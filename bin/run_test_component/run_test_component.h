@@ -15,6 +15,7 @@ struct ParseArgsResult {
   bool error;
   std::string error_msg;
   fuchsia::sys::LaunchInfo launch_info;
+  std::string cmx_file_path;
   std::vector<std::string> matching_urls;
 };
 

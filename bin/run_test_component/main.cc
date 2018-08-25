@@ -11,6 +11,7 @@
 
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
+#include "garnet/bin/run_test_component/test_metadata.h"
 #include "lib/component/cpp/environment_services.h"
 #include "lib/component/cpp/testing/enclosing_environment.h"
 #include "lib/component/cpp/testing/test_util.h"
@@ -132,6 +133,16 @@ int main(int argc, const char** argv) {
             parse_result.matching_urls[0].c_str());
   }
   std::string program_name = parse_result.launch_info.url;
+  auto test_metadata =
+      run::TestMetadata::CreateFromFile(parse_result.cmx_file_path);
+  if (test_metadata.has_error()) {
+    fprintf(stderr, "Not a valid manifest: %s\n",
+            parse_result.cmx_file_path.c_str());
+    for (auto& err : test_metadata.errors()) {
+      fprintf(stderr, "%s\n", err.c_str());
+    }
+    return 1;
+  }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
@@ -142,6 +153,13 @@ int main(int argc, const char** argv) {
 
   auto map_entry = config.url_map().find(parse_result.launch_info.url);
   if (map_entry != config.url_map().end()) {
+    if (!test_metadata.services().empty()) {
+      fprintf(stderr,
+              "Cannot run this test in sys/root environment as it defines "
+              "services in its '%s' facets\n",
+              run::kFuchsiaTest);
+      return 1;
+    }
     if (!ConnectToRequiredEnvironment(map_entry->second,
                                       parent_env.NewRequest().TakeChannel())) {
       return 1;
@@ -155,6 +173,12 @@ int main(int argc, const char** argv) {
     component::ConnectToEnvironmentService(parent_env.NewRequest());
     enclosing_env =
         component::testing::EnclosingEnvironment::Create(kEnv, parent_env);
+    for (auto& service : test_metadata.services()) {
+      fuchsia::sys::LaunchInfo launch_info;
+      launch_info.url = service.second;
+      enclosing_env->AddServiceWithLaunchInfo(std::move(launch_info),
+                                              service.first);
+    }
     launcher = enclosing_env->launcher_ptr();
   }
 

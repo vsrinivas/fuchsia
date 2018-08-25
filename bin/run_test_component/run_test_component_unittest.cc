@@ -79,12 +79,15 @@ TEST(RunTest, ParseArgs) {
   auto meta_dir_path = fxl::Substitute("$0/$1/0/meta", dir.path(), test_pkg);
   ASSERT_TRUE(files::CreateDirectory(meta_dir_path))
       << meta_dir_path << " " << errno;
-  ASSERT_TRUE(CreateEmptyFile(
-      fxl::Substitute("$0/$11.cmx", meta_dir_path, test_file_prefix)));
-  ASSERT_TRUE(CreateEmptyFile(
-      fxl::Substitute("$0/$12.cmx", meta_dir_path, test_file_prefix)));
-  ASSERT_TRUE(CreateEmptyFile(
-      fxl::Substitute("$0/$13.cmx", meta_dir_path, test_file_prefix)));
+  auto cmx_file_path1 =
+      fxl::Substitute("$0/$11.cmx", meta_dir_path, test_file_prefix);
+  auto cmx_file_path2 =
+      fxl::Substitute("$0/$12.cmx", meta_dir_path, test_file_prefix);
+  auto cmx_file_path3 =
+      fxl::Substitute("$0/$13.cmx", meta_dir_path, test_file_prefix);
+  ASSERT_TRUE(CreateEmptyFile(cmx_file_path1));
+  ASSERT_TRUE(CreateEmptyFile(cmx_file_path2));
+  ASSERT_TRUE(CreateEmptyFile(cmx_file_path3));
   auto expected_url1 = fxl::StringPrintf(
       "fuchsia-pkg://fuchsia.com/%s#meta/%s1.cmx", test_pkg, test_file_prefix);
   auto expected_url2 = fxl::StringPrintf(
@@ -102,19 +105,21 @@ TEST(RunTest, ParseArgs) {
     const char* argv[] = {kBinName, "test_file"};
     auto result = ParseArgs(2, argv, dir.path());
     EXPECT_FALSE(result.error);
-    EXPECT_EQ(3u, result.matching_urls.size());
+    ASSERT_EQ(3u, result.matching_urls.size());
     EXPECT_EQ(result.matching_urls[0], expected_url1);
     EXPECT_EQ(result.matching_urls[1], expected_url2);
     EXPECT_EQ(result.matching_urls[2], expected_url3);
+    EXPECT_EQ(result.cmx_file_path, cmx_file_path1);
   }
 
   {
     const char* argv[] = {kBinName, "test_file2"};
     auto result = ParseArgs(2, argv, dir.path());
     EXPECT_FALSE(result.error);
-    EXPECT_EQ(1u, result.matching_urls.size());
+    ASSERT_EQ(1u, result.matching_urls.size());
     EXPECT_EQ(result.matching_urls[0], expected_url2);
     EXPECT_EQ(expected_url2, result.launch_info.url);
+    EXPECT_EQ(result.cmx_file_path, cmx_file_path2);
   }
 }
 

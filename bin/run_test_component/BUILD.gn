@@ -13,9 +13,12 @@ source_set("lib") {
     "env_config.h",
     "run_test_component.cc",
     "run_test_component.h",
+    "test_metadata.cc",
+    "test_metadata.h",
   ]
 
   public_deps = [
+    "//garnet/lib/cmx",
     "//garnet/lib/json",
     "//garnet/lib/pkg_url",
     "//garnet/public/lib/component/cpp",
@@ -70,11 +73,13 @@ executable("test_bin") {
   sources = [
     "env_config_unittest.cc",
     "run_test_component_unittest.cc",
+    "test_metadata_unittest.cc",
   ]
 
   deps = [
     ":lib",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
   ]
 }
 

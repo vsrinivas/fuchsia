@@ -49,9 +49,9 @@ ParseArgsResult ParseArgs(int argc, const char** argv,
     return result;
   }
   std::string url = argv[1];
-  std::string cmx_file_path = GetComponentManifestPath(url);
+  result.cmx_file_path = GetComponentManifestPath(url);
 
-  if (cmx_file_path == "") {
+  if (result.cmx_file_path == "") {
     // try to find cmx files
     std::string test_prefix = argv[1];
     if (test_prefix.find('*') != std::string::npos) {
@@ -81,10 +81,12 @@ ParseArgsResult ParseArgs(int argc, const char** argv,
           GenerateComponentUrl(globbuf.gl_pathv[i] + glob_dir.length() + 1)
               .c_str());
     }
+    result.cmx_file_path = globbuf.gl_pathv[0];
     if (globbuf.gl_pathc > 1) {
       return result;
     }
     url = result.matching_urls[0];
+  } else {
   }
   result.launch_info.url = url;
   for (int i = 2; i < argc; i++) {
