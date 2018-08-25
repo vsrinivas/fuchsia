@@ -19,44 +19,24 @@ doc.
 
 ## Prerequisites
 
-### Prepare your build environment (Once per build environment)
+### Prepare your build environment (once per build environment)
 
-### Ubuntu
-
-```
-sudo apt-get install texinfo libglib2.0-dev liblz4-tool autoconf libtool libsdl-dev build-essential golang git curl unzip
-```
-
-### macOS
-
-1. Install the Xcode Command Line Tools:
+#### Debian
 
 ```
-xcode-select --install
+sudo apt-get install build-essential curl git python unzip
 ```
 
-1. In addition to the Xcode Command Line tools, you also need to
-   install a recent version of the full Xcode.
-   Download Xcode from https://developer.apple.com/xcode/.
+#### macOS
 
-1. Install the other pre-reqs:
+1.  Install Command Line Tools:
 
-* Using Homebrew:
+    ```
+    xcode-select --install
+    ```
 
-```
-# Install Homebrew
-/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-# Install packages
-brew install wget pkg-config glib autoconf automake libtool golang
-```
-
-* Using MacPorts:
-
-```
-# Install MacPorts
-# See https://guide.macports.org/chunked/installing.macports.html
-port install autoconf automake libtool libpixman pkgconfig glib2
-```
+1.  In addition to Command Line Tools, you also need to
+    install a recent version of [Xcode](https://developer.apple.com/xcode/).
 
 ### [Googlers only] Goma
 
