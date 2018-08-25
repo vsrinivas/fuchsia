@@ -20,6 +20,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--fuchsia-root', help='Path to root of Fuchsia project',
                         required=True)
+    parser.add_argument('--godepfile', help='Path to godepfile tool', required=True)
     parser.add_argument('--root-out-dir', help='Path to root of build output',
                         required=True)
     parser.add_argument('--zircon-sysroot', help='The Zircon sysroot to use',
@@ -138,11 +139,10 @@ def main():
                                 env=env)
 
     if retcode == 0:
-        godepfile = os.path.join(args.fuchsia_root, 'buildtools/godepfile')
         if args.depfile is not None:
             with open(args.depfile, "wb") as out:
-                env['GOROOT'] = os.path.join(args.fuchsia_root, "third_party/go")
-                godepfile_args = [godepfile, '-o', depfile_output]
+                env['GOROOT'] = args.go_root
+                godepfile_args = [args.godepfile, '-o', depfile_output]
                 if args.is_test:
                     godepfile_args += [ '-test']
                 godepfile_args += [args.package]

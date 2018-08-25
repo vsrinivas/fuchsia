@@ -58,7 +58,12 @@ template("go_build") {
       "//build/go/gen_library_metadata.py",
     ]
 
+    godepfile = "//buildtools/${host_platform}/godepfile"
+    inputs = [ godepfile ]
+
     args = [
+      "--godepfile",
+      rebase_path(godepfile, "", root_build_dir),
       "--fuchsia-root",
       rebase_path("//."),
       "--root-out-dir",
@@ -99,7 +104,6 @@ template("go_build") {
       ]
 
     }
-
 
     if (use_strip) {
       args += [
