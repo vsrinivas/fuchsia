@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/fidl/fidl.gni")
-import("//garnet/bin/run_test_component/test_package.gni")
+import("//build/test/test_package.gni")
 
 executable("realm_tests") {
   testonly = true

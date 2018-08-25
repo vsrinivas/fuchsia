@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/bin/run_test_component/test_package.gni")
+import("//build/test/test_package.gni")
 
 test_package("logger_integration_tests") {
   deps = [
