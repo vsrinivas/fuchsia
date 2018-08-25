@@ -841,8 +841,8 @@ class StoryControllerImpl::AddIntentCall
  private:
   void Run() {
     FlowToken flow{this, &start_module_status_};
-    operation_queue_.Add(new AddModCall(
-        story_controller_impl_->story_storage_,
+    AddAddModOperation(
+        &operation_queue_, story_controller_impl_->story_storage_,
         story_controller_impl_->story_provider_impl_->module_resolver(),
         story_controller_impl_->story_provider_impl_->entity_resolver(),
         fidl::VectorPtr<fidl::StringPtr>({module_name_}), std::move(*intent_),
@@ -863,7 +863,7 @@ class StoryControllerImpl::AddIntentCall
           }
           module_data_ = std::move(module_data);
           MaybeLaunchModule(flow);
-        }));
+        });
   }
 
   void MaybeLaunchModule(FlowToken flow) {

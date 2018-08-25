@@ -96,10 +96,10 @@ class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
         "UpdateModCommandRunner.UpdateLinkValue.fut");
     fuchsia::modular::LinkPath out_path;
     path.Clone(&out_path);
-    operations_.Add(new SetLinkValueCall(
-        story_storage_, std::move(out_path),
+    AddSetLinkValueOperation(
+        &operations_, story_storage_, std::move(out_path),
         [new_value](fidl::StringPtr* value) { *value = new_value; },
-        fut->Completer()));
+        fut->Completer());
     return fut;
   }
 

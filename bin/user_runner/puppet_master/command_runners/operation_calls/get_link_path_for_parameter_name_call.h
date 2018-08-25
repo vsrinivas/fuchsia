@@ -11,22 +11,10 @@
 
 namespace modular {
 
-class GetLinkPathForParameterNameCall
-    : public Operation<fuchsia::modular::LinkPathPtr> {
- public:
-  GetLinkPathForParameterNameCall(StoryStorage* const story_storage,
-                                  fidl::VectorPtr<fidl::StringPtr> module_name,
-                                  fidl::StringPtr link_name,
-                                  ResultCall result_call);
-
- private:
-  void Run() override;
-
-  StoryStorage* const story_storage_;  // Not owned.
-  fidl::VectorPtr<fidl::StringPtr> module_name_;
-  fidl::StringPtr link_name_;
-  fuchsia::modular::LinkPathPtr link_path_;
-};
+void AddGetLinkPathForParameterNameOperation(
+    OperationContainer* operation_container, StoryStorage* const story_storage,
+    fidl::VectorPtr<fidl::StringPtr> module_name, fidl::StringPtr link_name,
+    std::function<void(fuchsia::modular::LinkPathPtr)> result_call);
 
 }  // namespace modular
 

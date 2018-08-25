@@ -11,24 +11,11 @@
 
 namespace modular {
 
-class SetLinkValueCall : public Operation<fuchsia::modular::ExecuteResult> {
- public:
-  SetLinkValueCall(StoryStorage* const story_storage,
-                   fuchsia::modular::LinkPath link_path,
-                   std::function<void(fidl::StringPtr*)> mutate_fn,
-                   ResultCall done);
-
- private:
-  void Run() override;
-
-  fidl::StringPtr story_id_;
-  StoryStorage* const story_storage_;
-  fuchsia::modular::LinkPath link_path_;
-  std::function<void(fidl::StringPtr*)> mutate_fn_;
-  fuchsia::modular::ExecuteResult result_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SetLinkValueCall);
-};
+void AddSetLinkValueOperation(
+    OperationContainer* const operation_container,
+    StoryStorage* const story_storage, fuchsia::modular::LinkPath link_path,
+    std::function<void(fidl::StringPtr*)> mutate_fn,
+    std::function<void(fuchsia::modular::ExecuteResult)> done);
 
 }  // namespace modular
 

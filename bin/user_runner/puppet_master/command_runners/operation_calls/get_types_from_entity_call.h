@@ -10,21 +10,11 @@
 
 namespace modular {
 
-class GetTypesFromEntityCall : public Operation<std::vector<std::string>> {
- public:
-  GetTypesFromEntityCall(
-      fuchsia::modular::EntityResolver* const entity_resolver,
-      const fidl::StringPtr& entity_reference, ResultCall result);
-
-  void Run() override;
-
- private:
-  fuchsia::modular::EntityResolver* const entity_resolver_;
-  fidl::StringPtr const entity_reference_;
-  fuchsia::modular::EntityPtr entity_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetTypesFromEntityCall);
-};
+void AddGetTypesFromEntityOperation(
+    OperationContainer* operation_container,
+    fuchsia::modular::EntityResolver* entity_resolver,
+    const fidl::StringPtr& entity_reference,
+    std::function<void(std::vector<std::string>)> result_call);
 
 }  // namespace modular
 

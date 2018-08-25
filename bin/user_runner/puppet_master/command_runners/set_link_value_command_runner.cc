@@ -19,8 +19,9 @@ void SetLinkValueCommandRunner::Execute(
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_set_link_value());
 
-  operation_queue_.Add(new SetLinkValueCall(
-      story_storage, std::move(command.set_link_value().path),
+  AddSetLinkValueOperation(
+      &operation_queue_, story_storage,
+      std::move(command.set_link_value().path),
       fxl::MakeCopyable(
           [this, new_value = std::move(command.set_link_value().value)](
               fidl::StringPtr* value) {
@@ -28,7 +29,7 @@ void SetLinkValueCommandRunner::Execute(
             FXL_CHECK(fsl::StringFromVmo(*new_value, &str_value));
             *value = str_value;
           }),
-      std::move(done)));
+      std::move(done));
 }
 
 }  // namespace modular

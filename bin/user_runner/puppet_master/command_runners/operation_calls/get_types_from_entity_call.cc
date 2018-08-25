@@ -9,18 +9,41 @@
 
 namespace modular {
 
-GetTypesFromEntityCall::GetTypesFromEntityCall(
-    fuchsia::modular::EntityResolver* const entity_resolver,
-    const fidl::StringPtr& entity_reference, ResultCall result)
-    : Operation("GetTypesFromEntityCall", std::move(result)),
-      entity_resolver_(entity_resolver),
-      entity_reference_(entity_reference) {}
+namespace {
 
-void GetTypesFromEntityCall::Run() {
-  entity_resolver_->ResolveEntity(entity_reference_, entity_.NewRequest());
-  entity_->GetTypes([this](const fidl::VectorPtr<fidl::StringPtr>& types) {
-    Done(fxl::To<std::vector<std::string>>(types));
-  });
+class GetTypesFromEntityCall : public Operation<std::vector<std::string>> {
+ public:
+  GetTypesFromEntityCall(
+      fuchsia::modular::EntityResolver* const entity_resolver,
+      const fidl::StringPtr& entity_reference, ResultCall result)
+      : Operation("GetTypesFromEntityCall", std::move(result)),
+        entity_resolver_(entity_resolver),
+        entity_reference_(entity_reference) {}
+
+ private:
+  void Run() override {
+    entity_resolver_->ResolveEntity(entity_reference_, entity_.NewRequest());
+    entity_->GetTypes([this](const fidl::VectorPtr<fidl::StringPtr>& types) {
+      Done(fxl::To<std::vector<std::string>>(types));
+    });
+  }
+
+  fuchsia::modular::EntityResolver* const entity_resolver_;
+  fidl::StringPtr const entity_reference_;
+  fuchsia::modular::EntityPtr entity_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetTypesFromEntityCall);
+};
+
+}  // namespace
+
+void AddGetTypesFromEntityOperation(
+    OperationContainer* const operation_container,
+    fuchsia::modular::EntityResolver* const entity_resolver,
+    const fidl::StringPtr& entity_reference,
+    std::function<void(std::vector<std::string>)> result_call) {
+  operation_container->Add(new GetTypesFromEntityCall(
+      entity_resolver, entity_reference, std::move(result_call)));
 }
 
 }  // namespace modular

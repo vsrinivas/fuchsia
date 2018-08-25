@@ -26,8 +26,8 @@ void AddModCommandRunner::Execute(
   FXL_CHECK(command.is_add_mod());
 
   auto& add_mod = command.add_mod();
-  operation_queue_.Add(new AddModCall(
-      story_storage, module_resolver_, entity_resolver_,
+  AddAddModOperation(
+      &operation_queue_, story_storage, module_resolver_, entity_resolver_,
       std::move(add_mod.mod_name), std::move(add_mod.intent),
       std::make_unique<fuchsia::modular::SurfaceRelation>(
           std::move(add_mod.surface_relation)),
@@ -36,7 +36,7 @@ void AddModCommandRunner::Execute(
       [done = std::move(done)](fuchsia::modular::ExecuteResult result,
                                fuchsia::modular::ModuleData module_data) {
         done(std::move(result));
-      }));
+      });
 }
 
 }  // namespace modular

@@ -11,50 +11,15 @@
 
 namespace modular {
 
-class FindModulesCall
-    : public Operation<fuchsia::modular::ExecuteResult,
-                       fuchsia::modular::FindModulesResponse> {
- public:
-  FindModulesCall(StoryStorage* const story_storage,
-                  fuchsia::modular::ModuleResolver* const module_resolver,
-                  fuchsia::modular::EntityResolver* const entity_resolver,
-                  fuchsia::modular::IntentPtr intent,
-                  fidl::VectorPtr<fidl::StringPtr> requesting_module_path,
-                  ResultCall result_call);
-
- private:
-  void Run() override;
-
-  // To avoid deadlocks, this function must not depend on anything that executes
-  // on the story controller's operation queue.
-  FuturePtr<std::vector<std::string>> GetTypesFromIntentParameter(
-      fidl::VectorPtr<fidl::StringPtr> module_path,
-      const fuchsia::modular::IntentParameterData& input,
-      const fidl::StringPtr& param_name);
-
-  std::pair<bool, std::vector<std::string>> GetTypesFromJson(
-      const fidl::StringPtr& input);
-
-  void GetTypesFromLink(fuchsia::modular::LinkPathPtr link_path,
-                        std::function<void(std::vector<std::string>)> done,
-                        const fidl::StringPtr& param_name);
-
-  StoryStorage* const story_storage_;                        // Not owned.
-  fuchsia::modular::ModuleResolver* const module_resolver_;  // Not Owned
-  fuchsia::modular::EntityResolver* const entity_resolver_;  // Not owned.
-  const fuchsia::modular::IntentPtr intent_;
-  const fidl::VectorPtr<fidl::StringPtr> requesting_module_path_;
-
-  fuchsia::modular::FindModulesQuery resolver_query_;
-  std::vector<FuturePtr<fuchsia::modular::FindModulesParameterConstraint>>
-      constraint_futs_;
-  fuchsia::modular::LinkPtr link_;  // in case we need itf for
-  fuchsia::modular::ExecuteResult result_;
-  fuchsia::modular::FindModulesResponse response_;
-  OperationCollection operations_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesCall);
-};
+void AddFindModulesOperation(
+    OperationContainer* operation_container, StoryStorage* story_storage,
+    fuchsia::modular::ModuleResolver* module_resolver,
+    fuchsia::modular::EntityResolver* entity_resolver,
+    fuchsia::modular::IntentPtr intent,
+    fidl::VectorPtr<fidl::StringPtr> requesting_module_path,
+    std::function<void(fuchsia::modular::ExecuteResult,
+                       fuchsia::modular::FindModulesResponse)>
+        result_call);
 
 }  // namespace modular
 
