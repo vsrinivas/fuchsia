@@ -120,7 +120,7 @@ VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
     // location lists, so we assume that Clang won't generate them either.
     // Assume all addresses are relative to the compilation unit's base
     // address which is in DW_AT_low_pc
-    auto base_address = unit->getBaseAddress();
+    auto base_address = const_cast<llvm::DWARFUnit*>(unit)->getBaseAddress();
     if (base_address) {
       dest.begin = base_address->Address + llvm_entry.Begin;
       dest.end = base_address->Address + llvm_entry.End;

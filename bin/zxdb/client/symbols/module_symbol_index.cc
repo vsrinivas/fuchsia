@@ -11,7 +11,7 @@
 #include "garnet/bin/zxdb/common/file_util.h"
 #include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/public/lib/fxl/logging.h"
-#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 
@@ -96,7 +96,7 @@ size_t RecursiveCountFunctionDies(const ModuleSymbolIndexNode& node) {
 // unit (it will be exactly unit->getNumDIEs() long). The root node will have
 // kNoParent set.
 void ExtractUnitFunctionImplsAndParents(
-    llvm::DWARFContext* context, llvm::DWARFCompileUnit* unit,
+    llvm::DWARFContext* context, llvm::DWARFUnit* unit,
     std::vector<FunctionImpl>* function_impls,
     std::vector<unsigned>* parent_indices) {
   DwarfDieDecoder decoder(context, unit);
@@ -193,7 +193,7 @@ void ExtractUnitFunctionImplsAndParents(
 // ExtractUnitFunctionImplsAndParents for quickly finding parents.
 class FunctionImplIndexer {
  public:
-  FunctionImplIndexer(llvm::DWARFContext* context, llvm::DWARFCompileUnit* unit,
+  FunctionImplIndexer(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
                       const std::vector<unsigned>& parent_indices,
                       ModuleSymbolIndexNode* root)
       : unit_(unit),
@@ -268,7 +268,7 @@ class FunctionImplIndexer {
     return true;
   }
 
-  llvm::DWARFCompileUnit* unit_;
+  llvm::DWARFUnit* unit_;
   const std::vector<unsigned>& parent_indices_;
   ModuleSymbolIndexNode* root_;
 
@@ -285,8 +285,9 @@ void ModuleSymbolIndex::CreateIndex(llvm::object::ObjectFile* object_file) {
   std::unique_ptr<llvm::DWARFContext> context = llvm::DWARFContext::create(
       *object_file, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
-  llvm::DWARFUnitSection<llvm::DWARFCompileUnit> compile_units;
-  compile_units.parse(*context, context->getDWARFObj().getInfoSection());
+  llvm::DWARFUnitVector compile_units;
+  compile_units.addUnitsForSection(
+      *context, context->getDWARFObj().getInfoSection(), llvm::DW_SECT_INFO);
 
   for (unsigned i = 0; i < compile_units.size(); i++) {
     IndexCompileUnit(context.get(), compile_units[i].get(), i);
@@ -380,7 +381,7 @@ void ModuleSymbolIndex::DumpFileIndex(std::ostream& out) {
 }
 
 void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
-                                         llvm::DWARFCompileUnit* unit,
+                                         llvm::DWARFUnit* unit,
                                          unsigned unit_index) {
   // Find the things to index.
   std::vector<FunctionImpl> function_impls;
@@ -397,9 +398,9 @@ void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
   IndexCompileUnitSourceFiles(context, unit, unit_index);
 }
 
-void ModuleSymbolIndex::IndexCompileUnitSourceFiles(
-    llvm::DWARFContext* context, llvm::DWARFCompileUnit* unit,
-    unsigned unit_index) {
+void ModuleSymbolIndex::IndexCompileUnitSourceFiles(llvm::DWARFContext* context,
+                                                    llvm::DWARFUnit* unit,
+                                                    unsigned unit_index) {
   const llvm::DWARFDebugLine::LineTable* line_table =
       context->getLineTableForUnit(unit);
   const char* compilation_dir = unit->getCompilationDir();

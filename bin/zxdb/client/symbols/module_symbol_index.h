@@ -65,12 +65,11 @@ class ModuleSymbolIndex {
   void DumpFileIndex(std::ostream& out);
 
  private:
-  void IndexCompileUnit(llvm::DWARFContext* context,
-                        llvm::DWARFCompileUnit* unit, unsigned unit_index);
+  void IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
+                        unsigned unit_index);
 
   void IndexCompileUnitSourceFiles(llvm::DWARFContext* context,
-                                   llvm::DWARFCompileUnit* unit,
-                                   unsigned unit_index);
+                                   llvm::DWARFUnit* unit, unsigned unit_index);
 
   // Populates the file_name_index_ given a now-unchanging files_ map.
   void IndexFileNames();

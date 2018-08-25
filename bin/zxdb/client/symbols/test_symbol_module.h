@@ -9,6 +9,7 @@
 
 #include "garnet/public/lib/fxl/macros.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/ObjectFile.h"
 
 namespace llvm {
@@ -59,16 +60,14 @@ class TestSymbolModule {
     return static_cast<llvm::object::ObjectFile*>(binary_.get());
   }
   llvm::DWARFContext* context() { return context_.get(); }
-  llvm::DWARFUnitSection<llvm::DWARFCompileUnit>& compile_units() {
-    return compile_units_;
-  }
+  llvm::DWARFUnitVector& compile_units() { return compile_units_; }
 
  private:
   std::unique_ptr<llvm::MemoryBuffer> binary_buffer_;  // Backing for binary_.
   std::unique_ptr<llvm::object::Binary> binary_;
   std::unique_ptr<llvm::DWARFContext> context_;
 
-  llvm::DWARFUnitSection<llvm::DWARFCompileUnit> compile_units_;
+  llvm::DWARFUnitVector compile_units_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestSymbolModule);
 };

@@ -29,7 +29,7 @@ bool SameFileLine(const llvm::DWARFDebugLine::Row& a,
 
 struct LineMatch {
   uint64_t address = 0;
-  const llvm::DWARFCompileUnit* unit = 0;
+  const llvm::DWARFUnit* unit = 0;
   int line = 0;
 
   // Absolute offset of the DIE containing the function for this address or 0
@@ -38,7 +38,7 @@ struct LineMatch {
 };
 
 std::vector<LineMatch> GetBestLineTableMatchesInUnit(
-    llvm::DWARFContext* context, llvm::DWARFCompileUnit* unit,
+    llvm::DWARFContext* context, llvm::DWARFUnit* unit,
     const std::string& full_path, int line) {
   std::vector<LineMatch> result;
 
@@ -196,7 +196,8 @@ Err ModuleSymbolsImpl::Load() {
   context_ = llvm::DWARFContext::create(
       *obj, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
-  compile_units_.parse(*context_, context_->getDWARFObj().getInfoSection());
+  compile_units_.addUnitsForSection(
+      *context_, context_->getDWARFObj().getInfoSection(), llvm::DW_SECT_INFO);
 
   // We could consider creating a new binary/object file just for indexing.
   // The indexing will page all of the binary in, and most of it won't be
@@ -217,8 +218,7 @@ Location ModuleSymbolsImpl::LocationForAddress(
   // TODO(brettw) handle addresses that aren't code (e.g. data).
   uint64_t relative_address =
       symbol_context.AbsoluteToRelative(absolute_address);
-  llvm::DWARFCompileUnit* unit =
-      CompileUnitForRelativeAddress(relative_address);
+  llvm::DWARFUnit* unit = CompileUnitForRelativeAddress(relative_address);
   if (!unit)  // No symbol
     return Location(Location::State::kSymbolized, absolute_address);
 
@@ -256,8 +256,8 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(
   uint64_t relative_address =
       symbol_context.AbsoluteToRelative(absolute_address);
 
-  llvm::DWARFCompileUnit* unit =
-      CompileUnitForRelativeAddress(relative_address);
+  llvm::DWARFCompileUnit* unit = llvm::dyn_cast_or_null<llvm::DWARFCompileUnit>(
+      CompileUnitForRelativeAddress(relative_address));
   if (!unit)
     return LineDetails();
   const llvm::DWARFDebugLine::LineTable* line_table =
@@ -329,13 +329,13 @@ std::vector<uint64_t> ModuleSymbolsImpl::AddressesForFunction(
   for (const auto& cur : entries) {
     llvm::DWARFDie die = cur.ToDie(context_.get());
 
-    llvm::DWARFAddressRangesVector ranges = die.getAddressRanges();
-    if (ranges.empty())
+    auto ranges_or_error = die.getAddressRanges();
+    if (!ranges_or_error)
       continue;
 
     // Get the minimum address associated with this DIE.
     auto min_iter = std::min_element(
-        ranges.begin(), ranges.end(),
+        ranges_or_error.get().begin(), ranges_or_error.get().end(),
         [](const llvm::DWARFAddressRange& a, const llvm::DWARFAddressRange& b) {
           return a.LowPC < b.LowPC;
         });
@@ -378,7 +378,7 @@ std::vector<uint64_t> ModuleSymbolsImpl::AddressesForLine(
 
   std::vector<LineMatch> matches;
   for (unsigned index : *units) {
-    llvm::DWARFCompileUnit* unit = context_->getCompileUnitAtIndex(index);
+    llvm::DWARFUnit* unit = context_->getUnitAtIndex(index);
 
     // Complication 1 above: find all matches for this line in the unit.
     std::vector<LineMatch> unit_matches = GetBestLineTableMatchesInUnit(
@@ -406,7 +406,7 @@ std::vector<uint64_t> ModuleSymbolsImpl::AddressesForLine(
   return result;
 }
 
-llvm::DWARFCompileUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(
+llvm::DWARFUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(
     uint64_t relative_address) const {
   return compile_units_.getUnitForOffset(
       context_->getDebugAranges()->findAddress(relative_address));

@@ -93,13 +93,15 @@ static_library("client") {
     "//garnet/lib/debug_ipc:client",
     "//garnet/lib/debug_ipc/helper",
     "//garnet/public/lib/fxl",
-    "//third_party/llvm/lib/Target/AArch64/Disassembler",
-    "//third_party/llvm/lib/Target/X86/Disassembler",
+    "//garnet/third_party/llvm:LLVMAArch64Disassembler",
+    "//garnet/third_party/llvm:LLVMAArch64Desc",
+    "//garnet/third_party/llvm:LLVMX86Disassembler",
+    "//garnet/third_party/llvm:LLVMX86Desc",
   ]
 
   deps = [
-    "//third_party/llvm/lib/MC",
-    "//third_party/llvm/lib/Object",
+    "//garnet/third_party/llvm:LLVMMC",
+    "//garnet/third_party/llvm:LLVMObject",
   ]
 }
 

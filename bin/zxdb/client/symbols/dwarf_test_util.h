@@ -5,6 +5,7 @@
 #pragma once
 
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 
 namespace llvm {
 class DWARFContext;
@@ -17,10 +18,9 @@ namespace zxdb {
 // The name is normally the file name, so searching for "/foo.cc" will
 // find the unit corresponding to foo.cc (the full path in the unit name may be
 // more complicated so don't depend on the particulars of that).
-llvm::DWARFUnit* GetUnitWithNameEndingIn(
-    llvm::DWARFContext* context,
-    llvm::DWARFUnitSection<llvm::DWARFCompileUnit>& units,
-    const std::string& name);
+llvm::DWARFUnit* GetUnitWithNameEndingIn(llvm::DWARFContext* context,
+                                         llvm::DWARFUnitVector& units,
+                                         const std::string& name);
 
 // Returns the first DIE in the unit with the matching tag and DW_AT_Name
 // attribute. If not found,t he returned DIE will be !isValid().

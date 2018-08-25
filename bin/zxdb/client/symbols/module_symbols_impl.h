@@ -10,7 +10,7 @@
 #include "garnet/bin/zxdb/common/err.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 
 namespace llvm {
 
@@ -43,7 +43,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   ~ModuleSymbolsImpl();
 
   llvm::DWARFContext* context() { return context_.get(); }
-  llvm::DWARFUnitSection<llvm::DWARFCompileUnit>& compile_units() {
+  llvm::DWARFUnitVector& compile_units() {
     return compile_units_;
   }
   DwarfSymbolFactory* symbol_factory() { return symbol_factory_.get(); }
@@ -67,7 +67,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
                                          const FileLine& line) const override;
 
  private:
-  llvm::DWARFCompileUnit* CompileUnitForRelativeAddress(
+  llvm::DWARFUnit* CompileUnitForRelativeAddress(
       uint64_t relative_address) const;
 
   const std::string name_;
@@ -77,7 +77,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   std::unique_ptr<llvm::object::Binary> binary_;
   std::unique_ptr<llvm::DWARFContext> context_;
 
-  llvm::DWARFUnitSection<llvm::DWARFCompileUnit> compile_units_;
+  llvm::DWARFUnitVector compile_units_;
 
   ModuleSymbolIndex index_;
 

@@ -26,12 +26,11 @@ std::string GetDIEName(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
 
 }  // namespace
 
-llvm::DWARFUnit* GetUnitWithNameEndingIn(
-    llvm::DWARFContext* context,
-    llvm::DWARFUnitSection<llvm::DWARFCompileUnit>& units,
-    const std::string& name) {
+llvm::DWARFUnit* GetUnitWithNameEndingIn(llvm::DWARFContext* context,
+                                         llvm::DWARFUnitVector& units,
+                                         const std::string& name) {
   for (unsigned i = 0; i < units.size(); i++) {
-    llvm::DWARFCompileUnit* unit = units[i].get();
+    llvm::DWARFUnit* unit = units[i].get();
     std::string unit_name = GetDIEName(context, unit, unit->getUnitDIE());
     if (StringEndsWith(unit_name, name))
       return unit;
