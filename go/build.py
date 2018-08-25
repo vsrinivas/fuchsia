@@ -23,7 +23,7 @@ def main():
     parser.add_argument('--root-out-dir', help='Path to root of build output',
                         required=True)
     parser.add_argument('--zircon-sysroot', help='The Zircon sysroot to use',
-                        required=True)
+                        required=False)
     parser.add_argument('--depfile', help='The path to the depfile',
                         required=True)
     parser.add_argument('--current-cpu', help='Target architecture.',

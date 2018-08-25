@@ -58,43 +58,48 @@ template("go_build") {
       "//build/go/gen_library_metadata.py",
     ]
 
-    # The same Go toolchain is used for host and target.
-    go_root = rebase_path("$host_tools_dir/goroot")
-
-    deps += [ "//third_party/go:go_runtime" ]
-
-    if (is_fuchsia) {
-      deps += [
-        "//garnet/public/sdk:zircon_sysroot_export",
-        "//zircon/public/lib/fdio",
-      ]
-    }
-
-    zircon_sysroot = sysroot
-    if (is_fuchsia) {
-      zircon_sysroot = rebase_path("$root_out_dir/sdks/zircon_sysroot/arch/$target_cpu/sysroot")
-    }
-
     args = [
       "--fuchsia-root",
       rebase_path("//."),
       "--root-out-dir",
       rebase_path(root_out_dir, root_build_dir),
-      "--zircon-sysroot",
-      zircon_sysroot,
       "--depfile",
       rebase_path(depfile),
       "--current-cpu",
       current_cpu,
       "--current-os",
       current_os,
-      "--go-root",
-      go_root,
       "--binname",
       output_name,
       "--toolchain-prefix",
       rebase_path(clang_prefix, "", root_build_dir),
     ]
+
+    if (is_fuchsia) {
+      deps += [ "//third_party/go:go_runtime" ]
+
+      deps += [
+        "//garnet/public/sdk:zircon_sysroot_export",
+        "//zircon/public/lib/fdio",
+      ]
+
+      zircon_sysroot = rebase_path("$root_out_dir/sdks/zircon_sysroot/arch/$target_cpu/sysroot")
+
+      args += [
+        "--zircon-sysroot",
+        zircon_sysroot,
+        "--go-root",
+        rebase_path("$host_tools_dir/goroot"),
+      ]
+
+    } else {
+      args += [
+        "--go-root",
+        rebase_path("//buildtools/${host_platform}/go"),
+      ]
+
+    }
+
 
     if (use_strip) {
       args += [
