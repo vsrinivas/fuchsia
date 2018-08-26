@@ -18,6 +18,7 @@
 .vscode
 Session.vim
 Thumbs.db
+compile_commands.json
 cscope.*
 tags
 target
