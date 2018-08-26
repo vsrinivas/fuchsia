@@ -29,7 +29,7 @@ namespace audio {
 class TestFxLoader : public FxLoader {
  public:
   void* OpenSharedLibBinary() override {
-    return dlopen("libaudio_dfx.so", RTLD_LAZY | RTLD_GLOBAL);
+    return dlopen("audio_dfx.so", RTLD_LAZY | RTLD_GLOBAL);
   }
 };
 }  // namespace audio

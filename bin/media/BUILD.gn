@@ -81,16 +81,16 @@ package("tests") {
   deps = [
     "//garnet/bin/media/audio_core:tests",
     "//garnet/bin/media/audio_core/mixer:tests",
-    "//garnet/public/lib/media/audio_dfx:lib",
+    "//garnet/public/lib/media/audio_dfx",
     "//garnet/public/lib/media/audio_dfx:tests",
     "//garnet/public/lib/media/timeline:tests",
     "//garnet/public/lib/media/transport:tests",
   ]
 
-  libraries = [
+  loadable_modules = [
     {
-      # This is audio_dfx:lib, a test lib hosted in the audio_dfx_tests process.
-      name = "libaudio_dfx.so"
+      # This is audio_dfx, a test lib hosted in the audio_dfx_tests process.
+      name = "audio_dfx.so"
     },
   ]
 

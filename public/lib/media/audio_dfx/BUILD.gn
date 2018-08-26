@@ -6,9 +6,8 @@ import("//build/package.gni")
 import("//build/test.gni")
 
 # This DFX exists for test purposes, to validate the DFX interface.
-shared_library("lib") {
+loadable_module("audio_dfx") {
   testonly = true
-  output_name = "audio_dfx"
 
   sources = [
     "audio_device_fx.h",
