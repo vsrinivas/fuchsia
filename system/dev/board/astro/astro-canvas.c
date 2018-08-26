@@ -40,7 +40,8 @@ static const pbus_dev_t canvas_dev = {
 };
 
 zx_status_t aml_canvas_init(aml_bus_t* bus) {
-    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_CANVAS, &canvas_dev);
+    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_AMLOGIC_CANVAS,
+                                                  &canvas_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pbus_protocol_device_add canvas failed: %d\n", __FUNCTION__, status);
         return status;

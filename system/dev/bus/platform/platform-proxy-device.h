@@ -6,7 +6,7 @@
 
 #include "platform-proxy-device.h"
 
-#include <ddk/protocol/canvas.h>
+#include <ddk/protocol/amlogic-canvas.h>
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>

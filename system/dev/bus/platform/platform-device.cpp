@@ -509,7 +509,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
         }
         break;
     }
-    case ZX_PROTOCOL_CANVAS: {
+    case ZX_PROTOCOL_AMLOGIC_CANVAS: {
         auto req = reinterpret_cast<rpc_canvas_req_t*>(&req_buf);
         if (actual < sizeof(*req)) {
             zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));

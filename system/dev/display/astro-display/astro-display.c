@@ -473,7 +473,7 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_CANVAS, &display->canvas);
+    status = device_get_protocol(parent, ZX_PROTOCOL_AMLOGIC_CANVAS, &display->canvas);
     if (status != ZX_OK) {
         DISP_ERROR("Could not obtain CANVAS protocol\n");
         goto fail;

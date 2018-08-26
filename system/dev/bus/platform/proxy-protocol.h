@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/canvas.h>
+#include <ddk/protocol/amlogic-canvas.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
 

@@ -5,11 +5,11 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <ddk/protocol/canvas.h>
+#include <ddk/protocol/amlogic-canvas.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
 
-#include "canvas-internal.h"
+#include "amlogic-canvas-internal.h"
 
 // DDK canvas protocol support.
 //
@@ -25,7 +25,7 @@
 //
 // :: Examples ::
 //
-// // A driver that implements a ZX_PROTOCOL_CANVAS device.
+// // A driver that implements a ZX_PROTOCOL_AMLOGIC_CANVAS device.
 // class CanvasDevice;
 // using CanvasDeviceType = ddk::Device<CanvasDevice, /* ddk mixins */>;
 //
@@ -53,7 +53,7 @@ public:
 
         // Can only inherit from one base_protocol implemenation
         ZX_ASSERT(ddk_proto_id_ == 0);
-        ddk_proto_id_ = ZX_PROTOCOL_CANVAS;
+        ddk_proto_id_ = ZX_PROTOCOL_AMLOGIC_CANVAS;
         ddk_proto_ops_ = &ops_;
     }
 

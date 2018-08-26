@@ -72,7 +72,7 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol) {
         }
         break;
     }
-    case ZX_PROTOCOL_CANVAS: {
+    case ZX_PROTOCOL_AMLOGIC_CANVAS: {
         canvas_.reset(new (&ac) ddk::CanvasProtocolProxy(
             static_cast<canvas_protocol_t*>(protocol)));
         if (!ac.check()) {
@@ -122,7 +122,7 @@ zx_status_t PlatformBus::DeviceAdd(const pbus_dev_t* pdev) {
 
 zx_status_t PlatformBus::ProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* pdev) {
     switch (proto_id) {
-    case ZX_PROTOCOL_CANVAS:
+    case ZX_PROTOCOL_AMLOGIC_CANVAS:
     case ZX_PROTOCOL_CLK:
     case ZX_PROTOCOL_GPIO:
     case ZX_PROTOCOL_I2C_IMPL:
@@ -220,7 +220,7 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* protocol) {
             return ZX_OK;
         }
         break;
-    case ZX_PROTOCOL_CANVAS:
+    case ZX_PROTOCOL_AMLOGIC_CANVAS:
         if (canvas_ != nullptr) {
             canvas_->GetProto(static_cast<canvas_protocol_t*>(protocol));
             return ZX_OK;

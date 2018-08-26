@@ -132,7 +132,7 @@ zx_status_t ProxyDevice::CanvasConfig(void* ctx, zx_handle_t vmo, size_t offset,
     ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
     rpc_canvas_req_t req = {};
     rpc_canvas_rsp_t resp = {};
-    req.header.protocol = ZX_PROTOCOL_CANVAS;
+    req.header.protocol = ZX_PROTOCOL_AMLOGIC_CANVAS;
     req.header.op = CANVAS_CONFIG;
 
     memcpy((void*)&req.info, info, sizeof(canvas_info_t));
@@ -150,7 +150,7 @@ zx_status_t ProxyDevice::CanvasFree(void* ctx, uint8_t canvas_idx) {
     ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
     rpc_canvas_req_t req = {};
     rpc_canvas_rsp_t resp = {};
-    req.header.protocol = ZX_PROTOCOL_CANVAS;
+    req.header.protocol = ZX_PROTOCOL_AMLOGIC_CANVAS;
     req.header.op = CANVAS_FREE;
     req.idx = canvas_idx;
 
@@ -567,7 +567,7 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
         proto->ops = &clk_proto_ops_;
         break;
     }
-    case ZX_PROTOCOL_CANVAS: {
+    case ZX_PROTOCOL_AMLOGIC_CANVAS: {
         proto->ops = &canvas_proto_ops_;
         break;
     }

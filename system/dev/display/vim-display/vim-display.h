@@ -7,8 +7,8 @@
 #include "edid.h"
 #include <assert.h>
 #include <ddk/io-buffer.h>
+#include <ddk/protocol/amlogic-canvas.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/canvas.h>
 #include <ddk/protocol/display-controller.h>
 #include <stdint.h>
 #include <stdio.h>

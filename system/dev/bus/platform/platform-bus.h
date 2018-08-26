@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/canvas.h>
+#include <ddktl/protocol/amlogic-canvas.h>
 #include <ddktl/protocol/clk.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c-impl.h>

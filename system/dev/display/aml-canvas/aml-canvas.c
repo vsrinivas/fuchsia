@@ -198,7 +198,7 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
         .name = "aml-canvas",
         .ctx = canvas,
         .ops = &aml_canvas_device_protocol,
-        .proto_id = ZX_PROTOCOL_CANVAS,
+        .proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS,
     };
 
     status = device_add(parent, &args, &canvas->zxdev);
@@ -210,7 +210,7 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     canvas->canvas.ctx = canvas;
 
     // Set the canvas protocol on the platform bus
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_CANVAS, &canvas->canvas);
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas->canvas);
     return ZX_OK;
 fail:
     aml_canvas_release(canvas);

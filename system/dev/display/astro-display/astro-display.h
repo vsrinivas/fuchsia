@@ -6,9 +6,9 @@
 
 #include <assert.h>
 #include <ddk/io-buffer.h>
+#include <ddk/protocol/amlogic-canvas.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
-#include <ddk/protocol/canvas.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
