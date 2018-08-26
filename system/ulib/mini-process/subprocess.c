@@ -8,10 +8,6 @@
 // This function is the entire program that the child process will execute. It
 // gets directly mapped into the child process via zx_vmo_write() so it must not
 // reference any addressable entity outside it.
-__NO_SAFESTACK
-#ifdef __clang__
-__attribute__((no_sanitize("all")))
-#endif
 void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
     if (fnptr == 0) {
         // In this mode we don't have a VDSO so we don't care what the handle is

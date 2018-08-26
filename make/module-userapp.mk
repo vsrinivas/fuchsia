@@ -33,6 +33,18 @@ USER_MANIFEST_DEBUG_INPUTS += $(MODULE_USERAPP_OBJECT)
 endif
 
 MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS) $(MODULE_FIDL_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).a)
+
+# Link profile runtime into everything compiled with profile instrumentation.
+# The static profile runtime library must come after all static libraries
+# whose instrumented code might call into it.  It depends on libzircon, so
+# make sure we're linking that in if we're not already.
+ifeq ($(strip $(call TOBOOL,$(USE_PROFILE)) \
+	      $(filter $(NO_PROFILE),$(MODULE_COMPILEFLAGS))),true)
+MODULE_ALIBS += $(PROFILE_LIB)
+MODULE_LIBS := $(filter-out system/ulib/zircon,$(MODULE_LIBS)) \
+	       system/ulib/zircon
+endif
+
 MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so.abi)
 MODULE_EXTRA_OBJS += $(foreach lib,$(MODULE_FIDL_LIBS),$(call TOBUILDDIR,$(lib))/gen/obj/tables.cpp.o)
 

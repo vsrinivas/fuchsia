@@ -13,4 +13,6 @@ MODULE_SO_NAME := dlopen-indirect-deps-test-libb
 
 MODULE_SRCS := $(LOCAL_DIR)/libb.c
 
+MODULE_LIBS := system/ulib/c
+
 include make/module.mk

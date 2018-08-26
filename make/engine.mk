@@ -32,9 +32,14 @@ DISABLE_UTEST ?= false
 ENABLE_ULIB_ONLY ?= false
 USE_ASAN ?= false
 USE_SANCOV ?= false
+USE_PROFILE ?= false
 USE_LTO ?= false
 USE_THINLTO ?= $(USE_LTO)
-USE_CLANG ?= $(firstword $(filter true,$(call TOBOOL,$(USE_ASAN)) $(call TOBOOL,$(USE_LTO))) false)
+USE_CLANG ?= $(firstword $(filter true,$(call TOBOOL,$(USE_ASAN)) \
+	     		 	       $(call TOBOOL,$(USE_SANCOV)) \
+	     		 	       $(call TOBOOL,$(USE_PROFILE)) \
+	     		 	       $(call TOBOOL,$(USE_LTO))) \
+			 false)
 USE_LLD ?= $(USE_CLANG)
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
 USE_GOLD := false
@@ -63,6 +68,8 @@ BUILDDIR_SUFFIX :=
 
 ifeq ($(call TOBOOL,$(USE_ASAN)),true)
 BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-asan
+else ifeq ($(call TOBOOL,$(USE_PROFILE)),true)
+BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-profile
 else ifeq ($(call TOBOOL,$(USE_LTO)),true)
 ifeq ($(call TOBOOL,$(USE_THINLTO)),true)
 BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-thinlto
@@ -559,15 +566,16 @@ else
 NO_SANCOV :=
 endif
 
+clang-print-file-name = $(shell $(CLANG_TOOLCHAIN_PREFIX)clang \
+				$(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) \
+				-print-file-name=$1)
+
 # To use LibFuzzer, we need to provide it and its dependency to the linker
 # since we're not using Clang and its '-fsanitize=fuzzer' flag as a driver to
 # lld.  Additionally, we need to make sure the shared objects are available on
 # the device.
 ifeq ($(call TOBOOL,$(USE_ASAN)),true)
-FUZZ_ANAME := libclang_rt.fuzzer.a
-FUZZ_ALIB := $(shell $(CLANG_TOOLCHAIN_PREFIX)clang \
-				 $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS)\
-				 -print-file-name=$(FUZZ_ANAME))
+FUZZ_ALIB := $(call clang-print-file-name,libclang_rt.fuzzer.a)
 
 FUZZ_RUNTIME_SONAMES := libc++abi.so.1
 FUZZ_RUNTIME_SOLIBS := $(foreach soname,$(FUZZ_RUNTIME_SONAMES),\
@@ -576,6 +584,16 @@ FUZZ_RUNTIME_SOLIBS := $(foreach soname,$(FUZZ_RUNTIME_SONAMES),\
 FUZZ_EXTRA_OBJS := $(FUZZ_ALIB) $(FUZZ_RUNTIME_SOLIBS)
 else
 FUZZ_EXTRA_OBJS :=
+endif
+
+ifeq ($(call TOBOOL,$(USE_PROFILE)),true)
+USER_COMPILEFLAGS += -fprofile-instr-generate -fcoverage-mapping
+NO_PROFILE := -fno-profile-instr-generate -fno-coverage-mapping
+NO_SANITIZERS += $(NO_PROFILE)
+PROFILE_LIB := $(call clang-print-file-name,libclang_rt.profile.a)
+else
+NO_PROFILE :=
+PROFILE_LIB :=
 endif
 
 # Save these for the first module.mk iteration to see.

@@ -41,6 +41,18 @@ endif
 # modules that declare a soname or install name desire to be shared libs as well
 ifneq ($(MODULE_SO_NAME)$(MODULE_SO_INSTALL_NAME),)
 MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS) $(MODULE_FIDL_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).a)
+
+# Link profile runtime into everything compiled with profile instrumentation.
+# The static profile runtime library must come after all static libraries
+# whose instrumented code might call into it.  It depends on libzircon, so
+# make sure we're linking that in if we're not already.
+ifeq ($(strip $(call TOBOOL,$(USE_PROFILE)) \
+	      $(filter $(NO_PROFILE),$(MODULE_COMPILEFLAGS))),true)
+MODULE_ALIBS += $(PROFILE_LIB)
+MODULE_LIBS := $(filter-out system/ulib/zircon,$(MODULE_LIBS)) \
+	       system/ulib/zircon
+endif
+
 MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so.abi)
 MODULE_EXTRA_OBJS += $(foreach lib,$(MODULE_FIDL_LIBS),$(call TOBUILDDIR,$(lib))/gen/obj/tables.cpp.o)
 
@@ -62,8 +74,8 @@ $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODU
 	@$(MKDIR)
 	$(call BUILDECHO,linking userlib $@)
 	$(call BUILDCMD,$(USER_LD),$(_LDFLAGS) -shared $(_SONAME_FLAGS) $(_OBJS) \
-                                   --start-group $(_LIBS) --end-group \
-                                   $(LIBGCC) -o $@)
+				   --start-group $(_LIBS) --end-group \
+				   $(LIBGCC) -o $@)
 
 EXTRA_IDFILES += $(MODULE_LIBNAME).so.id
 
