@@ -58,9 +58,6 @@ fxl::WeakPtr<SuggestionDebugImpl> SuggestionEngineImpl::debug() {
 
 void SuggestionEngineImpl::AddNextProposal(
     ProposalPublisherImpl* source, fuchsia::modular::Proposal proposal) {
-  if (!proposal.story_name) {
-    proposal.story_name = fxl::GenerateUUID();
-  }
   if (proposal.wants_rich_suggestion &&
       ComponentCanUseRichSuggestions(source->component_url())) {
     AddProposalWithRichSuggestion(source, std::move(proposal));
@@ -77,6 +74,12 @@ void SuggestionEngineImpl::ProposeNavigation(
 void SuggestionEngineImpl::AddProposalWithRichSuggestion(
     ProposalPublisherImpl* source, fuchsia::modular::Proposal proposal) {
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
+
+  if (!proposal.story_name) {
+    // Puppet master will generate a story name on execution of the
+    // proposal actions.
+    proposal.story_name = "";
+  }
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
   puppet_master_->ControlStory(proposal.story_name,
                                story_puppet_master.NewRequest());
@@ -95,6 +98,9 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
                            << "non successful status="
                            << (uint32_t)result.status
                            << " message=" << result.error_message;
+        }
+        if (proposal.story_name->empty()) {
+          proposal.story_name = result.story_id;
         }
         next_processor_.AddProposal(source_url, result.story_id,
                                     std::move(proposal));
@@ -522,6 +528,10 @@ modular::FuturePtr<> SuggestionEngineImpl::HandleSelectedInteraction(
     return PromoteNextProposal(component_url, preloaded_story_id, proposal.id);
   }
 
+  if (!proposal.story_name) {
+    // Puppet master will generate a story name.
+    proposal.story_name = "";
+  }
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
   puppet_master_->ControlStory(proposal.story_name,
                                story_puppet_master.NewRequest());
