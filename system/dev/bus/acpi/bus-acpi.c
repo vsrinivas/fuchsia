@@ -30,6 +30,7 @@
 #include "errors.h"
 #include "init.h"
 #include "iommu.h"
+#include "methods.h"
 #include "nhlt.h"
 #include "pci.h"
 #include "pciroot.h"
@@ -504,7 +505,7 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
             ctx->found_pci = (pcidev != NULL);
         }
         // Get the PCI base bus number
-        acpi_status = pci_get_bbn(object, &ctx->last_pci);
+        acpi_status = acpi_bbn_call(object, (uint8_t*)&ctx->last_pci);
         if (acpi_status != AE_OK) {
             zxlogf(ERROR, "acpi: failed to get PCI base bus number for device '%s' "
                           "(acpi_status %u)\n", (const char*)&info->Name, acpi_status);

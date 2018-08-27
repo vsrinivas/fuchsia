@@ -36,6 +36,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/init.c \
     $(LOCAL_DIR)/iommu.c \
     $(LOCAL_DIR)/nhlt.c \
+    $(LOCAL_DIR)/methods.cpp \
     $(LOCAL_DIR)/pci.c \
     $(LOCAL_DIR)/pciroot.cpp \
     $(LOCAL_DIR)/power.c \

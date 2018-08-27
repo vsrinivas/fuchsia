@@ -17,6 +17,7 @@
 
 #include "dev.h"
 #include "errors.h"
+#include "methods.h"
 #include "util.h"
 
 #define INT3403_TYPE_SENSOR    0x03
@@ -41,15 +42,13 @@ static zx_status_t acpi_thermal_get_info(acpi_thermal_device_t* dev, thermal_inf
     zx_status_t st = ZX_OK;
 
     uint64_t temp;
-    ACPI_STATUS acpi_status = acpi_evaluate_integer(dev->acpi_handle, "_PSV", &temp);
-    if (acpi_status != AE_OK) {
-        st = acpi_to_zx_status(acpi_status);
+    st = acpi_psv_call(dev->acpi_handle, &temp);
+    if (st != ZX_OK) {
         goto out;
     }
     info->passive_temp = (uint32_t)temp; // we probably won't exceed 429496456.35 C
-    acpi_status = acpi_evaluate_integer(dev->acpi_handle, "_CRT", &temp);
-    if (acpi_status != AE_OK) {
-        st = acpi_to_zx_status(acpi_status);
+    st = acpi_crt_call(dev->acpi_handle, &temp);
+    if (st != ZX_OK) {
         goto out;
     }
     info->critical_temp = (uint32_t)temp;
@@ -57,9 +56,8 @@ static zx_status_t acpi_thermal_get_info(acpi_thermal_device_t* dev, thermal_inf
     info->max_trip_count = dev->trip_point_count;
     memcpy(info->active_trip, dev->trip_points, sizeof(info->active_trip));
 
-    acpi_status = acpi_evaluate_integer(dev->acpi_handle, "_TMP", &temp);
-    if (acpi_status != AE_OK) {
-        st = acpi_to_zx_status(acpi_status);
+    st = acpi_tmp_call(dev->acpi_handle, &temp);
+    if (st != ZX_OK) {
         goto out;
     }
     info->state = 0;
@@ -80,10 +78,10 @@ static zx_status_t acpi_thermal_read(void* ctx, void* buf, size_t count, zx_off_
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
-    ACPI_STATUS acpi_status = acpi_evaluate_integer(dev->acpi_handle, "_TMP", &v);
-    if (acpi_status != AE_OK) {
-        zxlogf(ERROR, "acpi-thermal: acpi error %d in _TMP\n", acpi_status);
-        return acpi_to_zx_status(acpi_status);
+    zx_status_t status = acpi_tmp_call(dev->acpi_handle, &v);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "acpi-thermal: acpi error %d in _TMP\n", status);
+        return status;
     }
     uint32_t temp = (uint32_t)v;
     memcpy(buf, &temp, sizeof(temp));
