@@ -4,6 +4,7 @@
 
 #![deny(warnings)]
 
+pub mod ap;
 pub mod client;
 mod sink;
 
@@ -27,6 +28,8 @@ pub enum MlmeRequest {
     Deauthenticate(fidl_mlme::DeauthenticateRequest),
     Eapol(fidl_mlme::EapolRequest),
     SetKeys(fidl_mlme::SetKeysRequest),
+    StartAp(fidl_mlme::StartRequest),
+    StopAp(fidl_mlme::StopRequest),
 }
 
 pub trait Station {
