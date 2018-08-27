@@ -71,6 +71,7 @@ source_set("suggestion_engine_impl") {
 
 tests_package("suggestion_engine_unittests") {
   deps = [
+    ":suggestion_engine_impl_unittest",
     "//peridot/bin/suggestion_engine/decision_policies:rank_over_threshold_decision_policy_unittest",
     "//peridot/bin/suggestion_engine/filters:conjugate_ranked_passive_filter_unittest",
     "//peridot/bin/suggestion_engine/filters:ranked_active_filter_unittest",
@@ -150,5 +151,24 @@ source_set("debug") {
 
   public_deps = [
     "//peridot/lib/util:idle_waiter",
+  ]
+}
+
+executable("suggestion_engine_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "suggestion_engine_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":suggestion_engine_impl",
+    "//garnet/public/lib/fsl",
+    "//peridot/bin/user_runner/puppet_master:puppet_master_impl",
+    "//peridot/lib/testing:test_story_command_executor",
+    "//peridot/lib/testing:test_with_session_storage",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.internal",
+    "//third_party/googletest:gtest_main",
   ]
 }

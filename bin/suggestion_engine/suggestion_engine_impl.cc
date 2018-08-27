@@ -73,8 +73,6 @@ void SuggestionEngineImpl::ProposeNavigation(
 
 void SuggestionEngineImpl::AddProposalWithRichSuggestion(
     ProposalPublisherImpl* source, fuchsia::modular::Proposal proposal) {
-  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-
   if (!proposal.story_name) {
     // Puppet master will generate a story name on execution of the
     // proposal actions.
@@ -90,7 +88,7 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
   auto performed_actions = PerformActions(std::move(story_puppet_master),
                                           std::move(proposal.on_selected));
   performed_actions->Then(fxl::MakeCopyable(
-      [this, performed_actions, activity, source_url = source->component_url(),
+      [this, performed_actions, source_url = source->component_url(),
        proposal = std::move(proposal)](
           fuchsia::modular::ExecuteResult result) mutable {
         if (result.status != fuchsia::modular::ExecuteStatus::OK) {
@@ -127,7 +125,6 @@ void SuggestionEngineImpl::PromoteNextProposal(const std::string& component_url,
                                                const std::string& proposal_id) {
   FXL_DCHECK(!story_name.empty()) << "SuggestionEngineImpl#PromoteNextProposal "
                                   << "story_name shouldn't be empty";
-  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
 
   fuchsia::modular::SetKindOfProtoStoryOption set_kind_of_proto_story_option;
   set_kind_of_proto_story_option.value = false;
@@ -141,7 +138,7 @@ void SuggestionEngineImpl::PromoteNextProposal(const std::string& component_url,
   puppet_master_->ControlStory(story_name, story_puppet_master.NewRequest());
   story_puppet_master->Enqueue(std::move(commands));
   story_puppet_master->Execute(fxl::MakeCopyable(
-      [this, activity, sp = std::move(story_puppet_master), component_url,
+      [this, sp = std::move(story_puppet_master), component_url,
        proposal_id](fuchsia::modular::ExecuteResult result) {
         if (result.status != fuchsia::modular::ExecuteStatus::OK) {
           FXL_LOG(WARNING) << "Promoting proposal " << proposal_id
@@ -253,7 +250,12 @@ void SuggestionEngineImpl::NotifyInteraction(
     case fuchsia::modular::InteractionType::EXPIRED:
     case fuchsia::modular::InteractionType::SNOOZED: {
       // No need to remove since it was either expired by a timeout in
-      // user shell or snoozed by the user.
+      // user shell or snoozed by the user, however we should still refresh the
+      // next processor (if not in ask) given that `interrupting=false` set
+      // above.
+      if (!suggestion_in_ask) {
+        next_processor_.UpdateRanking();
+      }
       break;
     }
   }
@@ -527,12 +529,11 @@ void SuggestionEngineImpl::HandleSelectedInteraction(
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
   puppet_master_->ControlStory(proposal.story_name,
                                story_puppet_master.NewRequest());
-  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
   auto done = PerformActions(std::move(story_puppet_master),
                              std::move(proposal.on_selected));
   done->Then(fxl::MakeCopyable(
       [this, listener = std::move(proposal.listener), proposal_id = proposal.id,
-       suggestion_in_ask, activity, component_url,
+       suggestion_in_ask, component_url,
        done](fuchsia::modular::ExecuteResult result) mutable {
         // TODO(miguelfrde): check status.
         if (listener) {

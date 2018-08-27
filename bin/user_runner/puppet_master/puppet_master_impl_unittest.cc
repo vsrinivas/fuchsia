@@ -7,40 +7,11 @@
 #include <fuchsia/modular/cpp/fidl.h>
 
 #include "gtest/gtest.h"
-#include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
+#include "peridot/lib/testing/test_story_command_executor.h"
 #include "peridot/lib/testing/test_with_session_storage.h"
 
 namespace modular {
 namespace {
-
-class TestStoryCommandExecutor : public StoryCommandExecutor {
- public:
-  void SetExecuteReturnResult(fuchsia::modular::ExecuteStatus status,
-                              fidl::StringPtr error_message) {
-    result_.status = status;
-    result_.error_message = error_message;
-  }
-
-  int execute_count{0};
-  fidl::StringPtr last_story_id;
-  std::vector<fuchsia::modular::StoryCommand> last_commands;
-
- private:
-  // |StoryCommandExecutor|
-  void ExecuteCommandsInternal(
-      fidl::StringPtr story_id,
-      std::vector<fuchsia::modular::StoryCommand> commands,
-      std::function<void(fuchsia::modular::ExecuteResult)> done) override {
-    ++execute_count;
-    last_story_id = story_id;
-    last_commands = std::move(commands);
-    fuchsia::modular::ExecuteResult result;
-    fidl::Clone(result_, &result);
-    done(std::move(result));
-  }
-
-  fuchsia::modular::ExecuteResult result_;
-};
 
 fuchsia::modular::StoryCommand MakeRemoveModCommand(std::string mod_name) {
   fuchsia::modular::StoryCommand command;
@@ -67,7 +38,7 @@ class PuppetMasterTest : public testing::TestWithSessionStorage {
   }
 
  protected:
-  TestStoryCommandExecutor executor_;
+  testing::TestStoryCommandExecutor executor_;
   std::unique_ptr<SessionStorage> storage_;
   std::unique_ptr<PuppetMasterImpl> impl_;
   fuchsia::modular::PuppetMasterPtr ptr_;
@@ -88,7 +59,7 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
 
   // Commands are not run until Execute() is called.
   RunLoopUntilIdle();
-  EXPECT_EQ(0, executor_.execute_count);
+  EXPECT_EQ(0, executor_.execute_count());
 
   fuchsia::modular::ExecuteResult result;
   bool done{false};
@@ -100,17 +71,20 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
     done = true;
   });
   RunLoopUntil([&]() { return done; });
-  EXPECT_EQ(1, executor_.execute_count);
+  EXPECT_EQ(1, executor_.execute_count());
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
 
   // Executor gets the internal story id. It is auto-generated, so we simply see
   // that we got one.
-  EXPECT_TRUE(executor_.last_story_id && executor_.last_story_id->size() > 0);
-  ASSERT_EQ(3u, executor_.last_commands.size());
-  EXPECT_EQ("one", executor_.last_commands.at(0).remove_mod().mod_name->at(0));
-  EXPECT_EQ("two", executor_.last_commands.at(1).remove_mod().mod_name->at(0));
+  EXPECT_TRUE(executor_.last_story_id() &&
+              executor_.last_story_id()->size() > 0);
+  ASSERT_EQ(3u, executor_.last_commands().size());
+  EXPECT_EQ("one",
+            executor_.last_commands().at(0).remove_mod().mod_name->at(0));
+  EXPECT_EQ("two",
+            executor_.last_commands().at(1).remove_mod().mod_name->at(0));
   EXPECT_EQ("three",
-            executor_.last_commands.at(2).remove_mod().mod_name->at(0));
+            executor_.last_commands().at(2).remove_mod().mod_name->at(0));
 }
 
 TEST_F(PuppetMasterTest, MultipleExecuteCalls) {
@@ -127,7 +101,7 @@ TEST_F(PuppetMasterTest, MultipleExecuteCalls) {
   bool done{false};
   story->Execute([&](fuchsia::modular::ExecuteResult r) { done = true; });
   RunLoopUntil([&]() { return done; });
-  auto story_id = executor_.last_story_id;
+  auto story_id = executor_.last_story_id();
 
   // Execute more commands.
   commands.push_back(MakeRemoveModCommand("three"));
@@ -135,7 +109,7 @@ TEST_F(PuppetMasterTest, MultipleExecuteCalls) {
   done = false;
   story->Execute([&](fuchsia::modular::ExecuteResult r) { done = true; });
   RunLoopUntil([&]() { return done; });
-  EXPECT_EQ(story_id, executor_.last_story_id);
+  EXPECT_EQ(story_id, executor_.last_story_id());
 }
 
 TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
@@ -163,10 +137,11 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
     done = true;
   });
   RunLoopUntil([&]() { return done; });
-  EXPECT_EQ(1, executor_.execute_count);
-  auto story1_id = executor_.last_story_id;
-  ASSERT_EQ(1u, executor_.last_commands.size());
-  EXPECT_EQ("one", executor_.last_commands.at(0).remove_mod().mod_name->at(0));
+  EXPECT_EQ(1, executor_.execute_count());
+  auto story1_id = executor_.last_story_id();
+  ASSERT_EQ(1u, executor_.last_commands().size());
+  EXPECT_EQ("one",
+            executor_.last_commands().at(0).remove_mod().mod_name->at(0));
 
   executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
                                    nullptr);
@@ -176,10 +151,11 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
     done = true;
   });
   RunLoopUntil([&]() { return done; });
-  EXPECT_EQ(2, executor_.execute_count);
-  auto story2_id = executor_.last_story_id;
-  ASSERT_EQ(1u, executor_.last_commands.size());
-  EXPECT_EQ("two", executor_.last_commands.at(0).remove_mod().mod_name->at(0));
+  EXPECT_EQ(2, executor_.execute_count());
+  auto story2_id = executor_.last_story_id();
+  ASSERT_EQ(1u, executor_.last_commands().size());
+  EXPECT_EQ("two",
+            executor_.last_commands().at(0).remove_mod().mod_name->at(0));
 
   // The two IDs should be different, because we gave the two stories different
   // names.
@@ -212,10 +188,11 @@ TEST_F(PuppetMasterTest, ControlExistingStory) {
     done = true;
   });
   RunLoopUntil([&]() { return done; });
-  EXPECT_EQ(1, executor_.execute_count);
-  auto story_id = executor_.last_story_id;
-  ASSERT_EQ(1u, executor_.last_commands.size());
-  EXPECT_EQ("one", executor_.last_commands.at(0).remove_mod().mod_name->at(0));
+  EXPECT_EQ(1, executor_.execute_count());
+  auto story_id = executor_.last_story_id();
+  ASSERT_EQ(1u, executor_.last_commands().size());
+  EXPECT_EQ("one",
+            executor_.last_commands().at(0).remove_mod().mod_name->at(0));
 
   executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
                                    nullptr);
@@ -225,10 +202,11 @@ TEST_F(PuppetMasterTest, ControlExistingStory) {
     done = true;
   });
   RunLoopUntil([&]() { return done; });
-  EXPECT_EQ(2, executor_.execute_count);
-  EXPECT_EQ(story_id, executor_.last_story_id);
-  ASSERT_EQ(1u, executor_.last_commands.size());
-  EXPECT_EQ("two", executor_.last_commands.at(0).remove_mod().mod_name->at(0));
+  EXPECT_EQ(2, executor_.execute_count());
+  EXPECT_EQ(story_id, executor_.last_story_id());
+  ASSERT_EQ(1u, executor_.last_commands().size());
+  EXPECT_EQ("two",
+            executor_.last_commands().at(0).remove_mod().mod_name->at(0));
 }
 
 TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
@@ -260,7 +238,7 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
     done = true;
   });
   RunLoopUntil([&] { return done; });
-  auto story_id = executor_.last_story_id;
+  auto story_id = executor_.last_story_id();
 
   // Options should have been set.
   done = false;
@@ -288,7 +266,7 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
   });
   RunLoopUntil([&] { return done; });
 
-  EXPECT_EQ(story_id, executor_.last_story_id);
+  EXPECT_EQ(story_id, executor_.last_story_id());
 
   // Options should have changed.
   done = false;

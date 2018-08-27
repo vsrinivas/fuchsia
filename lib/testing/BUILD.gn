@@ -111,6 +111,21 @@ source_set("story_provider_mock") {
   ]
 }
 
+source_set("test_story_command_executor") {
+  testonly = true
+
+  sources = [
+    "test_story_command_executor.cc",
+    "test_story_command_executor.h",
+  ]
+
+  deps = [
+    "//peridot/bin/user_runner/puppet_master:story_command_executor",
+    "//peridot/lib/fidl:clone",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
 source_set("test_with_ledger") {
   testonly = true
 

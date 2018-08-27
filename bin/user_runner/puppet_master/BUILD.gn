@@ -49,6 +49,7 @@ executable("puppet_master_impl_unittest") {
   deps = [
     ":puppet_master_impl",
     ":story_command_executor",
+    "//peridot/lib/testing:test_story_command_executor",
     "//peridot/lib/testing:test_with_session_storage",
     "//peridot/public/fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
