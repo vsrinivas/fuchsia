@@ -14,17 +14,25 @@ use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use wlan_sme::{client as client_sme, DeviceInfo};
 use wlan_sme::client::{BssInfo, ConnectResult, DiscoveryError, DiscoveryResult, EssInfo};
+use fuchsia_zircon as zx;
 
 use crate::fidl_util::is_peer_closed;
 use crate::future_util::ConcurrentTasks;
 use crate::Never;
 use crate::stats_scheduler::StatsRequest;
+use crate::telemetry;
+use crate::telemetry::CobaltSender;
 
 struct Tokens;
 
+struct ConnectToken {
+    handle: Option<fidl_sme::ConnectTransactionControlHandle>,
+    time_started: zx::Time,
+}
+
 impl client_sme::Tokens for Tokens {
     type ScanToken = fidl_sme::ScanTransactionControlHandle;
-    type ConnectToken = Option<fidl_sme::ConnectTransactionControlHandle>;
+    type ConnectToken = ConnectToken;
 }
 
 pub type Endpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
@@ -34,7 +42,8 @@ pub async fn serve<S>(proxy: MlmeProxy,
                       device_info: DeviceInfo,
                       event_stream: MlmeEventStream,
                       new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-                      stats_requests: S)
+                      stats_requests: S,
+                      cobalt_sender: CobaltSender)
     -> Result<(), failure::Error>
     where S: Stream<Item = StatsRequest> + Unpin
 {
@@ -42,7 +51,7 @@ pub async fn serve<S>(proxy: MlmeProxy,
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
         proxy, event_stream, Arc::clone(&sme), mlme_stream, stats_requests);
-    let sme_fidl = serve_fidl(sme, new_fidl_clients, user_stream);
+    let sme_fidl = serve_fidl(sme, new_fidl_clients, user_stream, cobalt_sender);
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);
     Ok(select! {
@@ -53,7 +62,8 @@ pub async fn serve<S>(proxy: MlmeProxy,
 
 async fn serve_fidl(sme: Arc<Mutex<Sme>>,
                     mut new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-                    mut user_stream: client_sme::UserStream<Tokens>)
+                    mut user_stream: client_sme::UserStream<Tokens>,
+                    mut cobalt_sender: CobaltSender)
     -> Result<Never, failure::Error>
 {
     let mut fidl_clients = ConcurrentTasks::new();
@@ -62,7 +72,7 @@ async fn serve_fidl(sme: Arc<Mutex<Sme>>,
         let mut new_fidl_client = new_fidl_clients.next();
         select! {
             user_event => match user_event {
-                Some(e) => handle_user_event(e),
+                Some(e) => handle_user_event(e, &mut cobalt_sender),
                 None => bail!("SME->FIDL future unexpectedly finished"),
             },
             fidl_clients => fidl_clients.into_any(),
@@ -134,7 +144,11 @@ fn connect(sme: &Arc<Mutex<Sme>>, ssid: Vec<u8>, password: Vec<u8>,
         None => None,
         Some(txn) => Some(txn.into_stream()?.control_handle())
     };
-    sme.lock().unwrap().on_connect_command(ssid, password, handle);
+    let token = ConnectToken {
+        handle,
+        time_started: zx::Time::get(zx::ClockId::Monotonic),
+    };
+    sme.lock().unwrap().on_connect_command(ssid, password, token);
     Ok(())
 }
 
@@ -152,12 +166,16 @@ fn status(sme: &Arc<Mutex<Sme>>) -> fidl_sme::ClientStatusResponse {
     }
 }
 
-fn handle_user_event(e: client_sme::UserEvent<Tokens>) {
+fn handle_user_event(e: client_sme::UserEvent<Tokens>,
+                     cobalt_sender: &mut CobaltSender,
+) {
     match e {
         client_sme::UserEvent::ScanFinished{ tokens, result } =>
             send_all_scan_results(tokens, result),
         client_sme::UserEvent::ConnectFinished { token, result } => {
-            send_connect_result(token, result).unwrap_or_else(|e| {
+            let (time, result_index) = get_connection_time_observation(token.time_started, &result);
+            telemetry::report_connection_time(cobalt_sender, time, result_index);
+            send_connect_result(token.handle, result).unwrap_or_else(|e| {
                 if !is_peer_closed(&e) {
                     error!("Error sending connect result to user: {}", e);
                 }
@@ -233,4 +251,15 @@ fn send_connect_result(token: Option<fidl_sme::ConnectTransactionControlHandle>,
         token.send_on_finished(code)?;
     }
     Ok(())
+}
+
+fn get_connection_time_observation(time_started: zx::Time, result: &client_sme::ConnectResult
+) -> (i64, u32) {
+    let time_now = zx::Time::get(zx::ClockId::Monotonic);
+    let connection_time_micros = (time_now - time_started).nanos() / 1000;
+    let result_index = match result {
+        client_sme::ConnectResult::Success => 0,
+        _ => 1,
+    };
+    (connection_time_micros, result_index)
 }

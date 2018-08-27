@@ -61,13 +61,13 @@ fn main() -> Result<(), Error> {
 
     let phy_server = device::serve_phys(phys.clone())
         .map_ok(|x| x.into_any());
-    let iface_server = device::serve_ifaces(ifaces.clone())
+    let (cobalt_sender, telemetry_server) = telemetry::serve(ifaces.clone());
+    let iface_server = device::serve_ifaces(ifaces.clone(), cobalt_sender)
         .map_ok(|x| x.into_any());
-    let telemetry_server = telemetry::report_telemetry_periodically(ifaces.clone()).map(Ok);
     let services_server = serve_fidl(phys, ifaces, phy_events, iface_events)?
         .map_ok(Never::into_any);
 
-    exec.run_singlethreaded(services_server.try_join4(phy_server, iface_server, telemetry_server))
+    exec.run_singlethreaded(services_server.try_join4(phy_server, iface_server, telemetry_server.map(Ok)))
         .map(|((), (), (), ())| ())
 }
 

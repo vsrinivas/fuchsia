@@ -24,6 +24,7 @@ use crate::future_util::ConcurrentTasks;
 use crate::Never;
 use crate::station;
 use crate::stats_scheduler::{self, StatsScheduler};
+use crate::telemetry::CobaltSender;
 use crate::watchable_map::WatchableMap;
 
 pub struct PhyDevice {
@@ -83,7 +84,7 @@ async fn serve_phy(phys: &PhyMap, new_phy: device_watch::NewPhyDevice) {
     info!("phy removed: #{}", id);
 }
 
-pub async fn serve_ifaces(ifaces: Arc<IfaceMap>) -> Result<Never, Error> {
+pub async fn serve_ifaces(ifaces: Arc<IfaceMap>, cobalt_sender: CobaltSender) -> Result<Never, Error> {
     let mut new_ifaces = device_watch::watch_iface_devices()?;
     let mut active_ifaces = ConcurrentTasks::new();
     loop {
@@ -93,7 +94,7 @@ pub async fn serve_ifaces(ifaces: Arc<IfaceMap>) -> Result<Never, Error> {
                 None => bail!("new iface stream unexpectedly finished"),
                 Some(Err(e)) => bail!("new iface stream returned an error: {}", e),
                 Some(Ok(new_iface)) => {
-                    let fut = query_and_serve_iface(new_iface, &ifaces);
+                    let fut = query_and_serve_iface(new_iface, &ifaces, cobalt_sender.clone());
                     active_ifaces.add(fut);
                 }
             },
@@ -102,7 +103,7 @@ pub async fn serve_ifaces(ifaces: Arc<IfaceMap>) -> Result<Never, Error> {
     }
 }
 
-async fn query_and_serve_iface(new_iface: NewIfaceDevice, ifaces: &IfaceMap) {
+async fn query_and_serve_iface(new_iface: NewIfaceDevice, ifaces: &IfaceMap, cobalt_sender: CobaltSender) {
     let NewIfaceDevice { id, device, proxy } = new_iface;
     let mut event_stream = proxy.take_event_stream();
     let query_resp = match await!(query_iface(proxy.clone(), &mut event_stream)) {
@@ -114,7 +115,7 @@ async fn query_and_serve_iface(new_iface: NewIfaceDevice, ifaces: &IfaceMap) {
     };
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
     let role = query_resp.role;
-    let (sme, sme_fut) = match create_sme(proxy, event_stream, query_resp, stats_reqs) {
+    let (sme, sme_fut) = match create_sme(proxy, event_stream, query_resp, stats_reqs, cobalt_sender) {
         Ok(x) => x,
         Err(e) => {
             error!("Failed to create SME for new iface '{}': {}",
@@ -174,7 +175,8 @@ async fn wait_for_query_conf(event_stream: &mut MlmeEventStream)
 fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
                  event_stream: fidl_mlme::MlmeEventStream,
                  query_resp: DeviceQueryConfirm,
-                 stats_requests: S)
+                 stats_requests: S,
+                 cobalt_sender: CobaltSender)
     -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
     where S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static
 {
@@ -183,7 +185,7 @@ fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
         fidl_mlme::MacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
             let fut = station::client::serve(
-                proxy, device_info, event_stream, receiver, stats_requests);
+                proxy, device_info, event_stream, receiver, stats_requests, cobalt_sender);
             Ok((SmeServer::Client(sender), FutureObj::new(Box::new(fut))))
         },
         fidl_mlme::MacRole::Ap => {

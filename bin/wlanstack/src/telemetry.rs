@@ -4,18 +4,17 @@
 
 use failure::{format_err, Error, ResultExt};
 use fdio;
-use fidl_fuchsia_cobalt::{
-    BucketDistributionEntry, EncoderFactoryMarker, EncoderProxy, ObservationValue, ProjectProfile,
-    Status, Value,
-};
+use fidl_fuchsia_cobalt::{BucketDistributionEntry, EncoderFactoryMarker, EncoderProxy,
+                          ObservationValue, ProjectProfile, Status, Value};
 use fidl_fuchsia_mem as fuchsia_mem;
 use fidl_fuchsia_wlan_stats as fidl_stats;
 use fidl_fuchsia_wlan_stats::MlmeStats::{ApMlmeStats, ClientMlmeStats};
 use fuchsia_async as fasync;
 use fuchsia_zircon::DurationNum;
+use futures::channel::mpsc;
 use futures::prelude::*;
 use futures::stream::FuturesUnordered;
-use futures::StreamExt;
+use futures::{join, StreamExt};
 use log::{error, info, log};
 use parking_lot::Mutex;
 use std::cmp::PartialOrd;
@@ -30,18 +29,51 @@ use crate::device::{IfaceDevice, IfaceMap};
 
 type StatsRef = Arc<Mutex<fidl_stats::IfaceStats>>;
 
-const REPORT_PERIOD_MINUTES: i64 = 1;
-
 const COBALT_CONFIG_PATH: &'static str = "/pkg/data/cobalt_config.binproto";
+
+const REPORT_PERIOD_MINUTES: i64 = 1;
+const COBALT_BUFFER_SIZE: usize = 100;
 
 // These IDs must match the Cobalt config from //third_party/cobalt_config/fuchsia/wlan/config.yaml
 enum CobaltMetricId {
     DispatcherPacketCounter = 5,
     ClientAssocDataRssi = 6,
     ClientBeaconRssi = 7,
+    ConnectionTime = 8,
 }
 enum CobaltEncodingId {
     RawEncoding = 1,
+}
+
+enum CobaltValue {
+    Multipart(Vec<ObservationValue>),
+}
+
+pub struct Observation {
+    metric_id: u32,
+    value: CobaltValue,
+}
+
+#[derive(Clone)]
+pub struct CobaltSender {
+    sender: mpsc::Sender<Observation>,
+}
+
+impl CobaltSender {
+    fn add_multipart_observation(&mut self, metric_id: u32, values: Vec<ObservationValue>) {
+        let value = CobaltValue::Multipart(values);
+        let observation = Observation { metric_id, value };
+        if self.sender.try_send(observation).is_err() {
+            error!("Dropping a Cobalt observation because the buffer is full");
+        }
+    }
+}
+
+pub fn serve(ifaces_map: Arc<IfaceMap>) -> (CobaltSender, impl Future<Output = ()>) {
+    let (sender, receiver) = mpsc::channel(COBALT_BUFFER_SIZE);
+    let sender = CobaltSender { sender };
+    let fut = report_telemetry(ifaces_map.clone(), receiver);
+    (sender, fut)
 }
 
 async fn get_cobalt_encoder() -> Result<EncoderProxy, Error> {
@@ -65,8 +97,35 @@ async fn get_cobalt_encoder() -> Result<EncoderProxy, Error> {
     }
 }
 
-// Export stats to Cobalt every REPORT_PERIOD_MINUTES.
-pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>) {
+async fn report_telemetry(ifaces_map: Arc<IfaceMap>, receiver: mpsc::Receiver<Observation>) {
+    let report_periodically_fut = report_telemetry_periodically(ifaces_map.clone());
+    let report_events_fut = report_telemetry_events(receiver);
+    join!(report_periodically_fut, report_events_fut);
+}
+
+async fn report_telemetry_events(mut receiver: mpsc::Receiver<Observation>) {
+    let encoder = match await!(get_cobalt_encoder()) {
+        Ok(encoder) => encoder,
+        Err(e) => {
+            error!("Error establishing connection to Cobalt encoder: {}", e);
+            return;
+        }
+    };
+    while let Some(observation) = await!(receiver.next()) {
+        match observation.value {
+            CobaltValue::Multipart(mut values) => {
+                let resp = await!(
+                    encoder
+                        .add_multipart_observation(observation.metric_id, &mut values.iter_mut())
+                );
+                handle_cobalt_response(resp, observation.metric_id);
+            }
+        }
+    }
+}
+
+// Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
+async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>) {
     // TODO(NET-1386): Make this module resilient to Wlanstack2 downtime.
 
     info!("Telemetry started");
@@ -212,9 +271,11 @@ async fn report_mlme_stats(
     let current = &current_stats_guard.mlme_stats;
     if let (Some(ref last), Some(ref current)) = (last, current) {
         match (last.as_ref(), current.as_ref()) {
-            (ClientMlmeStats(last), ClientMlmeStats(current)) => await!(
-                report_client_mlme_stats(&last, &current, encoder_proxy.clone())
-            ),
+            (ClientMlmeStats(last), ClientMlmeStats(current)) => await!(report_client_mlme_stats(
+                &last,
+                &current,
+                encoder_proxy.clone()
+            )),
             (ApMlmeStats(_), ApMlmeStats(_)) => {}
             _ => error!("Current MLME stats type is different from the last MLME stats type"),
         };
@@ -287,6 +348,21 @@ async fn report_int_bucket_distribution(
         ));
         handle_cobalt_response(resp, rssi_metric_id);
     }
+}
+
+pub fn report_connection_time(cobalt_sender: &mut CobaltSender, time: i64, result_index: u32) {
+    let result_value = ObservationValue {
+        name: String::from("connection_result_index"),
+        value: Value::IndexValue(result_index),
+        encoding_id: CobaltEncodingId::RawEncoding as u32,
+    };
+    let time_value = ObservationValue {
+        name: String::from("connection_time"),
+        value: Value::IntValue(time),
+        encoding_id: CobaltEncodingId::RawEncoding as u32,
+    };
+    let values = vec![result_value, time_value];
+    cobalt_sender.add_multipart_observation(CobaltMetricId::ConnectionTime as u32, values);
 }
 
 fn handle_cobalt_response(resp: Result<Status, fidl::Error>, metric_id: u32) {
