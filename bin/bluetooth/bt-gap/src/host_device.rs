@@ -13,11 +13,9 @@ use fidl_fuchsia_bluetooth_control::PairingDelegateMarker;
 use fidl_fuchsia_bluetooth_control::{InputCapabilityType, OutputCapabilityType};
 use fidl_fuchsia_bluetooth_gatt::ClientProxy;
 use fidl_fuchsia_bluetooth_host::{BondingData, HostEvent, HostProxy};
-use fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy};
-use fuchsia_async as fasync;
+use fidl_fuchsia_bluetooth_le::CentralProxy;
 use fuchsia_bluetooth::bt_fidl_status;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
-use fuchsia_zircon as zx;
 use futures::{Future, StreamExt};
 use parking_lot::RwLock;
 use std::collections::HashMap;
@@ -31,6 +29,12 @@ pub struct HostDevice {
     gatt: HashMap<String, (CentralProxy, ClientProxy)>,
 }
 
+
+// Many HostDevice methods return impl Future rather than being implemented as `async`. This has an
+// important behavioral difference in that the function body is triggered immediately when called.
+//
+// If they were instead declared async, the function body would not be executed until the first time
+// the future was polled.
 impl HostDevice {
     pub fn new(path: PathBuf, host: HostProxy, info: AdapterInfo) -> Self {
         HostDevice {
@@ -58,11 +62,6 @@ impl HostDevice {
         &self.info
     }
 
-    pub fn store_gatt(&mut self, id: String, central: CentralProxy, client: ClientProxy) {
-        // TODO(NET-1092): Use Host.Connect instead
-        self.gatt.insert(id, (central, client));
-    }
-
     pub fn rm_gatt(&mut self, id: String) -> impl Future<Output = fidl::Result<Status>> {
         let gatt_entry = self.gatt.remove(&id);
         async move {
@@ -82,14 +81,8 @@ impl HostDevice {
         self.host.start_discovery()
     }
 
-    pub fn connect_le_central(&mut self) -> Result<CentralProxy, fidl::Error> {
-        // TODO map_err
-        let (service_local, service_remote) = zx::Channel::create().unwrap();
-        let service_local = fasync::Channel::from_channel(service_local).unwrap();
-        let server = fidl::endpoints::ServerEnd::<CentralMarker>::new(service_remote);
-        self.host.request_low_energy_central(server)?;
-        let proxy = CentralProxy::new(service_local);
-        Ok(proxy)
+    pub fn connect(&mut self, device_id: String) -> impl Future<Output = Result<Status, fidl::Error>> {
+        self.host.connect(&device_id)
     }
 
     pub fn close(&self) -> Result<(), fidl::Error> {

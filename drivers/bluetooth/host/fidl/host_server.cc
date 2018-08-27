@@ -26,6 +26,7 @@
 namespace bthost {
 
 using btlib::sm::IOCapability;
+using fidl_helpers::NewFidlError;
 using fuchsia::bluetooth::Bool;
 using fuchsia::bluetooth::ErrorCode;
 using fuchsia::bluetooth::Status;
@@ -66,7 +67,7 @@ HostServer::HostServer(zx::channel channel,
       });
   adapter->set_auto_connect_callback([self](auto conn_ref) {
     if (self) {
-      self->OnAutoConnect(std::move(conn_ref));
+      self->OnConnect(std::move(conn_ref), true);
     }
   });
 }
@@ -297,22 +298,23 @@ void HostServer::OnRemoteDeviceBonded(
       fidl_helpers::NewBondingData(*adapter(), remote_device));
 }
 
-void HostServer::OnAutoConnect(btlib::gap::LowEnergyConnectionRefPtr conn_ref) {
+void HostServer::OnConnect(btlib::gap::LowEnergyConnectionRefPtr conn_ref,
+                           bool auto_connect) {
   ZX_DEBUG_ASSERT(conn_ref);
 
   const auto& id = conn_ref->device_identifier();
   auto iter = le_connections_.find(id);
   if (iter != le_connections_.end()) {
-    bt_log(WARN, "bt-host",
-           "auto-connected device already connected; reference dropped");
+    bt_log(WARN, "bt-host", "%s device already connected; reference dropped",
+           (auto_connect ? "auto-connected" : "manually-connected"));
     return;
   }
 
-  bt_log(TRACE, "bt-host", "LE device auto-connected: %s", id.c_str());
+  bt_log(TRACE, "bt-host", "LE device %s: %s ",
+         (auto_connect ? "auto-connected" : "manually_connected"), id.c_str());
   conn_ref->set_closed_callback([self = weak_ptr_factory_.GetWeakPtr(), id] {
-    if (self) {
+    if (self)
       self->le_connections_.erase(id);
-    }
   });
   le_connections_[id] = std::move(conn_ref);
 }
@@ -416,6 +418,51 @@ void HostServer::SetPairingDelegate(
   });
 }
 
+void HostServer::Connect(::fidl::StringPtr device_id,
+                         ConnectCallback callback) {
+  auto device = adapter()->remote_device_cache()->FindDeviceById(device_id);
+  if (!device) {
+    // We don't support connections to devices not in our cache
+    callback(NewFidlError(ErrorCode::NOT_FOUND,
+                          "Cannot find device with the given ID"));
+    return;
+  }
+
+  if (!device->le()) {
+    // TODO(NET-411): implement BR/EDR connect
+    // TODO(NET-411): If a dual-mode device, we attempt to connect both
+    // protocols, and if either fails, close the other and return failure
+    callback(
+        NewFidlError(ErrorCode::NOT_SUPPORTED,
+                     "Device does not support LowEnergy connections, and "
+                     "outgoing Classic connections are not yet supported"));
+    return;
+  }
+
+  // TODO(NET-411): Once dual-mode is supported, this logic will vary depending
+  // on whether we are initiating a BR/EDR connection as well. We may want to
+  // refactor this into a separate ConnectLowEnergy method.
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto on_complete = [self, callback = std::move(callback),
+                      peer_id = device_id.get()](auto status, auto conn_ref) {
+    if (!status) {
+      ZX_DEBUG_ASSERT(!conn_ref);
+      bt_log(TRACE, "bt-host", "failed to connect to connect to device (id %s)",
+             peer_id.c_str());
+      callback(fidl_helpers::StatusToFidl(status, "failed to connect"));
+    } else {
+      ZX_DEBUG_ASSERT(conn_ref);
+      ZX_DEBUG_ASSERT(peer_id == conn_ref->device_identifier());
+      callback(Status());
+    }
+    if (self) {
+      self->OnConnect(std::move(conn_ref), false);
+    }
+  };
+  adapter()->le_connection_manager()->Connect(device_id.get(),
+                                              std::move(on_complete));
+}
+
 void HostServer::RequestLowEnergyCentral(
     fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> request) {
   BindServer<LowEnergyCentralServer>(std::move(request), gatt_host_);
@@ -475,7 +522,6 @@ void HostServer::Close() {
   }
 
   // Drop all connections that are attached to this HostServer.
-  // TODO(NET-1092): Clean up direct connections here as well.
   le_connections_.clear();
 
   // Stop background scan if enabled.
@@ -504,7 +550,8 @@ void HostServer::CompletePairing(std::string id, btlib::sm::Status status) {
   bt_log(INFO, "bt-host", "pairing complete for device: %s, status: %s",
          id.c_str(), status.ToString().c_str());
   ZX_DEBUG_ASSERT(pairing_delegate_);
-  pairing_delegate_->OnPairingComplete(std::move(id), fidl_helpers::StatusToFidl(status));
+  pairing_delegate_->OnPairingComplete(std::move(id),
+                                       fidl_helpers::StatusToFidl(status));
 }
 
 void HostServer::ConfirmPairing(std::string id, ConfirmCallback confirm) {
@@ -557,7 +604,8 @@ void HostServer::RequestPasskey(std::string id,
         } else {
           uint32_t response;
           if (!fxl::StringToNumberWithError<uint32_t>(passkey, &response)) {
-            bt_log(ERROR, "bt-host", "Unrecognized integer in string: %s", passkey.c_str());
+            bt_log(ERROR, "bt-host", "Unrecognized integer in string: %s",
+                   passkey.c_str());
             respond(-1);
           } else {
             respond(response);

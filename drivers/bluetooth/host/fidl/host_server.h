@@ -59,6 +59,7 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
       ::fuchsia::bluetooth::control::OutputCapabilityType output,
       ::fidl::InterfaceHandle<::fuchsia::bluetooth::control::PairingDelegate>
           delegate) override;
+  void Connect(::fidl::StringPtr device_id, ConnectCallback callback) override;
 
   void RequestLowEnergyCentral(
       ::fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> central)
@@ -94,10 +95,11 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
   // bonded.
   void OnRemoteDeviceBonded(const ::btlib::gap::RemoteDevice& remote_device);
 
-  // Called by |adapter()->le_discovery_manager()| when a connection is
-  // automatically established to a bonded device in the directed connectable
-  // mode.
-  void OnAutoConnect(btlib::gap::LowEnergyConnectionRefPtr conn_ref);
+  // Called when a connection is established to a remote device, either when
+  // initiated by a user via a client of Host.fidl, or automatically by the GAP
+  // adapter
+  void OnConnect(btlib::gap::LowEnergyConnectionRefPtr conn_ref,
+                 bool auto_connect);
 
   // Called when |server| receives a channel connection error.
   void OnConnectionError(Server* server);
@@ -115,7 +117,7 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
   void BindServer(Args... args) {
     auto server = std::make_unique<ServerType>(adapter()->AsWeakPtr(),
                                                std::move(args)...);
-    Server *s = server.get();
+    Server* s = server.get();
     server->set_error_handler(
         [this, s](zx_status_t status) { this->OnConnectionError(s); });
     servers_[server.get()] = std::move(server);

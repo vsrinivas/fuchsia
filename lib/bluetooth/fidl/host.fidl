@@ -84,6 +84,26 @@ interface Host {
     // Sets whether this host should be discoverable.
     SetDiscoverable(bool enabled) -> (fuchsia.bluetooth.Status status);
 
+    // Establish a BR/EDR and/or LE connection to the remote device with identifier |device_id|:
+    //
+    //   - If the device is known to support the BR/EDR transport then a logical link over that 
+    //     transport will be established to the device. If the connection attempt is successful,
+    //     local services registered using "RequestProfile()" will be available to the peer.
+    //     Traditional services discovered on the peer will be notified to local services
+    //     asynchronously.
+    //
+    //   - If the device is known to support the LE transport then a logical link over that
+    //     transport will be established to the device. If the connection attempt is successful,
+    //     GATT services in the local database (populated via RequestGattServer()) will become
+    //     available to the peer. Similarly, remote GATT services that are discovered on the
+    //     peer will become available to holders of a gatt.Client capability and to device drivers
+    //     that can bind to the bt-gatt-svc class of devices.
+    //
+    // The result of the procedure will be communicated via |status|. If the remote device
+    // supports both BR/EDR and LE transports and a link cannot be established over both, then an
+    // error Status will be returned and neither transport will be connected.
+    15: Connect(string device_id) -> (fuchsia.bluetooth.Status status);
+
     // Enable or disable a passive LE background scan. When enabled, the bt-host
     // device will continuously perform a passive LE scan in the background when
     // no device discovery sessions are active and accept connection requests from

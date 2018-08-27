@@ -23,8 +23,7 @@ use fidl_fuchsia_bluetooth_control::{
 use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
 use fidl_fuchsia_bluetooth_gatt::Server_Marker;
 use fidl_fuchsia_bluetooth_host::HostProxy;
-use fidl_fuchsia_bluetooth_le::{CentralProxy, CentralMarker, PeripheralMarker};
-
+use fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker};
 use fuchsia_bluetooth::{
     self as bt,
     bt_fidl_status,
@@ -367,37 +366,6 @@ impl HostDispatcher {
         }
     }
 
-    pub async fn connect_le_central(&mut self) -> fidl::Result<Option<CentralProxy>> {
-        let adapter = await!(self.on_adapters_found())?;
-        let mut adapter = adapter.state.write();
-        match adapter.get_active_host() {
-            Some(host) => host.write().connect_le_central().map(|central| Some(central)),
-            None => Ok(None),
-        }
-    }
-
-    pub async fn connect(
-        &mut self, device_id: String,
-    ) -> fidl::Result<fidl_fuchsia_bluetooth::Status> {
-        let central = await!(self.connect_le_central())?;
-        let central = match central {
-            Some(c) => c,
-            None => return Ok(bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"))
-        };
-        let (service_local, service_remote) = fidl::endpoints::create_proxy().unwrap();
-        let connected = await!(central.connect_peripheral(device_id.as_str(), service_remote));
-        // TODO(NET-1092): We want this as a host.fidl API
-        match await!(self.get_active_adapter())? {
-            Some(adapter) => {
-                adapter
-                    .write()
-                    .store_gatt(device_id, central, service_local);
-                connected
-            }
-            None => Ok(bt_fidl_status!(BluetoothNotAvailable, "Adapter went away")),
-        }
-    }
-
     pub async fn forget(
         &mut self, _device_id: String
     ) -> fidl::Result<fidl_fuchsia_bluetooth::Status> {
@@ -566,6 +534,16 @@ impl HostDispatcher {
         }
 
         Ok(())
+    }
+
+    pub async fn connect(
+        &mut self, device_id: String,
+    ) -> fidl::Result<fidl_fuchsia_bluetooth::Status> {
+        let adapter = await!(self.get_active_adapter())?;
+        match adapter {
+            Some(adapter) => await!(adapter.write().connect(device_id)),
+            None => Ok(bt_fidl_status!(BluetoothNotAvailable, "Adapter went away")),
+        }
     }
 }
 
