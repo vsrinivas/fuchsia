@@ -195,19 +195,26 @@ Err DoFinish(ConsoleContext* context, const Command& cmd) {
 
 // locals ----------------------------------------------------------------------
 
-const char kLocalsShortHelp[] = "locals: Print local variables.";
+const char kLocalsShortHelp[] =
+    "locals: Print local variables and function args.";
 const char kLocalsHelp[] =
     R"(locals
 
-  Prints all local variables. By default it will print the variables for
-  the default stack frame.
+  Prints all local variables and the current function's arguments. By default
+  it will print the variables for the curretly selected stack frame.
+
+  You can override the stack frame with the "frame" noun to get the locals
+  for any specific stack frame of thread.
 
 Examples
 
   locals
+      Prints locals and args for the current stack frame.
 
+  f 4 locals
   frame 4 locals
-    Prints locals for a specific stack frame.
+  thread 2 frame 3 locals
+      Prints locals for a specific stack frame.
 )";
 Err DoLocals(ConsoleContext* context, const Command& cmd) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
@@ -246,6 +253,17 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     if (block == function)
       break;
     block = block->parent().Get()->AsCodeBlock();
+  }
+
+  // Add function parameters. Don't overwrite existing names in case of
+  // duplicates to duplicate the shadowing rules of the language.
+  for (const auto& param : function->parameters()) {
+    const Variable* var = param.Get()->AsVariable();
+    if (!var)
+      continue;  // Symbols are corrupt.
+    const std::string& name = var->GetAssignedName();
+    if (vars.find(name) == vars.end())
+      vars[name] = var;  // New one.
   }
 
   if (vars.empty()) {
