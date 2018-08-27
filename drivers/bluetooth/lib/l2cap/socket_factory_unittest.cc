@@ -19,7 +19,7 @@ namespace {
 class L2CAP_SocketFactoryTest : public ::testing::Test {
  public:
   L2CAP_SocketFactoryTest() : loop_(&kAsyncLoopConfigAttachToThread) {
-    EXPECT_EQ(loop_.GetState(), ASYNC_LOOP_RUNNABLE);
+    EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop_.GetState());
     channel_ = fbl::MakeRefCounted<testing::FakeChannel>(
         kDynamicChannelIdMin, kRemoteChannelId, kDefaultConnectionHandle,
         hci::Connection::LinkType::kACL);

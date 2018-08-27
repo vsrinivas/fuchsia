@@ -21,7 +21,7 @@ namespace {
 class L2CAP_SocketChannelRelayTest : public ::testing::Test {
  public:
   L2CAP_SocketChannelRelayTest() : loop_(&kAsyncLoopConfigAttachToThread) {
-    EXPECT_EQ(loop_.GetState(), ASYNC_LOOP_RUNNABLE);
+    EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop_.GetState());
 
     constexpr ChannelId kDynamicChannelIdMin = 0x0040;
     constexpr ChannelId kRemoteChannelId = 0x0050;
@@ -34,7 +34,7 @@ class L2CAP_SocketChannelRelayTest : public ::testing::Test {
     const auto socket_status =
         zx::socket::create(ZX_SOCKET_DATAGRAM, &local_socket_, &remote_socket_);
     local_socket_unowned_ = zx::unowned_socket(local_socket_);
-    EXPECT_EQ(socket_status, ZX_OK);
+    EXPECT_EQ(ZX_OK, socket_status);
   }
 
   // Writes data on |local_socket| until the socket is full, or an error occurs.
@@ -453,7 +453,7 @@ TEST_F(L2CAP_SocketChannelRelayRxTest,
       hello_sdu, ReadDatagramFromSocket(hello_sdu.size())));
   EXPECT_TRUE(common::ContainersEqual(
       goodbye_sdu, ReadDatagramFromSocket(goodbye_sdu.size())));
-  EXPECT_EQ(0U, ReadDatagramFromSocket(1U).size())
+  EXPECT_EQ(0u, ReadDatagramFromSocket(1u).size())
       << "Found unexpected datagram";
 }
 
@@ -488,21 +488,21 @@ TEST_F(L2CAP_SocketChannelRelayRxTest,
 
   // Discard two datagrams from socket, to make room for our SDUs to be copied
   // over.
-  ASSERT_NE(0U, ReadDatagramFromSocket(1U).size());
-  ASSERT_NE(0U, ReadDatagramFromSocket(1U).size());
+  ASSERT_NE(0u, ReadDatagramFromSocket(1u).size());
+  ASSERT_NE(0u, ReadDatagramFromSocket(1u).size());
   channel()->Close();
 
   // Read past all of the spam from StuffSocket().
   common::DynamicByteBuffer dgram;
   do {
-    dgram = ReadDatagramFromSocket(1U);
+    dgram = ReadDatagramFromSocket(1u);
   } while (dgram.size() && dgram[0] == kSpamChar);
 
   // First non-spam message should be kExpectedMessage1, and second should be
   // kExpectedMessage2.
   EXPECT_TRUE(common::ContainersEqual(kExpectedMessage1, dgram));
   EXPECT_TRUE(
-      common::ContainersEqual(kExpectedMessage2, ReadDatagramFromSocket(1U)));
+      common::ContainersEqual(kExpectedMessage2, ReadDatagramFromSocket(1u)));
 }
 
 TEST_F(L2CAP_SocketChannelRelayRxTest,
@@ -547,8 +547,8 @@ TEST_F(L2CAP_SocketChannelRelayRxTest,
 
   size_t n_bytes_avail = std::numeric_limits<size_t>::max();
   const auto read_res = remote_socket()->read(0, nullptr, 0, &n_bytes_avail);
-  EXPECT_EQ(read_res, ZX_OK);
-  EXPECT_EQ(n_bytes_avail, 0U);
+  EXPECT_EQ(ZX_OK, read_res);
+  EXPECT_EQ(0u, n_bytes_avail);
 }
 
 // Alias for the fixture for tests which exercise the datapath to the
@@ -569,7 +569,7 @@ TEST_F(L2CAP_SocketChannelRelayTxTest, SduFromSocketIsCopiedToChannel) {
 
   const auto& sdus = sent_to_channel();
   ASSERT_FALSE(sdus.empty());
-  EXPECT_EQ(1U, sdus.size());
+  EXPECT_EQ(1u, sdus.size());
   ASSERT_TRUE(sdus[0]);
   EXPECT_EQ(kExpectedMessage.size(), sdus[0]->size());
   EXPECT_TRUE(common::ContainersEqual(kExpectedMessage, *sdus[0]));
