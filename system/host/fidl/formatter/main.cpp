@@ -21,7 +21,7 @@ namespace {
 
 void Usage(const std::string& argv0) {
     std::cout
-        << "usage: " << argv0 << "<options> <files>\n"
+        << "usage: " << argv0 << " <options> <files>\n"
                                  "\n"
                                  " * `-i, --in-place` Formats file in place\n"
                                  "\n"
