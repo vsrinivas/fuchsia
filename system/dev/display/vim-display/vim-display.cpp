@@ -14,6 +14,7 @@
 #include <ddk/protocol/display-controller.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <hw/arch_ops.h>
@@ -513,13 +514,19 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
+    zx_status_t status = ZX_ERR_INTERNAL;
     display->parent = parent;
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &display->pdev);
-    if (status !=  ZX_OK) {
-        DISP_ERROR("Could not get parent protocol\n");
+    // If anything goes wrong from here on out, make sure to log the status code
+    // of the error, and destroy our display object.
+    auto cleanup = fbl::MakeAutoCall([&]() {
         DISP_ERROR("bind failed! %d\n", status);
         display_release(display);
+    });
+
+    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &display->pdev);
+    if (status !=  ZX_OK) {
+        DISP_ERROR("Could not get parent protocol\n");
         return status;
     }
 
@@ -538,48 +545,36 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     status = pdev_get_device_info(&display->pdev, &dev_info);
     if (status != ZX_OK) {
         DISP_ERROR("Failed to fetch device info (status %d)\n", status);
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
     if (dev_info.mmio_count != MMIO_COUNT) {
         DISP_ERROR("MMIO region count mismatch!  Expected %u regions to be supplied by board "
                    "driver, but only %u were passed\n", MMIO_COUNT, dev_info.mmio_count);
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
     if (dev_info.bti_count != BTI_COUNT) {
         DISP_ERROR("BTI count mismatch!  Expected %u BTIs to be supplied by board "
                    "driver, but only %u were passed\n", BTI_COUNT, dev_info.bti_count);
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
     status = pdev_get_bti(&display->pdev, 0, &display->bti);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get BTI handle\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
     status = device_get_protocol(parent, ZX_PROTOCOL_GPIO, &display->gpio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get Display GPIO protocol\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
     status = device_get_protocol(parent, ZX_PROTOCOL_AMLOGIC_CANVAS, &display->canvas);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get Display CANVAS protocol\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
@@ -588,8 +583,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         &display->mmio_preset);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO PRESET\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
@@ -597,8 +590,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         &display->mmio_hdmitx);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO HDMITX\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
@@ -606,8 +597,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         &display->mmio_hiu);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO HIU\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
@@ -615,8 +604,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         &display->mmio_vpu);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO VPU\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
@@ -624,8 +611,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         &display->mmio_hdmitx_sec);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO HDMITX SEC\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
@@ -633,40 +618,30 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         &display->mmio_cbus);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO CBUS\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
     status = gpio_config(&display->gpio, 0, GPIO_DIR_IN | GPIO_PULL_DOWN);
     if (status != ZX_OK) {
         DISP_ERROR("gpio_config failed for gpio\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
     status = gpio_get_interrupt(&display->gpio, 0, ZX_INTERRUPT_MODE_LEVEL_HIGH, &display->inth);
     if (status != ZX_OK) {
         DISP_ERROR("gpio_get_interrupt failed for gpio\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
     status = pdev_map_interrupt(&display->pdev, 0, &display->vsync_interrupt);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map vsync interrupt\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
     status = vim2_audio_create(&display->pdev, &display->audio);
     if (status != ZX_OK) {
         DISP_ERROR("Failed to create DAI controller (status %d)\n", status);
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
@@ -679,8 +654,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     display->edid_buf = new(&ac) uint8_t[EDID_BUF_SIZE]();
     if (!ac.check()) {
         DISP_ERROR("Could not allocated EDID BUf of size %d\n", EDID_BUF_SIZE);
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
@@ -708,8 +681,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     status = device_add(display->parent, &add_args, &display->mydevice);
     if (status != ZX_OK) {
         DISP_ERROR("Could not add device\n");
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
         return status;
     }
 
@@ -722,6 +693,8 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     thrd_create_with_name(&display->main_thread, hdmi_irq_handler, display, "hdmi_irq_handler");
     thrd_create_with_name(&display->vsync_thread, vsync_thread, display, "vsync_thread");
 
+    // Things went well!  Cancel our cleanup auto call
+    cleanup.cancel();
     return ZX_OK;
 }
 
