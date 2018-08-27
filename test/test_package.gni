@@ -126,7 +126,6 @@ template("test_package") {
                              "data_deps",
                              "deps",
                              "extra",
-                             "meta",
                              "public_deps",
                              "resources",
                            ])
