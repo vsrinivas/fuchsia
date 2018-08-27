@@ -81,8 +81,8 @@ typedef struct sdhci_adma64_desc {
 
 static_assert(sizeof(sdhci_adma64_desc_t) == 8, "unexpected ADMA2 descriptor size");
 
-// 64k max per descriptor
-#define ADMA2_DESC_MAX_LENGTH   0x10000 // 64k
+// 64k - 1 is max per descriptor, we operate on pages so we use 64K - PAGE_SIZE
+#define ADMA2_DESC_MAX_LENGTH   (0x10000 - PAGE_SIZE)
 // for 2M max transfer size for fully discontiguous
 // also see SDMMC_PAGES_COUNT in ddk/protocol/sdmmc.h
 #define DMA_DESC_COUNT          512
