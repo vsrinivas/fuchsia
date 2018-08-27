@@ -60,7 +60,7 @@ template("json_merge") {
       "--output",
       rebase_path(merged_output, root_build_dir),
     ]
-    if (minify) {
+    if (defined(minify) && minify) {
       args += [ "--minify" ]
     }
   }

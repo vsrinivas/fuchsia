@@ -34,7 +34,7 @@ static void usage(const char* exe_name) {
 }
 
 int main(int argc, char** argv) {
-  std::vector<input_file_t> inputs;
+  std::vector<input_file> inputs;
   std::ofstream output_file;
   auto output_buf = std::cout.rdbuf();
   bool minify = false;
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
       case 'i': {
         auto input = std::make_unique<std::ifstream>(optarg);
         if (!input->is_open()) {
-          printf(stderr, "Could not read from input file %s\n", optarg);
+          fprintf(stderr, "Could not read from input file %s\n", optarg);
           return 1;
         }
         inputs.push_back({.name = optarg, .contents = std::move(input)});
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
       case 'o':
         output_file.open(optarg);
         if (!output_file.is_open()) {
-          printf(stderr, "Could not write to output file %s\n", optarg);
+          fprintf(stderr, "Could not write to output file %s\n", optarg);
           return 1;
         }
         output_buf = output_file.rdbuf();
