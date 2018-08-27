@@ -646,7 +646,6 @@ static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
     }
 
     switch (op) {
-    case ZXSIO_GETADDRINFO:
     case ZXSIO_GETSOCKNAME:
     case ZXSIO_GETPEERNAME:
     case ZXSIO_GETSOCKOPT:
@@ -654,7 +653,6 @@ static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
     case ZXSIO_CONNECT:
     case ZXSIO_BIND:
     case ZXSIO_LISTEN:
-    case ZXSIO_FCNTL:
         break;
     default:
         return ZX_ERR_NOT_SUPPORTED;
