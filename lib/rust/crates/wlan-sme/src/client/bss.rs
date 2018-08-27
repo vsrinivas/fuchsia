@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_mlme::BssDescription;
-use Ssid;
-use client::rsn::is_rsn_compatible;
+use fidl_fuchsia_wlan_mlme::BssDescription;
 use std::cmp::Ordering;
 use wlan_rsn::rsne;
+
+use crate::Ssid;
+use super::rsn::is_rsn_compatible;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BssInfo {
@@ -62,7 +63,7 @@ fn is_bss_compatible(bss: &BssDescription) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_mlme;
+    use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use std::cmp::Ordering;
 
     #[test]

@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_mlme::{self, BssDescription, ScanResultCodes, ScanRequest};
+use failure::Fail;
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, ScanResultCodes, ScanRequest};
+use log::{error, log};
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::cmp::Ordering;
 use std::mem;
 use std::sync::Arc;
-use client::{bss::*, DeviceInfo, Ssid};
+
+use crate::client::{bss::*, DeviceInfo, Ssid};
 
 // Scans can be performed for two different purposes:
 //      1) Discover available wireless networks. These scans are initiated by the "user",
@@ -362,7 +365,7 @@ mod tests {
     use super::*;
 
     use std::collections::HashSet;
-    use client::test_utils::fake_unprotected_bss_description;
+    use crate::client::test_utils::fake_unprotected_bss_description;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 

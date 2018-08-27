@@ -10,13 +10,16 @@ mod state;
 #[cfg(test)]
 mod test_utils;
 
-use fidl_mlme::{MlmeEvent, ScanRequest};
+use fidl_fuchsia_wlan_mlme::{MlmeEvent, ScanRequest};
+use futures::channel::mpsc;
+use log::{error, log};
+use std::sync::Arc;
+
+use super::{DeviceInfo, MlmeRequest, MlmeStream, Ssid};
+
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
 use self::rsn::get_rsna;
 use self::state::{ConnectCommand, State};
-use std::sync::Arc;
-use super::{DeviceInfo, MlmeRequest, MlmeStream, Ssid};
-use futures::channel::mpsc;
 
 pub use self::bss::{BssInfo, EssInfo};
 pub use self::scan::{DiscoveryError, DiscoveryResult};
@@ -231,12 +234,14 @@ impl<T: Tokens> super::Station for ClientSme<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description};
-    use super::UserEvent::ConnectFinished;
-    use fidl_mlme;
+    use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use std::collections::HashSet;
     use std::error::Error;
-    use Station;
+
+    use super::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description};
+    use super::UserEvent::ConnectFinished;
+
+    use crate::Station;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 

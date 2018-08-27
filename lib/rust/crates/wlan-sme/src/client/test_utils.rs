@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use bytes::Bytes;
-use fidl_mlme;
-use Ssid;
+use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use wlan_rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI};
+
+use crate::Ssid;
 
 fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescription {
     fidl_mlme::BssDescription {

@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use client::bss::convert_bss_description;
-use fidl_mlme::{self, BssDescription, MlmeEvent};
-use client::{ConnectResult, Status, Tokens};
-use client::internal::{MlmeSink, UserSink};
-use client::rsn::Rsna;
-use MlmeRequest;
-use super::DeviceInfo;
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
+use log::{error, log, warn};
 use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{NegotiatedRsne, SecAssocUpdate, SecAssocStatus};
-use eapol;
+
+use super::bss::convert_bss_description;
+use super::{ConnectResult, Status, Tokens};
+use super::internal::{MlmeSink, UserSink};
+use super::rsn::Rsna;
+
+use crate::{DeviceInfo, MlmeRequest};
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
@@ -491,12 +492,12 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
 mod tests {
     use super::*;
     use futures::channel::mpsc;
-    use client::test_utils::fake_unprotected_bss_description;
-    use client::{UserEvent, UserStream};
-    use MlmeStream;
     use std::collections::HashSet;
     use std::iter::FromIterator;
-    use Ssid;
+
+    use crate::client::test_utils::fake_unprotected_bss_description;
+    use crate::client::{UserEvent, UserStream};
+    use crate::{MlmeStream, Ssid};
 
     #[derive(Debug, PartialEq)]
     struct FakeTokens;

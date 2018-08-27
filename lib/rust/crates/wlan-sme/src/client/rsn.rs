@@ -1,10 +1,11 @@
 use bytes::Bytes;
-use DeviceInfo;
-use failure;
-use fidl_mlme::BssDescription;
+use failure::{bail, ensure, format_err};
+use fidl_fuchsia_wlan_mlme::BssDescription;
 use wlan_rsn::{akm, auth, cipher, rsne::{self, Rsne}, suite_selector::OUI};
 use wlan_rsn::key::exchange;
 use wlan_rsn::rsna::{esssa::EssSa, NegotiatedRsne, Role};
+
+use crate::DeviceInfo;
 
 #[derive(Debug, PartialEq)]
 pub struct Rsna {
@@ -86,8 +87,8 @@ fn derive_s_rsne(a_rsne: &Rsne) -> Result<Rsne, failure::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use client::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description};
-    use client::test_utils::{make_rsne, rsne_as_bytes};
+    use crate::client::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description};
+    use crate::client::test_utils::{make_rsne, rsne_as_bytes};
     use std::collections::HashSet;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
