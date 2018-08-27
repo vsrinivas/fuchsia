@@ -193,7 +193,7 @@ fn create_iface(phys: &Arc<PhyMap>, req: fidl_svc::CreateIfaceRequest)
 }
 
 fn get_client_sme(ifaces: &Arc<IfaceMap>, iface_id: u16,
-                  endpoint: station::ClientSmeEndpoint)
+                  endpoint: station::client::Endpoint)
     -> zx::Status
 {
     let iface = ifaces.get(&iface_id);
@@ -436,7 +436,7 @@ mod tests {
     struct FakeClientIface<St: Stream<Item = StatsRequest>> {
         iface: IfaceDevice,
         _stats_requests: St,
-        new_sme_clients: mpsc::UnboundedReceiver<station::ClientSmeEndpoint>,
+        new_sme_clients: mpsc::UnboundedReceiver<station::client::Endpoint>,
     }
 
     fn fake_client_iface(path: &str) -> FakeClientIface<impl Stream<Item = StatsRequest>> {

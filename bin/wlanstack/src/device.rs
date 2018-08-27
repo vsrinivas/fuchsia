@@ -29,7 +29,7 @@ pub struct PhyDevice {
     pub device: wlan_dev::Device,
 }
 
-pub type ClientSmeServer = mpsc::UnboundedSender<super::station::ClientSmeEndpoint>;
+pub type ClientSmeServer = mpsc::UnboundedSender<super::station::client::Endpoint>;
 
 pub enum SmeServer {
     Client(ClientSmeServer),
@@ -178,7 +178,7 @@ fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
     match query_resp.role {
         fidl_mlme::MacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
-            let fut = station::serve_client_sme(
+            let fut = station::client::serve(
                 proxy, device_info, event_stream, receiver, stats_requests);
             Ok((SmeServer::Client(sender), fut))
         },
