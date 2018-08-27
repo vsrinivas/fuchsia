@@ -38,6 +38,10 @@ public:
     const char* first();
     const char* next();
 
+    // Like|fbl::DoublyLinkedList<fbl::unique_ptr<StringElement>>::clear|, but also resets the
+    // internal iterator.
+    void clear();
+
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(StringList);
 

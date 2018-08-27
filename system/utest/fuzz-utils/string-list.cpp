@@ -62,9 +62,25 @@ bool TestPushFrontAndBack() {
     END_TEST;
 }
 
+bool TestClear() {
+    BEGIN_TEST;
+
+    StringList list;
+    list.push_front("bar");
+
+    EXPECT_NONNULL(list.first());
+    list.clear();
+    EXPECT_NULL(list.next());
+    EXPECT_NULL(list.first());
+    EXPECT_EQ(list.length(), 0);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(StringListTest)
 RUN_TEST(TestEmpty)
 RUN_TEST(TestPushFrontAndBack)
+RUN_TEST(TestClear)
 END_TEST_CASE(StringListTest)
 
 } // namespace

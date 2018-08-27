@@ -64,4 +64,9 @@ void StringList::push(const char* str, bool front) {
     iterator_ = elements_.end();
 }
 
+void StringList::clear() {
+    elements_.clear();
+    iterator_ = elements_.begin();
+}
+
 } // namespace fuzzing
