@@ -110,10 +110,9 @@ typedef struct zx_packet_guest_io {
 } zx_packet_guest_io_t;
 
 typedef struct zx_packet_guest_vcpu {
-    uint8_t type;
     union {
         struct {
-            uint32_t mask;
+            uint64_t mask;
             uint8_t vector;
         } interrupt;
         struct {
@@ -121,6 +120,7 @@ typedef struct zx_packet_guest_vcpu {
             zx_gpaddr_t entry;
         } startup;
     };
+    uint8_t type;
     uint64_t reserved;
 } zx_packet_guest_vcpu_t;
 

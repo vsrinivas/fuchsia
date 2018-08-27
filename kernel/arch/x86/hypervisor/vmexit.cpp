@@ -598,14 +598,14 @@ static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
     }
 }
 
-static uint32_t ipi_target_mask(const InterruptCommandRegister& icr, uint16_t self) {
+static uint64_t ipi_target_mask(const InterruptCommandRegister& icr, uint16_t self) {
     switch (icr.destination_shorthand) {
     case InterruptDestinationShorthand::NO_SHORTHAND:
         return 1u << icr.destination;
     case InterruptDestinationShorthand::SELF:
         return 1u << (self - 1);
     case InterruptDestinationShorthand::ALL_INCLUDING_SELF:
-        return UINT32_MAX;
+        return UINT64_MAX;
     case InterruptDestinationShorthand::ALL_EXCLUDING_SELF:
         return ~(1u << (self - 1));
     }
