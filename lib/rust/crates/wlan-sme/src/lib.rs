@@ -5,6 +5,7 @@
 #![deny(warnings)]
 
 pub mod client;
+mod sink;
 
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use futures::channel::mpsc;

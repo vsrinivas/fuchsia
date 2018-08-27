@@ -21,6 +21,8 @@ use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanSched
 use self::rsn::get_rsna;
 use self::state::{ConnectCommand, State};
 
+use crate::sink::MlmeSink;
+
 pub use self::bss::{BssInfo, EssInfo};
 pub use self::scan::{DiscoveryError, DiscoveryResult};
 
@@ -37,30 +39,7 @@ pub trait Tokens {
 // even though the module itself is private and will never be exported.
 // As a workaround, we add another private module with public types.
 mod internal {
-    use futures::channel::mpsc;
-    use super::UserEvent;
-
-    pub struct UnboundedSink<T> {
-        pub sink: mpsc::UnboundedSender<T>,
-    }
-
-    impl<T> UnboundedSink<T> {
-        pub fn send(&self, msg: T) {
-            match self.sink.unbounded_send(msg) {
-                Ok(()) => {},
-                Err(e) => {
-                    if e.is_full() {
-                        panic!("Did not expect an unbounded channel to be full: {:?}", e);
-                    }
-                    // If the other side has disconnected, we can still technically function,
-                    // so ignore the error.
-                }
-            }
-        }
-    }
-
-    pub type MlmeSink = UnboundedSink<super::super::MlmeRequest>;
-    pub type UserSink<T> = UnboundedSink<UserEvent<T>>;
+    pub type UserSink<T> = crate::sink::UnboundedSink<super::UserEvent<T>>;
 }
 
 use self::internal::*;
@@ -116,8 +95,8 @@ impl<T: Tokens> ClientSme<T> {
             ClientSme {
                 state: Some(State::Idle),
                 scan_sched: ScanScheduler::new(Arc::clone(&device_info)),
-                mlme_sink: UnboundedSink{ sink: mlme_sink },
-                user_sink: UnboundedSink{ sink: user_sink },
+                mlme_sink: MlmeSink::new(mlme_sink),
+                user_sink: UserSink::new(user_sink),
                 device_info,
             },
             mlme_stream,

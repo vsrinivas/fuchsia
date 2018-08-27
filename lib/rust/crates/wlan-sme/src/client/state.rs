@@ -9,10 +9,11 @@ use wlan_rsn::rsna::{NegotiatedRsne, SecAssocUpdate, SecAssocStatus};
 
 use super::bss::convert_bss_description;
 use super::{ConnectResult, Status, Tokens};
-use super::internal::{MlmeSink, UserSink};
+use super::internal::UserSink;
 use super::rsn::Rsna;
 
 use crate::{DeviceInfo, MlmeRequest};
+use crate::sink::MlmeSink;
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
@@ -744,8 +745,8 @@ mod tests {
         fn new() -> Self {
             let (mlme_sink, mlme_stream) = mpsc::unbounded();
             let (user_sink, user_stream) = mpsc::unbounded();
-            let mlme_sink = MlmeSink { sink: mlme_sink };
-            let user_sink = UserSink { sink: user_sink };
+            let mlme_sink = MlmeSink::new(mlme_sink);
+            let user_sink = UserSink::new(user_sink);
             let device_info = fake_device_info();
             TestHelper { mlme_sink, mlme_stream, user_sink, user_stream, device_info }
         }
