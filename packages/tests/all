@@ -1,5 +1,6 @@
 {
     "imports": [
+        "garnet/packages/tests/run_test_component",
         "peridot/packages/tests/bup",
         "peridot/packages/tests/ledger",
         "peridot/packages/tests/leveldb",
