@@ -135,7 +135,7 @@ zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
   return ZX_OK;
 }
 
-zx_status_t Guest::Interrupt(uint32_t mask, uint8_t vector) {
+zx_status_t Guest::Interrupt(uint64_t mask, uint8_t vector) {
   for (size_t id = 0; id != kMaxVcpus; ++id) {
     if (vcpus_[id] == nullptr || !((1u << id) & mask)) {
       continue;
