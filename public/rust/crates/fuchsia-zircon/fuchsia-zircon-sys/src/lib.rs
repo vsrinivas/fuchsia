@@ -269,6 +269,10 @@ pub const ZX_SOCKET_HALF_CLOSE: u32 = 1;
 // VM Object clone flags
 pub const ZX_VMO_CLONE_COPY_ON_WRITE: u32 = 1;
 
+// channel write size constants
+pub const ZX_CHANNEL_MAX_MSG_HANDLES: u32 = 64;
+pub const ZX_CHANNEL_MAX_MSG_BYTES: u32 = 65536;
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum zx_cache_policy_t {
