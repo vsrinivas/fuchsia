@@ -28,6 +28,9 @@ struct DeviceInfo {
   uint16 product_id;
   string product_name;
   string serial_number;
+  // The maximum number of stream interfaces that the device can support
+  // simultaneously.
+  uint16 max_stream_count;
   uint32 output_capabilities;  // CameraOutputCapabilities
   // TODO(CAM-12): Add CameraPose, when we can actually use it.
 };

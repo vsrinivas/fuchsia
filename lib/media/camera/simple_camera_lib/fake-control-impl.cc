@@ -139,6 +139,7 @@ void FakeControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
   camera_device_info.product_name = kFakeProductName;
   camera_device_info.output_capabilities =
       fuchsia::camera::CAMERA_OUTPUT_STREAM;
+  camera_device_info.max_stream_count = 1;
   callback(std::move(camera_device_info));
 }
 

@@ -67,6 +67,7 @@ void ControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
   // TODO(CAM-11): add more capabilities based on usb description
   camera_device_info.output_capabilities =
       fuchsia::camera::CAMERA_OUTPUT_STREAM;
+  camera_device_info.max_stream_count = 1;
   callback(std::move(camera_device_info));
 }
 
