@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+#include "lib/zx/time.h"
+
 // This file contains constants and numbers that are part of the Generic Access
 // Profile specification.
 
@@ -128,6 +130,10 @@ constexpr uint16_t kLEInitialConnIntervalMin = 0x0018;       // 30 ms
 constexpr uint16_t kLEInitialConnIntervalMax = 0x0028;       // 50 ms
 constexpr uint16_t kLEInitialConnIntervalCodedMin = 0x0048;  // 90 ms
 constexpr uint16_t kLEInitialConnIntervalCodedMax = 0x0078;  // 150 ms
+
+// Time interval that must expire before a temporary device is removed from the
+// cache.
+constexpr zx::duration kCacheTimeout = zx::sec(60);
 
 }  // namespace gap
 }  // namespace btlib

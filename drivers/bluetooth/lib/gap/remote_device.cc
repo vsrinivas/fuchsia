@@ -100,6 +100,17 @@ void RemoteDevice::LowEnergyData::SetConnectionState(ConnectionState state) {
          ConnectionStateToString(state).c_str());
 
   conn_state_ = state;
+
+  // Become non-temporary if connected. Otherwise, become temporary again if the
+  // identity is unknown.
+  if (state == ConnectionState::kConnected) {
+    dev_->TryMakeNonTemporary();
+  } else if (state == ConnectionState::kNotConnected &&
+             !dev_->identity_known()) {
+    bt_log(TRACE, "gap", "bacame temporary: %s:", dev_->ToString().c_str());
+    dev_->temporary_ = true;
+  }
+
   dev_->UpdateExpiry();
   dev_->NotifyListeners();
 }
@@ -167,6 +178,12 @@ void RemoteDevice::BrEdrData::SetConnectionState(ConnectionState state) {
   conn_state_ = state;
   dev_->UpdateExpiry();
   dev_->NotifyListeners();
+
+  // Become non-temporary if we became connected. BR/EDR device remain
+  // non-temporary afterwards.
+  if (state == ConnectionState::kConnected) {
+    dev_->TryMakeNonTemporary();
+  }
 }
 
 void RemoteDevice::BrEdrData::SetInquiryData(
@@ -290,24 +307,6 @@ std::string RemoteDevice::ToString() const {
                            identifier_.c_str(), address_.ToString().c_str());
 }
 
-bool RemoteDevice::TryMakeNonTemporary() {
-  // TODO(armansito): Since we don't currently support address resolution,
-  // random addresses should never be persisted.
-  if (!connectable() || address().type() == DeviceAddress::Type::kLERandom ||
-      address().type() == DeviceAddress::Type::kLEAnonymous) {
-    bt_log(TRACE, "gap", "remains temporary: %s", ToString().c_str());
-    return false;
-  }
-
-  if (temporary_) {
-    temporary_ = false;
-    UpdateExpiry();
-    NotifyListeners();
-  }
-
-  return true;
-}
-
 void RemoteDevice::SetName(const std::string& name) {
   if (SetNameInternal(name)) {
     UpdateExpiry();
@@ -331,6 +330,25 @@ bool RemoteDevice::SetNameInternal(const std::string& name) {
     return true;
   }
   return false;
+}
+
+bool RemoteDevice::TryMakeNonTemporary() {
+  // TODO(armansito): Since we don't currently support address resolution,
+  // random addresses should never be persisted.
+  if (!connectable()) {
+    bt_log(TRACE, "gap", "remains temporary: %s", ToString().c_str());
+    return false;
+  }
+
+  bt_log(TRACE, "gap", "became non-temporary: %s:", ToString().c_str());
+
+  if (temporary_) {
+    temporary_ = false;
+    UpdateExpiry();
+    NotifyListeners();
+  }
+
+  return true;
 }
 
 void RemoteDevice::UpdateExpiry() {

@@ -104,34 +104,6 @@ TEST_F(GAP_RemoteDeviceCacheTest, LookUp) {
   EXPECT_EQ(kTestRSSI, device->rssi());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest, TryMakeNonTemporaryNonConn) {
-  auto device = cache()->NewDevice(kAddrLePublic, false);
-  EXPECT_TRUE(device->temporary());
-  EXPECT_FALSE(device->TryMakeNonTemporary());
-  EXPECT_TRUE(device->temporary());
-}
-
-TEST_F(GAP_RemoteDeviceCacheTest, TryMakeNonTemporaryRandomAddr) {
-  auto device = cache()->NewDevice(kAddrLeRandom, true);
-  EXPECT_TRUE(device->temporary());
-  EXPECT_FALSE(device->TryMakeNonTemporary());
-  EXPECT_TRUE(device->temporary());
-}
-
-TEST_F(GAP_RemoteDeviceCacheTest, TryMakeNonTemporaryAnonAddr) {
-  auto device = cache()->NewDevice(kAddrLeAnon, true);
-  EXPECT_TRUE(device->temporary());
-  EXPECT_FALSE(device->TryMakeNonTemporary());
-  EXPECT_TRUE(device->temporary());
-}
-
-TEST_F(GAP_RemoteDeviceCacheTest, TryMakeNonTemporarySuccess) {
-  auto device = cache()->NewDevice(kAddrLePublic, true);
-  EXPECT_TRUE(device->temporary());
-  EXPECT_TRUE(device->TryMakeNonTemporary());
-  EXPECT_FALSE(device->temporary());
-}
-
 TEST_F(GAP_RemoteDeviceCacheTest,
        NewDeviceDoesNotCrashWhenNoCallbackIsReigstered) {
   RemoteDeviceCache().NewDevice(kAddrLePublic, true);
@@ -154,6 +126,13 @@ TEST_F(GAP_RemoteDeviceCacheTest,
   cache()->NewDevice(kAddrLePublic, true);
   cache()->NewDevice(kAddrLePublic, true);
   EXPECT_EQ(1, call_count);
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest, NewDeviceIdentityKnown) {
+  EXPECT_TRUE(cache()->NewDevice(kAddrBrEdr, true)->identity_known());
+  EXPECT_TRUE(cache()->NewDevice(kAddrLePublic, true)->identity_known());
+  EXPECT_FALSE(cache()->NewDevice(kAddrLeRandom, true)->identity_known());
+  EXPECT_FALSE(cache()->NewDevice(kAddrLeAnon, false)->identity_known());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest, NewDeviceInitialTechnologyIsClassic) {
@@ -585,36 +564,6 @@ TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
   EXPECT_FALSE(was_called());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
-       TryMakeTemporaryTriggersUpdateCallbackOnSuccessfulChange) {
-  ASSERT_TRUE(device()->TryMakeNonTemporary());
-  EXPECT_TRUE(was_called());
-}
-
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
-       TryMakeTemporaryDoesNotTriggerUpdateCallbackWhenAlreadyTemporary) {
-  ASSERT_TRUE(device()->TryMakeNonTemporary());
-  ASSERT_TRUE(was_called());
-
-  bool was_called_again = false;
-  cache()->set_device_updated_callback(
-      [&](const auto&) { was_called_again = true; });
-  ASSERT_TRUE(device()->TryMakeNonTemporary());
-  EXPECT_FALSE(was_called_again);
-}
-
-using GAP_RemoteDeviceCacheTest_UpdateCallbackTest_NoConnectablePublicDevice =
-    GAP_RemoteDeviceCacheTest;
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest_NoConnectablePublicDevice,
-       TryMakeTemporaryDoesNotTriggerUpdateCallbackOnFailure) {
-  RemoteDevice* unconnectable_device = cache()->NewDevice(kAddrLePublic, false);
-  bool was_called = false;
-  cache()->set_device_updated_callback([&](const auto&) { was_called = true; });
-  ASSERT_FALSE(was_called);
-  ASSERT_FALSE(unconnectable_device->TryMakeNonTemporary());
-  EXPECT_FALSE(was_called);
-}
-
 class GAP_RemoteDeviceCacheTest_ExpirationTest
     : public GAP_RemoteDeviceCacheTest {
  public:
@@ -622,11 +571,8 @@ class GAP_RemoteDeviceCacheTest_ExpirationTest
     NewDevice(kAddrLePublic, true);
     device_id_ = device()->identifier();
     device_addr_ = device()->address();
+    ASSERT_TRUE(device()->temporary());
   }
-
- protected:
-  std::string device_id() { return device_id_; }
-  DeviceAddress device_addr() { return device_addr_; }
 
  private:
   std::string device_id_;
@@ -635,148 +581,181 @@ class GAP_RemoteDeviceCacheTest_ExpirationTest
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        TemporaryDiesSixtySecondsAfterBirth) {
-  RunLoopFor(zx::sec(60));
-  EXPECT_FALSE(cache()->FindDeviceById(device_id()));
+  RunLoopFor(kCacheTimeout);
+  EXPECT_FALSE(cache()->FindDeviceById(device()->identifier()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        TemporaryLivesForSixtySecondsAfterBirth) {
-  RunLoopFor(zx::sec(60) - zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
+  RunLoopFor(kCacheTimeout - zx::msec(1));
+  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        TemporaryLivesForSixtySecondsSinceLastSeen) {
-  RunLoopFor(zx::sec(60) - zx::msec(1));
-  ASSERT_EQ(device(), cache()->FindDeviceById(device_id()));
+  RunLoopFor(kCacheTimeout - zx::msec(1));
+  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
 
   // Tickle device, and verify it sticks around for another cache timeout.
   device()->SetName("nombre");
-  RunLoopFor(zx::sec(60) - zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
+  RunLoopFor(kCacheTimeout - zx::msec(1));
+  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        TemporaryDiesSixtySecondsAfterLastSeen) {
-  RunLoopFor(zx::sec(60) - zx::msec(1));
-  ASSERT_EQ(device(), cache()->FindDeviceById(device_id()));
+  RunLoopFor(kCacheTimeout - zx::msec(1));
+  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
 
   // Tickle device, and verify it expires after cache timeout.
   device()->SetName("nombre");
-  RunLoopFor(zx::sec(60));
-  EXPECT_FALSE(cache()->FindDeviceById(device_id()));
-}
-
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
-       NonTemporaryLivesMuchMoreThanSixtySeconds) {
-  ASSERT_TRUE(device()->TryMakeNonTemporary());
-  RunLoopFor(zx::sec(60) * 10);
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
+  RunLoopFor(kCacheTimeout);
+  EXPECT_FALSE(cache()->FindDeviceById(device()->identifier()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        CanMakeNonTemporaryJustBeforeSixtySeconds) {
   // At last possible moment, make device non-temporary,
-  RunLoopFor(zx::sec(60) - zx::msec(1));
-  ASSERT_EQ(device(), cache()->FindDeviceById(device_id()));
-  ASSERT_TRUE(device()->TryMakeNonTemporary());
+  RunLoopFor(kCacheTimeout - zx::msec(1));
+  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
+  device()->MutLe().SetConnectionState(
+      RemoteDevice::ConnectionState::kConnected);
+  ASSERT_FALSE(device()->temporary());
 
   // Verify that devices survives.
-  RunLoopFor(zx::sec(60) * 10);
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
+  RunLoopFor(kCacheTimeout * 10);
+  EXPECT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        LEConnectedDeviceLivesMuchMoreThanSixtySeconds) {
   device()->MutLe().SetConnectionState(
       RemoteDevice::ConnectionState::kConnected);
-  RunLoopFor(zx::sec(60) * 10);
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
+  RunLoopFor(kCacheTimeout * 10);
+  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_FALSE(device()->temporary());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        BREDRConnectedDeviceLivesMuchMoreThanSixtySeconds) {
   device()->MutBrEdr().SetConnectionState(
       RemoteDevice::ConnectionState::kConnected);
-  RunLoopFor(zx::sec(60) * 10);
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
+  RunLoopFor(kCacheTimeout * 10);
+  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_FALSE(device()->temporary());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
-       LEDisconnectTriggersExpirationAfterSixtySeconds) {
+       LEPublicDeviceRemainsNonTemporaryOnDisconnect) {
+  ASSERT_EQ(kAddrLePublic, device()->address());
   device()->MutLe().SetConnectionState(
       RemoteDevice::ConnectionState::kConnected);
-  RunLoopFor(zx::sec(60) * 10);
-  ASSERT_TRUE(cache()->FindDeviceById(device_id()));
+  ASSERT_FALSE(device()->temporary());
+
+  RunLoopFor(zx::sec(61));
+  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
+  ASSERT_TRUE(device()->identity_known());
 
   device()->MutLe().SetConnectionState(
       RemoteDevice::ConnectionState::kNotConnected);
-  RunLoopFor(zx::sec(60));
-  EXPECT_FALSE(cache()->FindDeviceById(device_id()));
+  EXPECT_FALSE(device()->temporary());
+
+  RunLoopFor(kCacheTimeout);
+  EXPECT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
-       BREDRDisconnectTriggersExpirationAfterSixySeconds) {
+       LERandomDeviceBecomesTemporaryOnDisconnect) {
+  ASSERT_TRUE(NewDevice(kAddrLeRandom, true));
+  ASSERT_TRUE(device()->temporary());
+  ASSERT_FALSE(device()->identity_known());
+
+  device()->MutLe().SetConnectionState(
+      RemoteDevice::ConnectionState::kConnected);
+  ASSERT_FALSE(device()->temporary());
+  ASSERT_FALSE(device()->identity_known());
+
+  RunLoopFor(zx::sec(61));
+  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
+  ASSERT_FALSE(device()->identity_known());
+
+  device()->MutLe().SetConnectionState(
+      RemoteDevice::ConnectionState::kNotConnected);
+  EXPECT_TRUE(device()->temporary());
+  EXPECT_FALSE(device()->identity_known());
+
+  RunLoopFor(zx::sec(61));
+  EXPECT_FALSE(cache()->FindDeviceById(device()->identifier()));
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+       BREDRDeviceRemainsNonTemporaryOnDisconnect) {
+  NewDevice(kAddrBrEdr, true);
   device()->MutBrEdr().SetConnectionState(
       RemoteDevice::ConnectionState::kConnected);
-  RunLoopFor(zx::sec(60) * 10);
-  ASSERT_TRUE(cache()->FindDeviceById(device_id()));
+  RunLoopFor(kCacheTimeout * 10);
+  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
+  ASSERT_TRUE(device()->identity_known());
+  EXPECT_FALSE(device()->temporary());
 
   device()->MutBrEdr().SetConnectionState(
       RemoteDevice::ConnectionState::kNotConnected);
-  RunLoopFor(zx::sec(60));
-  EXPECT_FALSE(cache()->FindDeviceById(device_id()));
+  EXPECT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
+  EXPECT_FALSE(device()->temporary());
+
+  RunLoopFor(kCacheTimeout);
+  EXPECT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest, ExpirationUpdatesAddressMap) {
-  RunLoopFor(zx::sec(60));
-  EXPECT_FALSE(cache()->FindDeviceByAddress(device_addr()));
+  RunLoopFor(kCacheTimeout);
+  EXPECT_FALSE(cache()->FindDeviceByAddress(device()->address()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        SetAdvertisingDataUpdatesExpiration) {
-  RunLoopFor(zx::sec(60) - zx::msec(1));
+  RunLoopFor(kCacheTimeout - zx::msec(1));
   device()->MutLe().SetAdvertisingData(kTestRSSI, StaticByteBuffer<1>{});
   RunLoopFor(zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
+  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        SetBrEdrInquiryDataFromInquiryResultUpdatesExpiration) {
   hci::InquiryResult ir;
-  ir.bd_addr = device_addr().value();
-  RunLoopFor(zx::sec(60) - zx::msec(1));
+  ir.bd_addr = device()->address().value();
+  RunLoopFor(kCacheTimeout - zx::msec(1));
   device()->MutBrEdr().SetInquiryData(ir);
   RunLoopFor(zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
+  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        SetBrEdrInquiryDataFromInquiryResultRSSIUpdatesExpiration) {
   hci::InquiryResultRSSI irr;
-  irr.bd_addr = device_addr().value();
-  RunLoopFor(zx::sec(60) - zx::msec(1));
+  irr.bd_addr = device()->address().value();
+  RunLoopFor(kCacheTimeout - zx::msec(1));
   device()->MutBrEdr().SetInquiryData(irr);
   RunLoopFor(zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
+  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
 }
 
 TEST_F(
     GAP_RemoteDeviceCacheTest_ExpirationTest,
     SetBrEdrInquiryDataFromExtendedInquiryResultEventParamsUpdatesExpiration) {
   hci::ExtendedInquiryResultEventParams eirep;
-  eirep.bd_addr = device_addr().value();
-  RunLoopFor(zx::sec(60) - zx::msec(1));
+  eirep.bd_addr = device()->address().value();
+  RunLoopFor(kCacheTimeout - zx::msec(1));
   device()->MutBrEdr().SetInquiryData(eirep);
   RunLoopFor(zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
+  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest, SetNameUpdatesExpiration) {
-  RunLoopFor(zx::sec(60) - zx::msec(1));
+  RunLoopFor(kCacheTimeout - zx::msec(1));
   device()->SetName({});
   RunLoopFor(zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
+  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
 }
 
 }  // namespace

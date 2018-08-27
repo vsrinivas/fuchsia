@@ -724,10 +724,7 @@ RemoteDevice* LowEnergyConnectionManager::UpdateRemoteDeviceWithLink(
     peer =
         device_cache_->NewDevice(link.peer_address(), true /* connectable */);
   }
-
   peer->MutLe().SetConnectionParameters(link.low_energy_parameters());
-  peer->TryMakeNonTemporary();
-
   return peer;
 }
 

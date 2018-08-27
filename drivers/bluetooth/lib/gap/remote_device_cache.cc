@@ -12,17 +12,9 @@
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 #include "lib/async/default.h"
 #include "lib/fxl/random/uuid.h"
-#include "lib/zx/time.h"
 
 namespace btlib {
 namespace gap {
-namespace {
-
-// Interval that must expire before a temporary device is removed from the
-// cache.
-constexpr zx::duration kCacheTimeout = zx::sec(60);
-
-}  // namespace
 
 RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
                                            bool connectable) {
@@ -127,14 +119,13 @@ void RemoteDeviceCache::UpdateExpiry(const RemoteDevice& device) {
   const auto cancel_res = device_record.removal_task()->Cancel();
   ZX_DEBUG_ASSERT(cancel_res == ZX_OK || cancel_res == ZX_ERR_NOT_FOUND);
 
-  // TODO: this shouldn't need to check the connection state
-  if (!device.temporary() || device.connected()) {
-    return;
+  // Previous expiry task has been canceled. Re-schedule only if the device is
+  // temporary.
+  if (device.temporary()) {
+    const auto schedule_res = device_record.removal_task()->PostDelayed(
+        async_get_default_dispatcher(), kCacheTimeout);
+    ZX_DEBUG_ASSERT(schedule_res == ZX_OK || schedule_res == ZX_ERR_BAD_STATE);
   }
-
-  const auto schedule_res = device_record.removal_task()->PostDelayed(
-      async_get_default_dispatcher(), kCacheTimeout);
-  ZX_DEBUG_ASSERT(schedule_res == ZX_OK || schedule_res == ZX_ERR_BAD_STATE);
 }
 
 void RemoteDeviceCache::RemoveDevice(RemoteDevice* device) {

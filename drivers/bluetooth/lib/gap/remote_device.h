@@ -248,14 +248,17 @@ class RemoteDevice final {
   // Returns the set of features of this device.
   const hci::LMPFeatureSet& features() const { return lmp_features_; }
 
-  // A temporary device is one that is never persisted, such as
+  // A temporary device gets removed from the RemoteDeviceCache after a period
+  // of inactivity (see the |update_expiry_callback| argument to the
+  // constructor). The following rules determine the temporary state of a
+  // device:
+  //   a. A device is temporary by default.
+  //   b. A device becomes non-temporary when it gets connected.
+  //   c. A device becomes temporary again when disconnected only if its
+  //      identity is not known (i.e. identity_known() returns false). This only
+  //      applies to LE devices that use the privacy feature.
   //
-  //   1. A device that has never been connected to;
-  //   2. A device that was connected but uses a Non-resolvable Private Address.
-  //   3. A device that was connected, uses a Resolvable Private Address, but
-  //      the local host has no Identity Resolving Key for it.
-  //
-  // All other devices can be considered bonded.
+  // Temporary devices are never bonded.
   bool temporary() const { return temporary_; }
 
   // Returns the LE transport specific data of this device, if any. This will be
@@ -279,14 +282,6 @@ class RemoteDevice final {
   std::string ToString() const;
 
   // The following methods mutate RemoteDevice properties:
-
-  // Marks this device as non-temporary. This operation may fail due to one of
-  // the conditions described above the |temporary()| method.
-  //
-  // TODO(armansito): Replace this with something more sophisticated when we
-  // implement bonding procedures. This method is here to remind us that these
-  // conditions are subtle and not fully supported yet.
-  bool TryMakeNonTemporary();
 
   // Updates the name of this device. This will override the existing name (if
   // present) and notify listeners of the change.
@@ -331,6 +326,14 @@ class RemoteDevice final {
   // TODO(armansito): Add similarly styled internal setters so that we can batch
   // more updates.
   bool SetNameInternal(const std::string& name);
+
+  // Marks this device as non-temporary. This operation may fail due to one of
+  // the conditions described above the |temporary()| method.
+  //
+  // TODO(armansito): Replace this with something more sophisticated when we
+  // implement bonding procedures. This method is here to remind us that these
+  // conditions are subtle and not fully supported yet.
+  bool TryMakeNonTemporary();
 
   // Tells the owning RemoteDeviceCache to update the expiry state of this
   // device.
