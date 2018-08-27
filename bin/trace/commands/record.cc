@@ -34,7 +34,8 @@ const char kOutputFile[] = "output-file";
 const char kDuration[] = "duration";
 const char kDetach[] = "detach";
 const char kDecouple[] = "decouple";
-const char kLaunchpad[] = "launchpad";
+const char kLaunchpad[] = "launchpad";  // deprecated
+const char kSpawn[] = "spawn";
 const char kBufferSize[] = "buffer-size";
 const char kBufferingMode[] = "buffering-mode";
 const char kBenchmarkResultsFile[] = "benchmark-results-file";
@@ -93,6 +94,17 @@ bool WaitForExit(zx_handle_t process, int* exit_code) {
   return true;
 }
 
+bool ParseBoolean(const fxl::StringView& arg, bool* out_value) {
+  if (arg == "" || arg == "true") {
+    *out_value = true;
+  } else if (arg == "false") {
+    *out_value = false;
+  } else {
+    return false;
+  }
+  return true;
+}
+
 }  // namespace
 
 bool Record::Options::Setup(const fxl::CommandLine& command_line) {
@@ -104,6 +116,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
                                                          kDetach,
                                                          kDecouple,
                                                          kLaunchpad,
+                                                         kSpawn,
                                                          kBufferSize,
                                                          kBufferingMode,
                                                          kBenchmarkResultsFile,
@@ -185,8 +198,33 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   // --decouple
   decouple = command_line.HasOption(kDecouple);
 
-  // --launchpad
-  launchpad = command_line.HasOption(kLaunchpad);
+  // --spawn
+  // --launchpad is a deprecated spelling
+  {
+    size_t spawn_index, launchpad_index;
+    auto have_spawn = command_line.HasOption(kSpawn, &spawn_index);
+    auto have_launchpad = command_line.HasOption(kLaunchpad, &launchpad_index);
+    if (have_spawn && have_launchpad) {
+      FXL_LOG(ERROR) << "Specify only one of " << kSpawn << ", " << kLaunchpad;
+      return false;
+    }
+    if (have_spawn) {
+      auto arg = command_line.options()[spawn_index].value;
+      if (!ParseBoolean(arg, &launchpad)) {
+        FXL_LOG(ERROR) << "Failed to parse command-line option " << kSpawn
+                       << ": " << arg;
+      }
+    }
+    if (have_launchpad) {
+      FXL_LOG(WARNING) << "Option " << kLaunchpad << " is deprecated"
+                       << ", use " << kSpawn << " instead";
+      auto arg = command_line.options()[launchpad_index].value;
+      if (!ParseBoolean(arg, &launchpad)) {
+        FXL_LOG(ERROR) << "Failed to parse command-line option " << kLaunchpad
+                       << ": " << arg;
+      }
+    }
+  }
 
   // --buffer-size=<megabytes>
   if (command_line.HasOption(kBufferSize, &index)) {
@@ -261,9 +299,9 @@ Command::Info Record::Describe() {
        {"detach=[false]",
         "Don't stop the traced program when tracing finished"},
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
-       {"launchpad=[false]",
-        "Use launchpad to run a legacy app. Detach will have no effect when "
-        "using this option"},
+       {"spawn=[false]",
+        "Use fdio_spawn to run a legacy app. Detach will have no effect when "
+        "using this option. May also be spelled --launchpad (deprecated)."},
        {"buffer-size=[4]",
         "Maximum size of trace buffer for each provider in megabytes"},
        {"buffering-mode=oneshot|circular|streaming",
