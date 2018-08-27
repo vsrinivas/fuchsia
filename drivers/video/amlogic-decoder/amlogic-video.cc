@@ -413,7 +413,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     DECODE_ERROR("Failed to get parent protocol");
     return ZX_ERR_NO_MEMORY;
   }
-  status = device_get_protocol(parent_, ZX_PROTOCOL_CANVAS, &canvas_);
+  status = device_get_protocol(parent_, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
   if (status != ZX_OK) {
     DECODE_ERROR("Could not get video CANVAS protocol\n");
     return status;
