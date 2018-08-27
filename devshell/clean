@@ -1,0 +1,17 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### `gn clean` the FUCHSIA_BUILD_DIR
+
+## If FUCHSIA_BUILD_DIR is out/x64, this is simply:
+##   gn clean out/x64
+## It is useful to clean the build directory without having to re-gen.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+set -ex
+
+"${FUCHSIA_DIR}/buildtools/gn" clean "$FUCHSIA_BUILD_DIR"
