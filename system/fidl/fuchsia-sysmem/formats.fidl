@@ -15,4 +15,3 @@ union BufferFormat {
 union BufferSpec {
     ImageSpec image;
 };
-

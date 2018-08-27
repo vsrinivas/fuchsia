@@ -11,5 +11,5 @@ using my.other.import.path as other;
 const int32 x = 23;
 
 interface Hello {
-  10243: Say(string req) -> (string response);
+    10243: Say(string req) -> (string response);
 };

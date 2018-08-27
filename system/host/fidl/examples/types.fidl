@@ -4,8 +4,14 @@
 
 library fidl.examples.types;
 
-struct this_is_a_struct { string s; };
-union this_is_a_union { string s; };
+struct this_is_a_struct {
+    string s;
+};
+
+union this_is_a_union {
+    string s;
+};
+
 interface this_is_an_interface {
     23: Copy(string s, uint32 count) -> (string s);
 };
@@ -277,27 +283,35 @@ struct strings {
 enum default_enum {
     x = 23;
 };
+
 enum i8_enum : int8 {
     x = 23;
 };
+
 enum i16_enum : int16 {
     x = 23;
 };
+
 enum i32_enum : int32 {
     x = 23;
 };
+
 enum i64_enum : int64 {
     x = 23;
 };
+
 enum u8_enum : uint8 {
     x = 23;
 };
+
 enum u16_enum : uint16 {
     x = 23;
 };
+
 enum u32_enum : uint32 {
     x = 23;
 };
+
 enum u64_enum : uint64 {
     x = 23;
 };

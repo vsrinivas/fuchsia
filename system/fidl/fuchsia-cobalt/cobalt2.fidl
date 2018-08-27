@@ -99,7 +99,7 @@ interface LoggerFactory {
     //  project_id.
     1: CreateLogger(ProjectProfile2 profile,
                     request<Logger> logger)
-        -> (Status2 status);
+           -> (Status2 status);
 
     // Creates a LoggerExt for the given ProjectProfile.
     //
@@ -111,7 +111,7 @@ interface LoggerFactory {
     //  project_id.
     2: CreateLoggerExt(ProjectProfile2 profile,
                        request<LoggerExt> logger)
-        -> (Status2 status);
+           -> (Status2 status);
 
     // Creates a LoggerSimple for the given ProjectProfile.
     //
@@ -123,7 +123,7 @@ interface LoggerFactory {
     //  project_id.
     3: CreateLoggerSimple(ProjectProfile2 profile,
                           request<LoggerSimple> logger)
-        -> (Status2 status);
+           -> (Status2 status);
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -142,7 +142,7 @@ interface LoggerFactory {
 // This interface conforms to the Simple layout so that Simple bindings
 // may be generated for it. For some additional methods, see also interfaces
 // LoggerExt and LoggerSimple below.
-[Layout="Simple"]
+[Layout = "Simple"]
 interface Logger {
     // Logs the fact that an event has occurred.
     //
@@ -153,7 +153,7 @@ interface Logger {
     // |event_type_index| The index of the event type that occurred. The indexed
     //     set of all event types is specified in the metric definition.
     1: LogEvent(string:64 metric_name, uint32 event_type_index)
-        -> (Status2 status);
+           -> (Status2 status);
 
     // Logs that an event has occurred a given number of times.
     //
@@ -181,7 +181,7 @@ interface Logger {
     2: LogEventCount(string:64 metric_name, uint32 event_type_index,
                      string:64 component, int64 period_duration_micros,
                      uint32 count)
-        -> (Status2 status);
+           -> (Status2 status);
 
     // Logs that an event lasted a given amount of time.
     //
@@ -201,7 +201,7 @@ interface Logger {
     //     of microseconds.
     3: LogElapsedTime(string:64 metric_name, uint32 event_type_index,
                       string:64 component, int64 elapsed_micros)
-        -> (Status2 status);
+           -> (Status2 status);
 
     // Logs a measured average frame rate.
     //
@@ -221,7 +221,7 @@ interface Logger {
     // |fps| The average-frame rate in frames-per-second.
     4: LogFrameRate(string:64 metric_name, uint32 event_type_index,
                     string:64 component, float32 fps)
-        -> (Status2 status);
+           -> (Status2 status);
 
     // Logs a measured memory usage.
     //
@@ -241,8 +241,7 @@ interface Logger {
     // |bytes| The memory used, in bytes.
     5: LogMemoryUsage(string:64 metric_name, uint32 event_type_index,
                       string:64 component, int64 bytes)
-        -> (Status2 status);
-
+           -> (Status2 status);
 
     // Logs the fact that a given string was used, in a specific context.
     // The semantics of the context and the string is specified in the
@@ -329,7 +328,7 @@ interface Logger {
     7: StartTimer(string:64 metric_name, uint32 event_type_index,
                   string:64 component, string:64 timer_id,
                   uint64 timestamp, uint32 timeout_s)
-        -> (Status2 status);
+           -> (Status2 status);
 
     // This method is part of Cobalt's helper service for measuring the time
     // delta between two events that occur in different processes. This ends
@@ -384,7 +383,7 @@ interface Logger {
     //     Any error returned by LogElapsedTime() may also be returned by this
     //     method.
     8: EndTimer(string:64 timer_id, uint64 timestamp, uint32 timeout_s)
-        -> (Status2 status);
+           -> (Status2 status);
 
     // Method ordinals >= 100 are reserved for sub-interfaces.
 };
@@ -395,22 +394,21 @@ interface Logger {
 
 // A value for a custom Event. This is used by the method LogCustomEvent().
 struct CustomEventValue {
-  // The name of the Metric dimension this value is for.
-  string dimension_name;
+    // The name of the Metric dimension this value is for.
+    string dimension_name;
 
-  // The value for that dimension.
-  Value value;
+    // The value for that dimension.
+    Value value;
 };
-
 
 // One bucket of histogram. This is used by the method LogIntHistogram().
 struct HistogramBucket {
-  // The index of the bucket. The meaning of the bucket is specified in the
-  // Metric definition.
-  uint32 index;
+    // The index of the bucket. The meaning of the bucket is specified in the
+    // Metric definition.
+    uint32 index;
 
-  // The number of values in that bucket.
-  uint64 count;
+    // The number of values in that bucket.
+    uint64 count;
 };
 
 // LoggerExt is an extension of the Logger interface that adds some additional
@@ -447,7 +445,7 @@ interface LoggerExt {
     //     given in the Metric definition.
     100: LogIntHistogram(string:64 metric_name, uint32 event_type_index,
                          string:64 component, vector<HistogramBucket> histogram)
-        -> (Status2 status);
+             -> (Status2 status);
 
     // Logs a custom Event. The semantics of the Metric are specified in the
     // Metric defintion.
@@ -461,7 +459,7 @@ interface LoggerExt {
     // be consistent with the dimensions declared in the Metric definition.
     101: LogCustomEvent(string:64 metric_name,
                         vector<CustomEventValue> event_values)
-        -> (Status2 status);
+             -> (Status2 status);
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -507,7 +505,7 @@ struct BulkLogParams {
 //
 // (ii) The method BulkLog() that allows for many invocations of different
 //      Logger methods to be made via a single FIDL call.
-[Layout="Simple"]
+[Layout = "Simple"]
 interface LoggerSimple {
     // Logs a histogram over a set of integer buckets. The meaning of the
     // Metric and the buckets is specified in the Metric definition.
@@ -521,7 +519,7 @@ interface LoggerSimple {
                          string:64 component,
                          vector<uint32>:100 bucket_indices,
                          vector<uint64>:100 bucket_counts)
-          -> (Status2 status);
+             -> (Status2 status);
 
     // Logs a custom Event. The semantics of the Metric are specified in the
     // Metric definition.
@@ -532,6 +530,5 @@ interface LoggerSimple {
     // this version takes a json string.
     101: LogCustomEvent(string:64 metric_name,
                         string:1024 json_string)
-        -> (Status2 status);
-
+             -> (Status2 status);
 };

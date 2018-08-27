@@ -6,7 +6,7 @@ library fidl.test.spaceship;
 
 using zx;
 
-[Layout="Simple"]
+[Layout = "Simple"]
 interface AstrometricsListener {
     1: OnNova();
 };
@@ -32,7 +32,7 @@ struct ZxTypes {
     zx.off h;
 };
 
-[Layout="Simple"]
+[Layout = "Simple"]
 interface SpaceShip {
     1: AdjustHeading(vector<uint32>:64 stars) -> (int8 result);
     2: ScanForLifeforms() -> (vector<uint32>:64 lifesigns);

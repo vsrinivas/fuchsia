@@ -11,8 +11,8 @@ struct MacAddress {
 };
 
 // Info.features bits
-const uint32 INFO_FEATURE_WLAN     = 0x00000001;
-const uint32 INFO_FEATURE_SYNTH    = 0x00000002;
+const uint32 INFO_FEATURE_WLAN = 0x00000001;
+const uint32 INFO_FEATURE_SYNTH = 0x00000002;
 const uint32 INFO_FEATURE_LOOPBACK = 0x00000004;
 
 struct Info {
@@ -35,7 +35,7 @@ struct Fifos {
 const uint32 DEVICE_STATUS_ONLINE = 0x00000001;
 
 // zircon/device/ethernet.h
-[Layout="Simple"]
+[Layout = "Simple"]
 interface Device {
     // Obtain information about device
     1: GetInfo() -> (Info info);
@@ -99,10 +99,10 @@ interface Device {
 // - none -
 
 // flags values for response messages
-const uint32 FIFO_RX_OK   = 0x00000001; // packet received okay
-const uint32 FIFO_TX_OK   = 0x00000001; // packet transmitted okay
+const uint32 FIFO_RX_OK = 0x00000001; // packet received okay
+const uint32 FIFO_TX_OK = 0x00000001; // packet transmitted okay
 const uint32 FIFO_INVALID = 0x00000002; // offset+length not within io_vmo bounds
-const uint32 FIFO_RX_TX   = 0x00000004; // received our own tx packet (when Listen enabled)
+const uint32 FIFO_RX_TX = 0x00000004; // received our own tx packet (when Listen enabled)
 
 struct FifoEntry {
     // offset from start of io vmo to packet data
