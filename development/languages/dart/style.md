@@ -258,6 +258,6 @@ Widget buildButton(
 ### DO add [logging statements][dart-logging]
 
 [effective-dart]: https://www.dartlang.org/guides/language/effective-dart
-[fuchsia-directory-style]: https://fuchsia.googlesource.com/docs/+/master/development/source_code/layer_repository_structure.md#
-[dart-logging]: https://fuchsia.googlesource.com/docs/+/master/development/languages/dart/logging.md
+[fuchsia-directory-style]: /development/source_code/layer_repository_structure.md#
+[dart-logging]: /development/languages/dart/logging.md
 [dartstyle-80-chars]: https://www.dartlang.org/guides/language/effective-dart/style#avoid-lines-longer-than-80-characters

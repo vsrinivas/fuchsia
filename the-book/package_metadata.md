@@ -181,4 +181,4 @@ The set of currently known features are as follows:
 See [sandboxing.md](sandboxing.md) for more information about sandboxing.
 
 
-[runner]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/app/fidl/runner.fidl
+[runner]: https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.sys/runner.fidl

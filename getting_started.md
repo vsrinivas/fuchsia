@@ -189,7 +189,7 @@ dm shutdown
 
 Almost everything that exists on a Fuchsia system is stored in a Fuchsia
 package. A typical development
-[workflow](https://fuchsia.googlesource.com/docs/+/master/development/workflows/package_update.md)
+[workflow](/development/workflows/package_update.md)
 involves re-building and pushing Fuchsia packages to a development device or
 QEMU virtual device.
 

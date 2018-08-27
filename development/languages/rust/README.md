@@ -45,6 +45,7 @@ fx set x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
 - [Unsafe code](unsafe.md)
 - [Unstable features](unstable.md)
 - [Rust FIDL server/client tutorial][fidl-tutorial]
+- [Syslog API](syslog.md)
 
 [target-library-rustc]: https://fuchsia.googlesource.com/build/+/master/rust/rustc_library.gni "Rust library"
 [target-binary-rustc]: https://fuchsia.googlesource.com/build/+/master/rust/rustc_binary.gni "Rust binary"
@@ -52,4 +53,4 @@ fx set x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
 [fargo]: https://fuchsia.googlesource.com/fargo
 [rustfmt-install]: https://github.com/rust-lang-nursery/rustfmt#quick-start
 [rustfmt-toml]: https://fuchsia.googlesource.com/garnet/+/master/rustfmt.toml
-[fidl-tutorial]: https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/tutorial.md#server-in-Rust
+[fidl-tutorial]: /development/languages/fidl/tutorial.md#server-in-Rust

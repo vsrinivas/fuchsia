@@ -3,11 +3,11 @@
 This document is a description of the Fuchsia Interface Definition Language
 (FIDL) implementation for C++, including its libraries and code generator.
 
-See [FIDL: Overview](index.md) for more information about FIDL's overall
+See [FIDL: Overview][fidl-overview] for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
 
 This specification builds on the [FIDL: C Language
-Bindings](c-language-bindings.md) and reuses many of its elements where
+Bindings](c.md) and reuses many of its elements where
 appropriate.
 
 [TOC]
@@ -659,3 +659,6 @@ mechanism.
 There are lots of options here...
 
 TBD (please feel free to amend / expand on this)
+
+
+[fidl-overview]: https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/index.md

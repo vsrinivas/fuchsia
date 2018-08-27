@@ -61,7 +61,7 @@ from the layer below.
 As products reference [packages](packages.md) and packages may reference
 other packages, it is useful to be able to inspect the expanded and filtered
 set of build labels that will make up each package set in a product. The
-[preprocess products](preprocess-products-py) script is the tool that
+[preprocess products][preprocess-products-py] script is the tool that
 produces this for the build and can be run by hand:
 
 ```bash
@@ -71,4 +71,4 @@ $ python build/gn/preprocess_products.py --products '["garnet/products/default"]
 [garnet-products-source]: https://fuchsia.googlesource.com/garnet/+/master/products/
 [peridot-products-source]: https://fuchsia.googlesource.com/peridot/+/master/products/
 [topaz-products-source]: https://fuchsia.googlesource.com/topaz/+/master/products/
-[preprocess-products-py]: https://fuchsia.googlesource.com/build/+/master/gn/prepreprocess_products.py
+[preprocess-products-py]: https://fuchsia.googlesource.com/build/+/master/gn/preprocess_products.py

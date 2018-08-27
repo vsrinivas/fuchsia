@@ -83,4 +83,4 @@ support.
 
 See this link for more information about the [Sherrif rotation]
 
-[Sherrif rotation]: (https://chromium.googlesource.com/chromium/src/+/master/docs/speed/perf_regression_sheriffing.md)
+[Sherrif rotation]: https://chromium.googlesource.com/chromium/src/+/master/docs/speed/perf_regression_sheriffing.md

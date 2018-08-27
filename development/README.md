@@ -69,4 +69,4 @@ This section covers Fuchsia-wide conventions and best practices.
 [intel_nuc]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/nuc.md "Intel NUC"
 [pixelbook]: hardware/pixelbook.md "Pixelbook"
 [tracing]: https://fuchsia.googlesource.com/garnet/+/master/docs/tracing_usage_guide.md
-[trace_based_benchmarking]: https://fuchsia.googlesource.com/garnet/+/master/docs/benchmarking.md
+[trace_based_benchmarking]: benchmarking/trace_based_benchmarking.md

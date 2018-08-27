@@ -49,5 +49,5 @@ language bindings) are described in [FIDL Tuning Proposals]. These
 decisions are recorded here for posterity. This includes both accepted
 and rejected designs. [FTP-001] describes the proposal process itself.
 
-[FIDL Tuning Proposals]: ./ftp
+[FIDL Tuning Proposals]: ./ftp/README.md
 [FTP-001]: ./ftp/ftp-001.md

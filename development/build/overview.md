@@ -220,7 +220,7 @@ You likely forgot to run **A** before running **B**.
 [gn-main]: https://chromium.googlesource.com/chromium/src/tools/gn/+/HEAD/README.md
 [gn-preso]: https://docs.google.com/presentation/d/15Zwb53JcncHfEwHpnG_PoIbbzQ3GQi_cpujYwbpcbZo/
 [ninja-main]: https://ninja-build.org/
-[gn-reference]: https://chromium.googlesource.com/chromium/src/tools/gn/+/HEAD/docs/reference.md
+[gn-reference]: https://gn.googlesource.com/gn/+/master/docs/reference.md
 [build-project]: https://fuchsia.googlesource.com/build/+/master/
 [zircon-getting-started]: https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md
 [zircon-makefile-options]: https://fuchsia.googlesource.com/zircon/+/master/docs/makefile_options.md
