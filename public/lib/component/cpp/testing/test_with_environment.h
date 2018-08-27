@@ -35,6 +35,18 @@ namespace testing {
 // This fixture also allows you to create components in the real environment in
 // which this test was launched. Those components should only be used to
 // validate real system state.
+//
+// To use this fixture you need to whitelist "fuchsia.sys.Environment" and
+// "fuchsia.sys.Loader" in your component manifest file in "sandbox.services".
+// It is necessary because this fixture needs to access
+// "fuchsia.sys.Environment" and if you create a |EnclosingEnvironment| then it
+// will need access to parent's "fuchsia.sys.Loader" to serve it own Loader
+// service.
+//
+// If you are going to create a new EnclosingEnvironment then you also need to
+// run your own loop to serve services provided by that environment. So use of
+// SyncPtrs is not advisable unless you can run a loop safely in a new thread
+// which stops running before you kill your EnclosingEnvironment.
 class TestWithEnvironment : public gtest::RealLoopFixture {
  protected:
   TestWithEnvironment();

@@ -1,0 +1,64 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+executable("fake_echo_app") {
+  testonly = true
+  output_name = "fake_echo_app"
+
+  sources = [
+    "fake_echo.cc",
+    "fake_echo.h",
+  ]
+
+  deps = [
+    "//garnet/examples/fidl/services:echo2",
+    "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("test_with_environment_example_test_bin") {
+  testonly = true
+  output_name = "test_with_environment_example_test"
+
+  sources = [
+    "fake_echo.h",
+    "test_with_environment_example_test.cc",
+  ]
+
+  deps = [
+    "//garnet/examples/fidl/services:echo2",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+test_package("test_with_environment_example_test") {
+  deps = [
+    ":fake_echo_app",
+    ":test_with_environment_example_test_bin",
+  ]
+
+  binaries = [
+    {
+      name = "fake_echo_app"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/fake_echo_app.cmx")
+      dest = "fake_echo_app.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "test_with_environment_example_test"
+    },
+  ]
+}
