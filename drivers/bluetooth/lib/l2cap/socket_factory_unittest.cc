@@ -16,9 +16,9 @@ namespace btlib {
 namespace l2cap {
 namespace {
 
-class SocketFactoryTest : public ::testing::Test {
+class L2CAP_SocketFactoryTest : public ::testing::Test {
  public:
-  SocketFactoryTest() : loop_(&kAsyncLoopConfigAttachToThread) {
+  L2CAP_SocketFactoryTest() : loop_(&kAsyncLoopConfigAttachToThread) {
     EXPECT_EQ(loop_.GetState(), ASYNC_LOOP_RUNNABLE);
     channel_ = fbl::MakeRefCounted<testing::FakeChannel>(
         kDynamicChannelIdMin, kRemoteChannelId, kDefaultConnectionHandle,
@@ -44,16 +44,17 @@ class SocketFactoryTest : public ::testing::Test {
   fbl::RefPtr<testing::FakeChannel> channel_;
 };
 
-constexpr ChannelId SocketFactoryTest::kDynamicChannelIdMin;
-constexpr ChannelId SocketFactoryTest::kRemoteChannelId;
-constexpr hci::ConnectionHandle SocketFactoryTest::kDefaultConnectionHandle;
+constexpr ChannelId L2CAP_SocketFactoryTest::kDynamicChannelIdMin;
+constexpr ChannelId L2CAP_SocketFactoryTest::kRemoteChannelId;
+constexpr hci::ConnectionHandle
+    L2CAP_SocketFactoryTest::kDefaultConnectionHandle;
 
-TEST_F(SocketFactoryTest, CanCreateSocket) {
+TEST_F(L2CAP_SocketFactoryTest, CanCreateSocket) {
   SocketFactory socket_factory;
   EXPECT_TRUE(socket_factory.MakeSocketForChannel(channel()));
 }
 
-TEST_F(SocketFactoryTest, SocketCreationFailsIfChannelAlreadyHasASocket) {
+TEST_F(L2CAP_SocketFactoryTest, SocketCreationFailsIfChannelAlreadyHasASocket) {
   SocketFactory socket_factory;
   zx::socket socket = socket_factory.MakeSocketForChannel(channel());
   ASSERT_TRUE(socket);
@@ -61,12 +62,12 @@ TEST_F(SocketFactoryTest, SocketCreationFailsIfChannelAlreadyHasASocket) {
   EXPECT_FALSE(socket_factory.MakeSocketForChannel(channel()));
 }
 
-TEST_F(SocketFactoryTest, SocketCreationFailsIfChannelActivationFails) {
+TEST_F(L2CAP_SocketFactoryTest, SocketCreationFailsIfChannelActivationFails) {
   channel()->set_activate_fails(true);
   EXPECT_FALSE(SocketFactory().MakeSocketForChannel(channel()));
 }
 
-TEST_F(SocketFactoryTest, CanCreateSocketForNewChannelWithRecycledId) {
+TEST_F(L2CAP_SocketFactoryTest, CanCreateSocketForNewChannelWithRecycledId) {
   SocketFactory socket_factory;
   auto original_channel = fbl::MakeRefCounted<testing::FakeChannel>(
       kDynamicChannelIdMin + 1, kRemoteChannelId, kDefaultConnectionHandle,
@@ -82,14 +83,14 @@ TEST_F(SocketFactoryTest, CanCreateSocketForNewChannelWithRecycledId) {
   EXPECT_TRUE(socket_factory.MakeSocketForChannel(new_channel));
 }
 
-TEST_F(SocketFactoryTest, DestructionWithActiveRelayDoesNotCrash) {
+TEST_F(L2CAP_SocketFactoryTest, DestructionWithActiveRelayDoesNotCrash) {
   SocketFactory socket_factory;
   zx::socket socket = socket_factory.MakeSocketForChannel(channel());
   ASSERT_TRUE(socket);
   // |socket_factory| is destroyed implicitly.
 }
 
-TEST_F(SocketFactoryTest, DestructionAfterDeactivatingRelayDoesNotCrash) {
+TEST_F(L2CAP_SocketFactoryTest, DestructionAfterDeactivatingRelayDoesNotCrash) {
   SocketFactory socket_factory;
   zx::socket socket = socket_factory.MakeSocketForChannel(channel());
   ASSERT_TRUE(socket);
