@@ -47,6 +47,10 @@ fuchsia::modular::auth::AccountPtr Convert(
   }
   account->url = user->profile_url()->str();
   account->image_url = user->image_url()->str();
+  account->profile_id = user->profile_id()->str();
+  if (account->profile_id.is_null()) {
+    account->profile_id = "";
+  }
   return account;
 }
 
@@ -187,7 +191,8 @@ void UserProviderImpl::AddUser(
                 user->identity_provider(),
                 builder.CreateString(user->display_name()),
                 builder.CreateString(user->profile_url()),
-                builder.CreateString(user->image_url())));
+                builder.CreateString(user->image_url()),
+                builder.CreateString(user->profile_id())));
           }
         }
 
@@ -209,7 +214,8 @@ void UserProviderImpl::AddUser(
             flatbuffer_identity_provider,
             builder.CreateString(account->display_name),
             builder.CreateString(account->url),
-            builder.CreateString(account->image_url)));
+            builder.CreateString(account->image_url),
+            builder.CreateString(account->profile_id)));
 
         builder.Finish(fuchsia::modular::CreateUsersStorage(
             builder, builder.CreateVector(users)));
@@ -269,7 +275,8 @@ void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
               user->identity_provider(),
               builder.CreateString(user->display_name()),
               builder.CreateString(user->profile_url()),
-              builder.CreateString(user->image_url())));
+              builder.CreateString(user->image_url()),
+              builder.CreateString(user->profile_id())));
         }
 
         builder.Finish(fuchsia::modular::CreateUsersStorage(

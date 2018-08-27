@@ -18,6 +18,11 @@ struct Account {
   // device.
   IdentityProvider identity_provider;
 
+  // Unique identifier configured for the given user at the Identity provider.
+  // Profile id is fetched from user profile attributes as configured by the
+  // user at the given identity provider.
+  string profile_id;
+
   // The name that is displayed on the device shell while logging in. Display
   // name is fetched from user profile attributes as configured by the user at
   // the given identity provider.

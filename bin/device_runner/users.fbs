@@ -4,6 +4,9 @@
 
 namespace fuchsia.modular;
 
+// See public/fidl/fuchsia.modular.auth/account/account.fidl for detailed
+// documentation about these fields.
+
 enum IdentityProvider : byte { DEV, GOOGLE }
 
 table UserStorage {
@@ -12,6 +15,7 @@ table UserStorage {
   display_name: string;
   profile_url: string;
   image_url: string;
+  profile_id: string;
 }
 
 table UsersStorage {
