@@ -65,9 +65,9 @@ zx_status_t run_camera() {
 
   printf("Available formats: %d\n", (int)formats.size());
   for (int i = 0; i < (int)formats.size(); i++) {
-    printf("format[%d] - width: %d, height: %d, stride: %lu\n", i,
+    printf("format[%d] - width: %d, height: %d, stride: %u\n", i,
            formats[i].format.width, formats[i].format.height,
-           formats[i].format.planes[0].bytes_per_row);
+           static_cast<uint32_t>(formats[i].format.planes[0].bytes_per_row));
   }
 
   int frame_counter = 0;
