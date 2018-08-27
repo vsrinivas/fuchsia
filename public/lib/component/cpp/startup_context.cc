@@ -26,28 +26,22 @@ StartupContext::StartupContext(zx::channel service_root,
     : incoming_services_(std::make_shared<Services>()) {
   incoming_services_->Bind(std::move(service_root));
   outgoing_.Serve(std::move(directory_request));
-
-  // TODO(CP-25): Change ConnectToService to Lookup and leave unset if
-  // ZX_ERR_NOT_FOUND.
-  incoming_services_->ConnectToService(environment_.NewRequest());
-  incoming_services_->ConnectToService(launcher_.NewRequest());
 }
 
 StartupContext::~StartupContext() = default;
 
-std::unique_ptr<StartupContext> StartupContext::CreateFromStartupInfo() {
-  auto startup_info = CreateFromStartupInfoNotChecked();
-  FXL_CHECK(startup_info->environment().get() != nullptr)
-      << "The Environment is null. If this is expected, use "
-         "CreateFromStartupInfoNotChecked() to allow |environment| to be null.";
-  return startup_info;
-}
-
+// static
 std::unique_ptr<StartupContext>
-StartupContext::CreateFromStartupInfoNotChecked() {
+StartupContext::CreateFromStartupInfo() {
   zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
   return std::make_unique<StartupContext>(
       subtle::CreateStaticServiceRootHandle(), zx::channel(directory_request));
+}
+
+// static
+std::unique_ptr<StartupContext>
+StartupContext::CreateFromStartupInfoNotChecked() {
+  return CreateFromStartupInfo();
 }
 
 std::unique_ptr<StartupContext> StartupContext::CreateFrom(
@@ -67,6 +61,22 @@ std::unique_ptr<StartupContext> StartupContext::CreateFrom(
   return std::make_unique<StartupContext>(
       std::move(service_root),
       std::move(startup_info.launch_info.directory_request));
+}
+
+const fuchsia::sys::EnvironmentPtr& StartupContext::environment() const {
+  std::lock_guard<std::mutex> guard(services_mutex_);
+  if (!environment_) {
+    incoming_services_->ConnectToService(environment_.NewRequest());
+  }
+  return environment_;
+}
+
+const fuchsia::sys::LauncherPtr& StartupContext::launcher() const {
+  std::lock_guard<std::mutex> guard(services_mutex_);
+  if (!launcher_) {
+    incoming_services_->ConnectToService(launcher_.NewRequest());
+  }
+  return launcher_;
 }
 
 void StartupContext::ConnectToEnvironmentService(

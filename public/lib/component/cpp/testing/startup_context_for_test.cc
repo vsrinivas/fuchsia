@@ -34,8 +34,6 @@ StartupContextForTest::StartupContextForTest(
   status = service_root_vfs_.ServeDirectory(service_root_dir_,
                                             std::move(service_root_server));
   ZX_ASSERT(status == ZX_OK);
-
-  incoming_services()->ConnectToService(launcher_.NewRequest());
 }
 
 std::unique_ptr<StartupContextForTest> StartupContextForTest::Create() {

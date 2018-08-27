@@ -5,8 +5,11 @@
 #ifndef LIB_COMPONENT_CPP_STARTUP_CONTEXT_H_
 #define LIB_COMPONENT_CPP_STARTUP_CONTEXT_H_
 
-#include <fuchsia/sys/cpp/fidl.h>
+#include <memory>
+#include <mutex>
 
+#include <fuchsia/sys/cpp/fidl.h>
+#include <zircon/compiler.h>
 #include "lib/component/cpp/outgoing.h"
 #include "lib/component/cpp/service_provider_impl.h"
 #include "lib/svc/cpp/services.h"
@@ -37,9 +40,10 @@ class StartupContext {
   // The returned unique_ptr is never null.
   static std::unique_ptr<StartupContext> CreateFromStartupInfo();
 
-  // Like CreateFromStartupInfo(), but allows both the environment and the
-  // environment services to be null so that callers can validate the values
-  // and provide meaningful error messages.
+  // DEPRECATED: Same as CreateFromStartupInfo().
+  //
+  // TODO(geb): Remove this method once users in higher layers have been
+  // converted, it's obsolete.
   static std::unique_ptr<StartupContext> CreateFromStartupInfoNotChecked();
 
   static std::unique_ptr<StartupContext> CreateFrom(
@@ -48,9 +52,7 @@ class StartupContext {
   // Gets the component's environment.
   //
   // May be null if the component does not have access to its environment.
-  const fuchsia::sys::EnvironmentPtr& environment() const {
-    return environment_;
-  }
+  const fuchsia::sys::EnvironmentPtr& environment() const;
 
   // Whether this component was given services by its environment.
   bool has_environment_services() const {
@@ -61,7 +63,7 @@ class StartupContext {
   // its environment.
   //
   // May be null if the component does not have access to its environment.
-  const fuchsia::sys::LauncherPtr& launcher() const { return launcher_; }
+  const fuchsia::sys::LauncherPtr& launcher() const;
 
   const std::shared_ptr<Services>& incoming_services() const {
     return incoming_services_;
@@ -97,13 +99,14 @@ class StartupContext {
   void ConnectToEnvironmentService(const std::string& interface_name,
                                    zx::channel channel);
 
- protected:
-  fuchsia::sys::LauncherPtr launcher_;
-
  private:
   std::shared_ptr<Services> incoming_services_;
   Outgoing outgoing_;
-  fuchsia::sys::EnvironmentPtr environment_;
+  mutable std::mutex services_mutex_;
+  mutable fuchsia::sys::EnvironmentPtr environment_
+      __TA_GUARDED(services_mutex_);
+  mutable fuchsia::sys::LauncherPtr launcher_
+      __TA_GUARDED(services_mutex_);
 };
 
 }  // namespace component

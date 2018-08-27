@@ -23,13 +23,9 @@ class NamespaceTest : public component::testing::TestWithEnvironment {
   // Connects to a service provided by the environment.
   template <typename Interface>
   void ConnectToService(fidl::InterfaceRequest<Interface> request,
-                        const std::string& service_name = Interface::Name_) {
-    if (!has_service_provider_) {
-      startup_context_->ConnectToEnvironmentService(env_.NewRequest());
-      env_->GetServices(service_provider_.NewRequest());
-      has_service_provider_ = true;
-    }
-    service_provider_->ConnectToService(service_name, request.TakeChannel());
+                        const std::string& interface_name = Interface::Name_) {
+    startup_context_->ConnectToEnvironmentService(std::move(request),
+                                                  interface_name);
   }
 
   // Returns whether path exists.
@@ -42,9 +38,6 @@ class NamespaceTest : public component::testing::TestWithEnvironment {
   void ExpectDoesNotExist(const char* path);
 
  private:
-  bool has_service_provider_ = false;
-  fuchsia::sys::EnvironmentPtr env_;
-  fuchsia::sys::ServiceProviderPtr service_provider_;
   std::unique_ptr<component::StartupContext> startup_context_;
 };
 
