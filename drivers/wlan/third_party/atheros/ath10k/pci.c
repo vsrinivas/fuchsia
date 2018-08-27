@@ -2777,18 +2777,221 @@ static void ath10k_chan_query_info(const struct ath10k_channel* dev_channel, voi
     *(*wlan_channel_ptr)++ = dev_channel->hw_value;
 }
 
-static void ath10k_band_query_info(const struct ath10k_band* dev_band, void* cookie) {
-    wlanmac_info_t* info = cookie;
-    wlan_info_t* ifc_info = &info->ifc_info;
+static void ath10k_get_ht_cap(struct ath10k* ar, struct wlan_ht_caps* ht_caps) {
+    memset(ht_caps, 0, sizeof(*ht_caps));
+
+    if (!(ar->ht_cap_info & WMI_HT_CAP_ENABLED)) {
+        return;
+    }
+
+    // ht_caps:LDPC
+    if (ar->ht_cap_info & WMI_HT_CAP_LDPC) {
+        ht_caps->ht_capability_info |= IEEE80211_HT_CAPS_LDPC;
+    }
+
+    // ht_caps:CHAN_WIDTH
+    ht_caps->ht_capability_info |= IEEE80211_HT_CAPS_CHAN_WIDTH;
+
+    // ht_caps:SMPS
+    if (ar->ht_cap_info & WMI_HT_CAP_DYNAMIC_SMPS) {
+        ht_caps->ht_capability_info |= IEEE80211_HT_CAPS_SMPS_DYNAMIC;
+    } else {
+        ht_caps->ht_capability_info |= IEEE80211_HT_CAPS_SMPS_DISABLED;
+    }
+
+    // ht_caps:GF (disabled)
+
+    // ht_caps:SGI_20
+    if (ar->ht_cap_info & WMI_HT_CAP_HT20_SGI) {
+        ht_caps->ht_capability_info |= IEEE80211_HT_CAPS_SGI_20;
+    }
+
+    // ht_caps:SGI_40
+    if (ar->ht_cap_info & WMI_HT_CAP_HT40_SGI) {
+        ht_caps->ht_capability_info |= IEEE80211_HT_CAPS_SGI_40;
+    }
+
+    // ht_caps:TX_STBC
+    if (ar->ht_cap_info & WMI_HT_CAP_TX_STBC && (ar->cfg_tx_chainmask > 1)) {
+        ht_caps->ht_capability_info |= IEEE80211_HT_CAPS_TX_STBC;
+    }
+
+    // ht_caps:RX_STBC
+    if (ar->ht_cap_info & WMI_HT_CAP_RX_STBC) {
+        uint32_t stbc = ar->ht_cap_info;
+        stbc &= WMI_HT_CAP_RX_STBC;
+        stbc >>= WMI_HT_CAP_RX_STBC_MASK_SHIFT;
+        stbc <<= IEEE80211_HT_CAPS_RX_STBC_SHIFT;
+        stbc &= IEEE80211_HT_CAPS_RX_STBC;
+        ht_caps->ht_capability_info |= stbc;
+    }
+
+    // ht_caps:DELAYED_BLOCK_ACK (disabled)
+
+    // ht_caps:MAX_AMSDU_LEN (implicitly taken from vht_cap_info)
+    if (ar->vht_cap_info & WMI_VHT_CAP_MAX_MPDU_LEN_MASK) {
+        ht_caps->ht_capability_info |= IEEE80211_HT_CAPS_MAX_AMSDU_LEN;
+    }
+
+    // ht_caps:DSSS_CCK_40
+    ht_caps->ht_capability_info |= IEEE80211_HT_CAPS_DSSS_CCK_40;
+
+    // ht_caps:40_INTOLERANT (disabled)
+
+    // ht_caps:L_SIG_TXOP_PROT
+    if (ar->ht_cap_info & WMI_HT_CAP_L_SIG_TXOP_PROT) {
+        ht_caps->ht_capability_info |= IEEE80211_HT_CAPS_L_SIG_TXOP_PROT;
+    }
+
+    // ampdu_params
+    ht_caps->ampdu_params = (3 << IEEE80211_AMPDU_MAX_RX_LEN_SHIFT) |    // (64K - 1) bytes
+                            (6 << IEEE80211_AMPDU_DENSITY_SHIFT);        // 8 us
+
+    // supported_mcs_set
+    for (uint8_t i = 0; i < ar->num_rf_chains; i++) {
+        ZX_DEBUG_ASSERT(i < countof(ht_caps->supported_mcs_set));
+        if (ar->cfg_rx_chainmask & (1 << i)) {
+            ht_caps->supported_mcs_set[i] = 0xFF;
+        }
+    }
+    ht_caps->supported_mcs_set[12] |= 0x1; // B96:97 Tx MCS == Rx MCS
+}
+
+static uint32_t ath10k_mac_get_vht_cap_bf_sts(struct ath10k* ar) {
+    uint32_t nsts = ar->vht_cap_info;
+
+    nsts &= IEEE80211_VHT_CAPS_BEAMFORMEE_STS;
+    nsts >>= IEEE80211_VHT_CAPS_BEAMFORMEE_STS_SHIFT;
+
+    /* If firmware does not deliver to host number of space-time
+     * streams supported, assume it support up to 4 BF STS and return
+     * the value for VHT CAP: nsts-1)
+     */
+    if (nsts == 0) {
+        return 3;
+    }
+
+    return nsts;
+}
+
+static uint32_t ath10k_mac_get_vht_cap_bf_sound_dim(struct ath10k* ar) {
+    uint32_t sound_dim = ar->vht_cap_info;
+
+    sound_dim &= IEEE80211_VHT_CAPS_SOUND_DIM;
+    sound_dim >>= IEEE80211_VHT_CAPS_SOUND_DIM_SHIFT;
+
+    /* If the sounding dimension is not advertised by the firmware,
+     * let's use a default value of 1
+     */
+    if (sound_dim == 0) {
+        return 1;
+    }
+
+    return sound_dim;
+}
+
+static void ath10k_get_vht_cap(struct ath10k* ar, struct wlan_vht_caps* vht_caps) {
+    memset(vht_caps, 0, sizeof(*vht_caps));
+    vht_caps->vht_capability_info = ar->vht_cap_info;
+
+    if (ar->vht_cap_info & (IEEE80211_VHT_CAPS_SU_BEAMFORMEE |
+                            IEEE80211_VHT_CAPS_MU_BEAMFORMEE)) {
+        uint32_t val = ath10k_mac_get_vht_cap_bf_sts(ar);
+        val <<= IEEE80211_VHT_CAPS_BEAMFORMEE_STS_SHIFT;
+        val &= IEEE80211_VHT_CAPS_BEAMFORMEE_STS;
+
+        vht_caps->vht_capability_info |= val;
+    }
+
+    if (ar->vht_cap_info & (IEEE80211_VHT_CAPS_SU_BEAMFORMER |
+                            IEEE80211_VHT_CAPS_MU_BEAMFORMER)) {
+        uint32_t val = ath10k_mac_get_vht_cap_bf_sound_dim(ar);
+        val <<= IEEE80211_VHT_CAPS_SOUND_DIM_SHIFT;
+        val &= IEEE80211_VHT_CAPS_SOUND_DIM;
+
+        vht_caps->vht_capability_info |= val;
+    }
+
+    /* Currently the firmware seems to be buggy, don't enable 80+80
+     * mode until that's resolved.
+     */
+    if ((ar->vht_cap_info & IEEE80211_VHT_CAPS_SGI_160) &&
+        (ar->vht_cap_info & IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH) == 0) {
+        vht_caps->vht_capability_info |= (1 << IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH_SHIFT);
+    }
+
+    if (ar->cfg_tx_chainmask <= 1) {
+        vht_caps->vht_capability_info &= ~IEEE80211_VHT_CAPS_TX_STBC;
+    }
+
+    uint16_t mcs_map = 0;
+    for (size_t i = 0; i < 8; i++) {
+        if ((i < ar->num_rf_chains) && (ar->cfg_tx_chainmask & (1 << i))) {
+            mcs_map |= (IEEE80211_VHT_MCS_0_9 << (i * 2));
+        } else {
+            mcs_map |= (IEEE80211_VHT_MCS_NONE << (i * 2));
+        }
+    }
+
+    // RX VHT-MCS Map (B0:15)
+    vht_caps->supported_vht_mcs_and_nss_set = (uint64_t)mcs_map;
+
+    // Rx Highest Supported Long GI Data Rate (B16:28): 0
+
+    // Maximum NSTS, total (B29:31): 0
+
+    // TX VHT-MCS Map (B32:47)
+    vht_caps->supported_vht_mcs_and_nss_set |= ((uint64_t)mcs_map << 32);
+
+    struct ath10k_hw_params* hw = &ar->hw_params;
+
+    /* If we are supporting 160Mhz or 80+80, then the NIC may be able to do
+     * a restricted NSS for 160 or 80+80 vs what it can do for 80Mhz.  Give
+     * user-space a clue if that is the case.
+     */
+    if ((vht_caps->vht_capability_info & IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH) &&
+            (hw->vht160_mcs_rx_highest != 0 ||
+             hw->vht160_mcs_tx_highest != 0)) {
+        uint16_t rx_highest = hw->vht160_mcs_rx_highest & 0x1fff;
+        vht_caps->supported_vht_mcs_and_nss_set |= ((uint64_t)rx_highest << 16);
+        uint16_t tx_highest = hw->vht160_mcs_tx_highest & 0x1fff;
+        vht_caps->supported_vht_mcs_and_nss_set |= ((uint64_t)tx_highest << 48);
+    }
+
+    // Tx Highest Supported Long GI Data Rate (B48:60): 0
+
+    // VHT Extended NSS BW Capable (B61): 0
+}
+
+static void ath10k_band_query_info(struct ath10k* ar,
+                                   const struct ath10k_band* dev_band,
+                                   void* cookie) {
+    wlan_info_t* ifc_info = cookie;
+
+    ZX_DEBUG_ASSERT(ifc_info->num_bands < WLAN_MAX_BANDS);
     wlan_band_info_t* wlan_band = &ifc_info->bands[ifc_info->num_bands++];
+
+    // desc
     strncpy(wlan_band->desc, dev_band->name, WLAN_BAND_DESC_MAX_LEN);
-    ZX_DEBUG_ASSERT(sizeof(wlan_band->ht_caps) == sizeof(dev_band->ht_caps));
-    memcpy(&wlan_band->ht_caps, &dev_band->ht_caps, sizeof(wlan_band->ht_caps));
-    wlan_band->vht_supported = dev_band->vht_supported;
-    ZX_DEBUG_ASSERT(sizeof(wlan_band->vht_caps) == sizeof(dev_band->vht_caps));
-    memcpy(&wlan_band->vht_caps, &dev_band->vht_caps, sizeof(wlan_band->vht_caps));
+
+    // ht_caps
+    if (dev_band->ht_supported) {
+        ath10k_get_ht_cap(ar, &wlan_band->ht_caps);
+    }
+
+    // vht_caps
+    if (dev_band->vht_supported) {
+        wlan_band->vht_supported = true;
+        ath10k_get_vht_cap(ar, &wlan_band->vht_caps);
+    } else {
+        wlan_band->vht_supported = false;
+    }
+
+    // basic_rates
     ZX_DEBUG_ASSERT(sizeof(wlan_band->basic_rates) == sizeof(dev_band->basic_rates));
     memcpy(&wlan_band->basic_rates, &dev_band->basic_rates, sizeof(wlan_band->basic_rates));
+
+    // base_freq
     wlan_band->supported_channels.base_freq = dev_band->base_freq;
 
     uint8_t* next_ch = wlan_band->supported_channels.channels;
@@ -2816,11 +3019,10 @@ void ath10k_pci_fill_wlan_info(struct ath10k* ar, wlan_info_t* ifc_info) {
     ifc_info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SPECTRUM_MGMT | WLAN_CAP_SHORT_SLOT_TIME;
 
     // bands
-    ath10k_foreach_band(ath10k_band_query_info, ifc_info);
+    ath10k_foreach_band(ar, ath10k_band_query_info, ifc_info);
 }
 
 static zx_status_t ath10k_pci_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
-    // TODO: ALL of the values below are hard-coded and faked for now.
     struct ath10k* ar = ctx;
 
     ZX_DEBUG_ASSERT(BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED));

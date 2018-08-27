@@ -60,7 +60,7 @@ struct ath10k_channel {
 
 struct ath10k_band {
     const char* name;
-    wlan_ht_caps_t ht_caps;
+    bool ht_supported;
     bool vht_supported;
     wlan_vht_caps_t vht_caps;
     uint8_t basic_rates[12];
@@ -127,7 +127,10 @@ struct ieee80211_txq* ath10k_mac_txq_lookup(struct ath10k* ar,
         uint8_t tid);
 #endif // NEEDS PORTING
 zx_status_t ath10k_mac_ext_resource_config(struct ath10k* ar, uint32_t val);
-void ath10k_foreach_band(void (*cb)(const struct ath10k_band* band, void* cookie),
+void ath10k_foreach_band(struct ath10k* ar,
+                         void (*cb)(struct ath10k* ar,
+                                    const struct ath10k_band* band,
+                                    void* cookie),
                          void* cookie);
 void ath10k_foreach_channel(const struct ath10k_band* band,
                             void (*cb)(const struct ath10k_channel* ch, void* cookie),

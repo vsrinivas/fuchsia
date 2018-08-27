@@ -99,20 +99,11 @@ static const struct ath10k_channel ath10k_5ghz_channels[] = {
     CHAN5G(169, 5845, 0),
 };
 
+// Band information that is consistent across all supported ath10k chipsets
 static const struct ath10k_band ath10k_supported_bands[] = {
     {
         .name = "2.4 GHz",
-        // These hard-coded values are experimentally proven to work.
-        // FIXME: NET-817
-        .ht_caps = { .ht_capability_info = 0x016e,
-                     .ampdu_params = 0x17,
-                     .supported_mcs_set = { 0xff, 0x00, 0x00, 0x00,
-                                            0x01, 0x00, 0x00, 0x00,
-                                            0x00, 0x00, 0x00, 0x00,
-                                            0x01, 0x00, 0x00, 0x00 },
-                     .ht_ext_capabilities = 0x0000,
-                     .tx_beamforming_capabilities = 0x00000000,
-                     .asel_capabilities = 0x00 },
+        .ht_supported = true,
         .vht_supported = false,
         // TODO(NET-1321, NET-1375):
         // Unmark the "BasicRate" bit for the first 4 rates.
@@ -126,18 +117,8 @@ static const struct ath10k_band ath10k_supported_bands[] = {
 
     {
         .name = "5 GHz",
-        // These hard-coded values are experimentally proven to work.
-        // FIXME: NET-817
-        .ht_caps = { .ht_capability_info = 0x016e,
-                     .ampdu_params = 0x17,
-                     .supported_mcs_set = { 0xff, 0xff, 0x00, 0x00,
-                                            0x01, 0x00, 0x00, 0x00,
-                                            0x00, 0x00, 0x00, 0x00,
-                                            0x01, 0x00, 0x00, 0x00 },
-                     .ht_ext_capabilities = 0x0000,
-                     .tx_beamforming_capabilities = 0x00000000,
-                     .asel_capabilities = 0x00 },
-        .vht_supported = false,
+        .ht_supported = true,
+        .vht_supported = true,
         // TODO(NET-1321, NET-1375):
         // Unmark the "BasicRate" bit for the first 4 rates.
         // Rename ".basic_rates" to ".supported_rates"
@@ -2511,8 +2492,8 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
     arg->peer_vht_caps = vht_cap->cap;
 
     ampdu_factor = (vht_cap->cap &
-                    IEEE80211_VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK) >>
-                   IEEE80211_VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_SHIFT;
+                    IEEE80211_VHT_CAP_MAX_AMPDU_LENGTH_EXPONENT_MASK) >>
+                   IEEE80211_VHT_CAP_MAX_AMPDU_LENGTH_EXPONENT_SHIFT;
 
     /* Workaround: Some Netgear/Linksys 11ac APs set Rx A-MPDU factor to
      * zero in VHT IE. Using it would result in degraded throughput.
@@ -2843,11 +2824,11 @@ static void ethaddr_sprintf(char* str, uint8_t* addr) {
     }
 }
 
-static void ath10k_mac_parse_a_mpdu(uint8_t response_a_mpdu,
-                                    struct wmi_peer_assoc_complete_arg* assoc_arg) {
-    assoc_arg->peer_max_mpdu = response_a_mpdu & IEEE80211_A_MPDU_MAX_RX_LEN;
-    assoc_arg->peer_mpdu_density = (response_a_mpdu & IEEE80211_A_MPDU_DENSITY) >>
-                                   IEEE80211_A_MPDU_DENSITY_SHIFT;
+static void ath10k_mac_parse_ampdu(uint8_t response_ampdu,
+                                   struct wmi_peer_assoc_complete_arg* assoc_arg) {
+    assoc_arg->peer_max_mpdu = response_ampdu & IEEE80211_AMPDU_MAX_RX_LEN;
+    assoc_arg->peer_mpdu_density = (response_ampdu & IEEE80211_AMPDU_DENSITY) >>
+                                   IEEE80211_AMPDU_DENSITY_SHIFT;
 }
 
 static void ath10k_mac_parse_assoc_resp(struct ath10k* ar,
@@ -2907,7 +2888,7 @@ static void ath10k_mac_parse_assoc_resp(struct ath10k* ar,
                 assoc_arg->peer_rate_caps |= stbc;
                 assoc_arg->peer_flags |= ar->wmi.peer_flags->stbc;
             }
-            ath10k_mac_parse_a_mpdu(tagged_data[2], assoc_arg);
+            ath10k_mac_parse_ampdu(tagged_data[2], assoc_arg);
             break;
         case IEEE80211_ASSOC_TAG_HT_INFO:
             if (tag_len != 22) {
@@ -3522,11 +3503,14 @@ static void ath10k_regd_update(struct ath10k* ar) {
 #endif // NEEDS PORTING
 }
 
-void ath10k_foreach_band(void (*cb)(const struct ath10k_band* band, void* cookie),
+void ath10k_foreach_band(struct ath10k* ar,
+                         void (*cb)(struct ath10k* ar,
+                                    const struct ath10k_band* band,
+                                    void* cookie),
                          void* cookie) {
     for (size_t band_ndx = 0; band_ndx < countof(ath10k_supported_bands); band_ndx++) {
         const struct ath10k_band* band = &ath10k_supported_bands[band_ndx];
-        cb(band, cookie);
+        cb(ar, band, cookie);
     }
 }
 
@@ -4560,199 +4544,6 @@ static void ath10k_check_chain_mask(struct ath10k* ar, uint32_t cm, const char* 
                 "Suggested values: 15, 7, 3, 1 or 0.\n",
                 dbg, cm);
 }
-
-#if 0 // NEEDS PORTING
-static int ath10k_mac_get_vht_cap_bf_sts(struct ath10k* ar) {
-    int nsts = ar->vht_cap_info;
-
-    nsts &= IEEE80211_VHT_CAP_BEAMFORMEE_STS_MASK;
-    nsts >>= IEEE80211_VHT_CAP_BEAMFORMEE_STS_SHIFT;
-
-    /* If firmware does not deliver to host number of space-time
-     * streams supported, assume it support up to 4 BF STS and return
-     * the value for VHT CAP: nsts-1)
-     */
-    if (nsts == 0) {
-        return 3;
-    }
-
-    return nsts;
-}
-
-static int ath10k_mac_get_vht_cap_bf_sound_dim(struct ath10k* ar) {
-    int sound_dim = ar->vht_cap_info;
-
-    sound_dim &= IEEE80211_VHT_CAP_SOUNDING_DIMENSIONS_MASK;
-    sound_dim >>= IEEE80211_VHT_CAP_SOUNDING_DIMENSIONS_SHIFT;
-
-    /* If the sounding dimension is not advertised by the firmware,
-     * let's use a default value of 1
-     */
-    if (sound_dim == 0) {
-        return 1;
-    }
-
-    return sound_dim;
-}
-
-static struct ieee80211_sta_vht_cap ath10k_create_vht_cap(struct ath10k* ar) {
-    struct ieee80211_sta_vht_cap vht_cap = {0};
-    struct ath10k_hw_params* hw = &ar->hw_params;
-    uint16_t mcs_map;
-    uint32_t val;
-    int i;
-
-    vht_cap.vht_supported = 1;
-    vht_cap.cap = ar->vht_cap_info;
-
-    if (ar->vht_cap_info & (IEEE80211_VHT_CAP_SU_BEAMFORMEE_CAPABLE |
-                            IEEE80211_VHT_CAP_MU_BEAMFORMEE_CAPABLE)) {
-        val = ath10k_mac_get_vht_cap_bf_sts(ar);
-        val <<= IEEE80211_VHT_CAP_BEAMFORMEE_STS_SHIFT;
-        val &= IEEE80211_VHT_CAP_BEAMFORMEE_STS_MASK;
-
-        vht_cap.cap |= val;
-    }
-
-    if (ar->vht_cap_info & (IEEE80211_VHT_CAP_SU_BEAMFORMER_CAPABLE |
-                            IEEE80211_VHT_CAP_MU_BEAMFORMER_CAPABLE)) {
-        val = ath10k_mac_get_vht_cap_bf_sound_dim(ar);
-        val <<= IEEE80211_VHT_CAP_SOUNDING_DIMENSIONS_SHIFT;
-        val &= IEEE80211_VHT_CAP_SOUNDING_DIMENSIONS_MASK;
-
-        vht_cap.cap |= val;
-    }
-
-    /* Currently the firmware seems to be buggy, don't enable 80+80
-     * mode until that's resolved.
-     */
-    if ((ar->vht_cap_info & IEEE80211_VHT_CAP_SHORT_GI_160) &&
-            (ar->vht_cap_info & IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_MASK) == 0) {
-        vht_cap.cap |= IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_160MHZ;
-    }
-
-    mcs_map = 0;
-    for (i = 0; i < 8; i++) {
-        if ((i < ar->num_rf_chains) && (ar->cfg_tx_chainmask & BIT(i))) {
-            mcs_map |= IEEE80211_VHT_MCS_SUPPORT_0_9 << (i * 2);
-        } else {
-            mcs_map |= IEEE80211_VHT_MCS_NOT_SUPPORTED << (i * 2);
-        }
-    }
-
-    if (ar->cfg_tx_chainmask <= 1) {
-        vht_cap.cap &= ~IEEE80211_VHT_CAP_TXSTBC;
-    }
-
-    vht_cap.vht_mcs.rx_mcs_map = mcs_map;
-    vht_cap.vht_mcs.tx_mcs_map = mcs_map;
-
-    /* If we are supporting 160Mhz or 80+80, then the NIC may be able to do
-     * a restricted NSS for 160 or 80+80 vs what it can do for 80Mhz.  Give
-     * user-space a clue if that is the case.
-     */
-    if ((vht_cap.cap & IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_MASK) &&
-            (hw->vht160_mcs_rx_highest != 0 ||
-             hw->vht160_mcs_tx_highest != 0)) {
-        vht_cap.vht_mcs.rx_highest = hw->vht160_mcs_rx_highest;
-        vht_cap.vht_mcs.tx_highest = hw->vht160_mcs_tx_highest;
-    }
-
-    return vht_cap;
-}
-
-static struct ieee80211_sta_ht_cap ath10k_get_ht_cap(struct ath10k* ar) {
-    int i;
-    struct ieee80211_sta_ht_cap ht_cap = {0};
-
-    if (!(ar->ht_cap_info & WMI_HT_CAP_ENABLED)) {
-        return ht_cap;
-    }
-
-    ht_cap.ht_supported = 1;
-    ht_cap.ampdu_factor = IEEE80211_HT_MAX_AMPDU_64K;
-    ht_cap.ampdu_density = IEEE80211_HT_MPDU_DENSITY_8;
-    ht_cap.cap |= IEEE80211_HT_CAP_SUP_WIDTH_20_40;
-    ht_cap.cap |= IEEE80211_HT_CAP_DSSSCCK40;
-    ht_cap.cap |=
-        WLAN_HT_CAP_SM_PS_DISABLED << IEEE80211_HT_CAP_SM_PS_SHIFT;
-
-    if (ar->ht_cap_info & WMI_HT_CAP_HT20_SGI) {
-        ht_cap.cap |= IEEE80211_HT_CAP_SGI_20;
-    }
-
-    if (ar->ht_cap_info & WMI_HT_CAP_HT40_SGI) {
-        ht_cap.cap |= IEEE80211_HT_CAP_SGI_40;
-    }
-
-    if (ar->ht_cap_info & WMI_HT_CAP_DYNAMIC_SMPS) {
-        uint32_t smps;
-
-        smps   = WLAN_HT_CAP_SM_PS_DYNAMIC;
-        smps <<= IEEE80211_HT_CAP_SM_PS_SHIFT;
-
-        ht_cap.cap |= smps;
-    }
-
-    if (ar->ht_cap_info & WMI_HT_CAP_TX_STBC && (ar->cfg_tx_chainmask > 1)) {
-        ht_cap.cap |= IEEE80211_HT_CAP_TX_STBC;
-    }
-
-    if (ar->ht_cap_info & WMI_HT_CAP_RX_STBC) {
-        uint32_t stbc;
-
-        stbc   = ar->ht_cap_info;
-        stbc  &= WMI_HT_CAP_RX_STBC;
-        stbc >>= WMI_HT_CAP_RX_STBC_MASK_SHIFT;
-        stbc <<= IEEE80211_HT_CAP_RX_STBC_SHIFT;
-        stbc  &= IEEE80211_HT_CAP_RX_STBC;
-
-        ht_cap.cap |= stbc;
-    }
-
-    if (ar->ht_cap_info & WMI_HT_CAP_LDPC) {
-        ht_cap.cap |= IEEE80211_HT_CAP_LDPC_CODING;
-    }
-
-    if (ar->ht_cap_info & WMI_HT_CAP_L_SIG_TXOP_PROT) {
-        ht_cap.cap |= IEEE80211_HT_CAP_LSIG_TXOP_PROT;
-    }
-
-    /* max AMSDU is implicitly taken from vht_cap_info */
-    if (ar->vht_cap_info & WMI_VHT_CAP_MAX_MPDU_LEN_MASK) {
-        ht_cap.cap |= IEEE80211_HT_CAP_MAX_AMSDU;
-    }
-
-    for (i = 0; i < ar->num_rf_chains; i++) {
-        if (ar->cfg_rx_chainmask & BIT(i)) {
-            ht_cap.mcs.rx_mask[i] = 0xFF;
-        }
-    }
-
-    ht_cap.mcs.tx_params |= IEEE80211_HT_MCS_TX_DEFINED;
-
-    return ht_cap;
-}
-
-static void ath10k_mac_setup_ht_vht_cap(struct ath10k* ar) {
-    struct ieee80211_supported_band* band;
-    struct ieee80211_sta_vht_cap vht_cap;
-    struct ieee80211_sta_ht_cap ht_cap;
-
-    ht_cap = ath10k_get_ht_cap(ar);
-    vht_cap = ath10k_create_vht_cap(ar);
-
-    if (ar->phy_capability & WHAL_WLAN_11G_CAPABILITY) {
-        band = &ar->mac.sbands[NL80211_BAND_2GHZ];
-        band->ht_cap = ht_cap;
-    }
-    if (ar->phy_capability & WHAL_WLAN_11A_CAPABILITY) {
-        band = &ar->mac.sbands[NL80211_BAND_5GHZ];
-        band->ht_cap = ht_cap;
-        band->vht_cap = vht_cap;
-    }
-}
-#endif // NEEDS PORTING
 
 static zx_status_t __ath10k_set_antenna(struct ath10k* ar, uint32_t tx_ant, uint32_t rx_ant) {
     zx_status_t ret;
