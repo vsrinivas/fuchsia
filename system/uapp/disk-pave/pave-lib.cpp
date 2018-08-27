@@ -235,7 +235,7 @@ zx_status_t WriteVmoToBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
     request.dev_offset = 0;
 
     if ((status = client.Transaction(&request, 1)) != ZX_OK) {
-        ERROR("Error writing partition data: %d\n", status);
+        ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
         return status;
     }
     return ZX_OK;
@@ -264,7 +264,7 @@ zx_status_t WriteVmoToSkipBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
 
     if ((status = static_cast<zx_status_t>(ioctl_skip_block_write(
              partition_fd.get(), &operation, &bad_block_grown))) < 0) {
-        ERROR("Error writing partition data: %d\n", status);
+        ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
         return status;
     }
     return ZX_OK;
@@ -379,7 +379,7 @@ fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size
     ERROR("Initializing partition as FVM\n");
     zx_status_t status;
     if ((status = fvm_init(partition_fd.get(), slice_size)) != ZX_OK) {
-        ERROR("Failed to initialize fvm: %d\n", status);
+        ERROR("Failed to initialize fvm: %s\n", zx_status_get_string(status));
         return fbl::unique_fd();
     }
     return TryBindToFvmDriver(partition_fd, zx::sec(3));
@@ -701,14 +701,14 @@ zx_status_t FvmPave(fbl::unique_ptr<DevicePartitioner> device_partitioner,
     } else {
         status = device_partitioner->AddPartition(Partition::kFuchsiaVolumeManager, &partition_fd);
         if (status != ZX_OK) {
-            ERROR("Failure creating partition: %d\n", status);
+            ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
             return status;
         }
     }
 
     LOG("Streaming partitions...\n");
     if ((status = FvmStreamPartitions(fbl::move(partition_fd), fbl::move(payload_fd))) != ZX_OK) {
-        ERROR("Failed to stream partitions: %d\n", status);
+        ERROR("Failed to stream partitions: %s\n", zx_status_get_string(status));
         return status;
     }
     LOG("Completed successfully\n");
@@ -723,11 +723,11 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
     fbl::unique_fd partition_fd;
     if ((status = partitioner->FindPartition(partition_type, &partition_fd)) != ZX_OK) {
         if (status != ZX_ERR_NOT_FOUND) {
-            ERROR("Failure looking for partition: %d\n", status);
+            ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
             return status;
         }
         if ((status = partitioner->AddPartition(partition_type, &partition_fd)) != ZX_OK) {
-            ERROR("Failure creating partition: %d\n", status);
+            ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
             return status;
         }
     } else {
