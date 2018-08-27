@@ -27,6 +27,7 @@ template("guest_package") {
   guest_config_file = "${target_out_dir}/guest.cfg"
 
   action(guest_config_target_name) {
+    testonly = true
     script = "//garnet/bin/guest/pkg/generate_guest_config.py"
     outputs = [
       guest_config_file,
@@ -97,6 +98,7 @@ template("guest_package") {
   }
 
   package(target_name) {
+    testonly = true
     deps = [
       ":${guest_config_target_name}",
     ]

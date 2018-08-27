@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zircon.gni")
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
 package("services_config") {
@@ -18,8 +17,22 @@ package("services_config") {
 }
 
 guest_package("zircon_guest") {
-  zircon = "$zircon_build_dir/zircon.zbi"
+  deps = [
+    "//build/images/guest:guest",
+    "//build/images/guest:guest_fvm",
+  ]
+  zircon = "$root_out_dir/guest.zbi"
 
-  cmdline = "console.path=/dev/class/console/virtio-console " +
-            "kernel.serial=legacy"
+  cmdline =
+      "console.path=/dev/class/console/virtio-console " + "kernel.serial=legacy"
+
+  disk_filename = "filesystem.fvm"
+  fvm = "$root_out_dir/guest_fvm.blk"
+  resources = [
+    {
+      path = rebase_path(fvm)
+      dest = "${disk_filename}"
+    },
+  ]
+  block_devices = [ "/guest/data/${disk_filename},ro" ]
 }

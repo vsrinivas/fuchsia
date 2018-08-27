@@ -14,9 +14,11 @@ action("block") {
   args = [
     rebase_path("images/${target_cpu}/disk.img", root_build_dir),
     rebase_path(disk_image, root_build_dir),
-    rebase_path(depfile, root_build_dir)
+    rebase_path(depfile, root_build_dir),
   ]
-  outputs = [ disk_image ]
+  outputs = [
+    disk_image,
+  ]
 }
 
 action("kernel") {
@@ -26,9 +28,11 @@ action("kernel") {
   args = [
     rebase_path("images/${target_cpu}/Image", root_build_dir),
     rebase_path(linux_image, root_build_dir),
-    rebase_path(depfile, root_build_dir)
+    rebase_path(depfile, root_build_dir),
   ]
-  outputs = [ linux_image ]
+  outputs = [
+    linux_image,
+  ]
 }
 
 guest_package("linux_guest") {
@@ -46,12 +50,12 @@ guest_package("linux_guest") {
 
   linux = "$target_out_dir/linux/Image"
 
-  disk_name = "filesystem.img"
+  disk_filename = "filesystem.img"
   resources = [
     {
-      path = rebase_path("$target_out_dir/linux/disk.img")
-      dest = "${disk_name}"
+      path = rebase_path("${disk_image}")
+      dest = "${disk_filename}"
     },
   ]
-  block_devices = [ "/guest/data/${disk_name},ro,volatile" ]
+  block_devices = [ "/guest/data/${disk_filename},ro,volatile" ]
 }
