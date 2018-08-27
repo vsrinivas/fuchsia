@@ -15,13 +15,23 @@
 #include <utility>
 
 #include "garnet/bin/appmgr/component_container.h"
-#include "garnet/bin/appmgr/debug_directory.h"
 #include "garnet/bin/appmgr/namespace.h"
 #include "lib/fsl/handles/object_info.h"
 
 namespace component {
 
 using fuchsia::sys::TerminationReason;
+
+namespace {
+zx::process DuplicateProcess(const zx::process& process) {
+  zx::process ret;
+  zx_status_t status = process.duplicate(ZX_RIGHT_SAME_RIGHTS, &ret);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to duplicate process handle: " << status;
+  }
+  return ret;
+}
+}  // namespace
 
 ComponentRequestWrapper::ComponentRequestWrapper(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
@@ -162,16 +172,15 @@ ComponentControllerImpl::ComponentControllerImpl(
       process_(std::move(process)),
       koid_(std::to_string(fsl::GetKoid(process_.get()))),
       wait_(this, process_.get(), ZX_TASK_TERMINATED),
-      termination_callback_(std::move(termination_callback)) {
+      termination_callback_(std::move(termination_callback)),
+      debug_directory_(DuplicateProcess(process_)) {
   zx_status_t status = wait_.Begin(async_get_default_dispatcher());
   FXL_DCHECK(status == ZX_OK);
 
   hub()->SetJobId(std::to_string(fsl::GetKoid(job_.get())));
   hub()->SetProcessId(koid_);
 
-  auto debug_dir = fbl::AdoptRef(new fs::PseudoDir());
-  debug_dir->AddEntry("threads", fbl::AdoptRef(new DebugDirectory(process_)));
-  hub()->AddEntry("system_debug", debug_dir);
+  hub()->AddEntry("system_objects", debug_directory_.object());
 }
 
 ComponentControllerImpl::~ComponentControllerImpl() {

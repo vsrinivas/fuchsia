@@ -17,7 +17,7 @@ struct thread_entry {
 };
 }  // namespace
 
-fbl::String DebugInfoRetriever::GetInfo(zx::process* process,
+fbl::String DebugInfoRetriever::GetInfo(const zx::process* process,
                                         zx_koid_t* thread_ids, size_t num) {
   assert(process);
   zx_koid_t thread_ids_storage[kMaxThreads];
@@ -49,8 +49,9 @@ fbl::String DebugInfoRetriever::GetInfo(zx::process* process,
 
     // All threads will resume when their suspend token goes out of scope.
     // Ensure that we don't later resume an already suspended thread.
-    if (thread_info.state != ZX_THREAD_STATE_SUSPENDED) {
+    if (thread_info.state != ZX_THREAD_SUSPENDED) {
       if ((status = it->thread.suspend(&it->suspend_token)) != ZX_OK) {
+        FXL_LOG(INFO) << "Failed to suspend thread: " << status;
         threads.erase(it);
       }
     }

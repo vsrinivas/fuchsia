@@ -7,33 +7,44 @@
 
 #include <fbl/string.h>
 #include <fs/lazy-dir.h>
+#include <lib/component/cpp/exposed_object.h>
 #include <lib/fxl/strings/string_view.h>
 #include <zx/process.h>
 #include <zx/thread.h>
 
 namespace component {
 
-class DebugDirectory : public fs::LazyDir {
+class DebugDirectory : public component::ExposedObject {
  public:
-  explicit DebugDirectory(const zx::process& process)
-      : process_(process.get()) {}
-
-  void GetContents(LazyEntryVector* out_vector) override;
-  zx_status_t GetFile(fbl::RefPtr<Vnode>* out, uint64_t id,
-                      fbl::String name) override;
+  explicit DebugDirectory(zx::process process)
+      : ExposedObject("debug_objects"),
+        process_(std::move(process)),
+        threads_(std::make_unique<ProcessThreads>(&process_)) {
+    add_child(threads_.get());
+  }
 
  private:
-  static constexpr size_t kMaxThreads = 2048;
-  static constexpr uint64_t kAllId = 1;
-  struct ThreadInfo {
-    zx_koid_t koid;
-    fbl::String name;
-    zx::thread thread;
+  class ProcessThreads : public component::ExposedObject {
+   public:
+    ProcessThreads(const zx::process* process);
+
+   private:
+    static constexpr size_t kMaxThreads = 2048;
+    static constexpr uint64_t kAllId = 1;
+    struct ThreadInfo {
+      zx_koid_t koid;
+      fbl::String name;
+      zx::thread thread;
+    };
+
+    // Retrieves a list of ThreadInfos, one for each thread of the process.
+    void GetThreads(fbl::Vector<ThreadInfo>* out);
+
+    const zx::process* process_;
   };
 
-  // Retrieves a list of ThreadInfos, one for each thread of the process.
-  void GetThreads(fbl::Vector<ThreadInfo>* out);
   zx::process process_;
+  std::unique_ptr<ProcessThreads> threads_;
 };
 
 }  // namespace component

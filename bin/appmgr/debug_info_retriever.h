@@ -34,7 +34,7 @@ class DebugInfoRetriever {
   // If thread_ids is not null, it must be an array of thread object ids of size
   // num to output. If thread_ids is null, all threads in the process will be
   // fetched and output.
-  static fbl::String GetInfo(zx::process* process,
+  static fbl::String GetInfo(const zx::process* process,
                              zx_koid_t* thread_ids = nullptr, size_t num = 0);
 
  private:
