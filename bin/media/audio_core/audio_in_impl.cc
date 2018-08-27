@@ -112,7 +112,8 @@ zx_status_t AudioInImpl::InitializeSourceLink(const AudioLinkPtr& link) {
   zx_status_t res;
 
   // Allocate our bookkeeping for our link.
-  std::unique_ptr<CaptureLinkBookkeeping> bk(new CaptureLinkBookkeeping());
+  std::unique_ptr<AudioLink::Bookkeeping> bk(
+      new AudioLink::Bookkeeping());
   link->set_bookkeeping(std::move(bk));
 
   // Choose a mixer
@@ -871,13 +872,18 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
       return false;
     }
 
+    // Get our capture link bookkeeping.
+    AudioLink::Bookkeeping* bk =
+        static_cast<AudioLink::Bookkeeping*>(link->bookkeeping().get());
+    FXL_DCHECK(bk != nullptr);
+
     // Figure out the fixed point gain scalar we will apply to this mix
     // operation by composing our gain with the link gain state.  The link's
     // gain helper class re-composes the source/dest gain combination if needed.
-    Gain::AScale amplitude_scale = link->gain().GetGainScale(capture_gain);
+    bk->amplitude_scale = link->gain().GetGainScale(capture_gain);
     // If this gain scale is at or below our mute threshold, skip this source,
     // as it will not contribute to this mix pass.
-    if (amplitude_scale <= Gain::MuteThreshold()) {
+    if (bk->amplitude_scale <= Gain::MuteThreshold()) {
       continue;
     }
 
@@ -893,11 +899,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
       continue;
     }
 
-    // Now grab a hold of our capture link bookkeeping and update our
-    // clock transformation if needed.
-    CaptureLinkBookkeeping* bk =
-        static_cast<CaptureLinkBookkeeping*>(link->bookkeeping().get());
-    FXL_DCHECK(bk != nullptr);
+    // Update clock transformation if needed.
     FXL_DCHECK(bk->mixer != nullptr);
     UpdateTransformation(bk, rb_snap);
 
@@ -916,7 +918,10 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
     // regions (expressed in fractional start frames) in the process.
     const auto& rb = rb_snap.ring_buffer;
     zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-    int64_t end_fence_frames = bk->clock_mono_to_src_frames_fence.Apply(now);
+
+    int64_t end_fence_frames =
+        (bk->clock_mono_to_frac_source_frames.Apply(now)) >> kPtsFractionalBits;
+
     int64_t start_fence_frames =
         end_fence_frames - rb_snap.end_fence_to_start_fence_frames;
     start_fence_frames = std::max<int64_t>(start_fence_frames, 0);
@@ -1075,7 +1080,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
       bool consumed_source = bk->mixer->Mix(
           buf, frames_left, &output_offset, region_source,
           region_frac_frame_len, &frac_source_offset, bk->step_size,
-          amplitude_scale, accumulate, bk->modulo, bk->denominator());
+          bk->amplitude_scale, accumulate, bk->modulo, bk->denominator());
       FXL_DCHECK(output_offset <= frames_left);
 
       if (!consumed_source) {
@@ -1103,7 +1108,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
 }
 
 void AudioInImpl::UpdateTransformation(
-    CaptureLinkBookkeeping* bk,
+    AudioLink::Bookkeeping* bk,
     const AudioDriver::RingBufferSnapshot& rb_snap) {
   FXL_DCHECK(bk != nullptr);
 
@@ -1128,8 +1133,9 @@ void AudioInImpl::UpdateTransformation(
 
   TimelineRate frac_frames_to_frames(1u, 1u << kPtsFractionalBits);
   int64_t offset = static_cast<int64_t>(rb_snap.position_to_end_fence_frames);
-  bk->clock_mono_to_src_frames_fence = TimelineFunction::Compose(
-      TimelineFunction(-offset, 0, frac_frames_to_frames),
+
+  bk->clock_mono_to_frac_source_frames = TimelineFunction::Compose(
+      TimelineFunction(-offset, 0, TimelineRate(1u, 1u)),
       src_clock_mono_to_ring_pos_frac_frames);
 
   int64_t tmp_step_size = bk->dest_frames_to_frac_source_frames.rate().Scale(1);
@@ -1350,15 +1356,15 @@ zx_status_t AudioInImpl::ChooseMixer(const std::shared_ptr<AudioLink>& link) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // The only devices who should not have a driver are the cursed throttle
-  // output.
+  // Throttle outputs are the only driver-less devices. MTWN-52 is the work to
+  // remove this construct and have packet sources maintain pending packet
+  // queues, trimmed by a thread from the pool managed by the device manager.
   auto device = static_cast<AudioDevice*>(source.get());
   if (device->driver() == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
 
-  // Get the driver's currently configured format.  If it does not have one, we
-  // cannot set up the mixer.
+  // Get the driver's current format. Without one, we can't setup the mixer.
   fuchsia::media::AudioStreamTypePtr source_format;
   source_format = device->driver()->GetSourceFormat();
   if (!source_format) {
@@ -1367,9 +1373,10 @@ zx_status_t AudioInImpl::ChooseMixer(const std::shared_ptr<AudioLink>& link) {
     return ZX_ERR_BAD_STATE;
   }
 
-  // Extract our bookkeeping from the from the link, then set the mixer in it.
+  // Extract our bookkeeping from the link, then set the mixer in it.
   FXL_DCHECK(link->bookkeeping() != nullptr);
-  auto bk = static_cast<CaptureLinkBookkeeping*>(link->bookkeeping().get());
+  auto bk =
+      static_cast<AudioLink::Bookkeeping*>(link->bookkeeping().get());
 
   FXL_DCHECK(bk->mixer == nullptr);
   bk->mixer = Mixer::Select(*source_format, *format_);

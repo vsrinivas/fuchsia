@@ -134,22 +134,6 @@ class AudioInImpl : public AudioObject,
 
   friend PcbAllocator;
 
-  // TODO(mpuryear): per MTWN-129, combine this with AudioOutBookkeeping, and
-  // integrate it into the Mixer class itself.
-  // TODO(mpuryear): Rationalize naming and usage of the bookkeeping structs.
-  struct CaptureLinkBookkeeping : public AudioLink::Bookkeeping {
-    std::unique_ptr<Mixer> mixer;
-    TimelineFunction dest_frames_to_frac_source_frames;
-    TimelineFunction clock_mono_to_src_frames_fence;
-    uint32_t step_size;
-    uint32_t modulo;
-    uint32_t denominator() const {
-      return dest_frames_to_frac_source_frames.rate().reference_delta();
-    }
-    uint32_t dest_trans_gen_id = kInvalidGenerationId;
-    uint32_t source_trans_gen_id = kInvalidGenerationId;
-  };
-
   AudioInImpl(fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
               AudioCoreImpl* owner, bool loopback);
 
@@ -178,7 +162,7 @@ class AudioInImpl : public AudioObject,
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   bool MixToIntermediate(uint32_t mix_frames)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  void UpdateTransformation(CaptureLinkBookkeeping* bk,
+  void UpdateTransformation(AudioLink::Bookkeeping* bk,
                             const AudioDriver::RingBufferSnapshot& rb_snap)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   void DoStopAsyncCapture() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
