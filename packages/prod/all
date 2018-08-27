@@ -84,6 +84,7 @@
         "garnet/packages/prod/wlan-hw-sim",
         "garnet/packages/prod/wlan-smoke-test",
         "garnet/packages/prod/wlancfg",
+        "garnet/packages/prod/wlanif",
         "garnet/packages/prod/wlanphy",
         "garnet/packages/prod/wlanstack",
         "garnet/packages/prod/wlantap",

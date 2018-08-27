@@ -4,6 +4,7 @@
         "garnet/packages/prod/broadcom",
         "garnet/packages/prod/ralink",
         "garnet/packages/prod/realtek",
+        "garnet/packages/prod/wlanif",
         "garnet/packages/prod/wlanphy",
         "garnet/packages/prod/wlantap"
     ],

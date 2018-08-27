@@ -62,7 +62,10 @@ enum GI {
 
 enum {
     WLAN_BSS_TYPE_INFRASTRUCTURE = 1,
-    WLAN_BSS_TYPE_IBSS = 2,
+    WLAN_BSS_TYPE_IBSS = 2, // Independent BSS
+    WLAN_BSS_TYPE_PERSONAL = 3,
+    WLAN_BSS_TYPE_MESH = 4,
+    WLAN_BSS_TYPE_ANY_BSS = 5,
 };
 
 typedef struct wlan_bss_config {
@@ -176,6 +179,7 @@ typedef struct wlan_chan_list {
 } wlan_chan_list_t;
 
 #define WLAN_BAND_DESC_MAX_LEN 16
+#define WLAN_BASIC_RATES_MAX_LEN 12
 
 typedef struct wlan_band_info {
     // Human-readable description of the band, for debugging.
@@ -187,7 +191,7 @@ typedef struct wlan_band_info {
     wlan_vht_caps_t vht_caps;
     // Basic rates supported in this band, as defined in IEEE Std 802.11-2016, 9.4.2.3.
     // Each rate is given in units of 500 kbit/s, so 1 Mbit/s is represent as 0x02.
-    uint8_t basic_rates[12];
+    uint8_t basic_rates[WLAN_BASIC_RATES_MAX_LEN];
     // Channels supported in this band.
     wlan_chan_list_t supported_channels;
 } wlan_band_info_t;
