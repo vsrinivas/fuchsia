@@ -39,18 +39,20 @@ class BufferCache : public ResourceRecycler {
   // |ResourceRecycler|
   void RecycleResource(std::unique_ptr<Resource> resource) override;
 
+  size_t free_buffer_count() const { return free_buffers_by_id_.size(); }
+
  private:
-  // The maximum amount of allocated memory cached in the BufferCache. 
+  // The maximum amount of allocated memory cached in the BufferCache.
   // TODO() Optimize the maximum amount of memory to cache. Value was chosen
   // to match the amount of memory allocated by the GpuUploader by default.
   static constexpr size_t kMaxMemoryCached = 1024 * 1024;
 
   // Buffer usage info.
-  // TODO(SCN-851) Grow this class to handle different buffer usage and memory flags.
-  // It should work with the UniformBlockAllocator.
-  const vk::BufferUsageFlags kUsageFlags = 
+  // TODO(SCN-851) Grow this class to handle different buffer usage and memory
+  // flags. It should work with the UniformBlockAllocator.
+  const vk::BufferUsageFlags kUsageFlags =
       vk::BufferUsageFlagBits::eTransferSrc;
-  const vk::MemoryPropertyFlags kMemoryPropertyFlags = 
+  const vk::MemoryPropertyFlags kMemoryPropertyFlags =
       vk::MemoryPropertyFlagBits::eHostVisible |
       vk::MemoryPropertyFlagBits::eHostCoherent;
 

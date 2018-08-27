@@ -33,12 +33,12 @@ BufferCache::~BufferCache() {
 
 BufferPtr BufferCache::NewHostBuffer(vk::DeviceSize vk_size) {
   BufferPtr buffer;
-  // See if there's a buffer of the right size. Or, find the smallest buffer that
-  // is big enough to handle the size request.
+  // See if there's a buffer of the right size. Or, find the smallest buffer
+  // that is big enough to handle the size request.
   auto size_itr = free_buffers_.lower_bound(vk_size);
 
-  if (size_itr != free_buffers_.end()
-      && size_itr->first > kMaxBufferAllocationRequestRatio * vk_size) {
+  if (size_itr != free_buffers_.end() &&
+      size_itr->first > kMaxBufferAllocationRequestRatio * vk_size) {
     // Next largest buffer is too big, just create a new one.
     size_itr = free_buffers_.end();
   }
@@ -64,8 +64,8 @@ BufferPtr BufferCache::NewHostBuffer(vk::DeviceSize vk_size) {
     free_buffers_by_id_.erase(info_itr);
   } else {
     // Construct a new buffer of the requested size.
-    buffer = Buffer::New(this, gpu_allocator_.get(), vk_size,
-                         kUsageFlags, kMemoryPropertyFlags);
+    buffer = Buffer::New(this, gpu_allocator_.get(), vk_size, kUsageFlags,
+                         kMemoryPropertyFlags);
   }
 
   return buffer;
@@ -80,7 +80,9 @@ void BufferCache::RecycleResource(std::unique_ptr<Resource> resource) {
   cache_info.allocation_time = fxl::TimePoint::Now();
   cache_info.size = buffer->size();
   // Ensure this buffer is not already tracked.
-  FXL_DCHECK(free_buffers_by_id_.find(cache_info.id) == free_buffers_by_id_.end());
+  FXL_DCHECK(free_buffers_by_id_.find(cache_info.id) ==
+             free_buffers_by_id_.end())
+      << "uid: " << buffer->uid();
 
   // Add to the map.
   free_buffers_[cache_info.size].emplace_back(std::move(buffer));

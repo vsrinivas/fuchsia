@@ -144,6 +144,7 @@ Escher::~Escher() {
   // since they register themselves with it.
   resource_recycler_.reset();
   gpu_uploader_.reset();
+  buffer_cache_.reset();
 }
 
 bool Escher::Cleanup() {

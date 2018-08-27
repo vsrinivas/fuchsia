@@ -40,8 +40,8 @@ VK_TEST(BufferCache, RecycleBuffer) {
   uint64_t buffer_id = buffer->uid();
 
   // Recycle the buffer and request a new buffer of equal or smaller size.
-  buffer_cache.RecycleResource(std::unique_ptr<Resource>(
-                                 static_cast<Resource*>(buffer.get())));
+  buffer_cache.RecycleResource(
+      std::unique_ptr<Resource>(static_cast<Resource*>(buffer.get())));
   vk::DeviceSize requested_size2 = 256;
   BufferPtr buffer2 = buffer_cache.NewHostBuffer(requested_size2);
 
@@ -57,8 +57,9 @@ VK_TEST(BufferCache, DontRecycleLargeBuffer) {
   uint64_t buffer_id = buffer->uid();
 
   // Recycle the buffer and request a new buffer of less than half the size.
-  buffer_cache.RecycleResource(std::unique_ptr<Resource>(
-                                 static_cast<Resource*>(buffer.get())));
+  EXPECT_EQ(0U, buffer_cache.free_buffer_count());
+  buffer = nullptr;
+  EXPECT_EQ(1U, buffer_cache.free_buffer_count());
   vk::DeviceSize requested_size2 = requested_size / 4;
   BufferPtr buffer2 = buffer_cache.NewHostBuffer(requested_size2);
 
@@ -76,8 +77,7 @@ VK_TEST(BufferCache, RecycleMany) {
   uint64_t big_buffer_id = big_buffer->uid();
   uint64_t big_buffer2_id = big_buffer2->uid();
   uint64_t big_buffer3_id = big_buffer3->uid();
-  if (big_buffer_id == big_buffer2_id ||
-      big_buffer_id == big_buffer3_id ||
+  if (big_buffer_id == big_buffer2_id || big_buffer_id == big_buffer3_id ||
       big_buffer2_id == big_buffer3_id) {
     // TODO(SCN-526) It seems that the allocator is allocating garbage
     // memory, and then later filling multiple BufferPtrs with the same
@@ -90,12 +90,11 @@ VK_TEST(BufferCache, RecycleMany) {
   }
 
   // Recycle the buffers. The third buffer should flush the cache.
-  buffer_cache.RecycleResource(std::unique_ptr<Resource>(
-                                 static_cast<Resource*>(big_buffer.get())));
-  buffer_cache.RecycleResource(std::unique_ptr<Resource>(
-                                 static_cast<Resource*>(big_buffer2.get())));
-  buffer_cache.RecycleResource(std::unique_ptr<Resource>(
-                                 static_cast<Resource*>(big_buffer3.get())));
+  EXPECT_EQ(0U, buffer_cache.free_buffer_count());
+  big_buffer = nullptr;
+  big_buffer2 = nullptr;
+  EXPECT_EQ(2U, buffer_cache.free_buffer_count());
+  big_buffer3 = nullptr;
 
   // Requesting a buffer should create a new buffer since the cache should
   // have been flushed by the third buffer, and it is too big to use for this
