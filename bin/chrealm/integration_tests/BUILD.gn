@@ -38,6 +38,7 @@ executable("get_message_client_bin") {
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
   ]
 }
