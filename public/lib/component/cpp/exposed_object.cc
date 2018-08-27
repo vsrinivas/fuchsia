@@ -13,24 +13,26 @@
 namespace component {
 
 ExposedObject::ExposedObject(const std::string& name)
-    : object_(fbl::MakeRefCounted<Object>(name.c_str())) {}
+    : object_dir_(fbl::MakeRefCounted<Object>(name.c_str())) {}
 
 ExposedObject::~ExposedObject() { remove_from_parent(); }
 
-void ExposedObject::set_parent(ObjectDir* parent) { move_parents(parent); }
+void ExposedObject::set_parent(const ObjectDir* parent) {
+  move_parents(parent);
+}
 
 void ExposedObject::add_child(ExposedObject* child) {
-  child->set_parent(&object_);
+  child->set_parent(&object_dir_);
 }
 
 void ExposedObject::remove_from_parent() { move_parents(nullptr); }
 
-void ExposedObject::move_parents(ObjectDir* new_parent) {
+void ExposedObject::move_parents(const ObjectDir* new_parent) {
   if (parent_) {
-    parent_.object()->TakeChild(object_.object()->name());
+    parent_.object()->TakeChild(object_dir_.object()->name());
   }
   if (new_parent != nullptr) {
-    new_parent->object()->SetChild(object_.object());
+    new_parent->object()->SetChild(object_dir_.object());
   }
 }
 

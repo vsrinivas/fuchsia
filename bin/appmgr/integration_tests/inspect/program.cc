@@ -11,18 +11,18 @@ const char* VALUE = "value";
 class Item : public component::ExposedObject {
  public:
   Item() : ExposedObject(UniqueName("item-")) {
-    object()->set_metric(VALUE, component::IntMetric(0));
+    object_dir().set_metric(VALUE, component::IntMetric(0));
   }
 
-  uint64_t size() { return object()->name().size() + 8; }
+  uint64_t size() { return object_dir().name().size() + 8; }
 
-  void add_value(int64_t value) { object()->add_metric(VALUE, value); }
+  void add_value(int64_t value) { object_dir().add_metric(VALUE, value); }
 };
 
 class Table : public component::ExposedObject {
  public:
   Table(const std::string& name) : ExposedObject("table-" + name) {
-    object()->set_metric(
+    object_dir().set_metric(
         {"item_size"},
         component::CallbackMetric([this](component::Metric* out_metric) {
           uint64_t sum = 0;
@@ -31,14 +31,14 @@ class Table : public component::ExposedObject {
           }
           out_metric->SetUInt(sum);
         }));
-    object()->set_prop({"version"}, "1.0");
+    object_dir().set_prop({"version"}, "1.0");
   }
 
   std::shared_ptr<Item> NewItem(int64_t value) {
     auto ret = std::make_shared<Item>();
     items_.emplace_back(ret);
     ret->add_value(value);
-    ret->set_parent(object());
+    add_child(ret.get());
     return ret;
   }
 

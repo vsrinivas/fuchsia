@@ -10,7 +10,7 @@ ObjectDir::ObjectDir() {}
 
 ObjectDir::ObjectDir(fbl::RefPtr<Object> object) : object_(std::move(object)) {}
 
-ObjectDir ObjectDir::find(ObjectPath path, bool initialize) {
+ObjectDir ObjectDir::find(ObjectPath path, bool initialize) const {
   fbl::RefPtr<Object> current = object_;
   for (const char* p : path) {
     auto next = current->GetChild(p);
@@ -27,21 +27,22 @@ ObjectDir ObjectDir::find(ObjectPath path, bool initialize) {
 }
 
 void ObjectDir::inner_set_prop(ObjectPath path, std::string name,
-                               Property property) {
+                               Property property) const {
   auto dir = find(path);
   dir.object()->SetProperty(name, std::move(property));
 }
 
-void ObjectDir::set_metric(ObjectPath path, std::string name, Metric metric) {
+void ObjectDir::set_metric(ObjectPath path, std::string name,
+                           Metric metric) const {
   find(path).object()->SetMetric(name, std::move(metric));
 }
 
-void ObjectDir::set_child(ObjectPath path, fbl::RefPtr<Object> obj) {
+void ObjectDir::set_child(ObjectPath path, fbl::RefPtr<Object> obj) const {
   find(path).object()->SetChild(obj);
 }
 
 void ObjectDir::set_children_callback(ObjectPath path,
-                                      Object::ChildrenCallback callback) {
+                                      Object::ChildrenCallback callback) const {
   find(path).object()->SetChildrenCallback(std::move(callback));
 }
 
