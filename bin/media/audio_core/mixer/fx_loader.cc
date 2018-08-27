@@ -51,8 +51,8 @@ void FxLoader::ClearExports() {
 // Protected methods
 //
 // Virtual, can be overridden by children (test fixtures)
-void* FxLoader::OpenSharedLibBinary() {
-  return dlopen("libaudiofx.so", RTLD_LAZY | RTLD_GLOBAL);
+void* FxLoader::OpenLoadableModuleBinary() {
+  return dlopen("audiofx.so", RTLD_LAZY | RTLD_GLOBAL);
 }
 
 //
@@ -65,9 +65,9 @@ zx_status_t FxLoader::LoadLibrary() {
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  fx_lib_ = OpenSharedLibBinary();
+  fx_lib_ = OpenLoadableModuleBinary();
   if (fx_lib_ == nullptr) {
-    FXL_LOG(ERROR) << "libaudiofx.so did not load";
+    FXL_LOG(ERROR) << "audiofx.so did not load";
     return ZX_ERR_UNAVAILABLE;
   }
 

@@ -20,14 +20,15 @@ group("tools") {
 package("audio_core") {
   deps = [
     "//garnet/bin/media/audio_core",
-    "//garnet/bin/media/audio_core/libaudiofx",
+    "//garnet/bin/media/audio_core/audiofx",
   ]
 
   binary = "audio_core"
 
   loadable_modules = [
     {
-      name = "libaudiofx.so"
+      # This audio processing library is hosted in the audio_core process.
+      name = "audiofx.so"
     },
   ]
 
@@ -89,7 +90,7 @@ package("tests") {
 
   loadable_modules = [
     {
-      # This is audio_dfx, a test lib hosted in the audio_dfx_tests process.
+      # This test-only library is hosted in the audio_dfx_tests process.
       name = "audio_dfx.so"
     },
   ]

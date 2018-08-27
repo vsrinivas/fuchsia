@@ -5,11 +5,11 @@
 import("//build/test.gni")
 
 
-loadable_module("libaudiofx") {
+loadable_module("audiofx") {
 
   sources = [
     "//garnet/public/lib/media/audio_dfx/audio_device_fx.h",
-    "libaudiofx.cc",
+    "audiofx.cc",
   ]
 
   deps = [

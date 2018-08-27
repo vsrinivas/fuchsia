@@ -25,10 +25,10 @@ namespace media {
 
 namespace audio {
 // We override this method so that we can name our test library differently than
-// the hard-coded "libaudiofx.so" that fx_loader always loads into audio_core.
+// the hard-coded "audiofx.so" that fx_loader always loads into audio_core.
 class TestFxLoader : public FxLoader {
  public:
-  void* OpenSharedLibBinary() override {
+  void* OpenLoadableModuleBinary() override {
     return dlopen("audio_dfx.so", RTLD_LAZY | RTLD_GLOBAL);
   }
 };

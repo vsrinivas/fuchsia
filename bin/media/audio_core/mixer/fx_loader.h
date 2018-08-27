@@ -59,7 +59,7 @@ class FxLoader {
   zx_status_t FxFlush(fx_token_t fx_token);
 
  protected:
-  virtual void* OpenSharedLibBinary();
+  virtual void* OpenLoadableModuleBinary();
 
   bool exports_loaded_ = false;
 
