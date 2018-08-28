@@ -18,9 +18,9 @@ namespace minfs {
 
 struct WriteRequest {
     zx_handle_t vmo;
-    size_t vmo_offset;
-    size_t dev_offset;
-    size_t length;
+    blk_t vmo_offset;
+    blk_t dev_offset;
+    blk_t length;
 };
 
 // A transaction consisting of enqueued VMOs to be written
@@ -32,27 +32,51 @@ struct WriteRequest {
 class WriteTxn {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(WriteTxn);
-    explicit WriteTxn(Bcache* bc) : bc_(bc) {}
+    explicit WriteTxn(Bcache* bc) : bc_(bc), vmoid_(VMOID_INVALID), block_count_(0) {}
     ~WriteTxn() {
-        ZX_DEBUG_ASSERT_MSG(requests_.size() == 0, "WriteTxn still has pending requests");
+        ZX_DEBUG_ASSERT_MSG(requests_.is_empty(), "WriteTxn still has pending requests");
     }
 
     // Identify that a block should be written to disk at a later point in time.
-    void Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset, uint64_t nblocks);
+    void Enqueue(zx_handle_t vmo, blk_t vmo_offset, blk_t dev_offset, blk_t nblocks);
 
     fbl::Vector<WriteRequest>& Requests() { return requests_; }
 
-    size_t BlkCount() const;
+    // Returns the first block at which this WriteTxn exists within its VMO buffer. Requires all
+    // requests within the transaction to have been copied to a single buffer.
+    blk_t BlockStart() const;
 
+    // Returns the total number of blocks in all requests within the WriteTxn.
+    blk_t BlockCount() const { return block_count_; }
+
+    bool IsBuffered() const {
+        return vmoid_ != VMOID_INVALID;
+    }
+
+    // Sets the source buffer for the WriteTxn to |vmoid|, and the starting block within that
+    // buffer to |block_start|.
+    void SetBuffer(vmoid_t vmoid, blk_t block_start);
+
+    // Checks if the WriteTxn vmoid_ matches |vmoid|.
+    bool CheckBuffer(vmoid_t vmoid) const {
+        return vmoid_ == vmoid;
+    }
+
+    // Resets the transaction's state.
+    void Cancel() {
+        requests_.reset();
+        vmoid_ = VMOID_INVALID;
+        block_count_ = 0;
+    }
 protected:
     // Activate the transaction, writing it out to disk.
-    //
-    // Each transaction uses the |vmo| / |vmoid| pair supplied, since the
-    // transactions should be all reading from a single in-memory buffer.
-    zx_status_t Flush(zx_handle_t vmo, vmoid_t vmoid);
+    zx_status_t Transact();
 
 private:
     Bcache* bc_;
+    vmoid_t vmoid_; // Vmoid of the external source buffer.
+    blk_t block_start_; // Starting block within the external source buffer.
+    blk_t block_count_; // Total number of blocks in all requests_.
     fbl::Vector<WriteRequest> requests_;
 };
 

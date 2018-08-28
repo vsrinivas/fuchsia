@@ -501,8 +501,9 @@ bool TestUnlinkFail(void) {
         }
     }
 
-    // Sync Minfs to ensure all close operations complete.
-    ASSERT_EQ(syncfs(fd.get()), 0);
+    // Sync Minfs to ensure all close operations complete. Since Minfs is in a read-only state and
+    // some requests have not been successfully persisted to disk, the sync is expected to fail.
+    ASSERT_LT(syncfs(fd.get()), 0);
 
     // Writeback should have failed.
     // However, the in-memory state has been updated correctly.

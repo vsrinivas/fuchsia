@@ -19,6 +19,7 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
+#include <minfs/writeback-async.h>
 #endif
 
 #include <fbl/algorithm.h>
@@ -197,6 +198,9 @@ public:
     void CommitTransaction(fbl::unique_ptr<Transaction> state);
 
 #ifdef __Fuchsia__
+    // Returns the capacity of the writeback buffer, in blocks.
+    size_t WritebackCapacity() const { return writeback_->GetCapacity(); }
+
     void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
     void Shutdown(fs::Vfs::ShutdownCallback cb) final;
 
@@ -275,7 +279,7 @@ private:
     Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
           fbl::unique_ptr<Allocator> block_allocator,
           fbl::unique_ptr<InodeManager> inodes,
-          fbl::unique_ptr<WritebackBuffer> writeback,
+          fbl::unique_ptr<WritebackQueue> writeback,
           uint64_t fs_id);
 #else
     Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
@@ -319,7 +323,7 @@ private:
 #ifdef __Fuchsia__
     fbl::Closure on_unmount_{};
     fuchsia_minfs_Metrics metrics_ = {};
-    fbl::unique_ptr<WritebackBuffer> writeback_;
+    fbl::unique_ptr<WritebackQueue> writeback_;
     uint64_t fs_id_ = 0;
 #else
     // Store start block + length for all extents. These may differ from info block for

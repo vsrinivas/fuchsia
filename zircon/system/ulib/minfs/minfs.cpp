@@ -306,7 +306,7 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
 void Minfs::CommitTransaction(fbl::unique_ptr<Transaction> state) {
     // On enqueue, unreserve any remaining reserved blocks/inodes tracked by work.
 #ifdef __Fuchsia__
-    ZX_DEBUG_ASSERT(state->GetWork()->BlkCount() <= limits_.GetMaximumEntryDataBlocks());
+    ZX_DEBUG_ASSERT(state->GetWork()->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
     state->Resolve();
     writeback_->Enqueue(state->RemoveWork());
 #else
@@ -318,7 +318,7 @@ void Minfs::CommitTransaction(fbl::unique_ptr<Transaction> state) {
 void Minfs::Sync(SyncCallback closure) {
     fbl::unique_ptr<Transaction> state;
     ZX_ASSERT(BeginTransaction(0, 0, &state) == ZX_OK);
-    state->GetWork()->SetClosure(std::move(closure));
+    state->GetWork()->SetSyncCallback(std::move(closure));
     CommitTransaction(std::move(state));
 }
 #endif
@@ -326,7 +326,7 @@ void Minfs::Sync(SyncCallback closure) {
 #ifdef __Fuchsia__
 Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
              fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
-             fbl::unique_ptr<WritebackBuffer> writeback, uint64_t fs_id)
+             fbl::unique_ptr<WritebackQueue> writeback, uint64_t fs_id)
     : bc_(std::move(bc)), sb_(std::move(sb)), block_allocator_(std::move(block_allocator)),
       inodes_(std::move(inodes)), writeback_(std::move(writeback)), fs_id_(fs_id),
       limits_(sb_->Info()) {}
@@ -823,16 +823,10 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
     // memory.
     const size_t write_buffer_size =
         fbl::round_up((zx_system_get_physmem() * 2) / 100, kMinfsBlockSize);
+    const blk_t write_buffer_blocks = static_cast<blk_t>(write_buffer_size / kMinfsBlockSize);
 
-    fzl::OwnedVmoMapper mapper;
-    zx::vmo vmo;
-    if ((status = mapper.CreateAndMap(write_buffer_size, "minfs-writeback")) != ZX_OK) {
-        return status;
-    }
-
-    fbl::unique_ptr<WritebackBuffer> writeback;
-    status = WritebackBuffer::Create(bc.get(), std::move(mapper), &writeback);
-    if (status != ZX_OK) {
+    fbl::unique_ptr<WritebackQueue> writeback;
+    if ((status = WritebackQueue::Create(bc.get(), write_buffer_blocks, &writeback)) != ZX_OK) {
         return status;
     }
 
@@ -912,7 +906,7 @@ void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
         Sync([this, cb = std::move(cb)](zx_status_t) mutable {
             async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
-                // Ensure writeback buffer completes before auxiliary structures
+                // Ensure writeback buffer completes before auxilliary structures
                 // are deleted.
                 writeback_ = nullptr;
                 bc_->Sync();
