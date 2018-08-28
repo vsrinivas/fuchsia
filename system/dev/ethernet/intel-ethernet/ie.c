@@ -391,8 +391,8 @@ void eth_init_hw(ethdev_t* eth) {
 
     // enable interrupts
     if (eth->pci_did == IE_DID_I211_AT) {
-        // Receiver Descriptor Write Back interrupt
-        writel(IE_INT_RXDW, IE_IMS);
+        // Receiver Descriptor Write Back & Link Status Change interrupts
+        writel(IE_INT_RXDW | IE_INT_LSC, IE_IMS);
     } else {
         // enable rx & link status change irqs
         writel(IE_INT_RXT0 | IE_INT_LSC, IE_IMS);
