@@ -1502,6 +1502,25 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
         // - "Tx Maximum Number Spatial Streams Supported"
         // - "Tx Unequal Modulation Supported"
         assoc_ctx_.ht_cap = IntersectHtCap(ap.ht_cap, client.ht_cap);
+
+        // Override the outcome of IntersectHtCap(), which is role agnostic.
+
+        // If AP can't rx STBC, then the client shall not tx STBC.
+        // Otherwise, the client shall do what it can do.
+        if (ap.ht_cap.ht_cap_info.rx_stbc() == 0) {
+            assoc_ctx_.ht_cap.ht_cap_info.set_tx_stbc(0);
+        } else {
+            assoc_ctx_.ht_cap.ht_cap_info.set_tx_stbc(client.ht_cap.ht_cap_info.tx_stbc());
+        }
+
+        // If AP can't tx STBC, then the client shall not expect to rx STBC.
+        // Otherwise, the client shall do what it can do.
+        if (ap.ht_cap.ht_cap_info.tx_stbc() == 0) {
+            assoc_ctx_.ht_cap.ht_cap_info.set_rx_stbc(0);
+        } else {
+            assoc_ctx_.ht_cap.ht_cap_info.set_rx_stbc(client.ht_cap.ht_cap_info.rx_stbc());
+        }
+
         assoc_ctx_.has_ht_op = ap.has_ht_op;
         if (assoc_ctx_.has_ht_op) { assoc_ctx_.ht_op = ap.ht_op; }
     }
