@@ -45,6 +45,10 @@ def main():
     parser.add_argument('--verbose', help='Tell the go tool to be verbose about what it is doing',
                         action='store_true')
     parser.add_argument('--package', help='The package name', required=True)
+    parser.add_argument('--shared-libs-root', help='Path to the build shared libraries',
+                        required=False)
+    parser.add_argument('--fdio-include', help='Path to the FDIO include directory',
+                        required=False)
     args = parser.parse_args()
 
     goarch = {
@@ -97,8 +101,6 @@ def main():
     gopath = os.path.abspath(project_path)
 
     env = {}
-    if args.current_os == 'fuchsia':
-        env['CGO_ENABLED'] = '1'
     env['GOARCH'] = goarch
     env['GOOS'] = goos
     env['GOPATH'] = gopath
@@ -106,11 +108,18 @@ def main():
     build_goroot = os.path.abspath(args.go_root)
 
     if goos == 'fuchsia':
-        # These are used by $CC (gccwrap.sh).
-        env['ZIRCON'] = os.path.join(args.fuchsia_root, 'zircon')
+        env['CGO_ENABLED'] = '1'
+        env['CC'] = os.path.join(build_goroot, 'misc', 'fuchsia', 'clangwrap.sh')
         env['ZIRCON_SYSROOT'] = args.zircon_sysroot
+
+        # These are used by gccwrap.sh
+        env['ZIRCON'] = os.path.join(args.fuchsia_root, 'zircon')
         env['FUCHSIA_ROOT_OUT_DIR'] = os.path.abspath(args.root_out_dir)
-        env['CC'] = os.path.join(build_goroot, 'misc/fuchsia/gccwrap.sh')
+
+        # These are used by clangwrap.sh
+        env['FUCHSIA_SHARED_LIBS'] = args.shared_libs_root
+        env['CLANG_PREFIX'] = args.toolchain_prefix
+        env['FDIO_INCLUDE'] = args.fdio_include
 
     # /usr/bin:/bin are required for basic things like bash(1) and env(1), but
     # preference the toolchain path. Note that on Mac, ld is also found from
