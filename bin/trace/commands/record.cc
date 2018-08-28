@@ -213,12 +213,19 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   }
 
   // --append-args=<arg1>,<arg2>,...
-  if (command_line.HasOption(kAppendArgs, &index)) {
-    auto append_args =
-        fxl::SplitStringCopy(command_line.options()[index].value, ",",
-                             fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
-    std::move(std::begin(append_args), std::end(append_args),
-              std::back_inserter(args));
+  // This option may be repeated, all args are added in order.
+  // These arguments are added after either of spec.args or the command line
+  // positional args.
+  std::vector<std::string> append_args;
+  if (command_line.HasOption(kAppendArgs, nullptr)) {
+    auto all_append_args = command_line.GetOptionValues(kAppendArgs);
+    for (const auto& arg : all_append_args) {
+      auto args =
+        fxl::SplitStringCopy(arg, ",", fxl::kTrimWhitespace,
+                             fxl::kSplitWantNonEmpty);
+      std::move(std::begin(args), std::end(args),
+                std::back_inserter(append_args));
+    }
   }
 
   // --output-file=<file>
@@ -320,6 +327,10 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     CheckCommandLineOverride("app,args", spec.app || spec.args);
   }
 
+  // Now that we've processed positional args we can append --append-args args.
+  std::move(std::begin(append_args), std::end(append_args),
+            std::back_inserter(args));
+
   return true;
 }
 
@@ -338,7 +349,8 @@ Command::Info Record::Describe() {
        {"categories=[\"\"]", "Categories that should be enabled for tracing"},
        {"append-args=[\"\"]",
         "Additional args for the app being traced, appended to those from the "
-        "spec file, if any"},
+        "spec file, if any. The value is a comma-separated list of arguments "
+        "to pass. This option may be repeated, arguments are added in order."},
        {"detach=[false]",
         "Don't stop the traced program when tracing finished"},
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
