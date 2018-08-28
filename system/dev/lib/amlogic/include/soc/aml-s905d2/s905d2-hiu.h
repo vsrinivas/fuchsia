@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include <ddk/io-buffer.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <ddk/io-buffer.h>
 
-#define SDM_FRACTIONALITY       ((uint32_t)16384)
+// clang-format off
+#define SDM_FRACTIONALITY         ((uint32_t)16384)
 #define S905D2_FIXED_PLL_RATE     ((uint32_t)2000000000)
 
 /* Intial configuration values for PLLs.  These were taken
@@ -81,6 +82,8 @@
 #define HHI_PLL_CNTL0_OD_SHIFT (16)
 #define HHI_PLL_CNTL0_OD       (0x3  << HHI_PLL_CNTL0_OD_SHIFT)
 
+// clang-format on
+
 typedef enum {
     GP0_PLL,
     PCIE_PLL,
@@ -97,68 +100,83 @@ typedef struct {
 } hhi_pll_rate_t;
 
 typedef struct {
-    io_buffer_t     regs_iobuff;
-    zx_vaddr_t      virt_regs;
+    io_buffer_t regs_iobuff;
+    zx_vaddr_t virt_regs;
 } aml_hiu_dev_t;
 
 typedef struct {
-    aml_hiu_dev_t* hiu;                 // Pointer to the register control block
-    const hhi_pll_rate_t* rate_table;   // Pointer to this PLLs rate table
-    uint32_t rate_idx;                  // Index in rate table of current setting
-    uint32_t frequency;                 // Current operating frequency
-    hhi_plls_t pll_num;                 // Which pll is this
+    aml_hiu_dev_t* hiu;               // Pointer to the register control block.
+    const hhi_pll_rate_t* rate_table; // Pointer to this PLLs rate table.
+    uint32_t rate_idx;                // Index in rate table of current setting.
+    uint32_t frequency;               // Current operating frequency.
+    hhi_plls_t pll_num;               // Which pll is this
+    size_t rate_count;                // Number of entries in the rate table.
 } aml_pll_dev_t;
 
-static inline uint32_t hiu_clk_get_reg(aml_hiu_dev_t *dev, uint32_t offset) {
-    return   *(volatile uint32_t *)((uintptr_t)dev->virt_regs + offset);
+static inline uint32_t hiu_clk_get_reg(aml_hiu_dev_t* dev, uint32_t offset) {
+    return *(volatile uint32_t*)((uintptr_t)dev->virt_regs + offset);
 }
 
-static inline uint32_t hiu_clk_set_reg(aml_hiu_dev_t *dev, uint32_t offset, uint32_t value) {
-    *(volatile uint32_t *)((uintptr_t)dev->virt_regs + offset) = value;
-    return   hiu_clk_get_reg(dev, offset);
+static inline uint32_t hiu_clk_set_reg(aml_hiu_dev_t* dev, uint32_t offset, uint32_t value) {
+    *(volatile uint32_t*)((uintptr_t)dev->virt_regs + offset) = value;
+    return hiu_clk_get_reg(dev, offset);
 }
 
 static inline uint32_t hiu_get_pll_offs(aml_pll_dev_t* pll_dev) {
     switch (pll_dev->pll_num) {
-        case GP0_PLL:  return HHI_GP0_PLL_CNTL0;
-        case PCIE_PLL: return HHI_PCIE_PLL_CNTL0;
-        case HIFI_PLL: return HHI_HIFI_PLL_CNTL0;
-        case SYS_PLL:  return HHI_SYS_PLL_CNTL0;
-        default: ZX_DEBUG_ASSERT(0);
+    case GP0_PLL:
+        return HHI_GP0_PLL_CNTL0;
+    case PCIE_PLL:
+        return HHI_PCIE_PLL_CNTL0;
+    case HIFI_PLL:
+        return HHI_HIFI_PLL_CNTL0;
+    case SYS_PLL:
+        return HHI_SYS_PLL_CNTL0;
+    default:
+        ZX_DEBUG_ASSERT(0);
     }
     return 0;
 }
 
-/*
-    Maps the hiu register block (containing all the pll controls)
-*/
-zx_status_t s905d2_hiu_init(zx_handle_t bti, aml_hiu_dev_t *device);
+__BEGIN_CDECLS;
 
 /*
-    Initializes the selected pll.  This resetting the pll and writing initial
-        values to control registers.  When exiting init the PLL will be in a
-        halted (de-enabled) state.
+    Maps the hiu register block (containing all the pll controls).
 */
-zx_status_t s905d2_pll_init(aml_hiu_dev_t *device, aml_pll_dev_t* pll, hhi_plls_t pll_num);
+zx_status_t s905d2_hiu_init(zx_handle_t bti, aml_hiu_dev_t* device);
+
+/*
+    Initializes the selected pll. This resetting the pll and writing initial
+    values to control registers.  When exiting init the PLL will be in a
+    halted (de-enabled) state.
+*/
+zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll, hhi_plls_t pll_num);
 /*
     Sets the rate of the selected pll. If the requested frequency is not found
-       it will return with ZX_ERR_NOT_SUPPORTED
+    it will return with ZX_ERR_NOT_SUPPORTED.
 */
-zx_status_t s905d2_pll_set_rate(aml_pll_dev_t *pll,  uint64_t freq);
+zx_status_t s905d2_pll_set_rate(aml_pll_dev_t* pll, uint64_t freq);
 
 /*
     Enables the selected pll.  This assumes the pll has been initialized and
-        valid divider values have been written to the control registers.
+    valid divider values have been written to the control registers.
 */
-zx_status_t s905d2_pll_ena(aml_pll_dev_t *pll);
+zx_status_t s905d2_pll_ena(aml_pll_dev_t* pll);
 
 /*
-    look for freq in pll rate table.  Returns ZX_ERR_NOT_SUPPORTED if the rate
+    Look for freq in pll rate table.  Returns ZX_ERR_NOT_SUPPORTED if the rate
     can not be found.
 */
-zx_status_t s905d2_pll_fetch_rate(aml_pll_dev_t *pll_dev, uint64_t freq, const hhi_pll_rate_t** pll_rate);
+zx_status_t s905d2_pll_fetch_rate(aml_pll_dev_t* pll_dev, uint64_t freq, const hhi_pll_rate_t** pll_rate);
 
 /*
-    returns correct pll rate table for selected pll
+    Returns correct pll rate table for selected pll.
 */
 const hhi_pll_rate_t* s905d2_pll_get_rate_table(hhi_plls_t pll_num);
+
+/*
+    Returns the count of the rate table for the pll.
+*/
+size_t s905d2_get_rate_table_count(hhi_plls_t pll_num);
+
+__END_CDECLS;

@@ -38,6 +38,13 @@ static const pbus_irq_t thermal_irqs[] = {
     },
 };
 
+static const pbus_bti_t thermal_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_THERMAL,
+    },
+};
+
 static const pbus_clk_t thermal_clk_gates[] = {
     {
         .clk = CLK_SYS_PLL_DIV16,
@@ -209,6 +216,8 @@ static pbus_dev_t thermal_dev = {
     .clk_count = countof(thermal_clk_gates),
     .irqs = thermal_irqs,
     .irq_count = countof(thermal_irqs),
+    .btis = thermal_btis,
+    .bti_count = countof(thermal_btis),
     .metadata = thermal_metadata,
     .metadata_count = countof(thermal_metadata),
 };

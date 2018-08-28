@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/aml-tsensor.cpp \
     $(LOCAL_DIR)/aml-pwm.cpp \
     $(LOCAL_DIR)/aml-voltage.cpp \
+    $(LOCAL_DIR)/aml-fclk-rates.c \
     $(LOCAL_DIR)/aml-cpufreq.cpp \
 
 MODULE_STATIC_LIBS := \
@@ -24,6 +25,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/hwreg \
+    system/dev/lib/amlogic \
+
 
 MODULE_LIBS := \
     system/ulib/c \

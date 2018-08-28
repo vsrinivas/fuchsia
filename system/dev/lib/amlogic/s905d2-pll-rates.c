@@ -2,27 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
-#include <zircon/types.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
+#include <zircon/types.h>
 
-
-//PLL Rate tables
+// PLL Rate tables
 #define HHI_PLL_RATE(_rate, _n, _m, _frac, _od) \
-    { .rate = _rate, \
-      .n    = _n,    \
-      .m    = _m,    \
-      .frac = _frac, \
-      .od   = _od }  \
+    {                                           \
+        .rate = _rate,                          \
+        .n = _n,                                \
+        .m = _m,                                \
+        .frac = _frac,                          \
+        .od = _od,                              \
+    }
 
 /* These settings work for hifi, sys, pcie, and gp0 plls
-    While it would be possible to dynamically calculate the four components
-    to generate a desired rate, it makes more sense at this time to have a table
-    of settings for some known needed rates.  The documentation fo the Amlogic
-    plls is somewhat thin and by using the tables we will have known tested good
-    rates to choose from.
-
-    fout = 24MHz*m/(n*(1 << od))
+   While it would be possible to dynamically calculate the four components
+   to generate a desired rate, it makes more sense at this time to have a table
+   of settings for some known needed rates.  The documentation fo the Amlogic
+   plls is somewhat thin and by using the tables we will have known tested good
+   rates to choose from.
+   fout = 24MHz*m/(n*(1 << od))
 */
 static const hhi_pll_rate_t s905d2_hiu_pll_rates[] = {
     HHI_PLL_RATE(1200000000, 1, 200, 0, 2), /*DCO=4800M*/
@@ -39,13 +38,14 @@ static const hhi_pll_rate_t s905d2_hiu_pll_rates[] = {
 };
 
 /* Find frequence in the rate table and return pointer to the entry.
-    At this point this assumes even integer requencies. This will be expanded later
-    to handle fractional cases.
+   At this point this assumes even integer requencies. This will be expanded later
+   to handle fractional cases.
 */
-zx_status_t s905d2_pll_fetch_rate(aml_pll_dev_t *pll_dev, uint64_t freq, const hhi_pll_rate_t** pll_rate) {
-    for(uint32_t i = 0; i < countof(s905d2_hiu_pll_rates); i++) {
-        if (freq == s905d2_hiu_pll_rates[i].rate) {
-            *pll_rate = &s905d2_hiu_pll_rates[i];
+zx_status_t s905d2_pll_fetch_rate(aml_pll_dev_t* pll_dev, uint64_t freq,
+                                  const hhi_pll_rate_t** pll_rate) {
+    for (uint32_t i = 0; i < pll_dev->rate_count; i++) {
+        if (freq == pll_dev->rate_table[i].rate) {
+            *pll_rate = &pll_dev->rate_table[i];
             return ZX_OK;
         }
     }
@@ -54,11 +54,23 @@ zx_status_t s905d2_pll_fetch_rate(aml_pll_dev_t *pll_dev, uint64_t freq, const h
 }
 
 const hhi_pll_rate_t* s905d2_pll_get_rate_table(hhi_plls_t pll_num) {
-    switch(pll_num) {
-        case GP0_PLL: return s905d2_hiu_pll_rates;
-        case PCIE_PLL: return s905d2_hiu_pll_rates;
-        case HIFI_PLL: return s905d2_hiu_pll_rates;
-        case SYS_PLL: return s905d2_hiu_pll_rates;
+    switch (pll_num) {
+    case GP0_PLL:
+    case PCIE_PLL:
+    case HIFI_PLL:
+    case SYS_PLL:
+        return s905d2_hiu_pll_rates;
     }
     return NULL;
+}
+
+size_t s905d2_get_rate_table_count(hhi_plls_t pll_num) {
+    switch (pll_num) {
+    case GP0_PLL:
+    case PCIE_PLL:
+    case HIFI_PLL:
+    case SYS_PLL:
+        return countof(s905d2_hiu_pll_rates);
+    }
+    return 0;
 }

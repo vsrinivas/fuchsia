@@ -11,8 +11,7 @@
 #include <soc/aml-s905d2/s905d2-hiu.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
-
-zx_status_t s905d2_hiu_init(zx_handle_t bti, aml_hiu_dev_t *device) {
+zx_status_t s905d2_hiu_init(zx_handle_t bti, aml_hiu_dev_t* device) {
 
     zx_handle_t resource = get_root_resource();
     zx_status_t status;
@@ -30,7 +29,7 @@ zx_status_t s905d2_hiu_init(zx_handle_t bti, aml_hiu_dev_t *device) {
     return ZX_OK;
 }
 
-zx_status_t s905d2_pll_init(aml_hiu_dev_t *device, aml_pll_dev_t* pll_dev, hhi_plls_t pll_num) {
+zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_plls_t pll_num) {
     ZX_DEBUG_ASSERT(device);
     ZX_DEBUG_ASSERT(pll_dev);
 
@@ -40,6 +39,11 @@ zx_status_t s905d2_pll_init(aml_hiu_dev_t *device, aml_pll_dev_t* pll_dev, hhi_p
         pll_dev->rate_idx = 0;
         pll_dev->frequency = 0;
         pll_dev->pll_num = pll_num;
+        pll_dev->rate_count = s905d2_get_rate_table_count(HIFI_PLL);
+
+        ZX_DEBUG_ASSERT(pll_dev->rate_table);
+        ZX_DEBUG_ASSERT(pll_dev->rate_count);
+
         //Disable and reset the pll
         hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL0, 1 << 29);
         //write config values
@@ -55,6 +59,11 @@ zx_status_t s905d2_pll_init(aml_hiu_dev_t *device, aml_pll_dev_t* pll_dev, hhi_p
         pll_dev->rate_idx = 0;
         pll_dev->frequency = 0;
         pll_dev->pll_num = pll_num;
+        pll_dev->rate_count = s905d2_get_rate_table_count(SYS_PLL);
+
+        ZX_DEBUG_ASSERT(pll_dev->rate_table);
+        ZX_DEBUG_ASSERT(pll_dev->rate_count);
+
         //Disable and reset the pll
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL0, 1 << 29);
         //write config values
@@ -63,15 +72,17 @@ zx_status_t s905d2_pll_init(aml_hiu_dev_t *device, aml_pll_dev_t* pll_dev, hhi_p
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL3, G12A_SYS_PLL_CNTL3);
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL4, G12A_SYS_PLL_CNTL4);
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL5, G12A_SYS_PLL_CNTL5);
+
         return ZX_OK;
     }
     //Need to find/add values for GP0 and PCIE plls
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t s905d2_pll_ena(aml_pll_dev_t *pll_dev) {
-    uint32_t offs = hiu_get_pll_offs(pll_dev);
+zx_status_t s905d2_pll_ena(aml_pll_dev_t* pll_dev) {
+    ZX_DEBUG_ASSERT(pll_dev);
 
+    uint32_t offs = hiu_get_pll_offs(pll_dev);
     uint32_t reg_val = hiu_clk_get_reg(pll_dev->hiu, offs);
     // Set Enable bit
     reg_val |= HHI_PLL_CNTL0_EN;
@@ -85,10 +96,12 @@ zx_status_t s905d2_pll_ena(aml_pll_dev_t *pll_dev) {
 
 /* Notes:
     -VCO needs to be between 3-6GHz per the datasheet. It appears that if you
-      provide values which would result in a VCO outside of this range, it will
-      still oscillate, but at unknown (but likely close to target) frequency.
+    provide values which would result in a VCO outside of this range, it will
+    still oscillate, but at unknown (but likely close to target) frequency.
 */
-zx_status_t s905d2_pll_set_rate(aml_pll_dev_t *pll_dev, uint64_t freq) {
+zx_status_t s905d2_pll_set_rate(aml_pll_dev_t* pll_dev, uint64_t freq) {
+    ZX_DEBUG_ASSERT(pll_dev);
+
     const hhi_pll_rate_t* pll_rate;
 
     zx_status_t status = s905d2_pll_fetch_rate(pll_dev, freq, &pll_rate);
@@ -97,7 +110,6 @@ zx_status_t s905d2_pll_set_rate(aml_pll_dev_t *pll_dev, uint64_t freq) {
     }
 
     uint32_t offs = hiu_get_pll_offs(pll_dev);
-
     uint32_t ctl0 = hiu_clk_get_reg(pll_dev->hiu, offs);
 
     ctl0 &= ~HHI_PLL_CNTL0_M;

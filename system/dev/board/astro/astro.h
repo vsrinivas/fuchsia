@@ -20,6 +20,7 @@ enum {
     BTI_AML_RAW_NAND,
     BTI_SDIO,
     BTI_CANVAS,
+    BTI_THERMAL,
 };
 
 typedef struct {
