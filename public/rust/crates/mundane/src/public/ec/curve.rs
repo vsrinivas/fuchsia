@@ -23,8 +23,8 @@ mod inner {
 
     /// An elliptic curve.
     ///
-    /// `Curve` is implemented by `P256`, `P384`, `P521`.
-    pub trait Curve: Sized + Sealed {
+    /// `PCurve` is implemented by `P256`, `P384`, `P521`.
+    pub trait PCurve: Sized + Sealed {
         /// Returns this curve's NID.
         ///
         /// Callers are allowed to assume that this NID is a valid one, and are
@@ -44,11 +44,14 @@ mod inner {
     }
 }
 
-/// An elliptic curve.
+/// A NIST P elliptic curve.
 ///
-/// `Curve` is implemented by [`P256`], [`P384`], and [`P521`]. The P-224 curve
+/// `PCurve` is implemented by [`P256`], [`P384`], and [`P521`]. The P-224 curve
 /// is considered insecure, and thus is not supported.
-pub trait Curve: Sized + Copy + Clone + Default + Display + Debug + self::inner::Curve {}
+///
+/// The P curves are defined by NIST and are used in the ECDSA and ECDH
+/// algorithms.
+pub trait PCurve: Sized + Copy + Clone + Default + Display + Debug + self::inner::PCurve {}
 
 /// The P-256 curve.
 #[derive(Copy, Clone, Default, Debug, Eq, PartialEq, Hash)]
@@ -82,7 +85,7 @@ const NID_P521: i32 = boringssl::NID_secp521r1 as i32;
 
 macro_rules! impl_curve {
     ($name:ident, $str:expr, $nid:ident) => {
-        impl self::inner::Curve for $name {
+        impl self::inner::PCurve for $name {
             fn nid() -> i32 {
                 $nid
             }
@@ -99,7 +102,7 @@ macro_rules! impl_curve {
         }
 
         impl Sealed for $name {}
-        impl Curve for $name {}
+        impl PCurve for $name {}
     };
 }
 

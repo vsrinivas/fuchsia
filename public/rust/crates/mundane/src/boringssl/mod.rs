@@ -72,8 +72,10 @@ mod raw;
 pub use boringssl_sys::{CBB, CBS, EC_GROUP, EC_KEY, EVP_MD, EVP_PKEY, HMAC_CTX, SHA256_CTX,
                         SHA512_CTX, SHA_CTX};
 // C constants
-pub use boringssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1, SHA256_DIGEST_LENGTH,
-                        SHA384_DIGEST_LENGTH, SHA512_DIGEST_LENGTH, SHA_DIGEST_LENGTH};
+pub use boringssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1,
+                        ED25519_PRIVATE_KEY_LEN, ED25519_PUBLIC_KEY_LEN, ED25519_SIGNATURE_LEN,
+                        SHA256_DIGEST_LENGTH, SHA384_DIGEST_LENGTH, SHA512_DIGEST_LENGTH,
+                        SHA_DIGEST_LENGTH};
 // wrapper types
 pub use boringssl::wrapper::{CHeapWrapper, CRef, CStackWrapper};
 
@@ -88,10 +90,11 @@ use boringssl::raw::{CBB_data, CBB_init, CBB_len, CBS_init, CBS_len, CRYPTO_memc
                      ECDSA_size, ECDSA_verify, EC_GROUP_get_curve_name,
                      EC_GROUP_new_by_curve_name, EC_KEY_generate_key, EC_KEY_get0_group,
                      EC_KEY_marshal_private_key, EC_KEY_parse_private_key, EC_KEY_set_group,
-                     EC_curve_nid2nist, ERR_print_errors_cb, EVP_PBE_scrypt,
-                     EVP_PKEY_assign_EC_KEY, EVP_PKEY_get1_EC_KEY, EVP_marshal_public_key,
-                     EVP_parse_public_key, HMAC_CTX_init, HMAC_Final, HMAC_Init_ex, HMAC_Update,
-                     HMAC_size, RAND_bytes, SHA384_Init};
+                     EC_curve_nid2nist, ED25519_keypair, ED25519_keypair_from_seed, ED25519_sign,
+                     ED25519_verify, ERR_print_errors_cb, EVP_PBE_scrypt, EVP_PKEY_assign_EC_KEY,
+                     EVP_PKEY_get1_EC_KEY, EVP_marshal_public_key, EVP_parse_public_key,
+                     HMAC_CTX_init, HMAC_Final, HMAC_Init_ex, HMAC_Update, HMAC_size, RAND_bytes,
+                     SHA384_Init};
 
 impl CStackWrapper<CBB> {
     /// Creates a new `CBB` and initializes it with `CBB_init`.
@@ -283,6 +286,49 @@ pub fn ecdsa_verify(digest: &[u8], sig: &[u8], key: &CHeapWrapper<EC_KEY>) -> bo
 #[must_use]
 pub fn ecdsa_size(key: &CHeapWrapper<EC_KEY>) -> Result<NonZeroUsize, BoringError> {
     unsafe { ECDSA_size(key.as_const()) }
+}
+
+/// The `ED25519_keypair` function.
+#[must_use]
+pub fn ed25519_keypair() -> [u8; ED25519_PRIVATE_KEY_LEN as usize] {
+    let mut public_unused = [0u8; ED25519_PUBLIC_KEY_LEN as usize];
+    let mut private = [0u8; ED25519_PRIVATE_KEY_LEN as usize];
+    unsafe {
+        ED25519_keypair(
+            (&mut public_unused[..]).as_mut_ptr(),
+            (&mut private[..]).as_mut_ptr(),
+        )
+    };
+    private
+}
+
+/// The `ED25519_sign` function.
+#[must_use]
+pub fn ed25519_sign(message: &[u8], private_key: &[u8; 64]) -> Result<[u8; 64], BoringError> {
+    let mut sig = [0u8; 64];
+    unsafe { ED25519_sign(&mut sig, message.as_ptr(), message.len(), private_key)? };
+    Ok(sig)
+}
+
+/// The `ED25519_keypair_from_seed` function.
+#[must_use]
+pub fn ed25519_keypair_from_seed(seed: &[u8; 32]) -> ([u8; 32], [u8; 64]) {
+    let mut public = [0u8; 32];
+    let mut private = [0u8; 64];
+    unsafe {
+        ED25519_keypair_from_seed(
+            (&mut public[..]).as_mut_ptr(),
+            (&mut private[..]).as_mut_ptr(),
+            (&seed[..]).as_ptr(),
+        )
+    };
+    (public, private)
+}
+
+/// The `ED25519_verify` function.
+#[must_use]
+pub fn ed25519_verify(message: &[u8], signature: &[u8; 64], public_key: &[u8; 32]) -> bool {
+    unsafe { ED25519_verify(message.as_ptr(), message.len(), signature, public_key) }
 }
 
 impl CHeapWrapper<EVP_PKEY> {

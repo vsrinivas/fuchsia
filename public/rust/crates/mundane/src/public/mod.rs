@@ -5,6 +5,7 @@
 //! Public key cryptography.
 
 pub mod ec;
+pub mod ed25519;
 
 use boringssl::{CHeapWrapper, CStackWrapper};
 use public::inner::BoringDerKey;
@@ -176,4 +177,44 @@ pub fn parse_private_key_der<P: DerPrivateKey>(bytes: &[u8]) -> Result<P, Error>
         }
         Ok(P::from_boring(key))
     })
+}
+
+#[cfg(test)]
+mod testutil {
+    use super::*;
+
+    /// Smoke test a signature scheme.
+    ///
+    /// `sig_from_bytes` takes a byte slice and converts it into a signature. If
+    /// the byte slice is too long, it either truncate it or treats it as
+    /// invalid (it's up to the caller). If the byte slice is too short, it
+    /// fills in the remaining bytes with zeroes.
+    pub fn test_signature_smoke<S: Signature, F: Fn(&[u8]) -> S, G: Fn(&S) -> &[u8]>(
+        key: &S::PrivateKey, sig_from_bytes: F, bytes_from_sig: G,
+    ) {
+        // Sign the message, verify the signature, and return the signature.
+        // Also verify that, if the wrong signature is used, the signature fails
+        // to verify. Also verify that sig_from_bytes works.
+        fn sign_and_verify<S: Signature, F: Fn(&[u8]) -> S, G: Fn(&S) -> &[u8]>(
+            key: &S::PrivateKey, message: &[u8], sig_from_bytes: F, bytes_from_sig: G,
+        ) -> S {
+            let sig = S::sign(key, message).unwrap();
+            assert!(sig.verify(&key.public(), message));
+            let sig2 = S::sign(&key, bytes_from_sig(&sig)).unwrap();
+            assert!(!sig2.verify(&key.public(), message));
+            sig_from_bytes(bytes_from_sig(&sig))
+        }
+
+        // Sign an empty message, and verify the signature. Use the signature as
+        // the next message to test, and repeat many times.
+        let mut msg = Vec::new();
+        for _ in 0..16 {
+            msg = bytes_from_sig(&sign_and_verify(
+                key,
+                &msg,
+                &sig_from_bytes,
+                &bytes_from_sig,
+            )).to_vec();
+        }
+    }
 }

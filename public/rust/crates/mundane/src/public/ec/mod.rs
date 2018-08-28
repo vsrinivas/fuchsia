@@ -2,11 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Elliptic Curve-based cryptographic algorithms.
+//! Elliptic Curve-based cryptographic algorithms over NIST P curves.
+//!
+//! This module only supports elliptic curve cryptography over NIST's P curves,
+//! defined in FIPS 186-3. These are the P-256, P-384, and P-521 curves (P-224
+//! is considered insecure, and thus is not supported). The ECDSA and ECDH
+//! algorithms are both defined over P curves, and so are exposed in this
+//! module.
+//!
+//! Other elliptic curve algorithms on non-P curves live in other modules (e.g.,
+//! operations on the Edwards 25519 curve live in the [`::public::ed25519`]
+//! module).
 
 mod curve;
 
-pub use public::ec::curve::{Curve, P256, P384, P521};
+pub use public::ec::curve::{PCurve, P256, P384, P521};
 
 use boringssl::{CHeapWrapper, CStackWrapper};
 use public::ec::curve::CurveKind;
@@ -19,7 +29,7 @@ mod inner {
     use std::marker::PhantomData;
 
     use boringssl::{self, BoringError, CHeapWrapper, CStackWrapper};
-    use public::ec::curve::Curve;
+    use public::ec::curve::PCurve;
     use public::inner::BoringDerKey;
     use Error;
 
@@ -32,12 +42,12 @@ mod inner {
     // This is marked pub and put in this (non-public) module so that using it in impls of
     // the Key trait don't result in public-in-private errors.
     #[derive(Clone)]
-    pub struct EcKey<C: Curve> {
+    pub struct EcKey<C: PCurve> {
         pub key: CHeapWrapper<boringssl::EC_KEY>,
         _marker: PhantomData<C>,
     }
 
-    impl<C: Curve> EcKey<C> {
+    impl<C: PCurve> EcKey<C> {
         pub fn generate() -> Result<EcKey<C>, BoringError> {
             let mut key = CHeapWrapper::default();
             // EC_KEY_set_group only errors if there's already a group set
@@ -68,7 +78,7 @@ mod inner {
         }
     }
 
-    impl<C: Curve> BoringDerKey for EcKey<C> {
+    impl<C: PCurve> BoringDerKey for EcKey<C> {
         fn pkey_assign(&self, pkey: &mut CHeapWrapper<boringssl::EVP_PKEY>) {
             pkey.evp_pkey_assign_ec_key(self.key.clone())
         }
@@ -108,7 +118,7 @@ mod inner {
 
         #[test]
         fn test_refcount() {
-            fn test<C: Curve>() {
+            fn test<C: PCurve>() {
                 let key = EcKey::<C>::generate().unwrap();
                 for i in 0..8 {
                     // make i clones and then free them all
@@ -128,17 +138,17 @@ mod inner {
     }
 }
 
-/// An elliptic curve public key.
+/// An elliptic curve public key over a P curve.
 ///
 /// `EcPubKey` is a public key over the curve `C`.
-pub struct EcPubKey<C: Curve> {
+pub struct EcPubKey<C: PCurve> {
     inner: EcKey<C>,
 }
 
-impl<C: Curve> Sealed for EcPubKey<C> {}
-impl<C: Curve> DerPublicKey for EcPubKey<C> {}
+impl<C: PCurve> Sealed for EcPubKey<C> {}
+impl<C: PCurve> DerPublicKey for EcPubKey<C> {}
 
-impl<C: Curve> DerKey for EcPubKey<C> {
+impl<C: PCurve> DerKey for EcPubKey<C> {
     type Boring = EcKey<C>;
     fn get_boring(&self) -> &EcKey<C> {
         &self.inner
@@ -148,18 +158,18 @@ impl<C: Curve> DerKey for EcPubKey<C> {
     }
 }
 
-impl<C: Curve> PublicKey for EcPubKey<C> {
+impl<C: PCurve> PublicKey for EcPubKey<C> {
     type Private = EcPrivKey<C>;
 }
 
-/// An elliptic curve private key.
+/// An elliptic curve private key over a P curve.
 ///
 /// `EcPrivKey` is a private key over the curve `C`.
-pub struct EcPrivKey<C: Curve> {
+pub struct EcPrivKey<C: PCurve> {
     inner: EcKey<C>,
 }
 
-impl<C: Curve> EcPrivKey<C> {
+impl<C: PCurve> EcPrivKey<C> {
     /// Generates a new private key.
     #[must_use]
     pub fn generate() -> Result<EcPrivKey<C>, Error> {
@@ -169,10 +179,10 @@ impl<C: Curve> EcPrivKey<C> {
     }
 }
 
-impl<C: Curve> Sealed for EcPrivKey<C> {}
-impl<C: Curve> DerPrivateKey for EcPrivKey<C> {}
+impl<C: PCurve> Sealed for EcPrivKey<C> {}
+impl<C: PCurve> DerPrivateKey for EcPrivKey<C> {}
 
-impl<C: Curve> DerKey for EcPrivKey<C> {
+impl<C: PCurve> DerKey for EcPrivKey<C> {
     type Boring = EcKey<C>;
     fn get_boring(&self) -> &EcKey<C> {
         &self.inner
@@ -182,7 +192,7 @@ impl<C: Curve> DerKey for EcPrivKey<C> {
     }
 }
 
-impl<C: Curve> PrivateKey for EcPrivKey<C> {
+impl<C: PCurve> PrivateKey for EcPrivKey<C> {
     type Public = EcPubKey<C>;
 
     fn public(&self) -> EcPubKey<C> {
@@ -230,10 +240,10 @@ impl EcPrivKeyAnyCurve {
 /// Parses a public key in DER format with any curve.
 ///
 /// `parse_public_key_der_any_curve` is like [`::public::parse_public_key_der`],
-/// but it accepts any [`Curve`] rather than a particular, static curve.
+/// but it accepts any [`PCurve`] rather than a particular, static curve.
 ///
 /// Since `parse_public_key_der` takes a `PublicKey` type argument, and
-/// [`EcPubKey`] requires a static [`Curve`] type parameter,
+/// [`EcPubKey`] requires a static [`PCurve`] type parameter,
 /// `parse_public_key_der` can only be called when the curve is known ahead of
 /// time. `parse_public_key_der_any_curve`, on the other hand, accepts any
 /// curve. It returns an `EcPubKeyAnyCurve`, which is an enum of keys over the
@@ -272,11 +282,11 @@ pub fn parse_public_key_der_any_curve(bytes: &[u8]) -> Result<EcPubKeyAnyCurve, 
 /// Parses a private key in DER format with any curve.
 ///
 /// `parse_private_key_der_any_curve` is like
-/// [`::public::parse_private_key_der`], but it accepts any [`Curve`] rather
+/// [`::public::parse_private_key_der`], but it accepts any [`PCurve`] rather
 /// than a particular, static curve.
 ///
 /// Since `parse_private_key_der` takes a `PrivateKey` type argument, and
-/// [`EcPrivKey`] requires a static [`Curve`] type parameter,
+/// [`EcPrivKey`] requires a static [`PCurve`] type parameter,
 /// `parse_private_key_der` can only be called when the curve is known ahead of
 /// time. `parse_private_key_der_any_curve`, on the other hand, accepts any
 /// curve. It returns an `EcPrivKeyAnyCurve`, which is an enum of keys over the
@@ -319,7 +329,7 @@ pub mod ecdsa {
 
     use boringssl;
     use hash::{inner::Digest, Hasher, Sha256, Sha384};
-    use public::{ec::{Curve, EcPrivKey, EcPubKey, P256, P384, P521},
+    use public::{ec::{EcPrivKey, EcPubKey, PCurve, P256, P384, P521},
                  Signature};
     use util::Sealed;
     use Error;
@@ -333,7 +343,7 @@ pub mod ecdsa {
     /// too long (in number of bytes) and thus not correspond to a point on the
     /// curve. `EcdsaHash<C>` is implemented by all hash functions whose digests
     /// are compatible with ECDSA signatures over the curve `C`.
-    pub trait EcdsaHash<C: Curve>: Sealed {}
+    pub trait EcdsaHash<C: PCurve>: Sealed {}
 
     impl EcdsaHash<P256> for Sha256 {}
     impl EcdsaHash<P384> for Sha256 {}
@@ -361,7 +371,7 @@ pub mod ecdsa {
 
     /// A DER-encoded ECDSA signature.
     #[must_use]
-    pub struct EcdsaSignature<C: Curve, H: Hasher + EcdsaHash<C>> {
+    pub struct EcdsaSignature<C: PCurve, H: Hasher + EcdsaHash<C>> {
         bytes: [u8; MAX_SIGNATURE_LEN],
         // Invariant: len is in [0; MAX_SIGNATURE_LEN). If len is 0, it
         // indicates an invalid signature. Invalid signatures can be produced
@@ -388,7 +398,7 @@ pub mod ecdsa {
         _marker: PhantomData<(C, H)>,
     }
 
-    impl<C: Curve, H: Hasher + EcdsaHash<C>> EcdsaSignature<C, H> {
+    impl<C: PCurve, H: Hasher + EcdsaHash<C>> EcdsaSignature<C, H> {
         /// Constructs an `EcdsaSignature` from raw bytes.
         #[must_use]
         pub fn from_bytes(bytes: &[u8]) -> EcdsaSignature<C, H> {
@@ -401,6 +411,9 @@ pub mod ecdsa {
             ret.len = bytes.len();
             ret
         }
+
+        // TODO(joshlf): Once we have const generics, have this return a
+        // fixed-length array.
 
         /// Gets the raw bytes of this `EcdsaSignature`.
         #[must_use]
@@ -421,8 +434,8 @@ pub mod ecdsa {
         }
     }
 
-    impl<C: Curve, H: Hasher + EcdsaHash<C>> Sealed for EcdsaSignature<C, H> {}
-    impl<C: Curve, H: Hasher + EcdsaHash<C>> Signature for EcdsaSignature<C, H> {
+    impl<C: PCurve, H: Hasher + EcdsaHash<C>> Sealed for EcdsaSignature<C, H> {}
+    impl<C: PCurve, H: Hasher + EcdsaHash<C>> Signature for EcdsaSignature<C, H> {
         type PrivateKey = EcPrivKey<C>;
 
         fn sign(key: &EcPrivKey<C>, message: &[u8]) -> Result<EcdsaSignature<C, H>, Error> {
@@ -445,37 +458,39 @@ pub mod ecdsa {
     #[cfg(test)]
     mod tests {
         use super::{super::*, *};
+        use public::testutil::test_signature_smoke;
 
         #[test]
         fn test_smoke() {
-            // Sign the message, verify the signature, and return the signature.
-            // Also verify that, if the wrong signature is used, the signature
-            // fails to verify. Also verify that EcdsaSignature::from_bytes
-            // works.
-            fn sign_and_verify<C: Curve, H: Hasher + EcdsaHash<C>>(
-                key: &EcPrivKey<C>, message: &[u8],
-            ) -> EcdsaSignature<C, H> {
-                let sig = EcdsaSignature::<C, H>::sign(&key, message).unwrap();
-                assert!(sig.verify(&key.public(), message));
-                let sig2 = EcdsaSignature::<C, H>::sign(&key, sig.bytes()).unwrap();
-                assert!(!sig2.verify(&key.public(), message));
-                EcdsaSignature::from_bytes(sig.bytes())
-            }
-
             let p256 = EcPrivKey::<P256>::generate().unwrap();
             let p384 = EcPrivKey::<P384>::generate().unwrap();
             let p521 = EcPrivKey::<P521>::generate().unwrap();
 
-            // Sign an empty message, and verify the signature. Use the
-            // signature as the next message to test, and repeat many times.
-            let mut msg = Vec::new();
-            for _ in 0..4 {
-                msg = sign_and_verify::<_, Sha256>(&p256, &msg).bytes().to_vec();
-                msg = sign_and_verify::<_, Sha256>(&p384, &msg).bytes().to_vec();
-                msg = sign_and_verify::<_, Sha384>(&p384, &msg).bytes().to_vec();
-                msg = sign_and_verify::<_, Sha256>(&p521, &msg).bytes().to_vec();
-                msg = sign_and_verify::<_, Sha384>(&p521, &msg).bytes().to_vec();
-            }
+            test_signature_smoke(
+                &p256,
+                EcdsaSignature::<_, Sha256>::from_bytes,
+                EcdsaSignature::bytes,
+            );
+            test_signature_smoke(
+                &p384,
+                EcdsaSignature::<_, Sha256>::from_bytes,
+                EcdsaSignature::bytes,
+            );
+            test_signature_smoke(
+                &p384,
+                EcdsaSignature::<_, Sha384>::from_bytes,
+                EcdsaSignature::bytes,
+            );
+            test_signature_smoke(
+                &p521,
+                EcdsaSignature::<_, Sha256>::from_bytes,
+                EcdsaSignature::bytes,
+            );
+            test_signature_smoke(
+                &p521,
+                EcdsaSignature::<_, Sha384>::from_bytes,
+                EcdsaSignature::bytes,
+            );
         }
 
         #[test]
@@ -518,7 +533,7 @@ mod tests {
         // that generically, so the caller must pass a function which will do
         // it.
         fn test<
-            C: Curve,
+            C: PCurve,
             F: Fn(EcPrivKeyAnyCurve) -> EcPrivKey<C>,
             G: Fn(EcPubKeyAnyCurve) -> EcPubKey<C>,
         >(
@@ -541,8 +556,9 @@ mod tests {
                 parse_public_key_der_any_curve(&marshal_public_key_der(&pubkey)).unwrap(),
             );
 
-            fn sign_and_verify<C1: Curve, C2: Curve>(privkey: &EcPrivKey<C1>, pubkey: &EcPubKey<C2>)
-            where
+            fn sign_and_verify<C1: PCurve, C2: PCurve>(
+                privkey: &EcPrivKey<C1>, pubkey: &EcPubKey<C2>,
+            ) where
                 Sha256: EcdsaHash<C1>,
                 Sha256: EcdsaHash<C2>,
             {
@@ -624,7 +640,7 @@ mod tests {
     #[test]
     fn test_parse_fail() {
         // Test that invalid input is rejected.
-        fn test_parse_invalid<C: Curve>() {
+        fn test_parse_invalid<C: PCurve>() {
             should_fail(
                 parse_private_key_der::<EcPrivKey<C>>(&[]),
                 "parse_private_key_der",
@@ -653,7 +669,7 @@ mod tests {
 
         // Test that, when a particular curve is expected, other curves are
         // rejected.
-        fn test_parse_wrong_curve<C1: Curve, C2: Curve>() {
+        fn test_parse_wrong_curve<C1: PCurve, C2: PCurve>() {
             let privkey = EcPrivKey::<C1>::generate().unwrap();
             let key_der = marshal_private_key_der(&privkey);
             should_fail(

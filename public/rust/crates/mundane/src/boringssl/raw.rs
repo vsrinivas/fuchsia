@@ -14,8 +14,9 @@
 
 // infallible functions
 pub use boringssl_sys::{CBB_cleanup, CBB_len, CBS_init, CBS_len, CRYPTO_memcmp,
-                        EC_GROUP_get_curve_name, ERR_error_string_n, ERR_get_error,
-                        ERR_print_errors_cb, HMAC_CTX_init, HMAC_size};
+                        EC_GROUP_get_curve_name, ED25519_keypair, ED25519_keypair_from_seed,
+                        ERR_error_string_n, ERR_get_error, ERR_print_errors_cb, HMAC_CTX_init,
+                        HMAC_size};
 
 use std::num::NonZeroUsize;
 use std::os::raw::{c_char, c_int, c_uint, c_void};
@@ -41,6 +42,42 @@ pub unsafe fn CBB_init(cbb: *mut CBB, initial_capacity: usize) -> Result<(), Bor
 #[must_use]
 pub unsafe fn CBB_data(cbb: *const CBB) -> Result<NonNull<u8>, BoringError> {
     ptr_or_err("CBB_init", ::boringssl_sys::CBB_data(cbb) as *mut _)
+}
+
+// curve25519.h
+
+#[allow(non_snake_case)]
+#[must_use]
+pub unsafe fn ED25519_sign(
+    out: *mut [u8; 64], message: *const u8, message_len: usize, private_key: *const [u8; 64],
+) -> Result<(), BoringError> {
+    one_or_err(
+        "ED25519_sign",
+        ::boringssl_sys::ED25519_sign(
+            out as *mut u8,
+            message,
+            message_len,
+            private_key as *const u8,
+        ),
+    )
+}
+
+#[allow(non_snake_case)]
+#[must_use]
+pub unsafe fn ED25519_verify(
+    message: *const u8, message_len: usize, signature: *const [u8; 64], public_key: *const [u8; 32],
+) -> bool {
+    match ::boringssl_sys::ED25519_verify(
+        message,
+        message_len,
+        signature as *const u8,
+        public_key as *const u8,
+    ) {
+        0 => false,
+        1 => true,
+        // ED25519_verify promises to only return 0 or 1
+        _ => unreachable_abort!(),
+    }
 }
 
 // digest.h
