@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/images/manifest.gni")
+import("//build/json/validate_json.gni")
 
 declare_args() {
   # The package key to use for signing Fuchsia packages made by the
@@ -320,6 +321,19 @@ template("package") {
             source = pkg.binary
           },
         ]
+      }
+    }
+
+    # Validate .cmx files
+    foreach(meta, pkg.meta) {
+      if (get_path_info(meta.dest, "extension") == "cmx") {
+        validate = "validate_" + pkg_target_name +
+                        "_" + get_path_info(meta.dest, "file")
+        validate_json(validate) {
+          data = meta.path
+          schema = "//garnet/lib/cmx/schema.json"
+        }
+        pkg.deps += [ ":$validate" ]
       }
     }
 

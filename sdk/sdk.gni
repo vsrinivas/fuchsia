@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/json/validate_json.gni")
 import("sdk_molecule.gni")
 
 declare_args() {
@@ -114,28 +115,12 @@ template("sdk") {
   }
 
   # Verifies that the manifest is valid.
-  compiled_action(verification_target_name) {
+  validate_json(verification_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    tool = "//build/tools/json_validator"
+    data = final_manifest_file
 
-    stamp_file = "$target_gen_dir/$target_name.verified"
-    schema_file = "//build/sdk/manifest_schema.json"
-
-    inputs = [
-      final_manifest_file,
-      schema_file,
-    ]
-
-    outputs = [
-      stamp_file,
-    ]
-
-    args = [
-      rebase_path(schema_file),
-      rebase_path(final_manifest_file),
-      rebase_path(stamp_file),
-    ]
+    schema = "//build/sdk/manifest_schema.json"
 
     deps = [
       ":$copy_target_name",

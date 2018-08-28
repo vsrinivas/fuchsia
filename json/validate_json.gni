@@ -1,0 +1,64 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Validate a JSON file against a JSON schema.
+#
+#   data (required)
+#     [file] JSON file to validate.
+#     If this file is not valid JSON, or does not meet the schema, then this
+#     target will fail to build.
+#
+#   schema (required)
+#     [file] Schema to use for validation.
+#
+#   sources (optional)
+#     [list of files] Additional schema files referenced by schema.
+#     Additional schema files used by the original schema file must be listed
+#     here for validation to be re-run when they change.
+#
+#   deps (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+#
+# Example of usage:
+#
+#   validate_json("validate_my_json") {
+#     data = "my_file.json"
+#     schema = "my_schema.json"
+#   }
+template("validate_json") {
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "sources",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//build/tools/json_validator"
+
+    stamp_file = "$target_gen_dir/$target_name.verified"
+
+    inputs = [
+      invoker.data,
+      invoker.schema,
+    ]
+
+    outputs = [
+      stamp_file,
+    ]
+
+    args = [
+      rebase_path(invoker.schema),
+      rebase_path(invoker.data),
+      rebase_path(stamp_file),
+    ]
+  }
+}

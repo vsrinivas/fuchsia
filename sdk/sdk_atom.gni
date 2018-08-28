@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/json/validate_json.gni")
 
 # Defines an SDK element.
 #
@@ -262,34 +263,14 @@ template("sdk_atom") {
   }
 
   # Verify that the metadata complies with the specified schema.
-  compiled_action(meta_target_name) {
+  validate_json(meta_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
-
-    tool = "//build/tools/json_validator"
-
-    stamp_file = "$target_gen_dir/$target_name.verified"
-    schema_file = "//build/sdk/meta/${meta_content.schema}.json"
-
+    data = meta_file
+    schema = "//build/sdk/meta/${meta_content.schema}.json"
     sources = [
       # This file is imported by all schemas.
       "//build/sdk/meta/common.json",
     ]
-
-    inputs = [
-      meta_file,
-      schema_file,
-    ]
-
-    outputs = [
-      stamp_file,
-    ]
-
-    args = [
-      rebase_path(schema_file),
-      rebase_path(meta_file),
-      rebase_path(stamp_file),
-    ]
-
     public_deps = meta_deps
   }
 

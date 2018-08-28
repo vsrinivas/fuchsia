@@ -5,6 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk_atom.gni")
+import("//build/json/validate_json.gni")
 
 # Generates some representation of a FIDL library that's consumable by Language
 # bindings generators.
@@ -132,25 +133,11 @@ template("fidl_library") {
     ]
   }
 
-  compiled_action(verification_target_name) {
+  validate_json(verification_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
-
     visibility = [ ":*" ]
-
-    tool = "//build/tools/json_validator"
-
-    inputs = [
-      "//zircon/system/host/fidl/schema.json",
-      json_representation,
-    ]
-
-    outputs = [
-      "${json_representation}.stamp",
-    ]
-
-    args = rebase_path(inputs, root_build_dir) +
-           rebase_path(outputs, root_build_dir)
-
+    data = json_representation
+    schema = "//zircon/system/host/fidl/schema.json"
     deps = [
       ":$compilation_target_name",
     ]
