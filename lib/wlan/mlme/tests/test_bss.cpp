@@ -324,4 +324,34 @@ zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* 
     return ZX_OK;
 }
 
+zx_status_t CreateNullDataFrame(fbl::unique_ptr<Packet>* out_packet) {
+    common::MacAddr bssid(kBssid1);
+    common::MacAddr client(kClientAddress);
+
+    auto buffer = GetBuffer(kDataFrameHdrLenMax);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), kDataFrameHdrLenMax);
+    packet->set_peer(Packet::Peer::kWlan);
+
+    DataFrame<> data_frame(fbl::move(packet));
+    auto data_hdr = data_frame.hdr();
+    std::memset(data_hdr, 0, kDataFrameHdrLenMax);
+    data_hdr->fc.set_type(FrameType::kData);
+    data_hdr->fc.set_subtype(DataSubtype::kNull);
+    data_hdr->fc.set_to_ds(1);
+    data_hdr->addr1 = bssid;
+    data_hdr->addr2 = bssid;
+    data_hdr->addr3 = client;
+    data_hdr->sc.set_val(42);
+
+    auto pkt = data_frame.Take();
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    pkt->CopyCtrlFrom(rx_info);
+
+    *out_packet = fbl::move(pkt);
+
+    return ZX_OK;
+}
+
 }  // namespace wlan

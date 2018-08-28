@@ -65,6 +65,14 @@ struct ClientTest : public ::testing::Test {
         return ZX_OK;
     }
 
+    zx_status_t SendNullDataFrame() {
+        fbl::unique_ptr<Packet> pkt;
+        auto status = CreateNullDataFrame(&pkt);
+        if (status != ZX_OK) { return status; }
+        station.HandleAnyFrame(fbl::move(pkt));
+        return ZX_OK;
+    }
+
     uint32_t MlmeMsgOrdinal(const Packet* pkt) {
         auto hdr = FromBytes<fidl_message_header_t>(pkt->data(), pkt->len());
         if (hdr == nullptr) { return 0; }
@@ -77,6 +85,7 @@ struct ClientTest : public ::testing::Test {
         SendMlmeMsg<wlan_mlme::JoinRequest>();
         SendFrame<Beacon>();
         device.svc_queue.clear();
+        station.HandleTimeout();
     }
 
     void Authenticate() {
@@ -84,6 +93,7 @@ struct ClientTest : public ::testing::Test {
         SendFrame<Authentication>();
         device.svc_queue.clear();
         device.wlan_queue.clear();
+        station.HandleTimeout();
     }
 
     void Associate() {
@@ -91,16 +101,18 @@ struct ClientTest : public ::testing::Test {
         SendFrame<AssociationResponse>();
         device.svc_queue.clear();
         device.wlan_queue.clear();
+        station.HandleTimeout();
     }
 
     void Connect() {
         Join();
         Authenticate();
         Associate();
+        station.HandleTimeout();
     }
 
-    void IncreaseTimeByBeaconPeriods(size_t periods) {
-        device.SetTime(device.GetTime() + zx::msec(periods * kBeaconPeriodTu));
+    void SetTimeInBeaconPeriods(size_t periods) {
+        device.SetTime(zx::time(0) + zx::usec(1024) * (periods * kBeaconPeriodTu));
     }
 
     void AssertJoinConfirm(fbl::unique_ptr<Packet> pkt, wlan_mlme::JoinResultCodes result_code) {
@@ -160,7 +172,7 @@ TEST_F(ClientTest, Join) {
 
     // Verify a delayed timeout won't cause another confirmation.
     device.svc_queue.clear();
-    IncreaseTimeByBeaconPeriods(100);
+    SetTimeInBeaconPeriods(100);
     station.HandleTimeout();
     ASSERT_TRUE(device.svc_queue.is_empty());
 }
@@ -172,7 +184,7 @@ TEST_F(ClientTest, Authenticate) {
     ASSERT_EQ(SendMlmeMsg<wlan_mlme::AuthenticateRequest>(), ZX_OK);
     ASSERT_TRUE(device.svc_queue.is_empty());
 
-    // Verify ethernet frame is correct.
+    // Verify wlan frame is correct.
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = device.wlan_queue.Dequeue();
     ASSERT_EQ(pkt->peer(), Packet::Peer::kWlan);
@@ -195,7 +207,7 @@ TEST_F(ClientTest, Authenticate) {
 
     // Verify a delayed timeout won't cause another confirmation.
     device.svc_queue.clear();
-    IncreaseTimeByBeaconPeriods(100);
+    SetTimeInBeaconPeriods(100);
     station.HandleTimeout();
     ASSERT_TRUE(device.svc_queue.is_empty());
 }
@@ -208,7 +220,7 @@ TEST_F(ClientTest, Associate) {
     ASSERT_EQ(SendMlmeMsg<wlan_mlme::AssociateRequest>(), ZX_OK);
     ASSERT_TRUE(device.svc_queue.is_empty());
 
-    // Verify ethernet frame is correct.
+    // Verify wlan frame is correct.
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = device.wlan_queue.Dequeue();
     ASSERT_EQ(pkt->peer(), Packet::Peer::kWlan);
@@ -230,7 +242,7 @@ TEST_F(ClientTest, Associate) {
 
     // Verify a delayed timeout won't cause another confirmation.
     device.svc_queue.clear();
-    IncreaseTimeByBeaconPeriods(100);
+    SetTimeInBeaconPeriods(100);
     station.HandleTimeout();
     while (!device.svc_queue.is_empty()) {
         auto pkt = device.svc_queue.Dequeue();
@@ -247,12 +259,12 @@ TEST_F(ClientTest, JoinTimeout) {
     ASSERT_TRUE(device.svc_queue.is_empty());
 
     // Timeout not yet hit.
-    IncreaseTimeByBeaconPeriods(kJoinTimeout - 1);
+    SetTimeInBeaconPeriods(kJoinTimeout - 1);
     station.HandleTimeout();
     ASSERT_TRUE(device.svc_queue.is_empty());
 
     // Timeout hit, verify a JOIN.confirm message was sent.
-    IncreaseTimeByBeaconPeriods(kJoinTimeout);
+    SetTimeInBeaconPeriods(kJoinTimeout);
     station.HandleTimeout();
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto join_pkt = device.svc_queue.Dequeue();
@@ -267,12 +279,12 @@ TEST_F(ClientTest, AuthTimeout) {
     ASSERT_TRUE(device.svc_queue.is_empty());
 
     // Timeout not yet hit.
-    IncreaseTimeByBeaconPeriods(kAuthTimeout - 1);
+    SetTimeInBeaconPeriods(kAuthTimeout - 1);
     station.HandleTimeout();
     ASSERT_TRUE(device.svc_queue.is_empty());
 
     // Timeout hit, verify a AUTHENTICATION.confirm message was sent.
-    IncreaseTimeByBeaconPeriods(kAuthTimeout);
+    SetTimeInBeaconPeriods(kAuthTimeout);
     station.HandleTimeout();
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto auth_pkt = device.svc_queue.Dequeue();
@@ -289,12 +301,12 @@ TEST_F(ClientTest, AssocTimeout) {
     ASSERT_TRUE(device.svc_queue.is_empty());
 
     // Timeout not yet hit.
-    IncreaseTimeByBeaconPeriods(10);
+    SetTimeInBeaconPeriods(10);
     station.HandleTimeout();
     ASSERT_TRUE(device.svc_queue.is_empty());
 
     // Timeout hit, verify a ASSOCIATE.confirm message was sent.
-    IncreaseTimeByBeaconPeriods(40);
+    SetTimeInBeaconPeriods(40);
     station.HandleTimeout();
     ASSERT_FALSE(device.svc_queue.is_empty());
     auto assoc_pkt = device.svc_queue.Dequeue();
@@ -306,20 +318,31 @@ TEST_F(ClientTest, ExchangeDataAfterAssociation) {
     // Verify no data frame is exchanged before being associated.
     device.eth_queue.clear();
     SendDataFrame();
+    SendNullDataFrame();
     ASSERT_TRUE(device.eth_queue.is_empty());
+    ASSERT_TRUE(device.wlan_queue.is_empty());
+    ASSERT_TRUE(device.svc_queue.is_empty());
 
     Join();
     SendDataFrame();
+    SendNullDataFrame();
     ASSERT_TRUE(device.eth_queue.is_empty());
+    ASSERT_TRUE(device.wlan_queue.is_empty());
+    ASSERT_TRUE(device.svc_queue.is_empty());
 
     Authenticate();
     SendDataFrame();
+    SendNullDataFrame();
     ASSERT_TRUE(device.eth_queue.is_empty());
+    ASSERT_TRUE(device.wlan_queue.is_empty());
+    ASSERT_TRUE(device.svc_queue.is_empty());
 
     // Associate and send a data frame.
     Associate();
     SendDataFrame();
     ASSERT_EQ(device.eth_queue.size(), static_cast<size_t>(1));
+    ASSERT_TRUE(device.wlan_queue.is_empty());
+    ASSERT_TRUE(device.svc_queue.is_empty());
 
     // Verify queued up ethernet frame is correct.
     auto pkt = device.eth_queue.Dequeue();
@@ -330,6 +353,24 @@ TEST_F(ClientTest, ExchangeDataAfterAssociation) {
     ASSERT_EQ(frame.hdr()->ether_type, 42);
     ASSERT_EQ(frame.body_len(), sizeof(kTestPayload));
     ASSERT_EQ(std::memcmp(frame.body()->data, kTestPayload, sizeof(kTestPayload)), 0);
+
+    // Send null data frame which shouldn't queue up any Ethernet frames but instead a "Keep Alive" one.
+    SendNullDataFrame();
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+    ASSERT_TRUE(device.svc_queue.is_empty());
+
+    // Verify queued up "Keep Alive" frame is correct.
+    pkt = device.wlan_queue.Dequeue();
+    ASSERT_EQ(pkt->peer(), Packet::Peer::kWlan);
+    auto partially_checked = DataFrameView<>::CheckType(pkt.get());
+    ASSERT_TRUE(partially_checked);
+    auto data_frame = partially_checked.CheckLength();
+    ASSERT_EQ(data_frame.hdr()->fc.to_ds(), 1);
+    ASSERT_EQ(data_frame.hdr()->fc.from_ds(), 0);
+    ASSERT_EQ(std::memcmp(data_frame.hdr()->addr1.byte, kBssid1, 6), 0);
+    ASSERT_EQ(std::memcmp(data_frame.hdr()->addr2.byte, kClientAddress, 6), 0);
+    ASSERT_EQ(std::memcmp(data_frame.hdr()->addr3.byte, kBssid1, 6), 0);
+    ASSERT_EQ(data_frame.body_len(), static_cast<size_t>(0));
 }
 
 TEST_F(ClientTest, DropManagementFrames) {
@@ -357,17 +398,35 @@ TEST_F(ClientTest, DropManagementFrames) {
     ASSERT_EQ(device.eth_queue.size(), static_cast<size_t>(1));
 }
 
+TEST_F(ClientTest, SuccessiveJoin) {
+    // Connect to a network
+    Connect();
+
+    // Issue a new MLME-JOIN.request which should reset the STA and restart the association flow.
+    // Verify data frame exchange is not operational any longer.
+    ASSERT_EQ(SendMlmeMsg<wlan_mlme::JoinRequest>(), ZX_OK);
+    SendDataFrame();
+    ASSERT_TRUE(device.eth_queue.is_empty());
+
+    // Verify BSS was notified about deauthentication.
+    // TODO(hahnr): This is currently not supported by the client.
+
+    // Respond with a Beacon frame and verify a JOIN.confirm message was sent.
+    ASSERT_EQ(SendFrame<Beacon>(), ZX_OK);
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    auto join_pkt = device.svc_queue.Dequeue();
+    AssertJoinConfirm(fbl::move(join_pkt), wlan_mlme::JoinResultCodes::SUCCESS);
+}
+
 // Add additional tests for (tracked in NET-801):
 // AP refuses Authentication/Association
 // Regression tests for:
 // - NET-898: PS-POLL after TIM indication.
-// - NET-1219: Send Null-Data frames while not being associated
 // Deauthenticate in any state issued by AP/SME.
 // Disassociation in any state issued by AP/SME.
 // Handle Action frames and setup Block-Ack session.
 // Drop data frames from unknown BSS.
 // Handle AMSDUs.
-// Send keep-alive frames.
 // Connect to a:
 // - protected network, exchange keys and send protected frames.
 // - HT/VHT capable network
