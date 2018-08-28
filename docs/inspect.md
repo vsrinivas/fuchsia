@@ -21,7 +21,7 @@ string-valued **Properties** and numeric **Metrics**.
 ## Object
 
 An object is an exported entity within a component that may have 0 or
-more children. Each component has a name, and each child of an object
+more children. Each object has a name, and each child of an object
 must have a unique name among the children.
 
 ## Property
@@ -67,7 +67,7 @@ Components by default obtain a reference to their `out/` directory in
 their hub. It is customary to expose a root-level object called `objects`
 at `out/objects/`.
 
-The manager for a components environment may expose its own information
+The manager for a component's environment may expose its own information
 about the component to the hub. For instance, appmgr exposes
 `system_objects` for each component.
 
