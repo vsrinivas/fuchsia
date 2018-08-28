@@ -379,7 +379,7 @@ void PageDownload::HandleGetObjectError(
   if (is_permanent) {
     backoff_->Reset();
     FXL_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a permanent "
-                     << error_name << " error";
+                     << error_name << " error.";
     callback(storage::Status::IO_ERROR, storage::ChangeSource::CLOUD,
              storage::IsObjectSynced::YES, nullptr);
     current_get_object_calls_--;
@@ -387,7 +387,7 @@ void PageDownload::HandleGetObjectError(
     return;
   }
   FXL_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a "
-                   << error_name << " error, retrying";
+                   << error_name << " error, retrying.";
   current_get_object_calls_--;
   UpdateDownloadState();
   RetryWithBackoff([this, object_identifier = std::move(object_identifier),

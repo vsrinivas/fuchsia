@@ -56,7 +56,7 @@ class DataSource {
   DataSource() {}
   virtual ~DataSource() {}
 
-  // Returns the toal size of the data in the DataSource.
+  // Returns the total size of the data in the DataSource.
   virtual uint64_t GetSize() = 0;
   // Fetches the data. This must only be called once. |callback| will later be
   // called one or more times with subsequent chunks of data. If |Status| is
