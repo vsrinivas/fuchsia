@@ -31,8 +31,14 @@ package("echo2_server_go") {
 
   binary = "echo2_server_go"
 
-  meta = [ {
-        path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-        dest = "legacy_flat_exported_dir"
-      } ]
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+      dest = "legacy_flat_exported_dir"
+    },
+    {
+      path = rebase_path("../meta/echo2_server.cmx")
+      dest = "echo2_server_go.cmx"
+    },
+  ]
 }

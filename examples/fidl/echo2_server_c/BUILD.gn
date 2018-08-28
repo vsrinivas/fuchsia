@@ -24,4 +24,11 @@ package("echo2_server_c") {
   ]
 
   binary = "echo2_server_c"
+
+  meta = [
+    {
+      path = rebase_path("../meta/echo2_server.cmx")
+      dest = "echo2_server_c.cmx"
+    },
+  ]
 }

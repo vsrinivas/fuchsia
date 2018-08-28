@@ -27,4 +27,11 @@ package("echo2_client_rust") {
   ]
 
   binary = "rust_crates/echo2_client_rust"
+
+  meta = [
+    {
+      path = rebase_path("../meta/echo2_client.cmx")
+      dest = "echo2_client_rust.cmx"
+    },
+  ]
 }

@@ -37,6 +37,13 @@ package("echo2_server_cpp") {
   ]
 
   binary = "echo2_server_cpp"
+
+  meta = [
+    {
+      path = rebase_path("../meta/echo2_server.cmx")
+      dest = "echo2_server_cpp.cmx"
+    },
+  ]
 }
 
 executable("echo2_server_cpp_unittests") {
