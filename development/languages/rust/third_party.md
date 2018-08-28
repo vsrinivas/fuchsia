@@ -19,7 +19,7 @@ the following steps:
    Google employee, you will need to ask a Google employee to do this part
    for you.
 1. Reference the crates you need in [`rustc_deps/Cargo.toml`][3p-cargo-toml].
-1. Run `fn update-rustc-third-party`. This will download all crates listed in
+1. Run `scripts/fx update-rustc-third-party`. This will download all crates listed in
    [`rustc_deps/Cargo.toml`][3p-cargo-toml] as well as their dependencies and
    place them in the `vendor` directory.
 1. `git add` the `Cargo.toml`, `Cargo.lock` and `vendor` directory.
