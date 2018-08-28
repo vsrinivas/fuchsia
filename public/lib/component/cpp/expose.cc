@@ -116,6 +116,20 @@ void Object::ListChildren(ListChildrenCallback callback) {
   callback(std::move(out));
 }
 
+void Object::OpenChild(::fidl::StringPtr name,
+                       ::fidl::InterfaceRequest<Inspect> child_channel,
+                       OpenChildCallback callback) {
+  auto child = GetChild(name->data());
+  if (!child) {
+    callback(false);
+    return;
+  }
+
+  fbl::AutoLock lock(&(child->mutex_));
+  child->bindings_.AddBinding(child, std::move(child_channel));
+  callback(true);
+}
+
 fbl::RefPtr<Object> Object::GetChild(fbl::String name) {
   fbl::AutoLock lock(&mutex_);
   auto it = children_.find(name.data());

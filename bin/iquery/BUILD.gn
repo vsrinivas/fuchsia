@@ -8,11 +8,15 @@ source_set("lib") {
   sources = [
     "connect.cc",
     "connect.h",
-    "find.cc",
-    "find.h",
     "formatter.h",
     "formatters/text.cc",
     "formatters/text.h",
+    "modes.cc",
+    "modes.h",
+    "options.cc",
+    "options.h",
+    "utils.cc",
+    "utils.h",
   ]
 
   deps = [

@@ -238,6 +238,11 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   // Lists the children of this Object, including dynamic ones if they exist.
   void ListChildren(ListChildrenCallback callback) override;
 
+  // Opens a channel with the requested child
+  void OpenChild(::fidl::StringPtr name,
+                 ::fidl::InterfaceRequest<Inspect> child_channel,
+                 OpenChildCallback callback) override;
+
   // |LazyDir| implementation
 
   // Gets contents for directory listing.

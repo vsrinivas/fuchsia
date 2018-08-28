@@ -2,84 +2,103 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "text.h"
-
 #include <sstream>
 
-#include <lib/fostr/hex_dump.h>
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/join_strings.h>
 #include <lib/fxl/strings/string_printf.h>
-#include <lib/fxl/strings/utf_codecs.h>
+
+#include "garnet/bin/iquery/formatters/text.h"
+#include "garnet/bin/iquery/options.h"
 
 namespace iquery {
 
 namespace {
-constexpr size_t kMaxHexSize = 256;
 
-std::string HexDump(const std::string& contents) {
-  std::ostringstream out;
-  if (contents.size() > kMaxHexSize) {
-    out << "\nFirst " << kMaxHexSize << " bytes of " << contents.size();
-  }
-  out << fostr::HexDump(&contents.front(),
-                        std::min(kMaxHexSize, contents.size()), 0x0);
-  return out.str();
+#define INDENT_SIZE 2
+
+inline std::string Indent(int indent) {
+  return std::string(indent * INDENT_SIZE, ' ');
 }
 
-void AppendKey(std::string* out, ::fidl::StringPtr key) {
-  if (fxl::IsStringUTF8(*key)) {
-    fxl::StringAppendf(out, "  %s = ", key->data());
-  } else {
-    fxl::StringAppendf(out, "  Binary Key:%s\n  = ", HexDump(*key).c_str());
+// This version exists so we can pass in the indentation.
+std::string RecursiveFormatCat(const Options& options, const ObjectNode& root,
+                               int indent) {
+  const auto& object = root.object;
+
+  std::ostringstream ss;
+  if (options.path_format != Options::PathFormatting::NONE) {
+    // The path already considers the object name.
+    ss << Indent(indent)
+       << "PATH: " << FormatPath(options.path_format, root.basepath)
+       << std::endl;
   }
+
+  for (const auto& property : *object.properties) {
+    ss << Indent(indent) << FormatString(property.key) << " = "
+       << FormatString(property.value) << std::endl;
+  }
+
+  for (const auto& metric : *object.metrics) {
+    ss << Indent(indent) << FormatString(metric.key) << " = "
+       << FormatMetricValue(metric) << std::endl;
+  }
+
+  // We print recursively. The recursion nature of the cat called is already
+  // taken care of by now.
+  for (const auto& child : root.children) {
+    ss << Indent(indent) << child.object.name << ":" << std::endl;
+    ss << RecursiveFormatCat(options, child, indent + 1);
+  }
+
+  return ss.str();
+}
+
+std::string FormatFind(const Options& options,
+                       const std::vector<ObjectNode>& results) {
+  std::stringstream ss;
+  for (const auto& node : results) {
+    ss << FormatPath(options.path_format, node.basepath, node.object.name)
+       << std::endl;
+  }
+  return ss.str();
+}
+
+std::string FormatLs(const Options& options,
+                     const std::vector<ObjectNode>& results) {
+  std::stringstream ss;
+  for (const auto& node : results) {
+    ss << FormatPath(options.path_format, node.basepath, node.object.name)
+       << std::endl;
+  }
+  return ss.str();
+}
+
+std::string FormatCat(const Options& options,
+                      const std::vector<ObjectNode>& results) {
+  std::ostringstream ss;
+  for (const auto& root_node : results) {
+    ss << root_node.object.name << ":" << std::endl;
+    ss << RecursiveFormatCat(options, root_node, 1);
+  }
+
+  return ss.str();
 }
 
 }  // namespace
 
-std::string TextFormatter::FormatFind(
-    const std::vector<std::string>& find_results) {
-  return fxl::Concatenate({fxl::JoinStrings(find_results, "\n"), "\n"});
-}
-
-std::string TextFormatter::FormatLs(
-    const std::vector<fuchsia::inspect::Object>& ls_results) {
-  std::string output;
-  for (const auto& obj : ls_results) {
-    fxl::StringAppendf(&output, "%s\n", obj.name->data());
-  }
-  return output;
-}
-
-std::string TextFormatter::FormatCat(
-    const std::vector<fuchsia::inspect::Object>& objects) {
-  std::string output;
-  for (const auto& obj : objects) {
-    fxl::StringAppendf(&output, "%s:\n", obj.name->data());
-    for (const auto& prop : *obj.properties) {
-      AppendKey(&output, prop.key);
-      if (fxl::IsStringUTF8(*prop.value)) {
-        fxl::StringAppendf(&output, "%s\n", prop.value->data());
-      } else {
-        fxl::StringAppendf(&output, "Binary Value:%s\n",
-                           HexDump(*prop.value).c_str());
-      }
-    }
-    for (const auto& metric : *obj.metrics) {
-      AppendKey(&output, metric.key);
-      if (metric.value.is_int_value()) {
-        fxl::StringAppendf(&output, "%ld\n", metric.value.int_value());
-      } else if (metric.value.is_uint_value()) {
-        fxl::StringAppendf(&output, "%lu\n", metric.value.uint_value());
-      } else if (metric.value.is_double_value()) {
-        fxl::StringAppendf(&output, "%f\n", metric.value.double_value());
-      } else {
-        FXL_LOG(WARNING) << "Unknown metric type for " << obj.name;
-      }
+std::string TextFormatter::Format(const Options& options,
+                                  const std::vector<ObjectNode>& results) {
+  switch (options.mode) {
+    case Options::Mode::CAT:
+      return FormatCat(options, results);
+    case Options::Mode::FIND:
+      return FormatFind(options, results);
+    case Options::Mode::LS:
+      return FormatLs(options, results);
+    case Options::Mode::UNSET: {
+      FXL_LOG(ERROR) << "Unset Mode";
+      return "";
     }
   }
-
-  return output;
 }
 
 }  // namespace iquery

@@ -7,17 +7,13 @@
 
 #include <string>
 #include <vector>
-#include "../formatter.h"
+#include "garnet/bin/iquery/formatter.h"
 
 namespace iquery {
 
 class TextFormatter : public Formatter {
  public:
-  std::string FormatFind(const std::vector<std::string>& find_results) override;
-  std::string FormatLs(
-      const std::vector<fuchsia::inspect::Object>& ls_results) override;
-  std::string FormatCat(
-      const std::vector<fuchsia::inspect::Object>& objects) override;
+  std::string Format(const Options&, const std::vector<ObjectNode>&) override;
 };
 
 }  // namespace iquery
