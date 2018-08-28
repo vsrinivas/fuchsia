@@ -24,7 +24,7 @@ RUN_SCENIC_BENCHMARK="/pkgfs/packages/scenic_benchmarks/0/bin/run_scenic_benchma
 #   --unshadowed --clipping_disabled  # Arguments.
 
 # hello_scenic
-BENCHMARK="scenic.hello_scenic_benchmark"
+BENCHMARK="fuchsia.scenic.hello_scenic"
 runbench_exec "${OUT_DIR}/${BENCHMARK}.json" \
     "${RUN_SCENIC_BENCHMARK}"                \
     "${OUT_DIR}"                             \
@@ -33,7 +33,7 @@ runbench_exec "${OUT_DIR}/${BENCHMARK}.json" \
     "hello_scenic"
 
 # image_grid_cpp
-BENCHMARK="scenic.image_grid_cpp_noclipping_noshadows_benchmark"
+BENCHMARK="fuchsia.scenic.image_grid_cpp_noclipping_noshadows"
 runbench_exec "${OUT_DIR}/${BENCHMARK}.json" \
     "${RUN_SCENIC_BENCHMARK}"                \
     "${OUT_DIR}"                             \
@@ -41,7 +41,7 @@ runbench_exec "${OUT_DIR}/${BENCHMARK}.json" \
     "${BENCHMARK}"                           \
     "set_root_view image_grid_cpp" --unshadowed --clipping_disabled
 
-BENCHMARK="scenic.image_grid_cpp_noshadows_benchmark"
+BENCHMARK="fuchsia.scenic.image_grid_cpp_noshadows"
 runbench_exec "${OUT_DIR}/${BENCHMARK}.json" \
     "${RUN_SCENIC_BENCHMARK}"                \
     "${OUT_DIR}"                             \
@@ -49,7 +49,7 @@ runbench_exec "${OUT_DIR}/${BENCHMARK}.json" \
     "${BENCHMARK}"                           \
     "set_root_view image_grid_cpp" --unshadowed --clipping_enabled
 
-BENCHMARK="scenic.image_grid_cpp_ssdo_benchmark"
+BENCHMARK="fuchsia.scenic.image_grid_cpp_ssdo"
 runbench_exec "${OUT_DIR}/${BENCHMARK}.json" \
     "${RUN_SCENIC_BENCHMARK}"                \
     "${OUT_DIR}"                             \
@@ -57,7 +57,7 @@ runbench_exec "${OUT_DIR}/${BENCHMARK}.json" \
     "${BENCHMARK}"                           \
     "set_root_view image_grid_cpp" --screen_space_shadows --clipping_enabled
 
-BENCHMARK="scenic.image_grid_cpp_shadow_map_benchmark"
+BENCHMARK="fuchsia.scenic.image_grid_cpp_shadow_map"
 runbench_exec "${OUT_DIR}/${BENCHMARK}.json" \
     "${RUN_SCENIC_BENCHMARK}"                \
     "${OUT_DIR}"                             \
@@ -65,7 +65,7 @@ runbench_exec "${OUT_DIR}/${BENCHMARK}.json" \
     "${BENCHMARK}"                           \
     "set_root_view image_grid_cpp" --shadow_map --clipping_enabled
 
-BENCHMARK="scenic.image_grid_cpp_moment_shadow_map_benchmark"
+BENCHMARK="fuchsia.scenic.image_grid_cpp_moment_shadow_map"
 runbench_exec "${OUT_DIR}/${BENCHMARK}.json" \
     "${RUN_SCENIC_BENCHMARK}"                \
     "${OUT_DIR}"                             \
