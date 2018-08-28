@@ -11,7 +11,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
-#include "garnet/drivers/bluetooth/lib/sm/pairing_state.h"
+#include "garnet/drivers/bluetooth/lib/sm/types.h"
 #include "lib/fxl/macros.h"
 #include "remote_device.h"
 
@@ -44,13 +44,35 @@ class RemoteDeviceCache final {
   RemoteDevice* NewDevice(const common::DeviceAddress& address,
                           bool connectable);
 
-  bool StoreLTK(std::string device_id, const sm::LTK& key);
-
-  // TODO: documentation
-  // TODO: consume struct
-  bool AddBondedDevice(std::string identifier,
+  // Creates a new non-temporary device entry using the given |identifier| and
+  // identity |address|. This is intended to initialize this RemoteDeviceCache
+  // with previously bonded devices while bootstrapping a bt-host device.
+  //
+  // This method is not intended for updating the bonding data of a device that
+  // already exists the cache and returns false if a mapping for |identifier| or
+  // |address| is already present. Use Store*Bond() methods to update pairing
+  // information of an existing device.
+  //
+  // TODO(armansito): Pass in BR/EDR link key here as well, if present.
+  bool AddBondedDevice(const std::string& identifier,
                        const common::DeviceAddress& address,
-                       const sm::LTK& key);
+                       const sm::PairingData& bond_data);
+
+  // Update the device with the given identifier with new LE bonding
+  // information. The device will be considered "bonded" and the bonded callback
+  // will be notified. If the device is already bonded then bonding data will be
+  // updated.
+  //
+  // If |bond_data| contains an |identity_address|, the device cache will be
+  // updated with a new mapping from that address to this device identifier. If
+  // the identity address already maps to an existing device, this method will
+  // return false. TODO(armansito): Merge the devices instead of failing? What
+  // happens if we obtain a LE identity address from a dual-mode device that
+  // matches the BD_ADDR previously obtained from it over BR/EDR?
+  bool StoreLowEnergyBond(const std::string& identifier,
+                          const sm::PairingData& bond_data);
+
+  // TODO(armansito): Add StoreBrEdrBond() method.
 
   // Returns the remote device with identifier |identifier|. Returns nullptr if
   // |identifier| is not recognized.
@@ -74,9 +96,9 @@ class RemoteDeviceCache final {
     device_removed_callback_ = std::move(callback);
   }
 
-  // When this callback is set, |callback| will be invoked whenever a
-  // device is bonded. Caller must ensure that |callback| outlives
-  // |this|.
+  // When this callback is set, |callback| will be invoked whenever the bonding
+  // data of a device is updated and should be persisted. The caller must ensure
+  // that |callback| outlives |this|.
   void set_device_bonded_callback(DeviceUpdatedCallback callback) {
     device_bonded_callback_ = std::move(callback);
   }

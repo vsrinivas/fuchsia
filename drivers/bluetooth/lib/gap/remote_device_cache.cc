@@ -18,8 +18,11 @@ namespace gap {
 
 RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
                                            bool connectable) {
-  if (address_map_.find(address) != address_map_.end())
+  if (address_map_.find(address) != address_map_.end()) {
+    bt_log(WARN, "gap", "tried to create new device with existing address: %s",
+           address.ToString().c_str());
     return nullptr;
+  }
 
   auto* device = new RemoteDevice(
       fit::bind_member(this, &RemoteDeviceCache::NotifyDeviceUpdated),
@@ -29,46 +32,108 @@ RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
       std::piecewise_construct, std::forward_as_tuple(device->identifier()),
       std::forward_as_tuple(std::unique_ptr<RemoteDevice>(device),
                             [this, device] { RemoveDevice(device); }));
+
   address_map_[device->address()] = device->identifier();
   UpdateExpiry(*device);
   NotifyDeviceUpdated(*device);
-
   return device;
 }
 
-bool RemoteDeviceCache::AddBondedDevice(std::string identifier,
+bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
                                         const common::DeviceAddress& address,
-                                        const sm::LTK& key) {
-  bool id_exists = FindDeviceById(identifier);
-  bool addr_exists = FindDeviceByAddress(address);
-  if (id_exists || addr_exists) {
-    bt_log(WARN, "gap", "bonded device with %s %s already in device cache",
-           id_exists ? "identifier" : "address",
-           id_exists ? identifier.c_str() : address.ToString().c_str());
+                                        const sm::PairingData& bond_data) {
+  ZX_DEBUG_ASSERT(!bond_data.identity_address ||
+                  address == *bond_data.identity_address);
+
+  if (devices_.find(identifier) != devices_.end()) {
+    bt_log(WARN, "gap",
+           "tried to initialize bonded device with existing ID: %s",
+           identifier.c_str());
     return false;
   }
+
+  if (address_map_.find(address) != address_map_.end()) {
+    bt_log(WARN, "gap",
+           "tried to initialize bonded device with existing address: %s",
+           address.ToString().c_str());
+    return false;
+  }
+
+  ZX_DEBUG_ASSERT(address.type() != common::DeviceAddress::Type::kLEAnonymous);
+
+  // |bond_data| must contain either a LTK or CSRK for LE Security Mode 1 or 2.
+  // TODO(armansito): Accept empty |bond_data| if a BR/EDR link key is provided.
+  if (!bond_data.ltk && !bond_data.csrk) {
+    bt_log(ERROR, "gap-le", "mandatorykeys missing: no IRK or CSRK (id: %s)",
+           identifier.c_str());
+    return false;
+  }
+
   auto* device = new RemoteDevice(
       fit::bind_member(this, &RemoteDeviceCache::NotifyDeviceUpdated),
       fit::bind_member(this, &RemoteDeviceCache::UpdateExpiry),
       identifier, address, true);
+
+  // A bonded device must have its identity known.
+  device->set_identity_known(true);
   devices_.emplace(
       std::piecewise_construct, std::forward_as_tuple(device->identifier()),
       std::forward_as_tuple(std::unique_ptr<RemoteDevice>(device),
                             [this, device] { RemoveDevice(device); }));
   address_map_[device->address()] = device->identifier();
-  device->MutLe().SetKeys(key);
+
+  device->MutLe().SetBondData(bond_data);
+  ZX_DEBUG_ASSERT(!device->temporary());
+  ZX_DEBUG_ASSERT(device->le()->bonded());
+  ZX_DEBUG_ASSERT(device->identity_known());
+
+  // Don't call UpdateExpiry(). Since a bonded device starts out as
+  // non-temporary it is not necessary to ever set up the expiration callback.
   NotifyDeviceUpdated(*device);
   return true;
 }
 
-bool RemoteDeviceCache::StoreLTK(std::string device_id, const sm::LTK& key) {
-  bt_log(TRACE, "gap", "StoreLTK");
-  auto device = FindDeviceById(device_id);
-  if (!device)
+bool RemoteDeviceCache::StoreLowEnergyBond(const std::string& identifier,
+                                           const sm::PairingData& bond_data) {
+  auto* device = FindDeviceById(identifier);
+  if (!device) {
+    bt_log(TRACE, "gap-le", "failed to store bond for unknown device: %s",
+           identifier.c_str());
     return false;
+  }
 
-  device->MutLe().SetKeys(key);
-  NotifyDeviceBonded(*device);
+  // Either a LTK or CSRK is mandatory for bonding (the former is needed for LE
+  // Security Mode 1 and the latter is needed for Mode 2).
+  if (!bond_data.ltk && !bond_data.csrk) {
+    bt_log(TRACE, "gap-le", "mandatory keys missing: no IRK or CSRK (id: %s)",
+           identifier.c_str());
+    return false;
+  }
+
+  if (bond_data.identity_address) {
+    auto iter = address_map_.find(*bond_data.identity_address);
+    if (iter == address_map_.end()) {
+      // Map the new address to |device|. We leave old addresses that map to
+      // this device in the cache in case there are any pending controller
+      // procedures that expect them.
+      // TODO(armansito): Maybe expire the old address after a while?
+      address_map_[*bond_data.identity_address] = identifier;
+    } else if (iter->second != identifier) {
+      bt_log(TRACE, "gap-le", "identity address belongs to another device!");
+      return false;
+    }
+    // We have either created a new mapping or the identity address already
+    // maps to this device.
+  }
+
+  device->MutLe().SetBondData(bond_data);
+  ZX_DEBUG_ASSERT(!device->temporary());
+  ZX_DEBUG_ASSERT(device->le()->bonded());
+
+  // Report the bond for persisting only if the identity of the device is known.
+  if (device->identity_known()) {
+    NotifyDeviceBonded(*device);
+  }
   return true;
 }
 
@@ -95,6 +160,8 @@ RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
 void RemoteDeviceCache::NotifyDeviceBonded(const RemoteDevice& device) {
   ZX_DEBUG_ASSERT(devices_.find(device.identifier()) != devices_.end());
   ZX_DEBUG_ASSERT(devices_.at(device.identifier()).device() == &device);
+  ZX_DEBUG_ASSERT_MSG(device.identity_known(),
+                      "devices not allowed to bond with unknown identity!");
 
   bt_log(INFO, "gap", "peer bonded %s", device.ToString().c_str());
   if (device_bonded_callback_) {

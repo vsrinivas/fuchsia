@@ -160,9 +160,9 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
                : "",
            pairing_data.csrk ? "csrk " : "", id().c_str());
 
-    // TODO(armansito): Store all pairing data with the remote device cache.
-    if (pairing_data.ltk) {
-      conn_mgr_->device_cache()->StoreLTK(id_, *pairing_data.ltk);
+    if (!conn_mgr_->device_cache()->StoreLowEnergyBond(id_, pairing_data)) {
+      bt_log(ERROR, "gap-le", "failed to cache bonding data (id: %s)",
+             id().c_str());
     }
   }
 

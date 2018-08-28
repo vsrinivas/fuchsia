@@ -34,6 +34,8 @@ const DeviceAddress kAddrLePublic(DeviceAddress::Type::kLEPublic,
 // TODO(armansito): Make these adhere to privacy specfication.
 const DeviceAddress kAddrLeRandom(DeviceAddress::Type::kLERandom,
                                   "06:05:04:03:02:01");
+const DeviceAddress kAddrLeRandom2(DeviceAddress::Type::kLERandom,
+                                   "FF:EE:DD:CC:BB:AA");
 const DeviceAddress kAddrLeAnon(DeviceAddress::Type::kLEAnonymous,
                                 "06:05:04:03:02:01");
 
@@ -44,6 +46,7 @@ const auto kAdvData =
 const auto kEirData = kAdvData;
 
 const btlib::sm::LTK kLTK;
+const btlib::sm::Key kKey{};
 
 class GAP_RemoteDeviceCacheTest : public ::gtest::TestLoopFixture {
  public:
@@ -245,7 +248,7 @@ TEST_F(GAP_RemoteDeviceCacheTest,
   EXPECT_EQ(TechnologyType::kDualMode, device()->technology());
 }
 
-class GAP_RemoteDeviceCacheTest_BondedCallbackTest : public GAP_RemoteDeviceCacheTest {
+class GAP_RemoteDeviceCacheTest_BondingTest : public GAP_RemoteDeviceCacheTest {
  public:
   void SetUp() {
     was_called_ = false;
@@ -256,15 +259,152 @@ class GAP_RemoteDeviceCacheTest_BondedCallbackTest : public GAP_RemoteDeviceCach
   }
 
  protected:
-  bool was_called() const { return was_called_; }
+  bool bonded_callback_called() const { return was_called_; }
 
  private:
   bool was_called_;
 };
 
-TEST_F(GAP_RemoteDeviceCacheTest_BondedCallbackTest, StoreLTK) {
-  cache()->StoreLTK(device()->identifier(), kLTK);
-  EXPECT_TRUE(was_called());
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       AddBondedDeviceFailsWithExistingId) {
+  sm::PairingData data;
+  data.ltk = kLTK;
+  EXPECT_FALSE(
+      cache()->AddBondedDevice(device()->identifier(), kAddrLePublic, data));
+  EXPECT_FALSE(bonded_callback_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       AddBondedDeviceFailsWithExistingAddress) {
+  sm::PairingData data;
+  data.ltk = kLTK;
+  EXPECT_FALSE(cache()->AddBondedDevice("foo", device()->address(), data));
+  EXPECT_FALSE(bonded_callback_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       AddBondedDeviceFailsWithoutMandatoryKeys) {
+  sm::PairingData data;
+  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrLePublic, data));
+  EXPECT_FALSE(bonded_callback_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, AddBondedDeviceSuccess) {
+  const std::string kId("test-id");
+  sm::PairingData data;
+  data.ltk = kLTK;
+
+  EXPECT_TRUE(cache()->AddBondedDevice(kId, kAddrLeRandom, data));
+  auto* dev = cache()->FindDeviceById(kId);
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(dev, cache()->FindDeviceByAddress(kAddrLeRandom));
+  EXPECT_EQ(kId, dev->identifier());
+  EXPECT_EQ(kAddrLeRandom, dev->address());
+  EXPECT_TRUE(dev->identity_known());
+  ASSERT_TRUE(dev->le());
+  EXPECT_TRUE(dev->le()->bonded());
+  ASSERT_TRUE(dev->le()->bond_data());
+  EXPECT_EQ(data, *dev->le()->bond_data());
+
+  // The "new bond" callback should be called when restoring a previously bonded
+  // device.
+  EXPECT_FALSE(bonded_callback_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       StoreLowEnergyBondFailsWithNoKeys) {
+  sm::PairingData data;
+  EXPECT_FALSE(cache()->StoreLowEnergyBond(device()->identifier(), data));
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, StoreLowEnergyBondDeviceUnknown) {
+  sm::PairingData data;
+  data.ltk = kLTK;
+  EXPECT_FALSE(cache()->StoreLowEnergyBond("foo", data));
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, StoreLowEnergyBondWithLtk) {
+  ASSERT_TRUE(device()->temporary());
+  ASSERT_TRUE(device()->le());
+  ASSERT_FALSE(device()->le()->bonded());
+
+  sm::PairingData data;
+  data.ltk = kLTK;
+  EXPECT_TRUE(cache()->StoreLowEnergyBond(device()->identifier(), data));
+
+  EXPECT_TRUE(bonded_callback_called());
+  EXPECT_FALSE(device()->temporary());
+  EXPECT_TRUE(device()->le()->bonded());
+  EXPECT_TRUE(device()->le()->bond_data());
+  EXPECT_EQ(data, *device()->le()->bond_data().value());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, StoreLowEnergyBondWithCsrk) {
+  ASSERT_TRUE(device()->temporary());
+  ASSERT_TRUE(device()->le());
+  ASSERT_FALSE(device()->le()->bonded());
+
+  sm::PairingData data;
+  data.csrk = kKey;
+  EXPECT_TRUE(cache()->StoreLowEnergyBond(device()->identifier(), data));
+
+  EXPECT_TRUE(bonded_callback_called());
+  EXPECT_FALSE(device()->temporary());
+  EXPECT_TRUE(device()->le()->bonded());
+  EXPECT_TRUE(device()->le()->bond_data());
+  EXPECT_EQ(data, *device()->le()->bond_data().value());
+}
+
+// StoreLowEnergyBond fails if it contains the address of a different,
+// previously known device.
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       StoreLowEnergyBondWithExistingDifferentIdentity) {
+  auto* dev = cache()->NewDevice(kAddrLeRandom, true);
+
+  // Assign the other device's address as identity.
+  sm::PairingData data;
+  data.ltk = kLTK;
+  data.identity_address = device()->address();
+  EXPECT_FALSE(cache()->StoreLowEnergyBond(dev->identifier(), data));
+  EXPECT_FALSE(dev->le()->bonded());
+  EXPECT_TRUE(dev->temporary());
+}
+
+// StoreLowEnergyBond success if it contains an identity address that already
+// matches the target device.
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       StoreLowEnergyBondWithExistingMatchingIdentity) {
+  sm::PairingData data;
+  data.ltk = kLTK;
+  data.identity_address = device()->address();
+  EXPECT_TRUE(cache()->StoreLowEnergyBond(device()->identifier(), data));
+  EXPECT_TRUE(device()->le()->bonded());
+  EXPECT_EQ(device(), cache()->FindDeviceByAddress(*data.identity_address));
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
+       StoreLowEnergyBondWithNewIdentity) {
+  ASSERT_TRUE(NewDevice(kAddrLeRandom, true));
+  ASSERT_FALSE(device()->identity_known());
+
+  sm::PairingData data;
+  data.ltk = kLTK;
+  data.identity_address = kAddrLeRandom2;  // assign a new identity address
+  const auto old_address = device()->address();
+  ASSERT_EQ(device(), cache()->FindDeviceByAddress(old_address));
+  ASSERT_EQ(nullptr, cache()->FindDeviceByAddress(*data.identity_address));
+
+  EXPECT_TRUE(cache()->StoreLowEnergyBond(device()->identifier(), data));
+  EXPECT_TRUE(device()->le()->bonded());
+
+  // Address should have been updated.
+  ASSERT_NE(*data.identity_address, old_address);
+  EXPECT_EQ(*data.identity_address, device()->address());
+  EXPECT_TRUE(device()->identity_known());
+  EXPECT_EQ(device(), cache()->FindDeviceByAddress(*data.identity_address));
+
+  // The old address should still map to |dev|.
+  ASSERT_EQ(device(), cache()->FindDeviceByAddress(old_address));
 }
 
 class GAP_RemoteDeviceCacheTest_UpdateCallbackTest
@@ -321,13 +461,6 @@ TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
   EXPECT_TRUE(was_called());
   ASSERT_TRUE(device()->name());
   EXPECT_EQ("Test", *device()->name());
-}
-
-TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
-       AddExistingBondedDeviceFails) {
-  auto res = cache()->AddBondedDevice(device()->identifier(),
-                                      device()->address(), kLTK);
-  EXPECT_FALSE(res);
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,

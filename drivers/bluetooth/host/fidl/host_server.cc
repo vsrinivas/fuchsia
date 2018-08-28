@@ -208,6 +208,8 @@ void HostServer::AddBondedDevices(
     return;
   }
 
+  // TODO(NET-1552): The logic here needs revisiting (will be fixed in a
+  // follow-up).
   for (auto& bond : *bonds) {
     // If LE Bond
     if (bond.le) {
@@ -220,12 +222,13 @@ void HostServer::AddBondedDevices(
       std::copy(ltk->key.value.begin(), ltk->key.value.begin() + 16,
                 key_data.begin());
       auto link_key = btlib::hci::LinkKey(key_data, ltk->rand, ltk->ediv);
-      auto store_ltk = btlib::sm::LTK(security, link_key);
 
-      // Store the built ltk with the address
+      btlib::sm::PairingData bond_data;
+      bond_data.ltk = btlib::sm::LTK(security, link_key);
+
       auto addr = btlib::common::DeviceAddress(
           fidl_helpers::NewAddrType(bond.le->address_type), bond.le->address);
-      auto resp = adapter()->AddBondedDevice(bond.identifier, addr, store_ltk);
+      auto resp = adapter()->AddBondedDevice(bond.identifier, addr, bond_data);
       if (!resp) {
         callback(fidl_helpers::NewFidlError(
             ErrorCode::FAILED, "Devices were already present in cache"));
@@ -233,6 +236,7 @@ void HostServer::AddBondedDevices(
       }
     }
   }
+
   callback(Status());
 }
 
@@ -242,29 +246,32 @@ void HostServer::OnRemoteDeviceBonded(
   BondingData data;
   data.identifier = remote_device.identifier().c_str();
 
-  if (remote_device.le() && remote_device.le()->ltk()) {
+  if (remote_device.le() && remote_device.le()->bond_data()) {
     data.le = LEData::New();
     data.le->address = remote_device.address().value().ToString();
-    auto fidl_ltk = fuchsia::bluetooth::control::LTK::New();
-    const auto& ltk = remote_device.le()->ltk();
 
-    // Copy the key.
-    const auto& key_value = ltk->key().value().data();
-    std::copy(key_value, key_value + 16, fidl_ltk->key.value.begin());
+    const auto& ltk = remote_device.le()->bond_data()->ltk;
+    if (ltk) {
+      auto fidl_ltk = fuchsia::bluetooth::control::LTK::New();
 
-    // Set security properties
-    fidl_ltk->key.security_properties.authenticated =
-        ltk->security().authenticated();
-    fidl_ltk->key.security_properties.secure_connections =
-        ltk->security().secure_connections();
-    fidl_ltk->key.security_properties.encryption_key_size =
-        ltk->security().enc_key_size();
+      // Copy the key.
+      const auto& key_value = ltk->key().value().data();
+      std::copy(key_value, key_value + 16, fidl_ltk->key.value.begin());
 
-    fidl_ltk->key_size = ltk->security().enc_key_size();
-    fidl_ltk->rand = ltk->key().rand();
-    fidl_ltk->ediv = ltk->key().ediv();
+      // Set security properties
+      fidl_ltk->key.security_properties.authenticated =
+          ltk->security().authenticated();
+      fidl_ltk->key.security_properties.secure_connections =
+          ltk->security().secure_connections();
+      fidl_ltk->key.security_properties.encryption_key_size =
+          ltk->security().enc_key_size();
 
-    data.le->ltk = std::move(fidl_ltk);
+      fidl_ltk->key_size = ltk->security().enc_key_size();
+      fidl_ltk->rand = ltk->key().rand();
+      fidl_ltk->ediv = ltk->key().ediv();
+
+      data.le->ltk = std::move(fidl_ltk);
+    }
   }
 
   // TODO(armansito): Initialize BR/EDR data.

@@ -58,6 +58,7 @@ class RemoteDevice final {
     bool connected() const {
       return connection_state() == ConnectionState::kConnected;
     }
+    bool bonded() const { return bond_data_.HasValue(); }
 
     // Advertising (and optionally scan response) data obtained during
     // discovery.
@@ -78,8 +79,10 @@ class RemoteDevice final {
       return preferred_conn_params_;
     }
 
-    // The link encryption key.
-    const common::Optional<sm::LTK>& ltk() const { return ltk_; }
+    // This device's LE bond data, if bonded.
+    const common::Optional<sm::PairingData>& bond_data() const {
+      return bond_data_;
+    }
 
     // Setters:
 
@@ -98,8 +101,9 @@ class RemoteDevice final {
     void SetPreferredConnectionParameters(
         const hci::LEPreferredConnectionParameters& value);
 
-    // TODO(armansito): Generalize this to store all keys.
-    void SetKeys(const sm::LTK& ltk);
+    // Stores LE bonding data and makes this device "boded". Marks the device as
+    // non-temporary if necessary.
+    void SetBondData(const sm::PairingData& bond_data);
 
     // TODO(armansito): Store most recently seen random address and identity
     // address separately, once RemoteDeviceCache can index devices by multiple
@@ -115,7 +119,7 @@ class RemoteDevice final {
     common::Optional<hci::LEPreferredConnectionParameters>
         preferred_conn_params_;
 
-    common::Optional<sm::LTK> ltk_;
+    common::Optional<sm::PairingData> bond_data_;
 
     // TODO(armansito): Store all keys
     // TODO(armansito): Store GATT service UUIDs.
@@ -236,6 +240,12 @@ class RemoteDevice final {
     return (le() && le()->connected()) || (bredr() && bredr()->connected());
   }
 
+  // Returns true if this device has been bonded over BR/EDR or LE transports.
+  bool bonded() const {
+    // TODO(armansito): Check BR/EDR state here.
+    return (le() && le()->bonded());
+  }
+
   // Returns the most recently observed RSSI for this remote device. Returns
   // hci::kRSSIInvalid if the value is unknown.
   int8_t rssi() const { return rssi_; }
@@ -318,6 +328,15 @@ class RemoteDevice final {
                const std::string& identifier,
                const common::DeviceAddress& address, bool connectable);
 
+  // Marks this device's identity as known. Called by RemoteDeviceCache when
+  // initializing a bonded device and by LowEnergyData when setting bond data
+  // with an identity address.
+  void set_identity_known(bool value) { identity_known_ = value; }
+
+  // Assigns a new value for the address of this device. Called by LowEnergyData
+  // when a new identity address is assigned.
+  void set_address(const common::DeviceAddress& address) { address_ = address; }
+
   // Updates the RSSI and returns true if it changed.
   bool SetRssiInternal(int8_t rssi);
 
@@ -349,7 +368,7 @@ class RemoteDevice final {
   const std::string identifier_;
   TechnologyType technology_;
 
-  const common::DeviceAddress address_;
+  common::DeviceAddress address_;
   bool identity_known_;
 
   common::Optional<std::string> name_;

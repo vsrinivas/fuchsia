@@ -189,10 +189,11 @@ void Adapter::ShutDown() {
   CleanUp();
 }
 
-bool Adapter::AddBondedDevice(std::string identifier,
+bool Adapter::AddBondedDevice(const std::string& identifier,
                               const common::DeviceAddress& address,
-                              sm::LTK key) {
-  return remote_device_cache()->AddBondedDevice(identifier, address, key);
+                              const sm::PairingData& le_bond_data) {
+  return remote_device_cache()->AddBondedDevice(identifier, address,
+                                                le_bond_data);
   // TODO(bwb) auto-connect the device
 }
 

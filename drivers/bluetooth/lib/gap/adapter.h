@@ -137,9 +137,11 @@ class Adapter final {
     return &device_cache_;
   }
 
-  // Add a bonded device with its priorly generated LTK to the adapter.
-  bool AddBondedDevice(std::string identifier,
-                       const common::DeviceAddress& address, sm::LTK key);
+  // Add a previously bonded device to the device cache and set it up for
+  // auto-connect procedures.
+  bool AddBondedDevice(const std::string& identifier,
+                       const common::DeviceAddress& address,
+                       const sm::PairingData& le_bond_data);
 
   // Assigns a pairing delegate to this adapter. This PairingDelegate and its
   // I/O capabilities will be used for all future pairing procedures. Setting a

@@ -127,9 +127,25 @@ void RemoteDevice::LowEnergyData::SetPreferredConnectionParameters(
   preferred_conn_params_ = params;
 }
 
-void RemoteDevice::LowEnergyData::SetKeys(const sm::LTK& ltk) {
+void RemoteDevice::LowEnergyData::SetBondData(
+    const sm::PairingData& bond_data) {
   ZX_DEBUG_ASSERT(dev_->connectable());
-  ltk_ = ltk;
+  ZX_DEBUG_ASSERT(dev_->address().type() != DeviceAddress::Type::kLEAnonymous);
+
+  // Make sure the device is non-temporary.
+  dev_->TryMakeNonTemporary();
+
+  // This will mark the device as bonded
+  bond_data_ = bond_data;
+
+  // Update to the new identity address if the current address is random.
+  if (dev_->address().type() == DeviceAddress::Type::kLERandom &&
+      bond_data.identity_address) {
+    dev_->set_identity_known(true);
+    dev_->set_address(*bond_data.identity_address);
+  }
+
+  dev_->NotifyListeners();
 }
 
 RemoteDevice::BrEdrData::BrEdrData(RemoteDevice* owner)
