@@ -1447,6 +1447,9 @@ zx_status_t Station::OverrideHtCapability(HtCapabilities* ht_cap) const {
     HtCapabilityInfo& hci = ht_cap->ht_cap_info;
     if (!IsCbw40Rx()) { hci.set_chan_width_set(HtCapabilityInfo::TWENTY_ONLY); }
 
+    // TODO(NET-1403): Lift up the restriction after broader interop and assoc_ctx_ adjustment.
+    hci.set_tx_stbc(0);
+
     return ZX_OK;
 }
 
