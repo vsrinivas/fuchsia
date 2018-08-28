@@ -146,28 +146,40 @@ static zx_status_t sdio_write_data32(sdmmc_device_t *dev, uint8_t fn_idx, uint32
 
 static zx_status_t sdio_read_data16(sdmmc_device_t *dev, uint8_t fn_idx, uint32_t addr,
                                     uint16_t *word) {
-    sdio_rw_txn_t txn;
-    txn.addr = addr;
-    txn.write = false;
-    txn.virt = word;
-    txn.data_size = 2;
-    txn.incr = true;
-    txn.use_dma = false;
-    txn.buf_offset = 0;
-    return sdio_rw_data(dev, fn_idx, &txn);
+    uint8_t byte1 = 0, byte2 = 0;
+    zx_status_t st = sdio_rw_byte(dev, false, 0, addr, 0, &byte1);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "sdio_read_data16: Error reading from addr:0x%x, retcode: %d\n", addr, st);
+        return st;
+    }
+
+    st = sdio_rw_byte(dev, false, 0, addr + 1, 0, &byte2);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "sdio_read_data16: Error reading from addr:0x%x, retcode: %d\n", addr + 1,
+               st);
+        return st;
+    }
+
+    *word = byte2 << 8 | byte1;
+    return ZX_OK;
 }
 
 static zx_status_t sdio_write_data16(sdmmc_device_t *dev, uint8_t fn_idx, uint32_t addr,
                                      uint16_t word) {
-    sdio_rw_txn_t txn;
-    txn.addr = addr;
-    txn.write = true;
-    txn.virt = (void *)&word;
-    txn.data_size = 2;
-    txn.incr = true;
-    txn.use_dma = false;
-    txn.buf_offset = 0;
-    return sdio_rw_data(dev, fn_idx, &txn);
+    zx_status_t st = sdio_rw_byte(dev, true, 0, addr, word & 0xff, NULL);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "sdio_write_data16: Error writing to addr:0x%x, retcode: %d\n", addr, st);
+        return st;
+    }
+
+    st = sdio_rw_byte(dev, true, 0, addr + 1, (word >> 8) & 0xff, NULL);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "sdio_write_data16: Error writing to addr:0x%x, retcode: %d\n", addr + 1,
+               st);
+        return st;
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t sdio_get_oob_irq_host(void *ctx, zx_handle_t *oob_irq) {
@@ -584,8 +596,15 @@ static zx_status_t sdio_process_fbr(sdmmc_device_t *dev, uint8_t fn_idx) {
 zx_status_t sdio_get_cur_block_size(void *ctx, uint8_t fn_idx,
                                     uint16_t *cur_blk_size) {
     sdmmc_device_t *dev = ctx;
-    *cur_blk_size = dev->sdio_dev.funcs[fn_idx].cur_blk_size;
-    return ZX_OK;
+
+    zx_status_t st = sdio_read_data16(dev, 0,
+                                      SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_BLK_SIZE_ADDR,
+                                      cur_blk_size);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "sdio_get_cur_block_size: Failed to get block size for fn: %d ret: %d\n",
+               fn_idx, st);
+    }
+    return st;
 }
 
 zx_status_t sdio_modify_block_size(void *ctx, uint8_t fn_idx, uint16_t blk_size,
@@ -609,11 +628,13 @@ zx_status_t sdio_modify_block_size(void *ctx, uint8_t fn_idx, uint16_t blk_size,
     st = sdio_write_data16(dev, 0, SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_BLK_SIZE_ADDR,
                            blk_size);
     if (st != ZX_OK) {
-        zxlogf(ERROR, "sdio_modify_block_size: Error writing to CCCR reg, retcode: %d\n", st);
+        zxlogf(ERROR, "sdio_modify_block_size: Error setting blk size.fn: %d blk_sz: %d ret: %d\n",
+               fn_idx, blk_size, st);
         return st;
     }
+
     func->cur_blk_size = blk_size;
-    return ZX_OK;
+    return st;
 }
 
 zx_status_t sdio_enable_function(void *ctx, uint8_t fn_idx) {
