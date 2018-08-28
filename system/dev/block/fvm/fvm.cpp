@@ -615,6 +615,12 @@ zx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
         const upgrade_req_t* req = static_cast<const upgrade_req_t*>(cmd);
         return Upgrade(req->old_guid, req->new_guid);
     }
+    case IOCTL_BLOCK_RR_PART: {
+        // RR Part is defined manually here, because the FVM Partition
+        // manager does not implement the block device protocol (even
+        // though it does have block devices as children).
+        return device_rebind(parent());
+    }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

@@ -36,6 +36,7 @@
 #include "fvm/fvm.h"
 #include "pave-lib.h"
 #include "pave-logging.h"
+#include "pave-utils.h"
 
 namespace paver {
 namespace {
@@ -93,8 +94,8 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, zx_handle_t vmo,
 
 // Stream an FVM partition to disk.
 zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
-                               fzl::MappedVmo* mvmo, const block_client::Client& client, size_t block_size,
-                               block_fifo_request_t* request) {
+                               fzl::MappedVmo* mvmo, const block_client::Client& client,
+                               size_t block_size, block_fifo_request_t* request) {
     size_t slice_size = reader->Image()->slice_size;
     const size_t vmo_cap = mvmo->GetSize();
     for (size_t e = 0; e < part->pd->extent_count; e++) {
@@ -367,21 +368,42 @@ fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size
     // reinitializing the FVM image so the rest of the paving
     // process can continue successfully.
     disk_format_t df = detect_disk_format(partition_fd.get());
+    fbl::unique_fd fvm_fd;
     if (df == DISK_FORMAT_FVM) {
-        fbl::unique_fd fvm_fd = TryBindToFvmDriver(partition_fd, zx::sec(3));
+        fvm_fd = TryBindToFvmDriver(partition_fd, zx::sec(3));
         if (fvm_fd) {
             LOG("Found already formatted FVM.\n");
-            return fvm_fd;
+            fvm_info_t info;
+            ssize_t r = ioctl_block_fvm_query(fvm_fd.get(), &info);
+            if (r >= 0) {
+                if (info.slice_size == slice_size) {
+                    return fvm_fd;
+                } else {
+                    ERROR("Mismatched slice size. Reinitializing FVM.\n");
+                }
+            } else {
+                ERROR("Could not query FVM for info. Reinitializing FVM.\n");
+            }
         } else {
-            ERROR("Saw DISK_FORMAT_FVM, but could not bind driver\n");
+            ERROR("Saw DISK_FORMAT_FVM, but could not bind driver. Reinitializing FVM.\n");
         }
     }
+
     ERROR("Initializing partition as FVM\n");
-    zx_status_t status;
-    if ((status = fvm_init(partition_fd.get(), slice_size)) != ZX_OK) {
+    zx_status_t status = fvm_init(partition_fd.get(), slice_size);
+    if (status != ZX_OK) {
         ERROR("Failed to initialize fvm: %s\n", zx_status_get_string(status));
         return fbl::unique_fd();
     }
+
+    if (fvm_fd) {
+        ssize_t r = ioctl_block_rr_part(fvm_fd.get());
+        if (r < 0) {
+            ERROR("Could not rebind FVM: %s\n", zx_status_get_string(static_cast<zx_status_t>(r)));
+            return fbl::unique_fd();
+        }
+    }
+
     return TryBindToFvmDriver(partition_fd, zx::sec(3));
 }
 
@@ -601,8 +623,10 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
             request.length = ext->slice_count;
             LOG("Extending partition[%zu] at offset %zu by length %zu\n", p, request.offset,
                 request.length);
-            if (ioctl_block_fvm_extend(parts[p].new_part.get(), &request) < 0) {
-                ERROR("Failed to extend partition\n");
+            ssize_t result = ioctl_block_fvm_extend(parts[p].new_part.get(), &request);
+            if (result < 0) {
+                ERROR("Failed to extend partition: %s\n",
+                      zx_status_get_string(static_cast<zx_status_t>(result)));
                 return ZX_ERR_BAD_STATE;
             }
         }
@@ -644,6 +668,11 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
             ERROR("Failed to stream partition\n");
             return status;
         }
+        if ((status = FlushClient(client)) != ZX_OK) {
+            ERROR("Failed to flush client\n");
+            return status;
+        }
+        LOG("Done flushing partition %zu\n", p);
     }
 
     for (size_t p = 0; p < hdr->partition_count; p++) {
@@ -697,8 +726,10 @@ zx_status_t FvmPave(fbl::unique_ptr<DevicePartitioner> device_partitioner,
     if (status == ZX_OK) {
         LOG("FVM partition already exists\n");
     } else if (status != ZX_ERR_NOT_FOUND) {
+        ERROR("Failure finding FVM partition: %s\n", zx_status_get_string(status));
         return status;
     } else {
+        LOG("Could not find FVM; attempting to add it: %s\n", zx_status_get_string(status));
         status = device_partitioner->AddPartition(Partition::kFuchsiaVolumeManager, &partition_fd);
         if (status != ZX_OK) {
             ERROR("Failure creating partition: %s\n", zx_status_get_string(status));

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
@@ -13,10 +14,12 @@
 #include <lib/fdio/watcher.h>
 #include <zircon/device/device.h>
 #include <zircon/device/skip-block.h>
+#include <zircon/status.h>
 #include <zxcrypt/volume.h>
 
 #include "device-partitioner.h"
 #include "pave-logging.h"
+#include "pave-utils.h"
 
 namespace paver {
 
@@ -103,24 +106,24 @@ zx_status_t OpenPartition(const char* path,
 
 constexpr char kBlockDevPath[] = "/dev/class/block/";
 
-zx_status_t OpenBlockPartition(const uint8_t* uniqueGUID, const uint8_t* typeGUID,
+zx_status_t OpenBlockPartition(const uint8_t* unique_guid, const uint8_t* type_guid,
                                zx_duration_t timeout, fbl::unique_fd* out_fd) {
-    ZX_ASSERT(uniqueGUID || typeGUID);
+    ZX_ASSERT(unique_guid || type_guid);
 
     auto cb = [&](const fbl::unique_fd& fd) {
         if (TestBlockFilter && TestBlockFilter(fd)) {
             return true;
         }
         uint8_t buf[GUID_LEN];
-        if (typeGUID) {
+        if (type_guid) {
             if (ioctl_block_get_type_guid(fd.get(), buf, sizeof(buf)) < 0 ||
-                memcmp(buf, typeGUID, GUID_LEN) != 0) {
+                memcmp(buf, type_guid, GUID_LEN) != 0) {
                 return true;
             }
         }
-        if (uniqueGUID) {
+        if (unique_guid) {
             if (ioctl_block_get_partition_guid(fd.get(), buf, sizeof(buf)) < 0 ||
-                memcmp(buf, uniqueGUID, GUID_LEN) != 0) {
+                memcmp(buf, unique_guid, GUID_LEN) != 0) {
                 return true;
             }
         }
@@ -132,9 +135,9 @@ zx_status_t OpenBlockPartition(const uint8_t* uniqueGUID, const uint8_t* typeGUI
 
 constexpr char kSkipBlockDevPath[] = "/dev/class/skip-block/";
 
-zx_status_t OpenSkipBlockPartition(const uint8_t* typeGUID, zx_duration_t timeout,
+zx_status_t OpenSkipBlockPartition(const uint8_t* type_guid, zx_duration_t timeout,
                                    fbl::unique_fd* out_fd) {
-    ZX_ASSERT(typeGUID);
+    ZX_ASSERT(type_guid);
 
     auto cb = [&](const fbl::unique_fd& fd) {
         if (TestSkipBlockFilter && TestSkipBlockFilter(fd)) {
@@ -142,7 +145,7 @@ zx_status_t OpenSkipBlockPartition(const uint8_t* typeGUID, zx_duration_t timeou
         }
         skip_block_partition_info_t part_info;
         if (ioctl_skip_block_get_partition_info(fd.get(), &part_info) < 0 ||
-            memcmp(part_info.partition_guid, typeGUID, GUID_LEN) != 0) {
+            memcmp(part_info.partition_guid, type_guid, GUID_LEN) != 0) {
             return true;
         }
         return false;
@@ -156,6 +159,47 @@ bool HasSkipBlockDevice() {
     // existence of a device enumerated under the skip-block class.
     const uint8_t type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
     return OpenSkipBlockPartition(type, ZX_SEC(1), nullptr) == ZX_OK;
+}
+
+// Attempts to open and overwrite the first block of the underlying
+// partition. Does not rebind partition drivers.
+//
+// At most one of |unique_guid| and |type_guid| may be nullptr.
+zx_status_t WipeBlockPartition(const uint8_t* unique_guid, const uint8_t* type_guid) {
+    zx_status_t status = ZX_OK;
+    fbl::unique_fd fd;
+    if ((status = OpenBlockPartition(unique_guid, type_guid, ZX_SEC(3), &fd)) != ZX_OK) {
+        ERROR("Warning: Could not open partition to wipe: %s\n",
+              zx_status_get_string(status));
+        return status;
+    }
+
+    block_info_t info;
+    ssize_t result = ZX_OK;
+    if ((result = ioctl_block_get_info(fd.get(), &info)) < 0) {
+        status = static_cast<zx_status_t>(result);
+        ERROR("Warning: Could not acquire block info: %s\n",
+              zx_status_get_string(status));
+        return status;
+    }
+
+    // Overwrite the first block to (hackily) ensure the destroyed partition
+    // doesn't "reappear" in place.
+    char buf[info.block_size];
+    memset(buf, 0, info.block_size);
+
+    if (pwrite(fd.get(), buf, info.block_size, 0) != info.block_size) {
+        ERROR("Warning: Could not write to block device: %s\n", strerror(errno));
+        return ZX_ERR_IO;
+    }
+
+    if ((status = FlushBlockDevice(fd)) != ZX_OK) {
+        ERROR("Warning: Failed to synchronize block device: %s\n",
+              zx_status_get_string(status));
+        return status;
+    }
+
+    return ZX_OK;
 }
 
 } // namespace
@@ -459,17 +503,8 @@ zx_status_t GptDevicePartitioner::WipePartitions(FilterCallback filter) {
 
         modify = true;
 
-        // Overwrite the first 8k to (hackily) ensure the destroyed partition
-        // doesn't "reappear" in place.
-        char buf[8192];
-        memset(buf, 0, sizeof(buf));
-
-        fbl::unique_fd pfd;
-        if (OpenBlockPartition(p->guid, p->type, ZX_SEC(2), &pfd) != ZX_OK) {
-            ERROR("Warning: Could not open partition to overwrite first 8KB\n");
-        } else {
-            write(pfd.get(), buf, sizeof(buf));
-        }
+        // Ignore the return status; wiping is a best-effort approach anyway.
+        WipeBlockPartition(p->guid, p->type);
 
         if (gpt_partition_remove(gpt_, p->guid)) {
             ERROR("Warning: Could not remove partition\n");
@@ -483,7 +518,7 @@ zx_status_t GptDevicePartitioner::WipePartitions(FilterCallback filter) {
     }
     if (modify) {
         gpt_device_sync(gpt_);
-        LOG("GPT updated, reboot strongly recommended immediately\n");
+        LOG("Immediate reboot strongly recommended\n");
     }
     ioctl_block_rr_part(fd_.get());
     return ZX_OK;
@@ -909,6 +944,27 @@ zx_status_t FixedDevicePartitioner::FindPartition(Partition partition_type,
     return OpenBlockPartition(nullptr, type, ZX_SEC(5), out_fd);
 }
 
+zx_status_t FixedDevicePartitioner::WipePartitions(const fbl::Vector<Partition>& partitions) {
+    const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
+    zx_status_t status;
+    for (const Partition& partition_type : partitions) {
+        switch (partition_type) {
+        case Partition::kFuchsiaVolumeManager:
+            if ((status = WipeBlockPartition(nullptr, fvm_type)) != ZX_OK) {
+                ERROR("Failed to wipe FVM.\n");
+            } else {
+                LOG("Wiped FVM successfully.\n");
+            }
+            break;
+        default:
+            // All non-FVM partitions are currently ignored on FixedDevices.
+            continue;
+        }
+    }
+    LOG("Immediate reboot strongly recommended\n");
+    return ZX_OK;
+}
+
 zx_status_t FixedDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
                                                  uint32_t* block_size) const {
     ssize_t r;
@@ -972,6 +1028,27 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(Partition partition_type,
     }
 
     return OpenSkipBlockPartition(type, ZX_SEC(5), out_fd);
+}
+
+zx_status_t SkipBlockDevicePartitioner::WipePartitions(const fbl::Vector<Partition>& partitions) {
+    const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
+    zx_status_t status;
+    for (const Partition& partition_type : partitions) {
+        switch (partition_type) {
+        case Partition::kFuchsiaVolumeManager:
+            if ((status = WipeBlockPartition(nullptr, fvm_type)) != ZX_OK) {
+                ERROR("Failed to wipe FVM.\n");
+            } else {
+                LOG("Wiped FVM successfully.\n");
+            }
+            break;
+        default:
+            // All non-FVM partitions are currently ignored on SkipBlockDevices.
+            continue;
+        }
+    }
+    LOG("Immediate reboot strongly recommended\n");
+    return ZX_OK;
 }
 
 zx_status_t SkipBlockDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,

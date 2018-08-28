@@ -15,6 +15,7 @@ MODULE_NAME := install-disk-image
 MODULE_SRCS := \
     $(LOCAL_DIR)/device-partitioner.cpp \
     $(LOCAL_DIR)/pave-lib.cpp \
+    $(LOCAL_DIR)/pave-utils.cpp \
     $(LOCAL_DIR)/disk-pave.cpp \
 
 MODULE_STATIC_LIBS := \
@@ -58,6 +59,7 @@ TEST_DIR := $(LOCAL_DIR)/test
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/device-partitioner.cpp \
+    $(LOCAL_DIR)/pave-utils.cpp \
     $(TEST_DIR)/main.cpp\
     $(TEST_DIR)/device-partitioner-test.cpp\
 
@@ -66,6 +68,7 @@ MODULE_COMPILEFLAGS := \
     -DTEST \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/block-client \
     system/ulib/chromeos-disk-setup \
     system/ulib/ddk \
     system/ulib/fbl \

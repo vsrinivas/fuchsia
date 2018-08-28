@@ -206,9 +206,7 @@ public:
 
     zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
 
-    zx_status_t WipePartitions(const fbl::Vector<Partition>& partitions) override {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    zx_status_t WipePartitions(const fbl::Vector<Partition>& partitions) override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
@@ -237,9 +235,7 @@ public:
 
     zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
 
-    zx_status_t WipePartitions(const fbl::Vector<Partition>& partitions) override {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    zx_status_t WipePartitions(const fbl::Vector<Partition>& partitions) override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
