@@ -84,6 +84,11 @@ The hub is organized as follows:
 > coexist within the same process. Components may also create new processes of
 > their own, which are not reflected here.
 
+**\<component instance id\>/system\_objects**: system-level component inspection
+> A directory tree exposing objects conforming to the [Inspect API](https://fuchsia.googlesource.com/garnet/+/master/docs/inspect.md).
+> This directory tree is managed by the system to expose system-level
+> information about the components.
+
 **\<component instance id\>/out/**: component’s out directory
 > A directory containing objects which the component has exported, such as its
 > services.  May be absent if the component exports nothing.  May contain
@@ -101,6 +106,11 @@ The hub is organized as follows:
 > A directory containing objects which the component has published for debugging
 > purposes, such as introspection files and services.  May contain read-write
 > objects.
+
+**\<component instance id\>/out/objects**: component’s exported structured objects
+> A directory tree exposing objects conforming to the [Inspect API](https://fuchsia.googlesource.com/garnet/+/master/docs/inspect.md).
+> This directory tree is exposed by the component itself to allow inspection
+> of component-specific data.
 
 **\<component instance id\>/c/**: sub component instance list
 > A read-only directory containing a list of sub component instances. This is
