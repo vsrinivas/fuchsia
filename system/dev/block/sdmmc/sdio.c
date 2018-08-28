@@ -56,6 +56,13 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
                             *(uintptr_t*)(txn->virt), txn->virt);
     }
 
+    if ((data_size % 4) != 0) {
+        //TODO(ravoorir): This is definitely needed for PIO mode. Astro has
+        //a hardware bug about not supporting DMA. We end up doing non-dma
+        //transfers on astro.For now restrict the size for dma requests as well.
+        zxlogf(ERROR, "sdio_rw_data: data size is not a multiple of 4\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
     //bool mbs = (dev->sdio_dev.hw_info.caps) & SDIO_CARD_MULTI_BLOCK;
     bool dma_supported = sdmmc_use_dma(dev);
     void *buf = use_dma ? NULL : txn->virt;
@@ -208,56 +215,13 @@ static uint32_t sdio_read_tuple_body(uint8_t *t_body, size_t start, size_t numby
 }
 
 static zx_status_t sdio_process_cccr(sdmmc_device_t *dev) {
-    zx_status_t status = ZX_OK;
     uint8_t cccr_vsn, sdio_vsn, vsn_info, bus_speed, card_caps, uhs_caps, drv_strength;
-    uint32_t max_blk_sz = dev->sdio_dev.funcs[0].hw_info.max_blk_size;
 
-    if (max_blk_sz >= SDIO_CIA_CCCR_NON_VENDOR_REG_SIZE) {
-        uint8_t cccr[SDIO_CIA_CCCR_NON_VENDOR_REG_SIZE] = {0};
-        //Read all of CCCR at a time to avoid multiple read commands
-        sdio_rw_txn_t txn;
-        txn.addr = SDIO_CIA_CCCR_CCCR_SDIO_VER_ADDR;
-        txn.write = false;
-        txn.virt = cccr;
-        txn.data_size = SDIO_CIA_CCCR_NON_VENDOR_REG_SIZE;
-        txn.incr = true;
-        txn.use_dma = false;
-        txn.buf_offset = 0;
-        status = sdio_rw_data(dev, 0, &txn);
-        vsn_info = cccr[SDIO_CIA_CCCR_CCCR_SDIO_VER_ADDR];
-        card_caps = cccr[SDIO_CIA_CCCR_CARD_CAPS_ADDR];
-        bus_speed = cccr[SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR];
-        uhs_caps = cccr[SDIO_CIA_CCCR_UHS_SUPPORT_ADDR];
-        drv_strength = cccr[SDIO_CIA_CCCR_DRV_STRENGTH_ADDR];
-    }
-
-    if (status != ZX_OK || (max_blk_sz < SDIO_CIA_CCCR_NON_VENDOR_REG_SIZE)) {
-        status = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_CCCR_CCCR_SDIO_VER_ADDR, 0, &vsn_info);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "sdio_process_cccr: Error reading CCCR reg: %d\n", status);
-            return status;
-        }
-        status = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_CCCR_CARD_CAPS_ADDR, 0, &card_caps);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "sdio_process_cccr: Error reading CAPS reg: %d\n", status);
-            return status;
-        }
-        status = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, 0, &bus_speed);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "sdio_process_cccr: Error reading SPEED reg: %d\n", status);
-            return status;
-        }
-        status = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_CCCR_UHS_SUPPORT_ADDR, 0, &uhs_caps);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "sdio_process_cccr: Error reading SPEED reg: %d\n", status);
-            return status;
-        }
-        status = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_CCCR_DRV_STRENGTH_ADDR, 0,
-                                   &drv_strength);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "sdio_process_cccr: Error reading SPEED reg: %d\n", status);
-            return status;
-        }
+    //version info
+    zx_status_t status = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_CCCR_CCCR_SDIO_VER_ADDR, 0, &vsn_info);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "sdio_process_cccr: Error reading CCCR reg: %d\n", status);
+        return status;
     }
     cccr_vsn = get_bits(vsn_info, SDIO_CIA_CCCR_CCCR_VER_MASK, SDIO_CIA_CCCR_CCCR_VER_LOC);
     sdio_vsn = get_bits(vsn_info, SDIO_CIA_CCCR_SDIO_VER_MASK, SDIO_CIA_CCCR_SDIO_VER_LOC);
@@ -266,6 +230,13 @@ static zx_status_t sdio_process_cccr(sdmmc_device_t *dev) {
     }
     dev->sdio_dev.hw_info.cccr_vsn = cccr_vsn;
     dev->sdio_dev.hw_info.sdio_vsn = sdio_vsn;
+
+    //card capabilities
+    status = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_CCCR_CARD_CAPS_ADDR, 0, &card_caps);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "sdio_process_cccr: Error reading CAPS reg: %d\n", status);
+        return status;
+    }
     dev->sdio_dev.hw_info.caps = 0;
     if (card_caps & SDIO_CIA_CCCR_CARD_CAP_SMB) {
         dev->sdio_dev.hw_info.caps |= SDIO_CARD_MULTI_BLOCK;
@@ -276,8 +247,22 @@ static zx_status_t sdio_process_cccr(sdmmc_device_t *dev) {
     if (card_caps & SDIO_CIA_CCCR_CARD_CAP_4BLS) {
         dev->sdio_dev.hw_info.caps |= SDIO_CARD_4BIT_BUS;
     }
+
+    //speed
+    status = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, 0, &bus_speed);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "sdio_process_cccr: Error reading SPEED reg: %d\n", status);
+        return status;
+    }
     if (bus_speed & SDIO_CIA_CCCR_BUS_SPEED_SEL_SHS) {
         dev->sdio_dev.hw_info.caps |= SDIO_CARD_HIGH_SPEED;
+    }
+
+    // Is UHS supported?
+    status = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_CCCR_UHS_SUPPORT_ADDR, 0, &uhs_caps);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "sdio_process_cccr: Error reading SPEED reg: %d\n", status);
+        return status;
     }
     if (uhs_caps & SDIO_CIA_CCCR_UHS_SDR50) {
         dev->sdio_dev.hw_info.caps |= SDIO_CARD_UHS_SDR50;
@@ -287,6 +272,14 @@ static zx_status_t sdio_process_cccr(sdmmc_device_t *dev) {
     }
     if (uhs_caps & SDIO_CIA_CCCR_UHS_DDR50) {
         dev->sdio_dev.hw_info.caps |= SDIO_CARD_UHS_DDR50;
+    }
+
+    //drv_strength
+    status = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_CCCR_DRV_STRENGTH_ADDR, 0,
+                               &drv_strength);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "sdio_process_cccr: Error reading SPEED reg: %d\n", status);
+        return status;
     }
     if (drv_strength & SDIO_CIA_CCCR_DRV_STRENGTH_SDTA) {
         dev->sdio_dev.hw_info.caps |= SDIO_DRIVER_TYPE_A;
@@ -778,14 +771,14 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
         return st;
     }
 
-    //Read CIS to get max block size
-    if ((st = sdio_process_cis(dev, 0)) != ZX_OK) {
-        zxlogf(ERROR, "sdmmc_probe_sdio: Read CIS failed, retcode = %d\n", st);
+    if ((st = sdio_process_cccr(dev)) != ZX_OK) {
+        zxlogf(ERROR, "sdmmc_probe_sdio: Read CCCR failed, retcode = %d\n", st);
         return st;
     }
 
-    if ((st = sdio_process_cccr(dev)) != ZX_OK) {
-        zxlogf(ERROR, "sdmmc_probe_sdio: Read CCCR failed, retcode = %d\n", st);
+    //Read CIS to get max block size
+    if ((st = sdio_process_cis(dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "sdmmc_probe_sdio: Read CIS failed, retcode = %d\n", st);
         return st;
     }
 

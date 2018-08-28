@@ -575,27 +575,18 @@ static int aml_sd_emmc_irq_thread(void *ctx) {
         }
         if ((!req->use_dma) && (req->cmd_flags & SDMMC_CMD_READ)) {
             uint32_t length = req->blockcount * req->blocksize;
-            uint32_t data_copied = 0;
-            if (length >= 8) {
-                uint64_t* dest = (uint64_t*)req->virt;
-                volatile uint64_t* src = (uint64_t*)(io_buffer_virt(&dev->mmio) +
-                                                  AML_SD_EMMC_PING_BUFFER_BASE);
-                while (length >= 8) {
-                    *dest++ = *src++;
-                    length -= 8;
-                    data_copied += 8;
-                }
-            }
-
-            if (length == 0) {
+            if (length == 0 || ((length % 4) != 0)) {
+                status = ZX_ERR_INTERNAL;
                 goto complete;
             }
-            uint8_t* dest = (uint8_t*)req->virt + data_copied;
-            volatile uint8_t* src = (uint8_t*)(io_buffer_virt(&dev->mmio) +
-                                                  AML_SD_EMMC_PING_BUFFER_BASE + data_copied);
-            while (length > 0) {
+            uint32_t data_copied = 0;
+            uint32_t* dest = (uint32_t*)req->virt;
+            volatile uint32_t* src = (volatile uint32_t*)(io_buffer_virt(&dev->mmio) +
+                                              AML_SD_EMMC_PING_BUFFER_BASE);
+            while (length) {
                 *dest++ = *src++;
-                length--;
+                length -= 4;
+                data_copied += 4;
             }
         }
 
@@ -763,36 +754,26 @@ static zx_status_t aml_sd_emmc_setup_data_descs_pio(aml_sd_emmc_t *dev, sdmmc_re
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    if (length == 0 || ((length % 4) != 0)) {
+        // From Amlogic documentation, Ping and Pong buffers in sram can be accessed only 4 bytes
+        // at a time.
+        zxlogf(ERROR, "Request sizes that are not multiple of 4 are not supported in PIO mode\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     desc->cmd_info |= AML_SD_EMMC_CMD_INFO_DATA_IO;
     if (!(req->cmd_flags & SDMMC_CMD_READ)) {
         desc->cmd_info |= AML_SD_EMMC_CMD_INFO_DATA_WR;
         uint32_t data_copied = 0;
         uint32_t data_remaining = length;
-        if (data_remaining >= 8) {
-            uint64_t* src = (uint64_t*)req->virt;
-            volatile uint64_t* dest = (uint64_t*)(io_buffer_virt(&dev->mmio) +
-                                              AML_SD_EMMC_PING_BUFFER_BASE);
-            while (data_remaining >= 8) {
-                *dest++ = *src++;
-                data_remaining -= 8;
-                data_copied += 8;
-            }
-        }
-
-        if (data_remaining == 0) {
-            goto complete;
-        }
-        uint8_t* src = (uint8_t*)req->virt + data_copied;
-        volatile uint8_t* dest = (uint8_t*)(io_buffer_virt(&dev->mmio) +
-                                              AML_SD_EMMC_PING_BUFFER_BASE + data_copied);
-        while (data_remaining > 0) {
+        uint32_t* src = (uint32_t*)req->virt;
+        volatile uint32_t* dest = (volatile uint32_t*)(io_buffer_virt(&dev->mmio) +
+                                                       AML_SD_EMMC_PING_BUFFER_BASE);
+        while (data_remaining) {
             *dest++ = *src++;
-            data_remaining--;
+            data_remaining -= 4;
+            data_copied += 4;
         }
-complete:
-        io_buffer_cache_flush(&dev->mmio, AML_SD_EMMC_PING_BUFFER_BASE, length);
-    } else if (req->cmd_flags & SDMMC_CMD_READ) {
-        io_buffer_cache_flush_invalidate(&dev->mmio, AML_SD_EMMC_PING_BUFFER_BASE, length);
     }
 
     // Make it 1 block
