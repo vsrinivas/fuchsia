@@ -165,9 +165,9 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   friend class NextProcessor;
   friend class QueryProcessor;
 
-  modular::FuturePtr<> PromoteNextProposal(const std::string& component_url,
-                                           const std::string& story_name,
-                                           const std::string& proposal_id);
+  void PromoteNextProposal(const std::string& component_url,
+                           const std::string& story_name,
+                           const std::string& proposal_id);
 
   // Used by AddNextProposal to create a kind-of-proto-story and pre execute
   // actions when |proposal.preload| is true.
@@ -201,9 +201,13 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   // Executes the Interaction::SELECTED operation. If a |preloaded_story_id| is
   // provided, it will be promoted. Otherwise the actions will be executed.
   // Also notifies of OnProposalAccepted on the |proposal.listener|.
-  modular::FuturePtr<> HandleSelectedInteraction(
-      const std::string& component_url, const std::string& preloaded_story_id,
-      fuchsia::modular::Proposal& proposal);
+  // If |suggestion_in_ask| is true means that the proposal belongs to a query
+  // suggestion. If false, to a next suggestion. This is information is used to
+  // know from which list to delete.
+  void HandleSelectedInteraction(const std::string& component_url,
+                                 const std::string& preloaded_story_id,
+                                 fuchsia::modular::Proposal& proposal,
+                                 bool suggestion_in_ask);
 
   fidl::BindingSet<fuchsia::modular::SuggestionEngine> bindings_;
   fidl::BindingSet<fuchsia::modular::SuggestionProvider>

@@ -122,15 +122,15 @@ void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
   }
 }
 
-modular::FuturePtr<> SuggestionEngineImpl::PromoteNextProposal(
-    const std::string& component_url, const std::string& story_name,
-    const std::string& proposal_id) {
+void SuggestionEngineImpl::PromoteNextProposal(const std::string& component_url,
+                                               const std::string& story_name,
+                                               const std::string& proposal_id) {
   FXL_DCHECK(!story_name.empty()) << "SuggestionEngineImpl#PromoteNextProposal "
                                   << "story_name shouldn't be empty";
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
 
   fuchsia::modular::SetKindOfProtoStoryOption set_kind_of_proto_story_option;
-  set_kind_of_proto_story_option.value = true;
+  set_kind_of_proto_story_option.value = false;
   fuchsia::modular::StoryCommand command;
   command.set_set_kind_of_proto_story_option(
       std::move(set_kind_of_proto_story_option));
@@ -140,19 +140,16 @@ modular::FuturePtr<> SuggestionEngineImpl::PromoteNextProposal(
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
   puppet_master_->ControlStory(story_name, story_puppet_master.NewRequest());
   story_puppet_master->Enqueue(std::move(commands));
-  auto fut =
-      modular::Future<>::Create("SuggestionEngineImpl#PromoteNextProposal.fut");
-  story_puppet_master->Execute(
-      fxl::MakeCopyable([fut, activity, sp = std::move(story_puppet_master),
-                         proposal_id](fuchsia::modular::ExecuteResult result) {
+  story_puppet_master->Execute(fxl::MakeCopyable(
+      [this, activity, sp = std::move(story_puppet_master), component_url,
+       proposal_id](fuchsia::modular::ExecuteResult result) {
         if (result.status != fuchsia::modular::ExecuteStatus::OK) {
           FXL_LOG(WARNING) << "Promoting proposal " << proposal_id
                            << "returned status=" << (uint32_t)result.status
                            << " message=" << result.error_message;
         }
-        fut->Complete();
+        next_processor_.RemoveProposal(component_url, proposal_id);
       }));
-  return fut;
 }
 
 void SuggestionEngineImpl::Connect(
@@ -239,35 +236,27 @@ void SuggestionEngineImpl::NotifyInteraction(
   auto preloaded_story_id = suggestion->prototype->preloaded_story_id;
   suggestion->interrupting = false;
 
-  modular::FuturePtr<> fut;
   switch (interaction.type) {
     case fuchsia::modular::InteractionType::SELECTED: {
-      fut = HandleSelectedInteraction(component_url, preloaded_story_id,
-                                      proposal);
-      break;  // Remove suggestion from Next since it was selected by user.
+      HandleSelectedInteraction(component_url, preloaded_story_id, proposal,
+                                suggestion_in_ask);
+      break;
     }
     case fuchsia::modular::InteractionType::DISMISSED: {
-      fut = modular::Future<>::CreateCompleted(
-          "SuggestionEngineImpl#NotifyInteraction");
-      break;  // Remove suggestion from Next since it was dismissed by user.
+      if (suggestion_in_ask) {
+        query_processor_.CleanUpPreviousQuery();
+      } else {
+        RemoveNextProposal(component_url, proposal_id);
+      }
+      break;
     }
     case fuchsia::modular::InteractionType::EXPIRED:
     case fuchsia::modular::InteractionType::SNOOZED: {
       // No need to remove since it was either expired by a timeout in
       // user shell or snoozed by the user.
-      return;
+      break;
     }
   }
-
-  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-  fut->Then(
-      [this, fut, activity, suggestion_in_ask, component_url, proposal_id] {
-        if (suggestion_in_ask) {
-          query_processor_.CleanUpPreviousQuery();
-        } else {
-          RemoveNextProposal(component_url, proposal_id);
-        }
-      });
 }
 
 // |fuchsia::modular::SuggestionEngine|
@@ -376,6 +365,7 @@ SuggestionEngineImpl::PerformActions(
   std::vector<fuchsia::modular::Action> pending_actions;
 
   fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  commands.resize(0);
   for (auto& action : *actions) {
     auto command = ActionToStoryCommand(action);
     // Some actions aren't supported as story commands (yet). In particular:
@@ -517,15 +507,17 @@ bool SuggestionEngineImpl::ComponentCanUseRichSuggestions(
          component_url.find("Proposinator") != std::string::npos;
 }
 
-modular::FuturePtr<> SuggestionEngineImpl::HandleSelectedInteraction(
+void SuggestionEngineImpl::HandleSelectedInteraction(
     const std::string& component_url, const std::string& preloaded_story_id,
-    fuchsia::modular::Proposal& proposal) {
+    fuchsia::modular::Proposal& proposal, bool suggestion_in_ask) {
+  // Rich suggestions are only in Next, so we don't check suggestion_in_ask.
   if (!preloaded_story_id.empty()) {
     if (proposal.listener) {
       auto listener = proposal.listener.Bind();
       listener->OnProposalAccepted(proposal.id, preloaded_story_id);
     }
-    return PromoteNextProposal(component_url, preloaded_story_id, proposal.id);
+    PromoteNextProposal(component_url, preloaded_story_id, proposal.id);
+    return;
   }
 
   if (!proposal.story_name) {
@@ -535,17 +527,24 @@ modular::FuturePtr<> SuggestionEngineImpl::HandleSelectedInteraction(
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
   puppet_master_->ControlStory(proposal.story_name,
                                story_puppet_master.NewRequest());
-  return PerformActions(std::move(story_puppet_master),
-                        std::move(proposal.on_selected))
-      ->Then(fxl::MakeCopyable(
-          [listener = std::move(proposal.listener), proposal_id = proposal.id](
-              fuchsia::modular::ExecuteResult result) mutable {
-            // TODO(miguelfrde): check status.
-            if (listener) {
-              auto bound_listener = listener.Bind();
-              bound_listener->OnProposalAccepted(proposal_id, result.story_id);
-            }
-          }));
+  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
+  auto done = PerformActions(std::move(story_puppet_master),
+                             std::move(proposal.on_selected));
+  done->Then(fxl::MakeCopyable(
+      [this, listener = std::move(proposal.listener), proposal_id = proposal.id,
+       suggestion_in_ask, activity, component_url,
+       done](fuchsia::modular::ExecuteResult result) mutable {
+        // TODO(miguelfrde): check status.
+        if (listener) {
+          auto bound_listener = listener.Bind();
+          bound_listener->OnProposalAccepted(proposal_id, result.story_id);
+        }
+        if (suggestion_in_ask) {
+          query_processor_.CleanUpPreviousQuery();
+        } else {
+          next_processor_.RemoveProposal(component_url, proposal_id);
+        }
+      }));
 }
 
 }  // namespace modular
