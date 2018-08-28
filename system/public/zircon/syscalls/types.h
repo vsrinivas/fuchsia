@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <zircon/compiler.h>
+
 __BEGIN_CDECLS
 
 // forward declarations needed by syscalls.h
