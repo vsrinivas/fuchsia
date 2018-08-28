@@ -130,7 +130,7 @@ void AddProtocolDescriptorList(
 
     bt_log(SPEW, "profile_server", "%d : %s",
            fidl::ToUnderlying(descriptor.protocol),
-           protocol_params.Describe().c_str());
+           protocol_params.ToString().c_str());
     rec->AddProtocolDescriptor(
         id, btlib::common::UUID(static_cast<uint16_t>(descriptor.protocol)),
         std::move(protocol_params));
@@ -206,7 +206,7 @@ void ProfileServer::AddService(fidlbredr::ServiceDefinition definition,
       btlib::sdp::DataElement elem;
       FidlToDataElement(attribute.element, &elem);
       bt_log(SPEW, "profile_server", "Adding attribute %#x : %s", attribute.id,
-             elem.Describe().c_str());
+             elem.ToString().c_str());
       rec->SetAttribute(attribute.id, std::move(elem));
     }
   });

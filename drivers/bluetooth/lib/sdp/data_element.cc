@@ -625,7 +625,7 @@ const DataElement* DataElement::At(size_t idx) const {
   return &aggregate_[idx];
 }
 
-std::string DataElement::Describe() const {
+std::string DataElement::ToString() const {
   switch (type_) {
     case Type::kNull:
       return std::string("Null");
@@ -644,19 +644,19 @@ std::string DataElement::Describe() const {
     case Type::kSequence: {
       std::string str;
       for (const auto &it : aggregate_) {
-        str += it.Describe() + " ";
+        str += it.ToString() + " ";
       }
       return fxl::StringPrintf("Sequence { %s}", str.c_str());
     }
     case Type::kAlternative: {
       std::string str;
       for (const auto &it : aggregate_) {
-        str += it.Describe() + " ";
+        str += it.ToString() + " ";
       }
       return fxl::StringPrintf("Alternatives { %s}", str.c_str());
     }
     default:
-      bt_log(SPEW, "sdp", "unhandled type (%d) in Describe()", type_);
+      bt_log(SPEW, "sdp", "unhandled type (%d) in ToString()", type_);
       // Fallthrough to unknown.
   }
 

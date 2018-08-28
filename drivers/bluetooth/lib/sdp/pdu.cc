@@ -882,7 +882,7 @@ Status ServiceSearchAttributeResponse::Parse(const common::ByteBuffer& buf) {
     return Status(common::HostError::kPacketMalformed);
   }
   bt_log(SPEW, "sdp", "parsed AttributeLists: %s",
-         attribute_lists.Describe().c_str());
+         attribute_lists.ToString().c_str());
 
   // Data Element sequence containing alternating attribute id and attribute
   // value pairs.  Only the requested attributes that are present are included.
@@ -904,8 +904,8 @@ Status ServiceSearchAttributeResponse::Parse(const common::ByteBuffer& buf) {
         bt_log(SPEW, "sdp", "attribute isn't a ptr or doesn't exist");
         return Status(common::HostError::kPacketMalformed);
       }
-      bt_log(SPEW, "sdp", "adding %d:%s = %s", list_idx, it->Describe().c_str(),
-             val->Describe().c_str());
+      bt_log(SPEW, "sdp", "adding %d:%s = %s", list_idx, it->ToString().c_str(),
+             val->ToString().c_str());
       AttributeId id = *(it->Get<uint16_t>());
       if (id < last_id) {
         attribute_lists_.clear();

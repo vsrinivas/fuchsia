@@ -266,29 +266,29 @@ TEST_F(SDP_DataElementTest, ReadNestedSeqeunce) {
   EXPECT_EQ(DataElement::Type::kUuid, inner_it->type());
 }
 
-TEST_F(SDP_DataElementTest, Describe) {
-  EXPECT_EQ("Null", DataElement().Describe());
-  EXPECT_EQ("Boolean(true)", DataElement(true).Describe());
+TEST_F(SDP_DataElementTest, ToString) {
+  EXPECT_EQ("Null", DataElement().ToString());
+  EXPECT_EQ("Boolean(true)", DataElement(true).ToString());
   EXPECT_EQ("UnsignedInt:1(27)",
-            DataElement(static_cast<uint8_t>(27)).Describe());
+            DataElement(static_cast<uint8_t>(27)).ToString());
   EXPECT_EQ("SignedInt:4(-54321)",
-            DataElement(static_cast<int32_t>(-54321)).Describe());
+            DataElement(static_cast<int32_t>(-54321)).ToString());
   EXPECT_EQ("UUID(00000100-0000-1000-8000-00805f9b34fb)",
-            DataElement(protocol::kL2CAP).Describe());
+            DataElement(protocol::kL2CAP).ToString());
   EXPECT_EQ("String(fuchsia💖)",
-            DataElement(std::string("fuchsia💖")).Describe());
+            DataElement(std::string("fuchsia💖")).ToString());
   std::vector<DataElement> strings;
   strings.emplace_back(std::string("hello"));
   strings.emplace_back(std::string("sapphire🔷"));
   EXPECT_EQ("Sequence { String(hello) String(sapphire🔷) }",
-            DataElement(std::move(strings)).Describe());
+            DataElement(std::move(strings)).ToString());
   DataElement alts;
   strings.clear();
   strings.emplace_back(std::string("hello"));
   strings.emplace_back(std::string("sapphire🔷"));
   alts.SetAlternative(std::move(strings));
   EXPECT_EQ("Alternatives { String(hello) String(sapphire🔷) }",
-            alts.Describe());
+            alts.ToString());
 }
 
 }  // namespace

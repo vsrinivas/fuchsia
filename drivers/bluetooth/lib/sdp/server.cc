@@ -137,7 +137,6 @@ bool Server::RegisterService(ConstructCallback callback) {
   // a UUID representing the service classes that a given service record
   // conforms to. (5.0, Vol 3, Part B, 5.1.2)
   const DataElement& class_id_list = record->GetAttribute(kServiceClassIdList);
-  bt_log(SPEW, "sdp", "class ID list : %s", class_id_list.Describe().c_str());
   if (class_id_list.type() != DataElement::Type::kSequence) {
     bt_log(SPEW, "sdp", "class ID list isn't a sequence");
     return false;
@@ -156,7 +155,7 @@ bool Server::RegisterService(ConstructCallback callback) {
   }
   failed_validation.cancel();
   bt_log(SPEW, "sdp", "registered service %#.8x, classes: %s", next,
-         record->GetAttribute(kServiceClassIdList).Describe().c_str());
+         record->GetAttribute(kServiceClassIdList).ToString().c_str());
   return true;
 }
 
