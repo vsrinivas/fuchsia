@@ -9,7 +9,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <unordered_set>
 
 #include "garnet/bin/trace/commands/record.h"
@@ -19,6 +18,7 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 
@@ -526,7 +526,13 @@ void Record::LaunchApp() {
   launch_info.arguments =
       fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.args);
 
-  out() << "Launching " << launch_info.url << std::endl;
+  if (FXL_VLOG_IS_ON(1)) {
+    FXL_VLOG(1) << "Launching: " << launch_info.url << " "
+                << fxl::JoinStrings(options_.args, " ");
+  } else {
+    out() << "Launching: " << launch_info.url << std::endl;
+  }
+
   context()->launcher()->CreateComponent(std::move(launch_info),
                                          component_controller_.NewRequest());
   component_controller_.set_error_handler([this] {
@@ -551,15 +557,9 @@ void Record::LaunchTool() {
   all_args.insert(all_args.end(), options_.args.begin(), options_.args.end());
 
   if (FXL_VLOG_IS_ON(1)) {
-    std::stringstream command;
-    for (size_t i = 0; i < all_args.size(); ++i) {
-      if (i > 0)
-        command << " ";
-      command << all_args[i];
-    }
-    FXL_VLOG(1) << "Launching: " << command.str();
+    FXL_VLOG(1) << "Spawning: " << fxl::JoinStrings(all_args, " ");
   } else {
-    out() << "Launching: " << options_.app << std::endl;
+    out() << "Spawning: " << options_.app << std::endl;
   }
 
   zx_handle_t process = Launch(all_args);
