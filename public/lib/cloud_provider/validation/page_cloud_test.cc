@@ -112,8 +112,8 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
                     std::unique_ptr<cloud_provider::Token> position_token,
                     OnNewCommitsCallback callback) override {
     on_new_commits_calls_++;
-    for (size_t i = 0; i < commits->size(); ++i) {
-      on_new_commits_commits_.push_back(std::move(commits->at(i)));
+    for (auto& commit : *commits) {
+      on_new_commits_commits_.push_back(std::move(commit));
     }
     on_new_commits_position_token_ = std::move(position_token);
     on_new_commits_commits_callback_ = std::move(callback);
