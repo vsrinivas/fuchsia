@@ -174,8 +174,7 @@ bool blkdev_test_fifo_basic(void) {
     groupid_t group = 0;
 
     // Create an arbitrary VMO, fill it with some stuff
-    //uint64_t vmo_size = blk_size * 3;
-    uint64_t vmo_size = PAGE_SIZE * 3;
+    const uint64_t vmo_size = blk_size * 3;
     zx_handle_t vmo;
     ASSERT_EQ(zx_vmo_create(vmo_size, 0, &vmo), ZX_OK, "Failed to create VMO");
     fbl::AllocChecker ac;
@@ -726,12 +725,11 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
     ASSERT_EQ(block_fifo_create_client(fifo, &client), ZX_OK, "");
     groupid_t group = 0;
 
-    ASSERT_TRUE(PAGE_SIZE % kBlockSize == 0);
-    ASSERT_TRUE(PAGE_SIZE >= kBlockSize);
-
-    // Create a vmo of one page.
+    // Create a vmo of one block.
+    //
+    // The underlying VMO may be rounded up to the nearest PAGE_SIZE.
     test_vmo_object_t obj;
-    obj.vmo_size = PAGE_SIZE;
+    obj.vmo_size = kBlockSize;
     ASSERT_EQ(zx_vmo_create(obj.vmo_size, 0, &obj.vmo), ZX_OK,
               "Failed to create vmo");
     fbl::AllocChecker ac;
@@ -747,12 +745,16 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
     ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &obj.vmoid), expected,
               "Failed to attach vmo");
 
-    // Send a request to write to write more than 1 page -- even though that's larger than the VMO
+    // Send a request to write to write multiple blocks -- enough that
+    // the request is larger than the VMO.
+    const uint64_t length = 1 + (fbl::round_up(obj.vmo_size,
+                                               static_cast<uint64_t>(PAGE_SIZE))
+                                 / kBlockSize);
     block_fifo_request_t request;
     request.group      = group;
     request.vmoid      = static_cast<vmoid_t>(obj.vmoid);
     request.opcode     = BLOCKIO_WRITE;
-    request.length     = static_cast<uint32_t>(PAGE_SIZE / kBlockSize + 1);
+    request.length     = static_cast<uint32_t>(length);
     request.vmo_offset = 0;
     request.dev_offset = 0;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE, "");
