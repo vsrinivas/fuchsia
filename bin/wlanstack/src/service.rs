@@ -23,7 +23,7 @@ use crate::watchable_map::MapEvent;
 use crate::watcher_service;
 
 unsafe_many_futures!(ServiceFut,
- [ListPhys, QueryPhy, ListIfaces, CreateIface, GetClientSme, GetIfaceStats, WatchDevices]);
+ [ListPhys, QueryPhy, ListIfaces, CreateIface, GetClientSme, GetApSme, GetIfaceStats, WatchDevices]);
 
 const CONCURRENT_LIMIT: usize = 1000;
 
@@ -82,6 +82,10 @@ fn serve_channel(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
             DeviceServiceRequest::DestroyIface{ req: _, responder: _ } => unimplemented!(),
             DeviceServiceRequest::GetClientSme{ iface_id, sme, responder } => ServiceFut::GetClientSme({
                 let status = get_client_sme(&ifaces, iface_id, sme);
+                future::ready(responder.send(status.into_raw()))
+            }),
+            DeviceServiceRequest::GetApSme{ iface_id, sme, responder } => ServiceFut::GetApSme({
+                let status = get_ap_sme(&ifaces, iface_id, sme);
                 future::ready(responder.send(status.into_raw()))
             }),
             DeviceServiceRequest::GetIfaceStats{ iface_id, responder } => ServiceFut::GetIfaceStats({
@@ -201,6 +205,27 @@ fn get_client_sme(ifaces: &Arc<IfaceMap>, iface_id: u16,
         None => return zx::Status::NOT_FOUND,
         Some(ref iface) => match iface.sme_server {
             device::SmeServer::Client(ref server) => server,
+            _ => return zx::Status::NOT_SUPPORTED
+        }
+    };
+    match server.unbounded_send(endpoint) {
+        Ok(()) => zx::Status::OK,
+        Err(e) => {
+            error!("error sending an endpoint to the SME server future: {}", e);
+            zx::Status::INTERNAL
+        }
+    }
+}
+
+fn get_ap_sme(ifaces: &Arc<IfaceMap>, iface_id: u16,
+              endpoint: station::ap::Endpoint)
+    -> zx::Status
+{
+    let iface = ifaces.get(&iface_id);
+    let server = match iface {
+        None => return zx::Status::NOT_FOUND,
+        Some(ref iface) => match iface.sme_server {
+            device::SmeServer::Ap(ref server) => server,
             _ => return zx::Status::NOT_SUPPORTED
         }
     };
@@ -425,6 +450,64 @@ mod tests {
         assert_eq!(zx::Status::NOT_SUPPORTED, super::get_client_sme(&iface_map, 10, server));
     }
 
+    #[test]
+    fn get_ap_sme_success() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (iface_map, _iface_map_events) = IfaceMap::new();
+        let iface_map = Arc::new(iface_map);
+
+        let mut iface = fake_ap_iface("/dev/null");
+        iface_map.insert(10, iface.iface);
+
+        let (proxy, server) = create_endpoints().expect("failed to create a pair of SME endpoints");
+        assert_eq!(zx::Status::OK, super::get_ap_sme(&iface_map, 10, server));
+
+        // Expect to get a new FIDL client in the stream
+        let endpoint = iface.new_sme_clients.try_next()
+            .expect("expected a message in new_sme_clients")
+            .expect("didn't expect new_sme_clients stream to end");
+        let mut sme_stream = endpoint.into_stream().expect("failed to create stream for endpoint");
+
+        // Verify that `proxy` is indeed connected to `sme_stream`
+        let mut fut = fidl_sme::ApSmeProxyInterface::start(&proxy, &mut fake_ap_config());
+
+        match exec.run_until_stalled(&mut sme_stream.next()) {
+            Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Start { config, responder }))) => {
+                assert_eq!(fake_ap_config(), config);
+                responder.send(fidl_sme::StartApResultCode::Success)
+                        .expect("failed to send response");
+            },
+            _ => panic!("sme_stream returned unexpected result")
+        };
+        match exec.run_until_stalled(&mut fut) {
+            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success)) => {},
+            other => panic!("expected a successful response, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn get_ap_sme_not_found() {
+        let mut _exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (iface_map, _iface_map_events) = IfaceMap::new();
+        let iface_map = Arc::new(iface_map);
+
+        let (_proxy, server) = create_endpoints().expect("failed to create a pair of SME endpoints");
+        assert_eq!(zx::Status::NOT_FOUND, super::get_ap_sme(&iface_map, 10, server));
+    }
+
+    #[test]
+    fn get_ap_sme_wrong_role() {
+        let mut _exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (iface_map, _iface_map_events) = IfaceMap::new();
+        let iface_map = Arc::new(iface_map);
+
+        let iface = fake_client_iface("/dev/null");
+        iface_map.insert(10, iface.iface);
+
+        let (_proxy, server) = create_endpoints().expect("failed to create a pair of SME endpoints");
+        assert_eq!(zx::Status::NOT_SUPPORTED, super::get_ap_sme(&iface_map, 10, server));
+    }
+
     fn fake_phy(path: &str) -> (PhyDevice, PhyRequestStream) {
         let (proxy, server) = create_endpoints::<fidl_wlan_dev::PhyMarker>()
             .expect("fake_phy: create_endpoints() failed");
@@ -459,20 +542,23 @@ mod tests {
     struct FakeApIface<St: Stream<Item = StatsRequest>> {
         iface: IfaceDevice,
         _stats_requests: St,
+        new_sme_clients: mpsc::UnboundedReceiver<station::ap::Endpoint>,
     }
 
     fn fake_ap_iface(path: &str) -> FakeApIface<impl Stream<Item = StatsRequest>> {
         let device = wlan_dev::Device::new(path)
             .expect(&format!("fake_client_iface: failed to open {}", path));
+        let (sme_sender, sme_receiver) = mpsc::unbounded();
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
         let iface = IfaceDevice {
-            sme_server: device::SmeServer::_Ap,
+            sme_server: device::SmeServer::Ap(sme_sender),
             stats_sched,
             device
         };
         FakeApIface {
             iface,
             _stats_requests: stats_requests,
+            new_sme_clients: sme_receiver
         }
     }
 
@@ -492,6 +578,13 @@ mod tests {
     fn fake_scan_request() -> fidl_sme::ScanRequest {
         fidl_sme::ScanRequest{
             timeout: 41
+        }
+    }
+
+    fn fake_ap_config() -> fidl_sme::ApConfig {
+        fidl_sme::ApConfig {
+            ssid: b"qwerty".to_vec(),
+            channel: 6,
         }
     }
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod ap;
 pub mod client;
 
 use failure::{bail, format_err};

@@ -14,6 +14,7 @@ use futures::select;
 use log::{error, info, log, warn};
 use pin_utils::pin_mut;
 use std::collections::HashSet;
+use std::future::FutureObj;
 use std::marker::Unpin;
 use std::sync::Arc;
 use wlan_sme;
@@ -31,10 +32,11 @@ pub struct PhyDevice {
 }
 
 pub type ClientSmeServer = mpsc::UnboundedSender<super::station::client::Endpoint>;
+pub type ApSmeServer = mpsc::UnboundedSender<super::station::ap::Endpoint>;
 
 pub enum SmeServer {
     Client(ClientSmeServer),
-    _Ap,
+    Ap(ApSmeServer),
 }
 
 pub struct IfaceDevice {
@@ -111,6 +113,7 @@ async fn query_and_serve_iface(new_iface: NewIfaceDevice, ifaces: &IfaceMap) {
         }
     };
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
+    let role = query_resp.role;
     let (sme, sme_fut) = match create_sme(proxy, event_stream, query_resp, stats_reqs) {
         Ok(x) => x,
         Err(e) => {
@@ -120,7 +123,7 @@ async fn query_and_serve_iface(new_iface: NewIfaceDevice, ifaces: &IfaceMap) {
         }
     };
 
-    info!("new iface #{}: {}", id, device.path().to_string_lossy());
+    info!("new iface #{} with role '{:?}': {}", id, role, device.path().to_string_lossy());
     ifaces.insert(id, IfaceDevice {
         sme_server: sme,
         stats_sched,
@@ -173,7 +176,7 @@ fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
                  query_resp: DeviceQueryConfirm,
                  stats_requests: S)
     -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
-    where S: Stream<Item = stats_scheduler::StatsRequest> + Unpin
+    where S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static
 {
     let device_info = convert_device_info(&query_resp);
     match query_resp.role {
@@ -181,10 +184,13 @@ fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
             let (sender, receiver) = mpsc::unbounded();
             let fut = station::client::serve(
                 proxy, device_info, event_stream, receiver, stats_requests);
-            Ok((SmeServer::Client(sender), fut))
+            Ok((SmeServer::Client(sender), FutureObj::new(Box::new(fut))))
         },
         fidl_mlme::MacRole::Ap => {
-            Err(format_err!("Access point SME is not implemented"))
+            let (sender, receiver) = mpsc::unbounded();
+            let fut = station::ap::serve(
+                proxy, event_stream, receiver, stats_requests);
+            Ok((SmeServer::Ap(sender), FutureObj::new(Box::new(fut))))
         }
     }
 }

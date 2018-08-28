@@ -36,6 +36,7 @@ fn main() -> Result<(), Error> {
             Opt::Phy(cmd) => await!(do_phy(cmd, wlan_svc)),
             Opt::Iface(cmd) => await!(do_iface(cmd, wlan_svc)),
             Opt::Client(cmd) => await!(do_client(cmd, wlan_svc)),
+            Opt::Ap(cmd) => await!(do_ap(cmd, wlan_svc)),
         }
     };
     exec.run_singlethreaded(fut)
@@ -130,6 +131,25 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
     }
 }
 
+async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
+    match cmd {
+        opts::ApCmd::Start { iface_id, ssid, channel } => {
+            let sme = await!(get_ap_sme(wlan_svc, iface_id))?;
+            let mut config = fidl_sme::ApConfig {
+                ssid: ssid.as_bytes().to_vec(),
+                channel
+            };
+            let r = await!(sme.start(&mut config));
+            println!("{:?}", r);
+        },
+        opts::ApCmd::Stop { iface_id } => {
+            let sme = await!(get_ap_sme(wlan_svc, iface_id))?;
+            await!(sme.stop());
+        }
+    }
+    Ok(())
+}
+
 struct Bssid([u8; 6]);
 
 impl fmt::Display for Bssid {
@@ -203,6 +223,18 @@ async fn get_client_sme(wlan_svc: WlanSvc, iface_id: u16)
 {
     let (proxy, remote) = endpoints2::create_endpoints()?;
     let status = await!(wlan_svc.get_client_sme(iface_id, remote)).context("error sending GetClientSme request")?;
+    if status == zx::sys::ZX_OK {
+        Ok(proxy)
+    } else {
+        Err(format_err!("Invalid interface id {}", iface_id))
+    }
+}
+
+async fn get_ap_sme(wlan_svc: WlanSvc, iface_id: u16)
+    -> Result<fidl_sme::ApSmeProxy, Error>
+{
+    let (proxy, remote) = endpoints2::create_endpoints()?;
+    let status = await!(wlan_svc.get_ap_sme(iface_id, remote)).context("error sending GetApSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(proxy)
     } else {

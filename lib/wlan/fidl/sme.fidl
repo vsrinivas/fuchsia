@@ -72,3 +72,19 @@ interface ClientSme {
     3: Disconnect() -> ();
     4: Status() -> (ClientStatusResponse resp);
 };
+
+struct ApConfig {
+    vector<uint8>:32 ssid;
+    uint8 channel;
+};
+
+enum StartApResultCode {
+    SUCCESS = 0;
+    ALREADY_STARTED = 1;
+    INTERNAL_ERROR = 2;
+};
+
+interface ApSme {
+    1: Start(ApConfig config) -> (StartApResultCode code);
+    2: Stop() -> ();
+};
