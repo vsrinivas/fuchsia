@@ -6,7 +6,7 @@
     <import remote="https://fuchsia.googlesource.com/build"
             manifest="manifest/build"
             name="build"
-            revision="38f2a651bb76deb53338082ce118f36af3428bdb"/>
+            revision="ba68bcdcad9ed3e7a5675c9e036f818bbcc17f67"/>
     <import remote="https://fuchsia.googlesource.com/buildtools"
             manifest="manifest/buildtools"
             name="buildtools"
