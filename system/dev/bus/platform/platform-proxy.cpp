@@ -50,18 +50,21 @@ zx_status_t PlatformProxy::Rpc(uint32_t device_id, platform_proxy_req_t* req, ui
     auto status = rpc_channel_.call(0, zx::time::infinite(), &args, &resp_size, &handle_count);
     if (status != ZX_OK) {
         return status;
-    } else if (resp_size < sizeof(*resp)) {
+    }
+
+    status = resp->status;
+
+    if (status == ZX_OK && resp_size < sizeof(*resp)) {
         zxlogf(ERROR, "PlatformProxy::Rpc resp_size too short: %u\n", resp_size);
         status = ZX_ERR_INTERNAL;
         goto fail;
-    } else if (handle_count != out_handle_count) {
+    } else if (status == ZX_OK && handle_count != out_handle_count) {
         zxlogf(ERROR, "PlatformProxy::Rpc handle count %u expected %u\n", handle_count,
                out_handle_count);
         status = ZX_ERR_INTERNAL;
         goto fail;
     }
 
-    status = resp->status;
     if (out_actual) {
         *out_actual = resp_size;
     }
