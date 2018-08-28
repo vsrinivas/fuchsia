@@ -130,11 +130,8 @@ PageCommunicatorImpl::~PageCommunicatorImpl() {
   }
 
   BuildWatchStopBuffer(&buffer);
-  char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
-  size_t size = buffer.GetSize();
-
   for (const auto& device : interested_devices_) {
-    mesh_->Send(device, fxl::StringView(buf, size));
+    mesh_->Send(device, buffer);
   }
 
   if (on_delete_) {
@@ -152,7 +149,7 @@ void PageCommunicatorImpl::Start() {
   BuildWatchStartBuffer(&buffer);
 
   for (const auto& device : mesh_->GetDeviceList()) {
-    mesh_->Send(device, convert::ExtendedStringView(buffer));
+    mesh_->Send(device, buffer);
   }
 }
 
@@ -181,7 +178,7 @@ void PageCommunicatorImpl::OnDeviceChange(
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer);
-  mesh_->Send(remote_device, convert::ExtendedStringView(buffer));
+  mesh_->Send(remote_device, buffer);
 }
 
 void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
@@ -208,7 +205,7 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
               not_interested_devices_.erase(it);
               flatbuffers::FlatBufferBuilder buffer;
               BuildWatchStartBuffer(&buffer);
-              mesh_->Send(source, convert::ExtendedStringView(buffer));
+              mesh_->Send(source, buffer);
             }
           });
       break;
@@ -311,7 +308,6 @@ void PageCommunicatorImpl::GetObject(
   flatbuffers::FlatBufferBuilder buffer;
 
   BuildObjectRequestBuffer(&buffer, object_identifier);
-  fxl::StringView object_request = convert::ToStringView(buffer);
 
   auto request_holder = pending_object_requests_.emplace(
       std::move(object_identifier), std::move(callback));
@@ -320,7 +316,7 @@ void PageCommunicatorImpl::GetObject(
     request_holder.first->second.AddNewPendingRequest(device);
   }
   for (const auto& device : interested_devices_) {
-    mesh_->Send(device, object_request);
+    mesh_->Send(device, buffer);
   }
 }
 
@@ -335,31 +331,31 @@ void PageCommunicatorImpl::OnNewCommits(
     commits_to_upload_.emplace_back(commit->Clone());
   }
   // We need to check if we need to merge first.
-  storage_->GetHeadCommitIds(callback::MakeScoped(
-      weak_factory_.GetWeakPtr(),
-      [this](storage::Status status,
-             std::vector<storage::CommitId> commit_ids) {
-        if (status != storage::Status::OK) {
-          return;
-        }
-        if (commit_ids.size() != 1) {
-          // A merge needs to happen, let's wait until we have one.
-          return;
-        }
-        if (commits_to_upload_.empty()) {
-          // Commits have already been sent. Let's stop early.
-          return;
-        }
-        flatbuffers::FlatBufferBuilder buffer;
-        BuildCommitBuffer(&buffer, commits_to_upload_);
-        char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
-        size_t size = buffer.GetSize();
+  storage_->GetHeadCommitIds(
+      callback::MakeScoped(weak_factory_.GetWeakPtr(),
+                           [this](storage::Status status,
+                                  std::vector<storage::CommitId> commit_ids) {
+                             if (status != storage::Status::OK) {
+                               return;
+                             }
+                             if (commit_ids.size() != 1) {
+                               // A merge needs to happen, let's wait until we
+                               // have one.
+                               return;
+                             }
+                             if (commits_to_upload_.empty()) {
+                               // Commits have already been sent. Let's stop
+                               // early.
+                               return;
+                             }
+                             flatbuffers::FlatBufferBuilder buffer;
+                             BuildCommitBuffer(&buffer, commits_to_upload_);
 
-        for (const auto& device : interested_devices_) {
-          mesh_->Send(device, fxl::StringView(buf, size));
-        }
-        commits_to_upload_.clear();
-      }));
+                             for (const auto& device : interested_devices_) {
+                               mesh_->Send(device, buffer);
+                             }
+                             commits_to_upload_.clear();
+                           }));
 }
 
 void PageCommunicatorImpl::BuildWatchStartBuffer(
@@ -498,10 +494,8 @@ void PageCommunicatorImpl::ProcessObjectRequest(
 
         flatbuffers::FlatBufferBuilder buffer;
         BuildObjectResponseBuffer(&buffer, std::move(object_responses));
-        char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
-        size_t size = buffer.GetSize();
 
-        mesh_->Send(source, fxl::StringView(buf, size));
+        mesh_->Send(source, buffer);
       });
 }
 

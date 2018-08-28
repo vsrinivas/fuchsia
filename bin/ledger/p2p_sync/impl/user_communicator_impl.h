@@ -41,7 +41,8 @@ class UserCommunicatorImpl : public UserCommunicator,
 
   // DeviceMesh:
   const DeviceSet& GetDeviceList() override;
-  void Send(fxl::StringView device_name, fxl::StringView data) override;
+  void Send(fxl::StringView device_name,
+            convert::ExtendedStringView data) override;
 
  private:
   // P2PProvider::Client

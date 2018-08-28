@@ -133,7 +133,7 @@ const DeviceMesh::DeviceSet& UserCommunicatorImpl::GetDeviceList() {
 }
 
 void UserCommunicatorImpl::Send(fxl::StringView device_name,
-                                fxl::StringView data) {
+                                convert::ExtendedStringView data) {
   p2p_provider_->SendMessage(device_name, data);
 }
 

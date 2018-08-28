@@ -139,7 +139,8 @@ class FakeDeviceMesh : public DeviceMesh {
 
   const DeviceSet& GetDeviceList() override { return devices_; }
 
-  void Send(fxl::StringView device_name, fxl::StringView data) override {
+  void Send(fxl::StringView device_name,
+            convert::ExtendedStringView data) override {
     messages_.emplace_back(
         std::forward_as_tuple(device_name.ToString(), data.ToString()));
   }
