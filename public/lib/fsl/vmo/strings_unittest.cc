@@ -9,33 +9,51 @@ namespace fsl {
 namespace {
 
 TEST(VmoStringsTest, ShortString) {
-  const std::string hello_string = "Hello, world.";
-  SizedVmo hello_buffer;
-  EXPECT_TRUE(VmoFromString(hello_string, &hello_buffer));
-  std::string hello_out;
-  EXPECT_TRUE(StringFromVmo(std::move(hello_buffer), &hello_out));
-  EXPECT_EQ(hello_string, hello_out);
+  const std::string hello_in_string = "Hello, world.";
+  std::string hello_out_string;
+
+  SizedVmo hello_sized_vmo;
+  EXPECT_TRUE(VmoFromString(hello_in_string, &hello_sized_vmo));
+  EXPECT_TRUE(StringFromVmo(std::move(hello_sized_vmo), &hello_out_string));
+  EXPECT_EQ(hello_in_string, hello_out_string);
+
+  ::fuchsia::mem::Buffer hello_buffer;
+  EXPECT_TRUE(VmoFromString(hello_in_string, &hello_buffer));
+  EXPECT_TRUE(StringFromVmo(hello_buffer, &hello_out_string));
+  EXPECT_EQ(hello_in_string, hello_out_string);
 }
 
 TEST(VmoStringsTest, EmptyString) {
-  const std::string hello_string = "";
-  SizedVmo hello_buffer;
-  EXPECT_TRUE(VmoFromString(hello_string, &hello_buffer));
-  std::string hello_out;
-  EXPECT_TRUE(StringFromVmo(std::move(hello_buffer), &hello_out));
-  EXPECT_EQ(hello_string, hello_out);
+  const std::string empty_in_string = "";
+  std::string empty_out_string;
+
+  SizedVmo empty_sized_vmo;
+  EXPECT_TRUE(VmoFromString(empty_in_string, &empty_sized_vmo));
+  EXPECT_TRUE(StringFromVmo(std::move(empty_sized_vmo), &empty_out_string));
+  EXPECT_EQ(empty_in_string, empty_out_string);
+
+  ::fuchsia::mem::Buffer empty_buffer;
+  EXPECT_TRUE(VmoFromString(empty_in_string, &empty_buffer));
+  EXPECT_TRUE(StringFromVmo(empty_buffer, &empty_out_string));
+  EXPECT_EQ(empty_in_string, empty_out_string);
 }
 
 TEST(VmoStringsTest, BinaryString) {
-  std::string binary_string('\0', 10);
-  for (size_t i = 0; i < binary_string.size(); i++) {
-    binary_string[i] = (char)i;
+  std::string binary_in_string('\0', 10);
+  for (size_t i = 0; i < binary_in_string.size(); i++) {
+    binary_in_string[i] = (char)i;
   }
-  SizedVmo binary_buffer;
-  EXPECT_TRUE(VmoFromString(binary_string, &binary_buffer));
-  std::string binary_out;
-  EXPECT_TRUE(StringFromVmo(std::move(binary_buffer), &binary_out));
-  EXPECT_EQ(binary_string, binary_out);
+  std::string binary_out_string;
+
+  SizedVmo binary_sized_vmo;
+  EXPECT_TRUE(VmoFromString(binary_in_string, &binary_sized_vmo));
+  EXPECT_TRUE(StringFromVmo(std::move(binary_sized_vmo), &binary_out_string));
+  EXPECT_EQ(binary_in_string, binary_out_string);
+
+  ::fuchsia::mem::Buffer binary_buffer;
+  EXPECT_TRUE(VmoFromString(binary_in_string, &binary_buffer));
+  EXPECT_TRUE(StringFromVmo(binary_buffer, &binary_out_string));
+  EXPECT_EQ(binary_in_string, binary_out_string);
 }
 
 }  // namespace

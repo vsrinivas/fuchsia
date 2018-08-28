@@ -65,6 +65,16 @@ bool VmoFromString(const fxl::StringView& string, SizedVmo* sized_vmo) {
   return VmoFromContainer<fxl::StringView>(string, sized_vmo);
 }
 
+bool VmoFromString(const fxl::StringView& string,
+                   fuchsia::mem::Buffer* buffer_ptr) {
+  fsl::SizedVmo sized_vmo;
+  if (!VmoFromContainer<fxl::StringView>(string, &sized_vmo)) {
+    return false;
+  }
+  *buffer_ptr = std::move(sized_vmo).ToTransport();
+  return true;
+}
+
 bool StringFromVmo(const SizedVmo& shared_buffer, std::string* string_ptr) {
   return ContainerFromVmo<std::string>(shared_buffer.vmo(),
                                        shared_buffer.size(), string_ptr);
