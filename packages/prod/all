@@ -1,6 +1,7 @@
 {
     "imports": [
         "garnet/packages/prod/amber",
+        "garnet/packages/prod/amlogic_video_decoder",
         "garnet/packages/prod/appmgr",
         "garnet/packages/prod/atheros",
         "garnet/packages/prod/auth",
