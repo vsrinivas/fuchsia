@@ -11,11 +11,6 @@ import("//topaz/public/dart-pkg/fuchsia/sdk_ext.gni")
 import("//topaz/public/dart-pkg/zircon/sdk_ext.gni")
 import("//topaz/public/lib/ui/flutter/sdk_ext/sdk_ext.gni")
 
-declare_args() {
-  # Whether to use the analysis server instead of the CLI.
-  use_analysis_server = false
-}
-
 # Defines a Dart library
 #
 # Parameters
@@ -233,105 +228,47 @@ if (current_toolchain == dart_toolchain) {
       analysis_target_name = "${target_name}_analysis"
       group_deps += [ ":$analysis_target_name" ]
 
-      if (use_analysis_server) {
-        # Runs analysis on the sources.
-        action(analysis_target_name) {
-          runner_label = "//build/dart/analyzer($host_toolchain)"
-          runner_out_dir = get_label_info(runner_label, "root_out_dir")
-          script = "$runner_out_dir/dart-tools/analyzer"
+      # Runs analysis on the sources.
+      action(analysis_target_name) {
+        script = "//build/dart/run_analysis.py"
 
-          server_snapshot = "$dart_sdk/bin/snapshots/analysis_server.dart.snapshot"
+        depfile = "$target_gen_dir/$target_name.analysis.d"
 
-          depfile = "$target_gen_dir/$target_name.analysis.d"
+        output_file = "$target_gen_dir/$target_name.analyzed"
 
-          output_file = "$target_gen_dir/$target_name.analyzed"
+        inputs = [
+          dart_analyzer_binary,
+          dot_packages_file,
+          options_file,
+          source_file,
+        ] + rebased_sources
 
-          log_file = "$target_gen_dir/$target_name.analysis_logs"
+        outputs = [
+          output_file,
+        ]
 
-          inputs = [
-            options_file,
-          ] + rebased_sources
+        args = [
+          "--source-file",
+          rebase_path(source_file),
+          "--dot-packages",
+          rebase_path(dot_packages_file),
+          "--dartanalyzer",
+          rebase_path(dart_analyzer_binary),
+          "--dart-sdk",
+          rebase_path(dart_sdk),
+          "--options",
+          rebase_path(options_file),
+          "--stamp",
+          rebase_path(output_file),
+          "--depname",
+          rebase_path(output_file, root_build_dir),
+          "--depfile",
+          rebase_path(depfile),
+        ]
 
-          # TODO(pylaligand): restore this pool.
-          # pool = "//build/dart:analysis_pool($dart_toolchain)"
-
-          outputs = [
-            output_file,
-          ]
-
-          # TODO(pylaligand): have the analysis server analyze individual files.
-          # It currently only understands directories.
-
-          args = [
-            "--package-root",
-            rebase_path("."),
-            "--source-dir",
-            rebase_path(source_dir, "."),
-            "--server-snapshot",
-            rebase_path(server_snapshot),
-            "--sdk-dir",
-            rebase_path(dart_sdk_dir),
-            "--stamp",
-            rebase_path(output_file),
-            "--depname",
-            rebase_path(output_file, root_build_dir),
-            "--depfile",
-            rebase_path(depfile),
-            "--cache-path",
-            rebase_path("$root_out_dir/analysis-cache"),
-            "--log-file",
-            rebase_path(log_file),
-          ]
-
-          deps = dart_sdk_deps + [
-            ":$dot_packages_target_name",
-            dart_sdk_label,
-            runner_label,
-          ]
-        }
-      } else {  # Use the analyzer CLI.
-        # Runs analysis on the sources.
-        action(analysis_target_name) {
-          script = "//build/dart/run_analysis.py"
-
-          depfile = "$target_gen_dir/$target_name.analysis.d"
-
-          output_file = "$target_gen_dir/$target_name.analyzed"
-
-          inputs = [
-            dart_analyzer_binary,
-            dot_packages_file,
-            options_file,
-            source_file,
-          ] + rebased_sources
-
-          outputs = [
-            output_file,
-          ]
-
-          args = [
-            "--source-file",
-            rebase_path(source_file),
-            "--dot-packages",
-            rebase_path(dot_packages_file),
-            "--dartanalyzer",
-            rebase_path(dart_analyzer_binary),
-            "--dart-sdk",
-            rebase_path(dart_sdk),
-            "--options",
-            rebase_path(options_file),
-            "--stamp",
-            rebase_path(output_file),
-            "--depname",
-            rebase_path(output_file, root_build_dir),
-            "--depfile",
-            rebase_path(depfile),
-          ]
-
-          deps = dart_sdk_deps + [
-            ":$dot_packages_target_name",
-          ]
-        }
+        deps = dart_sdk_deps + [
+          ":$dot_packages_target_name",
+        ]
       }
     }
 
