@@ -65,12 +65,12 @@ bool CheckMountedFs(const char* path, const char* fs_name, size_t len) {
     END_HELPER;
 }
 
-bool MountUnmount(void) {
+bool MountUnmountShared(size_t block_size) {
+    BEGIN_HELPER;
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_unmount";
 
-    BEGIN_TEST;
-    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0);
+    ASSERT_EQ(create_ramdisk(block_size, 1 << 16, ramdisk_path), 0);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
     ASSERT_EQ(mkdir(mount_path, 0666), 0);
@@ -84,10 +84,22 @@ bool MountUnmount(void) {
     ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0);
     ASSERT_EQ(unlink(mount_path), 0);
+    END_HELPER;
+}
+
+bool MountUnmount() {
+    BEGIN_TEST;
+    ASSERT_TRUE(MountUnmountShared(512));
     END_TEST;
 }
 
-bool MountMkdirUnmount(void) {
+bool MountUnmountLargeBlock() {
+    BEGIN_TEST;
+    ASSERT_TRUE(MountUnmountShared(8192));
+    END_TEST;
+}
+
+bool MountMkdirUnmount() {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_mkdir_unmount";
 
@@ -108,7 +120,7 @@ bool MountMkdirUnmount(void) {
     END_TEST;
 }
 
-bool FmountFunmount(void) {
+bool FmountFunmount() {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_unmount";
 
@@ -231,14 +243,14 @@ bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
     END_HELPER;
 }
 
-bool MountEvilMemfs(void) {
+bool MountEvilMemfs() {
     BEGIN_TEST;
     const char* mount_path = "/tmp/mount_evil";
     ASSERT_TRUE(DoMountEvil("memfs", mount_path));
     END_TEST;
 }
 
-bool MountEvilMinfs(void) {
+bool MountEvilMinfs() {
     char ramdisk_path[PATH_MAX];
 
     BEGIN_TEST;
@@ -265,7 +277,7 @@ bool MountEvilMinfs(void) {
     END_TEST;
 }
 
-bool UmountTestEvil(void) {
+bool UmountTestEvil() {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/umount_test_evil";
 
@@ -310,7 +322,7 @@ bool UmountTestEvil(void) {
     END_TEST;
 }
 
-bool DoubleMountRoot(void) {
+bool DoubleMountRoot() {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/double_mount_root";
 
@@ -362,7 +374,7 @@ bool DoubleMountRoot(void) {
     END_TEST;
 }
 
-bool MountRemount(void) {
+bool MountRemount() {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_remount";
 
@@ -386,7 +398,7 @@ bool MountRemount(void) {
     END_TEST;
 }
 
-bool MountFsck(void) {
+bool MountFsck() {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_fsck";
 
@@ -408,7 +420,7 @@ bool MountFsck(void) {
     END_TEST;
 }
 
-bool MountGetDevice(void) {
+bool MountGetDevice() {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_get_device";
 
@@ -495,7 +507,7 @@ bool CreateTestFile(const char* ramdisk_path, const char* mount_path, const char
 }
 
 // Tests that setting read-only on the mount options works as expected.
-bool MountReadonly(void) {
+bool MountReadonly() {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_readonly";
     const char file_name[] = "some_file";
@@ -539,7 +551,7 @@ bool MountReadonly(void) {
 }
 
 // Test that when a block device claims to be read-only, the filesystem is mounted as read-only.
-bool MountBlockReadonly(void) {
+bool MountBlockReadonly() {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_readonly";
     const char file_name[] = "some_file";
@@ -577,7 +589,7 @@ bool MountBlockReadonly(void) {
     END_TEST;
 }
 
-bool StatfsTest(void) {
+bool StatfsTest() {
     char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_unmount";
 
@@ -671,6 +683,7 @@ bool MkfsMinfsWithMinFvmSlices(fs_test_utils::Fixture* fixture) {
 
 BEGIN_TEST_CASE(fs_management_tests)
 RUN_TEST_MEDIUM(MountUnmount)
+RUN_TEST_MEDIUM(MountUnmountLargeBlock)
 RUN_TEST_MEDIUM(MountMkdirUnmount)
 RUN_TEST_MEDIUM(FmountFunmount)
 RUN_TEST_MEDIUM(MountEvilMemfs)

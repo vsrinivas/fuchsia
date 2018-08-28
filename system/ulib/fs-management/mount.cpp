@@ -9,6 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/type_support.h>
@@ -19,6 +20,7 @@
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
 #include <zircon/compiler.h>
+#include <zircon/device/block.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -261,9 +263,26 @@ const fsck_options_t default_fsck_options = {
 };
 
 disk_format_t detect_disk_format(int fd) {
-    uint8_t data[HEADER_SIZE];
-    if (read(fd, data, sizeof(data)) != sizeof(data)) {
-        fprintf(stderr, "Error reading block device\n");
+    if (lseek(fd, 0, SEEK_SET) != 0) {
+        fprintf(stderr, "detect_disk_format: Cannot seek to start of device.\n");
+        return DISK_FORMAT_UNKNOWN;
+    }
+
+    block_info_t info;
+    ssize_t r;
+    if ((r = ioctl_block_get_info(fd, &info)) < 0) {
+        fprintf(stderr, "detect_disk_format: Could not acquire block device info\n");
+        return DISK_FORMAT_UNKNOWN;
+    }
+
+    // We expect to read HEADER_SIZE bytes, but we may need to read
+    // extra to read a multiple of the underlying block size.
+    const size_t buffer_size = fbl::round_up(static_cast<size_t>(HEADER_SIZE),
+                                             static_cast<size_t>(info.block_size));
+
+    uint8_t data[buffer_size];
+    if (read(fd, data, buffer_size) != static_cast<ssize_t>(buffer_size)) {
+        fprintf(stderr, "detect_disk_format: Error reading block device.\n");
         return DISK_FORMAT_UNKNOWN;
     }
 
