@@ -94,6 +94,17 @@ bool WaitForExit(zx_handle_t process, int* exit_code) {
   return true;
 }
 
+bool LookupBufferingMode(const std::string& mode_name,
+                         fuchsia::tracing::BufferingMode* out_mode) {
+  for (const auto& mode : kBufferingModes) {
+    if (mode_name == mode.name) {
+      *out_mode = mode.mode;
+      return true;
+    }
+  }
+  return false;
+}
+
 bool ParseBoolean(const fxl::StringView& arg, bool* out_value) {
   if (arg == "" || arg == "true") {
     *out_value = true;
@@ -103,6 +114,19 @@ bool ParseBoolean(const fxl::StringView& arg, bool* out_value) {
     return false;
   }
   return true;
+}
+
+void CheckCommandLineOverride(const char* name, bool present_in_spec) {
+  if (present_in_spec) {
+    FXL_LOG(WARNING) << "The " << name << " passed on the command line"
+                     << "override value(s) from the tspec file.";
+  }
+}
+
+// Helper so call sites don't have to type !!object_as_unique_ptr.
+template<typename T>
+void CheckCommandLineOverride(const char* name, const T& object) {
+  CheckCommandLineOverride(name, !!object);
 }
 
 }  // namespace
@@ -129,6 +153,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     }
   }
 
+  Spec spec{};
   size_t index = 0;
   // Read the spec file first. Arguments passed on the command line override the
   // spec.
@@ -146,17 +171,22 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
       return false;
     }
 
-    Spec spec;
     if (!DecodeSpec(content, &spec)) {
       FXL_LOG(ERROR) << "Can't decode " << spec_file_path;
       return false;
     }
-    app = std::move(spec.app);
-    args = std::move(spec.args);
-    categories = std::move(spec.categories);
-    duration = std::move(spec.duration);
-    measurements = std::move(spec.measurements);
-    test_suite = std::move(spec.test_suite_name);
+    if (spec.app)
+      app = *spec.app;
+    if (spec.args)
+      args = *spec.args;
+    if (spec.categories)
+      categories = *spec.categories;
+    if (spec.duration)
+      duration = *spec.duration;
+    if (spec.measurements)
+      measurements = *spec.measurements;
+    if (spec.test_suite_name)
+      test_suite = *spec.test_suite_name;
   }
 
   // --categories=<cat1>,<cat2>,...
@@ -164,6 +194,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     categories =
         fxl::SplitStringCopy(command_line.options()[index].value, ",",
                              fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+    CheckCommandLineOverride("categories", spec.categories);
   }
 
   // --append-args=<arg1>,<arg2>,...
@@ -185,11 +216,12 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     uint64_t seconds;
     if (!fxl::StringToNumberWithError(command_line.options()[index].value,
                                       &seconds)) {
-      FXL_LOG(ERROR) << "Failed to parse command-line option duration: "
-                     << command_line.options()[index].value;
+      FXL_LOG(ERROR) << "Failed to parse command-line option " << kDuration
+                     << ": " << command_line.options()[index].value;
       return false;
     }
     duration = fxl::TimeDelta::FromSeconds(seconds);
+    CheckCommandLineOverride("duration", spec.duration);
   }
 
   // --detach
@@ -231,26 +263,20 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     uint32_t megabytes;
     if (!fxl::StringToNumberWithError(command_line.options()[index].value,
                                       &megabytes)) {
-      FXL_LOG(ERROR) << "Failed to parse command-line option buffer-size: "
-                     << command_line.options()[index].value;
+      FXL_LOG(ERROR) << "Failed to parse command-line option " << kBufferSize
+                     << ": " << command_line.options()[index].value;
       return false;
     }
-    buffer_size_megabytes_hint = megabytes;
+    buffer_size_megabytes = megabytes;
   }
 
   // --buffering-mode=oneshot|circular|streaming
   if (command_line.HasOption(kBufferingMode, &index)) {
-    bool found = false;
-    for (const auto& mode : kBufferingModes) {
-      if (command_line.options()[index].value == mode.name) {
-        buffering_mode = mode.mode;
-        found = true;
-        break;
-      }
-    }
-    if (!found) {
-      FXL_LOG(ERROR) << "Failed to parse command-line option " << kBufferingMode
-                     << ": " << command_line.options()[index].value;
+    if (!LookupBufferingMode(command_line.options()[index].value,
+                             &buffering_mode)) {
+      FXL_LOG(ERROR) << "Failed to parse command-line option "
+                     << kBufferingMode << ": "
+                     << command_line.options()[index].value;
       return false;
     }
   }
@@ -263,18 +289,16 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   // --test-suite=<test-suite-name>
   if (command_line.HasOption(kTestSuite, &index)) {
     test_suite = command_line.options()[index].value;
+    CheckCommandLineOverride("test-suite-name", spec.test_suite_name);
   }
 
   // <command> <args...>
   const auto& positional_args = command_line.positional_args();
   if (!positional_args.empty()) {
-    if (!app.empty() || !args.empty()) {
-      FXL_LOG(WARNING) << "The app and args passed on the command line"
-                       << "override those from the tspec file.";
-    }
     app = positional_args[0];
     args = std::vector<std::string>(positional_args.begin() + 1,
                                     positional_args.end());
+    CheckCommandLineOverride("app,args", spec.app || spec.args);
   }
 
   return true;
@@ -360,8 +384,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
   fuchsia::tracing::TraceOptions trace_options;
   trace_options.categories =
       fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.categories);
-  trace_options.buffer_size_megabytes_hint =
-      options_.buffer_size_megabytes_hint;
+  trace_options.buffer_size_megabytes_hint = options_.buffer_size_megabytes;
   // TODO(dje): start_timeout_milliseconds
   trace_options.buffering_mode = options_.buffering_mode;
 

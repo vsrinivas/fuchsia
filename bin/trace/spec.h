@@ -10,6 +10,7 @@
 #include "garnet/lib/measure/measurements.h"
 #include "garnet/lib/measure/time_between.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -18,24 +19,26 @@
 namespace tracing {
 
 // Tracing specification.
+// Every member is a unique_ptr so that we can tell if the object was
+// present in the spec file.
 struct Spec {
   // Url of the application to be run.
-  std::string app;
+  std::unique_ptr<std::string> app;
 
   // Startup arguments passed to the application.
-  std::vector<std::string> args;
+  std::unique_ptr<std::vector<std::string>> args;
 
   // Tracing categories enabled when tracing the application.
-  std::vector<std::string> categories;
+  std::unique_ptr<std::vector<std::string>> categories;
 
   // Duration of the benchmark.
-  fxl::TimeDelta duration = fxl::TimeDelta::FromSeconds(10);
+  std::unique_ptr<fxl::TimeDelta> duration;
 
   // Measurements to be performed on the captured traces.
-  measure::Measurements measurements;
+  std::unique_ptr<measure::Measurements> measurements;
 
   // Test suite name to be used for dashboard upload.
-  std::string test_suite_name;
+  std::unique_ptr<std::string> test_suite_name;
 };
 
 bool DecodeSpec(const std::string& json, Spec* spec);
