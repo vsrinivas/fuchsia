@@ -27,7 +27,7 @@
 
 namespace runtests {
 
-static constexpr char kExpectedJSONOutputPrefix[] = "{\"tests\":[\n";
+static constexpr char kExpectedJSONOutputPrefix[] = "{\n  \"tests\": [\n";
 // We don't want to count the null terminator.
 static constexpr size_t kExpectedJSONOutputPrefixSize =
     sizeof(kExpectedJSONOutputPrefix) - 1;

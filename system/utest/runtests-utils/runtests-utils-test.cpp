@@ -183,13 +183,23 @@ bool WriteSummaryJSONSucceeds() {
                                   output_file));
     // We don't have a JSON parser in zircon right now, so just hard-code the
     // expected output.
-    const char kExpectedJSONOutput[] = R"({"tests":[
-{"name":"/a","output_file":"a/output.txt","result":"PASS"},
-{"name":"b","output_file":"b/output.txt","result":"FAIL"}
-],
-"outputs":{
-"syslog_file":"/tmp/file_path"
-}}
+    const char kExpectedJSONOutput[] = R"({
+  "tests": [
+    {
+      "name": "/a",
+      "output_file": "a/output.txt",
+      "result": "PASS"
+    },
+    {
+      "name": "b",
+      "output_file": "b/output.txt",
+      "result": "FAIL"
+    }
+  ],
+  "outputs": {
+    "syslog_file": "/tmp/file_path"
+  }
+}
 )";
     EXPECT_TRUE(CompareFileContents(output_file, kExpectedJSONOutput));
     fclose(output_file);
@@ -210,10 +220,20 @@ bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
                                   output_file));
     // With an empty syslog_path, we expect no values under "outputs" and
     // "syslog_file" to be generated in the JSON output.
-    const char kExpectedJSONOutput[] = R"({"tests":[
-{"name":"/a","output_file":"a/output.txt","result":"PASS"},
-{"name":"b","output_file":"b/output.txt","result":"FAIL"}
-]}
+    const char kExpectedJSONOutput[] = R"({
+  "tests": [
+    {
+      "name": "/a",
+      "output_file": "a/output.txt",
+      "result": "PASS"
+    },
+    {
+      "name": "b",
+      "output_file": "b/output.txt",
+      "result": "FAIL"
+    }
+  ]
+}
 )";
 
     EXPECT_TRUE(CompareFileContents(output_file, kExpectedJSONOutput));
@@ -622,13 +642,21 @@ bool DiscoverAndRunTestsWithOutput() {
 
     fbl::StringBuffer<1024> expected_pass_output_buf;
     expected_pass_output_buf.AppendPrintf(
-        "{\"name\":\"%s\",\"output_file\":\"%s\",\"result\":\"PASS\"}",
+        "    {\n"
+        "      \"name\": \"%s\",\n"
+        "      \"output_file\": \"%s\",\n"
+        "      \"result\": \"PASS\"\n"
+        "    }",
         succeed_file_name.c_str(),
         success_output_rel_path.c_str() +
             1); // +1 to discard the leading slash.
     fbl::StringBuffer<1024> expected_fail_output_buf;
     expected_fail_output_buf.AppendPrintf(
-        "{\"name\":\"%s\",\"output_file\":\"%s\",\"result\":\"FAIL\"}",
+        "    {\n"
+        "      \"name\": \"%s\",\n"
+        "      \"output_file\": \"%s\",\n"
+        "      \"result\": \"FAIL\"\n"
+        "    }",
         fail_file_name.c_str(),
         failure_output_rel_path.c_str() +
             1); // +1 to discared the leading slash.
@@ -670,7 +698,7 @@ bool DiscoverAndRunTestsWithOutput() {
         EXPECT_TRUE(false,
                     "output buf didn't contain expected pass or fail strings");
     }
-    EXPECT_STR_EQ("\n]}\n", &buf[buf_index]);
+    EXPECT_STR_EQ("\n  ]\n}\n", &buf[buf_index]);
 
     END_TEST;
 }
@@ -706,7 +734,9 @@ bool DiscoverAndRunTestsWithSyslogOutput() {
                                      &failure_output_rel_path));
 
     const char kExpectedOutputsStr[] =
-        "\"outputs\":{\n\"syslog_file\":\"syslog.txt\"\n}";
+        "  \"outputs\": {\n"
+        "    \"syslog_file\": \"syslog.txt\"\n"
+        "  }";
 
     // Extract the actual output.
     const fbl::String output_path = JoinPath(output_dir, "summary.json");

@@ -198,7 +198,9 @@ bool RunAllTestsPublishData() {
 
     fbl::StringBuffer<1024> expected_output_buf;
     expected_output_buf.AppendPrintf(
-        "\"name\":\"%s\",\"output_file\":\"%s\",\"result\":\"PASS\"",
+        "      \"name\": \"%s\",\n"
+        "      \"output_file\": \"%s\",\n"
+        "      \"result\": \"PASS\"",
         test_name.c_str(),
         test_output_rel_path.c_str() + 1); // +1 to discard the leading slash.
 
@@ -208,7 +210,12 @@ bool RunAllTestsPublishData() {
 
     fbl::StringBuffer<1024> expected_data_sink_buf;
     expected_data_sink_buf.AppendPrintf(
-        "\"test\":[{\"name\":\"test\",\"file\":\"%s\"}]",
+        "        \"test\": [\n"
+        "          {\n"
+        "            \"name\": \"test\",\n"
+        "            \"file\": \"%s\"\n"
+        "          }\n"
+        "        ]",
         test_data_sink_rel_path.c_str() + 1); // +1 to discard the leading slash.
 
     // Extract the actual output.

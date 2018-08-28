@@ -103,15 +103,15 @@ int WriteSummaryJSON(const fbl::Vector<fbl::unique_ptr<Result>>& results,
                      const fbl::StringPiece syslog_path,
                      FILE* summary_json) {
     int test_count = 0;
-    fprintf(summary_json, "{\"tests\":[\n");
+    fprintf(summary_json, "{\n  \"tests\": [\n");
     for (const fbl::unique_ptr<Result>& result : results) {
         if (test_count != 0) {
             fprintf(summary_json, ",\n");
         }
-        fprintf(summary_json, "{");
+        fprintf(summary_json, "    {\n");
 
         // Write the name of the test.
-        fprintf(summary_json, "\"name\":\"%s\"", result->name.c_str());
+        fprintf(summary_json, "      \"name\": \"%s\",\n", result->name.c_str());
 
         // Write the path to the output file, relative to the test output root
         // (i.e. what's passed in via -o). The test name is already a path to
@@ -124,47 +124,53 @@ int WriteSummaryJSON(const fbl::Vector<fbl::unique_ptr<Result>>& results,
                     output_file.c_str());
             return EINVAL;
         }
-        fprintf(summary_json, ",\"output_file\":\"%s\"", &(output_file.c_str()[i]));
+        fprintf(summary_json, "      \"output_file\": \"%s\",\n", &(output_file.c_str()[i]));
 
         // Write the result of the test, which is either PASS or FAIL. We only
         // have one PASS condition in TestResult, which is SUCCESS.
-        fprintf(summary_json, ",\"result\":\"%s\"",
+        fprintf(summary_json, "      \"result\": \"%s\"",
                 result->launch_status == runtests::SUCCESS ? "PASS" : "FAIL");
 
         // Write all data sinks.
         if (result->data_sinks.size()) {
-            fprintf(summary_json, ",\"data_sinks\":{");
+            fprintf(summary_json, ",\n      \"data_sinks\": {\n");
             int sink_count = 0;
             for (const auto& sink : result->data_sinks) {
                 if (sink_count != 0) {
                     fprintf(summary_json, ",\n");
                 }
-                fprintf(summary_json, "\"%s\":[", sink.name.c_str());
+                fprintf(summary_json, "        \"%s\": [\n", sink.name.c_str());
                 int file_count = 0;
                 for (const auto& file : sink.files) {
                     if (file_count != 0) {
                         fprintf(summary_json, ",\n");
                     }
-                    fprintf(summary_json, "{\"name\":\"%s\",\"file\":\"%s\"}",
+                    fprintf(summary_json, "          {\n"
+                                          "            \"name\": \"%s\",\n"
+                                          "            \"file\": \"%s\"\n"
+                                          "          }",
                             file.name.c_str(), file.file.c_str());
                     file_count++;
                 }
-                fprintf(summary_json, "]");
+                fprintf(summary_json, "\n        ]");
                 sink_count++;
             }
-            fprintf(summary_json, "}");
+            fprintf(summary_json, "\n      }\n");
+        } else {
+          fprintf(summary_json, "\n");
         }
-
-        fprintf(summary_json, "}");
+        fprintf(summary_json, "    }");
         test_count++;
     }
-    fprintf(summary_json, "\n]");
+    fprintf(summary_json, "\n  ]");
     if (!syslog_path.empty()) {
-        fprintf(summary_json, ",\n\"outputs\":{\n");
-        fprintf(summary_json, "\"syslog_file\":\"%.*s\"",
-                static_cast<int>(syslog_path.length()),
-                syslog_path.data());
-        fprintf(summary_json, "\n}");
+        fprintf(summary_json, ",\n"
+                              "  \"outputs\": {\n"
+                              "    \"syslog_file\": \"%.*s\"\n"
+                              "  }\n",
+                static_cast<int>(syslog_path.length()), syslog_path.data());
+    } else {
+        fprintf(summary_json, "\n");
     }
     fprintf(summary_json, "}\n");
     return 0;
