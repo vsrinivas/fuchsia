@@ -81,8 +81,7 @@ void FormattingTreeVisitor::Segment::RemoveExtraBlankLines(bool respects_trailin
     }
 }
 
-// Assumption: Everything is left-justified (i.e., leading WS has been
-// stripped.)
+// Assumptions: Leading WS has been stripped.
 // Rules:
 //  - newlines after ';', '{' (unless before a comment)
 //  - newlines before top-level decls (unless after a comment).
@@ -180,12 +179,15 @@ int FormattingTreeVisitor::Segment::EraseMultipleSpacesAt(int pos, int leave_thi
     return num_deleted_spaces;
 }
 
+// Assumption: Trailing WS has been stripped, spaces have been changed to ' '
 // Rules:
 //  - No non-' ' or '\n' whitespace
 //  - One ws token before / after every ws-requiring character
 //  - No non-newline ws before / after characters that don't want it.
+//  - "->" operators are never at the end of the line.
 void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
     bool last_char_required_ws = false;
+
     // Check if this is still true from the last node.
     if (ws_required_next) {
         output_.insert(0, " ");
@@ -195,6 +197,13 @@ void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
     for (int i = 0; i < output_.size(); i++) {
         // If it is a comment, jump to EOL.
         MaybeWindPastComment(output_, i);
+
+        // If we see "->\n", change it to "\n->".
+        const char arrow_nl[] = "->\n";
+        if (output_.compare(i, strlen(arrow_nl), arrow_nl) == 0) {
+            output_.replace(i, strlen(arrow_nl), "\n->");
+            i -= EraseMultipleSpacesAt(i - 1, 0);
+        }
 
         // Erase multiple spaces
         EraseMultipleSpacesAt(i);

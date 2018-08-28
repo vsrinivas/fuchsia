@@ -58,7 +58,7 @@ interface Iface
     102: Karfel(
              int32 x) -> (int y);
 
-    10341: Gavrok // ( heh heh
+    10341: Gavrok // ( heh heh ->
                ( // ( An annoying comment.
                int a, int b) -> ();
 
@@ -74,6 +74,9 @@ interface Iface
 
     100: MethodResponse2()
              -> ();
+
+    1024: MethodResponse3(int64 a)
+              -> ();
 };
 
 // Comments at EOF
