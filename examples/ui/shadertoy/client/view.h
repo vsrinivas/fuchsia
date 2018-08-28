@@ -110,7 +110,7 @@ class NewView : public scenic::BaseView {
       fuchsia::ui::gfx::ViewProperties old_properties) override;
 
   // |scenic::SessionListener|
-  virtual void OnError(::fidl::StringPtr error) override;
+  virtual void OnScenicError(::fidl::StringPtr error) override;
 
   scenic::EntityNode root_node_;
   ViewImpl impl_;

@@ -136,7 +136,7 @@ void BaseView::HandleSessionEvents(
     AdjustMetricsAndPhysicalSize();
   }
 
-  OnSessionEvent(std::move(events));
+  OnScenicEvent(std::move(events));
 }
 
 void BaseView::SetNeedSquareMetrics(bool enable) {
@@ -165,7 +165,7 @@ void BaseView::OnPropertiesChanged(
 void BaseView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {}
 
-void BaseView::OnSessionEvent(
+void BaseView::OnScenicEvent(
     fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {}
 
 bool BaseView::OnInputEvent(fuchsia::ui::input::InputEvent event) {

@@ -97,7 +97,7 @@ impl SpinningSquareView {
                 .into_stream()
                 .unwrap()
                 .map_ok(move |request| match request {
-                    SessionListenerRequest::OnEvent { events, .. } => view_controller
+                    SessionListenerRequest::OnScenicEvent { events, .. } => view_controller
                         .lock()
                         .unwrap()
                         .handle_session_events(events),

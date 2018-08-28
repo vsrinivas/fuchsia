@@ -34,7 +34,7 @@ class ShadertoyEmbedderView : public scenic::BaseView {
 
  private:
   // |scenic::SessionListener|.
-  void OnError(fidl::StringPtr error) override {}
+  void OnScenicError(fidl::StringPtr error) override {}
 
   scenic::EntityNode node_;
   scenic::ShapeNode background_;

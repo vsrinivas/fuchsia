@@ -163,13 +163,14 @@ void Session::Rebind() {
   session_handle_ = nullptr;
 }
 
-void Session::OnError(fidl::StringPtr error) {
+void Session::OnScenicError(fidl::StringPtr error) {
   // TODO(SCN-903): replace fprintf with SDK-approved logging mechanism.  Also
   // remove "#include <stdio.h>".
   fprintf(stderr, "Session error: %s", error->c_str());
 }
 
-void Session::OnEvent(fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
+void Session::OnScenicEvent(
+    fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
   if (event_handler_)
     event_handler_(std::move(events));
 }

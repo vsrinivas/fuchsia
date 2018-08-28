@@ -118,7 +118,7 @@ void Session::EnqueueEvent(fuchsia::ui::input::InputEvent event) {
 void Session::FlushEvents() {
   if (!buffered_events_->empty()) {
     if (listener_) {
-      listener_->OnEvent(std::move(buffered_events_));
+      listener_->OnScenicEvent(std::move(buffered_events_));
     } else if (event_callback_) {
       // Only use the callback if there is no listener.  It is difficult to do
       // better because we std::move the argument into OnEvent().
@@ -141,7 +141,7 @@ void Session::ReportError(fxl::LogSeverity severity, std::string error_string) {
     case fxl::LOG_ERROR:
       FXL_LOG(ERROR) << error_string;
       if (listener_) {
-        listener_->OnError(std::move(error_string));
+        listener_->OnScenicError(std::move(error_string));
       } else if (error_callback_) {
         // Only use the callback if there is no listener.  It is difficult to do
         // better because we std::move the argument into OnEvent().

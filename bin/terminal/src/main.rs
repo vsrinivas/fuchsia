@@ -79,7 +79,7 @@ impl ViewController {
                 let mut stream = session_listener_request.into_stream()?;
                 while let Some(request) = await!(stream.try_next())? {
                     match request {
-                        SessionListenerRequest::OnEvent {
+                        SessionListenerRequest::OnScenicEvent {
                             events,
                             control_handle: _,
                         } => view_controller.lock().handle_session_events(events),

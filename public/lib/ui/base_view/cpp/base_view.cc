@@ -87,9 +87,10 @@ bool BaseView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
 
 void BaseView::OnUnhandledCommand(fuchsia::ui::scenic::Command unhandled) {}
 
-void BaseView::OnEvent(fuchsia::ui::scenic::Event) {}
+void BaseView::OnScenicEvent(fuchsia::ui::scenic::Event) {}
 
-void BaseView::OnEvent(fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
+void BaseView::OnScenicEvent(
+    fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
   for (auto& event : *events) {
     switch (event.Which()) {
       case fuchsia::ui::scenic::Event::Tag::kGfx:
@@ -108,14 +109,14 @@ void BaseView::OnEvent(fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
             OnPropertiesChanged(std::move(old_props));
             break;
           }
-          default: { OnEvent(std::move(event)); }
+          default: { OnScenicEvent(std::move(event)); }
         }
         break;
       case ::fuchsia::ui::scenic::Event::Tag::kUnhandled: {
         OnUnhandledCommand(std::move(event.unhandled()));
         break;
       }
-      default: { OnEvent(std::move(event)); }
+      default: { OnScenicEvent(std::move(event)); }
     }
   }
 }

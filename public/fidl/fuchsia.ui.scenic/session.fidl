@@ -138,9 +138,9 @@ interface Session {
 // Listens for events which occur within the session.
 interface SessionListener {
   // Called when an error has occurred and the session will be torn down.
-  1: OnError(string error);
+  1: OnScenicError(string error);
 
   // Called to deliver a batch of one or more events to the listener.
   // Use |SetEventMaskCmd| to enable event delivery for a resource.
-  2: OnEvent(vector<Event> events);
+  2: OnScenicEvent(vector<Event> events);
 };

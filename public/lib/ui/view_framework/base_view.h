@@ -137,7 +137,7 @@ class BaseView : private ::fuchsia::ui::viewsv1::ViewListener,
   // Called when session events are received.
   //
   // The default implementation does nothing.
-  virtual void OnSessionEvent(
+  virtual void OnScenicEvent(
       fidl::VectorPtr<fuchsia::ui::scenic::Event> events);
 
   // Called to handle an input event.

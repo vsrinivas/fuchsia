@@ -18,8 +18,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "garnet/examples/ui/shadertoy/client/glsl_strings.h"
-#include "lib/ui/scenic/cpp/commands.h"
 #include "lib/fxl/logging.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace shadertoy_client {
 
@@ -265,7 +265,7 @@ void NewView::OnPropertiesChanged(
   InvalidateScene();
 }
 
-void NewView::OnError(::fidl::StringPtr error) {
+void NewView::OnScenicError(::fidl::StringPtr error) {
   FXL_LOG(ERROR) << "Received Scenic Session error: " << error;
 }
 
