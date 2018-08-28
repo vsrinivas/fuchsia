@@ -26,6 +26,19 @@ enum class ExceptionClass : uint8_t {
     DATA_ABORT          = 0b100100,
 };
 
+static inline const char* exception_class_name(ExceptionClass exception_class) {
+#define EXCEPTION_CLASS_NAME(name) case ExceptionClass::name: return #name
+    switch (exception_class) {
+    EXCEPTION_CLASS_NAME(WFI_WFE_INSTRUCTION);
+    EXCEPTION_CLASS_NAME(SMC_INSTRUCTION);
+    EXCEPTION_CLASS_NAME(SYSTEM_INSTRUCTION);
+    EXCEPTION_CLASS_NAME(INSTRUCTION_ABORT);
+    EXCEPTION_CLASS_NAME(DATA_ABORT);
+#undef EXIT_REASON_NAME
+    default: return "UNKNOWN";
+    }
+}
+
 // Exception syndrome for a VM exit.
 struct ExceptionSyndrome {
     ExceptionClass ec;
