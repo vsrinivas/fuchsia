@@ -111,6 +111,11 @@ class ChannelManager final {
   void OpenChannel(hci::ConnectionHandle handle, PSM psm, ChannelCallback cb,
                    async_dispatcher_t* dispatcher);
 
+  bool RegisterService(PSM psm, ChannelCallback cb,
+                       async_dispatcher_t* dispatcher);
+
+  void UnregisterService(PSM psm);
+
  private:
   // Called when an ACL data packet is received from the controller. This method
   // is responsible for routing the packet to the corresponding LogicalLink.
@@ -121,6 +126,13 @@ class ChannelManager final {
   internal::LogicalLink* RegisterInternal(hci::ConnectionHandle handle,
                                           hci::Connection::LinkType ll_type,
                                           hci::Connection::Role role);
+
+  // If a service (identified by |psm|) requested has been registered, return a
+  // callback that passes an inbound channel to the registrant. The callback may
+  // be called repeatedly to pass multiple channels for |psm|, but should not be
+  // stored because the service may be unregistered at a later time. Calls for
+  // unregistered services return an empty callback.
+  ChannelCallback QueryService(hci::ConnectionHandle handle, PSM psm);
 
   fxl::RefPtr<hci::Transport> hci_;
   async_dispatcher_t* l2cap_dispatcher_;
@@ -135,6 +147,13 @@ class ChannelManager final {
       std::unordered_map<hci::ConnectionHandle,
                          common::LinkedList<hci::ACLDataPacket>>;
   PendingPacketMap pending_packets_;
+
+  // Store information required to create and forward channels for locally-
+  // hosted services.
+  //
+  // TODO(NET-1240): Add desired configuration options
+  using ServiceMap = std::unordered_map<PSM, ChannelCallback>;
+  ServiceMap services_;
 
   fxl::ThreadChecker thread_checker_;
   fxl::WeakPtrFactory<ChannelManager> weak_ptr_factory_;

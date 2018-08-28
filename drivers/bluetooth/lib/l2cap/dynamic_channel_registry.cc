@@ -34,7 +34,7 @@ void DynamicChannelRegistry::OpenOutbound(PSM psm,
   }
 
   auto iter = channels_.emplace(id, MakeOutbound(psm, id)).first;
-  ActivateChannel(iter->second.get(), std::move(open_cb));
+  ActivateChannel(iter->second.get(), std::move(open_cb), true);
 }
 
 void DynamicChannelRegistry::CloseChannel(ChannelId local_cid) {
@@ -48,11 +48,34 @@ void DynamicChannelRegistry::CloseChannel(ChannelId local_cid) {
   RemoveChannel(channel);
 }
 
-DynamicChannelRegistry::DynamicChannelRegistry(ChannelId largest_channel_id,
-                                               DynamicChannelCallback close_cb)
-    : largest_channel_id_(largest_channel_id), close_cb_(std::move(close_cb)) {
+DynamicChannelRegistry::DynamicChannelRegistry(
+    ChannelId largest_channel_id, DynamicChannelCallback close_cb,
+    ServiceRequestCallback service_request_cb)
+    : largest_channel_id_(largest_channel_id),
+      close_cb_(std::move(close_cb)),
+      service_request_cb_(std::move(service_request_cb)) {
   ZX_DEBUG_ASSERT(largest_channel_id_ >= kFirstDynamicChannelId);
   ZX_DEBUG_ASSERT(close_cb_);
+  ZX_DEBUG_ASSERT(service_request_cb_);
+}
+
+DynamicChannel* DynamicChannelRegistry::RequestService(PSM psm,
+                                                       ChannelId local_cid,
+                                                       ChannelId remote_cid) {
+  ZX_DEBUG_ASSERT(local_cid != kInvalidChannelId);
+
+  DynamicChannelCallback return_chan_cb = service_request_cb_(psm);
+  if (!return_chan_cb) {
+    bt_log(WARN, "l2cap", "No service found for PSM %#.4x from %#.4x", psm,
+           remote_cid);
+    return nullptr;
+  }
+
+  auto iter =
+      channels_.emplace(local_cid, MakeInbound(psm, local_cid, remote_cid))
+          .first;
+  ActivateChannel(iter->second.get(), std::move(return_chan_cb), false);
+  return iter->second.get();
 }
 
 ChannelId DynamicChannelRegistry::FindAvailableChannelId() const {
@@ -75,10 +98,12 @@ DynamicChannel* DynamicChannelRegistry::FindChannel(ChannelId local_cid) const {
 }
 
 void DynamicChannelRegistry::ActivateChannel(DynamicChannel* channel,
-                                             DynamicChannelCallback open_cb) {
+                                             DynamicChannelCallback open_cb,
+                                             bool pass_failed) {
   // It's safe to capture |this| here because the callback will be owned by the
   // DynamicChannel, which this registry owns.
-  auto return_chan = [this, channel, open_cb = std::move(open_cb)]() {
+  auto return_chan = [this, channel, open_cb = std::move(open_cb),
+                      pass_failed]() {
     if (channel->IsOpen()) {
       open_cb(channel);
       return;
@@ -94,7 +119,9 @@ void DynamicChannelRegistry::ActivateChannel(DynamicChannel* channel,
       channel->Disconnect();
     }
     RemoveChannel(channel);
-    open_cb(nullptr);
+    if (pass_failed) {
+      open_cb(nullptr);
+    }
   };
 
   channel->Open(std::move(return_chan));

@@ -52,13 +52,15 @@ LogicalLink::LogicalLink(hci::ConnectionHandle handle,
                          hci::Connection::LinkType type,
                          hci::Connection::Role role,
                          async_dispatcher_t* dispatcher,
-                         fxl::RefPtr<hci::Transport> hci)
+                         fxl::RefPtr<hci::Transport> hci,
+                         QueryServiceCallback query_service_cb)
     : hci_(hci),
       dispatcher_(dispatcher),
       handle_(handle),
       type_(type),
       role_(role),
       fragmenter_(handle),
+      query_service_cb_(std::move(query_service_cb)),
       weak_ptr_factory_(this) {
   ZX_DEBUG_ASSERT(hci_);
   ZX_DEBUG_ASSERT(dispatcher_);
@@ -107,7 +109,8 @@ LogicalLink::LogicalLink(hci::ConnectionHandle handle,
     signaling_channel_ = std::make_unique<BrEdrSignalingChannel>(
         OpenFixedChannel(kSignalingChannelId), role_);
     dynamic_registry_ = std::make_unique<BrEdrDynamicChannelRegistry>(
-        signaling_channel_.get(), std::move(on_channel_closed));
+        signaling_channel_.get(), std::move(on_channel_closed),
+        fit::bind_member(this, &LogicalLink::OnServiceRequest));
   }
 }
 
@@ -310,9 +313,33 @@ void LogicalLink::Close() {
   ZX_DEBUG_ASSERT(channels_.empty());
 }
 
+DynamicChannelRegistry::DynamicChannelCallback LogicalLink::OnServiceRequest(
+    PSM psm) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+
+  // Query upper layer for a service handler attached to this PSM.
+  ChannelCallback chan_cb = query_service_cb_(handle_, psm);
+  if (!chan_cb) {
+    return nullptr;
+  }
+
+  DynamicChannelRegistry::DynamicChannelCallback complete_open =
+      [self = weak_ptr_factory_.GetWeakPtr(),
+       chan_cb = std::move(chan_cb)](const DynamicChannel* dyn_chan) mutable {
+        if (!self)
+          return;
+
+        self->CompleteDynamicOpen(dyn_chan, std::move(chan_cb),
+                                  self->dispatcher_);
+      };
+  return complete_open;
+}
+
 void LogicalLink::CompleteDynamicOpen(const DynamicChannel* dyn_chan,
                                       ChannelCallback open_cb,
                                       async_dispatcher_t* dispatcher) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+
   if (!dyn_chan) {
     async::PostTask(dispatcher, std::bind(std::move(open_cb), nullptr));
     return;

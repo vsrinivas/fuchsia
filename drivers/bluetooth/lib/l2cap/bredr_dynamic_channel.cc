@@ -15,11 +15,15 @@ namespace l2cap {
 namespace internal {
 
 BrEdrDynamicChannelRegistry::BrEdrDynamicChannelRegistry(
-    SignalingChannelInterface* sig, DynamicChannelCallback close_cb)
-    : DynamicChannelRegistry(kLastACLDynamicChannelId, std::move(close_cb)),
+    SignalingChannelInterface* sig, DynamicChannelCallback close_cb,
+    ServiceRequestCallback service_request_cb)
+    : DynamicChannelRegistry(kLastACLDynamicChannelId, std::move(close_cb),
+                             std::move(service_request_cb)),
       sig_(sig) {
   ZX_DEBUG_ASSERT(sig_);
   BrEdrCommandHandler cmd_handler(sig_);
+  cmd_handler.ServeConnectionRequest(
+      fit::bind_member(this, &BrEdrDynamicChannelRegistry::OnRxConnReq));
   cmd_handler.ServeConfigurationRequest(
       fit::bind_member(this, &BrEdrDynamicChannelRegistry::OnRxConfigReq));
   cmd_handler.ServeDisconnectionRequest(
@@ -31,6 +35,46 @@ BrEdrDynamicChannelRegistry::BrEdrDynamicChannelRegistry(
 DynamicChannelPtr BrEdrDynamicChannelRegistry::MakeOutbound(
     PSM psm, ChannelId local_cid) {
   return BrEdrDynamicChannel::MakeOutbound(this, sig_, psm, local_cid);
+}
+
+DynamicChannelPtr BrEdrDynamicChannelRegistry::MakeInbound(
+    PSM psm, ChannelId local_cid, ChannelId remote_cid) {
+  return BrEdrDynamicChannel::MakeInbound(this, sig_, psm, local_cid,
+                                          remote_cid);
+}
+
+void BrEdrDynamicChannelRegistry::OnRxConnReq(
+    PSM psm, ChannelId remote_cid,
+    BrEdrCommandHandler::ConnectionResponder* responder) {
+  bt_log(SPEW, "l2cap-bredr",
+         "Got Connection Request for PSM %#.4x from channel %#.4x", psm,
+         remote_cid);
+
+  // TODO(NET-1320): Check if remote ID is already in use and if so, respond
+  // with kSourceCIDAlreadyAllocated
+
+  ChannelId local_cid = FindAvailableChannelId();
+  if (local_cid == kInvalidChannelId) {
+    bt_log(TRACE, "l2cap-bredr",
+           "Out of IDs; rejecting connection for PSM %#.4x from channel %#.4x",
+           psm, remote_cid);
+    responder->Send(kInvalidChannelId, ConnectionResult::kNoResources,
+                    ConnectionStatus::kNoInfoAvailable);
+    return;
+  }
+
+  auto dyn_chan = RequestService(psm, local_cid, remote_cid);
+  if (!dyn_chan) {
+    bt_log(TRACE, "l2cap-bredr",
+           "Rejecting connection for unsupported PSM %#.4x from channel %#.4x",
+           psm, remote_cid);
+    responder->Send(kInvalidChannelId, ConnectionResult::kPSMNotSupported,
+                    ConnectionStatus::kNoInfoAvailable);
+    return;
+  }
+
+  static_cast<BrEdrDynamicChannel*>(dyn_chan)->CompleteInboundConnection(
+      responder);
 }
 
 void BrEdrDynamicChannelRegistry::OnRxConfigReq(
@@ -249,6 +293,20 @@ void BrEdrDynamicChannel::OnRxDisconReq(
   state_ |= kDisconnected;
   responder->Send();
   OnDisconnected();
+}
+
+void BrEdrDynamicChannel::CompleteInboundConnection(
+    BrEdrCommandHandler::ConnectionResponder* responder) {
+  bt_log(TRACE, "l2cap-bredr",
+         "Channel %#.4x: connected for PSM %#.4x from remote channel %#.4x",
+         local_cid(), psm(), remote_cid());
+
+  responder->Send(local_cid(), ConnectionResult::kSuccess,
+                  ConnectionStatus::kNoInfoAvailable);
+  bt_log(SPEW, "l2cap-bredr", "Channel %#.4x: Sent Connection Response",
+         local_cid());
+  state_ |= kConnResponded;
+  TrySendLocalConfig();
 }
 
 BrEdrDynamicChannel::BrEdrDynamicChannel(

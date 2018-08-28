@@ -100,11 +100,29 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
 
   void RegisterService(PSM psm, ChannelCallback channel_callback,
                        async_dispatcher_t* dispatcher) override {
-    bt_log(WARN, "l2cap", "RegisterService not implemented");
+    PostMessage([this, psm, channel_callback = std::move(channel_callback),
+                 dispatcher]() mutable {
+      if (!chanmgr_) {
+        const bool result = chanmgr_->RegisterService(
+            psm, std::move(channel_callback), dispatcher);
+
+        ZX_DEBUG_ASSERT(result);
+      } else {
+        // RegisterService could be called early in host initialization, so log
+        // cases where L2CAP isn't ready for a service handler.
+        bt_log(WARN, "l2cap",
+               "failed to register handler for PSM %#.4x while uninitialized",
+               psm);
+      }
+    });
   }
 
   void UnregisterService(PSM psm) override {
-    bt_log(WARN, "l2cap", "UnregisterService not implemented");
+    PostMessage([this, psm] {
+      if (!chanmgr_) {
+        chanmgr_->UnregisterService(psm);
+      }
+    });
   }
 
  private:

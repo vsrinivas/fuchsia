@@ -33,6 +33,11 @@ class DynamicChannelRegistry {
   using DynamicChannelCallback =
       fit::function<void(const DynamicChannel* channel)>;
 
+  // Used to query the upper layers for the presence of a service that is
+  // accepting channels. If the service exists, it should return a callback
+  // that accepts the inbound dynamic channel opened.
+  using ServiceRequestCallback = fit::function<DynamicChannelCallback(PSM psm)>;
+
   virtual ~DynamicChannelRegistry();
 
   // Create and connect a dynamic channel. The result will be returned by
@@ -65,13 +70,28 @@ class DynamicChannelRegistry {
   // another dynamic channel. Channels that fail to open due to error or are
   // closed using CloseChannel will not trigger this callback.
   //
-  // TODO(NET-1135): Assign an inbound channel callback
+  // |service_request_cb| will be called upon remote-initiated channel requests.
+  // For services accepting channels, it shall return a callback to accept the
+  // opened channel, which only be called if the channel successfully opens. To
+  // deny the channel creation, |service_request_cb| should return a nullptr.
   DynamicChannelRegistry(ChannelId largest_channel_id_,
-                         DynamicChannelCallback close_cb);
+                         DynamicChannelCallback close_cb,
+                         ServiceRequestCallback service_request_cb);
 
   // Factory method for a DynamicChannel implementation that represents an
   // outbound channel with an endpoint on this device identified by |local_cid|.
   virtual DynamicChannelPtr MakeOutbound(PSM psm, ChannelId local_cid) = 0;
+
+  // Factory method for a DynamicChannel implementation that represents an
+  // inbound channel from a remote endpoint identified by |remote_cid| to an
+  // endpoint on this device identified by |local_cid|.
+  virtual DynamicChannelPtr MakeInbound(PSM psm, ChannelId local_cid,
+                                        ChannelId remote_cid) = 0;
+
+  // Open an inbound channel for a service |psm| from the remote endpoint
+  // identified by |remote_cid| to the local endpoint by |local_cid|.
+  DynamicChannel* RequestService(PSM psm, ChannelId local_cid,
+                                 ChannelId remote_cid);
 
   // Starting at kFirstDynamicChannelId and ending on |largest_channel_id_|
   // (inclusive), search for the next dynamic channel ID available on this link.
@@ -85,9 +105,12 @@ class DynamicChannelRegistry {
  private:
   friend class DynamicChannel;
 
-  // Open a newly-created channel and invoke |open_cb| with the result of the
-  // operation, which may be nullptr if the channel failed to open.
-  void ActivateChannel(DynamicChannel* channel, DynamicChannelCallback open_cb);
+  // Open a newly-created channel. If |pass_failed| is true, always invoke
+  // |open_cb| with the result of the operation, including with nullptr if the
+  // channel failed to open. Otherwise if |pass_failed| is false, only invoke
+  // |open_cb| for successfully-opened channels.
+  void ActivateChannel(DynamicChannel* channel, DynamicChannelCallback open_cb,
+                       bool pass_failed);
 
   // Signal a remote-initiated closure of a channel owned by this registry, then
   // delete it. |close_cb_| is invoked if the channel was ever open (see
@@ -105,6 +128,7 @@ class DynamicChannelRegistry {
   // Called only for channels that were already open (see
   // |DynamicChannel::opened|).
   DynamicChannelCallback close_cb_;
+  ServiceRequestCallback service_request_cb_;
 
   // Maps local CIDs to alive dynamic channels on this logical link.
   std::unordered_map<ChannelId, DynamicChannelPtr> channels_;

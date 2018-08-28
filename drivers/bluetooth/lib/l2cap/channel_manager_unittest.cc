@@ -1157,6 +1157,122 @@ TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelFailedConfiguration) {
   EXPECT_TRUE(channel_cb_called);
 }
 
+TEST_F(L2CAP_ChannelManagerTest, ACLInboundDynamicChannelLocalDisconnect) {
+  constexpr PSM kBadPsm0 = 0x0004;
+  constexpr PSM kBadPsm1 = 0x0103;
+  constexpr ChannelId kLocalId = 0x0040;
+  constexpr ChannelId kRemoteId = 0x9042;
+
+  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
+                         dispatcher());
+
+  bool closed_cb_called = false;
+  auto closed_cb = [&closed_cb_called] { closed_cb_called = true; };
+
+  fbl::RefPtr<Channel> channel;
+  auto channel_cb = [this, &channel, closed_cb = std::move(closed_cb)](
+                        fbl::RefPtr<l2cap::Channel> opened_chan) {
+    channel = std::move(opened_chan);
+    EXPECT_TRUE(channel->Activate(NopRxCallback, DoNothing, dispatcher()));
+  };
+
+  EXPECT_FALSE(chanmgr()->RegisterService(kBadPsm0, channel_cb, dispatcher()));
+  EXPECT_FALSE(chanmgr()->RegisterService(kBadPsm1, channel_cb, dispatcher()));
+  EXPECT_TRUE(chanmgr()->RegisterService(kTestPsm, std::move(channel_cb),
+                                         dispatcher()));
+
+  // clang-format off
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 12 bytes)
+      0x01, 0x00, 0x0c, 0x00,
+
+      // L2CAP B-frame header (length: 8 bytes, channel-id: 0x0001 (ACL sig))
+      0x08, 0x00, 0x01, 0x00,
+
+      // Connection Request (ID: 1, length: 4, psm: 0x0001, src cid: 0x9042)
+      0x02, 0x01, 0x04, 0x00,
+      0x01, 0x00, 0x42, 0x90));
+
+  RunLoopUntilIdle();
+
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 16 bytes)
+      0x01, 0x00, 0x10, 0x00,
+
+      // L2CAP B-frame header (length: 12 bytes, channel-id: 0x0001 (ACL sig))
+      0x0c, 0x00, 0x01, 0x00,
+
+      // Configuration Request (ID: 6, length: 8, dst cid: 0x0040, flags: 0,
+      // options: [type: MTU, length: 2, MTU: 1024])
+      0x04, 0x06, 0x08, 0x00,
+      0x40, 0x00, 0x00, 0x00,
+      0x01, 0x02, 0x00, 0x04));
+
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 14 bytes)
+      0x01, 0x00, 0x0e, 0x00,
+
+      // L2CAP B-frame header (length: 10 bytes, channel-id: 0x0001 (ACL sig))
+      0x0a, 0x00, 0x01, 0x00,
+
+      // Configuration Response (ID: 1, length: 6, src cid: 0x0040, flags: 0,
+      // result: success)
+      0x05, 0x01, 0x06, 0x00,
+      0x40, 0x00, 0x00, 0x00,
+      0x00, 0x00));
+  // clang-format on
+
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(channel);
+  EXPECT_FALSE(closed_cb_called);
+  EXPECT_EQ(kLocalId, channel->id());
+  EXPECT_EQ(kRemoteId, channel->remote_id());
+
+  // Test SDU transmission.
+  std::unique_ptr<common::ByteBuffer> received;
+  auto data_cb = [&received](const common::ByteBuffer& bytes) {
+    received = std::make_unique<common::DynamicByteBuffer>(bytes);
+  };
+  test_device()->SetDataCallback(std::move(data_cb), dispatcher());
+
+  EXPECT_TRUE(channel->Send(common::NewBuffer('T', 'e', 's', 't')));
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(received);
+
+  // SDU must have remote channel ID (unlike for fixed channels).
+  auto expected = common::CreateStaticByteBuffer(
+      // ACL data header (handle: 1, length 7)
+      0x01, 0x00, 0x08, 0x00,
+
+      // L2CAP B-frame: (length: 3, channel-id: 0x9042)
+      0x04, 0x00, 0x42, 0x90, 'T', 'e', 's', 't');
+
+  EXPECT_TRUE(common::ContainersEqual(expected, *received));
+
+  // Explicit deactivation should not result in |closed_cb| being called.
+  channel->Deactivate();
+
+  // clang-format off
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 12 bytes)
+      0x01, 0x00, 0x0c, 0x00,
+
+      // L2CAP B-frame header (length: 8 bytes, channel-id: 0x0001 (ACL sig))
+      0x08, 0x00, 0x01, 0x00,
+
+      // Disconnection Response
+      // (ID: 2, length: 4, dst cid: 0x9042, src cid: 0x0040)
+      0x07, 0x02, 0x04, 0x00,
+      0x42, 0x90, 0x40, 0x00));
+  // clang-format on
+
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(closed_cb_called);
+}
+
 }  // namespace
 }  // namespace l2cap
 }  // namespace btlib

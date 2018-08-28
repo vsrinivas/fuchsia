@@ -107,6 +107,42 @@ void ChannelManager::OpenChannel(hci::ConnectionHandle handle, PSM psm,
   iter->second->OpenChannel(psm, std::move(cb), dispatcher);
 }
 
+bool ChannelManager::RegisterService(PSM psm, ChannelCallback cb,
+                                     async_dispatcher_t* dispatcher) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+
+  // v5.0 Vol 3, Part A, Sec 4.2: PSMs shall be odd and the least significant
+  // bit of the most significant byte shall be zero
+  if (((psm & 0x0001) != 0x0001) || ((psm & 0x0100) != 0x0000)) {
+    return false;
+  }
+
+  auto iter = services_.find(psm);
+  if (iter != services_.end()) {
+    return false;
+  }
+
+  // Bind |dispatcher| in callback that forwards the created channel to the
+  // service provider.
+  ChannelCallback pass_channel =
+      [dispatcher, cb = std::move(cb)](fbl::RefPtr<Channel> chan) mutable {
+        // Do not transfer ownership of |cb| when passing a channel to L2CAP.
+        // |chan| is safe to move because its lifetime spans each invocation.
+        async::PostTask(dispatcher, [cb = cb.share(), chan = std::move(chan)] {
+          cb(std::move(chan));
+        });
+      };
+
+  services_[psm] = std::move(pass_channel);
+  return true;
+}
+
+void ChannelManager::UnregisterService(PSM psm) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+
+  services_.erase(psm);
+}
+
 void ChannelManager::OnACLDataReceived(hci::ACLDataPacketPtr packet) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
@@ -152,8 +188,9 @@ internal::LogicalLink* ChannelManager::RegisterInternal(
   ZX_DEBUG_ASSERT_MSG(iter == ll_map_.end(),
                       "connection handle re-used! (handle=%#.4x)", handle);
 
-  auto ll = std::make_unique<internal::LogicalLink>(handle, ll_type, role,
-                                                    l2cap_dispatcher_, hci_);
+  auto ll = std::make_unique<internal::LogicalLink>(
+      handle, ll_type, role, l2cap_dispatcher_, hci_,
+      fit::bind_member(this, &ChannelManager::QueryService));
 
   // Route all pending packets to the link.
   auto pp_iter = pending_packets_.find(handle);
@@ -169,6 +206,16 @@ internal::LogicalLink* ChannelManager::RegisterInternal(
   ll_map_[handle] = std::move(ll);
 
   return ll_raw;
+}
+
+ChannelCallback ChannelManager::QueryService(hci::ConnectionHandle handle,
+                                             PSM psm) {
+  auto iter = services_.find(psm);
+  if (iter == services_.end()) {
+    return nullptr;
+  }
+
+  return iter->second.share();
 }
 
 }  // namespace l2cap

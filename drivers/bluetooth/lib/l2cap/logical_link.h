@@ -30,8 +30,6 @@ namespace btlib {
 
 namespace l2cap {
 
-class ChannelManager;
-
 namespace internal {
 
 class ChannelImpl;
@@ -43,9 +41,16 @@ class SignalingChannel;
 // Instances are created and owned by a ChannelManager.
 class LogicalLink final {
  public:
+  // Used to query if ChannelManager has a service registered (identified by
+  // |psm|). If it does, return a function that can be used to provide the
+  // registrant with channels opened for the service. Otherwise, return nullptr.
+  using QueryServiceCallback =
+      fit::function<ChannelCallback(hci::ConnectionHandle handle, PSM psm)>;
+
   LogicalLink(hci::ConnectionHandle handle, hci::Connection::LinkType type,
               hci::Connection::Role role, async_dispatcher_t* dispatcher,
-              fxl::RefPtr<hci::Transport> hci);
+              fxl::RefPtr<hci::Transport> hci,
+              QueryServiceCallback query_service_cb);
 
   // When a logical link is destroyed it notifies all of its channels to close
   // themselves. Data packets will no longer be routed to the associated
@@ -101,6 +106,11 @@ class LogicalLink final {
   // destructor.
   void Close();
 
+  // If the service identified by |psm| can be opened, return a function to
+  // complete the channel open for a newly-opened DynamicChannel. Otherwise,
+  // return nullptr.
+  DynamicChannelRegistry::DynamicChannelCallback OnServiceRequest(PSM psm);
+
   // Given a newly-opened dynamic channel as reported by this link's
   // DynamicChannelRegistry, create a ChannelImpl for it to carry user data,
   // then pass a pointer to it through |open_cb| on |dispatcher|. If |dyn_chan|
@@ -142,6 +152,8 @@ class LogicalLink final {
 
   // Dynamic channels opened with the remote.
   std::unique_ptr<DynamicChannelRegistry> dynamic_registry_;
+
+  QueryServiceCallback query_service_cb_;
 
   fxl::ThreadChecker thread_checker_;
   fxl::WeakPtrFactory<LogicalLink> weak_ptr_factory_;

@@ -24,6 +24,7 @@ using common::UpperBits;
 // channel traffic.
 
 constexpr uint16_t kPsm = 0x0001;
+constexpr uint16_t kInvalidPsm = 0x0002;  // Valid PSMs are odd.
 constexpr ChannelId kLocalCId = 0x0040;
 constexpr ChannelId kRemoteCId = 0x60a3;
 constexpr ChannelId kBadCId = 0x003f;  // Not a dynamic channel.
@@ -42,6 +43,29 @@ const common::ByteBuffer& kConnReq = common::CreateStaticByteBuffer(
 
     // Source CID
     LowerBits(kLocalCId), UpperBits(kLocalCId));
+
+const common::ByteBuffer& kInboundConnReq = common::CreateStaticByteBuffer(
+    // PSM
+    LowerBits(kPsm), UpperBits(kPsm),
+
+    // Source CID
+    LowerBits(kRemoteCId), UpperBits(kRemoteCId));
+
+const common::ByteBuffer& kInboundInvalidPsmConnReq =
+    common::CreateStaticByteBuffer(
+        // PSM
+        LowerBits(kInvalidPsm), UpperBits(kInvalidPsm),
+
+        // Source CID
+        LowerBits(kRemoteCId), UpperBits(kRemoteCId));
+
+const common::ByteBuffer& kInboundBadCIdConnReq =
+    common::CreateStaticByteBuffer(
+        // PSM
+        LowerBits(kPsm), UpperBits(kPsm),
+
+        // Source CID
+        LowerBits(kBadCId), UpperBits(kBadCId));
 
 // Connection Responses
 
@@ -110,6 +134,47 @@ const common::ByteBuffer& kRejectConnRsp = common::CreateStaticByteBuffer(
 
     // Status (No further information available)
     0x00, 0x00);
+
+const common::ByteBuffer& kInboundOkConnRsp = common::CreateStaticByteBuffer(
+    // Destination CID
+    LowerBits(kLocalCId), UpperBits(kLocalCId),
+
+    // Source CID
+    LowerBits(kRemoteCId), UpperBits(kRemoteCId),
+
+    // Result (Successful)
+    0x00, 0x00,
+
+    // Status (No further information available)
+    0x00, 0x00);
+
+const common::ByteBuffer& kInboundBadPsmConnRsp =
+    common::CreateStaticByteBuffer(
+        // Destination CID (Invalid)
+        0x00, 0x00,
+
+        // Source CID
+        LowerBits(kRemoteCId), UpperBits(kRemoteCId),
+
+        // Result (PSM Not Supported)
+        0x02, 0x00,
+
+        // Status (No further information available)
+        0x00, 0x00);
+
+const common::ByteBuffer& kInboundBadCIdConnRsp =
+    common::CreateStaticByteBuffer(
+        // Destination CID (Invalid)
+        0x00, 0x00,
+
+        // Source CID
+        LowerBits(kBadCId), UpperBits(kBadCId),
+
+        // Result (Invalid Source CID)
+        0x06, 0x00,
+
+        // Status (No further information available)
+        0x00, 0x00);
 
 // Disconnection Requests
 
@@ -195,23 +260,30 @@ class L2CAP_BrEdrDynamicChannelTest : public ::gtest::TestLoopFixture {
  public:
   L2CAP_BrEdrDynamicChannelTest() = default;
   ~L2CAP_BrEdrDynamicChannelTest() override = default;
-  FXL_DISALLOW_COPY_AND_ASSIGN(L2CAP_BrEdrDynamicChannelTest);
 
  protected:
+  // Import types for brevity.
+  using DynamicChannelCallback = DynamicChannelRegistry::DynamicChannelCallback;
+  using ServiceRequestCallback = DynamicChannelRegistry::ServiceRequestCallback;
+
   // TestLoopFixture overrides
   void SetUp() override {
     TestLoopFixture::SetUp();
     channel_close_cb_ = nullptr;
+    service_request_cb_ = nullptr;
     signaling_channel_ =
         std::make_unique<testing::FakeSignalingChannel>(dispatcher());
     registry_ = std::make_unique<BrEdrDynamicChannelRegistry>(
         sig(),
-        fit::bind_member(this, &L2CAP_BrEdrDynamicChannelTest::OnChannelClose));
+        fit::bind_member(this, &L2CAP_BrEdrDynamicChannelTest::OnChannelClose),
+        fit::bind_member(this,
+                         &L2CAP_BrEdrDynamicChannelTest::OnServiceRequest));
   }
 
   void TearDown() override {
     registry_ = nullptr;
     signaling_channel_ = nullptr;
+    service_request_cb_ = nullptr;
     channel_close_cb_ = nullptr;
     TestLoopFixture::TearDown();
   }
@@ -222,9 +294,12 @@ class L2CAP_BrEdrDynamicChannelTest : public ::gtest::TestLoopFixture {
 
   BrEdrDynamicChannelRegistry* registry() const { return registry_.get(); }
 
-  void set_channel_close_cb(
-      DynamicChannelRegistry::DynamicChannelCallback close_cb) {
+  void set_channel_close_cb(DynamicChannelCallback close_cb) {
     channel_close_cb_ = std::move(close_cb);
+  }
+
+  void set_service_request_cb(ServiceRequestCallback service_request_cb) {
+    service_request_cb_ = std::move(service_request_cb);
   }
 
  private:
@@ -234,9 +309,20 @@ class L2CAP_BrEdrDynamicChannelTest : public ::gtest::TestLoopFixture {
     }
   }
 
-  DynamicChannelRegistry::DynamicChannelCallback channel_close_cb_;
+  // Default to rejecting all service requests if no test callback is set.
+  DynamicChannelCallback OnServiceRequest(PSM psm) {
+    if (service_request_cb_) {
+      return service_request_cb_(psm);
+    }
+    return nullptr;
+  }
+
+  DynamicChannelCallback channel_close_cb_;
+  ServiceRequestCallback service_request_cb_;
   std::unique_ptr<testing::FakeSignalingChannel> signaling_channel_;
   std::unique_ptr<BrEdrDynamicChannelRegistry> registry_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(L2CAP_BrEdrDynamicChannelTest);
 };
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, FailConnectChannel) {
@@ -562,6 +648,119 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelConfigWrongId) {
       kConfigurationRequest, kInboundConfigReq, kLocalCId, kInvalidChannelId);
 
   EXPECT_EQ(1, open_cb_count);
+}
+
+TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionOk) {
+  sig()->AddOutbound(
+      kConfigurationRequest, kConfigReq.view(),
+      std::make_pair(SignalingChannel::Status::kSuccess, kOkConfigRsp.view()));
+  sig()->AddOutbound(
+      kDisconnectionRequest, kDisconReq.view(),
+      std::make_pair(SignalingChannel::Status::kSuccess, kDisconRsp.view()));
+
+  int open_cb_count = 0;
+  DynamicChannelCallback open_cb = [&open_cb_count](auto chan) {
+    open_cb_count++;
+    ASSERT_TRUE(chan);
+    EXPECT_EQ(kPsm, chan->psm());
+    EXPECT_EQ(kLocalCId, chan->local_cid());
+    EXPECT_EQ(kRemoteCId, chan->remote_cid());
+  };
+
+  int service_request_cb_count = 0;
+  ServiceRequestCallback service_request_cb =
+      [&service_request_cb_count, open_cb = std::move(open_cb)](
+          PSM psm) mutable -> DynamicChannelCallback {
+    service_request_cb_count++;
+    EXPECT_EQ(kPsm, psm);
+    if (psm == kPsm) {
+      return open_cb.share();
+    }
+    return nullptr;
+  };
+
+  set_service_request_cb(std::move(service_request_cb));
+
+  int close_cb_count = 0;
+  set_channel_close_cb([&close_cb_count](auto chan) {
+    ASSERT_TRUE(chan);
+    EXPECT_EQ(kLocalCId, chan->local_cid());
+    EXPECT_EQ(kRemoteCId, chan->remote_cid());
+    close_cb_count++;
+  });
+
+  sig()->ReceiveExpect(kConnectionRequest, kInboundConnReq, kInboundOkConnRsp);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, service_request_cb_count);
+  EXPECT_EQ(0, open_cb_count);
+
+  RunLoopUntilIdle();
+
+  sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
+                       kInboundOkConfigRsp);
+
+  EXPECT_EQ(1, service_request_cb_count);
+  EXPECT_EQ(1, open_cb_count);
+
+  registry()->CloseChannel(kLocalCId);
+}
+
+TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionInvalidPsm) {
+  ServiceRequestCallback service_request_cb =
+      [](PSM psm) -> DynamicChannelCallback {
+    // Write user code that accepts the invalid PSM, but control flow may not
+    // reach here.
+    EXPECT_EQ(kInvalidPsm, psm);
+    if (psm == kInvalidPsm) {
+      return [](auto) { FAIL() << "Channel should fail to open for PSM"; };
+    }
+    return nullptr;
+  };
+
+  set_service_request_cb(std::move(service_request_cb));
+
+  sig()->ReceiveExpect(kConnectionRequest, kInboundInvalidPsmConnReq,
+                       kInboundBadPsmConnRsp);
+  RunLoopUntilIdle();
+}
+
+TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionUnsupportedPsm) {
+  int service_request_cb_count = 0;
+  ServiceRequestCallback service_request_cb =
+      [&service_request_cb_count](PSM psm) -> DynamicChannelCallback {
+    service_request_cb_count++;
+    EXPECT_EQ(kPsm, psm);
+
+    // Reject the service request.
+    return nullptr;
+  };
+
+  set_service_request_cb(std::move(service_request_cb));
+
+  sig()->ReceiveExpect(kConnectionRequest, kInboundConnReq,
+                       kInboundBadPsmConnRsp);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, service_request_cb_count);
+}
+
+TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionInvalidSrcCId) {
+  ServiceRequestCallback service_request_cb =
+      [](PSM psm) -> DynamicChannelCallback {
+    // Control flow may not reach here.
+    EXPECT_EQ(kPsm, psm);
+    if (psm == kPsm) {
+      return [](auto) { FAIL() << "Channel from src_cid should fail to open"; };
+    }
+    return nullptr;
+  };
+
+  set_service_request_cb(std::move(service_request_cb));
+
+  sig()->ReceiveExpect(kConnectionRequest, kInboundBadCIdConnReq,
+                       kInboundBadCIdConnRsp);
+  RunLoopUntilIdle();
 }
 
 }  // namespace
