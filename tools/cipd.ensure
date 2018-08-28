@@ -7,11 +7,3 @@ $ParanoidMode CheckPresence
 # Chromium media test data
 @Subdir test_data/media/third_party/chromium_media_test_data
 fuchsia/test_data/third_party/chromium_media_test_data 90a7f69f134fffcb58c127847fc35f3ae56684dc
-
-# Linux guest kernel images for x64
-@Subdir bin/guest/pkg/linux_guest/images/x64
-fuchsia_internal/linux/linux_guest-4.18-x64 git_revision:164a6509ba4fa54beaf0a37ef137a69b30058ff9
-
-# Linux guest kernel images for arm64
-@Subdir bin/guest/pkg/linux_guest/images/arm64
-fuchsia_internal/linux/linux_guest-4.18-arm64 git_revision:164a6509ba4fa54beaf0a37ef137a69b30058ff9
