@@ -89,6 +89,16 @@ void VirtioVsock::Connection::UpdateOp(uint16_t new_op) {
         op_ = new_op;
         return;
       }
+      if (op_ == VIRTIO_VSOCK_OP_RESPONSE) {
+        // NOTE: This is an invalid state.
+        // We end up here when Mux and Demux race to update the state, and vsock
+        // has essentially 'not yet completed connecting client' while trying to
+        // 'report available credit'.
+        // Do not update the op_ field here, as we risk that side handling
+        // RESPONSE will never accept the client.
+        FXL_LOG(INFO) << "Ignoring premature machine state change.";
+        return;
+      }
       break;
     case VIRTIO_VSOCK_OP_RW:
       switch (op_) {
