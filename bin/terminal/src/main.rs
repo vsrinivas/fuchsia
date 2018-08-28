@@ -174,12 +174,11 @@ impl ViewController {
     }
 
     fn present(&self) {
-        fasync::spawn(async move {
-            await!(self.session
-                .lock()
-                .present(0)
-                .map(|_| ()))
-        });
+        fasync::spawn(self.session
+            .lock()
+            .present(0)
+            .map(|_| ())
+        );
     }
 
     fn handle_session_events(&mut self, events: Vec<scenic::Event>) {

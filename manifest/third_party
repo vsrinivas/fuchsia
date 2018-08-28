@@ -243,7 +243,7 @@
     <project name="rust-crates"
              path="third_party/rust-crates"
              remote="https://fuchsia.googlesource.com/third_party/rust-crates"
-             revision="c2b1e8ce82f8dd6e3447e4a5075a2874888057f5"
+             revision="636593008780030311a2bb648de40364a0112805"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/cargo-vendor"
              path="third_party/rust-mirrors/cargo-vendor"

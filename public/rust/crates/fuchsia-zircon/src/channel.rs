@@ -93,8 +93,8 @@ impl Channel {
             -> Result<(), Status>
     {
         let opts = 0;
-        let n_bytes = try!(usize_into_u32(bytes.len()).map_err(|_| Status::OUT_OF_RANGE));
-        let n_handles = try!(usize_into_u32(handles.len()).map_err(|_| Status::OUT_OF_RANGE));
+        let n_bytes = usize_into_u32(bytes.len()).map_err(|_| Status::OUT_OF_RANGE)?;
+        let n_handles = usize_into_u32(handles.len()).map_err(|_| Status::OUT_OF_RANGE)?;
         unsafe {
             let status = sys::zx_channel_write(self.raw_handle(), opts, bytes.as_ptr(), n_bytes,
                 handles.as_ptr() as *const sys::zx_handle_t, n_handles);
@@ -127,10 +127,10 @@ impl Channel {
     pub fn call(&self, timeout: Time, bytes: &[u8], handles: &mut Vec<Handle>,
         buf: &mut MessageBuf) -> Result<(), Status>
     {
-        let write_num_bytes = try!(usize_into_u32(bytes.len()).map_err(
-            |_| Status::OUT_OF_RANGE));
-        let write_num_handles = try!(usize_into_u32(handles.len()).map_err(
-            |_| Status::OUT_OF_RANGE));
+        let write_num_bytes = usize_into_u32(bytes.len()).map_err(
+            |_| Status::OUT_OF_RANGE)?;
+        let write_num_handles = usize_into_u32(handles.len()).map_err(
+            |_| Status::OUT_OF_RANGE)?;
         buf.clear();
         let read_num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
         let read_num_handles: u32 = size_to_u32_sat(buf.handles.capacity());

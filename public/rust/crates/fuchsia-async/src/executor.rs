@@ -9,7 +9,7 @@ use futures::{Poll, Future, FutureExt, task};
 use futures::future::{self, FutureObj, LocalFutureObj};
 use futures::task::{
     AtomicWaker, local_waker_from_nonlocal, local_waker_ref_from_nonlocal,
-    Executor as FutureExecutor, SpawnObjError,
+    Spawn, SpawnObjError,
 };
 use parking_lot::{Mutex, Condvar};
 use pin_utils::pin_mut;
@@ -467,13 +467,13 @@ impl fmt::Debug for EHandle {
     }
 }
 
-impl FutureExecutor for EHandle {
+impl Spawn for EHandle {
     fn spawn_obj(&mut self, f: FutureObj<'static, ()>) -> Result<(), SpawnObjError> {
         <&EHandle>::spawn_obj(&mut &*self, f)
     }
 }
 
-impl<'a> FutureExecutor for &'a EHandle {
+impl<'a> Spawn for &'a EHandle {
     fn spawn_obj(&mut self, f: FutureObj<'static, ()>) -> Result<(), SpawnObjError> {
         Inner::spawn(&self.inner, f);
         Ok(())
