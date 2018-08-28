@@ -4,12 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-// N.B. This is ideally temporary. It is used by Intel PT support, and is a
-// stopgap until "resources" can be used to read/write x86 MSRs.
-// "mtrace" == "zircon trace": the idea being to be a generalization of
-// ktrace. It's all temporary, but there may be other uses before the stopgap
-// is no longer necessary.
-
 #ifdef __x86_64__ // entire file
 
 #include <inttypes.h>
