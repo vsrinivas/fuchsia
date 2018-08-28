@@ -4,6 +4,13 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//third_party/cobalt_config/cobalt_config.gni")
+
+cobalt_config("generate_wlan_config") {
+  # This ID must match the Cobalt config from
+  # //third_party/cobalt_config/projects.yaml
+  project_id = 106
+}
 
 rustc_binary("bin") {
   name = "wlanstack2"
@@ -23,6 +30,7 @@ rustc_binary("bin") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//garnet/public/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
+    "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
@@ -33,12 +41,14 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:parking_lot",
     "//third_party/rust-crates/rustc_deps:pin-utils",
     "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
 
 package("wlanstack2") {
   deps = [
     ":bin",
+    ":generate_wlan_config",
   ]
 
   binary = "rust_crates/wlanstack2"
@@ -48,6 +58,17 @@ package("wlanstack2") {
       path = rebase_path("meta/wlanstack2.cmx")
       dest = "wlanstack2.cmx"
     },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info(
+                             ":generate_wlan_config",
+                             "target_gen_dir")
+              + "/cobalt_config.binproto")
+      dest = "cobalt_config.binproto"
+    }
   ]
 }
 

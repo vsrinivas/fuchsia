@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
-use fidl_fuchsia_cobalt::{BucketDistributionEntry, EncoderFactoryMarker, EncoderProxy,
-                          ObservationValue, Status, Value};
+use failure::{format_err, Error, ResultExt};
+use fdio;
+use fidl_fuchsia_cobalt::{
+    BucketDistributionEntry, EncoderFactoryMarker, EncoderProxy, ObservationValue, ProjectProfile,
+    Status, Value,
+};
+use fidl_fuchsia_mem as fuchsia_mem;
 use fidl_fuchsia_wlan_stats as fidl_stats;
 use fidl_fuchsia_wlan_stats::MlmeStats::{ApMlmeStats, ClientMlmeStats};
 use fuchsia_async as fasync;
@@ -17,6 +21,8 @@ use parking_lot::Mutex;
 use std::cmp::PartialOrd;
 use std::collections::HashMap;
 use std::default::Default;
+use std::fs::File;
+use std::io::Seek;
 use std::ops::Sub;
 use std::sync::Arc;
 
@@ -26,8 +32,7 @@ type StatsRef = Arc<Mutex<fidl_stats::IfaceStats>>;
 
 const REPORT_PERIOD_MINUTES: i64 = 1;
 
-// This ID must match the Cobalt config from //third_party/cobalt_config/projects.yaml
-const COBALT_PROJECT_ID: i32 = 106;
+const COBALT_CONFIG_PATH: &'static str = "/pkg/data/cobalt_config.binproto";
 
 // These IDs must match the Cobalt config from //third_party/cobalt_config/fuchsia/wlan/config.yaml
 enum CobaltMetricId {
@@ -39,15 +44,25 @@ enum CobaltEncodingId {
     RawEncoding = 1,
 }
 
-fn get_cobalt_encoder() -> Result<EncoderProxy, Error> {
+async fn get_cobalt_encoder() -> Result<EncoderProxy, Error> {
     let (proxy, server_end) =
         fidl::endpoints2::create_endpoints().context("Failed to create endpoints")?;
     let encoder_factory = fuchsia_app::client::connect_to_service::<EncoderFactoryMarker>()
         .context("Failed to connect to the Cobalt EncoderFactory")?;
-    encoder_factory
-        .get_encoder(COBALT_PROJECT_ID, server_end)
-        .context("Failed to get Cobalt Encoder")?;
-    Ok(proxy)
+
+    let mut cobalt_config = File::open(COBALT_CONFIG_PATH)?;
+    let vmo = fdio::get_vmo_copy_from_file(&cobalt_config)?;
+    let size = cobalt_config.seek(std::io::SeekFrom::End(0))?;
+
+    let config = fuchsia_mem::Buffer { vmo, size };
+    let resp =
+        await!(encoder_factory.get_encoder_for_project(&mut ProjectProfile { config }, server_end));
+
+    match resp {
+        Ok(Status::Ok) => Ok(proxy),
+        Ok(other) => Err(format_err!("Failed to obtain Encoder: {:?}", other)),
+        Err(e) => Err(format_err!("Failed to obtain Encoder: {}", e)),
+    }
 }
 
 // Export stats to Cobalt every REPORT_PERIOD_MINUTES.
@@ -96,7 +111,7 @@ async fn handle_iface(
 async fn try_handle_iface(
     id: u16, last_stats_opt: Option<StatsRef>, iface: Arc<IfaceDevice>,
 ) -> Result<(u16, StatsRef), Error> {
-    let encoder_proxy = get_cobalt_encoder()?;
+    let encoder_proxy = await!(get_cobalt_encoder())?;
     let current_stats = await!(iface.stats_sched.get_stats())?;
     if let Some(last_stats) = last_stats_opt {
         await!(report_stats(
