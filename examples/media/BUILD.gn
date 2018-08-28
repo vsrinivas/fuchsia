@@ -16,7 +16,7 @@ package("media") {
     "tones",
     "tts",
     "use_aac_decoder",
-    "wav_record",
+    "wav_recorder",
   ]
 
   binaries = [
@@ -39,7 +39,7 @@ package("media") {
       name = "use_aac_decoder"
     },
     {
-      name = "wav_record"
+      name = "wav_recorder"
     },
   ]
 }

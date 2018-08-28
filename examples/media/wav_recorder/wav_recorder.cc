@@ -2,18 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/media/wav_record/wav_recorder.h"
+#include "garnet/examples/media/wav_recorder/wav_recorder.h"
 
 #include <fbl/auto_call.h>
-#include <fcntl.h>
 #include <lib/async-loop/loop.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-#include "lib/fxl/logging.h"
-#include "lib/media/audio/types.h"
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
+#include "lib/fxl/logging.h"
+#include "lib/media/audio/types.h"
 
 namespace examples {
 
@@ -26,7 +22,7 @@ static const std::string kShowUsageOption1 = "?";
 static const std::string kShowUsageOption2 = "help";
 static const std::string kVerboseOption = "v";
 static const std::string kLoopbackOption = "loopback";
-static const std::string kAsyncModeOption = "async-mode";
+static const std::string kAsyncModeOption = "async";
 static const std::string kFloatFormatOption = "float";
 static const std::string k24In32FormatOption = "int24";
 static const std::string kPacked24FormatOption = "packed24";
@@ -63,7 +59,7 @@ void WavRecorder::Run(component::StartupContext* app_context) {
 
   filename_ = pos_args[0].c_str();
 
-  // Connect to the audio service and obtain a capturer
+  // Connect to the audio service and obtain AudioIn and Gain interfaces.
   fuchsia::media::AudioPtr audio =
       app_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
@@ -93,24 +89,49 @@ void WavRecorder::Run(component::StartupContext* app_context) {
 
 void WavRecorder::Usage() {
   printf("Usage: %s [options] <filename>\n", cmd_line_.argv0().c_str());
-  printf("  --%s : be verbose\n", kVerboseOption.c_str());
-  printf("  --%s : record from loopback\n", kLoopbackOption.c_str());
-  printf("  --%s : capture using 'async-mode'\n", kAsyncModeOption.c_str());
-  printf("\n    Default is to record and save as 16-bit integer\n");
-  printf("  --%s : record and save as 32-bit float\n",
-         kFloatFormatOption.c_str());
-  printf("  --%s : record and save as 24-in-32 int (left-justify)\n",
-         k24In32FormatOption.c_str());
-  printf("  --%s : record as 24-in-32 int (left-justify), save as packed-24\n",
-         kPacked24FormatOption.c_str());
-  printf("\n  --%s=<rate> : frame rate at which to capture (range [%u, %u])\n",
+  printf("Record an audio signal from the specified source, to a .wav file.\n");
+  printf("\nValid options:\n");
+
+  printf("  --%s\t\t\t: Be verbose; display per-packet info\n",
+         kVerboseOption.c_str());
+
+  printf("\n    Default is to capture from the preferred input device\n");
+  printf("  --%s\t\t: Capture final-mix-output from preferred output device\n",
+         kLoopbackOption.c_str());
+
+  printf("\n    Default is to use the device's preferred frame rate\n");
+  printf("  --%s=<rate>\t: Specify the capture frame rate (range [%u, %u])\n",
          kFrameRateOption.c_str(), fuchsia::media::MIN_PCM_FRAMES_PER_SECOND,
          fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
-  printf("  --%s=<count> : number of channels to capture (range [%u, %u])\n",
-         kChannelsOption.c_str(), kMinChannels, kMaxChannels);
+
+  printf("\n    Default is to use the device's preferred number of channels\n");
+  printf(
+      "  --%s=<count>\t: Specify the number of channels captured (range [%u, "
+      "%u])\n",
+      kChannelsOption.c_str(), kMinChannels, kMaxChannels);
+
+  printf("\n    Default is to record and save as 16-bit integer\n");
+  printf("  --%s\t\t: Record and save as 32-bit float\n",
+         kFloatFormatOption.c_str());
+  printf(
+      "  --%s\t\t: Record and save as 24-in-32 integer (left-justified "
+      "'padded-32')\n",
+      k24In32FormatOption.c_str());
+  printf(
+      "  --%s\t\t: Record as 24-in-32 'padded-32', but save as 'packed-24'\n",
+      kPacked24FormatOption.c_str());
+
+  printf(
+      "\n    Default is to record in 'synchronous' (packet-by-packet) mode\n");
+  printf("  --%s\t\t: Capture using 'asynchronous' mode\n\n",
+         kAsyncModeOption.c_str());
 }
 
 void WavRecorder::Shutdown() {
+  if (gain_control_.is_bound()) {
+    gain_control_.set_error_handler(nullptr);
+    gain_control_.Unbind();
+  }
   if (audio_in_.is_bound()) {
     audio_in_.set_error_handler(nullptr);
     audio_in_.Unbind();
@@ -163,6 +184,8 @@ void WavRecorder::SendCaptureJob() {
   FXL_DCHECK((capture_frame_offset_ + capture_frames_per_chunk_) <=
              payload_buf_frames_);
 
+  ++outstanding_capture_jobs_;
+
   // clang-format off
   audio_in_->CaptureAt(0,
       capture_frame_offset_,
@@ -178,6 +201,9 @@ void WavRecorder::SendCaptureJob() {
   }
 }
 
+// Once we receive the default format, we don't need to wait for anything else.
+// We open our .wav file for recording, set our capture format, set input gain,
+// setup our VMO and add it as a payload buffer, send a series of empty packets
 void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
   zx_status_t res;
@@ -271,8 +297,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
     return;
   }
 
-  // If our desired format is different from the default capturer format, change
-  // formats now.
+  // If desired format differs from default capturer format, change formats now.
   if (change_format) {
     audio_in_->SetPcmStreamType(media::CreateAudioStreamType(
         sample_format_, channel_count_, frames_per_second_));
@@ -299,10 +324,9 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   }
   audio_in_->AddPayloadBuffer(0, std::move(audio_in_vmo));
 
-  // Are we operating in synchronous or asynchronous mode?  If synchronous,
-  // Queue up all of our capture buffers using to get the ball rolling.
-  // Otherwise, send a handle to our AudioCapturerClient interface and start to
-  // operate in async mode.
+  // Will we operate in synchronous or asynchronous mode?  If synchronous, queue
+  // all our capture buffers to get the ball rolling. If asynchronous, set an
+  // event handler for position notification, and start operating in async mode.
   if (!cmd_line_.HasOption(kAsyncModeOption)) {
     for (size_t i = 0; i < kCaptureChunkCount; ++i) {
       SendCaptureJob();
@@ -340,10 +364,16 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   cleanup.cancel();
 }
 
+// A packet containing captured audio data was just returned to us -- handle it.
 void WavRecorder::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
   if (verbose_) {
     printf("PACKET [%6lu, %6lu] flags 0x%02x : ts %ld\n", pkt.payload_offset,
            pkt.payload_size, pkt.flags, pkt.pts);
+  }
+
+  // If operating in sync-mode, track how many submitted packets are pending.
+  if (audio_in_.events().OnPacketProduced == nullptr) {
+    --outstanding_capture_jobs_;
   }
 
   FXL_DCHECK((pkt.payload_offset + pkt.payload_size) <=
@@ -382,18 +412,31 @@ void WavRecorder::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
     }
   }
 
-  if (!clean_shutdown_ && (audio_in_.events().OnPacketProduced == nullptr)) {
-    SendCaptureJob();
+  // In sync-mode, we send/track packets as they are sent/returned.
+  if (audio_in_.events().OnPacketProduced == nullptr) {
+    // If not shutting down, then send another capture job to keep things going.
+    if (!clean_shutdown_) {
+      SendCaptureJob();
+    }
+    // ...else (if shutting down) wait for pending capture jobs, then Shutdown.
+    else if (outstanding_capture_jobs_ == 0) {
+      Shutdown();
+    }
   }
 }
 
+// On receiving the key-press to quit, start the sequence of unwinding.
 void WavRecorder::OnQuit() {
   printf("Shutting down...\n");
   clean_shutdown_ = true;
 
+  // If async-mode, we can shutdown now (need not wait for packets to return).
   if (audio_in_.events().OnPacketProduced != nullptr) {
     audio_in_->StopAsyncCaptureNoReply();
-  } else {
+    Shutdown();
+  }
+  // If operating in sync-mode, wait for all packets to return, then Shutdown.
+  else {
     audio_in_->DiscardAllPacketsNoReply();
   }
 }

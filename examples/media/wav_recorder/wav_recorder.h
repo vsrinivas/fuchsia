@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_WAV_RECORD_WAV_RECORDER_H_
-#define GARNET_EXAMPLES_MEDIA_WAV_RECORD_WAV_RECORDER_H_
+#ifndef GARNET_EXAMPLES_MEDIA_WAV_RECORDER_WAV_RECORDER_H_
+#define GARNET_EXAMPLES_MEDIA_WAV_RECORDER_WAV_RECORDER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -51,7 +51,7 @@ class WavRecorder {
   void* payload_buf_virt_ = nullptr;
   size_t payload_buf_size_ = 0;
   size_t payload_buf_frames_ = 0;
-  std::unique_ptr<uint8_t[]> compress_32_24_buff_;  // only used for 24-in-32
+  std::unique_ptr<uint8_t[]> compress_32_24_buff_;  // only used for 'packed-24'
   bool pack_24bit_samples_ = false;
 
   fuchsia::media::AudioSampleFormat sample_format_;
@@ -61,8 +61,9 @@ class WavRecorder {
   size_t capture_frames_per_chunk_ = 0;
   size_t capture_frame_offset_ = 0;
   bool clean_shutdown_ = false;
+  uint32_t outstanding_capture_jobs_ = 0;
 };
 
 }  // namespace examples
 
-#endif  // GARNET_EXAMPLES_MEDIA_WAV_RECORD_WAV_RECORDER_H_
+#endif  // GARNET_EXAMPLES_MEDIA_WAV_RECORDER_WAV_RECORDER_H_

@@ -9,7 +9,7 @@ WavWriter object itself. When false, it results in zero additional code added
 (assuming a reasonable optimizing compiler).
 
 In Fuchsia, this library is used in various locations, including media examples
-FX and wav_record, as well as the system audio mixer itself. What follows are
+FX and wav_recorder, as well as the system audio mixer itself. What follows are
 details on how to use the WavWriter library, followed by instructions on using
 the WavWriter support built into the system mixer to inspect the final mixed
 audio output streams -- useful when debugging audio-related code.
@@ -17,7 +17,7 @@ audio output streams -- useful when debugging audio-related code.
 
 ### Using WavWriter ###
 
-See `wav_record` in 'examples/media' for a focused, easy-to-follow example
+See `wav_recorder` in 'examples/media' for a focused, easy-to-follow example
 of using this library.
 
 After creating a WavWriter object (with template parameter 'true' or blank),
@@ -68,11 +68,11 @@ These files are created on the target (Fuchsia) device at location
 '/tmp/wav_writer_N.wav', where N is a unique integer for each output. One can
 copy these files back to the host with:
 ```
-  fx scp <ip of fuchsia device>:tmp/mixer-*.wav ~/Desktop/
+  fx scp <ip of fuchsia device>:tmp/wav_writer_*.wav ~/Desktop/
 ```
 At this time, once audio playback begins on any device, the system audio mixer
 produces audio for ALL audio output devices (even if no client is playing
-audio to that device). The wave files for to these devices will naturally
+audio to that device). The wave files for these devices will, naturally,
 contain silence.
 
 Additionally, at this time Fuchsia continues mixing (once it has started) to
