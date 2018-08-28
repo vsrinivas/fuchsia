@@ -309,20 +309,20 @@ void BlockServer::ProcessRequest(block_fifo_request_t* request) {
     groupid_t group = request->group;
     vmoid_t vmoid = request->vmoid;
 
-    // TODO(ZX-1586): Reduce the usage of this lock (only used to protect
-    // IoBuffers).
-    fbl::AutoLock server_lock(&server_lock_);
-
-    auto iobuf = tree_.find(vmoid);
-    if (!iobuf.IsValid()) {
-        // Operation which is not accessing a valid vmo
-        TxnComplete(ZX_ERR_IO, reqid, group);
-        return;
-    }
-
     switch (request->opcode & BLOCKIO_OP_MASK) {
     case BLOCKIO_READ:
     case BLOCKIO_WRITE: {
+        // TODO(ZX-1586): Reduce the usage of this lock (only used to protect
+        // IoBuffers).
+        fbl::AutoLock server_lock(&server_lock_);
+
+        auto iobuf = tree_.find(vmoid);
+        if (!iobuf.IsValid()) {
+            // Operation which is not accessing a valid vmo
+            TxnComplete(ZX_ERR_IO, reqid, group);
+            return;
+        }
+
         if ((request->length < 1) ||
             (request->length > fbl::numeric_limits<uint32_t>::max())) {
             // Operation which is too small or too large
@@ -409,10 +409,35 @@ void BlockServer::ProcessRequest(block_fifo_request_t* request) {
         break;
     }
     case BLOCKIO_CLOSE_VMO: {
+        fbl::AutoLock server_lock(&server_lock_);
+
+        auto iobuf = tree_.find(vmoid);
+        if (!iobuf.IsValid()) {
+            // Operation which is not accessing a valid vmo
+            TxnComplete(ZX_ERR_IO, reqid, group);
+            return;
+        }
+
         // TODO(smklein): Ensure that "iobuf" is not being used by
         // any in-flight txns.
         tree_.erase(*iobuf);
         TxnComplete(ZX_OK, reqid, group);
+        break;
+    }
+    case BLOCKIO_FLUSH: {
+        zx_status_t status;
+        BlockMsg msg;
+        if ((status = BlockMsg::Create(block_op_size_, &msg)) != ZX_OK) {
+            TxnComplete(status, reqid, group);
+            return;
+        }
+        block_msg_extra_t* extra = msg.extra();
+        extra->iobuf = nullptr;
+        extra->server = this;
+        extra->reqid = reqid;
+        extra->group = group;
+        msg.op()->command = OpcodeToCommand(request->opcode);
+        InQueueAdd(ZX_HANDLE_INVALID, 0, 0, 0, msg.release(), &in_queue_);
         break;
     }
     default: {
