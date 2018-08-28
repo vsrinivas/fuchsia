@@ -63,27 +63,16 @@ func run(bloatyPath, file string, out chan<- bloatyOutput) {
 		return
 	}
 
-	rows := make(chan row)
-	go func() {
-		err = ReadCSV(stdout, rows)
-		if err != nil {
-			out <- bloatyOutput{err: fmt.Errorf("csv: %s: %s", file, err)}
-			return
-		}
-	}()
-
-	for r := range rows {
-		out <- bloatyOutput{
-			data: r,
-			file: file,
-		}
+	err = ReadCSV(stdout, out, file)
+	if err != nil {
+		out <- bloatyOutput{err: fmt.Errorf("csv: %s: %s", file, err)}
+		return
 	}
 
 	if err := cmd.Wait(); err != nil {
 		out <- bloatyOutput{err: fmt.Errorf("wait: %s: %s", file, cmd.Stderr)}
 		return
 	}
-
 }
 
 func updateSymbol(newSym *row, file string, sym *Symbol) {
@@ -179,34 +168,39 @@ func getTopN(fileSizes map[string]uint64, topFiles, topSyms uint64, output *map[
 
 // RunBloaty runs bloaty on all files in ids.txt, and returns a mapping of the
 // symbols and files by segment.
-func RunBloaty(bloatyPath, idsPath string, topFiles, topSyms, j uint64) (map[string]*Segment, error) {
+func RunBloaty(bloatyPath, idsPath string, topFiles, topSyms uint64, jobs int) (map[string]*Segment, error) {
 	files, err := getFiles(idsPath)
 	if err != nil {
 		return nil, err
 	}
 
 	var wg sync.WaitGroup
-	output := make(map[string]*Segment)
-	fileSizes := make(map[string]uint64)
 	data := make(chan bloatyOutput)
 
-	// Only allow up to j concurrent executions
-	sem := make(chan struct{}, j)
+	// Only allow up to max jobs concurrent executions
+	fileBuffer := make(chan string, jobs)
+	go func() {
+		for _, file := range files {
+			fileBuffer <- file
+		}
+		close(fileBuffer)
+	}()
 
-	for _, file := range files {
+	for file := range fileBuffer {
 		wg.Add(1)
-		sem <- struct{}{}
-		go func(bloatyPath, file string) {
+		go func() {
 			run(bloatyPath, file, data)
 			wg.Done()
-			<-sem
-		}(bloatyPath, file)
+		}()
 	}
 
 	go func() {
 		wg.Wait()
 		close(data)
 	}()
+
+	output := make(map[string]*Segment)
+	fileSizes := make(map[string]uint64)
 
 	for d := range data {
 		if d.err != nil {

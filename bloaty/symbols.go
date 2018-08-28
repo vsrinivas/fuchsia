@@ -78,11 +78,9 @@ func filterRow(r row) bool {
 	return true
 }
 
-func ReadCSV(data io.Reader, out chan row) error {
+func ReadCSV(data io.Reader, out chan<- bloatyOutput, file string) error {
 	reader := csv.NewReader(data)
 	reader.Comma = '\t'
-
-	defer close(out)
 
 	var line int
 	for {
@@ -106,7 +104,10 @@ func ReadCSV(data io.Reader, out chan row) error {
 				return fmt.Errorf("unable to decode line %d:%v %v\n", line, r, err)
 			}
 			if filterRow(properRow) {
-				out <- properRow
+				out <- bloatyOutput{
+					data: properRow,
+					file: file,
+				}
 			}
 		}
 		line += 1

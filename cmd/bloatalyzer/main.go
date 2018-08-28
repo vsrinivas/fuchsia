@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 
 	"fuchsia.googlesource.com/tools/bloaty"
@@ -55,7 +56,7 @@ var (
 	title      string
 	topFiles   uint64
 	topSyms    uint64
-	j          uint64
+	jobs       int
 )
 
 func init() {
@@ -66,7 +67,7 @@ func init() {
 	flag.StringVar(&title, "title", "Bloaty Analysis", "title for html page")
 	flag.Uint64Var(&topFiles, "top-files", 0, "max number of files to keep")
 	flag.Uint64Var(&topSyms, "top-syms", 0, "max number of symbols to keep per file")
-	flag.Uint64Var(&j, "j", 32, "max number of concurrent bloaty runs")
+	flag.IntVar(&jobs, "jobs", runtime.NumCPU(), "max number of concurrent bloaty runs")
 }
 
 func main() {
@@ -85,11 +86,11 @@ func main() {
 		logger.Fatalf(ctx, "%s", "must provide path to ids.txt file.")
 	}
 
-	if j <= 0 {
-		logger.Fatalf(ctx, "%s", "j must be greater than 0.")
+	if jobs <= 0 {
+		logger.Fatalf(ctx, "%s", "jobs (j) must be greater than 0.")
 	}
 
-	data, err := bloaty.RunBloaty(bloatyPath, idsPath, topFiles, topSyms, j)
+	data, err := bloaty.RunBloaty(bloatyPath, idsPath, topFiles, topSyms, jobs)
 	if err != nil {
 		logger.Fatalf(ctx, "%v", err)
 	}

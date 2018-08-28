@@ -19,17 +19,19 @@ LOAD [RX]	[LOAD [RX]]		530	0`
 
 func TestReadCSV(t *testing.T) {
 	reader := bytes.NewReader([]byte(tsv))
-	rows := make(chan row)
+
+	out := make(chan bloatyOutput)
 	go func() {
-		err := ReadCSV(reader, rows)
+		err := ReadCSV(reader, out, "file.c")
 		if err != nil {
 			t.Fatal(err)
 		}
+		close(out)
 	}()
 
 	actual := []row{}
-	for r := range rows {
-		actual = append(actual, r)
+	for o := range out {
+		actual = append(actual, o.data)
 	}
 
 	expected := []row{
