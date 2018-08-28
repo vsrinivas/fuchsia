@@ -33,11 +33,6 @@ class Environment {
     service_provider_bridge_.AddService(std::move(handler), service_name);
   }
 
-  // Kills the underlying environment. Calls |done| when completed. This
-  // |Environment| object must not be used (and must be deleted) after |Kill()|
-  // returns.
-  void Kill(fit::function<void()> done);
-
   fuchsia::sys::Launcher* GetLauncher();
 
   const fuchsia::sys::EnvironmentPtr& environment() const { return env_; }
