@@ -521,6 +521,120 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundDisconReqRej) {
       kDisconnectionRequest, discon_req, kLocalCId, kRemoteCId);
 }
 
+TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundConnReqRspPending) {
+  BrEdrCommandHandler::ConnectionRequestCallback cb =
+      [](PSM psm, ChannelId remote_cid, auto responder) {
+        EXPECT_EQ(kPsm, psm);
+        EXPECT_EQ(kRemoteCId, remote_cid);
+        responder->Send(kLocalCId, ConnectionResult::kPending,
+                        ConnectionStatus::kAuthorizationPending);
+      };
+  cmd_handler()->ServeConnectionRequest(std::move(cb));
+
+  // Connection Request payload
+  auto conn_req = CreateStaticByteBuffer(
+      // PSM
+      LowerBits(kPsm), UpperBits(kPsm),
+
+      // Source CID (relative to requester)
+      LowerBits(kRemoteCId), UpperBits(kRemoteCId));
+
+  // Connection Response payload
+  auto conn_rsp = CreateStaticByteBuffer(
+      // Destination CID (relative to requester)
+      LowerBits(kLocalCId), UpperBits(kLocalCId),
+
+      // Source CID (relative to requester)
+      LowerBits(kRemoteCId), UpperBits(kRemoteCId),
+
+      // Connection Result
+      LowerBits(static_cast<uint16_t>(ConnectionResult::kPending)),
+      UpperBits(static_cast<uint16_t>(ConnectionResult::kPending)),
+
+      // Connection Status
+      LowerBits(static_cast<uint16_t>(ConnectionStatus::kAuthorizationPending)),
+      UpperBits(
+          static_cast<uint16_t>(ConnectionStatus::kAuthorizationPending)));
+
+  fake_sig()->ReceiveExpect(kConnectionRequest, conn_req, conn_rsp);
+}
+
+TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundConnReqBadPsm) {
+  constexpr uint16_t kBadPsm = 0x0002;
+
+  // Request callback shouldn't even be called for an invalid PSM.
+  bool req_cb_called = false;
+  BrEdrCommandHandler::ConnectionRequestCallback cb =
+      [&req_cb_called](PSM psm, ChannelId remote_cid, auto responder) {
+        req_cb_called = true;
+      };
+  cmd_handler()->ServeConnectionRequest(std::move(cb));
+
+  // Connection Request payload
+  auto conn_req = CreateStaticByteBuffer(
+      // PSM
+      LowerBits(kBadPsm), UpperBits(kBadPsm),
+
+      // Source CID (relative to requester)
+      LowerBits(kRemoteCId), UpperBits(kRemoteCId));
+
+  // Connection Response payload
+  auto conn_rsp = CreateStaticByteBuffer(
+      // Destination CID (relative to requester)
+      LowerBits(kInvalidChannelId), UpperBits(kInvalidChannelId),
+
+      // Source CID (relative to requester)
+      LowerBits(kRemoteCId), UpperBits(kRemoteCId),
+
+      // Connection Result
+      LowerBits(static_cast<uint16_t>(ConnectionResult::kPSMNotSupported)),
+      UpperBits(static_cast<uint16_t>(ConnectionResult::kPSMNotSupported)),
+
+      // Connection Status
+      LowerBits(static_cast<uint16_t>(ConnectionStatus::kNoInfoAvailable)),
+      UpperBits(static_cast<uint16_t>(ConnectionStatus::kNoInfoAvailable)));
+
+  fake_sig()->ReceiveExpect(kConnectionRequest, conn_req, conn_rsp);
+  EXPECT_FALSE(req_cb_called);
+}
+
+TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundConnReqNonDynamicSrcCId) {
+  // Request callback shouldn't even be called for an invalid Source Channel ID.
+  bool req_cb_called = false;
+  BrEdrCommandHandler::ConnectionRequestCallback cb =
+      [&req_cb_called](PSM psm, ChannelId remote_cid, auto responder) {
+        req_cb_called = true;
+      };
+  cmd_handler()->ServeConnectionRequest(std::move(cb));
+
+  // Connection Request payload
+  auto conn_req = CreateStaticByteBuffer(
+      // PSM
+      LowerBits(kPsm), UpperBits(kPsm),
+
+      // Source CID: fixed channel for Security Manager (relative to requester)
+      LowerBits(kSMPChannelId), UpperBits(kSMPChannelId));
+
+  // Connection Response payload
+  auto conn_rsp = CreateStaticByteBuffer(
+      // Destination CID (relative to requester)
+      LowerBits(kInvalidChannelId), UpperBits(kInvalidChannelId),
+
+      // Source CID (relative to requester)
+      LowerBits(kSMPChannelId), UpperBits(kSMPChannelId),
+
+      // Connection Result
+      LowerBits(static_cast<uint16_t>(ConnectionResult::kInvalidSourceCID)),
+      UpperBits(static_cast<uint16_t>(ConnectionResult::kInvalidSourceCID)),
+
+      // Connection Status
+      LowerBits(static_cast<uint16_t>(ConnectionStatus::kNoInfoAvailable)),
+      UpperBits(static_cast<uint16_t>(ConnectionStatus::kNoInfoAvailable)));
+
+  fake_sig()->ReceiveExpect(kConnectionRequest, conn_req, conn_rsp);
+  EXPECT_FALSE(req_cb_called);
+}
+
 }  // namespace
 }  // namespace internal
 }  // namespace l2cap
