@@ -531,6 +531,15 @@ mod options {
                 OptionParseErr::Internal
             );
 
+            // the length byte is 0 (similar check to above, but worth
+            // explicitly testing since this was a bug in the Linux kernel:
+            // https://bugzilla.redhat.com/show_bug.cgi?id=1622404)
+            let bytes = [2, 0];
+            assert_eq!(
+                Options::<_, DummyOptionImpl>::parse(&bytes[..]).unwrap_err(),
+                OptionParseErr::Internal
+            );
+
             // the length byte is too long
             let bytes = [2, 3];
             assert_eq!(
