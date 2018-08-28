@@ -66,7 +66,7 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
               dispatcher());
         });
 
-    channel_manager_ = ChannelManager::Create(l2cap_.get());
+    channel_manager_ = std::make_unique<ChannelManager>(l2cap_.get());
     ZX_DEBUG_ASSERT(channel_manager_);
   }
 

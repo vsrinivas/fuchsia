@@ -93,10 +93,9 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
     bt_log(WARN, "l2cap", "OpenChannel not implemented");
   }
 
-  bool RegisterService(PSM psm, ChannelCallback cb,
+  void RegisterService(PSM psm, ChannelCallback channel_callback,
                        async_dispatcher_t* dispatcher) override {
     bt_log(WARN, "l2cap", "RegisterService not implemented");
-    return false;
   }
 
   void UnregisterService(PSM psm) override {

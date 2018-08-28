@@ -58,7 +58,7 @@ class FakeLayer final : public L2CAP {
   void RemoveConnection(hci::ConnectionHandle handle) override;
   void OpenChannel(hci::ConnectionHandle handle, PSM psm, ChannelCallback cb,
                    async_dispatcher_t* dispatcher) override;
-  bool RegisterService(PSM psm, ChannelCallback cb,
+  void RegisterService(PSM psm, ChannelCallback channel_callback,
                        async_dispatcher_t* dispatcher) override;
   void UnregisterService(PSM psm) override;
 

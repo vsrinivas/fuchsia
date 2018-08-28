@@ -36,10 +36,9 @@ namespace rfcomm {
 // dispatcher of the thread it was created on.
 class ChannelManager {
  public:
-  // Returns a new ChannelManager. Returns nullptr if creation fails (e.g. if
-  // registering the RFCOMM PSM with L2CAP fails). |l2cap| must be valid as long
-  // as the created ChannelManager exists.
-  static std::unique_ptr<ChannelManager> Create(l2cap::L2CAP* l2cap);
+  // Construct a new ChannelManager and register it as the L2CAP service handler
+  // for RFCOMM. |l2cap| must be valid as long as the ChannelManager exists.
+  ChannelManager(l2cap::L2CAP* l2cap);
 
   // Registers |l2cap_channel| with RFCOMM. After this call, we will be able to
   // use OpenRemoteChannel() to get an RFCOMM channel multiplexed on top of this
@@ -69,8 +68,6 @@ class ChannelManager {
                                      async_dispatcher_t* dispatcher);
 
  private:
-  ChannelManager(l2cap::L2CAP* l2cap);
-
   // Calls the appropriate callback for |server_channel|, passing in
   // |rfcomm_channel|.
   void ChannelOpened(fbl::RefPtr<Channel> rfcomm_channel,
@@ -86,12 +83,12 @@ class ChannelManager {
       handle_to_session_;
 
   // The dispatcher which ChannelManager uses to run its own tasks.
-  async_dispatcher_t* dispatcher_;
+  async_dispatcher_t* const dispatcher_;
 
   // A reference to the top-level L2CAP object, which creates and owns this
   // ChannelManager object. This reference is guaranteed to exist. Note that
   // using a RefPtr here would create a cyclical reference.
-  l2cap::L2CAP* l2cap_;
+  l2cap::L2CAP* const l2cap_;
 
   fxl::WeakPtrFactory<ChannelManager> weak_ptr_factory_;
 

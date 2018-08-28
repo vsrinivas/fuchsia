@@ -113,16 +113,13 @@ Server::Server(fbl::RefPtr<l2cap::L2CAP> l2cap)
   records_.emplace(kSDPHandle, MakeServiceDiscoveryService());
 
   // Register SDP
-  bool registered = l2cap_->RegisterService(
+  l2cap_->RegisterService(
       l2cap::kSDP,
       [self = weak_ptr_factory_.GetWeakPtr()](auto channel) {
         if (self)
           self->AddConnection(channel);
       },
       async_get_default_dispatcher());
-  if (!registered) {
-    bt_log(WARN, "sdp", "L2CAP service not registered");
-  }
 
   // SDP and RFCOMM are already reserved
   psm_callbacks_.emplace(l2cap::kSDP, [](auto) {

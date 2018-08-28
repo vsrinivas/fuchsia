@@ -15,32 +15,29 @@
 namespace btlib {
 namespace rfcomm {
 
-std::unique_ptr<ChannelManager> ChannelManager::Create(l2cap::L2CAP* l2cap) {
-  ZX_DEBUG_ASSERT(l2cap);
-  // ChannelManager constructor private; can't use make_unique.
-  auto channel_manager =
-      std::unique_ptr<ChannelManager>(new ChannelManager(l2cap));
-  if (l2cap->RegisterService(
-          l2cap::kRFCOMM,
-          [cm = channel_manager->weak_ptr_factory_.GetWeakPtr()](
-              auto l2cap_channel) {
-            if (cm) {
-              if (cm->RegisterL2CAPChannel(l2cap_channel)) {
-                bt_log(TRACE, "rfcomm",
-                       "registered incoming channel with handle %#.4x",
-                       l2cap_channel->link_handle());
-              } else {
-                bt_log(WARN, "rfcomm",
-                       "failed to register incoming channel with handle %#.4x",
-                       l2cap_channel->link_handle());
-              }
-            }
-          },
-          async_get_default_dispatcher())) {
-    return channel_manager;
-  }
+ChannelManager::ChannelManager(l2cap::L2CAP* l2cap)
+    : dispatcher_(async_get_default_dispatcher()),
+      l2cap_(l2cap),
+      weak_ptr_factory_(this) {
+  ZX_DEBUG_ASSERT(l2cap_);
+  l2cap_->RegisterService(
+      l2cap::kRFCOMM,
+      [cm = weak_ptr_factory_.GetWeakPtr()](auto l2cap_channel) {
+        if (!cm) {
+          return;
+        }
 
-  return nullptr;
+        if (!cm->RegisterL2CAPChannel(l2cap_channel)) {
+          bt_log(WARN, "rfcomm",
+                 "failed to register incoming channel with handle %#.4x",
+                 l2cap_channel->link_handle());
+          return;
+        }
+
+        bt_log(TRACE, "rfcomm", "registered incoming channel with handle %#.4x",
+               l2cap_channel->link_handle());
+      },
+      dispatcher_);
 }
 
 bool ChannelManager::RegisterL2CAPChannel(
@@ -134,13 +131,6 @@ ServerChannel ChannelManager::AllocateLocalChannel(
   }
 
   return kInvalidServerChannel;
-}
-
-ChannelManager::ChannelManager(l2cap::L2CAP* l2cap)
-    : dispatcher_(async_get_default_dispatcher()),
-      l2cap_(l2cap),
-      weak_ptr_factory_(this) {
-  ZX_DEBUG_ASSERT(l2cap_);
 }
 
 void ChannelManager::ChannelOpened(fbl::RefPtr<Channel> rfcomm_channel,
