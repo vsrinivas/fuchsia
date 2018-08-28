@@ -38,6 +38,7 @@ typedef struct {
     uint8_t max_lun;            // index of last logical unit
     size_t max_transfer;        // maximum transfer size reported by usb_get_max_transfer_size()
 
+    uint8_t interface_number;
     uint8_t bulk_in_addr;
     uint8_t bulk_out_addr;
     size_t bulk_in_max_packet;

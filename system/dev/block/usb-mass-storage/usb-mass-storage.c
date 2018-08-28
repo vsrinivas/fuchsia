@@ -33,19 +33,32 @@ static inline void txn_complete(ums_txn_t* txn, zx_status_t status) {
 }
 
 static zx_status_t ums_reset(ums_t* ums) {
-    // for all these control requests, data is null, length is 0 because nothing is passed back
-    // value and index not used for first command, though index is supposed to be set to interface number
-    // TODO: check interface number, see if index needs to be set
+    // UMS Reset Recovery. See section 5.3.4 of
+    // "Universal Serial Bus Mass Storage Class Bulk-Only Transport"
     DEBUG_PRINT(("UMS: performing reset recovery\n"));
+    // Step 1: Send  Bulk-Only Mass Storage Reset
     zx_status_t status = usb_control(&ums->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                                     USB_REQ_RESET, 0x00, 0x00, NULL, 0, ZX_TIME_INFINITE, NULL);
-    status = usb_control(&ums->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                         USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT, ums->bulk_in_addr, NULL, 0,
-                         ZX_TIME_INFINITE, NULL);
-    status = usb_control(&ums->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                         USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT, ums->bulk_out_addr, NULL, 0,
-                         ZX_TIME_INFINITE, NULL);
-    return status;
+                                     USB_REQ_RESET, 0, ums->interface_number, NULL, 0,
+                                     ZX_TIME_INFINITE, NULL);
+    if (status != ZX_OK) {
+        DEBUG_PRINT(("UMS: USB_REQ_RESET failed %d\n", status));
+        return status;
+    }
+    // Step 2: Clear Feature HALT to the Bulk-In endpoint
+    status =  usb_clear_feature(&ums->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_ENDPOINT,
+                                USB_ENDPOINT_HALT, ums->bulk_in_addr, ZX_TIME_INFINITE);
+    if (status != ZX_OK) {
+        DEBUG_PRINT(("UMS: clear endpoint halt failed %d\n", status));
+        return status;
+    }
+    // Step 3: Clear Feature HALT to the Bulk-Out endpoint
+    status =  usb_clear_feature(&ums->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_ENDPOINT,
+                                USB_ENDPOINT_HALT, ums->bulk_out_addr, ZX_TIME_INFINITE);
+    if (status != ZX_OK) {
+        DEBUG_PRINT(("UMS: clear endpoint halt failed %d\n", status));
+        return status;
+    }
+    return ZX_OK;
 }
 
 static void ums_req_complete(usb_request_t* req, void* cookie) {
@@ -663,6 +676,7 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    uint8_t interface_number = intf->bInterfaceNumber;
     uint8_t bulk_in_addr = 0;
     uint8_t bulk_out_addr = 0;
     size_t bulk_in_max_packet = 0;
@@ -733,6 +747,7 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
     ums->bulk_out_addr = bulk_out_addr;
     ums->bulk_in_max_packet = bulk_in_max_packet;
     ums->bulk_out_max_packet = bulk_out_max_packet;
+    ums->interface_number = interface_number;
 
     size_t max_in = usb_get_max_transfer_size(&usb, bulk_in_addr);
     size_t max_out = usb_get_max_transfer_size(&usb, bulk_out_addr);
