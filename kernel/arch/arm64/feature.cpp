@@ -122,6 +122,9 @@ static void midr_to_core(uint32_t midr, char* str, size_t len) {
         case 0xd04:
             partnum_str = "ARM Cortex-a35";
             break;
+        case 0xd05:
+            partnum_str = "ARM Cortex-a55";
+            break;
         case 0xd07:
             partnum_str = "ARM Cortex-a57";
             break;
@@ -131,10 +134,29 @@ static void midr_to_core(uint32_t midr, char* str, size_t len) {
         case 0xd09:
             partnum_str = "ARM Cortex-a73";
             break;
+        case 0xd0a:
+            partnum_str = "ARM Cortex-a75";
+            break;
+        default:
+            goto unknown;
         }
-    } else if (implementer == 'C' && partnum == 0xa1) {
+    } else if (implementer == 'C') {
         // Cavium
-        partnum_str = "Cavium CN88XX";
+        switch (partnum) {
+        case 0xa1:
+            partnum_str = "Cavium CN88XX";
+            break;
+        case 0xaf:
+            partnum_str = "Cavium CN99XX";
+            break;
+        default:
+            goto unknown;
+        }
+    } else {
+unknown:
+        snprintf(str, len, "Unknown implementer %c partnum 0x%x r%up%u",
+                (char)implementer, partnum, variant, revision);
+        return;
     }
 
     snprintf(str, len, "%s r%up%u", partnum_str, variant, revision);
