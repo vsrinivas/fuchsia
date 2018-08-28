@@ -168,10 +168,16 @@ zx_status_t SimpleDisplay::Bind(const char* name, fbl::unique_ptr<SimpleDisplay>
 }
 
 SimpleDisplay::SimpleDisplay(zx_device_t* parent, zx_handle_t vmo,
+                             uintptr_t framebuffer, uint64_t framebuffer_size,
                              uint32_t width, uint32_t height,
                              uint32_t stride, zx_pixel_format_t format)
         : DeviceType(parent), framebuffer_handle_(vmo),
+          framebuffer_(framebuffer), framebuffer_size_(framebuffer_size),
           width_(width), height_(height), stride_(stride), format_(format) { }
+
+SimpleDisplay::~SimpleDisplay() {
+    zx_vmar_unmap(zx_vmar_root_self(), framebuffer_, framebuffer_size_);
+}
 
 zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* name, uint32_t bar) {
     uint32_t format, width, height, stride;
@@ -204,11 +210,11 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
         printf("%s: failed to map pci bar %d: %d\n", name, bar, status);
         return status;
     }
-    zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t) framebuffer, framebuffer_size);
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<SimpleDisplay> display(
-            new (&ac) SimpleDisplay(dev, framebuffer_handle, width, height, stride, format));
+    fbl::unique_ptr<SimpleDisplay> display(new (&ac) SimpleDisplay(
+            dev, framebuffer_handle, (uintptr_t) framebuffer,
+            framebuffer_size, width, height, stride, format));
     if (!ac.check()) {
         zx_handle_close(framebuffer_handle);
         return ZX_ERR_NO_MEMORY;

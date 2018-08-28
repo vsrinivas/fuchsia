@@ -22,8 +22,10 @@ class SimpleDisplay : public DeviceType,
                       public ddk::DisplayControllerProtocol<SimpleDisplay> {
 public:
     SimpleDisplay(zx_device_t* parent, zx_handle_t vmo,
+                  uintptr_t framebuffer, uint64_t framebuffer_size,
                   uint32_t width, uint32_t height,
                   uint32_t stride, zx_pixel_format_t format);
+    ~SimpleDisplay();
 
     void DdkUnbind();
     void DdkRelease();
@@ -41,6 +43,8 @@ public:
 
 private:
     zx::vmo framebuffer_handle_;
+    uintptr_t framebuffer_;
+    uint64_t framebuffer_size_;
     zx_koid_t framebuffer_koid_;
 
     uint32_t width_;
