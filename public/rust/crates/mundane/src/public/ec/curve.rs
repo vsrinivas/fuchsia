@@ -6,7 +6,7 @@ use std::borrow::Cow;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::os::raw::c_int;
 
-use boringssl::{self, BoringError, CRef};
+use boringssl::{self, BoringError};
 use util::Sealed;
 use Error;
 
@@ -23,44 +23,24 @@ mod inner {
 
     /// An elliptic curve.
     ///
-    /// `Curve` is implemented by `P256`, `P384`, `P521`, and `DynamicCurve`.
-    /// The former three curves are exposed to the user, while the latter is
-    /// only ever exposed via an `impl Curve` return value. This ensures that,
-    /// so long as code is generating EC keys, the curve type must be static,
-    /// while still allowing for parsing a key without knowing the key's curve
-    /// at compile time.
-    ///
-    /// Since generating a new key from a particular curve requires not just a
-    /// type parameter for that curve, but an instance of that type, and since
-    /// there's no way for the user to get a `DynamicCurve` instance, the only
-    /// way to generate a new key on a curve is to use one of the static curve
-    /// types. The static curve types all implement `Default`, so code which is
-    /// generic over `C: Curve + Default` can still generate keys.
+    /// `Curve` is implemented by `P256`, `P384`, `P521`.
     pub trait Curve: Sized + Sealed {
-        /// Returns a NID, or `None` for `DynamicCurve`.
-        fn static_nid() -> Option<i32>;
-
-        /// Gets the NID of this curve.
-        fn nid(&self) -> i32;
-
-        /// Returns the group named by `Self::static_nid()` or `None`.
-        fn static_group() -> Option<CRef<'static, boringssl::EC_GROUP>> {
-            Self::static_nid().map(|nid| CRef::ec_group_new_by_curve_name(nid).unwrap())
-        }
-
-        /// Gets the group named by `self.nid()`.
-        fn group(&self) -> CRef<'static, boringssl::EC_GROUP> {
-            CRef::ec_group_new_by_curve_name(self.nid()).unwrap()
-        }
-
-        /// Constructs an instance of this curve from an `EC_GROUP`.
+        /// Returns this curve's NID.
         ///
-        /// If this is a particular curve type (`P256`, `P384`, or `P521`),
-        /// `from_group` returns `Err` if `group` is not equal to the curve's
-        /// group. If this is `DynamicCurve`, then it uses `group` as the group,
-        /// and always returns `Ok` for any of `P256`, `P384`, and `P521`, and
-        /// `Err` for any other curve.
-        fn from_group(group: CRef<boringssl::EC_GROUP>) -> Result<Self, Error>;
+        /// Callers are allowed to assume that this NID is a valid one, and are
+        /// allowed to panic if it is not.
+        fn nid() -> i32;
+
+        /// Returns the group named by `Self::nid()`.
+        fn group() -> CRef<'static, boringssl::EC_GROUP> {
+            CRef::ec_group_new_by_curve_name(Self::nid()).unwrap()
+        }
+
+        /// Validate that an `EC_GROUP` is matches this group.
+        ///
+        /// If `group` is not equal to the curve's group, `from_group` returns
+        /// an error.
+        fn validate_group(group: CRef<boringssl::EC_GROUP>) -> Result<(), Error>;
     }
 }
 
@@ -68,75 +48,7 @@ mod inner {
 ///
 /// `Curve` is implemented by [`P256`], [`P384`], and [`P521`]. The P-224 curve
 /// is considered insecure, and thus is not supported.
-///
-/// For implementation detail reasons, `Curve` does not require `Default`.
-/// However, all of `P256`, `P384`, and `P521` implement `Default`. If code
-/// wishes to be generic over curve type and still be able to call
-/// `EcPrivKey::generate`, which takes a curve argument, it is sufficient to
-/// require a `C: Curve + Default` bound; it will be compatible with all of the
-/// curve types.
-///
-/// ```rust
-/// # use mundane::public::ec::{Curve, EcPrivKey};
-/// # use mundane::public::PrivateKey;
-/// # use mundane::Error;
-/// fn generate<C: Curve + Default>() -> Result<EcPrivKey<C>, Error> {
-///     EcPrivKey::generate(C::default())
-/// }
-/// ```
-pub trait Curve: Sized + Copy + Clone + Display + Debug + self::inner::Curve {
-    /// Gets a dynamic representation of this curve.
-    ///
-    /// This is useful when you have a generic `Curve` type parameter, and want
-    /// to inspect which curve it is.
-    #[must_use]
-    fn curve(&self) -> EllipticCurve;
-}
-
-/// Any of P-256, P384, and P-521.
-///
-/// `EllipticCurve` is useful when you have a generic [`Curve`] type parameter,
-/// and want to inspect which curve it is using the [`Curve::curve`] method. It
-/// is also returned from the `curve` method on `EcPubKey` and `EcPrivKey`,
-/// which is useful for the same reason.
-///
-/// `EllipticCurve` does not implement `Curve`; it cannot be used as a type
-/// parameter for `EcPrivKey` or `EcPubKey`. It is only meant for querying which
-/// curve type is in use in a particular key.
-///
-/// # Examples
-///
-/// ```rust
-/// # use mundane::public::ec::parse_private_key_der_any_curve;
-/// # use mundane::Error;
-/// fn curve_name_from_der(der: &[u8]) -> Result<String, Error> {
-///     let key = parse_private_key_der_any_curve(der)?;
-///     Ok(format!("{}", key.curve()))
-/// }
-/// ```
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub enum EllipticCurve {
-    /// The P-256 curve.
-    P256,
-    /// The P-384 curve.
-    P384,
-    /// The P-521 curve.
-    P521,
-}
-
-impl Display for EllipticCurve {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "{}",
-            match self {
-                EllipticCurve::P256 => "P-256",
-                EllipticCurve::P384 => "P-384",
-                EllipticCurve::P521 => "P-521",
-            }
-        )
-    }
-}
+pub trait Curve: Sized + Copy + Clone + Default + Display + Debug + self::inner::Curve {}
 
 /// The P-256 curve.
 #[derive(Copy, Clone, Default, Debug, Eq, PartialEq, Hash)]
@@ -171,13 +83,10 @@ const NID_P521: i32 = boringssl::NID_secp521r1 as i32;
 macro_rules! impl_curve {
     ($name:ident, $str:expr, $nid:ident) => {
         impl self::inner::Curve for $name {
-            fn static_nid() -> Option<i32> {
-                Some($nid)
-            }
-            fn nid(&self) -> i32 {
+            fn nid() -> i32 {
                 $nid
             }
-            fn from_group(group: boringssl::CRef<boringssl::EC_GROUP>) -> Result<Self, ::Error> {
+            fn validate_group(group: boringssl::CRef<boringssl::EC_GROUP>) -> Result<(), ::Error> {
                 let nid = group.ec_group_get_curve_name();
                 if nid != $nid {
                     return Err(::Error::new(format!(
@@ -185,16 +94,12 @@ macro_rules! impl_curve {
                         nid_name(nid).unwrap(),
                     )));
                 }
-                Ok($name)
+                Ok(())
             }
         }
 
         impl Sealed for $name {}
-        impl Curve for $name {
-            fn curve(&self) -> ::public::ec::curve::EllipticCurve {
-                ::public::ec::curve::EllipticCurve::$name
-            }
-        }
+        impl Curve for $name {}
     };
 }
 
@@ -202,54 +107,25 @@ impl_curve!(P256, "P-256", NID_P256);
 impl_curve!(P384, "P-384", NID_P384);
 impl_curve!(P521, "P-521", NID_P521);
 
-/// Any of P-256, P384, and P-521.
-#[derive(Copy, Clone)]
-pub struct DynamicCurve(EllipticCurve);
+/// A dynamic representation of a curve.
+pub enum CurveKind {
+    P256,
+    P384,
+    P521,
+}
 
-impl Sealed for DynamicCurve {}
-
-impl self::inner::Curve for DynamicCurve {
-    fn static_nid() -> Option<i32> {
-        None
-    }
-
-    fn nid(&self) -> i32 {
-        match self.0 {
-            EllipticCurve::P256 => NID_P256,
-            EllipticCurve::P384 => NID_P384,
-            EllipticCurve::P521 => NID_P521,
-        }
-    }
-
-    fn from_group(group: CRef<boringssl::EC_GROUP>) -> Result<DynamicCurve, Error> {
-        let nid = group.ec_group_get_curve_name();
+impl CurveKind {
+    /// Get the `CurveKind` associated with a NID.
+    pub fn from_nid(nid: i32) -> Result<CurveKind, Error> {
         match nid {
-            self::NID_P256 => Ok(DynamicCurve(EllipticCurve::P256)),
-            self::NID_P384 => Ok(DynamicCurve(EllipticCurve::P384)),
-            self::NID_P521 => Ok(DynamicCurve(EllipticCurve::P521)),
+            self::NID_P256 => Ok(CurveKind::P256),
+            self::NID_P384 => Ok(CurveKind::P384),
+            self::NID_P521 => Ok(CurveKind::P521),
             _ => Err(Error::new(format!(
                 "unsupported curve: {}",
                 nid_name(nid).unwrap()
             ))),
         }
-    }
-}
-
-impl Curve for DynamicCurve {
-    fn curve(&self) -> EllipticCurve {
-        self.0
-    }
-}
-
-impl Display for DynamicCurve {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Debug for DynamicCurve {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "{:?}", self.0)
     }
 }
 

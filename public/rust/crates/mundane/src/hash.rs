@@ -24,6 +24,17 @@ pub(crate) mod inner {
         /// digest in the sense of being the output of a hash function.
         fn zero() -> Self;
 
+        /// Returns a reference to the bytes of the digest.
+        ///
+        /// We do this instead of AsRef<[u8]> because the latter would expose
+        /// the as_ref method to the user.
+        ///
+        /// NOTE: This method is only used by signature implementations, and
+        /// should be removed once const generics enable the Digest::bytes
+        /// method to return `[u8; Self::DIGEST_LEN]` rather than an opaque
+        /// associated type.
+        fn as_ref(&self) -> &[u8];
+
         /// Returns a mutable reference to the bytes of the digest.
         ///
         /// We do this instead of AsMut<[u8]> because the latter would expose
@@ -61,9 +72,6 @@ pub trait Hasher: Default + self::inner::Hasher {
 /// The output of a `Hash`.
 pub trait Digest: Eq + PartialEq + Display + Debug + Sized + self::inner::Digest {
     /// The length in bytes of this digest.
-    ///
-    /// `Digest`'s `AsRef<[u8]>` implementation is guaranteed to return a byte
-    /// slice of this length.
     const DIGEST_LEN: usize;
 
     /// The byte array equivalent of this digest.
@@ -148,10 +156,12 @@ pub struct Sha512Digest(pub(crate) [u8; boringssl::SHA512_DIGEST_LENGTH as usize
 /// Finally, the caller provides the name of the `CRef` constructor to construct
 /// a `CRef<'static, EVP_MD>` for this hash type.
 ///
-/// For the digest type, the traits `AsRef<[u8]>`, `PartialEq`, `Eq`, `Display`,
-/// and `Debug` are also implemented.
+/// For the digest type, the traits `PartialEq`, `Eq`, `Display`, and `Debug`
+/// are also implemented.
 macro_rules! impl_hash {
     ($name:ident, $digest_name:path, $digest_len:path, $update:ident, $final:ident, $evp_md:ident) => {
+        #[allow(deprecated)]
+        impl ::util::Sealed for $name {}
         #[allow(deprecated)]
         impl Hasher for $name {
             type Digest = $digest_name;
@@ -174,6 +184,9 @@ macro_rules! impl_hash {
         impl self::inner::Digest for $digest_name {
             fn zero() -> Self {
                 $digest_name([0; $digest_len as usize])
+            }
+            fn as_ref(&self) -> &[u8] {
+                &self.0[..]
             }
             fn as_mut(&mut self) -> &mut [u8] {
                 &mut self.0[..]
