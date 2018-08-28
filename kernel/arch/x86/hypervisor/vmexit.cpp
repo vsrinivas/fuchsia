@@ -211,10 +211,14 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
             guest_state->rcx &= ~(1u << X86_FEATURE_PDCM.bit);
             // Disable MONITOR/MWAIT.
             guest_state->rcx &= ~(1u << X86_FEATURE_MON.bit);
+            // Disable THERM_INTERRUPT and THERM_STATUS MSRs
+            guest_state->rcx &= ~(1u << X86_FEATURE_TM2.bit);
             // Enable the SEP (SYSENTER support).
             guest_state->rdx |= 1u << X86_FEATURE_SEP.bit;
             // Disable the Thermal Monitor bit.
             guest_state->rdx &= ~(1u << X86_FEATURE_TM.bit);
+            // Disable the THERM_CONTROL_MSR bit.
+            guest_state->rdx &= ~(1u << X86_FEATURE_ACPI.bit);
             break;
         case X86_CPUID_TOPOLOGY:
             guest_state->rdx = vmcs->Read(VmcsField16::VPID) - 1;
@@ -235,8 +239,14 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
             guest_state->rcx &= ~(1u << X86_FEATURE_PERF_BIAS.bit);
             // Disable the hardware coordination feedback bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_HW_FEEDBACK.bit);
-            // Disable HWP MSRs.
             guest_state->rax &= ~(
+                // Disable Digital Thermal Sensor
+                1u << X86_FEATURE_DTS.bit |
+                // Disable Package Thermal Status MSR.
+                1u << X86_FEATURE_PTM.bit |
+                // Disable THERM_STATUS MSR bits 10/11 & THERM_INTERRUPT MSR bit 24
+                1u << X86_FEATURE_PTM.bit |
+                // Disable HWP MSRs.
                 1u << X86_FEATURE_HWP.bit |
                 1u << X86_FEATURE_HWP_NOT.bit |
                 1u << X86_FEATURE_HWP_ACT.bit |
