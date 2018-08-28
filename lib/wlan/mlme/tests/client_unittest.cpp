@@ -431,6 +431,48 @@ TEST_F(ClientTest, SuccessiveJoin) {
     AssertJoinConfirm(fbl::move(*joins.begin()), wlan_mlme::JoinResultCodes::SUCCESS);
 }
 
+TEST_F(ClientTest, InvalidAuthenticationResponse) {
+    Join();
+
+    // Send AUTHENTICATION.request. Verify that no confirmation was sent yet.
+    ASSERT_EQ(SendMlmeMsg<wlan_mlme::AuthenticateRequest>(), ZX_OK);
+    ASSERT_TRUE(device.svc_queue.empty());
+
+    // Send authentication frame with wrong algorithm.
+    fbl::unique_ptr<Packet> auth_pkt;
+    ASSERT_EQ(CreateFrame<Authentication>(&auth_pkt), ZX_OK);
+    MgmtFrame<Authentication> auth_frame(fbl::move(auth_pkt));
+    auth_frame.body()->auth_algorithm_number = AuthAlgorithm::kSae;
+    ASSERT_EQ(station.HandleAnyFrame(auth_frame.Take()), ZX_OK);
+
+    // Verify that AUTHENTICATION.confirm was received.
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    auto auths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
+    ASSERT_FALSE(auths.empty());
+    AssertAuthConfirm(fbl::move(*auths.begin()), wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
+
+    // Fast forward in time would have caused a timeout.
+    // The timeout however should have been canceled and we should not receive
+    // and additional confirmation.
+    SetTimeInBeaconPeriods(kAuthTimeout);
+    station.HandleTimeout();
+    ASSERT_TRUE(device.svc_queue.empty());
+
+    // Send a second, now valid authentication frame.
+    // This frame should be ignored as the client reset.
+    ASSERT_EQ(CreateFrame<Authentication>(&auth_pkt), ZX_OK);
+    auth_frame = MgmtFrame<Authentication>(fbl::move(auth_pkt));
+    ASSERT_EQ(station.HandleAnyFrame(auth_frame.Take()), ZX_OK);
+
+    // Fast forward in time far beyond an authentication timeout.
+    // There should not be any AUTHENTICATION.confirm sent as the client
+    // is expected to have been reset into a |joined| state after failing
+    // to authenticate.
+    SetTimeInBeaconPeriods(1000);
+    station.HandleTimeout();
+    ASSERT_TRUE(device.svc_queue.empty());
+}
+
 // Add additional tests for (tracked in NET-801):
 // AP refuses Authentication/Association
 // Regression tests for:

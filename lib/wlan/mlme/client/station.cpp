@@ -17,6 +17,7 @@
 #include <wlan/mlme/service.h>
 
 #include <fuchsia/wlan/mlme/c/fidl.h>
+#include <zircon/status.h>
 
 #include <inttypes.h>
 #include <algorithm>
@@ -246,36 +247,33 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     debugfn();
 
     if (bss_ == nullptr) { return ZX_ERR_BAD_STATE; }
+    if (state_ != WlanState::kJoined) {
+        errorf("received AUTHENTICATE.request in wrong state: %u\n", state_);
+        return service::SendAuthConfirm(device_, bssid_,
+                                        wlan_mlme::AuthenticateResultCodes::REFUSED);
+    }
 
     // TODO(tkilbourn): better result codes
     common::MacAddr peer_sta_addr(req.body()->peer_sta_address.data());
     if (bssid_ != peer_sta_addr) {
-        errorf("cannot authenticate before joining\n");
+        errorf("received authentication request for unknown BSS: %s, expected BSS: %s\n",
+               peer_sta_addr.ToString().c_str(), bssid_.ToString().c_str());
         return service::SendAuthConfirm(device_, bssid_,
                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
-    if (state_ == WlanState::kUnjoined) {
-        errorf("must join before authenticating\n");
-        return service::SendAuthConfirm(device_, bssid_,
-                                        wlan_mlme::AuthenticateResultCodes::REFUSED);
-    }
-    if (state_ != WlanState::kUnauthenticated) {
-        warnf("already authenticated; sending request anyway\n");
-    }
+
     if (req.body()->auth_type != wlan_mlme::AuthenticationTypes::OPEN_SYSTEM) {
-        // TODO(tkilbourn): support other authentication types
-        // TODO(tkilbourn): set the auth_alg_ when we support other authentication types
         errorf("only OpenSystem authentication is supported\n");
         return service::SendAuthConfirm(device_, bssid_,
                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
 
-    debugjoin("authenticating to %s\n", MACSTR(bssid_));
+    debugjoin("authenticating to %s\n", bssid_.ToString().c_str());
 
     MgmtFrame<Authentication> frame;
     auto status = CreateMgmtFrame(&frame);
     if (status != ZX_OK) {
-        errorf("authing: failed to build a frame\n");
+        errorf("authenticating: failed to build authentication frame: %s\n", zx_status_get_string(status));
         return status;
     }
 
@@ -286,29 +284,30 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
 
-    // TODO(tkilbourn): this assumes Open System authentication
+    // This assumes Open System authentication.
     auto auth = frame.body();
     auth->auth_algorithm_number = auth_alg_;
     auth->auth_txn_seq_number = 1;
-    auth->status_code = 0;  // Reserved, so set to 0
-
-    finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*hdr).c_str());
-    status = SendNonData(frame.Take());
-    if (status != ZX_OK) {
-        errorf("could not send auth packet: %d\n", status);
-        service::SendAuthConfirm(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
-        return status;
-    }
+    auth->status_code = 0;  // Reserved: explicitly set to 0
 
     zx::time deadline = deadline_after_bcn_period(req.body()->auth_failure_timeout);
     status = timer_mgr_.Schedule(deadline, &auth_timeout_);
     if (status != ZX_OK) {
-        errorf("could not set auth timeout event: %d\n", status);
+        errorf("could not set authentication timeout event: %s\n", zx_status_get_string(status));
         // This is the wrong result code, but we need to define our own codes at some later time.
-        service::SendAuthConfirm(device_, bssid_,
-                                 wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
-        // TODO(tkilbourn): reset the station?
+        service::SendAuthConfirm(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
+        return status;
     }
+
+    finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*hdr).c_str());
+    status = SendNonData(frame.Take());
+    if (status != ZX_OK) {
+        errorf("could not send authentication frame: %d\n", status);
+        service::SendAuthConfirm(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
+        return status;
+    }
+
+    state_ = WlanState::kAuthenticating;
     return status;
 }
 
@@ -349,8 +348,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
 
     infof("deauthenticating from %s, reason=%hu\n", bss_->ssid->data(), req.body()->reason_code);
 
-    // TODO(hahnr): Refactor once we have the new state machine.
-    state_ = WlanState::kUnauthenticated;
+    state_ = WlanState::kJoined;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
     service::SendDeauthConfirm(device_, bssid_);
@@ -370,7 +368,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         return service::SendAuthConfirm(device_, bssid_,
                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
-    if (state_ == WlanState::kUnjoined || state_ == WlanState::kUnauthenticated) {
+    if (state_ == WlanState::kUnjoined || state_ == WlanState::kJoined) {
         errorf("must authenticate before associating\n");
         return service::SendAuthConfirm(device_, bssid_,
                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
@@ -511,7 +509,7 @@ zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
     if (join_timeout_.IsActive()) {
         join_timeout_.Cancel();
 
-        state_ = WlanState::kUnauthenticated;
+        state_ = WlanState::kJoined;
         debugjoin("joined %s\n", bss_->ssid->data());
         return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
     }
@@ -543,48 +541,47 @@ done_iter:
     return ZX_OK;
 }
 
-// TODO(NET-500): If the sequence number or algorithm is wrong, the client is not immediately
-// sending an MLME-AUTHENTICATION.confirm message but instead will wait until the authentication
-// times out. However, because it's very unlikely that the AP will send another authentication
-// notification with correctly configured information we can instead always immediately send the
-// confirmation and don't have to wait for the timeout to happen.
 zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
     debugfn();
 
-    if (state_ != WlanState::kUnauthenticated) {
-        // TODO(tkilbourn): should we process this Authentication packet anyway? The spec is
-        // unclear.
-        debugjoin("unexpected authentication frame\n");
+    if (state_ != WlanState::kAuthenticating) {
+        debugjoin("unexpected authentication frame in state: %u; ignoring frame\n", state_);
         return ZX_OK;
     }
+
+    // Authentication notification received. Cancel pending timeout.
+    auth_timeout_.Cancel();
 
     auto auth = frame.body();
     if (auth->auth_algorithm_number != auth_alg_) {
         errorf("mismatched authentication algorithm (expected %u, got %u)\n", auth_alg_,
                auth->auth_algorithm_number);
-        return ZX_ERR_BAD_STATE;
+        state_ = WlanState::kJoined;
+        service::SendAuthConfirm(device_, bssid_,
+                                 wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    // TODO(tkilbourn): this only makes sense for Open System.
+    // This assumes Open System authentication.
     if (auth->auth_txn_seq_number != 2) {
         errorf("unexpected auth txn sequence number (expected 2, got %u)\n",
                auth->auth_txn_seq_number);
-        return ZX_ERR_BAD_STATE;
+        state_ = WlanState::kJoined;
+        service::SendAuthConfirm(device_, bssid_,
+                                 wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (auth->status_code != status_code::kSuccess) {
         errorf("authentication failed (status code=%u)\n", auth->status_code);
-        auth_timeout_.Cancel();
-        // TODO(tkilbourn): is this the right result code?
+        state_ = WlanState::kJoined;
         service::SendAuthConfirm(device_, bssid_,
                                  wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
         return ZX_ERR_BAD_STATE;
     }
 
-    auth_timeout_.Cancel();
-    common::MacAddr bssid(bss_->bssid.data());
-    debugjoin("authenticated to %s\n", MACSTR(bssid));
     state_ = WlanState::kAuthenticated;
+    debugjoin("authenticated to %s\n", bssid_.ToString().c_str());
     service::SendAuthConfirm(device_, bssid_, wlan_mlme::AuthenticateResultCodes::SUCCESS);
     return ZX_OK;
 }
@@ -600,7 +597,7 @@ zx_status_t Station::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame)
     auto deauth = frame.body();
     infof("deauthenticating from %s, reason=%hu\n", bss_->ssid->data(), deauth->reason_code);
 
-    state_ = WlanState::kUnauthenticated;
+    state_ = WlanState::kJoined;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
 
@@ -991,8 +988,9 @@ zx_status_t Station::HandleTimeout() {
         Reset();
         service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
     } else if (auth_timeout_.Triggered(now)) {
-        debugjoin("auth timed out; moving back to joining\n");
+        debugjoin("auth timed out; moving back to joined state\n");
         auth_timeout_.Cancel();
+        state_ = WlanState::kJoined;
         service::SendAuthConfirm(device_, bssid_,
                                  wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
     } else if (assoc_timeout_.Triggered(now)) {

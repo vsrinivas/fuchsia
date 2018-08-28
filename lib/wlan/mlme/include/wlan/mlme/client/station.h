@@ -81,17 +81,12 @@ class Station {
     Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched);
 
     enum class WlanState {
-        // State 0
         kUnjoined,
-
-        // State 1
-        kUnauthenticated,
-
-        // State 2
+        kJoined,
+        kAuthenticating,
         kAuthenticated,
-        // State 3/4
-        // TODO(tkilbourn): distinguish between states where 802.1X ports are blocked
         kAssociated,
+        // 802.1X's controlled port is not handled here.
     };
 
     void Reset();
