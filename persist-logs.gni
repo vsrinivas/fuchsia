@@ -4,6 +4,10 @@
 
 import("//build/package.gni")
 
+declare_args() {
+    persist_logs = is_debug
+}
+
 # Adds a config to persist logs to disk
 #
 # The persist_logs template is used to generate a config for sysmgr that runs an
@@ -12,55 +16,76 @@ import("//build/package.gni")
 #
 # The file the logs are written to is located at /data/logs.${target_name}
 #
+# Once this section is added, the name provided will need to be pointed at by
+# something in the gn packages descriptions (e.g. //garnet/packages)
+#
 # Parameters
 #
-#   tags (optional):
+#   log_tags (optional):
 #     [list of strings] Logs with these tags will be written to the log file.
 #
-#   ignore_tags (optional):
+#   ignore_log_tags (optional):
 #     [list of strings] Logs with these tags will NOT be written to the log
-#     file, even if the log has tags included in the "tags" section.
+#     file, even if the log has tags included in the "log_tags" section.
 #
 # Example:
-# 
+#
 #   persist_logs("amber_logs") {
-#     tags = [ "amber" ]
-#     ignore_tags = [ "klog" ]
+#     log_tags = [ "amber" ]
+#     ignore_log_tags = [ "klog" ]
 #   }
 
 template("persist_logs") {
+  forward_variables_from(invoker,
+                         [
+                           "log_tags",
+                           "ignore_log_tags",
+                         ])
+
+  pkg_resources = []
+  pkg_deps = []
+
+  if (!defined(log_tags)) {
+    log_tags = []
+  }
+  if (!defined(ignore_log_tags)) {
+    ignore_log_tags = []
+  }
+
   name = target_name
   logs_action_name = "logs/${target_name}"
   output_file = "$target_out_dir/${target_name}_log_listener.config"
+
   action(logs_action_name) {
     script = "//build/gn/gen_persistent_log_config.py"
     outputs = [ output_file ]
     args = [ name ] + rebase_path(outputs, root_build_dir)
-    if (defined(invoker.tags)) {
-      if (invoker.tags != []) {
-        args += [ "--tags" ]
-        foreach(tag, invoker.tags) {
-          args += [ tag ]
-        }
+    if (log_tags != []) {
+      args += [ "--tags" ]
+      foreach(tag, invoker.log_tags) {
+        args += [ tag ]
       }
     }
-    if (defined(invoker.ignore_tags)) {
-      if (invoker.ignore_tags != []) {
-        args += [ "--ignore-tags" ]
-        foreach(ignore_tag, invoker.ignore_tags) {
-          args += [ ignore_tag ]
-        }
+    if (ignore_log_tags != []) {
+      args += [ "--ignore-tags" ]
+      foreach(ignore_tag, ignore_log_tags) {
+        args += [ ignore_tag ]
       }
     }
   }
-  package(target_name) {
-    deprecated_system_image = true
-    resources = [
+
+  if (persist_logs) {
+    pkg_resources = [
       {
         dest = "sysmgr/${target_name}_log_listener.config"
         path = output_file
       },
     ]
-    deps = [ ":$logs_action_name" ]
+    pkg_deps = [ ":$logs_action_name" ]
+  }
+  package(target_name) {
+    deprecated_system_image = true
+    resources = pkg_resources
+    deps = pkg_deps
   }
 }
