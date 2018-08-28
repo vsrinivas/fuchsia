@@ -125,7 +125,7 @@ impl HostDispatcher {
 
     pub fn set_name(
         hd: Arc<RwLock<HostDispatcher>>, name: Option<String>,
-    ) -> impl Future<Output = Result<fidl_fuchsia_bluetooth::Status, fidl::Error>> {
+    ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
         hd.write().name = match name {
             Some(name) => name,
             None => DEFAULT_NAME.to_string(),
@@ -160,12 +160,11 @@ impl HostDispatcher {
     pub fn start_discovery(
         hd: Arc<RwLock<HostDispatcher>>,
     ) -> impl Future<
-        Output = Result<
+        Output = fidl::Result<
             (
                 fidl_fuchsia_bluetooth::Status,
                 Option<Arc<DiscoveryRequestToken>>,
-            ),
-            fidl::Error,
+            )
         >,
     > {
         let strong_current_token = match hd.read().discovery {
@@ -205,12 +204,11 @@ impl HostDispatcher {
     pub fn set_discoverable(
         hd: Arc<RwLock<HostDispatcher>>,
     ) -> impl Future<
-        Output = Result<
+        Output = fidl::Result<
             (
                 fidl_fuchsia_bluetooth::Status,
                 Option<Arc<DiscoverableRequestToken>>,
             ),
-            fidl::Error,
         >,
     > {
         let strong_current_token = match hd.read().discoverable {
@@ -282,7 +280,7 @@ impl HostDispatcher {
 
     pub fn connect_le_central(
         hd: Arc<RwLock<HostDispatcher>>,
-    ) -> impl Future<Output = Result<Option<CentralProxy>, fidl::Error>> {
+    ) -> impl Future<Output = fidl::Result<Option<CentralProxy>>> {
         OnAdaptersFound::new(hd.clone()).and_then(|hd| {
             let mut hd = hd.write();
             future::ready(Ok(match hd.get_active_id() {
@@ -297,7 +295,7 @@ impl HostDispatcher {
 
     pub fn connect(
         hd: Arc<RwLock<HostDispatcher>>, device_id: String,
-    ) -> impl Future<Output = Result<fidl_fuchsia_bluetooth::Status, fidl::Error>> {
+    ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
         HostDispatcher::connect_le_central(hd.clone()).and_then(move |central| {
             let (service_local, service_remote) = fidl::endpoints2::create_endpoints().unwrap();
 
@@ -324,7 +322,7 @@ impl HostDispatcher {
 
     pub fn forget(
         hd: Arc<RwLock<HostDispatcher>>, device_id: String,
-    ) -> impl Future<Output = Result<fidl_fuchsia_bluetooth::Status, fidl::Error>> {
+    ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
         let id = device_id.clone();
         HostDispatcher::get_active_adapter(hd.clone())
             .and_then(move |adapter| {
@@ -351,7 +349,7 @@ impl HostDispatcher {
     }
     pub fn disconnect(
         hd: Arc<RwLock<HostDispatcher>>, device_id: String,
-    ) -> impl Future<Output = Result<fidl_fuchsia_bluetooth::Status, fidl::Error>> {
+    ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
         HostDispatcher::get_active_adapter(hd).and_then(move |adapter| match adapter {
             Some(adapter) => Right(adapter.write().rm_gatt(device_id)),
             None => Left(future::ready(Ok(bt_fidl_status!(
@@ -363,7 +361,7 @@ impl HostDispatcher {
 
     pub fn get_active_adapter(
         hd: Arc<RwLock<HostDispatcher>>,
-    ) -> impl Future<Output = Result<Option<Arc<RwLock<HostDevice>>>, fidl::Error>> {
+    ) -> impl Future<Output = fidl::Result<Option<Arc<RwLock<HostDevice>>>>> {
         OnAdaptersFound::new(hd.clone()).and_then(|hd| {
             let mut hd = hd.write();
             future::ready(Ok(match hd.get_active_id() {
@@ -375,7 +373,7 @@ impl HostDispatcher {
 
     pub fn get_adapters(
         hd: &mut Arc<RwLock<HostDispatcher>>,
-    ) -> impl Future<Output = Result<Vec<AdapterInfo>, fidl::Error>> {
+    ) -> impl Future<Output = fidl::Result<Vec<AdapterInfo>>> {
         OnAdaptersFound::new(hd.clone()).and_then(|hd| {
             let mut result = vec![];
             for host in hd.read().host_devices.values() {
@@ -421,7 +419,7 @@ impl OnAdaptersFound {
     // Constructs an OnAdaptersFound that completes at the latest after HOST_INIT_TIMEOUT seconds.
     fn new(
         hd: Arc<RwLock<HostDispatcher>>,
-    ) -> impl Future<Output = Result<Arc<RwLock<HostDispatcher>>, fidl::Error>> {
+    ) -> impl Future<Output = fidl::Result<Arc<RwLock<HostDispatcher>>>> {
         OnAdaptersFound {
             hd: hd.clone(),
             waker_key: None,
@@ -457,7 +455,7 @@ impl Drop for OnAdaptersFound {
 impl Unpin for OnAdaptersFound {}
 
 impl Future for OnAdaptersFound {
-    type Output = Result<Arc<RwLock<HostDispatcher>>, fidl::Error>;
+    type Output = fidl::Result<Arc<RwLock<HostDispatcher>>>;
 
     fn poll(mut self: ::std::mem::PinMut<Self>, ctx: &mut task::Context) -> Poll<Self::Output> {
         if self.hd.read().host_devices.len() == 0 {
