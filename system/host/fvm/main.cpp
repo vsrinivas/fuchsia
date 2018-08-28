@@ -10,7 +10,7 @@
 
 #include "fvm/container.h"
 
-#define DEFAULT_SLICE_SIZE (64lu * (1 << 20))
+#define DEFAULT_SLICE_SIZE (8lu * (1 << 20))
 
 int usage(void) {
     fprintf(stderr, "usage: fvm [ output_path ] [ command ] [ <flags>* ] [ <input_paths>* ]\n");
