@@ -250,7 +250,7 @@ if (current_toolchain == dart_toolchain) {
 
           inputs = [
             options_file,
-          ]
+          ] + rebased_sources
 
           # TODO(pylaligand): restore this pool.
           # pool = "//build/dart:analysis_pool($dart_toolchain)"
@@ -303,7 +303,7 @@ if (current_toolchain == dart_toolchain) {
             dot_packages_file,
             options_file,
             source_file,
-          ]
+          ] + rebased_sources
 
           outputs = [
             output_file,
