@@ -169,11 +169,13 @@ zx_status_t fvm_overwrite(const char* path, size_t slice_size) {
 
     // Write to primary copy.
     if (write(fd, buf.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
+        fprintf(stderr, "fvm_overwrite: Failed to write metadata\n");
         return -1;
     }
 
     // Write to backup copy
     if (write(fd, buf.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
+        fprintf(stderr, "fvm_overwrite: Failed to write metadata (secondary)\n");
        return -1;
     }
 
