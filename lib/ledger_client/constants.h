@@ -9,10 +9,6 @@ namespace modular {
 
 constexpr char kCloudProviderFirestoreAppUrl[] = "cloud_provider_firestore";
 constexpr char kLedgerAppUrl[] = "ledger";
-constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
-constexpr uint8_t kLedgerRootPageId[] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-};
 
 // Hard-coded communal Ledger instance.
 const char kFirebaseProjectId[] = "fuchsia-ledger";
