@@ -7,13 +7,14 @@
 #include <iostream>
 #include <limits>
 
+#include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/frame_impl.h"
 #include "garnet/bin/zxdb/client/input_location.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
-#include "garnet/bin/zxdb/client/run_until.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/symbols/line_details.h"
+#include "garnet/bin/zxdb/client/thread_controller.h"
 #include "garnet/public/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -54,9 +55,20 @@ void ThreadImpl::Continue() {
       request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
-void ThreadImpl::ContinueUntil(const InputLocation& location,
-                               std::function<void(const Err&)> cb) {
-  RunUntil(this, location, std::move(cb));
+void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller) {
+  controllers_.push_back(std::move(controller));
+  Continue();
+}
+
+void ThreadImpl::NotifyControllerDone(ThreadController* controller) {
+  // We expect to have few controllers so brute-force is sufficient.
+  for (auto cur = controllers_.begin(); cur != controllers_.end(); ++cur) {
+    if (cur->get() == controller) {
+      controllers_.erase(cur);
+      return;
+    }
+  }
+  FXL_NOTREACHED();  // Notification for unknown controller.
 }
 
 Err ThreadImpl::Step() {
@@ -95,24 +107,8 @@ void ThreadImpl::StepInstruction() {
 
 void ThreadImpl::Finish(const Frame* frame,
                         std::function<void(const Err&)> cb) {
-  // This stores the frame as IP/SP rather than as a weak frame pointer. If the
-  // thread stops in between the time this was issued and the time the callback
-  // runs, lower frames will be cleared even if they're still valid. Therefore,
-  // the only way we can re-match the stack frame is by IP/SP.
-  auto on_have_frames = [weak_thread = weak_factory_.GetWeakPtr(),
-                         cb = std::move(cb), ip = frame->GetAddress(),
-                         sp = frame->GetStackPointer()]() {
-    if (weak_thread) {
-      weak_thread->FinishWithFrames(ip, sp, std::move(cb));
-    } else {
-      cb(Err("The tread destroyed before \"Finish\" could be executed."));
-    }
-  };
-
-  if (!HasAllFrames())
-    SyncFrames(on_have_frames);
-  else
-    on_have_frames();
+  cb(Err("'Finish' is temporarily closed for construction. "
+         "Please try again in a few days."));
 }
 
 std::vector<Frame*> ThreadImpl::GetFrames() const {
@@ -187,11 +183,66 @@ void ThreadImpl::SetMetadataFromException(
   SaveFrames(frames, false);
 }
 
-void ThreadImpl::DispatchExceptionNotification(
+void ThreadImpl::OnException(
     debug_ipc::NotifyException::Type type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
-  for (auto& observer : observers())
-    observer.OnThreadStopped(this, type, hit_breakpoints);
+  bool should_stop;
+  if (controllers_.empty()) {
+    // When there are no controllers, all stops are effective. And any
+    // breakpoints being hit take precedence over any stepping being done by
+    // controllers.
+    should_stop = true;
+  } else {
+    // Ask all controllers, topmost first. If a controller says "continue", it
+    // means that controller doesn't think this stop applies to it and we
+    // should ask the next controller. We actually continue only if all
+    // controllers agree the thread should continue.
+    should_stop = false;
+    // Don't use iterators since the map is mutated in the loop.
+    for (int i = static_cast<int>(controllers_.size()) - 1;
+         !should_stop && i >= 0; i--) {
+      switch (controllers_[i]->OnThreadStop(type, hit_breakpoints)) {
+        case ThreadController::kContinue:
+          // Try the next controller.
+          continue;
+        case ThreadController::kStop:
+          // Once a controller tells us to stop, we assume the controller no
+          // longer applies and delete it.
+          controllers_.erase(controllers_.begin() + i);
+          should_stop = true;
+          break;
+      }
+    }
+  }
+
+  // The existance of any non-internal breakpoints being hit means the thread
+  // should always stop. This check happens after notifying the controllers so
+  // if a controller triggers, it's counted as a "hit" (otherwise, doing
+  // "run until" to a line with a normal breakpoint on it would keep the "run
+  // until" operation active even after it was hit).
+  //
+  // Also, filter out internal breakpoints in the notification sent to the
+  // observers.
+  std::vector<fxl::WeakPtr<Breakpoint>> external_breakpoints;
+  for (auto& hit : hit_breakpoints) {
+    if (!hit)
+      continue;
+
+    if (!hit->IsInternal()) {
+      external_breakpoints.push_back(hit);
+      should_stop = true;
+      break;
+    }
+  }
+
+  if (should_stop) {
+    // Stay stopped and notify the observers.
+    for (auto& observer : observers())
+      observer.OnThreadStopped(this, type, external_breakpoints);
+  } else {
+    // Controllers all say to continue.
+    Continue();
+  }
 }
 
 void ThreadImpl::SaveFrames(const std::vector<debug_ipc::StackFrame>& frames,
@@ -232,37 +283,6 @@ void ThreadImpl::ClearFrames() {
   frames_.clear();
   for (auto& observer : observers())
     observer.OnThreadFramesInvalidated(this);
-}
-
-void ThreadImpl::FinishWithFrames(uint64_t frame_ip, uint64_t frame_sp,
-                                  std::function<void(const Err&)> cb) {
-  // Find the frame corresponding to the reqested one.
-  constexpr size_t kNotFound = std::numeric_limits<size_t>::max();
-  size_t requested_index = kNotFound;
-  for (size_t i = 0; i < frames_.size(); i++) {
-    if (frames_[i]->GetAddress() == frame_ip &&
-        frames_[i]->GetStackPointer() == frame_sp) {
-      requested_index = i;
-      break;
-    }
-  }
-  if (requested_index == kNotFound) {
-    cb(Err("The stack frame was destroyed before \"finish\" could run."));
-    return;
-  }
-
-  if (requested_index == frames_.size() - 1) {
-    // "Finish" from the bottom-most stack frame just continues the
-    // program to completion.
-    Continue();
-    cb(Err());
-    return;
-  }
-
-  // The stack frame to exit to is just the next one up. Be careful to avoid
-  // forcing symbolizing when getting the frame's address.
-  Frame* step_to = frames_[requested_index + 1].get();
-  RunUntil(this, InputLocation(step_to->GetAddress()), frame_sp, std::move(cb));
 }
 
 }  // namespace zxdb

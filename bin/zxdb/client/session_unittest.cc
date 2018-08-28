@@ -5,7 +5,6 @@
 #include <set>
 
 #include "garnet/bin/zxdb/client/breakpoint.h"
-#include "garnet/bin/zxdb/client/breakpoint_controller.h"
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
 #include "garnet/bin/zxdb/client/remote_api_test.h"
 #include "garnet/bin/zxdb/client/session.h"
@@ -114,30 +113,6 @@ class SessionThreadObserver : public ThreadObserver {
   std::vector<Breakpoint*> breakpoints_;
 };
 
-// Returns a defined action to the breakpoint. It also expects that the
-// thread parameter that that thread's state matches a predefined value.
-class TestBreakpointController : public BreakpointController {
- public:
-  void set_action(BreakpointAction action) { action_ = action; }
-  void set_expected_thread(Thread* thread) { expected_thread_ = thread; }
-  void set_expected_thread_state(debug_ipc::ThreadRecord::State s) {
-    expected_thread_state_ = s;
-  }
-
-  BreakpointAction GetBreakpointHitAction(Breakpoint* bp,
-                                          Thread* thread) override {
-    EXPECT_EQ(expected_thread_, thread);
-    EXPECT_EQ(expected_thread_state_, thread->GetState());
-    return action_;
-  }
-
- private:
-  BreakpointAction action_ = BreakpointAction::kStop;
-  Thread* expected_thread_ = nullptr;
-  debug_ipc::ThreadRecord::State expected_thread_state_ =
-      debug_ipc::ThreadRecord::State::kBlocked;
-};
-
 class SessionTest : public RemoteAPITest {
  public:
   SessionTest() = default;
@@ -183,32 +158,27 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   SessionThreadObserver thread_observer;
   thread->AddObserver(&thread_observer);
 
-  // Two internal breakpoints and controllers.
-  TestBreakpointController cntl1;
-  Breakpoint* bp1 = session().system().CreateNewInternalBreakpoint(&cntl1);
-  TestBreakpointController cntl2;
-  Breakpoint* bp2 = session().system().CreateNewInternalBreakpoint(&cntl2);
+  // An internal breakpoint.
+  Breakpoint* bp_internal = session().system().CreateNewInternalBreakpoint();
 
   // The breakpoints are set at the same address.
   constexpr uint64_t kAddress = 0x12345678;
   BreakpointSettings bp_settings;
   bp_settings.enabled = true;
   bp_settings.location = InputLocation(kAddress);
-  SyncSetSettings(bp1, bp_settings);
-  SyncSetSettings(bp2, bp_settings);
+  SyncSetSettings(bp_internal, bp_settings);
 
-  // Should have gottten both breakpoints registering themselves.
+  // Should have gotten the breakpoint registering itself.
+  ASSERT_EQ(1u, sink()->set_breakpoint_ids().size());
+
+  // Now make a user breakpoint at the same place, it should have registered.
+  Breakpoint* bp_user = session().system().CreateNewBreakpoint();
+  SyncSetSettings(bp_user, bp_settings);
   ASSERT_EQ(2u, sink()->set_breakpoint_ids().size());
 
-  // Make both breakpoints report "continue" when they're hit.
-  cntl1.set_action(BreakpointAction::kContinue);
-  cntl1.set_expected_thread(thread);
-  cntl1.set_expected_thread_state(debug_ipc::ThreadRecord::State::kBlocked);
-  cntl2.set_action(BreakpointAction::kContinue);
-  cntl2.set_expected_thread(thread);
-  cntl2.set_expected_thread_state(debug_ipc::ThreadRecord::State::kBlocked);
-
-  // Notify of a breakpoint hit at both breakpoints.
+  // Do a notification with both breakpoints getting hit.
+  sink()->ResetResumeState();
+  thread_observer.ResetStopState();
   debug_ipc::NotifyException notify;
   notify.process_koid = kProcessKoid;
   notify.type = debug_ipc::NotifyException::Type::kSoftware;
@@ -217,52 +187,6 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   sink()->PopulateNotificationWithBreakpoints(&notify);
   InjectException(notify);
 
-  // Since both breakpoints requested "continue", it should have sent back a
-  // resume request and not reported a thread stop.
-  ASSERT_EQ(1, sink()->resume_count());
-  EXPECT_EQ(kProcessKoid, sink()->resume_request().process_koid);
-  ASSERT_EQ(1u, sink()->resume_request().thread_koids.size());
-  EXPECT_EQ(kThreadKoid, sink()->resume_request().thread_koids[0]);
-  EXPECT_EQ(0, thread_observer.stop_count());
-
-  // Do a second request, this time where one requests a silent stop.
-  sink()->ResetResumeState();
-  thread_observer.ResetStopState();
-  cntl2.set_action(BreakpointAction::kSilentStop);
-  InjectException(notify);
-
-  // The silent stop should take precedence so the thread should not be
-  // resumed, but the thread stop notification should still not be sent.
-  EXPECT_EQ(0, sink()->resume_count());
-  EXPECT_EQ(0, thread_observer.stop_count());
-
-  // Do a third request, this time with a full stop.
-  sink()->ResetResumeState();
-  thread_observer.ResetStopState();
-  cntl2.set_action(BreakpointAction::kStop);
-  InjectException(notify);
-
-  // The full stop should take precedence, the thread should have issued a
-  // notification. Since both breakpoints are internal, no breakpoints should
-  // be reported in the callback.
-  EXPECT_EQ(0, sink()->resume_count());
-  EXPECT_EQ(1, thread_observer.stop_count());
-
-  // Now make a user breakpoint at the same place, it should have registered.
-  Breakpoint* bp_user = session().system().CreateNewBreakpoint();
-  SyncSetSettings(bp_user, bp_settings);
-  ASSERT_EQ(3u, sink()->set_breakpoint_ids().size());
-
-  // Do a notification with all three breakpoints getting hit.
-  sink()->ResetResumeState();
-  thread_observer.ResetStopState();
-  sink()->PopulateNotificationWithBreakpoints(&notify);
-  InjectException(notify);
-
-  // The current state:
-  //   bp1: kContinue (internal)
-  //   bp2: kStop (internal)
-  //   bp_user: kStop (non-internal)
   // The thread observer should be triggered since there is a regular user
   // breakpoint responsible for this address. It should be the only one in the
   // notification (internal ones don't get listed as a stop reason).
@@ -270,8 +194,7 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   EXPECT_EQ(bp_user, thread_observer.breakpoints()[0]);
 
   // Delete the breakpoints, they should notify the backend.
-  session().system().DeleteBreakpoint(bp1);
-  session().system().DeleteBreakpoint(bp2);
+  session().system().DeleteBreakpoint(bp_internal);
   session().system().DeleteBreakpoint(bp_user);
   EXPECT_TRUE(sink()->set_breakpoint_ids().empty());
 

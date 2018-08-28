@@ -469,49 +469,19 @@ void Session::DispatchNotifyException(
   std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints;
 
   if (!notify.hit_breakpoints.empty()) {
-    // Update breakpoints' hit counts and stats. This is done in a separate
-    // phase before notifying the breakpoints of the action so all breakpoints'
-    // state is consistent since it's possible to write a breakpoint handler
-    // that queries other breakpoints statistics.
+    // Update breakpoints' hit counts and stats. This is done before any
+    // notifications are sent so that all breakpoint state is consistent.
     for (const debug_ipc::BreakpointStats& stats : notify.hit_breakpoints) {
       BreakpointImpl* impl = system_.BreakpointImplForId(stats.breakpoint_id);
-      if (impl)
+      if (impl) {
         impl->UpdateStats(stats);
-    }
-
-    // Give any hit breakpoints a say in what happens when they're hit. The
-    // initial value of "action" should be the lowest precedence action.
-    //
-    // Watch out: a breakpoint handler could do anything, including deleting
-    // other breakpoints. This re-queries the breakpoints by ID in the loop
-    // in case that happens.
-    BreakpointAction action = BreakpointAction::kContinue;
-    for (const debug_ipc::BreakpointStats& stats : notify.hit_breakpoints) {
-      BreakpointImpl* impl = system_.BreakpointImplForId(stats.breakpoint_id);
-      if (!impl)
-        continue;
-
-      BreakpointAction new_action = impl->OnHit(thread);
-      if (new_action == BreakpointAction::kStop && !impl->is_internal())
         hit_breakpoints.push_back(impl->GetWeakPtr());
-      action = BreakpointActionHighestPrecedence(action, new_action);
+      }
     }
-
-    switch (action) {
-      case BreakpointAction::kContinue:
-        thread->Continue();
-        return;
-      case BreakpointAction::kSilentStop:
-        // Do nothing when a silent stop is requested.
-        return;
-      case BreakpointAction::kStop:
-        // Fall through to normal thread stop handling.
-        break;
-    }
-    // Fall through to normal thread stop handling.
   }
 
-  thread->DispatchExceptionNotification(notify.type, hit_breakpoints);
+  // This is the main notification of an exception.
+  thread->OnException(notify.type, hit_breakpoints);
 
   // Delete all one-shot breakpoints the backend deleted. This happens after
   // the thread notifications so observers can tell why the thread stopped.

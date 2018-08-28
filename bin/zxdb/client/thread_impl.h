@@ -28,8 +28,8 @@ class ThreadImpl : public Thread {
   debug_ipc::ThreadRecord::State GetState() const override;
   void Pause() override;
   void Continue() override;
-  void ContinueUntil(const InputLocation& location,
-                     std::function<void(const Err&)> cb) override;
+  void ContinueWith(std::unique_ptr<ThreadController> controller) override;
+  void NotifyControllerDone(ThreadController* controller) override;
   Err Step() override;
   void StepInstruction() override;
   void Finish(const Frame* frame, std::function<void(const Err&)> cb) override;
@@ -50,15 +50,16 @@ class ThreadImpl : public Thread {
   void SetMetadata(const debug_ipc::ThreadRecord& record);
   void SetMetadataFromException(const debug_ipc::NotifyException& notify);
 
-  // Dispatches a stop notification. Call after SetMetadataFromException()
-  // in cases where a notification is appropriate.
-  void DispatchExceptionNotification(
+  // Notification of an exception. Call after SetMetadataFromException() in
+  // cases where a stop may be required. This function will check controllers
+  // and will either stop (dispatching notifications) or transparently
+  // continue accordingly.
+  //
+  // The his breakpoints should include all breakpoints, including internal
+  // ones.
+  void OnException(
       debug_ipc::NotifyException::Type type,
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
-
-  // Notification from the agent of an exception. This will get called for all
-  // thread stops.
-  void OnException(const debug_ipc::NotifyException& notify);
 
  private:
   // Saves the new frames for this thread.
@@ -68,12 +69,6 @@ class ThreadImpl : public Thread {
   // Invlidates the cached frames.
   void ClearFrames();
 
-  // Executes "Finish" once the stack frames are available. The IP/SP should
-  // correspond to the frame we're stepping OUT of (not the one we're stepping
-  // TO).
-  void FinishWithFrames(uint64_t frame_ip, uint64_t frame_sp,
-                        std::function<void(const Err&)> cb);
-
   ProcessImpl* const process_;
   uint64_t koid_;
   std::unique_ptr<RegisterSet> registers_;
@@ -82,6 +77,10 @@ class ThreadImpl : public Thread {
 
   std::vector<std::unique_ptr<FrameImpl>> frames_;
   bool has_all_frames_ = false;
+
+  // Ordered list of ThreadControllers that apply to this thread. This is
+  // a stack where back() is the topmost contoller that applies first.
+  std::vector<std::unique_ptr<ThreadController>> controllers_;
 
   fxl::WeakPtrFactory<ThreadImpl> weak_factory_;
 

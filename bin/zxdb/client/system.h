@@ -16,7 +16,6 @@
 namespace zxdb {
 
 class Breakpoint;
-class BreakpointController;
 class Err;
 class SystemObserver;
 class SystemSymbols;
@@ -64,11 +63,7 @@ class System : public ClientObject {
 
   // Creates an internal breakpoint. Internal breakpoints are not reported by
   // GetBreakpoints() and are used to implement internal stepping functions.
-  //
-  // The controller must outlive the breakpoint. In practice the controller
-  // should own the breakpoint.
-  virtual Breakpoint* CreateNewInternalBreakpoint(
-      BreakpointController* controller) = 0;
+  virtual Breakpoint* CreateNewInternalBreakpoint() = 0;
 
   // Deletes the given breakpoint. The passed-in pointer will be invalid after
   // this call. Used for both internal and external breapoints.

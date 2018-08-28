@@ -24,6 +24,7 @@ class Frame;
 struct InputLocation;
 class Process;
 class RegisterSet;
+class ThreadController;
 
 // The flow control commands on this object (Pause, Continue, Step...) apply
 // only to this thread (other threads will continue to run or not run
@@ -52,11 +53,14 @@ class Thread : public ClientObject {
   virtual void Pause() = 0;
   virtual void Continue() = 0;
 
-  // The callback does NOT mean the step has completed, but rather the setup
-  // for the function was successful. Symbols and breakpoint setup can cause
-  // asynchronous failures.
-  virtual void ContinueUntil(const InputLocation& location,
-                             std::function<void(const Err&)> cb) = 0;
+  // Continues the thread using the given ThreadController. This is used
+  // to implement the more complex forms of stepping.
+  virtual void ContinueWith(std::unique_ptr<ThreadController> controller) = 0;
+
+  // Notification from a ThreadController that it has completed its job. The
+  // thread controller should be removed from this thread and deleted.
+  virtual void NotifyControllerDone(ThreadController* controller) = 0;
+
   virtual Err Step() = 0;
   virtual void StepInstruction() = 0;
 
@@ -65,6 +69,8 @@ class Thread : public ClientObject {
   //
   // The callback will be executed when setup completes, not when execution
   // leaves the given frame.
+  //
+  // TODO(brettw) remove and replace with ContinueWith().
   virtual void Finish(const Frame* frame,
                       std::function<void(const Err&)> cb) = 0;
 

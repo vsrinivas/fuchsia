@@ -13,6 +13,7 @@
 #include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "garnet/bin/zxdb/client/thread.h"
+#include "garnet/bin/zxdb/client/until_thread_controller.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
@@ -756,7 +757,12 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
     err = AssertStoppedThreadCommand(context, cmd, false, "until");
     if (err.has_error())
       return err;
-    cmd.thread()->ContinueUntil(location, callback);
+
+    auto controller =
+        std::make_unique<UntilThreadController>(cmd.thread(), location);
+    controller->set_error_callback(
+        [](const Err& err) { Console::get()->Output(err); });
+    cmd.thread()->ContinueWith(std::move(controller));
   }
   return Err();
 }

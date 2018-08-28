@@ -11,7 +11,6 @@ static_library("client") {
   public = [
     "arch_info.h",
     "breakpoint.h",
-    "breakpoint_controller.h",
     "breakpoint_location.h",
     "breakpoint_observer.h",
     "breakpoint_settings.h",
@@ -30,7 +29,9 @@ static_library("client") {
     "target.h",
     "target_observer.h",
     "thread.h",
+    "thread_controller.h",
     "thread_observer.h",
+    "until_thread_controller.h",
   ]
 
   sources = [
@@ -61,8 +62,6 @@ static_library("client") {
     "remote_api.h",
     "remote_api_impl.cc",
     "remote_api_impl.h",
-    "run_until.cc",
-    "run_until.h",
     "session.cc",
     "session.h",
     "system.cc",
@@ -72,8 +71,10 @@ static_library("client") {
     "target_impl.cc",
     "target_impl.h",
     "thread.cc",
+    "thread_controller.cc",
     "thread_impl.cc",
     "thread_impl.h",
+    "until_thread_controller.cc",
   ]
 
   public_deps = [

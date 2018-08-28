@@ -111,9 +111,8 @@ Breakpoint* SystemImpl::CreateNewBreakpoint() {
   return to_return;
 }
 
-Breakpoint* SystemImpl::CreateNewInternalBreakpoint(
-    BreakpointController* controller) {
-  auto owning = std::make_unique<BreakpointImpl>(session(), true, controller);
+Breakpoint* SystemImpl::CreateNewInternalBreakpoint() {
+  auto owning = std::make_unique<BreakpointImpl>(session(), true);
   uint32_t id = owning->backend_id();
   Breakpoint* to_return = owning.get();
 

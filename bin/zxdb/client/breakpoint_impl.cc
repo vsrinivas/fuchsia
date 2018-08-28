@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <map>
 
-#include "garnet/bin/zxdb/client/breakpoint_controller.h"
 #include "garnet/bin/zxdb/client/breakpoint_location_impl.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
@@ -93,10 +92,8 @@ struct BreakpointImpl::ProcessRecord {
   std::map<uint64_t, BreakpointLocationImpl> locs;
 };
 
-BreakpointImpl::BreakpointImpl(Session* session, bool is_internal,
-                               BreakpointController* controller)
+BreakpointImpl::BreakpointImpl(Session* session, bool is_internal)
     : Breakpoint(session),
-      controller_(controller),
       is_internal_(is_internal),
       backend_id_(next_breakpoint_id++),
       impl_weak_factory_(this) {
@@ -141,6 +138,8 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
   SyncBackend(std::move(callback));
 }
 
+bool BreakpointImpl::IsInternal() const { return is_internal_; }
+
 std::vector<BreakpointLocation*> BreakpointImpl::GetLocations() {
   std::vector<BreakpointLocation*> result;
   for (auto& proc : procs_) {
@@ -152,14 +151,6 @@ std::vector<BreakpointLocation*> BreakpointImpl::GetLocations() {
 
 void BreakpointImpl::UpdateStats(const debug_ipc::BreakpointStats& stats) {
   stats_ = stats;
-}
-
-BreakpointAction BreakpointImpl::OnHit(Thread* thread) {
-  if (controller_)
-    return controller_->GetBreakpointHitAction(this, thread);
-
-  // Normal breakpoints always stop.
-  return BreakpointAction::kStop;
 }
 
 void BreakpointImpl::BackendBreakpointRemoved() { backend_installed_ = false; }
@@ -301,41 +292,40 @@ void BreakpointImpl::SendBackendAddOrChange(
     }
   }
 
-  session()->remote_api()->AddOrChangeBreakpoint(
-      request,
-      [callback, breakpoint = impl_weak_factory_.GetWeakPtr()](
-          const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
-        // Be sure to issue the callback even if the breakpoint no longer
-        // exists.
-        if (err.has_error()) {
-          // Transport error. We don't actually know what state the agent is in
-          // since it never got the message. In general this means things were
-          // disconnected and the agent no longer exists, so mark the breakpoint
-          // disabled.
-          if (breakpoint) {
-            breakpoint->settings_.enabled = false;
-            breakpoint->backend_installed_ = false;
-          }
-          if (callback)
-            callback(err);
-        } else if (reply.status != 0) {
-          // Backend error. The protocol specifies that errors adding or
-          // changing will result in any existing breakpoints with that ID
-          // being removed. So mark the breakpoint disabled but keep the
-          // settings to the user can fix the problem from the current state if
-          // desired.
-          if (breakpoint) {
-            breakpoint->settings_.enabled = false;
-            breakpoint->backend_installed_ = false;
-          }
-          if (callback)
-            callback(Err(ErrType::kGeneral, "Breakpoint set error."));
-        } else {
-          // Success.
-          if (callback)
-            callback(Err());
-        }
-      });
+  session()->remote_api()->AddOrChangeBreakpoint(request, [
+    callback, breakpoint = impl_weak_factory_.GetWeakPtr()
+  ](const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
+    // Be sure to issue the callback even if the breakpoint no longer
+    // exists.
+    if (err.has_error()) {
+      // Transport error. We don't actually know what state the agent is in
+      // since it never got the message. In general this means things were
+      // disconnected and the agent no longer exists, so mark the breakpoint
+      // disabled.
+      if (breakpoint) {
+        breakpoint->settings_.enabled = false;
+        breakpoint->backend_installed_ = false;
+      }
+      if (callback)
+        callback(err);
+    } else if (reply.status != 0) {
+      // Backend error. The protocol specifies that errors adding or
+      // changing will result in any existing breakpoints with that ID
+      // being removed. So mark the breakpoint disabled but keep the
+      // settings to the user can fix the problem from the current state if
+      // desired.
+      if (breakpoint) {
+        breakpoint->settings_.enabled = false;
+        breakpoint->backend_installed_ = false;
+      }
+      if (callback)
+        callback(Err(ErrType::kGeneral, "Breakpoint set error."));
+    } else {
+      // Success.
+      if (callback)
+        callback(Err());
+    }
+  });
 }
 
 void BreakpointImpl::SendBackendRemove(
@@ -397,9 +387,8 @@ bool BreakpointImpl::RegisterProcess(Process* process) {
          process->GetTarget()->GetSymbols()->FindFileMatches(
              settings_.location.line.file())) {
       changed |= record.AddLocations(
-          this, process,
-          symbols->AddressesForLine(
-              FileLine(std::move(file), settings_.location.line.line())));
+          this, process, symbols->AddressesForLine(FileLine(
+                             std::move(file), settings_.location.line.line())));
     }
   } else if (settings_.location.type == InputLocation::Type::kAddress) {
     changed = true;

@@ -86,6 +86,10 @@ int ConsoleContext::IdForFrame(const Frame* frame) const {
 }
 
 int ConsoleContext::IdForBreakpoint(const Breakpoint* breakpoint) const {
+  FXL_DCHECK(!breakpoint->IsInternal())
+      << "Should not be trying to get the ID of internal breakpoints. The "
+         "client layer should filter these out.";
+
   auto found = breakpoint_to_id_.find(breakpoint);
   if (found == breakpoint_to_id_.end()) {
     FXL_NOTREACHED();

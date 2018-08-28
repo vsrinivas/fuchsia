@@ -9,7 +9,6 @@
 #include "garnet/bin/zxdb/client/input_location.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
-#include "garnet/bin/zxdb/client/run_until.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
@@ -120,7 +119,8 @@ void ProcessImpl::Continue() {
 
 void ProcessImpl::ContinueUntil(const InputLocation& location,
                                 std::function<void(const Err&)> cb) {
-  RunUntil(this, location, cb);
+  cb(Err("Process-wide 'Until' is temporarily closed for construction. "
+         "Please try again in a few days."));
 }
 
 void ProcessImpl::ReadMemory(

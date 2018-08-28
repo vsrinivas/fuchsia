@@ -211,6 +211,8 @@ TEST_F(ThreadImplTest, Frames) {
   EXPECT_EQ(weak_top_stack.get(), frames[0]);
 }
 
+/* TODO(brettw) move this code to the as-yet-unwritten FinishThreadController
+   and re-enable.
 TEST_F(ThreadImplTest, Finish) {
   // Make a process and thread for notifying about.
   constexpr uint64_t kProcessKoid = 1234;
@@ -291,5 +293,6 @@ TEST_F(ThreadImplTest, Finish) {
       []() { debug_ipc::MessageLoop::Current()->QuitNow(); });
   loop().Run();
 }
+*/
 
 }  // namespace zxdb

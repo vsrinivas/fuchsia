@@ -19,7 +19,6 @@ struct BreakpointStats;
 
 namespace zxdb {
 
-class BreakpointController;
 class BreakpointLocationImpl;
 
 class BreakpointImpl : public Breakpoint,
@@ -28,8 +27,7 @@ class BreakpointImpl : public Breakpoint,
  public:
   // The controller can be null in which case it will perform the default
   // behavior. The controller must outlive the breakpoint.
-  BreakpointImpl(Session* session, bool is_internal,
-                 BreakpointController* controller = nullptr);
+  BreakpointImpl(Session* session, bool is_internal);
   ~BreakpointImpl() override;
 
   // This flag doesn't control anything in the breakpoint but is stored here
@@ -46,20 +44,11 @@ class BreakpointImpl : public Breakpoint,
   BreakpointSettings GetSettings() const override;
   void SetSettings(const BreakpointSettings& settings,
                    std::function<void(const Err&)> callback) override;
+  bool IsInternal() const override;
   std::vector<BreakpointLocation*> GetLocations() override;
 
   // Called whenever new stats are available from the debug agent.
   void UpdateStats(const debug_ipc::BreakpointStats& stats);
-
-  // Called when the breakpoint is hit on the given thread. The thread state
-  // and breakpoint status should already have been upated to reflect the new
-  // stopped state, but no notifications should have been issued yet (because
-  // the return value may be "continue".
-  //
-  // The return value indicates what this breakpoint thinks should happen as a
-  // result. This isn't guaranteed since multiple breakpoints can exist at the
-  // same address and they can have different answers.
-  BreakpointAction OnHit(Thread* thread);
 
   // Called when the backend reports that the breakpoint has been automatically
   // removed.
@@ -101,8 +90,6 @@ class BreakpointImpl : public Breakpoint,
   // Given a process which is new or might apply to us for the first time,
   // Returns true if any addresses were resolved.
   bool RegisterProcess(Process* process);
-
-  BreakpointController* const controller_;  // Non-owning.
 
   bool is_internal_;
 
