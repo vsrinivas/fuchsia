@@ -128,6 +128,12 @@ int emu_mkfs(const char* path) {
     return Mkfs(std::move(bc));
 }
 
+static const minfs::MountOptions kDefaultMountOptions = {
+    .readonly = false,
+    .metrics = false,
+    .verbose = false,
+};
+
 int emu_mount(const char* path) {
     fbl::unique_fd fd(open(path, O_RDWR));
     if (!fd) {
@@ -149,7 +155,7 @@ int emu_mount(const char* path) {
         return -1;
     }
 
-    int r = minfs::Mount(std::move(bc), &fakeFs.fake_root);
+    int r = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root);
     if (r == 0) {
         fakeFs.fake_vfs.reset(fakeFs.fake_root->fs_);
     }
@@ -157,7 +163,7 @@ int emu_mount(const char* path) {
 }
 
 int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
-    int r = minfs::Mount(std::move(bc), &fakeFs.fake_root) == ZX_OK ? 0 : -1;
+    int r = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root) == ZX_OK ? 0 : -1;
     if (r == 0) {
         fakeFs.fake_vfs.reset(fakeFs.fake_root->fs_);
     }

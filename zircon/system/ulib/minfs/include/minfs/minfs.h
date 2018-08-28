@@ -49,7 +49,7 @@ inline zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) {
 // This function does not start the async_dispatcher_t object owned by |vfs|;
 // requests will not be dispatched if that async_dispatcher_t object is not
 // active.
-zx_status_t MountAndServe(const MountOptions* options, async_dispatcher_t* dispatcher,
+zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispatcher,
                           fbl::unique_ptr<Bcache> bc, zx::channel mount_channel,
                           fbl::Closure on_unmount);
 #endif

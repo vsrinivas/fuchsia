@@ -37,7 +37,7 @@ zx_status_t SuperblockManager::Create(Bcache* bc, const Superblock* info,
                                       fbl::unique_ptr<SuperblockManager>* out) {
     zx_status_t status = CheckSuperblock(info, bc);
     if (status != ZX_OK) {
-        FS_TRACE_ERROR("Minfs::Create failed to check info: %d\n", status);
+        FS_TRACE_ERROR("SuperblockManager::Create failed to check info: %d\n", status);
         return status;
     }
 

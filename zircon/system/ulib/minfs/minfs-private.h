@@ -39,6 +39,7 @@
 #include <minfs/allocator.h>
 #include <minfs/format.h>
 #include <minfs/inode-manager.h>
+#include <minfs/minfs.h>
 #include <minfs/superblock.h>
 #include <minfs/transaction-limits.h>
 #include <minfs/writeback.h>
@@ -138,6 +139,12 @@ public:
 
     static zx_status_t Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
                               fbl::unique_ptr<Minfs>* out);
+
+#ifdef __Fuchsia__
+    // Initializes the Minfs writeback queue and resolves any pending disk state (e.g., resolving
+    // unlinked nodes).
+    zx_status_t InitializeWriteback();
+#endif
 
     // instantiate a vnode from an inode
     // the inode must exist in the file system
@@ -279,7 +286,6 @@ private:
     Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
           fbl::unique_ptr<Allocator> block_allocator,
           fbl::unique_ptr<InodeManager> inodes,
-          fbl::unique_ptr<WritebackQueue> writeback,
           uint64_t fs_id);
 #else
     Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
@@ -748,6 +754,6 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent);
 
 // Given an input bcache, initialize the filesystem and return a reference to the
 // root node.
-zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* root_out);
-
+zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
+                  fbl::RefPtr<VnodeMinfs>* root_out);
 } // namespace minfs

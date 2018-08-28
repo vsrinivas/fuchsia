@@ -279,6 +279,10 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
                                     fbl::unique_ptr<Transaction>* out) {
     ZX_DEBUG_ASSERT(reserve_inodes <= TransactionLimits::kMaxInodeBitmapBlocks);
 #ifdef __Fuchsia__
+    if (writeback_ == nullptr) {
+        return ZX_ERR_BAD_STATE;
+    }
+
     // TODO(planders): Once we are splitting up write transactions, assert this on host as well.
     ZX_DEBUG_ASSERT(reserve_blocks <= limits_.GetMaximumDataBlocks());
 #endif
@@ -306,6 +310,7 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
 void Minfs::CommitTransaction(fbl::unique_ptr<Transaction> state) {
     // On enqueue, unreserve any remaining reserved blocks/inodes tracked by work.
 #ifdef __Fuchsia__
+    ZX_DEBUG_ASSERT(writeback_ != nullptr);
     ZX_DEBUG_ASSERT(state->GetWork()->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
     state->Resolve();
     writeback_->Enqueue(state->RemoveWork());
@@ -317,7 +322,13 @@ void Minfs::CommitTransaction(fbl::unique_ptr<Transaction> state) {
 #ifdef __Fuchsia__
 void Minfs::Sync(SyncCallback closure) {
     fbl::unique_ptr<Transaction> state;
-    ZX_ASSERT(BeginTransaction(0, 0, &state) == ZX_OK);
+    zx_status_t status = BeginTransaction(0, 0, &state);
+
+    if (status != ZX_OK) {
+        closure(status);
+        return;
+    }
+
     state->GetWork()->SetSyncCallback(std::move(closure));
     CommitTransaction(std::move(state));
 }
@@ -326,10 +337,9 @@ void Minfs::Sync(SyncCallback closure) {
 #ifdef __Fuchsia__
 Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
              fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
-             fbl::unique_ptr<WritebackQueue> writeback, uint64_t fs_id)
+             uint64_t fs_id)
     : bc_(std::move(bc)), sb_(std::move(sb)), block_allocator_(std::move(block_allocator)),
-      inodes_(std::move(inodes)), writeback_(std::move(writeback)), fs_id_(fs_id),
-      limits_(sb_->Info()) {}
+      inodes_(std::move(inodes)), fs_id_(fs_id), limits_(sb_->Info()) {}
 #else
 Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
              fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
@@ -816,44 +826,51 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
     }
 
 #ifdef __Fuchsia__
-    // Use a heuristics-based approach based on physical RAM size to
-    // determine the size of the writeback buffer.
-    //
-    // Currently, we set the writeback buffer size to 2% of physical
-    // memory.
-    const size_t write_buffer_size =
-        fbl::round_up((zx_system_get_physmem() * 2) / 100, kMinfsBlockSize);
-    const blk_t write_buffer_blocks = static_cast<blk_t>(write_buffer_size / kMinfsBlockSize);
-
-    fbl::unique_ptr<WritebackQueue> writeback;
-    if ((status = WritebackQueue::Create(bc.get(), write_buffer_blocks, &writeback)) != ZX_OK) {
-        return status;
-    }
-
     uint64_t id;
     status = Minfs::CreateFsId(&id);
     if (status != ZX_OK) {
         FS_TRACE_ERROR("minfs: failed to create fs_id:%d\n", status);
         return status;
     }
-    auto fs =
+
+    *out =
         fbl::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
-                                         std::move(inodes), std::move(writeback), id));
+                                         std::move(inodes), id));
 #else
-    auto fs =
+    *out =
         fbl::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
                                          std::move(inodes), std::move(offsets)));
 #endif
 
-    if ((status = fs->PurgeUnlinked()) != ZX_OK) {
-        return status;
-    }
-
-    *out = std::move(fs);
     return ZX_OK;
 }
 
-zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* root_out) {
+#ifdef __Fuchsia__
+zx_status_t Minfs::InitializeWriteback() {
+    // Use a heuristics-based approach based on physical RAM size to
+    // determine the size of the writeback buffer.
+    //
+    // Currently, we set the writeback buffer size to 2% of physical
+    // memory.
+    static const size_t kWriteBufferSize =
+        fbl::round_up((zx_system_get_physmem() * 2) / 100, kMinfsBlockSize);
+    static const blk_t kWriteBufferBlocks = static_cast<blk_t>(kWriteBufferSize / kMinfsBlockSize);
+
+    zx_status_t status;
+    if ((status = WritebackQueue::Create(bc_.get(), kWriteBufferBlocks, &writeback_)) != ZX_OK) {
+        return status;
+    }
+
+    if ((status = PurgeUnlinked()) != ZX_OK) {
+        return status;
+    }
+
+    return ZX_OK;
+}
+#endif
+
+zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
+                  fbl::RefPtr<VnodeMinfs>* root_out) {
     TRACE_DURATION("minfs", "minfs_mount");
     zx_status_t status;
 
@@ -870,6 +887,12 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* ro
         return status;
     }
 
+#ifdef __Fuchsia__
+    if (!options.readonly && (status = fs->InitializeWriteback()) != ZX_OK) {
+        return status;
+    }
+#endif
+
     fbl::RefPtr<VnodeMinfs> vn;
     if ((status = fs->VnodeGet(&vn, kMinfsRootIno)) != ZX_OK) {
         FS_TRACE_ERROR("minfs: cannot find root inode\n");
@@ -883,20 +906,20 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* ro
 }
 
 #ifdef __Fuchsia__
-zx_status_t MountAndServe(const MountOptions* options, async_dispatcher_t* dispatcher,
+zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispatcher,
                           fbl::unique_ptr<Bcache> bc, zx::channel mount_channel,
                           fbl::Closure on_unmount) {
     TRACE_DURATION("minfs", "MountAndServe");
 
     fbl::RefPtr<VnodeMinfs> vn;
-    zx_status_t status = Mount(std::move(bc), &vn);
+    zx_status_t status = Mount(std::move(bc), options, &vn);
     if (status != ZX_OK) {
         return status;
     }
 
     Minfs* vfs = vn->fs_;
-    vfs->SetReadonly(options->readonly);
-    vfs->SetMetrics(options->metrics);
+    vfs->SetReadonly(options.readonly);
+    vfs->SetMetrics(options.metrics);
     vfs->SetUnmountCallback(std::move(on_unmount));
     vfs->SetDispatcher(dispatcher);
     return vfs->ServeDirectory(std::move(vn), std::move(mount_channel));
