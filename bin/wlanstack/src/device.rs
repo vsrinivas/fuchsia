@@ -14,6 +14,7 @@ use futures::select;
 use log::{error, info, log, warn};
 use pin_utils::pin_mut;
 use std::collections::HashSet;
+use std::marker::Unpin;
 use std::sync::Arc;
 use wlan_sme;
 
@@ -172,7 +173,7 @@ fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
                  query_resp: DeviceQueryConfirm,
                  stats_requests: S)
     -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
-    where S: Stream<Item = stats_scheduler::StatsRequest>
+    where S: Stream<Item = stats_scheduler::StatsRequest> + Unpin
 {
     let device_info = convert_device_info(&query_resp);
     match query_resp.role {

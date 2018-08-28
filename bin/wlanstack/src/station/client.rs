@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_async::temp::TempFutureExt;
-use failure::{format_err, ResultExt};
+use failure::bail;
 use fidl::{endpoints2::RequestStream, endpoints2::ServerEnd};
 use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
-use futures::{prelude::*, stream};
+use futures::{prelude::*, select};
 use futures::channel::mpsc;
 use log::{error, log};
+use pin_utils::pin_mut;
+use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use wlan_sme::{client as client_sme, DeviceInfo};
 use wlan_sme::client::{BssInfo, ConnectResult, DiscoveryError, DiscoveryResult, EssInfo};
 
 use crate::fidl_util::is_peer_closed;
+use crate::future_util::ConcurrentTasks;
 use crate::Never;
 use crate::stats_scheduler::StatsRequest;
 
@@ -28,72 +30,91 @@ impl client_sme::Tokens for Tokens {
 pub type Endpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
 type Sme = client_sme::ClientSme<Tokens>;
 
-pub fn serve<S>(proxy: MlmeProxy,
-                device_info: DeviceInfo,
-                event_stream: MlmeEventStream,
-                new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-                stats_requests: S)
-    -> impl Future<Output = Result<(), failure::Error>>
-    where S: Stream<Item = StatsRequest>
+pub async fn serve<S>(proxy: MlmeProxy,
+                      device_info: DeviceInfo,
+                      event_stream: MlmeEventStream,
+                      new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+                      stats_requests: S)
+    -> Result<(), failure::Error>
+    where S: Stream<Item = StatsRequest> + Unpin
 {
     let (sme, mlme_stream, user_stream) = Sme::new(device_info);
     let sme = Arc::new(Mutex::new(sme));
-    let mlme_sme_fut = super::serve_mlme_sme(
+    let mlme_sme = super::serve_mlme_sme(
         proxy, event_stream, Arc::clone(&sme), mlme_stream, stats_requests);
-    let sme_fidl_fut = serve_fidl(sme, new_fidl_clients, user_stream);
-    mlme_sme_fut.select(sme_fidl_fut)
-        .map(|e| e.either(|x| Ok(x.context("MLME<->SME future")?),
-                          |x| Ok(x.context("SME<->FIDL future")?.into_any())))
+    let sme_fidl = serve_fidl(sme, new_fidl_clients, user_stream);
+    pin_mut!(mlme_sme);
+    pin_mut!(sme_fidl);
+    Ok(select! {
+        mlme_sme => mlme_sme?,
+        sme_fidl => sme_fidl?.into_any(),
+    })
 }
 
-fn serve_fidl(sme: Arc<Mutex<Sme>>,
-              new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-              user_stream: client_sme::UserStream<Tokens>)
-    -> impl Future<Output = Result<Never, failure::Error>>
+async fn serve_fidl(sme: Arc<Mutex<Sme>>,
+                    mut new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+                    mut user_stream: client_sme::UserStream<Tokens>)
+    -> Result<Never, failure::Error>
 {
-    const SERVE_LIMIT: usize = 1000;
-
-    // A future that forwards user events from the station to connected FIDL clients
-    let sme_to_fidl = serve_user_stream(user_stream)
-        .map(|()| Err(format_err!("SME->FIDL future unexpectedly finished")));
-    // A future that handles requests from FIDL clients
-    let fidl_to_sme = new_fidl_clients
-        .map(Ok)
-        .chain(stream::once(
-            future::ready(Err(format_err!("new FIDL client stream unexpectedly ended")))))
-        .try_for_each_concurrent(SERVE_LIMIT, move |channel| {
-            serve_fidl_endpoint(Arc::clone(&sme), channel).unwrap_or_else(
-                |e| error!("Error handling a FIDL request from user: {:?}", e)
-            ).map(Ok)
-        })
-        .map(|x| match x {
-            Ok(()) => Err(format_err!("FIDL->SME future unexpectedly finished")),
-            Err(e) => Err(e),
-        });
-    sme_to_fidl.try_join(fidl_to_sme).map_ok(|x: (Never, Never)| x.0)
+    let mut fidl_clients = ConcurrentTasks::new();
+    loop {
+        let mut user_event = user_stream.next();
+        let mut new_fidl_client = new_fidl_clients.next();
+        select! {
+            user_event => match user_event {
+                Some(e) => handle_user_event(e),
+                None => bail!("SME->FIDL future unexpectedly finished"),
+            },
+            fidl_clients => fidl_clients.into_any(),
+            new_fidl_client => match new_fidl_client {
+                Some(c) => fidl_clients.add(serve_fidl_endpoint(Arc::clone(&sme), c)),
+                None => bail!("New FIDL client stream unexpectedly ended"),
+            },
+        }
+    }
 }
 
-fn serve_fidl_endpoint(sme: Arc<Mutex<Sme>>, endpoint: Endpoint)
-    -> impl Future<Output = Result<(), ::fidl::Error>>
+async fn serve_fidl_endpoint(sme: Arc<Mutex<Sme>>, endpoint: Endpoint) {
+    let mut stream = match endpoint.into_stream() {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Failed to create a stream from a zircon channel: {}", e);
+            return;
+        }
+    };
+    while let Some(request) = await!(stream.next()) {
+        let request = match request {
+            Ok(r) => r,
+            Err(e) => {
+                error!("Error reading a FIDL request from a channel: {}", e);
+                return;
+            }
+        };
+        if let Err(e) = handle_fidl_request(&sme, request) {
+            error!("Error serving a FIDL request: {}", e);
+            return;
+        }
+    }
+}
+
+fn handle_fidl_request(sme: &Arc<Mutex<Sme>>, request: fidl_sme::ClientSmeRequest)
+    -> Result<(), fidl::Error>
 {
-    future::ready(endpoint.into_stream())
-        .and_then(|s| {
-            s.try_for_each(move |request| future::ready(match request {
-                ClientSmeRequest::Scan { txn, .. } => {
-                    Ok(scan(&sme, txn)
-                        .unwrap_or_else(|e| error!("Error starting a scan transaction: {:?}", e)))
-                },
-                ClientSmeRequest::Connect { req, txn, .. } => {
-                    Ok(connect(&sme, req.ssid, req.password, txn)
-                        .unwrap_or_else(|e| error!("Error starting a connect transaction: {:?}", e)))
-                },
-                ClientSmeRequest::Disconnect { responder } => {
-                    disconnect(&sme);
-                    responder.send()
-                }
-                ClientSmeRequest::Status { responder } => responder.send(&mut status(&sme)),
-            }))
-        })
+    match request {
+        ClientSmeRequest::Scan { txn, .. } => {
+            Ok(scan(sme, txn)
+                .unwrap_or_else(|e| error!("Error starting a scan transaction: {:?}", e)))
+        },
+        ClientSmeRequest::Connect { req, txn, .. } => {
+            Ok(connect(sme, req.ssid, req.password, txn)
+                .unwrap_or_else(|e| error!("Error starting a connect transaction: {:?}", e)))
+        },
+        ClientSmeRequest::Disconnect { responder } => {
+            disconnect(sme);
+            responder.send()
+        }
+        ClientSmeRequest::Status { responder } => responder.send(&mut status(&sme)),
+    }
 }
 
 fn scan(sme: &Arc<Mutex<Sme>>,
@@ -131,21 +152,18 @@ fn status(sme: &Arc<Mutex<Sme>>) -> fidl_sme::ClientStatusResponse {
     }
 }
 
-fn serve_user_stream(stream: client_sme::UserStream<Tokens>) -> impl Future<Output = ()> {
-    stream
-        .for_each(|e| {
-            future::ready(match e {
-                client_sme::UserEvent::ScanFinished{ tokens, result } =>
-                    send_all_scan_results(tokens, result),
-                client_sme::UserEvent::ConnectFinished { token, result } => {
-                    send_connect_result(token, result).unwrap_or_else(|e| {
-                        if !is_peer_closed(&e) {
-                            error!("Error sending connect result to user: {}", e);
-                        }
-                    })
+fn handle_user_event(e: client_sme::UserEvent<Tokens>) {
+    match e {
+        client_sme::UserEvent::ScanFinished{ tokens, result } =>
+            send_all_scan_results(tokens, result),
+        client_sme::UserEvent::ConnectFinished { token, result } => {
+            send_connect_result(token, result).unwrap_or_else(|e| {
+                if !is_peer_closed(&e) {
+                    error!("Error sending connect result to user: {}", e);
                 }
             })
-        })
+        }
+    }
 }
 
 fn send_all_scan_results(tokens: Vec<fidl_sme::ScanTransactionControlHandle>,
