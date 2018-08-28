@@ -40,7 +40,7 @@ fbl::atomic<int> g_state{TRACE_STOPPED};
 // trace finishes.
 // Rules:
 //   - can only be accessed or modified while holding g_engine_mutex
-zx_status_t g_disposition{ZX_OK};
+zx_status_t g_disposition __TA_GUARDED(g_engine_mutex) {ZX_OK};
 
 // Trace asynchronous dispatcher.
 // Rules:
@@ -64,7 +64,7 @@ struct Observer {
     // state after being notified tracing has started.
     bool awaiting_update_after_start;
 };
-fbl::Vector<Observer> g_observers;
+fbl::Vector<Observer> g_observers __TA_GUARDED(g_engine_mutex);
 
 // Trace context reference count.
 // This functions as a non-exclusive lock for the engine's trace context.
@@ -137,19 +137,19 @@ void handle_event(async_dispatcher_t* dispatcher, async_wait_t* wait,
                   zx_status_t status, const zx_packet_signal_t* signal);
 
 // must hold g_engine_mutex
-inline void update_disposition_locked(zx_status_t disposition) {
+inline void update_disposition_locked(zx_status_t disposition) __TA_REQUIRES(g_engine_mutex) {
     if (g_disposition == ZX_OK)
         g_disposition = disposition;
 }
 
-void notify_observers_locked() {
+void notify_observers_locked() __TA_REQUIRES(g_engine_mutex) {
     for (auto& observer : g_observers) {
         zx_status_t status = zx_object_signal(observer.event, 0u, ZX_EVENT_SIGNALED);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 }
 
-void notify_engine_all_observers_started_if_needed_locked() {
+void notify_engine_all_observers_started_if_needed_locked() __TA_REQUIRES(g_engine_mutex) {
     for (auto& item : g_observers) {
         if (item.awaiting_update_after_start)
             return;
