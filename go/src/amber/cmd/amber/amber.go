@@ -114,7 +114,7 @@ func (l *logWriter) Write(data []byte) (n int, err error) {
 }
 
 func registerLogger(ctx *context.Context) {
-	if err := logger.InitDefaultLoggerWithTags(ctx.GetConnector(), "amber"); err != nil {
+	if err := logger.InitDefaultLoggerWithTags(ctx.Connector(), "amber"); err != nil {
 		log.Printf("error initializing syslog interface: %s", err)
 	}
 	log.SetOutput(&logWriter{})

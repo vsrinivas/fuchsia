@@ -51,7 +51,7 @@ func (app *echoClientApp) startApplication(
 		}
 	}()
 
-	err = app.ctx.Launcher.CreateComponent(launchInfo, req)
+	err = app.ctx.Launcher().CreateComponent(launchInfo, req)
 	if err != nil {
 		return nil, fmt.Errorf("CreateComponent failed: %v", err)
 	}

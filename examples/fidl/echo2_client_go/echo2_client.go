@@ -49,7 +49,7 @@ func (a *echoClientApp) startApplication(serverURL string) (li *sys.ComponentCon
 		}
 	}()
 
-	err = a.ctx.Launcher.CreateComponent(launchInfo, cr)
+	err = a.ctx.Launcher().CreateComponent(launchInfo, cr)
 	if err != nil {
 		return nil, fmt.Errorf("CreateComponent failed: %v", err)
 	}

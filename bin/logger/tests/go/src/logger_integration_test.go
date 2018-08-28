@@ -32,7 +32,7 @@ func TestFullStack(t *testing.T) {
 	tag := genTag()
 
 	ctx := context.CreateFromStartupInfo()
-	if err := logger.InitDefaultLoggerWithTags(ctx.GetConnector(), tag); err != nil {
+	if err := logger.InitDefaultLoggerWithTags(ctx.Connector(), tag); err != nil {
 		t.Fatal(err)
 	}
 	if err := logger.Infof("integer: %d", 10); err != nil {

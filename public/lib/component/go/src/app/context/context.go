@@ -7,7 +7,7 @@ package context
 import (
 	"fmt"
 	"svc/svcns"
-
+	"sync"
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
@@ -21,13 +21,13 @@ type Connector struct {
 }
 
 type Context struct {
-	connector *Connector
-
-	Environment     *sys.EnvironmentInterface
+	connector       *Connector
+	environment     *sys.EnvironmentInterface
+	launcher        *sys.LauncherInterface
+	servicesMu      sync.Mutex
 	OutgoingService *svcns.Namespace
-	Launcher        *sys.LauncherInterface
 	appServices     zx.Handle
-	services        sys.ServiceProviderService
+	serviceProvider sys.ServiceProviderService
 }
 
 // TODO: define these in syscall/zx/mxruntime
@@ -60,20 +60,6 @@ func New(serviceRoot, directoryRequest, appServices zx.Handle) *Context {
 
 	c.OutgoingService = svcns.New()
 
-	r, p, err := sys.NewEnvironmentInterfaceRequest()
-	if err != nil {
-		panic(err.Error())
-	}
-	c.Environment = p
-	c.ConnectToEnvService(r)
-
-	r2, p2, err := sys.NewLauncherInterfaceRequest()
-	if err != nil {
-		panic(err.Error())
-	}
-	c.Launcher = p2
-	c.ConnectToEnvService(r2)
-
 	if directoryRequest.IsValid() {
 		c.OutgoingService.ServeDirectory(zx.Channel(directoryRequest))
 	}
@@ -81,13 +67,43 @@ func New(serviceRoot, directoryRequest, appServices zx.Handle) *Context {
 	return c
 }
 
-func (c *Context) GetConnector() *Connector {
+func (c *Context) Connector() *Connector {
 	return c.connector
+}
+
+func (c *Context) Environment() *sys.EnvironmentInterface {
+	c.servicesMu.Lock()
+	defer c.servicesMu.Unlock()
+	if c.environment != nil {
+		return c.environment
+	}
+	r, p, err := sys.NewEnvironmentInterfaceRequest()
+	if err != nil {
+		panic(err.Error())
+	}
+	c.environment = p
+	c.ConnectToEnvService(r)
+	return c.environment
+}
+
+func (c *Context) Launcher() *sys.LauncherInterface {
+	c.servicesMu.Lock()
+	defer c.servicesMu.Unlock()
+	if c.launcher != nil {
+		return c.launcher
+	}
+	r, p, err := sys.NewLauncherInterfaceRequest()
+	if err != nil {
+		panic(err.Error())
+	}
+	c.launcher = p
+	c.ConnectToEnvService(r)
+	return c.launcher
 }
 
 func (c *Context) Serve() {
 	if c.appServices.IsValid() {
-		c.services.Add(c.OutgoingService, zx.Channel(c.appServices), nil)
+		c.serviceProvider.Add(c.OutgoingService, zx.Channel(c.appServices), nil)
 	}
 	go fidl.Serve()
 }
