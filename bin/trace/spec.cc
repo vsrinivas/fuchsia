@@ -21,6 +21,9 @@ const char kRootSchema[] = R"({
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "test_name": {
+      "type": "string"
+    },
     "app": {
       "type": "string"
     },
@@ -30,11 +33,21 @@ const char kRootSchema[] = R"({
         "type": "string"
       }
     },
+    "spawn": {
+      "type": "boolean"
+    },
     "categories": {
       "type": "array",
       "items": {
         "type": "string"
       }
+    },
+    "buffering_mode": {
+      "type": "string"
+    },
+    "buffer_size_in_mb": {
+      "type": "integer",
+      "minimum": 1
     },
     "duration": {
       "type": "integer",
@@ -68,10 +81,15 @@ const char kRootSchema[] = R"({
     }
   }
 })";
+
+const char kTestNameKey[] = "test_name";
 const char kAppKey[] = "app";
 const char kArgsKey[] = "args";
+const char kSpawnKey[] = "spawn";
 const char kDurationKey[] = "duration";
 const char kCategoriesKey[] = "categories";
+const char kBufferingModeKey[] = "buffering_mode";
+const char kBufferSizeInMbKey[] = "buffer_size_in_mb";
 const char kMeasurementsKey[] = "measure";
 const char kTypeKey[] = "type";
 const char kSplitSamplesAtKey[] = "split_samples_at";
@@ -257,6 +275,11 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     return false;
   }
 
+  if (document.HasMember(kTestNameKey)) {
+    result.test_name = std::make_unique<std::string>(
+        document[kTestNameKey].GetString());
+  }
+
   if (document.HasMember(kAppKey)) {
     result.app = std::make_unique<std::string>(document[kAppKey].GetString());
   }
@@ -267,11 +290,26 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
       result.args->push_back(arg_value.GetString());
     }
   }
+
+  if (document.HasMember(kSpawnKey)) {
+    result.spawn = std::make_unique<bool>(document[kSpawnKey].GetBool());
+  }
+
   if (document.HasMember(kCategoriesKey)) {
     result.categories = std::make_unique<std::vector<std::string>>();
     for (auto& arg_value : document[kCategoriesKey].GetArray()) {
       result.categories->push_back(arg_value.GetString());
     }
+  }
+
+  if (document.HasMember(kBufferingModeKey)) {
+    result.buffering_mode = std::make_unique<std::string>(
+        document[kBufferingModeKey].GetString());
+  }
+
+  if (document.HasMember(kBufferSizeInMbKey)) {
+    result.buffer_size_in_mb = std::make_unique<size_t>(
+        document[kBufferSizeInMbKey].GetUint());
   }
 
   if (document.HasMember(kDurationKey)) {

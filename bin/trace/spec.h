@@ -22,14 +22,26 @@ namespace tracing {
 // Every member is a unique_ptr so that we can tell if the object was
 // present in the spec file.
 struct Spec {
+  // Test name (for diagnostic purposes, can be elided).
+  std::unique_ptr<std::string> test_name;
+
   // Url of the application to be run.
   std::unique_ptr<std::string> app;
 
   // Startup arguments passed to the application.
   std::unique_ptr<std::vector<std::string>> args;
 
+  // Whether to treat "app" as a tool to be spawned or a component.
+  std::unique_ptr<bool> spawn;
+
   // Tracing categories enabled when tracing the application.
   std::unique_ptr<std::vector<std::string>> categories;
+
+  // The buffering mode to use.
+  std::unique_ptr<std::string> buffering_mode;
+
+  // The size of the trace buffer to use, in MB.
+  std::unique_ptr<size_t> buffer_size_in_mb;
 
   // Duration of the benchmark.
   std::unique_ptr<fxl::TimeDelta> duration;

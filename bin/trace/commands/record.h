@@ -28,13 +28,14 @@ class Record : public CommandWithTraceController {
   struct Options {
     bool Setup(const fxl::CommandLine&);
 
+    std::string test_name;
     std::string app;
     std::vector<std::string> args;
     std::vector<std::string> categories = {};
     fxl::TimeDelta duration = fxl::TimeDelta::FromSeconds(10);
     bool detach = false;
     bool decouple = false;
-    bool launchpad = false;
+    bool spawn = false;
     uint32_t buffer_size_megabytes = 4;
     fuchsia::tracing::BufferingMode buffering_mode =
         fuchsia::tracing::BufferingMode::ONESHOT;

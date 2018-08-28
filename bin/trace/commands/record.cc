@@ -175,12 +175,27 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
       FXL_LOG(ERROR) << "Can't decode " << spec_file_path;
       return false;
     }
+
+    if (spec.test_name)
+      test_name = *spec.test_name;
     if (spec.app)
       app = *spec.app;
     if (spec.args)
       args = *spec.args;
+    if (spec.spawn)
+      spawn = *spec.spawn;
     if (spec.categories)
       categories = *spec.categories;
+    if (spec.buffering_mode) {
+      if (!LookupBufferingMode(*spec.buffering_mode,
+                               &buffering_mode)) {
+        FXL_LOG(ERROR) << "Unknown spec parameter buffering-mode: "
+                       << spec.buffering_mode;
+        return false;
+      }
+    }
+    if (spec.buffer_size_in_mb)
+      buffer_size_megabytes = *spec.buffer_size_in_mb;
     if (spec.duration)
       duration = *spec.duration;
     if (spec.measurements)
@@ -242,19 +257,21 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     }
     if (have_spawn) {
       auto arg = command_line.options()[spawn_index].value;
-      if (!ParseBoolean(arg, &launchpad)) {
+      if (!ParseBoolean(arg, &spawn)) {
         FXL_LOG(ERROR) << "Failed to parse command-line option " << kSpawn
                        << ": " << arg;
       }
+      CheckCommandLineOverride("spawn", spec.spawn);
     }
     if (have_launchpad) {
       FXL_LOG(WARNING) << "Option " << kLaunchpad << " is deprecated"
                        << ", use " << kSpawn << " instead";
       auto arg = command_line.options()[launchpad_index].value;
-      if (!ParseBoolean(arg, &launchpad)) {
+      if (!ParseBoolean(arg, &spawn)) {
         FXL_LOG(ERROR) << "Failed to parse command-line option " << kLaunchpad
                        << ": " << arg;
       }
+      CheckCommandLineOverride("spawn", spec.spawn);
     }
   }
 
@@ -268,6 +285,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
       return false;
     }
     buffer_size_megabytes = megabytes;
+    CheckCommandLineOverride("buffer-size", spec.buffer_size_in_mb);
   }
 
   // --buffering-mode=oneshot|circular|streaming
@@ -279,6 +297,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
                      << command_line.options()[index].value;
       return false;
     }
+    CheckCommandLineOverride("buffering-mode", spec.buffering_mode);
   }
 
   // --benchmark-results-file=<file>
@@ -399,9 +418,8 @@ void Record::Start(const fxl::CommandLine& command_line) {
       },
       [](fbl::String error) { FXL_LOG(ERROR) << error.c_str(); },
       [this] {
-        if (!options_.app.empty()) {
-          options_.launchpad ? LaunchTool() : LaunchApp();
-        }
+        if (!options_.app.empty())
+          options_.spawn ? LaunchTool() : LaunchApp();
         StartTimer();
       },
       [this] { DoneTrace(); });
