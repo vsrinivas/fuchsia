@@ -1,0 +1,98 @@
+{
+  "description": "A prebuilt C/C++ library",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "common.json#/definitions/sdk_element"
+    },
+    {
+      "properties": {
+        "type": {
+          "description": "Marker for this type of element",
+          "type": "string",
+          "enum": [
+            "cc_prebuilt_library"
+          ]
+        },
+        "name": {
+          "description": "Name of the library",
+          "$ref": "common.json#/definitions/cc_library_name"
+        },
+        "format": {
+          "description": "The distribution format of the binaries",
+          "type": "string",
+          "enum": [
+            "shared",
+            "static"
+          ]
+        },
+        "headers": {
+          "description": "List of public headers",
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/definitions/file"
+          }
+        },
+        "include_dir": {
+          "description": "Path to the base directory for includes",
+          "$ref": "common.json#/definitions/file"
+        },
+        "deps": {
+          "description": "List of C/C++ libraries this library depends on",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/package_name"
+          }
+        },
+        "binaries": {
+          "description": "The binary files for the library, per architecture",
+          "type": "object",
+          "properties": {
+            "x64": {
+              "description": "Binaries for the x64 architecture",
+              "$ref": "#/definitions/binaryGroup"
+            },
+            "arm64": {
+              "description": "Binaries for the arm64 architecture",
+              "$ref": "#/definitions/binaryGroup"
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1,
+          "maxProperties": 2
+        }
+      },
+      "required": [
+        "binaries",
+        "deps",
+        "format",
+        "headers",
+        "name",
+        "type"
+      ]
+    }
+  ],
+  "definitions": {
+    "binaryGroup": {
+      "description": "A set of binary files compiled for a given architecture",
+      "type": "object",
+      "properties": {
+        "link": {
+          "description": "The link-time version of the library",
+          "$ref": "common.json#/definitions/file"
+        },
+        "dist": {
+          "description": "The version of the library to add to Fuchsia packages",
+          "$ref": "common.json#/definitions/file"
+        },
+        "debug": {
+          "description": "The unstripped version of the library",
+          "$ref": "common.json#/definitions/file"
+        }
+      },
+      "required": [
+        "link"
+      ]
+    }
+  }
+}

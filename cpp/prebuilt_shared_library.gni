@@ -205,7 +205,7 @@ template("prebuilt_shared_library") {
 
   # Verify that the SDK manifest for this target includes all of the expected
   # runtime dependencies.
-  # TODO(pylaligand): also check that everything in there is either prebuilt or
+  # TODO(DX-340): also check that everything in there is either prebuilt or
   # headers only.
   action(verify_target_name) {
     script = "//build/cpp/verify_runtime_deps.py"

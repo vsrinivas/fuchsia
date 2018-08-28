@@ -25,11 +25,16 @@
         }
       },
       "required": [
-        "files"
+        "name",
+        "type"
       ]
     },
     "fidl_library_name": {
       "description": "Name of a FIDL library",
+      "type": "string"
+    },
+    "cc_library_name": {
+      "description": "Name of a C/C++ library",
       "type": "string"
     }
   }

@@ -49,6 +49,95 @@ template("sdk_source_set") {
     }
   }
 
+  # Identify dependencies and their metadata files.
+  sdk_metas = []
+  sdk_deps = []
+  if (defined(invoker.public_deps)) {
+    foreach(dep, invoker.public_deps) {
+      full_label = get_label_info(dep, "label_no_toolchain")
+      sdk_dep = "${full_label}_sdk"
+      sdk_deps += [ sdk_dep ]
+
+      gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+      name = get_label_info(sdk_dep, "name")
+      sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+    }
+  }
+
+  # Sort headers vs. sources.
+  all_headers = []
+  all_sources = []
+  source_headers_are_public = true
+  if (defined(invoker.public)) {
+    source_headers_are_public = false
+    all_headers += invoker.public
+  }
+  if (defined(invoker.sources)) {
+    foreach(source_file, invoker.sources) {
+      extension = get_path_info(source_file, "extension")
+      if (extension == "h" && source_headers_are_public) {
+        all_headers += [ source_file ]
+      } else {
+        all_sources += [ source_file ]
+      }
+    }
+  }
+
+  # Determine destinations in the SDK for headers and sources.
+  file_base = "pkg/${invoker.sdk_name}"
+  sdk_headers = []
+  sdk_sources = []
+  sdk_files = []
+  include_base = "include"
+  if (defined(invoker.include_base)) {
+    include_base = invoker.include_base
+  }
+  foreach(header, all_headers) {
+    destination = rebase_path(header, include_base)
+    sdk_headers += [ "$file_base/include/$destination" ]
+    sdk_files += [
+      {
+        source = header
+        dest = "include/$destination"
+      },
+    ]
+  }
+  foreach(source, all_sources) {
+    sdk_sources += [ "$file_base/$source" ]
+    sdk_files += [
+      {
+        source = source
+      },
+    ]
+  }
+
+  metadata_target_name = "${target_name}_sdk_metadata"
+  metadata_file = "$target_gen_dir/$target_name.sdk_meta.json"
+
+  action(metadata_target_name) {
+    script = "//build/cpp/gen_sdk_sources_meta_file.py"
+
+    inputs = sdk_metas
+
+    outputs = [ metadata_file ]
+
+    args = [
+      "--out",
+      rebase_path(metadata_file),
+      "--name",
+      invoker.sdk_name,
+      "--include-dir",
+      "$file_base/include",
+      "--deps",
+    ] + sdk_metas + [
+      "--sources",
+    ] + sdk_sources + [
+      "--headers",
+    ] + sdk_headers
+
+    deps = sdk_deps
+  }
+
   sdk_atom(sdk_target_name) {
     forward_variables_from(invoker,
                            [
@@ -61,57 +150,22 @@ template("sdk_source_set") {
     id = "sdk://pkg/${invoker.sdk_name}"
     category = invoker.category
 
+    meta = {
+      source = metadata_file
+      dest = "$file_base/meta.json"
+      schema = "cc_source_library"
+    }
+
     tags = [ "type:sources" ]
 
-    headers = []
-    sources = []
-    source_headers_are_public = true
-    if (defined(invoker.public)) {
-      source_headers_are_public = false
-      headers += invoker.public
-    }
-    if (defined(invoker.sources)) {
-      foreach(source_file, invoker.sources) {
-        extension = get_path_info(source_file, "extension")
-        if (extension == "h" && source_headers_are_public) {
-          headers += [ source_file ]
-        } else {
-          sources += [ source_file ]
-        }
-      }
-    }
+    files = sdk_files
 
-    files = []
-    foreach(source_file, sources) {
-      files += [
-        {
-          source = source_file
-        },
-      ]
-    }
-    foreach(header_file, headers) {
-      include_base = "include"
-      if (defined(invoker.include_base)) {
-        include_base = invoker.include_base
-      }
-      destination = rebase_path(header_file, include_base)
-      files += [
-        {
-          source = header_file
-          dest = "include/$destination"
-        },
-      ]
-    }
+    deps = sdk_deps
 
-    deps = []
-    if (defined(invoker.public_deps)) {
-      foreach(dep, invoker.public_deps) {
-        full_label = get_label_info(dep, "label_no_toolchain")
-        deps += [ "${full_label}_sdk" ]
-      }
-    }
-
-    non_sdk_deps = [ ":$main_target_name" ]
+    non_sdk_deps = [
+      ":$main_target_name",
+      ":$metadata_target_name",
+    ]
 
     # Explicitly add non-public dependencies, in case some of the source files
     # are generated.

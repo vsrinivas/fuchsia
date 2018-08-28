@@ -44,11 +44,45 @@ source_set("${data.name}") {
   ]
 }
 
+file_base = "pkg/${data.name}"
+metadata = {
+  name = "${data.name}"
+  type = "cc_source_library"
+  include_dir = "$file_base/include"
+
+  sources = []
+  % for dest, _ in sorted(data.sources.iteritems()):
+  sources += [ "$file_base/${dest}" ]
+  % endfor
+
+  headers = []
+  % for dest, _ in sorted(data.includes.iteritems()):
+  headers += [ "$file_base/include/${dest}" ]
+  % endfor
+
+  deps = []
+  % for dep in sorted(data.deps):
+  deps += [ "${dep}" ]
+  % endfor
+
+  fidl_deps = []
+
+  files = sources + headers
+}
+metadata_file = "$target_gen_dir/${data.name}.sdk_meta"
+write_file(metadata_file, metadata, "json")
+
 sdk_atom("${data.name}_sdk") {
   domain = "cpp"
   name = "${data.name}"
   id = "sdk://pkg/${data.name}"
   category = "partner"
+
+  meta = {
+    source = metadata_file
+    dest = "$file_base/meta.json"
+    schema = "cc_source_library"
+  }
 
   tags = [
     "type:sources",

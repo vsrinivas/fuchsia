@@ -34,6 +34,7 @@ template("sdk_executable") {
     meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
     meta_data = {
       type = "host_tool"
+      name = output_name
       files = [
         file_base,
       ]
