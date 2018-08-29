@@ -22,7 +22,7 @@ std::string operator"" _s(const char* str, size_t size) {
   return std::string(str, size);
 }
 
-class StringEncodingTest : public ::testing::TestWithParam<std::string> {};
+using StringEncodingTest = ::testing::TestWithParam<std::string>;
 
 TEST_P(StringEncodingTest, BackAndForth) {
   std::string data = GetParam();

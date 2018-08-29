@@ -147,9 +147,9 @@ void DoSplit(DataSource* source, fit::function<void(SplitResult)> callback) {
   return ::testing::AssertionSuccess();
 }
 
-class SplitSmallValueTest : public ::testing::TestWithParam<size_t> {};
+using SplitSmallValueTest = ::testing::TestWithParam<size_t>;
 
-class SplitBigValueTest : public ::testing::TestWithParam<size_t> {};
+using SplitBigValueTest = ::testing::TestWithParam<size_t>;
 
 TEST_P(SplitSmallValueTest, SmallValue) {
   std::string content = NewString(GetParam());

@@ -15,8 +15,7 @@ fxl::StringView operator"" _s(const char* str, size_t size) {
 }
 
 // Test for object ids smaller than the inlining threshold.
-class ObjectDigestSmallTest : public ::testing::TestWithParam<fxl::StringView> {
-};
+using ObjectDigestSmallTest = ::testing::TestWithParam<fxl::StringView>;
 
 TEST_P(ObjectDigestSmallTest, Index) {
   ObjectDigest object_digest =
@@ -38,7 +37,7 @@ INSTANTIATE_TEST_CASE_P(ObjectDigestTest, ObjectDigestSmallTest,
                                           "01234567890123456789012345678901"));
 
 // Test for object ids bigger than the inlining threshold.
-class ObjectDigestBigTest : public ::testing::TestWithParam<fxl::StringView> {};
+using ObjectDigestBigTest = ::testing::TestWithParam<fxl::StringView>;
 
 TEST_P(ObjectDigestBigTest, Index) {
   ObjectDigest object_digest =

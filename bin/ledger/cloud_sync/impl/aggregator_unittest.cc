@@ -20,16 +20,7 @@ class RecordingWatcher : public SyncStateWatcher {
   std::vector<SyncStateContainer> states;
 };
 
-class AggregatorTest : public ::testing::Test {
- public:
-  AggregatorTest() {}
-  ~AggregatorTest() override {}
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(AggregatorTest);
-};
-
-TEST_F(AggregatorTest, SendFirstNotification) {
+TEST(AggregatorTest, SendFirstNotification) {
   std::unique_ptr<RecordingWatcher> base_watcher =
       std::make_unique<RecordingWatcher>();
   Aggregator aggregator;
@@ -43,7 +34,7 @@ TEST_F(AggregatorTest, SendFirstNotification) {
   EXPECT_EQ(UPLOAD_WAIT_REMOTE_DOWNLOAD, base_watcher->states[1].upload);
 }
 
-TEST_F(AggregatorTest, AggregateTwo) {
+TEST(AggregatorTest, AggregateTwo) {
   std::unique_ptr<RecordingWatcher> base_watcher =
       std::make_unique<RecordingWatcher>();
 
@@ -70,7 +61,7 @@ TEST_F(AggregatorTest, AggregateTwo) {
   EXPECT_EQ(UPLOAD_IN_PROGRESS, base_watcher->states.rbegin()->upload);
 }
 
-TEST_F(AggregatorTest, ResetWatcher) {
+TEST(AggregatorTest, ResetWatcher) {
   std::unique_ptr<RecordingWatcher> base_watcher =
       std::make_unique<RecordingWatcher>();
   Aggregator aggregator;

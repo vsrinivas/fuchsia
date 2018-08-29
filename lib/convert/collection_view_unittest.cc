@@ -52,7 +52,7 @@ template <typename T>
 }
 
 template <typename T>
-class CollectionViewTest : public ::testing::Test {};
+using CollectionViewTest = ::testing::Test;
 
 using CollectionTypes =
     ::testing::Types<std::vector<uint32_t>, std::unordered_set<uint32_t>,
