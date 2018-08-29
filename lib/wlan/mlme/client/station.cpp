@@ -1532,6 +1532,10 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     }
     debugjoin("final AssocCtx:[%s]\n", debug::Describe(assoc_ctx_).c_str());
 
+    assoc_ctx_.is_cbw40_rx =
+        assoc_cfg_.cbw != wlan_mlme::CBW::CBW20 && assoc_ctx_.has_ht_cap &&
+        ap.ht_cap.ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY &&
+        client.ht_cap.ht_cap_info.chan_width_set() != HtCapabilityInfo::TWENTY_FORTY;
     return ZX_OK;
 }
 

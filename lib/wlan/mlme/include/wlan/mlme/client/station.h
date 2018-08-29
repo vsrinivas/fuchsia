@@ -62,6 +62,8 @@ struct AssocContext {
 
     bool has_vht_op;
     VhtOperation vht_op;
+
+    bool is_cbw40_rx = false;
 };
 
 // TODO(NET-1322): Replace by a FIDL struct
