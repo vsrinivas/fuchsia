@@ -9,11 +9,9 @@
 
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/frame_impl.h"
-#include "garnet/bin/zxdb/client/input_location.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/symbols/line_details.h"
 #include "garnet/bin/zxdb/client/thread_controller.h"
 #include "garnet/public/lib/fxl/logging.h"
 
@@ -50,7 +48,39 @@ void ThreadImpl::Continue() {
   debug_ipc::ResumeRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koids.push_back(koid_);
-  request.how = debug_ipc::ResumeRequest::How::kContinue;
+
+  if (controllers_.empty()) {
+    request.how = debug_ipc::ResumeRequest::How::kContinue;
+  } else {
+    // When there are thread controllers, ask the most recent one for how to
+    // continue.
+    //
+    // Theoretically we're running with all controllers at once and we want to
+    // stop at the first one that triggers, which means we want to compute the
+    // most restrictive intersection of all of them.
+    //
+    // This is annoying to implement and it's difficult to construct a
+    // situation where this would be required. The controller that doesn't
+    // involve breakpoints is "step in range" and generally ranges refer to
+    // code lines that will align. Things like "until" are implemented with
+    // breakpoints so can overlap arbitrarily with other operations with no
+    // problem.
+    //
+    // A case where this might show up:
+    //  1. Do "step into" which steps through a range of instructions.
+    //  2. In the middle of that range is a breakpoint that's hit.
+    //  3. The user does "finish." We'll ask the finish controller what to do
+    //     and it will say "continue" and the range from step 1 is lost.
+    // However, in this case probably does want to end up one stack frame
+    // back rather than several instructions after the breakpoint due to the
+    // original "step into" command, so even when "wrong" this current behavior
+    // isn't necessarily bad.
+    ThreadController::ContinueOp op = controllers_.back()->GetContinueOp();
+    request.how = op.how;
+    request.range_begin = op.range_begin;
+    request.range_end = op.range_end;
+  }
+
   session()->remote_api()->Resume(
       request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
@@ -83,31 +113,6 @@ void ThreadImpl::NotifyControllerDone(ThreadController* controller) {
     }
   }
   FXL_NOTREACHED();  // Notification for unknown controller.
-}
-
-Err ThreadImpl::Step() {
-  if (frames_.empty())
-    return Err("Thread has no current address to step.");
-
-  debug_ipc::ResumeRequest request;
-  request.process_koid = process_->GetKoid();
-  request.thread_koids.push_back(koid_);
-  request.how = debug_ipc::ResumeRequest::How::kStepInRange;
-
-  LineDetails line_details =
-      process_->GetSymbols()->LineDetailsForAddress(frames_[0]->GetAddress());
-  if (line_details.entries().empty()) {
-    // When there are no symbols, fall back to step instruction.
-    StepInstruction();
-    return Err();
-  }
-
-  request.range_begin = line_details.entries()[0].range.begin();
-  request.range_end = line_details.entries().back().range.end();
-
-  session()->remote_api()->Resume(
-      request, [](const Err& err, debug_ipc::ResumeReply) {});
-  return Err();
 }
 
 void ThreadImpl::StepInstruction() {
@@ -196,19 +201,18 @@ void ThreadImpl::OnException(
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   bool should_stop;
   if (controllers_.empty()) {
-    // When there are no controllers, all stops are effective. And any
-    // breakpoints being hit take precedence over any stepping being done by
-    // controllers.
+    // When there are no controllers, all stops are effective.
     should_stop = true;
   } else {
-    // Ask all controllers, topmost first. If a controller says "continue", it
-    // means that controller doesn't think this stop applies to it and we
-    // should ask the next controller. We actually continue only if all
-    // controllers agree the thread should continue.
+    // Ask all controllers and continue only if all controllers agree the
+    // thread should continue. Multiple controllers should say "stop" at the
+    // same time and we need to be able to delete all that no longer apply
+    // (say you did "finish", hit a breakpoint, and then "finish" again, both
+    // finish commands would be active and you would want them both to be
+    // completed when the current frame actually finishes).
     should_stop = false;
     // Don't use iterators since the map is mutated in the loop.
-    for (int i = static_cast<int>(controllers_.size()) - 1;
-         !should_stop && i >= 0; i--) {
+    for (int i = 0; i < static_cast<int>(controllers_.size()); i++) {
       switch (controllers_[i]->OnThreadStop(type, hit_breakpoints)) {
         case ThreadController::kContinue:
           // Try the next controller.
@@ -218,6 +222,7 @@ void ThreadImpl::OnException(
           // longer applies and delete it.
           controllers_.erase(controllers_.begin() + i);
           should_stop = true;
+          i--;
           break;
       }
     }
@@ -242,6 +247,12 @@ void ThreadImpl::OnException(
       break;
     }
   }
+
+  // Non-debug exceptions also mean the thread should always stop (check this
+  // after running the controllers for the same reason as the breakpoint check
+  // above).
+  if (type == debug_ipc::NotifyException::Type::kGeneral)
+    should_stop = true;
 
   if (should_stop) {
     // Stay stopped and notify the observers.

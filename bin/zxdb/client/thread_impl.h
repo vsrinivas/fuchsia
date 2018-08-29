@@ -31,7 +31,6 @@ class ThreadImpl : public Thread {
   void ContinueWith(std::unique_ptr<ThreadController> controller,
                     std::function<void(const Err&)> on_continue) override;
   void NotifyControllerDone(ThreadController* controller) override;
-  Err Step() override;
   void StepInstruction() override;
   std::vector<Frame*> GetFrames() const override;
   bool HasAllFrames() const override;

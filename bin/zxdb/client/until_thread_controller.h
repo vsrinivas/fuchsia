@@ -34,6 +34,7 @@ class UntilThreadController : public ThreadController {
   // ThreadController implementation:
   void InitWithThread(Thread* thread,
                       std::function<void(const Err&)> cb) override;
+  ContinueOp GetContinueOp() override;
   StopOp OnThreadStop(
       debug_ipc::NotifyException::Type stop_type,
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;

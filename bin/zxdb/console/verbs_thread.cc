@@ -9,6 +9,7 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/step_into_thread_controller.h"
 #include "garnet/bin/zxdb/client/symbols/code_block.h"
 #include "garnet/bin/zxdb/client/symbols/function.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
@@ -483,7 +484,12 @@ Err DoStep(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  return cmd.thread()->Step();
+  auto controller = std::make_unique<StepIntoThreadController>();
+  cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
+    if (err.has_error())
+      Console::get()->Output(err);
+  });
+  return Err();
 }
 
 // stepi -----------------------------------------------------------------------

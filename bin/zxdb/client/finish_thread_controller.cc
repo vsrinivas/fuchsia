@@ -38,6 +38,10 @@ void FinishThreadController::InitWithThread(
   }
 }
 
+ThreadController::ContinueOp FinishThreadController::GetContinueOp() {
+  return until_controller_->GetContinueOp();
+}
+
 void FinishThreadController::InitWithFrames(
     std::function<void(const Err&)> cb) {
   // Note the frames may have changed from when the constructor was called or

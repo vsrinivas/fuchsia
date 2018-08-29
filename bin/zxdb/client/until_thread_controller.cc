@@ -54,6 +54,12 @@ void UntilThreadController::InitWithThread(Thread* thread,
       });
 }
 
+ThreadController::ContinueOp UntilThreadController::GetContinueOp() {
+  // Stopping the thread is done via a breakpoint, so the thread can always be
+  // resumed with no qualifications.
+  return ContinueOp::Continue();
+}
+
 ThreadController::StopOp UntilThreadController::OnThreadStop(
     debug_ipc::NotifyException::Type stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {

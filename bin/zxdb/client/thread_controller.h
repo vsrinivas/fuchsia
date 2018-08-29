@@ -23,6 +23,35 @@ class ThreadController {
  public:
   enum StopOp { kContinue, kStop };
 
+  // How the thread should run when it is executing this controller.
+  struct ContinueOp {
+    // Factory helper functions.
+    static ContinueOp Continue() {
+      return ContinueOp();  // Defaults are good for this case.
+    }
+    static ContinueOp StepInstruction() {
+      ContinueOp result;
+      result.how = debug_ipc::ResumeRequest::How::kStepInstruction;
+      return result;
+    }
+    static ContinueOp StepInRange(uint64_t r_begin, uint64_t r_end) {
+      ContinueOp result;
+      result.how = debug_ipc::ResumeRequest::How::kStepInRange;
+      result.range_begin = r_begin;
+      result.range_end = r_end;
+      return result;
+    }
+
+    debug_ipc::ResumeRequest::How how =
+        debug_ipc::ResumeRequest::How::kContinue;
+
+    // When how == kStepInRange, these variables define the address range to
+    // step in. As long as the instruction pointer is inside [range_begin,
+    // range_end), execution will continue.
+    uint64_t range_begin = 0;
+    uint64_t range_end = 0;
+  };
+
   ThreadController();
 
   virtual ~ThreadController();
@@ -42,6 +71,9 @@ class ThreadController {
   // the thread will remain stopped.
   virtual void InitWithThread(Thread* thread,
                               std::function<void(const Err&)> cb) = 0;
+
+  // Returns how to continue the thread when running this controller.
+  virtual ContinueOp GetContinueOp() = 0;
 
   // Notification that the thread has stopped. The return value indicates what
   // the thread should do in response.
