@@ -102,7 +102,9 @@ static void ecm_free(ecm_ctx_t* ctx) {
     while ((txn = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node)) != NULL) {
         usb_req_release(&ctx->usb, txn);
     }
-    usb_req_release(&ctx->usb, ctx->int_txn_buf);
+    if (ctx->int_txn_buf) {
+        usb_req_release(&ctx->usb, ctx->int_txn_buf);
+    }
     mtx_destroy(&ctx->ethmac_mutex);
     mtx_destroy(&ctx->tx_mutex);
     free(ctx);
