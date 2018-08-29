@@ -143,6 +143,8 @@ typedef struct {
     i2c_protocol_t                      i2c;
     canvas_protocol_t                   canvas;
 
+    pdev_board_info_t                   board_info;
+
     thrd_t                              main_thread;
     thrd_t                              vsync_thread;
 
@@ -173,7 +175,6 @@ typedef struct {
     // to set things up
     bool                                skip_disp_init;
 
-    uint8_t                             board_rev;
     uint8_t                             panel_type;
 
     lcd_timing_t                        lcd_timing;

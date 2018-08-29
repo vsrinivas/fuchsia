@@ -62,19 +62,6 @@ static const pbus_gpio_t display_gpios[] = {
         // Panel detection
         .gpio = S905D2_GPIOH(5),
     },
-    {
-        // HW_ID_0
-        .gpio = S905D2_GPIOZ(7),
-        // .gpio = S905D2_GPIOZ(5),
-    },
-    {
-        // HW_ID_1
-        .gpio = S905D2_GPIOZ(8),
-    },
-    {
-        // HW_ID_2
-        .gpio = S905D2_GPIOZ(3),
-    },
 };
 
 static const pbus_bti_t display_btis[] = {

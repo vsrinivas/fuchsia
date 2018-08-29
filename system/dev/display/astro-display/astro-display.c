@@ -292,27 +292,6 @@ static zx_protocol_device_t main_device_proto = {
     .release = display_release,
 };
 
-// This function determines the board ID. This information should ideally come from
-// the board driver.
-// TODO: ZX-2452 Add board info API to platform device
-static void populate_board_rev(astro_display_t* display) {
-    uint8_t id0, id1, id2;
-
-    // Vital info. Causing a panic here is better then returning an error.
-    if ((gpio_config(&display->gpio, GPIO_HW_ID0, GPIO_DIR_IN | GPIO_NO_PULL) == ZX_OK) &&
-        (gpio_config(&display->gpio, GPIO_HW_ID1, GPIO_DIR_IN | GPIO_NO_PULL) == ZX_OK) &&
-        (gpio_config(&display->gpio, GPIO_HW_ID2, GPIO_DIR_IN | GPIO_NO_PULL) == ZX_OK) &&
-        (gpio_read(&display->gpio, GPIO_HW_ID0, &id0) == ZX_OK) &&
-        (gpio_read(&display->gpio, GPIO_HW_ID1, &id1) == ZX_OK) &&
-        (gpio_read(&display->gpio, GPIO_HW_ID2, &id2) == ZX_OK)) {
-        display->board_rev = id0 + (id1 << 1) + (id2 << 2);
-        DISP_INFO("Detected Board ID = %d\n", display->board_rev);
-    } else {
-        display->board_rev = BOARD_REV_UNKNOWN;
-        DISP_ERROR("Failed to detect a valid board id\n");
-    }
-}
-
 // This function detect the panel type based.
 static void populate_panel_type(astro_display_t* display) {
     uint8_t pt;
@@ -335,17 +314,10 @@ static zx_status_t setup_display_interface(astro_display_t* display) {
 
     display->skip_disp_init = false;
     display->panel_type = PANEL_UNKNOWN;
-    display->board_rev = BOARD_REV_UNKNOWN;
 
-    // Detect board ID first
-    populate_board_rev(display);
-
-    //FIXME: We don't have a reliable source of board rev. What we do know is
-    // EVT units have board rev of 2 or 3. So for now, only support these two revs
-    if ((display->board_rev != BOARD_REV_EVT_1) &&
-        (display->board_rev != BOARD_REV_EVT_2)) {
+    if (display->board_info.board_revision < BOARD_REV_EVT_1) {
         DISP_INFO("Unsupported Board REV (%d). Will skip display driver initialization\n",
-            display->board_rev);
+            display->board_info.board_revision);
         display->skip_disp_init = true;
     }
 
@@ -452,10 +424,16 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     }
 
     display->parent = parent;
-
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &display->pdev);
     if (status !=  ZX_OK) {
         DISP_ERROR("Could not get parent protocol\n");
+        goto fail;
+    }
+
+    // Get board info
+    status = pdev_get_board_info(&display->pdev, &display->board_info);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not obtain board info\n");
         goto fail;
     }
 

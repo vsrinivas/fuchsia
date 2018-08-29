@@ -9,6 +9,7 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
+#include <soc/aml-s905d2/s905d2-gpio.h>
 
 // BTI IDs for our devices
 enum {
@@ -51,6 +52,21 @@ enum {
     ASTRO_I2C_2,
     ASTRO_I2C_3,
 };
+
+// Astro Board Revs
+enum {
+    BOARD_REV_P1            = 0,
+    BOARD_REV_P2            = 1,
+    BOARD_REV_EVT_1         = 2,
+    BOARD_REV_EVT_2         = 3,
+
+    MAX_SUPPORTED_REV, // This must be last entry
+};
+
+// Astro GPIO Pins used for board rev detection
+#define GPIO_HW_ID0             (S905D2_GPIOZ(7))
+#define GPIO_HW_ID1             (S905D2_GPIOZ(8))
+#define GPIO_HW_ID2             (S905D2_GPIOZ(3))
 
 /* Astro I2C Devices */
 #define I2C_BACKLIGHT_ADDR    (0x2C)

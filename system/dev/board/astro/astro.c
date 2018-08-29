@@ -45,6 +45,26 @@ static const pbus_dev_t rtc_dev = {
     .did = PDEV_DID_RTC_FALLBACK,
 };
 
+static uint32_t astro_get_board_rev(aml_bus_t* bus) {
+    uint32_t board_rev;
+    uint8_t id0, id1, id2;
+    gpio_config(&bus->gpio, GPIO_HW_ID0, GPIO_DIR_IN | GPIO_NO_PULL);
+    gpio_config(&bus->gpio, GPIO_HW_ID1, GPIO_DIR_IN | GPIO_NO_PULL);
+    gpio_config(&bus->gpio, GPIO_HW_ID2, GPIO_DIR_IN | GPIO_NO_PULL);
+    gpio_read(&bus->gpio, GPIO_HW_ID0, &id0);
+    gpio_read(&bus->gpio, GPIO_HW_ID1, &id1);
+    gpio_read(&bus->gpio, GPIO_HW_ID2, &id2);
+    board_rev = id0 + (id1 << 1) + (id2 << 2);
+
+    if (board_rev >= MAX_SUPPORTED_REV) {
+        // We have detected a new board rev. Print this warning just in case the
+        // new board rev requires additional support that we were not aware of
+        zxlogf(INFO, "Unsupported board revision detected (%d)\n", board_rev);
+    }
+
+    return board_rev;
+}
+
 static int aml_start_thread(void* arg) {
     aml_bus_t* bus = arg;
     zx_status_t status;
@@ -53,6 +73,13 @@ static int aml_start_thread(void* arg) {
         zxlogf(ERROR, "aml_gpio_init failed: %d\n", status);
         goto fail;
     }
+
+    // Once gpio is up and running, let's populate board revision
+    pbus_board_info_t info;
+    info.board_revision = astro_get_board_rev(bus);
+    pbus_set_board_info(&bus->pbus, &info);
+
+    zxlogf(INFO, "Detected board rev 0x%x\n", info.board_revision);
 
     if ((status = aml_i2c_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_i2c_init failed: %d\n", status);
