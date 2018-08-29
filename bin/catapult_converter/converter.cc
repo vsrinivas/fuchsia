@@ -177,6 +177,28 @@ void AddHistogram(rapidjson::Document* output,
   output->PushBack(histogram, *alloc);
 }
 
+// Convert |type| into a string representation.
+const char* TypeToString(rapidjson::Type type) {
+  switch (type) {
+    case rapidjson::kNullType:
+      return "null";
+    case rapidjson::kFalseType:
+      return "false";
+    case rapidjson::kTrueType:
+      return "true";
+    case rapidjson::kObjectType:
+      return "object";
+    case rapidjson::kArrayType:
+      return "array";
+    case rapidjson::kStringType:
+      return "string";
+    case rapidjson::kNumberType:
+      return "number";
+  }
+  FXL_NOTREACHED() << "Unexpected raipdjson type " << static_cast<int>(type);
+  return "";
+}
+
 }  // namespace
 
 void Convert(rapidjson::Document* input, rapidjson::Document* output,
@@ -249,6 +271,13 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
     test_suite_to_guid[test_suite] = helper.Copy(guid);
     return guid;
   };
+
+  if (!input->IsArray()) {
+    fprintf(stderr,
+            "Expected input document to be of type array, and got %s instead\n",
+            TypeToString(input->GetType()));
+    exit(1);
+  }
 
   for (auto& element : input->GetArray()) {
     // The new schema has a member "values" which is a list of floating point
