@@ -10,7 +10,25 @@ patterns used to achieve these goals
 
 # Philosophy
 
-TODO
+Cryptography is famously subtle and easy to get wrong. And when cryptography is
+done wrong, the results can be catastrophic.
+
+Experience has shown that most programmers, not being familiar with the
+subtleties of cryptography, will unknowingly misuse cryptographic libraries if
+they are allowed. This is one example of a broader trend - that it's difficult
+to get something right if getting it wrong doesn't affect whether your program
+runs. It's the same reason that error handling code is so often buggy in
+otherwise well-written programs. Misuse of cryptography, like buggy error
+handling, is unlikely to show up in tests, and unlikely to affect the
+correctness of a program under normal conditions. But unlike error handling,
+most programmers aren't familiar with the requirements of using cryptography
+securely, and getting it wrong can be absolutely fatal.
+
+Given this realization, `mundane` takes the approach of giving the programmer
+the fewest degrees of freedom possible. Doing the correct thing should be easy
+and feel natural. Doing the incorrect thing should feel difficult and ideally be
+entirely impossible to express. This philosophy motivates the design patterns
+which are explored in the next section.
 
 # Design Patterns
 
