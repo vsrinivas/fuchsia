@@ -13,6 +13,7 @@ function HELP {
     echo "-c <text>            : add item to kernel commandline"
     echo "-C                   : use Clang build"
     echo "-A                   : use ASan build"
+    echo "-P                   : use profile build"
     echo "-L                   : use LTO build"
     echo "-l                   : use ThinLTO build"
     echo "-d                   : run with emulated disk"
@@ -69,6 +70,7 @@ GRAPHICS=0
 DO_KVM=0
 LTO=0
 THINLTO=0
+PROFILE=0
 MEMSIZE_DEFAULT=2048
 MEMSIZE=$MEMSIZE_DEFAULT
 NET=0
@@ -106,7 +108,7 @@ abspath() {
   esac
 }
 
-while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:t::u:Vx:z:h-:" FLAG; do
+while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:Pq:rs:t::u:Vx:z:h-:" FLAG; do
     case $FLAG in
         A) ASAN=1;;
         a) ARCH=$OPTARG;;
@@ -125,6 +127,7 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:t::u:Vx:z:h-:" FLAG; do
         n) NET=1;;
         N) NET=2;;
         o) BUILDDIR=$OPTARG;;
+        P) PROFILE=1;;
         q) QEMUDIR=${OPTARG}/;;
         r) RELEASE=1;;
         s) SMP=$OPTARG;;
@@ -180,6 +183,9 @@ elif (( $LTO )); then
 elif (( $THINLTO )); then
     BUILDDIR_SUFFIX+=-thinlto
     BUILD_ARGS+=' -l'
+elif (( $PROFILE )); then
+    BUILDDIR_SUFFIX+=-profile
+    BUILD_ARGS+=' -P'
 elif (( $CLANG )); then
     BUILDDIR_SUFFIX+=-clang
     BUILD_ARGS+=' -C'
