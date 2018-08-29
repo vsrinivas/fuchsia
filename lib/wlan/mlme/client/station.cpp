@@ -753,9 +753,7 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
     // ArubaAP is persistent not honoring that.
     addbaresp->status_code = status_code::kSuccess;
 
-    // TODO(porce): Query the radio chipset capability to build the response.
-    // TODO(NET-567): Use the outcome of the association negotiation
-    addbaresp->params.set_amsdu(addbareq.params.amsdu() == 1 && IsAmsduRxReady());
+    addbaresp->params.set_amsdu(addbareq.params.amsdu() == 1);
     addbaresp->params.set_policy(BlockAckParameters::kImmediate);
     addbaresp->params.set_tid(addbareq.params.tid());
 
@@ -1101,7 +1099,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
     // It appears there is no particular rule to choose the value for
     // dialog_token. See IEEE Std 802.11-2016, 9.6.5.2.
     addbareq->dialog_token = 0x01;
-    addbareq->params.set_amsdu(IsAmsduRxReady());
+    addbareq->params.set_amsdu(1);
     addbareq->params.set_policy(BlockAckParameters::BlockAckPolicy::kImmediate);
     addbareq->params.set_tid(GetTid());  // TODO(porce): Communicate this with lower MAC.
     // TODO(porce): Fix the discrepancy of this value from the Ralink's TXWI ba_win_size setting
@@ -1399,20 +1397,6 @@ bool Station::IsQosReady() const {
 
     // Aruba / Ubiquiti are confirmed to be compatible with QoS field for the BlockAck session,
     // independently of 40MHz operation.
-    return true;
-}
-
-bool Station::IsAmsduRxReady() const {
-    // [Interop]
-    // IEEE Std 802.11-2016 9.4.1.14's wording is ambiguous, and it can cause interop issue.
-    // In particular, a peer may tear off BlockAck session if interpretation of the field
-    // "A-MSDU Supported" in Block Ack Parameter set of ADDBA Request and Response is different.
-    // Declare such that Fuchsia "can do" AMSDU. This hints the peer that
-    // peer may assume that this Fuchsia device can process inbound A-MSDU data frame.
-    // Since the presence of A-MSDU frame is indicated in the "amsdu_present" field of
-    // QoS field in MPDU header, and the use of A-MSDU frame is optional in flight-time,
-    // setting "A-MSDU Supported" both in ADDBA Request and Response is deemed to be most
-    // interoperable way.
     return true;
 }
 
