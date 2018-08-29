@@ -225,16 +225,20 @@ static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask) {
             cpu += 1;
         }
 
+        // Without the RS field set, we can only deal with the first
+        // 16 cpus within a single cluster
+        DEBUG_ASSERT((mask & 0xffff) == mask);
+
         val = ((irq & 0xf) << 24) |
               ((cluster & 0xff) << 16) |
-              (mask & 0xff);
+              (mask & 0xffff);
 
         gic_write_sgi1r(val);
         cluster += 1;
         // Work around
         if (mx8_gpr_virt) {
             uint32_t regVal;
-            // peinding irq32 to wakeup core
+            // pending irq32 to wakeup core
             regVal = *(volatile uint32_t *)(mx8_gpr_virt + 0x4);
             regVal |= (1 << 12);
             *(volatile uint32_t *)(mx8_gpr_virt + 0x4) = regVal;
