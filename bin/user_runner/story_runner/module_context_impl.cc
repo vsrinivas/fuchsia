@@ -29,6 +29,11 @@ ModuleContextImpl::ModuleContextImpl(
                               EncodeModulePath(module_data_->module_path),
                               module_data_->module_url),
       user_intelligence_provider_(info.user_intelligence_provider) {
+  service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
+      [this](
+          fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
+        component_context_impl_.Connect(std::move(request));
+      });
   service_provider_impl_.AddService<fuchsia::modular::ModuleContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ModuleContext> request) {
         bindings_.AddBinding(this, std::move(request));

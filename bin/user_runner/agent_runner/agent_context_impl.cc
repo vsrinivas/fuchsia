@@ -181,6 +181,11 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       entity_provider_runner_(
           info.component_context_info.entity_provider_runner),
       user_intelligence_provider_(info.user_intelligence_provider) {
+  service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
+      [this](
+          fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
+        component_context_impl_.Connect(std::move(request));
+      });
   service_provider_impl_.AddService<fuchsia::modular::AgentContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::AgentContext> request) {
         agent_context_bindings_.AddBinding(this, std::move(request));
