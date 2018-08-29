@@ -55,9 +55,23 @@ void ThreadImpl::Continue() {
       request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
-void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller) {
+void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
+                              std::function<void(const Err&)> on_continue) {
+  ThreadController* controller_ptr = controller.get();
+
+  // Add it first so that its presence will be noted by anything its
+  // initialization function does.
   controllers_.push_back(std::move(controller));
-  Continue();
+
+  controller_ptr->InitWithThread(
+      this, [ this, controller_ptr,
+              on_continue = std::move(on_continue) ](const Err& err) {
+        if (err.has_error())
+          NotifyControllerDone(controller_ptr);  // Remove the controller.
+        else
+          Continue();
+        on_continue(err);
+      });
 }
 
 void ThreadImpl::NotifyControllerDone(ThreadController* controller) {
@@ -105,12 +119,6 @@ void ThreadImpl::StepInstruction() {
       request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
-void ThreadImpl::Finish(const Frame* frame,
-                        std::function<void(const Err&)> cb) {
-  cb(Err("'Finish' is temporarily closed for construction. "
-         "Please try again in a few days."));
-}
-
 std::vector<Frame*> ThreadImpl::GetFrames() const {
   std::vector<Frame*> frames;
   frames.reserve(frames_.size());
@@ -127,7 +135,7 @@ void ThreadImpl::SyncFrames(std::function<void()> callback) {
   request.thread_koid = koid_;
 
   session()->remote_api()->Backtrace(
-      request, [callback, thread = weak_factory_.GetWeakPtr()](
+      request, [ callback, thread = weak_factory_.GetWeakPtr() ](
                    const Err& err, debug_ipc::BacktraceReply reply) {
         if (!thread)
           return;
@@ -144,7 +152,7 @@ void ThreadImpl::GetRegisters(
   request.thread_koid = koid_;
 
   session()->remote_api()->Registers(
-      request, [thread = weak_factory_.GetWeakPtr(), callback](
+      request, [ thread = weak_factory_.GetWeakPtr(), callback ](
                    const Err& err, debug_ipc::RegistersReply reply) {
         thread->registers_ = std::make_unique<RegisterSet>(
             thread->session()->arch(), std::move(reply.categories));

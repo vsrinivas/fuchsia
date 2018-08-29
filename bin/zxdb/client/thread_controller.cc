@@ -8,7 +8,7 @@
 
 namespace zxdb {
 
-ThreadController::ThreadController(Thread* thread) : thread_(thread) {}
+ThreadController::ThreadController() = default;
 
 ThreadController::~ThreadController() = default;
 

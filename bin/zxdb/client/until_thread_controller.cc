@@ -16,30 +16,42 @@
 
 namespace zxdb {
 
-UntilThreadController::UntilThreadController(Thread* in_thread,
-                                             InputLocation location,
-                                             uint64_t end_sp)
-    : ThreadController(in_thread), end_sp_(end_sp) {
-  BreakpointSettings settings;
-  settings.scope = BreakpointSettings::Scope::kThread;
-  settings.scope_target = GetTarget();
-  settings.scope_thread = thread();
-  settings.location = std::move(location);
-
-  // Frame-tied triggers can't be one-shot because we need to check the stack
-  // every time it triggers. In the non-frame case the one-shot breakpoint will
-  // be slightly more efficient.
-  settings.one_shot = end_sp_ == 0;
-
-  breakpoint_ = GetSystem()->CreateNewInternalBreakpoint()->GetWeakPtr();
-  // OK to capture |this| since our destructor will destroy the breakpoint.
-  breakpoint_->SetSettings(settings,
-                           [this](const Err& err) { OnSetComplete(err); });
-}
+UntilThreadController::UntilThreadController(InputLocation location,
+                                             uint64_t end_bp)
+    : ThreadController(),
+      location_(std::move(location)),
+      end_bp_(end_bp),
+      weak_factory_(this) {}
 
 UntilThreadController::~UntilThreadController() {
   if (breakpoint_)
     GetSystem()->DeleteBreakpoint(breakpoint_.get());
+}
+
+void UntilThreadController::InitWithThread(Thread* thread,
+                                           std::function<void(const Err&)> cb) {
+  set_thread(thread);
+
+  BreakpointSettings settings;
+  settings.scope = BreakpointSettings::Scope::kThread;
+  settings.scope_target = GetTarget();
+  settings.scope_thread = thread;
+  settings.location = std::move(location_);
+
+  // Frame-tied triggers can't be one-shot because we need to check the stack
+  // every time it triggers. In the non-frame case the one-shot breakpoint will
+  // be slightly more efficient.
+  settings.one_shot = end_bp_ == 0;
+
+  breakpoint_ = GetSystem()->CreateNewInternalBreakpoint()->GetWeakPtr();
+  // The breakpoint may post the callback asynchronously, so we can't be sure
+  // this class is still alive when this callback is issued, even though we
+  // destroy the breakpoint in the destructor.
+  breakpoint_->SetSettings(
+      settings, [ weak_this = weak_factory_.GetWeakPtr(), cb ](const Err& err) {
+        if (weak_this)
+          weak_this->OnBreakpointSet(err, std::move(cb));
+      });
 }
 
 ThreadController::StopOp UntilThreadController::OnThreadStop(
@@ -63,7 +75,7 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   if (!is_our_breakpoint)
     return kContinue;  // Not our breakpoint.
 
-  if (!end_sp_)
+  if (!end_bp_)
     return kStop;  // No stack check necessary, always stop.
 
   auto frames = thread()->GetFrames();
@@ -75,7 +87,7 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   // The stack grows downward. Want to stop the thread only when the frame is
   // before (greater than) the input one, which means anything <= should
   // continue.
-  if (frames[0]->GetStackPointer() <= end_sp_)
+  if (frames[0]->GetBasePointer() <= end_bp_)
     return kContinue;
   return kStop;
 }
@@ -88,13 +100,20 @@ Target* UntilThreadController::GetTarget() {
   return thread()->GetProcess()->GetTarget();
 }
 
-void UntilThreadController::OnSetComplete(const Err& err) {
+void UntilThreadController::OnBreakpointSet(
+    const Err& err, std::function<void(const Err&)> cb) {
   if (err.has_error()) {
-    if (error_callback_)
-      error_callback_(err);
-
-    // This controller can no longer work so just remove ourselves.
-    NotifyControllerDone();
+    // Breakpoint setting failed.
+    cb(err);
+  } else if (!breakpoint_ || breakpoint_->GetLocations().empty()) {
+    // Setting the breakpoint may have resolved to no locations and the
+    // breakpoint is now pending. For "until" this is not good because if the
+    // user does "until SometyhingNonexistant" they would like to see the error
+    // rather than have the thread transparently continue without stopping.
+    cb(Err("Destination to run until matched no location."));
+  } else {
+    // Success, can continue the thread.
+    cb(Err());
   }
 }
 

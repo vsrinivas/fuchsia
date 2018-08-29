@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 
+#include "garnet/bin/zxdb/client/finish_thread_controller.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/register.h"
@@ -187,7 +188,8 @@ Err DoFinish(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  cmd.thread()->Finish(cmd.frame(), [](const Err& err) {
+  auto controller = std::make_unique<FinishThreadController>(cmd.frame());
+  cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);
   });
@@ -758,11 +760,11 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
     if (err.has_error())
       return err;
 
-    auto controller =
-        std::make_unique<UntilThreadController>(cmd.thread(), location);
-    controller->set_error_callback(
-        [](const Err& err) { Console::get()->Output(err); });
-    cmd.thread()->ContinueWith(std::move(controller));
+    auto controller = std::make_unique<UntilThreadController>(location);
+    cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
+      if (err.has_error())
+        Console::get()->Output(err);
+    });
   }
   return Err();
 }

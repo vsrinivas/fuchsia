@@ -55,7 +55,19 @@ class Thread : public ClientObject {
 
   // Continues the thread using the given ThreadController. This is used
   // to implement the more complex forms of stepping.
-  virtual void ContinueWith(std::unique_ptr<ThreadController> controller) = 0;
+  //
+  // The on_continue callback does NOT indicate that the thread stopped again.
+  // This is because many thread controllers may need to do asynchronous setup
+  // that could fail. It is issued when the thread is actually resumed or when
+  // the resumption fails.
+  //
+  // The on_continue callback may be issued reentrantly from within the stack
+  // of the ContinueWith call if the controller was ready synchronously.
+  //
+  // On failure the ThreadController will be removed and the thread will not
+  // be continued.
+  virtual void ContinueWith(std::unique_ptr<ThreadController> controller,
+                            std::function<void(const Err&)> on_continue) = 0;
 
   // Notification from a ThreadController that it has completed its job. The
   // thread controller should be removed from this thread and deleted.
@@ -63,16 +75,6 @@ class Thread : public ClientObject {
 
   virtual Err Step() = 0;
   virtual void StepInstruction() = 0;
-
-  // Executes this thread until the given frame returns. The frame must be
-  // one of the ones from GetFrames() (i.e. a current frame from this thread).
-  //
-  // The callback will be executed when setup completes, not when execution
-  // leaves the given frame.
-  //
-  // TODO(brettw) remove and replace with ContinueWith().
-  virtual void Finish(const Frame* frame,
-                      std::function<void(const Err&)> cb) = 0;
 
   // Access to the stack frames for this thread at its current stopped
   // position. If a thread is running, the stack frames are not available.
@@ -89,10 +91,13 @@ class Thread : public ClientObject {
   //
   // Since the running/stopped state of a thread isn't available synchronously
   // in a non-racy manner, you can always request a Sync of the frames if the
-  // frames are not all available. If the thread is running when the request
-  // is processed, the callback will be issued. A subsequent call to
-  // GetFrames() will return an empty vector and HasAllFrames() will return
-  // false.
+  // frames are not all available. If the thread is destroyed before the backtrace can be issued, the callback will not be executed.
+  //
+  // If the thread is running when the request is processed, the callback will
+  // be issued but a subsequent call to GetFrames() will return an empty vector
+  // and HasAllFrames() will return false. This call can race with other
+  // requests to resume a thread, so you can't make any assumptions about the
+  // availability of the stack from the callback.
   //
   // The vector returned by GetFrames will be an internal one that will change
   // when the thread is resumed. The pointers in the vector can be cached if
