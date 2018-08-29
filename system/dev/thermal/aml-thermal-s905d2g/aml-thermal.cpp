@@ -12,6 +12,82 @@
 
 namespace thermal {
 
+zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
+    if (opp_idx >= MAX_TRIP_POINTS) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Get current settings.
+    uint32_t old_voltage = voltage_regulator_->GetVoltage();
+    uint32_t old_frequency = cpufreq_scaling_->GetFrequency();
+
+    // Get new settings.
+    uint32_t new_voltage = opp_info_.opps[opp_idx].volt_mv;
+    uint32_t new_frequency = opp_info_.opps[opp_idx].freq_hz;
+
+    // If new settings are same as old, don't do anything.
+    if (new_frequency == old_frequency) {
+        return ZX_OK;
+    }
+
+    zx_status_t status;
+    // Increasing CPU Frequency from current value, so we first change the voltage.
+    if (new_frequency > old_frequency) {
+        status = voltage_regulator_->SetVoltage(new_voltage);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "aml-thermal: Could not change CPU voltage: %d\n", status);
+            return status;
+        }
+    }
+
+    // Now let's change CPU frequency.
+    status = cpufreq_scaling_->SetFrequency(new_frequency);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-thermal: Could not change CPU frequemcy: %d\n", status);
+        // Failed to change CPU frequemcy, change back to old
+        // voltage before returning.
+        status = voltage_regulator_->SetVoltage(old_voltage);
+        if (status != ZX_OK) {
+            return status;
+        }
+        return status;
+    }
+
+    // Decreasing CPU Frequency from current value, changing voltage after frequency.
+    if (new_frequency < old_frequency) {
+        status = voltage_regulator_->SetVoltage(new_voltage);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "aml-thermal: Could not change CPU voltage: %d\n", status);
+            return status;
+        }
+    }
+
+    zxlogf(INFO, "Scaling from %d MHz, %u mV, --> %d MHz, %u mV\n",
+           old_frequency / 1000000, old_voltage / 1000,
+           new_frequency / 1000000, new_voltage / 1000);
+    return ZX_OK;
+}
+
+int AmlThermal::ThermalNotificationThread() {
+    zxlogf(INFO, "%s start\n", __func__);
+    zx_status_t status;
+
+    // Set the default CPU frequency
+    uint32_t opp_idx = thermal_config_.trip_point_info[current_trip_idx_].big_cluster_dvfs_opp;
+    status = SetTarget(opp_idx);
+
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    while (running_.load()) {
+        // TODO(braval): Implement the monitoring of temperature
+        // and notifying thermal daemon about trip points
+        // here.
+    }
+    return status;
+}
+
 zx_status_t AmlThermal::Create(zx_device_t* device) {
     fbl::AllocChecker ac;
     auto tsensor = fbl::make_unique_checked<thermal::AmlTSensor>(&ac);
@@ -88,6 +164,20 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
         return status;
     }
 
+    // Start thermal notification thread.
+    auto start_thread = [](void* arg) -> int {
+        return static_cast<AmlThermal*>(arg)->ThermalNotificationThread();
+    };
+
+    thermal_device->running_.store(true);
+    int rc = thrd_create_with_name(&thermal_device->notification_thread_,
+                                   start_thread,
+                                   reinterpret_cast<void*>(thermal_device.get()),
+                                   "aml_thermal_notify_thread");
+    if (rc != thrd_success) {
+        return ZX_ERR_INTERNAL;
+    }
+
     // devmgr is now in charge of the memory for dev.
     __UNUSED auto ptr = thermal_device.release();
     return ZX_OK;
@@ -111,6 +201,8 @@ zx_status_t AmlThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
 }
 
 void AmlThermal::DdkUnbind() {
+    running_.store(false);
+    thrd_join(notification_thread_, NULL);
     DdkRemove();
 }
 

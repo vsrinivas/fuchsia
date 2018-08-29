@@ -10,7 +10,9 @@
 #include "aml-voltage.h"
 #include <ddk/device.h>
 #include <ddktl/device.h>
+#include <fbl/atomic.h>
 #include <fbl/unique_ptr.h>
+#include <threads.h>
 
 namespace thermal {
 
@@ -45,10 +47,16 @@ public:
                          void* out_buf, size_t out_len, size_t* out_actual);
 
 private:
+    int ThermalNotificationThread();
+    zx_status_t SetTarget(uint32_t opp_idx);
+
     fbl::unique_ptr<thermal::AmlTSensor> tsensor_;
     fbl::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator_;
     fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling_;
     opp_info_t opp_info_;
     thermal_device_info_t thermal_config_;
+    thrd_t notification_thread_;
+    fbl::atomic<bool> running_;
+    uint32_t current_trip_idx_ = 0;
 };
 } // namespace thermal

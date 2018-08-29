@@ -44,6 +44,11 @@ zx_status_t AmlVoltageRegulator::Init(zx_device_t* parent, opp_info_t* opp_info)
     memcpy(&opp_info_, opp_info, sizeof(opp_info_t));
 
     current_voltage_index_ = kInvalidIndex;
+
+    // Set the voltage to maximum to start with
+    // TODO(braval):  Figure out a better way to set initialize
+    //.               voltage.
+    status = SetVoltage(731000);
     return ZX_OK;
 }
 
@@ -72,6 +77,7 @@ zx_status_t AmlVoltageRegulator::SetVoltage(uint32_t microvolt) {
             return status;
         }
         usleep(kSleep);
+        current_voltage_index_ = target_index;
         return ZX_OK;
     }
 

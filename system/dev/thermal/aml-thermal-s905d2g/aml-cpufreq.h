@@ -21,8 +21,9 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpuFrequency);
     AmlCpuFrequency(){};
     ~AmlCpuFrequency();
-    zx_status_t SetRate(uint32_t rate);
+    zx_status_t SetFrequency(uint32_t rate);
     zx_status_t Init(zx_device_t* parent);
+    uint32_t GetFrequency();
 
 private:
     zx_status_t WaitForBusy();

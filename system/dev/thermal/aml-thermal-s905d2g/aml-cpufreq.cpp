@@ -98,7 +98,7 @@ zx_status_t AmlCpuFrequency::Init(zx_device_t* parent) {
     // Once we switch to using the MPLL, we re-initialize the SYS PLL
     // to known values and then the thermal driver can take over the dynamic
     // switching.
-    status = SetRate(kFrequencyThreshold);
+    status = SetFrequency(kFrequencyThreshold);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq, status = %d\n", status);
         return status;
@@ -213,7 +213,7 @@ zx_status_t AmlCpuFrequency::ConfigureSysPLL(uint32_t new_rate) {
     return status;
 }
 
-zx_status_t AmlCpuFrequency::SetRate(uint32_t new_rate) {
+zx_status_t AmlCpuFrequency::SetFrequency(uint32_t new_rate) {
     zx_status_t status;
 
     if (new_rate > kFrequencyThreshold && current_rate_ > kFrequencyThreshold) {
@@ -223,7 +223,7 @@ zx_status_t AmlCpuFrequency::SetRate(uint32_t new_rate) {
         // frequency to avoid glitches.
 
         // Let's first switch to 1GHz
-        status = SetRate(kFrequencyThreshold);
+        status = SetFrequency(kFrequencyThreshold);
         if (status != ZX_OK) {
             zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq to intermediate freq, status = %d\n",
                    status);
@@ -249,6 +249,10 @@ zx_status_t AmlCpuFrequency::SetRate(uint32_t new_rate) {
         return ConfigureFixedPLL(new_rate);
     }
     return ZX_OK;
+}
+
+uint32_t AmlCpuFrequency::GetFrequency() {
+    return current_rate_;
 }
 
 AmlCpuFrequency::~AmlCpuFrequency() {
