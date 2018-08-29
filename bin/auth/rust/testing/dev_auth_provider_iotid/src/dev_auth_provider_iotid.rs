@@ -2,13 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_auth;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-
 use fidl::encoding2::OutOfLine;
 use fidl::endpoints2::{ClientEnd, ServerEnd};
 use fidl::Error;
@@ -20,8 +13,11 @@ use fidl_fuchsia_auth::{AuthProviderGetAppAccessTokenFromAssertionJwtResponder,
                         AuthProviderGetPersistentCredentialResponder, AuthProviderMarker,
                         AuthProviderRequest, AuthProviderRevokeAppOrPersistentCredentialResponder,
                         AuthProviderStatus, UserProfileInfo};
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::future;
 use futures::prelude::*;
+use log::{info, log, warn};
 use rand::{thread_rng, Rng};
 use std::time::Duration;
 
@@ -57,7 +53,7 @@ impl AuthProvider {
             Err(err) => {
                 warn!("Error creating AuthProvider request stream {:?}", err);
             }
-            Ok(request_stream) => async::spawn(
+            Ok(request_stream) => fasync::spawn(
                 request_stream
                     .try_for_each(|r| future::ready(Self::handle_request(r)))
                     .unwrap_or_else(|e| warn!("Error running AuthProvider{:?}", e)),
@@ -225,10 +221,10 @@ mod tests {
     use fidl_fuchsia_auth::AuthToken;
     use fidl_fuchsia_auth::CredentialEcKey;
 
-    fn set_up() -> Result<(async::Executor, AuthProviderProxy), failure::Error> {
-        let exec = async::Executor::new()?;
+    fn set_up() -> Result<(fasync::Executor, AuthProviderProxy), failure::Error> {
+        let exec = fasync::Executor::new()?;
         let (server_chan, client_chan) = zx::Channel::create()?;
-        let client_chan = async::Channel::from_channel(client_chan)?;
+        let client_chan = fasync::Channel::from_channel(client_chan)?;
         let server_end = ServerEnd::<AuthProviderMarker>::new(server_chan);
         AuthProvider::spawn(server_end);
         let proxy = AuthProviderProxy::new(client_chan);
