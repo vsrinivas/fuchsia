@@ -19,13 +19,12 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/cobalt/testapp/cobalt_testapp_encoder.h"
+#include "garnet/bin/cobalt/testapp/cobalt_testapp_logger.h"
 #include "garnet/bin/cobalt/testapp/tests.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fsl/vmo/file.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -35,8 +34,6 @@
 
 namespace cobalt {
 namespace testapp {
-
-using fuchsia::cobalt::Status2;
 
 // This app is not launched through appmgr as part of a package so we need the
 // full path
@@ -68,7 +65,6 @@ fuchsia::cobalt::ProjectProfile2 CobaltTestApp::LoadCobaltConfig2() {
   profile.config.size = buf.size;
   return profile;
 }
-
 
 bool CobaltTestApp::RunTests() {
   if (!RunTestsWithRequestSendSoon()) {
@@ -119,7 +115,6 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   fuchsia::cobalt::EncoderFactorySyncPtr factory;
   services.ConnectToService(factory.NewRequest());
 
-
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   factory->GetEncoderForProject(LoadCobaltConfig(),
                                 encoder_.encoder_.NewRequest(), &status);
@@ -131,18 +126,18 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   services.ConnectToService(logger_factory.NewRequest());
 
   fuchsia::cobalt::Status2 status2 = fuchsia::cobalt::Status2::INTERNAL_ERROR;
-  logger_factory->CreateLogger(LoadCobaltConfig2(), logger_.NewRequest(),
-                               &status2);
+  logger_factory->CreateLogger(LoadCobaltConfig2(),
+                               logger_.logger_.NewRequest(), &status2);
   FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
       << "CreateLogger() => " << StatusToString(status2);
 
-  logger_factory->CreateLoggerExt(LoadCobaltConfig2(), logger_ext_.NewRequest(),
-                                  &status2);
+  logger_factory->CreateLoggerExt(LoadCobaltConfig2(),
+                                  logger_.logger_ext_.NewRequest(), &status2);
   FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
       << "CreateLoggerExt() => " << StatusToString(status2);
 
-  logger_factory->CreateLoggerSimple(LoadCobaltConfig2(),
-                                     logger_simple_.NewRequest(), &status2);
+  logger_factory->CreateLoggerSimple(
+      LoadCobaltConfig2(), logger_.logger_simple_.NewRequest(), &status2);
   FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
       << "CreateLoggerSimple() => " << StatusToString(status2);
 
@@ -199,18 +194,18 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   context_->ConnectToEnvironmentService(logger_factory.NewRequest());
 
   fuchsia::cobalt::Status2 status2 = fuchsia::cobalt::Status2::INTERNAL_ERROR;
-  logger_factory->CreateLogger(LoadCobaltConfig2(), logger_.NewRequest(),
-                               &status2);
+  logger_factory->CreateLogger(LoadCobaltConfig2(),
+                               logger_.logger_.NewRequest(), &status2);
   FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
       << "CreateLogger() => " << StatusToString(status2);
 
-  logger_factory->CreateLoggerExt(LoadCobaltConfig2(), logger_ext_.NewRequest(),
-                                  &status2);
+  logger_factory->CreateLoggerExt(LoadCobaltConfig2(),
+                                  logger_.logger_ext_.NewRequest(), &status2);
   FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
       << "CreateLoggerExt() => " << StatusToString(status2);
 
-  logger_factory->CreateLoggerSimple(LoadCobaltConfig2(),
-                                     logger_simple_.NewRequest(), &status2);
+  logger_factory->CreateLoggerSimple(
+      LoadCobaltConfig2(), logger_.logger_simple_.NewRequest(), &status2);
   FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
       << "CreateLoggerSimple() => " << StatusToString(status2);
 
@@ -258,273 +253,31 @@ bool CobaltTestApp::RequestSendSoonTests() {
   if (!TestV1Backend(&encoder_)) {
     return false;
   }
-  if (!TestLogEvent()) {
+  if (!TestLogEvent(&logger_)) {
     return false;
   }
-  if (!TestLogEventCount()) {
+  if (!TestLogEventCount(&logger_)) {
     return false;
   }
-  if (!TestLogElapsedTime()) {
+  if (!TestLogElapsedTime(&logger_)) {
     return false;
   }
-  if (!TestLogFrameRate()) {
+  if (!TestLogFrameRate(&logger_)) {
     return false;
   }
-  if (!TestLogMemoryUsage()) {
+  if (!TestLogMemoryUsage(&logger_)) {
     return false;
   }
-  if (!TestLogString()) {
+  if (!TestLogString(&logger_)) {
     return false;
   }
-  if (!TestLogTimer()) {
+  if (!TestLogTimer(&logger_)) {
     return false;
   }
-  if (!TestLogCustomEvent()) {
+  if (!TestLogCustomEvent(&logger_)) {
     return false;
   }
   return true;
-}
-
-bool CobaltTestApp::TestLogEvent() {
-  FXL_LOG(INFO) << "========================";
-  FXL_LOG(INFO) << "TestLogEvent";
-  bool use_request_send_soon = true;
-  for (uint32_t index : kRareEventIndicesToUse) {
-    if (!LogEventAndSend(kRareEventIndexMetricId, index,
-                         use_request_send_soon)) {
-      FXL_LOG(INFO) << "TestLogEvent: FAIL";
-      return false;
-    }
-  }
-  FXL_LOG(INFO) << "TestLogEvent: PASS";
-  return true;
-}
-
-bool CobaltTestApp::TestLogEventCount() {
-  FXL_LOG(INFO) << "========================";
-  FXL_LOG(INFO) << "TestLogEventCount";
-  bool use_request_send_soon = true;
-  bool success =
-      LogEventCountAndSend(kEventInComponentMetricId, kEventInComponentIndex,
-                           kEventInComponentName, 1, use_request_send_soon);
-
-  FXL_LOG(INFO) << "TestLogEventCount : " << (success ? "PASS" : "FAIL");
-  return true;
-}
-
-bool CobaltTestApp::TestLogElapsedTime() {
-  FXL_LOG(INFO) << "========================";
-  FXL_LOG(INFO) << "TestLogElapsedTime";
-  bool use_request_send_soon = true;
-  bool success = LogElapsedTimeAndSend(
-      kElapsedTimeMetricId, kElapsedTimeEventIndex, kElapsedTimeComponent,
-      kElapsedTime, use_request_send_soon);
-  success =
-      success && LogElapsedTimeAndSend(kModTimerMetricId, 0, "",
-                                       kModEndTimestamp - kModStartTimestamp,
-                                       use_request_send_soon);
-  FXL_LOG(INFO) << "TestLogElapsedTime : " << (success ? "PASS" : "FAIL");
-  return success;
-}
-
-bool CobaltTestApp::TestLogFrameRate() {
-  FXL_LOG(INFO) << "========================";
-  FXL_LOG(INFO) << "TestLogFrameRate";
-  bool use_request_send_soon = true;
-  bool success = LogFrameRateAndSend(kFrameRateMetricId, kFrameRateComponent,
-                                     kFrameRate, use_request_send_soon);
-
-  FXL_LOG(INFO) << "TestLogFrameRate : " << (success ? "PASS" : "FAIL");
-  return success;
-}
-
-bool CobaltTestApp::TestLogMemoryUsage() {
-  FXL_LOG(INFO) << "========================";
-  FXL_LOG(INFO) << "TestLogMemoryUsage";
-  bool use_request_send_soon = true;
-  bool success = LogMemoryUsageAndSend(kMemoryUsageMetricId, kMemoryUsageIndex,
-                                       kMemoryUsage, use_request_send_soon);
-
-  FXL_LOG(INFO) << "TestLogFrameRate : " << (success ? "PASS" : "FAIL");
-  return success;
-}
-
-bool CobaltTestApp::TestLogString() {
-  FXL_LOG(INFO) << "========================";
-  FXL_LOG(INFO) << "TestLogString";
-  bool use_request_send_soon = true;
-  bool success = LogStringAndSend(kRareEventStringMetricId, kRareEvent1,
-                                  use_request_send_soon);
-  FXL_LOG(INFO) << "TestLogString : " << (success ? "PASS" : "FAIL");
-  return success;
-}
-
-bool CobaltTestApp::TestLogTimer() {
-  FXL_LOG(INFO) << "========================";
-  FXL_LOG(INFO) << "TestLogTimer";
-  bool use_request_send_soon = true;
-  bool success =
-      LogTimerAndSend(kModTimerMetricId, kModStartTimestamp, kModEndTimestamp,
-                      kModTimerId, kModTimeout, use_request_send_soon);
-  FXL_LOG(INFO) << "TestLogTimer : " << (success ? "PASS" : "FAIL");
-  return success;
-}
-
-bool CobaltTestApp::TestLogCustomEvent() {
-  FXL_LOG(INFO) << "========================";
-  FXL_LOG(INFO) << "TestLogCustomEvent";
-  bool use_request_send_soon = true;
-  bool success = LogStringPairAndSend(
-      kModulePairsMetricId, kExistingModulePartName, kModulePairsEncodingId,
-      "ModA", kAddedModulePartName, kModulePairsEncodingId, "ModB",
-      use_request_send_soon);
-  FXL_LOG(INFO) << "TestLogCustomEvent : " << (success ? "PASS" : "FAIL");
-  return success;
-}
-
-bool CobaltTestApp::LogEventAndSend(uint32_t metric_id, uint32_t index,
-                                    bool use_request_send_soon) {
-  for (int i = 0; i < encoder_.num_observations_per_batch_; i++) {
-    Status2 status = Status2::INTERNAL_ERROR;
-    logger_->LogEvent(metric_id, index, &status);
-    FXL_VLOG(1) << "LogEvent(" << index << ") => " << StatusToString(status);
-    if (status != Status2::OK) {
-      FXL_LOG(ERROR) << "LogEvent() => " << StatusToString(status);
-      return false;
-    }
-  }
-
-  return encoder_.CheckForSuccessfulSend(use_request_send_soon);
-}
-
-bool CobaltTestApp::LogEventCountAndSend(uint32_t metric_id, uint32_t index,
-                                         const std::string& component,
-                                         uint32_t count,
-                                         bool use_request_send_soon) {
-  for (int i = 0; i < encoder_.num_observations_per_batch_; i++) {
-    Status2 status = Status2::INTERNAL_ERROR;
-    logger_->LogEventCount(metric_id, index, component, 0, count, &status);
-    FXL_VLOG(1) << "LogEventCount(" << index << ") => "
-                << StatusToString(status);
-    if (status != Status2::OK) {
-      FXL_LOG(ERROR) << "LogEventCount() => " << StatusToString(status);
-      return false;
-    }
-  }
-
-  return encoder_.CheckForSuccessfulSend(use_request_send_soon);
-}
-
-bool CobaltTestApp::LogElapsedTimeAndSend(uint32_t metric_id, uint32_t index,
-                                          const std::string& component,
-                                          int64_t elapsed_micros,
-                                          bool use_request_send_soon) {
-  for (int i = 0; i < encoder_.num_observations_per_batch_; i++) {
-    Status2 status = Status2::INTERNAL_ERROR;
-    logger_->LogElapsedTime(metric_id, index, component, elapsed_micros,
-                            &status);
-    FXL_VLOG(1) << "LogElapsedTime() => " << StatusToString(status);
-    if (status != Status2::OK) {
-      FXL_LOG(ERROR) << "LogElapsedTime() => " << StatusToString(status);
-      return false;
-    }
-  }
-
-  return encoder_.CheckForSuccessfulSend(use_request_send_soon);
-}
-
-bool CobaltTestApp::LogFrameRateAndSend(uint32_t metric_id,
-                                        const std::string& component, float fps,
-                                        bool use_request_send_soon) {
-  for (int i = 0; i < encoder_.num_observations_per_batch_; i++) {
-    Status2 status = Status2::INTERNAL_ERROR;
-    logger_->LogFrameRate(metric_id, 0, component, fps, &status);
-    FXL_VLOG(1) << "LogFrameRate() => " << StatusToString(status);
-    if (status != Status2::OK) {
-      FXL_LOG(ERROR) << "LogFrameRate() => " << StatusToString(status);
-      return false;
-    }
-  }
-
-  return encoder_.CheckForSuccessfulSend(use_request_send_soon);
-}
-
-bool CobaltTestApp::LogMemoryUsageAndSend(uint32_t metric_id, uint32_t index,
-                                          int64_t bytes,
-                                          bool use_request_send_soon) {
-  for (int i = 0; i < encoder_.num_observations_per_batch_; i++) {
-    Status2 status = Status2::INTERNAL_ERROR;
-    logger_->LogMemoryUsage(metric_id, index, "", bytes, &status);
-    FXL_VLOG(1) << "LogMemoryUsage) => " << StatusToString(status);
-    if (status != Status2::OK) {
-      FXL_LOG(ERROR) << "LogMemoryUsage() => " << StatusToString(status);
-      return false;
-    }
-  }
-
-  return encoder_.CheckForSuccessfulSend(use_request_send_soon);
-}
-
-bool CobaltTestApp::LogStringAndSend(uint32_t metric_id, const std::string& val,
-                                     bool use_request_send_soon) {
-  for (int i = 0; i < encoder_.num_observations_per_batch_; i++) {
-    Status2 status = Status2::INTERNAL_ERROR;
-    logger_->LogString(metric_id, val, &status);
-    FXL_VLOG(1) << "LogString(" << val << ") => " << StatusToString(status);
-    if (status != Status2::OK) {
-      FXL_LOG(ERROR) << "LogString() => " << StatusToString(status);
-      return false;
-    }
-  }
-
-  return encoder_.CheckForSuccessfulSend(use_request_send_soon);
-}
-
-bool CobaltTestApp::LogTimerAndSend(uint32_t metric_id, uint32_t start_time,
-                                    uint32_t end_time,
-                                    const std::string& timer_id,
-                                    uint32_t timeout_s,
-                                    bool use_request_send_soon) {
-  for (int i = 0; i < encoder_.num_observations_per_batch_; i++) {
-    Status2 status = Status2::INTERNAL_ERROR;
-    logger_->StartTimer(metric_id, 0, "", timer_id, start_time, timeout_s,
-                        &status);
-    logger_->EndTimer(timer_id, end_time, timeout_s, &status);
-
-    FXL_VLOG(1) << "LogTimer("
-                << "timer_id:" << timer_id << ", start_time:" << start_time
-                << ", end_time:" << end_time << ") => "
-                << StatusToString(status);
-    if (status != Status2::OK) {
-      FXL_LOG(ERROR) << "LogTimer() => " << StatusToString(status);
-      return false;
-    }
-  }
-
-  return encoder_.CheckForSuccessfulSend(use_request_send_soon);
-}
-
-bool CobaltTestApp::LogStringPairAndSend(
-    uint32_t metric_id, const std::string& part0, uint32_t encoding_id0,
-    const std::string& val0, const std::string& part1, uint32_t encoding_id1,
-    const std::string& val1, bool use_request_send_soon) {
-  for (int i = 0; i < encoder_.num_observations_per_batch_; i++) {
-    Status2 status = Status2::INTERNAL_ERROR;
-    fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> parts(2);
-    parts->at(0).dimension_name = part0;
-    parts->at(0).value.set_string_value(val0);
-    parts->at(1).dimension_name = part1;
-    parts->at(1).value.set_string_value(val1);
-    logger_ext_->LogCustomEvent(metric_id, std::move(parts), &status);
-    FXL_VLOG(1) << "LogCustomEvent(" << val0 << ", " << val1 << ") => "
-                << StatusToString(status);
-    if (status != Status2::OK) {
-      FXL_LOG(ERROR) << "LogCustomEvent() => " << StatusToString(status);
-      return false;
-    }
-  }
-
-  return encoder_.CheckForSuccessfulSend(use_request_send_soon);
 }
 
 }  // namespace testapp

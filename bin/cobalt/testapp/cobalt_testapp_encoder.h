@@ -14,7 +14,6 @@ namespace cobalt {
 namespace testapp {
 
 std::string StatusToString(fuchsia::cobalt::Status status);
-std::string StatusToString(fuchsia::cobalt::Status2 status);
 
 class CobaltTestAppEncoder {
  public:

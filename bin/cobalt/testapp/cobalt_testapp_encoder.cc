@@ -11,7 +11,6 @@ namespace testapp {
 
 using fidl::VectorPtr;
 using fuchsia::cobalt::Status;
-using fuchsia::cobalt::Status2;
 
 bool CobaltTestAppEncoder::EncodeStringAndSend(uint32_t metric_id,
                                                uint32_t encoding_config_id,
@@ -291,19 +290,5 @@ std::string StatusToString(fuchsia::cobalt::Status status) {
   }
 }
 
-std::string StatusToString(fuchsia::cobalt::Status2 status) {
-  switch (status) {
-    case Status2::OK:
-      return "OK";
-    case Status2::INVALID_ARGUMENTS:
-      return "INVALID_ARGUMENTS";
-    case Status2::EVENT_TOO_BIG:
-      return "EVENT_TOO_BIG";
-    case Status2::BUFFER_FULL:
-      return "BUFFER_FULL";
-    case Status2::INTERNAL_ERROR:
-      return "INTERNAL_ERROR";
-  }
-};
 }  // namespace testapp
 }  // namespace cobalt

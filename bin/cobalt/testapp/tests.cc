@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/cobalt/testapp/tests.h"
+#include "garnet/bin/cobalt/testapp/test_constants.h"
 
 namespace cobalt {
 namespace testapp {
@@ -161,6 +162,104 @@ bool TestV1Backend(CobaltTestAppEncoder* encoder_) {
       kV1BackendMetricId, kV1BackendEncodingId, kV1BackendEvent,
       use_request_send_soon);
   FXL_LOG(INFO) << "TestV1Backend : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+
+bool TestLogEvent(CobaltTestAppLogger* logger_) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogEvent";
+  bool use_request_send_soon = true;
+  for (uint32_t index : kRareEventIndicesToUse) {
+    if (!logger_->LogEventAndSend(kRareEventIndexMetricId, index,
+                         use_request_send_soon)) {
+      FXL_LOG(INFO) << "TestLogEvent: FAIL";
+      return false;
+    }
+  }
+  FXL_LOG(INFO) << "TestLogEvent: PASS";
+  return true;
+}
+
+bool TestLogEventCount(CobaltTestAppLogger* logger_) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogEventCount";
+  bool use_request_send_soon = true;
+  bool success =
+      logger_->LogEventCountAndSend(kEventInComponentMetricId, kEventInComponentIndex,
+                           kEventInComponentName, 1, use_request_send_soon);
+
+  FXL_LOG(INFO) << "TestLogEventCount : " << (success ? "PASS" : "FAIL");
+  return true;
+}
+
+bool TestLogElapsedTime(CobaltTestAppLogger* logger_) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogElapsedTime";
+  bool use_request_send_soon = true;
+  bool success = logger_->LogElapsedTimeAndSend(
+      kElapsedTimeMetricId, kElapsedTimeEventIndex, kElapsedTimeComponent,
+      kElapsedTime, use_request_send_soon);
+  success =
+      success && logger_->LogElapsedTimeAndSend(kModTimerMetricId, 0, "",
+                                       kModEndTimestamp - kModStartTimestamp,
+                                       use_request_send_soon);
+  FXL_LOG(INFO) << "TestLogElapsedTime : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+bool TestLogFrameRate(CobaltTestAppLogger* logger_) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogFrameRate";
+  bool use_request_send_soon = true;
+  bool success = logger_->LogFrameRateAndSend(kFrameRateMetricId, kFrameRateComponent,
+                                     kFrameRate, use_request_send_soon);
+
+  FXL_LOG(INFO) << "TestLogFrameRate : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+bool TestLogMemoryUsage(CobaltTestAppLogger* logger_) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogMemoryUsage";
+  bool use_request_send_soon = true;
+  bool success = logger_->LogMemoryUsageAndSend(kMemoryUsageMetricId, kMemoryUsageIndex,
+                                       kMemoryUsage, use_request_send_soon);
+
+  FXL_LOG(INFO) << "TestLogFrameRate : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+bool TestLogString(CobaltTestAppLogger* logger_) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogString";
+  bool use_request_send_soon = true;
+  bool success = logger_->LogStringAndSend(kRareEventStringMetricId, kRareEvent1,
+                                  use_request_send_soon);
+  FXL_LOG(INFO) << "TestLogString : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+bool TestLogTimer(CobaltTestAppLogger* logger_) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogTimer";
+  bool use_request_send_soon = true;
+  bool success =
+      logger_->LogTimerAndSend(kModTimerMetricId, kModStartTimestamp, kModEndTimestamp,
+                      kModTimerId, kModTimeout, use_request_send_soon);
+  FXL_LOG(INFO) << "TestLogTimer : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+bool TestLogCustomEvent(CobaltTestAppLogger* logger_) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogCustomEvent";
+  bool use_request_send_soon = true;
+  bool success = logger_->LogStringPairAndSend(
+      kModulePairsMetricId, kExistingModulePartName, kModulePairsEncodingId,
+      "ModA", kAddedModulePartName, kModulePairsEncodingId, "ModB",
+      use_request_send_soon);
+  FXL_LOG(INFO) << "TestLogCustomEvent : " << (success ? "PASS" : "FAIL");
   return success;
 }
 
