@@ -64,6 +64,7 @@ struct AssocContext {
     VhtOperation vht_op;
 
     bool is_cbw40_rx = false;
+    bool is_cbw40_tx = false;
 };
 
 // TODO(NET-1322): Replace by a FIDL struct
@@ -176,7 +177,6 @@ class Station {
 
     bool IsHTReady() const;
     bool IsCbw40Rx() const;
-    bool IsCbw40TxReady() const;
     bool IsQosReady() const;
     bool IsAmsduRxReady() const;
 

@@ -927,8 +927,8 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
 
     // Ralink appears to setup BlockAck session AND AMPDU handling
     // TODO(porce): Use a separate sequence number space in that case
-    if (IsCbw40TxReady() && data_hdr->addr3.IsUcast()) {
-        // 40MHz direction does not matter here.
+    if (assoc_ctx_.is_cbw40_tx && data_hdr->addr3.IsUcast()) {
+        // 40 MHz direction does not matter here.
         // Radio uses the operational channel setting. This indicates the bandwidth without
         // direction.
         data_frame.FillTxInfo(CBW40, WLAN_PHY_HT);
@@ -1038,8 +1038,8 @@ zx_status_t Station::SendKeepAliveResponse() {
 
     // Ralink appears to setup BlockAck session AND AMPDU handling
     // TODO(porce): Use a separate sequence number space in that case
-    if (IsCbw40TxReady() && data_hdr->addr3.IsUcast()) {
-        // 40MHz direction does not matter here.
+    if (assoc_ctx_.is_cbw40_tx && data_hdr->addr3.IsUcast()) {
+        // 40 MHz direction does not matter here.
         // Radio uses the operational channel setting. This indicates the bandwidth without
         // direction.
         data_frame.FillTxInfo(CBW40, WLAN_PHY_HT);
@@ -1280,8 +1280,8 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
 
     // Ralink appears to setup BlockAck session AND AMPDU handling
     // TODO(porce): Use a separate sequence number space in that case
-    if (IsCbw40TxReady() && data_hdr->addr3.IsUcast()) {
-        // 40MHz direction does not matter here.
+    if (assoc_ctx_.is_cbw40_tx && data_hdr->addr3.IsUcast()) {
+        // 40 MHz direction does not matter here.
         // Radio uses the operational channel setting. This indicates the bandwidth without
         // direction.
         data_frame.FillTxInfo(CBW40, WLAN_PHY_HT);
@@ -1390,12 +1390,6 @@ bool Station::IsCbw40Rx() const {
     }
 
     return true;
-}
-
-bool Station::IsCbw40TxReady() const {
-    // TODO(porce): Test capabilites and configurations of the client and its BSS.
-    // TODO(porce): Ralink dependency on BlockAck, AMPDU handling
-    return false;
 }
 
 bool Station::IsQosReady() const {
@@ -1536,6 +1530,11 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
         assoc_cfg_.cbw != wlan_mlme::CBW::CBW20 && assoc_ctx_.has_ht_cap &&
         ap.ht_cap.ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY &&
         client.ht_cap.ht_cap_info.chan_width_set() != HtCapabilityInfo::TWENTY_FORTY;
+
+    // TODO(porce): Test capabilities and configurations of the client and its BSS.
+    // TODO(porce): Ralink dependency on BlockAck, AMPDU handling
+    assoc_ctx_.is_cbw40_tx = false;
+
     return ZX_OK;
 }
 
