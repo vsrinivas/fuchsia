@@ -126,11 +126,6 @@ class ViewRegistry : public ViewInspector,
                           ActivateFocusChainCallback callback) override;
   void HasFocus(::fuchsia::ui::viewsv1token::ViewToken view_token,
                 HasFocusCallback callback) override;
-  // TODO(TEXT-22): remove
-  void GetSoftKeyboardContainer(
-      ::fuchsia::ui::viewsv1token::ViewToken view_token,
-      fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer>
-          container) override;
   void GetImeService(::fuchsia::ui::viewsv1token::ViewToken view_token,
                      fidl::InterfaceRequest<fuchsia::ui::input::ImeService>
                          ime_service) override;

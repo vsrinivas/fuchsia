@@ -153,12 +153,6 @@ void InputConnectionImpl::OnClientDied() {
 }
 
 void InputConnectionImpl::Reset() {
-  // TODO(TEXT-22): remove
-  if (container_) {
-    container_->Hide();
-    container_.Unbind();
-  }
-
   if (editor_binding_.is_bound())
     editor_binding_.Unbind();
   if (client_)

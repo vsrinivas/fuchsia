@@ -826,21 +826,6 @@ fuchsia::sys::ServiceProvider* ViewRegistry::FindViewServiceProvider(
   return provider;
 }
 
-// TODO(TEXT-22): remove
-void ViewRegistry::GetSoftKeyboardContainer(
-    ::fuchsia::ui::viewsv1token::ViewToken view_token,
-    fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer>
-        container) {
-  FXL_DCHECK(container.is_valid());
-  FXL_VLOG(1) << "GetSoftKeyboardContainer: view_token=" << view_token;
-
-  auto provider = FindViewServiceProvider(
-      view_token.value, fuchsia::ui::input::SoftKeyboardContainer::Name_);
-  if (provider) {
-    component::ConnectToService(provider, std::move(container));
-  }
-}
-
 void ViewRegistry::GetImeService(
     ::fuchsia::ui::viewsv1token::ViewToken view_token,
     fidl::InterfaceRequest<fuchsia::ui::input::ImeService> ime_service) {
