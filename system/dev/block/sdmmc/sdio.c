@@ -63,14 +63,10 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
         zxlogf(ERROR, "sdio_rw_data: data size is not a multiple of 4\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
-    //bool mbs = (dev->sdio_dev.hw_info.caps) & SDIO_CARD_MULTI_BLOCK;
     bool dma_supported = sdmmc_use_dma(dev);
     void *buf = use_dma ? NULL : txn->virt;
     zx_handle_t dma_vmo = use_dma ? txn->dma_vmo : ZX_HANDLE_INVALID;
     uint64_t buf_offset = txn->buf_offset;
-    uint32_t func_blk_size = (dev->sdio_dev.funcs[fn_idx]).cur_blk_size;
-    uint32_t rem_blocks = (func_blk_size == 0) ? 0 : (data_size / func_blk_size);
-    uint32_t data_processed = 0;
 
     if (txn->use_dma && !dma_supported) {
         // host does not support dma
@@ -87,15 +83,20 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
         buf_offset = 0; //set it to 0 since we mapped starting from offset.
     }
 
+    bool mbs = (dev->sdio_dev.hw_info.caps) & SDIO_CARD_MULTI_BLOCK;
+    uint32_t func_blk_size = (dev->sdio_dev.funcs[fn_idx]).cur_blk_size;
+    uint32_t rem_blocks = (func_blk_size == 0) ? 0 : (data_size / func_blk_size);
+    uint32_t data_processed = 0;
+
     while (rem_blocks > 0) {
         uint32_t num_blocks = 1;
         //TODO (ravoorir) : Re-enable multi block support after fixing the
         //multi block failures.
-        /*if (mbs) {
+        if (mbs) {
             uint32_t max_host_blocks = (dev->host_info.max_transfer_size) / (func_blk_size);
             // multiblock is supported, determine max number of blocks per cmd
             num_blocks = MIN(MIN(SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD, max_host_blocks), rem_blocks);
-        }*/
+        }
         st = sdio_io_rw_extended(dev, txn->write, fn_idx, addr, txn->incr, num_blocks,
                                  func_blk_size, use_dma, buf, dma_vmo,
                                  buf_offset + data_processed);

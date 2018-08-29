@@ -36,6 +36,13 @@
 #define AML_SD_EMMC_COMMAND(c)      ((0x80) | (c))
 #define PAGE_MASK                   (PAGE_SIZE - 1ull)
 
+static inline uint8_t log2_ceil(uint16_t blk_sz) {
+    if (blk_sz == 1) {
+        return 0;
+    }
+    return (16 - __builtin_clz(blk_sz - 1));
+}
+
 typedef struct aml_sd_emmc_t {
     platform_device_protocol_t pdev;
     zx_device_t* zxdev;
@@ -776,9 +783,15 @@ static zx_status_t aml_sd_emmc_setup_data_descs_pio(aml_sd_emmc_t *dev, sdmmc_re
         }
     }
 
-    // Make it 1 block
-    update_bits(&desc->cmd_info, AML_SD_EMMC_CMD_INFO_LEN_MASK, AML_SD_EMMC_CMD_INFO_LEN_LOC,
-                length);
+    if (req->blockcount > 1) {
+        desc->cmd_info |= AML_SD_EMMC_CMD_INFO_BLOCK_MODE;
+        update_bits(&desc->cmd_info, AML_SD_EMMC_CMD_INFO_LEN_MASK,
+                    AML_SD_EMMC_CMD_INFO_LEN_LOC, req->blockcount);
+    } else {
+        update_bits(&desc->cmd_info, AML_SD_EMMC_CMD_INFO_LEN_MASK,
+                    AML_SD_EMMC_CMD_INFO_LEN_LOC, req->blocksize);
+    }
+
     // data_addr[0] = 0 for DDR. data_addr[0] = 1 if address is from SRAM
     zx_paddr_t buffer_phys = io_buffer_phys(&dev->mmio) + AML_SD_EMMC_PING_BUFFER_BASE;
     desc->data_addr = (uint32_t)buffer_phys | 1;
@@ -789,12 +802,35 @@ static zx_status_t aml_sd_emmc_setup_data_descs_pio(aml_sd_emmc_t *dev, sdmmc_re
 static zx_status_t aml_sd_emmc_setup_data_descs(aml_sd_emmc_t *dev, sdmmc_req_t *req,
                                                 aml_sd_emmc_desc_t *desc,
                                                 aml_sd_emmc_desc_t **last_desc) {
-    if (req->use_dma) {
-        return aml_sd_emmc_setup_data_descs_dma(dev, req, desc, last_desc);
+    zx_status_t st = ZX_OK;
+
+    if (!req->blocksize || req->blocksize > AML_SD_EMMC_MAX_BLK_SIZE) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // Data is at address req->virt
-    return aml_sd_emmc_setup_data_descs_pio(dev, req, desc, last_desc);
+    if (req->use_dma) {
+        st = aml_sd_emmc_setup_data_descs_dma(dev, req, desc, last_desc);
+        if (st != ZX_OK) {
+            return st;
+        }
+    } else {
+        st =  aml_sd_emmc_setup_data_descs_pio(dev, req, desc, last_desc);
+        if (st != ZX_OK) {
+            return st;
+        }
+    }
+
+    //update config
+    uint32_t config = dev->regs->sd_emmc_cfg;
+    uint8_t cur_blk_len = get_bits(config, AML_SD_EMMC_CFG_BL_LEN_MASK,
+                                   AML_SD_EMMC_CFG_BL_LEN_LOC);
+    uint8_t req_blk_len = log2_ceil(req->blocksize);
+    if (cur_blk_len != req_blk_len) {
+        update_bits(&config, AML_SD_EMMC_CFG_BL_LEN_MASK, AML_SD_EMMC_CFG_BL_LEN_LOC,
+                    req_blk_len);
+        dev->regs->sd_emmc_cfg = config;
+    }
+    return ZX_OK;
 }
 
 static zx_status_t aml_sd_emmc_finish_req(aml_sd_emmc_t* dev, sdmmc_req_t* req) {

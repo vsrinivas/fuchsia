@@ -16,6 +16,8 @@
 //~Min freq attainable with DIV2 Src
 #define AML_SD_EMMC_FCLK_DIV2_MIN_FREQ       20000000   //20MHz
 
+#define AML_SD_EMMC_MAX_BLK_SIZE              512
+
 //Default values after reset.EMMC Design Docs by AMLOGIC: PG 56
 #define AML_SD_EMMC_DEFAULT_BL_LEN           9          //512 bytes
 #define AML_SD_EMMC_DEFAULT_RESP_TIMEOUT     8          //256 core clock cycles
