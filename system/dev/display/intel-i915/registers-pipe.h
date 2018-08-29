@@ -15,7 +15,7 @@ namespace registers {
 // Number of pipes that the hardware provides.
 static constexpr uint32_t kPipeCount = 3;
 
-enum Pipe { PIPE_A, PIPE_B, PIPE_C };
+enum Pipe { PIPE_A, PIPE_B, PIPE_C, PIPE_INVALID };
 
 static const Pipe kPipes[kPipeCount] = {
     PIPE_A, PIPE_B, PIPE_C,

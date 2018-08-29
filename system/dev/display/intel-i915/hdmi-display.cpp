@@ -361,9 +361,8 @@ namespace {
 
 // See the section on HDMI/DVI programming in intel-gfx-prm-osrc-skl-vol12-display.pdf
 // for documentation on this algorithm.
-static bool calculate_params(uint32_t symbol_clock_khz,
-                             uint64_t* dco_freq_khz, uint32_t* dco_central_freq_khz,
-                             uint8_t* p0, uint8_t* p1, uint8_t* p2) {
+static bool calculate_params(uint32_t symbol_clock_khz, uint16_t* dco_int, uint16_t* dco_frac,
+                             uint8_t* q, uint8_t* q_mode, uint8_t* k, uint8_t* p, uint8_t* cf) {
     uint8_t even_candidates[36] = {
         4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 30, 32, 36, 40, 42,
         44, 48, 52, 54, 56, 60, 64, 66, 68, 70, 72, 76, 78, 80, 84, 88, 90, 92, 96, 98
@@ -418,43 +417,77 @@ static bool calculate_params(uint32_t symbol_clock_khz,
     if (!chosen_divisor) {
         return false;
     }
-    *p0 = *p1 = *p2 = 1;
+    uint8_t p0, p1, p2;
+    p0 = p1 = p2 = 1;
     if (chosen_divisor % 2 == 0) {
         uint8_t chosen_divisor1 = chosen_divisor / 2;
         if (chosen_divisor1 == 1 || chosen_divisor1 == 2
                 || chosen_divisor1 == 3 || chosen_divisor1 == 5) {
-            *p0 = 2;
-            *p2 = chosen_divisor1;
+            p0 = 2;
+            p2 = chosen_divisor1;
         } else if (chosen_divisor1 % 2 == 0) {
-            *p0 = 2;
-            *p1 = chosen_divisor1 / 2;
-            *p2 = 2;
+            p0 = 2;
+            p1 = chosen_divisor1 / 2;
+            p2 = 2;
         } else if (chosen_divisor1 % 3 == 0) {
-            *p0 = 3;
-            *p1 = chosen_divisor1 / 3;
-            *p2 = 2;
+            p0 = 3;
+            p1 = chosen_divisor1 / 3;
+            p2 = 2;
         } else if (chosen_divisor1 % 7 == 0) {
-            *p0 = 7;
-            *p1 = chosen_divisor1 / 7;
-            *p2 = 2;
+            p0 = 7;
+            p1 = chosen_divisor1 / 7;
+            p2 = 2;
         }
     } else if (chosen_divisor == 3 || chosen_divisor == 9) {
-        *p0 = 3;
-        *p2 = chosen_divisor / 3;
+        p0 = 3;
+        p2 = chosen_divisor / 3;
     } else if (chosen_divisor == 5 || chosen_divisor == 7) {
-        *p0 = chosen_divisor;
+        p0 = chosen_divisor;
     } else if (chosen_divisor == 15) {
-        *p0 = 3;
-        *p2 = 5;
+        p0 = 3;
+        p2 = 5;
     } else if (chosen_divisor == 21) {
-        *p0 = 7;
-        *p2 = 3;
+        p0 = 7;
+        p2 = 3;
     } else if (chosen_divisor == 35) {
-        *p0 = 7;
-        *p2 = 5;
+        p0 = 7;
+        p2 = 5;
     }
-    *dco_freq_khz = chosen_divisor * afe_clock;
-    *dco_central_freq_khz = chosen_central_freq;
+
+    *q = p1;
+    *q_mode = p1 != 1;
+
+    if (p2 == 5) {
+        *k = registers::DpllConfig2::kKdiv5;
+    } else if (p2 == 2) {
+        *k = registers::DpllConfig2::kKdiv2;
+    } else if (p2 == 3) {
+        *k = registers::DpllConfig2::kKdiv3;
+    } else { // p2 == 1
+        *k = registers::DpllConfig2::kKdiv1;
+    }
+    if (p0 == 1) {
+        *p = registers::DpllConfig2::kPdiv1;
+    } else if (p0 == 2) {
+        *p = registers::DpllConfig2::kPdiv2;
+    } else if (p0 == 3) {
+        *p = registers::DpllConfig2::kPdiv3;
+    } else { // p0 == 7
+        *p = registers::DpllConfig2::kPdiv7;
+    }
+
+    uint64_t dco_freq_khz = chosen_divisor * afe_clock;
+    *dco_int = static_cast<uint16_t>((dco_freq_khz / 1000) / 24);
+    *dco_frac = static_cast<uint16_t>(
+            ((dco_freq_khz * (1 << 15) / 24) - ((*dco_int * 1000L) * (1 << 15))) / 1000);
+
+    if (chosen_central_freq == 9600000) {
+        *cf = registers::DpllConfig2::k9600Mhz;
+    } else if (chosen_central_freq == 9000000) {
+        *cf = registers::DpllConfig2::k9000Mhz;
+    } else { // chosen_central_freq == 8400000
+        *cf = registers::DpllConfig2::k8400Mhz;
+    }
     return true;
 }
 
@@ -465,7 +498,7 @@ namespace i915 {
 HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id, registers::Ddi ddi)
         : DisplayDevice(controller, id, ddi) { }
 
-bool HdmiDisplay::InitDdi() {
+bool HdmiDisplay::Query() {
     // HDMI isn't supported on these DDIs
     if (ddi_to_pin(ddi()) == -1) {
         return false;
@@ -491,11 +524,36 @@ bool HdmiDisplay::InitDdi() {
     return false;
 }
 
-bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
+bool HdmiDisplay::InitDdi() {
+    // All the init happens during modeset
+    return true;
+}
+
+bool HdmiDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) {
+    config->is_hdmi = true;
+    return calculate_params(
+            pixel_clock_10khz * 10, &config->hdmi.dco_int, &config->hdmi.dco_frac,
+            &config->hdmi.q, &config->hdmi.q_mode, &config->hdmi.k,
+            &config->hdmi.p, &config->hdmi.cf);
+}
+
+bool HdmiDisplay::DdiModeset(const display_mode_t& mode,
+                             registers::Pipe pipe, registers::Trans trans) {
+    controller()->ResetPipe(pipe);
+    controller()->ResetTrans(trans);
     controller()->ResetDdi(ddi());
 
-    registers::Dpll dpll = controller()->SelectDpll(false /* is_edp */, true /* is_hdmi */,
-                                                    mode.pixel_clock_10khz);
+    // Calculate and the HDMI DPLL parameters
+    dpll_state_t state;
+    state.is_hdmi = true;
+    if (!calculate_params(mode.pixel_clock_10khz * 10,
+                          &state.hdmi.dco_int, &state.hdmi.dco_frac, &state.hdmi.q,
+                          &state.hdmi.q_mode, &state.hdmi.k, &state.hdmi.p, &state.hdmi.cf)) {
+        LOG_ERROR("hdmi: failed to calculate clock params\n");
+        return false;
+    }
+
+    registers::Dpll dpll = controller()->SelectDpll(false, state);
     if (dpll == registers::DPLL_INVALID) {
         return false;
     }
@@ -510,56 +568,21 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
         dpll_ctrl1.WriteTo(mmio_space());
         dpll_ctrl1.ReadFrom(mmio_space());
 
-        // Calculate and the HDMI DPLL parameters
-        uint8_t p0, p1, p2;
-        uint32_t dco_central_freq_khz;
-        uint64_t dco_freq_khz;
-        if (!calculate_params(mode.pixel_clock_10khz * 10,
-                              &dco_freq_khz, &dco_central_freq_khz, &p0, &p1, &p2)) {
-            LOG_ERROR("hdmi: failed to calculate clock params\n");
-            return false;
-        }
-
         // Set the DCO frequency
         auto dpll_cfg1 = registers::DpllConfig1::Get(dpll).FromValue(0);
-        uint16_t dco_int = static_cast<uint16_t>((dco_freq_khz / 1000) / 24);
-        uint16_t dco_frac = static_cast<uint16_t>(
-                ((dco_freq_khz * (1 << 15) / 24) - ((dco_int * 1000L) * (1 << 15))) / 1000);
         dpll_cfg1.set_frequency_enable(1);
-        dpll_cfg1.set_dco_integer(dco_int);
-        dpll_cfg1.set_dco_fraction(dco_frac);
+        dpll_cfg1.set_dco_integer(state.hdmi.dco_int);
+        dpll_cfg1.set_dco_fraction(state.hdmi.dco_frac);
         dpll_cfg1.WriteTo(mmio_space());
         dpll_cfg1.ReadFrom(mmio_space());
 
         // Set the divisors and central frequency
         auto dpll_cfg2 = registers::DpllConfig2::Get(dpll).FromValue(0);
-        dpll_cfg2.set_qdiv_ratio(p1);
-        dpll_cfg2.set_qdiv_mode(p1 != 1);
-        if (p2 == 5) {
-            dpll_cfg2.set_kdiv_ratio(dpll_cfg2.kKdiv5);
-        } else if (p2 == 2) {
-            dpll_cfg2.set_kdiv_ratio(dpll_cfg2.kKdiv2);
-        } else if (p2 == 3) {
-            dpll_cfg2.set_kdiv_ratio(dpll_cfg2.kKdiv3);
-        } else { // p2 == 1
-            dpll_cfg2.set_kdiv_ratio(dpll_cfg2.kKdiv1);
-        }
-        if (p0 == 1) {
-            dpll_cfg2.set_pdiv_ratio(dpll_cfg2.kPdiv1);
-        } else if (p0 == 2) {
-            dpll_cfg2.set_pdiv_ratio(dpll_cfg2.kPdiv2);
-        } else if (p0 == 3) {
-            dpll_cfg2.set_pdiv_ratio(dpll_cfg2.kPdiv3);
-        } else { // p0 == 7
-            dpll_cfg2.set_pdiv_ratio(dpll_cfg2.kPdiv7);
-        }
-        if (dco_central_freq_khz == 9600000) {
-            dpll_cfg2.set_central_freq(dpll_cfg2.k9600Mhz);
-        } else if (dco_central_freq_khz == 9000000) {
-            dpll_cfg2.set_central_freq(dpll_cfg2.k9000Mhz);
-        } else { // dco_central_freq == 8400000
-            dpll_cfg2.set_central_freq(dpll_cfg2.k8400Mhz);
-        }
+        dpll_cfg2.set_qdiv_ratio(state.hdmi.q);
+        dpll_cfg2.set_qdiv_mode(state.hdmi.q_mode);
+        dpll_cfg2.set_kdiv_ratio(state.hdmi.k);
+        dpll_cfg2.set_pdiv_ratio(state.hdmi.p);
+        dpll_cfg2.set_central_freq(state.hdmi.cf);
         dpll_cfg2.WriteTo(mmio_space());
         dpll_cfg2.ReadFrom(mmio_space()); // Posting read
 
@@ -680,11 +703,8 @@ bool HdmiDisplay::CheckPixelRate(uint64_t pixel_rate) {
         return false;
     }
 
-    uint64_t dco_freq_kh;
-    uint32_t dco_central_freq_khz;
-    uint8_t p0, p1, p2;
-    return calculate_params(static_cast<uint32_t>(pixel_rate / 1000 /* khz */),
-            &dco_freq_kh, &dco_central_freq_khz, &p0, &p1, &p2);
+    dpll_state_t test_state;
+    return ComputeDpllState(static_cast<uint32_t>(pixel_rate / 10000 /* 10khz */), &test_state);
 }
 
 } // namespace i915

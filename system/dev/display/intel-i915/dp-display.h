@@ -47,12 +47,15 @@ public:
     DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi);
 
 private:
+    bool Query() final;
     bool InitDdi() final;
-    bool DdiModeset(const display_mode_t& mode) final;
+    bool DdiModeset(const display_mode_t& mode,
+                    registers::Pipe pipe, registers::Trans trans) final;
     bool PipeConfigPreamble(const display_mode_t& mode,
                             registers::Pipe pipe, registers::Trans trans) final;
     bool PipeConfigEpilogue(const display_mode_t& mode,
                             registers::Pipe pipe, registers::Trans trans) final;
+    bool ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) final;
 
     bool CheckPixelRate(uint64_t pixel_rate) final;
 

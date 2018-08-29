@@ -143,6 +143,54 @@ void Pipe::ApplyModeConfig(const display_mode_t& mode) {
     pipe_size.WriteTo(mmio_space());
 }
 
+void Pipe::LoadActiveMode(display_mode_t* mode) {
+    registers::TranscoderRegs trans_regs(transcoder());
+
+    auto h_total_reg = trans_regs.HTotal().ReadFrom(mmio_space());
+    uint32_t h_total = h_total_reg.count_total();
+    uint32_t h_active = h_total_reg.count_active();
+    auto v_total_reg = trans_regs.VTotal().ReadFrom(mmio_space());
+    uint32_t v_total = v_total_reg.count_total();
+    uint32_t v_active = v_total_reg.count_active();
+
+    auto h_sync_reg = trans_regs.HSync().ReadFrom(mmio_space());
+    uint32_t h_sync_start = h_sync_reg.sync_start();
+    uint32_t h_sync_end = h_sync_reg.sync_end();
+    auto v_sync_reg = trans_regs.VSync().ReadFrom(mmio_space());
+    uint32_t v_sync_start = v_sync_reg.sync_start();
+    uint32_t v_sync_end = v_sync_reg.sync_end();
+
+    mode->h_addressable = h_active + 1;
+    mode->h_front_porch = h_sync_start - h_active;
+    mode->h_sync_pulse = h_sync_end - h_sync_start;
+    mode->h_blanking = h_total - h_active;
+
+    mode->v_addressable = v_active + 1;
+    mode->v_front_porch = v_sync_start - v_active;
+    mode->v_sync_pulse = v_sync_end - v_sync_start;
+    mode->v_blanking = v_total - v_active;
+
+    mode->flags = 0;
+    auto ddi_func_ctrl = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
+    if (ddi_func_ctrl.sync_polarity() & 0x2) {
+        mode->flags |= MODE_FLAG_VSYNC_POSITIVE;
+    }
+    if (ddi_func_ctrl.sync_polarity() & 0x1) {
+        mode->flags |= MODE_FLAG_HSYNC_POSITIVE;
+    }
+    if (trans_regs.Conf().ReadFrom(mmio_space()).interlaced_mode()) {
+        mode->flags |= MODE_FLAG_INTERLACED;
+    }
+
+    // If we're reusing hardware state, make sure the pipe source size matches
+    // the display mode size, since we never scale pipes.
+    registers::PipeRegs pipe_regs(pipe_);
+    auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
+    pipe_size.set_horizontal_source_size(mode->h_addressable - 1);
+    pipe_size.set_vertical_source_size(mode->v_addressable - 1);
+    pipe_size.WriteTo(mmio_space());
+}
+
 void Pipe::ApplyConfiguration(const display_config_t* config) {
     ZX_ASSERT(config);
 

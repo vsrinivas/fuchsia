@@ -135,7 +135,7 @@ hwreg::RegisterIo* DisplayDevice::mmio_space() const {
 bool DisplayDevice::Init() {
     ddi_power_ = controller_->power()->GetDdiPowerWellRef(ddi_);
 
-    if (!controller_->ResetDdi(ddi()) || !InitDdi()) {
+    if (!InitDdi()) {
         return false;
     }
 
@@ -176,13 +176,17 @@ bool DisplayDevice::Init() {
 }
 
 bool DisplayDevice::Resume() {
-    if (!DdiModeset(info_)) {
+    if (!DdiModeset(info_, pipe_->pipe(), pipe_->transcoder())) {
         return false;
     }
     if (pipe_) {
         pipe_->Resume();
     }
     return true;
+}
+
+void DisplayDevice::LoadActiveMode() {
+    pipe_->LoadActiveMode(&info_);
 }
 
 bool DisplayDevice::AttachPipe(Pipe* pipe) {
@@ -207,15 +211,50 @@ bool DisplayDevice::AttachPipe(Pipe* pipe) {
     return true;
 }
 
+bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
+    if (memcmp(&mode->h_addressable, &info_.h_addressable,
+               sizeof(display_mode_t) - offsetof(display_mode_t, h_addressable))) {
+        // Modeset is necessary if display params other than the clock frequency differ
+        return true;
+    }
+
+    if (mode->pixel_clock_10khz == info_.pixel_clock_10khz) {
+        // Modeset is necessary not necessary if all display params are the same
+        return false;
+    }
+
+    // Check to see if the hardware was already configured properly. The is primarily to
+    // prevent unnecessary modesetting at startup. The extra work this adds to regular
+    // modesetting is negligible.
+    auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(mmio_space());
+    const dpll_state_t* current_state = nullptr;
+    if (!dpll_ctrl2.ddi_clock_off(ddi()).get()) {
+        current_state = controller_->GetDpllState(
+                static_cast<registers::Dpll>(dpll_ctrl2.ddi_clock_select(ddi()).get()));
+    }
+
+    if (current_state == nullptr) {
+        // Modeset is necessary if the ddi doesn't have a clock
+        return true;
+    }
+
+    dpll_state_t new_state;
+    if (!ComputeDpllState(mode->pixel_clock_10khz, &new_state)) {
+        // ComputeDpllState should be validated in the display's CheckDisplayMode
+        ZX_ASSERT(false);
+    }
+
+    // Modesetting is necessary if the states are not equal
+    return !Controller::CompareDpllStates(*current_state, new_state);
+}
+
 void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
     ZX_ASSERT(config);
 
-    if (memcmp(&config->mode, &info_, sizeof(display_mode_t)) != 0) {
-        pipe_->Reset();
-
+    if (CheckNeedsModeset(&config->mode)) {
         info_ = config->mode;
 
-        DdiModeset(info_);
+        DdiModeset(info_, pipe_->pipe(), pipe_->transcoder());
 
         PipeConfigPreamble(info_, pipe_->pipe(), pipe_->transcoder());
         pipe_->ApplyModeConfig(info_);

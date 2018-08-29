@@ -37,6 +37,22 @@ typedef struct buffer_allocation {
     uint16_t end;
 } buffer_allocation_t;
 
+typedef struct dpll_state {
+    bool is_hdmi;
+    union {
+        uint32_t dp_rate;
+        struct {
+            uint16_t dco_int;
+            uint16_t dco_frac;
+            uint8_t q;
+            uint8_t q_mode;
+            uint8_t k;
+            uint8_t p;
+            uint8_t cf;
+        } hdmi;
+    };
+} dpll_state_t;
+
 class Controller;
 using DeviceType = ddk::Device<Controller, ddk::Unbindable,
                                ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
@@ -45,6 +61,8 @@ class Controller : public DeviceType, public ddk::DisplayControllerProtocol<Cont
 public:
     Controller(zx_device_t* parent);
     ~Controller();
+
+    static bool CompareDpllStates(const dpll_state_t& a, const dpll_state_t& b);
 
     // DDK ops
     void DdkUnbind();
@@ -109,11 +127,13 @@ public:
 
     const fbl::unique_ptr<GttRegion>& GetGttRegion(void* handle);
 
-    registers::Dpll SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate);
+    registers::Dpll SelectDpll(bool is_edp, const dpll_state_t& state);
+    const dpll_state_t* GetDpllState(registers::Dpll dpll);
 private:
     void EnableBacklight(bool enable);
     void InitDisplays();
-    fbl::unique_ptr<DisplayDevice> InitDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
+    fbl::unique_ptr<DisplayDevice> QueryDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
+    bool LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) __TA_REQUIRES(display_lock_);
     zx_status_t AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) __TA_REQUIRES(display_lock_);
     bool BringUpDisplayEngine(bool resume) __TA_REQUIRES(display_lock_);
     void InitDisplayBuffers();
@@ -205,8 +225,7 @@ private:
     PowerWellRef cd_clk_power_well_;
     struct {
         uint8_t use_count = 0;
-        bool is_hdmi;
-        uint32_t rate;
+        dpll_state_t state;
     } dplls_[registers::kDpllCount] = {};
 
     GMBusI2c gmbus_i2cs_[registers::kDdiCount] = {
@@ -224,6 +243,7 @@ private:
             __TA_GUARDED(display_lock_) = {};
     // Buffer allocations for pipes
     buffer_allocation_t pipe_buffers_[registers::kPipeCount] __TA_GUARDED(display_lock_) = {};
+    bool initial_alloc_ = true;
 
     uint16_t device_id_;
     uint32_t flags_;

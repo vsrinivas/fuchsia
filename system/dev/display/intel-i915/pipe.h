@@ -37,6 +37,8 @@ public:
     void Resume();
     void Reset();
 
+    void LoadActiveMode(display_mode_t* mode);
+
     registers::Pipe pipe() const { return pipe_; }
     registers::Trans transcoder() const {
         return attached_edp_ ? registers::TRANS_EDP : static_cast<registers::Trans>(pipe_);

@@ -39,8 +39,15 @@ public:
     bool AttachPipe(Pipe* pipe);
     void ApplyConfiguration(const display_config_t* config);
 
+    // Query whether or not there is a display attached to this ddi. Does not
+    // actually do any initialization - that is done by Init.
+    virtual bool Query() = 0;
+    // Does display mode agnostic ddi initialization - subclasses implement InitDdi.
     bool Init();
+    // Resumes the ddi after suspend.
     bool Resume();
+    // Loads ddi state from the hardware at driver startup.
+    void LoadActiveMode();
     // Method to allow the display device to handle hotplug events. Returns
     // true if the device can handle the event without disconnecting. Otherwise
     // the device will be removed.
@@ -67,7 +74,9 @@ protected:
     virtual bool InitDdi() = 0;
 
     // Configures the hardware to display content at the given resolution.
-    virtual bool DdiModeset(const display_mode_t& mode) = 0;
+    virtual bool DdiModeset(const display_mode_t& mode,
+                            registers::Pipe pipe, registers::Trans trans) = 0;
+    virtual bool ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) = 0;
 
     // Attaching a pipe to a display or configuring a pipe after display mode change has
     // 3 steps. The second step is generic pipe configuration, whereas PipeConfigPreamble
@@ -81,6 +90,8 @@ protected:
     hwreg::RegisterIo* mmio_space() const;
 
 private:
+    bool CheckNeedsModeset(const display_mode_t* mode);
+
     // Borrowed reference to Controller instance
     Controller* controller_;
 

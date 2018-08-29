@@ -186,6 +186,18 @@ static void get_posttransform_width(const layer_t& layer, uint32_t* width, uint3
 
 namespace i915 {
 
+bool Controller::CompareDpllStates(const dpll_state_t& a, const dpll_state_t& b) {
+    if (a.is_hdmi != b.is_hdmi) {
+        return false;
+    } else if (a.is_hdmi) {
+        return a.hdmi.dco_int == b.hdmi.dco_int && a.hdmi.dco_frac == b.hdmi.dco_frac
+                && a.hdmi.q == b.hdmi.q && a.hdmi.q_mode == b.hdmi.q_mode
+                && a.hdmi.k == b.hdmi.k && a.hdmi.p == b.hdmi.p && a.hdmi.cf == b.hdmi.cf;
+    } else {
+        return a.dp_rate == b.dp_rate;
+    }
+}
+
 void Controller::EnableBacklight(bool enable) {
     if (flags_ & FLAGS_BACKLIGHT) {
         uint32_t tmp = mmio_space_->Read<uint32_t>(BACKLIGHT_CTRL_OFFSET);
@@ -224,8 +236,8 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
         // Make sure the display's resources get freed before reallocating the pipe buffers
         device.reset();
     } else { // New device was plugged in
-        fbl::unique_ptr<DisplayDevice> device = InitDisplay(ddi);
-        if (!device) {
+        fbl::unique_ptr<DisplayDevice> device = QueryDisplay(ddi);
+        if (!device || !device->Init()) {
             LOG_INFO("failed to init hotplug display\n");
         } else {
             DisplayDevice* device_ptr = device.get();
@@ -426,18 +438,6 @@ bool Controller::BringUpDisplayEngine(bool resume) {
         }
     }
 
-    for (unsigned i = 0; i < registers::kTransCount; i++) {
-        ResetTrans(registers::kTrans[i]);
-    }
-
-    for (unsigned i = 0; i < registers::kDdiCount; i++) {
-        ResetDdi(registers::kDdis[i]);
-    }
-
-    for (unsigned i = 0; i < registers::kDpllCount; i++) {
-        dplls_[i].use_count = 0;
-    }
-
     return true;
 }
 
@@ -533,17 +533,18 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
     return true;
 }
 
-registers::Dpll Controller::SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate) {
+registers::Dpll Controller::SelectDpll(bool is_edp, const dpll_state_t& state) {
     registers::Dpll res = registers::DPLL_INVALID;
     if (is_edp) {
-        if (dplls_[0].use_count == 0 || dplls_[0].rate == rate) {
+        ZX_ASSERT(!state.is_hdmi);
+        if (dplls_[0].use_count == 0 || dplls_[0].state.dp_rate == state.dp_rate) {
             res = registers::DPLL_0;
         }
     } else {
         for (unsigned i = registers::kDpllCount - 1; i > 0; i--) {
             if (dplls_[i].use_count == 0) {
                 res = static_cast<registers::Dpll>(i);
-            } else if (dplls_[i].is_hdmi == is_hdmi && dplls_[i].rate == rate) {
+            } else if (CompareDpllStates(dplls_[i].state, state)) {
                 res = static_cast<registers::Dpll>(i);
                 break;
             }
@@ -551,8 +552,7 @@ registers::Dpll Controller::SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate)
     }
 
     if (res != registers::DPLL_INVALID) {
-        dplls_[res].is_hdmi = is_hdmi;
-        dplls_[res].rate = rate;
+        dplls_[res].state = state;
         dplls_[res].use_count++;
         LOG_SPEW("Selected DPLL %d\n", res);
     } else {
@@ -562,19 +562,26 @@ registers::Dpll Controller::SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate)
     return res;
 }
 
-fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
+const dpll_state_t* Controller::GetDpllState(registers::Dpll dpll) {
+    if (dplls_[dpll].use_count) {
+        return &dplls_[dpll].state;
+    }
+    return nullptr;
+}
+
+fbl::unique_ptr<DisplayDevice> Controller::QueryDisplay(registers::Ddi ddi) {
     fbl::AllocChecker ac;
     if (igd_opregion_.SupportsDp(ddi)) {
         LOG_SPEW("Checking for displayport monitor\n");
         auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi);
-        if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Init()) {
+        if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Query()) {
             return dp_disp;
         }
     }
     if (igd_opregion_.SupportsHdmi(ddi) || igd_opregion_.SupportsDvi(ddi)) {
         LOG_SPEW("Checking for hdmi monitor\n");
         auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, next_id_, ddi);
-        if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Init()) {
+        if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Query()) {
             return hdmi_disp;
         }
     }
@@ -582,12 +589,86 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
     return nullptr;
 }
 
+bool Controller::LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) {
+    registers::DdiRegs regs(ddi);
+
+    if (!registers::PowerWellControl2::Get().ReadFrom(mmio_space()).ddi_io_power_state(ddi).get()
+            || !regs.DdiBufControl().ReadFrom(mmio_space()).ddi_buffer_enable()) {
+        return false;
+    }
+
+    auto pipe = registers::PIPE_INVALID;
+    if (ddi == registers::DDI_A) {
+        registers::TranscoderRegs regs(registers::TRANS_EDP);
+        auto ddi_func_ctrl = regs.DdiFuncControl().ReadFrom(mmio_space());
+
+        if (ddi_func_ctrl.edp_input_select() == ddi_func_ctrl.kPipeA) {
+            pipe = registers::PIPE_A;
+        } else if (ddi_func_ctrl.edp_input_select() == ddi_func_ctrl.kPipeB) {
+            pipe = registers::PIPE_B;
+        } else if (ddi_func_ctrl.edp_input_select() == ddi_func_ctrl.kPipeC) {
+            pipe = registers::PIPE_C;
+        }
+    } else {
+        for (unsigned j = 0; j < registers::kPipeCount; j++) {
+            auto transcoder = registers::kTrans[j];
+            registers::TranscoderRegs regs(transcoder);
+            if (regs.ClockSelect().ReadFrom(mmio_space()).trans_clock_select() == ddi + 1u
+                    && regs.DdiFuncControl().ReadFrom(mmio_space()).ddi_select() == ddi) {
+                pipe = registers::kPipes[j];
+                break;
+            }
+        }
+    }
+
+    if (pipe == registers::PIPE_INVALID) {
+        return false;
+    }
+
+    auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(mmio_space());
+    if (dpll_ctrl2.ddi_clock_off(ddi).get()) {
+        return false;
+    }
+
+    auto dpll = static_cast<registers::Dpll>(dpll_ctrl2.ddi_clock_select(ddi).get());
+    auto dpll_enable = registers::DpllEnable::Get(dpll).ReadFrom(mmio_space());
+    if (!dpll_enable.enable_dpll()) {
+        return false;
+    }
+
+    auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
+    dplls_[dpll].use_count++;
+    dplls_[dpll].state.is_hdmi = dpll_ctrl1.dpll_hdmi_mode(dpll).get();
+    if (dplls_[dpll].state.is_hdmi) {
+        auto dpll_cfg1 = registers::DpllConfig1::Get(dpll).ReadFrom(mmio_space());
+        auto dpll_cfg2 = registers::DpllConfig2::Get(dpll).ReadFrom(mmio_space());
+
+        dplls_[dpll].state.hdmi = {
+            .dco_int = static_cast<uint16_t>(dpll_cfg1.dco_integer()),
+            .dco_frac = static_cast<uint16_t>(dpll_cfg1.dco_fraction()),
+            .q = static_cast<uint8_t>(dpll_cfg2.qdiv_ratio()),
+            .q_mode = static_cast<uint8_t>(dpll_cfg2.qdiv_mode()),
+            .k = static_cast<uint8_t>(dpll_cfg2.kdiv_ratio()),
+            .p = static_cast<uint8_t>(dpll_cfg2.pdiv_ratio()),
+            .cf = static_cast<uint8_t>(dpll_cfg2.central_freq()),
+        };
+    } else {
+        dplls_[dpll].state.dp_rate = dpll_ctrl1.dpll_link_rate(dpll).get();
+    }
+
+    device->AttachPipe(&pipes_[pipe]);
+
+    device->LoadActiveMode();
+
+    return true;
+}
+
 void Controller::InitDisplays() {
     fbl::AutoLock lock(&display_lock_);
     BringUpDisplayEngine(false);
 
     for (uint32_t i = 0; i < registers::kDdiCount; i++) {
-        auto disp_device = InitDisplay(registers::kDdis[i]);
+        auto disp_device = QueryDisplay(registers::kDdis[i]);
         if (disp_device) {
             AddDisplay(fbl::move(disp_device));
         }
@@ -595,6 +676,69 @@ void Controller::InitDisplays() {
 
     if (display_devices_.size() == 0) {
         LOG_INFO("No displays detected\n");
+    }
+
+    for (unsigned i = 0; i < registers::kDpllCount; i++) {
+        dplls_[i].use_count = 0;
+    }
+
+    // Make a note of what needs to be reset, so we can finish querying the hardware state
+    // before touching it, and so we can make sure transcoders are reset before ddis.
+    bool ddi_needs_reset[registers::kDdiCount] = {};
+    DisplayDevice* device_needs_init[registers::kDdiCount] = {};
+    for (unsigned i = 0; i < registers::kDdiCount; i++) {
+        auto ddi = registers::kDdis[i];
+        DisplayDevice* device = nullptr;
+        for (auto& d : display_devices_) {
+            if (d->ddi() == ddi) {
+                device = d.get();
+                break;
+            }
+        }
+
+        if (device == nullptr) {
+            ddi_needs_reset[ddi] = true;
+        } else {
+            if (!LoadHardwareState(ddi, device)) {
+                ddi_needs_reset[ddi] = true;
+                device_needs_init[ddi] = device;
+            }
+        }
+    }
+
+    // Reset any transcoders which aren't in use
+    for (unsigned i = 0; i < registers::kTransCount; i++) {
+        auto transcoder = registers::kTrans[i];
+        auto pipe = registers::PIPE_INVALID;
+        for (auto& p : pipes_) {
+            if (p.in_use() && p.transcoder() == transcoder) {
+                pipe = p.pipe();
+                break;
+            }
+        }
+
+        if (pipe == registers::PIPE_INVALID) {
+            ResetTrans(transcoder);
+        }
+    }
+
+    // Reset any ddis which don't have a restored display. If we failed to restore a
+    // display, try to initialize it here.
+    for (unsigned i = 0; i < registers::kDdiCount; i++) {
+        if (!ddi_needs_reset[i]) {
+            continue;
+        }
+        ResetDdi(static_cast<registers::Ddi>(i));
+
+        DisplayDevice* device = device_needs_init[i];
+        if (device && !device->Init()) {
+            for (unsigned i = 0; i < display_devices_.size(); i++) {
+                if (display_devices_[i].get() == device) {
+                    display_devices_.erase(i);
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -968,6 +1112,11 @@ void Controller::ReallocatePlaneBuffers(const display_config_t** display_configs
                 ZX_ASSERT(false);
             }
         }
+    }
+
+    if (initial_alloc_) {
+        initial_alloc_ = false;
+        reallocate_pipes = true;
     }
 
     buffer_allocation_t active_allocation[registers::kPipeCount];

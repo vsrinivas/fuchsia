@@ -875,7 +875,7 @@ namespace i915 {
 DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi)
         : DisplayDevice(controller, id, ddi) { }
 
-bool DpDisplay::InitDdi() {
+bool DpDisplay::Query() {
     // For eDP displays, assume that the BIOS has enabled panel power, given
     // that we need to rely on it properly configuring panel power anyway. For
     // general DP displays, the default power state is D0, so we don't have to
@@ -969,6 +969,12 @@ bool DpDisplay::InitDdi() {
         return false;
     }
 
+    LOG_INFO("Found %s monitor\n", controller()->igd_opregion().IsEdp(ddi()) ? "eDP" : "DP");
+
+    return true;
+}
+
+bool DpDisplay::InitDdi() {
     bool is_edp = controller()->igd_opregion().IsEdp(ddi());
     if (is_edp) {
         auto panel_ctrl = registers::PanelPowerCtrl::Get().ReadFrom(mmio_space());
@@ -1006,6 +1012,17 @@ bool DpDisplay::InitDdi() {
         }
     }
 
+    dpcd::LaneAlignStatusUpdate status;
+    if (!DpcdRead(dpcd::DPCD_LANE_ALIGN_STATUS_UPDATED, status.reg_value_ptr(), 1)) {
+        LOG_WARN("Failed to read align status on hotplug\n");
+        return false;
+    }
+
+    // If the link is already trained, assume output is working
+    if (status.interlane_align_done()) {
+        return true;
+    }
+
     uint8_t dpll_link_rate;
     if (dp_link_rate_mhz_ == 1620) {
         dpll_link_rate = registers::DpllControl1::kLinkRate810Mhz;
@@ -1015,7 +1032,8 @@ bool DpDisplay::InitDdi() {
         ZX_ASSERT(dp_link_rate_mhz_ == 5400);
         dpll_link_rate = registers::DpllControl1::kLinkRate2700Mhz;
     }
-    registers::Dpll dpll = controller()->SelectDpll(is_edp, false /* is_hdmi */, dpll_link_rate);
+    dpll_state_t state = { .is_hdmi = false, .dp_rate = dpll_link_rate };
+    registers::Dpll dpll = controller()->SelectDpll(is_edp, state);
     if (dpll == registers::DPLL_INVALID) {
         return false;
     }
@@ -1064,12 +1082,24 @@ bool DpDisplay::InitDdi() {
         return false;
     }
 
-    LOG_INFO("Found %s monitor\n", controller()->igd_opregion().IsEdp(ddi()) ? "eDP" : "DP");
-
     return true;
 }
 
-bool DpDisplay::DdiModeset(const display_mode_t& mode) {
+bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) {
+    config->is_hdmi = false;
+    if (dp_link_rate_mhz_ == 1620) {
+        config->dp_rate = registers::DpllControl1::kLinkRate810Mhz;
+    } else if (dp_link_rate_mhz_ == 2700) {
+        config->dp_rate = registers::DpllControl1::kLinkRate1350Mhz;
+    } else {
+        ZX_ASSERT(dp_link_rate_mhz_ == 5400);
+        config->dp_rate = registers::DpllControl1::kLinkRate2700Mhz;
+    }
+    return true;
+}
+
+bool DpDisplay::DdiModeset(const display_mode_t& mode,
+                           registers::Pipe pipe, registers::Trans trans) {
     return true;
 }
 
