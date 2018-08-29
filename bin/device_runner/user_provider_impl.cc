@@ -47,8 +47,10 @@ fuchsia::modular::auth::AccountPtr Convert(
   }
   account->url = user->profile_url()->str();
   account->image_url = user->image_url()->str();
-  account->profile_id = user->profile_id()->str();
-  if (account->profile_id.is_null()) {
+  if (flatbuffers::IsFieldPresent(
+          user, fuchsia::modular::UserStorage::VT_PROFILE_ID)) {
+    account->profile_id = user->profile_id()->str();
+  } else {
     account->profile_id = "";
   }
   return account;
