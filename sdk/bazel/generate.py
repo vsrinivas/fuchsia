@@ -259,6 +259,8 @@ class BazelBuilder(Builder):
                 library.hdrs.append(file.destination)
             elif extension == 'c' or extension == 'cc' or extension == 'cpp':
                 library.srcs.append(file.destination)
+            elif extension == 'json':
+                continue
             else:
                 raise Exception('Error: unknow file extension "%s" for %s.' %
                                 (extension, atom.id))
