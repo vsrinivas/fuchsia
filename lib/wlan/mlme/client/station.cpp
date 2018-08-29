@@ -842,6 +842,10 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
     finspect("  llc hdr: %s\n", debug::Describe(*llc_frame.hdr()).c_str());
     finspect("  llc payload: %s\n",
              debug::HexDump(llc_frame.body()->data, llc_payload_len).c_str());
+    if (llc_payload_len == 0) {
+        finspect("  dropping empty LLC frame\n");
+        return ZX_OK;
+    }
 
     // Prepare a packet
     const size_t eth_frame_len = sizeof(EthernetII) + llc_payload_len;

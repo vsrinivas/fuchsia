@@ -65,6 +65,14 @@ struct ClientTest : public ::testing::Test {
         return ZX_OK;
     }
 
+    zx_status_t SendEmptyDataFrame() {
+        fbl::unique_ptr<Packet> pkt;
+        auto status = CreateDataFrame(&pkt, nullptr, 0);
+        if (status != ZX_OK) { return status; }
+        station.HandleAnyFrame(fbl::move(pkt));
+        return ZX_OK;
+    }
+
     zx_status_t SendNullDataFrame() {
         fbl::unique_ptr<Packet> pkt;
         auto status = CreateNullDataFrame(&pkt);
@@ -371,6 +379,15 @@ TEST_F(ClientTest, ExchangeDataAfterAssociation) {
     ASSERT_EQ(std::memcmp(data_frame.hdr()->addr2.byte, kClientAddress, 6), 0);
     ASSERT_EQ(std::memcmp(data_frame.hdr()->addr3.byte, kBssid1, 6), 0);
     ASSERT_EQ(data_frame.body_len(), static_cast<size_t>(0));
+}
+
+TEST_F(ClientTest, ProcessEmptyDataFrames) {
+    Connect();
+
+    // Send a data frame which carries an LLC frame with no payload.
+    // Verify no ethernet frame was queued.
+    SendEmptyDataFrame();
+    ASSERT_TRUE(device.eth_queue.is_empty());
 }
 
 TEST_F(ClientTest, DropManagementFrames) {

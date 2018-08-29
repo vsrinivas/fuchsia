@@ -309,7 +309,9 @@ zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* 
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
     llc_hdr->protocol_id = 42;
-    std::memcpy(llc_hdr->payload, payload, len);
+    if (len > 0) {
+        std::memcpy(llc_hdr->payload, payload, len);
+    }
 
     size_t actual_body_len = llc_hdr->len() + len;
     auto status = data_frame.set_body_len(actual_body_len);
