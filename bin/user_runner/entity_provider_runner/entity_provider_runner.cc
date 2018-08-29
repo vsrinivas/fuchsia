@@ -139,6 +139,17 @@ class EntityProviderRunner::DataEntity : fuchsia::modular::Entity {
       result(nullptr);
     }
   }
+  // |fuchsia::modular::Entity|
+  void WriteData(fuchsia::modular::EntityData data,
+                 WriteDataCallback callback) override {
+    // TODO(MI4-1301)
+    callback(fuchsia::modular::EntityWriteStatus::READ_ONLY);
+  }
+  // |fuchsia::modular::Entity|
+  void GetReference(GetReferenceCallback callback) override {
+    // TODO(MI4-1301)
+    FXL_NOTIMPLEMENTED();
+  }
 
   std::vector<std::string> types_;
   std::map<std::string, std::string> data_;

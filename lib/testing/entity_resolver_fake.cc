@@ -42,6 +42,19 @@ class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
     callback(std::move(vmo_ptr));
   }
 
+  // |fuchsia::modular::Entity|
+  void WriteData(fuchsia::modular::EntityData data,
+                 WriteDataCallback callback) override {
+    // TODO(rosswang)
+    callback(fuchsia::modular::EntityWriteStatus::READ_ONLY);
+  }
+
+  // |fuchsia::modular::Entity|
+  void GetReference(GetReferenceCallback callback) override {
+    // TODO(rosswang)
+    FXL_NOTIMPLEMENTED();
+  }
+
   std::map<std::string, std::string> types_and_data_;
 
   fidl::BindingSet<fuchsia::modular::Entity> bindings_;

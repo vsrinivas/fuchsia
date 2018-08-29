@@ -6,6 +6,7 @@
 #include <lib/entity/cpp/json.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/type_converter.h>
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/get_link_path_for_parameter_name_call.h"
@@ -61,7 +62,7 @@ class FindModulesCall
     resolver_query_.parameter_constraints.resize(0);
     resolver_query_.parameter_constraints->reserve(intent_->parameters->size());
 
-    for (const auto& param : *intent_->parameters) {
+    for (auto& param : *intent_->parameters) {
       if (param.name.is_null() && intent_->handler.is_null()) {
         // It is not allowed to have a null intent name (left in for backwards
         // compatibility with old code: MI4-736) and rely on action-based
@@ -75,8 +76,7 @@ class FindModulesCall
       }
 
       constraint_futs_.push_back(
-          GetTypesFromIntentParameter(requesting_module_path_.Clone(),
-                                      param.data, param.name)
+          GetTypesFromIntentParameter(std::move(param.data), param.name)
               ->Map([this, name = param.name](std::vector<std::string> types) {
                 fuchsia::modular::FindModulesParameterConstraint constraint;
                 constraint.param_name = name;
@@ -109,8 +109,7 @@ class FindModulesCall
   // To avoid deadlocks, this function must not depend on anything that executes
   // on the story controller's operation queue.
   FuturePtr<std::vector<std::string>> GetTypesFromIntentParameter(
-      fidl::VectorPtr<fidl::StringPtr> module_path,
-      const fuchsia::modular::IntentParameterData& input,
+      fuchsia::modular::IntentParameterData input,
       const fidl::StringPtr& param_name) {
     auto fut = Future<std::vector<std::string>>::Create(
         "AddModCommandRunner::GetTypesFromIntentParameter");
@@ -122,8 +121,7 @@ class FindModulesCall
         break;
       }
       case fuchsia::modular::IntentParameterData::Tag::kEntityType: {
-        fut->Complete(std::vector<std::string>(input.entity_type()->begin(),
-                                               input.entity_type()->end()));
+        fut->Complete(fxl::To<std::vector<std::string>>(input.entity_type()));
         break;
       }
       case fuchsia::modular::IntentParameterData::Tag::kJson: {
@@ -145,7 +143,7 @@ class FindModulesCall
         auto did_get_lp = Future<fuchsia::modular::LinkPathPtr>::Create(
             "AddModCommandRunner::GetTypesFromIntentParameter.did_get_lp");
         AddGetLinkPathForParameterNameOperation(
-            &operations_, story_storage_, module_path.Clone(),
+            &operations_, story_storage_, requesting_module_path_.Clone(),
             input.link_name(), did_get_lp->Completer());
         did_get_lp->Then([this, fut,
                           param_name](fuchsia::modular::LinkPathPtr lp) {

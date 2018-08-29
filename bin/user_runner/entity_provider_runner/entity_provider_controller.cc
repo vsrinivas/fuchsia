@@ -42,6 +42,19 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
     entity_provider_->GetData(cookie_, type, callback);
   }
 
+  // |fuchsia::modular::Entity|
+  void WriteData(fuchsia::modular::EntityData data,
+                 WriteDataCallback callback) override {
+    // TODO(MI4-1301)
+    callback(fuchsia::modular::EntityWriteStatus::READ_ONLY);
+  }
+
+  // |fuchsia::modular::Entity|
+  void GetReference(GetReferenceCallback callback) override {
+    // TODO(MI4-1301)
+    FXL_NOTIMPLEMENTED();
+  }
+
   EntityProviderController* const entity_provider_controller_;
   fuchsia::modular::EntityProvider* const entity_provider_;
   const std::string cookie_;
