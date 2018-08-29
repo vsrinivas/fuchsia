@@ -143,6 +143,9 @@ class BazelBuilder(Builder):
         base = self.dest('dart', name)
 
         for file in atom.files:
+            extension = os.path.splitext(file.destination)[1][1:]
+            if extension == 'json':
+                continue
             dest = self.make_dir(os.path.join(base, file.destination))
             shutil.copy2(file.source, dest)
 
