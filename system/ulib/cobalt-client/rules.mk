@@ -11,7 +11,7 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/counter.cpp \
     $(LOCAL_DIR)/histogram.cpp \
-    $(LOCAL_DIR)/observation_buffer.cpp \
+    $(LOCAL_DIR)/event_buffer.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \

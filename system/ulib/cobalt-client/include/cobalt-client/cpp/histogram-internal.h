@@ -13,6 +13,7 @@
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
+#include <lib/fidl/cpp/vector_view.h>
 
 namespace cobalt_client {
 namespace internal {
@@ -66,43 +67,38 @@ public:
     // writeable again(this is buffer where the histogram is flushed).
     using FlushCompleteFn = fbl::Function<void()>;
 
-    // Function in charge persisting or processing the ObservationValue buffer.
-    using FlushFn = fbl::Function<void(
-        uint64_t metric_id, const fidl::VectorView<ObservationValue>&, FlushCompleteFn complete)>;
+    // Function in charge persisting or processing the EventValue buffer.
+    using FlushFn = fbl::Function<void(uint64_t metric_id,
+                                       const EventBuffer<fidl::VectorView<HistogramBucket>>&,
+                                       FlushCompleteFn complete)>;
 
     RemoteHistogram() = delete;
-    RemoteHistogram(uint32_t num_buckets, const fbl::String& name, uint64_t metric_id,
-                    uint32_t encoding_id, const fbl::Vector<ObservationValue>& metadata);
+    RemoteHistogram(uint32_t num_buckets, uint64_t metric_id,
+                    const fbl::Vector<Metadata>& metadata);
     RemoteHistogram(const RemoteHistogram&) = delete;
     RemoteHistogram(RemoteHistogram&&);
     RemoteHistogram& operator=(const RemoteHistogram&) = delete;
     RemoteHistogram& operator=(RemoteHistogram&&) = delete;
     ~RemoteHistogram() = default;
 
-    // Returns true if the contents of histogram were flushed into an ObservationPart collection,
+    // Returns true if the contents of histogram were flushed into an EventPart collection,
     // which is sent to the flush_handler. Returns false if the call was ignored.
     //
-    // VectorView will contain ObservationValue as follows:
+    // VectorView will contain EventValue as follows:
     // | Metadata | Histogram|
     bool Flush(const FlushFn& flush_handler);
 
 private:
     // Keeps a buffer for the metadata and the metric.
-    ObservationBuffer buffer_;
+    EventBuffer<fidl::VectorView<HistogramBucket>> buffer_;
 
     // Buffer for out of line allocation for the data being sent
     // through fidl. This buffer is rewritten on every flush, and contains
     // an entry for each bucket.
-    fbl::Vector<BucketDistributionEntry> bucket_buffer_;
-
-    // ObservationPart name for the histogram.
-    fbl::String name_;
+    fbl::Vector<HistogramBucket> bucket_buffer_;
 
     // Id for the cobalt metric backed by this histogram.
     uint64_t metric_id_;
-
-    // Id for the encoding used for the histograms data.
-    uint32_t encoding_id_;
 };
 
 } // namespace internal

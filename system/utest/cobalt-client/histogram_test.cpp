@@ -26,65 +26,44 @@ constexpr uint64_t kThreads = 20;
 // Number of buckets used for histogram(CUT).
 constexpr uint32_t kBuckets = 40;
 
-// Name of the histogram being created.
-constexpr char kHistogramName[] = "Histogram";
-
-// Default name for metadata parts.
-constexpr char kMetadataName[] = "Metadata";
-
 // Default id for the histogram.
 constexpr uint64_t kMetricId = 1;
 
-// Default encoding id for the histogram.
-constexpr uint32_t kEncodingId = 2;
-
-ObservationValue MakeObservation(const char* name, Value value) {
-    ObservationValue obs;
-    obs.name.size = strlen(name) + 1;
-    obs.name.data = const_cast<char*>(name);
-    obs.value = value;
-    obs.encoding_id = kEncodingId;
-    return obs;
-}
-
 // Returns an immutable vector of metadata.
-const fbl::Vector<ObservationValue>& GetMetadata() {
-    static fbl::Vector<ObservationValue> metadata = {MakeObservation(kMetadataName, IntValue(2)),
-                                                     MakeObservation(kMetadataName, IntValue(3))};
+fbl::Vector<Metadata>& GetMetadata() {
+    static fbl::Vector<Metadata> metadata = {{/*event_type =*/1, /*event_type_index =*/2},
+                                             {/*event_type =*/2, /*event_type_index =*/4}};
     return metadata;
 }
 
+// Returns true if both vectors contains the same metadata entries in the same order.
+bool MetadataEq(const fbl::Vector<Metadata>& lhs, const fbl::Vector<Metadata>& rhs) {
+    if (lhs.size() != rhs.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < rhs.size(); ++i) {
+        if (memcmp(&lhs[i], &rhs[i], sizeof(Metadata)) != 0) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 RemoteHistogram MakeRemoteHistogram() {
-    return RemoteHistogram(kBuckets, kHistogramName, kMetricId, kEncodingId, GetMetadata());
+    return RemoteHistogram(kBuckets, kMetricId, GetMetadata());
 }
 
-// Returns true if two observation values are equal.
-bool ObservationValuesEq(ObservationValue actual, ObservationValue expected) {
+bool HistEventValuesEq(fidl::VectorView<HistogramBucket> actual,
+                       fidl::VectorView<HistogramBucket> expected) {
     BEGIN_HELPER;
-    EXPECT_EQ(actual.encoding_id, expected.encoding_id);
-    EXPECT_EQ(actual.name.size, expected.name.size);
-    EXPECT_STR_EQ(actual.name.data, expected.name.data);
-    EXPECT_EQ(actual.value.tag, expected.value.tag);
-    EXPECT_EQ(actual.value.int_value, expected.value.int_value);
-    END_HELPER;
-}
-
-bool HistObservationValuesEq(ObservationValue actual, ObservationValue expected) {
-    BEGIN_HELPER;
-    EXPECT_EQ(actual.encoding_id, expected.encoding_id);
-    EXPECT_EQ(actual.name.size, expected.name.size);
-    EXPECT_STR_EQ(actual.name.data, expected.name.data);
-    EXPECT_EQ(actual.value.tag, fuchsia_cobalt_ValueTagint_bucket_distribution);
-    EXPECT_EQ(actual.value.tag, expected.value.tag);
-    EXPECT_EQ(actual.value.int_bucket_distribution.count,
-              expected.value.int_bucket_distribution.count);
-    for (size_t i = 0; i < actual.value.int_bucket_distribution.count; ++i) {
-        BucketDistributionEntry& actual_bucket =
-            static_cast<BucketDistributionEntry*>(actual.value.int_bucket_distribution.data)[i];
+    ASSERT_EQ(actual.count(), expected.count());
+    for (size_t i = 0; i < actual.count(); ++i) {
+        HistogramBucket& actual_bucket = actual[i];
         bool found = false;
-        for (size_t j = 0; j < expected.value.int_bucket_distribution.count; ++j) {
-            BucketDistributionEntry& expected_bucket = static_cast<BucketDistributionEntry*>(
-                expected.value.int_bucket_distribution.data)[j];
+        for (size_t j = 0; j < expected.count(); ++j) {
+            HistogramBucket& expected_bucket = expected[j];
             if (actual_bucket.index != expected_bucket.index) {
                 continue;
             }
@@ -212,9 +191,10 @@ bool TestIncrementMultiThread() {
 bool TestFlush() {
     BEGIN_TEST;
     RemoteHistogram histogram = MakeRemoteHistogram();
-    fidl::VectorView<ObservationValue> flushed_values;
+    fidl::VectorView<HistogramBucket> flushed_event_data;
     uint64_t flushed_metric_id;
     RemoteHistogram::FlushCompleteFn complete_fn;
+    const fbl::Vector<Metadata>* flushed_metadata;
 
     // Increase the count of each bucket bucket_index times.
     for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
@@ -223,40 +203,34 @@ bool TestFlush() {
         ASSERT_EQ(histogram.GetCount(bucket_index), bucket_index);
     }
 
-    ASSERT_TRUE(histogram.Flush([&flushed_values, &flushed_metric_id,
-                                 &complete_fn](uint64_t metric_id,
-                                               const fidl::VectorView<ObservationValue>& values,
-                                               RemoteHistogram::FlushCompleteFn comp_fn) {
-        flushed_values.set_data(const_cast<ObservationValue*>(values.data()));
-        flushed_values.set_count(values.count());
-        flushed_metric_id = metric_id;
-        complete_fn = fbl::move(comp_fn);
-    }));
+    ASSERT_TRUE(histogram.Flush(
+        [&flushed_event_data, &flushed_metadata, &flushed_metric_id, &complete_fn](
+            uint64_t metric_id, const EventBuffer<fidl::VectorView<HistogramBucket>>& buffer,
+            RemoteHistogram::FlushCompleteFn comp_fn) {
+            flushed_event_data = buffer.event_data();
+            flushed_metadata = &buffer.metadata();
+            flushed_metric_id = metric_id;
+            complete_fn = fbl::move(comp_fn);
+        }));
 
     // Check that flushed data is actually what we expect:
     // The metadata is the same, and each bucket contains bucket_index count.
     ASSERT_EQ(flushed_metric_id, kMetricId);
-    // Histogram should contain all metadata plus an extra value.
-    ASSERT_EQ(flushed_values.count(), GetMetadata().size() + 1);
     for (uint64_t metadata_index = 0; metadata_index < GetMetadata().size(); ++metadata_index) {
-        EXPECT_TRUE(
-            ObservationValuesEq(flushed_values[metadata_index], GetMetadata()[metadata_index]));
+        EXPECT_TRUE(MetadataEq(*flushed_metadata, GetMetadata()));
     }
 
-    fbl::Vector<BucketDistributionEntry> entries;
-    entries.reserve(kBuckets);
+    fbl::Vector<HistogramBucket> buckets;
+    buckets.reserve(kBuckets);
     for (size_t i = 0; i < kBuckets; ++i) {
-        entries.push_back({.index = static_cast<uint32_t>(i), .count = i});
+        buckets.push_back({.index = static_cast<uint32_t>(i), .count = i});
     }
-    ObservationValue expected_histogram = {
-        .name = {.size = fbl::constexpr_strlen(kHistogramName) + 1,
-                 .data = const_cast<char*>(kHistogramName)},
-        .value = BucketDistributionValue(entries.size(), entries.get()),
-        .encoding_id = kEncodingId};
+    fidl::VectorView<HistogramBucket> expected_buckets;
+    expected_buckets.set_data(buckets.get());
+    expected_buckets.set_count(buckets.size());
 
-    // Verify there is a bucket metric.
-    EXPECT_TRUE(
-        HistObservationValuesEq(flushed_values[flushed_values.count() - 1], expected_histogram));
+    // Verify there is a bucket event_data.
+    EXPECT_TRUE(HistEventValuesEq(flushed_event_data, expected_buckets));
 
     // Until complete_fn is called this should be false.
     ASSERT_FALSE(histogram.Flush(RemoteHistogram::FlushFn()));
@@ -269,9 +243,9 @@ bool TestFlush() {
     }
 
     // Check that after calling complete_fn we can call flush again.
-    ASSERT_TRUE(
-        histogram.Flush([](uint64_t metric_id, const fidl::VectorView<ObservationValue>& values,
-                           RemoteHistogram::FlushCompleteFn comp_fn) {}));
+    ASSERT_TRUE(histogram.Flush([](uint64_t metric_id,
+                                   const EventBuffer<fidl::VectorView<HistogramBucket>>& values,
+                                   RemoteHistogram::FlushCompleteFn comp_fn) {}));
 
     END_TEST;
 }
@@ -302,14 +276,13 @@ int FlushFn(void* args) {
     for (size_t i = 0; i < flush_args->operations; ++i) {
         if (flush_args->flush) {
             flush_args->histogram->Flush(
-                [&flush_args](uint64_t metric_id, const fidl::VectorView<ObservationValue>& values,
+                [&flush_args](uint64_t metric_id,
+                              const EventBuffer<fidl::VectorView<HistogramBucket>>& buffer,
                               RemoteHistogram::FlushCompleteFn complete_fn) {
-                    uint64_t count = values[values.count() - 1].value.int_bucket_distribution.count;
-                    BucketDistributionEntry* entries = static_cast<BucketDistributionEntry*>(
-                        values[values.count() - 1].value.int_bucket_distribution.data);
+                    uint64_t count = buffer.event_data().count();
                     for (uint32_t i = 0; i < count; ++i) {
-                        flush_args->accumulated_histogram->IncrementCount(entries[i].index,
-                                                                          entries[i].count);
+                        flush_args->accumulated_histogram->IncrementCount(
+                            buffer.event_data()[i].index, buffer.event_data()[i].count);
                     }
                 });
         } else {

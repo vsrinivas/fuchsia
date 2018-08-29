@@ -14,88 +14,29 @@ namespace cobalt_client {
 namespace internal {
 namespace {
 
-// Encoder Id used for setting up metrics parts in this test.
-constexpr uint32_t kEncodingId = 20;
-
-// Name used for metric returned by ObservationBuffer->GetMetric()
-constexpr char kPartName[] = "SomeName";
-
-// Name used for metric returned by ObservationBuffer->GetMetric()
-constexpr char kMetricName[] = "SomeMetricName";
-
 // Number of threads to spawn on multi threaded test.
 constexpr size_t kThreads = 20;
 
-bool TestIntValue() {
-    BEGIN_TEST;
-    Value int_val = IntValue(32);
-    ASSERT_EQ(int_val.tag, fuchsia_cobalt_ValueTagint_value);
-    ASSERT_EQ(int_val.int_value, 32);
-    END_TEST;
-}
-
-bool TestDoubleValue() {
-    BEGIN_TEST;
-    Value dbl_val = DoubleValue(1e-8);
-    ASSERT_EQ(dbl_val.tag, fuchsia_cobalt_ValueTagdouble_value);
-    ASSERT_EQ(dbl_val.double_value, 1e-8);
-    END_TEST;
-}
-
-bool TestIndexValue() {
-    BEGIN_TEST;
-    Value index_val = IndexValue(32);
-    ASSERT_EQ(index_val.tag, fuchsia_cobalt_ValueTagindex_value);
-    ASSERT_EQ(index_val.index_value, 32);
-    END_TEST;
-}
-
-bool TestBucketDistributionValue() {
-    BEGIN_TEST;
-    BucketDistributionEntry entries[5];
-    Value buckets_val = BucketDistributionValue(5, entries);
-    ASSERT_EQ(buckets_val.tag, fuchsia_cobalt_ValueTagint_bucket_distribution);
-    ASSERT_EQ(buckets_val.int_bucket_distribution.count, 5);
-    ASSERT_EQ(buckets_val.int_bucket_distribution.data, entries);
-    END_TEST;
-}
-
-ObservationValue MakeObservation(const char* name, Value value) {
-    ObservationValue obs;
-    obs.name.size = strlen(name) + 1;
-    obs.name.data = const_cast<char*>(name);
-    obs.value = value;
-    obs.encoding_id = kEncodingId;
-    return obs;
-}
-
-// Returns a buffer with two metric parts as metadata and |kPartName| as name, and both int values 2
-// and 3 respectively.
-ObservationBuffer MakeBuffer() {
-    fbl::Vector<ObservationValue> metadata = {MakeObservation(kPartName, IntValue(2)),
-                                              MakeObservation(kPartName, IntValue(3))};
-    ObservationBuffer buffer(metadata);
-    *buffer.GetMutableMetric() = MakeObservation(kMetricName, IntValue(32));
+// Return a buffer with two event_types each with their own event_type_index.
+EventBuffer<uint32_t> MakeBuffer() {
+    fbl::Vector<Metadata> metadata = {{.event_type = 1, .event_type_index = 2},
+                                      {.event_type = 2, .event_type_index = 4}};
+    EventBuffer<uint32_t> buffer(metadata);
+    *buffer.mutable_event_data() = 0;
     return buffer;
 }
 
 // Verify that the metadata is stored correctly.
 bool TestMetadataPreserved() {
     BEGIN_TEST;
-    ObservationBuffer buffer = MakeBuffer();
-    auto data = buffer.GetView();
+    EventBuffer<uint32_t> buffer = MakeBuffer();
 
-    ASSERT_EQ(data.count(), 3);
-
-    EXPECT_EQ(data[0].encoding_id, kEncodingId);
-    ASSERT_EQ(data[0].name.size, fbl::constexpr_strlen(kPartName) + 1);
-    EXPECT_STR_EQ(data[0].name.data, kPartName);
-    EXPECT_EQ(data[0].value.int_value, 2);
-
-    EXPECT_EQ(data[1].encoding_id, kEncodingId);
-    ASSERT_EQ(data[1].name.size, fbl::constexpr_strlen(kPartName) + 1);
-    EXPECT_STR_EQ(data[1].name.data, kPartName);
-    EXPECT_EQ(data[1].value.int_value, 3);
+    ASSERT_EQ(buffer.metadata().size(), 2);
+    ASSERT_EQ(buffer.metadata()[0].event_type, 1);
+    ASSERT_EQ(buffer.metadata()[0].event_type_index, 2);
+    ASSERT_EQ(buffer.metadata()[1].event_type, 2);
+    ASSERT_EQ(buffer.metadata()[1].event_type_index, 4);
+    ASSERT_EQ(buffer.event_data(), 0);
 
     END_TEST;
 }
@@ -103,20 +44,15 @@ bool TestMetadataPreserved() {
 // Verify that changes on GetMetric are persisted.
 bool TestMetricUpdatePersisted() {
     BEGIN_TEST;
-    ObservationBuffer buffer = MakeBuffer();
-    auto data = buffer.GetView();
+    EventBuffer<uint32_t> buffer = MakeBuffer();
 
-    ASSERT_EQ(data.count(), 3);
+    ASSERT_EQ(buffer.event_data(), 0);
 
-    EXPECT_EQ(data[2].encoding_id, kEncodingId);
-    ASSERT_EQ(data[2].name.size, fbl::constexpr_strlen(kMetricName) + 1);
-    EXPECT_STR_EQ(data[2].name.data, kMetricName);
+    *buffer.mutable_event_data() = 4;
+    EXPECT_EQ(buffer.event_data(), 4);
 
-    buffer.GetMutableMetric()->value.int_value = 4;
-    EXPECT_EQ(data[2].value.int_value, 4);
-
-    buffer.GetMutableMetric()->value.int_value = 20;
-    EXPECT_EQ(data[2].value.int_value, 20);
+    *buffer.mutable_event_data() = 20;
+    EXPECT_EQ(buffer.event_data(), 20);
 
     END_TEST;
 }
@@ -124,7 +60,7 @@ bool TestMetricUpdatePersisted() {
 // Verify while flushing is ongoing no calls to TryBeginFlush returns true.
 bool TestFlushDoNotOverlap() {
     BEGIN_TEST;
-    ObservationBuffer buffer = MakeBuffer();
+    EventBuffer<uint32_t> buffer = MakeBuffer();
 
     ASSERT_TRUE(buffer.TryBeginFlush());
     ASSERT_FALSE(buffer.TryBeginFlush());
@@ -151,7 +87,7 @@ struct TryFlushArgs {
     thrd_t* flushing_thread;
 
     // Buffer being attempted to flush.
-    ObservationBuffer* buffer;
+    EventBuffer<uint32_t>* buffer;
 };
 
 int TryFlushFn(void* args) {
@@ -178,7 +114,7 @@ int TryFlushFn(void* args) {
 // With multiple threads attempting to flush, should be flushed a single time.
 bool TestSingleFlushWithMultipleThreads() {
     BEGIN_TEST;
-    ObservationBuffer buffer = MakeBuffer();
+    EventBuffer<uint32_t> buffer = MakeBuffer();
     sync_completion_t start;
     sync_completion_t done;
     fbl::Vector<thrd_t> thread_ids;
@@ -214,19 +150,12 @@ bool TestSingleFlushWithMultipleThreads() {
     END_TEST;
 }
 
-BEGIN_TEST_CASE(ObservationTest)
-RUN_TEST(TestIntValue)
-RUN_TEST(TestDoubleValue)
-RUN_TEST(TestIndexValue)
-RUN_TEST(TestBucketDistributionValue)
-END_TEST_CASE(ObservationTest)
-
-BEGIN_TEST_CASE(ObservationBufferTest)
+BEGIN_TEST_CASE(EventBufferTest)
 RUN_TEST(TestMetadataPreserved)
 RUN_TEST(TestMetricUpdatePersisted)
 RUN_TEST(TestFlushDoNotOverlap)
 RUN_TEST(TestSingleFlushWithMultipleThreads)
-END_TEST_CASE(ObservationBufferTest)
+END_TEST_CASE(EventBufferTest)
 
 } // namespace
 } // namespace internal

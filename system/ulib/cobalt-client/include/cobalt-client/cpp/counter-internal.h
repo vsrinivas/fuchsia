@@ -31,8 +31,7 @@ public:
     // All atomic operations use this memory order.
     static constexpr fbl::memory_order kMemoryOrder = fbl::memory_order::memory_order_relaxed;
 
-    BaseCounter()
-        : counter_(0) {}
+    BaseCounter() : counter_(0) {}
     BaseCounter(const BaseCounter&) = delete;
     BaseCounter(BaseCounter&&);
     BaseCounter& operator=(const BaseCounter&) = delete;
@@ -65,12 +64,11 @@ public:
     using FlushCompleteFn = fbl::Function<void()>;
 
     // Function in charge persisting or processing the ObservationValue buffer.
-    using FlushFn = fbl::Function<void(
-        uint64_t metric_id, const fidl::VectorView<ObservationValue>&, FlushCompleteFn complete)>;
+    using FlushFn = fbl::Function<void(uint64_t metric_id, const EventBuffer<uint32_t>&,
+                                       FlushCompleteFn complete)>;
 
     RemoteCounter() = delete;
-    RemoteCounter(const fbl::String& name, uint64_t metric_id, uint32_t encoding_id,
-                  const fbl::Vector<ObservationValue>& metadata);
+    RemoteCounter(uint64_t metric_id, const fbl::Vector<Metadata>& metadata);
     RemoteCounter(const RemoteCounter&) = delete;
     RemoteCounter(RemoteCounter&&);
     RemoteCounter& operator=(const RemoteCounter&) = delete;
@@ -85,16 +83,10 @@ public:
 
 private:
     // The buffer containing the data to be flushed.
-    ObservationBuffer buffer_;
+    EventBuffer<uint32_t> buffer_;
 
-    // Metric Part name. This is ignored if there is a single observation part(the counter).
-    fbl::String name_;
-
-    // Unique-Id representing this metric in the backed.
+    // Unique-Id representing this metric in the backend.
     uint64_t metric_id_;
-
-    // Encoder used by the cobalt service.
-    uint32_t encoding_id_;
 };
 
 } // namespace internal

@@ -13,6 +13,7 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fuchsia/cobalt/c/fidl.h>
+#include <lib/fidl/cpp/vector_view.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 #include <unittest/unittest.h>
@@ -20,16 +21,7 @@
 namespace cobalt_client {
 namespace {
 
-// Encoder Id used for setting up metrics parts in this test.
-constexpr uint32_t kEncodingId = 20;
-
 constexpr uint64_t kMetricId = 1;
-
-// Name used for metric returned by metadata parts.
-constexpr char kPartName[] = "SomeName";
-
-// Name used for metric returned by ObservationBuffer->GetMutableMetric()
-constexpr char kMetricName[] = "SomeMetricName";
 
 // Number of threads spawned for multi-threaded tests.
 constexpr uint64_t kThreads = 20;
@@ -38,23 +30,14 @@ constexpr uint64_t kThreads = 20;
 namespace internal {
 namespace {
 
-ObservationValue MakeObservation(const char* name, Value value) {
-    ObservationValue obs;
-    obs.name.size = strlen(name) + 1;
-    obs.name.data = const_cast<char*>(name);
-    obs.value = value;
-    obs.encoding_id = kEncodingId;
-    return obs;
-}
-
-fbl::Vector<ObservationValue>& GetMetadata() {
-    static fbl::Vector<ObservationValue> metadata = {MakeObservation(kPartName, IntValue(2)),
-                                                     MakeObservation(kPartName, IntValue(3))};
+fbl::Vector<Metadata>& GetMetadata() {
+    static fbl::Vector<Metadata> metadata = {{.event_type = 1, .event_type_index = 2},
+                                             {.event_type = 2, .event_type_index = 4}};
     return metadata;
 }
 
 RemoteCounter MakeRemoteCounter() {
-    return RemoteCounter(kMetricName, kMetricId, kEncodingId, GetMetadata());
+    return RemoteCounter(kMetricId, GetMetadata());
 }
 
 // Verify that increments increases the underlying count by 1.
@@ -230,56 +213,56 @@ bool TestExchangeMultiThread() {
     END_TEST;
 }
 
-bool ObservationValuesEq(ObservationValue actual, ObservationValue expected) {
-    BEGIN_HELPER;
-    EXPECT_EQ(actual.encoding_id, expected.encoding_id);
-    EXPECT_EQ(actual.name.size, expected.name.size);
-    EXPECT_STR_EQ(actual.name.data, expected.name.data);
-    EXPECT_EQ(actual.value.tag, expected.value.tag);
-    EXPECT_EQ(actual.value.int_value, expected.value.int_value);
-    END_HELPER;
+bool MetadataEq(const fbl::Vector<Metadata>& lhs, const fbl::Vector<Metadata>& rhs) {
+    if (lhs.size() != rhs.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < rhs.size(); ++i) {
+        if (memcmp(&lhs[i], &rhs[i], sizeof(Metadata)) != 0) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 // Verify that the metadata used to create the counter is part of the flushes observation
 // and that the current value of the counter is correct, plus resets to 0 after flush.
 bool TestFlush() {
     BEGIN_TEST;
-    fbl::Vector<ObservationValue>& metadata = GetMetadata();
+    fbl::Vector<Metadata>& metadata = GetMetadata();
     RemoteCounter counter = MakeRemoteCounter();
     RemoteCounter::FlushCompleteFn mark_complete;
     counter.Increment(20);
     uint64_t actual_metric_id;
-    fidl::VectorView<ObservationValue> actual_values;
+    const fbl::Vector<Metadata>* actual_metadata;
+    uint32_t actual_count;
 
     // Check that all data is present, we abuse some implementation details which guarantee
-    // that metadata is first in the flushed values, and the last element is the metric we
+    // that metadata is first in the flushed values, and the last element is the event_data we
     // are measuring, which adds some restrictions to the internal implementation, but makes the
     // test cleaner and readable.
-    ASSERT_TRUE(
-        counter.Flush([&](uint64_t metric_id, const fidl::VectorView<ObservationValue>& values,
-                          RemoteCounter::FlushCompleteFn complete_fn) {
-            actual_metric_id = metric_id;
-            actual_values = values;
-            mark_complete = fbl::move(complete_fn);
-        }));
+    ASSERT_TRUE(counter.Flush([&](uint64_t metric_id, const EventBuffer<uint32_t>& buffer,
+                                  RemoteCounter::FlushCompleteFn complete_fn) {
+        actual_metric_id = metric_id;
+        actual_metadata = &buffer.metadata();
+        actual_count = buffer.event_data();
+        mark_complete = fbl::move(complete_fn);
+    }));
     // We capture the values and then verify outside to avoid having to pass flag around,
     // and have more descriptive messages on errors.
     ASSERT_EQ(actual_metric_id, kMetricId);
-    ASSERT_EQ(actual_values.count(), metadata.size() + 1);
+    ASSERT_EQ(actual_metadata->size(), metadata.size());
     // All metadata is present.
-    for (size_t i = 0; i < metadata.size(); ++i) {
-        ASSERT_TRUE(ObservationValuesEq(actual_values[i], metadata[i]));
-    }
-
-    const ObservationValue& metric_obs = actual_values[actual_values.count() - 1];
-    // Check that the last value has the expected int_value and tag.
-    ASSERT_TRUE(ObservationValuesEq(metric_obs, MakeObservation(kMetricName, IntValue(20))));
+    ASSERT_TRUE(MetadataEq(*actual_metadata, metadata));
+    ASSERT_EQ(actual_count, 20);
 
     // We haven't 'completed' the flush, so another call should return false.
     ASSERT_FALSE(counter.Flush(RemoteCounter::FlushFn()));
     mark_complete();
     ASSERT_EQ(counter.Load(), 0);
-    ASSERT_TRUE(counter.Flush([](uint64_t metric_id, const fidl::VectorView<ObservationValue>& val,
+    ASSERT_TRUE(counter.Flush([](uint64_t metric_id, const EventBuffer<uint32_t>& val,
                                  RemoteCounter::FlushCompleteFn flush) {}));
     END_TEST;
 }
@@ -307,10 +290,9 @@ int FlushFn(void* args) {
     for (size_t i = 0; i < flush_args->operation_count; ++i) {
         if (flush_args->flush) {
             flush_args->counter->Flush([&flush_args](uint64_t metric_id,
-                                                     const fidl::VectorView<ObservationValue>& vals,
+                                                     const EventBuffer<uint32_t>& buffer,
                                                      RemoteCounter::FlushCompleteFn complete_fn) {
-                const ObservationValue& val = vals[vals.count() - 1];
-                flush_args->accumulated->fetch_add(val.value.int_value, fbl::memory_order_relaxed);
+                flush_args->accumulated->fetch_add(buffer.event_data(), fbl::memory_order_relaxed);
                 complete_fn();
             });
         } else {

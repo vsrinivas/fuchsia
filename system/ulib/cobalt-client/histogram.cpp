@@ -14,16 +14,6 @@ namespace cobalt_client {
 namespace internal {
 namespace {
 
-ObservationValue MakeHistogramObservation(const fbl::String& name, uint32_t encoding_id,
-                                          uint64_t buckets, BucketDistributionEntry* entries) {
-    ObservationValue value;
-    value.encoding_id = encoding_id;
-    value.name.size = name.empty() ? 0 : name.size();
-    value.name.data = const_cast<char*>(name.data());
-    value.value = BucketDistributionValue(buckets, entries);
-    return value;
-}
-
 double GetLinearBucketValue(uint32_t bucket_index, const HistogramOptions& options) {
     if (bucket_index == 0) {
         return -INFINITY;
@@ -88,27 +78,24 @@ BaseHistogram::BaseHistogram(uint32_t num_buckets) {
 
 BaseHistogram::BaseHistogram(BaseHistogram&& other) = default;
 
-RemoteHistogram::RemoteHistogram(uint32_t num_buckets, const fbl::String& name, uint64_t metric_id,
-                                 uint32_t encoding_id,
-                                 const fbl::Vector<ObservationValue>& metadata)
-    : BaseHistogram(num_buckets), buffer_(metadata), name_(name), metric_id_(metric_id),
-      encoding_id_(encoding_id) {
+RemoteHistogram::RemoteHistogram(uint32_t num_buckets, uint64_t metric_id,
+                                 const fbl::Vector<Metadata>& metadata)
+    : BaseHistogram(num_buckets), buffer_(metadata), metric_id_(metric_id) {
     bucket_buffer_.reserve(num_buckets);
     for (uint32_t i = 0; i < num_buckets; ++i) {
-        bucket_buffer_.push_back({.index = i, .count = 0});
+        HistogramBucket bucket;
+        bucket.count = 0;
+        bucket.index = i;
+        bucket_buffer_.push_back(bucket);
     }
-    auto* metric = buffer_.GetMutableMetric();
-    metric->encoding_id = encoding_id_;
-    metric->name.data = const_cast<char*>(name_.data());
-    // Include null termination.
-    metric->name.size = name_.size() + 1;
-    metric->value = BucketDistributionValue(num_buckets, bucket_buffer_.get());
+    auto* buckets = buffer_.mutable_event_data();
+    buckets->set_data(bucket_buffer_.get());
+    buckets->set_count(bucket_buffer_.size());
 }
 
 RemoteHistogram::RemoteHistogram(RemoteHistogram&& other)
     : BaseHistogram(fbl::move(other)), buffer_(fbl::move(other.buffer_)),
-      bucket_buffer_(fbl::move(other.bucket_buffer_)), name_(fbl::move(other.name_)),
-      metric_id_(other.metric_id_), encoding_id_(other.encoding_id_) {}
+      bucket_buffer_(fbl::move(other.bucket_buffer_)), metric_id_(other.metric_id_) {}
 
 bool RemoteHistogram::Flush(const RemoteHistogram::FlushFn& flush_handler) {
     if (!buffer_.TryBeginFlush()) {
@@ -121,8 +108,9 @@ bool RemoteHistogram::Flush(const RemoteHistogram::FlushFn& flush_handler) {
         bucket_buffer_[bucket_index].count = buckets_[bucket_index].Exchange();
     }
 
-    flush_handler(metric_id_, buffer_.GetView(),
-                  fbl::BindMember(&buffer_, &ObservationBuffer::CompleteFlush));
+    flush_handler(
+        metric_id_, buffer_,
+        fbl::BindMember(&buffer_, &EventBuffer<fidl::VectorView<HistogramBucket>>::CompleteFlush));
     return true;
 }
 } // namespace internal
