@@ -13,13 +13,16 @@ use fuchsia_zircon as zx;
 use std::collections::hash_set::HashSet;
 use std::collections::HashMap;
 use std::env;
-use std::fs::OpenOptions;
-use std::io::{stdout, Write};
+use std::fs;
+use std::io::{self, Write};
+use std::path::PathBuf;
 
 // Include the generated FIDL bindings for the `Logger` service.
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogLevelFilter, LogMessage, MAX_TAGS, MAX_TAG_LEN_BYTES,
 };
+
+const DEFAULT_FILE_CAPACITY: u64 = 64000;
 
 #[derive(Debug, PartialEq)]
 struct LogListenerOptions {
@@ -47,6 +50,7 @@ impl Default for LogListenerOptions {
 #[derive(Debug, PartialEq, Clone)]
 struct LocalOptions {
     file: Option<String>,
+    file_capacity: u64,
     ignore_tags: HashSet<String>,
     clock: Clock,
     time_format: String,
@@ -56,6 +60,7 @@ impl Default for LocalOptions {
     fn default() -> LocalOptions {
         LocalOptions {
             file: None,
+            file_capacity: DEFAULT_FILE_CAPACITY,
             ignore_tags: HashSet::new(),
             clock: Clock::Monotonic,
             time_format: "%Y-%m-%d %H:%M:%S".to_string(),
@@ -104,9 +109,55 @@ enum Clock {
     Local,     // Localized wall time
 }
 
+struct MaxCapacityFile {
+    file_path: PathBuf,
+    file: fs::File,
+    capacity: u64,
+    curr_size: u64,
+}
+
+impl MaxCapacityFile {
+    fn new<P: Into<PathBuf>>(file_path: P, capacity: u64) -> Result<MaxCapacityFile, Error> {
+        let file_path = file_path.into();
+        let file = fs::OpenOptions::new().append(true).create(true).open(&file_path)?;
+        let curr_size = file.metadata()?.len();
+        Ok(MaxCapacityFile {
+            file,
+            file_path,
+            capacity,
+            curr_size,
+        })
+    }
+
+    // rotate will move the current file to ${file_path}.log.old and create a new file at ${file_path}
+    // to hold future messages.
+    fn rotate(&mut self) -> io::Result<()> {
+        fs::rename(&self.file_path, &self.file_path.with_extension("log.old"))?;
+        self.file = fs::OpenOptions::new().append(true).create(true).open(&self.file_path)?;
+        self.curr_size = 0;
+        Ok(())
+    }
+}
+
+impl Write for MaxCapacityFile {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        if buf.len() as u64 > self.capacity / 2 {
+            return Err(io::Error::new(io::ErrorKind::Other, "buffer size larger than file capacity"));
+        }
+        if self.capacity != 0 && self.curr_size + (buf.len() as u64) > self.capacity / 2 {
+            self.rotate()?;
+        }
+        self.curr_size += buf.len() as u64;
+        self.file.write(buf)
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        self.file.flush()
+    }
+}
+
 fn help(name: &str) -> String {
     format!(
-        r#"Usage: {} [flags]
+        r#"Usage: {name} [flags]
         Flags:
         --tag <string>:
             Tag to filter on. Multiple tags can be specified by using multiple --tag flags.
@@ -135,6 +186,12 @@ fn help(name: &str) -> String {
         --file <string>:
             File to write logs to. If omitted, logs are written to stdout.
 
+        --file_capacity <integer>:
+            The maximum allowed amount of disk space to consume. Once the file being written to
+            reaches half of the capacity, it is moved to FILE.old and a new log file is created.
+            Defaults to {default_capacity}. Does nothing if --file is not specified. Setting this
+            to 0 disables this functionality.
+
         --clock <Monotonic|UTC|Local>:
             Select clock to use for timestamps.
             Monotonic (default): same as ZX_CLOCK_MONOTONIC.
@@ -148,7 +205,7 @@ fn help(name: &str) -> String {
 
         --help | -h:
             Prints usage."#,
-        name
+        name=name, default_capacity=DEFAULT_FILE_CAPACITY
     )
 }
 
@@ -258,6 +315,19 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
             "--file" => {
                 options.local.file = Some((&args[i + 1]).clone());
             }
+            "--file_capacity" => {
+                match args[i + 1].parse::<u64>() {
+                    Ok(cap) => {
+                        options.local.file_capacity = cap;
+                    }
+                    Err(_) => {
+                        return Err(format!(
+                            "Invalid file capacity: '{}', should be a positive integer.",
+                            args[i + 1]
+                        ));
+                    }
+                }
+            }
             "--clock" => match args[i + 1].to_lowercase().as_ref() {
                 "monotonic" => options.local.clock = Clock::Monotonic,
                 "utc" => options.local.clock = Clock::UTC,
@@ -349,11 +419,8 @@ fn get_log_level(level: i32) -> String {
 
 fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + Send>>, Error> {
     let writer: Box<dyn Write + Send> = match local_options.file {
-        None => Box::new(stdout()),
-        Some(ref name) => {
-            let f = OpenOptions::new().append(true).create(true).open(name)?;
-            Box::new(f)
-        }
+        None => Box::new(io::stdout()),
+        Some(ref name) => Box::new(MaxCapacityFile::new(name, local_options.file_capacity)?),
     };
     Ok(Listener {
         dropped_logs: HashMap::new(),
@@ -499,6 +566,92 @@ mod tests {
             .expect("something went wrong reading the file");
 
         assert_eq!(content, expected);
+    }
+
+    #[test]
+    fn test_max_capacity_file_write() {
+        let cap = 10;
+
+        struct TestCase {
+            file_1_initial_state: Vec<u8>,
+            file_2_initial_state: Vec<u8>,
+            write_to_perform: Vec<u8>,
+            file_1_expected_state: Vec<u8>,
+            file_2_expected_state: Vec<u8>,
+        }
+
+        let test_cases = vec![
+            TestCase {
+                file_1_initial_state: vec![],
+                file_2_initial_state: vec![],
+                write_to_perform: vec![],
+                file_1_expected_state: vec![],
+                file_2_expected_state: vec![],
+            },
+            TestCase {
+                file_1_initial_state: vec![],
+                file_2_initial_state: vec![],
+                write_to_perform: vec![0],
+                file_1_expected_state: vec![0],
+                file_2_expected_state: vec![],
+            },
+            TestCase {
+                file_1_initial_state: vec![0],
+                file_2_initial_state: vec![0],
+                write_to_perform: vec![],
+                file_1_expected_state: vec![0],
+                file_2_expected_state: vec![0],
+            },
+            TestCase {
+                file_1_initial_state: vec![],
+                file_2_initial_state: vec![],
+                write_to_perform: vec![0,1,2,3,4],
+                file_1_expected_state: vec![0,1,2,3,4],
+                file_2_expected_state: vec![],
+            },
+            TestCase {
+                file_1_initial_state: vec![0,1,2,3,4],
+                file_2_initial_state: vec![],
+                write_to_perform: vec![5],
+                file_1_expected_state: vec![5],
+                file_2_expected_state: vec![0,1,2,3,4],
+            },
+            TestCase {
+                file_1_initial_state: vec![5,6,7,8,9],
+                file_2_initial_state: vec![0,1,2,3,4],
+                write_to_perform: vec![10,11,12,13,14],
+                file_1_expected_state: vec![10,11,12,13,14],
+                file_2_expected_state: vec![5,6,7,8,9],
+            },
+        ];
+
+        for tc in test_cases {
+            let tmp_dir = TempDir::new("log_listener_test").unwrap();
+            let tmp_file_path = tmp_dir.path().join("test.log");
+            fs::OpenOptions::new().append(true).create(true)
+                .open(&tmp_file_path).unwrap()
+                .write(&tc.file_1_initial_state).unwrap();
+            fs::OpenOptions::new().append(true).create(true)
+                .open(&tmp_file_path.with_extension("log.old")).unwrap()
+                .write(&tc.file_2_initial_state).unwrap();
+
+            MaxCapacityFile::new(tmp_file_path.clone(), cap).unwrap()
+                .write(&tc.write_to_perform).unwrap();
+
+            let mut file1 = fs::OpenOptions::new().read(true)
+                .open(&tmp_file_path).unwrap();
+            let file_size = file1.metadata().unwrap().len();
+            let mut buf = vec![0; file_size as usize];
+            file1.read(&mut buf).unwrap();
+            assert_eq!(buf, tc.file_1_expected_state);
+
+            let mut file2 = fs::OpenOptions::new().read(true)
+                .open(&tmp_file_path.with_extension("log.old")).unwrap();
+            let file_size = file2.metadata().unwrap().len();
+            let mut buf = vec![0; file_size as usize];
+            file2.read(&mut buf).unwrap();
+            assert_eq!(buf, tc.file_2_expected_state);
+        }
     }
 
     #[test]
