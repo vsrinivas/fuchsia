@@ -1,9 +1,10 @@
-use async;
-use fidl::endpoints2::{ClientEnd, RequestStream, ServerEnd};
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use fidl::endpoints2::{ClientEnd, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
-use futures::channel::mpsc::{unbounded, UnboundedSender};
 use futures::future;
-use futures::prelude::*;
 use std::sync::{Arc, Mutex, Weak};
 
 use ime::IME;
@@ -41,7 +42,7 @@ impl ImeService {
 
 impl uii::ImeService for ImeService {
     type OnOpenFut = future::Ready<()>;
-    fn on_open(&mut self, control_handle: uii::ImeServiceControlHandle) -> Self::OnOpenFut {
+    fn on_open(&mut self, _control_handle: uii::ImeServiceControlHandle) -> Self::OnOpenFut {
         future::ready(())
     }
 
@@ -50,18 +51,12 @@ impl uii::ImeService for ImeService {
         &mut self, keyboard_type: uii::KeyboardType, action: uii::InputMethodAction,
         initial_state: uii::TextInputState, client: ClientEnd<uii::InputMethodEditorClientMarker>,
         editor: ServerEnd<uii::InputMethodEditorMarker>,
-        control_handle: uii::ImeServiceControlHandle,
+        _control_handle: uii::ImeServiceControlHandle,
     ) -> Self::GetInputMethodEditorFut {
         if let Ok(edit_stream) = editor.into_stream() {
             if let Ok(client_proxy) = client.into_proxy() {
                 let ime_ref = Arc::downgrade(
-                    &IME::new(
-                        keyboard_type,
-                        action,
-                        initial_state,
-                        client_proxy,
-                        self.clone(),
-                    ).bind(edit_stream),
+                    &IME::new(keyboard_type, action, initial_state, client_proxy).bind(edit_stream),
                 );
                 let mut state = self.0.lock().unwrap();
                 state.active_ime = Some(ime_ref);
@@ -72,7 +67,7 @@ impl uii::ImeService for ImeService {
 
     type ShowKeyboardFut = future::Ready<()>;
     fn show_keyboard(
-        &mut self, control_handle: uii::ImeServiceControlHandle,
+        &mut self, _control_handle: uii::ImeServiceControlHandle,
     ) -> Self::ShowKeyboardFut {
         self.update_keyboard_visibility(true);
         future::ready(())
@@ -80,7 +75,7 @@ impl uii::ImeService for ImeService {
 
     type HideKeyboardFut = future::Ready<()>;
     fn hide_keyboard(
-        &mut self, control_handle: uii::ImeServiceControlHandle,
+        &mut self, _control_handle: uii::ImeServiceControlHandle,
     ) -> Self::HideKeyboardFut {
         self.update_keyboard_visibility(false);
         future::ready(())
@@ -88,7 +83,7 @@ impl uii::ImeService for ImeService {
 
     type InjectInputFut = future::Ready<()>;
     fn inject_input(
-        &mut self, event: uii::InputEvent, control_handle: uii::ImeServiceControlHandle,
+        &mut self, event: uii::InputEvent, _control_handle: uii::ImeServiceControlHandle,
     ) -> Self::InjectInputFut {
         let ime = {
             let mut state = self.0.lock().unwrap();
@@ -115,9 +110,13 @@ impl uii::ImeVisibilityService for ImeService {
         let mut state = self.0.lock().unwrap();
 
         // send the current state on first connect, even if it hasn't changed
-        control_handle.send_on_keyboard_visibility_changed(state.keyboard_visible);
+        if control_handle
+            .send_on_keyboard_visibility_changed(state.keyboard_visible)
+            .is_ok()
+        {
+            state.visibility_listeners.push(control_handle);
+        }
 
-        state.visibility_listeners.push(control_handle);
         future::ready(())
     }
 }

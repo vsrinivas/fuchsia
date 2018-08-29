@@ -1,3 +1,7 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use async;
 use fidl::encoding2::OutOfLine;
 use fidl_fuchsia_ui_input as uii;
@@ -7,8 +11,6 @@ use futures::prelude::*;
 use std::char;
 use std::ops::Range;
 use std::sync::{Arc, Mutex};
-
-use ime_service::ImeService;
 
 // TODO(lard): move constants into common, centralized location?
 const HID_USAGE_KEY_BACKSPACE: u32 = 0x2a;
@@ -21,24 +23,22 @@ pub struct IME {
     client: Box<uii::InputMethodEditorClientProxyInterface>,
     keyboard_type: uii::KeyboardType,
     action: uii::InputMethodAction,
-    ime_service: ImeService,
 }
 
 impl IME {
     pub fn new<I: 'static + uii::InputMethodEditorClientProxyInterface>(
         keyboard_type: uii::KeyboardType, action: uii::InputMethodAction,
-        initial_state: uii::TextInputState, client: I, ime_service: ImeService,
+        initial_state: uii::TextInputState, client: I,
     ) -> IME {
         IME {
             state: initial_state,
             client: Box::new(client),
             keyboard_type: keyboard_type,
             action: action,
-            ime_service: ime_service,
         }
     }
 
-    pub fn bind(mut self, edit_stream: uii::InputMethodEditorRequestStream) -> Arc<Mutex<Self>> {
+    pub fn bind(self, edit_stream: uii::InputMethodEditorRequestStream) -> Arc<Mutex<Self>> {
         let self_mutex = Arc::new(Mutex::new(self));
         let self_mutex_clone = self_mutex.clone();
         let stream_complete = edit_stream
@@ -214,42 +214,41 @@ impl IME {
     }
 }
 
-pub fn default_state() -> uii::TextInputState {
-    uii::TextInputState {
-        revision: 1,
-        text: "".to_string(),
-        selection: uii::TextSelection {
-            base: -1,
-            extent: -1,
-            affinity: uii::TextAffinity::Upstream,
-        },
-        composing: uii::TextRange { start: -1, end: -1 },
-    }
-}
-
-pub fn clone_state(state: &uii::TextInputState) -> uii::TextInputState {
-    uii::TextInputState {
-        revision: state.revision,
-        text: state.text.clone(),
-        selection: uii::TextSelection {
-            base: state.selection.base,
-            extent: state.selection.extent,
-            affinity: state.selection.affinity,
-        },
-        composing: uii::TextRange {
-            start: state.composing.start,
-            end: state.composing.end,
-        },
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use fidl;
     use std::sync::mpsc::{channel, Receiver, Sender};
     use std::sync::Mutex;
-    use std::time::Duration;
+
+    pub fn default_state() -> uii::TextInputState {
+        uii::TextInputState {
+            revision: 1,
+            text: "".to_string(),
+            selection: uii::TextSelection {
+                base: -1,
+                extent: -1,
+                affinity: uii::TextAffinity::Upstream,
+            },
+            composing: uii::TextRange { start: -1, end: -1 },
+        }
+    }
+
+    pub fn clone_state(state: &uii::TextInputState) -> uii::TextInputState {
+        uii::TextInputState {
+            revision: state.revision,
+            text: state.text.clone(),
+            selection: uii::TextSelection {
+                base: state.selection.base,
+                extent: state.selection.extent,
+                affinity: state.selection.affinity,
+            },
+            composing: uii::TextRange {
+                start: state.composing.start,
+                end: state.composing.end,
+            },
+        }
+    }
 
     fn set_up(
         text: &str, base: i64, extent: i64,
@@ -268,7 +267,6 @@ mod test {
             uii::InputMethodAction::Search,
             state,
             client,
-            ImeService::new(),
         );
         (ime, statechan, actionchan)
     }
@@ -346,7 +344,6 @@ mod test {
             uii::InputMethodAction::Search,
             default_state(),
             client,
-            ImeService::new(),
         );
         assert_eq!(true, statechan.try_recv().is_err());
         assert_eq!(true, actionchan.try_recv().is_err());
@@ -652,8 +649,9 @@ mod test {
 
     // TODO(lard): fix unicode support so this passes
     // disabled: #[test]
+    #[allow(dead_code)]
     fn test_unicode_selection() {
-        let (mut ime, statechan, actionchan) = set_up("m😸eow", 1, 1);
+        let (mut ime, statechan, _actionchan) = set_up("m😸eow", 1, 1);
 
         simulate_keypress(&mut ime, HID_USAGE_KEY_RIGHT, true, true);
         assert!(statechan.try_recv().is_ok());
@@ -668,8 +666,9 @@ mod test {
 
     // TODO(lard): fix unicode support so this passes
     // disabled: #[test]
+    #[allow(dead_code)]
     fn test_unicode_backspace() {
-        let (mut ime, statechan, actionchan) = set_up("m😸eow", 2, 2);
+        let (mut ime, statechan, _actionchan) = set_up("m😸eow", 2, 2);
 
         simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, true);
         let state = statechan.try_recv().unwrap();

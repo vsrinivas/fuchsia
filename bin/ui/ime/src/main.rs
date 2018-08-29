@@ -1,6 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 extern crate failure;
 extern crate fidl;
 extern crate fidl_fuchsia_ui_input;
@@ -14,7 +15,6 @@ mod ime_service;
 
 use component::server::ServicesServer;
 use failure::{Error, ResultExt};
-use fidl::endpoints2::RequestStream;
 use fidl::endpoints2::ServiceMarker;
 use fidl_fuchsia_ui_input as uii;
 use futures::prelude::*;
