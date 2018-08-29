@@ -58,13 +58,13 @@ class VmoDataChunk : public DataSource::DataChunk {
   zx_status_t Init() {
     uintptr_t allocate_address;
     zx_status_t status = zx::vmar::root_self()->allocate(
-        0, ToFullPages(vmo_.size()), ZX_VM_FLAG_CAN_MAP_READ, &vmar_,
+        0, ToFullPages(vmo_.size()), ZX_VM_CAN_MAP_READ, &vmar_,
         &allocate_address);
     if (status != ZX_OK) {
       return status;
     }
 
-    return vmar_.map(0, vmo_.vmo(), 0, vmo_.size(), ZX_VM_FLAG_PERM_READ,
+    return vmar_.map(0, vmo_.vmo(), 0, vmo_.size(), ZX_VM_PERM_READ,
                      &mapped_address_);
   }
 

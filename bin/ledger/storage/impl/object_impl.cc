@@ -93,8 +93,7 @@ Status VmoObject::Initialize() const {
   uintptr_t allocate_address;
   zx_status_t zx_status = zx::vmar::root_self()->allocate(
       0, ToFullPages(vmo_.size()),
-      ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-          ZX_VM_FLAG_CAN_MAP_SPECIFIC,
+      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC,
       &vmar_, &allocate_address);
   if (zx_status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to allocate VMAR. Error: " << zx_status;
@@ -104,7 +103,7 @@ Status VmoObject::Initialize() const {
   char* mapped_address;
   zx_status = vmar_.map(
       0, vmo_.vmo(), 0, vmo_.size(),
-      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
       reinterpret_cast<uintptr_t*>(&mapped_address));
   if (zx_status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to map VMO. Error: " << zx_status;
