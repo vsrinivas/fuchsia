@@ -34,6 +34,13 @@ void x86_init_smp(uint32_t* apic_ids, uint32_t num_cpus) {
     lk_init_secondary_cpus(num_cpus - 1);
 }
 
+static void free_stack_and_thread(thread_t* t) {
+    if (t) {
+        vm_free_kstack(&t->stack);
+        free(t);
+    }
+}
+
 zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
     volatile int aps_still_booting = 0;
     zx_status_t status = ZX_ERR_INTERNAL;
@@ -72,28 +79,16 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
     // resources.
     memset(&bootstrap_data->per_cpu, 0, sizeof(bootstrap_data->per_cpu));
     // Allocate kstacks and threads for all processors
-    //
-    // TODO(maniscalco): In a future change, allocate the stacks using |vm_allocate_kstack|
-    // (ZX-2547).
     for (unsigned int i = 0; i < count; ++i) {
-        thread_t* thread = (thread_t*)memalign(16,
-                                               ROUNDUP(sizeof(thread_t), 16) +
-#if __has_feature(safe_stack)
-                                                   PAGE_SIZE +
-#endif
-                                                   PAGE_SIZE);
+        thread_t* thread = static_cast<thread_t*>(calloc(1, sizeof(thread_t)));
         if (!thread) {
             status = ZX_ERR_NO_MEMORY;
-            goto cleanup_allocations;
+            goto cleanup_all;
         }
-        uintptr_t kstack_base =
-            (uint64_t)thread + ROUNDUP(sizeof(thread_t), 16);
-        bootstrap_data->per_cpu[i].kstack_base = kstack_base;
-        bootstrap_data->per_cpu[i].thread = (uint64_t)thread;
-#if __has_feature(safe_stack)
-        thread->stack.unsafe_base = kstack_base + PAGE_SIZE;
-        thread->stack.size = PAGE_SIZE;
-#endif
+
+        status = vm_allocate_kstack(&thread->stack);
+        bootstrap_data->per_cpu[i].kstack_base = thread->stack.base;
+        bootstrap_data->per_cpu[i].thread = thread;
     }
 
     // Memory fence to ensure all writes to the bootstrap region are
@@ -163,9 +158,9 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
             // Make sure the CPU is not marked online
             atomic_and((volatile int*)&mp.online_cpus, ~mask);
 
-            // Free the failed AP's thread, it was cancelled before it could use
-            // it.
-            free((void*)bootstrap_data->per_cpu[i].thread);
+            // Free the failed AP's thread, it was cancelled before it could use it.
+            free_stack_and_thread(bootstrap_data->per_cpu[i].thread);
+            bootstrap_data->per_cpu[i].thread = nullptr;
 
             failed_aps &= ~mask;
         }
@@ -176,14 +171,13 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
         goto finish;
     }
 
-    // Now that everything is booted, cleanup all temporary structures (e.g.
-    // everything except the kstacks).
+    // Now that everything is booted, cleanup temporary structures, but keep the threads and stacks.
     goto cleanup_aspace;
-cleanup_allocations:
+
+cleanup_all:
     for (unsigned int i = 0; i < count; ++i) {
-        if (bootstrap_data->per_cpu[i].thread) {
-            free((void*)bootstrap_data->per_cpu[i].thread);
-        }
+        free_stack_and_thread(bootstrap_data->per_cpu[i].thread);
+        bootstrap_data->per_cpu[i].thread = nullptr;
     }
 cleanup_aspace:
     bootstrap_aspace->Destroy();

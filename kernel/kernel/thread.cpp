@@ -1045,13 +1045,20 @@ void thread_become_idle(void) {
 }
 
 /**
- * @brief Create a thread around the current execution context
+ * @brief Create a thread around the current execution context, preserving |t|'s stack
  */
 void thread_secondary_cpu_init_early(thread_t* t) {
     DEBUG_ASSERT(arch_ints_disabled());
+
+    // Save |t|'s stack because |thread_construct_first| will zero out the whole struct.
+    kstack_t stack = t->stack;
+
     char name[16];
     snprintf(name, sizeof(name), "cpu_init %u", arch_curr_cpu_num());
     thread_construct_first(t, name);
+
+    // Restore the stack.
+    t->stack = stack;
 }
 
 void thread_secondary_cpu_entry(void) {
