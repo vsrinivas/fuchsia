@@ -158,19 +158,15 @@ static void platform_cpu_init(void) {
     for (uint cluster = 0; cluster < cpu_cluster_count; cluster++) {
         for (uint cpu = 0; cpu < cpu_cluster_cpus[cluster]; cpu++) {
             if (cluster != 0 || cpu != 0) {
-                // allocate a safe and unsafe stack for the cpu's boot stack
-                fbl::RefPtr<VmMapping> kstack_mapping;
-                fbl::RefPtr<VmAddressRegion> kstack_vmar;
-                void* sp;
-                zx_status_t err = vm_allocate_kstack(false, &sp, &kstack_mapping, &kstack_vmar);
+                // allocate a stack for the cpu's boot thread
+                kstack_t stack{};
+                zx_status_t err = vm_allocate_kstack(&stack);
                 ASSERT(err == ZX_OK);
 
+                void* sp = reinterpret_cast<void*>(stack.top);
                 void* unsafe_sp = nullptr;
 #if __has_feature(safe_stack)
-                fbl::RefPtr<VmMapping> unsafe_kstack_mapping;
-                fbl::RefPtr<VmAddressRegion> unsafe_kstack_vmar;
-                err = vm_allocate_kstack(true, &unsafe_sp, &unsafe_kstack_mapping, &unsafe_kstack_vmar);
-                ASSERT(err == ZX_OK);
+                unsafe_sp = reinterpret_cast<void*>(stack.unsafe_base + stack.size);
 #endif
 
                 // set the stack info in the arch layer
@@ -180,21 +176,18 @@ static void platform_cpu_init(void) {
                 err = platform_start_cpu(cluster, cpu);
 
                 if (err != ZX_OK) {
-                    vm_free_kstack(&kstack_mapping, &kstack_vmar);
-#if __has_feature(safe_stack)
-                    vm_free_kstack(&unsafe_kstack_mapping, &unsafe_kstack_vmar);
-#endif
+                    vm_free_kstack(&stack);
                     continue;
                 }
 
-                // the cpu booted, leak the references to our vmar and mappings, since there's
-                // no reason to ever free them
-                __UNUSED auto unused = kstack_mapping.leak_ref();
-                __UNUSED auto unused2 = kstack_vmar.leak_ref();
-#if __has_feature(safe_stack)
-                __UNUSED auto unused3 = unsafe_kstack_mapping.leak_ref();
-                __UNUSED auto unused4 = unsafe_kstack_vmar.leak_ref();
-#endif
+                // the cpu booted
+                //
+                // note, we're leaking the stack because we don't know if the initial thread has
+                // completed yet
+                //
+                // TODO(maniscalco): in a future change, rework the allocation so that it's stored
+                // in the static _init_thread array (arch.cpp) and can be freed when the boot thread
+                // terminates (ZX-2547)
             }
         }
     }

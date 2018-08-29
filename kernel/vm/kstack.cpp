@@ -20,16 +20,14 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 
 #define LOCAL_TRACE 0
 
-// Shared logic to allocate and map a kernel stack.
-// Currently allocates a VMAR for each stack with one page of padding before
-// and after the mapping.
-
-zx_status_t vm_allocate_kstack(bool unsafe, void** kstack_top_out,
-                               fbl::RefPtr<VmMapping>* out_kstack_mapping,
-                               fbl::RefPtr<VmAddressRegion>* out_kstack_vmar) {
+// Allocates and maps a kernel stack with one page of padding before and after the mapping.
+static zx_status_t allocate_vmar(bool unsafe,
+                                 fbl::RefPtr<VmMapping>* out_kstack_mapping,
+                                 fbl::RefPtr<VmAddressRegion>* out_kstack_vmar) {
     LTRACEF("allocating %s stack\n", unsafe ? "unsafe" : "safe");
 
     // get a handle to the root vmar
@@ -94,20 +92,79 @@ zx_status_t vm_allocate_kstack(bool unsafe, void** kstack_top_out,
     // Cancel the cleanup handler on the vmar since we're about to save a
     // reference to it.
     vmar_cleanup.cancel();
-    *kstack_top_out = reinterpret_cast<void*>(kstack_mapping->base() + DEFAULT_STACK_SIZE);
     *out_kstack_mapping = fbl::move(kstack_mapping);
     *out_kstack_vmar = fbl::move(kstack_vmar);
 
     return ZX_OK;
 }
 
-// Drop the references to the mapping and the vmar, calling Destroy in the right place.
-zx_status_t vm_free_kstack(fbl::RefPtr<VmMapping>* mapping, fbl::RefPtr<VmAddressRegion>* vmar) {
-    mapping->reset();
-    if (*vmar) {
-        (*vmar)->Destroy();
-        vmar->reset();
+zx_status_t vm_allocate_kstack(kstack_t* stack) {
+    DEBUG_ASSERT(stack->base == 0);
+    DEBUG_ASSERT(stack->size == 0);
+    DEBUG_ASSERT(stack->top == 0);
+    DEBUG_ASSERT(stack->vmar == nullptr);
+#if __has_feature(safe_stack)
+    DEBUG_ASSERT(stack->unsafe_base == 0);
+    DEBUG_ASSERT(stack->unsafe_vmar == nullptr);
+#endif
+
+    fbl::RefPtr<VmMapping> mapping;
+    fbl::RefPtr<VmAddressRegion> vmar;
+    zx_status_t status = allocate_vmar(false, &mapping, &vmar);
+    if (status != ZX_OK) {
+        return status;
     }
+    stack->size = mapping->size();
+    stack->base = mapping->base();
+    stack->top = mapping->base() + DEFAULT_STACK_SIZE;
+
+    // Stash address of VMAR so we can later free it in |vm_free_kstack|.
+    stack->vmar = vmar.leak_ref();
+
+#if __has_feature(safe_stack)
+    status = allocate_vmar(true, &mapping, &vmar);
+    if (status != ZX_OK) {
+        vm_free_kstack(stack);
+        return status;
+    }
+    stack->size = mapping->size();
+    stack->unsafe_base = mapping->base();
+
+    // Stash address of VMAR so we can later free it in |vm_free_kstack|.
+    stack->unsafe_vmar = vmar.leak_ref();
+#endif
+
+    return ZX_OK;
+}
+
+zx_status_t vm_free_kstack(kstack_t* stack) {
+    stack->base = 0;
+    stack->size = 0;
+    stack->top = 0;
+
+    if (stack->vmar != nullptr) {
+        fbl::RefPtr<VmAddressRegion> vmar =
+            fbl::WrapRefPtr(static_cast<VmAddressRegion*>(stack->vmar));
+        zx_status_t status = vmar->Destroy();
+        if (status != ZX_OK) {
+            return status;
+        }
+        stack->vmar = nullptr;
+    }
+
+#if __has_feature(safe_stack)
+    stack->unsafe_base = 0;
+
+    if (stack->unsafe_vmar != nullptr) {
+        fbl::RefPtr<VmAddressRegion> vmar =
+            fbl::WrapRefPtr(static_cast<VmAddressRegion*>(stack->unsafe_vmar));
+        zx_status_t status = vmar->Destroy();
+        if (status != ZX_OK) {
+            return status;
+        }
+        stack->unsafe_vmar = nullptr;
+    }
+#endif
 
     return ZX_OK;
 }

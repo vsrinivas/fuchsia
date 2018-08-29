@@ -23,15 +23,15 @@
 
 void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
     // create a default stack frame on the stack
-    vaddr_t stack_top = (vaddr_t)t->stack + t->stack_size;
+    vaddr_t stack_top = t->stack.top;
 
     // make sure the top of the stack is 16 byte aligned for ABI compliance
     stack_top = ROUNDDOWN(stack_top, 16);
-    t->stack_top = stack_top;
+    t->stack.top = stack_top;
 
     // make sure we start the frame 8 byte unaligned (relative to the 16 byte alignment) because
     // of the way the context switch will pop the return address off the stack. After the first
-    // context switch, this leaves the stack in unaligned relative to how a called function expects it.
+    // context switch, this leaves the stack unaligned relative to how a called function expects it.
     stack_top -= 8;
     struct x86_64_context_switch_frame* frame = (struct x86_64_context_switch_frame*)(stack_top);
 
@@ -58,7 +58,7 @@ void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
     t->arch.sp = (vaddr_t)frame;
 #if __has_feature(safe_stack)
     t->arch.unsafe_sp =
-        ROUNDDOWN((vaddr_t)t->unsafe_stack + t->stack_size, 16);
+        ROUNDDOWN(t->stack.unsafe_base + t->stack.size, 16);
 #endif
 
     // initialize the fs, gs and kernel bases to 0.
@@ -91,7 +91,7 @@ __NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thre
     //printf("cs 0x%llx\n", kstack_top);
 
     /* set the tss SP0 value to point at the top of our stack */
-    x86_set_tss_sp(newthread->stack_top);
+    x86_set_tss_sp(newthread->stack.top);
 
     /* Save the user fs_base register value.  The new rdfsbase instruction
      * is much faster than reading the MSR, so use the former in

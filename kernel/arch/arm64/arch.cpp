@@ -209,8 +209,8 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
 
     LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#x, %#" PRIxPTR
             ", %#" PRIxPTR ", 0, %#" PRIxPTR ")\n",
-            arg1, arg2, spsr, ct->stack_top, sp, pc);
-    arm64_uspace_entry(arg1, arg2, pc, sp, ct->stack_top, spsr, MSDCR_EL1_INITIAL_VALUE);
+            arg1, arg2, spsr, ct->stack.top, sp, pc);
+    arm64_uspace_entry(arg1, arg2, pc, sp, ct->stack.top, spsr, MSDCR_EL1_INITIAL_VALUE);
     __UNREACHABLE;
 }
 

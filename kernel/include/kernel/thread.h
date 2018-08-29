@@ -16,6 +16,7 @@
 #include <kernel/wait.h>
 #include <list.h>
 #include <sys/types.h>
+#include <vm/kstack.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -149,28 +150,7 @@ typedef struct thread {
     // architecture stuff
     struct arch_thread arch;
 
-    // stack stuff
-    //
-    // In general, thread stacks are allocated by thread_create_etc using vm_allocate_kstack.
-    // However, there are exceptions:
-    //   - idle thread for CPU 0 (BSS allocated)
-    //   - bootstrap threads for secondary CPUs (x64 and arm64)
-    //
-    void* stack;
-    //
-    // When non-null, stack_mapping and stack_vmar point to resources allocated by
-    // vm_allocate_kstack, which must be freed by vm_free_stacks. Note, they are of type void*
-    // because thread_t is a C struct and we can't store their true types here
-    // (fbl::RefPtr<VmMapping> and fbl::<VmAddressRegion>).
-    void* stack_mapping;
-    void* stack_vmar;
-    size_t stack_size;
-    vaddr_t stack_top;
-#if __has_feature(safe_stack)
-    void* unsafe_stack;
-    void* unsafe_stack_mapping;
-    void* unsafe_stack_vmar;
-#endif
+    kstack_t stack;
 
     // entry point
     thread_start_routine entry;

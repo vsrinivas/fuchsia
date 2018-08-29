@@ -72,6 +72,9 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
     // resources.
     memset(&bootstrap_data->per_cpu, 0, sizeof(bootstrap_data->per_cpu));
     // Allocate kstacks and threads for all processors
+    //
+    // TODO(maniscalco): In a future change, allocate the stacks using |vm_allocate_kstack|
+    // (ZX-2547).
     for (unsigned int i = 0; i < count; ++i) {
         thread_t* thread = (thread_t*)memalign(16,
                                                ROUNDUP(sizeof(thread_t), 16) +
@@ -88,8 +91,8 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
         bootstrap_data->per_cpu[i].kstack_base = kstack_base;
         bootstrap_data->per_cpu[i].thread = (uint64_t)thread;
 #if __has_feature(safe_stack)
-        thread->unsafe_stack = (void*)(kstack_base + PAGE_SIZE);
-        thread->stack_size = PAGE_SIZE;
+        thread->stack.unsafe_base = kstack_base + PAGE_SIZE;
+        thread->stack.size = PAGE_SIZE;
 #endif
     }
 

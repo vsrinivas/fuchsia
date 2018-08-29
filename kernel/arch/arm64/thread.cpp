@@ -45,11 +45,11 @@ void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
     t->arch = {};
 
     // create a default stack frame on the stack
-    vaddr_t stack_top = (vaddr_t)t->stack + t->stack_size;
+    vaddr_t stack_top = t->stack.top;
 
     // make sure the top of the stack is 16 byte aligned for EABI compliance
     stack_top = ROUNDDOWN(stack_top, 16);
-    t->stack_top = stack_top;
+    t->stack.top = stack_top;
 
     struct context_switch_frame* frame = (struct context_switch_frame*)(stack_top);
     frame--;
@@ -66,7 +66,7 @@ void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
     t->arch.sp = (vaddr_t)frame;
 #if __has_feature(safe_stack)
     t->arch.unsafe_sp =
-        ROUNDDOWN((vaddr_t)t->unsafe_stack + t->stack_size, 16);
+        ROUNDDOWN(t->stack.unsafe_base + t->stack.size, 16);
 #endif
 }
 
