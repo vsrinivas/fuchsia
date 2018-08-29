@@ -387,7 +387,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 								{{- end -}}
 								{{- if $method.HasResponse -}}
 									{{- $interface.Name -}}{{- $method.CamelName -}}Responder {
-										control_handle,
+										control_handle: ::std::mem::ManuallyDrop::new(control_handle),
 										tx_id: header.tx_id,
 									}
 									{{- else -}}
@@ -485,7 +485,7 @@ impl Stream for {{ $interface.Name }}RequestStream {
 						{{- end -}}
 						{{- if $method.HasResponse -}}
 							responder: {{- $interface.Name -}}{{- $method.CamelName -}}Responder {
-								control_handle,
+								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
 								tx_id: header.tx_id,
 							},
 							{{- else -}}
@@ -660,8 +660,19 @@ impl {{ $interface.Name }}ControlHandle {
 {{- if and $method.HasRequest $method.HasResponse }}
 #[must_use = "FIDL methods require a response to be sent"]
 pub struct {{ $interface.Name }}{{ $method.CamelName }}Responder {
-	control_handle: {{ $interface.Name }}ControlHandle,
+	control_handle: ::std::mem::ManuallyDrop<{{ $interface.Name }}ControlHandle>,
 	tx_id: u32,
+}
+
+impl ::std::ops::Drop for {{ $interface.Name }}{{ $method.CamelName }}Responder {
+	fn drop(&mut self) {
+		// Shutdown the channel if the responder is dropped without sending a response
+		// so that the client doesn't hang. To prevent this behavior, some methods
+		// call "drop_without_shutdown"
+		self.control_handle.shutdown();
+		// Safety: drops once, never accessed again
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+	}
 }
 
 impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
@@ -669,23 +680,54 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 		&self.control_handle
 	}
 
-	pub fn send_or_shutdown(&self,
+	/// Drop the Responder without setting the channel to shutdown.
+	///
+	/// This method shouldn't normally be used-- instead, send a response
+	/// to prevent the channel from shutting down.
+	pub fn drop_without_shutdown(mut self) {
+		// Safety: drops once, never accessed again due to mem::forget
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+		// Prevent Drop from running (which would shut down the channel)
+		::std::mem::forget(self);
+	}
+
+	/// Sends a response to the FIDL transaction.
+	///
+	/// Sets the channel to shutdown if an error occurs.
+	pub fn send(self,
 		{{- range $param := $method.Response -}}
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}},
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		let r = self.send(
+		let r = self.send_raw(
 			{{- range $index, $param := $method.Response -}}
 			{{ $param.Name -}},
 			{{- end -}}
 		);
 		if r.is_err() {
-			self.control_handle().shutdown();
+			self.control_handle.shutdown();
 		}
+		self.drop_without_shutdown();
 		r
 	}
 
-	pub fn send(&self,
+	/// Similar to "send" but does not shutdown the channel if
+	/// an error occurs.
+	fn send_no_shutdown_on_err(self,
+		{{- range $param := $method.Response -}}
+		mut {{ $param.Name -}}: {{ $param.BorrowedType -}},
+		{{- end -}}
+	) -> Result<(), fidl::Error> {
+		let r = self.send_raw(
+			{{- range $index, $param := $method.Response -}}
+			{{ $param.Name -}},
+			{{- end -}}
+		);
+		self.drop_without_shutdown();
+		r
+	}
+
+	fn send_raw(&self,
 		{{- range $param := $method.Response -}}
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}},
 		{{- end -}}
