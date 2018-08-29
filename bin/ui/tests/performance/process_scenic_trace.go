@@ -449,7 +449,7 @@ func getSystemEventsForPid(trace Trace, pid int) []SystemTraceEvent {
 
 // Compute the FPS within Scenic for |trace|, also writing results to
 // |results| if provided.
-func reportScenicFps(trace Trace, testSuite string, testResultsFile benchmarking.TestResultsFile) {
+func reportScenicFps(trace Trace, testSuite string, testResultsFile *benchmarking.TestResultsFile) {
 	durations := calculateEventDurations(trace.TraceEvents)
 
 	events := trace.TraceEvents
@@ -508,7 +508,7 @@ func reportScenicFps(trace Trace, testSuite string, testResultsFile benchmarking
 			events, "gfx", "RenderFrame", "gfx", "Scenic Compositor")/OneMsecInUsecs))
 }
 
-func reportFlutterFpsForInstance(trace Trace, testSuite string, testResultsFile benchmarking.TestResultsFile, uiEvents []TraceEvent, gpuEvents []TraceEvent, metricNamePrefix string) {
+func reportFlutterFpsForInstance(trace Trace, testSuite string, testResultsFile *benchmarking.TestResultsFile, uiEvents []TraceEvent, gpuEvents []TraceEvent, metricNamePrefix string) {
 	fmt.Printf("=== Flutter FPS (%s) ===\n", metricNamePrefix)
 	fps, fpsPerTimeWindow := calculateFps(uiEvents, "flutter", "vsync callback")
 	fmt.Printf("%.4gfps\nfps per one-second window: %v\n", fps, fpsPerTimeWindow)
@@ -564,7 +564,7 @@ func reportFlutterFpsForInstance(trace Trace, testSuite string, testResultsFile 
 	}
 }
 
-func reportFlutterFps(trace Trace, testSuite string, testResultsFile benchmarking.TestResultsFile, flutterAppName string) {
+func reportFlutterFps(trace Trace, testSuite string, testResultsFile *benchmarking.TestResultsFile, flutterAppName string) {
 	if flutterAppName != "" {
 		// TODO: What does this look like if we aren't running in aot mode?  Not a
 		// concern for now, as we only use aot.
@@ -644,8 +644,8 @@ func main() {
 	trace.TraceEvents = filteredEvents
 
 	var testResultsFile benchmarking.TestResultsFile
-	reportScenicFps(trace, testSuite, testResultsFile)
-	reportFlutterFps(trace, testSuite, testResultsFile, flutterAppName)
+	reportScenicFps(trace, testSuite, &testResultsFile)
+	reportFlutterFps(trace, testSuite, &testResultsFile, flutterAppName)
 
 	if outputFilename != "" {
 		outputFile, err := os.Create(outputFilename)
