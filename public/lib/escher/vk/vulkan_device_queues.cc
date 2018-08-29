@@ -196,30 +196,31 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
   physical_device.getFeatures(&supported_device_features);
   bool device_has_all_required_features = true;
 
-  // TODO(MA-478): ADD_REQUIRED_FEATURE allows device to be created even if
-  // 'shaderClipDistance' is not supported.  This is a short-term workaround;
-  // Scenic will need this feature soon.
+#define ADD_DESIRED_FEATURE(X)                                              \
+  if (supported_device_features.X) {                                        \
+    required_device_features.X = true;                                      \
+  } else {                                                                  \
+    FXL_LOG(INFO) << "Desired Vulkan Device feature not supported: " << #X; \
+  }
+
 #define ADD_REQUIRED_FEATURE(X)                                               \
   required_device_features.X = true;                                          \
   if (!supported_device_features.X) {                                         \
     FXL_LOG(ERROR) << "Required Vulkan Device feature not supported: " << #X; \
-    if (offsetof(vk::PhysicalDeviceFeatures, X) ==                            \
-        offsetof(vk::PhysicalDeviceFeatures, shaderClipDistance)) {           \
-      FXL_LOG(WARNING)                                                        \
-          << "... TODO(MA-478): attempting to create Device anyway.";         \
-      required_device_features.shaderClipDistance = false;                    \
-    } else {                                                                  \
-      device_has_all_required_features = false;                               \
-      required_device_features.X = true;                                      \
-    }                                                                         \
+    device_has_all_required_features = false;                                 \
   }
 
-  ADD_REQUIRED_FEATURE(shaderClipDistance);
+  // TODO(MA-478): We would like to make 'shaderClipDistance' a requirement on
+  // all Scenic platforms.  For now, treat it as a DESIRED_FEATURE.
+  ADD_DESIRED_FEATURE(shaderClipDistance);
+  ADD_DESIRED_FEATURE(fillModeNonSolid);
+
+#undef ADD_DESIRED_FEATURE
+#undef ADD_REQUIRED_FEATURE
 
   if (!device_has_all_required_features) {
     return fxl::RefPtr<VulkanDeviceQueues>();
   }
-#undef ADD_REQUIRED_FEATURE
 
   // Almost ready to create the device; start populating the VkDeviceCreateInfo.
   vk::DeviceCreateInfo device_info;
