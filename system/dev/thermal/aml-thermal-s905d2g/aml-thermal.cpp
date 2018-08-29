@@ -26,6 +26,25 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
         return status;
     }
 
+    // Get the voltage-table & opp metadata.
+    size_t actual;
+    opp_info_t opp_info;
+    status = device_get_metadata(device, VOLTAGE_DUTY_CYCLE_METADATA, &opp_info,
+                                 sizeof(opp_info_), &actual);
+    if (status != ZX_OK || actual != sizeof(opp_info_)) {
+        zxlogf(ERROR, "aml-thermal: Could not get voltage-table metadata %d\n", status);
+        return status;
+    }
+
+    // Get the thermal policy metadata.
+    thermal_device_info_t thermal_config;
+    status = device_get_metadata(device, THERMAL_CONFIG_METADATA, &thermal_config,
+                                 sizeof(thermal_device_info_t), &actual);
+    if (status != ZX_OK || actual != sizeof(thermal_device_info_t)) {
+        zxlogf(ERROR, "aml-thermal: Could not get thermal config metadata %d\n", status);
+        return status;
+    }
+
     // Create the voltage regulator.
     auto voltage_regulator = fbl::make_unique_checked<thermal::AmlVoltageRegulator>(&ac);
     if (!ac.check()) {
@@ -33,7 +52,7 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     }
 
     // Initialize Temperature Sensor.
-    status = voltage_regulator->Init(device);
+    status = voltage_regulator->Init(device, &opp_info);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-thermal: Could not inititalize Voltage Regulator: %d\n", status);
         return status;
@@ -56,7 +75,9 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
                                                        AmlThermal>(&ac, device,
                                                                    fbl::move(tsensor),
                                                                    fbl::move(voltage_regulator),
-                                                                   fbl::move(cpufreq_scaling));
+                                                                   fbl::move(cpufreq_scaling),
+                                                                   fbl::move(opp_info),
+                                                                   fbl::move(thermal_config));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

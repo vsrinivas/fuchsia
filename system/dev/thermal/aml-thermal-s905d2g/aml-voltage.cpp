@@ -5,6 +5,7 @@
 #include "aml-voltage.h"
 #include <ddk/debug.h>
 #include <unistd.h>
+#include <string.h>
 
 namespace thermal {
 
@@ -21,7 +22,9 @@ constexpr int kInvalidIndex = -1;
 
 } // namespace
 
-zx_status_t AmlVoltageRegulator::Init(zx_device_t* parent) {
+zx_status_t AmlVoltageRegulator::Init(zx_device_t* parent, opp_info_t* opp_info) {
+    ZX_DEBUG_ASSERT(opp_info);
+
     // Create a PWM period = 1250, hwpwm - 1 to signify using PWM_D from PWM_C/D.
     // Source: Amlogic SDK.
     fbl::AllocChecker ac;
@@ -38,13 +41,7 @@ zx_status_t AmlVoltageRegulator::Init(zx_device_t* parent) {
     }
 
     // Get the voltage-table metadata.
-    size_t actual;
-    status = device_get_metadata(parent, VOLTAGE_DUTY_CYCLE_METADATA, &opp_info_,
-                                 sizeof(opp_info_), &actual);
-    if (status != ZX_OK || actual != sizeof(opp_info_)) {
-        zxlogf(ERROR, "aml-voltage: Could not get voltage-table metadata %d\n", status);
-        return status;
-    }
+    memcpy(&opp_info_, opp_info, sizeof(opp_info_t));
 
     current_voltage_index_ = kInvalidIndex;
     return ZX_OK;

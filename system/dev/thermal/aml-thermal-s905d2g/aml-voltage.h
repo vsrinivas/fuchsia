@@ -17,7 +17,7 @@ class AmlVoltageRegulator {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlVoltageRegulator);
     AmlVoltageRegulator(){};
-    zx_status_t Init(zx_device_t* parent);
+    zx_status_t Init(zx_device_t* parent, opp_info_t* opp_info);
     uint32_t GetVoltage();
     zx_status_t SetVoltage(uint32_t microvolt);
 

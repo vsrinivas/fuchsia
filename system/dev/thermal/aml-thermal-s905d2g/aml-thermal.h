@@ -26,10 +26,14 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlThermal);
     AmlThermal(zx_device_t* device, fbl::unique_ptr<thermal::AmlTSensor> tsensor,
                fbl::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator,
-               fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling)
+               fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling,
+               opp_info_t opp_info,
+               thermal_device_info_t thermal_config)
         : DeviceType(device), tsensor_(fbl::move(tsensor)),
           voltage_regulator_(fbl::move(voltage_regulator)),
-          cpufreq_scaling_(fbl::move(cpufreq_scaling)) {
+          cpufreq_scaling_(fbl::move(cpufreq_scaling)),
+          opp_info_(fbl::move(opp_info)),
+          thermal_config_(fbl::move(thermal_config)) {
         ddk_proto_id_ = ZX_PROTOCOL_THERMAL;
     };
     static zx_status_t Create(zx_device_t* device);
@@ -44,5 +48,7 @@ private:
     fbl::unique_ptr<thermal::AmlTSensor> tsensor_;
     fbl::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator_;
     fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling_;
+    opp_info_t opp_info_;
+    thermal_device_info_t thermal_config_;
 };
 } // namespace thermal

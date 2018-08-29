@@ -73,7 +73,10 @@ static const pbus_clk_t thermal_clk_gates[] = {
  */
 
 // clang-format off
-static thermal_device_info_t aml_vim2_config = {
+
+// NOTE: This is a very trivial policy, no data backing it up
+// As we do more testing this policy can evolve.
+static thermal_device_info_t aml_astro_config = {
     .active_cooling                     = false,
     .passive_cooling                    = true,
     .gpu_throttling                     = false,
@@ -82,72 +85,40 @@ static thermal_device_info_t aml_vim2_config = {
     .big_little                         = false,
     .trip_point_info                    = {
         // Below trip point info is dummy for now.
-        // TOD(braval): (Put actual numbers below)
         {
             // This is the initial thermal setup of the device.
             // CPU freq set to a known stable MAX.
-            .big_cluster_dvfs_opp       = 6,
-            .little_cluster_dvfs_opp    = 4,
-        },
-        {
-            .up_temp                    = 65,
-            .down_temp                  = 63,
-            .big_cluster_dvfs_opp       = 6,
-            .little_cluster_dvfs_opp    = 4,
-        },
-        {
-            .up_temp                    = 70,
-            .down_temp                  = 68,
-            .big_cluster_dvfs_opp       = 6,
-            .little_cluster_dvfs_opp    = 4,
+            .big_cluster_dvfs_opp       = 10,
         },
         {
             .up_temp                    = 75,
             .down_temp                  = 73,
+            .big_cluster_dvfs_opp       = 9,
+        },
+        {
+            .up_temp                    = 80,
+            .down_temp                  = 77,
+            .big_cluster_dvfs_opp       = 8,
+        },
+        {
+            .up_temp                    = 85,
+            .down_temp                  = 83,
+            .big_cluster_dvfs_opp       = 7,
+        },
+        {
+            .up_temp                    = 90,
+            .down_temp                  = 88,
             .big_cluster_dvfs_opp       = 6,
-            .little_cluster_dvfs_opp    = 4,
         },
         {
-            .up_temp                    = 82,
-            .down_temp                  = 79,
+            .up_temp                    = 95,
+            .down_temp                  = 93,
             .big_cluster_dvfs_opp       = 5,
-            .little_cluster_dvfs_opp    = 4,
         },
         {
-            .up_temp                    = 87,
-            .down_temp                  = 84,
+            .up_temp                    = 100,
+            .down_temp                  = 98,
             .big_cluster_dvfs_opp       = 4,
-            .little_cluster_dvfs_opp    = 4,
-        },
-        {
-            .up_temp                    = 92,
-            .down_temp                  = 89,
-            .big_cluster_dvfs_opp       = 3,
-            .little_cluster_dvfs_opp    = 3,
-        },
-        {
-            .up_temp                    = 96,
-            .down_temp                  = 93,
-            .big_cluster_dvfs_opp       = 2,
-            .little_cluster_dvfs_opp    = 2,
-        },
-        {
-            .up_temp                    = 96,
-            .down_temp                  = 93,
-            .big_cluster_dvfs_opp       = 2,
-            .little_cluster_dvfs_opp    = 2,
-        },
-        {
-            .up_temp                    = 96,
-            .down_temp                  = 93,
-            .big_cluster_dvfs_opp       = 2,
-            .little_cluster_dvfs_opp    = 2,
-        },
-        {
-            .up_temp                    = 96,
-            .down_temp                  = 93,
-            .big_cluster_dvfs_opp       = 2,
-            .little_cluster_dvfs_opp    = 2,
         },
     },
 };
@@ -187,15 +158,71 @@ static opp_info_t aml_opp_info = {
         {731000, 96},
         {721000, 100},
     },
-    // TODO(braval): Add Opp Table.
+    .opps = {
+        {
+            // 0
+            .freq_hz = 100000000,
+            .volt_mv = 731000,
+        },
+        {
+            // 1
+            .freq_hz = 250000000,
+            .volt_mv = 731000,
+        },
+        {
+            // 2
+            .freq_hz = 500000000,
+            .volt_mv = 731000,
+        },
+        {
+            // 3
+            .freq_hz = 667000000,
+            .volt_mv = 731000,
+        },
+        {
+            // 4
+            .freq_hz = 1000000000,
+            .volt_mv = 731000,
+        },
+        {
+            // 5
+            .freq_hz = 1200000000,
+            .volt_mv = 731000,
+        },
+        {
+            // 6
+            .freq_hz = 1398000000,
+            .volt_mv = 761000,
+        },
+        {
+            // 7
+            .freq_hz = 1512000000,
+            .volt_mv = 791000,
+        },
+        {
+            // 8
+            .freq_hz = 1608000000,
+            .volt_mv = 831000,
+        },
+        {
+            // 9
+            .freq_hz = 1704000000,
+            .volt_mv = 861000,
+        },
+        {
+            // 10
+            .freq_hz = 1896000000,
+            .volt_mv = 981000,
+        },
+    }
 };
 
 static const pbus_metadata_t thermal_metadata[] = {
     {
         .type = THERMAL_CONFIG_METADATA,
         .extra = 0,
-        .data = &aml_vim2_config,
-        .len = sizeof(aml_vim2_config),
+        .data = &aml_astro_config,
+        .len = sizeof(aml_astro_config),
     },
     {
         .type = VOLTAGE_DUTY_CYCLE_METADATA,
