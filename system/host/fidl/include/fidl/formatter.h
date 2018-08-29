@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 #ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_FORMATTER_H_
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_FORMATTER_H_
 
@@ -31,6 +30,20 @@ private:
     bool prev_value_;
     bool& source_;
 };
+
+class ScopedIncrement {
+public:
+    ScopedIncrement(int& source) : source_(source) {
+	source_++;
+    }
+    ~ScopedIncrement() {
+	source_--;
+    }
+
+private:
+    int& source_;
+};
+
 
 // A Visitor that pretty prints its AST and makes its result available via
 // formatted_output().
@@ -69,6 +82,7 @@ public:
         ScopedBool mem(is_member_decl_);
         TreeVisitor::OnConstDeclaration(element);
     }
+
     virtual void OnEnumMember(std::unique_ptr<EnumMember> const& element) override {
         OnBlankLineRespectingNode();
         ScopedBool mem(is_member_decl_);
@@ -110,6 +124,7 @@ public:
     }
 
     virtual void OnType(std::unique_ptr<Type> const& element) override {
+        ScopedIncrement si(nested_type_depth_);
         ScopedBool before_colon(blank_space_before_colon_, false);
         ScopedBool after_colon(blank_space_after_colon_, false);
         TreeVisitor::OnType(element);
@@ -159,6 +174,10 @@ private:
     // This is true in decl headers and after the ordinal in an interface
     // method, but not in the element count for relevant types.
     bool blank_space_after_colon_ = true;
+
+    // > characters require spaces after them unless you are in the middle of a
+    // parameterized type: arrays, vectors, handles, and requests.
+    int nested_type_depth_ = 0;
 
     // Interface methods have fancy alignment: if the last open parenthesis was
     // at EOL, indentation is to the column that had beginning of method name +
@@ -243,11 +262,17 @@ private:
 
     private:
         bool RequiresWSBeforeChar(char ch) {
-            return (ch == '{') || (ch == '=') || (visitor_->blank_space_before_colon_ && ch == ':');
+            return (ch == '{') ||
+                   (ch == '=') ||
+                   (visitor_->blank_space_before_colon_ && ch == ':');
         }
 
         bool NoSpacesBeforeChar(char ch) {
-            return NoWSBeforeChar(ch) || (ch == ')') || (!visitor_->blank_space_before_colon_ && ch == ':') || (ch == '?');
+            return NoWSBeforeChar(ch) ||
+                   (ch == ')') ||
+                   (ch == '?') ||
+                   (!visitor_->blank_space_before_colon_ && ch == ':') ||
+                   (visitor_->nested_type_depth_ > 0 && ch == '>');
         }
 
         bool NoWSBeforeChar(char ch) {
@@ -256,8 +281,9 @@ private:
 
         bool RequiresWSAfterChar(char ch) {
             return (ch == '=') ||
-                   (ch == ':' && visitor_->blank_space_after_colon_) ||
-                   (ch == ',') || (ch == '>');
+                   (ch == ',') ||
+                   (ch == '>' && (visitor_->nested_type_depth_ <= 1)) ||
+                   (ch == ':' && visitor_->blank_space_after_colon_);
         }
 
         bool NoWSAfterChar(char ch) {

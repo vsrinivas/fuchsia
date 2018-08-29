@@ -36,6 +36,8 @@ union MyUnion {  // super annoying!
 
 struct Foo {
        request<Iface>? nullable_request;
+vector<handle<channel > > monoid;
+    vector<handle<channel>>drahvin;
 };
 
 // This { should } not be indented
