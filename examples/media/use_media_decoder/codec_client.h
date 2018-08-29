@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_CODEC_CLIENT_H_
-#define GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_CODEC_CLIENT_H_
+#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_CLIENT_H_
+#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_CLIENT_H_
 
 #include "codec_buffer.h"
 #include "codec_output.h"
@@ -246,4 +246,4 @@ class CodecClient {
   std::condition_variable output_pending_condition_;
 };
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_CODEC_CLIENT_H_
+#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_CLIENT_H_

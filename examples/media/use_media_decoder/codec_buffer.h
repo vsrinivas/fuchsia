@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_CODEC_BUFFER_H_
-#define GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_CODEC_BUFFER_H_
+#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_BUFFER_H_
+#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_BUFFER_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
@@ -55,4 +55,4 @@ class CodecBuffer {
   uint8_t* base_ = nullptr;
 };
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_CODEC_BUFFER_H_
+#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_CODEC_BUFFER_H_

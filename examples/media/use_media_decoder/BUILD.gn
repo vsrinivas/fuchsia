@@ -4,7 +4,7 @@
 
 import("//build/test.gni")
 
-source_set("use_aac_decoder_source_set") {
+source_set("use_media_decoder_source_set") {
   sources = [
     "codec_buffer.cc",
     "codec_buffer.h",
@@ -41,13 +41,13 @@ source_set("use_aac_decoder_source_set") {
   ]
 }
 
-executable("use_aac_decoder") {
+executable("use_media_decoder") {
   sources = [
     "main.cc",
   ]
 
   deps = [
-    ":use_aac_decoder_source_set",
+    ":use_media_decoder_source_set",
     "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -65,7 +65,7 @@ test("use_aac_decoder_test") {
   ]
 
   deps = [
-    ":use_aac_decoder_source_set",
+    ":use_media_decoder_source_set",
     "//garnet/bin/appmgr:appmgr_for_test",
     "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -84,7 +84,7 @@ test("use_h264_decoder_test") {
   ]
 
   deps = [
-    ":use_aac_decoder_source_set",
+    ":use_media_decoder_source_set",
     "//garnet/bin/appmgr:appmgr_for_test",
     "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",

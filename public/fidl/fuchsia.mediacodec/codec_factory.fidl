@@ -221,7 +221,7 @@ interface CodecFactory {
   // [fill out params]
   // CreateDecoder(params, decoder_request);
   //
-  // See use_aac_decoder code for more detail.
+  // See use_media_decoder code for more detail.
   //
   // TODO(dustingreen): More detail in this comment block.
 

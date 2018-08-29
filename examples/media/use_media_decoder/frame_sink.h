@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_FRAME_SINK_H_
-#define GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_FRAME_SINK_H_
+#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_FRAME_SINK_H_
+#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_FRAME_SINK_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -98,4 +98,4 @@ class FrameSink {
   FXL_DISALLOW_COPY_AND_ASSIGN(FrameSink);
 };
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_FRAME_SINK_H_
+#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_FRAME_SINK_H_

@@ -15,7 +15,7 @@ package("media") {
     "simple_sine_sync",
     "tones",
     "tts",
-    "use_aac_decoder",
+    "use_media_decoder",
     "wav_recorder",
   ]
 
@@ -36,7 +36,7 @@ package("media") {
       name = "tts"
     },
     {
-      name = "use_aac_decoder"
+      name = "use_media_decoder"
     },
     {
       name = "wav_recorder"
@@ -51,7 +51,7 @@ package("tests") {
   package_name = "media_examples_tests"
 
   deps = [
-    "//garnet/examples/media/use_aac_decoder:use_aac_decoder_test",
+    "//garnet/examples/media/use_media_decoder:use_aac_decoder_test",
   ]
 
   tests = [
@@ -62,7 +62,7 @@ package("tests") {
 
   resources = [
     {
-      path = rebase_path("use_aac_decoder/test/test_audio.adts")
+      path = rebase_path("use_media_decoder/test/test_audio.adts")
       dest = "media_test_data/test_audio.adts"
     },
   ]
@@ -75,7 +75,7 @@ package("manual_tests") {
   package_name = "media_examples_manual_tests"
 
   deps = [
-    "//garnet/examples/media/use_aac_decoder:use_h264_decoder_test",
+    "//garnet/examples/media/use_media_decoder:use_h264_decoder_test",
   ]
 
   tests = [

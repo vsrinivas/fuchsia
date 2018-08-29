@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_UTIL_H_
-#define GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_UTIL_H_
+#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_UTIL_H_
+#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_UTIL_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -87,4 +87,4 @@ static inline std::string fourcc_to_string(uint32_t fourcc) {
                      sizeof(fourcc));
 }
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_UTIL_H_
+#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_UTIL_H_
