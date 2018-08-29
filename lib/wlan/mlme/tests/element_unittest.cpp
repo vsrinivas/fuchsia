@@ -577,18 +577,18 @@ TEST(SupportedRate, Create) {
     ASSERT_EQ(rate.is_basic(), 0);
 
     // Create a rate with basic bit set.
-    rate = SupportedRate(0x89);
-    ASSERT_EQ(rate.rate(), 0x09);
+    rate = SupportedRate(0xF9);
+    ASSERT_EQ(rate.rate(), 0x79);
     ASSERT_EQ(rate.is_basic(), 1);
 
     // Create a rate with basic bit set but explicitly override basic setting.
-    rate = SupportedRate(0x89, false);
-    ASSERT_EQ(rate.rate(), 0x09);
+    rate = SupportedRate(0xF9, false);
+    ASSERT_EQ(rate.rate(), 0x79);
     ASSERT_EQ(rate.is_basic(), 0);
 
     // Create a rate with explicitly setting basic bit.
-    rate = SupportedRate::basic(0x09);
-    ASSERT_EQ(rate.rate(), 0x09);
+    rate = SupportedRate::basic(0x79);
+    ASSERT_EQ(rate.rate(), 0x79);
     ASSERT_EQ(rate.is_basic(), 1);
 }
 
@@ -596,33 +596,33 @@ TEST(SupportedRate, ToUint8) {
     SupportedRate rate = {};
     ASSERT_EQ(static_cast<uint8_t>(rate), 0);
 
-    rate = SupportedRate(0x89);
-    ASSERT_EQ(static_cast<uint8_t>(rate), 0x89);
+    rate = SupportedRate(0xF9);
+    ASSERT_EQ(static_cast<uint8_t>(rate), 0xF9);
 
-    rate = SupportedRate::basic(0x09);
-    ASSERT_EQ(static_cast<uint8_t>(rate), 0x89);
+    rate = SupportedRate::basic(0x79);
+    ASSERT_EQ(static_cast<uint8_t>(rate), 0xF9);
 }
 
 TEST(SupportedRate, Compare) {
     // Ignore basic bit when comparing rates.
-    SupportedRate rate1(0x09);
-    SupportedRate rate2(0x89);
+    SupportedRate rate1(0x79);
+    SupportedRate rate2(0xF9);
     ASSERT_TRUE(rate1 == rate2);
     ASSERT_FALSE(rate1 != rate2);
     ASSERT_FALSE(rate1 < rate2);
     ASSERT_FALSE(rate1 > rate2);
 
     // Test smaller.
-    rate1 = SupportedRate(0x08);
-    rate2 = SupportedRate(0x89);
+    rate1 = SupportedRate(0x78);
+    rate2 = SupportedRate(0xF9);
     ASSERT_FALSE(rate1 == rate2);
     ASSERT_TRUE(rate1 != rate2);
     ASSERT_TRUE(rate1 < rate2);
     ASSERT_FALSE(rate1 > rate2);
 
     // Test larger.
-    rate1 = SupportedRate(0x0A);
-    rate2 = SupportedRate(0x89);
+    rate1 = SupportedRate(0x7A);
+    rate2 = SupportedRate(0xF9);
     ASSERT_FALSE(rate1 == rate2);
     ASSERT_TRUE(rate1 != rate2);
     ASSERT_FALSE(rate1 < rate2);

@@ -155,7 +155,7 @@ struct SupportedRate : public common::BitField<uint8_t> {
 
     static SupportedRate basic(uint8_t rate) { return SupportedRate(rate, true); }
 
-    WLAN_BIT_FIELD(rate, 0, 6);
+    WLAN_BIT_FIELD(rate, 0, 7);
     WLAN_BIT_FIELD(is_basic, 7, 1);
 
     operator uint8_t() const { return val(); }
