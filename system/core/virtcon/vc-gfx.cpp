@@ -135,7 +135,7 @@ zx_status_t vc_init_gfx(zx_handle_t fb_vmo, int32_t width, int32_t height,
     // If we can't efficiently read from the framebuffer VMO, create a secondary
     // surface using a regular VMO and blit contents between the two.
     if ((r = zx_vmo_set_cache_policy(fb_vmo, ZX_CACHE_POLICY_CACHED)) == ZX_ERR_BAD_STATE) {
-        if ((r = zx_vmar_map(zx_vmar_root_self(), ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+        if ((r = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                              0, fb_vmo, 0, vc_gfx_size, &vc_hw_gfx_mem)) < 0) {
             goto fail;
         }
@@ -157,7 +157,7 @@ zx_status_t vc_init_gfx(zx_handle_t fb_vmo, int32_t width, int32_t height,
 
     uintptr_t ptr;
     vc_gfx_vmo = fb_vmo;
-    if ((r = zx_vmar_map(zx_vmar_root_self(), ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+    if ((r = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                          0, vc_gfx_vmo, 0, vc_gfx_size, &vc_gfx_mem)) < 0) {
         goto fail;
     }
