@@ -60,6 +60,13 @@ impl ops::Sub<Duration> for Time {
     }
 }
 
+impl ops::Sub<Time> for Time {
+    type Output = Duration;
+    fn sub(self, other: Time) -> Duration {
+        Duration::from_nanos(self.nanos() - other.nanos())
+    }
+}
+
 impl ops::AddAssign for Duration {
     fn add_assign(&mut self, dur: Duration) {
         self.0 += dur.nanos()
@@ -340,5 +347,12 @@ mod tests {
         assert_eq!(
             timer.wait_handle(Signals::TIMER_SIGNALED, ten_ms.after_now()),
             Err(Status::TIMED_OUT));
+    }
+
+    #[test]
+    fn time_minus_time() {
+        let lhs = Time::from_nanos(10);
+        let rhs = Time::from_nanos(30);
+        assert_eq!(lhs - rhs, Duration::from_nanos(-20));
     }
 }
