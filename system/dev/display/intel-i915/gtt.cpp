@@ -86,6 +86,8 @@ zx_status_t Gtt::Init(Controller* controller) {
         return status;
     }
 
+    scratch_buffer_.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, PAGE_SIZE, nullptr, 0);
+
     // Populate the gtt with the scratch buffer.
     uint64_t pte = gen_pte_encode(scratch_buffer_paddr_);
     unsigned i;
