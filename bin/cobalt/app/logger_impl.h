@@ -106,6 +106,8 @@ class LoggerExtImpl : public LoggerImpl, public fuchsia::cobalt::LoggerExt {
   using LoggerImpl::LoggerImpl;
 
  private:
+  // In the current implementation, |event_type_index| and |component| are
+  // ignored.
   void LogIntHistogram(
       uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
       fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,

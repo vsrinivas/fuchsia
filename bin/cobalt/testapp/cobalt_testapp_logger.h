@@ -51,6 +51,12 @@ class CobaltTestAppLogger {
   bool LogTimerAndSend(uint32_t metric_id, uint32_t start_time,
                        uint32_t end_time, const std::string& timer_id,
                        uint32_t timeout_s, bool use_request_send_soon);
+  // Synchronously invokes LogIntHistogram()
+  // |num_observations_per_batch_| times using the given parameters. Then
+  // invokes CheckForSuccessfulSend().
+  bool LogIntHistogramAndSend(uint32_t metric_id,
+                              std::map<uint32_t, uint64_t> histogram_map,
+                              bool use_request_send_soon);
   // Synchronously invokes LogCustomEvent() for an event with
   // two string parts, |num_observations_per_batch_| times, using the given
   // parameters. Then invokes CheckForSuccessfulSend().

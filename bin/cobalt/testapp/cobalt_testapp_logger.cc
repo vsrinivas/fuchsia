@@ -141,6 +141,31 @@ bool CobaltTestAppLogger::LogTimerAndSend(uint32_t metric_id,
   return CheckForSuccessfulSend(use_request_send_soon);
 }
 
+bool CobaltTestAppLogger::LogIntHistogramAndSend(
+    uint32_t metric_id, std::map<uint32_t, uint64_t> histogram_map,
+    bool use_request_send_soon) {
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    Status2 status = Status2::INTERNAL_ERROR;
+    fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram;
+    for (auto it = histogram_map.begin(); histogram_map.end() != it; it++) {
+      fuchsia::cobalt::HistogramBucket entry;
+      entry.index = it->first;
+      entry.count = it->second;
+      histogram.push_back(std::move(entry));
+    }
+
+    logger_ext_->LogIntHistogram(metric_id, 0, "", std::move(histogram),
+                                 &status);
+    FXL_VLOG(1) << "LogIntHistogram() => " << StatusToString(status);
+    if (status != Status2::OK) {
+      FXL_LOG(ERROR) << "LogIntHistogram() => " << StatusToString(status);
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
 bool CobaltTestAppLogger::LogStringPairAndSend(
     uint32_t metric_id, const std::string& part0, uint32_t encoding_id0,
     const std::string& val0, const std::string& part1, uint32_t encoding_id1,

@@ -23,47 +23,49 @@
 namespace cobalt {
 namespace testapp {
 
-  bool TestRareEventWithStrings(CobaltTestAppEncoder* encoder_);
+bool TestRareEventWithStrings(CobaltTestAppEncoder* encoder_);
 
-  bool TestRareEventWithIndices(CobaltTestAppEncoder* encoder_);
+bool TestRareEventWithIndices(CobaltTestAppEncoder* encoder_);
 
-  bool TestModuleUris(CobaltTestAppEncoder* encoder_);
+bool TestModuleUris(CobaltTestAppEncoder* encoder_);
 
-  bool TestNumStarsInSky(CobaltTestAppEncoder* encoder_);
+bool TestNumStarsInSky(CobaltTestAppEncoder* encoder_);
 
-  bool TestSpaceshipVelocity(CobaltTestAppEncoder* encoder_);
+bool TestSpaceshipVelocity(CobaltTestAppEncoder* encoder_);
 
-  bool TestAvgReadTime(CobaltTestAppEncoder* encoder_);
+bool TestAvgReadTime(CobaltTestAppEncoder* encoder_);
 
-  bool TestModulePairs(CobaltTestAppEncoder* encoder_);
+bool TestModulePairs(CobaltTestAppEncoder* encoder_);
 
-  bool TestRareEventWithStringsUsingBlockUntilEmpty(
+bool TestRareEventWithStringsUsingBlockUntilEmpty(
     CobaltTestAppEncoder* encoder_);
 
-  bool TestRareEventWithIndicesUsingServiceFromEnvironment(
+bool TestRareEventWithIndicesUsingServiceFromEnvironment(
     CobaltTestAppEncoder* encoder_);
 
-  bool TestModInitializationTime(CobaltTestAppEncoder* encoder_);
+bool TestModInitializationTime(CobaltTestAppEncoder* encoder_);
 
-  bool TestAppStartupTime(CobaltTestAppEncoder* encoder_);
+bool TestAppStartupTime(CobaltTestAppEncoder* encoder_);
 
-  bool TestV1Backend(CobaltTestAppEncoder* encoder_);
+bool TestV1Backend(CobaltTestAppEncoder* encoder_);
 
-  bool TestLogEvent(CobaltTestAppLogger* logger_);
+bool TestLogEvent(CobaltTestAppLogger* logger_);
 
-  bool TestLogEventCount(CobaltTestAppLogger* logger_);
+bool TestLogEventCount(CobaltTestAppLogger* logger_);
 
-  bool TestLogElapsedTime(CobaltTestAppLogger* logger_);
+bool TestLogElapsedTime(CobaltTestAppLogger* logger_);
 
-  bool TestLogFrameRate(CobaltTestAppLogger* logger_);
+bool TestLogFrameRate(CobaltTestAppLogger* logger_);
 
-  bool TestLogMemoryUsage(CobaltTestAppLogger* logger_);
+bool TestLogMemoryUsage(CobaltTestAppLogger* logger_);
 
-  bool TestLogString(CobaltTestAppLogger* logger_);
+bool TestLogString(CobaltTestAppLogger* logger_);
 
-  bool TestLogTimer(CobaltTestAppLogger* logger_);
+bool TestLogTimer(CobaltTestAppLogger* logger_);
 
-  bool TestLogCustomEvent(CobaltTestAppLogger* logger_);
+bool TestLogIntHistogram(CobaltTestAppLogger* logger_);
+
+bool TestLogCustomEvent(CobaltTestAppLogger* logger_);
 
 }  // namespace testapp
 }  // namespace cobalt

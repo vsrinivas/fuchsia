@@ -254,6 +254,21 @@ void LoggerImpl::LogEventCount(uint32_t metric_id, uint32_t event_type_index,
                                fidl::StringPtr component,
                                int64_t period_duration_micros, uint32_t count,
                                LogEventCountCallback callback) {
+  const Metric* metric = encoder_.GetMetric(metric_id);
+  if (!metric) {
+    FXL_LOG(ERROR) << "There is no metric with ID = " << metric_id << ".";
+    return;
+  }
+  const std::string& metric_name = metric->name();
+
+  if (period_duration_micros != 0) {
+    FXL_LOG(ERROR) << "The parameter |period_duration_micros| in the "
+                      "method LogEventCount is unsupported in the current "
+                      "version of Cobalt. Pass the value 0 for now. Metric="
+                   << metric_name;
+    callback(Status2::INVALID_ARGUMENTS);
+    return;
+  }
   LogThreePartMetric("event count", metric_id, event_type_index, component,
                      count, std::move(callback), false);
 }
@@ -353,8 +368,43 @@ void LoggerExtImpl::LogIntHistogram(
     uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
     fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,
     LogIntHistogramCallback callback) {
-  FXL_LOG(ERROR) << "Not yet implemented";
-  callback(Status2::INTERNAL_ERROR);
+  const Metric* metric = encoder_.GetMetric(metric_id);
+  if (!metric) {
+    FXL_LOG(ERROR) << "There is no metric with ID = " << metric_id << ".";
+    return;
+  }
+  const std::string& metric_name = metric->name();
+
+  if (event_type_index != 0) {
+    FXL_LOG(ERROR) << "The parameter |event_type_index| in the method "
+                      "LogIntHistogram is unsupported in the current version "
+                      "of Cobalt. Pass in the value 0 for now. Metric="
+                   << metric_name;
+    callback(Status2::INVALID_ARGUMENTS);
+    return;
+  }
+  if (!component->empty()) {
+    FXL_LOG(ERROR) << "The parameter |component| in the method LogIntHistogram "
+                      "is unsupported in the current version of Cobalt. Pass "
+                      "in an empty string for now. Metric="
+                   << metric_name;
+    callback(Status2::INVALID_ARGUMENTS);
+    return;
+  }
+
+  uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
+  if (encoding_id == 0) {
+    callback(Status2::INVALID_ARGUMENTS);
+    return;
+  }
+
+  std::map<uint32_t, uint64_t> histogram_map;
+  for (auto it = histogram->begin(); histogram->end() != it; it++) {
+    histogram_map[(*it).index] = (*it).count;
+  }
+  auto result = encoder_.EncodeIntBucketDistribution(metric_id, encoding_id,
+                                                     histogram_map);
+  AddEncodedObservation(&result, std::move(callback));
 }
 
 void LoggerExtImpl::LogCustomEvent(

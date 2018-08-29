@@ -271,6 +271,9 @@ bool CobaltTestApp::RequestSendSoonTests() {
   if (!TestLogTimer(&logger_)) {
     return false;
   }
+  if (!TestLogIntHistogram(&logger_)) {
+    return false;
+  }
   if (!TestLogCustomEvent(&logger_)) {
     return false;
   }
