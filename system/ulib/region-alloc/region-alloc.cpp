@@ -3,16 +3,25 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <region-alloc/region-alloc.h>
 #include <string.h>
 
 // Support for Pool allocated bookkeeping
 RegionAllocator::RegionPool::RefPtr RegionAllocator::RegionPool::Create(size_t max_memory) {
     // Sanity check our allocation arguments.
-    if (SLAB_SIZE > max_memory)
-        return RefPtr(nullptr);
+    if (SLAB_SIZE > max_memory) {
+        return nullptr;
+    }
 
-    return fbl::AdoptRef(new RegionPool(max_memory / SLAB_SIZE));
+    fbl::AllocChecker ac;
+    auto ret = fbl::AdoptRef(new (&ac) RegionPool(max_memory / SLAB_SIZE));
+
+    if (!ac.check()) {
+        return nullptr;
+    }
+
+    return ret;
 }
 
 RegionAllocator::~RegionAllocator() {

@@ -339,9 +339,6 @@ public:
 
         ~RegionPool() { }
 
-        void* operator new(size_t sz) noexcept { return ::malloc(sz); }
-        void  operator delete(void* obj) { ::free(obj); }
-
         // No one may copy, assign or move us.
         DISALLOW_COPY_ASSIGN_AND_MOVE(RegionPool);
     };
