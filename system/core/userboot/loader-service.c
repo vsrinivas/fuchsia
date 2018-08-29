@@ -82,14 +82,9 @@ static bool handle_loader_rpc(struct loader_state* state,
     const char* string;
     size_t string_len;
     status = ldmsg_req_decode(&req, size, &string, &string_len);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         fail(state->log, "loader-service request invalid");
-
-    // no opcodes which receive a handle are supported, but
-    // we need to receive (and discard) the handle to politely
-    // NAK clone requests
-    if (hcount == 1)
-        zx_handle_close(reqhandle);
+    }
 
     ldmsg_rsp_t rsp;
     memset(&rsp, 0, sizeof(rsp));
@@ -98,7 +93,7 @@ static bool handle_loader_rpc(struct loader_state* state,
     switch (req.header.ordinal) {
     case LDMSG_OP_DONE:
         printl(state->log, "loader-service received DONE request");
-        return false;
+        goto no_reply;
 
     case LDMSG_OP_CONFIG:
         loader_config(state, string, string_len);
@@ -116,6 +111,28 @@ static bool handle_loader_rpc(struct loader_state* state,
         fail(state->log, "loader-service received LOAD_SCRIPT_INTERP request");
         break;
 
+    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK: {
+        if (hcount != 1) {
+            fail(state->log, "loader-service received DEBUG_PUBLISH_DATA_SINK request without VMO");
+        }
+
+        char name[ZX_MAX_NAME_LEN];
+        status = zx_object_get_property(reqhandle, ZX_PROP_NAME, name, sizeof(name));
+        if (status != ZX_OK) {
+            fail(state->log, "zx_object_get_property failed");
+        }
+
+        uint64_t size;
+        status = zx_vmo_get_size(reqhandle, &size);
+        if (status != ZX_OK) {
+            fail(state->log, "zx_vmo_get_size failed");
+        }
+
+        printl(state->log, "loader-service data-sink \"%s\" DATA DROPPED: \"%s\", "
+                           "%zu bytes", string, name, (size_t)size);
+        break;
+    }
+
     default:
         fail(state->log, "loader-service received invalid opcode");
         break;
@@ -127,12 +144,26 @@ static bool handle_loader_rpc(struct loader_state* state,
 error_reply:
     rsp.header.txid = req.header.txid;
     rsp.header.ordinal = req.header.ordinal;
+
+    // no opcodes which receive a handle are supported, but
+    // we need to receive (and discard) the handle to politely
+    // NAK clone requests
+    if (hcount == 1) {
+        zx_handle_close(reqhandle);
+    }
+
     status = zx_channel_write(channel, 0, &rsp, ldmsg_rsp_get_size(&rsp),
                               &handle, handle == ZX_HANDLE_INVALID ? 0 : 1);
     check(state->log, status,
           "zx_channel_write on loader-service channel failed");
 
     return true;
+
+no_reply:
+    if (hcount == 1) {
+        zx_handle_close(reqhandle);
+    }
+    return false;
 }
 
 void loader_service(zx_handle_t log, struct bootfs* bootfs,
