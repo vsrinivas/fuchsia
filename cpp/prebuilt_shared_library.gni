@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/sdk/sdk_atom.gni")
+import("//build/sdk/sdk_atom_alias.gni")
 
 # A shared library that can be exported to an SDK in binary form.
 #
@@ -38,6 +39,7 @@ template("prebuilt_shared_library") {
   assert(defined(invoker.category), "Must define an SDK category")
 
   main_target_name = target_name
+  metadata_target_name = "${target_name}_sdk_metadata"
   manifest_target_name = "${target_name}_sdk_manifest"
   sdk_target_name = "${target_name}_sdk"
 
@@ -71,20 +73,15 @@ template("prebuilt_shared_library") {
     #
     # Once TC-46 is fixed, we'll be able to offer the option to statically link
     # against libc++.
-    additional_ldflags = [ "-nostdlib++" ]
-
-    if (defined(ldflags)) {
-      ldflags += additional_ldflags
-    } else {
-      ldflags = additional_ldflags
+    if (!defined(ldflags)) {
+      ldflags = []
     }
+    ldflags += [ "-nostdlib++" ]
 
     # Request that the runtime deps be written out to a file. This file will be
     # used later to verify that all runtime deps are available in the SDK.
     write_runtime_deps = "$target_out_dir/$target_name.runtime_deps"
   }
-
-  sdk_manifest_file = "$target_gen_dir/$sdk_target_name.sdk"
 
   output_name = target_name
   if (defined(invoker.output_name)) {
@@ -97,20 +94,146 @@ template("prebuilt_shared_library") {
     atom_name = output_name
   }
 
-  sdk_atom(manifest_target_name) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "headers_only",
-                             "include_base",
-                             "prebuilt",
-                             "sdk_name",
-                           ])
+  no_headers = defined(invoker.no_headers) && invoker.no_headers
+  # Base path for source files of this library in SDKs.
+  file_base = "pkg/$atom_name"
+  # Base path for binaries of this library in SDKs.
+  prebuilt_base = "arch/$target_cpu"
 
-    # Specify the path to the generated manifest file so that it matches the
-    # label of the SDK (group) target below. This way the file will be found in
-    # the location that the build system expects.
-    manifest_file = sdk_manifest_file
+  # Identify dependencies and their metadata files.
+  sdk_deps = []
+  sdk_metas = []
+  # If a prebuilt library is only provided for packaging purposes (by not
+  # exposing headers) then its dependencies need not be included in an SDK.
+  if (defined(invoker.public_deps) && !no_headers) {
+    foreach(dep, invoker.public_deps) {
+      full_label = get_label_info(dep, "label_no_toolchain")
+      sdk_dep = "${full_label}_sdk"
+      sdk_deps += [ sdk_dep ]
+    }
+  }
+  # Runtime deps are already SDK targets.
+  if (defined(invoker.runtime_deps)) {
+    sdk_deps += invoker.runtime_deps
+  }
+  foreach(sdk_dep, sdk_deps) {
+    gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+    name = get_label_info(sdk_dep, "name")
+    sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+  }
+
+  # Process headers.
+  all_headers = []
+  if ((defined(invoker.public) || defined(invoker.sources)) && !no_headers) {
+    if (defined(invoker.public)) {
+      all_headers += invoker.public
+    } else {
+      foreach(source_file, invoker.sources) {
+        extension = get_path_info(source_file, "extension")
+        if (extension == "h") {
+          all_headers += [ source_file ]
+        }
+      }
+    }
+  }
+  sdk_headers = []
+  sdk_files = []
+  new_sdk_files = []
+  foreach(header, all_headers) {
+    include_base = "include"
+    if (defined(invoker.include_base)) {
+      include_base = invoker.include_base
+    }
+    destination = rebase_path(header, include_base)
+    header_dest = "$file_base/include/$destination"
+    sdk_headers += [ header_dest ]
+    sdk_files += [
+      {
+        source = header
+        dest = "include/$destination"
+      },
+    ]
+    new_sdk_files += [
+      {
+        source = header
+        dest = header_dest
+      }
+    ]
+  }
+
+  # Add binaries.
+  shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
+  lib_name = "lib$output_name.so"
+  link_lib = "$prebuilt_base/lib/$lib_name"
+  dist_lib = "$prebuilt_base/dist/$lib_name"
+  debug_lib = "$prebuilt_base/debug/$lib_name"
+  sdk_files += [
+    {
+      # TODO(TO-791): put ABI stubs under lib/, not the full thing.
+      source = "$shared_out_dir/$lib_name"
+      dest = "lib/$lib_name"
+    },
+    {
+      source = "$shared_out_dir/$lib_name"
+      dest = "dist/$lib_name"
+      packaged = true
+    },
+    {
+      source = "$shared_out_dir/lib.unstripped/$lib_name"
+      dest = "debug/$lib_name"
+    },
+  ]
+  new_sdk_files += [
+    {
+      # TODO(TO-791): put ABI stubs under lib/, not the full thing.
+      source = "$shared_out_dir/$lib_name"
+      dest = link_lib
+    },
+    {
+      source = "$shared_out_dir/$lib_name"
+      dest = dist_lib
+    },
+    {
+      source = "$shared_out_dir/lib.unstripped/$lib_name"
+      dest = debug_lib
+    },
+  ]
+
+  metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"
+
+  action(metadata_target_name) {
+    script = "//build/cpp/gen_sdk_prebuilt_meta_file.py"
+
+    inputs = sdk_metas
+
+    outputs = [ metadata_file ]
+
+    args = [
+      "--out",
+      rebase_path(metadata_file),
+      "--name",
+      atom_name,
+      "--include-dir",
+      "$file_base/include",
+      "--deps",
+    ] + sdk_metas + [
+      "--headers",
+    ] + sdk_headers + [
+      "--arch",
+      target_cpu,
+      "--lib-link",
+      link_lib,
+      "--lib-dist",
+      dist_lib,
+      "--lib-debug",
+      debug_lib,
+    ]
+
+    deps = sdk_deps
+  }
+
+  sdk_atom(manifest_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
 
     domain = "cpp"
     name = atom_name
@@ -119,78 +242,28 @@ template("prebuilt_shared_library") {
 
     category = invoker.category
 
+    meta = {
+      source = metadata_file
+      dest = "$file_base/meta.json"
+      schema = "cc_prebuilt_library"
+    }
+
     if (is_fuchsia) {
       tags += [ "arch:target" ]
     } else {
       tags += [ "arch:host" ]
     }
 
-    no_headers = defined(invoker.no_headers) && invoker.no_headers
+    files = sdk_files
 
-    files = []
-    if ((defined(invoker.public) || defined(invoker.sources)) && !no_headers) {
-      headers = []
-      if (defined(invoker.public)) {
-        headers += invoker.public
-      } else {
-        foreach(source_file, invoker.sources) {
-          extension = get_path_info(source_file, "extension")
-          if (extension == "h") {
-            headers += [ source_file ]
-          }
-        }
-      }
-      foreach(header, headers) {
-        include_base = "include"
-        if (defined(invoker.include_base)) {
-          include_base = invoker.include_base
-        }
-        destination = rebase_path(header, include_base)
-        files += [
-          {
-            source = header
-            dest = "include/$destination"
-          },
-        ]
-      }
-    }
+    new_files = new_sdk_files
 
-    shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
-    lib_name = "lib$output_name.so"
+    deps = sdk_deps
 
-    # TODO(TO-791): put ABI stubs under lib/, not the full thing.
-    files += [
-      {
-        source = "$shared_out_dir/$lib_name"
-        dest = "dist/$lib_name"
-        packaged = true
-      },
-      {
-        source = "$shared_out_dir/$lib_name"
-        dest = "lib/$lib_name"
-      },
-      {
-        source = "$shared_out_dir/lib.unstripped/$lib_name"
-        dest = "debug/$lib_name"
-      },
+    non_sdk_deps = [
+      ":$main_target_name",
+      ":$metadata_target_name",
     ]
-
-    deps = []
-
-    # If a prebuilt library is only provided for packaging purposes (by not
-    # exposing headers) then its dependencies need not be included in an SDK.
-    if (defined(invoker.public_deps) && !no_headers) {
-      foreach(dep, invoker.public_deps) {
-        full_label = get_label_info(dep, "label_no_toolchain")
-        deps += [ "${full_label}_sdk" ]
-      }
-    }
-
-    if (defined(invoker.runtime_deps)) {
-      package_deps = invoker.runtime_deps
-    }
-
-    non_sdk_deps = [ ":$main_target_name" ]
 
     # Explicitly add non-public dependencies, in case some of the source files
     # are generated.
@@ -201,6 +274,7 @@ template("prebuilt_shared_library") {
 
   shared_gen_dir = get_label_info(":bogus($shlib_toolchain)", "target_out_dir")
   runtime_deps_file = "$shared_gen_dir/$target_name.runtime_deps"
+  sdk_manifest_file = "$target_gen_dir/$manifest_target_name.sdk"
   verify_target_name = "${target_name}_verify"
 
   # Verify that the SDK manifest for this target includes all of the expected
@@ -238,12 +312,10 @@ template("prebuilt_shared_library") {
     ]
   }
 
-  group(sdk_target_name) {
-    public_deps = [
-      ":$manifest_target_name",
-    ]
+  sdk_atom_alias(sdk_target_name) {
+    atom = ":$manifest_target_name"
 
-    deps = [
+    non_sdk_deps = [
       ":$verify_target_name",
     ]
   }

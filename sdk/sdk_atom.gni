@@ -6,6 +6,18 @@ import("//build/compiled_action.gni")
 
 # Defines an SDK element.
 #
+# Outputs
+#
+#   $target_gen_dir/$target_name.sdk
+#     A manifest describing what files pertain to the atom and which other atoms
+#     are required by this atom.
+#     TODO(DX-340): mention that this file is now purely internal to the build.
+#
+#   $target_gen_dir/$target_name.meta.json
+#     A metadata file describing the atom.
+#     This file is included in the final SDK and used to e.g. drive the
+#     inclusion of the atom in a different build system.
+#
 # Parameters
 #
 #   domain

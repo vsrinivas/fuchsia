@@ -8,6 +8,9 @@
 #
 #   atom
 #     The label of the aliased atom.
+#
+#   non_sdk_deps (optional)
+#     List of GN labels which this target needs built.
 
 template("sdk_atom_alias") {
   assert(defined(invoker.atom), "Must define an atom to alias")
@@ -60,5 +63,9 @@ template("sdk_atom_alias") {
     forward_variables_from(invoker, [ "testonly" ])
 
     public_deps = group_deps
+
+    if (defined(invoker.non_sdk_deps)) {
+      public_deps += invoker.non_sdk_deps
+    }
   }
 }
