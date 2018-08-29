@@ -9,8 +9,8 @@
 #include "codec_input_item.h"
 #include "codec_port.h"
 
+#include <fbl/macros.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/fxl/macros.h>
 
 #include <list>
 
@@ -277,7 +277,8 @@ class CodecAdapter {
   // do that is sub-class-specific.
 
  private:
-  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecAdapter);
+  CodecAdapter() = delete;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapter);
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_H_

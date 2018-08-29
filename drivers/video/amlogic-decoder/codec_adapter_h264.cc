@@ -10,7 +10,6 @@
 #include "vdec1.h"
 
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fxl/logging.h>
 #include <lib/zx/bti.h>
 
 // TODO(dustingreen):
@@ -96,8 +95,8 @@ CodecAdapterH264::CodecAdapterH264(std::mutex& lock,
       device_(device),
       video_(device_->video()),
       input_processing_loop_(&kAsyncLoopConfigNoAttachToThread) {
-  FXL_DCHECK(device_);
-  FXL_DCHECK(video_);
+  ZX_DEBUG_ASSERT(device_);
+  ZX_DEBUG_ASSERT(video_);
 }
 
 CodecAdapterH264::~CodecAdapterH264() {
@@ -184,7 +183,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
                                            frame->stride * frame->height / 2);
 
           CodecPacket* packet = frame->codec_packet;
-          FXL_DCHECK(packet);
+          ZX_DEBUG_ASSERT(packet);
 
           packet->SetStartOffset(0);
           uint64_t total_size_bytes = frame->stride * frame->height * 3 / 2;
@@ -264,7 +263,7 @@ void CodecAdapterH264::CoreCodecStopStream() {
     PostToInputProcessingThread([this, &stop_input_processing_condition] {
       {  // scope lock
         std::lock_guard<std::mutex> lock(lock_);
-        FXL_DCHECK(is_cancelling_input_processing_);
+        ZX_DEBUG_ASSERT(is_cancelling_input_processing_);
         input_queue_.clear();
         is_cancelling_input_processing_ = false;
       }  // ~lock
@@ -273,7 +272,7 @@ void CodecAdapterH264::CoreCodecStopStream() {
     while (is_cancelling_input_processing_) {
       stop_input_processing_condition.wait(lock);
     }
-    FXL_DCHECK(!is_cancelling_input_processing_);
+    ZX_DEBUG_ASSERT(!is_cancelling_input_processing_);
   }  // ~lock
 
   // Stop processing queued frames.
@@ -319,9 +318,9 @@ void CodecAdapterH264::CoreCodecAddBuffer(CodecPort port,
 void CodecAdapterH264::CoreCodecConfigureBuffers(
     CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) {
   if (port == kOutputPort) {
-    FXL_DCHECK(all_output_packets_.empty());
-    FXL_DCHECK(!all_output_buffers_.empty());
-    FXL_DCHECK(all_output_buffers_.size() == packets.size());
+    ZX_DEBUG_ASSERT(all_output_packets_.empty());
+    ZX_DEBUG_ASSERT(!all_output_buffers_.empty());
+    ZX_DEBUG_ASSERT(all_output_buffers_.size() == packets.size());
     for (auto& packet : packets) {
       all_output_packets_.push_back(packet.get());
     }
@@ -333,7 +332,7 @@ void CodecAdapterH264::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
     packet->SetIsNew(false);
     return;
   }
-  FXL_DCHECK(!packet->is_new());
+  ZX_DEBUG_ASSERT(!packet->is_new());
 
   std::shared_ptr<VideoFrame> frame = packet->video_frame().lock();
   if (!frame) {
@@ -358,9 +357,9 @@ void CodecAdapterH264::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   if (port == kInputPort) {
     // There shouldn't be any queued input at this point, but if there is any,
     // fail here even in a release build.
-    FXL_CHECK(input_queue_.empty());
+    ZX_ASSERT(input_queue_.empty());
   } else {
-    FXL_DCHECK(port == kOutputPort);
+    ZX_DEBUG_ASSERT(port == kOutputPort);
 
     // The old all_output_buffers_ are no longer valid.
     all_output_buffers_.clear();
@@ -406,7 +405,7 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   config->stream_lifetime_ordinal = stream_lifetime_ordinal;
   // For the moment, there will be only one CodecOutputConfig, and it'll need
   // output buffers configured for it.
-  FXL_DCHECK(buffer_constraints_action_required);
+  ZX_DEBUG_ASSERT(buffer_constraints_action_required);
   config->buffer_constraints_action_required =
       buffer_constraints_action_required;
   config->buffer_constraints.buffer_constraints_version_ordinal =
@@ -539,8 +538,8 @@ void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigFinish() {
 void CodecAdapterH264::PostSerial(async_dispatcher_t* dispatcher,
                                   fit::closure to_run) {
   zx_status_t post_result = async::PostTask(dispatcher, std::move(to_run));
-  FXL_CHECK(post_result == ZX_OK)
-      << "async::PostTask() failed - result: " << post_result;
+  ZX_ASSERT_MSG(post_result == ZX_OK, "async::PostTask() failed - result: %d\n",
+                post_result);
 }
 
 void CodecAdapterH264::PostToInputProcessingThread(fit::closure to_run) {
@@ -593,7 +592,7 @@ void CodecAdapterH264::ProcessInput() {
     if (item.is_format_details()) {
       // TODO(dustingreen): Be more strict about what the input format actually
       // is, and less strict about it matching the initial format.
-      FXL_CHECK(item.format_details() == initial_input_format_details_);
+      ZX_ASSERT(item.format_details() == initial_input_format_details_);
       continue;
     }
 
@@ -625,7 +624,7 @@ void CodecAdapterH264::ProcessInput() {
       continue;
     }
 
-    FXL_DCHECK(item.is_packet());
+    ZX_DEBUG_ASSERT(item.is_packet());
 
     uint8_t* data =
         item.packet()->buffer().buffer_base() + item.packet()->start_offset();
@@ -665,7 +664,7 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(
     ::zx::bti bti, uint32_t frame_count, uint32_t width, uint32_t height,
     uint32_t stride, uint32_t display_width, uint32_t display_height,
     std::vector<CodecFrame>* frames_out) {
-  FXL_DCHECK(frames_out->empty());
+  ZX_DEBUG_ASSERT(frames_out->empty());
 
   // First handle the special case of EndOfStream marker showing up at the
   // output.
@@ -779,22 +778,22 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(
       // CoreCodecStopStream() is essentially cancelling the mid-stream config
       // change.  Return an empty vector.  We need to return so the
       // video_decoder_lock_ can be acquired by CoreCodecStopStream().
-      FXL_DCHECK(frames_out->empty());
+      ZX_DEBUG_ASSERT(frames_out->empty());
       return ZX_ERR_CANCELED;
     }
 
     // Well, it's mostly done.  The remaining portion is to convert the
     // configured buffers into the form needed by frames_out.
-    FXL_DCHECK(is_mid_stream_output_config_change_done_);
+    ZX_DEBUG_ASSERT(is_mid_stream_output_config_change_done_);
 
     // At least for now, we don't implement single_buffer_mode on output of a
     // video decoder, so every frame will have a buffer.
-    FXL_DCHECK(all_output_buffers_.size() == packet_count_total_);
+    ZX_DEBUG_ASSERT(all_output_buffers_.size() == packet_count_total_);
 
     // Now we need to populate the frames_out vector.
     for (uint32_t i = 0; i < frame_count; i++) {
-      FXL_DCHECK(all_output_buffers_[i]->buffer_index() == i);
-      FXL_DCHECK(all_output_buffers_[i]->codec_buffer().buffer_index == i);
+      ZX_DEBUG_ASSERT(all_output_buffers_[i]->buffer_index() == i);
+      ZX_DEBUG_ASSERT(all_output_buffers_[i]->codec_buffer().buffer_index == i);
       frames_out->emplace_back(CodecFrame{
           .codec_buffer = fidl::Clone(all_output_buffers_[i]->codec_buffer()),
           .codec_packet = all_output_packets_[i],

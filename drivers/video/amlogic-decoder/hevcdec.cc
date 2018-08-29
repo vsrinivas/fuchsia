@@ -5,10 +5,10 @@
 #include "hevcdec.h"
 
 #include <ddk/io-buffer.h>
+#include <zircon/assert.h>
 
 #include <algorithm>
 
-#include "lib/fxl/logging.h"
 #include "macros.h"
 #include "memory_barriers.h"
 
@@ -292,7 +292,7 @@ void HevcDec::SaveInputContext(InputContext* context) {
     return !HevcStreamSwapCtrl::Get().ReadFrom(mmio()->dosbus).in_progress();
   });
   // TODO: return error on failure.
-  FXL_CHECK(finished);
+  ZX_ASSERT(finished);
   HevcStreamSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
   context->processed_video =
@@ -317,6 +317,6 @@ void HevcDec::RestoreInputContext(InputContext* context) {
     return !HevcStreamSwapCtrl::Get().ReadFrom(mmio()->dosbus).in_progress();
   });
   // TODO: return error on failure.
-  FXL_CHECK(finished);
+  ZX_ASSERT(finished);
   HevcStreamSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
 }

@@ -5,10 +5,10 @@
 #include "amlogic-video.h"
 
 #include <byteswap.h>
+#include <zircon/compiler.h>
 
 #include "gtest/gtest.h"
 #include "hevcdec.h"
-#include "lib/fxl/logging.h"
 #include "tests/test_support.h"
 #include "vp9_decoder.h"
 
@@ -107,8 +107,8 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size,
                         kOutputHeaderSize * frame_sizes.size());
   uint8_t* output = &(*output_vector)[output_offset];
   for (auto& size : frame_sizes) {
-    FXL_DCHECK(output + 16 - output_vector->data() <=
-               static_cast<int64_t>(output_vector->size()));
+    ZX_DEBUG_ASSERT(output + 16 - output_vector->data() <=
+                    static_cast<int64_t>(output_vector->size()));
     *reinterpret_cast<uint32_t*>(output) = bswap_32(size + 4);
     output += 4;
     *reinterpret_cast<uint32_t*>(output) = ~bswap_32(size + 4);
@@ -122,14 +122,14 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size,
     *output++ = 'L';
     *output++ = 'V';
 
-    FXL_DCHECK(output + size - output_vector->data() <=
-               static_cast<int64_t>(output_vector->size()));
+    ZX_DEBUG_ASSERT(output + size - output_vector->data() <=
+                    static_cast<int64_t>(output_vector->size()));
     memcpy(output, &data[frame_offset], size);
     output += size;
     frame_offset += size;
   }
-  FXL_DCHECK(output - output_vector->data() ==
-             static_cast<int64_t>(output_vector->size()));
+  ZX_DEBUG_ASSERT(output - output_vector->data() ==
+                  static_cast<int64_t>(output_vector->size()));
 }
 
 std::vector<uint8_t> ConvertIvfToAmlV(const uint8_t* data, uint32_t length) {
@@ -189,7 +189,7 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
   uint32_t GetInputDataSize() override { return 50; }
 
   // Called while the decoder lock is held.
-  void FrameWasOutput() override FXL_NO_THREAD_SAFETY_ANALYSIS {
+  void FrameWasOutput() override __TA_NO_THREAD_SAFETY_ANALYSIS {
     DLOG("Resetting hardware\n");
     SaveCurrentInstanceState();
     if (multi_instance_) {
@@ -210,7 +210,7 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
 
  private:
   // Called while the decoder lock is held.
-  void SaveCurrentInstanceState() FXL_NO_THREAD_SAFETY_ANALYSIS {
+  void SaveCurrentInstanceState() __TA_NO_THREAD_SAFETY_ANALYSIS {
     DecoderInstance* current_instance = &video_->decoder_instances_.front();
     // FrameWasOutput() is called during handling of kVp9CommandNalDecodeDone on
     // the interrupt thread, which means the decoder HW is currently paused,
@@ -232,7 +232,7 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
   }
 
   // Called while the decoder lock is held.
-  void RestoreInstanceState() FXL_NO_THREAD_SAFETY_ANALYSIS {
+  void RestoreInstanceState() __TA_NO_THREAD_SAFETY_ANALYSIS {
     DecoderInstance* current_instance = &video_->decoder_instances_.front();
 
     video_->video_decoder_ = current_instance->decoder();
@@ -649,7 +649,7 @@ class TestVP9 {
   // This is called from the interrupt handler, which already holds the lock.
   static void ReturnFrame(AmlogicVideo* video,
                           std::shared_ptr<VideoFrame> frame)
-      FXL_NO_THREAD_SAFETY_ANALYSIS {
+      __TA_NO_THREAD_SAFETY_ANALYSIS {
     video->video_decoder_->ReturnFrame(frame);
   }
 };

@@ -10,8 +10,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/fxl/logging.h>
 #include <lib/zx/bti.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
@@ -88,10 +88,10 @@ class VideoDecoder {
   virtual void HandleInterrupt() = 0;
   virtual void SetFrameReadyNotifier(FrameReadyNotifier notifier) {}
   virtual void SetInitializeFramesHandler(InitializeFramesHandler handler) {
-    FXL_CHECK(false) << "not yet implemented";
+    ZX_ASSERT_MSG(false, "not yet implemented");
   }
   virtual void SetErrorHandler(fit::closure error_handler) {
-    FXL_CHECK(false) << "not yet implemented";
+    ZX_ASSERT_MSG(false, "not yet implemented");
   }
   virtual void ReturnFrame(std::shared_ptr<VideoFrame> frame) = 0;
   virtual ~VideoDecoder() {}

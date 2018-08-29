@@ -11,12 +11,11 @@
 #include "codec_buffer.h"
 #include "codec_packet.h"
 
+#include <fbl/macros.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/synchronization/thread_annotations.h>
 #include <zircon/compiler.h>
 
 #include <list>
@@ -725,7 +724,8 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
 
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
 
-  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecImpl);
+  CodecImpl() = delete;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(CodecImpl);
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_IMPL_H_

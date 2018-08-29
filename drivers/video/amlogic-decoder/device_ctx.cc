@@ -7,7 +7,6 @@
 #include "amlogic-video.h"
 #include "macros.h"
 
-#include <lib/fxl/logging.h>
 #include <zircon/device/media-codec.h>
 
 namespace {
@@ -81,7 +80,7 @@ DeviceCtx::~DeviceCtx() {
   // implemented.
 
   // TODO(dustingreen): Implement this destructor iff it's actually used/called.
-  FXL_LOG(FATAL) << "not implemented";
+  ZX_PANIC("not implemented");
 }
 
 zx_status_t DeviceCtx::Bind(zx_device_t* parent) {

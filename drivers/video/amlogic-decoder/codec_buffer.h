@@ -7,8 +7,8 @@
 
 #include "codec_port.h"
 
+#include <fbl/macros.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/fxl/macros.h>
 
 #include <memory>
 
@@ -56,7 +56,7 @@ class CodecBuffer {
   // a Buffer instance from a const-ness point of view.
   uint8_t* buffer_base_ = nullptr;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(CodecBuffer);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(CodecBuffer);
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_BUFFER_H_

@@ -8,7 +8,6 @@
 #include "macros.h"
 
 #include <ddk/driver.h>
-#include <lib/fxl/logging.h>
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -110,7 +109,7 @@ void DriverCtx::FatalError(const char* format, ...) {
   assert(buffer_bytes == buffer_bytes_2);
   va_end(args);
 
-  FXL_LOG(ERROR) << "DriverCtx::FatalError(): " << buffer.get();
+  DECODE_ERROR("DriverCtx::FatalError(): %s\n", buffer.get());
 
   // TODO(dustingreen): Send string in buffer via channel epitaphs, when
   // possible. The channel activity/failing server-side generally will race with
@@ -118,7 +117,7 @@ void DriverCtx::FatalError(const char* format, ...) {
   // from here - probably a timeout here would be a good idea if so.
 
   // This should provide more stack dump than exit(-1) would give.
-  FXL_CHECK(false) << "DriverCtx::FatalError() is fatal.";
+  ZX_ASSERT_MSG(false, "DriverCtx::FatalError() is fatal.");
 }
 
 // Run to_run on given dispatcher, in order.

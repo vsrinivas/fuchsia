@@ -25,7 +25,6 @@
 #include "decoder_instance.h"
 #include "device_ctx.h"
 #include "firmware_blob.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
 #include "registers.h"
 #include "stream_buffer.h"
 #include "video_decoder.h"
@@ -65,7 +64,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
     return pts_manager_.get();
   }
   __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) override
-      FXL_NO_THREAD_SAFETY_ANALYSIS {
+      __TA_NO_THREAD_SAFETY_ANALYSIS {
     assert(decoder);
     return decoder == video_decoder_;
   }
@@ -88,7 +87,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   void InitializeStreamInput(bool use_parser);
   void SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(video_decoder_lock_);
+      __TA_REQUIRES(video_decoder_lock_);
 
   __WARN_UNUSED_RESULT
   zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size);
@@ -157,7 +156,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   std::unique_ptr<PtsManager> pts_manager_;
   std::mutex video_decoder_lock_;
   // This is the video decoder that's currently attached to the hardware.
-  FXL_GUARDED_BY(video_decoder_lock_)
+  __TA_GUARDED(video_decoder_lock_)
   VideoDecoder* video_decoder_ = nullptr;
 
   // This is the stream buffer that's currently attached to the hardware.

@@ -11,7 +11,6 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fxl/synchronization/thread_annotations.h>
 
 #include <map>
 

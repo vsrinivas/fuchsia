@@ -6,8 +6,6 @@
 
 #include "codec_buffer.h"
 
-#include <lib/fxl/logging.h>
-
 #include <stdint.h>
 
 CodecPacket::CodecPacket(uint64_t buffer_lifetime_ordinal,
@@ -66,14 +64,14 @@ void CodecPacket::ClearTimestampIsh() {
 bool CodecPacket::has_timestamp_ish() const { return has_timestamp_ish_; }
 
 uint64_t CodecPacket::timestamp_ish() const {
-  FXL_DCHECK(has_timestamp_ish_);
+  ZX_DEBUG_ASSERT(has_timestamp_ish_);
   return timestamp_ish_;
 }
 
 void CodecPacket::SetFree(bool is_free) {
   // We shouldn't need to be calling this method unless we're changing the
   // is_free state.
-  FXL_DCHECK(is_free_ != is_free);
+  ZX_DEBUG_ASSERT(is_free_ != is_free);
   is_free_ = is_free;
 }
 

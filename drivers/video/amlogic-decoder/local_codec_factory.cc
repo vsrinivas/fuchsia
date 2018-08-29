@@ -11,7 +11,6 @@
 #include "codec_admission_control.h"
 
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fxl/logging.h>
 
 #include <optional>
 
@@ -95,8 +94,8 @@ LocalCodecFactory::~LocalCodecFactory() {
   // We need ~factory_binding_ to run on shared_fidl_thread() else it's not safe
   // to un-bind unilaterally (without the channel closing).  Unless not bound in
   // the first place.
-  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread() ||
-             !factory_binding_.is_bound());
+  ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread() ||
+                  !factory_binding_.is_bound());
 
   // ~factory_binding_ here + fact that we're running on shared_fidl_thread()
   // (if Bind() previously called) means error_handler won't be running
@@ -105,16 +104,17 @@ LocalCodecFactory::~LocalCodecFactory() {
 }
 
 void LocalCodecFactory::SetErrorHandler(fit::closure error_handler) {
-  FXL_DCHECK(!factory_binding_.is_bound());
+  ZX_DEBUG_ASSERT(!factory_binding_.is_bound());
   factory_binding_.set_error_handler([this, error_handler = std::move(
                                                 error_handler)]() mutable {
-    FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
+    ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
     // This queues after the similar posting in CreateDecoder() (via
     // TryAddCodec()), so that LocalCodecFactory won't get deleted until
     // after previously-started TryAddCodec()s are done.
     device_->codec_admission_control()->PostAfterPreviouslyStartedClosesDone(
         [this, error_handler = std::move(error_handler)] {
-          FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
+          ZX_DEBUG_ASSERT(thrd_current() ==
+                          device_->driver()->shared_fidl_thread());
           error_handler();
           // "this" is gone
         });
@@ -123,8 +123,8 @@ void LocalCodecFactory::SetErrorHandler(fit::closure error_handler) {
 }
 
 void LocalCodecFactory::Bind(zx::channel server_endpoint) {
-  FXL_DCHECK(is_error_handler_set_);
-  FXL_DCHECK(!factory_binding_.is_bound());
+  ZX_DEBUG_ASSERT(is_error_handler_set_);
+  ZX_DEBUG_ASSERT(!factory_binding_.is_bound());
 
   // Go!  (immediately - if Bind() is called on IOCTL thread, this can result in
   // _immediate_ dispatching over on shared_fidl_thread()).

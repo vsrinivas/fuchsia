@@ -4,16 +4,16 @@
 
 #include "pts_manager.h"
 
-#include <lib/fxl/logging.h>
+#include <zircon/assert.h>
 
 void PtsManager::InsertPts(uint64_t offset, uint64_t pts) {
   std::lock_guard<std::mutex> lock(lock_);
 
   // caller should not insert duplicates
-  FXL_DCHECK(offset_to_result_.find(offset) == offset_to_result_.end());
+  ZX_DEBUG_ASSERT(offset_to_result_.find(offset) == offset_to_result_.end());
   // caller should set offsets in order
-  FXL_DCHECK(offset_to_result_.empty() ||
-             offset > (*offset_to_result_.rbegin()).first);
+  ZX_DEBUG_ASSERT(offset_to_result_.empty() ||
+                  offset > (*offset_to_result_.rbegin()).first);
 
   offset_to_result_.emplace(
       std::make_pair(offset, LookupResult(false, true, pts)));
@@ -28,15 +28,15 @@ void PtsManager::SetEndOfStreamOffset(uint64_t end_of_stream_offset) {
   std::lock_guard<std::mutex> lock(lock_);
 
   // caller should not insert duplicates
-  FXL_DCHECK(offset_to_result_.find(end_of_stream_offset) ==
-             offset_to_result_.end());
+  ZX_DEBUG_ASSERT(offset_to_result_.find(end_of_stream_offset) ==
+                  offset_to_result_.end());
   // caller should set offsets in order
-  FXL_DCHECK(offset_to_result_.empty() ||
-             end_of_stream_offset > (*offset_to_result_.rbegin()).first);
+  ZX_DEBUG_ASSERT(offset_to_result_.empty() ||
+                  end_of_stream_offset > (*offset_to_result_.rbegin()).first);
 
   // caller should only set end of stream offset once
-  FXL_DCHECK(offset_to_result_.empty() ||
-             !(*offset_to_result_.rbegin()).second.is_end_of_stream());
+  ZX_DEBUG_ASSERT(offset_to_result_.empty() ||
+                  !(*offset_to_result_.rbegin()).second.is_end_of_stream());
 
   offset_to_result_.emplace(
       std::make_pair(end_of_stream_offset, LookupResult(true, false, 0)));

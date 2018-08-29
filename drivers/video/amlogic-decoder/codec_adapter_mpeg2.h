@@ -5,6 +5,8 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_MPEG2_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_MPEG2_H_
 
+#include <zircon/compiler.h>
+
 #include "codec_adapter.h"
 
 class DeviceCtx;
@@ -45,7 +47,8 @@ class CodecAdapterMpeg2 : public CodecAdapter {
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
 
-  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecAdapterMpeg2);
+  CodecAdapterMpeg2() = delete;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterMpeg2);
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_MPEG2_H_

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/compiler.h>
+
 #include <future>
 
 #include "amlogic-video.h"
@@ -114,7 +116,7 @@ class TestMpeg2 {
   // This is called from the interrupt handler, which already holds the lock.
   static void ReturnFrame(AmlogicVideo* video,
                           std::shared_ptr<VideoFrame> frame)
-      FXL_NO_THREAD_SAFETY_ANALYSIS {
+      __TA_NO_THREAD_SAFETY_ANALYSIS {
     video->video_decoder_->ReturnFrame(frame);
   }
 };

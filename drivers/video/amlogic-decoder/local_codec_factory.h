@@ -7,8 +7,8 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
+#include <fbl/macros.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fxl/macros.h>
 
 // TODO(dustingreen): Concider pulling LocalCodecFactory out into a source_set
 // that can be used by other HW codec drivers (in contrast to CodecImpl source
@@ -90,7 +90,7 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
 
   bool is_error_handler_set_ = false;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(LocalCodecFactory);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(LocalCodecFactory);
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_

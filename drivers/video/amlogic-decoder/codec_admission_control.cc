@@ -6,9 +6,9 @@
 
 #include "device_ctx.h"
 
-#include <lib/fxl/logging.h>
-
 #include <stdint.h>
+#include <zircon/assert.h>
+
 #include <mutex>
 
 void CodecAdmissionControl::TryAddCodec(
@@ -32,12 +32,12 @@ void CodecAdmissionControl::PostAfterPreviouslyStartedClosesDone(
 std::unique_ptr<CodecAdmission> CodecAdmissionControl::TryAddCodecInternal() {
   std::lock_guard<std::mutex> lock(lock_);
   if (codec_count_ != 0) {
-    FXL_DCHECK(codec_count_ == 1);
+    ZX_DEBUG_ASSERT(codec_count_ == 1);
     printf("CodecAdmissionControl::AddCodec(): we've already got one\n");
     return nullptr;
   }
   codec_count_++;
-  FXL_DCHECK(codec_count_ == 1);
+  ZX_DEBUG_ASSERT(codec_count_ == 1);
   // private constructor so have to explicitly new, since friending
   // std::make_unique<> would allow any class to create one.
   return std::unique_ptr<CodecAdmission>(new CodecAdmission(this));
@@ -45,13 +45,13 @@ std::unique_ptr<CodecAdmission> CodecAdmissionControl::TryAddCodecInternal() {
 
 CodecAdmissionControl::CodecAdmissionControl(DeviceCtx* device_ctx)
     : device_ctx_(device_ctx) {
-  FXL_DCHECK(device_ctx_);
+  ZX_DEBUG_ASSERT(device_ctx_);
 }
 
 void CodecAdmissionControl::RemoveCodec() {
   std::lock_guard<std::mutex> lock(lock_);
   // Else bug in caller.
-  FXL_DCHECK(codec_count_ == 1);
+  ZX_DEBUG_ASSERT(codec_count_ == 1);
   codec_count_--;
 }
 
@@ -59,5 +59,5 @@ CodecAdmission::~CodecAdmission() { codec_admission_control_->RemoveCodec(); }
 
 CodecAdmission::CodecAdmission(CodecAdmissionControl* codec_admission_control)
     : codec_admission_control_(codec_admission_control) {
-  FXL_DCHECK(codec_admission_control_);
+  ZX_DEBUG_ASSERT(codec_admission_control_);
 }

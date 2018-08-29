@@ -112,7 +112,6 @@ source_set("sources") {
     "third_party/libvpx",
     "//garnet/public/fidl/fuchsia.mediacodec",
     "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
   ]
   if (amlogic_decoder_tests) {
     testonly = true
@@ -128,7 +127,6 @@ source_set("tests") {
     ":sources",
     ":test_support",
     "//garnet/public/fidl/fuchsia.mediacodec",
-    "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",
   ]
   sources = [

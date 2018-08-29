@@ -6,11 +6,12 @@
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_PACKET_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/fxl/macros.h>
 
 #include <stdint.h>
 #include <limits>
 #include <memory>
+
+#include <fbl/macros.h>
 
 class CodecBuffer;
 
@@ -118,7 +119,8 @@ class CodecPacket {
 
   std::weak_ptr<VideoFrame> video_frame_;
 
-  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecPacket);
+  CodecPacket() = delete;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(CodecPacket);
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_PACKET_H_

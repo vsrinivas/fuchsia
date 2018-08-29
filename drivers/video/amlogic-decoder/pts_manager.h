@@ -5,8 +5,8 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_PTS_MANAGER_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_PTS_MANAGER_H_
 
-#include <lib/fxl/logging.h>
-#include <lib/fxl/synchronization/thread_annotations.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
 
 #include <cstdint>
 #include <map>
@@ -35,8 +35,8 @@ class PtsManager {
       // 0.  In other words, we still need the sparate has_pts_ to tell whether
       // we have a PTS when the pts field is 0 - this way all pts values are
       // usable.
-      FXL_DCHECK(has_pts_ || !pts_);
-      FXL_DCHECK(!(is_end_of_stream_ && has_pts_));
+      ZX_DEBUG_ASSERT(has_pts_ || !pts_);
+      ZX_DEBUG_ASSERT(!(is_end_of_stream_ && has_pts_));
     }
 
     // If is_end_of_stream_, there is no PTS.  Instead, the stream is over.
@@ -65,7 +65,7 @@ class PtsManager {
 
  private:
   std::mutex lock_;
-  FXL_GUARDED_BY(lock_)
+  __TA_GUARDED(lock_)
   std::map<uint64_t, LookupResult> offset_to_result_;
 };
 

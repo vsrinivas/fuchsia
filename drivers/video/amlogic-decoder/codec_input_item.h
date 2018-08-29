@@ -5,8 +5,6 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_INPUT_ITEM_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_INPUT_ITEM_H_
 
-#include <lib/fxl/macros.h>
-
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
 #include <memory>

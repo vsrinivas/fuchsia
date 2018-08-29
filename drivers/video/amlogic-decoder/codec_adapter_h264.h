@@ -7,6 +7,7 @@
 
 #include "codec_adapter.h"
 
+#include <fbl/macros.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/bti.h>
 
@@ -111,7 +112,8 @@ class CodecAdapterH264 : public CodecAdapter {
 
   bool is_stream_failed_ = false;
 
-  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecAdapterH264);
+  CodecAdapterH264() = delete;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterH264);
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_

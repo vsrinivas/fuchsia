@@ -4,10 +4,10 @@
 
 #include "codec_buffer.h"
 
+#include <zircon/assert.h>
+
 #include "codec_impl.h"
 #include "codec_port.h"
-
-#include <lib/fxl/logging.h>
 
 CodecBuffer::CodecBuffer(CodecImpl* parent, CodecPort port,
                          fuchsia::mediacodec::CodecBuffer buffer)
@@ -28,7 +28,7 @@ CodecBuffer::~CodecBuffer() {
 }
 
 bool CodecBuffer::Init(bool input_require_write) {
-  FXL_DCHECK(!input_require_write || port_ == kInputPort);
+  ZX_DEBUG_ASSERT(!input_require_write || port_ == kInputPort);
   // Map the VMO in the local address space.
   uintptr_t tmp;
   uint32_t flags = ZX_VM_FLAG_PERM_READ;
@@ -54,7 +54,7 @@ uint64_t CodecBuffer::buffer_lifetime_ordinal() const {
 uint32_t CodecBuffer::buffer_index() const { return buffer_.buffer_index; }
 
 uint8_t* CodecBuffer::buffer_base() const {
-  FXL_DCHECK(buffer_base_ && "Shouldn't be using if Init() didn't work.");
+  ZX_DEBUG_ASSERT(buffer_base_ && "Shouldn't be using if Init() didn't work.");
   return buffer_base_;
 }
 

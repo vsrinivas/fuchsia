@@ -4,12 +4,12 @@
 
 #include "codec_adapter.h"
 
-#include <lib/fxl/logging.h>
+#include <zircon/assert.h>
 
 CodecAdapter::CodecAdapter(std::mutex& lock,
                            CodecAdapterEvents* codec_adapter_events)
     : lock_(lock), events_(codec_adapter_events) {
-  FXL_DCHECK(events_);
+  ZX_DEBUG_ASSERT(events_);
   // nothing else to do here
 }
 

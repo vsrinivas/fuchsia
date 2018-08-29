@@ -4,8 +4,9 @@
 
 #include "codec_input_item.h"
 
+#include <zircon/assert.h>
+
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fxl/logging.h>
 
 CodecInputItem::CodecInputItem() : is_valid_(false) {
   // nothing else to do here
@@ -31,7 +32,7 @@ CodecInputItem CodecInputItem::FormatDetails(
 }
 
 CodecInputItem CodecInputItem::Packet(const CodecPacket* packet) {
-  FXL_DCHECK(packet);
+  ZX_DEBUG_ASSERT(packet);
   return CodecInputItem(packet);
 }
 
@@ -51,11 +52,11 @@ bool CodecInputItem::is_end_of_stream() const {
 
 const fuchsia::mediacodec::CodecFormatDetails&
 CodecInputItem::format_details() {
-  FXL_DCHECK(is_format_details());
+  ZX_DEBUG_ASSERT(is_format_details());
   return *format_details_;
 }
 
 const CodecPacket* CodecInputItem::packet() const {
-  FXL_DCHECK(is_packet());
+  ZX_DEBUG_ASSERT(is_packet());
   return packet_;
 }

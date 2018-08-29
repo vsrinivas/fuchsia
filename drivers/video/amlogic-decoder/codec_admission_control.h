@@ -6,10 +6,11 @@
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADMISSION_CONTROL_H_
 
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/synchronization/thread_annotations.h>
+#include <zircon/compiler.h>
 
 #include <mutex>
+
+#include <fbl/macros.h>
 
 // Controls how many Codec instances are concurrently served by this process.
 //
@@ -62,9 +63,9 @@ class CodecAdmissionControl {
   DeviceCtx* device_ctx_ = nullptr;
 
   std::mutex lock_;
-  uint32_t codec_count_ FXL_GUARDED_BY(lock_);
+  uint32_t codec_count_ __TA_GUARDED(lock_);
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(CodecAdmissionControl);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdmissionControl);
 };
 
 class CodecAdmission {
