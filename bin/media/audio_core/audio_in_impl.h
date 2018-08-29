@@ -162,7 +162,7 @@ class AudioInImpl : public AudioObject,
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   bool MixToIntermediate(uint32_t mix_frames)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  void UpdateTransformation(AudioLink::Bookkeeping* bk,
+  void UpdateTransformation(Bookkeeping* bk,
                             const AudioDriver::RingBufferSnapshot& rb_snap)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   void DoStopAsyncCapture() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());

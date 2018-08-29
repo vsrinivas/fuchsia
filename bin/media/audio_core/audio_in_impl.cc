@@ -112,8 +112,7 @@ zx_status_t AudioInImpl::InitializeSourceLink(const AudioLinkPtr& link) {
   zx_status_t res;
 
   // Allocate our bookkeeping for our link.
-  std::unique_ptr<AudioLink::Bookkeeping> bk(
-      new AudioLink::Bookkeeping());
+  std::unique_ptr<Bookkeeping> bk(new Bookkeeping());
   link->set_bookkeeping(std::move(bk));
 
   // Choose a mixer
@@ -873,8 +872,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
     }
 
     // Get our capture link bookkeeping.
-    AudioLink::Bookkeeping* bk =
-        static_cast<AudioLink::Bookkeeping*>(link->bookkeeping().get());
+    Bookkeeping* bk = static_cast<Bookkeeping*>(link->bookkeeping().get());
     FXL_DCHECK(bk != nullptr);
 
     // Figure out the fixed point gain scalar we will apply to this mix
@@ -1108,8 +1106,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
 }
 
 void AudioInImpl::UpdateTransformation(
-    AudioLink::Bookkeeping* bk,
-    const AudioDriver::RingBufferSnapshot& rb_snap) {
+    Bookkeeping* bk, const AudioDriver::RingBufferSnapshot& rb_snap) {
   FXL_DCHECK(bk != nullptr);
 
   if ((bk->dest_trans_gen_id == frames_to_clock_mono_gen_.get()) &&
@@ -1131,7 +1128,6 @@ void AudioInImpl::UpdateTransformation(
   bk->dest_frames_to_frac_source_frames = TimelineFunction::Compose(
       src_clock_mono_to_ring_pos_frac_frames, frames_to_clock_mono_);
 
-  TimelineRate frac_frames_to_frames(1u, 1u << kPtsFractionalBits);
   int64_t offset = static_cast<int64_t>(rb_snap.position_to_end_fence_frames);
 
   bk->clock_mono_to_frac_source_frames = TimelineFunction::Compose(
@@ -1375,8 +1371,7 @@ zx_status_t AudioInImpl::ChooseMixer(const std::shared_ptr<AudioLink>& link) {
 
   // Extract our bookkeeping from the link, then set the mixer in it.
   FXL_DCHECK(link->bookkeeping() != nullptr);
-  auto bk =
-      static_cast<AudioLink::Bookkeeping*>(link->bookkeeping().get());
+  auto bk = static_cast<Bookkeeping*>(link->bookkeeping().get());
 
   FXL_DCHECK(bk->mixer == nullptr);
   bk->mixer = Mixer::Select(*source_format, *format_);

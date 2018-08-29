@@ -11,12 +11,37 @@
 
 #include "garnet/bin/media/audio_core/constants.h"
 #include "garnet/bin/media/audio_core/gain.h"
+#include "lib/media/timeline/timeline_function.h"
 
 namespace media {
 namespace audio {
 
 class Mixer;
 using MixerPtr = std::unique_ptr<Mixer>;
+
+// TODO(mpuryear): per MTWN-129, integrate this into the Mixer class itself.
+// TODO(mpuryear): Rationalize naming and usage of the bookkeeping structs.
+struct Bookkeeping {
+  Bookkeeping() = default;
+  ~Bookkeeping() = default;
+
+  MixerPtr mixer;
+  Gain::AScale amplitude_scale;
+
+  uint32_t step_size;
+  uint32_t modulo;
+  uint32_t denominator() const {
+    return dest_frames_to_frac_source_frames.rate().reference_delta();
+  }
+
+  // The output values of these functions are in fractional frames.
+  TimelineFunction dest_frames_to_frac_source_frames;
+  uint32_t dest_trans_gen_id = kInvalidGenerationId;
+
+  // TimelineFunction clock_mono_to_src_frames;
+  TimelineFunction clock_mono_to_frac_source_frames;
+  uint32_t source_trans_gen_id = kInvalidGenerationId;
+};
 
 class Mixer {
  public:

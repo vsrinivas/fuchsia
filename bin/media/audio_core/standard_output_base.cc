@@ -146,8 +146,8 @@ void StandardOutputBase::Process() {
 }
 
 zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
-  AudioLink::Bookkeeping* bk = AllocBookkeeping();
-  std::unique_ptr<AudioLink::Bookkeeping> ref(bk);
+  Bookkeeping* bk = AllocBookkeeping();
+  std::unique_ptr<Bookkeeping> ref(bk);
 
   // We should never fail to allocate our bookkeeping.  The only way this can
   // happen is if we have a badly behaved implementation.
@@ -184,8 +184,8 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
   return ZX_OK;
 }
 
-AudioLink::Bookkeeping* StandardOutputBase::AllocBookkeeping() {
-  return new AudioLink::Bookkeeping();
+Bookkeeping* StandardOutputBase::AllocBookkeeping() {
+  return new Bookkeeping();
 }
 
 void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
@@ -238,9 +238,8 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
 
     // It would be nice to be able to use a dynamic cast for this, but currently
     // we are building with no-rtti
-    AudioLink::Bookkeeping* info =
-        static_cast<AudioLink::Bookkeeping*>(
-            packet_link->bookkeeping().get());
+    Bookkeeping* info =
+        static_cast<Bookkeeping*>(packet_link->bookkeeping().get());
     FXL_DCHECK(info);
 
     // Ensure the mapping from source-frame to local-time is up-to-date.
@@ -320,7 +319,7 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
 }
 
 bool StandardOutputBase::SetupMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
-                                  AudioLink::Bookkeeping* info) {
+                                  Bookkeeping* info) {
   // If we need to recompose our transformation from output frame space to input
   // fractional frames, do so now.
   FXL_DCHECK(info);
@@ -331,7 +330,7 @@ bool StandardOutputBase::SetupMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
 }
 
 bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
-                                    AudioLink::Bookkeeping* info,
+                                    Bookkeeping* info,
                                     const fbl::RefPtr<AudioPacketRef>& packet) {
   // Sanity check our parameters.
   FXL_DCHECK(info);
@@ -474,7 +473,7 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
 }
 
 bool StandardOutputBase::SetupTrim(const fbl::RefPtr<AudioOutImpl>& audio_out,
-                                   AudioLink::Bookkeeping* info) {
+                                   Bookkeeping* info) {
   // Compute the cutoff time we will use to decide wether or not to trim
   // packets.  ForeachLink has already updated our transformation, no need
   // for us to do so here.
@@ -495,8 +494,7 @@ bool StandardOutputBase::SetupTrim(const fbl::RefPtr<AudioOutImpl>& audio_out,
 }
 
 bool StandardOutputBase::ProcessTrim(
-    const fbl::RefPtr<AudioOutImpl>& audio_out,
-    AudioLink::Bookkeeping* info,
+    const fbl::RefPtr<AudioOutImpl>& audio_out, Bookkeeping* info,
     const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
   FXL_DCHECK(pkt_ref);
 
@@ -509,8 +507,7 @@ bool StandardOutputBase::ProcessTrim(
 }
 
 void StandardOutputBase::UpdateSourceTrans(
-    const fbl::RefPtr<AudioOutImpl>& audio_out,
-    AudioLink::Bookkeeping* bk) {
+    const fbl::RefPtr<AudioOutImpl>& audio_out, Bookkeeping* bk) {
   FXL_DCHECK(audio_out != nullptr);
   uint32_t gen = bk->source_trans_gen_id;
 
@@ -527,8 +524,7 @@ void StandardOutputBase::UpdateSourceTrans(
   bk->dest_trans_gen_id = kInvalidGenerationId;
 }
 
-void StandardOutputBase::UpdateDestTrans(const MixJob& job,
-                                         AudioLink::Bookkeeping* bk) {
+void StandardOutputBase::UpdateDestTrans(const MixJob& job, Bookkeeping* bk) {
   // We should only be here if we have a valid mix job. This means a job which
   // supplies a valid transformation from local time to output frames.
   FXL_DCHECK(job.local_to_output);
@@ -568,7 +564,7 @@ void StandardOutputBase::UpdateDestTrans(const MixJob& job,
         dst.rate().subject_delta() - (bk->denominator() * bk->step_size);
   }
 
-  // Done, update our generation.
+  // Done, update our dest_trans generation.
   bk->dest_trans_gen_id = job.local_to_output_gen;
 }
 

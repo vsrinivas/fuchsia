@@ -50,8 +50,8 @@ class StandardOutputBase : public AudioOutput {
   // integrate it into the Mixer class itself.
   // TODO(mpuryear): Rationalize naming and usage of the bookkeeping structs.
   void UpdateSourceTrans(const fbl::RefPtr<AudioOutImpl>& audio_out,
-                         AudioLink::Bookkeeping* bk);
-  void UpdateDestTrans(const MixJob& job, AudioLink::Bookkeeping* bk);
+                         Bookkeeping* bk);
+  void UpdateDestTrans(const MixJob& job, Bookkeeping* bk);
 
   explicit StandardOutputBase(AudioDeviceManager* manager);
 
@@ -74,7 +74,7 @@ class StandardOutputBase : public AudioOutput {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) = 0;
   virtual bool FinishMixJob(const MixJob& job)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) = 0;
-  virtual AudioLink::Bookkeeping* AllocBookkeeping();
+  virtual Bookkeeping* AllocBookkeeping();
   void SetupMixBuffer(uint32_t max_mix_frames)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
@@ -90,19 +90,16 @@ class StandardOutputBase : public AudioOutput {
   void ForeachLink(TaskType task_type)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  bool SetupMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
-                AudioLink::Bookkeeping* info)
+  bool SetupMix(const fbl::RefPtr<AudioOutImpl>& audio_out, Bookkeeping* info)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
-                  AudioLink::Bookkeeping* info,
+  bool ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out, Bookkeeping* info,
                   const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  bool SetupTrim(const fbl::RefPtr<AudioOutImpl>& audio_out,
-                 AudioLink::Bookkeeping* info)
+  bool SetupTrim(const fbl::RefPtr<AudioOutImpl>& audio_out, Bookkeeping* info)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   bool ProcessTrim(const fbl::RefPtr<AudioOutImpl>& audio_out,
-                   AudioLink::Bookkeeping* info,
+                   Bookkeeping* info,
                    const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
