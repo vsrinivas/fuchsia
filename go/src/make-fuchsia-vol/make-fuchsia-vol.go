@@ -282,7 +282,7 @@ func main() {
 	g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 		PartitionTypeGUID:   gpt.GUIDEFI,
 		UniquePartitionGUID: gpt.NewRandomGUID(),
-		PartitionName:       gpt.NewPartitionName("ESP"),
+		PartitionName:       gpt.NewPartitionName("EFI Gigaboot"),
 		StartingLBA:         efiStart,
 		EndingLBA:           end,
 	})
