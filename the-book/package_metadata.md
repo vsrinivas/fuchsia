@@ -19,38 +19,14 @@ See [https://fuchsia.googlesource.com/garnet/+/master/go/src/pm#contents]
 
 See [https://fuchsia.googlesource.com/garnet/+/master/go/src/pm#signature]
 
-## runtime
+## Component manifest
 
-The runtime file specifies if execution of the component in the package
-should be delegated to another process.
+A component manifest (.cmx) is a JSON file with the file extension `.cmx`
+located in the package’s `meta/` directory with information that declares
+how to run the component and what resources it receives. In particular, the
+component manifest describes how the component is sandboxed.
 
-The runtime file is a JSON object with the following schema:
-
-```
-{
-    "type": "object",
-    "properties": {
-        "runner": {
-            "type": "string"
-        },
-        "required": [ "runner" ]
-    }
-}
-```
-
-The `runner` property names another component (or a package that contains
-one) to which execution is to be delegated. The target component must expose
-the [`Runner`][runner] service.
-
-## Component Manifest
-
-A Component Manifest (.cmx) is a JSON file with the file extension .cmx
-located in the package’s meta directory with information about the component.
-
-If the package name for your component is `sysmgr`, your component manifest
-must be `sysmgr.cmx`.
-
-Currently, the component manifest supports declaring sandboxing metadata.
+Here's a simple example:
 
 ```
 {
@@ -64,14 +40,51 @@ Currently, the component manifest supports declaring sandboxing metadata.
 }
 ```
 
+### program
+
+The `program` property describes the resources to execute the component.
+
+If [`runner`](#runner) is absent, the `program` property is a JSON object with
+the following schema:
+
+```
+{
+    "type": "object",
+    "properties": {
+        "binary": {
+            "type": "string"
+        }
+    }
+}
+```
+
+The `binary` property describes where in the package namespace to find the
+binary to run the component.
+
+If [`runner`](#runner) is present, `program` is a freeform string-string JSON
+object interpreted as args to pass to the runner. 
+
+### runner
+
+`runner` is an optional property that names another component (or a package
+that contains one) to which execution is to be delegated. The target component
+must expose the [`Runner`][runner] service.
+
+If `runner` is present, [`program`](#program) is a freeform string-string JSON
+object interpreted as args to pass to the runner.
+
+If `runner` is absent, it is assumed that `program.binary` is an ELF binary or
+shell script.
+
+The `runner` property is a JSON string.
+
 ### sandbox
 
-The sandbox property in the component manifest controls the environment in
-which the component executes. Specifically, the property controls
-which directories the component can access during execution. Currently,
-whitelisting access to individual files is not supported (CP-52).
+The `sandbox` property controls the environment in which the component
+executes. Specifically, the property controls which directories the component
+can access during execution.
 
-The sandbox property is a JSON object with the following schema:
+The `sandbox` property is a JSON object with the following schema:
 
 ```
 {
@@ -136,7 +149,9 @@ component may access. A typical component will require a number services from
 component will have the ability to launch other components and access network
 services. A component may declare any list of services in its `services`
 whitelist, but it will only be able to access services present in its
-[environment](../glossary.md#environment).
+[environment](../glossary.md#environment). This property should be defined by
+all new components, and soon a migration will take place to convert all
+components to define `services`.
 
 The `features` array contains a list of well-known features that the package
 wishes to use. Including a feature in this list is a request for the environment

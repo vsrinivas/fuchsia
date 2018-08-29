@@ -54,6 +54,17 @@ objects via its export directory. [Modules](#Module) and [Agents](#Agent) are
 examples of components. Components are most commonly distributed inside [Fuchsia
 Packages](#fuchsia-package).
 
+#### **Component manifest**
+
+A component manifest (.cmx) is a JSON file with the file extension `.cmx`,
+typically located in the package’s `meta/` directory with information that
+declares how to run the component and what capabilities it receives upon launch.
+In particular, the component manifest describes how the component is sandboxed.
+See [Component manifest](the-book/package_metadata.md#Component-manifest) for a
+detailed description.
+
+These files end in `.cmx`, so they are also known as "cmx files".
+
 #### **Channel**
 
 A Channel is the fundamental IPC primitive provided by Zircon.  It is a

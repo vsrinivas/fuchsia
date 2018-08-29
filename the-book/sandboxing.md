@@ -25,24 +25,36 @@ The namespace given to a process strongly influences how much of the system the
 process can influence. Therefore, configuring the sandbox in which a process
 runs amounts to configuring the process's namespace.
 
-## Packages and namespaces
+## Package namespace
 
-In our current implementation, a process runs in a sandbox if its binary is
-contained in a package. As the package manager evolves, these details are
-likely to change.
+A [component](../glossary.md#Component) run from a package is given access to
+`/pkg`, which is a read-only view of the package containing the component. To
+access these resources at runtime, a process can use the `/pkg` namespace. For
+example, the `root_presenter` can access `cursor32.png` using the absolute path
+`/pkg/data/cursor32.png`.
 
-An component run from a package is given a read-only view of its package
-contents in `/pkg`. To access these resources at runtime, a process can use
-the `/pkg` namespace. For example, the `root_presenter` can access
-`cursor32.png` using the absolute path `/pkg/data/cursor32.png`.
+## Services
 
-Another important part of the component's namespace is `/svc`, which renders
-access to services in the component's sandbox. A typical component will
-interact with a number of services from `/svc` in order to play some useful
-role in the system. The set of services that a component has access to is
-governed by its [`services`](package_metadata.md#Component-Manifest) sandbox.
-For example, the service `fuchsia.sys.Launcher` allows the component to launch
-other components.
+Processes that are [components](../glossary.md#Component) receive an `/svc`
+directory in their namespace. The services available through `/svc` are a
+subset of the services provided by the component's
+[environment](../glossary.md#Environment). This subset is determined by the
+[`sandbox.services`](package_metadata.md#sandbox) whitelist in the
+component's [manifest file](package_metadata.md#Component-manifest).
+
+A typical component will interact with a number of services from `/svc` in
+order to play some useful role in the system. For example, the service
+`fuchsia.sys.Launcher` is required if a component wishes to launch other
+components.
+
+Processes that are not components may or may not have `/svc`. These processes
+receive whatever `/svc` their creator decided to provide to them.
+
+*NOTE:* In the past, there existed no mechanism for service sandboxing and a
+component received all services in its environment. Pre-existing components
+have been grandfathered to receive all services with the
+`deprecated-all-services` feature, which will eventually be removed. Please do
+not use `deprecated-all-services` for new components.
 
 ## Configuring additional namespaces
 
