@@ -1402,13 +1402,12 @@ bool Station::IsQosReady() const {
 
 CapabilityInfo Station::OverrideCapability(CapabilityInfo cap) const {
     // parameter is of 2 bytes
-    cap.set_ess(1);             // reserved in client role. 1 for better interop.
-    cap.set_ibss(0);            // reserved in client role
-    cap.set_cf_pollable(0);     // not supported
-    cap.set_cf_poll_req(0);     // not supported
-    cap.set_privacy(0);         // reserved in client role
-    cap.set_short_preamble(0);  // Override for Broader interop
-    cap.set_spectrum_mgmt(0);   // not supported
+    cap.set_ess(1);            // reserved in client role. 1 for better interop.
+    cap.set_ibss(0);           // reserved in client role
+    cap.set_cf_pollable(0);    // not supported
+    cap.set_cf_poll_req(0);    // not supported
+    cap.set_privacy(0);        // reserved in client role
+    cap.set_spectrum_mgmt(0);  // not supported
     return cap;
 }
 
