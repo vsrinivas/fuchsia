@@ -14,17 +14,28 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <unordered_set>
 
 namespace wlan {
 
 static constexpr uint8_t kClientAddress[] = {0x94, 0x3C, 0x49, 0x49, 0x9F, 0x2D};
 
+template <uint32_t ordinal> bool IsMlmeMsg(const Packet* pkt) {
+    auto hdr = FromBytes<fidl_message_header_t>(pkt->data(), pkt->len());
+    if (hdr == nullptr) { return 0; }
+
+    return hdr->ordinal == ordinal;
+}
+
 namespace {
 
 // TODO(hahnr): Support for failing various device calls.
 struct MockDevice : public DeviceInterface {
    public:
+    using PacketList = std::vector<fbl::unique_ptr<Packet>>;
+    typedef bool (*PacketPredicate)(const Packet*);
+
     MockDevice() {
         state = fbl::AdoptRef(new DeviceState);
         common::MacAddr addr(kClientAddress);
@@ -59,17 +70,17 @@ struct MockDevice : public DeviceInterface {
     }
 
     zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final {
-        eth_queue.Enqueue(fbl::move(packet));
+        eth_queue.push_back(fbl::move(packet));
         return ZX_OK;
     }
 
     zx_status_t SendWlan(fbl::unique_ptr<Packet> packet) override final {
-        wlan_queue.Enqueue(fbl::move(packet));
+        wlan_queue.push_back(fbl::move(packet));
         return ZX_OK;
     }
 
     zx_status_t SendService(fbl::unique_ptr<Packet> packet) override final {
-        svc_queue.Enqueue(fbl::move(packet));
+        svc_queue.push_back(fbl::move(packet));
         return ZX_OK;
     }
 
@@ -139,21 +150,45 @@ struct MockDevice : public DeviceInterface {
 
     template <typename T> zx_status_t GetQueuedServiceMsg(uint32_t ordinal, T* out) {
         EXPECT_EQ(1u, svc_queue.size());
-        auto packet = svc_queue.Dequeue();
+        auto iter = svc_queue.begin();
+        auto packet = std::move(*iter);
+        svc_queue.erase(iter);
         return DeserializeServiceMsg<T>(*packet, ordinal, out);
+    }
+
+    PacketList GetServicePackets(PacketPredicate predicate = nullptr) {
+        return GetPackets(&svc_queue, predicate ? predicate : [](auto pkt) { return true; });
+    }
+
+    PacketList GetEthPackets(PacketPredicate predicate = nullptr) {
+        return GetPackets(&eth_queue, predicate ? predicate : [](auto pkt) { return true; });
+    }
+
+    PacketList GetWlanPackets(PacketPredicate predicate = nullptr) {
+        return GetPackets(&wlan_queue, predicate ? predicate : [](auto pkt) { return true; });
     }
 
     fbl::RefPtr<DeviceState> state;
     wlanmac_info_t wlanmac_info;
-    PacketQueue eth_queue;
-    PacketQueue wlan_queue;
-    PacketQueue svc_queue;
+    PacketList wlan_queue;
+    PacketList svc_queue;
+    PacketList eth_queue;
     fbl::unique_ptr<wlan_bss_config_t> bss_cfg;
     fbl::unique_ptr<wlan_key_config_t> key_cfg;
     fbl::unique_ptr<Packet> beacon;
     bool beaconing_enabled;
 
    private:
+    PacketList GetPackets(PacketList* lst, PacketPredicate predicate) {
+        std::vector<fbl::unique_ptr<Packet>> matches;
+        for (auto iter = lst->begin(); iter != lst->end(); ++iter) {
+            if (predicate(iter->get())) { matches.push_back(std::move(*iter)); }
+        }
+        lst->erase(std::remove_if(lst->begin(), lst->end(), [](auto& i) { return i == nullptr; }),
+                   lst->end());
+        return matches;
+    }
+
     TestClock clock_;
 };
 
