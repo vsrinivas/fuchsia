@@ -66,7 +66,7 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
 
     case MessageUnion_Request: {
       MessageHolder<Request> request =
-          message.TakeAndMap<Request>([](const Message* message) {
+          std::move(message).TakeAndMap<Request>([](const Message* message) {
             return static_cast<const Request*>(message->message());
           });
       namespace_page_id = request->namespace_page();
@@ -90,7 +90,7 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
 
     case MessageUnion_Response: {
       MessageHolder<Response> response =
-          message.TakeAndMap<Response>([](const Message* message) {
+          std::move(message).TakeAndMap<Response>([](const Message* message) {
             return static_cast<const Response*>(message->message());
           });
       namespace_page_id = response->namespace_page();

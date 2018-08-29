@@ -234,9 +234,11 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
       break;
     case RequestMessage_ObjectRequest:
       ProcessObjectRequest(
-          source, message.TakeAndMap<ObjectRequest>([](const Request* request) {
-            return static_cast<const ObjectRequest*>(request->request());
-          }));
+          source,
+          std::move(message).TakeAndMap<ObjectRequest>(
+              [](const Request* request) {
+                return static_cast<const ObjectRequest*>(request->request());
+              }));
       break;
     case RequestMessage_NONE:
       FXL_LOG(ERROR) << "The message received is malformed";

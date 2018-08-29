@@ -336,10 +336,10 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
   MessageHolder<Message> new_device_message(convert::ToStringView(buffer),
                                             &GetMessage);
   page_communicator.OnNewRequest(
-      "device2",
-      new_device_message.TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+      "device2", std::move(new_device_message)
+                     .TakeAndMap<Request>([](const Message* message) {
+                       return static_cast<const Request*>(message->message());
+                     }));
 
   bool called;
   storage::Status status;
@@ -394,10 +394,10 @@ TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
   // be updated.
   storage.mark_synced_to_peer_status = storage::Status::IO_ERROR;
   page_communicator.OnNewRequest(
-      "device2",
-      new_device_message.TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+      "device2", std::move(new_device_message)
+                     .TakeAndMap<Request>([](const Message* message) {
+                       return static_cast<const Request*>(message->message());
+                     }));
   bool called;
   storage::Status status;
   storage::ChangeSource source;
@@ -430,10 +430,10 @@ TEST_F(PageCommunicatorImplTest, ObjectRequest) {
   MessageHolder<Message> request_message(convert::ToStringView(request_buffer),
                                          &GetMessage);
   page_communicator.OnNewRequest(
-      "device2",
-      request_message.TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+      "device2", std::move(request_message)
+                     .TakeAndMap<Request>([](const Message* message) {
+                       return static_cast<const Request*>(message->message());
+                     }));
 
   RunLoopUntilIdle();
 
@@ -487,10 +487,10 @@ TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
   MessageHolder<Message> request_message(convert::ToStringView(request_buffer),
                                          &GetMessage);
   page_communicator.OnNewRequest(
-      "device2",
-      request_message.TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+      "device2", std::move(request_message)
+                     .TakeAndMap<Request>([](const Message* message) {
+                       return static_cast<const Request*>(message->message());
+                     }));
 
   RunLoopUntilIdle();
 
@@ -536,10 +536,10 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   MessageHolder<Message> new_device_message(convert::ToStringView(buffer),
                                             &GetMessage);
   page_communicator.OnNewRequest(
-      "device2",
-      new_device_message.TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+      "device2", std::move(new_device_message)
+                     .TakeAndMap<Request>([](const Message* message) {
+                       return static_cast<const Request*>(message->message());
+                     }));
 
   bool called;
   storage::Status status;
@@ -566,10 +566,10 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   MessageHolder<Message> response_message(
       convert::ToStringView(response_buffer), &GetMessage);
   page_communicator.OnNewResponse(
-      "device2",
-      response_message.TakeAndMap<Response>([](const Message* message) {
-        return static_cast<const Response*>(message->message());
-      }));
+      "device2", std::move(response_message)
+                     .TakeAndMap<Response>([](const Message* message) {
+                       return static_cast<const Response*>(message->message());
+                     }));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(storage::Status::OK, status);
@@ -589,10 +589,10 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   MessageHolder<Message> new_device_message(convert::ToStringView(buffer),
                                             &GetMessage);
   page_communicator.OnNewRequest(
-      "device2",
-      new_device_message.TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+      "device2", std::move(new_device_message)
+                     .TakeAndMap<Request>([](const Message* message) {
+                       return static_cast<const Request*>(message->message());
+                     }));
 
   bool called;
   storage::Status status;
@@ -617,10 +617,10 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   MessageHolder<Message> response_message(
       convert::ToStringView(response_buffer), &GetMessage);
   page_communicator.OnNewResponse(
-      "device2",
-      response_message.TakeAndMap<Response>([](const Message* message) {
-        return static_cast<const Response*>(message->message());
-      }));
+      "device2", std::move(response_message)
+                     .TakeAndMap<Response>([](const Message* message) {
+                       return static_cast<const Response*>(message->message());
+                     }));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(storage::Status::OK, status);
@@ -639,7 +639,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   BuildWatchStartBuffer(&buffer, "ledger", "page");
   MessageHolder<Message> message(convert::ToStringView(buffer), &GetMessage);
   page_communicator.OnNewRequest(
-      "device2", message.TakeAndMap<Request>([](const Message* message) {
+      "device2",
+      std::move(message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
 
@@ -665,10 +666,10 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   MessageHolder<Message> response_message(
       convert::ToStringView(response_buffer), &GetMessage);
   page_communicator.OnNewResponse(
-      "device2",
-      response_message.TakeAndMap<Response>([](const Message* message) {
-        return static_cast<const Response*>(message->message());
-      }));
+      "device2", std::move(response_message)
+                     .TakeAndMap<Response>([](const Message* message) {
+                       return static_cast<const Response*>(message->message());
+                     }));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(storage::Status::NOT_FOUND, status);
@@ -686,12 +687,14 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   BuildWatchStartBuffer(&buffer, "ledger", "page");
   MessageHolder<Message> message(convert::ToStringView(buffer), &GetMessage);
   page_communicator.OnNewRequest(
-      "device2", message.TakeAndMap<Request>([](const Message* message) {
+      "device2",
+      std::move(message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
   message = MessageHolder<Message>(convert::ToStringView(buffer), &GetMessage);
   page_communicator.OnNewRequest(
-      "device3", message.TakeAndMap<Request>([](const Message* message) {
+      "device3",
+      std::move(message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
 
@@ -715,7 +718,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   MessageHolder<Message> message_1(convert::ToStringView(response_buffer_1),
                                    &GetMessage);
   page_communicator.OnNewResponse(
-      "device2", message_1.TakeAndMap<Response>([](const Message* message) {
+      "device2",
+      std::move(message_1).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
   EXPECT_FALSE(called);
@@ -728,7 +732,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   MessageHolder<Message> message_2(convert::ToStringView(response_buffer_2),
                                    &GetMessage);
   page_communicator.OnNewResponse(
-      "device3", message_2.TakeAndMap<Response>([](const Message* message) {
+      "device3",
+      std::move(message_2).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
 
@@ -750,12 +755,14 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   BuildWatchStartBuffer(&buffer, "ledger", "page");
   MessageHolder<Message> message(convert::ToStringView(buffer), &GetMessage);
   page_communicator.OnNewRequest(
-      "device2", message.TakeAndMap<Request>([](const Message* message) {
+      "device2",
+      std::move(message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
   message = MessageHolder<Message>(convert::ToStringView(buffer), &GetMessage);
   page_communicator.OnNewRequest(
-      "device3", message.TakeAndMap<Request>([](const Message* message) {
+      "device3",
+      std::move(message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
 
@@ -779,7 +786,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   MessageHolder<Message> message_1(convert::ToStringView(response_buffer_1),
                                    &GetMessage);
   page_communicator.OnNewResponse(
-      "device2", message_1.TakeAndMap<Response>([](const Message* message) {
+      "device2",
+      std::move(message_1).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
   EXPECT_FALSE(called);
@@ -791,7 +799,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   MessageHolder<Message> message_2(convert::ToStringView(response_buffer_2),
                                    &GetMessage);
   page_communicator.OnNewResponse(
-      "device3", message_2.TakeAndMap<Response>([](const Message* message) {
+      "device3",
+      std::move(message_2).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
 
@@ -811,7 +820,8 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   BuildWatchStartBuffer(&buffer, "ledger", "page");
   MessageHolder<Message> message(convert::ToStringView(buffer), &GetMessage);
   page_communicator_1.OnNewRequest(
-      "device2", message.TakeAndMap<Request>([](const Message* message) {
+      "device2",
+      std::move(message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
   RunLoopUntilIdle();
@@ -852,7 +862,7 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   MessageHolder<Message> reply_message(mesh.messages_[0].second, &GetMessage);
   ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
   MessageHolder<Response> response =
-      reply_message.TakeAndMap<Response>([](const Message* message) {
+      std::move(reply_message).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       });
   const NamespacePageId* response_namespace_page_id =
@@ -891,7 +901,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
   BuildWatchStartBuffer(&buffer, "ledger", "page");
   MessageHolder<Message> message(convert::ToStringView(buffer), &GetMessage);
   page_communicator.OnNewRequest(
-      "device2", message.TakeAndMap<Request>([](const Message* message) {
+      "device2",
+      std::move(message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
 
@@ -929,10 +940,10 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
   MessageHolder<Message> watch_stop_message(convert::ToStringView(stop_buffer),
                                             &GetMessage);
   page_communicator.OnNewRequest(
-      "device2",
-      watch_stop_message.TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+      "device2", std::move(watch_stop_message)
+                     .TakeAndMap<Request>([](const Message* message) {
+                       return static_cast<const Request*>(message->message());
+                     }));
   RunLoopUntilIdle();
 
   // All requests are terminated with a not found status.

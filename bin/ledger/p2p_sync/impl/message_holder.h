@@ -32,12 +32,13 @@ class MessageHolder {
   // specialize the message. The current message holder is destroyed in the
   // process. It can be used as follows:
   // MessageHolder<Message> message = ...;
-  // MessageHolder<Request> request = message.TakeAndMap<Request>(
+  // MessageHolder<Request> request = std::move(message).TakeAndMap<Request>(
   //         [](const Message* message) {
   //             return static_cast<const Request*>(message->message());
   //         });
   template <class T>
-  MessageHolder<T> TakeAndMap(fit::function<const T*(const M*)> get_message) {
+  MessageHolder<T> TakeAndMap(
+      fit::function<const T*(const M*)> get_message) && {
     return MessageHolder<T>(std::move(*this), std::move(get_message));
   }
 
