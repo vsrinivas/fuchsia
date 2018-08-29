@@ -74,6 +74,37 @@ size_t get_disk_size(const char* path, size_t offset) {
     return 0;
 }
 
+int parse_size(const char* size_str, size_t* out) {
+    char* end;
+    size_t size = strtoull(size_str, &end, 10);
+
+    switch (end[0]) {
+    case 'K':
+    case 'k':
+        size *= 1024;
+        end++;
+        break;
+    case 'M':
+    case 'm':
+        size *= (1024 * 1024);
+        end++;
+        break;
+    case 'G':
+    case 'g':
+        size *= (1024 * 1024 * 1024);
+        end++;
+        break;
+    }
+
+    if (end[0] || size == 0) {
+        fprintf(stderr, "Bad size: %s\n", size_str);
+        return -1;
+    }
+
+    *out = size;
+    return 0;
+}
+
 int main(int argc, char** argv) {
     if (argc < 3) {
         usage();
@@ -90,7 +121,9 @@ int main(int argc, char** argv) {
     uint32_t flags = 0;
     while (i < argc) {
         if (!strcmp(argv[i], "--slice") && i + 1 < argc) {
-            slice_size = atoll(argv[++i]);
+            if (parse_size(argv[++i], &slice_size) < 0) {
+                return -1;
+            }
             if (!slice_size ||
                 slice_size % blobfs::kBlobfsBlockSize ||
                 slice_size % minfs::kMinfsBlockSize) {
@@ -100,9 +133,13 @@ int main(int argc, char** argv) {
             }
         } else if (!strcmp(argv[i], "--offset") && i + 1 < argc) {
             should_unlink = false;
-            offset = atoll(argv[++i]);
+            if (parse_size(argv[++i], &offset) < 0) {
+                return -1;
+            }
         } else if (!strcmp(argv[i], "--length") && i + 1 < argc) {
-            length = atoll(argv[++i]);
+            if (parse_size(argv[++i], &length) < 0) {
+                return -1;
+            }
         } else if (!strcmp(argv[i], "--compress")) {
             if (!strcmp(argv[++i], "lz4")) {
                 flags |= fvm::kSparseFlagLz4;
