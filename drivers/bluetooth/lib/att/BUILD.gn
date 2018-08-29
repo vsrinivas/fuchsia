@@ -34,10 +34,6 @@ static_library("att") {
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",
   ]
-
-  deps = [
-    "//garnet/public/lib/fsl",
-  ]
 }
 
 source_set("tests") {
@@ -52,7 +48,6 @@ source_set("tests") {
   deps = [
     ":att",
     "//garnet/drivers/bluetooth/lib/l2cap:testing",
-    "//garnet/public/lib/fsl",
     "//third_party/googletest:gtest",
   ]
 }

@@ -65,7 +65,6 @@ source_set("testing") {
     ":l2cap",
     "//garnet/drivers/bluetooth/lib/common",
     "//garnet/drivers/bluetooth/lib/hci",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
