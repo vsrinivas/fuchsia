@@ -27,9 +27,13 @@ namespace scenic {
 namespace input {
 
 InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
-    : System(std::move(context)), gfx_system_(gfx_system) {
+    : System(std::move(context), /*initialized_after_construction*/ false),
+      gfx_system_(gfx_system) {
   FXL_CHECK(gfx_system_);
-  FXL_LOG(INFO) << "Scenic input system started.";
+  gfx_system_->AddInitClosure([this]() {
+    SetToInitialized();
+    FXL_LOG(INFO) << "Scenic input system initialized.";
+  });
 }
 
 std::unique_ptr<CommandDispatcher> InputSystem::CreateCommandDispatcher(
@@ -64,8 +68,6 @@ void InputCommandDispatcher::DispatchCommand(
   FXL_DCHECK(command.Which() == ScenicCommand::Tag::kInput);
 
   const InputCommand& input_command = command.input();
-  FXL_VLOG(2) << "Scenic input - command received: " << input_command;
-
   if (input_command.is_send_pointer_input()) {
     const fuchsia::ui::input::SendPointerInputCmd& cmd =
         input_command.send_pointer_input();

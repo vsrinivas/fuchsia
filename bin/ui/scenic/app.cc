@@ -40,10 +40,8 @@ App::App(component::StartupContext* app_context, fit::closure quit_callback)
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  gfx->AddInitClosure([this, gfx]() {
-    auto input = scenic_->RegisterSystem<scenic::input::InputSystem>(gfx);
-    FXL_DCHECK(input);
-  });
+  auto input = scenic_->RegisterSystem<scenic::input::InputSystem>(gfx);
+  FXL_DCHECK(input);
 #else
 #error InputSystem requires gfx::GfxSystem.
 #endif
