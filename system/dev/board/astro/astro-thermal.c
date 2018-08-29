@@ -80,8 +80,8 @@ static thermal_device_info_t aml_astro_config = {
     .active_cooling                     = false,
     .passive_cooling                    = true,
     .gpu_throttling                     = false,
-    .num_trip_points                    = 11,
-    .critical_temp                      = 130,
+    .num_trip_points                    = 7,
+    .critical_temp                      = 102,
     .big_little                         = false,
     .trip_point_info                    = {
         // Below trip point info is dummy for now.
@@ -214,7 +214,7 @@ static opp_info_t aml_opp_info = {
             .freq_hz = 1896000000,
             .volt_mv = 981000,
         },
-    }
+    },
 };
 
 static const pbus_metadata_t thermal_metadata[] = {

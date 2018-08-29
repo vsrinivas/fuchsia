@@ -160,7 +160,7 @@ IOCTL_WRAPPER_OUT(ioctl_thermal_get_device_info,
                  IOCTL_THERMAL_GET_DEVICE_INFO, thermal_device_info_t);
 
 // ssize_t ioctl_thermal_set_fan_level(int fd, uint32_t fan_level)
-IOCTL_WRAPPER_IN(ioctl_thermal_set_fan_level, IOCTL_THERMAL_SET_FAN_LEVEL, int32_t);
+IOCTL_WRAPPER_IN(ioctl_thermal_set_fan_level, IOCTL_THERMAL_SET_FAN_LEVEL, uint32_t);
 
 // ssize_t ioctl_thermal_set_dvfs_opp(int fd, dvfs_info_t* info)
 IOCTL_WRAPPER_IN(ioctl_thermal_set_dvfs_opp,

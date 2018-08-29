@@ -48,6 +48,7 @@ public:
 
 private:
     int ThermalNotificationThread();
+    zx_status_t NotifyThermalDaemon();
     zx_status_t SetTarget(uint32_t opp_idx);
 
     fbl::unique_ptr<thermal::AmlTSensor> tsensor_;
@@ -57,6 +58,7 @@ private:
     thermal_device_info_t thermal_config_;
     thrd_t notification_thread_;
     fbl::atomic<bool> running_;
+    zx_handle_t port_;
     uint32_t current_trip_idx_ = 0;
 };
 } // namespace thermal

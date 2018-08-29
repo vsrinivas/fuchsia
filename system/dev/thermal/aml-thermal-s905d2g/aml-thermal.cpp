@@ -7,8 +7,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
+#include <string.h>
 #include <threads.h>
 #include <zircon/device/thermal.h>
+#include <zircon/syscalls/port.h>
 
 namespace thermal {
 
@@ -24,6 +26,10 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
     // Get new settings.
     uint32_t new_voltage = opp_info_.opps[opp_idx].volt_mv;
     uint32_t new_frequency = opp_info_.opps[opp_idx].freq_hz;
+
+    zxlogf(INFO, "Scaling from %d MHz, %u mV, --> %d MHz, %u mV\n",
+           old_frequency / 1000000, old_voltage / 1000,
+           new_frequency / 1000000, new_voltage / 1000);
 
     // If new settings are same as old, don't do anything.
     if (new_frequency == old_frequency) {
@@ -62,28 +68,92 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
         }
     }
 
-    zxlogf(INFO, "Scaling from %d MHz, %u mV, --> %d MHz, %u mV\n",
-           old_frequency / 1000000, old_voltage / 1000,
-           new_frequency / 1000000, new_voltage / 1000);
     return ZX_OK;
+}
+
+zx_status_t AmlThermal::NotifyThermalDaemon() {
+    zx_port_packet_t thermal_port_packet;
+    thermal_port_packet.key = current_trip_idx_;
+    thermal_port_packet.type = ZX_PKT_TYPE_USER;
+    return zx_port_queue(port_, &thermal_port_packet);
 }
 
 int AmlThermal::ThermalNotificationThread() {
     zxlogf(INFO, "%s start\n", __func__);
     zx_status_t status;
+    bool critical_temp_measure_taken = false;
 
-    // Set the default CPU frequency
+    // Set the default CPU frequency.
+    // We could be running Zircon only, or thermal daemon might not
+    // run, so we manually set the CPU frequency here.
     uint32_t opp_idx = thermal_config_.trip_point_info[current_trip_idx_].big_cluster_dvfs_opp;
     status = SetTarget(opp_idx);
-
     if (status != ZX_OK) {
         return status;
     }
 
+    // Create a port to send messages to thermal daemon.
+    status = zx_port_create(0, &port_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-thermal: Unable to create port\n");
+        return status;
+    }
+
+    // Notify thermal daemon about the default settings.
+    status = NotifyThermalDaemon();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-thermal: Failed to send packet via port\n");
+        return status;
+    }
+
     while (running_.load()) {
-        // TODO(braval): Implement the monitoring of temperature
-        // and notifying thermal daemon about trip points
-        // here.
+
+        sleep(5);
+
+        // TODO(braval): Use Interrupt driven method to
+        //       set trigger points instead of polling.
+        //       HW supports setting upto 4 trigger points.
+
+        // Get the current temperature.
+        uint32_t temperature = tsensor_->ReadTemperature();
+        uint32_t idx = current_trip_idx_;
+        bool signal = true;
+
+        if ((idx != thermal_config_.num_trip_points - 1) &&
+            (temperature >= thermal_config_.trip_point_info[idx + 1].up_temp)) {
+            // Next trip point triggered.
+            current_trip_idx_ = idx + 1;
+        } else if (idx != 0 && temperature < thermal_config_.trip_point_info[idx].down_temp) {
+            current_trip_idx_ = idx - 1;
+            if (idx == thermal_config_.num_trip_points - 1) {
+                // A prev trip point triggered, so the temperature
+                // is falling down below the critical temperature
+                // make a note of that
+                critical_temp_measure_taken = false;
+            }
+        } else if ((idx == thermal_config_.num_trip_points - 1) &&
+                   (temperature >= thermal_config_.critical_temp) &&
+                   critical_temp_measure_taken != true) {
+            // The device temperature is crossing the critical
+            // temperature, set the CPU freq to the lowest possible
+            // setting to ensure the temperature doesn't rise any further
+
+            signal = false;
+            critical_temp_measure_taken = true;
+            // TODO(braval): Slow down the CPU to the lowest possible freq.
+            // Need to instrument a way to populate the operating points
+            // with a count in this class. Once we have that, we can easily set
+            // to the correct operating index here.
+        } else {
+            signal = false;
+        }
+
+        if (signal) {
+            status = NotifyThermalDaemon();
+            if (status != ZX_OK) {
+                return status;
+            }
+        }
     }
     return status;
 }
@@ -195,6 +265,36 @@ zx_status_t AmlThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
         *out_actual = sizeof(uint32_t);
         return ZX_OK;
     }
+
+    case IOCTL_THERMAL_GET_DEVICE_INFO: {
+        if (out_len != sizeof(thermal_device_info_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        memcpy(out_buf, &thermal_config_, sizeof(thermal_device_info_t));
+        *out_actual = sizeof(thermal_device_info_t);
+        return ZX_OK;
+    }
+
+    case IOCTL_THERMAL_SET_DVFS_OPP: {
+        if (in_len != sizeof(dvfs_info_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        auto* dvfs_info = reinterpret_cast<const dvfs_info_t*>(in_buf);
+        if (dvfs_info->power_domain != BIG_CLUSTER_POWER_DOMAIN) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return SetTarget(dvfs_info->op_idx);
+    }
+
+    case IOCTL_THERMAL_GET_STATE_CHANGE_PORT: {
+        if (out_len != sizeof(zx_handle_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        auto* port = reinterpret_cast<zx_handle_t*>(out_buf);
+        *out_actual = sizeof(zx_handle_t);
+        return zx_handle_duplicate(port_, ZX_RIGHT_SAME_RIGHTS, port);
+    }
+
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
