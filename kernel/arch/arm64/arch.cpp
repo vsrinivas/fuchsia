@@ -85,7 +85,11 @@ static_assert(TP_OFFSET(unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET, "");
 // SMP boot lock.
 static spin_lock_t arm_boot_cpu_lock = (spin_lock_t){1};
 static volatile int secondaries_to_init = 0;
+
+// one for each secondary CPU, indexed by (cpu_num - 1).
 static thread_t _init_thread[SMP_MAX_CPUS - 1];
+
+// one for each CPU
 arm64_sp_info_t arm64_secondary_sp_list[SMP_MAX_CPUS];
 
 extern uint64_t arch_boot_el;  // Defined in start.S.
@@ -94,20 +98,38 @@ uint64_t arm64_get_boot_el() {
     return arch_boot_el >> 2;
 }
 
-zx_status_t arm64_set_secondary_sp(uint cluster, uint cpu, void* sp, void* unsafe_sp) {
-    uint64_t mpid = ARM64_MPID(cluster, cpu);
+zx_status_t arm64_create_secondary_stack(uint cluster, uint cpu) {
+    // Allocate a stack, indexed by CPU num so that |arm64_secondary_entry| can find it.
+    cpu_num_t cpu_num = arch_mpid_to_cpu_num(cluster, cpu);
+    DEBUG_ASSERT(cpu_num > 0 && cpu_num < SMP_MAX_CPUS);
+    kstack_t* stack = &_init_thread[cpu_num - 1].stack;
+    DEBUG_ASSERT(stack->base == 0);
+    zx_status_t status = vm_allocate_kstack(stack);
+    if (status != ZX_OK) {
+        return status;
+    }
 
+    // Get the stack pointers.
+    void* sp = reinterpret_cast<void*>(stack->top);
+    void* unsafe_sp = nullptr;
+#if __has_feature(safe_stack)
+    DEBUG_ASSERT(stack->unsafe_base != 0);
+    unsafe_sp = reinterpret_cast<void*>(stack->unsafe_base + stack->size);
+#endif
+
+    // Find an empty slot for the low-level stack info.
     uint32_t i = 0;
     while ((i < SMP_MAX_CPUS) && (arm64_secondary_sp_list[i].mpid != 0)) {
         i++;
     }
     if (i == SMP_MAX_CPUS)
         return ZX_ERR_NO_RESOURCES;
+
+    // Store it.
+    uint64_t mpid = ARM64_MPID(cluster, cpu);
     LTRACEF("set mpid 0x%lx sp to %p\n", mpid, sp);
 #if __has_feature(safe_stack)
     LTRACEF("set mpid 0x%lx unsafe-sp to %p\n", mpid, unsafe_sp);
-#else
-    DEBUG_ASSERT(unsafe_sp == NULL);
 #endif
     arm64_secondary_sp_list[i].mpid = mpid;
     arm64_secondary_sp_list[i].sp = sp;
@@ -115,6 +137,14 @@ zx_status_t arm64_set_secondary_sp(uint cluster, uint cpu, void* sp, void* unsaf
     arm64_secondary_sp_list[i].unsafe_sp = unsafe_sp;
 
     return ZX_OK;
+}
+
+zx_status_t arm64_free_secondary_stack(uint cluster, uint cpu) {
+    cpu_num_t cpu_num = arch_mpid_to_cpu_num(cluster, cpu);
+    DEBUG_ASSERT(cpu_num > 0 && cpu_num < SMP_MAX_CPUS);
+    kstack_t* stack = &_init_thread[cpu_num - 1].stack;
+    zx_status_t status = vm_free_kstack(stack);
+    return status;
 }
 
 static void arm64_cpu_early_init() {

@@ -1046,9 +1046,12 @@ void thread_become_idle(void) {
 
 /**
  * @brief Create a thread around the current execution context, preserving |t|'s stack
+ *
+ * Prior to calling, |t->stack| must be properly constructed. See |vm_allocate_kstack|.
  */
 void thread_secondary_cpu_init_early(thread_t* t) {
     DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(t->stack.base != 0);
 
     // Save |t|'s stack because |thread_construct_first| will zero out the whole struct.
     kstack_t stack = t->stack;

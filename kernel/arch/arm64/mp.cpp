@@ -67,6 +67,10 @@ static uint arch_curr_cpu_num_slow() {
     return arm64_cpu_map[cluster][cpu];
 }
 
+cpu_num_t arch_mpid_to_cpu_num(uint cluster, uint cpu) {
+    return arm64_cpu_map[cluster][cpu];
+}
+
 void arch_prepare_current_cpu_idle_state(bool idle) {
     // no-op
 }

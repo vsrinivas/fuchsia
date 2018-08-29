@@ -123,13 +123,16 @@ void arm64_fpu_context_switch(struct thread* oldthread, struct thread* newthread
 uint64_t arm64_get_boot_el(void);
 
 void arm_reset(void);
+
 /*
- * Sets the secondary stack pointer for the specified CPU.  |sp| and
- * |unsafe_sp| must point to the top (highest address, exclusive) of the
- * memory to use as the stacks.
+ * Creates a stack and sets the stack pointer for the specified secondary CPU.
  */
-zx_status_t arm64_set_secondary_sp(uint cluster, uint cpu,
-                                   void* sp, void* unsafe_sp);
+zx_status_t arm64_create_secondary_stack(uint cluster, uint cpu);
+
+/*
+ * Frees a stack created by |arm64_create_secondary_stack|.
+ */
+zx_status_t arm64_free_secondary_stack(uint cluster, uint cpu);
 
 __END_CDECLS
 
