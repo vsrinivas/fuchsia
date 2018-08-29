@@ -17,6 +17,15 @@ sdk("zircon_sysroot") {
   ]
 }
 
+sdk("ddk") {
+  category = "partner"
+
+  deps = [
+    "//zircon/public/lib/driver:driver_sdk",
+    "//zircon/public/sysroot:sysroot_sdk",
+  ]
+}
+
 sdk("garnet") {
   category = "partner"
 

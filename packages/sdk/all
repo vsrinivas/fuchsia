@@ -1,6 +1,7 @@
 {
   "imports": [
     "garnet/packages/sdk/base",
+    "garnet/packages/sdk/ddk",
     "garnet/packages/sdk/garnet"
   ]
 }
