@@ -43,21 +43,23 @@ zx_koid_t GenerateKernelObjectId() {
 // unwind the recursion.
 class SafeDeleter {
 public:
-    static SafeDeleter* Get() {
-        auto self = reinterpret_cast<SafeDeleter*>(tls_get(TLS_ENTRY_KOBJ_DELETER));
-        if (self == nullptr) {
-            fbl::AllocChecker ac;
-            self = new (&ac) SafeDeleter;
-            if (!ac.check())
-                return nullptr;
-
-            tls_set(TLS_ENTRY_KOBJ_DELETER, self);
-            tls_set_callback(TLS_ENTRY_KOBJ_DELETER, &CleanTLS);
+    static void Delete(Dispatcher* kobj) {
+        auto deleter = reinterpret_cast<SafeDeleter*>(tls_get(TLS_ENTRY_KOBJ_DELETER));
+        if (deleter) {
+            deleter->DeleteObj(kobj);
+        } else {
+            SafeDeleter deleter;
+            tls_set(TLS_ENTRY_KOBJ_DELETER, &deleter);
+            deleter.DeleteObj(kobj);
+            tls_set(TLS_ENTRY_KOBJ_DELETER, nullptr);
         }
-        return self;
     }
 
-    void Delete(Dispatcher* kobj) {
+private:
+    SafeDeleter() : level_(0) {}
+    ~SafeDeleter() { DEBUG_ASSERT(level_ == 0); }
+
+    void DeleteObj(Dispatcher* kobj) {
         if (level_ > 0) {
             pending_.push_front(kobj);
             return;
@@ -71,14 +73,6 @@ public:
         }
         level_--;
     }
-
-private:
-    static void CleanTLS(void* tls) {
-        delete reinterpret_cast<SafeDeleter*>(tls);
-    }
-
-    SafeDeleter() : level_(0) {}
-    ~SafeDeleter() { DEBUG_ASSERT(level_ == 0); }
 
     int level_;
     fbl::SinglyLinkedList<Dispatcher*, Dispatcher::DeleterListTraits> pending_;
@@ -108,16 +102,7 @@ Dispatcher::~Dispatcher() {
 // can control the lifetime of others. For example events do
 // not fall in this category.
 void Dispatcher::fbl_recycle() {
-    auto deleter = SafeDeleter::Get();
-    if (likely(deleter != nullptr)) {
-        deleter->Delete(this);
-    } else {
-        // We failed to allocate the safe deleter. As an OOM
-        // case one is extremely unlikely but possible. Attempt
-        // to delete the dispatcher directly which very likely
-        // can be done without blowing the stack.
-        delete this;
-    }
+    SafeDeleter::Delete(this);
 }
 
 zx_status_t Dispatcher::add_observer(StateObserver* observer) {
