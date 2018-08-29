@@ -99,13 +99,15 @@ def main():
         os.symlink(os.path.relpath(src, os.path.dirname(tgt)), tgt)
 
     gopath = os.path.abspath(project_path)
+    build_goroot = os.path.abspath(args.go_root)
 
     env = {}
     env['GOARCH'] = goarch
     env['GOOS'] = goos
     env['GOPATH'] = gopath
-
-    build_goroot = os.path.abspath(args.go_root)
+    # Some users have GOROOT set in their parent environment, which can break
+    # things, so it is always set explicitly here.
+    env['GOROOT'] = build_goroot
 
     if goos == 'fuchsia':
         env['CGO_ENABLED'] = '1'
@@ -150,7 +152,6 @@ def main():
     if retcode == 0:
         if args.depfile is not None:
             with open(args.depfile, "wb") as out:
-                env['GOROOT'] = args.go_root
                 godepfile_args = [args.godepfile, '-o', depfile_output]
                 if args.is_test:
                     godepfile_args += [ '-test']
