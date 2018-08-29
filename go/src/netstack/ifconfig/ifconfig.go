@@ -36,15 +36,26 @@ func (a *netstackClientApp) printAll() {
 	}
 }
 
-func (a *netstackClientApp) getIfaceByName(name string) *netstack.NetInterface {
-	ifaces, err := a.netstack.GetInterfaces()
-	if err != nil {
-		fmt.Print("ifconfig: failed to fetch interfaces\n")
-		return nil
-	}
-
+func getIfaceByNameFromIfaces(name string, ifaces []netstack.NetInterface) *netstack.NetInterface {
 	for _, iface := range ifaces {
 		if iface.Name == name {
+			return &iface
+		}
+	}
+	return nil
+}
+
+func (a *netstackClientApp) getIfaceByName(name string) (*netstack.NetInterface, error) {
+	ifaces, err := a.netstack.GetInterfaces()
+	if err != nil {
+		return nil, err
+	}
+	return getIfaceByNameFromIfaces(name, ifaces), nil
+}
+
+func getIfaceByIdFromIfaces(id uint32, ifaces []netstack.NetInterface) *netstack.NetInterface {
+	for _, iface := range ifaces {
+		if iface.Id == id {
 			return &iface
 		}
 	}
@@ -108,7 +119,10 @@ func (a *netstackClientApp) parseRouteAttribute(in *netstack.RouteTableEntry, ar
 	case "gateway":
 		in.Gateway = toNetAddress(net.ParseIP(val))
 	case "iface":
-		iface := a.getIfaceByName(val)
+		iface, err := a.getIfaceByName(val)
+		if err != nil {
+			return remaining, err
+		}
 		if iface == nil {
 			return remaining, fmt.Errorf("no such interface '%s'\n", val)
 		}
@@ -154,12 +168,46 @@ func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry) error {
 	return a.netstack.SetRouteTable(append(rs, r))
 }
 
+func (a *netstackClientApp) showRoutes() error {
+	rs, err := a.netstack.GetRouteTable()
+	if err != nil {
+		return fmt.Errorf("could not get route table from netstack: %s", err)
+	}
+
+	ifaces, err := a.netstack.GetInterfaces()
+	if err != nil {
+		return err
+	}
+	for _, r := range rs {
+		iface := getIfaceByIdFromIfaces(r.Nicid, ifaces)
+		var ifaceName string
+		if iface == nil {
+			ifaceName = fmt.Sprintf("Nicid:%d", r.Nicid)
+		} else {
+			ifaceName = iface.Name
+		}
+		netAndMask := net.IPNet{}
+		switch r.Destination.Family {
+		case netstack.NetAddressFamilyIpv4:
+			netAndMask = net.IPNet{IP: r.Destination.Ipv4.Addr[:], Mask: r.Netmask.Ipv4.Addr[:]}
+		case netstack.NetAddressFamilyIpv6:
+			netAndMask = net.IPNet{IP: r.Destination.Ipv6.Addr[:], Mask: r.Netmask.Ipv6.Addr[:]}
+		}
+		fmt.Printf("%s via %s %s\n", netAndMask.String(), netAddrToString(r.Gateway), ifaceName)
+	}
+	return nil
+}
+
 func (a *netstackClientApp) bridge(ifNames []string) error {
 	ifs := make([]*netstack.NetInterface, len(ifNames))
 	nicIDs := make([]uint32, len(ifNames))
 	// first, validate that all interfaces exist
+	ifaces, err := a.netstack.GetInterfaces()
+	if err != nil {
+		return err
+	}
 	for i, ifName := range ifNames {
-		iface := a.getIfaceByName(ifName)
+		iface := getIfaceByNameFromIfaces(ifName, ifaces)
 		if iface == nil {
 			return fmt.Errorf("no such interface '%s'\n", ifName)
 		}
@@ -169,7 +217,7 @@ func (a *netstackClientApp) bridge(ifNames []string) error {
 
 	result, _ := a.netstack.BridgeInterfaces(nicIDs)
 	if result.Status != netstack.StatusOk {
-		return fmt.Errorf("error bridging interfaces: %s, result: %+v", result, ifs)
+		return fmt.Errorf("error bridging interfaces: %s, result: %s", ifNames, result)
 	}
 
 	return nil
@@ -329,6 +377,7 @@ func usage() {
 	fmt.Printf("  %s [<interface>] [add|del] [<address>]/[<mask>]\n", os.Args[0])
 	fmt.Printf("  %s [<interface>] dhcp [start|stop]\n", os.Args[0])
 	fmt.Printf("  %s route [add|del] [<address>]/[<mask>]\n", os.Args[0])
+	fmt.Printf("  %s route show\n", os.Args[0])
 	fmt.Printf("  %s bridge [<interface>]+\n", os.Args[0])
 	os.Exit(1)
 }
@@ -358,13 +407,21 @@ func main() {
 	var iface *netstack.NetInterface
 	switch os.Args[1] {
 	case "route":
+		op := os.Args[2]
+		if op == "show" {
+			err = a.showRoutes()
+			if err != nil {
+				fmt.Printf("Error showing routes: %s\n", err)
+			}
+			return
+		}
 		routeFlags := os.Args[3:]
 		r, err := a.newRouteFromArgs(routeFlags)
 		if err != nil {
 			fmt.Printf("Error parsing route from args: %s, error: %s\n", routeFlags, err)
 		}
 
-		switch op := os.Args[2]; op {
+		switch op {
 		case "add":
 			err = a.addRoute(r)
 			if err != nil {
@@ -391,7 +448,11 @@ func main() {
 		usage()
 		return
 	default:
-		iface = a.getIfaceByName(os.Args[1])
+		iface, err = a.getIfaceByName(os.Args[1])
+		if err != nil {
+			fmt.Printf("Error finding interface name: %s\n", err)
+			return
+		}
 		if iface == nil {
 			fmt.Printf("ifconfig: no such interface '%s'\n", os.Args[1])
 			return
