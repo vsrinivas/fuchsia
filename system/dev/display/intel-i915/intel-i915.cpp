@@ -1856,6 +1856,11 @@ Controller::~Controller() {
     interrupts_.Destroy();
     if (mmio_space_) {
         EnableBacklight(false);
+
+        for (unsigned i = 0; i < registers::kPipeCount; i++) {
+            fbl::AutoLock lock(&display_lock_);
+            pipes_[i].Reset();
+        }
     }
     // Drop our own reference to bar 0. No-op if we failed before we mapped it.
     UnmapPciMmio(0u);

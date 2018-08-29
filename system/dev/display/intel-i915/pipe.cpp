@@ -73,10 +73,6 @@ namespace i915 {
 Pipe::Pipe(Controller* controller, registers::Pipe pipe)
         : controller_(controller), pipe_(pipe) {}
 
-Pipe::~Pipe() {
-    Reset();
-}
-
 hwreg::RegisterIo* Pipe::mmio_space() const {
     return controller_->mmio_space();
 }

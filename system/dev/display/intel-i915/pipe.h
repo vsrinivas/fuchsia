@@ -26,7 +26,6 @@ class Pipe {
 public:
     Pipe(Controller* device, registers::Pipe pipe);
     Pipe(const i915::Pipe& other) : Pipe(other.controller_, other.pipe_) {}
-    ~Pipe();
 
     void AttachToDisplay(uint64_t display_id, bool is_edp);
     void Detach();
