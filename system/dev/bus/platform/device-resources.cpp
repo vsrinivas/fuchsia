@@ -35,6 +35,7 @@ zx_status_t DeviceResources::Init(const pbus_dev_t* pdev, uint32_t* next_index) 
         !CopyResources(pdev->clk_count, pdev->clks, &clks_) ||
         !CopyResources(pdev->bti_count, pdev->btis, &btis_) ||
         !CopyResources(pdev->metadata_count, pdev->metadata, &metadata_) ||
+        !CopyResources(pdev->boot_metadata_count, pdev->boot_metadata, &boot_metadata_) ||
         !CopyResources(pdev->protocol_count, pdev->protocols, &protocols_)) {
         return ZX_ERR_NO_MEMORY;
     }

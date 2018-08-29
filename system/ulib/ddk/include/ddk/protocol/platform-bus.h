@@ -42,13 +42,24 @@ typedef struct {
     uint32_t    bti_id;
 } pbus_bti_t;
 
-// metadata for the device
+// Device metadata.
 typedef struct {
-    uint32_t    type;   // metadata type (matches zbi_header_t.type for bootloader metadata)
-    uint32_t    extra;  // matches zbi_header_t.extra for bootloader metadata
-    const void* data;   // pointer to metadata (set to NULL for bootloader metadata)
-    uint32_t    len;    // metadata length in bytes (set to zero for bootloader metadata)
+    // Metadata type.
+    uint32_t    type;
+    // Pointer to the metadata.
+    const void* data;
+    // Metadata length in bytes.
+    uint32_t    len;
 } pbus_metadata_t;
+
+// Device metadata to be passed from bootloader via a ZBI record.
+typedef struct {
+    // Metadata type (matches zbi_header_t.type for bootloader metadata).
+    uint32_t zbi_type;
+    // Matches zbi_header_t.extra for bootloader metadata.
+    // Used in cases where bootloader provides multiple metadata records of the same type.
+    uint32_t zbi_extra;
+} pbus_boot_metadata_t;
 
 typedef struct pbus_dev pbus_dev_t;
 struct pbus_dev {
@@ -70,6 +81,8 @@ struct pbus_dev {
     uint32_t bti_count;
     const pbus_metadata_t* metadata;
     uint32_t metadata_count;
+    const pbus_boot_metadata_t* boot_metadata;
+    uint32_t boot_metadata_count;
     // List of this device's child devices.
     // This is only used in cases where children of a platform device also need to access
     // platform bus resources.

@@ -39,7 +39,6 @@ static usb_mode_t dwc3_mode = USB_MODE_HOST;
 static const pbus_metadata_t dwc2_metadata[] = {
     {
         .type       = DEVICE_METADATA_USB_MODE,
-        .extra      = 0,
         .data       = &dwc3_mode,
         .len        = sizeof(dwc3_mode),
     }

@@ -51,7 +51,6 @@ static aml_sd_emmc_config_t config = {
 static const pbus_metadata_t aml_sd_emmc_metadata[] = {
     {
         .type       = DEVICE_METADATA_PRIVATE,
-        .extra      = 0,
         .data       = &config,
         .len        = sizeof(config),
     }

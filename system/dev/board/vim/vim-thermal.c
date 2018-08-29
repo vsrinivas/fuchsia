@@ -173,7 +173,6 @@ static thermal_device_info_t aml_vim2_config = {
 static const pbus_metadata_t vim_thermal_metadata[] = {
     {
         .type       = DEVICE_METADATA_PRIVATE,
-        .extra      = 0,
         .data       = &aml_vim2_config,
         .len        = sizeof(aml_vim2_config),
     }

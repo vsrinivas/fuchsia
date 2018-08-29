@@ -43,7 +43,6 @@ static usb_mode_t usb1_mode = USB_MODE_HOST;
 static const pbus_metadata_t usb1_metadata[] = {
     {
         .type       = DEVICE_METADATA_USB_MODE,
-        .extra      = 0,
         .data       = &usb1_mode,
         .len        = sizeof(usb1_mode),
     }
@@ -90,7 +89,6 @@ static usb_mode_t usb2_mode = USB_MODE_HOST;
 static const pbus_metadata_t usb2_metadata[] = {
     {
         .type       = DEVICE_METADATA_USB_MODE,
-        .extra      = 0,
         .data       = &usb2_mode,
         .len        = sizeof(usb2_mode),
     }

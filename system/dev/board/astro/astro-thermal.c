@@ -220,13 +220,11 @@ static opp_info_t aml_opp_info = {
 static const pbus_metadata_t thermal_metadata[] = {
     {
         .type = THERMAL_CONFIG_METADATA,
-        .extra = 0,
         .data = &aml_astro_config,
         .len = sizeof(aml_astro_config),
     },
     {
         .type = VOLTAGE_DUTY_CYCLE_METADATA,
-        .extra = 0,
         .data = &aml_opp_info,
         .len = sizeof(aml_opp_info),
     },

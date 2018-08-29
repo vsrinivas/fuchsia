@@ -79,13 +79,15 @@ static aml_sd_emmc_config_t config = {
 static const pbus_metadata_t emmc_metadata[] = {
     {
         .type       = DEVICE_METADATA_PRIVATE,
-        .extra      = 0,
         .data       = &config,
         .len        = sizeof(config),
     },
+};
+
+static const pbus_boot_metadata_t emmc_boot_metadata[] = {
     {
-        .type = DEVICE_METADATA_PARTITION_MAP,
-        .extra = 0,
+        .zbi_type = DEVICE_METADATA_PARTITION_MAP,
+        .zbi_extra = 0,
     },
 };
 
@@ -104,6 +106,8 @@ static const pbus_dev_t emmc_dev = {
     .gpio_count = countof(emmc_gpios),
     .metadata = emmc_metadata,
     .metadata_count = countof(emmc_metadata),
+    .boot_metadata = emmc_boot_metadata,
+    .boot_metadata_count = countof(emmc_boot_metadata),
 };
 
 zx_status_t vim_sd_emmc_init(vim_bus_t* bus) {

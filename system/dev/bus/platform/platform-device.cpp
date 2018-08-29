@@ -143,7 +143,7 @@ zx_status_t PlatformDevice::RpcGetDeviceInfo(const DeviceResources* dr, pdev_dev
         .i2c_channel_count = static_cast<uint32_t>(dr->i2c_channel_count()),
         .clk_count = static_cast<uint32_t>(dr->clk_count()),
         .bti_count = static_cast<uint32_t>(dr->bti_count()),
-        .metadata_count = static_cast<uint32_t>(dr->metadata_count()),
+        .metadata_count = static_cast<uint32_t>(dr->metadata_count() + dr->boot_metadata_count()),
         .reserved = {},
         .name = {},
     };
@@ -167,11 +167,12 @@ zx_status_t PlatformDevice::RpcDeviceAdd(const DeviceResources* dr, uint32_t ind
 zx_status_t PlatformDevice::RpcGetMetadata(const DeviceResources* dr, uint32_t index,
                                            uint32_t* out_type, uint8_t* buf, uint32_t buf_size,
                                            uint32_t* actual) {
-    if (index >= dr->metadata_count()) {
+    if (index >= dr->metadata_count() + dr->boot_metadata_count()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    auto& metadata = dr->metadata(index);
-    if (metadata.data && metadata.len) {
+
+    if (index < dr->metadata_count()) {
+        auto& metadata = dr->metadata(index);
         if (metadata.len > buf_size) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
@@ -180,20 +181,23 @@ zx_status_t PlatformDevice::RpcGetMetadata(const DeviceResources* dr, uint32_t i
         *actual = metadata.len;
         return ZX_OK;
     } else {
+        // boot_metadata indices follow metadata indices.
+        index -= static_cast<uint32_t>(dr->metadata_count());
+
+        auto& metadata = dr->boot_metadata(index);
         const void* data;
         uint32_t length;
-        auto status = bus_->GetZbiMetadata(metadata.type, metadata.extra, &data, &length);
+        auto status = bus_->GetZbiMetadata(metadata.zbi_type, metadata.zbi_extra, &data, &length);
         if (status == ZX_OK) {
             if (length > buf_size) {
                 return ZX_ERR_BUFFER_TOO_SMALL;
             }
             memcpy(buf, data, length);
-            *out_type = metadata.type;
+            *out_type = metadata.zbi_type;
             *actual = length;
         }
         return status;
     }
-    return ZX_OK;
 }
 
 zx_status_t PlatformDevice::RpcGetProtocols(const DeviceResources* dr, uint32_t* out_protocols,
@@ -544,12 +548,6 @@ void PlatformDevice::DdkRelease() {
 }
 
 zx_status_t PlatformDevice::Start() {
-    zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, vid_},
-        {BIND_PLATFORM_DEV_PID, 0, pid_},
-        {BIND_PLATFORM_DEV_DID, 0, did_},
-    };
-
     char name[ZX_DEVICE_NAME_MAX];
     if (vid_ == PDEV_VID_GENERIC && pid_ == PDEV_PID_GENERIC && did_ == PDEV_DID_KPCI) {
         strlcpy(name, "pci", sizeof(name));
@@ -563,8 +561,9 @@ zx_status_t PlatformDevice::Start() {
     uint32_t device_add_flags = DEVICE_ADD_MUST_ISOLATE;
 
     const DeviceResources* dr = device_index_[ROOT_DEVICE_ID];
-    size_t metadata_count = dr->metadata_count();
-    if (metadata_count > 0) {
+    const size_t metadata_count = dr->metadata_count();
+    const size_t boot_metadata_count = dr->boot_metadata_count();
+    if (metadata_count > 0 || boot_metadata_count > 0) {
         // Keep device invisible until after we add its metadata.
         device_add_flags |= DEVICE_ADD_INVISIBLE;
     }
@@ -573,8 +572,13 @@ zx_status_t PlatformDevice::Start() {
     if (dr->protocol_count() > 0) {
         // PlatformDevice::Start with protocols
         status = DdkAdd(name, device_add_flags, nullptr, 0, ZX_PROTOCOL_PLATFORM_PROXY, argstr);
-
     } else {
+    zx_device_prop_t props[] = {
+            {BIND_PLATFORM_DEV_VID, 0, vid_},
+            {BIND_PLATFORM_DEV_PID, 0, pid_},
+            {BIND_PLATFORM_DEV_DID, 0, did_},
+        };
+
         status = DdkAdd(name, device_add_flags, props, countof(props), ZX_PROTOCOL_PLATFORM_DEV,
                         argstr);
     }
@@ -583,24 +587,30 @@ zx_status_t PlatformDevice::Start() {
         return status;
     }
 
-    if (metadata_count > 0) {
+    if (metadata_count > 0 || boot_metadata_count > 0) {
         for (size_t i = 0; i < metadata_count; i++) {
-            const pbus_metadata_t& pbm = dr->metadata(i);
-            if (pbm.data && pbm.len) {
-                status = DdkAddMetadata(pbm.type, pbm.data, pbm.len);
-            } else {
-                const void* data;
-                uint32_t length;
-                status = bus_->GetZbiMetadata(pbm.type, pbm.extra, &data, &length);
-                if (status == ZX_OK) {
-                    status = DdkAddMetadata(pbm.type, data, length);
-                }
+            const auto& metadata = dr->metadata(i);
+            status = DdkAddMetadata(metadata.type, metadata.data, metadata.len);
+            if (status != ZX_OK) {
+                DdkRemove();
+                return status;
+            }
+        }
+
+        for (size_t i = 0; i < boot_metadata_count; i++) {
+            const auto& metadata = dr->boot_metadata(i);
+            const void* data;
+            uint32_t length;
+            status = bus_->GetZbiMetadata(metadata.zbi_type, metadata.zbi_extra, &data, &length);
+            if (status == ZX_OK) {
+                status = DdkAddMetadata(metadata.zbi_type, data, length);
             }
             if (status != ZX_OK) {
                 DdkRemove();
                 return status;
             }
         }
+
         DdkMakeVisible();
     }
 

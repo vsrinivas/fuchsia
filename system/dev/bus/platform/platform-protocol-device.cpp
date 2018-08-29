@@ -212,7 +212,8 @@ zx_status_t ProtocolDevice::Start() {
     uint32_t device_add_flags = 0;
 
     const size_t metadata_count = resources_.metadata_count();
-    if (metadata_count > 0) {
+    const size_t boot_metadata_count = resources_.boot_metadata_count();
+    if (metadata_count > 0 || boot_metadata_count > 0) {
         // Keep device invisible until after we add its metadata.
         device_add_flags |= DEVICE_ADD_INVISIBLE;
     }
@@ -222,24 +223,30 @@ zx_status_t ProtocolDevice::Start() {
         return status;
     }
 
-    if (metadata_count > 0) {
+    if (metadata_count > 0 || boot_metadata_count > 0) {
         for (size_t i = 0; i < metadata_count; i++) {
-            const pbus_metadata_t& pbm = resources_.metadata(i);
-            if (pbm.data && pbm.len) {
-                status = DdkAddMetadata(pbm.type, pbm.data, pbm.len);
-            } else {
-                const void* data;
-                uint32_t length;
-                status = bus_->GetZbiMetadata(pbm.type, pbm.extra, &data, &length);
-                if (status == ZX_OK) {
-                    status = DdkAddMetadata(pbm.type, data, length);
-                }
+            const auto& metadata = resources_.metadata(i);
+            status = DdkAddMetadata(metadata.type, metadata.data, metadata.len);
+            if (status != ZX_OK) {
+                DdkRemove();
+                return status;
+            }
+        }
+
+        for (size_t i = 0; i < boot_metadata_count; i++) {
+            const auto& metadata = resources_.boot_metadata(i);
+            const void* data;
+            uint32_t length;
+            status = bus_->GetZbiMetadata(metadata.zbi_type, metadata.zbi_extra, &data, &length);
+            if (status == ZX_OK) {
+                status = DdkAddMetadata(metadata.zbi_type, data, length);
             }
             if (status != ZX_OK) {
                 DdkRemove();
                 return status;
             }
         }
+
         DdkMakeVisible();
     }
 

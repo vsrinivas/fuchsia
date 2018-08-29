@@ -95,7 +95,6 @@ static const pbus_metadata_t iatu_metadata[] = {
     // PCIe Configuration Space
     {
         .type = IATU_CFG_APERTURE_METADATA,  // Private Metadata
-        .extra = 0,
         .data = &cfg_entry,
         .len = sizeof(cfg_entry),
     },
@@ -103,7 +102,6 @@ static const pbus_metadata_t iatu_metadata[] = {
     // PCIe IO Space
     {
         .type = IATU_IO_APERTURE_METADATA,  // Private Metadata
-        .extra = 0,
         .data = &io_entry,
         .len = sizeof(io_entry),
     },
@@ -111,7 +109,6 @@ static const pbus_metadata_t iatu_metadata[] = {
     // PCIe Memory space
     {
         .type = IATU_MMIO_APERTURE_METADATA,  // Private Metadata
-        .extra = 0,
         .data = &mem_entry,
         .len = sizeof(mem_entry),
     },
