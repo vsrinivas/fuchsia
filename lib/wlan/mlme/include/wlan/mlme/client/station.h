@@ -63,6 +63,7 @@ struct AssocContext {
     bool has_vht_op;
     VhtOperation vht_op;
 
+    bool is_ht = false;
     bool is_cbw40_rx = false;
     bool is_cbw40_tx = false;
 };
@@ -175,7 +176,6 @@ class Station {
     // Returns the STA's own MAC address.
     const common::MacAddr& self_addr() const { return device_->GetState()->address(); }
 
-    bool IsHTReady() const;
     bool IsCbw40Rx() const;
     bool IsQosReady() const;
     bool IsAmsduRxReady() const;

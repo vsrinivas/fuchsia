@@ -433,7 +433,8 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
         }
     }
 
-    if (IsHTReady()) {
+    auto is_ht = client_capability.has_ht_cap && (bss_->ht_cap != nullptr);
+    if (is_ht) {
         auto ht_cap = client_capability.ht_cap;
         debugf("HT cap(hardware reports): %s\n", debug::Describe(ht_cap).c_str());
 
@@ -666,7 +667,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
           self_addr().ToString().c_str(), bss_->ssid->data(), bssid.ToString().c_str(),
           common::ChanStr(GetJoinChan()).c_str(), common::BandStr(GetJoinChan()).c_str(),
-          IsHTReady() ? "802.11n HT" : "802.11g/a");
+          assoc_ctx_.is_ht ? "802.11n HT" : "802.11g/a");
 
     // TODO(porce): Time when to establish BlockAck session
     // Handle MLME-level retry, if MAC-level retry ultimately fails
@@ -1341,11 +1342,6 @@ zx::time Station::deadline_after_bcn_period(size_t bcn_count) {
     return timer_mgr_.Now() + WLAN_TU(bss_->beacon_period * bcn_count);
 }
 
-bool Station::IsHTReady() const {
-    // TODO(porce): Test capabilites and configurations of the client and its BSS.
-    return true;
-}
-
 bool Station::IsCbw40Rx() const {
     ZX_DEBUG_ASSERT(bss_ != nullptr);
     if (bss_ == nullptr) { return false; }
@@ -1526,6 +1522,7 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     }
     debugjoin("final AssocCtx:[%s]\n", debug::Describe(assoc_ctx_).c_str());
 
+    assoc_ctx_.is_ht = assoc_ctx_.has_ht_cap;
     assoc_ctx_.is_cbw40_rx =
         assoc_cfg_.cbw != wlan_mlme::CBW::CBW20 && assoc_ctx_.has_ht_cap &&
         ap.ht_cap.ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY &&
