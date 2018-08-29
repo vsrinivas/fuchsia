@@ -1265,9 +1265,9 @@ static bool check_not_readable(int fd) {
     fds.events = POLLIN;
     ASSERT_EQ(poll(&fds, 1, 10), 0, "Failed to wait for readable blob");
 
-    char buf[8];
+    char buf[1];
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-    ASSERT_LT(read(fd, buf, 1), 0, "Blob should not be readable yet");
+    ASSERT_LT(read(fd, buf, sizeof(buf)), 0, "Blob should not be readable yet");
     END_HELPER;
 }
 
@@ -1279,7 +1279,7 @@ static bool check_readable(int fd) {
     ASSERT_EQ(poll(&fds, 1, 10), 1, "Failed to wait for readable blob");
     ASSERT_EQ(fds.revents, POLLIN);
 
-    char buf[8];
+    char buf[1];
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_EQ(read(fd, buf, sizeof(buf)), sizeof(buf));
     END_HELPER;
