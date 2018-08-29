@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "astro-display.h"
+#include "lcd.h"
+#include <ddk/debug.h>
+#include <ddktl/device.h>
 
 #define DELAY_CMD           (0xFF)
 #define DCS_CMD             (0xFE)
@@ -11,10 +13,13 @@
 #define READ_DISPLAY_ID_CMD (0x04)
 #define READ_DISPLAY_ID_LEN (0x03)
 
+namespace astro_display {
+
+namespace {
 // Based on Vendor datasheet
 // <CMD TYPE><LENGTH><DATA...>
 // <DELAY_CMD><DELAY (us)>
-static uint8_t lcd_init_sequence_TV070WSM_FT[] = {
+constexpr uint8_t lcd_init_sequence_TV070WSM_FT[] = {
     GEN_CMD,2,0xE0,0x00,
     GEN_CMD,2,0xE1,0x93,
     GEN_CMD,2,0xE2,0x65,
@@ -301,7 +306,7 @@ static uint8_t lcd_init_sequence_TV070WSM_FT[] = {
     DCS_CMD,1,0x29,
     DELAY_CMD,5,
 };
-static uint8_t lcd_init_sequence_P070ACB_FT[] = {
+constexpr uint8_t lcd_init_sequence_P070ACB_FT[] = {
     DELAY_CMD, 100,
     GEN_CMD,2,0xE0,0x00,
     GEN_CMD,2,0xE1,0x93,
@@ -524,14 +529,15 @@ static uint8_t lcd_init_sequence_P070ACB_FT[] = {
     DCS_CMD,1,0x35,
     DELAY_CMD, 20,
 };
+} //namespace
 
-zx_status_t lcd_read_display_id(astro_display_t* display) {
+zx_status_t Lcd::GetDisplayId() {
 
     uint8_t cmd = READ_DISPLAY_ID_CMD;
     uint8_t rsp[READ_DISPLAY_ID_LEN];
     zx_status_t status = ZX_OK;
-    if ((status = mipi_dsi_cmd(display, &cmd, 1, rsp, READ_DISPLAY_ID_LEN,
-                               COMMAND_GEN)) != ZX_OK) {
+    if ((status = dsi_->Cmd(&cmd, 1, rsp, READ_DISPLAY_ID_LEN,
+                            COMMAND_GEN)) != ZX_OK) {
         DISP_ERROR("Could not read out Display ID\n");
         return status;
     }
@@ -541,7 +547,7 @@ zx_status_t lcd_read_display_id(astro_display_t* display) {
 }
 
 // This function write DSI commands based on the input buffer.
-zx_status_t load_init_table(astro_display_t* display, uint8_t* buffer, size_t size) {
+zx_status_t Lcd::LoadInitTable(const uint8_t* buffer, size_t size) {
     zx_status_t status = ZX_OK;
     size_t i;
     i  = 0;
@@ -549,16 +555,16 @@ zx_status_t load_init_table(astro_display_t* display, uint8_t* buffer, size_t si
     while (i < size) {
         switch (buffer[i]) {
         case DELAY_CMD:
-            usleep(buffer[i + 1]);
+            zx_nanosleep(zx_deadline_after(ZX_USEC(buffer[i + 1])));
             i += 2;
             break;
         case DCS_CMD:
             isDCS = true;
-            // fall through
+             __FALLTHROUGH;
         case GEN_CMD:
         default:
-            if ((status = mipi_dsi_cmd(display, &buffer[i+2], buffer[i+1], NULL, 0,
-                                       isDCS)) != ZX_OK) {
+            if ((status = dsi_->Cmd(&buffer[i+2], buffer[i+1], NULL, 0,
+                                    isDCS)) != ZX_OK) {
                 DISP_ERROR("Error loading LCD init table. Aborting %d\n", status);
                 return status;
             }
@@ -571,35 +577,56 @@ zx_status_t load_init_table(astro_display_t* display, uint8_t* buffer, size_t si
     return status;
 }
 
-zx_status_t lcd_init(astro_display_t* display) {
+zx_status_t Lcd::Init(zx_device_t* parent) {
+
+    // Obtain GPIO protocol
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_GPIO, &gpio_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not obtain GPIO protocol\n");
+        return status;
+    }
+
+    // Create a DW MIPI DSI object to use for sending dsi commands
+    fbl::AllocChecker ac;
+    dsi_ = fbl::make_unique_checked<astro_display::DwMipiDsi>(&ac);
+    if (!ac.check()) {
+        DISP_ERROR("Lcd: Could not create MIPI DSI object\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+    status = dsi_->Init(parent);
+    if (status != ZX_OK) {
+        DISP_ERROR("Lcd: MIPI DSI initialization failed\n");
+        return status;
+    }
 
     // reset LCD panel via GPIO according to vendor doc
-    gpio_config_out(&display->gpio, GPIO_LCD, 1);
-    usleep(30 * 1000);
-    gpio_write(&display->gpio, GPIO_LCD, 0);
-    usleep(10 * 1000);
-    gpio_write(&display->gpio, GPIO_LCD, 1);
-    usleep(30 * 1000);
-
+    gpio_config_out(&gpio_, GPIO_LCD, 1);
+    gpio_write(&gpio_, GPIO_LCD, 1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
+    gpio_write(&gpio_, GPIO_LCD, 0);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+    gpio_write(&gpio_, GPIO_LCD, 1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
     // check status
-    if (lcd_read_display_id(display) != ZX_OK) {
+    if (GetDisplayId() != ZX_OK) {
         DISP_ERROR("Cannot communicate with LCD Panel!\n");
         return ZX_ERR_TIMED_OUT;
     }
-    usleep(10);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 
     // load table
-    if (display->panel_type == PANEL_TV070WSM_FT) {
-        return load_init_table(display, lcd_init_sequence_TV070WSM_FT,
-                               sizeof(lcd_init_sequence_TV070WSM_FT));
-    } else if (display->panel_type == PANEL_P070ACB_FT) {
-        return load_init_table(display, lcd_init_sequence_P070ACB_FT,
-                               sizeof(lcd_init_sequence_P070ACB_FT));
+    if (panel_type_ == PANEL_TV070WSM_FT) {
+        return LoadInitTable(lcd_init_sequence_TV070WSM_FT,
+                             sizeof(lcd_init_sequence_TV070WSM_FT));
+    } else if (panel_type_ == PANEL_P070ACB_FT) {
+        return LoadInitTable(lcd_init_sequence_P070ACB_FT,
+                             sizeof(lcd_init_sequence_P070ACB_FT));
     } else {
         DISP_ERROR("Unsupported panel detected!\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-
     return ZX_OK;
 }
+
+} // namespace astro_display

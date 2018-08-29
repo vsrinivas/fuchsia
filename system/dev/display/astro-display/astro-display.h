@@ -4,224 +4,137 @@
 
 #pragma once
 
-#include <assert.h>
-#include <ddk/io-buffer.h>
-#include <ddk/protocol/amlogic-canvas.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <threads.h>
-#include <hw/reg.h>
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
+
+#include <zircon/compiler.h>
+#include <zircon/thread_annotations.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zx/bti.h>
+
 #include <ddk/driver.h>
-#include <ddk/io-buffer.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/platform-defs.h>
-#include <ddk/protocol/display-controller.h>
-#include <zircon/listnode.h>
-#include <zircon/types.h>
-#include <zircon/assert.h>
-#include <zircon/syscalls.h>
+#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/amlogic-canvas.h>
+#include <ddk/debug.h>
 
-#include "hhi.h"
-#include "mipi-dsi.h"
-#include "dw-mipi-dsi.h"
-#include "aml-dsi.h"
+#include <ddktl/protocol/display-controller.h>
+#include <ddktl/device.h>
 
-#define DISP_ERROR(fmt, ...)    zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define DISP_INFO(fmt, ...)     zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define DISP_SPEW(fmt, ...)     zxlogf(SPEW, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define DISP_TRACE              zxlogf(INFO, "[%s %d]\n", __func__, __LINE__)
+#include <fbl/unique_ptr.h>
+#include <fbl/atomic.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 
-#define DISPLAY_MASK(start, count) (((1 << (count)) - 1) << (start))
-#define DISPLAY_SET_MASK(mask, start, count, value) \
-                        ((mask & ~DISPLAY_MASK(start, count)) | \
-                                (((value) << (start)) & DISPLAY_MASK(start, count)))
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
+#include "osd.h"
+#include "backlight.h"
+#include "astro-clock.h"
+#include "aml-dsi-host.h"
+#include "common.h"
 
-#define READ32_DMC_REG(a)                   readl(io_buffer_virt(&display->mmio_dmc) + a)
-#define WRITE32_DMC_REG(a, v)               writel(v, io_buffer_virt(&display->mmio_dmc) + a)
+namespace astro_display {
 
-#define READ32_MIPI_DSI_REG(a)              readl(io_buffer_virt(&display->mmio_mipi_dsi) + a)
-#define WRITE32_MIPI_DSI_REG(a, v)          writel(v, io_buffer_virt(&display->mmio_mipi_dsi) + a)
+class AstroDisplay;
 
-#define READ32_DSI_PHY_REG(a)               readl(io_buffer_virt(&display->mmio_dsi_phy) + a)
-#define WRITE32_DSI_PHY_REG(a, v)           writel(v, io_buffer_virt(&display->mmio_dsi_phy) + a)
+constexpr uint8_t kMaxImportedImages = 255;
+using ImportedImageBitmap = bitmap::RawBitmapGeneric<bitmap::FixedStorage<kMaxImportedImages>>;
 
-#define READ32_HHI_REG(a)                   readl(io_buffer_virt(&display->mmio_hhi) + a)
-#define WRITE32_HHI_REG(a, v)               writel(v, io_buffer_virt(&display->mmio_hhi) + a);
+// AstroDisplay will implement only a few subset of Device.
+using DeviceType = ddk::Device<AstroDisplay, ddk::Unbindable>;
 
-#define READ32_VPU_REG(a)                   readl(io_buffer_virt(&display->mmio_vpu) + a)
-#define WRITE32_VPU_REG(a, v)               writel(v, io_buffer_virt(&display->mmio_vpu) + a)
+class AstroDisplay : public DeviceType,
+                     public ddk::DisplayControllerProtocol<AstroDisplay> {
+public:
+    AstroDisplay(zx_device_t* parent, uint32_t width, uint32_t height)
+        : DeviceType(parent), width_(width), height_(height) {}
 
-#define SET_BIT32(x, dest, value, start, count) \
-            WRITE32_##x##_REG(dest, (READ32_##x##_REG(dest) & ~DISPLAY_MASK(start, count)) | \
-                                (((value) << (start)) & DISPLAY_MASK(start, count)))
+    // This function is called from the c-bind function upon driver matching
+    zx_status_t Bind();
 
-#define GET_BIT32(x, dest, start, count) \
-            ((READ32_##x##_REG(dest) >> (start)) & ((1 << (count)) - 1))
+    // Required functions needed to implement Display Controller Protocol
+    void SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb);
+    zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
+    void ReleaseImage(image_t* image);
+    void CheckConfiguration(const display_config_t** display_config,
+                            uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
+                            uint32_t display_count);
+    void ApplyConfiguration(const display_config_t** display_config, uint32_t display_count);
+    uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format);
+    zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);
 
-#define WRITE32_REG(x, a, v)            WRITE32_##x##_REG(a, v)
-#define READ32_REG(x, a)                READ32_##x##_REG(a)
+    // Required functions for DeviceType
+    void DdkUnbind();
+    void DdkRelease();
 
-#define PANEL_DISPLAY_ID                (1)
+    void Dump();
 
-// Should match display_mmios table in board driver
-enum {
-    MMIO_CANVAS,
-    MMIO_MPI_DSI,
-    MMIO_DSI_PHY,
-    MMIO_HHI,
-    MMIO_VPU,
-};
+private:
+    zx_status_t SetupDisplayInterface(void);
+    int VSyncThread();
+    void CopyDisplaySettings();
+    void PopulateAddedDisplayArgs(added_display_args_t* args);
+    void PopulatePanelType() TA_REQ(display_lock_);
 
-// Should match display_gpios table in board driver
-enum {
-    GPIO_BL,
-    GPIO_LCD,
-    GPIO_PANEL_DETECT,
-    GPIO_HW_ID0,
-    GPIO_HW_ID1,
-    GPIO_HW_ID2,
-};
+    // Zircon handles
+    zx::bti                             bti_;
+    zx::interrupt                       inth_;
+    zx::vmo                             fb_vmo_;
 
-// Astro Display dimension
-#define DISPLAY_WIDTH           608
-#define DISPLAY_HEIGHT          1024
+    // Thread handles
+    thrd_t                              vsync_thread_;
 
-// Supported panel types
-#define PANEL_TV070WSM_FT       0x00
-#define PANEL_P070ACB_FT        0x01
-#define PANEL_UNKNOWN           0xff
+    // Protocol handles used in by this driver
+    platform_device_protocol_t          pdev_ = { nullptr, nullptr };
+    gpio_protocol_t                     gpio_ = { nullptr, nullptr };
+    canvas_protocol_t                   canvas_ = { nullptr, nullptr };
 
-// This display driver supports EVT hardware and onwards. For pre-EVT boards,
-// it will simply configure the framebuffer and canvas and assume U-Boot has
-// already done all display initializations
-#define BOARD_REV_P1            0
-#define BOARD_REV_P2            1
-#define BOARD_REV_EVT_1         2
-#define BOARD_REV_EVT_2         3
-#define BOARD_REV_UNKNOWN       0xff
+    // Board Info
+    pdev_board_info_t                   board_info_;
 
-// This structure is populated based on hardware/lcd type. Its values come from vendor.
-// This table is the top level structure used to populated all Clocks/LCD/DSI/BackLight/etc
-// values
-typedef struct {
-    uint32_t lane_num;
-    uint32_t bit_rate_max;
-    uint32_t clock_factor;
-    uint32_t lcd_clock;
-    uint32_t h_active;
-    uint32_t v_active;
-    uint32_t h_period;
-    uint32_t v_period;
-    uint32_t hsync_width;
-    uint32_t hsync_bp;
-    uint32_t hsync_pol;
-    uint32_t vsync_width;
-    uint32_t vsync_bp;
-    uint32_t vsync_pol;
-} display_setting_t;
+    // Interrupts
+    zx::interrupt                       vsync_irq_;
 
-typedef struct {
-    zx_device_t*                        zxdev;
-    platform_device_protocol_t          pdev;
-    zx_device_t*                        parent;
-    zx_device_t*                        mydevice;
-    zx_device_t*                        fbdevice;
-    zx_handle_t                         bti;
-    zx_handle_t                         inth;
+    // Locks used by the display driver
+    fbl::Mutex                          display_lock_; // general display state (i.e. display_id)
+    fbl::Mutex                          image_lock_; // used for accessing imported_images_
 
-    gpio_protocol_t                     gpio;
-    i2c_protocol_t                      i2c;
-    canvas_protocol_t                   canvas;
-
-    pdev_board_info_t                   board_info;
-
-    thrd_t                              main_thread;
-    thrd_t                              vsync_thread;
-
-    // Lock for general display state, in particular display_id.
-    mtx_t                               display_lock;
-    // Lock for imported images.
-    mtx_t                               image_lock;
     // TODO(stevensd): This can race if this is changed right after
     // vsync but before the interrupt is handled.
-    uint8_t                             current_image;
-    bool                                current_image_valid;
+    uint8_t                             current_image_ TA_GUARDED(display_lock_);;
+    bool                                current_image_valid_ TA_GUARDED(display_lock_);;
 
-    io_buffer_t                         mmio_dmc;
-    io_buffer_t                         mmio_mipi_dsi;
-    io_buffer_t                         mmio_dsi_phy;
-    io_buffer_t                         mmio_hhi;
-    io_buffer_t                         mmio_vpu;
-    io_buffer_t                         fbuffer;
-    zx_handle_t                         vsync_interrupt;
+    // display dimensions and format
+    const uint32_t                      width_;
+    const uint32_t                      height_;
+    uint32_t                            stride_;
+    zx_pixel_format_t                   format_;
 
-    uint32_t                            width;
-    uint32_t                            height;
-    uint32_t                            stride;
-    zx_pixel_format_t                   format;
+    const DisplaySetting*               init_disp_table_ = nullptr;
 
     // This flag is used to skip all driver initializations for older
     // boards that we don't support. Those boards will depend on U-Boot
     // to set things up
-    bool                                skip_disp_init;
+    bool                                skip_disp_init_ TA_GUARDED(display_lock_);
 
-    uint8_t                             panel_type;
+    // board revision and panel type detected by the display driver
+    uint8_t                             panel_type_ TA_GUARDED(display_lock_);
 
-    lcd_timing_t                        lcd_timing;
-    dsi_phy_config_t                    dsi_phy_cfg;
-    display_setting_t                   disp_setting;
-    pll_config_t                        pll_cfg;
+    // Display structure used by various layers of display controller
+    DisplaySetting                      disp_setting_;
 
-    uint8_t                             input_color_format;
-    uint8_t                             output_color_format;
-    uint8_t                             color_depth;
+    // Display controller related data
+    display_controller_cb_t*            dc_cb_ TA_GUARDED(display_lock_);
+    void*                               dc_cb_ctx_ TA_GUARDED(display_lock_);
 
-    display_controller_cb_t*            dc_cb;
-    void*                               dc_cb_ctx;
-    list_node_t                         imported_images;
+    // Simple hashtable
+    ImportedImageBitmap                imported_images_ TA_GUARDED(image_lock_);;
 
-} astro_display_t;
+    // Objects
+    fbl::unique_ptr<astro_display::Osd>                 osd_;
+    fbl::unique_ptr<astro_display::Backlight>           backlight_;
+    fbl::unique_ptr<astro_display::AstroDisplayClock>   clock_;
+    fbl::unique_ptr<astro_display::AmlDsiHost>          dsi_host_;
+};
 
-// Below two functions setup the OSD layer
-// TODO: The function depends heavily on U-Boot setting up the OSD layer. Write a
-// proper OSD driver (ZX-2453)(ZX-2454)
-void disable_osd(astro_display_t* display);
-zx_status_t configure_osd(astro_display_t* display);
-void flip_osd(astro_display_t* display, uint8_t idx);
-
-// Backlight Initialization
-void init_backlight(astro_display_t* display);
-
-// Initialize all display related clocks
-zx_status_t display_clock_init(astro_display_t* display);
-
-// Useful functions for dumping all display related structures for debug purposes
-void dump_display_info(astro_display_t* display);
-void dump_dsi_hose(astro_display_t* display);
-void dump_dsi_phy(astro_display_t* display);
-
-// This function turns on DSI Host for AmLogic platform
-zx_status_t aml_dsi_host_on(astro_display_t* display);
-
-// This function initializes LCD panel
-zx_status_t lcd_init(astro_display_t* display);
-
-
-// This send a generic DSI command
-zx_status_t mipi_dsi_cmd(astro_display_t* display, uint8_t* tbuf, size_t tlen,
-                                                    uint8_t* rbuf, size_t rlen,
-                                                    bool is_dcs);
-
-
-
-
+} // namespace astro_display

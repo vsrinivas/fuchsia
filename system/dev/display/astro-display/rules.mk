@@ -9,18 +9,29 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/astro-display.c \
-    $(LOCAL_DIR)/osd.c \
-    $(LOCAL_DIR)/backlight.c \
-    $(LOCAL_DIR)/aml-dsi-host.c \
-    $(LOCAL_DIR)/lcd.c \
-    $(LOCAL_DIR)/display-debug.c \
-    $(LOCAL_DIR)/display-clock.c \
-    $(LOCAL_DIR)/dw-mipi-dsi.c \
-    $(LOCAL_DIR)/aml-mipi-phy.c \
+    $(LOCAL_DIR)/bind.c \
+    $(LOCAL_DIR)/osd.cpp \
+    $(LOCAL_DIR)/backlight.cpp \
+    $(LOCAL_DIR)/astro-clock.cpp \
+    $(LOCAL_DIR)/dw-mipi-dsi.cpp \
+    $(LOCAL_DIR)/aml-mipi-phy.cpp \
+    $(LOCAL_DIR)/aml-dsi-host.cpp \
+    $(LOCAL_DIR)/lcd.cpp \
+    $(LOCAL_DIR)/astro-display.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_STATIC_LIBS := \
+    system/ulib/sync \
+    system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/hwreg \
+    system/ulib/fbl \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/c \
+    system/ulib/bitmap \
 
 include make/module.mk

@@ -16,11 +16,6 @@
 
 static const pbus_mmio_t display_mmios[] = {
     {
-        // Canvas
-        .base = S905D2_DMC_BASE,
-        .length = S905D2_DMC_LENGTH,
-    },
-    {
         // DSI Host Controller
         .base = S905D2_MIPI_DSI_BASE,
         .length = S905D2_MIPI_DSI_LENGTH,

@@ -157,14 +157,14 @@
 // exit from ULPS >1ms
 #define DPHY_TIME_WAKEUP                        (1020 * UI_X_100 * 1000)
 
-// LP TX excape mode should be  >100ns --> TODO: Where is this coming from?
+// LP TX excape mode should be  >100ns --> TODO(payamm): Where is this coming from?
 #define DPHY_TIME_LP_TESC                       (250 * UI_X_100 )
 
 //  MIPI DSI/VENC Color Format Definitions
 #define MIPI_DSI_VENC_COLOR_24B                 (0x1)
 
 // This structure holds the parameters used to program VPU LCD interface
-typedef struct {
+struct LcdTiming {
     uint32_t vid_pixel_on;
     uint32_t vid_line_on;
     uint32_t de_hs_addr;
@@ -179,10 +179,10 @@ typedef struct {
     uint32_t vs_he_addr;
     uint32_t vs_vs_addr;
     uint32_t vs_ve_addr;
-} lcd_timing_t;
+};
 
 // This structure holds the calculated pll values based on desired pixel clock
-typedef struct { // unit: kHz
+struct PllConfig { // unit: kHz
     // IN-OUT parameters
     uint32_t fin;
     uint32_t fout;
@@ -199,4 +199,4 @@ typedef struct { // unit: kHz
     uint32_t pll_od3_sel;
     uint32_t pll_frac;
     uint32_t pll_fout;
-} pll_config_t;
+};

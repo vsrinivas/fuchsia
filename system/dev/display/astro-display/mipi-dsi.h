@@ -48,48 +48,23 @@
 #define COMMAND_GEN                             (0)
 #define COMMAND_DCS                             (1)
 
-/* This is the generic MIPI-DSI comomand structure that
- * can be used as a IP-independent driver
- */
-typedef struct {
-    uint8_t     virt_chn_id;
-    uint8_t     dsi_data_type;
-
-    // TX Direction
-    size_t      pld_size;
-    uint8_t*    pld_data;
-
-    // RX Direction
-    size_t      rsp_size;
-    uint8_t*    rsp_data;
-
-    uint32_t    flags;
-
-} mipi_dsi_cmd_t;
-
-/* mipi_dsi_cmd_t flag bit def */
+// MipiDsiCmd flag bit def
 #define MIPI_DSI_CMD_FLAGS_ACK                  (1 << 0)
 #define MIPI_DSI_CMD_FLAGS_SET_MAX              (1 << 1)
 
+// This is the generic MIPI-DSI comomand structure that
+// can be used as a IP-independent driver
+struct MipiDsiCmd {
+    uint8_t             virt_chn_id;
+    uint8_t             dsi_data_type;
 
-/* This structure holds the timing parameters used for MIPI D-PHY
- * This can be moved later on to MIPI D-PHY specific header if need be
- */
-typedef struct {
-    uint32_t lp_tesc;
-    uint32_t lp_lpx;
-    uint32_t lp_ta_sure;
-    uint32_t lp_ta_go;
-    uint32_t lp_ta_get;
-    uint32_t hs_exit;
-    uint32_t hs_trail;
-    uint32_t hs_zero;
-    uint32_t hs_prepare;
-    uint32_t clk_trail;
-    uint32_t clk_post;
-    uint32_t clk_zero;
-    uint32_t clk_prepare;
-    uint32_t clk_pre;
-    uint32_t init;
-    uint32_t wakeup;
-} dsi_phy_config_t;
+    // TX Direction
+    size_t              pld_size;
+    const uint8_t*      pld_data;
+
+    // RX Direction
+    size_t              rsp_size;
+    uint8_t*            rsp_data;
+
+    uint32_t            flags;
+};
