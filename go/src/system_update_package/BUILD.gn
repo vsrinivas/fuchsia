@@ -15,6 +15,7 @@ go_library("system_update_package_lib") {
     "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
+    "//garnet/public/lib/syslog/go/src/syslog",
   ]
 }
 

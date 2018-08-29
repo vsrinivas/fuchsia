@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,6 +20,7 @@ import (
 	"fidl/fuchsia/amber"
 	"syscall/zx"
 	"syscall/zx/zxwait"
+	"syslog/logger"
 )
 
 type Package struct {
@@ -33,7 +33,7 @@ func ConnectToUpdateSrvc() (*amber.ControlInterface, error) {
 	req, pxy, err := amber.NewControlInterfaceRequest()
 
 	if err != nil {
-		log.Println("control interface could not be acquired: %s", err)
+		logger.Errorf("control interface could not be acquired: %s", err)
 		return nil, err
 	}
 
@@ -132,7 +132,7 @@ func fetchWorker(c <-chan *Package, amber *amber.ControlInterface, done *sync.Wa
 }
 
 func fetchPackage(p *Package, amber *amber.ControlInterface) error {
-	log.Printf("requesting %s/%s from update system", p.name, p.merkle)
+	logger.Infof("requesting %s/%s from update system", p.name, p.merkle)
 	h, err := amber.GetUpdateComplete(p.name, nil, &p.merkle)
 	if err != nil {
 		return fmt.Errorf("fetch: failed submitting update request: %s", err)
@@ -148,7 +148,7 @@ func fetchPackage(p *Package, amber *amber.ControlInterface) error {
 
 	// we encountered a failure
 	if signals&zx.SignalUser0 == zx.SignalUser0 {
-		log.Printf("fetch: update service signaled failure getting %q, reading error", p.name)
+		logger.Errorf("fetch: update service signaled failure getting %q, reading error", p.name)
 
 		// if the channel isn't readable, do a bounded wait to try to get an error message from it
 		if signals&zx.SignalChannelReadable != zx.SignalChannelReadable {
@@ -176,7 +176,7 @@ func fetchPackage(p *Package, amber *amber.ControlInterface) error {
 		if err != nil {
 			return fmt.Errorf("fetch: error reading channel %s", err)
 		}
-		log.Printf("package %q installed at %q", p.name, string(buf))
+		logger.Infof("package %q installed at %q", p.name, string(buf))
 	} else {
 		return fmt.Errorf("fetch: reply channel was not readable")
 	}
@@ -205,10 +205,12 @@ func readBytesFromHandle(h *zx.Channel, buf []byte) ([]byte, error) {
 var diskImagerPath = filepath.Join("/boot", "bin", "install-disk-image")
 
 func WriteImgs(imgs []string, imgsPath string) error {
+	logger.Infof("Writing images %+v from %q", imgs, imgsPath)
+
 	for _, img := range imgs {
 		imgPath := filepath.Join(imgsPath, img)
 		if fi, err := os.Stat(imgPath); err != nil || fi.Size() == 0 {
-			log.Printf("img_writer: %s image not found or zero length, skipping", img)
+			logger.Errorf("img_writer: %s image not found or zero length, skipping", img)
 			continue
 		}
 
@@ -230,9 +232,10 @@ func WriteImgs(imgs []string, imgsPath string) error {
 
 		err := writeImg(c, imgPath)
 		if err != nil {
+			logger.Errorf("img_writer: error writing image: %s", err)
 			return err
 		}
-		log.Printf("img_writer: wrote %s successfully from %s", img, imgPath)
+		logger.Infof("img_writer: wrote %s successfully from %s", img, imgPath)
 	}
 	return nil
 }
