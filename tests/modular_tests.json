@@ -25,10 +25,6 @@
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=link_context_entities_test_user_shell --story_shell=dev_story_shell"
     },
     {
-      "name":"link_data",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=link_data_test_user_shell --story_shell=dev_story_shell"
-    },
-    {
       "name":"link_passing",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=link_passing_test_module1"
     },
@@ -59,10 +55,6 @@
     {
       "name":"user_shell",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=user_shell_test_user_shell --story_shell=dev_story_shell"
-    },
-    {
-      "name":"module_context",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=module_context_test_user_shell --story_shell=dev_story_shell"
     },
     {
       "name":"intents",
