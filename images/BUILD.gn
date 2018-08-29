@@ -522,7 +522,14 @@ declare_args() {
   # that is too small will result in build failure.
   fvm_image_size = ""
 
-  # Build boot images that prefer Zedboot over local boot.
+  # The size of the FVM partition images "slice size". The FVM slice size is a
+  # minimum size of a particular chunk of a partition that is stored within
+  # FVM. A very small slice size may lead to decreased throughput. A very large
+  # slice size may lead to wasted space. The selected default size of 8mb is
+  # selected for conservation of space, rather than performance.
+  fvm_slice_size = "8388608"
+
+  # Build boot images that prefer Zedboot over local boot (only for EFI).
   always_zedboot = false
 }
 
@@ -544,13 +551,15 @@ template("generate_fvm") {
   }
 }
 
-fvm_create_args = [ "create" ]
+fvm_slice_args = [ "--slice", fvm_slice_size ]
+
+fvm_create_args = [ "create" ] + fvm_slice_args
 
 fvm_sparse_args = [
   "sparse",
   "--compress",
   "lz4",
-]
+] + fvm_slice_args
 
 # fvm.blk creates a non-sparse FVM partition image containing the blob
 # partition produced by blob.blk.  fvm.blk is primarily invoked and used
