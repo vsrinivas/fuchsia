@@ -2,6 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # Maximum number of Dart processes to run in parallel.
+  #
+  # Dart analyzer uses a lot of memory which may cause issues when building
+  # with many parallel jobs e.g. when using goma. To avoid out-of-memory
+  # errors we explicitly reduce the number of jobs.
+  dart_pool_depth = 16
+}
+
 dart_toolchain = "//build/dart:dartlang"
 
 dart_root_gen_dir = get_label_info("//bogus($dart_toolchain)", "root_gen_dir")

@@ -236,6 +236,8 @@ if (current_toolchain == dart_toolchain) {
 
         output_file = "$target_gen_dir/$target_name.analyzed"
 
+        pool = "//build/dart:dart_pool($dart_toolchain)"
+
         inputs = [
           dart_analyzer_binary,
           dot_packages_file,

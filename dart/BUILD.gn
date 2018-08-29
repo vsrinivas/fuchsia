@@ -5,8 +5,8 @@
 import("//build/dart/toolchain.gni")
 
 if (current_toolchain == dart_toolchain) {
-  pool("analysis_pool") {
-    depth = 10
+  pool("dart_pool") {
+    depth = dart_pool_depth
   }
 } else {
   import("//build/toolchain/clang_toolchain.gni")
