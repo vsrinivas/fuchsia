@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
+import("//build/sdk/sdk_atom_alias.gni")
 
 # Generates some C++ bindings for a FIDL library.
 #
@@ -118,6 +119,15 @@ template("fidl_cpp") {
 
     if (defined(invoker.public_deps)) {
       public_deps += invoker.public_deps
+    }
+  }
+
+  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+    # Instead of depending on the generated bindings, set up a dependency on the
+    # original library.
+    sdk_target_name = "${main_target_name}_sdk"
+    sdk_atom_alias(sdk_target_name) {
+      atom = ":$sdk_target_name($fidl_toolchain)"
     }
   }
 }
