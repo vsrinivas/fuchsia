@@ -21,12 +21,13 @@
 namespace time_server {
 
 TEST(RoughTimeServerTest, TestValid) {
-  uint8_t key[ED25519_PUBLIC_KEY_LEN] = {0};
+  uint8_t key[roughtime::kPublicKeyLength] = {0};
   RoughTimeServer server1("name", "address:3424", key,
-                          ED25519_PUBLIC_KEY_LEN + 1);
+                          roughtime::kPublicKeyLength + 1);
   EXPECT_EQ(server1.IsValid(), false);
 
-  RoughTimeServer server2("name", "address:3424", key, ED25519_PUBLIC_KEY_LEN);
+  RoughTimeServer server2("name", "address:3424", key,
+                          roughtime::kPublicKeyLength);
   EXPECT_EQ(server2.IsValid(), true);
 }
 
@@ -60,9 +61,9 @@ void listen(int sock) {
 
 // Checks that server recieves request from network_time
 TEST(RoughTimeServerTest, TestServerRequest) {
-  uint8_t key[ED25519_PUBLIC_KEY_LEN] = {0};
+  uint8_t key[roughtime::kPublicKeyLength] = {0};
   RoughTimeServer server("name", "127.0.0.1:" + std::to_string(PORT), key,
-                         ED25519_PUBLIC_KEY_LEN);
+                         roughtime::kPublicKeyLength);
   EXPECT_EQ(server.IsValid(), true);
 
   // Start server

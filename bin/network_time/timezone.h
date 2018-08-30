@@ -2,18 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-#include <stdint.h>
+#ifndef GARNET_BIN_NETWORK_TIME_TIMEZONE_H_
+#define GARNET_BIN_NETWORK_TIME_TIMEZONE_H_
 
+#include <stdint.h>
+#include <sys/time.h>
 #include <string>
 #include <utility>
 
 namespace time_server {
 
+// TODO(CP-131): Rename to something like SystemTimeUpdater.
 class Timezone {
  public:
   bool Run();
   bool UpdateSystemTime(int tries);
+  static bool SetSystemTime(time_t epoch_seconds);
   Timezone(std::string server_config_file)
       : server_config_file_(std::move(server_config_file)) {}
   ~Timezone() = default;
@@ -23,3 +27,5 @@ class Timezone {
 };
 
 }  // namespace time_server
+
+#endif  // GARNET_BIN_NETWORK_TIME_TIMEZONE_H_

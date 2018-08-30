@@ -14,14 +14,14 @@
 
 #include "garnet/bin/network_time/roughtime_server.h"
 #include "garnet/bin/network_time/time_server_config.h"
+#include "garnet/bin/network_time/time_util.h"
 #include "lib/syslog/cpp/logger.h"
 
 namespace time_server {
 
 bool Timezone::Run() {
   FX_LOGS(INFO) << "started";
-  UpdateSystemTime(255);
-  return true;
+  return UpdateSystemTime(255);
 }
 
 bool Timezone::UpdateSystemTime(int tries) {
@@ -60,35 +60,36 @@ bool Timezone::UpdateSystemTime(int tries) {
       FX_LOGS(ERROR) << "Error with roughtime server, abort";
       return false;
     }
-
-    struct tm ptm;
-    time_t t = timestamp / 1000000;
-    gmtime_r(&t, &ptm);
-    rtc_t rtc;
-    rtc.seconds = ptm.tm_sec;
-    rtc.minutes = ptm.tm_min;
-    rtc.hours = ptm.tm_hour;
-    rtc.day = ptm.tm_mday;
-    rtc.month = ptm.tm_mon + 1;
-    rtc.year = ptm.tm_year + 1900;
-    int rtc_fd = open("/dev/class/rtc/000", O_WRONLY);
-    if (rtc_fd < 0) {
-      FX_LOGS(ERROR) << "open rtc: " << strerror(errno);
-      return false;
+    if (SetSystemTime(timestamp / 1'000'000)) {
+      break;
     }
-    ssize_t written = ioctl_rtc_set(rtc_fd, &rtc);
-    if (written != sizeof(rtc)) {
-      printf("%04d-%02d-%02dT%02d:%02d:%02d\n", rtc.year, rtc.month, rtc.day,
-             rtc.hours, rtc.minutes, rtc.seconds);
-      FX_LOGS(ERROR) << "ioctl_rtc_set: " << strerror(errno) << " " << t;
-      return false;
-    }
-    char time[20];
-    snprintf(time, 20, "%04d-%02d-%02dT%02d:%02d:%02d", rtc.year, rtc.month,
-             rtc.day, rtc.hours, rtc.minutes, rtc.seconds);
-    FX_LOGS(INFO) << "time set to: " << time;
-    break;
   }
+  return true;
+}
+
+bool Timezone::SetSystemTime(time_t epoch_seconds) {
+  struct tm ptm;
+  gmtime_r(&epoch_seconds, &ptm);
+  rtc_t rtc;
+  rtc.seconds = ptm.tm_sec;
+  rtc.minutes = ptm.tm_min;
+  rtc.hours = ptm.tm_hour;
+  rtc.day = ptm.tm_mday;
+  rtc.month = ptm.tm_mon + 1;
+  rtc.year = ptm.tm_year + 1900;
+  int rtc_fd = open("/dev/class/rtc/000", O_WRONLY);
+  if (rtc_fd < 0) {
+    FX_LOGS(ERROR) << "Couldn't open RTC file: " << strerror(errno);
+    return false;
+  }
+  ssize_t written = ioctl_rtc_set(rtc_fd, &rtc);
+  if (written != sizeof(rtc)) {
+    FX_LOGS(ERROR) << "ioctl_rtc_set failed: " << strerror(errno) << " for "
+                   << ToIso8601String(epoch_seconds) << " (" << epoch_seconds
+                   << ")";
+    return false;
+  }
+  FX_LOGS(INFO) << "time set to: " << ToIso8601String(epoch_seconds);
   return true;
 }
 

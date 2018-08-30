@@ -248,7 +248,7 @@
              path="third_party/roughtime"
              remote="https://fuchsia.googlesource.com/third_party/roughtime"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="1b87c453239eefdb2363eee5614f621e22d8c7fb"/>
+             revision="d9937b098c9aa1eabe594a27532f9bf0a44279bb"/>
     <project name="rust-crates"
              path="third_party/rust-crates"
              remote="https://fuchsia.googlesource.com/third_party/rust-crates"

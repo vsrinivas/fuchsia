@@ -38,8 +38,7 @@ const char* config_schema = MULTILINE({
             "type" : "array"
           },
           "name" : {"type" : "string"},
-          "publicKey" :
-              {"maxLength" : 64, "minLength" : 64, "type" : "string"}
+          "publicKey" : {"maxLength" : 64, "minLength" : 64, "type" : "string"}
         },
         "required" : [ "publicKey", "addresses", "name" ],
         "type" : "object"
@@ -122,12 +121,12 @@ bool TimeServerConfig::Parse(std::string config_file) {
       const rapidjson::Value& address = addresses[j];
 
       std::string address_str = address["address"].GetString();
-      uint8_t public_key[ED25519_PUBLIC_KEY_LEN];
-      if (public_key_str.length() != ED25519_PUBLIC_KEY_LEN * 2) {
+      uint8_t public_key[roughtime::kPublicKeyLength];
+      if (public_key_str.length() != roughtime::kPublicKeyLength * 2) {
         FX_LOGS(ERROR) << "Invalid public key: " << public_key_str;
         return false;
       }
-      for (int k = 0; k < ED25519_PUBLIC_KEY_LEN; k++) {
+      for (unsigned int k = 0; k < roughtime::kPublicKeyLength; k++) {
         char hex[3] = {0};
         hex[0] = public_key_str.at(k * 2);
         hex[1] = public_key_str.at(k * 2 + 1);
@@ -135,7 +134,7 @@ bool TimeServerConfig::Parse(std::string config_file) {
       }
 
       RoughTimeServer server(std::move(name), std::move(address_str),
-                             public_key, ED25519_PUBLIC_KEY_LEN);
+                             public_key, roughtime::kPublicKeyLength);
       server_list_.push_back(server);
     }
   }

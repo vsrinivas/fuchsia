@@ -51,6 +51,7 @@ source_set("lib") {
   ]
 
   deps = [
+    ":time_util_lib",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
     "//third_party/boringssl",
@@ -72,6 +73,14 @@ executable("bin") {
     ":lib",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+  ]
+}
+
+static_library("time_util_lib") {
+  output_name = "time_util_lib"
+  sources = [
+    "time_util.cc",
+    "time_util.h",
   ]
 }
 

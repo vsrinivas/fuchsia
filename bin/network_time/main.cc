@@ -5,6 +5,7 @@
 #include "garnet/bin/network_time/timezone.h"
 #include "lib/fsl/syslogger/init.h"
 #include "lib/fxl/command_line.h"
+#include "lib/syslog/cpp/logger.h"
 #include "zircon/process.h"
 #include "zircon/processargs.h"
 #include "zircon/syscalls.h"
@@ -23,8 +24,12 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  time_server::Timezone service("/pkg/data/roughtime-servers.json");
-  service.Run();
+  const std::string config_path = command_line.GetOptionValueWithDefault(
+      "config", "/pkg/data/roughtime-servers.json");
+  FX_LOGS(INFO) << "Opening client config from " << config_path;
 
-  return 0;
+  time_server::Timezone service(config_path);
+  bool success = service.Run();
+
+  return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }

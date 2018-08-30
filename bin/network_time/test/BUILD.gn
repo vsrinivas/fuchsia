@@ -1,0 +1,45 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+executable("system_time_updater_test_bin") {
+  testonly = true
+  output_name = "system_time_updater_test"
+
+  sources = [
+    "local_roughtime_server.cc",
+    "local_roughtime_server.h",
+    "settable_time_source.cc",
+    "settable_time_source.h",
+    "system_time_updater_test.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/network_time:lib",
+    "//garnet/bin/network_time:time_util_lib",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/syslog/cpp",
+    "//third_party/boringssl",
+    "//third_party/googletest:gmock",
+    "//third_party/roughtime:client_lib",
+    "//third_party/roughtime:simple_server_lib",
+  ]
+}
+
+test_package("system_time_updater_test") {
+  deps = [
+    ":system_time_updater_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "system_time_updater_test"
+    },
+  ]
+}
