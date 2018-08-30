@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
-
 use futures::channel::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use parking_lot::Mutex;
 use std::collections::{HashMap};

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
-
 use failure;
 use parking_lot::{Mutex, MutexGuard};
 use serde_json;

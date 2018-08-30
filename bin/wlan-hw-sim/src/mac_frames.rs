@@ -1,9 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-//trace_macros!(true);
-
-#![allow(dead_code)]
 
 use {
     bitfield::{
@@ -145,6 +142,7 @@ impl<W: io::Write> ElementWriter<W> {
         Ok(self)
     }
 
+    #[cfg(test)]
     pub fn into_writer(self) -> W {
         self.w
     }

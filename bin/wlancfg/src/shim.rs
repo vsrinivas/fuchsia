@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
-
 use client;
 use fidl::{self, endpoints2::create_endpoints};
 use futures::{prelude::*, channel::oneshot};
