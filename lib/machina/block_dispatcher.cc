@@ -88,7 +88,7 @@ class FdioBlockDispatcher : public BlockDispatcher {
 
 zx_status_t BlockDispatcher::CreateFromPath(
     const char* path, Mode mode, DataPlane data_plane, const PhysMem& phys_mem,
-    fbl::unique_ptr<BlockDispatcher>* dispatcher) {
+    std::unique_ptr<BlockDispatcher>* dispatcher) {
   bool read_only = mode == Mode::RO;
   int fd = open(path, read_only ? O_RDONLY : O_RDWR);
   if (fd < 0) {
@@ -139,7 +139,7 @@ static zx_status_t MatchBlockDeviceToGuid(int dirfd, int event, const char* fn,
 
 zx_status_t BlockDispatcher::CreateFromGuid(
     const Guid& guid, zx_duration_t timeout, Mode mode, DataPlane data_plane,
-    const PhysMem& phys_mem, fbl::unique_ptr<BlockDispatcher>* dispatcher) {
+    const PhysMem& phys_mem, std::unique_ptr<BlockDispatcher>* dispatcher) {
   GuidLookupArgs args = {-1, mode, guid, nullptr};
   switch (guid.type) {
     case GuidType::GPT_PARTITION_GUID:
@@ -167,7 +167,7 @@ zx_status_t BlockDispatcher::CreateFromGuid(
 
 zx_status_t BlockDispatcher::CreateFromFd(
     int fd, Mode mode, DataPlane data_plane, const PhysMem& phys_mem,
-    fbl::unique_ptr<BlockDispatcher>* dispatcher) {
+    std::unique_ptr<BlockDispatcher>* dispatcher) {
   off_t file_size = lseek(fd, 0, SEEK_END);
   if (file_size < 0) {
     FXL_LOG(ERROR) << "Failed to read size of block device";
@@ -178,7 +178,7 @@ zx_status_t BlockDispatcher::CreateFromFd(
   switch (data_plane) {
     case DataPlane::FDIO:
       *dispatcher =
-          fbl::make_unique<FdioBlockDispatcher>(file_size, read_only, fd);
+          std::make_unique<FdioBlockDispatcher>(file_size, read_only, fd);
       return ZX_OK;
     case DataPlane::QCOW:
       return QcowDispatcher::Create(fd, read_only, dispatcher);
@@ -189,8 +189,8 @@ zx_status_t BlockDispatcher::CreateFromFd(
 }
 
 zx_status_t BlockDispatcher::CreateVolatileWrapper(
-    fbl::unique_ptr<BlockDispatcher> dispatcher,
-    fbl::unique_ptr<BlockDispatcher>* out) {
+    std::unique_ptr<BlockDispatcher> dispatcher,
+    std::unique_ptr<BlockDispatcher>* out) {
   return VolatileWriteBlockDispatcher::Create(std::move(dispatcher), out);
 }
 

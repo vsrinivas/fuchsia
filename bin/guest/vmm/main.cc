@@ -263,9 +263,9 @@ int main(int argc, char** argv) {
   }
 
   // Setup block device.
-  std::vector<fbl::unique_ptr<machina::VirtioBlock>> block_devices;
+  std::vector<std::unique_ptr<machina::VirtioBlock>> block_devices;
   for (const auto& block_spec : cfg.block_devices()) {
-    fbl::unique_ptr<machina::BlockDispatcher> dispatcher;
+    std::unique_ptr<machina::BlockDispatcher> dispatcher;
     if (!block_spec.path.empty()) {
       status = machina::BlockDispatcher::CreateFromPath(
           block_spec.path.c_str(), block_spec.mode, block_spec.data_plane,
@@ -293,12 +293,8 @@ int main(int argc, char** argv) {
       }
     }
 
-    auto block = fbl::make_unique<machina::VirtioBlock>(guest.phys_mem());
-    status = block->SetDispatcher(std::move(dispatcher));
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to set block dispatcher " << status;
-      return status;
-    }
+    auto block = std::make_unique<machina::VirtioBlock>(guest.phys_mem(),
+                                                        std::move(dispatcher));
     status = block->Start();
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start block device " << status;

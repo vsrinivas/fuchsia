@@ -10,7 +10,6 @@
 #include <mutex>
 
 #include <bitmap/rle-bitmap.h>
-#include <fbl/unique_ptr.h>
 #include <lib/zx/vmo.h>
 
 #include "garnet/lib/machina/block_dispatcher.h"
@@ -21,8 +20,8 @@ namespace machina {
 // another dispatcher.
 class VolatileWriteBlockDispatcher : public BlockDispatcher {
  public:
-  static zx_status_t Create(fbl::unique_ptr<BlockDispatcher> dispatcher,
-                            fbl::unique_ptr<BlockDispatcher>* out);
+  static zx_status_t Create(std::unique_ptr<BlockDispatcher> dispatcher,
+                            std::unique_ptr<BlockDispatcher>* out);
 
   ~VolatileWriteBlockDispatcher();
 
@@ -32,14 +31,14 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
   zx_status_t Write(off_t disk_offset, const void* buf, size_t size) override;
 
  private:
-  VolatileWriteBlockDispatcher(fbl::unique_ptr<BlockDispatcher> dispatcher,
+  VolatileWriteBlockDispatcher(std::unique_ptr<BlockDispatcher> dispatcher,
                                zx::vmo vmo, uintptr_t vmar_address);
 
   bool ValidateBlockParams(off_t disk_offset, size_t size);
 
   static constexpr size_t kBlockSize = 512;
   std::mutex mutex_;
-  fbl::unique_ptr<BlockDispatcher> dispatcher_;
+  std::unique_ptr<BlockDispatcher> dispatcher_;
 
   bitmap::RleBitmap bitmap_ __TA_GUARDED(mutex_);
   zx::vmo vmo_;

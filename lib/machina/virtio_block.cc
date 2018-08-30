@@ -10,7 +10,6 @@
 
 #include <block-client/client.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 #include <trace-engine/types.h>
 #include <trace/event.h>
 #include <virtio/virtio_ids.h>
@@ -22,34 +21,22 @@
 
 namespace machina {
 
-VirtioBlock::VirtioBlock(const PhysMem& phys_mem) : VirtioDevice(phys_mem) {
+VirtioBlock::VirtioBlock(const PhysMem& phys_mem,
+                         std::unique_ptr<BlockDispatcher> dispatcher)
+    : VirtioDevice(phys_mem), dispatcher_(std::move(dispatcher)) {
+  config_.capacity = dispatcher_->size() / kSectorSize;
   config_.blk_size = kSectorSize;
   // Virtio 1.0: 5.2.5.2: Devices SHOULD always offer VIRTIO_BLK_F_FLUSH
   add_device_features(VIRTIO_BLK_F_FLUSH
                       // Required by zircon guests.
                       | VIRTIO_BLK_F_BLK_SIZE);
-}
-
-zx_status_t VirtioBlock::SetDispatcher(
-    fbl::unique_ptr<BlockDispatcher> dispatcher) {
-  if (dispatcher_ != nullptr) {
-    FXL_LOG(ERROR) << "Block device has already been initialized";
-    return ZX_ERR_BAD_STATE;
-  }
-
-  dispatcher_ = std::move(dispatcher);
-  {
-    std::lock_guard<std::mutex> lock(config_mutex_);
-    config_.capacity = dispatcher_->size() / kSectorSize;
-  }
   if (dispatcher_->read_only()) {
     add_device_features(VIRTIO_BLK_F_RO);
   }
-  return ZX_OK;
 }
 
 zx_status_t VirtioBlock::Start() {
-  return queue(0)->Poll(
+  return request_queue()->Poll(
       fit::bind_member(this, &VirtioBlock::HandleBlockRequest), "virtio-block");
 }
 

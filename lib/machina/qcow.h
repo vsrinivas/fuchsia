@@ -7,7 +7,6 @@
 
 #include <endian.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <string>
@@ -143,14 +142,14 @@ class QcowFile {
   QcowHeader header_;
 
   class LookupTable;
-  fbl::unique_ptr<LookupTable> lookup_table_;
+  std::unique_ptr<LookupTable> lookup_table_;
   QcowRefcount refcount_table_;
 };
 
 class QcowDispatcher : public BlockDispatcher {
  public:
   static zx_status_t Create(int fd, bool read_only,
-                            fbl::unique_ptr<BlockDispatcher>* out);
+                            std::unique_ptr<BlockDispatcher>* out);
 
  private:
   QcowDispatcher(QcowFile qcow, bool read_only);

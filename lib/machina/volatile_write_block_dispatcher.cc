@@ -12,8 +12,8 @@
 namespace machina {
 
 zx_status_t VolatileWriteBlockDispatcher::Create(
-    fbl::unique_ptr<BlockDispatcher> dispatcher,
-    fbl::unique_ptr<BlockDispatcher>* out) {
+    std::unique_ptr<BlockDispatcher> dispatcher,
+    std::unique_ptr<BlockDispatcher>* out) {
   zx::vmo vmo;
   zx_status_t status =
       zx::vmo::create(dispatcher->size(), ZX_VMO_NON_RESIZABLE, &vmo);
@@ -35,14 +35,14 @@ zx_status_t VolatileWriteBlockDispatcher::Create(
     return status;
   }
 
-  *out = fbl::unique_ptr<VolatileWriteBlockDispatcher>(
+  *out = std::unique_ptr<VolatileWriteBlockDispatcher>(
       new VolatileWriteBlockDispatcher(std::move(dispatcher), std::move(vmo),
                                        vmar_addr));
   return ZX_OK;
 }
 
 VolatileWriteBlockDispatcher::VolatileWriteBlockDispatcher(
-    fbl::unique_ptr<BlockDispatcher> dispatcher, zx::vmo vmo,
+    std::unique_ptr<BlockDispatcher> dispatcher, zx::vmo vmo,
     uintptr_t vmar_addr)
     : BlockDispatcher(dispatcher->size(), false /* read-only */),
       dispatcher_(std::move(dispatcher)),

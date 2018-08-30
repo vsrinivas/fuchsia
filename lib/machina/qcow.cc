@@ -5,7 +5,6 @@
 #include "garnet/lib/machina/qcow.h"
 
 #include <fbl/array.h>
-#include <fbl/unique_ptr.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -231,7 +230,7 @@ zx_status_t QcowFile::Load(int fd) {
   }
 
   auto lookup_table =
-      fbl::make_unique<LookupTable>(header_.cluster_bits, header_.size);
+      std::make_unique<LookupTable>(header_.cluster_bits, header_.size);
   zx_status_t status = lookup_table->Load(fd_.get(), header_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to load L1 table.";
@@ -290,7 +289,7 @@ zx_status_t QcowFile::Read(uint64_t disk_offset, void* buf, size_t size) {
 }
 
 zx_status_t QcowDispatcher::Create(int fd, bool read_only,
-                                   fbl::unique_ptr<BlockDispatcher>* out) {
+                                   std::unique_ptr<BlockDispatcher>* out) {
   if (!read_only) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -300,7 +299,7 @@ zx_status_t QcowDispatcher::Create(int fd, bool read_only,
     return status;
   }
 
-  *out = fbl::unique_ptr<QcowDispatcher>(
+  *out = std::unique_ptr<QcowDispatcher>(
       new QcowDispatcher(std::move(file), read_only));
   return ZX_OK;
 }

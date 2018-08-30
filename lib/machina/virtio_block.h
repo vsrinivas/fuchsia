@@ -7,7 +7,6 @@
 
 #include <mutex>
 
-#include <fbl/unique_ptr.h>
 #include <virtio/block.h>
 #include <virtio/virtio_ids.h>
 
@@ -22,11 +21,8 @@ class VirtioBlock
  public:
   static constexpr size_t kSectorSize = 512;
 
-  VirtioBlock(const PhysMem& phys_mem);
-  ~VirtioBlock() override = default;
-
-  // Set the dispatcher to use to interface with the back-end.
-  zx_status_t SetDispatcher(fbl::unique_ptr<BlockDispatcher> dispatcher);
+  VirtioBlock(const PhysMem& phys_mem,
+              std::unique_ptr<BlockDispatcher> dispatcher);
 
   // Starts a thread to monitor the queue for incoming block requests.
   zx_status_t Start();
@@ -45,7 +41,7 @@ class VirtioBlock
   VirtioQueue* request_queue() { return queue(0); }
 
  private:
-  fbl::unique_ptr<BlockDispatcher> dispatcher_;
+  std::unique_ptr<BlockDispatcher> dispatcher_;
 };
 
 }  // namespace machina
