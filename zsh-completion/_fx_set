@@ -4,6 +4,12 @@ _packages() {
   _values -s , $(cd ${fuchsia_dir} && echo */packages/**/^*.*(.N) vendor/*/packages/**/^*.*(.N))
 }
 
+# _products completes a comma separated list of products
+_products() {
+  # products are files without extensions in */products/ and vendor/*/products/
+  _values -s , $(cd ${fuchsia_dir} && echo */products/**/^*.*(.N) vendor/*/products/**/^*.*(.N))
+}
+
 _gn_args_caching_policy() {
   test ${ninja_file} -nt $1
 }
@@ -42,6 +48,7 @@ archs=(
 # arguments to fx set
 _arguments '1:arch:{_describe "arch" archs}' '--release[release build]' \
   '--packages[packages to build]:packages:_packages' \
+  '--products[products to build]:products:_products' \
   '--goma[use goma]' "--no-goma[don't use goma]" \
   "--no-ensure-goma[don't make sure goma is running]" \
   "--ccache[use ccache]" "--no-ccache[don't use ccache]" \
