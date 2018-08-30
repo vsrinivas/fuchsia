@@ -8,5 +8,5 @@ rustc_library("shared-buffer") {
   name = "shared_buffer"
   version = "0.1.0"
   with_unit_tests = true
-  edition = "2015"
+  edition = "2018"
 }

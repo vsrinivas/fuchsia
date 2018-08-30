@@ -961,7 +961,7 @@ mod tests {
     use core::mem;
     use core::ptr;
 
-    use {overlap, SharedBuffer};
+    use super::{overlap, SharedBuffer};
 
     // use the referent as the backing memory for a SharedBuffer
     unsafe fn buf_from_ref<T>(x: &mut T) -> SharedBuffer {
