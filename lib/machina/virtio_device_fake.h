@@ -19,13 +19,13 @@ typedef struct test_config {
 } test_config_t;
 
 class VirtioDeviceFake
-    : public VirtioDeviceBase<VIRTIO_TEST_ID, 1, test_config_t> {
+    : public VirtioDevice<VIRTIO_TEST_ID, 1, test_config_t> {
  public:
-  VirtioDeviceFake() : VirtioDeviceBase(phys_mem_), queue_fake_(queue()) {}
+  VirtioDeviceFake() : VirtioDevice(phys_mem_), queue_fake_(queue()) {}
 
   zx_status_t Init() { return queue_fake_.Init(QUEUE_SIZE); }
 
-  VirtioQueue* queue() { return VirtioDeviceBase::queue(0); }
+  VirtioQueue* queue() { return VirtioDevice::queue(0); }
   VirtioQueueFake& queue_fake() { return queue_fake_; }
 
  private:

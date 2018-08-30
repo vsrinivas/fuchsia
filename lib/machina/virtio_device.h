@@ -22,12 +22,12 @@ namespace machina {
 // Set of features that are supported by the bus transparently for all devices.
 static constexpr uint32_t kVirtioBusFeatures = 0;
 
-class VirtioDevice;
+class VirtioDeviceBase;
 
 // Interface for all virtio devices.
-class VirtioDevice {
+class VirtioDeviceBase {
  public:
-  virtual ~VirtioDevice();
+  virtual ~VirtioDeviceBase();
 
   // Read a device-specific configuration field.
   virtual zx_status_t ReadConfig(uint64_t addr, IoValue* value) = 0;
@@ -91,7 +91,7 @@ class VirtioDevice {
   PciDevice* pci_device() { return &pci_; }
 
  protected:
-  VirtioDevice(uint8_t device_id, size_t config_size, VirtioQueue* queues,
+  VirtioDeviceBase(uint8_t device_id, size_t config_size, VirtioQueue* queues,
                uint16_t num_queues, const PhysMem& phys_mem);
 
   // Handles notifications from the driver that a queue needs attention.
@@ -147,10 +147,10 @@ class VirtioDevice {
 };
 
 template <uint16_t VirtioId, int NumQueues, typename ConfigType>
-class VirtioDeviceBase : public VirtioDevice {
+class VirtioDevice : public VirtioDeviceBase {
  public:
-  VirtioDeviceBase(const PhysMem& phys_mem)
-      : VirtioDevice(VirtioId, sizeof(config_), queues_, NumQueues, phys_mem) {
+  VirtioDevice(const PhysMem& phys_mem)
+      : VirtioDeviceBase(VirtioId, sizeof(config_), queues_, NumQueues, phys_mem) {
     // Advertise support for common/bus features.
     add_device_features(kVirtioBusFeatures);
     for (int i = 0; i < NumQueues; ++i) {
@@ -229,7 +229,7 @@ class VirtioDeviceBase : public VirtioDevice {
     }
 
     // Perform the actual notification.
-    return VirtioDevice::Notify(queue);
+    return VirtioDeviceBase::Notify(queue);
   }
 
   VirtioQueue* queue(uint16_t sel) {

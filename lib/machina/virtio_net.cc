@@ -226,7 +226,7 @@ void VirtioNet::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
 }
 
 VirtioNet::VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
-    : VirtioDeviceBase(phys_mem),
+    : VirtioDevice(phys_mem),
       rx_stream_(this, dispatcher, rx_queue(), rx_trace_flow_id()),
       tx_stream_(this, dispatcher, tx_queue(), tx_trace_flow_id()) {
   config_.status = VIRTIO_NET_S_LINK_UP;

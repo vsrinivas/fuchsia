@@ -18,7 +18,7 @@ namespace machina {
 
 // Stores the state of a block device.
 class VirtioBlock
-    : public VirtioDeviceBase<VIRTIO_ID_BLOCK, 1, virtio_blk_config_t> {
+    : public VirtioDevice<VIRTIO_ID_BLOCK, 1, virtio_blk_config_t> {
  public:
   static constexpr size_t kSectorSize = 512;
 

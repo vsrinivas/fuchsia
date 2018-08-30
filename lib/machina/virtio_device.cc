@@ -13,7 +13,7 @@
 
 namespace machina {
 
-VirtioDevice::VirtioDevice(uint8_t device_id, size_t config_size,
+VirtioDeviceBase::VirtioDeviceBase(uint8_t device_id, size_t config_size,
                            VirtioQueue* queues, uint16_t num_queues,
                            const PhysMem& phys_mem)
     : device_id_(device_id),
@@ -23,9 +23,9 @@ VirtioDevice::VirtioDevice(uint8_t device_id, size_t config_size,
       phys_mem_(phys_mem),
       pci_(this) {}
 
-VirtioDevice::~VirtioDevice() = default;
+VirtioDeviceBase::~VirtioDeviceBase() = default;
 
-zx_status_t VirtioDevice::NotifyGuest() {
+zx_status_t VirtioDeviceBase::NotifyGuest() {
   bool interrupt = false;
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -38,7 +38,7 @@ zx_status_t VirtioDevice::NotifyGuest() {
   return pci_.Interrupt();
 }
 
-zx_status_t VirtioDevice::Notify(uint16_t queue) {
+zx_status_t VirtioDeviceBase::Notify(uint16_t queue) {
   if (queue >= num_queues_) {
     return ZX_ERR_OUT_OF_RANGE;
   }

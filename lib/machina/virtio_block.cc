@@ -22,7 +22,7 @@
 
 namespace machina {
 
-VirtioBlock::VirtioBlock(const PhysMem& phys_mem) : VirtioDeviceBase(phys_mem) {
+VirtioBlock::VirtioBlock(const PhysMem& phys_mem) : VirtioDevice(phys_mem) {
   config_.blk_size = kSectorSize;
   // Virtio 1.0: 5.2.5.2: Devices SHOULD always offer VIRTIO_BLK_F_FLUSH
   add_device_features(VIRTIO_BLK_F_FLUSH

@@ -445,7 +445,7 @@ VirtioQueue* VirtioPci::selected_queue() const {
   return &device_->queues_[device_->queue_sel_];
 }
 
-VirtioPci::VirtioPci(VirtioDevice* device)
+VirtioPci::VirtioPci(VirtioDeviceBase* device)
     : PciDevice({
           .device_id = virtio_pci_id(device->device_id_),
           .vendor_id = kPciVendorIdVirtio,

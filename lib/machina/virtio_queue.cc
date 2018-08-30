@@ -276,7 +276,7 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
   if (needs_interrupt) {
     // Set the queue bit in the device ISR so that the driver knows to check
     // the queues on the next interrupt.
-    device_->add_isr_flags(VirtioDevice::VIRTIO_ISR_QUEUE);
+    device_->add_isr_flags(VirtioDeviceBase::VIRTIO_ISR_QUEUE);
     if (action == InterruptAction::SEND_INTERRUPT) {
       return device_->NotifyGuest();
     }

@@ -23,7 +23,7 @@ namespace machina {
 // even if they do not configure one themselves.
 static constexpr uint16_t kDefaultVirtioRingSize = 128;
 
-class VirtioDevice;
+class VirtioDeviceBase;
 
 // Stores the Virtio queue based on the ring provided by the guest.
 //
@@ -84,8 +84,8 @@ class VirtioQueue {
   }
 
   // Gets or sets the associated device with this queue.
-  VirtioDevice* device() const { return device_; }
-  void set_device(VirtioDevice* device) { device_ = device; }
+  VirtioDeviceBase* device() const { return device_; }
+  void set_device(VirtioDeviceBase* device) { device_ = device; }
 
   // Gets of sets the number of descriptors in the queue.
   uint16_t size() const;
@@ -210,7 +210,7 @@ class VirtioQueue {
                           zx_status_t status, const PollFn& handler);
 
   mutable std::mutex mutex_;
-  VirtioDevice* device_;
+  VirtioDeviceBase* device_;
   VirtioRing ring_ __TA_GUARDED(mutex_) = {};
   zx::event event_;
   uint16_t avail_event_num_ __TA_GUARDED(mutex_) = 1;

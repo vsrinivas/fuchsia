@@ -25,7 +25,7 @@ namespace machina {
 
 // Virtio input device.
 class VirtioInput
-    : public VirtioDeviceBase<VIRTIO_ID_INPUT, VIRTIO_INPUT_Q_COUNT,
+    : public VirtioDevice<VIRTIO_ID_INPUT, VIRTIO_INPUT_Q_COUNT,
                               virtio_input_config_t> {
  public:
   VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,

@@ -12,7 +12,7 @@
 
 namespace machina {
 
-class VirtioDevice;
+class VirtioDeviceBase;
 class VirtioQueue;
 
 // Virtio 1.0 Section 4.1.4.4: notify_off_multiplier is combined with the
@@ -38,7 +38,7 @@ static constexpr size_t kVirtioPciNumCapabilities = 4;
 // Virtio PCI transport implementation.
 class VirtioPci : public PciDevice {
  public:
-  VirtioPci(VirtioDevice* device);
+  VirtioPci(VirtioDeviceBase* device);
 
   // Read a value at |bar| and |offset| from this device.
   zx_status_t ReadBar(uint8_t bar, uint64_t offset,
@@ -74,7 +74,7 @@ class VirtioPci : public PciDevice {
   virtio_pci_notify_cap_t notify_cfg_cap_;
   virtio_pci_cap_t isr_cfg_cap_;
 
-  VirtioDevice* device_;
+  VirtioDeviceBase* device_;
 };
 
 }  // namespace machina

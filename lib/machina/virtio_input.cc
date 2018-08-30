@@ -179,7 +179,7 @@ constexpr uint32_t kButtonMouseTertiaryCode = 0x112;
 
 VirtioInput::VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
                          const char* device_name, const char* device_serial)
-    : VirtioDeviceBase(phys_mem),
+    : VirtioDevice(phys_mem),
       device_name_(device_name),
       device_serial_(device_serial),
       event_queue_(event_queue) {}
@@ -189,7 +189,7 @@ static void SetConfigBit(uint32_t event_code, virtio_input_config_t* config) {
 }
 
 zx_status_t VirtioInput::WriteConfig(uint64_t addr, const IoValue& value) {
-  zx_status_t status = VirtioDeviceBase::WriteConfig(addr, value);
+  zx_status_t status = VirtioDevice::WriteConfig(addr, value);
   if (status != ZX_OK) {
     return status;
   }

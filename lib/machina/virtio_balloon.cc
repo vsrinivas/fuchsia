@@ -111,7 +111,7 @@ zx_status_t VirtioBalloon::HandleQueueNotify(uint16_t queue_sel) {
 }
 
 VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
-    : VirtioDeviceBase(phys_mem) {
+    : VirtioDevice(phys_mem) {
   add_device_features(VIRTIO_BALLOON_F_STATS_VQ |
                       VIRTIO_BALLOON_F_DEFLATE_ON_OOM);
 }
@@ -172,7 +172,7 @@ zx_status_t VirtioBalloon::UpdateNumPages(uint32_t num_pages) {
   }
 
   // Send a config change interrupt to the guest.
-  add_isr_flags(VirtioDevice::VIRTIO_ISR_DEVICE);
+  add_isr_flags(VirtioDeviceBase::VIRTIO_ISR_DEVICE);
   return NotifyGuest();
 }
 
