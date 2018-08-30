@@ -2,113 +2,126 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::format_err;
+use failure::{bail, format_err};
 use fidl::encoding2::OutOfLine;
 use fidl::endpoints2::RequestStream;
 use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
 use fidl_fuchsia_wlan_device as fidl_wlan_dev;
-use fuchsia_async::{self as fasync, unsafe_many_futures};
+use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::channel::mpsc::UnboundedReceiver;
-use futures::{future, Future, FutureExt, stream};
+use futures::select;
 use futures::prelude::*;
 use log::{error, info, log};
+use std::marker::Unpin;
 use std::sync::Arc;
 
 use crate::device::{self, PhyDevice, PhyMap, IfaceDevice, IfaceMap};
+use crate::future_util::ConcurrentTasks;
 use crate::Never;
 use crate::station;
 use crate::stats_scheduler::StatsRef;
 use crate::watchable_map::MapEvent;
-use crate::watcher_service;
-
-unsafe_many_futures!(ServiceFut,
- [ListPhys, QueryPhy, ListIfaces, CreateIface, GetClientSme, GetApSme, GetIfaceStats, WatchDevices]);
+use crate::watcher_service::{self, WatcherService};
 
 const CONCURRENT_LIMIT: usize = 1000;
 
-pub fn device_service<S>(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
-                         phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
-                         iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
-                         new_clients: S)
-    -> impl Future<Output = Result<Never, failure::Error>>
-    where S: Stream<Item = fasync::Channel>
+pub async fn device_service<S>(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
+                               phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
+                               iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
+                               mut new_clients: S)
+    -> Result<Never, failure::Error>
+    where S: Stream<Item = fasync::Channel> + Unpin
 {
-    let (watcher_service, watcher_fut) = watcher_service::serve_watchers(
+    let (watcher_service, mut watcher_fut) = watcher_service::serve_watchers(
         phys.clone(), ifaces.clone(), phy_events, iface_events);
-    let server = new_clients
-        .map(Ok)
-        .chain(stream::once(
-            future::ready(
-                Err(format_err!("new client stream in device_service ended unexpectedly")))))
-        .try_for_each_concurrent(CONCURRENT_LIMIT, move |channel| {
-            serve_channel(phys.clone(), ifaces.clone(), watcher_service.clone(), channel)
-                .map(Ok)
-        })
-        .and_then(|_|
-            future::ready(Err(format_err!("device_service server future exited unexpectedly"))));
-    server.try_join(watcher_fut)
-        .map_ok(|x: (Never, Never)| x.0)
+    let mut active_clients = ConcurrentTasks::new();
+    loop {
+        let mut new_client = new_clients.next();
+        select! {
+            watcher_fut => watcher_fut
+                .map_err(|e| format_err!("watcher service has failed: {}", e))?.into_any(),
+            active_clients => active_clients.into_any(),
+            new_client => match new_client {
+                Some(channel) => {
+                    active_clients.add(serve_channel(
+                        Arc::clone(&phys), Arc::clone(&ifaces), watcher_service.clone(), channel));
+                }
+                None => bail!("stream of new FIDL clients has ended unexpectedly"),
+            },
+        }
+    }
 }
 
-fn serve_channel(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
-                 watcher_service: watcher_service::WatcherService<PhyDevice, IfaceDevice>,
-                 channel: fasync::Channel)
-    -> impl Future<Output = ()>
+async fn serve_channel(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
+                       watcher_service: WatcherService<PhyDevice, IfaceDevice>,
+                       channel: fasync::Channel)
+{
+    let r = await!(fidl_svc::DeviceServiceRequestStream::from_channel(channel)
+        .try_for_each_concurrent(CONCURRENT_LIMIT, move |request| {
+            handle_fidl_request(request, Arc::clone(&phys), Arc::clone(&ifaces), watcher_service.clone())
+        }));
+    r.unwrap_or_else(|e| error!("error serving a DeviceService client: {}", e))
+}
+
+async fn handle_fidl_request(request: fidl_svc::DeviceServiceRequest,
+                             phys: Arc<PhyMap>,
+                             ifaces: Arc<IfaceMap>,
+                             watcher_service: WatcherService<PhyDevice, IfaceDevice>)
+    -> Result<(), fidl::Error>
 {
     // Note that errors from responder.send() are propagated intentionally.
     // If we fail to send a response, the only way to recover is to stop serving the client
     // and close the channel. Otherwise, the client would be left hanging forever.
-    fidl_svc::DeviceServiceRequestStream::from_channel(channel)
-        .try_for_each_concurrent(CONCURRENT_LIMIT, move |request| match request {
-            DeviceServiceRequest::ListPhys{ responder } => ServiceFut::ListPhys({
-                future::ready(responder.send(&mut list_phys(&phys)))
-            }),
-            DeviceServiceRequest::QueryPhy { req, responder } => ServiceFut::QueryPhy({
-                query_phy(&phys, req.phy_id)
-                    .map(move |(status, mut r)| {
-                        responder.send(status.into_raw(), r.as_mut().map(OutOfLine))
-                    })
-            }),
-            DeviceServiceRequest::ListIfaces { responder } => ServiceFut::ListIfaces({
-                future::ready(responder.send(&mut list_ifaces(&ifaces)))
-            }),
-            DeviceServiceRequest::CreateIface { req, responder } => ServiceFut::CreateIface({
-                create_iface(&phys, req)
-                    .map(move |(status, mut r)| {
-                        responder.send(status.into_raw(), r.as_mut().map(OutOfLine))
-                    })
-            }),
-            DeviceServiceRequest::DestroyIface{ req: _, responder: _ } => unimplemented!(),
-            DeviceServiceRequest::GetClientSme{ iface_id, sme, responder } => ServiceFut::GetClientSme({
-                let status = get_client_sme(&ifaces, iface_id, sme);
-                future::ready(responder.send(status.into_raw()))
-            }),
-            DeviceServiceRequest::GetApSme{ iface_id, sme, responder } => ServiceFut::GetApSme({
-                let status = get_ap_sme(&ifaces, iface_id, sme);
-                future::ready(responder.send(status.into_raw()))
-            }),
-            DeviceServiceRequest::GetIfaceStats{ iface_id, responder } => ServiceFut::GetIfaceStats({
-                get_iface_stats(&ifaces, iface_id)
-                    .map(move |res| match res {
-                        Ok(stats_ref) => {
-                            let mut stats = stats_ref.lock();
-                            responder.send(zx::sys::ZX_OK, Some(OutOfLine(&mut stats)))
-                        }
-                        Err(status) => responder.send(status.into_raw(), None)
-                    })
-            }),
-            DeviceServiceRequest::WatchDevices{ watcher, control_handle: _ } => ServiceFut::WatchDevices({
-                watcher_service.add_watcher(watcher)
-                    .unwrap_or_else(|e| error!("error registering a device watcher: {}", e));
-                future::ready(Ok(()))
-            })
-        })
-        .map_ok(|_| ())
-        .unwrap_or_else(|e| error!("error serving a DeviceService client: {}", e))
+    match request {
+        DeviceServiceRequest::ListPhys{ responder } =>
+            responder.send(&mut list_phys(&phys)),
+        DeviceServiceRequest::QueryPhy { req, responder } => {
+            let result = await!(query_phy(&phys, req.phy_id));
+            let (status, mut response) = into_status_and_opt(result);
+            responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
+        },
+        DeviceServiceRequest::ListIfaces { responder } =>
+            responder.send(&mut list_ifaces(&ifaces)),
+        DeviceServiceRequest::CreateIface { req, responder } => {
+            let result = await!(create_iface(&phys, req));
+            let (status, mut response) = into_status_and_opt(result);
+            responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
+        },
+        DeviceServiceRequest::DestroyIface{ req: _, responder: _ } => unimplemented!(),
+        DeviceServiceRequest::GetClientSme{ iface_id, sme, responder } => {
+            let status = get_client_sme(&ifaces, iface_id, sme);
+            responder.send(status.into_raw())
+        },
+        DeviceServiceRequest::GetApSme{ iface_id, sme, responder } => {
+            let status = get_ap_sme(&ifaces, iface_id, sme);
+            responder.send(status.into_raw())
+        },
+        DeviceServiceRequest::GetIfaceStats{ iface_id, responder } => {
+            match await!(get_iface_stats(&ifaces, iface_id)) {
+                Ok(stats_ref) => {
+                    let mut stats = stats_ref.lock();
+                    responder.send(zx::sys::ZX_OK, Some(OutOfLine(&mut stats)))
+                },
+                Err(status) => responder.send(status.into_raw(), None),
+            }
+        },
+        DeviceServiceRequest::WatchDevices{ watcher, control_handle: _ } => {
+            watcher_service.add_watcher(watcher)
+                .unwrap_or_else(|e| error!("error registering a device watcher: {}", e));
+            Ok(())
+        }
+    }
 }
 
-fn list_phys(phys: &Arc<PhyMap>) -> fidl_svc::ListPhysResponse {
+fn into_status_and_opt<T>(r: Result<T, zx::Status>) -> (zx::Status, Option<T>) {
+    match r {
+        Ok(x) => (zx::Status::OK, Some(x)),
+        Err(status) => (status, None),
+    }
+}
+
+fn list_phys(phys: &PhyMap) -> fidl_svc::ListPhysResponse {
     let list = phys
         .get_snapshot()
         .iter()
@@ -122,42 +135,25 @@ fn list_phys(phys: &Arc<PhyMap>) -> fidl_svc::ListPhysResponse {
     fidl_svc::ListPhysResponse { phys: list }
 }
 
-fn query_phy(phys: &Arc<PhyMap>, id: u16)
-    -> impl Future<Output = (zx::Status, Option<fidl_svc::QueryPhyResponse>)>
+async fn query_phy(phys: &PhyMap, id: u16)
+    -> Result<fidl_svc::QueryPhyResponse, zx::Status>
 {
     info!("query_phy(id = {})", id);
-    let phy = phys.get(&id)
-        .map(|phy| (phy.device.path().to_string_lossy().into_owned(), phy.proxy.clone()))
-        .ok_or(zx::Status::NOT_FOUND);
-    future::ready(phy)
-        .and_then(move |(path, proxy)| {
-            info!("query_phy(id = {}): sending 'Query' request to device", id);
-            proxy.query()
-                .map_err(move |e| {
-                    error!("query_phy(id = {}): error sending 'Query' request to phy: {}", id, e);
-                    zx::Status::INTERNAL
-                })
-                .and_then(move |query_result| {
-                    info!("query_phy(id = {}): received a 'QueryResult' from device", id);
-                    future::ready(zx::Status::ok(query_result.status)
-                        .map(|()| {
-                            let mut info = query_result.info;
-                            info.id = id;
-                            info.dev_path = Some(path);
-                            info
-                        }))
-                })
-        })
-        .map(|r| match r {
-            Ok(phy_info) => {
-                let resp = fidl_svc::QueryPhyResponse { info: phy_info };
-                (zx::Status::OK, Some(resp))
-            },
-            Err(status) => (status, None),
-        })
+    let phy = phys.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    let query_result = await!(phy.proxy.query())
+        .map_err(move |e| {
+            error!("query_phy(id = {}): error sending 'Query' request to phy: {}", id, e);
+            zx::Status::INTERNAL
+        })?;
+    info!("query_phy(id = {}): received a 'QueryResult' from device", id);
+    zx::Status::ok(query_result.status)?;
+    let mut info = query_result.info;
+    info.id = id;
+    info.dev_path = Some(phy.device.path().to_string_lossy().into_owned());
+    Ok(fidl_svc::QueryPhyResponse { info })
 }
 
-fn list_ifaces(ifaces: &Arc<IfaceMap>) -> fidl_svc::ListIfacesResponse {
+fn list_ifaces(ifaces: &IfaceMap) -> fidl_svc::ListIfacesResponse {
     let list = ifaces
         .get_snapshot()
         .iter()
@@ -171,33 +167,22 @@ fn list_ifaces(ifaces: &Arc<IfaceMap>) -> fidl_svc::ListIfacesResponse {
     fidl_svc::ListIfacesResponse{ ifaces: list }
 }
 
-fn create_iface(phys: &Arc<PhyMap>, req: fidl_svc::CreateIfaceRequest)
-    -> impl Future<Output = (zx::Status, Option<fidl_svc::CreateIfaceResponse>)>
+async fn create_iface(phys: &PhyMap, req: fidl_svc::CreateIfaceRequest)
+    -> Result<fidl_svc::CreateIfaceResponse, zx::Status>
 {
-    future::ready(phys.get(&req.phy_id)
-        .map(|phy| phy.proxy.clone())
-        .ok_or(zx::Status::NOT_FOUND))
-        .and_then(move |proxy| {
-            let mut phy_req = fidl_wlan_dev::CreateIfaceRequest { role: req.role };
-            proxy.create_iface(&mut phy_req)
-                .map_err(move |e| {
-                    error!("Error sending 'CreateIface' request to phy #{}: {}", req.phy_id, e);
-                    zx::Status::INTERNAL
-                })
-                .and_then(|r| future::ready(zx::Status::ok(r.status).map(move |()| r.iface_id)))
-        })
-        .map(|r| match r {
-            Ok(iface_id) => {
-                // TODO(gbonik): this is not the ID that we want to return
-                let resp = fidl_svc::CreateIfaceResponse { iface_id };
-                (zx::Status::OK, Some(resp))
-            },
-            Err(status) => (status, None),
-        })
+    let phy = phys.get(&req.phy_id).ok_or(zx::Status::NOT_FOUND)?;
+    let mut phy_req = fidl_wlan_dev::CreateIfaceRequest { role: req.role };
+    let r = await!(phy.proxy.create_iface(&mut phy_req))
+        .map_err(move |e| {
+            error!("Error sending 'CreateIface' request to phy #{}: {}", req.phy_id, e);
+            zx::Status::INTERNAL
+        })?;
+    zx::Status::ok(r.status)?;
+    // TODO(gbonik): this is not the ID that we want to return
+    Ok(fidl_svc::CreateIfaceResponse { iface_id: r.iface_id })
 }
 
-fn get_client_sme(ifaces: &Arc<IfaceMap>, iface_id: u16,
-                  endpoint: station::client::Endpoint)
+fn get_client_sme(ifaces: &IfaceMap, iface_id: u16, endpoint: station::client::Endpoint)
     -> zx::Status
 {
     let iface = ifaces.get(&iface_id);
@@ -217,10 +202,7 @@ fn get_client_sme(ifaces: &Arc<IfaceMap>, iface_id: u16,
     }
 }
 
-fn get_ap_sme(ifaces: &Arc<IfaceMap>, iface_id: u16,
-              endpoint: station::ap::Endpoint)
-    -> zx::Status
-{
+fn get_ap_sme(ifaces: &IfaceMap, iface_id: u16, endpoint: station::ap::Endpoint) -> zx::Status {
     let iface = ifaces.get(&iface_id);
     let server = match iface {
         None => return zx::Status::NOT_FOUND,
@@ -238,12 +220,11 @@ fn get_ap_sme(ifaces: &Arc<IfaceMap>, iface_id: u16,
     }
 }
 
-fn get_iface_stats(ifaces: &Arc<IfaceMap>, iface_id: u16)
-    -> impl Future<Output = Result<StatsRef, zx::Status>>
+async fn get_iface_stats(ifaces: &IfaceMap, iface_id: u16)
+    -> Result<StatsRef, zx::Status>
 {
-    future::ready(ifaces.get(&iface_id)
-        .ok_or(zx::Status::NOT_FOUND))
-        .and_then(|iface| iface.stats_sched.get_stats())
+    let iface = ifaces.get(&iface_id).ok_or(zx::Status::NOT_FOUND)?;
+    await!(iface.stats_sched.get_stats())
 }
 
 #[cfg(test)]
@@ -256,6 +237,7 @@ mod tests {
     use fidl_fuchsia_wlan_sme as fidl_sme;
     use fuchsia_wlan_dev as wlan_dev;
     use futures::channel::mpsc;
+    use pin_utils::pin_mut;
 
     use crate::stats_scheduler::{self, StatsRequest};
 
@@ -286,7 +268,8 @@ mod tests {
 
         // Initiate a QueryPhy request. The returned future should not be able
         // to produce a result immediately
-        let mut query_fut = super::query_phy(&phy_map, 10u16);
+        let query_fut = super::query_phy(&phy_map, 10u16);
+        pin_mut!(query_fut);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut query_fut));
 
         // The call above should trigger a Query message to the phy.
@@ -304,7 +287,7 @@ mod tests {
 
         // Our original future should complete now, and return the same phy info
         let response = match exec.run_until_stalled(&mut query_fut) {
-            Poll::Ready((zx::Status::OK, Some(response))) => response,
+            Poll::Ready(Ok(response)) => response,
             other => panic!("query_fut returned unexpected result: {:?}", other),
         };
         assert_eq!(fake_phy_info(), response.info);
@@ -316,8 +299,9 @@ mod tests {
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
 
-        let mut query_fut = super::query_phy(&phy_map, 10u16);
-        assert_eq!(Poll::Ready((zx::Status::NOT_FOUND, None)),
+        let query_fut = super::query_phy(&phy_map, 10u16);
+        pin_mut!(query_fut);
+        assert_eq!(Poll::Ready(Err(zx::Status::NOT_FOUND)),
                    exec.run_until_stalled(&mut query_fut));
     }
 
@@ -349,10 +333,11 @@ mod tests {
 
         // Initiate a CreateIface request. The returned future should not be able
         // to produce a result immediately
-        let mut create_fut = super::create_iface(&phy_map, fidl_svc::CreateIfaceRequest {
+        let create_fut = super::create_iface(&phy_map, fidl_svc::CreateIfaceRequest {
             phy_id: 10,
             role: fidl_wlan_dev::MacRole::Client,
         });
+        pin_mut!(create_fut);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut create_fut));
 
         // The call above should trigger a CreateIface message to the phy.
@@ -375,7 +360,7 @@ mod tests {
 
         // Now, our original future should resolve into a response
         let response = match exec.run_until_stalled(&mut create_fut) {
-            Poll::Ready((zx::Status::OK, Some(response))) => response,
+            Poll::Ready(Ok(response)) => response,
             other => panic!("create_fut returned unexpected result: {:?}", other),
         };
         // This assertion likely needs to change once we figure out a solution
@@ -389,12 +374,12 @@ mod tests {
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
 
-        let mut fut = super::create_iface(&phy_map, fidl_svc::CreateIfaceRequest {
+        let fut = super::create_iface(&phy_map, fidl_svc::CreateIfaceRequest {
             phy_id: 10,
             role: fidl_wlan_dev::MacRole::Client,
         });
-        assert_eq!(Poll::Ready((zx::Status::NOT_FOUND, None)),
-                   exec.run_until_stalled(&mut fut));
+        pin_mut!(fut);
+        assert_eq!(Poll::Ready(Err(zx::Status::NOT_FOUND)), exec.run_until_stalled(&mut fut));
     }
 
     #[test]
