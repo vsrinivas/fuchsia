@@ -1,6 +1,10 @@
-use fdio::{fdio_sys, ioctl_raw};
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use fdio::{fdio_sys, ioctl_raw, make_ioctl};
 use std::os::raw;
-use failure::Error;
+use failure::{format_err, Error};
 
 const PTY_EVENT_HANGUP: u8 = 1;
 const PTY_EVENT_INTERRUPT: u8 = 2;

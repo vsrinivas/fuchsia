@@ -6,7 +6,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("fuchsia-device") {
   name = "fuchsia_device"
-  edition = "2015"
+  edition = "2018"
   version = "0.1.0"
   deps = [
     "//garnet/public/rust/crates/fdio",

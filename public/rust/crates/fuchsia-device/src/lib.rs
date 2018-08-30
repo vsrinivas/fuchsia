@@ -7,12 +7,6 @@
 
 #![deny(warnings)]
 //#![deny(missing_docs)]
-
 #![allow(dead_code)]
-extern crate fuchsia_zircon as zx;
-#[macro_use]
-extern crate fdio;
-#[macro_use]
-extern crate failure;
 
 pub mod pty;
