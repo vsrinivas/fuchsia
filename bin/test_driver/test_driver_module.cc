@@ -12,11 +12,11 @@
 #include <lib/fsl/vmo/strings.h>
 
 #include "lib/svc/cpp/service_provider_bridge.h"
+#include "peridot/bin/test_driver/defs.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/test_driver.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/test_driver/defs.h"
 
 using modular::testing::Signal;
 using modular::testing::TestPoint;
