@@ -140,8 +140,6 @@ func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) (err error) {
 		ep.vv.TrimFront(headerLength)
 		d.DeliverNetworkPacket(ep, dstLinkAddr, srcLinkAddr, p, &ep.vv)
 	}
-
-	return nil
 }
 
 func NewLinkEndpoint(c *Client) *linkEndpoint {
