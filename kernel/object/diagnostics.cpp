@@ -498,6 +498,7 @@ public:
             u->vmo_koid = vmo->user_id();
             u->committed_pages = vmo->AllocatedPagesInRange(
                 map->object_offset(), map->size());
+            u->vmo_offset = map->object_offset();
             if (maps_.copy_array_to_user(&entry, 1, nelem_) != ZX_OK) {
                 return false;
             }

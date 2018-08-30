@@ -187,6 +187,8 @@ typedef struct zx_info_maps_mapping {
     zx_vm_option_t mmu_flags;
     // koid of the mapped VMO.
     zx_koid_t vmo_koid;
+    // Offset into the above VMO.
+    uint64_t vmo_offset;
     // The number of PAGE_SIZE pages in the mapped region of the VMO
     // that are backed by physical memory.
     size_t committed_pages;
