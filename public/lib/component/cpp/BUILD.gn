@@ -47,7 +47,7 @@ source_set("environment_services") {
     "//garnet/bin/debugserver:bin",
     "//garnet/bin/insntrace:bin",
     "//garnet/bin/debug_agent:bin",
-    "//garnet/drivers/wlan/wlan:wlan_driver",
+    "//garnet/drivers/wlan/wlan:*",
     "testing",
   ]
   sources = [
