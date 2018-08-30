@@ -180,7 +180,7 @@ interface Logger {
     //     similar to the LogEventOccurred() method, but with a |component|.
     2: LogEventCount(uint32 metric_id, uint32 event_type_index,
                      string:64 component, int64 period_duration_micros,
-                     uint32 count)
+                     int64 count)
            -> (Status2 status);
 
     // Logs that an event lasted a given amount of time.
