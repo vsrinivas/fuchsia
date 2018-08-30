@@ -5,8 +5,15 @@
 
 #![allow(dead_code)]
 
-use byteorder::{LittleEndian, WriteBytesExt};
-use std::io;
+use {
+    bitfield::{
+        bitfield,
+        bitfield_fields,
+        bitfield_struct,
+    },
+    byteorder::{LittleEndian, WriteBytesExt},
+    std::io,
+};
 
 // IEEE Std 802.11-2016, 9.2.4.1.3 Table 9-1
 #[derive(Clone, Copy, Debug)]

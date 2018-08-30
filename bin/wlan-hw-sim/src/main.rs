@@ -5,22 +5,15 @@
 #![feature(futures_api, pin, arbitrary_self_types)]
 #![deny(warnings)]
 
-#[macro_use] extern crate bitfield;
-extern crate byteorder;
-extern crate failure;
-extern crate fuchsia_app as app;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate wlantap_client;
-extern crate fidl_fuchsia_wlan_device as wlan_device;
-extern crate fidl_fuchsia_wlan_service as fidl_wlan_service;
-extern crate fidl_fuchsia_wlan_tap as wlantap;
-#[cfg_attr(test, macro_use)] extern crate futures;
-
-use futures::prelude::*;
-use std::sync::{Arc, Mutex};
-use wlantap_client::Wlantap;
-use zx::prelude::*;
+use {
+    fidl_fuchsia_wlan_device as wlan_device,
+    fidl_fuchsia_wlan_tap as wlantap,
+    fuchsia_async as fasync,
+    fuchsia_zircon::prelude::*,
+    futures::prelude::*,
+    std::sync::{Arc, Mutex},
+    wlantap_client::Wlantap,
+};
 
 mod mac_frames;
 
@@ -51,7 +44,7 @@ fn create_2_4_ghz_band_info() -> wlan_device::BandInfo {
 }
 
 fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
-    use wlan_device::SupportedPhy;
+    use fidl_fuchsia_wlan_device::SupportedPhy;
     wlantap::WlantapPhyConfig {
         phy_info: wlan_device::PhyInfo{
             id: 0,
@@ -137,7 +130,7 @@ fn send_beacon(frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: 
 }
 
 fn main() -> Result<(), failure::Error> {
-    let mut exec = async::Executor::new()?;
+    let mut exec = fasync::Executor::new()?;
     let wlantap = Wlantap::open()?;
     let state = Arc::new(Mutex::new(State::new()));
     let proxy = wlantap.create_phy(create_wlantap_config())?;
@@ -156,7 +149,7 @@ fn main() -> Result<(), failure::Error> {
         })
         .unwrap_or_else(|e| eprintln!("error running wlantap event listener: {:?}", e))
     };
-    let beacon_timer = async::Interval::new(102_400_000.nanos())
+    let beacon_timer = fasync::Interval::new(102_400_000.nanos())
         .for_each(move |_| {
             let state = &mut *state.lock().unwrap();
             if state.current_channel.primary == 6 {
@@ -173,6 +166,10 @@ fn main() -> Result<(), failure::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use {
+        fidl_fuchsia_wlan_service as fidl_wlan_service,
+        fuchsia_app as app,
+    };
 
     const BSS_FOO: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f];
     const SSID_FOO: &str = "foo";
@@ -183,7 +180,7 @@ mod tests {
 
     #[test]
     fn simulate_scan() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
 
         let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
@@ -210,7 +207,7 @@ mod tests {
         assert_eq!(&expected_aps, &aps[..]);
     }
 
-    fn scan(exec: &mut async::Executor,
+    fn scan(exec: &mut fasync::Executor,
             wlan_service: &fidl_wlan_service::WlanProxy,
             phy: &wlantap::WlantapPhyProxy,
             helper: &mut test_utils::TestHelper) -> fidl_wlan_service::ScanResult {
