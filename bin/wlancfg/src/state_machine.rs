@@ -2,11 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use Never;
-use futures::future::FutureObj;
-use futures::prelude::*;
-use std::marker::Unpin;
-use std::mem::PinMut;
+use crate::Never;
+
+use {
+    futures::{
+        future::FutureObj,
+        prelude::*,
+        ready,
+    },
+    std::{
+        marker::Unpin,
+        mem::PinMut,
+    },
+};
 
 pub struct State<E>(FutureObj<'static, Result<State<E>, E>>);
 
@@ -48,13 +56,15 @@ impl<F, E> IntoStateExt<E> for F where F: Future<Output = Result<State<E>, E>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async;
-    use futures::channel::mpsc;
-    use std::mem;
+    use {
+        fuchsia_async as fasync,
+        futures::channel::mpsc,
+        std::mem,
+    };
 
     #[test]
     fn state_machine() {
-        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (sender, receiver) = mpsc::unbounded();
         let mut state_machine = sum_state(0, receiver).into_future();
 

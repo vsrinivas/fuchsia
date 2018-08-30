@@ -2,9 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async::{Interval, temp::{TempFutureExt, TempStreamExt}};
-use futures::{prelude::*, future};
-use zx;
+use {
+    fuchsia_async::{
+        Interval,
+        temp::{TempFutureExt, TempStreamExt},
+    },
+    fuchsia_zircon as zx,
+    futures::{prelude::*, future},
+};
 
 pub fn retry_until<T, E, FUNC, FUT>(retry_interval: zx::Duration, mut f: FUNC)
     -> impl Future<Output = Result<T, E>>
@@ -26,20 +31,22 @@ pub fn retry_until<T, E, FUNC, FUT>(retry_interval: zx::Duration, mut f: FUNC)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async;
-    use Never;
-    use zx::prelude::*;
+    use crate::Never;
+    use {
+        fuchsia_async as fasync,
+        fuchsia_zircon::prelude::*,
+    };
 
     #[test]
     fn first_try() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let mut fut = retry_until::<_, Never, _, _>(5.seconds(), || future::ready(Ok(Some(123))));
         assert_eq!(Poll::Ready(Ok(123)), exec.run_until_stalled(&mut fut));
     }
 
     #[test]
     fn third_try() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let mut countdown = 3;
         let start = 0.seconds().after_now();
         let mut fut = retry_until::<_, Never, _, _>(

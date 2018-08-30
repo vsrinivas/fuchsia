@@ -5,32 +5,6 @@
 #![feature(async_await, await_macro, futures_api, pin, arbitrary_self_types, transpose_result)]
 #![deny(warnings)]
 
-#[macro_use]
-extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_wlan_mlme as fidl_mlme;
-extern crate fidl_fuchsia_wlan_service as legacy;
-extern crate fidl_fuchsia_wlan_sme as fidl_sme;
-extern crate fidl_fuchsia_wlan_stats as fidl_wlan_stats;
-extern crate fidl_fuchsia_wlan_device as wlan;
-extern crate fidl_fuchsia_wlan_device_service as wlan_service;
-extern crate fuchsia_app as app;
-#[macro_use]
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-#[macro_use]
-extern crate futures;
-#[macro_use]
-extern crate log;
-extern crate parking_lot;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-
-#[cfg(test)]
-extern crate tempdir;
-
 mod config;
 mod client;
 mod device;
@@ -39,14 +13,18 @@ mod future_util;
 mod shim;
 mod state_machine;
 
-use app::server::ServicesServer;
-use config::Config;
-use known_ess_store::KnownEssStore;
-use failure::{Error, ResultExt};
-use fidl::endpoints2::{RequestStream, ServiceMarker};
-use futures::prelude::*;
-use std::sync::Arc;
-use wlan_service::DeviceServiceMarker;
+use crate::{config::Config, known_ess_store::KnownEssStore};
+
+use {
+    failure::{format_err, Error, ResultExt},
+    fidl::endpoints2::{RequestStream, ServiceMarker},
+    fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
+    fidl_fuchsia_wlan_service as legacy,
+    fuchsia_app::server::ServicesServer,
+    fuchsia_async as fasync,
+    futures::prelude::*,
+    std::sync::Arc,
+};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Never {}
@@ -62,7 +40,7 @@ fn serve_fidl(_client_ref: shim::ClientRef)
             let stream = legacy::WlanRequestStream::from_channel(channel);
             let fut = shim::serve_legacy(stream, _client_ref.clone())
                 .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
-            async::spawn(fut)
+            fasync::spawn(fut)
         }))
         .start())
         .and_then(|fut| fut)
@@ -72,8 +50,8 @@ fn serve_fidl(_client_ref: shim::ClientRef)
 fn main() -> Result<(), Error> {
     let cfg = Config::load_from_file()?;
 
-    let mut executor = async::Executor::new().context("error creating event loop")?;
-    let wlan_svc = app::client::connect_to_service::<DeviceServiceMarker>()
+    let mut executor = fasync::Executor::new().context("error creating event loop")?;
+    let wlan_svc = fuchsia_app::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
 
     let legacy_client = shim::ClientRef::new();

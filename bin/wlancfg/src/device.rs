@@ -2,18 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async::{self, temp::TempFutureExt};
-use config::{self, Config};
-use client;
-use known_ess_store::KnownEssStore;
-use fidl::endpoints2::create_endpoints;
-use futures::prelude::*;
-use futures::{future, stream};
-use shim;
-use std::sync::Arc;
-use wlan;
-use wlan_service::{self, DeviceWatcherEvent, DeviceServiceProxy};
-use zx;
+use crate::{
+    config::{self, Config},
+    client,
+    known_ess_store::KnownEssStore,
+    shim,
+};
+
+use {
+    fidl::endpoints2::create_endpoints,
+    fidl_fuchsia_wlan_device as wlan,
+    fidl_fuchsia_wlan_device_service::{
+        self as wlan_service,
+        DeviceWatcherEvent,
+        DeviceServiceProxy
+    },
+    fuchsia_async::{self as fasync, temp::TempFutureExt},
+    fuchsia_zircon as zx,
+    futures::{
+        future,
+        prelude::*,
+        stream,
+    },
+    std::sync::Arc,
+};
 
 pub struct Listener {
     proxy: DeviceServiceProxy,
@@ -122,7 +134,7 @@ fn on_iface_added(listener: &Arc<Listener>, iface_id: u16, ess_store: Arc<KnownE
                 .map_ok(move |status| {
                     if status == zx::sys::ZX_OK {
                         let (c, fut) = client::new_client(iface_id, sme.clone(), ess_store);
-                        async::spawn(fut);
+                        fasync::spawn(fut);
                         let lc = shim::Client { service, client: c, sme, iface_id };
                         legacy_client.set_if_empty(lc);
                     } else {

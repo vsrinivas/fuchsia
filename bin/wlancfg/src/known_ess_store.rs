@@ -2,12 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure;
-use parking_lot::{Mutex, MutexGuard};
-use serde_json;
-use std::collections::HashMap;
-use std::{fs, io, mem};
-use std::path::{Path, PathBuf};
+use {
+    failure::{self, bail, format_err},
+    log::{error, log},
+    parking_lot::{Mutex, MutexGuard},
+    serde_derive::{Deserialize, Serialize},
+    serde_json,
+    std::{
+        collections::HashMap,
+        fs,
+        io,
+        mem,
+        path::{Path, PathBuf},
+    },
+};
 
 const KNOWN_NETWORKS_PATH: &str = "/data/known_networks.json";
 const TMP_KNOWN_NETWORKS_PATH: &str = "/data/known_networks.json.tmp";
@@ -147,8 +155,10 @@ impl<'a> TempFile<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
-    use tempdir;
+    use {
+        std::io::Write,
+        tempdir,
+    };
 
     const STORE_JSON_PATH: &str = "store.json";
 

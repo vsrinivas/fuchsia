@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
-use serde_json;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{Read, Write};
-use wlan;
+use {
+    failure::{Error, ResultExt},
+    fidl_fuchsia_wlan_device as wlan,
+    serde_derive::Deserialize,
+    std::{
+        collections::HashMap,
+        fs::File,
+        io::{Read, Write},
+    },
+};
 
 const CONFIG_FILE: &str = "/data/config.json";
 const DEFAULT_CONFIG_FILE: &str = "/pkg/data/default.json";

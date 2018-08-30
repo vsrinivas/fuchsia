@@ -2,16 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use client;
-use fidl::{self, endpoints2::create_endpoints};
-use futures::{prelude::*, channel::oneshot};
-use legacy;
-use fidl_wlan_stats;
-use fidl_mlme;
-use fidl_sme;
-use std::sync::{Arc, Mutex};
-use wlan_service;
-use zx;
+use crate::client;
+
+use {
+    fidl_fuchsia_wlan_device_service as wlan_service,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_service as legacy,
+    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_stats as fidl_wlan_stats,
+    fidl::{self, endpoints2::create_endpoints},
+    fuchsia_async::unsafe_many_futures,
+    fuchsia_zircon as zx,
+    futures::{prelude::*, channel::oneshot},
+    std::sync::{Arc, Mutex},
+};
 
 #[derive(Clone)]
 pub struct Client {

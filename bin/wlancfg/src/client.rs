@@ -2,21 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use Never;
-use async::temp::{Either, TempFutureExt, TempStreamExt};
-use known_ess_store::{KnownEssStore, KnownEss};
-use failure;
-use fidl::endpoints2::create_endpoints;
-use fidl_sme;
-use future_util::retry_until;
-use futures::channel::{oneshot, mpsc};
-use futures::future;
-use futures::prelude::*;
-use futures::stream;
-use state_machine::{self, IntoStateExt};
-use std::boxed::PinBox;
-use std::sync::Arc;
-use zx::prelude::*;
+use crate::{
+    Never,
+    future_util::retry_until,
+    known_ess_store::{KnownEssStore, KnownEss},
+    state_machine::{self, IntoStateExt},
+};
+
+use {
+    failure::{bail, format_err},
+    fidl::endpoints2::create_endpoints,
+    fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_async::temp::{Either, TempFutureExt, TempStreamExt},
+    futures::{
+        channel::{oneshot, mpsc},
+        future,
+        prelude::*,
+        select,
+        stream,
+    },
+    std::{
+        boxed::PinBox,
+        sync::Arc,
+    },
+    fuchsia_zircon::prelude::*,
+};
 
 const AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
 const AUTO_CONNECT_SCAN_TIMEOUT_SECONDS: u8 = 20;
@@ -327,16 +337,18 @@ fn fetch_scan_results(txn: fidl_sme::ScanTransactionProxy)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async;
-    use fidl::endpoints2::RequestStream;
-    use fidl_sme::{ClientSmeRequest, ClientSmeRequestStream};
-    use futures::stream::StreamFuture;
-    use std::path::Path;
-    use tempdir;
+    use {
+        fuchsia_async as fasync,
+        fidl::endpoints2::RequestStream,
+        fidl_fuchsia_wlan_sme::{ClientSmeRequest, ClientSmeRequestStream},
+        futures::stream::StreamFuture,
+        std::path::Path,
+        tempdir,
+    };
 
     #[test]
     fn scans_only_requested_with_saved_networks() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (_client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
@@ -363,7 +375,7 @@ mod tests {
 
     #[test]
     fn auto_connect_to_known_ess() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         // save the network to trigger a scan
@@ -406,7 +418,7 @@ mod tests {
 
     #[test]
     fn manual_connect_cancels_auto_connect() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
@@ -438,7 +450,7 @@ mod tests {
 
     #[test]
     fn manual_connect_cancels_manual_connect() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
@@ -482,7 +494,7 @@ mod tests {
 
     #[test]
     fn manual_connect_when_already_connected() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         // save the network that will be autoconnected
@@ -524,7 +536,7 @@ mod tests {
 
     #[test]
     fn manual_connect_failure_triggers_auto_connect() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
@@ -564,7 +576,7 @@ mod tests {
 
     #[test]
     fn manual_connect_after_sme_disconnected() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
@@ -591,7 +603,7 @@ mod tests {
 
     #[test]
     fn manual_connect_while_sme_is_disconnecting() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
@@ -627,7 +639,7 @@ mod tests {
 
     #[test]
     fn disconnect_request_when_already_disconnected() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
@@ -655,7 +667,7 @@ mod tests {
 
     #[test]
     fn disconnect_request_when_manually_connecting() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
@@ -688,7 +700,7 @@ mod tests {
 
     #[test]
     fn disconnect_when_connected() {
-        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
@@ -731,7 +743,7 @@ mod tests {
         receiver
     }
 
-    fn poll_sme_req(exec: &mut async::Executor,
+    fn poll_sme_req(exec: &mut fasync::Executor,
                     next_sme_req: &mut StreamFuture<ClientSmeRequestStream>)
         -> Poll<ClientSmeRequest>
     {
@@ -742,7 +754,7 @@ mod tests {
         })
     }
 
-    fn send_scan_results(exec: &mut async::Executor,
+    fn send_scan_results(exec: &mut fasync::Executor,
                          next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
                          ssids: &[&[u8]]) {
         let txn = match poll_sme_req(exec, next_sme_req) {
@@ -768,7 +780,7 @@ mod tests {
         txn.send_on_finished().expect("failed to send OnFinished to ScanTxn");
     }
 
-    fn exchange_connect_with_sme(exec: &mut async::Executor,
+    fn exchange_connect_with_sme(exec: &mut fasync::Executor,
                                  next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
                                  expected_ssid: &[u8],
                                  expected_password: &[u8],
@@ -778,7 +790,7 @@ mod tests {
             .expect("failed to send OnFinished to ConnectTxn");
     }
 
-    fn expect_connect_req_to_sme(exec: &mut async::Executor,
+    fn expect_connect_req_to_sme(exec: &mut fasync::Executor,
                                  next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
                                  expected_ssid: &[u8],
                                  expected_password: &[u8])
@@ -796,13 +808,13 @@ mod tests {
         }
     }
 
-    fn exchange_disconnect_with_sme(exec: &mut async::Executor,
+    fn exchange_disconnect_with_sme(exec: &mut fasync::Executor,
                                     next_sme_req: &mut StreamFuture<ClientSmeRequestStream>) {
         let responder = expect_disconnect_req_to_sme(exec, next_sme_req);
         responder.send().expect("failed to respond to Disconnect request");
     }
 
-    fn expect_disconnect_req_to_sme(exec: &mut async::Executor,
+    fn expect_disconnect_req_to_sme(exec: &mut fasync::Executor,
                                     next_sme_req: &mut StreamFuture<ClientSmeRequestStream>)
         -> fidl_sme::ClientSmeDisconnectResponder
     {
