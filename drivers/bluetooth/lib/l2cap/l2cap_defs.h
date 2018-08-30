@@ -155,6 +155,7 @@ enum class LECreditBasedConnectionResult : uint16_t {
 // Type used for all Protocol and Service Multiplexer (PSM) identifiers,
 // including those dynamically-assigned/-obtained
 using PSM = uint16_t;
+constexpr PSM kInvalidPSM = 0x0000;
 
 // Well-known Protocol and Service Multiplexer values defined by the Bluetooth
 // SIG in Logical Link Control Assigned Numbers

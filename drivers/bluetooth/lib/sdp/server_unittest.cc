@@ -96,7 +96,8 @@ class SDP_ServerTest : public TestingBase {
                                  protocol::kRFCOMM, DataElement(uint8_t(0)));
     record.AddProfile(profile::kSerialPort, 1, 2);
     record.AddInfo("en", "FAKE", "", "");
-    ServiceHandle handle = server()->RegisterService(std::move(record));
+    ServiceHandle handle =
+        server()->RegisterService(std::move(record), [](auto, const auto&) {});
     EXPECT_TRUE(handle);
     return handle;
   }
@@ -112,7 +113,8 @@ class SDP_ServerTest : public TestingBase {
     record.AddProfile(profile::kAdvancedAudioDistribution, 1, 3);
     record.SetAttribute(kA2DP_SupportedFeatures,
                         DataElement(uint16_t(0x0001)));  // Headphones
-    ServiceHandle handle = server()->RegisterService(std::move(record));
+    ServiceHandle handle =
+        server()->RegisterService(std::move(record), [](auto, const auto&) {});
     EXPECT_TRUE(handle);
     return handle;
   }
@@ -175,24 +177,95 @@ TEST_F(SDP_ServerTest, BasicError) {
 //  - Adds a service that is valid.
 //  - Services can be Unregistered.
 TEST_F(SDP_ServerTest, RegisterService) {
-  EXPECT_FALSE(server()->RegisterService(ServiceRecord()));
+  EXPECT_FALSE(server()->RegisterService(ServiceRecord(), {}));
 
   ServiceRecord record;
   record.SetAttribute(kServiceClassIdList, DataElement(uint16_t(42)));
-  EXPECT_FALSE(server()->RegisterService(std::move(record)));
+  EXPECT_FALSE(server()->RegisterService(std::move(record), {}));
 
   ServiceRecord has_handle;
   has_handle.SetHandle(42);
-  EXPECT_FALSE(server()->RegisterService(std::move(has_handle)));
+  EXPECT_FALSE(server()->RegisterService(std::move(has_handle), {}));
 
   ServiceRecord valid;
   valid.SetServiceClassUUIDs({profile::kAVRemoteControl});
-  ServiceHandle handle = server()->RegisterService(std::move(valid));
+  ServiceHandle handle = server()->RegisterService(std::move(valid), {});
 
   EXPECT_TRUE(handle);
 
   EXPECT_TRUE(server()->UnregisterService(handle));
   EXPECT_FALSE(server()->UnregisterService(handle));
+}
+
+TEST_F(SDP_ServerTest, PSMVerification) {
+  ServiceRecord no_psm;
+  no_psm.SetServiceClassUUIDs({profile::kAVRemoteControl});
+  no_psm.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
+                               protocol::kL2CAP, DataElement());
+
+  EXPECT_FALSE(server()->RegisterService(std::move(no_psm), {}));
+
+  ServiceRecord psm_wrong_argtype;
+  psm_wrong_argtype.SetServiceClassUUIDs({profile::kAVRemoteControl});
+  psm_wrong_argtype.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
+                                          protocol::kL2CAP,
+                                          DataElement(bool(true)));
+
+  EXPECT_FALSE(server()->RegisterService(std::move(psm_wrong_argtype), {}));
+
+  ServiceRecord psm_rfcomm;
+  psm_rfcomm.SetServiceClassUUIDs({profile::kAVRemoteControl});
+  psm_rfcomm.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
+                                   protocol::kL2CAP, DataElement());
+  // Don't need an argument for RFCOMM, it will be auto-assigned.
+  psm_rfcomm.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
+                                   protocol::kRFCOMM, DataElement());
+
+  EXPECT_TRUE(server()->RegisterService(std::move(psm_rfcomm),
+                                        [](auto, const auto&) {}));
+
+  // Another RFCOMM is also fine.
+  ServiceRecord psm_rfcomm2;
+  psm_rfcomm2.SetServiceClassUUIDs({profile::kAVRemoteControl});
+  psm_rfcomm2.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
+                                    protocol::kL2CAP, DataElement());
+  // Don't need an argument for RFCOMM, it will be auto-assigned.
+  psm_rfcomm2.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
+                                    protocol::kRFCOMM, DataElement());
+
+  EXPECT_TRUE(server()->RegisterService(std::move(psm_rfcomm2),
+                                        [](auto, const auto&) {}));
+
+  ServiceRecord psm_ok;
+  psm_ok.SetServiceClassUUIDs({profile::kAVRemoteControl});
+  psm_ok.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
+                               protocol::kL2CAP, DataElement(uint16_t(500)));
+
+  auto handle =
+      server()->RegisterService(std::move(psm_ok), [](auto, const auto&) {});
+  EXPECT_TRUE(handle);
+
+  ServiceRecord psm_duplicate;
+  psm_duplicate.SetServiceClassUUIDs({profile::kAVRemoteControl});
+  psm_duplicate.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
+                                      protocol::kL2CAP,
+                                      DataElement(uint16_t(500)));
+
+  EXPECT_FALSE(server()->RegisterService(std::move(psm_duplicate),
+                                         [](auto, const auto&) {}));
+
+  // Unregistering allows us to re-register with PSM.
+  server()->UnregisterService(handle);
+  ServiceRecord psm_readd;
+  psm_readd.SetServiceClassUUIDs({profile::kAVRemoteControl});
+  psm_readd.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
+                                  protocol::kL2CAP, DataElement(uint16_t(500)));
+
+  EXPECT_TRUE(server()->RegisterService(std::move(psm_readd),
+                                        [](auto, const auto&) {}));
+
+  // TODO(NET-1417): test that new connections to the PSM get delivered once
+  // they are deliverable
 }
 
 #define UINT32_AS_BE_BYTES(x)                                    \
@@ -372,7 +445,7 @@ TEST_F(SDP_ServerTest, ServiceAttributeRequest) {
   record.SetAttribute(0xf00d, DataElement(uint32_t(0xfeedbeef)));
   record.SetAttribute(0xf000, DataElement(uint32_t(0x01234567)));
 
-  ServiceHandle handle = server()->RegisterService(std::move(record));
+  ServiceHandle handle = server()->RegisterService(std::move(record), {});
 
   EXPECT_TRUE(handle);
 
@@ -515,7 +588,8 @@ TEST_F(SDP_ServerTest, SearchAttributeRequest) {
   record1.SetAttribute(0xf00d, DataElement(uint32_t(0xfeedbeef)));
   record1.SetAttribute(0xf000, DataElement(uint32_t(0x01234567)));
 
-  ServiceHandle handle1 = server()->RegisterService(std::move(record1));
+  ServiceHandle handle1 =
+      server()->RegisterService(std::move(record1), [](auto, const auto&) {});
 
   EXPECT_TRUE(handle1);
 
@@ -523,7 +597,8 @@ TEST_F(SDP_ServerTest, SearchAttributeRequest) {
   record2.SetServiceClassUUIDs({profile::kAVRemoteControl});
   record2.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
                                 protocol::kL2CAP, DataElement(uint16_t(501)));
-  ServiceHandle handle2 = server()->RegisterService(std::move(record2));
+  ServiceHandle handle2 =
+      server()->RegisterService(std::move(record2), [](auto, const auto&) {});
 
   EXPECT_TRUE(handle2);
 

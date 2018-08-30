@@ -10,10 +10,12 @@
 #include <fbl/function.h>
 #include <fbl/ref_ptr.h>
 #include <lib/fit/function.h>
+#include <zx/socket.h>
 
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 #include "garnet/drivers/bluetooth/lib/sdp/pdu.h"
 #include "garnet/drivers/bluetooth/lib/sdp/sdp.h"
 #include "garnet/drivers/bluetooth/lib/sdp/service_record.h"
@@ -44,9 +46,11 @@ class Server final {
   // registered. Any service handle previously set in |record| is ignored and
   // overwritten.
   // |conn_cb| will be called for any connections made to the registered
-  // service with a socket set to comminicate on the connection and the protocol
+  // service with a socket set to communicate on the connection and the protocol
   // descriptor list for the endpoint which was connected.
-  ServiceHandle RegisterService(ServiceRecord record);
+  using ConnectCallback =
+      fit::function<void(zx::socket connection, const DataElement& protocol)>;
+  ServiceHandle RegisterService(ServiceRecord record, ConnectCallback conn_cb);
 
   // Unregister a service from the database. Idempotent.
   // Returns |true| if a record was removed.
@@ -76,12 +80,23 @@ class Server final {
   void OnChannelClosed(const hci::ConnectionHandle& handle);
   void OnRxBFrame(const hci::ConnectionHandle& handle, const l2cap::SDU& sdu);
 
+  // l2cap::RegisterService callback
+  void OnChannelConnected(l2cap::PSM psm, fbl::RefPtr<l2cap::Channel> channel);
+
   // The L2CAP layer this server is running on.  Used to register callbacks for
   // the channels of services registered.
   fbl::RefPtr<l2cap::L2CAP> l2cap_;
 
   std::unordered_map<hci::ConnectionHandle, l2cap::ScopedChannel> channels_;
   std::unordered_map<ServiceHandle, ServiceRecord> records_;
+
+  // Registered handles to sets of PSMs registered.
+  std::unordered_map<ServiceHandle, std::unordered_set<l2cap::PSM>>
+      record_psms_;
+
+  // Registered PSMs to a callback to route a newly connected socket.
+  std::unordered_map<l2cap::PSM, fit::function<void(zx::socket)>>
+      psm_callbacks_;
 
   // The next available ServiceHandle.
   ServiceHandle next_handle_;
