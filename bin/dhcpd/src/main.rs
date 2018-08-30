@@ -5,27 +5,29 @@
 #![feature(futures_api)]
 #![deny(warnings)]
 
-extern crate dhcp;
-extern crate failure;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-extern crate getopts;
-
-use async::net::UdpSocket;
-use async::{Executor, Interval};
-use dhcp::configuration;
-use dhcp::protocol::{Message, SERVER_PORT};
-use dhcp::server::Server;
-use failure::{Error, Fail, ResultExt};
-use futures::future;
-use futures::prelude::*;
-use getopts::Options;
-use std::env;
-use std::io;
-use std::net::{IpAddr, SocketAddr};
-use std::sync::{Arc, Mutex};
-use zx::DurationNum;
+use {
+    dhcp::{
+        configuration,
+        protocol::{Message, SERVER_PORT},
+        server::Server,
+    },
+    failure::{Error, Fail, ResultExt},
+    fuchsia_async::{
+        Executor,
+        Interval,
+        net::UdpSocket,
+    },
+    fuchsia_zircon::DurationNum,
+    futures::future,
+    futures::prelude::*,
+    getopts::Options,
+    std::{
+        env,
+        io,
+        net::{IpAddr, SocketAddr},
+        sync::{Arc, Mutex},
+    },
+};
 
 /// A buffer size in excess of the maximum allowable DHCP message size.
 const BUF_SZ: usize = 1024;
