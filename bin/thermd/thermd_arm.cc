@@ -107,33 +107,34 @@ int main(int argc, char** argv) {
 
     uint32_t trip_idx = (uint32_t)packet.key;
     if (trip_idx > info.num_trip_points) {
-      fprintf(stderr, "Invalid trip index: terminating thermd\n");
+      fprintf(stderr, "ERROR: Invalid trip index: terminating thermd\n");
       return -1;
     }
 
     if (info.passive_cooling) {
-      int32_t big_cluster_opp =
+      uint32_t big_cluster_opp =
           info.trip_point_info[trip_idx].big_cluster_dvfs_opp;
-      int32_t little_cluster_opp =
-          info.trip_point_info[trip_idx].little_cluster_dvfs_opp;
       dvfs_info_t dvfs_info;
 
-      if (big_cluster_opp != -1) {
-        dvfs_info.power_domain = BIG_CLUSTER_POWER_DOMAIN;
-        dvfs_info.op_idx = big_cluster_opp;
-        rc = ioctl_thermal_set_dvfs_opp(fd, &dvfs_info);
-        if (rc) {
-          fprintf(stderr,
-                  "ERROR: Failed to set DVFS OPP for big cluster: %zd\n", rc);
-          return rc;
-        }
+      // Set DVFS Opp for Big Cluster.
+      dvfs_info.power_domain = BIG_CLUSTER_POWER_DOMAIN;
+      dvfs_info.op_idx = big_cluster_opp;
+      rc = ioctl_thermal_set_dvfs_opp(fd, &dvfs_info);
+      if (rc < 0) {
+        fprintf(stderr, "ERROR: Failed to set DVFS OPP for big cluster: %zd\n",
+                rc);
+        return rc;
       }
 
-      if (little_cluster_opp != -1) {
+      // Check if it's big little.
+      if (info.big_little) {
+        // Set the DVFS Opp for Little Cluster.
+        uint32_t little_cluster_opp =
+            info.trip_point_info[trip_idx].little_cluster_dvfs_opp;
         dvfs_info.power_domain = LITTLE_CLUSTER_POWER_DOMAIN;
         dvfs_info.op_idx = little_cluster_opp;
         rc = ioctl_thermal_set_dvfs_opp(fd, &dvfs_info);
-        if (rc) {
+        if (rc < 0) {
           fprintf(stderr,
                   "ERROR: Failed to set DVFS OPP for little cluster: %zd\n",
                   rc);
@@ -143,13 +144,11 @@ int main(int argc, char** argv) {
     }
 
     if (info.active_cooling) {
-      int32_t fan_level = info.trip_point_info[trip_idx].fan_level;
-      if (fan_level != -1) {
-        rc = ioctl_thermal_set_fan_level(fd, &fan_level);
-        if (rc) {
-          fprintf(stderr, "ERROR: Failed to set fan level: %zd\n", rc);
-          return rc;
-        }
+      uint32_t fan_level = info.trip_point_info[trip_idx].fan_level;
+      rc = ioctl_thermal_set_fan_level(fd, &fan_level);
+      if (rc) {
+        fprintf(stderr, "ERROR: Failed to set fan level: %zd\n", rc);
+        return rc;
       }
     }
 
