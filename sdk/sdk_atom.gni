@@ -54,10 +54,9 @@ import("//build/compiled_action.gni")
 #       - partner      : the atom may be used by select partners;
 #       - public       : the atom may be included in published SDKs.
 #
-#   meta (optional)
+#   meta
 #     Scope describing the element's metadata file.
 #     See the "Metadata scope" section for how to populate this attribute.
-#     TODO(DX-340): make this attribute required.
 #
 #   files
 #     List of scopes describing the contents of this element.
@@ -103,10 +102,10 @@ import("//build/compiled_action.gni")
 # This scope describes a metadata file to be added to the SDK element. Its
 # supported attributes are:
 #
-#   source
+#   source (optional)
 #     Path to the metadata file.
 #
-#   value
+#   value (optional)
 #     Scope representing the metadata contents.
 #
 #     NOTE: Exactly one of `source` or `value` must be set.
@@ -147,6 +146,9 @@ template("sdk_atom") {
   category = invoker.category
 
   assert(defined(invoker.id), "Must define an SDK ID")
+
+  assert(defined(invoker.meta), "Must specify some metadata")
+  meta = invoker.meta
 
   if (defined(invoker.name)) {
     name_args = [
@@ -191,8 +193,8 @@ template("sdk_atom") {
   file_mappings = []
   file_inputs = []
   all_files = invoker.files
-  if (defined(invoker.meta) && !defined(invoker.new_files)) {
-    all_files += [ invoker.meta ]
+  if (!defined(invoker.new_files)) {
+    all_files += [ meta ]
   }
   foreach(file, all_files) {
     assert(defined(file.source), "File $file does not specify a source.")
@@ -207,10 +209,6 @@ template("sdk_atom") {
       prefix = "packaged"
     }
     file_mappings += [ "$prefix:$destination=$source" ]
-  }
-
-  if (defined(invoker.meta)) {
-    meta = invoker.meta
   }
 
   new_file_mappings = []
@@ -234,80 +232,76 @@ template("sdk_atom") {
     tags = invoker.tags
   }
 
-  full_label = get_label_info(":$target_name", "label_with_toolchain")
+  meta_target_name = "${target_name}_meta"
+  meta_content = invoker.meta
+  meta_file = "$target_gen_dir/$target_name.meta.json"
 
-  if (defined(invoker.meta)) {
-    # Validate the metadata file.
-    meta_target_name = "${target_name}_meta"
-    meta_content = invoker.meta
-
-    meta_file = "$target_gen_dir/$target_name.meta.json"
-
-    if (defined(meta_content.value)) {
-      write_file(meta_file, meta_content.value, "json")
-      meta_deps = gn_deps
-    } else {
-      meta_copy_target_name = "${target_name}_meta_copy"
-      assert(defined(meta_content.source), "Meta scope needs a source or value")
-      # Copy the file to a canonical location for access by other rules.
-      # TODO(DX-340): instead, make sure that all atoms generate their metadata
-      # file in the right location.
-      copy(meta_copy_target_name) {
-        sources = [
-          meta_content.source,
-        ]
-
-        outputs = [
-          meta_file,
-        ]
-
-        deps = gn_deps
-      }
-
-      meta_deps = [ ":$meta_copy_target_name" ]
-    }
-
-    compiled_action(meta_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-
-      tool = "//build/tools/json_validator"
-
-      stamp_file = "$target_gen_dir/$target_name.verified"
-      schema_file = "//build/sdk/meta/${meta_content.schema}.json"
-
+  if (defined(meta_content.value)) {
+    # Directly write the value into a file in the output directory.
+    write_file(meta_file, meta_content.value, "json")
+    meta_deps = gn_deps
+  } else {
+    meta_copy_target_name = "${target_name}_meta_copy"
+    assert(defined(meta_content.source), "Meta scope needs a source or value")
+    # Copy the file to a canonical location for access by other rules.
+    # TODO(DX-340): instead, make sure that all atoms generate their metadata
+    # file in the right location.
+    copy(meta_copy_target_name) {
       sources = [
-        # This file is imported by all schemas.
-        "//build/sdk/meta/common.json",
-      ]
-
-      inputs = [
-        meta_file,
-        schema_file,
+        meta_content.source,
       ]
 
       outputs = [
-        stamp_file,
+        meta_file,
       ]
 
-      args = [
-        rebase_path(schema_file),
-        rebase_path(meta_file),
-        rebase_path(stamp_file),
-      ]
-
-      public_deps = meta_deps
+      deps = gn_deps
     }
 
-    if (defined(invoker.new_files)) {
-      # TODO(DX-340): remove this temporary attribute.
-      if (defined(meta.new_dest)) {
-        dest = meta.new_dest
-      } else {
-        dest = meta.dest
-      }
-      source = rebase_path(meta_file)
-      new_file_mappings += [ "${dest}=${source}" ]
+    meta_deps = [ ":$meta_copy_target_name" ]
+  }
+
+  # Verify that the metadata complies with the specified schema.
+  compiled_action(meta_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    tool = "//build/tools/json_validator"
+
+    stamp_file = "$target_gen_dir/$target_name.verified"
+    schema_file = "//build/sdk/meta/${meta_content.schema}.json"
+
+    sources = [
+      # This file is imported by all schemas.
+      "//build/sdk/meta/common.json",
+    ]
+
+    inputs = [
+      meta_file,
+      schema_file,
+    ]
+
+    outputs = [
+      stamp_file,
+    ]
+
+    args = [
+      rebase_path(schema_file),
+      rebase_path(meta_file),
+      rebase_path(stamp_file),
+    ]
+
+    public_deps = meta_deps
+  }
+
+  if (defined(invoker.new_files)) {
+    # TODO(DX-340): remove this temporary attribute.
+    if (defined(meta.new_dest)) {
+      dest = meta.new_dest
+    } else {
+      dest = meta.dest
     }
+    source = rebase_path(meta_file)
+    new_file_mappings += [ "${dest}=${source}" ]
   }
 
   # Builds a manifest representing this element.
@@ -318,13 +312,9 @@ template("sdk_atom") {
 
     script = "//build/sdk/create_atom_manifest.py"
 
-    public_deps = gn_deps
-
-    if (defined(invoker.meta)) {
-      public_deps += [
-        ":$meta_target_name",
-      ]
-    }
+    public_deps = gn_deps + [
+      ":$meta_target_name",
+    ]
 
     inputs = dep_manifests + file_inputs + [
                # Imported by the action's script.
@@ -345,7 +335,7 @@ template("sdk_atom") {
              "--base",
              rebase_path(source_dir),
              "--gn-label",
-             full_label,
+             get_label_info(":$target_name", "label_with_toolchain"),
              "--category",
              category,
              "--deps",
@@ -359,16 +349,14 @@ template("sdk_atom") {
       ]
     }
 
-    if (defined(invoker.meta)) {
-      if (defined(meta.new_dest)) {
-        dest = meta.new_dest
-      } else {
-        dest = meta.dest
-      }
-      args += [
-        "--meta",
-        dest,
-      ]
+    if (defined(meta.new_dest)) {
+      dest = meta.new_dest
+    } else {
+      dest = meta.dest
     }
+    args += [
+      "--meta",
+      dest,
+    ]
   }
 }
