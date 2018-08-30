@@ -160,7 +160,7 @@ See [examples/benchmark] for a full example of a traced-based benchmark.
 
 This example can be run with the following command:
 ```{shell}
-trace record --spec-file=/system/data/benchmark_example/benchmark_example.tspec
+trace record --spec-file=/pkgfs/packages/benchmark/0/data/benchmark_example.tspec
 ```
 
 ## Best practices
