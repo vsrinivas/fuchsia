@@ -27,35 +27,35 @@ MATCHER_P(InternalBufferMatcher, sub_matcher, "") {  // NOLINT
   return ExplainMatchResult(sub_matcher, vmo_content, result_listener);
 }
 
-MATCHER(PointWiseEntryMatches, "") {  // NOLINT
+MATCHER(PointWiseMatchesEntry, "") {  // NOLINT
   auto& a = std::get<0>(arg);
   auto& b = std::get<1>(arg);
-  return ExplainMatchResult(EntryMatches(b), a, result_listener);
+  return ExplainMatchResult(MatchesEntry(b), a, result_listener);
 }
 
 }  // namespace
 
-testing::Matcher<convert::ExtendedStringView> ViewMatches(
+testing::Matcher<convert::ExtendedStringView> MatchesView(
     testing::Matcher<std::string> matcher) {
   return InternalViewMatcher(std::move(matcher));
 }
 
-testing::Matcher<const fuchsia::mem::Buffer&> BufferMatches(
+testing::Matcher<const fuchsia::mem::Buffer&> MatchesBuffer(
     testing::Matcher<std::string> matcher) {
   return InternalBufferMatcher(std::move(matcher));
 }
 
-testing::Matcher<const ledger::Entry&> EntryMatches(
+testing::Matcher<const ledger::Entry&> MatchesEntry(
     std::pair<testing::Matcher<std::string>, testing::Matcher<std::string>>
         matcher) {
   return AllOf(
-      Field(&ledger::Entry::key, ViewMatches(matcher.first)),
-      Field(&ledger::Entry::value, Pointee(BufferMatches(matcher.second))));
+      Field(&ledger::Entry::key, MatchesView(matcher.first)),
+      Field(&ledger::Entry::value, Pointee(MatchesBuffer(matcher.second))));
 }
 
-testing::Matcher<const std::vector<ledger::Entry>&> EntriesMatch(
+testing::Matcher<const std::vector<ledger::Entry>&> MatchEntries(
     std::map<std::string, testing::Matcher<std::string>> matchers) {
-  return Pointwise(PointWiseEntryMatches(), matchers);
+  return Pointwise(PointWiseMatchesEntry(), matchers);
 }
 
 }  // namespace ledger

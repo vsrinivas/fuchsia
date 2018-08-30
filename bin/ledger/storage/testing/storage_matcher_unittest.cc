@@ -9,29 +9,29 @@
 namespace storage {
 namespace {
 
-TEST(StorageMatcher, DigestMatches) {
+TEST(StorageMatcher, MatchesDigest) {
   ObjectIdentifier id = {0, 1, "hello"};
 
-  EXPECT_THAT(id, DigestMatches("hello"));
-  EXPECT_THAT(id, Not(DigestMatches("hexllo")));
+  EXPECT_THAT(id, MatchesDigest("hello"));
+  EXPECT_THAT(id, Not(MatchesDigest("hexllo")));
 }
 
-TEST(StorageMatcher, EntryMatches2Parameters) {
+TEST(StorageMatcher, MatchesEntry2Parameters) {
   Entry entry = {"key", {0, 1, "hello"}, KeyPriority::EAGER};
 
-  EXPECT_THAT(entry, EntryMatches({"key", DigestMatches("hello")}));
-  EXPECT_THAT(entry, Not(EntryMatches({"key", DigestMatches("helo")})));
-  EXPECT_THAT(entry, Not(EntryMatches({"ky", DigestMatches("hello")})));
+  EXPECT_THAT(entry, MatchesEntry({"key", MatchesDigest("hello")}));
+  EXPECT_THAT(entry, Not(MatchesEntry({"key", MatchesDigest("helo")})));
+  EXPECT_THAT(entry, Not(MatchesEntry({"ky", MatchesDigest("hello")})));
 }
 
-TEST(StorageMatcher, EntryMatches3Parameters) {
+TEST(StorageMatcher, MatchesEntry3Parameters) {
   Entry entry = {"key", {0, 1, "hello"}, KeyPriority::EAGER};
 
   EXPECT_THAT(
-      entry, EntryMatches({"key", DigestMatches("hello"), KeyPriority::EAGER}));
+      entry, MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::EAGER}));
   EXPECT_THAT(
       entry,
-      Not(EntryMatches({"key", DigestMatches("hello"), KeyPriority::LAZY})));
+      Not(MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::LAZY})));
 }
 
 }  // namespace

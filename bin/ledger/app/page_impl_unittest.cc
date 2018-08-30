@@ -628,8 +628,8 @@ TEST_F(PageImplTest, TransactionClearCommit) {
     EXPECT_FALSE(journal->IsCommitted());
     EXPECT_THAT(journal->GetData(),
                 ElementsAre(Pair(
-                    key2, storage::EntryMatches(
-                              {key2, storage::DigestMatches(object_digest2),
+                    key2, storage::MatchesEntry(
+                              {key2, storage::MatchesDigest(object_digest2),
                                storage::KeyPriority::EAGER}))));
   }
 
@@ -649,8 +649,8 @@ TEST_F(PageImplTest, TransactionClearCommit) {
     EXPECT_TRUE(journal->IsCommitted());
     EXPECT_THAT(journal->GetData(),
                 ElementsAre(Pair(
-                    key2, storage::EntryMatches(
-                              {key2, storage::DigestMatches(object_digest2),
+                    key2, storage::MatchesEntry(
+                              {key2, storage::MatchesDigest(object_digest2),
                                storage::KeyPriority::EAGER}))));
   }
 }

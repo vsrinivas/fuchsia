@@ -112,12 +112,12 @@ TEST_P(PageMutationTest, InitialSnapshotIsEmpty) {
 TEST_P(PageMutationTest, PutOutsideOfTransaction) {
   ASSERT_TRUE(Put("key", "value"));
 
-  ASSERT_THAT(GetEntries(), EntriesMatch({{"key", "value"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}}));
 
   ASSERT_TRUE(Put("key2", "value2"));
 
   ASSERT_THAT(GetEntries(),
-              EntriesMatch({{"key", "value"}, {"key2", "value2"}}));
+              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 }
 
 TEST_P(PageMutationTest, PutInsideOfTransaction) {
@@ -130,7 +130,7 @@ TEST_P(PageMutationTest, PutInsideOfTransaction) {
   ASSERT_TRUE(Commit());
 
   ASSERT_THAT(GetEntries(),
-              EntriesMatch({{"key", "value"}, {"key2", "value2"}}));
+              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 }
 
 TEST_P(PageMutationTest, RollbackTransaction) {
@@ -149,18 +149,18 @@ TEST_P(PageMutationTest, DeleteOutsideOfTransaction) {
   ASSERT_TRUE(Put("key", "value"));
   ASSERT_TRUE(Put("key2", "value2"));
   ASSERT_THAT(GetEntries(),
-              EntriesMatch({{"key", "value"}, {"key2", "value2"}}));
+              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
   ASSERT_TRUE(Delete("key"));
 
-  ASSERT_THAT(GetEntries(), EntriesMatch({{"key2", "value2"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key2", "value2"}}));
 }
 
 TEST_P(PageMutationTest, DeleteInsideOfTransaction) {
   ASSERT_TRUE(Put("key", "value"));
   ASSERT_TRUE(Put("key2", "value2"));
   ASSERT_THAT(GetEntries(),
-              EntriesMatch({{"key", "value"}, {"key2", "value2"}}));
+              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
   ASSERT_TRUE(StartTransaction());
   ASSERT_TRUE(Delete("key"));
@@ -168,14 +168,14 @@ TEST_P(PageMutationTest, DeleteInsideOfTransaction) {
   ASSERT_TRUE(Delete("key3"));
   ASSERT_TRUE(Commit());
 
-  ASSERT_THAT(GetEntries(), EntriesMatch({{"key2", "value2"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key2", "value2"}}));
 }
 
 TEST_P(PageMutationTest, ClearOutsideOfTransaction) {
   ASSERT_TRUE(Put("key", "value"));
   ASSERT_TRUE(Put("key2", "value2"));
   ASSERT_THAT(GetEntries(),
-              EntriesMatch({{"key", "value"}, {"key2", "value2"}}));
+              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
   ASSERT_TRUE(Clear());
 
@@ -186,7 +186,7 @@ TEST_P(PageMutationTest, ClearInsideOfTransaction) {
   ASSERT_TRUE(Put("key", "value"));
   ASSERT_TRUE(Put("key2", "value2"));
   ASSERT_THAT(GetEntries(),
-              EntriesMatch({{"key", "value"}, {"key2", "value2"}}));
+              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
   ASSERT_TRUE(StartTransaction());
   ASSERT_TRUE(Put("key3", "value3"));
@@ -194,14 +194,14 @@ TEST_P(PageMutationTest, ClearInsideOfTransaction) {
   ASSERT_TRUE(Put("key4", "value4"));
   ASSERT_TRUE(Commit());
 
-  ASSERT_THAT(GetEntries(), EntriesMatch({{"key4", "value4"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key4", "value4"}}));
 }
 
 TEST_P(PageMutationTest, MultipleClearCallsInsideOfTransaction) {
   ASSERT_TRUE(Put("key", "value"));
   ASSERT_TRUE(Put("key2", "value2"));
   ASSERT_THAT(GetEntries(),
-              EntriesMatch({{"key", "value"}, {"key2", "value2"}}));
+              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
   ASSERT_TRUE(StartTransaction());
   ASSERT_TRUE(Put("key3", "value3"));
@@ -211,12 +211,12 @@ TEST_P(PageMutationTest, MultipleClearCallsInsideOfTransaction) {
   ASSERT_TRUE(Put("key5", "value5"));
   ASSERT_TRUE(Commit());
 
-  ASSERT_THAT(GetEntries(), EntriesMatch({{"key5", "value5"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key5", "value5"}}));
 }
 
 TEST_P(PageMutationTest, ClearAndDeleteInsideOfTransaction) {
   ASSERT_TRUE(Put("key", "value"));
-  ASSERT_THAT(GetEntries(), EntriesMatch({{"key", "value"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}}));
 
   ASSERT_TRUE(StartTransaction());
   ASSERT_TRUE(Clear());
@@ -228,7 +228,7 @@ TEST_P(PageMutationTest, ClearAndDeleteInsideOfTransaction) {
 
 TEST_P(PageMutationTest, DeleteAndClearInsideOfTransaction) {
   ASSERT_TRUE(Put("key", "value"));
-  ASSERT_THAT(GetEntries(), EntriesMatch({{"key", "value"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}}));
 
   ASSERT_TRUE(StartTransaction());
   ASSERT_TRUE(Delete("key"));
@@ -240,14 +240,14 @@ TEST_P(PageMutationTest, DeleteAndClearInsideOfTransaction) {
 
 TEST_P(PageMutationTest, ClearAndRestoreInsideTransaction) {
   ASSERT_TRUE(Put("key", "value"));
-  ASSERT_THAT(GetEntries(), EntriesMatch({{"key", "value"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}}));
 
   ASSERT_TRUE(StartTransaction());
   ASSERT_TRUE(Clear());
   ASSERT_TRUE(Put("key", "value"));
   ASSERT_TRUE(Commit());
 
-  ASSERT_THAT(GetEntries(), EntriesMatch({{"key", "value"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}}));
 }
 
 INSTANTIATE_TEST_CASE_P(

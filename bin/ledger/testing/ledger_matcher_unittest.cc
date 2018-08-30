@@ -19,9 +19,9 @@ TEST(LedgerMatcher, ExtendedStringViewMatcher) {
   std::string foo = "hello";
   convert::ExtendedStringView view(foo);
 
-  EXPECT_THAT(view, ViewMatches("hello"));
-  EXPECT_THAT(view, ViewMatches(HasSubstr("ll")));
-  EXPECT_THAT(view, Not(ViewMatches("hello2")));
+  EXPECT_THAT(view, MatchesView("hello"));
+  EXPECT_THAT(view, MatchesView(HasSubstr("ll")));
+  EXPECT_THAT(view, Not(MatchesView("hello2")));
 }
 
 TEST(LedgerMatcher, BufferMatcher) {
@@ -29,9 +29,9 @@ TEST(LedgerMatcher, BufferMatcher) {
   ASSERT_TRUE(fsl::VmoFromString("hello", &size_vmo));
   fuchsia::mem::Buffer buffer = std::move(size_vmo).ToTransport();
 
-  EXPECT_THAT(buffer, BufferMatches("hello"));
-  EXPECT_THAT(buffer, BufferMatches(HasSubstr("ll")));
-  EXPECT_THAT(buffer, Not(BufferMatches("hello2")));
+  EXPECT_THAT(buffer, MatchesBuffer("hello"));
+  EXPECT_THAT(buffer, MatchesBuffer(HasSubstr("ll")));
+  EXPECT_THAT(buffer, Not(MatchesBuffer("hello2")));
 }
 
 TEST(LedgerMatcher, EntryMatcher) {
@@ -42,8 +42,8 @@ TEST(LedgerMatcher, EntryMatcher) {
   ledger::Entry entry{convert::ToArray("key"),
                       fidl::MakeOptional(std::move(buffer))};
 
-  EXPECT_THAT(entry, EntryMatches({"key", "hello"}));
-  EXPECT_THAT(entry, EntryMatches({Not("key2"), HasSubstr("ll")}));
+  EXPECT_THAT(entry, MatchesEntry({"key", "hello"}));
+  EXPECT_THAT(entry, MatchesEntry({Not("key2"), HasSubstr("ll")}));
 }
 
 TEST(LedgerMatcher, EntriesMatcher) {
@@ -64,8 +64,8 @@ TEST(LedgerMatcher, EntriesMatcher) {
   entries.push_back(std::move(entry1));
   entries.push_back(std::move(entry2));
 
-  EXPECT_THAT(entries, EntriesMatch({{"key1", "hello"}, {"key2", "hello2"}}));
-  EXPECT_THAT(entries, EntriesMatch({{"key1", HasSubstr("ll")},
+  EXPECT_THAT(entries, MatchEntries({{"key1", "hello"}, {"key2", "hello2"}}));
+  EXPECT_THAT(entries, MatchEntries({{"key1", HasSubstr("ll")},
                                      {"key2", HasSubstr("ll")}}));
 }
 
