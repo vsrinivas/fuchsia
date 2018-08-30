@@ -263,7 +263,7 @@
     <project name="third_party/xi-editor"
              path="third_party/rust-mirrors/xi-editor"
              remote="https://fuchsia.googlesource.com/third_party/xi-editor"
-             revision="2100f968cb9a5f9e55f96962ec72a0f6e4147cfb"
+             revision="b08bc5a755c2d35c6540480e99dd73ec8ebbf919"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/rust-mirrors/rand"
              path="third_party/rust-mirrors/rand"
