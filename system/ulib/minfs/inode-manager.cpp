@@ -13,7 +13,7 @@ InodeManager::InodeManager(Bcache* bc, blk_t start_block) :
     bc_(bc), start_block_(start_block) {}
 InodeManager::~InodeManager() = default;
 
-zx_status_t InodeManager::Create(Bcache* bc, Superblock* sb, ReadTxn* txn,
+zx_status_t InodeManager::Create(Bcache* bc, Superblock* sb, fs::ReadTxn* txn,
                                  AllocatorMetadata metadata,
                                  blk_t start_block, size_t inodes,
                                  fbl::unique_ptr<InodeManager>* out) {

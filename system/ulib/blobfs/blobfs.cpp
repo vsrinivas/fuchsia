@@ -222,7 +222,7 @@ zx_status_t VnodeBlob::InitCompressed() {
     TRACE_DURATION("blobfs", "Blobfs::InitCompressed", "size", inode_.blob_size,
                    "blocks", inode_.num_blocks);
     fs::Ticker ticker(blobfs_->CollectingMetrics());
-    ReadTxn txn(blobfs_);
+    fs::ReadTxn txn(blobfs_);
     uint64_t start = inode_.start_block + DataStartBlock(blobfs_->info_);
     uint64_t merkle_blocks = MerkleTreeBlocks(inode_);
 
@@ -255,7 +255,7 @@ zx_status_t VnodeBlob::InitCompressed() {
     // Read the compressed data.
     txn.Enqueue(compressed_vmoid, 0, start + merkle_blocks, compressed_blocks);
 
-    if ((status = txn.Flush()) != ZX_OK) {
+    if ((status = txn.Transact()) != ZX_OK) {
         FS_TRACE_ERROR("Failed to flush read transaction: %d\n", status);
         return status;
     }
@@ -285,13 +285,13 @@ zx_status_t VnodeBlob::InitUncompressed() {
     TRACE_DURATION("blobfs", "Blobfs::InitUncompressed", "size", inode_.blob_size,
                    "blocks", inode_.num_blocks);
     fs::Ticker ticker(blobfs_->CollectingMetrics());
-    ReadTxn txn(blobfs_);
+    fs::ReadTxn txn(blobfs_);
     uint64_t start = inode_.start_block + DataStartBlock(blobfs_->info_);
 
     // Read both the uncompressed merkle tree and data.
     uint64_t length = BlobDataBlocks(inode_) + MerkleTreeBlocks(inode_);
     txn.Enqueue(vmoid_, 0, start, length);
-    zx_status_t status = txn.Flush();
+    zx_status_t status = txn.Transact();
     blobfs_->UpdateMerkleDiskReadMetrics(length * kBlobfsBlockSize, ticker.End());
     return status;
 }
@@ -407,7 +407,7 @@ fail:
 }
 
 void* VnodeBlob::GetData() const {
-    return fs::GetBlock<kBlobfsBlockSize>(blob_->GetData(), MerkleTreeBlocks(inode_));
+    return fs::GetBlock(kBlobfsBlockSize, blob_->GetData(), MerkleTreeBlocks(inode_));
 }
 
 void* VnodeBlob::GetMerkle() const {
@@ -1533,10 +1533,10 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<VnodeBlob>* out) {
 zx_status_t Blobfs::LoadBitmaps() {
     TRACE_DURATION("blobfs", "Blobfs::LoadBitmaps");
     reserved_nodes_.ClearAll();
-    ReadTxn txn(this);
+    fs::ReadTxn txn(this);
     txn.Enqueue(block_map_vmoid_, 0, BlockMapStartBlock(info_), BlockMapBlocks(info_));
     txn.Enqueue(node_map_vmoid_, 0, NodeMapStartBlock(info_), NodeMapBlocks(info_));
-    return txn.Flush();
+    return txn.Transact();
 }
 
 zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd) {

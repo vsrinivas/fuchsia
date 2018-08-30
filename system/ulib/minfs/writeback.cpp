@@ -67,7 +67,7 @@ zx_status_t WriteTxn::Flush(zx_handle_t vmo, vmoid_t vmoid) {
     // Update all the outgoing transactions to be in "disk blocks",
     // not "Minfs blocks".
     block_fifo_request_t blk_reqs[requests_.size()];
-    const uint32_t kDiskBlocksPerMinfsBlock = kMinfsBlockSize / bc_->BlockSize();
+    const uint32_t kDiskBlocksPerMinfsBlock = kMinfsBlockSize / bc_->DeviceBlockSize();
     for (size_t i = 0; i < requests_.size(); i++) {
         blk_reqs[i].group = bc_->BlockGroupID();
         blk_reqs[i].vmoid = vmoid;
@@ -132,7 +132,7 @@ void WritebackWork::SetClosure(SyncCallback closure) {
 }
 #else
 void WritebackWork::Complete() {
-    Flush();
+    Transact();
     Reset();
 }
 #endif  // __Fuchsia__

@@ -49,7 +49,7 @@ uint64_t MerkleTreeBlocks(const blobfs_inode_t& blobNode);
 inline void* get_raw_bitmap_data(const RawBitmap& bm, uint64_t n) {
     assert(n * kBlobfsBlockSize < bm.size());             // Accessing beyond end of bitmap
     assert(kBlobfsBlockSize <= (n + 1) * kBlobfsBlockSize); // Avoid overflow
-    return fs::GetBlock<kBlobfsBlockSize>(bm.StorageUnsafe()->GetData(), n);
+    return fs::GetBlock(kBlobfsBlockSize, bm.StorageUnsafe()->GetData(), n);
 }
 
 } // namespace blobfs

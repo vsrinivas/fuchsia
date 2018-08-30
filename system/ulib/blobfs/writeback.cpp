@@ -42,7 +42,7 @@ zx_status_t WriteTxn::Flush() {
 
     // Update all the outgoing transactions to be in disk blocks
     block_fifo_request_t blk_reqs[requests_.size()];
-    const uint32_t kDiskBlocksPerBlobfsBlock = kBlobfsBlockSize / bs_->BlockSize();
+    const uint32_t kDiskBlocksPerBlobfsBlock = kBlobfsBlockSize / bs_->DeviceBlockSize();
     for (size_t i = 0; i < requests_.size(); i++) {
         blk_reqs[i].group = bs_->BlockGroupID();
         blk_reqs[i].vmoid = vmoid_;

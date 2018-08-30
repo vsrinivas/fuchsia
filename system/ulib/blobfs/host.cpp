@@ -291,7 +291,7 @@ zx_status_t Blobfs::LoadBitmap() {
     const void* bmstart = block_map_.StorageUnsafe()->GetData();
 
     for (size_t n = 0; n < block_map_block_count_; n++) {
-        void* bmdata = fs::GetBlock<kBlobfsBlockSize>(bmstart, n);
+        void* bmdata = fs::GetBlock(kBlobfsBlockSize, bmstart, n);
 
         if (n >= node_map_start_block_) {
             memset(bmdata, 0, kBlobfsBlockSize);
@@ -372,7 +372,7 @@ zx_status_t Blobfs::WriteBitmap(size_t nblocks, size_t start_block) {
     uint64_t bbm_end_block = fbl::round_up(start_block + nblocks, kBlobfsBlockBits) / kBlobfsBlockBits;
     const void* bmstart = block_map_.StorageUnsafe()->GetData();
     for (size_t n = bbm_start_block; n < bbm_end_block; n++) {
-        const void* data = fs::GetBlock<kBlobfsBlockSize>(bmstart, n);
+        const void* data = fs::GetBlock(kBlobfsBlockSize, bmstart, n);
         uint64_t bno = block_map_start_block_ + n;
         zx_status_t status;
         if ((status = WriteBlock(bno, data)) != ZX_OK) {
@@ -396,7 +396,7 @@ zx_status_t Blobfs::WriteData(blobfs_inode_t* inode, const void* merkle_data, co
     const size_t merkle_blocks = MerkleTreeBlocks(*inode);
     const size_t data_blocks = inode->num_blocks - merkle_blocks;
     for (size_t n = 0; n < merkle_blocks; n++) {
-        const void* data = fs::GetBlock<kBlobfsBlockSize>(merkle_data, n);
+        const void* data = fs::GetBlock(kBlobfsBlockSize, merkle_data, n);
         uint64_t bno = data_start_block_ + inode->start_block + n;
         zx_status_t status;
         if ((status = WriteBlock(bno, data)) != ZX_OK) {
@@ -405,7 +405,7 @@ zx_status_t Blobfs::WriteData(blobfs_inode_t* inode, const void* merkle_data, co
     }
 
     for (size_t n = 0; n < data_blocks; n++) {
-        const void* data = fs::GetBlock<kBlobfsBlockSize>(blob_data, n);
+        const void* data = fs::GetBlock(kBlobfsBlockSize, blob_data, n);
 
         // If we try to write a block, will it be reaching beyond the end of the
         // mapped file?

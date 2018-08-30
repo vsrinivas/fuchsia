@@ -28,7 +28,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(InodeManager);
     ~InodeManager();
 
-    static zx_status_t Create(Bcache* bc, Superblock* sb, ReadTxn* txn,
+    static zx_status_t Create(Bcache* bc, Superblock* sb, fs::ReadTxn* txn,
                               AllocatorMetadata metadata,
                               blk_t start_block, size_t inodes,
                               fbl::unique_ptr<InodeManager>* out);

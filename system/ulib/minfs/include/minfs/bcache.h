@@ -30,31 +30,56 @@
 
 namespace minfs {
 
-class Bcache {
+class Bcache : public fs::TransactionHandler {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
     friend class BlockNode;
 
-    static zx_status_t Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint32_t blockmax);
+    ////////////////
+    // fs::TransactionHandler interface.
 
+    uint32_t FsBlockSize() const final {
+        return kMinfsBlockSize;
+    }
+
+#ifdef __Fuchsia__
+    // Acquires a Thread-local group that can be used for sending messages
+    // over the block I/O FIFO.
+    groupid_t BlockGroupID() final {
+        thread_local groupid_t group_ = next_group_.fetch_add(1);
+        ZX_ASSERT_MSG(group_ < MAX_TXN_GROUP_COUNT, "Too many threads accessing block device");
+        return group_;
+    }
+
+    // Return the block size of the underlying block device.
+    uint32_t DeviceBlockSize() const final {
+        return info_.block_size;
+    }
+
+    zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
+        return fifo_client_.Transaction(requests, count);
+    }
+#endif // __Fuchsia__
     // Raw block read functions.
     // These do not track blocks (or attempt to access the block cache)
+    // NOTE: Not marked as final, since these are overridden methods on host,
+    // but not on __Fuchsia__.
     zx_status_t Readblk(blk_t bno, void* data);
     zx_status_t Writeblk(blk_t bno, const void* data);
+
+    ////////////////
+    // Other methods.
+
+    static zx_status_t Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd,
+                              uint32_t blockmax);
 
     // Returns the maximum number of available blocks,
     // assuming the filesystem is non-resizable.
     uint32_t Maxblk() const { return blockmax_; };
 
 #ifdef __Fuchsia__
-    // Return the block size of the underlying block device.
-    uint32_t BlockSize() const { return info_.block_size; }
-
     ssize_t GetDevicePath(char* out, size_t out_len);
     zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out) const;
-    zx_status_t Transaction(block_fifo_request_t* requests, size_t count) const {
-        return fifo_client_.Transaction(requests, count);
-    }
 
     zx_status_t FVMQuery(fvm_info_t* info) {
         ssize_t r = ioctl_block_fvm_query(fd_.get(), info);
@@ -90,14 +115,6 @@ public:
 
     zx_status_t FVMReset() {
         return fs::fvm_reset_volume_slices(fd_.get());
-    }
-
-    // Acquires a Thread-local group that can be used for sending messages
-    // over the block I/O FIFO.
-    groupid_t BlockGroupID() {
-        thread_local groupid_t group_ = next_group_.fetch_add(1);
-        ZX_ASSERT_MSG(group_ < MAX_TXN_GROUP_COUNT, "Too many threads accessing block device");
-        return group_;
     }
 
 #else

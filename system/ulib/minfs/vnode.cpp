@@ -118,7 +118,7 @@ zx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32
         }
     }
 
-    ReadTxn txn(fs_->bc_.get());
+    fs::ReadTxn txn(fs_->bc_.get());
 
     for (uint32_t i = 0; i < count; i++) {
         blk_t ibno;
@@ -128,7 +128,7 @@ zx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32
         }
     }
 
-    return txn.Flush();
+    return txn.Transact();
 }
 
 zx_status_t VnodeMinfs::LoadIndirectWithinDoublyIndirect(uint32_t dindex) {
@@ -203,7 +203,7 @@ zx_status_t VnodeMinfs::InitVmo() {
         vmo_.reset();
         return status;
     }
-    ReadTxn txn(fs_->bc_.get());
+    fs::ReadTxn txn(fs_->bc_.get());
     uint32_t dnum_count = 0;
     uint32_t inum_count = 0;
     uint32_t dinum_count = 0;
@@ -293,7 +293,7 @@ zx_status_t VnodeMinfs::InitVmo() {
         }
     }
 
-    status = txn.Flush();
+    status = txn.Transact();
     ValidateVmoTail();
     return status;
 }

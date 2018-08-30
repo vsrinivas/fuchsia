@@ -14,8 +14,6 @@
 
 namespace minfs {
 
-using ReadTxn = fs::ReadTxn<kMinfsBlockSize, Bcache>;
-
 #ifdef __Fuchsia__
 
 typedef struct {
@@ -60,7 +58,7 @@ private:
 
 #else
 
-using WriteTxn = fs::WriteTxn<kMinfsBlockSize, Bcache>;
+using WriteTxn = fs::WriteTxn;
 
 #endif
 

@@ -192,7 +192,7 @@ public:
     //
     // |grow_cb| is an optional callback to increase the size of the
     // allocator.
-    static zx_status_t Create(Bcache* bc, Superblock* sb, ReadTxn* txn,
+    static zx_status_t Create(Bcache* bc, Superblock* sb, fs::ReadTxn* txn,
                               size_t unit_size, GrowHandler grow_cb,
                               AllocatorMetadata metadata, fbl::unique_ptr<Allocator>* out);
 
