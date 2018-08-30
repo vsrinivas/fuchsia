@@ -145,7 +145,7 @@ func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 
 	// if enabled/disabled is not set, default to disabled
 	if cfg.StatusConfig == nil {
-		cfg.StatusConfig = &amber.StatusConfig{false}
+		cfg.StatusConfig = &amber.StatusConfig{Enabled: false}
 	}
 	src, err := source.NewTUFSource(store, cfg)
 	if err != nil {

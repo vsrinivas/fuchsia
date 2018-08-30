@@ -54,7 +54,7 @@ func (t *testSrc) GetId() string {
 
 func (t *testSrc) GetConfig() *amber.SourceConfig {
 	if t.cfg == nil {
-		t.cfg = &amber.SourceConfig{StatusConfig: &amber.StatusConfig{true}}
+		t.cfg = &amber.SourceConfig{StatusConfig: &amber.StatusConfig{Enabled: true}}
 		t.cfg.Id = t.id
 		t.cfg.BlobRepoUrl = "https://127.0.0.1:8083/test"
 		t.cfg.RepoUrl = "https://127.0.0.1:8083/test/blobs"

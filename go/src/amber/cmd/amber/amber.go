@@ -181,7 +181,7 @@ func readExtraFlags() {
 	d, err := os.Open(flagsDir)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			log.Println("unexpected error reading %q: %s", flagsDir, err)
+			log.Printf("unexpected error reading %q: %s", flagsDir, err)
 		}
 		return
 	}
