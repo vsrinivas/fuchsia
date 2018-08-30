@@ -3,17 +3,15 @@
 // found in the LICENSE file.
 #![deny(warnings)]
 
-extern crate dhcp;
-extern crate failure;
-extern crate fuchsia_async as async;
-extern crate futures;
-
-use async::{Executor};
-use async::net::{UdpSocket};
-use failure::{Error, ResultExt};
-use futures::prelude::*;
-use dhcp::protocol::{CLIENT_PORT, ConfigOption, Message, MessageType, OptionCode, SERVER_PORT};
-use std::net::{SocketAddr};
+use {
+    fuchsia_async::{Executor, net::UdpSocket},
+    failure::{Error, ResultExt},
+    futures::prelude::*,
+    dhcp::protocol::{
+        CLIENT_PORT, ConfigOption, Message, MessageType, OptionCode, SERVER_PORT,
+    },
+    std::net::SocketAddr,
+};
 
 const TEST_MAC: [u8; 6] = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
 
