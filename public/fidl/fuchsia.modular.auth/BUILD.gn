@@ -17,6 +17,6 @@ fidl("fuchsia.modular.auth") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
   ]
 }
