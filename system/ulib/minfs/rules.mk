@@ -55,8 +55,6 @@ MODULE_HOST_SRCS := \
     $(COMMON_SRCS) \
     $(LOCAL_DIR)/host.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
-    system/ulib/fs/vfs.cpp \
-    system/ulib/fs/vnode.cpp \
 
 MODULE_HOST_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
@@ -81,7 +79,8 @@ MODULE_COMPILEFLAGS := $(MODULE_HOST_COMPILEFLAGS)
 MODULE_HEADER_DEPS += system/ulib/zircon-internal
 
 MODULE_HOST_LIBS := \
-    system/ulib/fbl.hostlib
+    system/ulib/fbl.hostlib \
+    system/ulib/fs.hostlib \
 
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 

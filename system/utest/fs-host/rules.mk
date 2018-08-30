@@ -20,8 +20,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-sparse.cpp \
     $(LOCAL_DIR)/test-truncate.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
-    system/ulib/fs/vfs.cpp \
-    system/ulib/fs/vnode.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
@@ -44,7 +42,8 @@ MODULE_HOST_LIBS := \
     system/ulib/unittest.hostlib \
     system/ulib/pretty.hostlib \
     system/ulib/minfs.hostlib \
-    system/ulib/fbl.hostlib
+    system/ulib/fbl.hostlib \
+    system/ulib/fs.hostlib \
 
 # The VFS library uses Clang's thread annotations extensively, but
 # the mutex implementation is not shared between target / host. As a

@@ -47,6 +47,7 @@ MODULE_HOST_LIBS := \
     system/ulib/pretty.hostlib \
     system/ulib/minfs.hostlib \
     system/ulib/fbl.hostlib \
+    system/ulib/fs.hostlib \
     system/ulib/digest.hostlib \
     system/uapp/blobfs.hostlib \
 

@@ -13,8 +13,6 @@ MODULE_TYPE := hostapp
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
-    system/ulib/fs/vfs.cpp \
-    system/ulib/fs/vnode.cpp \
 
 MODULE_HOST_LIBS := \
     third_party/ulib/lz4.hostlib \

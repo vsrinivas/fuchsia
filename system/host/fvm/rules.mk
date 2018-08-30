@@ -40,6 +40,7 @@ MODULE_HOST_LIBS := \
     system/uapp/blobfs.hostlib \
     system/ulib/fvm.hostlib \
     system/ulib/fbl.hostlib \
+    system/ulib/fs.hostlib \
     system/ulib/digest.hostlib \
     system/ulib/minfs.hostlib \
 

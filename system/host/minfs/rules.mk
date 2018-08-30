@@ -13,8 +13,6 @@ MODULE_TYPE := hostapp
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
-    system/ulib/fs/vfs.cpp \
-    system/ulib/fs/vnode.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
@@ -30,6 +28,7 @@ MODULE_COMPILEFLAGS := \
 
 MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib \
+    system/ulib/fs.hostlib \
     system/ulib/minfs.hostlib \
     system/ulib/fs-host.hostlib \
 
