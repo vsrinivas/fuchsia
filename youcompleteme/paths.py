@@ -6,6 +6,8 @@
 
 import os
 import platform
+import re
+import sys
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 FUCHSIA_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, os.pardir, os.pardir))
@@ -94,3 +96,21 @@ def build_tool(package, tool):
     assert os.path.exists(path), 'No "%s" tool in "%s"' % (tool, package)
     _BUILD_TOOLS[package, tool] = path
   return path
+
+def main():
+  variable_re = re.compile('^[A-Z][A-Z_]*$')
+  def usage():
+    print 'Usage: path.py VARIABLE'
+    print 'Available variables:'
+    print '\n'.join(filter(variable_re.match, globals().keys()))
+  if len(sys.argv) != 2:
+    usage()
+    return
+  variable = sys.argv[1]
+  if not variable_re.match(variable) or variable not in globals().keys():
+    usage()
+    return
+  print globals()[variable]
+
+if __name__ == '__main__':
+  main()
