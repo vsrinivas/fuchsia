@@ -5,8 +5,6 @@
 source_set("cpp") {
   sources = [
     "connect.h",
-    "environment_services.cc",
-    "environment_services.h",
     "expose.cc",
     "expose.h",
     "exposed_object.cc",
