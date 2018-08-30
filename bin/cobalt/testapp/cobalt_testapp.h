@@ -30,8 +30,8 @@ class CobaltTestApp {
                 int num_observations_per_batch)
       : do_environment_test_(do_environment_test),
         context_(component::StartupContext::CreateFromStartupInfo()),
-        encoder_(use_network, num_observations_per_batch),
-        logger_(use_network, num_observations_per_batch) {}
+        encoder_(use_network, num_observations_per_batch, &cobalt_controller_),
+        logger_(use_network, num_observations_per_batch, &cobalt_controller_) {}
 
   // We have multiple testing strategies based on the method we use to
   // connect to the FIDL service and the method we use to determine whether
@@ -76,7 +76,6 @@ class CobaltTestApp {
   bool RunTestsUsingServiceFromEnvironment();
 
   bool RequestSendSoonTests();
-
 
   bool do_environment_test_;
   std::unique_ptr<component::StartupContext> context_;

@@ -241,20 +241,20 @@ bool CobaltTestAppEncoder::CheckForSuccessfulSend(bool use_request_send_soon) {
     // Use the request-send-soon strategy to check the result of the send.
     bool send_success = false;
     FXL_VLOG(1) << "Invoking RequestSendSoon() now...";
-    cobalt_controller_->RequestSendSoon(&send_success);
+    (*cobalt_controller_)->RequestSendSoon(&send_success);
     FXL_VLOG(1) << "RequestSendSoon => " << send_success;
     return send_success;
   }
 
   // Use the block-until-empty strategy to check the result of the send.
   FXL_VLOG(1) << "Invoking BlockUntilEmpty(10)...";
-  cobalt_controller_->BlockUntilEmpty(10);
+  (*cobalt_controller_)->BlockUntilEmpty(10);
   FXL_VLOG(1) << "BlockUntilEmpty() returned.";
 
   uint32_t num_send_attempts;
-  cobalt_controller_->GetNumSendAttempts(&num_send_attempts);
+  (*cobalt_controller_)->GetNumSendAttempts(&num_send_attempts);
   uint32_t failed_send_attempts;
-  cobalt_controller_->GetFailedSendAttempts(&failed_send_attempts);
+  (*cobalt_controller_)->GetFailedSendAttempts(&failed_send_attempts);
   FXL_VLOG(1) << "num_send_attempts=" << num_send_attempts;
   FXL_VLOG(1) << "failed_send_attempts=" << failed_send_attempts;
   uint32_t expected_lower_bound = previous_value_of_num_send_attempts_ + 1;

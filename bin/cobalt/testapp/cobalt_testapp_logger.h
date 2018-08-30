@@ -17,9 +17,11 @@ std::string StatusToString(fuchsia::cobalt::Status2 status);
 
 class CobaltTestAppLogger {
  public:
-  CobaltTestAppLogger(bool use_network, int num_observations_per_batch)
+  CobaltTestAppLogger(bool use_network, int num_observations_per_batch,
+                      fuchsia::cobalt::ControllerSyncPtr* cobalt_controller)
       : use_network_(use_network),
-        num_observations_per_batch_(num_observations_per_batch) {}
+        num_observations_per_batch_(num_observations_per_batch),
+        cobalt_controller_(cobalt_controller) {}
 
   // Synchronously invokes LogEvent() |num_observations_per_batch_|
   // times using the given parameters. Then invokes CheckForSuccessfulSend().
@@ -84,7 +86,7 @@ class CobaltTestAppLogger {
   int num_observations_per_batch_;
   int previous_value_of_num_send_attempts_ = 0;
 
-  fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
+  fuchsia::cobalt::ControllerSyncPtr* cobalt_controller_;
 
   fuchsia::cobalt::LoggerSyncPtr logger_;
   fuchsia::cobalt::LoggerExtSyncPtr logger_ext_;
