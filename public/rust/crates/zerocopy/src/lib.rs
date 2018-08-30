@@ -5,9 +5,6 @@
 #![feature(refcell_map_split)]
 #![cfg_attr(not(test), no_std)]
 
-#[cfg(test)]
-extern crate core;
-
 use core::cell::{Ref, RefMut};
 use core::fmt::{self, Debug, Display, Formatter};
 use core::marker::PhantomData;
@@ -549,7 +546,7 @@ mod tests {
     use core::ops::Deref;
     use core::ptr;
 
-    use LayoutVerified;
+    use super::LayoutVerified;
 
     // B should be [u8; N]. T will require that the entire structure is aligned
     // to the alignment of T.
