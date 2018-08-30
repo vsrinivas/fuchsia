@@ -69,7 +69,13 @@ static const pbus_clk_t thermal_clk_gates[] = {
  * Operating point 9  - Freq 1.7040 Ghz Voltage 0.8610 V
  * Operating point 10 - Freq 1.8960 Ghz Voltage 0.9810 V
  *
- * GPU_CLK_FREQUENCY_SOURCE - // TOD(jbauman): (Put actual numbers below)
+ * GPU_CLK_FREQUENCY_SOURCE -
+ * 0 - 285.7 MHz
+ * 1 - 400 MHz
+ * 2 - 500 MHz
+ * 3 - 666 MHz
+ * 4 - 800 MHz
+ * 5 - 846 MHz (not yet implemented)
  */
 
 // clang-format off
@@ -79,7 +85,7 @@ static const pbus_clk_t thermal_clk_gates[] = {
 static thermal_device_info_t aml_astro_config = {
     .active_cooling                     = false,
     .passive_cooling                    = true,
-    .gpu_throttling                     = false,
+    .gpu_throttling                     = true,
     .num_trip_points                    = 7,
     .critical_temp                      = 102,
     .big_little                         = false,
@@ -89,36 +95,43 @@ static thermal_device_info_t aml_astro_config = {
             // This is the initial thermal setup of the device.
             // CPU freq set to a known stable MAX.
             .big_cluster_dvfs_opp       = 10,
+            .gpu_clk_freq_source        = 4,
         },
         {
             .up_temp                    = 75,
             .down_temp                  = 73,
             .big_cluster_dvfs_opp       = 9,
+            .gpu_clk_freq_source        = 4,
         },
         {
             .up_temp                    = 80,
             .down_temp                  = 77,
             .big_cluster_dvfs_opp       = 8,
+            .gpu_clk_freq_source        = 3,
         },
         {
             .up_temp                    = 85,
             .down_temp                  = 83,
             .big_cluster_dvfs_opp       = 7,
+            .gpu_clk_freq_source        = 3,
         },
         {
             .up_temp                    = 90,
             .down_temp                  = 88,
             .big_cluster_dvfs_opp       = 6,
+            .gpu_clk_freq_source        = 2,
         },
         {
             .up_temp                    = 95,
             .down_temp                  = 93,
             .big_cluster_dvfs_opp       = 5,
+            .gpu_clk_freq_source        = 1,
         },
         {
             .up_temp                    = 100,
             .down_temp                  = 98,
             .big_cluster_dvfs_opp       = 4,
+            .gpu_clk_freq_source        = 0,
         },
     },
 };
