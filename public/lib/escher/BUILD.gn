@@ -376,6 +376,7 @@ source_set("escher") {
     "util/image_utils.h",
     "util/intrusive_list.h",
     "util/object_pool.h",
+    "util/pair_hasher.h",
     "util/stack_allocator.h",
     "util/stopwatch.h",
     "util/string_utils.h",

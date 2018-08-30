@@ -79,4 +79,29 @@ TEST(BitOps, SetBitsAtAndAboveIndex) {
   TestSetBitsAtAndAboveIndex<int64_t>();
 }
 
+template <typename T>
+void TestRotateLeft() {
+  EXPECT_EQ(2U, RotateLeft(1U, 1));
+  EXPECT_EQ(4U, RotateLeft(1U, 2));
+  EXPECT_EQ(6U, RotateLeft(3U, 1));
+  EXPECT_EQ(12U, RotateLeft(3U, 2));
+
+  const T max = std::numeric_limits<T>::max();
+  const int digits = std::numeric_limits<T>::digits;
+
+  for (int i = 1; i < digits; ++i) {
+    EXPECT_EQ(max, RotateLeft(max, i));
+  }
+
+  const T high_order_bit = T(1) << digits - 1;
+  EXPECT_EQ(1U, RotateLeft(high_order_bit, 1));
+}
+
+TEST(BitOps, RotateLeft) {
+  TestRotateLeft<uint8_t>();
+  TestRotateLeft<uint16_t>();
+  TestRotateLeft<uint32_t>();
+  TestRotateLeft<uint64_t>();
+}
+
 }  // namespace
