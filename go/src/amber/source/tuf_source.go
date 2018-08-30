@@ -98,7 +98,7 @@ func LoadConfigFromDir(path string) (*amber.SourceConfig, error) {
 	// it is possible we encounter a config on disk that does not have
 	// this value set, set the defaults
 	if cfg.StatusConfig == nil {
-		cfg.StatusConfig = &amber.StatusConfig{true}
+		cfg.StatusConfig = &amber.StatusConfig{Enabled: true}
 	}
 
 	return &cfg, nil
@@ -203,7 +203,7 @@ func setEnabledStatus(cfg *tufSourceConfig) bool {
 	// it is possible we encounter a config on disk that does not have
 	// this value set, set the defaults
 	if cfg.Config.StatusConfig == nil {
-		cfg.Config.StatusConfig = &amber.StatusConfig{true}
+		cfg.Config.StatusConfig = &amber.StatusConfig{Enabled: true}
 		dirty = true
 	}
 
@@ -427,7 +427,7 @@ func newTUFKeys(cfg []amber.KeyConfig) ([]*tuf_data.Key, error) {
 
 		keys[i] = &tuf_data.Key{
 			Type:  key.Type,
-			Value: tuf_data.KeyValue{tuf_data.HexBytes(keyHex)},
+			Value: tuf_data.KeyValue{Public: tuf_data.HexBytes(keyHex)},
 		}
 	}
 
