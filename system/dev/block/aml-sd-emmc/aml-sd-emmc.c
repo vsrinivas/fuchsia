@@ -1018,7 +1018,12 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         .proto_ops = &aml_sdmmc_proto,
     };
 
-    status = device_add(parent, &args, &dev->zxdev);
+    // Try pdev_device_add() first, but fallback to device_add()
+    // if we weren't configured for platform device children.
+    status = pdev_device_add(&dev->pdev, 0, &args, &dev->zxdev);
+    if (status != ZX_OK) {
+        status = device_add(parent, &args, &dev->zxdev);
+    }
     if (status != ZX_OK) {
         goto fail;
     }

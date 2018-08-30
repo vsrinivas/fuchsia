@@ -12,31 +12,57 @@
 
 #include "astro.h"
 
-static const pbus_mmio_t sdio_mmios[] = {
+static const pbus_gpio_t wifi_gpios[] = {
+    {
+        .gpio = S905D2_WIFI_SDIO_WAKE_HOST,
+    },
+};
+
+static const pbus_dev_t sdio_children[] = {
+    {
+        // Wifi driver.
+        .name = "astro-wifi",
+        .gpios = wifi_gpios,
+        .gpio_count = countof(wifi_gpios),
+    },
+};
+
+static const pbus_dev_t aml_sd_emmc_children[] = {
+    {
+        // Generic SDIO driver.
+        .name = "sdio",
+        .children = sdio_children,
+        .child_count = countof(sdio_children),
+    },
+};
+
+static const pbus_mmio_t aml_sd_emmc_mmios[] = {
     {
         .base = S905D2_EMMC_A_SDIO_BASE,
         .length = S905D2_EMMC_A_SDIO_LENGTH,
     },
 };
 
-static const pbus_irq_t sdio_irqs[] = {
+static const pbus_irq_t aml_sd_emmc_irqs[] = {
     {
         .irq = S905D2_EMMC_A_SDIO_IRQ,
     },
 };
 
-static const pbus_bti_t sdio_btis[] = {
+static const pbus_bti_t aml_sd_emmc_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = BTI_SDIO,
     },
 };
 
-static const pbus_gpio_t sdio_gpios[] = {
+static const pbus_gpio_t aml_sd_emmc_gpios[] = {
     {
         .gpio = S905D2_GPIOX(6),
     },
     {
+        // TODO remove this after Wifi adapter is updated to access its GPIOs
+        // using platform device protocol
         .gpio = S905D2_WIFI_SDIO_WAKE_HOST,
     },
 };
@@ -59,21 +85,23 @@ static const pbus_metadata_t aml_sd_emmc_metadata[] = {
     }
 };
 
-static const pbus_dev_t sdio_dev = {
-    .name = "aml_sdio",
+static const pbus_dev_t aml_sd_emmc_dev = {
+    .name = "aml-sdio",
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_SD_EMMC,
-    .mmios = sdio_mmios,
-    .mmio_count = countof(sdio_mmios),
-    .irqs = sdio_irqs,
-    .irq_count = countof(sdio_irqs),
-    .btis = sdio_btis,
-    .bti_count = countof(sdio_btis),
-    .gpios = sdio_gpios,
-    .gpio_count = countof(sdio_gpios),
+    .mmios = aml_sd_emmc_mmios,
+    .mmio_count = countof(aml_sd_emmc_mmios),
+    .irqs = aml_sd_emmc_irqs,
+    .irq_count = countof(aml_sd_emmc_irqs),
+    .btis = aml_sd_emmc_btis,
+    .bti_count = countof(aml_sd_emmc_btis),
+    .gpios = aml_sd_emmc_gpios,
+    .gpio_count = countof(aml_sd_emmc_gpios),
     .metadata = aml_sd_emmc_metadata,
     .metadata_count = countof(aml_sd_emmc_metadata),
+    .children = aml_sd_emmc_children,
+    .child_count = countof(aml_sd_emmc_children),
 };
 
 zx_status_t aml_sdio_init(aml_bus_t* bus) {
@@ -87,8 +115,8 @@ zx_status_t aml_sdio_init(aml_bus_t* bus) {
     gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_CLK, S905D2_WIFI_SDIO_CLK_FN);
     gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_CMD, S905D2_WIFI_SDIO_CMD_FN);
     gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_WAKE_HOST, S905D2_WIFI_SDIO_WAKE_HOST_FN);
-    if ((status = pbus_device_add(&bus->pbus, &sdio_dev)) != ZX_OK) {
-        zxlogf(ERROR, "aml_sdio_init could not add sdio_dev: %d\n", status);
+    if ((status = pbus_device_add(&bus->pbus, &aml_sd_emmc_dev)) != ZX_OK) {
+        zxlogf(ERROR, "aml_sdio_init could not add aml_sd_emmc_dev: %d\n", status);
         return status;
     }
 

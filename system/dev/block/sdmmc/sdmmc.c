@@ -16,6 +16,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/debug.h>
+#include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/sdmmc.h>
 
 // Zircon Includes
@@ -483,7 +484,14 @@ static int sdmmc_worker_thread(void* arg) {
             .prop_count = countof(props),
         };
 
-        st = device_add(hci_zxdev, &sdio_args, &dev->zxdev);
+        // Use platform device protocol to create our SDIO device, if it is available.
+        platform_device_protocol_t pdev;
+        st = device_get_protocol(hci_zxdev, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+        if (st == ZX_OK) {
+            st = pdev_device_add(&pdev, 0, &sdio_args, &dev->zxdev);
+        } else {
+            st = device_add(hci_zxdev, &sdio_args, &dev->zxdev);
+        }
         if (st != ZX_OK) {
             zxlogf(ERROR, "sdmmc: Failed to add sdio device, retcode = %d\n", st);
             return st;
