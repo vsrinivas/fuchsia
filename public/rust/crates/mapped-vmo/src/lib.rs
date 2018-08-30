@@ -7,9 +7,7 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-extern crate fuchsia_zircon as zx;
-
-use zx::VmarFlags;
+use fuchsia_zircon::{self as zx, VmarFlags};
 
 /// An object representing a mapping into an address space.
 #[derive(Debug)]
@@ -141,7 +139,10 @@ impl MappedVmo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::slice;
+    use {
+        fuchsia_zircon as zx,
+        std::slice,
+    };
 
     const PAGE_SIZE: usize = 4096;
 
