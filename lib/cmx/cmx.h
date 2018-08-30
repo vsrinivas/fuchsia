@@ -24,16 +24,13 @@ class CmxMetadata {
 
   // Initializes the CmxMetadata from a JSON file. Returns false if there were
   // any errors.
-  bool ParseFromFileAt(int dirfd, const std::string& file);
+  bool ParseFromFileAt(int dirfd, const std::string& file,
+                       json::JSONParser* json_parser);
 
   // Initializes the CmxMetadata from a deprecated_runtime JSON file. Returns
   // false if there were any errors.
-  bool ParseFromDeprecatedRuntimeFileAt(int dirfd, const std::string& file);
-
-  // Returns true if |ParseSandboxMetadata| encountered an error.
-  bool HasError() const;
-  // Returns the error if |HasError| is true.
-  std::string error_str() const;
+  bool ParseFromDeprecatedRuntimeFileAt(int dirfd, const std::string& file,
+                                        json::JSONParser* json_parser);
 
   // Takes a package's resolved_url, e.g. file:///pkgfs/packages/<FOO>/0, and
   // returns the default component's .cmx path, e.g. meta/<FOO>.cmx.
@@ -48,11 +45,13 @@ class CmxMetadata {
  private:
   static std::string GetCmxPathFromPath(const std::regex& regex,
                                         const std::string& path);
-  void ParseSandboxMetadata(const rapidjson::Document& document);
-  void ParseProgramMetadata(const rapidjson::Document& document);
-  void ParseFacetsMetadata(const rapidjson::Document& document);
+  void ParseSandboxMetadata(const rapidjson::Document& document,
+                            json::JSONParser* json_parser);
+  void ParseProgramMetadata(const rapidjson::Document& document,
+                            json::JSONParser* json_parser);
+  void ParseFacetsMetadata(const rapidjson::Document& document,
+                           json::JSONParser* json_parser);
 
-  json::JSONParser json_parser_;
   SandboxMetadata sandbox_meta_;
   RuntimeMetadata runtime_meta_;
   ProgramMetadata program_meta_;

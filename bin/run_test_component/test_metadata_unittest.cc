@@ -32,12 +32,23 @@ class TestMetadataTest : public ::testing::Test {
     ASSERT_NE("", tmp_dir_.path()) << "Cannot acccess /tmp";
   }
 
-  std::string NewFileFromString(const std::string& json) {
-    std::string json_file;
-    if (!tmp_dir_.NewTempFileWithData(json, &json_file)) {
-      return "";
+  void ExpectFailedParse(const std::string& json,
+                         const std::string& expected_error) {
+    std::string error;
+    TestMetadata tm;
+    EXPECT_FALSE(ParseFrom(&tm, json));
+    EXPECT_TRUE(tm.HasError());
+    EXPECT_THAT(tm.error_str(), ::testing::HasSubstr(expected_error));
+  }
+
+  bool ParseFrom(TestMetadata* tm, const std::string& json) {
+    std::string json_path;
+    if (!tmp_dir_.NewTempFileWithData(json, &json_path)) {
+      return false;
     }
-    return json_file;
+    const bool ret = tm->ParseFromFile(json_path);
+    EXPECT_EQ(ret, !tm->HasError());
+    return ret;
   }
 
   std::string CreateManifestJson(std::string additional_elements = "") {
@@ -54,34 +65,24 @@ class TestMetadataTest : public ::testing::Test {
 };
 
 TEST_F(TestMetadataTest, InvalidJson) {
-  const std::string json = R"JSON({
-  "root": ["url1", "url3", "url5"]
-  "sys": ["url2", "url4"]
-  })JSON";
-  const std::string file = NewFileFromString(json);
-  auto test_metadata = run::TestMetadata::CreateFromFile(file);
-  EXPECT_TRUE(test_metadata.has_error());
-  ASSERT_EQ(1u, test_metadata.errors().size());
+  const std::string json = R"JSON({,,,})JSON";
+  ExpectFailedParse(json, "Missing a name for object member.");
 }
 
 TEST_F(TestMetadataTest, NoFacet) {
   const std::string json = CreateManifestJson();
-  const std::string file = NewFileFromString(json);
-  auto test_metadata = run::TestMetadata::CreateFromFile(file);
-  EXPECT_FALSE(test_metadata.has_error());
-  ASSERT_EQ(0u, test_metadata.errors().size()) << test_metadata.errors()[0];
-  ASSERT_TRUE(test_metadata.is_null());
+  TestMetadata tm;
+  EXPECT_TRUE(ParseFrom(&tm, json));
+  EXPECT_TRUE(tm.is_null());
 }
 
 TEST_F(TestMetadataTest, NoFuchsiaTestFacet) {
   const std::string json = CreateManifestJson(R"(
   "facets": {
   })");
-  const std::string file = NewFileFromString(json);
-  auto test_metadata = run::TestMetadata::CreateFromFile(file);
-  EXPECT_FALSE(test_metadata.has_error());
-  ASSERT_EQ(0u, test_metadata.errors().size()) << test_metadata.errors()[0];
-  ASSERT_TRUE(test_metadata.is_null());
+  TestMetadata tm;
+  EXPECT_TRUE(ParseFrom(&tm, json));
+  EXPECT_TRUE(tm.is_null());
 }
 
 TEST_F(TestMetadataTest, NoServices) {
@@ -90,12 +91,10 @@ TEST_F(TestMetadataTest, NoServices) {
     "fuchsia.test": {
     }
   })");
-  const std::string file = NewFileFromString(json);
-  auto test_metadata = run::TestMetadata::CreateFromFile(file);
-  EXPECT_FALSE(test_metadata.has_error());
-  ASSERT_EQ(0u, test_metadata.errors().size()) << test_metadata.errors()[0];
-  ASSERT_FALSE(test_metadata.is_null());
-  ASSERT_EQ(0u, test_metadata.services().size());
+  TestMetadata tm;
+  EXPECT_TRUE(ParseFrom(&tm, json));
+  EXPECT_FALSE(tm.is_null());
+  EXPECT_THAT(tm.services(), ::testing::IsEmpty());
 }
 
 TEST_F(TestMetadataTest, InvalidTestFacet) {
@@ -104,10 +103,7 @@ TEST_F(TestMetadataTest, InvalidTestFacet) {
     "fuchsia.test": [
     ]
   })");
-  const std::string file = NewFileFromString(json);
-  auto test_metadata = run::TestMetadata::CreateFromFile(file);
-  EXPECT_TRUE(test_metadata.has_error());
-  ASSERT_EQ(1u, test_metadata.errors().size());
+  ExpectFailedParse(json, "'fuchsia.test' in 'facets' should be an object.");
 }
 
 TEST_F(TestMetadataTest, InvalidServicesType) {
@@ -117,10 +113,9 @@ TEST_F(TestMetadataTest, InvalidServicesType) {
       "injected-services": []
     }
   })");
-  const std::string file = NewFileFromString(json);
-  auto test_metadata = run::TestMetadata::CreateFromFile(file);
-  EXPECT_TRUE(test_metadata.has_error());
-  ASSERT_EQ(1u, test_metadata.errors().size());
+  ExpectFailedParse(json,
+                    "'injected-services' in 'fuchsia.test' should be an "
+                    "object.");
 }
 
 TEST_F(TestMetadataTest, InvalidServices) {
@@ -132,12 +127,7 @@ TEST_F(TestMetadataTest, InvalidServices) {
       }
     }
   })");
-  {
-    const std::string file = NewFileFromString(json);
-    auto test_metadata = run::TestMetadata::CreateFromFile(file);
-    EXPECT_TRUE(test_metadata.has_error());
-    ASSERT_EQ(1u, test_metadata.errors().size());
-  }
+  ExpectFailedParse(json, "Missing a name for object member.");
 
   json = CreateManifestJson(R"(
   "facets": {
@@ -147,13 +137,9 @@ TEST_F(TestMetadataTest, InvalidServices) {
       }
     }
   })");
-
-  {
-    const std::string file = NewFileFromString(json);
-    auto test_metadata = run::TestMetadata::CreateFromFile(file);
-    EXPECT_TRUE(test_metadata.has_error());
-    ASSERT_EQ(1u, test_metadata.errors().size());
-  }
+  ExpectFailedParse(json,
+                    "'injected-services' in 'fuchsia.test' has a "
+                    "non-string pair.");
 }
 
 std::pair<std::string, std::string> create_pair(const std::string& s1,
@@ -173,13 +159,10 @@ TEST_F(TestMetadataTest, ValidServices) {
     }
   })");
 
-  const std::string file = NewFileFromString(json);
-  auto test_metadata = run::TestMetadata::CreateFromFile(file);
-  EXPECT_FALSE(test_metadata.has_error());
-  ASSERT_EQ(0u, test_metadata.errors().size());
-  ASSERT_EQ(3u, test_metadata.services().size());
+  TestMetadata tm;
+  EXPECT_TRUE(ParseFrom(&tm, json));
   EXPECT_THAT(
-      test_metadata.services(),
+      tm.services(),
       testing::ElementsAre(create_pair("1", "url1"), create_pair("2", "url2"),
                            create_pair("3", "url3")));
 }

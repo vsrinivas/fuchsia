@@ -6,6 +6,8 @@
 
 #include <string>
 
+#include "garnet/lib/json/json_parser.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
@@ -22,12 +24,14 @@ class EnvironmentConfigTest : public ::testing::Test {
     ASSERT_NE("", tmp_dir_.path()) << "Cannot acccess /tmp";
   }
 
-  std::string NewJSONFile(const std::string& json) {
-    std::string json_file;
-    if (!tmp_dir_.NewTempFileWithData(json, &json_file)) {
-      return "";
+  bool ParseFrom(EnvironmentConfig* config, const std::string& json) {
+    std::string json_path;
+    if (!tmp_dir_.NewTempFileWithData(json, &json_path)) {
+      return false;
     }
-    return json_file;
+    const bool ret = config->ParseFromFile(json_path);
+    EXPECT_EQ(ret, !config->HasError());
+    return ret;
   }
 
  private:
@@ -35,46 +39,56 @@ class EnvironmentConfigTest : public ::testing::Test {
 };
 
 TEST_F(EnvironmentConfigTest, InvalidJson) {
-  const std::string json = R"JSON({
-  "root": ["url1", "url3", "url5"]
-  "sys": ["url2", "url4"]
-  })JSON";
-  const std::string file = NewJSONFile(json);
-  auto config = run::EnvironmentConfig::CreateFromFile(file);
-  EXPECT_TRUE(config.has_error());
-  ASSERT_EQ(1u, config.errors().size());
-}
-
-TEST_F(EnvironmentConfigTest, EmptyJson) {
-  const std::string json = R"JSON({
-  })JSON";
-  const std::string file = NewJSONFile(json);
-  auto config = run::EnvironmentConfig::CreateFromFile(file);
-  EXPECT_TRUE(config.has_error());
-  ASSERT_EQ(2u, config.errors().size());
-  ASSERT_EQ(0u, config.url_map().size());
+  const std::string json = R"JSON({,,,})JSON";
+  EnvironmentConfig config;
+  EXPECT_FALSE(ParseFrom(&config, json));
+  EXPECT_THAT(config.error_str(),
+              ::testing::HasSubstr("Missing a name for object member."));
 }
 
 TEST_F(EnvironmentConfigTest, NoRootElement) {
   const std::string json = R"JSON({
   "sys": ["url2", "url4"]
   })JSON";
-  const std::string file = NewJSONFile(json);
-  auto config = run::EnvironmentConfig::CreateFromFile(file);
-  EXPECT_TRUE(config.has_error());
-  ASSERT_EQ(1u, config.errors().size());
-  ASSERT_EQ(2u, config.url_map().size());
+  EnvironmentConfig config;
+  EXPECT_FALSE(ParseFrom(&config, json));
+  EXPECT_THAT(config.error_str(),
+              ::testing::HasSubstr("Environment 'root' not found."));
+  EXPECT_EQ(2u, config.url_map().size());
 }
 
 TEST_F(EnvironmentConfigTest, NoSysElement) {
   const std::string json = R"JSON({
   "root": ["url2", "url4"]
   })JSON";
-  const std::string file = NewJSONFile(json);
-  auto config = run::EnvironmentConfig::CreateFromFile(file);
-  EXPECT_TRUE(config.has_error());
-  ASSERT_EQ(1u, config.errors().size());
-  ASSERT_EQ(2u, config.url_map().size());
+  EnvironmentConfig config;
+  EXPECT_FALSE(ParseFrom(&config, json));
+  EXPECT_THAT(config.error_str(),
+              ::testing::HasSubstr("Environment 'sys' not found."));
+  EXPECT_EQ(2u, config.url_map().size());
+}
+
+TEST_F(EnvironmentConfigTest, InvalidSection) {
+  {
+    const std::string json = R"JSON({
+    "root": ["url2", "url4"],
+    "sys": 3
+    })JSON";
+    EnvironmentConfig config;
+    EXPECT_FALSE(ParseFrom(&config, json));
+    EXPECT_THAT(config.error_str(),
+                ::testing::HasSubstr("'sys' section should be an array."));
+  }
+  {
+    const std::string json = R"JSON({
+    "root": ["url2", 42],
+    "sys": ["url1"]
+    })JSON";
+    EnvironmentConfig config;
+    EXPECT_FALSE(ParseFrom(&config, json));
+    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(
+        "'root' section should be a string array."));
+  }
 }
 
 TEST_F(EnvironmentConfigTest, ValidConfig) {
@@ -82,10 +96,9 @@ TEST_F(EnvironmentConfigTest, ValidConfig) {
   "root": ["url1", "url3", "url5"],
   "sys": ["url2", "url4"]
   })JSON";
-  const std::string file = NewJSONFile(json);
-  auto config = run::EnvironmentConfig::CreateFromFile(file);
-  EXPECT_FALSE(config.has_error());
-  ASSERT_EQ(0u, config.errors().size()) << config.errors()[0];
+  EnvironmentConfig config;
+  EXPECT_TRUE(ParseFrom(&config, json));
+  EXPECT_FALSE(config.HasError());
   ASSERT_EQ(5u, config.url_map().size());
   std::vector<std::string> root_urls = {"url1", "url3", "url5"};
   for (auto& url : root_urls) {

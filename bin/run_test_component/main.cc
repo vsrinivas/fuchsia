@@ -105,12 +105,11 @@ bool ConnectToRequiredEnvironment(const run::EnvironmentType& env_type,
 }  // namespace
 
 int main(int argc, const char** argv) {
-  auto config = run::EnvironmentConfig::CreateFromFile(kConfigPath);
-  if (config.has_error()) {
-    fprintf(stderr, "Error parsing config file:\n");
-    for (auto& err : config.errors()) {
-      fprintf(stderr, "%s\n", err.c_str());
-    }
+  run::EnvironmentConfig config;
+  config.ParseFromFile(kConfigPath);
+  if (config.HasError()) {
+    fprintf(stderr, "Error parsing config file %s: %s\n",
+            kConfigPath, config.error_str().c_str());
     return 1;
   }
 
@@ -133,14 +132,11 @@ int main(int argc, const char** argv) {
             parse_result.matching_urls[0].c_str());
   }
   std::string program_name = parse_result.launch_info.url;
-  auto test_metadata =
-      run::TestMetadata::CreateFromFile(parse_result.cmx_file_path);
-  if (test_metadata.has_error()) {
-    fprintf(stderr, "Not a valid manifest: %s\n",
-            parse_result.cmx_file_path.c_str());
-    for (auto& err : test_metadata.errors()) {
-      fprintf(stderr, "%s\n", err.c_str());
-    }
+  run::TestMetadata test_metadata;
+  if (!test_metadata.ParseFromFile(parse_result.cmx_file_path)) {
+    fprintf(stderr, "Error parsing cmx %s: %s\n",
+            parse_result.cmx_file_path.c_str(),
+            test_metadata.error_str().c_str());
     return 1;
   }
 

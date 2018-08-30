@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <string>
 
+#include "garnet/lib/json/json_parser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/path.h"
@@ -23,24 +24,28 @@ class CmxMetadataTest : public ::testing::Test {
   void ExpectFailedParse(const std::string& json, std::string expected_error) {
     std::string error;
     CmxMetadata cmx;
+    json::JSONParser json_parser;
     std::string json_basename;
-    EXPECT_FALSE(ParseFrom(&cmx, json, &json_basename));
-    EXPECT_TRUE(cmx.HasError());
-    EXPECT_EQ(cmx.error_str(), fxl::Substitute(expected_error, json_basename));
+    EXPECT_FALSE(ParseFrom(&cmx, &json_parser, json, &json_basename));
+    EXPECT_TRUE(json_parser.HasError());
+    EXPECT_EQ(json_parser.error_str(),
+              fxl::Substitute(expected_error, json_basename));
   }
 
-  bool ParseFrom(CmxMetadata* cmx, const std::string& json,
-                 std::string* json_basename) {
+  bool ParseFrom(CmxMetadata* cmx, json::JSONParser* json_parser,
+                 const std::string& json, std::string* json_basename) {
     std::string json_path;
     if (!tmp_dir_.NewTempFileWithData(json, &json_path)) {
       return false;
     }
     *json_basename = files::GetBaseName(json_path);
     const int dirfd = open(tmp_dir_.path().c_str(), O_RDONLY);
-    return cmx->ParseFromFileAt(dirfd, *json_basename);
+    return cmx->ParseFromFileAt(dirfd, *json_basename, json_parser);
   }
 
-  bool ParseFromDeprecatedRuntime(CmxMetadata* cmx, const std::string& json,
+  bool ParseFromDeprecatedRuntime(CmxMetadata* cmx,
+                                  json::JSONParser* json_parser,
+                                  const std::string& json,
                                   std::string* json_basename) {
     std::string json_path;
     if (!tmp_dir_.NewTempFileWithData(json, &json_path)) {
@@ -48,7 +53,8 @@ class CmxMetadataTest : public ::testing::Test {
     }
     *json_basename = files::GetBaseName(json_path);
     const int dirfd = open(tmp_dir_.path().c_str(), O_RDONLY);
-    return cmx->ParseFromDeprecatedRuntimeFileAt(dirfd, *json_basename);
+    return cmx->ParseFromDeprecatedRuntimeFileAt(dirfd, *json_basename,
+                                                 json_parser);
   }
 
  private:
@@ -57,6 +63,7 @@ class CmxMetadataTest : public ::testing::Test {
 
 TEST_F(CmxMetadataTest, ParseMetadata) {
   CmxMetadata cmx;
+  json::JSONParser json_parser;
   const std::string json = R"JSON({
   "sandbox": {
       "dev": [ "class/input" ],
@@ -70,8 +77,9 @@ TEST_F(CmxMetadataTest, ParseMetadata) {
   "other": "stuff"
   })JSON";
   std::string file_unused;
-  EXPECT_TRUE(ParseFrom(&cmx, json, &file_unused)) << cmx.error_str();
-  EXPECT_FALSE(cmx.HasError());
+  EXPECT_TRUE(ParseFrom(&cmx, &json_parser, json,
+                        &file_unused)) << json_parser.error_str();
+  EXPECT_FALSE(json_parser.HasError());
 
   const auto& sandbox = cmx.sandbox_meta();
   EXPECT_FALSE(sandbox.IsNull());
@@ -101,8 +109,10 @@ TEST_F(CmxMetadataTest, ParseEmpty) {
   }
   )JSON";
   CmxMetadata cmx;
+  json::JSONParser json_parser;
   std::string file_unused;
-  EXPECT_TRUE(ParseFrom(&cmx, json, &file_unused)) << cmx.error_str();
+  EXPECT_TRUE(ParseFrom(&cmx, &json_parser, json, &file_unused))
+      << json_parser.error_str();
   EXPECT_FALSE(cmx.sandbox_meta().IsNull());
   EXPECT_TRUE(cmx.runtime_meta().IsNull());
   EXPECT_TRUE(cmx.program_meta().IsNull());
@@ -115,9 +125,11 @@ TEST_F(CmxMetadataTest, ParseFromDeprecatedRuntime) {
   { "runner": "dart_runner" }
   )JSON";
   CmxMetadata cmx;
+  json::JSONParser json_parser;
   std::string file_unused;
-  EXPECT_TRUE(ParseFromDeprecatedRuntime(&cmx, json, &file_unused))
-      << cmx.error_str();
+  EXPECT_TRUE(ParseFromDeprecatedRuntime(&cmx, &json_parser, json,
+                                         &file_unused))
+      << json_parser.error_str();
   EXPECT_TRUE(cmx.sandbox_meta().IsNull());
   EXPECT_FALSE(cmx.runtime_meta().IsNull());
   EXPECT_EQ("dart_runner", cmx.runtime_meta().runner());

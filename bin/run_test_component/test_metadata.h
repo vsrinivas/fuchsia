@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include "garnet/lib/json/json_parser.h"
+
 namespace run {
 
 // This is a section in "facets" for component manifest. This section is used to
@@ -29,22 +31,21 @@ static constexpr char kFuchsiaTest[] = "fuchsia.test";
 
 class TestMetadata {
  public:
-  ~TestMetadata();
+  bool ParseFromFile(const std::string& cmx_file_path);
 
-  static TestMetadata CreateFromFile(const std::string& cmx_file_path);
+  bool HasError() const { return json_parser_.HasError(); }
+  std::string error_str() const {
+    return json_parser_.error_str();
+  }
 
-  bool has_error() const { return has_error_; }
   bool is_null() const { return null_; }
-  const std::vector<std::string>& errors() const { return errors_; }
   const std::vector<std::pair<std::string, std::string>>& services() const {
     return service_url_pair_;
   }
 
  private:
-  TestMetadata();
-  bool has_error_ = false;
+  json::JSONParser json_parser_;
   bool null_ = true;
-  std::vector<std::string> errors_;
   std::vector<std::pair<std::string, std::string>> service_url_pair_;
 };
 

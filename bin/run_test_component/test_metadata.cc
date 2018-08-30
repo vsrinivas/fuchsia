@@ -16,52 +16,42 @@ constexpr char kInjectedServices[] = "injected-services";
 
 }  // namespace
 
-TestMetadata::TestMetadata() {}
-
-TestMetadata::~TestMetadata() {}
-
-TestMetadata TestMetadata::CreateFromFile(const std::string& cmx_file_path) {
-  TestMetadata test_metadata;
-  test_metadata.has_error_ = true;
-  // TODO(geb): Use JSONParser to report parsing errors.
+bool TestMetadata::ParseFromFile(const std::string& cmx_file_path) {
   component::CmxMetadata cmx;
-  cmx.ParseFromFileAt(-1, cmx_file_path);
-  if (cmx.HasError()) {
-    test_metadata.errors_.push_back(
-        Substitute("parse error: $0", cmx.error_str()));
-    return test_metadata;
+  cmx.ParseFromFileAt(-1, cmx_file_path, &json_parser_);
+  if (json_parser_.HasError()) {
+    return false;
   }
   auto& fuchisa_test = cmx.facets_meta().GetSection(kFuchsiaTest);
   if (!fuchisa_test.IsNull()) {
-    test_metadata.null_ = false;
+    null_ = false;
     if (!fuchisa_test.IsObject()) {
-      test_metadata.errors_.push_back(
-          Substitute("'$0' in 'facets' should be an object", kFuchsiaTest));
-      return test_metadata;
+      json_parser_.ReportError(
+          Substitute("'$0' in 'facets' should be an object.", kFuchsiaTest));
+      return false;
     }
     auto services = fuchisa_test.FindMember(kInjectedServices);
     if (services != fuchisa_test.MemberEnd()) {
       if (!services->value.IsObject()) {
-        test_metadata.errors_.push_back(
-            Substitute("'$0' in '$1' should be an object", kInjectedServices,
+        json_parser_.ReportError(
+            Substitute("'$0' in '$1' should be an object.", kInjectedServices,
                        kFuchsiaTest));
-        return test_metadata;
+        return false;
       }
       for (auto itr = services->value.MemberBegin();
            itr != services->value.MemberEnd(); ++itr) {
         if (!itr->value.IsString() || !itr->name.IsString()) {
-          test_metadata.errors_.push_back(
-              Substitute("'$0' in '$1' should define string pairs.",
+          json_parser_.ReportError(
+              Substitute("'$0' in '$1' has a non-string pair.",
                          kInjectedServices, kFuchsiaTest));
-          return test_metadata;
+        } else {
+          service_url_pair_.push_back(
+              {itr->name.GetString(), itr->value.GetString()});
         }
-        test_metadata.service_url_pair_.push_back(
-            {itr->name.GetString(), itr->value.GetString()});
       }
     }
   }
-  test_metadata.has_error_ = false;
-  return test_metadata;
+  return !HasError();
 }
 
 }  // namespace run

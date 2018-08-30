@@ -24,39 +24,36 @@ static const std::regex* const kPackageNameFileScheme =
 CmxMetadata::CmxMetadata() = default;
 CmxMetadata::~CmxMetadata() = default;
 
-bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file) {
-  rapidjson::Document document = json_parser_.ParseFromFileAt(dirfd, file);
-  if (HasError()) {
+bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file,
+                                  json::JSONParser* json_parser) {
+  rapidjson::Document document = json_parser->ParseFromFileAt(dirfd, file);
+  if (json_parser->HasError()) {
     return false;
   }
   if (!document.IsObject()) {
-    json_parser_.ReportError("File is not a JSON object.");
+    json_parser->ReportError("File is not a JSON object.");
     return false;
   }
-  ParseSandboxMetadata(document);
-  runtime_meta_.ParseFromDocument(document, &json_parser_);
-  ParseProgramMetadata(document);
-  ParseFacetsMetadata(document);
-  return !HasError();
+  ParseSandboxMetadata(document, json_parser);
+  runtime_meta_.ParseFromDocument(document, json_parser);
+  ParseProgramMetadata(document, json_parser);
+  ParseFacetsMetadata(document, json_parser);
+  return !json_parser->HasError();
 }
 
-bool CmxMetadata::ParseFromDeprecatedRuntimeFileAt(int dirfd,
-                                                   const std::string& file) {
-  rapidjson::Document document = json_parser_.ParseFromFileAt(dirfd, file);
-  if (HasError()) {
+bool CmxMetadata::ParseFromDeprecatedRuntimeFileAt(
+    int dirfd, const std::string& file, json::JSONParser* json_parser) {
+  rapidjson::Document document = json_parser->ParseFromFileAt(dirfd, file);
+  if (json_parser->HasError()) {
     return false;
   }
   if (!document.IsObject()) {
-    json_parser_.ReportError("File is not a JSON object.");
+    json_parser->ReportError("File is not a JSON object.");
     return false;
   }
-  runtime_meta_.ParseFromDocument(document, &json_parser_);
-  return !HasError();
+  runtime_meta_.ParseFromDocument(document, json_parser);
+  return !json_parser->HasError();
 }
-
-bool CmxMetadata::HasError() const { return json_parser_.HasError(); }
-
-std::string CmxMetadata::error_str() const { return json_parser_.error_str(); }
 
 std::string CmxMetadata::GetDefaultComponentCmxPath(
     const std::string& package_resolved_url) {
@@ -76,40 +73,43 @@ std::string CmxMetadata::GetDefaultComponentCmxPath(
   return cmx_path;
 }
 
-void CmxMetadata::ParseSandboxMetadata(const rapidjson::Document& document) {
+void CmxMetadata::ParseSandboxMetadata(const rapidjson::Document& document,
+                                       json::JSONParser* json_parser) {
   auto sandbox = document.FindMember(kSandbox);
   if (sandbox == document.MemberEnd()) {
     // Valid syntax, but no value. Pass empty object.
     rapidjson::Value sandbox_obj = rapidjson::Value(rapidjson::kObjectType);
-    sandbox_meta_.Parse(sandbox_obj, &json_parser_);
+    sandbox_meta_.Parse(sandbox_obj, json_parser);
   } else if (!sandbox->value.IsObject()) {
-    json_parser_.ReportError("'sandbox' is not an object.");
+    json_parser->ReportError("'sandbox' is not an object.");
     return;
   } else {
-    sandbox_meta_.Parse(sandbox->value, &json_parser_);
+    sandbox_meta_.Parse(sandbox->value, json_parser);
   }
 }
 
-void CmxMetadata::ParseProgramMetadata(const rapidjson::Document& document) {
+void CmxMetadata::ParseProgramMetadata(const rapidjson::Document& document,
+                                       json::JSONParser* json_parser) {
   auto program = document.FindMember(kProgram);
   if (program == document.MemberEnd()) {
     // Valid syntax, but no value.
     return;
   }
   if (!program->value.IsObject()) {
-    json_parser_.ReportError("'program' is not an object.");
+    json_parser->ReportError("'program' is not an object.");
     return;
   }
-  program_meta_.Parse(program->value, &json_parser_);
+  program_meta_.Parse(program->value, json_parser);
 }
 
-void CmxMetadata::ParseFacetsMetadata(const rapidjson::Document& document) {
+void CmxMetadata::ParseFacetsMetadata(const rapidjson::Document& document,
+                                      json::JSONParser* json_parser) {
   auto facets = document.FindMember(kFacets);
   if (facets == document.MemberEnd()) {
     // Valid syntax, but no value.
     return;
   }
-  facets_meta_.Parse(facets->value, &json_parser_);
+  facets_meta_.Parse(facets->value, json_parser);
 }
 
 }  // namespace component

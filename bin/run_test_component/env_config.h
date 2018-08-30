@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "garnet/lib/json/json_parser.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace run {
@@ -17,23 +18,22 @@ enum EnvironmentType { ROOT, SYS };
 
 class EnvironmentConfig {
  public:
-  ~EnvironmentConfig();
+  bool ParseFromFile(const std::string& file_path);
 
-  static EnvironmentConfig CreateFromFile(const std::string& file_path);
+  bool HasError() const { return json_parser_.HasError(); }
+  std::string error_str() const {
+    return json_parser_.error_str();
+  }
 
-  bool has_error() const { return has_error_; }
-  const std::vector<std::string>& errors() const { return errors_; }
   const std::unordered_map<std::string, EnvironmentType>& url_map() const {
     return url_map_;
   }
 
  private:
-  EnvironmentConfig();
   void CreateMap(const std::string& environment_name, EnvironmentType env_type,
                  const rapidjson::Document& document);
 
-  bool has_error_;
-  std::vector<std::string> errors_;
+  json::JSONParser json_parser_;
   std::unordered_map<std::string, EnvironmentType> url_map_;
 };
 

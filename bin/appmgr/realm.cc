@@ -557,8 +557,9 @@ void Realm::CreateComponentFromPackage(
         CmxMetadata::GetDefaultComponentCmxPath(package->resolved_url.get());
   }
   if (!cmx_path.empty() && files::IsFileAt(fd.get(), cmx_path)) {
-    if (!cmx.ParseFromFileAt(fd.get(), cmx_path)) {
-      FXL_LOG(ERROR) << "cmx file failed to parse: " << cmx.error_str();
+    json::JSONParser json_parser;
+    if (!cmx.ParseFromFileAt(fd.get(), cmx_path, &json_parser)) {
+      FXL_LOG(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
       component_request.SetReturnValues(kComponentCreationFailed,
                                         TerminationReason::INTERNAL_ERROR);
       return;
