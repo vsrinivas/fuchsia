@@ -67,7 +67,7 @@ func (a *ToolApp) Scan(seconds uint8) {
 
 	rxed := make(chan struct{})
 	go func() {
-		res, err := a.wlan.Scan(wlan_service.ScanRequest{seconds})
+		res, err := a.wlan.Scan(wlan_service.ScanRequest{Timeout: seconds})
 		if err != nil {
 			fmt.Println("Error:", err)
 		} else if res.Error.Code != wlan_service.ErrCodeOk {
@@ -103,7 +103,12 @@ func (a *ToolApp) Connect(ssid string, bssid string, passPhrase string, seconds 
 		fmt.Println("ssid is too long")
 		return
 	}
-	werr, err := a.wlan.Connect(wlan_service.ConnectConfig{ssid, passPhrase, seconds, bssid})
+	werr, err := a.wlan.Connect(wlan_service.ConnectConfig{
+		Ssid:         ssid,
+		PassPhrase:   passPhrase,
+		ScanInterval: seconds,
+		Bssid:        bssid,
+	})
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else if werr.Code != wlan_service.ErrCodeOk {
@@ -129,7 +134,12 @@ func (a *ToolApp) StartBSS(ssid string, beaconPeriod int32, dtimPeriod int32, ch
 		fmt.Println("ssid is too short")
 		return
 	}
-	werr, err := a.wlan.StartBss(wlan_service.BssConfig{ssid, beaconPeriod, dtimPeriod, channel})
+	werr, err := a.wlan.StartBss(wlan_service.BssConfig{
+		Ssid:         ssid,
+		BeaconPeriod: beaconPeriod,
+		DtimPeriod:   dtimPeriod,
+		Channel:      channel,
+	})
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else if werr.Code != wlan_service.ErrCodeOk {
@@ -198,9 +208,9 @@ func (a *ToolApp) ShowStats() {
 		return
 	}
 	stats := result.Stats
-	fmt.Printf("Dispatcher stats:\n%+v\n", stats.DispatcherStats);
+	fmt.Printf("Dispatcher stats:\n%+v\n", stats.DispatcherStats)
 	if stats.MlmeStats != nil {
-		fmt.Printf("\nMLME stats:\n%+v\n", stats.MlmeStats);
+		fmt.Printf("\nMLME stats:\n%+v\n", stats.MlmeStats)
 	}
 }
 
