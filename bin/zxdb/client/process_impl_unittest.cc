@@ -46,7 +46,7 @@ class ProcessImplTest : public RemoteAPITest {
   std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() override {
     auto sink = std::make_unique<ProcessSink>();
     sink_ = sink.get();
-    return std::move(sink);
+    return sink;
   }
 
  private:

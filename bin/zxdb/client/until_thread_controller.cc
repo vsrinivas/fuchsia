@@ -17,9 +17,7 @@
 namespace zxdb {
 
 UntilThreadController::UntilThreadController(InputLocation location)
-    : ThreadController(),
-      location_(std::move(location)),
-      weak_factory_(this) {}
+    : ThreadController(), location_(std::move(location)), weak_factory_(this) {}
 
 UntilThreadController::UntilThreadController(InputLocation location,
                                              FrameFingerprint newest_frame)
@@ -68,6 +66,14 @@ ThreadController::ContinueOp UntilThreadController::GetContinueOp() {
 ThreadController::StopOp UntilThreadController::OnThreadStop(
     debug_ipc::NotifyException::Type stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+  // Other controllers such as the StepOverRangeThreadController can use this
+  // as a sub-controller. If the controllers don't care about breakpoint set
+  // failures, they may start using the thread right away without waiting for
+  // the callback in InitWithThread() to asynchronously complete (indicating
+  // the breakpoint was set successfull).
+  //
+  // This is generally fine, we just need to be careful not to do anything in
+  // OnBreakpointSet() that the code in this function depends on.
   if (!breakpoint_) {
     // Our internal breakpoint shouldn't be deleted out from under ourselves.
     FXL_NOTREACHED();
@@ -111,6 +117,8 @@ Target* UntilThreadController::GetTarget() {
 
 void UntilThreadController::OnBreakpointSet(
     const Err& err, std::function<void(const Err&)> cb) {
+  // This may get called after the thread stop in some cases so don't do
+  // anything important in this function. See OnThreadStop().
   if (err.has_error()) {
     // Breakpoint setting failed.
     cb(err);

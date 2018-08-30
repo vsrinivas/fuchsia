@@ -40,8 +40,8 @@ class RemoteAPITest : public testing::Test {
   Process* InjectProcess(uint64_t process_koid);
 
   // Sends a "thread created" notifications to the client for the given fake
-  // KOIDs. The thread will be reported as running.
-  Thread* InjectThread(uint64_t process_koid, uint64_t thread_koids);
+  // KOID. The thread will be reported as running.
+  Thread* InjectThread(uint64_t process_koid, uint64_t thread_koid);
 
   // Sends the exception notification to the session.
   void InjectException(const debug_ipc::NotifyException& exception);

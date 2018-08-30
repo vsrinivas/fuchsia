@@ -28,6 +28,7 @@ static_library("client") {
     "session.h",
     "step_in_range_thread_controller.h",
     "step_into_thread_controller.h",
+    "step_over_thread_controller.h",
     "system.h",
     "system_observer.h",
     "target.h",
@@ -72,6 +73,7 @@ static_library("client") {
     "session.h",
     "step_in_range_thread_controller.cc",
     "step_into_thread_controller.cc",
+    "step_over_thread_controller.cc",
     "system.cc",
     "system_impl.cc",
     "system_impl.h",
@@ -132,8 +134,11 @@ source_set("tests") {
     "process_impl_unittest.cc",
     "register_unittest.cc",
     "session_unittest.cc",
+    "step_over_thread_controller_unittest.cc",
     "string_util_unittest.cc",
     "target_impl_unittest.cc",
+    "thread_controller_test.cc",
+    "thread_controller_test.h",
     "thread_impl_unittest.cc",
   ]
 

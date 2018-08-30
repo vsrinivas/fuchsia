@@ -65,6 +65,8 @@ enum class Verb {
   kMemAnalyze,
   kMemRead,
   kNew,
+  kNext,
+  kNexti,
   kPause,
   kPrint,
   kQuit,

@@ -10,7 +10,8 @@ namespace zxdb {
 
 // This controller causes the thread to single-step as long as the CPU is in
 // a given address range. It is used as a component of some of the higher-level
-// step controllers such as "step into".
+// step controllers such as "step into". Contrast with the
+// StepOverRangeThreadController which also steps over calls.
 class StepInRangeThreadController : public ThreadController {
  public:
   // Continues execution as long as the IP is in [begin, end).

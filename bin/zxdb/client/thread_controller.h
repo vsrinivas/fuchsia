@@ -21,7 +21,15 @@ class Thread;
 // thread stepping.
 class ThreadController {
  public:
-  enum StopOp { kContinue, kStop };
+  enum StopOp {
+    // Resume the thread. A controller can indicate "continue" but if another
+    // indicates "stop", the "stop" will take precedence.
+    kContinue,
+
+    // Keeps the thread stopped and reports the stop to the user. This takes
+    // precedence over any "continue" votes.
+    kStop
+  };
 
   // How the thread should run when it is executing this controller.
   struct ContinueOp {

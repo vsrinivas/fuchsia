@@ -10,6 +10,7 @@
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/step_into_thread_controller.h"
+#include "garnet/bin/zxdb/client/step_over_thread_controller.h"
 #include "garnet/bin/zxdb/client/symbols/code_block.h"
 #include "garnet/bin/zxdb/client/symbols/function.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
@@ -292,6 +293,111 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// next ------------------------------------------------------------------------
+
+const char kNextShortHelp[] = "next / n: Single-step over one source line.";
+const char kNextHelp[] =
+    R"(next / n
+
+  When a thread is stopped, "next" will execute one source line, stepping over
+  subroutine call instructions, and stop the thread again. If the thread is
+  running it will issue an error.
+
+  By default, "next" will operate on the current thread. If a thread context
+  is given, the specified thread will be single-stepped. You can't single-step
+  a process.
+
+  See also "step" to step into subroutine calls or "nexti" to step machine
+  instructions.
+
+Examples
+
+  n
+  next
+      Step the current thread.
+
+  t 2 n
+  thread 2 next
+      Steps thread 2 in the current process.
+
+  pr 3 n
+  process 3 next
+      Steps the current thread in process 3 (regardless of which process is
+      the current process).
+
+  pr 3 t 2 n
+  process 3 thread 2 next
+      Steps thread 2 in process 3.
+)";
+Err DoNext(ConsoleContext* context, const Command& cmd) {
+  Err err = AssertStoppedThreadCommand(context, cmd, true, "next");
+  if (err.has_error())
+    return err;
+
+  auto controller = std::make_unique<StepOverThreadController>(
+      StepOverThreadController::kSourceLine);
+  cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
+    if (err.has_error())
+      Console::get()->Output(err);
+  });
+  return Err();
+}
+
+// nexti -----------------------------------------------------------------------
+
+const char kNextiShortHelp[] =
+    "nexti / ni: Single-step over one machine instruction.";
+const char kNextiHelp[] =
+    R"(nexti / ni
+
+  When a thread is stopped, "nexti" will execute one machine instruction,
+  stepping over subroutine call instructions, and stop the thread again.
+  If the thread is running it will issue an error.
+
+  Only machine call instructions ("call" on x86 and "bl" on ARM) will be
+  stepped over with this command. This is not the only way to do a subroutine
+  call, as code can manually set up a call frame and jump. These jumps will not
+  count as a call and this command will step into the resulting frame.
+
+  By default, "nexti" will operate on the current thread. If a thread context
+  is given, the specified thread will be single-stepped. You can't single-step
+  a process.
+
+  See also "stepi" to step into subroutine calls.
+
+Examples
+
+  ni
+  nexti
+      Step the current thread.
+
+  t 2 ni
+  thread 2 nexti
+      Steps thread 2 in the current process.
+
+  pr 3 ni
+  process 3 nexti
+      Steps the current thread in process 3 (regardless of which process is
+      the current process).
+
+  pr 3 t 2 ni
+  process 3 thread 2 nexti
+      Steps thread 2 in process 3.
+)";
+Err DoNexti(ConsoleContext* context, const Command& cmd) {
+  Err err = AssertStoppedThreadCommand(context, cmd, true, "nexti");
+  if (err.has_error())
+    return err;
+
+  auto controller = std::make_unique<StepOverThreadController>(
+      StepOverThreadController::kInstruction);
+  cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
+    if (err.has_error())
+      Console::get()->Output(err);
+  });
+  return Err();
+}
+
 // pause -----------------------------------------------------------------------
 
 const char kPauseShortHelp[] = "pause / pa: Pause a thread or process.";
@@ -506,6 +612,8 @@ const char kStepiHelp[] =
   By default, "stepi" will single-step the current thread. If a thread context
   is given, the specified thread will be single-stepped. You can't single-step
   a process.
+
+  See also "nexti" to step over subroutine calls.
 
 Examples
 
@@ -793,6 +901,12 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
                  CommandGroup::kStep);
   (*verbs)[Verb::kLocals] = VerbRecord(&DoLocals, {"locals"}, kLocalsShortHelp,
                                        kLocalsHelp, CommandGroup::kQuery);
+  (*verbs)[Verb::kNext] =
+      VerbRecord(&DoNext, {"next", "n"}, kNextShortHelp, kNextHelp,
+                 CommandGroup::kStep, SourceAffinity::kSource);
+  (*verbs)[Verb::kNexti] =
+      VerbRecord(&DoNexti, {"nexti", "ni"}, kNextiShortHelp, kNextiHelp,
+                 CommandGroup::kAssembly, SourceAffinity::kAssembly);
   (*verbs)[Verb::kPause] =
       VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp,
                  CommandGroup::kProcess);
