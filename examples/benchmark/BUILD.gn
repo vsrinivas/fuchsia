@@ -18,8 +18,6 @@ executable("benchmark_example") {
 }
 
 package("benchmark") {
-  deprecated_system_image = true
-
   deps = [
     ":benchmark_example",
   ]
@@ -29,6 +27,6 @@ package("benchmark") {
       } ]
   resources = [ {
         path = rebase_path("benchmark_example.tspec")
-        dest = "benchmark_example/benchmark_example.tspec"
+        dest = "benchmark_example.tspec"
       } ]
 }

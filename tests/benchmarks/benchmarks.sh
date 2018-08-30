@@ -16,7 +16,7 @@ runbench_read_arguments "$@"
 # Benchmark example, here for demonstration.
 runbench_exec "${OUT_DIR}/benchmark_example.json" \
     trace record \
-    --spec-file=/system/data/benchmark_example/benchmark_example.tspec \
+    --spec-file=/pkgfs/packages/benchmark/0/data/benchmark_example.tspec \
     --test-suite=fuchsia.benchmark_example \
     --benchmark-results-file="${OUT_DIR}/benchmark_example.json"
 
