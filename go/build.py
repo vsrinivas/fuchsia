@@ -130,6 +130,10 @@ def main():
 
     go_tool = os.path.join(build_goroot, 'bin/go')
 
+    retcode = subprocess.call([go_tool, 'vet', args.package], env=env)
+    if retcode != 0:
+      return retcode
+
     cmd = [go_tool]
     if args.is_test:
       cmd += ['test', '-c']
