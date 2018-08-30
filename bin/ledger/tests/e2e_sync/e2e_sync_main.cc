@@ -15,19 +15,21 @@ namespace ledger {
 namespace {
 ledger::SyncParams* sync_params_ptr = nullptr;
 
+class FactoryBuilderE2eImpl : public LedgerAppInstanceFactoryBuilder {
+ public:
+  std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const override {
+    return std::make_unique<LedgerAppInstanceFactoryImpl>(*sync_params_ptr);
+  }
+};
+
 }  // namespace
 
-std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories() {
-  static std::unique_ptr<LedgerAppInstanceFactory> factory;
-  static std::once_flag flag;
-
-  auto factory_ptr = &factory;
-  std::call_once(flag, [factory_ptr] {
-    *factory_ptr =
-        std::make_unique<LedgerAppInstanceFactoryImpl>(*sync_params_ptr);
-  });
-
-  return {factory.get()};
+std::vector<const LedgerAppInstanceFactoryBuilder*>
+GetLedgerAppInstanceFactoryBuilders() {
+  static auto static_builder = FactoryBuilderE2eImpl();
+  std::vector<const LedgerAppInstanceFactoryBuilder*> builders = {
+      &static_builder};
+  return builders;
 }
 
 }  // namespace ledger

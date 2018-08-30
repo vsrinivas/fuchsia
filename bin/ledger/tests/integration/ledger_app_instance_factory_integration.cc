@@ -251,12 +251,36 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
   return result;
 }
 
-std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories() {
-  static std::vector<std::unique_ptr<LedgerAppInstanceFactory>> factories_impl;
+namespace {
+
+class FactoryBuilderIntegrationImpl : public LedgerAppInstanceFactoryBuilder {
+ public:
+  FactoryBuilderIntegrationImpl(InjectNetworkError inject_error,
+                                EnableP2PMesh enable_p2p)
+      : inject_error_(inject_error), enable_p2p_(enable_p2p){};
+
+  std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const override {
+    auto factory = std::make_unique<LedgerAppInstanceFactoryImpl>(inject_error_,
+                                                                  enable_p2p_);
+    factory->Init();
+    return factory;
+  }
+
+ private:
+  InjectNetworkError inject_error_;
+  EnableP2PMesh enable_p2p_;
+};
+
+}  // namespace
+
+std::vector<const LedgerAppInstanceFactoryBuilder*>
+GetLedgerAppInstanceFactoryBuilders() {
+  static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>>
+      static_builders;
   static std::once_flag flag;
 
-  auto factories_ptr = &factories_impl;
-  std::call_once(flag, [factories_ptr] {
+  auto static_builders_ptr = &static_builders;
+  std::call_once(flag, [&static_builders_ptr] {
     for (auto inject_error :
          {InjectNetworkError::NO, InjectNetworkError::YES}) {
       for (auto enable_p2p : {EnableP2PMesh::NO, EnableP2PMesh::YES}) {
@@ -266,20 +290,20 @@ std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories() {
           // are fast enough for the CQ.
           continue;
         }
-        auto factory = std::make_unique<LedgerAppInstanceFactoryImpl>(
-            inject_error, enable_p2p);
-        factory->Init();
-        factories_ptr->push_back(std::move(factory));
+        static_builders_ptr->push_back(
+            std::make_unique<FactoryBuilderIntegrationImpl>(inject_error,
+                                                            enable_p2p));
       }
     }
   });
-  std::vector<LedgerAppInstanceFactory*> factories;
-  factories.reserve(factories_impl.size());
-  for (const auto& factory : factories_impl) {
-    factories.push_back(factory.get());
+
+  std::vector<const LedgerAppInstanceFactoryBuilder*> builders;
+
+  for (const auto& builder : static_builders) {
+    builders.push_back(builder.get());
   }
 
-  return factories;
+  return builders;
 }
 
 }  // namespace ledger

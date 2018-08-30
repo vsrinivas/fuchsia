@@ -100,8 +100,9 @@ TEST_P(PageIntegrationTest, MultiplePageConnections) {
   EXPECT_EQ(page_id_1.id, page_id_2.id);
 }
 
-INSTANTIATE_TEST_CASE_P(PageIntegrationTest, PageIntegrationTest,
-                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
+INSTANTIATE_TEST_CASE_P(
+    PageIntegrationTest, PageIntegrationTest,
+    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger

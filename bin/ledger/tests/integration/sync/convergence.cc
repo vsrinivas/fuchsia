@@ -209,14 +209,14 @@ enum class MergeType {
 class ConvergenceTest
     : public BaseIntegrationTest,
       public ::testing::WithParamInterface<
-          std::tuple<MergeType, int, LedgerAppInstanceFactory*>> {
+          std::tuple<MergeType, int, const LedgerAppInstanceFactoryBuilder*>> {
  public:
   ConvergenceTest() {}
   ~ConvergenceTest() override{};
 
   void SetUp() override {
     BaseIntegrationTest::SetUp();
-    LedgerAppInstanceFactory* not_used;
+    const LedgerAppInstanceFactoryBuilder* not_used;
     std::tie(merge_function_type_, num_ledgers_, not_used) = GetParam();
 
     ASSERT_GT(num_ledgers_, 1);
@@ -243,7 +243,12 @@ class ConvergenceTest
 
  protected:
   LedgerAppInstanceFactory* GetAppFactory() override {
-    return std::get<2>(GetParam());
+    if (!app_instance_factory_) {
+      auto factory_builder =
+          std::get<const LedgerAppInstanceFactoryBuilder*>(GetParam());
+      app_instance_factory_ = factory_builder->NewFactory();
+    }
+    return app_instance_factory_.get();
   }
 
   std::unique_ptr<PageWatcherImpl> WatchPageContents(PagePtr* page) {
@@ -302,6 +307,7 @@ class ConvergenceTest
 
   std::vector<std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>>
       ledger_instances_;
+  std::unique_ptr<LedgerAppInstanceFactory> app_instance_factory_;
   std::vector<PagePtr> pages_;
   DataGenerator data_generator_;
 };
@@ -459,10 +465,11 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
 
 INSTANTIATE_TEST_CASE_P(
     ManyLedgersConvergenceTest, ConvergenceTest,
-    ::testing::Combine(::testing::Values(MergeType::LAST_ONE_WINS,
-                                         MergeType::NON_ASSOCIATIVE_CUSTOM),
-                       ::testing::Range(2, 6),
-                       ::testing::ValuesIn(GetLedgerAppInstanceFactories())));
+    ::testing::Combine(
+        ::testing::Values(MergeType::LAST_ONE_WINS,
+                          MergeType::NON_ASSOCIATIVE_CUSTOM),
+        ::testing::Range(2, 6),
+        ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders())));
 
 }  // namespace
 }  // namespace ledger

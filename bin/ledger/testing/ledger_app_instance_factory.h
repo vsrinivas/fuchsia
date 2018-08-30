@@ -19,6 +19,16 @@
 
 namespace ledger {
 
+class LedgerAppInstanceFactory;
+
+// Class that creates instances of |LedgerAppInstanceFactory|.
+class LedgerAppInstanceFactoryBuilder {
+ public:
+  virtual ~LedgerAppInstanceFactoryBuilder(){};
+  // Returns a new LedgerAppInstanceFactory.
+  virtual std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const = 0;
+};
+
 // Base class for client tests.
 //
 // Client tests are tests that act as clients to the Ledger as a whole. These
@@ -94,7 +104,6 @@ class LedgerAppInstanceFactory {
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerAppInstance);
   };
 
-  LedgerAppInstanceFactory() {}
   virtual ~LedgerAppInstanceFactory() {}
 
   // Starts a new instance of the Ledger. The |loop_controller| must allow to
@@ -103,7 +112,12 @@ class LedgerAppInstanceFactory {
       LoopController* loop_controller) = 0;
 };
 
-std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories();
+// Returns the list of LedgerAppInstanceFactoryBuilder to be passed as
+// parameters to the tests. The implementation of this function changes
+// depending on whether the tests are ran as integration tests, or end to end
+// tests.
+std::vector<const LedgerAppInstanceFactoryBuilder*>
+GetLedgerAppInstanceFactoryBuilders();
 
 }  // namespace ledger
 

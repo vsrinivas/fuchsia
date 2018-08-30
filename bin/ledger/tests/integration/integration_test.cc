@@ -56,7 +56,11 @@ IntegrationTest::IntegrationTest() = default;
 IntegrationTest::~IntegrationTest() = default;
 
 LedgerAppInstanceFactory* IntegrationTest::GetAppFactory() {
-  return GetParam();
+  if (!factory_) {
+    auto factory_builder = GetParam();
+    factory_ = factory_builder->NewFactory();
+  }
+  return factory_.get();
 }
 
 }  // namespace ledger

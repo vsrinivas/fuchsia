@@ -250,8 +250,9 @@ TEST_P(PageMutationTest, ClearAndRestoreInsideTransaction) {
   ASSERT_THAT(GetEntries(), EntriesMatch({{"key", "value"}}));
 }
 
-INSTANTIATE_TEST_CASE_P(PageMutationTest, PageMutationTest,
-                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
+INSTANTIATE_TEST_CASE_P(
+    PageMutationTest, PageMutationTest,
+    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger

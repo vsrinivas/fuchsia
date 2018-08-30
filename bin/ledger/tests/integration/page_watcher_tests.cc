@@ -775,8 +775,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
   EXPECT_EQ(0u, watcher.changes_seen);
 }
 
-INSTANTIATE_TEST_CASE_P(PageWatcherIntegrationTest, PageWatcherIntegrationTest,
-                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
+INSTANTIATE_TEST_CASE_P(
+    PageWatcherIntegrationTest, PageWatcherIntegrationTest,
+    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger

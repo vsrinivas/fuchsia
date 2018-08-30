@@ -28,8 +28,9 @@ TEST_P(IntegrationTestTests, MultipleLedgerAppInstances) {
   EXPECT_TRUE(instance2->GetTestLedger());
 }
 
-INSTANTIATE_TEST_CASE_P(IntegrationTestTests, IntegrationTestTests,
-                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
+INSTANTIATE_TEST_CASE_P(
+    IntegrationTestTests, IntegrationTestTests,
+    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger

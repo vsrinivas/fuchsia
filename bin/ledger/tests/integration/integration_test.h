@@ -58,15 +58,16 @@ class BaseIntegrationTest : public gtest::RealLoopFixture,
   std::unique_ptr<trace::TraceProvider> trace_provider_;
 };
 
-class IntegrationTest
-    : public BaseIntegrationTest,
-      public ::testing::WithParamInterface<LedgerAppInstanceFactory*> {
+class IntegrationTest : public BaseIntegrationTest,
+                        public ::testing::WithParamInterface<
+                            const LedgerAppInstanceFactoryBuilder*> {
  public:
   IntegrationTest();
   ~IntegrationTest() override;
 
  protected:
   LedgerAppInstanceFactory* GetAppFactory() override;
+  std::unique_ptr<LedgerAppInstanceFactory> factory_;
 };
 
 // Initializes test environment based on the command line arguments.

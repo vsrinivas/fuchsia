@@ -2017,8 +2017,9 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   EXPECT_EQ("0123456789", ToString(final_entries[2].value));
 }
 
-INSTANTIATE_TEST_CASE_P(MergingIntegrationTest, MergingIntegrationTest,
-                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
+INSTANTIATE_TEST_CASE_P(
+    MergingIntegrationTest, MergingIntegrationTest,
+    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger

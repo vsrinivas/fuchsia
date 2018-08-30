@@ -178,8 +178,9 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 }
 
-INSTANTIATE_TEST_CASE_P(SyncIntegrationTest, SyncIntegrationTest,
-                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
+INSTANTIATE_TEST_CASE_P(
+    SyncIntegrationTest, SyncIntegrationTest,
+    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger
