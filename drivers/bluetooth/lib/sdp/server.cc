@@ -211,6 +211,27 @@ ServiceAttributeResponse Server::GetServiceAttributes(
   return resp;
 }
 
+ServiceSearchAttributeResponse Server::SearchAllServiceAttributes(
+    const std::unordered_set<common::UUID>& search_pattern,
+    const std::list<AttributeRange>& attribute_ranges) const {
+  ServiceSearchAttributeResponse resp;
+  for (const auto& it : records_) {
+    const auto& rec = it.second;
+    if (rec.FindUUID(search_pattern)) {
+      for (const auto& range : attribute_ranges) {
+        auto attrs = rec.GetAttributesInRange(range.start, range.end);
+        for (const auto& attr : attrs) {
+          resp.SetAttribute(it.first, attr, rec.GetAttribute(attr).Clone());
+        }
+      }
+    }
+  }
+
+  bt_log(SPEW, "sdp", "ServiceSearchAttribute %d records",
+         resp.num_attribute_lists());
+  return resp;
+}
+
 void Server::OnChannelClosed(const std::string& peer_id) {
   channels_.erase(peer_id);
 }
@@ -275,6 +296,19 @@ void Server::OnRxBFrame(const std::string& peer_id, const l2cap::SDU& sdu) {
         }
         auto resp = GetServiceAttributes(handle, request.attribute_ranges());
 
+        chan->Send(resp.GetPDU(request.max_attribute_byte_count(), tid,
+                               request.ContinuationState()));
+        return;
+      }
+      case kServiceSearchAttributeRequest: {
+        ServiceSearchAttributeRequest request(packet.payload_data());
+        if (!request.valid()) {
+          bt_log(SPEW, "sdp", "ServiceSearchAttributeRequest not valid");
+          SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
+          return;
+        }
+        auto resp = SearchAllServiceAttributes(request.service_search_pattern(),
+                                               request.attribute_ranges());
         chan->Send(resp.GetPDU(request.max_attribute_byte_count(), tid,
                                request.ContinuationState()));
         return;

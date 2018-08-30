@@ -322,11 +322,11 @@ TEST_F(SDP_ServerTest, ServiceSearchRequestOneOfMany) {
 }
 
 // Test:
-//  - Answers SearchAttributeRequest correctly
+//  - Answers ServiceAttributeRequest correctly
 //  - Continuation state is generated correctly re:
 //    MaximumAttributeListByteCount
 //  - Valid Continuation state continues response
-TEST_F(SDP_ServerTest, AttributeRequest) {
+TEST_F(SDP_ServerTest, ServiceAttributeRequest) {
   ServiceHandle handle;
   bool added = server()->RegisterService([&handle](ServiceRecord* record) {
     EXPECT_TRUE(record);
@@ -456,6 +456,180 @@ TEST_F(SDP_ServerTest, AttributeRequest) {
       0x00, 0x0C,                  // Parameter length (12 bytes)
       UINT32_AS_BE_BYTES(handle),  // ServiceRecordHandle
       0x00, 0x05,                  // MaximumAttributeByteCount (5 bytes max)
+      // AttributeIDList
+      0x35, 0x03,  // Sequence uint8 3 bytes
+      0x09,        // uint16_t, single attribute
+      0x00, 0x01,  // ServiceClassIDList
+      0x00         // Contunuation State: none
+  );
+
+  const auto kRspErrSyntax2 =
+      SDP_ERROR_RSP(0xE002, ErrorCode::kInvalidRequestSyntax);
+
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidMaxBytes, kRspErrSyntax2));
+}
+
+// Test:
+//  - Answers ServiceSearchAttributeRequest correctly
+//  - Continuation state is generated correctly re:
+//    MaximumAttributeListsByteCount
+//  - Valid Continuation state continues response
+TEST_F(SDP_ServerTest, SearchAttributeRequest) {
+  ServiceHandle handle1;
+  bool added = server()->RegisterService([&handle1](ServiceRecord* record) {
+    EXPECT_TRUE(record);
+    handle1 = record->handle();
+    record->SetServiceClassUUIDs({profile::kAVRemoteControl});
+    record->AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
+                                  protocol::kL2CAP, DataElement(500));
+    DataElement val;
+    val.Set(uint32_t(0xfeedbeef));
+    record->SetAttribute(0xf00d, std::move(val));
+    val.Set(uint32_t(0x01234567));
+    record->SetAttribute(0xf000, std::move(val));
+  });
+
+  EXPECT_TRUE(added);
+
+  ServiceHandle handle2;
+  added = server()->RegisterService([&handle2](ServiceRecord* record) {
+    EXPECT_TRUE(record);
+    handle2 = record->handle();
+    record->SetServiceClassUUIDs({profile::kAVRemoteControl});
+    record->AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
+                                  protocol::kL2CAP, DataElement(501));
+  });
+
+  EXPECT_TRUE(added);
+
+  {
+    auto fake_chan = CreateFakeChannel(ChannelOptions(kSdpChannel));
+    EXPECT_TRUE(server()->AddConnection(std::string("two"), fake_chan));
+  }
+
+  const auto kRequestAttr = common::CreateStaticByteBuffer(
+      0x06,        // SDP_ServiceAttritbuteRequest
+      0x10, 0x01,  // Transaction ID (0x1001)
+      0x00, 0x12,  // Parameter length (18 bytes)
+      // ServiceSearchPattern
+      0x35, 0x03,        // Sequence uint8 3 bytes
+      0x19, 0x01, 0x00,  // UUID: Protocol: L2CAP
+      0x00, 0x0A,        // MaximumAttributeByteCount (10 bytes max)
+      // AttributeIDList
+      0x35, 0x08,  // Sequence uint8 8 bytes
+      0x09,        // uint16_t, single attribute
+      0x00, 0x00,  // ServiceRecordHandle
+      0x0A,        // uint32_t, which is a range (0x3000 - 0xf000)
+      0x30, 0x00,  // low end of range
+      0xf0, 0x00,  // high end of range
+      0x00         // Contunuation State: none
+  );
+
+  size_t received = 0;
+
+  ServiceSearchAttributeResponse rsp;
+
+  auto send_cb = [this, &rsp, &received](auto cb_packet) {
+    EXPECT_LE(sizeof(Header), cb_packet->size());
+    common::PacketView<sdp::Header> packet(cb_packet.get());
+    ASSERT_EQ(0x07, packet.header().pdu_id);
+    uint16_t len = betoh16(packet.header().param_length);
+    EXPECT_LE(len, 0x11);  // 2 (byte count) + 10 (max len) + 5 (cont state)
+    packet.Resize(len);
+    Status st = rsp.Parse(packet.payload_data());
+    if (received == 0) {
+      // Server should have split this into more than one response.
+      EXPECT_FALSE(st);
+      EXPECT_EQ(common::HostError::kInProgress, st.error());
+      EXPECT_FALSE(rsp.complete());
+    }
+    received++;
+    if (!st && (st.error() != common::HostError::kInProgress)) {
+      // This isn't a valid packet and we shouldn't try to get
+      // a continuation.
+      return;
+    }
+    if (!rsp.complete()) {
+      // Repeat the request with the continuation state if it was returned.
+      auto continuation = rsp.ContinuationState();
+      uint8_t cont_size = continuation.size();
+      EXPECT_NE(0u, cont_size);
+      // Make another request with the continutation data.
+      size_t param_size = 18 + cont_size;
+      auto kContinuedRequestAttrStart = common::CreateStaticByteBuffer(
+          0x06,  // SDP_ServiceAttributeRequest
+          0x10, static_cast<uint8_t>(received + 1),      // Transaction ID
+          UpperBits(param_size), LowerBits(param_size),  // Parameter length
+          0x35, 0x03,        // Sequence uint8 3 bytes
+          0x19, 0x01, 0x00,  // SearchPattern: L2CAP
+          0x00, 0x0A,        // MaximumAttributeByteCount (10 bytes max)
+          // AttributeIDList
+          0x35, 0x08,  // Sequence uint8 8 bytes
+          0x09,        // uint16_t, single attribute
+          0x00, 0x00,  // ServiceRecordHandle
+          0x0A,        // uint32_t, which is a range (0x3000 - 0xf000)
+          0x30, 0x00,  // low end of range
+          0xf0, 0x00   // high end of range
+      );
+      common::DynamicByteBuffer req(kContinuedRequestAttrStart.size() +
+                                    sizeof(uint8_t) + cont_size);
+
+      kContinuedRequestAttrStart.Copy(&req);
+      req.Write(&cont_size, sizeof(uint8_t), kContinuedRequestAttrStart.size());
+      req.Write(continuation,
+                kContinuedRequestAttrStart.size() + sizeof(uint8_t));
+
+      fake_chan()->Receive(req);
+    }
+  };
+
+  fake_chan()->SetSendCallback(send_cb, dispatcher());
+  fake_chan()->Receive(kRequestAttr);
+  RunLoopUntilIdle();
+
+  EXPECT_GE(received, 1u);
+  // We should receive both of our entered records.
+  EXPECT_EQ(2u, rsp.num_attribute_lists());
+  for (size_t i = 0; i < rsp.num_attribute_lists(); i++) {
+    const auto& attrs = rsp.attributes(i);
+    // Every service has a record handle
+    auto handle_it = attrs.find(kServiceRecordHandle);
+    EXPECT_NE(attrs.end(), handle_it);
+    ServiceHandle received_handle = *handle_it->second.Get<uint32_t>();
+    if (received_handle == handle1) {
+      // The first service also has another attribute we should find.
+      EXPECT_EQ(2u, attrs.size());
+      EXPECT_NE(attrs.end(), attrs.find(0xf000));
+    }
+  }
+
+  const auto kInvalidRangeOrder = common::CreateStaticByteBuffer(
+      0x06,                          // SDP_ServiceAttritbuteRequest
+      0xE0, 0x01,                    // Transaction ID (0xE001)
+      0x00, 0x12,                    // Parameter length (18 bytes)
+      0x35, 0x03, 0x19, 0x01, 0x00,  // SearchPattern: L2CAP
+      0x00, 0x0A,                    // MaximumAttributeByteCount (10 bytes max)
+      // AttributeIDList
+      0x35, 0x08,  // Sequence uint8 8 bytes
+      0x09,        // uint16_t, single attribute
+      0x00, 0x01,  // ServiceClassIDList
+      0x0A,        // uint32_t, which is a range (0x3000 - 0xf000)
+      0xf0, 0x00,  // low end of range
+      0x30, 0x00,  // high end of range
+      0x00         // Contunuation State: none
+  );
+
+  const auto kRspErrSyntax =
+      SDP_ERROR_RSP(0xE001, ErrorCode::kInvalidRequestSyntax);
+
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidRangeOrder, kRspErrSyntax));
+
+  const auto kInvalidMaxBytes = common::CreateStaticByteBuffer(
+      0x04,                          // SDP_ServiceAttritbuteRequest
+      0xE0, 0x02,                    // Transaction ID (0xE002)
+      0x00, 0x0D,                    // Parameter length (13 bytes)
+      0x35, 0x03, 0x19, 0x01, 0x00,  // SearchPattern: L2CAP
+      0x00, 0x05,                    // MaximumAttributeByteCount (5 bytes max)
       // AttributeIDList
       0x35, 0x03,  // Sequence uint8 3 bytes
       0x09,        // uint16_t, single attribute

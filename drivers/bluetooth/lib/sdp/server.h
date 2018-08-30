@@ -72,6 +72,12 @@ class Server final {
   ServiceAttributeResponse GetServiceAttributes(
       ServiceHandle handle, const std::list<AttributeRange>& ranges) const;
 
+  // Retrieves Service Attributes in the |attribute_ranges|, using the pattern
+  // to search for the services that contain all UUIDs from the |search_pattern|
+  ServiceSearchAttributeResponse SearchAllServiceAttributes(
+      const std::unordered_set<common::UUID>& search_pattern,
+      const std::list<AttributeRange>& attribute_ranges) const;
+
   // l2cap::channel callbacks
   void OnChannelClosed(const std::string& peer_id);
   void OnRxBFrame(const std::string& peer_id, const l2cap::SDU& sdu);
