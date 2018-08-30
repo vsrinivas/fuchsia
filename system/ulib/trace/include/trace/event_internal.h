@@ -156,9 +156,6 @@ __BEGIN_CDECLS
 #define TRACE_INTERNAL_DURATION_(scope_label, scope_category_literal, scope_name_literal, args...)  \
     TRACE_INTERNAL_DECLARE_DURATION_SCOPE(scope_label, scope_category_literal, scope_name_literal); \
     TRACE_INTERNAL_DURATION_BEGIN(scope_label.category_literal, scope_label.name_literal, args)
-#define TRACE_INTERNAL_DURATION_(scope_label, scope_category_literal, scope_name_literal, args...)  \
-    TRACE_INTERNAL_DECLARE_DURATION_SCOPE(scope_label, scope_category_literal, scope_name_literal); \
-    TRACE_INTERNAL_DURATION_BEGIN(scope_label.category_literal, scope_label.name_literal, args)
 #define TRACE_INTERNAL_DURATION(category_literal, name_literal, args...) \
     TRACE_INTERNAL_DURATION_(TRACE_INTERNAL_SCOPE_LABEL(), (category_literal), (name_literal), args)
 #else
