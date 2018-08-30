@@ -20,15 +20,15 @@ const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 
 #[derive(Debug, PartialEq)]
 pub enum LinkState<T: Tokens> {
-    EstablishingRsna(Option<T::ConnectToken>, Rsna),
-    LinkUp(Option<Rsna>)
+    EstablishingRsna(Option<T::ConnectToken>, Box<Rsna>),
+    LinkUp(Option<Box<Rsna>>)
 }
 
 #[derive(Debug, PartialEq)]
 pub struct ConnectCommand<T> {
     pub bss: Box<BssDescription>,
     pub token: Option<T>,
-    pub rsna: Option<Rsna>,
+    pub rsna: Option<Box<Rsna>>,
 }
 
 #[derive(Debug)]

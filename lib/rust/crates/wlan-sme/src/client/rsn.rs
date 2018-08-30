@@ -36,7 +36,7 @@ pub fn is_rsn_compatible(a_rsne: &Rsne) -> bool {
 }
 
 pub fn get_rsna(device_info: &DeviceInfo, password: &[u8], bss: &BssDescription)
-    -> Result<Option<Rsna>, failure::Error>
+    -> Result<Option<Box<Rsna>>, failure::Error>
 {
     ensure!(bss.rsn.is_none() == password.is_empty(), "invalid password param for BSS");
     let a_rsne_bytes = match &bss.rsn {
@@ -50,7 +50,7 @@ pub fn get_rsna(device_info: &DeviceInfo, password: &[u8], bss: &BssDescription)
                             s_rsne.clone(), bss.bssid, a_rsne)
         .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;
     let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
-    Ok(Some(Rsna{negotiated_rsne, esssa }))
+    Ok(Some(Box::new(Rsna { negotiated_rsne, esssa })))
 }
 
 fn make_ess_sa(ssid: &[u8], passphrase: &[u8], sta_addr: [u8; 6], sta_rsne: Rsne, bssid: [u8; 6],
