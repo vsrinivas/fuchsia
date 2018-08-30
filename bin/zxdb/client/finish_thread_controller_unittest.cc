@@ -31,9 +31,10 @@ TEST_F(FinishThreadControllerTest, Finish) {
   break_notification.type = debug_ipc::NotifyException::Type::kSoftware;
   break_notification.thread.koid = kThreadKoid;
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  break_notification.frame.ip = kInitialAddress;
-  break_notification.frame.sp = kInitialBase;
-  break_notification.frame.bp = kInitialBase;
+  break_notification.frames.resize(1);
+  break_notification.frames[0].ip = kInitialAddress;
+  break_notification.frames[0].sp = kInitialBase;
+  break_notification.frames[0].bp = kInitialBase;
   InjectException(break_notification);
 
   // Supply two frames for when the thread requests them: the top one (of the
@@ -57,10 +58,10 @@ TEST_F(FinishThreadControllerTest, Finish) {
   EXPECT_FALSE(sink().breakpoint_add_called());
   Err out_err;
   thread->ContinueWith(std::make_unique<FinishThreadController>(frames[0]),
-      [&out_err](const Err& err) {
-    out_err = err;
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  });
+                       [&out_err](const Err& err) {
+                         out_err = err;
+                         debug_ipc::MessageLoop::Current()->QuitNow();
+                       });
   loop().Run();
 
   TestThreadObserver thread_observer(thread);
@@ -77,9 +78,10 @@ TEST_F(FinishThreadControllerTest, Finish) {
 
   // Simulate a hit of the breakpoint. This stack pointer is too small
   // (indicating a recursive call) so it should not trigger.
-  break_notification.frame.ip = kReturnAddress;
-  break_notification.frame.sp = kInitialBase - 0x100;
-  break_notification.frame.bp = kInitialBase - 0x100;
+  break_notification.frames.resize(1);
+  break_notification.frames[0].ip = kReturnAddress;
+  break_notification.frames[0].sp = kInitialBase - 0x100;
+  break_notification.frames[0].bp = kInitialBase - 0x100;
   break_notification.hit_breakpoints.emplace_back();
   break_notification.hit_breakpoints[0].breakpoint_id =
       sink().last_breakpoint_add().breakpoint.breakpoint_id;
@@ -88,8 +90,8 @@ TEST_F(FinishThreadControllerTest, Finish) {
 
   // Simulate a breakpoint hit with a lower BP. This should trigger a thread
   // stop.
-  break_notification.frame.sp = kReturnBase;
-  break_notification.frame.bp = kReturnBase;
+  break_notification.frames[0].sp = kReturnBase;
+  break_notification.frames[0].bp = kReturnBase;
   InjectException(break_notification);
   EXPECT_TRUE(thread_observer.got_stopped());
   EXPECT_TRUE(sink().breakpoint_remove_called());

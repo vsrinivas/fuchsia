@@ -28,13 +28,17 @@ void FinishThreadController::InitWithThread(
     Thread* thread, std::function<void(const Err&)> cb) {
   set_thread(thread);
 
-  if (thread->HasAllFrames()) {
-    InitWithFrames(std::move(cb));
+  auto frames = thread->GetFrames();
+  if (frames.size() >= 2 || thread->HasAllFrames()) {
+    // This thread has the next-to-topmost frame (or we know that it's
+    // not available).
+    InitWithFrames(frames, std::move(cb));
   } else {
     // Need to asynchronously request the thread's frames. We can capture
     // |this| here since the thread owns this class.
-    thread->SyncFrames(
-        [ this, cb = std::move(cb) ]() { InitWithFrames(std::move(cb)); });
+    thread->SyncFrames([ this, cb = std::move(cb) ]() {
+      InitWithFrames(this->thread()->GetFrames(), std::move(cb));
+    });
   }
 }
 
@@ -43,11 +47,9 @@ ThreadController::ContinueOp FinishThreadController::GetContinueOp() {
 }
 
 void FinishThreadController::InitWithFrames(
-    std::function<void(const Err&)> cb) {
-  // Note the frames may have changed from when the constructor was called or
-  // they could even be empty (if the thread was already running or racily
-  // resumed before the backtrace completed).
-  auto frames = thread()->GetFrames();
+    const std::vector<Frame*>& frames, std::function<void(const Err&)> cb) {
+  // Note if this was called asynchronously the thread could be resumed
+  // and it could have no frames, or totally different ones.
 
   // Find the frame corresponding to the reqested one.
   constexpr size_t kNotFound = std::numeric_limits<size_t>::max();

@@ -407,7 +407,7 @@ void WriteNotifyException(const NotifyException& notify,
   writer->WriteUint64(notify.process_koid);
   Serialize(notify.thread, writer);
   writer->WriteUint32(static_cast<uint32_t>(notify.type));
-  Serialize(notify.frame, writer);
+  Serialize(notify.frames, writer);
   Serialize(notify.hit_breakpoints, writer);
 }
 

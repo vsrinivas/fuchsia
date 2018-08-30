@@ -191,9 +191,8 @@ void ThreadImpl::SetMetadataFromException(
   // After an exception the thread should be blocked.
   FXL_DCHECK(state_ == debug_ipc::ThreadRecord::State::kBlocked);
 
-  std::vector<debug_ipc::StackFrame> frames;
-  frames.push_back(notify.frame);
-  SaveFrames(frames, false);
+  FXL_DCHECK(!notify.frames.empty());
+  SaveFrames(notify.frames, false);
 }
 
 void ThreadImpl::OnException(

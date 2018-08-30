@@ -77,9 +77,10 @@ class Thread : public ClientObject {
   // Access to the stack frames for this thread at its current stopped
   // position. If a thread is running, the stack frames are not available.
   //
-  // When a thread is stopped, it will have only its first frame available
-  // by default (the current IP and stack position). So stopped threads will
-  // always have at least one result in the vector returned by GetFrames().
+  // When a thread is stopped, it will have its 0th frame available (the
+  // current IP and stack position) and the 1st (the calling frame) if
+  // possible. So stopped threads will always have at least one result in the
+  // vector returned by GetFrames(), and normally two.
   //
   // If the full backtrace is needed, SyncFrames() can be called which will
   // compute the full backtrace and issue the callback when complete. This
@@ -97,10 +98,9 @@ class Thread : public ClientObject {
   // requests to resume a thread, so you can't make any assumptions about the
   // availability of the stack from the callback.
   //
-  // The vector returned by GetFrames will be an internal one that will change
-  // when the thread is resumed. The pointers in the vector can be cached if
-  // the code listens for ThreadObserver::OnThreadFramesInvalidated() and
-  // clears the cache at that point.
+  // The pointers in the vector returned by GetFrames() can be cached if the
+  // code listens for ThreadObserver::OnThreadFramesInvalidated() and clears
+  // the cache at that point.
   virtual std::vector<Frame*> GetFrames() const = 0;
   virtual bool HasAllFrames() const = 0;
   virtual void SyncFrames(std::function<void()> callback) = 0;

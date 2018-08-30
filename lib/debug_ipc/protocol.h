@@ -263,8 +263,10 @@ struct NotifyException {
 
   Type type = Type::kGeneral;
 
-  // The frame of the top of the stack.
-  StackFrame frame;
+  // The frames of the top of the stack. This will contain the top 2 frames
+  // (the current one and the caller) if they are available. It will always
+  // contain at least one frame which contains the current IP.
+  std::vector<StackFrame> frames;
 
   // When the stop was caused by hitting a breakpoint, this vector will contain
   // the post-hit stats of every hit breakpoint (since there can be more than

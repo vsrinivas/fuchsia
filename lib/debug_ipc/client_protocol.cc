@@ -463,7 +463,7 @@ bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
     return false;
   notify->type = static_cast<NotifyException::Type>(type);
 
-  if (!Deserialize(reader, &notify->frame))
+  if (!Deserialize(reader, &notify->frames))
     return false;
   return Deserialize(reader, &notify->hit_breakpoints);
 }
