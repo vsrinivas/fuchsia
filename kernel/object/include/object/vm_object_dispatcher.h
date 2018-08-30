@@ -49,6 +49,8 @@ public:
 
     zx_status_t SetMappingCachePolicy(uint32_t cache_policy);
 
+    zx_info_vmo_t GetVmoInfo();
+
     const fbl::RefPtr<VmObject>& vmo() const { return vmo_; }
 
 private:
@@ -66,3 +68,6 @@ private:
     // shares the same lock.
     CookieJar cookie_jar_;
 };
+
+zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
+                             bool is_handle, zx_rights_t handle_rights);

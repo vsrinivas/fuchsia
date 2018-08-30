@@ -28,6 +28,7 @@
 #include <object/socket_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
+#include <object/vm_object_dispatcher.h>
 
 #include <fbl/ref_ptr.h>
 
@@ -381,6 +382,35 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         }
         if (_avail) {
             zx_status_t status = _avail.copy_to_user(avail);
+            if (status != ZX_OK)
+                return status;
+        }
+        return status;
+    }
+    case ZX_INFO_VMO: {
+        // lookup the dispatcher from handle
+        fbl::RefPtr<VmObjectDispatcher> vmo;
+        zx_status_t status = up->GetDispatcher(handle, &vmo);
+        if (status < 0)
+            return status;
+        auto vmos = _buffer.reinterpret<zx_info_vmo_t>();
+        zx_info_vmo_t entry;
+
+        entry = vmo->GetVmoInfo();
+        if (vmos.copy_array_to_user(&entry, 1, 0) != ZX_OK) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (_actual) {
+            size_t count = 1;
+            zx_status_t status = _actual.copy_to_user(count);
+            if (status != ZX_OK)
+                return status;
+        }
+        // Avail returned is 0, since we were just asked to read
+        // the info for a single vmo, hence nothing more is available (?)
+        if (_avail) {
+            size_t count = 0;
+            zx_status_t status = _avail.copy_to_user(count);
             if (status != ZX_OK)
                 return status;
         }

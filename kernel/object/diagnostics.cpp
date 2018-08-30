@@ -553,29 +553,6 @@ zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
 }
 
 namespace {
-zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
-                             bool is_handle, zx_rights_t handle_rights) {
-    zx_info_vmo_t entry = {};
-    entry.koid = vmo->user_id();
-    vmo->get_name(entry.name, sizeof(entry.name));
-    entry.size_bytes = vmo->size();
-    entry.parent_koid = vmo->parent_user_id();
-    entry.num_children = vmo->num_children();
-    entry.num_mappings = vmo->num_mappings();
-    entry.share_count = vmo->share_count();
-    entry.flags =
-        (vmo->is_paged() ? ZX_INFO_VMO_TYPE_PAGED : ZX_INFO_VMO_TYPE_PHYSICAL) |
-        (vmo->is_cow_clone() ? ZX_INFO_VMO_IS_COW_CLONE : 0);
-    entry.committed_bytes = vmo->AllocatedPages() * PAGE_SIZE;
-    if (is_handle) {
-        entry.flags |= ZX_INFO_VMO_VIA_HANDLE;
-        entry.handle_rights = handle_rights;
-    } else {
-        entry.flags |= ZX_INFO_VMO_VIA_MAPPING;
-    }
-    return entry;
-}
-
 // Builds a list of all VMOs mapped into a VmAspace.
 class AspaceVmoEnumerator final : public VmEnumerator {
 public:

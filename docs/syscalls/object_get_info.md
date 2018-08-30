@@ -298,6 +298,57 @@ typedef struct zx_info_vmar {
 This returns a single *zx_info_vmar_t* that describes the range of address
 space that the VMAR occupies.
 
+### ZX_INFO_VMO
+
+*handle* type: **VM Object**
+
+*buffer* type: **zx_info_vmo_t[1]**
+
+```
+typedef struct zx_info_vmo {
+    // The koid of this VMO.
+    zx_koid_t koid;
+
+    // The name of this VMO.
+    char name[ZX_MAX_NAME_LEN];
+
+    // The size of this VMO.
+    uint64_t size_bytes;
+
+    // If this VMO is a clone, the koid of its parent. Otherwise, zero.
+    zx_koid_t parent_koid;
+
+    // The number of clones of this VMO, if any.
+    size_t num_children;
+
+    // The number of times this VMO is currently mapped into VMARs.
+    size_t num_mappings;
+
+    // An estimate of the number of unique address spaces that
+    // this VMO is mapped into.
+    size_t share_count;
+
+    // Bitwise OR of ZX_INFO_VMO_* values.
+    uint32_t flags;
+
+    // If |ZX_INFO_VMO_TYPE(flags) == ZX_INFO_VMO_TYPE_PAGED|, the amount of
+    // memory currently allocated to this VMO.
+    uint64_t committed_bytes;
+
+    // If |flags & ZX_INFO_VMO_VIA_HANDLE|, the handle rights.
+    // Undefined otherwise.
+    zx_rights_t handle_rights;
+
+    // VMO creation options. This is a bitmask of
+    // kResizable    = (1u << 0);
+    // kContiguous   = (1u << 1);
+    uint32_t create_options;
+} zx_info_vmo_t;
+```
+
+This returns a single *zx_info_vmo_t* that describes various attrubutes of
+the VMO.
+
 ### ZX_INFO_SOCKET
 
 *handle* type: **Socket**

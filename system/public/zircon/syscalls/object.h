@@ -34,6 +34,7 @@ typedef enum {
     ZX_INFO_BTI                        = 20, // zx_info_bti_t[1]
     ZX_INFO_PROCESS_HANDLE_STATS       = 21, // zx_info_process_handle_stats_t[1]
     ZX_INFO_SOCKET                     = 22, // zx_info_socket_t[1]
+    ZX_INFO_VMO                        = 23, // zx_info_vmo_t[1]
 } zx_object_info_topic_t;
 
 typedef uint32_t zx_obj_props_t;
@@ -292,6 +293,11 @@ typedef struct zx_info_vmo {
     // If |flags & ZX_INFO_VMO_VIA_HANDLE|, the handle rights.
     // Undefined otherwise.
     zx_rights_t handle_rights;
+
+    // VMO creation options. This is a bitmask of
+    // kResizable    = (1u << 0);
+    // kContiguous   = (1u << 1);
+    uint32_t create_options;
 } zx_info_vmo_t;
 
 // kernel statistics per cpu

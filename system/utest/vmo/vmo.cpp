@@ -407,6 +407,51 @@ bool vmo_no_resize_test() {
     return vmo_no_resize_helper(vmo, len);
 }
 
+bool vmo_info_test() {
+    size_t len = PAGE_SIZE * 4;
+    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    zx_info_vmo_t info;
+    zx_status_t status;
+
+    // Create a non-resizeable VMO, query the INFO on it
+    // and dump it.
+    status = zx_vmo_create(len, ZX_VMO_NON_RESIZABLE, &vmo);
+    EXPECT_EQ(ZX_OK, status, "vm_info_test: vmo_create");
+
+    status = zx_object_get_info(vmo, ZX_INFO_VMO, &info,
+                                sizeof(info), nullptr, nullptr);
+    EXPECT_EQ(ZX_OK, status, "vm_info_test: info_vmo");
+
+    status = zx_handle_close(vmo);
+    EXPECT_EQ(ZX_OK, status, "vm_info_test: handle_close");
+
+    EXPECT_EQ(info.size_bytes, len, "vm_info_test: info_vmo.size_bytes");
+    EXPECT_NE(info.create_options, (1u << 0),
+              "vm_info_test: info_vmo.create_options");
+//    printf("NON_Resizeable VMO, size = %lu, create_options = %ux\n",
+//           info.size_bytes, info.create_options);
+
+    // Create a resizeable VMO, query the INFO on it and dump it.
+    len = PAGE_SIZE * 8;
+    zx_vmo_create(len, 0, &vmo);
+    EXPECT_EQ(ZX_OK, status, "vm_info_test: vmo_create");
+
+    status = zx_object_get_info(vmo, ZX_INFO_VMO, &info,
+                                sizeof(info), nullptr, nullptr);
+    EXPECT_EQ(ZX_OK, status, "vm_info_test: info_vmo");
+
+    status = zx_handle_close(vmo);
+    EXPECT_EQ(ZX_OK, status, "vm_info_test: handle_close");
+
+    EXPECT_EQ(info.size_bytes, len, "vm_info_test: info_vmo.size_bytes");
+    EXPECT_EQ(info.create_options, (1u << 0),
+              "vm_info_test: info_vmo.create_options");
+//    printf("Resizeable VMO, size = %lu, create_options = %ux\n",
+//           info.size_bytes, info.create_options);
+
+    END_TEST;
+}
+
 bool vmo_no_resize_clone_test() {
     const size_t len = PAGE_SIZE * 4;
     zx_handle_t vmo = ZX_HANDLE_INVALID;
@@ -1748,6 +1793,7 @@ RUN_TEST(vmo_clone_rights_test);
 RUN_TEST(vmo_resize_hazard);
 RUN_TEST(vmo_clone_resize_clone_hazard);
 RUN_TEST(vmo_clone_resize_parent_ok);
+RUN_TEST(vmo_info_test);
 RUN_TEST_LARGE(vmo_unmap_coherency);
 END_TEST_CASE(vmo_tests)
 

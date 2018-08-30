@@ -47,6 +47,7 @@ public:
     virtual zx_status_t ResizeLocked(uint64_t size) TA_REQ(lock_) { return ZX_ERR_NOT_SUPPORTED; }
 
     virtual uint64_t size() const { return 0; }
+    virtual uint32_t create_options() const { return 0; }
 
     // Returns true if the object is backed by RAM.
     virtual bool is_paged() const { return false; }
