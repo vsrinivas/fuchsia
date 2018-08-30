@@ -23,19 +23,20 @@ static zx_pixel_format_t pixel_format(uint32_t virtio_format) {
 namespace machina {
 
 fbl::unique_ptr<GpuResource> GpuResource::Create(
-    const virtio_gpu_resource_create_2d_t* request, VirtioGpu* gpu) {
+    const PhysMem& phys_mem, const virtio_gpu_resource_create_2d_t* request) {
   zx_pixel_format_t format = pixel_format(request->format);
   if (format == ZX_PIXEL_FORMAT_NONE) {
     FXL_LOG(INFO) << "Unsupported GPU format " << request->format;
     return nullptr;
   }
   GpuBitmap bitmap(request->width, request->height, format);
-  return fbl::make_unique<GpuResource>(gpu, request->resource_id,
+  return fbl::make_unique<GpuResource>(phys_mem, request->resource_id,
                                        std::move(bitmap));
 }
 
-GpuResource::GpuResource(VirtioGpu* gpu, ResourceId id, GpuBitmap bitmap)
-    : gpu_(gpu), res_id_(id), bitmap_(std::move(bitmap)) {}
+GpuResource::GpuResource(const PhysMem& phys_mem, ResourceId id,
+                         GpuBitmap bitmap)
+    : phys_mem_(phys_mem), res_id_(id), bitmap_(std::move(bitmap)) {}
 
 virtio_gpu_ctrl_type GpuResource::AttachBacking(
     const virtio_gpu_mem_entry_t* mem_entries, uint32_t num_entries) {
@@ -112,7 +113,7 @@ void GpuResource::CopyBytes(uint64_t offset, uint8_t* dest, size_t size) {
       len = len > size ? size : len;
 
       zx_vaddr_t src_vaddr = entry.addr + offset - base;
-      memcpy(dest, gpu_->phys_mem().as<void>(src_vaddr, len), len);
+      memcpy(dest, phys_mem_.as<void>(src_vaddr, len), len);
 
       dest += len;
       offset += len;

@@ -22,7 +22,7 @@ class GpuResource
     : public fbl::SinglyLinkedListable<fbl::unique_ptr<GpuResource>> {
  public:
   static fbl::unique_ptr<GpuResource> Create(
-      const virtio_gpu_resource_create_2d_t* request, VirtioGpu* gpu);
+      const PhysMem& phys_mem, const virtio_gpu_resource_create_2d_t* request);
 
   // The driver will provide a scatter-gather list of memory pages to back
   // the framebuffer in guest physical memory.
@@ -35,7 +35,7 @@ class GpuResource
         : addr(addr_), length(length_) {}
   };
 
-  GpuResource(VirtioGpu*, ResourceId, GpuBitmap);
+  GpuResource(const PhysMem& phys_mem, ResourceId, GpuBitmap);
 
   const GpuBitmap& bitmap() const { return bitmap_; }
 
@@ -76,7 +76,7 @@ class GpuResource
   // a host resource.
   void CopyBytes(uint64_t offset, uint8_t* dest, size_t size);
 
-  VirtioGpu* gpu_;
+  const PhysMem& phys_mem_;
   ResourceId res_id_;
   fbl::SinglyLinkedList<fbl::unique_ptr<BackingPages>> backing_;
 
