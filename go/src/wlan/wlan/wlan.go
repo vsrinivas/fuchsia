@@ -103,7 +103,14 @@ func ConvertWapToAp(ap AP) wlan_service.Ap {
 	// TODO: Check if AP supports other types of security mechanism (e.g. WEP)
 	is_secure := ap.BSSDesc.Rsn != nil
 	is_compatible := ap.IsCompatible
-	return wlan_service.Ap{bssid, ap.SSID, ap.RssiDbm, is_secure, is_compatible, ap.Chan}
+	return wlan_service.Ap{
+		Bssid:        bssid,
+		Ssid:         ap.SSID,
+		RssiDbm:      ap.RssiDbm,
+		IsSecure:     is_secure,
+		IsCompatible: is_compatible,
+		Chan:         ap.Chan,
+	}
 }
 
 func (c *Client) Status() wlan_service.WlanStatus {
@@ -139,9 +146,9 @@ func (c *Client) Status() wlan_service.WlanStatus {
 	}
 
 	return wlan_service.WlanStatus{
-		wlan_service.Error{wlan_service.ErrCodeOk, "OK"},
-		state,
-		current_ap,
+		Error:     wlan_service.Error{Code: wlan_service.ErrCodeOk, Description: "OK"},
+		State:     state,
+		CurrentAp: current_ap,
 	}
 }
 
@@ -149,7 +156,7 @@ func (c *Client) handleQueryStatsCommand(req *commandRequest) {
 	err := c.SendMessage(&mlme.MlmeStatsQueryReqRequest{}, mlme.MlmeStatsQueryReqOrdinal)
 	if err != nil {
 		req.respC <- &CommandResult{nil,
-			&wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}}
+			&wlan_service.Error{Code: wlan_service.ErrCodeInternal, Description: "Could not send MLME request"}}
 		return
 	}
 	c.pendingStatsResp = req.respC
@@ -293,7 +300,7 @@ func (c *Client) handleMLMEMsg(resp interface{}) (state, error) {
 	// Query Stats is state-independent so handle it immediately.
 	case *mlme.StatsQueryResponse:
 		if c.pendingStatsResp != nil {
-			c.pendingStatsResp <- &CommandResult{ resp.(*mlme.StatsQueryResponse).Stats, nil }
+			c.pendingStatsResp <- &CommandResult{resp.(*mlme.StatsQueryResponse).Stats, nil}
 			c.pendingStatsResp = nil
 		}
 	// Everything else is state-dependent

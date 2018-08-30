@@ -109,7 +109,7 @@ func (s *startBSSState) handleCommand(cmd *commandRequest, c *Client) (state, er
 			}
 			err := c.SendMessage(req, mlme.MlmeStopReqOrdinal)
 			if err != nil {
-				res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}
+				res.Err = &wlan_service.Error{Code: wlan_service.ErrCodeInternal, Description: "Could not send MLME request"}
 			} else {
 				// Send MLME-RESET.request to reset and allow MLME to move into Client mode.
 				req := newResetRequest(c.staAddr)
@@ -119,7 +119,7 @@ func (s *startBSSState) handleCommand(cmd *commandRequest, c *Client) (state, er
 					}
 					err := c.SendMessage(req, mlme.MlmeResetReqOrdinal)
 					if err != nil {
-						res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}
+						res.Err = &wlan_service.Error{Code: wlan_service.ErrCodeInternal, Description: "Could not send MLME request"}
 					}
 				}
 			}
@@ -133,8 +133,11 @@ func (s *startBSSState) handleCommand(cmd *commandRequest, c *Client) (state, er
 		}
 	default:
 		cmd.respC <- &CommandResult{nil,
-			&wlan_service.Error{wlan_service.ErrCodeNotSupported,
-				"Can't run the command in scanState"}}
+			&wlan_service.Error{
+				Code:        wlan_service.ErrCodeNotSupported,
+				Description: "Can't run the command in scanState",
+			},
+		}
 	}
 	return s, nil
 }
@@ -347,8 +350,8 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 		if !ok {
 			res := &CommandResult{}
 			res.Err = &wlan_service.Error{
-				wlan_service.ErrCodeInvalidArgs,
-				"Invalid arguments",
+				Code:        wlan_service.ErrCodeInvalidArgs,
+				Description: "Invalid arguments",
 			}
 			cmd.respC <- res
 		}
@@ -358,8 +361,8 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 		res := &CommandResult{}
 		if !ok {
 			res.Err = &wlan_service.Error{
-				wlan_service.ErrCodeInvalidArgs,
-				"Invalid arguments",
+				Code:        wlan_service.ErrCodeInvalidArgs,
+				Description: "Invalid arguments",
 			}
 		} else {
 			c.cfg = newCfg
@@ -380,8 +383,8 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 		res := &CommandResult{}
 		if !ok {
 			res.Err = &wlan_service.Error{
-				wlan_service.ErrCodeInvalidArgs,
-				"Invalid arguments",
+				Code:        wlan_service.ErrCodeInvalidArgs,
+				Description: "Invalid arguments",
 			}
 		} else {
 			// Send MLME-RESET.request to reset and allow MLME to move into AP mode.
@@ -392,7 +395,7 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 				}
 				err := c.SendMessage(req, mlme.MlmeResetReqOrdinal)
 				if err != nil {
-					res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}
+					res.Err = &wlan_service.Error{Code: wlan_service.ErrCodeInternal, Description: "Could not send MLME request"}
 				}
 			}
 		}
@@ -402,8 +405,11 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 		}
 	default:
 		cmd.respC <- &CommandResult{nil,
-			&wlan_service.Error{wlan_service.ErrCodeNotSupported,
-				"Can't run the command in scanState"}}
+			&wlan_service.Error{
+				Code:        wlan_service.ErrCodeNotSupported,
+				Description: "Can't run the command in scanState",
+			},
+		}
 	}
 	return s, nil
 }
@@ -753,7 +759,7 @@ func (s *assocState) createSupplicant(c *Client, bcnRSNE *elements.RSN, assocRSN
 
 func (s *assocState) createEAPOLClient(c *Client, assocRSNE *elements.RSN, keyExchange eapol.KeyExchange) *eapol.Client {
 	// TODO(hahnr): Derive MIC size from AKM.
-	return eapol.NewClient(eapol.Config{128, keyExchange})
+	return eapol.NewClient(eapol.Config{MICBits: 128, KeyExchange: keyExchange})
 }
 
 func (s *assocState) commandIsDisabled() bool {
@@ -837,7 +843,7 @@ func (s *associatedState) handleCommand(cmd *commandRequest, c *Client) (state, 
 		err := c.SendMessage(req, mlme.MlmeDeauthenticateReqOrdinal)
 		res := &CommandResult{}
 		if err != nil {
-			res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}
+			res.Err = &wlan_service.Error{Code: wlan_service.ErrCodeInternal, Description: "Could not send MLME request"}
 		}
 		cmd.respC <- res
 
@@ -849,8 +855,11 @@ func (s *associatedState) handleCommand(cmd *commandRequest, c *Client) (state, 
 	//	s.scanner.handleCommand(cmd, c)
 	default:
 		cmd.respC <- &CommandResult{nil,
-			&wlan_service.Error{wlan_service.ErrCodeNotSupported,
-				"Can't run the command in associatedState"}}
+			&wlan_service.Error{
+				Code:        wlan_service.ErrCodeNotSupported,
+				Description: "Can't run the command in associatedState",
+			},
+		}
 	}
 	return s, nil
 }
