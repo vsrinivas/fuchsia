@@ -6,6 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
+
 namespace btlib {
 namespace l2cap {
 namespace testing {
@@ -102,6 +104,13 @@ bool FakeChannel::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
 
   if (!send_cb_)
     return false;
+
+  if (sdu->size() > tx_mtu()) {
+    bt_log(ERROR, "l2cap",
+           "Dropping oversized SDU (sdu->size()=%u, tx_mtu()=%u)", sdu->size(),
+           tx_mtu());
+    return false;
+  }
 
   ZX_DEBUG_ASSERT(send_dispatcher_);
   async::PostTask(send_dispatcher_,
