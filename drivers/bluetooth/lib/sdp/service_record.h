@@ -22,9 +22,11 @@ class ServiceRecord {
  public:
   // Create a new service record with the handle given.
   // Also generates a UUID and sets the Service ID attribute.
-  explicit ServiceRecord(ServiceHandle handle);
+  ServiceRecord();
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceRecord);
+  // Allow move.
+  ServiceRecord(ServiceRecord&&) = default;
 
   // Directly sets an attribute to a specific DataElement
   void SetAttribute(AttributeId id, DataElement value);
@@ -41,6 +43,8 @@ class ServiceRecord {
 
   // Returns the handle of this service.
   ServiceHandle handle() const { return handle_; }
+
+  void SetHandle(ServiceHandle handle);
 
   // Returns the set of attributes in this record that are in
   // the range |start| - |end| inclusive.
@@ -101,7 +105,7 @@ class ServiceRecord {
   std::map<AttributeId, DataElement> attributes_;
 
   // Additional protocol lists, by id.
-  // Each one of these elements is a sequence of the form that would
+  // Each one of these elements is a sequence of the form that would qualify as
   // a protocol list (a sequence of sequences of protocols and params)
   std::unordered_map<ProtocolListId, DataElement> addl_protocols_;
 

@@ -32,9 +32,7 @@ void AddAllUUIDs(const DataElement& elem,
 
 }  // namespace
 
-ServiceRecord::ServiceRecord(ServiceHandle handle) : handle_(handle) {
-  SetAttribute(kServiceRecordHandle, DataElement(uint32_t(handle_)));
-
+ServiceRecord::ServiceRecord() {
   common::UUID service_uuid;
   common::StringToUuid(fxl::GenerateUUID(), &service_uuid);
   SetAttribute(kServiceId, DataElement(service_uuid));
@@ -56,6 +54,11 @@ bool ServiceRecord::HasAttribute(AttributeId id) const {
 }
 
 void ServiceRecord::RemoveAttribute(AttributeId id) { attributes_.erase(id); }
+
+void ServiceRecord::SetHandle(ServiceHandle handle) {
+  handle_ = handle;
+  SetAttribute(kServiceRecordHandle, DataElement(uint32_t(handle_)));
+}
 
 std::set<AttributeId> ServiceRecord::GetAttributesInRange(
     AttributeId start, AttributeId end) const {
@@ -128,8 +131,7 @@ void ServiceRecord::AddProtocolDescriptor(const ProtocolListId id,
   seq.emplace_back(DataElement(std::move(protocol_desc)));
 
   if (id == kPrimaryProtocolList) {
-    DataElement new_prot_list(std::move(seq));
-    SetAttribute(kProtocolDescriptorList, std::move(new_prot_list));
+    SetAttribute(kProtocolDescriptorList, DataElement(std::move(seq)));
   } else {
     addl_protocols_.erase(id);
     addl_protocols_.emplace(id, DataElement(std::move(seq)));

@@ -25,7 +25,9 @@ using SDP_ServiceRecordTest = ::testing::Test;
 // Test: SetServiceClassUUIDs
 //  - Sets the right attribute with the right format.
 TEST_F(SDP_ServiceRecordTest, BasicFunctionality) {
-  ServiceRecord record(kSDPHandle);
+  ServiceRecord record;
+
+  record.SetHandle(kSDPHandle);
 
   EXPECT_EQ(kSDPHandle, record.handle());
 
@@ -66,7 +68,9 @@ TEST_F(SDP_ServiceRecordTest, BasicFunctionality) {
 // Test: GetAttributesInRange
 //  - Returns any attributes that are present.
 TEST_F(SDP_ServiceRecordTest, GetAttributesInRange) {
-  ServiceRecord record(5);
+  ServiceRecord record;
+
+  record.SetHandle(kSDPHandle);
 
   record.SetAttribute(0xf00d, DataElement());
   record.SetAttribute(0x0001, DataElement());
@@ -92,7 +96,7 @@ TEST_F(SDP_ServiceRecordTest, GetAttributesInRange) {
 // Test: FindUUID
 //  - Only returns true if all uuids are present
 TEST_F(SDP_ServiceRecordTest, FindUUID) {
-  ServiceRecord record(kSDPHandle);
+  ServiceRecord record;
 
   DataElement elem;
   elem.Set(common::UUID(uint16_t(0xfeaa)));
@@ -118,7 +122,7 @@ TEST_F(SDP_ServiceRecordTest, FindUUID) {
 
 // Test: AddProtocolDescriptor
 TEST_F(SDP_ServiceRecordTest, AddProtocolDescriptor) {
-  ServiceRecord record(kSDPHandle);
+  ServiceRecord record;
 
   EXPECT_FALSE(record.HasAttribute(kProtocolDescriptorList));
 
@@ -200,7 +204,7 @@ TEST_F(SDP_ServiceRecordTest, AddProtocolDescriptor) {
 //  - Adds an attribute if it doesn't exist
 //  - Appends to the attribute if it does exist
 TEST_F(SDP_ServiceRecordTest, AddProfile) {
-  ServiceRecord record(kSDPHandle);
+  ServiceRecord record;
 
   EXPECT_FALSE(record.HasAttribute(kBluetoothProfileDescriptorList));
 
@@ -257,7 +261,7 @@ TEST_F(SDP_ServiceRecordTest, AddProfile) {
 //  - Requires at least one is set.
 //  - Adds the right attributes to a set.
 TEST_F(SDP_ServiceRecordTest, AddInfo) {
-  ServiceRecord record(kSDPHandle);
+  ServiceRecord record;
 
   EXPECT_FALSE(record.HasAttribute(kLanguageBaseAttributeIdList));
 

@@ -160,58 +160,55 @@ void ProfileServer::AddService(fidlbredr::ServiceDefinition definition,
   auto sdp = adapter()->sdp_server();
   ZX_DEBUG_ASSERT(sdp);
 
-  btlib::sdp::ServiceHandle handle;
+  btlib::sdp::ServiceRecord rec;
+  std::vector<btlib::common::UUID> classes;
+  for (auto& uuid_str : *definition.service_class_uuids) {
+    btlib::common::UUID uuid;
+    bt_log(SPEW, "profile_server", "Setting Service Class UUID %s",
+           uuid_str->c_str());
+    bool success = btlib::common::StringToUuid(uuid_str, &uuid);
+    ZX_DEBUG_ASSERT(success);
+    classes.emplace_back(std::move(uuid));
+  }
 
-  bool added = sdp->RegisterService([&handle, &definition](
-                                        btlib::sdp::ServiceRecord* rec) {
-    handle = rec->handle();
-    std::vector<btlib::common::UUID> classes;
-    for (auto& uuid_str : *definition.service_class_uuids) {
-      btlib::common::UUID uuid;
-      bt_log(SPEW, "profile_server", "Setting Service Class UUID %s",
-             uuid_str->c_str());
-      bool success = btlib::common::StringToUuid(uuid_str, &uuid);
-      ZX_DEBUG_ASSERT(success);
-      classes.emplace_back(std::move(uuid));
-    }
+  rec.SetServiceClassUUIDs(classes);
 
-    rec->SetServiceClassUUIDs(classes);
+  AddProtocolDescriptorList(&rec,
+                            btlib::sdp::ServiceRecord::kPrimaryProtocolList,
+                            definition.protocol_descriptors);
 
-    AddProtocolDescriptorList(rec,
-                              btlib::sdp::ServiceRecord::kPrimaryProtocolList,
-                              definition.protocol_descriptors);
+  size_t protocol_list_id = 1;
+  for (const auto& descriptor_list :
+       *definition.additional_protocol_descriptors) {
+    AddProtocolDescriptorList(&rec, protocol_list_id, descriptor_list);
+    protocol_list_id++;
+  }
 
-    size_t protocol_list_id = 1;
-    for (const auto& descriptor_list :
-         *definition.additional_protocol_descriptors) {
-      AddProtocolDescriptorList(rec, protocol_list_id, descriptor_list);
-      protocol_list_id++;
-    }
+  for (const auto& profile : *definition.profile_descriptors) {
+    bt_log(SPEW, "profile_server", "Adding Profile %#x v%d.%d",
+           profile.profile_id, profile.major_version, profile.minor_version);
+    rec.AddProfile(btlib::common::UUID(uint16_t(profile.profile_id)),
+                   profile.major_version, profile.minor_version);
+  }
 
-    for (const auto& profile : *definition.profile_descriptors) {
-      bt_log(SPEW, "profile_server", "Adding Profile %#x v%d.%d",
-             profile.profile_id, profile.major_version, profile.minor_version);
-      rec->AddProfile(btlib::common::UUID(uint16_t(profile.profile_id)),
-                      profile.major_version, profile.minor_version);
-    }
+  for (const auto& info : *definition.information) {
+    bt_log(SPEW, "profile_server", "Adding Info (%s): (%s, %s, %s)",
+           info.language->c_str(), info.name->c_str(),
+           info.description->c_str(), info.provider->c_str());
+    rec.AddInfo(info.language, info.name, info.description, info.provider);
+  }
 
-    for (const auto& info : *definition.information) {
-      bt_log(SPEW, "profile_server", "Adding Info (%s): (%s, %s, %s)",
-             info.language->c_str(), info.name->c_str(),
-             info.description->c_str(), info.provider->c_str());
-      rec->AddInfo(info.language, info.name, info.description, info.provider);
-    }
+  for (const auto& attribute : *definition.additional_attributes) {
+    btlib::sdp::DataElement elem;
+    FidlToDataElement(attribute.element, &elem);
+    bt_log(SPEW, "profile_server", "Adding attribute %#x : %s", attribute.id,
+           elem.ToString().c_str());
+    rec.SetAttribute(attribute.id, std::move(elem));
+  }
 
-    for (const auto& attribute : *definition.additional_attributes) {
-      btlib::sdp::DataElement elem;
-      FidlToDataElement(attribute.element, &elem);
-      bt_log(SPEW, "profile_server", "Adding attribute %#x : %s", attribute.id,
-             elem.ToString().c_str());
-      rec->SetAttribute(attribute.id, std::move(elem));
-    }
-  });
+  auto handle = sdp->RegisterService(std::move(rec));
 
-  if (!added) {
+  if (!handle) {
     callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
                                         "Service definition was not valid"),
              0);
