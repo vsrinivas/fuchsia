@@ -208,7 +208,8 @@ private:
 
     bool SwitchRollingBuffer(uint32_t wrapped_count, uint64_t buffer_offset);
 
-    void SwitchRollingBufferLocked(uint32_t prev_wrapped_count, uint64_t prev_last_offset);
+    void SwitchRollingBufferLocked(uint32_t prev_wrapped_count, uint64_t prev_last_offset)
+        __TA_REQUIRES(buffer_switch_mutex_);
 
     void StreamingBufferFullCheck(uint32_t wrapped_count,
                                   uint64_t buffer_offset);
@@ -230,7 +231,8 @@ private:
     }
 
     void NotifyRollingBufferFullLocked(uint32_t wrapped_count,
-                                       uint64_t durable_data_end);
+                                       uint64_t durable_data_end)
+        __TA_REQUIRES(buffer_switch_mutex_);
 
     // The generation counter associated with this context to distinguish
     // it from previously created contexts.
