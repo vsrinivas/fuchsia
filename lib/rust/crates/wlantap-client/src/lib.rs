@@ -4,23 +4,22 @@
 
 #![deny(warnings)]
 
-extern crate byteorder;
-extern crate failure;
-#[macro_use] extern crate fdio;
-extern crate fidl;
-extern crate fidl_fuchsia_wlan_tap as wlantap;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zx;
+use {
+    byteorder::{NativeEndian, WriteBytesExt},
+    failure::Error,
+    fdio::{fdio_sys, ioctl, make_ioctl},
+    fidl::encoding2::{Encoder},
+    fidl_fuchsia_wlan_tap as wlantap,
+    fuchsia_async as fasync,
+    fuchsia_zircon::{self as zx, AsHandleRef},
 
-use byteorder::{NativeEndian, WriteBytesExt};
-use failure::Error;
-use fdio::{fdio_sys, ioctl};
-use fidl::encoding2::{Encoder};
-use zx::AsHandleRef;
-use std::fs::{File, OpenOptions};
-use std::os::raw;
-use std::mem;
-use std::path::Path;
+    std::{
+        fs::{File, OpenOptions},
+        os::raw,
+        mem,
+        path::Path,
+    },
+};
 
 pub struct Wlantap {
     file: File,
@@ -58,7 +57,7 @@ impl Wlantap {
         }
         // Release ownership of the remote handle
         mem::forget(remote);
-        Ok(wlantap::WlantapPhyProxy::new(async::Channel::from_channel(local)?))
+        Ok(wlantap::WlantapPhyProxy::new(fasync::Channel::from_channel(local)?))
     }
 
 }
