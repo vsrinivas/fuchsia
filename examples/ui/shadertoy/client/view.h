@@ -73,8 +73,7 @@ class OldView : public mozart::BaseView {
           ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
           fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
               view_owner_request);
-
-  ~OldView() override;
+  ~OldView() = default;
 
   // |mozart::BaseView|.
   virtual bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
@@ -97,8 +96,7 @@ class OldView : public mozart::BaseView {
 class NewView : public scenic::BaseView {
  public:
   NewView(scenic::ViewFactoryArgs args, const std::string& debug_name);
-
-  ~NewView() override;
+  ~NewView() = default;
 
  private:
   // |scenic::BaseView|.
@@ -109,11 +107,16 @@ class NewView : public scenic::BaseView {
   void OnPropertiesChanged(
       fuchsia::ui::gfx::ViewProperties old_properties) override;
 
+  // |scenic::BaseView|.
+  void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
+
   // |scenic::SessionListener|
   virtual void OnScenicError(::fidl::StringPtr error) override;
 
   scenic::EntityNode root_node_;
   ViewImpl impl_;
+
+  bool focused_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NewView);
 };

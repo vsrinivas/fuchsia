@@ -18,6 +18,10 @@ namespace hello_base_view {
 // Instead, the example directly creates a pair of zx::eventpairs that are used
 // to create a ViewHolder/View pair; the ExamplePresenter gets one and the
 // ShadertoyEmbedderView gets the other.  See main().
+//
+// Note Well! This Presenter is currently *not* set up to receive input events
+// from Zircon.  It is the Presenter's responsibility to convey input events to
+// Scenic for further dispatch.  See HelloInput for an example of how to do it.
 class ExamplePresenter : private fuchsia::ui::policy::Presenter2 {
  public:
   ExamplePresenter(fuchsia::ui::scenic::Scenic* scenic);

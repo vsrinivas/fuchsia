@@ -19,6 +19,7 @@
 
 #include "garnet/examples/ui/shadertoy/client/glsl_strings.h"
 #include "lib/fxl/logging.h"
+#include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 namespace shadertoy_client {
@@ -159,7 +160,7 @@ bool ViewImpl::PointerDown() {
     default:
       // This will never happen, because we checked above that we're not
       // in a transitional state.
-      FXL_DCHECK(false) << "already in transition.";
+      FXL_NOTREACHED() << "already in transition.";
   }
   return true;
 }
@@ -205,8 +206,6 @@ OldView::OldView(component::StartupContext* startup_context,
   parent_node().AddChild(root_node_);
 }
 
-OldView::~OldView() = default;
-
 void OldView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size())
@@ -237,15 +236,8 @@ NewView::NewView(scenic::ViewFactoryArgs args, const std::string& debug_name)
       impl_(args.startup_context, session(), &root_node_) {
   view().AddChild(root_node_);
 
-  // TODO(SCN-804): This makes rectangles animate by default, which is not
-  // desired.  Until input events are available from Scenic, there is not other
-  // way to enter this mode.  Delete once input works.
-  impl_.PointerDown();
-
   InvalidateScene();
 }
-
-NewView::~NewView() = default;
 
 void NewView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {
@@ -255,14 +247,39 @@ void NewView::OnSceneInvalidated(
   impl_.OnSceneInvalidated(std::move(presentation_info),
                            {logical_size().x, logical_size().y});
 
-  if (impl_.IsAnimating()) {
-    InvalidateScene();
-  }
+  InvalidateScene();
 }
 
 void NewView::OnPropertiesChanged(
     fuchsia::ui::gfx::ViewProperties old_properties) {
   InvalidateScene();
+}
+
+void NewView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
+  switch (event.Which()) {
+    case ::fuchsia::ui::input::InputEvent::Tag::kFocus: {
+      focused_ = event.focus().focused;
+      break;
+    }
+    case ::fuchsia::ui::input::InputEvent::Tag::kPointer: {
+      const auto& pointer = event.pointer();
+      switch (pointer.phase) {
+        case ::fuchsia::ui::input::PointerEventPhase::DOWN: {
+          if (focused_) {
+            impl_.PointerDown();
+          }
+          break;
+        }
+        default:
+          break;  // Ignore all other pointer phases.
+      }
+      break;
+    }
+    case ::fuchsia::ui::input::InputEvent::Tag::kKeyboard:
+      break;
+    case ::fuchsia::ui::input::InputEvent::Tag::Invalid:
+      break;
+  }
 }
 
 void NewView::OnScenicError(::fidl::StringPtr error) {
