@@ -70,8 +70,7 @@ class Server final {
   // Gets Service Attributes in the |attribute_ranges| from the service record
   // with |handle|.
   ServiceAttributeResponse GetServiceAttributes(
-      ServiceHandle handle,
-      const std::list<ServiceAttributeRequest::AttributeRange>& ranges) const;
+      ServiceHandle handle, const std::list<AttributeRange>& ranges) const;
 
   // l2cap::channel callbacks
   void OnChannelClosed(const std::string& peer_id);

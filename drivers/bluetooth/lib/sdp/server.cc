@@ -197,8 +197,7 @@ ServiceSearchResponse Server::SearchServices(
 }
 
 ServiceAttributeResponse Server::GetServiceAttributes(
-    ServiceHandle handle,
-    const std::list<ServiceAttributeRequest::AttributeRange>& ranges) const {
+    ServiceHandle handle, const std::list<AttributeRange>& ranges) const {
   ServiceAttributeResponse resp;
   const auto& record = records_.at(handle);
   for (const auto& range : ranges) {

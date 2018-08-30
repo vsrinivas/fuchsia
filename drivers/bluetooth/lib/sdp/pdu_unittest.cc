@@ -206,10 +206,7 @@ TEST_F(SDP_PDUTest, ServiceAttributeRequestValidity) {
   EXPECT_EQ(kServiceClassIdList - 1, req.attribute_ranges().front().start);
   EXPECT_EQ(kServiceClassIdList + 4, req.attribute_ranges().front().end);
 
-  // Attribute byte count has a minimum size.
-  req.set_max_attribute_byte_count(6);
-
-  EXPECT_FALSE(req.valid());
+  EXPECT_TRUE(req.valid());
 }
 
 TEST_F(SDP_PDUTest, ServiceAttriuteRequestAddRange) {
@@ -419,6 +416,284 @@ TEST_F(SDP_PDUTest, ServiceAttributeResponseParse) {
   status = resp.Parse(kInvalidByteCount);
 
   EXPECT_FALSE(status);
+}
+
+TEST_F(SDP_PDUTest, ServiceSearchAttributeRequestParse) {
+  const auto kSDPL2CAPAllAttributes = common::CreateStaticByteBuffer(
+      // Service search pattern
+      0x35, 0x03,        // Sequence uint8 3 bytes
+      0x19, 0x01, 0x00,  // UUID: Protocol: L2CAP
+      0xF0, 0x0F,        // Maximum attribute byte count: (max = 61455)
+      // Attribute ID List
+      0x35, 0x05,              // Sequence uint8 5 bytes
+      0x0A,                    // uint32_t
+      0x00, 0x00, 0xFF, 0xFF,  // Attribute range: 0x000 - 0xFFFF (All of them)
+      0x00                     // No continuation state
+  );
+
+  ServiceSearchAttributeRequest req(kSDPL2CAPAllAttributes);
+
+  EXPECT_TRUE(req.valid());
+  EXPECT_EQ(1u, req.service_search_pattern().size());
+  EXPECT_EQ(1u, req.service_search_pattern().count(protocol::kL2CAP));
+  EXPECT_EQ(1u, req.attribute_ranges().size());
+  EXPECT_EQ(0x0000, req.attribute_ranges().front().start);
+  EXPECT_EQ(0xFFFF, req.attribute_ranges().front().end);
+  EXPECT_EQ(61455, req.max_attribute_byte_count());
+
+  const auto kContinued = common::CreateStaticByteBuffer(
+      0x35, 0x03,        // Sequence uint8 3 bytes
+      0x19, 0x01, 0x00,  // UUID: Protocol: L2CAP
+      0x00, 0x0F,        // Maximum attribute byte count: (max = 15)
+      // Attribute ID List
+      0x35, 0x06,             // Sequence uint8 6 bytes
+      0x09,                   // uint16_t
+      0x00, 0x01,             // Attribute ID: 1
+      0x09,                   // uint16_t
+      0x00, 0x02,             // Attribute ID: 2
+      0x03, 0x12, 0x34, 0x56  // Continuation state
+  );
+
+  ServiceSearchAttributeRequest req_cont_state(kContinued);
+
+  EXPECT_TRUE(req_cont_state.valid());
+  EXPECT_EQ(1u, req.service_search_pattern().size());
+  EXPECT_EQ(1u, req.service_search_pattern().count(protocol::kL2CAP));
+  EXPECT_EQ(2u, req_cont_state.attribute_ranges().size());
+  EXPECT_EQ(0x0001, req_cont_state.attribute_ranges().front().start);
+  EXPECT_EQ(0x0001, req_cont_state.attribute_ranges().front().end);
+  EXPECT_EQ(0x0002, req_cont_state.attribute_ranges().back().start);
+  EXPECT_EQ(0x0002, req_cont_state.attribute_ranges().back().end);
+  EXPECT_EQ(15, req_cont_state.max_attribute_byte_count());
+
+  // Too short request.
+  ServiceSearchAttributeRequest req_short((common::BufferView()));
+
+  EXPECT_FALSE(req_short.valid());
+
+  const auto kInvalidMaxBytes = common::CreateStaticByteBuffer(
+      0x35, 0x03,        // Sequence uint8 3 bytes
+      0x19, 0x01, 0x00,  // UUID: Protocol: L2CAP
+      0x00, 0x04,        // Maximum attribute byte count (4)
+      // Attribute ID List
+      0x35, 0x03,        // Sequence uint8 3 bytes
+      0x09, 0x00, 0x02,  // uint16_t (2)
+      0x00               // No continuation state
+  );
+
+  ServiceSearchAttributeRequest req_minmax(kInvalidMaxBytes);
+
+  EXPECT_FALSE(req_minmax.valid());
+
+  // Invalid order of the attributes.
+  const auto kInvalidAttributeListOrder = common::CreateStaticByteBuffer(
+      0x35, 0x03,        // Sequence uint8 3 bytes
+      0x19, 0x01, 0x00,  // UUID: Protocol: L2CAP
+      0xFF, 0xFF,        // Maximum attribute byte count: (max = 65535)
+      // Attribute ID List
+      0x35, 0x06,        // Sequence uint8 6 bytes
+      0x09, 0x00, 0x02,  // uint16_t (2)
+      0x09, 0x00, 0x01,  // uint16_t (1)
+      0x00               // No continuation state
+  );
+
+  ServiceSearchAttributeRequest req_order(kInvalidAttributeListOrder);
+
+  EXPECT_FALSE(req_short.valid());
+
+  // AttributeID List has invalid items
+  const auto kInvalidAttributeList = common::CreateStaticByteBuffer(
+      0x35, 0x03,        // Sequence uint8 3 bytes
+      0x19, 0x01, 0x00,  // UUID: Protocol: L2CAP
+      0xFF, 0xFF,        // Maximum attribute byte count: (max = 65535)
+      // Attribute ID List
+      0x35, 0x06,        // Sequence uint8 6 bytes
+      0x09, 0x00, 0x02,  // uint16_t (2)
+      0x19, 0x00, 0x01,  // UUID (0x0001)
+      0x00               // No continuation state
+  );
+
+  ServiceSearchAttributeRequest req_baditems(kInvalidAttributeList);
+
+  EXPECT_FALSE(req_baditems.valid());
+
+  const auto kInvalidNoItems = common::CreateStaticByteBuffer(
+      0x35, 0x00,  // Sequence uint8 0 bytes
+      0xF0, 0x0F,  // Maximum attribute byte count (61455)
+      // Attribute ID List
+      0x35, 0x03,        // Sequence uint8 3 bytes
+      0x09, 0x00, 0x02,  // uint16_t (2)
+      0x00               // No continuation state
+  );
+
+  ServiceSearchAttributeRequest req_noitems(kInvalidNoItems);
+  EXPECT_FALSE(req_noitems.valid());
+
+  const auto kInvalidTooManyItems = common::CreateStaticByteBuffer(
+      // ServiceSearchPattern
+      0x35, 0x27,        // Sequence uint8 27 bytes
+      0x19, 0x30, 0x01,  // 13 UUIDs in the search
+      0x19, 0x30, 0x02, 0x19, 0x30, 0x03, 0x19, 0x30, 0x04, 0x19, 0x30, 0x05,
+      0x19, 0x30, 0x06, 0x19, 0x30, 0x07, 0x19, 0x30, 0x08, 0x19, 0x30, 0x09,
+      0x19, 0x30, 0x10, 0x19, 0x30, 0x11, 0x19, 0x30, 0x12, 0x19, 0x30, 0x13,
+      0xF0, 0x0F,        // Maximum attribute byte coutn (61455)
+      0x35, 0x03,        // Sequence uint8 3 bytes
+      0x09, 0x00, 0x02,  // uint16_t (2)
+      0x00               // No continuation state
+  );
+
+  ServiceSearchAttributeRequest req_toomany(kInvalidTooManyItems);
+  EXPECT_FALSE(req_toomany.valid());
+}
+
+TEST_F(SDP_PDUTest, ServiceSearchAttributeResponseParse) {
+  const auto kValidResponseEmpty = common::CreateStaticByteBuffer(
+      0x00, 0x02,  // AttributeListsByteCount (2 bytes)
+      // Attribute List
+      0x35, 0x00,  // Sequence uint8 0 bytes
+      0x00         // No continuation state
+  );
+
+  ServiceSearchAttributeResponse resp;
+  auto status = resp.Parse(kValidResponseEmpty);
+
+  EXPECT_TRUE(status);
+  EXPECT_TRUE(resp.complete());
+  EXPECT_EQ(0u, resp.num_attribute_lists());
+
+  const auto kValidResponseItems = common::CreateStaticByteBuffer(
+      0x00, 0x14,  // AttributeListsByteCount (20 bytes)
+      // Wrapping Attribute List
+      0x35, 0x12,  // Sequence uint8 18 bytes
+      // Attribute List
+      0x35, 0x10,        // Sequence uint8 16 bytes
+      0x09, 0x00, 0x00,  // Handle: uint16_t (0 = kServiceRecordHandle)
+      0x0A, 0xFE, 0xED, 0xBE, 0xEF,  // Element: uint32_t (0xFEEDBEEF)
+      0x09, 0x00, 0x01,  // Handle: uint16_t (1 = kServiceClassIdList)
+      0x35, 0x03, 0x19, 0x11, 0x01,  // Element: Sequence (3) { UUID(0x1101) }
+      0x00                           // No continuation state
+  );
+
+  status = resp.Parse(kValidResponseItems);
+
+  EXPECT_TRUE(status);
+  EXPECT_TRUE(resp.complete());
+  EXPECT_EQ(1u, resp.num_attribute_lists());
+  EXPECT_EQ(2u, resp.attributes(0).size());
+  auto it = resp.attributes(0).find(0x0000);
+  EXPECT_NE(resp.attributes(0).end(), it);
+  EXPECT_EQ(DataElement::Type::kUnsignedInt, it->second.type());
+
+  it = resp.attributes(0).find(0x0001);
+  EXPECT_NE(resp.attributes(0).end(), it);
+  EXPECT_EQ(DataElement::Type::kSequence, it->second.type());
+
+  const auto kValidResponseTwoLists = common::CreateStaticByteBuffer(
+      0x00, 0x1E,  // AttributeListsByteCount (30 bytes)
+      // Wrapping Attribute List
+      0x35, 0x1C,  // Sequence uint8 28 bytes
+      // Attribute List 0 (first service)
+      0x35, 0x08,        // Sequence uint8 8 bytes
+      0x09, 0x00, 0x00,  // Handle: uint16_t (0 = kServiceRecordHandle)
+      0x0A, 0xFE, 0xED, 0xBE, 0xEF,  // Element: uint32_t (0xFEEDBEEF)
+      // Attribute List 1 (second service)
+      0x35, 0x10,        // Sequence uint8 16 bytes
+      0x09, 0x00, 0x00,  // Handle: uint16_t (0 = kServiceRecordHandle)
+      0x0A, 0xFE, 0xDB, 0xAC, 0x01,  // Element: uint32_t (0xFEDBAC01)
+      0x09, 0x00, 0x01,  // Handle: uint16_t (1 = kServiceClassIdList)
+      0x35, 0x03, 0x19, 0x11, 0x01,  // Element: Sequence (3) { UUID(0x1101) }
+      0x00                           // No continuation state
+  );
+
+  ServiceSearchAttributeResponse resp2;
+  status = resp2.Parse(kValidResponseTwoLists);
+
+  EXPECT_TRUE(status);
+  EXPECT_TRUE(resp2.complete());
+  EXPECT_EQ(2u, resp2.num_attribute_lists());
+
+  EXPECT_EQ(1u, resp2.attributes(0).size());
+  it = resp2.attributes(0).find(0x0000);
+  EXPECT_NE(resp2.attributes(0).end(), it);
+  EXPECT_EQ(DataElement::Type::kUnsignedInt, it->second.type());
+
+  EXPECT_EQ(2u, resp2.attributes(1).size());
+  it = resp2.attributes(1).find(0x0000);
+  EXPECT_NE(resp2.attributes(1).end(), it);
+  EXPECT_EQ(DataElement::Type::kUnsignedInt, it->second.type());
+
+  const auto kInvalidItemsWrongOrder = common::CreateStaticByteBuffer(
+      0x00, 0x14,  // AttributeListByteCount (20 bytes)
+      // Wrapping Attribute List
+      0x35, 0x12,  // Sequence uint8 18 bytes
+      // Attribute List
+      0x35, 0x10,        // Sequence uint8 16 bytes
+      0x09, 0x00, 0x01,  // Handle: uint16_t (1 = kServiceClassIdList)
+      0x35, 0x03, 0x19, 0x11, 0x01,  // Element: Sequence (3) { UUID(0x1101) }
+      0x09, 0x00, 0x00,  // Handle: uint16_t (0 = kServiceRecordHandle)
+      0x0A, 0xFE, 0xED, 0xBE, 0xEF,  // Element: uint32_t (0xFEEDBEEF)
+      0x00                           // No continuation state
+  );
+
+  ServiceSearchAttributeResponse resp3;
+  status = resp3.Parse(kInvalidItemsWrongOrder);
+
+  EXPECT_FALSE(status);
+
+  const auto kInvalidByteCount = common::CreateStaticByteBuffer(
+      0x00, 0x12,  // AttributeListsByteCount (18 bytes)
+      0x35, 0x11,  // Sequence uint8 17 bytes
+      // Attribute List
+      0x35, 0x0F,                    // Sequence uint8 15 bytes
+      0x09, 0x00, 0x01,              // Handle: uint16_t (1)
+      0x35, 0x03, 0x19, 0x11, 0x01,  // Element: Sequence (3) { UUID(0x1101) }
+      0x09, 0x00, 0x00,              // Handle: uint16_t (0)
+      0x25, 0x02, 'h', 'i',          // Element: String ('hi')
+      0x00                           // No continuation state
+  );
+
+  status = resp3.Parse(kInvalidByteCount);
+
+  EXPECT_FALSE(status);
+}
+
+TEST_F(SDP_PDUTest, ServiceSearchAttributeRepsonseGetPDU) {
+  ServiceSearchAttributeResponse resp;
+
+  // Even if set in the wrong order, attributes should be sorted in the PDU.
+  resp.SetAttribute(0, 0x4000, DataElement(uint16_t(0xfeed)));
+  resp.SetAttribute(0, 0x4001, DataElement(protocol::kSDP));
+  resp.SetAttribute(0, kServiceRecordHandle, DataElement(uint32_t(0)));
+
+  // Attributes do not need to be continuous
+  resp.SetAttribute(5, kServiceRecordHandle, DataElement(uint32_t(0x10002000)));
+
+  const uint16_t kTransactionID = 0xfeed;
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x07,  // ServiceSearchAttributeResponse
+      UpperBits(kTransactionID), LowerBits(kTransactionID),  // Transaction ID
+      0x00, 0x25,  // Param Length (37 bytes)
+      0x00, 0x22,  // AttributeListsByteCount (34 bytes)
+      // AttributeLists
+      0x35, 0x20,                    // Sequence uint8 32 bytes
+      0x35, 0x14,                    // Sequence uint8 20 bytes
+      0x09, 0x00, 0x00,              // uint16_t (handle) = kServiceRecordHandle
+      0x0A, 0x00, 0x00, 0x00, 0x00,  // uint32_t, 0
+      0x09, 0x40, 0x00,              // uint16_t (handle) = 0x4000
+      0x09, 0xfe, 0xed,              // uint16_t (0xfeed)
+      0x09, 0x40, 0x01,              // uint16_t (handle) = 0x4001
+      0x19, 0x00, 0x01,              // UUID (kSDP)
+      0x35, 0x08,                    // Sequence uint8 8 bytes
+      0x09, 0x00, 0x00,              // uint16_t (handle) = kServiceRecordHandle
+      0x0A, 0x10, 0x00, 0x20, 0x00,  // value: uint32_t (0x10002000)
+      0x00                           // Continutation state (none)
+  );
+
+  auto pdu =
+      resp.GetPDU(0xFFFF /* no max */, kTransactionID, common::BufferView());
+
+  EXPECT_TRUE(ContainersEqual(kExpected, *pdu));
 }
 
 }  // namespace

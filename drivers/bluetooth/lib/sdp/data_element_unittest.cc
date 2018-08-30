@@ -156,21 +156,21 @@ TEST_F(SDP_DataElementTest, Write) {
 
   // clang-format off
   auto expected = common::CreateStaticByteBuffer(
-      0x35, 0x29,  // Data Element Sequence with 1 byte length (41 bytes)
+      0x35, 0x29,  // Sequence uint8 41 bytes
       0x09,        // uint16_t type
       UpperBits(kServiceClassIdList), LowerBits(kServiceClassIdList),
-      0x35, 0x03,  // Data Element Sequence with 1 byte length (3 bytes)
+      0x35, 0x03,  // Sequence uint8 3 bytes
       0x19,        // UUID (16 bits)
       0x11, 0x01,  // Serial Port from assigned numbers
       0x09,        // uint16_t type
       UpperBits(kProtocolDescriptorList), LowerBits(kProtocolDescriptorList),
-      0x35, 0x0F,  // Data Element Sequence with 1 byte length (15 bytes)
-      0x35, 0x06,  // Data Element Sequence with 1 byte length (6 bytes)
+      0x35, 0x0F,  // Sequence uint8 15 bytes
+      0x35, 0x06,  // Sequence uint8 6 bytes
       0x19,        // Type: UUID (16 bits)
       0x01, 0x00,  // L2CAP UUID
       0x09,        // Type: uint16_t
       0x00, 0x03,  // RFCOMM PSM
-      0x35, 0x05,  // Data Element Sequence with 1 byte length (5 bytes)
+      0x35, 0x05,  // Sequence uint8 5 bytes
       0x19,        // Type: UUID (16 bits)
       0x00, 0x03,  // RFCOMM UUID
       0x08,        // Type: uint8_t
@@ -178,8 +178,8 @@ TEST_F(SDP_DataElementTest, Write) {
       0x09,        // uint16_t type
       UpperBits(kBluetoothProfileDescriptorList),
       LowerBits(kBluetoothProfileDescriptorList),
-      0x35, 0x08,  // Data Element Sequence with 1 byte length (8 bytes)
-      0x35, 0x06,  // Data Element Sequence with 1 byte ength (6 bytes)
+      0x35, 0x08,  // Sequence uint8 8 bytes
+      0x35, 0x06,  // Sequence uint8 6 bytes
       0x19,        // Type: UUID (16 bits)
       0x11, 0x01,  // 0x1101 (SPP)
       0x09,        // Type: uint16_t
@@ -197,10 +197,13 @@ TEST_F(SDP_DataElementTest, Write) {
 }
 
 TEST_F(SDP_DataElementTest, ReadSequence) {
+  // clang-format off
   auto buf = common::CreateStaticByteBuffer(
-      0x35, 0x08, 0x09, 0x00, 0x01,  // uint16_t: 1
+      0x35, 0x08, // Sequence with 1 byte length (8)
+      0x09, 0x00, 0x01,  // uint16_t: 1
       0x0A, 0x00, 0x00, 0x00, 0x02   // uint32_t: 2
   );
+  // clang-format on
 
   DataElement elem;
   EXPECT_EQ(buf.size(), DataElement::Read(&elem, buf));
@@ -212,6 +215,55 @@ TEST_F(SDP_DataElementTest, ReadSequence) {
   it = elem.At(1);
   EXPECT_EQ(DataElement::Type::kUnsignedInt, it->type());
   EXPECT_EQ(2u, *it->Get<uint32_t>());
+}
+
+TEST_F(SDP_DataElementTest, ReadNestedSeqeunce) {
+  auto buf = common::CreateStaticByteBuffer(
+      0x35, 0x1C,  // Sequence uint8 28 bytes
+      // Sequence 0
+      0x35, 0x08,                    // Sequence uint8 8 bytes
+      0x09, 0x00, 0x00,              // Element: uint16_t (0)
+      0x0A, 0xFE, 0xED, 0xBE, 0xEF,  // Element: uint32_t (0xFEEDBEEF)
+      // Sequence 1
+      0x35, 0x10,                    // Sequence uint8 16 bytes
+      0x09, 0x00, 0x00,              // Element: uint16_t (0)
+      0x0A, 0xFE, 0xDB, 0xAC, 0x01,  // Element: uint32_t (0xFEDBAC01)
+      0x09, 0x00, 0x01,  // Handle: uint16_t (1 = kServiceClassIdList)
+      0x35, 0x03, 0x19, 0x11, 0x01  // Element: Sequence (3) { UUID(0x1101) }
+  );
+
+  DataElement elem;
+  EXPECT_EQ(buf.size(), DataElement::Read(&elem, buf));
+  EXPECT_EQ(DataElement::Type::kSequence, elem.type());
+  auto *outer_it = elem.At(0);
+  EXPECT_EQ(DataElement::Type::kSequence, outer_it->type());
+
+  auto *it = outer_it->At(0);
+  EXPECT_EQ(0u, *it->Get<uint16_t>());
+
+  it = outer_it->At(1);
+  EXPECT_EQ(0xfeedbeef, *it->Get<uint32_t>());
+
+  outer_it = elem.At(1);
+  EXPECT_EQ(DataElement::Type::kSequence, outer_it->type());
+
+  it = outer_it->At(0);
+  EXPECT_EQ(DataElement::Type::kUnsignedInt, it->type());
+  EXPECT_EQ(0u, *it->Get<uint16_t>());
+
+  it = outer_it->At(1);
+  EXPECT_EQ(DataElement::Type::kUnsignedInt, it->type());
+  EXPECT_EQ(0xfedbac01, *it->Get<uint32_t>());
+
+  it = outer_it->At(2);
+  EXPECT_EQ(DataElement::Type::kUnsignedInt, it->type());
+  EXPECT_EQ(1u, *it->Get<uint16_t>());
+
+  it = outer_it->At(3);
+  EXPECT_EQ(DataElement::Type::kSequence, it->type());
+
+  auto inner_it = it->At(0);
+  EXPECT_EQ(DataElement::Type::kUuid, inner_it->type());
 }
 
 TEST_F(SDP_DataElementTest, Describe) {

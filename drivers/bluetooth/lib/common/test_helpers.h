@@ -18,7 +18,7 @@ namespace common {
 template <class InputIt>
 void PrintByteContainer(InputIt begin, InputIt end) {
   for (InputIt iter = begin; iter != end; ++iter) {
-    std::cout << fxl::StringPrintf("%#.2x ", *iter);
+    std::cout << fxl::StringPrintf("0x%.2x ", *iter);
   }
 }
 
