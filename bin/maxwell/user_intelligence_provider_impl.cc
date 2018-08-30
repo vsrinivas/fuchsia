@@ -227,8 +227,9 @@ void UserIntelligenceProviderImpl::StartKronk() {
       FXL_LOG(INFO) << "Restarting Kronk...";
       StartKronk();
     } else {
-      FXL_LOG(WARNING) << "Kronk crashed more than " << kKronkRetryLimit.count
-                       << " times in " << kKronkRetryLimit.period.to_secs()
+      FXL_LOG(WARNING) << "Kronk failed to restart more than "
+                       << kKronkRetryLimit.count << " times in "
+                       << kKronkRetryLimit.period.to_secs()
                        << " seconds. Speech capture disabled.";
     }
   });
