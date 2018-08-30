@@ -7,8 +7,15 @@
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/substitute.h"
 
 namespace component {
+
+namespace {
+constexpr char kSandboxDocUrl[] =
+    "https://fuchsia.googlesource.com/docs/+/master/the-book/"
+    "sandboxing.md#services";
+}  // namespace
 
 ServiceProviderDirImpl::ServiceProviderDirImpl()
     : vfs_(async_get_default_dispatcher()),
@@ -37,8 +44,12 @@ void ServiceProviderDirImpl::ConnectToService(fidl::StringPtr service_name,
                                               zx::channel channel) {
   if (has_services_whitelist_ &&
       services_whitelist_.count(service_name.get()) == 0) {
-    FXL_LOG(WARNING) << "Component " << component_url_
-                     << " is not allowed to connect to " << service_name.get();
+    const std::string msg = fxl::Substitute(
+        "Component $0 is not allowed to connect to $1 because this service "
+        "is not present in the component's sandbox.\nRefer to $2 for more "
+        "information.",
+        component_url_, service_name.get(), kSandboxDocUrl);
+    FXL_LOG(WARNING) << msg;
     return;
   }
   fbl::RefPtr<fs::Vnode> child;

@@ -7,8 +7,8 @@
 #include <algorithm>
 #include <map>
 
-#include <lib/fxl/strings/string_printf.h>
 #include "garnet/lib/json/json_parser.h"
+#include "lib/fxl/strings/substitute.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
@@ -16,19 +16,23 @@ namespace {
 
 constexpr char kDeprecatedAllServices[] = "deprecated-all-services";
 
+constexpr char kCmxDocUrl[] =
+    "https://fuchsia.googlesource.com/docs/+/master/the-book/"
+    "package_metadata.md#sandbox";
+
 template <typename Value>
 void CopyArrayToVector(const std::string& name, const Value& value,
                        json::JSONParser* json_parser,
                        std::vector<std::string>* vec) {
   if (!value.IsArray()) {
     json_parser->ReportError(
-        fxl::StringPrintf("'%s' in sandbox is not an array.", name.c_str()));
+        fxl::Substitute("'$0' in sandbox is not an array.", name));
     return;
   }
   for (const auto& entry : value.GetArray()) {
     if (!entry.IsString()) {
-      json_parser->ReportError(fxl::StringPrintf(
-          "Entry for '%s' in sandbox is not a string.", name.c_str()));
+      json_parser->ReportError(fxl::Substitute(
+          "Entry for '$0' in sandbox is not a string.", name));
       return;
     }
     vec->push_back(entry.GetString());
@@ -78,14 +82,15 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
   const bool has_services_member =
       (services_member != sandbox_value.MemberEnd());
   if (has_all_services_ && has_services_member) {
-    json_parser->ReportError(
-        fxl::StringPrintf("Sandbox may not include both 'services' and "
-                          "'deprecated-all-services'."));
+    json_parser->ReportError(fxl::Substitute(
+        "Sandbox may not include both 'services' and "
+        "'deprecated-all-services'.\nRefer to $0 for more information.",
+        kCmxDocUrl));
   }
   if (!has_all_services_ && !has_services_member) {
-    json_parser->ReportError(
-        fxl::StringPrintf("Sandbox must include either 'services' or "
-                          "'deprecated-all-services'."));
+    json_parser->ReportError(fxl::Substitute(
+        "Sandbox must include either 'services' or 'deprecated-all-services'.\n"
+        "Refer to $0 for more information.", kCmxDocUrl));
   }
 
   if (!json_parser->HasError()) {

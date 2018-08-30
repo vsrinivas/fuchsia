@@ -125,7 +125,11 @@ TEST_F(CmxMetadataTest, ParseFromDeprecatedRuntime) {
 }
 
 #define NO_SERVICES \
-  "$0: Sandbox must include either 'services' or 'deprecated-all-services'."
+    "$0: Sandbox must include either 'services' or " \
+    "'deprecated-all-services'.\n" \
+    "Refer to " \
+    "https://fuchsia.googlesource.com/docs/+/master/the-book/" \
+    "package_metadata.md#sandbox for more information."
 
 TEST_F(CmxMetadataTest, ParseWithErrors) {
   rapidjson::Value sandbox;

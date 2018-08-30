@@ -144,6 +144,11 @@ TEST_F(SandboxMetadataTest, Parse) {
   }
 }
 
+#define SERVICES_INFO \
+    "\nRefer to " \
+    "https://fuchsia.googlesource.com/docs/+/master/the-book/" \
+    "package_metadata.md#sandbox for more information."
+
 TEST_F(SandboxMetadataTest, ParseWithErrors) {
   ExpectFailedParse(
       R"JSON({
@@ -158,13 +163,13 @@ TEST_F(SandboxMetadataTest, ParseWithErrors) {
         "services": [ "fuchsia.sys.Launcher" ]
       })JSON",
       "test_file: Sandbox may not include both 'services' and "
-      "'deprecated-all-services'.");
+      "'deprecated-all-services'." SERVICES_INFO);
   ExpectFailedParse(
       R"JSON({
         "features": [ "vulkan" ]
       })JSON",
       "test_file: Sandbox must include either 'services' or "
-      "'deprecated-all-services'.");
+      "'deprecated-all-services'." SERVICES_INFO);
 }
 
 }  // namespace
