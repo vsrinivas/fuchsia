@@ -203,19 +203,27 @@ struct BoundingBox {
 };
 
 // Represents the properties for a View.
-//
-// |extents| specifies the bounding box for the View itself.  Content
-// contained within the View is clipped to this bounding box.
-//
-// |insets_from_min| and |insets_from_max| specify the distances between the
-// view's bounding box and that of its parent.
-//
-// The View's bounding box extents can be defined as:
-//    { bounding_box.min - inset_from_min, bounding_box.max + inset_from_max }
-// TODO(SCN-819): should we just have a vec3 extent instead of a bounding box
-// with a potentially non-zero min?
 struct ViewProperties {
+  // The View's bounding box extents can be defined as:
+  //    { bounding_box.min - inset_from_min, bounding_box.max + inset_from_max }
+  // Content contained within the View is clipped to this bounding box.
+  //
+  // TODO(SCN-819): should we just have a vec3 extent instead of a bounding box
+  // with a potentially non-zero min?
   BoundingBox bounding_box;
+
+  // |insets_from_min| and |insets_from_max| specify the distances between the
+  // view's bounding box and that of its parent.
   vec3 inset_from_min;
   vec3 inset_from_max;
+
+  // Whether the View can receive a focus event; default is true.  When
+  // false, and this View is eligible to receive a focus event, no
+  // focus/unfocus event is actually sent to any View.
+  bool focus_change;
+
+  // Whether the View allows geometrically underlying Views to receive input;
+  // default is true. When false, Scenic does not send input events to
+  // underlying Views.
+  bool downward_input;
 };

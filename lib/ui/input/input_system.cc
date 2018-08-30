@@ -15,7 +15,6 @@
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer_stack.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
-#include "garnet/lib/ui/input/focus.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/fxl/logging.h"
@@ -45,12 +44,9 @@ std::unique_ptr<CommandDispatcher> InputSystem::CreateCommandDispatcher(
 InputCommandDispatcher::InputCommandDispatcher(
     CommandDispatcherContext context, scenic::gfx::GfxSystem* gfx_system)
     : CommandDispatcher(std::move(context)),
-      gfx_system_(gfx_system),
-      focus_(std::make_unique<Focus>()) {
-  FXL_DCHECK(gfx_system_);
+      gfx_system_(gfx_system) {
+  FXL_CHECK(gfx_system_);
 }
-
-InputCommandDispatcher::~InputCommandDispatcher() = default;
 
 // Helper for DispatchCommand.
 static int64_t NowInNs() {
@@ -69,15 +65,18 @@ void InputCommandDispatcher::DispatchCommand(
 
   const InputCommand& input_command = command.input();
   if (input_command.is_send_pointer_input()) {
-    const fuchsia::ui::input::SendPointerInputCmd& cmd =
+    const fuchsia::ui::input::SendPointerInputCmd& send =
         input_command.send_pointer_input();
+    const uint32_t pointer_id = send.pointer_event.pointer_id;
+    const PointerEventPhase pointer_phase = send.pointer_event.phase;
 
-    if (cmd.pointer_event.phase == PointerEventPhase::DOWN) {
+    // TODO(SCN-164): ADD events may require additional REMOVE/CANCEL matching.
+    if (pointer_phase == PointerEventPhase::DOWN) {
       escher::ray4 ray;
       {
         fuchsia::math::PointF point;
-        point.x = cmd.pointer_event.x;
-        point.y = cmd.pointer_event.y;
+        point.x = send.pointer_event.x;
+        point.y = send.pointer_event.y;
         FXL_VLOG(1) << "HitTest: point " << point;
 
         // Start just above the (x,y) point in the device's coordinate space.
@@ -88,69 +87,101 @@ void InputCommandDispatcher::DispatchCommand(
 
       std::vector<gfx::Hit> hits;
       {
-        FXL_DCHECK(cmd.compositor_id != 0)
-            << "Pointer event without compositor_id.";
         gfx::Compositor* compositor =
-            gfx_system_->GetCompositor(cmd.compositor_id);
-        FXL_DCHECK(compositor != nullptr) << "Compositor not found.";
+            gfx_system_->GetCompositor(send.compositor_id);
+        FXL_DCHECK(compositor)
+            << "No compositor found (id=" << send.compositor_id << ").";
 
         gfx::LayerStackPtr layer_stack = compositor->layer_stack();
-        std::unique_ptr<gfx::HitTester> hit_tester =
-            std::make_unique<gfx::GlobalHitTester>();
+        auto hit_tester = std::make_unique<gfx::GlobalHitTester>();
         hits = layer_stack->HitTest(ray, hit_tester.get());
       }
-
       FXL_VLOG(1) << "Hits acquired, count: " << hits.size();
 
-      // Construct focus chain.
-      std::unique_ptr<Focus> new_focus = std::make_unique<Focus>();
-      for (gfx::Hit hit : hits) {
-        ViewId view_id;
-        view_id.session_id = hit.view_session;
-        view_id.resource_id = hit.view_resource;
-        gfx::ViewPtr owning_view = FindView(view_id);
-        if (owning_view) {
-          new_focus->chain.push_back(view_id);
+      // Find input targets.  Honor the "input masking" view property.
+      ViewStack hit_views;
+      {
+        // Ensure that Views are unique, and honor requests for input masking.
+        ViewId last;
+        for (gfx::Hit& hit : hits) {
+          ViewId view_id(hit.view_session, hit.view_resource);
+          if (view_id != last) {
+            if (gfx::ViewPtr view = FindView(view_id)) {
+              hit_views.stack.push_back(view_id);
+              if (/*TODO(SCN-919): view_id may mask input */ false) {
+                break;
+              }
+            }
+            last = view_id;
+          }
         }
+      }
+      FXL_VLOG(1) << "View stack of hits: " << hit_views;
+
+      // New focus can be: (1) empty (if no views), or (2) the old focus (either
+      // deliberately, or by the no-focus property), or (3) another view.
+      ViewId new_focus;
+      if (!hit_views.stack.empty()) {
+        // TODO(SCN-919): Honor the "focus_change" view property.
+        if (/*top view is focusable*/ true) {
+          new_focus = hit_views.stack[0];
+        } else {
+          new_focus = focus_;  // No focus change.
+        }
+      }
+      FXL_VLOG(1) << "Focus, old and new: " << focus_ << " vs " << new_focus;
+
+      // Deliver focus events.
+      if (focus_ != new_focus) {
+        const int64_t focus_time = NowInNs();
+        if (focus_) {
+          if (gfx::ViewPtr view = FindView(focus_)) {
+            fuchsia::ui::input::FocusEvent event;
+            event.event_time = focus_time;
+            event.focused = false;
+            EnqueueEventToView(view, event);
+            FXL_VLOG(1) << "Input focus lost by " << focus_;
+          }
+        }
+        if (new_focus) {
+          if (gfx::ViewPtr view = FindView(new_focus)) {
+            fuchsia::ui::input::FocusEvent event;
+            event.event_time = focus_time;
+            event.focused = true;
+            EnqueueEventToView(view, event);
+            FXL_VLOG(1) << "Input focus gained by " << new_focus;
+          }
+        }
+        focus_ = new_focus;
       }
 
-      bool switch_focus =
-          focus_->chain.size() == 0 ||     // old focus empty, or
-          new_focus->chain.size() == 0 ||  // new focus empty, or
-          focus_->chain.front() != new_focus->chain.front();  // focus changed
-      if (switch_focus) {
-        const int64_t focus_time = NowInNs();
-        if (focus_ && !focus_->chain.empty()) {
-          FXL_VLOG(1) << "Input focus lost by " << focus_->chain.front();
-          gfx::ViewPtr view = FindView(focus_->chain.front());
-          if (view) {
-            fuchsia::ui::input::FocusEvent focus;
-            focus.event_time = focus_time;
-            focus.focused = false;
-            EnqueueEvent(view, focus);
-          }
-        }
-        if (!new_focus->chain.empty()) {
-          FXL_VLOG(1) << "Input focus gained by " << new_focus->chain.front();
-          gfx::ViewPtr view = FindView(new_focus->chain.front());
-          if (view) {
-            fuchsia::ui::input::FocusEvent focus;
-            focus.event_time = focus_time;
-            focus.focused = true;
-            EnqueueEvent(view, focus);
-          }
-        }
-        focus_ = std::move(new_focus);
+      // Enable consistent delivery of pointer events.
+      pointer_targets_[pointer_id] = hit_views;
+    }  // Pointer DOWN event
+
+    // Input delivery must be parallel; needed for gesture disambiguation.
+    for (ViewId& id : pointer_targets_[pointer_id].stack) {
+      if (gfx::ViewPtr view = FindView(id)) {
+        EnqueueEventToView(view, send.pointer_event);
       }
     }
+
+    if (pointer_phase == PointerEventPhase::UP ||
+        pointer_phase == PointerEventPhase::CANCEL) {
+      pointer_targets_.erase(pointer_id);
+    }
   } else if (input_command.is_send_keyboard_input()) {
-    FXL_VLOG(1) << "Scenic dispatch: " << input_command.send_keyboard_input();
+    // Send keyboard events to active focus.
+    if (gfx::ViewPtr view = FindView(focus_)) {
+      EnqueueEventToView(view,
+                         input_command.send_keyboard_input().keyboard_event);
+    }
   }
 }
 
 gfx::ViewPtr InputCommandDispatcher::FindView(ViewId view_id) {
-  if (view_id.session_id == 0u && view_id.resource_id == 0u) {
-    return nullptr;  // Don't bother with empty tokens.
+  if (!view_id) {
+    return nullptr;  // Don't bother.
   }
 
   gfx::Session* session = gfx_system_->GetSession(view_id.session_id);
@@ -161,26 +192,34 @@ gfx::ViewPtr InputCommandDispatcher::FindView(ViewId view_id) {
   return nullptr;
 }
 
-void InputCommandDispatcher::EnqueueEvent(
+void InputCommandDispatcher::EnqueueEventToView(
     gfx::ViewPtr view, fuchsia::ui::input::FocusEvent focus) {
   FXL_DCHECK(view);
-  gfx::Session* session = view->session();
-  EventReporter* event_reporter = session->event_reporter();
-  if (session && session->is_valid() && event_reporter) {
-    fuchsia::ui::input::InputEvent input_event;
-    input_event.set_focus(std::move(focus));
-    fuchsia::ui::scenic::Event event;
-    event.set_input(std::move(input_event));
-    event_reporter->EnqueueEvent(std::move(event));
-    return;
-  }
 
-  if (!(session && session->is_valid())) {
-    FXL_DLOG(INFO) << "Scenic input dispatch: invalid session.";
-  }
-  if (!event_reporter) {
-    FXL_DLOG(INFO) << "Scnenic input dispatch: no event reporter";
-  }
+  fuchsia::ui::input::InputEvent event;
+  event.set_focus(std::move(focus));
+
+  view->session()->EnqueueEvent(std::move(event));
+}
+
+void InputCommandDispatcher::EnqueueEventToView(
+    gfx::ViewPtr view, fuchsia::ui::input::KeyboardEvent keyboard) {
+  FXL_DCHECK(view);
+
+  fuchsia::ui::input::InputEvent event;
+  event.set_keyboard(std::move(keyboard));
+
+  view->session()->EnqueueEvent(std::move(event));
+}
+
+void InputCommandDispatcher::EnqueueEventToView(
+    gfx::ViewPtr view, fuchsia::ui::input::PointerEvent pointer) {
+  FXL_DCHECK(view);
+
+  fuchsia::ui::input::InputEvent event;
+  event.set_pointer(std::move(pointer));
+
+  view->session()->EnqueueEvent(std::move(event));
 }
 
 }  // namespace input

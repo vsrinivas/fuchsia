@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_UI_INPUT_FOCUS_H_
-#define GARNET_LIB_UI_INPUT_FOCUS_H_
+#ifndef GARNET_LIB_UI_INPUT_VIEW_ID_H_
+#define GARNET_LIB_UI_INPUT_VIEW_ID_H_
 
 #include <ostream>
 #include <vector>
@@ -15,20 +15,27 @@ namespace input {
 
 // A View is a Resource in a Session. Need both to uniquely identify.
 struct ViewId {
+  ViewId() : session_id(0), resource_id(0) {}
+  ViewId(scenic::SessionId s, scenic::ResourceId r)
+      : session_id(s), resource_id(r) {}
+
+  explicit operator bool();
+
   scenic::SessionId session_id;
   scenic::ResourceId resource_id;
 };
 
-struct Focus {
-  std::vector<ViewId> chain;
+// The top-level View is index 0, and grows downward.
+struct ViewStack {
+  std::vector<ViewId> stack;
 };
-
-std::ostream& operator<<(std::ostream& os, const ViewId& value);
-std::ostream& operator<<(std::ostream& os, const Focus& value);
 
 bool operator==(const ViewId& lhs, const ViewId& rhs);
 bool operator!=(const ViewId& lhs, const ViewId& rhs);
 
+std::ostream& operator<<(std::ostream& os, const ViewId& value);
+std::ostream& operator<<(std::ostream& os, const ViewStack& value);
+
 }  // namespace input
 }  // namespace scenic
-#endif  // GARNET_LIB_UI_INPUT_FOCUS_H_
+#endif  // GARNET_LIB_UI_INPUT_VIEW_ID_H_

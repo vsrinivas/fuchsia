@@ -352,6 +352,7 @@ class View final : public Resource {
   ~View();
 
   void AddChild(const Node& child) const;
+  void DetachChild(const Node& child) const;
 };
 
 // Creates a node that clips the contents of its hierarchy to the specified clip

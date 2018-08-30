@@ -332,6 +332,11 @@ void View::AddChild(const Node& child) const {
   session()->Enqueue(NewAddChildCmd(id(), child.id()));
 }
 
+void View::DetachChild(const Node& child) const {
+  ZX_DEBUG_ASSERT(session() == child.session());
+  session()->Enqueue(NewDetachCmd(child.id()));
+}
+
 ClipNode::ClipNode(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateClipNodeCmd(id()));
 }
