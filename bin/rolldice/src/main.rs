@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate rand;
-extern crate rolldice;
-#[macro_use] extern crate structopt;
-
 use rand::{thread_rng, Rng};
 use structopt::StructOpt;
 use rolldice::*;

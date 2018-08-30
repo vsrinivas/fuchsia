@@ -8,7 +8,7 @@ import("//build/package.gni")
 
 rustc_binary("bin") {
   name = "rolldice"
-  edition = "2015"
+  edition = "2018"
   deps = [
     ":lib",
     "//third_party/rust-crates/rustc_deps:rand",
@@ -18,7 +18,7 @@ rustc_binary("bin") {
 
 rustc_library("lib") {
   name = "rolldice"
-  edition = "2015"
+  edition = "2018"
   with_unit_tests = true
   deps = [
     "//third_party/rust-crates/rustc_deps:rand",
