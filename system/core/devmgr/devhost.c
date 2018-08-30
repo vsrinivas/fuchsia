@@ -407,11 +407,15 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
                 if ((r == ZX_OK) && (ctx.child == NULL)) {
                     printf("devhost: WARNING: driver '%s' did not add device in bind()\n", name);
                 }
+                if (r < 0) {
+                    log(ERROR, "devhost[%s] bind driver '%s' failed: %d\n", path, name, r);
+                }
             } else {
+                if (!drv->ops->create) {
+                    log(ERROR, "devhost[%s] neither create nor bind are implemented: '%s'\n",
+                        path, name);
+                }
                 r = ZX_ERR_NOT_SUPPORTED;
-            }
-            if (r < 0) {
-                log(ERROR, "devhost[%s] bind driver '%s' failed: %d\n", path, name, r);
             }
         }
         dh_send_status(h, r);
