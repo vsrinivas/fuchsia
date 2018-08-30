@@ -180,6 +180,10 @@ class PageStorageImpl : public PageStorage {
                                    fsl::SizedVmo vmo, size_t offset,
                                    size_t size,
                                    fit::function<void(Status)> callback);
+  void FillBufferWithObjectContent(std::unique_ptr<const Object> object,
+                                   fsl::SizedVmo vmo, size_t offset,
+                                   size_t size,
+                                   fit::function<void(Status)> callback);
 
   // Notifies the registered watchers of |new_commits|.
   void NotifyWatchersOfNewCommits(
