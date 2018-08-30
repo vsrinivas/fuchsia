@@ -169,7 +169,7 @@ func (a *netstackClientApp) bridge(ifNames []string) error {
 
 	result, _ := a.netstack.BridgeInterfaces(nicIDs)
 	if result.Status != netstack.StatusOk {
-		return fmt.Errorf("error bridging interfaces: %s, result: %s", result, ifs)
+		return fmt.Errorf("error bridging interfaces: %s, result: %+v", result, ifs)
 	}
 
 	return nil
