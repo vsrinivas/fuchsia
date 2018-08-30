@@ -9,6 +9,8 @@ source_set("lib") {
     "connect.cc",
     "connect.h",
     "formatter.h",
+    "formatters/json.cc",
+    "formatters/json.h",
     "formatters/text.cc",
     "formatters/text.h",
     "modes.cc",
@@ -21,6 +23,7 @@ source_set("lib") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
   ]
 
   public_deps = [

@@ -23,6 +23,7 @@ class Options {
   };
   enum class FormatterType {
     UNSET,
+    JSON,
     TEXT,
   };
   enum class PathFormatting {

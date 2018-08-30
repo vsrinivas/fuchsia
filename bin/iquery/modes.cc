@@ -225,7 +225,6 @@ bool RunFind(const Options& options, std::vector<ObjectNode>* out) {
 // RunLs -----------------------------------------------------------------------
 
 bool RunLs(const Options& options, std::vector<ObjectNode>* out) {
-  std::vector<ObjectNode> children;
   for (const auto& path : options.paths) {
     FXL_VLOG(1) << fxl::Substitute("Running ls in $0", path);
     iquery::Connection connection(path);
@@ -248,7 +247,7 @@ bool RunLs(const Options& options, std::vector<ObjectNode>* out) {
       ObjectNode child_node;
       child_node.object.name = child_name;
       child_node.basepath = fxl::Concatenate({path, "/", child_name});
-      children.emplace_back(std::move(child_node));
+      out->emplace_back(std::move(child_node));
     }
   }
 

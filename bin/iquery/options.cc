@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 #include <iostream>
+#include <set>
+#include <string>
 
 #include <lib/fxl/files/path.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/substitute.h>
 
+#include "garnet/bin/iquery/formatters/json.h"
 #include "garnet/bin/iquery/formatters/text.h"
 #include "garnet/bin/iquery/options.h"
 
@@ -15,10 +18,25 @@ namespace iquery {
 
 namespace {
 
+std::set<std::string> kKnownOptions = {
+    "cat", "absolute_paths", "find", "format", "full_paths", "ls", "recursive",
+};
+
+// Validate whether the option is within the defined ones.
+bool OptionExists(const std::string& option) {
+  if (kKnownOptions.find(option) == kKnownOptions.end()) {
+    FXL_LOG(ERROR) << "Unknown option \"" << option << "\"";
+    return false;
+  }
+  return true;
+}
+
 Options::FormatterType GetFormatterType(const fxl::CommandLine& cmd_line) {
   std::string formatter = cmd_line.GetOptionValueWithDefault("format", "");
   if (formatter.empty() || formatter == "text") {
     return Options::FormatterType::TEXT;
+  } else if (formatter == "json") {
+    return Options::FormatterType::JSON;
   } else {
     FXL_LOG(ERROR) << "Cannot find formatter: " << formatter;
     return Options::FormatterType::UNSET;
@@ -29,6 +47,8 @@ std::unique_ptr<Formatter> CreateFormatter(Options::FormatterType type) {
   switch (type) {
     case Options::FormatterType::TEXT:
       return std::make_unique<TextFormatter>();
+    case Options::FormatterType::JSON:
+      return std::make_unique<JsonFormatter>();
     case Options::FormatterType::UNSET:
       return nullptr;
   }
@@ -38,6 +58,12 @@ std::unique_ptr<Formatter> CreateFormatter(Options::FormatterType type) {
 }  // namespace
 
 Options::Options(const fxl::CommandLine& command_line) {
+  // Validate options
+  for (const fxl::CommandLine::Option& option : command_line.options()) {
+    if (!OptionExists(option.name))
+      return;
+  }
+
   if (command_line.HasOption("cat") && !SetMode(command_line, Mode::CAT))
     return;
   else if (command_line.HasOption("find") && !SetMode(command_line, Mode::FIND))
@@ -76,7 +102,7 @@ Options::Options(const fxl::CommandLine& command_line) {
 void Options::Usage(const std::string& argv0) {
   std::cout << fxl::Substitute(
       R"txt(Usage: $0 (--cat|--find|--ls) [--recursive]
-      [--formatter=<FORMATTER>] [(--full_paths]|--absolute_paths)]
+      [--formatt=<FORMATTER>] [(--full_paths]|--absolute_paths)]
       PATH [...PATH]
 
   Utility for querying exposed object directories.
@@ -89,7 +115,7 @@ void Options::Usage(const std::string& argv0) {
   --ls:   List the children of the object(s) given by PATH.
 
   --recursive: Whether iquery should continue inside an object. See each mode
-               to see how it modifies their behaviour.
+             c to see how it modifies their behaviour.
 
   --format: What formatter to use for output. Available options are:
     - text: [DEFAULT] Simple text output meant for manual inspection.
