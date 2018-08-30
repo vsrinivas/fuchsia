@@ -188,7 +188,7 @@ func validateInterfaceAddress(nicid uint32, address netstack.NetAddress, prefixL
 	case netstack.NetAddressFamilyIpv4:
 		protocol = ipv4.ProtocolNumber
 	case netstack.NetAddressFamilyIpv6:
-		retval = netstack.NetErr{netstack.StatusIpv4Only, "IPv6 not yet supported"}
+		retval = netstack.NetErr{Status: netstack.StatusIpv4Only, Message: "IPv6 not yet supported"}
 		return
 	}
 
@@ -196,11 +196,11 @@ func validateInterfaceAddress(nicid uint32, address netstack.NetAddress, prefixL
 	addr = fidlconv.NetAddressToTCPIPAddress(address)
 
 	if (8 * len(addr)) < int(prefixLen) {
-		retval = netstack.NetErr{netstack.StatusParseError, "Prefix length does not match address"}
+		retval = netstack.NetErr{Status: netstack.StatusParseError, Message: "Prefix length does not match address"}
 		return
 	}
 
-	retval = netstack.NetErr{netstack.StatusOk, ""}
+	retval = netstack.NetErr{Status: netstack.StatusOk, Message: ""}
 	return
 }
 
@@ -214,9 +214,9 @@ func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address netstack.NetAd
 	}
 
 	if err := ns.setInterfaceAddress(nic, protocol, addr, prefixLen); err != nil {
-		return netstack.NetErr{netstack.StatusUnknownError, err.Error()}, nil
+		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: err.Error()}, nil
 	}
-	return netstack.NetErr{netstack.StatusOk, ""}, nil
+	return netstack.NetErr{Status: netstack.StatusOk, Message: ""}, nil
 }
 
 func (ni *netstackImpl) RemoveInterfaceAddress(nicid uint32, address netstack.NetAddress, prefixLen uint8) (result netstack.NetErr, endService error) {
@@ -227,10 +227,10 @@ func (ni *netstackImpl) RemoveInterfaceAddress(nicid uint32, address netstack.Ne
 	}
 
 	if err := ns.removeInterfaceAddress(nic, protocol, addr, prefixLen); err != nil {
-		return netstack.NetErr{netstack.StatusUnknownError, err.Error()}, nil
+		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: err.Error()}, nil
 	}
 
-	return netstack.NetErr{netstack.StatusOk, ""}, nil
+	return netstack.NetErr{Status: netstack.StatusOk, Message: ""}, nil
 }
 
 func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, error) {
@@ -247,7 +247,7 @@ func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, erro
 
 func (ni *netstackImpl) SetFilterStatus(enabled bool) (result netstack.NetErr, err error) {
 	ns.filter.Enable(enabled)
-	return netstack.NetErr{netstack.StatusOk, ""}, nil
+	return netstack.NetErr{Status: netstack.StatusOk, Message: ""}, nil
 }
 
 func (ni *netstackImpl) GetFilterStatus() (enabled bool, err error) {
@@ -319,11 +319,11 @@ func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) (err erro
 func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (result netstack.NetErr, err error) {
 	ifState, ok := ns.ifStates[tcpip.NICID(nicid)]
 	if !ok {
-		return netstack.NetErr{netstack.StatusUnknownInterface, "unknown interface"}, nil
+		return netstack.NetErr{Status: netstack.StatusUnknownInterface, Message: "unknown interface"}, nil
 	}
 
 	ifState.setDHCPStatus(enabled)
-	return netstack.NetErr{netstack.StatusOk, ""}, nil
+	return netstack.NetErr{Status: netstack.StatusOk, Message: ""}, nil
 }
 
 // TODO(NET-1263): Remove once clients registering with the ResolverAdmin interface

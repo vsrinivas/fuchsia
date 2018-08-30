@@ -796,7 +796,7 @@ func (s *socketServer) opBind(ios *iostate, msg *zxsocket.Msg) (status zx.Status
 	}
 	if debug2 {
 		defer func() {
-			log.Printf("bind(%s): %v", *addr, status)
+			log.Printf("bind(%+v): %v", *addr, status)
 		}()
 	}
 
@@ -1076,7 +1076,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 	}
 	if debug2 {
 		defer func() {
-			log.Printf("connect(%s): %v", *addr, status)
+			log.Printf("connect(%+v): %v", *addr, status)
 		}()
 	}
 
@@ -1227,6 +1227,5 @@ func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVa
 		log.Printf("zxsocketHandler: unknown socket op: %v", op)
 		return zx.ErrNotSupported
 	}
-	return zx.ErrBadState
 	// TODO do_halfclose
 }
