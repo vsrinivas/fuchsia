@@ -5,18 +5,16 @@
 #![deny(warnings)]
 #![feature(futures_api, pin, arbitrary_self_types)]
 
-extern crate clap;
-extern crate failure;
-extern crate fidl_fuchsia_overnet;
-extern crate fuchsia_app as app;
-extern crate fuchsia_async as async;
-extern crate futures;
-
-use clap::{App, SubCommand};
-use failure::{Error, ResultExt};
-use fidl_fuchsia_overnet::{OvernetMarker, OvernetProxy};
-use futures::{future::lazy, prelude::*};
-use async::temp::TempFutureExt;
+use {
+    clap::{App, SubCommand},
+    failure::{Error, ResultExt},
+    fidl_fuchsia_overnet::{OvernetMarker, OvernetProxy},
+    futures::{
+        future::lazy,
+        prelude::*,
+    },
+    fuchsia_async::{self as fasync, temp::TempFutureExt},
+};
 
 fn app<'a, 'b>() -> App<'a, 'b> {
     App::new("onet")
@@ -49,8 +47,8 @@ fn dump_error() -> impl Future<Output = Result<(), Error>> {
 fn main() -> Result<(), Error> {
     let args = app().get_matches();
 
-    let mut executor = async::Executor::new().context("error creating event loop")?;
-    let svc = app::client::connect_to_service::<OvernetMarker>()
+    let mut executor = fasync::Executor::new().context("error creating event loop")?;
+    let svc = fuchsia_app::client::connect_to_service::<OvernetMarker>()
         .context("Failed to connect to overnet service")?;
 
     let fut = match args.subcommand_name() {
