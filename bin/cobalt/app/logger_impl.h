@@ -61,7 +61,7 @@ class LoggerImpl : public fuchsia::cobalt::Logger {
   // In the current implementation, |period_duration_micros| is ignored
   void LogEventCount(uint32_t metric_id, uint32_t event_type_index,
                      fidl::StringPtr component, int64_t period_duration_micros,
-                     uint32_t count, LogEventCountCallback callback) override;
+                     int64_t count, LogEventCountCallback callback) override;
 
   void LogElapsedTime(uint32_t metric_id, uint32_t event_type_index,
                       fidl::StringPtr component, int64_t elapsed_micros,

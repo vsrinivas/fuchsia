@@ -130,8 +130,7 @@ void LoggerImpl::LogThreePartMetric(const std::string& value_part_name,
     }
   } else if (encodings.size() == 2 || encodings.size() == 3) {
     if (!value_part.empty()) {
-      if (std::is_same<ValueType, int64_t>::value ||
-          std::is_same<ValueType, uint32_t>::value) {
+      if (std::is_same<ValueType, int64_t>::value) {
         new_value.AddIntPart(encodings[value_part], value_part, value);
       } else if (std::is_same<ValueType, float>::value) {
         new_value.AddDoublePart(encodings[value_part], value_part, value);
@@ -252,7 +251,7 @@ void LoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_type_index,
 
 void LoggerImpl::LogEventCount(uint32_t metric_id, uint32_t event_type_index,
                                fidl::StringPtr component,
-                               int64_t period_duration_micros, uint32_t count,
+                               int64_t period_duration_micros, int64_t count,
                                LogEventCountCallback callback) {
   const Metric* metric = encoder_.GetMetric(metric_id);
   if (!metric) {

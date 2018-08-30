@@ -30,7 +30,7 @@ class CobaltTestAppLogger {
   // Synchronously invokes LogEventCount() |num_observations_per_batch_|
   // times using the given parameters. Then invokes CheckForSuccessfulSend().
   bool LogEventCountAndSend(uint32_t metric_id, uint32_t index,
-                            const std::string& component, uint32_t count,
+                            const std::string& component, int64_t count,
                             bool use_request_send_soon);
   // Synchronously invokes LogElapsedTime() |num_observations_per_batch_|
   // times using the given parameters. Then invokes CheckForSuccessfulSend().

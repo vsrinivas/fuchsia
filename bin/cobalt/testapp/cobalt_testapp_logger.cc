@@ -32,7 +32,7 @@ bool CobaltTestAppLogger::LogEventAndSend(uint32_t metric_id, uint32_t index,
 bool CobaltTestAppLogger::LogEventCountAndSend(uint32_t metric_id,
                                                uint32_t index,
                                                const std::string& component,
-                                               uint32_t count,
+                                               int64_t count,
                                                bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     Status2 status = Status2::INTERNAL_ERROR;
