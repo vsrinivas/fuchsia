@@ -56,7 +56,7 @@ func TestStatic(t *testing.T) {
 		{"b", "0", ""},
 	}
 	for _, tc := range getPackageCases {
-		if got, _ := si.Get(pkg.Package{tc.name, tc.version}); got != tc.result {
+		if got, _ := si.Get(pkg.Package{Name: tc.name, Version: tc.version}); got != tc.result {
 			t.Errorf("static.Get(%q, %q) = %q want %q", tc.name, tc.version, got, tc.result)
 		}
 	}
