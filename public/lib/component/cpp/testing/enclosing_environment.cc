@@ -78,23 +78,28 @@ EnclosingEnvironment::CreateNestedEnclosingEnvironment(std::string& label) {
 zx_status_t EnclosingEnvironment::AddServiceWithLaunchInfo(
     fuchsia::sys::LaunchInfo launch_info, const std::string& service_name) {
   auto child = fbl::AdoptRef(
-      new fs::Service([this, service_name, url = launch_info.url, launch_info = std::move(launch_info),
+      new fs::Service([this, service_name, launch_info = std::move(launch_info),
                        controller = fuchsia::sys::ComponentControllerPtr()](
                           zx::channel client_handle) mutable {
-        auto it = services_.find(url);
+        auto it = services_.find(launch_info.url);
         if (it == services_.end()) {
           Services services;
 
-          launch_info.directory_request = services.NewRequest();
+          fuchsia::sys::LaunchInfo dup_launch_info;
+          dup_launch_info.url = launch_info.url;
+          fidl::Clone(launch_info.arguments, &dup_launch_info.arguments);
+          dup_launch_info.directory_request = services.NewRequest();
 
-          CreateComponent(std::move(launch_info), controller.NewRequest());
-          controller.set_error_handler([this, url = url, &controller] {
-            controller.Unbind();  // kills the singleton application
-            services_.erase(url);
-          });
+          CreateComponent(std::move(dup_launch_info), controller.NewRequest());
+          controller.set_error_handler(
+              [this, url = launch_info.url, &controller] {
+                // TODO: show error? where on stderr?
+                controller.Unbind();  // kills the singleton application
+                services_.erase(url);
+              });
 
           std::tie(it, std::ignore) =
-              services_.emplace(url, std::move(services));
+              services_.emplace(launch_info.url, std::move(services));
         }
 
         it->second.ConnectToService(std::move(client_handle), service_name);
