@@ -16,7 +16,11 @@
 /* ****************** SDIO CARD Interface Functions **************************/
 
 // TODO(cphoenix): Do we need sdio, completion, status, stdatomic, threads?
+#include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/sdio.h>
+#include <ddk/metadata.h>
+#include <wifi/wifi-config.h>
+#include <ddk/protocol/gpio.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 
@@ -53,6 +57,8 @@
 
 #define BRCMF_DEFAULT_RXGLOM_SIZE 32 /* max rx frames in glom chain */
 
+#define WIFI_OOB_IRQ_GPIO_INDEX 0
+
 struct brcmf_sdiod_freezer {
     atomic_int freezing;
     atomic_int thread_count;
@@ -84,6 +90,52 @@ static void brcmf_sdiod_ib_irqhandler(struct brcmf_sdio_dev* sdiodev) {
 /* dummy handler for SDIO function 2 interrupt */
 static void brcmf_sdiod_dummy_irqhandler(struct brcmf_sdio_dev* sdiodev) {}
 
+zx_status_t brcmf_sdiod_configure_oob_interrupt(struct brcmf_sdio_dev* sdiodev,
+                                                wifi_config_t *config) {
+    platform_device_protocol_t pdev;
+    zx_status_t ret = ZX_OK;
+
+    if ((ret = device_get_protocol(sdiodev->dev.zxdev, ZX_PROTOCOL_PLATFORM_DEV, &pdev))
+                                                                                != ZX_OK) {
+        zxlogf(ERROR, "brcmf_sdiod_intr_register: ZX_PROTOCOL_PLATFORM_DEV not available\n");
+        //TODO: This driver could be run on X64 platforms. When X64 platforms have parallel apis,
+        // we need to check for those apis instead of returning an error.
+        return ZX_ERR_INTERNAL;
+    }
+
+    pdev_device_info_t info;
+    ret = pdev_get_device_info(&pdev, &info);
+    if (ret != ZX_OK) {
+        zxlogf(ERROR, "brcmf_sdiod_intr_register: pdev_get_device_info failed: %d\n", ret);
+        return ret;
+    }
+
+    if (info.gpio_count < 1) {
+        zxlogf(ERROR, "brcmf_sdiod_intr_register: OOB gpio not available\n");
+        return ZX_ERR_INTERNAL;
+    }
+    if ((ret = device_get_protocol(sdiodev->dev.zxdev, ZX_PROTOCOL_GPIO, &sdiodev->gpio))
+                                                                               != ZX_OK) {
+        zxlogf(ERROR, "brcmf_sdiod_intr_register: ZX_PROTOCOL_GPIO not available\n");
+        return ret;
+    }
+
+    ret = gpio_config_in(&sdiodev->gpio, WIFI_OOB_IRQ_GPIO_INDEX, GPIO_NO_PULL);
+    if (ret != ZX_OK) {
+        zxlogf(ERROR, "brcmf_sdiod_intr_register: gpio_config failed: %d\n", ret);
+        return ret;
+    }
+
+    ret = gpio_get_interrupt(&sdiodev->gpio, WIFI_OOB_IRQ_GPIO_INDEX,
+                             config->oob_irq_mode,
+                             &sdiodev->irq_handle);
+    if (ret != ZX_OK) {
+        zxlogf(ERROR, "brcmf_sdiod_intr_register: gpio_get_interrupt failed: %d\n", ret);
+        return ret;
+    }
+    return ZX_OK;
+}
+
 zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
     struct brcmfmac_sdio_pd* pdata;
     zx_status_t ret = ZX_OK;
@@ -91,14 +143,27 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
     uint32_t addr, gpiocontrol;
 
     pdata = &sdiodev->settings->bus.sdio;
-    // TODO(cphoenix): Always?
-    pdata->oob_irq_supported = true;
-    if (pdata->oob_irq_supported) {
+    pdata->oob_irq_supported = false;
+    wifi_config_t config;
+    size_t actual;
+    ret = device_get_metadata(sdiodev->dev.zxdev, DEVICE_METADATA_PRIVATE,
+                              &config, sizeof(wifi_config_t), &actual);
+    if ((ret != ZX_OK && ret != ZX_ERR_NOT_FOUND) ||
+        (ret == ZX_OK && actual != sizeof(wifi_config_t))) {
+        zxlogf(ERROR, "brcmf_sdiod_intr_register: device_get_metadata failed\n");
+        return ret;
+    }
+
+    if (ret == ZX_OK) {
         brcmf_dbg(SDIO, "Enter, register OOB IRQ\n");
-        // TODO(cphoenix): Add error handling for sdio_get_oob_irq, thrd_create_with_name, and
+        ret = brcmf_sdiod_configure_oob_interrupt(sdiodev, &config);
+        if (ret != ZX_OK) {
+            return ret;
+        }
+        // TODO(cphoenix): Add error handling for thrd_create_with_name, and
         // thrd_detach. Note that the thrd_ functions don't return zx_status_t; check for
         // thrd_success and maybe thrd_nomem. See zircon/third_party/ulib/musl/include/threads.h
-        sdio_get_oob_irq(sdiodev->sdio_proto, &sdiodev->irq_handle);
+        pdata->oob_irq_supported = true;
         thrd_create_with_name(&sdiodev->isr_thread, brcmf_sdiod_oob_irqhandler, sdiodev,
                               "brcmf-sdio-isr");
         thrd_detach(sdiodev->isr_thread);

@@ -99,6 +99,7 @@ driver_module("brcmfmac_driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/broadcom",
     "//garnet/lib/wlan/protocol"
   ]
 
