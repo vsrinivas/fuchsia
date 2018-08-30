@@ -329,11 +329,14 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
     uint64_t presentation_time;
     ImagePipePtr image_pipe;
 
-    bool operator<(const ImagePipeUpdate& rhs) const {
-      return presentation_time < rhs.presentation_time;
+    bool operator>(const ImagePipeUpdate& rhs) const {
+      return presentation_time > rhs.presentation_time;
     }
   };
-  std::priority_queue<ImagePipeUpdate> scheduled_image_pipe_updates_;
+  // The least element should be on top.
+  std::priority_queue<ImagePipeUpdate, std::vector<ImagePipeUpdate>,
+                      std::greater<ImagePipeUpdate>>
+      scheduled_image_pipe_updates_;
 
   const SessionId id_;
   Engine* const engine_;
