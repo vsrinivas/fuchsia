@@ -6,35 +6,22 @@
 
 #![deny(warnings)]
 
-extern crate xi_core_lib;
-extern crate xi_rpc;
-
-extern crate fuchsia_zircon as zx;
-extern crate mxruntime;
-extern crate fidl;
-extern crate fidl_fuchsia_xi;
-extern crate byteorder;
-extern crate failure;
-extern crate futures;
-extern crate fuchsia_app as component;
-extern crate fuchsia_async as async;
-
-use fidl::endpoints2::ServiceMarker;
-use std::io;
-use std::sync::Arc;
-use std::thread;
-
-use failure::{Error, ResultExt};
-use futures::{TryFutureExt, future};
-
-use fidl_fuchsia_xi::{Json, JsonImpl, JsonMarker};
-
-use component::server::ServicesServer;
-
-use zx::{AsHandleRef, Signals, Socket, Status, Time};
-
-use xi_rpc::RpcLoop;
-use xi_core_lib::XiCore;
+use {
+    failure::{Error, ResultExt},
+    fidl::endpoints2::ServiceMarker,
+    fidl_fuchsia_xi::{Json, JsonImpl, JsonMarker},
+    fuchsia_app::server::ServicesServer,
+    fuchsia_async as fasync,
+    fuchsia_zircon::{AsHandleRef, Signals, Socket, Status, Time},
+    futures::{TryFutureExt, future},
+    std::{
+        io,
+        sync::Arc,
+        thread,
+    },
+    xi_core_lib::XiCore,
+    xi_rpc::RpcLoop,
+};
 
 // TODO: this should be moved into fuchsia_zircon.
 pub struct BlockingSocket(Arc<Socket>);
@@ -78,8 +65,8 @@ fn editor_main(sock: Socket) {
     let _ = rpc_looper.mainloop(|| my_in, &mut state);
 }
 
-fn spawn_json_server(chan: async::Channel) {
-    async::spawn(
+fn spawn_json_server(chan: fasync::Channel) {
+    fasync::spawn(
     JsonImpl {
         state: (),
         on_open: |_, _| future::ready(()),
@@ -100,7 +87,7 @@ fn main() {
 }
 
 fn main_xi() -> Result<(), Error> {
-    let mut executor = async::Executor::new().context("unable to create executor")?;
+    let mut executor = fasync::Executor::new().context("unable to create executor")?;
 
     let server = ServicesServer::new()
         .add_service((JsonMarker::NAME, spawn_json_server))
