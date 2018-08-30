@@ -1237,6 +1237,15 @@ foreach(image, images) {
       category = "partner"
       testonly = true
 
+      meta = {
+        new_dest = "images/${image.sdk}-meta.json"
+        schema = "image"
+        value = {
+          type = "image"
+          name = "${image.sdk}"
+        }
+      }
+
       image_sources = []
       if (defined(image.sources)) {
         image_sources += image.sources
@@ -1252,6 +1261,12 @@ foreach(image, images) {
           source = image_sources[0]
           dest = image.sdk
         },
+      ]
+      new_files = [
+        {
+          source = image_sources[0]
+          dest = "target/$target_cpu/${image.sdk}"
+        }
       ]
 
       non_sdk_deps = image.deps
@@ -1269,10 +1284,25 @@ sdk_atom(zircon_bin_sdk_target_name) {
   category = "partner"
   testonly = true
 
+  meta = {
+    new_dest = "images/zircon.bin-meta.json"
+    schema = "image"
+    value = {
+      type = "image"
+      name = "zircon.bin"
+    }
+  }
+
   files = [
     {
       source = "${zircon_build_dir}/zircon.bin"
       dest = "zircon.bin"
+    },
+  ]
+  new_files = [
+    {
+      source = "${zircon_build_dir}/zircon.bin"
+      dest = "target/$target_cpu/zircon.bin"
     },
   ]
 }
@@ -1287,10 +1317,25 @@ if (target_cpu == "arm64") {
     category = "partner"
     testonly = true
 
+    meta = {
+      new_dest = "images/qemu-zircon.bin-meta.json"
+      schema = "image"
+      value = {
+        type = "image"
+        name = "qemu-zircon.bin"
+      }
+    }
+
     files = [
       {
         source = "${zircon_build_dir}/qemu-zircon.bin"
         dest = "qemu-zircon.bin"
+      },
+    ]
+    new_files = [
+      {
+        source = "${zircon_build_dir}/qemu-zircon.bin"
+        dest = "target/$target_cpu/qemu-zircon.bin"
       },
     ]
   }

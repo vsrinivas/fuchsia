@@ -114,12 +114,13 @@ if (current_toolchain != shlib_toolchain) {
 }  # current_toolchain != shlib_toolchain
 
 file_base = "pkg/${data.name}"
+prebuilt_base = "arch/$target_cpu"
 binaries_content = {
-  link = "$file_base/lib/${data.lib_name}"
-  debug = "$file_base/debug/${data.lib_name}"
+  link = "$prebuilt_base/lib/${data.lib_name}"
+  debug = "$prebuilt_base/debug/${data.lib_name}"
 }
 % if data.has_impl_prebuilt:
-binaries_content.dist = "$file_base/dist/${data.lib_name}"
+binaries_content.dist = "$prebuilt_base/dist/${data.lib_name}"
 % endif
 metadata = {
   name = "${data.name}"
@@ -128,9 +129,11 @@ metadata = {
   include_dir = "$file_base/include"
 
   headers = []
+  % if data.with_sdk_headers:
   % for dest, _ in sorted(data.includes.iteritems()):
   headers += [ "$file_base/include/${dest}" ]
   % endfor
+  % endif
 
   binaries = {}
   if (target_cpu == "arm64") {
@@ -146,8 +149,6 @@ metadata = {
   deps += [ "${dep}" ]
   % endfor
 }
-metadata_file = "$target_gen_dir/${data.name}.sdk_meta"
-write_file(metadata_file, metadata, "json")
 
 sdk_atom("${data.name}_sdk") {
   domain = "cpp"
@@ -156,9 +157,9 @@ sdk_atom("${data.name}_sdk") {
   category = "partner"
 
   meta = {
-    source = metadata_file
     dest = "$file_base/meta.json"
     schema = "cc_prebuilt_library"
+    value = metadata
   }
 
   tags = [
@@ -194,6 +195,31 @@ sdk_atom("${data.name}_sdk") {
     {
       source = "$shared_out_dir/lib.unstripped/${data.lib_name}"
       dest = "debug/${data.lib_name}"
+    },
+  ]
+
+  new_files = [
+    % if data.with_sdk_headers:
+    % for dest, source in sorted(data.includes.iteritems()):
+    {
+      source = "${source}"
+      dest = "$file_base/include/${dest}"
+    },
+    % endfor
+    % endif
+    {
+      source = "$shared_out_dir/${data.lib_name}"
+      dest = "$prebuilt_base/lib/${data.lib_name}"
+    },
+    % if data.has_impl_prebuilt:
+    {
+      source = "$shared_out_dir/${data.lib_name}.impl"
+      dest = "$prebuilt_base/dist/${data.lib_name}"
+    },
+    % endif
+    {
+      source = "$shared_out_dir/lib.unstripped/${data.lib_name}"
+      dest = "$prebuilt_base/debug/${data.lib_name}"
     },
   ]
 

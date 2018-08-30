@@ -69,8 +69,6 @@ metadata = {
 
   files = sources + headers
 }
-metadata_file = "$target_gen_dir/${data.name}.sdk_meta"
-write_file(metadata_file, metadata, "json")
 
 sdk_atom("${data.name}_sdk") {
   domain = "cpp"
@@ -79,9 +77,9 @@ sdk_atom("${data.name}_sdk") {
   category = "partner"
 
   meta = {
-    source = metadata_file
     dest = "$file_base/meta.json"
     schema = "cc_source_library"
+    value = metadata
   }
 
   tags = [
@@ -99,6 +97,21 @@ sdk_atom("${data.name}_sdk") {
     {
       source = "${source}"
       dest = "${dest}"
+    },
+    % endfor
+  ]
+
+  new_files = [
+    % for dest, source in sorted(data.includes.iteritems()):
+    {
+      source = "${source}"
+      dest = "$file_base/include/${dest}"
+    },
+    % endfor
+    % for dest, source in sorted(data.sources.iteritems()):
+    {
+      source = "${source}"
+      dest = "$file_base/${dest}"
     },
     % endfor
   ]

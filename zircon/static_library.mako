@@ -48,8 +48,9 @@ group("${data.name}") {
 }
 
 file_base = "pkg/${data.name}"
+prebuilt_base = "arch/$target_cpu"
 binaries_content = {
-  link = "$file_base/lib/${data.lib_name}"
+  link = "$prebuilt_base/lib/${data.lib_name}"
 }
 metadata = {
   name = "${data.name}"
@@ -76,8 +77,6 @@ metadata = {
   deps += [ "${dep}" ]
   % endfor
 }
-metadata_file = "$target_gen_dir/${data.name}.sdk_meta"
-write_file(metadata_file, metadata, "json")
 
 sdk_atom("${data.name}_sdk") {
   domain = "cpp"
@@ -86,9 +85,9 @@ sdk_atom("${data.name}_sdk") {
   category = "partner"
 
   meta = {
-    source = metadata_file
     dest = "$file_base/meta.json"
     schema = "cc_prebuilt_library"
+    value = metadata
   }
 
   tags = [
@@ -106,6 +105,19 @@ sdk_atom("${data.name}_sdk") {
     {
       source = _lib
       dest = "lib/${data.lib_name}"
+    },
+  ]
+
+  new_files = [
+    % for dest, source in sorted(data.includes.iteritems()):
+    {
+      source = "${source}"
+      dest = "$file_base/include/${dest}"
+    },
+    % endfor
+    {
+      source = _lib
+      dest = "$prebuilt_base/lib/${data.lib_name}"
     },
   ]
 

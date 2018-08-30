@@ -15,15 +15,7 @@ copy("${data.name}") {
   ]
 }
 
-meta_file = "$target_gen_dir/${data.name}.sdk_meta.json"
-meta_data = {
-  type = "host_tool"
-  name = "${data.name}"
-  files = [
-    "tools/${data.name}",
-  ]
-}
-write_file(meta_file, meta_data, "json")
+file_base = "tools/${data.name}"
 
 sdk_atom("${data.name}_sdk") {
   domain = "exe"
@@ -32,9 +24,16 @@ sdk_atom("${data.name}_sdk") {
   category = "partner"
 
   meta = {
-    source = meta_file
-    dest = "tools/${data.name}-meta.json"
+    dest = "$file_base-meta.json"
+    new_dest = "$file_base-meta.json"
     schema = "host_tool"
+    value = {
+      type = "host_tool"
+      name = "${data.name}"
+      files = [
+        file_base,
+      ]
+    }
   }
 
   tags = [ "arch:host" ]
@@ -44,5 +43,12 @@ sdk_atom("${data.name}_sdk") {
       source = "${data.executable}"
       dest = "${data.name}"
     },
+  ]
+
+  new_files = [
+    {
+      source = "${data.executable}"
+      dest = file_base
+    }
   ]
 }

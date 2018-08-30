@@ -38,6 +38,7 @@ import("//build/config/clang/clang.gni")
 #   args (all optional)
 #   depfile
 #   deps
+#   public_deps
 #   testonly
 #   visibility
 #       Same meaning as action/action_foreach.
@@ -86,6 +87,7 @@ template("_compiled_action_target") {
                              "deps",
                              "inputs",
                              "outputs",
+                             "public_deps",
                              "sources",
                              "testonly",
                              "tool_output_name",

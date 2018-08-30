@@ -343,16 +343,26 @@ if (current_toolchain == dart_toolchain) {
                ] + third_party_pubspecs
       }
 
+      file_base = "dart/${invoker.package_name}"
+
       sdk_sources = []
       sdk_source_mappings = []
+      new_sdk_source_mappings = []
       foreach(source, rebased_sources) {
         relative_source = rebase_path(source, source_dir)
         destination = "lib/$relative_source"
-        sdk_sources += [ "dart/$package_name/$destination" ]
+        dest = "$file_base/$destination"
+        sdk_sources += [ dest ]
         sdk_source_mappings += [
           {
             source = source
             dest = destination
+          }
+        ]
+        new_sdk_source_mappings += [
+          {
+            source = source
+            dest = dest
           }
         ]
       }
@@ -397,7 +407,8 @@ if (current_toolchain == dart_toolchain) {
 
         meta = {
             source = metadata_file
-            dest = "dart/$package_name/meta.json"
+            dest = "$file_base/meta.json"
+            new_dest = "$file_base/meta.json"
             schema = "dart_library"
         }
 
@@ -412,6 +423,7 @@ if (current_toolchain == dart_toolchain) {
         }
 
         files = sdk_source_mappings
+        new_files = new_sdk_source_mappings
       }
     }
   }

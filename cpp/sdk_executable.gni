@@ -31,15 +31,6 @@ template("sdk_executable") {
 
   if (!is_fuchsia) {
     file_base = "tools/$output_name"
-    meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
-    meta_data = {
-      type = "host_tool"
-      name = output_name
-      files = [
-        file_base,
-      ]
-    }
-    write_file(meta_file, meta_data, "json")
 
     sdk_atom("${target_name}_sdk") {
       domain = "exe"
@@ -49,10 +40,16 @@ template("sdk_executable") {
       category = invoker.category
 
       meta = {
-        source = meta_file
         dest = "$file_base-meta.json"
         schema = "host_tool"
         new_dest = "$file_base-meta.json"
+        value = {
+          type = "host_tool"
+          name = output_name
+          files = [
+            file_base,
+          ]
+        }
       }
 
       tags = [ "arch:host" ]

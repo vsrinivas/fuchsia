@@ -1,0 +1,23 @@
+{
+  "description": "The sysroot",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "common.json#/definitions/sdk_element"
+    },
+    {
+      "properties": {
+        "type": {
+          "description": "Marker for this type of element",
+          "type": "string",
+          "enum": [
+            "sysroot"
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ]
+    }
+  ]
+}

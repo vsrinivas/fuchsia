@@ -106,8 +106,13 @@ import("//build/compiled_action.gni")
 # This scope describes a metadata file to be added to the SDK element. Its
 # supported attributes are:
 #
-#   source (required)
+#   source
 #     Path to the metadata file.
+#
+#   value
+#     Scope representing the metadata contents.
+#
+#     NOTE: Exactly one of `source` or `value` must be set.
 #
 #   dest (required)
 #     Path to the metadata file in the SDK, relatively to the SDK root
@@ -189,7 +194,7 @@ template("sdk_atom") {
   file_mappings = []
   file_inputs = []
   all_files = invoker.files
-  if (defined(invoker.meta)) {
+  if (defined(invoker.meta) && !defined(invoker.new_files)) {
     all_files += [ invoker.meta ]
   }
   foreach(file, all_files) {
@@ -207,6 +212,10 @@ template("sdk_atom") {
     file_mappings += [ "$prefix:$destination=$source" ]
   }
 
+  if (defined(invoker.meta)) {
+    meta = invoker.meta
+  }
+
   new_file_mappings = []
   if (defined(invoker.new_files)) {
     foreach(file, invoker.new_files) {
@@ -216,17 +225,6 @@ template("sdk_atom") {
       source = rebase_path(file.source)
       new_file_mappings += [ "${file.dest}=${source}" ]
     }
-  }
-  if (defined(invoker.meta)) {
-    meta = invoker.meta
-    # TODO(DX-340): remove this temporary attribute.
-    if (defined(meta.new_dest)) {
-      dest = meta.new_dest
-    } else {
-      dest = meta.dest
-    }
-    source = rebase_path(meta.source)
-    new_file_mappings += [ "${dest}=${source}" ]
   }
 
   source_dir = "."
@@ -244,10 +242,35 @@ template("sdk_atom") {
   if (defined(invoker.meta)) {
     # Validate the metadata file.
     meta_target_name = "${target_name}_meta"
-    meta_validate_target_name = "${target_name}_meta_validate"
     meta_content = invoker.meta
 
-    compiled_action(meta_validate_target_name) {
+    meta_file = "$target_gen_dir/$target_name.meta.json"
+
+    if (defined(meta_content.value)) {
+      write_file(meta_file, meta_content.value, "json")
+      meta_deps = gn_deps
+    } else {
+      meta_copy_target_name = "${target_name}_meta_copy"
+      assert(defined(meta_content.source), "Meta scope needs a source or value")
+      # Copy the file to a canonical location for access by other rules.
+      # TODO(DX-340): instead, make sure that all atoms generate their metadata
+      # file in the right location.
+      copy(meta_copy_target_name) {
+        sources = [
+          meta_content.source,
+        ]
+
+        outputs = [
+          meta_file,
+        ]
+
+        deps = gn_deps
+      }
+
+      meta_deps = [ ":$meta_copy_target_name" ]
+    }
+
+    compiled_action(meta_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
       tool = "//build/tools/json_validator"
@@ -261,7 +284,7 @@ template("sdk_atom") {
       ]
 
       inputs = [
-        meta_content.source,
+        meta_file,
         schema_file,
       ]
 
@@ -271,28 +294,22 @@ template("sdk_atom") {
 
       args = [
         rebase_path(schema_file),
-        rebase_path(meta_content.source),
+        rebase_path(meta_file),
         rebase_path(stamp_file),
       ]
 
-      deps = gn_deps
+      public_deps = meta_deps
     }
 
-    # Copy the file to a canonical location for access by other rules.
-    # TODO(DX-340): instead, make sure that all atoms generate their metadata
-    # file in the right location.
-    copy(meta_target_name) {
-      sources = [
-        meta_content.source,
-      ]
-
-      outputs = [
-        "$target_gen_dir/$target_name.meta.json",
-      ]
-
-      deps = gn_deps + [
-        ":$meta_validate_target_name",
-      ]
+    if (defined(invoker.new_files)) {
+      # TODO(DX-340): remove this temporary attribute.
+      if (defined(meta.new_dest)) {
+        dest = meta.new_dest
+      } else {
+        dest = meta.dest
+      }
+      source = rebase_path(meta_file)
+      new_file_mappings += [ "${dest}=${source}" ]
     }
   }
 
@@ -350,9 +367,14 @@ template("sdk_atom") {
     }
 
     if (defined(invoker.meta)) {
+      if (defined(meta.new_dest)) {
+        dest = meta.new_dest
+      } else {
+        dest = meta.dest
+      }
       args += [
         "--meta",
-        meta.dest,
+        dest,
       ]
     }
   }
