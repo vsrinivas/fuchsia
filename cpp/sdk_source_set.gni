@@ -75,12 +75,14 @@ template("sdk_source_set") {
   if (defined(invoker.sources)) {
     foreach(source_file, invoker.sources) {
       extension = get_path_info(source_file, "extension")
-      if (extension == "h" && source_headers_are_public) {
+      if (source_headers_are_public && extension == "h") {
         all_headers += [ source_file ]
       } else {
         all_sources += [ source_file ]
       }
     }
+  } else {
+    not_needed([ "source_headers_are_public" ])
   }
 
   # Determine destinations in the SDK for headers and sources.
@@ -88,11 +90,11 @@ template("sdk_source_set") {
   sdk_headers = []
   sdk_sources = []
   sdk_files = []
-  include_base = "include"
-  if (defined(invoker.include_base)) {
-    include_base = invoker.include_base
-  }
   foreach(header, all_headers) {
+    include_base = "include"
+    if (defined(invoker.include_base)) {
+      include_base = invoker.include_base
+    }
     destination = rebase_path(header, include_base)
     sdk_headers += [ "$file_base/include/$destination" ]
     sdk_files += [
