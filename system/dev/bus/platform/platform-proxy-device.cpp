@@ -486,12 +486,17 @@ zx_status_t ProxyDevice::InitChild(device_add_args_t* args) {
     proto_id_ = args->proto_id;
     proto_ops_ = args->proto_ops;
 
+    device_add_args_t new_args = *args;
+    // Replace ctx and device protocol ops with ours so we can intercept device_get_protocol().
+    new_args.ctx = this;
+    new_args.ops = &ddk_device_proto_;
+
     if (metadata_count_ == 0) {
-        return DdkAdd("ProxyDevice", args->flags, args->props, args->prop_count);
+        return device_add(parent(), &new_args, &zxdev_);
     }
 
-    status = DdkAdd(args->name, args->flags | DEVICE_ADD_INVISIBLE, args->props,
-                    args->prop_count);
+    new_args.flags |= DEVICE_ADD_INVISIBLE;
+    status = device_add(parent(), &new_args, &zxdev_);
     if (status != ZX_OK) {
         return status;
     }

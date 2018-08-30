@@ -126,6 +126,7 @@ zx_status_t PlatformProxy::RegisterProtocol(uint32_t proto_id, const void* proto
         device_add_args_t args = {};
         args.version = DEVICE_ADD_ARGS_VERSION;
         args.name = info.name;
+        args.proto_id = ZX_PROTOCOL_PLATFORM_DEV;
         args.props = props;
         args.prop_count = countof(props);
 
