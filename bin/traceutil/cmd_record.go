@@ -166,7 +166,7 @@ func (cmd *cmdRecord) getFilenamePrefix() string {
 
 func (cmd *cmdRecord) getReportTitle() string {
 	conf := cmd.captureConfig
-	have_categories := conf.Categories != "" && conf.Categories != ""
+	have_categories := conf.Categories != ""
 	have_duration := conf.Duration != 0
 	text := ""
 	if have_categories {
