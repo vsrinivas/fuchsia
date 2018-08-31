@@ -22,6 +22,9 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+zx_status_t aml_gp0_init(aml_gpu_t* gpu);
+void aml_gp0_release(aml_gpu_t* gpu);
+
 static int32_t current_clk_source;
 
 static void aml_gpu_set_clk_freq_source(aml_gpu_t* gpu, int32_t clk_source) {
@@ -122,9 +125,11 @@ static void aml_gpu_init(aml_gpu_t* gpu) {
 
 static void aml_gpu_release(void* ctx) {
     aml_gpu_t* gpu = ctx;
+    aml_gp0_release(gpu);
     io_buffer_release(&gpu->hiu_buffer);
     io_buffer_release(&gpu->preset_buffer);
     io_buffer_release(&gpu->gpu_buffer);
+    zx_handle_close(gpu->bti);
     free(gpu);
 }
 
@@ -182,6 +187,12 @@ static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    status = pdev_get_bti(&gpu->pdev, 0, &gpu->bti);
+    if (status != ZX_OK) {
+        GPU_ERROR("could not get BTI handle: %d\n", status);
+        return status;
+    }
+
     status = pdev_map_mmio_buffer(&gpu->pdev, MMIO_GPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &gpu->gpu_buffer);
     if (status != ZX_OK) {
@@ -220,6 +231,14 @@ static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {
     default:
         GPU_ERROR("unsupported SOC PID %u\n", info.pid);
         goto fail;
+    }
+
+    if (info.pid == PDEV_PID_AMLOGIC_S905D2) {
+        status = aml_gp0_init(gpu);
+        if (status != ZX_OK) {
+            GPU_ERROR("aml_gp0_init failed: %d\n", status);
+            goto fail;
+        }
     }
 
     aml_gpu_init(gpu);

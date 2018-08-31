@@ -74,6 +74,27 @@ zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_p
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL5, G12A_SYS_PLL_CNTL5);
 
         return ZX_OK;
+    } else if (pll_num == GP0_PLL) {
+        pll_dev->hiu = device;
+        pll_dev->rate_table = s905d2_pll_get_rate_table(GP0_PLL);
+        pll_dev->rate_idx = 0;
+        pll_dev->frequency = 0;
+        pll_dev->pll_num = pll_num;
+        pll_dev->rate_count = s905d2_get_rate_table_count(GP0_PLL);
+
+        ZX_DEBUG_ASSERT(pll_dev->rate_table);
+        ZX_DEBUG_ASSERT(pll_dev->rate_count);
+
+        //Disable and reset the pll
+        hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL0, 1 << 29);
+        //write config values
+        hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL1, G12A_GP0_PLL_CNTL1);
+        hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL2, G12A_GP0_PLL_CNTL2);
+        hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL3, G12A_GP0_PLL_CNTL3);
+        hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL4, G12A_GP0_PLL_CNTL4);
+        hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL5, G12A_GP0_PLL_CNTL5);
+
+        return ZX_OK;
     }
     //Need to find/add values for GP0 and PCIE plls
     return ZX_ERR_NOT_SUPPORTED;

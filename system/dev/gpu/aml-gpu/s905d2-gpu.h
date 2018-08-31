@@ -9,7 +9,7 @@
 
 enum {
     S905D2_XTAL        = 0,    // 24MHz
-    S905D2_GP0         = 1,
+    S905D2_GP0         = 1,    // Currently set to 846 MHz
     S905D2_HIFI        = 2,
     S905D2_FCLK_DIV2P5 = 3,    // 800 MHz
     S905D2_FCLK_DIV3   = 4,    // 666 MHz
@@ -31,5 +31,6 @@ static aml_gpu_block_t s905d2_gpu_blocks = {
         S905D2_FCLK_DIV4,
         S905D2_FCLK_DIV3,
         S905D2_FCLK_DIV2P5,
+        S905D2_GP0,
     },
 };

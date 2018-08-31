@@ -75,7 +75,7 @@ static const pbus_clk_t thermal_clk_gates[] = {
  * 2 - 500 MHz
  * 3 - 666 MHz
  * 4 - 800 MHz
- * 5 - 846 MHz (not yet implemented)
+ * 5 - 846 MHz
  */
 
 // clang-format off
@@ -95,7 +95,7 @@ static thermal_device_info_t aml_astro_config = {
             // This is the initial thermal setup of the device.
             // CPU freq set to a known stable MAX.
             .big_cluster_dvfs_opp       = 10,
-            .gpu_clk_freq_source        = 4,
+            .gpu_clk_freq_source        = 5,
         },
         {
             .up_temp                    = 75,

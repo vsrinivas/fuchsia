@@ -10,8 +10,9 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/aml-gpu.c \
+    $(LOCAL_DIR)/aml-s905d2g.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/dev/lib/amlogic
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 

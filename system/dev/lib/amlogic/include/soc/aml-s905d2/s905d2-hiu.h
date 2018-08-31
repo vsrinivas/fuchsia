@@ -35,6 +35,12 @@
 #define G12A_SYS_PLL_CNTL4 0x88770290
 #define G12A_SYS_PLL_CNTL5 0x39272000
 
+#define G12A_GP0_PLL_CNTL1 0x00000000
+#define G12A_GP0_PLL_CNTL2 0x00000000
+#define G12A_GP0_PLL_CNTL3 0x48681c00
+#define G12A_GP0_PLL_CNTL4 0x33771290
+#define G12A_GP0_PLL_CNTL5 0x39272000
+
 // HHI register offsets (all are 32-bit registers)
 #define HHI_GP0_PLL_CNTL0           (0x10 << 2)
 #define HHI_PCIE_PLL_CNTL0          (0x26 << 2)
@@ -71,6 +77,13 @@
 #define HHI_SYS_PLL_CNTL4           (0xc1 << 2)
 #define HHI_SYS_PLL_CNTL5           (0xc2 << 2)
 
+#define HHI_GP0_PLL_CNTL0           (0x10 << 2)
+#define HHI_GP0_PLL_CNTL1           (0x11 << 2)
+#define HHI_GP0_PLL_CNTL2           (0x12 << 2)
+#define HHI_GP0_PLL_CNTL3           (0x13 << 2)
+#define HHI_GP0_PLL_CNTL4           (0x14 << 2)
+#define HHI_GP0_PLL_CNTL5           (0x15 << 2)
+#define HHI_GP0_PLL_CNTL6           (0x16 << 2)
 
 // HHI PLL register bitfield definitions
 #define HHI_PLL_CNTL0_EN       (1 << 28)
@@ -99,12 +112,12 @@ typedef struct {
     uint32_t od;
 } hhi_pll_rate_t;
 
-typedef struct {
+typedef struct aml_hiu_dev {
     io_buffer_t regs_iobuff;
     zx_vaddr_t virt_regs;
 } aml_hiu_dev_t;
 
-typedef struct {
+typedef struct aml_pll_dev {
     aml_hiu_dev_t* hiu;               // Pointer to the register control block.
     const hhi_pll_rate_t* rate_table; // Pointer to this PLLs rate table.
     uint32_t rate_idx;                // Index in rate table of current setting.

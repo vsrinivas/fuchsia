@@ -40,7 +40,7 @@
 
 #define CLOCK_MUX_MASK                  0xFFF
 
-#define MAX_GPU_CLK_FREQ                5
+#define MAX_GPU_CLK_FREQ                6
 #define FINAL_MUX_BIT_SHIFT             31
 
 enum {
@@ -58,14 +58,21 @@ typedef struct {
     uint32_t gpu_clk_freq[MAX_GPU_CLK_FREQ];
 }aml_gpu_block_t;
 
+typedef struct aml_hiu_dev aml_hiu_dev_t;
+typedef struct aml_pll_dev aml_pll_dev_t;
+
 typedef struct {
     platform_device_protocol_t  pdev;
 
     zx_device_t*                zxdev;
+
+    zx_handle_t                 bti;
 
     io_buffer_t                 hiu_buffer;
     io_buffer_t                 preset_buffer;
     io_buffer_t                 gpu_buffer;
 
     aml_gpu_block_t*            gpu_block;
+    aml_hiu_dev_t*              hiu_dev;
+    aml_pll_dev_t*              gp0_pll_dev;
 } aml_gpu_t;
