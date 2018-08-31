@@ -90,16 +90,10 @@ uint64_t PciBar::base() const {
 }
 
 zx_status_t PciBar::Read(uint64_t addr, IoValue* value) const {
-  if (device == nullptr) {
-    return ZX_ERR_BAD_STATE;
-  }
   return device->ReadBar(n, addr, value);
 }
 
 zx_status_t PciBar::Write(uint64_t addr, const IoValue& value) {
-  if (device == nullptr) {
-    return ZX_ERR_BAD_STATE;
-  }
   return device->WriteBar(n, addr, value);
 }
 

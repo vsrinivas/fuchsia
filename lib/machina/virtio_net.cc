@@ -226,13 +226,12 @@ void VirtioNet::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
 }
 
 VirtioNet::VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
-    : VirtioDevice(phys_mem),
+    // TODO(abdulla): Support VIRTIO_NET_F_STATUS via IOCTL_ETHERNET_GET_STATUS.
+    : VirtioDevice(phys_mem, VIRTIO_NET_F_MAC),
       rx_stream_(phys_mem, dispatcher, rx_queue(), rx_trace_flow_id()),
       tx_stream_(phys_mem, dispatcher, tx_queue(), tx_trace_flow_id()) {
   config_.status = VIRTIO_NET_S_LINK_UP;
   config_.max_virtqueue_pairs = 1;
-  // TODO(abdulla): Support VIRTIO_NET_F_STATUS via IOCTL_ETHERNET_GET_STATUS.
-  add_device_features(VIRTIO_NET_F_MAC);
 }
 
 VirtioNet::~VirtioNet() {
@@ -265,7 +264,7 @@ zx_status_t VirtioNet::Start(const char* path) {
   // is exposed to the Ethernet server.
   zx_handle_t vmo;
   zx_status_t status =
-      zx_handle_duplicate(phys_mem().vmo().get(), ZX_RIGHT_SAME_RIGHTS, &vmo);
+      zx_handle_duplicate(phys_mem_.vmo().get(), ZX_RIGHT_SAME_RIGHTS, &vmo);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to duplicate guest physical memory";
     return status;

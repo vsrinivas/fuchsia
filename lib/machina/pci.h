@@ -126,7 +126,7 @@ class PciDevice {
   zx_status_t WriteConfig(uint64_t reg, const IoValue& value);
 
   // Send the configured interrupt for this device.
-  zx_status_t Interrupt();
+  virtual zx_status_t Interrupt();
 
   // Determines if the given base address register is implemented for this
   // device.
@@ -149,6 +149,7 @@ class PciDevice {
 
  protected:
   PciDevice(const Attributes attrs);
+  virtual ~PciDevice() = default;
 
   // Base address registers.
   PciBar bar_[kPciMaxBars] = {};

@@ -144,9 +144,9 @@ class VirtioConsole::Port {
 
 VirtioConsole::VirtioConsole(const PhysMem& phys_mem,
                              async_dispatcher_t* dispatcher, zx::socket socket)
-    : VirtioDevice(phys_mem) {
+    : VirtioDevice(phys_mem, 0 /* device_features */) {
   {
-    std::lock_guard<std::mutex> lock(config_mutex_);
+    std::lock_guard<std::mutex> lock(device_config_.mutex);
     config_.max_nr_ports = kVirtioConsoleMaxNumPorts;
   }
   ports_[0] =

@@ -495,7 +495,7 @@ zx_status_t VirtioVsock::ChannelConnection::Write(VirtioQueue* queue,
 VirtioVsock::VirtioVsock(component::StartupContext* context,
                          const PhysMem& phys_mem,
                          async_dispatcher_t* dispatcher)
-    : VirtioDevice(phys_mem),
+    : VirtioDevice(phys_mem, 0 /* device_features */),
       dispatcher_(dispatcher),
       rx_stream_(dispatcher, rx_queue(), this),
       tx_stream_(dispatcher, tx_queue(), this) {
@@ -506,7 +506,7 @@ VirtioVsock::VirtioVsock(component::StartupContext* context,
 }
 
 uint32_t VirtioVsock::guest_cid() const {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::mutex> lock(device_config_.mutex);
   return config_.guest_cid;
 }
 
@@ -522,7 +522,7 @@ void VirtioVsock::SetContextId(
     fidl::InterfaceHandle<fuchsia::guest::HostVsockConnector> connector,
     fidl::InterfaceRequest<fuchsia::guest::GuestVsockAcceptor> acceptor) {
   {
-    std::lock_guard<std::mutex> lock(config_mutex_);
+    std::lock_guard<std::mutex> lock(device_config_.mutex);
     config_.guest_cid = cid;
   }
   acceptor_bindings_.AddBinding(this, std::move(acceptor));

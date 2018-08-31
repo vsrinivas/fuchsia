@@ -19,21 +19,6 @@ VirtioQueue::VirtioQueue() {
   FXL_CHECK(zx::event::create(0, &event_) == ZX_OK);
 }
 
-uint16_t VirtioQueue::size() const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return ring_.size;
-}
-
-uint16_t VirtioQueue::avail_event_num() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return avail_event_num_;
-}
-
-void VirtioQueue::set_avail_event_num(uint16_t num) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  avail_event_num_ = num;
-}
-
 void VirtioQueue::GetAddrs(zx_gpaddr_t* desc_addr, zx_gpaddr_t* avail_addr,
                            zx_gpaddr_t* used_addr) const {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -45,7 +30,6 @@ void VirtioQueue::GetAddrs(zx_gpaddr_t* desc_addr, zx_gpaddr_t* avail_addr,
 void VirtioQueue::Configure(uint16_t size, zx_gpaddr_t desc_addr,
                             zx_gpaddr_t avail_addr, zx_gpaddr_t used_addr) {
   std::lock_guard<std::mutex> lock(mutex_);
-  const PhysMem& phys_mem = device_->phys_mem();
 
   // Configure the ring size.
   ring_.size = size;
@@ -53,25 +37,25 @@ void VirtioQueue::Configure(uint16_t size, zx_gpaddr_t desc_addr,
   // Configure the descriptor table.
   ring_.addr.desc = desc_addr;
   const uintptr_t desc_size = ring_.size * sizeof(ring_.desc[0]);
-  ring_.desc = phys_mem.as<vring_desc>(desc_addr, desc_size);
+  ring_.desc = phys_mem_->as<vring_desc>(desc_addr, desc_size);
 
   // Configure the available ring.
   ring_.addr.avail = avail_addr;
   const uintptr_t avail_size =
       sizeof(*ring_.avail) + (ring_.size * sizeof(ring_.avail->ring[0]));
-  ring_.avail = phys_mem.as<vring_avail>(avail_addr, avail_size);
+  ring_.avail = phys_mem_->as<vring_avail>(avail_addr, avail_size);
 
   const uintptr_t used_event_addr = avail_addr + avail_size;
-  ring_.used_event = phys_mem.as<uint16_t>(used_event_addr);
+  ring_.used_event = phys_mem_->as<uint16_t>(used_event_addr);
 
   // Configure the used ring.
   ring_.addr.used = used_addr;
   const uintptr_t used_size =
       sizeof(*ring_.used) + (ring_.size * sizeof(ring_.used->ring[0]));
-  ring_.used = phys_mem.as<vring_used>(used_addr, used_size);
+  ring_.used = phys_mem_->as<vring_used>(used_addr, used_size);
 
   const uintptr_t avail_event_addr = used_addr + used_size;
-  ring_.avail_event = phys_mem.as<uint16_t>(avail_event_addr);
+  ring_.avail_event = phys_mem_->as<uint16_t>(avail_event_addr);
 }
 
 zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
@@ -83,8 +67,7 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
 
   // If we have event indices enabled, update the avail-event to notify us
   // when we have sufficient descriptors available.
-  if (device_->has_enabled_features(1u << VIRTIO_F_RING_EVENT_IDX) &&
-      ring_.avail_event) {
+  if (use_event_index_ && ring_.avail_event) {
     *ring_.avail_event = ring_.index + avail_event_num_ - 1;
   }
 
@@ -128,8 +111,8 @@ zx_status_t VirtioQueue::Notify() {
 
 struct poll_task_args_t {
   VirtioQueue* queue;
-  VirtioQueue::PollFn handler;
   std::string name;
+  VirtioQueue::PollFn handler;
 };
 
 static int virtio_queue_poll_task(void* ctx) {
@@ -161,8 +144,8 @@ static int virtio_queue_poll_task(void* ctx) {
   return result;
 }
 
-zx_status_t VirtioQueue::Poll(PollFn handler, std::string name) {
-  auto args = new poll_task_args_t{this, std::move(handler), std::move(name)};
+zx_status_t VirtioQueue::Poll(std::string name, PollFn handler) {
+  auto args = new poll_task_args_t{this, std::move(name), std::move(handler)};
 
   thrd_t thread;
   int ret = thrd_create_with_name(&thread, virtio_queue_poll_task, args,
@@ -221,14 +204,13 @@ void VirtioQueue::InvokeAsyncHandler(async_dispatcher_t* dispatcher,
 zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, VirtioDescriptor* out) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto& desc = ring_.desc[desc_index];
-  size_t mem_size = device_->phys_mem().size();
 
   const uint64_t end = desc.addr + desc.len;
-  if (end < desc.addr || end > mem_size) {
+  if (end < desc.addr || end > phys_mem_->size()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  out->addr = device_->phys_mem().as<void>(desc.addr, desc.len);
+  out->addr = phys_mem_->as<void>(desc.addr, desc.len);
   out->len = desc.len;
   out->has_next = desc.flags & VRING_DESC_F_NEXT;
   out->writable = desc.flags & VRING_DESC_F_WRITE;
@@ -239,8 +221,6 @@ zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, VirtioDescriptor* out) {
 zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
                                 InterruptAction action) {
   bool needs_interrupt = false;
-  bool use_event_index =
-      device_->has_enabled_features(1u << VIRTIO_F_RING_EVENT_IDX);
   {
     std::lock_guard<std::mutex> lock(mutex_);
     volatile struct vring_used_elem* used =
@@ -251,14 +231,14 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
     ring_.used->idx++;
 
     // Virtio 1.0 Section 2.4.7.2: Virtqueue Interrupt Suppression
-    if (!use_event_index) {
+    if (!use_event_index_) {
       // If the VIRTIO_F_EVENT_IDX feature bit is not negotiated:
       //  - The device MUST ignore the used_event value.
       //  - After the device writes a descriptor index into the used ring:
       //    - If flags is 1, the device SHOULD NOT send an interrupt.
       //    - If flags is 0, the device MUST send an interrupt.
       needs_interrupt = ring_.used->flags == 0;
-    } else {
+    } else if (ring_.used_event) {
       // Otherwise, if the VIRTIO_F_EVENT_IDX feature bit is negotiated:
       //
       //  - The device MUST ignore the lower bit of flags.
@@ -267,19 +247,12 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
       //      descriptor index was placed) was equal to used_event, the device
       //      MUST send an interrupt.
       //    - Otherwise the device SHOULD NOT send an interrupt.
-      if (ring_.used_event) {
-        needs_interrupt = ring_.used->idx == (*ring_.used_event + 1);
-      }
+      needs_interrupt = ring_.used->idx == (*ring_.used_event + 1);
     }
   }
 
   if (needs_interrupt) {
-    // Set the queue bit in the device ISR so that the driver knows to check
-    // the queues on the next interrupt.
-    device_->add_isr_flags(VirtioDeviceBase::VIRTIO_ISR_QUEUE);
-    if (action == InterruptAction::SEND_INTERRUPT) {
-      return device_->NotifyGuest();
-    }
+    return interrupt_(action);
   }
   return ZX_OK;
 }
@@ -305,12 +278,13 @@ zx_status_t VirtioQueue::HandleDescriptor(DescriptorFn handler, void* ctx) {
     if (desc_index >= size()) {
       return ZX_ERR_OUT_OF_RANGE;
     }
+
     {
       std::lock_guard<std::mutex> lock(mutex_);
       desc = &ring_.desc[desc_index];
     }
 
-    void* addr = device_->phys_mem().as<void>(desc->addr, desc->len);
+    void* addr = phys_mem_->as<void>(desc->addr, desc->len);
     status = handler(addr, desc->len, desc->flags, &used_len, ctx);
     if (status != ZX_OK) {
       return status;

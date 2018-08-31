@@ -27,15 +27,10 @@ class VirtioBlock
   // Starts a thread to monitor the queue for incoming block requests.
   zx_status_t Start();
 
-  // Our config space is read-only.
-  zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   zx_status_t HandleBlockRequest(VirtioQueue* queue, uint16_t head,
                                  uint32_t* used);
 
-  bool is_read_only() { return has_device_features(VIRTIO_BLK_F_RO); }
+  bool is_read_only() { return pci_.has_device_features(VIRTIO_BLK_F_RO); }
 
   // The queue used for handling block requests.
   VirtioQueue* request_queue() { return queue(0); }

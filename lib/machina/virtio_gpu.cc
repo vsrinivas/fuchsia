@@ -18,7 +18,8 @@
 namespace machina {
 
 VirtioGpu::VirtioGpu(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
-    : VirtioDevice(phys_mem), dispatcher_(dispatcher) {}
+    : VirtioDevice(phys_mem, 0 /* device_features */),
+      dispatcher_(dispatcher) {}
 
 VirtioGpu::~VirtioGpu() = default;
 
@@ -40,7 +41,7 @@ zx_status_t VirtioGpu::AddScanout(GpuScanout* scanout) {
   }
 
   {
-    std::lock_guard<std::mutex> lock(config_mutex_);
+    std::lock_guard<std::mutex> lock(device_config_.mutex);
     FXL_DCHECK(config_.num_scanouts == 0);
     config_.num_scanouts = 1;
   }
@@ -285,7 +286,7 @@ void VirtioGpu::GetDisplayInfo(const virtio_gpu_ctrl_hdr_t* request,
 void VirtioGpu::ResourceCreate2D(const virtio_gpu_resource_create_2d_t* request,
                                  virtio_gpu_ctrl_hdr_t* response) {
   TRACE_DURATION("machina", "virtio_gpu_resource_create_2d");
-  fbl::unique_ptr<GpuResource> res = GpuResource::Create(phys_mem(), request);
+  fbl::unique_ptr<GpuResource> res = GpuResource::Create(phys_mem_, request);
   if (!res) {
     response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
     return;

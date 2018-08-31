@@ -24,20 +24,20 @@
 namespace machina {
 
 // Virtio input device.
-class VirtioInput
-    : public VirtioDevice<VIRTIO_ID_INPUT, VIRTIO_INPUT_Q_COUNT,
-                              virtio_input_config_t> {
+class VirtioInput : public VirtioDevice<VIRTIO_ID_INPUT, VIRTIO_INPUT_Q_COUNT,
+                                        virtio_input_config_t> {
  public:
   VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
               const char* device_name, const char* device_serial);
-
-  zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
 
   VirtioQueue* event_queue() { return queue(VIRTIO_INPUT_Q_EVENTQ); }
 
   // Spawns a thread to monitor for new input devices. When one is detected
   // the corresponding event source will be created to poll for events.
   zx_status_t Start();
+
+ protected:
+  virtual zx_status_t UpdateConfig(uint64_t addr, const IoValue& value);
 
  private:
   zx_status_t PollEventQueue();
@@ -61,7 +61,8 @@ class VirtioKeyboard : public VirtioInput {
                  const char* device_name, const char* device_serial)
       : VirtioInput(event_queue, phys_mem, device_name, device_serial) {}
 
-  zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
+ protected:
+  zx_status_t UpdateConfig(uint64_t addr, const IoValue& value) override;
 };
 
 class VirtioRelativePointer : public VirtioInput {
@@ -70,7 +71,8 @@ class VirtioRelativePointer : public VirtioInput {
                         const char* device_name, const char* device_serial)
       : VirtioInput(event_queue, phys_mem, device_name, device_serial) {}
 
-  zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
+ protected:
+  zx_status_t UpdateConfig(uint64_t addr, const IoValue& value) override;
 };
 
 class VirtioAbsolutePointer : public VirtioInput {
@@ -82,7 +84,8 @@ class VirtioAbsolutePointer : public VirtioInput {
         max_width_(max_width),
         max_height_(max_height) {}
 
-  zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
+ protected:
+  zx_status_t UpdateConfig(uint64_t addr, const IoValue& value) override;
 
  private:
   uint32_t max_width_;

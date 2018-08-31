@@ -13,6 +13,8 @@
 #include <lib/zx/event.h>
 #include <virtio/virtio.h>
 
+#include "garnet/lib/machina/phys_mem.h"
+
 struct vring_desc;
 struct vring_avail;
 struct vring_used;
@@ -22,8 +24,6 @@ namespace machina {
 // We initialize Virtio devices with a ring size so that a sensible size is set,
 // even if they do not configure one themselves.
 static constexpr uint16_t kDefaultVirtioRingSize = 128;
-
-class VirtioDeviceBase;
 
 // Stores the Virtio queue based on the ring provided by the guest.
 //
@@ -83,12 +83,19 @@ class VirtioQueue {
     return func(&ring_);
   }
 
-  // Gets or sets the associated device with this queue.
-  VirtioDeviceBase* device() const { return device_; }
-  void set_device(VirtioDeviceBase* device) { device_ = device; }
+  // Sets the guest physical memory for the queue.
+  void set_phys_mem(const PhysMem* phys_mem) { phys_mem_ = phys_mem; }
 
-  // Gets of sets the number of descriptors in the queue.
-  uint16_t size() const;
+  // Sets the interrupt callback from the queue.
+  enum class InterruptAction { SET_FLAGS, SEND_INTERRUPT };
+  using InterruptFn = fit::function<zx_status_t(InterruptAction action)>;
+  void set_interrupt(InterruptFn fn) { interrupt_ = std::move(fn); }
+
+  // Gets the number of descriptors in the queue.
+  uint16_t size() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return ring_.size;
+  }
 
   // If the device negotiates |VIRTIO_F_EVENT_IDX|, this is the number of
   // descriptors to allow the driver to queue into the avail ring before
@@ -99,18 +106,28 @@ class VirtioQueue {
   //
   // If the device does not negotiate |VIRTIO_F_EVENT_IDX|, this attribute has
   // no effect.
-  uint16_t avail_event_num();
-  void set_avail_event_num(uint16_t num);
-
-  void GetAddrs(zx_gpaddr_t* desc_addr, zx_gpaddr_t* avail_addr,
-                zx_gpaddr_t* used_addr) const;
-  void Configure(uint16_t size, zx_gpaddr_t desc_addr, zx_gpaddr_t avail_addr,
-                 zx_gpaddr_t used_addr);
+  uint16_t avail_event_num() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return avail_event_num_;
+  }
+  void set_avail_event_num(uint16_t num) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    avail_event_num_ = num;
+  }
+  void set_use_event_index(bool use) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    use_event_index_ = use;
+  }
 
   // Returns a handle that can waited on for available descriptors in the.
   // While buffers are available in the queue |ZX_USER_SIGNAL_0| will be
   // asserted.
   zx_handle_t event() const { return event_.get(); }
+
+  void GetAddrs(zx_gpaddr_t* desc_addr, zx_gpaddr_t* avail_addr,
+                zx_gpaddr_t* used_addr) const;
+  void Configure(uint16_t size, zx_gpaddr_t desc_addr, zx_gpaddr_t avail_addr,
+                 zx_gpaddr_t used_addr);
 
   // Get the index of the next descriptor in the available ring.
   //
@@ -139,7 +156,6 @@ class VirtioQueue {
   // if (for example) the device is returning several descriptors sequentially.
   // The |SEND_INTERRUPT| flag will still respect any requirements enforced by
   // the bus regarding interrupt suppression.
-  enum class InterruptAction { SET_FLAGS, SEND_INTERRUPT };
   zx_status_t Return(uint16_t index, uint32_t len,
                      InterruptAction action = InterruptAction::SEND_INTERRUPT);
 
@@ -171,7 +187,7 @@ class VirtioQueue {
   // provided handler on each available buffer asynchronously.
   //
   // Returns |ZX_ERR_INVALID_ARGS| if |thread_name| is null.
-  zx_status_t Poll(PollFn handler, std::string thread_name);
+  zx_status_t Poll(std::string thread_name, PollFn handler);
 
   // Monitors the queue signal for available descriptors and run the callback
   // when one is available.
@@ -210,10 +226,12 @@ class VirtioQueue {
                           zx_status_t status, const PollFn& handler);
 
   mutable std::mutex mutex_;
-  VirtioDeviceBase* device_;
+  const PhysMem* phys_mem_ = nullptr;
+  InterruptFn interrupt_;
   VirtioRing ring_ __TA_GUARDED(mutex_) = {};
   zx::event event_;
   uint16_t avail_event_num_ __TA_GUARDED(mutex_) = 1;
+  bool use_event_index_ __TA_GUARDED(mutex_) = false;
 };
 
 }  // namespace machina

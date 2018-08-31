@@ -23,21 +23,20 @@ namespace machina {
 
 VirtioBlock::VirtioBlock(const PhysMem& phys_mem,
                          std::unique_ptr<BlockDispatcher> dispatcher)
-    : VirtioDevice(phys_mem), dispatcher_(std::move(dispatcher)) {
+    : VirtioDevice(
+          phys_mem,
+          // Virtio 1.0: 5.2.5.2: Devices SHOULD alwaysoffer VIRTIO_BLK_F_FLUSH.
+          // VIRTIO_BLK_F_BLK_SIZE is required by Zircon guests.
+          VIRTIO_BLK_F_FLUSH | VIRTIO_BLK_F_BLK_SIZE |
+              (dispatcher->read_only() ? VIRTIO_BLK_F_RO : 0)),
+      dispatcher_(std::move(dispatcher)) {
   config_.capacity = dispatcher_->size() / kSectorSize;
   config_.blk_size = kSectorSize;
-  // Virtio 1.0: 5.2.5.2: Devices SHOULD always offer VIRTIO_BLK_F_FLUSH
-  add_device_features(VIRTIO_BLK_F_FLUSH
-                      // Required by zircon guests.
-                      | VIRTIO_BLK_F_BLK_SIZE);
-  if (dispatcher_->read_only()) {
-    add_device_features(VIRTIO_BLK_F_RO);
-  }
 }
 
 zx_status_t VirtioBlock::Start() {
   return request_queue()->Poll(
-      fit::bind_member(this, &VirtioBlock::HandleBlockRequest), "virtio-block");
+      "virtio-block", fit::bind_member(this, &VirtioBlock::HandleBlockRequest));
 }
 
 zx_status_t VirtioBlock::HandleBlockRequest(VirtioQueue* queue, uint16_t head,

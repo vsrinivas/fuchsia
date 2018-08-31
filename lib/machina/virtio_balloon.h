@@ -25,7 +25,7 @@ namespace machina {
 // Virtio memory balloon device.
 class VirtioBalloon
     : public VirtioDevice<VIRTIO_ID_BALLOON, VIRTIO_BALLOON_Q_COUNT,
-                              virtio_balloon_config_t> {
+                          virtio_balloon_config_t> {
  public:
   // Per Virtio 1.0 Section 5.5.6, This value is historical, and independent
   // of the guest page size.
@@ -34,7 +34,7 @@ class VirtioBalloon
   VirtioBalloon(const PhysMem& phys_mem);
   ~VirtioBalloon() override = default;
 
-  zx_status_t HandleQueueNotify(uint16_t queue_sel) override;
+  zx_status_t HandleQueueNotify(uint16_t queue);
 
   // Receives an array of statistics in |stats| that contains |len| entries.
   //
@@ -69,7 +69,7 @@ class VirtioBalloon
  private:
   void WaitForStatsBuffer(VirtioQueue* stats_queue) __TA_REQUIRES(stats_.mutex);
 
-  zx_status_t HandleDescriptor(uint16_t queue_sel);
+  zx_status_t HandleDescriptor(uint16_t queue);
 
   // With on-demand deflation we won't commit memory up-front for balloon
   // deflate requests.

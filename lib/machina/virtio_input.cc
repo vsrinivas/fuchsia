@@ -11,9 +11,9 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <lib/fxl/logging.h>
 
 #include "garnet/lib/machina/bits.h"
-#include "lib/fxl/logging.h"
 
 namespace machina {
 
@@ -179,7 +179,10 @@ constexpr uint32_t kButtonMouseTertiaryCode = 0x112;
 
 VirtioInput::VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
                          const char* device_name, const char* device_serial)
-    : VirtioDevice(phys_mem),
+    : VirtioDevice(phys_mem, 0 /* device_features */,
+                   fit::bind_member<zx_status_t, VirtioDevice>(
+                       this, &VirtioInput::NotifyQueue),
+                   fit::bind_member(this, &VirtioInput::UpdateConfig)),
       device_name_(device_name),
       device_serial_(device_serial),
       event_queue_(event_queue) {}
@@ -188,18 +191,14 @@ static void SetConfigBit(uint32_t event_code, virtio_input_config_t* config) {
   config->u.bitmap[event_code / 8] |= 1u << (event_code % 8);
 }
 
-zx_status_t VirtioInput::WriteConfig(uint64_t addr, const IoValue& value) {
-  zx_status_t status = VirtioDevice::WriteConfig(addr, value);
-  if (status != ZX_OK) {
-    return status;
-  }
+zx_status_t VirtioInput::UpdateConfig(uint64_t addr, const IoValue& value) {
   if (addr >= 2) {
     return ZX_OK;
   }
 
   //  A write to select or subselect modifies the contents of the config.u
   //  field.
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::mutex> lock(device_config_.mutex);
   switch (config_.select) {
     case VIRTIO_INPUT_CFG_ID_NAME: {
       size_t len = strlen(device_name_);
@@ -230,12 +229,12 @@ zx_status_t VirtioInput::WriteConfig(uint64_t addr, const IoValue& value) {
   return ZX_OK;
 }
 
-zx_status_t VirtioKeyboard::WriteConfig(uint64_t addr, const IoValue& value) {
-  zx_status_t status = VirtioInput::WriteConfig(addr, value);
+zx_status_t VirtioKeyboard::UpdateConfig(uint64_t addr, const IoValue& value) {
+  zx_status_t status = VirtioInput::UpdateConfig(addr, value);
   if (status != ZX_OK) {
     return status;
   }
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::mutex> lock(device_config_.mutex);
   if (config_.select != VIRTIO_INPUT_CFG_EV_BITS) {
     return ZX_OK;
   }
@@ -271,13 +270,13 @@ zx_status_t VirtioKeyboard::WriteConfig(uint64_t addr, const IoValue& value) {
   return ZX_OK;
 }
 
-zx_status_t VirtioRelativePointer::WriteConfig(uint64_t addr,
-                                               const IoValue& value) {
-  zx_status_t status = VirtioInput::WriteConfig(addr, value);
+zx_status_t VirtioRelativePointer::UpdateConfig(uint64_t addr,
+                                                const IoValue& value) {
+  zx_status_t status = VirtioInput::UpdateConfig(addr, value);
   if (status != ZX_OK) {
     return status;
   }
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::mutex> lock(device_config_.mutex);
   if (config_.select != VIRTIO_INPUT_CFG_EV_BITS) {
     return ZX_OK;
   }
@@ -300,13 +299,13 @@ zx_status_t VirtioRelativePointer::WriteConfig(uint64_t addr,
   return ZX_OK;
 }
 
-zx_status_t VirtioAbsolutePointer::WriteConfig(uint64_t addr,
-                                               const IoValue& value) {
-  zx_status_t status = VirtioInput::WriteConfig(addr, value);
+zx_status_t VirtioAbsolutePointer::UpdateConfig(uint64_t addr,
+                                                const IoValue& value) {
+  zx_status_t status = VirtioInput::UpdateConfig(addr, value);
   if (status != ZX_OK) {
     return status;
   }
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::mutex> lock(device_config_.mutex);
   if (config_.select == VIRTIO_INPUT_CFG_EV_BITS) {
     if (config_.subsel == VIRTIO_INPUT_EV_KEY) {
       SetConfigBit(kButtonMousePrimaryCode, &config_);
@@ -444,7 +443,7 @@ zx_status_t VirtioInput::OnBarrierEvent() {
   if (status != ZX_OK) {
     return status;
   }
-  return NotifyGuest();
+  return Interrupt();
 }
 
 zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event) {
@@ -461,9 +460,8 @@ zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event) {
   memcpy(event_out, &event, sizeof(event));
 
   // To be less chatty, we'll only send interrupts on barrier events.
-  event_queue()->Return(head, sizeof(event),
-                        VirtioQueue::InterruptAction::SET_FLAGS);
-  return ZX_OK;
+  return event_queue()->Return(head, sizeof(event),
+                               VirtioQueue::InterruptAction::SET_FLAGS);
 }
 
 }  // namespace machina

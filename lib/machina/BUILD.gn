@@ -42,7 +42,6 @@ source_set("machina") {
     "virtio_block.h",
     "virtio_console.cc",
     "virtio_console.h",
-    "virtio_device.cc",
     "virtio_device.h",
     "virtio_gpu.cc",
     "virtio_gpu.h",

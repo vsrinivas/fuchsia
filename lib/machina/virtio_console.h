@@ -31,7 +31,7 @@ static_assert(kVirtioConsoleNumQueues % 2 == 0,
 
 class VirtioConsole
     : public VirtioDevice<VIRTIO_ID_CONSOLE, kVirtioConsoleNumQueues,
-                              virtio_console_config_t> {
+                          virtio_console_config_t> {
  public:
   VirtioConsole(const PhysMem&, async_dispatcher_t* dispatcher,
                 zx::socket socket);
