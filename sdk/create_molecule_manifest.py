@@ -19,9 +19,6 @@ def main():
     parser.add_argument('--deps',
                         help='List of manifest paths for the included elements',
                         nargs='*')
-    parser.add_argument('--is-group',
-                        help='True if the molecule is a grouping of its deps',
-                        action='store_true')
     parser.add_argument('--metadata',
                         help='Metadata to attach to the manifest',
                         action='append',
@@ -39,11 +36,8 @@ def main():
         if detect_category_violations(args.category, atoms):
             print('Publication level violations detected!')
             return 1
-    ids = []
-    if args.is_group:
-        ids = map(lambda i: i.json, sorted(list(direct_deps)))
     manifest = {
-        'ids': ids,
+        'ids': [],
         'atoms': map(lambda a: a.json, sorted(list(atoms))),
     }
     if args.metadata:

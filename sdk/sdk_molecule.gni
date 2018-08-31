@@ -17,11 +17,6 @@
 #   non_sdk_deps (optional)
 #     List of GN labels which this target needs built.
 #
-#   is_group (optional)
-#     True if a direct dependency on this molecule should be interpreted as a
-#     direct dependency on its own dependencies.
-#     Useful for group-like templates.
-#
 #   metadata (optional)
 #     List of scopes describing the metadata to attach to this molecule.
 #     Each scope must have two attributes: a "key" and a "value". Keys are
@@ -53,8 +48,6 @@ template("sdk_molecule") {
     }
   }
 
-  is_group = defined(invoker.is_group) && invoker.is_group
-
   # Builds a manifest representing members of the group.
   action(target_name) {
     forward_variables_from(invoker, [ "assert_no_deps", "testonly" ])
@@ -85,10 +78,6 @@ template("sdk_molecule") {
         "--category",
         invoker.category,
       ]
-    }
-
-    if (is_group) {
-      args += [ "--is-group" ]
     }
   }
 }
