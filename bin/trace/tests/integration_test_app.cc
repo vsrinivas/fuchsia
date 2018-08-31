@@ -183,17 +183,18 @@ static bool VerifyFillBufferTest(const tracing::Spec& spec,
 
   FXL_VLOG(1) << array.Size() << " trace events present";
 
-  double percentage_buffer_filled;
-  FXL_DCHECK(spec.buffering_mode);
-  if (*spec.buffering_mode == "streaming") {
-    // We should have saved at least one buffer's worth of events.
-    percentage_buffer_filled = 1.0;
-  } else {
-    // We should have saved at least 80% buffer's worth of events.
-    // This is conservative to avoid having a flaky test.
-    percentage_buffer_filled = 0.8;
-  }
-
+  // IWBN to verify we collected all the events we should have, but doing that
+  // robustly is tricky for a few reasons:
+  // - The physical buffer is split up into three pieces in streaming and
+  //   circular modes (durable + 2 * rolling). Plus there's the header.
+  // - Events go into the rolling buffers, not the durable buffer, and we'd
+  //   rather not encode knowlege of their different sizes here. We can be
+  //   assured though that the durable buffer size is not greater than the
+  //   rolling buffer sizes.
+  // - In circular mode it's possible one of the rolling buffers is empty.
+  // We've already verified the trace ran successfully and produced a readable
+  // file so we don't have to be hyper-accurate here.
+  double percentage_buffer_filled = 0.1;
   FXL_DCHECK(spec.buffer_size_in_mb);
   size_t buffer_size = *spec.buffer_size_in_mb * 1024 * 1024;
   size_t min_event_count =
