@@ -6,6 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/crashanalyzer/crashanalyzer.h>
 #include <lib/fdio/util.h>
+#include <lib/logger/provider.h>
 #include <lib/process-launcher/launcher.h>
 #include <lib/svc/outgoing.h>
 #include <lib/sysmem/sysmem.h>
@@ -143,6 +144,10 @@ void publish_deprecated_services(const fbl::RefPtr<fs::PseudoDir>& dir) {
 }
 
 int main(int argc, char** argv) {
+    bool require_system = false;
+    if (argc > 1) {
+      require_system = strcmp(argv[1], "--require-system") == 0 ? true: false;
+    }
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     async_dispatcher_t* dispatcher = loop.dispatcher();
     svc::Outgoing outgoing(dispatcher);
@@ -162,6 +167,7 @@ int main(int argc, char** argv) {
         {.provider = sysmem_get_service_provider(), .ctx = nullptr},
     };
 
+
     for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
         status = provider_load(&service_providers[i], dispatcher, outgoing.public_dir());
         if (status != ZX_OK) {
@@ -169,6 +175,17 @@ int main(int argc, char** argv) {
                     i, status, zx_status_get_string(status));
             return 1;
         }
+    }
+
+    // if full system is not required drop simple logger service.
+    zx_service_provider_instance_t logger_service{.provider = logger_get_service_provider(), .ctx = nullptr};
+    if(!require_system) {
+      status = provider_load(&logger_service, dispatcher, outgoing.public_dir());
+      if (status != ZX_OK) {
+          fprintf(stderr, "svchost: error: Failed to publish logger: %d (%s).\n",
+                status, zx_status_get_string(status));
+          return 1;
+      }
     }
 
     status = publish_tracelink(outgoing.public_dir());

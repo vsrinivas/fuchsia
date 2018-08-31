@@ -601,10 +601,11 @@ int main(int argc, char** argv) {
         printf("cmdline: %s\n", *e++);
     }
 
+    require_system = getenv_bool("devmgr.require-system", false);
+
     devmgr_svc_init();
     devmgr_vfs_init();
 
-    require_system = getenv_bool("devmgr.require-system", false);
 
     // if we're not a full fuchsia build, no point to set up appmgr services
     // which will just cause things attempting to access it to block until
@@ -898,7 +899,8 @@ zx_status_t svchost_start(void) {
     }
 
     const char* name = "svchost";
-    const char* argv[] = {"/boot/bin/svchost"};
+    const char* argv[] = {"/boot/bin/svchost", require_system? "--require-system" : NULL};
+    int argc = require_system? 2 : 1;
 
     zx_handle_t svchost_vmo = devmgr_load_file(argv[0], NULL);
     if (svchost_vmo == ZX_HANDLE_INVALID) {
@@ -911,7 +913,7 @@ zx_status_t svchost_start(void) {
     launchpad_t* lp = NULL;
     launchpad_create(job_copy, name, &lp);
     launchpad_load_from_vmo(lp, svchost_vmo);
-    launchpad_set_args(lp, 1, argv);
+    launchpad_set_args(lp, argc, argv);
     launchpad_add_handle(lp, dir_request, PA_DIRECTORY_REQUEST);
     launchpad_add_handle(lp, logger, PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO));
 

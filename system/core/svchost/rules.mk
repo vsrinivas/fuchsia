@@ -15,11 +15,13 @@ MODULE_SRCS += \
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-crash \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-logger \
     system/fidl/fuchsia-process \
     system/fidl/fuchsia-sysmem \
 
 MODULE_STATIC_LIBS := \
     system/ulib/inspector \
+    system/ulib/logger \
     system/ulib/svc \
     system/ulib/process-launcher \
     system/ulib/sysmem \
