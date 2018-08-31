@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::zx;
-use async;
-use component::client::{App, Launcher};
-use failure::{Error, ResultExt};
+use failure::{format_err, Error, ResultExt};
 use fidl::endpoints2::ServerEnd;
 use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderFactoryMarker, AuthProviderFactoryProxy,
                         AuthProviderProxy, AuthProviderStatus};
+use fuchsia_app::client::{App, Launcher};
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::future::{ready as fready, FutureObj};
 use futures::prelude::*;
+use log::{info, log};
 use std::boxed::Box;
 use std::sync::{Arc, RwLock};
 
@@ -49,22 +50,31 @@ struct ConnectionState {
 /// construction but initialization of the interface is delayed until the first
 /// call to get_proxy().
 pub struct AuthProviderClient {
+    // Most operations on an AuthProviderClient operate asynchronously. Define internal state
+    // in an Arc for ease of decoupling lifetimes.
+    inner: Arc<Inner>,
+}
+
+/// The Arc-wrapped internal state of an AuthProviderClient.
+struct Inner {
     /// The URL that should be used to launch the AuthProvider.
     url: String,
     /// Optional params to be passed to the AuthProvider at launch.
     params: Option<Vec<String>>,
     /// A wrapper containing the proxy object and associated objects for the AuthProvider,
     /// once it has been created.
-    deferred_state: Arc<RwLock<DeferredOption<ConnectionState>>>,
+    deferred_state: RwLock<DeferredOption<ConnectionState>>,
 }
 
 impl AuthProviderClient {
     /// Creates a new AuthProviderClient from the supplied AuthProviderConfig.
     pub fn from_config(config: AuthProviderConfig) -> Self {
         AuthProviderClient {
-            url: config.url,
-            params: config.params,
-            deferred_state: Arc::new(RwLock::new(DeferredOption::new())),
+            inner: Arc::new(Inner {
+                url: config.url,
+                params: config.params,
+                deferred_state: RwLock::new(DeferredOption::new()),
+            }),
         }
     }
 
@@ -72,54 +82,45 @@ impl AuthProviderClient {
     /// been created previously this is returned, otherwise a new proxy is
     /// created by launching a factory interface and then acquiring a
     /// provider interface from this factory.
-    pub fn get_proxy(&self) -> FutureObj<'static, Result<Arc<AuthProviderProxy>, Error>> {
-        // First check if a proxy has already been created, and if so return
-        // immediately.
-        if let Some(client_state) = self.deferred_state.read().unwrap().get() {
-            return FutureObj::new(Box::new(fready(Ok(client_state.provider_proxy.clone()))));
+    pub fn get_proxy(
+        &self,
+    ) -> impl Future<Output = Result<Arc<AuthProviderProxy>, Error>> + 'static {
+        // Extract the state we need from self for both eventual outcomes so that we don't bind
+        // the lifetime of the future to the lifetime of the supplied self reference.
+        let inner = self.inner.clone();
+
+        async move {
+            // If a proxy has already been created return it.
+            if let Some(client_state) = inner.deferred_state.read().unwrap().get() {
+                return Ok(client_state.provider_proxy.clone());
+            }
+
+            // Launch the factory for the auth provider and prepare a channel to
+            // communicate.
+            info!("Launching factory for AuthProvider: {}", inner.url);
+            let launcher = Launcher::new().context("Failed to start launcher")?;
+            let app = launcher
+                .launch(inner.url.clone(), inner.params.clone())
+                .context("Failed to launch AuthProviderFactory")?;
+            let factory_proxy = app
+                .connect_to_service(AuthProviderFactoryMarker)
+                .context("Failed to connect to AuthProviderFactory")?;
+            let (server_chan, client_chan) = zx::Channel::create()?;
+
+            // Connect to the factory and request an auth provider.
+            match await!(factory_proxy.get_auth_provider(ServerEnd::new(server_chan))) {
+                Ok(AuthProviderStatus::Ok) => {
+                    let client_async = fasync::Channel::from_channel(client_chan).unwrap();
+                    let provider_proxy = Arc::new(AuthProviderProxy::new(client_async));
+                    inner.deferred_state.write().unwrap().set(ConnectionState {
+                        _app: app,
+                        provider_proxy: provider_proxy.clone(),
+                    });
+                    Ok(provider_proxy)
+                },
+                Ok(status) => Err(format_err!("Error getting auth provider: {:?}", status)),
+                Err(err) => Err(format_err!("GetAuthProvider method failed with {:?}", err)),
+            }
         }
-
-        // Launch the factory for the auth provider and prepare a channel to
-        // communicate.
-        info!("Launching factory for AuthProvider: {}", self.url);
-        let (app, factory_proxy) = future_try!(self.launch_factory());
-        let (server_chan, client_chan) = future_try!(zx::Channel::create());
-
-        // Create a new reference to the DeferredOption that can live beyond our self
-        // reference.
-        let deferred_state = self.deferred_state.clone();
-        FutureObj::new(Box::new(
-            factory_proxy
-                .get_auth_provider(ServerEnd::new(server_chan))
-                .map_err(|err| format_err!("GetAuthProvider method failed with {:?}", err))
-                .and_then(move |status| match status {
-                    AuthProviderStatus::Ok => {
-                        let client_async = async::Channel::from_channel(client_chan).unwrap();
-                        let provider_proxy = Arc::new(AuthProviderProxy::new(client_async));
-                        deferred_state.write().unwrap().set(ConnectionState {
-                            _app: app,
-                            provider_proxy: provider_proxy.clone(),
-                        });
-                        fready(Ok(provider_proxy))
-                    }
-                    _ => fready(Err(format_err!(
-                        "Error getting auth provider: {:?}",
-                        status
-                    ))),
-                }),
-        ))
-    }
-
-    /// Launches a new instance of the associated AuthProvider and connects to
-    /// the factory interface.
-    fn launch_factory(&self) -> Result<(App, AuthProviderFactoryProxy), Error> {
-        let launcher = Launcher::new().context("Failed to start launcher")?;
-        let app = launcher
-            .launch(self.url.clone(), self.params.clone())
-            .context("Failed to launch AuthProviderFactory")?;
-        let factory_proxy = app
-            .connect_to_service(AuthProviderFactoryMarker)
-            .context("Failed to connect to AuthProviderFactory")?;
-        Ok((app, factory_proxy))
     }
 }

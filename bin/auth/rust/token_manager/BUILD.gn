@@ -6,7 +6,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("token_manager_rust") {
   name = "token_manager_rust"
-  edition = "2015"
+  edition = "2018"
 
   deps = [
     "//garnet/bin/auth/rust/cache",

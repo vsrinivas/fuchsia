@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::auth_context_client::AuthContextClient;
-use super::auth_provider_client::AuthProviderClient;
-use super::error::TokenManagerError;
-use async;
 use auth_cache::{AuthCacheError, CacheKey, FirebaseAuthToken, OAuthToken, TokenCache};
 use auth_store::file::AuthDbFile;
 use auth_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
-use failure;
+use crate::auth_context_client::AuthContextClient;
+use crate::auth_provider_client::AuthProviderClient;
+use crate::error::TokenManagerError;
+use failure::format_err;
 use fidl;
 use fidl::encoding2::OutOfLine;
 use fidl::endpoints2::{ClientEnd, ServerEnd};
@@ -20,13 +19,15 @@ use fidl_fuchsia_auth::{AppConfig, AssertionJwtParams, AttestationJwtParams,
                         TokenManagerDeleteAllTokensResponder, TokenManagerGetAccessTokenResponder,
                         TokenManagerGetFirebaseTokenResponder, TokenManagerGetIdTokenResponder,
                         TokenManagerMarker, TokenManagerRequest, UserProfileInfo};
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::future::{ready as fready, FutureObj};
 use futures::prelude::*;
 use futures::FutureExt;
+use log::{error, log, warn};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use zx;
 
 const CACHE_SIZE: usize = 128;
 const DB_DIR: &str = "/data/auth";
@@ -70,7 +71,7 @@ impl TokenManager {
         };
 
         match server_end.into_stream() {
-            Ok(request_stream) => async::spawn(
+            Ok(request_stream) => fasync::spawn(
                 request_stream
                     .err_into::<failure::Error>()
                     .try_for_each(move |req| manager.handle_request(req))
@@ -608,7 +609,7 @@ impl TokenManager {
         let refresh_token = match (**self.token_store.lock().unwrap()).get_refresh_token(&db_key) {
             Ok(rt) => rt.to_string(),
             Err(AuthDbError::CredentialNotFound) => return FutureObj::new(Box::new(fready(Ok(())))),
-            Err(err) => return TokenManagerError::from(err).to_boxed_future(),
+            Err(err) => return TokenManagerError::from(err).to_future_obj(),
         };
 
         let cache = self.token_cache.clone();
@@ -677,7 +678,7 @@ impl TokenManager {
             None => {
                 return TokenManagerError::new(Status::AuthProviderServiceUnavailable)
                     .with_cause(format_err!("Unknown auth provider {}", auth_provider_type))
-                    .to_boxed_future();
+                    .to_future_obj();
             }
         };
         FutureObj::new(Box::new(auth_provider.get_proxy().map_err(|err| {

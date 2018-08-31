@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::zx;
 use failure::Error;
 use fidl::endpoints2::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AuthenticationContextProviderMarker, AuthenticationContextProviderProxy,
                         AuthenticationUiContextMarker};
+use fuchsia_zircon as zx;
 
 /// An object capable of acquiring new AuthenticationUiContexts.
 pub struct AuthContextClient {

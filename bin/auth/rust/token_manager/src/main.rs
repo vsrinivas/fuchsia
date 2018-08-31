@@ -2,21 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(futures_api)]
-
-extern crate auth_cache;
-extern crate auth_store;
-#[macro_use]
-extern crate failure;
-extern crate fidl;
-extern crate fidl_fuchsia_auth;
-extern crate fuchsia_app as component;
-extern crate fuchsia_async as async;
-extern crate fuchsia_syslog as syslog;
-extern crate fuchsia_zircon as zx;
-extern crate futures;
-#[macro_use]
-extern crate log;
+#![feature(async_await, await_macro, futures_api)]
 
 #[macro_use]
 mod macros;
@@ -26,17 +12,19 @@ mod error;
 mod token_manager;
 mod token_manager_factory;
 
-use component::server::ServicesServer;
+use crate::token_manager_factory::TokenManagerFactory;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::ServiceMarker;
 use fidl_fuchsia_auth::TokenManagerFactoryMarker;
-use token_manager_factory::TokenManagerFactory;
+use fuchsia_app::server::ServicesServer;
+use fuchsia_async as fasync;
+use log::{info, log};
 
 fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["auth"]).expect("Can't init logger");
+    fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting token manager");
 
-    let mut executor = async::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let fut = ServicesServer::new()
         .add_service((TokenManagerFactoryMarker::NAME, |chan| {
             TokenManagerFactory::spawn(chan)

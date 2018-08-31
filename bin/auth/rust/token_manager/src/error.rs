@@ -4,7 +4,7 @@
 
 use auth_cache::AuthCacheError;
 use auth_store::AuthDbError;
-use failure::Error;
+use failure::{format_err, Error, Fail};
 use fidl_fuchsia_auth::{AuthProviderStatus, Status};
 use futures::future::{ready as fready, FutureObj};
 
@@ -44,9 +44,9 @@ impl TokenManagerError {
         self
     }
 
-    /// Convenience method to create a `Box` of a `FutureResult` based on this
-    /// error.
-    pub fn to_boxed_future<T: Send + 'static>(
+    /// Convenience method to create a `FutureObj` containing a `Future` of a `Result` based on
+    /// this error.
+    pub fn to_future_obj<T: Send + 'static>(
         self,
     ) -> FutureObj<'static, Result<T, TokenManagerError>> {
         FutureObj::new(Box::new(fready(Err(self))))
