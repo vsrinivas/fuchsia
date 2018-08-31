@@ -24,8 +24,8 @@ OS" and confirm the version is &gt;=62.
 2. Go into Recovery Mode.
 Hold down Esc+Refresh (first and third buttons on the top row of the keyboard).
 Then press the Power button (bottom left side of the device).
-3. Go into Developer Mode by pressing Ctrl+D.
-4. Press Enter to confirm your choice to enter Developer Mode.
+3. Start by disabling OS verification by pressing Ctrl+D. You should see "To turn OS verification OFF, press ENTER". Press Enter to confirm.
+4. When your device reboots, you'll get confirmation that OS verification is OFF. Press Ctrl+D again to enter Developer Mode.
 5. Wait for the device to re-configure itself, which will take several minutes.
 Initially it may not appear to be doing anything. Let the device sit for a
 minute or two. You will hear two loud &lt;BEEP&gt;s early in the process. The
