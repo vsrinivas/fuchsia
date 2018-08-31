@@ -6,6 +6,7 @@ use failure::format_err;
 use fidl::endpoints2::{RequestStream, ServerEnd};
 use futures::channel::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use futures::prelude::*;
+use futures::try_join;
 use log::{error, log};
 use parking_lot::Mutex;
 use std::collections::HashMap;
@@ -22,6 +23,7 @@ pub fn serve_watchers<P, I>(phys: Arc<WatchableMap<u16, P>>,
                             phy_events: UnboundedReceiver<MapEvent<u16, P>>,
                             iface_events: UnboundedReceiver<MapEvent<u16, I>>)
     -> (WatcherService<P, I>, impl Future<Output = Result<Never, failure::Error>>)
+    where P: 'static, I: 'static
 {
     let inner = Arc::new(Mutex::new(Inner {
         watchers: HashMap::new(),
@@ -29,19 +31,19 @@ pub fn serve_watchers<P, I>(phys: Arc<WatchableMap<u16, P>>,
         phys,
         ifaces
     }));
-    let phy_fut = notify_phy_watchers(phy_events, inner.clone())
-        .map(|_| Err(format_err!("phy notifier future exited unexpectedly")));
-    let iface_fut = notify_iface_watchers(iface_events, inner.clone())
-        .map(|_| Err(format_err!("iface notifier future exited unexpectedly")));
     let (reaper_sender, reaper_receiver) = mpsc::unbounded();
-    let reaper_fut = reap_watchers(inner.clone(), reaper_receiver)
-        .map(|_| Err(format_err!("watcher reaper future exited unexpectedly")));
     let s = WatcherService {
-        inner,
+        inner: Arc::clone(&inner),
         reaper_queue: reaper_sender
     };
-    let fut = reaper_fut.try_join3(phy_fut, iface_fut)
-        .map_ok(|x: (Never, Never, Never)| x.0);
+
+    let fut = async move {
+        let phy_fut = notify_phy_watchers(phy_events, &inner);
+        let iface_fut = notify_iface_watchers(iface_events, &inner);
+        let reaper_fut = reap_watchers(&inner, reaper_receiver);
+        try_join!(phy_fut, iface_fut, reaper_fut)
+            .map(|x: (Never, Never, Never)| x.0)
+    };
     (s, fut)
 }
 
@@ -140,32 +142,38 @@ fn handle_send_result(handle: &DeviceWatcherControlHandle, r: Result<(), fidl::E
     r.is_ok()
 }
 
-fn notify_phy_watchers<P, I>(events: UnboundedReceiver<MapEvent<u16, P>>,
-                             inner: Arc<Mutex<Inner<P, I>>>)
-    -> impl Future<Output = ()>
+async fn notify_phy_watchers<P, I>(mut events: UnboundedReceiver<MapEvent<u16, P>>,
+                                   inner: &Mutex<Inner<P, I>>)
+    -> Result<Never, failure::Error>
 {
-    events.for_each(move |e| future::ready(match e {
-        MapEvent::KeyInserted(id) => inner.lock().notify_watchers(|w| w.sent_phy_snapshot,
-                                                                  |h| h.send_on_phy_added(id)),
-        MapEvent::KeyRemoved(id) => inner.lock().notify_watchers(|w| w.sent_phy_snapshot,
-                                                                 |h| h.send_on_phy_removed(id)),
-        MapEvent::Snapshot(s) => inner.lock().send_snapshot(|w| &mut w.sent_phy_snapshot,
-                                                            |h, id| h.send_on_phy_added(id), s)
-    }))
+    while let Some(e) = await!(events.next()) {
+        match e {
+            MapEvent::KeyInserted(id) => inner.lock().notify_watchers(
+                    |w| w.sent_phy_snapshot, |h| h.send_on_phy_added(id)),
+            MapEvent::KeyRemoved(id) => inner.lock().notify_watchers(
+                    |w| w.sent_phy_snapshot, |h| h.send_on_phy_removed(id)),
+            MapEvent::Snapshot(s) => inner.lock().send_snapshot(
+                    |w| &mut w.sent_phy_snapshot, |h, id| h.send_on_phy_added(id), s)
+        }
+    }
+    Err(format_err!("stream of events from the phy device map has ended unexpectedly"))
 }
 
-fn notify_iface_watchers<P, I>(events: UnboundedReceiver<MapEvent<u16, I>>,
-                               inner: Arc<Mutex<Inner<P, I>>>)
-    -> impl Future<Output = ()>
+async fn notify_iface_watchers<P, I>(mut events: UnboundedReceiver<MapEvent<u16, I>>,
+                                     inner: &Mutex<Inner<P, I>>)
+    -> Result<Never, failure::Error>
 {
-    events.for_each(move |e| future::ready(match e {
-        MapEvent::KeyInserted(id) => inner.lock().notify_watchers(|w| w.sent_iface_snapshot,
-                                                                  |h| h.send_on_iface_added(id)),
-        MapEvent::KeyRemoved(id) => inner.lock().notify_watchers(|w| w.sent_iface_snapshot,
-                                                                 |h| h.send_on_iface_removed(id)),
-        MapEvent::Snapshot(s) => inner.lock().send_snapshot(|w| &mut w.sent_iface_snapshot,
-                                                            |h, id| h.send_on_iface_added(id), s)
-    }))
+    while let Some(e) = await!(events.next()) {
+        match e {
+            MapEvent::KeyInserted(id) => inner.lock().notify_watchers(
+                    |w| w.sent_iface_snapshot, |h| h.send_on_iface_added(id)),
+            MapEvent::KeyRemoved(id) => inner.lock().notify_watchers(
+                    |w| w.sent_iface_snapshot, |h| h.send_on_iface_removed(id)),
+            MapEvent::Snapshot(s) => inner.lock().send_snapshot(
+                    |w| &mut w.sent_iface_snapshot, |h, id| h.send_on_iface_added(id), s)
+        }
+    }
+    Err(format_err!("stream of events from the iface device map has ended unexpectedly"))
 }
 
 struct ReaperTask {
@@ -177,20 +185,19 @@ struct ReaperTask {
 /// Performing this clean up solely when notification fails is not sufficient:
 /// in the scenario where devices are not being added or removed, but new clients come and go,
 /// the watcher list could grow without bound.
-fn reap_watchers<P, I>(inner: Arc<Mutex<Inner<P, I>>>, watchers: UnboundedReceiver<ReaperTask>)
-    -> impl Future<Output = ()>
+async fn reap_watchers<P, I>(inner: &Mutex<Inner<P, I>>, watchers: UnboundedReceiver<ReaperTask>)
+    -> Result<Never, failure::Error>
 {
     const REAP_CONCURRENT_LIMIT: usize = 10000;
-    watchers.for_each_concurrent(REAP_CONCURRENT_LIMIT, move |w| {
-        let inner = inner.clone();
-        let watcher_id = w.watcher_id;
+    await!(watchers.for_each_concurrent(REAP_CONCURRENT_LIMIT, move |w| {
         // Wait for the other side to close the channel (or an error to occur)
         // and remove the watcher from the maps
-        w.watcher_channel.map_ok(|_| ()).try_collect::<()>()
-            .map(move |_| {
-                inner.lock().watchers.remove(&watcher_id);
-            })
-    })
+        async move {
+            await!(w.watcher_channel.map(|_| ()).collect::<()>());
+            inner.lock().watchers.remove(&w.watcher_id);
+        }
+    }));
+    Err(format_err!("stream of watcher channels has ended unexpectedly"))
 }
 
 #[cfg(test)]
@@ -199,12 +206,14 @@ mod tests {
     use fidl_fuchsia_wlan_device_service::DeviceWatcherEvent;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
+    use pin_utils::pin_mut;
     use std::mem;
 
     #[test]
     fn reap_watchers() {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
-        let (helper, mut future) = setup();
+        let (helper, future) = setup();
+        pin_mut!(future);
         assert_eq!(0, helper.service.inner.lock().watchers.len());
         let (client_end, server_end) = fidl::endpoints2::create_endpoints()
             .expect("Failed to create endpoints");
@@ -230,7 +239,8 @@ mod tests {
     #[test]
     fn add_remove_phys() {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
-        let (helper, mut future) = setup();
+        let (helper, future) = setup();
+        pin_mut!(future);
         let (client_end, server_end) = fidl::endpoints2::create_endpoints()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
@@ -264,7 +274,8 @@ mod tests {
     #[test]
     fn add_remove_ifaces() {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
-        let (helper, mut future) = setup();
+        let (helper, future) = setup();
+        pin_mut!(future);
         let (client_end, server_end) = fidl::endpoints2::create_endpoints()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
@@ -292,7 +303,8 @@ mod tests {
     #[test]
     fn snapshot_phys() {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
-        let (helper, mut future) = setup();
+        let (helper, future) = setup();
+        pin_mut!(future);
 
         // Add and remove phys before we the watcher is added
         helper.phys.insert(20, 2000);
@@ -319,7 +331,8 @@ mod tests {
     #[test]
     fn snapshot_ifaces() {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
-        let (helper, mut future) = setup();
+        let (helper, future) = setup();
+        pin_mut!(future);
 
         // Add and remove ifaces before we the watcher is added
         helper.ifaces.insert(20, 2000);
@@ -346,7 +359,8 @@ mod tests {
     #[test]
     fn two_watchers() {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
-        let (helper, mut future) = setup();
+        let (helper, future) = setup();
+        pin_mut!(future);
 
         helper.ifaces.insert(20, 2000);
 
@@ -376,7 +390,8 @@ mod tests {
     #[test]
     fn remove_watcher_on_send_error() {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
-        let (helper, mut future) = setup();
+        let (helper, future) = setup();
+        pin_mut!(future);
 
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
         // Make a channel without a WRITE permission to make sure sending an event fails

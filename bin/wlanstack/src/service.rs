@@ -13,6 +13,7 @@ use futures::channel::mpsc::UnboundedReceiver;
 use futures::select;
 use futures::prelude::*;
 use log::{error, info, log};
+use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::Arc;
 
@@ -33,8 +34,9 @@ pub async fn device_service<S>(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
     -> Result<Never, failure::Error>
     where S: Stream<Item = fasync::Channel> + Unpin
 {
-    let (watcher_service, mut watcher_fut) = watcher_service::serve_watchers(
+    let (watcher_service, watcher_fut) = watcher_service::serve_watchers(
         phys.clone(), ifaces.clone(), phy_events, iface_events);
+    pin_mut!(watcher_fut);
     let mut active_clients = ConcurrentTasks::new();
     loop {
         let mut new_client = new_clients.next();
