@@ -38,6 +38,11 @@ you can set the `rustc_prefix` argument to `fx set`, like this:
 fx set x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
 ```
 
+## Communication Channels
+
+Public discussion happens on the [rust@fuchsia.com] mailing list.
+For Googler-only channels, see [go/fuchsia-rust-googlers].
+
 ## Going further
 
 - [Editor setup](editors.md)
@@ -54,3 +59,5 @@ fx set x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
 [rustfmt-install]: https://github.com/rust-lang-nursery/rustfmt#quick-start
 [rustfmt-toml]: https://fuchsia.googlesource.com/garnet/+/master/rustfmt.toml
 [fidl-tutorial]: /development/languages/fidl/tutorial.md#server-in-Rust
+[rust@fuchsia.com]: https://groups.google.com/a/fuchsia.com/forum/#!forum/rust-fuchsia
+[go/fuchsia-rust-googlers]: https://goto.google.com/fuchsia-rust-googlers
