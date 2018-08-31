@@ -17,10 +17,10 @@
 
 namespace machina {
 
-VirtioNet::Stream::Stream(VirtioNet* device, async_dispatcher_t* dispatcher,
-                          VirtioQueue* queue,
+VirtioNet::Stream::Stream(const PhysMem& phys_mem,
+                          async_dispatcher_t* dispatcher, VirtioQueue* queue,
                           std::atomic<trace_async_id_t>* trace_flow_id)
-    : device_(device),
+    : phys_mem_(phys_mem),
       dispatcher_(dispatcher),
       queue_(queue),
       trace_flow_id_(trace_flow_id),
@@ -82,11 +82,11 @@ void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
     uintptr_t packet_length;
     auto header = reinterpret_cast<virtio_net_hdr_t*>(desc.addr);
     if (!desc.has_next) {
-      packet_offset = device_->phys_mem().offset(header + 1);
+      packet_offset = phys_mem_.offset(header + 1);
       packet_length = static_cast<uint16_t>(desc.len - sizeof(*header));
     } else if (desc.len == sizeof(virtio_net_hdr_t)) {
       status = queue_->ReadDesc(desc.next, &desc);
-      packet_offset = device_->phys_mem().offset(desc.addr, desc.len);
+      packet_offset = phys_mem_.offset(desc.addr, desc.len);
       packet_length = static_cast<uint16_t>(desc.len);
     }
 
@@ -227,8 +227,8 @@ void VirtioNet::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
 
 VirtioNet::VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
     : VirtioDevice(phys_mem),
-      rx_stream_(this, dispatcher, rx_queue(), rx_trace_flow_id()),
-      tx_stream_(this, dispatcher, tx_queue(), tx_trace_flow_id()) {
+      rx_stream_(phys_mem, dispatcher, rx_queue(), rx_trace_flow_id()),
+      tx_stream_(phys_mem, dispatcher, tx_queue(), tx_trace_flow_id()) {
   config_.status = VIRTIO_NET_S_LINK_UP;
   config_.max_virtqueue_pairs = 1;
   // TODO(abdulla): Support VIRTIO_NET_F_STATUS via IOCTL_ETHERNET_GET_STATUS.

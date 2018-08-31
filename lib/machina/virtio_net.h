@@ -30,7 +30,7 @@ static_assert(kVirtioNetRxQueueIndex != kVirtioNetTxQueueIndex,
 
 // Implements a Virtio Ethernet device.
 class VirtioNet : public VirtioDevice<VIRTIO_ID_NET, kVirtioNetNumQueues,
-                                          virtio_net_config_t> {
+                                      virtio_net_config_t> {
  public:
   VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher);
   ~VirtioNet() override;
@@ -59,7 +59,7 @@ class VirtioNet : public VirtioDevice<VIRTIO_ID_NET, kVirtioNetNumQueues,
   // A single data stream (either RX or TX).
   class Stream {
    public:
-    Stream(VirtioNet* device, async_dispatcher_t* dispatcher,
+    Stream(const PhysMem& phys_mem, async_dispatcher_t* dispatcher,
            VirtioQueue* queue, std::atomic<trace_async_id_t>* trace_flow_id);
     zx_status_t Start(zx_handle_t fifo, size_t fifo_num_entries, bool rx);
 
@@ -76,7 +76,7 @@ class VirtioNet : public VirtioDevice<VIRTIO_ID_NET, kVirtioNetNumQueues,
     void OnFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                         zx_status_t status, const zx_packet_signal_t* signal);
 
-    VirtioNet* device_;
+    const PhysMem& phys_mem_;
     async_dispatcher_t* dispatcher_;
     VirtioQueue* queue_;
     std::atomic<trace_async_id_t>* trace_flow_id_;
