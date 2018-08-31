@@ -13,7 +13,7 @@ rustc_library("wlan-rsn") {
 
   deps = [
     "//garnet/lib/rust/crates/eapol",
-    "//garnet/public/rust/crates/mundane-crypto",
+    "//garnet/public/rust/crates/mundane",
     "//third_party/rust-crates/rustc_deps:bitfield",
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:bytes",

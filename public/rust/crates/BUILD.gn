@@ -15,7 +15,7 @@ package("rust-crates-tests") {
     "fuchsia-trace",
     "fuchsia-zircon",
     "mapped-vmo",
-    "mundane-crypto",
+    "mundane",
     "shared-buffer",
     "zerocopy",
     "//garnet/public/lib/fidl/rust/fidl",
