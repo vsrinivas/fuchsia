@@ -170,7 +170,7 @@ common::ByteBufferPtr ServiceSearchRequest::GetPDU(TransactionId tid) const {
     pattern.at(i).Set(it);
     i++;
   }
-  DataElement search_pattern(pattern);
+  DataElement search_pattern(std::move(pattern));
 
   size += search_pattern.WriteSize();
   auto buf = GetNewPDU(kServiceSearchRequest, tid, size);

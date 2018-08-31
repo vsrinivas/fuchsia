@@ -113,78 +113,46 @@ TEST_F(SDP_DataElementTest, Write) {
   // SDP_ServiceSearchAtttributeResponse PDU for an SPP service.
   std::vector<DataElement> attribute_list;
 
-  DataElement service_class_id;
-  service_class_id.Set(kServiceClassIdList);
-  DataElement service_class_value;
-  DataElement service_class_uuid_spp;
   // SerialPort from Assigned Numbers
-  service_class_uuid_spp.Set(common::UUID(uint16_t(0x1101)));
   std::vector<DataElement> service_class_list;
-  service_class_list.push_back(service_class_uuid_spp);
-  service_class_value.Set(service_class_list);
-  attribute_list.push_back(service_class_id);
-  attribute_list.push_back(service_class_value);
+  service_class_list.emplace_back(DataElement(common::UUID(uint16_t(0x1101))));
+  DataElement service_class_value(std::move(service_class_list));
+  attribute_list.emplace_back(DataElement(kServiceClassIdList));
+  attribute_list.emplace_back(std::move(service_class_value));
 
   // Protocol Descriptor List
-  DataElement protocol_list_id;
-  protocol_list_id.Set(kProtocolDescriptorList);
+
   std::vector<DataElement> protocol_list_value;
 
   // ( L2CAP, PSM=RFCOMM )
   std::vector<DataElement> protocol_l2cap;
-  DataElement protocol;
-  protocol.Set(protocol::kL2CAP);
-  DataElement psm;
-  psm.Set(uint16_t(0x0003));  // RFCOMM
-  protocol_l2cap.push_back(protocol);
-  protocol_l2cap.push_back(psm);
+  protocol_l2cap.emplace_back(DataElement(protocol::kL2CAP));
+  protocol_l2cap.emplace_back(DataElement(uint16_t(0x0003)));  // RFCOMM
 
-  DataElement protocol_l2cap_elem;
-  protocol_l2cap_elem.Set(protocol_l2cap);
-  protocol_list_value.push_back(protocol_l2cap_elem);
+  protocol_list_value.emplace_back(DataElement(std::move(protocol_l2cap)));
 
   // ( RFCOMM, CHANNEL=1 )
   std::vector<DataElement> protocol_rfcomm;
-  protocol.Set(protocol::kRFCOMM);
-  DataElement chan;
-  chan.Set(uint8_t(1));  // Server Channel = 1
-  protocol_rfcomm.push_back(protocol);
-  protocol_rfcomm.push_back(chan);
+  protocol_rfcomm.push_back(DataElement(protocol::kRFCOMM));
+  protocol_rfcomm.push_back(DataElement(uint8_t(1)));  // Server Channel = 1
 
-  DataElement protocol_rfcomm_elem;
-  protocol_rfcomm_elem.Set(protocol_rfcomm);
-  protocol_list_value.push_back(protocol_rfcomm_elem);
+  protocol_list_value.emplace_back(DataElement(std::move(protocol_rfcomm)));
 
-  attribute_list.push_back(protocol_list_id);
-  DataElement protocol_list_val;
-  protocol_list_val.Set(protocol_list_value);
-  attribute_list.push_back(protocol_list_val);
+  attribute_list.emplace_back(DataElement(kProtocolDescriptorList));
+  attribute_list.emplace_back(DataElement(std::move(protocol_list_value)));
 
   // Bluetooth Profile Descriptor List
-  DataElement profile_descriptor_list_id;
-  profile_descriptor_list_id.Set(kBluetoothProfileDescriptorList);
-
   std::vector<DataElement> profile_sequence_list;
   std::vector<DataElement> spp_sequence;
-  DataElement profile_uuid;
-  profile_uuid.Set(common::UUID(uint16_t(0x1101)));
-  DataElement profile_version;
-  profile_version.Set(uint16_t(0x0102));
-  spp_sequence.push_back(profile_uuid);
-  spp_sequence.push_back(profile_version);
-  DataElement spp_sequence_elem;
-  spp_sequence_elem.Set(spp_sequence);
+  spp_sequence.push_back(DataElement(common::UUID(uint16_t(0x1101))));
+  spp_sequence.push_back(DataElement(uint16_t(0x0102)));
 
-  profile_sequence_list.push_back(spp_sequence_elem);
+  profile_sequence_list.emplace_back(std::move(spp_sequence));
 
-  DataElement profile_descriptor_list_value;
-  profile_descriptor_list_value.Set(profile_sequence_list);
+  attribute_list.push_back(DataElement(kBluetoothProfileDescriptorList));
+  attribute_list.push_back((DataElement(std::move(profile_sequence_list))));
 
-  attribute_list.push_back(profile_descriptor_list_id);
-  attribute_list.push_back(profile_descriptor_list_value);
-
-  DataElement attribute_lists_elem;
-  attribute_lists_elem.Set(attribute_list);
+  DataElement attribute_lists_elem(std::move(attribute_list));
 
   // clang-format off
   auto expected = common::CreateStaticByteBuffer(
@@ -257,12 +225,16 @@ TEST_F(SDP_DataElementTest, Describe) {
             DataElement(protocol::kL2CAP).Describe());
   EXPECT_EQ("String(fuchsia💖)",
             DataElement(std::string("fuchsia💖")).Describe());
-  std::vector<DataElement> strings{DataElement(std::string("hello")),
-                                   DataElement(std::string("sapphire🔷"))};
+  std::vector<DataElement> strings;
+  strings.emplace_back(std::string("hello"));
+  strings.emplace_back(std::string("sapphire🔷"));
   EXPECT_EQ("Sequence { String(hello) String(sapphire🔷) }",
-            DataElement(strings).Describe());
+            DataElement(std::move(strings)).Describe());
   DataElement alts;
-  alts.SetAlternative(strings);
+  strings.clear();
+  strings.emplace_back(std::string("hello"));
+  strings.emplace_back(std::string("sapphire🔷"));
+  alts.SetAlternative(std::move(strings));
   EXPECT_EQ("Alternatives { String(hello) String(sapphire🔷) }",
             alts.Describe());
 }

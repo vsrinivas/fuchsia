@@ -73,6 +73,34 @@ size_t WriteLength(MutableByteBuffer* buf, size_t length) {
 
 DataElement::DataElement() : type_(Type::kNull), size_(Size::kOneByte) {}
 
+DataElement::DataElement(const DataElement& other)
+    : type_(other.type_), size_(other.size_) {
+  switch (type_) {
+    case Type::kNull:
+      return;
+    case Type::kUnsignedInt:
+      uint_value_ = other.uint_value_;
+      return;
+    case Type::kBoolean:
+    case Type::kSignedInt:
+      int_value_ = other.int_value_;
+      return;
+    case Type::kUuid:
+      uuid_ = other.uuid_;
+      return;
+    case Type::kString:
+    case Type::kUrl:
+      string_ = other.string_;
+      return;
+    case Type::kSequence:
+    case Type::kAlternative:
+      for (const auto& it : other.aggregate_) {
+        aggregate_.emplace_back(DataElement(it));
+      }
+      return;
+  }
+}
+
 template <>
 void DataElement::Set<uint8_t>(uint8_t value) {
   type_ = Type::kUnsignedInt;
@@ -160,13 +188,13 @@ template <>
 void DataElement::Set<std::vector<DataElement>>(
     std::vector<DataElement> value) {
   type_ = Type::kSequence;
-  aggregate_ = value;
+  aggregate_ = std::move(value);
   SetVariableSize(AggregateSize(aggregate_));
 }
 
 void DataElement::SetAlternative(std::vector<DataElement> items) {
   type_ = Type::kAlternative;
-  aggregate_ = items;
+  aggregate_ = std::move(items);
   SetVariableSize(AggregateSize(aggregate_));
 }
 
@@ -286,7 +314,11 @@ Optional<std::vector<DataElement>> DataElement::Get<std::vector<DataElement>>()
     const {
   Optional<std::vector<DataElement>> ret;
   if (type_ == Type::kSequence) {
-    ret = aggregate_;
+    std::vector<DataElement> aggregate_copy;
+    for (const auto& it : aggregate_) {
+      aggregate_copy.emplace_back(it.Clone());
+    }
+    ret = std::move(aggregate_copy);
   }
   return ret;
 }
@@ -586,7 +618,8 @@ size_t DataElement::Write(MutableByteBuffer* buffer) const {
 }
 
 const DataElement* DataElement::At(size_t idx) const {
-  if ((type_ != Type::kSequence) || (idx >= aggregate_.size())) {
+  if ((type_ != Type::kSequence && type_ != Type::kAlternative) ||
+      (idx >= aggregate_.size())) {
     return nullptr;
   }
   return &aggregate_[idx];

@@ -131,7 +131,7 @@ TEST_F(SDP_ServerTest, RegisterService) {
 
   EXPECT_FALSE(server()->RegisterService([](auto* record) {
     // kSDPHandle is invalid anyway, but we can't change it.
-    record->SetAttribute(kServiceRecordHandle, 0);
+    record->SetAttribute(kServiceRecordHandle, DataElement(0));
   }));
 
   EXPECT_FALSE(server()->RegisterService(

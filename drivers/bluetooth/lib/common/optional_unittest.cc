@@ -92,6 +92,20 @@ TEST(OptionalTest, MoveValue) {
   EXPECT_EQ(5, obj.value);
 }
 
+TEST(OptionalTest, MoveVector) {
+  Optional<std::vector<TestObject>> optional_vec;
+  optional_vec = std::vector<TestObject>();
+  optional_vec->emplace_back(1);
+  optional_vec->emplace_back(2);
+  optional_vec->emplace_back(3);
+  optional_vec->emplace_back(4);
+  optional_vec->emplace_back(5);
+  std::vector<TestObject> vec = std::move(*optional_vec);
+
+  EXPECT_EQ(5u, vec.size());
+  EXPECT_EQ(0u, optional_vec->size());
+}
+
 TEST(OptionalTest, Reset) {
   Optional<int> optional_int1, optional_int2;
   EXPECT_FALSE(optional_int1);

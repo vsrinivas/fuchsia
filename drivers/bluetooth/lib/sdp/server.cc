@@ -32,11 +32,12 @@ void PopulateServiceDiscoveryService(ServiceRecord* sdp) {
 
   // The VersionNumberList attribute. See v5.0, Vol 3, Part B, Sec 5.2.3
   // Version 1.0
-  sdp->SetAttribute(kSDP_VersionNumberList, std::vector<DataElement>{kVersion});
+  sdp->SetAttribute(kSDP_VersionNumberList,
+                    DataElement(std::vector<DataElement>{kVersion}));
 
   // ServiceDatabaseState attribute. Changes when a service gets added or
   // removed.
-  sdp->SetAttribute(kSDP_ServiceDatabaseState, kInitialDbState);
+  sdp->SetAttribute(kSDP_ServiceDatabaseState, DataElement(kInitialDbState));
 }
 
 }  // namespace
@@ -115,14 +116,14 @@ bool Server::RegisterService(ConstructCallback callback) {
   // a UUID representing the service classes that a given service record
   // conforms to. (5.0, Vol 3, Part B, 5.1.2)
   const DataElement& class_id_list = record->GetAttribute(kServiceClassIdList);
+  bt_log(SPEW, "sdp", "class ID list : %s", class_id_list.Describe().c_str());
   if (class_id_list.type() != DataElement::Type::kSequence) {
     bt_log(SPEW, "sdp", "class ID list isn't a sequence");
     return false;
   }
   size_t idx;
   const DataElement* elem;
-  for (idx = 0, elem = class_id_list.At(idx); elem != nullptr;
-       elem = class_id_list.At(++idx)) {
+  for (idx = 0; nullptr != (elem = class_id_list.At(idx)); idx++) {
     if (elem->type() != DataElement::Type::kUuid) {
       bt_log(SPEW, "sdp", "class ID list elements are not all UUIDs");
       return false;

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/drivers/bluetooth/lib/sdp/service_record.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 
 #include <set>
 
@@ -22,9 +23,9 @@ void AddAllUUIDs(const DataElement& elem,
     out->emplace(*elem.Get<common::UUID>());
   } else if (type == DataElement::Type::kSequence ||
              type == DataElement::Type::kAlternative) {
-    std::vector<DataElement> seq = *elem.Get<std::vector<DataElement>>();
-    for (const auto& item : seq) {
-      AddAllUUIDs(item, out);
+    const DataElement* it;
+    for (size_t idx = 0; nullptr != (it = elem.At(idx)); idx++) {
+      AddAllUUIDs(*it, out);
     }
   }
 }
@@ -92,13 +93,10 @@ void ServiceRecord::SetServiceClassUUIDs(
     const std::vector<common::UUID>& classes) {
   std::vector<DataElement> class_uuids;
   for (const auto& uuid : classes) {
-    DataElement uuid_elem;
-    uuid_elem.Set(uuid);
-    class_uuids.emplace_back(std::move(uuid_elem));
+    class_uuids.emplace_back(DataElement(uuid));
   }
-  DataElement class_uuids_elem;
-  class_uuids_elem.Set(class_uuids);
-  SetAttribute(kServiceClassIdList, class_uuids_elem);
+  DataElement class_id_list_val(std::move(class_uuids));
+  SetAttribute(kServiceClassIdList, std::move(class_id_list_val));
 }
 
 void ServiceRecord::AddProtocolDescriptor(const ProtocolListId id,
@@ -108,36 +106,37 @@ void ServiceRecord::AddProtocolDescriptor(const ProtocolListId id,
   if (id == kPrimaryProtocolList) {
     auto list_it = attributes_.find(kProtocolDescriptorList);
     if (list_it != attributes_.end()) {
-      seq = *list_it->second.Get<std::vector<DataElement>>();
+      auto v = list_it->second.Get<std::vector<DataElement>>();
+      seq = std::move(*v);
     }
   } else if (addl_protocols_.count(id)) {
-    seq = *addl_protocols_[id].Get<std::vector<DataElement>>();
+    auto v = addl_protocols_[id].Get<std::vector<DataElement>>();
+    seq = std::move(*v);
   }
 
   std::vector<DataElement> protocol_desc;
   protocol_desc.emplace_back(DataElement(uuid));
   if (params.type() == DataElement::Type::kSequence) {
-    std::vector<DataElement> param_seq =
-        *params.Get<std::vector<DataElement>>();
-    protocol_desc.insert(protocol_desc.end(), param_seq.begin(),
-                         param_seq.end());
+    auto v = params.Get<std::vector<DataElement>>();
+    auto param_seq = std::move(*v);
+    std::move(std::begin(param_seq), std::end(param_seq),
+              std::back_inserter(protocol_desc));
   } else if (params.type() != DataElement::Type::kNull) {
-    protocol_desc.emplace_back(params);
+    protocol_desc.emplace_back(std::move(params));
   }
 
-  seq.emplace_back(DataElement(protocol_desc));
-
-  DataElement protocol_list;
-  protocol_list.Set(seq);
+  seq.emplace_back(DataElement(std::move(protocol_desc)));
 
   if (id == kPrimaryProtocolList) {
-    SetAttribute(kProtocolDescriptorList, DataElement(std::move(seq)));
+    DataElement new_prot_list(std::move(seq));
+    SetAttribute(kProtocolDescriptorList, std::move(new_prot_list));
   } else {
-    addl_protocols_[id] = DataElement(std::move(seq));
+    addl_protocols_.erase(id);
+    addl_protocols_.emplace(id, DataElement(std::move(seq)));
 
     std::vector<DataElement> addl_protocol_seq;
     for (const auto& it : addl_protocols_) {
-      addl_protocol_seq.emplace_back(it.second);
+      addl_protocol_seq.emplace_back(it.second.Clone());
     }
 
     SetAttribute(kAdditionalProtocolDescriptorList,
@@ -150,7 +149,8 @@ void ServiceRecord::AddProfile(const common::UUID& uuid, uint8_t major,
   std::vector<DataElement> seq;
   auto list_it = attributes_.find(kBluetoothProfileDescriptorList);
   if (list_it != attributes_.end()) {
-    seq = *list_it->second.Get<std::vector<DataElement>>();
+    auto v = list_it->second.Get<std::vector<DataElement>>();
+    seq = std::move(*v);
   }
 
   std::vector<DataElement> profile_desc;
@@ -161,7 +161,7 @@ void ServiceRecord::AddProfile(const common::UUID& uuid, uint8_t major,
 
   seq.emplace_back(DataElement(std::move(profile_desc)));
 
-  attributes_[kBluetoothProfileDescriptorList] = DataElement(std::move(seq));
+  SetAttribute(kBluetoothProfileDescriptorList, DataElement(std::move(seq)));
 }
 
 bool ServiceRecord::AddInfo(const std::string& language_code,
@@ -176,7 +176,8 @@ bool ServiceRecord::AddInfo(const std::string& language_code,
   std::vector<DataElement> base_attr_list;
   auto it = attributes_.find(kLanguageBaseAttributeIdList);
   if (it != attributes_.end()) {
-    base_attr_list = *it->second.Get<std::vector<DataElement>>();
+    auto v = it->second.Get<std::vector<DataElement>>();
+    base_attr_list = std::move(*v);
     ZX_DEBUG_ASSERT(base_attr_list.size() % 3 == 0);
     // 0x0100 is guaranteed to be taken, start counting from higher.
     base_attrid = 0x9000;

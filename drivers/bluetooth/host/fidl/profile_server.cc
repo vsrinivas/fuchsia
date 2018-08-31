@@ -121,9 +121,9 @@ void AddProtocolDescriptorList(
       for (auto& fidl_param : *descriptor.params) {
         btlib::sdp::DataElement bt_param;
         FidlToDataElement(fidl_param, &bt_param);
-        params.emplace_back(bt_param);
+        params.emplace_back(std::move(bt_param));
       }
-      protocol_params.Set(params);
+      protocol_params.Set(std::move(params));
     } else if (descriptor.params->size() == 1) {
       FidlToDataElement(descriptor.params->front(), &protocol_params);
     }
