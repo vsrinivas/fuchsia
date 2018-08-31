@@ -563,25 +563,27 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         exception_status_ = ExceptionStatus::UNPROCESSED;
     }
 
-    // There's no need to send the message under the lock, but we do need to
-    // make sure our exception state is up to date before sending the message:
-    // Otherwise a debugger could get the packet and observe our state before
-    // we've updated it. Thus send the packet after updating our state.
-    zx_status_t status = eport->SendPacket(this, report->header.type);
-    if (status != ZX_OK) {
-        // Can't send the request to the exception handler. Report the error, which will probably
-        // kill the process.
-        LTRACEF("SendPacket returned %d\n", status);
-        return status;
-    }
-
-    // Continue to wait for the exception response if we get suspended.
-    // If it is suspended, the suspension will be processed after the
-    // exception response is received (requiring a second resume).
-    // Exceptions and suspensions are essentially treated orthogonally.
+    zx_status_t status;
 
     {
         AutoBlocked by(Blocked::EXCEPTION);
+
+        // There's no need to send the message under the lock, but we do need to make sure our
+        // exception state and blocked state are up to date before sending the message. Otherwise, a
+        // debugger could get the packet and observe them before we've updated them. Thus, send the
+        // packet after updating both exception state and blocked state.
+        status = eport->SendPacket(this, report->header.type);
+        if (status != ZX_OK) {
+            // Can't send the request to the exception handler. Report the error, which will
+            // probably kill the process.
+            LTRACEF("SendPacket returned %d\n", status);
+            return status;
+        }
+
+        // Continue to wait for the exception response if we get suspended.
+        // If it is suspended, the suspension will be processed after the
+        // exception response is received (requiring a second resume).
+        // Exceptions and suspensions are essentially treated orthogonally.
 
         do {
             status = event_wait_with_mask(&exception_event_, THREAD_SIGNAL_SUSPEND);
