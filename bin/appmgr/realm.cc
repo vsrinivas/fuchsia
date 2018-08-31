@@ -47,6 +47,8 @@ namespace {
 
 constexpr char kNumberedLabelFormat[] = "env-%d";
 constexpr char kAppPath[] = "bin/app";
+constexpr char kDataPathPrefix[] = "data/";
+constexpr char kDataKey[] = "data";
 constexpr char kAppArgv0Prefix[] = "/pkg/";
 constexpr char kLegacyFlatExportedDirPath[] = "meta/legacy_flat_exported_dir";
 // Runtime files are deprecated. Use component manifests instead.
@@ -577,12 +579,13 @@ void Realm::CreateComponentFromPackage(
     runtime_parse_error = json_parser.error_str();
   }
 
-  // If we cannot parse a runtime from either .cmx or deprecated_runtime, then
-  // we fall back to the default runner, which is running an ELF binary.
   fsl::SizedVmo app_data;
   std::string app_argv0;
+  fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata;
+  const ProgramMetadata program = cmx.program_meta();
   if (runtime.IsNull()) {
-    const ProgramMetadata program = cmx.program_meta();
+    // If we cannot parse a runtime from either .cmx or deprecated_runtime, then
+    // we fall back to the default runner, which is running an ELF binary.
     const std::string bin_path =
         program.IsBinaryNull() ? kAppPath : program.binary();
     app_argv0 = fxl::Concatenate({kAppArgv0Prefix, bin_path});
@@ -595,6 +598,20 @@ void Realm::CreateComponentFromPackage(
                                         TerminationReason::INTERNAL_ERROR);
       return;
     }
+  } else {
+    // Read 'data' path from cmx, or assume to be /pkg/data/<component-name>.
+    std::string data_path =
+        program.IsDataNull()
+            ? kDataPathPrefix +
+                  cmx.GetDefaultComponentName(package->resolved_url.get())
+            : program.data();
+    // Pass a {"data", "data/<component-name>"} pair through StartupInfo, so
+    // components can identify their directory under /pkg/data.
+    program_metadata = fidl::VectorPtr<fuchsia::sys::ProgramMetadata>::New(1);
+    fuchsia::sys::ProgramMetadata pg;
+    pg.key = kDataKey;
+    pg.value = data_path;
+    program_metadata->at(0) = pg;
   }
 
   ExportedDirType exported_dir_layout =
@@ -652,7 +669,8 @@ void Realm::CreateComponentFromPackage(
     // Use other component runners.
     CreateRunnerComponentFromPackage(
         std::move(package), std::move(launch_info), runtime,
-        builder.BuildForRunner(), std::move(component_request), std::move(ns));
+        builder.BuildForRunner(), std::move(component_request), std::move(ns),
+        std::move(program_metadata));
   }
 }
 
@@ -696,13 +714,15 @@ void Realm::CreateElfBinaryComponentFromPackage(
 void Realm::CreateRunnerComponentFromPackage(
     fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
     RuntimeMetadata& runtime, fuchsia::sys::FlatNamespace flat,
-    ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns) {
+    ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
+    fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata) {
   fuchsia::sys::Package inner_package;
   inner_package.resolved_url = package->resolved_url;
 
   fuchsia::sys::StartupInfo startup_info;
   startup_info.launch_info = std::move(launch_info);
   startup_info.flat_namespace = std::move(flat);
+  startup_info.program_metadata = std::move(program_metadata);
 
   auto* runner = GetOrCreateRunner(runtime.runner());
   if (runner == nullptr) {

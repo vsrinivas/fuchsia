@@ -127,7 +127,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   void CreateRunnerComponentFromPackage(
       fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
       RuntimeMetadata& runtime, fuchsia::sys::FlatNamespace flat,
-      ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns);
+      ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
+      fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata);
 
   zx::channel OpenInfoDir();
 
