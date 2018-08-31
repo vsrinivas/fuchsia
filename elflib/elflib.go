@@ -156,8 +156,8 @@ func ReadIDsFile(file io.Reader) ([]BinaryFileRef, error) {
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("error parsing on line %d: found `%s`", line, text)
 		}
-		build := parts[0]
-		filename := parts[1]
+		build := strings.TrimSpace(parts[0])
+		filename := strings.TrimSpace(parts[1])
 		out = append(out, BinaryFileRef{Filepath: filename, BuildID: build})
 	}
 	return out, nil
