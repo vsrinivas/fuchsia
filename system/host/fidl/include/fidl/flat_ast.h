@@ -477,7 +477,7 @@ struct Union : public Decl {
 
 class Library {
 public:
-    Library(const std::map<std::vector<StringView>, std::unique_ptr<Library>>* all_libraries,
+    Library(const std::map<std::vector<StringView>, std::unique_ptr<Library>>* dependencies,
             ErrorReporter* error_reporter);
 
     bool ConsumeFile(std::unique_ptr<raw::File> file);
@@ -496,13 +496,6 @@ private:
 
     bool ParseSize(std::unique_ptr<Constant> constant, Size* out_size);
 
-    bool RegisterDependentLibrary(Library* library,
-                                  const std::unique_ptr<raw::Identifier>& maybe_alias,
-                                  StringView filename);
-    bool InsertDependentLibraryByName(const std::vector<StringView>& library_name,
-                                      Library* library,
-                                      StringView filename);
-
     void RegisterConst(Const* decl);
     bool RegisterDecl(Decl* decl);
 
@@ -512,7 +505,6 @@ private:
                      std::unique_ptr<Type>* out_type);
 
     bool ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
-    bool ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive);
     bool ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
     bool
@@ -642,7 +634,7 @@ public:
 
     bool HasAttribute(fidl::StringView name) const;
 
-    const std::map<std::vector<StringView>, Library*>& dependencies() const { return dependencies_; };
+    const std::map<std::vector<StringView>, std::unique_ptr<Library>>* dependencies_;
 
     std::vector<StringView> library_name_;
 
@@ -659,12 +651,6 @@ public:
 
 private:
     std::unique_ptr<raw::AttributeList> attributes_;
-
-    // TODO(pascal): Refactor into a `Dependencies` object which nicely ties
-    // all these things together, and offers a simpler API.
-    std::map<std::vector<StringView>, Library*> dependencies_;
-    std::set<std::pair<std::vector<StringView>, std::string>> dependencies_by_filename_;
-    const std::map<std::vector<StringView>, std::unique_ptr<Library>>* all_libraries_;
 
     // All Name, Constant, Using, and Decl pointers here are non-null and are
     // owned by the various foo_declarations_.

@@ -508,10 +508,10 @@ std::ostringstream JSONGenerator::Produce() {
         GenerateObjectPunctuation(Position::kSubsequent);
         EmitObjectKey(&json_file_, indent_level_, "library_dependencies");
         std::vector<flat::Library*> dependencies;
-        for (auto entry : library_->dependencies()) {
+        for (const auto& entry : *library_->dependencies_) {
             if (entry.second->HasAttribute("Internal"))
                 continue;
-            dependencies.push_back(entry.second);
+            dependencies.push_back(entry.second.get());
         }
 
         GenerateArray(dependencies.begin(), dependencies.end());

@@ -50,14 +50,8 @@ private:
     // be true.  That allows the parser to track its source location, in case it
     // should become interesting to the AST.
     Token ConsumeToken(Token::Kind kind, bool is_discarded = false) {
-        auto actual_kind = Peek();
-        if (actual_kind != kind) {
-            std::string message("unexpected token ");
-            message += Token::Name(actual_kind);
-            message += ", was expecting ";
-            message += Token::Name(kind);
-            Fail(message);
-        }
+        if (Peek() != kind)
+            Fail();
         auto token = last_token_;
         last_token_ = LexAndSetPrevious(is_discarded, token);
         previous_token_ = token;
@@ -100,7 +94,6 @@ private:
     }
 
     decltype(nullptr) Fail();
-    decltype(nullptr) Fail(StringView message);
 
     std::unique_ptr<raw::Identifier> ParseIdentifier(bool is_discarded = false);
     std::unique_ptr<raw::CompoundIdentifier> ParseCompoundIdentifier();

@@ -4,6 +4,8 @@
 
 library fidl.examples.example7;
 
+using pkg;
+
 // ¡🇷🇸🇷
 
 interface Hello {

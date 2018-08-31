@@ -24,20 +24,7 @@ public:
         : source_file_(MakeSourceFile(filename, raw_source_code)),
           lexer_(source_file_, &identifier_table_),
           parser_(&lexer_, &error_reporter_),
-          library_(std::make_unique<fidl::flat::Library>(&compiled_libraries_, &error_reporter_)) {
-    }
-
-    bool AddDependentLibrary(TestLibrary& dependent_library) {
-        // For testing, we have conveniences to construct compiled test
-        // libraries, which we usurp here to move it into the current library
-        // under test. This would be made clearer with a helper object which
-        // owned all libraries under test.
-        std::vector<fidl::StringView> final_library_name = dependent_library.library_->name();
-        auto iter = compiled_libraries_.emplace(
-            std::move(final_library_name),
-            std::unique_ptr<fidl::flat::Library>(dependent_library.library_.get()));
-        dependent_library.library_.release();
-        return iter.second;
+          library_(&compiled_libraries_, &error_reporter_) {
     }
 
     bool Parse(std::unique_ptr<fidl::raw::File> &ast_ptr) {
@@ -48,12 +35,12 @@ public:
     bool Compile() {
         auto ast = parser_.Parse();
         return parser_.Ok() &&
-               library_->ConsumeFile(std::move(ast)) &&
-               library_->Compile();
+               library_.ConsumeFile(std::move(ast)) &&
+               library_.Compile();
     }
 
     const fidl::flat::Struct* LookupStruct(const std::string& name) {
-        for (const auto& struct_decl : library_->struct_declarations_) {
+        for (const auto& struct_decl : library_.struct_declarations_) {
             if (struct_decl->GetName() == name) {
                 return struct_decl.get();
             }
@@ -62,7 +49,7 @@ public:
     }
 
     const fidl::flat::Union* LookupUnion(const std::string& name) {
-        for (const auto& union_decl : library_->union_declarations_) {
+        for (const auto& union_decl : library_.union_declarations_) {
             if (union_decl->GetName() == name) {
                 return union_decl.get();
             }
@@ -71,7 +58,7 @@ public:
     }
 
     const fidl::flat::Interface* LookupInterface(const std::string& name) {
-        for (const auto& interface_decl : library_->interface_declarations_) {
+        for (const auto& interface_decl : library_.interface_declarations_) {
             if (interface_decl->GetName() == name) {
                 return interface_decl.get();
             }
@@ -83,10 +70,6 @@ public:
         return source_file_;
     }
 
-    const std::vector<std::string>& errors() const {
-        return error_reporter_.errors();
-    }
-
 private:
     fidl::SourceFile source_file_;
     fidl::IdentifierTable identifier_table_;
@@ -94,7 +77,7 @@ private:
     fidl::Lexer lexer_;
     fidl::Parser parser_;
     std::map<std::vector<fidl::StringView>, std::unique_ptr<fidl::flat::Library>> compiled_libraries_;
-    std::unique_ptr<fidl::flat::Library> library_;
+    fidl::flat::Library library_;
 };
 
 
