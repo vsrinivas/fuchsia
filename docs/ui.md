@@ -12,7 +12,7 @@ Scenic ([doc](ui_scenic.md)) provides a retained-mode scene graph that allows gr
 
 ## View Manager
 
-The view manager ([doc](ui_view_manager.md)) supports hierarchical embedding of client modules, and is responsible for propagating layout information, dispatching input events, and maintaining a model of the user's focus.
+The view manager supports hierarchical embedding of client modules, and is responsible for propagating layout information, dispatching input events, and maintaining a model of the user's focus.
 
 ## Input
 
