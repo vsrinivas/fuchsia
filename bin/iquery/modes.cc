@@ -26,6 +26,8 @@ namespace {
 // Joins the basepath and the relative path together.
 std::string GetCurrentPath(const std::string& basepath,
                            const std::vector<std::string>& rel_path) {
+  if (rel_path.empty())
+    return basepath;
   return fxl::Concatenate({basepath, "/", fxl::JoinStrings(rel_path, "/")});
 }
 
@@ -62,7 +64,7 @@ bool RecursiveRunCat(const fuchsia::inspect::InspectSyncPtr& channel_ptr,
     // Fill out the data.
     ObjectNode child_node;
     child_channel->ReadData(&child_node.object);
-    child_node.basepath = GetCurrentPath(basepath, *rel_path);
+    child_node.basepath = fxl::Concatenate({current_path, "/", child_name});
 
     FXL_VLOG(1) << "    recursing down";
     // We create the relative path stack.

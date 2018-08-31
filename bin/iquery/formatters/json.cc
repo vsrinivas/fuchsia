@@ -11,8 +11,15 @@ namespace iquery {
 namespace {
 
 // Create the appropriate Json exporter according to the given options.
+// NOTE(donoso): For some reason, rapidjson decided that while Writer is a class
+//               PrettyWriter inherits from, it is *not* a virtual interface.
+//               This means I cannot pass a Writer pointer around and get each
+//               writer to do it's thing, which is what I expected.
+//               Eventually this class will have to become a dispatcher that
+//               passes the writer to a templatized version of FormatCat, Ls
+//               and Find.
 template <typename OutputStream>
-std::unique_ptr<rapidjson::Writer<OutputStream>> GetJsonWriter(OutputStream& os,
+std::unique_ptr<rapidjson::PrettyWriter<OutputStream>> GetJsonWriter(OutputStream& os,
                                                                const Options&) {
   // NOTE(donosoc): When json formatter options are given, create the
   //                appropriate json writer and configure it here.
@@ -56,7 +63,7 @@ std::string FormatLs(const Options& options,
 // FormatCat -------------------------------------------------------------------
 
 template <typename OutputStream>
-void RecursiveFormatCat(rapidjson::Writer<OutputStream>* writer,
+void RecursiveFormatCat(rapidjson::PrettyWriter<OutputStream>* writer,
                         const Options& options, const ObjectNode& root) {
   writer->StartObject();
 

@@ -22,16 +22,13 @@ inline std::string Indent(int indent) {
 // This version exists so we can pass in the indentation.
 std::string RecursiveFormatCat(const Options& options, const ObjectNode& root,
                                int indent) {
-  const auto& object = root.object;
-
+  // In each step of the indentation we output the path formatting. This is not
+  // equivalent to what formatters as JSON do, which will introduce a path
+  // entry under each object.
+  // This is mainly because this formatter is intended for human examination and
+  // it's not intended for easier parsing.
   std::ostringstream ss;
-  if (options.path_format != Options::PathFormatting::NONE) {
-    // The path already considers the object name.
-    ss << Indent(indent)
-       << "PATH: " << FormatPath(options.path_format, root.basepath)
-       << std::endl;
-  }
-
+  const auto& object = root.object;
   for (const auto& property : *object.properties) {
     ss << Indent(indent) << FormatString(property.key) << " = "
        << FormatString(property.value) << std::endl;
@@ -45,7 +42,8 @@ std::string RecursiveFormatCat(const Options& options, const ObjectNode& root,
   // We print recursively. The recursion nature of the cat called is already
   // taken care of by now.
   for (const auto& child : root.children) {
-    ss << Indent(indent) << child.object.name << ":" << std::endl;
+    ss << Indent(indent) << FormatPath(options.path_format, child.basepath)
+       << ":" << std::endl;
     ss << RecursiveFormatCat(options, child, indent + 1);
   }
 
@@ -76,7 +74,7 @@ std::string FormatCat(const Options& options,
                       const std::vector<ObjectNode>& results) {
   std::ostringstream ss;
   for (const auto& root_node : results) {
-    ss << root_node.object.name << ":" << std::endl;
+    ss << FormatPath(options.path_format, root_node.basepath) << ":" << std::endl;
     ss << RecursiveFormatCat(options, root_node, 1);
   }
 
