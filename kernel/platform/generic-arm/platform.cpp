@@ -34,6 +34,7 @@
 
 #include <target.h>
 
+#include <arch/arch_ops.h>
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
 #include <arch/arm64/mp.h>
@@ -146,6 +147,9 @@ void platform_halt_secondary_cpus(void) {
 }
 
 static zx_status_t platform_start_cpu(uint cluster, uint cpu) {
+    // Issue memory barrier before starting to ensure previous stores will be visible to new CPU.
+    smp_mb();
+
     uint32_t ret = psci_cpu_on(cluster, cpu, kernel_entry_paddr);
     dprintf(INFO, "Trying to start cpu %u:%u returned: %d\n", cluster, cpu, (int)ret);
     if (ret != 0) {
