@@ -87,6 +87,8 @@ zx_status_t AudioOutput::Play(AudioSource& source) {
 
             if (source.finished()) {
                 memset(buf + wr, 0, todo);
+                zx_cache_flush(buf + wr, todo, ZX_CACHE_FLUSH_DATA);
+
                 wr += todo;
             } else {
                 uint32_t done;
