@@ -19,7 +19,7 @@ sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'mako')]
 from mako.lookup import TemplateLookup
 from mako.template import Template
 sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
-from layout_builder import Builder, process_manifest
+from frontend import Frontend
 
 import template_model as model
 
@@ -34,30 +34,28 @@ def sanitize(name):
     return name.replace('-', '_').replace('.', '_')
 
 
-class BazelBuilder(Builder):
+class BazelBuilder(Frontend):
 
-    def __init__(self, output, overlay):
-        super(BazelBuilder, self).__init__(
-            domains=['cpp', 'dart', 'exe', 'fidl'], ignored_domains=['image'])
-        self.output = output
-        self.is_overlay = overlay
+    def __init__(self, archive, output):
+        super(BazelBuilder, self).__init__(archive, output)
         self.dart_vendor_packages = {}
 
 
-    def source(self, *args):
+    def _bail(self):
+        '''Temporary method to abort execution when hitting a code path that's
+        not yet been converted.
+        '''
+        raise Exception('Not implemented!')
+
+
+    def local(self, *args):
         '''Builds a path in the current directory.'''
         return os.path.join(SCRIPT_DIR, *args)
 
 
-    def dest(self, *args):
-        '''Builds a path in the output directory.'''
-        return os.path.join(self.output, *args)
-
-
     def write_file(self, path, template_name, data, append=False):
         '''Writes a file based on a Mako template.'''
-        self.make_dir(path)
-        lookup = TemplateLookup(directories=[self.source('templates')])
+        lookup = TemplateLookup(directories=[self.local('templates')])
         template = lookup.get_template(template_name + '.mako')
         with open(path, 'a' if append else 'w') as file:
             file.write(template.render(data=data))
@@ -79,17 +77,13 @@ class BazelBuilder(Builder):
 
 
     def prepare(self):
-        if self.is_overlay:
-            return
         # Copy the static files.
-        shutil.copytree(self.source('base'), self.dest())
+        shutil.copytree(self.local('base'), self.output)
 
 
     def finalize(self):
         # Generate the crosstool.bzl based on the available sysroots.
         self.install_crosstool()
-        if self.is_overlay:
-            return
         # Write BUILD files for tools directories.
         tools_root = os.path.join(self.output, 'tools')
         for directory, _, _ in os.walk(tools_root, topdown=True):
@@ -121,71 +115,31 @@ class BazelBuilder(Builder):
                         'toolchain_build', crosstool)
 
 
-    def install_dart_atom(self, atom):
-        '''Installs an atom from the "dart" domain.'''
-        type = atom.tags['type']
-        if type == 'library':
-            self.install_dart_library_atom(atom)
-        elif type == 'tool':
-            self.install_dart_tool_atom(atom)
-        else:
-            print('Dart atom type "%s" not handled, skipping %s.'
-                  % (type, atom.id))
-
-
     def install_dart_library_atom(self, atom):
-        if self.is_overlay:
-            return
-
-        name = sanitize(atom.id.name)
-        package_name = atom.tags['package_name']
+        package_name = atom['name']
+        name = sanitize(package_name)
         library = model.DartLibrary(name, package_name)
         base = self.dest('dart', name)
 
-        for file in atom.files:
-            extension = os.path.splitext(file.destination)[1][1:]
-            if extension == 'json':
-                continue
-            dest = self.make_dir(os.path.join(base, file.destination))
-            shutil.copy2(file.source, dest)
+        for file in atom['sources']:
+            relative_path = os.path.relpath(file, atom['root'])
+            dest = self.make_dir(os.path.join(base, relative_path))
+            shutil.copy2(self.source(file), dest)
 
-        for dep in atom.deps:
-            library.deps.append('//dart/' + sanitize(dep.name))
+        for dep in atom['deps']:
+            library.deps.append('//dart/' + sanitize(dep))
 
-        for tag, value in atom.tags.iteritems():
-            if not tag.startswith('3p:'):
-                continue
-            name = tag.split(':', 1)[1]
+        for dep in atom['third_party_deps']:
+            name = dep['name']
             library.deps.append('@vendor_%s//:%s' % (name, name))
-            self.add_dart_vendor_package(name, value)
+            self.add_dart_vendor_package(name, dep['version'])
 
         self.write_file(os.path.join(base, 'BUILD'), 'dart_library', library)
 
 
-    def install_dart_tool_atom(self, atom):
-        if self.is_overlay:
-            return
-        for file in atom.files:
-            dest = self.make_dir(self.dest('tools', file.destination))
-            shutil.copy2(file.source, dest)
-
-
-    def install_cpp_atom(self, atom):
-        '''Installs an atom from the "cpp" domain.'''
-        type = atom.tags['type']
-        if type == 'compiled_shared' or type == 'compiled_static':
-            self.install_cpp_prebuilt_atom(atom)
-        elif type == 'sources':
-            self.install_cpp_source_atom(atom)
-        elif type == 'sysroot':
-            self.install_cpp_sysroot_atom(atom)
-        else:
-            print('C++ atom type "%s" not handled, skipping %s.'
-                  % (type, atom.id))
-
-
     def install_cpp_prebuilt_atom(self, atom, check_arch=True):
         '''Installs a prebuilt atom from the "cpp" domain.'''
+        self._bail()
         if check_arch and atom.tags['arch'] != 'target':
             print('Only libraries compiled for a target are supported, '
                   'skipping %s.' % atom.id)
@@ -244,8 +198,7 @@ class BazelBuilder(Builder):
 
     def install_cpp_source_atom(self, atom):
         '''Installs a source atom from the "cpp" domain.'''
-        if self.is_overlay:
-            return
+        self._bail()
 
         name = sanitize(atom.id.name)
         library = model.CppSourceLibrary(name)
@@ -275,6 +228,8 @@ class BazelBuilder(Builder):
 
     def install_cpp_sysroot_atom(self, atom):
         '''Installs a sysroot atom from the "cpp" domain.'''
+        self._bail()
+
         data = model.Sysroot(self.metadata.target_arch)
 
         base = self.dest('arch', self.metadata.target_arch, 'sysroot')
@@ -295,6 +250,7 @@ class BazelBuilder(Builder):
 
     def install_exe_atom(self, atom):
         '''Installs an atom from the "exe" domain.'''
+        self._bail()
         if atom.tags['arch'] != 'host':
             print('Only host executables are supported, skipping %s.' % atom.id)
             return
@@ -310,8 +266,7 @@ class BazelBuilder(Builder):
 
     def install_fidl_atom(self, atom):
         '''Installs an atom from the "fidl" domain.'''
-        if self.is_overlay:
-            return
+        self._bail()
         name = sanitize(atom.id.name)
         data = model.FidlLibrary(name, atom.tags['name'])
         base = self.dest('fidl', name)
@@ -329,30 +284,20 @@ class BazelBuilder(Builder):
 
 def main():
     parser = argparse.ArgumentParser(
-            description=('Lays out an SDK based on the given manifest'))
-    parser.add_argument('--manifest',
-                        help='Path to the SDK manifest',
+            description=('Lays out a Bazel workspace for a given SDK tarball.'))
+    parser.add_argument('--archive',
+                        help='Path to the SDK archive to ingest',
                         required=True)
     parser.add_argument('--output',
                         help='Path to the directory where to install the SDK',
                         required=True)
-    parser.add_argument('--overlay',
-                        help='Whether to overlay target binaries on top of an '
-                             'existing layout',
-                        action='store_true')
     args = parser.parse_args()
 
     # Remove any existing output.
-    if args.overlay:
-        if not os.path.isdir(args.output) :
-            print('Cannot overlay on top of missing output directory: %s.' %
-                  args.output)
-            return 1
-    else:
-        shutil.rmtree(args.output, True)
+    shutil.rmtree(args.output, True)
 
-    builder = BazelBuilder(args.output, args.overlay)
-    return 0 if process_manifest(args.manifest, builder) else 1
+    builder = BazelBuilder(args.archive, args.output)
+    return 0 if builder.run() else 1
 
 
 if __name__ == '__main__':
