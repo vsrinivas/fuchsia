@@ -15,49 +15,41 @@
  */
 
 #include "core.h"
-#include "wmi-ops.h"
 #include "debug.h"
+#include "wmi-ops.h"
 
 static void ath10k_sta_update_extd_stats_rx_duration(struct ath10k* ar,
-        struct ath10k_fw_stats* stats) {
+                                                     struct ath10k_fw_stats* stats) {
     struct ath10k_fw_extd_stats_peer* peer;
     struct ieee80211_sta* sta;
     struct ath10k_sta* arsta;
 
     rcu_read_lock();
     list_for_each_entry(peer, &stats->peers_extd, list) {
-        sta = ieee80211_find_sta_by_ifaddr(ar->hw, peer->peer_macaddr,
-                                           NULL);
-        if (!sta) {
-            continue;
-        }
+        sta = ieee80211_find_sta_by_ifaddr(ar->hw, peer->peer_macaddr, NULL);
+        if (!sta) { continue; }
         arsta = (struct ath10k_sta*)sta->drv_priv;
         arsta->rx_duration += (uint64_t)peer->rx_duration;
     }
     rcu_read_unlock();
 }
 
-static void ath10k_sta_update_stats_rx_duration(struct ath10k* ar,
-        struct ath10k_fw_stats* stats) {
+static void ath10k_sta_update_stats_rx_duration(struct ath10k* ar, struct ath10k_fw_stats* stats) {
     struct ath10k_fw_stats_peer* peer;
     struct ieee80211_sta* sta;
     struct ath10k_sta* arsta;
 
     rcu_read_lock();
     list_for_each_entry(peer, &stats->peers, list) {
-        sta = ieee80211_find_sta_by_ifaddr(ar->hw, peer->peer_macaddr,
-                                           NULL);
-        if (!sta) {
-            continue;
-        }
+        sta = ieee80211_find_sta_by_ifaddr(ar->hw, peer->peer_macaddr, NULL);
+        if (!sta) { continue; }
         arsta = (struct ath10k_sta*)sta->drv_priv;
         arsta->rx_duration += (uint64_t)peer->rx_duration;
     }
     rcu_read_unlock();
 }
 
-void ath10k_sta_update_rx_duration(struct ath10k* ar,
-                                   struct ath10k_fw_stats* stats) {
+void ath10k_sta_update_rx_duration(struct ath10k* ar, struct ath10k_fw_stats* stats) {
     if (stats->extended) {
         ath10k_sta_update_extd_stats_rx_duration(ar, stats);
     } else {
@@ -66,21 +58,16 @@ void ath10k_sta_update_rx_duration(struct ath10k* ar,
 }
 
 void ath10k_sta_statistics(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
-                           struct ieee80211_sta* sta,
-                           struct station_info* sinfo) {
+                           struct ieee80211_sta* sta, struct station_info* sinfo) {
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
 
-    if (!ath10k_peer_stats_enabled(ar)) {
-        return;
-    }
+    if (!ath10k_peer_stats_enabled(ar)) { return; }
 
     sinfo->rx_duration = arsta->rx_duration;
     sinfo->filled |= 1ULL << NL80211_STA_INFO_RX_DURATION;
 
-    if (!arsta->txrate.legacy && !arsta->txrate.nss) {
-        return;
-    }
+    if (!arsta->txrate.legacy && !arsta->txrate.nss) { return; }
 
     if (arsta->txrate.legacy) {
         sinfo->txrate.legacy = arsta->txrate.legacy;
@@ -93,9 +80,8 @@ void ath10k_sta_statistics(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
     sinfo->filled |= 1ULL << NL80211_STA_INFO_TX_BITRATE;
 }
 
-static ssize_t ath10k_dbg_sta_read_aggr_mode(struct file* file,
-        char __user* user_buf,
-        size_t count, loff_t* ppos) {
+static ssize_t ath10k_dbg_sta_read_aggr_mode(struct file* file, char __user* user_buf, size_t count,
+                                             loff_t* ppos) {
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
@@ -104,33 +90,26 @@ static ssize_t ath10k_dbg_sta_read_aggr_mode(struct file* file,
 
     mtx_lock(&ar->conf_mutex);
     len = SNPRINTF_USED(buf, sizeof(buf) - len, "aggregation mode: %s\n",
-                        (arsta->aggr_mode == ATH10K_DBG_AGGR_MODE_AUTO) ?
-                        "auto" : "manual");
+                        (arsta->aggr_mode == ATH10K_DBG_AGGR_MODE_AUTO) ? "auto" : "manual");
     mtx_unlock(&ar->conf_mutex);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
 
-static ssize_t ath10k_dbg_sta_write_aggr_mode(struct file* file,
-        const char __user* user_buf,
-        size_t count, loff_t* ppos) {
+static ssize_t ath10k_dbg_sta_write_aggr_mode(struct file* file, const char __user* user_buf,
+                                              size_t count, loff_t* ppos) {
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
     uint32_t aggr_mode;
     int ret;
 
-    if (kstrtouint_from_user(user_buf, count, 0, &aggr_mode)) {
-        return -EINVAL;
-    }
+    if (kstrtouint_from_user(user_buf, count, 0, &aggr_mode)) { return -EINVAL; }
 
-    if (aggr_mode >= ATH10K_DBG_AGGR_MODE_MAX) {
-        return -EINVAL;
-    }
+    if (aggr_mode >= ATH10K_DBG_AGGR_MODE_MAX) { return -EINVAL; }
 
     mtx_lock(&ar->conf_mutex);
-    if ((ar->state != ATH10K_STATE_ON) ||
-            (aggr_mode == arsta->aggr_mode)) {
+    if ((ar->state != ATH10K_STATE_ON) || (aggr_mode == arsta->aggr_mode)) {
         ret = count;
         goto out;
     }
@@ -155,9 +134,8 @@ static const struct file_operations fops_aggr_mode = {
     .llseek = default_llseek,
 };
 
-static ssize_t ath10k_dbg_sta_write_addba(struct file* file,
-        const char __user* user_buf,
-        size_t count, loff_t* ppos) {
+static ssize_t ath10k_dbg_sta_write_addba(struct file* file, const char __user* user_buf,
+                                          size_t count, loff_t* ppos) {
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
@@ -171,24 +149,18 @@ static ssize_t ath10k_dbg_sta_write_addba(struct file* file,
     buf[sizeof(buf) - 1] = '\0';
 
     ret = sscanf(buf, "%u %u", &tid, &buf_size);
-    if (ret != 2) {
-        return -EINVAL;
-    }
+    if (ret != 2) { return -EINVAL; }
 
     /* Valid TID values are 0 through 15 */
-    if (tid > HTT_DATA_TX_EXT_TID_MGMT - 2) {
-        return -EINVAL;
-    }
+    if (tid > HTT_DATA_TX_EXT_TID_MGMT - 2) { return -EINVAL; }
 
     mtx_lock(&ar->conf_mutex);
-    if ((ar->state != ATH10K_STATE_ON) ||
-            (arsta->aggr_mode != ATH10K_DBG_AGGR_MODE_MANUAL)) {
+    if ((ar->state != ATH10K_STATE_ON) || (arsta->aggr_mode != ATH10K_DBG_AGGR_MODE_MANUAL)) {
         ret = count;
         goto out;
     }
 
-    ret = ath10k_wmi_addba_send(ar, arsta->arvif->vdev_id, sta->addr,
-                                tid, buf_size);
+    ret = ath10k_wmi_addba_send(ar, arsta->arvif->vdev_id, sta->addr, tid, buf_size);
     if (ret) {
         ath10k_warn("failed to send addba request: vdev_id %u peer %pM tid %u buf_size %u\n",
                     arsta->arvif->vdev_id, sta->addr, tid, buf_size);
@@ -207,9 +179,8 @@ static const struct file_operations fops_addba = {
     .llseek = default_llseek,
 };
 
-static ssize_t ath10k_dbg_sta_write_addba_resp(struct file* file,
-        const char __user* user_buf,
-        size_t count, loff_t* ppos) {
+static ssize_t ath10k_dbg_sta_write_addba_resp(struct file* file, const char __user* user_buf,
+                                               size_t count, loff_t* ppos) {
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
@@ -223,24 +194,18 @@ static ssize_t ath10k_dbg_sta_write_addba_resp(struct file* file,
     buf[sizeof(buf) - 1] = '\0';
 
     ret = sscanf(buf, "%u %u", &tid, &status);
-    if (ret != 2) {
-        return -EINVAL;
-    }
+    if (ret != 2) { return -EINVAL; }
 
     /* Valid TID values are 0 through 15 */
-    if (tid > HTT_DATA_TX_EXT_TID_MGMT - 2) {
-        return -EINVAL;
-    }
+    if (tid > HTT_DATA_TX_EXT_TID_MGMT - 2) { return -EINVAL; }
 
     mtx_lock(&ar->conf_mutex);
-    if ((ar->state != ATH10K_STATE_ON) ||
-            (arsta->aggr_mode != ATH10K_DBG_AGGR_MODE_MANUAL)) {
+    if ((ar->state != ATH10K_STATE_ON) || (arsta->aggr_mode != ATH10K_DBG_AGGR_MODE_MANUAL)) {
         ret = count;
         goto out;
     }
 
-    ret = ath10k_wmi_addba_set_resp(ar, arsta->arvif->vdev_id, sta->addr,
-                                    tid, status);
+    ret = ath10k_wmi_addba_set_resp(ar, arsta->arvif->vdev_id, sta->addr, tid, status);
     if (ret) {
         ath10k_warn("failed to send addba response: vdev_id %u peer %pM tid %u status%u\n",
                     arsta->arvif->vdev_id, sta->addr, tid, status);
@@ -258,9 +223,8 @@ static const struct file_operations fops_addba_resp = {
     .llseek = default_llseek,
 };
 
-static ssize_t ath10k_dbg_sta_write_delba(struct file* file,
-        const char __user* user_buf,
-        size_t count, loff_t* ppos) {
+static ssize_t ath10k_dbg_sta_write_delba(struct file* file, const char __user* user_buf,
+                                          size_t count, loff_t* ppos) {
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
@@ -274,28 +238,21 @@ static ssize_t ath10k_dbg_sta_write_delba(struct file* file,
     buf[sizeof(buf) - 1] = '\0';
 
     ret = sscanf(buf, "%u %u %u", &tid, &initiator, &reason);
-    if (ret != 3) {
-        return -EINVAL;
-    }
+    if (ret != 3) { return -EINVAL; }
 
     /* Valid TID values are 0 through 15 */
-    if (tid > HTT_DATA_TX_EXT_TID_MGMT - 2) {
-        return -EINVAL;
-    }
+    if (tid > HTT_DATA_TX_EXT_TID_MGMT - 2) { return -EINVAL; }
 
     mtx_lock(&ar->conf_mutex);
-    if ((ar->state != ATH10K_STATE_ON) ||
-            (arsta->aggr_mode != ATH10K_DBG_AGGR_MODE_MANUAL)) {
+    if ((ar->state != ATH10K_STATE_ON) || (arsta->aggr_mode != ATH10K_DBG_AGGR_MODE_MANUAL)) {
         ret = count;
         goto out;
     }
 
-    ret = ath10k_wmi_delba_send(ar, arsta->arvif->vdev_id, sta->addr,
-                                tid, initiator, reason);
+    ret = ath10k_wmi_delba_send(ar, arsta->arvif->vdev_id, sta->addr, tid, initiator, reason);
     if (ret) {
         ath10k_warn("failed to send delba: vdev_id %u peer %pM tid %u initiator %u reason %u\n",
-                    arsta->arvif->vdev_id, sta->addr, tid, initiator,
-                    reason);
+                    arsta->arvif->vdev_id, sta->addr, tid, initiator, reason);
     }
     ret = count;
 out:
@@ -310,10 +267,8 @@ static const struct file_operations fops_delba = {
     .llseek = default_llseek,
 };
 
-static ssize_t ath10k_dbg_sta_read_peer_debug_trigger(struct file* file,
-        char __user* user_buf,
-        size_t count,
-        loff_t* ppos) {
+static ssize_t ath10k_dbg_sta_read_peer_debug_trigger(struct file* file, char __user* user_buf,
+                                                      size_t count, loff_t* ppos) {
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
@@ -321,30 +276,24 @@ static ssize_t ath10k_dbg_sta_read_peer_debug_trigger(struct file* file,
     int len = 0;
 
     mtx_lock(&ar->conf_mutex);
-    len = SNPRINTF_USED(buf, sizeof(buf) - len,
-                        "Write 1 to once trigger the debug logs\n");
+    len = SNPRINTF_USED(buf, sizeof(buf) - len, "Write 1 to once trigger the debug logs\n");
     mtx_unlock(&ar->conf_mutex);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
 
-static ssize_t
-ath10k_dbg_sta_write_peer_debug_trigger(struct file* file,
-                                        const char __user* user_buf,
-                                        size_t count, loff_t* ppos) {
+static ssize_t ath10k_dbg_sta_write_peer_debug_trigger(struct file* file,
+                                                       const char __user* user_buf, size_t count,
+                                                       loff_t* ppos) {
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
     uint8_t peer_debug_trigger;
     int ret;
 
-    if (kstrtou8_from_user(user_buf, count, 0, &peer_debug_trigger)) {
-        return -EINVAL;
-    }
+    if (kstrtou8_from_user(user_buf, count, 0, &peer_debug_trigger)) { return -EINVAL; }
 
-    if (peer_debug_trigger != 1) {
-        return -EINVAL;
-    }
+    if (peer_debug_trigger != 1) { return -EINVAL; }
 
     mtx_lock(&ar->conf_mutex);
 
@@ -353,11 +302,10 @@ ath10k_dbg_sta_write_peer_debug_trigger(struct file* file,
         goto out;
     }
 
-    ret = ath10k_wmi_peer_set_param(ar, arsta->arvif->vdev_id, sta->addr,
-                                    WMI_PEER_DEBUG, peer_debug_trigger);
+    ret = ath10k_wmi_peer_set_param(ar, arsta->arvif->vdev_id, sta->addr, WMI_PEER_DEBUG,
+                                    peer_debug_trigger);
     if (ret) {
-        ath10k_warn("failed to set param to trigger peer tid logs for station ret: %d\n",
-                    ret);
+        ath10k_warn("failed to set param to trigger peer tid logs for station ret: %d\n", ret);
         goto out;
     }
 out:
@@ -379,6 +327,5 @@ void ath10k_sta_add_debugfs(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
     debugfs_create_file("addba", 0200, dir, sta, &fops_addba);
     debugfs_create_file("addba_resp", 0200, dir, sta, &fops_addba_resp);
     debugfs_create_file("delba", 0200, dir, sta, &fops_delba);
-    debugfs_create_file("peer_debug_trigger", 0600, dir, sta,
-                        &fops_peer_debug_trigger);
+    debugfs_create_file("peer_debug_trigger", 0600, dir, sta, &fops_peer_debug_trigger);
 }

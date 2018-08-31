@@ -65,11 +65,8 @@ struct ath10k_swap_code_seg_info {
     zx_paddr_t paddr[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
 };
 
-zx_status_t ath10k_swap_code_seg_configure(struct ath10k* ar,
-        const struct ath10k_fw_file* fw_file);
-void ath10k_swap_code_seg_release(struct ath10k* ar,
-                                  struct ath10k_fw_file* fw_file);
-zx_status_t ath10k_swap_code_seg_init(struct ath10k* ar,
-                                      struct ath10k_fw_file* fw_file);
+zx_status_t ath10k_swap_code_seg_configure(struct ath10k* ar, const struct ath10k_fw_file* fw_file);
+void ath10k_swap_code_seg_release(struct ath10k* ar, struct ath10k_fw_file* fw_file);
+zx_status_t ath10k_swap_code_seg_init(struct ath10k* ar, struct ath10k_fw_file* fw_file);
 
 #endif

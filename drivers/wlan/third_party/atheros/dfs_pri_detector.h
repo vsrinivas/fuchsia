@@ -57,10 +57,9 @@ struct pri_sequence {
  * @window_size: window size back from newest pulse time stamp in usecs
  */
 struct pri_detector {
-    void (*exit)     (struct pri_detector* de);
-    struct pri_sequence*
-    (*add_pulse)(struct pri_detector* de, struct pulse_event* e);
-    void (*reset)    (struct pri_detector* de, uint64_t ts);
+    void (*exit)(struct pri_detector* de);
+    struct pri_sequence* (*add_pulse)(struct pri_detector* de, struct pulse_event* e);
+    void (*reset)(struct pri_detector* de, uint64_t ts);
 
     /* private: internal use only */
     const struct radar_detector_specs* rs;

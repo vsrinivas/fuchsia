@@ -40,24 +40,20 @@
 
 #define HTT_RX_RING_REFILL_RESCHED_MS 5
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
 static int ath10k_htt_rx_get_csum_state(struct sk_buff* skb);
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
-static_assert(IS_POW2(HTT_RX_BUF_HTABLE_SZ),
-              "Invalid hash table size, must be power of 2");
+static_assert(IS_POW2(HTT_RX_BUF_HTABLE_SZ), "Invalid hash table size, must be power of 2");
 
-static struct ath10k_msg_buf*
-ath10k_htt_rx_find_msg_buf_paddr(struct ath10k* ar, uint32_t paddr) {
+static struct ath10k_msg_buf* ath10k_htt_rx_find_msg_buf_paddr(struct ath10k* ar, uint32_t paddr) {
     uint32_t hash = fnv1a_tiny(paddr, ROUNDUP_LOG2(HTT_RX_BUF_HTABLE_SZ));
     ZX_DEBUG_ASSERT(hash < HTT_RX_BUF_HTABLE_SZ);
     list_node_t* candidate_list = &ar->htt.rx_ring.buf_hash[hash];
     struct ath10k_msg_buf* entry;
     struct ath10k_msg_buf* temp_entry;
     list_for_every_entry_safe(candidate_list, entry, temp_entry, struct ath10k_msg_buf, listnode) {
-        if (entry->paddr == paddr) {
-            return entry;
-        }
+        if (entry->paddr == paddr) { return entry; }
     }
 
     ath10k_warn("Unable to find buffer corresponding to phys addr %x\n", paddr);
@@ -71,23 +67,20 @@ static void ath10k_htt_rx_ring_free(struct ath10k_htt* htt) {
     if (htt->rx_ring.in_ord_rx == ATH10K_HTT_IN_ORD_RX_YES) {
         for (i = 0; i < HTT_RX_BUF_HTABLE_SZ; i++) {
             list_node_t* list = &htt->rx_ring.buf_hash[i];
-            while((buf = list_remove_head_type(list, struct ath10k_msg_buf, listnode)) != NULL) {
+            while ((buf = list_remove_head_type(list, struct ath10k_msg_buf, listnode)) != NULL) {
                 ath10k_msg_buf_free(buf);
             }
         }
     } else {
         for (i = 0; i < htt->rx_ring.size; i++) {
             buf = htt->rx_ring.netbufs_ring[i];
-            if (buf == NULL) {
-                continue;
-            }
+            if (buf == NULL) { continue; }
             ath10k_msg_buf_free(buf);
         }
     }
 
     htt->rx_ring.fill_cnt = 0;
-    memset(htt->rx_ring.netbufs_ring, 0,
-           htt->rx_ring.size * sizeof(htt->rx_ring.netbufs_ring[0]));
+    memset(htt->rx_ring.netbufs_ring, 0, htt->rx_ring.size * sizeof(htt->rx_ring.netbufs_ring[0]));
 }
 
 static zx_status_t __ath10k_htt_rx_ring_fill_n(struct ath10k_htt* htt, int num) {
@@ -107,9 +100,7 @@ static zx_status_t __ath10k_htt_rx_ring_fill_n(struct ath10k_htt* htt, int num) 
     idx = *htt->rx_ring.alloc_idx.vaddr;
     while (num > 0) {
         ret = ath10k_msg_buf_alloc(htt->ar, &buf, ATH10K_MSG_TYPE_BASE, HTT_RX_BUF_SIZE);
-        if (ret != ZX_OK) {
-            goto fail;
-        }
+        if (ret != ZX_OK) { goto fail; }
 
         ZX_DEBUG_ASSERT(IS_ALIGNED(buf->vaddr, HTT_RX_DESC_ALIGN));
         ZX_DEBUG_ASSERT((uintptr_t)buf->paddr + HTT_RX_BUF_SIZE <= 0x100000000);
@@ -179,13 +170,10 @@ zx_status_t ath10k_htt_rx_ring_refill(struct ath10k* ar) {
     zx_status_t ret;
 
     mtx_lock(&htt->rx_ring.lock);
-    ret = ath10k_htt_rx_ring_fill_n(htt, (htt->rx_ring.fill_level -
-                                          htt->rx_ring.fill_cnt));
+    ret = ath10k_htt_rx_ring_fill_n(htt, (htt->rx_ring.fill_level - htt->rx_ring.fill_cnt));
     mtx_unlock(&htt->rx_ring.lock);
 
-    if (ret != ZX_OK) {
-        ath10k_htt_rx_ring_free(htt);
-    }
+    if (ret != ZX_OK) { ath10k_htt_rx_ring_free(htt); }
 
     return ret;
 }
@@ -197,7 +185,7 @@ void ath10k_htt_rx_free(struct ath10k_htt* htt) {
     free(htt->rx_ring.netbufs_ring);
 }
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
 static inline struct sk_buff* ath10k_htt_rx_netbuf_pop(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
     int idx;
@@ -333,7 +321,7 @@ static int ath10k_htt_rx_amsdu_pop(struct ath10k_htt* htt,
 
     return msdu_chaining;
 }
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
 static struct ath10k_msg_buf* ath10k_htt_rx_pop_paddr(struct ath10k_htt* htt, uint32_t paddr) {
     struct ath10k* ar = htt->ar;
@@ -342,26 +330,23 @@ static struct ath10k_msg_buf* ath10k_htt_rx_pop_paddr(struct ath10k_htt* htt, ui
     ASSERT_MTX_HELD(&htt->rx_ring.lock);
 
     msdu = ath10k_htt_rx_find_msg_buf_paddr(ar, paddr);
-    if (!msdu) {
-        return NULL;
-    }
+    if (!msdu) { return NULL; }
 
     list_delete(&msdu->listnode);
     htt->rx_ring.fill_cnt--;
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
     dma_unmap_single(htt->ar->dev, rxcb->paddr,
                      msdu->len + skb_tailroom(msdu),
                      DMA_FROM_DEVICE);
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
-    ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt rx netbuf pop: ",
-                    msdu->vaddr, msdu->used);
+    ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt rx netbuf pop: ", msdu->vaddr, msdu->used);
 
     return msdu;
 }
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
 static zx_status_t ath10k_htt_rx_pop_paddr_list(struct ath10k_htt* htt,
                                                 struct htt_rx_in_ord_ind* ev,
                                                 list_node_t* list) {
@@ -408,7 +393,7 @@ static zx_status_t ath10k_htt_rx_pop_paddr_list(struct ath10k_htt* htt,
 
     return ZX_OK;
 }
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
 zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
@@ -429,24 +414,18 @@ zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
     }
 
     htt->rx_ring.netbufs_ring = calloc(1, htt->rx_ring.size * sizeof(struct ath10k_msg_buf*));
-    if (htt->rx_ring.netbufs_ring == NULL) {
-        goto err_netbuf;
-    }
+    if (htt->rx_ring.netbufs_ring == NULL) { goto err_netbuf; }
 
     size_t ring_size = htt->rx_ring.size * sizeof(htt->rx_ring.paddrs_ring);
 
     zx_handle_t bti_handle;
     ret = ath10k_hif_get_bti_handle(ar, &bti_handle);
-    if (ret != ZX_OK) {
-        goto err_dma_ring;
-    }
+    if (ret != ZX_OK) { goto err_dma_ring; }
 
     // Can this be a IO_BUFFER_RO?
     ret = io_buffer_init(&htt->rx_ring.io_buf, bti_handle, ring_size,
                          IO_BUFFER_RW | IO_BUFFER_CONTIG);
-    if (ret != ZX_OK) {
-        goto err_dma_ring;
-    }
+    if (ret != ZX_OK) { goto err_dma_ring; }
     htt->rx_ring.paddrs_ring = io_buffer_virt(&htt->rx_ring.io_buf);
     htt->rx_ring.base_paddr = io_buffer_phys(&htt->rx_ring.io_buf);
     if (htt->rx_ring.base_paddr + ring_size > 0x100000000ULL) {
@@ -457,9 +436,7 @@ zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
     size_t idx_size = sizeof(*htt->rx_ring.alloc_idx.vaddr);
     ret = io_buffer_init(&htt->rx_ring.alloc_idx.io_buf, bti_handle, idx_size,
                          IO_BUFFER_RW | IO_BUFFER_CONTIG);
-    if (ret != ZX_OK) {
-        goto err_dma_idx;
-    }
+    if (ret != ZX_OK) { goto err_dma_idx; }
     htt->rx_ring.alloc_idx.vaddr = io_buffer_virt(&htt->rx_ring.alloc_idx.io_buf);
     htt->rx_ring.alloc_idx.paddr = io_buffer_phys(&htt->rx_ring.alloc_idx.io_buf);
     if (htt->rx_ring.alloc_idx.paddr + idx_size > 0x100000000ULL) {
@@ -481,8 +458,8 @@ zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
 
     atomic_store(&htt->num_mpdus_ready, 0);
 
-    ath10k_dbg(ar, ATH10K_DBG_BOOT, "htt rx ring size %d fill_level %d\n",
-               htt->rx_ring.size, htt->rx_ring.fill_level);
+    ath10k_dbg(ar, ATH10K_DBG_BOOT, "htt rx ring size %d fill_level %d\n", htt->rx_ring.size,
+               htt->rx_ring.fill_level);
     return ZX_OK;
 
 err_dma_idx_map:
@@ -495,7 +472,7 @@ err_netbuf:
     return ZX_ERR_NO_MEMORY;
 }
 
-#if 0 // NEEDS PORTING
+#if 0  // NEEDS PORTING
 static int ath10k_htt_rx_crypto_param_len(struct ath10k* ar,
         enum htt_rx_mpdu_encrypt_type type) {
     switch (type) {
@@ -1575,10 +1552,9 @@ static void ath10k_htt_rx_proc_rx_ind(struct ath10k_htt* htt,
 
     atomic_fetch_add(&htt->num_mpdus_ready, mpdu_count);
 }
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
-static void ath10k_htt_rx_tx_compl_ind(struct ath10k* ar,
-                                       struct ath10k_msg_buf* buf) {
+static void ath10k_htt_rx_tx_compl_ind(struct ath10k* ar, struct ath10k_msg_buf* buf) {
     struct ath10k_htt* htt = &ar->htt;
     struct htt_resp* resp = ath10k_msg_buf_get_header(buf, ATH10K_MSG_TYPE_HTT_RESP);
     struct htt_tx_done tx_done = {};
@@ -1614,7 +1590,7 @@ static void ath10k_htt_rx_tx_compl_ind(struct ath10k* ar,
     }
 }
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
 static void ath10k_htt_rx_addba(struct ath10k* ar, struct htt_resp* resp) {
     struct htt_rx_addba* ev = &resp->rx_addba;
     struct ath10k_peer* peer;
@@ -1797,10 +1773,9 @@ static int ath10k_htt_rx_h_rx_offload(struct ath10k* ar,
     }
     return num_msdu;
 }
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
-static zx_status_t ath10k_htt_rx_in_ord_ind(struct ath10k* ar,
-                                            struct ath10k_msg_buf* buf) {
+static zx_status_t ath10k_htt_rx_in_ord_ind(struct ath10k* ar, struct ath10k_msg_buf* buf) {
     struct ath10k_htt* htt = &ar->htt;
     struct htt_resp* resp = ath10k_msg_buf_get_header(buf, ATH10K_MSG_TYPE_HTT_RESP);
 
@@ -1824,7 +1799,7 @@ static zx_status_t ath10k_htt_rx_in_ord_ind(struct ath10k* ar,
     return ZX_OK;
 }
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
 static zx_status_t ath10k_htt_rx_in_ord_ind(struct ath10k* ar,
                                             struct ath10k_msg_buf* buf,
                                             int* num_msdus) {
@@ -2188,7 +2163,7 @@ static void ath10k_htt_rx_tx_mode_switch_ind(struct ath10k* ar,
 
     ath10k_mac_tx_push_pending(ar);
 }
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
 void ath10k_htt_htc_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_buf) {
     bool release;
@@ -2196,12 +2171,10 @@ void ath10k_htt_htc_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* ms
     release = ath10k_htt_t2h_msg_handler(ar, msg_buf);
 
     /* Free the indication buffer */
-    if (release) {
-        ath10k_msg_buf_free(msg_buf);
-    }
+    if (release) { ath10k_msg_buf_free(msg_buf); }
 }
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
 static inline bool is_valid_legacy_rate(uint8_t rate) {
     static const uint8_t legacy_rates[] = {1, 2, 5, 11, 6, 9, 12,
                                            18, 24, 36, 48, 54
@@ -2332,7 +2305,7 @@ out:
     mtx_unlock(&ar->data_lock);
     rcu_read_unlock();
 }
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
 bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_buf) {
     struct ath10k_htt* htt = &ar->htt;
@@ -2344,8 +2317,7 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
         ath10k_warn("unaligned htt message, expect trouble\n");
     }
 
-    ath10k_dbg(ar, ATH10K_DBG_HTT, "htt rx, msg_type: 0x%0X\n",
-               resp->hdr.msg_type);
+    ath10k_dbg(ar, ATH10K_DBG_HTT, "htt rx, msg_type: 0x%0X\n", resp->hdr.msg_type);
 
     if (resp->hdr.msg_type >= ar->htt.t2h_msg_types_max) {
         ath10k_dbg(ar, ATH10K_DBG_HTT, "htt rx, unsupported msg_type: 0x%0X\n max: 0x%0X",
@@ -2363,30 +2335,30 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
     }
     case HTT_T2H_MSG_TYPE_RX_IND:
         ath10k_err("HTT_T2H_MSG_TYPE_RX_IND unimplemented\n");
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         ath10k_htt_rx_proc_rx_ind(htt, &resp->rx_ind);
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
         break;
     case HTT_T2H_MSG_TYPE_PEER_MAP: {
         ath10k_err("HTT_T2H_MSG_TYPE_PEER_MAP unimplemented\n");
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         struct htt_peer_map_event ev = {
             .vdev_id = resp->peer_map.vdev_id,
             .peer_id = resp->peer_map.peer_id,
         };
         memcpy(ev.addr, resp->peer_map.addr, sizeof(ev.addr));
         ath10k_peer_map_event(htt, &ev);
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
         break;
     }
     case HTT_T2H_MSG_TYPE_PEER_UNMAP: {
         ath10k_err("HTT_T2H_MSG_TYPE_PEER_UNMAP unimplemented\n");
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         struct htt_peer_unmap_event ev = {
             .peer_id = resp->peer_unmap.peer_id,
         };
         ath10k_peer_unmap_event(htt, &ev);
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
         break;
     }
     case HTT_T2H_MSG_TYPE_MGMT_TX_COMPLETION: {
@@ -2421,18 +2393,15 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
         struct ath10k* ar = htt->ar;
         struct htt_security_indication* ev = &resp->security_indication;
 
-        ath10k_dbg(ar, ATH10K_DBG_HTT,
-                   "sec ind peer_id %d unicast %d type %d\n",
-                   ev->peer_id,
-                   !!(ev->flags & HTT_SECURITY_IS_UNICAST),
-                   MS(ev->flags, HTT_SECURITY_TYPE));
+        ath10k_dbg(ar, ATH10K_DBG_HTT, "sec ind peer_id %d unicast %d type %d\n", ev->peer_id,
+                   !!(ev->flags & HTT_SECURITY_IS_UNICAST), MS(ev->flags, HTT_SECURITY_TYPE));
         sync_completion_signal(&ar->install_key_done);
         break;
     }
     case HTT_T2H_MSG_TYPE_RX_FRAG_IND: {
         ath10k_err("HTT_T2H_MSG_TYPE_RX_FRAG_IND unimplemented\n");
-        ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt event: ",
-                        msg_buf->vaddr, msg_buf->used);
+        ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt event: ", msg_buf->vaddr,
+                        msg_buf->used);
         atomic_fetch_add(&htt->num_mpdus_ready, 1);
         break;
     }
@@ -2451,24 +2420,24 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
         break;
     case HTT_T2H_MSG_TYPE_RX_ADDBA:
         ath10k_err("HTT_T2H_MSG_TYPE_RX_ADDBA unimplemented\n");
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         ath10k_htt_rx_addba(ar, resp);
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
         break;
     case HTT_T2H_MSG_TYPE_RX_DELBA:
         ath10k_err("HTT_T2H_MSG_TYPE_RX_DELBA unimplemented\n");
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         ath10k_htt_rx_delba(ar, resp);
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
         break;
     case HTT_T2H_MSG_TYPE_PKTLOG: {
         ath10k_err("HTT_T2H_MSG_TYPE_PKTLOG unimplemented\n");
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         trace_ath10k_htt_pktlog(ar, resp->pktlog_msg.payload,
                                 skb->len -
                                 offsetof(struct htt_resp,
                                          pktlog_msg.payload));
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
         break;
     }
     case HTT_T2H_MSG_TYPE_RX_FLUSH: {
@@ -2482,16 +2451,14 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
         status = ath10k_htt_rx_in_ord_ind(ar, msg_buf);
         mtx_unlock(&htt->rx_ring.lock);
         ath10k_htt_rx_msdu_buff_replenish(htt);
-        if (status != ZX_OK) {
-            return false;
-        }
+        if (status != ZX_OK) { return false; }
         break;
     }
     case HTT_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND:
         break;
     case HTT_T2H_MSG_TYPE_CHAN_CHANGE: {
         ath10k_err("HTT_T2H_MSG_TYPE_CHAN_CHANGE unimplemented\n");
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         uint32_t phymode = resp->chan_change.phymode;
         uint32_t freq = resp->chan_change.freq;
 
@@ -2499,7 +2466,7 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
         ath10k_dbg(ar, ATH10K_DBG_HTT,
                    "htt chan change freq %u phymode %s\n",
                    freq, ath10k_wmi_phymode_str(phymode));
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
         break;
     }
     case HTT_T2H_MSG_TYPE_AGGR_CONF:
@@ -2510,28 +2477,27 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
     }
     case HTT_T2H_MSG_TYPE_TX_FETCH_CONFIRM:
         ath10k_err("HTT_T2H_MSG_TYPE_TX_FETCH_CONFIRM unimplemented\n");
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         ath10k_htt_rx_tx_fetch_confirm(ar, skb);
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
         break;
     case HTT_T2H_MSG_TYPE_TX_MODE_SWITCH_IND:
         ath10k_err("HTT_T2H_MSG_TYPE_TX_MODE_SWITCH_IND unimplemented\n");
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         ath10k_htt_rx_tx_mode_switch_ind(ar, skb);
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
         break;
     case HTT_T2H_MSG_TYPE_PEER_STATS:
         ath10k_err("HTT_T2H_MSG_TYPE_PEER_STATS unimplemented\n");
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         ath10k_htt_fetch_peer_stats(ar, skb);
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
         break;
     case HTT_T2H_MSG_TYPE_EN_STATS:
     default:
-        ath10k_warn("htt event (%d) not handled\n",
-                    resp->hdr.msg_type);
-        ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt event: ",
-                        msg_buf->vaddr, msg_buf->used);
+        ath10k_warn("htt event (%d) not handled\n", resp->hdr.msg_type);
+        ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt event: ", msg_buf->vaddr,
+                        msg_buf->used);
         break;
     }
     return true;

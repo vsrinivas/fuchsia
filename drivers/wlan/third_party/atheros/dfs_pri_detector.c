@@ -26,8 +26,7 @@ struct ath_dfs_pool_stats global_dfs_pool_stats = {};
 #define DFS_POOL_STAT_INC(c) (global_dfs_pool_stats.c++)
 #define DFS_POOL_STAT_DEC(c) (global_dfs_pool_stats.c--)
 #define GET_PRI_TO_USE(MIN, MAX, RUNTIME) \
-    (MIN + PRI_TOLERANCE == MAX - PRI_TOLERANCE ? \
-    MIN + PRI_TOLERANCE : RUNTIME)
+    (MIN + PRI_TOLERANCE == MAX - PRI_TOLERANCE ? MIN + PRI_TOLERANCE : RUNTIME)
 
 /**
  * struct pulse_elem - elements in pulse queue
@@ -47,14 +46,12 @@ static uint32_t pde_get_multiple(uint32_t val, uint32_t fraction, uint32_t toler
     uint32_t factor;
     uint32_t delta;
 
-    if (fraction == 0) {
-        return 0;
-    }
+    if (fraction == 0) { return 0; }
 
     delta = (val < fraction) ? (fraction - val) : (val - fraction);
 
     if (delta <= tolerance)
-        /* val and fraction are within tolerance */
+    /* val and fraction are within tolerance */
     {
         return 1;
     }
@@ -64,7 +61,7 @@ static uint32_t pde_get_multiple(uint32_t val, uint32_t fraction, uint32_t toler
     if (remainder > tolerance) {
         /* no exact match */
         if ((fraction - remainder) <= tolerance)
-            /* remainder is within tolerance */
+        /* remainder is within tolerance */
         {
             factor++;
         } else {
@@ -101,8 +98,8 @@ static void pool_deregister_ref(void) {
     DFS_POOL_STAT_DEC(pool_reference);
     if (singleton_pool_references == 0) {
         /* free singleton pools with no references left */
-        struct pri_sequence* ps, *ps0;
-        struct pulse_elem* p, *p0;
+        struct pri_sequence *ps, *ps0;
+        struct pulse_elem *p, *p0;
 
         list_for_each_entry_safe(p, p0, &pulse_pool, head) {
             list_del(&p->head);
@@ -158,9 +155,7 @@ static struct pulse_elem* pool_get_pulse_elem(void) {
 
 static struct pulse_elem* pulse_queue_get_tail(struct pri_detector* pde) {
     struct list_head* l = &pde->pulses;
-    if (list_empty(l)) {
-        return NULL;
-    }
+    if (list_empty(l)) { return NULL; }
     return list_entry(l->prev, struct pulse_elem, head);
 }
 
@@ -181,19 +176,13 @@ static void pulse_queue_check_window(struct pri_detector* pde) {
     struct pulse_elem* p;
 
     /* there is no delta time with less than 2 pulses */
-    if (pde->count < 2) {
-        return;
-    }
+    if (pde->count < 2) { return; }
 
-    if (pde->last_ts <= pde->window_size) {
-        return;
-    }
+    if (pde->last_ts <= pde->window_size) { return; }
 
     min_valid_ts = pde->last_ts - pde->window_size;
     while ((p = pulse_queue_get_tail(pde)) != NULL) {
-        if (p->ts >= min_valid_ts) {
-            return;
-        }
+        if (p->ts >= min_valid_ts) { return; }
         pulse_queue_dequeue(pde);
     }
 }
@@ -215,14 +204,12 @@ static bool pulse_queue_enqueue(struct pri_detector* pde, uint64_t ts) {
     pde->count++;
     pde->last_ts = ts;
     pulse_queue_check_window(pde);
-    if (pde->count >= pde->max_count) {
-        pulse_queue_dequeue(pde);
-    }
+    if (pde->count >= pde->max_count) { pulse_queue_dequeue(pde); }
     return true;
 }
 
-static bool pseq_handler_create_sequences(struct pri_detector* pde,
-        uint64_t ts, uint32_t min_count) {
+static bool pseq_handler_create_sequences(struct pri_detector* pde, uint64_t ts,
+                                          uint32_t min_count) {
     struct pulse_elem* p;
     list_for_each_entry(p, &pde->pulses, head) {
         struct pri_sequence ps, *new_ps;
@@ -232,13 +219,13 @@ static bool pseq_handler_create_sequences(struct pri_detector* pde,
         uint32_t delta_ts = ts - p->ts;
 
         if (delta_ts < pde->rs->pri_min)
-            /* ignore too small pri */
+        /* ignore too small pri */
         {
             continue;
         }
 
         if (delta_ts > pde->rs->pri_max)
-            /* stop on too large pri (sorted list) */
+        /* stop on too large pri (sorted list) */
         {
             break;
         }
@@ -248,10 +235,8 @@ static bool pseq_handler_create_sequences(struct pri_detector* pde,
         ps.count_falses = 0;
         ps.first_ts = p->ts;
         ps.last_ts = ts;
-        ps.pri = GET_PRI_TO_USE(pde->rs->pri_min,
-                                pde->rs->pri_max, ts - p->ts);
-        ps.dur = ps.pri * (pde->rs->ppb - 1)
-                 + 2 * pde->rs->max_pri_tolerance;
+        ps.pri = GET_PRI_TO_USE(pde->rs->pri_min, pde->rs->pri_max, ts - p->ts);
+        ps.dur = ps.pri * (pde->rs->ppb - 1) + 2 * pde->rs->max_pri_tolerance;
 
         p2 = p;
         tmp_false_count = 0;
@@ -260,13 +245,12 @@ static bool pseq_handler_create_sequences(struct pri_detector* pde,
         list_for_each_entry_continue(p2, &pde->pulses, head) {
             uint32_t factor;
             if (p2->ts < min_valid_ts)
-                /* stop on crossing window border */
+            /* stop on crossing window border */
             {
                 break;
             }
             /* check if pulse match (multi)PRI */
-            factor = pde_get_multiple(ps.last_ts - p2->ts, ps.pri,
-                                      pde->rs->max_pri_tolerance);
+            factor = pde_get_multiple(ps.last_ts - p2->ts, ps.pri, pde->rs->max_pri_tolerance);
             if (factor > 0) {
                 ps.count++;
                 ps.first_ts = p2->ts;
@@ -282,7 +266,7 @@ static bool pseq_handler_create_sequences(struct pri_detector* pde,
             }
         }
         if (ps.count <= min_count)
-            /* did not reach minimum count, drop sequence */
+        /* did not reach minimum count, drop sequence */
         {
             continue;
         }
@@ -307,10 +291,9 @@ static bool pseq_handler_create_sequences(struct pri_detector* pde,
 }
 
 /* check new ts and add to all matching existing sequences */
-static uint32_t
-pseq_handler_add_to_existing_seqs(struct pri_detector* pde, uint64_t ts) {
+static uint32_t pseq_handler_add_to_existing_seqs(struct pri_detector* pde, uint64_t ts) {
     uint32_t max_count = 0;
-    struct pri_sequence* ps, *ps2;
+    struct pri_sequence *ps, *ps2;
     list_for_each_entry_safe(ps, ps2, &pde->sequences, head) {
         uint32_t delta_ts;
         uint32_t factor;
@@ -323,15 +306,12 @@ pseq_handler_add_to_existing_seqs(struct pri_detector* pde, uint64_t ts) {
         }
 
         delta_ts = ts - ps->last_ts;
-        factor = pde_get_multiple(delta_ts, ps->pri,
-                                  pde->rs->max_pri_tolerance);
+        factor = pde_get_multiple(delta_ts, ps->pri, pde->rs->max_pri_tolerance);
         if (factor > 0) {
             ps->last_ts = ts;
             ps->count++;
 
-            if (max_count < ps->count) {
-                max_count = ps->count;
-            }
+            if (max_count < ps->count) { max_count = ps->count; }
         } else {
             ps->count_falses++;
         }
@@ -339,13 +319,10 @@ pseq_handler_add_to_existing_seqs(struct pri_detector* pde, uint64_t ts) {
     return max_count;
 }
 
-static struct pri_sequence*
-pseq_handler_check_detection(struct pri_detector* pde) {
+static struct pri_sequence* pseq_handler_check_detection(struct pri_detector* pde) {
     struct pri_sequence* ps;
 
-    if (list_empty(&pde->sequences)) {
-        return NULL;
-    }
+    if (list_empty(&pde->sequences)) { return NULL; }
 
     list_for_each_entry(ps, &pde->sequences, head) {
         /*
@@ -354,18 +331,17 @@ pseq_handler_check_detection(struct pri_detector* pde) {
          * 2) have more matching than false pulses
          */
         if ((ps->count >= pde->rs->ppb_thresh) &&
-                (ps->count * pde->rs->num_pri >= ps->count_falses)) {
+            (ps->count * pde->rs->num_pri >= ps->count_falses)) {
             return ps;
         }
     }
     return NULL;
 }
 
-
 /* free pulse queue and sequences list and give objects back to pools */
 static void pri_detector_reset(struct pri_detector* pde, uint64_t ts) {
-    struct pri_sequence* ps, *ps0;
-    struct pulse_elem* p, *p0;
+    struct pri_sequence *ps, *ps0;
+    struct pulse_elem *p, *p0;
     list_for_each_entry_safe(ps, ps0, &pde->sequences, head) {
         list_del_init(&ps->head);
         pool_put_pseq_elem(ps);
@@ -385,26 +361,22 @@ static void pri_detector_exit(struct pri_detector* de) {
 }
 
 static struct pri_sequence* pri_detector_add_pulse(struct pri_detector* de,
-        struct pulse_event* event) {
+                                                   struct pulse_event* event) {
     uint32_t max_updated_seq;
     struct pri_sequence* ps;
     uint64_t ts = event->ts;
     const struct radar_detector_specs* rs = de->rs;
 
     /* ignore pulses not within width range */
-    if ((rs->width_min > event->width) || (rs->width_max < event->width)) {
-        return NULL;
-    }
+    if ((rs->width_min > event->width) || (rs->width_max < event->width)) { return NULL; }
 
     if ((ts - de->last_ts) < rs->max_pri_tolerance)
-        /* if delta to last pulse is too short, don't use this pulse */
+    /* if delta to last pulse is too short, don't use this pulse */
     {
         return NULL;
     }
     /* radar detector spec needs chirp, but not detected */
-    if (rs->chirp && rs->chirp != event->chirp) {
-        return NULL;
-    }
+    if (rs->chirp && rs->chirp != event->chirp) { return NULL; }
 
     de->last_ts = ts;
 
@@ -417,9 +389,7 @@ static struct pri_sequence* pri_detector_add_pulse(struct pri_detector* de,
 
     ps = pseq_handler_check_detection(de);
 
-    if (ps == NULL) {
-        pulse_queue_enqueue(de, ts);
-    }
+    if (ps == NULL) { pulse_queue_enqueue(de, ts); }
 
     return ps;
 }
@@ -428,9 +398,7 @@ struct pri_detector* pri_detector_init(const struct radar_detector_specs* rs) {
     struct pri_detector* de;
 
     de = kzalloc(sizeof(*de), GFP_ATOMIC);
-    if (de == NULL) {
-        return NULL;
-    }
+    if (de == NULL) { return NULL; }
     de->exit = pri_detector_exit;
     de->add_pulse = pri_detector_add_pulse;
     de->reset = pri_detector_reset;

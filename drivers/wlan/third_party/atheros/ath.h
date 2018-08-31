@@ -18,8 +18,8 @@
 #define ATH_H
 
 #include <linux/etherdevice.h>
-#include <linux/skbuff.h>
 #include <linux/if_ether.h>
+#include <linux/skbuff.h>
 #include <linux/spinlock.h>
 #include <net/mac80211.h>
 
@@ -31,7 +31,7 @@
  * Different parts have different size key caches.  We handle
  * up to ATH_KEYMAX entries (could dynamically allocate state).
  */
-#define ATH_KEYMAX          128     /* max key cache size we handle */
+#define ATH_KEYMAX 128 /* max key cache size we handle */
 
 static const uint8_t ath_bcast_mac[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
@@ -103,8 +103,8 @@ struct ath_keyval {
     uint8_t kv_val[16];  /* TK */
     uint8_t kv_mic[8];   /* Michael MIC key */
     uint8_t kv_txmic[8]; /* Michael MIC TX key (used only if the hardware
-                     * supports both MIC keys in the same key cache entry;
-                     * in that case, kv_mic is the RX key) */
+                          * supports both MIC keys in the same key cache entry;
+                          * in that case, kv_mic is the RX key) */
 };
 
 enum ath_cipher {
@@ -131,11 +131,10 @@ struct ath_ops {
     void (*multi_read)(void*, uint32_t* addr, uint32_t* val, uint16_t count);
     void (*write)(void*, uint32_t val, uint32_t reg_offset);
     void (*enable_write_buffer)(void*);
-    void (*write_flush) (void*);
+    void (*write_flush)(void*);
     uint32_t (*rmw)(void*, uint32_t reg_offset, uint32_t set, uint32_t clr);
     void (*enable_rmw_buffer)(void*);
-    void (*rmw_flush) (void*);
-
+    void (*rmw_flush)(void*);
 };
 
 struct ath_common;
@@ -194,39 +193,27 @@ static inline const struct ath_ps_ops* ath_ps_ops(struct ath_common* common) {
     return common->ps_ops;
 }
 
-struct sk_buff* ath_rxbuf_alloc(struct ath_common* common,
-                                uint32_t len,
-                                gfp_t gfp_mask);
+struct sk_buff* ath_rxbuf_alloc(struct ath_common* common, uint32_t len, gfp_t gfp_mask);
 bool ath_is_mybeacon(struct ath_common* common, struct ieee80211_hdr* hdr);
 
 void ath_hw_setbssidmask(struct ath_common* common);
 void ath_key_delete(struct ath_common* common, struct ieee80211_key_conf* key);
-int ath_key_config(struct ath_common* common,
-                   struct ieee80211_vif* vif,
-                   struct ieee80211_sta* sta,
+int ath_key_config(struct ath_common* common, struct ieee80211_vif* vif, struct ieee80211_sta* sta,
                    struct ieee80211_key_conf* key);
 bool ath_hw_keyreset(struct ath_common* common, uint16_t entry);
 void ath_hw_cycle_counters_update(struct ath_common* common);
 int32_t ath_hw_get_listen_time(struct ath_common* common);
 
-__printf(3, 4)
-void ath_printk(const char* level, const struct ath_common* common,
-                const char* fmt, ...);
+__printf(3, 4) void ath_printk(const char* level, const struct ath_common* common, const char* fmt,
+                               ...);
 
-#define ath_emerg(common, fmt, ...)             \
-    ath_printk(KERN_EMERG, common, fmt, ##__VA_ARGS__)
-#define ath_alert(common, fmt, ...)             \
-    ath_printk(KERN_ALERT, common, fmt, ##__VA_ARGS__)
-#define ath_crit(common, fmt, ...)              \
-    ath_printk(KERN_CRIT, common, fmt, ##__VA_ARGS__)
-#define ath_err(common, fmt, ...)               \
-    ath_printk(KERN_ERR, common, fmt, ##__VA_ARGS__)
-#define ath_warn(common, fmt, ...)              \
-    ath_printk(KERN_WARNING, common, fmt, ##__VA_ARGS__)
-#define ath_notice(common, fmt, ...)                \
-    ath_printk(KERN_NOTICE, common, fmt, ##__VA_ARGS__)
-#define ath_info(common, fmt, ...)              \
-    ath_printk(KERN_INFO, common, fmt, ##__VA_ARGS__)
+#define ath_emerg(common, fmt, ...) ath_printk(KERN_EMERG, common, fmt, ##__VA_ARGS__)
+#define ath_alert(common, fmt, ...) ath_printk(KERN_ALERT, common, fmt, ##__VA_ARGS__)
+#define ath_crit(common, fmt, ...) ath_printk(KERN_CRIT, common, fmt, ##__VA_ARGS__)
+#define ath_err(common, fmt, ...) ath_printk(KERN_ERR, common, fmt, ##__VA_ARGS__)
+#define ath_warn(common, fmt, ...) ath_printk(KERN_WARNING, common, fmt, ##__VA_ARGS__)
+#define ath_notice(common, fmt, ...) ath_printk(KERN_NOTICE, common, fmt, ##__VA_ARGS__)
+#define ath_info(common, fmt, ...) ath_printk(KERN_INFO, common, fmt, ##__VA_ARGS__)
 
 /**
  * enum ath_debug_level - atheros wireless debug level
@@ -262,7 +249,7 @@ void ath_printk(const char* level, const struct ath_common* common,
  * entry.
  */
 enum ATH_DEBUG {
-// clang-format off
+    // clang-format off
     ATH_DBG_RESET         = 0x00000001,
     ATH_DBG_QUEUE         = 0x00000002,
     ATH_DBG_EEPROM        = 0x00000004,
@@ -285,7 +272,7 @@ enum ATH_DEBUG {
     ATH_DBG_DYNACK        = 0x00080000,
     ATH_DBG_SPECTRAL_SCAN = 0x00100000,
     ATH_DBG_ANY           = 0xffffffff
-// clang-format on
+    // clang-format on
 };
 
 #define ATH_DBG_DEFAULT (ATH_DBG_FATAL)
@@ -293,29 +280,30 @@ enum ATH_DEBUG {
 
 #ifdef CONFIG_ATH_DEBUG
 
-#define ath_dbg(common, dbg_mask, fmt, ...)             \
-do {                                    \
-    if ((common)->debug_mask & ATH_DBG_##dbg_mask)          \
-        ath_printk(KERN_DEBUG, common, fmt, ##__VA_ARGS__); \
-} while (0)
+#define ath_dbg(common, dbg_mask, fmt, ...)                     \
+    do {                                                        \
+        if ((common)->debug_mask & ATH_DBG_##dbg_mask)          \
+            ath_printk(KERN_DEBUG, common, fmt, ##__VA_ARGS__); \
+    } while (0)
 
 #define ATH_DBG_WARN(foo, arg...) WARN(foo, arg)
 #define ATH_DBG_WARN_ON_ONCE(foo) WARN_ON_ONCE(foo)
 
 #else
 
-static inline  __attribute__ ((format (printf, 3, 4)))
-void _ath_dbg(struct ath_common* common, enum ATH_DEBUG dbg_mask,
-              const char* fmt, ...) {
-}
-#define ath_dbg(common, dbg_mask, fmt, ...)             \
-    _ath_dbg(common, ATH_DBG_##dbg_mask, fmt, ##__VA_ARGS__)
+static inline __attribute__((format(printf, 3, 4))) void _ath_dbg(struct ath_common* common,
+                                                                  enum ATH_DEBUG dbg_mask,
+                                                                  const char* fmt, ...) {}
+#define ath_dbg(common, dbg_mask, fmt, ...) _ath_dbg(common, ATH_DBG_##dbg_mask, fmt, ##__VA_ARGS__)
 
-#define ATH_DBG_WARN(foo, arg...) do {} while (0)
-#define ATH_DBG_WARN_ON_ONCE(foo) ({                \
-    int __ret_warn_once = !!(foo);              \
-    unlikely(__ret_warn_once);              \
-})
+#define ATH_DBG_WARN(foo, arg...) \
+    do {                          \
+    } while (0)
+#define ATH_DBG_WARN_ON_ONCE(foo)      \
+    ({                                 \
+        int __ret_warn_once = !!(foo); \
+        unlikely(__ret_warn_once);     \
+    })
 
 #endif /* CONFIG_ATH_DEBUG */
 

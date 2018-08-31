@@ -489,5 +489,4 @@ struct host_interest {
 #define QCA4019_BOARD_EXT_DATA_SZ 0
 // clang-format on
 
-
 #endif /* __TARGADDRS_H__ */

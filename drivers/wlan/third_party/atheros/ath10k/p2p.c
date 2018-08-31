@@ -20,10 +20,9 @@
 #include "mac.h"
 #include "wmi.h"
 
-static void ath10k_p2p_noa_ie_fill(uint8_t* data, size_t len,
-                                   const struct wmi_p2p_noa_info* noa) {
+static void ath10k_p2p_noa_ie_fill(uint8_t* data, size_t len, const struct wmi_p2p_noa_info* noa) {
     struct ieee80211_p2p_noa_attr* noa_attr;
-    uint8_t  ctwindow_oppps = noa->ctwindow_oppps;
+    uint8_t ctwindow_oppps = noa->ctwindow_oppps;
     uint8_t ctwindow = ctwindow_oppps >> WMI_P2P_OPPPS_CTWINDOW_OFFSET;
     bool oppps = !!(ctwindow_oppps & WMI_P2P_OPPPS_ENABLE_BIT);
     uint16_t* noa_attr_len;
@@ -41,14 +40,12 @@ static void ath10k_p2p_noa_ie_fill(uint8_t* data, size_t len,
 
     /* NOA ATTR */
     data[6] = IEEE80211_P2P_ATTR_ABSENCE_NOTICE;
-    noa_attr_len = (uint16_t*)&data[7];  /* 2 bytes */
+    noa_attr_len = (uint16_t*)&data[7]; /* 2 bytes */
     noa_attr = (struct ieee80211_p2p_noa_attr*)&data[9];
 
     noa_attr->index = noa->index;
     noa_attr->oppps_ctwindow = ctwindow;
-    if (oppps) {
-        noa_attr->oppps_ctwindow |= IEEE80211_P2P_OPPPS_ENABLE_BIT;
-    }
+    if (oppps) { noa_attr->oppps_ctwindow |= IEEE80211_P2P_OPPPS_ENABLE_BIT; }
 
     for (i = 0; i < noa_descriptors; i++) {
         noa_attr->desc[i].count = noa->descriptors[i].type_count;
@@ -65,21 +62,17 @@ static void ath10k_p2p_noa_ie_fill(uint8_t* data, size_t len,
 static size_t ath10k_p2p_noa_ie_len_compute(const struct wmi_p2p_noa_info* noa) {
     size_t len = 0;
 
-    if (!noa->num_descriptors &&
-            !(noa->ctwindow_oppps & WMI_P2P_OPPPS_ENABLE_BIT)) {
-        return 0;
-    }
+    if (!noa->num_descriptors && !(noa->ctwindow_oppps & WMI_P2P_OPPPS_ENABLE_BIT)) { return 0; }
 
     len += 1 + 1 + 4; /* EID + len + OUI */
-    len += 1 + 2; /* noa attr + attr len */
-    len += 1 + 1; /* index + oppps_ctwindow */
+    len += 1 + 2;     /* noa attr + attr len */
+    len += 1 + 1;     /* index + oppps_ctwindow */
     len += noa->num_descriptors * sizeof(struct ieee80211_p2p_noa_desc);
 
     return len;
 }
 
-static void ath10k_p2p_noa_ie_assign(struct ath10k_vif* arvif, void* ie,
-                                     size_t len) {
+static void ath10k_p2p_noa_ie_assign(struct ath10k_vif* arvif, void* ie, size_t len) {
     struct ath10k* ar = arvif->ar;
 
     ASSERT_MTX_HELD(&ar->data_lock);
@@ -90,8 +83,7 @@ static void ath10k_p2p_noa_ie_assign(struct ath10k_vif* arvif, void* ie,
     arvif->u.ap.noa_len = len;
 }
 
-static void __ath10k_p2p_noa_update(struct ath10k_vif* arvif,
-                                    const struct wmi_p2p_noa_info* noa) {
+static void __ath10k_p2p_noa_update(struct ath10k_vif* arvif, const struct wmi_p2p_noa_info* noa) {
     struct ath10k* ar = arvif->ar;
     void* ie;
     size_t len;
@@ -101,21 +93,16 @@ static void __ath10k_p2p_noa_update(struct ath10k_vif* arvif,
     ath10k_p2p_noa_ie_assign(arvif, NULL, 0);
 
     len = ath10k_p2p_noa_ie_len_compute(noa);
-    if (!len) {
-        return;
-    }
+    if (!len) { return; }
 
     ie = kmalloc(len, GFP_ATOMIC);
-    if (!ie) {
-        return;
-    }
+    if (!ie) { return; }
 
     ath10k_p2p_noa_ie_fill(ie, len, noa);
     ath10k_p2p_noa_ie_assign(arvif, ie, len);
 }
 
-void ath10k_p2p_noa_update(struct ath10k_vif* arvif,
-                           const struct wmi_p2p_noa_info* noa) {
+void ath10k_p2p_noa_update(struct ath10k_vif* arvif, const struct wmi_p2p_noa_info* noa) {
     struct ath10k* ar = arvif->ar;
 
     mtx_lock(&ar->data_lock);
@@ -128,14 +115,11 @@ struct ath10k_p2p_noa_arg {
     const struct wmi_p2p_noa_info* noa;
 };
 
-static void ath10k_p2p_noa_update_vdev_iter(void* data, uint8_t* mac,
-        struct ieee80211_vif* vif) {
+static void ath10k_p2p_noa_update_vdev_iter(void* data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct ath10k_vif* arvif = (void*)vif->drv_priv;
     struct ath10k_p2p_noa_arg* arg = data;
 
-    if (arvif->vdev_id != arg->vdev_id) {
-        return;
-    }
+    if (arvif->vdev_id != arg->vdev_id) { return; }
 
     ath10k_p2p_noa_update(arvif, arg->noa);
 }
@@ -147,8 +131,6 @@ void ath10k_p2p_noa_update_by_vdev_id(struct ath10k* ar, uint32_t vdev_id,
         .noa = noa,
     };
 
-    ieee80211_iterate_active_interfaces_atomic(ar->hw,
-            IEEE80211_IFACE_ITER_NORMAL,
-            ath10k_p2p_noa_update_vdev_iter,
-            &arg);
+    ieee80211_iterate_active_interfaces_atomic(ar->hw, IEEE80211_IFACE_ITER_NORMAL,
+                                               ath10k_p2p_noa_update_vdev_iter, &arg);
 }

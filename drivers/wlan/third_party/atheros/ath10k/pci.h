@@ -84,7 +84,7 @@ struct pcie_state {
 };
 
 /* PCIE_CONFIG_FLAG definitions */
-#define PCIE_CONFIG_FLAG_ENABLE_L1  0x0000001
+#define PCIE_CONFIG_FLAG_ENABLE_L1 0x0000001
 
 /* Host software's Copy Engine configuration. */
 #define CE_ATTR_FLAGS 0
@@ -211,7 +211,7 @@ struct ath10k_pci {
      */
     unsigned long ps_wake_refcount;
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
     /* Waking up takes some time (up to 2ms in some cases) so it can be bad
      * for latency. To mitigate this the device isn't immediately allowed
      * to sleep after all references are undone - instead there's a grace
@@ -221,7 +221,7 @@ struct ath10k_pci {
      * Also see comments on ATH10K_PCI_SLEEP_GRACE_PERIOD_MSEC.
      */
     struct timer_list ps_timer;
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
     /* MMIO registers are used to communicate with the device. With
      * intensive traffic accessing powersave register would be a bit
@@ -250,13 +250,13 @@ struct ath10k_pci {
      */
     zx_status_t (*targ_cpu_to_ce_addr)(struct ath10k* ar, uint32_t addr, uint32_t* ce_addr);
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
     /* Keep this entry in the last, memory for struct ath10k_ahb is
      * allocated (ahb support enabled case) in the continuation of
      * this struct.
      */
     struct ath10k_ahb ahb[0];
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 };
 
 static inline struct ath10k_pci* ath10k_pci_priv(struct ath10k* ar) {
@@ -290,16 +290,14 @@ zx_status_t ath10k_pci_hif_tx_sg(struct ath10k* ar, uint8_t pipe_id,
                                  struct ath10k_hif_sg_item* items, int n_items);
 zx_status_t ath10k_pci_hif_diag_read(struct ath10k* ar, uint32_t address, void* buf,
                                      size_t buf_len);
-zx_status_t ath10k_pci_diag_write_mem(struct ath10k* ar, uint32_t address,
-                                      const void* data, int nbytes);
+zx_status_t ath10k_pci_diag_write_mem(struct ath10k* ar, uint32_t address, const void* data,
+                                      int nbytes);
 zx_status_t ath10k_pci_hif_exchange_bmi_msg(struct ath10k* ar, void* req, uint32_t req_len,
                                             void* resp, uint32_t* resp_len);
 zx_status_t ath10k_pci_hif_map_service_to_pipe(struct ath10k* ar, uint16_t service_id,
                                                uint8_t* ul_pipe, uint8_t* dl_pipe);
-void ath10k_pci_hif_get_default_pipe(struct ath10k* ar, uint8_t* ul_pipe,
-                                     uint8_t* dl_pipe);
-void ath10k_pci_hif_send_complete_check(struct ath10k* ar, uint8_t pipe,
-                                        int force);
+void ath10k_pci_hif_get_default_pipe(struct ath10k* ar, uint8_t* ul_pipe, uint8_t* dl_pipe);
+void ath10k_pci_hif_send_complete_check(struct ath10k* ar, uint8_t pipe, int force);
 uint16_t ath10k_pci_hif_get_free_queue_number(struct ath10k* ar, uint8_t pipe);
 void ath10k_pci_hif_power_down(struct ath10k* ar);
 zx_status_t ath10k_pci_alloc_pipes(struct ath10k* ar);

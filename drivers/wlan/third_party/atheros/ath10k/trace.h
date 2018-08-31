@@ -40,12 +40,12 @@ static inline uint32_t ath10k_frm_hdr_len(const void* buf, size_t len) {
 #if !defined(CONFIG_ATH10K_TRACING)
 #undef TRACE_EVENT
 #define TRACE_EVENT(name, proto, ...) \
-static inline void trace_ ## name(proto) {}
+    static inline void trace_##name(proto) {}
 #undef DECLARE_EVENT_CLASS
 #define DECLARE_EVENT_CLASS(...)
 #undef DEFINE_EVENT
 #define DEFINE_EVENT(evt_class, name, proto, ...) \
-static inline void trace_ ## name(proto) {}
+    static inline void trace_##name(proto) {}
 #endif /* !CONFIG_ATH10K_TRACING || __CHECKER__ */
 
 #undef TRACE_SYSTEM

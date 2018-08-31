@@ -15,25 +15,22 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/export.h>
 #include <asm/unaligned.h>
+#include <linux/export.h>
 #include <net/mac80211.h>
 
 #include "ath.h"
 #include "reg.h"
 
-#define REG_READ            (common->ops->read)
-#define REG_WRITE(_ah, _reg, _val)  (common->ops->write)(_ah, _val, _reg)
-#define ENABLE_REGWRITE_BUFFER(_ah)         \
-    if (common->ops->enable_write_buffer)       \
-        common->ops->enable_write_buffer((_ah));
+#define REG_READ (common->ops->read)
+#define REG_WRITE(_ah, _reg, _val) (common->ops->write)(_ah, _val, _reg)
+#define ENABLE_REGWRITE_BUFFER(_ah) \
+    if (common->ops->enable_write_buffer) common->ops->enable_write_buffer((_ah));
 
-#define REGWRITE_BUFFER_FLUSH(_ah)          \
-    if (common->ops->write_flush)           \
-        common->ops->write_flush((_ah));
+#define REGWRITE_BUFFER_FLUSH(_ah) \
+    if (common->ops->write_flush) common->ops->write_flush((_ah));
 
-
-#define IEEE80211_WEP_NKID      4       /* number of key ids */
+#define IEEE80211_WEP_NKID 4 /* number of key ids */
 
 /************************/
 /* Key Cache Management */
@@ -44,8 +41,7 @@ bool ath_hw_keyreset(struct ath_common* common, uint16_t entry) {
     void* ah = common->ah;
 
     if (entry >= common->keymax) {
-        ath_err(common, "keyreset: keycache entry %u out of range\n",
-                entry);
+        ath_err(common, "keyreset: keycache entry %u out of range\n", entry);
         return false;
     }
 
@@ -71,10 +67,8 @@ bool ath_hw_keyreset(struct ath_common* common, uint16_t entry) {
         REG_WRITE(ah, AR_KEYTABLE_KEY3(micentry), 0);
         if (common->crypt_caps & ATH_CRYPT_CAP_MIC_COMBINED) {
             REG_WRITE(ah, AR_KEYTABLE_KEY4(micentry), 0);
-            REG_WRITE(ah, AR_KEYTABLE_TYPE(micentry),
-                      AR_KEYTABLE_TYPE_CLR);
+            REG_WRITE(ah, AR_KEYTABLE_TYPE(micentry), AR_KEYTABLE_TYPE_CLR);
         }
-
     }
 
     REGWRITE_BUFFER_FLUSH(ah);
@@ -83,15 +77,13 @@ bool ath_hw_keyreset(struct ath_common* common, uint16_t entry) {
 }
 EXPORT_SYMBOL(ath_hw_keyreset);
 
-static bool ath_hw_keysetmac(struct ath_common* common,
-                             uint16_t entry, const uint8_t* mac) {
+static bool ath_hw_keysetmac(struct ath_common* common, uint16_t entry, const uint8_t* mac) {
     uint32_t macHi, macLo;
     uint32_t unicast_flag = AR_KEYTABLE_VALID;
     void* ah = common->ah;
 
     if (entry >= common->keymax) {
-        ath_err(common, "keysetmac: keycache entry %u out of range\n",
-                entry);
+        ath_err(common, "keysetmac: keycache entry %u out of range\n", entry);
         return false;
     }
 
@@ -103,9 +95,7 @@ static bool ath_hw_keysetmac(struct ath_common* common,
          * Not setting this bit allows the hardware to use the key
          * for multicast frame decryption.
          */
-        if (mac[0] & 0x01) {
-            unicast_flag = 0;
-        }
+        if (mac[0] & 0x01) { unicast_flag = 0; }
 
         macLo = get_unaligned_le32(mac);
         macHi = get_unaligned_le16(mac + 4);
@@ -126,15 +116,13 @@ static bool ath_hw_keysetmac(struct ath_common* common,
 }
 
 static bool ath_hw_set_keycache_entry(struct ath_common* common, uint16_t entry,
-                                      const struct ath_keyval* k,
-                                      const uint8_t* mac) {
+                                      const struct ath_keyval* k, const uint8_t* mac) {
     void* ah = common->ah;
     uint32_t key0, key1, key2, key3, key4;
     uint32_t keyType;
 
     if (entry >= common->keymax) {
-        ath_err(common, "set-entry: keycache entry %u out of range\n",
-                entry);
+        ath_err(common, "set-entry: keycache entry %u out of range\n", entry);
         return false;
     }
 
@@ -144,8 +132,7 @@ static bool ath_hw_set_keycache_entry(struct ath_common* common, uint16_t entry,
         break;
     case ATH_CIPHER_AES_CCM:
         if (!(common->crypt_caps & ATH_CRYPT_CAP_CIPHER_AESCCM)) {
-            ath_dbg(common, ANY,
-                    "AES-CCM not supported by this mac rev\n");
+            ath_dbg(common, ANY, "AES-CCM not supported by this mac rev\n");
             return false;
         }
         keyType = AR_KEYTABLE_TYPE_CCM;
@@ -153,15 +140,13 @@ static bool ath_hw_set_keycache_entry(struct ath_common* common, uint16_t entry,
     case ATH_CIPHER_TKIP:
         keyType = AR_KEYTABLE_TYPE_TKIP;
         if (entry + 64 >= common->keymax) {
-            ath_dbg(common, ANY,
-                    "entry %u inappropriate for TKIP\n", entry);
+            ath_dbg(common, ANY, "entry %u inappropriate for TKIP\n", entry);
             return false;
         }
         break;
     case ATH_CIPHER_WEP:
         if (k->kv_len < WLAN_KEY_LEN_WEP40) {
-            ath_dbg(common, ANY, "WEP key length %u too small\n",
-                    k->kv_len);
+            ath_dbg(common, ANY, "WEP key length %u too small\n", k->kv_len);
             return false;
         }
         if (k->kv_len <= WLAN_KEY_LEN_WEP40) {
@@ -185,9 +170,7 @@ static bool ath_hw_set_keycache_entry(struct ath_common* common, uint16_t entry,
     key2 = get_unaligned_le32(k->kv_val + 6);
     key3 = get_unaligned_le16(k->kv_val + 10);
     key4 = get_unaligned_le32(k->kv_val + 12);
-    if (k->kv_len <= WLAN_KEY_LEN_WEP104) {
-        key4 &= 0xff;
-    }
+    if (k->kv_len <= WLAN_KEY_LEN_WEP104) { key4 &= 0xff; }
 
     /*
      * Note: Key cache registers access special memory area that requires
@@ -217,7 +200,7 @@ static bool ath_hw_set_keycache_entry(struct ath_common* common, uint16_t entry,
         REG_WRITE(ah, AR_KEYTABLE_TYPE(entry), keyType);
 
         /* Write MAC address for the entry */
-        (void) ath_hw_keysetmac(common, entry, mac);
+        (void)ath_hw_keysetmac(common, entry, mac);
 
         if (common->crypt_caps & ATH_CRYPT_CAP_MIC_COMBINED) {
             /*
@@ -252,8 +235,7 @@ static bool ath_hw_set_keycache_entry(struct ath_common* common, uint16_t entry,
 
             /* Write TX[63:32] and keyType(reserved) */
             REG_WRITE(ah, AR_KEYTABLE_KEY4(micentry), mic4);
-            REG_WRITE(ah, AR_KEYTABLE_TYPE(micentry),
-                      AR_KEYTABLE_TYPE_CLR);
+            REG_WRITE(ah, AR_KEYTABLE_TYPE(micentry), AR_KEYTABLE_TYPE_CLR);
 
             REGWRITE_BUFFER_FLUSH(ah);
 
@@ -291,8 +273,7 @@ static bool ath_hw_set_keycache_entry(struct ath_common* common, uint16_t entry,
 
             /* Write TX[63:32] and keyType(reserved) */
             REG_WRITE(ah, AR_KEYTABLE_KEY4(micentry), 0);
-            REG_WRITE(ah, AR_KEYTABLE_TYPE(micentry),
-                      AR_KEYTABLE_TYPE_CLR);
+            REG_WRITE(ah, AR_KEYTABLE_TYPE(micentry), AR_KEYTABLE_TYPE_CLR);
 
             REGWRITE_BUFFER_FLUSH(ah);
         }
@@ -330,15 +311,14 @@ static bool ath_hw_set_keycache_entry(struct ath_common* common, uint16_t entry,
         REGWRITE_BUFFER_FLUSH(ah);
 
         /* Write MAC address for the entry */
-        (void) ath_hw_keysetmac(common, entry, mac);
+        (void)ath_hw_keysetmac(common, entry, mac);
     }
 
     return true;
 }
 
 static int ath_setkey_tkip(struct ath_common* common, uint16_t keyix, const uint8_t* key,
-                           struct ath_keyval* hk, const uint8_t* addr,
-                           bool authenticator) {
+                           struct ath_keyval* hk, const uint8_t* addr, bool authenticator) {
     const uint8_t* key_rxmic;
     const uint8_t* key_txmic;
 
@@ -386,14 +366,12 @@ static int ath_reserve_key_cache_slot_tkip(struct ath_common* common) {
     int i;
 
     for (i = IEEE80211_WEP_NKID; i < common->keymax / 2; i++) {
-        if (test_bit(i, common->keymap) ||
-                test_bit(i + 64, common->keymap)) {
-            continue;    /* At least one part of TKIP key allocated */
+        if (test_bit(i, common->keymap) || test_bit(i + 64, common->keymap)) {
+            continue; /* At least one part of TKIP key allocated */
         }
         if (!(common->crypt_caps & ATH_CRYPT_CAP_MIC_COMBINED) &&
-                (test_bit(i + 32, common->keymap) ||
-                 test_bit(i + 64 + 32, common->keymap))) {
-            continue;    /* At least one part of TKIP key allocated */
+            (test_bit(i + 32, common->keymap) || test_bit(i + 64 + 32, common->keymap))) {
+            continue; /* At least one part of TKIP key allocated */
         }
 
         /* Found a free slot for a TKIP key */
@@ -402,52 +380,39 @@ static int ath_reserve_key_cache_slot_tkip(struct ath_common* common) {
     return -1;
 }
 
-static int ath_reserve_key_cache_slot(struct ath_common* common,
-                                      uint32_t cipher) {
+static int ath_reserve_key_cache_slot(struct ath_common* common, uint32_t cipher) {
     int i;
 
-    if (cipher == WLAN_CIPHER_SUITE_TKIP) {
-        return ath_reserve_key_cache_slot_tkip(common);
-    }
+    if (cipher == WLAN_CIPHER_SUITE_TKIP) { return ath_reserve_key_cache_slot_tkip(common); }
 
     /* First, try to find slots that would not be available for TKIP. */
     if (!(common->crypt_caps & ATH_CRYPT_CAP_MIC_COMBINED)) {
         for (i = IEEE80211_WEP_NKID; i < common->keymax / 4; i++) {
             if (!test_bit(i, common->keymap) &&
-                    (test_bit(i + 32, common->keymap) ||
-                     test_bit(i + 64, common->keymap) ||
-                     test_bit(i + 64 + 32, common->keymap))) {
+                (test_bit(i + 32, common->keymap) || test_bit(i + 64, common->keymap) ||
+                 test_bit(i + 64 + 32, common->keymap))) {
                 return i;
             }
             if (!test_bit(i + 32, common->keymap) &&
-                    (test_bit(i, common->keymap) ||
-                     test_bit(i + 64, common->keymap) ||
-                     test_bit(i + 64 + 32, common->keymap))) {
+                (test_bit(i, common->keymap) || test_bit(i + 64, common->keymap) ||
+                 test_bit(i + 64 + 32, common->keymap))) {
                 return i + 32;
             }
             if (!test_bit(i + 64, common->keymap) &&
-                    (test_bit(i, common->keymap) ||
-                     test_bit(i + 32, common->keymap) ||
-                     test_bit(i + 64 + 32, common->keymap))) {
+                (test_bit(i, common->keymap) || test_bit(i + 32, common->keymap) ||
+                 test_bit(i + 64 + 32, common->keymap))) {
                 return i + 64;
             }
             if (!test_bit(i + 64 + 32, common->keymap) &&
-                    (test_bit(i, common->keymap) ||
-                     test_bit(i + 32, common->keymap) ||
-                     test_bit(i + 64, common->keymap))) {
+                (test_bit(i, common->keymap) || test_bit(i + 32, common->keymap) ||
+                 test_bit(i + 64, common->keymap))) {
                 return i + 64 + 32;
             }
         }
     } else {
         for (i = IEEE80211_WEP_NKID; i < common->keymax / 2; i++) {
-            if (!test_bit(i, common->keymap) &&
-                    test_bit(i + 64, common->keymap)) {
-                return i;
-            }
-            if (test_bit(i, common->keymap) &&
-                    !test_bit(i + 64, common->keymap)) {
-                return i + 64;
-            }
+            if (!test_bit(i, common->keymap) && test_bit(i + 64, common->keymap)) { return i; }
+            if (test_bit(i, common->keymap) && !test_bit(i + 64, common->keymap)) { return i + 64; }
         }
     }
 
@@ -456,21 +421,13 @@ static int ath_reserve_key_cache_slot(struct ath_common* common,
         /* Do not allow slots that could be needed for TKIP group keys
          * to be used. This limitation could be removed if we know that
          * TKIP will not be used. */
-        if (i >= 64 && i < 64 + IEEE80211_WEP_NKID) {
-            continue;
-        }
+        if (i >= 64 && i < 64 + IEEE80211_WEP_NKID) { continue; }
         if (!(common->crypt_caps & ATH_CRYPT_CAP_MIC_COMBINED)) {
-            if (i >= 32 && i < 32 + IEEE80211_WEP_NKID) {
-                continue;
-            }
-            if (i >= 64 + 32 && i < 64 + 32 + IEEE80211_WEP_NKID) {
-                continue;
-            }
+            if (i >= 32 && i < 32 + IEEE80211_WEP_NKID) { continue; }
+            if (i >= 64 + 32 && i < 64 + 32 + IEEE80211_WEP_NKID) { continue; }
         }
 
-        if (!test_bit(i, common->keymap)) {
-            return i;    /* Found a free slot for a key */
-        }
+        if (!test_bit(i, common->keymap)) { return i; /* Found a free slot for a key */ }
     }
 
     /* No free slot found */
@@ -480,9 +437,7 @@ static int ath_reserve_key_cache_slot(struct ath_common* common,
 /*
  * Configure encryption in the HW.
  */
-int ath_key_config(struct ath_common* common,
-                   struct ieee80211_vif* vif,
-                   struct ieee80211_sta* sta,
+int ath_key_config(struct ath_common* common, struct ieee80211_vif* vif, struct ieee80211_sta* sta,
                    struct ieee80211_key_conf* key) {
     struct ath_keyval hk;
     const uint8_t* mac = NULL;
@@ -511,9 +466,7 @@ int ath_key_config(struct ath_common* common,
     }
 
     hk.kv_len = key->keylen;
-    if (key->keylen) {
-        memcpy(hk.kv_val, key->key, key->keylen);
-    }
+    if (key->keylen) { memcpy(hk.kv_val, key->key, key->keylen); }
 
     if (!(key->flags & IEEE80211_KEY_FLAG_PAIRWISE)) {
         switch (vif->type) {
@@ -538,9 +491,7 @@ int ath_key_config(struct ath_common* common,
             break;
         }
     } else if (key->keyidx) {
-        if (WARN_ON(!sta)) {
-            return -EOPNOTSUPP;
-        }
+        if (WARN_ON(!sta)) { return -EOPNOTSUPP; }
         mac = sta->addr;
 
         if (vif->type != NL80211_IFTYPE_AP) {
@@ -551,33 +502,24 @@ int ath_key_config(struct ath_common* common,
             return -EIO;
         }
     } else {
-        if (WARN_ON(!sta)) {
-            return -EOPNOTSUPP;
-        }
+        if (WARN_ON(!sta)) { return -EOPNOTSUPP; }
         mac = sta->addr;
 
         idx = ath_reserve_key_cache_slot(common, key->cipher);
     }
 
-    if (idx < 0) {
-        return -ENOSPC;    /* no free key cache entries */
-    }
+    if (idx < 0) { return -ENOSPC; /* no free key cache entries */ }
 
     if (key->cipher == WLAN_CIPHER_SUITE_TKIP)
-        ret = ath_setkey_tkip(common, idx, key->key, &hk, mac,
-                              vif->type == NL80211_IFTYPE_AP);
+        ret = ath_setkey_tkip(common, idx, key->key, &hk, mac, vif->type == NL80211_IFTYPE_AP);
     else {
         ret = ath_hw_set_keycache_entry(common, idx, &hk, mac);
     }
 
-    if (!ret) {
-        return -EIO;
-    }
+    if (!ret) { return -EIO; }
 
     set_bit(idx, common->keymap);
-    if (key->cipher == WLAN_CIPHER_SUITE_CCMP) {
-        set_bit(idx, common->ccmp_keymap);
-    }
+    if (key->cipher == WLAN_CIPHER_SUITE_CCMP) { set_bit(idx, common->ccmp_keymap); }
 
     if (key->cipher == WLAN_CIPHER_SUITE_TKIP) {
         set_bit(idx + 64, common->keymap);
@@ -600,15 +542,11 @@ EXPORT_SYMBOL(ath_key_config);
  */
 void ath_key_delete(struct ath_common* common, struct ieee80211_key_conf* key) {
     ath_hw_keyreset(common, key->hw_key_idx);
-    if (key->hw_key_idx < IEEE80211_WEP_NKID) {
-        return;
-    }
+    if (key->hw_key_idx < IEEE80211_WEP_NKID) { return; }
 
     clear_bit(key->hw_key_idx, common->keymap);
     clear_bit(key->hw_key_idx, common->ccmp_keymap);
-    if (key->cipher != WLAN_CIPHER_SUITE_TKIP) {
-        return;
-    }
+    if (key->cipher != WLAN_CIPHER_SUITE_TKIP) { return; }
 
     clear_bit(key->hw_key_idx + 64, common->keymap);
 

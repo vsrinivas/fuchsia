@@ -2495,9 +2495,7 @@ static int ath10k_pci_interrupt_handler(void* arg) {
             ath10k_pci_disable_and_clear_legacy_irq(ar);
         }
         ath10k_pci_interrupt_poll(ar);
-        if (ar_pci->oper_irq_mode == ATH10K_PCI_IRQ_LEGACY) {
-            ath10k_pci_enable_legacy_irq(ar);
-        }
+        if (ar_pci->oper_irq_mode == ATH10K_PCI_IRQ_LEGACY) { ath10k_pci_enable_legacy_irq(ar); }
     }
 
     ath10k_err("ISR exiting with status %s\n", zx_status_get_string(status));
@@ -2780,9 +2778,7 @@ static void ath10k_chan_query_info(const struct ath10k_channel* dev_channel, voi
 static void ath10k_get_ht_cap(struct ath10k* ar, struct wlan_ht_caps* ht_caps) {
     memset(ht_caps, 0, sizeof(*ht_caps));
 
-    if (!(ar->ht_cap_info & WMI_HT_CAP_ENABLED)) {
-        return;
-    }
+    if (!(ar->ht_cap_info & WMI_HT_CAP_ENABLED)) { return; }
 
     // ht_caps:LDPC
     if (ar->ht_cap_info & WMI_HT_CAP_LDPC) {
@@ -2844,17 +2840,15 @@ static void ath10k_get_ht_cap(struct ath10k* ar, struct wlan_ht_caps* ht_caps) {
     }
 
     // ampdu_params
-    ht_caps->ampdu_params = (3 << IEEE80211_AMPDU_MAX_RX_LEN_SHIFT) |    // (64K - 1) bytes
-                            (6 << IEEE80211_AMPDU_DENSITY_SHIFT);        // 8 us
+    ht_caps->ampdu_params = (3 << IEEE80211_AMPDU_MAX_RX_LEN_SHIFT) |  // (64K - 1) bytes
+                            (6 << IEEE80211_AMPDU_DENSITY_SHIFT);      // 8 us
 
     // supported_mcs_set
     for (uint8_t i = 0; i < ar->num_rf_chains; i++) {
         ZX_DEBUG_ASSERT(i < countof(ht_caps->supported_mcs_set));
-        if (ar->cfg_rx_chainmask & (1 << i)) {
-            ht_caps->supported_mcs_set[i] = 0xFF;
-        }
+        if (ar->cfg_rx_chainmask & (1 << i)) { ht_caps->supported_mcs_set[i] = 0xFF; }
     }
-    ht_caps->supported_mcs_set[12] |= 0x1; // B96:97 Tx MCS == Rx MCS
+    ht_caps->supported_mcs_set[12] |= 0x1;  // B96:97 Tx MCS == Rx MCS
 }
 
 static uint32_t ath10k_mac_get_vht_cap_bf_sts(struct ath10k* ar) {
@@ -2867,9 +2861,7 @@ static uint32_t ath10k_mac_get_vht_cap_bf_sts(struct ath10k* ar) {
      * streams supported, assume it support up to 4 BF STS and return
      * the value for VHT CAP: nsts-1)
      */
-    if (nsts == 0) {
-        return 3;
-    }
+    if (nsts == 0) { return 3; }
 
     return nsts;
 }
@@ -2883,9 +2875,7 @@ static uint32_t ath10k_mac_get_vht_cap_bf_sound_dim(struct ath10k* ar) {
     /* If the sounding dimension is not advertised by the firmware,
      * let's use a default value of 1
      */
-    if (sound_dim == 0) {
-        return 1;
-    }
+    if (sound_dim == 0) { return 1; }
 
     return sound_dim;
 }
@@ -2894,8 +2884,7 @@ static void ath10k_get_vht_cap(struct ath10k* ar, struct wlan_vht_caps* vht_caps
     memset(vht_caps, 0, sizeof(*vht_caps));
     vht_caps->vht_capability_info = ar->vht_cap_info;
 
-    if (ar->vht_cap_info & (IEEE80211_VHT_CAPS_SU_BEAMFORMEE |
-                            IEEE80211_VHT_CAPS_MU_BEAMFORMEE)) {
+    if (ar->vht_cap_info & (IEEE80211_VHT_CAPS_SU_BEAMFORMEE | IEEE80211_VHT_CAPS_MU_BEAMFORMEE)) {
         uint32_t val = ath10k_mac_get_vht_cap_bf_sts(ar);
         val <<= IEEE80211_VHT_CAPS_BEAMFORMEE_STS_SHIFT;
         val &= IEEE80211_VHT_CAPS_BEAMFORMEE_STS;
@@ -2903,8 +2892,7 @@ static void ath10k_get_vht_cap(struct ath10k* ar, struct wlan_vht_caps* vht_caps
         vht_caps->vht_capability_info |= val;
     }
 
-    if (ar->vht_cap_info & (IEEE80211_VHT_CAPS_SU_BEAMFORMER |
-                            IEEE80211_VHT_CAPS_MU_BEAMFORMER)) {
+    if (ar->vht_cap_info & (IEEE80211_VHT_CAPS_SU_BEAMFORMER | IEEE80211_VHT_CAPS_MU_BEAMFORMER)) {
         uint32_t val = ath10k_mac_get_vht_cap_bf_sound_dim(ar);
         val <<= IEEE80211_VHT_CAPS_SOUND_DIM_SHIFT;
         val &= IEEE80211_VHT_CAPS_SOUND_DIM;
@@ -2920,9 +2908,7 @@ static void ath10k_get_vht_cap(struct ath10k* ar, struct wlan_vht_caps* vht_caps
         vht_caps->vht_capability_info |= (1 << IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH_SHIFT);
     }
 
-    if (ar->cfg_tx_chainmask <= 1) {
-        vht_caps->vht_capability_info &= ~IEEE80211_VHT_CAPS_TX_STBC;
-    }
+    if (ar->cfg_tx_chainmask <= 1) { vht_caps->vht_capability_info &= ~IEEE80211_VHT_CAPS_TX_STBC; }
 
     uint16_t mcs_map = 0;
     for (size_t i = 0; i < 8; i++) {
@@ -2950,8 +2936,7 @@ static void ath10k_get_vht_cap(struct ath10k* ar, struct wlan_vht_caps* vht_caps
      * user-space a clue if that is the case.
      */
     if ((vht_caps->vht_capability_info & IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH) &&
-            (hw->vht160_mcs_rx_highest != 0 ||
-             hw->vht160_mcs_tx_highest != 0)) {
+        (hw->vht160_mcs_rx_highest != 0 || hw->vht160_mcs_tx_highest != 0)) {
         uint16_t rx_highest = hw->vht160_mcs_rx_highest & 0x1fff;
         vht_caps->supported_vht_mcs_and_nss_set |= ((uint64_t)rx_highest << 16);
         uint16_t tx_highest = hw->vht160_mcs_tx_highest & 0x1fff;
@@ -2963,8 +2948,7 @@ static void ath10k_get_vht_cap(struct ath10k* ar, struct wlan_vht_caps* vht_caps
     // VHT Extended NSS BW Capable (B61): 0
 }
 
-static void ath10k_band_query_info(struct ath10k* ar,
-                                   const struct ath10k_band* dev_band,
+static void ath10k_band_query_info(struct ath10k* ar, const struct ath10k_band* dev_band,
                                    void* cookie) {
     wlan_info_t* ifc_info = cookie;
 
@@ -2975,9 +2959,7 @@ static void ath10k_band_query_info(struct ath10k* ar,
     strncpy(wlan_band->desc, dev_band->name, WLAN_BAND_DESC_MAX_LEN);
 
     // ht_caps
-    if (dev_band->ht_supported) {
-        ath10k_get_ht_cap(ar, &wlan_band->ht_caps);
-    }
+    if (dev_band->ht_supported) { ath10k_get_ht_cap(ar, &wlan_band->ht_caps); }
 
     // vht_caps
     if (dev_band->vht_supported) {
@@ -3094,13 +3076,13 @@ static zx_status_t ath10k_pci_configure_bss(void* ctx, uint32_t options,
 }
 
 static zx_status_t ath10k_pci_enable_beaconing(void* ctx, uint32_t options, bool enabled) {
-  ath10k_err("Enabling beaconing is not supported yet.\n");
-  return ZX_ERR_NOT_SUPPORTED;
+    ath10k_err("Enabling beaconing is not supported yet.\n");
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t ath10k_pci_configure_beacon(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
-  ath10k_err("Configuring beacon is not supported yet.\n");
-  return ZX_ERR_NOT_SUPPORTED;
+    ath10k_err("Configuring beacon is not supported yet.\n");
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t ath10k_pci_set_key(void* ctx, uint32_t options, wlan_key_config_t* key_config) {

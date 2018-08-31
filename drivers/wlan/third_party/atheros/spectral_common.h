@@ -42,7 +42,7 @@ enum ath_fft_sample_type {
 };
 
 struct fft_sample_tlv {
-    uint8_t type;    /* see ath_fft_sample */
+    uint8_t type; /* see ath_fft_sample */
     __be16 length;
     /* type dependent data follows */
 } __packed;

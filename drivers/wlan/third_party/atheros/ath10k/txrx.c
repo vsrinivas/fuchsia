@@ -22,7 +22,7 @@
 #include "htt.h"
 #include "mac.h"
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
 static void ath10k_report_offchan_tx(struct ath10k* ar, struct sk_buff* skb) {
     struct ieee80211_tx_info* info = IEEE80211_SKB_CB(skb);
 
@@ -52,27 +52,24 @@ static void ath10k_report_offchan_tx(struct ath10k* ar, struct sk_buff* skb) {
 out:
     mtx_unlock(&ar->data_lock);
 }
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
 zx_status_t ath10k_txrx_tx_unref(struct ath10k_htt* htt, const struct htt_tx_done* tx_done) {
     struct ath10k* ar = htt->ar;
     struct ath10k_msg_buf* msdu;
 
-    ath10k_dbg(ar, ATH10K_DBG_HTT,
-               "htt tx completion msdu_id %u status %d\n",
-               tx_done->msdu_id, tx_done->status);
+    ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx completion msdu_id %u status %d\n", tx_done->msdu_id,
+               tx_done->status);
 
     if (tx_done->msdu_id >= htt->max_num_pending_tx) {
-        ath10k_warn("warning: msdu_id %d too big, ignoring\n",
-                    tx_done->msdu_id);
+        ath10k_warn("warning: msdu_id %d too big, ignoring\n", tx_done->msdu_id);
         return ZX_ERR_INVALID_ARGS;
     }
 
     mtx_lock(&htt->tx_lock);
     msdu = sa_get(htt->pending_tx, tx_done->msdu_id);
     if (msdu == NULL) {
-        ath10k_warn("received tx completion for invalid msdu_id: %d\n",
-                    tx_done->msdu_id);
+        ath10k_warn("received tx completion for invalid msdu_id: %d\n", tx_done->msdu_id);
         mtx_unlock(&htt->tx_lock);
         return ZX_ERR_IO;
     }
@@ -81,7 +78,7 @@ zx_status_t ath10k_txrx_tx_unref(struct ath10k_htt* htt, const struct htt_tx_don
     ath10k_htt_tx_dec_pending(htt);
     mtx_unlock(&htt->tx_lock);
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
     dma_unmap_single(dev, skb_cb->paddr, msdu->len, DMA_TO_DEVICE);
 
     ath10k_report_offchan_tx(htt->ar, msdu);
@@ -106,13 +103,13 @@ zx_status_t ath10k_txrx_tx_unref(struct ath10k_htt* htt, const struct htt_tx_don
             (info->flags & IEEE80211_TX_CTL_NO_ACK)) {
         info->flags |= IEEE80211_TX_STAT_NOACK_TRANSMITTED;
     }
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
     ath10k_msg_buf_free(msdu);
     return ZX_OK;
 }
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
 struct ath10k_peer* ath10k_peer_find(struct ath10k* ar, int vdev_id,
                                      const uint8_t* addr) {
     struct ath10k_peer* peer;
@@ -245,4 +242,4 @@ void ath10k_peer_unmap_event(struct ath10k_htt* htt,
 exit:
     mtx_unlock(&ar->data_lock);
 }
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING

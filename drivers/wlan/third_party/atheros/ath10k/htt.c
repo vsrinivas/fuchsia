@@ -36,15 +36,11 @@ static const enum htt_t2h_msg_type htt_main_t2h_msg_types[] = {
     [HTT_MAIN_T2H_MSG_TYPE_STATS_CONF] = HTT_T2H_MSG_TYPE_STATS_CONF,
     [HTT_MAIN_T2H_MSG_TYPE_RX_FRAG_IND] = HTT_T2H_MSG_TYPE_RX_FRAG_IND,
     [HTT_MAIN_T2H_MSG_TYPE_SEC_IND] = HTT_T2H_MSG_TYPE_SEC_IND,
-    [HTT_MAIN_T2H_MSG_TYPE_TX_INSPECT_IND] =
-        HTT_T2H_MSG_TYPE_TX_INSPECT_IND,
-    [HTT_MAIN_T2H_MSG_TYPE_MGMT_TX_COMPL_IND] =
-        HTT_T2H_MSG_TYPE_MGMT_TX_COMPLETION,
-    [HTT_MAIN_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND] =
-        HTT_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND,
+    [HTT_MAIN_T2H_MSG_TYPE_TX_INSPECT_IND] = HTT_T2H_MSG_TYPE_TX_INSPECT_IND,
+    [HTT_MAIN_T2H_MSG_TYPE_MGMT_TX_COMPL_IND] = HTT_T2H_MSG_TYPE_MGMT_TX_COMPLETION,
+    [HTT_MAIN_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND] = HTT_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND,
     [HTT_MAIN_T2H_MSG_TYPE_RX_PN_IND] = HTT_T2H_MSG_TYPE_RX_PN_IND,
-    [HTT_MAIN_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND] =
-        HTT_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND,
+    [HTT_MAIN_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND] = HTT_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND,
     [HTT_MAIN_T2H_MSG_TYPE_TEST] = HTT_T2H_MSG_TYPE_TEST,
 };
 
@@ -67,8 +63,7 @@ static const enum htt_t2h_msg_type htt_10x_t2h_msg_types[] = {
     [HTT_10X_T2H_MSG_TYPE_CHAN_CHANGE] = HTT_T2H_MSG_TYPE_CHAN_CHANGE,
     [HTT_10X_T2H_MSG_TYPE_AGGR_CONF] = HTT_T2H_MSG_TYPE_AGGR_CONF,
     [HTT_10X_T2H_MSG_TYPE_STATS_NOUPLOAD] = HTT_T2H_MSG_TYPE_STATS_NOUPLOAD,
-    [HTT_10X_T2H_MSG_TYPE_MGMT_TX_COMPL_IND] =
-        HTT_T2H_MSG_TYPE_MGMT_TX_COMPLETION,
+    [HTT_10X_T2H_MSG_TYPE_MGMT_TX_COMPL_IND] = HTT_T2H_MSG_TYPE_MGMT_TX_COMPLETION,
 };
 
 static const enum htt_t2h_msg_type htt_tlv_t2h_msg_types[] = {
@@ -86,20 +81,14 @@ static const enum htt_t2h_msg_type htt_tlv_t2h_msg_types[] = {
     [HTT_TLV_T2H_MSG_TYPE_SEC_IND] = HTT_T2H_MSG_TYPE_SEC_IND,
     [HTT_TLV_T2H_MSG_TYPE_RC_UPDATE_IND] = HTT_T2H_MSG_TYPE_RC_UPDATE_IND,
     [HTT_TLV_T2H_MSG_TYPE_TX_INSPECT_IND] = HTT_T2H_MSG_TYPE_TX_INSPECT_IND,
-    [HTT_TLV_T2H_MSG_TYPE_MGMT_TX_COMPL_IND] =
-        HTT_T2H_MSG_TYPE_MGMT_TX_COMPLETION,
-    [HTT_TLV_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND] =
-        HTT_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND,
+    [HTT_TLV_T2H_MSG_TYPE_MGMT_TX_COMPL_IND] = HTT_T2H_MSG_TYPE_MGMT_TX_COMPLETION,
+    [HTT_TLV_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND] = HTT_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND,
     [HTT_TLV_T2H_MSG_TYPE_RX_PN_IND] = HTT_T2H_MSG_TYPE_RX_PN_IND,
-    [HTT_TLV_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND] =
-        HTT_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND,
-    [HTT_TLV_T2H_MSG_TYPE_RX_IN_ORD_PADDR_IND] =
-        HTT_T2H_MSG_TYPE_RX_IN_ORD_PADDR_IND,
-    [HTT_TLV_T2H_MSG_TYPE_WDI_IPA_OP_RESPONSE] =
-        HTT_T2H_MSG_TYPE_WDI_IPA_OP_RESPONSE,
+    [HTT_TLV_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND] = HTT_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND,
+    [HTT_TLV_T2H_MSG_TYPE_RX_IN_ORD_PADDR_IND] = HTT_T2H_MSG_TYPE_RX_IN_ORD_PADDR_IND,
+    [HTT_TLV_T2H_MSG_TYPE_WDI_IPA_OP_RESPONSE] = HTT_T2H_MSG_TYPE_WDI_IPA_OP_RESPONSE,
     [HTT_TLV_T2H_MSG_TYPE_CHAN_CHANGE] = HTT_T2H_MSG_TYPE_CHAN_CHANGE,
-    [HTT_TLV_T2H_MSG_TYPE_RX_OFLD_PKT_ERR] =
-        HTT_T2H_MSG_TYPE_RX_OFLD_PKT_ERR,
+    [HTT_TLV_T2H_MSG_TYPE_RX_OFLD_PKT_ERR] = HTT_T2H_MSG_TYPE_RX_OFLD_PKT_ERR,
     [HTT_TLV_T2H_MSG_TYPE_TEST] = HTT_T2H_MSG_TYPE_TEST,
 };
 
@@ -117,29 +106,20 @@ static const enum htt_t2h_msg_type htt_10_4_t2h_msg_types[] = {
     [HTT_10_4_T2H_MSG_TYPE_RX_FRAG_IND] = HTT_T2H_MSG_TYPE_RX_FRAG_IND,
     [HTT_10_4_T2H_MSG_TYPE_SEC_IND] = HTT_T2H_MSG_TYPE_SEC_IND,
     [HTT_10_4_T2H_MSG_TYPE_RC_UPDATE_IND] = HTT_T2H_MSG_TYPE_RC_UPDATE_IND,
-    [HTT_10_4_T2H_MSG_TYPE_TX_INSPECT_IND] =
-        HTT_T2H_MSG_TYPE_TX_INSPECT_IND,
-    [HTT_10_4_T2H_MSG_TYPE_MGMT_TX_COMPL_IND] =
-        HTT_T2H_MSG_TYPE_MGMT_TX_COMPLETION,
+    [HTT_10_4_T2H_MSG_TYPE_TX_INSPECT_IND] = HTT_T2H_MSG_TYPE_TX_INSPECT_IND,
+    [HTT_10_4_T2H_MSG_TYPE_MGMT_TX_COMPL_IND] = HTT_T2H_MSG_TYPE_MGMT_TX_COMPLETION,
     [HTT_10_4_T2H_MSG_TYPE_CHAN_CHANGE] = HTT_T2H_MSG_TYPE_CHAN_CHANGE,
-    [HTT_10_4_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND] =
-        HTT_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND,
+    [HTT_10_4_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND] = HTT_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND,
     [HTT_10_4_T2H_MSG_TYPE_RX_PN_IND] = HTT_T2H_MSG_TYPE_RX_PN_IND,
-    [HTT_10_4_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND] =
-        HTT_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND,
+    [HTT_10_4_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND] = HTT_T2H_MSG_TYPE_RX_OFFLOAD_DELIVER_IND,
     [HTT_10_4_T2H_MSG_TYPE_TEST] = HTT_T2H_MSG_TYPE_TEST,
     [HTT_10_4_T2H_MSG_TYPE_EN_STATS] = HTT_T2H_MSG_TYPE_EN_STATS,
     [HTT_10_4_T2H_MSG_TYPE_AGGR_CONF] = HTT_T2H_MSG_TYPE_AGGR_CONF,
-    [HTT_10_4_T2H_MSG_TYPE_TX_FETCH_IND] =
-        HTT_T2H_MSG_TYPE_TX_FETCH_IND,
-    [HTT_10_4_T2H_MSG_TYPE_TX_FETCH_CONFIRM] =
-        HTT_T2H_MSG_TYPE_TX_FETCH_CONFIRM,
-    [HTT_10_4_T2H_MSG_TYPE_STATS_NOUPLOAD] =
-        HTT_T2H_MSG_TYPE_STATS_NOUPLOAD,
-    [HTT_10_4_T2H_MSG_TYPE_TX_MODE_SWITCH_IND] =
-        HTT_T2H_MSG_TYPE_TX_MODE_SWITCH_IND,
-    [HTT_10_4_T2H_MSG_TYPE_PEER_STATS] =
-        HTT_T2H_MSG_TYPE_PEER_STATS,
+    [HTT_10_4_T2H_MSG_TYPE_TX_FETCH_IND] = HTT_T2H_MSG_TYPE_TX_FETCH_IND,
+    [HTT_10_4_T2H_MSG_TYPE_TX_FETCH_CONFIRM] = HTT_T2H_MSG_TYPE_TX_FETCH_CONFIRM,
+    [HTT_10_4_T2H_MSG_TYPE_STATS_NOUPLOAD] = HTT_T2H_MSG_TYPE_STATS_NOUPLOAD,
+    [HTT_10_4_T2H_MSG_TYPE_TX_MODE_SWITCH_IND] = HTT_T2H_MSG_TYPE_TX_MODE_SWITCH_IND,
+    [HTT_10_4_T2H_MSG_TYPE_PEER_STATS] = HTT_T2H_MSG_TYPE_PEER_STATS,
 };
 
 zx_status_t ath10k_htt_connect(struct ath10k_htt* htt) {
@@ -156,12 +136,9 @@ zx_status_t ath10k_htt_connect(struct ath10k_htt* htt) {
     /* connect to control service */
     conn_req.service_id = ATH10K_HTC_SVC_ID_HTT_DATA_MSG;
 
-    status = ath10k_htc_connect_service(&htt->ar->htc, &conn_req,
-                                        &conn_resp);
+    status = ath10k_htc_connect_service(&htt->ar->htc, &conn_req, &conn_resp);
 
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     htt->eid = conn_resp.eid;
 
@@ -179,11 +156,10 @@ zx_status_t ath10k_htt_init(struct ath10k* ar) {
      * This is for LL chips. HL chips will probably
      * transfer all frame in the tx fragment.
      */
-    htt->prefetch_len =
-        36 + /* 802.11 + qos + ht */
-        4 + /* 802.1q */
-        8 + /* llc snap */
-        2; /* ip4 dscp or ip6 priority */
+    htt->prefetch_len = 36 + /* 802.11 + qos + ht */
+                        4 +  /* 802.1q */
+                        8 +  /* llc snap */
+                        2;   /* ip4 dscp or ip6 priority */
 
     switch (ar->running_fw->fw_file.htt_op_version) {
     case ATH10K_FW_HTT_OP_VERSION_10_4:
@@ -216,11 +192,10 @@ zx_status_t ath10k_htt_init(struct ath10k* ar) {
 static zx_status_t ath10k_htt_verify_version(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
 
-    ath10k_dbg(ar, ATH10K_DBG_BOOT, "htt target version %d.%d\n",
-               htt->target_version_major, htt->target_version_minor);
+    ath10k_dbg(ar, ATH10K_DBG_BOOT, "htt target version %d.%d\n", htt->target_version_major,
+               htt->target_version_minor);
 
-    if (htt->target_version_major != 2 &&
-            htt->target_version_major != 3) {
+    if (htt->target_version_major != 2 && htt->target_version_major != 3) {
         ath10k_err("unsupported htt major version %d. supported versions are 2 and 3\n",
                    htt->target_version_major);
         return ZX_ERR_NOT_SUPPORTED;
@@ -235,27 +210,22 @@ zx_status_t ath10k_htt_setup(struct ath10k_htt* htt) {
     htt->target_version_received = SYNC_COMPLETION_INIT;
 
     status = ath10k_htt_h2t_ver_req_msg(htt);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
-    if (sync_completion_wait(&htt->target_version_received,
-                        HTT_TARGET_VERSION_TIMEOUT) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&htt->target_version_received, HTT_TARGET_VERSION_TIMEOUT) ==
+        ZX_ERR_TIMED_OUT) {
         ath10k_warn("htt version request timed out\n");
         return ZX_ERR_TIMED_OUT;
     }
 
     status = ath10k_htt_verify_version(htt);
     if (status) {
-        ath10k_warn("failed to verify htt version: %d\n",
-                    status);
+        ath10k_warn("failed to verify htt version: %d\n", status);
         return status;
     }
 
     status = ath10k_htt_send_frag_desc_bank_cfg(htt);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     status = ath10k_htt_send_rx_ring_cfg_ll(htt);
     if (status != ZX_OK) {
@@ -263,12 +233,9 @@ zx_status_t ath10k_htt_setup(struct ath10k_htt* htt) {
         return status;
     }
 
-    status = ath10k_htt_h2t_aggr_cfg_msg(htt,
-                                         htt->max_num_ampdu,
-                                         htt->max_num_amsdu);
+    status = ath10k_htt_h2t_aggr_cfg_msg(htt, htt->max_num_ampdu, htt->max_num_amsdu);
     if (status != ZX_OK) {
-        ath10k_warn("failed to setup amsdu/ampdu limit: %s\n",
-                    zx_status_get_string(status));
+        ath10k_warn("failed to setup amsdu/ampdu limit: %s\n", zx_status_get_string(status));
         return status;
     }
 

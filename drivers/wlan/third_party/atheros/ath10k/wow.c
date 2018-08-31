@@ -20,12 +20,11 @@
 #include "debug.h"
 #include "hif.h"
 #include "mac.h"
-#include "wmi.h"
 #include "wmi-ops.h"
+#include "wmi.h"
 
 static const struct wiphy_wowlan_support ath10k_wowlan_support = {
-    .flags = WIPHY_WOWLAN_DISCONNECT |
-    WIPHY_WOWLAN_MAGIC_PKT,
+    .flags = WIPHY_WOWLAN_DISCONNECT | WIPHY_WOWLAN_MAGIC_PKT,
     .pattern_min_len = WOW_MIN_PATTERN_SIZE,
     .pattern_max_len = WOW_MAX_PATTERN_SIZE,
     .max_pkt_offset = WOW_MAX_PKT_OFFSET,
@@ -47,8 +46,8 @@ static int ath10k_wow_vif_cleanup(struct ath10k_vif* arvif) {
     for (i = 0; i < ar->wow.max_num_patterns; i++) {
         ret = ath10k_wmi_wow_del_pattern(ar, arvif->vdev_id, i);
         if (ret) {
-            ath10k_warn("failed to delete wow pattern %d for vdev %i: %d\n",
-                        i, arvif->vdev_id, ret);
+            ath10k_warn("failed to delete wow pattern %d for vdev %i: %d\n", i, arvif->vdev_id,
+                        ret);
             return ret;
         }
     }
@@ -65,8 +64,7 @@ static int ath10k_wow_cleanup(struct ath10k* ar) {
     list_for_each_entry(arvif, &ar->arvifs, list) {
         ret = ath10k_wow_vif_cleanup(arvif);
         if (ret) {
-            ath10k_warn("failed to clean wow wakeups on vdev %i: %d\n",
-                        arvif->vdev_id, ret);
+            ath10k_warn("failed to clean wow wakeups on vdev %i: %d\n", arvif->vdev_id, ret);
             return ret;
         }
     }
@@ -74,10 +72,9 @@ static int ath10k_wow_cleanup(struct ath10k* ar) {
     return 0;
 }
 
-static int ath10k_vif_wow_set_wakeups(struct ath10k_vif* arvif,
-                                      struct cfg80211_wowlan* wowlan) {
+static int ath10k_vif_wow_set_wakeups(struct ath10k_vif* arvif, struct cfg80211_wowlan* wowlan) {
     int ret, i;
-    BITARR(wow_mask, WOW_EVENT_MAX) = { 0 };
+    BITARR(wow_mask, WOW_EVENT_MAX) = {0};
     struct ath10k* ar = arvif->ar;
     const struct cfg80211_pkt_pattern* patterns = wowlan->patterns;
     int pattern_id = 0;
@@ -104,9 +101,7 @@ static int ath10k_vif_wow_set_wakeups(struct ath10k_vif* arvif,
             BITARR_SET(&wow_mask, WOW_CSA_IE_EVENT);
         }
 
-        if (wowlan->magic_pkt) {
-            BITARR_SET(&wow_mask, WOW_MAGIC_PKT_RECVD_EVENT);
-        }
+        if (wowlan->magic_pkt) { BITARR_SET(&wow_mask, WOW_MAGIC_PKT_RECVD_EVENT); }
         break;
     default:
         break;
@@ -116,26 +111,17 @@ static int ath10k_vif_wow_set_wakeups(struct ath10k_vif* arvif,
         uint8_t bitmask[WOW_MAX_PATTERN_SIZE] = {};
         int j;
 
-        if (patterns[i].pattern_len > WOW_MAX_PATTERN_SIZE) {
-            continue;
-        }
+        if (patterns[i].pattern_len > WOW_MAX_PATTERN_SIZE) { continue; }
 
         /* convert bytemask to bitmask */
         for (j = 0; j < patterns[i].pattern_len; j++)
-            if (patterns[i].mask[j / 8] & BIT(j % 8)) {
-                bitmask[j] = 0xff;
-            }
+            if (patterns[i].mask[j / 8] & BIT(j % 8)) { bitmask[j] = 0xff; }
 
-        ret = ath10k_wmi_wow_add_pattern(ar, arvif->vdev_id,
-                                         pattern_id,
-                                         patterns[i].pattern,
-                                         bitmask,
-                                         patterns[i].pattern_len,
-                                         patterns[i].pkt_offset);
+        ret = ath10k_wmi_wow_add_pattern(ar, arvif->vdev_id, pattern_id, patterns[i].pattern,
+                                         bitmask, patterns[i].pattern_len, patterns[i].pkt_offset);
         if (ret) {
-            ath10k_warn("failed to add pattern %i to vdev %i: %d\n",
-                        pattern_id,
-                        arvif->vdev_id, ret);
+            ath10k_warn("failed to add pattern %i to vdev %i: %d\n", pattern_id, arvif->vdev_id,
+                        ret);
             return ret;
         }
 
@@ -144,13 +130,11 @@ static int ath10k_vif_wow_set_wakeups(struct ath10k_vif* arvif,
     }
 
     for (i = 0; i < WOW_EVENT_MAX; i++) {
-        if (!BITARR_TEST(&wow_mask, i)) {
-            continue;
-        }
+        if (!BITARR_TEST(&wow_mask, i)) { continue; }
         ret = ath10k_wmi_wow_add_wakeup_event(ar, arvif->vdev_id, i, 1);
         if (ret) {
-            ath10k_warn("failed to enable wakeup event %s on vdev %i: %d\n",
-                        wow_wakeup_event(i), arvif->vdev_id, ret);
+            ath10k_warn("failed to enable wakeup event %s on vdev %i: %d\n", wow_wakeup_event(i),
+                        arvif->vdev_id, ret);
             return ret;
         }
     }
@@ -158,8 +142,7 @@ static int ath10k_vif_wow_set_wakeups(struct ath10k_vif* arvif,
     return 0;
 }
 
-static int ath10k_wow_set_wakeups(struct ath10k* ar,
-                                  struct cfg80211_wowlan* wowlan) {
+static int ath10k_wow_set_wakeups(struct ath10k* ar, struct cfg80211_wowlan* wowlan) {
     struct ath10k_vif* arvif;
     int ret;
 
@@ -168,8 +151,7 @@ static int ath10k_wow_set_wakeups(struct ath10k* ar,
     list_for_each_entry(arvif, &ar->arvifs, list) {
         ret = ath10k_vif_wow_set_wakeups(arvif, wowlan);
         if (ret) {
-            ath10k_warn("failed to set wow wakeups on vdev %i: %d\n",
-                        arvif->vdev_id, ret);
+            ath10k_warn("failed to set wow wakeups on vdev %i: %d\n", arvif->vdev_id, ret);
             return ret;
         }
     }
@@ -207,8 +189,7 @@ static int ath10k_wow_wakeup(struct ath10k* ar) {
 
     ret = ath10k_wmi_wow_host_wakeup_ind(ar);
     if (ret) {
-        ath10k_warn("failed to send wow wakeup indication: %d\n",
-                    ret);
+        ath10k_warn("failed to send wow wakeup indication: %d\n", ret);
         return ret;
     }
 
@@ -220,30 +201,27 @@ static int ath10k_wow_wakeup(struct ath10k* ar) {
     return 0;
 }
 
-int ath10k_wow_op_suspend(struct ieee80211_hw* hw,
-                          struct cfg80211_wowlan* wowlan) {
+int ath10k_wow_op_suspend(struct ieee80211_hw* hw, struct cfg80211_wowlan* wowlan) {
     struct ath10k* ar = hw->priv;
     int ret;
 
     mtx_lock(&ar->conf_mutex);
 
-    if (COND_WARN(!BITARR_TEST(ar->running_fw->fw_file.fw_features,
-                               ATH10K_FW_FEATURE_WOWLAN_SUPPORT))) {
+    if (COND_WARN(
+            !BITARR_TEST(ar->running_fw->fw_file.fw_features, ATH10K_FW_FEATURE_WOWLAN_SUPPORT))) {
         ret = 1;
         goto exit;
     }
 
-    ret =  ath10k_wow_cleanup(ar);
+    ret = ath10k_wow_cleanup(ar);
     if (ret) {
-        ath10k_warn("failed to clear wow wakeup events: %d\n",
-                    ret);
+        ath10k_warn("failed to clear wow wakeup events: %d\n", ret);
         goto exit;
     }
 
     ret = ath10k_wow_set_wakeups(ar, wowlan);
     if (ret) {
-        ath10k_warn("failed to set wow wakeup events: %d\n",
-                    ret);
+        ath10k_warn("failed to set wow wakeup events: %d\n", ret);
         goto cleanup;
     }
 
@@ -278,8 +256,8 @@ int ath10k_wow_op_resume(struct ieee80211_hw* hw) {
 
     mtx_lock(&ar->conf_mutex);
 
-    if (COND_WARN(!BITARR_TEST(ar->running_fw->fw_file.fw_features,
-                               ATH10K_FW_FEATURE_WOWLAN_SUPPORT))) {
+    if (COND_WARN(
+            !BITARR_TEST(ar->running_fw->fw_file.fw_features, ATH10K_FW_FEATURE_WOWLAN_SUPPORT))) {
         ret = 1;
         goto exit;
     }
@@ -291,9 +269,7 @@ int ath10k_wow_op_resume(struct ieee80211_hw* hw) {
     }
 
     ret = ath10k_wow_wakeup(ar);
-    if (ret) {
-        ath10k_warn("failed to wakeup from wow: %d\n", ret);
-    }
+    if (ret) { ath10k_warn("failed to wakeup from wow: %d\n", ret); }
 
 exit:
     if (ret) {
@@ -323,9 +299,7 @@ int ath10k_wow_init(struct ath10k* ar) {
         return 0;
     }
 
-    if (COND_WARN(!BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_WOW))) {
-        return -EINVAL;
-    }
+    if (COND_WARN(!BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_WOW))) { return -EINVAL; }
 
     ar->wow.wowlan_support = ath10k_wowlan_support;
     ar->wow.wowlan_support.n_patterns = ar->wow.max_num_patterns;

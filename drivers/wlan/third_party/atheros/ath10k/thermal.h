@@ -48,15 +48,11 @@ static inline int ath10k_thermal_register(struct ath10k* ar) {
     return 0;
 }
 
-static inline void ath10k_thermal_unregister(struct ath10k* ar) {
-}
+static inline void ath10k_thermal_unregister(struct ath10k* ar) {}
 
-static inline void ath10k_thermal_event_temperature(struct ath10k* ar,
-        int temperature) {
-}
+static inline void ath10k_thermal_event_temperature(struct ath10k* ar, int temperature) {}
 
-static inline void ath10k_thermal_set_throttling(struct ath10k* ar) {
-}
+static inline void ath10k_thermal_set_throttling(struct ath10k* ar) {}
 
 #endif
 #endif /* _THERMAL_ */

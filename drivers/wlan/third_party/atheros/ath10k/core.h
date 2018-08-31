@@ -147,7 +147,7 @@ struct ath10k_wmi {
     struct ath10k_mem_chunk mem_chunks[WMI_MAX_MEM_REQS];
 };
 
-#if 0 // NEEDS PORTING
+#if 0  // NEEDS PORTING
 struct ath10k_fw_stats_peer {
     struct list_head list;
 
@@ -263,8 +263,8 @@ struct ath10k_fw_stats {
     struct list_head peers_extd;
 };
 
-#define ATH10K_TPC_TABLE_TYPE_FLAG  1
-#define ATH10K_TPC_PREAM_TABLE_END  0xFFFF
+#define ATH10K_TPC_TABLE_TYPE_FLAG 1
+#define ATH10K_TPC_PREAM_TABLE_END 0xFFFF
 
 struct ath10k_tpc_table {
     uint32_t pream_idx[WMI_TPC_RATE_MAX];
@@ -330,7 +330,7 @@ struct ath10k_sta {
     uint64_t rx_duration;
 #endif
 };
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
 #define ATH10K_VDEV_SETUP_TIMEOUT (ZX_SEC(5))
 
@@ -370,7 +370,7 @@ struct ath10k_fw_crash_data {
     struct ath10k_ce_crash_data ce_crash_data[CE_COUNT_MAX];
 };
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
 struct ath10k_debug {
     struct dentry* debugfs_phy;
 
@@ -398,7 +398,7 @@ struct ath10k_debug {
 
     struct ath10k_fw_crash_data* fw_crash_data;
 };
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
 enum ath10k_state {
     ATH10K_STATE_OFF = 0,
@@ -654,7 +654,7 @@ struct ath10k_fw_components {
     struct ath10k_fw_file fw_file;
 };
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
 struct ath10k_per_peer_tx_stats {
     uint32_t succ_bytes;
     uint32_t retry_bytes;
@@ -669,7 +669,7 @@ struct ath10k_per_peer_tx_stats {
     uint32_t reserved1;
     uint32_t reserved2;
 };
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
 struct ath10k_vif {
     uint32_t vdev_id;
@@ -752,8 +752,8 @@ struct ath10k {
     } hif;
 
     struct {
-       wlanmac_ifc_t* ifc;
-       void* cookie;
+        wlanmac_ifc_t* ifc;
+        void* cookie;
     } wlanmac;
 
     // Now we only support one interface. Need to review the below variables when supporting
@@ -806,9 +806,9 @@ struct ath10k {
         sync_completion_t started;
         sync_completion_t completed;
         sync_completion_t on_channel;
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         struct delayed_work timeout;
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
         enum ath10k_scan_state state;
         bool is_roc;
         int vdev_id;
@@ -816,22 +816,22 @@ struct ath10k {
         bool roc_notify;
     } scan;
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
     struct {
         struct ieee80211_supported_band sbands[NUM_NL80211_BANDS];
     } mac;
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
     /* should never be NULL; needed for regular htt rx */
     wlan_channel_t rx_channel;
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
     /* current operating channel definition */
     struct cfg80211_chan_def chandef;
 
     /* currently configured operating channel in firmware */
     struct ieee80211_channel* tgt_oper_chan;
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
     unsigned long long free_vdev_map;
     struct ath10k_vif arvif;
@@ -856,11 +856,11 @@ struct ath10k {
 
     sync_completion_t vdev_setup_done;
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
     struct workqueue_struct* workqueue;
     /* Auxiliary workqueue */
     struct workqueue_struct* workqueue_aux;
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
     /* prevents concurrent FW reconfiguration */
     mtx_t conf_mutex;
@@ -876,10 +876,10 @@ struct ath10k {
     list_node_t txqs;
     list_node_t arvifs;
     list_node_t peers;
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
     struct ath10k_peer* peer_map[ATH10K_MAX_NUM_PEER_IDS];
     wait_queue_head_t peer_mapping_wq;
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
     /* protected by conf_mutex */
     int num_peers;
@@ -896,7 +896,7 @@ struct ath10k {
 
     struct ath10k_msg_buf_state msg_buf_state;
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
     struct work_struct offchan_tx_work;
     struct sk_buff_head offchan_tx_queue;
     sync_completion_t offchan_tx_completed;
@@ -904,7 +904,7 @@ struct ath10k {
 
     struct work_struct wmi_mgmt_tx_work;
     struct sk_buff_head wmi_mgmt_tx_queue;
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
     enum ath10k_state state;
 
@@ -920,14 +920,14 @@ struct ath10k {
     sync_completion_t assoc_complete;
     struct ath10k_msg_buf* assoc_frame;
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
     /* cycle count is reported twice for each visited channel during scan.
      * access protected by data_lock
      */
     uint32_t survey_last_rx_clear_count;
     uint32_t survey_last_cycle_count;
     struct survey_info survey[ATH10K_NUM_CHANS];
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
     /* Channel info events are expected to come in pairs without and with
      * COMPLETE flag set respectively for each channel visit during scan.
@@ -938,7 +938,7 @@ struct ath10k {
     bool ch_info_can_report_survey;
     sync_completion_t bss_survey_done;
 
-#if 0 // NEEDS PORTING
+#if 0  // NEEDS PORTING
     struct dfs_pattern_detector* dfs_detector;
 
     unsigned long tx_paused; /* see ATH10K_TX_PAUSE_ */
@@ -962,7 +962,7 @@ struct ath10k {
         /* protected by data_lock */
         bool utf_monitor;
     } testmode;
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
     struct {
         /* protected by data_lock */
@@ -973,7 +973,7 @@ struct ath10k {
 
     struct ath10k_thermal thermal;
     struct ath10k_wow wow;
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
     struct ath10k_per_peer_tx_stats peer_tx_stats;
 
     /* NAPI */
@@ -992,29 +992,26 @@ struct ath10k {
         uint32_t reg_ack_cts_timeout_conf;
         uint32_t reg_ack_cts_timeout_orig;
     } fw_coverage;
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
     /* must be last */
     void* drv_priv;
 };
 
 static inline bool ath10k_peer_stats_enabled(struct ath10k* ar) {
-    if (BITARR_TEST(ar->dev_flags, ATH10K_FLAG_PEER_STATS)
-        && BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_PEER_STATS)) {
+    if (BITARR_TEST(ar->dev_flags, ATH10K_FLAG_PEER_STATS) &&
+        BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_PEER_STATS)) {
         return true;
     }
 
     return false;
 }
 
-zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size,
-                               zx_device_t* dev, enum ath10k_bus bus,
-                               enum ath10k_hw_rev hw_rev,
+zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size, zx_device_t* dev,
+                               enum ath10k_bus bus, enum ath10k_hw_rev hw_rev,
                                const struct ath10k_hif_ops* hif_ops);
 void ath10k_core_destroy(struct ath10k* ar);
-void ath10k_core_get_fw_features_str(struct ath10k* ar,
-                                     char* buf,
-                                     size_t max_len);
+void ath10k_core_get_fw_features_str(struct ath10k* ar, char* buf, size_t max_len);
 zx_status_t ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
                                              struct ath10k_fw_file* fw_file);
 

@@ -26,7 +26,8 @@
 #if !defined(CONFIG_ATH_TRACEPOINTS)
 
 #undef TRACE_EVENT
-#define TRACE_EVENT(name, proto, ...) static inline void trace_ ## name(proto) {}
+#define TRACE_EVENT(name, proto, ...) \
+    static inline void trace_##name(proto) {}
 
 #endif /* CONFIG_ATH_TRACEPOINTS */
 

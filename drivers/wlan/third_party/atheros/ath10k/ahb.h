@@ -18,7 +18,7 @@
 #ifndef _AHB_H_
 #define _AHB_H_
 
-#if 0 // NEEDS PORTING
+#if 0  // NEEDS PORTING
 
 #include <linux/platform_device.h>
 
@@ -86,6 +86,6 @@ static inline void ath10k_ahb_exit(void) {
 
 #endif /* CONFIG_ATH10K_AHB */
 
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
 #endif /* _AHB_H_ */

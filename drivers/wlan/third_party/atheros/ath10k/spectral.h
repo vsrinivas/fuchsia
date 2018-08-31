@@ -46,10 +46,8 @@ enum ath10k_spectral_mode {
 
 #ifdef CONFIG_ATH10K_DEBUGFS
 
-int ath10k_spectral_process_fft(struct ath10k* ar,
-                                struct wmi_phyerr_ev_arg* phyerr,
-                                const struct phyerr_fft_report* fftr,
-                                size_t bin_len, uint64_t tsf);
+int ath10k_spectral_process_fft(struct ath10k* ar, struct wmi_phyerr_ev_arg* phyerr,
+                                const struct phyerr_fft_report* fftr, size_t bin_len, uint64_t tsf);
 int ath10k_spectral_start(struct ath10k* ar);
 int ath10k_spectral_vif_stop(struct ath10k_vif* arvif);
 int ath10k_spectral_create(struct ath10k* ar);
@@ -57,11 +55,9 @@ void ath10k_spectral_destroy(struct ath10k* ar);
 
 #else
 
-static inline int
-ath10k_spectral_process_fft(struct ath10k* ar,
-                            struct wmi_phyerr_ev_arg* phyerr,
-                            const struct phyerr_fft_report* fftr,
-                            size_t bin_len, uint64_t tsf) {
+static inline int ath10k_spectral_process_fft(struct ath10k* ar, struct wmi_phyerr_ev_arg* phyerr,
+                                              const struct phyerr_fft_report* fftr, size_t bin_len,
+                                              uint64_t tsf) {
     return 0;
 }
 
@@ -77,8 +73,7 @@ static inline int ath10k_spectral_create(struct ath10k* ar) {
     return 0;
 }
 
-static inline void ath10k_spectral_destroy(struct ath10k* ar) {
-}
+static inline void ath10k_spectral_destroy(struct ath10k* ar) {}
 
 #endif /* CONFIG_ATH10K_DEBUGFS */
 

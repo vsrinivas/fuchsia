@@ -14,14 +14,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/export.h>
 #include <asm/unaligned.h>
+#include <linux/export.h>
 
 #include "ath.h"
 #include "reg.h"
 
-#define REG_READ            (common->ops->read)
-#define REG_WRITE(_ah, _reg, _val)  (common->ops->write)(_ah, _val, _reg)
+#define REG_READ (common->ops->read)
+#define REG_WRITE(_ah, _reg, _val) (common->ops->write)(_ah, _val, _reg)
 
 /**
  * ath_hw_set_bssid_mask - filter out bssids we listen
@@ -129,7 +129,6 @@ void ath_hw_setbssidmask(struct ath_common* common) {
 }
 EXPORT_SYMBOL(ath_hw_setbssidmask);
 
-
 /**
  * ath_hw_cycle_counters_update - common function to update cycle counters
  *
@@ -177,8 +176,7 @@ int32_t ath_hw_get_listen_time(struct ath_common* common) {
     struct ath_cycle_counters* cc = &common->cc_ani;
     int32_t listen_time;
 
-    listen_time = (cc->cycles - cc->rx_frame - cc->tx_frame) /
-                  (common->clockrate * 1000);
+    listen_time = (cc->cycles - cc->rx_frame - cc->tx_frame) / (common->clockrate * 1000);
 
     memset(cc, 0, sizeof(*cc));
 

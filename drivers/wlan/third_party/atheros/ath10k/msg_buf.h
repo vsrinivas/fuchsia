@@ -64,7 +64,7 @@ enum ath10k_msg_type {
 
 enum ath10k_tx_flags {
     ATH10K_TX_BUF_PROTECTED = (1 << 0),
-    ATH10K_TX_BUF_QOS =       (1 << 1),
+    ATH10K_TX_BUF_QOS = (1 << 1),
 };
 
 struct ath10k_msg_buf {
@@ -114,19 +114,14 @@ struct ath10k_msg_buf_state {
 zx_status_t ath10k_msg_bufs_init(struct ath10k* ar);
 
 // Allocate a new buffer of the specified type, plus any extra space requested
-zx_status_t ath10k_msg_buf_alloc_internal(struct ath10k* ar,
-                                          struct ath10k_msg_buf** msg_buf_ptr,
-                                          enum ath10k_msg_type type,
-                                          size_t extra_bytes,
-                                          bool force_new,
-                                          const char* filename,
-                                          size_t line_num);
+zx_status_t ath10k_msg_buf_alloc_internal(struct ath10k* ar, struct ath10k_msg_buf** msg_buf_ptr,
+                                          enum ath10k_msg_type type, size_t extra_bytes,
+                                          bool force_new, const char* filename, size_t line_num);
 
 #define ath10k_msg_buf_alloc(ar, ptr, type, bytes) \
-        ath10k_msg_buf_alloc_internal(ar, ptr, type, bytes, false, __FILE__, __LINE__)
+    ath10k_msg_buf_alloc_internal(ar, ptr, type, bytes, false, __FILE__, __LINE__)
 
-void* ath10k_msg_buf_get_header(struct ath10k_msg_buf* msg_buf,
-                                enum ath10k_msg_type msg_type);
+void* ath10k_msg_buf_get_header(struct ath10k_msg_buf* msg_buf, enum ath10k_msg_type msg_type);
 
 void* ath10k_msg_buf_get_payload(struct ath10k_msg_buf* msg_buf);
 

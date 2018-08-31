@@ -143,19 +143,13 @@ struct ce_attr;
  *
  * Implementation note: pushes 1 buffer to Source ring
  */
-zx_status_t ath10k_ce_send(struct ath10k_ce_pipe* ce_state,
-                           void* per_transfer_send_context,
-                           uint32_t buffer,
-                           unsigned int nbytes,
+zx_status_t ath10k_ce_send(struct ath10k_ce_pipe* ce_state, void* per_transfer_send_context,
+                           uint32_t buffer, unsigned int nbytes,
                            /* 14 bits */
-                           unsigned int transfer_id,
-                           unsigned int flags);
+                           unsigned int transfer_id, unsigned int flags);
 
-zx_status_t ath10k_ce_send_nolock(struct ath10k_ce_pipe* ce_state,
-                                  void* per_transfer_context,
-                                  uint32_t buffer,
-                                  unsigned int nbytes,
-                                  unsigned int transfer_id,
+zx_status_t ath10k_ce_send_nolock(struct ath10k_ce_pipe* ce_state, void* per_transfer_context,
+                                  uint32_t buffer, unsigned int nbytes, unsigned int transfer_id,
                                   unsigned int flags);
 
 void __ath10k_ce_send_revert(struct ath10k_ce_pipe* pipe);
@@ -171,15 +165,14 @@ void ath10k_ce_rx_update_write_idx(struct ath10k_ce_pipe* pipe, uint32_t nentrie
 
 /* recv flags */
 /* Data is byte-swapped */
-#define CE_RECV_FLAG_SWAPPED    1
+#define CE_RECV_FLAG_SWAPPED 1
 
 /*
  * Supply data for the next completed unprocessed receive descriptor.
  * Pops buffer from Dest ring.
  */
 zx_status_t ath10k_ce_completed_recv_next(struct ath10k_ce_pipe* ce_state,
-                                          void** per_transfer_contextp,
-                                          unsigned int* nbytesp);
+                                          void** per_transfer_contextp, unsigned int* nbytesp);
 /*
  * Supply data for the next completed unprocessed send descriptor.
  * Pops 1 completed send buffer from Source ring.
@@ -192,11 +185,9 @@ zx_status_t ath10k_ce_completed_send_next_nolock(struct ath10k_ce_pipe* ce_state
 
 /*==================CE Engine Initialization=======================*/
 
-zx_status_t ath10k_ce_init_pipe(struct ath10k* ar, unsigned int ce_id,
-                                const struct ce_attr* attr);
+zx_status_t ath10k_ce_init_pipe(struct ath10k* ar, unsigned int ce_id, const struct ce_attr* attr);
 void ath10k_ce_deinit_pipe(struct ath10k* ar, unsigned int ce_id);
-zx_status_t ath10k_ce_alloc_pipe(struct ath10k* ar, int ce_id,
-                                 const struct ce_attr* attr);
+zx_status_t ath10k_ce_alloc_pipe(struct ath10k* ar, int ce_id, const struct ce_attr* attr);
 void ath10k_ce_free_pipe(struct ath10k* ar, int ce_id);
 
 /*==================CE Engine Shutdown=======================*/
@@ -206,8 +197,7 @@ void ath10k_ce_free_pipe(struct ath10k* ar, int ce_id);
  * this API.
  */
 zx_status_t ath10k_ce_revoke_recv_next(struct ath10k_ce_pipe* ce_state,
-                                       void** per_transfer_contextp,
-                                       uint32_t* bufferp);
+                                       void** per_transfer_contextp, uint32_t* bufferp);
 
 zx_status_t ath10k_ce_completed_recv_next_nolock(struct ath10k_ce_pipe* ce_state,
                                                  void** per_transfer_contextp,
@@ -219,18 +209,15 @@ zx_status_t ath10k_ce_completed_recv_next_nolock(struct ath10k_ce_pipe* ce_state
  * this API.
  */
 zx_status_t ath10k_ce_cancel_send_next(struct ath10k_ce_pipe* ce_state,
-                                       void** per_transfer_contextp,
-                                       uint32_t* bufferp,
-                                       unsigned int* nbytesp,
-                                       unsigned int* transfer_idp);
+                                       void** per_transfer_contextp, uint32_t* bufferp,
+                                       unsigned int* nbytesp, unsigned int* transfer_idp);
 
 /*==================CE Interrupt Handlers====================*/
 void ath10k_ce_per_engine_service_any(struct ath10k* ar);
 void ath10k_ce_per_engine_service(struct ath10k* ar, unsigned int ce_id);
 zx_status_t ath10k_ce_disable_interrupts(struct ath10k* ar);
 void ath10k_ce_enable_interrupts(struct ath10k* ar);
-void ath10k_ce_dump_registers(struct ath10k* ar,
-                              struct ath10k_fw_crash_data* crash_data);
+void ath10k_ce_dump_registers(struct ath10k* ar, struct ath10k_fw_crash_data* crash_data);
 
 // clang-format off
 /* ce_attr.flags values */
@@ -272,32 +259,25 @@ static inline uint32_t ath10k_ce_base_address(struct ath10k* ar, unsigned int ce
     return CE0_BASE_ADDRESS + (CE1_BASE_ADDRESS - CE0_BASE_ADDRESS) * ce_id;
 }
 
-#define CE_SRC_RING_TO_DESC(baddr, idx) \
-    (&(((struct ce_desc *)baddr)[idx]))
+#define CE_SRC_RING_TO_DESC(baddr, idx) (&(((struct ce_desc*)baddr)[idx]))
 
-#define CE_DEST_RING_TO_DESC(baddr, idx) \
-    (&(((struct ce_desc *)baddr)[idx]))
+#define CE_DEST_RING_TO_DESC(baddr, idx) (&(((struct ce_desc*)baddr)[idx]))
 
 /* Ring arithmetic (modulus number of entries in ring, which is a pwr of 2). */
 #define CE_RING_DELTA(nentries_mask, fromidx, toidx) \
     (((int)(toidx) - (int)(fromidx)) & (nentries_mask))
 
 #define CE_RING_IDX_INCR(nentries_mask, idx) (((idx) + 1) & (nentries_mask))
-#define CE_RING_IDX_ADD(nentries_mask, idx, num) \
-        (((idx) + (num)) & (nentries_mask))
+#define CE_RING_IDX_ADD(nentries_mask, idx, num) (((idx) + (num)) & (nentries_mask))
 
-#define CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_LSB \
-                ar->regs->ce_wrap_intr_sum_host_msi_lsb
-#define CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_MASK \
-                ar->regs->ce_wrap_intr_sum_host_msi_mask
+#define CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_LSB ar->regs->ce_wrap_intr_sum_host_msi_lsb
+#define CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_MASK ar->regs->ce_wrap_intr_sum_host_msi_mask
 #define CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_GET(x) \
-    (((x) & CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_MASK) >> \
-        CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_LSB)
-#define CE_WRAPPER_INTERRUPT_SUMMARY_ADDRESS            0x0000
+    (((x)&CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_MASK) >> CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_LSB)
+#define CE_WRAPPER_INTERRUPT_SUMMARY_ADDRESS 0x0000
 
-#define CE_INTERRUPT_SUMMARY(ar) \
+#define CE_INTERRUPT_SUMMARY(ar)               \
     CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_GET( \
-        ath10k_pci_read32((ar), CE_WRAPPER_BASE_ADDRESS + \
-        CE_WRAPPER_INTERRUPT_SUMMARY_ADDRESS))
+        ath10k_pci_read32((ar), CE_WRAPPER_BASE_ADDRESS + CE_WRAPPER_INTERRUPT_SUMMARY_ADDRESS))
 
 #endif /* _CE_H_ */

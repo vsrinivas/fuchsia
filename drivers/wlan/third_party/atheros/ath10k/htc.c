@@ -39,8 +39,7 @@ void ath10k_htc_notify_tx_completion(struct ath10k_htc_ep* ep, struct ath10k_msg
     ep->ep_ops.ep_tx_complete(ep->htc->ar, msg_buf);
 }
 
-static void ath10k_htc_prepare_tx_buf(struct ath10k_htc_ep* ep,
-                                      struct ath10k_msg_buf* msg_buf) {
+static void ath10k_htc_prepare_tx_buf(struct ath10k_htc_ep* ep, struct ath10k_msg_buf* msg_buf) {
     struct ath10k_htc_hdr* hdr = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTC);
     hdr->eid = ep->eid;
     hdr->len = ath10k_msg_buf_get_payload_len(msg_buf, ATH10K_MSG_TYPE_HTC);
@@ -51,8 +50,7 @@ static void ath10k_htc_prepare_tx_buf(struct ath10k_htc_ep* ep,
     mtx_unlock(&ep->htc->tx_lock);
 }
 
-zx_status_t ath10k_htc_send(struct ath10k_htc* htc,
-                            enum ath10k_htc_ep_id eid,
+zx_status_t ath10k_htc_send(struct ath10k_htc* htc, enum ath10k_htc_ep_id eid,
                             struct ath10k_msg_buf* msg_buf) {
     struct ath10k* ar = htc->ar;
     struct ath10k_htc_ep* ep = &htc->endpoint[eid];
@@ -60,9 +58,7 @@ zx_status_t ath10k_htc_send(struct ath10k_htc* htc,
     int credits = 0;
     int ret;
 
-    if (htc->ar->state == ATH10K_STATE_WEDGED) {
-        return ZX_ERR_BAD_STATE;
-    }
+    if (htc->ar->state == ATH10K_STATE_WEDGED) { return ZX_ERR_BAD_STATE; }
 
     if (eid >= ATH10K_HTC_EP_COUNT) {
         ath10k_warn("Invalid endpoint id: %d\n", eid);
@@ -74,16 +70,15 @@ zx_status_t ath10k_htc_send(struct ath10k_htc* htc,
         mtx_lock(&htc->tx_lock);
         if (ep->tx_credits < credits) {
             ath10k_dbg(ar, ATH10K_DBG_HTC,
-                       "htc insufficient credits ep %d required %d available %d\n",
-                       eid, credits, ep->tx_credits);
+                       "htc insufficient credits ep %d required %d available %d\n", eid, credits,
+                       ep->tx_credits);
             mtx_unlock(&htc->tx_lock);
             ret = ZX_ERR_SHOULD_WAIT;
             goto err_done;
         }
         ep->tx_credits -= credits;
-        ath10k_dbg(ar, ATH10K_DBG_HTC,
-                   "htc ep %d consumed %d credits (total %d)\n",
-                   eid, credits, ep->tx_credits);
+        ath10k_dbg(ar, ATH10K_DBG_HTC, "htc ep %d consumed %d credits (total %d)\n", eid, credits,
+                   ep->tx_credits);
         mtx_unlock(&htc->tx_lock);
     }
 
@@ -96,9 +91,7 @@ zx_status_t ath10k_htc_send(struct ath10k_htc* htc,
     sg_item.len = msg_buf->used;
 
     ret = ath10k_hif_tx_sg(htc->ar, ep->ul_pipe_id, &sg_item, 1);
-    if (ret != ZX_OK) {
-        goto err_credits;
-    }
+    if (ret != ZX_OK) { goto err_credits; }
 
     return ZX_OK;
 
@@ -106,14 +99,11 @@ err_credits:
     if (ep->tx_credit_flow_enabled) {
         mtx_lock(&htc->tx_lock);
         ep->tx_credits += credits;
-        ath10k_dbg(ar, ATH10K_DBG_HTC,
-                   "htc ep %d reverted %d credits back (total %d)\n",
-                   eid, credits, ep->tx_credits);
+        ath10k_dbg(ar, ATH10K_DBG_HTC, "htc ep %d reverted %d credits back (total %d)\n", eid,
+                   credits, ep->tx_credits);
         mtx_unlock(&htc->tx_lock);
 
-        if (ep->ep_ops.ep_tx_credits) {
-            ep->ep_ops.ep_tx_credits(htc->ar);
-        }
+        if (ep->ep_ops.ep_tx_credits) { ep->ep_ops.ep_tx_credits(htc->ar); }
     }
 err_done:
     return ret;
@@ -134,32 +124,26 @@ void ath10k_htc_tx_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* 
 /* Receive */
 /***********/
 
-static void
-ath10k_htc_process_credit_report(struct ath10k_htc* htc,
-                                 const struct ath10k_htc_credit_report* report,
-                                 int len,
-                                 enum ath10k_htc_ep_id eid) {
+static void ath10k_htc_process_credit_report(struct ath10k_htc* htc,
+                                             const struct ath10k_htc_credit_report* report, int len,
+                                             enum ath10k_htc_ep_id eid) {
     struct ath10k* ar = htc->ar;
     struct ath10k_htc_ep* ep;
     int i, n_reports;
 
-    if (len % sizeof(*report)) {
-        ath10k_warn("Uneven credit report len %d", len);
-    }
+    if (len % sizeof(*report)) { ath10k_warn("Uneven credit report len %d", len); }
 
     n_reports = len / sizeof(*report);
 
     mtx_lock(&htc->tx_lock);
     for (i = 0; i < n_reports; i++, report++) {
-        if (report->eid >= ATH10K_HTC_EP_COUNT) {
-            break;
-        }
+        if (report->eid >= ATH10K_HTC_EP_COUNT) { break; }
 
         ep = &htc->endpoint[report->eid];
         ep->tx_credits += report->credits;
 
-        ath10k_dbg(ar, ATH10K_DBG_HTC, "htc ep %d got %d credits (total %d)\n",
-                   report->eid, report->credits, ep->tx_credits);
+        ath10k_dbg(ar, ATH10K_DBG_HTC, "htc ep %d got %d credits (total %d)\n", report->eid,
+                   report->credits, ep->tx_credits);
 
         if (ep->ep_ops.ep_tx_credits) {
             mtx_unlock(&htc->tx_lock);
@@ -170,13 +154,10 @@ ath10k_htc_process_credit_report(struct ath10k_htc* htc,
     mtx_unlock(&htc->tx_lock);
 }
 
-static zx_status_t
-ath10k_htc_process_lookahead(struct ath10k_htc* htc,
-                             const struct ath10k_htc_lookahead_report* report,
-                             int len,
-                             enum ath10k_htc_ep_id eid,
-                             void* next_lookaheads,
-                             int* next_lookaheads_len) {
+static zx_status_t ath10k_htc_process_lookahead(struct ath10k_htc* htc,
+                                                const struct ath10k_htc_lookahead_report* report,
+                                                int len, enum ath10k_htc_ep_id eid,
+                                                void* next_lookaheads, int* next_lookaheads_len) {
     struct ath10k* ar = htc->ar;
 
     /* Invalid lookahead flags are actually transmitted by
@@ -184,13 +165,10 @@ ath10k_htc_process_lookahead(struct ath10k_htc* htc,
      * Since this will happen at every boot we silently ignore
      * the lookahead in this case
      */
-    if (report->pre_valid != ((~report->post_valid) & 0xFF)) {
-        return ZX_OK;
-    }
+    if (report->pre_valid != ((~report->post_valid) & 0xFF)) { return ZX_OK; }
 
     if (next_lookaheads && next_lookaheads_len) {
-        ath10k_dbg(ar, ATH10K_DBG_HTC,
-                   "htc rx lookahead found pre_valid 0x%x post_valid 0x%x\n",
+        ath10k_dbg(ar, ATH10K_DBG_HTC, "htc rx lookahead found pre_valid 0x%x post_valid 0x%x\n",
                    report->pre_valid, report->post_valid);
 
         /* look ahead bytes are valid, copy them over */
@@ -202,18 +180,13 @@ ath10k_htc_process_lookahead(struct ath10k_htc* htc,
     return ZX_OK;
 }
 
-static zx_status_t
-ath10k_htc_process_lookahead_bundle(struct ath10k_htc* htc,
-                                    const struct ath10k_htc_lookahead_bundle* report,
-                                    int len,
-                                    enum ath10k_htc_ep_id eid,
-                                    void* next_lookaheads,
-                                    int* next_lookaheads_len) {
+static zx_status_t ath10k_htc_process_lookahead_bundle(
+    struct ath10k_htc* htc, const struct ath10k_htc_lookahead_bundle* report, int len,
+    enum ath10k_htc_ep_id eid, void* next_lookaheads, int* next_lookaheads_len) {
     int bundle_cnt = len / sizeof(*report);
 
     if (!bundle_cnt || (bundle_cnt > HTC_HOST_MAX_MSG_PER_BUNDLE)) {
-        ath10k_warn("Invalid lookahead bundle count: %d\n",
-                    bundle_cnt);
+        ath10k_warn("Invalid lookahead bundle count: %d\n", bundle_cnt);
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
@@ -221,8 +194,7 @@ ath10k_htc_process_lookahead_bundle(struct ath10k_htc* htc,
         int i;
 
         for (i = 0; i < bundle_cnt; i++) {
-            memcpy(((uint8_t*)next_lookaheads) + 4 * i,
-                   report->lookahead, 4);
+            memcpy(((uint8_t*)next_lookaheads) + 4 * i, report->lookahead, 4);
             report++;
         }
 
@@ -232,11 +204,8 @@ ath10k_htc_process_lookahead_bundle(struct ath10k_htc* htc,
     return ZX_OK;
 }
 
-zx_status_t ath10k_htc_process_trailer(struct ath10k_htc* htc,
-                                       uint8_t* buffer,
-                                       int length,
-                                       enum ath10k_htc_ep_id src_eid,
-                                       void* next_lookaheads,
+zx_status_t ath10k_htc_process_trailer(struct ath10k_htc* htc, uint8_t* buffer, int length,
+                                       enum ath10k_htc_ep_id src_eid, void* next_lookaheads,
                                        int* next_lookaheads_len) {
     struct ath10k_htc_lookahead_bundle* bundle;
     struct ath10k* ar = htc->ar;
@@ -259,8 +228,7 @@ zx_status_t ath10k_htc_process_trailer(struct ath10k_htc* htc,
 
         if (record->hdr.len > length) {
             /* no room left in buffer for record */
-            ath10k_warn("Invalid record length: %d\n",
-                        record->hdr.len);
+            ath10k_warn("Invalid record length: %d\n", record->hdr.len);
             status = ZX_ERR_BUFFER_TOO_SMALL;
             break;
         }
@@ -273,10 +241,7 @@ zx_status_t ath10k_htc_process_trailer(struct ath10k_htc* htc,
                 status = ZX_ERR_BUFFER_TOO_SMALL;
                 break;
             }
-            ath10k_htc_process_credit_report(htc,
-                                             record->credit_report,
-                                             record->hdr.len,
-                                             src_eid);
+            ath10k_htc_process_credit_report(htc, record->credit_report, record->hdr.len, src_eid);
             break;
         case ATH10K_HTC_RECORD_LOOKAHEAD:
             len = sizeof(struct ath10k_htc_lookahead_report);
@@ -285,31 +250,20 @@ zx_status_t ath10k_htc_process_trailer(struct ath10k_htc* htc,
                 status = ZX_ERR_BUFFER_TOO_SMALL;
                 break;
             }
-            status = ath10k_htc_process_lookahead(htc,
-                                                  record->lookahead_report,
-                                                  record->hdr.len,
-                                                  src_eid,
-                                                  next_lookaheads,
-                                                  next_lookaheads_len);
+            status = ath10k_htc_process_lookahead(htc, record->lookahead_report, record->hdr.len,
+                                                  src_eid, next_lookaheads, next_lookaheads_len);
             break;
         case ATH10K_HTC_RECORD_LOOKAHEAD_BUNDLE:
             bundle = record->lookahead_bundle;
-            status = ath10k_htc_process_lookahead_bundle(htc,
-                     bundle,
-                     record->hdr.len,
-                     src_eid,
-                     next_lookaheads,
-                     next_lookaheads_len);
+            status = ath10k_htc_process_lookahead_bundle(htc, bundle, record->hdr.len, src_eid,
+                                                         next_lookaheads, next_lookaheads_len);
             break;
         default:
-            ath10k_warn("Unhandled record: id:%d length:%d\n",
-                        record->hdr.id, record->hdr.len);
+            ath10k_warn("Unhandled record: id:%d length:%d\n", record->hdr.id, record->hdr.len);
             break;
         }
 
-        if (status != ZX_OK) {
-            break;
-        }
+        if (status != ZX_OK) { break; }
 
         /* multiple records may be present in a trailer */
         buffer += sizeof(record->hdr) + record->hdr.len;
@@ -317,8 +271,7 @@ zx_status_t ath10k_htc_process_trailer(struct ath10k_htc* htc,
     }
 
     if (status != ZX_OK)
-        ath10k_dbg_dump(ar, ATH10K_DBG_HTC, "htc rx bad trailer", "",
-                        orig_buffer, orig_length);
+        ath10k_dbg_dump(ar, ATH10K_DBG_HTC, "htc rx bad trailer", "", orig_buffer, orig_length);
 
     return status;
 }
@@ -343,8 +296,7 @@ void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* 
 
     if (eid >= ATH10K_HTC_EP_COUNT) {
         ath10k_warn("HTC Rx: invalid eid %d\n", eid);
-        ath10k_dbg_dump(ar, ATH10K_DBG_HTC, "htc bad header", "",
-                        hdr, sizeof(*hdr));
+        ath10k_dbg_dump(ar, ATH10K_DBG_HTC, "htc bad header", "", hdr, sizeof(*hdr));
         goto out;
     }
 
@@ -353,19 +305,16 @@ void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* 
     payload_len = hdr->len;
 
     if (payload_len + sizeof(*hdr) > ATH10K_HTC_MAX_LEN) {
-        ath10k_warn("HTC rx frame too long, len: %zu\n",
-                    payload_len + sizeof(*hdr));
-        ath10k_dbg_dump(ar, ATH10K_DBG_HTC, "htc bad rx pkt len", "",
-                        hdr, sizeof(*hdr));
+        ath10k_warn("HTC rx frame too long, len: %zu\n", payload_len + sizeof(*hdr));
+        ath10k_dbg_dump(ar, ATH10K_DBG_HTC, "htc bad rx pkt len", "", hdr, sizeof(*hdr));
         goto out;
     }
 
     size_t actual_payload_sz = ath10k_msg_buf_get_payload_len(msg_buf, ATH10K_MSG_TYPE_HTC);
     if (actual_payload_sz < payload_len) {
-        ath10k_err("HTC Rx: insufficient length, got %zu, expected %d\n",
-                   actual_payload_sz, payload_len);
-        ath10k_dbg_dump(ar, ATH10K_DBG_HTC, "htc bad rx pkt len",
-                        "", hdr, sizeof(*hdr));
+        ath10k_err("HTC Rx: insufficient length, got %zu, expected %d\n", actual_payload_sz,
+                   payload_len);
+        ath10k_dbg_dump(ar, ATH10K_DBG_HTC, "htc bad rx pkt len", "", hdr, sizeof(*hdr));
         goto out;
     }
 
@@ -377,10 +326,8 @@ void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* 
         trailer_len = hdr->trailer_len;
         min_len = sizeof(struct ath10k_ath10k_htc_record_hdr);
 
-        if ((trailer_len < min_len) ||
-                (trailer_len > payload_len)) {
-            ath10k_warn("Invalid trailer length: %d\n",
-                        trailer_len);
+        if ((trailer_len < min_len) || (trailer_len > payload_len)) {
+            ath10k_warn("Invalid trailer length: %d\n", trailer_len);
             goto out;
         }
 
@@ -388,24 +335,19 @@ void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* 
         trailer += sizeof(*hdr);
         trailer += payload_len;
         trailer -= trailer_len;
-        status = ath10k_htc_process_trailer(htc, trailer,
-                                            trailer_len, hdr->eid,
-                                            NULL, NULL);
-        if (status) {
-            goto out;
-        }
+        status = ath10k_htc_process_trailer(htc, trailer, trailer_len, hdr->eid, NULL, NULL);
+        if (status) { goto out; }
 
         msg_buf->used -= trailer_len;
     }
 
     if (((int)payload_len - (int)trailer_len) <= 0)
-        /* zero length packet with trailer data, just drop these */
+    /* zero length packet with trailer data, just drop these */
     {
         goto out;
     }
 
-    ath10k_dbg(ar, ATH10K_DBG_HTC, "htc rx completion ep %d msg_buf %pK\n",
-               eid, msg_buf);
+    ath10k_dbg(ar, ATH10K_DBG_HTC, "htc rx completion ep %d msg_buf %pK\n", eid, msg_buf);
     ep->ep_ops.ep_rx_complete(ar, msg_buf);
 
     /* msg_buf is now owned by the rx completion handler */
@@ -433,8 +375,7 @@ static void ath10k_htc_control_rx_complete(struct ath10k* ar, struct ath10k_msg_
         }
 
         size_t msg_len = ath10k_msg_buf_get_payload_len(msg_buf, ATH10K_MSG_TYPE_HTC_MSG);
-        htc->control_resp_len =
-            MIN_T(int, msg_len, ATH10K_HTC_MAX_CTRL_MSG_LEN);
+        htc->control_resp_len = MIN_T(int, msg_len, ATH10K_HTC_MAX_CTRL_MSG_LEN);
 
         memcpy(htc->control_resp_buffer, msg, htc->control_resp_len);
 
@@ -500,16 +441,13 @@ static void ath10k_htc_reset_endpoint_states(struct ath10k_htc* htc) {
     }
 }
 
-static uint8_t ath10k_htc_get_credit_allocation(struct ath10k_htc* htc,
-                                                uint16_t service_id) {
+static uint8_t ath10k_htc_get_credit_allocation(struct ath10k_htc* htc, uint16_t service_id) {
     uint8_t allocation = 0;
 
     /* The WMI control service is the only service with flow control.
      * Let it have all transmit credits.
      */
-    if (service_id == ATH10K_HTC_SVC_ID_WMI_CONTROL) {
-        allocation = htc->total_transmit_credits;
-    }
+    if (service_id == ATH10K_HTC_SVC_ID_WMI_CONTROL) { allocation = htc->total_transmit_credits; }
 
     return allocation;
 }
@@ -550,13 +488,12 @@ zx_status_t ath10k_htc_wait_target(struct ath10k_htc* htc) {
     }
 
     if ((size_t)htc->control_resp_len < sizeof(msg->hdr) + sizeof(msg->ready)) {
-        ath10k_err("Invalid HTC ready msg len:%d\n",
-                   htc->control_resp_len);
+        ath10k_err("Invalid HTC ready msg len:%d\n", htc->control_resp_len);
         return ZX_ERR_IO;
     }
 
     msg = (struct ath10k_htc_msg*)htc->control_resp_buffer;
-    message_id   = msg->hdr.message_id;
+    message_id = msg->hdr.message_id;
 
     if (message_id != ATH10K_HTC_MSG_READY_ID) {
         ath10k_err("Invalid HTC ready msg: 0x%x\n", message_id);
@@ -566,13 +503,10 @@ zx_status_t ath10k_htc_wait_target(struct ath10k_htc* htc) {
     htc->total_transmit_credits = msg->ready.credit_count;
     htc->target_credit_size = msg->ready.credit_size;
 
-    ath10k_dbg(ar, ATH10K_DBG_HTC,
-               "Target ready! transmit resources: %d size:%d\n",
-               htc->total_transmit_credits,
-               htc->target_credit_size);
+    ath10k_dbg(ar, ATH10K_DBG_HTC, "Target ready! transmit resources: %d size:%d\n",
+               htc->total_transmit_credits, htc->target_credit_size);
 
-    if ((htc->total_transmit_credits == 0) ||
-            (htc->target_credit_size == 0)) {
+    if ((htc->total_transmit_credits == 0) || (htc->target_credit_size == 0)) {
         ath10k_err("Invalid credit size received\n");
         return ZX_ERR_IO;
     }
@@ -580,13 +514,10 @@ zx_status_t ath10k_htc_wait_target(struct ath10k_htc* htc) {
     /* The only way to determine if the ready message is an extended
      * message is from the size.
      */
-    if ((size_t)htc->control_resp_len >=
-            sizeof(msg->hdr) + sizeof(msg->ready_ext)) {
+    if ((size_t)htc->control_resp_len >= sizeof(msg->hdr) + sizeof(msg->ready_ext)) {
         htc->max_msgs_per_htc_bundle =
-            MIN_T(uint8_t, msg->ready_ext.max_msgs_per_htc_bundle,
-                  HTC_HOST_MAX_MSG_PER_BUNDLE);
-        ath10k_dbg(ar, ATH10K_DBG_HTC,
-                   "Extended ready message. RX bundle size: %d\n",
+            MIN_T(uint8_t, msg->ready_ext.max_msgs_per_htc_bundle, HTC_HOST_MAX_MSG_PER_BUNDLE);
+        ath10k_dbg(ar, ATH10K_DBG_HTC, "Extended ready message. RX bundle size: %d\n",
                    htc->max_msgs_per_htc_bundle);
     }
 
@@ -622,15 +553,12 @@ zx_status_t ath10k_htc_connect_service(struct ath10k_htc* htc,
 
     tx_alloc = ath10k_htc_get_credit_allocation(htc, conn_req->service_id);
     if (!tx_alloc) {
-        ath10k_dbg(ar, ATH10K_DBG_BOOT,
-                   "boot htc service %s does not allocate target credits\n",
+        ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot htc service %s does not allocate target credits\n",
                    htc_service_name(conn_req->service_id));
     }
 
     status = ath10k_msg_buf_alloc(htc->ar, &msg_buf, ATH10K_MSG_TYPE_HTC_CONN_SVC, 0);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     msg = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTC_MSG);
     msg->hdr.message_id = ATH10K_HTC_MSG_CONNECT_SERVICE_ID;
@@ -672,22 +600,20 @@ zx_status_t ath10k_htc_connect_service(struct ath10k_htc* htc,
 
     resp_length = sizeof(msg->hdr) + sizeof(msg->connect_service_response);
     if ((message_id != ATH10K_HTC_MSG_CONNECT_SERVICE_RESP_ID) ||
-            (htc->control_resp_len < resp_length)) {
+        (htc->control_resp_len < resp_length)) {
         ath10k_err("Invalid resp message ID 0x%x", message_id);
         return ZX_ERR_BAD_STATE;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_HTC,
                "HTC Service %s connect response: status: 0x%x, assigned ep: 0x%x\n",
-               htc_service_name(service_id),
-               resp_msg->status, resp_msg->eid);
+               htc_service_name(service_id), resp_msg->status, resp_msg->eid);
 
     conn_resp->connect_resp_code = resp_msg->status;
 
     /* check response status */
     if (resp_msg->status != ATH10K_HTC_CONN_SVC_STATUS_SUCCESS) {
-        ath10k_err("HTC Service %s connect request failed: 0x%x)\n",
-                   htc_service_name(service_id),
+        ath10k_err("HTC Service %s connect request failed: 0x%x)\n", htc_service_name(service_id),
                    resp_msg->status);
         return ZX_ERR_BAD_STATE;
     }
@@ -697,20 +623,14 @@ zx_status_t ath10k_htc_connect_service(struct ath10k_htc* htc,
 
 setup:
 
-    if (assigned_eid >= ATH10K_HTC_EP_COUNT) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
+    if (assigned_eid >= ATH10K_HTC_EP_COUNT) { return ZX_ERR_OUT_OF_RANGE; }
 
-    if (max_msg_size == 0) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
+    if (max_msg_size == 0) { return ZX_ERR_OUT_OF_RANGE; }
 
     ep = &htc->endpoint[assigned_eid];
     ep->eid = assigned_eid;
 
-    if (ep->service_id != ATH10K_HTC_SVC_ID_UNUSED) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
+    if (ep->service_id != ATH10K_HTC_SVC_ID_UNUSED) { return ZX_ERR_OUT_OF_RANGE; }
 
     /* return assigned endpoint to caller */
     conn_resp->eid = assigned_eid;
@@ -725,23 +645,16 @@ setup:
     /* copy all the callbacks */
     ep->ep_ops = conn_req->ep_ops;
 
-    status = ath10k_hif_map_service_to_pipe(htc->ar,
-                                            ep->service_id,
-                                            &ep->ul_pipe_id,
-                                            &ep->dl_pipe_id);
-    if (status != ZX_OK) {
-        return status;
-    }
+    status =
+        ath10k_hif_map_service_to_pipe(htc->ar, ep->service_id, &ep->ul_pipe_id, &ep->dl_pipe_id);
+    if (status != ZX_OK) { return status; }
 
-    ath10k_dbg(ar, ATH10K_DBG_BOOT,
-               "boot htc service '%s' ul pipe %d dl pipe %d eid %d ready\n",
-               htc_service_name(ep->service_id), ep->ul_pipe_id,
-               ep->dl_pipe_id, ep->eid);
+    ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot htc service '%s' ul pipe %d dl pipe %d eid %d ready\n",
+               htc_service_name(ep->service_id), ep->ul_pipe_id, ep->dl_pipe_id, ep->eid);
 
     if (disable_credit_flow_ctrl && ep->tx_credit_flow_enabled) {
         ep->tx_credit_flow_enabled = false;
-        ath10k_dbg(ar, ATH10K_DBG_BOOT,
-                   "boot htc service '%s' eid %d TX flow control disabled\n",
+        ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot htc service '%s' eid %d TX flow control disabled\n",
                    htc_service_name(ep->service_id), assigned_eid);
     }
 
@@ -755,19 +668,15 @@ zx_status_t ath10k_htc_start(struct ath10k_htc* htc) {
     struct ath10k_htc_msg* msg;
 
     status = ath10k_msg_buf_alloc(htc->ar, &msg_buf, ATH10K_MSG_TYPE_HTC_SETUP_COMPLETE_EXT, 0);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     msg = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTC_MSG);
     msg->hdr.message_id = ATH10K_HTC_MSG_SETUP_COMPLETE_EX_ID;
 
     if (ar->hif.bus == ATH10K_BUS_SDIO) {
         /* Extra setup params used by SDIO */
-        msg->setup_complete_ext.flags =
-            ATH10K_HTC_SETUP_COMPLETE_FLAGS_RX_BNDL_EN;
-        msg->setup_complete_ext.max_msgs_per_bundled_recv =
-            htc->max_msgs_per_htc_bundle;
+        msg->setup_complete_ext.flags = ATH10K_HTC_SETUP_COMPLETE_FLAGS_RX_BNDL_EN;
+        msg->setup_complete_ext.max_msgs_per_bundled_recv = htc->max_msgs_per_htc_bundle;
     }
     ath10k_dbg(ar, ATH10K_DBG_HTC, "HTC is using TX credit flow control\n");
 
@@ -804,8 +713,7 @@ zx_status_t ath10k_htc_init(struct ath10k* ar) {
     /* connect fake service */
     status = ath10k_htc_connect_service(htc, &conn_req, &conn_resp);
     if (status != ZX_OK) {
-        ath10k_err("could not connect to htc service (%d)\n",
-                   status);
+        ath10k_err("could not connect to htc service (%d)\n", status);
         return status;
     }
 

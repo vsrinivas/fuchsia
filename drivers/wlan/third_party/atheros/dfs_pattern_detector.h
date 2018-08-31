@@ -25,7 +25,7 @@
 /* tolerated deviation of radar time stamp in usecs on both sides
  * TODO: this might need to be HW-dependent
  */
-#define PRI_TOLERANCE   16
+#define PRI_TOLERANCE 16
 
 /**
  * struct ath_dfs_pool_stats - DFS Statistics for global pools
@@ -95,10 +95,8 @@ struct radar_detector_specs {
  */
 struct dfs_pattern_detector {
     void (*exit)(struct dfs_pattern_detector* dpd);
-    bool (*set_dfs_domain)(struct dfs_pattern_detector* dpd,
-                           enum nl80211_dfs_regions region);
-    bool (*add_pulse)(struct dfs_pattern_detector* dpd,
-                      struct pulse_event* pe);
+    bool (*set_dfs_domain)(struct dfs_pattern_detector* dpd, enum nl80211_dfs_regions region);
+    bool (*add_pulse)(struct dfs_pattern_detector* dpd, struct pulse_event* pe);
 
     struct ath_dfs_pool_stats (*get_stats)(struct dfs_pattern_detector* dpd);
     enum nl80211_dfs_regions region;
@@ -116,7 +114,6 @@ struct dfs_pattern_detector {
  * @param region: DFS domain to be used, can be NL80211_DFS_UNSET at creation
  * @return instance pointer on success, NULL otherwise
  */
-extern struct dfs_pattern_detector*
-dfs_pattern_detector_init(struct ath_common* common,
-                          enum nl80211_dfs_regions region);
+extern struct dfs_pattern_detector* dfs_pattern_detector_init(struct ath_common* common,
+                                                              enum nl80211_dfs_regions region);
 #endif /* DFS_PATTERN_DETECTOR_H */

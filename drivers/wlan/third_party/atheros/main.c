@@ -26,9 +26,7 @@ MODULE_AUTHOR("Atheros Communications");
 MODULE_DESCRIPTION("Shared library for Atheros wireless LAN cards.");
 MODULE_LICENSE("Dual BSD/GPL");
 
-struct sk_buff* ath_rxbuf_alloc(struct ath_common* common,
-                                uint32_t len,
-                                gfp_t gfp_mask) {
+struct sk_buff* ath_rxbuf_alloc(struct ath_common* common, uint32_t len, gfp_t gfp_mask) {
     struct sk_buff* skb;
     uint32_t off;
 
@@ -47,10 +45,8 @@ struct sk_buff* ath_rxbuf_alloc(struct ath_common* common,
      * systems :( */
     skb = __dev_alloc_skb(len + common->cachelsz - 1, gfp_mask);
     if (skb != NULL) {
-        off = ((unsigned long) skb->data) % common->cachelsz;
-        if (off != 0) {
-            skb_reserve(skb, common->cachelsz - off);
-        }
+        off = ((unsigned long)skb->data) % common->cachelsz;
+        if (off != 0) { skb_reserve(skb, common->cachelsz - off); }
     } else {
         pr_err("skbuff alloc of size %u failed\n", len);
         return NULL;
@@ -61,14 +57,12 @@ struct sk_buff* ath_rxbuf_alloc(struct ath_common* common,
 EXPORT_SYMBOL(ath_rxbuf_alloc);
 
 bool ath_is_mybeacon(struct ath_common* common, struct ieee80211_hdr* hdr) {
-    return ieee80211_is_beacon(hdr->frame_control) &&
-           !is_zero_ether_addr(common->curbssid) &&
+    return ieee80211_is_beacon(hdr->frame_control) && !is_zero_ether_addr(common->curbssid) &&
            ether_addr_equal_64bits(hdr->addr3, common->curbssid);
 }
 EXPORT_SYMBOL(ath_is_mybeacon);
 
-void ath_printk(const char* level, const struct ath_common* common,
-                const char* fmt, ...) {
+void ath_printk(const char* level, const struct ath_common* common, const char* fmt, ...) {
     struct va_format vaf;
     va_list args;
 
@@ -78,8 +72,7 @@ void ath_printk(const char* level, const struct ath_common* common,
     vaf.va = &args;
 
     if (common && common->hw && common->hw->wiphy) {
-        printk("%sath: %s: %pV",
-               level, wiphy_name(common->hw->wiphy), &vaf);
+        printk("%sath: %s: %pV", level, wiphy_name(common->hw->wiphy), &vaf);
         trace_ath_log(common->hw->wiphy, &vaf);
     } else {
         printk("%sath: %pV", level, &vaf);

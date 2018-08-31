@@ -24,10 +24,10 @@
  */
 #define ATH10K_TESTMODE_VERSION_MINOR 0
 
-#define ATH10K_TM_DATA_MAX_LEN      5000
+#define ATH10K_TM_DATA_MAX_LEN 5000
 
 enum ath10k_tm_attr {
-// clang-format off
+    // clang-format off
     __ATH10K_TM_ATTR_INVALID      = 0,
     ATH10K_TM_ATTR_CMD            = 1,
     ATH10K_TM_ATTR_DATA           = 2,
@@ -39,7 +39,7 @@ enum ath10k_tm_attr {
     /* keep last */
     __ATH10K_TM_ATTR_AFTER_LAST,
     ATH10K_TM_ATTR_MAX            = __ATH10K_TM_ATTR_AFTER_LAST - 1,
-// clang-format on
+    // clang-format on
 };
 
 /* All ath10k testmode interface commands specified in

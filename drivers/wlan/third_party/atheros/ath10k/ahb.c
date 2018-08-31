@@ -17,24 +17,19 @@
 
 #include "ahb.h"
 
-#include <zircon/syscalls.h>
+#include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
-#include <linux/clk.h>
 #include <linux/reset.h>
+#include <zircon/syscalls.h>
 
 #include "core.h"
 #include "debug.h"
 #include "pci.h"
 
 static const struct of_device_id ath10k_ahb_of_match[] = {
-    {
-        .compatible = "qcom,ipq4019-wifi",
-        .data = (void*)ATH10K_HW_QCA4019
-    },
-    { }
-};
+    {.compatible = "qcom,ipq4019-wifi", .data = (void*)ATH10K_HW_QCA4019}, {}};
 
 MODULE_DEVICE_TABLE(of, ath10k_ahb_of_match);
 
@@ -82,9 +77,7 @@ static uint32_t ath10k_ahb_soc_read32(struct ath10k* ar, uint32_t addr) {
 }
 
 static int ath10k_ahb_get_num_banks(struct ath10k* ar) {
-    if (ar->hw_rev == ATH10K_HW_QCA4019) {
-        return 1;
-    }
+    if (ar->hw_rev == ATH10K_HW_QCA4019) { return 1; }
 
     ath10k_warn("unknown number of banks, assuming 1\n");
     return 1;
@@ -98,22 +91,19 @@ static int ath10k_ahb_clock_init(struct ath10k* ar) {
 
     ar_ahb->cmd_clk = devm_clk_get(dev, "wifi_wcss_cmd");
     if (IS_ERR_OR_NULL(ar_ahb->cmd_clk)) {
-        ath10k_err("failed to get cmd clk: %ld\n",
-                   PTR_ERR(ar_ahb->cmd_clk));
+        ath10k_err("failed to get cmd clk: %ld\n", PTR_ERR(ar_ahb->cmd_clk));
         return ar_ahb->cmd_clk ? PTR_ERR(ar_ahb->cmd_clk) : -ENODEV;
     }
 
     ar_ahb->ref_clk = devm_clk_get(dev, "wifi_wcss_ref");
     if (IS_ERR_OR_NULL(ar_ahb->ref_clk)) {
-        ath10k_err("failed to get ref clk: %ld\n",
-                   PTR_ERR(ar_ahb->ref_clk));
+        ath10k_err("failed to get ref clk: %ld\n", PTR_ERR(ar_ahb->ref_clk));
         return ar_ahb->ref_clk ? PTR_ERR(ar_ahb->ref_clk) : -ENODEV;
     }
 
     ar_ahb->rtc_clk = devm_clk_get(dev, "wifi_wcss_rtc");
     if (IS_ERR_OR_NULL(ar_ahb->rtc_clk)) {
-        ath10k_err("failed to get rtc clk: %ld\n",
-                   PTR_ERR(ar_ahb->rtc_clk));
+        ath10k_err("failed to get rtc clk: %ld\n", PTR_ERR(ar_ahb->rtc_clk));
         return ar_ahb->rtc_clk ? PTR_ERR(ar_ahb->rtc_clk) : -ENODEV;
     }
 
@@ -135,9 +125,8 @@ static int ath10k_ahb_clock_enable(struct ath10k* ar) {
 
     dev = &ar_ahb->pdev->dev;
 
-    if (IS_ERR_OR_NULL(ar_ahb->cmd_clk) ||
-            IS_ERR_OR_NULL(ar_ahb->ref_clk) ||
-            IS_ERR_OR_NULL(ar_ahb->rtc_clk)) {
+    if (IS_ERR_OR_NULL(ar_ahb->cmd_clk) || IS_ERR_OR_NULL(ar_ahb->ref_clk) ||
+        IS_ERR_OR_NULL(ar_ahb->rtc_clk)) {
         ath10k_err("clock(s) is/are not initialized\n");
         ret = -EIO;
         goto out;
@@ -176,17 +165,11 @@ out:
 static void ath10k_ahb_clock_disable(struct ath10k* ar) {
     struct ath10k_ahb* ar_ahb = ath10k_ahb_priv(ar);
 
-    if (!IS_ERR_OR_NULL(ar_ahb->cmd_clk)) {
-        clk_disable_unprepare(ar_ahb->cmd_clk);
-    }
+    if (!IS_ERR_OR_NULL(ar_ahb->cmd_clk)) { clk_disable_unprepare(ar_ahb->cmd_clk); }
 
-    if (!IS_ERR_OR_NULL(ar_ahb->ref_clk)) {
-        clk_disable_unprepare(ar_ahb->ref_clk);
-    }
+    if (!IS_ERR_OR_NULL(ar_ahb->ref_clk)) { clk_disable_unprepare(ar_ahb->ref_clk); }
 
-    if (!IS_ERR_OR_NULL(ar_ahb->rtc_clk)) {
-        clk_disable_unprepare(ar_ahb->rtc_clk);
-    }
+    if (!IS_ERR_OR_NULL(ar_ahb->rtc_clk)) { clk_disable_unprepare(ar_ahb->rtc_clk); }
 }
 
 static int ath10k_ahb_rst_ctrl_init(struct ath10k* ar) {
@@ -197,36 +180,31 @@ static int ath10k_ahb_rst_ctrl_init(struct ath10k* ar) {
 
     ar_ahb->core_cold_rst = devm_reset_control_get(dev, "wifi_core_cold");
     if (IS_ERR(ar_ahb->core_cold_rst)) {
-        ath10k_err("failed to get core cold rst ctrl: %ld\n",
-                   PTR_ERR(ar_ahb->core_cold_rst));
+        ath10k_err("failed to get core cold rst ctrl: %ld\n", PTR_ERR(ar_ahb->core_cold_rst));
         return PTR_ERR(ar_ahb->core_cold_rst);
     }
 
     ar_ahb->radio_cold_rst = devm_reset_control_get(dev, "wifi_radio_cold");
     if (IS_ERR(ar_ahb->radio_cold_rst)) {
-        ath10k_err("failed to get radio cold rst ctrl: %ld\n",
-                   PTR_ERR(ar_ahb->radio_cold_rst));
+        ath10k_err("failed to get radio cold rst ctrl: %ld\n", PTR_ERR(ar_ahb->radio_cold_rst));
         return PTR_ERR(ar_ahb->radio_cold_rst);
     }
 
     ar_ahb->radio_warm_rst = devm_reset_control_get(dev, "wifi_radio_warm");
     if (IS_ERR(ar_ahb->radio_warm_rst)) {
-        ath10k_err("failed to get radio warm rst ctrl: %ld\n",
-                   PTR_ERR(ar_ahb->radio_warm_rst));
+        ath10k_err("failed to get radio warm rst ctrl: %ld\n", PTR_ERR(ar_ahb->radio_warm_rst));
         return PTR_ERR(ar_ahb->radio_warm_rst);
     }
 
     ar_ahb->radio_srif_rst = devm_reset_control_get(dev, "wifi_radio_srif");
     if (IS_ERR(ar_ahb->radio_srif_rst)) {
-        ath10k_err("failed to get radio srif rst ctrl: %ld\n",
-                   PTR_ERR(ar_ahb->radio_srif_rst));
+        ath10k_err("failed to get radio srif rst ctrl: %ld\n", PTR_ERR(ar_ahb->radio_srif_rst));
         return PTR_ERR(ar_ahb->radio_srif_rst);
     }
 
     ar_ahb->cpu_init_rst = devm_reset_control_get(dev, "wifi_cpu_init");
     if (IS_ERR(ar_ahb->cpu_init_rst)) {
-        ath10k_err("failed to get cpu init rst ctrl: %ld\n",
-                   PTR_ERR(ar_ahb->cpu_init_rst));
+        ath10k_err("failed to get cpu init rst ctrl: %ld\n", PTR_ERR(ar_ahb->cpu_init_rst));
         return PTR_ERR(ar_ahb->cpu_init_rst);
     }
 
@@ -247,10 +225,8 @@ static int ath10k_ahb_release_reset(struct ath10k* ar) {
     struct ath10k_ahb* ar_ahb = ath10k_ahb_priv(ar);
     int ret;
 
-    if (IS_ERR_OR_NULL(ar_ahb->radio_cold_rst) ||
-            IS_ERR_OR_NULL(ar_ahb->radio_warm_rst) ||
-            IS_ERR_OR_NULL(ar_ahb->radio_srif_rst) ||
-            IS_ERR_OR_NULL(ar_ahb->cpu_init_rst)) {
+    if (IS_ERR_OR_NULL(ar_ahb->radio_cold_rst) || IS_ERR_OR_NULL(ar_ahb->radio_warm_rst) ||
+        IS_ERR_OR_NULL(ar_ahb->radio_srif_rst) || IS_ERR_OR_NULL(ar_ahb->cpu_init_rst)) {
         ath10k_err("rst ctrl(s) is/are not initialized\n");
         return -EINVAL;
     }
@@ -282,8 +258,7 @@ static int ath10k_ahb_release_reset(struct ath10k* ar) {
     return 0;
 }
 
-static void ath10k_ahb_halt_axi_bus(struct ath10k* ar, uint32_t haltreq_reg,
-                                    uint32_t haltack_reg) {
+static void ath10k_ahb_halt_axi_bus(struct ath10k* ar, uint32_t haltreq_reg, uint32_t haltack_reg) {
     unsigned long timeout;
     uint32_t val;
 
@@ -296,9 +271,7 @@ static void ath10k_ahb_halt_axi_bus(struct ath10k* ar, uint32_t haltreq_reg,
     timeout = jiffies + msecs_to_jiffies(ATH10K_AHB_AXI_BUS_HALT_TIMEOUT);
     do {
         val = ath10k_ahb_tcsr_read32(ar, haltack_reg);
-        if (val & AHB_AXI_BUS_HALT_ACK) {
-            break;
-        }
+        if (val & AHB_AXI_BUS_HALT_ACK) { break; }
 
         zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
     } while (time_before(jiffies, timeout));
@@ -317,11 +290,9 @@ static void ath10k_ahb_halt_chip(struct ath10k* ar) {
     uint32_t val;
     int ret;
 
-    if (IS_ERR_OR_NULL(ar_ahb->core_cold_rst) ||
-            IS_ERR_OR_NULL(ar_ahb->radio_cold_rst) ||
-            IS_ERR_OR_NULL(ar_ahb->radio_warm_rst) ||
-            IS_ERR_OR_NULL(ar_ahb->radio_srif_rst) ||
-            IS_ERR_OR_NULL(ar_ahb->cpu_init_rst)) {
+    if (IS_ERR_OR_NULL(ar_ahb->core_cold_rst) || IS_ERR_OR_NULL(ar_ahb->radio_cold_rst) ||
+        IS_ERR_OR_NULL(ar_ahb->radio_warm_rst) || IS_ERR_OR_NULL(ar_ahb->radio_srif_rst) ||
+        IS_ERR_OR_NULL(ar_ahb->cpu_init_rst)) {
         ath10k_err("rst ctrl(s) is/are not initialized\n");
         return;
     }
@@ -340,8 +311,7 @@ static void ath10k_ahb_halt_chip(struct ath10k* ar) {
         haltack_reg = ATH10K_AHB_TCSR_WCSS1_HALTACK;
         break;
     default:
-        ath10k_err("invalid core id %d found, skipping reset sequence\n",
-                   core_id);
+        ath10k_err("invalid core id %d found, skipping reset sequence\n", core_id);
         return;
     }
 
@@ -352,33 +322,23 @@ static void ath10k_ahb_halt_chip(struct ath10k* ar) {
     ath10k_ahb_tcsr_write32(ar, glb_cfg_reg, val);
 
     ret = reset_control_assert(ar_ahb->core_cold_rst);
-    if (ret) {
-        ath10k_err("failed to assert core cold rst: %d\n", ret);
-    }
+    if (ret) { ath10k_err("failed to assert core cold rst: %d\n", ret); }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
     ret = reset_control_assert(ar_ahb->radio_cold_rst);
-    if (ret) {
-        ath10k_err("failed to assert radio cold rst: %d\n", ret);
-    }
+    if (ret) { ath10k_err("failed to assert radio cold rst: %d\n", ret); }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
     ret = reset_control_assert(ar_ahb->radio_warm_rst);
-    if (ret) {
-        ath10k_err("failed to assert radio warm rst: %d\n", ret);
-    }
+    if (ret) { ath10k_err("failed to assert radio warm rst: %d\n", ret); }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
     ret = reset_control_assert(ar_ahb->radio_srif_rst);
-    if (ret) {
-        ath10k_err("failed to assert radio srif rst: %d\n", ret);
-    }
+    if (ret) { ath10k_err("failed to assert radio srif rst: %d\n", ret); }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
     ret = reset_control_assert(ar_ahb->cpu_init_rst);
-    if (ret) {
-        ath10k_err("failed to assert cpu init rst: %d\n", ret);
-    }
+    if (ret) { ath10k_err("failed to assert cpu init rst: %d\n", ret); }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
     /* Clear halt req and core clock disable req before
@@ -393,9 +353,7 @@ static void ath10k_ahb_halt_chip(struct ath10k* ar) {
     ath10k_ahb_tcsr_write32(ar, glb_cfg_reg, val);
 
     ret = reset_control_deassert(ar_ahb->core_cold_rst);
-    if (ret) {
-        ath10k_err("failed to deassert core cold rst: %d\n", ret);
-    }
+    if (ret) { ath10k_err("failed to deassert core cold rst: %d\n", ret); }
 
     ath10k_dbg(ar, ATH10K_DBG_AHB, "core %d reset done\n", core_id);
 }
@@ -403,9 +361,7 @@ static void ath10k_ahb_halt_chip(struct ath10k* ar) {
 static irqreturn_t ath10k_ahb_interrupt_handler(int irq, void* arg) {
     struct ath10k* ar = arg;
 
-    if (!ath10k_pci_irq_pending(ar)) {
-        return IRQ_NONE;
-    }
+    if (!ath10k_pci_irq_pending(ar)) { return IRQ_NONE; }
 
     ath10k_pci_disable_and_clear_legacy_irq(ar);
     ath10k_pci_irq_msi_fw_mask(ar);
@@ -419,12 +375,9 @@ static int ath10k_ahb_request_irq_legacy(struct ath10k* ar) {
     struct ath10k_ahb* ar_ahb = ath10k_ahb_priv(ar);
     int ret;
 
-    ret = request_irq(ar_ahb->irq,
-                      ath10k_ahb_interrupt_handler,
-                      IRQF_SHARED, "ath10k_ahb", ar);
+    ret = request_irq(ar_ahb->irq, ath10k_ahb_interrupt_handler, IRQF_SHARED, "ath10k_ahb", ar);
     if (ret) {
-        ath10k_warn("failed to request legacy irq %d: %d\n",
-                    ar_ahb->irq, ret);
+        ath10k_warn("failed to request legacy irq %d: %d\n", ar_ahb->irq, ret);
         return ret;
     }
     ar_pci->oper_irq_mode = ATH10K_PCI_IRQ_LEGACY;
@@ -469,16 +422,14 @@ static int ath10k_ahb_resource_init(struct ath10k* ar) {
 
     ar_ahb->mem_len = resource_size(res);
 
-    ar_ahb->gcc_mem = ioremap_nocache(ATH10K_GCC_REG_BASE,
-                                      ATH10K_GCC_REG_SIZE);
+    ar_ahb->gcc_mem = ioremap_nocache(ATH10K_GCC_REG_BASE, ATH10K_GCC_REG_SIZE);
     if (!ar_ahb->gcc_mem) {
         ath10k_err("gcc mem ioremap error\n");
         ret = -ENOMEM;
         goto err_mem_unmap;
     }
 
-    ar_ahb->tcsr_mem = ioremap_nocache(ATH10K_TCSR_REG_BASE,
-                                       ATH10K_TCSR_REG_SIZE);
+    ar_ahb->tcsr_mem = ioremap_nocache(ATH10K_TCSR_REG_BASE, ATH10K_TCSR_REG_SIZE);
     if (!ar_ahb->tcsr_mem) {
         ath10k_err("tcsr mem ioremap error\n");
         ret = -ENOMEM;
@@ -493,20 +444,15 @@ static int ath10k_ahb_resource_init(struct ath10k* ar) {
 
     ret = dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(32));
     if (ret) {
-        ath10k_err("failed to set 32-bit consistent dma: %d\n",
-                   ret);
+        ath10k_err("failed to set 32-bit consistent dma: %d\n", ret);
         goto err_tcsr_mem_unmap;
     }
 
     ret = ath10k_ahb_clock_init(ar);
-    if (ret) {
-        goto err_tcsr_mem_unmap;
-    }
+    if (ret) { goto err_tcsr_mem_unmap; }
 
     ret = ath10k_ahb_rst_ctrl_init(ar);
-    if (ret) {
-        goto err_clock_deinit;
-    }
+    if (ret) { goto err_clock_deinit; }
 
     ar_ahb->irq = platform_get_irq_byname(pdev, "legacy");
     if (ar_ahb->irq < 0) {
@@ -518,8 +464,7 @@ static int ath10k_ahb_resource_init(struct ath10k* ar) {
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "irq: %d\n", ar_ahb->irq);
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "mem: 0x%pK mem_len: %lu gcc mem: 0x%pK tcsr_mem: 0x%pK\n",
-               ar_ahb->mem, ar_ahb->mem_len,
-               ar_ahb->gcc_mem, ar_ahb->tcsr_mem);
+               ar_ahb->mem, ar_ahb->mem_len, ar_ahb->gcc_mem, ar_ahb->tcsr_mem);
     return 0;
 
 err_clock_deinit:
@@ -547,17 +492,11 @@ static void ath10k_ahb_resource_deinit(struct ath10k* ar) {
 
     dev = &ar_ahb->pdev->dev;
 
-    if (ar_ahb->mem) {
-        devm_iounmap(dev, ar_ahb->mem);
-    }
+    if (ar_ahb->mem) { devm_iounmap(dev, ar_ahb->mem); }
 
-    if (ar_ahb->gcc_mem) {
-        iounmap(ar_ahb->gcc_mem);
-    }
+    if (ar_ahb->gcc_mem) { iounmap(ar_ahb->gcc_mem); }
 
-    if (ar_ahb->tcsr_mem) {
-        iounmap(ar_ahb->tcsr_mem);
-    }
+    if (ar_ahb->tcsr_mem) { iounmap(ar_ahb->tcsr_mem); }
 
     ar_ahb->mem = NULL;
     ar_ahb->gcc_mem = NULL;
@@ -588,18 +527,14 @@ static int ath10k_ahb_prepare_device(struct ath10k* ar) {
     ath10k_ahb_write32(ar, ATH10K_AHB_WIFI_SCRATCH_5_REG, val);
 
     ret = ath10k_ahb_release_reset(ar);
-    if (ret) {
-        goto err_clk_disable;
-    }
+    if (ret) { goto err_clk_disable; }
 
     ath10k_ahb_irq_disable(ar);
 
     ath10k_ahb_write32(ar, FW_INDICATOR_ADDRESS, FW_IND_HOST_READY);
 
     ret = ath10k_pci_wait_for_target_init(ar);
-    if (ret) {
-        goto err_halt_chip;
-    }
+    if (ret) { goto err_halt_chip; }
 
     return 0;
 
@@ -619,9 +554,7 @@ static int ath10k_ahb_chip_reset(struct ath10k* ar) {
     ath10k_ahb_clock_disable(ar);
 
     ret = ath10k_ahb_prepare_device(ar);
-    if (ret) {
-        return ret;
-    }
+    if (ret) { return ret; }
 
     return 0;
 }
@@ -705,8 +638,7 @@ static uint32_t ath10k_ahb_qca4019_targ_cpu_to_ce_addr(struct ath10k* ar, uint32
 
     val = ath10k_pci_read32(ar, PCIE_BAR_REG_ADDRESS);
 
-    if (region >= QCA4019_SRAM_ADDR && region <=
-            (QCA4019_SRAM_ADDR + QCA4019_SRAM_LEN)) {
+    if (region >= QCA4019_SRAM_ADDR && region <= (QCA4019_SRAM_ADDR + QCA4019_SRAM_LEN)) {
         /* SRAM contents for QCA4019 can be directly accessed and
          * no conversions are required
          */
@@ -719,7 +651,7 @@ static uint32_t ath10k_ahb_qca4019_targ_cpu_to_ce_addr(struct ath10k* ar, uint32
 }
 
 static const struct ath10k_hif_ops ath10k_ahb_hif_ops = {
-// clang-format off
+    // clang-format off
     .tx_sg                  = ath10k_pci_hif_tx_sg,
     .diag_read              = ath10k_pci_hif_diag_read,
     .diag_write             = ath10k_pci_diag_write_mem,
@@ -734,13 +666,13 @@ static const struct ath10k_hif_ops ath10k_ahb_hif_ops = {
     .power_down             = ath10k_pci_hif_power_down,
     .read32                 = ath10k_ahb_read32,
     .write32                = ath10k_ahb_write32,
-// clang-format on
+    // clang-format on
 };
 
 static const struct ath10k_bus_ops ath10k_ahb_bus_ops = {
-    .read32     = ath10k_ahb_read32,
-    .write32    = ath10k_ahb_write32,
-    .get_num_banks  = ath10k_ahb_get_num_banks,
+    .read32 = ath10k_ahb_read32,
+    .write32 = ath10k_ahb_write32,
+    .get_num_banks = ath10k_ahb_get_num_banks,
 };
 
 static int ath10k_ahb_probe(struct platform_device* pdev) {
@@ -762,8 +694,7 @@ static int ath10k_ahb_probe(struct platform_device* pdev) {
     hw_rev = (enum ath10k_hw_rev)of_id->data;
 
     size = sizeof(*ar_pci) + sizeof(*ar_ahb);
-    ar = ath10k_core_create(size, &pdev->dev, ATH10K_BUS_AHB,
-                            hw_rev, &ath10k_ahb_hif_ops);
+    ar = ath10k_core_create(size, &pdev->dev, ATH10K_BUS_AHB, hw_rev, &ath10k_ahb_hif_ops);
     if (!ar) {
         dev_err(&pdev->dev, "failed to allocate core\n");
         return -ENOMEM;
@@ -778,9 +709,7 @@ static int ath10k_ahb_probe(struct platform_device* pdev) {
     platform_set_drvdata(pdev, ar);
 
     ret = ath10k_ahb_resource_init(ar);
-    if (ret) {
-        goto err_core_destroy;
-    }
+    if (ret) { goto err_core_destroy; }
 
     ar->dev_id = 0;
     ar_pci->mem = ar_ahb->mem;
@@ -798,14 +727,10 @@ static int ath10k_ahb_probe(struct platform_device* pdev) {
     ath10k_pci_init_napi(ar);
 
     ret = ath10k_ahb_request_irq_legacy(ar);
-    if (ret) {
-        goto err_free_pipes;
-    }
+    if (ret) { goto err_free_pipes; }
 
     ret = ath10k_ahb_prepare_device(ar);
-    if (ret) {
-        goto err_free_irq;
-    }
+    if (ret) { goto err_free_irq; }
 
     ath10k_pci_ce_deinit(ar);
 
@@ -848,15 +773,11 @@ static int ath10k_ahb_remove(struct platform_device* pdev) {
     struct ath10k* ar = platform_get_drvdata(pdev);
     struct ath10k_ahb* ar_ahb;
 
-    if (!ar) {
-        return -EINVAL;
-    }
+    if (!ar) { return -EINVAL; }
 
     ar_ahb = ath10k_ahb_priv(ar);
 
-    if (!ar_ahb) {
-        return -EINVAL;
-    }
+    if (!ar_ahb) { return -EINVAL; }
 
     ath10k_dbg(ar, ATH10K_DBG_AHB, "ahb remove\n");
 
@@ -875,11 +796,12 @@ static int ath10k_ahb_remove(struct platform_device* pdev) {
 }
 
 static struct platform_driver ath10k_ahb_driver = {
-    .driver         = {
-        .name   = "ath10k_ahb",
-        .of_match_table = ath10k_ahb_of_match,
-    },
-    .probe  = ath10k_ahb_probe,
+    .driver =
+        {
+            .name = "ath10k_ahb",
+            .of_match_table = ath10k_ahb_of_match,
+        },
+    .probe = ath10k_ahb_probe,
     .remove = ath10k_ahb_remove,
 };
 
@@ -887,9 +809,7 @@ int ath10k_ahb_init(void) {
     int ret;
 
     ret = platform_driver_register(&ath10k_ahb_driver);
-    if (ret)
-        printk(KERN_ERR "failed to register ath10k ahb driver: %d\n",
-               ret);
+    if (ret) printk(KERN_ERR "failed to register ath10k ahb driver: %d\n", ret);
     return ret;
 }
 

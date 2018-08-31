@@ -20,16 +20,12 @@
 #include "debug.h"
 #include "wmi-ops.h"
 
-static void send_fft_sample(struct ath10k* ar,
-                            const struct fft_sample_tlv* fft_sample_tlv) {
+static void send_fft_sample(struct ath10k* ar, const struct fft_sample_tlv* fft_sample_tlv) {
     int length;
 
-    if (!ar->spectral.rfs_chan_spec_scan) {
-        return;
-    }
+    if (!ar->spectral.rfs_chan_spec_scan) { return; }
 
-    length = __be16_to_cpu(fft_sample_tlv->length) +
-             sizeof(*fft_sample_tlv);
+    length = __be16_to_cpu(fft_sample_tlv->length) + sizeof(*fft_sample_tlv);
     relay_write(ar->spectral.rfs_chan_spec_scan, fft_sample_tlv, length);
 }
 
@@ -41,43 +37,33 @@ static uint8_t get_max_exp(int8_t max_index, uint16_t max_magnitude, size_t bin_
     dc_pos = bin_len / 2;
 
     /* peak index outside of bins */
-    if (dc_pos < max_index || -dc_pos >= max_index) {
-        return 0;
-    }
+    if (dc_pos < max_index || -dc_pos >= max_index) { return 0; }
 
     for (max_exp = 0; max_exp < 8; max_exp++) {
-        if (data[dc_pos + max_index] == (max_magnitude >> max_exp)) {
-            break;
-        }
+        if (data[dc_pos + max_index] == (max_magnitude >> max_exp)) { break; }
     }
 
     /* max_exp not found */
-    if (data[dc_pos + max_index] != (max_magnitude >> max_exp)) {
-        return 0;
-    }
+    if (data[dc_pos + max_index] != (max_magnitude >> max_exp)) { return 0; }
 
     return max_exp;
 }
 
-static inline size_t ath10k_spectral_fix_bin_size(struct ath10k* ar,
-        size_t bin_len) {
+static inline size_t ath10k_spectral_fix_bin_size(struct ath10k* ar, size_t bin_len) {
     /* some chipsets reports bin size as 2^n bytes + 'm' bytes in
      * report mode 2. First 2^n bytes carries inband tones and last
      * 'm' bytes carries band edge detection data mainly used in
      * radar detection purpose. Strip last 'm' bytes to make bin size
      * as a valid one. 'm' can take possible values of 4, 12.
      */
-    if (!IS_POW2(bin_len)) {
-        bin_len -= ar->hw_params.spectral_bin_discard;
-    }
+    if (!IS_POW2(bin_len)) { bin_len -= ar->hw_params.spectral_bin_discard; }
 
     return bin_len;
 }
 
-int ath10k_spectral_process_fft(struct ath10k* ar,
-                                struct wmi_phyerr_ev_arg* phyerr,
-                                const struct phyerr_fft_report* fftr,
-                                size_t bin_len, uint64_t tsf) {
+int ath10k_spectral_process_fft(struct ath10k* ar, struct wmi_phyerr_ev_arg* phyerr,
+                                const struct phyerr_fft_report* fftr, size_t bin_len,
+                                uint64_t tsf) {
     struct fft_sample_ath10k* fft_sample;
     uint8_t buf[sizeof(*fft_sample) + SPECTRAL_ATH10K_MAX_NUM_BINS];
     uint16_t freq1, freq2, total_gain_db, base_pwr_db, length, peak_mag;
@@ -89,9 +75,7 @@ int ath10k_spectral_process_fft(struct ath10k* ar,
 
     bin_len = ath10k_spectral_fix_bin_size(ar, bin_len);
 
-    if (bin_len < 64 || bin_len > SPECTRAL_ATH10K_MAX_NUM_BINS) {
-        return -EINVAL;
-    }
+    if (bin_len < 64 || bin_len > SPECTRAL_ATH10K_MAX_NUM_BINS) { return -EINVAL; }
 
     reg0 = fftr->reg0;
     reg1 = fftr->reg1;
@@ -117,9 +101,7 @@ int ath10k_spectral_process_fft(struct ath10k* ar,
          * not match with the other samples at all. Until the reason
          * for that is found, don't report these samples.
          */
-        if (bin_len == 64) {
-            return -EINVAL;
-        }
+        if (bin_len == 64) { return -EINVAL; }
         fft_sample->chan_width_mhz = 88;
         break;
     default:
@@ -156,8 +138,7 @@ int ath10k_spectral_process_fft(struct ath10k* ar,
     /* max_exp has been directly reported by previous hardware (ath9k),
      * maybe its possible to get it by other means?
      */
-    fft_sample->max_exp = get_max_exp(fft_sample->max_index, peak_mag,
-                                      bin_len, bins);
+    fft_sample->max_exp = get_max_exp(fft_sample->max_index, peak_mag, bin_len, bins);
 
     memcpy(fft_sample->data, bins, bin_len);
 
@@ -165,8 +146,7 @@ int ath10k_spectral_process_fft(struct ath10k* ar,
      * sample and invalid, interpolate it.
      */
     dc_pos = bin_len / 2;
-    fft_sample->data[dc_pos] = (fft_sample->data[dc_pos + 1] +
-                                fft_sample->data[dc_pos - 1]) / 2;
+    fft_sample->data[dc_pos] = (fft_sample->data[dc_pos + 1] + fft_sample->data[dc_pos - 1]) / 2;
 
     send_fft_sample(ar, &fft_sample->tlv);
 
@@ -178,15 +158,10 @@ static struct ath10k_vif* ath10k_get_spectral_vdev(struct ath10k* ar) {
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    if (list_empty(&ar->arvifs)) {
-        return NULL;
-    }
+    if (list_empty(&ar->arvifs)) { return NULL; }
 
     /* if there already is a vif doing spectral, return that. */
-    list_for_each_entry(arvif, &ar->arvifs, list)
-    if (arvif->spectral_enabled) {
-        return arvif;
-    }
+    list_for_each_entry(arvif, &ar->arvifs, list) if (arvif->spectral_enabled) { return arvif; }
 
     /* otherwise, return the first vif. */
     return list_first_entry(&ar->arvifs, typeof(*arvif), list);
@@ -200,34 +175,23 @@ static int ath10k_spectral_scan_trigger(struct ath10k* ar) {
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
     arvif = ath10k_get_spectral_vdev(ar);
-    if (!arvif) {
-        return -ENODEV;
-    }
+    if (!arvif) { return -ENODEV; }
     vdev_id = arvif->vdev_id;
 
-    if (ar->spectral.mode == SPECTRAL_DISABLED) {
-        return 0;
-    }
+    if (ar->spectral.mode == SPECTRAL_DISABLED) { return 0; }
 
-    res = ath10k_wmi_vdev_spectral_enable(ar, vdev_id,
-                                          WMI_SPECTRAL_TRIGGER_CMD_CLEAR,
+    res = ath10k_wmi_vdev_spectral_enable(ar, vdev_id, WMI_SPECTRAL_TRIGGER_CMD_CLEAR,
                                           WMI_SPECTRAL_ENABLE_CMD_ENABLE);
-    if (res < 0) {
-        return res;
-    }
+    if (res < 0) { return res; }
 
-    res = ath10k_wmi_vdev_spectral_enable(ar, vdev_id,
-                                          WMI_SPECTRAL_TRIGGER_CMD_TRIGGER,
+    res = ath10k_wmi_vdev_spectral_enable(ar, vdev_id, WMI_SPECTRAL_TRIGGER_CMD_TRIGGER,
                                           WMI_SPECTRAL_ENABLE_CMD_ENABLE);
-    if (res < 0) {
-        return res;
-    }
+    if (res < 0) { return res; }
 
     return 0;
 }
 
-static int ath10k_spectral_scan_config(struct ath10k* ar,
-                                       enum ath10k_spectral_mode mode) {
+static int ath10k_spectral_scan_config(struct ath10k* ar, enum ath10k_spectral_mode mode) {
     struct wmi_vdev_spectral_conf_arg arg;
     struct ath10k_vif* arvif;
     int vdev_id, count, res = 0;
@@ -235,26 +199,21 @@ static int ath10k_spectral_scan_config(struct ath10k* ar,
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
     arvif = ath10k_get_spectral_vdev(ar);
-    if (!arvif) {
-        return -ENODEV;
-    }
+    if (!arvif) { return -ENODEV; }
 
     vdev_id = arvif->vdev_id;
 
     arvif->spectral_enabled = (mode != SPECTRAL_DISABLED);
     ar->spectral.mode = mode;
 
-    res = ath10k_wmi_vdev_spectral_enable(ar, vdev_id,
-                                          WMI_SPECTRAL_TRIGGER_CMD_CLEAR,
+    res = ath10k_wmi_vdev_spectral_enable(ar, vdev_id, WMI_SPECTRAL_TRIGGER_CMD_CLEAR,
                                           WMI_SPECTRAL_ENABLE_CMD_DISABLE);
     if (res < 0) {
         ath10k_warn("failed to enable spectral scan: %d\n", res);
         return res;
     }
 
-    if (mode == SPECTRAL_DISABLED) {
-        return 0;
-    }
+    if (mode == SPECTRAL_DISABLED) { return 0; }
 
     if (mode == SPECTRAL_BACKGROUND) {
         count = WMI_SPECTRAL_COUNT_DEFAULT;
@@ -291,8 +250,8 @@ static int ath10k_spectral_scan_config(struct ath10k* ar,
     return 0;
 }
 
-static ssize_t read_file_spec_scan_ctl(struct file* file, char __user* user_buf,
-                                       size_t count, loff_t* ppos) {
+static ssize_t read_file_spec_scan_ctl(struct file* file, char __user* user_buf, size_t count,
+                                       loff_t* ppos) {
     struct ath10k* ar = file->private_data;
     char* mode = "";
     size_t len;
@@ -318,8 +277,7 @@ static ssize_t read_file_spec_scan_ctl(struct file* file, char __user* user_buf,
     return simple_read_from_buffer(user_buf, count, ppos, mode, len);
 }
 
-static ssize_t write_file_spec_scan_ctl(struct file* file,
-                                        const char __user* user_buf,
+static ssize_t write_file_spec_scan_ctl(struct file* file, const char __user* user_buf,
                                         size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
     char buf[32];
@@ -327,31 +285,21 @@ static ssize_t write_file_spec_scan_ctl(struct file* file,
     int res;
 
     len = MIN(count, sizeof(buf) - 1);
-    if (copy_from_user(buf, user_buf, len)) {
-        return -EFAULT;
-    }
+    if (copy_from_user(buf, user_buf, len)) { return -EFAULT; }
 
     buf[len] = '\0';
 
     mtx_lock(&ar->conf_mutex);
 
     if (strncmp("trigger", buf, 7) == 0) {
-        if (ar->spectral.mode == SPECTRAL_MANUAL ||
-                ar->spectral.mode == SPECTRAL_BACKGROUND) {
+        if (ar->spectral.mode == SPECTRAL_MANUAL || ar->spectral.mode == SPECTRAL_BACKGROUND) {
             /* reset the configuration to adopt possibly changed
              * debugfs parameters
              */
-            res = ath10k_spectral_scan_config(ar,
-                                              ar->spectral.mode);
-            if (res < 0) {
-                ath10k_warn("failed to reconfigure spectral scan: %d\n",
-                            res);
-            }
+            res = ath10k_spectral_scan_config(ar, ar->spectral.mode);
+            if (res < 0) { ath10k_warn("failed to reconfigure spectral scan: %d\n", res); }
             res = ath10k_spectral_scan_trigger(ar);
-            if (res < 0) {
-                ath10k_warn("failed to trigger spectral scan: %d\n",
-                            res);
-            }
+            if (res < 0) { ath10k_warn("failed to trigger spectral scan: %d\n", res); }
         } else {
             res = -EINVAL;
         }
@@ -367,9 +315,7 @@ static ssize_t write_file_spec_scan_ctl(struct file* file,
 
     mtx_unlock(&ar->conf_mutex);
 
-    if (res < 0) {
-        return res;
-    }
+    if (res < 0) { return res; }
 
     return count;
 }
@@ -382,9 +328,8 @@ static const struct file_operations fops_spec_scan_ctl = {
     .llseek = default_llseek,
 };
 
-static ssize_t read_file_spectral_count(struct file* file,
-                                        char __user* user_buf,
-                                        size_t count, loff_t* ppos) {
+static ssize_t read_file_spectral_count(struct file* file, char __user* user_buf, size_t count,
+                                        loff_t* ppos) {
     struct ath10k* ar = file->private_data;
     char buf[32];
     size_t len;
@@ -398,27 +343,20 @@ static ssize_t read_file_spectral_count(struct file* file,
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
 
-static ssize_t write_file_spectral_count(struct file* file,
-        const char __user* user_buf,
-        size_t count, loff_t* ppos) {
+static ssize_t write_file_spectral_count(struct file* file, const char __user* user_buf,
+                                         size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
     unsigned long val;
     char buf[32];
     ssize_t len;
 
     len = MIN(count, sizeof(buf) - 1);
-    if (copy_from_user(buf, user_buf, len)) {
-        return -EFAULT;
-    }
+    if (copy_from_user(buf, user_buf, len)) { return -EFAULT; }
 
     buf[len] = '\0';
-    if (kstrtoul(buf, 0, &val)) {
-        return -EINVAL;
-    }
+    if (kstrtoul(buf, 0, &val)) { return -EINVAL; }
 
-    if (val < 0 || val > 255) {
-        return -EINVAL;
-    }
+    if (val < 0 || val > 255) { return -EINVAL; }
 
     mtx_lock(&ar->conf_mutex);
     ar->spectral.config.count = val;
@@ -435,9 +373,8 @@ static const struct file_operations fops_spectral_count = {
     .llseek = default_llseek,
 };
 
-static ssize_t read_file_spectral_bins(struct file* file,
-                                       char __user* user_buf,
-                                       size_t count, loff_t* ppos) {
+static ssize_t read_file_spectral_bins(struct file* file, char __user* user_buf, size_t count,
+                                       loff_t* ppos) {
     struct ath10k* ar = file->private_data;
     char buf[32];
     unsigned int bins, fft_size, bin_scale;
@@ -455,8 +392,7 @@ static ssize_t read_file_spectral_bins(struct file* file,
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
 
-static ssize_t write_file_spectral_bins(struct file* file,
-                                        const char __user* user_buf,
+static ssize_t write_file_spectral_bins(struct file* file, const char __user* user_buf,
                                         size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
     unsigned long val;
@@ -464,22 +400,14 @@ static ssize_t write_file_spectral_bins(struct file* file,
     ssize_t len;
 
     len = MIN(count, sizeof(buf) - 1);
-    if (copy_from_user(buf, user_buf, len)) {
-        return -EFAULT;
-    }
+    if (copy_from_user(buf, user_buf, len)) { return -EFAULT; }
 
     buf[len] = '\0';
-    if (kstrtoul(buf, 0, &val)) {
-        return -EINVAL;
-    }
+    if (kstrtoul(buf, 0, &val)) { return -EINVAL; }
 
-    if (val < 64 || val > SPECTRAL_ATH10K_MAX_NUM_BINS) {
-        return -EINVAL;
-    }
+    if (val < 64 || val > SPECTRAL_ATH10K_MAX_NUM_BINS) { return -EINVAL; }
 
-    if (!IS_POW2(val)) {
-        return -EINVAL;
-    }
+    if (!IS_POW2(val)) { return -EINVAL; }
 
     mtx_lock(&ar->conf_mutex);
     ar->spectral.config.fft_size = LOG2(val);
@@ -497,15 +425,11 @@ static const struct file_operations fops_spectral_bins = {
     .llseek = default_llseek,
 };
 
-static struct dentry* create_buf_file_handler(const char* filename,
-        struct dentry* parent,
-        umode_t mode,
-        struct rchan_buf* buf,
-        int* is_global) {
+static struct dentry* create_buf_file_handler(const char* filename, struct dentry* parent,
+                                              umode_t mode, struct rchan_buf* buf, int* is_global) {
     struct dentry* buf_file;
 
-    buf_file = debugfs_create_file(filename, mode, parent, buf,
-                                   &relay_file_operations);
+    buf_file = debugfs_create_file(filename, mode, parent, buf, &relay_file_operations);
     *is_global = 1;
     return buf_file;
 }
@@ -526,8 +450,7 @@ int ath10k_spectral_start(struct ath10k* ar) {
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    list_for_each_entry(arvif, &ar->arvifs, list)
-    arvif->spectral_enabled = 0;
+    list_for_each_entry(arvif, &ar->arvifs, list) arvif->spectral_enabled = 0;
 
     ar->spectral.mode = SPECTRAL_DISABLED;
     ar->spectral.config.count = WMI_SPECTRAL_COUNT_DEFAULT;
@@ -537,9 +460,7 @@ int ath10k_spectral_start(struct ath10k* ar) {
 }
 
 int ath10k_spectral_vif_stop(struct ath10k_vif* arvif) {
-    if (!arvif->spectral_enabled) {
-        return 0;
-    }
+    if (!arvif->spectral_enabled) { return 0; }
 
     return ath10k_spectral_scan_config(arvif->ar, SPECTRAL_DISABLED);
 }
@@ -548,22 +469,11 @@ int ath10k_spectral_create(struct ath10k* ar) {
     /* The buffer size covers whole channels in dual bands up to 128 bins.
      * Scan with bigger than 128 bins needs to be run on single band each.
      */
-    ar->spectral.rfs_chan_spec_scan = relay_open("spectral_scan",
-                                      ar->debug.debugfs_phy,
-                                      1140, 2500,
-                                      &rfs_spec_scan_cb, NULL);
-    debugfs_create_file("spectral_scan_ctl",
-                        0600,
-                        ar->debug.debugfs_phy, ar,
-                        &fops_spec_scan_ctl);
-    debugfs_create_file("spectral_count",
-                        0600,
-                        ar->debug.debugfs_phy, ar,
-                        &fops_spectral_count);
-    debugfs_create_file("spectral_bins",
-                        0600,
-                        ar->debug.debugfs_phy, ar,
-                        &fops_spectral_bins);
+    ar->spectral.rfs_chan_spec_scan =
+        relay_open("spectral_scan", ar->debug.debugfs_phy, 1140, 2500, &rfs_spec_scan_cb, NULL);
+    debugfs_create_file("spectral_scan_ctl", 0600, ar->debug.debugfs_phy, ar, &fops_spec_scan_ctl);
+    debugfs_create_file("spectral_count", 0600, ar->debug.debugfs_phy, ar, &fops_spectral_count);
+    debugfs_create_file("spectral_bins", 0600, ar->debug.debugfs_phy, ar, &fops_spectral_bins);
 
     return 0;
 }

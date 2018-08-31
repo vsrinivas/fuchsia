@@ -25,7 +25,8 @@
 // ath10k_msg_type enums, but in order for the init algorithm to work properly, a type
 // must be defined in the init_data array before it appears in an 'isa' field.
 #define STR_NAME(name) #name
-#define MSG(type, base, hdr) { type, base, hdr, STR_NAME(type) }
+#define MSG(type, base, hdr) \
+    { type, base, hdr, STR_NAME(type) }
 static const struct {
     enum ath10k_msg_type type;
     enum ath10k_msg_type isa;
@@ -39,8 +40,7 @@ static const struct {
     // Note that since all of the following use the HTC interface they must follow HTC_MSGS
     WMI_MSGS,
     WMI_TLV_MSGS,
-    HTT_MSGS
-};
+    HTT_MSGS};
 #undef MSG
 
 // Table to keep track of the sizes and types of each message. Once initialized, this data
@@ -69,7 +69,6 @@ void ath10k_msg_bufs_init_stats(struct ath10k_msg_buf_state* state) {
 
 // One-time initialization of the module
 zx_status_t ath10k_msg_bufs_init(struct ath10k* ar) {
-
     static mtx_t init_lock = MTX_INIT;
     static bool initialized = false;
 
@@ -102,8 +101,8 @@ zx_status_t ath10k_msg_bufs_init(struct ath10k* ar) {
             struct ath10k_msg_type_info* type_info = &ath10k_msg_types_info[type];
 
             type_info->isa = parent_type;
-            type_info->offset = ath10k_msg_types_info[parent_type].offset
-                                + ath10k_msg_types_info[parent_type].hdr_size;
+            type_info->offset = ath10k_msg_types_info[parent_type].offset +
+                                ath10k_msg_types_info[parent_type].hdr_size;
             type_info->hdr_size = ath10k_msg_types_init_data[ndx].hdr_size;
             type_info->name = ath10k_msg_types_init_data[ndx].name;
         }
@@ -113,30 +112,25 @@ zx_status_t ath10k_msg_bufs_init(struct ath10k* ar) {
 
     struct ath10k_msg_buf* msg_buf;
     for (unsigned i = 0; i < ATH10K_INITIAL_BUF_COUNT; i++) {
-        ath10k_msg_buf_alloc_internal(ar, &msg_buf, ATH10K_MSG_TYPE_BASE, 1, true,
-                                      __FILE__, __LINE__);
+        ath10k_msg_buf_alloc_internal(ar, &msg_buf, ATH10K_MSG_TYPE_BASE, 1, true, __FILE__,
+                                      __LINE__);
         ath10k_msg_buf_free(msg_buf);
     }
 
     return ZX_OK;
 }
 
-zx_status_t ath10k_msg_buf_alloc_internal(struct ath10k* ar,
-                                          struct ath10k_msg_buf** msg_buf_ptr,
-                                          enum ath10k_msg_type type,
-                                          size_t extra_bytes,
-                                          bool force_new,
-                                          const char* filename,
-                                          size_t line_num) {
+zx_status_t ath10k_msg_buf_alloc_internal(struct ath10k* ar, struct ath10k_msg_buf** msg_buf_ptr,
+                                          enum ath10k_msg_type type, size_t extra_bytes,
+                                          bool force_new, const char* filename, size_t line_num) {
     struct ath10k_msg_buf_state* state = &ar->msg_buf_state;
     zx_status_t status;
 
     ZX_DEBUG_ASSERT(type < ATH10K_MSG_TYPE_COUNT);
 
     struct ath10k_msg_buf* msg_buf;
-    size_t requested_sz = ath10k_msg_types_info[type].offset
-                          + ath10k_msg_types_info[type].hdr_size
-                          + extra_bytes;
+    size_t requested_sz =
+        ath10k_msg_types_info[type].offset + ath10k_msg_types_info[type].hdr_size + extra_bytes;
     ZX_DEBUG_ASSERT(requested_sz > 0);
     ZX_DEBUG_ASSERT(requested_sz <= PAGE_SIZE);
 
@@ -152,26 +146,21 @@ zx_status_t ath10k_msg_buf_alloc_internal(struct ath10k* ar,
         // Allocate a new buffer
         mtx_unlock(&state->lock);
         msg_buf = calloc(1, sizeof(struct ath10k_msg_buf));
-        if (!msg_buf) {
-            return ZX_ERR_NO_MEMORY;
-        }
+        if (!msg_buf) { return ZX_ERR_NO_MEMORY; }
 
         zx_handle_t bti_handle;
         status = ath10k_hif_get_bti_handle(ar, &bti_handle);
-        if (status != ZX_OK) {
-            goto err_free_buf;
-        }
-        status = io_buffer_init(&msg_buf->buf, bti_handle, PAGE_SIZE,
-                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
-        if (status != ZX_OK) {
-            goto err_free_buf;
-        }
+        if (status != ZX_OK) { goto err_free_buf; }
+        status =
+            io_buffer_init(&msg_buf->buf, bti_handle, PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+        if (status != ZX_OK) { goto err_free_buf; }
 
         msg_buf->paddr = io_buffer_phys(&msg_buf->buf);
         if (msg_buf->paddr + PAGE_SIZE > 0x100000000) {
             status = ZX_ERR_NO_MEMORY;
-            ath10k_warn("attempt to allocate buffer, unable to get mmio with "
-                        "32 bit phys addr (see ZX-1073)\n");
+            ath10k_warn(
+                "attempt to allocate buffer, unable to get mmio with "
+                "32 bit phys addr (see ZX-1073)\n");
             goto err_free_iobuf;
         }
         msg_buf->vaddr = io_buffer_virt(&msg_buf->buf);
@@ -200,16 +189,14 @@ err_free_buf:
     return status;
 }
 
-void* ath10k_msg_buf_get_header(struct ath10k_msg_buf* msg_buf,
-                                enum ath10k_msg_type type) {
+void* ath10k_msg_buf_get_header(struct ath10k_msg_buf* msg_buf, enum ath10k_msg_type type) {
     return (void*)((uint8_t*)msg_buf->vaddr + ath10k_msg_types_info[type].offset);
 }
 
 void* ath10k_msg_buf_get_payload(struct ath10k_msg_buf* msg_buf) {
     enum ath10k_msg_type type = msg_buf->type;
-    return (void*)((uint8_t*)msg_buf->vaddr
-                   + ath10k_msg_types_info[type].offset
-                   + ath10k_msg_types_info[type].hdr_size);
+    return (void*)((uint8_t*)msg_buf->vaddr + ath10k_msg_types_info[type].offset +
+                   ath10k_msg_types_info[type].hdr_size);
 }
 
 size_t ath10k_msg_buf_get_payload_len(struct ath10k_msg_buf* msg_buf,
@@ -268,8 +255,8 @@ static void dump_buffer_locs(list_node_t* buf_list) {
                 buffer_origins[ndx].line_number = next_buf->alloc_line_num;
                 buffer_origins[ndx].count = 1;
                 break;
-            } else if ((buffer_origins[ndx].line_number == next_buf->alloc_line_num)
-                       && !strcmp(buffer_origins[ndx].filename, next_buf->alloc_file_name)) {
+            } else if ((buffer_origins[ndx].line_number == next_buf->alloc_line_num) &&
+                       !strcmp(buffer_origins[ndx].filename, next_buf->alloc_file_name)) {
                 buffer_origins[ndx].count++;
                 break;
             }
@@ -280,9 +267,7 @@ static void dump_buffer_locs(list_node_t* buf_list) {
     // Report
     printf("  Buffer origins:\n");
     for (size_t ndx = 0; ndx < MAX_BUFFER_LOCS && buffer_origins[ndx].count != 0; ndx++) {
-        printf("    %s:%zd... %zd\n",
-               buffer_origins[ndx].filename,
-               buffer_origins[ndx].line_number,
+        printf("    %s:%zd... %zd\n", buffer_origins[ndx].filename, buffer_origins[ndx].line_number,
                buffer_origins[ndx].count);
     }
 }
@@ -296,17 +281,16 @@ void ath10k_msg_buf_dump_stats(struct ath10k* ar) {
     dump_buffer_locs(&state->bufs_in_use);
     mtx_unlock(&state->lock);
 }
-#endif // DEBUG_MSG_BUF
+#endif  // DEBUG_MSG_BUF
 
 void ath10k_msg_buf_dump(struct ath10k_msg_buf* msg_buf, const char* prefix) {
     uint8_t* raw_data = msg_buf->vaddr;
-    ath10k_info("msg_buf (%s): paddr %#x\n",
-                ath10k_msg_types_info[msg_buf->type].name,
+    ath10k_info("msg_buf (%s): paddr %#x\n", ath10k_msg_types_info[msg_buf->type].name,
                 (unsigned int)msg_buf->paddr);
     unsigned ndx;
     for (ndx = 0; msg_buf->used - ndx >= 4; ndx += 4) {
-        ath10k_info("%s0x%02x 0x%02x 0x%02x 0x%02x\n", prefix,
-                    raw_data[ndx], raw_data[ndx + 1], raw_data[ndx + 2], raw_data[ndx + 3]);
+        ath10k_info("%s0x%02x 0x%02x 0x%02x 0x%02x\n", prefix, raw_data[ndx], raw_data[ndx + 1],
+                    raw_data[ndx + 2], raw_data[ndx + 3]);
     }
     if (ndx != msg_buf->used) {
         ath10k_err("%sBuffer has %d bytes extra\n", prefix, (int)(msg_buf->used - ndx));
