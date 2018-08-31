@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("ime") {
   name = "ime_service"
   with_unit_tests = true
-  edition = "2015"
+  edition = "2018"
 
   deps = [
     "//garnet/public/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",

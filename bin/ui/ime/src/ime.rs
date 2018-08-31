@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async;
 use fidl::encoding2::OutOfLine;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::InputMethodEditorRequest as ImeReq;
@@ -46,7 +45,7 @@ impl IME {
                 Self::handle_request(self_mutex_clone.clone(), edit_request);
                 future::ready(Ok(()))
             }).unwrap_or_else(|e| eprintln!("error running ime server: {:?}", e));
-        async::spawn(stream_complete);
+        fuchsia_async::spawn(stream_complete);
         self_mutex
     }
 

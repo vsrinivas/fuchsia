@@ -6,8 +6,7 @@ use fidl::endpoints2::{ClientEnd, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
 use futures::future;
 use std::sync::{Arc, Mutex, Weak};
-
-use ime::IME;
+use crate::ime::IME;
 
 pub struct ImeServiceState {
     pub keyboard_visible: bool,
@@ -86,7 +85,7 @@ impl uii::ImeService for ImeService {
         &mut self, event: uii::InputEvent, _control_handle: uii::ImeServiceControlHandle,
     ) -> Self::InjectInputFut {
         let ime = {
-            let mut state = self.0.lock().unwrap();
+            let state = self.0.lock().unwrap();
             let active_ime_weak = match state.active_ime {
                 Some(ref v) => v,
                 None => return future::ready(()), // no currently active IME
