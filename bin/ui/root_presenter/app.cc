@@ -122,8 +122,9 @@ void App::PresentView(
   }
 
   auto presentation = std::make_unique<Presentation2>(
-      scenic_.get(), session_.get(), std::move(view_holder_token),
-      renderer_params_, display_startup_rotation_adjustment);
+      scenic_.get(), session_.get(), compositor_->id(),
+      std::move(view_holder_token), renderer_params_,
+      display_startup_rotation_adjustment);
   presentation->PresentView(std::move(presentation_request), GetYieldCallback(),
                             GetShutdownCallback(presentation.get()));
   AddPresentation(std::move(presentation));

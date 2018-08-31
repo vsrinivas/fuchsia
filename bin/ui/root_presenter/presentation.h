@@ -11,6 +11,7 @@
 #include "garnet/bin/ui/root_presenter/displays/display_model.h"
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
 #include "lib/ui/input/input_device_impl.h"
+#include "lib/ui/scenic/cpp/id.h"
 #include "lib/ui/scenic/cpp/resources.h"
 
 namespace root_presenter {

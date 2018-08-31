@@ -19,6 +19,7 @@ source_set("cpp") {
     "host_image_cycler.h",
     "host_memory.cc",
     "host_memory.h",
+    "id.h",
     "resources.cc",
     "resources.h",
     "session.cc",

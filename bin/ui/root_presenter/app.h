@@ -90,6 +90,15 @@ class App : public fuchsia::ui::policy::Presenter,
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
   std::unique_ptr<scenic::Session> session_;
+  // Today, we have a global, singleton compositor, and it is managed solely by
+  // a root presenter. Hence, a single resource ID is sufficient to identify it.
+  // Additionally, it is a system invariant that any compositor is created and
+  // managed by a root presenter. We may relax these constraints in the
+  // following order:
+  // * Root presenter creates multiple compositors. Here, a resource ID for each
+  //   compositor would still be sufficient to uniquely identify it.
+  // * Root presenter delegates the creation of compositors. Here, we would
+  //   need to generalize the identifier to include the delegate's session ID.
   std::unique_ptr<scenic::DisplayCompositor> compositor_;
   std::unique_ptr<scenic::LayerStack> layer_stack_;
 

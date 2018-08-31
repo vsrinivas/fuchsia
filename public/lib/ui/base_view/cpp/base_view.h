@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
 #include "lib/component/cpp/startup_context.h"
@@ -121,7 +122,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   //
   // The default implementation does nothing.
   virtual void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info);
+      fuchsia::images::PresentationInfo presentation_info) {}
 
   // Called when the view's properties have changed.
   //
@@ -131,21 +132,17 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   //
   // The default implementation does nothing.
   virtual void OnPropertiesChanged(
-      fuchsia::ui::gfx::ViewProperties old_properties);
+      fuchsia::ui::gfx::ViewProperties old_properties) {}
 
   // Called to handle an input event.
-  // Returns true if the view will handle the event, false if the event
-  // should continue propagating to other views which may handle it themselves.
   //
-  // The default implementation does nothing but return false.
-  //
-  // TODO(SCN-804): This is not currently called; it needs to be hooked up.
-  virtual bool OnInputEvent(fuchsia::ui::input::InputEvent event);
+  // The default implementation does nothing.
+  virtual void OnInputEvent(fuchsia::ui::input::InputEvent event) {}
 
   // Called when a command sent by the client was not handled by Scenic.
   //
   // The default implementation does nothing.
-  virtual void OnUnhandledCommand(fuchsia::ui::scenic::Command unhandled);
+  virtual void OnUnhandledCommand(fuchsia::ui::scenic::Command unhandled) {}
 
   // Called when an event that is not handled directly by BaseView is received.
   // For example, BaseView handles fuchsia::ui::gfx::ViewPropertiesChangedEvent,
@@ -153,7 +150,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   // handled in this way.
   //
   // The default implementation does nothing.
-  virtual void OnScenicEvent(fuchsia::ui::scenic::Event);
+  virtual void OnScenicEvent(fuchsia::ui::scenic::Event) {}
 
  private:
   // |scenic::SessionListener|

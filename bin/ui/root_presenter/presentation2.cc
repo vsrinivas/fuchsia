@@ -25,6 +25,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/scenic/cpp/id.h"
 #include "lib/ui/views/cpp/formatting.h"
 
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
@@ -42,11 +43,13 @@ constexpr float kCursorElevation = 800;
 
 Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
                              scenic::Session* session,
+                             scenic::ResourceId compositor_id,
                              zx::eventpair view_holder_token,
                              RendererParams renderer_params,
                              int32_t display_startup_rotation_adjustment)
     : scenic_(scenic),
       session_(session),
+      compositor_id_(compositor_id),
       layer_(session_),
       renderer_(session_),
       scene_(session_),
@@ -63,6 +66,7 @@ Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       presentation_binding_(this),
       weak_factory_(this) {
+  FXL_DCHECK(compositor_id != 0);
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
   scene_.AddChild(root_node_);
@@ -561,6 +565,8 @@ bool Presentation2::GlobalHooksHandleEvent(
 void Presentation2::OnEvent(fuchsia::ui::input::InputEvent event) {
   FXL_VLOG(1) << "OnEvent " << event;
 
+  fuchsia::ui::input::Command input_cmd;
+
   bool invalidate = false;
   bool dispatch_event = true;
 
@@ -623,6 +629,11 @@ void Presentation2::OnEvent(fuchsia::ui::input::InputEvent event) {
         captured_pointerbindings_[i].listener->OnPointerEvent(std::move(clone));
       }
 
+      fuchsia::ui::input::SendPointerInputCmd pointer_cmd;
+      pointer_cmd.pointer_event = std::move(pointer);
+      pointer_cmd.compositor_id = compositor_id_;
+      input_cmd.set_send_pointer_input(std::move(pointer_cmd));
+
     } else if (event.is_keyboard()) {
       const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
 
@@ -635,6 +646,11 @@ void Presentation2::OnEvent(fuchsia::ui::input::InputEvent event) {
           captured_keybindings_[i].listener->OnEvent(std::move(clone));
         }
       }
+
+      fuchsia::ui::input::SendKeyboardInputCmd keyboard_cmd;
+      keyboard_cmd.keyboard_event = std::move(kbd);
+      keyboard_cmd.compositor_id = compositor_id_;
+      input_cmd.set_send_keyboard_input(std::move(keyboard_cmd));
     }
   }
 
@@ -642,8 +658,9 @@ void Presentation2::OnEvent(fuchsia::ui::input::InputEvent event) {
     PresentScene();
   }
 
-  if (dispatch_event && input_dispatcher_)
-    input_dispatcher_->DispatchEvent(std::move(event));
+  if (dispatch_event) {
+    session_->Enqueue(std::move(input_cmd));
+  }
 }
 
 void Presentation2::OnSensorEvent(uint32_t device_id,

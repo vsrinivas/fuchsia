@@ -6,6 +6,7 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/ui/gfx/cpp/math.h"
+#include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
@@ -75,33 +76,19 @@ void BaseView::InvalidateScene() {
     PresentScene(last_presentation_time_);
 }
 
-void BaseView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {}
-
-void BaseView::OnPropertiesChanged(
-    fuchsia::ui::gfx::ViewProperties old_properties) {}
-
-bool BaseView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
-  return false;
-}
-
-void BaseView::OnUnhandledCommand(fuchsia::ui::scenic::Command unhandled) {}
-
-void BaseView::OnScenicEvent(fuchsia::ui::scenic::Event) {}
-
 void BaseView::OnScenicEvent(
     fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
   for (auto& event : *events) {
     switch (event.Which()) {
-      case fuchsia::ui::scenic::Event::Tag::kGfx:
+      case ::fuchsia::ui::scenic::Event::Tag::kGfx:
         switch (event.gfx().Which()) {
-          case fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged: {
+          case ::fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged: {
             auto& evt = event.gfx().view_properties_changed();
             FXL_DCHECK(view_.id() == evt.view_id);
             auto old_props = view_properties_;
             view_properties_ = evt.properties;
 
-            fuchsia::ui::gfx::BoundingBox layout_box =
+            ::fuchsia::ui::gfx::BoundingBox layout_box =
                 ViewPropertiesLayoutBox(view_properties_);
 
             logical_size_ = scenic::Max(layout_box.max - layout_box.min, 0.f);
@@ -112,6 +99,10 @@ void BaseView::OnScenicEvent(
           default: { OnScenicEvent(std::move(event)); }
         }
         break;
+      case ::fuchsia::ui::scenic::Event::Tag::kInput: {
+        OnInputEvent(std::move(event.input()));
+        break;
+      }
       case ::fuchsia::ui::scenic::Event::Tag::kUnhandled: {
         OnUnhandledCommand(std::move(event.unhandled()));
         break;

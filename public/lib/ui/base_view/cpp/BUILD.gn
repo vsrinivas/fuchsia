@@ -15,6 +15,7 @@ source_set("cpp") {
     "//garnet/public/fidl/fuchsia.ui.app",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/gfx/cpp",
+    "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
   ]
 

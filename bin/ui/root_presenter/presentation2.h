@@ -64,6 +64,7 @@ namespace root_presenter {
 class Presentation2 : public Presentation {
  public:
   Presentation2(fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
+                scenic::ResourceId compositor_id,
                 zx::eventpair view_holder_token, RendererParams renderer_params,
                 int32_t display_startup_rotation_adjustment);
 
@@ -209,6 +210,7 @@ class Presentation2 : public Presentation {
 
   fuchsia::ui::scenic::Scenic* const scenic_;
   scenic::Session* const session_;
+  scenic::ResourceId compositor_id_;
 
   scenic::Layer layer_;
   scenic::Renderer renderer_;
@@ -263,8 +265,6 @@ class Presentation2 : public Presentation {
   fuchsia::math::PointF mouse_coordinates_;
 
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
-
-  fuchsia::ui::input::InputDispatcherPtr input_dispatcher_;
 
   // Rotates the display 180 degrees in response to events.
   DisplayRotater display_rotater_;

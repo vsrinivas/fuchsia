@@ -100,19 +100,20 @@ void InputCommandDispatcher::DispatchCommand(
 
       // Find input targets.  Honor the "input masking" view property.
       ViewStack hit_views;
-      {
-        // Ensure that Views are unique, and honor requests for input masking.
-        ViewId last;
-        for (gfx::Hit& hit : hits) {
-          ViewId view_id(hit.view_session, hit.view_resource);
-          if (view_id != last) {
-            if (gfx::ViewPtr view = FindView(view_id)) {
-              hit_views.stack.push_back(view_id);
-              if (/*TODO(SCN-919): view_id may mask input */ false) {
-                break;
-              }
+      for (size_t i = 0; i < hits.size(); ++i) {
+        ViewId view_id(hits[i].view_session, hits[i].view_resource);
+        if (gfx::ViewPtr view = FindView(view_id)) {
+          hit_views.stack.push_back(view_id);
+          if (/*TODO(SCN-919): view_id may mask input */ false) {
+            break;
+          }
+          // Ensure Views are unique: stamp out duplicates in the hits vector.
+          for (size_t k = i + 1; k < hits.size(); ++k) {
+            ViewId next(hits[k].view_session, hits[k].view_resource);
+            if (view_id == next) {
+              hits[k].view_session = 0u;
+              hits[k].view_resource = 0u;
             }
-            last = view_id;
           }
         }
       }
