@@ -104,13 +104,15 @@ int main(int argc, char* argv[]) {
 
   drive_decoder_thread->join();
 
-  printf(
-      "The sha256 of the output data (including data format "
-      "parameters) is:\n");
-  for (uint8_t byte : md) {
-    printf("%02x", byte);
+  if (!frame_sink) {
+    printf(
+        "The sha256 of the output data (including data format "
+        "parameters) is:\n");
+    for (uint8_t byte : md) {
+      printf("%02x", byte);
+    }
+    printf("\n");
   }
-  printf("\n");
 
   // ~frame_sink
   // ~main_loop

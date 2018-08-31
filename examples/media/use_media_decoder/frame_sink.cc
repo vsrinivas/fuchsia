@@ -19,7 +19,8 @@
 
 namespace {
 
-constexpr double kFramesPerSecond = 3.0;
+// bear.mp4 says 29.97, and bear.h264 is same content
+constexpr double kFramesPerSecond = 29.97;
 
 }  // namespace
 
@@ -54,7 +55,7 @@ void FrameSink::PutFrame(
         // program uses the present queue, it's equivalent since there's only
         // ever at most 1 usage of any given image_id in the present queue at
         // any given time.
-        FXL_LOG(INFO) << "Scenic released image_id: " << image_id;
+        FXL_VLOG(3) << "Scenic released image_id: " << image_id;
         on_done();
         frames_outstanding_--;
         CheckIfAllFramesReturned();
@@ -68,15 +69,15 @@ void FrameSink::PutFrame(
   zx_time_t present_time;
   if (last_requested_present_time_ == ZX_TIME_INFINITE_PAST) {
     // Tell Scenic to show the first frame around now-ish.
-    present_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_SEC(3);
+    present_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_SEC(2);
   } else {
     present_time =
         last_requested_present_time_ + ZX_SEC(1.0 / kFramesPerSecond);
   }
   last_requested_present_time_ = present_time;
 
-  FXL_LOG(INFO) << "putting frame - present_time: " << present_time
-                << " image_id: " << image_id;
+  FXL_VLOG(3) << "putting frame - present_time: " << present_time
+              << " image_id: " << image_id;
 
   for (FrameSinkView* view : views_) {
     view->PutFrame(image_id, present_time, vmo, vmo_offset, video_format,

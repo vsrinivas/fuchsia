@@ -141,10 +141,9 @@ void FrameSinkView::PutFrame(
       .pixel_format = pixel_format,
   };
 
-  FXL_LOG(INFO) << "#### image_id: " << image_id
-                << " width: " << image_info.width
-                << " height: " << image_info.height
-                << " stride: " << image_info.stride;
+  FXL_VLOG(3) << "#### image_id: " << image_id << " width: " << image_info.width
+              << " height: " << image_info.height
+              << " stride: " << image_info.stride;
 
   ::zx::vmo image_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_vmo);
@@ -224,11 +223,11 @@ void FrameSinkView::PutFrame(
       image_id, present_time, std::move(acquire_fences),
       std::move(release_fences),
       [image_id](fuchsia::images::PresentationInfo presentation_info) {
-        FXL_LOG(INFO) << "PresentImageCallback() called - presentation_time: "
-                      << presentation_info.presentation_time
-                      << " presenation_interval: "
-                      << presentation_info.presentation_interval
-                      << " image_id: " << image_id;
+        FXL_VLOG(3) << "PresentImageCallback() called - presentation_time: "
+                    << presentation_info.presentation_time
+                    << " presenation_interval: "
+                    << presentation_info.presentation_interval
+                    << " image_id: " << image_id;
       });
 
   // The frame will self-delete when its wait is done, so don't ~frame here.
@@ -278,26 +277,11 @@ void FrameSinkView::OnSceneInvalidated(
     return;
   }
 
-  // Compute the amount of time that has elapsed since the view was created.
-  double seconds =
-      static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
-
-  const float kHalfWidth = logical_size().width * 0.5f;
-  const float kHalfHeight = logical_size().height * 0.5f;
-
-  // Compute the translation for the window to swirl around the screen.
-  // Why do this?  Well, this is an example of what a View can do, and it helps
-  // debug to know if scenic is still running.
-  node_.SetTranslation(kHalfWidth * (1. + .1 * sin(seconds * 0.8)),
-                       kHalfHeight * (1. + .1 * sin(seconds * 0.6)),
-                       kDisplayHeight);
-
-  // The rectangle is constantly animating; invoke InvalidateScene() to
-  // guarantee that OnSceneInvalidated() will be called again.
-  //
-  // For now, we animate the movement slower on purpose, to check if the video
-  // content updates anyway, or if an invalidate is required for frames to show.
-  async::PostDelayedTask(main_loop_->dispatcher(),
-                         [this] { InvalidateScene(); },
-                         zx::duration(ZX_MSEC(500)));
+  float width = logical_size().width;
+  float height = logical_size().height;
+  scenic::Rectangle shape(session(), width, height);
+  node_.SetShape(shape);
+  float half_width = width * 0.5f;
+  float half_height = height * 0.5f;
+  node_.SetTranslation(half_width, half_height, kDisplayHeight);
 }

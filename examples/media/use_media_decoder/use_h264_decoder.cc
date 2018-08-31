@@ -358,7 +358,9 @@ void use_h264_decoder(async::Loop* main_loop,
         if (packet.valid_length_bytes < total_size) {
           Exit("packet.valid_length_bytes < total_size");
         }
-        SHA256_Update_VideoParameters(&sha256_ctx, *raw);
+        if (!frame_sink) {
+          SHA256_Update_VideoParameters(&sha256_ctx, *raw);
+        }
       }
 
       if (!output_file.empty()) {
@@ -378,22 +380,25 @@ void use_h264_decoder(async::Loop* main_loop,
             std::make_pair(packet.has_timestamp_ish, packet.timestamp_ish));
       }
 
-      // Y
-      uint8_t* y_src =
-          buffer.base() + packet.start_offset + raw->primary_start_offset;
-      for (uint32_t y_iter = 0; y_iter < raw->primary_height_pixels; y_iter++) {
-        SHA256_Update(&sha256_ctx, y_src, raw->primary_width_pixels);
-        y_src += raw->primary_line_stride_bytes;
-      }
-      // UV
-      uint8_t* uv_src =
-          buffer.base() + packet.start_offset + raw->secondary_start_offset;
-      for (uint32_t uv_iter = 0; uv_iter < raw->primary_height_pixels / 2;
-           uv_iter++) {
-        // NV12 requires eacy UV line be same width as a Y line, and same stride
-        // as a Y line.
-        SHA256_Update(&sha256_ctx, uv_src, raw->primary_width_pixels);
-        uv_src += raw->primary_line_stride_bytes;
+      if (!frame_sink) {
+        // Y
+        uint8_t* y_src =
+            buffer.base() + packet.start_offset + raw->primary_start_offset;
+        for (uint32_t y_iter = 0; y_iter < raw->primary_height_pixels;
+             y_iter++) {
+          SHA256_Update(&sha256_ctx, y_src, raw->primary_width_pixels);
+          y_src += raw->primary_line_stride_bytes;
+        }
+        // UV
+        uint8_t* uv_src =
+            buffer.base() + packet.start_offset + raw->secondary_start_offset;
+        for (uint32_t uv_iter = 0; uv_iter < raw->primary_height_pixels / 2;
+             uv_iter++) {
+          // NV12 requires eacy UV line be same width as a Y line, and same
+          // stride as a Y line.
+          SHA256_Update(&sha256_ctx, uv_src, raw->primary_width_pixels);
+          uv_src += raw->primary_line_stride_bytes;
+        }
       }
 
       if (frame_sink) {

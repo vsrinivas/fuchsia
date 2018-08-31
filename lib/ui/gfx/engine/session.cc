@@ -1537,8 +1537,10 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
   while (!scheduled_image_pipe_updates_.empty() &&
          scheduled_image_pipe_updates_.top().presentation_time <=
              presentation_time) {
-    needs_render = scheduled_image_pipe_updates_.top().image_pipe->Update(
-        presentation_time, presentation_interval);
+    // The bool returned from Update() is 0 or 1, and needs_render is 0 or 1, so
+    // bitwise |= is used which doesn't short-circuit.
+    needs_render |= scheduled_image_pipe_updates_.top().image_pipe->Update(
+                            presentation_time, presentation_interval);
     scheduled_image_pipe_updates_.pop();
   }
 
