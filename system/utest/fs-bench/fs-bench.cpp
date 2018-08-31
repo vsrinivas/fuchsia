@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 
 #include <fbl/function.h>
@@ -26,8 +27,6 @@ using fs_test_utils::PerformanceTestOptions;
 using fs_test_utils::TestCaseInfo;
 using fs_test_utils::TestInfo;
 
-constexpr uint8_t kMagicByte = 0xee;
-
 constexpr int kWriteReadCycles = 3;
 
 fbl::String GetBigFilePath(const Fixture& fixture) {
@@ -42,11 +41,8 @@ bool WriteBigFile(ssize_t data_size, perftest::RepeatState* state, Fixture* fixt
     ASSERT_TRUE(fd);
     state->DeclareStep("write");
     uint8_t data[data_size];
-    // TODO(gevalentino): make kMagicByte random. Make Fixture take a seed parameter,
-    // and use that seed to generate this value, then we pick the seed randomly by default,
-    // or pass it via parameters(reproduceability) and errors need to log the seed
-    // if the data depends on a randomized value.
-    memset(data, kMagicByte, data_size);
+    uint8_t pattern = static_cast<uint8_t>(rand_r(fixture->mutable_seed()) % (1 << 8));
+    memset(data, pattern, data_size);
 
     while (state->KeepRunning()) {
         ASSERT_EQ(write(fd.get(), data, data_size), data_size);
@@ -57,15 +53,16 @@ bool WriteBigFile(ssize_t data_size, perftest::RepeatState* state, Fixture* fixt
 
 bool ReadBigFile(ssize_t data_size, perftest::RepeatState* state, Fixture* fixture) {
     BEGIN_HELPER;
-
     fbl::unique_fd fd(open(GetBigFilePath(*fixture).c_str(), O_RDONLY));
+
+    uint8_t pattern = static_cast<uint8_t>(rand_r(fixture->mutable_seed()) % (1 << 8));
     ASSERT_TRUE(fd);
     state->DeclareStep("read");
     uint8_t data[data_size];
 
     while (state->KeepRunning()) {
         ASSERT_EQ(read(fd.get(), data, data_size), data_size);
-        ASSERT_EQ(data[0], kMagicByte);
+        ASSERT_EQ(data[0], pattern);
     }
 
     END_HELPER;

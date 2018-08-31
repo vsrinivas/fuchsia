@@ -138,6 +138,11 @@ public:
         return fs_path_;
     }
 
+    // Returns a seed to be used along the test, for rand_r calls.
+    unsigned int* mutable_seed() {
+        return &seed_;
+    }
+
     // Unmounts the FS from fs_path.
     zx_status_t Umount();
 
@@ -187,6 +192,8 @@ private:
 
     // The root path where FS is mounted.
     fbl::String fs_path_;
+
+    unsigned int seed_;
 
     // Keep track of the resource allocation during the setup teardown process,
     // to avoid leaks, or unnecessary errors when trying to free resources, that

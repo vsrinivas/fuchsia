@@ -168,11 +168,12 @@ void RunTest(const TestInfo& test, uint32_t sample_count, bool skip,
         return;
     }
     auto test_wrapper = [&test, fixture](perftest::RepeatState* state) {
+        // Reset the seed before running the test.
+        *fixture->mutable_seed() = fixture->options().seed;
         bool result = test.test_fn(state, fixture);
         return result;
     };
 
-    srand(fixture->options().seed);
     constexpr char kTestSuite[] = "fuchsia.zircon";
     bool failed = !perftest::RunTest(kTestSuite, test.name.c_str(), test_wrapper,
                                      sample_count, result_set, &error);
