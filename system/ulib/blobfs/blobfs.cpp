@@ -937,7 +937,9 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
         Sync([this, cb = fbl::move(cb)](zx_status_t status) mutable {
             async::PostTask(dispatcher(), [this, cb = fbl::move(cb)]() mutable {
                 // 3) Ensure the underlying disk has also flushed.
-                fsync(blockfd_.get());
+                fs::WriteTxn sync_txn(this);
+                sync_txn.EnqueueFlush();
+                sync_txn.Transact();
 
                 DumpMetrics();
 

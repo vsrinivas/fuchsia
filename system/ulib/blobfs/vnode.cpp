@@ -270,7 +270,9 @@ void VnodeBlob::Sync(SyncCallback closure) {
                 return;
             }
 
-            status = fsync(blobfs_->Fd());
+            fs::WriteTxn sync_txn(blobfs_);
+            sync_txn.EnqueueFlush();
+            status = sync_txn.Transact();
             cb(status);
         });
     } else {

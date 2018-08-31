@@ -54,7 +54,9 @@ zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
 }
 
 int Bcache::Sync() {
-    return fsync(fd_.get());
+    fs::WriteTxn sync_txn(this);
+    sync_txn.EnqueueFlush();
+    return sync_txn.Transact();
 }
 
 zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint32_t blockmax) {
