@@ -171,7 +171,7 @@ component::Services UserIntelligenceProviderImpl::StartTrustedApp(
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = url;
   launch_info.directory_request = services.NewRequest();
-  context_->launcher()->CreateComponent(std::move(launch_info), NULL);
+  context_->launcher()->CreateComponent(std::move(launch_info), nullptr);
   return services;
 }
 

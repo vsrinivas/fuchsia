@@ -80,12 +80,12 @@ void ModulePackageSource::IndexManifest(fidl::StringPtr package_name,
 void IterateDirectory(fxl::StringView dirname,
                       std::function<void(fxl::StringView)> callback) {
   DIR* fd = opendir(dirname.data());
-  if (fd == NULL) {
+  if (fd == nullptr) {
     perror("Could not open module package index directory: ");
     return;
   }
-  struct dirent* dp = NULL;
-  while ((dp = readdir(fd)) != NULL) {
+  struct dirent* dp = nullptr;
+  while ((dp = readdir(fd)) != nullptr) {
     if (dp->d_name[0] != '.') {
       callback(dp->d_name);
     }

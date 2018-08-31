@@ -42,7 +42,7 @@ std::vector<ActiveSession> FindAllSessions() {
 
   glob_t globbuf;
   std::vector<ActiveSession> sessions;
-  FXL_CHECK(glob(glob_str.data(), 0, NULL, &globbuf) == 0);
+  FXL_CHECK(glob(glob_str.data(), 0, nullptr, &globbuf) == 0);
   for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
     ActiveSession s;
     s.service_path = globbuf.gl_pathv[i];
@@ -59,8 +59,7 @@ std::vector<ActiveSession> FindAllSessions() {
 PuppetMasterPtr ConnectToPuppetMaster(const ActiveSession& session) {
   PuppetMasterPtr puppet_master;
   auto request = puppet_master.NewRequest().TakeChannel();
-  std::string service_path =
-      session.service_path + "/" + PuppetMaster::Name_;
+  std::string service_path = session.service_path + "/" + PuppetMaster::Name_;
   if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
     FXL_LOG(FATAL) << "Could not connect to PuppetMaster service in "
                    << session.service_path;

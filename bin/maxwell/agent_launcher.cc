@@ -19,7 +19,7 @@ component::Services AgentLauncher::StartAgent(
   bridge_ = std::move(bridge);
   fuchsia::sys::EnvironmentPtr agent_env;
   environment_->CreateNestedEnvironment(bridge_->OpenAsDirectory(),
-                                        agent_env.NewRequest(), NULL,
+                                        agent_env.NewRequest(), nullptr,
                                         kEnvironmentLabel);
 
   fuchsia::sys::LauncherPtr agent_launcher;
@@ -30,7 +30,7 @@ component::Services AgentLauncher::StartAgent(
   component::Services services;
   launch_info.directory_request = services.NewRequest();
   FXL_LOG(INFO) << "Starting Maxwell agent " << url;
-  agent_launcher->CreateComponent(std::move(launch_info), NULL);
+  agent_launcher->CreateComponent(std::move(launch_info), nullptr);
   return services;
 }
 

@@ -34,7 +34,7 @@ std::string FindModulePackageIndexerService() {
 
   glob_t globbuf;
   std::string service_path;
-  FXL_CHECK(glob(glob_str.data(), 0, NULL, &globbuf) == 0);
+  FXL_CHECK(glob(glob_str.data(), 0, nullptr, &globbuf) == 0);
   if (globbuf.gl_pathc > 0) {
     service_path = globbuf.gl_pathv[0];
   }
