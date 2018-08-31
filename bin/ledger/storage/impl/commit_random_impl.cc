@@ -17,7 +17,7 @@ CommitRandomImpl::CommitRandomImpl()
       timestamp_(fxl::RandUint64()),
       generation_(fxl::RandUint64()),
       root_node_identifier_(RandomObjectIdentifier()),
-      parent_ids_{RandomObjectDigest()},
+      parent_ids_{RandomCommitId()},
       parent_ids_views_{parent_ids_[0]},
       storage_bytes_(RandomString(64)) {}
 
