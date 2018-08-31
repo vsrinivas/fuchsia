@@ -41,10 +41,14 @@ package("recovery_netstack_tests") {
   testonly = true
   deps = [
     ":bin",
+    "core:netstack-core",
   ]
   tests = [
     {
       name = "recovery_netstack_bin_test_rustc"
+    },
+    {
+      name = "netstack_core_lib_test_rustc"
     },
   ]
 }
