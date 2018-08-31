@@ -85,8 +85,8 @@ int PlatformI2cBus::I2cThread() {
         while ((txn = list_remove_head_type(&queued_txns_, I2cTxn, node)) != nullptr) {
             mutex_.Release();
 
-            auto status = i2c_.Transact(bus_id_, txn->address, txn->write_buffer,
-                                        txn->write_length, read_buffer.get(), txn->read_length);
+            auto status = i2c_.WriteRead(bus_id_, txn->address, txn->write_buffer,
+                                         txn->write_length, read_buffer.get(), txn->read_length);
             size_t actual = (status == ZX_OK ? txn->read_length : 0);
             Complete(txn, status, read_buffer.get(), actual);
 

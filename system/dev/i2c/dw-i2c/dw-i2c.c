@@ -42,7 +42,7 @@ typedef struct {
     size_t i2c_dev_count;
 } i2c_dw_t;
 
-static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len);
+static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len, bool stop);
 static zx_status_t i2c_dw_write(i2c_dw_dev_t* dev, const uint8_t *buff, uint32_t len, bool stop);
 static zx_status_t i2c_dw_set_slave_addr(i2c_dw_dev_t* dev, uint16_t addr);
 
@@ -168,10 +168,12 @@ static int i2c_dw_irq_thread(void* arg) {
 }
 
 static zx_status_t i2c_dw_transact(void* ctx, uint32_t bus_id, uint16_t address,
-                                   const void* write_buf, size_t write_length,
-                                   void* read_buf, size_t read_length) {
-    if (read_length > I2C_DW_MAX_TRANSFER || write_length > I2C_DW_MAX_TRANSFER) {
-        return ZX_ERR_OUT_OF_RANGE;
+                                   i2c_impl_op_t* rws, size_t count) {
+    size_t i;
+    for (i = 0; i < count; ++i) {
+        if (rws[i].length > I2C_DW_MAX_TRANSFER) {
+            return ZX_ERR_OUT_OF_RANGE;
+        }
     }
 
     i2c_dw_t* i2c = ctx;
@@ -188,12 +190,15 @@ static zx_status_t i2c_dw_transact(void* ctx, uint32_t bus_id, uint16_t address,
     i2c_dw_clear_intrrupts(dev);
 
     zx_status_t status = ZX_OK;
-    if (write_length > 0) {
-        status = i2c_dw_write(dev, write_buf, write_length, (read_length == 0));
-     }
-
-    if (status == ZX_OK && read_length > 0) {
-        status = i2c_dw_read(dev, read_buf, read_length);
+    for (i = 0; i < count; ++i) {
+        if (rws[i].is_read) {
+            status = i2c_dw_read(dev, rws[i].buf, rws[i].length, rws[i].stop);
+        } else {
+            status = i2c_dw_write(dev, rws[i].buf, rws[i].length, rws[i].stop);
+        }
+        if (status != ZX_OK) {
+            return status; // TODO(andresoportus) release the bus
+        }
     }
 
     i2c_dw_disable_interrupts(dev);
@@ -228,7 +233,7 @@ static zx_status_t i2c_dw_set_slave_addr(i2c_dw_dev_t* dev, uint16_t addr) {
     return ZX_OK;
 }
 
-static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len) {
+static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len, bool stop) {
      uint32_t rx_limit;
 
     ZX_DEBUG_ASSERT(len <= I2C_DW_MAX_TRANSFER);
@@ -240,8 +245,8 @@ static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len) {
 
     while (len > 0) {
         uint32_t cmd = 0;
-        if (len == 1) {
-            // send STOP cmd if last byte
+        // send STOP cmd if last byte and stop set
+        if (len == 1 && stop) {
             cmd = I2C_DW_SET_MASK(cmd, DW_I2C_DATA_CMD_STOP_START, DW_I2C_DATA_CMD_STOP_BITS, 1);
         }
         I2C_DW_WRITE32(DW_I2C_DATA_CMD, cmd | (1 << DW_I2C_DATA_CMD_CMD_START));
@@ -271,8 +276,8 @@ static zx_status_t i2c_dw_write(i2c_dw_dev_t* dev, const uint8_t *buff, uint32_t
     ZX_DEBUG_ASSERT(len <= tx_limit);
     while (len > 0) {
         uint32_t cmd = 0;
+        // send STOP cmd if last byte and stop set
         if (len == 1 && stop) {
-            // send STOP cmd if last byte
             cmd = I2C_DW_SET_MASK(cmd, DW_I2C_DATA_CMD_STOP_START, DW_I2C_DATA_CMD_STOP_BITS, 1);
         }
         I2C_DW_WRITE32(DW_I2C_DATA_CMD, cmd | *buff++);
@@ -510,4 +515,3 @@ ZIRCON_DRIVER_BEGIN(dw_i2c, dw_i2c_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DW_I2C),
 ZIRCON_DRIVER_END(dw_i2c)
-

@@ -40,8 +40,8 @@ edid::ddc_i2c_transact ddc_tx = [](void* ctx, edid::ddc_i2c_msg_t* msgs, uint32_
     // TODO(ZX-2487): Remove the special casing when the i2c_impl API gets updated
     if (count == 3) {
         ZX_ASSERT(!msgs[0].is_read);
-        if (i2c_impl_transact(i2c->i2c, i2c->bus_id,
-                              msgs->addr, msgs->buf, msgs->length, nullptr, 0)) {
+        if (i2c_impl_write_read(i2c->i2c, i2c->bus_id,
+                                msgs->addr, msgs->buf, msgs->length, nullptr, 0)) {
             return false;
         }
         msgs++;
@@ -50,9 +50,9 @@ edid::ddc_i2c_transact ddc_tx = [](void* ctx, edid::ddc_i2c_msg_t* msgs, uint32_
     ZX_ASSERT(msgs[1].is_read);
     ZX_ASSERT(msgs[0].addr == msgs[1].addr);
 
-    return i2c_impl_transact(i2c->i2c, i2c->bus_id,
-                             msgs[0].addr, msgs[0].buf, msgs[0].length,
-                             msgs[1].buf, msgs[1].length) == ZX_OK;
+    return i2c_impl_write_read(i2c->i2c, i2c->bus_id,
+                               msgs[0].addr, msgs[0].buf, msgs[0].length,
+                               msgs[1].buf, msgs[1].length) == ZX_OK;
 };
 
 } // namespace

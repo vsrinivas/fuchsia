@@ -35,8 +35,7 @@
 //     I2cImplDevice(zx_device_t* parent)
 //       : I2cImplDeviceType("my-i2c-impl-device", parent) {}
 //
-//    zx_status_t I2cTransact(uint32_t index, const void* write_buf, size_t write_length,
-//                            size_t read_length, i2c_complete_cb complete_cb, void* cookie);
+//    zx_status_t Transact(uint32_t bus_id, uint16_t address, i2c_impl_op_t* ops, size_t count);
 //    zx_status_t I2cGetMaxTransferSize(uint32_t index, size_t* out_size);
 //     ...
 // };
@@ -73,10 +72,8 @@ private:
         return static_cast<D*>(ctx)->I2cImplGetMaxTransferSize(bus_id, bitrate);
     }
     static zx_status_t I2cImplTransact(void* ctx, uint32_t bus_id, uint16_t address,
-                                       const void* write_buf, size_t write_length, void* read_buf,
-                                       size_t read_length) {
-        return static_cast<D*>(ctx)->I2cImplTransact(bus_id, address, write_buf, write_length,
-                                                     read_buf, read_length);
+                                       i2c_impl_op_t* ops, size_t count) {
+        return static_cast<D*>(ctx)->I2cImplTransact(bus_id, address, ops, count);
     }
 };
 
@@ -99,10 +96,26 @@ public:
     zx_status_t SetBitRate(uint32_t bus_id, uint32_t bitrate) {
         return ops_->set_bitrate(ctx_, bus_id, bitrate);
     }
-    zx_status_t Transact(uint32_t bus_id, uint16_t address, const void* write_buf,
-                         size_t write_length, void* read_buf, size_t read_length) {
-        return ops_->transact(ctx_, bus_id, address, write_buf,  write_length, read_buf,
-                              read_length);
+    zx_status_t WriteRead(uint32_t bus_id, uint16_t address, const void* write_buf,
+                          size_t write_length, void* read_buf, size_t read_length) {
+        i2c_impl_op_t ops[] = {
+            {
+                .buf = const_cast<void*>(write_buf),
+                .length = write_length,
+                .is_read = false,
+                .stop = false,
+            },
+            {
+                .buf = read_buf,
+                .length = read_length,
+                .is_read = true,
+                .stop = true,
+            }
+        };
+        return Transact(bus_id, address, ops, sizeof(ops) / sizeof(i2c_impl_op_t));
+    }
+    zx_status_t Transact(uint32_t bus_id, uint16_t address, i2c_impl_op_t* ops, size_t count) {
+        return ops_->transact(ctx_, bus_id, address, ops, count);
     }
 
 private:
