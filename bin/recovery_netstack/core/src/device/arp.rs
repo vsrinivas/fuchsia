@@ -141,7 +141,7 @@ pub fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     AD::get_arp_state(ctx, device_id)
         .table
         .lookup(lookup)
-        .map(|val| val.addr)
+        .cloned()
 }
 
 /// The state associated with an instance of the Address Resolution Protocol
@@ -174,17 +174,21 @@ struct ArpTable<H, P: Hash + Eq> {
 }
 
 #[derive(Debug, Eq, PartialEq)] // for testing
-struct ArpValue<H> {
-    addr: H,
+enum ArpValue<H> {
+    Known(H),
+    Waiting,
 }
 
 impl<H, P: Hash + Eq> ArpTable<H, P> {
     fn insert(&mut self, net: P, hw: H) {
-        self.table.insert(net, ArpValue { addr: hw });
+        self.table.insert(net, ArpValue::Known(hw));
     }
 
-    fn lookup(&self, addr: P) -> Option<&ArpValue<H>> {
-        self.table.get(&addr)
+    fn lookup(&self, addr: P) -> Option<&H> {
+        match self.table.get(&addr) {
+            Some(ArpValue::Known(x)) => Some(x),
+            _                        => None,
+        }
     }
 }
 
@@ -208,7 +212,7 @@ mod tests {
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 1])), None);
         t.insert(Ipv4Addr::new([10, 0, 0, 1]), Mac::new([1, 2, 3, 4, 5, 6]));
         assert_eq!(
-            t.lookup(Ipv4Addr::new([10, 0, 0, 1])).unwrap().addr,
+            *t.lookup(Ipv4Addr::new([10, 0, 0, 1])).unwrap(),
             Mac::new([1, 2, 3, 4, 5, 6])
         );
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 2])), None);
