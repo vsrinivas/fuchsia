@@ -28,8 +28,11 @@
 
 #include "htc.h"
 #include "htt.h"
+// clang-format off
+// order matters.
 #include "wmi.h"
 #include "wmi-tlv.h"
+// clang-format on
 
 #define DEBUG_MSG_BUF 0
 

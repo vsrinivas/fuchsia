@@ -35,6 +35,7 @@
 #include "wmi-ops.h"
 #include "wow.h"
 
+// clang-format off
 #define CHAN2G(_channel, _freq, _flags) { \
     .hw_value           = (_channel), \
     .center_freq        = (_freq), \
@@ -98,6 +99,7 @@ static const struct ath10k_channel ath10k_5ghz_channels[] = {
     CHAN5G(165, 5825, 0),
     CHAN5G(169, 5845, 0),
 };
+// clang-format on
 
 // Band information that is consistent across all supported ath10k chipsets
 static const struct ath10k_band ath10k_supported_bands[] = {

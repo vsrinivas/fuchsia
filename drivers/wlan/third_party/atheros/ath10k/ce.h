@@ -25,8 +25,10 @@
 #define CE_HTT_H2T_MSG_SRC_NENTRIES 8192
 
 /* Descriptor rings must be aligned to this boundary */
+// clang-format off
 #define CE_DESC_RING_ALIGN  8
 #define CE_SEND_FLAG_GATHER 0x00010000
+// clang-format on
 
 /*
  * Copy Engine support: low-level Target-side Copy Engine API.
@@ -36,8 +38,9 @@
 
 struct ath10k_ce_pipe;
 
-#define CE_DESC_FLAGS_GATHER         (1 << 0)
-#define CE_DESC_FLAGS_BYTE_SWAP      (1 << 1)
+// clang-format off
+#define CE_DESC_FLAGS_GATHER        (1 << 0)
+#define CE_DESC_FLAGS_BYTE_SWAP     (1 << 1)
 
 /* Following desc flags are used in QCA99X0 */
 #define CE_DESC_FLAGS_HOST_INT_DIS  (1 << 2)
@@ -45,6 +48,7 @@ struct ath10k_ce_pipe;
 
 #define CE_DESC_FLAGS_META_DATA_MASK ar->hw_values->ce_desc_meta_data_mask
 #define CE_DESC_FLAGS_META_DATA_LSB  ar->hw_values->ce_desc_meta_data_lsb
+// clang-format on
 
 struct ce_desc {
     uint32_t addr;
@@ -228,9 +232,10 @@ void ath10k_ce_enable_interrupts(struct ath10k* ar);
 void ath10k_ce_dump_registers(struct ath10k* ar,
                               struct ath10k_fw_crash_data* crash_data);
 
+// clang-format off
 /* ce_attr.flags values */
 /* Use NonSnooping PCIe accesses? */
-#define CE_ATTR_NO_SNOOP        1
+#define CE_ATTR_NO_SNOOP            1
 
 /* Byte swap data words */
 #define CE_ATTR_BYTE_SWAP_DATA      2
@@ -239,7 +244,8 @@ void ath10k_ce_dump_registers(struct ath10k* ar,
 #define CE_ATTR_SWIZZLE_DESCRIPTORS 4
 
 /* no interrupt on copy completion */
-#define CE_ATTR_DIS_INTR        8
+#define CE_ATTR_DIS_INTR            8
+// clang-format on
 
 /* Attributes of an instance of a Copy Engine */
 struct ce_attr {

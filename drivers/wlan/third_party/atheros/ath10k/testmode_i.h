@@ -27,17 +27,19 @@
 #define ATH10K_TM_DATA_MAX_LEN      5000
 
 enum ath10k_tm_attr {
-    __ATH10K_TM_ATTR_INVALID    = 0,
-    ATH10K_TM_ATTR_CMD      = 1,
-    ATH10K_TM_ATTR_DATA     = 2,
-    ATH10K_TM_ATTR_WMI_CMDID    = 3,
-    ATH10K_TM_ATTR_VERSION_MAJOR    = 4,
-    ATH10K_TM_ATTR_VERSION_MINOR    = 5,
-    ATH10K_TM_ATTR_WMI_OP_VERSION   = 6,
+// clang-format off
+    __ATH10K_TM_ATTR_INVALID      = 0,
+    ATH10K_TM_ATTR_CMD            = 1,
+    ATH10K_TM_ATTR_DATA           = 2,
+    ATH10K_TM_ATTR_WMI_CMDID      = 3,
+    ATH10K_TM_ATTR_VERSION_MAJOR  = 4,
+    ATH10K_TM_ATTR_VERSION_MINOR  = 5,
+    ATH10K_TM_ATTR_WMI_OP_VERSION = 6,
 
     /* keep last */
     __ATH10K_TM_ATTR_AFTER_LAST,
-    ATH10K_TM_ATTR_MAX      = __ATH10K_TM_ATTR_AFTER_LAST - 1,
+    ATH10K_TM_ATTR_MAX            = __ATH10K_TM_ATTR_AFTER_LAST - 1,
+// clang-format on
 };
 
 /* All ath10k testmode interface commands specified in

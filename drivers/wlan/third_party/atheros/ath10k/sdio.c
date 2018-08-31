@@ -1872,20 +1872,22 @@ static void ath10k_sdio_hif_send_complete_check(struct ath10k* ar,
 }
 
 static const struct ath10k_hif_ops ath10k_sdio_hif_ops = {
-    .tx_sg          = ath10k_sdio_hif_tx_sg,
-    .diag_read      = ath10k_sdio_hif_diag_read,
-    .diag_write     = ath10k_sdio_hif_diag_write_mem,
-    .exchange_bmi_msg   = ath10k_sdio_bmi_exchange_msg,
-    .start          = ath10k_sdio_hif_start,
-    .stop           = ath10k_sdio_hif_stop,
-    .map_service_to_pipe    = ath10k_sdio_hif_map_service_to_pipe,
-    .get_default_pipe   = ath10k_sdio_hif_get_default_pipe,
-    .send_complete_check    = ath10k_sdio_hif_send_complete_check,
-    .power_up       = ath10k_sdio_hif_power_up,
-    .power_down     = ath10k_sdio_hif_power_down,
+// clang-format off
+    .tx_sg               = ath10k_sdio_hif_tx_sg,
+    .diag_read           = ath10k_sdio_hif_diag_read,
+    .diag_write          = ath10k_sdio_hif_diag_write_mem,
+    .exchange_bmi_msg    = ath10k_sdio_bmi_exchange_msg,
+    .start               = ath10k_sdio_hif_start,
+    .stop                = ath10k_sdio_hif_stop,
+    .map_service_to_pipe = ath10k_sdio_hif_map_service_to_pipe,
+    .get_default_pipe    = ath10k_sdio_hif_get_default_pipe,
+    .send_complete_check = ath10k_sdio_hif_send_complete_check,
+    .power_up            = ath10k_sdio_hif_power_up,
+    .power_down          = ath10k_sdio_hif_power_down,
 #ifdef CONFIG_PM
-    .suspend        = ath10k_sdio_hif_suspend,
-    .resume         = ath10k_sdio_hif_resume,
+    .suspend             = ath10k_sdio_hif_suspend,
+    .resume              = ath10k_sdio_hif_resume,
+// clang-format on
 #endif
 };
 
@@ -2071,11 +2073,13 @@ static const struct sdio_device_id ath10k_sdio_devices[] = {
 MODULE_DEVICE_TABLE(sdio, ath10k_sdio_devices);
 
 static struct sdio_driver ath10k_sdio_driver = {
-    .name = "ath10k_sdio",
+// clang-format off
+    .name     = "ath10k_sdio",
     .id_table = ath10k_sdio_devices,
-    .probe = ath10k_sdio_probe,
-    .remove = ath10k_sdio_remove,
-    .drv.pm = ATH10K_SDIO_PM_OPS,
+    .probe    = ath10k_sdio_probe,
+    .remove   = ath10k_sdio_remove,
+    .drv.pm   = ATH10K_SDIO_PM_OPS,
+// clang-format on
 };
 
 static int __init ath10k_sdio_init(void) {

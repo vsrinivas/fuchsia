@@ -24,6 +24,7 @@
 #include "macros.h"
 #include "wmi-ops.h"
 
+// clang-format off
 const struct ath10k_hw_regs qca988x_regs = {
     .rtc_soc_base_address                   = 0x00004000,
     .rtc_wmac_base_address                  = 0x00005000,
@@ -396,6 +397,7 @@ const struct ath10k_hw_clk_params qca6174_clk[ATH10K_HW_REFCLK_COUNT] = {
         .outdiv = 1,
     },
 };
+// clang-format on
 
 #if 0 // NEEDS PORTING
 void ath10k_hw_fill_survey_time(struct ath10k* ar, struct survey_info* survey,

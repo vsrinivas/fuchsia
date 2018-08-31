@@ -27,14 +27,16 @@
 #include "wmi.h"
 
 static const struct nla_policy ath10k_tm_policy[ATH10K_TM_ATTR_MAX + 1] = {
-    [ATH10K_TM_ATTR_CMD]        = { .type = NLA_U32 },
-    [ATH10K_TM_ATTR_DATA]       = {
+// clang-format off
+    [ATH10K_TM_ATTR_CMD]            = { .type = NLA_U32 },
+    [ATH10K_TM_ATTR_DATA]           = {
         .type = NLA_BINARY,
         .len = ATH10K_TM_DATA_MAX_LEN
     },
-    [ATH10K_TM_ATTR_WMI_CMDID]  = { .type = NLA_U32 },
+    [ATH10K_TM_ATTR_WMI_CMDID]      = { .type = NLA_U32 },
     [ATH10K_TM_ATTR_VERSION_MAJOR]  = { .type = NLA_U32 },
     [ATH10K_TM_ATTR_VERSION_MINOR]  = { .type = NLA_U32 },
+// clang-format on
 };
 
 /* Returns true if callee consumes the skb and the skb should be discarded.

@@ -1522,8 +1522,10 @@ enum wmi_tlv_pattern_type {
     WOW_PATTERN_MAX
 };
 
-#define WOW_DEFAULT_BITMAP_PATTERN_SIZE     148
+// clang-format off
+#define WOW_DEFAULT_BITMAP_PATTERN_SIZE 148
 #define WOW_DEFAULT_BITMASK_SIZE        148
+// clang-format on
 
 struct wmi_tlv_wow_bitmap_pattern {
     uint8_t patternbuf[WOW_DEFAULT_BITMAP_PATTERN_SIZE];
@@ -1582,8 +1584,10 @@ enum {
     WMI_TLV_TDLS_PEER_QOS_AC_BE = (1 << 3),
 };
 
+// clang-format off
 #define WMI_TLV_TDLS_PEER_SP_MASK   0x60
 #define WMI_TLV_TDLS_PEER_SP_LSB    5
+// clang-format on
 
 struct wmi_tdls_peer_capab {
     uint32_t peer_qos;
@@ -1650,6 +1654,7 @@ struct wmi_tlv_tx_pause_ev {
 #define WMI_TLV_MSG(type, hdr) \
     MSG(WMI_TLV_PFX(type), ATH10K_MSG_TYPE_WMI_TLV, sizeof(struct hdr))
 
+// clang-format off
 #define WMI_TLV_MSGS \
     MSG(ATH10K_MSG_TYPE_WMI_TLV, ATH10K_MSG_TYPE_WMI, sizeof(struct wmi_tlv)), \
     WMI_TLV_MSG(ECHO_CMD,           wmi_echo_cmd),               \
@@ -1675,6 +1680,7 @@ struct wmi_tlv_tx_pause_ev {
     WMI_TLV_MSG(VDEV_START,         wmi_tlv_vdev_start_cmd),     \
     WMI_TLV_MSG(VDEV_STOP,          wmi_vdev_stop_cmd),          \
     WMI_TLV_MSG(VDEV_UP,            wmi_vdev_up_cmd)
+// clang-format on
 
 void ath10k_wmi_tlv_attach(struct ath10k* ar);
 

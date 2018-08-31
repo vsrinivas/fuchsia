@@ -43,10 +43,12 @@ struct rfc1042_hdr {
 #endif // NEEDS PORTING
 
 enum ath10k_channel_flags {
+// clang-format off
     IEEE80211_CHAN_DISABLED    = (1 << 0),
     IEEE80211_CHAN_NO_IR       = (1 << 1),
     IEEE80211_CHAN_NO_HT40PLUS = (1 << 2),
     IEEE80211_CHAN_RADAR       = (1 << 3),
+// clang-format on
 };
 
 struct ath10k_channel {

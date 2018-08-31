@@ -39,9 +39,11 @@
 #include "wmi.h"
 #include "wow.h"
 
+// clang-format off
 #define MS(_v, _f) (((_v) & _f##_MASK) >> _f##_LSB)
 #define SM(_v, _f) (((_v) << _f##_LSB) & _f##_MASK)
 #define WO(_f)      ((_f##_OFFSET) >> 2)
+// clang-format on
 
 #define ATH10K_SCAN_ID 0
 #define WMI_READY_TIMEOUT (5 * HZ)
@@ -68,8 +70,10 @@
 #define ATH10K_KEEPALIVE_MAX_UNRESPONSIVE 3900
 
 /* NAPI poll budget */
+// clang-format off
 #define ATH10K_NAPI_BUDGET      64
 #define ATH10K_NAPI_QUOTA_LIMIT 60
+// clang-format on
 
 /* SMBIOS type containing Board Data File Name Extension */
 #define ATH10K_SMBIOS_BDF_EXT_TYPE 0xF8

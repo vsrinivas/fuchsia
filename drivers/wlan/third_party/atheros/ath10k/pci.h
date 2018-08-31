@@ -116,10 +116,12 @@ struct ce_pipe_config {
  * Target since things that are "PIPEDIR_OUT" are coming IN to the Target
  * over the interconnect.
  */
+// clang-format off
 #define PIPEDIR_NONE    0
 #define PIPEDIR_IN      1  /* Target-->Host, WiFi Rx direction */
 #define PIPEDIR_OUT     2  /* Host->Target, WiFi Tx direction */
 #define PIPEDIR_INOUT   3  /* bidirectional */
+// clang-format on
 
 /* Establish a mapping between a service/direction and a pipe. */
 struct service_to_pipe {
@@ -261,10 +263,11 @@ static inline struct ath10k_pci* ath10k_pci_priv(struct ath10k* ar) {
     return (struct ath10k_pci*)ar->drv_priv;
 }
 
+// clang-format off
 #define ATH10K_PCI_RX_POST_RETRY_MS 50
-#define ATH_PCI_RESET_WAIT_MAX 10 /* ms */
-#define PCIE_WAKE_TIMEOUT 30000 /* 30ms */
-#define PCIE_WAKE_LATE_US 10000 /* 10ms */
+#define ATH_PCI_RESET_WAIT_MAX      10 /* ms */
+#define PCIE_WAKE_TIMEOUT           30000 /* 30ms */
+#define PCIE_WAKE_LATE_US           10000 /* 10ms */
 
 #define BAR_NUM 0
 
@@ -273,6 +276,7 @@ static inline struct ath10k_pci* ath10k_pci_priv(struct ath10k* ar) {
 
 /* Wait up to this many Ms for a Diagnostic Access CE operation to complete */
 #define DIAG_ACCESS_CE_TIMEOUT_MS 10
+// clang-format on
 
 void ath10k_pci_write32(struct ath10k* ar, uint32_t offset, uint32_t value);
 void ath10k_pci_soc_write32(struct ath10k* ar, uint32_t addr, uint32_t val);

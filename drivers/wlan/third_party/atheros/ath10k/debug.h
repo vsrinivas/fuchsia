@@ -23,6 +23,7 @@
 #include <ddk/debug.h>
 
 enum ath10k_debug_mask {
+// clang-format off
     ATH10K_DBG_PCI          = 0x00000001,
     ATH10K_DBG_WMI          = 0x00000002,
     ATH10K_DBG_HTC          = 0x00000004,
@@ -42,15 +43,18 @@ enum ath10k_debug_mask {
     ATH10K_DBG_SDIO         = 0x00010000,
     ATH10K_DBG_SDIO_DUMP    = 0x00020000,
     ATH10K_DBG_ANY          = 0xffffffff,
+// clang-format on
 };
 
 enum ath10k_pktlog_filter {
+// clang-format off
     ATH10K_PKTLOG_RX         = 0x000000001,
     ATH10K_PKTLOG_TX         = 0x000000002,
     ATH10K_PKTLOG_RCFIND     = 0x000000004,
     ATH10K_PKTLOG_RCUPDATE   = 0x000000008,
     ATH10K_PKTLOG_DBG_PRINT  = 0x000000010,
     ATH10K_PKTLOG_ANY        = 0x00000001f,
+// clang-format on
 };
 
 enum ath10k_dbg_aggr_mode {

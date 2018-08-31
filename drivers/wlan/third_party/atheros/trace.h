@@ -30,6 +30,7 @@
 
 #endif /* CONFIG_ATH_TRACEPOINTS */
 
+// clang-format off
 TRACE_EVENT(ath_log,
 
             TP_PROTO(struct wiphy* wiphy,
@@ -59,6 +60,7 @@ TRACE_EVENT(ath_log,
                 __get_str(msg)
             )
            );
+// clang-format on
 
 #endif /* _TRACE_H || TRACE_HEADER_MULTI_READ */
 

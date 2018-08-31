@@ -157,6 +157,7 @@ enum EnumRd {
 
 /* Regpair to CTL band mapping */
 static struct reg_dmn_pair_mapping regDomainPairs[] = {
+    // clang-format off
     /* regpair, 5 GHz CTL, 2 GHz CTL */
     {NO_ENUMRD, DEBUG_REG_DMN, DEBUG_REG_DMN},
     {NULL1_WORLD, NO_CTL, CTL_ETSI},
@@ -284,9 +285,11 @@ static struct reg_dmn_pair_mapping regDomainPairs[] = {
     {WORA_WORLD, NO_CTL, NO_CTL},
     {WORB_WORLD, NO_CTL, NO_CTL},
     {WORC_WORLD, NO_CTL, NO_CTL},
+    // clang-format on
 };
 
 static struct country_code_to_enum_rd allCountries[] = {
+    // clang-format off
     {CTRY_DEBUG, NO_ENUMRD, "DB"},
     {CTRY_DEFAULT, FCC1_FCCA, "CO"},
     {CTRY_ALBANIA, NULL1_WORLD, "AL"},
@@ -473,6 +476,7 @@ static struct country_code_to_enum_rd allCountries[] = {
     {CTRY_VIET_NAM, NULL1_WORLD, "VN"},
     {CTRY_YEMEN, NULL1_WORLD, "YE"},
     {CTRY_ZIMBABWE, NULL1_WORLD, "ZW"},
+    // clang-format on
 };
 
 #endif

@@ -59,6 +59,7 @@
 /* BMI Commands */
 
 enum bmi_cmd_id {
+    // clang-format off
     BMI_NO_COMMAND          = 0,
     BMI_DONE                = 1,
     BMI_READ_MEMORY         = 2,
@@ -78,13 +79,15 @@ enum bmi_cmd_id {
     BMI_LZ_STREAM_START     = 13, /* should be followed by LZ_DATA */
     BMI_LZ_DATA             = 14,
     BMI_NVRAM_PROCESS       = 15,
+    // clang-format on
 };
 
-#define BMI_NVRAM_SEG_NAME_SZ 16
+// clang-format off
+#define BMI_NVRAM_SEG_NAME_SZ         16
 
 #define BMI_PARAM_GET_EEPROM_BOARD_ID 0x10
-#define BMI_PARAM_GET_FLASH_BOARD_ID 0x8000
-#define BMI_PARAM_FLASH_SECTION_ALL 0x10000
+#define BMI_PARAM_GET_FLASH_BOARD_ID  0x8000
+#define BMI_PARAM_FLASH_SECTION_ALL   0x10000
 
 #define ATH10K_BMI_BOARD_ID_FROM_OTP_MASK   0x7c00
 #define ATH10K_BMI_BOARD_ID_FROM_OTP_LSB    10
@@ -92,7 +95,8 @@ enum bmi_cmd_id {
 #define ATH10K_BMI_CHIP_ID_FROM_OTP_MASK    0x18000
 #define ATH10K_BMI_CHIP_ID_FROM_OTP_LSB     15
 
-#define ATH10K_BMI_BOARD_ID_STATUS_MASK 0xff
+#define ATH10K_BMI_BOARD_ID_STATUS_MASK     0xff
+// clang-format on
 
 struct bmi_cmd {
     uint32_t id; /* enum bmi_cmd_id */

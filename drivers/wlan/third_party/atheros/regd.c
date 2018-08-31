@@ -64,16 +64,19 @@ static int __ath_regd_init(struct ath_regulatory* reg);
 /* Can be used for:
  * 0x60, 0x61, 0x62 */
 static const struct ieee80211_regdomain ath_world_regdom_60_61_62 = {
+// clang-format off
     .n_reg_rules = 5,
     .alpha2 =  "99",
     .reg_rules = {
         ATH9K_2GHZ_ALL,
         ATH9K_5GHZ_ALL,
     }
+// clang-format on
 };
 
 /* Can be used by 0x63 and 0x65 */
 static const struct ieee80211_regdomain ath_world_regdom_63_65 = {
+// clang-format off
     .n_reg_rules = 4,
     .alpha2 =  "99",
     .reg_rules = {
@@ -81,30 +84,36 @@ static const struct ieee80211_regdomain ath_world_regdom_63_65 = {
         ATH9K_2GHZ_CH12_13,
         ATH9K_5GHZ_NO_MIDBAND,
     }
+// clang-format on
 };
 
 /* Can be used by 0x64 only */
 static const struct ieee80211_regdomain ath_world_regdom_64 = {
+// clang-format off
     .n_reg_rules = 3,
     .alpha2 =  "99",
     .reg_rules = {
         ATH9K_2GHZ_CH01_11,
         ATH9K_5GHZ_NO_MIDBAND,
     }
+// clang-format on
 };
 
 /* Can be used by 0x66 and 0x69 */
 static const struct ieee80211_regdomain ath_world_regdom_66_69 = {
+// clang-format off
     .n_reg_rules = 3,
     .alpha2 =  "99",
     .reg_rules = {
         ATH9K_2GHZ_CH01_11,
         ATH9K_5GHZ_ALL,
     }
+// clang-format on
 };
 
 /* Can be used by 0x67, 0x68, 0x6A and 0x6C */
 static const struct ieee80211_regdomain ath_world_regdom_67_68_6A_6C = {
+// clang-format off
     .n_reg_rules = 4,
     .alpha2 =  "99",
     .reg_rules = {
@@ -112,6 +121,7 @@ static const struct ieee80211_regdomain ath_world_regdom_67_68_6A_6C = {
         ATH9K_2GHZ_CH12_13,
         ATH9K_5GHZ_ALL,
     }
+// clang-format on
 };
 
 static bool dynamic_country_user_possible(struct ath_regulatory* reg) {

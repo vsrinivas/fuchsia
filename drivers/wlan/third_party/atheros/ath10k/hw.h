@@ -26,6 +26,7 @@
 
 #include "targaddrs.h"
 
+// clang-format off
 #define ATHEROS_VID    (0x168c)
 #define ETH_ALEN       6  // Bytes in an ethernet address
 
@@ -1080,4 +1081,5 @@ ath10k_rx_desc_get_l3_pad_bytes(struct ath10k_hw_params* hw,
 #define RTC_SYNC_STATUS_PLL_CHANGING_MASK       0x00000020
 /* qca6174 PLL offset/mask end */
 
+// clang-format on
 #endif /* _HW_H_ */

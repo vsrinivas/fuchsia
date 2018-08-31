@@ -90,8 +90,10 @@ struct ath_regulatory {
 };
 
 enum ath_crypt_caps {
+// clang-format off
     ATH_CRYPT_CAP_CIPHER_AESCCM     = BIT(0),
     ATH_CRYPT_CAP_MIC_COMBINED      = BIT(1),
+// clang-format on
 };
 
 struct ath_keyval {
@@ -260,28 +262,30 @@ void ath_printk(const char* level, const struct ath_common* common,
  * entry.
  */
 enum ATH_DEBUG {
-    ATH_DBG_RESET       = 0x00000001,
-    ATH_DBG_QUEUE       = 0x00000002,
-    ATH_DBG_EEPROM      = 0x00000004,
-    ATH_DBG_CALIBRATE   = 0x00000008,
-    ATH_DBG_INTERRUPT   = 0x00000010,
-    ATH_DBG_REGULATORY  = 0x00000020,
-    ATH_DBG_ANI     = 0x00000040,
-    ATH_DBG_XMIT        = 0x00000080,
-    ATH_DBG_BEACON      = 0x00000100,
-    ATH_DBG_CONFIG      = 0x00000200,
-    ATH_DBG_FATAL       = 0x00000400,
-    ATH_DBG_PS      = 0x00000800,
-    ATH_DBG_BTCOEX      = 0x00001000,
-    ATH_DBG_WMI     = 0x00002000,
-    ATH_DBG_BSTUCK      = 0x00004000,
-    ATH_DBG_MCI     = 0x00008000,
-    ATH_DBG_DFS     = 0x00010000,
-    ATH_DBG_WOW     = 0x00020000,
-    ATH_DBG_CHAN_CTX    = 0x00040000,
-    ATH_DBG_DYNACK      = 0x00080000,
-    ATH_DBG_SPECTRAL_SCAN   = 0x00100000,
-    ATH_DBG_ANY     = 0xffffffff
+// clang-format off
+    ATH_DBG_RESET         = 0x00000001,
+    ATH_DBG_QUEUE         = 0x00000002,
+    ATH_DBG_EEPROM        = 0x00000004,
+    ATH_DBG_CALIBRATE     = 0x00000008,
+    ATH_DBG_INTERRUPT     = 0x00000010,
+    ATH_DBG_REGULATORY    = 0x00000020,
+    ATH_DBG_ANI           = 0x00000040,
+    ATH_DBG_XMIT          = 0x00000080,
+    ATH_DBG_BEACON        = 0x00000100,
+    ATH_DBG_CONFIG        = 0x00000200,
+    ATH_DBG_FATAL         = 0x00000400,
+    ATH_DBG_PS            = 0x00000800,
+    ATH_DBG_BTCOEX        = 0x00001000,
+    ATH_DBG_WMI           = 0x00002000,
+    ATH_DBG_BSTUCK        = 0x00004000,
+    ATH_DBG_MCI           = 0x00008000,
+    ATH_DBG_DFS           = 0x00010000,
+    ATH_DBG_WOW           = 0x00020000,
+    ATH_DBG_CHAN_CTX      = 0x00040000,
+    ATH_DBG_DYNACK        = 0x00080000,
+    ATH_DBG_SPECTRAL_SCAN = 0x00100000,
+    ATH_DBG_ANY           = 0xffffffff
+// clang-format on
 };
 
 #define ATH_DBG_DEFAULT (ATH_DBG_FATAL)

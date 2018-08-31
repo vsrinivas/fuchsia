@@ -18,6 +18,7 @@
 #ifndef _RX_DESC_H_
 #define _RX_DESC_H_
 
+// clang-format off
 enum rx_attention_flags {
     RX_ATTENTION_FLAGS_FIRST_MPDU          = 1 << 0,
     RX_ATTENTION_FLAGS_LAST_MPDU           = 1 << 1,
@@ -1221,5 +1222,6 @@ struct rx_ppdu_end {
 struct fw_rx_desc_base {
     uint8_t info0;
 } __PACKED;
+// clang-format on
 
 #endif /* _RX_DESC_H_ */

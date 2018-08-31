@@ -53,6 +53,7 @@ struct radar_types {
 
 /* radar types as defined by ETSI EN-301-893 v1.5.1 */
 static const struct radar_detector_specs etsi_radar_ref_types_v15[] = {
+// clang-format off
     ETSI_PATTERN(0,  0,  1,  700,  700, 1, 18, false),
     ETSI_PATTERN(1,  0,  5,  200, 1000, 1, 10, false),
     ETSI_PATTERN(2,  0, 15,  200, 1600, 1, 15, false),
@@ -60,12 +61,15 @@ static const struct radar_detector_specs etsi_radar_ref_types_v15[] = {
     ETSI_PATTERN(4, 20, 30, 2000, 4000, 1, 20, false),
     ETSI_PATTERN(5,  0,  2,  300,  400, 3, 10, false),
     ETSI_PATTERN(6,  0,  2,  400, 1200, 3, 15, false),
+// clang-format on
 };
 
 static const struct radar_types etsi_radar_types_v15 = {
-    .region         = NL80211_DFS_ETSI,
+// clang-format off
+    .region             = NL80211_DFS_ETSI,
     .num_radar_types    = ARRAY_SIZE(etsi_radar_ref_types_v15),
     .radar_types        = etsi_radar_ref_types_v15,
+// clang-format on
 };
 
 #define FCC_PATTERN(ID, WMIN, WMAX, PMIN, PMAX, PRF, PPB, CHIRP)    \
@@ -83,21 +87,25 @@ static const struct radar_types etsi_radar_types_v15 = {
  * collected for more than a year.
  */
 static const struct radar_detector_specs fcc_radar_ref_types[] = {
-    FCC_PATTERN(0, 0, 1, 1428, 1428, 1, 18, false),
-    FCC_PATTERN(101, 0, 1, 518, 938, 1, 57, false),
-    FCC_PATTERN(102, 0, 1, 938, 2000, 1, 27, false),
-    FCC_PATTERN(103, 0, 1, 2000, 3066, 1, 18, false),
-    FCC_PATTERN(2, 0, 5, 150, 230, 1, 23, false),
-    FCC_PATTERN(3, 6, 10, 200, 500, 1, 16, false),
-    FCC_PATTERN(4, 11, 20, 200, 500, 1, 12, false),
-    FCC_PATTERN(5, 50, 100, 1000, 2000, 1, 1, true),
-    FCC_PATTERN(6, 0, 1, 333, 333, 1, 9, false),
+// clang-format off
+    FCC_PATTERN(  0,  0,   1, 1428, 1428, 1, 18, false),
+    FCC_PATTERN(101,  0,   1,  518,  938, 1, 57, false),
+    FCC_PATTERN(102,  0,   1,  938, 2000, 1, 27, false),
+    FCC_PATTERN(103,  0,   1, 2000, 3066, 1, 18, false),
+    FCC_PATTERN(  2,  0,   5,  150,  230, 1, 23, false),
+    FCC_PATTERN(  3,  6,  10,  200,  500, 1, 16, false),
+    FCC_PATTERN(  4, 11,  20,  200,  500, 1, 12, false),
+    FCC_PATTERN(  5, 50, 100, 1000, 2000, 1,  1, true),
+    FCC_PATTERN(  6,  0,   1,  333,  333, 1,  9, false),
+// clang-format on
 };
 
 static const struct radar_types fcc_radar_types = {
-    .region         = NL80211_DFS_FCC,
+// clang-format off
+    .region             = NL80211_DFS_FCC,
     .num_radar_types    = ARRAY_SIZE(fcc_radar_ref_types),
     .radar_types        = fcc_radar_ref_types,
+// clang-format on
 };
 
 #define JP_PATTERN(ID, WMIN, WMAX, PMIN, PMAX, PRF, PPB, RATE, CHIRP)   \
@@ -108,21 +116,25 @@ static const struct radar_types fcc_radar_types = {
     PPB_THRESH_RATE(PPB, RATE), PRI_TOLERANCE, CHIRP    \
 }
 static const struct radar_detector_specs jp_radar_ref_types[] = {
-    JP_PATTERN(0, 0, 1, 1428, 1428, 1, 18, 29, false),
-    JP_PATTERN(1, 2, 3, 3846, 3846, 1, 18, 29, false),
-    JP_PATTERN(2, 0, 1, 1388, 1388, 1, 18, 50, false),
-    JP_PATTERN(3, 1, 2, 4000, 4000, 1, 18, 50, false),
-    JP_PATTERN(4, 0, 5, 150, 230, 1, 23, 50, false),
-    JP_PATTERN(5, 6, 10, 200, 500, 1, 16, 50, false),
-    JP_PATTERN(6, 11, 20, 200, 500, 1, 12, 50, false),
-    JP_PATTERN(7, 50, 100, 1000, 2000, 1, 3, 50, false),
-    JP_PATTERN(5, 0, 1, 333, 333, 1, 9, 50, false),
+// clang-format off
+    JP_PATTERN(0,  0,   1, 1428, 1428, 1, 18, 29, false),
+    JP_PATTERN(1,  2,   3, 3846, 3846, 1, 18, 29, false),
+    JP_PATTERN(2,  0,   1, 1388, 1388, 1, 18, 50, false),
+    JP_PATTERN(3,  1,   2, 4000, 4000, 1, 18, 50, false),
+    JP_PATTERN(4,  0,   5,  150,  230, 1, 23, 50, false),
+    JP_PATTERN(5,  6,  10,  200,  500, 1, 16, 50, false),
+    JP_PATTERN(6, 11,  20,  200,  500, 1, 12, 50, false),
+    JP_PATTERN(7, 50, 100, 1000, 2000, 1,  3, 50, false),
+    JP_PATTERN(5,  0,   1,  333,  333, 1,  9, 50, false),
+// clang-format on
 };
 
 static const struct radar_types jp_radar_types = {
-    .region         = NL80211_DFS_JP,
+// clang-format off
+    .region             = NL80211_DFS_JP,
     .num_radar_types    = ARRAY_SIZE(jp_radar_ref_types),
     .radar_types        = jp_radar_ref_types,
+// clang-format on
 };
 
 static const struct radar_types* dfs_domains[] = {

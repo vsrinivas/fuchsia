@@ -16,12 +16,14 @@
 #ifndef _THERMAL_
 #define _THERMAL_
 
+// clang-format off
 #define ATH10K_QUIET_PERIOD_DEFAULT     100
 #define ATH10K_QUIET_PERIOD_MIN         25
 #define ATH10K_QUIET_START_OFFSET       10
 #define ATH10K_HWMON_NAME_LEN           15
 #define ATH10K_THERMAL_SYNC_TIMEOUT     (ZX_SEC(5))
 #define ATH10K_THERMAL_THROTTLE_MAX     100
+// clang-format on
 
 struct ath10k_thermal {
     struct thermal_cooling_device* cdev;

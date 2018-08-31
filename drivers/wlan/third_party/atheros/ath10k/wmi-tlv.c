@@ -42,6 +42,7 @@ struct wmi_tlv_policy {
 };
 
 static const struct wmi_tlv_policy wmi_tlv_policies[] = {
+// clang-format off
     [WMI_TLV_TAG_ARRAY_BYTE]
     = { .min_len = 0 },
     [WMI_TLV_TAG_ARRAY_UINT32]
@@ -82,6 +83,7 @@ static const struct wmi_tlv_policy wmi_tlv_policies[] = {
     = { .min_len = sizeof(struct wmi_tlv_wow_event_info) },
     [WMI_TLV_TAG_STRUCT_TX_PAUSE_EVENT]
     = { .min_len = sizeof(struct wmi_tlv_tx_pause_ev) },
+// clang-format on
 };
 
 static zx_status_t
@@ -926,6 +928,7 @@ static int ath10k_wmi_tlv_op_pull_phyerr_ev_hdr(struct ath10k* ar,
 }
 #endif // NEEDS PORTING
 
+// clang-format off
 #define WMI_TLV_ABI_VER_NS0 0x5F414351
 #define WMI_TLV_ABI_VER_NS1 0x00004C4D
 #define WMI_TLV_ABI_VER_NS2 0x00000000
@@ -936,6 +939,7 @@ static int ath10k_wmi_tlv_op_pull_phyerr_ev_hdr(struct ath10k* ar,
 #define WMI_TLV_ABI_VER0 ((((WMI_TLV_ABI_VER0_MAJOR) << 24) & 0xFF000000) | \
               (((WMI_TLV_ABI_VER0_MINOR) <<  0) & 0x00FFFFFF))
 #define WMI_TLV_ABI_VER1 53
+// clang-format on
 
 static zx_status_t
 ath10k_wmi_tlv_parse_mem_reqs(struct ath10k* ar, uint16_t tag, uint16_t len,

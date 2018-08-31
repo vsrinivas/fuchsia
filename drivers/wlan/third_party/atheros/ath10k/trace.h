@@ -53,6 +53,7 @@ static inline void trace_ ## name(proto) {}
 
 #define ATH10K_MSG_MAX 400
 
+// clang-format off
 DECLARE_EVENT_CLASS(ath10k_log_event,
                     TP_PROTO(struct ath10k* ar, struct va_format* vaf),
                     TP_ARGS(ar, vaf),
@@ -535,6 +536,7 @@ TRACE_EVENT(ath10k_wmi_diag,
                 __entry->len
             )
            );
+// clang-format on
 
 #endif /* _TRACE_H_ || TRACE_HEADER_MULTI_READ*/
 

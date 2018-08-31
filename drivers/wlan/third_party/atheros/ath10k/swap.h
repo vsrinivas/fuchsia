@@ -19,11 +19,13 @@
 
 #include <ddk/io-buffer.h>
 
+// clang-format off
 #define ATH10K_SWAP_CODE_SEG_BIN_LEN_MAX    (512 * 1024)
 #define ATH10K_SWAP_CODE_SEG_MAGIC_BYTES_SZ 12
 #define ATH10K_SWAP_CODE_SEG_NUM_MAX        16
 /* Currently only one swap segment is supported */
 #define ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED  1
+// clang-format on
 
 struct ath10k_fw_file;
 

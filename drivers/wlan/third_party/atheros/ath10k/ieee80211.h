@@ -23,6 +23,7 @@
 
 #include "hw.h"
 
+// clang-format off
 // IEEE Std 802.11-2016, 9.2.3
 struct ieee80211_frame_header {
     uint16_t frame_ctrl;
@@ -233,5 +234,6 @@ static inline const char* ieee80211_cipher_str(uint8_t* oui, uint8_t cipher_type
         return "reserved CID value\n";
     }
 }
+// clang-format on
 
 #endif /* _IEEE80211_H_ */

@@ -17,13 +17,15 @@
 #ifndef SPECTRAL_COMMON_H
 #define SPECTRAL_COMMON_H
 
-#define SPECTRAL_HT20_NUM_BINS      56
-#define SPECTRAL_HT20_40_NUM_BINS       128
+// clang-format off
+#define SPECTRAL_HT20_NUM_BINS       56
+#define SPECTRAL_HT20_40_NUM_BINS    128
+// clang-format on
 
 /* TODO: could possibly be 512, but no samples this large
  * could be acquired so far.
  */
-#define SPECTRAL_ATH10K_MAX_NUM_BINS        256
+#define SPECTRAL_ATH10K_MAX_NUM_BINS 256
 
 /* FFT sample format given to userspace via debugfs.
  *

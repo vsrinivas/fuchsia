@@ -33,8 +33,9 @@
  * write a single binary that works with all Target Types.
  * May be used in assembler code as well as C.
  */
+// clang-format off
 #define QCA988X_HOST_INTEREST_ADDRESS    0x00400800
-#define HOST_INTEREST_MAX_SIZE          0x200
+#define HOST_INTEREST_MAX_SIZE           0x200
 
 /*
  * These are items that the Host may need to access via BMI or via the
@@ -435,9 +436,9 @@ struct host_interest {
  *    re-claimable. If this is adopted, link script should keep this in
  *    mind to avoid data corruption.
  */
-#define HI_EARLY_ALLOC_MAGIC        0x6d8a
-#define HI_EARLY_ALLOC_MAGIC_MASK   0xffff0000
-#define HI_EARLY_ALLOC_MAGIC_SHIFT  16
+#define HI_EARLY_ALLOC_MAGIC            0x6d8a
+#define HI_EARLY_ALLOC_MAGIC_MASK       0xffff0000
+#define HI_EARLY_ALLOC_MAGIC_SHIFT      16
 #define HI_EARLY_ALLOC_IRAM_BANKS_MASK  0x0000000f
 #define HI_EARLY_ALLOC_IRAM_BANKS_SHIFT 0
 
@@ -486,5 +487,7 @@ struct host_interest {
 
 #define QCA4019_BOARD_DATA_SZ     12064
 #define QCA4019_BOARD_EXT_DATA_SZ 0
+// clang-format on
+
 
 #endif /* __TARGADDRS_H__ */
