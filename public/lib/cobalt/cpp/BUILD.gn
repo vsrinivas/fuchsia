@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-
 source_set("cpp") {
   sources = [
     "observation.h",
@@ -14,15 +12,43 @@ source_set("cpp") {
   public_configs = [ "//garnet/public:config" ]
 }
 
+source_set("cobalt_logger") {
+  sources = [
+    "cobalt_logger.h",
+    "cobalt_logger.cc",
+    "cobalt_logger_impl.h",
+    "cobalt_logger_impl.cc",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//garnet/public/lib/backoff",
+    "//garnet/public/lib/callback",
+    "//zircon/public/fidl/fuchsia-cobalt",
+  ]
+}
+
 source_set("unittests") {
   testonly = true
 
   sources = [
+    "cobalt_logger_unittest.cc",
     "observations_collector_test.cc",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/svc/cpp",
   ]
 
   deps = [
     ":cpp",
+    ":cobalt_logger",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-testutils",
   ]
 }
