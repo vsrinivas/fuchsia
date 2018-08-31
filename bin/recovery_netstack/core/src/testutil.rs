@@ -9,6 +9,10 @@ use std::collections::HashMap;
 use log;
 use rand::{SeedableRng, XorShiftRng};
 
+use crate::{Context, EventDispatcher};
+use crate::device::{DeviceId, DeviceLayerEventDispatcher};
+use crate::transport::TransportLayerEventDispatcher;
+
 /// Create a new deterministic RNG from a seed.
 pub fn new_rng(mut seed: u64) -> impl SeedableRng<[u32; 4]> {
     if seed == 0 {
@@ -64,4 +68,20 @@ static LOGGER: Logger = Logger;
 pub fn set_logger_for_test() {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Trace);
+}
+
+pub struct DummyEventDispatcher;
+
+impl TransportLayerEventDispatcher for DummyEventDispatcher {}
+
+impl DeviceLayerEventDispatcher for DummyEventDispatcher {
+    fn send_frame(&mut self, device: DeviceId, frame: &[u8]) {
+        unimplemented!()
+    }
+}
+
+impl EventDispatcher for DummyEventDispatcher {
+    fn schedule_timeout<F: FnOnce(&mut Context<Self>)>(&mut self, duration: (), f: F) {
+        unimplemented!()
+    }
 }

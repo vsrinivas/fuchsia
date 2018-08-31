@@ -288,7 +288,7 @@ fn get_device_state<D: EventDispatcher>(
 }
 
 // Dummy type used to implement ArpDevice.
-struct EthernetArpDevice;
+pub struct EthernetArpDevice;
 
 impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     type HardwareAddr = Mac;
@@ -307,5 +307,11 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
         ctx: &mut Context<D>, device_id: u64,
     ) -> &mut ArpState<Ipv4Addr, Self> {
         &mut get_device_state(ctx, device_id).ipv4_arp
+    }
+
+    fn get_protocol_addr<D: EventDispatcher>(
+        ctx: &mut Context<D>, device_id: u64,
+    ) -> Option<Ipv4Addr> {
+        get_device_state(ctx, device_id).ipv4_addr.map(|x| x.0)
     }
 }

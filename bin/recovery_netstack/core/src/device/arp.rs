@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
+use crate::device::ethernet::EthernetArpDevice;
 use crate::wire::{arp::{ArpPacket, HType, PType},
                   BufferAndRange, SerializationCallback};
 use crate::{Context, EventDispatcher};
@@ -102,6 +103,9 @@ pub trait ArpDevice<P: PType + Eq + Hash>: Sized {
     fn get_arp_state<D: EventDispatcher>(
         ctx: &mut Context<D>, device_id: u64,
     ) -> &mut ArpState<P, Self>;
+
+    /// Get the protocol address of this interface.
+    fn get_protocol_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Option<P>;
 }
 
 /// Receive an ARP packet from a device.
@@ -120,13 +124,66 @@ pub fn receive_arp_packet<
     ctx: &mut Context<D>, device_id: u64, src_addr: AD::HardwareAddr, dst_addr: AD::HardwareAddr,
     mut buffer: BufferAndRange<B>,
 ) {
+    // TODO(wesleyac) Add support for gratuitous ARP and probe/announce.
     let packet = if let Ok(packet) = ArpPacket::<_, AD::HardwareAddr, P>::parse(buffer.as_mut()) {
-        packet
+        let addressed_to_me =
+            Some(packet.target_protocol_address()) == AD::get_protocol_addr(ctx, device_id);
+        let table = &mut AD::get_arp_state(ctx, device_id).table;
+        // The following logic is equivalent to the "Packet Reception" section of RFC 826.
+        //
+        // We statically know that the hardware type and protocol type are correct, so we do not
+        // need to have additional code to check that. The remainder of the algorithm is:
+        //
+        // Merge_flag := false
+        // If the pair <protocol type, sender protocol address> is
+        //     already in my translation table, update the sender
+        //     hardware address field of the entry with the new
+        //     information in the packet and set Merge_flag to true.
+        // ?Am I the target protocol address?
+        // Yes:
+        //   If Merge_flag is false, add the triplet <protocol type,
+        //       sender protocol address, sender hardware address> to
+        //       the translation table.
+        //   ?Is the opcode ares_op$REQUEST?  (NOW look at the opcode!!)
+        //   Yes:
+        //     Swap hardware and protocol fields, putting the local
+        //         hardware and protocol addresses in the sender fields.
+        //     Set the ar$op field to ares_op$REPLY
+        //     Send the packet to the (new) target hardware address on
+        //         the same hardware on which the request was received.
+        //
+        // This can be summed up as follows:
+        //
+        // +----------+---------------+---------------+-----------------------------+
+        // | opcode   | Am I the TPA? | SPA in table? | action                      |
+        // +----------+---------------+---------------+-----------------------------+
+        // | REQUEST  | yes           | yes           | Update table, Send response |
+        // | REQUEST  | yes           | no            | Update table, Send response |
+        // | REQUEST  | no            | yes           | Update table                |
+        // | REQUEST  | no            | no            | NOP                         |
+        // | RESPONSE | yes           | yes           | Update table                |
+        // | RESPONSE | yes           | no            | Update table                |
+        // | RESPONSE | no            | yes           | Update table                |
+        // | RESPONSE | no            | no            | NOP                         |
+        // +----------+---------------+---------------+-----------------------------+
+        //
+        // Given that the semantics of ArpTable is that inserting and updating an entry are the
+        // same, this can be implemented with two if statements (one to update the table, and one
+        // to send a response).
+
+        if addressed_to_me || table.lookup(packet.sender_protocol_address()).is_some() {
+            table.insert(
+                packet.sender_protocol_address(),
+                packet.sender_hardware_address(),
+            );
+        }
+        if addressed_to_me && packet.operation() == ArpOp::Request {
+            log_unimplemented!((), "device::arp::receive_arp_frame: Handling ARP requests not implemented");
+        }
     } else {
         // TODO(joshlf): Do something else here?
         return;
     };
-    log_unimplemented!((), "device::arp::receive_arp_frame: Not implemented");
 }
 
 /// Look up the hardware address for a network protocol address.
@@ -184,10 +241,11 @@ impl<H, P: Hash + Eq> ArpTable<H, P> {
         self.table.insert(net, ArpValue::Known(hw));
     }
 
+    // TODO(wesleyac): figure out how to send arp requests on cache misses
     fn lookup(&self, addr: P) -> Option<&H> {
         match self.table.get(&addr) {
             Some(ArpValue::Known(x)) => Some(x),
-            _                        => None,
+            _ => None,
         }
     }
 }
@@ -203,8 +261,70 @@ impl<H, P: Hash + Eq> Default for ArpTable<H, P> {
 #[cfg(test)]
 mod tests {
     use crate::device::arp::*;
-    use crate::device::ethernet::Mac;
-    use crate::ip::Ipv4Addr;
+    use crate::device::ethernet::{set_ip_addr, EtherType, Mac};
+    use crate::device::DeviceId;
+    use crate::device::DeviceLayerEventDispatcher;
+    use crate::ip::{Ipv4Addr, Subnet};
+    use crate::testutil::DummyEventDispatcher;
+    use crate::transport::TransportLayerEventDispatcher;
+    use crate::wire::arp::peek_arp_types;
+    use crate::wire::ethernet::EthernetFrame;
+    use crate::StackState;
+
+    const TEST_SENDER_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
+    const TEST_TARGET_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
+    const TEST_SENDER_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
+    const TEST_TARGET_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
+
+    #[test]
+    fn test_recv_arp_response() {
+        let mut state = StackState::default();
+        let dev_id = state
+            .device
+            .add_ethernet_device(Mac::new([4, 4, 4, 4, 4, 4]));
+        let dispatcher = DummyEventDispatcher {};
+        let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
+        set_ip_addr(
+            &mut ctx,
+            dev_id.id,
+            TEST_TARGET_IPV4,
+            Subnet::new(TEST_TARGET_IPV4, 24),
+        );
+
+        let mut buf = [0; 28];
+        {
+            ArpPacket::serialize(
+                &mut buf[..],
+                ArpOp::Request,
+                TEST_SENDER_MAC,
+                TEST_SENDER_IPV4,
+                TEST_TARGET_MAC,
+                TEST_TARGET_IPV4,
+            );
+        }
+        let (hw, proto) = peek_arp_types(&buf[..]).unwrap();
+        assert_eq!(hw, ArpHardwareType::Ethernet);
+        assert_eq!(proto, EtherType::Ipv4);
+        let arp = BufferAndRange::new(&mut buf[..], ..);
+
+        receive_arp_packet::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice, &mut [u8]>(
+            &mut ctx,
+            0,
+            TEST_SENDER_MAC,
+            TEST_TARGET_MAC,
+            arp,
+        );
+
+        assert_eq!(
+            lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+                &mut ctx,
+                0,
+                TEST_TARGET_MAC,
+                TEST_SENDER_IPV4
+            ).unwrap(),
+            TEST_SENDER_MAC
+        );
+    }
 
     #[test]
     fn test_arp_table() {
