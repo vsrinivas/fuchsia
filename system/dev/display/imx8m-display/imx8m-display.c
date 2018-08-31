@@ -46,6 +46,7 @@ static void populate_added_display_args(imx8m_display_t* display, added_display_
     args->panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
     args->pixel_formats = &supported_pixel_formats;
     args->pixel_format_count = sizeof(supported_pixel_formats) / sizeof(zx_pixel_format_t);
+    args->cursor_info_count = 0;
 }
 
 static void imx8m_set_display_controller_cb(void* ctx, void* cb_ctx, display_controller_cb_t* cb) {
