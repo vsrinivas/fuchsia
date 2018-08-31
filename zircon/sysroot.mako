@@ -47,7 +47,6 @@ sdk_atom("sysroot_sdk") {
 
   meta = {
     dest = "pkg/sysroot/meta.json"
-    new_dest = "pkg/sysroot/meta.json"
     schema = "sysroot"
     value = metadata
   }

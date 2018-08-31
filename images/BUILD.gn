@@ -1238,7 +1238,7 @@ foreach(image, images) {
       testonly = true
 
       meta = {
-        new_dest = "images/${image.sdk}-meta.json"
+        dest = "images/${image.sdk}-meta.json"
         schema = "image"
         value = {
           type = "image"
@@ -1285,7 +1285,7 @@ sdk_atom(zircon_bin_sdk_target_name) {
   testonly = true
 
   meta = {
-    new_dest = "images/zircon.bin-meta.json"
+    dest = "images/zircon.bin-meta.json"
     schema = "image"
     value = {
       type = "image"
@@ -1318,7 +1318,7 @@ if (target_cpu == "arm64") {
     testonly = true
 
     meta = {
-      new_dest = "images/qemu-zircon.bin-meta.json"
+      dest = "images/qemu-zircon.bin-meta.json"
       schema = "image"
       value = {
         type = "image"

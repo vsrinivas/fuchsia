@@ -42,7 +42,6 @@ template("sdk_executable") {
       meta = {
         dest = "$file_base-meta.json"
         schema = "host_tool"
-        new_dest = "$file_base-meta.json"
         value = {
           type = "host_tool"
           name = output_name

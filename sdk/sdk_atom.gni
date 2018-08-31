@@ -191,12 +191,10 @@ template("sdk_atom") {
   }
 
   assert(defined(invoker.files), "An atom must specify some files")
+  assert(defined(invoker.new_files), "An atom must specify some files")
   file_mappings = []
   file_inputs = []
   all_files = invoker.files
-  if (!defined(invoker.new_files)) {
-    all_files += [ meta ]
-  }
   foreach(file, all_files) {
     assert(defined(file.source), "File $file does not specify a source.")
     file_inputs += [ file.source ]
@@ -213,14 +211,12 @@ template("sdk_atom") {
   }
 
   new_file_mappings = []
-  if (defined(invoker.new_files)) {
-    foreach(file, invoker.new_files) {
-      assert(defined(file.source), "File $file does not specify a source.")
-      assert(defined(file.dest), "File $file does not specify a destination.")
-      file_inputs += [ file.source ]
-      source = rebase_path(file.source)
-      new_file_mappings += [ "${file.dest}=${source}" ]
-    }
+  foreach(file, invoker.new_files) {
+    assert(defined(file.source), "File $file does not specify a source.")
+    assert(defined(file.dest), "File $file does not specify a destination.")
+    file_inputs += [ file.source ]
+    source = rebase_path(file.source)
+    new_file_mappings += [ "${file.dest}=${source}" ]
   }
 
   source_dir = "."
@@ -274,16 +270,9 @@ template("sdk_atom") {
     public_deps = meta_deps
   }
 
-  if (defined(invoker.new_files)) {
-    # TODO(DX-340): remove this temporary attribute.
-    if (defined(meta.new_dest)) {
-      dest = meta.new_dest
-    } else {
-      dest = meta.dest
-    }
-    source = rebase_path(meta_file)
-    new_file_mappings += [ "${dest}=${source}" ]
-  }
+  # Add the metadata file to the set of files to include in SDKs.
+  meta_source = rebase_path(meta_file)
+  new_file_mappings += [ "${meta.dest}=${meta_source}" ]
 
   # Builds a manifest representing this element.
   action(target_name) {
@@ -330,14 +319,9 @@ template("sdk_atom") {
       ]
     }
 
-    if (defined(meta.new_dest)) {
-      dest = meta.new_dest
-    } else {
-      dest = meta.dest
-    }
     args += [
       "--meta",
-      dest,
+      meta.dest,
     ]
   }
 }

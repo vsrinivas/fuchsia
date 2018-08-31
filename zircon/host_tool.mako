@@ -25,7 +25,6 @@ sdk_atom("${data.name}_sdk") {
 
   meta = {
     dest = "$file_base-meta.json"
-    new_dest = "$file_base-meta.json"
     schema = "host_tool"
     value = {
       type = "host_tool"

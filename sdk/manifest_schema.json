@@ -139,6 +139,7 @@
         "category",
         "deps",
         "files",
+        "new-files",
         "id",
         "identifier",
         "tags",

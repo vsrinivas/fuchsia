@@ -168,6 +168,7 @@ template("fidl_library") {
 
     # Process sources.
     all_files = []
+    new_all_files = []
     sdk_sources = []
     foreach(source, invoker.sources) {
       relative_source = rebase_path(source, ".")
@@ -182,6 +183,12 @@ template("fidl_library") {
         {
           source = rebase_path(source)
           dest = relative_source
+        },
+      ]
+      new_all_files += [
+        {
+          source = rebase_path(source)
+          dest = destination
         },
       ]
     }
@@ -237,6 +244,7 @@ template("fidl_library") {
       tags = [ "name:$library_name" ]
 
       files = all_files
+      new_files = new_all_files
 
       non_sdk_deps = [
         ":$meta_target_name",

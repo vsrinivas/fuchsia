@@ -410,7 +410,6 @@ if (current_toolchain == dart_toolchain) {
         meta = {
             source = metadata_file
             dest = "$file_base/meta.json"
-            new_dest = "$file_base/meta.json"
             schema = "dart_library"
         }
 

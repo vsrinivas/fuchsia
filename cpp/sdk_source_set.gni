@@ -90,17 +90,25 @@ template("sdk_source_set") {
   sdk_headers = []
   sdk_sources = []
   sdk_files = []
+  sdk_new_files = []
   foreach(header, all_headers) {
     include_base = "include"
     if (defined(invoker.include_base)) {
       include_base = invoker.include_base
     }
-    destination = rebase_path(header, include_base)
-    sdk_headers += [ "$file_base/include/$destination" ]
+    relative_destination = rebase_path(header, include_base)
+    destination = "$file_base/include/$relative_destination"
+    sdk_headers += [ destination ]
     sdk_files += [
       {
         source = header
-        dest = "include/$destination"
+        dest = "include/$relative_destination"
+      },
+    ]
+    sdk_new_files += [
+      {
+        source = header
+        dest = destination
       },
     ]
   }
@@ -109,6 +117,12 @@ template("sdk_source_set") {
     sdk_files += [
       {
         source = source
+      },
+    ]
+    sdk_new_files += [
+      {
+        source = source
+        dest = "$file_base/$source"
       },
     ]
   }
@@ -161,6 +175,7 @@ template("sdk_source_set") {
     tags = [ "type:sources" ]
 
     files = sdk_files
+    new_files = sdk_new_files
 
     deps = sdk_deps
 
