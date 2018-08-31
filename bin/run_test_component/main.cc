@@ -108,8 +108,8 @@ int main(int argc, const char** argv) {
   run::EnvironmentConfig config;
   config.ParseFromFile(kConfigPath);
   if (config.HasError()) {
-    fprintf(stderr, "Error parsing config file %s: %s\n",
-            kConfigPath, config.error_str().c_str());
+    fprintf(stderr, "Error parsing config file %s: %s\n", kConfigPath,
+            config.error_str().c_str());
     return 1;
   }
 
@@ -150,7 +150,7 @@ int main(int argc, const char** argv) {
 
   auto map_entry = config.url_map().find(parse_result.launch_info.url);
   if (map_entry != config.url_map().end()) {
-    if (!test_metadata.services().empty()) {
+    if (test_metadata.HasServices()) {
       fprintf(stderr,
               "Cannot run this test in sys/root environment as it defines "
               "services in its '%s' facets\n",
@@ -170,10 +170,9 @@ int main(int argc, const char** argv) {
     context->ConnectToEnvironmentService(parent_env.NewRequest());
     enclosing_env =
         component::testing::EnclosingEnvironment::Create(kEnv, parent_env);
-    for (auto& service : test_metadata.services()) {
-      fuchsia::sys::LaunchInfo launch_info;
-      launch_info.url = service.second;
-      enclosing_env->AddServiceWithLaunchInfo(std::move(launch_info),
+    auto services = test_metadata.TakeServices();
+    for (auto& service : services) {
+      enclosing_env->AddServiceWithLaunchInfo(std::move(service.second),
                                               service.first);
     }
     launcher = enclosing_env->launcher_ptr();

@@ -9,7 +9,11 @@
 #include <utility>
 #include <vector>
 
+#include <fuchsia/sys/cpp/fidl.h>
+
 #include "garnet/lib/json/json_parser.h"
+#include "lib/fxl/macros.h"
+#include "third_party/rapidjson/rapidjson/document.h"
 
 namespace run {
 
@@ -30,23 +34,32 @@ namespace run {
 static constexpr char kFuchsiaTest[] = "fuchsia.test";
 
 class TestMetadata {
+  using Services =
+      std::vector<std::pair<std::string, fuchsia::sys::LaunchInfo>>;
+
  public:
+  TestMetadata();
+  ~TestMetadata();
+
   bool ParseFromFile(const std::string& cmx_file_path);
 
   bool HasError() const { return json_parser_.HasError(); }
-  std::string error_str() const {
-    return json_parser_.error_str();
-  }
+  std::string error_str() const { return json_parser_.error_str(); }
 
   bool is_null() const { return null_; }
-  const std::vector<std::pair<std::string, std::string>>& services() const {
-    return service_url_pair_;
-  }
+
+  bool HasServices() const { return !service_url_pair_.empty(); }
+  Services TakeServices() { return std::move(service_url_pair_); }
 
  private:
+  fuchsia::sys::LaunchInfo GetLaunchInfo(
+      const rapidjson::Document::ValueType& value, const std::string& name);
+
   json::JSONParser json_parser_;
   bool null_ = true;
-  std::vector<std::pair<std::string, std::string>> service_url_pair_;
+  Services service_url_pair_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestMetadata);
 };
 
 }  // namespace run

@@ -7,6 +7,8 @@
 #include <string>
 #include <utility>
 
+#include <fuchsia/sys/cpp/fidl.h>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/directory.h"
@@ -17,6 +19,8 @@
 
 namespace run {
 namespace {
+
+using fuchsia::sys::LaunchInfo;
 
 constexpr char kRequiredCmxElements[] = R"(
 "program": {
@@ -94,7 +98,7 @@ TEST_F(TestMetadataTest, NoServices) {
   TestMetadata tm;
   EXPECT_TRUE(ParseFrom(&tm, json));
   EXPECT_FALSE(tm.is_null());
-  EXPECT_THAT(tm.services(), ::testing::IsEmpty());
+  ASSERT_FALSE(tm.HasServices());
 }
 
 TEST_F(TestMetadataTest, InvalidTestFacet) {
@@ -138,13 +142,37 @@ TEST_F(TestMetadataTest, InvalidServices) {
     }
   })");
   ExpectFailedParse(json,
-                    "'injected-services' in 'fuchsia.test' has a "
-                    "non-string pair.");
+                    "'1' must be a string or a non-empty array of strings.");
+  json = CreateManifestJson(R"(
+  "facets": {
+    "fuchsia.test": {
+      "injected-services": {
+        "1": [2]
+      }
+    }
+  })");
+
+  ExpectFailedParse(json,
+                    "'1' must be a string or a non-empty array of strings.");
 }
 
-std::pair<std::string, std::string> create_pair(const std::string& s1,
-                                                const std::string& s2) {
-  return std::make_pair(s1, s2);
+TEST_F(TestMetadataTest, EmptyServices) {
+  std::string json = CreateManifestJson(R"(
+  "facets": {
+    "fuchsia.test": {
+      "injected-services": {
+      }
+    }
+  })");
+  TestMetadata tm;
+  EXPECT_TRUE(ParseFrom(&tm, json));
+  EXPECT_FALSE(tm.HasError());
+  EXPECT_FALSE(tm.HasServices());
+}
+
+std::pair<std::string, LaunchInfo> create_pair(const std::string& s1,
+                                               LaunchInfo launch_info) {
+  return std::make_pair(s1, std::move(launch_info));
 }
 
 TEST_F(TestMetadataTest, ValidServices) {
@@ -153,7 +181,7 @@ TEST_F(TestMetadataTest, ValidServices) {
     "fuchsia.test": {
       "injected-services": {
         "1": "url1",
-        "2": "url2",
+        "2": ["url2", "--a=b", "c"],
         "3": "url3"
       }
     }
@@ -161,10 +189,14 @@ TEST_F(TestMetadataTest, ValidServices) {
 
   TestMetadata tm;
   EXPECT_TRUE(ParseFrom(&tm, json));
-  EXPECT_THAT(
-      tm.services(),
-      testing::ElementsAre(create_pair("1", "url1"), create_pair("2", "url2"),
-                           create_pair("3", "url3")));
+  auto services = tm.TakeServices();
+  ASSERT_EQ(3u, services.size());
+  EXPECT_EQ(services[0], create_pair("1", LaunchInfo{.url = "url1"}));
+  LaunchInfo launch_info{.url = "url2"};
+  launch_info.arguments.push_back("--a=b");
+  launch_info.arguments.push_back("c");
+  EXPECT_EQ(services[1], create_pair("2", std::move(launch_info)));
+  EXPECT_EQ(services[2], create_pair("3", LaunchInfo{.url = "url3"}));
 }
 
 }  // namespace
