@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/array.h>
