@@ -61,7 +61,7 @@ public:
     virtual void SetBacklightState(bool power, uint8_t brightness) {}
     virtual void GetBacklightState(bool* power, uint8_t* brightness) {}
 
-    virtual bool CheckDisplayLimits(const display_config_t* config) = 0;
+    virtual bool CheckPixelRate(uint64_t pixel_rate) = 0;
 protected:
     // Attempts to initialize the ddi.
     virtual bool InitDdi() = 0;

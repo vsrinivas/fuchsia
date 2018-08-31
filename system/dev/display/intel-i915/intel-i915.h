@@ -46,8 +46,6 @@ public:
     Controller(zx_device_t* parent);
     ~Controller();
 
-    static uint32_t DisplayModeToRefreshRate(const display_mode_t* mode);
-
     // DDK ops
     void DdkUnbind();
     void DdkRelease();
@@ -154,8 +152,8 @@ private:
 
     // Validates that a basic layer configuration can be supported for the
     // given modes of the displays.
-    bool CheckDisplayLimits(const display_config_t** display_configs,
-                            uint32_t display_count) __TA_REQUIRES(display_lock_);
+    bool CheckDisplayLimits(const display_config_t** display_configs, uint32_t display_count,
+                            uint32_t** layer_cfg_results) __TA_REQUIRES(display_lock_);
 
     bool CalculatePipeAllocation(const display_config_t** display_config, uint32_t display_count,
                                  uint64_t alloc[registers::kPipeCount])

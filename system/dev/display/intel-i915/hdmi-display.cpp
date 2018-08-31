@@ -672,14 +672,19 @@ bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode,
     return true;
 }
 
-bool HdmiDisplay::CheckDisplayLimits(const display_config_t* config) {
-    uint32_t refresh_rate = Controller::DisplayModeToRefreshRate(&config->mode);
-    uint32_t width = config->mode.h_addressable;
-    uint32_t height = config->mode.v_addressable;
+bool HdmiDisplay::CheckPixelRate(uint64_t pixel_rate) {
+    // Pixel rates of 300M/165M pixels per second for HDMI/DVI. The Intel docs state
+    // that the maximum link bit rate of an HDMI port is 3GHz, not 3.4GHz that would
+    // be expected  based on the HDMI spec.
+    if ((is_hdmi() ? 300000000 : 165000000) < pixel_rate) {
+        return false;
+    }
 
-    // See comments in DpDisplay::CheckDisplayLimits for details about constants
-    return (width <= 1920 && height <= 1200 && refresh_rate <= 60)
-            || (is_hdmi() && width <= 4096 && height <= 2160 && refresh_rate <= 30);
+    uint64_t dco_freq_kh;
+    uint32_t dco_central_freq_khz;
+    uint8_t p0, p1, p2;
+    return calculate_params(static_cast<uint32_t>(pixel_rate / 1000 /* khz */),
+            &dco_freq_kh, &dco_central_freq_khz, &p0, &p1, &p2);
 }
 
 } // namespace i915

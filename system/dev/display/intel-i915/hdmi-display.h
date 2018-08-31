@@ -44,7 +44,7 @@ private:
     bool PipeConfigEpilogue(const display_mode_t& mode,
                             registers::Pipe pipe, registers::Trans trans) final;
 
-    bool CheckDisplayLimits(const display_config_t* config) final;
+    bool CheckPixelRate(uint64_t pixel_rate) final;
 
     uint32_t i2c_bus_id() const final { return ddi(); }
 };

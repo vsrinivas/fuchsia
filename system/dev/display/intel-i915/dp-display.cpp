@@ -21,6 +21,8 @@
 
 namespace i915 {
 
+constexpr uint32_t kBitsPerPixel = 24; // kPixelFormat
+
 // Recommended DDI buffer translation programming values
 
 struct ddi_buf_trans_entry {
@@ -1103,14 +1105,11 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode,
 
     uint32_t pixel_bit_rate = pixel_clock_rate * bits_per_pixel;
     uint32_t total_link_bit_rate = link_symbol_rate * 8 * dp_lane_count_;
+    ZX_DEBUG_ASSERT(pixel_bit_rate <= total_link_bit_rate); // Should be caught by CheckPixelRate
+
     uint32_t data_m;
     uint32_t data_n;
     CalculateRatio(pixel_bit_rate, total_link_bit_rate, &data_m, &data_n);
-
-    if (pixel_bit_rate > total_link_bit_rate) {
-        LOG_ERROR("Insufficient link rate for resolution\n");
-        return false;
-    }
 
     auto data_m_reg = trans_regs.DataM().FromValue(0);
     data_m_reg.set_tu_or_vcpayload_size(63); // Size - 1, default TU size is 64
@@ -1351,29 +1350,11 @@ void DpDisplay::GetBacklightState(bool* power, uint8_t* brightness) {
     *brightness = static_cast<uint8_t>(GetBacklightBrightness() * 255);
 }
 
-bool DpDisplay::CheckDisplayLimits(const display_config_t* config) {
-    uint32_t refresh_rate = Controller::DisplayModeToRefreshRate(&config->mode);
-    uint32_t width = config->mode.h_addressable;
-    uint32_t height = config->mode.v_addressable;
-
-    // Approximate maximum display resolution capabilities taken from Intel display docs.
-    // TODO(stevensd): Actually do the calculations, since some larger/higher refresh
-    // rate displays actually are supported.
-    switch (registers::CdClockCtl::Get().ReadFrom(mmio_space()).cd_freq_select()) {
-    case registers::CdClockCtl::kFreqSelect6XX:
-        return ((width <= 3840 && height <= 2560) || (width <= 4096 && height <= 2304))
-                && refresh_rate <= 60;
-    case registers::CdClockCtl::kFreqSelect540:
-        return width <= 3840 && height <= 2160 && refresh_rate <= 60;
-    case registers::CdClockCtl::kFreqSelect4XX:
-        return width <= 3200 && height <= 2000 && refresh_rate <= 60;
-    case registers::CdClockCtl::kFreqSelect3XX:
-        return (width <= 2880 && height <= 1620 && refresh_rate <= 60)
-                || (width <= 4096 && height <= 2160 && refresh_rate <= 30);
-    default:
-        ZX_ASSERT(false);
-    }
-    return false;
+bool DpDisplay::CheckPixelRate(uint64_t pixel_rate) {
+    uint64_t bit_rate = (dp_link_rate_mhz_ * 1000000lu) * dp_lane_count_;
+    // Multiply by 8/10 because of 8b/10b encoding
+    uint64_t max_pixel_rate = (bit_rate * 8 / 10) / kBitsPerPixel;
+    return pixel_rate <= max_pixel_rate;
 }
 
 } // namespace i915

@@ -168,17 +168,23 @@ const display_config_t* find_config(uint64_t display_id,
     return nullptr;
 }
 
+static void get_posttransform_width(const layer_t& layer, uint32_t* width, uint32_t* height) {
+    const primary_layer_t* primary = &layer.cfg.primary;
+    if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY
+            || primary->transform_mode == FRAME_TRANSFORM_ROT_180
+            || primary->transform_mode == FRAME_TRANSFORM_REFLECT_X
+            || primary->transform_mode == FRAME_TRANSFORM_REFLECT_Y) {
+        *width = primary->src_frame.width;
+        *height = primary->src_frame.height;
+    } else {
+        *width = primary->src_frame.height;
+        *height = primary->src_frame.width;
+    }
+}
 
 } // namespace
 
 namespace i915 {
-
-uint32_t Controller::DisplayModeToRefreshRate(const display_mode_t* mode) {
-    double total_pxls = (mode->h_addressable + mode->h_blanking) *
-            (mode->v_addressable + mode->v_blanking);
-    double pixel_clock_hz = mode->pixel_clock_10khz * 1000 * 10;
-    return static_cast<uint32_t>(round(pixel_clock_hz / total_pxls));
-}
 
 void Controller::EnableBacklight(bool enable) {
     if (flags_ & FLAGS_BACKLIGHT) {
@@ -1063,26 +1069,91 @@ void Controller::DoPipeBufferReallocation(
 }
 
 bool Controller::CheckDisplayLimits(const display_config_t** display_configs,
-                                    uint32_t display_count) {
+                                    uint32_t display_count, uint32_t** layer_cfg_results) {
     for (unsigned i = 0; i < display_count; i++) {
         const display_config_t* config = display_configs[i];
+
+        // The intel display controller doesn't support these flags
+        if (config->mode.flags
+                & (MODE_FLAG_ALTERNATING_VBLANK | MODE_FLAG_DOUBLE_CLOCKED)) {
+            return false;
+        }
+
         DisplayDevice* display = FindDevice(config->display_id);
         if (display == nullptr) {
             continue;
         }
 
-        // TODO(stevensd): The current display limits check only check that the mode is
-        // supported - it also needs to check that the layer configuration is supported,
-        // and return layer errors if it isn't.
-        // TODO(stevensd): Check maximum memory read bandwidth, watermark
-
-        if (config->mode.h_addressable > 4096 || config->mode.v_addressable > 8192
-                || !display->CheckDisplayLimits(config)) {
-            // The API guarantees that if there are multiple displays, then each
-            // display is supported in isolation. Debug assert if that's violated.
-            ZX_DEBUG_ASSERT(display_count == 1);
+        // Pipes don't support height of more than 4096. They support a width of up to
+        // 2^14 - 1. However, planes don't support a width of more than 8192 and we need
+        // to always be able to accept a single plane, fullscreen configuration.
+        if (config->mode.v_addressable > 4096 || config->mode.h_addressable > 8192) {
             return false;
         }
+
+        uint64_t max_pipe_pixel_rate;
+        auto cd_freq = registers::CdClockCtl::Get().ReadFrom(mmio_space()).cd_freq_decimal();
+        if (cd_freq == registers::CdClockCtl::kFreqDecimal30857) {
+            max_pipe_pixel_rate = 308570000;
+        } else if (cd_freq == registers::CdClockCtl::kFreqDecimal3375) {
+            max_pipe_pixel_rate = 337500000;
+        } else if (cd_freq == registers::CdClockCtl::kFreqDecimal432) {
+            max_pipe_pixel_rate = 432000000;
+        } else if (cd_freq == registers::CdClockCtl::kFreqDecimal450) {
+            max_pipe_pixel_rate = 450000000;
+        } else if (cd_freq == registers::CdClockCtl::kFreqDecimal540) {
+            max_pipe_pixel_rate = 540000000;
+        } else if (cd_freq == registers::CdClockCtl::kFreqDecimal61714) {
+            max_pipe_pixel_rate = 617140000;
+        } else if (cd_freq == registers::CdClockCtl::kFreqDecimal675) {
+            max_pipe_pixel_rate = 675000000;
+        } else {
+            ZX_ASSERT(false);
+        }
+
+        // Either the pipe pixel rate or the link pixel rate can't support a simple
+        // configuration at this display resolution.
+        if (max_pipe_pixel_rate < config->mode.pixel_clock_10khz * 10000
+                || !display->CheckPixelRate(config->mode.pixel_clock_10khz * 10000)) {
+            return false;
+        }
+
+        // Compute the maximum pipe pixel rate with the desired scaling. If the max rate
+        // is too low, then make the client do any downscaling itself.
+        double min_plane_ratio = 1.0;
+        for (unsigned i = 0; i < config->layer_count; i++) {
+            if (config->layers[i]->type != LAYER_PRIMARY) {
+                continue;
+            }
+            primary_layer_t* primary = &config->layers[i]->cfg.primary;
+            uint32_t src_width, src_height;
+            get_posttransform_width(*config->layers[i], &src_width, &src_height);
+
+            double downscale = fbl::max(1.0, 1.0 * src_height / primary->dest_frame.height)
+                    * fbl::max(1.0, 1.0 * src_width / primary->dest_frame.width);
+            double plane_ratio = 1.0 / downscale;
+            min_plane_ratio = fbl::min(plane_ratio, min_plane_ratio);
+        }
+
+        max_pipe_pixel_rate = static_cast<uint64_t>(
+                min_plane_ratio * static_cast<double>(max_pipe_pixel_rate));
+        if (max_pipe_pixel_rate < config->mode.pixel_clock_10khz * 10000) {
+            for (unsigned j = 0; j < config->layer_count; j++) {
+                if (config->layers[j]->type != LAYER_PRIMARY) {
+                    continue;
+                }
+                primary_layer_t* primary = &config->layers[j]->cfg.primary;
+                uint32_t src_width, src_height;
+                get_posttransform_width(*config->layers[j], &src_width, &src_height);
+
+                if (src_height > primary->dest_frame.height
+                        || src_width > primary->dest_frame.width) {
+                    layer_cfg_results[i][j] |= CLIENT_FRAME_SCALE;
+                }
+            }
+        }
+
+        // TODO(stevensd): Check maximum memory read bandwidth, watermark
     }
 
     return true;
@@ -1105,16 +1176,9 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
         return;
     }
 
-    if (!CheckDisplayLimits(display_config, display_count)) {
+    if (!CheckDisplayLimits(display_config, display_count, layer_cfg_result)) {
         *display_cfg_result = CONFIG_DISPLAY_UNSUPPORTED_MODES;
         return;
-    }
-    for (unsigned i = 0; i < display_count; i++) {
-        if (display_config[i]->mode.flags
-                & (MODE_FLAG_ALTERNATING_VBLANK | MODE_FLAG_DOUBLE_CLOCKED)) {
-            *display_cfg_result = CONFIG_DISPLAY_UNSUPPORTED_MODES;
-            return;
-        }
     }
 
     *display_cfg_result = CONFIG_DISPLAY_OK;
@@ -1151,14 +1215,6 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
             }
         }
 
-        if (merge_all) {
-            layer_cfg_result[i][0] = CLIENT_MERGE_BASE;
-            for (unsigned j = 1; j < config->layer_count; j++) {
-                layer_cfg_result[i][j] = CLIENT_MERGE_SRC;
-            }
-            continue;
-        }
-
         uint32_t total_scalers_needed = 0;
         for (unsigned j = 0; j < config->layer_count; j++) {
             switch (config->layers[j]->type) {
@@ -1177,17 +1233,20 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
                     layer_cfg_result[i][j] |= CLIENT_TRANSFORM;
                 }
 
-                uint32_t src_width;
-                uint32_t src_height;
-                if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY
-                        || primary->transform_mode == FRAME_TRANSFORM_ROT_180
-                        || primary->transform_mode == FRAME_TRANSFORM_REFLECT_X
-                        || primary->transform_mode == FRAME_TRANSFORM_REFLECT_Y) {
-                    src_width = primary->src_frame.width;
-                    src_height = primary->src_frame.height;
+                uint32_t src_width, src_height;
+                get_posttransform_width(*config->layers[j], &src_width, &src_height);
+
+                // If the plane is too wide, force the client to do all composition
+                // and just give us a simple configuration.
+                uint32_t max_width;
+                if (primary->image.type == IMAGE_TYPE_SIMPLE
+                        || primary->image.type == IMAGE_TYPE_X_TILED) {
+                    max_width = 8192;
                 } else {
-                    src_width = primary->src_frame.height;
-                    src_height = primary->src_frame.width;
+                    max_width = 4096;
+                }
+                if (src_width > max_width) {
+                    merge_all = true;
                 }
 
                 if (primary->dest_frame.width != src_width
@@ -1260,6 +1319,13 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
             }
             default:
                 layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
+            }
+        }
+
+        if (merge_all) {
+            layer_cfg_result[i][0] = CLIENT_MERGE_BASE;
+            for (unsigned j = 1; j < config->layer_count; j++) {
+                layer_cfg_result[i][j] = CLIENT_MERGE_SRC;
             }
         }
     }
