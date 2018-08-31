@@ -350,9 +350,10 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
                (cur_mix_job_.frames_produced * output_producer_->channels());
 
   // Figure out where the first and last sampling points of this job are,
-  // expressed in fractional audio out frames.
+  // expressed in fractional source frames.
   int64_t first_sample_ftf = info->dest_frames_to_frac_source_frames(
       cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced);
+
   // Without the "-1", this would be the first output frame of the NEXT job.
   int64_t final_sample_ftf =
       first_sample_ftf +
@@ -417,20 +418,20 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
   bool consumed_source = false;
   if (frac_input_offset < static_cast<int32_t>(packet->frac_frame_len())) {
     // When calling Mix(), we communicate the resampling rate with three
-    // parameters. We augment frac_step_size with modulo and denominator
+    // parameters. We augment frac_step_size with rate_modulo and denominator
     // arguments that capture the remaining rate component that cannot be
     // expressed by a 19.13 fixed-point step_size. Note: frac_step_size and
     // frac_input_offset use the same format -- they have the same limitations
     // in what they can and cannot communicate. This begs two questions:
     //
-    // Q1: For perfect position accuracy, don't we also need an in/out param
-    // to specify initial/final subframe modulo, for fractional source offset?
+    // Q1: For perfect position accuracy, just as we track incoming/outgoing
+    // fractional source offset, wouldn't we also need a src_pos_modulo?
     // A1: Yes, for optimum position accuracy (within quantization limits), we
-    // SHOULD incorporate running subframe position_modulo in this way.
+    // SHOULD incorporate the ongoing subframe_position_modulo in this way.
     //
     // For now, we are defering this work, tracking it with MTWN-128.
     //
-    // Q2: Why did we solve this issue for rate but not for initial position?
+    // Q2: Why did we solve this issue for Rate but not for initial Position?
     // A2: We solved this issue for *rate* because its effect accumulates over
     // time, causing clearly measurable distortion that becomes crippling with
     // larger jobs. For *position*, there is no accumulated magnification over
@@ -438,12 +439,14 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
     // size would affect the distortion frequency but not amplitude. We expect
     // the effects to be below audible thresholds. Until the effects are
     // measurable and attributable to this jitter, we will defer this work.
-
+    //
+    // Update: src_pos_modulo is added to Mix(), but for now we omit it here.
+    //
     // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
     consumed_source = info->mixer->Mix(
         buf, frames_left, &output_offset, packet->payload(),
         packet->frac_frame_len(), &frac_input_offset, info->step_size,
-        info->amplitude_scale, cur_mix_job_.accumulate, info->modulo,
+        info->amplitude_scale, cur_mix_job_.accumulate, info->rate_modulo,
         info->denominator());
     FXL_DCHECK(output_offset <= frames_left);
   }
@@ -539,7 +542,7 @@ void StandardOutputBase::UpdateDestTrans(const MixJob& job, Bookkeeping* bk) {
   FXL_DCHECK(dst.rate().reference_delta());
   if (!dst.rate().subject_delta()) {
     bk->step_size = 0;
-    bk->modulo = 0;
+    bk->rate_modulo = 0;
   } else {
     int64_t tmp_step_size = dst.rate().Scale(1);
 
@@ -547,7 +550,7 @@ void StandardOutputBase::UpdateDestTrans(const MixJob& job, Bookkeeping* bk) {
     FXL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
 
     bk->step_size = static_cast<uint32_t>(tmp_step_size);
-    bk->modulo =
+    bk->rate_modulo =
         dst.rate().subject_delta() - (bk->denominator() * bk->step_size);
   }
 

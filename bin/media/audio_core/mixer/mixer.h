@@ -28,7 +28,7 @@ struct Bookkeeping {
   Gain::AScale amplitude_scale;
 
   uint32_t step_size;
-  uint32_t modulo;
+  uint32_t rate_modulo;
   uint32_t denominator() const {
     return dest_frames_to_frac_source_frames.rate().reference_delta();
   }
@@ -128,17 +128,25 @@ class Mixer {
   // sum, clip, write-back).  When false, the mixer will simply replace the
   // destination buffer with its output.
   //
-  // @param modulo
+  // @param rate_modulo
   // If frac_step_size cannot perfectly express the mix's resampling ratio,
   // this parameter (along with subsequent denominator) expresses any leftover
-  // precision.  When present, modulo and denominator express a fractional value
-  // of frac_step_size unit that should be advanced, for each destination frame.
+  // precision.  When present, rate_modulo and denominator express a fractional
+  // value of frac_step_size unit that should be advanced, for each destination
+  // frame.
   //
   // @param denominator
   // If frac_step_size cannot perfectly express the mix's resampling ratio, this
-  // parameter (along with precedent modulo) expresses any leftover precision.
-  // When present, modulo and denominator express a fractional value of
-  // frac_step_size unit that should be advanced, for each destination frame.
+  // parameter (along with precedent rate_modulo) expresses any leftover
+  // precision. When present, rate_modulo and denominator express a fractional
+  // value of frac_step_size unit that should be advanced, for each destination
+  // frame.
+  //
+  // @param src_pos_modulo
+  // If frac_src_offset cannot perfectly express the source's position, this
+  // parameter (along with denominator) expresses any leftover precision. When
+  // present, src_pos_modulo and denominator express a fractional value of
+  // frac_src_offset unit that should be used when advancing src position.
   //
   // @return True if the mixer is finished with this source data and will not
   // need it in the future.  False if the mixer has not consumed the entire
@@ -150,18 +158,20 @@ class Mixer {
                    const void* src, uint32_t frac_src_frames,
                    int32_t* frac_src_offset, uint32_t frac_step_size,
                    Gain::AScale amplitude_scale, bool accumulate,
-                   uint32_t modulo = 0, uint32_t denominator = 1) = 0;
+                   uint32_t rate_modulo = 0, uint32_t denominator = 1,
+                   uint32_t* src_pos_modulo = nullptr) = 0;
   // When calling Mix(), we communicate the resampling rate with three
-  // parameters. We augment frac_step_size with modulo and denominator
+  // parameters. We augment frac_step_size with rate_modulo and denominator
   // arguments that capture the remaining rate component that cannot be
   // expressed by a 19.13 fixed-point step_size. Note: frac_step_size and
   // frac_input_offset use the same format -- they have the same limitations
   // in what they can and cannot communicate. This begs two questions:
   //
   // Q1: For perfect position accuracy, don't we also need an in/out param
-  // to specify initial/final subframe modulo, for fractional source offset?
-  // A1: Yes, for optimum position accuracy (within quantization limits), we
-  // SHOULD incorporate running subframe position_modulo in this way.
+  // to specify initial/final subframe rate_modulo, for fractional source
+  // offset? A1: Yes, for optimum position accuracy (within quantization
+  // limits), we SHOULD incorporate running subframe position_modulo in this
+  // way.
   //
   // For now, we are defering this work, tracking it with MTWN-128.
   //

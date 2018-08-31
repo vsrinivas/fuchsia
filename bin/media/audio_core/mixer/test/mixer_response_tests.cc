@@ -280,7 +280,7 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
   std::vector<float> source(src_buf_size + 1);
   std::vector<float> accum(kFreqTestBufSize);
   uint32_t step_size = (Mixer::FRAC_ONE * src_buf_size) / kFreqTestBufSize;
-  uint32_t modulo =
+  uint32_t rate_modulo =
       (Mixer::FRAC_ONE * src_buf_size) - (step_size * kFreqTestBufSize);
 
   // kReferenceFreqs[] contains the full set of official test frequencies (47).
@@ -316,6 +316,9 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
     int32_t frac_src_offset;
     uint32_t frac_src_frames = source.size() * Mixer::FRAC_ONE;
 
+    // Maintain an ongoing source_position_modulo across multiple Mix() calls.
+    uint32_t src_pos_modulo = 0;
+
     for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
       dst_frames = kFreqTestBufSize * (packet + 1) / kResamplerTestNumPackets;
       dst_offset = kFreqTestBufSize * packet / kResamplerTestNumPackets;
@@ -325,7 +328,9 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
 
       mixer->Mix(accum.data(), dst_frames, &dst_offset, source.data(),
                  frac_src_frames, &frac_src_offset, step_size,
-                 Gain::kUnityScale, false, modulo, kFreqTestBufSize);
+                 Gain::kUnityScale, false, rate_modulo, kFreqTestBufSize,
+                 &src_pos_modulo);
+
       EXPECT_EQ(dst_frames, dst_offset);
     }
 
@@ -765,11 +770,17 @@ void TestNxNEquivalence(Resampler sampler_type, double* freq_resp_results,
   uint32_t frac_src_frames =
       num_chans * (num_source_frames + 1) * Mixer::FRAC_ONE;
   uint32_t step_size = (Mixer::FRAC_ONE * num_source_frames) / num_dest_frames;
-  uint32_t modulo =
+  uint32_t rate_modulo =
       (Mixer::FRAC_ONE * num_source_frames) - (step_size * num_dest_frames);
 
+  // Resample the source into the accumulation buffer, in pieces. (Why in
+  // pieces? See description of kResamplerTestNumPackets in frequency_set.h.)
   std::unique_ptr<float[]> accum =
       std::make_unique<float[]>(num_chans * num_dest_frames);
+
+  // Maintain an ongoing source_position_modulo across multiple Mix() calls.
+  uint32_t src_pos_modulo = 0;
+
   for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
     uint32_t dst_frames =
         num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
@@ -780,7 +791,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* freq_resp_results,
 
     mixer->Mix(accum.get(), dst_frames, &dst_offset, source.get(),
                frac_src_frames, &frac_src_offset, step_size, Gain::kUnityScale,
-               false, modulo, num_dest_frames);
+               false, rate_modulo, num_dest_frames, &src_pos_modulo);
     EXPECT_EQ(dst_frames, dst_offset);
   }
 

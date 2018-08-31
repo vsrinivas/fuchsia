@@ -1054,16 +1054,16 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
       // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
       //
       // When calling Mix(), we communicate the resampling rate with three
-      // parameters. We augment frac_step_size with modulo and denominator
+      // parameters. We augment frac_step_size with rate_modulo and denominator
       // arguments that capture the remaining rate component that cannot be
       // expressed by a 19.13 fixed-point step_size. Note: frac_step_size and
       // frac_input_offset use the same format -- they have the same limitations
       // in what they can and cannot communicate. This begs two questions:
       //
-      // Q1: For perfect position accuracy, don't we also need an in/out param
-      // to specify initial/final subframe modulo, for fractional source offset?
+      // Q1: For perfect position accuracy, just as we track incoming/outgoing
+      // fractional source offset, wouldn't we also need a src_pos_modulo?
       // A1: Yes, for optimum position accuracy (within quantization limits), we
-      // SHOULD incorporate running subframe position_modulo in this way.
+      // SHOULD incorporate the ongoing subframe_position_modulo in this way.
       //
       // For now, we are deferring this work, tracking it with MTWN-128.
       //
@@ -1075,10 +1075,12 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
       // size would affect the distortion frequency but not amplitude. We expect
       // the effects to be below audible thresholds. Until the effects are
       // measurable and attributable to this jitter, we will defer this work.
+      //
+      // Update: src_pos_modulo is added to Mix(), but for now we omit it here.
       bool consumed_source = bk->mixer->Mix(
           buf, frames_left, &output_offset, region_source,
           region_frac_frame_len, &frac_source_offset, bk->step_size,
-          bk->amplitude_scale, accumulate, bk->modulo, bk->denominator());
+          bk->amplitude_scale, accumulate, bk->rate_modulo, bk->denominator());
       FXL_DCHECK(output_offset <= frames_left);
 
       if (!consumed_source) {
@@ -1138,8 +1140,9 @@ void AudioInImpl::UpdateTransformation(
   FXL_DCHECK(tmp_step_size >= 0);
   FXL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
   bk->step_size = static_cast<uint32_t>(tmp_step_size);
-  bk->modulo = bk->dest_frames_to_frac_source_frames.rate().subject_delta() -
-               (bk->denominator() * bk->step_size);
+  bk->rate_modulo =
+      bk->dest_frames_to_frac_source_frames.rate().subject_delta() -
+      (bk->denominator() * bk->step_size);
 
   FXL_DCHECK(bk->denominator() > 0);
   bk->dest_trans_gen_id = frames_to_clock_mono_gen_.get();

@@ -59,7 +59,7 @@ static constexpr uint32_t kFreqTestBufSize = 65536;
 // degrade it at 10 kHz. With this in mind, the values we have saved as
 // thresholds represent the worst-case results across kResamplerTestNumPackets
 // values of [1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768].
-static constexpr uint32_t kResamplerTestNumPackets = 128;
+static constexpr uint32_t kResamplerTestNumPackets = 256;
 
 class FrequencySet {
  public:

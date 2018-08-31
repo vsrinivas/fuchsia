@@ -278,7 +278,7 @@ TEST(Resampling, Position_Fractional_Linear) {
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
 
-void TestPositionModulo(Resampler sampler_type) {
+void TestRateModulo(Resampler sampler_type) {
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
                                32000, 1, 48000, sampler_type);
 
@@ -287,7 +287,7 @@ void TestPositionModulo(Resampler sampler_type) {
   float accum[3];
   int32_t expected_frac_src_offset = 2 << kPtsFractionalBits;
 
-  // Without modulo, ending source position should be short of full [2/3 * 2].
+  // Without rate_modulo, we expect frac_src_offset to be less than [2/3 * 3].
   int32_t frac_src_offset = 0;
   uint32_t dst_offset = 0;
   mixer->Mix(accum, fbl::count_of(accum), &dst_offset, source,
@@ -297,28 +297,127 @@ void TestPositionModulo(Resampler sampler_type) {
   EXPECT_EQ(fbl::count_of(accum), dst_offset);
   EXPECT_LT(frac_src_offset, expected_frac_src_offset);
 
-  // Now with modulo, source position should be exactly correct.
+  // With rate_modulo, frac_src_offset should be exactly 2 (i.e. 2/3 * 3).
   frac_src_offset = 0;
   dst_offset = 0;
-  uint32_t modulo = (2 << kPtsFractionalBits) - (frac_step_size * 3);
+  uint32_t rate_modulo = (2 << kPtsFractionalBits) - (frac_step_size * 3);
   uint32_t denominator = 3;
 
   mixer->Mix(accum, fbl::count_of(accum), &dst_offset, source,
              fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
-             frac_step_size, Gain::kUnityScale, false, modulo, denominator);
+             frac_step_size, Gain::kUnityScale, false, rate_modulo,
+             denominator);
 
   EXPECT_EQ(fbl::count_of(accum), dst_offset);
   EXPECT_EQ(frac_src_offset, expected_frac_src_offset);
 }
 
-// Verify PointSampler correctly incorporates modulo & denominator parameters
-// into position and interpolation results.
+// Verify PointSampler correctly incorporates rate_modulo & denominator
+// parameters into position and interpolation results.
+TEST(Resampling, Rate_Modulo_Point) {
+  TestRateModulo(Resampler::SampleAndHold);
+}
+
+// Verify LinearSampler correctly incorporates rate_modulo & denominator
+// parameters into position and interpolation results.
+TEST(Resampling, Rate_Modulo_Linear) {
+  TestRateModulo(Resampler::LinearInterpolation);
+}
+
+// For the provided sampler, validate src_pos_modulo for default, 0, non-zero.
+// For these three input conditions, verify rollover and non-rollover cases.
+void TestPositionModulo(Resampler sampler_type) {
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               44100, 1, 44100, sampler_type);
+
+  float accum[3];
+  uint32_t dst_offset;
+  int32_t frac_src_offset;
+  uint32_t src_pos_modulo;
+  float source[4] = {0.0f};
+
+  // For these three "almost-but-not-rollover" cases, we generate 3 output
+  // samples, leaving source and dest at pos 3 and src_pos_modulo at 9999/10000.
+  //
+  // Case: Zero src_pos_modulo, almost-but-not-rollover.
+  dst_offset = 0;
+  frac_src_offset = 0;
+  src_pos_modulo = 0;
+  mixer->Mix(accum, fbl::count_of(accum), &dst_offset, source,
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, Gain::kUnityScale, false, 3333, 10000,
+             &src_pos_modulo);
+  EXPECT_EQ(fbl::count_of(accum), dst_offset);
+  EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
+  EXPECT_EQ(9999u, src_pos_modulo);
+
+  // Case: nullptr src_pos_modulo equates to a src_pos_modulo of 0.
+  dst_offset = 0;
+  frac_src_offset = 0;
+  src_pos_modulo = 0;
+  mixer->Mix(accum, fbl::count_of(accum), &dst_offset, source,
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, Gain::kUnityScale, false, 3333, 10000, nullptr);
+  EXPECT_EQ(fbl::count_of(accum), dst_offset);
+  EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
+
+  // Non-zero src_pos_modulo (but rate_modulo is reduced, so same outcome).
+  dst_offset = 0;
+  frac_src_offset = 0;
+  src_pos_modulo = 3;
+  mixer->Mix(accum, fbl::count_of(accum), &dst_offset, source,
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, Gain::kUnityScale, false, 3332, 10000,
+             &src_pos_modulo);
+  EXPECT_EQ(fbl::count_of(accum), dst_offset);
+  EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
+  EXPECT_EQ(9999u, src_pos_modulo);
+
+  // For these three "just-barely-rollover" cases, we generate 2 output
+  // samples, leaving source and dest pos at 3 but src_pos_modulo at 0/10000.
+  //
+  // Case: Zero src_pos_modulo, just-barely-rollover.
+  dst_offset = 1;
+  frac_src_offset = Mixer::FRAC_ONE - 1;
+  src_pos_modulo = 0;
+  mixer->Mix(accum, fbl::count_of(accum), &dst_offset, source,
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, Gain::kUnityScale, false, 5000, 10000,
+             &src_pos_modulo);
+  EXPECT_EQ(fbl::count_of(accum), dst_offset);
+  EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
+  EXPECT_EQ(0u, src_pos_modulo);
+
+  // (Missing) equates to a src_pos_modulo of 0 (rolls over when it should).
+  dst_offset = 1;
+  frac_src_offset = Mixer::FRAC_ONE - 1;
+  mixer->Mix(accum, fbl::count_of(accum), &dst_offset, source,
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, Gain::kUnityScale, false, 5000, 10000);
+  EXPECT_EQ(fbl::count_of(accum), dst_offset);
+  EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
+
+  // Non-zero src_pos_modulo, just-barely-rollover case.
+  dst_offset = 1;
+  frac_src_offset = Mixer::FRAC_ONE - 1;
+  src_pos_modulo = 3336;
+  mixer->Mix(accum, fbl::count_of(accum), &dst_offset, source,
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, Gain::kUnityScale, false, 3332, 10000,
+             &src_pos_modulo);
+  EXPECT_EQ(fbl::count_of(accum), dst_offset);
+  EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
+  EXPECT_EQ(0u, src_pos_modulo);
+}
+
+// Verify PointSampler correctly incorporates src_pos_modulo (along with
+// rate_modulo and denominator) into position and interpolation results.
 TEST(Resampling, Position_Modulo_Point) {
   TestPositionModulo(Resampler::SampleAndHold);
 }
 
-// Verify LinearSampler correctly incorporates modulo & denominator parameters
-// into position and interpolation results.
+// Verify LinearSampler correctly incorporates src_pos_modulo (along with
+// rate_modulo and denominator) into position and interpolation results.
 TEST(Resampling, Position_Modulo_Linear) {
   TestPositionModulo(Resampler::LinearInterpolation);
 }

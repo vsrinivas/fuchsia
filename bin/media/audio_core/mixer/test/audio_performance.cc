@@ -149,7 +149,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
   uint32_t source_buffer_size = kFreqTestBufSize * dest_rate / source_rate;
   uint32_t source_frames = source_buffer_size + 1;
   uint32_t frac_step_size = (source_rate * Mixer::FRAC_ONE) / dest_rate;
-  uint32_t modulo =
+  uint32_t rate_modulo =
       (source_rate * Mixer::FRAC_ONE) - (frac_step_size * dest_rate);
 
   std::unique_ptr<SampleType[]> source =
@@ -173,7 +173,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
     frac_src_offset = 0;
     mixer->Mix(accum.get(), kFreqTestBufSize, &dst_offset, source.get(),
                frac_src_frames, &frac_src_offset, frac_step_size, gain_scale,
-               accumulate, modulo, dest_rate);
+               accumulate, rate_modulo, dest_rate);
 
     elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time;
 
