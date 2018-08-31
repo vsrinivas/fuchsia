@@ -68,6 +68,9 @@ const char kRootSchema[] = R"({
               "minimum": 0
             }
           },
+          "split_first": {
+            "type": "boolean"
+          },
           "expected_sample_count": {
             "type": "integer",
             "minimum": 1
@@ -93,6 +96,7 @@ const char kBufferSizeInMbKey[] = "buffer_size_in_mb";
 const char kMeasurementsKey[] = "measure";
 const char kTypeKey[] = "type";
 const char kSplitSamplesAtKey[] = "split_samples_at";
+const char kSplitFirstKey[] = "split_first";
 const char kExpectedSampleCountKey[] = "expected_sample_count";
 const char kTestSuiteNameKey[] = "test_suite_name";
 const char kMeasureDurationType[] = "duration";
@@ -363,6 +367,11 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
       return false;
     }
 
+    if (measurement.HasMember(kSplitFirstKey)) {
+      result.measurements->split_first[counter] =
+          measurement[kSplitFirstKey].GetBool();
+    }
+
     if (measurement.HasMember(kSplitSamplesAtKey)) {
       for (auto& value : measurement[kSplitSamplesAtKey].GetArray()) {
         if (!result.measurements->split_samples_at[counter].empty() &&
@@ -375,6 +384,11 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
         result.measurements->split_samples_at[counter].push_back(
             value.GetUint());
       }
+    }
+
+    if (measurement.HasMember(kSplitFirstKey)) {
+      result.measurements->split_first[counter] =
+          measurement[kSplitFirstKey].GetBool();
     }
 
     if (measurement.HasMember(kExpectedSampleCountKey)) {

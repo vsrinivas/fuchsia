@@ -25,6 +25,10 @@ struct Measurements {
   // recorded results must be split into consecutive sample groups.
   std::unordered_map<uint64_t, std::vector<size_t>> split_samples_at;
 
+  // Maps measurement ids to flags indicating whether or not the first run must
+  // be recorded separately.
+  std::unordered_map<uint64_t, bool> split_first;
+
   // Maps measurement ids to number of expected samples for these measurements.
   std::unordered_map<uint64_t, size_t> expected_sample_count;
 };

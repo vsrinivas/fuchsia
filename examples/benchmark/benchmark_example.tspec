@@ -12,6 +12,7 @@
     },
     {
       "type": "time_between",
+      "split_first": true,
       "first_event_name": "task_end",
       "first_event_category": "benchmark",
       "second_event_name": "task_start",
