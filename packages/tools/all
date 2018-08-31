@@ -3,7 +3,6 @@
         "garnet/packages/tools/curl",
         "garnet/packages/tools/fidlmerge",
         "garnet/packages/tools/iperf",
-        "garnet/packages/tools/iquery",
         "garnet/packages/tools/make-efi",
         "garnet/packages/tools/make-fuchsia-vol",
         "garnet/packages/tools/runmany",
