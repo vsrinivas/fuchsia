@@ -244,6 +244,8 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // The execution domain
     fbl::RefPtr<dispatcher::ExecutionDomain> domain_;
 
+    uint32_t LoadNotificationsPerRing() const { return expected_notifications_per_ring_.load();};
+
     // State and capabilities which need to be established and maintained by the
     // driver implementation..
     fbl::Vector<audio_stream_format_range_t> supported_formats_ __TA_GUARDED(domain_->token());

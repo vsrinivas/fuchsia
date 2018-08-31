@@ -524,13 +524,12 @@ zx_status_t SimpleAudioStream::OnGetBuffer(dispatcher::Channel* channel,
         if (resp.result == ZX_OK) {
             zx_status_t res = channel->Write(&resp, sizeof(resp), fbl::move(buffer));
             if (res == ZX_OK) {
-                expected_notifications_per_ring_.store(resp.num_ring_buffer_frames);
+                expected_notifications_per_ring_.store(req.notifications_per_ring);
                 rb_fetched_ = true;
-            } else {
-                expected_notifications_per_ring_.store(0);
             }
-
             return res;
+        } else {
+            expected_notifications_per_ring_.store(0);
         }
     }
 
@@ -557,7 +556,7 @@ zx_status_t SimpleAudioStream::OnStart(dispatcher::Channel* channel,
 
 zx_status_t SimpleAudioStream::OnStop(dispatcher::Channel* channel,
                                       const audio_proto::RingBufStopReq& req) {
-    audio_proto::RingBufStartResp resp = {};
+    audio_proto::RingBufStopResp resp = {};
     resp.hdr = req.hdr;
 
     if (!rb_started_) {
