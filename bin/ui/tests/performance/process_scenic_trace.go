@@ -6,18 +6,18 @@
 //
 // Usage:
 //
-// /pkgfs/packages/scenic_benchmarks/0/bin/process_scenic_trace test_label trace_filename benchmarks_out_filename
+// /pkgfs/packages/scenic_benchmarks/0/bin/process_scenic_trace [-test_suite_name=label] [-benchmarks_out_filename=output_file] [-flutter_app_name=app_name] trace_filename
 //
-// test_label = test title (used in output file)
-// trace_filename = filename for the trace (input)
-// bencharks_out_filename = filename for benchmarks file (output)
+// output = Optional: A file to output results to.
+// app_name = Optional: The name of the flutter app to measure fps for.
+// label = Optional: The name of the test suite.
+// trace_filename = The input trace files.
 //
 // The output is a JSON file with benchmark statistics.
 
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -43,197 +43,18 @@ func check(e error) {
 	}
 }
 
-// Structs for parsing trace files (JSON).
+// Sorting helpers.
+type ByStartTime []benchmarking.Event
 
-// The root level object found in the trace file.
-type Trace struct {
-	TraceEvents       []TraceEvent
-	SystemTraceEvents SystemTraceEvents
-	DisplayTimeUnit   string
-}
+func (a ByStartTime) Len() int           { return len(a) }
+func (a ByStartTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByStartTime) Less(i, j int) bool { return a[i].Start < a[j].Start }
 
-// A struct that represents objects found within the list at the "traceEvents"
-// field of the root trace object.  Note that the "Dur" field not actually
-// found in the original JSON, it something that we compute later ourselves
-// using the timestamps of begin/end events.
-//
-// Example instance:
-// {
-//   "args": {
-//     "elapsed time since presentation (usecs)": 1,
-//     "frame_number": 919,
-//     "presentation time (usecs)": 96695880,
-//     "target time missed by (usecs)": -3
-//   }
-//   "cat": "gfx,
-//   "name": "FramePresented",
-//   "ph": "i",
-//   "pid": 9844,
-//   "s": "p",
-//   "tid": 9862,
-//   "ts": 96695884.33333333
-// }
-type TraceEvent struct {
-	Cat  string
-	Name string
-	Ph   string
-	Pid  int
-	Tid  int
-	Ts   float64
-	Id   int
-	Dur  float64
-	Args map[string]interface{}
-}
-
-// A struct that represents the object found at the "systemTraceEvents" field
-// of the root trace object.
-type SystemTraceEvents struct {
-	Events []SystemTraceEvent
-	Type   string
-}
-
-// A struct that represents objects within the "events" list in the
-// "systemTraceEvents" object.  By Fuchsia trace file conventions, we expect
-// it to contain a list of events that are actually meta events describing
-// processes and threads.  Additionally, it contains CPU utilization events,
-// however those are currently unused.  Because of this, it does not contain
-// fields such as timestamp.
-//
-// Example instance:
-// {
-//   "name": "pthread_t:0xe85f81c8000",
-//   "ph": "t",
-//   "pid": 9844,
-//   "tid": 63681
-// }
-type SystemTraceEvent struct {
-	Name string
-	Pid  int
-	Tid  int
-	Ph   string
-}
-
-type Thread struct {
-	pid int
-	tid int
-}
-
-type CatAndId struct {
-	cat string
-	id  int
-}
-
-func printTraceEvent(e TraceEvent) {
-	fmt.Printf(
-		"ph=%s  %.2f %-15s %-20s\tpid=%-8d\ttid=%-8d\tid=%-8d\tDur=%.4g\t%s\n",
-		e.Ph, e.Ts, e.Cat, e.Name, e.Pid, e.Tid, e.Id, e.Dur, e.Args)
-}
-
-// Returns a list with only one event per duration event.
-// The |Dur| member of the event is populated with its duration.
-func calculateEventDurations(events []TraceEvent) []TraceEvent {
-	durations := make([]TraceEvent, 0)
-	eventStacks := make(map[Thread][]TraceEvent)
-	asyncEvents := make(map[CatAndId]TraceEvent)
-	for _, event := range events {
-		ph := event.Ph
-		thread := Thread{event.Pid, event.Tid}
-
-		if verbose {
-			printTraceEvent(event)
-		}
-		if ph == "X" {
-			// Complete event
-			durations = append(durations, event)
-		} else if ph == "b" {
-			// Async begin duration event
-			asyncEvents[CatAndId{event.Cat, event.Id}] = event
-		} else if ph == "e" {
-			// Async end duration event
-			beginEvent, ok := asyncEvents[CatAndId{event.Cat, event.Id}]
-			if ok {
-				if beginEvent.Cat != event.Cat {
-					panic("Category for begin and end event does not match")
-				}
-				if beginEvent.Id != event.Id {
-					panic("Id for begin and end event does not match")
-				}
-				// Set duration on the end event.
-				event.Dur = event.Ts - beginEvent.Ts
-				mergeArgs(&beginEvent, &event)
-				durations = append(durations, event)
-			}
-		} else if ph == "B" {
-			// Begin duration event.
-			eventStacks[thread] = append(eventStacks[thread], event)
-		} else if ph == "E" {
-			// End duration event.
-			eventStack := eventStacks[thread]
-			if eventStack != nil && len(eventStack) > 0 {
-				// Peek at last event
-				beginEvent := eventStack[len(eventStack)-1]
-
-				if beginEvent.Cat != event.Cat || beginEvent.Name != event.Name {
-					// This is possible since events are not necessarily in
-					// chronological order; they are grouped by source. So, when
-					// processing a new batch of events, it's possible that we
-					// get an end event that didn't have a begin event because
-					// we started tracing mid-event.
-					eventStacks[thread] = nil
-					continue
-				}
-
-				// Pop last event from event stack.
-				eventStacks[thread] = eventStack[:len(eventStack)-1]
-
-				// Set duration on the end event.
-				event.Dur = event.Ts - beginEvent.Ts
-
-				mergeArgs(&beginEvent, &event)
-				durations = append(durations, event)
-			}
-		}
-	}
-
-	return durations
-}
-
-// Takes the 'args' of event1 and writes all its values to the 'args' of event2,
-// and vice versa.
-// If event2's 'args' already has a value for a given key, it does not get
-// overwritten.
-func mergeArgs(event1 *TraceEvent, event2 *TraceEvent) {
-	// Merge 'Args' maps of both events.
-	if event1.Args != nil && event2.Args == nil {
-		event2.Args = event1.Args
-	} else if event1.Args != nil && event2.Args != nil {
-		for k, v := range event2.Args {
-			event1.Args[k] = v
-		}
-		event2.Args = event1.Args
-	}
-
-}
-
-// Returns the overall fps and an arrays of fps (one per one second window) for
-// the given events.
-func calculateFps(events []TraceEvent, fpsEventCat, fpsEventName string) (fps float64, fpsPerWindow []float64) {
-	sortedEvents := make([]TraceEvent, len(events))
-	copy(sortedEvents, events)
-	sort.Sort(ByTimestamp(sortedEvents))
-
-	baseTime := sortedEvents[0].Ts
-
-	// Find the time of the first frame presented. There may be a few seconds
-	// at the beginning with no frames and we want to skip that.
-	for _, event := range sortedEvents {
-		if event.Cat == fpsEventCat && event.Name == fpsEventName {
-			baseTime = event.Ts
-			break
-		}
-	}
-
-	lastEventTime := sortedEvents[len(sortedEvents)-1].Ts
+func calculateFpsForEvents(fpsEvents []benchmarking.Event) (fps float64, fpsPerWindow []float64) {
+	events := make([]benchmarking.Event, len(fpsEvents))
+	copy(events, fpsEvents)
+	sort.Sort(ByStartTime(events))
+	baseTime := events[0].Start
 
 	// window = one-second time window
 	const WindowLength float64 = OneSecInUsecs
@@ -243,22 +64,20 @@ func calculateFps(events []TraceEvent, fpsEventCat, fpsEventName string) (fps fl
 	numFramesInWindow := 0.0
 	numFrames := 0.0
 
-	for _, event := range sortedEvents {
-		// Make sure to not double count frame events by only counting events with
-		// phase "instant" or "end".
-		if event.Cat == fpsEventCat && event.Name == fpsEventName && (event.Ph == "i" || event.Ph == "E") {
-			if event.Ts < windowEndTime {
-				numFramesInWindow++
-				numFrames++
-			} else {
-				for windowEndTime < event.Ts {
-					fpsPerWindow = append(fpsPerWindow, numFramesInWindow)
-					windowEndTime += WindowLength
-					numFramesInWindow = 0
-				}
+	for _, event := range events {
+		if event.Start < windowEndTime {
+			numFramesInWindow++
+			numFrames++
+		} else {
+			for windowEndTime < event.Start {
+				fpsPerWindow = append(fpsPerWindow, numFramesInWindow)
+				windowEndTime += WindowLength
+				numFramesInWindow = 0
 			}
 		}
 	}
+	lastEventTime := events[len(events)-1].Start
+
 	for windowEndTime < lastEventTime {
 		fpsPerWindow = append(fpsPerWindow, numFramesInWindow)
 		windowEndTime += WindowLength
@@ -268,52 +87,12 @@ func calculateFps(events []TraceEvent, fpsEventCat, fpsEventName string) (fps fl
 	return fps, fpsPerWindow
 }
 
-// For the given set of |events|, find the average duration of all instances of
-// events with matching |cat| and |name|.
-func avgDuration(events []TraceEvent, cat string, name string) float64 {
-	totalTime := 0.0
-	numEvents := 0.0
-
-	for _, e := range events {
-		if e.Cat == cat && e.Name == name {
-			totalTime += e.Dur
-			numEvents += 1
-		}
-	}
-	return totalTime / numEvents
+// Returns the overall fps and an array of fps per one second window for the
+// given events.
+func calculateFps(model benchmarking.Model, fpsEventCat string, fpsEventName string) (fps float64, fpsPerWindow []float64) {
+	fpsEvents := model.FindEvents(benchmarking.EventsFilter{Cat: &fpsEventCat, Name: &fpsEventName})
+	return calculateFpsForEvents(fpsEvents)
 }
-
-// For the given set of |events|, find the average duration between event
-// (cat1, name1) and event (cat2, name2).
-func avgDurationBetween(events []TraceEvent, cat1 string, name1 string, cat2 string, name2 string) float64 {
-	lastEventEndTs := 0.0
-	totalTime := 0.0
-	numEvents := 0.0
-
-	for _, e := range events {
-		if e.Cat == cat2 && e.Name == name2 &&
-			lastEventEndTs != 0.0 && e.Ph != "E" && e.Ph != "e" {
-			totalTime += e.Ts - lastEventEndTs
-			lastEventEndTs = 0.0
-			numEvents += 1
-		} else if e.Cat == cat1 && e.Name == name1 {
-			if e.Ph == "E" || e.Ph == "e" {
-				lastEventEndTs = e.Ts
-			} else {
-				lastEventEndTs = e.Ts + e.Dur
-			}
-		}
-
-	}
-	return totalTime / numEvents
-}
-
-// Sorting helpers.
-type ByTimestamp []TraceEvent
-
-func (a ByTimestamp) Len() int           { return len(a) }
-func (a ByTimestamp) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByTimestamp) Less(i, j int) bool { return a[i].Ts < a[j].Ts }
 
 // The Go JSON encoder will not work if any of the values are NaN, so use 0 in
 // those cases instead.
@@ -326,51 +105,18 @@ func jsonFloat(num float64) float64 {
 }
 
 // Return all pids that have name |processName|.
-func getPidsOfName(trace Trace, processName string) []int {
-	result := make([]int, 0)
-	for _, event := range trace.SystemTraceEvents.Events {
-		if event.Name == processName {
-			result = append(result, event.Pid)
-		}
-	}
-	return result
-}
-
-// Return all events in |events| that have name |name|.
-func getEventsOfName(events []TraceEvent, name string) []TraceEvent {
-	result := make([]TraceEvent, 0)
-	for _, event := range events {
-		if event.Name == name {
-			result = append(result, event)
-		}
-	}
-	return result
-}
-
-// Return all events that have pid |pid|.
-func getEventsOfPid(events []TraceEvent, pid int) []TraceEvent {
-	result := make([]TraceEvent, 0)
-	for _, event := range events {
-		if event.Pid == pid {
-			result = append(result, event)
-		}
-	}
-	return result
-}
-
-// Return all events that have tid |tid|.
-func getEventsOfTid(events []TraceEvent, tid int) []TraceEvent {
-	result := make([]TraceEvent, 0)
-	for _, event := range events {
-		if event.Tid == tid {
-			result = append(result, event)
+func getProcessesWithName(model benchmarking.Model, processName string) []benchmarking.Process {
+	result := make([]benchmarking.Process, 0)
+	for _, process := range model.Processes {
+		if process.Name == processName {
+			result = append(result, process)
 		}
 	}
 	return result
 }
 
 // Project |events| to just their durations, i.e. |events[i].Dur|.
-func extractDurations(events []TraceEvent) []float64 {
+func extractDurations(events []benchmarking.Event) []float64 {
 	result := make([]float64, 0)
 	for _, e := range events {
 		result = append(result, e.Dur)
@@ -437,25 +183,31 @@ func computePercentile(array []float64, targetPercentile int) float64 {
 	return array[index]*(1-fractional) + array[index+1]*fractional
 }
 
-func getSystemEventsForPid(trace Trace, pid int) []SystemTraceEvent {
-	result := make([]SystemTraceEvent, 0)
-	for _, event := range trace.SystemTraceEvents.Events {
-		if event.Pid == pid {
-			result = append(result, event)
+func averageGap(events []benchmarking.Event, cat1 string, name1 string, cat2 string, name2 string) float64 {
+	gapStart := 0.0
+	totalTime := 0.0
+	numOfGaps := 0.0
+
+	for _, event := range events {
+		if event.Cat == cat1 && event.Name == name1 {
+			gapStart = event.Start + event.Dur
+		} else if event.Cat == cat2 && event.Name == name2 &&
+			gapStart != 0.0 {
+			if event.Start > gapStart {
+				totalTime += (event.Start - gapStart)
+				numOfGaps++
+			}
+			gapStart = 0.0
 		}
 	}
-	return result
+	return totalTime / numOfGaps
 }
 
 // Compute the FPS within Scenic for |trace|, also writing results to
 // |results| if provided.
-func reportScenicFps(trace Trace, testSuite string, testResultsFile *benchmarking.TestResultsFile) {
-	durations := calculateEventDurations(trace.TraceEvents)
-
-	events := trace.TraceEvents
-
+func reportScenicFps(model benchmarking.Model, testSuite string, testResultsFile *benchmarking.TestResultsFile) {
 	fmt.Printf("=== Scenic FPS ===\n")
-	fps, fpsPerTimeWindow := calculateFps(events, "gfx", "FramePresented")
+	fps, fpsPerTimeWindow := calculateFps(model, "gfx", "FramePresented")
 	fmt.Printf("%.4gfps\nfps per one-second window: %v\n", fps, fpsPerTimeWindow)
 
 	unitName := benchmarking.Milliseconds
@@ -489,8 +241,10 @@ func reportScenicFps(trace Trace, testSuite string, testResultsFile *benchmarkin
 		{0, "Scenic Compositor", "Escher GPU time"},
 	}
 
+	gfxStr := "gfx"
 	for _, e := range averageEvents {
-		avgDuration := jsonFloat(avgDuration(durations, "gfx", e.Name) / OneMsecInUsecs)
+		events := model.FindEvents(benchmarking.EventsFilter{Cat: &gfxStr, Name: &e.Name})
+		avgDuration := jsonFloat(benchmarking.AvgDuration(events) / OneMsecInUsecs)
 		if e.Label == "" {
 			e.Label = e.Name
 		}
@@ -503,25 +257,38 @@ func reportScenicFps(trace Trace, testSuite string, testResultsFile *benchmarkin
 			Values:    []float64{avgDuration},
 		})
 	}
+	renderFrameStr := "RenderFrame"
+	scenicCompositorStr := "Scenic Compositor"
+	events := model.FindEvents(benchmarking.EventsFilter{Cat: &gfxStr, Name: &renderFrameStr})
+	events = append(events, model.FindEvents(benchmarking.EventsFilter{Cat: &gfxStr, Name: &scenicCompositorStr})...)
+	sort.Sort(ByStartTime(events))
+
 	fmt.Printf("%-35s %.4gms\n", "unaccounted (mostly gfx driver)",
-		jsonFloat(avgDurationBetween(
-			events, "gfx", "RenderFrame", "gfx", "Scenic Compositor")/OneMsecInUsecs))
+		jsonFloat(averageGap(events, gfxStr, renderFrameStr, gfxStr, scenicCompositorStr)/OneMsecInUsecs))
 }
 
-func reportFlutterFpsForInstance(trace Trace, testSuite string, testResultsFile *benchmarking.TestResultsFile, uiEvents []TraceEvent, gpuEvents []TraceEvent, metricNamePrefix string) {
+func reportFlutterFpsForInstance(model benchmarking.Model, testSuite string, testResultsFile *benchmarking.TestResultsFile, uiThread benchmarking.Thread, gpuThread benchmarking.Thread, metricNamePrefix string) {
 	fmt.Printf("=== Flutter FPS (%s) ===\n", metricNamePrefix)
-	fps, fpsPerTimeWindow := calculateFps(uiEvents, "flutter", "vsync callback")
+	flutterStr := "flutter"
+	vsyncCallbackStr := "vsync callback"
+	vsyncEvents := uiThread.FindEvents(benchmarking.EventsFilter{Cat: &flutterStr, Name: &vsyncCallbackStr})
+	fps, fpsPerTimeWindow := calculateFpsForEvents(vsyncEvents)
 	fmt.Printf("%.4gfps\nfps per one-second window: %v\n", fps, fpsPerTimeWindow)
 
-	frameEvents := getEventsOfName(uiEvents, "Frame")
-	frameDurations := extractDurations(calculateEventDurations(frameEvents))
-	rasterizerEvents := getEventsOfName(gpuEvents, "GPURasterizer::Draw")
-	rasterizerDurations := extractDurations(calculateEventDurations(rasterizerEvents))
-	const buildBudget float64 = 8.0 * 1000 * 1000
+	frameStr := "Frame"
+	frameEvents := uiThread.FindEvents(benchmarking.EventsFilter{Name: &frameStr})
+
+	frameDurations := extractDurations(frameEvents)
+
+	const buildBudget float64 = 8.0 * 1000
 
 	averageFrameBuildTimeMillis := computeAverage(frameDurations)
 	worstFrameBuildTimeMillis := computeMax(frameDurations)
 	missedFrameBuildBudgetCount := len(filterByThreshold(frameDurations, buildBudget))
+
+	drawStr := "GPURasterizer::Draw"
+	rasterizerEvents := gpuThread.FindEvents(benchmarking.EventsFilter{Name: &drawStr})
+	rasterizerDurations := extractDurations(rasterizerEvents)
 
 	averageFrameRasterizerTimeMillis := computeAverage(rasterizerDurations)
 	percentile90FrameRasterizerTimeMillis := computePercentile(rasterizerDurations, 90)
@@ -533,6 +300,7 @@ func reportFlutterFpsForInstance(trace Trace, testSuite string, testResultsFile 
 		Name   string
 		Values []float64
 	}
+
 	// Metrics inspired by https://github.com/flutter/flutter/blob/master/packages/flutter_driver/lib/src/driver/timeline_summary.dart.
 	metrics := []Metric{
 		{"fps", []float64{fps}},
@@ -549,7 +317,7 @@ func reportFlutterFpsForInstance(trace Trace, testSuite string, testResultsFile 
 		{"frame_rasterizer_times", rasterizerDurations},
 	}
 	for _, metric := range metrics {
-		fullName := metricNamePrefix + metric.Name
+		fullName := metricNamePrefix + "_" + metric.Name
 		// Only print scalar metrics, as the collection based ones are too large
 		// to be useful when printed out.
 		if len(metric.Values) == 1 {
@@ -564,37 +332,38 @@ func reportFlutterFpsForInstance(trace Trace, testSuite string, testResultsFile 
 	}
 }
 
-func reportFlutterFps(trace Trace, testSuite string, testResultsFile *benchmarking.TestResultsFile, flutterAppName string) {
+func getThreadsWithPrefixAndSuffix(process benchmarking.Process, prefix string, suffix string) []benchmarking.Thread {
+	threads := make([]benchmarking.Thread, 0)
+	for _, thread := range process.Threads {
+		if strings.HasPrefix(thread.Name, prefix) && strings.HasSuffix(thread.Name, suffix) {
+			threads = append(threads, thread)
+		}
+	}
+	return threads
+}
+
+func reportFlutterFps(model benchmarking.Model, testSuite string, testResultsFile *benchmarking.TestResultsFile, flutterAppName string) {
 	if flutterAppName != "" {
 		// TODO: What does this look like if we aren't running in aot mode?  Not a
 		// concern for now, as we only use aot.
-		flutterPids := getPidsOfName(trace, "io.flutter.runner.aot")
-	FlutterPidsLoop:
-		for _, flutterPid := range flutterPids {
-			systemEvents := getSystemEventsForPid(trace, flutterPid)
-			uiSystemEvents := make([]SystemTraceEvent, 0)
-			gpuSystemEvents := make([]SystemTraceEvent, 0)
-			for _, se := range systemEvents {
-				if se.Tid != 0 && strings.HasPrefix(se.Name, flutterAppName) {
-					if strings.HasSuffix(se.Name, ".ui") {
-						uiSystemEvents = append(uiSystemEvents, se)
-					} else if strings.HasSuffix(se.Name, ".gpu") {
-						gpuSystemEvents = append(gpuSystemEvents, se)
-					}
-				}
+		flutterProcesses := getProcessesWithName(model, "io.flutter.runner.aot")
+	FlutterProcessesLoop:
+		for _, flutterProcess := range flutterProcesses {
+			gpuThreads := getThreadsWithPrefixAndSuffix(flutterProcess, flutterAppName, ".gpu")
+			uiThreads := getThreadsWithPrefixAndSuffix(flutterProcess, flutterAppName, ".ui")
+			if len(gpuThreads) != len(uiThreads) {
+				panic("Unequal ui threads and gpu threads")
 			}
-			if len(uiSystemEvents) != len(gpuSystemEvents) {
-				panic("Unequal uiSystemEvents and gpuSystemEvents lengths")
-			}
-			for i, uiSystemEvent := range uiSystemEvents {
-				gpuSystemEvent := gpuSystemEvents[i]
-				uiEvents := getEventsOfTid(trace.TraceEvents, uiSystemEvent.Tid)
-				gpuEvents := getEventsOfTid(trace.TraceEvents, gpuSystemEvent.Tid)
-				metricNamePrefix := strings.Split(uiSystemEvent.Name, ".")[0]
-				reportFlutterFpsForInstance(trace, testSuite, testResultsFile, uiEvents, gpuEvents, metricNamePrefix)
+
+			for i, uiThread := range uiThreads {
+				// TODO: We are assuming that threads are in order, instead we should verify
+				// that they have the same name % suffix
+				gpuThread := gpuThreads[i]
+				metricNamePrefix := strings.Split(uiThread.Name, ".")[0]
+				reportFlutterFpsForInstance(model, testSuite, testResultsFile, uiThread, gpuThread, metricNamePrefix)
 				// TODO: Decide how to handle multiple flutter apps that match the
 				// target app name. Just report the first one for now.
-				break FlutterPidsLoop
+				break FlutterProcessesLoop
 			}
 		}
 	}
@@ -623,29 +392,18 @@ func main() {
 	traceFile, err := ioutil.ReadFile(inputFilename)
 	check(err)
 
-	// Parsing input.
-	var trace Trace
-	err = json.Unmarshal([]byte(traceFile), &trace)
+	// Creating the trace model.
+	var model benchmarking.Model
+	model, err = benchmarking.ReadTrace(traceFile)
 	check(err)
 
-	events := trace.TraceEvents
-	if events == nil || len(events) == 0 {
-		panic("No events found")
+	if len(model.Processes) == 0 {
+		panic("No processes found in the model")
 	}
-
-	// Scrub events with title 'log'; they mess up the total timeline duration
-	// because they include events that happen way past the tracing duration.
-	filteredEvents := make([]TraceEvent, 0)
-	for _, event := range events {
-		if !(event.Cat == "" && event.Name == "log") {
-			filteredEvents = append(filteredEvents, event)
-		}
-	}
-	trace.TraceEvents = filteredEvents
 
 	var testResultsFile benchmarking.TestResultsFile
-	reportScenicFps(trace, testSuite, &testResultsFile)
-	reportFlutterFps(trace, testSuite, &testResultsFile, flutterAppName)
+	reportScenicFps(model, testSuite, &testResultsFile)
+	reportFlutterFps(model, testSuite, &testResultsFile, flutterAppName)
 
 	if outputFilename != "" {
 		outputFile, err := os.Create(outputFilename)
