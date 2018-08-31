@@ -28,7 +28,7 @@ sdk_atom("vulkan_layers") {
   category = "partner"
 
   meta = {
-    new_dest = "pkg/vulkan_layers/meta.json"
+    dest = "pkg/vulkan_layers/meta.json"
     # TODO(DX-340): this metadata is bogus, define a proper type.
     schema = "image"
     value = {
