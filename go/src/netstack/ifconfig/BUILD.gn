@@ -10,7 +10,6 @@ go_binary("ifconfig") {
 
   deps = [
     "//garnet/go/src/netstack:netstack_lib",
-    "//garnet/go/src/wlan:wlan_lib",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
     "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",

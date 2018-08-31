@@ -4,31 +4,8 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
-
-
-go_library("wlan_lib") {
-  name = "wlan"
-  deps = [
-    "//garnet/public/fidl/fuchsia.wlan.mlme($go_toolchain)",
-    "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
-    "//garnet/public/go/third_party:golang.org/x/crypto",
-  ]
-}
-
-go_library("wlanstack_lib") {
-  name = "wlanstack"
-  source_dir = "wlanstack"
-  deps = [
-    # TODO(raggi): the source imports fidl/fuchsia/wlan/stats, which is not here
-    "//garnet/go/src/netstack:netstack_lib",
-    "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
-    "//garnet/public/lib/component/go/src/app",
-    ":wlan_lib",
-  ]
-}
 
 go_library("wlantool_lib") {
   name = "wlantool"
@@ -36,42 +13,9 @@ go_library("wlantool_lib") {
 
   deps = [
     "//garnet/public/lib/component/go/src/app",
-    ":wlan_lib",
+    "//garnet/public/fidl/fuchsia.wlan.mlme($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
   ]
-}
-
-go_test("keywrap_test_bin") {
-  output_name = "keywrap_test"
-  gopackage = "wlan/keywrap"
-
-  deps = [ ":wlan_lib" ]
-}
-
-go_test("elements_test_bin") {
-  output_name = "elements_test"
-  gopackage = "wlan/wlan/elements"
-  deps = [ ":wlan_lib" ]
-}
-
-go_test("eapol_handshake_test_bin") {
-  output_name = "eapol_handshake_test"
-  gopackage = "wlan/eapol/handshake"
-
-  deps = [ ":wlan_lib" ]
-}
-
-go_test("eapol_crypto_test_bin") {
-  output_name = "eapol_crypto_test"
-  gopackage = "wlan/eapol/crypto"
-
-  deps = [ ":wlan_lib" ]
-}
-
-go_binary("wlanstack_bin") {
-  output_name = "wlanstack"
-  gopackage = "wlanstack"
-
-  deps = [ ":wlanstack_lib" ]
 }
 
 go_binary("wlantool_bin") {
@@ -79,43 +23,6 @@ go_binary("wlantool_bin") {
   gopackage = "wlantool"
 
   deps = [ ":wlantool_lib" ]
-}
-
-go_test("wlanstack_test_bin") {
-  output_name = "wlanstack_test"
-  gopackage = "wlan/wlan"
-
-  deps = [ ":wlanstack_lib" ]
-}
-
-package("wlanstack") {
-  deps = [
-    ":wlanstack_bin",
-  ]
-
-  binary = "wlanstack"
-
-  meta = [
-    {
-      path = rebase_path("wlanstack/meta/wlanstack.cmx")
-      dest = "wlanstack.cmx"
-    },
-    {
-      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-      dest = "legacy_flat_exported_dir"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("default.json")
-      dest = "config.json"
-    },
-    {
-      path = rebase_path("ap.json")
-      dest = "ap_config.json"
-    },
-  ]
 }
 
 package("wlantool") {
@@ -128,35 +35,6 @@ package("wlantool") {
   binaries = [
     {
       name = "wlan"
-    },
-  ]
-}
-
-package("wlanstack_test") {
-
-  deps = [
-    ":eapol_crypto_test_bin",
-    ":eapol_handshake_test_bin",
-    ":elements_test_bin",
-    ":keywrap_test_bin",
-    ":wlanstack_test_bin",
-  ]
-
-  tests = [
-    {
-      name = "elements_test"
-    },
-    {
-      name = "eapol_crypto_test"
-    },
-    {
-      name = "eapol_handshake_test"
-    },
-    {
-      name = "wlanstack_test"
-    },
-    {
-      name = "keywrap_test"
     },
   ]
 }
