@@ -301,7 +301,7 @@ zx_status_t MinfsCreator::ProcessCustom(int argc, char** argv, uint8_t* processe
     return ZX_OK;
 }
 
-off_t MinfsCreator::CalculateRequiredSize() {
+zx_status_t MinfsCreator::CalculateRequiredSize(off_t* out) {
     uint32_t dir_count = dir_list_.size() + 1; // dir_list_ + root
 
     // This is a rough estimate of how many directory data blocks will be needed.
@@ -317,7 +317,9 @@ off_t MinfsCreator::CalculateRequiredSize() {
     uint32_t ibmblks = (inodes + minfs::kMinfsBlockBits - 1) / minfs::kMinfsBlockBits;
     uint32_t abmblks = (blocks + minfs::kMinfsBlockBits - 1) / minfs::kMinfsBlockBits;
 
-    return (8 + fbl::round_up(inoblks, 8u) + fbl::round_up(ibmblks, 8u) + fbl::round_up(abmblks, 8u) + blocks) * minfs::kMinfsBlockSize;
+    *out = (8 + fbl::round_up(inoblks, 8u) + fbl::round_up(ibmblks, 8u) +
+            fbl::round_up(abmblks, 8u) + blocks) * minfs::kMinfsBlockSize;
+    return ZX_OK;
 }
 
 zx_status_t MinfsCreator::Mkfs() {

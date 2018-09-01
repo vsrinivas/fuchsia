@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
 #include <thread>
 #include <vector>
 
@@ -11,22 +12,27 @@
 
 #include "blobfs.h"
 
-// Add the blob located at |path| on host to the |blobfs| blobfs store.
-zx_status_t AddBlob(blobfs::Blobfs* blobfs, const char* path) {
+namespace {
+
+// Add the blob described by |info| on host to the |blobfs| blobfs store.
+zx_status_t AddBlob(blobfs::Blobfs* blobfs, MerkleInfo& info) {
+    const char* path = info.path.c_str();
     fbl::unique_fd data_fd(open(path, O_RDONLY, 0644));
     if (!data_fd) {
         fprintf(stderr, "error: cannot open '%s'\n", path);
         return ZX_ERR_IO;
     }
-    zx_status_t status;
-    if ((status = blobfs::blobfs_add_blob(blobfs, data_fd.get())) != ZX_OK) {
-        if (status != ZX_ERR_ALREADY_EXISTS) {
-            fprintf(stderr, "blobfs: Failed to add blob '%s': %d\n", path, status);
-            return status;
-        }
+    zx_status_t status = blobfs::blobfs_add_blob_with_merkle(blobfs, data_fd.get(), info.length,
+                                                             fbl::move(info.digest),
+                                                             fbl::move(info.merkle));
+    if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
+        fprintf(stderr, "blobfs: Failed to add blob '%s': %d\n", path, status);
+        return status;
     }
     return ZX_OK;
 }
+
+} // namespace
 
 zx_status_t BlobfsCreator::Usage() {
     zx_status_t status = FsCreator::Usage();
@@ -88,7 +94,8 @@ zx_status_t BlobfsCreator::ProcessManifestLine(FILE* manifest, const char* dir_p
         return ZX_ERR_INVALID_ARGS;
     }
 
-    return ProcessBlob(src);
+    blob_list_.push_back(src);
+    return ZX_OK;
 }
 
 zx_status_t BlobfsCreator::ProcessCustom(int argc, char** argv, uint8_t* processed) {
@@ -101,20 +108,97 @@ zx_status_t BlobfsCreator::ProcessCustom(int argc, char** argv, uint8_t* process
         return ZX_ERR_INVALID_ARGS;
     }
 
-    zx_status_t status;
-    if ((status = ProcessBlob(argv[1])) != ZX_OK) {
-        return status;
-    }
-
+    blob_list_.push_back(argv[1]);
     *processed = required_args;
     return ZX_OK;
 }
 
-off_t BlobfsCreator::CalculateRequiredSize() {
+zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
+    std::vector<std::thread> threads;
+    unsigned blob_index = 0;
+    unsigned n_threads = std::thread::hardware_concurrency();
+    if (!n_threads) {
+        n_threads = 4;
+    }
+    zx_status_t status = ZX_OK;
+    std::mutex mtx;
+    for (unsigned j = n_threads; j > 0; j--) {
+        threads.push_back(std::thread([&] {
+            unsigned i = 0;
+            while (true) {
+                mtx.lock();
+                if (status != ZX_OK) {
+                    return;
+                }
+                i = blob_index++;
+                mtx.unlock();
+                if (i >= blob_list_.size()) {
+                    return;
+                }
+                const char* path = blob_list_[i].c_str();
+                zx_status_t res;
+                if ((res = AppendDepfile(path)) != ZX_OK) {
+                    mtx.lock();
+                    status = res;
+                    mtx.unlock();
+                    return;
+                }
+
+                MerkleInfo info;
+                fbl::unique_fd data_fd(open(path, O_RDONLY, 0644));
+                if ((res = blobfs::blobfs_create_merkle(data_fd.get(), &info.digest,
+                                                        &info.merkle)) != ZX_OK) {
+                    mtx.lock();
+                    status = res;
+                    mtx.unlock();
+                    return;
+                }
+
+                struct stat s;
+                if (fstat(data_fd.get(), &s) < 0) {
+                    mtx.lock();
+                    status = ZX_ERR_BAD_STATE;
+                    mtx.unlock();
+                    return;
+                }
+                info.path = path;
+                info.length = s.st_size;
+
+                mtx.lock();
+                merkle_list_.push_back(fbl::move(info));
+                mtx.unlock();
+            }
+        }));
+    }
+
+    for (unsigned i = 0; i < threads.size(); i++) {
+        threads[i].join();
+    }
+
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Remove all duplicate blobs by first sorting the merkle trees by
+    // digest, and then by reshuffling the vector to exclude duplicates.
+    std::sort(merkle_list_.begin(), merkle_list_.end(), DigestCompare());
+    auto compare = [](const MerkleInfo& lhs, const MerkleInfo& rhs) {
+        return lhs.digest == rhs.digest;
+    };
+    auto it = std::unique(merkle_list_.begin(), merkle_list_.end(), compare);
+    merkle_list_.resize(std::distance(merkle_list_.begin(), it));
+
+    for (const auto& info : merkle_list_) {
+        blobfs::blobfs_inode_t node;
+        node.blob_size = info.length;
+        data_blocks_ += MerkleTreeBlocks(node) + BlobDataBlocks(node);
+    }
+
     blobfs::blobfs_info_t info;
     info.inode_count = blobfs::kBlobfsDefaultInodeCount;
     info.block_count = data_blocks_;
-    return (data_blocks_ + blobfs::DataStartBlock(info)) * blobfs::kBlobfsBlockSize;
+    *out = (data_blocks_ + blobfs::DataStartBlock(info)) * blobfs::kBlobfsBlockSize;
+    return ZX_OK;
 }
 
 zx_status_t BlobfsCreator::Mkfs() {
@@ -159,30 +243,26 @@ zx_status_t BlobfsCreator::Add() {
 
     std::vector<std::thread> threads;
     std::mutex mtx;
-    unsigned bi = 0;
 
     unsigned n_threads = std::thread::hardware_concurrency();
     if (!n_threads) {
         n_threads = 4;
     }
+    unsigned blob_index = 0;
     for (unsigned j = n_threads; j > 0; j--) {
         threads.push_back(std::thread([&] {
             unsigned i = 0;
             while (true) {
                 mtx.lock();
-                i = bi++;
-                mtx.unlock();
-                if (i >= blob_list_.size()) {
-                    return;
-                }
-                zx_status_t res;
-                if ((res = AppendDepfile(blob_list_[i].c_str())) != ZX_OK) {
-                    mtx.lock();
-                    status = res;
+                i = blob_index++;
+                if (i >= merkle_list_.size()) {
                     mtx.unlock();
                     return;
                 }
-                if ((res = AddBlob(blobfs.get(), blob_list_[i].c_str())) < 0) {
+                mtx.unlock();
+
+                zx_status_t res;
+                if ((res = AddBlob(blobfs.get(), merkle_list_[i])) < 0) {
                     mtx.lock();
                     status = res;
                     mtx.unlock();
@@ -197,29 +277,6 @@ zx_status_t BlobfsCreator::Add() {
     }
 
     return status;
-}
-
-zx_status_t BlobfsCreator::ProcessBlob(const char* path) {
-    struct stat stats;
-    if (stat(path, &stats) < 0) {
-        fprintf(stderr, "Failed to stat blob %s\n", path);
-        return ZX_ERR_IO;
-    }
-
-    zx_status_t status;
-    if ((status = ProcessBlocks(stats.st_size)) != ZX_OK) {
-        return status;
-    }
-
-    blob_list_.push_back(path);
-    return ZX_OK;
-}
-
-zx_status_t BlobfsCreator::ProcessBlocks(off_t data_size) {
-    blobfs::blobfs_inode_t node;
-    node.blob_size = data_size;
-    data_blocks_ += MerkleTreeBlocks(node) + BlobDataBlocks(node);
-    return ZX_OK;
 }
 
 int main(int argc, char** argv) {

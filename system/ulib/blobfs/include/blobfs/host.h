@@ -136,9 +136,18 @@ private:
 
 zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);
 
+// Create a merkle tree and digest from the supplied file.
+zx_status_t blobfs_create_merkle(int data_fd, digest::Digest* out_digest,
+                                 fbl::Array<uint8_t>* out_merkle);
+
 // blobfs_add_blob may be called by multiple threads to gain concurrent
 // merkle tree generation. No other methods are thread safe.
 zx_status_t blobfs_add_blob(Blobfs* bs, int data_fd);
+
+// Identical to blobfs_add_blob, but uses a precomputed Merkle Tree and digest.
+zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, int data_fd, uint64_t length,
+                                        digest::Digest digest, fbl::Array<uint8_t> merkle);
+
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
                         const fbl::Vector<size_t>& extent_lengths);
 

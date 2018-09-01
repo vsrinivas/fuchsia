@@ -499,9 +499,12 @@ zx_status_t FsCreator::ResizeFile(off_t requested_size, struct stat stats) {
     }
 
     // Calculate the total required size for the fs image, given all files that have been processed
-    // up to this point. Note that for blobfs there is currently no de-duplification of files, so
-    // the estimate might be slightly higher than the minimum required.
-    off_t required_size = CalculateRequiredSize();
+    // up to this point.
+    off_t required_size;
+    zx_status_t status = CalculateRequiredSize(&required_size);
+    if (status != ZX_OK) {
+        return status;
+    }
 
     bool is_block = S_ISBLK(stats.st_mode);
 

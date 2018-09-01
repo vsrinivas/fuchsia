@@ -99,7 +99,7 @@ protected:
     }
 
     // Calculates the minimum fs size required for all files processed up to this point.
-    virtual off_t CalculateRequiredSize() = 0;
+    virtual zx_status_t CalculateRequiredSize(off_t* out) = 0;
 
     // Commands.
     // Creates the fs at fd_.

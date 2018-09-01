@@ -24,7 +24,7 @@ private:
 
     zx_status_t ProcessManifestLine(FILE* manifest, const char* dir_path) override;
     zx_status_t ProcessCustom(int argc, char** argv, uint8_t* processed) override;
-    off_t CalculateRequiredSize() override;
+    zx_status_t CalculateRequiredSize(off_t* out) override;
 
     zx_status_t Mkfs() override;
     zx_status_t Fsck() override;
