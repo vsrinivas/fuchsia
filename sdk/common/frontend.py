@@ -12,15 +12,6 @@ import tarfile
 import tempfile
 
 
-@contextlib.contextmanager
-def _create_temp_dir():
-    temp_dir = tempfile.mkdtemp(prefix='fuchsia-bazel')
-    try:
-        yield temp_dir
-    finally:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-
-
 class Frontend(object):
     '''Processes the contents of an SDK tarball and runs them through various
     transformation methods.
@@ -30,9 +21,10 @@ class Frontend(object):
     the atom's metadata in JSON format.
     '''
 
-    def __init__(self, archive, output):
+    def __init__(self, output='', archive='', directory=''):
         self._archive = archive
-        self.output = output
+        self._directory = directory
+        self.output = os.path.realpath(output)
         self._source_dir = ''
 
     def source(self, *args):
@@ -47,14 +39,21 @@ class Frontend(object):
         '''Builds a path in the output directory.
         This method also ensures that the directory hierarchy exists in the
         output directory.
+        Behaves correctly if the first argument is already within the output
+        directory.
         '''
-        return self.make_dir(os.path.join(self.output, *args))
+        if (os.path.commonprefix([os.path.realpath(args[0]), self.output]) ==
+            self.output):
+          path = os.path.join(*args)
+        else:
+          path = os.path.join(self.output, *args)
+        return self.make_dir(path)
 
-    def prepare(self):
+    def prepare(self, arch):
         '''Called before elements are processed.'''
         pass
 
-    def finalize(self):
+    def finalize(self, arch):
         '''Called after all elements have been processed.'''
         pass
 
@@ -62,32 +61,26 @@ class Frontend(object):
         '''Runs this frontend through the contents of the archive.
         Returns true if successful.
         '''
-        with _create_temp_dir() as temp_dir:
-            self._source_dir = temp_dir
+        with self._create_archive_dir() as archive_dir:
+            self._source_dir = archive_dir
 
             # Convenience for loading metadata files below.
             def load_metadata(*args):
                 with open(self.source(*args), 'r') as meta_file:
                     return json.load(meta_file)
 
-            # Extract the tarball into the temporary directory.
-            # This is vastly more efficient than accessing files one by one via
-            # the tarfile API.
-            with tarfile.open(self._archive) as archive:
-                archive.extractall(temp_dir)
-
-            self.prepare()
+            manifest = load_metadata('meta', 'manifest.json')
+            self.prepare(manifest['arch'])
 
             # Process each SDK atom.
-            manifest = load_metadata('meta', 'manifest.json')
             for part in manifest['parts']:
                 atom = load_metadata(part)
                 type = atom['type']
                 getattr(self, 'install_%s_atom' % type, self._handle_atom)(atom)
 
-            self.finalize()
+            self.finalize(manifest['arch'])
 
-            # Reset the source directory, which is about to disappear.
+            # Reset the source directory, which may be about to disappear.
             self._source_dir = ''
         return True
 
@@ -108,3 +101,21 @@ class Frontend(object):
             else:
                 raise
         return file_path
+
+    @contextlib.contextmanager
+    def _create_archive_dir(self):
+        if self._directory:
+            yield self._directory
+        elif self._archive:
+            temp_dir = tempfile.mkdtemp(prefix='fuchsia-bazel')
+            # Extract the tarball into the temporary directory.
+            # This is vastly more efficient than accessing files one by one via
+            # the tarfile API.
+            with tarfile.open(self._archive) as archive:
+                archive.extractall(temp_dir)
+            try:
+                yield temp_dir
+            finally:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+        else:
+            raise Exception('Error: archive or directory must be set')

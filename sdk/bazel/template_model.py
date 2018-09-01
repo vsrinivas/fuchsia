@@ -21,14 +21,24 @@ class CppSourceLibrary(_CppLibrary):
         self.srcs = []
 
 
+class CppPrebuiltSet(object):
+
+    def __init__(self, link):
+        self.link_lib = link
+        self.dist_lib = ''
+        self.dist_path = ''
+
+
 class CppPrebuiltLibrary(_CppLibrary):
 
-    def __init__(self, name, target_arch):
+    # TODO(DX-340): remove target_arch argument.
+    def __init__(self, name, target_arch=''):
         super(CppPrebuiltLibrary, self).__init__(name)
         self.prebuilt = ""
         self.is_static = False
         self.target_arch = target_arch
         self.packaged_files = {}
+        self.prebuilts = {}
 
 
 class Sysroot(object):

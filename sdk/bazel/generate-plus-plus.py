@@ -36,9 +36,12 @@ def sanitize(name):
 
 class BazelBuilder(Frontend):
 
-    def __init__(self, archive, output):
-        super(BazelBuilder, self).__init__(archive, output)
+    def __init__(self, **kwargs):
+        super(BazelBuilder, self).__init__(**kwargs)
+        self.has_dart = False
+        self.has_sysroot = False
         self.dart_vendor_packages = {}
+        self.target_arches = []
 
 
     def _bail(self):
@@ -46,6 +49,17 @@ class BazelBuilder(Frontend):
         not yet been converted.
         '''
         raise Exception('Not implemented!')
+
+
+    def _copy_files(self, files, root, destination, result=[]):
+        '''Copies some files from a given root directory and writes the
+        resulting relative paths to a list.
+        '''
+        for file in files:
+            relative_path = os.path.relpath(file, root)
+            dest = self.dest(destination, relative_path)
+            shutil.copy2(self.source(file), dest)
+            result.append(relative_path)
 
 
     def local(self, *args):
@@ -59,7 +73,6 @@ class BazelBuilder(Frontend):
         template = lookup.get_template(template_name + '.mako')
         with open(path, 'a' if append else 'w') as file:
             file.write(template.render(data=data))
-
 
     def add_dart_vendor_package(self, name, version):
         '''Adds a reference to a new Dart third-party package.'''
@@ -76,31 +89,33 @@ class BazelBuilder(Frontend):
             self.dart_vendor_packages[name] = version
 
 
-    def prepare(self):
+    def prepare(self, arch):
+        self.target_arches = arch['target']
         # Copy the static files.
         shutil.copytree(self.local('base'), self.output)
 
 
-    def finalize(self):
-        # Generate the crosstool.bzl based on the available sysroots.
-        self.install_crosstool()
-        # Write BUILD files for tools directories.
+    def finalize(self, arch):
+        self.install_crosstool(arch)
+        self.install_tools()
+        self.install_dart()
+
+
+    def install_tools(self):
+        '''Write BUILD files for tools directories.'''
         tools_root = os.path.join(self.output, 'tools')
         for directory, _, _ in os.walk(tools_root, topdown=True):
             self.write_file(os.path.join(directory, 'BUILD'), 'tools', {})
-        # Write the rule for setting up Dart packages.
-        # TODO(pylaligand): this process currently does not capture dependencies
-        # between vendor packages.
-        self.write_file(self.dest('build_defs', 'setup_dart.bzl'),
-                       'setup_dart_bzl', self.dart_vendor_packages)
 
 
-    def install_crosstool(self):
-        sysroot_dir = self.dest('arch')
-        if not os.path.isdir(sysroot_dir):
+    def install_crosstool(self, arches):
+        '''Generates crosstool.bzl based on the availability of sysroot
+        versions.
+        '''
+        if not self.has_sysroot:
             return
         crosstool = model.Crosstool()
-        for arch in os.listdir(sysroot_dir):
+        for arch in arches:
             if arch in ARCH_MAP:
                 crosstool.arches.append(model.Arch(arch, ARCH_MAP[arch]))
             else:
@@ -115,16 +130,25 @@ class BazelBuilder(Frontend):
                         'toolchain_build', crosstool)
 
 
+    def install_dart(self):
+        if not self.has_dart:
+            return
+        # Write the rule for setting up Dart packages.
+        # TODO(pylaligand): this process currently does not capture dependencies
+        # between vendor packages.
+        self.write_file(self.dest('build_defs', 'setup_dart.bzl'),
+                       'setup_dart_bzl', self.dart_vendor_packages)
+
+
     def install_dart_library_atom(self, atom):
+        self.has_dart = True
+
         package_name = atom['name']
         name = sanitize(package_name)
         library = model.DartLibrary(name, package_name)
         base = self.dest('dart', name)
 
-        for file in atom['sources']:
-            relative_path = os.path.relpath(file, atom['root'])
-            dest = self.make_dir(os.path.join(base, relative_path))
-            shutil.copy2(self.source(file), dest)
+        self._copy_files(atom['sources'], atom['root'], base)
 
         for dep in atom['deps']:
             library.deps.append('//dart/' + sanitize(dep))
@@ -137,91 +161,63 @@ class BazelBuilder(Frontend):
         self.write_file(os.path.join(base, 'BUILD'), 'dart_library', library)
 
 
-    def install_cpp_prebuilt_atom(self, atom, check_arch=True):
-        '''Installs a prebuilt atom from the "cpp" domain.'''
-        self._bail()
-        if check_arch and atom.tags['arch'] != 'target':
-            print('Only libraries compiled for a target are supported, '
-                  'skipping %s.' % atom.id)
-            return
-
-        name = sanitize(atom.id.name)
-        library = model.CppPrebuiltLibrary(name, self.metadata.target_arch)
+    def install_cc_prebuilt_library_atom(self, atom):
+        name = sanitize(atom['name'])
+        library = model.CppPrebuiltLibrary(name)
+        library.is_static = atom['format'] == 'static'
         base = self.dest('pkg', name)
 
-        for file in atom.files:
-            destination = file.destination
-            extension = os.path.splitext(destination)[1][1:]
-            if extension == 'so' or extension == 'a' or extension == 'o':
-                relative_dest = os.path.join('arch', self.metadata.target_arch,
-                                             destination)
-                dest = os.path.join(base, relative_dest)
-                if os.path.isfile(dest):
-                    raise Exception('File already exists: %s.' % dest)
-                self.make_dir(dest)
-                shutil.copy2(file.source, dest)
-                if ((extension == 'so' or extension == 'a') and
-                        destination.startswith('lib')):
-                    if library.prebuilt:
-                        raise Exception('Multiple prebuilts for %s.' % dest)
-                    library.prebuilt = relative_dest
-                    library.is_static = extension == 'a'
-                if file.is_packaged:
-                    package_path = 'lib/%s' % os.path.basename(relative_dest)
-                    library.packaged_files[package_path] = relative_dest
-            elif self.is_overlay:
-                # Only binaries get installed in overlay mode.
-                continue
-            elif (extension == 'h' or extension == 'modulemap' or
-                    extension == 'inc' or extension == 'rs'):
-                dest = self.make_dir(os.path.join(base, destination))
-                shutil.copy2(file.source, dest)
-                if extension == 'h':
-                    library.hdrs.append(destination)
-            else:
-                dest = self.make_dir(os.path.join(base, destination))
-                shutil.copy2(file.source, dest)
+        self._copy_files(atom['headers'], atom['root'], base, library.hdrs)
 
-        for dep_id in atom.deps:
-            library.deps.append('//pkg/' + sanitize(dep_id.name))
-        library.includes.append('include')
+        for arch in self.target_arches:
+            def _copy_prebuilt(path, category):
+                relative_dest = os.path.join('arch', arch, category,
+                                             os.path.basename(path))
+                dest = self.dest(base, relative_dest)
+                shutil.copy2(self.source(path), dest)
+                return relative_dest
 
-        # Only write the prebuilt library BUILD top when not in overlay mode.
-        if not self.is_overlay:
-            self.write_file(os.path.join(base, 'BUILD'),
-                            'cc_prebuilt_library_top', library)
+            binaries = atom['binaries'][arch]
+            prebuilt_set = model.CppPrebuiltSet(_copy_prebuilt(binaries['link'],
+                                                              'lib'))
+            if 'dist' in binaries:
+                dist = binaries['dist']
+                prebuilt_set.dist_lib = _copy_prebuilt(dist, 'dist')
+                prebuilt_set.dist_path = 'lib/' + os.path.basename(dist)
 
-        # Write the arch-specific target.
-        self.write_file(os.path.join(base, 'BUILD'),
-                        'cc_prebuilt_library_srcs', library, append=True)
+            # TODO(DX-340): this is only to reach parity with the old version of
+            # the frontend, should be removed.
+            if 'debug' in binaries:
+                _copy_prebuilt(binaries['debug'], 'debug')
+
+            library.prebuilts[arch] = prebuilt_set
+
+        for dep in atom['deps']:
+            library.deps.append('//pkg/' + sanitize(dep))
+
+        library.includes.append(os.path.relpath(atom['include_dir'],
+                                                atom['root']))
+
+        # TODO(DX-340): remove the _top and _srcs templates.
+        self.write_file(os.path.join(base, 'BUILD'), 'cc_prebuilt_library',
+                        library)
 
 
-    def install_cpp_source_atom(self, atom):
-        '''Installs a source atom from the "cpp" domain.'''
-        self._bail()
-
-        name = sanitize(atom.id.name)
+    def install_cc_source_library_atom(self, atom):
+        name = sanitize(atom['name'])
         library = model.CppSourceLibrary(name)
         base = self.dest('pkg', name)
 
-        for file in atom.files:
-            dest = self.make_dir(os.path.join(base, file.destination))
-            shutil.copy2(file.source, dest)
-            extension = os.path.splitext(file.destination)[1][1:]
-            if extension == 'h':
-                library.hdrs.append(file.destination)
-            elif extension == 'c' or extension == 'cc' or extension == 'cpp':
-                library.srcs.append(file.destination)
-            elif extension == 'json':
-                continue
-            else:
-                raise Exception('Error: unknow file extension "%s" for %s.' %
-                                (extension, atom.id))
+        self._copy_files(atom['headers'], atom['root'], base, library.hdrs)
+        self._copy_files(atom['sources'], atom['root'], base, library.srcs)
 
-        for dep_id in atom.deps:
-            library.deps.append('//pkg/' + sanitize(dep_id.name))
+        for dep in atom['deps']:
+            library.deps.append('//pkg/' + sanitize(dep))
 
-        library.includes.append('include')
+        # TODO(DX-340): add FIDL deps.
+
+        library.includes.append(os.path.relpath(atom['include_dir'],
+                                                atom['root']))
 
         self.write_file(os.path.join(base, 'BUILD'), 'cc_library', library)
 
@@ -248,55 +244,41 @@ class BazelBuilder(Frontend):
                         'sysroot_pkg_dist', data, append=True)
 
 
-    def install_exe_atom(self, atom):
-        '''Installs an atom from the "exe" domain.'''
-        self._bail()
-        if atom.tags['arch'] != 'host':
-            print('Only host executables are supported, skipping %s.' % atom.id)
-            return
-        if self.is_overlay:
-            return
-        for file in atom.files:
-            extension = os.path.splitext(file.destination)[1][1:]
-            if extension == 'json':
-                continue
-            destination = self.make_dir(self.dest('tools', file.destination))
-            shutil.copy2(file.source, destination)
+    def install_host_tool_atom(self, atom):
+        self._copy_files(atom['files'], atom['root'], 'tools')
 
 
-    def install_fidl_atom(self, atom):
-        '''Installs an atom from the "fidl" domain.'''
-        self._bail()
-        name = sanitize(atom.id.name)
-        data = model.FidlLibrary(name, atom.tags['name'])
+    def install_fidl_library_atom(self, atom):
+        name = sanitize(atom['name'])
+        data = model.FidlLibrary(name, atom['name'])
         base = self.dest('fidl', name)
-        for file in atom.files:
-            extension = os.path.splitext(file.destination)[1][1:]
-            if extension == 'json':
-                continue
-            dest = self.make_dir(os.path.join(base, file.destination))
-            shutil.copy2(file.source, dest)
-            data.srcs.append(file.destination)
-        for dep_id in atom.deps:
-            data.deps.append('//fidl/' + sanitize(dep_id.name))
+        self._copy_files(atom['sources'], atom['root'], base, data.srcs)
+        for dep in atom['deps']:
+            data.deps.append('//fidl/' + sanitize(dep))
         self.write_file(os.path.join(base, 'BUILD'), 'fidl', data)
 
 
 def main():
     parser = argparse.ArgumentParser(
-            description=('Lays out a Bazel workspace for a given SDK tarball.'))
-    parser.add_argument('--archive',
-                        help='Path to the SDK archive to ingest',
-                        required=True)
+            description='Lays out a Bazel workspace for a given SDK tarball.')
+    source_group = parser.add_mutually_exclusive_group(required=True)
+    source_group.add_argument('--archive',
+                              help='Path to the SDK archive to ingest',
+                              default='')
+    source_group.add_argument('--directory',
+                              help='Path to the SDK directory to ingest',
+                              default='')
     parser.add_argument('--output',
                         help='Path to the directory where to install the SDK',
                         required=True)
     args = parser.parse_args()
 
     # Remove any existing output.
-    shutil.rmtree(args.output, True)
+    shutil.rmtree(args.output, ignore_errors=True)
 
-    builder = BazelBuilder(args.archive, args.output)
+    builder = BazelBuilder(archive=args.archive,
+                           directory=args.directory,
+                           output=args.output)
     return 0 if builder.run() else 1
 
 
