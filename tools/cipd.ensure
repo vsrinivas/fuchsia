@@ -7,3 +7,7 @@ $ParanoidMode CheckPresence
 # Chromium media test data
 @Subdir test_data/media/third_party/chromium_media_test_data
 fuchsia/test_data/third_party/chromium_media_test_data 90a7f69f134fffcb58c127847fc35f3ae56684dc
+
+# Chromium media test data downstream
+@Subdir test_data/media/third_party/chromium_media_test_data_downstream
+fuchsia/test_data/third_party/chromium_media_test_data_downstream 6c913dc0cd4d4812e1fefd3e58de7660805a380b
