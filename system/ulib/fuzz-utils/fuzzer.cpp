@@ -10,6 +10,7 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fuzz-utils/fuzzer.h>
+#include <lib/fdio/spawn.h>
 #include <task-utils/walker.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -23,6 +24,7 @@ enum Command : uint32_t {
     kHelp,
     kList,
     kSeeds,
+    kStart,
 };
 
 // Usage information for specific tool subcommands.
@@ -35,6 +37,8 @@ const struct {
     {kHelp, "help", "", "Print this message and exit."},
     {kList, "list", "[name]", "Lists fuzzers matching 'name' if provided, or all fuzzers."},
     {kSeeds, "seeds", "name", "Lists the seed corpus location(s) for the fuzzer."},
+    {kStart, "start", "name [...]",
+     "Starts the named fuzzer.  Additional arguments are passed to the fuzzer."},
 };
 
 } // namespace
@@ -53,8 +57,10 @@ void Fuzzer::Reset() {
     executable_.clear();
     root_.clear();
     resource_path_.Reset();
+    data_path_.Reset();
     inputs_.clear();
     options_.clear();
+    process_.reset();
     out_ = stdout;
     err_ = stderr;
 }
@@ -82,6 +88,8 @@ zx_status_t Fuzzer::Run(StringList* args) {
         return List();
     case kSeeds:
         return Seeds();
+    case kStart:
+        return Start();
     default:
         // Shouldn't get here.
         ZX_DEBUG_ASSERT(false);
@@ -268,6 +276,62 @@ void Fuzzer::FindFuzzers(const char* name, StringMap* out) {
     }
 }
 
+void Fuzzer::GetArgs(StringList* out) {
+    out->clear();
+    out->push_back(executable_.c_str());
+    const char* key;
+    const char* val;
+    options_.begin();
+    while (options_.next(&key, &val)) {
+        out->push_back(fbl::StringPrintf("-%s=%s", key, val).c_str());
+    }
+    for (const char* input = inputs_.first(); input; input = inputs_.next()) {
+        out->push_back(input);
+    }
+}
+
+zx_status_t Fuzzer::Execute(bool wait_for_completion) {
+    zx_status_t rc;
+
+    StringList args;
+    GetArgs(&args);
+    const char* argv[args.length() + 1];
+    const char** p = argv;
+    if ((*p++ = args.first())) {
+        while ((*p++ = args.next())) {
+        }
+    }
+
+    if ((rc = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv,
+                         process_.reset_and_get_address())) != ZX_OK) {
+        fprintf(err_, "Failed to spawn '%s': %s\n", argv[0], zx_status_get_string(rc));
+        return rc;
+    }
+
+    if (!wait_for_completion) {
+        return ZX_OK;
+    }
+
+    if ((rc = process_.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr)) != ZX_OK) {
+        fprintf(err_, "Failed while waiting for process to end: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    zx_info_process_t proc_info;
+    if ((rc = process_.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr,
+                                nullptr)) != ZX_OK) {
+        fprintf(err_, "Failed to get exit code for process: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    if (proc_info.return_code != ZX_OK) {
+        fprintf(err_, "Fuzzer returned non-zero exit code: %" PRId64 "\n", proc_info.return_code);
+        return ZX_ERR_INTERNAL;
+    }
+
+    return ZX_OK;
+}
+
 // |fuzzing::Walked| is a |TaskEnumerator| used to find and print status information about a given
 // fuzzer |executable|.
 class Walker final : public TaskEnumerator {
@@ -390,10 +454,24 @@ zx_status_t Fuzzer::SetFuzzer(const char* name) {
         resource_path_.Reset();
     }
 
+    // Ensure the directory that will hold the fuzzing artifacts is present.
+    if ((rc = RebasePath("data", &data_path_)) != ZX_OK ||
+        (rc = data_path_.Ensure("fuzzing")) != ZX_OK ||
+        (rc = data_path_.Push("fuzzing")) != ZX_OK ||
+        (rc = data_path_.Ensure(package.c_str())) != ZX_OK ||
+        (rc = data_path_.Push(package.c_str())) != ZX_OK ||
+        (rc = data_path_.Ensure(target.c_str())) != ZX_OK ||
+        (rc = data_path_.Push(target.c_str())) != ZX_OK) {
+        fprintf(err_, "Failed to establish data path for '%s/%s': %s\n", package.c_str(),
+                target.c_str(), zx_status_get_string(rc));
+        return ZX_ERR_IO;
+    }
+
     return ZX_OK;
 }
 
 zx_status_t Fuzzer::LoadOptions() {
+    zx_status_t rc;
     switch (cmd_) {
     case kHelp:
     case kList:
@@ -405,7 +483,39 @@ zx_status_t Fuzzer::LoadOptions() {
         break;
     }
 
-    return ZX_ERR_NOT_SUPPORTED;
+    // Artifacts go in the data directory
+    if ((rc = SetOption("artifact_prefix", data_path_.c_str())) != ZX_OK) {
+        return rc;
+    }
+
+    // Early exit if no resources
+    if (strlen(resource_path_.c_str()) <= 1) {
+        return ZX_OK;
+    }
+
+    // Record the (optional) dictionary
+    size_t dict_size;
+    if ((rc = resource_path_.GetSize("dictionary", &dict_size)) == ZX_OK && dict_size != 0 &&
+        (rc = SetOption("dict", resource_path_.Join("dictionary").c_str())) != ZX_OK) {
+        fprintf(err_, "failed to set dictionary option: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    // Read the (optional) options file
+    fbl::String options = resource_path_.Join("options");
+    FILE* f = fopen(options.c_str(), "r");
+    if (f) {
+        auto close_f = fbl::MakeAutoCall([&f]() { fclose(f); });
+        char buffer[PATH_MAX];
+        while (fgets(buffer, sizeof(buffer), f)) {
+            if ((rc = SetOption(buffer)) != ZX_OK) {
+                fprintf(err_, "Failed to set option: %s", zx_status_get_string(rc));
+                return rc;
+            }
+        }
+    }
+
+    return ZX_OK;
 }
 
 // Specific subcommands
@@ -454,6 +564,15 @@ zx_status_t Fuzzer::Seeds() {
         fprintf(out_, "%s\n", buffer);
     }
     return ZX_OK;
+}
+
+zx_status_t Fuzzer::Start() {
+    // If no inputs, use the default corpus
+    if (inputs_.is_empty()) {
+        inputs_.push_front(data_path_.Join("corpus").c_str());
+    }
+
+    return Execute(false /* !wait_for_completion */);
 }
 
 } // namespace fuzzing

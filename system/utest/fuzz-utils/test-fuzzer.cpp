@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <fbl/auto_call.h>
+#include <fbl/string_printf.h>
 #include <unittest/unittest.h>
 
 #include "fuzzer-fixture.h"
@@ -31,6 +32,10 @@ TestFuzzer::~TestFuzzer() {
 void TestFuzzer::Reset() {
     Fuzzer::Reset();
     args_.clear();
+    package_path_.clear();
+    data_path_.clear();
+    executable_.clear();
+    dictionary_.clear();
 
     if (out_) {
         fclose(out_);
@@ -99,11 +104,63 @@ bool TestFuzzer::InStdErr(const char* needle) {
     return strcasestr(errbuf_, needle) != nullptr;
 }
 
+int TestFuzzer::FindArg(const char* fmt, ...) {
+    fbl::StringBuffer<PATH_MAX> buffer;
+    va_list ap;
+    va_start(ap, fmt);
+    buffer.AppendVPrintf(fmt, ap);
+    va_end(ap);
+    int result = 0;
+    for (const char* arg = args_.first(); arg; arg = args_.next()) {
+        if (strcmp(arg, buffer.c_str()) == 0) {
+            return result;
+        }
+        ++result;
+    }
+    return -1;
+}
+
 bool TestFuzzer::CheckProcess(zx_handle_t process, const char* executable) {
     if (executable) {
         set_executable(executable);
     }
     return Fuzzer::CheckProcess(process);
+}
+
+// Protected methods
+
+zx_status_t TestFuzzer::Execute(bool wait_for_completion) {
+    GetArgs(&args_);
+
+    const char* arg0 = args_.first();
+    char* str = strdup(arg0 + strlen(fixture_.path().c_str()));
+    ZX_ASSERT(str);
+    auto cleanup = fbl::MakeAutoCall([str]() { free(str); });
+
+    const char *package, *version, *target;
+    if (strcmp(strsep(&str, "/"), "pkgfs") != 0) {
+        package = "zircon_fuzzers";
+        version = "0";
+        strsep(&str, "/");
+        strsep(&str, "/");
+        target = strsep(&str, "/");
+    } else {
+        strsep(&str, "/");
+        package = strsep(&str, "/");
+        version = strsep(&str, "/");
+        strsep(&str, "/");
+        target = strsep(&str, "/");
+    }
+    ZX_ASSERT(package);
+    ZX_ASSERT(version);
+    ZX_ASSERT(target);
+    executable_.Set(arg0);
+    data_path_.Set(fixture_.path("data/fuzzing/%s/%s", package, target).c_str());
+    dictionary_.Set(
+        fixture_.path("pkgfs/packages/%s/%s/data/%s/dictionary", package, version, target).c_str());
+    package_path_.Set(fixture_.path("pkgfs/packages/%s/%s", package, version).c_str());
+
+    return ZX_OK;
 }
 
 // Private methods

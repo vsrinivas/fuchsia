@@ -44,6 +44,19 @@ public:
     bool InStdOut(const char* needle);
     bool InStdErr(const char* needle);
 
+    // Returns the index in "argv" of the arg produced from |fmt| and any variadic parameters, or -1
+    // if it isn't found.
+    int FindArg(const char* fmt, ...);
+
+    // Various fixture locations
+    const char* package_path() const { return package_path_.c_str(); }
+    const char* data_path() const { return data_path_.c_str(); }
+    fbl::String data_path(const char* relpath) {
+        return fixture_.path("%s/%s", data_path_.c_str(), relpath ? relpath : "");
+    }
+    const char* executable() const { return executable_.c_str(); }
+    const char* dictionary() const { return dictionary_.c_str(); }
+
     // Expose parent class methods
     zx_status_t SetOption(const char* option) { return Fuzzer::SetOption(option); }
     zx_status_t SetOption(const char* key, const char* val) { return Fuzzer::SetOption(key, val); }
@@ -64,6 +77,10 @@ public:
     // Exposes |Fuzzer::CheckProcess| optionally overriding the executable name to look for.
     bool CheckProcess(zx_handle_t process, const char* executable = nullptr);
 
+protected:
+    // Overrides |Fuzzer::Execute| to simply save the subprocess' command line without spawning it.
+    zx_status_t Execute(bool wait_for_completion) override;
+
 private:
     // Sets up the test fuzzer to buffer output without changing the test fixture
     bool Init();
@@ -73,6 +90,12 @@ private:
 
     // The arguments passed to the subprocess
     StringList args_;
+
+    // Test info, captured by |Execute|
+    fbl::String package_path_;
+    fbl::String data_path_;
+    fbl::String executable_;
+    fbl::String dictionary_;
 
     // Output stream
     FILE* out_;

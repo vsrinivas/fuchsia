@@ -80,6 +80,12 @@ protected:
     // specified.
     void FindFuzzers(const char* name, StringMap* out);
 
+    // Fills in |args| with the arguments for the fuzzer subprocess as currently configured.
+    void GetArgs(StringList* args);
+
+    // Spawns a fuzzer sub-process.  Runs synchronously if |wait_for_completion| is true.
+    virtual zx_status_t Execute(bool wait_for_completion);
+
     // Callback used by |Walker| to match the fuzz target sub-process and print information on it.
     friend class Walker;
     bool CheckProcess(zx_handle_t process) const;
@@ -101,6 +107,7 @@ private:
     zx_status_t Help();
     zx_status_t List();
     zx_status_t Seeds();
+    zx_status_t Start();
 
     // The current subcommand
     uint32_t cmd_;
@@ -112,10 +119,14 @@ private:
     fbl::String root_;
     // Path on target to where immutable fuzzing resources are stored
     Path resource_path_;
+    // Path on target to where mutable fuzzing inputs and outputs are stored
+    Path data_path_;
     // Positional arguments to libFuzzers
     StringList inputs_;
     // libFuzzer option flags
     StringMap options_;
+    // The libFuzzer subprocess handle
+    zx::process process_;
     // Output file descriptor; primarily used for testing.
     FILE* out_;
     // Error file descriptor; primarily used for testing.

@@ -567,6 +567,75 @@ bool TestSeeds() {
     END_TEST;
 }
 
+bool TestStart() {
+    BEGIN_TEST;
+    TestFuzzer test;
+
+    // Zircon tests
+    ASSERT_TRUE(test.InitZircon());
+
+    ASSERT_TRUE(test.Eval("start"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("missing"));
+
+    ASSERT_TRUE(test.Eval("start foobar"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("no match"));
+
+    ASSERT_TRUE(test.Eval("start target"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("multiple"));
+
+    // Zircon fuzzer
+    ASSERT_TRUE(test.Eval("start zircon/target2"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+
+    // // Fuchsia tests
+    ASSERT_TRUE(test.InitFuchsia());
+
+    // Zircon fuzzer within Fuchsia
+    ASSERT_TRUE(test.Eval("start zircon/target2"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-baz=qux"));
+    EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
+    EXPECT_LT(0, test.FindArg("-foo=bar"));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+
+    // Fuchsia fuzzer without resources
+    ASSERT_TRUE(test.Eval("start fuchsia1/target1"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+
+    // Fuchsia fuzzer with resources
+    ASSERT_TRUE(test.Eval("start fuchsia1/target3"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-baz=qux"));
+    EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
+    EXPECT_LT(0, test.FindArg("-foo=bar"));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+
+    // Fuchsia fuzzer with resources, command-line option, and explicit corpus
+    ASSERT_TRUE(test.Eval("start fuchsia2/target4 /path/to/another/corpus -foo=baz"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-baz=qux"));
+    EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
+    EXPECT_LT(0, test.FindArg("-foo=baz"));
+    EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
+    EXPECT_GT(0, test.FindArg(test.data_path("corpus").c_str()));
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FuzzerTest)
 RUN_TEST(TestSetOption)
 RUN_TEST(TestRebasePath)
@@ -579,6 +648,7 @@ RUN_TEST(TestInvalid)
 RUN_TEST(TestHelp)
 RUN_TEST(TestList)
 RUN_TEST(TestSeeds)
+RUN_TEST(TestStart)
 END_TEST_CASE(FuzzerTest)
 
 } // namespace
