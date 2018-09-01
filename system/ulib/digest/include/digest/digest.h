@@ -31,7 +31,8 @@ public:
 
     Digest();
     explicit Digest(const uint8_t* other);
-    explicit Digest(Digest&& o) = delete;
+    Digest(Digest&& o);
+    Digest& operator=(Digest&& o);
     Digest& operator=(const uint8_t* rhs);
     ~Digest();
 

@@ -34,6 +34,18 @@ Digest::~Digest() {
     ZX_DEBUG_ASSERT(ref_count_ == 0);
 }
 
+Digest::Digest(Digest&& o) {
+    ZX_DEBUG_ASSERT(o.ref_count_ == 0);
+    memcpy(bytes_, o.bytes_, kLength);
+}
+
+Digest& Digest::operator=(Digest&& o) {
+    ZX_DEBUG_ASSERT(o.ref_count_ == 0);
+    ZX_DEBUG_ASSERT(ref_count_ == 0);
+    memcpy(bytes_, o.bytes_, kLength);
+    return *this;
+}
+
 Digest& Digest::operator=(const uint8_t* rhs) {
     ZX_DEBUG_ASSERT(ref_count_ == 0);
     memcpy(bytes_, rhs, kLength);
