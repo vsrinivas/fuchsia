@@ -40,6 +40,12 @@ public:
     // Associates the given |value| with the given |key|.  |key| and |value| must not be null.
     void set(const char* key, const char* val);
 
+    // Removes any value associated with the given |key| and removes it from the map.
+    void erase(const char* key);
+
+    // Erases all keys.
+    void clear();
+
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(StringMap);
 

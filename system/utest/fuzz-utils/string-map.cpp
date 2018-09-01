@@ -14,7 +14,8 @@ bool TestEmpty() {
     StringMap map;
 
     EXPECT_TRUE(map.is_empty());
-    EXPECT_EQ(0, map.size());
+    map.begin();
+    EXPECT_FALSE(map.next(nullptr, nullptr));
 
     END_TEST;
 }
@@ -57,10 +58,6 @@ bool TestBeginAndNext() {
     const char* key;
     const char* val;
 
-    // Empty map
-    map.begin();
-    EXPECT_FALSE(map.next(&key, nullptr));
-
     map.set("8", "1");
     map.set("7", "2");
     map.set("6", "3");
@@ -91,10 +88,45 @@ bool TestBeginAndNext() {
     END_TEST;
 }
 
+bool TestEraseAndClear() {
+    BEGIN_TEST;
+    StringMap map;
+    const char* val;
+
+    map.clear();
+
+    map.erase("key1");
+    val = map.get("key1");
+    EXPECT_NULL(val);
+
+    map.set("key1", "val1");
+    map.set("key2", "val2");
+    map.erase("key1");
+
+    val = map.get("key1");
+    EXPECT_NULL(val);
+
+    val = map.get("key2");
+    ASSERT_NONNULL(val);
+    EXPECT_STR_EQ(val, "val2");
+
+    map.set("key1", "val1");
+    map.clear();
+
+    val = map.get("key1");
+    EXPECT_NULL(val);
+
+    val = map.get("key2");
+    EXPECT_NULL(val);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(StringMapTest)
 RUN_TEST(TestEmpty)
 RUN_TEST(TestGetAndSet)
 RUN_TEST(TestBeginAndNext)
+RUN_TEST(TestEraseAndClear)
 END_TEST_CASE(StringMapTest)
 
 } // namespace
