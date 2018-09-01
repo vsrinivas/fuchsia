@@ -10,9 +10,12 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/fixture.cpp \
+    $(LOCAL_DIR)/fuzzer-fixture.cpp \
     $(LOCAL_DIR)/main.cpp \
+    $(LOCAL_DIR)/test-fuzzer.cpp \
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/fuzzer.cpp \
     $(LOCAL_DIR)/path.cpp \
     $(LOCAL_DIR)/string-list.cpp \
     $(LOCAL_DIR)/string-map.cpp \

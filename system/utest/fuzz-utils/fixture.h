@@ -30,17 +30,18 @@ protected:
     // Creates the temporary directory to act as the test root.
     virtual bool Create();
 
+    // Create a file at |path|, first creating any parent directories needed.  Write the given
+    // |contents| to the file, if provided.
+    bool CreateFile(const char* path, const char* contents = nullptr);
+
     // Creates a directory at |path|, creating any parent directories as needed.
     bool CreateDirectory(const char* path);
-
-    // Write |contents| to a file at |path|, creating it and any parent directories as needed.
-    bool CreateFile(const char* path, const char* contents);
 
     // Deletes a directory and all of its contents
     bool RemoveDirectory(const char* path);
 
     // Removes the root directory if set and resets the object to a pristine state.
-    void Reset();
+    virtual void Reset();
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Fixture);
