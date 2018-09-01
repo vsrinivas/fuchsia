@@ -25,6 +25,7 @@ enum Command : uint32_t {
     kList,
     kSeeds,
     kStart,
+    kCheck,
 };
 
 // Usage information for specific tool subcommands.
@@ -39,6 +40,15 @@ const struct {
     {kSeeds, "seeds", "name", "Lists the seed corpus location(s) for the fuzzer."},
     {kStart, "start", "name [...]",
      "Starts the named fuzzer.  Additional arguments are passed to the fuzzer."},
+    {kCheck, "check", "name",
+     "Reports information about the named fuzzer, such as execution status, corpus size, and "
+     "number of artifacts."},
+};
+
+// |kArtifactPrefixes| should matches the prefixes in libFuzzer passed to |Fuzzer::DumpCurrentUnit|
+// or |Fuzzer::WriteUnitToFileWithPrefix|.
+constexpr const char* kArtifactPrefixes[] = {
+    "crash", "leak", "mismatch", "oom", "slow-unit", "timeout",
 };
 
 } // namespace
@@ -90,6 +100,8 @@ zx_status_t Fuzzer::Run(StringList* args) {
         return Seeds();
     case kStart:
         return Start();
+    case kCheck:
+        return Check();
     default:
         // Shouldn't get here.
         ZX_DEBUG_ASSERT(false);
@@ -573,6 +585,55 @@ zx_status_t Fuzzer::Start() {
     }
 
     return Execute(false /* !wait_for_completion */);
+}
+
+zx_status_t Fuzzer::Check() {
+    zx_status_t rc;
+
+    // Report fuzzer execution status
+    Walker walker(this);
+    if (walker.WalkRootJobTree() != ZX_ERR_STOP) {
+        fprintf(out_, "Fuzzer '%s' is not running.\n", name_.c_str());
+    }
+
+    // Fuzzer details
+    fprintf(out_, "The fuzzer binary is located at: %s\n", executable_.c_str());
+    fprintf(out_, "The fuzzing data is located at: %s\n", data_path_.c_str());
+
+    // Report corpus details, if present
+    if ((rc = data_path_.Push("corpus")) != ZX_OK) {
+        fprintf(out_, "No fuzzing corpus was found\n");
+    } else {
+        auto corpus = data_path_.List();
+        size_t corpus_size = 0;
+        for (const char* input = corpus->first(); input; input = corpus->next()) {
+            size_t input_size;
+            if ((rc = data_path_.GetSize(input, &input_size)) != ZX_OK) {
+                return rc;
+            }
+            corpus_size += input_size;
+        }
+        fprintf(out_, "The fuzzing corpus has %zu inputs totaling %zu bytes.\n", corpus->length(),
+                corpus_size);
+        data_path_.Pop();
+    }
+
+    // Report number of artifacts.
+    auto artifacts = data_path_.List();
+    StringList prefixes(kArtifactPrefixes,
+                        sizeof(kArtifactPrefixes) / sizeof(kArtifactPrefixes[0]));
+    artifacts->keep_if_any(&prefixes);
+    size_t num_artifacts = artifacts->length();
+    if (num_artifacts == 0) {
+        fprintf(out_, "The fuzzer has not produced any artifacts.\n");
+    } else {
+        fprintf(out_, "The fuzzer has produced %zu artifacts:\n", num_artifacts);
+        for (const char* artifact = artifacts->first(); artifact; artifact = artifacts->next()) {
+            fprintf(out_, "  %s\n", artifact);
+        }
+    }
+
+    return ZX_OK;
 }
 
 } // namespace fuzzing

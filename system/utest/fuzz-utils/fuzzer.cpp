@@ -636,6 +636,71 @@ bool TestStart() {
     END_TEST;
 }
 
+bool TestCheck() {
+    BEGIN_TEST;
+    TestFuzzer test;
+
+    // Zircon tests
+    ASSERT_TRUE(test.InitZircon());
+
+    ASSERT_TRUE(test.Eval("check"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("missing"));
+
+    ASSERT_TRUE(test.Eval("check foobar"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("no match"));
+
+    ASSERT_TRUE(test.Eval("check target"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("multiple"));
+
+    ASSERT_TRUE(test.Eval("check zircon/target1"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("not running"));
+    EXPECT_TRUE(test.InStdOut(test.executable()));
+    EXPECT_TRUE(test.InStdOut(test.data_path()));
+    EXPECT_TRUE(test.InStdOut("no fuzzing corpus"));
+    EXPECT_TRUE(test.InStdOut("has not produced any artifacts."));
+
+    ASSERT_TRUE(test.Eval("check zircon/target2"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("not running"));
+    EXPECT_TRUE(test.InStdOut(test.executable()));
+    EXPECT_TRUE(test.InStdOut(test.data_path()));
+    EXPECT_TRUE(test.InStdOut("fuzzing corpus has"));
+    EXPECT_TRUE(test.InStdOut("has produced"));
+
+    // Fuchsia tests
+    ASSERT_TRUE(test.InitFuchsia());
+
+    ASSERT_TRUE(test.Eval("check zircon/target2"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("not running"));
+    EXPECT_TRUE(test.InStdOut(test.executable()));
+    EXPECT_TRUE(test.InStdOut(test.data_path()));
+    EXPECT_TRUE(test.InStdOut("fuzzing corpus has"));
+    EXPECT_TRUE(test.InStdOut("has produced"));
+
+    ASSERT_TRUE(test.Eval("check fuchsia/target1"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("not running"));
+    EXPECT_TRUE(test.InStdOut(test.executable()));
+    EXPECT_TRUE(test.InStdOut(test.data_path()));
+    EXPECT_TRUE(test.InStdOut("no fuzzing corpus"));
+    EXPECT_TRUE(test.InStdOut("has not produced any artifacts."));
+
+    ASSERT_TRUE(test.Eval("check fuchsia/target4"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("not running"));
+    EXPECT_TRUE(test.InStdOut(test.executable()));
+    EXPECT_TRUE(test.InStdOut(test.data_path()));
+    EXPECT_TRUE(test.InStdOut("fuzzing corpus has"));
+    EXPECT_TRUE(test.InStdOut("has produced"));
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FuzzerTest)
 RUN_TEST(TestSetOption)
 RUN_TEST(TestRebasePath)
@@ -649,6 +714,7 @@ RUN_TEST(TestHelp)
 RUN_TEST(TestList)
 RUN_TEST(TestSeeds)
 RUN_TEST(TestStart)
+RUN_TEST(TestCheck)
 END_TEST_CASE(FuzzerTest)
 
 } // namespace

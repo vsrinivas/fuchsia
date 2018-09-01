@@ -31,6 +31,7 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fuzz-utils \
+    system/ulib/task-utils \
     system/ulib/zx \
     system/ulib/zxcpp \
 
