@@ -51,9 +51,50 @@ bool TestGetAndSet() {
     END_TEST;
 }
 
+bool TestBeginAndNext() {
+    BEGIN_TEST;
+    StringMap map;
+    const char* key;
+    const char* val;
+
+    // Empty map
+    map.begin();
+    EXPECT_FALSE(map.next(&key, nullptr));
+
+    map.set("8", "1");
+    map.set("7", "2");
+    map.set("6", "3");
+    map.set("5", "4");
+    map.set("4", "5");
+    map.set("3", "6");
+    map.set("2", "7");
+    map.set("1", "8");
+
+    // Iterate over all pairs
+    uint8_t keys = 0;
+    EXPECT_FALSE(map.next(&key, nullptr));
+    map.begin();
+    while (map.next(&key, &val)) {
+        keys |= static_cast<uint8_t>(1 << (key[0] - '0' - 1));
+    }
+    EXPECT_EQ(keys, 0xff);
+
+    // Reset and iterate again
+    uint8_t vals = 0;
+    EXPECT_FALSE(map.next(nullptr, &val));
+    map.begin();
+    while (map.next(&key, &val)) {
+        vals |= static_cast<uint8_t>(1 << (val[0] - '0' - 1));
+    }
+    EXPECT_EQ(keys, 0xff);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(StringMapTest)
 RUN_TEST(TestEmpty)
 RUN_TEST(TestGetAndSet)
+RUN_TEST(TestBeginAndNext)
 END_TEST_CASE(StringMapTest)
 
 } // namespace

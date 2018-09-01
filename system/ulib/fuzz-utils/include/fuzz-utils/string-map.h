@@ -23,6 +23,17 @@ public:
     // Identical to |fbl::WAVLTree<fbl::unique_ptr<StringElement>>::size|.
     size_t size() const;
 
+    // In place of iterators, this class provides |first| and |next| methods.  The former resets the
+    // internal iterator to the beginning of the map, while the latter returns successive key-value
+    // pairs via |out_key| and |out_value| with each successive call until it reaches the end of the
+    // map and returns null.  The map can be simply iterated by:
+    //   const char *key;
+    //   const char *value;
+    //   map.begin();
+    //   while(map.next(&key, &value)) { ... }
+    void begin();
+    bool next(const char** out_key, const char** out_val);
+
     // Returns the value for the given |key|, or null if the key isn't found.
     const char* get(const char* key) const;
 

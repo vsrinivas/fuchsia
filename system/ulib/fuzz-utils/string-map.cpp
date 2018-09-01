@@ -21,6 +21,24 @@ size_t StringMap::size() const {
     return elements_.size();
 }
 
+void StringMap::begin() {
+    iterator_ = elements_.begin();
+}
+
+bool StringMap::next(const char** out_key, const char** out_val) {
+    if (iterator_ == elements_.end()) {
+        return false;
+    }
+    if (out_key) {
+        *out_key = iterator_->key.c_str();
+    }
+    if (out_val) {
+        *out_val = iterator_->val.c_str();
+    }
+    iterator_++;
+    return true;
+}
+
 const char* StringMap::get(const char* key) const {
     ZX_DEBUG_ASSERT(key);
     auto iterator = elements_.find(key);
