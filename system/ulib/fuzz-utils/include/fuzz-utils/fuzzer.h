@@ -99,6 +99,7 @@ private:
 
     // Specific subcommands; see corresponding usage messages
     zx_status_t Help();
+    zx_status_t List();
 
     // The current subcommand
     uint32_t cmd_;

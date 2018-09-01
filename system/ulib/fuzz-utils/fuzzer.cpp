@@ -21,6 +21,7 @@ namespace {
 enum Command : uint32_t {
     kNone,
     kHelp,
+    kList,
 };
 
 // Usage information for specific tool subcommands.
@@ -31,6 +32,7 @@ const struct {
     const char* desc;
 } kCommands[] = {
     {kHelp, "help", "", "Print this message and exit."},
+    {kList, "list", "[name]", "Lists fuzzers matching 'name' if provided, or all fuzzers."},
 };
 
 } // namespace
@@ -73,7 +75,8 @@ zx_status_t Fuzzer::Run(StringList* args) {
     switch (cmd_) {
     case kHelp:
         return Help();
-
+    case kList:
+        return List();
     default:
         // Shouldn't get here.
         ZX_DEBUG_ASSERT(false);
@@ -329,6 +332,7 @@ zx_status_t Fuzzer::SetFuzzer(const char* name) {
     // Early exit for commands that don't need a single, selected fuzzer
     switch (cmd_) {
     case kHelp:
+    case kList:
         if (name) {
             name_.Set(name);
         }
@@ -344,6 +348,7 @@ zx_status_t Fuzzer::SetFuzzer(const char* name) {
 zx_status_t Fuzzer::LoadOptions() {
     switch (cmd_) {
     case kHelp:
+    case kList:
         // No options needed
         return ZX_OK;
 
@@ -362,6 +367,22 @@ zx_status_t Fuzzer::Help() {
     for (size_t i = 0; i < sizeof(kCommands) / sizeof(kCommands[0]); ++i) {
         fprintf(out_, "  %s %s\n", kCommands[i].name, kCommands[i].args);
         fprintf(out_, "    %s\n\n", kCommands[i].desc);
+    }
+    return ZX_OK;
+}
+
+zx_status_t Fuzzer::List() {
+    StringMap fuzzers;
+    FindFuzzers(name_.c_str(), &fuzzers);
+    if (fuzzers.is_empty()) {
+        fprintf(out_, "No matching fuzzers.\n");
+        return ZX_OK;
+    }
+    fprintf(out_, "Found %zu matching fuzzers:\n", fuzzers.size());
+    const char* name;
+    fuzzers.begin();
+    while (fuzzers.next(&name, nullptr)) {
+        fprintf(out_, "  %s\n", name);
     }
     return ZX_OK;
 }

@@ -442,6 +442,86 @@ bool TestHelp() {
     END_TEST;
 }
 
+bool TestList() {
+    BEGIN_TEST;
+    TestFuzzer test;
+
+    // Zircon tests
+    ASSERT_TRUE(test.InitZircon());
+
+    ASSERT_TRUE(test.Eval("list"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target1"));
+    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target2"));
+    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target1"));
+    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target2"));
+    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target3"));
+    EXPECT_FALSE(test.InStdOut("fuchsia2_fuzzers/target4"));
+
+    ASSERT_TRUE(test.Eval("list fuchsia"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("no match"));
+
+    ASSERT_TRUE(test.Eval("list target"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target1"));
+    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target2"));
+    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target1"));
+    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target2"));
+    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target3"));
+    EXPECT_FALSE(test.InStdOut("fuchsia2_fuzzers/target4"));
+
+    ASSERT_TRUE(test.Eval("list zircon_fuzzers/target1"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target1"));
+    EXPECT_FALSE(test.InStdOut("zircon_fuzzers/target2"));
+    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target1"));
+    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target2"));
+    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target3"));
+    EXPECT_FALSE(test.InStdOut("fuchsia2_fuzzers/target4"));
+
+    // Fuchsia tests
+    ASSERT_TRUE(test.InitFuchsia());
+
+    ASSERT_TRUE(test.Eval("list"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target1"));
+    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target2"));
+    EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target1"));
+    EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target2"));
+    EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target3"));
+    EXPECT_TRUE(test.InStdOut("fuchsia2_fuzzers/target4"));
+
+    ASSERT_TRUE(test.Eval("list fuchsia"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_FALSE(test.InStdOut("zircon_fuzzers/target1"));
+    EXPECT_FALSE(test.InStdOut("zircon_fuzzers/target2"));
+    EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target1"));
+    EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target2"));
+    EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target3"));
+    EXPECT_TRUE(test.InStdOut("fuchsia2_fuzzers/target4"));
+
+    ASSERT_TRUE(test.Eval("list target"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target1"));
+    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target2"));
+    EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target1"));
+    EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target2"));
+    EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target3"));
+    EXPECT_TRUE(test.InStdOut("fuchsia2_fuzzers/target4"));
+
+    ASSERT_TRUE(test.Eval("list fuchsia1_fuzzers/target1"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_FALSE(test.InStdOut("zircon_fuzzers/target1"));
+    EXPECT_FALSE(test.InStdOut("zircon_fuzzers/target2"));
+    EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target1"));
+    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target2"));
+    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target3"));
+    EXPECT_FALSE(test.InStdOut("fuchsia2_fuzzers/target4"));
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FuzzerTest)
 RUN_TEST(TestSetOption)
 RUN_TEST(TestRebasePath)
@@ -452,6 +532,7 @@ RUN_TEST(TestFindFuzzers)
 RUN_TEST(TestCheckProcess)
 RUN_TEST(TestInvalid)
 RUN_TEST(TestHelp)
+RUN_TEST(TestList)
 END_TEST_CASE(FuzzerTest)
 
 } // namespace
