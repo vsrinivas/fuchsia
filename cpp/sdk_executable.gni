@@ -45,6 +45,7 @@ template("sdk_executable") {
         value = {
           type = "host_tool"
           name = output_name
+          root = "tools"
           files = [
             file_base,
           ]

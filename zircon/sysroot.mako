@@ -32,6 +32,7 @@ file_base = "arch/$target_cpu/sysroot"
 metadata = {
   type = "sysroot"
   name = "sysroot"
+  root = "pkg/sysroot"
   files = [
     % for path, _ in sorted(data.sdk_files.iteritems()):
     "$file_base/${path}",

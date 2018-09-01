@@ -55,6 +55,7 @@ binaries_content = {
 metadata = {
   name = "${data.name}"
   type = "cc_prebuilt_library"
+  root = file_base
   format = "static"
   include_dir = "$file_base/include"
 

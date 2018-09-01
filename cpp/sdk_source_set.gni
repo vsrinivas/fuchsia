@@ -142,6 +142,8 @@ template("sdk_source_set") {
       rebase_path(metadata_file),
       "--name",
       invoker.sdk_name,
+      "--root",
+      file_base,
       "--include-dir",
       "$file_base/include",
       "--deps",

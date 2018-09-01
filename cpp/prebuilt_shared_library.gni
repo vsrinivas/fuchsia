@@ -213,6 +213,8 @@ template("prebuilt_shared_library") {
       rebase_path(metadata_file),
       "--name",
       atom_name,
+      "--root",
+      file_base,
       "--include-dir",
       "$file_base/include",
       "--deps",

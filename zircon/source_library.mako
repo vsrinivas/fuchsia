@@ -48,6 +48,7 @@ file_base = "pkg/${data.name}"
 metadata = {
   name = "${data.name}"
   type = "cc_source_library"
+  root = file_base
   include_dir = "$file_base/include"
 
   sources = []

@@ -17,6 +17,9 @@ def main():
     parser.add_argument('--name',
                         help='Name of the library',
                         required=True)
+    parser.add_argument('--root',
+                        help='Root of the library in the SDK',
+                        required=True)
     parser.add_argument('--deps',
                         help='Path to metadata files of dependencies',
                         nargs='*')
@@ -34,6 +37,7 @@ def main():
     metadata = {
         'type': 'cc_source_library',
         'name': args.name,
+        'root': args.root,
         'sources': args.sources,
         'headers': args.headers,
         'include_dir': args.include_dir,

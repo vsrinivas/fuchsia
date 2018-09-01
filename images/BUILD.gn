@@ -1243,6 +1243,7 @@ foreach(image, images) {
         value = {
           type = "image"
           name = "${image.sdk}"
+          root = "images"
         }
       }
 
@@ -1290,6 +1291,7 @@ sdk_atom(zircon_bin_sdk_target_name) {
     value = {
       type = "image"
       name = "zircon.bin"
+      root = "images"
     }
   }
 
@@ -1323,6 +1325,7 @@ if (target_cpu == "arm64") {
       value = {
         type = "image"
         name = "qemu-zircon.bin"
+        root = "images"
       }
     }
 

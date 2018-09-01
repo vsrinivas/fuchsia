@@ -35,6 +35,9 @@ def main():
     parser.add_argument('--name',
                         help='Name of the original package',
                         required=True)
+    parser.add_argument('--root',
+                        help='Root of the package in the SDK',
+                        required=True)
     parser.add_argument('--specs',
                         help='Path to spec files of dependencies',
                         nargs='*')
@@ -49,6 +52,7 @@ def main():
     metadata = {
         'type': 'dart_library',
         'name': args.name,
+        'root': args.root,
         'sources': args.sources,
         'files': args.sources,
     }

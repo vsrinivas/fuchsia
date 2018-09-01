@@ -16,6 +16,10 @@
           "description": "The name of the element",
           "type": "string"
         },
+        "root": {
+          "description": "The root of the element in the SDK",
+          "type": "string"
+        },
         "files": {
           "description": "The list of files pertaining to the element",
           "type": "array",
@@ -26,6 +30,7 @@
       },
       "required": [
         "name",
+        "root",
         "type"
       ]
     },

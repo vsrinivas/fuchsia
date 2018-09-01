@@ -29,6 +29,7 @@ sdk_atom("${data.name}_sdk") {
     value = {
       type = "host_tool"
       name = "${data.name}"
+      root = "tools"
       files = [
         file_base,
       ]

@@ -167,6 +167,7 @@ template("fidl_library") {
     }
 
     # Process sources.
+    file_base = "fidl/$library_name"
     all_files = []
     new_all_files = []
     sdk_sources = []
@@ -177,7 +178,7 @@ template("fidl_library") {
         # name.
         relative_source = get_path_info(source, "file")
       }
-      destination = "fidl/$library_name/$relative_source"
+      destination = "$file_base/$relative_source"
       sdk_sources += [ destination ]
       all_files += [
         {
@@ -208,6 +209,7 @@ template("fidl_library") {
     # Generate the library metadata.
     meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
     meta_target_name = "${target_name}_meta"
+
     action(meta_target_name) {
       script = "//build/fidl/gen_sdk_meta.py"
 
@@ -220,6 +222,8 @@ template("fidl_library") {
         rebase_path(meta_file),
         "--name",
         library_name,
+        "--root",
+        file_base,
         "--specs",
       ] + sdk_metas + [
         "--sources",
@@ -237,7 +241,7 @@ template("fidl_library") {
 
       meta = {
         source = meta_file
-        dest = "fidl/$library_name/meta.json"
+        dest = "$file_base/meta.json"
         schema = "fidl_library"
       }
 

@@ -125,6 +125,7 @@ binaries_content.dist = "$prebuilt_base/dist/${data.lib_name}"
 metadata = {
   name = "${data.name}"
   type = "cc_prebuilt_library"
+  root = file_base
   format = "shared"
   include_dir = "$file_base/include"
 
