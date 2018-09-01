@@ -40,8 +40,9 @@ template("sdk") {
   main_target_name = target_name
   generation_target_name = "${target_name}_molecule"
   copy_target_name = "${target_name}_copy"
-  verification_target_name = "${target_name}_verify"
+  verification_target_name = "${target_name}_manifest_verify"
   meta_target_name = "${target_name}_meta"
+  verify_meta_target_name = "${target_name}_meta_verify"
   archive_manifest_target_name = "${target_name}_archive_manifest"
   archive_target_name = "${target_name}_archive"
 
@@ -159,6 +160,19 @@ template("sdk") {
     ]
   }
 
+  # Verifies that the manifest metadata is valid.
+  validate_json(verify_meta_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    data = sdk_meta_file
+
+    schema = "//build/sdk/meta/manifest.json"
+
+    public_deps = [
+      ":$meta_target_name",
+    ]
+  }
+
   archive_manifest_file = "$target_gen_dir/$sdk_name.archive_manifest"
 
   # From the manifest file representing the SDK, generates a list of the files
@@ -190,7 +204,7 @@ template("sdk") {
 
     deps = [
       ":$copy_target_name",
-      ":$meta_target_name",
+      ":$verify_meta_target_name",
     ]
   }
 

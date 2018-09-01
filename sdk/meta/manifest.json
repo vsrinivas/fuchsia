@@ -1,0 +1,40 @@
+{
+  "description": "A target image",
+  "type": "object",
+  "properties": {
+    "arch": {
+      "description": "The various architectures encountered in the SDK",
+      "type": "object",
+      "properties": {
+        "host": {
+          "description": "The host architecture",
+          "type": "string"
+        },
+        "target": {
+          "description": "The target architectures",
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/definitions/target_arch"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "host",
+        "target"
+      ]
+    },
+    "parts": {
+      "description": "The metadata files for elements in the SDK",
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/definitions/file"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "arch",
+    "parts"
+  ]
+}

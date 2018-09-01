@@ -41,6 +41,14 @@
     "cc_library_name": {
       "description": "Name of a C/C++ library",
       "type": "string"
+    },
+    "target_arch": {
+      "description": "Target architecture",
+      "type": "string",
+      "enum": [
+        "arm64",
+        "x64"
+      ]
     }
   }
 }

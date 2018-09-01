@@ -33,7 +33,9 @@ def main():
     meta = {
         'arch': {
             'host': args.host_arch,
-            'target': args.target_arch,
+            'target': [
+                args.target_arch,
+            ],
         },
         'parts': filter(lambda m: m, [a.metadata for a in atoms]),
     }
