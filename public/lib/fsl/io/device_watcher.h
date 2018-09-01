@@ -71,6 +71,8 @@ class FXL_EXPORT DeviceWatcher {
   // |idle_callback| gets called after |exists_callback| has returned for all
   // pre-existing devices, and returns before |exists_callback| is called for
   // any subsequently-added devices.
+  // |idle_callback| will be deleted after it is called, so captured context
+  // is guaranteed to not be retained.
   static std::unique_ptr<DeviceWatcher> CreateWithIdleCallback(
       std::string directory_path, ExistsCallback exists_callback,
       IdleCallback idle_callback);

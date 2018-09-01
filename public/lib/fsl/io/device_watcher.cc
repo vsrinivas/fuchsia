@@ -98,6 +98,10 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher,
                          std::string(reinterpret_cast<char*>(msg), namelen));
       } else if (event == VFS_WATCH_EVT_IDLE) {
         idle_callback_();
+        // Only call the idle callback once.  In case there is some captured
+        // context, remove the function, or rather set it to an empty function,
+        // in case we try to call it again.
+        idle_callback_ = [] {};
       }
       // Note: Callback may have destroyed the DeviceWatcher before returning.
       if (!weak) {
