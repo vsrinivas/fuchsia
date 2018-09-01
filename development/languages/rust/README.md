@@ -43,6 +43,10 @@ fx set x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
 Public discussion happens on the [rust@fuchsia.com] mailing list.
 For Googler-only channels, see [go/fuchsia-rust-googlers].
 
+## Existing Fuchsia Rust Libraries
+
+[List of crates](crates.md)
+
 ## Going further
 
 - [Editor setup](editors.md)
