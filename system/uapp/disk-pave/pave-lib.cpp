@@ -41,6 +41,12 @@
 namespace paver {
 namespace {
 
+// The number of additional slices a partition will need to become
+// zxcrypt'd.
+//
+// TODO(aarongreen): Replace this with a value supplied by ulib/zxcrypt.
+constexpr size_t kZxcryptExtraSlices = 1;
+
 // Confirm that the file descriptor to the underlying partition exists within an
 // FVM, not, for example, a GPT or MBR.
 //
@@ -59,6 +65,8 @@ zx_status_t FvmIsVirtualPartition(const fbl::unique_fd& fd, bool* out) {
 // Describes the state of a partition actively being written
 // out to disk.
 struct PartitionInfo {
+    PartitionInfo() : pd(nullptr) {}
+
     fvm::partition_descriptor_t* pd;
     fbl::unique_fd new_part;
     fbl::unique_fd old_part; // Or '-1' if this is a new partition
@@ -356,52 +364,62 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd,
     return fbl::unique_fd(open(fvm_path, O_RDWR));
 }
 
+// Options for locating an FVM within a partition.
+enum class BindOption {
+    // Bind to the FVM, if it exists already.
+    TryBind,
+    // Reformat the partition, regardless of if it already exists as an FVM.
+    Reformat,
+};
+
 // Formats the FVM within the provided partition if it is not already formatted.
 //
 // On success, returns a file descriptor to an FVM.
 // On failure, returns -1
-fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size) {
+fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size,
+                                  BindOption option) {
     // Although the format (based on the magic in the FVM superblock)
     // indicates this is (or at least was) an FVM image, it may be invalid.
     //
     // Attempt to bind the FVM driver to this partition, but fall-back to
     // reinitializing the FVM image so the rest of the paving
     // process can continue successfully.
-    disk_format_t df = detect_disk_format(partition_fd.get());
     fbl::unique_fd fvm_fd;
-    if (df == DISK_FORMAT_FVM) {
-        fvm_fd = TryBindToFvmDriver(partition_fd, zx::sec(3));
-        if (fvm_fd) {
-            LOG("Found already formatted FVM.\n");
-            fvm_info_t info;
-            ssize_t r = ioctl_block_fvm_query(fvm_fd.get(), &info);
-            if (r >= 0) {
-                if (info.slice_size == slice_size) {
-                    return fvm_fd;
+    if (option == BindOption::TryBind) {
+        disk_format_t df = detect_disk_format(partition_fd.get());
+        if (df == DISK_FORMAT_FVM) {
+            fvm_fd = TryBindToFvmDriver(partition_fd, zx::sec(3));
+            if (fvm_fd) {
+                LOG("Found already formatted FVM.\n");
+                fvm_info_t info;
+                ssize_t r = ioctl_block_fvm_query(fvm_fd.get(), &info);
+                if (r >= 0) {
+                    if (info.slice_size == slice_size) {
+                        return fvm_fd;
+                    } else {
+                        ERROR("Mismatched slice size. Reinitializing FVM.\n");
+                    }
                 } else {
-                    ERROR("Mismatched slice size. Reinitializing FVM.\n");
+                    ERROR("Could not query FVM for info. Reinitializing FVM.\n");
                 }
             } else {
-                ERROR("Could not query FVM for info. Reinitializing FVM.\n");
+                ERROR("Saw DISK_FORMAT_FVM, but could not bind driver. Reinitializing FVM.\n");
             }
-        } else {
-            ERROR("Saw DISK_FORMAT_FVM, but could not bind driver. Reinitializing FVM.\n");
         }
     }
 
-    ERROR("Initializing partition as FVM\n");
+    LOG("Initializing partition as FVM\n");
     zx_status_t status = fvm_init(partition_fd.get(), slice_size);
     if (status != ZX_OK) {
         ERROR("Failed to initialize fvm: %s\n", zx_status_get_string(status));
         return fbl::unique_fd();
     }
 
-    if (fvm_fd) {
-        ssize_t r = ioctl_block_rr_part(fvm_fd.get());
-        if (r < 0) {
-            ERROR("Could not rebind FVM: %s\n", zx_status_get_string(static_cast<zx_status_t>(r)));
-            return fbl::unique_fd();
-        }
+    ssize_t r = ioctl_block_rr_part(partition_fd.get());
+    if (r < 0) {
+        ERROR("Could not rebind partition: %s\n",
+              zx_status_get_string(static_cast<zx_status_t>(r)));
+        return fbl::unique_fd();
     }
 
     return TryBindToFvmDriver(partition_fd, zx::sec(3));
@@ -482,63 +500,44 @@ zx_status_t FvmPartitionIsChild(const fbl::unique_fd& fvm_fd, const fbl::unique_
     return ZX_OK;
 }
 
-void RecommendWipe(const char* reason) {
+// Warn users about issues in a way that is intended to stand out from
+// typical error logs. These errors typically require user intervention,
+// or may result in data loss.
+void Warn(const char* problem, const char* action) {
     ERROR("-----------------------------------------------------\n");
     ERROR("\n");
-    ERROR("%s: Please run 'install-disk-image wipe' to wipe your partitions\n", reason);
+    ERROR("%s:\n", problem);
+    ERROR("%s\n", action);
     ERROR("\n");
     ERROR("-----------------------------------------------------\n");
 }
 
-// Given an fd representing a "sparse FVM format", fill the FVM with the
-// provided partitions described by |src_fd|.
+void RecommendWipe(const char* problem) {
+    Warn(problem, "Please run 'install-disk-image wipe' to wipe your partitions");
+}
+
+// Calculate the amount of space necessary for the incoming partitions,
+// validating the header along the way.
 //
-// Decides to overwrite or create new partitions based on the type
-// GUID, not the instance GUID.
-zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_fd) {
-    fbl::unique_ptr<fvm::SparseReader> reader;
-    zx_status_t status;
-    if ((status = fvm::SparseReader::Create(fbl::move(src_fd), &reader)) != ZX_OK) {
-        return status;
-    }
-
-    LOG("Header Validated - OK\n");
-
-    fvm::sparse_image_t* hdr = reader->Image();
-    // Acquire an fd to the fvm, either by finding one that already
-    // exists, or formatting a new one.
-    fbl::unique_fd fvm_fd(FvmPartitionFormat(fbl::move(partition_fd), hdr->slice_size));
-    if (!fvm_fd) {
-        ERROR("Couldn't find FVM partition\n");
-        return ZX_ERR_IO;
-    }
-
-    // TODO(smklein): In this case, we could actually unbind the FVM driver,
-    // create a new FVM with the updated slice size, and rebind.
-
-    fvm_info_t info;
-    if (ioctl_block_fvm_query(fvm_fd.get(), &info) < 0) {
-        ERROR("Couldn't query underlying FVM\n");
-        return ZX_ERR_IO;
-    } else if (info.slice_size != hdr->slice_size) {
-        ERROR("Unexpected slice size (%zu vs %zu)\n", info.slice_size, hdr->slice_size);
-        return ZX_ERR_IO;
-    }
-
-    fbl::Array<PartitionInfo> parts(new PartitionInfo[hdr->partition_count],
-                                    hdr->partition_count);
-
-    size_t block_size = 0;
+// Parses the information from the |reader| into |parts|.
+zx_status_t ValidatePartitions(const fbl::unique_fd& fvm_fd,
+                               const fbl::unique_ptr<fvm::SparseReader>& reader,
+                               const fbl::Array<PartitionInfo>& parts,
+                               size_t* out_requested_slices) {
     fvm::partition_descriptor_t* part = reader->Partitions();
+    fvm::sparse_image_t* hdr = reader->Image();
 
+    // Validate the header and determine the necessary slice requirements for
+    // all partitions and all offsets.
+    size_t requested_slices = 0;
     for (size_t p = 0; p < hdr->partition_count; p++) {
         parts[p].pd = part;
-        parts[p].old_part.reset(open_partition(nullptr, part->type, ZX_SEC(2), nullptr));
         if (parts[p].pd->magic != fvm::kPartitionDescriptorMagic) {
             ERROR("Bad partition magic\n");
             return ZX_ERR_IO;
         }
 
+        parts[p].old_part.reset(open_partition(nullptr, parts[p].pd->type, ZX_SEC(2), nullptr));
         if (parts[p].old_part) {
             bool is_vpartition;
             if (FvmIsVirtualPartition(parts[p].old_part, &is_vpartition) != ZX_OK) {
@@ -555,7 +554,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
             }
         }
 
-        fvm::extent_descriptor_t* ext = GetExtent(part, 0);
+        fvm::extent_descriptor_t* ext = GetExtent(parts[p].pd, 0);
         if (ext->magic != fvm::kExtentDescriptorMagic) {
             ERROR("Bad extent magic\n");
             return ZX_ERR_IO;
@@ -573,36 +572,9 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
             return ZX_ERR_IO;
         }
 
-        alloc_req_t alloc;
-        // Allocate this partition as inactive so it gets deleted on the next
-        // reboot if this stream fails.
-        alloc.flags = fvm::kVPartFlagInactive;
-        alloc.slice_count = ext->slice_count;
-        memcpy(&alloc.type, parts[p].pd->type, sizeof(alloc.type));
-        zx_cprng_draw(alloc.guid, GPT_GUID_LEN);
-        memcpy(&alloc.name, parts[p].pd->name, sizeof(alloc.name));
-        LOG("Allocating partition %s consisting of %zu slices\n", alloc.name, alloc.slice_count);
-        parts[p].new_part.reset(fvm_allocate_partition(fvm_fd.get(), &alloc));
-        if (!parts[p].new_part) {
-            ERROR("Couldn't allocate partition\n");
-            return ZX_ERR_BAD_STATE;
-        }
-
-        // Add filter drivers
-        if ((part->flags & fvm::kSparseFlagZxcrypt) != 0) {
-            LOG("Creating zxcrypt volume\n");
-            if ((status = ZxcryptCreate(&parts[p])) != ZX_OK) {
-                return status;
-            }
-        }
-
-        if (block_size == 0) {
-            block_info_t binfo;
-            if ((ioctl_block_get_info(parts[p].new_part.get(), &binfo)) < 0) {
-                ERROR("Couldn't get partition block info\n");
-                return ZX_ERR_IO;
-            }
-            block_size = binfo.block_size;
+        // Filter drivers may require additional space.
+        if ((parts[p].pd->flags & fvm::kSparseFlagZxcrypt) != 0) {
+            requested_slices += kZxcryptExtraSlices;
         }
 
         for (size_t e = 1; e < parts[p].pd->extent_count; e++) {
@@ -618,23 +590,152 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
                 return ZX_ERR_IO;
             }
 
-            extend_request_t request;
-            request.offset = ext->slice_start;
-            request.length = ext->slice_count;
-            LOG("Extending partition[%zu] at offset %zu by length %zu\n", p, request.offset,
-                request.length);
-            ssize_t result = ioctl_block_fvm_extend(parts[p].new_part.get(), &request);
-            if (result < 0) {
-                ERROR("Failed to extend partition: %s\n",
-                      zx_status_get_string(static_cast<zx_status_t>(result)));
-                return ZX_ERR_BAD_STATE;
-            }
+            requested_slices += ext->slice_count;
         }
         part = reinterpret_cast<fvm::partition_descriptor*>(
             reinterpret_cast<uintptr_t>(ext) + sizeof(fvm::extent_descriptor_t));
     }
 
-    LOG("Partition space pre-allocated\n");
+    *out_requested_slices = requested_slices;
+    return ZX_OK;
+
+}
+
+// Allocates the space requested by the partitions by creating new
+// partitions and filling them with extents. This guarantees that
+// streaming the data to the device will not run into "no space" issues
+// later.
+zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
+                               const fbl::Array<PartitionInfo>& parts) {
+    for (size_t p = 0; p < parts.size(); p++) {
+        fvm::extent_descriptor_t* ext = GetExtent(parts[p].pd, 0);
+        alloc_req_t alloc;
+        // Allocate this partition as inactive so it gets deleted on the next
+        // reboot if this stream fails.
+        alloc.flags = fvm::kVPartFlagInactive;
+        alloc.slice_count = ext->slice_count;
+        memcpy(&alloc.type, parts[p].pd->type, sizeof(alloc.type));
+        zx_cprng_draw(alloc.guid, GPT_GUID_LEN);
+        memcpy(&alloc.name, parts[p].pd->name, sizeof(alloc.name));
+        LOG("Allocating partition %s consisting of %zu slices\n", alloc.name, alloc.slice_count);
+        parts[p].new_part.reset(fvm_allocate_partition(fvm_fd.get(), &alloc));
+        if (!parts[p].new_part) {
+            ERROR("Couldn't allocate partition\n");
+            return ZX_ERR_NO_SPACE;
+        }
+
+        // Add filter drivers.
+        if ((parts[p].pd->flags & fvm::kSparseFlagZxcrypt) != 0) {
+            LOG("Creating zxcrypt volume\n");
+            zx_status_t status = ZxcryptCreate(&parts[p]);
+            if (status != ZX_OK) {
+                return status;
+            }
+        }
+
+        // The 0th index extent is allocated alongside the partition, so we
+        // begin indexing from the 1st extent here.
+        for (size_t e = 1; e < parts[p].pd->extent_count; e++) {
+            ext = GetExtent(parts[p].pd, e);
+            extend_request_t request;
+            request.offset = ext->slice_start;
+            request.length = ext->slice_count;
+            ssize_t result = ioctl_block_fvm_extend(parts[p].new_part.get(), &request);
+            if (result < 0) {
+                ERROR("Failed to extend partition: %s\n",
+                      zx_status_get_string(static_cast<zx_status_t>(result)));
+                return ZX_ERR_NO_SPACE;
+            }
+        }
+    }
+
+    return ZX_OK;
+}
+
+// Given an fd representing a "sparse FVM format", fill the FVM with the
+// provided partitions described by |src_fd|.
+//
+// Decides to overwrite or create new partitions based on the type
+// GUID, not the instance GUID.
+zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_fd) {
+    fbl::unique_ptr<fvm::SparseReader> reader;
+    zx_status_t status;
+    if ((status = fvm::SparseReader::Create(fbl::move(src_fd), &reader)) != ZX_OK) {
+        return status;
+    }
+
+    LOG("Header Validated - OK\n");
+    // Duplicate the partition fd; we may need it later if we reformat the FVM.
+    fbl::unique_fd partition_fd2(dup(partition_fd.get()));
+    if (!partition_fd2) {
+        ERROR("Coudln't dup partition fd\n");
+        return ZX_ERR_IO;
+    }
+
+    fvm::sparse_image_t* hdr = reader->Image();
+    // Acquire an fd to the FVM, either by finding one that already
+    // exists, or formatting a new one.
+    fbl::unique_fd fvm_fd(FvmPartitionFormat(fbl::move(partition_fd2), hdr->slice_size,
+                                             BindOption::TryBind));
+    if (!fvm_fd) {
+        ERROR("Couldn't find FVM partition\n");
+        return ZX_ERR_IO;
+    }
+
+    fbl::Array<PartitionInfo> parts(new PartitionInfo[hdr->partition_count],
+                                    hdr->partition_count);
+
+    // Parse the incoming image and calculate its size.
+    size_t requested_slices = 0;
+    if ((status = ValidatePartitions(fvm_fd, reader, parts, &requested_slices)) != ZX_OK) {
+        ERROR("Failed to validate partitions: %s\n", zx_status_get_string(status));
+        return status;
+    }
+
+    // Contend with issues from an image that may be too large for this device.
+    fvm_info_t info;
+    ssize_t result = ioctl_block_fvm_query(fvm_fd.get(), &info);
+    if (result < 0) {
+        zx_status_t status = static_cast<zx_status_t>(result);
+        ERROR("Failed to acquire FVM info: %s\n", zx_status_get_string(status));
+        return status;
+    }
+    size_t free_slices = info.pslice_total_count - info.pslice_allocated_count;
+    if (info.pslice_total_count < requested_slices) {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "Image size (%zu) > Storage size (%zu)",
+                 requested_slices * hdr->slice_size,
+                 info.pslice_total_count * hdr->slice_size);
+        Warn(buf, "Image is too large to be paved to device");
+        return ZX_ERR_NO_SPACE;
+    }
+    if (free_slices < requested_slices) {
+        Warn("Not enough space to non-destructively pave",
+             "Automatically reinitializing FVM; Expect data loss");
+        // Shut down the connections to the old partitions; they will
+        // become defunct when the FVM is re-initialized.
+        for (size_t p = 0; p < parts.size(); p++) {
+            parts[p].old_part.reset();
+        }
+
+        fvm_fd = FvmPartitionFormat(fbl::move(partition_fd), hdr->slice_size,
+                                    BindOption::Reformat);
+        if (!fvm_fd) {
+            ERROR("Couldn't reformat FVM partition.\n");
+            return ZX_ERR_IO;
+        }
+        LOG("FVM Reformatted successfully.\n");
+    }
+
+    LOG("Partitions pre-validated successfully: Enough space exists to pave.\n");
+
+    // Actually allocate the storage for the incoming image.
+    if ((status = AllocatePartitions(fvm_fd, parts)) != ZX_OK) {
+        ERROR("Failed to allocate partitions: %s\n", zx_status_get_string(status));
+        return status;
+    }
+
+    LOG("Partition space pre-allocated successfully.\n");
 
     constexpr size_t vmo_size = 1 << 20;
 
@@ -645,7 +746,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
     }
 
     // Now that all partitions are preallocated, begin streaming data to them.
-    for (size_t p = 0; p < hdr->partition_count; p++) {
+    for (size_t p = 0; p < parts.size(); p++) {
         vmoid_t vmoid;
         block_client::Client client;
         zx_status_t status = RegisterFastBlockIo(parts[p].new_part,
@@ -654,6 +755,13 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
             ERROR("Failed to register fast block IO\n");
             return status;
         }
+
+        block_info_t binfo;
+        if ((ioctl_block_get_info(parts[p].new_part.get(), &binfo)) < 0) {
+            ERROR("Couldn't get partition block info\n");
+            return ZX_ERR_IO;
+        }
+        size_t block_size = binfo.block_size;
 
         block_fifo_request_t request;
         request.group = 0;
@@ -675,7 +783,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
         LOG("Done flushing partition %zu\n", p);
     }
 
-    for (size_t p = 0; p < hdr->partition_count; p++) {
+    for (size_t p = 0; p < parts.size(); p++) {
         // Upgrade the old partition (currently active) to the new partition (currently
         // inactive), so when the new partition becomes active, the old
         // partition is destroyed.
