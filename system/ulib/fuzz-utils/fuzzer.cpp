@@ -22,6 +22,7 @@ enum Command : uint32_t {
     kNone,
     kHelp,
     kList,
+    kSeeds,
 };
 
 // Usage information for specific tool subcommands.
@@ -33,6 +34,7 @@ const struct {
 } kCommands[] = {
     {kHelp, "help", "", "Print this message and exit."},
     {kList, "list", "[name]", "Lists fuzzers matching 'name' if provided, or all fuzzers."},
+    {kSeeds, "seeds", "name", "Lists the seed corpus location(s) for the fuzzer."},
 };
 
 } // namespace
@@ -50,6 +52,7 @@ void Fuzzer::Reset() {
     name_.clear();
     executable_.clear();
     root_.clear();
+    resource_path_.Reset();
     inputs_.clear();
     options_.clear();
     out_ = stdout;
@@ -77,6 +80,8 @@ zx_status_t Fuzzer::Run(StringList* args) {
         return Help();
     case kList:
         return List();
+    case kSeeds:
+        return Seeds();
     default:
         // Shouldn't get here.
         ZX_DEBUG_ASSERT(false);
@@ -329,6 +334,8 @@ zx_status_t Fuzzer::SetCommand(const char* command) {
 }
 
 zx_status_t Fuzzer::SetFuzzer(const char* name) {
+    zx_status_t rc;
+
     // Early exit for commands that don't need a single, selected fuzzer
     switch (cmd_) {
     case kHelp:
@@ -342,13 +349,55 @@ zx_status_t Fuzzer::SetFuzzer(const char* name) {
         break;
     }
 
-    return ZX_ERR_NOT_SUPPORTED;
+    if (!name) {
+        fprintf(err_, "Missing fuzzer name.\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+    name_.Set(name);
+
+    // Determine the fuzzer
+    StringMap fuzzers;
+    FindFuzzers(name, &fuzzers);
+    switch (fuzzers.size()) {
+    case 0:
+        fprintf(err_, "No matching fuzzers for '%s'.\n", name);
+        return ZX_ERR_NOT_FOUND;
+    case 1:
+        break;
+    default:
+        fprintf(err_, "Multiple matching fuzzers for '%s':\n", name);
+        List();
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    const char* executable;
+    fuzzers.begin();
+    fuzzers.next(&name, &executable);
+    name_.Set(name);
+    executable_.Set(executable);
+
+    fbl::String package, target;
+    if ((rc = ParseName(name_.c_str(), &package, &target)) != ZX_OK) {
+        return rc;
+    }
+
+    // Determine the directory that holds the fuzzing resources. It may not be present if fuzzing
+    // Zircon standalone.
+    if ((rc = GetPackagePath(package.c_str(), &resource_path_)) != ZX_OK ||
+        (rc = resource_path_.Push("data")) != ZX_OK ||
+        (rc = resource_path_.Push(target.c_str())) != ZX_OK) {
+        // No-op: The directory may not be present when fuzzing standalone Zircon.
+        resource_path_.Reset();
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t Fuzzer::LoadOptions() {
     switch (cmd_) {
     case kHelp:
     case kList:
+    case kSeeds:
         // No options needed
         return ZX_OK;
 
@@ -383,6 +432,26 @@ zx_status_t Fuzzer::List() {
     fuzzers.begin();
     while (fuzzers.next(&name, nullptr)) {
         fprintf(out_, "  %s\n", name);
+    }
+    return ZX_OK;
+}
+
+zx_status_t Fuzzer::Seeds() {
+    if (strlen(resource_path_.c_str()) <= 1) {
+        fprintf(out_, "No seed corpora found for %s.\n", name_.c_str());
+        return ZX_OK;
+    }
+    fbl::String corpora = resource_path_.Join("corpora");
+    FILE* f = fopen(corpora.c_str(), "r");
+    if (!f) {
+        fprintf(out_, "No seed corpora found for %s.\n", name_.c_str());
+        return ZX_OK;
+    }
+    auto close_f = fbl::MakeAutoCall([&f]() { fclose(f); });
+
+    char buffer[PATH_MAX];
+    while (fgets(buffer, sizeof(buffer), f)) {
+        fprintf(out_, "%s\n", buffer);
     }
     return ZX_OK;
 }

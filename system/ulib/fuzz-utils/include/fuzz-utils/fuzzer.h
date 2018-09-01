@@ -100,6 +100,7 @@ private:
     // Specific subcommands; see corresponding usage messages
     zx_status_t Help();
     zx_status_t List();
+    zx_status_t Seeds();
 
     // The current subcommand
     uint32_t cmd_;
@@ -109,6 +110,8 @@ private:
     fbl::String executable_;
     // Path that the resource and data paths are relative to; primarily used for testing.
     fbl::String root_;
+    // Path on target to where immutable fuzzing resources are stored
+    Path resource_path_;
     // Positional arguments to libFuzzers
     StringList inputs_;
     // libFuzzer option flags

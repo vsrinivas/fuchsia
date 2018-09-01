@@ -522,6 +522,51 @@ bool TestList() {
     END_TEST;
 }
 
+bool TestSeeds() {
+    BEGIN_TEST;
+    TestFuzzer test;
+
+    // Zircon tests
+    ASSERT_TRUE(test.InitZircon());
+
+    ASSERT_TRUE(test.Eval("seeds"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("missing"));
+
+    ASSERT_TRUE(test.Eval("seeds foobar"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("no match"));
+
+    ASSERT_TRUE(test.Eval("seeds target"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("multiple"));
+
+    ASSERT_TRUE(test.Eval("seeds zircon/target2"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("no seed"));
+
+    // Fuchsia tests
+    ASSERT_TRUE(test.InitFuchsia());
+
+    ASSERT_TRUE(test.Eval("seeds zircon/target2"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("//path/to/seed/corpus"));
+    EXPECT_TRUE(test.InStdOut("//path/to/cipd/ensure/file"));
+    EXPECT_TRUE(test.InStdOut("https://gcs/url"));
+
+    ASSERT_TRUE(test.Eval("seeds fuchsia1/target1"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("no seed"));
+
+    ASSERT_TRUE(test.Eval("seeds fuchsia1/target3"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("//path/to/seed/corpus"));
+    EXPECT_TRUE(test.InStdOut("//path/to/cipd/ensure/file"));
+    EXPECT_TRUE(test.InStdOut("https://gcs/url"));
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FuzzerTest)
 RUN_TEST(TestSetOption)
 RUN_TEST(TestRebasePath)
@@ -533,6 +578,7 @@ RUN_TEST(TestCheckProcess)
 RUN_TEST(TestInvalid)
 RUN_TEST(TestHelp)
 RUN_TEST(TestList)
+RUN_TEST(TestSeeds)
 END_TEST_CASE(FuzzerTest)
 
 } // namespace
