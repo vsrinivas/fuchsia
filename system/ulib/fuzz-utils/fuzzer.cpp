@@ -7,6 +7,7 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
+#include <fbl/string_printf.h>
 #include <fuzz-utils/fuzzer.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -131,6 +132,80 @@ zx_status_t Fuzzer::GetPackagePath(const char* package, Path* out) {
     pop_package.cancel();
     pop_prefix.cancel();
     return ZX_OK;
+}
+
+void Fuzzer::FindZirconFuzzers(const char* zircon_path, const char* target, StringMap* out) {
+    Path path;
+    if (RebasePath(zircon_path, &path) != ZX_OK) {
+        return;
+    }
+
+    auto targets = path.List();
+    for (const char* t = targets->first(); t; t = targets->next()) {
+    }
+
+    targets->keep_if(target);
+    for (const char* t = targets->first(); t; t = targets->next()) {
+        out->set(fbl::StringPrintf("zircon_fuzzers/%s", t).c_str(), path.Join(t).c_str());
+    }
+}
+
+void Fuzzer::FindFuchsiaFuzzers(const char* package, const char* target, StringMap* out) {
+    Path path;
+    if (RebasePath("pkgfs/packages", &path) != ZX_OK) {
+        return;
+    }
+
+    auto packages = path.List();
+    packages->keep_if(package);
+
+    for (const char* p = packages->first(); p; p = packages->next()) {
+        if (GetPackagePath(p, &path) != ZX_OK || path.Push("test") != ZX_OK) {
+            continue;
+        }
+
+        auto targets = path.List();
+        targets->keep_if(target);
+
+        fbl::String abspath;
+        for (const char* t = targets->first(); t; t = targets->next()) {
+            out->set(fbl::StringPrintf("%s/%s", p, t).c_str(), path.Join(t).c_str());
+        }
+    }
+}
+
+void Fuzzer::FindFuzzers(const char* package, const char* target, StringMap* out) {
+    if (strstr("zircon_fuzzers", package) != nullptr) {
+        FindZirconFuzzers("boot/test/fuzz", target, out);
+        FindZirconFuzzers("system/test/fuzz", target, out);
+    }
+    FindFuchsiaFuzzers(package, target, out);
+}
+
+static zx_status_t ParseName(const char* name, fbl::String* out_package, fbl::String* out_target) {
+    const char* sep = name ? strchr(name, '/') : nullptr;
+    if (!sep) {
+        return ZX_ERR_NOT_FOUND;
+    }
+    out_package->Set(name, sep - name);
+    out_target->Set(sep + 1);
+    return ZX_OK;
+}
+
+void Fuzzer::FindFuzzers(const char* name, StringMap* out) {
+    ZX_DEBUG_ASSERT(out);
+
+    // Scan the system for available fuzzers
+    out->clear();
+    fbl::String package, target;
+    if (ParseName(name, &package, &target) == ZX_OK) {
+        FindFuzzers(package.c_str(), target.c_str(), out);
+    } else if (name) {
+        FindFuzzers(name, "", out);
+        FindFuzzers("", name, out);
+    } else {
+        FindFuzzers("", "", out);
+    }
 }
 
 } // namespace fuzzing

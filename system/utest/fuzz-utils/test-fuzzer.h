@@ -43,6 +43,13 @@ public:
     zx_status_t GetPackagePath(const char* package, Path* out) {
         return Fuzzer::GetPackagePath(package, out);
     }
+    void FindZirconFuzzers(const char* zircon_path, const char* target, StringMap* out) {
+        Fuzzer::FindZirconFuzzers(zircon_path, target, out);
+    }
+    void FindFuchsiaFuzzers(const char* package, const char* target, StringMap* out) {
+        Fuzzer::FindFuchsiaFuzzers(package, target, out);
+    }
+    void FindFuzzers(const char* name, StringMap* out) { Fuzzer::FindFuzzers(name, out); }
 
 private:
     // Sets up the test fuzzer to buffer output without changing the test fixture

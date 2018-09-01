@@ -59,6 +59,23 @@ protected:
     // reset to the root directory.
     zx_status_t GetPackagePath(const char* package, Path* out);
 
+    // Returns a map of names of available fuzzers to executables in |out| belonging to the
+    // 'zircon_fuzzers' fuzz package located under |zircon_path| and matching |target|, if
+    // specified.
+    void FindZirconFuzzers(const char* zircon_path, const char* target, StringMap* out);
+
+    // Returns a map of names of available fuzzers to executables in |out| belonging to the given
+    // fuzz |package| located under "pkgfs/packages" and matching |target|, if specified.
+    void FindFuchsiaFuzzers(const char* package, const char* target, StringMap* out);
+
+    // Returns a map of names of available fuzzers to executables in |out| matching the given
+    // |package| and |target|.
+    void FindFuzzers(const char* package, const char* target, StringMap* out);
+
+    // Returns a map of names of available fuzzers to executables in |out| matching |name|, if
+    // specified.
+    void FindFuzzers(const char* name, StringMap* out);
+
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Fuzzer);
 
