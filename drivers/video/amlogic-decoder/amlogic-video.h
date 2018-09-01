@@ -97,6 +97,10 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT
   zx_status_t ParseVideo(void* data, uint32_t len);
   __WARN_UNUSED_RESULT
+  zx_status_t WaitForParsingCompleted(zx_duration_t deadline);
+  void CancelParsing();
+
+  __WARN_UNUSED_RESULT
   zx_status_t ProcessVideoNoParser(void* data, uint32_t len,
                                    uint32_t* written_out = nullptr);
   __WARN_UNUSED_RESULT
@@ -127,6 +131,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   std::unique_ptr<FirmwareBlob> firmware_;
 
+  std::unique_ptr<io_buffer_t> parser_input_;
+
   // This buffer holds an ES start code that's used to get an interrupt when the
   // parser is finished.
   io_buffer_t search_pattern_ = {};
@@ -134,6 +140,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   zx::handle bti_;
 
   zx::event parser_finished_event_;
+
+  std::mutex parser_running_lock_;
+  bool parser_running_ = false;
 
   zx::handle parser_interrupt_handle_;
   zx::handle vdec0_interrupt_handle_;

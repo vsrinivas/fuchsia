@@ -108,6 +108,7 @@ class TestH264 {
     if (use_parser) {
       EXPECT_EQ(ZX_OK, video->InitializeEsParser());
       EXPECT_EQ(ZX_OK, video->ParseVideo(bear_h264->ptr, bear_h264->size));
+      EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));
     } else {
       video->core_->InitializeDirectInput();
       EXPECT_EQ(ZX_OK,
@@ -119,6 +120,7 @@ class TestH264 {
 
     if (use_parser) {
       EXPECT_EQ(ZX_OK, video->ParseVideo(larger_h264->ptr, larger_h264->size));
+      EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));
     } else {
       EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(larger_h264->ptr,
                                                    larger_h264->size));
@@ -281,6 +283,7 @@ class TestH264 {
       }
       if (use_parser) {
         EXPECT_EQ(ZX_OK, video->ParseVideo(nal.data(), nal.size()));
+        EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));
       } else {
         EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(nal.data(), nal.size()));
       }

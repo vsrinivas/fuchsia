@@ -605,10 +605,20 @@ void CodecAdapterH264::ProcessInput() {
         OnCoreCodecFailStream();
         return;
       }
+      if (ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
+        video_->CancelParsing();
+        OnCoreCodecFailStream();
+        return;
+      }
       auto bytes = std::make_unique<uint8_t[]>(kFlushThroughBytes);
       memset(bytes.get(), 0, kFlushThroughBytes);
       if (ZX_OK != video_->ParseVideo(reinterpret_cast<void*>(bytes.get()),
                                       kFlushThroughBytes)) {
+        OnCoreCodecFailStream();
+        return;
+      }
+      if (ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
+        video_->CancelParsing();
         OnCoreCodecFailStream();
         return;
       }
