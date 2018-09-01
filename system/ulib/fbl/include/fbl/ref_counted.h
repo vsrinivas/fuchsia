@@ -31,7 +31,7 @@ namespace fbl {
 //
 template <typename T,
           bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED>
-class RefCounted : public internal::RefCountedBase<EnableAdoptionValidator> {
+class RefCounted : private internal::RefCountedBase<EnableAdoptionValidator> {
 public:
     RefCounted() {}
     ~RefCounted() {}
@@ -39,6 +39,8 @@ public:
     using internal::RefCountedBase<EnableAdoptionValidator>::AddRef;
     using internal::RefCountedBase<EnableAdoptionValidator>::Release;
     using internal::RefCountedBase<EnableAdoptionValidator>::Adopt;
+    using internal::RefCountedBase<EnableAdoptionValidator>::ref_count_debug;
+
     // Don't use this method. See the relevant RefPtr implementation for details.
     using internal::RefCountedBase<EnableAdoptionValidator>::AddRefMaybeInDestructor;
 

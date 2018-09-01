@@ -12,127 +12,51 @@
 namespace fbl {
 namespace internal {
 
-template <bool Enabled>
-class AdoptionValidator;
-
-constexpr const char kStarting[] = "RcST";
-constexpr const char kAdopted[] = "RcAD";
-
-// This will catch:
+// Adoption validation will help to catch:
 // - Double-adoptions
 // - AddRef/Release without adopting first
-// - Wrapping bad pointers
 // - Re-wrapping raw pointers to destroyed objects
-template <>
-class AdoptionValidator<true> {
-public:
-    ~AdoptionValidator() {
-        magic_ = 0;
-    }
-
-    void Adopt() const {
-        AssertMagic(kStartingMagic);
-        magic_ = kAdoptedMagic;
-    }
-    void ValidateAddRef() const {
-        AssertMagic(kAdoptedMagic);
-    }
-    void ValidateRelease() const {
-        AssertMagic(kAdoptedMagic);
-    }
-
-private:
-    void AssertMagic(const uint32_t expected) const {
-        ZX_DEBUG_ASSERT_MSG(magic_ == expected,
-                            "fbl::RefCounted: Invalid magic: "
-                            "expected: %s (0x%02x), got: %s (0x%02x)\n",
-                            MagicString(expected),
-                            static_cast<unsigned int>(expected),
-                            MagicString(magic_),
-                            static_cast<unsigned int>(magic_));
-    }
-
-    constexpr const char* MagicString(uint32_t magic) const {
-        switch (magic) {
-        case kStartingMagic:
-            return kStarting;
-        case kAdoptedMagic:
-            return kAdopted;
-        }
-        return "<unknown>";
-    }
-
-    // The object has been constructed, but not yet adopted or destroyed.
-    static constexpr uint32_t kStartingMagic = fbl::magic(kStarting);
-
-    // The object has been constructed and adopted, but not destroyed.
-    static constexpr uint32_t kAdoptedMagic = fbl::magic(kAdopted);
-
-    mutable volatile uint32_t magic_ = kStartingMagic;
-};
-
-template <>
-class AdoptionValidator<false> {
-public:
-    void Adopt() const {}
-    void ValidateAddRef() const {}
-    void ValidateRelease() const {}
-};
-
-template<bool EnableAdoptionValidator>
-inline void AddRefDefault(fbl::atomic_int& ref_count,
-                          AdoptionValidator<EnableAdoptionValidator> adoption_validator) {
-    adoption_validator.ValidateAddRef();
-    const int rc = ref_count.fetch_add(1, memory_order_relaxed);
-    if (EnableAdoptionValidator) {
-        // This assertion will fire if someone calls AddRef() on a
-        // ref-counted object that has reached ref_count_ == 0 but has not
-        // been destroyed yet. This could happen by manually calling
-        // AddRef(), or re-wrapping such a pointer with WrapRefPtr() or
-        // RefPtr<T>(T*) (both of which call AddRef()). If the object has
-        // already been destroyed, the magic check in
-        // adoption_validator_.ValidateAddRef() should have caught it before
-        // this point.
-        ZX_DEBUG_ASSERT_MSG(rc >= 1, "count %d < 1\n", rc);
-    }
-}
-
-inline bool AddRefMaybeInDestructorDefault(fbl::atomic_int& ref_count) {
-    int old = ref_count.load(memory_order_acquire);
-    do {
-        if (old == 0)
-            return false;
-    } while (!ref_count.compare_exchange_weak(
-        &old, old + 1, memory_order_acquire, memory_order_acquire));
-    return true;
-}
-
-template <bool EnableAdoptionValidator>
-inline bool ReleaseRefDefault(fbl::atomic_int& ref_count,
-                              AdoptionValidator<EnableAdoptionValidator>
-                              adoption_validator) {
-    adoption_validator.ValidateRelease();
-    const int rc = ref_count.fetch_sub(1, memory_order_release);
-    if (EnableAdoptionValidator) {
-        // This assertion will fire if someone manually calls Release()
-        // on a ref-counted object too many times.
-        ZX_DEBUG_ASSERT_MSG(rc >= 1, "count %d < 1\n", rc);
-    }
-    if (rc == 1) {
-        atomic_thread_fence(memory_order_acquire);
-        return true;
-    }
-    return false;
-}
-
+//
+// It also provides some limited defense against
+// - Wrapping bad pointers
 template <bool EnableAdoptionValidator>
 class RefCountedBase {
 protected:
     constexpr RefCountedBase()
-        : ref_count_(1) {}
-    ~RefCountedBase() {}
+        : ref_count_(kPreAdoptSentinel) {}
+
+    ~RefCountedBase() {
+        if (EnableAdoptionValidator) {
+            // Reset the ref-count back to the pre-adopt sentinel value so that we
+            // have the best chance of catching a use-after-free situation, even if
+            // we have a messed up mix of debug/release translation units being
+            // linked together.
+            ref_count_.store(kPreAdoptSentinel, memory_order_release);
+        }
+    }
+
     void AddRef() const {
-        AddRefDefault<EnableAdoptionValidator>(ref_count_, adoption_validator_);
+        const int32_t rc = ref_count_.fetch_add(1, memory_order_relaxed);
+
+        // This assertion will fire if either of the following occur.
+        //
+        // 1) someone calls AddRef() before the object has been properly
+        // Adopted.
+        //
+        // 2) someone calls AddRef() on a ref-counted object that has
+        // reached ref_count_ == 0 but has not been destroyed yet. This
+        // could happen by manually calling AddRef(), or re-wrapping such a
+        // pointer with WrapRefPtr() or RefPtr<T>(T*) (both of which call
+        // AddRef()).
+        //
+        // Note: leave the ASSERT on in all builds.  The constant
+        // EnableAdoptionValidator check above should cause this code path to be
+        // pruned in release builds, but leaving this as an always on ASSERT
+        // will mean that the tests continue to function even when built as
+        // release.
+        if (EnableAdoptionValidator) {
+            ZX_ASSERT_MSG(rc >= 1, "count %d(0x%08x) < 1\n", rc, static_cast<uint32_t>(rc));
+        }
     }
 
     // This method should not be used. See MakeRefPtrUpgradeFromRaw()
@@ -140,25 +64,72 @@ protected:
     // this function is to atomically increment the refcount if the
     // refcount is greater than zero.
     //
-    // This method returns false if the object was found with refcount
-    // of zero and refcount was unmodified and true if the refcount
-    // was not zero and it was incremented.
+    // This method returns false if the object was found with an invalid
+    // refcount (refcount was <= 0), and true if the refcount was not zero and
+    // it was incremented.
     //
     // The procedure used is the while-CAS loop with the advantage that
     // compare_exchange on failure updates |old| on failure (to exchange)
     // so the loop does not have to do a separate load.
     //
-    bool AddRefMaybeInDestructor() {
-        return AddRefMaybeInDestructorDefault(ref_count_);
+    bool AddRefMaybeInDestructor() const __WARN_UNUSED_RESULT {
+        int32_t old = ref_count_.load(memory_order_acquire);
+        do {
+            if (old <= 0) {
+                return false;
+            }
+        } while (!ref_count_.compare_exchange_weak(&old,
+                                                   old + 1,
+                                                   memory_order_acq_rel,
+                                                   memory_order_acquire));
+        return true;
     }
 
     // Returns true if the object should self-delete.
     bool Release() const __WARN_UNUSED_RESULT {
-        return ReleaseRefDefault<EnableAdoptionValidator>(ref_count_, adoption_validator_);
+        const int32_t rc = ref_count_.fetch_sub(1, memory_order_release);
+
+        // This assertion will fire if someone manually calls Release()
+        // on a ref-counted object too many times, or if Release is called
+        // before an object has been Adopted.
+        //
+        // Note: leave the ASSERT on in all builds.  The constant
+        // EnableAdoptionValidator check above should cause this code path to be
+        // pruned in release builds, but leaving this as an always on ASSERT
+        // will mean that the tests continue to function even when built as
+        // release.
+        if (EnableAdoptionValidator) {
+            ZX_ASSERT_MSG(rc >= 1, "count %d(0x%08x) < 1\n", rc, static_cast<uint32_t>(rc));
+        }
+
+        if (rc == 1) {
+            atomic_thread_fence(memory_order_acquire);
+            return true;
+        }
+
+        return false;
     }
 
     void Adopt() const {
-        adoption_validator_.Adopt();
+        // TODO(johngro): turn this into an if-constexpr when we have moved up
+        // to C++17
+        if (EnableAdoptionValidator) {
+            int32_t expected = kPreAdoptSentinel;
+            bool res = ref_count_.compare_exchange_strong(&expected, 1,
+                                                          memory_order_acq_rel,
+                                                          memory_order_acquire);
+            // Note: leave the ASSERT on in all builds.  The constant
+            // EnableAdoptionValidator check above should cause this code path
+            // to be pruned in release builds, but leaving this as an always on
+            // ASSERT will mean that the tests continue to function even when
+            // built as release.
+            ZX_ASSERT_MSG(res,
+                          "count(0x%08x) != sentinel(0x%08x)\n",
+                          static_cast<uint32_t>(expected),
+                          static_cast<uint32_t>(kPreAdoptSentinel));
+        } else {
+            ref_count_.store(1, memory_order_release);
+        }
     }
 
     // Current ref count. Only to be used for debugging purposes.
@@ -166,9 +137,22 @@ protected:
         return ref_count_.load(memory_order_relaxed);
     }
 
-private:
-    mutable fbl::atomic_int ref_count_;
-    AdoptionValidator<EnableAdoptionValidator> adoption_validator_;
+    // Note:
+    //
+    // The PreAdoptSentinel value is chosen specifically to be negative when
+    // stored as an int32_t, and as far away from becoming positiive (via either
+    // addition or subtraction) as possible.  These properties allow us to
+    // combine the debug-build adopt sanity checks and the lifecycle sanity
+    // checks into a single debug assert.
+    //
+    // If a user creates an object, but never adopts it, they would need to
+    // perform 0x4000000 (about 1 billion) unchecked AddRef or Release
+    // operations before making the internal ref_count become positive again.
+    // At this point, even a checked AddRef or Release operation would fail to
+    // detect the bad state of the system fails to detect the problem.
+    //
+    static constexpr int32_t kPreAdoptSentinel = static_cast<int32_t>(0xC0000000);
+    mutable fbl::atomic_int32_t ref_count_;
 };
 
 } // namespace internal
