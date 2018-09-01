@@ -175,6 +175,7 @@ class Station {
     zx_status_t SendPsPoll();
     zx_status_t SendDeauthFrame(wlan_mlme::ReasonCode reason_code);
     void SendBufferedUnits();
+    zx_status_t SendWlan(fbl::unique_ptr<Packet> packet);
     void DumpDataFrame(const DataFrameView<>&);
 
     zx::time deadline_after_bcn_period(size_t bcn_count);

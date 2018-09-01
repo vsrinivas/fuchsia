@@ -959,7 +959,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     packet = data_frame.Take();
     finspect("  frame   : %s\n", debug::HexDump(packet->data(), packet->len()).c_str());
 
-    status = device_->SendWlan(fbl::move(packet));
+    status = SendWlan(fbl::move(packet));
     if (status != ZX_OK) { errorf("could not send wlan data: %d\n", status); }
     return status;
 }
@@ -1070,7 +1070,7 @@ zx_status_t Station::SendKeepAliveResponse() {
         return status;
     }
 
-    status = device_->SendWlan(data_frame.Take());
+    status = SendWlan(data_frame.Take());
     if (status != ZX_OK) {
         errorf("could not send keep alive frame: %d\n", status);
         return status;
@@ -1172,7 +1172,7 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     data_frame.set_body_len(llc_hdr->len() + llc_payload_len);
     data_frame.FillTxInfo(CBW20, WLAN_PHY_HT);
 
-    zx_status_t status = device_->SendWlan(data_frame.Take());
+    zx_status_t status = SendWlan(data_frame.Take());
     if (status != ZX_OK) {
         errorf("could not send eapol request packet: %d\n", status);
         service::SendEapolConfirm(device_, wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
@@ -1294,7 +1294,7 @@ void Station::DumpDataFrame(const DataFrameView<>& frame) {
 
 zx_status_t Station::SendNonData(fbl::unique_ptr<Packet> packet) {
     chan_sched_->EnsureOnChannel(zx::deadline_after(kOnChannelTimeAfterSend));
-    return device_->SendWlan(fbl::move(packet));
+    return SendWlan(fbl::move(packet));
 }
 
 zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
@@ -1339,7 +1339,7 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
         return status;
     }
 
-    status = device_->SendWlan(data_frame.Take());
+    status = SendWlan(data_frame.Take());
     if (status != ZX_OK) {
         errorf("could not send power management frame: %d\n", status);
         return status;
@@ -1397,6 +1397,12 @@ zx_status_t Station::SendDeauthFrame(wlan_mlme::ReasonCode reason_code) {
 
     finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*hdr).c_str());
     return SendNonData(frame.Take());
+}
+
+zx_status_t Station::SendWlan(fbl::unique_ptr<Packet> packet) {
+    zx_status_t status = device_->SendWlan(fbl::move(packet));
+    if (status == ZX_OK) { WLAN_STATS_INC(tx_frame.out); }
+    return status;
 }
 
 zx::time Station::deadline_after_bcn_period(size_t bcn_count) {
