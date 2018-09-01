@@ -23,6 +23,12 @@ public:
     // Identical to |fbl::WAVLTree<fbl::unique_ptr<StringElement>>::size|.
     size_t size() const;
 
+    // Returns the value for the given |key|, or null if the key isn't found.
+    const char* get(const char* key) const;
+
+    // Associates the given |value| with the given |key|.  |key| and |value| must not be null.
+    void set(const char* key, const char* val);
+
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(StringMap);
 
