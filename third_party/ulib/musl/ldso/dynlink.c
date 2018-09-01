@@ -1565,6 +1565,23 @@ static void do_init_fini(struct dso* p) {
 }
 
 void __libc_start_init(void) {
+    // If a preinit hook spawns a thread that calls dlopen, that thread will
+    // get to do_init_fini and block on the lock.  Now the main thread finishes
+    // preinit hooks and releases the lock.  Then it's a race for which thread
+    // gets the lock and actually runs all the normal constructors.  This is
+    // expected, but to avoid such races preinit hooks should be very careful
+    // about what they do and rely on.
+    pthread_mutex_lock(&init_fini_lock);
+    size_t dyn[DT_NUM];
+    decode_vec(head->l_map.l_ld, dyn, DT_NUM);
+    if (dyn[0] & (1ul << DT_PREINIT_ARRAY)) {
+        size_t n = dyn[DT_PREINIT_ARRAYSZ] / sizeof(size_t);
+        size_t* fn = laddr(head, dyn[DT_PREINIT_ARRAY]);
+        while (n--)
+            ((void (*)(void)) * fn++)();
+    }
+    pthread_mutex_unlock(&init_fini_lock);
+
     do_init_fini(tail);
 }
 
