@@ -10,6 +10,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/string-list.cpp \
+    $(LOCAL_DIR)/string-map.cpp \
 
 MODULE_NAME := fuzz-utils
 

@@ -13,6 +13,7 @@ MODULE_SRCS += \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/string-list.cpp \
+    $(LOCAL_DIR)/string-map.cpp \
 
 MODULE_NAME := fuzz-utils-test
 
