@@ -19,14 +19,17 @@
 
 namespace {
 
-// bear.mp4 says 29.97, and bear.h264 is same content
-constexpr double kFramesPerSecond = 29.97;
+// bear.mp4 says 29.97, and bear.h264 is same content.
+// Other longer test files want 24.
+constexpr double kDefaultFramesPerSecond = 24;
 
 }  // namespace
 
 std::unique_ptr<FrameSink> FrameSink::Create(
-    component::StartupContext* startup_context, async::Loop* main_loop) {
-  return std::unique_ptr<FrameSink>(new FrameSink(startup_context, main_loop));
+    component::StartupContext* startup_context, async::Loop* main_loop,
+    double frames_per_second) {
+  return std::unique_ptr<FrameSink>(
+      new FrameSink(startup_context, main_loop, frames_per_second));
 }
 
 FrameSink::~FrameSink() {
@@ -68,10 +71,10 @@ void FrameSink::PutFrame(
   zx_time_t present_time;
   if (last_requested_present_time_ == ZX_TIME_INFINITE_PAST) {
     // Tell Scenic to show the first frame around now-ish.
-    present_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_SEC(2);
+    present_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_SEC(1);
   } else {
     present_time =
-        last_requested_present_time_ + ZX_SEC(1.0 / kFramesPerSecond);
+        last_requested_present_time_ + ZX_SEC(1.0 / frames_per_second_);
   }
   last_requested_present_time_ = present_time;
 
@@ -150,8 +153,12 @@ void FrameSink::AddFrameSinkView(FrameSinkView* view) { views_.insert(view); }
 void FrameSink::RemoveFrameSinkView(FrameSinkView* view) { views_.erase(view); }
 
 FrameSink::FrameSink(component::StartupContext* startup_context,
-                     async::Loop* main_loop)
-    : startup_context_(startup_context), main_loop_(main_loop) {
+                     async::Loop* main_loop, double frames_per_second)
+    : startup_context_(startup_context),
+      main_loop_(main_loop),
+      // IEEE 754 floating point can represent 0.0 exactly.
+      frames_per_second_(frames_per_second != 0.0 ? frames_per_second
+                                                  : kDefaultFramesPerSecond) {
   view_provider_app_ = std::make_unique<mozart::ViewProviderApp>(
       startup_context_, [this](mozart::ViewContext view_context) {
         return FrameSinkView::Create(

@@ -33,8 +33,11 @@ class FrameSink {
   //
   // |startup_context| must out-last the FrameSink
   // |main_loop| must out-last the FrameSink
+  // |frames_per_second| if not exactly 0.0, the frames per second, else use the
+  //     built-in default frames per second.
   static std::unique_ptr<FrameSink> Create(
-      component::StartupContext* startup_context, async::Loop* main_loop);
+      component::StartupContext* startup_context, async::Loop* main_loop,
+      double frames_per_second);
 
   ~FrameSink();
 
@@ -65,12 +68,14 @@ class FrameSink {
       std::numeric_limits<uint32_t>::max();
 
  private:
-  FrameSink(component::StartupContext* startup_context, async::Loop* main_loop);
+  FrameSink(component::StartupContext* startup_context, async::Loop* main_loop,
+            double frames_per_second);
 
   void CheckIfAllFramesReturned();
 
   component::StartupContext* startup_context_ = nullptr;
   async::Loop* main_loop_ = nullptr;
+  const double frames_per_second_ = 0.0;
 
   // The actaul views are owned by the view_provider_app_ with no
   // super-straightforward way for PutFrame() to find them, so we instead have
