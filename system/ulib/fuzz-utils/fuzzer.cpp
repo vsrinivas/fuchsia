@@ -3,16 +3,29 @@
 // found in the LICENSE file.
 
 #include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <fbl/auto_call.h>
+#include <fbl/macros.h>
 #include <fbl/string.h>
+#include <fbl/string_buffer.h>
+#include <fbl/string_piece.h>
 #include <fbl/string_printf.h>
 #include <fuzz-utils/fuzzer.h>
+#include <fuzz-utils/path.h>
+#include <fuzz-utils/string-list.h>
 #include <lib/fdio/spawn.h>
+#include <lib/zx/process.h>
+#include <lib/zx/time.h>
 #include <task-utils/walker.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
 namespace fuzzing {
@@ -27,6 +40,7 @@ enum Command : uint32_t {
     kStart,
     kCheck,
     kRepro,
+    kMerge,
 };
 
 // Usage information for specific tool subcommands.
@@ -47,6 +61,9 @@ const struct {
     {kRepro, "repro", "name [...]",
      "Runs the named fuzzer on specific inputs. If no additional inputs are provided, uses "
      "previously found artifacts."},
+    {kMerge, "merge", "name [...]",
+     "Merges the corpus for the named fuzzer.  If no additional inputs are provided, minimizes the "
+     "current corpus."},
 };
 
 // |kArtifactPrefixes| should matches the prefixes in libFuzzer passed to |Fuzzer::DumpCurrentUnit|
@@ -109,6 +126,8 @@ zx_status_t Fuzzer::Run(StringList* args) {
         return Check();
     case kRepro:
         return Repro();
+    case kMerge:
+        return Merge();
     default:
         // Shouldn't get here.
         ZX_DEBUG_ASSERT(false);
@@ -498,6 +517,12 @@ zx_status_t Fuzzer::LoadOptions() {
         // No options needed
         return ZX_OK;
 
+    case kMerge:
+        if ((rc = SetOption("merge", "1")) != ZX_OK) {
+            return rc;
+        }
+        break;
+
     default:
         break;
     }
@@ -670,6 +695,36 @@ zx_status_t Fuzzer::Repro() {
     }
 
     if ((rc = Execute(true /* wait_for_completion */)) != ZX_OK) {
+        fprintf(err_, "Failed to execute: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Fuzzer::Merge() {
+    zx_status_t rc;
+
+    // If no inputs, minimize the previous corpus (and there must be an existing corpus!)
+    if (inputs_.is_empty()) {
+        if ((rc = data_path_.Remove("corpus.prev")) != ZX_OK ||
+            (rc = data_path_.Rename("corpus", "corpus.prev")) != ZX_OK) {
+            fprintf(err_, "Failed to move 'corpus' for minimization: %s\n",
+                    zx_status_get_string(rc));
+            return rc;
+        }
+        inputs_.push_back(data_path_.Join("corpus.prev").c_str());
+    }
+
+    // Make sure the corpus directory exists, and make sure the output corpus is the first argument
+    if ((rc = data_path_.Ensure("corpus")) != ZX_OK) {
+        fprintf(err_, "Failed to ensure 'corpus': %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    inputs_.erase_if(data_path_.Join("corpus").c_str());
+    inputs_.push_front(data_path_.Join("corpus").c_str());
+
+    if ((rc = Execute(false /* !wait_for_completion */)) != ZX_OK) {
         fprintf(err_, "Failed to execute: %s\n", zx_status_get_string(rc));
         return rc;
     }

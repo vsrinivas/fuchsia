@@ -438,6 +438,12 @@ bool TestHelp() {
     ASSERT_TRUE(test.Eval("help"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_TRUE(test.InStdOut("help"));
+    EXPECT_TRUE(test.InStdOut("list"));
+    EXPECT_TRUE(test.InStdOut("seeds"));
+    EXPECT_TRUE(test.InStdOut("start"));
+    EXPECT_TRUE(test.InStdOut("check"));
+    EXPECT_TRUE(test.InStdOut("repro"));
+    EXPECT_TRUE(test.InStdOut("merge"));
 
     END_TEST;
 }
@@ -778,6 +784,87 @@ bool TestRepro() {
     END_TEST;
 }
 
+bool TestMerge() {
+    BEGIN_TEST;
+    TestFuzzer test;
+
+    // Zircon tests
+    FuzzerFixture fixture;
+    ASSERT_TRUE(test.InitZircon());
+
+    ASSERT_TRUE(test.Eval("merge"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("missing"));
+
+    ASSERT_TRUE(test.Eval("merge foobar"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("no match"));
+
+    ASSERT_TRUE(test.Eval("merge target"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("multiple"));
+
+    // Can't merge if no corpus
+    ASSERT_TRUE(test.Eval("merge zircon/target1"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("failed"));
+
+    // Zircon minimizing merge
+    ASSERT_TRUE(test.Eval("merge zircon/target2"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-merge=1"));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
+
+    // Fuchsia tests
+    ASSERT_TRUE(test.InitFuchsia());
+
+    // Zircon minimizing merge in Fuchsia
+    ASSERT_TRUE(test.Eval("merge zircon/target2"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-merge=1"));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
+
+    // Can't merge if no corpus
+    ASSERT_TRUE(test.Eval("merge fuchsia1/target1"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("failed"));
+
+    // Fuchsia minimizing merge
+    ASSERT_TRUE(test.Eval("merge fuchsia2/target4"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-merge=1"));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
+
+    // Fuchsia merge of another corpus without an existing corpus
+    ASSERT_TRUE(test.Eval("merge fuchsia1/target3 /path/to/another/corpus"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-merge=1"));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
+
+    // Fuchsia merge of another corpus with an existing corpus
+    ASSERT_TRUE(test.Eval("merge fuchsia2/target4 /path/to/another/corpus"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-merge=1"));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FuzzerTest)
 RUN_TEST(TestSetOption)
 RUN_TEST(TestRebasePath)
@@ -793,6 +880,7 @@ RUN_TEST(TestSeeds)
 RUN_TEST(TestStart)
 RUN_TEST(TestCheck)
 RUN_TEST(TestRepro)
+RUN_TEST(TestMerge)
 END_TEST_CASE(FuzzerTest)
 
 } // namespace

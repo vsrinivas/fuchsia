@@ -110,6 +110,7 @@ private:
     zx_status_t Start();
     zx_status_t Check();
     zx_status_t Repro();
+    zx_status_t Merge();
 
     // The current subcommand
     uint32_t cmd_;
