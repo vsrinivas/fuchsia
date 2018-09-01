@@ -4,8 +4,10 @@
 
 use failure::{format_err, Error, ResultExt};
 use fdio;
-use fidl_fuchsia_cobalt::{BucketDistributionEntry, EncoderFactoryMarker, EncoderProxy,
-                          ObservationValue, ProjectProfile, Status, Value};
+use fidl_fuchsia_cobalt::{
+    HistogramBucket, LoggerExtProxy, LoggerFactoryMarker, LoggerProxy, ProjectProfile2,
+    ReleaseStage, Status2,
+};
 use fidl_fuchsia_mem as fuchsia_mem;
 use fidl_fuchsia_wlan_stats as fidl_stats;
 use fidl_fuchsia_wlan_stats::MlmeStats::{ApMlmeStats, ClientMlmeStats};
@@ -41,48 +43,57 @@ enum CobaltMetricId {
     ClientBeaconRssi = 7,
     ConnectionTime = 8,
 }
-enum CobaltEncodingId {
-    RawEncoding = 1,
-}
 
-enum CobaltValue {
-    IntBucketDistribution {
-        encoding_id: u32,
-        values: Vec<BucketDistributionEntry>,
+enum EventValue {
+    Count {
+        event_type_index: u32,
+        count: i64,
     },
-    Multipart(Vec<ObservationValue>),
+    ElapsedTime {
+        event_type_index: u32,
+        elapsed_micros: i64,
+    },
+    IntHistogram {
+        values: Vec<HistogramBucket>,
+    },
 }
 
-pub struct Observation {
+pub struct Event {
     metric_id: u32,
-    value: CobaltValue,
+    value: EventValue,
 }
 
 #[derive(Clone)]
 pub struct CobaltSender {
-    sender: mpsc::Sender<Observation>,
+    sender: mpsc::Sender<Event>,
 }
 
 impl CobaltSender {
-    fn add_int_bucket_distribution(
-        &mut self, metric_id: u32, encoding_id: u32, values: Vec<BucketDistributionEntry>,
-    ) {
-        let value = CobaltValue::IntBucketDistribution {
-            encoding_id,
-            values,
+    fn log_event_count(&mut self, metric_id: u32, event_type_index: u32, count: i64) {
+        let event_value = EventValue::Count {
+            event_type_index,
+            count,
         };
-        self.add_observation(metric_id, value);
+        self.log_event(metric_id, event_value);
     }
 
-    fn add_multipart_observation(&mut self, metric_id: u32, values: Vec<ObservationValue>) {
-        let value = CobaltValue::Multipart(values);
-        self.add_observation(metric_id, value);
+    fn log_elapsed_time(&mut self, metric_id: u32, event_type_index: u32, elapsed_micros: i64) {
+        let event_value = EventValue::ElapsedTime {
+            event_type_index,
+            elapsed_micros,
+        };
+        self.log_event(metric_id, event_value);
     }
 
-    fn add_observation(&mut self, metric_id: u32, value: CobaltValue) {
-        let observation = Observation { metric_id, value };
-        if self.sender.try_send(observation).is_err() {
-            error!("Dropping a Cobalt observation because the buffer is full");
+    fn log_int_histogram(&mut self, metric_id: u32, values: Vec<HistogramBucket>) {
+        let event_value = EventValue::IntHistogram { values };
+        self.log_event(metric_id, event_value);
+    }
+
+    fn log_event(&mut self, metric_id: u32, value: EventValue) {
+        let event = Event { metric_id, value };
+        if self.sender.try_send(event).is_err() {
+            error!("Dropping a Cobalt event because the buffer is full");
         }
     }
 }
@@ -94,29 +105,55 @@ pub fn serve(ifaces_map: Arc<IfaceMap>) -> (CobaltSender, impl Future<Output = (
     (sender, fut)
 }
 
-async fn get_cobalt_encoder() -> Result<EncoderProxy, Error> {
-    let (proxy, server_end) =
+async fn get_cobalt_loggers() -> Result<(LoggerProxy, LoggerExtProxy), Error> {
+    let (logger_proxy, server_end) =
         fidl::endpoints2::create_endpoints().context("Failed to create endpoints")?;
-    let encoder_factory = fuchsia_app::client::connect_to_service::<EncoderFactoryMarker>()
-        .context("Failed to connect to the Cobalt EncoderFactory")?;
+    let (logger_ext_proxy, ext_server_end) =
+        fidl::endpoints2::create_endpoints().context("Failed to create endpoints")?;
+    let logger_factory = fuchsia_app::client::connect_to_service::<LoggerFactoryMarker>()
+        .context("Failed to connect to the Cobalt LoggerFactory")?;
 
     let mut cobalt_config = File::open(COBALT_CONFIG_PATH)?;
     let vmo = fdio::get_vmo_copy_from_file(&cobalt_config)?;
     let size = cobalt_config.seek(std::io::SeekFrom::End(0))?;
 
     let config = fuchsia_mem::Buffer { vmo, size };
-    let resp =
-        await!(encoder_factory.get_encoder_for_project(&mut ProjectProfile { config }, server_end));
+    let vmo_ext = fdio::get_vmo_copy_from_file(&cobalt_config)?;
+    let config_ext = fuchsia_mem::Buffer { vmo: vmo_ext, size };
 
-    match resp {
-        Ok(Status::Ok) => Ok(proxy),
-        Ok(other) => Err(format_err!("Failed to obtain Encoder: {:?}", other)),
-        Err(e) => Err(format_err!("Failed to obtain Encoder: {}", e)),
+    let create_logger_fut = logger_factory.create_logger(
+        &mut ProjectProfile2 {
+            config,
+            release_stage: ReleaseStage::Ga,
+        },
+        server_end,
+    );
+    let create_logger_ext_fut = logger_factory.create_logger_ext(
+        &mut ProjectProfile2 {
+            config: config_ext,
+            release_stage: ReleaseStage::Ga,
+        },
+        ext_server_end,
+    );
+
+    let (res, ext_res) = join!(create_logger_fut, create_logger_ext_fut);
+    handle_cobalt_factory_result(res, "Failed to obtain Logger")?;
+    handle_cobalt_factory_result(ext_res, "Failed to obtain LoggerExt")?;
+    Ok((logger_proxy, logger_ext_proxy))
+}
+
+fn handle_cobalt_factory_result(
+    r: Result<Status2, fidl::Error>, context: &str
+) -> Result<(), failure::Error> {
+    match r {
+        Ok(Status2::Ok) => Ok(()),
+        Ok(other) => Err(format_err!("{}: {:?}", context, other)),
+        Err(e) => Err(format_err!("{}: {}", context, e)),
     }
 }
 
 async fn report_telemetry(
-    ifaces_map: Arc<IfaceMap>, sender: CobaltSender, receiver: mpsc::Receiver<Observation>,
+    ifaces_map: Arc<IfaceMap>, sender: CobaltSender, receiver: mpsc::Receiver<Event>,
 ) {
     info!("Telemetry started");
     let report_periodically_fut = report_telemetry_periodically(ifaces_map.clone(), sender);
@@ -124,35 +161,51 @@ async fn report_telemetry(
     join!(report_periodically_fut, report_events_fut);
 }
 
-async fn report_telemetry_events(mut receiver: mpsc::Receiver<Observation>) {
-    let encoder = match await!(get_cobalt_encoder()) {
-        Ok(encoder) => encoder,
+async fn report_telemetry_events(mut receiver: mpsc::Receiver<Event>) {
+    let (logger, logger_ext) = match await!(get_cobalt_loggers()) {
+        Ok((logger, logger_ext)) => (logger, logger_ext),
         Err(e) => {
-            error!("Error establishing connection to Cobalt encoder: {}", e);
+            error!("Error obtaining a Cobalt Logger: {}", e);
             return;
         }
     };
 
     let mut is_full = false;
-    while let Some(observation) = await!(receiver.next()) {
-        match observation.value {
-            CobaltValue::Multipart(mut values) => {
-                let resp = await!(
-                    encoder
-                        .add_multipart_observation(observation.metric_id, &mut values.iter_mut())
-                );
-                handle_cobalt_response(resp, observation.metric_id, &mut is_full);
-            }
-            CobaltValue::IntBucketDistribution {
-                encoding_id,
-                mut values,
+    while let Some(event) = await!(receiver.next()) {
+        match event.value {
+            EventValue::Count {
+                event_type_index,
+                count,
             } => {
-                let resp = await!(encoder.add_int_bucket_distribution(
-                    observation.metric_id,
-                    encoding_id,
+                let resp = await!(logger.log_event_count(
+                    event.metric_id,
+                    event_type_index,
+                    "",
+                    0, // TODO report a period duration once the backend supports it.
+                    count
+                ));
+                handle_cobalt_response(resp, event.metric_id, &mut is_full);
+            }
+            EventValue::ElapsedTime {
+                event_type_index,
+                elapsed_micros,
+            } => {
+                let resp = await!(logger.log_elapsed_time(
+                    event.metric_id,
+                    event_type_index,
+                    "",
+                    elapsed_micros
+                ));
+                handle_cobalt_response(resp, event.metric_id, &mut is_full);
+            }
+            EventValue::IntHistogram { mut values } => {
+                let resp = await!(logger_ext.log_int_histogram(
+                    event.metric_id,
+                    0,
+                    "",
                     &mut values.iter_mut()
                 ));
-                handle_cobalt_response(resp, observation.metric_id, &mut is_full);
+                handle_cobalt_response(resp, event.metric_id, &mut is_full);
             }
         }
     }
@@ -248,18 +301,11 @@ fn report_dispatcher_stats(
 }
 
 fn report_dispatcher_packets(packet_type_index: u32, packet_count: u64, sender: &mut CobaltSender) {
-    let index_value = ObservationValue {
-        name: String::from("packet_type_index"),
-        value: Value::IndexValue(packet_type_index),
-        encoding_id: CobaltEncodingId::RawEncoding as u32,
-    };
-    let count_value = ObservationValue {
-        name: String::from("packet_count"),
-        value: Value::IntValue(packet_count as i64),
-        encoding_id: CobaltEncodingId::RawEncoding as u32,
-    };
-    let values = vec![index_value, count_value];
-    sender.add_multipart_observation(CobaltMetricId::DispatcherPacketCounter as u32, values);
+    sender.log_event_count(
+        CobaltMetricId::DispatcherPacketCounter as u32,
+        packet_type_index,
+        packet_count as i64,
+    );
 }
 
 fn report_mlme_stats(
@@ -312,55 +358,40 @@ fn report_rssi_stats(
     // The for loop below converts the stats internal representation to the
     // Cobalt representation and prepares the histogram that will be sent.
 
-    let mut distribution = Vec::new();
+    let mut histogram = Vec::new();
     for bin in 0..current_stats.hist.len() {
         let diff = get_diff(last_stats.hist[bin], current_stats.hist[bin]);
         if diff > 0 {
-            let entry = BucketDistributionEntry {
+            let entry = HistogramBucket {
                 index: (fidl_stats::RSSI_BINS - (bin as u8) - 1).into(),
                 count: diff.into(),
             };
-            distribution.push(entry);
+            histogram.push(entry);
         }
     }
 
-    if !distribution.is_empty() {
-        sender.add_int_bucket_distribution(
-            rssi_metric_id,
-            CobaltEncodingId::RawEncoding as u32,
-            distribution,
-        );
+    if !histogram.is_empty() {
+        sender.log_int_histogram(rssi_metric_id, histogram);
     }
 }
 
 pub fn report_connection_time(sender: &mut CobaltSender, time: i64, result_index: u32) {
-    let result_value = ObservationValue {
-        name: String::from("connection_result_index"),
-        value: Value::IndexValue(result_index),
-        encoding_id: CobaltEncodingId::RawEncoding as u32,
-    };
-    let time_value = ObservationValue {
-        name: String::from("connection_time"),
-        value: Value::IntValue(time),
-        encoding_id: CobaltEncodingId::RawEncoding as u32,
-    };
-    let values = vec![result_value, time_value];
-    sender.add_multipart_observation(CobaltMetricId::ConnectionTime as u32, values);
+    sender.log_elapsed_time(CobaltMetricId::ConnectionTime as u32, result_index, time);
 }
 
-fn handle_cobalt_response(resp: Result<Status, fidl::Error>, metric_id: u32, is_full: &mut bool) {
+fn handle_cobalt_response(resp: Result<Status2, fidl::Error>, metric_id: u32, is_full: &mut bool) {
     if let Err(e) = throttle_cobalt_error(resp, metric_id, is_full) {
         error!("{}", e);
     }
 }
 
 fn throttle_cobalt_error(
-    resp: Result<Status, fidl::Error>, metric_id: u32, is_full: &mut bool,
+    resp: Result<Status2, fidl::Error>, metric_id: u32, is_full: &mut bool,
 ) -> Result<(), failure::Error> {
     let was_full = *is_full;
-    *is_full = resp.as_ref().ok() == Some(&Status::TemporarilyFull);
+    *is_full = resp.as_ref().ok() == Some(&Status2::BufferFull);
     match resp {
-        Ok(Status::TemporarilyFull) => {
+        Ok(Status2::BufferFull) => {
             if !was_full {
                 Err(format_err!(
                     "Cobalt buffer became full. Cannot report the stats"
@@ -369,14 +400,14 @@ fn throttle_cobalt_error(
                 Ok(())
             }
         }
-        Ok(Status::Ok) => Ok(()),
+        Ok(Status2::Ok) => Ok(()),
         Ok(other) => Err(format_err!(
             "Cobalt returned an error for metric {}: {:?}",
             metric_id,
             other
         )),
         Err(e) => Err(format_err!(
-            "Failed to send observation to Cobalt for metric {}: {}",
+            "Failed to send event to Cobalt for metric {}: {}",
             metric_id,
             e
         )),
@@ -397,29 +428,29 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_cobalt::Status;
+    use fidl_fuchsia_cobalt::Status2;
 
     #[test]
     fn throttle_errors() {
         let mut is_full = false;
 
-        let cobalt_resp = Ok(Status::Ok);
+        let cobalt_resp = Ok(Status2::Ok);
         assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
         assert_eq!(is_full, false);
 
-        let cobalt_resp = Ok(Status::InvalidArguments);
+        let cobalt_resp = Ok(Status2::InvalidArguments);
         assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_err());
         assert_eq!(is_full, false);
 
-        let cobalt_resp = Ok(Status::TemporarilyFull);
+        let cobalt_resp = Ok(Status2::BufferFull);
         assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_err());
         assert_eq!(is_full, true);
 
-        let cobalt_resp = Ok(Status::TemporarilyFull);
+        let cobalt_resp = Ok(Status2::BufferFull);
         assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
         assert_eq!(is_full, true);
 
-        let cobalt_resp = Ok(Status::Ok);
+        let cobalt_resp = Ok(Status2::Ok);
         assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
         assert_eq!(is_full, false);
 
