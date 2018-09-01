@@ -40,6 +40,7 @@ protected:
 
     // These getters and setters are provided strictly for unit testing purposes.
     const StringMap& options() const { return options_; }
+    void set_root(const char* root) { root_.Set(root); }
     void set_out(FILE* out) { out_ = out; }
     void set_err(FILE* err) { err_ = err; }
 
@@ -51,9 +52,18 @@ protected:
     // set, it is replaced.  Otherwise, the option is added.
     zx_status_t SetOption(const char* key, const char* value);
 
+    // Constructs a |Path| object to the |path| directory, relative to the root if set.
+    zx_status_t RebasePath(const char* package, Path* out);
+
+    // Constructs a |Path| object to the |package|'s max version directory.  On error, |out| will be
+    // reset to the root directory.
+    zx_status_t GetPackagePath(const char* package, Path* out);
+
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Fuzzer);
 
+    // Path that the resource and data paths are relative to; primarily used for testing.
+    fbl::String root_;
     // libFuzzer option flags
     StringMap options_;
     // Output file descriptor; primarily used for testing.

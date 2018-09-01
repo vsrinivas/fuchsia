@@ -61,6 +61,13 @@ bool TestFuzzer::InitZircon() {
     END_HELPER;
 }
 
+bool TestFuzzer::InitFuchsia() {
+    BEGIN_HELPER;
+    ASSERT_TRUE(fixture_.CreateFuchsia());
+    ASSERT_TRUE(Init());
+    END_HELPER;
+}
+
 // Private methods
 
 bool TestFuzzer::Init() {
@@ -74,6 +81,7 @@ bool TestFuzzer::Init() {
     ASSERT_NONNULL(err_);
 
     // Configure base object
+    set_root(fixture_.path().c_str());
     set_out(out_);
     set_err(err_);
 

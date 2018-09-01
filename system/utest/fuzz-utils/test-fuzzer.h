@@ -20,11 +20,16 @@ public:
     TestFuzzer();
     ~TestFuzzer() override;
 
+    const FuzzerFixture& fixture() const { return fixture_; }
+
     // Resets the out and err buffers to be unallocated.
     void Reset() override;
 
     // Sets up the test fuzzer to buffer output with a Zircon-standalone test fixture
     bool InitZircon();
+
+    // Sets up the test fuzzer to buffer output with a test fixture of Fuchsia packages
+    bool InitFuchsia();
 
     // Returns the value associated with the given |key|, or null if unset.
     const char* GetOption(const char* key) { return options().get(key); }
@@ -32,6 +37,12 @@ public:
     // Expose parent class methods
     zx_status_t SetOption(const char* option) { return Fuzzer::SetOption(option); }
     zx_status_t SetOption(const char* key, const char* val) { return Fuzzer::SetOption(key, val); }
+    zx_status_t RebasePath(const char* package, Path* out) {
+        return Fuzzer::RebasePath(package, out);
+    }
+    zx_status_t GetPackagePath(const char* package, Path* out) {
+        return Fuzzer::GetPackagePath(package, out);
+    }
 
 private:
     // Sets up the test fuzzer to buffer output without changing the test fixture

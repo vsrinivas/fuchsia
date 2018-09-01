@@ -88,8 +88,67 @@ bool TestSetOption() {
     END_TEST;
 }
 
+bool TestRebasePath() {
+    BEGIN_TEST;
+    TestFuzzer test;
+    ASSERT_TRUE(test.InitZircon());
+    const FuzzerFixture& fixture = test.fixture();
+
+    Path path;
+    EXPECT_EQ(ZX_OK, test.RebasePath("boot", &path));
+    EXPECT_STR_EQ(path.c_str(), fixture.path("boot/").c_str());
+
+    EXPECT_EQ(ZX_OK, test.RebasePath("boot/test/fuzz", &path));
+    EXPECT_STR_EQ(path.c_str(), fixture.path("boot/test/fuzz/").c_str());
+
+    EXPECT_NE(ZX_OK, test.RebasePath("pkgfs", &path));
+    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+
+    END_TEST;
+}
+
+bool TestGetPackagePath() {
+    BEGIN_TEST;
+    TestFuzzer test;
+    ASSERT_TRUE(test.InitFuchsia());
+    const FuzzerFixture& fixture = test.fixture();
+
+    Path path;
+    fbl::String expected;
+    EXPECT_NE(ZX_OK, test.GetPackagePath("", &path));
+    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+
+    EXPECT_NE(ZX_OK, test.GetPackagePath("not-a-package", &path));
+    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+
+    const char* package = "zircon_fuzzers";
+    EXPECT_EQ(ZX_OK, test.GetPackagePath(package, &path));
+    EXPECT_STR_EQ(
+        path.c_str(),
+        fixture.path("pkgfs/packages/%s/%s/", package, fixture.max_version(package)).c_str());
+
+    EXPECT_NE(ZX_OK, test.GetPackagePath("fuchsia", &path));
+    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+
+    package = "fuchsia1_fuzzers";
+    EXPECT_EQ(ZX_OK, test.GetPackagePath(package, &path));
+    EXPECT_STR_EQ(
+        path.c_str(),
+        fixture.path("pkgfs/packages/%s/%s/", package, fixture.max_version(package)).c_str());
+
+    package = "fuchsia2_fuzzers";
+    EXPECT_EQ(ZX_OK, test.GetPackagePath(package, &path));
+    EXPECT_STR_EQ(
+        path.c_str(),
+        fixture.path("pkgfs/packages/%s/%s/", package, fixture.max_version(package)).c_str());
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FuzzerTest)
 RUN_TEST(TestSetOption)
+RUN_TEST(TestRebasePath)
+RUN_TEST(TestGetPackagePath)
 END_TEST_CASE(FuzzerTest)
 
 } // namespace
