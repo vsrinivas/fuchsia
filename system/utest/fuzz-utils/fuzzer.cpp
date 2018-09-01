@@ -701,6 +701,83 @@ bool TestCheck() {
     END_TEST;
 }
 
+bool TestRepro() {
+    BEGIN_TEST;
+    TestFuzzer test;
+
+    // Zircon tests
+    FuzzerFixture fixture;
+    ASSERT_TRUE(test.InitZircon());
+
+    ASSERT_TRUE(test.Eval("repro"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("missing"));
+
+    ASSERT_TRUE(test.Eval("repro foobar"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("no match"));
+
+    ASSERT_TRUE(test.Eval("repro target"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("multiple"));
+
+    ASSERT_TRUE(test.Eval("repro zircon/target1"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("no match"));
+
+    // Automatically add artifacts
+    ASSERT_TRUE(test.Eval("repro zircon/target2"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface").c_str()));
+
+    // Filter artifacts based on substring
+    ASSERT_TRUE(test.Eval("repro zircon/target2 dead"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11").c_str()));
+    EXPECT_GT(0, test.FindArg(test.data_path("oom-feedface").c_str()));
+
+    // Fuchsia tests
+    ASSERT_TRUE(test.InitFuchsia());
+
+    // Zircon fuzzer within Fuchsia
+    ASSERT_TRUE(test.Eval("repro zircon/target2 fa"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-baz=qux"));
+    EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
+    EXPECT_LT(0, test.FindArg("-foo=bar"));
+    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface").c_str()));
+    EXPECT_GT(0, test.FindArg(test.data_path("crash-deadbeef").c_str()));
+    EXPECT_GT(0, test.FindArg(test.data_path("corpus").c_str()));
+
+    ASSERT_TRUE(test.Eval("repro fuchsia1/target1"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("no match"));
+
+    // Fuchsia fuzzer with resources
+    ASSERT_TRUE(test.Eval("repro fuchsia2/target4"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-baz=qux"));
+    EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
+    EXPECT_LT(0, test.FindArg("-foo=bar"));
+    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef").c_str()));
+    EXPECT_GT(0, test.FindArg(test.data_path("corpus").c_str()));
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FuzzerTest)
 RUN_TEST(TestSetOption)
 RUN_TEST(TestRebasePath)
@@ -715,6 +792,7 @@ RUN_TEST(TestList)
 RUN_TEST(TestSeeds)
 RUN_TEST(TestStart)
 RUN_TEST(TestCheck)
+RUN_TEST(TestRepro)
 END_TEST_CASE(FuzzerTest)
 
 } // namespace

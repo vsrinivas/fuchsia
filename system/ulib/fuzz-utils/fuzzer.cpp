@@ -26,6 +26,7 @@ enum Command : uint32_t {
     kSeeds,
     kStart,
     kCheck,
+    kRepro,
 };
 
 // Usage information for specific tool subcommands.
@@ -43,6 +44,9 @@ const struct {
     {kCheck, "check", "name",
      "Reports information about the named fuzzer, such as execution status, corpus size, and "
      "number of artifacts."},
+    {kRepro, "repro", "name [...]",
+     "Runs the named fuzzer on specific inputs. If no additional inputs are provided, uses "
+     "previously found artifacts."},
 };
 
 // |kArtifactPrefixes| should matches the prefixes in libFuzzer passed to |Fuzzer::DumpCurrentUnit|
@@ -50,6 +54,7 @@ const struct {
 constexpr const char* kArtifactPrefixes[] = {
     "crash", "leak", "mismatch", "oom", "slow-unit", "timeout",
 };
+constexpr size_t kArtifactPrefixesLen = sizeof(kArtifactPrefixes) / sizeof(kArtifactPrefixes[0]);
 
 } // namespace
 
@@ -102,6 +107,8 @@ zx_status_t Fuzzer::Run(StringList* args) {
         return Start();
     case kCheck:
         return Check();
+    case kRepro:
+        return Repro();
     default:
         // Shouldn't get here.
         ZX_DEBUG_ASSERT(false);
@@ -631,6 +638,40 @@ zx_status_t Fuzzer::Check() {
         for (const char* artifact = artifacts->first(); artifact; artifact = artifacts->next()) {
             fprintf(out_, "  %s\n", artifact);
         }
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Fuzzer::Repro() {
+    zx_status_t rc;
+
+    // If no patterns, match all artifacts
+    if (inputs_.is_empty()) {
+        inputs_.push_back("");
+    }
+
+    // Filter data for just artifacts that match one or more supplied patterns
+    auto artifacts = data_path_.List();
+    StringList prefixes(kArtifactPrefixes, kArtifactPrefixesLen);
+    artifacts->keep_if_any(&prefixes);
+    artifacts->keep_if_any(&inputs_);
+
+    // Get full paths of artifacts
+    inputs_.clear();
+    for (const char* artifact = artifacts->first(); artifact; artifact = artifacts->next()) {
+        inputs_.push_back(data_path_.Join(artifact).c_str());
+    }
+
+    // Nothing to repro
+    if (inputs_.is_empty()) {
+        fprintf(err_, "No matching artifacts found.\n");
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    if ((rc = Execute(true /* wait_for_completion */)) != ZX_OK) {
+        fprintf(err_, "Failed to execute: %s\n", zx_status_get_string(rc));
+        return rc;
     }
 
     return ZX_OK;

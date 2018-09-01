@@ -109,6 +109,7 @@ private:
     zx_status_t Seeds();
     zx_status_t Start();
     zx_status_t Check();
+    zx_status_t Repro();
 
     // The current subcommand
     uint32_t cmd_;
