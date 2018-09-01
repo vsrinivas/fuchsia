@@ -31,8 +31,14 @@ public:
     // Sets up the test fuzzer to buffer output with a test fixture of Fuchsia packages
     bool InitFuchsia();
 
+    // Resets |test| and reconstructs it from the |cmdline| in the context of the current fixture.
+    zx_status_t Eval(const char* cmdline);
+
     // Returns the value associated with the given |key|, or null if unset.
     const char* GetOption(const char* key) { return options().get(key); }
+
+    // Invoke the base method with the saved arguments.
+    zx_status_t Run() { return Fuzzer::Run(&args_); }
 
     // Expose parent class methods
     zx_status_t SetOption(const char* option) { return Fuzzer::SetOption(option); }
@@ -51,12 +57,18 @@ public:
     }
     void FindFuzzers(const char* name, StringMap* out) { Fuzzer::FindFuzzers(name, out); }
 
+    // Exposes |Fuzzer::CheckProcess| optionally overriding the executable name to look for.
+    bool CheckProcess(zx_handle_t process, const char* executable = nullptr);
+
 private:
     // Sets up the test fuzzer to buffer output without changing the test fixture
     bool Init();
 
     // The current test fixture
     FuzzerFixture fixture_;
+
+    // The arguments passed to the subprocess
+    StringList args_;
 
     // Output stream
     FILE* out_;

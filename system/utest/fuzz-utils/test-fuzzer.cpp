@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fbl/auto_call.h>
 #include <unittest/unittest.h>
 
 #include "fuzzer-fixture.h"
@@ -29,6 +30,8 @@ TestFuzzer::~TestFuzzer() {
 
 void TestFuzzer::Reset() {
     Fuzzer::Reset();
+    args_.clear();
+
     if (out_) {
         fclose(out_);
 #if ZXDEBUG
@@ -66,6 +69,31 @@ bool TestFuzzer::InitFuchsia() {
     ASSERT_TRUE(fixture_.CreateFuchsia());
     ASSERT_TRUE(Init());
     END_HELPER;
+}
+
+zx_status_t TestFuzzer::Eval(const char* cmdline) {
+    BEGIN_HELPER;
+    ASSERT_TRUE(Init());
+
+    char* buf = strdup(cmdline);
+    ASSERT_NONNULL(buf);
+    auto cleanup = fbl::MakeAutoCall([&buf]() { free(buf); });
+    char* ptr = buf;
+    char* arg;
+    while ((arg = strsep(&ptr, " "))) {
+        if (arg && *arg) {
+            args_.push_back(arg);
+        }
+    }
+
+    END_HELPER;
+}
+
+bool TestFuzzer::CheckProcess(zx_handle_t process, const char* executable) {
+    if (executable) {
+        set_executable(executable);
+    }
+    return Fuzzer::CheckProcess(process);
 }
 
 // Private methods

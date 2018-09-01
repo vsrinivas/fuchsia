@@ -43,6 +43,10 @@ protected:
     void set_root(const char* root) { root_.Set(root); }
     void set_out(FILE* out) { out_ = out; }
     void set_err(FILE* err) { err_ = err; }
+    void set_executable(const char* executable) { executable_.Set(executable); }
+
+    // Interpret the given |args| and execute the appropriate subcommand.
+    zx_status_t Run(StringList* args);
 
     // Parses |option| as a key-value pair.  If an option with the same key is already set, it is
     // replaced.  Otherwise, the option is added.  Options are of the form '[-]key=value[#comment]'.
@@ -76,11 +80,33 @@ protected:
     // specified.
     void FindFuzzers(const char* name, StringMap* out);
 
+    // Callback used by |Walker| to match the fuzz target sub-process and print information on it.
+    friend class Walker;
+    bool CheckProcess(zx_handle_t process) const;
+
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Fuzzer);
 
+    // Parses the subcommand, saves it, and sets the corresponding default options.
+    zx_status_t SetCommand(const char* command);
+
+    // Selects a unique fuzzer based on the given |name|, or returns an error if 0 or 2 or more
+    // matches are found.
+    virtual zx_status_t SetFuzzer(const char* name);
+
+    // Reads and parses the fuzzer's options file.
+    zx_status_t LoadOptions();
+
+    // The current subcommand
+    uint32_t cmd_;
+    // Fuzzer name; may be a user-supplied pattern until resolved into a package/target.
+    fbl::String name_;
+    // Path on target to the fuzzer binary
+    fbl::String executable_;
     // Path that the resource and data paths are relative to; primarily used for testing.
     fbl::String root_;
+    // Positional arguments to libFuzzers
+    StringList inputs_;
     // libFuzzer option flags
     StringMap options_;
     // Output file descriptor; primarily used for testing.

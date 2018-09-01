@@ -3,16 +3,26 @@
 // found in the LICENSE file.
 
 #include <ctype.h>
+#include <inttypes.h>
 #include <stdio.h>
 
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fuzz-utils/fuzzer.h>
+#include <task-utils/walker.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 namespace fuzzing {
+namespace {
+
+// List of supported subcommands
+enum Command : uint32_t {
+    kNone,
+};
+
+} // namespace
 
 // Public methods
 
@@ -20,13 +30,41 @@ Fuzzer::~Fuzzer() {}
 
 // Protected methods
 
-Fuzzer::Fuzzer() : out_(stdout), err_(stderr) {}
+Fuzzer::Fuzzer() : cmd_(kNone), out_(stdout), err_(stderr) {}
 
 void Fuzzer::Reset() {
+    cmd_ = kNone;
+    name_.clear();
+    executable_.clear();
     root_.clear();
+    inputs_.clear();
     options_.clear();
     out_ = stdout;
     err_ = stderr;
+}
+
+zx_status_t Fuzzer::Run(StringList* args) {
+    ZX_DEBUG_ASSERT(args);
+    zx_status_t rc;
+
+    if ((rc = SetCommand(args->first())) != ZX_OK || (rc = SetFuzzer(args->next())) != ZX_OK ||
+        (rc = LoadOptions()) != ZX_OK) {
+        return rc;
+    }
+    const char* arg;
+    while ((arg = args->next())) {
+        if (*arg != '-') {
+            inputs_.push_back(arg);
+        } else if ((rc = SetOption(arg + 1)) != ZX_OK) {
+            return rc;
+        }
+    }
+    switch (cmd_) {
+    default:
+        // Shouldn't get here.
+        ZX_DEBUG_ASSERT(false);
+        return ZX_ERR_INTERNAL;
+    }
 }
 
 zx_status_t Fuzzer::SetOption(const char* option) {
@@ -206,6 +244,73 @@ void Fuzzer::FindFuzzers(const char* name, StringMap* out) {
     } else {
         FindFuzzers("", "", out);
     }
+}
+
+// |fuzzing::Walked| is a |TaskEnumerator| used to find and print status information about a given
+// fuzzer |executable|.
+class Walker final : public TaskEnumerator {
+public:
+    explicit Walker(const Fuzzer* fuzzer) : fuzzer_(fuzzer) {}
+    ~Walker() {}
+
+    zx_status_t OnProcess(int depth, zx_handle_t task, zx_koid_t koid, zx_koid_t pkoid) override {
+        return fuzzer_->CheckProcess(task) ? ZX_ERR_STOP : ZX_OK;
+    }
+
+protected:
+    bool has_on_process() const override { return true; }
+
+private:
+    const Fuzzer* fuzzer_;
+};
+
+bool Fuzzer::CheckProcess(zx_handle_t process) const {
+    char name[ZX_MAX_NAME_LEN];
+    zx_info_process_t info;
+    if (zx_object_get_property(process, ZX_PROP_NAME, name, sizeof(name)) != ZX_OK ||
+        strcmp(name, executable_.c_str()) != 0 ||
+        zx_object_get_info(process, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr) !=
+            ZX_OK) {
+        return false;
+    }
+
+    if (!info.started) {
+        fprintf(out_, "Fuzzer '%s' has not started.\n", name_.c_str());
+    } else if (!info.exited) {
+        fprintf(out_, "Fuzzer '%s' is running.\n", name_.c_str());
+    } else {
+        fprintf(out_, "Fuzzer '%s' exited with return code %" PRId64 ".\n", name_.c_str(),
+                info.return_code);
+    }
+
+    return true;
+}
+
+// Private methods
+
+zx_status_t Fuzzer::SetCommand(const char* command) {
+    cmd_ = kNone;
+    options_.clear();
+    inputs_.clear();
+
+    if (!command) {
+        fprintf(err_, "Missing command. Try 'help'.\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (cmd_ == kNone) {
+        fprintf(err_, "Unknown command '%s'. Try 'help'.\n", command);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Fuzzer::SetFuzzer(const char* name) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Fuzzer::LoadOptions() {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 } // namespace fuzzing

@@ -401,6 +401,35 @@ bool TestFindFuzzers() {
     END_TEST;
 }
 
+bool TestCheckProcess() {
+    BEGIN_TEST;
+    TestFuzzer test;
+    ASSERT_TRUE(test.InitZircon());
+
+    EXPECT_FALSE(test.CheckProcess(ZX_HANDLE_INVALID));
+    EXPECT_FALSE(test.CheckProcess(zx_process_self()));
+
+    char name[ZX_MAX_NAME_LEN];
+    ASSERT_EQ(ZX_OK, zx_object_get_property(zx_process_self(), ZX_PROP_NAME, name, sizeof(name)));
+
+    EXPECT_TRUE(test.CheckProcess(zx_process_self(), name));
+
+    END_TEST;
+}
+
+bool TestInvalid() {
+    BEGIN_TEST;
+    TestFuzzer test;
+    ASSERT_TRUE(test.InitZircon());
+
+    ASSERT_TRUE(test.Eval(""));
+    EXPECT_NE(ZX_OK, test.Run());
+    ASSERT_TRUE(test.Eval("bad"));
+    EXPECT_NE(ZX_OK, test.Run());
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FuzzerTest)
 RUN_TEST(TestSetOption)
 RUN_TEST(TestRebasePath)
@@ -408,6 +437,8 @@ RUN_TEST(TestGetPackagePath)
 RUN_TEST(TestFindZirconFuzzers)
 RUN_TEST(TestFindFuchsiaFuzzers)
 RUN_TEST(TestFindFuzzers)
+RUN_TEST(TestCheckProcess)
+RUN_TEST(TestInvalid)
 END_TEST_CASE(FuzzerTest)
 
 } // namespace
