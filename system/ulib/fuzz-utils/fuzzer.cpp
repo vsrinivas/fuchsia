@@ -20,6 +20,17 @@ namespace {
 // List of supported subcommands
 enum Command : uint32_t {
     kNone,
+    kHelp,
+};
+
+// Usage information for specific tool subcommands.
+const struct {
+    Command cmd;
+    const char* name;
+    const char* args;
+    const char* desc;
+} kCommands[] = {
+    {kHelp, "help", "", "Print this message and exit."},
 };
 
 } // namespace
@@ -60,6 +71,9 @@ zx_status_t Fuzzer::Run(StringList* args) {
         }
     }
     switch (cmd_) {
+    case kHelp:
+        return Help();
+
     default:
         // Shouldn't get here.
         ZX_DEBUG_ASSERT(false);
@@ -297,6 +311,12 @@ zx_status_t Fuzzer::SetCommand(const char* command) {
         fprintf(err_, "Missing command. Try 'help'.\n");
         return ZX_ERR_INVALID_ARGS;
     }
+    for (size_t i = 0; i < sizeof(kCommands) / sizeof(kCommands[0]); ++i) {
+        if (strcmp(command, kCommands[i].name) == 0) {
+            cmd_ = kCommands[i].cmd;
+            break;
+        }
+    }
     if (cmd_ == kNone) {
         fprintf(err_, "Unknown command '%s'. Try 'help'.\n", command);
         return ZX_ERR_INVALID_ARGS;
@@ -306,11 +326,44 @@ zx_status_t Fuzzer::SetCommand(const char* command) {
 }
 
 zx_status_t Fuzzer::SetFuzzer(const char* name) {
+    // Early exit for commands that don't need a single, selected fuzzer
+    switch (cmd_) {
+    case kHelp:
+        if (name) {
+            name_.Set(name);
+        }
+        return ZX_OK;
+
+    default:
+        break;
+    }
+
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Fuzzer::LoadOptions() {
+    switch (cmd_) {
+    case kHelp:
+        // No options needed
+        return ZX_OK;
+
+    default:
+        break;
+    }
+
     return ZX_ERR_NOT_SUPPORTED;
+}
+
+// Specific subcommands
+
+zx_status_t Fuzzer::Help() {
+    fprintf(out_, "usage: fuzz <command> [args]\n\n");
+    fprintf(out_, "Supported commands are:\n");
+    for (size_t i = 0; i < sizeof(kCommands) / sizeof(kCommands[0]); ++i) {
+        fprintf(out_, "  %s %s\n", kCommands[i].name, kCommands[i].args);
+        fprintf(out_, "    %s\n\n", kCommands[i].desc);
+    }
+    return ZX_OK;
 }
 
 } // namespace fuzzing

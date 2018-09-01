@@ -40,6 +40,10 @@ public:
     // Invoke the base method with the saved arguments.
     zx_status_t Run() { return Fuzzer::Run(&args_); }
 
+    // Checks if the (case-insensitive) substring is in the buffered output
+    bool InStdOut(const char* needle);
+    bool InStdErr(const char* needle);
+
     // Expose parent class methods
     zx_status_t SetOption(const char* option) { return Fuzzer::SetOption(option); }
     zx_status_t SetOption(const char* key, const char* val) { return Fuzzer::SetOption(key, val); }

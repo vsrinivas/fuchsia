@@ -97,6 +97,9 @@ private:
     // Reads and parses the fuzzer's options file.
     zx_status_t LoadOptions();
 
+    // Specific subcommands; see corresponding usage messages
+    zx_status_t Help();
+
     // The current subcommand
     uint32_t cmd_;
     // Fuzzer name; may be a user-supplied pattern until resolved into a package/target.

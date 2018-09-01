@@ -89,6 +89,16 @@ zx_status_t TestFuzzer::Eval(const char* cmdline) {
     END_HELPER;
 }
 
+bool TestFuzzer::InStdOut(const char* needle) {
+    fflush(out_);
+    return strcasestr(outbuf_, needle) != nullptr;
+}
+
+bool TestFuzzer::InStdErr(const char* needle) {
+    fflush(err_);
+    return strcasestr(errbuf_, needle) != nullptr;
+}
+
 bool TestFuzzer::CheckProcess(zx_handle_t process, const char* executable) {
     if (executable) {
         set_executable(executable);

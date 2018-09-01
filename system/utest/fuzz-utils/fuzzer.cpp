@@ -430,6 +430,18 @@ bool TestInvalid() {
     END_TEST;
 }
 
+bool TestHelp() {
+    BEGIN_TEST;
+    TestFuzzer test;
+    ASSERT_TRUE(test.InitZircon());
+
+    ASSERT_TRUE(test.Eval("help"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("help"));
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FuzzerTest)
 RUN_TEST(TestSetOption)
 RUN_TEST(TestRebasePath)
@@ -439,6 +451,7 @@ RUN_TEST(TestFindFuchsiaFuzzers)
 RUN_TEST(TestFindFuzzers)
 RUN_TEST(TestCheckProcess)
 RUN_TEST(TestInvalid)
+RUN_TEST(TestHelp)
 END_TEST_CASE(FuzzerTest)
 
 } // namespace
