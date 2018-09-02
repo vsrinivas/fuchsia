@@ -31,6 +31,7 @@ enum VcpuMeta : uint32_t {
     VCPU_EPT_VIOLATION,
     VCPU_XSETBV,
     VCPU_PAUSE,
+    VCPU_VMCALL,
 #endif
     VCPU_UNKNOWN,
     VCPU_FAILURE,

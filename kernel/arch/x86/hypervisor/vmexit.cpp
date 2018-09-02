@@ -122,6 +122,16 @@ InterruptCommandRegister::InterruptCommandRegister(uint32_t hi, uint32_t lo) {
     vector = static_cast<uint8_t>(BITS(lo, 7, 0));
 }
 
+VmCallInfo::VmCallInfo(const GuestState* guest_state) {
+    // ABI is documented in Linux kernel documentation, see
+    // Documents/virtual/kvm/hypercalls.txt
+    type = static_cast<VmCallType>(guest_state->rax);
+    arg[0] = guest_state->rbx;
+    arg[1] = guest_state->rcx;
+    arg[2] = guest_state->rdx;
+    arg[3] = guest_state->rsi;
+}
+
 static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
     vmcs->Write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.exit_instruction_length);
 
@@ -990,6 +1000,39 @@ static zx_status_t handle_pause(const ExitInfo& exit_info, AutoVmcs* vmcs) {
     return ZX_OK;
 }
 
+static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                                 hypervisor::GuestPhysicalAddressSpace* gpas,
+                                 GuestState* guest_state) {
+    VmCallInfo info(guest_state);
+    switch (info.type) {
+    case VmCallType::CLOCK_PAIRING: {
+        if (info.arg[1] != 0) {
+            dprintf(INFO, "CLOCK_PAIRING hypercall doesn't support clock type %lu\n",
+                    info.arg[1]);
+            guest_state->rax = VmCallStatus::OP_NOT_SUPPORTED;
+            break;
+        }
+        zx_status_t status = pvclock_populate_offset(gpas, info.arg[0]);
+        if (status != ZX_OK) {
+            dprintf(INFO, "Populating lock offset failed with %d\n", status);
+            guest_state->rax = VmCallStatus::FAULT;
+            break;
+        }
+        guest_state->rax = VmCallStatus::OK;
+        break;
+    }
+    default:
+        dprintf(INFO, "Unknown VMCALL(%lu) (arg0=%#lx, arg1=%#lx, arg2=%#lx, arg3=%#lx)\n",
+                static_cast<unsigned long>(info.type),
+                info.arg[0], info.arg[1], info.arg[2], info.arg[3]);
+        guest_state->rax = VmCallStatus::NO_SYS;
+        break;
+    }
+    next_rip(exit_info, vmcs);
+    // We never fail in case of hypercalls, we just return/propagate errors to the caller.
+    return ZX_OK;
+}
+
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
                            LocalApicState* local_apic_state, PvClockState* pvclock,
                            hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
@@ -1055,6 +1098,11 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
         LTRACEF("handling PAUSE\n\n");
         ktrace_vcpu(TAG_VCPU_EXIT, VCPU_PAUSE);
         status = handle_pause(exit_info, vmcs);
+        break;
+    case ExitReason::VMCALL:
+        LTRACEF("handling VMCALL\n\n");
+        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_VMCALL);
+        status = handle_vmcall(exit_info, vmcs, gpas, guest_state);
         break;
     // Currently all exceptions except NMI delivered to guest directly. NMI causes vmexit
     // and handled by host via IDT as any other interrupt/exception.

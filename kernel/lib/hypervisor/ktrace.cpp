@@ -30,6 +30,7 @@ static const char* const vcpu_meta[] = {
     [VCPU_EPT_VIOLATION] = "exit:ept_violation",
     [VCPU_XSETBV] = "exit:xsetbv",
     [VCPU_PAUSE] = "exit:pause",
+    [VCPU_VMCALL] = "exit:vmcall",
 #endif
     [VCPU_UNKNOWN] = "exit:unknown",
     [VCPU_FAILURE] = "exit:failure",

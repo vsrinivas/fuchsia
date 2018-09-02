@@ -55,6 +55,8 @@ extern const char vcpu_sysenter_start[];
 extern const char vcpu_sysenter_end[];
 extern const char vcpu_sysenter_compat_start[];
 extern const char vcpu_sysenter_compat_end[];
+extern const char vcpu_vmcall_start[];
+extern const char vcpu_vmcall_end[];
 extern const char guest_set_trap_start[];
 extern const char guest_set_trap_end[];
 extern const char guest_set_trap_with_io_start[];
@@ -559,6 +561,31 @@ static bool vcpu_sysenter_compat() {
     END_TEST;
 }
 
+static bool vcpu_vmcall() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_vmcall_start, vcpu_vmcall_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+
+    zx_vcpu_state_t vcpu_state;
+    ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+
+#if __x86_64__
+    const uint64_t kVmCallNoSys = -1000;
+    EXPECT_EQ(vcpu_state.rax, kVmCallNoSys);
+#endif
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
 static bool guest_set_trap_with_mem() {
     BEGIN_TEST;
 
@@ -662,5 +689,6 @@ RUN_TEST(vcpu_compat_mode)
 RUN_TEST(vcpu_syscall)
 RUN_TEST(vcpu_sysenter)
 RUN_TEST(vcpu_sysenter_compat)
+RUN_TEST(vcpu_vmcall)
 #endif
 END_TEST_CASE(guest)

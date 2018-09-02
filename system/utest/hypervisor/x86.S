@@ -21,6 +21,7 @@
 #define USER_DATA_SELECTOR        (5<<3)
 #define USER_CODE_64_SELECTOR     (6<<3)
 #define CODE_16_SELECTOR          (8<<3)
+#define INVALID_HYPERCALL         0xffffffff
 
 .text
 
@@ -400,3 +401,9 @@ FUNCTION guest_set_trap_with_io_start
     out %al, $TRAP_PORT
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION guest_set_trap_with_io_end
+
+FUNCTION vcpu_vmcall_start
+    movq $(INVALID_HYPERCALL), %rax
+    vmcall
+    movq $0, (EXIT_TEST_ADDR)
+FUNCTION vcpu_vmcall_end
