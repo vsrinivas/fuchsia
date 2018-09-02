@@ -66,27 +66,18 @@ FUNCTION(_start)
     adr_global  tmp, kernel_relocated_base
     ldr     kernel_vaddr, [tmp]
 
-    // This function is executed by all CPUs. It's crucial that only
-    // the first CPU relocate the kernel. Skip over it unless we're CPU 0.
-    cbnz     cpuid, .Lskip_fixup
-
-    // The fixup code appears right after the kernel image (at __data_end
-    // in our view).  It expects x0 to contain the actual runtime address
-    // of __code_start.
-    mov     x0, kernel_vaddr
-    bl      __data_end
-
-.Lskip_fixup:
-    /* load the base of the translation tables */
+    // Load the base of the translation tables.
     adr_global page_table0, tt_trampoline
     adr_global page_table1, arm64_kernel_translation_table
 
-    /* Prepare tt_trampoline page table */
-    /* Calculate pagetable physical addresses */
-    adr_global page_table0, tt_trampoline
-
-    /* send secondary cpus over to a waiting spot for the primary to finish */
+    // Send secondary cpus over to a waiting spot for the primary to finish.
     cbnz    cpuid, .Lmmu_enable_secondary
+
+    // The fixup code appears right after the kernel image (at __data_end in
+    // our view).  Note this code overlaps with the kernel's bss!  It
+    // expects x0 to contain the actual runtime address of __code_start.
+    mov     x0, kernel_vaddr
+    bl      __data_end
 
     /* clear out the kernel's bss using current physical location */
     /* NOTE: Relies on __bss_start and _end being 16 byte aligned */
