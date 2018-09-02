@@ -152,15 +152,6 @@ struct r_debug* _dl_debug_addr = &debug;
 // post-processing the h/w trace.
 static bool trace_maps = false;
 
-__attribute__((__visibility__("hidden"))) void (*const __init_array_start)(void) = 0,
-                                                       (*const __fini_array_start)(void) = 0;
-
-__attribute__((__visibility__("hidden"))) extern void (*const __init_array_end)(void),
-    (*const __fini_array_end)(void);
-
-weak_alias(__init_array_start, __init_array_end);
-weak_alias(__fini_array_start, __fini_array_end);
-
 NO_ASAN static int dl_strcmp(const char* l, const char* r) {
     for (; *l == *r && *l; l++, r++)
         ;
