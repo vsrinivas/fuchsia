@@ -278,6 +278,15 @@ static inline void dso_set_prev(struct dso* p, struct dso* prev) {
     p->l_map.l_prev = &prev->l_map;
 }
 
+// TODO(mcgrathr): Working around arcane compiler issues; find a better way.
+// The compiler can decide to turn the loop below into a memset call.  Since
+// memset is an exported symbol, calls to that name are PLT calls.  But this
+// code runs before PLT calls are available.  So use the .weakref trick to
+// tell the assembler to rename references (the compiler generates) to memset
+// to __libc_memset.  That's a hidden symbol that won't cause a PLT entry to
+// be generated, so it's safe to use in calls here.
+__asm__(".weakref memset,__libc_memset");
+
 __NO_SAFESTACK NO_ASAN
  static void decode_vec(ElfW(Dyn)* v, size_t* a, size_t cnt) {
     size_t i;
