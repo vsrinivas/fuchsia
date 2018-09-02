@@ -551,7 +551,3 @@ typedef uint64_t iomux_cfg_struct;
 #define VSEL_5_MAN_2P5          (0x05)
 #define VSEL_6_MAN_2p5          (0x06)
 #define VSEL_7_MAN_1P2_1P8      (0x07)
-
-
-
-zx_status_t imx8m_config_pin(imx8m_t *dev, iomux_cfg_struct* s_cfg, int size);

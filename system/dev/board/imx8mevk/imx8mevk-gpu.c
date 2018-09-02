@@ -8,7 +8,6 @@
 #include <hw/reg.h>
 #include <soc/imx8m/imx8m-hw.h>
 #include <soc/imx8m/imx8m-sip.h>
-#include <soc/imx8m/imx8m.h>
 #include <zircon/syscalls/smc.h>
 
 #include "imx8mevk.h"

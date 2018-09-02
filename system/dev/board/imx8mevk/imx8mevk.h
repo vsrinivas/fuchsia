@@ -27,7 +27,6 @@ typedef struct {
     iommu_protocol_t            iommu;
     gpio_protocol_t             gpio;
     zx_handle_t                 bti_handle;
-    imx8m_t*                    imx8m;
     uint32_t                    soc_pid;
 } imx8mevk_bus_t;
 
