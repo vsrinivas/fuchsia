@@ -148,6 +148,7 @@ source_set("test_sources") {
     "//garnet/public/lib/fidl/cpp/test",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop",
   ]
 
   public_configs = [ "//garnet/public:config" ]

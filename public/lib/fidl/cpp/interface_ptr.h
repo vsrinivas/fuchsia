@@ -161,7 +161,7 @@ class InterfacePtr {
   // the |channel| lacks |ZX_RIGHT_WAIT|).
   zx_status_t Bind(InterfaceHandle<Interface> handle,
                    async_dispatcher_t* dispatcher = nullptr) {
-    return Bind(handle.TakeChannel());
+    return Bind(handle.TakeChannel(), dispatcher);
   }
 
   // Unbinds the underlying channel from the |InterfacePtr|.

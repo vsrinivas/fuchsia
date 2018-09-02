@@ -6,6 +6,7 @@
 
 #include "lib/fidl/cpp/interface_ptr.h"
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/message_buffer.h>
 
 #include "gtest/gtest.h"
@@ -43,6 +44,25 @@ TEST(InterfacePtr, Control) {
   EXPECT_TRUE(ptr.is_bound());
 
   EXPECT_EQ(ZX_ERR_TIMED_OUT, ptr.WaitForResponseUntil(zx::time()));
+}
+
+TEST(InterfacePtr, BindToSpecificDispatcher) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+
+  test::FrobinatorImpl impl;
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
+
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  EXPECT_EQ(ZX_OK,
+            binding.Bind(ptr.NewRequest(loop.dispatcher()), loop.dispatcher()));
+  EXPECT_TRUE(ptr.is_bound());
+
+  ptr->Frob("one");
+  EXPECT_TRUE(impl.frobs.empty());
+
+  loop.RunUntilIdle();
+
+  EXPECT_EQ(1u, impl.frobs.size());
 }
 
 TEST(InterfacePtr, Events) {
