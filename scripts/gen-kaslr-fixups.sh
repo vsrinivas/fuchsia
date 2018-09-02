@@ -25,9 +25,15 @@
 # each run of adjustments, and then #include's the output of this script.
 
 usage() {
-  echo >&2 "Usage: $0 KERNEL READELF OBJDUMP OUTFILE"
+  echo >&2 "Usage: $0 [--pure] KERNEL READELF OBJDUMP OUTFILE"
   exit 2
 }
+
+PURE=0
+if [ $# -eq 5 -a "$1" = --pure ]; then
+  PURE=1
+  shift
+fi
 
 if [ $# -ne 4 ]; then
   usage
@@ -40,7 +46,7 @@ OBJDUMP="$3"
 OUTFILE="$4"
 
 grok_fixups() {
-  "$AWK" -v kernel="$KERNEL" -v objdump="$OBJDUMP" '
+  "$AWK" -v kernel="$KERNEL" -v objdump="$OBJDUMP" -v pure=$PURE '
 BEGIN {
     nrelocs = 0;
     status = 0;
@@ -147,6 +153,20 @@ END {
             }
         }
     }
+
+    if (pure) {
+        if (nrelocs > 0) {
+            print "Binary not purely position-independent: needs", nrelocs, "fixups" > "/dev/stderr";
+            for (i = 1; i <= nrelocs; ++i) {
+                printf "    0x%s%.*x\n", address_prefix, 16 - length(address_prefix), reloc[i] > "/dev/stderr";
+            }
+            exit(1);
+        }
+    } else if (nrelocs == 0) {
+        print "Kernel should have some fixups!" > "/dev/stderr";
+        exit(1);
+    }
+
     # 256 bytes is the max reach of a load/store post indexed instruction on arm64
     max_stride = 256;
 

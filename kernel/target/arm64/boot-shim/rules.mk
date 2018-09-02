@@ -66,7 +66,13 @@ $(BOOT_SHIM_ELF): $(BOOT_SHIM_OBJS) $(BOOT_SHIM_LD)
 	$(call BUILDECHO,linking $@)
 	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(KERNEL_LDFLAGS) --build-id=none $(BOOT_SHIM_OBJS) -defsym KERNEL_ALIGN=$(KERNEL_ALIGN) -T $(BOOT_SHIM_LD) -o $@
 
-$(BOOT_SHIM_BIN): $(BOOT_SHIM_ELF)
+# The shim code should be purely position-independent code.
+$(BOOT_SHIM_ELF).pure-stamp: $(BOOT_SHIM_ELF) scripts/gen-kaslr-fixups.sh
+	$(call BUILDECHO,checking $<)
+	$(NOECHO)scripts/gen-kaslr-fixups.sh --pure \
+					     $< '$(READELF)' '$(OBJDUMP)' $@
+
+$(BOOT_SHIM_BIN): $(BOOT_SHIM_ELF) $(BOOT_SHIM_ELF).pure-stamp
 	$(call BUILDECHO,generating $@)
 	$(NOECHO)$(OBJCOPY) -O binary $< $@
 GENERATED += $(BOOT_SHIM_BIN)
