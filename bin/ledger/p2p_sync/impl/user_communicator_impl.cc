@@ -128,9 +128,7 @@ void UserCommunicatorImpl::OnDeviceChange(
   }
 }
 
-const DeviceMesh::DeviceSet& UserCommunicatorImpl::GetDeviceList() {
-  return devices_;
-}
+DeviceMesh::DeviceSet UserCommunicatorImpl::GetDeviceList() { return devices_; }
 
 void UserCommunicatorImpl::Send(fxl::StringView device_name,
                                 convert::ExtendedStringView data) {

@@ -22,7 +22,7 @@ class DeviceMesh {
   virtual ~DeviceMesh() {}
 
   // Returns the current active device set.
-  virtual const DeviceSet& GetDeviceList() = 0;
+  virtual DeviceSet GetDeviceList() = 0;
 
   // Sends the given buffer to a connected device.
   virtual void Send(fxl::StringView device_name,

@@ -173,6 +173,10 @@ void PageCommunicatorImpl::OnDeviceChange(
     if (it2 != not_interested_devices_.end()) {
       not_interested_devices_.erase(it2);
     }
+    const auto& it3 = pending_commit_batches_.find(remote_device);
+    if (it3 != pending_commit_batches_.end()) {
+      pending_commit_batches_.erase(it3);
+    }
     return;
   }
 
@@ -286,17 +290,15 @@ void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
         commits.emplace_back(convert::ToString(commit->id()->id()),
                              convert::ToString(commit->commit()->bytes()));
       }
-      storage_->AddCommitsFromSync(
-          std::move(commits), storage::ChangeSource::P2P,
-          [this](storage::Status status,
-                 std::vector<storage::CommitId> missing_ids) {
-            if (status != storage::Status::OK) {
-              // TODO(etiennej): At this point, we should initiate a full
-              // backlog sync. See LE-476.
-              FXL_LOG(WARNING)
-                  << "Unable to add commits from peer to storage: " << status;
-            }
-          });
+      auto it = pending_commit_batches_.find(source);
+      if (it != pending_commit_batches_.end()) {
+        it->second.AddToBatch(std::move(commits));
+      } else {
+        auto it_pair = pending_commit_batches_.emplace(
+            std::piecewise_construct, std::forward_as_tuple(source.ToString()),
+            std::forward_as_tuple(source.ToString(), this, storage_));
+        it_pair.first->second.AddToBatch(std::move(commits));
+      }
       break;
     }
 
@@ -363,6 +365,30 @@ void PageCommunicatorImpl::OnNewCommits(
                              }
                              commits_to_upload_.clear();
                            }));
+}
+
+void PageCommunicatorImpl::RequestCommits(fxl::StringView device,
+                                          std::vector<storage::CommitId> ids) {
+  flatbuffers::FlatBufferBuilder buffer;
+  flatbuffers::Offset<NamespacePageId> namespace_page_id =
+      CreateNamespacePageId(buffer,
+                            convert::ToFlatBufferVector(&buffer, namespace_id_),
+                            convert::ToFlatBufferVector(&buffer, page_id_));
+  std::vector<flatbuffers::Offset<CommitId>> commit_ids;
+  for (const auto& id : ids) {
+    flatbuffers::Offset<CommitId> commit_id =
+        CreateCommitId(buffer, convert::ToFlatBufferVector(&buffer, id));
+    commit_ids.push_back(commit_id);
+  }
+  flatbuffers::Offset<CommitRequest> commit_request =
+      CreateCommitRequest(buffer, buffer.CreateVector(commit_ids));
+  flatbuffers::Offset<Request> request =
+      CreateRequest(buffer, namespace_page_id, RequestMessage_CommitRequest,
+                    commit_request.Union());
+  flatbuffers::Offset<Message> message =
+      CreateMessage(buffer, MessageUnion_Request, request.Union());
+  buffer.Finish(message);
+  mesh_->Send(device, buffer);
 }
 
 void PageCommunicatorImpl::BuildWatchStartBuffer(

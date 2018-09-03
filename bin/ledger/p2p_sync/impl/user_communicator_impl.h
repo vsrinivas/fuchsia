@@ -40,7 +40,7 @@ class UserCommunicatorImpl : public UserCommunicator,
       std::string namespace_id) override;
 
   // DeviceMesh:
-  const DeviceSet& GetDeviceList() override;
+  DeviceSet GetDeviceList() override;
   void Send(fxl::StringView device_name,
             convert::ExtendedStringView data) override;
 

@@ -1334,6 +1334,7 @@ Status PageStorageImpl::SynchronousAddCommits(
     // If the commit arrive out of order, print an error, but skip it
     // temporarly so that the Ledger can recover if all the needed commits
     // are received in a single batch.
+    bool orphaned_commit = false;
     for (const CommitIdView& parent_id : commit->GetParentIds()) {
       if (added_commits.find(&parent_id) == added_commits.end()) {
         s = ContainsCommit(handler, parent_id);
@@ -1345,7 +1346,7 @@ Status PageStorageImpl::SynchronousAddCommits(
             if (missing_ids) {
               missing_ids->push_back(parent_id.ToString());
             }
-            commit.reset();
+            orphaned_commit = true;
             continue;
           }
           return Status::INTERNAL_IO_ERROR;
@@ -1362,7 +1363,7 @@ Status PageStorageImpl::SynchronousAddCommits(
     }
 
     // The commit could not be added. Skip it.
-    if (!commit) {
+    if (orphaned_commit) {
       orphaned_commits++;
       continue;
     }
@@ -1389,10 +1390,13 @@ Status PageStorageImpl::SynchronousAddCommits(
   }
 
   if (orphaned_commits > 0) {
-    ledger::ReportEvent(
-        ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
-    FXL_LOG(ERROR) << "Failed adding commits. Found " << orphaned_commits
-                   << " orphaned commits (one of their parent was not found).";
+    if (source != ChangeSource::P2P) {
+      ledger::ReportEvent(
+          ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
+      FXL_LOG(ERROR)
+          << "Failed adding commits. Found " << orphaned_commits
+          << " orphaned commits (one of their parent was not found).";
+    }
     return Status::NOT_FOUND;
   }
 

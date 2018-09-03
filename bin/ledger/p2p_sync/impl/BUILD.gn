@@ -8,6 +8,8 @@ visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("impl") {
   sources = [
+    "commit_batch.cc",
+    "commit_batch.h",
     "device_mesh.h",
     "flatbuffer_message_factory.cc",
     "flatbuffer_message_factory.h",

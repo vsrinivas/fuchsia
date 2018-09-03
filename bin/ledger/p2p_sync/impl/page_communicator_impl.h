@@ -15,6 +15,7 @@
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/coroutine/coroutine_manager.h"
 #include "peridot/bin/ledger/p2p_provider/public/types.h"
+#include "peridot/bin/ledger/p2p_sync/impl/commit_batch.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_holder.h"
@@ -30,7 +31,8 @@ class PageCommunicatorImplInspectorForTest;
 
 class PageCommunicatorImpl : public PageCommunicator,
                              public storage::PageSyncDelegate,
-                             public storage::CommitWatcher {
+                             public storage::CommitWatcher,
+                             public CommitBatch::Delegate {
  public:
   PageCommunicatorImpl(coroutine::CoroutineService* coroutine_service,
                        storage::PageStorage* storage,
@@ -72,6 +74,9 @@ class PageCommunicatorImpl : public PageCommunicator,
   class PendingObjectRequestHolder;
   struct ObjectResponseHolder;
 
+  void RequestCommits(fxl::StringView device,
+                      std::vector<storage::CommitId> ids) override;
+
   // These methods build the flatbuffer message corresponding to their name.
   void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer);
   void BuildWatchStopBuffer(flatbuffers::FlatBufferBuilder* buffer);
@@ -111,6 +116,10 @@ class PageCommunicatorImpl : public PageCommunicator,
   callback::AutoCleanableMap<storage::ObjectIdentifier,
                              PendingObjectRequestHolder>
       pending_object_requests_;
+  // Map of pending commit batch insertions.
+  callback::AutoCleanableMap<std::string, CommitBatch,
+                             convert::StringViewComparator>
+      pending_commit_batches_;
   // List of devices we know are interested in this page.
   std::set<std::string, convert::StringViewComparator> interested_devices_;
   // List of devices we know are not interested in this page.
