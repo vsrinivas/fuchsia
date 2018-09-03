@@ -18,6 +18,13 @@ func Run(t *testing.T, cmd0 string, cmd ...string) string {
 	return string(out)
 }
 
+func RunExpectingError(t *testing.T, cmd0 string, cmd ...string) {
+	_, err := exec.Command(cmd0, cmd...).CombinedOutput()
+	if err == nil {
+		t.Errorf("expected `%s %s` to exit nonzero", cmd0, cmd)
+	}
+}
+
 func RunQuietly(t *testing.T, cmd0 string, cmd ...string) {
 	out := Run(t, cmd0, cmd...)
 	if len(out) > 0 {
@@ -27,10 +34,10 @@ func RunQuietly(t *testing.T, cmd0 string, cmd ...string) {
 
 func TestOutput(t *testing.T) {
 	t.Run("ifconfig route add", func(t *testing.T) {
-		Run(t, "/system/bin/ifconfig", "route", "show")
 		before := Run(t, "/system/bin/ifconfig", "route", "show")
-		_ = Run(t, "/system/bin/ifconfig", "route", "add", "1.2.3.4/14", "gateway", "9.8.7.6", "iface", "NON_EXISTANT_INTERFACE_FORCES_FAILURE")
+		RunExpectingError(t, "/system/bin/ifconfig", "route", "add", "1.2.3.4/14", "gateway", "9.8.7.6", "iface", "NON_EXISTENT_INTERFACE_FORCES_FAILURE")
 		after := Run(t, "/system/bin/ifconfig", "route", "show")
+
 		if before != after {
 			t.Errorf("Expected ifconfig route add failure but the routes changed: '%s' vs '%s'", before, after)
 		}
@@ -47,40 +54,51 @@ func TestOutput(t *testing.T) {
 		}
 
 		// Try to delete it but the gateway mismatches so it should fail.
-		out = Run(t, "/system/bin/ifconfig", "route", "del", "1.2.3.4/14", "gateway", "9.9.9.9")
-		if len(out) == 0 {
-			t.Errorf("ifconfig route del should have reported an error but didn't")
-		}
+		RunExpectingError(t, "/system/bin/ifconfig", "route", "del", "1.2.3.4/14", "gateway", "9.9.9.9")
 		out = Run(t, "/system/bin/ifconfig", "route", "show")
 		if !strings.Contains(out, expected) {
 			t.Errorf("ifconfig route del removed '%s' from '%s' but it should not have", expected, out)
 		}
 
 		// Try to delete it but the mask length mismatches so it should fail.
-		out = Run(t, "/system/bin/ifconfig", "route", "del", "1.2.3.4/15")
-		if len(out) == 0 {
-			t.Errorf("ifconfig route del should have reported an error but didn't")
-		}
+		RunExpectingError(t, "/system/bin/ifconfig", "route", "del", "1.2.3.4/15")
 		out = Run(t, "/system/bin/ifconfig", "route", "show")
 		if !strings.Contains(out, expected) {
 			t.Errorf("ifconfig route del removed '%s' from '%s' but it should not have", expected, out)
 		}
 
 		// Now delete it.
-		RunQuietly(t, "/system/bin/ifconfig", "route", "del", "1.2.3.4/14")
+		RunQuietly(t, "/system/bin/ifconfig", "route", "del", "1.2.3.4/14", "gateway", "9.8.7.6")
 		out = Run(t, "/system/bin/ifconfig", "route", "show")
 		if strings.Contains(out, expected) {
 			t.Errorf("ifconfig route del failed, did not expect to find '%s' in '%s'", expected, out)
 		}
 
 		// Try to delete it again, it should fail.
-		out = Run(t, "/system/bin/ifconfig", "route", "del", "1.2.3.4/14")
-		if len(out) == 0 {
-			t.Errorf("ifconfig route del should have reported an error but didn't")
-		}
+		RunExpectingError(t, "/system/bin/ifconfig", "route", "del", "1.2.3.4/14")
 		out = Run(t, "/system/bin/ifconfig", "route", "show")
 		if strings.Contains(out, expected) {
 			t.Errorf("ifconfig route del failed, did not expect to find '%s' in '%s'", expected, out)
+		}
+	})
+
+	t.Run("ifconfig route parse error formatting", func(t *testing.T) {
+		out, err := exec.Command("/system/bin/ifconfig", "route", "add").CombinedOutput()
+		if err == nil {
+			t.Errorf("ifconfig route add returned success without enough arguments. output: \n%s", out)
+		}
+		expected := "Not enough arguments"
+		if !strings.Contains(string(out), expected) {
+			t.Errorf("want `ifconfig route add` to print \"%s\", got \"%s\"", expected, out)
+		}
+
+		out, err = exec.Command("/system/bin/ifconfig", "route", "add", "1.2.3.4/14").CombinedOutput()
+		if err == nil {
+			t.Errorf("ifconfig route add returned success with neither gateway or iface specified. output: \n%s", out)
+		}
+		expected = "Error adding route"
+		if !strings.Contains(string(out), expected) {
+			t.Errorf("want `ifconfig route add` to print \"%s\", got \"%s\"", expected, out)
 		}
 	})
 }

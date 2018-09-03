@@ -156,6 +156,10 @@ func (a *netstackClientApp) newRouteFromArgs(args []string) (route netstack.Rout
 }
 
 func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry) error {
+	if (r.Gateway == netstack.NetAddress{}) && r.Nicid == 0 {
+		return fmt.Errorf("either gateway or iface must be provided when adding a route")
+	}
+
 	rs, err := a.netstack.GetRouteTable()
 	if err != nil {
 		return fmt.Errorf("Could not get route table from netstack: %s", err)
@@ -424,7 +428,7 @@ func usage() {
 	fmt.Printf("  %s [<interface>] [up|down]\n", os.Args[0])
 	fmt.Printf("  %s [<interface>] [add|del] [<address>]/[<mask>]\n", os.Args[0])
 	fmt.Printf("  %s [<interface>] dhcp [start|stop]\n", os.Args[0])
-	fmt.Printf("  %s route [add|del] [<address>]/[<mask>]\n", os.Args[0])
+	fmt.Printf("  %s route [add|del] [<address>/<mask>] [iface <name>] [gateway <address>/<mask>]\n", os.Args[0])
 	fmt.Printf("  %s route show\n", os.Args[0])
 	fmt.Printf("  %s bridge [<interface>]+\n", os.Args[0])
 	os.Exit(1)
@@ -463,23 +467,28 @@ func main() {
 			}
 			return
 		}
+		if len(os.Args) < 4 {
+			fmt.Printf("Not enough arguments to `ifconfig route`; at least a destination and one of iface name or gateway must be provided\n")
+			usage()
+		}
 		routeFlags := os.Args[3:]
 		r, err := a.newRouteFromArgs(routeFlags)
 		if err != nil {
 			fmt.Printf("Error parsing route from args: %s, error: %s\n", routeFlags, err)
-			return
+			usage()
 		}
 
 		switch op {
 		case "add":
-			err = a.addRoute(r)
-			if err != nil {
+			if err = a.addRoute(r); err != nil {
 				fmt.Printf("Error adding route to route table: %s", err)
+				usage()
 			}
 		case "del":
 			err = a.deleteRoute(r)
 			if err != nil {
 				fmt.Printf("Error deleting route from route table: %s", err)
+				usage()
 			}
 		default:
 			fmt.Printf("Unknown route operation: %s", op)
