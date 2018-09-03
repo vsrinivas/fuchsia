@@ -11,14 +11,17 @@ set -eo pipefail
 usage() {
   echo "usage: ${0} [options] {arm64, x64}"
   echo
+  echo "  -b [branch]     Remote branch of zircon-guest linux repository to"
+  echo "                  pull before building (default: machina)."
   echo "  -l [linux-dir]  Linux source dir"
   echo "  -o [image]      Output location for the built kernel"
   echo
   exit 1
 }
 
-while getopts "d:l:o:" OPT; do
+while getopts "b:d:l:o:" OPT; do
   case $OPT in
+  b) LINUX_BRANCH="${OPTARG}";;
   l) LINUX_DIR="${OPTARG}";;
   o) LINUX_OUT="${OPTARG}";;
   *) usage;;
@@ -44,15 +47,23 @@ x64)
 esac
 
 declare -r LINUX_DIR=${LINUX_DIR:-/tmp/linux}
+declare -r LINUX_BRANCH=${LINUX_BRANCH:-machina}
 
 # Shallow clone the repository.
 if [ ! -d "${LINUX_DIR}/.git" ]; then
-  git clone --depth 1 https://zircon-guest.googlesource.com/third_party/linux "${LINUX_DIR}"
+  git clone --depth 1 --branch "${LINUX_BRANCH}" https://zircon-guest.googlesource.com/third_party/linux "${LINUX_DIR}"
 fi
 
 # Update the repository.
 cd "${LINUX_DIR}"
-git pull
+if [[ `git branch --list ${LINUX_BRANCH} ` ]]; then
+  git checkout ${LINUX_BRANCH}
+  git pull --depth 1 origin ${LINUX_BRANCH}
+else
+  git fetch --depth 1 origin ${LINUX_BRANCH}:${LINUX_BRANCH}
+  git checkout ${LINUX_BRANCH}
+fi
+
 # Build Linux.
 make machina_defconfig
 make -j $(getconf _NPROCESSORS_ONLN)
