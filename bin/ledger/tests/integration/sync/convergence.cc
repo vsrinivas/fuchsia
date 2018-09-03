@@ -218,12 +218,13 @@ class ConvergenceTest
   ~ConvergenceTest() override{};
 
   void SetUp() override {
-    BaseIntegrationTest::SetUp();
     const LedgerAppInstanceFactoryBuilder* factory_builder;
     std::tie(merge_function_type_, num_ledgers_, factory_builder) = GetParam();
 
     app_instance_factory_ = factory_builder->NewFactory();
     loop_controller_ = factory_builder->NewLoopController();
+
+    BaseIntegrationTest::SetUp();
 
     ASSERT_GT(num_ledgers_, 1);
 
@@ -324,9 +325,7 @@ class ConvergenceTest
 
 // Verify that the Ledger converges over different settings of merging functions
 // and number of ledger instances.
-//
-// Disabled as flaky, see LE-458.
-TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
+TEST_P(ConvergenceTest, NLedgersConverge) {
   std::vector<std::unique_ptr<PageWatcherImpl>> watchers;
   std::vector<std::unique_ptr<SyncWatcherImpl>> sync_watchers;
 
