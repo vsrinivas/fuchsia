@@ -33,6 +33,23 @@ paddr_t boot_alloc_end;
 __NO_SAFESTACK
 void boot_alloc_init() {
     boot_alloc_start = reinterpret_cast<paddr_t>(_end);
+    // TODO(ZX-2563): This is a compile-time no-op that defeats any compiler
+    // optimizations based on its knowledge/assumption that `&_end` is a
+    // constant here that equals the `&_end` constant as computed elsewhere.
+    // Without this, the compiler can see that boot_alloc_start is never set to
+    // any other value and replace code that uses the boot_alloc_start value
+    // with code that computes `&_end` on the spot.  What the compiler doesn't
+    // know is that this `&_end` is crucially a PC-relative computation when
+    // the PC is a (low) physical address.  Later code that uses
+    // boot_alloc_start will be running at a kernel (high) virtual address and
+    // so its `&_end` will be nowhere near the same value.  The compiler isn't
+    // wrong to do this sort of optimization when it can and other such cases
+    // will eventually arise.  So long-term we'll need more thorough
+    // compile-time separation of the early boot code that runs in physical
+    // space from normal kernel code.  For now, this asm generates no
+    // additional code but tells the compiler that it has no idea what value
+    // boot_alloc_start might take, so it has to compute the `&_end` value now.
+    __asm__("" : "=g"(boot_alloc_start) : "0"(boot_alloc_start));
     boot_alloc_end = reinterpret_cast<paddr_t>(_end);
 }
 
