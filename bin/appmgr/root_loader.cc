@@ -56,7 +56,7 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
   // 2. Try to load the URL directly, if the path is valid. If the path is valid
   // but we cannot load the component, exit immediately.
   fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
-  if (fd.is_valid() || path[0] == '/') {
+  if (fd.is_valid() && path[0] == '/') {
     if (!LoadComponentWithProcess(fd, path, callback)) {
       FXL_LOG(ERROR) << "Could not load url: " << url
                      << "; resource located at path, but it could not be "
