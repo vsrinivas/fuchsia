@@ -14,19 +14,14 @@
 
 #include <zircon/mtrace.h>
 
-#ifdef __x86_64__
-#include "arch/x86/perf_mon.h"
-#include "arch/x86/proc_trace.h"
-#endif
-
 zx_status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,
                            user_inout_ptr<void> arg, size_t size) {
     switch (kind) {
 #ifdef __x86_64__
-    case MTRACE_KIND_IPM:
-        return mtrace_ipm_control(action, options, arg, size);
-    case MTRACE_KIND_IPT:
-        return mtrace_ipt_control(action, options, arg, size);
+    case MTRACE_KIND_CPUPERF:
+        return mtrace_cpuperf_control(action, options, arg, size);
+    case MTRACE_KIND_INSNTRACE:
+        return mtrace_insntrace_control(action, options, arg, size);
 #endif
     default:
         return ZX_ERR_INVALID_ARGS;

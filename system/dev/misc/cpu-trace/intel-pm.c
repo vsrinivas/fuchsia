@@ -171,7 +171,7 @@ void cpuperf_init_once(void)
     zx_x86_ipm_properties_t props;
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
-        zx_mtrace_control(resource, MTRACE_KIND_IPM, MTRACE_IPM_GET_PROPERTIES,
+        zx_mtrace_control(resource, MTRACE_KIND_CPUPERF, MTRACE_CPUPERF_GET_PROPERTIES,
                           0, &props, sizeof(props));
     if (status != ZX_OK) {
         if (status == ZX_ERR_NOT_SUPPORTED)
@@ -803,8 +803,8 @@ static zx_status_t ipm_start(cpu_trace_device_t* dev) {
     zx_handle_t resource = get_root_resource();
 
     zx_status_t status =
-        zx_mtrace_control(resource, MTRACE_KIND_IPM,
-                          MTRACE_IPM_INIT, 0, NULL, 0);
+        zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
+                          MTRACE_CPUPERF_INIT, 0, NULL, 0);
     if (status != ZX_OK)
         return status;
 
@@ -813,22 +813,22 @@ static zx_status_t ipm_start(cpu_trace_device_t* dev) {
         zx_x86_ipm_buffer_t buffer;
         io_buffer_t* io_buffer = &per_trace->buffers[cpu];
         buffer.vmo = io_buffer->vmo_handle;
-        status = zx_mtrace_control(resource, MTRACE_KIND_IPM,
-                                   MTRACE_IPM_ASSIGN_BUFFER, cpu,
+        status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
+                                   MTRACE_CPUPERF_ASSIGN_BUFFER, cpu,
                                    &buffer, sizeof(buffer));
         if (status != ZX_OK)
             goto fail;
     }
 
-    status = zx_mtrace_control(resource, MTRACE_KIND_IPM,
-                               MTRACE_IPM_STAGE_CONFIG, 0,
+    status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
+                               MTRACE_CPUPERF_STAGE_CONFIG, 0,
                                &per_trace->config, sizeof(per_trace->config));
     if (status != ZX_OK)
         goto fail;
 
     // Step 2: Start data collection.
 
-    status = zx_mtrace_control(resource, MTRACE_KIND_IPM, MTRACE_IPM_START,
+    status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF, MTRACE_CPUPERF_START,
                                0, NULL, 0);
     if (status != ZX_OK)
         goto fail;
@@ -839,10 +839,10 @@ static zx_status_t ipm_start(cpu_trace_device_t* dev) {
   fail:
     {
         zx_status_t status2 =
-            zx_mtrace_control(resource, MTRACE_KIND_IPM,
-                              MTRACE_IPM_FINI, 0, NULL, 0);
+            zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
+                              MTRACE_CPUPERF_FINI, 0, NULL, 0);
         if (status2 != ZX_OK)
-            zxlogf(TRACE, "%s: MTRACE_IPM_FINI failed: %d\n", __func__, status2);
+            zxlogf(TRACE, "%s: MTRACE_CPUPERF_FINI failed: %d\n", __func__, status2);
         assert(status2 == ZX_OK);
         return status;
     }
@@ -857,12 +857,12 @@ static zx_status_t ipm_stop(cpu_trace_device_t* dev) {
 
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
-        zx_mtrace_control(resource, MTRACE_KIND_IPM,
-                          MTRACE_IPM_STOP, 0, NULL, 0);
+        zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
+                          MTRACE_CPUPERF_STOP, 0, NULL, 0);
     if (status == ZX_OK) {
         ipm->active = false;
-        status = zx_mtrace_control(resource, MTRACE_KIND_IPM,
-                                   MTRACE_IPM_FINI, 0, NULL, 0);
+        status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
+                                   MTRACE_CPUPERF_FINI, 0, NULL, 0);
     }
     return status;
 }

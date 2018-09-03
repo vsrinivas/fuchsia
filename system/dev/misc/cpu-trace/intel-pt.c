@@ -427,7 +427,7 @@ static void x86_pt_free_buffer1(insntrace_device_t* ipt_dev, ipt_per_trace_state
 }
 
 static zx_status_t x86_pt_alloc_buffer(insntrace_device_t* ipt_dev,
-                                       const ioctl_ipt_buffer_config_t* config,
+                                       const ioctl_insntrace_buffer_config_t* config,
                                        uint32_t* out_index) {
     zxlogf(DEBUG1, "%s: num_chunks %u, chunk_order %u\n",
            __func__, config->num_chunks, config->chunk_order);
@@ -565,7 +565,7 @@ static zx_status_t ipt_alloc_trace(cpu_trace_device_t* dev,
     if (!ipt_config_output_topa)
         return ZX_ERR_NOT_SUPPORTED;
 
-    ioctl_ipt_trace_config_t config;
+    ioctl_insntrace_trace_config_t config;
     if (cmdlen != sizeof(config))
         return ZX_ERR_INVALID_ARGS;
     memcpy(&config, cmd, sizeof(config));
@@ -604,7 +604,7 @@ static zx_status_t ipt_alloc_trace(cpu_trace_device_t* dev,
 
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
-        zx_mtrace_control(resource, MTRACE_KIND_IPT, MTRACE_IPT_ALLOC_TRACE, 0,
+        zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE, MTRACE_INSNTRACE_ALLOC_TRACE, 0,
                           &internal_mode, sizeof(internal_mode));
     if (status != ZX_OK) {
         free(ipt_dev->per_trace_state);
@@ -630,7 +630,7 @@ static zx_status_t ipt_free_trace(cpu_trace_device_t* dev) {
 
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
-        zx_mtrace_control(resource, MTRACE_KIND_IPT, MTRACE_IPT_FREE_TRACE, 0, NULL, 0);
+        zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE, MTRACE_INSNTRACE_FREE_TRACE, 0, NULL, 0);
     // TODO(dje): This really shouldn't fail. What to do?
     // For now flag things as busted and prevent further use.
     if (status != ZX_OK)
@@ -645,7 +645,7 @@ static zx_status_t ipt_free_trace(cpu_trace_device_t* dev) {
 static zx_status_t ipt_get_trace_config(insntrace_device_t* ipt_dev,
                                         void* reply, size_t replymax,
                                         size_t* out_actual) {
-    ioctl_ipt_trace_config_t config;
+    ioctl_insntrace_trace_config_t config;
     if (replymax < sizeof(config))
         return ZX_ERR_BUFFER_TOO_SMALL;
 
@@ -668,7 +668,7 @@ static zx_status_t ipt_alloc_buffer(insntrace_device_t* ipt_dev,
                                     const void* cmd, size_t cmdlen,
                                     void* reply, size_t replymax,
                                     size_t* out_actual) {
-    ioctl_ipt_buffer_config_t config;
+    ioctl_insntrace_buffer_config_t config;
     if (cmdlen != sizeof(config))
         return ZX_ERR_INVALID_ARGS;
     memcpy(&config, cmd, sizeof(config));
@@ -686,7 +686,7 @@ static zx_status_t ipt_alloc_buffer(insntrace_device_t* ipt_dev,
 
 static zx_status_t ipt_assign_buffer_thread(insntrace_device_t* ipt_dev,
                                             const void* cmd, size_t cmdlen) {
-    ioctl_ipt_assign_buffer_thread_t assign;
+    ioctl_insntrace_assign_buffer_thread_t assign;
     if (cmdlen != sizeof(assign))
         return ZX_ERR_INVALID_ARGS;
 
@@ -696,7 +696,7 @@ static zx_status_t ipt_assign_buffer_thread(insntrace_device_t* ipt_dev,
 
 static zx_status_t ipt_release_buffer_thread(insntrace_device_t* ipt_dev,
                                              const void* cmd, size_t cmdlen) {
-    ioctl_ipt_assign_buffer_thread_t assign;
+    ioctl_insntrace_assign_buffer_thread_t assign;
     if (cmdlen != sizeof(assign))
         return ZX_ERR_INVALID_ARGS;
 
@@ -709,7 +709,7 @@ static zx_status_t ipt_get_buffer_config(insntrace_device_t* ipt_dev,
                                          void* reply, size_t replymax,
                                          size_t* out_actual) {
     uint32_t index;
-    ioctl_ipt_buffer_config_t config;
+    ioctl_insntrace_buffer_config_t config;
 
     if (cmdlen != sizeof(index))
         return ZX_ERR_INVALID_ARGS;
@@ -741,7 +741,7 @@ static zx_status_t ipt_get_buffer_info(insntrace_device_t* ipt_dev,
                                        void* reply, size_t replymax,
                                        size_t* out_actual) {
     uint32_t index;
-    ioctl_ipt_buffer_info_t data;
+    ioctl_insntrace_buffer_info_t data;
 
     if (cmdlen != sizeof(index))
         return ZX_ERR_INVALID_ARGS;
@@ -769,7 +769,7 @@ static zx_status_t ipt_get_chunk_handle(insntrace_device_t* ipt_dev,
                                         const void* cmd, size_t cmdlen,
                                         void* reply, size_t replymax,
                                         size_t* out_actual) {
-    ioctl_ipt_chunk_handle_req_t req;
+    ioctl_insntrace_chunk_handle_req_t req;
     zx_handle_t h;
 
     if (cmdlen != sizeof(req))
@@ -837,13 +837,15 @@ static zx_status_t ipt_start(insntrace_device_t* ipt_dev) {
                       "addr range size mismatch");
         memcpy(regs.addr_ranges, per_trace->addr_ranges, sizeof(per_trace->addr_ranges));
 
-        status = zx_mtrace_control(resource, MTRACE_KIND_IPT, MTRACE_IPT_STAGE_CPU_DATA,
+        status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,
+                                   MTRACE_INSNTRACE_STAGE_CPU_DATA,
                                    cpu, &regs, sizeof(regs));
         if (status != ZX_OK)
             return status;
     }
 
-    status = zx_mtrace_control(resource, MTRACE_KIND_IPT, MTRACE_IPT_CPU_MODE_START,
+    status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,
+                               MTRACE_INSNTRACE_CPU_MODE_START,
                                0, NULL, 0);
     if (status != ZX_OK)
         return status;
@@ -859,7 +861,8 @@ static zx_status_t ipt_stop(insntrace_device_t* ipt_dev) {
 
     zx_handle_t resource = get_root_resource();
 
-    zx_status_t status = zx_mtrace_control(resource, MTRACE_KIND_IPT, MTRACE_IPT_CPU_MODE_STOP,
+    zx_status_t status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,
+                                           MTRACE_INSNTRACE_CPU_MODE_STOP,
                                            0, NULL, 0);
     if (status != ZX_OK)
         return status;
@@ -869,7 +872,8 @@ static zx_status_t ipt_stop(insntrace_device_t* ipt_dev) {
         ipt_per_trace_state_t* per_trace = &ipt_dev->per_trace_state[cpu];
 
         zx_x86_pt_regs_t regs;
-        status = zx_mtrace_control(resource, MTRACE_KIND_IPT, MTRACE_IPT_GET_CPU_DATA,
+        status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,
+                                   MTRACE_INSNTRACE_GET_CPU_DATA,
                                    cpu, &regs, sizeof(regs));
         if (status != ZX_OK)
             return status;
@@ -899,60 +903,60 @@ zx_status_t insntrace_ioctl(cpu_trace_device_t* dev, uint32_t op,
     assert(IOCTL_FAMILY(op) == IOCTL_FAMILY_INSNTRACE);
 
     insntrace_device_t* ipt_dev = dev->insntrace;
-    if (op != IOCTL_IPT_ALLOC_TRACE) {
+    if (op != IOCTL_INSNTRACE_ALLOC_TRACE) {
         if (!ipt_dev)
             return ZX_ERR_BAD_STATE;
     }
 
     switch (op) {
-    case IOCTL_IPT_ALLOC_TRACE:
+    case IOCTL_INSNTRACE_ALLOC_TRACE:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return ipt_alloc_trace(dev, cmd, cmdlen);
 
-    case IOCTL_IPT_FREE_TRACE:
+    case IOCTL_INSNTRACE_FREE_TRACE:
         if (cmdlen != 0 || replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return ipt_free_trace(dev);
 
-    case IOCTL_IPT_GET_TRACE_CONFIG:
+    case IOCTL_INSNTRACE_GET_TRACE_CONFIG:
         if (cmdlen != 0)
             return ZX_ERR_INVALID_ARGS;
         return ipt_get_trace_config(ipt_dev, reply, replymax, out_actual);
 
-    case IOCTL_IPT_ALLOC_BUFFER:
+    case IOCTL_INSNTRACE_ALLOC_BUFFER:
         return ipt_alloc_buffer(ipt_dev, cmd, cmdlen, reply, replymax, out_actual);
 
-    case IOCTL_IPT_ASSIGN_BUFFER_THREAD:
+    case IOCTL_INSNTRACE_ASSIGN_BUFFER_THREAD:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return ipt_assign_buffer_thread(ipt_dev, cmd, cmdlen);
 
-    case IOCTL_IPT_RELEASE_BUFFER_THREAD:
+    case IOCTL_INSNTRACE_RELEASE_BUFFER_THREAD:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return ipt_release_buffer_thread(ipt_dev, cmd, cmdlen);
 
-    case IOCTL_IPT_GET_BUFFER_CONFIG:
+    case IOCTL_INSNTRACE_GET_BUFFER_CONFIG:
         return ipt_get_buffer_config(ipt_dev, cmd, cmdlen, reply, replymax, out_actual);
 
-    case IOCTL_IPT_GET_BUFFER_INFO:
+    case IOCTL_INSNTRACE_GET_BUFFER_INFO:
         return ipt_get_buffer_info(ipt_dev, cmd, cmdlen, reply, replymax, out_actual);
 
-    case IOCTL_IPT_GET_CHUNK_HANDLE:
+    case IOCTL_INSNTRACE_GET_CHUNK_HANDLE:
         return ipt_get_chunk_handle(ipt_dev, cmd, cmdlen, reply, replymax, out_actual);
 
-    case IOCTL_IPT_FREE_BUFFER:
+    case IOCTL_INSNTRACE_FREE_BUFFER:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return ipt_free_buffer(ipt_dev, cmd, cmdlen);
 
-    case IOCTL_IPT_START:
+    case IOCTL_INSNTRACE_START:
         if (cmdlen != 0 || replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return ipt_start(ipt_dev);
 
-    case IOCTL_IPT_STOP:
+    case IOCTL_INSNTRACE_STOP:
         if (cmdlen != 0 || replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return ipt_stop(ipt_dev);

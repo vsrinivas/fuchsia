@@ -28,13 +28,13 @@
 
 #define LOCAL_TRACE 0
 
-zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
-                               user_inout_ptr<void> arg, size_t size) {
+zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
+                                   user_inout_ptr<void> arg, size_t size) {
     TRACEF("action %u, options 0x%x, arg %p, size 0x%zx\n",
            action, options, arg.get(), size);
 
     switch (action) {
-    case MTRACE_IPM_GET_PROPERTIES: {
+    case MTRACE_CPUPERF_GET_PROPERTIES: {
         zx_x86_ipm_properties_t props;
         if (size != sizeof(props))
             return ZX_ERR_INVALID_ARGS;
@@ -49,12 +49,12 @@ zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
         return ZX_OK;
     }
 
-    case MTRACE_IPM_INIT:
+    case MTRACE_CPUPERF_INIT:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
         return x86_ipm_init();
 
-    case MTRACE_IPM_ASSIGN_BUFFER: {
+    case MTRACE_CPUPERF_ASSIGN_BUFFER: {
         zx_x86_ipm_buffer_t buffer;
         if (size != sizeof(buffer))
             return ZX_ERR_INVALID_ARGS;
@@ -64,8 +64,8 @@ zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
 
         // TODO(dje): Later need to rework to assign buffers to things
         // like threads.
-        uint32_t cpu = MTRACE_IPM_OPTIONS_CPU(options);
-        if ((options & ~MTRACE_IPM_OPTIONS_CPU_MASK) != 0)
+        uint32_t cpu = MTRACE_CPUPERF_OPTIONS_CPU(options);
+        if ((options & ~MTRACE_CPUPERF_OPTIONS_CPU_MASK) != 0)
             return ZX_ERR_INVALID_ARGS;
 
         // lookup the VMO dispatcher from handle
@@ -86,7 +86,7 @@ zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
         return x86_ipm_assign_buffer(cpu, fbl::move(vmo->vmo()));
     }
 
-    case MTRACE_IPM_STAGE_CONFIG: {
+    case MTRACE_CPUPERF_STAGE_CONFIG: {
         zx_x86_ipm_config_t config;
         if (size != sizeof(config))
             return ZX_ERR_INVALID_ARGS;
@@ -100,17 +100,17 @@ zx_status_t mtrace_ipm_control(uint32_t action, uint32_t options,
         return x86_ipm_stage_config(&config);
     }
 
-    case MTRACE_IPM_START:
+    case MTRACE_CPUPERF_START:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
         return x86_ipm_start();
 
-    case MTRACE_IPM_STOP:
+    case MTRACE_CPUPERF_STOP:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
         return x86_ipm_stop();
 
-    case MTRACE_IPM_FINI:
+    case MTRACE_CPUPERF_FINI:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
         return x86_ipm_fini();

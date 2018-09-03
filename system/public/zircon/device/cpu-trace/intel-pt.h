@@ -25,7 +25,7 @@ __BEGIN_CDECLS
 #define IPT_MSR_BITS(len, shift) (((1ULL << (len)) - 1) << (shift))
 
 // Bits in the IA32_RTIT_CTL MSR.
-// These bits are writable by the user with ioctl_ipt_set_ctl_config.
+// These bits are writable by the user with ioctl_insntrace_set_ctl_config.
 // The driver will override a setting if it's unsafe (e.g., causes #gpf).
 
 #define IPT_CTL_CYC_EN_SHIFT (1)
@@ -97,7 +97,7 @@ __BEGIN_CDECLS
 #define IPT_CTL_ADDR3_SHIFT (44)
 #define IPT_CTL_ADDR3_MASK  IPT_MSR_BITS(IPT_CTL_ADDR_LEN, IPT_CTL_ADDR3_SHIFT)
 
-// Other bits in IA32_RTIT_CTL MSR, not writable with ioctl_ipt_set_ctl_config.
+// Other bits in IA32_RTIT_CTL MSR, not writable with ioctl_insntrace_set_ctl_config.
 
 #define IPT_CTL_TRACE_EN_SHIFT (0)
 #define IPT_CTL_TRACE_EN_LEN   (1)
@@ -194,26 +194,26 @@ typedef struct {
 typedef struct {
     // One of IPT_MODE_{CPUS,THREADS}.
     uint32_t mode;
-} ioctl_ipt_trace_config_t;
+} ioctl_insntrace_trace_config_t;
 
 // must be called prior to START, allocate buffers of the specified size
-// Input: ioctl_ipt_trace_config_t
+// Input: ioctl_insntrace_trace_config_t
 // TODO(dje): Later return a trace descriptor.
-#define IOCTL_IPT_ALLOC_TRACE \
+#define IOCTL_INSNTRACE_ALLOC_TRACE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 0)
-IOCTL_WRAPPER_IN(ioctl_ipt_alloc_trace, IOCTL_IPT_ALLOC_TRACE, ioctl_ipt_trace_config_t);
+IOCTL_WRAPPER_IN(ioctl_insntrace_alloc_trace, IOCTL_INSNTRACE_ALLOC_TRACE, ioctl_insntrace_trace_config_t);
 
-// release resources allocated with IOCTL_IPT_ALLOC_TRACE
+// release resources allocated with IOCTL_INSNTRACE_ALLOC_TRACE
 // TODO(dje): Later allow allocating multiple traces.
-#define IOCTL_IPT_FREE_TRACE \
+#define IOCTL_INSNTRACE_FREE_TRACE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 1)
-IOCTL_WRAPPER(ioctl_ipt_free_trace, IOCTL_IPT_FREE_TRACE);
+IOCTL_WRAPPER(ioctl_insntrace_free_trace, IOCTL_INSNTRACE_FREE_TRACE);
 
 // fetch the config of a trace
-// Output: ioctl_ipt_trace_config_t
-#define IOCTL_IPT_GET_TRACE_CONFIG \
+// Output: ioctl_insntrace_trace_config_t
+#define IOCTL_INSNTRACE_GET_TRACE_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 2)
-IOCTL_WRAPPER_OUT(ioctl_ipt_get_trace_config, IOCTL_IPT_GET_TRACE_CONFIG, ioctl_ipt_trace_config_t);
+IOCTL_WRAPPER_OUT(ioctl_insntrace_get_trace_config, IOCTL_INSNTRACE_GET_TRACE_CONFIG, ioctl_insntrace_trace_config_t);
 
 typedef struct {
     // A "buffer" is made up of |num_chunks| chunks with each chunk having size
@@ -227,44 +227,44 @@ typedef struct {
     struct {
         uint64_t a,b;
     } addr_ranges[IPT_MAX_NUM_ADDR_RANGES];
-} ioctl_ipt_buffer_config_t;
+} ioctl_insntrace_buffer_config_t;
 
 // allocate a trace buffer
-// Input: ioctl_ipt_buffer_config_t
+// Input: ioctl_insntrace_buffer_config_t
 // Output: trace buffer descriptor (think file descriptor for trace buffers)
 // When tracing cpus, buffers are auto-assigned to cpus: the resulting trace
 // buffer descriptor is the number of the cpu using the buffer.
-#define IOCTL_IPT_ALLOC_BUFFER \
+#define IOCTL_INSNTRACE_ALLOC_BUFFER \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 3)
-IOCTL_WRAPPER_INOUT(ioctl_ipt_alloc_buffer, IOCTL_IPT_ALLOC_BUFFER, ioctl_ipt_buffer_config_t, uint32_t);
+IOCTL_WRAPPER_INOUT(ioctl_insntrace_alloc_buffer, IOCTL_INSNTRACE_ALLOC_BUFFER, ioctl_insntrace_buffer_config_t, uint32_t);
 
 typedef struct {
     // for IOCTL_KIND_SET_HANDLE first element must be the handle
     zx_handle_t thread;
     uint32_t descriptor;
-} ioctl_ipt_assign_buffer_thread_t;
+} ioctl_insntrace_assign_buffer_thread_t;
 
 // assign a buffer to a thread
-// Input: ioctl_ipt_assign_buffer_thread_t
-#define IOCTL_IPT_ASSIGN_BUFFER_THREAD \
+// Input: ioctl_insntrace_assign_buffer_thread_t
+#define IOCTL_INSNTRACE_ASSIGN_BUFFER_THREAD \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_INSNTRACE, 4)
-IOCTL_WRAPPER_IN(ioctl_ipt_assign_buffer_thread, IOCTL_IPT_ASSIGN_BUFFER_THREAD,
-                 ioctl_ipt_assign_buffer_thread_t);
+IOCTL_WRAPPER_IN(ioctl_insntrace_assign_buffer_thread, IOCTL_INSNTRACE_ASSIGN_BUFFER_THREAD,
+                 ioctl_insntrace_assign_buffer_thread_t);
 
 // release a buffer from a thread
-// Input: ioctl_ipt_assign_buffer_thread_t
-#define IOCTL_IPT_RELEASE_BUFFER_THREAD \
+// Input: ioctl_insntrace_assign_buffer_thread_t
+#define IOCTL_INSNTRACE_RELEASE_BUFFER_THREAD \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_INSNTRACE, 5)
-IOCTL_WRAPPER_IN(ioctl_ipt_release_buffer_thread, IOCTL_IPT_RELEASE_BUFFER_THREAD,
-                 ioctl_ipt_assign_buffer_thread_t);
+IOCTL_WRAPPER_IN(ioctl_insntrace_release_buffer_thread, IOCTL_INSNTRACE_RELEASE_BUFFER_THREAD,
+                 ioctl_insntrace_assign_buffer_thread_t);
 
 // return config data for a trace buffer
 // Input: trace buffer descriptor
-// Output: ioctl_ipt_trace_buffer_config_t
-#define IOCTL_IPT_GET_BUFFER_CONFIG \
+// Output: ioctl_insntrace_trace_buffer_config_t
+#define IOCTL_INSNTRACE_GET_BUFFER_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 6)
-IOCTL_WRAPPER_INOUT(ioctl_ipt_get_buffer_config, IOCTL_IPT_GET_BUFFER_CONFIG,
-                    uint32_t, ioctl_ipt_buffer_config_t);
+IOCTL_WRAPPER_INOUT(ioctl_insntrace_get_buffer_config, IOCTL_INSNTRACE_GET_BUFFER_CONFIG,
+                    uint32_t, ioctl_insntrace_buffer_config_t);
 
 // This contains the run-time produced data about the buffer.
 // Not the trace data itself, just info about the data.
@@ -274,46 +274,46 @@ typedef struct {
     // the buffer may contain data, there's no current way to know if tracing
     // wrapped.
     uint64_t capture_end;
-} ioctl_ipt_buffer_info_t;
+} ioctl_insntrace_buffer_info_t;
 
 // get trace data associated with the buffer
 // Input: trace buffer descriptor
-// Output: ioctl_ipt_buffer_info_t
-#define IOCTL_IPT_GET_BUFFER_INFO \
+// Output: ioctl_insntrace_buffer_info_t
+#define IOCTL_INSNTRACE_GET_BUFFER_INFO \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 7)
-IOCTL_WRAPPER_INOUT(ioctl_ipt_get_buffer_info, IOCTL_IPT_GET_BUFFER_INFO,
-                    uint32_t, ioctl_ipt_buffer_info_t);
+IOCTL_WRAPPER_INOUT(ioctl_insntrace_get_buffer_info, IOCTL_INSNTRACE_GET_BUFFER_INFO,
+                    uint32_t, ioctl_insntrace_buffer_info_t);
 
 typedef struct {
     uint32_t descriptor;
     uint32_t chunk_num;
-} ioctl_ipt_chunk_handle_req_t;
+} ioctl_insntrace_chunk_handle_req_t;
 
 // return a handle of a chunk of the trace buffer
 // There is no API to get N handles, we have to get them one at a time.
 // [There's no point in trying to micro-optimize this and, say, get 3 at
 // a time.]
-#define IOCTL_IPT_GET_CHUNK_HANDLE \
+#define IOCTL_INSNTRACE_GET_CHUNK_HANDLE \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_INSNTRACE, 8)
-IOCTL_WRAPPER_INOUT(ioctl_ipt_get_chunk_handle, IOCTL_IPT_GET_CHUNK_HANDLE,
-                    ioctl_ipt_chunk_handle_req_t, zx_handle_t);
+IOCTL_WRAPPER_INOUT(ioctl_insntrace_get_chunk_handle, IOCTL_INSNTRACE_GET_CHUNK_HANDLE,
+                    ioctl_insntrace_chunk_handle_req_t, zx_handle_t);
 
 // free a trace buffer
 // Input: trace buffer descriptor
-#define IOCTL_IPT_FREE_BUFFER \
+#define IOCTL_INSNTRACE_FREE_BUFFER \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 9)
-IOCTL_WRAPPER_IN(ioctl_ipt_free_buffer, IOCTL_IPT_FREE_BUFFER,
+IOCTL_WRAPPER_IN(ioctl_insntrace_free_buffer, IOCTL_INSNTRACE_FREE_BUFFER,
                  uint32_t);
 
 // turn on processor tracing
-#define IOCTL_IPT_START \
+#define IOCTL_INSNTRACE_START \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 10)
-IOCTL_WRAPPER(ioctl_ipt_start, IOCTL_IPT_START);
+IOCTL_WRAPPER(ioctl_insntrace_start, IOCTL_INSNTRACE_START);
 
 // turn off processor tracing
-#define IOCTL_IPT_STOP \
+#define IOCTL_INSNTRACE_STOP \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 11)
-IOCTL_WRAPPER(ioctl_ipt_stop, IOCTL_IPT_STOP);
+IOCTL_WRAPPER(ioctl_insntrace_stop, IOCTL_INSNTRACE_STOP);
 
 #endif // __Fuchsia__
 

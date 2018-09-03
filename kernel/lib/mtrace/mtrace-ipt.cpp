@@ -23,13 +23,13 @@
 
 #define LOCAL_TRACE 0
 
-zx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
-                               user_inout_ptr<void> arg, size_t size) {
+zx_status_t mtrace_insntrace_control(uint32_t action, uint32_t options,
+                                     user_inout_ptr<void> arg, size_t size) {
     TRACEF("action %u, options 0x%x, arg %p, size 0x%zx\n",
            action, options, arg.get(), size);
 
     switch (action) {
-    case MTRACE_IPT_ALLOC_TRACE: {
+    case MTRACE_INSNTRACE_ALLOC_TRACE: {
         if (options != 0)
             return ZX_ERR_INVALID_ARGS;
         uint32_t mode;
@@ -49,32 +49,32 @@ zx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
         }
     }
 
-    case MTRACE_IPT_FREE_TRACE:
+    case MTRACE_INSNTRACE_FREE_TRACE:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
         return x86_ipt_free_trace();
 
-    case MTRACE_IPT_STAGE_CPU_DATA: {
+    case MTRACE_INSNTRACE_STAGE_CPU_DATA: {
         zx_x86_pt_regs_t regs;
         if (size != sizeof(regs))
             return ZX_ERR_INVALID_ARGS;
         zx_status_t status = arg.reinterpret<zx_x86_pt_regs_t>().copy_from_user(&regs);
         if (status != ZX_OK)
             return status;
-        uint32_t cpu = MTRACE_IPT_OPTIONS_CPU(options);
-        if ((options & ~MTRACE_IPT_OPTIONS_CPU_MASK) != 0)
+        uint32_t cpu = MTRACE_INSNTRACE_OPTIONS_CPU(options);
+        if ((options & ~MTRACE_INSNTRACE_OPTIONS_CPU_MASK) != 0)
             return ZX_ERR_INVALID_ARGS;
         TRACEF("action %u, cpu %u, ctl 0x%" PRIx64 ", output_base 0x%" PRIx64 "\n",
                action, cpu, regs.ctl, regs.output_base);
         return x86_ipt_stage_cpu_data(cpu, &regs);
     }
 
-    case MTRACE_IPT_GET_CPU_DATA: {
+    case MTRACE_INSNTRACE_GET_CPU_DATA: {
         zx_x86_pt_regs_t regs;
         if (size != sizeof(regs))
             return ZX_ERR_INVALID_ARGS;
-        uint32_t cpu = MTRACE_IPT_OPTIONS_CPU(options);
-        if ((options & ~MTRACE_IPT_OPTIONS_CPU_MASK) != 0)
+        uint32_t cpu = MTRACE_INSNTRACE_OPTIONS_CPU(options);
+        if ((options & ~MTRACE_INSNTRACE_OPTIONS_CPU_MASK) != 0)
             return ZX_ERR_INVALID_ARGS;
         auto status = x86_ipt_get_cpu_data(cpu, &regs);
         if (status != ZX_OK)
@@ -87,12 +87,12 @@ zx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
         return ZX_OK;
     }
 
-    case MTRACE_IPT_CPU_MODE_START:
+    case MTRACE_INSNTRACE_CPU_MODE_START:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
         return x86_ipt_cpu_mode_start();
 
-    case MTRACE_IPT_CPU_MODE_STOP:
+    case MTRACE_INSNTRACE_CPU_MODE_STOP:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
         return x86_ipt_cpu_mode_stop();
