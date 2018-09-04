@@ -140,7 +140,10 @@ __BEGIN_CDECLS
                IPT_STATUS_IPT_STATUS_PACKET_BYTE_COUNT_LEN_SHIFT)
 
 // Maximum number of address ranges that h/w may support.
-#define IPT_MAX_NUM_ADDR_RANGES 4
+// No chip supports more than 2 at the moment.
+// Plus the XSAVES docs don't define more than 2 (see Intel Vol 3 section
+// 36.3.5.2 "Trace Configuration Context Switch using XSAVES/XRSTORS").
+#define IPT_MAX_NUM_ADDR_RANGES 2
 
 // Valid ToPA entry sizes.
 #define IPT_TOPA_MIN_SHIFT 12
