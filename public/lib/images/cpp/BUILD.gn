@@ -8,10 +8,6 @@ source_set("cpp") {
     "images.h",
   ]
 
-  deps = [
-    "//garnet/public/lib/fxl",
-  ]
-
   public_deps = [
     "//garnet/public/fidl/fuchsia.images:fuchsia.images",
   ]
