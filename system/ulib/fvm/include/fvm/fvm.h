@@ -86,7 +86,7 @@ static_assert(sizeof(vpart_entry_t) * FVM_MAX_ENTRIES % FVM_BLOCK_SIZE == 0,
 
 // A Slice Entry represents the allocation of a slice.
 //
-// Slice Entries are layed out in an array on disk.  The index into this array
+// Slice Entries are laid out in an array on disk.  The index into this array
 // determines the "physical slice" being accessed, where physical slices consist
 // of all disk space immediately following the FVM metadata on an FVM partition.
 //
@@ -107,7 +107,7 @@ typedef struct slice_entry {
     void SetVslice(uint64_t vslice);
 } slice_entry_t;
 
-static_assert(FVM_MAX_ENTRIES <= VPART_MAX, "vpart adress space too small");
+static_assert(FVM_MAX_ENTRIES <= VPART_MAX, "vpart address space too small");
 static_assert(sizeof(slice_entry_t) == 8, "Unexpected FVM slice entry size");
 static_assert(FVM_BLOCK_SIZE % sizeof(slice_entry_t) == 0,
               "FVM slice entry might cross block");

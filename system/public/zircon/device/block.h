@@ -183,8 +183,10 @@ typedef struct {
 } query_response_t;
 
 typedef struct {
-    size_t slice_size;   // Size of a single slice, in bytes
-    size_t vslice_count; // Number of addressable slices
+    size_t slice_size;   // Size of a single slice, in bytes.
+    size_t vslice_count; // Number of addressable slices.
+    size_t pslice_total_count; // Total number of allocatable slices.
+    size_t pslice_allocated_count; // Total number of currently allocated slices.
 } fvm_info_t;
 
 // ssize_t ioctl_block_fvm_query(int fd, fvm_info_t* info);

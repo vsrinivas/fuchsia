@@ -108,16 +108,6 @@ public:
         return entry;
     }
 
-    slice_entry_t* GetSliceEntryLocked(size_t index) const TA_REQ(lock_) {
-        ZX_DEBUG_ASSERT(index >= 1);
-        uintptr_t metadata_start = reinterpret_cast<uintptr_t>(GetFvmLocked());
-        uintptr_t offset = static_cast<uintptr_t>(kAllocTableOffset +
-                                                  index * sizeof(slice_entry_t));
-        ZX_DEBUG_ASSERT(kAllocTableOffset <= offset);
-        ZX_DEBUG_ASSERT(offset < kAllocTableOffset + AllocTableLength(DiskSize(), SliceSize()));
-        return reinterpret_cast<slice_entry_t*>(metadata_start + offset);
-    }
-
     // Allocate 'count' slices, write back the FVM.
     zx_status_t AllocateSlices(VPartition* vp, size_t vslice_start, size_t count) TA_EXCL(lock_);
     zx_status_t AllocateSlicesLocked(VPartition* vp, size_t vslice_start,
@@ -166,15 +156,21 @@ private:
         return reinterpret_cast<fvm_t*>(metadata_->GetData());
     }
 
-    vpart_entry_t* GetVPartEntryLocked(size_t index) const TA_REQ(lock_) {
-        ZX_DEBUG_ASSERT(index >= 1);
-        uintptr_t metadata_start = reinterpret_cast<uintptr_t>(GetFvmLocked());
-        uintptr_t offset = static_cast<uintptr_t>(kVPartTableOffset +
-                                                  index * sizeof(vpart_entry_t));
-        ZX_DEBUG_ASSERT(kVPartTableOffset <= offset);
-        ZX_DEBUG_ASSERT(offset < kVPartTableOffset + kVPartTableLength);
-        return reinterpret_cast<vpart_entry_t*>(metadata_start + offset);
-    }
+    // Mark a slice as free in the metadata structure.
+    // Update free slice accounting.
+    void FreePhysicalSlice(size_t pslice) TA_REQ(lock_);
+
+    // Mark a slice as allocated in the metadata structure.
+    // Update allocated slice accounting.
+    void AllocatePhysicalSlice(size_t pslice, uint64_t vpart, uint64_t vslice) TA_REQ(lock_);
+
+    // Given a physical slice (acting as an index into the slice table),
+    // return the associated slice entry.
+    slice_entry_t* GetSliceEntryLocked(size_t index) const TA_REQ(lock_);
+
+    // Given an index into the vpartition table, return the associated
+    // virtual partition entry.
+    vpart_entry_t* GetVPartEntryLocked(size_t index) const TA_REQ(lock_);
 
     size_t PrimaryOffsetLocked() const TA_REQ(lock_) {
         return first_metadata_is_primary_ ? 0 : MetadataSize();
@@ -195,6 +191,10 @@ private:
     bool first_metadata_is_primary_ TA_GUARDED(lock_);
     size_t metadata_size_;
     size_t slice_size_;
+    // Number of allocatable slices.
+    size_t pslice_total_count_;
+    // Number of currently allocated slices.
+    size_t pslice_allocated_count_ TA_GUARDED(lock_);
 
     // Block Protocol
     const size_t block_op_size_;
@@ -219,6 +219,9 @@ public:
     auto ExtentBegin() TA_REQ(lock_) {
         return slice_map_.begin();
     }
+
+    // Given a virtual slice, return the physical slice allocated
+    // to it. If no slice is allocated, return PSLICE_UNALLOCATED.
     uint32_t SliceGetLocked(size_t vslice) const TA_REQ(lock_);
 
     // Check slices starting from |vslice_start|.
