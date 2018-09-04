@@ -55,26 +55,22 @@ zx_status_t mtrace_insntrace_control(uint32_t action, uint32_t options,
         zx_status_t status = arg.reinterpret<zx_x86_pt_regs_t>().copy_from_user(&regs);
         if (status != ZX_OK)
             return status;
-        uint32_t cpu = MTRACE_INSNTRACE_OPTIONS_CPU(options);
-        if ((options & ~MTRACE_INSNTRACE_OPTIONS_CPU_MASK) != 0)
-            return ZX_ERR_INVALID_ARGS;
-        TRACEF("action %u, cpu %u, ctl 0x%" PRIx64 ", output_base 0x%" PRIx64 "\n",
-               action, cpu, regs.ctl, regs.output_base);
-        return x86_ipt_stage_cpu_data(cpu, &regs);
+        zx_itrace_buffer_descriptor_t descriptor = options;
+        TRACEF("action %u, descriptor %u, ctl 0x%" PRIx64 ", output_base 0x%" PRIx64 "\n",
+               action, descriptor, regs.ctl, regs.output_base);
+        return x86_ipt_stage_cpu_data(descriptor, &regs);
     }
 
     case MTRACE_INSNTRACE_GET_CPU_DATA: {
         zx_x86_pt_regs_t regs;
         if (size != sizeof(regs))
             return ZX_ERR_INVALID_ARGS;
-        uint32_t cpu = MTRACE_INSNTRACE_OPTIONS_CPU(options);
-        if ((options & ~MTRACE_INSNTRACE_OPTIONS_CPU_MASK) != 0)
-            return ZX_ERR_INVALID_ARGS;
-        auto status = x86_ipt_get_cpu_data(cpu, &regs);
+        zx_itrace_buffer_descriptor_t descriptor = options;
+        auto status = x86_ipt_get_cpu_data(descriptor, &regs);
         if (status != ZX_OK)
             return status;
-        TRACEF("action %u, cpu %u, ctl 0x%" PRIx64 ", output_base 0x%" PRIx64 "\n",
-               action, cpu, regs.ctl, regs.output_base);
+        TRACEF("action %u, descriptor %u, ctl 0x%" PRIx64 ", output_base 0x%" PRIx64 "\n",
+               action, descriptor, regs.ctl, regs.output_base);
         status = arg.reinterpret<zx_x86_pt_regs_t>().copy_to_user(regs);
         if (status != ZX_OK)
             return status;

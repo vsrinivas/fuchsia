@@ -356,7 +356,8 @@ zx_status_t x86_ipt_cpu_mode_stop() {
     return ZX_OK;
 }
 
-zx_status_t x86_ipt_stage_cpu_data(uint32_t cpu, const zx_x86_pt_regs_t* regs) {
+zx_status_t x86_ipt_stage_cpu_data(zx_itrace_buffer_descriptor_t descriptor,
+                                   const zx_x86_pt_regs_t* regs) {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
@@ -368,21 +369,22 @@ zx_status_t x86_ipt_stage_cpu_data(uint32_t cpu, const zx_x86_pt_regs_t* regs) {
     if (!ipt_trace_state)
         return ZX_ERR_BAD_STATE;
     uint32_t num_cpus = arch_max_num_cpus();
-    if (cpu >= num_cpus)
+    if (descriptor >= num_cpus)
         return ZX_ERR_INVALID_ARGS;
 
-    ipt_trace_state[cpu].ctl = regs->ctl;
-    ipt_trace_state[cpu].status = regs->status;
-    ipt_trace_state[cpu].output_base = regs->output_base;
-    ipt_trace_state[cpu].output_mask_ptrs = regs->output_mask_ptrs;
-    ipt_trace_state[cpu].cr3_match = regs->cr3_match;
-    static_assert(sizeof(ipt_trace_state[cpu].addr_ranges) == sizeof(regs->addr_ranges), "addr_ranges size mismatch");
-    memcpy(ipt_trace_state[cpu].addr_ranges, regs->addr_ranges, sizeof(regs->addr_ranges));
+    ipt_trace_state[descriptor].ctl = regs->ctl;
+    ipt_trace_state[descriptor].status = regs->status;
+    ipt_trace_state[descriptor].output_base = regs->output_base;
+    ipt_trace_state[descriptor].output_mask_ptrs = regs->output_mask_ptrs;
+    ipt_trace_state[descriptor].cr3_match = regs->cr3_match;
+    static_assert(sizeof(ipt_trace_state[descriptor].addr_ranges) == sizeof(regs->addr_ranges), "addr_ranges size mismatch");
+    memcpy(ipt_trace_state[descriptor].addr_ranges, regs->addr_ranges, sizeof(regs->addr_ranges));
 
     return ZX_OK;
 }
 
-zx_status_t x86_ipt_get_cpu_data(uint32_t cpu, zx_x86_pt_regs_t* regs) {
+zx_status_t x86_ipt_get_cpu_data(zx_itrace_buffer_descriptor_t descriptor,
+                                 zx_x86_pt_regs_t* regs) {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
@@ -394,16 +396,16 @@ zx_status_t x86_ipt_get_cpu_data(uint32_t cpu, zx_x86_pt_regs_t* regs) {
     if (!ipt_trace_state)
         return ZX_ERR_BAD_STATE;
     uint32_t num_cpus = arch_max_num_cpus();
-    if (cpu >= num_cpus)
+    if (descriptor >= num_cpus)
         return ZX_ERR_INVALID_ARGS;
 
-    regs->ctl = ipt_trace_state[cpu].ctl;
-    regs->status = ipt_trace_state[cpu].status;
-    regs->output_base = ipt_trace_state[cpu].output_base;
-    regs->output_mask_ptrs = ipt_trace_state[cpu].output_mask_ptrs;
-    regs->cr3_match = ipt_trace_state[cpu].cr3_match;
-    static_assert(sizeof(regs->addr_ranges) == sizeof(ipt_trace_state[cpu].addr_ranges), "addr_ranges size mismatch");
-    memcpy(regs->addr_ranges, ipt_trace_state[cpu].addr_ranges, sizeof(regs->addr_ranges));
+    regs->ctl = ipt_trace_state[descriptor].ctl;
+    regs->status = ipt_trace_state[descriptor].status;
+    regs->output_base = ipt_trace_state[descriptor].output_base;
+    regs->output_mask_ptrs = ipt_trace_state[descriptor].output_mask_ptrs;
+    regs->cr3_match = ipt_trace_state[descriptor].cr3_match;
+    static_assert(sizeof(regs->addr_ranges) == sizeof(ipt_trace_state[descriptor].addr_ranges), "addr_ranges size mismatch");
+    memcpy(regs->addr_ranges, ipt_trace_state[descriptor].addr_ranges, sizeof(regs->addr_ranges));
 
     return ZX_OK;
 }
