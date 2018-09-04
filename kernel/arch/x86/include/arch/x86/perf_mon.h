@@ -16,7 +16,7 @@
 
 #include <arch/x86.h>
 
-#include <zircon/device/cpu-trace/intel-pm.h>
+#include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
 
 __BEGIN_CDECLS
 

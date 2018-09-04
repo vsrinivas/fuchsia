@@ -22,7 +22,7 @@
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 
-#include <zircon/mtrace.h>
+#include <lib/zircon-internal/mtrace.h>
 
 #include "arch/x86/perf_mon.h"
 

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zircon/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
 
 __BEGIN_CDECLS
 
