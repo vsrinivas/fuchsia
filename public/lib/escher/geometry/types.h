@@ -22,6 +22,7 @@
 #include <glm/gtx/transform.hpp>
 
 #include "lib/escher/util/debug_print.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
@@ -52,12 +53,61 @@ struct ray4 {
   glm::vec4 direction;
 };
 
+// Used to compare whether two values are nearly equal.
+constexpr float kEpsilon = 0.000001f;
+
 inline ray4 operator*(const glm::mat4& matrix, const ray4& ray) {
   return ray4{matrix * ray.origin, matrix * ray.direction};
 }
 
-// Used to compare whether two values are nearly equal.
-constexpr float kEpsilon = 0.0000001f;
+// Oriented plane described by a normal vector and a distance from the origin
+// along that vector.
+template <typename VecT>
+struct planeN {
+  using VectorType = VecT;
+
+  // |direction| must be normalized.
+  planeN(VecT direction, float distance) : dir_(direction), dist_(distance) {
+    FXL_DCHECK(std::abs(glm::dot(direction, direction) - 1.f) < kEpsilon);
+  }
+
+  planeN(VecT point_on_plane, VecT direction)
+      : dir_(direction), dist_(glm::dot(point_on_plane, direction)) {
+    FXL_DCHECK(std::abs(glm::dot(direction, direction) - 1.f) < kEpsilon);
+  }
+
+  planeN(const planeN& other) : dir_(other.dir_), dist_(other.dist_) {}
+
+  bool operator==(const planeN<VecT>& other) const {
+    return dir_ == other.dir_ && dist_ == other.dist_;
+  }
+
+  const VecT& dir() const { return dir_; }
+  float dist() const { return dist_; }
+
+ private:
+  VecT dir_;
+  float dist_;
+};
+
+struct plane2 : public planeN<vec2> {
+  using planeN::planeN;
+  plane2(const vec3& direction, float distance)
+      : planeN<vec2>(vec2(direction), distance) {
+    // We only want to construct plane2 instead of plane3 when no info will be
+    // lost.  It is up to the caller to guarantee that z == 0.
+    FXL_DCHECK(direction.z == 0);
+  }
+};
+
+struct plane3 : public planeN<vec3> {
+  using planeN::planeN;
+  explicit plane3(const plane2& p)
+      : planeN<vec3>(vec3(p.dir(), 0.f), p.dist()) {}
+};
+
+ESCHER_DEBUG_PRINTABLE(plane2);
+ESCHER_DEBUG_PRINTABLE(plane3);
 
 }  // namespace escher
 

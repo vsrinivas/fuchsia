@@ -64,6 +64,14 @@ std::ostream& operator<<(std::ostream& str, const quat& q) {
   return str << "(" << q.x << ", " << q.y << ", " << q.z << ", " << q.w << ")";
 }
 
+std::ostream& operator<<(std::ostream& str, const plane2& p) {
+  return str << "plane2[dir:" << p.dir() << " dist:" << p.dist() << "]";
+}
+
+std::ostream& operator<<(std::ostream& str, const plane3& p) {
+  return str << "plane3[dir:" << p.dir() << " dist:" << p.dist() << "]";
+}
+
 std::ostream& operator<<(std::ostream& str, const MeshAttribute& attr) {
   switch (attr) {
     case MeshAttribute::kPosition2D:
