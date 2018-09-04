@@ -48,24 +48,6 @@ static constexpr char pt_list_output_path_suffix[] = "ptlist";
 
 static constexpr uint32_t kKtraceGroupMask = KTRACE_GRP_ARCH | KTRACE_GRP_TASKS;
 
-// Temporary bridge to walk v2 changes through zircon pinning.
-
-#if IPT_API_VERSION >= 2
-
-ssize_t ioctl_ipt_set_mode(int fd, const uint32_t* mode) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-ssize_t ioctl_ipt_cpu_mode_alloc(int fd) { return ZX_ERR_NOT_SUPPORTED; }
-
-ssize_t ioctl_ipt_cpu_mode_start(int fd) { return ZX_ERR_NOT_SUPPORTED; }
-
-ssize_t ioctl_ipt_cpu_mode_stop(int fd) { return ZX_ERR_NOT_SUPPORTED; }
-
-ssize_t ioctl_ipt_cpu_mode_free(int fd) { return ZX_ERR_NOT_SUPPORTED; }
-
-#endif
-
 static bool OpenDevices(fxl::UniqueFD* out_ipt_fd, fxl::UniqueFD* out_ktrace_fd,
                         zx::handle* out_ktrace_handle) {
   int ipt_fd = -1;
@@ -125,9 +107,9 @@ bool AllocTrace(const IptConfig& config) {
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
-  ioctl_ipt_trace_config_t trace_config;
+  ioctl_insntrace_trace_config_t trace_config;
   trace_config.mode = config.mode;
-  ssize_t ssize = ioctl_ipt_alloc_trace(ipt_fd.get(), &trace_config);
+  ssize_t ssize = ioctl_insntrace_alloc_trace(ipt_fd.get(), &trace_config);
   if (ssize < 0) {
     FXL_LOG(ERROR) << "set perf mode: " << debugger_utils::ZxErrorString(ssize);
     goto Fail;
@@ -139,16 +121,11 @@ Fail:
   return false;
 }
 
-static void InitIptBufferConfig(ioctl_ipt_buffer_config_t* ipt_config,
+static void InitIptBufferConfig(ioctl_insntrace_buffer_config_t* ipt_config,
                                 const IptConfig& config) {
   memset(ipt_config, 0, sizeof(*ipt_config));
-#if IPT_API_VERSION == 0
-  ipt_config->num_buffers = config.num_chunks;
-  ipt_config->buffer_order = config.chunk_order;
-#else
   ipt_config->num_chunks = config.num_chunks;
   ipt_config->chunk_order = config.chunk_order;
-#endif
   ipt_config->is_circular = config.is_circular;
   ipt_config->ctl = config.CtlMsr();
   ipt_config->cr3_match = config.cr3_match;
@@ -167,11 +144,11 @@ bool InitCpuPerf(const IptConfig& config) {
     return false;
 
   for (uint32_t cpu = 0; cpu < config.num_cpus; ++cpu) {
-    ioctl_ipt_buffer_config_t ipt_config;
+    ioctl_insntrace_buffer_config_t ipt_config;
     InitIptBufferConfig(&ipt_config, config);
 
     uint32_t descriptor;
-    auto ssize = ioctl_ipt_alloc_buffer(ipt_fd.get(), &ipt_config, &descriptor);
+    auto ssize = ioctl_insntrace_alloc_buffer(ipt_fd.get(), &ipt_config, &descriptor);
     if (ssize < 0) {
       FXL_LOG(ERROR) << "init cpu perf: "
                      << debugger_utils::ZxErrorString(ssize);
@@ -195,12 +172,12 @@ bool InitThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
-  ioctl_ipt_buffer_config_t ipt_config;
+  ioctl_insntrace_buffer_config_t ipt_config;
   InitIptBufferConfig(&ipt_config, config);
 
   uint32_t descriptor;
   ssize_t ssize =
-      ioctl_ipt_alloc_buffer(ipt_fd.get(), &ipt_config, &descriptor);
+      ioctl_insntrace_alloc_buffer(ipt_fd.get(), &ipt_config, &descriptor);
   if (ssize < 0) {
     FXL_LOG(ERROR) << "init thread perf: "
                    << debugger_utils::ZxErrorString(ssize);
@@ -294,7 +271,7 @@ bool StartCpuPerf(const IptConfig& config) {
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
-  ssize_t ssize = ioctl_ipt_start(ipt_fd.get());
+  ssize_t ssize = ioctl_insntrace_start(ipt_fd.get());
   if (ssize < 0) {
     FXL_LOG(ERROR) << "start cpu perf: "
                    << debugger_utils::ZxErrorString(ssize);
@@ -320,7 +297,7 @@ bool StartThreadPerf(inferior_control::Thread* thread,
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
-  ioctl_ipt_assign_buffer_thread_t assign;
+  ioctl_insntrace_assign_buffer_thread_t assign;
   zx_status_t status;
   ssize_t ssize;
 
@@ -332,7 +309,7 @@ bool StartThreadPerf(inferior_control::Thread* thread,
     goto Fail;
   }
   assign.descriptor = thread->ipt_buffer();
-  ssize = ioctl_ipt_assign_buffer_thread(ipt_fd.get(), &assign);
+  ssize = ioctl_insntrace_assign_buffer_thread(ipt_fd.get(), &assign);
   if (ssize < 0) {
     FXL_LOG(ERROR) << "assigning ipt buffer to thread: "
                    << debugger_utils::ZxErrorString(ssize);
@@ -353,7 +330,7 @@ void StopCpuPerf(const IptConfig& config) {
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
-  ssize_t ssize = ioctl_ipt_stop(ipt_fd.get());
+  ssize_t ssize = ioctl_insntrace_stop(ipt_fd.get());
   if (ssize < 0) {
     // TODO(dje): This is really bad, this shouldn't fail.
     FXL_LOG(ERROR) << "stop cpu perf: " << debugger_utils::ZxErrorString(ssize);
@@ -374,7 +351,7 @@ void StopThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
-  ioctl_ipt_assign_buffer_thread_t assign;
+  ioctl_insntrace_assign_buffer_thread_t assign;
   zx_handle_t status;
   ssize_t ssize;
 
@@ -386,7 +363,7 @@ void StopThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
     goto Fail;
   }
   assign.descriptor = thread->ipt_buffer();
-  ssize = ioctl_ipt_release_buffer_thread(ipt_fd.get(), &assign);
+  ssize = ioctl_insntrace_release_buffer_thread(ipt_fd.get(), &assign);
   if (ssize < 0) {
     FXL_LOG(ERROR) << "releasing ipt buffer from thread: "
                    << debugger_utils::ZxErrorString(ssize);
@@ -445,22 +422,22 @@ static zx_status_t WriteBufferData(const IptConfig& config,
   // Refetch the buffer config as we can be invoked in a separate process,
   // after tracing has started, and shouldn't rely on what the user thinks
   // the config is.
-  ioctl_ipt_buffer_config_t buffer_config;
+  ioctl_insntrace_buffer_config_t buffer_config;
   ssize_t ssize =
-      ioctl_ipt_get_buffer_config(ipt_fd.get(), &descriptor, &buffer_config);
+      ioctl_insntrace_get_buffer_config(ipt_fd.get(), &descriptor, &buffer_config);
   if (ssize < 0) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
-                          "ioctl_ipt_get_buffer_config: buffer %u: ",
+                          "ioctl_insntrace_get_buffer_config: buffer %u: ",
                           descriptor)
                    << debugger_utils::ZxErrorString(ssize);
     return ssize;
   }
 
-  ioctl_ipt_buffer_info_t info;
-  ssize = ioctl_ipt_get_buffer_info(ipt_fd.get(), &descriptor, &info);
+  ioctl_insntrace_buffer_info_t info;
+  ssize = ioctl_insntrace_get_buffer_info(ipt_fd.get(), &descriptor, &info);
   if (ssize < 0) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
-                          "ioctl_ipt_get_buffer_info: buffer %u: ", descriptor)
+                          "ioctl_insntrace_get_buffer_info: buffer %u: ", descriptor)
                    << debugger_utils::ZxErrorString(ssize);
     return ssize;
   }
@@ -473,13 +450,8 @@ static zx_status_t WriteBufferData(const IptConfig& config,
   }
 
   // TODO(dje): Fetch from vmo?
-#if IPT_API_VERSION == 0
-  size_t chunk_size = (1 << buffer_config.buffer_order) * PAGE_SIZE;
-  uint32_t num_chunks = buffer_config.num_buffers;
-#else
   size_t chunk_size = (1 << buffer_config.chunk_order) * PAGE_SIZE;
   uint32_t num_chunks = buffer_config.num_chunks;
-#endif
 
   // If using a circular buffer there's (currently) no way to know if
   // tracing wrapped, so for now we just punt and always dump the entire
@@ -496,28 +468,15 @@ static zx_status_t WriteBufferData(const IptConfig& config,
   char buf[4096];
 
   for (uint32_t i = 0; i < num_chunks && bytes_left > 0; ++i) {
-#if IPT_API_VERSION == 0
-    ioctl_ipt_buffer_handle_req_t handle_rqst;
-#else
-    ioctl_ipt_chunk_handle_req_t handle_rqst;
-#endif
+    ioctl_insntrace_chunk_handle_req_t handle_rqst;
     handle_rqst.descriptor = descriptor;
-#if IPT_API_VERSION == 0
-    handle_rqst.buffer_num = i;
-#else
     handle_rqst.chunk_num = i;
-#endif
     zx_handle_t vmo_handle;
-#if IPT_API_VERSION == 0
-    ssize =
-        ioctl_ipt_get_buffer_handle(ipt_fd.get(), &handle_rqst, &vmo_handle);
-#else
-    ssize = ioctl_ipt_get_chunk_handle(ipt_fd.get(), &handle_rqst, &vmo_handle);
-#endif
+    ssize = ioctl_insntrace_get_chunk_handle(ipt_fd.get(), &handle_rqst, &vmo_handle);
     if (ssize < 0) {
       FXL_LOG(ERROR)
           << fxl::StringPrintf(
-                 "ioctl_ipt_get_buffer_handle: buffer %u, buffer %u: ",
+                 "ioctl_insntrace_get_buffer_handle: buffer %u, buffer %u: ",
                  descriptor, i)
           << debugger_utils::ZxErrorString(ssize);
       goto Fail;
@@ -706,7 +665,7 @@ void ResetThreadPerf(inferior_control::Thread* thread,
     return;
 
   uint32_t descriptor = thread->ipt_buffer();
-  ssize_t ssize = ioctl_ipt_free_buffer(ipt_fd.get(), &descriptor);
+  ssize_t ssize = ioctl_insntrace_free_buffer(ipt_fd.get(), &descriptor);
   if (ssize < 0) {
     FXL_LOG(ERROR) << "freeing ipt buffer: "
                    << debugger_utils::ZxErrorString(ssize);
@@ -729,9 +688,9 @@ void FreeTrace(const IptConfig& config) {
   if (!OpenDevices(&ipt_fd, nullptr, &ktrace_handle))
     return;
 
-  ssize_t ssize = ioctl_ipt_free_trace(ipt_fd.get());
+  ssize_t ssize = ioctl_insntrace_free_trace(ipt_fd.get());
   if (ssize < 0) {
-    FXL_LOG(ERROR) << "ioctl_ipt_free_trace failed: "
+    FXL_LOG(ERROR) << "ioctl_insntrace_free_trace failed: "
                    << debugger_utils::ZxErrorString(ssize);
   }
 
