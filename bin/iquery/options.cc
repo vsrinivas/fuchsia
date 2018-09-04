@@ -19,7 +19,8 @@ namespace iquery {
 namespace {
 
 std::set<std::string> kKnownOptions = {
-    "cat", "absolute_paths", "find", "format", "full_paths", "ls", "recursive",
+    "cat",        "absolute_paths", "find", "format",
+    "full_paths", "help",           "ls",   "recursive",
 };
 
 // Validate whether the option is within the defined ones.
@@ -102,7 +103,7 @@ Options::Options(const fxl::CommandLine& command_line) {
 void Options::Usage(const std::string& argv0) {
   std::cout << fxl::Substitute(
       R"txt(Usage: $0 (--cat|--find|--ls) [--recursive]
-      [--formatt=<FORMATTER>] [(--full_paths]|--absolute_paths)]
+      [--format=<FORMAT>] [(--full_paths|--absolute_paths)]
       PATH [...PATH]
 
   Utility for querying exposed object directories.
@@ -119,6 +120,7 @@ void Options::Usage(const std::string& argv0) {
 
   --format: What formatter to use for output. Available options are:
     - text: [DEFAULT] Simple text output meant for manual inspection.
+    - json: JSON format meant for machine consumption.
 
   --full_paths:     Include the full path in object names.
   --absolute_paths: Include full absolute path in objectnames.

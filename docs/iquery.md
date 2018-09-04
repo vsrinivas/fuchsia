@@ -7,7 +7,11 @@ iquery(3)
 
 # SYNOPSIS
 
-`iquery [MODE] [<options>] PATH [...PATH]`
+```
+iquery [MODE] [--recursive] [--format=<FORMAT>]
+       [(--full_paths|--absolute_paths)]
+       PATH [...PATH]
+```
 
 # DESCRIPTION
 
@@ -29,6 +33,58 @@ iquery(3)
 > passed in, and output the relative path one per line.
 
 # OPTIONS
+
+## `--recursive`
+> Continue to step down the hierarchy of elements. Mode dependent.
+```
+cat: If false, will print the top level object only. True will output the complete object hierarchy.
+Example:
+$ find .
+a/
+a/.channel
+a/b/
+a/b/.channel
+
+$ iquery --cat a
+a:
+  key = value
+  key2 = 3.4
+
+$ iquery --cat --recursive a
+a:
+  a_key = a_value
+  a_key2 = 3.4
+  b:
+    b_key = b_value
+    b_key2 = 44.2
+
+find: If false, it will descent each branch until it finds a valid object.
+      True will output the complete tree, including nested objects.
+
+Example:
+$ find .
+a/
+a/.channel
+a/b/
+a/b/.channel
+
+$ iquery --find .
+a/
+
+$ iquery --find --recursive .
+a/
+a/b/
+
+ls: Currently ignored.
+```
+
+## `--format=<FORMAT>`
+> What format the output should be in.
+```
+Current supported formatters:
+- text: Meant for human inspection. This is the default option.
+- json: Meant for machine consumption.
+```
 
 ## `--full_paths`
 > Rename each object to have its own relative path.
