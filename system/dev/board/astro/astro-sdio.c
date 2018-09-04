@@ -9,6 +9,7 @@
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-common/aml-sd-emmc.h>
+#include <wifi/wifi-config.h>
 
 #include "astro.h"
 
@@ -18,12 +19,26 @@ static const pbus_gpio_t wifi_gpios[] = {
     },
 };
 
+static const wifi_config_t wifi_config = {
+    .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+};
+
+static const pbus_metadata_t wifi_metadata[] = {
+    {
+        .type       = DEVICE_METADATA_PRIVATE,
+        .data       = &wifi_config,
+        .len        = sizeof(wifi_config),
+    }
+};
+
 static const pbus_dev_t sdio_children[] = {
     {
         // Wifi driver.
         .name = "astro-wifi",
         .gpios = wifi_gpios,
         .gpio_count = countof(wifi_gpios),
+        .metadata = wifi_metadata,
+        .metadata_count = countof(wifi_metadata),
     },
 };
 

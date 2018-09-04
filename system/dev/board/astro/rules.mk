@@ -28,7 +28,8 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/dev/lib/amlogic \
     system/ulib/ddk \
-    system/ulib/sync
+    system/ulib/sync \
+    system/dev/lib/broadcom \
 
 MODULE_LIBS := \
     system/ulib/driver \

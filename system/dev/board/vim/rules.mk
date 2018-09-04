@@ -28,7 +28,8 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
-    system/ulib/sync
+    system/ulib/sync \
+    system/dev/lib/broadcom \
 
 MODULE_LIBS := \
     system/ulib/driver \
@@ -36,6 +37,6 @@ MODULE_LIBS := \
     system/ulib/zircon
 
 MODULE_HEADER_DEPS := \
-    system/dev/lib/amlogic
+    system/dev/lib/amlogic \
 
 include make/module.mk
