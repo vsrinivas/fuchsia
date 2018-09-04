@@ -23,5 +23,6 @@ static_library("cpuperf") {
   deps = [
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//zircon/public/lib/zircon-internal",
   ]
 }

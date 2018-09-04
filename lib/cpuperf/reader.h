@@ -7,7 +7,7 @@
 
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
 #include <zircon/types.h>
 
 #include "lib/fxl/macros.h"

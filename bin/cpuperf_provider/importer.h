@@ -11,8 +11,8 @@
 
 #include <unordered_map>
 
+#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
 #include <trace-engine/context.h>
-#include <zircon/device/cpu-trace/cpu-perf.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/cpuperf/events.h"

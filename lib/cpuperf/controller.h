@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include <zircon/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
 
 #include "garnet/lib/cpuperf/reader.h"
 #include "lib/fxl/files/unique_fd.h"

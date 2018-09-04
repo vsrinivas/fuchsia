@@ -19,15 +19,15 @@ enum EventId {
 #define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, \
                        description)                                    \
   symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_ARCH, id),
-#include <zircon/device/cpu-trace/intel-pm-events.inc>
+#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 
 #define DEF_SKL_EVENT(symbol, id, event, umask, flags, name, description) \
   symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MODEL, id),
-#include <zircon/device/cpu-trace/skylake-pm-events.inc>
+#include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
   symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
-#include <zircon/device/cpu-trace/skylake-misc-events.inc>
+#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 };
 
 #define DEF_FIXED_CATEGORY(symbol, name, events...) \
