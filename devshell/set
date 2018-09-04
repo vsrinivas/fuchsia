@@ -48,6 +48,9 @@
 ##                         all the specified packages are included in the build.
 ##   --variant             Pass a `select_variant=[VARIANT*,...]` GN build argument
 ##                         collecting all the --variant arguments in order.
+##   --fuzz-with           Pass a sanitizer name, e.g. "--fuzz-with asan" to
+##                         enable ALL supporting fuzzers.  Use --variant for
+##                         individual fuzzers, e.g. "--variant asan-fuzzer/foo".
 ##   --args                Additional argument to pass to gn. If the --args
 ##                         argument is given multiple times, all the specified
 ##                         arguments are passed to gn.
@@ -207,6 +210,14 @@ function main {
           return 1
         fi
         variant+="\"$2\","
+        shift
+        ;;
+      --fuzz-with)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        variant+="{variant=\"$2-fuzzer\" target_type=[\"fuzzed_executable\"]},"
         shift
         ;;
       --args)
