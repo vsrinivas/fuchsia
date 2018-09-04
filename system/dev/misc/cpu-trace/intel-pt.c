@@ -14,6 +14,7 @@
 
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <lib/zircon-internal/mtrace.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
@@ -861,8 +862,22 @@ static zx_status_t ipt_get_chunk_handle(insntrace_device_t* dev,
     if (req.chunk_num >= per_trace->num_chunks)
         return ZX_ERR_INVALID_ARGS;
 
-    zx_status_t status = zx_handle_duplicate(per_trace->chunks[req.chunk_num].vmo_handle, ZX_RIGHT_SAME_RIGHTS, &h);
-    if (status < 0)
+    zx_handle_t vmo_handle = per_trace->chunks[req.chunk_num].vmo_handle;
+    zx_info_handle_basic_t handle_info;
+    zx_status_t status = zx_object_get_info(vmo_handle, ZX_INFO_HANDLE_BASIC,
+                                            &handle_info, sizeof(handle_info),
+                                            NULL, NULL);
+    if (status != ZX_OK) {
+        // This could only fail if vmo_handle is invalid.
+        printf("%s: WARNING: unexpected error reading vmo handle rights: %d/%s\n",
+               __func__, status, zx_status_get_string(status));
+        return status;
+    }
+    zx_rights_t allowed_rights =
+        (ZX_RIGHT_TRANSFER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT |
+         ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_READ | ZX_RIGHT_MAP);
+    status = zx_handle_duplicate(vmo_handle, handle_info.rights & allowed_rights, &h);
+    if (status != ZX_OK)
         return status;
     memcpy(reply, &h, sizeof(h));
     *out_actual = sizeof(h);
