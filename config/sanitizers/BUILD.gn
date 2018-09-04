@@ -50,6 +50,12 @@ variant("ubsan") {
 
 variant("fuzzer") {
   common_flags = [ "-fsanitize=fuzzer" ]
+
+  # TODO (TC-251): This shouldn't be necessary, but libzircon isn't currently
+  # linked into libFuzzer on Fuchsia.
+  if (is_fuchsia) {
+    libs = [ "zircon" ]
+  }
 }
 
 variant("sancov") {
