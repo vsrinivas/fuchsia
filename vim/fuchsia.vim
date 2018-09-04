@@ -16,9 +16,9 @@ if jiri_manifest != ""
   let g:ycm_extra_conf_globlist = [ '!' . g:fuchsia_dir . '/*']
   let g:ycm_use_clangd = 0
 
-  let &runtimepath = g:fuchsia_dir . "/scripts/vim/," .
-        \ g:fuchsia_dir . "/garnet/public/lib/fidl/tools/vim/," .
-        \ &runtimepath
+  let &runtimepath .= "," .
+        \ g:fuchsia_dir . "/scripts/vim/," .
+        \ g:fuchsia_dir . "/garnet/public/lib/fidl/tools/vim/"
 
   " The "filetype plugin" line must come AFTER the changes to runtimepath
   " above (so the proper directories are searched), but must come BEFORE the
