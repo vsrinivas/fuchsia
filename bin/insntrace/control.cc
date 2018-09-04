@@ -297,7 +297,7 @@ bool StartThreadPerf(inferior_control::Thread* thread,
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
-  ioctl_insntrace_assign_buffer_thread_t assign;
+  ioctl_insntrace_assign_thread_buffer_t assign;
   zx_status_t status;
   ssize_t ssize;
 
@@ -309,7 +309,7 @@ bool StartThreadPerf(inferior_control::Thread* thread,
     goto Fail;
   }
   assign.descriptor = thread->ipt_buffer();
-  ssize = ioctl_insntrace_assign_buffer_thread(ipt_fd.get(), &assign);
+  ssize = ioctl_insntrace_assign_thread_buffer(ipt_fd.get(), &assign);
   if (ssize < 0) {
     FXL_LOG(ERROR) << "assigning ipt buffer to thread: "
                    << debugger_utils::ZxErrorString(ssize);
@@ -351,7 +351,7 @@ void StopThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
-  ioctl_insntrace_assign_buffer_thread_t assign;
+  ioctl_insntrace_assign_thread_buffer_t assign;
   zx_handle_t status;
   ssize_t ssize;
 
@@ -363,7 +363,7 @@ void StopThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
     goto Fail;
   }
   assign.descriptor = thread->ipt_buffer();
-  ssize = ioctl_insntrace_release_buffer_thread(ipt_fd.get(), &assign);
+  ssize = ioctl_insntrace_release_thread_buffer(ipt_fd.get(), &assign);
   if (ssize < 0) {
     FXL_LOG(ERROR) << "releasing ipt buffer from thread: "
                    << debugger_utils::ZxErrorString(ssize);
