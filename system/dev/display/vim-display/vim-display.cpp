@@ -465,8 +465,10 @@ static int hdmi_irq_handler(void *arg) {
 
         if (display_removed != INVALID_DISPLAY_ID) {
             vim2_audio_on_display_removed(display, display_removed);
-        } else if (display_added != INVALID_DISPLAY_ID) {
-            vim2_audio_on_display_added(display, display_added);
+        }
+
+        if (display_added) {
+            vim2_audio_on_display_added(display, display->display_id);
         }
     }
 }
