@@ -102,3 +102,20 @@
 #define S905D2_GPIOA_PIN_START     61
 #define S905D2_GPIOX_PIN_START     77
 #define S905D2_GPIOE_PIN_START     97
+
+//GPIOA pin alternate funcitons
+#define S905D2_GPIOA_1_TDMB_SCLK_FN          1
+#define S905D2_GPIOA_1_TDMB_SLV_SCLK_FN      2
+#define S905D2_GPIOA_2_TDMB_FS_FN            1
+#define S905D2_GPIOA_2_TDMB_SLV_FS_FN        2
+#define S905D2_GPIOA_3_TDMB_D0_FN            1
+#define S905D2_GPIOA_3_TDMB_DIN0_FN          2
+#define S905D2_GPIOA_6_PDM_DIN2_FN           1
+#define S905D2_GPIOA_6_TDMB_DIN3_FN          2
+#define S905D2_GPIOA_6_TDMB_D3_FN            3
+#define S905D2_GPIOA_7_PDM_DCLK_FN           1
+#define S905D2_GPIOA_7_TDMC_D3_FN            2
+#define S905D2_GPIOA_7_TDMC_DIN3_FN          3
+#define S905D2_GPIOA_8_PDM_DIN0_FN           1
+#define S905D2_GPIOA_8_TDMC_D2_FN            2
+#define S905D2_GPIOA_8_TDMC_DIN2_FN          3

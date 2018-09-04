@@ -87,3 +87,5 @@ zx_status_t aml_thermal_init(aml_bus_t* bus);
 zx_status_t aml_video_init(aml_bus_t* bus);
 // astro-clk.c
 zx_status_t aml_clk_init(aml_bus_t* bus);
+// astro-audio.c
+zx_status_t astro_tdm_init(aml_bus_t* bus);
