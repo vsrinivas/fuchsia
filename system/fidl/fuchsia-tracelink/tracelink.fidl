@@ -4,6 +4,8 @@
 
 library fuchsia.tracelink;
 
+using zx;
+
 // The provider interface which applications must implement and register
 // with the |TraceRegistry| to participate in tracing.
 //

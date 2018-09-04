@@ -528,8 +528,8 @@ void CGenerator::GeneratePrologues() {
     EmitIncludeHeader(&file_, "<zircon/fidl.h>");
     EmitIncludeHeader(&file_, "<zircon/syscalls/object.h>");
     EmitIncludeHeader(&file_, "<zircon/types.h>");
-    for (const auto& pair : *library_->dependencies_) {
-        if (pair.second.get() == library_)
+    for (auto pair : library_->dependencies()) {
+        if (pair.second == library_)
             continue;
         if (pair.second->HasAttribute("Internal"))
             continue;
