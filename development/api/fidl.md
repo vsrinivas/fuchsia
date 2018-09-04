@@ -1041,7 +1041,7 @@ when the entangled event retained by the client is destroyed.
 
 ### Empty interfaces
 
-Sometimes and empty interface can provide value.  For example, a method that
+Sometimes an empty interface can provide value.  For example, a method that
 creates an object might also receive a `request<FooController>` parameter.  The
 caller provides an implementation of this empty interface:
 
