@@ -218,9 +218,10 @@ void cmpct_dump(bool panic_time) TA_NO_THREAD_SAFETY_ANALYSIS {
     }
 
     dprintf(INFO, "Heap dump (using cmpctmalloc):\n");
-    dprintf(INFO, "\tsize %lu, remaining %lu\n",
+    dprintf(INFO, "\tsize %lu, remaining %lu, cached free %lu\n",
             (unsigned long)theheap.size,
-            (unsigned long)theheap.remaining);
+            (unsigned long)theheap.remaining,
+            theheap.cached_os_alloc ? theheap.cached_os_alloc->size : 0);
 
     dprintf(INFO, "\tfree list:\n");
     for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
