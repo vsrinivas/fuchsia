@@ -32,6 +32,9 @@ class Fuzzer {
 public:
     virtual ~Fuzzer();
 
+    // Execute the 'fuzz' tool with the given command line arguments.  See also uapp/fuzz/main.cpp.
+    static zx_status_t Main(int argc, char** argv);
+
 protected:
     Fuzzer();
 

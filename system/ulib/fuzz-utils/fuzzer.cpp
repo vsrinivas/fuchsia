@@ -79,6 +79,12 @@ constexpr size_t kArtifactPrefixesLen = sizeof(kArtifactPrefixes) / sizeof(kArti
 
 Fuzzer::~Fuzzer() {}
 
+zx_status_t Fuzzer::Main(int argc, char** argv) {
+    Fuzzer fuzzer;
+    StringList args(argv + 1, argc - 1);
+    return fuzzer.Run(&args);
+}
+
 // Protected methods
 
 Fuzzer::Fuzzer() : cmd_(kNone), out_(stdout), err_(stderr) {}
