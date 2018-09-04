@@ -142,7 +142,7 @@ class TestApp
       rapidjson::Document doc;
       doc.Parse(value);
       if (!doc.IsObject() || !doc.HasMember(kCount) || !doc[kCount].IsInt() ||
-          doc[kCount].GetInt() < 100) {
+          doc[kCount].GetInt() < 10) {
         TestStory1_Wait();
         return;
       }
@@ -207,7 +207,7 @@ class TestApp
       rapidjson::Document doc;
       doc.Parse(value);
       if (!doc.IsObject() || !doc.HasMember(kCount) || !doc[kCount].IsInt() ||
-          doc[kCount].GetInt() < 200) {
+          doc[kCount].GetInt() < 20) {
         TestStory2_Wait();
         return;
       }
