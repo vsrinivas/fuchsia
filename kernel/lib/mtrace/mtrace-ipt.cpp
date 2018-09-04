@@ -17,7 +17,7 @@
 #include "lib/mtrace.h"
 #include "trace.h"
 
-#include <zircon/mtrace.h>
+#include <lib/zircon-internal/mtrace.h>
 
 #include "arch/x86/proc_trace.h"
 
