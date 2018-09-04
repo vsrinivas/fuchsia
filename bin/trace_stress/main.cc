@@ -11,10 +11,13 @@
 #include <lib/async/cpp/time.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
+#include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
+#include <trace/observer.h>
 #include <zircon/status.h>
+#include <zx/time.h>
 
 static constexpr int kDefaultCount = 1;
 static constexpr int kDefaultDelaySeconds = 0;
@@ -73,6 +76,39 @@ static void RunStressTestIteration(int count) {
   }
 }
 
+static bool WaitForTracingStarted(zx::duration timeout) {
+  // This implementation is more complex than it needs to be.
+  // We don't really need to use an async loop here.
+  // It is written this way as part of the purpose of this program is to
+  // provide examples of tracing usage.
+  trace::TraceObserver trace_observer;
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+
+  bool started = false;
+  auto on_trace_state_changed = [&loop, &started]() {
+    if (trace_state() == TRACE_STARTED) {
+      started = true;
+    }
+    // Any state change is relevant to us. If we're not started then we must
+    // have transitioned from STOPPED to STARTED to at least STOPPING.
+    loop.Quit();
+  };
+
+  trace_observer.Start(loop.dispatcher(), std::move(on_trace_state_changed));
+  if (trace_state() == TRACE_STARTED) {
+    return true;
+  }
+
+  async::TaskClosure timeout_task([&loop] {
+    FXL_LOG(ERROR) << "Timed out waiting for tracing to start";
+    loop.Quit();
+  });
+  timeout_task.PostDelayed(loop.dispatcher(), timeout);
+  loop.Run();
+
+  return started;
+}
+
 int main(int argc, char** argv) {
   prog_name = argv[0];
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -124,13 +160,10 @@ int main(int argc, char** argv) {
   }
   if (already_started) {
     FXL_LOG(INFO) << "Tracing already started, waiting for our Start request";
-    auto status = provider->WaitTracingStarted(
-        zx::duration{zx::sec(kWaitStartTimeoutSeconds)});
-    if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Error waiting for tracing to start: "
-                       << zx_status_get_string(status);
-    } else {
+    if (WaitForTracingStarted(zx::sec(kWaitStartTimeoutSeconds))) {
       FXL_LOG(INFO) << "Start request received";
+    } else {
+      FXL_LOG(WARNING) << "Error waiting for tracing to start, timed out";
     }
   }
 
