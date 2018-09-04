@@ -1,0 +1,225 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Keep the usage info below in sync with //zircon/ulib/fuzz-utils/fuzzer.cpp!
+
+### Run a fuzz test on target a device
+## Run a fuzz test on target a device
+##
+## Usage: fx fuzz [options] <command> [command-arguments]
+##
+## Options (must be first):
+##   -d, --device   <name>   Connect to device using Fuchsia link-local name.
+##                           Must be specified if multiple devices are present.
+##
+## Commands:
+##   help                    Prints this message and exits.
+##   list    [name]          Lists fuzzers matching 'name' if provided, or all
+##                           fuzzers.
+##   fetch   <name> [digest] Retrieves the corpus for the named fuzzer and
+##                           version given by 'digest'. Defaults to the latest
+##                           if 'digest' is omitted.
+##   start   <name> [...]    Starts the named fuzzer. Additional arguments are
+##                           passed to the fuzzer.  If the target does not have
+##                           a corpus for the fuzzer, and the metadata lists one
+##                           available, this will fetch the corpus first.
+##   check   <name>          Reports information about the named fuzzer, such as
+##                           execution status, corpus location and size, and
+##                           number of crashes.
+##   stop    <name>          Stops all instances of the named fuzzer.
+##   repro   <name> [...]    Runs the named fuzzer on specific inputs. If no
+##                           additional inputs are provided, uses all previously
+##                           found crashes.
+##   merge   <name> [...]    Merges the corpus for the named fuzzer. If no
+##                           additional inputs are provided, minimizes the
+##                           current corpus.
+##   store   <name>          Gathers the current corpus from the target platform
+##                           and publishes it. Requires a pristine repository,
+##                           as it will updates the build files with the new
+##                           corpus location.
+##
+## Example workflow:
+##   1. Shows available fuzzers:
+##         fx fuzz list
+##   2. Run a fuzzer for 8 hours (e.g. overnight), fetching the initial corpus
+##      if needed:
+##         fx fuzz start foo_package/bar_fuzz_test -max_total_time=28800
+##   3. Check if any crashes occurred:
+##         fx fuzz check foo/bar
+##   4. Execute the fuzzer with a crashing input:
+##         fx fuzz repro foo/bar crash-deadbeef
+##   5. Fix bugs and repeat step 4 until it doesn't crash.
+##   6. Repeat steps 2-4 until no crashes found.
+##   7. Minimize the resulting corpus:
+##         fx fuzz merge foo/bar
+##   8. Save the new, minimized corpus in CIPD:
+##         fx fuzz store foo/bar
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+# Constants
+CIPD="${FUCHSIA_DIR}/buildtools/cipd"
+
+# Global variables
+device=""
+staging=""
+
+fuzzer=""
+status=""
+data_path=""
+corpus_size="0"
+cipd_path=""
+
+# Utility functions
+fatal() {
+  echo "Fatal error: $@"
+  echo "Try 'fx help fuzz'"
+  exit 1
+}
+
+set_device() {
+  if [[ -z "${device}" ]] ; then
+    device=$(fx-command-run netaddr --fuchsia)
+    [[ $? -eq 0 ]] || fatal "failed to connect to device"
+  fi
+}
+
+set_staging() {
+  staging=$(mktemp -d)
+  [[ $? -eq 0 ]] || fatal "failed to make staging directory"
+}
+
+# Ensure the temporary directory is removed as needed
+cleanup() {
+  rm -rf "${staging}"
+}
+trap cleanup EXIT
+
+# Commands
+query() {
+  local tmp
+  tmp="$(fx-command-run ssh "${device}" fuzz check "$1" | tr -s '\n' ' ')"
+  [[ $? -eq 0 ]] || fatal "failed to query fuzzer"
+  tmp="$(echo "${tmp}" | tr -d ':' | cut -d' ' -f1,2,8,11)"
+  read fuzzer status data_path corpus_size <<< "${tmp}"
+  cipd_path="fuchsia/test_data/fuzzing/${fuzzer}"
+}
+
+fetch() {
+  [[ "${status}" == "STOPPED" ]] || fatal "fuzzer must be stopped to run this command"
+
+  local version="$1"
+  if [[ -z "${version}" ]] ; then
+    version="latest"
+  fi
+
+  local corpus="${staging}/${fuzzer}/corpus"
+  mkdir -p "${corpus}"
+  [[ $? -eq 0 ]] || fatal "failed to create local directory: ${corpus}"
+
+  ${CIPD} install ${cipd_path} ${version} --root ${corpus}
+  if [[ $? -ne 0 ]] && [[ "${version}" != "latest" ]] ; then
+    fatal "unable to find ${cipd_path}:${version}"
+  fi
+
+  # Add any upstream third-party corpora
+  if [[ "${version}" == "latest" ]] ; then
+    local seed_corpora=$(fx-command-run ssh ${device} fuzz seeds ${fuzzer})
+    for seed in ${seed_corpora} ; do
+      if echo "${seed}" | grep -q "^//third_party" ; then
+        rsync -a ${FUCHSIA_DIR}/${seed}/ ${corpus}/
+      fi
+    done
+  fi
+
+  # Fuchsia's scp doesn't like to glob
+  fx-command-run scp -r ${corpus} "[${device}]:${data_path}"
+}
+
+store() {
+  [[ "${status}" == "STOPPED" ]] || fatal "fuzzer must be stopped to run this command"
+  [[ "${corpus_size}" != "0" ]] || fatal "refusing to store empty corpus"
+
+  local corpus="${staging}/${fuzzer}/corpus"
+  mkdir -p "${corpus}"
+  [[ $? -eq 0 ]] || fatal "failed to create local directory: ${corpus}"
+
+  # Fuchsia's scp doesn't like to glob
+  fx-command-run scp -r "[${device}]:${data_path}corpus" $(dirname "${corpus}")
+  echo "***"
+  echo "This script may prompt for credentials."
+  echo "This is to allow it to add POSIX-style ACLs to corpus files."
+  echo "***"
+  sudo chmod +x ${corpus}
+  [[ $? -eq 0 ]] || fatal "failed to grant access"
+
+  pushd ${corpus}
+  local version
+  version=$(tar c * | sha256sum | cut -d' ' -f1)
+  [[ $? -eq 0 ]] || fatal "failed to calculate digest"
+
+  cat >cipd.yaml <<EOF
+package: ${cipd_path}
+description: Auto-generated fuzzing corpus for ${fuzzer}.
+install_mode: copy
+data:
+$(ls -1 | grep -v cipd | sed 's/^/  - file: /')
+EOF
+  # TODO: catch the error and tell user to do this
+  # $ cipd auth-login  # One-time auth.
+  ${CIPD} create --pkg-def cipd.yaml -tag version:${version}
+  popd
+}
+
+# Main
+main() {
+  # Parse options
+  while [[ "$1" == "-"* ]] ; do
+    case $1 in
+      -d|--device)
+        device=$(get-device-addr $1 $2)
+        ;;
+      *)
+        fatal "unknown option: $1"
+        ;;
+    esac
+    if [[ -z "$2" ]] || [[ "$2" == "-"* ]] ; then
+      fatal "missing value for $1"
+    fi
+    shift
+    shift
+  done
+
+  # Parse command
+  local command=$1
+  local fuzzer=$2
+  local args="${@:3}"
+  case ${command} in
+    help)
+      fx-command-help
+      exit 0
+      ;;
+    list|check|stop|repro|merge)
+      set_device
+      fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args}
+      ;;
+    start)
+      set_device
+      fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args} &
+      ;;
+    fetch|store)
+      set_device
+      set_staging
+      query "${fuzzer}"
+      ${command} ${args}
+      ;;
+    *)
+      fatal "unrecognized command: '${command}'"
+      ;;
+  esac
+}
+
+main "$@"
