@@ -34,8 +34,9 @@ void Environment::InitEnvironment(
   parent_env->GetDirectory(std::move(h1));
   service_provider_bridge_.set_backing_dir(std::move(h2));
   parent_env->CreateNestedEnvironment(
-      service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
-      env_controller_.NewRequest(), label);
+      env_.NewRequest(), env_controller_.NewRequest(), label,
+      service_provider_bridge_.OpenAsDirectory(),
+      /*additional_services=*/nullptr, /*inherit_parent_services=*/false);
 }
 
 }  // namespace modular

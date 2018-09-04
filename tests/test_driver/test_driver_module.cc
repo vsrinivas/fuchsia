@@ -95,8 +95,9 @@ class TestApp {
     module_host_->startup_context()->environment()->GetDirectory(std::move(h1));
     service_provider_bridge_.set_backing_dir(std::move(h2));
     module_host_->startup_context()->environment()->CreateNestedEnvironment(
+        test_driver_env_.NewRequest(), /*controller=*/nullptr, kSubModuleName,
         service_provider_bridge_.OpenAsDirectory(),
-        test_driver_env_.NewRequest(), nullptr, kSubModuleName);
+        /*additional_services=*/nullptr, /*inherit_parent_services=*/false);
     return true;
   }
 
