@@ -543,6 +543,25 @@ void unittest_cancel_timeout(void);
         }                                                                   \
     } while (0)
 
+/* Check that str1 contains str2. */
+#define UT_STR_STR(str1, str2, ret, ...)                                    \
+    do {                                                                    \
+        UT_ASSERT_VALID_TEST_STATE;                                         \
+        UNITTEST_TRACEF(2, "str_str(%s, %s)\n", #str1, #str2);              \
+        /* Note that we should not do the following here:                   \
+         *   const char* str1_val = str1;                                   \
+         * That does not work in C++ if str1 is string.c_str(): the         \
+         * storage for the C string will get deallocated before the         \
+         * string is used.  Instead we must use a helper function. */       \
+        if (!unittest_expect_str_str((str1), (str2), #str1, #str2,          \
+                                    unittest_get_message(__VA_ARGS__),      \
+                                    __FILE__, __LINE__,                     \
+                                    __PRETTY_FUNCTION__)) {                 \
+            current_test_info->all_ok = false;                              \
+            ret;                                                            \
+        }                                                                   \
+    } while (0)
+
 #define EXPECT_CMP(op, lhs, rhs, lhs_str, rhs_str, ...) \
     UT_CMP(op, lhs, rhs, lhs_str, rhs_str, DONOT_RET, ##__VA_ARGS__)
 
@@ -596,6 +615,7 @@ void unittest_cancel_timeout(void);
 #define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, RET_FALSE)
 #define ASSERT_STR_EQ(str1, str2, ...) UT_STR_EQ(str1, str2, RET_FALSE, ##__VA_ARGS__)
 #define ASSERT_STR_NE(str1, str2, ...) UT_STR_NE(str1, str2, RET_FALSE, ##__VA_ARGS__)
+#define ASSERT_STR_STR(str1, str2, ...) UT_STR_STR(str1, str2, RET_FALSE, ##__VA_ARGS__)
 
 #ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
 
@@ -686,6 +706,12 @@ bool unittest_expect_str_eq(const char* str1_value, const char* str2_value,
                             const char* source_function);
 
 bool unittest_expect_str_ne(const char* str1_value, const char* str2_value,
+                            const char* str1_expr, const char* str2_expr,
+                            const char* msg,
+                            const char* source_filename, int source_line_num,
+                            const char* source_function);
+
+bool unittest_expect_str_str(const char* str1_value, const char* str2_value,
                             const char* str1_expr, const char* str2_expr,
                             const char* msg,
                             const char* source_filename, int source_line_num,

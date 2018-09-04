@@ -193,22 +193,43 @@ public:
     const std::string value;
 };
 
-class AttributeList : public SourceElement {
+class Attributes {
 public:
-    AttributeList(Token start, Token end, std::vector<std::unique_ptr<Attribute>> attribute_list)
-        : SourceElement(start, end), attribute_list(std::move(attribute_list)) {}
+    bool Insert(std::unique_ptr<raw::Attribute> attribute) {
+        if (HasAttribute(StringView(attribute->name))) {
+            return false;
+        }
+        attributes_.push_back(std::move(attribute));
+        return true;
+    }
 
-    bool HasAttribute(fidl::StringView name) const {
-        for (const auto& attribute : attribute_list) {
-            if (StringView(attribute->name) == name)
+    bool HasAttribute(std::string name) const {
+        for (const auto& attribute : attributes_) {
+            if (attribute->name == name)
                 return true;
         }
         return false;
     }
 
+    std::vector<std::unique_ptr<Attribute>> attributes_;
+};
+
+class AttributeList : public SourceElement {
+public:
+    AttributeList(Token start, Token end, std::unique_ptr<Attributes> attributes)
+        : SourceElement(start, end), attributes_(std::move(attributes)) {}
+
+    bool HasAttribute(fidl::StringView name) const {
+        return attributes_->HasAttribute(StringView(name));
+    }
+
+    bool Insert(std::unique_ptr<raw::Attribute> attribute) {
+        return attributes_->Insert(std::move(attribute));
+    }
+
     void Accept(TreeVisitor& visitor);
 
-    std::vector<std::unique_ptr<Attribute>> attribute_list;
+    std::unique_ptr<Attributes> attributes_;
 };
 
 class Type : public SourceElement {

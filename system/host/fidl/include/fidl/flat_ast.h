@@ -484,6 +484,7 @@ public:
     bool Compile();
 
     const std::vector<StringView>& name() const { return library_name_; }
+    const std::vector<std::string>& errors() const { return error_reporter_->errors(); }
 
 private:
     bool Fail(StringView message);

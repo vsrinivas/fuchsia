@@ -320,7 +320,7 @@ void JSONGenerator::Generate(const raw::Attribute& value) {
 }
 
 void JSONGenerator::Generate(const raw::AttributeList& value) {
-    Generate(value.attribute_list);
+    Generate(value.attributes_->attributes_);
 }
 
 void JSONGenerator::Generate(const flat::Ordinal& value) {

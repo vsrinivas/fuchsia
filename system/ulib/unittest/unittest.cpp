@@ -134,6 +134,27 @@ bool unittest_expect_str_ne(const char* str1_value, const char* str2_value,
     return true;
 }
 
+bool unittest_expect_str_str(const char* str1_value, const char* str2_value,
+                            const char* str1_expr, const char* str2_expr,
+                            const char* msg,
+                            const char* source_filename, int source_line_num,
+                            const char* source_function) {
+    if (!strstr(str1_value, str2_value)) {
+        unittest_printf_critical(
+            UNITTEST_FAIL_TRACEF_FORMAT
+            "%s:\n"
+            "        Comparison failed: String 1 does not"
+            " contain String 2:\n"
+            "        String 1 expression: %s\n"
+            "        String 2 expression: %s\n"
+            "        Value of both strings: \"%s\"\n",
+            source_filename, source_line_num, source_function,
+            msg, str1_expr, str2_expr, str1_value);
+        return false;
+    }
+    return true;
+}
+
 void unittest_set_output_function(test_output_func fun, void* arg) {
     out_func = fun;
     out_func_arg = arg;

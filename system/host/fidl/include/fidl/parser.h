@@ -79,7 +79,7 @@ private:
     // declaration (struct, enum, etc...)?
     Token ConsumeTokenReturnEarliest(Token::Kind kind,
                                      std::unique_ptr<raw::AttributeList> const& attributes) {
-        if (attributes != nullptr && attributes->attribute_list.size() != 0) {
+        if (attributes != nullptr && attributes->attributes_->attributes_.size() != 0) {
             ConsumeToken(kind, true);
             return attributes->start_;
         }

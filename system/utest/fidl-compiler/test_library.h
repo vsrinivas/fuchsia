@@ -52,6 +52,17 @@ public:
                library_->Compile();
     }
 
+    bool AddSourceFile(const std::string& filename, const std::string& raw_source_code) {
+        auto source_file = MakeSourceFile(filename, raw_source_code);
+        fidl::IdentifierTable identifier_table;
+        fidl::Lexer lexer(source_file, &identifier_table);
+        fidl::Parser parser(&lexer, &error_reporter_);
+        auto ast = parser.Parse();
+        return parser.Ok() &&
+               library_->ConsumeFile(std::move(ast)) &&
+               library_->Compile();
+    }
+
     const fidl::flat::Struct* LookupStruct(const std::string& name) {
         for (const auto& struct_decl : library_->struct_declarations_) {
             if (struct_decl->GetName() == name) {

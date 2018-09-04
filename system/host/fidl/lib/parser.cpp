@@ -254,18 +254,26 @@ std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList() {
     Token start = ConsumeToken(Token::Kind::kLeftSquare);
     if (!Ok())
         return Fail();
-    std::vector<std::unique_ptr<raw::Attribute>> attribute_list;
+    auto attributes = std::make_unique<raw::Attributes>();
     for (;;) {
-        attribute_list.emplace_back(ParseAttribute());
+        auto attribute = ParseAttribute();
         if (!Ok())
             return Fail();
+        auto attribute_name = attribute->name;
+        if (!attributes->Insert(std::move(attribute))) {
+            std::string message("Duplicate attribute with name '");
+            message += attribute_name;
+            message += "'";
+            return Fail(message);
+        }
         if (!MaybeConsumeToken(Token::Kind::kComma))
             break;
     }
     ConsumeToken(Token::Kind::kRightSquare, true);
     if (!Ok())
         return Fail();
-    return std::make_unique<raw::AttributeList>(start, MarkLastUseful(), std::move(attribute_list));
+    auto attribute_list = std::make_unique<raw::AttributeList>(start, MarkLastUseful(), std::move(attributes));
+    return attribute_list;
 }
 
 std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
@@ -289,15 +297,22 @@ std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList() {
     if (Peek() == Token::Kind::kLeftSquare) {
         auto list = ParseAttributeList();
         if (list && doc_comment) {
-            list->attribute_list.emplace_back(std::move(doc_comment));
+          auto attribute_name = doc_comment->name;
+          if (!list->attributes_->Insert(std::move(doc_comment))) {
+            std::string message("Duplicate attribute with name '");
+            message += attribute_name;
+            message += "'";
+            Fail(message);
+            return nullptr;
+          }
         }
         return list;
     }
     // no generic attributes, start the attribute list
     if (doc_comment) {
-        std::vector<std::unique_ptr<raw::Attribute>> attribute_list;
-        attribute_list.emplace_back(std::move(doc_comment));
-        return std::make_unique<raw::AttributeList>(MarkLastUseful(), MarkLastUseful(), std::move(attribute_list));
+        auto attributes = std::make_unique<raw::Attributes>();
+        attributes->Insert(std::move(doc_comment));
+        return std::make_unique<raw::AttributeList>(MarkLastUseful(), MarkLastUseful(), std::move(attributes));
     }
     return nullptr;
 }
@@ -733,7 +748,7 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
 std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_ptr<raw::AttributeList> attributes) {
     Token start;
     auto ordinal = ParseNumericLiteral();
-    if (attributes != nullptr && attributes->attribute_list.size() != 0) {
+    if (attributes != nullptr && attributes->attributes_->attributes_.size() != 0) {
         start = attributes->start_;
     } else {
         start = ordinal->start_;

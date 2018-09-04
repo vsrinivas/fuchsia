@@ -227,7 +227,7 @@ bool Decl::HasAttribute(fidl::StringView name) const {
 fidl::StringView Decl::GetAttribute(fidl::StringView name) const {
     if (!attributes)
         return fidl::StringView();
-    for (const auto& attribute : attributes->attribute_list) {
+    for (const auto& attribute : attributes->attributes_->attributes_) {
         if (StringView(attribute->name) == name) {
             if (attribute->value != "") {
                 auto value = attribute->value;
@@ -741,8 +741,15 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
         if (!attributes_) {
             attributes_ = std::move(file->attributes);
         } else {
-            for (auto& attribute : std::move(file->attributes)->attribute_list) {
-                attributes_->attribute_list.push_back(std::move(attribute));
+            for (auto& attribute : std::move(file->attributes)->attributes_->attributes_) {
+                auto attribute_name = attribute->name;
+                auto loc = attribute->location();
+                if (!attributes_->Insert(std::move(attribute))) {
+                    std::string message("Duplicate attribute with name '");
+                    message += attribute_name;
+                    message += "'";
+                    return Fail(loc, message);
+                }
             }
         }
     }
