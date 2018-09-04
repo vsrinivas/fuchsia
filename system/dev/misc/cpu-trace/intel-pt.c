@@ -411,14 +411,18 @@ static zx_status_t x86_pt_alloc_buffer1(insntrace_device_t* ipt_dev,
 }
 
 static void x86_pt_free_buffer1(insntrace_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
-    for (uint32_t i = 0; i < per_trace->num_chunks; ++i) {
-        io_buffer_release(&per_trace->chunks[i]);
+    if (per_trace->chunks) {
+        for (uint32_t i = 0; i < per_trace->num_chunks; ++i) {
+            io_buffer_release(&per_trace->chunks[i]);
+        }
     }
     free(per_trace->chunks);
     per_trace->chunks = NULL;
 
-    for (uint32_t i = 0; i < per_trace->num_tables; ++i) {
-        io_buffer_release(&per_trace->topas[i]);
+    if (per_trace->topas) {
+        for (uint32_t i = 0; i < per_trace->num_tables; ++i) {
+            io_buffer_release(&per_trace->topas[i]);
+        }
     }
     free(per_trace->topas);
     per_trace->topas = NULL;
