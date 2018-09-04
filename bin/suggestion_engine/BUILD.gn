@@ -6,6 +6,13 @@ import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
 executable_package("suggestion_engine") {
+  meta = [
+    {
+      path = "meta/suggestion_engine.cmx"
+      dest = "suggestion_engine.cmx"
+    },
+  ]
+
   resources = [
     {
       path = "resources/mod_pairs.json"

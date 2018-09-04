@@ -16,8 +16,6 @@ namespace modular {
 class SuggestionEngineApp {
  public:
   SuggestionEngineApp(component::StartupContext* const context) {
-    context->ConnectToEnvironmentService(intelligence_services_.NewRequest());
-
     fuchsia::media::AudioPtr audio;
     context->ConnectToEnvironmentService(audio.NewRequest());
 
@@ -43,7 +41,6 @@ class SuggestionEngineApp {
 
  private:
   std::unique_ptr<SuggestionEngineImpl> engine_impl_;
-  fuchsia::modular::IntelligenceServicesPtr intelligence_services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SuggestionEngineApp);
 };
