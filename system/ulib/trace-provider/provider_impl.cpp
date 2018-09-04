@@ -19,15 +19,10 @@
 namespace trace {
 namespace internal {
 
-constexpr zx_signals_t SIGNAL_TRACING_STARTED = ZX_USER_SIGNAL_0;
-constexpr zx_signals_t SIGNAL_TRACING_CLOSED = ZX_USER_SIGNAL_1;
-
 TraceProviderImpl::TraceProviderImpl(async_dispatcher_t* dispatcher,
-                                     zx::channel channel,
-                                     zx::event start_event)
+                                     zx::channel channel)
     : dispatcher_(dispatcher),
-      connection_(this, fbl::move(channel)),
-      start_event_(fbl::move(start_event)) {
+      connection_(this, fbl::move(channel)) {
 }
 
 TraceProviderImpl::~TraceProviderImpl() = default;
@@ -43,7 +38,6 @@ void TraceProviderImpl::Start(trace_buffering_mode_t buffering_mode,
         fbl::move(enabled_categories));
     if (status == ZX_OK) {
         running_ = true;
-        start_event_.signal(0u, SIGNAL_TRACING_STARTED);
     }
 }
 
@@ -52,28 +46,11 @@ void TraceProviderImpl::Stop() {
         return;
 
     running_ = false;
-    start_event_.signal(SIGNAL_TRACING_STARTED, 0u);
     TraceHandlerImpl::StopEngine();
 }
 
 void TraceProviderImpl::OnClose() {
     Stop();
-    start_event_.signal(0u, SIGNAL_TRACING_CLOSED);
-}
-
-zx_status_t TraceProviderImpl::WaitForTracingStarted(zx::duration timeout) {
-    // This must be run on a thread other than provider's dispatcher thread.
-    ZX_DEBUG_ASSERT(async_get_default_dispatcher() != dispatcher_);
-    if (running_)
-        return ZX_OK;
-    zx_signals_t pending;
-    auto status = start_event_.wait_one(SIGNAL_TRACING_STARTED | SIGNAL_TRACING_CLOSED,
-                                        zx::deadline_after(timeout), &pending);
-    if (status != ZX_OK)
-        return status;
-    if (pending & SIGNAL_TRACING_STARTED)
-        return ZX_OK;
-    return ZX_ERR_CANCELED;
 }
 
 TraceProviderImpl::Connection::Connection(TraceProviderImpl* impl,
@@ -253,14 +230,8 @@ trace_provider_t* trace_provider_create_with_name(async_dispatcher_t* dispatcher
     if (status != ZX_OK)
         return nullptr;
 
-    zx::event start_event;
-    status = zx::event::create(0u, &start_event);
-    if (status != ZX_OK)
-        return nullptr;
-
     return new trace::internal::TraceProviderImpl(dispatcher,
-                                                  fbl::move(provider_service),
-                                                  fbl::move(start_event));
+                                                  fbl::move(provider_service));
 }
 
 trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
@@ -296,22 +267,10 @@ trace_provider_t* trace_provider_create_synchronously(async_dispatcher_t* dispat
     if (registry_status != ZX_OK)
         return nullptr;
 
-    zx::event start_event;
-    status = zx::event::create(0u, &start_event);
-    if (status != ZX_OK)
-        return nullptr;
-
     if (out_manager_is_tracing_already)
         *out_manager_is_tracing_already = manager_is_tracing_already;
     return new trace::internal::TraceProviderImpl(dispatcher,
-                                                  fbl::move(provider_service),
-                                                  fbl::move(start_event));
-}
-
-zx_status_t trace_provider_wait_tracing_started(trace_provider_t* provider,
-                                                zx_duration_t timeout) {
-    auto p = reinterpret_cast<trace::internal::TraceProviderImpl*>(provider);
-    return p->WaitForTracingStarted(zx::duration(timeout));
+                                                  fbl::move(provider_service));
 }
 
 void trace_provider_destroy(trace_provider_t* provider) {

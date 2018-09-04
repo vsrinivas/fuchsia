@@ -108,12 +108,6 @@ trace_provider_t* trace_provider_create_synchronously(async_dispatcher_t* dispat
                                                       const char* name,
                                                       bool* out_already_started);
 
-// Wait for tracing to start.
-// Returns ZX_OK on success, ZX_ERR_CANCELED if it times out.
-// This must be called on a thread other than the provider's dispatcher thread.
-zx_status_t trace_provider_wait_tracing_started(trace_provider_t* provider,
-                                                zx_duration_t timeout);
-
 // Destroys the trace provider.
 void trace_provider_destroy(trace_provider_t* provider);
 
@@ -122,7 +116,6 @@ __END_CDECLS
 #ifdef __cplusplus
 
 #include <fbl/unique_ptr.h>
-#include <lib/zx/time.h>
 
 namespace trace {
 
@@ -158,15 +151,6 @@ public:
     ~TraceProvider() {
         if (provider_)
             trace_provider_destroy(provider_);
-    }
-
-    zx_status_t WaitTracingStarted(zx::duration timeout) {
-        if (provider_) {
-            return trace_provider_wait_tracing_started(provider_,
-                                                       timeout.get());
-        } else {
-            return ZX_ERR_BAD_STATE;
-        }
     }
 
     // Returns true if the trace provider was created successfully.
