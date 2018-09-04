@@ -48,9 +48,14 @@ function main {
   # empty. Some Dart build tools have been observed writing into source paths
   # when TMPDIR="" - it is deliberately unquoted and using the ${+} expansion
   # expression).
+  local max_load=0
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    # Only limit maximum load on Darwin.
+    max_load="$(fx-cpu-count)"
+  fi
   try_locked env -i TERM="${TERM}" PATH="${PATH}" ${TMPDIR+"TMPDIR=$TMPDIR"} \
     "${FUCHSIA_DIR}/buildtools/ninja" -j "$(fx-choose-build-concurrency)" \
-                                      -l "$(fx-cpu-count)" \
+                                      -l ${max_load} \
                                       -C "${FUCHSIA_BUILD_DIR}" "$@"
 }
 
