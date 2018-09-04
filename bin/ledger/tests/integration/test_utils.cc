@@ -51,10 +51,10 @@ fidl::VectorPtr<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo) {
   return convert::ToArray(ToString(vmo));
 }
 
-std::vector<Entry> SnapshotGetEntries(
-    LedgerAppInstanceFactory::LoopController* loop_controller,
-    PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
-    int* num_queries) {
+std::vector<Entry> SnapshotGetEntries(LoopController* loop_controller,
+                                      PageSnapshotPtr* snapshot,
+                                      fidl::VectorPtr<uint8_t> start,
+                                      int* num_queries) {
   std::vector<Entry> result;
   std::unique_ptr<Token> token;
   if (num_queries) {

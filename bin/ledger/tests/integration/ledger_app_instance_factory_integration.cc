@@ -24,6 +24,7 @@
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
+#include "peridot/bin/ledger/tests/integration/loop_controller_real_loop.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
@@ -59,8 +60,7 @@ class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
-      LedgerAppInstanceFactory::LoopController* loop_controller,
-      async_dispatcher_t* services_dispatcher,
+      LoopController* loop_controller, async_dispatcher_t* services_dispatcher,
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
           repository_factory_request,
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory>
@@ -106,8 +106,7 @@ class LedgerAppInstanceImpl final
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
-    LedgerAppInstanceFactory::LoopController* loop_controller,
-    async_dispatcher_t* services_dispatcher,
+    LoopController* loop_controller, async_dispatcher_t* services_dispatcher,
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
         repository_factory_request,
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory>
@@ -264,6 +263,10 @@ class FactoryBuilderIntegrationImpl : public LedgerAppInstanceFactoryBuilder {
                                                                   enable_p2p_);
     factory->Init();
     return factory;
+  }
+
+  std::unique_ptr<LoopController> NewLoopController() const override {
+    return std::make_unique<LoopControllerRealLoop>();
   }
 
  private:

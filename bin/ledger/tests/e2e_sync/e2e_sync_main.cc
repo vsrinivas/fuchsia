@@ -10,6 +10,7 @@
 
 #include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/bin/ledger/tests/e2e_sync/ledger_app_instance_factory_e2e.h"
+#include "peridot/bin/ledger/tests/integration/loop_controller_real_loop.h"
 
 namespace ledger {
 namespace {
@@ -19,6 +20,10 @@ class FactoryBuilderE2eImpl : public LedgerAppInstanceFactoryBuilder {
  public:
   std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const override {
     return std::make_unique<LedgerAppInstanceFactoryImpl>(*sync_params_ptr);
+  }
+
+  std::unique_ptr<LoopController> NewLoopController() const override {
+    return std::make_unique<LoopControllerRealLoop>();
   }
 };
 

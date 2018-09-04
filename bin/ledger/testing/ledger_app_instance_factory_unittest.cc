@@ -13,7 +13,7 @@
 namespace ledger {
 namespace {
 
-class FakeLoopController : public LedgerAppInstanceFactory::LoopController {
+class FakeLoopController : public LoopController {
  public:
   FakeLoopController(fit::function<void()> on_run,
                      fit::function<void()> on_stop)
@@ -24,6 +24,31 @@ class FakeLoopController : public LedgerAppInstanceFactory::LoopController {
   void RunLoop() override { on_run_(); };
 
   void StopLoop() override { on_stop_(); };
+
+  std::unique_ptr<SubLoop> StartNewLoop() override {
+    FXL_NOTREACHED();
+    return nullptr;
+  }
+
+  async_dispatcher_t* dispatcher() override {
+    FXL_NOTREACHED();
+    return nullptr;
+  }
+
+  fit::closure QuitLoopClosure() override {
+    FXL_NOTREACHED();
+    return []() {};
+  }
+
+  bool RunLoopUntil(fit::function<bool()> /* condition */) override {
+    FXL_NOTREACHED();
+    return false;
+  }
+
+  bool RunLoopFor(zx::duration /* duration */) override {
+    FXL_NOTREACHED();
+    return false;
+  }
 
  private:
   fit::function<void()> on_run_;

@@ -5,59 +5,13 @@
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/memory/ref_ptr.h>
-#include <lib/zx/time.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/convert/convert.h"
 
 namespace ledger {
-namespace {
-class CallbackWaiterImpl : public LedgerAppInstanceFactory::CallbackWaiter {
- public:
-  explicit CallbackWaiterImpl(
-      LedgerAppInstanceFactory::LoopController* loop_controller)
-      : loop_controller_(loop_controller) {}
-  CallbackWaiterImpl(const CallbackWaiterImpl&) = delete;
-  CallbackWaiterImpl& operator=(const CallbackWaiterImpl&) = delete;
-  ~CallbackWaiterImpl() override = default;
-
-  fit::function<void()> GetCallback() override {
-    return [this] {
-      ++callback_called_;
-      if (waiting_) {
-        loop_controller_->StopLoop();
-      }
-    };
-  }
-
-  void RunUntilCalled() override {
-    FXL_DCHECK(!waiting_);
-    waiting_ = true;
-    while (NotCalledYet()) {
-      loop_controller_->RunLoop();
-    }
-    waiting_ = false;
-    ++run_until_called_;
-  }
-
-  bool NotCalledYet() override { return callback_called_ <= run_until_called_; }
-
- private:
-  LedgerAppInstanceFactory::LoopController* loop_controller_;
-  size_t callback_called_ = 0;
-  size_t run_until_called_ = 0;
-  bool waiting_ = false;
-};
-}  // namespace
-
-std::unique_ptr<LedgerAppInstanceFactory::CallbackWaiter>
-LedgerAppInstanceFactory::LoopController::NewWaiter() {
-  return std::make_unique<CallbackWaiterImpl>(this);
-}
 
 LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
     LoopController* loop_controller, fidl::VectorPtr<uint8_t> test_ledger_name,

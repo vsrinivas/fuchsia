@@ -16,33 +16,53 @@
 
 namespace ledger {
 
-BaseIntegrationTest::BaseIntegrationTest()
-    : loop_(&kAsyncLoopConfigNoAttachToThread) {}
+BaseIntegrationTest::BaseIntegrationTest() {}
 
 BaseIntegrationTest::~BaseIntegrationTest() = default;
-
-void BaseIntegrationTest::RunLoop() { RealLoopFixture::RunLoop(); }
-
-void BaseIntegrationTest::StopLoop() { QuitLoop(); }
 
 void BaseIntegrationTest::SetUp() {
   ::testing::Test::SetUp();
   trace_provider_ = std::make_unique<trace::TraceProvider>(dispatcher());
-  loop_.StartThread();
+  services_loop_ = GetLoopController()->StartNewLoop();
 }
 
 void BaseIntegrationTest::TearDown() {
-  loop_.Shutdown();
+  services_loop_.reset();
   ::testing::Test::TearDown();
 }
 
+  void BaseIntegrationTest::RunLoop() { GetLoopController()->RunLoop(); }
+
+  void BaseIntegrationTest::StopLoop() { GetLoopController()->StopLoop(); }
+
+  std::unique_ptr<SubLoop> BaseIntegrationTest::StartNewLoop() {
+    return GetLoopController()->StartNewLoop();
+  }
+
+  async_dispatcher_t* BaseIntegrationTest::dispatcher() {
+    return GetLoopController()->dispatcher();
+  }
+
+  fit::closure BaseIntegrationTest::QuitLoopClosure() {
+    return GetLoopController()->QuitLoopClosure();
+  }
+  bool BaseIntegrationTest::RunLoopUntil(fit::function<bool()> condition) {
+    return GetLoopController()->RunLoopUntil(std::move(condition));
+  }
+
+  bool BaseIntegrationTest::RunLoopFor(zx::duration duration) {
+    return GetLoopController()->RunLoopFor(duration);
+  }
+
+
 zx::socket BaseIntegrationTest::StreamDataToSocket(std::string data) {
   socket::SocketPair sockets;
-  async::PostTask(loop_.dispatcher(), [socket = std::move(sockets.socket1),
-                                       data = std::move(data)]() mutable {
-    auto writer = new socket::StringSocketWriter();
-    writer->Start(std::move(data), std::move(socket));
-  });
+  async::PostTask(
+      services_loop_->dispatcher(),
+      [socket = std::move(sockets.socket1), data = std::move(data)]() mutable {
+        auto writer = new socket::StringSocketWriter();
+        writer->Start(std::move(data), std::move(socket));
+      });
   return std::move(sockets.socket2);
 }
 
@@ -55,12 +75,21 @@ IntegrationTest::IntegrationTest() = default;
 
 IntegrationTest::~IntegrationTest() = default;
 
+void IntegrationTest::SetUp() {
+  auto factory_builder = GetParam();
+  loop_controller_ = factory_builder->NewLoopController();
+  factory_ = factory_builder->NewFactory();
+  BaseIntegrationTest::SetUp();
+}
+
 LedgerAppInstanceFactory* IntegrationTest::GetAppFactory() {
-  if (!factory_) {
-    auto factory_builder = GetParam();
-    factory_ = factory_builder->NewFactory();
-  }
+  FXL_DCHECK(factory_) << "|SetUp| has not been called.";
   return factory_.get();
+}
+
+LoopController* IntegrationTest::GetLoopController() {
+  FXL_DCHECK(loop_controller_) << "|SetUp| has not been called.";
+  return loop_controller_.get();
 }
 
 }  // namespace ledger

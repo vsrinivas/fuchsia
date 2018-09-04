@@ -30,8 +30,7 @@ fidl::VectorPtr<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo);
 // |start|. If |num_queries| is not null, returns the number of calls to
 // |GetEntries|. If any call fails, this function will fail the current test.
 std::vector<Entry> SnapshotGetEntries(
-    LedgerAppInstanceFactory::LoopController* loop_controller,
-    PageSnapshotPtr* snapshot,
+    LoopController* loop_controller, PageSnapshotPtr* snapshot,
     fidl::VectorPtr<uint8_t> start = fidl::VectorPtr<uint8_t>::New(0),
     int* num_queries = nullptr);
 

@@ -71,7 +71,7 @@ enum class MergeType {
 class ConflictResolverImpl : public ConflictResolver {
  public:
   explicit ConflictResolverImpl(
-      LedgerAppInstanceFactory::LoopController* loop_controller,
+      LoopController* loop_controller,
       fidl::InterfaceRequest<ConflictResolver> request)
       : loop_controller_(loop_controller),
         disconnect_waiter_(loop_controller->NewWaiter()),
@@ -90,7 +90,7 @@ class ConflictResolverImpl : public ConflictResolver {
     fidl::InterfaceHandle<PageSnapshot> common_version;
     MergeResultProviderPtr result_provider;
 
-    ResolveRequest(LedgerAppInstanceFactory::LoopController* loop_controller,
+    ResolveRequest(LoopController* loop_controller,
                    fidl::InterfaceHandle<PageSnapshot> left_version,
                    fidl::InterfaceHandle<PageSnapshot> right_version,
                    fidl::InterfaceHandle<PageSnapshot> common_version,
@@ -259,7 +259,7 @@ class ConflictResolverImpl : public ConflictResolver {
       return ::testing::AssertionSuccess();
     }
 
-    LedgerAppInstanceFactory::LoopController* loop_controller_;
+    LoopController* loop_controller_;
   };
 
   void RunUntilDisconnected() { disconnect_waiter_->RunUntilCalled(); }
@@ -282,9 +282,9 @@ class ConflictResolverImpl : public ConflictResolver {
     resolve_waiter_->GetCallback()();
   }
 
-  LedgerAppInstanceFactory::LoopController* loop_controller_;
-  std::unique_ptr<LedgerAppInstanceFactory::CallbackWaiter> disconnect_waiter_;
-  std::unique_ptr<LedgerAppInstanceFactory::CallbackWaiter> resolve_waiter_;
+  LoopController* loop_controller_;
+  std::unique_ptr<CallbackWaiter> disconnect_waiter_;
+  std::unique_ptr<CallbackWaiter> resolve_waiter_;
   fidl::Binding<ConflictResolver> binding_;
 };
 
@@ -312,8 +312,7 @@ class DummyConflictResolver : public ConflictResolver {
 class TestConflictResolverFactory : public ConflictResolverFactory {
  public:
   TestConflictResolverFactory(
-      LedgerAppInstanceFactory::LoopController* loop_controller,
-      MergePolicy policy,
+      LoopController* loop_controller, MergePolicy policy,
       fidl::InterfaceRequest<ConflictResolverFactory> request,
       fit::closure on_get_policy_called_callback,
       zx::duration response_delay = zx::msec(0))
@@ -367,9 +366,8 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
     new_conflict_resolver_waiter_->GetCallback()();
   }
 
-  LedgerAppInstanceFactory::LoopController* loop_controller_;
-  std::unique_ptr<LedgerAppInstanceFactory::CallbackWaiter>
-      new_conflict_resolver_waiter_;
+  LoopController* loop_controller_;
+  std::unique_ptr<CallbackWaiter> new_conflict_resolver_waiter_;
   MergePolicy policy_;
   bool use_dummy_resolver_ = false;
   std::map<storage::PageId, DummyConflictResolver> dummy_resolvers_;
@@ -665,7 +663,7 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   EXPECT_EQ("0123456789", ToString(change.changed_entries->at(1).value));
 
   // Check that the resolver fectory GetPolicy method is not called.
-  EXPECT_TRUE(RunLoopWithTimeout());
+  EXPECT_TRUE(RunLoopFor(zx::sec(1)));
   EXPECT_TRUE(resolver_factory_waiter->NotCalledYet());
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 
@@ -1023,13 +1021,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   // Remove all references to a page:
   page1 = nullptr;
   page2 = nullptr;
-  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(500)));
+  EXPECT_TRUE(RunLoopFor(zx::msec(500)));
 
   // Resolution should not crash the Ledger
   fidl::VectorPtr<MergedValue> merged_values =
       fidl::VectorPtr<MergedValue>::New(0);
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
-  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(200)));
+  EXPECT_TRUE(RunLoopFor(zx::msec(200)));
 }
 
 TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
@@ -1131,14 +1129,14 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   // Remove all references to a page:
   page1 = nullptr;
   page2 = nullptr;
-  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(500)));
+  EXPECT_TRUE(RunLoopFor(zx::msec(500)));
 
   // Resolution should not crash the Ledger
   fidl::VectorPtr<MergedValue> merged_values =
       fidl::VectorPtr<MergedValue>::New(0);
 
   EXPECT_TRUE(resolver_impl2->requests[0].Merge(std::move(merged_values)));
-  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(200)));
+  EXPECT_TRUE(RunLoopFor(zx::msec(200)));
 }
 
 // Tests for a race between setting the new conflict resolver and sending the
@@ -1882,7 +1880,7 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
 
   // Check that conflicts_resolved_callback is not called, as there are merge
   // requests pending.
-  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(250)));
+  EXPECT_TRUE(RunLoopFor(zx::msec(250)));
   EXPECT_TRUE(conflicts_resolved_callback_waiter->NotCalledYet());
 
   // Merge manually.

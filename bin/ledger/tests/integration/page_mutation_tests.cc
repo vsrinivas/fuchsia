@@ -23,6 +23,7 @@ namespace {
 class PageMutationTest : public IntegrationTest {
  public:
   void SetUp() override {
+    IntegrationTest::SetUp();
     app_instance_ = NewLedgerAppInstance();
     page_ = app_instance_->GetTestPage();
   }

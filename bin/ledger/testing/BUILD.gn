@@ -70,6 +70,8 @@ source_set("ledger_instance_factory") {
   sources = [
     "ledger_app_instance_factory.cc",
     "ledger_app_instance_factory.h",
+    "loop_controller.cc",
+    "loop_controller.h"
   ]
 
   public_deps = [

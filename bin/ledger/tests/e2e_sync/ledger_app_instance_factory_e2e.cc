@@ -31,7 +31,7 @@ class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
-      LedgerAppInstanceFactory::LoopController* loop_controller,
+      LoopController* loop_controller,
       ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
       SyncParams sync_params, std::string user_id);
 
@@ -50,7 +50,7 @@ class LedgerAppInstanceImpl final
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
-    LedgerAppInstanceFactory::LoopController* loop_controller,
+    LoopController* loop_controller,
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
     SyncParams sync_params, std::string user_id)
     : LedgerAppInstanceFactory::LedgerAppInstance(
@@ -108,7 +108,7 @@ LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {}
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
-    LedgerAppInstanceFactory::LoopController* loop_controller) {
+    LoopController* loop_controller) {
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
   fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
       repository_factory_request = repository_factory.NewRequest();

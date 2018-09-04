@@ -24,8 +24,7 @@ namespace ledger {
 // Integration tests verify interactions with client-facing FIDL services
 // exposed by Ledger. The FIDL services are run within the test process, on a
 // separate thread.
-class BaseIntegrationTest : public gtest::RealLoopFixture,
-                            public LedgerAppInstanceFactory::LoopController {
+class BaseIntegrationTest : public ::testing::Test, public LoopController {
  public:
   BaseIntegrationTest();
   ~BaseIntegrationTest() override;
@@ -38,6 +37,11 @@ class BaseIntegrationTest : public gtest::RealLoopFixture,
   // LoopController:
   void RunLoop() override;
   void StopLoop() override;
+  std::unique_ptr<SubLoop> StartNewLoop() override;
+  async_dispatcher_t* dispatcher() override;
+  fit::closure QuitLoopClosure() override;
+  bool RunLoopUntil(fit::function<bool()> condition) override;
+  bool RunLoopFor(zx::duration duration);
 
  protected:
   // ::testing::Test:
@@ -50,11 +54,11 @@ class BaseIntegrationTest : public gtest::RealLoopFixture,
   NewLedgerAppInstance();
 
   virtual LedgerAppInstanceFactory* GetAppFactory() = 0;
+  virtual LoopController* GetLoopController() = 0;
 
  private:
   // Loop used to run network service and token provider tasks.
-  async::Loop loop_;
-
+  std::unique_ptr<SubLoop> services_loop_;
   std::unique_ptr<trace::TraceProvider> trace_provider_;
 };
 
@@ -66,8 +70,16 @@ class IntegrationTest : public BaseIntegrationTest,
   ~IntegrationTest() override;
 
  protected:
+  // ::testing::Test:
+  void SetUp() override;
+
+  // BaseIntegrationTest:
   LedgerAppInstanceFactory* GetAppFactory() override;
+  LoopController* GetLoopController() override;
+
+ private:
   std::unique_ptr<LedgerAppInstanceFactory> factory_;
+  std::unique_ptr<LoopController> loop_controller_;
 };
 
 // Initializes test environment based on the command line arguments.
