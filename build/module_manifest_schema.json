@@ -1,26 +1,30 @@
 {
   "$schema": "http://json-schema.org/schema#",
-  "title": "Schema for `action_template` metadata file",
+  "title": "Schema for `module_manifest.json` metadata file",
   "definitions": {
-    "actionArray": {
+    "intentFilterArray": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/action"
+        "$ref": "#/definitions/intentFilter"
       },
       "additionalItems": false,
       "uniqueItems": true,
       "minItems": 1
     },
-    "action": {
+    "intentFilter": {
       "type": "object",
       "properties": {
-        "name": {
+        "action": {
           "type": "string"
         },
         "parameters": {
           "$ref": "#/definitions/parameterArray"
         }
-      }
+      },
+      "required": [
+        "action",
+        "parameters"
+      ]
     },
     "parameterArray": {
       "type": "array",
@@ -28,8 +32,7 @@
         "$ref": "#/definitions/parameter"
       },
       "additionalItems": false,
-      "uniqueItems": true,
-      "minItems": 1
+      "uniqueItems": true
     },
     "parameter": {
       "type": "object",
@@ -70,22 +73,31 @@
     "suggestion_headline": {
       "type": "string"
     },
+    "intent_filters": {
+      "$ref": "#/definitions/intentFilterArray"
+    },
+    "composition_pattern": {
+      "$ref": "#/definitions/compositionPattern"
+    },
     "action": {
       "type": "string"
-    },
-    "actions": {
-      "$ref": "#/definitions/actionArray"
     },
     "parameters": {
       "$ref": "#/definitions/parameterArray"
     },
-    "composition_pattern": {
-      "$ref": "#/definitions/compositionPattern"
+    "@version": {
+      "type": "integer"
     }
   },
   "required": [
-    "binary",
-    "action"
+    "binary"
   ],
+  "dependencies": {
+    "intent_filters": {
+      "required": [
+        "@version"
+      ]
+    }
+  },
   "additionalProperties": false
 }

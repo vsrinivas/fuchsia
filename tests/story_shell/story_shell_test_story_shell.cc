@@ -82,12 +82,13 @@ class TestApp
     FXL_LOG(INFO) << "AddView " << view_id << " " << anchor_id << " "
                   << (module_manifest ? module_manifest->composition_pattern
                                       : " NO MANIFEST");
-
     if (view_id == "root:one" && anchor_id == "root") {
       Signal("root:one");
 
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
-          module_manifest->action == "com.google.fuchsia.common.null") {
+          module_manifest->intent_filters->size() == 1 &&
+          module_manifest->intent_filters.get()[0].action ==
+              "com.google.fuchsia.common.null") {
         Signal("root:one manifest");
       }
 
@@ -98,7 +99,9 @@ class TestApp
       Signal("root:one:two");
 
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
-          module_manifest->action == "com.google.fuchsia.common.null") {
+          module_manifest->intent_filters->size() == 1 &&
+          module_manifest->intent_filters.get()[0].action ==
+              "com.google.fuchsia.common.null") {
         Signal("root:one:two manifest");
       }
 

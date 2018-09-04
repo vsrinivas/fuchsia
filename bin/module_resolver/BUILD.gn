@@ -67,6 +67,7 @@ executable("local_module_resolver_unittest") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
+    "//peridot/lib/fidl:clone",
     "//peridot/lib/testing:entity_resolver_fake",
     "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/module_resolver/cpp:formatting",

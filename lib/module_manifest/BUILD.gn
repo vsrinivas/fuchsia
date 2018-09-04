@@ -1,0 +1,42 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("module_manifest") {
+  public_deps = [":json_xdr"]
+}
+
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":module_manifest_xdr_unittest",
+  ]
+}
+
+source_set("json_xdr") {
+  sources = [
+    "module_manifest_xdr.cc",
+    "module_manifest_xdr.h",
+  ]
+
+  deps = [
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
+source_set("module_manifest_xdr_unittest") {
+  testonly = true
+
+  sources = [
+    "module_manifest_xdr_unittest.cc",
+  ]
+
+  deps = [
+    ":json_xdr",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//third_party/googletest:gtest",
+  ]
+}

@@ -10,10 +10,20 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/module_resolver/cpp/formatting.h>
 
+#include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
 namespace modular {
 namespace {
+
+fuchsia::modular::IntentFilter MakeIntentFilter(
+    std::string action,
+    std::vector<fuchsia::modular::ParameterConstraint> param_constraints) {
+  fuchsia::modular::IntentFilter f;
+  f.action = action;
+  f.parameter_constraints.reset(param_constraints);
+  return f;
+}
 
 class TestManifestSource : public ModuleManifestSource {
  public:
@@ -184,7 +194,7 @@ TEST_F(FindModulesTest, Null) {
 
   fuchsia::modular::ModuleManifest entry;
   entry.binary = "id1";
-  entry.action = "verb wont match";
+  entry.intent_filters.push_back(MakeIntentFilter("verb wont match", {}));
   source->add("1", std::move(entry));
   source->idle();
 
@@ -203,19 +213,22 @@ TEST_F(FindModulesTest, Simpleaction) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
     source1->add("1", std::move(entry));
   }
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module2";
-    entry.action = "com.google.fuchsia.navigate.v1";
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
     source2->add("1", std::move(entry));
   }
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module3";
-    entry.action = "com.google.fuchsia.exist.vinfinity";
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.exist.vinfinity", {}));
     source1->add("2", std::move(entry));
   }
 
@@ -260,39 +273,39 @@ TEST_F(FindModulesTest, SimpleParameterTypes) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "foo";
     fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "destination";
     parameter2.type = "baz";
-    entry.parameter_constraints.push_back(std::move(parameter1));
-    entry.parameter_constraints.push_back(std::move(parameter2));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1",
+                         {std::move(parameter1), std::move(parameter2)}));
     source->add("1", std::move(entry));
   }
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module2";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "frob";
     fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "destination";
     parameter2.type = "froozle";
-    entry.parameter_constraints.push_back(std::move(parameter1));
-    entry.parameter_constraints.push_back(std::move(parameter2));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1",
+                         {std::move(parameter1), std::move(parameter2)}));
     source->add("2", std::move(entry));
   }
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module3";
-    entry.action = "com.google.fuchsia.exist.vinfinity";
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "with";
     parameter.type = "compantionCube";
-    entry.parameter_constraints.push_back(std::move(parameter));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.exist.vinfinity", {std::move(parameter)}));
     source->add("3", std::move(entry));
   }
   source->idle();
@@ -331,7 +344,7 @@ TEST_F(FindModulesTest, ReAddExistingEntries) {
 
   fuchsia::modular::ModuleManifest entry;
   entry.binary = "id1";
-  entry.action = "action1";
+  entry.intent_filters.push_back(MakeIntentFilter("action1", {}));
 
   fuchsia::modular::ModuleManifest entry1;
   entry.Clone(&entry1);
@@ -358,11 +371,11 @@ TEST_F(FindModulesByTypesTest, MatchingParameterWithNoactionOrUrl) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "start";
     parameter.type = "foo";
-    entry.parameter_constraints.push_back(std::move(parameter));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1", {parameter}));
     source->add("1", std::move(entry));
   }
 
@@ -384,11 +397,11 @@ TEST_F(FindModulesByTypesTest, CorrectParameterTypeWithNoactionOrUrl) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
-    entry.parameter_constraints.push_back(std::move(parameter));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1", {parameter}));
     source->add("1", std::move(entry));
   }
 
@@ -411,21 +424,21 @@ TEST_F(FindModulesByTypesTest,
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
-    entry.parameter_constraints.push_back(std::move(parameter));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v1", {std::move(parameter)}));
     source->add("1", std::move(entry));
   }
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module2";
-    entry.action = "com.google.fuchsia.navigate.v2";
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
-    entry.parameter_constraints.push_back(std::move(parameter));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v2", {std::move(parameter)}));
     source->add("2", std::move(entry));
   }
 
@@ -448,11 +461,11 @@ TEST_F(FindModulesByTypesTest, IncorrectParameterTypeWithNoactionOrUrl) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "start";
     parameter.type = "not";
-    entry.parameter_constraints.push_back(std::move(parameter));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v1", {std::move(parameter)}));
     source->add("1", std::move(entry));
   }
 
@@ -473,11 +486,11 @@ TEST_F(FindModulesByTypesTest, QueryWithMoreParametersThanEntry) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "start";
     parameter.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v1", {std::move(parameter)}));
     source->add("1", std::move(entry));
   }
 
@@ -500,15 +513,15 @@ TEST_F(FindModulesByTypesTest, QueryWithoutActionAndMultipleParameters) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter1));
     fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "end";
     parameter2.type = "not_gps";
-    entry.parameter_constraints.push_back(std::move(parameter2));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1",
+                         {std::move(parameter1), std::move(parameter2)}));
     source->add("1", std::move(entry));
   }
 
@@ -537,15 +550,15 @@ TEST_F(FindModulesByTypesTest, FindModulesByTypeWithTwoParametersOfSameType) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter1));
     fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "end";
     parameter2.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter2));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1",
+                         {std::move(parameter1), std::move(parameter2)}));
     source->add("1", std::move(entry));
   }
 
@@ -591,19 +604,18 @@ TEST_F(FindModulesByTypesTest, QueryWithoutActionAndThreeParametersOfSameType) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter1));
     fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "end";
     parameter2.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter2));
     fuchsia::modular::ParameterConstraint parameter3;
     parameter3.name = "middle";
     parameter3.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter3));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v1",
+        {std::move(parameter1), std::move(parameter2), std::move(parameter3)}));
     source->add("1", std::move(entry));
   }
 
@@ -628,15 +640,15 @@ TEST_F(FindModulesByTypesTest,
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter1));
     fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "end";
     parameter2.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter2));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1",
+                         {std::move(parameter1), std::move(parameter2)}));
     source->add("1", std::move(entry));
   }
 
@@ -661,15 +673,15 @@ TEST_F(FindModulesByTypesTest,
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter1));
     fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "end";
     parameter2.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter2));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1",
+                         {std::move(parameter1), std::move(parameter2)}));
     source->add("1", std::move(entry));
   }
 
@@ -692,11 +704,11 @@ TEST_F(FindModulesByTypesTest, QueryWithoutActionIncompatibleParameterTypes) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "start";
     parameter.type = "gps";
-    entry.parameter_constraints.push_back(std::move(parameter));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v1", {std::move(parameter)}));
     source->add("1", std::move(entry));
   }
 
@@ -720,11 +732,11 @@ TEST_F(FindModulesTest, QueryWithActionMatchesBothParameterNamesAndTypes) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
-    entry.parameter_constraints.push_back(std::move(parameter));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v1", {std::move(parameter)}));
     source->add("1", std::move(entry));
   }
 
@@ -735,6 +747,77 @@ TEST_F(FindModulesTest, QueryWithActionMatchesBothParameterNamesAndTypes) {
                   .build());
 
   EXPECT_EQ(0lu, results()->size());
+}
+
+TEST_F(FindModulesTest, MultipleIntentFilters) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    fuchsia::modular::ModuleManifest entry;
+    entry.binary = "module1";
+    fuchsia::modular::ParameterConstraint parameter;
+    parameter.name = "end";
+    parameter.type = "foo";
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v1", {modular::CloneStruct(parameter)}));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v2", {modular::CloneStruct(parameter)}));
+
+    source->add("1", std::move(entry));
+  }
+
+  source->idle();
+
+  FindModules(QueryBuilder("com.google.fuchsia.navigate.v1")
+                  .AddParameter("end", {"foo"})
+                  .build());
+  ASSERT_EQ(1lu, results()->size());
+  EXPECT_EQ("module1", results()->at(0).module_id);
+
+  FindModules(QueryBuilder("com.google.fuchsia.navigate.v2")
+                  .AddParameter("end", {"foo"})
+                  .build());
+  ASSERT_EQ(1lu, results()->size());
+  EXPECT_EQ("module1", results()->at(0).module_id);
+
+  FindModules(QueryBuilder("com.google.fuchsia.navigate.v3")
+                  .AddParameter("end", {"foo"})
+                  .build());
+  ASSERT_EQ(0lu, results()->size());
+}
+
+TEST_F(FindModulesByTypesTest, MultipleIntentFilters) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    fuchsia::modular::ModuleManifest entry;
+    entry.binary = "module1";
+    fuchsia::modular::ParameterConstraint parameter;
+    parameter.name = "end";
+    parameter.type = "foo";
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v1", {modular::CloneStruct(parameter)}));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v2", {modular::CloneStruct(parameter)}));
+
+    source->add("1", std::move(entry));
+  }
+
+  source->idle();
+
+  FindModulesByTypes(QueryBuilder().AddParameter("end", {"foo"}).build());
+
+  ASSERT_EQ(2lu, results()->size());
+  // expected action =>.
+  std::set<std::string> actual_actions;
+  for (size_t i = 0; i < 2u; i++) {
+    EXPECT_EQ("module1", results()->at(i).module_id);
+    actual_actions.insert(results()->at(i).action);
+  }
+  EXPECT_EQ(1u, actual_actions.count("com.google.fuchsia.navigate.v1"));
+  EXPECT_EQ(1u, actual_actions.count("com.google.fuchsia.navigate.v2"));
 }
 
 }  // namespace

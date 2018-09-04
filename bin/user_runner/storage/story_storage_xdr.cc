@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/user_runner/storage/story_storage_xdr.h"
+#include "peridot/lib/module_manifest/module_manifest_xdr.h"
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/vmo/strings.h>
@@ -149,22 +150,6 @@ void XdrIntent(XdrContext* const xdr, fuchsia::modular::Intent* const data) {
   xdr->Field("parameters", &data->parameters, XdrIntentParameter);
 }
 
-void XdrParameterConstraint(XdrContext* const xdr,
-                            fuchsia::modular::ParameterConstraint* const data) {
-  xdr->Field("name", &data->name);
-  xdr->Field("type", &data->type);
-}
-
-void XdrModuleManifest(XdrContext* const xdr,
-                       fuchsia::modular::ModuleManifest* const data) {
-  xdr->Field("binary", &data->binary);
-  xdr->Field("suggestion_headline", &data->suggestion_headline);
-  xdr->Field("action", &data->action);
-  xdr->Field("parameters", &data->parameter_constraints,
-             XdrParameterConstraint);
-  xdr->Field("composition_pattern", &data->composition_pattern);
-}
-
 void XdrModuleData_v1(XdrContext* const xdr,
                       fuchsia::modular::ModuleData* const data) {
   xdr->Field("url", &data->module_url);
@@ -206,7 +191,7 @@ void XdrModuleData_v3(XdrContext* const xdr,
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
   xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
-  xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest);
+  xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest_v1);
 }
 
 void XdrModuleData_v4(XdrContext* const xdr,
@@ -223,7 +208,7 @@ void XdrModuleData_v4(XdrContext* const xdr,
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
   xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
-  xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest);
+  xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest_v2);
 }
 
 XdrFilterType<fuchsia::modular::ModuleData> XdrModuleData[] = {

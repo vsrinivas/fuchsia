@@ -51,7 +51,10 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
 
   using RepoName = std::string;
   using ModuleId = std::string;
-  using EntryId = std::pair<RepoName, ModuleId>;
+  using ManifestId = std::pair<RepoName, ModuleId>;
+  using ParameterName = std::string;
+  using ParameterType = std::string;
+  using Action = std::string;
 
   // |fuchsia::modular::QueryHandler|
   void OnQuery(fuchsia::modular::UserInput query,
@@ -73,18 +76,18 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
   // Ask handler.
   std::map<std::string, std::unique_ptr<ModuleManifestSource>> sources_;
   // Set of sources that have told us they are idle, meaning they have
-  // sent us all entries they knew about at construction time.
+  // sent us all manifests they knew about at construction time.
   std::set<std::string> ready_sources_;
-  // Map of (repo name, module manifest ID) -> entry.
-  std::map<EntryId, fuchsia::modular::ModuleManifest> entries_;
+  // Map of (repo name, module manifest ID) -> module manifest.
+  std::map<ManifestId, fuchsia::modular::ModuleManifest> manifests_;
 
-  // action -> key in |entries_|
-  std::map<std::string, std::set<EntryId>> action_to_entries_;
-  // (parameter type, parameter name) -> key in |entries_|
-  std::map<std::pair<std::string, std::string>, std::set<EntryId>>
-      parameter_type_and_name_to_entries_;
-  //  (parameter type) -> keys in |entries_|.
-  std::map<std::string, std::set<EntryId>> parameter_type_to_entries_;
+  // action -> key in |manifests_|
+  std::map<Action, std::set<ManifestId>> action_to_manifests_;
+  // (parameter type, parameter name) -> key in |manifests_|
+  std::map<std::pair<ParameterType, ParameterName>, std::set<ManifestId>>
+      parameter_type_and_name_to_manifests_;
+  //  (parameter type) -> keys in |manifests_|.
+  std::map<ParameterType, std::set<ManifestId>> parameter_type_to_manifests_;
 
   fidl::BindingSet<fuchsia::modular::ModuleResolver> bindings_;
   fidl::Binding<fuchsia::modular::QueryHandler> query_handler_binding_;

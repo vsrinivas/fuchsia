@@ -1,6 +1,12 @@
 {
+  "@version": 2,
   "binary": "common_null_module",
   "suggestion_headline": "Null module",
-  "action": "com.google.fuchsia.common.null",
+  "intent_filters": [
+    {
+      "action": "com.google.fuchsia.common.null",
+      "parameters": []
+    }
+  ],
   "composition_pattern": "ticker"
 }

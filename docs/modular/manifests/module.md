@@ -3,8 +3,7 @@ Module Metadata File
 > Status: DRAFT
 
 A Module metadata file defines the runtime capabilities of a single `Module`
-(**TODO: link**). A Module expresses its capabilities by providing a description
-of an implementation for an `action`s (**TODO**: link to action/action template doc).
+(**TODO: link**). A Module expresses its capabilities by declaring the different intents it is able to handle (**TODO**: link to action/action template doc).
 
 The file is part of a Fuchsia package (**TODO: link**), is named `module` and
 placed within the `meta/` of the package.
@@ -13,22 +12,27 @@ The `module` file contents are a JSON-encoded object (JSON schema [available
 here](../../../build/module_manifest_schema.json)) that defines a
 single action implementation.
 
-## Example `module` metadata file
+## Example module `manifest.json` file
 
-Following are two sample `module` files. Each describes a `Module` that
-implements different `action`s.
+Following are two sample `manifest.json` files. Each describes a `Module` being
+able to handle particular intents (`action` and associated `parameters`s) using
+`intent_filters`.
 
 ```javascript
 {
   "binary": "bin/myPersonPreviewer",
   "suggestion_headline": "See details about person",
-  "action": "com.google.fuchsia.preview.v1",
-  "parameters": [
+  "intent_filters": [
     {
-      "name": "entityToPreview",
-      "type": "https://fuchsia.instagram.com/types/Friend"
+      "action": "com.google.fuchsia.preview.v1",
+      "parameters": [
+        {
+          "name": "entityToPreview",
+          "type": "https://fuchsia.instagram.com/types/Friend"
+        }
+      ],
     }
-  ],
+  ]
   "composition_pattern": "ticker"
 }
 ```
@@ -36,15 +40,19 @@ implements different `action`s.
 {
   "binary": "bin/myContactPicker",
   "suggestion_headline": "Pick an instagram friend",
-  "action": "com.google.fuchsia.pick.v1",
-  "parameters": [
+  "intent_filters": [
     {
-      "name": "source",
-      "type": "https://fuchsia.instagram.com/types/FriendRepository"
-    },
-    {
-      "name": "picked",
-      "type": "https://fuchsia.instagram.com/types/Friend"
+      "action": "com.google.fuchsia.pick.v1",
+      "parameters": [
+        {
+          "name": "source",
+          "type": "https://fuchsia.instagram.com/types/FriendRepository"
+        },
+        {
+          "name": "picked",
+          "type": "https://fuchsia.instagram.com/types/Friend"
+        }
+      ]
     }
   ]
 }
@@ -68,7 +76,7 @@ package can share a single `binary`.
 
 #### suggestion_headline
 
-> TODO(thatguy): If we keep this, expand it to support 
+> TODO(thatguy): If we keep this, expand it to support
 > templating based on the entity args.
 
 ```javascript
@@ -79,31 +87,31 @@ The `suggestion_headline` attribute provides human-readable
 text. It will be used if this `Module` is suggested for inclusion
 in the current Story.
 
-#### fuchsia::modular::Action
+#### intent_filters
 
 ```javascript
-"action": "com.google.fuchsia.preview.v1",
+"intent_filters": [
+  {
+    "action": "com.google.fuchsia.preview.v1",
+    "parameters": [
+      {
+        "name": "entityToPreview",
+        "type": "https://fuchsia.instagram.com/types/Friend"
+      }
+    ]
+  }
+]
 ```
 > NOTE: The exactly format of the action attribute is likely to evolve.
-
-The `action` attribute identifies which action this Module implements. This dictates the semantic function of this Module, as well as the role of each parameter.
+The `intent_filters` attributes identifiers the different intents this Module is
+able to handle. Each intent consists of an `action` and its associated
+`parameters`. An `action` dictates a semantic function this Module implements,
+as well as the role of each of its `parameters`.
 
 The `action` must match an `action` name in an associated
 [`meta/action_template`](action_template.md) file.
 
 > TODO(thatguy): Add information about where actions are discoverable.
-
-#### Parameters
-
-```javascript
-"parameters": [
-  {
-    "name": "entityToPreview",
-    "type": "https://fuchsia.instagram.com/types/Friend"
-  },
-  ...
-],
-```
 
 In the [action template](action_template.md), the parameters are given names but not
 assigned concrete fuchsia::modular::Entity types (**TODO** link). Here, we constrain this

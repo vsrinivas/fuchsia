@@ -19,7 +19,7 @@ namespace modular {
 
 namespace {
 
-// << operator for LocalModuleResolver::EntryId.
+// << operator for LocalModuleResolver::ManifestId.
 std::ostream& operator<<(std::ostream& o,
                          const std::pair<std::string, std::string>& id) {
   return o << id.first << ":" << id.second;
@@ -43,8 +43,8 @@ void LocalModuleResolver::AddSource(
 
   ptr->Watch(
       async_get_default_dispatcher(), [this, name]() { OnSourceIdle(name); },
-      [this, name](std::string id, fuchsia::modular::ModuleManifest entry) {
-        OnNewManifestEntry(name, std::move(id), std::move(entry));
+      [this, name](std::string id, fuchsia::modular::ModuleManifest manifest) {
+        OnNewManifestEntry(name, std::move(id), std::move(manifest));
       },
       [this, name](std::string id) {
         OnRemoveManifestEntry(name, std::move(id));
@@ -87,8 +87,8 @@ class LocalModuleResolver::FindModulesCall
     FlowToken flow{this, &response_};
 
     auto action_it =
-        local_module_resolver_->action_to_entries_.find(query_.action);
-    if (action_it == local_module_resolver_->action_to_entries_.end()) {
+        local_module_resolver_->action_to_manifests_.find(query_.action);
+    if (action_it == local_module_resolver_->action_to_manifests_.end()) {
       response_ = CreateEmptyResponse();
       return;
     }
@@ -114,14 +114,14 @@ class LocalModuleResolver::FindModulesCall
   // |parameter_name| and |types| come from the FindModulesQuery.
   void ProcessParameterTypes(const std::string& parameter_name,
                              const fidl::VectorPtr<fidl::StringPtr>& types) {
-    std::set<EntryId> parameter_type_entries;
+    std::set<ManifestId> parameter_type_entries;
     for (const auto& type : *types) {
-      std::set<EntryId> found_entries =
-          GetEntriesMatchingParameterByTypeAndName(type, parameter_name);
+      std::set<ManifestId> found_entries =
+          GetManifestsMatchingParameterByTypeAndName(type, parameter_name);
       parameter_type_entries.insert(found_entries.begin(), found_entries.end());
     }
 
-    std::set<EntryId> new_result_entries;
+    std::set<ManifestId> new_result_entries;
     // All parameters in the query must be handled by the candidates. For each
     // parameter that is processed, filter out any existing results that can't
     // also handle the new parameter type.
@@ -133,18 +133,18 @@ class LocalModuleResolver::FindModulesCall
     candidates_.swap(new_result_entries);
   }
 
-  // Returns the EntryIds of all entries with a parameter that matches the
+  // Returns the ManifestIds of all entries with a parameter that matches the
   // provided name and type.
-  std::set<EntryId> GetEntriesMatchingParameterByTypeAndName(
+  std::set<ManifestId> GetManifestsMatchingParameterByTypeAndName(
       const std::string& parameter_type, const std::string& parameter_name) {
-    std::set<EntryId> found_entries;
-    auto found_entries_it =
-        local_module_resolver_->parameter_type_and_name_to_entries_.find(
+    std::set<ManifestId> found_entries;
+    auto found_manifests_it =
+        local_module_resolver_->parameter_type_and_name_to_manifests_.find(
             std::make_pair(parameter_type, parameter_name));
-    if (found_entries_it !=
-        local_module_resolver_->parameter_type_and_name_to_entries_.end()) {
-      found_entries.insert(found_entries_it->second.begin(),
-                           found_entries_it->second.end());
+    if (found_manifests_it !=
+        local_module_resolver_->parameter_type_and_name_to_manifests_.end()) {
+      found_entries.insert(found_manifests_it->second.begin(),
+                           found_manifests_it->second.end());
     }
     return found_entries;
   }
@@ -159,14 +159,15 @@ class LocalModuleResolver::FindModulesCall
     }
 
     for (auto id : candidates_) {
-      auto entry_it = local_module_resolver_->entries_.find(id);
-      FXL_CHECK(entry_it != local_module_resolver_->entries_.end()) << id;
+      auto entry_it = local_module_resolver_->manifests_.find(id);
+      FXL_CHECK(entry_it != local_module_resolver_->manifests_.end()) << id;
 
-      const auto& entry = entry_it->second;
+      const auto& manifest = entry_it->second;
       fuchsia::modular::FindModulesResult result;
-      result.module_id = entry.binary;
+      result.module_id = manifest.binary;
       result.manifest = fuchsia::modular::ModuleManifest::New();
-      fidl::Clone(entry, result.manifest.get());
+      result.manifest->intent_filters.resize(0);
+      fidl::Clone(manifest, result.manifest.get());
 
       response_.results.push_back(std::move(result));
     }
@@ -182,7 +183,7 @@ class LocalModuleResolver::FindModulesCall
   LocalModuleResolver* const local_module_resolver_;
   fuchsia::modular::FindModulesQuery query_;
 
-  std::set<EntryId> candidates_;
+  std::set<ManifestId> candidates_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesCall);
 };
@@ -203,20 +204,20 @@ class LocalModuleResolver::FindModulesByTypesCall
 
     response_ = CreateEmptyResponse();
 
-    std::set<EntryId> candidates;
+    std::set<ManifestId> candidates;
     for (auto& constraint : *query_.parameter_constraints) {
-      std::set<EntryId> param_type_entries;
+      std::set<ManifestId> param_type_entries;
       parameter_types_cache_[constraint.constraint_name] =
           constraint.param_types.Clone();
       for (auto& type : *constraint.param_types) {
-        auto found_entries = GetEntriesMatchingParameterByType(type);
+        auto found_entries = GetManifestsMatchingParameterByType(type);
         candidates.insert(found_entries.begin(), found_entries.end());
       }
     }
 
     for (auto& candidate : candidates) {
-      auto results = MatchQueryParametersToEntryParametersByType(
-          local_module_resolver_->entries_[candidate]);
+      auto results = MatchQueryParametersToManifestParametersByType(
+          local_module_resolver_->manifests_[candidate]);
 
       using iter = decltype(results->begin());
       response_.results->insert(response_.results->end(),
@@ -234,124 +235,129 @@ class LocalModuleResolver::FindModulesByTypesCall
 
   // Returns the set of all modules that have a parameter whose type is
   // |parameter_type|.
-  std::set<LocalModuleResolver::EntryId> GetEntriesMatchingParameterByType(
+  std::set<LocalModuleResolver::ManifestId> GetManifestsMatchingParameterByType(
       const std::string& parameter_type) {
-    std::set<EntryId> found_entries;
-    auto found_entries_it =
-        local_module_resolver_->parameter_type_to_entries_.find(parameter_type);
-    if (found_entries_it !=
-        local_module_resolver_->parameter_type_to_entries_.end()) {
-      found_entries.insert(found_entries_it->second.begin(),
-                           found_entries_it->second.end());
+    std::set<ManifestId> found_entries;
+    auto found_manifests_it =
+        local_module_resolver_->parameter_type_to_manifests_.find(
+            parameter_type);
+    if (found_manifests_it !=
+        local_module_resolver_->parameter_type_to_manifests_.end()) {
+      found_entries.insert(found_manifests_it->second.begin(),
+                           found_manifests_it->second.end());
     }
     return found_entries;
   }
 
   // Creates FindModulesResults for each available mapping from
   // parameters in |query_| to the corresponding parameters in each candidate
-  // entry.
+  // manifest.
   //
-  // In order for a query to match an entry, it must contain enough parameters
-  // to populate each of the entry parameters.
+  // In order for a query to match an manifest, it must contain enough
+  // parameters to populate each of the manifest parameters.
   // TODO(MI4-866): Handle entries with optional parameters.
   fidl::VectorPtr<fuchsia::modular::FindModulesByTypesResult>
-  MatchQueryParametersToEntryParametersByType(
-      const fuchsia::modular::ModuleManifest& entry) {
+  MatchQueryParametersToManifestParametersByType(
+      const fuchsia::modular::ModuleManifest& manifest) {
     fidl::VectorPtr<fuchsia::modular::FindModulesByTypesResult> modules;
     modules.resize(0);
-    if (query_.parameter_constraints->size() <
-        entry.parameter_constraints->size()) {
-      return modules;
-    }
 
-    // Map each parameter in |entry| to the query parameter names that could
-    // be used to populate the |entry| parameter.
-    std::map<std::string, std::vector<std::string>>
-        entry_parameters_to_query_constraints =
-            MapEntryParametersToCompatibleQueryParameters(entry);
-
-    // Compute each possible map from |query_| parameter to the |entry|
-    // parameter that it should populate.
-    std::vector<std::map<std::string, std::string>> parameter_mappings =
-        ComputeResultsFromEntryParameterToQueryParameterMapping(
-            entry_parameters_to_query_constraints);
-
-    // For each of the possible mappings, create a resolver result.
-    for (const auto& parameter_mapping : parameter_mappings) {
-      fuchsia::modular::FindModulesByTypesResult result;
-      // TODO(vardhan): This score is a place holder. Compute a simple score for
-      // results.
-      result.score = 1.0f;
-      result.module_id = entry.binary;
-      result.action = entry.action;
-      for (auto& kv : parameter_mapping) {
-        fuchsia::modular::FindModulesByTypesParameterMapping entry;
-        entry.query_constraint_name = kv.first;
-        entry.result_param_name = kv.second;
-        result.parameter_mappings.push_back(std::move(entry));
+    for (const auto& intent_filter : *manifest.intent_filters) {
+      if (query_.parameter_constraints->size() <
+          intent_filter.parameter_constraints->size()) {
+        return modules;
       }
-      result.manifest = fuchsia::modular::ModuleManifest::New();
-      fidl::Clone(entry, result.manifest.get());
 
-      modules.push_back(std::move(result));
+      // Map each parameter in |intent_filter| to the query parameter names that
+      // could be used to populate the |intent_filter| parameter.
+      std::map<ParameterName, std::vector<ParameterName>>
+          intent_filter_params_to_query_constraints =
+              MapManifestParametersToCompatibleQueryParameters(intent_filter);
+
+      // Compute each possible map from |query_| parameter to the
+      // |intent_filter| parameter that it should populate.
+      std::vector<std::map<ParameterName, ParameterName>> parameter_mappings =
+          ComputeResultsFromEntryParameterToQueryParameterMapping(
+              intent_filter_params_to_query_constraints);
+
+      // For each of the possible mappings, create a resolver result.
+      for (const auto& parameter_mapping : parameter_mappings) {
+        fuchsia::modular::FindModulesByTypesResult result;
+        // TODO(vardhan): This score is a place holder. Compute a simple score
+        // for results.
+        result.score = 1.0f;
+        result.module_id = manifest.binary;
+        result.action = intent_filter.action;
+        for (auto& kv : parameter_mapping) {
+          fuchsia::modular::FindModulesByTypesParameterMapping mapping;
+          mapping.query_constraint_name = kv.first;
+          mapping.result_param_name = kv.second;
+          result.parameter_mappings.push_back(std::move(mapping));
+        }
+        result.manifest = fuchsia::modular::ModuleManifest::New();
+        fidl::Clone(manifest, result.manifest.get());
+
+        modules.push_back(std::move(result));
+      }
     }
 
     return modules;
   }
 
-  // Returns a map where the keys are the |entry|'s parameters, and the values
-  // are all the |query_| parameters that are type-compatible with that
-  // |entry| parameter.
+  // Returns a map where the keys are the |intent_filter|'s parameter names, and
+  // the values are all the |query_| parameter names that are type-compatible
+  // with that |intent_filter| parameter name.
   std::map<std::string, std::vector<std::string>>
-  MapEntryParametersToCompatibleQueryParameters(
-      const fuchsia::modular::ModuleManifest& entry) {
-    std::map<std::string, std::vector<std::string>>
-        entry_parameter_to_query_constraints;
-    for (const auto& entry_parameter : *entry.parameter_constraints) {
-      std::vector<std::string> matching_query_constraints;
+  MapManifestParametersToCompatibleQueryParameters(
+      const fuchsia::modular::IntentFilter& intent_filter) {
+    std::map<ParameterName, std::vector<ParameterName>>
+        intent_filter_param_to_query_constraints;
+    for (const auto& intent_filter_param :
+         *intent_filter.parameter_constraints) {
+      std::vector<ParameterName> matching_query_constraints;
       for (const auto& query_constraint : *query_.parameter_constraints) {
         const auto& this_query_constraint_cache =
             parameter_types_cache_[query_constraint.constraint_name];
         if (std::find(this_query_constraint_cache->begin(),
                       this_query_constraint_cache->end(),
-                      entry_parameter.type) !=
+                      intent_filter_param.type) !=
             this_query_constraint_cache->end()) {
           matching_query_constraints.push_back(
               query_constraint.constraint_name);
         }
       }
-      entry_parameter_to_query_constraints[entry_parameter.name] =
+      intent_filter_param_to_query_constraints[intent_filter_param.name] =
           matching_query_constraints;
     }
-    return entry_parameter_to_query_constraints;
+    return intent_filter_param_to_query_constraints;
   }
 
   // Returns a collection of valid mappings where the key is the query
-  // parameter, and the value is the entry parameter to be populated with the
+  // parameter, and the value is the manifest parameter to be populated with the
   // query parameters contents.
   //
-  // |remaining_entry_parameters| are all the entry parameters that are yet to
-  // be matched. |used_query_constraints| are all the query parameters that
-  // have already been used in the current solution.
+  // |remaining_intent_filter_params| are all the manifest parameters that are
+  // yet to be matched. |used_query_constraints| are all the query parameters
+  // that have already been used in the current solution.
   std::vector<std::map<std::string, std::string>>
   ComputeResultsFromEntryParameterToQueryParameterMapping(
       const std::map<std::string, std::vector<std::string>>&
-          remaining_entry_parameters,
+          remaining_intent_filter_params,
       const std::set<std::string>& used_query_constraints = {}) {
     std::vector<std::map<std::string, std::string>> result;
-    if (remaining_entry_parameters.empty()) {
+    if (remaining_intent_filter_params.empty()) {
       return result;
     }
 
-    auto first_entry_parameter_it = remaining_entry_parameters.begin();
-    const std::string& first_entry_parameter_name =
-        first_entry_parameter_it->first;
+    auto first_intent_filter_param_it = remaining_intent_filter_params.begin();
+    const std::string& first_intent_filter_param_name =
+        first_intent_filter_param_it->first;
     const std::vector<std::string> query_constraints_for_first_entry =
-        first_entry_parameter_it->second;
+        first_intent_filter_param_it->second;
 
-    // If there is only one remaining entry parameter, create one result
+    // If there is only one remaining manifest parameter, create one result
     // mapping for each viable query parameter.
-    if (remaining_entry_parameters.size() == 1) {
+    if (remaining_intent_filter_params.size() == 1) {
       for (const auto& query_constraint_name :
            query_constraints_for_first_entry) {
         // Don't create solutions where the query parameter has already been
@@ -362,13 +368,14 @@ class LocalModuleResolver::FindModulesByTypesCall
         }
 
         std::map<std::string, std::string> result_map;
-        result_map[query_constraint_name] = first_entry_parameter_name;
+        result_map[query_constraint_name] = first_intent_filter_param_name;
         result.push_back(result_map);
       }
       return result;
     }
 
-    for (const auto& query_constraint_name : first_entry_parameter_it->second) {
+    for (const auto& query_constraint_name :
+         first_intent_filter_param_it->second) {
       // If the query parameter has already been used, it cannot be matched
       // again, and thus the loop continues.
       if (used_query_constraints.find(query_constraint_name) !=
@@ -376,7 +383,7 @@ class LocalModuleResolver::FindModulesByTypesCall
         continue;
       }
 
-      // The current query parameter that will be used by the first entry
+      // The current query parameter that will be used by the first manifest
       // parameter must be added to the used set before computing the solution
       // to the smaller problem.
       std::set<std::string> new_used_query_constraints = used_query_constraints;
@@ -385,15 +392,16 @@ class LocalModuleResolver::FindModulesByTypesCall
       // Recurse for the remaining parameters.
       std::vector<std::map<std::string, std::string>> solution_for_remainder =
           ComputeResultsFromEntryParameterToQueryParameterMapping(
-              {std::next(remaining_entry_parameters.begin()),
-               remaining_entry_parameters.end()},
+              {std::next(remaining_intent_filter_params.begin()),
+               remaining_intent_filter_params.end()},
               new_used_query_constraints);
 
       // Expand each solution to the smaller problem by inserting the current
-      // query parameter -> entry parameter into the solution.
+      // query parameter -> manifest parameter into the solution.
       for (const auto& existing_solution : solution_for_remainder) {
         std::map<std::string, std::string> updated_solution = existing_solution;
-        updated_solution[query_constraint_name] = first_entry_parameter_name;
+        updated_solution[query_constraint_name] =
+            first_intent_filter_param_name;
         result.push_back(updated_solution);
       }
     }
@@ -428,9 +436,9 @@ void LocalModuleResolver::GetModuleManifest(
     fidl::StringPtr module_id, GetModuleManifestCallback callback) {
   FXL_DCHECK(!module_id.is_null());
 
-  for (auto& entry : entries_) {
-    if (entry.first.second == module_id.get()) {
-      callback(CloneOptional(entry.second));
+  for (auto& manifest : manifests_) {
+    if (manifest.first.second == module_id.get()) {
+      callback(CloneOptional(manifest.second));
       return;
     }
   }
@@ -460,38 +468,40 @@ void LocalModuleResolver::OnQuery(fuchsia::modular::UserInput query,
     return;
   }
 
-  for (const auto& id_entry : entries_) {
-    const auto& entry = id_entry.second;
-    // Simply prefix match on the last element of the action.
-    // actions have a convention of being namespaced like java classes:
-    // com.google.subdomain.action
-    std::string action = entry.action;
-    auto parts =
-        fxl::SplitString(action, ".", fxl::kKeepWhitespace, fxl::kSplitWantAll);
-    const auto& last_part = parts.back();
-    if (StringStartsWith(entry.action, query.text) ||
-        StringStartsWith(last_part.ToString(), query.text)) {
-      fuchsia::modular::Proposal proposal;
-      proposal.id = entry.binary;
+  for (const auto& id_entry : manifests_) {
+    const auto& manifest = id_entry.second;
+    for (const auto& intent_filter : *manifest.intent_filters) {
+      // Simply prefix match on the last element of the action.
+      // actions have a convention of being namespaced like java classes:
+      // com.google.subdomain.action
+      std::string action = intent_filter.action;
+      auto parts = fxl::SplitString(action, ".", fxl::kKeepWhitespace,
+                                    fxl::kSplitWantAll);
+      const auto& last_part = parts.back();
+      if (StringStartsWith(intent_filter.action, query.text) ||
+          StringStartsWith(last_part.ToString(), query.text)) {
+        fuchsia::modular::Proposal proposal;
+        proposal.id = manifest.binary;
 
-      fuchsia::modular::AddModule add_module;
-      add_module.intent.handler = entry.binary;
-      add_module.module_name = "root";
-      add_module.surface_parent_module_path.resize(0);
+        fuchsia::modular::AddModule add_module;
+        add_module.intent.handler = manifest.binary;
+        add_module.module_name = "root";
+        add_module.surface_parent_module_path.resize(0);
 
-      fuchsia::modular::Action action;
-      action.set_add_module(std::move(add_module));
-      proposal.on_selected.push_back(std::move(action));
+        fuchsia::modular::Action action;
+        action.set_add_module(std::move(add_module));
+        proposal.on_selected.push_back(std::move(action));
 
-      proposal.display.headline =
-          std::string("Go go gadget ") + last_part.ToString();
-      proposal.display.subheadline = entry.binary;
-      proposal.display.color = 0xffffffff;
-      proposal.display.annoyance = fuchsia::modular::AnnoyanceType::NONE;
+        proposal.display.headline =
+            std::string("Go go gadget ") + last_part.ToString();
+        proposal.display.subheadline = manifest.binary;
+        proposal.display.color = 0xffffffff;
+        proposal.display.annoyance = fuchsia::modular::AnnoyanceType::NONE;
 
-      proposal.confidence = 1.0;  // Yeah, super confident.
+        proposal.confidence = 1.0;  // Yeah, super confident.
 
-      proposals.push_back(std::move(proposal));
+        proposals.push_back(std::move(proposal));
+      }
     }
   }
 
@@ -525,49 +535,56 @@ void LocalModuleResolver::OnSourceIdle(const std::string& source_name) {
 void LocalModuleResolver::OnNewManifestEntry(
     const std::string& source_name, std::string id_in,
     fuchsia::modular::ModuleManifest new_entry) {
-  FXL_LOG(INFO) << "New Module manifest " << id_in
-                << ": action = " << new_entry.action
-                << ", binary = " << new_entry.binary;
-  // Add this new entry info to our local index.
-  if (entries_.count(EntryId(source_name, id_in)) > 0) {
-    // Remove this existing entry first, then add it back in.
+  FXL_LOG(INFO) << "New Module manifest for binary " << new_entry.binary
+                << " with " << new_entry.intent_filters->size()
+                << " intent filters";
+  // Add this new manifest info to our local index.
+  if (manifests_.count(ManifestId(source_name, id_in)) > 0) {
+    // Remove this existing manifest first, then add it back in.
     OnRemoveManifestEntry(source_name, id_in);
   }
+  if (new_entry.intent_filters->size() == 0) {
+    new_entry.intent_filters.resize(0);
+  }
   auto ret =
-      entries_.emplace(EntryId(source_name, id_in), std::move(new_entry));
+      manifests_.emplace(ManifestId(source_name, id_in), std::move(new_entry));
   FXL_CHECK(ret.second);
   const auto& id = ret.first->first;
-  const auto& entry = ret.first->second;
-  action_to_entries_[entry.action].insert(id);
+  const auto& manifest = ret.first->second;
+  for (const auto& intent_filter : *manifest.intent_filters) {
+    action_to_manifests_[intent_filter.action].insert(id);
 
-  for (const auto& constraint : *entry.parameter_constraints) {
-    parameter_type_and_name_to_entries_[std::make_pair(constraint.type,
-                                                       constraint.name)]
-        .insert(id);
-    parameter_type_to_entries_[constraint.type].insert(id);
+    for (const auto& constraint : *intent_filter.parameter_constraints) {
+      parameter_type_and_name_to_manifests_[std::make_pair(constraint.type,
+                                                           constraint.name)]
+          .insert(id);
+      parameter_type_to_manifests_[constraint.type].insert(id);
+    }
   }
 }
 
 void LocalModuleResolver::OnRemoveManifestEntry(const std::string& source_name,
                                                 std::string id_in) {
-  EntryId id{source_name, id_in};
-  auto it = entries_.find(id);
-  if (it == entries_.end()) {
-    FXL_LOG(WARNING) << "Asked to remove non-existent manifest entry: " << id;
+  ManifestId id{source_name, id_in};
+  auto it = manifests_.find(id);
+  if (it == manifests_.end()) {
+    FXL_LOG(WARNING) << "Asked to remove non-existent manifest: " << id;
     return;
   }
 
-  const auto& entry = it->second;
-  action_to_entries_[entry.action].erase(id);
+  const auto& manifest = it->second;
+  for (const auto& intent_filter : *manifest.intent_filters) {
+    action_to_manifests_[intent_filter.action].erase(id);
 
-  for (const auto& constraint : *entry.parameter_constraints) {
-    parameter_type_and_name_to_entries_[std::make_pair(constraint.type,
-                                                       constraint.name)]
-        .erase(id);
-    parameter_type_to_entries_[constraint.type].erase(id);
+    for (const auto& constraint : *intent_filter.parameter_constraints) {
+      parameter_type_and_name_to_manifests_[std::make_pair(constraint.type,
+                                                           constraint.name)]
+          .erase(id);
+      parameter_type_to_manifests_[constraint.type].erase(id);
+    }
   }
 
-  entries_.erase(id);
+  manifests_.erase(id);
 }
 
 void LocalModuleResolver::PeriodicCheckIfSourcesAreReady() {

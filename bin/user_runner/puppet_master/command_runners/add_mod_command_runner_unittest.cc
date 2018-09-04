@@ -19,6 +19,15 @@
 namespace modular {
 namespace {
 
+fuchsia::modular::IntentFilter MakeIntentFilter(
+    std::string action,
+    std::vector<fuchsia::modular::ParameterConstraint> param_constraints) {
+  fuchsia::modular::IntentFilter f;
+  f.action = action;
+  f.parameter_constraints.reset(param_constraints);
+  return f;
+}
+
 class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
  public:
   void SetUp() override {
@@ -256,7 +265,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
   auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
 
   auto manifest = fuchsia::modular::ModuleManifest::New();
-  manifest->action = "intent_action";
+  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
   manifest->binary = "mod_url";
 
   // Set up fake module resolver and set validation of GetModuleManifest call.
@@ -315,8 +324,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentThatNeedsResolution) {
   auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
 
   auto manifest = fuchsia::modular::ModuleManifest::New();
-  manifest->action = "intent_action";
   manifest->binary = "mod_url";
+  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
   fuchsia::modular::FindModulesResult result;
   result.module_id = "mod_url";
   fidl::Clone(manifest, &result.manifest);
@@ -440,8 +449,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidParameter) {
   auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
 
   auto manifest = fuchsia::modular::ModuleManifest::New();
-  manifest->action = "intent_action";
   manifest->binary = "mod_url";
+  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
 
   // Set up fake module resolver.
   fuchsia::modular::ModuleManifestPtr manifest_out;
@@ -471,8 +480,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidParameterWithResulution) {
 
   // Set up fake module resolver.
   auto manifest = fuchsia::modular::ModuleManifest::New();
-  manifest->action = "intent_action";
   manifest->binary = "mod_url";
+  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
   fuchsia::modular::FindModulesResult result;
   result.module_id = "mod_url";
   fidl::Clone(manifest, &result.manifest);
@@ -523,8 +532,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteNoLinkPathForLinkName) {
 
   // Set up fake module resolver.
   auto manifest = fuchsia::modular::ModuleManifest::New();
-  manifest->action = "intent_action";
   manifest->binary = "mod_url";
+  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
   fuchsia::modular::FindModulesResult result;
   result.module_id = "mod_url";
   fidl::Clone(manifest, &result.manifest);
@@ -553,8 +562,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidJsonLinkPathParam) {
 
   // Set up fake module resolver.
   auto manifest = fuchsia::modular::ModuleManifest::New();
-  manifest->action = "intent_action";
   manifest->binary = "mod_url";
+  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
   fuchsia::modular::FindModulesResult result;
   result.module_id = "mod_url";
   fidl::Clone(manifest, &result.manifest);
@@ -583,8 +592,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidJsonParam) {
 
   // Set up fake module resolver.
   auto manifest = fuchsia::modular::ModuleManifest::New();
-  manifest->action = "intent_action";
   manifest->binary = "mod_url";
+  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
   fuchsia::modular::ModuleManifestPtr manifest_out;
   fidl::Clone(manifest, &manifest_out);
   fake_module_resolver_->SetManifest(std::move(manifest_out));
@@ -610,8 +619,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidJsonParamResolution) {
 
   // Set up fake module resolver.
   auto manifest = fuchsia::modular::ModuleManifest::New();
-  manifest->action = "intent_action";
   manifest->binary = "mod_url";
+  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
   fuchsia::modular::FindModulesResult result;
   result.module_id = "mod_url";
   fidl::Clone(manifest, &result.manifest);
@@ -637,8 +646,8 @@ TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
   auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
 
   auto manifest = fuchsia::modular::ModuleManifest::New();
-  manifest->action = "intent_action";
   manifest->binary = "mod_url";
+  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
 
   // Set up fake module resolver and set validaiton of GetModuleManifest call.
   fuchsia::modular::ModuleManifestPtr manifest_out;

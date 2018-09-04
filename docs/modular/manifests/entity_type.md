@@ -1,8 +1,8 @@
 fuchsia::modular::Entity Types
 ===
 > Status: DRAFT
-> 
-> This is a stand-in for a future schematic metadata system for Entities. For now, 
+>
+> This is a stand-in for a future schematic metadata system for Entities. For now,
 > it is used to specify schemas for schematic content in the cases where that
 > is relevant to clients creating Entities.
 
