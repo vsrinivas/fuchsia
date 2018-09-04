@@ -48,7 +48,7 @@ zx_status_t mtrace_insntrace_control(uint32_t action, uint32_t options,
             return ZX_ERR_INVALID_ARGS;
         return x86_ipt_free_trace();
 
-    case MTRACE_INSNTRACE_STAGE_CPU_DATA: {
+    case MTRACE_INSNTRACE_STAGE_TRACE_DATA: {
         zx_x86_pt_regs_t regs;
         if (size != sizeof(regs))
             return ZX_ERR_INVALID_ARGS;
@@ -58,15 +58,15 @@ zx_status_t mtrace_insntrace_control(uint32_t action, uint32_t options,
         zx_itrace_buffer_descriptor_t descriptor = options;
         TRACEF("action %u, descriptor %u, ctl 0x%" PRIx64 ", output_base 0x%" PRIx64 "\n",
                action, descriptor, regs.ctl, regs.output_base);
-        return x86_ipt_stage_cpu_data(descriptor, &regs);
+        return x86_ipt_stage_trace_data(descriptor, &regs);
     }
 
-    case MTRACE_INSNTRACE_GET_CPU_DATA: {
+    case MTRACE_INSNTRACE_GET_TRACE_DATA: {
         zx_x86_pt_regs_t regs;
         if (size != sizeof(regs))
             return ZX_ERR_INVALID_ARGS;
         zx_itrace_buffer_descriptor_t descriptor = options;
-        auto status = x86_ipt_get_cpu_data(descriptor, &regs);
+        auto status = x86_ipt_get_trace_data(descriptor, &regs);
         if (status != ZX_OK)
             return status;
         TRACEF("action %u, descriptor %u, ctl 0x%" PRIx64 ", output_base 0x%" PRIx64 "\n",
@@ -77,15 +77,15 @@ zx_status_t mtrace_insntrace_control(uint32_t action, uint32_t options,
         return ZX_OK;
     }
 
-    case MTRACE_INSNTRACE_CPU_MODE_START:
+    case MTRACE_INSNTRACE_START:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_ipt_cpu_mode_start();
+        return x86_ipt_start();
 
-    case MTRACE_INSNTRACE_CPU_MODE_STOP:
+    case MTRACE_INSNTRACE_STOP:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_ipt_cpu_mode_stop();
+        return x86_ipt_stop();
 
     default:
         return ZX_ERR_INVALID_ARGS;

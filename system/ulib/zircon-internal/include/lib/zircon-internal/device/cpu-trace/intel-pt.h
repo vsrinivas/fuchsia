@@ -247,21 +247,21 @@ typedef struct {
     // for IOCTL_KIND_SET_HANDLE first element must be the handle
     zx_handle_t thread;
     zx_itrace_buffer_descriptor_t descriptor;
-} ioctl_insntrace_assign_buffer_thread_t;
+} ioctl_insntrace_assign_thread_buffer_t;
 
 // assign a buffer to a thread
-// Input: ioctl_insntrace_assign_buffer_thread_t
-#define IOCTL_INSNTRACE_ASSIGN_BUFFER_THREAD \
+// Input: ioctl_insntrace_assign_thread_buffer_t
+#define IOCTL_INSNTRACE_ASSIGN_THREAD_BUFFER \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_INSNTRACE, 4)
-IOCTL_WRAPPER_IN(ioctl_insntrace_assign_buffer_thread, IOCTL_INSNTRACE_ASSIGN_BUFFER_THREAD,
-                 ioctl_insntrace_assign_buffer_thread_t);
+IOCTL_WRAPPER_IN(ioctl_insntrace_assign_thread_buffer, IOCTL_INSNTRACE_ASSIGN_THREAD_BUFFER,
+                 ioctl_insntrace_assign_thread_buffer_t);
 
 // release a buffer from a thread
-// Input: ioctl_insntrace_assign_buffer_thread_t
-#define IOCTL_INSNTRACE_RELEASE_BUFFER_THREAD \
+// Input: ioctl_insntrace_assign_thread_buffer_t
+#define IOCTL_INSNTRACE_RELEASE_THREAD_BUFFER \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_INSNTRACE, 5)
-IOCTL_WRAPPER_IN(ioctl_insntrace_release_buffer_thread, IOCTL_INSNTRACE_RELEASE_BUFFER_THREAD,
-                 ioctl_insntrace_assign_buffer_thread_t);
+IOCTL_WRAPPER_IN(ioctl_insntrace_release_thread_buffer, IOCTL_INSNTRACE_RELEASE_THREAD_BUFFER,
+                 ioctl_insntrace_assign_thread_buffer_t);
 
 // return config data for a trace buffer
 // Input: zx_itrace_buffer_descriptor_t

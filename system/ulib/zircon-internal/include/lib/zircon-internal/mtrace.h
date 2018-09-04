@@ -25,24 +25,14 @@ __BEGIN_CDECLS
 // Free everything allocated with MTRACE_INSNTRACE_ALLOC_TRACE.
 #define MTRACE_INSNTRACE_FREE_TRACE 1
 
-// Stage all trace buffer data for a CPU.
-#define MTRACE_INSNTRACE_STAGE_CPU_DATA 2
+// Stage all trace buffer data for the specified buffer descriptor.
+#define MTRACE_INSNTRACE_STAGE_TRACE_DATA 2
 
-// Fetch trace buffer data (MSRs) for a CPU.
-#define MTRACE_INSNTRACE_GET_CPU_DATA 3
+// Fetch trace buffer data (MSRs) for the specified buffer descriptor.
+#define MTRACE_INSNTRACE_GET_TRACE_DATA 3
 
-#define MTRACE_INSNTRACE_CPU_MODE_START 4
-#define MTRACE_INSNTRACE_CPU_MODE_STOP 5
-
-// Encode/decode options values for mtrace_control().
-// At present we just encode the cpu number here.
-// We only support 32 cpus at the moment, the extra bit is for magic values.
-#define MTRACE_INSNTRACE_OPTIONS_CPU_MASK 0x3f
-#define MTRACE_INSNTRACE_OPTIONS(cpu) ((cpu) & MTRACE_INSNTRACE_OPTIONS_CPU_MASK)
-
-#define MTRACE_INSNTRACE_ALL_CPUS 32
-
-#define MTRACE_INSNTRACE_OPTIONS_CPU(options) ((options) & MTRACE_INSNTRACE_OPTIONS_CPU_MASK)
+#define MTRACE_INSNTRACE_START 4
+#define MTRACE_INSNTRACE_STOP 5
 
 // Actions for CPU Performance Counters/Statistics control
 

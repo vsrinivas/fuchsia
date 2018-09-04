@@ -30,14 +30,14 @@ zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode);
 
 zx_status_t x86_ipt_free_trace();
 
-zx_status_t x86_ipt_cpu_mode_start();
+zx_status_t x86_ipt_start();
 
-zx_status_t x86_ipt_cpu_mode_stop();
+zx_status_t x86_ipt_stop();
 
-zx_status_t x86_ipt_stage_cpu_data(zx_itrace_buffer_descriptor_t descriptor,
-                                   const zx_x86_pt_regs_t* regs);
+zx_status_t x86_ipt_stage_trace_data(zx_itrace_buffer_descriptor_t descriptor,
+                                     const zx_x86_pt_regs_t* regs);
 
-zx_status_t x86_ipt_get_cpu_data(zx_itrace_buffer_descriptor_t descriptor,
-                                 zx_x86_pt_regs_t* regs);
+zx_status_t x86_ipt_get_trace_data(zx_itrace_buffer_descriptor_t descriptor,
+                                   zx_x86_pt_regs_t* regs);
 
 #endif // __cplusplus

@@ -250,7 +250,7 @@ static void x86_ipt_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
 
 // Begin the trace.
 
-zx_status_t x86_ipt_cpu_mode_start() {
+zx_status_t x86_ipt_start() {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
@@ -327,7 +327,7 @@ static void x86_ipt_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
 // This can be called while not active, so the caller doesn't have to care
 // during any cleanup.
 
-zx_status_t x86_ipt_cpu_mode_stop() {
+zx_status_t x86_ipt_stop() {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
@@ -356,8 +356,8 @@ zx_status_t x86_ipt_cpu_mode_stop() {
     return ZX_OK;
 }
 
-zx_status_t x86_ipt_stage_cpu_data(zx_itrace_buffer_descriptor_t descriptor,
-                                   const zx_x86_pt_regs_t* regs) {
+zx_status_t x86_ipt_stage_trace_data(zx_itrace_buffer_descriptor_t descriptor,
+                                     const zx_x86_pt_regs_t* regs) {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
@@ -383,8 +383,8 @@ zx_status_t x86_ipt_stage_cpu_data(zx_itrace_buffer_descriptor_t descriptor,
     return ZX_OK;
 }
 
-zx_status_t x86_ipt_get_cpu_data(zx_itrace_buffer_descriptor_t descriptor,
-                                 zx_x86_pt_regs_t* regs) {
+zx_status_t x86_ipt_get_trace_data(zx_itrace_buffer_descriptor_t descriptor,
+                                   zx_x86_pt_regs_t* regs) {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)

@@ -531,7 +531,7 @@ static zx_status_t x86_pt_alloc_buffer(insntrace_device_t* ipt_dev,
     return ZX_OK;
 }
 
-static zx_status_t x86_pt_assign_buffer_thread(insntrace_device_t* ipt_dev,
+static zx_status_t x86_pt_assign_thread_buffer(insntrace_device_t* ipt_dev,
                                                zx_itrace_buffer_descriptor_t descriptor,
                                                zx_handle_t thread) {
     zx_handle_close(thread);
@@ -539,7 +539,7 @@ static zx_status_t x86_pt_assign_buffer_thread(insntrace_device_t* ipt_dev,
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t x86_pt_release_buffer_thread(insntrace_device_t* ipt_dev,
+static zx_status_t x86_pt_release_thread_buffer(insntrace_device_t* ipt_dev,
                                                 zx_itrace_buffer_descriptor_t descriptor,
                                                 zx_handle_t thread) {
     zx_handle_close(thread);
@@ -691,24 +691,24 @@ static zx_status_t ipt_alloc_buffer(insntrace_device_t* ipt_dev,
     return ZX_OK;
 }
 
-static zx_status_t ipt_assign_buffer_thread(insntrace_device_t* ipt_dev,
+static zx_status_t ipt_assign_thread_buffer(insntrace_device_t* ipt_dev,
                                             const void* cmd, size_t cmdlen) {
-    ioctl_insntrace_assign_buffer_thread_t assign;
+    ioctl_insntrace_assign_thread_buffer_t assign;
     if (cmdlen != sizeof(assign))
         return ZX_ERR_INVALID_ARGS;
 
     memcpy(&assign, cmd, sizeof(assign));
-    return x86_pt_assign_buffer_thread(ipt_dev, assign.descriptor, assign.thread);
+    return x86_pt_assign_thread_buffer(ipt_dev, assign.descriptor, assign.thread);
 }
 
-static zx_status_t ipt_release_buffer_thread(insntrace_device_t* ipt_dev,
+static zx_status_t ipt_release_thread_buffer(insntrace_device_t* ipt_dev,
                                              const void* cmd, size_t cmdlen) {
-    ioctl_insntrace_assign_buffer_thread_t assign;
+    ioctl_insntrace_assign_thread_buffer_t assign;
     if (cmdlen != sizeof(assign))
         return ZX_ERR_INVALID_ARGS;
 
     memcpy(&assign, cmd, sizeof(assign));
-    return x86_pt_release_buffer_thread(ipt_dev, assign.descriptor, assign.thread);
+    return x86_pt_release_thread_buffer(ipt_dev, assign.descriptor, assign.thread);
 }
 
 static zx_status_t ipt_get_buffer_config(insntrace_device_t* ipt_dev,
@@ -845,14 +845,14 @@ static zx_status_t ipt_start(insntrace_device_t* ipt_dev) {
         memcpy(regs.addr_ranges, per_trace->addr_ranges, sizeof(per_trace->addr_ranges));
 
         status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,
-                                   MTRACE_INSNTRACE_STAGE_CPU_DATA,
+                                   MTRACE_INSNTRACE_STAGE_TRACE_DATA,
                                    cpu, &regs, sizeof(regs));
         if (status != ZX_OK)
             return status;
     }
 
     status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,
-                               MTRACE_INSNTRACE_CPU_MODE_START,
+                               MTRACE_INSNTRACE_START,
                                0, NULL, 0);
     if (status != ZX_OK)
         return status;
@@ -869,7 +869,7 @@ static zx_status_t ipt_stop(insntrace_device_t* ipt_dev) {
     zx_handle_t resource = get_root_resource();
 
     zx_status_t status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,
-                                           MTRACE_INSNTRACE_CPU_MODE_STOP,
+                                           MTRACE_INSNTRACE_STOP,
                                            0, NULL, 0);
     if (status != ZX_OK)
         return status;
@@ -880,7 +880,7 @@ static zx_status_t ipt_stop(insntrace_device_t* ipt_dev) {
 
         zx_x86_pt_regs_t regs;
         status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,
-                                   MTRACE_INSNTRACE_GET_CPU_DATA,
+                                   MTRACE_INSNTRACE_GET_TRACE_DATA,
                                    cpu, &regs, sizeof(regs));
         if (status != ZX_OK)
             return status;
@@ -934,15 +934,15 @@ zx_status_t insntrace_ioctl(cpu_trace_device_t* dev, uint32_t op,
     case IOCTL_INSNTRACE_ALLOC_BUFFER:
         return ipt_alloc_buffer(ipt_dev, cmd, cmdlen, reply, replymax, out_actual);
 
-    case IOCTL_INSNTRACE_ASSIGN_BUFFER_THREAD:
+    case IOCTL_INSNTRACE_ASSIGN_THREAD_BUFFER:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
-        return ipt_assign_buffer_thread(ipt_dev, cmd, cmdlen);
+        return ipt_assign_thread_buffer(ipt_dev, cmd, cmdlen);
 
-    case IOCTL_INSNTRACE_RELEASE_BUFFER_THREAD:
+    case IOCTL_INSNTRACE_RELEASE_THREAD_BUFFER:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
-        return ipt_release_buffer_thread(ipt_dev, cmd, cmdlen);
+        return ipt_release_thread_buffer(ipt_dev, cmd, cmdlen);
 
     case IOCTL_INSNTRACE_GET_BUFFER_CONFIG:
         return ipt_get_buffer_config(ipt_dev, cmd, cmdlen, reply, replymax, out_actual);
