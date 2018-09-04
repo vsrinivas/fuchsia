@@ -47,7 +47,9 @@ the socket, the amount written is returned via *actual* and the call succeeds.
 Otherwise, if the socket was already full, the call returns
 **ZX_ERR_SHOULD_WAIT** and the client should wait (e.g., with
 [object_wait_one](object_wait_one.md) or
-[object_wait_async](object_wait_async.md)).
+[object_wait_async](object_wait_async.md)). For datagram sockets, attempting to
+write a packet larger than the socket's capacity will fail with
+**ZX_ERR_OUT_OF_RANGE**.
 
 A **ZX_SOCKET_DATAGRAM** socket write is never short. If the socket has
 insufficient space for *buffer*, it writes nothing and returns
@@ -78,9 +80,10 @@ or **ZX_SOCKET_SHUTDOWN_READ** and/or **ZX_SOCKET_SHUTDOWN_WRITE**.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_WRITE**.
 
-**ZX_ERR_SHOULD_WAIT**  The buffer underlying the socket is full, or
-the socket was created with **ZX_SOCKET_DATAGRAM** and *buffer* is
-larger than the remaining space in the socket.
+**ZX_ERR_SHOULD_WAIT**  The buffer underlying the socket is full.
+
+**ZX_ERR_OUT_OF_RANGE**  The socket was created with **ZX_SOCKET_DATAGRAM** and
+*buffer* is larger than the remaining space in the socket.
 
 **ZX_ERR_BAD_STATE**  Writing has been disabled for this socket endpoint.
 

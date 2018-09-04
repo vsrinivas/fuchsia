@@ -81,6 +81,8 @@ zx_status_t MBufChain::WriteDatagram(user_in_ptr<const void> src, size_t len,
     if (len == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
+    if (len > kSizeMax)
+        return ZX_ERR_OUT_OF_RANGE;
     if (len + size_ > kSizeMax)
         return ZX_ERR_SHOULD_WAIT;
 

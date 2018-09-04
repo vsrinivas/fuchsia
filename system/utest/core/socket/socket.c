@@ -577,15 +577,25 @@ static bool socket_datagram_no_short_write(void) {
     status = zx_socket_create(ZX_SOCKET_DATAGRAM, &h0, &h1);
     ASSERT_EQ(status, ZX_OK, "");
 
-    // TODO(qsr): Request socket buffer and use (socket_buffer + 1).
-    const size_t buffer_size = 256 * 1024 + 1;
-    char* buffer = malloc(buffer_size);
-    size_t written = 999;
+    size_t tx_buf_size = 0u;
+    status = zx_object_get_property(h0, ZX_PROP_SOCKET_TX_BUF_MAX, &tx_buf_size,
+                                    sizeof(tx_buf_size));
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_GT(tx_buf_size, 0u, "");
+
+    // Pick a size for a huge datagram, and make sure not to overflow.
+    size_t buffer_size = tx_buf_size * 2;
+    EXPECT_GT(buffer_size, 0u, "");
+
+    void* buffer = calloc(buffer_size, 1u);
+    EXPECT_NONNULL(buffer, "");
+
+    size_t written = ~0u;
     status = zx_socket_write(h0, 0u, buffer, buffer_size, &written);
-    EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT, "");
+    EXPECT_EQ(status, ZX_ERR_OUT_OF_RANGE, "");
     // Since the syscall failed, it should not have overwritten this output
     // parameter.
-    EXPECT_EQ(written, 999u, "");
+    EXPECT_EQ(written, ~0u, "");
 
     free(buffer);
     zx_handle_close(h0);

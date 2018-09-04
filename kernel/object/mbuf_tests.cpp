@@ -310,6 +310,23 @@ static bool datagram_write_too_much() {
     END_TEST;
 }
 
+// Tests writing a datagram packet larger than the mbuf's capacity.
+static bool datagram_write_huge_packet() {
+    BEGIN_TEST;
+
+    MBufChain chain;
+
+    const size_t kHugePacketSize = chain.max_size() + 1;
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kHugePacketSize);
+    auto mem_in = make_user_in_ptr(mem->in());
+
+    size_t written;
+    zx_status_t status = chain.WriteDatagram(mem_in, kHugePacketSize, &written);
+    ASSERT_EQ(status, ZX_ERR_OUT_OF_RANGE, "");
+
+    END_TEST;
+}
+
 } // namespace
 
 UNITTEST_START_TESTCASE(mbuf_tests)
@@ -325,4 +342,5 @@ UNITTEST("datagram_read_buffer_too_small", datagram_read_buffer_too_small)
 UNITTEST("datagram_write_basic", datagram_write_basic)
 UNITTEST("datagram_write_zero", datagram_write_zero)
 UNITTEST("datagram_write_too_much", datagram_write_too_much)
+UNITTEST("datagram_write_huge_packet", datagram_write_huge_packet)
 UNITTEST_END_TESTCASE(mbuf_tests, "mbuf", "MBuf test");
