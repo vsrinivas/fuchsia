@@ -48,7 +48,6 @@ struct WlanChan {
 // LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/mac.h)
 
 struct ScanRequest {
-    // For now, the special value of 0 indicates "use legacy non-incremental ScanConf message"
     uint64 txn_id;
     BSSTypes bss_type;
     array<uint8>:6 bssid;
@@ -419,13 +418,6 @@ struct ScanResult {
 struct ScanEnd {
     uint64 txn_id;
     ScanResultCodes code;
-};
-
-// TODO(gbonik): remove after transition to wlanstack2
-struct ScanConfirm {
-    vector<BSSDescription> bss_description_set;
-    // BSSDescriptionFromMeasurementPilotSet
-    ScanResultCodes result_code;
 };
 
 // MLME-JOIN.request (IEEE Std 802.11-2016, 6.3.4.2)
@@ -812,10 +804,6 @@ interface MLME {
 
     // An event that signals the end of a scan transaction.
     010200: -> OnScanEnd(ScanEnd end);
-
-    // Legacy non-incremental scan result
-    // TODO(gbonik): remove after transition to wlanstack2
-    2: -> ScanConf(ScanConfirm resp);
 
     // ====
 

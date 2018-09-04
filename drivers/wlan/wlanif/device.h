@@ -52,7 +52,6 @@ class Device : public wlan_mlme::MLME {
     // wlanif_impl_ifc (wlanif-impl -> ::fuchsia::wlan::mlme)
     void OnScanResult(wlanif_scan_result_t* result);
     void OnScanEnd(wlanif_scan_end_t* result);
-    void ScanConf(wlanif_scan_confirm_t* resp);
     void JoinConf(wlanif_join_confirm_t* resp);
     void AuthenticateConf(wlanif_auth_confirm_t* resp);
     void AuthenticateResp(wlanif_auth_resp_t* resp);

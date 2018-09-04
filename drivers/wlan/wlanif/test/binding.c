@@ -30,8 +30,6 @@ void wlanif_stop(void* ctx) {
 
 #define MAX_SSID_LEN 100
 
-#define INCREMENTAL_SCAN
-
 wlanif_bss_description_t scan_results[] = {
     { .bssid = {11, 22, 33, 44, 55, 66},
       .ssid = "Fake AP 1",
@@ -47,7 +45,6 @@ wlanif_bss_description_t scan_results[] = {
 
 #define NUM_SCAN_RESULTS countof(scan_results)
 
-#ifdef INCREMENTAL_SCAN
 int fake_scan_results(void* arg) {
     printf("***** faking scan results!\n");
     for (unsigned int iter = 0; iter < NUM_SCAN_RESULTS; iter++) {
@@ -63,18 +60,6 @@ int fake_scan_results(void* arg) {
     wlanif_ifc.on_scan_end(wlanif_cookie, &scan_end);
     return 0;
 }
-#else
-int fake_scan_results(void* arg) {
-    printf("***** faking scan results!\n");
-    zx_nanosleep(zx_deadline_after(ZX_SEC(2)));
-    wlanif_scan_confirm_t conf;
-    conf.num_bss_descs = NUM_SCAN_RESULTS;
-    conf.bss_description_set = scan_results;
-    conf.result_code = SCAN_RESULT_SUCCESS;
-    wlanif_ifc.scan_conf(wlanif_cookie, &conf);
-    return 0;
-}
-#endif
 
 void wlanif_start_scan(void* ctx, wlanif_scan_req_t* req) {
     printf("***** starting scan (txn_id = %lu)!!!\n", req->txn_id);

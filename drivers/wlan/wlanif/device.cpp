@@ -53,8 +53,6 @@ static wlanif_impl_ifc_t wlanif_impl_ifc_ops = {
                           { DEV(cookie)->OnScanResult(result); },
     .on_scan_end = [](void* cookie, wlanif_scan_end_t* end)
                        { DEV(cookie)->OnScanEnd(end); },
-    .scan_conf = [](void* cookie, wlanif_scan_confirm_t* resp)
-                     { DEV(cookie)->ScanConf(resp); },
     .join_conf = [](void* cookie, wlanif_join_confirm_t* resp)
                      { DEV(cookie)->JoinConf(resp); },
     .auth_conf = [](void* cookie, wlanif_auth_confirm_t* resp)
@@ -618,27 +616,6 @@ void Device::OnScanEnd(wlanif_scan_end_t* end) {
     fidl_end.code = ConvertScanResultCode(end->code);
 
     binding_.events().OnScanEnd(std::move(fidl_end));
-}
-
-void Device::ScanConf(wlanif_scan_confirm_t* resp) {
-    std::lock_guard<std::mutex> lock(lock_);
-    if (!binding_.is_bound()) {
-        return;
-    }
-
-    wlan_mlme::ScanConfirm fidl_resp;
-
-    // bss_description_set
-    fidl_resp.bss_description_set->resize(resp->num_bss_descs);
-    for (size_t ndx = 0; ndx < resp->num_bss_descs; ndx++) {
-        ConvertBSSDescription(&(*fidl_resp.bss_description_set)[ndx],
-                              &resp->bss_description_set[ndx]);
-    }
-
-    // result_code
-    fidl_resp.result_code = ConvertScanResultCode(resp->result_code);
-
-    binding_.events().ScanConf(std::move(fidl_resp));
 }
 
 void Device::JoinConf(wlanif_join_confirm_t* resp) {

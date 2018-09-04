@@ -32,20 +32,11 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 static constexpr size_t kMaxBssPerChannel = 100;
 
 static void SendScanEnd(DeviceInterface* device, uint64_t txn_id, wlan_mlme::ScanResultCodes code) {
-    if (txn_id != 0) {
-        wlan_mlme::ScanEnd msg;
-        msg.txn_id = txn_id;
-        msg.code = code;
-        zx_status_t s = SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEOnScanEndOrdinal);
-        if (s != ZX_OK) { errorf("failed to send OnScanEnd event: %d\n", s); }
-    } else {
-        // TODO(gbonik): remove legacy support
-        wlan_mlme::ScanConfirm msg;
-        msg.result_code = code;
-        msg.bss_description_set.resize(0);
-        zx_status_t s = SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEScanConfOrdinal);
-        if (s != ZX_OK) { errorf("failed to send ScanConf event: %d\n", s); }
-    }
+    wlan_mlme::ScanEnd msg;
+    msg.txn_id = txn_id;
+    msg.code = code;
+    zx_status_t s = SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEOnScanEndOrdinal);
+    if (s != ZX_OK) { errorf("failed to send OnScanEnd event: %d\n", s); }
 }
 
 static zx_status_t SendResults(DeviceInterface* device, uint64_t txn_id,
@@ -58,19 +49,6 @@ static zx_status_t SendResults(DeviceInterface* device, uint64_t txn_id,
         if (status != ZX_OK) { return status; }
     }
     return ZX_OK;
-}
-
-static zx_status_t SendLegacyScanConf(DeviceInterface* device,
-                                      const std::unordered_map<uint64_t, Bss>& bss_map) {
-    wlan_mlme::ScanConfirm conf;
-    conf.result_code = wlan_mlme::ScanResultCodes::SUCCESS;
-    conf.bss_description_set.resize(0);
-    for (auto& p : bss_map) {
-        conf.bss_description_set.push_back(p.second.ToFidl());
-    }
-    zx_status_t status = SendServiceMsg(device, &conf, fuchsia_wlan_mlme_MLMEScanConfOrdinal);
-    if (status != ZX_OK) { errorf("failed to send ScanConf: %d\n", status); }
-    return status;
 }
 
 // TODO(NET-500): The way we handle Beacons and ProbeResponses in here is kinda gross. Refactor.
@@ -166,27 +144,19 @@ bool Scanner::OffChannelHandlerImpl::EndOffChannelTime(bool interrupted,
         return true;
     }
 
-    // TODO(gbonik): remove the 'if' once we remove legacy support
-    if (scanner_->req_->txn_id != 0) {
-        zx_status_t status = SendResults(scanner_->device_, scanner_->req_->txn_id,
-                                         scanner_->current_bss_);
-        if (status != ZX_OK) {
-            errorf("scanner: failed to send results: %d\n", status);
-            SendScanEnd(scanner_->device_, scanner_->req_->txn_id,
-                        wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
-            scanner_->Reset();
-            return false;
-        }
-        scanner_->current_bss_.clear();
+    zx_status_t status = SendResults(scanner_->device_, scanner_->req_->txn_id,
+                                     scanner_->current_bss_);
+    if (status != ZX_OK) {
+        errorf("scanner: failed to send results: %d\n", status);
+        SendScanEnd(scanner_->device_, scanner_->req_->txn_id,
+                    wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
+        scanner_->Reset();
+        return false;
     }
+    scanner_->current_bss_.clear();
     if (++scanner_->channel_index_ >= scanner_->req_->channel_list->size()) {
-        // TODO(gbonik): remove legacy support
-        if (scanner_->req_->txn_id != 0) {
-            SendScanEnd(scanner_->device_, scanner_->req_->txn_id,
-                        wlan_mlme::ScanResultCodes::SUCCESS);
-        } else {
-            SendLegacyScanConf(scanner_->device_, scanner_->current_bss_);
-        }
+        SendScanEnd(scanner_->device_, scanner_->req_->txn_id,
+                    wlan_mlme::ScanResultCodes::SUCCESS);
         scanner_->Reset();
         return false;
     } else {
@@ -286,17 +256,12 @@ void Scanner::HandleHwScanComplete() {
         return;
     }
 
-    // TODO(gbonik): remove legacy support once wlanstack2 lands
-    if (req_->txn_id != 0) {
-        zx_status_t status = SendResults(device_, req_->txn_id, current_bss_);
-        if (status != ZX_OK) {
-            errorf("scanner: failed to send results: %d\n", status);
-            SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
-        } else {
-            SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::SUCCESS);
-        }
+    zx_status_t status = SendResults(device_, req_->txn_id, current_bss_);
+    if (status == ZX_OK) {
+        SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::SUCCESS);
     } else {
-        SendLegacyScanConf(device_, current_bss_);
+        errorf("scanner: failed to send results: %d\n", status);
+        SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
     }
     Reset();
 }

@@ -248,12 +248,6 @@ typedef struct wlanif_scan_end {
     uint8_t code; // WLAN_SCAN_RESULT_*
 } wlanif_scan_end_t;
 
-typedef struct wlanif_scan_confirm {
-    size_t num_bss_descs;
-    wlanif_bss_description_t* bss_description_set;
-    uint8_t result_code; // WLAN_SCAN_RESULT_*
-} wlanif_scan_confirm_t;
-
 enum {
     WLAN_JOIN_RESULT_SUCCESS = 0,
     WLAN_JOIN_RESULT_FAILURE_TIMEOUT = 1,
@@ -422,7 +416,6 @@ typedef struct wlanif_impl_ifc {
     // MLME operations
     void (*on_scan_result)(void* cookie, wlanif_scan_result_t* result);
     void (*on_scan_end)(void* cookie, wlanif_scan_end_t* end);
-    void (*scan_conf)(void* cookie, wlanif_scan_confirm_t* resp);
     void (*join_conf)(void* cookie, wlanif_join_confirm_t* resp);
     void (*auth_conf)(void* cookie, wlanif_auth_confirm_t* resp);
     void (*auth_resp)(void* cookie, wlanif_auth_resp_t* resp);

@@ -149,7 +149,6 @@ struct MockDevice : public DeviceInterface {
     uint16_t GetChannelNumber() { return state->channel().primary; }
 
     template <typename T> zx_status_t GetQueuedServiceMsg(uint32_t ordinal, T* out) {
-        EXPECT_EQ(1u, svc_queue.size());
         auto iter = svc_queue.begin();
         auto packet = std::move(*iter);
         svc_queue.erase(iter);
