@@ -38,26 +38,14 @@ sudo apt-get install build-essential curl git python unzip
 1.  In addition to Command Line Tools, you also need to
     install a recent version of [Xcode](https://developer.apple.com/xcode/).
 
-### [Googlers only] Goma
-
-Ensure `goma` is installed on your machine for faster builds.
-
-## Build Fuchsia
-
-### Get the source
+## Get the Source
 
 Follow [the instructions to get the Fuchsia source](/development/source_code/README.md)
 and then return to this document.
 
-### [Googlers only] CIPD auth-login
+## Build Fuchsia
 
-Run
-```
-./buildtools/cipd auth-login
-jiri run-hooks  # Re-run hooks now that you're logged in.
-```
-
-You should only need to do this once per host.
+Note: A quick overview of the basic build-and-pave workflow can be found [here](/development/workflows/build_and_pave_quickstart.md).
 
 ### Build
 
@@ -116,7 +104,9 @@ To override the default behaviors, pass flags to `fx set`:
 ### Installing and booting from hardware
 
 To get Fuchsia running on hardware requires using the paver, which these
-[instructions](/development/workflows/fuchsia_paver.md) will help you get up and running with.
+[instructions](/development/workflows/paving.md) will help you get up and running with.
+
+Note: A quick overview of the basic build-and-pave workflow can be found [here](/development/workflows/build_and_pave_quickstart.md).
 
 ### Boot from QEMU
 

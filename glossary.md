@@ -257,7 +257,7 @@ Package is an overloaded term. Package may refer to a
 #### **Paver**
 
 A tool in Zircon that installs partition images to internal storage of a device.
-- [Guide for installing Fuchsia with paver](/development/workflows/fuchsia_paver.md).
+- [Guide for installing Fuchsia with paver](/development/workflows/paving.md).
 
 #### **Peridot**
 
