@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string>
+
 #include "garnet/bin/media/audio_core/mixer/test/audio_performance.h"
 #include "garnet/bin/media/audio_core/mixer/test/frequency_set.h"
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
@@ -45,14 +47,14 @@ void AudioPerformance::DisplayMixerConfigLegend() {
   printf("\n   Elapsed time in microsec for Mix() to produce %u frames\n",
          kFreqTestBufSize);
   printf(
-      "\n   For mixer configuration Rf.IOGAnnnnn, where:\n"
-      "\t    R: Resampler type - [P]oint, [L]inear\n"
-      "\t    f: source Format - [u]int8, [i]nt16, [f]loat,\n"
-      "\t    I: Input channels (one-digit number),\n"
-      "\t    O: Output channels (one-digit number),\n"
-      "\t    G: Gain factor - [M]ute, [U]nity, [S]caled,\n"
-      "\t    A: Accumulate - [-] no or [+] yes,\n"
-      "\tnnnnn: source sample rate (five-digit number)\n\n");
+      "\n   For mixer configuration R-fff.IOGAnnnnn, where:\n"
+      "\t     R: Resampler type - [P]oint, [L]inear\n"
+      "\t   fff: Format - un8, i16, i24, f32,\n"
+      "\t     I: Input channels (one-digit number),\n"
+      "\t     O: Output channels (one-digit number),\n"
+      "\t     G: Gain factor - [M]ute, [U]nity, [S]caled,\n"
+      "\t     A: Accumulate - [-] no or [+] yes,\n"
+      "\t nnnnn: Sample rate (five-digit number)\n\n");
 }
 
 void AudioPerformance::ProfileSampler(Resampler sampler_type) {
@@ -112,6 +114,8 @@ void AudioPerformance::ProfileSamplerChansRateScaleMix(
                         source_rate, gain_scale, accumulate);
   ProfileMixer<int16_t>(num_input_chans, num_output_chans, sampler_type,
                         source_rate, gain_scale, accumulate);
+  ProfileMixer<int32_t>(num_input_chans, num_output_chans, sampler_type,
+                        source_rate, gain_scale, accumulate);
   ProfileMixer<float>(num_input_chans, num_output_chans, sampler_type,
                       source_rate, gain_scale, accumulate);
 }
@@ -124,19 +128,23 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
                                     Gain::AScale gain_scale, bool accumulate) {
   fuchsia::media::AudioSampleFormat sample_format;
   double amplitude;
-  char format;
+  std::string format;
   if (std::is_same<SampleType, uint8_t>::value) {
     sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
     amplitude = std::numeric_limits<int8_t>::max();
-    format = 'u';
+    format = "un8";
   } else if (std::is_same<SampleType, int16_t>::value) {
     sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
     amplitude = std::numeric_limits<int16_t>::max();
-    format = 'i';
+    format = "i16";
+  } else if (std::is_same<SampleType, int32_t>::value) {
+    sample_format = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
+    amplitude = std::numeric_limits<int32_t>::max() & ~0x0FF;
+    format = "i24";
   } else if (std::is_same<SampleType, float>::value) {
     sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
     amplitude = 1.0;
-    format = 'f';
+    format = "f32";
   } else {
     ASSERT_TRUE(false) << "Unknown mix sample format for testing";
     return;
@@ -189,8 +197,8 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
   }
 
   double mean = total_elapsed / kNumMixerProfilerRuns;
-  printf("%c%c.%u%u%c%c%u:",
-         (sampler_type == Resampler::SampleAndHold ? 'P' : 'L'), format,
+  printf("%c-%s.%u%u%c%c%u:",
+         (sampler_type == Resampler::SampleAndHold ? 'P' : 'L'), format.c_str(),
          num_input_chans, num_output_chans,
          (gain_scale ? (gain_scale == Gain::kUnityScale ? 'U' : 'S') : 'M'),
          (accumulate ? '+' : '-'), source_rate);
@@ -207,10 +215,10 @@ void AudioPerformance::DisplayOutputConfigLegend() {
   printf("\n   Elapsed time in microsec to ProduceOutput() %u frames\n",
          kFreqTestBufSize);
   printf(
-      "\n   For output configuration FRn, where:\n"
-      "\t    F: Format of source data - [U]int8, [I]nt16, [F]loat,\n"
-      "\t    R: Range of source data - [S]ilence, [O]ut-of-range, [N]ormal,\n"
-      "\t    n: Number of output channels (one-digit number)\n\n");
+      "\n   For output configuration FFF-Rn, where:\n"
+      "\t   FFF: Format of source data - Un8, I16, I24, F32,\n"
+      "\t     R: Range of source data - [S]ilence, [O]ut-of-range, [N]ormal,\n"
+      "\t     n: Number of output channels (one-digit number)\n\n");
 }
 
 void AudioPerformance::ProfileOutputProducers() {
@@ -242,6 +250,7 @@ void AudioPerformance::ProfileOutputRange(uint32_t num_chans,
                                           OutputDataRange data_range) {
   ProfileOutputType<uint8_t>(num_chans, data_range);
   ProfileOutputType<int16_t>(num_chans, data_range);
+  ProfileOutputType<int32_t>(num_chans, data_range);
   ProfileOutputType<float>(num_chans, data_range);
 }
 
@@ -249,17 +258,21 @@ template <typename SampleType>
 void AudioPerformance::ProfileOutputType(uint32_t num_chans,
                                          OutputDataRange data_range) {
   fuchsia::media::AudioSampleFormat sample_format;
-  char format, range;
+  std::string format;
+  char range;
 
   if (std::is_same<SampleType, uint8_t>::value) {
     sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
-    format = 'U';
+    format = "Un8";
   } else if (std::is_same<SampleType, int16_t>::value) {
     sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
-    format = 'I';
+    format = "I16";
+  } else if (std::is_same<SampleType, int32_t>::value) {
+    sample_format = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
+    format = "I24";
   } else if (std::is_same<SampleType, float>::value) {
     sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
-    format = 'F';
+    format = "F32";
   } else {
     ASSERT_TRUE(false) << "Unknown output sample format for testing";
     return;
@@ -335,8 +348,9 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans,
   }
 
   double mean = total_elapsed / kNumOutputProfilerRuns;
-  printf("%c%c%u:\t%9.3lf\t%9.3lf\t%9.3lf\t%9.3lf\n", format, range, num_chans,
-         mean / 1000.0, first / 1000.0, best / 1000.0, worst / 1000.0);
+  printf("%s-%c%u:\t%9.3lf\t%9.3lf\t%9.3lf\t%9.3lf\n", format.c_str(), range,
+         num_chans, mean / 1000.0, first / 1000.0, best / 1000.0,
+         worst / 1000.0);
 }
 
 }  // namespace test

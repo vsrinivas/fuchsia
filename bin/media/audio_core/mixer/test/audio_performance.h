@@ -25,8 +25,8 @@ class AudioPerformance {
   //
   // These values were chosen to keep Mixer and OutputProducer profile times
   // under 180 seconds each, on both a standard VIM2 and a standard NUC.
-  static constexpr uint32_t kNumMixerProfilerRuns = 190;
-  static constexpr uint32_t kNumOutputProfilerRuns = 2100;
+  static constexpr uint32_t kNumMixerProfilerRuns = 140;
+  static constexpr uint32_t kNumOutputProfilerRuns = 1200;
 
   // class is static only - prevent attempts to instantiate it
   AudioPerformance() = delete;
