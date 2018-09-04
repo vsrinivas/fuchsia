@@ -119,7 +119,7 @@ func main() {
 
 	// Once the pipeline has finished output all triggers
 	if jsonTriggerHandler != nil {
-		file, err := os.Open(jsonOutput)
+		file, err := os.Create(jsonOutput)
 		if err != nil {
 			log.Fatal(err)
 		}
