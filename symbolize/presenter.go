@@ -32,9 +32,8 @@ func printBacktrace(out io.Writer, hdr LineHeader, frame uint64, info addressInf
 		fmt.Fprintf(out, "%s    #%-4d %#016x in <%s>+%#x\n", hdr.Present(), frame, info.addr, info.mod.Name, modRelAddr)
 		return
 	}
-	for i, _ := range info.locs {
+	for i, loc := range info.locs {
 		i = len(info.locs) - i - 1
-		loc := info.locs[i]
 		fmt.Fprintf(out, "%s    ", hdr.Present())
 		var frameStr string
 		if i == 0 {

@@ -227,7 +227,7 @@ func ExampleNewBacktracePresenter() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
 		{"testdata/libc.elf", map[uint64][]SourceLocation{
-			0x429c0: {{NewOptStr("atan2.c"), 49, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
+			0x429c0: {{NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}, {NewOptStr("atan2.c"), 49, NewOptStr("atan2")}},
 			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
 			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 		}},
