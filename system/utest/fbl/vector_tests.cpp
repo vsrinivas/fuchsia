@@ -825,6 +825,23 @@ bool VectorTestImplicitConversion() {
     END_TEST;
 }
 
+bool VectorGetConstness() {
+    BEGIN_TEST;
+
+    fbl::Vector<int> vector_int;
+
+    auto& ref_vector_int = vector_int;
+    const auto& const_ref_vector_int = vector_int;
+
+    auto int_ptr = ref_vector_int.get();
+    auto const_int_ptr = const_ref_vector_int.get();
+
+    static_assert(!fbl::is_const<fbl::remove_pointer<decltype(int_ptr)>::type>::value, "");
+    static_assert(fbl::is_const<fbl::remove_pointer<decltype(const_int_ptr)>::type>::value, "");
+
+    END_TEST;
+}
+
 } // namespace
 
 #define RUN_FOR_ALL_TRAITS(test_base, test_size)       \

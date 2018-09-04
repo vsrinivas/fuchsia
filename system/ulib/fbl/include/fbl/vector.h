@@ -196,7 +196,11 @@ public:
         consider_shrinking();
     }
 
-    T* get() const {
+    const T* get() const {
+        return ptr_;
+    }
+
+    T* get() {
         return ptr_;
     }
 
