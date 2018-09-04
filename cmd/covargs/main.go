@@ -69,9 +69,6 @@ func readSummary(summaryFile string) (map[string]Test, error) {
 	}
 	out := make(map[string]Test)
 	for _, test := range summary.Tests {
-		if len(test.DataSinks[llvmProfileSinkType]) != 1 {
-			return nil, fmt.Errorf("%s has more than one entry for %s", test.Name, llvmProfileSinkType)
-		}
 		for _, profileDump := range test.DataSinks[llvmProfileSinkType] {
 			out[profileDump.Name] = test
 		}
