@@ -30,6 +30,8 @@ struct InputContext {
   uint32_t processed_video = 0;
 };
 
+enum class DeviceType;
+
 class DecoderCore {
  public:
   class Owner {
@@ -38,6 +40,7 @@ class DecoderCore {
     virtual __WARN_UNUSED_RESULT MmioRegisters* mmio() = 0;
     virtual void UngateClocks() = 0;
     virtual void GateClocks() = 0;
+    virtual __WARN_UNUSED_RESULT DeviceType device_type() = 0;
   };
 
   virtual ~DecoderCore() {}

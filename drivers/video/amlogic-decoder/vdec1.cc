@@ -10,6 +10,7 @@
 
 #include "macros.h"
 #include "memory_barriers.h"
+#include "video_decoder.h"
 
 zx_status_t Vdec1::LoadFirmware(const uint8_t* data, uint32_t size) {
   Mpsr::Get().FromValue(0).WriteTo(mmio()->dosbus);
@@ -66,9 +67,38 @@ void Vdec1::PowerOn() {
   DosSwReset0::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
   owner_->UngateClocks();
+  enum {
+    kGxmFclkDiv4 = 0,  // 500 MHz
+    kGxmFclkDiv3 = 1,  // 666 MHz
+    kGxmFclkDiv5 = 2,  // 400 MHz
+    kGxmFclkDiv7 = 3,  // 285.7 MHz
+    kGxmMp1 = 4,
+    kGxmMp2 = 5,
+    kGxmGp0 = 6,
+    kGxmXtal = 7,  // 24 MHz
 
-  HhiVdecClkCntl::Get().FromValue(0).set_vdec_en(true).set_vdec_sel(3).WriteTo(
-      mmio()->hiubus);
+    kG12aFclkDiv2p5 = 0,  // 800 MHz
+    kG12aFclkDiv3 = 1,    // 666 MHz
+    kG12aFclkDiv4 = 2,    // 500 MHz
+    kG12aFclkDiv5 = 3,    // 400 MHz
+    kG12aFclkDiv7 = 4,    // 285.7 MHz
+    kG12aHifi = 5,
+    kG12aGp0 = 6,
+    kG12aXtal = 7,  // 24 MHz
+  };
+
+  // Pick 500 MHz. The maximum frequency used in linux is 648 MHz, but that
+  // requires using GP0, which is already being used by the GPU.
+  // The linux driver also uses 200MHz in some circumstances for videos <=
+  // 1080p30.
+  uint32_t clock_sel =
+      owner_->device_type() == DeviceType::kG12A ? kG12aFclkDiv4 : kGxmFclkDiv4;
+
+  HhiVdecClkCntl::Get()
+      .FromValue(0)
+      .set_vdec_en(true)
+      .set_vdec_sel(clock_sel)
+      .WriteTo(mmio()->hiubus);
   DosGclkEn::Get().FromValue(0x3ff).WriteTo(mmio()->dosbus);
   DosMemPdVdec::Get().FromValue(0).WriteTo(mmio()->dosbus);
   {
