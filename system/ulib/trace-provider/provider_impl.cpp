@@ -230,7 +230,8 @@ static zx_status_t ConnectToServiceRegistry(zx::channel* out_registry_client) {
     return ZX_OK;
 }
 
-trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
+trace_provider_t* trace_provider_create_with_name(async_dispatcher_t* dispatcher,
+                                                  const char* name) {
     ZX_DEBUG_ASSERT(dispatcher);
 
     zx::channel registry_client;
@@ -247,7 +248,8 @@ trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
 
     // Register the trace provider.
     status = fuchsia_tracelink_RegistryRegisterTraceProvider(
-        registry_client.get(), provider_client.release());
+        registry_client.get(), provider_client.release(),
+        get_pid(), name, strlen(name));
     if (status != ZX_OK)
         return nullptr;
 
@@ -259,6 +261,10 @@ trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
     return new trace::internal::TraceProviderImpl(dispatcher,
                                                   fbl::move(provider_service),
                                                   fbl::move(start_event));
+}
+
+trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
+    return trace_provider_create_with_name(dispatcher, "");
 }
 
 trace_provider_t* trace_provider_create_synchronously(async_dispatcher_t* dispatcher,

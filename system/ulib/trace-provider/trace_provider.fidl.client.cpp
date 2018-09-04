@@ -14,9 +14,13 @@
 // and then this header (up to "End of additions ...") manually inserted.
 //   
 // There are *no* differences with the machine generated version except the
-// addition of this text WITH ONE EXCEPTION: Commenting out
-// #include <fuchsia/tracelink/c/fidl.h> below. Our copy of this header lives
-// in trace_provider.fidl.h.
+// addition of this text WITH TWO EXCEPTIONS:
+// 1) Commenting out
+//   #include <fuchsia/tracelink/c/fidl.h> below. Our copy of this header lives
+//   in trace_provider.fidl.h.
+// 2) Workaround FIDL-275.
+//    size_t -> uint32_t conversion errors. Grep for TO_UINT32 below.
+//
 // Minimizing differences with generated code is critical to lessening the
 // maintenance burden until we no longer check in machine generated code.
 // It is currently checked in to workaround these problems:
@@ -24,8 +28,6 @@
 // - duplicate copy of tracelink is generated and compiled in garnet,
 //   leading to duplicate symbol linker errors
 
-// TODO(dje): Another hack is added until FIDL-275 is fixed.
-// size_t -> uint32_t conversion errors. Grep for TO_UINT32 below.
 #define TO_UINT32(x) (static_cast<uint32_t>(x))
 
 // End of additions to machine-generated file.
@@ -36,13 +38,34 @@
 #include <zircon/syscalls.h>
 //#include <fuchsia/tracelink/c/fidl.h>
 
-zx_status_t fuchsia_tracelink_RegistryRegisterTraceProvider(zx_handle_t _channel, zx_handle_t provider) {
-    uint32_t _wr_num_bytes = sizeof(fuchsia_tracelink_RegistryRegisterTraceProviderRequest);
+zx_status_t fuchsia_tracelink_RegistryRegisterTraceProviderDeprecated(zx_handle_t _channel, zx_handle_t provider) {
+    uint32_t _wr_num_bytes = sizeof(fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequest);
     FIDL_ALIGNDECL char _wr_bytes[_wr_num_bytes];
-    fuchsia_tracelink_RegistryRegisterTraceProviderRequest* _request = (fuchsia_tracelink_RegistryRegisterTraceProviderRequest*)_wr_bytes;
+    fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequest* _request = (fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequest*)_wr_bytes;
     memset(_wr_bytes, 0, sizeof(_wr_bytes));
     _request->hdr.ordinal = 1;
     _request->provider = provider;
+    zx_handle_t _handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    uint32_t _wr_num_handles = 0u;
+    zx_status_t _status = fidl_encode(&fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestTable, _wr_bytes, _wr_num_bytes, _handles, ZX_CHANNEL_MAX_MSG_HANDLES, &_wr_num_handles, NULL);
+    if (_status != ZX_OK)
+        return _status;
+    return zx_channel_write(_channel, 0u, _wr_bytes, _wr_num_bytes, _handles, _wr_num_handles);
+}
+
+zx_status_t fuchsia_tracelink_RegistryRegisterTraceProvider(zx_handle_t _channel, zx_handle_t provider, uint64_t pid, const char* name_data, size_t name_size) {
+    uint32_t _wr_num_bytes = TO_UINT32(sizeof(fuchsia_tracelink_RegistryRegisterTraceProviderRequest) + FIDL_ALIGN(name_size));
+    FIDL_ALIGNDECL char _wr_bytes[_wr_num_bytes];
+    fuchsia_tracelink_RegistryRegisterTraceProviderRequest* _request = (fuchsia_tracelink_RegistryRegisterTraceProviderRequest*)_wr_bytes;
+    memset(_wr_bytes, 0, sizeof(_wr_bytes));
+    _request->hdr.ordinal = 2;
+    uint32_t _next = sizeof(*_request);
+    _request->provider = provider;
+    _request->pid = pid;
+    _request->name.data = &_wr_bytes[_next];
+    _request->name.size = name_size;
+    memcpy(_request->name.data, name_data, name_size);
+    _next += TO_UINT32(FIDL_ALIGN(name_size));
     zx_handle_t _handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t _wr_num_handles = 0u;
     zx_status_t _status = fidl_encode(&fuchsia_tracelink_RegistryRegisterTraceProviderRequestTable, _wr_bytes, _wr_num_bytes, _handles, ZX_CHANNEL_MAX_MSG_HANDLES, &_wr_num_handles, NULL);
@@ -56,7 +79,7 @@ zx_status_t fuchsia_tracelink_RegistryRegisterTraceProviderSynchronously(zx_hand
     FIDL_ALIGNDECL char _wr_bytes[_wr_num_bytes];
     fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequest* _request = (fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequest*)_wr_bytes;
     memset(_wr_bytes, 0, sizeof(_wr_bytes));
-    _request->hdr.ordinal = 2;
+    _request->hdr.ordinal = 3;
     uint32_t _next = sizeof(*_request);
     _request->provider = provider;
     _request->pid = pid;

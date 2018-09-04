@@ -22,6 +22,7 @@
 
 #define fuchsia_tracelink_ProviderStartRequestTable ProviderStartRequestTable
 #define fuchsia_tracelink_ProviderStopRequestTable ProviderStopRequestTable
+#define fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestTable RegistryRegisterTraceProviderDeprecatedRequestTable
 #define fuchsia_tracelink_RegistryRegisterTraceProviderRequestTable RegistryRegisterTraceProviderRequestTable
 #define fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequestTable RegistryRegisterTraceProviderSynchronouslyRequestTable
 #define fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyResponseTable RegistryRegisterTraceProviderSynchronouslyResponseTable
@@ -55,9 +56,11 @@ typedef struct fuchsia_tracelink_ProviderStartRequest fuchsia_tracelink_Provider
 #define fuchsia_tracelink_ProviderStopOrdinal ((uint32_t)0x2)
 typedef struct fuchsia_tracelink_ProviderStopRequest fuchsia_tracelink_ProviderStopRequest;
 #define fuchsia_tracelink_Registry_Name "fuchsia.tracelink.Registry"
-#define fuchsia_tracelink_RegistryRegisterTraceProviderOrdinal ((uint32_t)0x1)
+#define fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedOrdinal ((uint32_t)0x1)
+typedef struct fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequest fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequest;
+#define fuchsia_tracelink_RegistryRegisterTraceProviderOrdinal ((uint32_t)0x2)
 typedef struct fuchsia_tracelink_RegistryRegisterTraceProviderRequest fuchsia_tracelink_RegistryRegisterTraceProviderRequest;
-#define fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyOrdinal ((uint32_t)0x2)
+#define fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyOrdinal ((uint32_t)0x3)
 typedef struct fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequest fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequest;
 typedef struct fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyResponse fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyResponse;
 
@@ -65,6 +68,7 @@ typedef struct fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRespo
 
 extern const fidl_type_t fuchsia_tracelink_ProviderStartRequestTable;
 extern const fidl_type_t fuchsia_tracelink_ProviderStopRequestTable;
+extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestTable;
 extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderRequestTable;
 extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequestTable;
 extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyResponseTable;
@@ -85,10 +89,18 @@ struct fuchsia_tracelink_ProviderStopRequest {
     fidl_message_header_t hdr;
 };
 
+struct fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequest {
+    FIDL_ALIGNDECL
+    fidl_message_header_t hdr;
+    zx_handle_t provider;
+};
+
 struct fuchsia_tracelink_RegistryRegisterTraceProviderRequest {
     FIDL_ALIGNDECL
     fidl_message_header_t hdr;
     zx_handle_t provider;
+    uint64_t pid;
+    fidl_string_t name;
 };
 
 struct fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequest {
@@ -109,11 +121,13 @@ struct fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyResponse {
 
 // Simple bindings 
 
-zx_status_t fuchsia_tracelink_RegistryRegisterTraceProvider(zx_handle_t _channel, zx_handle_t provider);
+zx_status_t fuchsia_tracelink_RegistryRegisterTraceProviderDeprecated(zx_handle_t _channel, zx_handle_t provider);
+zx_status_t fuchsia_tracelink_RegistryRegisterTraceProvider(zx_handle_t _channel, zx_handle_t provider, uint64_t pid, const char* name_data, size_t name_size);
 zx_status_t fuchsia_tracelink_RegistryRegisterTraceProviderSynchronously(zx_handle_t _channel, zx_handle_t provider, uint64_t pid, const char* name_data, size_t name_size, int32_t* out_s, bool* out_started);
 
 typedef struct fuchsia_tracelink_Registry_ops {
-    zx_status_t (*RegisterTraceProvider)(void* ctx, zx_handle_t provider);
+    zx_status_t (*RegisterTraceProviderDeprecated)(void* ctx, zx_handle_t provider);
+    zx_status_t (*RegisterTraceProvider)(void* ctx, zx_handle_t provider, uint64_t pid, const char* name_data, size_t name_size);
     zx_status_t (*RegisterTraceProviderSynchronously)(void* ctx, zx_handle_t provider, uint64_t pid, const char* name_data, size_t name_size, fidl_txn_t* txn);
 } fuchsia_tracelink_Registry_ops_t;
 

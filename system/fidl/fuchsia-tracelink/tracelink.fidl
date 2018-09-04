@@ -61,7 +61,13 @@ interface Registry {
     // Note: Registration is asynchronous, it's only at some point after this
     // returns that the provider is actually registered.
     // To unregister, simply close the TraceProvider pipe.
-    1: RegisterTraceProvider(Provider provider);
+    1: RegisterTraceProviderDeprecated(Provider provider);
+
+    // Registers the trace provider.
+    // Note: Registration is asynchronous, it's only at some point after this
+    // returns that the provider is actually registered.
+    // To unregister, simply close the TraceProvider pipe.
+    2: RegisterTraceProvider(Provider provider, zx.koid pid, string:100 name);
 
     // Registers the trace provider synchronously. The call doesn't return
     // until the provider is registered.
@@ -70,7 +76,7 @@ interface Registry {
     // the provider to wait for the Start() message before continuing if it
     // wishes to not drop trace records before Start() is received.
     // To unregister, simply close the TraceProvider pipe.
-    2: RegisterTraceProviderSynchronously(Provider provider, zx.koid pid, string:100 name) -> (zx.status s, bool started);
+    3: RegisterTraceProviderSynchronously(Provider provider, zx.koid pid, string:100 name) -> (zx.status s, bool started);
 };
 
 // The trace buffering mode.

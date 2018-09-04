@@ -53,11 +53,18 @@ const fidl_type_t fuchsia_tracelink_ProviderStopRequestTable = fidl_type_t(::fid
 
 static const fidl_type_t fuchsia_tracelink_ProviderInterfacenonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, ::fidl::kNonnullable));
 
-extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderRequestTable;
-static const ::fidl::FidlField fuchsia_tracelink_RegistryRegisterTraceProviderRequestFields[] = {
+extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestTable;
+static const ::fidl::FidlField fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestFields[] = {
     ::fidl::FidlField(&fuchsia_tracelink_ProviderInterfacenonnullableTable, 16)
 };
-const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_RegistryRegisterTraceProviderRequestFields, 1, 20, "fuchsia.tracelink/RegistryRegisterTraceProviderRequest"));
+const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_RegistryRegisterTraceProviderDeprecatedRequestFields, 1, 20, "fuchsia.tracelink/RegistryRegisterTraceProviderDeprecatedRequest"));
+
+extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderRequestTable;
+static const ::fidl::FidlField fuchsia_tracelink_RegistryRegisterTraceProviderRequestFields[] = {
+    ::fidl::FidlField(&fuchsia_tracelink_ProviderInterfacenonnullableTable, 16),
+    ::fidl::FidlField(&String100nonnullableTable, 32)
+};
+const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_RegistryRegisterTraceProviderRequestFields, 2, 48, "fuchsia.tracelink/RegistryRegisterTraceProviderRequest"));
 
 extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequestTable;
 static const ::fidl::FidlField fuchsia_tracelink_RegistryRegisterTraceProviderSynchronouslyRequestFields[] = {

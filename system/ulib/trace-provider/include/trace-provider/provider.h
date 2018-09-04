@@ -73,6 +73,9 @@ typedef struct trace_provider trace_provider_t;
 // Creates a trace provider associated with the specified async dispatcher
 // and registers it with the tracing system.
 //
+// |name| is the name of the trace provider and is used for diagnostic
+// purposes. The maximum supported length is 100 characters.
+//
 // The trace provider will start and stop the trace engine in response to requests
 // from the tracing system.
 //
@@ -85,6 +88,13 @@ typedef struct trace_provider trace_provider_t;
 // Switch to passively exporting the trace provider via the "hub" through
 // the process's exported directory once that stuff is implemented.  We'll
 // probably need to pass some extra parameters to the trace provider then.
+trace_provider_t* trace_provider_create_with_name(async_dispatcher_t* dispatcher,
+                                                  const char* name);
+
+// Wrapper around trace_provider_create_with_name for backward compatibility.
+// TODO(DX-422): Update all providers to use create_with_name, then change this
+// to also take a name, then update all providers to call this one, and then
+// delete trace_provider_create_with_name.
 trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher);
 
 // Same as trace_provider_create except does not return until the provider is
@@ -139,6 +149,10 @@ public:
     // Creates a trace provider.
     TraceProvider(async_dispatcher_t* dispatcher)
         : provider_(trace_provider_create(dispatcher)) {}
+
+    // Creates a trace provider.
+    TraceProvider(async_dispatcher_t* dispatcher, const char* name)
+        : provider_(trace_provider_create_with_name(dispatcher, name)) {}
 
     // Destroys a trace provider.
     ~TraceProvider() {
