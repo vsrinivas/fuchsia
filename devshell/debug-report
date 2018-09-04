@@ -5,25 +5,25 @@
 
 ### Generate a report with component exposed data.
 
-# usage: fx debug-report [f|--format <FORMAT>]
-##                       [-s|--system-objects]
-##                       [--] [<REGEX> [...<REGEX>]]
+## usage: fx debug-report [f|--format <FORMAT>]
+##                        [-s|--system-objects]
+##                        [--] [<REGEX> [...<REGEX>]]
 ##
 ## Runs and generate a debug report from the selected components.
 ##
-##    -f|--format <FORMAT>  What formatter to use for the output. These will be
-##                          passed on to the underlying iquery tool.
-##                          Supported values:
-##                          - text: Human readable output [DEFAULT]
-##                          - json: Pretty formatted JSON.
+##    -f|--format <FORMAT>  What formatter to be used for the output.
+##                          These will be passed on to the underlying iquery
+##                          tool. Supported values:
+##                          - text: Human readable output. [DEFAULT]
+##                          - json: Simple to parse JSON format.
 ##    -s|--system-objects   Whether to include the system generated debug
 ##                          information. This is information includes current
 ##                          register and stack traces for all threads.
 ##                          False by default.
 ##
-##    REGEX   Basic Regular Espression (as understood by GNU grep) to filter
+##    REGEX   Basic Regular Expression (as understood by GNU grep) to filter
 ##            out components. Only matching components will be included in the
-##            report
+##            report.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
