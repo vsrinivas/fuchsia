@@ -158,7 +158,7 @@ class PciDevice {
   friend class PciBus;
 
   // Setup traps and handlers for accesses to BAR regions.
-  zx_status_t SetupBarTraps(Guest* guest);
+  zx_status_t SetupBarTraps(Guest* guest, bool skip_bell);
 
   zx_status_t ReadConfigWord(uint8_t reg, uint32_t* value) const;
 
@@ -218,7 +218,8 @@ class PciBus {
   //
   // This method is *not* thread-safe and must only be called during
   // initialization.
-  zx_status_t Connect(PciDevice* device) __TA_NO_THREAD_SAFETY_ANALYSIS;
+  zx_status_t Connect(PciDevice* device,
+                      bool skip_bell = false) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   // Access devices via the ECAM region.
   //

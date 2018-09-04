@@ -169,7 +169,7 @@ void PciBus::set_config_addr(uint32_t addr) {
   config_addr_ = addr;
 }
 
-zx_status_t PciBus::Connect(PciDevice* device) {
+zx_status_t PciBus::Connect(PciDevice* device, bool skip_bell) {
   if (next_open_slot_ >= kPciMaxDevices) {
     FXL_LOG(ERROR) << "No PCI device slots available";
     return ZX_ERR_OUT_OF_RANGE;
@@ -186,7 +186,7 @@ zx_status_t PciBus::Connect(PciDevice* device) {
 
     device->bus_ = this;
     PciBar* bar = &device->bar_[bar_num];
-    bar->size = static_cast<uint16_t>(align(bar->size, PAGE_SIZE));
+    bar->size = align(bar->size, PAGE_SIZE);
     bar->addr = mmio_base_;
     mmio_base_ += bar->size;
   }
@@ -199,7 +199,7 @@ zx_status_t PciBus::Connect(PciDevice* device) {
   device->global_irq_ = kPciGlobalIrqAssigments[slot];
   device_[slot] = device;
 
-  zx_status_t status = device->SetupBarTraps(guest_);
+  zx_status_t status = device->SetupBarTraps(guest_, skip_bell);
   if (status == ZX_OK) {
     FXL_LOG(INFO) << "PCI bus connected device " << slot << " to device ID 0x"
                   << std::hex << device->attrs_.device_id;
@@ -582,11 +582,13 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
   }
 }
 
-zx_status_t PciDevice::SetupBarTraps(Guest* guest) {
+zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell) {
   for (uint8_t i = 0; i < kPciMaxBars; ++i) {
     PciBar* bar = &bar_[i];
     if (!is_bar_implemented(i)) {
       break;
+    } else if (skip_bell && bar->trap_type == TrapType::MMIO_BELL) {
+      continue;
     }
 
     bar->n = i;
