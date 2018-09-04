@@ -125,10 +125,16 @@ void TraceManager::RegisterTraceProviderWorker(
     session_->AddProvider(&(*it));
 }
 
-void TraceManager::RegisterTraceProvider(
+void TraceManager::RegisterTraceProviderDeprecated(
     fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider) {
   RegisterTraceProviderWorker(std::move(provider), ZX_KOID_INVALID,
                               fidl::StringPtr(""));
+}
+
+void TraceManager::RegisterTraceProvider(
+    fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
+    uint64_t pid, fidl::StringPtr name) {
+  RegisterTraceProviderWorker(std::move(provider), pid, std::move(name));
 }
 
 void TraceManager::RegisterTraceProviderSynchronously(
