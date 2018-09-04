@@ -78,10 +78,15 @@ void GetCategories(RegisterSet* registers) {
 TEST(FormatRegisters, GeneralRegisters) {
   RegisterSet registers;
   GetCategories(&registers);
-  OutputBuffer out;
-  Err err = FormatRegisters(registers, "", &out);
 
+  std::vector<RegisterCategory::Type> cats_to_show = {
+      RegisterCategory::Type::kGeneral};
+  FilteredRegisterSet filtered_set;
+  Err err = FilterRegisters(registers, &filtered_set, cats_to_show);
   ASSERT_FALSE(err.has_error()) << err.msg();
+
+  OutputBuffer out;
+  FormatRegisters(filtered_set, &out);
 
   EXPECT_EQ(
       "General Purpose Registers\n"
@@ -97,11 +102,15 @@ TEST(FormatRegisters, GeneralRegisters) {
 TEST(FormatRegisters, VectorRegisters) {
   RegisterSet registers;
   GetCategories(&registers);
-  OutputBuffer out;
-  Err err =
-      FormatRegisters(registers, "", &out, {RegisterCategory::Type::kVector});
 
+  std::vector<RegisterCategory::Type> cats_to_show = {
+      RegisterCategory::Type::kVector};
+  FilteredRegisterSet filtered_set;
+  Err err = FilterRegisters(registers, &filtered_set, cats_to_show);
   ASSERT_FALSE(err.has_error()) << err.msg();
+
+  OutputBuffer out;
+  FormatRegisters(filtered_set, &out);
 
   EXPECT_EQ(
       "Vector Registers\n"
@@ -118,13 +127,16 @@ TEST(FormatRegisters, VectorRegisters) {
 TEST(FormatRegisters, AllRegisters) {
   RegisterSet registers;
   GetCategories(&registers);
-  OutputBuffer out;
-  Err err = FormatRegisters(
-      registers, "", &out,
-      {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFloatingPoint,
-       RegisterCategory::Type::kVector, RegisterCategory::Type::kMisc});
 
+  std::vector<RegisterCategory::Type> cats_to_show = {
+      {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFloatingPoint,
+       RegisterCategory::Type::kVector, RegisterCategory::Type::kMisc}};
+  FilteredRegisterSet filtered_set;
+  Err err = FilterRegisters(registers, &filtered_set, cats_to_show);
   ASSERT_FALSE(err.has_error()) << err.msg();
+
+  OutputBuffer out;
+  FormatRegisters(filtered_set, &out);
 
   // TODO(donosoc): Detect the maximum length and make the the tables coincide.
   EXPECT_EQ(
@@ -159,11 +171,16 @@ TEST(FormatRegisters, AllRegisters) {
 TEST(FormatRegisters, OneRegister) {
   RegisterSet registers;
   GetCategories(&registers);
-  OutputBuffer out;
-  Err err =
-      FormatRegisters(registers, "x3", &out, {RegisterCategory::Type::kVector});
 
+  std::vector<RegisterCategory::Type> cats_to_show = {
+      {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFloatingPoint,
+       RegisterCategory::Type::kVector, RegisterCategory::Type::kMisc}};
+  FilteredRegisterSet filtered_set;
+  Err err = FilterRegisters(registers, &filtered_set, cats_to_show, "x3");
   ASSERT_FALSE(err.has_error()) << err.msg();
+
+  OutputBuffer out;
+  FormatRegisters(filtered_set, &out);
 
   EXPECT_EQ(
       "Vector Registers\n"
@@ -176,13 +193,15 @@ TEST(FormatRegisters, OneRegister) {
 TEST(FormatRegister, RegexSearch) {
   RegisterSet registers;
   GetCategories(&registers);
-  OutputBuffer out;
 
-  // Case insensitive search.
-  Err err = FormatRegisters(registers, "X[3-5]$", &out,
-                            {RegisterCategory::Type::kVector});
-
+  std::vector<RegisterCategory::Type> cats_to_show = {
+      RegisterCategory::Type::kVector};
+  FilteredRegisterSet filtered_set;
+  Err err = FilterRegisters(registers, &filtered_set, cats_to_show, "X[3-5]$");
   ASSERT_FALSE(err.has_error()) << err.msg();
+
+  OutputBuffer out;
+  FormatRegisters(filtered_set, &out);
 
   EXPECT_EQ(
       "Vector Registers\n"
@@ -196,8 +215,13 @@ TEST(FormatRegister, RegexSearch) {
 TEST(FormatRegisters, CannotFindRegister) {
   RegisterSet registers;
   GetCategories(&registers);
-  OutputBuffer out;
-  Err err = FormatRegisters(registers, "W0", &out);
+
+  std::vector<RegisterCategory::Type> cats_to_show = {
+      {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFloatingPoint,
+       RegisterCategory::Type::kVector, RegisterCategory::Type::kMisc}};
+  FilteredRegisterSet filtered_set;
+  Err err = FilterRegisters(registers, &filtered_set, cats_to_show, "W0");
+  EXPECT_TRUE(err.has_error());
 
   ASSERT_TRUE(err.has_error());
 }

@@ -22,6 +22,7 @@
 namespace zxdb {
 
 using debug_ipc::RegisterID;
+using debug_ipc::RegisterCategory;
 
 namespace {
 
@@ -80,6 +81,97 @@ inline OutputBuffer RegisterValueToOutputBuffer(const Register& reg) {
   return out;
 }
 
+// Using a vector of output buffers make it easy to not have to worry about
+// appending new lines per each new section.
+void InternalFormatGeneric(const std::vector<Register>& registers,
+                           OutputBuffer* out) {
+  // Registers.
+  std::vector<std::vector<OutputBuffer>> rows;
+  for (const Register& reg : registers) {
+    rows.emplace_back();
+    auto& row = rows.back();
+
+    auto color = rows.size() % 2 == 1 ? TextForegroundColor::kDefault
+                                      : TextForegroundColor::kLightGray;
+
+    auto name = OutputBuffer(RegisterIDToString(reg.id()));
+    name.SetForegroundColor(color);
+    row.push_back(name);
+
+    auto size = OutputBuffer(fxl::StringPrintf("%zu", reg.size()));
+    size.SetForegroundColor(color);
+    row.push_back(size);
+
+    auto val = RegisterValueToOutputBuffer(reg);
+    val.SetForegroundColor(color);
+    row.push_back(val);
+  }
+
+  auto colspecs = std::vector<ColSpec>({ColSpec(Align::kLeft, 0, "Name"),
+                                        ColSpec(Align::kRight, 0, "Size"),
+                                        ColSpec(Align::kRight, 0, "Value", 2)});
+  FormatTable(colspecs, rows, out);
+}
+
+void InternalFormatFP(const std::vector<Register>& registers,
+                      OutputBuffer* out) {
+  // Registers.
+  std::vector<std::vector<OutputBuffer>> rows;
+  for (const Register& reg : registers) {
+    rows.emplace_back();
+    auto& row = rows.back();
+
+    auto color = rows.size() % 2 == 1 ? TextForegroundColor::kDefault
+                                      : TextForegroundColor::kLightGray;
+
+    auto name = OutputBuffer(RegisterIDToString(reg.id()));
+    name.SetForegroundColor(color);
+    row.push_back(name);
+
+    auto size = OutputBuffer(fxl::StringPrintf("%zu", reg.size()));
+    size.SetForegroundColor(color);
+    row.push_back(size);
+
+    auto val = RegisterValueToOutputBuffer(reg);
+    val.SetForegroundColor(color);
+    row.push_back(val);
+
+    OutputBuffer fp_val;
+    std::string out;
+    if (GetFPString(reg, &out).ok()) {
+      fp_val = OutputBuffer::WithContents(std::move(out));
+      fp_val.SetForegroundColor(color);
+    }
+    row.push_back(fp_val);
+  }
+
+  auto colspecs = std::vector<ColSpec>(
+      {ColSpec(Align::kLeft, 0, "Name"), ColSpec(Align::kRight, 0, "Size"),
+       ColSpec(Align::kRight, 0, "Value", 2), ColSpec(Align::kRight, 0, "FP")});
+  FormatTable(colspecs, rows, out);
+}
+
+void FormatCategory(debug_ipc::RegisterCategory::Type category,
+                    const std::vector<Register> registers, OutputBuffer* out) {
+  FXL_DCHECK(!registers.empty());
+
+  // Title.
+  auto category_title = fxl::StringPrintf(
+      "%s Registers\n", RegisterCategoryTypeToString(category).data());
+  out->Append(OutputBuffer(Syntax::kHeading, category_title));
+
+  OutputBuffer category_out;
+  if (category == RegisterCategory::Type::kFloatingPoint) {
+    InternalFormatFP(registers, &category_out);
+  } else {
+    // Generic case.
+    // TODO: Eventually every case should be handled separatedly.
+    InternalFormatGeneric(registers, &category_out);
+  }
+
+  out->Append(std::move(category_out));
+}
+
 inline Err RegexpError(const char* prefix, const std::string& pattern,
                        const regex_t* regexp, int status) {
   char err_buf[256];
@@ -88,153 +180,98 @@ inline Err RegexpError(const char* prefix, const std::string& pattern,
       fxl::StringPrintf("%s \"%s\": %s", prefix, pattern.c_str(), err_buf));
 }
 
-// Using a vector of output buffers make it easy to not have to worry about
-// appending new lines per each new section.
-Err InternalFormatCategory(debug_ipc::RegisterCategory::Type cat,
-                           const std::vector<Register>& registers,
-                           const std::string& search_regexp,
-                           std::vector<OutputBuffer>* out_buffers) {
-  std::vector<std::pair<const Register*, std::string>> found_registers;
-  if (search_regexp.empty()) {
-    for (const auto& reg : registers) {
-      std::string reg_name = RegisterIDToString(reg.id());
-      found_registers.push_back({&reg, std::move(reg_name)});
-    }
-  } else {
-    // We use insensitive case regexp matching.
-    regex_t regexp;
-    auto status = regcomp(&regexp, search_regexp.c_str(), REG_ICASE);
-    fxl::AutoCall<std::function<void()>> reg_freer(
-        [&regexp]() { regfree(&regexp); });
+}  // namespace
 
-    if (status) {
-      return RegexpError("Could not compile regexp", search_regexp.c_str(),
-                         &regexp, status);
-    }
+Err FilterRegisters(const RegisterSet& register_set, FilteredRegisterSet* out,
+                    std::vector<RegisterCategory::Type> categories,
+                    const std::string& search_regexp) {
+  const auto& category_map = register_set.category_map();
+  // Used to track how many registers we found when filtering.
+  int registers_found = 0;
+  for (const auto& category : categories) {
+    auto it = category_map.find(category);
+    if (it == category_map.end())
+      continue;
 
-    for (const auto& reg : registers) {
-      const char* reg_name = RegisterIDToString(reg.id());
-      // We don't care about the matches.
-      status = regexec(&regexp, reg_name, 0, nullptr, 0);
-      if (!status) {
-        found_registers.push_back({&reg, std::move(reg_name)});
-      } else if (status != REG_NOMATCH) {
-        return RegexpError("Error running regexp", search_regexp.c_str(),
+    out->insert({category, {}});
+    (*out)[category] = {};
+    auto& registers = (*out)[category];
+
+    if (search_regexp.empty()) {
+      // Add all registers.
+      registers.reserve(it->second.size());
+      for (const auto& reg : it->second) {
+        registers.emplace_back(reg);
+      }
+    } else {
+      // We use insensitive case regexp matching.
+      regex_t regexp;
+      auto status = regcomp(&regexp, search_regexp.c_str(), REG_ICASE);
+      fxl::AutoCall<std::function<void()>> reg_freer(
+          [&regexp]() { regfree(&regexp); });
+
+      if (status) {
+        return RegexpError("Could not compile regexp", search_regexp.c_str(),
                            &regexp, status);
       }
-    }
-  }
 
-  // If this category didn't find registers, skip it.
-  if (found_registers.empty())
-    return Err();
-
-  // Title.
-  auto category_title = fxl::StringPrintf(
-      "%s Registers", RegisterCategoryTypeToString(cat).c_str());
-  out_buffers->push_back(
-      OutputBuffer::WithContents(Syntax::kHeading, category_title));
-
-  // Registers.
-  std::vector<std::vector<OutputBuffer>> rows;
-  for (const auto reg_pair : found_registers) {
-    rows.emplace_back();
-    auto& row = rows.back();
-
-    auto color = rows.size() % 2 == 1 ? TextForegroundColor::kDefault
-                                      : TextForegroundColor::kLightGray;
-
-    auto name = (OutputBuffer::WithContents(reg_pair.second));
-    name.SetForegroundColor(color);
-    row.push_back(name);
-
-    auto size = OutputBuffer::WithContents(
-        fxl::StringPrintf("%zu", reg_pair.first->size()));
-    size.SetForegroundColor(color);
-    row.push_back(size);
-
-    auto val = RegisterValueToOutputBuffer(*reg_pair.first);
-    val.SetForegroundColor(color);
-    row.push_back(val);
-
-    if (cat == debug_ipc::RegisterCategory::Type::kFloatingPoint) {
-      OutputBuffer fp_val;
-      std::string out;
-      if (GetFPString(*reg_pair.first, &out).ok()) {
-        fp_val = OutputBuffer::WithContents(std::move(out));
-        fp_val.SetForegroundColor(color);
+      for (const auto& reg : it->second) {
+        const char* reg_name = RegisterIDToString(reg.id());
+        // We don't care about the matches.
+        status = regexec(&regexp, reg_name, 0, nullptr, 0);
+        if (!status) {
+          registers.push_back(reg);
+          registers_found++;
+        } else if (status != REG_NOMATCH) {
+          return RegexpError("Error running regexp", search_regexp.c_str(),
+                             &regexp, status);
+        }
       }
-      row.push_back(fp_val);
     }
   }
 
-  out_buffers->push_back({});
-  OutputBuffer& out = out_buffers->back();
-  auto colspecs = std::vector<ColSpec>({ColSpec(Align::kLeft, 0, "Name"),
-                                        ColSpec(Align::kRight, 0, "Size"),
-                                        ColSpec(Align::kRight, 0, "Value", 2)});
-
-  if (cat == debug_ipc::RegisterCategory::Type::kFloatingPoint) {
-    colspecs.push_back(ColSpec(Align::kRight, 0, "FP"));
+  if (!search_regexp.empty() && registers_found == 0) {
+    return Err(fxl::StringPrintf(
+        "Could not find registers \"%s\" in the selected categories",
+        search_regexp.data()));
   }
-  FormatTable(colspecs, rows, &out);
-
   return Err();
 }
 
-}  // namespace
-
-Err FormatRegisters(const RegisterSet& registers,
-                    const std::string& searched_register, OutputBuffer* out,
-                    std::vector<debug_ipc::RegisterCategory::Type> categories) {
+void FormatRegisters(const FilteredRegisterSet& register_set,
+                    OutputBuffer* out) {
   std::vector<OutputBuffer> out_buffers;
-  const auto& category_map = registers.category_map();
-
-  // Go category to category trying to print.
-  for (const auto& category : categories) {
-    auto it = category_map.find(category);
-    if (it == category_map.end()) {
+  out_buffers.reserve(register_set.size());
+  for (auto kv : register_set) {
+    if (kv.second.empty())
       continue;
-    }
+    OutputBuffer out;
+    FormatCategory(kv.first, kv.second, &out);
+    out_buffers.emplace_back(std::move(out));
+  }
 
-    Err err = InternalFormatCategory(category, it->second, searched_register,
-                                     &out_buffers);
-    if (err.has_error()) {
-      return err;
-    }
-  }
-  // If nothing was printed, it means that we couldn't find the register.
-  if (out_buffers.empty()) {
-    if (searched_register.empty()) {
-      return Err("No registers to show in the selected categories");
-    } else {
-      return Err(fxl::StringPrintf(
-          "Could not find register \"%s\" in the selected categories",
-          searched_register.c_str()));
-    }
-  }
+  // We should have detected on the filtering stage that we didn't find any
+  // register.
+  FXL_DCHECK(!out_buffers.empty());
 
   // Each section is separated by a new line.
   for (const auto& buf : out_buffers) {
-    out->Append(buf);
+    out->Append(std::move(buf));
     out->Append("\n");
   }
-
-  return Err();
 }
 
 // Formatting helpers ----------------------------------------------------------
 
-std::string RegisterCategoryTypeToString(
-    debug_ipc::RegisterCategory::Type type) {
+std::string RegisterCategoryTypeToString(RegisterCategory::Type type) {
   switch (type) {
-    case debug_ipc::RegisterCategory::Type::kGeneral:
+    case RegisterCategory::Type::kGeneral:
       return "General Purpose";
-    case debug_ipc::RegisterCategory::Type::kFloatingPoint:
+    case RegisterCategory::Type::kFloatingPoint:
       return "Floating Point";
-    case debug_ipc::RegisterCategory::Type::kVector:
+    case RegisterCategory::Type::kVector:
       return "Vector";
-    case debug_ipc::RegisterCategory::Type::kMisc:
+    case RegisterCategory::Type::kMisc:
       return "Miscellaneous";
   }
 }

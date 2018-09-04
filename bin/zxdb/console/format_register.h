@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -13,23 +14,28 @@ namespace zxdb {
 
 class Err;
 class OutputBuffer;
+class Register;
 class RegisterSet;
 
-// Outputs the register information received from the debug agent.
-// |search_regexp| is to limit which register to show. It will only output
-// information for registers that matches.
-//
-// You can define the types of categories to print using the vector at the end.
-// By default only prints the general registers. Empty means every category.
-Err FormatRegisters(
-    const RegisterSet&, const std::string& search_regexp, OutputBuffer* out,
-    std::vector<debug_ipc::RegisterCategory::Type> categories = {
-        debug_ipc::RegisterCategory::Type::kGeneral});
+using FilteredRegisterSet = std::map<debug_ipc::RegisterCategory::Type,
+                                     std::vector<Register>>;
+
+// Filters the available registers to the ones matching the given categories and
+// matching the registers.
+// Not defining a regexp will let all the registers pass.
+Err FilterRegisters(const RegisterSet&, FilteredRegisterSet* out,
+                    std::vector<debug_ipc::RegisterCategory::Type> categories,
+                    const std::string& search_regexp = std::string());
+
+// Format the output of the FilterRegisters call into a console readable format.
+void FormatRegisters(const FilteredRegisterSet&, OutputBuffer* out);
 
 // Formatting helpers ----------------------------------------------------------
 
 std::string RegisterCategoryTypeToString(debug_ipc::RegisterCategory::Type);
 
 const char* RegisterIDToString(debug_ipc::RegisterID);
+
+Err FormaterRegisterValue(const Register&, std::string* out);
 
 }  // namespace zxdb

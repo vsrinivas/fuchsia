@@ -584,8 +584,8 @@ constexpr int kRegsCategoriesSwitch = 1;
 const std::vector<std::string> kRegsCategoriesValues = {"general", "fp",
                                                         "vector", "all"};
 
-void OnRegsComplete(const Err& cmd_err, const RegisterSet& registers,
-                    const std::string& reg_name,
+void OnRegsComplete(const Err& cmd_err, const RegisterSet& register_set,
+                    const std::string& search_regexp,
                     const std::vector<RegisterCategory::Type>& cats_to_show) {
   Console* console = Console::get();
   if (cmd_err.has_error()) {
@@ -593,13 +593,16 @@ void OnRegsComplete(const Err& cmd_err, const RegisterSet& registers,
     return;
   }
 
-  OutputBuffer out;
-  Err err = FormatRegisters(registers, reg_name, &out, cats_to_show);
-  if (err.has_error()) {
+  FilteredRegisterSet filtered_set;
+  Err err = FilterRegisters(register_set, &filtered_set, cats_to_show,
+                            search_regexp);
+  if (!err.ok()) {
     console->Output(err);
     return;
   }
 
+  OutputBuffer out;
+  FormatRegisters(filtered_set, &out);
   console->Output(out);
 }
 
