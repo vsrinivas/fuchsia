@@ -20,7 +20,8 @@ struct GuestInfo {
   // can also be used to uniquely identify a guest within an environment.
   uint32 cid;
 
-  // The string provided in the |GuestLaunchInfo| structure.
+  // The |label| string originally provided in the |GuestLaunchInfo| structure
+  // or, if it was the null, the |url|
   string label;
 };
 
@@ -37,7 +38,7 @@ interface GuestManager {
   // This is intended for diagnostic purposes only.
   2: ListEnvironments() -> (vector<GuestEnvironmentInfo> env_infos);
 
-  // Connect to a currently running guest envrionment identified by |id|. The
+  // Connect to a currently running guest environment identified by |id|. The
   // |id| can be found via a call to |ListEnvironments|.
   //
   // This is intended for diagnostic purposes only.
