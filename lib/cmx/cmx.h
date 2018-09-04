@@ -37,6 +37,11 @@ class CmxMetadata {
   static std::string GetDefaultComponentCmxPath(
       const std::string& package_resolved_url);
 
+  // Takes a package's resolved_url, e.g. file:///pkgfs/packages/<FOO>/0, and
+  // returns the default component's name, e.g. <FOO>.
+  static std::string GetDefaultComponentName(
+      const std::string& package_resolved_url);
+
   const SandboxMetadata& sandbox_meta() { return sandbox_meta_; }
   const RuntimeMetadata& runtime_meta() { return runtime_meta_; }
   const ProgramMetadata& program_meta() { return program_meta_; }

@@ -18,8 +18,6 @@ constexpr char kProgram[] = "program";
 constexpr char kFacets[] = "facets";
 constexpr char kCmxPath[] = "meta/";
 constexpr char kCmxExtension[] = ".cmx";
-static const std::regex* const kPackageNameFileScheme =
-    new std::regex("^file:///pkgfs/packages/(.*?)/");
 
 CmxMetadata::CmxMetadata() = default;
 CmxMetadata::~CmxMetadata() = default;
@@ -60,17 +58,32 @@ std::string CmxMetadata::GetDefaultComponentCmxPath(
   // Expect package resolved URL in the form of file:///pkgfs/packages/<FOO>/0.
   // Look for <FOO> as the package name.
   // Currently there is only one component per package. The default .cmx is
-  // meta/<FOO>.cmx
+  // meta/<FOO>.cmx.
   std::string cmx_path;
-  std::smatch sm;
-  if (std::regex_search(package_resolved_url, sm, *kPackageNameFileScheme) &&
-      sm.size() >= 2) {
-    std::ostringstream os;
-
-    os << kCmxPath << sm[1].str().c_str() << kCmxExtension;
+  std::ostringstream os;
+  std::string component_name = GetDefaultComponentName(package_resolved_url);
+  if (!component_name.empty()) {
+    os << kCmxPath << component_name << kCmxExtension;
     cmx_path = os.str();
   }
   return cmx_path;
+}
+
+std::string CmxMetadata::GetDefaultComponentName(
+    const std::string& package_resolved_url) {
+  static const std::regex* const kPackageNameFileScheme =
+      new std::regex("^file:///pkgfs/packages/(.*?)/");
+  // Expect package resolved URL in the form of file:///pkgfs/packages/<FOO>/0.
+  // Look for <FOO> as the package name.
+  // Currently there is only one component per package. The default component is
+  // <FOO>.
+  std::string component_name;
+  std::smatch sm;
+  if (std::regex_search(package_resolved_url, sm, *kPackageNameFileScheme) &&
+      sm.size() >= 2) {
+    component_name = sm[1].str().c_str();
+  }
+  return component_name;
 }
 
 void CmxMetadata::ParseSandboxMetadata(const rapidjson::Document& document,

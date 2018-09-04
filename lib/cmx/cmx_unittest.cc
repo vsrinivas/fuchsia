@@ -77,8 +77,8 @@ TEST_F(CmxMetadataTest, ParseMetadata) {
   "other": "stuff"
   })JSON";
   std::string file_unused;
-  EXPECT_TRUE(ParseFrom(&cmx, &json_parser, json,
-                        &file_unused)) << json_parser.error_str();
+  EXPECT_TRUE(ParseFrom(&cmx, &json_parser, json, &file_unused))
+      << json_parser.error_str();
   EXPECT_FALSE(json_parser.HasError());
 
   const auto& sandbox = cmx.sandbox_meta();
@@ -115,7 +115,8 @@ TEST_F(CmxMetadataTest, ParseEmpty) {
       << json_parser.error_str();
   EXPECT_FALSE(cmx.sandbox_meta().IsNull());
   EXPECT_TRUE(cmx.runtime_meta().IsNull());
-  EXPECT_TRUE(cmx.program_meta().IsNull());
+  EXPECT_TRUE(cmx.program_meta().IsBinaryNull());
+  EXPECT_TRUE(cmx.program_meta().IsDataNull());
 }
 
 TEST_F(CmxMetadataTest, ParseFromDeprecatedRuntime) {
@@ -127,21 +128,22 @@ TEST_F(CmxMetadataTest, ParseFromDeprecatedRuntime) {
   CmxMetadata cmx;
   json::JSONParser json_parser;
   std::string file_unused;
-  EXPECT_TRUE(ParseFromDeprecatedRuntime(&cmx, &json_parser, json,
-                                         &file_unused))
+  EXPECT_TRUE(
+      ParseFromDeprecatedRuntime(&cmx, &json_parser, json, &file_unused))
       << json_parser.error_str();
   EXPECT_TRUE(cmx.sandbox_meta().IsNull());
   EXPECT_FALSE(cmx.runtime_meta().IsNull());
   EXPECT_EQ("dart_runner", cmx.runtime_meta().runner());
-  EXPECT_TRUE(cmx.program_meta().IsNull());
+  EXPECT_TRUE(cmx.program_meta().IsBinaryNull());
+  EXPECT_TRUE(cmx.program_meta().IsDataNull());
 }
 
-#define NO_SERVICES \
-    "$0: Sandbox must include either 'services' or " \
-    "'deprecated-all-services'.\n" \
-    "Refer to " \
-    "https://fuchsia.googlesource.com/docs/+/master/the-book/" \
-    "package_metadata.md#sandbox for more information."
+#define NO_SERVICES                                          \
+  "$0: Sandbox must include either 'services' or "           \
+  "'deprecated-all-services'.\n"                             \
+  "Refer to "                                                \
+  "https://fuchsia.googlesource.com/docs/+/master/the-book/" \
+  "package_metadata.md#sandbox for more information."
 
 TEST_F(CmxMetadataTest, ParseWithErrors) {
   rapidjson::Value sandbox;
@@ -155,8 +157,9 @@ TEST_F(CmxMetadataTest, ParseWithErrors) {
                     "$0: 'dev' in sandbox is not an array.\n" NO_SERVICES);
   ExpectFailedParse(R"JSON({ "runner" : 3 })JSON",
                     NO_SERVICES "\n$0: 'runner' is not a string.");
-  ExpectFailedParse(R"JSON({ "program" : { "binary": 3 } })JSON",
-                    NO_SERVICES "\n$0: 'binary' in program is not a string.");
+  ExpectFailedParse(R"JSON({ "program" : { "binary": 3 } })JSON", NO_SERVICES
+                    "\n$0: 'binary' in program is not a string.\n$0: Both "
+                    "'binary' and 'data' in program are missing.");
 }
 
 TEST_F(CmxMetadataTest, GetDefaultComponentCmxPath) {

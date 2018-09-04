@@ -21,7 +21,8 @@ class ProgramMetadataTest : public ::testing::Test {
     std::string error;
     ProgramMetadata program;
     EXPECT_FALSE(ParseFrom(&program, json, &error));
-    EXPECT_TRUE(program.IsNull());
+    EXPECT_TRUE(program.IsBinaryNull());
+    EXPECT_TRUE(program.IsDataNull());
     EXPECT_EQ(error, expected_error);
   }
 
@@ -30,7 +31,8 @@ class ProgramMetadataTest : public ::testing::Test {
     json::JSONParser parser;
     rapidjson::Document document = parser.ParseFromString(json, "test_file");
     EXPECT_FALSE(parser.HasError());
-    EXPECT_TRUE(program->IsNull());
+    EXPECT_TRUE(program->IsBinaryNull());
+    EXPECT_TRUE(program->IsDataNull());
     const bool ret = program->Parse(document, &parser);
     if (parser.HasError()) {
       *error = parser.error_str();
@@ -39,21 +41,55 @@ class ProgramMetadataTest : public ::testing::Test {
   }
 };
 
-TEST_F(ProgramMetadataTest, Parse) {
+TEST_F(ProgramMetadataTest, ParseBinary) {
   ProgramMetadata program;
-  EXPECT_TRUE(program.IsNull());
+  EXPECT_TRUE(program.IsBinaryNull());
+  EXPECT_TRUE(program.IsDataNull());
   std::string error;
   EXPECT_TRUE(
       ParseFrom(&program, R"JSON({ "binary": "bin/app" })JSON", &error));
-  EXPECT_FALSE(program.IsNull());
+  EXPECT_FALSE(program.IsBinaryNull());
+  EXPECT_TRUE(program.IsDataNull());
   EXPECT_EQ("bin/app", program.binary());
 }
 
+TEST_F(ProgramMetadataTest, ParseData) {
+  ProgramMetadata program;
+  EXPECT_TRUE(program.IsBinaryNull());
+  EXPECT_TRUE(program.IsDataNull());
+  std::string error;
+  EXPECT_TRUE(
+      ParseFrom(&program, R"JSON({ "data": "data/component" })JSON", &error));
+  EXPECT_FALSE(program.IsDataNull());
+  EXPECT_TRUE(program.IsBinaryNull());
+  EXPECT_EQ("data/component", program.data());
+}
+
+TEST_F(ProgramMetadataTest, ParseBinaryAndData) {
+  ProgramMetadata program;
+  EXPECT_TRUE(program.IsBinaryNull());
+  EXPECT_TRUE(program.IsDataNull());
+  std::string error;
+  EXPECT_TRUE(ParseFrom(
+      &program, R"JSON({ "binary": "bin/app", "data": "data/component" })JSON",
+      &error));
+  EXPECT_FALSE(program.IsBinaryNull());
+  EXPECT_FALSE(program.IsDataNull());
+  EXPECT_EQ("bin/app", program.binary());
+  EXPECT_EQ("data/component", program.data());
+}
+
 TEST_F(ProgramMetadataTest, ParseWithErrors) {
-  ExpectFailedParse(R"JSON({})JSON",
-                    "test_file: 'binary' in program is missing.");
-  ExpectFailedParse(R"JSON({ "binary": 3 })JSON",
-                    "test_file: 'binary' in program is not a string.");
+  ExpectFailedParse(
+      R"JSON({})JSON",
+      "test_file: Both 'binary' and 'data' in program are missing.");
+  ExpectFailedParse(
+      R"JSON({ "binary": 3 })JSON",
+      "test_file: 'binary' in program is not a string.\ntest_file: Both "
+      "'binary' and 'data' in program are missing.");
+  ExpectFailedParse(R"JSON({ "data": 3 })JSON",
+                    "test_file: 'data' in program is not a string.\ntest_file: "
+                    "Both 'binary' and 'data' in program are missing.");
 }
 
 }  // namespace

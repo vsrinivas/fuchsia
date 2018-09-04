@@ -583,7 +583,8 @@ void Realm::CreateComponentFromPackage(
   std::string app_argv0;
   if (runtime.IsNull()) {
     const ProgramMetadata program = cmx.program_meta();
-    const std::string bin_path = program.IsNull() ? kAppPath : program.binary();
+    const std::string bin_path =
+        program.IsBinaryNull() ? kAppPath : program.binary();
     app_argv0 = fxl::Concatenate({kAppArgv0Prefix, bin_path});
     VmoFromFilenameAt(fd.get(), bin_path, &app_data);
     if (!app_data) {
