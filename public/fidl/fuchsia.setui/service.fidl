@@ -10,13 +10,12 @@ enum ReturnCode {
 };
 
 struct SettingsObject {
-  SettingType settingType;
-  bool readOnly;
+  SettingType setting_type;
   SettingData data;
 };
 
-struct SetResponse {
-  ReturnCode returnCode;
+struct UpdateResponse {
+  ReturnCode return_code;
 };
 
 // The main interface for UIs to change system settings. Currently, the 
@@ -29,13 +28,13 @@ interface SetUiService {
   // for a given type are closed.
   // The service will call the listener with the current state immediately on
   // initialization.
-  1: AddListener(SettingType type, SetUIListener listener);
+  1: Listen(SettingType settingType, SettingListener listener);
 
-  // Sets the value of a given settings object. Will only return once the operation
-  // has completed.
-  2: Set(SettingType type, SettingsObject value) -> (SetResponse response);
+  // Sets the value of a given settings object. Returns once operation
+  // has completed. 
+  2: Update(SettingsObject value) -> (UpdateResponse response);
 };
 
-interface SetUIListener {
-  1: Notify(SettingType type, SettingsObject object);
+interface SettingListener {
+  1: Notify(SettingsObject object);
 };

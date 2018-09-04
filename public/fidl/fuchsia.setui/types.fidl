@@ -2,8 +2,32 @@ library fuchsia.setui;
 
 enum SettingType {
     UNKNOWN = 0;
+    TIME_ZONE = 1;
 };
 
 union SettingData {
-    string stringValue;
+    string string_value;
+    // The data returned by the time zone service for getting or setting
+    // time zones.
+    TimeZoneInfo time_zone_value;
+};
+
+struct TimeZoneInfo {
+    // The current time zone. Will be absent if no time zone is currently set.
+    // To update the time zone, set this value.
+    TimeZone? current;
+
+    // An ordered list of the availble time zones.
+    vector<TimeZone> available;
+};
+
+struct TimeZone {
+    // The underlying ID value; shouldn't be displayed to the end user.
+    string id;
+
+    // The user visible description of the time zone.
+    string name;
+
+    // List of sample locations for which the time zone is valid.
+    vector<string> region;
 };
