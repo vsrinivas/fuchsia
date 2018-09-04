@@ -170,8 +170,7 @@ zx_status_t vim_uart_init(vim_bus_t* bus) {
     }
 
     // set GPIO to reset Bluetooth module
-    gpio_config(&bus->gpio, BT_EN, GPIO_DIR_OUT);
-    gpio_write(&bus->gpio, BT_EN, 0);
+    gpio_config_out(&bus->gpio, BT_EN, 0);
     usleep(10 * 1000);
     gpio_write(&bus->gpio, BT_EN, 1);
 

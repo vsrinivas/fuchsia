@@ -263,7 +263,7 @@ static pbus_dev_t thermal_dev = {
 zx_status_t aml_thermal_init(aml_bus_t* bus) {
     // Configure the GPIO to be Output & set it to alternate
     // function 3 which puts in PWM_D mode.
-    zx_status_t status = gpio_config(&bus->gpio, S905D2_PWM_D, GPIO_DIR_OUT);
+    zx_status_t status = gpio_config_out(&bus->gpio, S905D2_PWM_D, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_thermal_init: gpio_config failed: %d\n", status);
         return status;

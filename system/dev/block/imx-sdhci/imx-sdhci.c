@@ -1171,7 +1171,7 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
     dev->base_clock = IMX8M_SDHCI_BASE_CLOCK; // TODO: Better way of obtaining this info
 
     // Toggle the reset button
-    if (gpio_config(&dev->gpio, 0, GPIO_DIR_OUT) != ZX_OK) {
+    if (gpio_config_out(&dev->gpio, 0, 0) != ZX_OK) {
         SDHCI_ERROR("Could not configure RESET pin as output\n");
         goto fail;
     }

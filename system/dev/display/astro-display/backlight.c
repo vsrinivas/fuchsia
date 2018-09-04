@@ -24,10 +24,8 @@ static const bl_i2c_cmd_t backlight_init_table[] = {
 };
 
 void init_backlight(astro_display_t* display) {
-
     // power on backlight
-    gpio_config(&display->gpio, GPIO_BL, GPIO_DIR_OUT);
-    gpio_write(&display->gpio, GPIO_BL, 1);
+    gpio_config_out(&display->gpio, GPIO_BL, 1);
     usleep(1000);
 
     for (size_t i = 0; i < countof(backlight_init_table); i++) {

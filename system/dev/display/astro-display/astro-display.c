@@ -295,7 +295,7 @@ static zx_protocol_device_t main_device_proto = {
 // This function detect the panel type based.
 static void populate_panel_type(astro_display_t* display) {
     uint8_t pt;
-    if ((gpio_config(&display->gpio, GPIO_PANEL_DETECT, GPIO_DIR_IN | GPIO_NO_PULL) == ZX_OK) &&
+    if ((gpio_config_in(&display->gpio, GPIO_PANEL_DETECT, GPIO_NO_PULL) == ZX_OK) &&
         (gpio_read(&display->gpio, GPIO_PANEL_DETECT, &pt) == ZX_OK)) {
         display->panel_type = pt;
         DISP_INFO("Detected panel type = %s (%d)\n",

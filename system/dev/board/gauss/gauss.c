@@ -132,8 +132,7 @@ static int gauss_start_thread(void* arg) {
     gpio_set_alt_function(&bus->gpio, TDM_MISO_C, 2);
 
     gpio_set_alt_function(&bus->gpio, SPK_MUTEn, 0);
-    gpio_config(&bus->gpio, SPK_MUTEn, GPIO_DIR_OUT);
-    gpio_write(&bus->gpio, SPK_MUTEn, 1);
+    gpio_config_out(&bus->gpio, SPK_MUTEn, 1);
 
     if ((status = gauss_i2c_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_i2c_init failed: %d\n", status);

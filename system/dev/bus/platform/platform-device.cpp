@@ -208,7 +208,7 @@ zx_status_t PlatformDevice::RpcGetProtocols(const DeviceResources* dr, uint32_t*
     return ZX_OK;
 }
 
-zx_status_t PlatformDevice::RpcGpioConfig(const DeviceResources* dr, uint32_t index, uint32_t flags) {
+zx_status_t PlatformDevice::RpcGpioConfigIn(const DeviceResources* dr, uint32_t index, uint32_t flags) {
     if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -216,7 +216,18 @@ zx_status_t PlatformDevice::RpcGpioConfig(const DeviceResources* dr, uint32_t in
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    return bus_->gpio()->Config(dr->gpio(index).gpio, flags);
+    return bus_->gpio()->ConfigIn(dr->gpio(index).gpio, flags);
+}
+
+zx_status_t PlatformDevice::RpcGpioConfigOut(const DeviceResources* dr, uint32_t index, uint8_t initial_value) {
+    if (bus_->gpio() == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= dr->gpio_count()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    return bus_->gpio()->ConfigOut(dr->gpio(index).gpio, initial_value);
 }
 
 zx_status_t PlatformDevice::RpcGpioSetAltFunction(const DeviceResources* dr, uint32_t index,
@@ -435,8 +446,11 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
         resp_len = sizeof(*resp);
 
         switch (req_header->op) {
-        case GPIO_CONFIG:
-            status = RpcGpioConfig(dr, req->index, req->flags);
+        case GPIO_CONFIG_IN:
+            status = RpcGpioConfigIn(dr, req->index, req->flags);
+            break;
+        case GPIO_CONFIG_OUT:
+            status = RpcGpioConfigOut(dr, req->index, req->value);
             break;
         case GPIO_SET_ALT_FUNCTION:
             status = RpcGpioSetAltFunction(dr, req->index, req->alt_function);

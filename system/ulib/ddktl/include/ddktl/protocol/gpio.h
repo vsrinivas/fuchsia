@@ -35,7 +35,8 @@
 //     GpioDevice(zx_device_t* parent)
 //       : GpioDeviceType("my-gpio-device", parent) {}
 //
-//     zx_status_t GpioConfig(uint32_t index, uint32_t flags);
+//     zx_status_t GpioConfigIn(uint32_t index, uint32_t flags);
+//     zx_status_t GpioConfigOut(uint32_t index, uint8_t initial_value);
 //     zx_status_t GpioSetAltFunction(uint32_t index, uint64_t function);
 //     zx_status_t GpioRead(uint32_t index, uint8_t* out_value);
 //     zx_status_t GpioWrite(uint32_t index, uint8_t value);
@@ -52,7 +53,8 @@ class GpioProtocol : public internal::base_protocol {
 public:
     GpioProtocol() {
         internal::CheckGpioProtocolSubclass<D>();
-        ops_.config = GpioConfig;
+        ops_.config_in = GpioConfigIn;
+        ops_.config_out = GpioConfigOut;
         ops_.set_alt_function = GpioSetAltFunction;
         ops_.read = GpioRead;
         ops_.write = GpioWrite;
@@ -70,8 +72,11 @@ protected:
     gpio_protocol_ops_t ops_ = {};
 
 private:
-    static zx_status_t GpioConfig(void* ctx, uint32_t index, uint32_t flags) {
-        return static_cast<D*>(ctx)->GpioConfig(index, flags);
+    static zx_status_t GpioConfigIn(void* ctx, uint32_t index, uint32_t flags) {
+        return static_cast<D*>(ctx)->GpioConfigIn(index, flags);
+    }
+    static zx_status_t GpioConfigOut(void* ctx, uint32_t index, uint8_t initial_value) {
+        return static_cast<D*>(ctx)->GpioConfigOut(index, initial_value);
     }
     static zx_status_t GpioSetAltFunction(void* ctx, uint32_t index, uint64_t function) {
         return static_cast<D*>(ctx)->GpioSetAltFunction(index, function);
@@ -104,8 +109,11 @@ public:
         proto->ops = ops_;
     }
 
-    zx_status_t Config(uint32_t index, uint32_t flags) {
-        return ops_->config(ctx_, index, flags);
+    zx_status_t ConfigIn(uint32_t index, uint32_t flags) {
+        return ops_->config_in(ctx_, index, flags);
+    }
+    zx_status_t ConfigOut(uint32_t index, uint8_t initial_value) {
+        return ops_->config_out(ctx_, index, initial_value);
     }
     zx_status_t SetAltFunction(uint32_t index, uint64_t function) {
         return ops_->set_alt_function(ctx_, index, function);

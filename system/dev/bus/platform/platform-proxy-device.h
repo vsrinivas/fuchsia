@@ -67,7 +67,8 @@ public:
     static zx_status_t ClkDisable(void* ctx, uint32_t index);
 
     // GPIO protocol implementation.
-    static zx_status_t GpioConfig(void* ctx, uint32_t index, uint32_t flags);
+    static zx_status_t GpioConfigIn(void* ctx, uint32_t index, uint32_t flags);
+    static zx_status_t GpioConfigOut(void* ctx, uint32_t index, uint8_t initial_value);
     static zx_status_t GpioSetAltFunction(void* ctx, uint32_t index, uint64_t function);
     static zx_status_t GpioRead(void* ctx, uint32_t index, uint8_t* out_value);
     static zx_status_t GpioWrite(void* ctx, uint32_t index, uint8_t value);

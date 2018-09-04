@@ -9,36 +9,15 @@
 
 __BEGIN_CDECLS;
 
-// flags for gpio_config()
-enum {
-    GPIO_DIR_IN             = 0 << 0,
-    GPIO_DIR_OUT            = 1 << 0,
-    GPIO_DIR_MASK           = 1 << 0,
+// flags for gpio_config_in()
+#define GPIO_PULL_DOWN          (0 << 0)
+#define GPIO_PULL_UP            (1 << 0)
+#define GPIO_NO_PULL            (2 << 0)
+#define GPIO_PULL_MASK          (3 << 0)
 
-    GPIO_TRIGGER_EDGE       = 0 << 1,
-    GPIO_TRIGGER_LEVEL      = 1 << 1,
-    GPIO_TRIGGER_MASK       = 1 << 1,
-
-    // for edge triggered
-    GPIO_TRIGGER_RISING     = 1 << 2,
-    GPIO_TRIGGER_FALLING    = 1 << 3,
-
-    // for level triggered
-    GPIO_TRIGGER_HIGH       = 1 << 2,
-    GPIO_TRIGGER_LOW        = 1 << 3,
-
-    // for pull-up/pull-down/no-pull
-    GPIO_PULL_DOWN          = 0 << 4,
-    GPIO_PULL_UP            = 1 << 4,
-    GPIO_NO_PULL            = 2 << 4,
-    GPIO_PULL_MASK          = 3 << 4,
-};
-
-enum
-{
-    GPIO_POLARITY_LOW =     0,
-    GPIO_POLARITY_HIGH =    1,
-};
+// Values for gpio_set_polarity()
+#define GPIO_POLARITY_LOW       0
+#define GPIO_POLARITY_HIGH      1
 
 // In the functions below, the GPIO index is relative to the list of GPIOs for the device.
 // For example, the list of GPIOs a platform device has access to would likely be a small
@@ -46,7 +25,8 @@ enum
 // have access to the complete set of GPIOs.
 
 typedef struct {
-    zx_status_t (*config)(void* ctx, uint32_t index, uint32_t flags);
+    zx_status_t (*config_in)(void* ctx, uint32_t index, uint32_t flags);
+    zx_status_t (*config_out)(void* ctx, uint32_t index, uint8_t initial_value);
     zx_status_t (*set_alt_function)(void* ctx, uint32_t index, uint64_t function);
     zx_status_t (*read)(void* ctx, uint32_t index, uint8_t* out_value);
     zx_status_t (*write)(void* ctx, uint32_t index, uint8_t value);
@@ -60,10 +40,16 @@ typedef struct {
     void* ctx;
 } gpio_protocol_t;
 
-// configures a GPIO
-static inline zx_status_t gpio_config(gpio_protocol_t* gpio, uint32_t index,
-                                      uint32_t flags) {
-    return gpio->ops->config(gpio->ctx, index, flags);
+// configures a GPIO for input
+static inline zx_status_t gpio_config_in(gpio_protocol_t* gpio, uint32_t index,
+                                         uint32_t flags) {
+    return gpio->ops->config_in(gpio->ctx, index, flags);
+}
+
+// configures a GPIO for output
+static inline zx_status_t gpio_config_out(gpio_protocol_t* gpio, uint32_t index,
+                                          uint8_t initial_value) {
+    return gpio->ops->config_out(gpio->ctx, index, initial_value);
 }
 
 // configures the GPIO pin for an alternate function (I2C, SPI, etc)

@@ -621,9 +621,9 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    status = gpio_config(&display->gpio, 0, GPIO_DIR_IN | GPIO_PULL_DOWN);
+    status = gpio_config_in(&display->gpio, 0, GPIO_PULL_DOWN);
     if (status != ZX_OK) {
-        DISP_ERROR("gpio_config failed for gpio\n");
+        DISP_ERROR("gpio_config_in failed for gpio\n");
         return status;
     }
 

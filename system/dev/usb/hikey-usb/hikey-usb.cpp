@@ -57,9 +57,9 @@ zx_status_t HikeyUsb::Init() {
     }
 
     ddk::GpioProtocolProxy gpio(&gpio_);
-    gpio.Config(HUB_VDD33_EN, GPIO_DIR_OUT);
-    gpio.Config(VBUS_TYPEC, GPIO_DIR_OUT);
-    gpio.Config(USBSW_SW_SEL, GPIO_DIR_OUT);
+    gpio.ConfigOut(HUB_VDD33_EN, 0);
+    gpio.ConfigOut(VBUS_TYPEC, 0);
+    gpio.ConfigOut(USBSW_SW_SEL, 0);
 
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},

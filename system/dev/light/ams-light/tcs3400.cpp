@@ -346,7 +346,7 @@ zx_status_t Tcs3400Device::Bind() {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    gpio_config(&gpio_, TCS3400_INTERRUPT_IDX, GPIO_DIR_IN);
+    gpio_config_in(&gpio_, TCS3400_INTERRUPT_IDX, GPIO_NO_PULL);
 
     status = gpio_get_interrupt(&gpio_, TCS3400_INTERRUPT_IDX,
                                 ZX_INTERRUPT_MODE_EDGE_LOW,

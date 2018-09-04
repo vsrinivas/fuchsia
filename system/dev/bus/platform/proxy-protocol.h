@@ -68,7 +68,8 @@ static constexpr uint32_t I2C_MAX_TRANSFER_SIZE = (PROXY_MAX_TRANSFER_SIZE -
 
 // ZX_PROTOCOL_GPIO proxy support.
 enum {
-    GPIO_CONFIG,
+    GPIO_CONFIG_IN,
+    GPIO_CONFIG_OUT,
     GPIO_SET_ALT_FUNCTION,
     GPIO_READ,
     GPIO_WRITE,

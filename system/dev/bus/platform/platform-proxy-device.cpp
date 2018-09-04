@@ -30,14 +30,27 @@
 
 namespace platform_bus {
 
-zx_status_t ProxyDevice::GpioConfig(void* ctx, uint32_t index, uint32_t flags) {
+zx_status_t ProxyDevice::GpioConfigIn(void* ctx, uint32_t index, uint32_t flags) {
     ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
     rpc_gpio_req_t req = {};
     rpc_gpio_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_GPIO;
-    req.header.op = GPIO_CONFIG;
+    req.header.op = GPIO_CONFIG_IN;
     req.index = index;
     req.flags = flags;
+
+    return thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp.header,
+                             sizeof(resp));
+}
+
+zx_status_t ProxyDevice::GpioConfigOut(void* ctx, uint32_t index, uint8_t initial_value) {
+    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
+    rpc_gpio_req_t req = {};
+    rpc_gpio_rsp_t resp = {};
+    req.header.proto_id = ZX_PROTOCOL_GPIO;
+    req.header.op = GPIO_CONFIG_OUT;
+    req.index = index;
+    req.value = initial_value;
 
     return thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp.header,
                              sizeof(resp));
@@ -388,7 +401,8 @@ ProxyDevice::ProxyDevice(zx_device_t* parent, uint32_t device_id,
     // Initialize protocol ops
     clk_proto_ops_.enable = ClkEnable;
     clk_proto_ops_.disable = ClkDisable;
-    gpio_proto_ops_.config = GpioConfig;
+    gpio_proto_ops_.config_in = GpioConfigIn;
+    gpio_proto_ops_.config_out = GpioConfigOut;
     gpio_proto_ops_.set_alt_function = GpioSetAltFunction;
     gpio_proto_ops_.read = GpioRead;
     gpio_proto_ops_.write = GpioWrite;

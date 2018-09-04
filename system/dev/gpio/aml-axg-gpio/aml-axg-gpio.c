@@ -79,13 +79,13 @@ enum {
 #include "a113-blocks.h"
 #include "s905d2-blocks.h"
 
-static zx_status_t aml_pin_to_block(aml_gpio_t* gpio, const uint32_t pinid, aml_gpio_block_t** result) {
+static zx_status_t aml_pin_to_block(aml_gpio_t* gpio, const uint32_t pin, aml_gpio_block_t** result) {
     ZX_DEBUG_ASSERT(result);
 
     for (size_t i = 0; i < gpio->block_count; i++) {
         aml_gpio_block_t* gpio_block = &gpio->gpio_blocks[i];
         const uint32_t end_pin = gpio_block->start_pin + gpio_block->pin_count;
-        if (pinid >= gpio_block->start_pin && pinid < end_pin) {
+        if (pin >= gpio_block->start_pin && pin < end_pin) {
             *result = gpio_block;
             return ZX_OK;
         }
@@ -94,7 +94,7 @@ static zx_status_t aml_pin_to_block(aml_gpio_t* gpio, const uint32_t pinid, aml_
     return ZX_ERR_NOT_FOUND;
 }
 
-static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
+static zx_status_t aml_gpio_config_in(void* ctx, uint32_t index, uint32_t flags) {
     aml_gpio_t* gpio = ctx;
     zx_status_t status;
 
@@ -104,35 +104,65 @@ static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
         return status;
     }
 
-    uint32_t pinid = index - block->pin_block;
-    pinid += block->output_shift;
+    uint32_t pinindex = index - block->pin_block;
+    pinindex += block->output_shift;
+    const uint32_t pinmask = 1 << pinindex;
+
     mtx_lock(&block->lock);
 
     uint32_t regval = READ32_GPIO_REG(block->mmio_index, block->oen_offset);
-    const uint32_t pinmask = 1 << pinid;
-    uint32_t direction = flags & GPIO_DIR_MASK;
-    if (direction & GPIO_DIR_OUT) {
-        regval &= ~pinmask;
+    // Set the GPIO as pull-up or pull-down
+    uint32_t pull = flags & GPIO_PULL_MASK;
+    uint32_t pull_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_offset);
+    uint32_t pull_en_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_en_offset);
+    if (pull & GPIO_NO_PULL) {
+        pull_en_reg_val &= ~pinmask;
     } else {
-        // Set the GPIO as pull-up or pull-down
-        uint32_t pull = flags & GPIO_PULL_MASK;
-        uint32_t pull_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_offset);
-        uint32_t pull_en_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_en_offset);
-        if (pull & GPIO_NO_PULL) {
-            pull_en_reg_val &= ~(1 << pinmask);
+        if (pull & GPIO_PULL_UP) {
+            pull_reg_val |= pinmask;
         } else {
-            if (pull & GPIO_PULL_UP) {
-                pull_reg_val |= (1 << pinmask);
-            } else {
-                pull_reg_val &= ~(1 << pinmask);
-            }
-            pull_en_reg_val |= (1 << pinmask);
+            pull_reg_val &= ~pinmask;
         }
-
-        WRITE32_GPIO_REG(block->mmio_index, block->pull_offset, pull_reg_val);
-        WRITE32_GPIO_REG(block->mmio_index, block->pull_en_offset, pull_en_reg_val);
-        regval |= pinmask;
+        pull_en_reg_val |= pinmask;
     }
+
+    WRITE32_GPIO_REG(block->mmio_index, block->pull_offset, pull_reg_val);
+    WRITE32_GPIO_REG(block->mmio_index, block->pull_en_offset, pull_en_reg_val);
+    regval |= pinmask;
+    WRITE32_GPIO_REG(block->mmio_index, block->oen_offset, regval);
+
+    mtx_unlock(&block->lock);
+
+    return ZX_OK;
+}
+
+static zx_status_t aml_gpio_config_out(void* ctx, uint32_t index, uint8_t initial_value) {
+    aml_gpio_t* gpio = ctx;
+    zx_status_t status;
+
+    aml_gpio_block_t* block;
+    if ((status = aml_pin_to_block(gpio, index, &block)) != ZX_OK) {
+        zxlogf(ERROR, "aml_gpio_config: pin not found %u\n", index);
+        return status;
+    }
+
+    uint32_t pinindex = index - block->pin_block;
+    pinindex += block->output_shift;
+    const uint32_t pinmask = 1 << pinindex;
+
+    mtx_lock(&block->lock);
+
+    // Set value before configuring for output
+    uint32_t regval = READ32_GPIO_REG(block->mmio_index, block->output_offset);
+    if (initial_value) {
+        regval |= pinmask;
+    } else {
+        regval &= ~pinmask;
+    }
+    WRITE32_GPIO_REG(block->mmio_index, block->output_offset, regval);
+
+    regval = READ32_GPIO_REG(block->mmio_index, block->oen_offset);
+    regval &= ~pinmask;
     WRITE32_GPIO_REG(block->mmio_index, block->oen_offset, regval);
 
     mtx_unlock(&block->lock);
@@ -237,7 +267,6 @@ static zx_status_t aml_gpio_write(void* ctx, uint32_t index, uint8_t value) {
 
     return ZX_OK;
 }
-
 
 static uint32_t aml_gpio_get_unsed_irq_index(uint8_t status) {
     // First isolate the rightmost 0-bit
@@ -385,7 +414,8 @@ static zx_status_t aml_gpio_set_polarity(void *ctx, uint32_t pin,
 }
 
 static gpio_protocol_ops_t gpio_ops = {
-    .config = aml_gpio_config,
+    .config_in = aml_gpio_config_in,
+    .config_out = aml_gpio_config_out,
     .set_alt_function = aml_gpio_set_alt_function,
     .read = aml_gpio_read,
     .write = aml_gpio_write,

@@ -9,8 +9,10 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_gpio_config, GpioConfig,
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_gpio_config_in, GpioConfigIn,
         zx_status_t (C::*)(uint32_t, uint32_t));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_gpio_config_out, GpioConfigOut,
+        zx_status_t (C::*)(uint32_t, uint8_t));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_gpio_set_alt_function, GpioSetAltFunction,
         zx_status_t (C::*)(uint32_t, uint64_t));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_gpio_read, GpioRead,
@@ -26,9 +28,12 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_gpio_set_polarity, GpioSetPolarity,
 
 template <typename D>
 constexpr void CheckGpioProtocolSubclass() {
-    static_assert(internal::has_gpio_config<D>::value,
+    static_assert(internal::has_gpio_config_in<D>::value,
                   "GpioProtocol subclasses must implement "
-                  "GpioConfig(uint32_t index, uint32_t flags)");
+                  "GpioConfigIn(uint32_t index, uint32_t flags)");
+    static_assert(internal::has_gpio_config_out<D>::value,
+                  "GpioProtocol subclasses must implement "
+                  "GpioConfigOut(uint32_t index, uint8_t initial_value)");
     static_assert(internal::has_gpio_set_alt_function<D>::value,
                   "GpioProtocol subclasses must implement "
                   "GpioSetAltFunction(uint32_t index, uint64_t function)");

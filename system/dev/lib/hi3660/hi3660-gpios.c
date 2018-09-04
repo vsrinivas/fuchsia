@@ -31,13 +31,26 @@ static pl061_gpios_t* find_gpio(hi3660_t* hi3660, uint32_t index) {
     return NULL;
 }
 
-static zx_status_t hi3660_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
+static zx_status_t hi3660_gpio_config_in(void* ctx, uint32_t index, uint32_t flags) {
     hi3660_t* hi3660 = ctx;
     pl061_gpios_t* gpios = find_gpio(hi3660, index);
     if (!gpios) {
         return ZX_ERR_INVALID_ARGS;
     }
-    return pl061_proto_ops.config(gpios, index, flags);
+    return pl061_proto_ops.config_in(gpios, index, flags);
+}
+
+static zx_status_t hi3660_gpio_config_out(void* ctx, uint32_t index, uint8_t initial_value) {
+    hi3660_t* hi3660 = ctx;
+    pl061_gpios_t* gpios = find_gpio(hi3660, index);
+    if (!gpios) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return pl061_proto_ops.config_out(gpios, index, initial_value);
+}
+
+static zx_status_t hi3660_gpio_set_alt_function(void* ctx, uint32_t index, uint64_t function) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t hi3660_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
@@ -58,10 +71,28 @@ static zx_status_t hi3660_gpio_write(void* ctx, uint32_t index, uint8_t value) {
     return pl061_proto_ops.write(gpios, index, value);
 }
 
+static zx_status_t hi3660_gpio_get_interrupt(void* ctx, uint32_t pin, uint32_t flags,
+                                             zx_handle_t* out_handle) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t hi3660_gpio_release_interrupt(void* ctx, uint32_t pin) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t hi3660_gpio_set_polarity(void* ctx, uint32_t pin, uint32_t polarity) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static gpio_protocol_ops_t gpio_ops = {
-    .config = hi3660_gpio_config,
+    .config_in = hi3660_gpio_config_in,
+    .config_out = hi3660_gpio_config_out,
+    .set_alt_function = hi3660_gpio_set_alt_function,
     .read = hi3660_gpio_read,
     .write = hi3660_gpio_write,
+    .get_interrupt = hi3660_gpio_get_interrupt,
+    .release_interrupt = hi3660_gpio_release_interrupt,
+    .set_polarity = hi3660_gpio_set_polarity,
 };
 
 typedef struct {

@@ -574,8 +574,7 @@ zx_status_t load_init_table(astro_display_t* display, uint8_t* buffer, size_t si
 zx_status_t lcd_init(astro_display_t* display) {
 
     // reset LCD panel via GPIO according to vendor doc
-    gpio_config(&display->gpio, GPIO_LCD, GPIO_DIR_OUT);
-    gpio_write(&display->gpio, GPIO_LCD, 1);
+    gpio_config_out(&display->gpio, GPIO_LCD, 1);
     usleep(30 * 1000);
     gpio_write(&display->gpio, GPIO_LCD, 0);
     usleep(10 * 1000);

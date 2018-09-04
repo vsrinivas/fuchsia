@@ -74,7 +74,7 @@ zx_status_t Ft3x27Device::InitPdev() {
         return status;
     }
 
-    gpio_config(&gpio_, FT_INT_PIN, GPIO_DIR_IN);
+    gpio_config_in(&gpio_, FT_INT_PIN, GPIO_NO_PULL);
 
     status = gpio_get_interrupt(&gpio_, FT_INT_PIN,
                                 ZX_INTERRUPT_MODE_EDGE_LOW,

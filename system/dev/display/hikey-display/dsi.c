@@ -114,9 +114,9 @@ static void dsi_configure_dphy_pll(dsi_t* dsi) {
 
 static void hdmi_gpio_init(dsi_t* dsi) {
     gpio_protocol_t* gpio = &dsi->hdmi_gpio.gpio;
-    gpio_config(gpio, GPIO_MUX, GPIO_DIR_OUT);
-    gpio_config(gpio, GPIO_PD, GPIO_DIR_OUT);
-    gpio_config(gpio, GPIO_INT, GPIO_DIR_IN);
+    gpio_config_out(gpio, GPIO_MUX, 0);
+    gpio_config_out(gpio, GPIO_PD, 0);
+    gpio_config_in(gpio, GPIO_INT, GPIO_NO_PULL);
     gpio_write(gpio, GPIO_MUX, 0);
 }
 

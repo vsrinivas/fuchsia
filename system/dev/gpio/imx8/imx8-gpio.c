@@ -43,7 +43,7 @@ typedef struct {
 #define WRITE32_GPIO_REG(block_index, offset, value) writel(value, \
                                   io_buffer_virt(&gpio->mmios[block_index]) + offset)
 
-static zx_status_t imx8_gpio_config(void* ctx, uint32_t pin, uint32_t flags) {
+static zx_status_t imx8_gpio_config_in(void* ctx, uint32_t pin, uint32_t flags) {
     uint32_t gpio_block;
     uint32_t gpio_pin;
     uint32_t regVal;
@@ -61,18 +61,42 @@ static zx_status_t imx8_gpio_config(void* ctx, uint32_t pin, uint32_t flags) {
     mtx_lock(&gpio->lock[gpio_block]);
     regVal = READ32_GPIO_REG(gpio_block, IMX_GPIO_GDIR);
     regVal &= ~(1 << gpio_pin);
-    uint32_t direction = flags & GPIO_DIR_MASK;
-
-    if (direction & GPIO_DIR_OUT) {
-        regVal |= (GPIO_OUTPUT << gpio_pin);
-    } else {
-        regVal |= (GPIO_INPUT << gpio_pin);
-    }
+    regVal |= (GPIO_INPUT << gpio_pin);
     WRITE32_GPIO_REG(gpio_block, IMX_GPIO_GDIR, regVal);
     mtx_unlock(&gpio->lock[gpio_block]);
     return ZX_OK;
 }
 
+static zx_status_t imx8_gpio_config_out(void* ctx, uint32_t pin, uint8_t initial_value) {
+    uint32_t gpio_block;
+    uint32_t gpio_pin;
+    uint32_t regVal;
+    imx8_gpio_t* gpio = ctx;
+
+    gpio_block = IMX_NUM_TO_BLOCK(pin);
+    gpio_pin = IMX_NUM_TO_BIT(pin);
+
+    if (gpio_block >= IMX_GPIO_BLOCKS || gpio_pin >= 32) {
+        zxlogf(ERROR, "%s: Invalid GPIO pin (pin = %d Block = %d, Offset = %d)\n",
+            __FUNCTION__, pin, gpio_block, gpio_pin);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    mtx_lock(&gpio->lock[gpio_block]);
+
+    // Set value before configuring for output
+    regVal = READ32_GPIO_REG(gpio_block, IMX_GPIO_DR);
+    regVal &= ~(1 << gpio_pin);
+    regVal |= (initial_value << gpio_pin);
+    WRITE32_GPIO_REG(gpio_block, IMX_GPIO_DR, regVal);
+
+    regVal = READ32_GPIO_REG(gpio_block, IMX_GPIO_GDIR);
+    regVal &= ~(1 << gpio_pin);
+    regVal |= (GPIO_OUTPUT << gpio_pin);
+    WRITE32_GPIO_REG(gpio_block, IMX_GPIO_GDIR, regVal);
+    mtx_unlock(&gpio->lock[gpio_block]);
+    return ZX_OK;
+}
 
 static zx_status_t imx8_gpio_read(void* ctx, uint32_t pin, uint8_t* out_value) {
     uint32_t gpio_block;
@@ -352,13 +376,21 @@ fail:
     mtx_unlock(&gpio->gpio_lock);
     return status;
 }
+
+static zx_status_t imx8_gpio_set_polarity(void *ctx, uint32_t pin,
+                                        uint32_t polarity) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static gpio_protocol_ops_t gpio_ops = {
-    .config = imx8_gpio_config,
+    .config_in = imx8_gpio_config_in,
+    .config_out = imx8_gpio_config_out,
     .set_alt_function = imx8_gpio_set_alt_function,
     .read = imx8_gpio_read,
     .write = imx8_gpio_write,
     .get_interrupt = imx8_gpio_get_interrupt,
     .release_interrupt = imx8_gpio_release_interrupt,
+    .set_polarity = imx8_gpio_set_polarity,
 };
 
 static void imx8_gpio_release(void* ctx)

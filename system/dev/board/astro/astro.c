@@ -48,9 +48,9 @@ static const pbus_dev_t rtc_dev = {
 static uint32_t astro_get_board_rev(aml_bus_t* bus) {
     uint32_t board_rev;
     uint8_t id0, id1, id2;
-    gpio_config(&bus->gpio, GPIO_HW_ID0, GPIO_DIR_IN | GPIO_NO_PULL);
-    gpio_config(&bus->gpio, GPIO_HW_ID1, GPIO_DIR_IN | GPIO_NO_PULL);
-    gpio_config(&bus->gpio, GPIO_HW_ID2, GPIO_DIR_IN | GPIO_NO_PULL);
+    gpio_config_in(&bus->gpio, GPIO_HW_ID0, GPIO_NO_PULL);
+    gpio_config_in(&bus->gpio, GPIO_HW_ID1, GPIO_NO_PULL);
+    gpio_config_in(&bus->gpio, GPIO_HW_ID2, GPIO_NO_PULL);
     gpio_read(&bus->gpio, GPIO_HW_ID0, &id0);
     gpio_read(&bus->gpio, GPIO_HW_ID1, &id1);
     gpio_read(&bus->gpio, GPIO_HW_ID2, &id2);

@@ -62,7 +62,7 @@ static int gpio_test_thread(void *arg) {
     uint32_t gpio_count = gpio_test->gpio_count;
 
     for (unsigned i = 0; i < gpio_count; i++) {
-        if (gpio_config(gpio, i, GPIO_DIR_OUT) != ZX_OK) {
+        if (gpio_config_out(gpio, i, 0) != ZX_OK) {
             zxlogf(ERROR, "gpio-test: gpio_config failed for gpio %u\n", i);
             return -1;
         }
@@ -105,7 +105,7 @@ static int gpio_interrupt_test(void *arg) {
     gpio_test_t* gpio_test = arg;
     gpio_protocol_t* gpio = &gpio_test->gpio;
 
-    if (gpio_config(gpio, GPIO_BUTTON, GPIO_DIR_IN | GPIO_PULL_DOWN) != ZX_OK) {
+    if (gpio_config_in(gpio, GPIO_BUTTON, GPIO_PULL_DOWN) != ZX_OK) {
         zxlogf(ERROR, "gpio_interrupt_test: gpio_config failed for gpio %u \n", GPIO_BUTTON);
         return -1;
     }
@@ -125,7 +125,7 @@ static int gpio_test_in(void *arg) {
     gpio_test_t* gpio_test = arg;
     gpio_protocol_t* gpio = &gpio_test->gpio;
 
-    if (gpio_config(gpio, GPIO_BUTTON, GPIO_DIR_IN) != ZX_OK) {
+    if (gpio_config_in(gpio, GPIO_BUTTON, GPIO_NO_PULL) != ZX_OK) {
         zxlogf(ERROR, "gpio_interrupt_test: gpio_config failed for gpio %u \n", GPIO_BUTTON);
         return -1;
     }

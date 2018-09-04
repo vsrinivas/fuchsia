@@ -22,7 +22,7 @@
 
 #define GPIOS_PER_PAGE  8
 
-static zx_status_t pl061_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
+static zx_status_t pl061_gpio_config_in(void* ctx, uint32_t index, uint32_t flags) {
     pl061_gpios_t* gpios = ctx;
     index -= gpios->gpio_start;
     volatile uint8_t* regs = io_buffer_virt(&gpios->buffer) + PAGE_SIZE * (index / GPIOS_PER_PAGE);
@@ -30,13 +30,10 @@ static zx_status_t pl061_gpio_config(void* ctx, uint32_t index, uint32_t flags) 
 
     mtx_lock(&gpios->lock);
     uint8_t dir = readb(regs + GPIODIR);
-    if ((flags & GPIO_DIR_MASK) == GPIO_DIR_OUT) {
-        dir |= bit;
-    } else {
-        dir &= ~bit;
-    }
+    dir &= ~bit;
     writeb(dir, regs + GPIODIR);
 
+/* TODO(voydanoff) this should move to a gpio_get_interrupt callback
     uint8_t trigger = readb(regs + GPIOIS);
     if ((flags & GPIO_TRIGGER_MASK) == GPIO_TRIGGER_LEVEL) {
         trigger |= bit;
@@ -63,9 +60,35 @@ static zx_status_t pl061_gpio_config(void* ctx, uint32_t index, uint32_t flags) 
 
     writeb(be, regs + GPIOIBE);
     writeb(iev, regs + GPIOIEV);
+*/
+
+// TODO(voydanoff) Implement GPIO_PULL_* flags
 
     mtx_unlock(&gpios->lock);
     return ZX_OK;
+}
+
+static zx_status_t pl061_gpio_config_out(void* ctx, uint32_t index, uint8_t initial_value) {
+    pl061_gpios_t* gpios = ctx;
+    index -= gpios->gpio_start;
+    volatile uint8_t* regs = io_buffer_virt(&gpios->buffer) + PAGE_SIZE * (index / GPIOS_PER_PAGE);
+    uint8_t bit = 1 << (index % GPIOS_PER_PAGE);
+
+    mtx_lock(&gpios->lock);
+    // write value first
+    writeb((initial_value ? bit : 0), regs + GPIODATA(bit));
+
+    // then set direction to OUT
+    uint8_t dir = readb(regs + GPIODIR);
+    dir |= bit;
+    writeb(dir, regs + GPIODIR);
+
+    mtx_unlock(&gpios->lock);
+    return ZX_OK;
+}
+
+static zx_status_t pl061_gpio_set_alt_function(void* ctx, uint32_t index, uint64_t function) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t pl061_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
@@ -88,8 +111,26 @@ static zx_status_t pl061_gpio_write(void* ctx, uint32_t index, uint8_t value) {
     return ZX_OK;
 }
 
+static zx_status_t pl061_gpio_get_interrupt(void* ctx, uint32_t pin, uint32_t flags,
+                                             zx_handle_t* out_handle) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pl061_gpio_release_interrupt(void* ctx, uint32_t pin) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pl061_gpio_set_polarity(void* ctx, uint32_t pin, uint32_t polarity) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 gpio_protocol_ops_t pl061_proto_ops = {
-    .config = pl061_gpio_config,
+    .config_in = pl061_gpio_config_in,
+    .config_out = pl061_gpio_config_out,
+    .set_alt_function = pl061_gpio_set_alt_function,
     .read = pl061_gpio_read,
     .write = pl061_gpio_write,
+    .get_interrupt = pl061_gpio_get_interrupt,
+    .release_interrupt = pl061_gpio_release_interrupt,
+    .set_polarity = pl061_gpio_set_polarity,
 };

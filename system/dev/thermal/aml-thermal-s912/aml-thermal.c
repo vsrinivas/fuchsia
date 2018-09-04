@@ -294,7 +294,7 @@ static zx_status_t aml_thermal_init(aml_thermal_t* thermal) {
 
     // Configure the GPIOs
     for (uint32_t i = 0; i < info.gpio_count; i++) {
-        status = gpio_config(&thermal->gpio, i, GPIO_DIR_OUT);
+        status = gpio_config_out(&thermal->gpio, i, 0);
         if (status != ZX_OK) {
             THERMAL_ERROR("gpio_config failed\n");
             return status;

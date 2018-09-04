@@ -454,8 +454,7 @@ static void aml_sd_emmc_init_regs(aml_sd_emmc_t* dev) {
 static void aml_sd_emmc_hw_reset(void* ctx) {
     aml_sd_emmc_t *dev = (aml_sd_emmc_t *)ctx;
     mtx_lock(&dev->mtx);
-    gpio_config(&dev->gpio, 0, GPIO_DIR_OUT);
-    gpio_write(&dev->gpio, 0, 0);
+    gpio_config_out(&dev->gpio, 0, 0);
     usleep(10 * 1000);
     gpio_write(&dev->gpio, 0, 1);
     usleep(10 * 1000);
@@ -926,7 +925,7 @@ static zx_status_t aml_sd_emmc_get_sdio_oob_irq(void* ctx, zx_handle_t *oob_irq_
         return ZX_OK;
     }
 
-    zx_status_t st = gpio_config(&dev->gpio, 1, GPIO_DIR_IN);
+    zx_status_t st = gpio_config_in(&dev->gpio, 1, GPIO_NO_PULL);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_sd_emmc_get_oob_irq: gpio_config failed: %d\n", st);
         return st;

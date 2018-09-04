@@ -41,7 +41,7 @@ zx_status_t AmlPcieDevice::InitProtocols() {
         return st;
     }
 
-    st = gpio_config(&gpio_, kRstGpio, GPIO_DIR_OUT);
+    st = gpio_config_out(&gpio_, kRstGpio, 0);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to configure rst gpio, st = %d", st);
         return st;

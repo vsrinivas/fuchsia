@@ -117,7 +117,7 @@ static zx_status_t aml_pin_to_block(aml_gpio_t* gpio, const uint32_t pin,
     return ZX_OK;
 }
 
-static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
+static zx_status_t aml_gpio_config_in(void* ctx, uint32_t index, uint32_t flags) {
     aml_gpio_t* gpio = ctx;
     zx_status_t status;
 
@@ -131,34 +131,61 @@ static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
     // Set the GPIO as IN or OUT
     mtx_lock(&block->lock);
     uint32_t regval = READ32_GPIO_REG(block->mmio_index, block->oen_offset);
-    uint32_t direction = flags & GPIO_DIR_MASK;
-    if (direction & GPIO_DIR_OUT) {
-        regval &= ~(1 << pin_index);
-    } else {
-        // Set the GPIO as pull-up or pull-down
-        uint32_t pull = flags & GPIO_PULL_MASK;
-        uint32_t pull_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_offset);
-        uint32_t pull_en_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_en_offset);
-        uint32_t pull_pin_index = pin_index;
-        if (block->output_write_shift) {
-            // Handling special case where output_offset is
-            // different for OEN/OUT/PU-PD for GPIOA0 block
-            pull_pin_index += block->output_write_shift;
-        }
-        if (pull & GPIO_NO_PULL) {
-            pull_en_reg_val &= ~(1 << pin_index);
-        } else {
-            if (pull & GPIO_PULL_UP) {
-                pull_reg_val |= (1 << pull_pin_index);
-            } else {
-                pull_reg_val &= ~(1 << pull_pin_index);
-            }
-            pull_en_reg_val |= (1 << pin_index);
-        }
-        WRITE32_GPIO_REG(block->mmio_index, block->pull_offset, pull_reg_val);
-        WRITE32_GPIO_REG(block->mmio_index, block->pull_en_offset, pull_en_reg_val);
-        regval |= (1 << pin_index);
+    // Set the GPIO as pull-up or pull-down
+    uint32_t pull = flags & GPIO_PULL_MASK;
+    uint32_t pull_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_offset);
+    uint32_t pull_en_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_en_offset);
+    uint32_t pull_pin_index = pin_index;
+    if (block->output_write_shift) {
+        // Handling special case where output_offset is
+        // different for OEN/OUT/PU-PD for GPIOA0 block
+        pull_pin_index += block->output_write_shift;
     }
+    if (pull & GPIO_NO_PULL) {
+        pull_en_reg_val &= ~(1 << pin_index);
+    } else {
+        if (pull & GPIO_PULL_UP) {
+            pull_reg_val |= (1 << pull_pin_index);
+        } else {
+            pull_reg_val &= ~(1 << pull_pin_index);
+        }
+        pull_en_reg_val |= (1 << pin_index);
+    }
+    WRITE32_GPIO_REG(block->mmio_index, block->pull_offset, pull_reg_val);
+    WRITE32_GPIO_REG(block->mmio_index, block->pull_en_offset, pull_en_reg_val);
+    regval |= (1 << pin_index);
+    WRITE32_GPIO_REG(block->mmio_index, block->oen_offset, regval);
+    mtx_unlock(&block->lock);
+
+    return ZX_OK;
+}
+
+static zx_status_t aml_gpio_config_out(void* ctx, uint32_t index, uint8_t initial_value) {
+    aml_gpio_t* gpio = ctx;
+    zx_status_t status;
+
+    aml_gpio_block_t* block;
+    uint32_t pin_index;
+    if ((status = aml_pin_to_block(gpio, index, &block, &pin_index)) != ZX_OK) {
+        zxlogf(ERROR, "aml_gpio_config: pin not found %u\n", index);
+        return status;
+    }
+
+    mtx_lock(&block->lock);
+
+    // Set value before configuring for output
+    uint32_t regval = READ32_GPIO_REG(block->mmio_index, block->output_offset);
+   // output_write_shift is handling special case where output_offset is
+    // different for OEN/OUT for GPIOA0 block
+    if (initial_value) {
+        regval |= (1 << (pin_index + block->output_write_shift));
+    } else {
+        regval &= ~(1 << (pin_index + block->output_write_shift));
+    }
+    WRITE32_GPIO_REG(block->mmio_index, block->output_offset, regval);
+
+    regval = READ32_GPIO_REG(block->mmio_index, block->oen_offset);
+    regval &= ~(1 << pin_index);
     WRITE32_GPIO_REG(block->mmio_index, block->oen_offset, regval);
     mtx_unlock(&block->lock);
 
@@ -413,7 +440,8 @@ static zx_status_t aml_gpio_set_polarity(void *ctx, uint32_t pin,
 }
 
 static gpio_protocol_ops_t gpio_ops = {
-    .config = aml_gpio_config,
+    .config_in = aml_gpio_config_in,
+    .config_out = aml_gpio_config_out,
     .set_alt_function = aml_gpio_set_alt_function,
     .read = aml_gpio_read,
     .write = aml_gpio_write,
