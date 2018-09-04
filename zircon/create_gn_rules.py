@@ -259,6 +259,10 @@ class Sysroot(object):
     def __init__(self):
         self.files = {}
         self.sdk_files = {}
+        self.headers = []
+        self.link_libs = []
+        self.dist_libs = []
+        self.debug_libs = []
 
 
 def generate_sysroot(package, context):
@@ -275,13 +279,24 @@ def generate_sysroot(package, context):
                 in_sdk = False
                 break
         if in_sdk:
-            data.sdk_files['include/%s' % name] = '//%s' % file
+            dest = 'include/%s' % name
+            data.sdk_files[dest] = '//%s' % file
+            data.headers.append(dest)
 
     # Lib.
     for name, path in package.get('lib', {}).iteritems():
         (file, _) = extract_file(name, path, context)
         data.files[name] = '//%s' % file
         data.sdk_files[name] = '//%s' % file
+        type_dir = os.path.dirname(name)
+        if type_dir == 'lib':
+            data.link_libs.append(name)
+        elif type_dir == 'dist/lib':
+            data.dist_libs.append(name)
+        elif type_dir == 'debug':
+            data.debug_libs.append(name)
+        else:
+            raise Exception('Unknown library type: ' + type_dir)
 
     # Generate the build file.
     build_path = os.path.join(context.out_dir, 'sysroot', 'BUILD.gn')
