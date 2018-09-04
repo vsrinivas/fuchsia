@@ -101,6 +101,7 @@ class TestApp
         zx::msec(modular::testing::kTestTimeoutMilliseconds));
   }
 
+  TestPoint story_get_controller_{"Story GetController()"};
   // Starts the story and adds two modules to it.
   void StartStory(const std::string& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
@@ -120,15 +121,34 @@ class TestApp
 
     story_controller_->Start(story_view_.NewRequest());
 
-    PerformFirstModuleStartActivity();
+    story_controller_->GetInfo(
+        [this](fuchsia::modular::StoryInfo, fuchsia::modular::StoryState) {
+          story_get_controller_.Pass();
+          PerformWatchActivity();
+        });
   }
 
   TestPoint on_watch_ongoing_activities_dispatched{
       "When a watcher is registered, ongoing activities should be dispatched."};
+  void PerformWatchActivity() {
+    story_activity_watcher_.Watch(&story_provider_);
+    story_activity_watcher_.OnNotify(
+        [this](
+            fidl::StringPtr story_id,
+            fidl::VectorPtr<fuchsia::modular::OngoingActivityType> activities) {
+          if (story_id == story_id_ && activities->empty()) {
+            on_watch_ongoing_activities_dispatched.Pass();
+          }
+          PerformFirstModuleStartActivity();
+        });
+  }
+
+  TestPoint on_start_ongoing_activity_dispatched{
+      "When there is a new ongoing activity, the ongoing activity should be "
+      "dispatched."};
   // Signals the first module to call ModuleContext.StartOngoingActivity().
   void PerformFirstModuleStartActivity() {
     Signal(kFirstModuleCallStartActivity);
-    story_activity_watcher_.Watch(&story_provider_);
     story_activity_watcher_.OnNotify(
         [this](
             fidl::StringPtr story_id,
@@ -136,13 +156,13 @@ class TestApp
           if (story_id == story_id_ && activities->size() == 1 &&
               activities.get()[0] ==
                   fuchsia::modular::OngoingActivityType::VIDEO) {
-            on_watch_ongoing_activities_dispatched.Pass();
+            on_start_ongoing_activity_dispatched.Pass();
           }
           PerformSecondModuleStartActivity();
         });
   }
 
-  TestPoint on_change_all_ongoing_activities_dispatched{
+  TestPoint on_start_all_ongoing_activities_dispatched{
       "When there is a new ongoing activity, all ongoing activities should be "
       "dispatched."};
   // Signals the second module to call ModuleContext.StartOngoingActivity().
@@ -157,13 +177,13 @@ class TestApp
                   fuchsia::modular::OngoingActivityType::VIDEO &&
               activities.get()[1] ==
                   fuchsia::modular::OngoingActivityType::VIDEO) {
-            on_change_all_ongoing_activities_dispatched.Pass();
+            on_start_all_ongoing_activities_dispatched.Pass();
           }
           PerformSecondModuleStopActivity();
         });
   }
 
-  TestPoint on_stop_ongoing_activities_dispatched{
+  TestPoint on_stop_remaining_ongoing_activities_dispatched{
       "When an ongoing activity is stopped, all remaining ongoing activities "
       "should be dispatched."};
   // Signals the second module to stop ongoing activity.
@@ -176,7 +196,7 @@ class TestApp
           if (story_id == story_id_ && activities->size() == 1 &&
               activities.get()[0] ==
                   fuchsia::modular::OngoingActivityType::VIDEO) {
-            on_stop_ongoing_activities_dispatched.Pass();
+            on_stop_remaining_ongoing_activities_dispatched.Pass();
           }
           PerformFirstModuleDone();
         });
