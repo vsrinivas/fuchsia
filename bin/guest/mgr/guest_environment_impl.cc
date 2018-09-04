@@ -18,8 +18,9 @@ GuestEnvironmentImpl::GuestEnvironmentImpl(
           fit::bind_member(this, &GuestEnvironmentImpl::GetAcceptor)) {
   // Create environment.
   context_->environment()->CreateNestedEnvironment(
-      service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
-      env_controller_.NewRequest(), label);
+      env_.NewRequest(), env_controller_.NewRequest(), label,
+      service_provider_bridge_.OpenAsDirectory(),
+      /*additional_services=*/nullptr, /*inherit_parent_services=*/false);
   env_->GetLauncher(launcher_.NewRequest());
   zx::channel h1, h2;
   FXL_CHECK(zx::channel::create(0, &h1, &h2) == ZX_OK);

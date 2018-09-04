@@ -73,10 +73,12 @@ void Namespace::AddBinding(
 }
 
 void Namespace::CreateNestedEnvironment(
-    zx::channel host_directory,
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
-    fidl::StringPtr label) {
+    fidl::StringPtr label,
+    zx::channel host_directory,
+    fuchsia::sys::ServiceListPtr additional_services,
+    bool inherit_parent_services) {
   realm_->CreateNestedJob(std::move(host_directory), std::move(environment),
                           std::move(controller), label);
 }

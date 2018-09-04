@@ -35,10 +35,16 @@ interface Environment {
   // The |label| is an optional name to associate with the environment for
   // diagnostic purposes.  The label will be truncated if it is longer
   // than |kLabelMaxLength|.
-  1: CreateNestedEnvironment(handle<channel> host_directory,
-                            request<Environment> environment,
-                            request<EnvironmentController>? controller,
-                            string? label);
+  //
+  // |additional_services| and |inherit_parent_services| are currently unused.
+  // In the future, they will be used instead of |host_directory| to provide
+  // services to the environment.
+  1: CreateNestedEnvironment(request<Environment> environment,
+                             request<EnvironmentController>? controller,
+                             string? label,
+                             handle<channel> host_directory,
+                             ServiceList? additional_services,
+                             bool inherit_parent_services);
 
   // Gets the Launcher associated with this environment.
   //

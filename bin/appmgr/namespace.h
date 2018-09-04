@@ -38,13 +38,18 @@ class Namespace : public fuchsia::sys::Environment,
 
   void SetServicesWhitelist(const std::vector<std::string>& services);
 
+  //
   // fuchsia::sys::Environment implementation:
+  //
 
+  // TODO(CP-124): Support |additional_services| and |inherit_parent_services|.
   void CreateNestedEnvironment(
-      zx::channel host_directory,
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
       fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
-      fidl::StringPtr label) override;
+      fidl::StringPtr label,
+      zx::channel host_directory,
+      fuchsia::sys::ServiceListPtr additional_services,
+      bool inherit_parent_services) override;
 
   void GetLauncher(
       fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher) override;
@@ -60,7 +65,9 @@ class Namespace : public fuchsia::sys::Environment,
     services_->set_component_url(url);
   }
 
+  //
   // fuchsia::sys::Launcher implementation:
+  //
 
   void CreateComponent(fuchsia::sys::LaunchInfo launch_info,
                        fidl::InterfaceRequest<fuchsia::sys::ComponentController>

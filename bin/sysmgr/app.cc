@@ -27,13 +27,15 @@ App::App(Config config)
 
   // Set up environment for the programs we will run.
   startup_context_->environment()->CreateNestedEnvironment(
-      OpenAsDirectory(), env_.NewRequest(), env_controller_.NewRequest(),
-      kDefaultLabel);
+      env_.NewRequest(), env_controller_.NewRequest(),
+      kDefaultLabel, OpenAsDirectory(), /*additional_services=*/nullptr,
+      /*inherit_parent_services=*/false);
   env_->GetLauncher(env_launcher_.NewRequest());
 
   // Register services.
-  for (auto& pair : config.TakeServices())
+  for (auto& pair : config.TakeServices()) {
     RegisterSingleton(pair.first, std::move(pair.second));
+  }
 
   // Ordering note: The impl of CreateNestedEnvironment will resolve the
   // delegating app loader. However, since its call back to the host directory
@@ -50,8 +52,9 @@ App::App(Config config)
   }
 
   // Launch startup applications.
-  for (auto& launch_info : config.TakeApps())
+  for (auto& launch_info : config.TakeApps()) {
     LaunchApplication(std::move(*launch_info));
+  }
 }
 
 App::~App() {}

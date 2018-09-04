@@ -26,9 +26,10 @@ EnclosingEnvironment::EnclosingEnvironment(
   }
 
   // Create environment
-  parent_env->CreateNestedEnvironment(OpenAsDirectory(&vfs_, svc_),
-                                      env_.NewRequest(),
-                                      env_controller_.NewRequest(), label);
+  parent_env->CreateNestedEnvironment(
+      env_.NewRequest(), env_controller_.NewRequest(), label,
+      OpenAsDirectory(&vfs_, svc_), /*additional_services=*/nullptr,
+      /*inherit_parent_services=*/false);
   env_controller_.set_error_handler([this] { running_ = false; });
   // Connect to launcher
   env_->GetLauncher(launcher_.NewRequest());

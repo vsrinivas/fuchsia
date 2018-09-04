@@ -80,8 +80,9 @@ void TileView::ConnectViews() {
 
 void TileView::CreateNestedEnvironment() {
   startup_context_->environment()->CreateNestedEnvironment(
-      service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
-      env_controller_.NewRequest(), "tile");
+      env_.NewRequest(), env_controller_.NewRequest(), "tile",
+      service_provider_bridge_.OpenAsDirectory(),
+      /*additional_services=*/nullptr, /*inherit_parent_services=*/false);
   env_->GetLauncher(env_launcher_.NewRequest());
 
   // Add a binding for the presenter service
