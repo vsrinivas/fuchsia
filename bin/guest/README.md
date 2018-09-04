@@ -22,7 +22,7 @@ Where `${ARCH}` is one of `x64` or `arm64`.
 The linux_guest package expects the Linux kernel binaries to be in `garnet/bin/guest/pkg/linux_guest/`, you should create them before running `fx full-build` by running the following scripts:
 ```
 $ ./garnet/bin/guest/pkg/linux_guest/mklinux.sh -l /tmp/linux/source -o garnet/bin/guest/pkg/linux_guest/images/${ARCH}/Image ${ARCH}
-$ ./garnet/bin/guest/pkg/linux_guest/mksysroot.sh -r -p garnet/bin/guest/pkg/linux_guest/images/${ARCH}/Image -d /tmp/toybox -s /tmp/dash S{ARCH}
+$ ./garnet/bin/guest/pkg/linux_guest/mksysroot.sh -r -p garnet/bin/guest/pkg/linux_guest/images/${ARCH}/disk.img -d /tmp/toybox -s /tmp/dash S{ARCH}
 ```
 
 ## Running guests
