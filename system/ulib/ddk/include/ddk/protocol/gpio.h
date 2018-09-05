@@ -41,47 +41,48 @@ typedef struct {
 } gpio_protocol_t;
 
 // configures a GPIO for input
-static inline zx_status_t gpio_config_in(gpio_protocol_t* gpio, uint32_t index,
+static inline zx_status_t gpio_config_in(const gpio_protocol_t* gpio, uint32_t index,
                                          uint32_t flags) {
     return gpio->ops->config_in(gpio->ctx, index, flags);
 }
 
 // configures a GPIO for output
-static inline zx_status_t gpio_config_out(gpio_protocol_t* gpio, uint32_t index,
+static inline zx_status_t gpio_config_out(const gpio_protocol_t* gpio, uint32_t index,
                                           uint8_t initial_value) {
     return gpio->ops->config_out(gpio->ctx, index, initial_value);
 }
 
 // configures the GPIO pin for an alternate function (I2C, SPI, etc)
 // the interpretation of "function" is platform dependent
-static inline zx_status_t gpio_set_alt_function(gpio_protocol_t* gpio, uint32_t index,
+static inline zx_status_t gpio_set_alt_function(const gpio_protocol_t* gpio, uint32_t index,
                                                 uint64_t function) {
     return gpio->ops->set_alt_function(gpio->ctx, index, function);
 }
 
 // reads the current value of a GPIO (0 or 1)
-static inline zx_status_t gpio_read(gpio_protocol_t* gpio, uint32_t index, uint8_t* out_value) {
+static inline zx_status_t gpio_read(const gpio_protocol_t* gpio, uint32_t index,
+                                    uint8_t* out_value) {
     return gpio->ops->read(gpio->ctx, index, out_value);
 }
 
 // sets the current value of the GPIO (any non-zero value maps to 1)
-static inline zx_status_t gpio_write(gpio_protocol_t* gpio, uint32_t index, uint8_t value) {
+static inline zx_status_t gpio_write(const gpio_protocol_t* gpio, uint32_t index, uint8_t value) {
     return gpio->ops->write(gpio->ctx, index, value);
 }
 
 // gets an interrupt object pertaining to a particular GPIO pin
-static inline zx_status_t gpio_get_interrupt(gpio_protocol_t* gpio, uint32_t index,
+static inline zx_status_t gpio_get_interrupt(const gpio_protocol_t* gpio, uint32_t index,
                                              uint32_t flags, zx_handle_t* out_handle) {
     return gpio->ops->get_interrupt(gpio->ctx, index, flags, out_handle);
 }
 
 // release the interrupt
-static inline zx_status_t gpio_release_interrupt(gpio_protocol_t* gpio, uint32_t pin) {
+static inline zx_status_t gpio_release_interrupt(const gpio_protocol_t* gpio, uint32_t pin) {
     return gpio->ops->release_interrupt(gpio->ctx, pin);
 }
 
 // Set GPIO polarity
-static inline zx_status_t gpio_set_polarity(gpio_protocol_t* gpio, uint32_t pin,
+static inline zx_status_t gpio_set_polarity(const gpio_protocol_t* gpio, uint32_t pin,
                                             uint32_t polarity) {
     return gpio->ops->set_polarity(gpio->ctx, pin, polarity);
 }

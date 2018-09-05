@@ -36,15 +36,17 @@ typedef struct {
 // and if write_length is zero, then it will only perform a read operation.
 // The results of the operation are returned asynchronously via the complete_cb.
 // The cookie parameter can be used to pass your own private data to the complete_cb callback.
-static inline zx_status_t i2c_transact(i2c_protocol_t* i2c, uint32_t index, const void* write_buf,
-                                       size_t write_length, size_t read_length,
-                                       i2c_complete_cb complete_cb, void* cookie) {
+static inline zx_status_t i2c_transact(const i2c_protocol_t* i2c, uint32_t index,
+                                       const void* write_buf, size_t write_length,
+                                       size_t read_length, i2c_complete_cb complete_cb,
+                                       void* cookie) {
     return i2c->ops->transact(i2c->ctx, index, write_buf, write_length, read_length, complete_cb,
                                   cookie);
 }
 
 // Returns the maximum transfer size for read and write operations on the channel.
-static inline zx_status_t i2c_get_max_transfer_size(i2c_protocol_t* i2c, uint32_t index, size_t* out_size) {
+static inline zx_status_t i2c_get_max_transfer_size(const i2c_protocol_t* i2c, uint32_t index,
+                                                    size_t* out_size) {
     return i2c->ops->get_max_transfer_size(i2c->ctx, index, out_size);
 }
 
@@ -66,7 +68,7 @@ static inline void pdev_i2c_sync_cb(zx_status_t status, const uint8_t* data, voi
     sync_completion_signal(&ctx->completion);
 }
 
-static inline zx_status_t i2c_transact_sync(i2c_protocol_t* i2c, uint32_t index,
+static inline zx_status_t i2c_transact_sync(const i2c_protocol_t* i2c, uint32_t index,
                                             const void* write_buf, size_t write_length,
                                             void* read_buf, size_t read_length) {
     pdev_i2c_ctx_t ctx;
