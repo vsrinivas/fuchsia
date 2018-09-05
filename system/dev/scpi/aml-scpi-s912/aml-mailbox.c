@@ -156,8 +156,8 @@ static zx_status_t aml_mailbox_bind(void* ctx, zx_device_t* parent) {
     }
 
     zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_KHADAS},
-        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_VIM2},
+        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
+        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_S912},
         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_SCPI},
     };
 
