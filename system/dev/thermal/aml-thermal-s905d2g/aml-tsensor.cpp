@@ -127,18 +127,18 @@ uint32_t AmlTSensor::CodeToTemp(uint32_t temp_code) {
 
 uint32_t AmlTSensor::ReadTemperature() {
     int count = 0;
-    volatile unsigned int tvalue = 0;
     unsigned int value_all = 0;
 
     // Datasheet is incorrect.
     // Referred to u-boot code.
     // Yay magic numbers.
     for (int j = 0; j < AML_TS_VALUE_CONT; j++) {
-        tvalue = pll_regs_->Read<uint32_t>(AML_TS_STAT0);
-        tvalue = tvalue & 0xffff;
+        auto ts_stat0 = TsStat0::Get().ReadFrom(pll_regs_.get());
+        auto tvalue = ts_stat0.temperature();
+
         if ((tvalue >= 0x18a9) && (tvalue <= 0x32a6)) {
             count++;
-            value_all += (tvalue & 0xffff);
+            value_all += tvalue;
         }
     }
     if (count == 0) {
@@ -150,11 +150,13 @@ uint32_t AmlTSensor::ReadTemperature() {
 
 void AmlTSensor::SetRebootTemperature(uint32_t temp) {
     uint32_t reboot_val = TempToCode(kRebootTemp / MCELSIUS, true);
-    uint32_t reboot_config = pll_regs_->Read<uint32_t>(AML_TS_CFG_REG2);
+    auto reboot_config = TsCfgReg2::Get().ReadFrom(pll_regs_.get());
 
-    reboot_config |= reboot_val << 4;
-    reboot_config |= AML_TS_HITEMP_EN | AML_TS_REBOOT_ALL_EN | AML_TS_REBOOT_TIME;
-    pll_regs_->Write(AML_TS_CFG_REG2, reboot_config);
+    reboot_config.set_hi_temp_enable(1)
+        .set_reset_en(1)
+        .set_high_temp_times(AML_TS_REBOOT_TIME)
+        .set_high_temp_threshold(reboot_val << 4)
+        .WriteTo(pll_regs_.get());
 }
 
 zx_status_t AmlTSensor::InitSensor(zx_device_t* parent) {
@@ -170,10 +172,15 @@ zx_status_t AmlTSensor::InitSensor(zx_device_t* parent) {
     hiu_regs_->Write(AML_HHI_TS_CLK_CNTL, AML_HHI_TS_CLK_ENABLE);
 
     // Not setting IRQ's here.
-    uint32_t sensor_ctl = pll_regs_->Read<uint32_t>(AML_TS_CFG_REG1);
-    sensor_ctl |= (AML_TS_FILTER_EN | AML_TS_VCM_EN | AML_TS_VBG_EN | AML_TS_CH_SEL |
-                   AML_TS_IPTAT_EN | AML_TS_DEM_EN);
-    pll_regs_->Write(AML_TS_CFG_REG1, sensor_ctl);
+    auto sensor_ctl = TsCfgReg1::Get().ReadFrom(pll_regs_.get());
+    sensor_ctl.set_filter_en(1)
+        .set_ts_ana_en_vcm(1)
+        .set_ts_ana_en_vbg(1)
+        .set_bipolar_bias_current_input(AML_TS_CH_SEL)
+        .set_ts_ena_en_iptat(1)
+        .set_ts_dem_en(1)
+        .WriteTo(pll_regs_.get());
+
     return ZX_OK;
 }
 
