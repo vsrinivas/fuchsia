@@ -117,6 +117,8 @@ class OutputBuffer {
   void SetBackgroundColor(TextBackgroundColor);
   void SetForegroundColor(TextForegroundColor);
 
+  bool empty() const { return spans_.empty(); }
+
  private:
   struct Span {
     Span(Syntax s, std::string t);

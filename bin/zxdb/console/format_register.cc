@@ -12,6 +12,7 @@
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_register.h"
+#include "garnet/bin/zxdb/console/format_register_x64.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_formatters.h"
@@ -21,70 +22,15 @@
 
 namespace zxdb {
 
-using debug_ipc::RegisterID;
 using debug_ipc::RegisterCategory;
+using debug_ipc::RegisterID;
 
 namespace {
 
-inline OutputBuffer RegisterValueToOutputBuffer(const Register& reg) {
-  if (reg.data().empty()) {
-    FXL_NOTREACHED() << "Invalid size for " << __PRETTY_FUNCTION__ << ": "
-                     << reg.size();
-  }
-
-  // For now we print into chunks of 32-bits, shortening the ends.
-  // TODO(donosoc): Extract this logic to be used separatedly by sub-registers.
-  // TODO(donosoc): FP formatting: float, double-float, extended double-float.
-  // TODO(donosoc): Vector formatting.
-  auto cur = reg.begin();
-  auto end = reg.end();
-  std::vector<std::string> chunks;
-  while (cur < end) {
-    auto diff = end - cur;
-    if (diff >= 4) {
-      auto* val = reinterpret_cast<const uint32_t*>(&*cur);
-      chunks.push_back(fxl::StringPrintf("%.8x", *val));
-      cur += 4;
-      continue;
-    }
-
-    switch (diff) {
-      case 1: {
-        auto* val = reinterpret_cast<const uint8_t*>(&*cur);
-        chunks.push_back(fxl::StringPrintf("%.2x", *val));
-        cur += diff;
-        continue;
-      }
-      case 2: {
-        auto* val = reinterpret_cast<const uint16_t*>(&*cur);
-        chunks.push_back(fxl::StringPrintf("%.4x", *val));
-        cur += diff;
-        continue;
-      }
-    }
-
-    FXL_NOTREACHED() << "Invalid size for " << __PRETTY_FUNCTION__ << ": "
-                     << reg.size();
-  }
-
-  // Though each particular chunk correctly keeps the endianness, the order is
-  // backwards, as the last bits of the register would be printed first.
-  // For that we append the chunks backwards.
-  OutputBuffer out;
-  auto cit = chunks.rbegin();
-  while (cit != chunks.rend()) {
-    out.Append(*cit);
-    cit++;
-    if (cit != chunks.rend())
-      out.Append(" ");
-  }
-  return out;
-}
-
 // Using a vector of output buffers make it easy to not have to worry about
 // appending new lines per each new section.
-void InternalFormatGeneric(const std::vector<Register>& registers,
-                           OutputBuffer* out) {
+Err InternalFormatGeneric(const std::vector<Register>& registers,
+                          OutputBuffer* out) {
   // Registers.
   std::vector<std::vector<OutputBuffer>> rows;
   for (const Register& reg : registers) {
@@ -96,25 +42,25 @@ void InternalFormatGeneric(const std::vector<Register>& registers,
 
     auto name = OutputBuffer(RegisterIDToString(reg.id()));
     name.SetForegroundColor(color);
-    row.push_back(name);
+    row.push_back(std::move(name));
 
-    auto size = OutputBuffer(fxl::StringPrintf("%zu", reg.size()));
-    size.SetForegroundColor(color);
-    row.push_back(size);
-
-    auto val = RegisterValueToOutputBuffer(reg);
-    val.SetForegroundColor(color);
-    row.push_back(val);
+    std::string value;
+    Err err = GetLittleEndianHexOutput(reg.data(), &value);
+    if (!err.ok())
+      return err;
+    OutputBuffer value_buffer(value);
+    value_buffer.SetForegroundColor(color);
+    row.push_back(std::move(value_buffer));
   }
 
   auto colspecs = std::vector<ColSpec>({ColSpec(Align::kLeft, 0, "Name"),
-                                        ColSpec(Align::kRight, 0, "Size"),
-                                        ColSpec(Align::kRight, 0, "Value", 2)});
+                                        ColSpec(Align::kRight, 0, "Value")});
   FormatTable(colspecs, rows, out);
+  return Err();
 }
 
-void InternalFormatFP(const std::vector<Register>& registers,
-                      OutputBuffer* out) {
+Err InternalFormatFP(const std::vector<Register>& registers,
+                     OutputBuffer* out) {
   // Registers.
   std::vector<std::vector<OutputBuffer>> rows;
   for (const Register& reg : registers) {
@@ -126,50 +72,61 @@ void InternalFormatFP(const std::vector<Register>& registers,
 
     auto name = OutputBuffer(RegisterIDToString(reg.id()));
     name.SetForegroundColor(color);
-    row.push_back(name);
+    row.push_back(std::move(name));
 
-    auto size = OutputBuffer(fxl::StringPrintf("%zu", reg.size()));
-    size.SetForegroundColor(color);
-    row.push_back(size);
-
-    auto val = RegisterValueToOutputBuffer(reg);
-    val.SetForegroundColor(color);
-    row.push_back(val);
-
-    OutputBuffer fp_val;
     std::string out;
-    if (GetFPString(reg, &out).ok()) {
-      fp_val = OutputBuffer::WithContents(std::move(out));
-      fp_val.SetForegroundColor(color);
-    }
-    row.push_back(fp_val);
+    Err err = GetLittleEndianHexOutput(reg.data(), &out);
+    if (!err.ok())
+      return err;
+    OutputBuffer value_buffer(out);
+    row.push_back(std::move(value_buffer));
+
+    err = GetFPString(reg.data(), &out);
+    if (!err.ok())
+      return err;
+    OutputBuffer fp_val(out);
+    fp_val.SetForegroundColor(color);
+    row.push_back(std::move(fp_val));
   }
 
-  auto colspecs = std::vector<ColSpec>(
-      {ColSpec(Align::kLeft, 0, "Name"), ColSpec(Align::kRight, 0, "Size"),
-       ColSpec(Align::kRight, 0, "Value", 2), ColSpec(Align::kRight, 0, "FP")});
-  FormatTable(colspecs, rows, out);
+  auto colspecs = std::vector<ColSpec>({ColSpec(Align::kLeft, 0, "Name"),
+                                        ColSpec(Align::kRight, 0, "Value", 2),
+                                        ColSpec(Align::kRight, 0, "FP")});
+  FormatTable(std::move(colspecs), rows, out);
+  return Err();
 }
 
-void FormatCategory(debug_ipc::RegisterCategory::Type category,
-                    const std::vector<Register> registers, OutputBuffer* out) {
+Err FormatCategory(debug_ipc::Arch arch, RegisterCategory::Type category,
+                   const std::vector<Register>& registers, OutputBuffer* out) {
   FXL_DCHECK(!registers.empty());
+
+  // We see if architecture specific printing wants to take over.
+  Err err;
+  OutputBuffer category_out;
+  if (arch == debug_ipc::Arch::kX64) {
+    if (FormatCategoryX64(category, registers, &category_out, &err)) {
+      if (err.ok())
+        out->Append(category_out);
+      return err;
+    }
+  }
 
   // Title.
   auto category_title = fxl::StringPrintf(
       "%s Registers\n", RegisterCategoryTypeToString(category).data());
   out->Append(OutputBuffer(Syntax::kHeading, category_title));
 
-  OutputBuffer category_out;
   if (category == RegisterCategory::Type::kFloatingPoint) {
-    InternalFormatFP(registers, &category_out);
+    err = InternalFormatFP(registers, &category_out);
   } else {
     // Generic case.
-    // TODO: Eventually every case should be handled separatedly.
-    InternalFormatGeneric(registers, &category_out);
+    err = InternalFormatGeneric(registers, &category_out);
   }
+  if (!err.ok())
+    return err;
 
   out->Append(std::move(category_out));
+  return Err();
 }
 
 inline Err RegexpError(const char* prefix, const std::string& pattern,
@@ -238,7 +195,8 @@ Err FilterRegisters(const RegisterSet& register_set, FilteredRegisterSet* out,
   return Err();
 }
 
-void FormatRegisters(const FilteredRegisterSet& register_set,
+Err FormatRegisters(debug_ipc::Arch arch,
+                    const FilteredRegisterSet& register_set,
                     OutputBuffer* out) {
   std::vector<OutputBuffer> out_buffers;
   out_buffers.reserve(register_set.size());
@@ -246,7 +204,9 @@ void FormatRegisters(const FilteredRegisterSet& register_set,
     if (kv.second.empty())
       continue;
     OutputBuffer out;
-    FormatCategory(kv.first, kv.second, &out);
+    Err err = FormatCategory(arch, kv.first, kv.second, &out);
+    if (!err.ok())
+      return err;
     out_buffers.emplace_back(std::move(out));
   }
 
@@ -259,6 +219,7 @@ void FormatRegisters(const FilteredRegisterSet& register_set,
     out->Append(std::move(buf));
     out->Append("\n");
   }
+  return Err();
 }
 
 // Formatting helpers ----------------------------------------------------------
@@ -510,71 +471,71 @@ const char* RegisterIDToString(RegisterID id) {
 
     // SSE/SSE2 (128 bit).
     case RegisterID::kX64_xmm0:
-      return "m0";
+      return "xmm0";
     case RegisterID::kX64_xmm1:
-      return "m1";
+      return "xmm1";
     case RegisterID::kX64_xmm2:
-      return "m2";
+      return "xmm2";
     case RegisterID::kX64_xmm3:
-      return "m3";
+      return "xmm3";
     case RegisterID::kX64_xmm4:
-      return "m4";
+      return "xmm4";
     case RegisterID::kX64_xmm5:
-      return "m5";
+      return "xmm5";
     case RegisterID::kX64_xmm6:
-      return "m6";
+      return "xmm6";
     case RegisterID::kX64_xmm7:
-      return "m7";
+      return "xmm7";
     case RegisterID::kX64_xmm8:
-      return "m8";
+      return "xmm8";
     case RegisterID::kX64_xmm9:
-      return "m9";
+      return "xmm9";
     case RegisterID::kX64_xmm10:
-      return "m10";
+      return "xmm10";
     case RegisterID::kX64_xmm11:
-      return "m11";
+      return "xmm11";
     case RegisterID::kX64_xmm12:
-      return "m12";
+      return "xmm12";
     case RegisterID::kX64_xmm13:
-      return "m13";
+      return "xmm13";
     case RegisterID::kX64_xmm14:
-      return "m14";
+      return "xmm14";
     case RegisterID::kX64_xmm15:
-      return "m15";
+      return "xmm15";
 
     // AVX (256 bit).
     case RegisterID::kX64_ymm0:
-      return "m0";
+      return "ymm0";
     case RegisterID::kX64_ymm1:
-      return "m1";
+      return "ymm1";
     case RegisterID::kX64_ymm2:
-      return "m2";
+      return "ymm2";
     case RegisterID::kX64_ymm3:
-      return "m3";
+      return "ymm3";
     case RegisterID::kX64_ymm4:
-      return "m4";
+      return "ymm4";
     case RegisterID::kX64_ymm5:
-      return "m5";
+      return "ymm5";
     case RegisterID::kX64_ymm6:
-      return "m6";
+      return "ymm6";
     case RegisterID::kX64_ymm7:
-      return "m7";
+      return "ymm7";
     case RegisterID::kX64_ymm8:
-      return "m8";
+      return "ymm8";
     case RegisterID::kX64_ymm9:
-      return "m9";
+      return "ymm9";
     case RegisterID::kX64_ymm10:
-      return "m10";
+      return "ymm10";
     case RegisterID::kX64_ymm11:
-      return "m11";
+      return "ymm11";
     case RegisterID::kX64_ymm12:
-      return "m12";
+      return "ymm12";
     case RegisterID::kX64_ymm13:
-      return "m13";
+      return "ymm13";
     case RegisterID::kX64_ymm14:
-      return "m14";
+      return "ymm14";
     case RegisterID::kX64_ymm15:
-      return "m15";
+      return "ymm15";
 
       // TODO(donosoc): Add support for AVX-512 when zircon supports it.
   }

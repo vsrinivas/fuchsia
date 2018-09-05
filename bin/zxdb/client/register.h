@@ -37,6 +37,7 @@ class RegisterSet {
   debug_ipc::Arch arch() const { return arch_; }
   void set_arch(debug_ipc::Arch arch) { arch_ = arch; }  // Mainly for tests.
 
+  CategoryMap& category_map() { return category_map_; }
   virtual const CategoryMap& category_map() const { return category_map_; }
 
   // Shorthand for looking over the category map.
@@ -74,6 +75,7 @@ class Register {
 
   size_t size() const { return reg_.data.size(); }  // In bytes.
 
+  std::vector<uint8_t>& data() { return reg_.data; }
   const std::vector<uint8_t>& data() const { return reg_.data; }
 
   // Intented for <=64-bits values, check length.

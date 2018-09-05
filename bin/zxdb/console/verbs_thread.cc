@@ -595,15 +595,15 @@ void OnRegsComplete(const Err& cmd_err, const RegisterSet& register_set,
   }
 
   FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(register_set, &filtered_set, cats_to_show,
-                            search_regexp);
+  Err err =
+      FilterRegisters(register_set, &filtered_set, cats_to_show, search_regexp);
   if (!err.ok()) {
     console->Output(err);
     return;
   }
 
   OutputBuffer out;
-  FormatRegisters(filtered_set, &out);
+  FormatRegisters(register_set.arch(), filtered_set, &out);
   console->Output(out);
 }
 
@@ -646,8 +646,8 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   }
 
   // We pass the given register name to the callback
-  auto regs_cb = [ reg_name, cats = std::move(cats_to_show) ](
-      const Err& err, const RegisterSet& registers) {
+  auto regs_cb = [reg_name, cats = std::move(cats_to_show)](
+                     const Err& err, const RegisterSet& registers) {
     OnRegsComplete(err, registers, reg_name, std::move(cats));
   };
 

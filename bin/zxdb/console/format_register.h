@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/records.h"
 
 namespace zxdb {
@@ -17,8 +18,8 @@ class OutputBuffer;
 class Register;
 class RegisterSet;
 
-using FilteredRegisterSet = std::map<debug_ipc::RegisterCategory::Type,
-                                     std::vector<Register>>;
+using FilteredRegisterSet =
+    std::map<debug_ipc::RegisterCategory::Type, std::vector<Register>>;
 
 // Filters the available registers to the ones matching the given categories and
 // matching the registers.
@@ -28,7 +29,8 @@ Err FilterRegisters(const RegisterSet&, FilteredRegisterSet* out,
                     const std::string& search_regexp = std::string());
 
 // Format the output of the FilterRegisters call into a console readable format.
-void FormatRegisters(const FilteredRegisterSet&, OutputBuffer* out);
+Err FormatRegisters(debug_ipc::Arch, const FilteredRegisterSet&,
+                    OutputBuffer* out);
 
 // Formatting helpers ----------------------------------------------------------
 
