@@ -13,6 +13,9 @@ struct PacketCounter {
   Counter in;
   Counter out;
   Counter drop;
+  Counter in_bytes;
+  Counter out_bytes;
+  Counter drop_bytes;
 };
 
 // LINT.IfChange

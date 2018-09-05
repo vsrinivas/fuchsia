@@ -153,6 +153,9 @@ mod tests {
             in_: fake_counter(count),
             out: fake_counter(count),
             drop: fake_counter(count),
+            in_bytes: fake_counter(count),
+            out_bytes: fake_counter(count),
+            drop_bytes: fake_counter(count),
         }
     }
 

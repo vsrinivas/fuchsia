@@ -46,14 +46,24 @@ struct PacketCounter {
     Counter in;
     Counter out;
     Counter drop;
+    Counter in_bytes;
+    Counter out_bytes;
+    Counter drop_bytes;
     ::fuchsia::wlan::stats::PacketCounter ToFidl() const {
-        return ::fuchsia::wlan::stats::PacketCounter{
-            .in = in.ToFidl(), .out = out.ToFidl(), .drop = drop.ToFidl()};
+        return ::fuchsia::wlan::stats::PacketCounter{.in = in.ToFidl(),
+                                                     .out = out.ToFidl(),
+                                                     .drop = drop.ToFidl(),
+                                                     .in_bytes = in_bytes.ToFidl(),
+                                                     .out_bytes = out_bytes.ToFidl(),
+                                                     .drop_bytes = drop_bytes.ToFidl()};
     };
     void Reset() {
         in.Reset();
         out.Reset();
         drop.Reset();
+        in_bytes.Reset();
+        out_bytes.Reset();
+        drop_bytes.Reset();
     }
 };
 

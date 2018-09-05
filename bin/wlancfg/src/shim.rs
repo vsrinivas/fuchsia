@@ -340,6 +340,9 @@ fn empty_packet_counter() -> fidl_wlan_stats::PacketCounter {
         in_: empty_counter(),
         out: empty_counter(),
         drop: empty_counter(),
+        in_bytes: empty_counter(),
+        out_bytes: empty_counter(),
+        drop_bytes: empty_counter(),
     }
 }
 
