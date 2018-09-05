@@ -194,8 +194,7 @@ common::MutableByteBufferPtr ErrorResponse::GetPDU(uint16_t, TransactionId tid,
   auto ptr = GetNewPDU(kErrorResponse, tid, sizeof(ErrorCode));
   size_t written = sizeof(Header);
 
-  uint16_t err = htobe16(static_cast<uint16_t>(error_code_));
-  ptr->Write(reinterpret_cast<uint8_t*>(&err), sizeof(uint16_t), written);
+  ptr->WriteObj(htobe16(static_cast<uint16_t>(error_code_)), written);
 
   return ptr;
 }
@@ -270,8 +269,7 @@ common::ByteBufferPtr ServiceSearchRequest::GetPDU(TransactionId tid) const {
   auto write_view = buf->mutable_view(written);
   written += search_pattern.Write(&write_view);
   // Write MaxServiceRecordCount
-  uint16_t be = htobe16(max_service_record_count_);
-  buf->Write(reinterpret_cast<uint8_t*>(&be), sizeof(uint16_t), written);
+  buf->WriteObj(htobe16(max_service_record_count_), written);
   written += sizeof(uint16_t);
   // Write Continuation State
   write_view = buf->mutable_view(written);
@@ -372,23 +370,17 @@ common::MutableByteBufferPtr ServiceSearchResponse::GetPDU(
   size_t written = sizeof(Header);
   // The total service record count and current service record count is the
   // same.
-  uint16_t record_count_le = htobe16(response_record_count);
-  buf->Write(reinterpret_cast<uint8_t*>(&record_count_le), sizeof(uint16_t),
-             written);
+  buf->WriteObj(htobe16(response_record_count), written);
   written += sizeof(uint16_t);
-  buf->Write(reinterpret_cast<uint8_t*>(&record_count_le), sizeof(uint16_t),
-             written);
+  buf->WriteObj(htobe16(response_record_count), written);
   written += sizeof(uint16_t);
 
   for (size_t i = 0; i < response_record_count; i++) {
-    uint32_t handle_le = htobe32(service_record_handle_list_.at(i));
-    buf->Write(reinterpret_cast<uint8_t*>(&handle_le), sizeof(ServiceHandle),
-               written);
+    buf->WriteObj(htobe32(service_record_handle_list_.at(i)), written);
     written += sizeof(ServiceHandle);
   }
   // There's no continuation state. Write the InfoLength.
-  uint8_t info_length = 0;
-  buf->Write(&info_length, sizeof(uint8_t), written);
+  buf->WriteObj(static_cast<uint8_t>(0), written);
   written += sizeof(uint8_t);
   ZX_DEBUG_ASSERT(written == sizeof(Header) + size);
   return buf;
@@ -466,12 +458,10 @@ common::ByteBufferPtr ServiceAttributeRequest::GetPDU(TransactionId tid) const {
   }
   size_t written = sizeof(Header);
 
-  uint32_t be32 = htobe32(service_record_handle_);
-  buf->Write(reinterpret_cast<uint8_t*>(&be32), sizeof(uint32_t), written);
+  buf->WriteObj(htobe32(service_record_handle_), written);
   written += sizeof(uint32_t);
 
-  uint16_t be = htobe16(max_attribute_byte_count_);
-  buf->Write(reinterpret_cast<uint8_t*>(&be), sizeof(uint16_t), written);
+  buf->WriteObj(htobe16(max_attribute_byte_count_), written);
   written += sizeof(uint16_t);
 
   auto mut_view = buf->mutable_view(written);
@@ -633,8 +623,8 @@ common::MutableByteBufferPtr ServiceAttributeResponse::GetPDU(
     return nullptr;
   }
   size_t written = sizeof(Header);
-  uint16_t be = htobe16(attribute_list_byte_count);
-  buf->Write(reinterpret_cast<uint8_t*>(&be), sizeof(uint16_t), written);
+
+  buf->WriteObj(htobe16(attribute_list_byte_count), written);
   written += sizeof(uint16_t);
 
   auto attribute_list_bytes = common::NewSlabBuffer(list_elem.WriteSize());
@@ -645,14 +635,12 @@ common::MutableByteBufferPtr ServiceAttributeResponse::GetPDU(
   written += attribute_list_byte_count;
 
   // Continuation state
-  buf->Write(&info_length, sizeof(uint8_t), written);
+  buf->WriteObj(info_length, written);
   written += sizeof(uint8_t);
   if (info_length > 0) {
     bytes_skipped += attribute_list_byte_count;
-    uint32_t be = htobe32(bytes_skipped);
-    BufferView cont_view(reinterpret_cast<uint8_t*>(&be), sizeof(uint32_t));
-    buf->Write(cont_view, written);
-    written += cont_view.size();
+    buf->WriteObj(htobe32(bytes_skipped), written);
+    written += sizeof(uint32_t);
   }
   ZX_DEBUG_ASSERT(written == sizeof(Header) + size);
   return buf;
@@ -778,8 +766,7 @@ common::ByteBufferPtr ServiceSearchAttributeRequest::GetPDU(
   auto mut_view = buf->mutable_view(written);
   written += search_pattern.Write(&mut_view);
 
-  uint16_t be = htobe16(max_attribute_byte_count_);
-  buf->Write((uint8_t*)(&be), sizeof(uint16_t), written);
+  buf->WriteObj(htobe16(max_attribute_byte_count_), written);
   written += sizeof(uint16_t);
 
   mut_view = buf->mutable_view(written);
@@ -976,8 +963,8 @@ common::MutableByteBufferPtr ServiceSearchAttributeResponse::GetPDU(
     return nullptr;
   }
   size_t written = sizeof(Header);
-  uint16_t be = htobe16(attribute_lists_byte_count);
-  buf->Write((uint8_t*)(&be), sizeof(uint16_t), written);
+
+  buf->WriteObj(htobe16(attribute_lists_byte_count), written);
   written += sizeof(uint16_t);
 
   auto attribute_list_bytes = common::NewSlabBuffer(list_elem.WriteSize());
@@ -988,14 +975,12 @@ common::MutableByteBufferPtr ServiceSearchAttributeResponse::GetPDU(
   written += attribute_lists_byte_count;
 
   // Continuation state
-  buf->Write(&info_length, sizeof(uint8_t), written);
+  buf->WriteObj(info_length, written);
   written += sizeof(uint8_t);
   if (info_length > 0) {
     bytes_skipped = bytes_skipped + attribute_lists_byte_count;
-    uint32_t be = htobe32(bytes_skipped);
-    BufferView cont_view(reinterpret_cast<uint8_t*>(&be), sizeof(uint32_t));
-    buf->Write(cont_view, written);
-    written += cont_view.size();
+    buf->WriteObj(htobe32(bytes_skipped), written);
+    written += sizeof(uint32_t);
   }
   ZX_DEBUG_ASSERT(written == sizeof(Header) + size);
   return buf;

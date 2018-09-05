@@ -56,15 +56,13 @@ size_t WriteLength(MutableByteBuffer* buf, size_t length) {
   if (length <= std::numeric_limits<uint8_t>::max()) {
     uint8_t val = static_cast<uint8_t>(length);
     buf->Write(&val, sizeof(val));
-    return sizeof(val);
+    return sizeof(uint8_t);
   } else if (length <= std::numeric_limits<uint16_t>::max()) {
-    uint16_t val = htobe16(static_cast<uint16_t>(length));
-    buf->Write(reinterpret_cast<uint8_t*>(&val), sizeof(val));
-    return sizeof(val);
+    buf->WriteObj(htobe16(static_cast<uint16_t>(length)));
+    return sizeof(uint16_t);
   } else if (length <= std::numeric_limits<uint32_t>::max()) {
-    uint32_t val = htobe32(static_cast<uint32_t>(length));
-    buf->Write(reinterpret_cast<uint8_t*>(&val), sizeof(val));
-    return sizeof(val);
+    buf->WriteObj(htobe32(static_cast<uint32_t>(length)));
+    return sizeof(uint32_t);
   }
   return 0;
 }
@@ -535,7 +533,7 @@ size_t DataElement::Write(MutableByteBuffer* buffer) const {
     }
     case Type::kBoolean: {
       uint8_t val = int_value_ != 0 ? 1 : 0;
-      cursor.Write(reinterpret_cast<uint8_t*>(&val), sizeof(val));
+      cursor.Write(&val, sizeof(val));
       pos += 1;
       return pos;
     }
@@ -545,15 +543,13 @@ size_t DataElement::Write(MutableByteBuffer* buffer) const {
         cursor.Write(reinterpret_cast<uint8_t*>(&val), sizeof(val));
         pos += sizeof(val);
       } else if (size_ == Size::kTwoBytes) {
-        uint16_t val = htobe16(uint16_t(uint_value_));
-        cursor.Write(reinterpret_cast<uint8_t*>(&val), sizeof(val));
-        pos += sizeof(val);
+        cursor.WriteObj(htobe16(static_cast<uint16_t>(uint_value_)));
+        pos += sizeof(uint16_t);
       } else if (size_ == Size::kFourBytes) {
-        uint32_t val = htobe32(uint32_t(uint_value_));
-        cursor.Write(reinterpret_cast<uint8_t*>(&val), sizeof(val));
-        pos += sizeof(val);
+        cursor.WriteObj(htobe32(static_cast<uint32_t>(uint_value_)));
+        pos += sizeof(uint32_t);
       } else if (size_ == Size::kFourBytes) {
-        uint64_t val = htobe64(uint64_t(uint_value_));
+        uint64_t val = htobe64(uint_value_);
         cursor.Write(reinterpret_cast<uint8_t*>(&val), sizeof(val));
         pos += sizeof(val);
       }
@@ -561,19 +557,17 @@ size_t DataElement::Write(MutableByteBuffer* buffer) const {
     }
     case Type::kSignedInt: {
       if (size_ == Size::kOneByte) {
-        int8_t val = int8_t(int_value_);
+        int8_t val = static_cast<int8_t>(int_value_);
         cursor.Write(reinterpret_cast<uint8_t*>(&val), sizeof(val));
         pos += sizeof(val);
       } else if (size_ == Size::kTwoBytes) {
-        int16_t val = htobe16(int16_t(int_value_));
-        cursor.Write(reinterpret_cast<uint8_t*>(&val), sizeof(val));
-        pos += sizeof(val);
+        cursor.WriteObj(htobe16(static_cast<int16_t>(int_value_)));
+        pos += sizeof(uint16_t);
       } else if (size_ == Size::kFourBytes) {
-        int32_t val = htobe32(int32_t(int_value_));
-        cursor.Write(reinterpret_cast<uint8_t*>(&val), sizeof(val));
-        pos += sizeof(val);
+        cursor.WriteObj(htobe32(static_cast<int32_t>(int_value_)));
+        pos += sizeof(uint32_t);
       } else if (size_ == Size::kFourBytes) {
-        int64_t val = htobe64(int64_t(int_value_));
+        int64_t val = htobe64(static_cast<int64_t>(int_value_));
         cursor.Write(reinterpret_cast<uint8_t*>(&val), sizeof(val));
         pos += sizeof(val);
       }

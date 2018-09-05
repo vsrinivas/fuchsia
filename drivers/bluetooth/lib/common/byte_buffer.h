@@ -135,6 +135,17 @@ class MutableByteBuffer : public ByteBuffer {
   // non-zero. If |size| is zero, then this operation is a NOP.
   void Write(const uint8_t* data, size_t size, size_t pos = 0);
 
+  // Writes the byte interpretation of |data| at |pos|, overwriting the octets
+  // from pos to pos + sizeof(T).
+  // There must be enough space in the buffer to write T.
+  // If T is an array of known bounds, the entire array will be written.
+  template <typename T>
+  void WriteObj(const T& data, size_t pos = 0) {
+    static_assert(!std::is_pointer<T>::value,
+                  "Pointer passed to WriteObj, deref or use Write");
+    Write(reinterpret_cast<const uint8_t*>(&data), sizeof(T), pos);
+  }
+
   // Behaves exactly like ByteBuffer::View but returns the result in a
   // MutableBufferView instead.
   //
