@@ -85,7 +85,7 @@ class ListenCallTest : public ::testing::Test, public ListenCallClient {
 };
 
 TEST_F(ListenCallTest, DeleteHandlerBeforeConnect) {
-  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
+  auto handler = call_->MakeHandler();
   handler.reset();
 
   // Simulate the connection response arriving.
@@ -102,7 +102,7 @@ TEST_F(ListenCallTest, DeleteHandlerBeforeConnect) {
 }
 
 TEST_F(ListenCallTest, ConnectionError) {
-  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
+  auto handler = call_->MakeHandler();
   (*stream_->connect_tag)(false);
   EXPECT_EQ(0, on_connected_calls_);
   EXPECT_EQ(0, on_response_calls_);
@@ -111,7 +111,7 @@ TEST_F(ListenCallTest, ConnectionError) {
 }
 
 TEST_F(ListenCallTest, DeleteHandlerAfterConnect) {
-  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
+  auto handler = call_->MakeHandler();
   (*stream_->connect_tag)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
@@ -130,7 +130,7 @@ TEST_F(ListenCallTest, DeleteHandlerAfterConnect) {
 }
 
 TEST_F(ListenCallTest, WriteAndDeleteHandler) {
-  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
+  auto handler = call_->MakeHandler();
   (*stream_->connect_tag)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
@@ -146,7 +146,7 @@ TEST_F(ListenCallTest, WriteAndDeleteHandler) {
 }
 
 TEST_F(ListenCallTest, ReadAndDeleteHandler) {
-  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
+  auto handler = call_->MakeHandler();
   (*stream_->connect_tag)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
@@ -163,7 +163,7 @@ TEST_F(ListenCallTest, ReadAndDeleteHandler) {
 }
 
 TEST_F(ListenCallTest, ReadError) {
-  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
+  auto handler = call_->MakeHandler();
   (*stream_->connect_tag)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
@@ -178,6 +178,33 @@ TEST_F(ListenCallTest, ReadError) {
 
   (*stream_->finish_tag)(true);
   EXPECT_EQ(1, on_finished_calls_);
+}
+
+// Verifies that we don't crash when the handler outlives the call object, see
+// LE-584.
+TEST_F(ListenCallTest, DeleteCallObjectBeforeHandler) {
+  auto handler = call_->MakeHandler();
+  (*stream_->connect_tag)(true);
+  EXPECT_EQ(1, on_connected_calls_);
+
+  (*stream_->read_tag)(true);
+  EXPECT_EQ(1, on_response_calls_);
+  EXPECT_FALSE(stream_->finish_tag);
+
+  // Simulate read error which will close the stream.
+  (*stream_->read_tag)(false);
+  EXPECT_TRUE(stream_->finish_tag);
+  (*stream_->finish_tag)(true);
+  EXPECT_EQ(1, on_finished_calls_);
+
+  // Verify that on_empty was called.
+  EXPECT_EQ(1, on_empty_calls_);
+
+  // Delete the call object.
+  call_.reset();
+
+  // Delete the handler.
+  handler.reset();
 }
 
 }  // namespace cloud_provider_firestore

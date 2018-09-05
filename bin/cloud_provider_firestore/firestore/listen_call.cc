@@ -6,6 +6,34 @@
 
 namespace cloud_provider_firestore {
 
+namespace {
+
+class ListenCallHandlerImpl : public ListenCallHandler {
+ public:
+  explicit ListenCallHandlerImpl(fxl::WeakPtr<ListenCall> call) : call_(call) {}
+
+  ~ListenCallHandlerImpl() override {
+    if (!call_) {
+      return;
+    }
+    call_->OnHandlerGone();
+  }
+
+  void Write(google::firestore::v1beta1::ListenRequest request) override {
+    // It's an arror to call Write() after OnFinished() is delivered to the
+    // client (which happens before |call_| is deleted).
+    FXL_DCHECK(call_);
+    call_->Write(std::move(request));
+  }
+
+ private:
+  fxl::WeakPtr<ListenCall> const call_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ListenCallHandlerImpl);
+};
+
+}  // namespace
+
 ListenCall::ListenCall(ListenCallClient* client,
                        std::unique_ptr<grpc::ClientContext> context,
                        std::unique_ptr<ListenStream> stream)
@@ -14,7 +42,8 @@ ListenCall::ListenCall(ListenCallClient* client,
       stream_(std::move(stream)),
       stream_controller_(stream_.get()),
       stream_reader_(stream_.get()),
-      stream_writer_(stream_.get()) {
+      stream_writer_(stream_.get()),
+      weak_ptr_factory_(this) {
   // Configure reading from the stream.
   stream_reader_.SetOnError([this] { FinishIfNeeded(); });
   stream_reader_.SetOnMessage(
@@ -71,6 +100,11 @@ void ListenCall::OnHandlerGone() {
 
   context_->TryCancel();
   CheckEmpty();
+}
+
+std::unique_ptr<ListenCallHandler> ListenCall::MakeHandler() {
+  return std::make_unique<ListenCallHandlerImpl>(
+      weak_ptr_factory_.GetWeakPtr());
 }
 
 void ListenCall::FinishIfNeeded() {

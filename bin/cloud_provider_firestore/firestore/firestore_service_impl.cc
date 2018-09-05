@@ -167,7 +167,7 @@ std::unique_ptr<ListenCallHandler> FirestoreServiceImpl::Listen(
   auto stream = firestore_->PrepareAsyncListen(context.get(), &cq_);
   auto& call =
       listen_calls_.emplace(client, std::move(context), std::move(stream));
-  return std::make_unique<ListenCallHandlerImpl>(&call);
+  return call.MakeHandler();
 }
 
 void FirestoreServiceImpl::ShutDown(fit::closure callback) {

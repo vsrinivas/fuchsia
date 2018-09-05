@@ -12,6 +12,7 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"
 #include "peridot/bin/cloud_provider_firestore/grpc/stream_controller.h"
@@ -37,6 +38,8 @@ class ListenCall {
   void Write(google::firestore::v1beta1::ListenRequest request);
 
   void OnHandlerGone();
+
+  std::unique_ptr<ListenCallHandler> MakeHandler();
 
  private:
   void FinishIfNeeded();
@@ -69,22 +72,9 @@ class ListenCall {
 
   bool connected_ = false;
   bool finish_requested_ = false;
-};
 
-class ListenCallHandlerImpl : public ListenCallHandler {
- public:
-  explicit ListenCallHandlerImpl(ListenCall* call) : call_(call) {}
-
-  ~ListenCallHandlerImpl() override { call_->OnHandlerGone(); }
-
-  void Write(google::firestore::v1beta1::ListenRequest request) override {
-    call_->Write(std::move(request));
-  }
-
- private:
-  ListenCall* const call_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ListenCallHandlerImpl);
+  // Must be the last member.
+  fxl::WeakPtrFactory<ListenCall> weak_ptr_factory_;
 };
 
 }  // namespace cloud_provider_firestore
