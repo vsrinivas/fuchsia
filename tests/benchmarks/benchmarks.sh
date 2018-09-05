@@ -55,6 +55,12 @@ if [ "${benchmarks_bot_name}" = garnet-x64-perf-swift_canyon ]; then
       /system/test/fs/fs-bench-test -p --fs minfs \
       --block_device ${block_device} \
       --print_statistics --out "${OUT_DIR}/fs_bench.json"
+
+  # Test BlobFs performance.
+  runbench_exec "${OUT_DIR}/blobfs_bench.json" \
+      /system/test/sys/blobfs-bench-test -p --fs blobfs \
+      --block_device ${block_device} \
+      --print_statistics --out "${OUT_DIR}/blobfs_bench.json"
 fi
 
 # Exit with a code indicating whether any errors occurred.
