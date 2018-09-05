@@ -44,9 +44,9 @@ fuchsia::bluetooth::Status StatusToFidl(
     const ::btlib::common::Status<ProtocolErrorCode>& status,
     std::string msg = "") {
   fuchsia::bluetooth::Status fidl_status;
-
-  if (status.is_success())
+  if (status.is_success()) {
     return fidl_status;
+  }
 
   auto error = fuchsia::bluetooth::Error::New();
   error->error_code = HostErrorToFidl(status.error());
@@ -60,21 +60,23 @@ fuchsia::bluetooth::Status StatusToFidl(
 }
 
 // Functions that convert FIDL types to library objects
-btlib::sm::SecurityProperties NewSecurityLevel(
-    const fuchsia::bluetooth::control::SecurityProperties& sec_prop);
-btlib::common::DeviceAddress::Type NewAddrType(
-    const fuchsia::bluetooth::control::AddressType& type);
-btlib::sm::IOCapability NewIoCapability(
+btlib::sm::IOCapability IoCapabilityFromFidl(
     const fuchsia::bluetooth::control::InputCapabilityType,
     const fuchsia::bluetooth::control::OutputCapabilityType);
+btlib::sm::PairingData PairingDataFromFidl(
+    const fuchsia::bluetooth::control::LEData& data);
 
-// Functions to convert host library objects into FIDL types.
-
+// Functions to construct FIDL control library objects from library objects.
 fuchsia::bluetooth::control::AdapterInfo NewAdapterInfo(
     const ::btlib::gap::Adapter& adapter);
 fuchsia::bluetooth::control::RemoteDevicePtr NewRemoteDevice(
     const ::btlib::gap::RemoteDevice& device);
 
+// TODO(armansito): Incorporate BR/EDR bonding data here.
+fuchsia::bluetooth::control::BondingData NewBondingData(
+    const ::btlib::gap::RemoteDevice& device);
+
+// Functions to construct FIDL LE library objects from library objects.
 fuchsia::bluetooth::le::AdvertisingDataPtr NewAdvertisingData(
     const ::btlib::common::ByteBuffer& advertising_data);
 fuchsia::bluetooth::le::RemoteDevicePtr NewLERemoteDevice(

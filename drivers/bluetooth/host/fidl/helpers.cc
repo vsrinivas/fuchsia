@@ -13,7 +13,6 @@
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/discovery_filter.h"
 
-using btlib::sm::SecurityLevel;
 using fuchsia::bluetooth::Bool;
 using fuchsia::bluetooth::Error;
 using fuchsia::bluetooth::ErrorCode;
@@ -42,6 +41,106 @@ ctrl::TechnologyType TechnologyTypeToFidl(::btlib::gap::TechnologyType type) {
 
   // This should never execute.
   return ctrl::TechnologyType::DUAL_MODE;
+}
+
+btlib::common::UInt128 KeyDataFromFidl(const ctrl::Key& key) {
+  btlib::common::UInt128 result;
+  static_assert(sizeof(key.value) == result.size(),
+                "keys must have the same size");
+  std::copy(key.value.begin(), key.value.end(), result.begin());
+  return result;
+}
+
+::fidl::Array<uint8_t, 16> KeyDataToFidl(const btlib::common::UInt128& key) {
+  ::fidl::Array<uint8_t, 16> result;
+  static_assert(sizeof(key) == result.size(), "keys must have the same size");
+  std::copy(key.begin(), key.end(), result.begin());
+  return result;
+}
+
+btlib::sm::SecurityProperties SecurityPropsFromFidl(
+    const ctrl::SecurityProperties& sec_prop) {
+  auto level = btlib::sm::SecurityLevel::kEncrypted;
+  if (sec_prop.authenticated) {
+    level = btlib::sm::SecurityLevel::kAuthenticated;
+  }
+  return btlib::sm::SecurityProperties(level, sec_prop.encryption_key_size,
+                                       sec_prop.secure_connections);
+}
+
+ctrl::SecurityProperties SecurityPropsToFidl(
+    const btlib::sm::SecurityProperties& sec_prop) {
+  ctrl::SecurityProperties result;
+  result.authenticated = sec_prop.authenticated();
+  result.secure_connections = sec_prop.secure_connections();
+  result.encryption_key_size = sec_prop.enc_key_size();
+  return result;
+}
+
+btlib::common::DeviceAddress::Type BondingAddrTypeFromFidl(
+    const fuchsia::bluetooth::control::AddressType& type) {
+  switch (type) {
+    case ctrl::AddressType::LE_RANDOM:
+      return btlib::common::DeviceAddress::Type::kLERandom;
+    case ctrl::AddressType::LE_PUBLIC:
+      return btlib::common::DeviceAddress::Type::kLEPublic;
+    case ctrl::AddressType::BREDR:
+      return btlib::common::DeviceAddress::Type::kBREDR;
+    default:
+      ZX_PANIC("invalid address type: %u", static_cast<unsigned int>(type));
+      break;
+  }
+  return btlib::common::DeviceAddress::Type::kBREDR;
+}
+
+fuchsia::bluetooth::control::AddressType BondingAddrTypeToFidl(
+    btlib::common::DeviceAddress::Type type) {
+  switch (type) {
+    case btlib::common::DeviceAddress::Type::kLERandom:
+      return ctrl::AddressType::LE_RANDOM;
+    case btlib::common::DeviceAddress::Type::kLEPublic:
+      return ctrl::AddressType::LE_PUBLIC;
+    case btlib::common::DeviceAddress::Type::kBREDR:
+      return ctrl::AddressType::BREDR;
+    default:
+      // Anonymous is not a valid address type to use for bonding, so we treat
+      // that as a programming error.
+      ZX_PANIC("invalid address type for bonding: %u",
+               static_cast<unsigned int>(type));
+      break;
+  }
+  return ctrl::AddressType::BREDR;
+}
+
+btlib::sm::LTK LtkFromFidl(const ctrl::LTK& ltk) {
+  return btlib::sm::LTK(
+      SecurityPropsFromFidl(ltk.key.security_properties),
+      btlib::hci::LinkKey(KeyDataFromFidl(ltk.key), ltk.rand, ltk.ediv));
+}
+
+ctrl::LTK LtkToFidl(const btlib::sm::LTK& ltk) {
+  ctrl::LTK result;
+  result.key.security_properties = SecurityPropsToFidl(ltk.security());
+  result.key.value = KeyDataToFidl(ltk.key().value());
+
+  // TODO(armansito): Remove this field since its already captured in security
+  // properties.
+  result.key_size = ltk.security().enc_key_size();
+  result.rand = ltk.key().rand();
+  result.ediv = ltk.key().ediv();
+  return result;
+}
+
+btlib::sm::Key KeyFromFidl(const ctrl::Key& key) {
+  return btlib::sm::Key(SecurityPropsFromFidl(key.security_properties),
+                        KeyDataFromFidl(key));
+}
+
+ctrl::Key KeyToFidl(const btlib::sm::Key& key) {
+  ctrl::Key result;
+  result.security_properties = SecurityPropsToFidl(key.security());
+  result.value = KeyDataToFidl(key.value());
+  return result;
 }
 
 }  // namespace
@@ -79,35 +178,8 @@ Status NewFidlError(ErrorCode error_code, std::string description) {
   return status;
 }
 
-btlib::common::DeviceAddress::Type NewAddrType(
-    const fuchsia::bluetooth::control::AddressType& type) {
-  switch (type) {
-    case ctrl::AddressType::LE_RANDOM:
-      return btlib::common::DeviceAddress::Type::kLERandom;
-    case ctrl::AddressType::LE_PUBLIC:
-      return btlib::common::DeviceAddress::Type::kLEPublic;
-    case ctrl::AddressType::BREDR:
-      return btlib::common::DeviceAddress::Type::kBREDR;
-    default:
-      ZX_PANIC("invalid address type: %u", static_cast<unsigned int>(type));
-      break;
-  }
-  return btlib::common::DeviceAddress::Type::kBREDR;
-}
-
-btlib::sm::SecurityProperties NewSecurityLevel(
-    const fuchsia::bluetooth::control::SecurityProperties& sec_prop) {
-  auto level = btlib::sm::SecurityLevel::kEncrypted;
-  if (sec_prop.authenticated) {
-    level = btlib::sm::SecurityLevel::kAuthenticated;
-  }
-
-  return btlib::sm::SecurityProperties(level, sec_prop.encryption_key_size,
-                                       sec_prop.secure_connections);
-}
-
-btlib::sm::IOCapability NewIoCapability(ctrl::InputCapabilityType input,
-                                        ctrl::OutputCapabilityType output) {
+btlib::sm::IOCapability IoCapabilityFromFidl(
+    ctrl::InputCapabilityType input, ctrl::OutputCapabilityType output) {
   if (input == ctrl::InputCapabilityType::NONE &&
       output == ctrl::OutputCapabilityType::NONE) {
     return btlib::sm::IOCapability::kNoInputNoOutput;
@@ -127,21 +199,37 @@ btlib::sm::IOCapability NewIoCapability(ctrl::InputCapabilityType input,
   return btlib::sm::IOCapability::kNoInputNoOutput;
 }
 
+btlib::sm::PairingData PairingDataFromFidl(
+    const fuchsia::bluetooth::control::LEData& data) {
+  btlib::sm::PairingData result;
+  result.identity_address = btlib::common::DeviceAddress(
+      BondingAddrTypeFromFidl(data.address_type), data.address);
+  if (data.ltk) {
+    result.ltk = LtkFromFidl(*data.ltk);
+  }
+  if (data.irk) {
+    result.irk = KeyFromFidl(*data.irk);
+  }
+  if (data.csrk) {
+    result.csrk = KeyFromFidl(*data.csrk);
+  }
+  return result;
+}
+
 ctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {
   ctrl::AdapterInfo adapter_info;
+  adapter_info.identifier = adapter.identifier();
+  adapter_info.technology = TechnologyTypeToFidl(adapter.state().type());
+  adapter_info.address = adapter.state().controller_address().ToString();
+
   adapter_info.state = ctrl::AdapterState::New();
-
   adapter_info.state->local_name = adapter.state().local_name();
-
   adapter_info.state->discoverable = Bool::New();
   adapter_info.state->discoverable->value = false;
   adapter_info.state->discovering = Bool::New();
   adapter_info.state->discovering->value = adapter.IsDiscovering();
 
-  adapter_info.identifier = adapter.identifier();
-  adapter_info.address = adapter.state().controller_address().ToString();
-
-  adapter_info.technology = TechnologyTypeToFidl(adapter.state().type());
+  // TODO(armansito): Populate |local_service_uuids| as well.
 
   return adapter_info;
 }
@@ -153,9 +241,7 @@ ctrl::RemoteDevicePtr NewRemoteDevice(
   fidl_device->address = device.address().value().ToString();
   fidl_device->technology = TechnologyTypeToFidl(device.technology());
   fidl_device->connected = device.connected();
-
-  // TODO(armansito): Report correct values once we support these.
-  fidl_device->bonded = false;
+  fidl_device->bonded = device.bonded();
 
   // Set default value for device appearance.
   fidl_device->appearance = ctrl::Appearance::UNKNOWN;
@@ -196,6 +282,44 @@ ctrl::RemoteDevicePtr NewRemoteDevice(
   }
 
   return fidl_device;
+}
+
+ctrl::BondingData NewBondingData(const ::btlib::gap::RemoteDevice& device) {
+  ctrl::BondingData out_data;
+  out_data.identifier = device.identifier();
+
+  // Store LE data.
+  if (device.le() && device.le()->bond_data()) {
+    out_data.le = ctrl::LEData::New();
+
+    const auto& le_data = *device.le()->bond_data();
+    const auto& identity =
+        le_data.identity_address ? *le_data.identity_address : device.address();
+    out_data.le->address = identity.value().ToString();
+    out_data.le->address_type = BondingAddrTypeToFidl(identity.type());
+
+    // TODO(armansito): Populate the preferred connection parameters here.
+
+    // TODO(armansito): Populate with discovered GATT services. We initialize
+    // this as empty as |services| is not nullable.
+    out_data.le->services.resize(0);
+
+    if (le_data.ltk) {
+      out_data.le->ltk = ctrl::LTK::New();
+      *out_data.le->ltk = LtkToFidl(*le_data.ltk);
+    }
+    if (le_data.irk) {
+      out_data.le->irk = ctrl::Key::New();
+      *out_data.le->irk = KeyToFidl(*le_data.irk);
+    }
+    if (le_data.csrk) {
+      out_data.le->csrk = ctrl::Key::New();
+      *out_data.le->csrk = KeyToFidl(*le_data.csrk);
+    }
+  }
+
+  // TODO(armansito): Store BR/EDR data.
+  return out_data;
 }
 
 ble::RemoteDevicePtr NewLERemoteDevice(

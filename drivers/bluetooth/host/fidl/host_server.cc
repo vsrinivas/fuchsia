@@ -208,32 +208,38 @@ void HostServer::AddBondedDevices(
     return;
   }
 
-  // TODO(NET-1552): The logic here needs revisiting (will be fixed in a
-  // follow-up).
   for (auto& bond : *bonds) {
-    // If LE Bond
+    btlib::sm::PairingData bond_data;
     if (bond.le) {
-      auto ltk = std::move(bond.le->ltk);
-      auto security =
-          fidl_helpers::NewSecurityLevel(ltk->key.security_properties);
+      bond_data = fidl_helpers::PairingDataFromFidl(*bond.le);
 
-      // Setup LTK to store
-      btlib::common::UInt128 key_data;
-      std::copy(ltk->key.value.begin(), ltk->key.value.begin() + 16,
-                key_data.begin());
-      auto link_key = btlib::hci::LinkKey(key_data, ltk->rand, ltk->ediv);
-
-      btlib::sm::PairingData bond_data;
-      bond_data.ltk = btlib::sm::LTK(security, link_key);
-
-      auto addr = btlib::common::DeviceAddress(
-          fidl_helpers::NewAddrType(bond.le->address_type), bond.le->address);
-      auto resp = adapter()->AddBondedDevice(bond.identifier, addr, bond_data);
-      if (!resp) {
-        callback(fidl_helpers::NewFidlError(
-            ErrorCode::FAILED, "Devices were already present in cache"));
+      // Report error if bond data is missing a security key.
+      if (!bond_data.irk && !bond_data.csrk) {
+        bt_log(ERROR, "bt-host", "LE bond data is missing security key");
+        callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                            "LE IRK/CSRK missing"));
         return;
       }
+    }
+
+    // TODO(armansito): Handle BR/EDR data here. For now we skip the entry if LE
+    // data isn't available.
+    if (!bond_data.identity_address) {
+      bt_log(ERROR, "bt-host", "LE bonding data is required");
+      continue;
+    }
+
+    // TODO(armansito): BondingData should contain the identity address for both
+    // transports instead of storing them separately. For now use the one we
+    // obtained from |bond.le|.
+    if (!adapter()->AddBondedDevice(bond.identifier,
+                                    *bond_data.identity_address, bond_data)) {
+      // TODO(armansito): Continue walking the list if this fails?
+      callback(fidl_helpers::NewFidlError(
+          ErrorCode::FAILED,
+          fxl::StringPrintf("Failed to initialize bonded device (id: %s)",
+                            bond.identifier->c_str())));
+      return;
     }
   }
 
@@ -243,40 +249,8 @@ void HostServer::AddBondedDevices(
 void HostServer::OnRemoteDeviceBonded(
     const ::btlib::gap::RemoteDevice& remote_device) {
   bt_log(TRACE, "bt-host", "OnRemoteDeviceBonded()");
-  BondingData data;
-  data.identifier = remote_device.identifier().c_str();
-
-  if (remote_device.le() && remote_device.le()->bond_data()) {
-    data.le = LEData::New();
-    data.le->address = remote_device.address().value().ToString();
-
-    const auto& ltk = remote_device.le()->bond_data()->ltk;
-    if (ltk) {
-      auto fidl_ltk = fuchsia::bluetooth::control::LTK::New();
-
-      // Copy the key.
-      const auto& key_value = ltk->key().value().data();
-      std::copy(key_value, key_value + 16, fidl_ltk->key.value.begin());
-
-      // Set security properties
-      fidl_ltk->key.security_properties.authenticated =
-          ltk->security().authenticated();
-      fidl_ltk->key.security_properties.secure_connections =
-          ltk->security().secure_connections();
-      fidl_ltk->key.security_properties.encryption_key_size =
-          ltk->security().enc_key_size();
-
-      fidl_ltk->key_size = ltk->security().enc_key_size();
-      fidl_ltk->rand = ltk->key().rand();
-      fidl_ltk->ediv = ltk->key().ediv();
-
-      data.le->ltk = std::move(fidl_ltk);
-    }
-  }
-
-  // TODO(armansito): Initialize BR/EDR data.
-
-  binding()->events().OnNewBondingData(std::move(data));
+  binding()->events().OnNewBondingData(
+      fidl_helpers::NewBondingData(remote_device));
 }
 
 void HostServer::SetDiscoverable(bool discoverable,
@@ -361,7 +335,7 @@ void HostServer::SetPairingDelegate(
     return;
   }
 
-  io_capability_ = fidl_helpers::NewIoCapability(input, output);
+  io_capability_ = fidl_helpers::IoCapabilityFromFidl(input, output);
   bt_log(TRACE, "bt-host", "PairingDelegate assigned (I/O capability: %s)",
          btlib::sm::util::IOCapabilityToString(io_capability_).c_str());
 
