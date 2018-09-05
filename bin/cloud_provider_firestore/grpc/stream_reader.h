@@ -70,7 +70,9 @@ class StreamReader {
  private:
   void OnRead(bool ok) {
     if (!ok) {
-      FXL_LOG(ERROR) << "Read failed, closing the stream.";
+      // This can mean an unrecoverable connection error or be part of a regular
+      // shutdown sequence: OnRead with ok = false is called after the client
+      // calls TryCancel() to abort the RPC.
       on_error_();
       return;
     }
