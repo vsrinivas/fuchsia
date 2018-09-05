@@ -14,6 +14,10 @@ MODULE_SRCS += \
 
 MODULE_NAME := publish-data-helper
 
+# TODO: don't instrument the helper until we have a way to route sinks from the
+# inner runtests instance to the outer one so they make it into summary.json.
+MODULE_COMPILEFLAGS += $(NO_SANCOV) $(NO_PROFILE)
+
 MODULE_LIBS := \
 	system/ulib/unittest \
 	system/ulib/fdio \
