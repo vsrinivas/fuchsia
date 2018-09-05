@@ -4,8 +4,9 @@
 
 #include <fbl/alloc_checker.h>
 
-#include <zircon/assert.h>
 #include <fbl/new.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
 
 #if !__has_include(<new>)
 namespace std {
@@ -68,6 +69,8 @@ bool AllocChecker::check() {
 
 } // namespace fbl
 
+#if !_KERNEL
+
 void* operator new(size_t size, fbl::AllocChecker* ac) noexcept {
     return fbl::checked(size, ac, operator new(size, std::nothrow_t()));
 }
@@ -75,3 +78,15 @@ void* operator new(size_t size, fbl::AllocChecker* ac) noexcept {
 void* operator new[](size_t size, fbl::AllocChecker* ac) noexcept {
     return fbl::checked(size, ac, operator new[](size, std::nothrow_t()));
 }
+
+#else // _KERNEL
+
+void* operator new(size_t size, fbl::AllocChecker* ac) noexcept {
+    return fbl::checked(size, ac, operator new(size, __GET_CALLER(), std::nothrow_t()));
+}
+
+void* operator new[](size_t size, fbl::AllocChecker* ac) noexcept {
+    return fbl::checked(size, ac, operator new[](size, __GET_CALLER(), std::nothrow_t()));
+}
+
+#endif // !_KERNEL

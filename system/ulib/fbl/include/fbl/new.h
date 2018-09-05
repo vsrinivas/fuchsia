@@ -26,7 +26,17 @@ void* operator new[](size_t size, void* ptr) noexcept;
 namespace std {
 struct nothrow_t;
 } // namespace std
+
+#if !_KERNEL
+
 void* operator new(size_t size, const std::nothrow_t&) noexcept;
 void* operator new[](size_t size, const std::nothrow_t&) noexcept;
+
+#else   //  _KERNEL
+
+void* operator new(size_t size, void* caller, const std::nothrow_t&) noexcept;
+void* operator new[](size_t size, void* caller, const std::nothrow_t&) noexcept;
+
+#endif  //  !_KERNEL
 
 #endif  //  __has_include(<new>)

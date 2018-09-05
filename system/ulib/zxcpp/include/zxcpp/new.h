@@ -16,10 +16,13 @@ struct nothrow_t {};
 #if !_KERNEL
 void* operator new(size_t);
 void* operator new[](size_t);
-#endif // !_KERNEL
 
-void* operator new(size_t, const std::nothrow_t&) noexcept;
-void* operator new[](size_t, const std::nothrow_t&) noexcept;
+#else // _KERNEL
+
+void* operator new(size_t, void* caller, const std::nothrow_t&) noexcept;
+void* operator new[](size_t, void* caller, const std::nothrow_t&) noexcept;
+
+#endif // !_KERNEL
 
 void* operator new(size_t, void *ptr);
 

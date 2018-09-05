@@ -49,18 +49,18 @@ void* operator new[](size_t s, const std::nothrow_t&) noexcept {
 #else // _KERNEL
 
 // kernel versions may pass through the call site to the underlying allocator
-void* operator new(size_t s, const std::nothrow_t&) noexcept {
+void* operator new(size_t s, void* caller, const std::nothrow_t&) noexcept {
     if (s == 0u) {
         s = 1u;
     }
-    return ::malloc_debug_caller(s, __GET_CALLER());
+    return ::malloc_debug_caller(s, caller);
 }
 
-void* operator new[](size_t s, const std::nothrow_t&) noexcept {
+void* operator new[](size_t s, void* caller, const std::nothrow_t&) noexcept {
     if (s == 0u) {
         s = 1u;
     }
-    return ::malloc_debug_caller(s, __GET_CALLER());
+    return ::malloc_debug_caller(s, caller);
 }
 
 #endif // _KERNEL
