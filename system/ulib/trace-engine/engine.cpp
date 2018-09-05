@@ -60,8 +60,9 @@ trace_handler_t* g_handler{nullptr};
 struct Observer {
     // The event handle that we notify the observer through.
     zx_handle_t event;
-    // Set to true when the observer has notified us it has updated its
-    // state after being notified tracing has started.
+    // Set to true when the engine starts to indicate we're waiting for this
+    // observer to call us back, via |trace_notify_observer_updated()|, that
+    // it has started. When it does call us back this is set back to false.
     bool awaiting_update_after_start;
 };
 fbl::Vector<Observer> g_observers __TA_GUARDED(g_engine_mutex);
