@@ -33,10 +33,6 @@
 #include "pts_manager.h"
 #include "registers.h"
 
-#if ENABLE_DECODER_TESTS
-#include "tests/test_support.h"
-#endif
-
 // These match the regions exported when the bus device was added.
 enum MmioRegion {
   kCbus,

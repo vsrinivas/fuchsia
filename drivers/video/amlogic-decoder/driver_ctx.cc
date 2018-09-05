@@ -12,9 +12,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#if ENABLE_DECODER_TESTS
 #include "tests/test_support.h"
-#endif
 
 namespace {
 
@@ -31,10 +29,9 @@ extern zx_status_t amlogic_video_init(void** out_ctx) {
 
 // ctx is the driver ctx (not device ctx)
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
-#if ENABLE_DECODER_TESTS
+  // These calls don't do anything on a production build.
   TestSupport::set_parent_device(parent);
   TestSupport::RunAllTests();
-#endif
 
   DriverCtx* driver = reinterpret_cast<DriverCtx*>(ctx);
   std::unique_ptr<DeviceCtx> device = std::make_unique<DeviceCtx>(driver);
