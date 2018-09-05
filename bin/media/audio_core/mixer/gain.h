@@ -22,11 +22,11 @@ class Gain {
   // gain values are combined and then stored in the API-to-device link (usually
   // AudioRenderer-to-output), as a 32-bit floating-point amplitude multiplier.
   //
-  // Examples: renderer gain + Output gain = combined gain for a playback path.
-  // Input device gain + audio in gain = combined gain for an audio input path.
-  static constexpr float kMinGainDb = fuchsia::media::MUTED_GAIN_DB;
-  static constexpr float kUnityGainDb = 0.0f;
+  // Playback example: source (renderer) gain + dest (device) gain = total gain.
+  // Capture example: source (device) gain + dest (capturer) gain = total gain.
   static constexpr float kMaxGainDb = fuchsia::media::MAX_GAIN_DB;
+  static constexpr float kUnityGainDb = 0.0f;
+  static constexpr float kMinGainDb = fuchsia::media::MUTED_GAIN_DB;
 
   // constructor
   Gain()
@@ -38,18 +38,18 @@ class Gain {
   // Helper constant values in the gain-scale domain.
   //
   // kMinScale is the value at which the amplitude scaler is guaranteed to drive
-  // all sample values to a value of 0 (meaning that we waste compute cycles if
-  // we actually scale anything). Note: because we normalize all input formats
-  // to the same full-scale bounds, this value is identical for all input types.
-  // This gain_scale value takes rounding into account in its calculation.
+  // all sample values to a value of 0 (meaning we waste compute cycles if we
+  // actually scale anything). We normalize all input formats to the same
+  // full-scale bounds, so this value is identical for all input types. The
+  // calculation of this value takes rounding into account.
   //
   // kUnityScale is the scale value at which mix inputs are passed bit-for-bit
   // through the mixer into the accumulation buffer. This is used during the Mix
   // process as an optimization, to avoid unnecessary multiplications.
   //
-  // kMaxScale is the scale value corresponding to the largest allowed gainDb
-  // values, which is currently +24.0 decibels. Scale values above this value
-  // will be clamped to this value.
+  // kMaxScale is the scale corresponding to the largest allowed gainDb value,
+  // currently +24.0 decibels. Scales above this value will be clamped to this.
+  static constexpr AScale kMuteScale = 0.0f;
   static constexpr AScale kMinScale = 0.00000001f;  // kMinGainDb is -160.0 dB
   static constexpr AScale kUnityScale = 1.0f;
   static constexpr AScale kMaxScale = 15.8489319f;  // kMaxGainDb is +24.0 dB
@@ -91,18 +91,18 @@ class Gain {
   // when performing the current Mix operation for that particular source.
   void SetDestGain(float gain_db) { target_dest_gain_db_.store(gain_db); }
 
-  // Retrieve the combined amplitude scale for this Gain, when provided the
-  // "destination" gain (output device, or capturer in API). This is only
-  // called by the mixer for this audio path. For performance reasons, values
-  // are cached and recomputed only as needed.
-  Gain::AScale GetGainScale(float dest_gain_db) {
-    return GetGainScale(target_src_gain_db_.load(), dest_gain_db);
-  }
-
   // Calculate the stream's gain-scale, from cached source and dest values.
   Gain::AScale GetGainScale() {
     return GetGainScale(target_src_gain_db_.load(),
                         target_dest_gain_db_.load());
+  }
+
+  // Retrieve combined amplitude scale for a mix stream, when provided gain for
+  // the mix's "destination" (output device, or capturer in API). This is only
+  // called by the link's mixer. For performance reasons, values are cached and
+  // recomputed only as needed.
+  Gain::AScale GetGainScale(float dest_gain_db) {
+    return GetGainScale(target_src_gain_db_.load(), dest_gain_db);
   }
 
   // Convenience functions to aid in performance optimization.
@@ -116,8 +116,8 @@ class Gain {
   // implementation caches values and recomputes the result only as needed.
   Gain::AScale GetGainScale(float src_gain_db, float dest_gain_db);
 
-  // TODO(mpuryear): at some point, we should examine whether using these two
-  // atomics gives better performance and scale than using a lock instead.
+  // TODO(mpuryear): at some point, examine whether using a lock provides better
+  // performance and scalability than using these two atomics.
   std::atomic<float> target_src_gain_db_;
   std::atomic<float> target_dest_gain_db_;
 

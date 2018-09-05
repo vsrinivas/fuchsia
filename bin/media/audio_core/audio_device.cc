@@ -48,11 +48,31 @@ uint64_t AudioDevice::token() const {
   return driver_ ? driver_->stream_channel_koid() : ZX_KOID_INVALID;
 }
 
+// Change a device's gain, propagating the change to the affected links.
 void AudioDevice::SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
                               uint32_t set_flags) {
   // Limit the request to what the hardware can support
   ::fuchsia::media::AudioGainInfo limited = info;
   ApplyGainLimits(&limited, set_flags);
+
+  // For outputs, change the gain of all links where it is the destination.
+  if (is_output()) {
+    fbl::AutoLock links_lock(&links_lock_);
+    for (auto& link : source_links_) {
+      if (link->GetSource()->type() == AudioObject::Type::AudioRenderer) {
+        link->bookkeeping()->gain.SetDestGain(limited.gain_db);
+      }
+    }
+  } else {
+    // For inputs, change the gain of all links where it is the source.
+    FXL_DCHECK(is_input());
+    fbl::AutoLock links_lock(&links_lock_);
+    for (auto& link : dest_links_) {
+      if (link->GetDest()->type() == AudioObject::Type::AudioCapturer) {
+        link->bookkeeping()->gain.SetSourceGain(limited.gain_db);
+      }
+    }
+  }
 
   FXL_DCHECK(device_settings_ != nullptr);
   if (device_settings_->SetGainInfo(limited, set_flags)) {
@@ -92,12 +112,10 @@ zx_status_t AudioDevice::Init() {
 void AudioDevice::Cleanup() {}
 
 void AudioDevice::ActivateSelf() {
-  // If we are not shutting down, send a message to the device manager letting
-  // it know that we are ready to do some work.
+  // If we aren't shutting down, tell DeviceManager we are ready for work.
   if (!is_shutting_down()) {
-    // Create our default settings.  The device manager will take care of
-    // restoring these settings from persistent storage for us when it gets our
-    // activation message.
+    // Create default settings. The device manager will restore these settings
+    // from persistent storage for us when it gets our activation message.
     FXL_DCHECK(device_settings_ == nullptr);
     FXL_DCHECK(driver() != nullptr);
     device_settings_ = AudioDeviceSettings::Create(*driver(), is_input());

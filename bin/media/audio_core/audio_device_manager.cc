@@ -285,25 +285,21 @@ void AudioDeviceManager::HandlePlugStateChange(
   UpdateDefaultDevice(device->is_input());
 }
 
-void AudioDeviceManager::OnSystemGainChanged() {
+// SetSystemGain or SetSystemMute has been called. 'changed' tells us whether
+// the System Gain / Mute values actually changed. If not, only update devices
+// that (because of calls to SetDeviceGain) have diverged from System settings.
+//
+// We update link gains in Device::SetGainInfo rather than here, so that we
+// catch changes to device gain coming from SetSystemGain OR SetDeviceGain.
+void AudioDeviceManager::OnSystemGain(bool changed) {
   for (auto& device : devices_) {
-    if (device.is_output()) {
+    if (device.is_output() && (changed || device.system_gain_dirty)) {
       UpdateDeviceToSystemGain(&device);
       NotifyDeviceGainChanged(device);
       device.system_gain_dirty = false;
     }
     // We intentionally route System Gain only to Output devices, not Inputs.
     // If needed, we could revisit this in the future.
-  }
-}
-
-void AudioDeviceManager::OnSystemGainUnchanged() {
-  for (auto& device : devices_) {
-    if (device.is_output() && device.system_gain_dirty) {
-      UpdateDeviceToSystemGain(&device);
-      NotifyDeviceGainChanged(device);
-      device.system_gain_dirty = false;
-    }
   }
 }
 
@@ -764,7 +760,7 @@ void AudioDeviceManager::CommitDirtySettings() {
     commit_settings_task_.Cancel();
   }
 
-  // If we need to try to update in the future, schedule a commit task to do so.
+  // If we need to update in the future, schedule a commit task to do so.
   if (next != zx::time::infinite()) {
     commit_settings_task_.PostForTime(service_->dispatcher(), next);
   }

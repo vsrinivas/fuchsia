@@ -80,10 +80,18 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   uint32_t dest_off = *dest_offset;
   int32_t src_off = *frac_src_offset;
 
+  // Cache these locally, in the template specialization that uses them.
+  // Only src_pos_modulo needs to be written back before returning.
+  uint32_t step_size = info->step_size;
+  uint32_t rate_modulo, denominator, src_pos_modulo;
   if (HasModulo) {
-    FXL_DCHECK(info->denominator > 0);
-    FXL_DCHECK(info->denominator > info->rate_modulo);
-    FXL_DCHECK(info->denominator > info->src_pos_modulo);
+    rate_modulo = info->rate_modulo;
+    denominator = info->denominator;
+    src_pos_modulo = info->src_pos_modulo;
+
+    FXL_DCHECK(denominator > 0);
+    FXL_DCHECK(denominator > rate_modulo);
+    FXL_DCHECK(denominator > src_pos_modulo);
   }
 
   FXL_DCHECK(dest_off < dest_frames);
@@ -115,13 +123,13 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       }
 
       ++dest_off;
-      src_off += info->step_size;
+      src_off += step_size;
 
       if (HasModulo) {
-        info->src_pos_modulo += info->rate_modulo;
-        if (info->src_pos_modulo >= info->denominator) {
+        src_pos_modulo += rate_modulo;
+        if (src_pos_modulo >= denominator) {
           ++src_off;
-          info->src_pos_modulo -= info->denominator;
+          src_pos_modulo -= denominator;
         }
       }
     }
@@ -130,23 +138,27 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       // Calc how many samples we would've produced; update src_off &
       // dest_off.
       uint32_t src_avail =
-          ((frac_src_frames - src_off) + info->step_size - 1) / info->step_size;
+          ((frac_src_frames - src_off) + step_size - 1) / step_size;
       uint32_t dest_avail = (dest_frames - dest_off);
       uint32_t avail = std::min(src_avail, dest_avail);
 
-      src_off += avail * info->step_size;
+      src_off += avail * step_size;
       dest_off += avail;
 
       if (HasModulo) {
-        info->src_pos_modulo += (info->rate_modulo * avail);
-        src_off += (info->src_pos_modulo / info->denominator);
-        info->src_pos_modulo %= info->denominator;
+        src_pos_modulo += (rate_modulo * avail);
+        src_off += (src_pos_modulo / denominator);
+        src_pos_modulo %= denominator;
       }
     }
   }
 
+  // Update all our returned in-out parameters
   *dest_offset = dest_off;
   *frac_src_offset = src_off;
+  if (HasModulo) {
+    info->src_pos_modulo = src_pos_modulo;
+  }
 
   // If we passed the last valid source subframe, then we exhausted this source.
   return (src_off >= static_cast<int32_t>(frac_src_frames));
@@ -225,10 +237,18 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
   uint32_t dest_off = *dest_offset;
   int32_t src_off = *frac_src_offset;
 
+  // Cache these locally, in the template specialization that uses them.
+  // Only src_pos_modulo needs to be written back before returning.
+  uint32_t step_size = info->step_size;
+  uint32_t rate_modulo, denominator, src_pos_modulo;
   if (HasModulo) {
-    FXL_DCHECK(info->denominator > 0);
-    FXL_DCHECK(info->denominator > info->rate_modulo);
-    FXL_DCHECK(info->denominator > info->src_pos_modulo);
+    rate_modulo = info->rate_modulo;
+    denominator = info->denominator;
+    src_pos_modulo = info->src_pos_modulo;
+
+    FXL_DCHECK(denominator > 0);
+    FXL_DCHECK(denominator > rate_modulo);
+    FXL_DCHECK(denominator > src_pos_modulo);
   }
 
   FXL_DCHECK(dest_off < dest_frames);
@@ -260,38 +280,41 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
       }
 
       dest_off += 1;
-      src_off += info->step_size;
+      src_off += step_size;
 
       if (HasModulo) {
-        info->src_pos_modulo += info->rate_modulo;
-        if (info->src_pos_modulo >= info->denominator) {
+        src_pos_modulo += rate_modulo;
+        if (src_pos_modulo >= denominator) {
           ++src_off;
-          info->src_pos_modulo -= info->denominator;
+          src_pos_modulo -= denominator;
         }
       }
     }
   } else {
     if (dest_off < dest_frames) {
-      // Calc how many samples we would've produced; update src_off &
-      // dest_off.
+      // Calc how many samples we would've produced; update src_off & dest_off.
       uint32_t src_avail =
-          ((frac_src_frames - src_off) + info->step_size - 1) / info->step_size;
+          ((frac_src_frames - src_off) + step_size - 1) / step_size;
       uint32_t dest_avail = (dest_frames - dest_off);
       uint32_t avail = std::min(src_avail, dest_avail);
 
-      src_off += avail * info->step_size;
+      src_off += avail * step_size;
       dest_off += avail;
 
       if (HasModulo) {
-        info->src_pos_modulo += (info->rate_modulo * avail);
-        src_off += (info->src_pos_modulo / info->denominator);
-        info->src_pos_modulo %= info->denominator;
+        src_pos_modulo += (rate_modulo * avail);
+        src_off += (src_pos_modulo / denominator);
+        src_pos_modulo %= denominator;
       }
     }
   }
 
+  // Update all our returned in-out parameters
   *dest_offset = dest_off;
   *frac_src_offset = src_off;
+  if (HasModulo) {
+    info->src_pos_modulo = src_pos_modulo;
+  }
 
   // If we passed the last valid source subframe, then we exhausted this source.
   return (src_off >= static_cast<int32_t>(frac_src_frames));

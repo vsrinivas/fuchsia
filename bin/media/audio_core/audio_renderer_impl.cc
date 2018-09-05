@@ -669,11 +669,12 @@ void AudioRendererImpl::SetGain(float gain_db) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   if (stream_gain_db_ != gain_db) {
-    if (gain_db > fuchsia::media::MAX_GAIN_DB) {
-      FXL_LOG(ERROR) << "Stream gain value too large (" << gain_db << ").";
+    if (gain_db > fuchsia::media::MAX_GAIN_DB ||
+        gain_db < fuchsia::media::MUTED_GAIN_DB) {
+      FXL_LOG(ERROR) << "Stream gain value (" << gain_db << ") out of range.";
       return;
     }
-
+    // Anywhere we set stream_gain_db_, we should perform the above range check.
     stream_gain_db_ = gain_db;
 
     float effective_gain_db =
@@ -683,6 +684,11 @@ void AudioRendererImpl::SetGain(float gain_db) {
     for (const auto& link : dest_links_) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
       auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+
+      // Don't waste time on links to the throttle output.
+      if (packet_link == throttle_output_link_.get()) {
+        continue;
+      }
 
       // The Gain object contains multiple stages. In playback, renderer gain is
       // "source" gain and device (or master) gain is "dest" gain.
@@ -708,8 +714,15 @@ void AudioRendererImpl::SetMute(bool mute) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
       auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
 
+      // Don't waste time on links to the throttle output.
+      if (packet_link == throttle_output_link_.get()) {
+        continue;
+      }
+
       // The Gain object contains multiple stages. In playback, renderer gain is
       // "source" gain and device (or master) gain is "dest" gain.
+      //
+      // TODO(mpuryear): implement a true Mute in the Gain object; use it here.
       packet_link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
     }
   }
@@ -745,8 +758,8 @@ void AudioRendererImpl::GainControlBinding::SetGain(float gain_db) {
   owner_->SetGain(gain_db);
 }
 
-void AudioRendererImpl::GainControlBinding::SetMute(bool muted) {
-  owner_->SetMute(muted);
+void AudioRendererImpl::GainControlBinding::SetMute(bool mute) {
+  owner_->SetMute(mute);
 }
 
 }  // namespace audio

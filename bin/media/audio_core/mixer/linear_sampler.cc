@@ -101,10 +101,18 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   uint32_t dest_off = *dest_offset;
   int32_t src_off = *frac_src_offset;
 
+  // Cache these locally, in the template specialization that uses them.
+  // Only src_pos_modulo needs to be written back before returning.
+  uint32_t step_size = info->step_size;
+  uint32_t rate_modulo, denominator, src_pos_modulo;
   if (HasModulo) {
-    FXL_DCHECK(info->denominator > 0);
-    FXL_DCHECK(info->denominator > info->rate_modulo);
-    FXL_DCHECK(info->denominator > info->src_pos_modulo);
+    rate_modulo = info->rate_modulo;
+    denominator = info->denominator;
+    src_pos_modulo = info->src_pos_modulo;
+
+    FXL_DCHECK(denominator > 0);
+    FXL_DCHECK(denominator > rate_modulo);
+    FXL_DCHECK(denominator > src_pos_modulo);
   }
 
   // "Source end" is the last valid input sub-frame that can be sampled.
@@ -152,13 +160,13 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
         }
 
         dest_off += 1;
-        src_off += info->step_size;
+        src_off += step_size;
 
         if (HasModulo) {
-          info->src_pos_modulo += info->rate_modulo;
-          if (info->src_pos_modulo >= info->denominator) {
+          src_pos_modulo += rate_modulo;
+          if (src_pos_modulo >= denominator) {
             ++src_off;
-            info->src_pos_modulo -= info->denominator;
+            src_pos_modulo -= denominator;
           }
         }
       }
@@ -177,13 +185,13 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       }
 
       dest_off += 1;
-      src_off += info->step_size;
+      src_off += step_size;
 
       if (HasModulo) {
-        info->src_pos_modulo += info->rate_modulo;
-        if (info->src_pos_modulo >= info->denominator) {
+        src_pos_modulo += rate_modulo;
+        if (src_pos_modulo >= denominator) {
           ++src_off;
-          info->src_pos_modulo -= info->denominator;
+          src_pos_modulo -= denominator;
         }
       }
     }
@@ -191,18 +199,17 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     // We are muted. Don't mix, but figure out how many samples we WOULD have
     // produced and update the src_off and dest_off values appropriately.
     if ((dest_off < dest_frames) && (src_off < src_end)) {
-      uint32_t src_avail =
-          (((src_end - src_off) + info->step_size - 1) / info->step_size);
+      uint32_t src_avail = (((src_end - src_off) + step_size - 1) / step_size);
       uint32_t dest_avail = (dest_frames - dest_off);
       uint32_t avail = std::min(src_avail, dest_avail);
 
       dest_off += avail;
-      src_off += avail * info->step_size;
+      src_off += avail * step_size;
 
       if (HasModulo) {
-        info->src_pos_modulo += (info->rate_modulo * avail);
-        src_off += (info->src_pos_modulo / info->denominator);
-        info->src_pos_modulo %= info->denominator;
+        src_pos_modulo += (rate_modulo * avail);
+        src_off += (src_pos_modulo / denominator);
+        src_pos_modulo %= denominator;
       }
     }
   }
@@ -224,19 +231,23 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     }
 
     dest_off += 1;
-    src_off += info->step_size;
+    src_off += step_size;
 
     if (HasModulo) {
-      info->src_pos_modulo += info->rate_modulo;
-      if (info->src_pos_modulo >= info->denominator) {
+      src_pos_modulo += rate_modulo;
+      if (src_pos_modulo >= denominator) {
         ++src_off;
-        info->src_pos_modulo -= info->denominator;
+        src_pos_modulo -= denominator;
       }
     }
   }
 
+  // Update all our returned in-out parameters
   *dest_offset = dest_off;
   *frac_src_offset = src_off;
+  if (HasModulo) {
+    info->src_pos_modulo = src_pos_modulo;
+  }
 
   // If next source position to consume is beyond start of last frame ...
   if (src_off > src_end) {
@@ -339,10 +350,18 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
   uint32_t dest_off = *dest_offset;
   int32_t src_off = *frac_src_offset;
 
+  // Cache these locally, in the template specialization that uses them.
+  // Only src_pos_modulo needs to be written back before returning.
+  uint32_t step_size = info->step_size;
+  uint32_t rate_modulo, denominator, src_pos_modulo;
   if (HasModulo) {
-    FXL_DCHECK(info->denominator > 0);
-    FXL_DCHECK(info->denominator > info->rate_modulo);
-    FXL_DCHECK(info->denominator > info->src_pos_modulo);
+    rate_modulo = info->rate_modulo;
+    denominator = info->denominator;
+    src_pos_modulo = info->src_pos_modulo;
+
+    FXL_DCHECK(denominator > 0);
+    FXL_DCHECK(denominator > rate_modulo);
+    FXL_DCHECK(denominator > src_pos_modulo);
   }
 
   // This is the last sub-frame at which we can output without additional data.
@@ -385,13 +404,13 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
         }
 
         dest_off += 1;
-        src_off += info->step_size;
+        src_off += step_size;
 
         if (HasModulo) {
-          info->src_pos_modulo += info->rate_modulo;
-          if (info->src_pos_modulo >= info->denominator) {
+          src_pos_modulo += rate_modulo;
+          if (src_pos_modulo >= denominator) {
             ++src_off;
-            info->src_pos_modulo -= info->denominator;
+            src_pos_modulo -= denominator;
           }
         }
       } while ((dest_off < dest_frames) && (src_off < 0));
@@ -411,13 +430,13 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
       }
 
       dest_off += 1;
-      src_off += info->step_size;
+      src_off += step_size;
 
       if (HasModulo) {
-        info->src_pos_modulo += info->rate_modulo;
-        if (info->src_pos_modulo >= info->denominator) {
+        src_pos_modulo += rate_modulo;
+        if (src_pos_modulo >= denominator) {
           ++src_off;
-          info->src_pos_modulo -= info->denominator;
+          src_pos_modulo -= denominator;
         }
       }
     }
@@ -425,18 +444,17 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
     // We are muted. Don't mix, but figure out how many samples we WOULD have
     // produced and update the src_off and dest_off values appropriately.
     if ((dest_off < dest_frames) && (src_off < src_end)) {
-      uint32_t src_avail =
-          (((src_end - src_off) + info->step_size - 1) / info->step_size);
+      uint32_t src_avail = (((src_end - src_off) + step_size - 1) / step_size);
       uint32_t dest_avail = (dest_frames - dest_off);
       uint32_t avail = std::min(src_avail, dest_avail);
 
       dest_off += avail;
-      src_off += avail * info->step_size;
+      src_off += avail * step_size;
 
       if (HasModulo) {
-        info->src_pos_modulo += (info->rate_modulo * avail);
-        src_off += (info->src_pos_modulo / info->denominator);
-        info->src_pos_modulo %= info->denominator;
+        src_pos_modulo += (rate_modulo * avail);
+        src_off += (src_pos_modulo / denominator);
+        src_pos_modulo %= denominator;
       }
     }
   }
@@ -458,19 +476,23 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
     }
 
     dest_off += 1;
-    src_off += info->step_size;
+    src_off += step_size;
 
     if (HasModulo) {
-      info->src_pos_modulo += info->rate_modulo;
-      if (info->src_pos_modulo >= info->denominator) {
+      src_pos_modulo += rate_modulo;
+      if (src_pos_modulo >= denominator) {
         ++src_off;
-        info->src_pos_modulo -= info->denominator;
+        src_pos_modulo -= denominator;
       }
     }
   }
 
+  // Update all our returned in-out parameters
   *dest_offset = dest_off;
   *frac_src_offset = src_off;
+  if (HasModulo) {
+    info->src_pos_modulo = src_pos_modulo;
+  }
 
   // If next source position to consume is beyond start of last frame ...
   if (src_off > src_end) {

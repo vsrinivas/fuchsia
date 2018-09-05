@@ -44,8 +44,7 @@ std::shared_ptr<AudioLink> AudioObject::LinkObjects(
         fbl::RefPtr<AudioDevice>::Downcast(source), dest);
   }
 
-  // Give the the source and the destination their chances to initialize (or
-  // reject) the link.
+  // Give source and destination a chance to initialize (or reject) the link.
   zx_status_t res;
   res = source->InitializeDestLink(link);
   if (res != ZX_OK) {
@@ -56,9 +55,8 @@ std::shared_ptr<AudioLink> AudioObject::LinkObjects(
     return nullptr;
   }
 
-  // Now lock both objects, make sure that both are still allowing new links,
-  // then add the link to the proper sets in both the source and the
-  // destination.
+  // Now lock both objects, make sure both are still allowing new links,
+  // then add the link to the proper sets in both source and destination.
   {
     fbl::AutoLock slock(&source->links_lock_);
     fbl::AutoLock dlock(&dest->links_lock_);
@@ -72,9 +70,8 @@ std::shared_ptr<AudioLink> AudioObject::LinkObjects(
     }
   }
 
-  // TODO(johngro): if we need to poke the destination to let it know that it
-  // might need to wake up and do some work because it has a new source to
-  // handle, this would be the place to do so.
+  // TODO(johngro): if we must poke the destination, in case it needs to wake
+  // and do specific work because of this new source, this where to do it.
 
   return link;
 }

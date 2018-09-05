@@ -161,14 +161,11 @@ class AudioCapturerImpl
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
                        fuchsia::media::AudioRamp rampType) final {
     FXL_NOTIMPLEMENTED();
-  };
-  void SetMute(bool muted) final;
-  // TODO(mpuryear): Need to implement SetMute.
-
+  }
+  void SetMute(bool mute) final;
   // TODO(mpuryear): Need to implement OnGainMuteChanged event.
 
-  // Methods used by the capture/mixer thread(s). Must be called from the
-  // mix_domain.
+  // Methods used by capture/mixer thread(s). Must be called from mix_domain.
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   bool MixToIntermediate(uint32_t mix_frames)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
@@ -212,6 +209,7 @@ class AudioCapturerImpl
   TimelineRate frames_to_clock_mono_rate_;
   uint32_t max_frames_per_capture_;
   std::atomic<float> stream_gain_db_;
+  bool mute_;
 
   // Shared buffer state
   zx::vmo payload_buf_vmo_;

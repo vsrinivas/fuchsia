@@ -42,12 +42,7 @@ class AudioLink {
 
   SourceType source_type() const { return source_type_; }
 
-  // Accessor for the link's gain state tracking class.  Used by both the main
-  // message loop thread and the mixer threads.
-  Gain& gain() { return gain_; }
-
-  // Current validity.  Sources invalidate links when they either go away, or
-  // change formats.
+  // Sources invalidate links when they change format or go away.
   void Invalidate() { valid_.store(false); }
   bool valid() const { return valid_.load(); }
 
@@ -67,7 +62,6 @@ class AudioLink {
   fbl::RefPtr<AudioObject> source_;
   fbl::RefPtr<AudioObject> dest_;
   std::unique_ptr<Bookkeeping> bookkeeping_;
-  Gain gain_;
   std::atomic_bool valid_;
 };
 

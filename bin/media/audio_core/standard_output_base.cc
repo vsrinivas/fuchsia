@@ -70,9 +70,8 @@ void StandardOutputBase::Process() {
   // Just trim the queues and move on.
   FXL_DCHECK(next_sched_time_known_);
   if (now >= next_sched_time_) {
-    // Clear the flag, if the implementation does not set this flag by calling
-    // SetNextSchedTime during the cycle, we consider it to be an error and shut
-    // down.
+    // Clear the flag. If the implementation does not set it during the cycle by
+    // calling SetNextSchedTime, we consider it an error and shut down.
     next_sched_time_known_ = false;
 
     // As long as our implementation wants to mix more and has not run into a
@@ -101,8 +100,8 @@ void StandardOutputBase::Process() {
                                output_producer_->channels();
         ::memset(mix_buf_.get(), 0, bytes_to_zero);
 
-        // Mix each audio outs into the intermediate buffer, then clip/format
-        // into the final buffer.
+        // Mix each renderer into the intermediate accumulator buffer, then
+        // reformat (and clip) into the final output buffer.
         ForeachLink(TaskType::Mix);
         output_producer_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf,
                                         cur_mix_job_.buf_frames);
@@ -170,6 +169,23 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // The Gain object contains multiple stages. In render, stream gain is
+  // "source" gain and device (or system) gain is "dest" gain.
+  //
+  // The renderer will set this link's source gain once this call returns.
+  //
+  // Set the dest gain -- device gain retrieved from device settings.
+  if (device_settings_ != nullptr) {
+    AudioDeviceSettings::GainState cur_gain_state;
+    device_settings_->SnapshotGainState(&cur_gain_state);
+
+    float effective_gain_db =
+        (cur_gain_state.muted ? fuchsia::media::MUTED_GAIN_DB
+                              : cur_gain_state.gain_db);
+    mix_bookkeeping->gain.SetDestGain(effective_gain_db);
+  }
+  // Settings should exist but if they don't, we use default DestGain (Unity).
+
   // Things went well. Stash a reference to our bookkeeping and get out.
   link->set_bookkeeping(std::move(mix_bookkeeping));
   return ZX_OK;
@@ -201,8 +217,7 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
     }
   }
 
-  // No matter what happens, make sure we release our temporary references as
-  // soons a we exit this method.
+  // In all cases, release our temporary references upon leaving this method.
   auto cleanup = fit::defer(
       [this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_link_refs_.clear(); });
 
@@ -232,23 +247,14 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
     // Ensure the mapping from source-frame to local-time is up-to-date.
     UpdateSourceTrans(audio_renderer, info);
 
-    // Ensure the destination (master or device) gain is up-to-date.
-    // TODO(mpuryear): Ideally we wouldn't need to set this here, if we
-    // 1) plumb SetGainInfo to also SetDestGain for render links (and
-    // SetSourceGain for capture links), and 2) initialize these values
-    // correctly when gain/bk are created.
-    FXL_DCHECK(cur_mix_job_.sw_output_gain_db <= Gain::kUnityGainDb);
-    info->gain.SetDestGain(cur_mix_job_.sw_output_gain_db);
-
     bool setup_done = false;
     fbl::RefPtr<AudioPacketRef> pkt_ref;
 
     bool release_audio_renderer_packet;
     while (true) {
       release_audio_renderer_packet = false;
-      // Try to grab the front of the packet queue.  If it has been flushed
-      // since the last time we grabbed it, be sure to reset our mixer's
-      // internal filter state.
+      // Try to grab the packet queue's front. If it has been flushed since the
+      // last time we grabbed it, reset our mixer's internal filter state.
       bool was_flushed;
       pkt_ref = packet_link->LockPendingQueueFront(&was_flushed);
       if (was_flushed) {
@@ -267,6 +273,7 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
                          ? SetupMix(audio_renderer, info)
                          : SetupTrim(audio_renderer, info);
         if (!setup_done) {
+          // Clear our ramps, if we exit with error?
           break;
         }
       }
@@ -279,9 +286,8 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
               ? ProcessMix(audio_renderer, info, pkt_ref)
               : ProcessTrim(audio_renderer, info, pkt_ref);
 
-      // If we are mixing, and we have produced enough output frames, then we
-      // are done with this mix, regardless of what we should now do with the
-      // renderer packet.
+      // If we have mixed enough output frames, we are done with this mix,
+      // regardless of what we should now do with the renderer packet.
       if ((task_type == TaskType::Mix) &&
           (cur_mix_job_.frames_produced == cur_mix_job_.buf_frames)) {
         break;
@@ -321,6 +327,8 @@ bool StandardOutputBase::SetupMix(
 bool StandardOutputBase::ProcessMix(
     const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info,
     const fbl::RefPtr<AudioPacketRef>& packet) {
+  // Bookkeeping should contain: the rechannel matrix (eventually).
+
   // Sanity check our parameters.
   FXL_DCHECK(info);
   FXL_DCHECK(packet);
@@ -340,7 +348,7 @@ bool StandardOutputBase::ProcessMix(
     return false;
   }
 
-  // Did we produce enough? If so, hold this packet and move to next renderer.
+  // Have we produced enough? If so, hold this packet and move to next renderer.
   if (cur_mix_job_.frames_produced >= cur_mix_job_.buf_frames) {
     return false;
   }
@@ -425,6 +433,7 @@ bool StandardOutputBase::ProcessMix(
     // fractional source offset, we also need to track the ongoing
     // subframe_position_modulo. This is now added to Mix() and maintained
     // across calls, but not initially set to any value other than zero.
+    // For now, we are deferring that work, tracking it with MTWN-128.
     //
     // Q: Why did we solve this issue for Rate but not for initial Position?
     // A: We solved this issue for *rate* because its effect accumulates over
@@ -436,6 +445,7 @@ bool StandardOutputBase::ProcessMix(
     // measurable and attributable to this jitter, we will defer this work.
     //
     // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
+
     consumed_source =
         info->mixer->Mix(buf, frames_left, &output_offset, packet->payload(),
                          packet->frac_frame_len(), &frac_input_offset,
@@ -456,20 +466,17 @@ bool StandardOutputBase::ProcessMix(
 
 bool StandardOutputBase::SetupTrim(
     const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info) {
-  // Compute the cutoff time we will use to decide wether or not to trim
-  // packets.  ForeachLink has already updated our transformation, no need
-  // for us to do so here.
+  // Compute the cutoff time used to decide whether to trim packets. ForeachLink
+  // has already updated our transformation, no need for us to do so here.
   FXL_DCHECK(info);
 
   int64_t local_now_ticks =
       (fxl::TimePoint::Now() - fxl::TimePoint()).ToNanoseconds();
 
-  // The behavior of the RateControlBase implementation guarantees that the
-  // transformation into the media timeline is never singular.  If the
-  // forward transformation fails it can only be because of an overflow,
-  // which should be impossible unless the user has defined a playback rate
-  // where the ratio between media time ticks and local time ticks is
-  // greater than one.
+  // RateControlBase guarantees that the transformation into the media timeline
+  // is never singular.  If a forward transformation fails it must be because of
+  // overflow, which should be impossible unless user defined a playback rate
+  // where the ratio of media-ticks-to-local-ticks is greater than one.
   trim_threshold_ = info->clock_mono_to_frac_source_frames(local_now_ticks);
 
   return true;

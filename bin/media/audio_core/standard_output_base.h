@@ -30,8 +30,7 @@ class StandardOutputBase : public AudioOutput {
 
  protected:
   struct MixJob {
-    // State for the job set up once by the output implementation and then used
-    // by all audio outs.
+    // Job state set up once by an output implementation, used by all AudioOuts.
     void* buf;
     uint32_t buf_frames;
     int64_t start_pts_of;  // start PTS, expressed in output frames.
@@ -42,13 +41,12 @@ class StandardOutputBase : public AudioOutput {
     float sw_output_gain_db;
     bool sw_output_muted;
 
-    // State for the job which is set up for each audio out during SetupMix
+    // Per-stream job state, set up for each AudioOut during SetupMix.
     uint32_t frames_produced;
   };
 
-  // TODO(mpuryear): per MTWN-129, combine this with CaptureLinkBookkeeping, and
-  // integrate it into the Mixer class itself.
-  // TODO(mpuryear): Rationalize naming and usage of the bookkeeping structs.
+  // TODO(mpuryear): per MTWN-129, integrate it into the Mixer class itself.
+  // TODO(mpuryear): Rationalize naming/usage of bookkeeping and MixJob structs.
   void UpdateSourceTrans(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
                          Bookkeeping* bk);
   void UpdateDestTrans(const MixJob& job, Bookkeeping* bk);
@@ -107,9 +105,8 @@ class StandardOutputBase : public AudioOutput {
   fxl::TimePoint next_sched_time_;
   bool next_sched_time_known_;
 
-  // Vector used to hold references to our source links while we are mixing
-  // (instead of holding the lock which prevents source_links_ mutation for the
-  // entire mix job)
+  // Vector used to hold references to source links while mixing (instead of
+  // holding a lock, preventing source_links_ mutation for the entire mix job).
   std::vector<std::shared_ptr<AudioLink>> source_link_refs_
       FXL_GUARDED_BY(mix_domain_->token());
 

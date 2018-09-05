@@ -114,8 +114,10 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
     return false;
   }
 
-  void OnSystemGainChanged();
-  void OnSystemGainUnchanged();
+  // SetSystemGain/Mute has been called. 'changed' tells us whether System Gain
+  // or Mute values actually changed. If not, only update devices that (because
+  // of calls to SetDeviceGain) have diverged from System settings.
+  void OnSystemGain(bool changed);
 
   // Implementation of the AudioDeviceEnumerator FIDL interface.
   void GetDevices(GetDevicesCallback cbk) final;

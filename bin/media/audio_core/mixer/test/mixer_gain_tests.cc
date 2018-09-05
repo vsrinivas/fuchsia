@@ -105,17 +105,17 @@ TEST(Gain, Caching) {
 TEST(Gain, MaxClamp) {
   Gain gain;
 
-  // AudioRenderer Gain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
+  // Renderer Gain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
   gain.SetSourceGain(Gain::kMaxGainDb * 2);
   EXPECT_EQ(Gain::kMaxScale, gain.GetGainScale(0.0f));
 
-  // This combination (24.05 dB) would even fit into 4.24, but clamps to 24.0dB.
+  // This combination (24.05 dB) is clamped to 24.0dB.
   gain.SetSourceGain(Gain::kMaxGainDb);
   EXPECT_EQ(Gain::kMaxScale, gain.GetGainScale(0.05f));
 
-  constexpr float kScale24DbDown = 0.0630957344f;
   // System limits renderer gain to kMaxGainDb, even when sum is less than 0.
   // Renderer Gain +36dB (clamped to +24dB) plus system Gain -48dB ==> -24dB.
+  constexpr float kScale24DbDown = 0.0630957344f;
   gain.SetSourceGain(Gain::kMaxGainDb * 1.5f);
   gain.SetDestGain(-2 * Gain::kMaxGainDb);
   EXPECT_EQ(kScale24DbDown, gain.GetGainScale());
@@ -123,7 +123,7 @@ TEST(Gain, MaxClamp) {
   EXPECT_FALSE(gain.IsSilent());
 
   // AudioCore limits master to 0dB, but Gain object handles up to kMaxGainDb.
-  // Master +36dB (clamped to +24dB) plus stream gain -48dB becomes -24dB.
+  // Dest also clamps to +24dB: source(-48dB) + dest(+36dB=>24dB) becomes -24dB.
   gain.SetSourceGain(-2 * Gain::kMaxGainDb);
   gain.SetDestGain(Gain::kMaxGainDb * 1.5f);
   EXPECT_EQ(kScale24DbDown, gain.GetGainScale());

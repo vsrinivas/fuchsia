@@ -116,7 +116,7 @@ class AudioRendererImpl
     void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
                          fuchsia::media::AudioRamp rampType) final {
       FXL_NOTIMPLEMENTED();
-    };
+    }
     void SetMute(bool muted) final;
     // TODO(mpuryear): Need to implement OnGainMuteChanged event.
 
