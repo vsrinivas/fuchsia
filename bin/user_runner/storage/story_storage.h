@@ -135,12 +135,6 @@ class StoryStorage : public PageClient {
   // Completes the returned future after all prior methods have completed.
   FuturePtr<> Sync();
 
-  // TODO(thatguy): Remove users of these and remove. Only used when
-  // constructing a LinkImpl in StoryControllerImpl. Bring Link storage
-  // into this class.
-  LedgerClient* ledger_client() const { return ledger_client_; }
-  fuchsia::ledger::PageId page_id() const { return page_id_; }
-
  private:
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;

@@ -85,15 +85,6 @@ void XdrIntentParameterData(XdrContext* const xdr,
     case XdrOp::TO_JSON: {
       std::string tag;
 
-      // The unusual call to operator->() in the cases below is because
-      // operator-> for all of FIDL's pointer types to {strings, arrays,
-      // structs} returns a _non-const_ reference to the inner pointer,
-      // which is required by the xdr->Field() method. Calling get() returns
-      // a const pointer for arrays and strings. get() does return a non-const
-      // pointer for FIDL structs, but given that operator->() is required for
-      // some FIDL types, we might as well be consistent and use operator->()
-      // for all types.
-
       switch (data->Which()) {
         case fuchsia::modular::IntentParameterData::Tag::kEntityReference: {
           tag = kEntityReference;

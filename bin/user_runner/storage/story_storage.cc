@@ -15,6 +15,15 @@
 
 namespace modular {
 
+namespace {
+
+// TODO(rosswang): replace with |std::string::starts_with| after C++20
+bool StartsWith(const std::string& string, const std::string& prefix) {
+  return string.compare(0, prefix.size(), prefix) == 0;
+}
+
+}  // namespace
+
 StoryStorage::StoryStorage(LedgerClient* ledger_client,
                            fuchsia::ledger::PageId page_id)
     : PageClient("StoryStorage", ledger_client, page_id, "" /* key_prefix */),
@@ -431,9 +440,9 @@ void StoryStorage::OnPageChange(const std::string& key,
     return;
   }
 
-  if (key.find(kLinkKeyPrefix) == 0) {
+  if (StartsWith(key, kLinkKeyPrefix)) {
     NotifyLinkWatchers(key, value, nullptr /* context */);
-  } else if (key.find(kModuleKeyPrefix) == 0) {
+  } else if (StartsWith(key, kModuleKeyPrefix)) {
     if (on_module_data_updated_) {
       auto module_data = ModuleData::New();
       if (!XdrRead(value, &module_data, XdrModuleData)) {
