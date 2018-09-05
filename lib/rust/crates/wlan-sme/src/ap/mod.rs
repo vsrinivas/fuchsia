@@ -8,8 +8,8 @@ use futures::channel::mpsc;
 use crate::{MlmeRequest, Ssid};
 use crate::sink::MlmeSink;
 
-const DEFAULT_BEACON_PERIOD: u32 = 100;
-const DEFAULT_DTIM_PERIOD: u32 = 1;
+const DEFAULT_BEACON_PERIOD: u16 = 100;
+const DEFAULT_DTIM_PERIOD: u8 = 1;
 
 // A token is an opaque value that identifies a particular request from a user.
 // To avoid parameterizing over many different token types, we introduce a helper
