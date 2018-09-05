@@ -158,7 +158,7 @@ func mergeInfo(prefix string, info *indexedInfo) ([]CovDataEntry, error) {
 		// Get the test data and make sure there are no errors
 		test, ok := info.summary[dump.DumpName]
 		if !ok {
-			fmt.Fprintf(os.Stderr, "WARN: %s not found in summary file", dump.DumpName)
+			fmt.Fprintf(os.Stderr, "WARN: %s not found in summary file\n", dump.DumpName)
 			continue
 		}
 
@@ -244,31 +244,23 @@ func process() error {
 	}
 
 	// Make the mods file
-	modListPath := filepath.Join(outputDir, "merge.rsp")
+	modListPath := filepath.Join(outputDir, "show.rsp")
 	modList, err := os.Create(modListPath)
 	if err != nil {
 		return fmt.Errorf("creating mods.rsp file: %v", err)
 	}
-	defer func() {
-		name := modList.Name()
-		modList.Close()
-		os.Remove(name)
-	}()
+	defer modList.Close()
 	for _, mod := range mods {
-		fmt.Fprintf(modList, "-object %s\n", mod)
+		fmt.Fprintf(modList, "%s\n", mod)
 	}
 
 	// Make the cov files file
-	covFileListPath := filepath.Join(outputDir, "show.rsp")
+	covFileListPath := filepath.Join(outputDir, "merge.rsp")
 	covFileList, err := os.Create(covFileListPath)
 	if err != nil {
 		return fmt.Errorf("creating covfile.rsp file: %v", err)
 	}
-	defer func() {
-		name := covFileList.Name()
-		covFileList.Close()
-		os.Remove(name)
-	}()
+	defer covFileList.Close()
 	for _, covFile := range covFiles {
 		fmt.Fprintf(covFileList, "%s\n", covFile)
 	}
