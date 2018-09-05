@@ -44,13 +44,6 @@ class BazelBuilder(Frontend):
         self.target_arches = []
 
 
-    def _bail(self):
-        '''Temporary method to abort execution when hitting a code path that's
-        not yet been converted.
-        '''
-        raise Exception('Not implemented!')
-
-
     def _copy_files(self, files, root, destination, result=[]):
         '''Copies some files from a given root directory and writes the
         resulting relative paths to a list.
@@ -115,7 +108,7 @@ class BazelBuilder(Frontend):
         if not self.has_sysroot:
             return
         crosstool = model.Crosstool()
-        for arch in arches:
+        for arch in arches['target']:
             if arch in ARCH_MAP:
                 crosstool.arches.append(model.Arch(arch, ARCH_MAP[arch]))
             else:
@@ -222,26 +215,25 @@ class BazelBuilder(Frontend):
         self.write_file(os.path.join(base, 'BUILD'), 'cc_library', library)
 
 
-    def install_cpp_sysroot_atom(self, atom):
-        '''Installs a sysroot atom from the "cpp" domain.'''
-        self._bail()
+    def install_sysroot_atom(self, atom):
+        self.has_sysroot = True
+        for arch in self.target_arches:
+            base = self.dest('arch', arch, 'sysroot')
+            arch_data = atom['versions'][arch]
+            self._copy_files(arch_data['headers'], arch_data['root'], base)
+            self._copy_files(arch_data['link_libs'], arch_data['root'], base)
+            self._copy_files(arch_data['debug_libs'], arch_data['root'], base)
+            dist_libs = []
+            self._copy_files(arch_data['dist_libs'], arch_data['root'], base,
+                             dist_libs)
+            version = {}
+            for lib in dist_libs:
+                version['lib/' + os.path.basename(lib)] = lib
+            self.write_file(os.path.join(base, 'BUILD'), 'sysroot_version',
+                            version)
 
-        data = model.Sysroot(self.metadata.target_arch)
-
-        base = self.dest('arch', self.metadata.target_arch, 'sysroot')
-        for file in atom.files:
-            dest = self.make_dir(os.path.join(base, file.destination))
-            shutil.copy2(file.source, dest)
-            if file.is_packaged:
-                package_path = 'lib/%s' % os.path.basename(file.destination)
-                data.packaged_files[package_path] = file.destination
-        self.write_file(os.path.join(base, 'BUILD'), 'sysroot_arch', data)
-
-        if not self.is_overlay:
-            self.write_file(self.dest('pkg', 'sysroot', 'BUILD'),
-                            'sysroot_pkg_top', data)
         self.write_file(self.dest('pkg', 'sysroot', 'BUILD'),
-                        'sysroot_pkg_dist', data, append=True)
+                        'sysroot_pkg', self.target_arches)
 
 
     def install_host_tool_atom(self, atom):
