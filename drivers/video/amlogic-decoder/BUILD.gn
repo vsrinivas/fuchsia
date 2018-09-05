@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
+import("//garnet/tools/cipd.gni")
 
 declare_args() {
   amlogic_decoder_tests = false
@@ -164,7 +165,8 @@ copy("test_files") {
 package("amlogic_video_decoder") {
   deprecated_system_image = true
 
-  if (target_cpu == "arm64") {
+  # internal access is needed to get the firmware
+  if (target_cpu == "arm64" && internal_access) {
     if (amlogic_decoder_tests) {
       testonly = true
     }
@@ -208,6 +210,8 @@ package("amlogic_video_decoder") {
         },
       ]
     }
+  } else {
+    assert(!amlogic_decoder_tests, "amlogic decoder not built")
   }
 }
 
