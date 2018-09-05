@@ -5,7 +5,8 @@
 use fidl::endpoints2::{ClientEnd, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
 use futures::future;
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Weak};
+use parking_lot::Mutex;
 use crate::ime::IME;
 
 pub struct ImeServiceState {
@@ -27,7 +28,7 @@ impl ImeService {
     }
 
     pub fn update_keyboard_visibility(&self, visible: bool) {
-        let mut state = self.0.lock().unwrap();
+        let mut state = self.0.lock();
         state.keyboard_visible = visible;
 
         state.visibility_listeners.retain(|listener| {
@@ -57,7 +58,7 @@ impl uii::ImeService for ImeService {
                 let ime_ref = Arc::downgrade(
                     &IME::new(keyboard_type, action, initial_state, client_proxy).bind(edit_stream),
                 );
-                let mut state = self.0.lock().unwrap();
+                let mut state = self.0.lock();
                 state.active_ime = Some(ime_ref);
             }
         }
@@ -85,7 +86,7 @@ impl uii::ImeService for ImeService {
         &mut self, event: uii::InputEvent, _control_handle: uii::ImeServiceControlHandle,
     ) -> Self::InjectInputFut {
         let ime = {
-            let state = self.0.lock().unwrap();
+            let state = self.0.lock();
             let active_ime_weak = match state.active_ime {
                 Some(ref v) => v,
                 None => return future::ready(()), // no currently active IME
@@ -96,7 +97,7 @@ impl uii::ImeService for ImeService {
             };
             active_ime
         };
-        ime.lock().unwrap().inject_input(event);
+        ime.lock().inject_input(event);
         future::ready(())
     }
 }
@@ -106,7 +107,7 @@ impl uii::ImeVisibilityService for ImeService {
     fn on_open(
         &mut self, control_handle: uii::ImeVisibilityServiceControlHandle,
     ) -> Self::OnOpenFut {
-        let mut state = self.0.lock().unwrap();
+        let mut state = self.0.lock();
 
         // send the current state on first connect, even if it hasn't changed
         if control_handle

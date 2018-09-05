@@ -9,7 +9,9 @@ use futures::future;
 use futures::prelude::*;
 use std::char;
 use std::ops::Range;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
+use fuchsia_zircon as zx;
 
 // TODO(lard): move constants into common, centralized location?
 const HID_USAGE_KEY_BACKSPACE: u32 = 0x2a;
@@ -52,15 +54,15 @@ impl IME {
     pub fn handle_request(self_mutex: Arc<Mutex<Self>>, edit_request: ImeReq) {
         match edit_request {
             ImeReq::SetKeyboardType { keyboard_type, .. } => {
-                let mut this = self_mutex.lock().unwrap();
+                let mut this = self_mutex.lock();
                 this.keyboard_type = keyboard_type;
             }
             ImeReq::SetState { state, .. } => {
-                let mut this = self_mutex.lock().unwrap();
+                let mut this = self_mutex.lock();
                 this.set_state(state);
             }
             ImeReq::InjectInput { event, .. } => {
-                let mut this = self_mutex.lock().unwrap();
+                let mut this = self_mutex.lock();
                 this.inject_input(event);
             }
             ImeReq::Show { .. } => {
@@ -84,7 +86,7 @@ impl IME {
             .did_update_state(
                 &mut self.state,
                 Some(OutOfLine(&mut uii::InputEvent::Keyboard(e))),
-            ).expect("IME service failed when attempting to notify IMEClient of updated state");
+            ).unwrap_or_else(|e| eprintln!("error sending state update to ImeClient: {:?}", e));
     }
 
     // gets start and len, and sets base/extent to start of string if don't exist
@@ -124,9 +126,9 @@ impl IME {
                         self.did_update_state(keyboard_event);
                     }
                     HID_USAGE_KEY_ENTER => {
-                        self.client
-                            .on_action(self.action)
-                            .expect("IME service failed when calling IMEClient action");
+                        self.client.on_action(self.action).unwrap_or_else(|e| {
+                            eprintln!("error sending action to ImeClient: {:?}", e)
+                        });
                     }
                     // we're ignoring many editing keys right now, this is where they would
                     // be added
@@ -218,7 +220,6 @@ mod test {
     use super::*;
     use fidl;
     use std::sync::mpsc::{channel, Receiver, Sender};
-    use std::sync::Mutex;
 
     pub fn default_state() -> uii::TextInputState {
         uii::TextInputState {
@@ -326,12 +327,10 @@ mod test {
             mut _event: Option<fidl::encoding2::OutOfLine<uii::InputEvent>>,
         ) -> Result<(), fidl::Error> {
             let state2 = clone_state(state);
-            self.state.lock().unwrap().send(state2).unwrap();
-            Ok(())
+            self.state.lock().send(state2).map_err(|_| fidl::Error::ClientWrite(zx::Status::PEER_CLOSED))
         }
         fn on_action(&self, action: uii::InputMethodAction) -> Result<(), fidl::Error> {
-            self.action.lock().unwrap().send(action).unwrap();
-            Ok(())
+            self.action.lock().send(action).map_err(|_| fidl::Error::ClientWrite(zx::Status::PEER_CLOSED))
         }
     }
 
