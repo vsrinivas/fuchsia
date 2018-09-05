@@ -9,7 +9,6 @@
 #include "tests/test_support.h"
 #include "vdec1.h"
 
-#include "bear.mpeg2.h"
 #include "mpeg12_decoder.h"
 
 class TestMpeg2 {
@@ -51,7 +50,10 @@ class TestMpeg2 {
     }
 
     EXPECT_EQ(ZX_OK, video->InitializeEsParser());
-    EXPECT_EQ(ZX_OK, video->ParseVideo(bear_mpeg2, bear_mpeg2_len));
+    auto bear_mpeg2 =
+        TestSupport::LoadFirmwareFile("video_test_data/bear.mpeg2");
+    ASSERT_NE(nullptr, bear_mpeg2);
+    EXPECT_EQ(ZX_OK, video->ParseVideo(bear_mpeg2->ptr, bear_mpeg2->size));
 
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(1)));
@@ -95,7 +97,11 @@ class TestMpeg2 {
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
     video->core_->InitializeDirectInput();
-    EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(bear_mpeg2, bear_mpeg2_len));
+    auto bear_mpeg2 =
+        TestSupport::LoadFirmwareFile("video_test_data/bear.mpeg2");
+    ASSERT_NE(nullptr, bear_mpeg2);
+    EXPECT_EQ(ZX_OK,
+              video->ProcessVideoNoParser(bear_mpeg2->ptr, bear_mpeg2->size));
 
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(1)));
