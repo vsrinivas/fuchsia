@@ -77,6 +77,13 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
                         vk::Filter filter, vk::ImageAspectFlags aspect_flags,
                         bool use_unnormalized_coordinates = false);
 
+  // Construct a new Buffer, which encapsulates a newly-created VkBuffer.
+  // |usage_flags| defines whether it is to be used as e.g. a uniform and/or a
+  // vertex buffer, and |memory_property_flags| is used to select the heap that
+  // the buffer's backing VkDeviceMemory is allocated from.
+  BufferPtr NewBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage_flags,
+                      vk::MemoryPropertyFlags memory_property_flags);
+
   // Same as the NewTexture() variant that creates the image, except that it
   // automatically sets up the vk::ImageAspectFlags, and adds the following to
   // |additional_usage_flags|:
