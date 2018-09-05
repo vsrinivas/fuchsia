@@ -132,6 +132,8 @@ async fn report_telemetry_events(mut receiver: mpsc::Receiver<Observation>) {
             return;
         }
     };
+
+    let mut is_full = false;
     while let Some(observation) = await!(receiver.next()) {
         match observation.value {
             CobaltValue::Multipart(mut values) => {
@@ -139,7 +141,7 @@ async fn report_telemetry_events(mut receiver: mpsc::Receiver<Observation>) {
                     encoder
                         .add_multipart_observation(observation.metric_id, &mut values.iter_mut())
                 );
-                handle_cobalt_response(resp, observation.metric_id);
+                handle_cobalt_response(resp, observation.metric_id, &mut is_full);
             }
             CobaltValue::IntBucketDistribution {
                 encoding_id,
@@ -150,7 +152,7 @@ async fn report_telemetry_events(mut receiver: mpsc::Receiver<Observation>) {
                     encoding_id,
                     &mut values.iter_mut()
                 ));
-                handle_cobalt_response(resp, observation.metric_id);
+                handle_cobalt_response(resp, observation.metric_id, &mut is_full);
             }
         }
     }
@@ -346,17 +348,38 @@ pub fn report_connection_time(sender: &mut CobaltSender, time: i64, result_index
     sender.add_multipart_observation(CobaltMetricId::ConnectionTime as u32, values);
 }
 
-fn handle_cobalt_response(resp: Result<Status, fidl::Error>, metric_id: u32) {
+fn handle_cobalt_response(resp: Result<Status, fidl::Error>, metric_id: u32, is_full: &mut bool) {
+    if let Err(e) = throttle_cobalt_error(resp, metric_id, is_full) {
+        error!("{}", e);
+    }
+}
+
+fn throttle_cobalt_error(
+    resp: Result<Status, fidl::Error>, metric_id: u32, is_full: &mut bool,
+) -> Result<(), failure::Error> {
+    let was_full = *is_full;
+    *is_full = resp.as_ref().ok() == Some(&Status::TemporarilyFull);
     match resp {
-        Ok(Status::Ok) => {}
-        Ok(other) => error!(
+        Ok(Status::TemporarilyFull) => {
+            if !was_full {
+                Err(format_err!(
+                    "Cobalt buffer became full. Cannot report the stats"
+                ))
+            } else {
+                Ok(())
+            }
+        }
+        Ok(Status::Ok) => Ok(()),
+        Ok(other) => Err(format_err!(
             "Cobalt returned an error for metric {}: {:?}",
-            metric_id, other
-        ),
-        Err(e) => error!(
+            metric_id,
+            other
+        )),
+        Err(e) => Err(format_err!(
             "Failed to send observation to Cobalt for metric {}: {}",
-            metric_id, e
-        ),
+            metric_id,
+            e
+        )),
     }
 }
 
@@ -368,5 +391,42 @@ where
         current_stat - last_stat
     } else {
         Default::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fidl_fuchsia_cobalt::Status;
+
+    #[test]
+    fn throttle_errors() {
+        let mut is_full = false;
+
+        let cobalt_resp = Ok(Status::Ok);
+        assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
+        assert_eq!(is_full, false);
+
+        let cobalt_resp = Ok(Status::InvalidArguments);
+        assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_err());
+        assert_eq!(is_full, false);
+
+        let cobalt_resp = Ok(Status::TemporarilyFull);
+        assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_err());
+        assert_eq!(is_full, true);
+
+        let cobalt_resp = Ok(Status::TemporarilyFull);
+        assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
+        assert_eq!(is_full, true);
+
+        let cobalt_resp = Ok(Status::Ok);
+        assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
+        assert_eq!(is_full, false);
+
+        let cobalt_resp = Err(fidl::Error::ClientWrite(
+            fuchsia_zircon::Status::PEER_CLOSED,
+        ));
+        assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_err());
+        assert_eq!(is_full, false);
     }
 }
