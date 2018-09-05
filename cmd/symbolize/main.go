@@ -123,6 +123,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		jsonTriggerHandler.Write(file)
+		if err := jsonTriggerHandler.Write(file); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
