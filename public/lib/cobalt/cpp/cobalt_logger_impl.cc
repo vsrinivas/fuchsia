@@ -16,6 +16,7 @@
 #include <lib/component/cpp/connect.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
+#include <zx/time.h>
 
 using fuchsia::cobalt::LoggerFactory;
 using fuchsia::cobalt::ProjectProfile2;
@@ -58,6 +59,56 @@ void CobaltLoggerImpl::LogElapsedTime(uint32_t metric_id,
       metric_id, event_type_index, component, elapsed_time.to_usecs()));
 }
 
+void CobaltLoggerImpl::LogFrameRate(uint32_t metric_id,
+                                    uint32_t event_type_index,
+                                    const std::string& component, float fps) {
+  LogEvent(std::make_unique<FrameRateEvent>(metric_id, event_type_index,
+                                            component, fps));
+}
+
+void CobaltLoggerImpl::LogMemoryUsage(uint32_t metric_id,
+                                      uint32_t event_type_index,
+                                      const std::string& component,
+                                      int64_t bytes) {
+  LogEvent(std::make_unique<MemoryUsageEvent>(metric_id, event_type_index,
+                                              component, bytes));
+}
+
+void CobaltLoggerImpl::LogString(uint32_t metric_id, const std::string& s) {
+  LogEvent(std::make_unique<StringUsedEvent>(metric_id, s));
+}
+
+void CobaltLoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_type_index,
+                                  const std::string& component,
+                                  const std::string& timer_id,
+                                  zx::time timestamp, zx::duration timeout) {
+  LogEvent(std::make_unique<StartTimerEvent>(
+      metric_id, event_type_index, component, timer_id,
+      timestamp.get() / ZX_USEC(1), timeout.to_secs()));
+}
+
+void CobaltLoggerImpl::EndTimer(const std::string& timer_id, zx::time timestamp,
+                                zx::duration timeout) {
+  LogEvent(std::make_unique<EndTimerEvent>(
+      timer_id, timestamp.get() / ZX_USEC(1), timeout.to_secs()));
+}
+
+void CobaltLoggerImpl::LogIntHistogram(
+    uint32_t metric_id, uint32_t event_type_index, const std::string& component,
+    std::vector<fuchsia::cobalt::HistogramBucket> histogram) {
+  LogEvent(std::make_unique<IntHistogramEvent>(
+      metric_id, event_type_index, component,
+      fidl::VectorPtr<fuchsia::cobalt::HistogramBucket>(std::move(histogram))));
+}
+
+void CobaltLoggerImpl::LogCustomEvent(
+    uint32_t metric_id,
+    std::vector<fuchsia::cobalt::CustomEventValue> event_values) {
+  LogEvent(std::make_unique<CustomEvent>(
+      metric_id, fidl::VectorPtr<fuchsia::cobalt::CustomEventValue>(
+                     std::move(event_values))));
+}
+
 void CobaltLoggerImpl::LogEvent(std::unique_ptr<Event> event) {
   if (dispatcher_ == async_get_default_dispatcher()) {
     LogEventOnMainThread(std::move(event));
@@ -70,9 +121,7 @@ void CobaltLoggerImpl::LogEvent(std::unique_ptr<Event> event) {
   });
 }
 
-void CobaltLoggerImpl::ConnectToCobaltApplication() {
-  auto logger_factory = context_->ConnectToEnvironmentService<LoggerFactory>();
-
+ProjectProfile2 CobaltLoggerImpl::CloneProjectProfile() {
   ProjectProfile2 cloned_profile;
   FXL_CHECK(profile_.config.vmo.duplicate(
                 ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
@@ -80,8 +129,14 @@ void CobaltLoggerImpl::ConnectToCobaltApplication() {
       << "Could not clone config VMO";
   cloned_profile.config.size = profile_.config.size;
 
+  return cloned_profile;
+}
+
+void CobaltLoggerImpl::ConnectToCobaltApplication() {
+  auto logger_factory = context_->ConnectToEnvironmentService<LoggerFactory>();
+
   logger_factory->CreateLogger(
-      std::move(cloned_profile), logger_.NewRequest(), [this](Status2 status) {
+      CloneProjectProfile(), logger_.NewRequest(), [this](Status2 status) {
         if (status == Status2::OK) {
           if (logger_) {
             logger_.set_error_handler([this]() { OnConnectionError(); });
@@ -91,6 +146,20 @@ void CobaltLoggerImpl::ConnectToCobaltApplication() {
           }
         } else {
           FXL_LOG(ERROR) << "CreateLogger() received invalid arguments";
+        }
+      });
+
+  logger_factory->CreateLoggerExt(
+      CloneProjectProfile(), logger_ext_.NewRequest(), [this](Status2 status) {
+        if (status == Status2::OK) {
+          if (logger_ext_) {
+            logger_ext_.set_error_handler([this]() { OnConnectionError(); });
+            SendEvents();
+          } else {
+            OnConnectionError();
+          }
+        } else {
+          FXL_LOG(ERROR) << "CreateLoggerExt() received invalid arguments";
         }
       });
 }
@@ -110,6 +179,7 @@ void CobaltLoggerImpl::OnConnectionError() {
 
   OnTransitFail();
   logger_.Unbind();
+  logger_ext_.Unbind();
   async::PostDelayedTask(dispatcher_,
                          [this]() { ConnectToCobaltApplication(); },
                          backoff_.GetNext());
@@ -117,7 +187,7 @@ void CobaltLoggerImpl::OnConnectionError() {
 
 void CobaltLoggerImpl::LogEventOnMainThread(std::unique_ptr<Event> event) {
   events_to_send_.insert(std::move(event));
-  if (!logger_ || !events_in_transit_.empty()) {
+  if (!logger_ || !logger_ext_ || !events_in_transit_.empty()) {
     return;
   }
 
@@ -137,11 +207,12 @@ void CobaltLoggerImpl::SendEvents() {
   auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   for (auto& event : events_in_transit_) {
     auto callback = waiter->NewCallback();
-    event->Log(&logger_, [this, event_ptr = event.get(),
-                          callback = std::move(callback)](Status2 status) {
-      LogEventCallback(event_ptr, status);
-      callback();
-    });
+    event->Log(&logger_, &logger_ext_,
+               [this, event_ptr = event.get(),
+                callback = std::move(callback)](Status2 status) {
+                 LogEventCallback(event_ptr, status);
+                 callback();
+               });
   }
 
   waiter->Finalize([this]() {
