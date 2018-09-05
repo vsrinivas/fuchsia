@@ -5,13 +5,13 @@
 use fidl::encoding2::OutOfLine;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::InputMethodEditorRequest as ImeReq;
+use fuchsia_syslog::{fx_log, fx_log_err, fx_log_warn};
 use futures::future;
 use futures::prelude::*;
+use parking_lot::Mutex;
 use std::char;
 use std::ops::Range;
 use std::sync::Arc;
-use parking_lot::Mutex;
-use fuchsia_zircon as zx;
 
 // TODO(lard): move constants into common, centralized location?
 const HID_USAGE_KEY_BACKSPACE: u32 = 0x2a;
@@ -46,7 +46,7 @@ impl IME {
             .try_for_each(move |edit_request| {
                 Self::handle_request(self_mutex_clone.clone(), edit_request);
                 future::ready(Ok(()))
-            }).unwrap_or_else(|e| eprintln!("error running ime server: {:?}", e));
+            }).unwrap_or_else(|e| fx_log_err!("error running ime server: {:?}", e));
         fuchsia_async::spawn(stream_complete);
         self_mutex
     }
@@ -86,7 +86,7 @@ impl IME {
             .did_update_state(
                 &mut self.state,
                 Some(OutOfLine(&mut uii::InputEvent::Keyboard(e))),
-            ).unwrap_or_else(|e| eprintln!("error sending state update to ImeClient: {:?}", e));
+            ).unwrap_or_else(|e| fx_log_warn!("error sending state update to ImeClient: {:?}", e));
     }
 
     // gets start and len, and sets base/extent to start of string if don't exist
@@ -127,7 +127,7 @@ impl IME {
                     }
                     HID_USAGE_KEY_ENTER => {
                         self.client.on_action(self.action).unwrap_or_else(|e| {
-                            eprintln!("error sending action to ImeClient: {:?}", e)
+                            fx_log_warn!("error sending action to ImeClient: {:?}", e)
                         });
                     }
                     // we're ignoring many editing keys right now, this is where they would
@@ -219,6 +219,7 @@ impl IME {
 mod test {
     use super::*;
     use fidl;
+    use fuchsia_zircon as zx;
     use std::sync::mpsc::{channel, Receiver, Sender};
 
     pub fn default_state() -> uii::TextInputState {
@@ -327,10 +328,16 @@ mod test {
             mut _event: Option<fidl::encoding2::OutOfLine<uii::InputEvent>>,
         ) -> Result<(), fidl::Error> {
             let state2 = clone_state(state);
-            self.state.lock().send(state2).map_err(|_| fidl::Error::ClientWrite(zx::Status::PEER_CLOSED))
+            self.state
+                .lock()
+                .send(state2)
+                .map_err(|_| fidl::Error::ClientWrite(zx::Status::PEER_CLOSED))
         }
         fn on_action(&self, action: uii::InputMethodAction) -> Result<(), fidl::Error> {
-            self.action.lock().send(action).map_err(|_| fidl::Error::ClientWrite(zx::Status::PEER_CLOSED))
+            self.action
+                .lock()
+                .send(action)
+                .map_err(|_| fidl::Error::ClientWrite(zx::Status::PEER_CLOSED))
         }
     }
 

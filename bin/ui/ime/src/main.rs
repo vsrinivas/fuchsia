@@ -5,16 +5,18 @@
 mod ime;
 mod ime_service;
 
-use fuchsia_app::server::ServicesServer;
 use failure::{Error, ResultExt};
+use fidl::endpoints2::ServiceMarker;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::{ImeServiceMarker, ImeVisibilityServiceMarker};
-use fidl::endpoints2::ServiceMarker;
+use fuchsia_app::server::ServicesServer;
+use fuchsia_syslog;
 use futures::prelude::*;
 
 fn main() -> Result<(), Error> {
-    let mut executor =
-        fuchsia_async::Executor::new().context("Creating fuchsia_async executor for IME service failed")?;
+    fuchsia_syslog::init_with_tags(&["ime_service"]).expect("ime syslog init should not fail");
+    let mut executor = fuchsia_async::Executor::new()
+        .context("Creating fuchsia_async executor for IME service failed")?;
     let ime_service = ime_service::ImeService::new();
     let ime_service1 = ime_service.clone();
     let ime_service2 = ime_service.clone();

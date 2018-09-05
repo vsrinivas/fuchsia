@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::ime::IME;
 use fidl::endpoints2::{ClientEnd, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
 use futures::future;
-use std::sync::{Arc, Weak};
 use parking_lot::Mutex;
-use crate::ime::IME;
+use std::sync::{Arc, Weak};
 
 pub struct ImeServiceState {
     pub keyboard_visible: bool,
