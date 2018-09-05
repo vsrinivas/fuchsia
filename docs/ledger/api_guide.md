@@ -275,4 +275,4 @@ automatically in the background, and clients do not have to manage them.
 
 [FIDL interface]: /public/fidl/fuchsia.ledger/ledger.fidl
 [C++ watcher example]: /examples/todo_cpp/todo.h
-[Dart watcher example]: https://fuchsia.googlesource.com/topaz/+/master/app/chat/agents/content_provider/lib/src/base_page_watcher.dart
+[Dart watcher example]: https://fuchsia.googlesource.com/topaz/+/master/examples/ledger/todo_list/lib/src/models/todo_list_model.dart
