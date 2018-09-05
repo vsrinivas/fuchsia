@@ -144,7 +144,7 @@ zx_status_t vm_free_kstack(kstack_t* stack) {
 
     if (stack->vmar != nullptr) {
         fbl::RefPtr<VmAddressRegion> vmar =
-            fbl::WrapRefPtr(static_cast<VmAddressRegion*>(stack->vmar));
+            fbl::internal::MakeRefPtrNoAdopt(static_cast<VmAddressRegion*>(stack->vmar));
         zx_status_t status = vmar->Destroy();
         if (status != ZX_OK) {
             return status;
@@ -157,7 +157,7 @@ zx_status_t vm_free_kstack(kstack_t* stack) {
 
     if (stack->unsafe_vmar != nullptr) {
         fbl::RefPtr<VmAddressRegion> vmar =
-            fbl::WrapRefPtr(static_cast<VmAddressRegion*>(stack->unsafe_vmar));
+            fbl::internal::MakeRefPtrNoAdopt(static_cast<VmAddressRegion*>(stack->unsafe_vmar));
         zx_status_t status = vmar->Destroy();
         if (status != ZX_OK) {
             return status;
