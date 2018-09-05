@@ -8,6 +8,7 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
+mod cobalt_reporter;
 mod device;
 mod device_watch;
 mod fidl_util;
@@ -61,14 +62,19 @@ fn main() -> Result<(), Error> {
 
     let phy_server = device::serve_phys(phys.clone())
         .map_ok(|x| x.into_any());
-    let (cobalt_sender, telemetry_server) = telemetry::serve(ifaces.clone());
+    let (cobalt_sender, cobalt_reporter) = cobalt_reporter::serve();
+    let telemetry_server = telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
     let iface_server = device::serve_ifaces(ifaces.clone(), cobalt_sender)
         .map_ok(|x| x.into_any());
     let services_server = serve_fidl(phys, ifaces, phy_events, iface_events)?
         .map_ok(Never::into_any);
 
-    exec.run_singlethreaded(services_server.try_join4(phy_server, iface_server, telemetry_server.map(Ok)))
-        .map(|((), (), (), ())| ())
+    exec.run_singlethreaded(services_server.try_join5(phy_server,
+                                                      iface_server,
+                                                      cobalt_reporter.map(Ok),
+                                                      telemetry_server.map(Ok)))
+        .map(|((), (), (), (), ())| ())
+
 }
 
 fn serve_fidl(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,

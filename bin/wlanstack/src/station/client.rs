@@ -16,12 +16,12 @@ use wlan_sme::{client as client_sme, DeviceInfo};
 use wlan_sme::client::{BssInfo, ConnectResult, DiscoveryError, DiscoveryResult, EssInfo};
 use fuchsia_zircon as zx;
 
+use crate::cobalt_reporter::CobaltSender;
 use crate::fidl_util::is_peer_closed;
 use crate::future_util::ConcurrentTasks;
 use crate::Never;
 use crate::stats_scheduler::StatsRequest;
 use crate::telemetry;
-use crate::telemetry::CobaltSender;
 
 struct Tokens;
 
