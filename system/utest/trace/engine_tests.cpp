@@ -115,7 +115,12 @@ bool test_generate_nonce() {
 }
 
 bool test_observer() {
-    BEGIN_TRACE_TEST;
+    const size_t kBufferSize = 4096u;
+
+    // This test needs the trace engine to run in the same thread as the test:
+    // We need to control when state change signalling happens.
+    BEGIN_TRACE_TEST_ETC(kAttachToThread,
+                         TRACE_BUFFERING_MODE_ONESHOT, kBufferSize);
 
     zx::event event;
     EXPECT_EQ(ZX_OK, zx::event::create(0u, &event));
@@ -125,13 +130,28 @@ bool test_observer() {
 
     fixture_start_tracing();
     EXPECT_EQ(ZX_OK, event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr));
+    EXPECT_EQ(TRACE_STARTED, trace_state());
 
     EXPECT_EQ(ZX_OK, event.signal(ZX_EVENT_SIGNALED, 0u));
     EXPECT_EQ(ZX_ERR_TIMED_OUT, event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr));
 
-    fixture_stop_tracing();
-    EXPECT_EQ(ZX_OK, event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr));
+    fixture_stop_engine();
 
+    // Now walk the dispatcher loop an event at a time so that we see both
+    // the TRACE_STOPPING event and the TRACE_STOPPED event.
+    EXPECT_EQ(TRACE_STOPPING, trace_state());
+    EXPECT_EQ(ZX_OK, event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr));
+    EXPECT_EQ(ZX_OK, event.signal(ZX_EVENT_SIGNALED, 0u));
+    zx_status_t status = ZX_OK;
+    while (status == ZX_OK && trace_state() != TRACE_STOPPED) {
+        status = async_loop_run(fixture_async_loop(), zx_deadline_after(0), true);
+        EXPECT_EQ(ZX_OK, status);
+        if (trace_state() == TRACE_STOPPED) {
+            EXPECT_EQ(ZX_OK, event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr));
+        }
+    }
+
+    fixture_shutdown();
     EXPECT_EQ(ZX_OK, trace_unregister_observer(event.get()));
 
     END_TRACE_TEST;
@@ -617,7 +637,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
     END_TRACE_TEST;
 }
 
-// This test exercises DX-441 where a buffer becomes full at immediately
+// This test exercises DX-441 where a buffer becomes full and immediately
 // thereafter tracing is stopped. This causes the "please save buffer"
 // processing to run when tracing is not active.
 bool test_shutdown_when_full() {

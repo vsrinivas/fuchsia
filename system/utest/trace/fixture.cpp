@@ -62,28 +62,13 @@ public:
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
     }
 
-    void StopTracing(bool hard_shutdown) {
-        if (!trace_running_)
-            return;
+    void StopEngine() {
+        ZX_DEBUG_ASSERT(trace_running_);
+        zx_status_t status = trace_stop_engine(ZX_OK);
+        ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
+    }
 
-        // Asynchronously stop the engine.
-        // If we're performing a hard shutdown, skip this step and begin immediately
-        // tearing down the loop.  The trace engine should stop itself.
-        if (!hard_shutdown) {
-            zx_status_t status = trace_stop_engine(ZX_OK);
-            ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
-
-            if (attach_to_thread_ == kNoAttachToThread) {
-                status = trace_stopped_.wait_one(ZX_EVENT_SIGNALED,
-                                                 zx::deadline_after(zx::msec(1000)), nullptr);
-                ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
-            } else {
-                // Finish up any remaining tasks. The engine may have queued some.
-                status = loop_.RunUntilIdle();
-                ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
-            }
-        }
-
+    void Shutdown() {
         // Shut down the loop (implicitly joins the thread we started
         // earlier). When this completes we know the trace engine is
         // really stopped.
@@ -94,11 +79,44 @@ public:
         trace_running_ = false;
     }
 
+    void StopTracing(bool hard_shutdown) {
+        if (!trace_running_)
+            return;
+
+        // Asynchronously stop the engine.
+        // If we're performing a hard shutdown, skip this step and begin immediately
+        // tearing down the loop.  The trace engine should stop itself.
+        if (!hard_shutdown) {
+            StopEngine();
+
+            zx_status_t status;
+            while (trace_state() != TRACE_STOPPED) {
+                if (attach_to_thread_ == kNoAttachToThread) {
+                    status = trace_stopped_.wait_one(
+                        ZX_EVENT_SIGNALED, zx::deadline_after(zx::msec(100)),
+                        nullptr);
+                    ZX_DEBUG_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_TIMED_OUT,
+                                        "status=%d", status);
+                } else {
+                    // Finish up any remaining tasks. The engine may have queued some.
+                    status = loop_.RunUntilIdle();
+                    ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
+                }
+            }
+        }
+
+        Shutdown();
+    }
+
     bool WaitBufferFullNotification() {
         auto status = buffer_full_.wait_one(ZX_EVENT_SIGNALED,
                                             zx::deadline_after(zx::msec(1000)), nullptr);
         buffer_full_.signal(ZX_EVENT_SIGNALED, 0u);
         return status == ZX_OK;
+    }
+
+    async::Loop& loop() {
+        return loop_;
     }
 
     zx_status_t disposition() const {
@@ -222,6 +240,21 @@ void fixture_stop_tracing() {
 void fixture_stop_tracing_hard() {
     ZX_DEBUG_ASSERT(g_fixture);
     g_fixture->StopTracing(true);
+}
+
+void fixture_stop_engine() {
+    ZX_DEBUG_ASSERT(g_fixture);
+    g_fixture->StopEngine();
+}
+
+void fixture_shutdown() {
+    ZX_DEBUG_ASSERT(g_fixture);
+    g_fixture->Shutdown();
+}
+
+async_loop_t* fixture_async_loop(void) {
+    ZX_DEBUG_ASSERT(g_fixture);
+    return g_fixture->loop().loop();
 }
 
 zx_status_t fixture_get_disposition(void) {

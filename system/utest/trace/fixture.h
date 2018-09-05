@@ -18,6 +18,7 @@
 #include <trace-reader/records.h>
 #endif
 
+#include <lib/async-loop/loop.h>
 #include <trace-engine/types.h>
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>
@@ -72,8 +73,24 @@ void fixture_set_up(attach_to_thread_t attach_to_thread,
                     trace_buffering_mode_t mode, size_t buffer_size);
 void fixture_tear_down(void);
 void fixture_start_tracing(void);
+
+// There are two ways of stopping tracing.
+// 1) |fixture_stop_tracing()|:
+//    a) stops the engine,
+//    b) waits for everything to quiesce,
+//    c) shuts down the dispatcher loop.
+//    A variant of this is |fixture_stop_tracing_hard()| which is for
+//    specialized cases where the async loop exits forcing the engine to
+//    quit on its own.
+// 2) |fixture_stop_engine(),fixture_shutdown()|: This variant splits out
+//    steps (a) and (c) above, leaving the test free to manage step (b): the
+//    quiescence.
 void fixture_stop_tracing(void);
 void fixture_stop_tracing_hard(void);
+void fixture_stop_engine(void);
+void fixture_shutdown(void);
+
+async_loop_t* fixture_async_loop(void);
 zx_status_t fixture_get_disposition(void);
 bool fixture_wait_buffer_full_notification(void);
 uint32_t fixture_get_buffer_full_wrapped_count(void);

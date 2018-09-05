@@ -370,6 +370,9 @@ void handle_context_released(async_dispatcher_t* dispatcher) {
 
         // After this point, it's possible for the engine to be restarted.
         g_state.store(TRACE_STOPPED, fbl::memory_order_relaxed);
+
+        // Notify observers that the state changed.
+        notify_observers_locked();
     }
 
     // Notify the handler about the final disposition.
