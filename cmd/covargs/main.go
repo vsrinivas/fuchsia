@@ -158,7 +158,8 @@ func mergeInfo(prefix string, info *indexedInfo) ([]CovDataEntry, error) {
 		// Get the test data and make sure there are no errors
 		test, ok := info.summary[dump.DumpName]
 		if !ok {
-			return nil, fmt.Errorf("%s not found in summary file", dump.DumpName)
+			fmt.Fprintf(os.Stderr, "WARN: %s not found in summary file", dump.DumpName)
+			continue
 		}
 
 		// This is going to go in a covDataEntry as the location of the coverage data
