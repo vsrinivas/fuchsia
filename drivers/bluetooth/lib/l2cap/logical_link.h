@@ -19,6 +19,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/dynamic_channel_registry.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fragmenter.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/recombiner.h"
@@ -55,6 +56,8 @@ class LogicalLink final {
   // for documentation on |rx_callback| and |closed_callback|. Returns nullptr
   // if a Channel for |channel_id| already exists.
   fbl::RefPtr<Channel> OpenFixedChannel(ChannelId channel_id);
+
+  void OpenChannel(PSM psm, ChannelCallback cb, async_dispatcher_t* dispatcher);
 
   // Takes ownership of |packet| for PDU processing and routes it to its target
   // channel. This must be called on the HCI I/O thread.
@@ -98,6 +101,14 @@ class LogicalLink final {
   // destructor.
   void Close();
 
+  // Given a newly-opened dynamic channel as reported by this link's
+  // DynamicChannelRegistry, create a ChannelImpl for it to carry user data,
+  // then pass a pointer to it through |open_cb| on |dispatcher|. If |dyn_chan|
+  // is null, then pass nullptr into |open_cb|.
+  void CompleteDynamicOpen(const DynamicChannel* dyn_chan,
+                           ChannelCallback open_cb,
+                           async_dispatcher_t* dispatcher);
+
   fxl::RefPtr<hci::Transport> hci_;
   async_dispatcher_t* dispatcher_;
 
@@ -128,6 +139,9 @@ class LogicalLink final {
   // channel is opened.
   using PendingPduMap = std::unordered_map<ChannelId, std::list<PDU>>;
   PendingPduMap pending_pdus_;
+
+  // Dynamic channels opened with the remote.
+  std::unique_ptr<DynamicChannelRegistry> dynamic_registry_;
 
   fxl::ThreadChecker thread_checker_;
   fxl::WeakPtrFactory<LogicalLink> weak_ptr_factory_;

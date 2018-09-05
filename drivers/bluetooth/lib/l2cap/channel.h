@@ -67,10 +67,6 @@ class Channel : public fbl::RefCounted<Channel> {
   // |id()| for fixed channels and allocated by the remote for dynamic channels.
   ChannelId remote_id() const { return remote_id_; }
 
-  // TODO(xow): Remove setters after fixing tests to no longer mutate Channels
-  void set_id_for_testing(ChannelId id) { id_ = id; }
-  void set_remote_id_for_testing(ChannelId id) { remote_id_ = id; }
-
   // Callback invoked when this channel has been closed without an explicit
   // request from the owner of this instance. For example, this can happen when
   // the remote end closes a dynamically configured channel or when the
@@ -170,7 +166,7 @@ class ChannelImpl : public Channel {
   // Called by |link_| to notify us when the channel can no longer process data.
   // This MUST NOT call any locking methods of |link_| as that WILL cause a
   // deadlock.
-  void OnLinkClosed();
+  void OnClosed();
 
   // Called by |link_| when a PDU targeting this channel has been received.
   // Contents of |pdu| will be moved.

@@ -159,7 +159,7 @@ bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
   return true;
 }
 
-void ChannelImpl::OnLinkClosed() {
+void ChannelImpl::OnClosed() {
   async_dispatcher_t* dispatcher;
   fit::closure task;
 

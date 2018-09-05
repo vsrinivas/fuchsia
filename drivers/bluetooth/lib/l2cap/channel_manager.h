@@ -108,6 +108,9 @@ class ChannelManager final {
   fbl::RefPtr<Channel> OpenFixedChannel(hci::ConnectionHandle connection_handle,
                                         ChannelId channel_id);
 
+  void OpenChannel(hci::ConnectionHandle handle, PSM psm, ChannelCallback cb,
+                   async_dispatcher_t* dispatcher);
+
  private:
   // Called when an ACL data packet is received from the controller. This method
   // is responsible for routing the packet to the corresponding LogicalLink.

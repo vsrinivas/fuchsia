@@ -91,6 +91,22 @@ fbl::RefPtr<Channel> ChannelManager::OpenFixedChannel(
   return iter->second->OpenFixedChannel(channel_id);
 }
 
+void ChannelManager::OpenChannel(hci::ConnectionHandle handle, PSM psm,
+                                 ChannelCallback cb,
+                                 async_dispatcher_t* dispatcher) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+
+  auto iter = ll_map_.find(handle);
+  if (iter == ll_map_.end()) {
+    bt_log(ERROR, "l2cap",
+           "Cannot open channel on unknown connection handle: %#.4x", handle);
+    async::PostTask(dispatcher, [cb = std::move(cb)] { cb(nullptr); });
+    return;
+  }
+
+  iter->second->OpenChannel(psm, std::move(cb), dispatcher);
+}
+
 void ChannelManager::OnACLDataReceived(hci::ACLDataPacketPtr packet) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 

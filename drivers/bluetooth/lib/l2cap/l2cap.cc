@@ -87,10 +87,15 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
     });
   }
 
-  void OpenChannel(hci::ConnectionHandle handle, PSM psm,
-                   ChannelCallback callback,
+  void OpenChannel(hci::ConnectionHandle handle, PSM psm, ChannelCallback cb,
                    async_dispatcher_t* dispatcher) override {
-    bt_log(WARN, "l2cap", "OpenChannel not implemented");
+    ZX_DEBUG_ASSERT(dispatcher);
+
+    PostMessage([this, handle, psm, cb = std::move(cb), dispatcher]() mutable {
+      if (chanmgr_) {
+        chanmgr_->OpenChannel(handle, psm, std::move(cb), dispatcher);
+      }
+    });
   }
 
   void RegisterService(PSM psm, ChannelCallback channel_callback,

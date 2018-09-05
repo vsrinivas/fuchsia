@@ -18,6 +18,7 @@ namespace {
 
 constexpr hci::ConnectionHandle kTestHandle1 = 0x0001;
 constexpr hci::ConnectionHandle kTestHandle2 = 0x0002;
+constexpr PSM kTestPsm = 0x0001;
 
 using ::btlib::testing::TestController;
 
@@ -66,6 +67,25 @@ class L2CAP_ChannelManagerTest : public TestingBase {
     }
 
     return chan;
+  }
+
+  // |activated_cb| will be called with opened and activated Channel if
+  // successful and nullptr otherwise.
+  void ActivateOutboundChannel(PSM psm, ChannelCallback activated_cb,
+                               hci::ConnectionHandle conn_handle = kTestHandle1,
+                               Channel::ClosedCallback closed_cb = DoNothing,
+                               Channel::RxCallback rx_cb = NopRxCallback) {
+    ChannelCallback open_cb =
+        [this, activated_cb = std::move(activated_cb), rx_cb = std::move(rx_cb),
+         closed_cb = std::move(closed_cb)](auto chan) mutable {
+          if (!chan || !chan->Activate(std::move(rx_cb), std::move(closed_cb),
+                                       dispatcher())) {
+            activated_cb(nullptr);
+          } else {
+            activated_cb(std::move(chan));
+          }
+        };
+    chanmgr()->OpenChannel(conn_handle, psm, std::move(open_cb), dispatcher());
   }
 
   ChannelManager* chanmgr() const { return chanmgr_.get(); }
@@ -466,44 +486,6 @@ TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
   EXPECT_TRUE(common::ContainersEqual(expected, *received));
 }
 
-TEST_F(L2CAP_ChannelManagerTest, SendDynamicChannelSdu) {
-  constexpr ChannelId kLocalId = 0x0040;
-  constexpr ChannelId kRemoteId = 0x9042;
-
-  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, DoNothing, dispatcher());
-
-  // For testing how the SDU is encoded, open a "fixed" channel then assign it
-  // different local and remote channel IDs in the dynamic channels range (as
-  // would be likely in production).
-  // TODO(xow): Fix this test after dynamic channels are implemented for
-  // ChannelManager
-  auto dyn_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
-  ZX_DEBUG_ASSERT(dyn_chan);
-  dyn_chan->set_id_for_testing(kLocalId);
-  dyn_chan->set_remote_id_for_testing(kRemoteId);
-
-  std::unique_ptr<common::ByteBuffer> received;
-  auto data_cb = [&received](const common::ByteBuffer& bytes) {
-    received = std::make_unique<common::DynamicByteBuffer>(bytes);
-  };
-  test_device()->SetDataCallback(data_cb, dispatcher());
-
-  EXPECT_TRUE(dyn_chan->Send(common::NewBuffer('T', 'e', 's', 't')));
-
-  RunLoopUntilIdle();
-  ASSERT_TRUE(received);
-
-  auto expected = common::CreateStaticByteBuffer(
-      // ACL data header (handle: 1, length 7)
-      0x01, 0x00, 0x08, 0x00,
-
-      // L2CAP B-frame: (length: 3, channel-id: 0x9042)
-      0x04, 0x00, 0x42, 0x90, 'T', 'e', 's', 't');
-
-  EXPECT_TRUE(common::ContainersEqual(expected, *received));
-}
-
 // Tests that fragmentation of LE vs BR/EDR packets is based on the same
 // fragment size.
 TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
@@ -758,6 +740,421 @@ TEST_F(L2CAP_ChannelManagerTest, LEConnectionParameterUpdateRequest) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(conn_param_cb_called);
+}
+
+TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelLocalDisconnect) {
+  constexpr ChannelId kLocalId = 0x0040;
+  constexpr ChannelId kRemoteId = 0x9042;
+
+  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
+                         dispatcher());
+
+  fbl::RefPtr<Channel> channel;
+  auto channel_cb = [&channel](fbl::RefPtr<l2cap::Channel> activated_chan) {
+    channel = std::move(activated_chan);
+  };
+
+  bool closed_cb_called = false;
+  auto closed_cb = [&closed_cb_called] { closed_cb_called = true; };
+
+  ActivateOutboundChannel(kTestPsm, std::move(channel_cb), kTestHandle1,
+                          std::move(closed_cb));
+  RunLoopUntilIdle();
+
+  // clang-format off
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 16 bytes)
+      0x01, 0x00, 0x10, 0x00,
+
+      // L2CAP B-frame header (length: 12 bytes, channel-id: 0x0001 (ACL sig))
+      0x0c, 0x00, 0x01, 0x00,
+
+      // Connection Response (ID: 1, length: 8, dst cid: 0x9042,
+      // src cid: 0x0040, result: success, status: none)
+      0x03, 0x01, 0x08, 0x00,
+      0x42, 0x90, 0x40, 0x00,
+      0x00, 0x00, 0x00, 0x00));
+
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 16 bytes)
+      0x01, 0x00, 0x10, 0x00,
+
+      // L2CAP B-frame header (length: 12 bytes, channel-id: 0x0001 (ACL sig))
+      0x0c, 0x00, 0x01, 0x00,
+
+      // Configuration Request (ID: 6, length: 8, dst cid: 0x0040, flags: 0,
+      // options: [type: MTU, length: 2, MTU: 1024])
+      0x04, 0x06, 0x08, 0x00,
+      0x40, 0x00, 0x00, 0x00,
+      0x01, 0x02, 0x00, 0x04));
+
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 14 bytes)
+      0x01, 0x00, 0x0e, 0x00,
+
+      // L2CAP B-frame header (length: 10 bytes, channel-id: 0x0001 (ACL sig))
+      0x0a, 0x00, 0x01, 0x00,
+
+      // Configuration Response (ID: 2, length: 6, src cid: 0x0040, flags: 0,
+      // result: success)
+      0x05, 0x02, 0x06, 0x00,
+      0x40, 0x00, 0x00, 0x00,
+      0x00, 0x00));
+  // clang-format on
+
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(channel);
+  EXPECT_FALSE(closed_cb_called);
+  EXPECT_EQ(kLocalId, channel->id());
+  EXPECT_EQ(kRemoteId, channel->remote_id());
+
+  // Test SDU transmission.
+  std::unique_ptr<common::ByteBuffer> received;
+  auto data_cb = [&received](const common::ByteBuffer& bytes) {
+    received = std::make_unique<common::DynamicByteBuffer>(bytes);
+  };
+  test_device()->SetDataCallback(std::move(data_cb), dispatcher());
+
+  EXPECT_TRUE(channel->Send(common::NewBuffer('T', 'e', 's', 't')));
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(received);
+
+  // SDU must have remote channel ID (unlike for fixed channels).
+  auto expected = common::CreateStaticByteBuffer(
+      // ACL data header (handle: 1, length 8)
+      0x01, 0x00, 0x08, 0x00,
+
+      // L2CAP B-frame: (length: 4, channel-id: 0x9042)
+      0x04, 0x00, 0x42, 0x90, 'T', 'e', 's', 't');
+
+  EXPECT_TRUE(common::ContainersEqual(expected, *received));
+
+  // Explicit deactivation should not result in |closed_cb| being called.
+  channel->Deactivate();
+
+  // clang-format off
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 12 bytes)
+      0x01, 0x00, 0x0c, 0x00,
+
+      // L2CAP B-frame header (length: 8 bytes, channel-id: 0x0001 (ACL sig))
+      0x08, 0x00, 0x01, 0x00,
+
+      // Disconnection Response
+      // (ID: 3, length: 4, dst cid: 0x9042, src cid: 0x0040)
+      0x07, 0x03, 0x04, 0x00,
+      0x42, 0x90, 0x40, 0x00));
+  // clang-format on
+
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(closed_cb_called);
+}
+
+TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelRemoteDisconnect) {
+  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
+                         dispatcher());
+
+  fbl::RefPtr<Channel> channel;
+  auto channel_cb = [&channel](fbl::RefPtr<l2cap::Channel> activated_chan) {
+    channel = std::move(activated_chan);
+  };
+
+  bool channel_closed = false;
+  auto closed_cb = [&channel_closed] { channel_closed = true; };
+
+  bool sdu_received = false;
+  auto data_rx_cb = [&sdu_received](const SDU& sdu) {
+    sdu_received = true;
+    auto received = common::DynamicByteBuffer(sdu.length());
+    const size_t length = sdu.Copy(&received);
+    EXPECT_EQ(sdu.length(), length);
+    EXPECT_EQ("Test", received.AsString());
+  };
+
+  ActivateOutboundChannel(kTestPsm, std::move(channel_cb), kTestHandle1,
+                          std::move(closed_cb), std::move(data_rx_cb));
+  RunLoopUntilIdle();
+
+  // clang-format off
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 16 bytes)
+      0x01, 0x00, 0x10, 0x00,
+
+      // L2CAP B-frame header (length: 12 bytes, channel-id: 0x0001 (ACL sig))
+      0x0c, 0x00, 0x01, 0x00,
+
+      // Connection Response (ID: 1, length: 8, dst cid: 0x0047,
+      // src cid: 0x0040, result: success, status: none)
+      0x03, 0x01, 0x08, 0x00,
+      0x47, 0x00, 0x40, 0x00,
+      0x00, 0x00, 0x00, 0x00));
+
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 16 bytes)
+      0x01, 0x00, 0x10, 0x00,
+
+      // L2CAP B-frame header (length: 12 bytes, channel-id: 0x0001 (ACL sig))
+      0x0c, 0x00, 0x01, 0x00,
+
+      // Configuration Request (ID: 6, length: 8, dst cid: 0x0040, flags: 0,
+      // options: [type: MTU, length: 2, MTU: 1024])
+      0x04, 0x06, 0x08, 0x00,
+      0x40, 0x00, 0x00, 0x00,
+      0x01, 0x02, 0x00, 0x04));
+
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 14 bytes)
+      0x01, 0x00, 0x0e, 0x00,
+
+      // L2CAP B-frame header (length: 10 bytes, channel-id: 0x0001 (ACL sig))
+      0x0a, 0x00, 0x01, 0x00,
+
+      // Configuration Response (ID: 2, length: 6, src cid: 0x0040, flags: 0,
+      // result: success)
+      0x05, 0x02, 0x06, 0x00,
+      0x40, 0x00, 0x00, 0x00,
+      0x00, 0x00));
+  // clang-format on
+
+  RunLoopUntilIdle();
+
+  EXPECT_NE(nullptr, channel);
+  EXPECT_FALSE(channel_closed);
+
+  // Test SDU reception.
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 1, length 8)
+      0x01, 0x00, 0x08, 0x00,
+
+      // L2CAP B-frame: (length: 4, channel-id: 0x0040)
+      0x04, 0x00, 0x40, 0x00, 'T', 'e', 's', 't'));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(sdu_received);
+
+  // clang-format off
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 12 bytes)
+      0x01, 0x00, 0x0c, 0x00,
+
+      // L2CAP B-frame header (length: 8 bytes, channel-id: 0x0001 (ACL sig))
+      0x08, 0x00, 0x01, 0x00,
+
+      // Disconnection Request
+      // (ID: 7, length: 4, dst cid: 0x0040, src cid: 0x0047)
+      0x06, 0x07, 0x04, 0x00,
+      0x40, 0x00, 0x47, 0x00));
+  // clang-format on
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(channel_closed);
+}
+
+TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelDataNotBuffered) {
+  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
+                         dispatcher());
+
+  fbl::RefPtr<Channel> channel;
+  auto channel_cb = [&channel](fbl::RefPtr<l2cap::Channel> activated_chan) {
+    channel = std::move(activated_chan);
+  };
+
+  bool channel_closed = false;
+  auto closed_cb = [&channel_closed] { channel_closed = true; };
+
+  auto data_rx_cb = [](const SDU& sdu) {
+    FAIL() << "Unexpected data reception";
+  };
+
+  // Receive SDU for the channel about to be opened. It should be ignored.
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 1, length 8)
+      0x01, 0x00, 0x08, 0x00,
+
+      // L2CAP B-frame: (length: 4, channel-id: 0x0040)
+      0x04, 0x00, 0x40, 0x00, 'T', 'e', 's', 't'));
+
+  ActivateOutboundChannel(kTestPsm, std::move(channel_cb), kTestHandle1,
+                          std::move(closed_cb), std::move(data_rx_cb));
+  RunLoopUntilIdle();
+
+  // clang-format off
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 16 bytes)
+      0x01, 0x00, 0x10, 0x00,
+
+      // L2CAP B-frame header (length: 12 bytes, channel-id: 0x0001 (ACL sig))
+      0x0c, 0x00, 0x01, 0x00,
+
+      // Connection Response (ID: 1, length: 8, dst cid: 0x0047,
+      // src cid: 0x0040, result: success, status: none)
+      0x03, 0x01, 0x08, 0x00,
+      0x47, 0x00, 0x40, 0x00,
+      0x00, 0x00, 0x00, 0x00));
+
+  // The channel is connected but not configured, so no data should flow on the
+  // channel. Test that this received data is also ignored.
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 1, length 8)
+      0x01, 0x00, 0x08, 0x00,
+
+      // L2CAP B-frame: (length: 4, channel-id: 0x0040)
+      0x04, 0x00, 0x40, 0x00, 'T', 'e', 's', 't'));
+
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 16 bytes)
+      0x01, 0x00, 0x10, 0x00,
+
+      // L2CAP B-frame header (length: 12 bytes, channel-id: 0x0001 (ACL sig))
+      0x0c, 0x00, 0x01, 0x00,
+
+      // Configuration Request (ID: 6, length: 8, dst cid: 0x0040, flags: 0,
+      // options: [type: MTU, length: 2, MTU: 1024])
+      0x04, 0x06, 0x08, 0x00,
+      0x40, 0x00, 0x00, 0x00,
+      0x01, 0x02, 0x00, 0x04));
+
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 14 bytes)
+      0x01, 0x00, 0x0e, 0x00,
+
+      // L2CAP B-frame header (length: 10 bytes, channel-id: 0x0001 (ACL sig))
+      0x0a, 0x00, 0x01, 0x00,
+
+      // Configuration Response (ID: 2, length: 6, src cid: 0x0040, flags: 0,
+      // result: success)
+      0x05, 0x02, 0x06, 0x00,
+      0x40, 0x00, 0x00, 0x00,
+      0x00, 0x00));
+  // clang-format on
+
+  RunLoopUntilIdle();
+
+  EXPECT_NE(nullptr, channel);
+  EXPECT_FALSE(channel_closed);
+
+  // clang-format off
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 12 bytes)
+      0x01, 0x00, 0x0c, 0x00,
+
+      // L2CAP B-frame header (length: 8 bytes, channel-id: 0x0001 (ACL sig))
+      0x08, 0x00, 0x01, 0x00,
+
+      // Disconnection Request
+      // (ID: 7, length: 4, dst cid: 0x0040, src cid: 0x0047)
+      0x06, 0x07, 0x04, 0x00,
+      0x40, 0x00, 0x47, 0x00));
+  // clang-format on
+
+  RunLoopUntilIdle();
+}
+
+TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelRemoteRefused) {
+  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
+                         dispatcher());
+
+  bool channel_cb_called = false;
+  auto channel_cb = [&channel_cb_called](fbl::RefPtr<l2cap::Channel> channel) {
+    channel_cb_called = true;
+    EXPECT_FALSE(channel);
+  };
+
+  ActivateOutboundChannel(kTestPsm, std::move(channel_cb));
+  RunLoopUntilIdle();
+
+  // clang-format off
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 16 bytes)
+      0x01, 0x00, 0x10, 0x00,
+
+      // L2CAP B-frame header (length: 12 bytes, channel-id: 0x0001 (ACL sig))
+      0x0c, 0x00, 0x01, 0x00,
+
+      // Connection Response (ID: 1, length: 8, dst cid: 0x0000 (invalid),
+      // src cid: 0x0040, result: 0x0004 (Refused; no resources available),
+      // status: none)
+      0x03, 0x01, 0x08, 0x00,
+      0x00, 0x00, 0x40, 0x00,
+      0x04, 0x00, 0x00, 0x00));
+  // clang-format on
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(channel_cb_called);
+}
+
+TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelFailedConfiguration) {
+  chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster, [] {},
+                         dispatcher());
+
+  bool channel_cb_called = false;
+  auto channel_cb = [&channel_cb_called](fbl::RefPtr<l2cap::Channel> channel) {
+    channel_cb_called = true;
+    EXPECT_FALSE(channel);
+  };
+
+  ActivateOutboundChannel(kTestPsm, std::move(channel_cb));
+  RunLoopUntilIdle();
+
+  // clang-format off
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 16 bytes)
+      0x01, 0x00, 0x10, 0x00,
+
+      // L2CAP B-frame header (length: 12 bytes, channel-id: 0x0001 (ACL sig))
+      0x0c, 0x00, 0x01, 0x00,
+
+      // Connection Response (ID: 1, length: 8, dst cid: 0x0047,
+      // src cid: 0x0040, result: success, status: none)
+      0x03, 0x01, 0x08, 0x00,
+      0x47, 0x00, 0x40, 0x00,
+      0x00, 0x00, 0x00, 0x00));
+
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 16 bytes)
+      0x01, 0x00, 0x10, 0x00,
+
+      // L2CAP B-frame header (length: 12 bytes, channel-id: 0x0001 (ACL sig))
+      0x0c, 0x00, 0x01, 0x00,
+
+      // Configuration Request (ID: 6, length: 8, dst cid: 0x0040, flags: 0,
+      // options: [type: MTU, length: 2, MTU: 1024])
+      0x04, 0x06, 0x08, 0x00,
+      0x40, 0x00, 0x00, 0x00,
+      0x01, 0x02, 0x00, 0x04));
+
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 14 bytes)
+      0x01, 0x00, 0x0e, 0x00,
+
+      // L2CAP B-frame header (length: 10 bytes, channel-id: 0x0001 (ACL sig))
+      0x0a, 0x00, 0x01, 0x00,
+
+      // Configuration Response (ID: 2, length: 6, src cid: 0x0040, flags: 0,
+      // result: 0x0002 (Rejected; no reason provide))
+      0x05, 0x02, 0x06, 0x00,
+      0x40, 0x00, 0x00, 0x00,
+      0x02, 0x00));
+
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 12 bytes)
+      0x01, 0x00, 0x0c, 0x00,
+
+      // L2CAP B-frame header (length: 8 bytes, channel-id: 0x0001 (ACL sig))
+      0x08, 0x00, 0x01, 0x00,
+
+      // Disconnection Response
+      // (ID: 3, length: 4, dst cid: 0x9042, src cid: 0x0040)
+      0x07, 0x03, 0x04, 0x00,
+      0x47, 0x00, 0x40, 0x00));
+  // clang-format on
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(channel_cb_called);
 }
 
 }  // namespace

@@ -4,12 +4,15 @@
 
 #include "logical_link.h"
 
+#include <functional>
+
 #include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "lib/fxl/strings/string_printf.h"
 
+#include "bredr_dynamic_channel.h"
 #include "bredr_signaling_channel.h"
 #include "channel.h"
 #include "le_signaling_channel.h"
@@ -72,13 +75,39 @@ LogicalLink::LogicalLink(hci::ConnectionHandle handle,
         hci_->acl_data_channel()->GetBufferInfo().max_data_length());
   }
 
-  // Set up the signaling channel.
+  // This is called upon remote-requested dynamic channel closures.
+  auto on_channel_closed =
+      [self = weak_ptr_factory_.GetWeakPtr()](const DynamicChannel* dyn_chan) {
+        if (!self) {
+          return;
+        }
+
+        ZX_DEBUG_ASSERT(dyn_chan);
+        auto iter = self->channels_.find(dyn_chan->local_cid());
+        if (iter == self->channels_.end()) {
+          bt_log(WARN, "l2cap",
+                 "No ChannelImpl found for closing dynamic channel %#.4x",
+                 dyn_chan->local_cid());
+          return;
+        }
+
+        fbl::RefPtr<ChannelImpl> channel = std::move(iter->second);
+        ZX_DEBUG_ASSERT(channel->remote_id() == dyn_chan->remote_cid());
+        self->channels_.erase(iter);
+
+        // Signal closure because this is a remote disconnection.
+        channel->OnClosed();
+      };
+
+  // Set up the signaling channel and dynamic channels.
   if (type_ == hci::Connection::LinkType::kLE) {
     signaling_channel_ = std::make_unique<LESignalingChannel>(
         OpenFixedChannel(kLESignalingChannelId), role_);
   } else {
     signaling_channel_ = std::make_unique<BrEdrSignalingChannel>(
         OpenFixedChannel(kSignalingChannelId), role_);
+    dynamic_registry_ = std::make_unique<BrEdrDynamicChannelRegistry>(
+        signaling_channel_.get(), std::move(on_channel_closed));
   }
 }
 
@@ -116,6 +145,29 @@ fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
   return chan;
 }
 
+void LogicalLink::OpenChannel(PSM psm, ChannelCallback cb,
+                              async_dispatcher_t* dispatcher) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+
+  // TODO(NET-1437): Implement channels for LE credit-based connections
+  if (type_ == hci::Connection::LinkType::kLE) {
+    bt_log(WARN, "l2cap", "not opening LE channel for PSM %.4x", psm);
+    CompleteDynamicOpen(nullptr, std::move(cb), dispatcher);
+    return;
+  }
+
+  auto create_channel = [self = weak_ptr_factory_.GetWeakPtr(),
+                         cb = std::move(cb),
+                         dispatcher](const DynamicChannel* dyn_chan) mutable {
+    if (!self) {
+      return;
+    }
+    self->CompleteDynamicOpen(dyn_chan, std::move(cb), dispatcher);
+  };
+
+  dynamic_registry_->OpenOutbound(psm, std::move(create_channel));
+}
+
 void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(!recombiner_.ready());
@@ -145,12 +197,22 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   auto iter = channels_.find(channel_id);
   PendingPduMap::iterator pp_iter;
 
-  // TODO(armansito): This buffering scheme could be problematic for dynamically
-  // negotiated channels if a channel id were to be recycled, as it requires
-  // careful management of the timing between channel destruction and data
-  // buffering. Probably only buffer data for fixed channels?
-
   if (iter == channels_.end()) {
+    // Only buffer data for fixed channels. This prevents stale data that is
+    // intended for a closed dynamic channel from being delivered to a new
+    // channel that recycled the former's ID. The downside is that it's possible
+    // to lose any data that is received after a dynamic channel's connection
+    // request and before its completed configuration. This would require tricky
+    // additional state to track "pending open" channels here and it's not clear
+    // if that is necessary since hosts should not send data before a channel is
+    // first configured.
+    if (!AllowsFixedChannel(channel_id)) {
+      bt_log(WARN, "l2cap",
+             "Dropping PDU for nonexistent dynamic channel %#.4x on link %#.4x",
+             channel_id, handle_);
+      return;
+    }
+
     // The packet was received on a channel for which no ChannelImpl currently
     // exists. Buffer packets for the channel to receive when it gets created.
     pp_iter = pending_pdus_.emplace(channel_id, std::list<PDU>()).first;
@@ -210,7 +272,8 @@ void LogicalLink::RemoveChannel(Channel* chan) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(chan);
 
-  auto iter = channels_.find(chan->id());
+  const ChannelId id = chan->id();
+  auto iter = channels_.find(id);
   if (iter == channels_.end())
     return;
 
@@ -219,8 +282,12 @@ void LogicalLink::RemoveChannel(Channel* chan) {
   if (iter->second.get() != chan)
     return;
 
-  pending_pdus_.erase(chan->id());
+  pending_pdus_.erase(id);
   channels_.erase(iter);
+
+  // Disconnect the channel if it's a dynamic channel. This path is for local-
+  // initiated closures and does not invoke callbacks back to the channel user.
+  dynamic_registry_->CloseChannel(id);
 }
 
 void LogicalLink::SignalError() {
@@ -237,10 +304,30 @@ void LogicalLink::Close() {
 
   auto channels = std::move(channels_);
   for (auto& iter : channels) {
-    static_cast<ChannelImpl*>(iter.second.get())->OnLinkClosed();
+    iter.second->OnClosed();
   }
 
   ZX_DEBUG_ASSERT(channels_.empty());
+}
+
+void LogicalLink::CompleteDynamicOpen(const DynamicChannel* dyn_chan,
+                                      ChannelCallback open_cb,
+                                      async_dispatcher_t* dispatcher) {
+  if (!dyn_chan) {
+    async::PostTask(dispatcher, std::bind(std::move(open_cb), nullptr));
+    return;
+  }
+
+  const ChannelId local_cid = dyn_chan->local_cid();
+  const ChannelId remote_cid = dyn_chan->remote_cid();
+  bt_log(TRACE, "l2cap",
+         "Link %#.4x: Channel opened with ID %#.4x (remote ID %#.4x)", handle_,
+         local_cid, remote_cid);
+
+  auto chan = fbl::AdoptRef(new ChannelImpl(
+      local_cid, remote_cid, weak_ptr_factory_.GetWeakPtr(), {}));
+  channels_[local_cid] = chan;
+  async::PostTask(dispatcher, std::bind(std::move(open_cb), std::move(chan)));
 }
 
 }  // namespace internal
