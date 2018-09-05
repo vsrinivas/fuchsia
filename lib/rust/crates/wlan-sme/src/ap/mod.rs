@@ -24,6 +24,7 @@ pub trait Tokens {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Config {
     pub ssid: Ssid,
+    pub _password: Vec<u8>,
     pub channel: u8
 }
 

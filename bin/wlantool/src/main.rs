@@ -133,10 +133,11 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
 
 async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
-        opts::ApCmd::Start { iface_id, ssid, channel } => {
+        opts::ApCmd::Start { iface_id, ssid, password, channel } => {
             let sme = await!(get_ap_sme(wlan_svc, iface_id))?;
             let mut config = fidl_sme::ApConfig {
                 ssid: ssid.as_bytes().to_vec(),
+                password: password.map_or(vec![], |p| p.as_bytes().to_vec()),
                 channel
             };
             let r = await!(sme.start(&mut config));

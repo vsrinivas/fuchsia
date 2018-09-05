@@ -125,6 +125,8 @@ pub enum ApCmd {
         iface_id: u16,
         #[structopt(short = "s", long = "ssid")]
         ssid: String,
+        #[structopt(short = "p", long = "password")]
+        password: Option<String>,
         #[structopt(short = "c", long = "channel")]
         channel: u8,
     },

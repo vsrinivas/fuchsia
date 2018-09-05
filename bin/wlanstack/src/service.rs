@@ -571,6 +571,7 @@ mod tests {
     fn fake_ap_config() -> fidl_sme::ApConfig {
         fidl_sme::ApConfig {
             ssid: b"qwerty".to_vec(),
+            password: vec![],
             channel: 6,
         }
     }

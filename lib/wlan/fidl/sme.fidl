@@ -75,6 +75,7 @@ interface ClientSme {
 
 struct ApConfig {
     vector<uint8>:32 ssid;
+    vector<uint8>:64 password;
     uint8 channel;
 };
 
