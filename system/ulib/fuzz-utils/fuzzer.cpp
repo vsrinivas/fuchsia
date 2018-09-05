@@ -369,8 +369,7 @@ zx_status_t Fuzzer::Execute(bool wait_for_completion) {
     }
 
     if (proc_info.return_code != ZX_OK) {
-        fprintf(err_, "Fuzzer returned non-zero exit code: %" PRId64 "\n", proc_info.return_code);
-        return ZX_ERR_INTERNAL;
+        fprintf(out_, "Fuzzer returned non-zero exit code: %" PRId64 "\n", proc_info.return_code);
     }
 
     return ZX_OK;
@@ -617,8 +616,14 @@ zx_status_t Fuzzer::Seeds() {
 }
 
 zx_status_t Fuzzer::Start() {
+    zx_status_t rc;
+
     // If no inputs, use the default corpus
     if (inputs_.is_empty()) {
+        if ((rc = data_path_.Ensure("corpus")) != ZX_OK) {
+            fprintf(err_, "Failed to make empty corpus: %s\n", zx_status_get_string(rc));
+            return rc;
+        }
         inputs_.push_front(data_path_.Join("corpus").c_str());
     }
 
