@@ -11,17 +11,33 @@
 
 #include <fbl/array.h>
 #include <lib/async-loop/cpp/loop.h>
-
 #include <trace/handler.h>
+#include <lib/zx/event.h>
 
 class BenchmarkHandler : public trace::TraceHandler {
 public:
-    BenchmarkHandler(async::Loop* loop, const char* name,
-                     trace_buffering_mode_t mode, size_t buffer_size)
+    static constexpr int kWaitStoppedTimeoutSeconds = 10;
+
+    BenchmarkHandler(async::Loop* loop, trace_buffering_mode_t mode,
+                     size_t buffer_size)
         : loop_(loop),
-          name_(name),
           mode_(mode),
           buffer_(new uint8_t[buffer_size], buffer_size) {
+        auto status = zx::event::create(0u, &observer_event_);
+        ZX_DEBUG_ASSERT_MSG(status == ZX_OK,
+                            "zx::event::create returned %s\n",
+                            zx_status_get_string(status));
+        status = trace_register_observer(observer_event_.get());
+        ZX_DEBUG_ASSERT_MSG(status == ZX_OK,
+                            "trace_register_observer returned %s\n",
+                            zx_status_get_string(status));
+    }
+
+    ~BenchmarkHandler() {
+        auto status = trace_unregister_observer(observer_event_.get());
+        ZX_DEBUG_ASSERT_MSG(status == ZX_OK,
+                            "trace_unregister_observer returned %s\n",
+                            zx_status_get_string(status));
     }
 
     trace_buffering_mode_t mode() const { return mode_; }
@@ -30,9 +46,46 @@ public:
         zx_status_t status = trace_start_engine(loop_->dispatcher(),
                                                 this, mode_,
                                                 buffer_.get(), buffer_.size());
-        ZX_DEBUG_ASSERT(status == ZX_OK);
+        ZX_DEBUG_ASSERT_MSG(status == ZX_OK,
+                            "trace_start_engine returned %s\n",
+                            zx_status_get_string(status));
+        ZX_DEBUG_ASSERT(trace_state() == TRACE_STARTED);
+        observer_event_.signal(ZX_EVENT_SIGNALED, 0u);
+        trace_notify_observer_updated(observer_event_.get());
+    }
 
-        printf("\nTrace with benchmark spec \"%s\" started\n", name_);
+    void Stop() {
+        // Acquire the context before we stop. We can't after we stop
+        // as the context has likely been released (no more
+        // references).
+        trace::internal::trace_buffer_header header;
+        {
+            auto context = trace::TraceProlongedContext::Acquire();
+            auto status = trace_stop_engine(ZX_OK);
+            ZX_DEBUG_ASSERT_MSG(status == ZX_OK,
+                                "trace_stop_engine returned %s\n",
+                                zx_status_get_string(status));
+            trace_context_snapshot_buffer_header(context.get(), &header);
+        }
+
+        // Tracing hasn't actually stopped yet. It's stopping, but that won't
+        // complete until all context references are gone (which they are),
+        // and the engine has processed that fact (which it hasn't necessarily
+        // yet).
+        while (trace_state() != TRACE_STOPPED) {
+            auto status = observer_event_.wait_one(
+                ZX_EVENT_SIGNALED,
+                zx::deadline_after(zx::sec(kWaitStoppedTimeoutSeconds)),
+                nullptr);
+            ZX_DEBUG_ASSERT_MSG(status == ZX_OK,
+                                "observer_event_.wait_one returned %s\n",
+                                zx_status_get_string(status));
+            observer_event_.signal(ZX_EVENT_SIGNALED, 0u);
+        }
+
+        if (mode_ == TRACE_BUFFERING_MODE_ONESHOT) {
+            ZX_DEBUG_ASSERT(header.wrapped_count == 0);
+        }
     }
 
 private:
@@ -44,8 +97,13 @@ private:
     void TraceStopped(async_dispatcher_t* async,
                       zx_status_t disposition,
                       size_t buffer_bytes_written) override {
-        printf("Trace stopped, disposition = %s\n",
-               zx_status_get_string(disposition));
+        // This is noise if the status is ZX_OK, so just print if error.
+        // There's also no point in printing for ZX_ERR_NO_MEMORY, as that
+        // information can be determined from the number of records dropped.
+        if  (disposition != ZX_OK && disposition != ZX_ERR_NO_MEMORY) {
+            printf("WARNING: Trace stopped, disposition = %s\n",
+                   zx_status_get_string(disposition));
+        }
 
         if (mode_ == TRACE_BUFFERING_MODE_STREAMING) {
             ZX_DEBUG_ASSERT(disposition == ZX_OK ||
@@ -57,8 +115,6 @@ private:
             // any records.
             ZX_DEBUG_ASSERT(disposition == ZX_OK);
         }
-
-        loop_->Quit();
     }
 
     void NotifyBufferFull(uint32_t wrapped_count,
@@ -74,7 +130,7 @@ private:
     }
 
     async::Loop* const loop_;
-    const char* const name_;
     const trace_buffering_mode_t mode_;
     fbl::Array<uint8_t> const buffer_;
+    zx::event observer_event_;
 };

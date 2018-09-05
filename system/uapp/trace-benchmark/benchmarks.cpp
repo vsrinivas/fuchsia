@@ -34,36 +34,20 @@ public:
             // is a stress test so all the app is doing is filling the trace
             // buffer. :-)
             async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-            BenchmarkHandler handler(&loop, spec_->name, spec_->mode,
-                                     spec_->buffer_size);
+            BenchmarkHandler handler(&loop, spec_->mode, spec_->buffer_size);
 
             loop.StartThread("trace-engine loop", nullptr);
-            handler.Start();
 
-            RunAndMeasure(name, spec_->num_iterations, benchmark);
+            RunAndMeasure(name, spec_->name, spec_->num_iterations, benchmark,
+                          [&handler] () { handler.Start(); },
+                          [&handler] () { handler.Stop(); });
 
-            // Acquire the context before we stop. We can't after we stop
-            // as the context has likely been released (no more
-            // references).
-            trace::internal::trace_buffer_header header;
-            {
-                auto context = trace::TraceProlongedContext::Acquire();
-                trace_stop_engine(ZX_OK);
-                trace_context_snapshot_buffer_header(context.get(), &header);
-            }
-            if (handler.mode() == TRACE_BUFFERING_MODE_ONESHOT) {
-                ZX_DEBUG_ASSERT(header.wrapped_count == 0);
-            } else {
-                printf("Trace buffer wrapped %u times, %" PRIu64 " records dropped\n",
-                       header.wrapped_count, header.num_records_dropped);
-            }
-
+            loop.Quit();
             loop.JoinThreads();
         } else {
             // For the disabled benchmarks we just use the default number
             // of iterations.
-            ZX_DEBUG_ASSERT(spec_ == nullptr);
-            RunAndMeasure(name, benchmark);
+            RunAndMeasure(name, spec_->name, benchmark, [](){}, [](){});
         }
     }
 
@@ -191,13 +175,17 @@ void RunBenchmarks(bool tracing_enabled, const BenchmarkSpec* spec) {
 } // namespace
 
 void RunTracingDisabledBenchmarks() {
-    puts("\nRunning benchmarks with tracing disabled...\n");
-    RunBenchmarks(false, nullptr);
+    static const BenchmarkSpec spec = {
+        "disabled",
+        TRACE_BUFFERING_MODE_ONESHOT, // unused
+        0,
+        kDefaultRunIterations,
+    };
+    RunBenchmarks(false, &spec);
 }
 
 void RunTracingEnabledBenchmarks(const BenchmarkSpec* spec) {
     // No trailing \n on purpose. The extra blank line is provided by
     // BenchmarkHandler.Start().
-    puts("\nRunning benchmarks with tracing enabled...");
     RunBenchmarks(true, spec);
 }

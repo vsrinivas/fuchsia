@@ -5,14 +5,22 @@
 #pragma once
 
 #include <stdio.h>
+#include <fbl/function.h>
 
 #include <zircon/syscalls.h>
+#include <lib/zx/time.h>
 
-static constexpr unsigned kWarmUpIterations = 10;
+constexpr unsigned kWarmUpIterations = 10;
 // N.B. This value can't be so large that the buffer fills in oneshot mode.
 // The benchmark will assert-fail if the buffer fills: Otherwise the benchmark
 // is invalid.
-static constexpr unsigned kDefaultRunIterations = 100000;
+constexpr unsigned kDefaultRunIterations = 100000;
+
+// The number of test runs to do.
+// We do this many runs and report min,max,average.
+// We do this because there's some variability in the runs, and this helps
+// identify when it's happening and cope.
+constexpr unsigned kNumTestRuns = 10;
 
 // Measures how long it takes to run some number of iterations of a closure.
 // Returns a value in microseconds.
@@ -27,23 +35,52 @@ float Measure(unsigned iterations, const T& closure) {
             static_cast<float>(zx_ticks_per_second()));
 }
 
+using thunk = fbl::Function<void ()>;
+
 // Runs a closure repeatedly and prints its timing.
 template <typename T>
-void RunAndMeasure(const char* test_name, unsigned iterations,
-                   const T& closure) {
-    printf("* %s...\n", test_name);
+void RunAndMeasure(const char* test_name, const char* spec_name,
+                   unsigned iterations, const T& closure,
+                   thunk setup, thunk teardown) {
+    printf("\n* %s: %s ...\n", spec_name, test_name);
 
+    setup();
     float warm_up_time = Measure(kWarmUpIterations, closure);
-    printf("  - warm-up: %u iterations in %.1f us, %.3f us per iteration\n",
+    teardown();
+    printf("  - warm-up: %u iterations in %.3f us, %.3f us per iteration\n",
            kWarmUpIterations, warm_up_time, warm_up_time / kWarmUpIterations);
 
-    float run_time = Measure(iterations, closure);
-    printf("  - run: %u iterations in %.1f us, %.3f us per iteration\n",
+    float run_times[kNumTestRuns];
+    for (unsigned i = 0; i < kNumTestRuns; ++i) {
+        setup();
+        run_times[i] = Measure(iterations, closure);
+        teardown();
+        zx::nanosleep(zx::deadline_after(zx::msec(10)));
+    }
+
+    float min = 0, max = 0;
+    float cumulative = 0;
+    for (const auto rt : run_times) {
+        if (min == 0 || min > rt)
+            min = rt;
+        if (max == 0 || max < rt)
+            max = rt;
+        cumulative += rt;
+    }
+    float average = cumulative / kNumTestRuns;
+
+    printf("  - run: %u test runs, %u iterations per run\n",
+           kNumTestRuns, iterations);
+    printf("  - total (usec): min: %.3f, max: %.3f, ave: %.3f\n",
+           min, max, average);
+    printf("  - per-iteration (usec): min: %.3f\n",
            // The static cast is to avoid a "may change value" warning.
-           iterations, run_time, run_time / static_cast<float>(iterations));
+           min / static_cast<float>(iterations));
 }
 
 template <typename T>
-void RunAndMeasure(const char* test_name, const T& closure) {
-    RunAndMeasure(test_name, kDefaultRunIterations, closure);
+void RunAndMeasure(const char* test_name, const char* spec_name,
+                   const T& closure, thunk setup, thunk teardown) {
+    RunAndMeasure(test_name, spec_name, kDefaultRunIterations, closure,
+                  fbl::move(setup), fbl::move(teardown));
 }
