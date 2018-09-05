@@ -202,7 +202,7 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
     }
 
     // Stay on channel to make sure we don't miss the beacon
-    chan_sched_->EnsureOnChannel(zx::deadline_after(kOnChannelTimeAfterSend));
+    chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
 
     join_chan_ = chan;
     zx::time deadline = deadline_after_bcn_period(req.body()->join_failure_timeout);
@@ -1293,7 +1293,7 @@ void Station::DumpDataFrame(const DataFrameView<>& frame) {
 }
 
 zx_status_t Station::SendNonData(fbl::unique_ptr<Packet> packet) {
-    chan_sched_->EnsureOnChannel(zx::deadline_after(kOnChannelTimeAfterSend));
+    chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
     return SendWlan(fbl::move(packet));
 }
 
@@ -1518,7 +1518,7 @@ uint8_t Station::GetTid(const EthFrame& frame) {
 
 zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& frame) {
     assoc_ctx_ = AssocContext{};
-    assoc_ctx_.ts_start = zx::time();
+    assoc_ctx_.ts_start = timer_mgr_.Now();
     assoc_ctx_.bssid = common::MacAddr(bss_->bssid.data());
     assoc_ctx_.aid = frame.body()->aid & kAidMask;
 
