@@ -46,6 +46,7 @@ constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
     return (kReservedEntryBlocks + 2 * blk_size) / blk_size;
 };
 
+constexpr char kGptDriverName[] = "/boot/driver/gpt.so";
 constexpr char kFvmPartitionName[] = "fvm";
 
 // Helper function to auto-deduce type.
@@ -293,11 +294,21 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_ptr<GptDevicePartiti
         if (gpt_partition_remove_all(gpt)) {
             ERROR("Failed to create empty GPT\n");
             return ZX_ERR_BAD_STATE;
-        } else if (gpt_device_sync(gpt)) {
+        }
+        if (gpt_device_sync(gpt)) {
             ERROR("Failed to sync empty GPT\n");
             return ZX_ERR_BAD_STATE;
-        } else if ((rc = ioctl_block_rr_part(fd.get())) != ZX_OK) {
+        }
+        // Try to rebind the GPT, in case a prior GPT driver was actually
+        // up and running.
+        if ((rc = ioctl_block_rr_part(fd.get())) != ZX_OK) {
             ERROR("Failed to re-read GPT\n");
+            return ZX_ERR_BAD_STATE;
+        }
+        // Manually re-bind the GPT driver, since it is almost certainly
+        // too late to be noticed by the block watcher.
+        if ((rc = ioctl_device_bind(fd.get(), kGptDriverName, strlen(kGptDriverName))) != ZX_OK) {
+            ERROR("Failed to bind GPT\n");
             return ZX_ERR_BAD_STATE;
         }
     }
