@@ -322,7 +322,7 @@ where
         frame: &frame,
         kd_plaintext: Bytes::from(vec![]),
     };
-    let result = handshake.on_eapol_key_frame(msg1);
+    let result = handshake.on_eapol_key_frame(0, msg1);
 
     let ptk = compute_ptk(&a_nonce[..], &result);
     (
@@ -347,6 +347,6 @@ impl FourwayHandshakeTestEnv {
             frame: &frame,
             kd_plaintext,
         };
-        self.handshake.on_eapol_key_frame(msg3)
+        self.handshake.on_eapol_key_frame(0, msg3)
     }
 }

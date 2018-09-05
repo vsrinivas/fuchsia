@@ -34,10 +34,14 @@ pub enum Method {
 }
 
 impl Method {
-    pub fn on_eapol_key_frame(&mut self, frame: VerifiedKeyFrame) -> SecAssocResult {
+    pub fn on_eapol_key_frame(
+        &mut self,
+        key_replay_counter: u64,
+        frame: VerifiedKeyFrame,
+    ) -> SecAssocResult {
         match self {
-            Method::FourWayHandshake(hs) => hs.on_eapol_key_frame(frame),
-            Method::GroupKeyHandshake(hs) => hs.on_eapol_key_frame(frame),
+            Method::FourWayHandshake(hs) => hs.on_eapol_key_frame(key_replay_counter, frame),
+            Method::GroupKeyHandshake(hs) => hs.on_eapol_key_frame(key_replay_counter, frame),
         }
     }
 

@@ -209,11 +209,9 @@ impl EssSa {
     fn init_pmksa(&mut self) -> Result<(), failure::Error> {
         // PSK allows deriving the PMK without exchanging
         let pmk = match &self.pmksa.method {
-            auth::Method::Psk(psk) => Some(psk.compute()),
+            auth::Method::Psk(psk) => psk.compute(),
         };
-        if let Some(pmk_data) = pmk {
-            self.on_key_confirmed(Key::Pmk(pmk_data))?;
-        }
+        self.on_key_confirmed(Key::Pmk(pmk))?;
 
         // TODO(hahnr): Support 802.1X authentication if STA is Authenticator and authentication
         // method is not PSK.
@@ -231,8 +229,26 @@ impl EssSa {
     pub fn on_eapol_frame(&mut self, frame: &eapol::Frame) -> SecAssocResult {
         // Only processes EAPOL Key frames. Drop all other frames silently.
         let mut updates = match frame {
-            eapol::Frame::Key(key_frame) => self.on_eapol_key_frame(&key_frame),
-        }?;
+            eapol::Frame::Key(key_frame) => {
+                let updates = self.on_eapol_key_frame(&key_frame)?;
+
+                // Authenticator updates its key replay counter with every outbound EAPOL frame.
+                if let Role::Authenticator = self.role {
+                    for update in &updates {
+                        if let SecAssocUpdate::TxEapolKeyFrame(frame) = update {
+                            if frame.key_replay_counter <= self.key_replay_counter {
+                                eprintln!("tx EAPOL Key frame uses invalid key replay counter: {:?} ({:?})",
+                                          frame.key_replay_counter,
+                                          self.key_replay_counter);
+                            }
+                            self.key_replay_counter = frame.key_replay_counter;
+                        }
+                    }
+                }
+
+                updates
+            }
+        };
 
         // Process Key updates ourselves to correctly track security associations.
         // If ESS-SA was not already established, wait with reporting PTK until GTK
@@ -284,9 +300,11 @@ impl EssSa {
         }?;
 
         // IEEE Std 802.11-2016, 12.7.2, d)
-        // Update key replay counter if MIC was set and valid.
+        // Update key replay counter if MIC was set and is valid. Only applicable for Supplicant.
         if frame.key_info.key_mic() {
-            self.key_replay_counter = frame.key_replay_counter;
+            if let Role::Supplicant = self.role {
+                self.key_replay_counter = frame.key_replay_counter;
+            }
         }
 
         // Forward frame to correct security association.
@@ -295,15 +313,19 @@ impl EssSa {
             None => self.pmksa.method.on_eapol_key_frame(verified_frame),
             Some(_) => match (&mut self.ptksa, &mut self.gtksa) {
                 (Ptksa::Uninitialized(_), _) => Ok(vec![]),
-                (Ptksa::Initialized(ptksa), Gtksa::Uninitialized(_)) => {
-                    ptksa.method.on_eapol_key_frame(verified_frame)
-                }
+                (Ptksa::Initialized(ptksa), Gtksa::Uninitialized(_)) => ptksa
+                    .method
+                    .on_eapol_key_frame(self.key_replay_counter, verified_frame),
                 (Ptksa::Initialized(ptksa), Gtksa::Initialized(gtksa)) => {
                     // IEEE Std 802.11-2016, 12.7.2 b.2)
                     if frame.key_info.key_type() == eapol::KEY_TYPE_PAIRWISE {
-                        ptksa.method.on_eapol_key_frame(verified_frame)
+                        ptksa
+                            .method
+                            .on_eapol_key_frame(self.key_replay_counter, verified_frame)
                     } else if frame.key_info.key_type() == eapol::KEY_TYPE_GROUP_SMK {
-                        gtksa.method.on_eapol_key_frame(verified_frame)
+                        gtksa
+                            .method
+                            .on_eapol_key_frame(self.key_replay_counter, verified_frame)
                     } else {
                         eprintln!(
                             "unsupported EAPOL Key frame key type: {:?}",

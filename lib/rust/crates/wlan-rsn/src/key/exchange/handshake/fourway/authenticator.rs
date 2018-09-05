@@ -20,7 +20,11 @@ impl Authenticator {
         })
     }
 
-    pub fn on_eapol_key_frame(&self, _frame: FourwayHandshakeFrame) -> SecAssocResult {
+    pub fn on_eapol_key_frame(
+        &self,
+        _key_replay_counter: u64,
+        _frame: FourwayHandshakeFrame,
+    ) -> SecAssocResult {
         // TODO(hahnr): Implement.
         Ok(vec![])
     }

@@ -156,7 +156,11 @@ impl GroupKey {
         }
     }
 
-    pub fn on_eapol_key_frame(&mut self, frame: VerifiedKeyFrame) -> SecAssocResult {
+    pub fn on_eapol_key_frame(
+        &mut self,
+        _key_replay_counter: u64,
+        frame: VerifiedKeyFrame,
+    ) -> SecAssocResult {
         match &mut self.0 {
             RoleHandler::Supplicant(s) => {
                 let frame = GroupKeyHandshakeFrame::from_verified(frame, Role::Supplicant)?;

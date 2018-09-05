@@ -122,12 +122,16 @@ impl Fourway {
         Ok(Fourway(handler))
     }
 
-    pub fn on_eapol_key_frame(&mut self, frame: VerifiedKeyFrame) -> SecAssocResult {
+    pub fn on_eapol_key_frame(
+        &mut self,
+        key_replay_counter: u64,
+        frame: VerifiedKeyFrame,
+    ) -> SecAssocResult {
         match &mut self.0 {
             RoleHandler::Authenticator(a) => {
                 let frame =
                     FourwayHandshakeFrame::from_verified(frame, Role::Authenticator, a.snonce())?;
-                a.on_eapol_key_frame(frame)
+                a.on_eapol_key_frame(key_replay_counter, frame)
             }
             RoleHandler::Supplicant(s) => {
                 let frame =
