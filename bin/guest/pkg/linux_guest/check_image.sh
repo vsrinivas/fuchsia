@@ -21,7 +21,8 @@ declare -r SOURCE_IMAGE=${1}
 declare -r TARGET_IMAGE=${2}
 
 if [ -f "${SOURCE_IMAGE}" ]; then
-  cp --remove-destination "${SOURCE_IMAGE}" "${TARGET_IMAGE}"
+  rm -f "${TARGET_IMAGE}"
+  cp "${SOURCE_IMAGE}" "${TARGET_IMAGE}"
 else
   echo "WARNING: ${SOURCE_IMAGE} not found, using a dummy image. See" \
        "garnet/bin/guest/README.md for manual build instructions."
