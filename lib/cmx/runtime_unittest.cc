@@ -8,10 +8,10 @@
 #include <string>
 
 #include "garnet/lib/json/json_parser.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/strings/substitute.h"
 
 namespace component {
 namespace {
@@ -24,7 +24,7 @@ class RuntimeMetadataTest : public ::testing::Test {
     std::string json_basename;
     EXPECT_FALSE(ParseFrom(&runtime, json, &error, &json_basename));
     EXPECT_TRUE(runtime.IsNull());
-    EXPECT_EQ(error, fxl::Substitute(expected_error, json_basename));
+    EXPECT_THAT(error, ::testing::HasSubstr(expected_error));
   }
 
   bool ParseFrom(RuntimeMetadata* runtime, const std::string& json,
@@ -74,9 +74,9 @@ TEST_F(RuntimeMetadataTest, Parse) {
 
 TEST_F(RuntimeMetadataTest, ParseWithErrors) {
   ExpectFailedParse(R"JSON({,,,})JSON",
-                    "$0:1:2: Missing a name for object member.");
+                    "Missing a name for object member.");
   ExpectFailedParse(R"JSON({ "runner": 10 })JSON",
-                    "$0: 'runner' is not a string.");
+                    "'runner' is not a string.");
 }
 
 }  // namespace

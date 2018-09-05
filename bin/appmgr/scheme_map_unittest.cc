@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
@@ -25,8 +26,8 @@ class SchemeMapTest : public ::testing::Test {
     ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
     const std::string json_file = NewJSONFile(dir, json);
     EXPECT_FALSE(scheme_map.ParseFromDirectory(dir));
-    EXPECT_EQ(scheme_map.error_str(),
-              fxl::Substitute(expected_error, json_file));
+    EXPECT_THAT(scheme_map.error_str(),
+                ::testing::HasSubstr(expected_error));
   }
 
   std::string NewJSONFile(const std::string& dir, const std::string& json) {
@@ -90,16 +91,16 @@ TEST_F(SchemeMapTest, ParseMultiple) {
 }
 
 TEST_F(SchemeMapTest, ParseWithErrors) {
-  ExpectFailedParse(R"JSON({})JSON", "$0: Missing 'launchers'.");
+  ExpectFailedParse(R"JSON({})JSON", "Missing 'launchers'.");
   ExpectFailedParse(R"JSON({ "launchers": 42 })JSON",
-                    "$0: 'launchers' is not a valid object.");
+                    "'launchers' is not a valid object.");
   ExpectFailedParse(
       R"JSON({
         "launchers": {
           "web_runner": "http"
         }
       })JSON",
-      "$0: Schemes for 'web_runner' are not a list."),
+      "Schemes for 'web_runner' are not a list."),
       ExpectFailedParse(
           R"JSON({
         "launchers": {
@@ -107,7 +108,7 @@ TEST_F(SchemeMapTest, ParseWithErrors) {
           "web_runner": [ "http", 42 ]
         }
       })JSON",
-          "$0: Scheme for 'web_runner' is not a string.");
+      "Scheme for 'web_runner' is not a string.");
 }
 
 TEST_F(SchemeMapTest, ParseMultipleWithErrors) {
@@ -125,9 +126,9 @@ TEST_F(SchemeMapTest, ParseMultipleWithErrors) {
   const std::string json_file2 = NewJSONFile(dir, kJson2);
   EXPECT_FALSE(scheme_map.ParseFromDirectory(dir));
   EXPECT_TRUE(scheme_map.HasError());
-  EXPECT_EQ(scheme_map.error_str(),
-            fxl::Substitute("$0: Scheme 'http' is assigned to two launchers.",
-                            json_file2));
+  EXPECT_THAT(scheme_map.error_str(),
+              ::testing::HasSubstr(
+                   "Scheme 'http' is assigned to two launchers."));
 }
 
 }  // namespace

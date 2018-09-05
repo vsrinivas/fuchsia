@@ -10,13 +10,11 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/substitute.h"
 
 namespace sysmgr {
 namespace {
 
-using fxl::StringPrintf;
 using testing::AllOf;
 using testing::ElementsAre;
 using testing::Key;
@@ -31,7 +29,7 @@ class ConfigTest : public ::testing::Test {
     ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
     const std::string json_file = NewJSONFile(dir, json);
     EXPECT_FALSE(config.ParseFromDirectory(dir));
-    EXPECT_EQ(config.error_str(), fxl::Substitute(expected_error, json_file));
+    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(expected_error));
   }
 
   std::string NewJSONFile(const std::string& dir, const std::string& json) {
@@ -54,33 +52,42 @@ TEST_F(ConfigTest, ParseWithErrors) {
 
   // Empty document.
   json = "";
-  ExpectFailedParse(json, "$0: The document is empty.");
+  ExpectFailedParse(json, "The document is empty.");
 
   // Document is not an object.
   json = "3";
-  ExpectFailedParse(json, "$0: Config file is not a JSON object.");
+  ExpectFailedParse(json, "Config file is not a JSON object.");
 
   // Bad services.
   constexpr char kBadServiceError[] =
-      "$0: '%s' must be a string or a non-empty array of strings.";
+      "'$0' must be a string or a non-empty array of strings.";
   json = R"json({
   "services": {
     "chrome": 3,
     "appmgr": [],
     "other": ["a", 3]
   }})json";
-  ExpectFailedParse(
-      json, StringPrintf(kBadServiceError, "services.chrome") + "\n" +
-                StringPrintf(kBadServiceError, "services.appmgr") + "\n" +
-                StringPrintf(kBadServiceError, "services.other"));
+  {
+    std::string dir;
+    ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+    const std::string json_file = NewJSONFile(dir, json);
+    Config config;
+    EXPECT_FALSE(config.ParseFromDirectory(dir));
+    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(
+        fxl::Substitute(kBadServiceError, "services.chrome")));
+    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(
+        fxl::Substitute(kBadServiceError, "services.appmgr")));
+    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(
+        fxl::Substitute(kBadServiceError, "services.other")));
+  }
 
   // Bad apps.
   json = R"json({"apps": 3})json";
-  ExpectFailedParse(json, "$0: 'apps' is not an array.");
+  ExpectFailedParse(json, "'apps' is not an array.");
 
   // Bad startup services.
   json = R"json({"startup_services": [3, "33"]})json";
-  ExpectFailedParse(json, "$0: 'startup_services' is not an array of strings.");
+  ExpectFailedParse(json, "'startup_services' is not an array of strings.");
 }
 
 TEST_F(ConfigTest, Parse) {

@@ -6,9 +6,9 @@
 
 #include <string>
 
-#include "gtest/gtest.h"
-
 #include "garnet/lib/json/json_parser.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
@@ -23,7 +23,7 @@ class ProgramMetadataTest : public ::testing::Test {
     EXPECT_FALSE(ParseFrom(&program, json, &error));
     EXPECT_TRUE(program.IsBinaryNull());
     EXPECT_TRUE(program.IsDataNull());
-    EXPECT_EQ(error, expected_error);
+    EXPECT_THAT(error, ::testing::HasSubstr(expected_error));
   }
 
   bool ParseFrom(ProgramMetadata* program, const std::string& json,
@@ -82,14 +82,12 @@ TEST_F(ProgramMetadataTest, ParseBinaryAndData) {
 TEST_F(ProgramMetadataTest, ParseWithErrors) {
   ExpectFailedParse(
       R"JSON({})JSON",
-      "test_file: Both 'binary' and 'data' in program are missing.");
+      "Both 'binary' and 'data' in program are missing.");
   ExpectFailedParse(
       R"JSON({ "binary": 3 })JSON",
-      "test_file: 'binary' in program is not a string.\ntest_file: Both "
-      "'binary' and 'data' in program are missing.");
+      "'binary' in program is not a string.");
   ExpectFailedParse(R"JSON({ "data": 3 })JSON",
-                    "test_file: 'data' in program is not a string.\ntest_file: "
-                    "Both 'binary' and 'data' in program are missing.");
+                    "'data' in program is not a string.");
 }
 
 }  // namespace

@@ -6,10 +6,9 @@
 
 #include <string>
 
+#include "garnet/lib/json/json_parser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-
-#include "garnet/lib/json/json_parser.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
@@ -23,7 +22,7 @@ class SandboxMetadataTest : public ::testing::Test {
     SandboxMetadata sandbox;
     EXPECT_FALSE(ParseFrom(&sandbox, json, &error));
     EXPECT_TRUE(sandbox.IsNull());
-    EXPECT_EQ(error, expected_error);
+    EXPECT_THAT(error, ::testing::HasSubstr(expected_error));
   }
 
   bool ParseFrom(SandboxMetadata* sandbox, const std::string& json,
@@ -152,23 +151,21 @@ TEST_F(SandboxMetadataTest, Parse) {
 TEST_F(SandboxMetadataTest, ParseWithErrors) {
   ExpectFailedParse(
       R"JSON({
-        "dev": [ "class/input", 3 ],
-        "services": 55
+        "dev": [ "class/input", 3 ]
       })JSON",
-      "test_file: Entry for 'dev' in sandbox is not a string.\n"
-      "test_file: 'services' in sandbox is not an array.");
+      "Entry for 'dev' in sandbox is not a string.");
   ExpectFailedParse(
       R"JSON({
         "features": [ "vulkan", "deprecated-all-services" ],
         "services": [ "fuchsia.sys.Launcher" ]
       })JSON",
-      "test_file: Sandbox may not include both 'services' and "
+      "Sandbox may not include both 'services' and "
       "'deprecated-all-services'." SERVICES_INFO);
   ExpectFailedParse(
       R"JSON({
         "features": [ "vulkan" ]
       })JSON",
-      "test_file: Sandbox must include either 'services' or "
+      "Sandbox must include either 'services' or "
       "'deprecated-all-services'." SERVICES_INFO);
 }
 

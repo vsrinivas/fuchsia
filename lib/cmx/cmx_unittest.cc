@@ -12,7 +12,6 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/strings/substitute.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
@@ -20,7 +19,6 @@ namespace {
 
 class CmxMetadataTest : public ::testing::Test {
  protected:
-  // ExpectFailedParse() will replace '$0' with the JSON filename, if present.
   void ExpectFailedParse(const std::string& json, std::string expected_error) {
     std::string error;
     CmxMetadata cmx;
@@ -28,8 +26,7 @@ class CmxMetadataTest : public ::testing::Test {
     std::string json_basename;
     EXPECT_FALSE(ParseFrom(&cmx, &json_parser, json, &json_basename));
     EXPECT_TRUE(json_parser.HasError());
-    EXPECT_EQ(json_parser.error_str(),
-              fxl::Substitute(expected_error, json_basename));
+    EXPECT_THAT(json_parser.error_str(), ::testing::HasSubstr(expected_error));
   }
 
   bool ParseFrom(CmxMetadata* cmx, json::JSONParser* json_parser,
@@ -138,28 +135,20 @@ TEST_F(CmxMetadataTest, ParseFromDeprecatedRuntime) {
   EXPECT_TRUE(cmx.program_meta().IsDataNull());
 }
 
-#define NO_SERVICES                                          \
-  "$0: Sandbox must include either 'services' or "           \
-  "'deprecated-all-services'.\n"                             \
-  "Refer to "                                                \
-  "https://fuchsia.googlesource.com/docs/+/master/the-book/" \
-  "package_metadata.md#sandbox for more information."
-
 TEST_F(CmxMetadataTest, ParseWithErrors) {
   rapidjson::Value sandbox;
   std::string error;
   ExpectFailedParse(R"JSON({ ,,, })JSON",
-                    "$0:1:3: Missing a name for object member.");
-  ExpectFailedParse(R"JSON(3)JSON", "$0: File is not a JSON object.");
+                    "Missing a name for object member.");
+  ExpectFailedParse(R"JSON(3)JSON", "File is not a JSON object.");
   ExpectFailedParse(R"JSON({ "sandbox" : 3})JSON",
-                    "$0: 'sandbox' is not an object.");
+                    "'sandbox' is not an object.");
   ExpectFailedParse(R"JSON({ "sandbox" : {"dev": "notarray"} })JSON",
-                    "$0: 'dev' in sandbox is not an array.\n" NO_SERVICES);
+                    "'dev' in sandbox is not an array.");
   ExpectFailedParse(R"JSON({ "runner" : 3 })JSON",
-                    NO_SERVICES "\n$0: 'runner' is not a string.");
-  ExpectFailedParse(R"JSON({ "program" : { "binary": 3 } })JSON", NO_SERVICES
-                    "\n$0: 'binary' in program is not a string.\n$0: Both "
-                    "'binary' and 'data' in program are missing.");
+                    "'runner' is not a string.");
+  ExpectFailedParse(R"JSON({ "program" : { "binary": 3 } })JSON",
+                    "'binary' in program is not a string.");
 }
 
 TEST_F(CmxMetadataTest, GetDefaultComponentCmxPath) {
