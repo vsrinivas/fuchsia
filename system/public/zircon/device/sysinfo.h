@@ -28,6 +28,12 @@
 #define IOCTL_SYSINFO_GET_HYPERVISOR_RESOURCE \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_SYSINFO, 3)
 
+// Return the board name for the platform we are running on
+//   in: none
+//   out: char[ZBI_BOARD_NAME_LEN]
+#define IOCTL_SYSINFO_GET_BOARD_NAME \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SYSINFO, 4)
+
 // ssize_t ioctl_sysinfo_get_root_job(int fd, zx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_sysinfo_get_root_job, IOCTL_SYSINFO_GET_ROOT_JOB, zx_handle_t);
 
@@ -36,3 +42,6 @@ IOCTL_WRAPPER_OUT(ioctl_sysinfo_get_root_resource, IOCTL_SYSINFO_GET_ROOT_RESOUR
 
 // ssize_t ioctl_sysinfo_get_hypervisor_resource(int fd, zx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_sysinfo_get_hypervisor_resource, IOCTL_SYSINFO_GET_HYPERVISOR_RESOURCE, zx_handle_t);
+
+// ssize_t ioctl_sysinfo_get_board_name(int fd, char* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_sysinfo_get_board_name, IOCTL_SYSINFO_GET_BOARD_NAME, char);

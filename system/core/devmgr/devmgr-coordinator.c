@@ -1078,8 +1078,9 @@ static zx_status_t dc_get_metadata(device_t* dev, uint32_t type, void* buffer, s
     dc_metadata_t* md;
 
     // search dev and its parent devices for a match
-    while (dev) {
-        list_for_every_entry(&dev->metadata, md, dc_metadata_t, node) {
+    device_t* test = dev;
+    while (test) {
+        list_for_every_entry(&test->metadata, md, dc_metadata_t, node) {
             if (md->type == type) {
                 if (md->length > buflen) {
                     return ZX_ERR_BUFFER_TOO_SMALL;
@@ -1089,7 +1090,27 @@ static zx_status_t dc_get_metadata(device_t* dev, uint32_t type, void* buffer, s
                 return ZX_OK;
             }
         }
-        dev = dev->parent;
+        test = test->parent;
+    }
+
+    // if no metadata is found, check list of metadata added via device_publish_metadata()
+    char path[DC_PATH_MAX];
+    zx_status_t status = dc_get_topo_path(dev, path, DC_PATH_MAX);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    dc_metadata_t* temp;
+    list_for_every_entry_safe(&published_metadata, md, temp, dc_metadata_t, node) {
+        char* md_path = (char*)md->data + md->length;
+        if (md->type == type && !strcmp(md_path, path)) {
+            if (md->length > buflen) {
+                return ZX_ERR_BUFFER_TOO_SMALL;
+            }
+            memcpy(buffer, md->data, md->length);
+            *actual = md->length;
+            return ZX_OK;
+        }
     }
 
     return ZX_ERR_NOT_FOUND;
@@ -1111,11 +1132,7 @@ static zx_status_t dc_add_metadata(device_t* dev, uint32_t type, const void* dat
 
 static zx_status_t dc_publish_metadata(device_t* dev, const char* path, uint32_t type,
                                        const void* data, uint32_t length) {
-    if (!path || strncmp(path, "/dev/sys/", strlen("/dev/sys/"))) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // TODO: this should probably be restricted to the root devhost
+    // TODO: Restrict access to the sys devhost by matching against caller's PID.
 
     dc_metadata_t* md = calloc(1, sizeof(dc_metadata_t) + length + strlen(path) + 1);
     if (!md) {
@@ -1670,21 +1687,6 @@ static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
 
 static void dc_handle_new_device(device_t* dev) {
     driver_t* drv;
-
-    char path[DC_PATH_MAX];
-    if (dc_get_topo_path(dev, path, DC_PATH_MAX) == ZX_OK) {
-        // check for metadata in published_metadata
-        // move any matches to new device's metadata list
-        dc_metadata_t* md;
-        dc_metadata_t* temp;
-        list_for_every_entry_safe(&published_metadata, md, temp, dc_metadata_t, node) {
-            char* md_path = (char*)md->data + md->length;
-            if (!strcmp(md_path, path)) {
-                list_delete(&md->node);
-                list_add_tail(&dev->metadata, &md->node);
-            }
-        }
-    }
 
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
         if (dc_is_bindable(drv, dev->protocol_id,

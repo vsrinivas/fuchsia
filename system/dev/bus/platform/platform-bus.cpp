@@ -14,6 +14,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/platform-defs.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
@@ -334,6 +335,15 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
             // This is optionally set later by the board driver.
             board_info_.board_revision = 0;
             got_platform_id = true;
+
+            // Publish board name to sysinfo driver
+            status = device_publish_metadata(parent(), "/dev/misc/sysinfo",
+                                             DEVICE_METADATA_BOARD_NAME, platform_id.board_name,
+                                             sizeof(platform_id.board_name));
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
+                return status;
+            }
         } else if (ZBI_TYPE_DRV_METADATA(header.type)) {
             status = zbi.read(metadata + metadata_offset, off, itemlen);
             if (status != ZX_OK) {

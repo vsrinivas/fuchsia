@@ -30,6 +30,10 @@ static_assert(DEVICE_METADATA_PARTITION_MAP == ZBI_TYPE_DRV_PARTITION_MAP, "");
 // type: serial_port_info_t
 #define DEVICE_METADATA_SERIAL_PORT_INFO    0x4D524553 // SERM
 
+// Platform board name (for sysinfo driver)
+// type: char[ZBI_BOARD_NAME_LEN]
+#define DEVICE_METADATA_BOARD_NAME          0x4E524F42 // BORN
+
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
 // This allows creating metadata types to be defined local to a particular

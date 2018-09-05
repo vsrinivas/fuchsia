@@ -5,11 +5,13 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/metadata.h>
 
 #include <zircon/types.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
+#include <zircon/boot/image.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/syscalls/resource.h>
 
@@ -20,19 +22,24 @@
 
 
 #define ID_HJOBROOT 4
-static mtx_t sysinfo_lock = MTX_INIT;
-static zx_handle_t sysinfo_job_root;
 
-static zx_handle_t get_sysinfo_job_root(void) {
-    mtx_lock(&sysinfo_lock);
-    if (sysinfo_job_root == ZX_HANDLE_INVALID) {
-        sysinfo_job_root = zx_take_startup_handle(PA_HND(PA_USER0, ID_HJOBROOT));
+typedef struct {
+    zx_device_t* zxdev;
+    zx_handle_t job_root;
+    mtx_t lock;
+    char board_name[ZBI_BOARD_NAME_LEN];
+} sysinfo_t;
+
+static zx_handle_t get_sysinfo_job_root(sysinfo_t* sysinfo) {
+    mtx_lock(&sysinfo->lock);
+    if (sysinfo->job_root == ZX_HANDLE_INVALID) {
+        sysinfo->job_root = zx_take_startup_handle(PA_HND(PA_USER0, ID_HJOBROOT));
     }
-    mtx_unlock(&sysinfo_lock);
+    mtx_unlock(&sysinfo->lock);
 
     zx_handle_t h;
-    if ((sysinfo_job_root != ZX_HANDLE_INVALID) &&
-        (zx_handle_duplicate(sysinfo_job_root, ZX_RIGHT_SAME_RIGHTS, &h) == ZX_OK)) {
+    if ((sysinfo->job_root != ZX_HANDLE_INVALID) &&
+        (zx_handle_duplicate(sysinfo->job_root, ZX_RIGHT_SAME_RIGHTS, &h) == ZX_OK)) {
         return h;
     }
 
@@ -41,12 +48,14 @@ static zx_handle_t get_sysinfo_job_root(void) {
 
 static zx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
                              void* reply, size_t max, size_t* out_actual) {
+    sysinfo_t* sysinfo = ctx;
+
     switch (op) {
     case IOCTL_SYSINFO_GET_ROOT_JOB: {
         if ((cmdlen != 0) || (max < sizeof(zx_handle_t))) {
             return ZX_ERR_INVALID_ARGS;
         }
-        zx_handle_t h = get_sysinfo_job_root();
+        zx_handle_t h = get_sysinfo_job_root(sysinfo);
         if (h == ZX_HANDLE_INVALID) {
             return ZX_ERR_NOT_SUPPORTED;
         } else {
@@ -87,6 +96,27 @@ static zx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         *out_actual = sizeof(zx_handle_t);
         return ZX_OK;
     }
+    case IOCTL_SYSINFO_GET_BOARD_NAME: {
+        if ((cmdlen != 0) || (max < sizeof(sysinfo->board_name))) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        zx_status_t status = ZX_OK;
+
+        mtx_lock(&sysinfo->lock);
+        if (sysinfo->board_name[0] == 0) {
+            size_t actual = 0;
+            status = device_get_metadata(sysinfo->zxdev, DEVICE_METADATA_BOARD_NAME,
+                                         sysinfo->board_name, sizeof(sysinfo->board_name),
+                                         &actual);
+        }
+        mtx_unlock(&sysinfo->lock);
+        if (status != ZX_OK) {
+            return status;
+        }
+        memcpy(reply, sysinfo->board_name, sizeof(sysinfo->board_name));
+        *out_actual = sizeof(sysinfo->board_name);
+        return ZX_OK;
+    }
     default:
         return ZX_ERR_INVALID_ARGS;
     }
@@ -98,14 +128,21 @@ static zx_protocol_device_t sysinfo_ops = {
 };
 
 zx_status_t sysinfo_bind(void* ctx, zx_device_t* parent) {
+    sysinfo_t* sysinfo = calloc(1, sizeof(sysinfo_t));
+    if (!sysinfo) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    mtx_init(&sysinfo->lock, mtx_plain);
+
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "sysinfo",
+        .ctx = sysinfo,
         .ops = &sysinfo_ops,
     };
 
-    zx_device_t* dev;
-    return device_add(parent, &args, &dev);
+    return device_add(parent, &args, &sysinfo->zxdev);
 }
 
 static zx_driver_ops_t sysinfo_driver_ops = {

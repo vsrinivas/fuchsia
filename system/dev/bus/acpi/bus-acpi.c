@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/acpi.h>
 #include <ddk/protocol/pciroot.h>
 
@@ -647,6 +648,16 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
         zxlogf(ERROR, "acpi: error %d in device_add(sys/acpi)\n", status);
         device_remove(sys_root);
         return status;
+    }
+
+    // TODO - retrieve more useful board name from ACPI data
+    const char board_name[] = { "pc" };
+
+    // Publish board name to sysinfo driver
+    status = device_publish_metadata(acpi_root, "/dev/misc/sysinfo", DEVICE_METADATA_BOARD_NAME,
+                                     board_name, sizeof(board_name));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
     }
 
     publish_acpi_devices(acpi_root);
