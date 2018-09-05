@@ -264,7 +264,7 @@ static zx_status_t aml_thermal_ioctl(void* ctx, uint32_t op,
         }
         uint32_t* power_domain = (uint32_t*)in_buf;
         uint32_t* opp_idx = (uint32_t*)out_buf;
-        if (power_domain == BIG_CLUSTER_POWER_DOMAIN) {
+        if (*power_domain == BIG_CLUSTER_POWER_DOMAIN) {
             *opp_idx = dev->current_big_cluster_opp_idx;
         } else {
             *opp_idx = dev->current_little_cluster_opp_idx;
