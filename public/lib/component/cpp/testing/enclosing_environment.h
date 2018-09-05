@@ -13,12 +13,16 @@
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
-
 #include "lib/component/cpp/testing/launcher_impl.h"
+#include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
 
 namespace component {
 namespace testing {
+
+static constexpr char kCannotAddServiceAfterLaunch[] =
+    "Cannot add a service to an environment that has already started. "
+    "Call EnclosingEnvironment::Launch() after adding services.";
 
 // EnclosingEnvironment wraps a new isolated environment for test |parent_env|
 // and provides a way to use that environment for integration testing.
@@ -31,17 +35,21 @@ namespace testing {
 // It also provides a way to access parent services if needed.
 class EnclosingEnvironment {
  public:
-  // Creates environment using loader from parent environment.
+  // Creates environment using loader from parent environment. Does not
+  // actually start the environment -- see Launch().
   //
   // |label| is human readable environment name, it can be seen in /hub, for eg
   // /hub/r/sys/<koid>/r/<label>/<koid>
   static std::unique_ptr<EnclosingEnvironment> Create(
-      const std::string& label, const fuchsia::sys::EnvironmentPtr& parent_env);
+      const std::string& label, fuchsia::sys::EnvironmentPtr parent_env);
 
   // Creates environment using custom loader service.
   static std::unique_ptr<EnclosingEnvironment> CreateWithCustomLoader(
-      const std::string& label, const fuchsia::sys::EnvironmentPtr& parent_env,
+      const std::string& label, fuchsia::sys::EnvironmentPtr parent_env,
       const fbl::RefPtr<fs::Service>& loader_service);
+
+  // Starts the environment. Should be called after adding all services.
+  void Launch();
 
   ~EnclosingEnvironment();
 
@@ -70,6 +78,8 @@ class EnclosingEnvironment {
   template <typename Interface>
   zx_status_t AddService(fidl::InterfaceRequestHandler<Interface> handler,
                          const std::string& service_name = Interface::Name_) {
+    FXL_DCHECK(!service_provider_) << kCannotAddServiceAfterLaunch;
+    svc_names_.push_back(service_name);
     return svc_->AddEntry(
         service_name.c_str(),
         fbl::AdoptRef(new fs::Service(
@@ -82,6 +92,8 @@ class EnclosingEnvironment {
   // Adds the specified service to the set of services.
   zx_status_t AddService(const fbl::RefPtr<fs::Service> service,
                          const std::string& service_name) {
+    FXL_DCHECK(!service_provider_) << kCannotAddServiceAfterLaunch;
+    svc_names_.push_back(service_name);
     return svc_->AddEntry(service_name.c_str(), service);
   }
 
@@ -97,6 +109,8 @@ class EnclosingEnvironment {
   // This will only work if parent environment actually provides said service
   // and the service is in the test component's service whitelist.
   zx_status_t AllowParentService(const std::string& service_name) {
+    FXL_DCHECK(!service_provider_) << kCannotAddServiceAfterLaunch;
+    svc_names_.push_back(service_name);
     return svc_->AddEntry(
         service_name.c_str(),
         fbl::AdoptRef(
@@ -154,13 +168,15 @@ class EnclosingEnvironment {
 
  private:
   EnclosingEnvironment(const std::string& label,
-                       const fuchsia::sys::EnvironmentPtr& parent_env,
+                       fuchsia::sys::EnvironmentPtr parent_env,
                        const fbl::RefPtr<fs::Service>& loader_service);
 
   bool running_;
-  fuchsia::sys::EnvironmentPtr env_;
+  const std::string label_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
+  fuchsia::sys::EnvironmentPtr parent_env_;
   fbl::RefPtr<fs::PseudoDir> svc_;
+  fidl::VectorPtr<fidl::StringPtr> svc_names_;
   fuchsia::sys::ServiceProviderPtr parent_svc_;
   fuchsia::sys::ServiceProviderPtr service_provider_;
   fs::SynchronousVfs vfs_;

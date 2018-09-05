@@ -40,7 +40,8 @@ struct RealmArgs {
       Realm* parent,
       fidl::StringPtr label,
       const std::shared_ptr<component::Services>& env_services,
-      bool run_virtual_console);
+      bool run_virtual_console,
+      bool inherit_parent_services);
 
   static RealmArgs MakeWithHostDir(
       Realm* parent,

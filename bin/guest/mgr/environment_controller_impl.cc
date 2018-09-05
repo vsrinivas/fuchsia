@@ -19,13 +19,12 @@ EnvironmentControllerImpl::EnvironmentControllerImpl(
   // Create environment.
   context_->environment()->CreateNestedEnvironment(
       env_.NewRequest(), env_controller_.NewRequest(), label,
-      service_provider_bridge_.OpenAsDirectory(),
-      /*additional_services=*/nullptr, /*inherit_parent_services=*/false);
+      zx::channel(), /*additional_services=*/nullptr,
+      /*inherit_parent_services=*/true);
   env_->GetLauncher(launcher_.NewRequest());
   zx::channel h1, h2;
   FXL_CHECK(zx::channel::create(0, &h1, &h2) == ZX_OK);
   context_->environment()->GetDirectory(std::move(h1));
-  service_provider_bridge_.set_backing_dir(std::move(h2));
 
   AddBinding(std::move(request));
 }

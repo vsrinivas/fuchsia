@@ -32,6 +32,7 @@ class InspectTest : public component::testing::TestWithEnvironment {
     launch_info.url = kTestComponent;
 
     environment_ = CreateNewEnclosingEnvironment("test");
+    environment_->Launch();
     environment_->CreateComponent(std::move(launch_info),
                                   controller_.NewRequest());
     WaitForEnclosingEnvToStart(environment_.get());

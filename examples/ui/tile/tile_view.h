@@ -11,11 +11,12 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fs/pseudo-dir.h>
+#include <fs/synchronous-vfs.h>
 #include "garnet/examples/ui/tile/tile_params.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/svc/cpp/service_provider_bridge.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/view_framework/base_view.h"
 
@@ -73,6 +74,8 @@ class TileView : public mozart::BaseView,
   // Launches initial list of views, passed as command line parameters.
   void ConnectViews();
 
+  zx::channel OpenAsDirectory();
+
   void AddChildView(
       fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       const std::string& url, fuchsia::sys::ComponentControllerPtr);
@@ -81,7 +84,8 @@ class TileView : public mozart::BaseView,
   // Nested environment within which the apps started by TileView will run.
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
-  component::ServiceProviderBridge service_provider_bridge_;
+  fs::SynchronousVfs vfs_;
+  fbl::RefPtr<fs::PseudoDir> services_dir_;
   fuchsia::sys::LauncherPtr env_launcher_;
 
   // Context inherited when TileView is launched.

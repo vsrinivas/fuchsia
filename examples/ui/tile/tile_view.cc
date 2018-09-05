@@ -7,6 +7,7 @@
 #include <lib/fdio/util.h>
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <lib/async/default.h>
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
@@ -21,6 +22,8 @@ TileView::TileView(
         view_owner_request,
     component::StartupContext* startup_context, const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
+      vfs_(async_get_default_dispatcher()),
+      services_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       startup_context_(startup_context),
       params_(params),
       container_node_(session()) {
@@ -78,24 +81,32 @@ void TileView::ConnectViews() {
   }
 }
 
-void TileView::CreateNestedEnvironment() {
-  startup_context_->environment()->CreateNestedEnvironment(
-      env_.NewRequest(), env_controller_.NewRequest(), "tile",
-      service_provider_bridge_.OpenAsDirectory(),
-      /*additional_services=*/nullptr, /*inherit_parent_services=*/false);
-  env_->GetLauncher(env_launcher_.NewRequest());
-
-  // Add a binding for the presenter service
-  service_provider_bridge_.AddService<fuchsia::ui::policy::Presenter>(
-      [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presenter> request) {
-        presenter_bindings_.AddBinding(this, std::move(request));
-      });
-
+zx::channel TileView::OpenAsDirectory() {
   zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) < 0)
-    return;
-  startup_context_->environment()->GetDirectory(std::move(h1));
-  service_provider_bridge_.set_backing_dir(std::move(h2));
+  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
+    return zx::channel();
+  if (vfs_.ServeDirectory(services_dir_, std::move(h1)) != ZX_OK)
+    return zx::channel();
+  return h2;
+}
+
+void TileView::CreateNestedEnvironment() {
+  // Add a binding for the presenter service
+  auto service = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+    presenter_bindings_.AddBinding(
+        this, fidl::InterfaceRequest<fuchsia::ui::policy::Presenter>(
+            std::move(channel)));
+    return ZX_OK;
+  }));
+  services_dir_->AddEntry(fuchsia::ui::policy::Presenter::Name_, service);
+
+  fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
+  service_list->names.push_back(fuchsia::ui::policy::Presenter::Name_);
+  service_list->host_directory = OpenAsDirectory();
+  startup_context_->environment()->CreateNestedEnvironment(
+      env_.NewRequest(), env_controller_.NewRequest(), "tile", zx::channel(),
+      std::move(service_list), /*inherit_parent_services=*/true);
+  env_->GetLauncher(env_launcher_.NewRequest());
 }
 
 void TileView::OnChildAttached(

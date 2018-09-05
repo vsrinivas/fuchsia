@@ -36,6 +36,10 @@ class RealmRunnerTest : public TestWithEnvironment {
     TestWithEnvironment::SetUp();
     enclosing_environment_ = CreateNewEnclosingEnvironment(kRealm);
     enclosing_environment_->AddService(runner_registry_.GetHandler());
+  }
+
+  void LaunchEnvironment() {
+    enclosing_environment_->Launch();
     ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment_.get()));
   }
 
@@ -79,6 +83,7 @@ class RealmRunnerTest : public TestWithEnvironment {
 };
 
 TEST_F(RealmRunnerTest, RunnerLaunched) {
+  LaunchEnvironment();
   auto component =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   ASSERT_TRUE(WaitForRunnerToRegister());
@@ -88,6 +93,7 @@ TEST_F(RealmRunnerTest, RunnerLaunched) {
 }
 
 TEST_F(RealmRunnerTest, RunnerLaunchedOnlyOnce) {
+  LaunchEnvironment();
   auto component1 =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   ASSERT_TRUE(WaitForRunnerToRegister());
@@ -100,6 +106,7 @@ TEST_F(RealmRunnerTest, RunnerLaunchedOnlyOnce) {
 }
 
 TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
+  LaunchEnvironment();
   auto component =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   ASSERT_TRUE(WaitForRunnerToRegister());
@@ -140,6 +147,7 @@ TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
 }
 
 TEST_F(RealmRunnerTest, ComponentBridgeReturnsRightReturnCode) {
+  LaunchEnvironment();
   auto component =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   ASSERT_TRUE(WaitForRunnerToRegister());
@@ -164,6 +172,7 @@ TEST_F(RealmRunnerTest, ComponentBridgeReturnsRightReturnCode) {
 }
 
 TEST_F(RealmRunnerTest, DestroyingControllerKillsComponent) {
+  LaunchEnvironment();
   {
     auto component =
         enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
@@ -176,6 +185,7 @@ TEST_F(RealmRunnerTest, DestroyingControllerKillsComponent) {
 }
 
 TEST_F(RealmRunnerTest, KillComponentController) {
+  LaunchEnvironment();
   auto component =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   ASSERT_TRUE(WaitForRunnerToRegister());
@@ -195,6 +205,7 @@ TEST_F(RealmRunnerTest, ComponentCanConnectToEnvService) {
   ASSERT_EQ(ZX_OK, enclosing_environment_->AddServiceWithLaunchInfo(
                        CreateLaunchInfo("echo2_server_cpp"),
                        fidl::examples::echo::Echo::Name_));
+  LaunchEnvironment();
   auto component =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   ASSERT_TRUE(WaitForRunnerToRegister());
@@ -220,6 +231,7 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
   constexpr char dummy_service_name[] = "dummy_service";
 
   // launch component with service.
+  LaunchEnvironment();
   Services services;
   auto launch_info = CreateLaunchInfo(kComponentForRunner);
   launch_info.directory_request = services.NewRequest();
@@ -257,6 +269,7 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
 }
 
 TEST_F(RealmRunnerTest, ProbeHub) {
+  LaunchEnvironment();
   auto glob_str = fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner/*/c/%s/*",
                                     kRealm, kComponentForRunner);
   // launch two components and make sure both show up in /hub.

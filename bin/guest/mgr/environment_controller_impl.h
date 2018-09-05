@@ -5,14 +5,13 @@
 #ifndef GARNET_BIN_GUEST_MGR_ENVIRONMENT_CONTROLLER_IMPL_H_
 #define GARNET_BIN_GUEST_MGR_ENVIRONMENT_CONTROLLER_IMPL_H_
 
+#include <unordered_map>
+
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/macros.h>
-#include <lib/svc/cpp/service_provider_bridge.h>
-#include <unordered_map>
-
 #include "garnet/bin/guest/mgr/guest_component.h"
 #include "garnet/bin/guest/mgr/host_vsock_endpoint.h"
 
@@ -64,7 +63,6 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
   fuchsia::sys::LauncherPtr launcher_;
-  component::ServiceProviderBridge service_provider_bridge_;
 
   HostVsockEndpoint host_vsock_endpoint_;
   uint32_t next_guest_cid_ = kFirstGuestCid;

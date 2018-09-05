@@ -58,7 +58,8 @@ class ChrealmTest : public component::testing::TestWithEnvironment,
     auto env = CreateNewEnclosingEnvironment(kRealm);
     // Add a TestService that the test realm can use.
     env->AddService(bindings_.GetHandler(this));
-    enclosing_env_.swap(env);
+    env->Launch();
+    enclosing_env_ = std::move(env);
     ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_env_.get()));
 
     // Get the path to the test realm in /hub. Test is running in the root

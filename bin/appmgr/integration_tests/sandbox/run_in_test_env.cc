@@ -58,10 +58,11 @@ int main(int argc, const char** argv) {
 
   TestServiceImpl test_service;
   TestService2Impl test_service2;
-  auto enclosing_env =
-      component::testing::EnclosingEnvironment::Create(kRealm, parent_env);
+  auto enclosing_env = component::testing::EnclosingEnvironment::Create(
+      kRealm, std::move(parent_env));
   enclosing_env->AddService(test_service.GetHandler());
   enclosing_env->AddService(test_service2.GetHandler());
+  enclosing_env->Launch();
 
   const std::string program_url = argv[1];
   auto controller = enclosing_env->CreateComponentFromUrl(program_url);

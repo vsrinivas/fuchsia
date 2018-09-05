@@ -168,14 +168,15 @@ RealmArgs RealmArgs::Make(
     Realm* parent,
     fidl::StringPtr label,
     const std::shared_ptr<component::Services>& env_services,
-    bool run_virtual_console) {
+    bool run_virtual_console,
+    bool inherit_parent_services) {
   return {.parent = parent,
           .label = label,
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .host_directory = zx::channel(),
           .additional_services = nullptr,
-          .inherit_parent_services = false};
+          .inherit_parent_services = inherit_parent_services};
 }
 
 // static
@@ -344,7 +345,8 @@ void Realm::CreateNestedEnvironment(
         std::move(additional_services), inherit_parent_services);
   } else {
     args = RealmArgs::Make(
-        this, label, environment_services_, /*run_virtual_console=*/false);
+        this, label, environment_services_, /*run_virtual_console=*/false,
+        inherit_parent_services);
   }
   auto controller = std::make_unique<EnvironmentControllerImpl>(
       std::move(controller_request), std::make_unique<Realm>(std::move(args)));

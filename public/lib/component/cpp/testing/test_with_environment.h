@@ -63,31 +63,41 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
   // Creates a new enclosing environment inside current real environment.
   //
   // This environment and components created in it will not have access to any
-  // of services(except Loader) and resources from real environment unless
+  // of services(except Loader) and resources from the real environment unless
   // explicitly allowed by calling AllowPublicService.
+  //
+  // After all services are added/passed through to the environment, you must
+  // call Launch() to actually start it.
   std::unique_ptr<EnclosingEnvironment> CreateNewEnclosingEnvironment(
       const std::string& label) const {
-    return EnclosingEnvironment::Create(std::move(label), real_env_);
+    fuchsia::sys::EnvironmentPtr real_env;
+    real_services_->ConnectToService(real_env.NewRequest());
+    return EnclosingEnvironment::Create(label, std::move(real_env));
   }
 
-  // Creates a new enclosing environment inside current real environment with
-  // custom loader service.
+  // Creates a new enclosing environment inside the current real environment
+  // with a custom loader service.
   //
   // This environment and components created in it will not have access to any
-  // of services and resources from real environment unless explicitly allowed
-  // by calling AllowPublicService.
+  // of services and resources from the real environment unless explicitly
+  // allowed by calling AllowPublicService.
+  //
+  // After all services are added/passed through to the environment, you must
+  // call Launch() to actually start it.
   std::unique_ptr<EnclosingEnvironment> CreateNewEnclosingEnvironmentWithLoader(
       const std::string& label,
       const fbl::RefPtr<fs::Service> loader_service) const {
+    fuchsia::sys::EnvironmentPtr real_env;
+    real_services_->ConnectToService(real_env.NewRequest());
     return EnclosingEnvironment::CreateWithCustomLoader(
-        std::move(label), real_env_, loader_service);
+        label, std::move(real_env), loader_service);
   }
 
   // Creates component in current real environment. This component will have
   // access to the services, directories and other resources from the
   // environment in which your test was launched.
   //
-  // This should be moslty used for observing the state of system and for
+  // This should be mostly used for observing the state of system and for
   // nothing else. For eg. Try launching "glob" component and validate how it
   // behaves in various environments.
   void CreateComponentInCurrentEnvironment(
@@ -108,7 +118,6 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
 
  private:
   std::shared_ptr<component::Services> real_services_;
-  fuchsia::sys::EnvironmentPtr real_env_;
   LauncherImpl real_launcher_;
 };
 

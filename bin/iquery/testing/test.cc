@@ -33,6 +33,7 @@ class IqueryGoldenTest : public component::testing::TestWithEnvironment,
     // Create a new enclosing environment and create the example component in
     // it.
     environment_ = CreateNewEnclosingEnvironment("test");
+    environment_->Launch();
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url =
         "fuchsia-pkg://fuchsia.com/iquery_golden_test#meta/"

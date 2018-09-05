@@ -39,6 +39,9 @@ class TestWithEnvironmentExampleTest : public TestWithEnvironment {
 TEST_F(TestWithEnvironmentExampleTest, AddFakeEchoAsService) {
   FakeEcho fake_echo;
   enclosing_environment_->AddService(fake_echo.GetHandler());
+  // All services must be added before EnclosingEnvironment is launched.
+  enclosing_environment_->Launch();
+
   fidl::StringPtr message = "bogus";
   fake_echo.SetAnswer(answer_);
   EchoPtr echo_ptr;
@@ -60,6 +63,9 @@ TEST_F(TestWithEnvironmentExampleTest, AddFakeEchoAsServiceComponent) {
   launch_info.arguments.push_back(answer_);
   enclosing_environment_->AddServiceWithLaunchInfo(std::move(launch_info),
                                                    Echo::Name_);
+  // All services must be added before EnclosingEnvironment is launched.
+  enclosing_environment_->Launch();
+
   fidl::StringPtr message = "bogus";
   EchoPtr echo_ptr;
   // You can also launch your component which connects to echo service using
