@@ -24,6 +24,10 @@ include <{{ .HeaderPath }}>
 {{ template "StructDefinition" . }}
 {{- end }}
 
+{{- range .Unions }}
+{{ template "UnionDefinition" . }}
+{{- end }}
+
 {{ range $interface := .Interfaces -}}
 {{ template "InterfaceDefinition" $interface }}
 {{- end -}}

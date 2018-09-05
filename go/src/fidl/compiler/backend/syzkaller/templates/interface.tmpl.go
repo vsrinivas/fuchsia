@@ -14,8 +14,8 @@ const Interface = `
 {{- if .RequestHandles }}
 {{ template "StructDefinition" .RequestHandles }}
 {{- end }}
-{{- if .Response }}
-{{ template "StructDefinition" .Response }}
+{{- if .ResponseHandles }}
+{{ template "StructDefinition" .ResponseHandles }}
 {{- end }}
 {{- end }}
 
@@ -27,7 +27,13 @@ fdio_service_connect${{ .Name }}(path ptr[in, string["/svc/{{ .ServiceNameString
 
 {{- $if := .Name }}
 {{- range .Methods }}
-zx_channel_call${{ .Name }}(handle zx_chan_{{ $if }}_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[{{ .Name }}Request, {{ .Name }}RequestHandles, array[zx_handle]]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+{{- if and .Request .ResponseHandles }}
+zx_channel_call${{ .Name }}(handle zx_chan_{{ $if }}_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[{{ .Request.Name }}, {{ .RequestHandles.Name }}, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], {{ .ResponseHandles.Name }}]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+{{- else if .Request }}
+zx_channel_write${{ .Name }}(handle zx_chan_{{ $if }}_client, options const[0], bytes ptr[in, {{ .Request.Name }}], num_bytes bytesize[bytes], handles ptr[in, {{ .RequestHandles.Name }}], num_handles bytesize[handles])
+{{- else if .ResponseHandles }}
+zx_channel_read${{ .Name }}(handle zx_chan_{{ $if }}_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, {{ .ResponseHandles.Name }}], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+{{- end }}
 {{- end }}
 
 {{ end -}}
