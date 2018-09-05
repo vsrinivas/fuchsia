@@ -4,18 +4,26 @@
 
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
-linux_image = "$target_out_dir/linux/Image"
 disk_image = "$target_out_dir/linux/disk.img"
+linux_image = "$target_out_dir/linux/Image"
 
-copy("block") {
+action("block") {
   visibility = [ ":*" ]
-  sources = [ "images/${target_cpu}/disk.img" ]
+  script = "check_image.sh"
+  args = [
+    rebase_path("images/${target_cpu}/disk.img", root_build_dir),
+    rebase_path(disk_image, root_build_dir)
+  ]
   outputs = [ disk_image ]
 }
 
-copy("kernel") {
+action("kernel") {
   visibility = [ ":*" ]
-  sources = [ "images/${target_cpu}/Image" ]
+  script = "check_image.sh"
+  args = [
+    rebase_path("images/${target_cpu}/Image", root_build_dir),
+    rebase_path(linux_image, root_build_dir)
+  ]
   outputs = [ linux_image ]
 }
 
