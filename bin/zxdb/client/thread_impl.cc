@@ -150,6 +150,31 @@ void ThreadImpl::SyncFrames(std::function<void()> callback) {
       });
 }
 
+FrameFingerprint ThreadImpl::GetFrameFingerprint(size_t frame_index) const {
+  // See function comment in thread.h for more. We need to look at the next
+  // frame, so either we need to know we got them all or the caller wants the
+  // 0th one. We should always have the top two stack entries if available,
+  // so having only one means we got them all.
+  FXL_DCHECK(frame_index == 0 || HasAllFrames());
+
+  // Should reference a valid index in the array.
+  if (frame_index >= frames_.size()) {
+    FXL_NOTREACHED();
+    return FrameFingerprint();
+  }
+
+  // The frame address requires looking at the previour frame. When this is the
+  // last entry, we can't do that. This returns the frame base pointer instead
+  // which will at least identify the frame in some ways, and can be used to
+  // see if future frames are younger.
+  size_t prev_frame_index = frame_index + 1;
+  if (prev_frame_index == frames_.size())
+    return FrameFingerprint(frames_[frame_index]->GetStackPointer());
+
+  // Use the previuos frame's stack pointer. See frame_fingerprint.h.
+  return FrameFingerprint(frames_[prev_frame_index]->GetStackPointer());
+}
+
 void ThreadImpl::GetRegisters(
     std::function<void(const Err&, const RegisterSet&)> callback) {
   debug_ipc::RegistersRequest request;

@@ -8,13 +8,19 @@
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/client/until_thread_controller.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "lib/fxl/logging.h"
 
 namespace zxdb {
 
-FinishThreadController::FinishThreadController(const Frame* frame_to_finish)
+FinishThreadController::FinishThreadController(FromFrame, const Frame* frame)
     : ThreadController(),
-      frame_ip_(frame_to_finish->GetAddress()),
-      frame_bp_(frame_to_finish->GetBasePointer()) {}
+      frame_ip_(frame->GetAddress()),
+      frame_bp_(frame->GetBasePointer()) {}
+
+FinishThreadController::FinishThreadController(
+    ToFrame, uint64_t to_address, const FrameFingerprint& to_frame_fingerprint)
+    : to_address_(to_address),
+      to_frame_fingerprint_(to_frame_fingerprint) {}
 
 FinishThreadController::~FinishThreadController() = default;
 
@@ -28,17 +34,24 @@ void FinishThreadController::InitWithThread(
     Thread* thread, std::function<void(const Err&)> cb) {
   set_thread(thread);
 
-  auto frames = thread->GetFrames();
-  if (frames.size() >= 2 || thread->HasAllFrames()) {
-    // This thread has the next-to-topmost frame (or we know that it's
-    // not available).
-    InitWithFrames(frames, std::move(cb));
+  if (HaveAddressAndFingerprint()) {
+    // The fingerprint was already computed in the constructor, can skip
+    // directly to setting up the breakpoint.
+    InitWithFingerprint(std::move(cb));
   } else {
-    // Need to asynchronously request the thread's frames. We can capture
-    // |this| here since the thread owns this class.
-    thread->SyncFrames([ this, cb = std::move(cb) ]() {
-      InitWithFrames(this->thread()->GetFrames(), std::move(cb));
-    });
+    // Need to make sure the frames are available to find the fingerprint
+    // (fingerprint computation requires both the destination frame and the
+    // frame before the destination frame).
+    auto frames = thread->GetFrames();
+    if (thread->HasAllFrames()) {
+      InitWithFrames(frames, std::move(cb));
+    } else {
+      // Need to asynchronously request the thread's frames. We can capture
+      // |this| here since the thread owns this class.
+      thread->SyncFrames([ this, cb = std::move(cb) ]() {
+        InitWithFrames(this->thread()->GetFrames(), std::move(cb));
+      });
+    }
   }
 }
 
@@ -73,22 +86,34 @@ void FinishThreadController::InitWithFrames(
     return;
   }
 
-  // The stack frame to exit to is just the next one up. The "until" controller
-  // will manage things from here.
-  Frame* step_to = frames[requested_index + 1];
+  // The stack frame to exit to is just the next one up.
+  size_t step_to_index = requested_index + 1;
+  to_address_ = frames[step_to_index]->GetAddress();
+  to_frame_fingerprint_ = thread()->GetFrameFingerprint(step_to_index);
+  InitWithFingerprint(std::move(cb));
+}
 
-  // UntilThreadController will break when the BP is greater than the argument.
-  // Do "BasePointer - 1" to match the exact BP and anything greater.
-  //
-  // An alternative implementation would be to look at the current frame's BP
-  // (which avoids having to sync the full list of frames) and anything greater
-  // must mean we're out of that frame. But that doesn't handle the case where
-  // the current location is in the function prologue, in which case the BP
-  // of the current frame could be the same as the previuos one.
-  uint64_t threadhold_bp = step_to->GetBasePointer() - 1;
+bool FinishThreadController::HaveAddressAndFingerprint() const {
+  return to_address_ != 0 && to_frame_fingerprint_.is_valid();
+}
+
+void FinishThreadController::InitWithFingerprint(
+    std::function<void(const Err&)> cb) {
+  FXL_DCHECK(HaveAddressAndFingerprint());
   until_controller_ = std::make_unique<UntilThreadController>(
-      InputLocation(step_to->GetAddress()), threadhold_bp);
-  until_controller_->InitWithThread(thread(), std::move(cb));
+      InputLocation(to_address_), to_frame_fingerprint_);
+
+  // Give the "until" controller a dummy callback and execute the callback
+  // ASAP. The until controller executes the callback once it knows that the
+  // breakpoint set has been complete (round-trip to the target system).
+  //
+  // Since we provide an address there's no weirdness with symbols and we don't
+  // have to worry about matching 0 locations. If the breakpoint set fails, the
+  // caller address is invalid and stepping is impossible so it doesn't matter.
+  // We can run faster without waiting for the round-trip, and the IPC will
+  // serialize so the breakpoint set happens before the thread resume.
+  until_controller_->InitWithThread(thread(), [](const Err&) {});
+  cb(Err());
 }
 
 }  // namespace zxdb

@@ -35,6 +35,7 @@ class ThreadImpl : public Thread {
   std::vector<Frame*> GetFrames() const override;
   bool HasAllFrames() const override;
   void SyncFrames(std::function<void()> callback) override;
+  FrameFingerprint GetFrameFingerprint(size_t frame_index) const override;
 
   void GetRegisters(
       std::function<void(const Err&, const RegisterSet&)>) override;

@@ -189,7 +189,8 @@ Err DoFinish(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  auto controller = std::make_unique<FinishThreadController>(cmd.frame());
+  auto controller = std::make_unique<FinishThreadController>(
+      FinishThreadController::FromFrame(), cmd.frame());
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);

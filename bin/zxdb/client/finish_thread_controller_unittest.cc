@@ -57,7 +57,8 @@ TEST_F(FinishThreadControllerTest, Finish) {
 
   EXPECT_FALSE(sink().breakpoint_add_called());
   Err out_err;
-  thread->ContinueWith(std::make_unique<FinishThreadController>(frames[0]),
+  thread->ContinueWith(std::make_unique<FinishThreadController>(
+                           FinishThreadController::FromFrame(), frames[0]),
                        [&out_err](const Err& err) {
                          out_err = err;
                          debug_ipc::MessageLoop::Current()->QuitNow();

@@ -11,6 +11,7 @@
 #include <string>
 
 #include "garnet/bin/zxdb/client/client_object.h"
+#include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/client/thread_observer.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
@@ -104,6 +105,17 @@ class Thread : public ClientObject {
   virtual std::vector<Frame*> GetFrames() const = 0;
   virtual bool HasAllFrames() const = 0;
   virtual void SyncFrames(std::function<void()> callback) = 0;
+
+  // Computes the stack frame fingerprint for the stack frame at the given
+  // index. This function requires that that the previous stack frame
+  // (frame_index + 1) by present since the stack base is the SP of the
+  // calling function.
+  //
+  // This function can always return the fingerprint for frame 0. Other
+  // frames requires HasAllFrames() == true or it will assert.
+  //
+  // See frame.h for a discussion on stack frames.
+  virtual FrameFingerprint GetFrameFingerprint(size_t frame_index) const = 0;
 
   // Obtains the state of the registers for a particular thread.
   // The thread must be stopped in order to get the values.

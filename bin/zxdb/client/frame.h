@@ -17,6 +17,9 @@ class ExprEvalContext;
 class Location;
 class Thread;
 
+// Represents one stack frame.
+//
+// See also FrameFingerprint (the getter for a fingerprint is on Thread).
 class Frame : public ClientObject {
  public:
   explicit Frame(Session* session);

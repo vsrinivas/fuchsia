@@ -16,11 +16,16 @@
 
 namespace zxdb {
 
-UntilThreadController::UntilThreadController(InputLocation location,
-                                             uint64_t end_bp)
+UntilThreadController::UntilThreadController(InputLocation location)
     : ThreadController(),
       location_(std::move(location)),
-      end_bp_(end_bp),
+      weak_factory_(this) {}
+
+UntilThreadController::UntilThreadController(InputLocation location,
+                                             FrameFingerprint newest_frame)
+    : ThreadController(),
+      location_(std::move(location)),
+      newest_threadhold_frame_(newest_frame),
       weak_factory_(this) {}
 
 UntilThreadController::~UntilThreadController() {
@@ -41,7 +46,7 @@ void UntilThreadController::InitWithThread(Thread* thread,
   // Frame-tied triggers can't be one-shot because we need to check the stack
   // every time it triggers. In the non-frame case the one-shot breakpoint will
   // be slightly more efficient.
-  settings.one_shot = end_bp_ == 0;
+  settings.one_shot = !newest_threadhold_frame_.is_valid();
 
   breakpoint_ = GetSystem()->CreateNewInternalBreakpoint()->GetWeakPtr();
   // The breakpoint may post the callback asynchronously, so we can't be sure
@@ -81,7 +86,7 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   if (!is_our_breakpoint)
     return kContinue;  // Not our breakpoint.
 
-  if (!end_bp_)
+  if (!newest_threadhold_frame_.is_valid())
     return kStop;  // No stack check necessary, always stop.
 
   auto frames = thread()->GetFrames();
@@ -90,12 +95,10 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
     return kStop;
   }
 
-  // The stack grows downward. Want to stop the thread only when the frame is
-  // before (greater than) the input one, which means anything <= should
-  // continue.
-  if (frames[0]->GetBasePointer() <= end_bp_)
-    return kContinue;
-  return kStop;
+  FrameFingerprint current_frame = thread()->GetFrameFingerprint(0);
+  if (!FrameFingerprint::Newer(current_frame, newest_threadhold_frame_))
+    return kStop;
+  return kContinue;
 }
 
 System* UntilThreadController::GetSystem() {
