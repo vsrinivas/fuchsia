@@ -146,14 +146,7 @@ void StandardOutputBase::Process() {
 }
 
 zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
-  Bookkeeping* bk = AllocBookkeeping();
-  std::unique_ptr<Bookkeeping> ref(bk);
-
-  // We should never fail to allocate our bookkeeping.  The only way this can
-  // happen is if we have a badly behaved implementation.
-  if (!bk) {
-    return ZX_ERR_INTERNAL;
-  }
+  auto mix_bookkeeping = std::make_unique<Bookkeeping>();
 
   // For now, refuse to link to anything but a packet source.  This code does
   // not currently know how to properly handle a ring-buffer source.
@@ -165,27 +158,22 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
   // Otherwise, we only need a NoOp mixer (for the time being).
   auto& packet_link = *(static_cast<AudioLinkPacketSource*>(link.get()));
   if (output_producer_) {
-    bk->mixer = Mixer::Select(packet_link.format_info().format(),
-                              *(output_producer_->format()));
+    mix_bookkeeping->mixer = Mixer::Select(packet_link.format_info().format(),
+                                           *(output_producer_->format()));
   } else {
-    bk->mixer = MixerPtr(new audio::mixer::NoOp());
+    mix_bookkeeping->mixer = MixerPtr(new audio::mixer::NoOp());
   }
 
-  if (bk->mixer == nullptr) {
+  if (mix_bookkeeping->mixer == nullptr) {
     FXL_LOG(ERROR) << "*** Audio system mixer cannot convert between formats "
                       "*** (could not select mixer while linking to output). "
                       "Usually, this indicates a 'num_channels' mismatch.";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Looks like things went well.  Stash a reference to our bookkeeping and get
-  // out.
-  link->set_bookkeeping(std::move(ref));
+  // Things went well. Stash a reference to our bookkeeping and get out.
+  link->set_bookkeeping(std::move(mix_bookkeeping));
   return ZX_OK;
-}
-
-Bookkeeping* StandardOutputBase::AllocBookkeeping() {
-  return new Bookkeeping();
 }
 
 void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
