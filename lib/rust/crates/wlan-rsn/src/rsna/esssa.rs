@@ -3,12 +3,18 @@
 // found in the LICENSE file.
 
 use crate::auth;
-use eapol;
-use crate::Error;
-use failure::{self, bail};
-use crate::key::exchange::{self, Key, handshake::{fourway::Fourway, group_key::GroupKey}};
+use crate::key::exchange::{
+    self,
+    handshake::{fourway::Fourway, group_key::GroupKey},
+    Key,
+};
 use crate::key::{gtk::Gtk, ptk::Ptk};
-use crate::rsna::{NegotiatedRsne, Role, SecAssocResult, SecAssocStatus, SecAssocUpdate, VerifiedKeyFrame};
+use crate::rsna::{
+    NegotiatedRsne, Role, SecAssocResult, SecAssocStatus, SecAssocUpdate, VerifiedKeyFrame,
+};
+use crate::Error;
+use eapol;
+use failure::{self, bail};
 use std::mem;
 
 #[derive(Debug, PartialEq)]
@@ -39,11 +45,11 @@ impl Ptksa {
         let method = match cfg {
             Some(exchange::Config::FourWayHandshake(cfg)) => {
                 exchange::Method::FourWayHandshake(Fourway::new(cfg, pmk)?)
-            },
+            }
             _ => bail!("unsupported method for PTKSA: {:?}", cfg),
         };
 
-        *self = Ptksa::Initialized(PtksaCfg {method, ptk: None});
+        *self = Ptksa::Initialized(PtksaCfg { method, ptk: None });
         Ok(())
     }
 
@@ -52,7 +58,7 @@ impl Ptksa {
             Ptksa::Initialized(ptksa_cfg) => {
                 let cfg = ptksa_cfg.method.destroy();
                 Ptksa::Uninitialized(Some(cfg))
-            },
+            }
             uninitialized => uninitialized,
         };
         *self = ptska;
@@ -60,7 +66,7 @@ impl Ptksa {
 
     fn ptk(&self) -> Option<&Ptk> {
         match self {
-            Ptksa::Initialized(PtksaCfg{ ptk: Some(ptk) , ..}) => Some(ptk),
+            Ptksa::Initialized(PtksaCfg { ptk: Some(ptk), .. }) => Some(ptk),
             _ => None,
         }
     }
@@ -94,11 +100,11 @@ impl Gtksa {
         let method = match cfg {
             Some(exchange::Config::GroupKeyHandshake(cfg)) => {
                 exchange::Method::GroupKeyHandshake(GroupKey::new(cfg, kck)?)
-            },
+            }
             _ => bail!("unsupported method for GTKSA: {:?}", cfg),
         };
 
-        *self = Gtksa::Initialized(GtksaCfg {method, gtk: None});
+        *self = Gtksa::Initialized(GtksaCfg { method, gtk: None });
         Ok(())
     }
 
@@ -107,7 +113,7 @@ impl Gtksa {
             Gtksa::Initialized(gtksa_cfg) => {
                 let cfg = gtksa_cfg.method.destroy();
                 Gtksa::Uninitialized(Some(cfg))
-            },
+            }
             uninitialized => uninitialized,
         };
         *self = gtksa;
@@ -115,7 +121,7 @@ impl Gtksa {
 
     fn gtk(&self) -> Option<&Gtk> {
         match self {
-            Gtksa::Initialized(GtksaCfg{ gtk: Some(gtk) , ..}) => Some(gtk),
+            Gtksa::Initialized(GtksaCfg { gtk: Some(gtk), .. }) => Some(gtk),
             _ => None,
         }
     }
@@ -232,17 +238,17 @@ impl EssSa {
         // If ESS-SA was not already established, wait with reporting PTK until GTK
         // is also known.
         let was_esssa_established = self.is_established();
-        updates.drain_filter(|update| match update {
-            SecAssocUpdate::Key(_) if !was_esssa_established => true,
-            _ => false,
-        })
-        .for_each(|update| {
-            if let SecAssocUpdate::Key(key) = update {
-                if let Err(e) = self.on_key_confirmed(key.clone()) {
-                    eprintln!("error while processing key: {}", e);
-                };
-            }
-        });
+        updates
+            .drain_filter(|update| match update {
+                SecAssocUpdate::Key(_) if !was_esssa_established => true,
+                _ => false,
+            }).for_each(|update| {
+                if let SecAssocUpdate::Key(key) = update {
+                    if let Err(e) = self.on_key_confirmed(key.clone()) {
+                        eprintln!("error while processing key: {}", e);
+                    };
+                }
+            });
 
         // Report if ESSSA was established successfully for the first time,
         // as well as PTK and GTK.
@@ -259,16 +265,21 @@ impl EssSa {
 
     fn on_eapol_key_frame(&mut self, frame: &eapol::KeyFrame) -> SecAssocResult {
         // Verify the frame complies with IEEE Std 802.11-2016, 12.7.2.
-        let result = VerifiedKeyFrame::from_key_frame(frame, &self.role, &self.negotiated_rsne,
-                                                      self.key_replay_counter,
-                                                      self.ptksa.ptk(), self.gtksa.gtk());
+        let result = VerifiedKeyFrame::from_key_frame(
+            frame,
+            &self.role,
+            &self.negotiated_rsne,
+            self.key_replay_counter,
+            self.ptksa.ptk(),
+            self.gtksa.gtk(),
+        );
         let verified_frame = match result {
             Err(e) => match e.cause().downcast_ref::<Error>() {
                 Some(Error::WrongAesKeywrapKey) => {
                     return Ok(vec![SecAssocUpdate::Status(SecAssocStatus::WrongPassword)])
-                },
+                }
                 _ => bail!(e),
-            }
+            },
             other => other,
         }?;
 
@@ -286,7 +297,7 @@ impl EssSa {
                 (Ptksa::Uninitialized(_), _) => Ok(vec![]),
                 (Ptksa::Initialized(ptksa), Gtksa::Uninitialized(_)) => {
                     ptksa.method.on_eapol_key_frame(verified_frame)
-                },
+                }
                 (Ptksa::Initialized(ptksa), Gtksa::Initialized(gtksa)) => {
                     // IEEE Std 802.11-2016, 12.7.2 b.2)
                     if frame.key_info.key_type() == eapol::KEY_TYPE_PAIRWISE {
@@ -294,11 +305,13 @@ impl EssSa {
                     } else if frame.key_info.key_type() == eapol::KEY_TYPE_GROUP_SMK {
                         gtksa.method.on_eapol_key_frame(verified_frame)
                     } else {
-                        eprintln!("unsupported EAPOL Key frame key type: {:?}",
-                                  frame.key_info.key_type());
+                        eprintln!(
+                            "unsupported EAPOL Key frame key type: {:?}",
+                            frame.key_info.key_type()
+                        );
                         Ok(vec![])
                     }
-                },
+                }
             },
         }
     }
@@ -321,12 +334,11 @@ mod tests {
             msg1.key_replay_counter = 0;
         });
         let updates = result.expect("Supplicant failed processing 1st message");
-        let msg2 = extract_eapol_resp(&updates[..])
-            .expect("Supplicant did not respond with 2nd message");
+        let msg2 =
+            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
         let ptk = extract_ptk(msg2);
 
-        send_msg3(&mut esssa, &ptk, |_| {})
-            .expect("Supplicant failed processing 3rd message");
+        send_msg3(&mut esssa, &ptk, |_| {}).expect("Supplicant failed processing 3rd message");
     }
 
     #[test]
@@ -345,8 +357,8 @@ mod tests {
         let updates = send_msg1(&mut esssa, |msg1| {
             msg1.key_replay_counter = 1;
         }).expect("Supplicant failed processing 1st message");
-        let msg2 = extract_eapol_resp(&updates[..])
-            .expect("Supplicant did not respond with 2nd message");
+        let msg2 =
+            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
         let ptk = extract_ptk(msg2);
 
         send_msg3(&mut esssa, &ptk, |msg3| {
@@ -361,8 +373,8 @@ mod tests {
         let updates = send_msg1(&mut esssa, |msg1| {
             msg1.key_replay_counter = 0;
         }).expect("Supplicant failed processing 1st message");
-        let msg2 = extract_eapol_resp(&updates[..])
-            .expect("Supplicant did not respond with 2nd message");
+        let msg2 =
+            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
         let ptk = extract_ptk(msg2);
 
         send_msg3(&mut esssa, &ptk, |msg3| {
@@ -377,8 +389,8 @@ mod tests {
         let updates = send_msg1(&mut esssa, |msg1| {
             msg1.key_replay_counter = 0;
         }).expect("Supplicant failed processing 1st message");
-        let msg2 = extract_eapol_resp(&updates[..])
-            .expect("Supplicant did not respond with 2nd message");
+        let msg2 =
+            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
         let ptk = extract_ptk(msg2);
 
         send_msg3(&mut esssa, &ptk, |msg3| {
@@ -410,8 +422,8 @@ mod tests {
         let updates = result.expect("Supplicant failed processing 1st message");
 
         // Verify 2nd message.
-        let msg2 = extract_eapol_resp(&updates[..])
-            .expect("Supplicant did not respond with 3nd message");
+        let msg2 =
+            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 3nd message");
         let s_rsne = test_util::get_s_rsne();
         let s_rsne_data = test_util::get_rsne_bytes(&s_rsne);
         assert_eq!(msg2.version, 1);
@@ -432,12 +444,12 @@ mod tests {
 
         // Send 3rd message.
         let ptk = extract_ptk(msg2);
-        let updates = send_msg3(&mut esssa, &ptk, |_| {})
-            .expect("Supplicant failed processing 3rd message");
+        let updates =
+            send_msg3(&mut esssa, &ptk, |_| {}).expect("Supplicant failed processing 3rd message");
 
         // Verify 4th message was received and is correct.
-        let msg4 = extract_eapol_resp(&updates[..])
-            .expect("Supplicant did not respond with 4th message");
+        let msg4 =
+            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 4th message");
         assert_eq!(msg4.version, 1);
         assert_eq!(msg4.packet_type, 3);
         assert_eq!(msg4.packet_body_len as usize, msg4.len() - 4);
@@ -457,20 +469,20 @@ mod tests {
         assert_eq!(&msg4.key_mic[..], &mic[..]);
 
         // Verify PTK was reported.
-        let reported_ptk = extract_reported_ptk(&updates[..])
-            .expect("Supplicant did not report PTK");
+        let reported_ptk =
+            extract_reported_ptk(&updates[..]).expect("Supplicant did not report PTK");
         assert_eq!(ptk.ptk(), reported_ptk.ptk());
 
         // Verify GTK was reported.
-        let reported_gtk = extract_reported_gtk(&updates[..])
-            .expect("Supplicant did not report GTK");
+        let reported_gtk =
+            extract_reported_gtk(&updates[..]).expect("Supplicant did not report GTK");
         assert_eq!(&GTK[..], reported_gtk.gtk());
 
         // Verify ESS was reported to be established.
-        let reported_status = extract_reported_status(&updates[..])
-            .expect("Supplicant did not report any status");
+        let reported_status =
+            extract_reported_status(&updates[..]).expect("Supplicant did not report any status");
         match reported_status {
-            SecAssocStatus::EssSaEstablished => {},
+            SecAssocStatus::EssSaEstablished => {}
             _ => assert!(false),
         };
 
@@ -501,8 +513,8 @@ mod tests {
         assert_eq!(&msg2.key_mic[..], &mic[..]);
 
         // Verify GTK was reported.
-        let reported_gtk = extract_reported_gtk(&updates[..])
-            .expect("Supplicant did not report re-key'ed GTK");
+        let reported_gtk =
+            extract_reported_gtk(&updates[..]).expect("Supplicant did not report re-key'ed GTK");
         assert_eq!(&GTK_REKEY[..], reported_gtk.gtk());
     }
 
@@ -516,49 +528,60 @@ mod tests {
     }
 
     fn extract_eapol_resp(updates: &[SecAssocUpdate]) -> Option<&eapol::KeyFrame> {
-        updates.iter().filter_map(|u| match u {
-            SecAssocUpdate::TxEapolKeyFrame(resp) => Some(resp),
-            _ => None,
-        }).next()
+        updates
+            .iter()
+            .filter_map(|u| match u {
+                SecAssocUpdate::TxEapolKeyFrame(resp) => Some(resp),
+                _ => None,
+            }).next()
     }
 
     fn extract_reported_ptk(updates: &[SecAssocUpdate]) -> Option<&Ptk> {
-        updates.iter().filter_map(|u| match u {
-            SecAssocUpdate::Key(Key::Ptk(ptk)) => Some(ptk),
-            _ => None,
-        }).next()
+        updates
+            .iter()
+            .filter_map(|u| match u {
+                SecAssocUpdate::Key(Key::Ptk(ptk)) => Some(ptk),
+                _ => None,
+            }).next()
     }
 
     fn extract_reported_gtk(updates: &[SecAssocUpdate]) -> Option<&Gtk> {
-        updates.iter().filter_map(|u| match u {
-            SecAssocUpdate::Key(Key::Gtk(gtk)) => Some(gtk),
-            _ => None,
-        }).next()
+        updates
+            .iter()
+            .filter_map(|u| match u {
+                SecAssocUpdate::Key(Key::Gtk(gtk)) => Some(gtk),
+                _ => None,
+            }).next()
     }
 
     fn extract_reported_status(updates: &[SecAssocUpdate]) -> Option<&SecAssocStatus> {
-        updates.iter().filter_map(|u| match u {
-            SecAssocUpdate::Status(status) => Some(status),
-            _ => None,
-        }).next()
+        updates
+            .iter()
+            .filter_map(|u| match u {
+                SecAssocUpdate::Status(status) => Some(status),
+                _ => None,
+            }).next()
     }
 
     fn send_msg1<F>(esssa: &mut EssSa, msg_modifier: F) -> SecAssocResult
-        where F: Fn(&mut eapol::KeyFrame)
+    where
+        F: Fn(&mut eapol::KeyFrame),
     {
         let msg = test_util::get_4whs_msg1(&ANONCE[..], msg_modifier);
         esssa.on_eapol_frame(&eapol::Frame::Key(msg))
     }
 
     fn send_msg3<F>(esssa: &mut EssSa, ptk: &Ptk, msg_modifier: F) -> SecAssocResult
-        where F: Fn(&mut eapol::KeyFrame)
+    where
+        F: Fn(&mut eapol::KeyFrame),
     {
         let (msg, _) = test_util::get_4whs_msg3(ptk, &ANONCE[..], &GTK[..], msg_modifier);
         esssa.on_eapol_frame(&eapol::Frame::Key(msg))
     }
 
     fn send_group_key_msg1<F>(esssa: &mut EssSa, ptk: &Ptk, msg_modifier: F) -> SecAssocResult
-        where F: Fn(&mut eapol::KeyFrame)
+    where
+        F: Fn(&mut eapol::KeyFrame),
     {
         let (msg, _) = test_util::get_group_key_hs_msg1(ptk, &GTK_REKEY[..], msg_modifier);
         esssa.on_eapol_frame(&eapol::Frame::Key(msg))

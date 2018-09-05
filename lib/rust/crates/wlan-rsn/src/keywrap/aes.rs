@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use byteorder::{BigEndian, ByteOrder};
+use crate::keywrap::Algorithm;
+use crate::Error;
 use crypto::aes::KeySize;
 use crypto::aessafe;
-use crypto::blockmodes::{self, EcbEncryptor, EcbDecryptor, PaddingProcessor};
+use crypto::blockmodes::{self, EcbDecryptor, EcbEncryptor, PaddingProcessor};
 use crypto::buffer;
 use crypto::symmetriccipher::{Decryptor, Encryptor};
 use failure::{self, bail, ensure, format_err};
-use crate::keywrap::Algorithm;
-use crate::Error;
 
 // Implementation of RFC 3394 - Advanced Encryption Standard (AES) Key Wrap Algorithm
 // RFC 3394, 2.2.3
@@ -33,7 +33,8 @@ impl NistAes {
 pub fn ecb_encryptor<X: PaddingProcessor + Send + 'static>(
     key_size: KeySize,
     key: &[u8],
-    padding: X) -> Box<Encryptor> {
+    padding: X,
+) -> Box<Encryptor> {
     match key_size {
         KeySize::KeySize128 => {
             let aes_enc = aessafe::AesSafe128Encryptor::new(key);
@@ -56,7 +57,8 @@ pub fn ecb_encryptor<X: PaddingProcessor + Send + 'static>(
 pub fn ecb_decryptor<X: PaddingProcessor + Send + 'static>(
     key_size: KeySize,
     key: &[u8],
-    padding: X) -> Box<Decryptor> {
+    padding: X,
+) -> Box<Decryptor> {
     match key_size {
         KeySize::KeySize128 => {
             let aes_dec = aessafe::AesSafe128Decryptor::new(key);
@@ -80,7 +82,10 @@ impl Algorithm for NistAes {
     // RFC 3394, 2.2.1 - Uses index based wrapping
     fn wrap(&self, key: &[u8], p: &[u8]) -> Result<Vec<u8>, failure::Error> {
         let n = p.len() / 8;
-        ensure!(p.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(p.len()));
+        ensure!(
+            p.len() % 8 == 0 && n >= 2,
+            Error::InvalidAesKeywrapDataLength(p.len())
+        );
 
         let keysize = NistAes::keysize(key.len())?;
         let mut b = vec![0u8; BLOCK_SIZE];
@@ -103,11 +108,9 @@ impl Algorithm for NistAes {
                     {
                         let mut read_buf = buffer::RefReadBuffer::new(&aes_block[..]);
                         let mut write_buf = buffer::RefWriteBuffer::new(&mut b[..]);
-                        let mut cipher = ecb_encryptor(
-                            keysize,
-                            key,
-                            blockmodes::NoPadding);
-                        cipher.encrypt(&mut read_buf, &mut write_buf, true)
+                        let mut cipher = ecb_encryptor(keysize, key, blockmodes::NoPadding);
+                        cipher
+                            .encrypt(&mut read_buf, &mut write_buf, true)
                             .map_err(|e| format_err!("AES keywrap encryption error: {:?}", e))?;
                     }
                     let t = (n * j + i) as u64;
@@ -127,7 +130,10 @@ impl Algorithm for NistAes {
     // RFC 3394, 2.2.2 - uses index based unwrapping
     fn unwrap(&self, key: &[u8], c: &[u8]) -> Result<Vec<u8>, failure::Error> {
         let n = c.len() / 8 - 1;
-        ensure!(c.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(c.len()));
+        ensure!(
+            c.len() % 8 == 0 && n >= 2,
+            Error::InvalidAesKeywrapDataLength(c.len())
+        );
 
         let keysize = NistAes::keysize(key.len())?;
         let mut b = vec![0u8; BLOCK_SIZE];
@@ -152,11 +158,9 @@ impl Algorithm for NistAes {
                 {
                     let mut read_buf = buffer::RefReadBuffer::new(&aes_block[..]);
                     let mut write_buf = buffer::RefWriteBuffer::new(&mut b[..]);
-                    let mut cipher = ecb_decryptor(
-                        keysize,
-                        key,
-                        blockmodes::NoPadding);
-                    cipher.decrypt(&mut read_buf, &mut write_buf, true)
+                    let mut cipher = ecb_decryptor(keysize, key, blockmodes::NoPadding);
+                    cipher
+                        .decrypt(&mut read_buf, &mut write_buf, true)
                         .map_err(|e| format_err!("AES keywrap decryption error: {:?}", e))?;
                 }
 
@@ -263,9 +267,9 @@ mod tests {
     #[test]
     fn test_invalid_data_length() {
         let kek = Vec::from_hex("000102030405060708090A0B0C0D0E0F").unwrap();
-        let data = Vec::from_hex(
-            "012345678912345601234567891234560123456789123456012345678912345614",
-        ).unwrap();
+        let data =
+            Vec::from_hex("012345678912345601234567891234560123456789123456012345678912345614")
+                .unwrap();
         let keywrap = NistAes;
         let result = keywrap.wrap(&kek[..], &data[..]);
         assert_eq!(result.is_err(), true);

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::Error;
 use crypto::hmac::Hmac;
 use crypto::pbkdf2;
 use crypto::sha1::Sha1;
 use failure::{self, bail, ensure};
-use crate::Error;
 
 /// Keys derived from a passphrase provide comparably low levels of security.
 /// Passphrases should have a minimum length of 20 characters since shorter passphrases
@@ -28,8 +28,10 @@ impl Config {
         ensure!(ssid.len() <= 32, Error::InvalidSsidLen(ssid.len()));
 
         // IEEE Std 802.11-2016, J.4.1
-        ensure!(passphrase.len() >= 8 && passphrase.len() <= 63,
-                Error::InvalidPassphraseLen(passphrase.len()));
+        ensure!(
+            passphrase.len() >= 8 && passphrase.len() <= 63,
+            Error::InvalidPassphraseLen(passphrase.len())
+        );
 
         for c in passphrase {
             ensure!(*c >= 32 && *c <= 126, Error::InvalidPassphraseChar(*c));
@@ -62,7 +64,9 @@ mod tests {
         let cfg_result = Config::new(password.as_bytes(), ssid.as_bytes());
         assert_eq!(cfg_result.is_ok(), true);
 
-        let psk = Psk{config: cfg_result.unwrap()};
+        let psk = Psk {
+            config: cfg_result.unwrap(),
+        };
         let actual = psk.compute();
         let expected = Vec::from_hex(expected).unwrap();
         assert_eq!(actual, expected);

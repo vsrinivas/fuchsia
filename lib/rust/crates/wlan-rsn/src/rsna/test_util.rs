@@ -3,19 +3,22 @@
 // found in the LICENSE file.
 
 use super::*;
+use bytes::Bytes;
 use crate::akm::{self, Akm};
 use crate::auth;
-use bytes::Bytes;
 use crate::cipher::{self, Cipher};
 use crate::crypto_utils::nonce::NonceReader;
-use hex::FromHex;
-use crate::key::exchange::{self, handshake::fourway::{Fourway, Config}};
+use crate::key::exchange::{
+    self,
+    handshake::fourway::{Config, Fourway},
+};
 use crate::key::ptk::Ptk;
 use crate::key_data;
 use crate::key_data::kde;
 use crate::rsna::{esssa::EssSa, NegotiatedRsne};
 use crate::rsne::Rsne;
 use crate::suite_selector::OUI;
+use hex::FromHex;
 
 pub const S_ADDR: [u8; 6] = [0x81, 0x76, 0x61, 0x14, 0xDF, 0xC9];
 pub const A_ADDR: [u8; 6] = [0x1D, 0xE3, 0xFD, 0xDF, 0xCB, 0xD3];
@@ -67,16 +70,22 @@ pub fn get_s_rsne() -> Rsne {
 pub fn get_esssa() -> EssSa {
     let a_rsne = get_a_rsne();
     let s_rsne = get_s_rsne();
-    let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)
-        .expect("could not derive negotiated RSNE");
+    let negotiated_rsne =
+        NegotiatedRsne::from_rsne(&s_rsne).expect("could not derive negotiated RSNE");
     let auth_cfg = auth::Config::for_psk("ThisIsAPassword".as_bytes(), "ThisIsASSID".as_bytes())
         .expect("could not construct authentication config");
     let ptk_exch_cfg =
         exchange::Config::for_4way_handshake(Role::Supplicant, S_ADDR, s_rsne, A_ADDR, a_rsne)
             .expect("could not construct PTK exchange method");
-    let gtk_cfg = exchange::Config::for_groupkey_handshake(Role::Supplicant, negotiated_rsne.akm.clone());
-    EssSa::new(Role::Supplicant, negotiated_rsne, auth_cfg, ptk_exch_cfg, gtk_cfg)
-        .expect("error constructing ESS Security Assocation")
+    let gtk_cfg =
+        exchange::Config::for_groupkey_handshake(Role::Supplicant, negotiated_rsne.akm.clone());
+    EssSa::new(
+        Role::Supplicant,
+        negotiated_rsne,
+        auth_cfg,
+        ptk_exch_cfg,
+        gtk_cfg,
+    ).expect("error constructing ESS Security Assocation")
 }
 
 pub fn get_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
@@ -97,7 +106,8 @@ pub fn get_pmk() -> Vec<u8> {
 
 pub fn compute_mic(kck: &[u8], frame: &eapol::KeyFrame) -> Vec<u8> {
     let akm = get_akm();
-    let integrity_alg = akm.integrity_algorithm()
+    let integrity_alg = akm
+        .integrity_algorithm()
         .expect("error AKM has no known integrity Algorithm");
     let mut buf = Vec::with_capacity(frame.len());
     frame.as_bytes(true, &mut buf);
@@ -124,8 +134,10 @@ pub fn mic_len() -> usize {
 }
 
 pub fn get_nonce() -> Vec<u8> {
-    NonceReader::new(&S_ADDR[..]).expect("error creating NonceReader")
-        .next().expect("error generating nonce")
+    NonceReader::new(&S_ADDR[..])
+        .expect("error creating NonceReader")
+        .next()
+        .expect("error generating nonce")
 }
 
 pub fn get_akm() -> akm::Akm {
@@ -136,9 +148,9 @@ pub fn get_pairwise_cipher() -> cipher::Cipher {
     get_s_rsne().pairwise_cipher_suites.remove(0)
 }
 
-pub fn get_4whs_msg1<F>(anonce: &[u8], msg_modifier: F)
-    -> eapol::KeyFrame
-    where F: Fn(&mut eapol::KeyFrame)
+pub fn get_4whs_msg1<F>(anonce: &[u8], msg_modifier: F) -> eapol::KeyFrame
+where
+    F: Fn(&mut eapol::KeyFrame),
 {
     let mut msg = eapol::KeyFrame {
         version: 1,
@@ -160,9 +172,14 @@ pub fn get_4whs_msg1<F>(anonce: &[u8], msg_modifier: F)
     msg
 }
 
-pub fn get_4whs_msg3<F>(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_modifier: F)
-    -> (eapol::KeyFrame, Bytes)
-    where F: Fn(&mut eapol::KeyFrame)
+pub fn get_4whs_msg3<F>(
+    ptk: &Ptk,
+    anonce: &[u8],
+    gtk: &[u8],
+    msg_modifier: F,
+) -> (eapol::KeyFrame, Bytes)
+where
+    F: Fn(&mut eapol::KeyFrame),
 {
     let mut buf = Vec::with_capacity(256);
 
@@ -208,7 +225,8 @@ pub fn get_4whs_msg3<F>(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_modifier: F)
 }
 
 pub fn get_group_key_hs_msg1<F>(ptk: &Ptk, gtk: &[u8], msg_modifier: F) -> (eapol::KeyFrame, Bytes)
-    where F: Fn(&mut eapol::KeyFrame)
+where
+    F: Fn(&mut eapol::KeyFrame),
 {
     let mut buf = Vec::with_capacity(256);
 
@@ -256,12 +274,12 @@ pub fn is_zero(slice: &[u8]) -> bool {
 fn make_handshake() -> Fourway {
     // Create a new instance of the 4-Way Handshake in Supplicant role.
     let pmk = test_util::get_pmk();
-    let cfg = Config{
+    let cfg = Config {
         s_rsne: test_util::get_s_rsne(),
         a_rsne: test_util::get_a_rsne(),
         s_addr: test_util::S_ADDR,
         a_addr: test_util::A_ADDR,
-        role: Role::Supplicant
+        role: Role::Supplicant,
     };
     Fourway::new(cfg, pmk).expect("error while creating 4-Way Handshake")
 }
@@ -274,9 +292,9 @@ fn compute_ptk(a_nonce: &[u8], supplicant_result: &SecAssocResult) -> Option<Ptk
                     SecAssocUpdate::TxEapolKeyFrame(msg2) => {
                         let snonce = msg2.key_nonce;
                         let derived_ptk = test_util::get_ptk(a_nonce, &snonce[..]);
-                        return Some(derived_ptk)
+                        return Some(derived_ptk);
                     }
-                    _ => {},
+                    _ => {}
                 }
             }
         }
@@ -292,27 +310,43 @@ pub struct FourwayHandshakeTestEnv {
 }
 
 pub fn send_msg1<F>(msg_modifier: F) -> (FourwayHandshakeTestEnv, SecAssocResult)
-    where F: Fn(&mut eapol::KeyFrame) {
+where
+    F: Fn(&mut eapol::KeyFrame),
+{
     let mut handshake = make_handshake();
 
     // Send first message of Handshake to Supplicant and verify result.
     let a_nonce = get_nonce();
     let frame = get_4whs_msg1(&a_nonce[..], msg_modifier);
-    let msg1 = VerifiedKeyFrame{ frame: &frame, kd_plaintext: Bytes::from(vec![])};
+    let msg1 = VerifiedKeyFrame {
+        frame: &frame,
+        kd_plaintext: Bytes::from(vec![]),
+    };
     let result = handshake.on_eapol_key_frame(msg1);
 
     let ptk = compute_ptk(&a_nonce[..], &result);
-    (FourwayHandshakeTestEnv{ handshake, a_nonce, ptk }, result)
+    (
+        FourwayHandshakeTestEnv {
+            handshake,
+            a_nonce,
+            ptk,
+        },
+        result,
+    )
 }
 
 impl FourwayHandshakeTestEnv {
     pub fn send_msg3<F>(&mut self, gtk: Vec<u8>, msg_modifier: F) -> SecAssocResult
-        where F: Fn(&mut eapol::KeyFrame) {
+    where
+        F: Fn(&mut eapol::KeyFrame),
+    {
         // Send third message of 4-Way Handshake to Supplicant.
         let ptk = self.ptk.as_ref().unwrap();
-        let (frame, kd_plaintext) =
-            get_4whs_msg3(ptk, &self.a_nonce[..], &gtk[..], msg_modifier);
-        let msg3 = VerifiedKeyFrame{ frame: &frame, kd_plaintext};
+        let (frame, kd_plaintext) = get_4whs_msg3(ptk, &self.a_nonce[..], &gtk[..], msg_modifier);
+        let msg3 = VerifiedKeyFrame {
+            frame: &frame,
+            kd_plaintext,
+        };
         self.handshake.on_eapol_key_frame(msg3)
     }
 }

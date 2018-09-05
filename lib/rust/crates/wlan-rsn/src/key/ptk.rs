@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Error;
 use crate::akm::Akm;
 use crate::cipher::Cipher;
 use crate::crypto_utils::prf;
+use crate::Error;
 use failure::{self, bail, ensure};
 use std::cmp::{max, min};
 
@@ -32,15 +32,26 @@ impl Ptk {
         akm: &Akm,
         cipher: &Cipher,
     ) -> Result<Ptk, failure::Error> {
-        ensure!(anonce.len() == 32 && snonce.len() == 32, Error::InvalidNonceSize(anonce.len()));
+        ensure!(
+            anonce.len() == 32 && snonce.len() == 32,
+            Error::InvalidNonceSize(anonce.len())
+        );
 
-        let pmk_len = akm.pmk_bits().map(|bits| (bits / 8) as usize)
+        let pmk_len = akm
+            .pmk_bits()
+            .map(|bits| (bits / 8) as usize)
             .ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
         ensure!(pmk.len() == pmk_len, Error::PtkHierarchyInvalidPmkError);
 
-        let kck_bits = akm.kck_bits().ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
-        let kek_bits = akm.kek_bits().ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
-        let tk_bits = cipher.tk_bits().ok_or(Error::PtkHierarchyUnsupportedCipherError)?;
+        let kck_bits = akm
+            .kck_bits()
+            .ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
+        let kek_bits = akm
+            .kek_bits()
+            .ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
+        let tk_bits = cipher
+            .tk_bits()
+            .ok_or(Error::PtkHierarchyUnsupportedCipherError)?;
         let prf_bits = kck_bits + kek_bits + tk_bits;
 
         // data length = 6 (aa) + 6 (spa) + 32 (anonce) + 32 (snonce)
@@ -83,11 +94,11 @@ impl Ptk {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::akm::{Akm, PSK};
     use bytes::Bytes;
-    use crate::cipher::{CCMP_128, Cipher, TKIP};
-    use hex::FromHex;
+    use crate::akm::{Akm, PSK};
+    use crate::cipher::{Cipher, CCMP_128, TKIP};
     use crate::suite_selector::{Factory, OUI};
+    use hex::FromHex;
 
     struct TestData {
         pmk: Vec<u8>,
@@ -159,9 +170,9 @@ mod tests {
         // IEEE Std 802.11-2016, J.7.3, Table J-15
         let expected_kck = Vec::from_hex("379f9852d0199236b94e407ce4c00ec8").unwrap();
         let expected_kek = Vec::from_hex("47c9edc01c2c6e5b4910caddfb3e51a7").unwrap();
-        let expected_tk = Vec::from_hex(
-            "b2360c79e9710fdd58bea93deaf06599db980afbc29c152855740a6ce5ae3827",
-        ).unwrap();
+        let expected_tk =
+            Vec::from_hex("b2360c79e9710fdd58bea93deaf06599db980afbc29c152855740a6ce5ae3827")
+                .unwrap();
         let ptk = ptk_result.unwrap();
         assert_eq!(ptk.kck(), &expected_kck[..]);
         assert_eq!(ptk.kek(), &expected_kek[..]);

@@ -4,12 +4,12 @@
 
 use bytes::Bytes;
 use crate::crypto_utils;
-use failure::{self, bail, ensure};
 use crate::integrity::{self, hmac_sha1::HmacSha1};
 use crate::keywrap;
-use std::fmt;
 use crate::suite_selector;
 use crate::Error;
+use failure::{self, bail, ensure};
+use std::fmt;
 
 macro_rules! return_none_if_unknown_algo {
     ($e:expr) => {
@@ -128,9 +128,13 @@ impl Akm {
         }
     }
 
-    pub fn prf(&self, k: &[u8], a: &str, b: &[u8], bits: usize)
-        -> Option<Result<Vec<u8>, failure::Error>>
-    {
+    pub fn prf(
+        &self,
+        k: &[u8],
+        a: &str,
+        b: &[u8],
+        bits: usize,
+    ) -> Option<Result<Vec<u8>, failure::Error>> {
         return_none_if_unknown_algo!(self);
 
         // IEEE 802.11-2016, 12.7.1.2

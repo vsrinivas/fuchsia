@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use bytes::Bytes;
-use failure::{self, bail, ensure};
 use crate::Error;
+use failure::{self, bail, ensure};
 
 pub type Pmkid = Bytes;
 

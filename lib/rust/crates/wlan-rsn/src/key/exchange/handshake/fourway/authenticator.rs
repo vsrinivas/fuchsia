@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure;
 use crate::key::exchange::handshake::fourway::{Config, FourwayHandshakeFrame};
 use crate::rsna::SecAssocResult;
+use failure;
 
 #[derive(Debug, PartialEq)]
 pub struct Authenticator {
@@ -25,7 +25,7 @@ impl Authenticator {
         Ok(vec![])
     }
 
-    pub fn snonce(&self) -> &[u8]{
+    pub fn snonce(&self) -> &[u8] {
         &self.s_nonce[..]
     }
 

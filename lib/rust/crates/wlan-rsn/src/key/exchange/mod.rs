@@ -4,13 +4,16 @@
 
 pub mod handshake;
 
-use self::handshake::{fourway::{self, Fourway}, group_key::{self, GroupKey}};
+use self::handshake::{
+    fourway::{self, Fourway},
+    group_key::{self, GroupKey},
+};
 use crate::akm::Akm;
-use failure;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::rsna::{Role, SecAssocResult, VerifiedKeyFrame};
 use crate::rsne::Rsne;
+use failure;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Key {
@@ -65,8 +68,7 @@ impl Config {
             .map(|c| Config::FourWayHandshake(c))
     }
 
-    pub fn for_groupkey_handshake(role: Role, akm: Akm) -> Config
-    {
-        Config::GroupKeyHandshake(group_key::Config{role, akm})
+    pub fn for_groupkey_handshake(role: Role, akm: Akm) -> Config {
+        Config::GroupKeyHandshake(group_key::Config { role, akm })
     }
 }

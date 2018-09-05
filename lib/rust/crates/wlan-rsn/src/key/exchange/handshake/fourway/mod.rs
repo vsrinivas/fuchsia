@@ -8,12 +8,12 @@ mod supplicant;
 use self::authenticator::Authenticator;
 use self::supplicant::Supplicant;
 use bytes::Bytes;
+use crate::key::exchange;
+use crate::rsna::{NegotiatedRsne, Role, SecAssocResult, VerifiedKeyFrame};
+use crate::rsne::Rsne;
 use crate::Error;
 use eapol;
 use failure::{self, bail, ensure};
-use crate::key::exchange;
-use crate::rsna::{Role, SecAssocResult, VerifiedKeyFrame, NegotiatedRsne};
-use crate::rsne::Rsne;
 
 #[derive(Debug, PartialEq)]
 enum RoleHandler {
@@ -36,12 +36,12 @@ pub struct FourwayHandshakeFrame<'a> {
     kd_plaintext: Bytes,
 }
 
-impl <'a> FourwayHandshakeFrame<'a> {
-
+impl<'a> FourwayHandshakeFrame<'a> {
     pub fn from_verified(
-        valid_frame: VerifiedKeyFrame<'a>, role: Role, nonce: &[u8])
-        -> Result<FourwayHandshakeFrame<'a>, failure::Error>
-    {
+        valid_frame: VerifiedKeyFrame<'a>,
+        role: Role,
+        nonce: &[u8],
+    ) -> Result<FourwayHandshakeFrame<'a>, failure::Error> {
         let frame = valid_frame.get();
         let kd_plaintext = valid_frame.key_data_plaintext();
 
@@ -50,11 +50,11 @@ impl <'a> FourwayHandshakeFrame<'a> {
         match role {
             // Authenticator should only receive message 2 and 4.
             Role::Authenticator => match msg_no {
-                MessageNumber::Message2 | MessageNumber::Message4 => {},
+                MessageNumber::Message2 | MessageNumber::Message4 => {}
                 _ => bail!(Error::Unexpected4WayHandshakeMessage(msg_no)),
             },
             Role::Supplicant => match msg_no {
-                MessageNumber::Message1 | MessageNumber::Message3 => {},
+                MessageNumber::Message1 | MessageNumber::Message3 => {}
                 _ => bail!(Error::Unexpected4WayHandshakeMessage(msg_no)),
             },
         };
@@ -68,7 +68,10 @@ impl <'a> FourwayHandshakeFrame<'a> {
             MessageNumber::Message4 => validate_message_4(frame),
         }?;
 
-        Ok(FourwayHandshakeFrame{ frame, kd_plaintext: Bytes::from(kd_plaintext) })
+        Ok(FourwayHandshakeFrame {
+            frame,
+            kd_plaintext: Bytes::from(kd_plaintext),
+        })
     }
 
     pub fn get(&self) -> &'a eapol::KeyFrame {
@@ -97,7 +100,13 @@ impl Config {
         a_rsne: Rsne,
     ) -> Result<Config, failure::Error> {
         let _ = NegotiatedRsne::from_rsne(&s_rsne)?;
-        Ok(Config {role, s_addr, s_rsne, a_addr, a_rsne})
+        Ok(Config {
+            role,
+            s_addr,
+            s_rsne,
+            a_addr,
+            a_rsne,
+        })
     }
 }
 
@@ -114,15 +123,17 @@ impl Fourway {
     }
 
     pub fn on_eapol_key_frame(&mut self, frame: VerifiedKeyFrame) -> SecAssocResult {
-         match &mut self.0 {
+        match &mut self.0 {
             RoleHandler::Authenticator(a) => {
-                let frame = FourwayHandshakeFrame::from_verified(frame, Role::Authenticator, a.snonce())?;
+                let frame =
+                    FourwayHandshakeFrame::from_verified(frame, Role::Authenticator, a.snonce())?;
                 a.on_eapol_key_frame(frame)
-            },
+            }
             RoleHandler::Supplicant(s) => {
-                let frame = FourwayHandshakeFrame::from_verified(frame, Role::Supplicant, s.anonce())?;
+                let frame =
+                    FourwayHandshakeFrame::from_verified(frame, Role::Supplicant, s.anonce())?;
                 s.on_eapol_key_frame(frame)
-            },
+            }
         }
     }
 
@@ -138,25 +149,51 @@ impl Fourway {
 
 fn validate_message_1(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 b.4)
-    ensure!(!frame.key_info.install(), Error::InvalidInstallBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.install(),
+        Error::InvalidInstallBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    ensure!(frame.key_info.key_ack(), Error::InvalidKeyAckBitValue(message_number(frame)));
+    ensure!(
+        frame.key_info.key_ack(),
+        Error::InvalidKeyAckBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.6)
-    ensure!(!frame.key_info.key_mic(), Error::InvalidKeyMicBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.key_mic(),
+        Error::InvalidKeyMicBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.7)
-    ensure!(!frame.key_info.secure(), Error::InvalidSecureBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.secure(),
+        Error::InvalidSecureBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.8)
-    ensure!(!frame.key_info.error(), Error::InvalidErrorBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.error(),
+        Error::InvalidErrorBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    ensure!(!frame.key_info.request(), Error::InvalidRequestBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.request(),
+        Error::InvalidRequestBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.10)
-    ensure!(!frame.key_info.encrypted_key_data(),
-            Error::InvalidEncryptedKeyDataBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.encrypted_key_data(),
+        Error::InvalidEncryptedKeyDataBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 e)
-    ensure!(!is_zero(&frame.key_nonce[..]), Error::InvalidNonce(message_number(frame)));
+    ensure!(
+        !is_zero(&frame.key_nonce[..]),
+        Error::InvalidNonce(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.2
-    ensure!(is_zero(&frame.key_iv[..]), Error::InvalidIv(frame.version, message_number(frame)));
+    ensure!(
+        is_zero(&frame.key_iv[..]),
+        Error::InvalidIv(frame.version, message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 g)
     ensure!(frame.key_rsc == 0, Error::InvalidRsc(message_number(frame)));
 
@@ -172,90 +209,165 @@ fn validate_message_1(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
 
 fn validate_message_2(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 b.4)
-    ensure!(!frame.key_info.install(), Error::InvalidInstallBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.install(),
+        Error::InvalidInstallBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    ensure!(!frame.key_info.key_ack(), Error::InvalidKeyAckBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.key_ack(),
+        Error::InvalidKeyAckBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.6)
-    ensure!(frame.key_info.key_mic(), Error::InvalidKeyMicBitValue(message_number(frame)));
+    ensure!(
+        frame.key_info.key_mic(),
+        Error::InvalidKeyMicBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.7)
-    ensure!(!frame.key_info.secure(), Error::InvalidSecureBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.secure(),
+        Error::InvalidSecureBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.8)
     // Error bit only set by Supplicant in MIC failures in SMK derivation.
     // SMK derivation not yet supported.
-    ensure!(!frame.key_info.error(), Error::InvalidErrorBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.error(),
+        Error::InvalidErrorBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    ensure!(!frame.key_info.request(), Error::InvalidRequestBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.request(),
+        Error::InvalidRequestBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.10)
-    ensure!(!frame.key_info.encrypted_key_data(),
-            Error::InvalidEncryptedKeyDataBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.encrypted_key_data(),
+        Error::InvalidEncryptedKeyDataBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 e)
-    ensure!(!is_zero(&frame.key_nonce[..]), Error::InvalidNonce(message_number(frame)));
+    ensure!(
+        !is_zero(&frame.key_nonce[..]),
+        Error::InvalidNonce(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.3
-    ensure!(is_zero(&frame.key_iv[..]), Error::InvalidIv(frame.version, message_number(frame)));
+    ensure!(
+        is_zero(&frame.key_iv[..]),
+        Error::InvalidIv(frame.version, message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 g)
     ensure!(frame.key_rsc == 0, Error::InvalidRsc(message_number(frame)));
 
     Ok(())
 }
 
-fn validate_message_3(frame: &eapol::KeyFrame, nonce: &[u8])
-    -> Result<(), failure::Error>
-{
+fn validate_message_3(frame: &eapol::KeyFrame, nonce: &[u8]) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 b.4)
     // Install = 0 is only used in key mapping with TKIP and WEP, neither is supported by Fuchsia.
-    ensure!(frame.key_info.install(), Error::InvalidInstallBitValue(message_number(frame)));
+    ensure!(
+        frame.key_info.install(),
+        Error::InvalidInstallBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    ensure!(frame.key_info.key_ack(), Error::InvalidKeyAckBitValue(message_number(frame)));
+    ensure!(
+        frame.key_info.key_ack(),
+        Error::InvalidKeyAckBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.6)
-    ensure!(frame.key_info.key_mic(), Error::InvalidKeyMicBitValue(message_number(frame)));
+    ensure!(
+        frame.key_info.key_mic(),
+        Error::InvalidKeyMicBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.7)
-    ensure!(frame.key_info.secure(), Error::InvalidSecureBitValue(message_number(frame)));
+    ensure!(
+        frame.key_info.secure(),
+        Error::InvalidSecureBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.8)
-    ensure!(!frame.key_info.error(), Error::InvalidErrorBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.error(),
+        Error::InvalidErrorBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    ensure!(!frame.key_info.request(), Error::InvalidRequestBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.request(),
+        Error::InvalidRequestBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.10)
-    ensure!(frame.key_info.encrypted_key_data(),
-            Error::InvalidEncryptedKeyDataBitValue(message_number(frame)));
+    ensure!(
+        frame.key_info.encrypted_key_data(),
+        Error::InvalidEncryptedKeyDataBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 e)
-    ensure!(!is_zero(&frame.key_nonce[..]) && &frame.key_nonce[..] == nonce,
-            Error::InvalidNonce(message_number(frame)));
+    ensure!(
+        !is_zero(&frame.key_nonce[..]) && &frame.key_nonce[..] == nonce,
+        Error::InvalidNonce(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.4
     // IEEE 802.11-2016 requires a zeroed IV for 802.1X-2004+ and allows random ones for older
     // protocols. Some APs such as TP-Link violate this requirement and send non-zeroed IVs while
     // using 802.1X-2004. For compatibility, random IVs are allowed for 802.1X-2004.
-    ensure!(frame.version < eapol::ProtocolVersion::Ieee802dot1x2010 as u8 ||
-            is_zero(&frame.key_iv[..]), Error::InvalidIv(frame.version, message_number(frame)));
+    ensure!(
+        frame.version < eapol::ProtocolVersion::Ieee802dot1x2010 as u8
+            || is_zero(&frame.key_iv[..]),
+        Error::InvalidIv(frame.version, message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 i) & j)
     // Key Data must not be empty.
-    ensure!(frame.key_data_len != 0, Error::EmptyKeyData(message_number(frame)));
+    ensure!(
+        frame.key_data_len != 0,
+        Error::EmptyKeyData(message_number(frame))
+    );
 
     Ok(())
 }
 
 fn validate_message_4(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 b.4)
-    ensure!(!frame.key_info.install(), Error::InvalidInstallBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.install(),
+        Error::InvalidInstallBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    ensure!(!frame.key_info.key_ack(), Error::InvalidKeyAckBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.key_ack(),
+        Error::InvalidKeyAckBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.6)
-    ensure!(frame.key_info.key_mic(), Error::InvalidKeyMicBitValue(message_number(frame)));
+    ensure!(
+        frame.key_info.key_mic(),
+        Error::InvalidKeyMicBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.7)
-    ensure!(frame.key_info.secure(), Error::InvalidSecureBitValue(message_number(frame)));
+    ensure!(
+        frame.key_info.secure(),
+        Error::InvalidSecureBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.8)
     // Error bit only set by Supplicant in MIC failures in SMK derivation.
     // SMK derivation not yet supported.
-    ensure!(!frame.key_info.error(), Error::InvalidErrorBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.error(),
+        Error::InvalidErrorBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    ensure!(!frame.key_info.request(), Error::InvalidRequestBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.request(),
+        Error::InvalidRequestBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 b.10)
-    ensure!(!frame.key_info.encrypted_key_data(),
-            Error::InvalidEncryptedKeyDataBitValue(message_number(frame)));
+    ensure!(
+        !frame.key_info.encrypted_key_data(),
+        Error::InvalidEncryptedKeyDataBitValue(message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.5
-    ensure!(is_zero(&frame.key_iv[..]), Error::InvalidIv(frame.version, message_number(frame)));
+    ensure!(
+        is_zero(&frame.key_iv[..]),
+        Error::InvalidIv(frame.version, message_number(frame))
+    );
     // IEEE Std 802.11-2016, 12.7.2 g)
     ensure!(frame.key_rsc == 0, Error::InvalidRsc(message_number(frame)));
 
@@ -308,8 +420,11 @@ mod tests {
             msg1.version = 1;
             msg1.key_iv = [0xFFu8; 16];
         });
-        assert!(msg1_result.is_err(),
-                "error, expected failure for first msg but result is: {:?}", msg1_result);
+        assert!(
+            msg1_result.is_err(),
+            "error, expected failure for first msg but result is: {:?}",
+            msg1_result
+        );
     }
 
     #[test]
@@ -318,8 +433,11 @@ mod tests {
             msg1.version = 2;
             msg1.key_iv = [0xFFu8; 16];
         });
-        assert!(msg1_result.is_err(),
-                "error, expected failure for first msg but result is: {:?}", msg1_result);
+        assert!(
+            msg1_result.is_err(),
+            "error, expected failure for first msg but result is: {:?}",
+            msg1_result
+        );
     }
 
     // EAPOL Key frames can carry a random IV in the third message of the 4-Way Handshake if
@@ -330,61 +448,78 @@ mod tests {
     #[test]
     fn test_random_iv_msg3_v1() {
         let (mut env, msg1_result) = test_util::send_msg1(|_| {});
-        assert!(msg1_result.is_ok(),
-                "error, expected success for processing first msg but result is: {:?}",
-                msg1_result);
+        assert!(
+            msg1_result.is_ok(),
+            "error, expected success for processing first msg but result is: {:?}",
+            msg1_result
+        );
         let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
             msg3.version = 1;
             msg3.key_iv = [0xFFu8; 16];
         });
-        assert!(msg3_result.is_ok(),
-                "error, expected success for processing third msg but result is: {:?}",
-                msg3_result);
+        assert!(
+            msg3_result.is_ok(),
+            "error, expected success for processing third msg but result is: {:?}",
+            msg3_result
+        );
     }
 
     #[test]
     fn test_random_iv_msg3_v2() {
         let (mut env, msg1_result) = test_util::send_msg1(|_| {});
-        assert!(msg1_result.is_ok(),
-                "error, expected success for processing first msg but result is: {:?}",
-                msg1_result);
+        assert!(
+            msg1_result.is_ok(),
+            "error, expected success for processing first msg but result is: {:?}",
+            msg1_result
+        );
         let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
             msg3.version = 2;
             msg3.key_iv = [0xFFu8; 16];
         });
-        assert!(msg3_result.is_ok(),
-                "error, expected success for processing third msg but result is: {:?}",
-                msg3_result);
+        assert!(
+            msg3_result.is_ok(),
+            "error, expected success for processing third msg but result is: {:?}",
+            msg3_result
+        );
     }
 
     #[test]
     fn test_zeroed_iv_msg3_v2() {
         let (mut env, msg1_result) = test_util::send_msg1(|_| {});
-        assert!(msg1_result.is_ok(),
-                "error, expected success for processing first msg but result is: {:?}",
-                msg1_result);
+        assert!(
+            msg1_result.is_ok(),
+            "error, expected success for processing first msg but result is: {:?}",
+            msg1_result
+        );
         let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
             msg3.version = 2;
             msg3.key_iv = [0u8; 16];
         });
-        assert!(msg3_result.is_ok(),
-                "error, expected success for processing third msg but result is: {:?}",
-                msg3_result);
+        assert!(
+            msg3_result.is_ok(),
+            "error, expected success for processing third msg but result is: {:?}",
+            msg3_result
+        );
     }
 
     #[test]
     fn test_random_iv_msg3_v3() {
         let (mut env, msg1_result) = test_util::send_msg1(|_| {});
-        assert!(msg1_result.is_ok(),
-                "error, expected success for processing first msg but result is: {:?}",
-                msg1_result);
+        assert!(
+            msg1_result.is_ok(),
+            "error, expected success for processing first msg but result is: {:?}",
+            msg1_result
+        );
         let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
             msg3.version = 3;
             msg3.key_iv = [0xFFu8; 16];
         });
         // Random IVs are not allowed for v2 but because some APs violate this requirement, we have
         // to allow such IVs.
-        assert!(msg3_result.is_err(),
-                "error, expected failure for third msg but result is: {:?}", msg3_result);
+        assert!(
+            msg3_result.is_err(),
+            "error, expected failure for third msg but result is: {:?}",
+            msg3_result
+        );
     }
 }

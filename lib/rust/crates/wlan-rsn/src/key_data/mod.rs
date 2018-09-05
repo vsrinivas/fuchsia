@@ -5,12 +5,12 @@
 pub mod kde;
 
 use bytes::BufMut;
-use failure::{self, bail, ensure};
-use nom::IResult::{Done, Incomplete};
-use nom::{IResult, Needed};
-use nom::{call, error_position, many0, named, take, try_parse};
 use crate::rsne;
 use crate::Error;
+use failure::{self, bail, ensure};
+use nom::IResult::{Done, Incomplete};
+use nom::{call, error_position, many0, named, take, try_parse};
+use nom::{IResult, Needed};
 
 #[derive(Debug)]
 pub enum Element {
@@ -54,8 +54,10 @@ named!(parse_elements<&[u8], Vec<Element>>, many0!(parse_element));
 
 pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, failure::Error> {
     // Key Data field must be at least 16 bytes long and its length a multiple of 8.
-    ensure!(key_data.len() % 8 == 0 && key_data.len() >= 16,
-            Error::InvaidKeyDataLength(key_data.len()));
+    ensure!(
+        key_data.len() % 8 == 0 && key_data.len() >= 16,
+        Error::InvaidKeyDataLength(key_data.len())
+    );
 
     parse_elements(key_data)
         .to_full_result()

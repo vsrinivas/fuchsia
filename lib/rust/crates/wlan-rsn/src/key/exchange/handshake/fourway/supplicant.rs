@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Error;
 use bytes::Bytes;
 use crate::crypto_utils::nonce::NonceReader;
-use eapol;
-use failure::{self, bail, ensure};
 use crate::integrity;
-use crate::key::exchange::Key;
 use crate::key::exchange::handshake::fourway::{self, FourwayHandshakeFrame};
+use crate::key::exchange::Key;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data;
 use crate::rsna::{SecAssocResult, SecAssocUpdate};
 use crate::rsne::Rsne;
+use crate::Error;
+use eapol;
+use failure::{self, bail, ensure};
 
 #[derive(Debug, Default, PartialEq)]
 struct PtkInitState {}
@@ -23,9 +23,11 @@ struct GtkInitState {}
 
 impl PtkInitState {
     // IEEE Std 802.1X-2010, 12.7.6.2
-    fn on_message_1(&self, shared: &mut SharedState, msg1: FourwayHandshakeFrame)
-        -> Result<(eapol::KeyFrame, Ptk), failure::Error>
-    {
+    fn on_message_1(
+        &self,
+        shared: &mut SharedState,
+        msg1: FourwayHandshakeFrame,
+    ) -> Result<(eapol::KeyFrame, Ptk), failure::Error> {
         let anonce = &msg1.get().key_nonce;
         let snonce = shared.nonce_rdr.next()?;
         let rsne = &shared.cfg.s_rsne;
@@ -84,7 +86,9 @@ impl PtkInitState {
 
         // Verified before that Supplicant's RSNE holds one AKM Suite.
         let akm = &shared.cfg.s_rsne.akm_suites[0];
-        let integrity_alg = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
+        let integrity_alg = akm
+            .integrity_algorithm()
+            .ok_or(Error::UnsupportedAkmSuite)?;
         let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
         update_mic(&shared.kck[..], mic_len, integrity_alg, &mut msg2)?;
 
@@ -94,9 +98,11 @@ impl PtkInitState {
 
 impl GtkInitState {
     // IEEE Std 802.1X-2010, 12.7.6.4
-    fn on_message_3(&self, shared: &mut SharedState, msg3: FourwayHandshakeFrame)
-        -> Result<(eapol::KeyFrame, Gtk), failure::Error>
-    {
+    fn on_message_3(
+        &self,
+        shared: &mut SharedState,
+        msg3: FourwayHandshakeFrame,
+    ) -> Result<(eapol::KeyFrame, Gtk), failure::Error> {
         let mut gtk: Option<key_data::kde::Gtk> = None;
         let mut rsne: Option<Rsne> = None;
         let mut _second_rsne: Option<Rsne> = None;
@@ -122,9 +128,11 @@ impl GtkInitState {
     }
 
     // IEEE Std 802.1X-2010, 12.7.6.5
-    fn create_message_4(&self, shared: &SharedState, msg3: &eapol::KeyFrame)
-        -> Result<eapol::KeyFrame, failure::Error>
-    {
+    fn create_message_4(
+        &self,
+        shared: &SharedState,
+        msg3: &eapol::KeyFrame,
+    ) -> Result<eapol::KeyFrame, failure::Error> {
         let mut key_info = eapol::KeyInformation(0);
         key_info.set_key_descriptor_version(msg3.key_info.key_descriptor_version());
         key_info.set_key_type(msg3.key_info.key_type());
@@ -150,7 +158,9 @@ impl GtkInitState {
 
         // Verified before that Supplicant's RSNE holds one AKM Suite.
         let akm = &shared.cfg.s_rsne.akm_suites[0];
-        let integrity_alg = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
+        let integrity_alg = akm
+            .integrity_algorithm()
+            .ok_or(Error::UnsupportedAkmSuite)?;
         let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
         update_mic(&shared.kck[..], mic_len, integrity_alg, &mut msg4)?;
 
@@ -166,9 +176,11 @@ enum State {
 }
 
 impl State {
-    pub fn on_eapol_key_frame(self, shared: &mut SharedState, frame: FourwayHandshakeFrame)
-        -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error>
-    {
+    pub fn on_eapol_key_frame(
+        self,
+        shared: &mut SharedState,
+        frame: FourwayHandshakeFrame,
+    ) -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error> {
         match fourway::message_number(frame.get()) {
             // Only process first and third message of the Handshake.
             fourway::MessageNumber::Message1 => self.on_message_1(shared, frame),
@@ -178,9 +190,11 @@ impl State {
         }
     }
 
-    fn on_message_1(self, shared: &mut SharedState, msg1: FourwayHandshakeFrame)
-        -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error>
-    {
+    fn on_message_1(
+        self,
+        shared: &mut SharedState,
+        msg1: FourwayHandshakeFrame,
+    ) -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error> {
         // Always reset Handshake when first message was received.
         match self {
             // If the Handshake already completed, simply drop the message.
@@ -210,9 +224,11 @@ impl State {
         }
     }
 
-    fn on_message_3(self, shared: &mut SharedState, msg3: FourwayHandshakeFrame)
-        -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error>
-    {
+    fn on_message_3(
+        self,
+        shared: &mut SharedState,
+        msg3: FourwayHandshakeFrame,
+    ) -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error> {
         // Third message of Handshake is only processed once to prevent replay attacks such as
         // KRACK. A replayed third message will be dropped and has no effect on the Supplicant.
         // TODO(hahnr): Decide whether this client side fix should be kept, which will reduce
@@ -226,7 +242,7 @@ impl State {
                     Some(vec![
                         SecAssocUpdate::TxEapolKeyFrame(msg4),
                         SecAssocUpdate::Key(Key::Gtk(gtk)),
-                    ])
+                    ]),
                 ))
             }
             // At this point keys are either already installed and this message is a replay of a
@@ -251,11 +267,11 @@ impl PartialEq for SharedState {
     fn eq(&self, other: &SharedState) -> bool {
         // Exclude nonce generator from comparison. This code will soon change once the nonce
         // generator moved further up the stack.
-        self.anonce == other.anonce &&
-            self.pmk == other.pmk &&
-            self.kek == other.kek &&
-            self.kck == other.kck &&
-            self.cfg == other.cfg
+        self.anonce == other.anonce
+            && self.pmk == other.pmk
+            && self.kek == other.kek
+            && self.kck == other.kck
+            && self.cfg == other.cfg
     }
 }
 
@@ -286,11 +302,14 @@ impl Supplicant {
     }
 
     pub fn on_eapol_key_frame(&mut self, frame: FourwayHandshakeFrame) -> SecAssocResult {
-        self.state.take().map_or_else(|| Ok(vec![]), |state| {
-            let (state, updates) = state.on_eapol_key_frame(&mut self.shared, frame)?;
-            self.state = Some(state);
-            Ok(updates.unwrap_or_default())
-        })
+        self.state.take().map_or_else(
+            || Ok(vec![]),
+            |state| {
+                let (state, updates) = state.on_eapol_key_frame(&mut self.shared, frame)?;
+                self.state = Some(state);
+                Ok(updates.unwrap_or_default())
+            },
+        )
     }
 
     pub fn destroy(self) -> fourway::Config {

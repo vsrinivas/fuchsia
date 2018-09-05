@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::akm::Akm;
 use bytes::Bytes;
-use eapol;
-use failure::{self, bail, ensure};
+use crate::akm::Akm;
 use crate::key::exchange::{self, handshake::group_key::supplicant::Supplicant};
 use crate::rsna::{Role, SecAssocResult, VerifiedKeyFrame};
+use eapol;
+use failure::{self, bail, ensure};
 
 mod supplicant;
 
@@ -23,11 +23,11 @@ pub struct GroupKeyHandshakeFrame<'a> {
     kd_plaintext: Bytes,
 }
 
-impl <'a> GroupKeyHandshakeFrame<'a> {
-
-    pub fn from_verified(valid_frame: VerifiedKeyFrame<'a>, role: Role)
-        -> Result<GroupKeyHandshakeFrame<'a>, failure::Error>
-    {
+impl<'a> GroupKeyHandshakeFrame<'a> {
+    pub fn from_verified(
+        valid_frame: VerifiedKeyFrame<'a>,
+        role: Role,
+    ) -> Result<GroupKeyHandshakeFrame<'a>, failure::Error> {
         let sender = match role {
             Role::Supplicant => Role::Authenticator,
             Role::Authenticator => Role::Supplicant,
@@ -37,13 +37,30 @@ impl <'a> GroupKeyHandshakeFrame<'a> {
         let kd_plaintext = valid_frame.key_data_plaintext();
 
         // IEEE Std 802.11-2016, 12.7.7.2 & IEEE Std 802.11-2016, 12.7.7.3
-        ensure!(frame.key_info.key_type() == eapol::KEY_TYPE_GROUP_SMK,
-                "only group key messages are allowed in Group Key Handshake");
-        ensure!(!frame.key_info.install(), "installbit must not be set in Group Key Handshake messages");
-        ensure!(frame.key_info.key_mic(), "MIC bit must be set in Group Key Handshake messages");
-        ensure!(frame.key_info.secure(), "secure bit must be set in Group Key Handshake messages");
-        ensure!(!frame.key_info.error(), "error bit must not be set in Group Key Handshake messages");
-        ensure!(!frame.key_info.request(), "request bit must not be set in Group Key Handshake messages");
+        ensure!(
+            frame.key_info.key_type() == eapol::KEY_TYPE_GROUP_SMK,
+            "only group key messages are allowed in Group Key Handshake"
+        );
+        ensure!(
+            !frame.key_info.install(),
+            "installbit must not be set in Group Key Handshake messages"
+        );
+        ensure!(
+            frame.key_info.key_mic(),
+            "MIC bit must be set in Group Key Handshake messages"
+        );
+        ensure!(
+            frame.key_info.secure(),
+            "secure bit must be set in Group Key Handshake messages"
+        );
+        ensure!(
+            !frame.key_info.error(),
+            "error bit must not be set in Group Key Handshake messages"
+        );
+        ensure!(
+            !frame.key_info.request(),
+            "request bit must not be set in Group Key Handshake messages"
+        );
 
         // IEEE Std 802.11-2016, 12.7.7.2 requires the key length to be set to 0 in
         // group key handshakes messages. Some routers, such as Apple Airport Extreme
@@ -56,27 +73,50 @@ impl <'a> GroupKeyHandshakeFrame<'a> {
         // send a nonce other than zero. To support interoperability, the nonce is allowed to
         // be an arbitrary value as it's not used in the Group Key handshake.
 
-
         match &sender {
             // IEEE Std 802.11-2016, 12.7.7.2
             Role::Authenticator => {
-                ensure!(frame.key_info.key_ack(), "ACK bit must be set in 1st message of Group Key Handshake");
-                ensure!(frame.key_info.encrypted_key_data(), "encrypted data bit must be set in 1st message of Group Key Handshake");
-                ensure!(frame.version == eapol::ProtocolVersion::Ieee802dot1x2001 as u8 ||
-                        is_zero(&frame.key_iv[..]),
-                        "invalid IV in 1st message of Group Key Handshake with version: {}", frame.version);
+                ensure!(
+                    frame.key_info.key_ack(),
+                    "ACK bit must be set in 1st message of Group Key Handshake"
+                );
+                ensure!(
+                    frame.key_info.encrypted_key_data(),
+                    "encrypted data bit must be set in 1st message of Group Key Handshake"
+                );
+                ensure!(
+                    frame.version == eapol::ProtocolVersion::Ieee802dot1x2001 as u8
+                        || is_zero(&frame.key_iv[..]),
+                    "invalid IV in 1st message of Group Key Handshake with version: {}",
+                    frame.version
+                );
                 // RSC is currently not taken into account.
-            },
+            }
             // IEEE Std 802.11-2016, 12.7.7.3
             Role::Supplicant => {
-                ensure!(!frame.key_info.key_ack(), "ACK bit must not be set in 2nd message of Group Key Handshake");
-                ensure!(!frame.key_info.encrypted_key_data(), "encrypted data bit must not be set in 2nd message of Group Key Handshake");
-                ensure!(is_zero(&frame.key_iv[..]), "IV must be zero in 2nd message of Group Key Handshake");
-                ensure!(frame.key_rsc == 0, "RSC must be zero in 2nd message of Group Key Handshake");
-            },
+                ensure!(
+                    !frame.key_info.key_ack(),
+                    "ACK bit must not be set in 2nd message of Group Key Handshake"
+                );
+                ensure!(
+                    !frame.key_info.encrypted_key_data(),
+                    "encrypted data bit must not be set in 2nd message of Group Key Handshake"
+                );
+                ensure!(
+                    is_zero(&frame.key_iv[..]),
+                    "IV must be zero in 2nd message of Group Key Handshake"
+                );
+                ensure!(
+                    frame.key_rsc == 0,
+                    "RSC must be zero in 2nd message of Group Key Handshake"
+                );
+            }
         };
 
-        Ok(GroupKeyHandshakeFrame{ frame, kd_plaintext: Bytes::from(kd_plaintext) })
+        Ok(GroupKeyHandshakeFrame {
+            frame,
+            kd_plaintext: Bytes::from(kd_plaintext),
+        })
     }
 
     pub fn get(&self) -> &'a eapol::KeyFrame {
@@ -100,14 +140,17 @@ pub struct GroupKey(RoleHandler);
 impl GroupKey {
     pub fn new(cfg: Config, kck: &[u8]) -> Result<GroupKey, failure::Error> {
         let handler = match &cfg.role {
-            Role::Supplicant => RoleHandler::Supplicant(Supplicant{cfg, kck: Bytes::from(kck)}),
+            Role::Supplicant => RoleHandler::Supplicant(Supplicant {
+                cfg,
+                kck: Bytes::from(kck),
+            }),
             _ => bail!("Authenticator not yet support in Group-Key Handshake"),
         };
 
         Ok(GroupKey(handler))
     }
 
-    pub fn destroy(self) -> exchange::Config  {
+    pub fn destroy(self) -> exchange::Config {
         match self.0 {
             RoleHandler::Supplicant(s) => exchange::Config::GroupKeyHandshake(s.destroy()),
         }
@@ -118,7 +161,7 @@ impl GroupKey {
             RoleHandler::Supplicant(s) => {
                 let frame = GroupKeyHandshakeFrame::from_verified(frame, Role::Supplicant)?;
                 s.on_eapol_key_frame(frame)
-            },
+            }
         }
     }
 }

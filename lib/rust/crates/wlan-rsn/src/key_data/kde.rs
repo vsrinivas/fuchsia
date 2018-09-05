@@ -6,8 +6,8 @@ use super::Element;
 use bitfield::{bitfield, bitfield_debug, bitfield_fields, bitfield_struct};
 use bytes::BufMut;
 use nom::IResult::{Done, Incomplete};
+use nom::{call, do_parse, eof, error_position, map, named, named_args, take, try_parse};
 use nom::{le_u8, IResult, Needed};
-use nom::{call, do_parse, eof, error_position, try_parse, map, named, named_args, take};
 
 pub const OUI: [u8; 3] = [0x00, 0x0F, 0xAC];
 pub const TYPE: u8 = 0xDD;

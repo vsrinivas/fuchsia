@@ -5,8 +5,8 @@
 pub mod psk;
 
 use self::psk::Psk;
-use failure;
 use crate::rsna::{SecAssocResult, VerifiedKeyFrame};
+use failure;
 
 #[derive(Debug, PartialEq)]
 pub enum Method {
@@ -16,7 +16,7 @@ pub enum Method {
 impl Method {
     pub fn from_config(cfg: Config) -> Result<Method, failure::Error> {
         match cfg {
-            Config::Psk(c) => Ok(Method::Psk(Psk{config: c})),
+            Config::Psk(c) => Ok(Method::Psk(Psk { config: c })),
         }
     }
 

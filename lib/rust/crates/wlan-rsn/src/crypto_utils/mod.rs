@@ -5,11 +5,11 @@
 pub mod nonce;
 
 // Used in PRF as specified in IEEE Std 802.11-2016, 12.7.1.2.
-#[allow(deprecated)]
-use mundane::insecure::InsecureHmacSha1;
-use mundane::hash::Digest;
 use crate::Error;
 use failure::{self, bail, ensure};
+use mundane::hash::Digest;
+#[allow(deprecated)]
+use mundane::insecure::InsecureHmacSha1;
 
 const VALID_PRF_BIT_SIZES: [usize; 6] = [128, 192, 256, 384, 512, 704];
 
@@ -17,7 +17,10 @@ const VALID_PRF_BIT_SIZES: [usize; 6] = [128, 192, 256, 384, 512, 704];
 // HMAC-SHA1 is considered insecure but is required to be used in IEEE 802.11's PRF.
 #[allow(deprecated)]
 pub(crate) fn prf(k: &[u8], a: &str, b: &[u8], bits: usize) -> Result<Vec<u8>, failure::Error> {
-    ensure!(VALID_PRF_BIT_SIZES.contains(&bits), Error::InvalidBitSize(bits));
+    ensure!(
+        VALID_PRF_BIT_SIZES.contains(&bits),
+        Error::InvalidBitSize(bits)
+    );
 
     let mut result: Vec<u8> = Vec::with_capacity(bits / 8);
     let iterations = (bits + 159) / 160;
@@ -102,9 +105,9 @@ mod tests {
         );
         assert_eq!(actual.is_ok(), true);
 
-        let expected = Vec::from_hex(
-            "47c4908e30c947521ad20be9053450ecbea23d3aa604b77326d8b3825ff7475c",
-        ).unwrap();
+        let expected =
+            Vec::from_hex("47c4908e30c947521ad20be9053450ecbea23d3aa604b77326d8b3825ff7475c")
+                .unwrap();
         assert_eq!(actual.unwrap(), expected);
     }
 
@@ -146,9 +149,9 @@ mod tests {
         );
         assert_eq!(actual.is_ok(), true);
 
-        let expected = Vec::from_hex(
-            "5b154287399baeabd7d2c9682989e0933b3fdef8211ae7ae0c6586bb1e38de7c",
-        ).unwrap();
+        let expected =
+            Vec::from_hex("5b154287399baeabd7d2c9682989e0933b3fdef8211ae7ae0c6586bb1e38de7c")
+                .unwrap();
         assert_eq!(actual.unwrap(), expected);
     }
 
@@ -158,9 +161,9 @@ mod tests {
         let actual = prf(&key[..], "", "Lorem ipsum".as_bytes(), 256);
         assert_eq!(actual.is_ok(), true);
 
-        let expected = Vec::from_hex(
-            "1317523ae07f212fc4139ce9ebafe31ecf7c59cb07c7a7f04131afe7a59de60c",
-        ).unwrap();
+        let expected =
+            Vec::from_hex("1317523ae07f212fc4139ce9ebafe31ecf7c59cb07c7a7f04131afe7a59de60c")
+                .unwrap();
         assert_eq!(actual.unwrap(), expected);
     }
 

@@ -4,13 +4,16 @@
 
 use bytes::Bytes;
 use crate::integrity;
+use crate::key::exchange::{
+    handshake::group_key::{self, Config, GroupKeyHandshakeFrame},
+    Key,
+};
+use crate::key::gtk::Gtk;
+use crate::key_data;
+use crate::rsna::{SecAssocResult, SecAssocUpdate};
 use crate::Error;
 use eapol;
 use failure::{self, bail};
-use crate::key::gtk::Gtk;
-use crate::key::exchange::{Key, handshake::{group_key::{self, Config, GroupKeyHandshakeFrame}}};
-use crate::key_data;
-use crate::rsna::{SecAssocResult, SecAssocUpdate};
 
 #[derive(Debug, PartialEq)]
 pub struct Supplicant {
@@ -27,7 +30,7 @@ impl Supplicant {
         for ele in elements {
             match ele {
                 key_data::Element::Gtk(_, e) => gtk = Some(e),
-                _ => {},
+                _ => {}
             }
         }
         let gtk = match gtk {
@@ -71,7 +74,9 @@ impl Supplicant {
 
         // Update the frame's MIC.
         let akm = &self.cfg.akm;
-        let integrity_alg = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
+        let integrity_alg = akm
+            .integrity_algorithm()
+            .ok_or(Error::UnsupportedAkmSuite)?;
         let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
         update_mic(&self.kck[..], mic_len, integrity_alg, &mut msg2)?;
 
@@ -83,9 +88,12 @@ impl Supplicant {
     }
 }
 
-fn update_mic(kck: &[u8], mic_len: u16, alg: Box<integrity::Algorithm>, frame: &mut eapol::KeyFrame)
-    -> Result<(), failure::Error>
-{
+fn update_mic(
+    kck: &[u8],
+    mic_len: u16,
+    alg: Box<integrity::Algorithm>,
+    frame: &mut eapol::KeyFrame,
+) -> Result<(), failure::Error> {
     let mut buf = Vec::with_capacity(frame.len());
     frame.as_bytes(true, &mut buf);
     let written = buf.len();

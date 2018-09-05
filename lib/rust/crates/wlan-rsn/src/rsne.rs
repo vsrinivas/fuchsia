@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::akm;
 use bytes::{BufMut, Bytes};
+use crate::akm;
 use crate::cipher;
 use crate::pmkid;
 use crate::suite_selector;
 
+use nom::{call, cond, count, do_parse, eof, error_position, expr_res, named, take, try_parse};
 use nom::{le_u16, le_u8, IResult};
-use nom::{try_parse, named, take, expr_res, call, do_parse, cond, count, error_position, eof};
 
 macro_rules! if_remaining (
   ($i:expr, $f:expr) => ( cond!($i, $i.len() !=0, call!($f)); );
@@ -107,9 +107,7 @@ impl Rsne {
 
         match self.rsn_capabilities.as_ref() {
             None => return,
-            Some(caps) => {
-                buf.put_u16_le(*caps)
-            }
+            Some(caps) => buf.put_u16_le(*caps),
         };
 
         if self.pmkids.is_empty() {

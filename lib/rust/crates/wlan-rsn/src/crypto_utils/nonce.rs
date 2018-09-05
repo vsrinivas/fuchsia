@@ -44,7 +44,7 @@ impl NonceReader {
                 let mut result = (*counter).to_bytes_le();
                 result.resize(32, 0);
                 Ok(result)
-            },
+            }
         }
     }
 }

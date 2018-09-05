@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Error;
 use bytes::Bytes;
+use crate::suite_selector;
+use crate::Error;
 use failure::{self, bail, ensure};
 use std::fmt;
-use crate::suite_selector;
 
 macro_rules! return_none_if_unknown_usage {
     ($e:expr) => {
