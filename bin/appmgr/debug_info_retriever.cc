@@ -48,12 +48,9 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process,
                         nullptr, nullptr);
 
     // All threads will resume when their suspend token goes out of scope.
-    // Ensure that we don't later resume an already suspended thread.
-    if (thread_info.state != ZX_THREAD_SUSPENDED) {
-      if ((status = it->thread.suspend(&it->suspend_token)) != ZX_OK) {
-        FXL_LOG(INFO) << "Failed to suspend thread: " << status;
-        threads.erase(it);
-      }
+    if ((status = it->thread.suspend(&it->suspend_token)) != ZX_OK) {
+      FXL_LOG(INFO) << "Failed to suspend thread: " << status;
+      threads.erase(it);
     }
   }
 
