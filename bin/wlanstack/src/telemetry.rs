@@ -25,7 +25,7 @@ use std::io::Seek;
 use std::ops::Sub;
 use std::sync::Arc;
 
-use crate::device::{IfaceDevice, IfaceMap};
+use crate::device::IfaceMap;
 
 type StatsRef = Arc<Mutex<fidl_stats::IfaceStats>>;
 
@@ -46,6 +46,10 @@ enum CobaltEncodingId {
 }
 
 enum CobaltValue {
+    IntBucketDistribution {
+        encoding_id: u32,
+        values: Vec<BucketDistributionEntry>,
+    },
     Multipart(Vec<ObservationValue>),
 }
 
@@ -60,8 +64,22 @@ pub struct CobaltSender {
 }
 
 impl CobaltSender {
+    fn add_int_bucket_distribution(
+        &mut self, metric_id: u32, encoding_id: u32, values: Vec<BucketDistributionEntry>,
+    ) {
+        let value = CobaltValue::IntBucketDistribution {
+            encoding_id,
+            values,
+        };
+        self.add_observation(metric_id, value);
+    }
+
     fn add_multipart_observation(&mut self, metric_id: u32, values: Vec<ObservationValue>) {
         let value = CobaltValue::Multipart(values);
+        self.add_observation(metric_id, value);
+    }
+
+    fn add_observation(&mut self, metric_id: u32, value: CobaltValue) {
         let observation = Observation { metric_id, value };
         if self.sender.try_send(observation).is_err() {
             error!("Dropping a Cobalt observation because the buffer is full");
@@ -72,7 +90,7 @@ impl CobaltSender {
 pub fn serve(ifaces_map: Arc<IfaceMap>) -> (CobaltSender, impl Future<Output = ()>) {
     let (sender, receiver) = mpsc::channel(COBALT_BUFFER_SIZE);
     let sender = CobaltSender { sender };
-    let fut = report_telemetry(ifaces_map.clone(), receiver);
+    let fut = report_telemetry(ifaces_map.clone(), sender.clone(), receiver);
     (sender, fut)
 }
 
@@ -97,8 +115,11 @@ async fn get_cobalt_encoder() -> Result<EncoderProxy, Error> {
     }
 }
 
-async fn report_telemetry(ifaces_map: Arc<IfaceMap>, receiver: mpsc::Receiver<Observation>) {
-    let report_periodically_fut = report_telemetry_periodically(ifaces_map.clone());
+async fn report_telemetry(
+    ifaces_map: Arc<IfaceMap>, sender: CobaltSender, receiver: mpsc::Receiver<Observation>,
+) {
+    info!("Telemetry started");
+    let report_periodically_fut = report_telemetry_periodically(ifaces_map.clone(), sender);
     let report_events_fut = report_telemetry_events(receiver);
     join!(report_periodically_fut, report_events_fut);
 }
@@ -120,128 +141,111 @@ async fn report_telemetry_events(mut receiver: mpsc::Receiver<Observation>) {
                 );
                 handle_cobalt_response(resp, observation.metric_id);
             }
+            CobaltValue::IntBucketDistribution {
+                encoding_id,
+                mut values,
+            } => {
+                let resp = await!(encoder.add_int_bucket_distribution(
+                    observation.metric_id,
+                    encoding_id,
+                    &mut values.iter_mut()
+                ));
+                handle_cobalt_response(resp, observation.metric_id);
+            }
         }
     }
 }
 
 // Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
-async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>) {
+async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender: CobaltSender) {
     // TODO(NET-1386): Make this module resilient to Wlanstack2 downtime.
 
-    info!("Telemetry started");
     let mut last_reported_stats: HashMap<u16, StatsRef> = HashMap::new();
     let mut interval_stream = fasync::Interval::new(REPORT_PERIOD_MINUTES.minutes());
     while let Some(_) = await!(interval_stream.next()) {
         let mut futures = FuturesUnordered::new();
         for (id, iface) in ifaces_map.get_snapshot().iter() {
-            let fut = handle_iface(
-                *id,
-                last_reported_stats.get(id).map(|r| Arc::clone(r)),
-                Arc::clone(&iface),
-            );
+            let id = *id;
+            let iface = Arc::clone(iface);
+            let fut = iface.stats_sched.get_stats().map(move |r| (id, iface, r));
             futures.push(fut);
         }
-        while let Some((id, stats_result)) = await!(futures.next()) {
+
+        while let Some((id, iface, stats_result)) = await!(futures.next()) {
             match stats_result {
-                Some(reported_stats) => last_reported_stats.insert(id, reported_stats),
-                None => last_reported_stats.remove(&id),
+                Ok(current_stats) => {
+                    let last_stats_opt = last_reported_stats.get(&id);
+                    if let Some(last_stats) = last_stats_opt {
+                        let last_stats = last_stats.lock();
+                        let current_stats = current_stats.lock();
+                        report_stats(&last_stats, &current_stats, &mut sender);
+                    }
+
+                    last_reported_stats.insert(id, current_stats);
+                }
+                Err(e) => {
+                    last_reported_stats.remove(&id);
+                    error!(
+                        "Failed to get the stats for iface '{}': {}",
+                        iface.device.path().display(),
+                        e
+                    );
+                }
             };
         }
     }
 }
 
-async fn handle_iface(
-    id: u16, last_stats_opt: Option<StatsRef>, iface: Arc<IfaceDevice>,
-) -> (u16, Option<StatsRef>) {
-    let r = await!(try_handle_iface(id, last_stats_opt, Arc::clone(&iface)));
-    match r {
-        Ok((id, reported_stats)) => (id, Some(reported_stats)),
-        Err(e) => {
-            error!(
-                "Failed to report telemetry for iface '{}': {}",
-                iface.device.path().display(),
-                e
-            );
-            (id, None)
-        }
-    }
-}
+fn report_stats(
+    last_stats: &fidl_stats::IfaceStats, current_stats: &fidl_stats::IfaceStats,
+    sender: &mut CobaltSender,
+) {
+    report_mlme_stats(&last_stats.mlme_stats, &current_stats.mlme_stats, sender);
 
-async fn try_handle_iface(
-    id: u16, last_stats_opt: Option<StatsRef>, iface: Arc<IfaceDevice>,
-) -> Result<(u16, StatsRef), Error> {
-    let encoder_proxy = await!(get_cobalt_encoder())?;
-    let current_stats = await!(iface.stats_sched.get_stats())?;
-    if let Some(last_stats) = last_stats_opt {
-        await!(report_stats(
-            last_stats,
-            Arc::clone(&current_stats),
-            &encoder_proxy
-        ));
-    }
-    Ok((id, current_stats))
-}
-
-async fn report_stats(last_stats: StatsRef, current_stats: StatsRef, encoder_proxy: &EncoderProxy) {
-    await!(report_mlme_stats(
-        Arc::clone(&last_stats),
-        Arc::clone(&current_stats),
-        encoder_proxy.clone()
-    ));
-
-    let last_stats_guard = last_stats.lock();
-    let current_stats_guard = current_stats.lock();
-
-    await!(report_dispatcher_stats(
-        &last_stats_guard.dispatcher_stats,
-        &current_stats_guard.dispatcher_stats,
-        encoder_proxy.clone()
-    ));
+    report_dispatcher_stats(
+        &last_stats.dispatcher_stats,
+        &current_stats.dispatcher_stats,
+        sender,
+    );
 }
 
 fn report_dispatcher_stats(
     last_stats: &fidl_stats::DispatcherStats, current_stats: &fidl_stats::DispatcherStats,
-    encoder_proxy: EncoderProxy,
-) -> impl Future<Output = ()> {
+    sender: &mut CobaltSender,
+) {
     // These indexes must match the Cobalt config from
     // //third_party/cobalt_config/fuchsia/wlan/config.yaml
     const DISPATCHER_IN_PACKET_COUNT_INDEX: u32 = 0;
     const DISPATCHER_OUT_PACKET_COUNT_INDEX: u32 = 1;
     const DISPATCHER_DROP_PACKET_COUNT_INDEX: u32 = 2;
 
-    let report_in_fut = report_dispatcher_packets(
+    report_dispatcher_packets(
         DISPATCHER_IN_PACKET_COUNT_INDEX,
         get_diff(
             last_stats.any_packet.in_.count,
             current_stats.any_packet.in_.count,
         ),
-        encoder_proxy.clone(),
+        sender,
     );
-    let report_out_fut = report_dispatcher_packets(
+    report_dispatcher_packets(
         DISPATCHER_OUT_PACKET_COUNT_INDEX,
         get_diff(
             last_stats.any_packet.out.count,
             current_stats.any_packet.out.count,
         ),
-        encoder_proxy.clone(),
+        sender,
     );
-    let report_drop_fut = report_dispatcher_packets(
+    report_dispatcher_packets(
         DISPATCHER_DROP_PACKET_COUNT_INDEX,
         get_diff(
             last_stats.any_packet.drop.count,
             current_stats.any_packet.drop.count,
         ),
-        encoder_proxy.clone(),
+        sender,
     );
-
-    report_in_fut
-        .join3(report_out_fut, report_drop_fut)
-        .map(|_| ())
 }
 
-async fn report_dispatcher_packets(
-    packet_type_index: u32, packet_count: u64, encoder_proxy: EncoderProxy,
-) {
+fn report_dispatcher_packets(packet_type_index: u32, packet_count: u64, sender: &mut CobaltSender) {
     let index_value = ObservationValue {
         name: String::from("packet_type_index"),
         value: Value::IndexValue(packet_type_index),
@@ -252,62 +256,47 @@ async fn report_dispatcher_packets(
         value: Value::IntValue(packet_count as i64),
         encoding_id: CobaltEncodingId::RawEncoding as u32,
     };
-    let mut values = vec![index_value, count_value];
-
-    let resp = await!(encoder_proxy.add_multipart_observation(
-        CobaltMetricId::DispatcherPacketCounter as u32,
-        &mut values.iter_mut()
-    ));
-    handle_cobalt_response(resp, CobaltMetricId::DispatcherPacketCounter as u32);
+    let values = vec![index_value, count_value];
+    sender.add_multipart_observation(CobaltMetricId::DispatcherPacketCounter as u32, values);
 }
 
-async fn report_mlme_stats(
-    last_stats: StatsRef, current_stats: StatsRef, encoder_proxy: EncoderProxy,
+fn report_mlme_stats(
+    last: &Option<Box<fidl_stats::MlmeStats>>, current: &Option<Box<fidl_stats::MlmeStats>>,
+    sender: &mut CobaltSender,
 ) {
-    let last_stats_guard = last_stats.lock();
-    let current_stats_guard = current_stats.lock();
-
-    let last = &last_stats_guard.mlme_stats;
-    let current = &current_stats_guard.mlme_stats;
     if let (Some(ref last), Some(ref current)) = (last, current) {
         match (last.as_ref(), current.as_ref()) {
-            (ClientMlmeStats(last), ClientMlmeStats(current)) => await!(report_client_mlme_stats(
-                &last,
-                &current,
-                encoder_proxy.clone()
-            )),
+            (ClientMlmeStats(last), ClientMlmeStats(current)) => {
+                report_client_mlme_stats(&last, &current, sender)
+            }
             (ApMlmeStats(_), ApMlmeStats(_)) => {}
             _ => error!("Current MLME stats type is different from the last MLME stats type"),
         };
     }
 }
 
-fn report_client_mlme_stats<'a>(
-    last_stats: &'a fidl_stats::ClientMlmeStats, current_stats: &'a fidl_stats::ClientMlmeStats,
-    encoder_proxy: EncoderProxy,
-) -> impl Future<Output = ()> + 'a {
-    let report_assoc_rssi_fut = report_rssi_stats(
+fn report_client_mlme_stats(
+    last_stats: &fidl_stats::ClientMlmeStats, current_stats: &fidl_stats::ClientMlmeStats,
+    sender: &mut CobaltSender,
+) {
+    report_rssi_stats(
         CobaltMetricId::ClientAssocDataRssi as u32,
         &last_stats.assoc_data_rssi,
         &current_stats.assoc_data_rssi,
-        encoder_proxy.clone(),
+        sender,
     );
-    let report_beacon_rssi_fut = report_rssi_stats(
+    report_rssi_stats(
         CobaltMetricId::ClientBeaconRssi as u32,
         &last_stats.beacon_rssi,
         &current_stats.beacon_rssi,
-        encoder_proxy.clone(),
+        sender,
     );
-
-    report_assoc_rssi_fut
-        .join(report_beacon_rssi_fut)
-        .map(|_| ())
 }
 
 fn report_rssi_stats(
     rssi_metric_id: u32, last_stats: &fidl_stats::RssiStats, current_stats: &fidl_stats::RssiStats,
-    encoder_proxy: EncoderProxy,
-) -> impl Future<Output = ()> {
+    sender: &mut CobaltSender,
+) {
     // In the internal stats histogram, hist[x] represents the number of frames
     // with RSSI -x. For the Cobalt representation, buckets from -128 to 0 are
     // used. When data is sent to Cobalt, the concept of index is utilized.
@@ -333,24 +322,16 @@ fn report_rssi_stats(
         }
     }
 
-    report_int_bucket_distribution(distribution, rssi_metric_id, encoder_proxy)
-}
-
-async fn report_int_bucket_distribution(
-    mut distribution: Vec<BucketDistributionEntry>, rssi_metric_id: u32,
-    encoder_proxy: EncoderProxy,
-) {
     if !distribution.is_empty() {
-        let resp = await!(encoder_proxy.add_int_bucket_distribution(
+        sender.add_int_bucket_distribution(
             rssi_metric_id,
             CobaltEncodingId::RawEncoding as u32,
-            &mut distribution.iter_mut()
-        ));
-        handle_cobalt_response(resp, rssi_metric_id);
+            distribution,
+        );
     }
 }
 
-pub fn report_connection_time(cobalt_sender: &mut CobaltSender, time: i64, result_index: u32) {
+pub fn report_connection_time(sender: &mut CobaltSender, time: i64, result_index: u32) {
     let result_value = ObservationValue {
         name: String::from("connection_result_index"),
         value: Value::IndexValue(result_index),
@@ -362,7 +343,7 @@ pub fn report_connection_time(cobalt_sender: &mut CobaltSender, time: i64, resul
         encoding_id: CobaltEncodingId::RawEncoding as u32,
     };
     let values = vec![result_value, time_value];
-    cobalt_sender.add_multipart_observation(CobaltMetricId::ConnectionTime as u32, values);
+    sender.add_multipart_observation(CobaltMetricId::ConnectionTime as u32, values);
 }
 
 fn handle_cobalt_response(resp: Result<Status, fidl::Error>, metric_id: u32) {
