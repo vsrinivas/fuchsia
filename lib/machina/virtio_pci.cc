@@ -447,7 +447,7 @@ zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
   size_t device_config_top =
       kVirtioPciDeviceCfgBase + device_config_->config_size;
   if (addr >= kVirtioPciDeviceCfgBase && addr < device_config_top) {
-    uint64_t cfg_addr = addr - kVirtioPciCommonCfgBase;
+    uint64_t cfg_addr = addr - kVirtioPciDeviceCfgBase;
     {
       std::lock_guard<std::mutex> lock(device_config_->mutex);
       switch (value.access_size) {
