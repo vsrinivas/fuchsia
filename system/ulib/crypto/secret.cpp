@@ -31,7 +31,7 @@ Secret::~Secret() {
 }
 
 zx_status_t Secret::Allocate(size_t len, uint8_t** out) {
-    ZX_DEBUG_ASSERT(len != 0 && out);
+    ZX_ASSERT(len != 0 && out);
 
     Clear();
     fbl::AllocChecker ac;
@@ -48,7 +48,7 @@ zx_status_t Secret::Allocate(size_t len, uint8_t** out) {
 }
 
 zx_status_t Secret::Generate(size_t len) {
-    ZX_DEBUG_ASSERT(len != 0);
+    ZX_ASSERT(len != 0);
 
     uint8_t* tmp = nullptr;
     zx_status_t status = Allocate(len, &tmp);
