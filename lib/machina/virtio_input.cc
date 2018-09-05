@@ -384,7 +384,7 @@ zx_status_t VirtioInput::OnKeyEvent(const KeyEvent& key_event) {
   virtio_event.value = key_event.state == KeyState::PRESSED
                            ? VIRTIO_INPUT_EV_KEY_PRESSED
                            : VIRTIO_INPUT_EV_KEY_RELEASED;
-  return SendVirtioEvent(virtio_event);
+  return SendVirtioEvent(virtio_event, VirtioQueue::SET_QUEUE);
 }
 
 zx_status_t VirtioInput::OnPointerEvent(const PointerEvent& pointer_event) {
@@ -407,11 +407,11 @@ zx_status_t VirtioInput::OnPointerEvent(const PointerEvent& pointer_event) {
   }
   x_event.value = static_cast<int32_t>(pointer_event.x);
   y_event.value = static_cast<int32_t>(pointer_event.y);
-  zx_status_t status = SendVirtioEvent(x_event);
+  zx_status_t status = SendVirtioEvent(x_event, VirtioQueue::SET_QUEUE);
   if (status != ZX_OK) {
     return status;
   }
-  return SendVirtioEvent(y_event);
+  return SendVirtioEvent(y_event, VirtioQueue::SET_QUEUE);
 }
 
 zx_status_t VirtioInput::OnButtonEvent(const ButtonEvent& button_event) {
@@ -433,20 +433,18 @@ zx_status_t VirtioInput::OnButtonEvent(const ButtonEvent& button_event) {
   virtio_event.value = button_event.state == KeyState::PRESSED
                            ? VIRTIO_INPUT_EV_KEY_PRESSED
                            : VIRTIO_INPUT_EV_KEY_RELEASED;
-  return SendVirtioEvent(virtio_event);
+  return SendVirtioEvent(virtio_event, VirtioQueue::SET_QUEUE);
 }
 
 zx_status_t VirtioInput::OnBarrierEvent() {
   virtio_input_event_t virtio_event = {};
   virtio_event.type = VIRTIO_INPUT_EV_SYN;
-  zx_status_t status = SendVirtioEvent(virtio_event);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return Interrupt();
+  return SendVirtioEvent(virtio_event,
+                         VirtioQueue::SET_QUEUE | VirtioQueue::TRY_INTERRUPT);
 }
 
-zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event) {
+zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event,
+                                         uint8_t actions) {
   uint16_t head;
   event_queue()->Wait(&head);
 
@@ -460,8 +458,7 @@ zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event) {
   memcpy(event_out, &event, sizeof(event));
 
   // To be less chatty, we'll only send interrupts on barrier events.
-  return event_queue()->Return(head, sizeof(event),
-                               VirtioQueue::InterruptAction::SET_FLAGS);
+  return event_queue()->Return(head, sizeof(event), actions);
 }
 
 }  // namespace machina

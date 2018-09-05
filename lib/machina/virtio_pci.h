@@ -97,11 +97,10 @@ class VirtioPci : public PciDevice {
   // ISR flag values.
   enum IsrFlags : uint8_t {
     // Interrupt is caused by a queue.
-    VIRTIO_ISR_QUEUE = 0x1,
+    ISR_QUEUE = 1 << 0,
     // Interrupt is caused by a device config change.
-    VIRTIO_ISR_DEVICE = 0x2,
+    ISR_CONFIG = 1 << 1,
   };
-
   // Sets the given flags in the ISR register.
   void add_isr_flags(uint8_t flags) {
     std::lock_guard<std::mutex> lock(mutex_);

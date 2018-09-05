@@ -436,6 +436,31 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+static zx_status_t write_device_config(VirtioDeviceConfig* device_config,
+                                       uint64_t addr, const IoValue& value) {
+  switch (value.access_size) {
+    case 1: {
+      std::lock_guard<std::mutex> lock(device_config->mutex);
+      uint8_t* buf = static_cast<uint8_t*>(device_config->config);
+      buf[addr] = value.u8;
+      return ZX_OK;
+    }
+    case 2: {
+      std::lock_guard<std::mutex> lock(device_config->mutex);
+      uint16_t* buf = static_cast<uint16_t*>(device_config->config);
+      buf[addr / 2] = value.u16;
+      return ZX_OK;
+    }
+    case 4: {
+      std::lock_guard<std::mutex> lock(device_config->mutex);
+      uint32_t* buf = static_cast<uint32_t*>(device_config->config);
+      buf[addr / 4] = value.u32;
+      return ZX_OK;
+    }
+  }
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
   switch (addr) {
     case kVirtioPciCommonCfgBase ... kVirtioPciCommonCfgTop: {
@@ -448,27 +473,10 @@ zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
       kVirtioPciDeviceCfgBase + device_config_->config_size;
   if (addr >= kVirtioPciDeviceCfgBase && addr < device_config_top) {
     uint64_t cfg_addr = addr - kVirtioPciDeviceCfgBase;
-    {
-      std::lock_guard<std::mutex> lock(device_config_->mutex);
-      switch (value.access_size) {
-        case 1: {
-          uint8_t* buf = static_cast<uint8_t*>(device_config_->config);
-          buf[cfg_addr] = value.u8;
-          break;
-        }
-        case 2: {
-          uint16_t* buf = static_cast<uint16_t*>(device_config_->config);
-          buf[cfg_addr / 2] = value.u16;
-          break;
-        }
-        case 4: {
-          uint32_t* buf = static_cast<uint32_t*>(device_config_->config);
-          buf[cfg_addr / 4] = value.u32;
-          break;
-        }
-      }
+    zx_status_t status = write_device_config(device_config_, cfg_addr, value);
+    if (status == ZX_OK) {
+      return device_config_->update_config(cfg_addr, value);
     }
-    return device_config_->update_config(cfg_addr, value);
   }
   FXL_LOG(ERROR) << "Unhandled config BAR write 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;

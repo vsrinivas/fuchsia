@@ -87,8 +87,15 @@ class VirtioQueue {
   void set_phys_mem(const PhysMem* phys_mem) { phys_mem_ = phys_mem; }
 
   // Sets the interrupt callback from the queue.
-  enum class InterruptAction { SET_FLAGS, SEND_INTERRUPT };
-  using InterruptFn = fit::function<zx_status_t(InterruptAction action)>;
+  enum InterruptAction : uint8_t {
+    // Set a flag to inspect queues on the next interrupt.
+    SET_QUEUE = 1 << 0,
+    // Set a flag to inspect configs on the next interrupt.
+    SET_CONFIG = 1 << 1,
+    // If a flag is set, send an interrupt to the device.
+    TRY_INTERRUPT = 1 << 2,
+  };
+  using InterruptFn = fit::function<zx_status_t(uint8_t actions)>;
   void set_interrupt(InterruptFn fn) { interrupt_ = std::move(fn); }
 
   // Gets the number of descriptors in the queue.
@@ -157,7 +164,7 @@ class VirtioQueue {
   // The |SEND_INTERRUPT| flag will still respect any requirements enforced by
   // the bus regarding interrupt suppression.
   zx_status_t Return(uint16_t index, uint32_t len,
-                     InterruptAction action = InterruptAction::SEND_INTERRUPT);
+                     uint8_t actions = SET_QUEUE | TRY_INTERRUPT);
 
   // Reads a single descriptor from the queue.
   //

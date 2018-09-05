@@ -72,12 +72,14 @@ class VirtioDevice {
   virtual ~VirtioDevice() = default;
 
   // Sets interrupt flag, and possibly sends interrupt to the driver.
-  zx_status_t Interrupt(VirtioQueue::InterruptAction action =
-                            VirtioQueue::InterruptAction::SEND_INTERRUPT) {
-    // Set the queue bit in the device ISR so that the driver knows to check
-    // the queues on the next interrupt.
-    pci_.add_isr_flags(VirtioPci::VIRTIO_ISR_QUEUE);
-    if (action == VirtioQueue::InterruptAction::SEND_INTERRUPT) {
+  zx_status_t Interrupt(uint8_t actions) {
+    if (actions & VirtioQueue::SET_QUEUE) {
+      pci_.add_isr_flags(VirtioPci::ISR_QUEUE);
+    }
+    if (actions & VirtioQueue::SET_CONFIG) {
+      pci_.add_isr_flags(VirtioPci::ISR_CONFIG);
+    }
+    if (actions & VirtioQueue::TRY_INTERRUPT) {
       return pci_.Interrupt();
     }
     return ZX_OK;

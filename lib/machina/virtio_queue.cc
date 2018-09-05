@@ -218,8 +218,7 @@ zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, VirtioDescriptor* out) {
   return ZX_OK;
 }
 
-zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
-                                InterruptAction action) {
+zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len, uint8_t actions) {
   bool needs_interrupt = false;
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -252,7 +251,7 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
   }
 
   if (needs_interrupt) {
-    return interrupt_(action);
+    return interrupt_(actions);
   }
   return ZX_OK;
 }

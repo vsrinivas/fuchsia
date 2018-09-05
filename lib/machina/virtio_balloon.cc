@@ -174,7 +174,7 @@ zx_status_t VirtioBalloon::UpdateNumPages(uint32_t num_pages) {
   }
 
   // Send a config change interrupt to the guest.
-  return Interrupt();
+  return Interrupt(VirtioQueue::SET_CONFIG | VirtioQueue::TRY_INTERRUPT);
 }
 
 uint32_t VirtioBalloon::num_pages() {

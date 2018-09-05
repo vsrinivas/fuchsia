@@ -27,9 +27,6 @@ namespace machina {
 class VirtioInput : public VirtioDevice<VIRTIO_ID_INPUT, VIRTIO_INPUT_Q_COUNT,
                                         virtio_input_config_t> {
  public:
-  VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
-              const char* device_name, const char* device_serial);
-
   VirtioQueue* event_queue() { return queue(VIRTIO_INPUT_Q_EVENTQ); }
 
   // Spawns a thread to monitor for new input devices. When one is detected
@@ -37,6 +34,9 @@ class VirtioInput : public VirtioDevice<VIRTIO_ID_INPUT, VIRTIO_INPUT_Q_COUNT,
   zx_status_t Start();
 
  protected:
+  VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
+              const char* device_name, const char* device_serial);
+
   virtual zx_status_t UpdateConfig(uint64_t addr, const IoValue& value);
 
  private:
@@ -48,7 +48,8 @@ class VirtioInput : public VirtioDevice<VIRTIO_ID_INPUT, VIRTIO_INPUT_Q_COUNT,
   zx_status_t OnKeyEvent(const KeyEvent& event);
   zx_status_t OnButtonEvent(const ButtonEvent& button_event);
 
-  zx_status_t SendVirtioEvent(const virtio_input_event_t& event);
+  zx_status_t SendVirtioEvent(const virtio_input_event_t& event,
+                              uint8_t actions);
 
   const char* device_name_;
   const char* device_serial_;
