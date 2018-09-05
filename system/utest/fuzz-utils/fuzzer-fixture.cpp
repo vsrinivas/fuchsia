@@ -80,7 +80,7 @@ bool FuzzerFixture::CreatePackage(const char* package, long int version, const c
 
     if (flags & kHasBinary) {
         ASSERT_TRUE(
-            CreateFile(path("pkgfs/packages/%s/%ld/test/%s", package, version, target).c_str()));
+            CreateFile(path("pkgfs/packages/%s/%ld/bin/%s", package, version, target).c_str()));
     }
     if (flags & kHasResources) {
         ASSERT_TRUE(CreateFile(

@@ -269,10 +269,11 @@ void Fuzzer::FindFuchsiaFuzzers(const char* package, const char* target, StringM
     }
 
     auto packages = path.List();
+    packages->keep_if("_fuzzers");
     packages->keep_if(package);
 
     for (const char* p = packages->first(); p; p = packages->next()) {
-        if (GetPackagePath(p, &path) != ZX_OK || path.Push("test") != ZX_OK) {
+        if (GetPackagePath(p, &path) != ZX_OK || path.Push("bin") != ZX_OK) {
             continue;
         }
 
