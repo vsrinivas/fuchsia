@@ -4,6 +4,8 @@
 
 #include <fcntl.h>
 #include <limits.h>
+#include <sstream>
+#include <string>
 
 #include <fbl/unique_fd.h>
 #include <fuchsia/guest/cpp/fidl.h>
@@ -24,7 +26,7 @@ static constexpr char kRealm[] = "realmguestintegrationtest";
 
 class GuestTest : public component::testing::TestWithEnvironment {
  protected:
-  void SetUp() override {
+  void StartGuest(uint8_t num_cpus) {
     enclosing_environment_ = CreateNewEnclosingEnvironment(kRealm);
     ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment_.get()));
 
@@ -35,6 +37,10 @@ class GuestTest : public component::testing::TestWithEnvironment {
                   std::move(launch_info), fuchsia::guest::GuestManager::Name_));
 
     fuchsia::guest::GuestLaunchInfo guest_launch_info = GuestLaunchInfo();
+
+    std::stringstream cpu_arg;
+    cpu_arg << "--cpus=" << std::to_string(num_cpus);
+    guest_launch_info.vmm_args.push_back(cpu_arg.str());
 
     enclosing_environment_->ConnectToService(guest_mgr_.NewRequest());
     ASSERT_TRUE(guest_mgr_);
@@ -52,7 +58,7 @@ class GuestTest : public component::testing::TestWithEnvironment {
         [&socket](zx::socket s) { socket = std::move(s); });
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return socket.is_valid(); },
                                           zx::sec(5)));
-    serial_.Start(std::move(socket));
+    ASSERT_EQ(serial_.Start(std::move(socket)), ZX_OK);
   }
 
   zx_status_t Execute(std::string message, std::string* result = nullptr) {
@@ -75,13 +81,21 @@ class ZirconGuestTest : public GuestTest {
     fuchsia::guest::GuestLaunchInfo launch_info;
     launch_info.url = kZirconGuestUrl;
     launch_info.vmm_args.push_back("--display=none");
-    launch_info.vmm_args.push_back("--cpus=1");
     launch_info.vmm_args.push_back("--network=false");
     return launch_info;
   }
 };
 
 TEST_F(ZirconGuestTest, LaunchGuest) {
+  StartGuest(1);
+  std::string result;
+  EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
+  EXPECT_EQ(result, "test\n");
+  QuitLoop();
+}
+
+TEST_F(ZirconGuestTest, LaunchGuestMultiprocessor) {
+  StartGuest(4);
   std::string result;
   EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
   EXPECT_EQ(result, "test\n");
@@ -94,7 +108,6 @@ class LinuxGuestTest : public GuestTest {
     fuchsia::guest::GuestLaunchInfo launch_info;
     launch_info.url = kLinuxGuestUrl;
     launch_info.vmm_args.push_back("--display=none");
-    launch_info.vmm_args.push_back("--cpus=1");
     launch_info.vmm_args.push_back("--network=false");
     launch_info.vmm_args.push_back("--cmdline-append=loglevel=0 console=hvc0");
     return launch_info;
@@ -102,6 +115,15 @@ class LinuxGuestTest : public GuestTest {
 };
 
 TEST_F(LinuxGuestTest, LaunchGuest) {
+  StartGuest(1);
+  std::string result;
+  EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
+  EXPECT_EQ(result, "test\n");
+  QuitLoop();
+}
+
+TEST_F(LinuxGuestTest, LaunchGuestMultiprocessor) {
+  StartGuest(4);
   std::string result;
   EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
   EXPECT_EQ(result, "test\n");
