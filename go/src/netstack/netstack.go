@@ -118,29 +118,23 @@ func applyMask(addr tcpip.Address, mask tcpip.AddressMask) tcpip.Address {
 }
 
 func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, prefixLen uint8) error {
-	sn, err := toSubnet(addr, prefixLen)
-
+	subnet, err := toSubnet(addr, prefixLen)
 	if err != nil {
-		return fmt.Errorf("Error parsing subnet format for NIC ID %d, error: %s", nic, err)
+		return fmt.Errorf("error parsing subnet format for NIC ID %d: %s", nic, err)
 	}
 
-	hasSubnet, tcpipErr := ns.stack.ContainsSubnet(nic, sn)
-	if tcpipErr != nil {
-		return errors.New(fmt.Sprintf("Error finding subnet %s for NIC ID %d, error: %s", sn, nic, tcpipErr))
-	}
-
-	if hasSubnet {
-		tcpipErr = ns.stack.RemoveSubnet(nic, sn)
-		if tcpipErr != nil {
-			return errors.New(fmt.Sprintf("Error removing subnet %s from NIC ID %d, error: %s", sn, nic, tcpipErr))
+	if hasSubnet, err := ns.stack.ContainsSubnet(nic, subnet); err != nil {
+		return fmt.Errorf("error finding subnet %s for NIC ID %d: %s", subnet, nic, err)
+	} else if hasSubnet {
+		if err := ns.stack.RemoveSubnet(nic, subnet); err != nil {
+			return fmt.Errorf("error removing subnet %s from NIC ID %d: %s", subnet, nic, err)
 		}
 	} else {
-		return errors.New(fmt.Sprintf("No such subnet %s for NIC ID %d", sn, nic))
+		return fmt.Errorf("no such subnet %s for NIC ID %d", subnet, nic)
 	}
 
-	tcpipErr = ns.stack.RemoveAddress(nic, addr)
-	if tcpipErr != nil {
-		return fmt.Errorf("Error removing address %s from NIC ID %d, error: %s", addr, nic, tcpipErr)
+	if err := ns.stack.RemoveAddress(nic, addr); err != nil {
+		return fmt.Errorf("error removing address %s from NIC ID %d: %s", addr, nic, err)
 	}
 
 	ifs, ok := ns.ifStates[nic]
@@ -148,16 +142,19 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 		panic(fmt.Sprintf("Interface state table out of sync: NIC [%d] known to third_party/netstack not found in garnet/netstack", nic))
 	}
 
-	newAddr, newSubnet, err1 := ns.stack.GetMainNICAddress(nic, protocol)
-	netmask := newSubnet.Mask()
-	if netmask == "" {
-		addressSize := int(len(newAddr) * 8)
-		netmask = tcpip.CIDRMask(addressSize, addressSize)
+	{
+		addr, subnet, err := ns.stack.GetMainNICAddress(nic, protocol)
+		if err != nil {
+			return fmt.Errorf("error querying NIC ID %d, error: %s", nic, err)
+		}
+		netmask := subnet.Mask()
+		if netmask == "" {
+			addressSize := int(len(addr) * 8)
+			netmask = tcpip.CIDRMask(addressSize, addressSize)
+		}
+		ifs.staticAddressChanged(addr, netmask)
 	}
-	ifs.staticAddressChanged(newAddr, netmask)
-	if err1 != nil {
-		return fmt.Errorf("Error querying NIC ID %d, error: %s", nic, err)
-	}
+
 	return nil
 }
 
@@ -167,19 +164,17 @@ func toSubnet(address tcpip.Address, prefixLen uint8) (tcpip.Subnet, error) {
 }
 
 func (ns *Netstack) setInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, prefixLen uint8) error {
-
-	sn, err := toSubnet(addr, prefixLen)
+	subnet, err := toSubnet(addr, prefixLen)
 	if err != nil {
-		return fmt.Errorf("Error parsing subnet format for NIC ID %d, error: %s", nic, err)
-	}
-	tcpipErr := ns.stack.AddAddress(nic, protocol, addr)
-	if tcpipErr != nil {
-		return fmt.Errorf("Error adding address %s to NIC ID %d, error: %s", addr, nic, tcpipErr)
+		return fmt.Errorf("error parsing subnet format for NIC ID %d: %s", nic, err)
 	}
 
-	tcpipErr = ns.stack.AddSubnet(nic, protocol, sn)
-	if tcpipErr != nil {
-		return errors.New(fmt.Sprintf("Error adding subnet %s to NIC ID %d, error: %s", sn, nic, tcpipErr))
+	if err := ns.stack.AddAddress(nic, protocol, addr); err != nil {
+		return fmt.Errorf("error adding address %s to NIC ID %d: %s", addr, nic, err)
+	}
+
+	if err := ns.stack.AddSubnet(nic, protocol, subnet); err != nil {
+		return fmt.Errorf("error adding subnet %s to NIC ID %d: %s", subnet, nic, err)
 	}
 
 	ifs, ok := ns.ifStates[nic]
@@ -187,7 +182,7 @@ func (ns *Netstack) setInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkP
 		panic(fmt.Sprintf("Interface state table out of sync: NIC [%d] known to third_party/netstack not found in garnet/netstack", nic))
 	}
 
-	ifs.staticAddressChanged(addr, sn.Mask())
+	ifs.staticAddressChanged(addr, subnet.Mask())
 	return nil
 }
 
