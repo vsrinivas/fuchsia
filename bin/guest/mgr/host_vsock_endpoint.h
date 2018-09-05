@@ -19,7 +19,7 @@ namespace guestmgr {
 static constexpr uint32_t kFirstEphemeralPort = 49152;
 static constexpr uint32_t kLastEphemeralPort = 65535;
 
-// An callback for querying a |GuestEnvironment| for |GuestVsockAcceptor|s.
+// An callback for querying a |EnvironmentController| for |GuestVsockAcceptor|s.
 using AcceptorProvider =
     fit::function<fuchsia::guest::GuestVsockAcceptor*(uint32_t)>;
 

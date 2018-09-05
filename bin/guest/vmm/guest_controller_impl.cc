@@ -17,7 +17,7 @@ static T duplicate(const T& handle, zx_rights_t rights) {
   return handle_out;
 }
 
-GuestControllerImpl::GuestControllerImpl(component::StartupContext* context,
+ControllerImpl::ControllerImpl(component::StartupContext* context,
                                          const machina::PhysMem& phys_mem)
     : vmo_(duplicate(phys_mem.vmo(), kVmoRights)) {
   zx_status_t status = zx::socket::create(0, &server_socket_, &client_socket_);
@@ -26,16 +26,16 @@ GuestControllerImpl::GuestControllerImpl(component::StartupContext* context,
   context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
-void GuestControllerImpl::GetPhysicalMemory(
+void ControllerImpl::GetPhysicalMemory(
     GetPhysicalMemoryCallback callback) {
   callback(duplicate(vmo_, ZX_RIGHT_SAME_RIGHTS));
 }
 
-void GuestControllerImpl::GetSerial(GetSerialCallback callback) {
+void ControllerImpl::GetSerial(GetSerialCallback callback) {
   callback(duplicate(client_socket_, ZX_RIGHT_SAME_RIGHTS));
 }
 
-void GuestControllerImpl::GetViewProvider(GetViewProviderCallback callback) {
+void ControllerImpl::GetViewProvider(GetViewProviderCallback callback) {
   if (view_provider_ == nullptr) {
     // AddBinding gives a "valid" handle to a null ImplPtr, so we explicitly
     // pass a nullptr to the callback here.

@@ -202,7 +202,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
   void VerifyHeader(RxBuffer* buffer, uint32_t host_port, uint32_t guest_port,
                     uint32_t len, uint16_t op, uint32_t flags) {
     virtio_vsock_hdr_t* header = &buffer->header;
-    EXPECT_EQ(header->src_cid, fuchsia::guest::kHostCid);
+    EXPECT_EQ(header->src_cid, fuchsia::guest::HOST_CID);
     EXPECT_EQ(header->dst_cid, kVirtioVsockGuestCid);
     EXPECT_EQ(header->src_port, host_port);
     EXPECT_EQ(header->dst_port, guest_port);
@@ -230,7 +230,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
               uint16_t type, uint16_t op) {
     virtio_vsock_hdr_t tx_header = {
         .src_cid = guest_cid,
-        .dst_cid = fuchsia::guest::kHostCid,
+        .dst_cid = fuchsia::guest::HOST_CID,
         .src_port = guest_port,
         .dst_port = host_port,
         .type = type,
@@ -249,7 +249,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
   template <typename Connection>
   void HostConnectOnPortRequest(uint32_t host_port, Connection* connection) {
     acceptor_->Accept(
-        fuchsia::guest::kHostCid, host_port, kVirtioVsockGuestPort,
+        fuchsia::guest::HOST_CID, host_port, kVirtioVsockGuestPort,
         std::move(connection->take_remote()), connection->callback());
 
     RxBuffer* rx_buffer = DoReceive();
@@ -306,7 +306,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     ASSERT_GE(len, sizeof(*tx_header));
     *tx_header = {
         .src_cid = kVirtioVsockGuestCid,
-        .dst_cid = fuchsia::guest::kHostCid,
+        .dst_cid = fuchsia::guest::HOST_CID,
         .src_port = kVirtioVsockGuestPort,
         .dst_port = host_port,
         .len = static_cast<uint32_t>(len - sizeof(*tx_header)),
@@ -444,7 +444,7 @@ TEST_F(VirtioVsockTest, ConnectMultipleTimesSamePort) {
   }
 
   TestSocketConnection connection;
-  acceptor_->Accept(fuchsia::guest::kHostCid, kVirtioVsockHostPort,
+  acceptor_->Accept(fuchsia::guest::HOST_CID, kVirtioVsockHostPort,
                     kVirtioVsockGuestPort, std::move(connection.take_remote()),
                     connection.callback());
   RunLoopUntilIdle();
@@ -466,14 +466,14 @@ TEST_F(VirtioVsockTest, ConnectRefused) {
   ASSERT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
   ASSERT_TRUE(connection.remote_closed());
   EXPECT_FALSE(vsock_.HasConnection(
-      fuchsia::guest::kHostCid, kVirtioVsockHostPort, kVirtioVsockGuestPort));
+      fuchsia::guest::HOST_CID, kVirtioVsockHostPort, kVirtioVsockGuestPort));
 }
 
 TEST_F(VirtioVsockTest, Listen) {
   GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort,
                      CreateSocket);
   ASSERT_EQ(1u, connections_established_.size());
-  ASSERT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
+  ASSERT_TRUE(vsock_.HasConnection(fuchsia::guest::HOST_CID,
                                    kVirtioVsockHostPort,
                                    kVirtioVsockGuestEphemeralPort));
 }
@@ -482,7 +482,7 @@ TEST_F(VirtioVsockTest, ListenWithChannel) {
   GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort,
                      CreateChannel);
   ASSERT_EQ(1u, connections_established_.size());
-  ASSERT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
+  ASSERT_TRUE(vsock_.HasConnection(fuchsia::guest::HOST_CID,
                                    kVirtioVsockHostPort,
                                    kVirtioVsockGuestEphemeralPort));
 }
@@ -493,10 +493,10 @@ TEST_F(VirtioVsockTest, ListenMultipleTimes) {
   GuestConnectOnPort(kVirtioVsockHostPort + 2,
                      kVirtioVsockGuestEphemeralPort + 2, CreateSocket);
   ASSERT_EQ(2u, connections_established_.size());
-  ASSERT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
+  ASSERT_TRUE(vsock_.HasConnection(fuchsia::guest::HOST_CID,
                                    kVirtioVsockHostPort + 1,
                                    kVirtioVsockGuestEphemeralPort + 1));
-  ASSERT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
+  ASSERT_TRUE(vsock_.HasConnection(fuchsia::guest::HOST_CID,
                                    kVirtioVsockHostPort + 2,
                                    kVirtioVsockGuestEphemeralPort + 2));
 }
@@ -507,10 +507,10 @@ TEST_F(VirtioVsockTest, ListenMultipleTimesSameHostPort) {
   GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort + 1,
                      CreateSocket);
 
-  EXPECT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
+  EXPECT_TRUE(vsock_.HasConnection(fuchsia::guest::HOST_CID,
                                    kVirtioVsockHostPort,
                                    kVirtioVsockGuestEphemeralPort));
-  EXPECT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
+  EXPECT_TRUE(vsock_.HasConnection(fuchsia::guest::HOST_CID,
                                    kVirtioVsockHostPort,
                                    kVirtioVsockGuestEphemeralPort + 1));
 }
@@ -518,7 +518,7 @@ TEST_F(VirtioVsockTest, ListenMultipleTimesSameHostPort) {
 TEST_F(VirtioVsockTest, ListenMultipleTimesSamePort) {
   GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort,
                      CreateSocket);
-  EXPECT_TRUE(vsock_.HasConnection(fuchsia::guest::kHostCid,
+  EXPECT_TRUE(vsock_.HasConnection(fuchsia::guest::HOST_CID,
                                    kVirtioVsockHostPort,
                                    kVirtioVsockGuestEphemeralPort));
 
@@ -526,7 +526,7 @@ TEST_F(VirtioVsockTest, ListenMultipleTimesSamePort) {
                             kVirtioVsockGuestEphemeralPort);
   GuestConnectOnPortResponse(kVirtioVsockHostPort, VIRTIO_VSOCK_OP_RST,
                              kVirtioVsockGuestEphemeralPort);
-  EXPECT_FALSE(vsock_.HasConnection(fuchsia::guest::kHostCid,
+  EXPECT_FALSE(vsock_.HasConnection(fuchsia::guest::HOST_CID,
                                     kVirtioVsockHostPort,
                                     kVirtioVsockGuestEphemeralPort));
 }
@@ -537,7 +537,7 @@ TEST_F(VirtioVsockTest, ListenRefused) {
   GuestConnectInvokeCallbacks(ZX_ERR_CONNECTION_REFUSED, CreateSocket);
   GuestConnectOnPortResponse(kVirtioVsockHostPort, VIRTIO_VSOCK_OP_RST,
                              kVirtioVsockGuestEphemeralPort);
-  EXPECT_FALSE(vsock_.HasConnection(fuchsia::guest::kHostCid,
+  EXPECT_FALSE(vsock_.HasConnection(fuchsia::guest::HOST_CID,
                                     kVirtioVsockHostPort,
                                     kVirtioVsockGuestEphemeralPort));
 }
@@ -548,7 +548,7 @@ TEST_F(VirtioVsockTest, ListenWrongCid) {
          VIRTIO_VSOCK_OP_REQUEST);
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(vsock_.HasConnection(fuchsia::guest::kHostCid,
+  EXPECT_FALSE(vsock_.HasConnection(fuchsia::guest::HOST_CID,
                                     kVirtioVsockHostPort,
                                     kVirtioVsockGuestEphemeralPort));
 }
@@ -868,7 +868,7 @@ TEST_F(VirtioVsockTest, UnsupportedSocketType) {
   RxBuffer* rx_buffer = DoReceive();
   ASSERT_NE(nullptr, rx_buffer);
   virtio_vsock_hdr_t* rx_header = &rx_buffer->header;
-  EXPECT_EQ(rx_header->src_cid, fuchsia::guest::kHostCid);
+  EXPECT_EQ(rx_header->src_cid, fuchsia::guest::HOST_CID);
   EXPECT_EQ(rx_header->dst_cid, kVirtioVsockGuestCid);
   EXPECT_EQ(rx_header->src_port, kVirtioVsockHostPort);
   EXPECT_EQ(rx_header->dst_port, kVirtioVsockGuestPort);

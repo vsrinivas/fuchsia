@@ -45,10 +45,10 @@ class GuestVsockAcceptor : public fuchsia::guest::HostVsockAcceptor {
 
 void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
                          component::StartupContext* context) {
-  fuchsia::guest::GuestManagerSyncPtr guestmgr;
+  fuchsia::guest::EnvironmentManagerSyncPtr guestmgr;
   context->ConnectToEnvironmentService(guestmgr.NewRequest());
-  fuchsia::guest::GuestEnvironmentSyncPtr guest_env;
-  guestmgr->ConnectToEnvironment(env_id, guest_env.NewRequest());
+  fuchsia::guest::EnvironmentControllerSyncPtr guest_env;
+  guestmgr->Connect(env_id, guest_env.NewRequest());
   fuchsia::guest::HostVsockEndpointSyncPtr vsock_endpoint;
   guest_env->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
@@ -67,10 +67,10 @@ void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
 void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port,
                           async::Loop* loop,
                           component::StartupContext* context) {
-  fuchsia::guest::GuestManagerSyncPtr guestmgr;
+  fuchsia::guest::EnvironmentManagerSyncPtr guestmgr;
   context->ConnectToEnvironmentService(guestmgr.NewRequest());
-  fuchsia::guest::GuestEnvironmentSyncPtr guest_env;
-  guestmgr->ConnectToEnvironment(env_id, guest_env.NewRequest());
+  fuchsia::guest::EnvironmentControllerSyncPtr guest_env;
+  guestmgr->Connect(env_id, guest_env.NewRequest());
   fuchsia::guest::HostVsockEndpointSyncPtr vsock_endpoint;
   guest_env->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 

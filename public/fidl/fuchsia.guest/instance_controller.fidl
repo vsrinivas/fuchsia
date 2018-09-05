@@ -1,0 +1,22 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.guest;
+
+using fuchsia.ui.viewsv1;
+
+// A |InstanceController| provides access to services vended by a guest instance.
+[Discoverable]
+interface InstanceController {
+    // Fetch a read-only VMO that represents the physical memory of the guest.
+    1: GetPhysicalMemory() -> (handle<vmo> vmo);
+
+    // Fetch a socket for the primary serial device of the guest. The details
+    // regarding what output is produced and what input is accepted are determined
+    // by each guest.
+    2: GetSerial() -> (handle<socket> socket);
+
+    // Fetch the guest display view provider.
+    3: GetViewProvider() -> (fuchsia.ui.viewsv1.ViewProvider view_provider);
+};

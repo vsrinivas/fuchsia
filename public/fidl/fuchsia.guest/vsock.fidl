@@ -6,11 +6,11 @@ library fuchsia.guest;
 
 using zx;
 
-// |kHostCid| is the reserved context ID (CID) of the host.
+// |HOST_CID| is the reserved context ID (CID) of the host.
 //
-// CIDs for guests are assigned by the GuestManager and can be found in the
-// corresponding |GuestInfo| structure.
-const uint32 kHostCid = 2;
+// CIDs for guests are assigned by the EnvironmentManager and can be found in the
+// corresponding |InstanceInfo| structure.
+const uint32 HOST_CID = 2;
 
 // Exposed by guests capable of listening via vsocks. On a request to establish
 // a connection, the |Accept| method will be called. If the port is open and
@@ -18,47 +18,49 @@ const uint32 kHostCid = 2;
 //
 // Also see |GuestVsockEndpoint|.
 interface GuestVsockAcceptor {
-  1: Accept(uint32 src_cid, uint32 src_port, uint32 port, handle? @handle)
-      -> (zx.status status);
+    1: Accept(uint32 src_cid, uint32 src_port, uint32 port, handle? @handle)
+           -> (zx.status status);
 };
 
 // Exposed by a host capable of listening via vsocks. A variant of a
 // |GuestVsockAcceptor| that is responsible for creating the |handle| with which
-// to communicate.
+// to communicate. The |handle| will be either a socket or a channel, depending
+// on the current configuration.
 interface HostVsockAcceptor {
-  1: Accept(uint32 src_cid, uint32 src_port, uint32 port)
-      -> (zx.status status, handle? @handle);
+    1: Accept(uint32 src_cid, uint32 src_port, uint32 port)
+           -> (zx.status status, handle? @handle);
 };
 
 // Exposed by a host capable of connecting via vsocks. This allows a guest to
 // identify itself via {src_cid, src_port}, and request to connect to
 // {cid, port}. The host should return |ZX_OK|, and create a handle with which
-// to communicate.
+// to communicate. The |handle| will be either a socket or a channel, depending
+// on the current configuration.
 interface HostVsockConnector {
-  1: Connect(uint32 src_cid, uint32 src_port, uint32 cid, uint32 port)
-      -> (zx.status status, handle? @handle);
+    1: Connect(uint32 src_cid, uint32 src_port, uint32 cid, uint32 port)
+           -> (zx.status status, handle? @handle);
 };
 
 // Exposed by guests capable of handling vsock traffic. During
-// initialization the GuestManager will assign a unique CID to this endpoint and
+// initialization the EnvironmentManager will assign a unique CID to this endpoint and
 // provide a |HostVsockConnector| that can be used to establish outbound
 // connections. The implementation should provide a |GuestVsockAcceptor|
 // implementation that can handle any inbound connection requests.
 [Discoverable]
 interface GuestVsockEndpoint {
-  1: SetContextId(uint32 cid, HostVsockConnector connector,
-                  request<GuestVsockAcceptor> acceptor);
+    1: SetContextId(uint32 cid, HostVsockConnector connector,
+                    request<GuestVsockAcceptor> acceptor);
 };
 
 // Exposed by a host to provide the ability for listeners to be multiplexed by
 // port and to manage dynamic port allocation for outbound connections.
 interface HostVsockEndpoint {
-  // Register |acceptor| to be invoked for any connection requests to |port|.
-  1: Listen(uint32 port, HostVsockAcceptor acceptor)
-      -> (zx.status status);
+    // Register |acceptor| to be invoked for any connection requests to |port|.
+    1: Listen(uint32 port, HostVsockAcceptor acceptor)
+           -> (zx.status status);
 
-  // Similar to |HostVsockConnector.Connect| except the |src_cid| is
-  // |kHostCid| and |src_port| is generated automatically.
-  2: Connect(uint32 cid, uint32 port, handle? @handle)
-      -> (zx.status status);
+    // Similar to |HostVsockConnector.Connect| except the |src_cid| is
+    // |HOST_CID| and |src_port| is generated automatically.
+    2: Connect(uint32 cid, uint32 port, handle? @handle)
+           -> (zx.status status);
 };

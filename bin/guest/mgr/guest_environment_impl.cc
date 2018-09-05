@@ -8,14 +8,14 @@
 
 namespace guestmgr {
 
-GuestEnvironmentImpl::GuestEnvironmentImpl(
+EnvironmentControllerImpl::EnvironmentControllerImpl(
     uint32_t id, const std::string& label, component::StartupContext* context,
-    fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request)
+    fidl::InterfaceRequest<fuchsia::guest::EnvironmentController> request)
     : id_(id),
       label_(label),
       context_(context),
       host_vsock_endpoint_(
-          fit::bind_member(this, &GuestEnvironmentImpl::GetAcceptor)) {
+          fit::bind_member(this, &EnvironmentControllerImpl::GetAcceptor)) {
   // Create environment.
   context_->environment()->CreateNestedEnvironment(
       env_.NewRequest(), env_controller_.NewRequest(), label,
@@ -30,24 +30,24 @@ GuestEnvironmentImpl::GuestEnvironmentImpl(
   AddBinding(std::move(request));
 }
 
-void GuestEnvironmentImpl::set_unbound_handler(std::function<void()> handler) {
+void EnvironmentControllerImpl::set_unbound_handler(std::function<void()> handler) {
   bindings_.set_empty_set_handler(std::move(handler));
 }
 
-void GuestEnvironmentImpl::AddBinding(
-    fidl::InterfaceRequest<GuestEnvironment> request) {
+void EnvironmentControllerImpl::AddBinding(
+    fidl::InterfaceRequest<EnvironmentController> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void GuestEnvironmentImpl::LaunchGuest(
-    fuchsia::guest::GuestLaunchInfo launch_info,
-    fidl::InterfaceRequest<fuchsia::guest::GuestController> controller,
-    LaunchGuestCallback callback) {
+void EnvironmentControllerImpl::LaunchInstance(
+    fuchsia::guest::LaunchInfo launch_info,
+    fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller,
+    LaunchInstanceCallback callback) {
   component::Services services;
   fuchsia::sys::ComponentControllerPtr component_controller;
   fuchsia::sys::LaunchInfo info;
   info.url = launch_info.url;
-  info.arguments = std::move(launch_info.vmm_args);
+  info.arguments = std::move(launch_info.args);
   info.directory_request = services.NewRequest();
   info.flat_namespace = std::move(launch_info.flat_namespace);
   launcher_->CreateComponent(std::move(info),
@@ -71,26 +71,26 @@ void GuestEnvironmentImpl::LaunchGuest(
   std::tie(std::ignore, inserted) = guests_.insert({cid, std::move(component)});
   if (!inserted) {
     FXL_LOG(ERROR) << "Failed to allocate guest endpoint on CID " << cid;
-    callback(fuchsia::guest::GuestInfo());
+    callback(fuchsia::guest::InstanceInfo());
     return;
   }
 
-  fuchsia::guest::GuestInfo guest_info;
+  fuchsia::guest::InstanceInfo guest_info;
   guest_info.cid = cid;
   guest_info.label = label;
   callback(std::move(guest_info));
 }
 
-void GuestEnvironmentImpl::GetHostVsockEndpoint(
+void EnvironmentControllerImpl::GetHostVsockEndpoint(
     fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> request) {
   host_vsock_endpoint_.AddBinding(std::move(request));
 }
 
-fidl::VectorPtr<fuchsia::guest::GuestInfo> GuestEnvironmentImpl::ListGuests() {
-  fidl::VectorPtr<fuchsia::guest::GuestInfo> guest_infos =
-      fidl::VectorPtr<fuchsia::guest::GuestInfo>::New(0);
+fidl::VectorPtr<fuchsia::guest::InstanceInfo> EnvironmentControllerImpl::ListGuests() {
+  fidl::VectorPtr<fuchsia::guest::InstanceInfo> guest_infos =
+      fidl::VectorPtr<fuchsia::guest::InstanceInfo>::New(0);
   for (const auto& it : guests_) {
-    fuchsia::guest::GuestInfo guest_info;
+    fuchsia::guest::InstanceInfo guest_info;
     guest_info.cid = it.first;
     guest_info.label = it.second->label();
     guest_infos.push_back(std::move(guest_info));
@@ -98,20 +98,20 @@ fidl::VectorPtr<fuchsia::guest::GuestInfo> GuestEnvironmentImpl::ListGuests() {
   return guest_infos;
 }
 
-void GuestEnvironmentImpl::ListGuests(ListGuestsCallback callback) {
+void EnvironmentControllerImpl::ListInstances(ListInstancesCallback callback) {
   callback(ListGuests());
 }
 
-void GuestEnvironmentImpl::ConnectToGuest(
+void EnvironmentControllerImpl::ConnectToInstance(
     uint32_t id,
-    fidl::InterfaceRequest<fuchsia::guest::GuestController> request) {
+    fidl::InterfaceRequest<fuchsia::guest::InstanceController> request) {
   const auto& it = guests_.find(id);
   if (it != guests_.end()) {
     it->second->AddBinding(std::move(request));
   }
 }
 
-fuchsia::guest::GuestVsockAcceptor* GuestEnvironmentImpl::GetAcceptor(
+fuchsia::guest::GuestVsockAcceptor* EnvironmentControllerImpl::GetAcceptor(
     uint32_t cid) {
   const auto& it = guests_.find(cid);
   return it == guests_.end() ? nullptr : it->second->endpoint();

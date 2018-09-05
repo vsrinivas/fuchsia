@@ -8,6 +8,6 @@
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  guestmgr::GuestManagerImpl guestmgr;
+  guestmgr::EnvironmentManagerImpl guestmgr;
   loop.Run();
 }

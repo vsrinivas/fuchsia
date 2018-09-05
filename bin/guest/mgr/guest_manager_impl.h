@@ -16,27 +16,27 @@
 
 namespace guestmgr {
 
-class GuestManagerImpl : public fuchsia::guest::GuestManager {
+class EnvironmentManagerImpl : public fuchsia::guest::EnvironmentManager {
  public:
-  GuestManagerImpl();
-  ~GuestManagerImpl() override;
+  EnvironmentManagerImpl();
+  ~EnvironmentManagerImpl() override;
 
  private:
-  // |fuchsia::guest::GuestManager|
-  void CreateEnvironment(
+  // |fuchsia::guest::EnvironmentManager|
+  void Create(
       fidl::StringPtr label,
-      fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> env) override;
-  void ListEnvironments(ListEnvironmentsCallback callback) override;
-  void ConnectToEnvironment(
+      fidl::InterfaceRequest<fuchsia::guest::EnvironmentController> env) override;
+  void List(ListCallback callback) override;
+  void Connect(
       uint32_t id,
-      fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> env) override;
+      fidl::InterfaceRequest<fuchsia::guest::EnvironmentController> env) override;
 
   std::unique_ptr<component::StartupContext> context_;
-  fidl::BindingSet<fuchsia::guest::GuestManager> bindings_;
-  std::unordered_map<uint32_t, std::unique_ptr<GuestEnvironmentImpl>>
+  fidl::BindingSet<fuchsia::guest::EnvironmentManager> bindings_;
+  std::unordered_map<uint32_t, std::unique_ptr<EnvironmentControllerImpl>>
       environments_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(GuestManagerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EnvironmentManagerImpl);
 };
 
 }  // namespace guestmgr

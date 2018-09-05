@@ -8,14 +8,14 @@
 #include <iostream>
 
 void handle_list(component::StartupContext* context) {
-  fuchsia::guest::GuestManagerSyncPtr guestmgr;
+  fuchsia::guest::EnvironmentManagerSyncPtr guestmgr;
   context->ConnectToEnvironmentService(guestmgr.NewRequest());
-  fidl::VectorPtr<fuchsia::guest::GuestEnvironmentInfo> env_infos;
-  guestmgr->ListEnvironments(&env_infos);
+  fidl::VectorPtr<fuchsia::guest::EnvironmentInfo> env_infos;
+  guestmgr->List(&env_infos);
 
   for (const auto& env_info : *env_infos) {
     printf("env:%-4u          %s\n", env_info.id, env_info.label->c_str());
-    for (const auto& guest_info : *env_info.guests) {
+    for (const auto& guest_info : *env_info.instances) {
       printf(" guest:%-4u       %s\n", guest_info.cid,
              guest_info.label->c_str());
     }

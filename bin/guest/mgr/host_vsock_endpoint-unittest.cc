@@ -119,7 +119,7 @@ TEST_F(HostVsockEndpointTest, ConnectGuestToHost) {
   host_endpoint_.Listen(22, host_acceptor.NewBinding(), NoOpCallback);
 
   TestConnectorConnection connection;
-  host_endpoint_.Connect(kGuestCid, 1022, fuchsia::guest::kHostCid, 22,
+  host_endpoint_.Connect(kGuestCid, 1022, fuchsia::guest::HOST_CID, 22,
                          connection.callback());
 
   RunLoopUntilIdle();
@@ -150,7 +150,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuest) {
 
   auto requests = guest_acceptor_.TakeRequests();
   ASSERT_EQ(1u, requests.size());
-  EXPECT_EQ(fuchsia::guest::kHostCid, requests[0].src_cid);
+  EXPECT_EQ(fuchsia::guest::HOST_CID, requests[0].src_cid);
   EXPECT_EQ(kFirstEphemeralPort, requests[0].src_port);
   EXPECT_EQ(22u, requests[0].port);
   EXPECT_TRUE(requests[0].handle.is_valid());
@@ -165,7 +165,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToHost) {
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
 
   TestEndpointConnection connection;
-  host_endpoint_.Connect(fuchsia::guest::kHostCid, 22, std::move(h1),
+  host_endpoint_.Connect(fuchsia::guest::HOST_CID, 22, std::move(h1),
                          connection.callback());
 
   ASSERT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
@@ -185,7 +185,7 @@ TEST_F(HostVsockEndpointTest, ConnectGuestToGuestNoAcceptor) {
 
 TEST_F(HostVsockEndpointTest, ConnectGuestToHostNoAcceptor) {
   TestConnectorConnection connection;
-  host_endpoint_.Connect(kGuestCid, 1022, fuchsia::guest::kHostCid, 22,
+  host_endpoint_.Connect(kGuestCid, 1022, fuchsia::guest::HOST_CID, 22,
                          connection.callback());
 
   EXPECT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
@@ -234,7 +234,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestMultipleTimes) {
   ASSERT_EQ(kNumTimes, requests.size());
   uint32_t port = kFirstEphemeralPort;
   for (const auto& request : requests) {
-    EXPECT_EQ(fuchsia::guest::kHostCid, request.src_cid);
+    EXPECT_EQ(fuchsia::guest::HOST_CID, request.src_cid);
     EXPECT_EQ(port++, request.src_port);
     EXPECT_EQ(22u, request.port);
     EXPECT_TRUE(request.handle.is_valid());
@@ -257,7 +257,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
   ASSERT_EQ(kNumTimes, requests.size());
   uint32_t port = kFirstEphemeralPort;
   for (const auto& request : requests) {
-    EXPECT_EQ(fuchsia::guest::kHostCid, request.src_cid);
+    EXPECT_EQ(fuchsia::guest::HOST_CID, request.src_cid);
     EXPECT_EQ(port++, request.src_port);
     EXPECT_EQ(22u, request.port);
     EXPECT_TRUE(request.handle.is_valid());
@@ -277,7 +277,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
 
   requests = guest_acceptor_.TakeRequests();
   ASSERT_EQ(1u, requests.size());
-  EXPECT_EQ(fuchsia::guest::kHostCid, requests[0].src_cid);
+  EXPECT_EQ(fuchsia::guest::HOST_CID, requests[0].src_cid);
   EXPECT_EQ(kFirstEphemeralPort, requests[0].src_port);
   EXPECT_EQ(22u, requests[0].port);
   EXPECT_TRUE(requests[0].handle.is_valid());

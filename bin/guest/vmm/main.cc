@@ -156,7 +156,7 @@ static zx_status_t setup_zircon_framebuffer(
 static zx_status_t setup_scenic_framebuffer(
     component::StartupContext* startup_context, machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
-    GuestControllerImpl* guest_controller,
+    ControllerImpl* guest_controller,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
   fbl::unique_ptr<ScenicScanout> scenic_scanout;
   zx_status_t status =
@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
   }
 
   // Instantiate the controller service.
-  GuestControllerImpl guest_controller(startup_context.get(), guest.phys_mem());
+  ControllerImpl guest_controller(startup_context.get(), guest.phys_mem());
 
   // Setup UARTs.
   machina::Uart uart[kNumUarts];

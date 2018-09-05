@@ -18,7 +18,7 @@ GuestComponent::GuestComponent(
 }
 
 void GuestComponent::AddBinding(
-    fidl::InterfaceRequest<fuchsia::guest::GuestController> request) {
+    fidl::InterfaceRequest<fuchsia::guest::InstanceController> request) {
   bindings_.AddBinding(guest_controller_.get(), std::move(request));
 }
 

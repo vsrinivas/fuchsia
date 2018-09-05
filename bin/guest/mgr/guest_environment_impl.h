@@ -23,11 +23,11 @@ namespace guestmgr {
 // guest in the environment.
 static constexpr uint32_t kFirstGuestCid = 3;
 
-class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
+class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
  public:
-  GuestEnvironmentImpl(
+  EnvironmentControllerImpl(
       uint32_t id, const std::string& label, component::StartupContext* context,
-      fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request);
+      fidl::InterfaceRequest<fuchsia::guest::EnvironmentController> request);
 
   uint32_t id() const { return id_; }
   const std::string& label() const { return label_; }
@@ -35,18 +35,18 @@ class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
   // orphaned.
   void set_unbound_handler(std::function<void()> handler);
 
-  void AddBinding(fidl::InterfaceRequest<GuestEnvironment> request);
-  fidl::VectorPtr<fuchsia::guest::GuestInfo> ListGuests();
+  void AddBinding(fidl::InterfaceRequest<EnvironmentController> request);
+  fidl::VectorPtr<fuchsia::guest::InstanceInfo> ListGuests();
 
  private:
-  // |fuchsia::guest::GuestEnvironment|
-  void LaunchGuest(
-      fuchsia::guest::GuestLaunchInfo launch_info,
-      fidl::InterfaceRequest<fuchsia::guest::GuestController> controller,
-      LaunchGuestCallback callback) override;
-  void ListGuests(ListGuestsCallback callback) override;
-  void ConnectToGuest(uint32_t id,
-                      fidl::InterfaceRequest<fuchsia::guest::GuestController>
+  // |fuchsia::guest::EnvironmentController|
+  void LaunchInstance(
+      fuchsia::guest::LaunchInfo launch_info,
+      fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller,
+      LaunchInstanceCallback callback) override;
+  void ListInstances(ListInstancesCallback callback) override;
+  void ConnectToInstance(uint32_t id,
+                      fidl::InterfaceRequest<fuchsia::guest::InstanceController>
                           controller) override;
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint)
@@ -58,7 +58,7 @@ class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
   const std::string label_;
 
   component::StartupContext* context_;
-  fidl::BindingSet<fuchsia::guest::GuestEnvironment> bindings_;
+  fidl::BindingSet<fuchsia::guest::EnvironmentController> bindings_;
 
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
@@ -69,7 +69,7 @@ class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
   uint32_t next_guest_cid_ = kFirstGuestCid;
   std::unordered_map<uint32_t, std::unique_ptr<GuestComponent>> guests_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(GuestEnvironmentImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EnvironmentControllerImpl);
 };
 
 }  // namespace guestmgr

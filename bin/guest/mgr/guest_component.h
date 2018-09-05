@@ -27,15 +27,15 @@ class GuestComponent {
   GuestVsockEndpoint* endpoint() const { return endpoint_.get(); }
 
   void AddBinding(
-      fidl::InterfaceRequest<fuchsia::guest::GuestController> request);
+      fidl::InterfaceRequest<fuchsia::guest::InstanceController> request);
 
  private:
   const std::string label_;
   std::unique_ptr<GuestVsockEndpoint> endpoint_;
   component::Services services_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
-  fuchsia::guest::GuestControllerPtr guest_controller_;
-  fidl::BindingSet<fuchsia::guest::GuestController> bindings_;
+  fuchsia::guest::InstanceControllerPtr guest_controller_;
+  fidl::BindingSet<fuchsia::guest::InstanceController> bindings_;
 };
 
 }  // namespace guestmgr

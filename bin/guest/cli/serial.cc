@@ -122,13 +122,13 @@ void SerialConsole::Start(zx::socket socket) {
 void handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
                    component::StartupContext* context) {
   // Connect to environment.
-  fuchsia::guest::GuestManagerSyncPtr guestmgr;
+  fuchsia::guest::EnvironmentManagerSyncPtr guestmgr;
   context->ConnectToEnvironmentService(guestmgr.NewRequest());
-  fuchsia::guest::GuestEnvironmentSyncPtr env_ptr;
-  guestmgr->ConnectToEnvironment(env_id, env_ptr.NewRequest());
+  fuchsia::guest::EnvironmentControllerSyncPtr env_ptr;
+  guestmgr->Connect(env_id, env_ptr.NewRequest());
 
-  fuchsia::guest::GuestControllerSyncPtr guest_controller;
-  env_ptr->ConnectToGuest(cid, guest_controller.NewRequest());
+  fuchsia::guest::InstanceControllerSyncPtr guest_controller;
+  env_ptr->ConnectToInstance(cid, guest_controller.NewRequest());
 
   // Open the serial service of the guest and process IO.
   zx::socket socket;

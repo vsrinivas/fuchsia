@@ -21,7 +21,7 @@ void HostVsockEndpoint::AddBinding(
 void HostVsockEndpoint::Connect(
     uint32_t src_cid, uint32_t src_port, uint32_t cid, uint32_t port,
     fuchsia::guest::HostVsockConnector::ConnectCallback callback) {
-  if (cid == fuchsia::guest::kHostCid) {
+  if (cid == fuchsia::guest::HOST_CID) {
     // Guest to host connection.
     auto it = listeners_.find(port);
     if (it == listeners_.end()) {
@@ -77,7 +77,7 @@ void HostVsockEndpoint::Listen(
 void HostVsockEndpoint::Connect(
     uint32_t cid, uint32_t port, zx::handle handle,
     fuchsia::guest::HostVsockEndpoint::ConnectCallback callback) {
-  if (cid == fuchsia::guest::kHostCid) {
+  if (cid == fuchsia::guest::HOST_CID) {
     FXL_LOG(ERROR) << "Attempt to connect to host service from host";
     callback(ZX_ERR_CONNECTION_REFUSED);
     return;
@@ -101,7 +101,7 @@ void HostVsockEndpoint::Connect(
   }
   // Get access to the guests.
   acceptor->Accept(
-      fuchsia::guest::kHostCid, src_port, port, std::move(handle),
+      fuchsia::guest::HOST_CID, src_port, port, std::move(handle),
       [this, dup = std::move(dup), src_port,
        callback = std::move(callback)](zx_status_t status) mutable {
         ConnectCallback(status, std::move(dup), src_port, std::move(callback));

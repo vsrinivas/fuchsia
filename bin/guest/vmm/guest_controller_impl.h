@@ -12,11 +12,11 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 
-// Provides an implementation of the |fuchsia::guest::GuestController|
+// Provides an implementation of the |fuchsia::guest::InstanceController|
 // interface. This exposes some guest services over FIDL.
-class GuestControllerImpl : public fuchsia::guest::GuestController {
+class ControllerImpl : public fuchsia::guest::InstanceController {
  public:
-  GuestControllerImpl(component::StartupContext* context,
+  ControllerImpl(component::StartupContext* context,
                       const machina::PhysMem& phys_mem);
 
   void set_view_provider(::fuchsia::ui::viewsv1::ViewProvider* view_provider) {
@@ -28,13 +28,13 @@ class GuestControllerImpl : public fuchsia::guest::GuestController {
   // via |GetSerial|.
   zx::socket TakeSocket() { return std::move(server_socket_); }
 
-  // |fuchsia::guest::GuestController|
+  // |fuchsia::guest::InstanceController|
   void GetPhysicalMemory(GetPhysicalMemoryCallback callback) override;
   void GetSerial(GetSerialCallback callback) override;
   void GetViewProvider(GetViewProviderCallback callback) override;
 
  private:
-  fidl::BindingSet<fuchsia::guest::GuestController> bindings_;
+  fidl::BindingSet<fuchsia::guest::InstanceController> bindings_;
   fidl::BindingSet<::fuchsia::ui::viewsv1::ViewProvider>
       view_provider_bindings_;
 

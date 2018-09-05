@@ -34,23 +34,23 @@ class GuestTest : public component::testing::TestWithEnvironment {
     launch_info.url = kGuestMgrUrl;
     ASSERT_EQ(ZX_OK,
               enclosing_environment_->AddServiceWithLaunchInfo(
-                  std::move(launch_info), fuchsia::guest::GuestManager::Name_));
+                  std::move(launch_info), fuchsia::guest::EnvironmentManager::Name_));
 
-    fuchsia::guest::GuestLaunchInfo guest_launch_info = GuestLaunchInfo();
+    fuchsia::guest::LaunchInfo guest_launch_info = LaunchInfo();
 
     std::stringstream cpu_arg;
     cpu_arg << "--cpus=" << std::to_string(num_cpus);
-    guest_launch_info.vmm_args.push_back(cpu_arg.str());
+    guest_launch_info.args.push_back(cpu_arg.str());
 
     enclosing_environment_->ConnectToService(guest_mgr_.NewRequest());
     ASSERT_TRUE(guest_mgr_);
-    guest_mgr_->CreateEnvironment(guest_launch_info.url,
+    guest_mgr_->Create(guest_launch_info.url,
                                   guest_env_.NewRequest());
     ASSERT_TRUE(guest_env_);
 
-    guest_env_->LaunchGuest(std::move(guest_launch_info),
+    guest_env_->LaunchInstance(std::move(guest_launch_info),
                             guest_controller_.NewRequest(),
-                            [](fuchsia::guest::GuestInfo) {});
+                            [](fuchsia::guest::InstanceInfo) {});
     ASSERT_TRUE(guest_controller_);
 
     zx::socket socket;
@@ -65,23 +65,23 @@ class GuestTest : public component::testing::TestWithEnvironment {
     return serial_.ExecuteBlocking(message, result);
   }
 
-  virtual fuchsia::guest::GuestLaunchInfo GuestLaunchInfo() = 0;
+  virtual fuchsia::guest::LaunchInfo LaunchInfo() = 0;
 
   std::unique_ptr<component::testing::EnclosingEnvironment>
       enclosing_environment_;
-  fuchsia::guest::GuestManagerPtr guest_mgr_;
-  fuchsia::guest::GuestEnvironmentPtr guest_env_;
-  fuchsia::guest::GuestControllerPtr guest_controller_;
+  fuchsia::guest::EnvironmentManagerPtr guest_mgr_;
+  fuchsia::guest::EnvironmentControllerPtr guest_env_;
+  fuchsia::guest::InstanceControllerPtr guest_controller_;
   TestSerial serial_;
 };
 
 class ZirconGuestTest : public GuestTest {
  protected:
-  fuchsia::guest::GuestLaunchInfo GuestLaunchInfo() {
-    fuchsia::guest::GuestLaunchInfo launch_info;
+  fuchsia::guest::LaunchInfo LaunchInfo() {
+    fuchsia::guest::LaunchInfo launch_info;
     launch_info.url = kZirconGuestUrl;
-    launch_info.vmm_args.push_back("--display=none");
-    launch_info.vmm_args.push_back("--network=false");
+    launch_info.args.push_back("--display=none");
+    launch_info.args.push_back("--network=false");
     return launch_info;
   }
 };
@@ -104,12 +104,12 @@ TEST_F(ZirconGuestTest, LaunchGuestMultiprocessor) {
 
 class LinuxGuestTest : public GuestTest {
  protected:
-  fuchsia::guest::GuestLaunchInfo GuestLaunchInfo() {
-    fuchsia::guest::GuestLaunchInfo launch_info;
+  fuchsia::guest::LaunchInfo LaunchInfo() {
+    fuchsia::guest::LaunchInfo launch_info;
     launch_info.url = kLinuxGuestUrl;
-    launch_info.vmm_args.push_back("--display=none");
-    launch_info.vmm_args.push_back("--network=false");
-    launch_info.vmm_args.push_back("--cmdline-append=loglevel=0 console=hvc0");
+    launch_info.args.push_back("--display=none");
+    launch_info.args.push_back("--network=false");
+    launch_info.args.push_back("--cmdline-append=loglevel=0 console=hvc0");
     return launch_info;
   }
 };
