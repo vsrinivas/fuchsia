@@ -178,10 +178,11 @@ bool RsnElement::Create(void* buf, size_t len, size_t* actual, const uint8_t* ra
     if (raw_len < sizeof(RsnElement)) return false;
     if (raw_len > len) return false;
 
+    memcpy(buf, raw, raw_len);
+
     auto elem = static_cast<RsnElement*>(buf);
-    memcpy(elem, raw, raw_len);
     elem->hdr.id = element_id::kRsn;
-    elem->hdr.len = raw_len - sizeof(ElementHeader);
+    elem->hdr.len = static_cast<uint8_t >(raw_len - sizeof(ElementHeader));
     *actual = raw_len;
     return true;
 }

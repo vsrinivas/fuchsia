@@ -40,6 +40,7 @@ class BeaconSender {
     zx_status_t WriteExtendedSupportedRates(ElementWriter* w);
     zx_status_t WriteHtCapabilities(ElementWriter* w);
     zx_status_t WriteHtOperation(ElementWriter* w);
+    zx_status_t WriteRsne(ElementWriter* w);
     bool IsStarted();
 
     DeviceInterface* const device_;

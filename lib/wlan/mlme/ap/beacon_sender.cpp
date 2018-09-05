@@ -140,6 +140,11 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     status = WriteExtendedSupportedRates(&w);
     if (status != ZX_OK) { return status; }
 
+    if (!req_.rsne.is_null()) {
+        status = WriteRsne(&w);
+        if (status != ZX_OK) { return status; }
+    }
+
     if (bss_->IsHTReady()) {
         status = WriteHtCapabilities(&w);
         if (status != ZX_OK) { return status; }
@@ -191,7 +196,7 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
     frame.FillTxInfo();
 
     auto resp = frame.body();
-    resp->beacon_interval = req_.beacon_period;
+    resp->beacon_interval = static_cast<uint16_t>(req_.beacon_period);
     resp->timestamp = bss_->timestamp();
     resp->cap.set_ess(1);
     resp->cap.set_short_preamble(1);
@@ -203,6 +208,7 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
     if (WriteDsssParamSet(&w) != ZX_OK) { return; }
     if (WriteCountry(&w) != ZX_OK) { return; }
     if (WriteExtendedSupportedRates(&w) != ZX_OK) { return; }
+    if (!req_.rsne.is_null() && WriteRsne(&w) != ZX_OK) { return; }
 
     if (bss_->IsHTReady()) {
         if (WriteHtCapabilities(&w) != ZX_OK) { return; }
@@ -339,6 +345,14 @@ zx_status_t BeaconSender::WriteHtOperation(ElementWriter* w) {
     HtOperation hto = bss_->BuildHtOperation(bss_->Chan());
     if (!w->write<HtOperation>(hto.primary_chan, hto.head, hto.tail, hto.basic_mcs_set)) {
         errorf("[bcn-sender] [%s] could not write HtOperation\n", bss_->bssid().ToString().c_str());
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
+}
+
+zx_status_t BeaconSender::WriteRsne(ElementWriter* w) {
+    if (!w->write<RsnElement>(req_.rsne->data(), req_.rsne->size())) {
+        errorf("[bcn-sender] [%s] could not write RSNE\n", bss_->bssid().ToString().c_str());
         return ZX_ERR_IO;
     }
     return ZX_OK;
