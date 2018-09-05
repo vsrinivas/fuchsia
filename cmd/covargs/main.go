@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"debug/elf"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -210,6 +211,25 @@ func (a Action) String() string {
 	return buf.String()
 }
 
+func isInstrumented(filepath string) bool {
+	sections := []string{"__llvm_covmap", "__llvm_prf_names"}
+	file, err := os.Open(filepath)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	elfFile, err := elf.NewFile(file)
+	if err != nil {
+		return false
+	}
+	for _, section := range sections {
+		if sec := elfFile.Section(section); sec == nil {
+			return false
+		}
+	}
+	return true
+}
+
 func process() error {
 	// Make the output directory
 	err := os.MkdirAll(outputDir, os.ModePerm)
@@ -235,7 +255,7 @@ func process() error {
 	var covFiles []string
 	for _, entry := range entries {
 		for _, mod := range entry.ModuleFiles {
-			if _, ok := modSet[mod]; !ok {
+			if _, ok := modSet[mod]; !ok && isInstrumented(mod) {
 				mods = append(mods, mod)
 				modSet[mod] = struct{}{}
 			}
@@ -251,7 +271,7 @@ func process() error {
 	}
 	defer modList.Close()
 	for _, mod := range mods {
-		fmt.Fprintf(modList, "%s\n", mod)
+		fmt.Fprintf(modList, "-object %s\n", mod)
 	}
 
 	// Make the cov files file

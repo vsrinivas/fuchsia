@@ -2,3 +2,4 @@ deadbeef build/fbl.so
 12345678 build/libc.so
 ffffffff build/foo.so
 89abcdef build/dl.so
+deadcafe build/a.out
