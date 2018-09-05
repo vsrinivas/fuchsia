@@ -12,6 +12,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
 namespace btlib {
 
@@ -28,10 +29,11 @@ class RemoteDeviceCache;
 // Manages all activity related to connections in the BR/EDR section of the
 // controller, including whether the device can be connected to, incoming
 // connections, and initiating connections.
-class BrEdrConnectionManager {
+class BrEdrConnectionManager final {
  public:
   BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
                          RemoteDeviceCache* device_cache,
+                         fbl::RefPtr<l2cap::L2CAP> l2cap,
                          bool use_interlaced_scan);
   ~BrEdrConnectionManager();
 
@@ -84,6 +86,8 @@ class BrEdrConnectionManager {
   // TODO(NET-410) - put newly found devices OnConnectionRequest/Complete
   // and use for Connect()
   RemoteDeviceCache* cache_ __UNUSED;
+
+  fbl::RefPtr<l2cap::L2CAP> l2cap_;
 
   // Interregator for new connections to pass.
   BrEdrInterrogator interrogator_;

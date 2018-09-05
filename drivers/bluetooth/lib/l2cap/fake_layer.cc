@@ -65,6 +65,14 @@ void FakeLayer::TriggerInboundChannel(hci::ConnectionHandle handle, PSM psm,
   });
 }
 
+void FakeLayer::TriggerLinkError(hci::ConnectionHandle handle) {
+  ZX_DEBUG_ASSERT(initialized_);
+
+  LinkData& link_data = FindLinkData(handle);
+  async::PostTask(link_data.dispatcher,
+                  [cb = link_data.link_error_cb.share()] { cb(); });
+}
+
 void FakeLayer::Initialize() { initialized_ = true; }
 
 void FakeLayer::ShutDown() { initialized_ = false; }

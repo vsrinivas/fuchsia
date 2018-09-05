@@ -69,9 +69,11 @@ hci::CommandChannel::EventHandlerId BrEdrConnectionManager::AddEventHandler(
 
 BrEdrConnectionManager::BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
                                                RemoteDeviceCache* device_cache,
+                                               fbl::RefPtr<l2cap::L2CAP> l2cap,
                                                bool use_interlaced_scan)
     : hci_(hci),
       cache_(device_cache),
+      l2cap_(l2cap),
       interrogator_(cache_, hci_, async_get_default_dispatcher()),
       page_scan_interval_(0),
       page_scan_window_(0),
@@ -291,7 +293,8 @@ void BrEdrConnectionManager::OnConnectionComplete(
   if (!device) {
     device = cache_->NewDevice(addr, true);
   }
-  // Interrogate this device to find out it's version/capabilities.
+
+  // Interrogate this device to find out its version/capabilities.
   interrogator_.Start(
       device->identifier(), std::move(conn_ptr),
       [device, self = weak_ptr_factory_.GetWeakPtr()](auto status,
@@ -304,9 +307,30 @@ void BrEdrConnectionManager::OnConnectionComplete(
         bt_log(SPEW, "gap-bredr", "interrogation complete for %#.4x",
                conn_ptr->handle());
 
+        if (!self) {
+          return;
+        }
+
+        // Register with L2CAP to handle services on the ACL signaling channel.
+        self->l2cap_->AddACLConnection(
+            conn_ptr->handle(), conn_ptr->role(),
+            [self, conn_ptr = conn_ptr->WeakPtr()] {
+              if (!self || !conn_ptr) {
+                return;
+              }
+
+              bt_log(ERROR, "gap-bredr",
+                     "Link error received, closing connection %#.4x",
+                     conn_ptr->handle());
+
+              // Clean up after receiving the DisconnectComplete event.
+              // TODO(NET-1442): Test link error behavior using FakeDevice.
+              conn_ptr->Close();
+            },
+            self->dispatcher_);
+
         self->connections_.emplace(device->identifier(), std::move(conn_ptr));
-        // TODO(NET-406, NET-407): set up the L2CAP signalling channel and
-        // start SDP service discovery.
+        // TODO(NET-1019): Start SDP service discovery.
       });
 }
 
@@ -338,7 +362,7 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
          "%s disconnected - %s, handle: %#.4x, reason: %#.2x", device.c_str(),
          event.ToStatus().ToString().c_str(), handle, params.reason);
 
-  // TODO(NET-406): Inform L2CAP that the connection has been disconnected.
+  l2cap_->RemoveConnection(handle);
 
   // Connection is already closed, so we don't need to send a disconnect.
   conn->set_closed();

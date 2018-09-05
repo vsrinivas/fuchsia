@@ -43,6 +43,9 @@ class FakeLayer final : public L2CAP {
   void TriggerInboundChannel(hci::ConnectionHandle handle, PSM psm,
                              ChannelId id, ChannelId remote_id);
 
+  // Triggers a link error callback on the given link.
+  void TriggerLinkError(hci::ConnectionHandle handle);
+
   // L2CAP overrides
   void Initialize() override;
   void ShutDown() override;

@@ -532,7 +532,7 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
 
   if (state_.IsBREDRSupported()) {
     bredr_connection_manager_ = std::make_unique<BrEdrConnectionManager>(
-        hci_, &device_cache_,
+        hci_, &device_cache_, l2cap_,
         state_.features().HasBit(0, hci::LMPFeature::kInterlacedPageScan));
 
     hci::InquiryMode mode = hci::InquiryMode::kStandard;

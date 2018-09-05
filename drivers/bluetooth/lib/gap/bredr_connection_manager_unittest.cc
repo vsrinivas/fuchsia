@@ -7,6 +7,7 @@
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 
@@ -21,6 +22,8 @@ using common::LowerBits;
 
 using TestingBase =
     ::btlib::testing::FakeControllerTest<::btlib::testing::TestController>;
+
+constexpr hci::ConnectionHandle kConnectionHandle = 0x0BAA;
 
 // clang-format off
 
@@ -98,8 +101,10 @@ class BrEdrConnectionManagerTest : public TestingBase {
     InitializeACLDataChannel();
 
     device_cache_ = std::make_unique<RemoteDeviceCache>();
+    l2cap_ = l2cap::testing::FakeLayer::Create();
+    l2cap_->Initialize();
     connection_manager_ = std::make_unique<BrEdrConnectionManager>(
-        transport(), device_cache_.get(), true);
+        transport(), device_cache_.get(), l2cap_, true);
 
     StartTestDevice();
   }
@@ -115,6 +120,7 @@ class BrEdrConnectionManagerTest : public TestingBase {
     }
     RunLoopUntilIdle();
     test_device()->Stop();
+    l2cap_ = nullptr;
     device_cache_ = nullptr;
     TestingBase::TearDown();
   }
@@ -125,9 +131,12 @@ class BrEdrConnectionManagerTest : public TestingBase {
     connection_manager_ = std::move(mgr);
   }
 
+  l2cap::testing::FakeLayer* l2cap() const { return l2cap_.get(); }
+
  private:
   std::unique_ptr<BrEdrConnectionManager> connection_manager_;
   std::unique_ptr<RemoteDeviceCache> device_cache_;
+  fbl::RefPtr<l2cap::testing::FakeLayer> l2cap_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BrEdrConnectionManagerTest);
 };
@@ -352,8 +361,9 @@ const auto kDisconnectionComplete = common::CreateStaticByteBuffer(
     0x13                        // Reason (Remote User Terminated Connection)
 );
 
-// Test: An incoming connection request should trigger an acceptance and an
-// interrogation to discover capabilities.
+// Test: An incoming connection request should trigger an acceptance and
+// interrogation should allow a device that only report the first Extended
+// Features page.
 TEST_F(GAP_BrEdrConnectionManagerTest,
        IncomingConnection_BrokenExtendedPageResponse) {
   size_t transactions = 0;
@@ -404,7 +414,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest,
 
 // Test: An incoming connection request should trigger an acceptance and an
 // interrogation to discover capabilities.
-TEST_F(GAP_BrEdrConnectionManagerTest, IncommingConnection) {
+TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnection) {
   size_t transactions = 0;
   test_device()->SetTransactionCallback([&transactions] { transactions++; },
                                         async_get_default_dispatcher());
@@ -568,6 +578,59 @@ TEST_F(GAP_BrEdrConnectionManagerTest, ConfirmationRequest) {
   RunLoopUntilIdle();
 
   EXPECT_EQ(1u, transactions);
+}
+
+// Test: if L2CAP gets a link error, we disconnect the connection
+TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
+  size_t transactions = 0;
+  test_device()->SetTransactionCallback([&transactions] { transactions++; },
+                                        async_get_default_dispatcher());
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kAcceptConnectionRequest,
+                         {&kAcceptConnectionRequestRsp, &kConnectionComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kRemoteNameRequest,
+      {&kRemoteNameRequestRsp, &kRemoteNameRequestComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteVersionInfo,
+      {&kReadRemoteVersionInfoRsp, &kRemoteVersionInfoComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteSupportedFeatures, {&kReadRemoteSupportedFeaturesRsp,
+                                     &kReadRemoteSupportedFeaturesComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteExtended1,
+      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended1Complete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteExtended2,
+      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended2Complete}));
+
+  test_device()->SendCommandChannelPacket(kConnectionRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(6u, transactions);
+
+  // When we deallocate the connection manager next, we should disconnect.
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kDisconnect, {&kDisconnectRsp, &kDisconnectionComplete}));
+
+  l2cap()->TriggerLinkError(kConnectionHandle);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(7u, transactions);
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspBoth}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnableInq, {&kWriteScanEnableRsp}));
+
+  SetConnectionManager(nullptr);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(9u, transactions);
 }
 
 #undef COMMAND_COMPLETE_RSP
