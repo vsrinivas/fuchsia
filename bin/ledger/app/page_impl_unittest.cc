@@ -659,15 +659,21 @@ TEST_F(PageImplTest, TransactionRollback) {
   // Sequence of operations:
   //  - StartTransaction
   //  - Rollback
-  bool called;
-  Status status;
+  bool called_start;
+  Status status_start;
+  bool called_rollback;
+  Status status_rollback;
+
   page_ptr_->StartTransaction(
-      [](Status status) { EXPECT_EQ(Status::OK, status); });
+      callback::Capture(callback::SetWhenCalled(&called_start), &status_start));
   page_ptr_->Rollback(
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      callback::Capture(callback::SetWhenCalled(&called_rollback), &status_rollback));
+
   DrainLoop();
-  EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(called_start);
+  EXPECT_EQ(Status::OK, status_start);
+  EXPECT_TRUE(called_rollback);
+  EXPECT_EQ(Status::OK, status_rollback);
   EXPECT_EQ(0u, fake_storage_->GetObjects().size());
 
   // Only one journal, rollbacked.
@@ -684,15 +690,21 @@ TEST_F(PageImplTest, NoTwoTransactions) {
   // Sequence of operations:
   //  - StartTransaction
   //  - StartTransaction
+  bool called1;
+  Status status1;
+  bool called2;
+  Status status2;
+
   page_ptr_->StartTransaction(
-      [](Status status) { EXPECT_EQ(Status::OK, status); });
-  bool called;
-  Status status;
+      callback::Capture(callback::SetWhenCalled(&called1), &status1));
   page_ptr_->StartTransaction(
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      callback::Capture(callback::SetWhenCalled(&called2), &status2));
+
   DrainLoop();
-  EXPECT_TRUE(called);
-  EXPECT_EQ(Status::TRANSACTION_ALREADY_IN_PROGRESS, status);
+  EXPECT_TRUE(called1);
+  EXPECT_EQ(Status::OK, status1);
+  EXPECT_TRUE(called2);
+  EXPECT_EQ(Status::TRANSACTION_ALREADY_IN_PROGRESS, status2);
 }
 
 TEST_F(PageImplTest, NoTransactionCommit) {
