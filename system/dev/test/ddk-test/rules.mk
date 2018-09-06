@@ -11,6 +11,7 @@ MODULE_TYPE := drivertest
 MODULE_SRCS := \
   $(LOCAL_DIR)/ddk-test.c \
   $(LOCAL_DIR)/ddk-test-binding.c \
+  $(LOCAL_DIR)/metadata-test.c \
   $(LOCAL_DIR)/usb-request-test.c \
 
 MODULE_STATIC_LIBS := \

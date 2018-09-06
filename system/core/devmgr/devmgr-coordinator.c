@@ -1132,7 +1132,30 @@ static zx_status_t dc_add_metadata(device_t* dev, uint32_t type, const void* dat
 
 static zx_status_t dc_publish_metadata(device_t* dev, const char* path, uint32_t type,
                                        const void* data, uint32_t length) {
-    // TODO: Restrict access to the sys devhost by matching against caller's PID.
+    char caller_path[DC_PATH_MAX];
+    zx_status_t status = dc_get_topo_path(dev, caller_path, DC_PATH_MAX);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Check to see if the specified path is a child of the caller's path
+    int caller_length = strlen(caller_path);
+    if (!strncmp(path, caller_path, caller_length) &&
+        (path[caller_length] == 0 || path[caller_length] == '/')) {
+        // Caller is adding a path that matches itself or one of its children, which is allowed.
+    } else {
+        // Adding metadata to arbitrary paths is restricted to drivers running in the sys devhost.
+        while (dev && dev != &sys_device) {
+            if (dev->proxy) {
+                // this device is in a child devhost
+                return ZX_ERR_ACCESS_DENIED;
+            }
+            dev = dev->parent;
+        }
+        if (!dev) {
+            return ZX_ERR_ACCESS_DENIED;
+        }
+    }
 
     dc_metadata_t* md = calloc(1, sizeof(dc_metadata_t) + length + strlen(path) + 1);
     if (!md) {

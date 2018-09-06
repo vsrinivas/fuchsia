@@ -148,6 +148,10 @@ static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
         strncpy(devname, "testdev", sizeof(devname) - 1);
     }
     devname[sizeof(devname) - 1] = '\0';
+    // truncate trailing ".so"
+    if (!strcmp(devname + strlen(devname) - 3, ".so")) {
+        devname[strlen(devname) - 3] = 0;
+    }
 
     if (outlen < strlen(devname) + sizeof(TEST_CONTROL_DEVICE) + 1) {
         return ZX_ERR_BUFFER_TOO_SMALL;

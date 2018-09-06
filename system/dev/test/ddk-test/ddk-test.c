@@ -14,7 +14,10 @@
 #include <string.h>
 #include <limits.h>
 
+extern struct test_case_element* test_case_ddk_metadata;
 extern struct test_case_element* test_case_ddk_usb_request;
+
+zx_device_t* ddk_test_dev;
 
 static void ddk_test_output_func(const char* line, int len, void* arg) {
     zx_handle_t h = *(zx_handle_t*)arg;
@@ -46,6 +49,7 @@ static zx_status_t ddk_test_func(void* cookie, test_report_t* report, const void
     }
 
     memset(report, 0, sizeof(*report));
+    update_test_report(unittest_run_one_test(test_case_ddk_metadata, TEST_ALL), report);
     update_test_report(unittest_run_one_test(test_case_ddk_usb_request, TEST_ALL), report);
     return report->n_failed == 0 ? ZX_OK : ZX_ERR_INTERNAL;
 }
@@ -57,6 +61,7 @@ zx_status_t ddk_test_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
+    ddk_test_dev = parent;
     proto.ops->set_test_func(proto.ctx, ddk_test_func, parent);
     return ZX_OK;
 }
