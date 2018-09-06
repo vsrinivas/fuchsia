@@ -12,9 +12,14 @@ void handle_list(component::StartupContext* context) {
   context->ConnectToEnvironmentService(guestmgr.NewRequest());
   fidl::VectorPtr<fuchsia::guest::EnvironmentInfo> env_infos;
   guestmgr->List(&env_infos);
-
+  if (env_infos->empty()) {
+    printf("no environments\n");
+  }
   for (const auto& env_info : *env_infos) {
     printf("env:%-4u          %s\n", env_info.id, env_info.label->c_str());
+    if (env_info.instances->empty()) {
+      printf(" no guest instances\n");
+    }
     for (const auto& guest_info : *env_info.instances) {
       printf(" guest:%-4u       %s\n", guest_info.cid,
              guest_info.label->c_str());

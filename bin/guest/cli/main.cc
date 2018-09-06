@@ -31,10 +31,12 @@ static void usage() {
             << "  dump          <env_id> <cid> <hex-addr> <hex-len>\n";
 }
 
-bool parse_id(const char* arg, uint32_t* id) {
-  fxl::StringView id_view(arg);
-  if (!fxl::StringToNumberWithError(id_view, id)) {
-    std::cerr << "Invalid id " << id << "\n";
+template <class T>
+bool parse_number(const char* arg, const char* name, T* value,
+                  fxl::Base base = fxl::Base::k10) {
+  fxl::StringView arg_view(arg);
+  if (!fxl::StringToNumberWithError(arg_view, value, base)) {
+    std::cerr << "Invalid " << name << ": " << arg_view << "\n";
     return false;
   }
   return true;
@@ -48,25 +50,17 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
   fxl::StringView cmd_view(argv[1]);
   if (cmd_view == "dump" && argc == 6) {
     uint32_t env_id;
-    if (!parse_id(argv[2], &env_id)) {
+    if (!parse_number(argv[2], "environment ID", &env_id))
       return false;
-    }
     uint32_t cid;
-    if (!parse_id(argv[3], &cid)) {
+    if (!parse_number(argv[3], "context ID", &cid))
       return false;
-    }
-    fxl::StringView addr_view(argv[4]);
     zx_vaddr_t addr;
-    if (!fxl::StringToNumberWithError(addr_view, &addr, fxl::Base::k16)) {
-      std::cerr << "Invalid address " << addr_view << "\n";
+    if (!parse_number(argv[4], "address", &addr, fxl::Base::k16))
       return false;
-    }
-    fxl::StringView len_view(argv[5]);
     size_t len;
-    if (!fxl::StringToNumberWithError(len_view, &len, fxl::Base::k16)) {
-      std::cerr << "Invalid length " << len_view << "\n";
+    if (!parse_number(argv[5], "length", &len, fxl::Base::k16))
       return false;
-    }
     *func = [env_id, cid, addr, len, context] {
       handle_dump(env_id, cid, addr, len, context);
     };
@@ -76,54 +70,37 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     };
   } else if (cmd_view == "serial" && argc == 4) {
     uint32_t env_id;
-    if (!parse_id(argv[2], &env_id)) {
+    if (!parse_number(argv[2], "environment ID", &env_id))
       return false;
-    }
     uint32_t cid;
-    if (!parse_id(argv[3], &cid)) {
+    if (!parse_number(argv[3], "context ID", &cid))
       return false;
-    }
     *func = [env_id, cid, loop, context]() {
       handle_serial(env_id, cid, loop, context);
     };
-  } else if ((cmd_view == "socat" || cmd_view == "socat-listen") && argc >= 4) {
+  } else if (cmd_view == "socat" && argc == 5) {
     uint32_t env_id;
-    fxl::StringView env_id_view(argv[2]);
-    if (!fxl::StringToNumberWithError(env_id_view, &env_id)) {
-      std::cerr << "Invalid environment ID: " << env_id_view << "\n";
+    if (!parse_number(argv[2], "environment ID", &env_id))
       return false;
-    }
-
-    if (cmd_view == "socat" && argc == 5) {
-      uint32_t cid;
-      fxl::StringView cid_view(argv[3]);
-      if (!fxl::StringToNumberWithError(cid_view, &cid)) {
-        std::cerr << "Invalid context ID: " << cid_view << "\n";
-        return false;
-      }
-      uint32_t port;
-      fxl::StringView port_view(argv[4]);
-      if (!fxl::StringToNumberWithError(port_view, &port)) {
-        std::cerr << "Invalid port: " << port_view << "\n";
-        return false;
-      }
-      *func = [env_id, cid, port, loop, context]() {
-        handle_socat_connect(env_id, cid, port, loop, context);
-      };
-      return true;
-    } else if (cmd_view == "socat-listen" && argc == 4) {
-      uint32_t host_port;
-      fxl::StringView host_port_view(argv[3]);
-      if (!fxl::StringToNumberWithError(host_port_view, &host_port)) {
-        std::cerr << "Invalid port: " << host_port_view << "\n";
-        return false;
-      }
-      *func = [env_id, host_port, loop, context]() {
-        handle_socat_listen(env_id, host_port, loop, context);
-      };
-      return true;
-    }
-    return false;
+    uint32_t cid;
+    if (!parse_number(argv[3], "context ID", &cid))
+      return false;
+    uint32_t port;
+    if (!parse_number(argv[4], "port", &port))
+      return false;
+    *func = [env_id, cid, port, loop, context]() {
+      handle_socat_connect(env_id, cid, port, loop, context);
+    };
+  } else if (cmd_view == "socat-listen" && argc == 4) {
+    uint32_t env_id;
+    if (!parse_number(argv[2], "environment ID", &env_id))
+      return false;
+    uint32_t host_port;
+    if (!parse_number(argv[3], "host port", &host_port))
+      return false;
+    *func = [env_id, host_port, loop, context]() {
+      handle_socat_listen(env_id, host_port, loop, context);
+    };
   } else if (cmd_view == "list") {
     *func = [context]() { handle_list(context); };
     return true;
