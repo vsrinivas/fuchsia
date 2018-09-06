@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -263,49 +264,53 @@ func process() error {
 		covFiles = append(covFiles, entry.CovDataFile)
 	}
 
-	// Make the mods file
-	modListPath := filepath.Join(outputDir, "show.rsp")
-	modList, err := os.Create(modListPath)
+	dir, err := ioutil.TempDir("", "covargs")
 	if err != nil {
-		return fmt.Errorf("creating mods.rsp file: %v", err)
+		return fmt.Errorf("cannot create temporary dir: %v", err)
 	}
-	defer modList.Close()
-	for _, mod := range mods {
-		fmt.Fprintf(modList, "-object %s\n", mod)
-	}
+	defer os.RemoveAll(dir)
 
-	// Make the cov files file
-	covFileListPath := filepath.Join(outputDir, "merge.rsp")
-	covFileList, err := os.Create(covFileListPath)
+	// Make the llvm-profdata response file
+	profdataFile, err := os.Create(filepath.Join(dir, "llvm-profdata.rsp"))
 	if err != nil {
-		return fmt.Errorf("creating covfile.rsp file: %v", err)
+		return fmt.Errorf("creating llvm-profdata.rsp file: %v", err)
 	}
-	defer covFileList.Close()
 	for _, covFile := range covFiles {
-		fmt.Fprintf(covFileList, "%s\n", covFile)
+		fmt.Fprintf(profdataFile, "%s\n", covFile)
 	}
+	profdataFile.Close()
 
 	// Merge everything
-	mergedFile := filepath.Join(outputDir, "merged.profdata")
+	mergedFile := filepath.Join(dir, "merged.profdata")
 	mergeCmd := Action{Path: llvmProfdata, Args: []string{
 		"merge",
 		"-o", mergedFile,
-		"@" + covFileList.Name(),
+		"@" + profdataFile.Name(),
 	}}
 	data, err := mergeCmd.Run()
 	if err != nil {
 		return fmt.Errorf("%v:\n%s", err, string(data))
 	}
 
+	// Make the llvm-cov response file
+	covFile, err := os.Create(filepath.Join(dir, "llvm-cov.rsp"))
+	if err != nil {
+		return fmt.Errorf("creating llvm-cov.rsp file: %v", err)
+	}
+	for _, mod := range mods {
+		fmt.Fprintf(covFile, "-object %s\n", mod)
+	}
+	covFile.Close()
+
 	// Produce output
-	showCovCmd := Action{Path: llvmCov, Args: []string{
+	showCmd := Action{Path: llvmCov, Args: []string{
 		"show",
 		"-format", outputFormat,
 		"-instr-profile", mergedFile,
 		"-output-dir", outputDir,
-		"@" + modList.Name(),
+		"@" + covFile.Name(),
 	}}
-	data, err = showCovCmd.Run()
+	data, err = showCmd.Run()
 	if err != nil {
 		return fmt.Errorf("%v:\n%s", err, string(data))
 	}
