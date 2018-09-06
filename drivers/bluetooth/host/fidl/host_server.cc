@@ -345,17 +345,25 @@ void HostServer::SetPairingDelegate(
     ::fuchsia::bluetooth::control::OutputCapabilityType output,
     ::fidl::InterfaceHandle<::fuchsia::bluetooth::control::PairingDelegate>
         delegate) {
+  bool cleared = !delegate;
+  pairing_delegate_.Bind(std::move(delegate));
+
+  if (cleared) {
+    bt_log(TRACE, "bt-host", "PairingDelegate cleared");
+    ResetPairingDelegate();
+    return;
+  }
+
   io_capability_ = fidl_helpers::NewIoCapability(input, output);
+  bt_log(TRACE, "bt-host", "PairingDelegate assigned (I/O capability: %s)",
+         btlib::sm::util::IOCapabilityToString(io_capability_).c_str());
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  adapter()->SetPairingDelegate(delegate ? self : fxl::WeakPtr<HostServer>());
-
-  pairing_delegate_.Bind(std::move(delegate));
+  adapter()->SetPairingDelegate(self);
   pairing_delegate_.set_error_handler([self] {
+    bt_log(TRACE, "bt-host", "PairingDelegate disconnected");
     if (self) {
-      self->adapter()->le_connection_manager()->SetPairingDelegate(
-          fxl::WeakPtr<PairingDelegate>());
-      bt_log(TRACE, "bt-host", "PairingDelegate disconnected");
+      self->ResetPairingDelegate();
     }
   });
 }
@@ -374,7 +382,7 @@ void HostServer::Close() {
 }
 
 btlib::sm::IOCapability HostServer::io_capability() const {
-  bt_log(TRACE, "bt-host", "bthost: io capability: %s",
+  bt_log(TRACE, "bt-host", "I/O capability: %s",
          btlib::sm::util::IOCapabilityToString(io_capability_).c_str());
   return io_capability_;
 }
@@ -459,6 +467,11 @@ void HostServer::OnRemoteDeviceUpdated(
 
 void HostServer::OnRemoteDeviceRemoved(const std::string& identifier) {
   this->binding()->events().OnDeviceRemoved(identifier);
+}
+
+void HostServer::ResetPairingDelegate() {
+  io_capability_ = IOCapability::kNoInputNoOutput;
+  adapter()->SetPairingDelegate(fxl::WeakPtr<HostServer>());
 }
 
 }  // namespace bthost
