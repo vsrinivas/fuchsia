@@ -155,12 +155,11 @@ Volume::~Volume() {}
 
 // Library methods
 
-zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Secret& key,
-                           fbl::unique_ptr<Volume>* out) {
+zx_status_t Volume::Init(fbl::unique_fd fd, fbl::unique_ptr<Volume>* out) {
     zx_status_t rc;
 
-    if (!fd) {
-        xprintf("bad parameter(s): fd=%d\n", fd.get());
+    if (!fd || !out) {
+        xprintf("bad parameter(s): fd=%d, out=%p\n", fd.get(), out);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -171,7 +170,21 @@ zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Secret& key,
         return ZX_ERR_NO_MEMORY;
     }
 
-    if ((rc = volume->Init()) != ZX_OK || (rc = volume->CreateBlock()) != ZX_OK ||
+    if ((rc = volume->Init()) != ZX_OK) {
+        return rc;
+    }
+
+    *out = fbl::move(volume);
+    return ZX_OK;
+}
+
+zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Secret& key,
+                           fbl::unique_ptr<Volume>* out) {
+    zx_status_t rc;
+
+    fbl::unique_ptr<Volume> volume;
+    if ((rc = Volume::Init(fbl::move(fd), &volume)) != ZX_OK ||
+        (rc = volume->CreateBlock()) != ZX_OK ||
         (rc = volume->SealBlock(key, 0)) != ZX_OK || (rc = volume->CommitBlock()) != ZX_OK) {
         return rc;
     }
@@ -186,18 +199,9 @@ zx_status_t Volume::Unlock(fbl::unique_fd fd, const crypto::Secret& key, key_slo
                            fbl::unique_ptr<Volume>* out) {
     zx_status_t rc;
 
-    if (!fd || !out) {
-        xprintf("bad parameter(s): fd=%d, out=%p\n", fd.get(), out);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<Volume> volume(new (&ac) Volume(fbl::move(fd)));
-    if (!ac.check()) {
-        xprintf("allocation failed: %zu bytes\n", sizeof(Volume));
-        return ZX_ERR_NO_MEMORY;
-    }
-    if ((rc = volume->Init()) != ZX_OK || (rc = volume->Unseal(key, slot)) != ZX_OK) {
+    fbl::unique_ptr<Volume> volume;
+    if ((rc = Volume::Init(fbl::move(fd), &volume)) != ZX_OK ||
+        (rc = volume->Unseal(key, slot)) != ZX_OK) {
         return rc;
     }
 
@@ -354,20 +358,20 @@ zx_status_t Volume::Bind(crypto::Cipher::Direction direction, crypto::Cipher* ci
 
 // Private methods
 
-Volume::Volume(fbl::unique_fd&& fd) : dev_(nullptr), fd_(fbl::move(fd)) {
+Volume::Volume(fbl::unique_fd&& fd) {
     Reset();
+    fd_ = fbl::move(fd);
 }
 
-Volume::Volume(zx_device_t* dev) : dev_(dev), fd_() {
+Volume::Volume(zx_device_t* dev) {
     Reset();
+    dev_ = dev;
 }
 
 // Configuration methods
 
 zx_status_t Volume::Init() {
     zx_status_t rc;
-    Reset();
-    auto cleanup = fbl::MakeAutoCall([&] { Reset(); });
 
     // Get block info; align our blocks to pages
     block_info_t blk;
@@ -432,7 +436,6 @@ zx_status_t Volume::Init() {
         return rc;
     }
 
-    cleanup.cancel();
     return ZX_OK;
 }
 
@@ -497,15 +500,24 @@ zx_status_t Volume::DeriveSlotKeys(const crypto::Secret& key, key_slot_t slot) {
 }
 
 void Volume::Reset() {
+    dev_ = nullptr;
+    fd_.reset();
+    reserved_blocks_ = 0;
+    reserved_slices_ = 0;
     block_.Resize(0);
     offset_ = UINT64_MAX;
+    guid_.Resize(0);
+    header_.Resize(0);
     aead_ = crypto::AEAD::kUninitialized;
     wrap_key_.Clear();
+    wrap_iv_.Resize(0);
     cipher_ = crypto::Cipher::kUninitialized;
     data_key_.Clear();
+    data_iv_.Resize(0);
     slot_len_ = 0;
     num_key_slots_ = 0;
     digest_ = crypto::digest::kUninitialized;
+    digest_len_ = 0;
 }
 
 // Block methods

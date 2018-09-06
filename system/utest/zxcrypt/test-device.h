@@ -9,8 +9,8 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <crypto/secret.h>
 #include <block-client/client.h>
+#include <crypto/secret.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>

@@ -47,6 +47,28 @@ bool VolumeCreate(const fbl::unique_fd& fd, const crypto::Secret& key, bool fvm,
     END_HELPER;
 }
 
+bool TestInit(Volume::Version version, bool fvm) {
+    BEGIN_TEST;
+
+    TestDevice device;
+    ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm));
+
+    // Invalid arguments
+    fbl::unique_fd bad_fd;
+    fbl::unique_ptr<Volume> volume;
+    EXPECT_ZX(Volume::Init(fbl::move(bad_fd), &volume), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(Volume::Init(fbl::move(device.parent()), nullptr), ZX_ERR_INVALID_ARGS);
+
+    // Valid
+    EXPECT_ZX(Volume::Init(device.parent(), &volume), ZX_OK);
+    ASSERT_TRUE(!!volume);
+    EXPECT_EQ(volume->reserved_blocks(), fvm ? (FVM_BLOCK_SIZE / kBlockSize) : 2u);
+    EXPECT_EQ(volume->reserved_slices(), fvm ? 1u : 0u);
+
+    END_TEST;
+}
+DEFINE_EACH_DEVICE(TestInit);
+
 bool TestCreate(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
@@ -186,6 +208,7 @@ bool TestShred(Volume::Version version, bool fvm) {
 DEFINE_EACH_DEVICE(TestShred);
 
 BEGIN_TEST_CASE(VolumeTest)
+RUN_EACH_DEVICE(TestInit)
 RUN_EACH_DEVICE(TestCreate)
 RUN_EACH_DEVICE(TestUnlock)
 RUN_EACH_DEVICE(TestEnroll)

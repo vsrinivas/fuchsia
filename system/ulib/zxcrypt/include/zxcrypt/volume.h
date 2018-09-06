@@ -64,6 +64,10 @@ public:
     ////////////////
     // Library methods
 
+    // Returns a new volume object corresponding to the block device given by |fd| and populated
+    // with the block and FVM information.
+    static zx_status_t Init(fbl::unique_fd fd, fbl::unique_ptr<Volume>* out = nullptr);
+
     // Creates a new zxcrypt volume associated with the given file descriptor, |fd| and returns it
     // via |out|, if provided.  This will format the block device as zxcrypt using the given |key|,
     // which will be associated with key slot 0. This method takes ownership of |fd|.
