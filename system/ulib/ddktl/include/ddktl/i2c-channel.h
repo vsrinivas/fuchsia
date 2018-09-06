@@ -69,8 +69,8 @@ public:
 
     zx_status_t Transact(uint8_t* tx_buf, uint8_t tx_len,
                          uint8_t* rx_buf, uint8_t rx_len) const {
-        return i2c_transact_sync(&i2c_, pdev_index_, tx_buf, tx_len,
-                                 rx_buf, rx_len);
+        return i2c_write_read_sync(&i2c_, pdev_index_, tx_buf, tx_len,
+                                   rx_buf, rx_len);
     }
 
 private:

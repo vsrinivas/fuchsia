@@ -155,42 +155,61 @@ zx_status_t ProxyDevice::I2cGetMaxTransferSize(void* ctx, uint32_t index, size_t
     return status;
 }
 
-zx_status_t ProxyDevice::I2cTransact(void* ctx, uint32_t index, const void* write_buf,
-                                     size_t write_length, size_t read_length,
-                                     i2c_complete_cb complete_cb, void* cookie) {
+zx_status_t ProxyDevice::I2cTransact(void* ctx, uint32_t index, i2c_op_t* ops, size_t cnt,
+                                     i2c_transact_cb transact_cb, void* cookie) {
     ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
-
-    if (!read_length && !write_length) {
+    size_t writes_length = 0;
+    size_t reads_length = 0;
+    for (size_t i = 0; i < cnt; ++i) {
+        if (ops[i].is_read) {
+            reads_length += ops[i].length;
+        } else {
+            writes_length += ops[i].length;
+        }
+    }
+    if (!writes_length && !reads_length) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if (write_length > I2C_MAX_TRANSFER_SIZE || read_length > I2C_MAX_TRANSFER_SIZE) {
-        return ZX_ERR_OUT_OF_RANGE;
+
+    size_t req_length = sizeof(rpc_i2c_req_t) + cnt * sizeof(i2c_rpc_op_t) + writes_length;
+    if (req_length >= PROXY_MAX_TRANSFER_SIZE) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    uint8_t req_buffer[PROXY_MAX_TRANSFER_SIZE];
+    auto req = reinterpret_cast<rpc_i2c_req_t*>(req_buffer);
+    req->header.proto_id = ZX_PROTOCOL_I2C;
+    req->header.op = I2C_TRANSACT;
+    req->index = index;
+    req->cnt = cnt;
+    req->transact_cb = transact_cb;
+    req->cookie = cookie;
+
+    auto rpc_ops = reinterpret_cast<i2c_rpc_op_t*>(req + 1);
+    ZX_ASSERT(cnt < I2C_MAX_RW_OPS);
+    for (size_t i = 0; i < cnt; ++i) {
+        rpc_ops[i].length = ops[i].length;
+        rpc_ops[i].is_read = ops[i].is_read;
+        rpc_ops[i].stop = ops[i].stop;
+    }
+    uint8_t* p_writes = reinterpret_cast<uint8_t*>(rpc_ops) + cnt * sizeof(i2c_rpc_op_t);
+    for (size_t i = 0; i < cnt; ++i) {
+        if (!ops[i].is_read) {
+            memcpy(p_writes, ops[i].buf, ops[i].length);
+            p_writes += ops[i].length;
+        }
     }
 
-    struct {
-        rpc_i2c_req_t i2c;
-        uint8_t data[I2C_MAX_TRANSFER_SIZE];
-    } req = {};
-    req.i2c.header.proto_id = ZX_PROTOCOL_I2C;
-    req.i2c.header.op = I2C_TRANSACT;
-    req.i2c.index = index;
-    req.i2c.write_length = write_length;
-    req.i2c.read_length = read_length;
-    req.i2c.complete_cb = complete_cb;
-    req.i2c.cookie = cookie;
-    struct {
-        rpc_i2c_rsp_t i2c;
-        uint8_t data[I2C_MAX_TRANSFER_SIZE];
-    } resp;
-
-    if (write_length) {
-        memcpy(req.data, write_buf, write_length);
+    const size_t resp_length = sizeof(rpc_i2c_rsp_t) + reads_length;
+    if (resp_length >= PROXY_MAX_TRANSFER_SIZE) {
+        return ZX_ERR_INVALID_ARGS;
     }
+    uint8_t resp_buffer[PROXY_MAX_TRANSFER_SIZE];
+    rpc_i2c_rsp_t* rsp = reinterpret_cast<rpc_i2c_rsp_t*>(resp_buffer);
     uint32_t actual;
-    auto status = thiz->proxy_->Rpc(thiz->device_id_, &req.i2c.header,
-                                    static_cast<uint32_t>(sizeof(req.i2c) + write_length),
-                                    &resp.i2c.header, sizeof(resp), nullptr, 0, nullptr, 0,
-                                    &actual);
+    auto status = thiz->proxy_->Rpc(thiz->device_id_, &req->header,
+                                    static_cast<uint32_t>(req_length),
+                                    &rsp->header, static_cast<uint32_t>(resp_length),
+                                    nullptr, 0, nullptr, 0, &actual);
     if (status != ZX_OK) {
         return status;
     }
@@ -199,13 +218,24 @@ zx_status_t ProxyDevice::I2cTransact(void* ctx, uint32_t index, const void* writ
     // due to the fact that it is unsafe to respond asynchronously on the devmgr rxrpc channel.
     // In the future we may want to redo the plumbing to allow this to be truly asynchronous.
 
-    if (actual - sizeof(resp.i2c) != read_length) {
+    if (actual != resp_length) {
         status = ZX_ERR_INTERNAL;
     } else {
-        status = resp.i2c.header.status;
+        status = rsp->header.status;
     }
-    if (complete_cb) {
-        complete_cb(status, resp.data, resp.i2c.cookie);
+    if (transact_cb) {
+        i2c_op_t read_ops[I2C_MAX_RW_OPS];
+        size_t read_ops_cnt = 0;
+        uint8_t* p_reads = reinterpret_cast<uint8_t*>(rsp + 1);
+        for (size_t i = 0; i < cnt; ++i) {
+            if (ops[i].is_read) {
+                read_ops[read_ops_cnt] = ops[i];
+                read_ops[read_ops_cnt].buf = p_reads;
+                read_ops_cnt++;
+                p_reads += ops[i].length;
+            }
+        }
+        transact_cb(status, read_ops, read_ops_cnt, rsp->cookie);
     }
 
     return ZX_OK;

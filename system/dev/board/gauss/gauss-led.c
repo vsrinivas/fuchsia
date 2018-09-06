@@ -167,7 +167,7 @@ static zx_status_t gauss_led_i2c_transact(gauss_led_t* gauss_led,
                                           size_t read_len,
                                           gauss_led_dev_t* dev) {
     mtx_lock(&gauss_led->lock);
-    zx_status_t status = i2c_transact(&gauss_led->channel, write_buf, write_len,
+    zx_status_t status = i2c_write_read(&gauss_led->channel, write_buf, write_len,
                                       read_len, i2c_complete, dev);
     mtx_unlock(&gauss_led->lock);
     if (status != ZX_OK) {
@@ -184,7 +184,7 @@ static zx_status_t gauss_led_reset_helper(gauss_led_t* gauss_led) {
     // Set max gain control for all IREF registers.
     {
         uint8_t buf[] = {PCA9956_IREFALL, 0xff};
-        if ((status = i2c_transact(&gauss_led->channel, buf, sizeof(buf), 0,
+        if ((status = i2c_write_read(&gauss_led->channel, buf, sizeof(buf), 0,
                                    i2c_complete, NULL)) != ZX_OK) {
             return status;
         }
@@ -193,7 +193,7 @@ static zx_status_t gauss_led_reset_helper(gauss_led_t* gauss_led) {
     // Enable auto-increment for registers 00h to 39h.
     {
         uint8_t buf[] = {PCA9956_MODE_REGISTER_1, 0x40};
-        if ((status = i2c_transact(&gauss_led->channel, buf, sizeof(buf), 0,
+        if ((status = i2c_write_read(&gauss_led->channel, buf, sizeof(buf), 0,
                                    i2c_complete, NULL)) != ZX_OK) {
             return status;
         }
@@ -205,7 +205,7 @@ static zx_status_t gauss_led_reset_helper(gauss_led_t* gauss_led) {
     {
         uint8_t buf[] = {PCA9956_MODE_REGISTER_2 | AUTO_INCREMENT_ADDRESS_MASK,
                          0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x08};
-        if ((status = i2c_transact(&gauss_led->channel, buf, sizeof(buf), 0,
+        if ((status = i2c_write_read(&gauss_led->channel, buf, sizeof(buf), 0,
                                    i2c_complete, NULL)) != ZX_OK) {
             return status;
         }
@@ -214,7 +214,7 @@ static zx_status_t gauss_led_reset_helper(gauss_led_t* gauss_led) {
     // Turn off all LEDs
     uint8_t buf[NUM_PWM_CHANNELS + 1] =
         {PCA9956_PWM_BASE | AUTO_INCREMENT_ADDRESS_MASK};
-    if ((status = i2c_transact(&gauss_led->channel, buf, sizeof(buf), 0,
+    if ((status = i2c_write_read(&gauss_led->channel, buf, sizeof(buf), 0,
                                i2c_complete, NULL)) != ZX_OK) {
         return status;
     }

@@ -101,16 +101,15 @@ enum {
 typedef struct {
     platform_proxy_req_t header;
     uint32_t index;
-    size_t write_length;
-    size_t read_length;
-    i2c_complete_cb complete_cb;
+    i2c_transact_cb transact_cb;
     void* cookie;
+    size_t cnt;
 } rpc_i2c_req_t;
 
 typedef struct {
     platform_proxy_rsp_t header;
     size_t max_transfer;
-    i2c_complete_cb complete_cb;
+    i2c_transact_cb transact_cb;
     void* cookie;
 } rpc_i2c_rsp_t;
 

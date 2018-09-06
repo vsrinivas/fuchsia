@@ -278,7 +278,7 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
     mac_device->ConfigPhy();
     // WOL reset enable to MCU
     uint8_t write_buf[2] = { MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE };
-    status = i2c_transact_sync(&mac_device->i2c_, 0, write_buf, sizeof write_buf, NULL, 0);
+    status = i2c_write_sync(&mac_device->i2c_, 0, write_buf, sizeof write_buf);
     if (status) {
         zxlogf(ERROR, "aml-dwmac: WOL reset enable to MCU failed: %d\n", status);
     }

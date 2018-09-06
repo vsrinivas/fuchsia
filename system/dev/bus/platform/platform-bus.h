@@ -63,7 +63,7 @@ public:
 
     // Used by PlatformDevice to queue I2C transactions on an I2C bus.
     zx_status_t I2cTransact(uint32_t txid, rpc_i2c_req_t* req, const pbus_i2c_channel_t* channel,
-                            const void* write_buf, zx_handle_t channel_handle);
+                            zx_handle_t channel_handle);
 
     // Helper for PlatformDevice.
     zx_status_t GetBoardInfo(pdev_board_info_t* out_info);

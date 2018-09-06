@@ -218,13 +218,13 @@ zx_status_t Ft3x27Device::HidBusStart(ddk::HidBusIfcProxy proxy) {
 //  intended mostly for debug purposes
 uint8_t Ft3x27Device::Read(uint8_t addr) {
     uint8_t rbuf;
-    i2c_transact_sync(&i2c_, kI2cIndex, &addr, 1, &rbuf, 1);
+    i2c_write_read_sync(&i2c_, kI2cIndex, &addr, 1, &rbuf, 1);
     return rbuf;
 }
 
 zx_status_t Ft3x27Device::Read(uint8_t addr, uint8_t* buf, uint8_t len) {
 
-    zx_status_t status = i2c_transact_sync(&i2c_, kI2cIndex, &addr, 1, buf, len);
+    zx_status_t status = i2c_write_read_sync(&i2c_, kI2cIndex, &addr, 1, buf, len);
     if (status != ZX_OK) {
         zxlogf(ERROR, "Failed to read i2c - %d\n", status);
         return status;

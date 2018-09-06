@@ -82,7 +82,7 @@ zx_status_t Tas57xx::WriteReg(uint8_t reg, uint8_t value) {
     uint8_t write_buf[2];
     write_buf[0] = reg;
     write_buf[1] = value;
-    return i2c_transact(&i2c_, 0, write_buf, 2, 0, NULL, NULL);
+    return i2c_write_read(&i2c_, 0, write_buf, 2, 0, NULL, NULL);
 }
 } //namespace gauss
 } //namespace audio

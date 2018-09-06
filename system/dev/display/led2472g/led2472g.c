@@ -13,7 +13,7 @@
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-defs.h>
 
-static void i2c_complete(zx_status_t status, const uint8_t* data, void* cookie) {
+static void i2c_complete(zx_status_t status, i2c_op_t* ops, size_t cnt, void* cookie) {
     if (status != ZX_OK) {
         zxlogf(ERROR, "led2472g i2c_complete error: %d\n", status);
     }
@@ -49,7 +49,7 @@ static zx_status_t led2472g_write(void* ctx, const void* buf, size_t count,
     for (size_t i = 0; i < MIN(count, sizeof(i2c_buf)); i++) {
         i2c_buf[i] = inbuf[i] >> 3;
     }
-    i2c_transact(&led2472g->i2c, 0, i2c_buf, sizeof(i2c_buf), 0, i2c_complete, NULL);
+    i2c_write_read(&led2472g->i2c, 0, i2c_buf, sizeof(i2c_buf), 0, i2c_complete, NULL);
 
     return ZX_OK;
 }
@@ -90,9 +90,10 @@ static int led2472g_thread(void* arg) {
             cix += 1;
             cix %= countof(colors);
         }
-        zx_status_t status = i2c_transact(&led2472g->i2c, 0, buf, sizeof(buf), 0, i2c_complete, NULL);
+        zx_status_t status = i2c_write_read(&led2472g->i2c, 0, buf, sizeof(buf), 0, i2c_complete,
+                                            NULL);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "led2472g i2c_transact error: %d\n  Exiting led2472g_thread\n", status);
+            zxlogf(ERROR, "led2472g i2c_write_read error: %d\n  Exiting led2472g_thread\n", status);
             return status;
         }
         zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));

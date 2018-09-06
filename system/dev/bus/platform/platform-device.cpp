@@ -304,7 +304,7 @@ zx_status_t PlatformDevice::RpcGpioSetPolarity(const DeviceResources* dr, uint32
 }
 
 zx_status_t PlatformDevice::RpcI2cTransact(const DeviceResources* dr, uint32_t txid,
-                                           rpc_i2c_req_t* req, uint8_t* data, zx_handle_t channel) {
+                                           rpc_i2c_req_t* req, zx_handle_t channel) {
     if (bus_->i2c_impl() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -314,7 +314,7 @@ zx_status_t PlatformDevice::RpcI2cTransact(const DeviceResources* dr, uint32_t t
     }
     const pbus_i2c_channel_t& pdev_channel = dr->i2c_channel(index);
 
-    return bus_->I2cTransact(txid, req, &pdev_channel, data, channel);
+    return bus_->I2cTransact(txid, req, &pdev_channel, channel);
 }
 
 zx_status_t PlatformDevice::RpcI2cGetMaxTransferSize(const DeviceResources* dr, uint32_t index,
@@ -491,8 +491,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             status = RpcI2cGetMaxTransferSize(dr, req->index, &resp->max_transfer);
             break;
         case I2C_TRANSACT: {
-            auto buf = reinterpret_cast<uint8_t*>(&req[1]);
-            status = RpcI2cTransact(dr, req_header->txid, req, buf, channel);
+            status = RpcI2cTransact(dr, req_header->txid, req, channel);
             if (status == ZX_OK) {
                 // If platform_i2c_transact succeeds, we return immmediately instead of calling
                 // zx_channel_write below. Instead we will respond in platform_i2c_complete().

@@ -78,9 +78,8 @@ public:
     static zx_status_t GpioSetPolarity(void* ctx, uint32_t index, uint32_t polarity);
 
     // I2C protocol implementation.
-    static zx_status_t I2cTransact(void* ctx, uint32_t index, const void* write_buf,
-                                   size_t write_length,
-                            size_t read_length, i2c_complete_cb complete_cb, void* cookie);
+    static zx_status_t I2cTransact(void* ctx, uint32_t index, i2c_op_t* ops, size_t cnt,
+                                   i2c_transact_cb transact_cb, void* cookie);
     static zx_status_t I2cGetMaxTransferSize(void* ctx, uint32_t index, size_t* out_size);
 
 private:

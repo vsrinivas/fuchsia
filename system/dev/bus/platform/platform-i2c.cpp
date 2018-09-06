@@ -5,10 +5,12 @@
 #include "platform-i2c.h"
 
 #include <ddk/debug.h>
+#include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <stdlib.h>
 #include <threads.h>
+#include <zircon/assert.h>
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
 
@@ -39,29 +41,16 @@ zx_status_t PlatformI2cBus::Start() {
     return ZX_OK;
 }
 
-void PlatformI2cBus::Complete(I2cTxn* txn, zx_status_t status, const uint8_t* data,
-                              size_t data_length) {
-    struct {
-        rpc_i2c_rsp_t i2c;
-        uint8_t data[I2C_MAX_TRANSFER_SIZE] = {};
-    } resp = {
-        .i2c = {
-            .header = {
-                .txid = txn->txid,
-                .status = status,
-            },
-            .max_transfer = 0,
-            .complete_cb = txn->complete_cb,
-            .cookie = txn->cookie,
-        },
-    };
-
-    if (status == ZX_OK) {
-        memcpy(resp.data, data, data_length);
-    }
-
-    auto length = static_cast<uint32_t>(sizeof(resp.i2c) + data_length);
-    status = zx_channel_write(txn->channel_handle, 0, &resp, length, nullptr, 0);
+void PlatformI2cBus::Complete(I2cTxn* txn, zx_status_t status, const uint8_t* resp_buffer,
+                              size_t resp_length) {
+    rpc_i2c_rsp_t* i2c = (rpc_i2c_rsp_t*)(resp_buffer);
+    i2c->header.txid = txn->txid;
+    i2c->header.status = status;
+    i2c->max_transfer = 0;
+    i2c->transact_cb = txn->transact_cb;
+    i2c->cookie = txn->cookie;
+    status = zx_channel_write(txn->channel_handle, 0, resp_buffer,
+                              static_cast<uint32_t>(resp_length), nullptr, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_i2c_read_complete: zx_channel_write failed %d\n", status);
     }
@@ -69,7 +58,8 @@ void PlatformI2cBus::Complete(I2cTxn* txn, zx_status_t status, const uint8_t* da
 
 int PlatformI2cBus::I2cThread() {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t> read_buffer(new (&ac) uint8_t[max_transfer_]);
+    fbl::Array<uint8_t> read_buffer(new (&ac) uint8_t[PROXY_MAX_TRANSFER_SIZE],
+                                    PROXY_MAX_TRANSFER_SIZE);
     if (!ac.check()) {
         zxlogf(ERROR, "%s could not allocate read_buffer\n", __FUNCTION__);
         return 0;
@@ -84,10 +74,27 @@ int PlatformI2cBus::I2cThread() {
         mutex_.Acquire();
         while ((txn = list_remove_head_type(&queued_txns_, I2cTxn, node)) != nullptr) {
             mutex_.Release();
+            auto rpc_ops = reinterpret_cast<i2c_rpc_op_t*>(txn + 1);
+            auto p_writes = reinterpret_cast<uint8_t*>(rpc_ops) +
+                txn->cnt * sizeof(i2c_rpc_op_t);
+            uint8_t* p_reads = read_buffer.get() + sizeof(rpc_i2c_rsp_t);
 
-            auto status = i2c_.WriteRead(bus_id_, txn->address, txn->write_buffer,
-                                         txn->write_length, read_buffer.get(), txn->read_length);
-            size_t actual = (status == ZX_OK ? txn->read_length : 0);
+            ZX_ASSERT(txn->cnt < I2C_MAX_RW_OPS);
+            i2c_impl_op_t ops[I2C_MAX_RW_OPS];
+            for (size_t i = 0; i < txn->cnt; ++i) {
+                ops[i].length = rpc_ops[i].length;
+                ops[i].is_read = rpc_ops[i].is_read;
+                ops[i].stop = rpc_ops[i].stop;
+                if (ops[i].is_read) {
+                    ops[i].buf = p_reads;
+                    p_reads += ops[i].length;
+                } else {
+                    ops[i].buf = p_writes;
+                    p_writes += ops[i].length;
+                }
+            }
+            auto status = i2c_.Transact(bus_id_, txn->address, ops, txn->cnt);
+            size_t actual = status == ZX_OK ? p_reads - read_buffer.get() : sizeof(rpc_i2c_rsp_t);
             Complete(txn, status, read_buffer.get(), actual);
 
             mutex_.Acquire();
@@ -99,32 +106,55 @@ int PlatformI2cBus::I2cThread() {
 }
 
 zx_status_t PlatformI2cBus::Transact(uint32_t txid, rpc_i2c_req_t* req, uint16_t address,
-                                     const void* write_buf, zx_handle_t channel_handle) {
-    const size_t write_length = req->write_length;
-    const size_t read_length = req->read_length;
-    if (write_length > max_transfer_ || read_length > max_transfer_) {
+                                     zx_handle_t channel_handle) {
+    i2c_rpc_op_t* ops = reinterpret_cast<i2c_rpc_op_t*>(req + 1);
+
+    size_t writes_length = 0;
+    for (size_t i = 0; i < req->cnt; ++i) {
+        if (ops[i].length == 0 || ops[i].length > max_transfer_) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (!ops[i].is_read) {
+            writes_length += ops[i].length;
+        }
+    }
+    // Add space for requests and writes data.
+    size_t req_length = sizeof(I2cTxn) + req->cnt * sizeof(i2c_rpc_op_t) + writes_length;
+    if (req_length >= PROXY_MAX_TRANSFER_SIZE) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     fbl::AutoLock lock(&mutex_);
 
     I2cTxn* txn = list_remove_head_type(&free_txns_, I2cTxn, node);
+    if (txn && txn->length < req_length) {
+        free(txn);
+        txn = nullptr;
+    }
+
     if (!txn) {
         // add space for write buffer
-        txn = static_cast<I2cTxn*>(calloc(1, sizeof(I2cTxn) + max_transfer_));
+        txn = static_cast<I2cTxn*>(calloc(1, req_length));
+        txn->length = req_length;
     }
     if (!txn) {
         return ZX_ERR_NO_MEMORY;
     }
 
     txn->address = address;
-    txn->write_length = write_length;
-    txn->read_length = read_length;
-    memcpy(txn->write_buffer, write_buf, write_length);
     txn->txid = txid;
-    txn->complete_cb = req->complete_cb;
+    txn->transact_cb = req->transact_cb;
     txn->cookie = req->cookie;
     txn->channel_handle = channel_handle;
+    txn->cnt = req->cnt;
+
+    auto rpc_ops = reinterpret_cast<i2c_rpc_op_t*>(req + 1);
+    if (req->cnt && !(rpc_ops[req->cnt - 1].stop)) {
+        list_add_tail(&free_txns_, &txn->node);
+        return ZX_ERR_INVALID_ARGS; // no stop in last op in transaction
+    }
+
+    memcpy(txn + 1, req + 1, req->cnt * sizeof(i2c_rpc_op_t) + writes_length);
 
     list_add_tail(&queued_txns_, &txn->node);
     sync_completion_signal(&txn_signal_);

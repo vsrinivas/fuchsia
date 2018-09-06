@@ -18,7 +18,7 @@ public:
     explicit PlatformI2cBus(i2c_impl_protocol_t* i2c, uint32_t bus_id);
     zx_status_t Start();
 
-    zx_status_t Transact(uint32_t txid, rpc_i2c_req_t* req, uint16_t address, const void* write_buf,
+    zx_status_t Transact(uint32_t txid, rpc_i2c_req_t* req, uint16_t address,
                          zx_handle_t channel_handle);
 
 private:
@@ -28,12 +28,11 @@ private:
         zx_handle_t channel_handle;
 
         list_node_t node;
-        size_t write_length;
-        size_t read_length;
         uint16_t address;
-        i2c_complete_cb complete_cb;
+        i2c_transact_cb transact_cb;
         void* cookie;
-        uint8_t write_buffer[];
+        size_t length;
+        size_t cnt;
     };
 
     void Complete(I2cTxn* txn, zx_status_t status, const uint8_t* data,

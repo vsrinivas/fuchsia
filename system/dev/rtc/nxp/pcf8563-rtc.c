@@ -33,7 +33,7 @@ static ssize_t pcf8563_rtc_get(pcf8563_context *ctx, void* buf, size_t count) {
 
     uint8_t write_buf[] = { 0x02 };
     uint8_t read_buf[7];
-    zx_status_t err = i2c_transact_sync(&ctx->i2c, 0,
+    zx_status_t err = i2c_write_read_sync(&ctx->i2c, 0,
                                         write_buf, sizeof write_buf,
                                         read_buf, sizeof read_buf);
     if (err) {
@@ -82,7 +82,7 @@ static ssize_t pcf8563_rtc_set(pcf8563_context *ctx, const void* buf, size_t cou
         to_bcd(year)
     };
 
-    zx_status_t err = i2c_transact_sync(&ctx->i2c, 0, write_buf, sizeof write_buf, NULL, 0);
+    zx_status_t err = i2c_write_read_sync(&ctx->i2c, 0, write_buf, sizeof write_buf, NULL, 0);
     if (err) {
         return err;
     }

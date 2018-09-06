@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/gpio_pin.h>
-#include <ddktl/i2c_channel.h>
+#include <ddktl/i2c-channel.h>
 #include <ddktl/mmio.h>
 
 #include <fbl/ref_counted.h>
