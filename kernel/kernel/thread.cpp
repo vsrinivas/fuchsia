@@ -1015,33 +1015,46 @@ void thread_set_priority(thread_t* t, int priority) {
  *
  * This function marks the current thread as the idle thread -- the one which
  * executes when there is nothing else to do.  This function does not return.
- * This function is called once at boot time.
+ * This thread is called once at boot on the first cpu.
  */
 void thread_become_idle(void) {
     DEBUG_ASSERT(arch_ints_disabled());
 
     thread_t* t = get_current_thread();
+    cpu_num_t curr_cpu = arch_curr_cpu_num();
 
+    // Set our name
     char name[16];
-    snprintf(name, sizeof(name), "idle %u", arch_curr_cpu_num());
+    snprintf(name, sizeof(name), "idle %u", curr_cpu);
     thread_set_name(name);
 
-    // mark ourself as idle
+    // Mark ourself as idle
     t->flags |= THREAD_FLAG_IDLE;
-    cpu_num_t curr_cpu = arch_curr_cpu_num();
+    sched_init_thread(t, IDLE_PRIORITY);
+
+    // Pin the thread on the current cpu and mark it as already running
     t->last_cpu = curr_cpu;
     t->curr_cpu = curr_cpu;
     t->cpu_affinity = cpu_num_to_mask(curr_cpu);
-    sched_init_thread(t, IDLE_PRIORITY);
 
+    // Cpu is active now
     mp_set_curr_cpu_active(true);
-    mp_set_cpu_idle(arch_curr_cpu_num());
 
-    // enable interrupts and start the scheduler
+    // Grab the thread lock, mark ourself idle and reschedule
+    {
+        Guard<spin_lock_t, NoIrqSave> guard{ThreadLock::Get()};
+
+        mp_set_cpu_idle(curr_cpu);
+
+        sched_reschedule();
+    }
+
+    // We're now properly in the idle routine. Reenable interrupts and drop
+    // into the idle routine, never return.
     arch_enable_ints();
-    thread_reschedule();
-
     arch_idle_thread_routine(NULL);
+
+    __UNREACHABLE;
 }
 
 /**
