@@ -16,7 +16,7 @@ namespace mixer {
 class LinearSampler : public Mixer {
  public:
   static MixerPtr Select(const fuchsia::media::AudioStreamType& src_format,
-                         const fuchsia::media::AudioStreamType& dst_format);
+                         const fuchsia::media::AudioStreamType& dest_format);
 
  protected:
   LinearSampler(uint32_t pos_filter_width, uint32_t neg_filter_width)

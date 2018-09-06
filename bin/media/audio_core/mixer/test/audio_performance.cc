@@ -166,7 +166,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
       std::make_unique<float[]>(kFreqTestBufSize * num_output_chans);
   uint32_t frac_src_frames = source_frames * Mixer::FRAC_ONE;
   int32_t frac_src_offset;
-  uint32_t dst_offset;
+  uint32_t dest_offset;
 
   OverwriteCosine(source.get(), source_buffer_size * num_input_chans,
                   FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx],
@@ -177,9 +177,9 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
     zx_duration_t elapsed;
     zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
-    dst_offset = 0;
+    dest_offset = 0;
     frac_src_offset = 0;
-    mixer->Mix(accum.get(), kFreqTestBufSize, &dst_offset, source.get(),
+    mixer->Mix(accum.get(), kFreqTestBufSize, &dest_offset, source.get(),
                frac_src_frames, &frac_src_offset, frac_step_size, gain_scale,
                accumulate, rate_modulo, dest_rate);
 

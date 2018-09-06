@@ -228,16 +228,16 @@ TEST(PassThru, NoOp) {
   float accum[] = {-1, 42};
   float expect[] = {-1, 42};
 
-  uint32_t dst_offset = 0;
+  uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
 
   bool mix_result = no_op_mixer->Mix(
-      accum, fbl::count_of(accum), &dst_offset, source,
+      accum, fbl::count_of(accum), &dest_offset, source,
       fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
       Mixer::FRAC_ONE, Gain::kUnityScale, false);
 
   EXPECT_FALSE(mix_result);
-  EXPECT_EQ(0u, dst_offset);
+  EXPECT_EQ(0u, dest_offset);
   EXPECT_EQ(0, frac_src_offset);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }

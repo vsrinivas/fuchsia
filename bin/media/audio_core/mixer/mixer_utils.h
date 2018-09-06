@@ -33,39 +33,45 @@ enum class ScalerType {
 // SampleNormalizer
 //
 // Template to read and normalize samples into float32 [ -1.0 , 1.0 ] format.
-template <typename SType, typename Enable = void>
+template <typename SrcSampleType, typename Enable = void>
 class SampleNormalizer;
 
-template <typename SType>
-class SampleNormalizer<
-    SType, typename std::enable_if<std::is_same<SType, uint8_t>::value>::type> {
+template <typename SrcSampleType>
+class SampleNormalizer<SrcSampleType,
+                       typename std::enable_if<
+                           std::is_same<SrcSampleType, uint8_t>::value>::type> {
  public:
-  static inline float Read(const SType* src) {
+  static inline float Read(const SrcSampleType* src) {
     return kInt8ToFloat * (static_cast<int32_t>(*src) - kOffsetInt8ToUint8);
   }
 };
 
-template <typename SType>
-class SampleNormalizer<
-    SType, typename std::enable_if<std::is_same<SType, int16_t>::value>::type> {
+template <typename SrcSampleType>
+class SampleNormalizer<SrcSampleType,
+                       typename std::enable_if<
+                           std::is_same<SrcSampleType, int16_t>::value>::type> {
  public:
-  static inline float Read(const SType* src) { return kInt16ToFloat * (*src); }
+  static inline float Read(const SrcSampleType* src) {
+    return kInt16ToFloat * (*src);
+  }
 };
 
-template <typename SType>
-class SampleNormalizer<
-    SType, typename std::enable_if<std::is_same<SType, int32_t>::value>::type> {
+template <typename SrcSampleType>
+class SampleNormalizer<SrcSampleType,
+                       typename std::enable_if<
+                           std::is_same<SrcSampleType, int32_t>::value>::type> {
  public:
-  static inline float Read(const SType* src) {
+  static inline float Read(const SrcSampleType* src) {
     return kInt24In32ToFloat * (*src);
   }
 };
 
-template <typename SType>
+template <typename SrcSampleType>
 class SampleNormalizer<
-    SType, typename std::enable_if<std::is_same<SType, float>::value>::type> {
+    SrcSampleType,
+    typename std::enable_if<std::is_same<SrcSampleType, float>::value>::type> {
  public:
-  static inline float Read(const SType* src) { return *src; }
+  static inline float Read(const SrcSampleType* src) { return *src; }
 };
 
 //
@@ -102,46 +108,46 @@ class SampleScaler<ScaleType, typename std::enable_if<(
 // SrcReader
 //
 // Template to read normalized source samples, and combine channels if required.
-template <typename SType, size_t SChCount, size_t DChCount,
+template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount,
           typename Enable = void>
 class SrcReader;
 
-template <typename SType, size_t SChCount, size_t DChCount>
+template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
 class SrcReader<
-    SType, SChCount, DChCount,
-    typename std::enable_if<(SChCount == DChCount) ||
-                                ((SChCount == 1) && (DChCount == 2)),
+    SrcSampleType, SrcChanCount, DestChanCount,
+    typename std::enable_if<(SrcChanCount == DestChanCount) ||
+                                ((SrcChanCount == 1) && (DestChanCount == 2)),
                             void>::type> {
  public:
-  static constexpr size_t DstPerSrc = DChCount / SChCount;
-  static inline float Read(const SType* src) {
-    return SampleNormalizer<SType>::Read(src);
+  static constexpr size_t DestPerSrc = DestChanCount / SrcChanCount;
+  static inline float Read(const SrcSampleType* src) {
+    return SampleNormalizer<SrcSampleType>::Read(src);
   }
 };
 
-template <typename SType, size_t SChCount, size_t DChCount>
-class SrcReader<
-    SType, SChCount, DChCount,
-    typename std::enable_if<(SChCount == 2) && (DChCount == 1)>::type> {
+template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
+class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
+                typename std::enable_if<(SrcChanCount == 2) &&
+                                        (DestChanCount == 1)>::type> {
  public:
-  static constexpr size_t DstPerSrc = 1;
-  static inline float Read(const SType* src) {
-    return 0.5f * (SampleNormalizer<SType>::Read(src + 0) +
-                   SampleNormalizer<SType>::Read(src + 1));
+  static constexpr size_t DestPerSrc = 1;
+  static inline float Read(const SrcSampleType* src) {
+    return 0.5f * (SampleNormalizer<SrcSampleType>::Read(src + 0) +
+                   SampleNormalizer<SrcSampleType>::Read(src + 1));
   }
 };
 
 //
-// DstMixer
+// DestMixer
 //
 // Template to mix normalized destination samples with normalized source samples
 // based on scaling and accumulation policy.
 template <ScalerType ScaleType, bool DoAccumulate, typename Enable = void>
-class DstMixer;
+class DestMixer;
 
 template <ScalerType ScaleType, bool DoAccumulate>
-class DstMixer<ScaleType, DoAccumulate,
-               typename std::enable_if<DoAccumulate == false>::type> {
+class DestMixer<ScaleType, DoAccumulate,
+                typename std::enable_if<DoAccumulate == false>::type> {
  public:
   static inline constexpr float Mix(float, float sample, Gain::AScale scale) {
     return SampleScaler<ScaleType>::Scale(sample, scale);
@@ -149,12 +155,12 @@ class DstMixer<ScaleType, DoAccumulate,
 };
 
 template <ScalerType ScaleType, bool DoAccumulate>
-class DstMixer<ScaleType, DoAccumulate,
-               typename std::enable_if<DoAccumulate == true>::type> {
+class DestMixer<ScaleType, DoAccumulate,
+                typename std::enable_if<DoAccumulate == true>::type> {
  public:
-  static inline constexpr float Mix(float dst, float sample,
+  static inline constexpr float Mix(float dest, float sample,
                                     Gain::AScale scale) {
-    return SampleScaler<ScaleType>::Scale(sample, scale) + dst;
+    return SampleScaler<ScaleType>::Scale(sample, scale) + dest;
   }
 };
 

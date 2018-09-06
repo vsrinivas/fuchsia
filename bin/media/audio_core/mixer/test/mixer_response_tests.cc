@@ -63,12 +63,12 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
                   amplitude);
 
   std::vector<float> accum(kFreqTestBufSize);
-  uint32_t dst_offset = 0;
+  uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
+  mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
              Mixer::FRAC_ONE, Gain::kUnityScale, false);
-  EXPECT_EQ(kFreqTestBufSize, dst_offset);
+  EXPECT_EQ(kFreqTestBufSize, dest_offset);
   EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
             frac_src_offset);
 
@@ -312,7 +312,7 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
 
     // Resample the source into the accumulation buffer, in pieces. (Why in
     // pieces? See description of kResamplerTestNumPackets in frequency_set.h.)
-    uint32_t dst_frames, dst_offset;
+    uint32_t dest_frames, dest_offset;
     int32_t frac_src_offset;
     uint32_t frac_src_frames = source.size() * Mixer::FRAC_ONE;
 
@@ -320,18 +320,18 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
     uint32_t src_pos_modulo = 0;
 
     for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
-      dst_frames = kFreqTestBufSize * (packet + 1) / kResamplerTestNumPackets;
-      dst_offset = kFreqTestBufSize * packet / kResamplerTestNumPackets;
+      dest_frames = kFreqTestBufSize * (packet + 1) / kResamplerTestNumPackets;
+      dest_offset = kFreqTestBufSize * packet / kResamplerTestNumPackets;
       frac_src_offset =
           (static_cast<int64_t>(src_buf_size) * Mixer::FRAC_ONE * packet) /
           kResamplerTestNumPackets;
 
-      mixer->Mix(accum.data(), dst_frames, &dst_offset, source.data(),
+      mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
                  frac_src_frames, &frac_src_offset, step_size,
                  Gain::kUnityScale, false, rate_modulo, kFreqTestBufSize,
                  &src_pos_modulo);
 
-      EXPECT_EQ(dst_frames, dst_offset);
+      EXPECT_EQ(dest_frames, dest_offset);
     }
 
     // Copy results to double[], for high-resolution frequency analysis (FFT).
@@ -782,17 +782,17 @@ void TestNxNEquivalence(Resampler sampler_type, double* freq_resp_results,
   uint32_t src_pos_modulo = 0;
 
   for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
-    uint32_t dst_frames =
+    uint32_t dest_frames =
         num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
-    uint32_t dst_offset = num_dest_frames * packet / kResamplerTestNumPackets;
+    uint32_t dest_offset = num_dest_frames * packet / kResamplerTestNumPackets;
     int32_t frac_src_offset =
         (static_cast<int64_t>(num_source_frames) * Mixer::FRAC_ONE * packet) /
         kResamplerTestNumPackets;
 
-    mixer->Mix(accum.get(), dst_frames, &dst_offset, source.get(),
+    mixer->Mix(accum.get(), dest_frames, &dest_offset, source.get(),
                frac_src_frames, &frac_src_offset, step_size, Gain::kUnityScale,
                false, rate_modulo, num_dest_frames, &src_pos_modulo);
-    EXPECT_EQ(dst_frames, dst_offset);
+    EXPECT_EQ(dest_frames, dest_offset);
   }
 
   // Copy-deinterleave each accum[] channel into mono[] and frequency-analyze.

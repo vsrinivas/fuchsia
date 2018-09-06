@@ -27,12 +27,12 @@ void MeasureSummaryDynamicRange(Gain::AScale scale, double* level_db,
   OverwriteCosine(source.data(), kFreqTestBufSize,
                   FrequencySet::kReferenceFreq);
 
-  uint32_t dst_offset = 0;
+  uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
+  mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
              Mixer::FRAC_ONE, scale, false);
-  EXPECT_EQ(kFreqTestBufSize, dst_offset);
+  EXPECT_EQ(kFreqTestBufSize, dest_offset);
   EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
             frac_src_offset);
 
@@ -151,12 +151,12 @@ TEST(DynamicRange, MonoToStereo) {
   OverwriteCosine(source.data(), kFreqTestBufSize,
                   FrequencySet::kReferenceFreq);
 
-  uint32_t dst_offset = 0;
+  uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
+  mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
              Mixer::FRAC_ONE, Gain::kUnityScale, false);
-  EXPECT_EQ(kFreqTestBufSize, dst_offset);
+  EXPECT_EQ(kFreqTestBufSize, dest_offset);
   EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
             frac_src_offset);
 
@@ -205,12 +205,12 @@ TEST(DynamicRange, StereoToMono) {
     source[(idx * 2) + 1] = mono[idx];
   }
 
-  uint32_t dst_offset = 0;
+  uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
+  mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
              Mixer::FRAC_ONE, Gain::kUnityScale, false);
-  EXPECT_EQ(kFreqTestBufSize, dst_offset);
+  EXPECT_EQ(kFreqTestBufSize, dest_offset);
   EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
             frac_src_offset);
 
@@ -289,22 +289,22 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                   amplitude);
 
-  uint32_t dst_offset = 0;
+  uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
-  EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset,
+  EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset,
                          source.data(), kFreqTestBufSize << kPtsFractionalBits,
                          &frac_src_offset, Mixer::FRAC_ONE,
                          Gain::kUnityScale * 0.5f, false));
 
   // Accumulate the same (reference-frequency) wave.
-  dst_offset = 0;
+  dest_offset = 0;
   frac_src_offset = 0;
-  EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset,
+  EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset,
                          source.data(), kFreqTestBufSize << kPtsFractionalBits,
                          &frac_src_offset, Mixer::FRAC_ONE,
                          Gain::kUnityScale * 0.5f, true));
-  EXPECT_EQ(kFreqTestBufSize, dst_offset);
-  EXPECT_EQ(dst_offset << kPtsFractionalBits,
+  EXPECT_EQ(kFreqTestBufSize, dest_offset);
+  EXPECT_EQ(dest_offset << kPtsFractionalBits,
             static_cast<uint32_t>(frac_src_offset));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res

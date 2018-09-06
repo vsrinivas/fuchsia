@@ -79,7 +79,7 @@ class Mixer {
   // take care when directly specifying a resampler type, if they do so at all.
   // The default should be allowed whenever possible.
   static MixerPtr Select(const fuchsia::media::AudioStreamType& src_format,
-                         const fuchsia::media::AudioStreamType& dst_format,
+                         const fuchsia::media::AudioStreamType& dest_format,
                          Resampler resampler_type = Resampler::Default);
 
   //
@@ -88,15 +88,15 @@ class Mixer {
   // Perform a mixing operation from the source buffer into the destination
   // buffer.
   //
-  // @param dst
+  // @param dest
   // The pointer to the destination buffer into which frames will be mixed.
   //
-  // @param dst_frames
+  // @param dest_frames
   // The total number of frames of audio which comprise the destination buffer.
   //
-  // @param dst_offset
+  // @param dest_offset
   // The pointer to the offset (in destination frames) at which we should start
-  // to mix destination frames.  When Mix has finished, dst_offset will be
+  // to mix destination frames.  When Mix has finished, dest_offset will be
   // updated to indicate the offset into the destination buffer of the next
   // frame to be mixed.
   //
@@ -154,7 +154,7 @@ class Mixer {
   //
   // TODO(mpuryear): Change frac_src_frames parameter to be (integer)
   // src_frames, as number of src_frames was never intended to be fractional.
-  virtual bool Mix(float* dst, uint32_t dst_frames, uint32_t* dst_offset,
+  virtual bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
                    const void* src, uint32_t frac_src_frames,
                    int32_t* frac_src_offset, uint32_t frac_step_size,
                    Gain::AScale amplitude_scale, bool accumulate,

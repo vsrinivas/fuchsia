@@ -395,12 +395,12 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
   // filter window, then we need to skip some number of output frames before
   // starting to produce data.
   if (packet->start_pts() > first_sample_pos_window_edge) {
-    const TimelineRate& dst_to_src =
+    const TimelineRate& dest_to_src =
         info->dest_frames_to_frac_source_frames.rate();
-    output_offset_64 = dst_to_src.Inverse().Scale(packet->start_pts() -
-                                                  first_sample_pos_window_edge +
-                                                  Mixer::FRAC_ONE - 1);
-    input_offset_64 += dst_to_src.Scale(output_offset_64);
+    output_offset_64 = dest_to_src.Inverse().Scale(
+        packet->start_pts() - first_sample_pos_window_edge + Mixer::FRAC_ONE -
+        1);
+    input_offset_64 += dest_to_src.Scale(output_offset_64);
   }
 
   FXL_DCHECK(output_offset_64 >= 0);
@@ -509,7 +509,7 @@ void StandardOutputBase::UpdateSourceTrans(
     return;
   }
 
-  // Transformation has changed. Update gen; invalidate dst-to-src generation.
+  // Transformation has changed. Update gen; invalidate dest-to-src generation.
   bk->source_trans_gen_id = gen;
   bk->dest_trans_gen_id = kInvalidGenerationId;
 }
@@ -531,27 +531,27 @@ void StandardOutputBase::UpdateDestTrans(const MixJob& job, Bookkeeping* bk) {
   // Compose the job supplied transformation from local to output with the
   // audio out supplied mapping from local to fraction input frames to produce a
   // transformation which maps from output frames to fractional input frames.
-  TimelineFunction& dst = bk->dest_frames_to_frac_source_frames;
+  TimelineFunction& dest = bk->dest_frames_to_frac_source_frames;
 
-  dst = bk->clock_mono_to_frac_source_frames * job.local_to_output->Inverse();
+  dest = bk->clock_mono_to_frac_source_frames * job.local_to_output->Inverse();
 
   // Finally, compute the step size in fractional frames.  IOW, every time
   // we move forward one output frame, how many fractional frames of input
   // do we consume.  Don't bother doing the multiplication if we already
   // know that the numerator is zero.
-  FXL_DCHECK(dst.rate().reference_delta());
-  if (!dst.rate().subject_delta()) {
+  FXL_DCHECK(dest.rate().reference_delta());
+  if (!dest.rate().subject_delta()) {
     bk->step_size = 0;
     bk->rate_modulo = 0;
   } else {
-    int64_t tmp_step_size = dst.rate().Scale(1);
+    int64_t tmp_step_size = dest.rate().Scale(1);
 
     FXL_DCHECK(tmp_step_size >= 0);
     FXL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
 
     bk->step_size = static_cast<uint32_t>(tmp_step_size);
     bk->rate_modulo =
-        dst.rate().subject_delta() - (bk->denominator() * bk->step_size);
+        dest.rate().subject_delta() - (bk->denominator() * bk->step_size);
   }
 
   // Done, update our dest_trans generation.

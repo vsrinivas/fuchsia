@@ -31,14 +31,14 @@ Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
 // used. Note that requiring a specific resampler may cause Mixer::Select() to
 // fail (i.e. return nullptr), even in cases where 'Default' would succeed.
 MixerPtr Mixer::Select(const fuchsia::media::AudioStreamType& src_format,
-                       const fuchsia::media::AudioStreamType& dst_format,
+                       const fuchsia::media::AudioStreamType& dest_format,
                        Resampler resampler) {
   // If user specified a particular Resampler, directly select it.
   switch (resampler) {
     case Resampler::SampleAndHold:
-      return mixer::PointSampler::Select(src_format, dst_format);
+      return mixer::PointSampler::Select(src_format, dest_format);
     case Resampler::LinearInterpolation:
-      return mixer::LinearSampler::Select(src_format, dst_format);
+      return mixer::LinearSampler::Select(src_format, dest_format);
 
       // Otherwise (if Default), continue onward.
     case Resampler::Default:
@@ -47,12 +47,12 @@ MixerPtr Mixer::Select(const fuchsia::media::AudioStreamType& src_format,
 
   // If source sample rate is an integer multiple of destination sample rate,
   // just use the point sampler.  Otherwise, use the linear re-sampler.
-  TimelineRate src_to_dst(src_format.frames_per_second,
-                          dst_format.frames_per_second);
-  if (src_to_dst.reference_delta() == 1) {
-    return mixer::PointSampler::Select(src_format, dst_format);
+  TimelineRate src_to_dest(src_format.frames_per_second,
+                           dest_format.frames_per_second);
+  if (src_to_dest.reference_delta() == 1) {
+    return mixer::PointSampler::Select(src_format, dest_format);
   } else {
-    return mixer::LinearSampler::Select(src_format, dst_format);
+    return mixer::LinearSampler::Select(src_format, dest_format);
   }
 }
 

@@ -28,12 +28,12 @@ inline double GainScaleToDb(Gain::AScale gain_scale) {
 // Find a suitable mixer for the provided format, channels and frame rates.
 MixerPtr SelectMixer(fuchsia::media::AudioSampleFormat src_format,
                      uint32_t src_channels, uint32_t src_frame_rate,
-                     uint32_t dst_channels, uint32_t dst_frame_rate,
+                     uint32_t dest_channels, uint32_t dest_frame_rate,
                      Mixer::Resampler resampler = Mixer::Resampler::Default);
 
 // OutputProducers convert frames from accumulation format to dest format.
 OutputProducerPtr SelectOutputProducer(
-    fuchsia::media::AudioSampleFormat dst_format, uint32_t num_channels);
+    fuchsia::media::AudioSampleFormat dest_format, uint32_t num_channels);
 
 // When doing direct bit-for-bit comparisons in our tests, we must factor in the
 // conversion that occurs, from non-float inputs into our internal accumulator's

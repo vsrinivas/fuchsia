@@ -15,7 +15,7 @@ class NoOp : public Mixer {
  public:
   NoOp() : Mixer(0, 0) {}
 
-  bool Mix(float* dst, uint32_t dst_frames, uint32_t* dst_offset,
+  bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
            const void* src, uint32_t frac_src_frames, int32_t* frac_src_offset,
            uint32_t frac_step_size, Gain::AScale amplitude_scale,
            bool accumulate, uint32_t rate_modulo, uint32_t denominator,
