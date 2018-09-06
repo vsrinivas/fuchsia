@@ -66,7 +66,6 @@ pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, failure::Error>
 
 // IEEE Std 802.11-2016, 12.7.2 j)
 // Adds padding to a given key data if necessary and truncates all remaining bytes of the buffer.
-#[allow(unused)]
 pub fn add_padding(buf: &mut Vec<u8>) {
     let padding_len = if buf.len() < 16 {
         16 - buf.len()

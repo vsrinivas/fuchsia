@@ -118,6 +118,7 @@ impl<'a> VerifiedKeyFrame<'a> {
 
         // IEEE Std 802.11-2016, 12.7.2 b.5)
         if let Role::Supplicant = sender {
+            println!("frame.key_info: {:?}", frame.key_info);
             ensure!(!frame.key_info.key_ack(), Error::InvalidKeyAckBitSupplicant);
         }
 
@@ -277,7 +278,7 @@ impl<'a> VerifiedKeyFrame<'a> {
 
 // IEEE Std 802.11-2016, 12.7.2 b.1)
 // Key Descriptor Version is based on the negotiated AKM, Pairwise- and Group Cipher suite.
-fn derive_key_descriptor_version(
+pub fn derive_key_descriptor_version(
     key_descriptor_type: eapol::KeyDescriptor,
     rsne: &NegotiatedRsne,
 ) -> u16 {

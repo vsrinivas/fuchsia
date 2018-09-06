@@ -5,19 +5,19 @@
 mod authenticator;
 mod supplicant;
 
-use self::authenticator::Authenticator;
 use self::supplicant::Supplicant;
 use bytes::Bytes;
 use crate::key::exchange;
-use crate::rsna::{NegotiatedRsne, Role, UpdateSink, VerifiedKeyFrame};
+use crate::rsna::{NegotiatedRsne, Role, SecAssocUpdate, UpdateSink, VerifiedKeyFrame};
 use crate::rsne::Rsne;
+use crate::state_machine::StateMachine;
 use crate::Error;
 use eapol;
 use failure::{self, bail, ensure};
 
 #[derive(Debug, PartialEq)]
 enum RoleHandler {
-    Authenticator(Authenticator),
+    Authenticator(StateMachine<authenticator::State>),
     Supplicant(Supplicant),
 }
 
@@ -40,7 +40,7 @@ impl<'a> FourwayHandshakeFrame<'a> {
     pub fn from_verified(
         valid_frame: VerifiedKeyFrame<'a>,
         role: Role,
-        nonce: &[u8],
+        nonce: Option<&[u8]>,
     ) -> Result<FourwayHandshakeFrame<'a>, failure::Error> {
         let frame = valid_frame.get();
         let kd_plaintext = valid_frame.key_data_plaintext();
@@ -110,6 +110,7 @@ impl Config {
     }
 }
 
+// TODO(hahnr): Flatten hierarchy.
 #[derive(Debug, PartialEq)]
 pub struct Fourway(RoleHandler);
 
@@ -117,9 +118,28 @@ impl Fourway {
     pub fn new(cfg: Config, pmk: Vec<u8>) -> Result<Fourway, failure::Error> {
         let handler = match &cfg.role {
             Role::Supplicant => RoleHandler::Supplicant(Supplicant::new(cfg, pmk)?),
-            Role::Authenticator => RoleHandler::Authenticator(Authenticator::new(cfg)?),
+            Role::Authenticator => {
+                let state = authenticator::new(cfg, pmk);
+                RoleHandler::Authenticator(StateMachine::new(state))
+            },
         };
         Ok(Fourway(handler))
+    }
+    pub fn initiate(&mut self, update_sink: &mut Vec<SecAssocUpdate>, key_replay_counter: u64)
+        -> Result<(), failure::Error>
+    {
+        match &mut self.0 {
+            RoleHandler::Authenticator(state_machine) => {
+                state_machine.replace_state(|state| {
+                    // TODO(hahnr): Take anonce from NonceReader.
+                    let anonce = vec![0xAc; 32];
+                    state.initiate(update_sink, key_replay_counter, anonce)
+                });
+                Ok(())
+            }
+            // TODO(hahnr): Supplicant cannot initiate yet.
+            _ => Ok(())
+        }
     }
 
     pub fn on_eapol_key_frame(
@@ -129,14 +149,17 @@ impl Fourway {
         frame: VerifiedKeyFrame,
     ) -> Result<(), failure::Error> {
         match &mut self.0 {
-            RoleHandler::Authenticator(a) => {
-                let frame =
-                    FourwayHandshakeFrame::from_verified(frame, Role::Authenticator, a.snonce())?;
-                a.on_eapol_key_frame(update_sink, key_replay_counter, frame)
+            RoleHandler::Authenticator(state_machine) => {
+                let frame = FourwayHandshakeFrame::from_verified(frame, Role::Authenticator, None)?;
+                state_machine.replace_state(|state| {
+                    state.on_eapol_key_frame(update_sink, key_replay_counter, frame)
+                });
+                Ok(())
             }
+            // TODO(hahnr): Follow Authenticator design for Supplicant.
             RoleHandler::Supplicant(s) => {
                 let frame =
-                    FourwayHandshakeFrame::from_verified(frame, Role::Supplicant, s.anonce())?;
+                    FourwayHandshakeFrame::from_verified(frame, Role::Supplicant, Some(s.anonce()))?;
                 s.on_eapol_key_frame(update_sink, frame)
             }
         }
@@ -145,7 +168,9 @@ impl Fourway {
     pub fn destroy(self) -> exchange::Config {
         match self.0 {
             RoleHandler::Supplicant(s) => exchange::Config::FourWayHandshake(s.destroy()),
-            RoleHandler::Authenticator(a) => exchange::Config::FourWayHandshake(a.destroy()),
+            RoleHandler::Authenticator(state_machine) => {
+                exchange::Config::FourWayHandshake(state_machine.into_state().destroy())
+            },
         }
     }
 }
@@ -267,7 +292,7 @@ fn validate_message_2(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     Ok(())
 }
 
-fn validate_message_3(frame: &eapol::KeyFrame, nonce: &[u8]) -> Result<(), failure::Error> {
+fn validate_message_3(frame: &eapol::KeyFrame, nonce: Option<&[u8]>) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 b.4)
     // Install = 0 is only used in key mapping with TKIP and WEP, neither is supported by Fuchsia.
     ensure!(
@@ -305,10 +330,12 @@ fn validate_message_3(frame: &eapol::KeyFrame, nonce: &[u8]) -> Result<(), failu
         Error::InvalidEncryptedKeyDataBitValue(message_number(frame))
     );
     // IEEE Std 802.11-2016, 12.7.2 e)
-    ensure!(
-        !is_zero(&frame.key_nonce[..]) && &frame.key_nonce[..] == nonce,
-        Error::InvalidNonce(message_number(frame))
-    );
+    if let Some(nonce) = nonce {
+        ensure!(
+            !is_zero(&frame.key_nonce[..]) && &frame.key_nonce[..] == nonce,
+            Error::InvalidNonce(message_number(frame))
+        );
+    }
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.4
     // IEEE 802.11-2016 requires a zeroed IV for 802.1X-2004+ and allows random ones for older

@@ -19,6 +19,7 @@ mod keywrap;
 mod pmkid;
 pub mod rsna;
 pub mod rsne;
+mod state_machine;
 pub mod suite_selector;
 
 use crate::key::exchange::handshake::fourway::MessageNumber;

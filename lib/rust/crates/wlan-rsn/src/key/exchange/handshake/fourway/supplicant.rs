@@ -22,7 +22,7 @@ struct PtkInitState {}
 struct GtkInitState {}
 
 impl PtkInitState {
-    // IEEE Std 802.1X-2010, 12.7.6.2
+    // IEEE Std 802.11-2016, 12.7.6.2
     fn on_message_1(
         &self,
         shared: &mut SharedState,
@@ -52,7 +52,7 @@ impl PtkInitState {
         Ok((msg2, ptk))
     }
 
-    // IEEE Std 802.1X-2010, 12.7.6.3
+    // IEEE Std 802.11-2016, 12.7.6.3
     fn create_message_2(
         &self,
         shared: &SharedState,
@@ -97,7 +97,7 @@ impl PtkInitState {
 }
 
 impl GtkInitState {
-    // IEEE Std 802.1X-2010, 12.7.6.4
+    // IEEE Std 802.11-2016, 12.7.6.4
     fn on_message_3(
         &self,
         shared: &mut SharedState,
@@ -127,7 +127,7 @@ impl GtkInitState {
         }
     }
 
-    // IEEE Std 802.1X-2010, 12.7.6.5
+    // IEEE Std 802.11-2016, 12.7.6.5
     fn create_message_4(
         &self,
         shared: &SharedState,

@@ -271,7 +271,7 @@ pub fn is_zero(slice: &[u8]) -> bool {
     slice.iter().all(|&x| x == 0)
 }
 
-fn make_handshake() -> Fourway {
+pub fn make_handshake(role: Role) -> Fourway {
     // Create a new instance of the 4-Way Handshake in Supplicant role.
     let pmk = test_util::get_pmk();
     let cfg = Config {
@@ -279,7 +279,7 @@ fn make_handshake() -> Fourway {
         a_rsne: test_util::get_a_rsne(),
         s_addr: test_util::S_ADDR,
         a_addr: test_util::A_ADDR,
-        role: Role::Supplicant,
+        role,
     };
     Fourway::new(cfg, pmk).expect("error while creating 4-Way Handshake")
 }
@@ -307,7 +307,7 @@ pub struct FourwayHandshakeTestEnv {
 pub fn send_msg1<F>(update_sink: &mut UpdateSink, msg_modifier: F)
     -> (FourwayHandshakeTestEnv, Result<(), failure::Error>) where F: Fn(&mut eapol::KeyFrame)
 {
-    let mut handshake = make_handshake();
+    let mut handshake = make_handshake(Role::Supplicant);
 
     // Send first message of Handshake to Supplicant and verify result.
     let a_nonce = get_nonce();
