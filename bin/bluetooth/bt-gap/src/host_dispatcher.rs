@@ -497,13 +497,12 @@ fn add_adapter(
             let delegate_local = fasync::Channel::from_channel(delegate_local).unwrap();
             let delegate_ptr =
                 fidl::endpoints2::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
+            host_device.read()
+                .set_host_pairing_delegate(hd.read().input, hd.read().output, delegate_ptr);
             fasync::spawn(
                 services::start_pairing_delegate(hd.clone(), delegate_local)
                     .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
             );
-            let dev = host_device.clone();
-            dev.read()
-                .set_host_pairing_delegate(hd.read().input, hd.read().output, delegate_ptr);
             future::ready(Ok((hd, host_device)))
         }).and_then(|(hd, host_device)| {
             for listener in hd.read().event_listeners.iter() {
