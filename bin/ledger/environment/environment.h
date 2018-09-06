@@ -21,6 +21,7 @@ class Environment {
  public:
   using BackoffFactory = fit::function<std::unique_ptr<backoff::Backoff>()>;
   Environment(async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
+              std::string firebase_api_key,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory);
   Environment(Environment&& other) noexcept;
@@ -33,6 +34,8 @@ class Environment {
   // Returns the async_dispatcher_t to be used for I/O operations.
   async_dispatcher_t* io_dispatcher() { return io_dispatcher_; }
 
+  const std::string& firebase_api_key() { return firebase_api_key_; };
+
   coroutine::CoroutineService* coroutine_service() {
     return coroutine_service_.get();
   }
@@ -44,6 +47,9 @@ class Environment {
 
   // The async_dispatcher_t to be used for I/O operations.
   async_dispatcher_t* io_dispatcher_ = nullptr;
+
+  // The firebase API key.
+  std::string firebase_api_key_;
 
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   BackoffFactory backoff_factory_;
@@ -64,6 +70,7 @@ class EnvironmentBuilder {
 
   EnvironmentBuilder& SetAsync(async_dispatcher_t* dispatcher);
   EnvironmentBuilder& SetIOAsync(async_dispatcher_t* io_dispatcher);
+  EnvironmentBuilder& SetFirebaseApiKey(std::string firebase_api_key);
   EnvironmentBuilder& SetCoroutineService(
       std::unique_ptr<coroutine::CoroutineService> coroutine_service);
   EnvironmentBuilder& SetBackoffFactory(
@@ -74,6 +81,7 @@ class EnvironmentBuilder {
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
   async_dispatcher_t* io_dispatcher_ = nullptr;
+  std::string firebase_api_key_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   Environment::BackoffFactory backoff_factory_;
 };

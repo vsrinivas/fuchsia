@@ -11,7 +11,6 @@
 #include <lib/fxl/logging.h>
 
 #include "peridot/bin/ledger/p2p_provider/impl/envelope_generated.h"
-#include "peridot/lib/ledger_client/constants.h"
 
 namespace p2p_provider {
 namespace {

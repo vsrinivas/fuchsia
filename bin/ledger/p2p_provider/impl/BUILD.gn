@@ -34,7 +34,6 @@ source_set("impl") {
     "//peridot/bin/ledger/environment",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth",
-    "//peridot/lib/ledger_client:constants",
     "//peridot/public/fidl/fuchsia.modular.auth",
   ]
 }

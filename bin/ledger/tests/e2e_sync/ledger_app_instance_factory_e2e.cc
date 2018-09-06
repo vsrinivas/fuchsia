@@ -41,6 +41,7 @@ class LedgerAppInstanceImpl final
  private:
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
 
+  SyncParams sync_params_;
   std::unique_ptr<component::StartupContext> startup_context_;
   component::ServiceProviderImpl service_provider_impl_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
@@ -56,6 +57,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     : LedgerAppInstanceFactory::LedgerAppInstance(
           loop_controller, convert::ToArray(kLedgerName),
           std::move(ledger_repository_factory)),
+      sync_params_(sync_params),
       startup_context_(
           component::StartupContext::CreateFromStartupInfoNotChecked()),
       cloud_provider_factory_(startup_context_.get(),
@@ -80,6 +82,7 @@ void LedgerAppInstanceImpl::Init(
   launch_info.url = "ledger";
   launch_info.directory_request = child_services.NewRequest();
   launch_info.arguments.push_back("--disable_reporting");
+  launch_info.arguments.push_back("--firebase_api_key=" + sync_params_.api_key);
   fuchsia::sys::ServiceList service_list;
   service_list.names.push_back(fuchsia::modular::auth::TokenProvider::Name_);
   service_provider_impl_.AddBinding(service_list.provider.NewRequest());

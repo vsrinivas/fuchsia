@@ -8,15 +8,18 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/lib/ledger_client/constants.h"
 
 namespace ledger {
 
 Environment::Environment(
     async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
+    std::string firebase_api_key,
     std::unique_ptr<coroutine::CoroutineService> coroutine_service,
     BackoffFactory backoff_factory)
     : dispatcher_(dispatcher),
       io_dispatcher_(io_dispatcher),
+      firebase_api_key_(std::move(firebase_api_key)),
       coroutine_service_(std::move(coroutine_service)),
       backoff_factory_(std::move(backoff_factory)) {
   FXL_DCHECK(dispatcher_);
@@ -24,14 +27,14 @@ Environment::Environment(
   FXL_DCHECK(backoff_factory_);
 }
 
-Environment::Environment(Environment&& other) noexcept
-    : Environment(other.dispatcher_, other.io_dispatcher_,
-                  std::move(other.coroutine_service_),
-                  std::move(other.backoff_factory_)) {}
+Environment::Environment(Environment&& other) noexcept {
+  *this = std::move(other);
+}
 
 Environment& Environment::operator=(Environment&& other) noexcept {
   dispatcher_ = other.dispatcher_;
   io_dispatcher_ = other.io_dispatcher_;
+  firebase_api_key_ = std::move(other.firebase_api_key_);
   coroutine_service_ = std::move(other.coroutine_service_);
   backoff_factory_ = std::move(other.backoff_factory_);
   FXL_DCHECK(dispatcher_);
@@ -46,7 +49,8 @@ std::unique_ptr<backoff::Backoff> Environment::MakeBackoff() {
   return backoff_factory_();
 }
 
-EnvironmentBuilder::EnvironmentBuilder() {}
+EnvironmentBuilder::EnvironmentBuilder()
+    : firebase_api_key_(modular::kFirebaseApiKey) {}
 
 EnvironmentBuilder::~EnvironmentBuilder() {}
 
@@ -59,6 +63,12 @@ EnvironmentBuilder& EnvironmentBuilder::SetAsync(
 EnvironmentBuilder& EnvironmentBuilder::SetIOAsync(
     async_dispatcher_t* io_dispatcher) {
   io_dispatcher_ = io_dispatcher;
+  return *this;
+}
+
+EnvironmentBuilder& EnvironmentBuilder::SetFirebaseApiKey(
+    std::string firebase_api_key) {
+  firebase_api_key_ = std::move(firebase_api_key);
   return *this;
 }
 
@@ -84,7 +94,8 @@ Environment EnvironmentBuilder::Build() {
       return std::make_unique<backoff::ExponentialBackoff>();
     };
   }
-  return Environment(dispatcher_, io_dispatcher_, std::move(coroutine_service_),
+  return Environment(dispatcher_, io_dispatcher_, std::move(firebase_api_key_),
+                     std::move(coroutine_service_),
                      std::move(backoff_factory_));
 }
 

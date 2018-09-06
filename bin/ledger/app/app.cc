@@ -30,10 +30,12 @@
 namespace ledger {
 
 namespace {
-constexpr fxl::StringView kNoStatisticsReporting = "disable_reporting";
+constexpr fxl::StringView kNoStatisticsReportingFlag = "disable_reporting";
+constexpr fxl::StringView kFirebaseApiKeyFlag = "firebase_api_key";
 
 struct AppParams {
   bool disable_statistics = false;
+  std::string firebase_api_key = "";
 };
 
 fxl::AutoCall<fit::closure> SetupCobalt(
@@ -70,9 +72,15 @@ class App : public ledger_internal::LedgerController {
 
   bool Start() {
     io_loop_.StartThread("io thread");
+
+    EnvironmentBuilder builder;
+
+    if (!app_params_.firebase_api_key.empty()) {
+      builder.SetFirebaseApiKey(app_params_.firebase_api_key);
+    }
+
     environment_ =
-        std::make_unique<Environment>(EnvironmentBuilder()
-                                          .SetAsync(loop_.dispatcher())
+        std::make_unique<Environment>(builder.SetAsync(loop_.dispatcher())
                                           .SetIOAsync(io_loop_.dispatcher())
                                           .Build());
     auto user_communicator_factory =
@@ -128,7 +136,14 @@ int main(int argc, const char** argv) {
 
   ledger::AppParams app_params;
   app_params.disable_statistics =
-      command_line.HasOption(ledger::kNoStatisticsReporting);
+      command_line.HasOption(ledger::kNoStatisticsReportingFlag);
+  if (command_line.HasOption(ledger::kFirebaseApiKeyFlag)) {
+    if (!command_line.GetOptionValue(ledger::kFirebaseApiKeyFlag,
+                                     &app_params.firebase_api_key)) {
+      FXL_LOG(ERROR) << "Unable to retrieve the firebase api key.";
+      return 1;
+    }
+  }
 
   ledger::App app(app_params);
   if (!app.Start()) {

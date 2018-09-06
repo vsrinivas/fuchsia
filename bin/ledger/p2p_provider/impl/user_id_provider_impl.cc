@@ -10,7 +10,6 @@
 #include <lib/fxl/logging.h>
 
 #include "peridot/lib/firebase_auth/firebase_auth_impl.h"
-#include "peridot/lib/ledger_client/constants.h"
 
 namespace p2p_provider {
 
@@ -24,8 +23,8 @@ UserIdProviderImpl::UserIdProviderImpl(
     std::string cobalt_client_name)
     : user_id_path_(user_directory.SubPath(user_id_filename)),
       firebase_auth_(std::make_unique<firebase_auth::FirebaseAuthImpl>(
-          firebase_auth::FirebaseAuthImpl::Config{modular::kFirebaseApiKey,
-                                                  cobalt_client_name},
+          firebase_auth::FirebaseAuthImpl::Config{
+              environment->firebase_api_key(), cobalt_client_name},
           environment->dispatcher(), std::move(token_provider_ptr),
           startup_context)) {}
 
