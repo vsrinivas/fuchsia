@@ -27,8 +27,7 @@ namespace cloud_provider_firestore {
 class CloudProviderFactory {
  public:
   CloudProviderFactory(
-      component::StartupContext* startup_context, std::string server_id,
-      std::string api_key,
+      component::StartupContext* startup_context, std::string api_key,
       std::unique_ptr<service_account::Credentials> credentials);
   ~CloudProviderFactory();
 
@@ -44,7 +43,6 @@ class CloudProviderFactory {
  private:
   class TokenProviderContainer;
   component::StartupContext* const startup_context_;
-  const std::string server_id_;
   const std::string api_key_;
   std::unique_ptr<service_account::Credentials> credentials_;
 

@@ -49,8 +49,6 @@ Commonly used among all the ledger benchmarks are the following parameters:
   they will be treated as inline entries.
 * `commit-count` for the number of commits made to the page
 * `transaction-size` for the number of operations in a single transaction
-* `server-id` for an ID of a cloud instance used for synchronisation (see
-  below).
 
 Unless the name of the benchmark suggest otherwise, default values are:
 * `100` entries
@@ -70,7 +68,7 @@ Then, run the selected benchmark as follows:
 
 ```sh
 trace record --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/sync.tspec \
-  --append-args=--server-id=<instance id>,--api-key=<api key>
+  --append-args=--api-key=<api key>
 ```
 
 ### A note regarding benchmark apps

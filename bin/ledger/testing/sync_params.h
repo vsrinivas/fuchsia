@@ -23,9 +23,6 @@ struct SyncParams {
   SyncParams& operator=(const SyncParams& other);
   SyncParams& operator=(SyncParams&& other);
 
-  // ID of the Firestore instance.
-  std::string server_id;
-
   // API key used to access the database.
   std::string api_key;
 

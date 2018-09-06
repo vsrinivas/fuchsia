@@ -55,16 +55,13 @@ class CloudProviderFactory::TokenProviderContainer {
 };
 
 CloudProviderFactory::CloudProviderFactory(
-    component::StartupContext* startup_context, std::string server_id,
-    std::string api_key,
+    component::StartupContext* startup_context, std::string api_key,
     std::unique_ptr<service_account::Credentials> credentials)
     : startup_context_(startup_context),
-      server_id_(std::move(server_id)),
       api_key_(std::move(api_key)),
       credentials_(std::move(credentials)),
       services_loop_(&kAsyncLoopConfigNoAttachToThread) {
   FXL_DCHECK(startup_context);
-  FXL_DCHECK(!server_id_.empty());
   FXL_DCHECK(!api_key_.empty());
 }
 
@@ -100,7 +97,7 @@ void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
       }));
 
   cloud_provider_firestore::Config firebase_config;
-  firebase_config.server_id = server_id_;
+  firebase_config.server_id = credentials_->project_id();
   firebase_config.api_key = api_key_;
 
   cloud_provider_factory_->GetCloudProvider(

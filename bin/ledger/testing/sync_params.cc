@@ -10,7 +10,6 @@
 
 namespace {
 
-constexpr fxl::StringView kServerIdFlag = "server-id";
 constexpr fxl::StringView kApiKeyFlag = "api-key";
 constexpr fxl::StringView kCredentialsPathFlag = "credentials-path";
 constexpr fxl::StringView kGnCredentialsPathArg =
@@ -24,7 +23,6 @@ void WarnIncorrectSyncParams() {
                "to run along with access credentials. "
                "If you're running it from a .tspec file, make sure "
                "you add --append-args=\""
-            << "--" << kServerIdFlag << "=<string>,"
             << "--" << kApiKeyFlag << "=<string>,"
             << "\"." << std::endl;
   std::cerr << "You can also pass the "
@@ -46,7 +44,6 @@ SyncParams::SyncParams(const SyncParams& other) { *this = other; }
 SyncParams& SyncParams::operator=(SyncParams&& other) = default;
 
 SyncParams& SyncParams::operator=(const SyncParams& other) {
-  server_id = other.server_id;
   api_key = other.api_key;
   if (other.credentials) {
     credentials = other.credentials->Clone();
@@ -56,7 +53,6 @@ SyncParams& SyncParams::operator=(const SyncParams& other) {
 
 std::string GetSyncParamsUsage() {
   std::ostringstream result;
-  result << " --" << kServerIdFlag << "=<string>";
   result << " --" << kApiKeyFlag << "=<string>";
   result << " [--" << kCredentialsPathFlag << "=<file path>]";
   return result.str();
@@ -64,9 +60,7 @@ std::string GetSyncParamsUsage() {
 
 bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
                                     SyncParams* sync_params) {
-  bool ret = command_line.GetOptionValue(kServerIdFlag.ToString(),
-                                         &sync_params->server_id) &&
-             command_line.GetOptionValue(kApiKeyFlag.ToString(),
+  bool ret = command_line.GetOptionValue(kApiKeyFlag.ToString(),
                                          &sync_params->api_key);
   if (!ret) {
     WarnIncorrectSyncParams();
@@ -103,8 +97,7 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
 }
 
 std::set<std::string> GetSyncParamFlags() {
-  return {kServerIdFlag.ToString(), kApiKeyFlag.ToString(),
-          kCredentialsPathFlag.ToString()};
+  return {kApiKeyFlag.ToString(), kCredentialsPathFlag.ToString()};
 }
 
 }  // namespace ledger

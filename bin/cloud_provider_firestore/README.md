@@ -21,7 +21,6 @@ Then, run the validation tests as follows:
 
 ```sh
 fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/validation_firestore.cmx \
-  --server-id=<server-id> \
   --api-key=<api-key>
 ```
 

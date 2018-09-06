@@ -55,9 +55,9 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
           std::move(ledger_repository_factory)),
       startup_context_(
           component::StartupContext::CreateFromStartupInfoNotChecked()),
-      cloud_provider_factory_(
-          startup_context_.get(), std::move(sync_params.server_id),
-          std::move(sync_params.api_key), std::move(sync_params.credentials)),
+      cloud_provider_factory_(startup_context_.get(),
+                              std::move(sync_params.api_key),
+                              std::move(sync_params.credentials)),
       user_id_(std::move(user_id)) {}
 
 void LedgerAppInstanceImpl::Init(

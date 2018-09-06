@@ -60,9 +60,9 @@ SyncBenchmark::SyncBenchmark(
     ledger::SyncParams sync_params)
     : loop_(loop),
       startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      cloud_provider_factory_(
-          startup_context_.get(), std::move(sync_params.server_id),
-          std::move(sync_params.api_key), std::move(sync_params.credentials)),
+      cloud_provider_factory_(startup_context_.get(),
+                              std::move(sync_params.api_key),
+                              std::move(sync_params.credentials)),
       change_count_(change_count),
       value_size_(value_size),
       entries_per_change_(entries_per_change),

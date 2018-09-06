@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();
   cloud_provider_firestore::CloudProviderFactory factory(
-      startup_context.get(), sync_params.server_id, sync_params.api_key,
+      startup_context.get(), sync_params.api_key,
       sync_params.credentials->Clone());
 
   cloud_provider::ValidationTestsLauncher launcher(

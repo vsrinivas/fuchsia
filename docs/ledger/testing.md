@@ -130,7 +130,6 @@ You can run the tests from the host as follows:
 
 ```sh
 fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/e2e_sync.cmx \
-  --server-id=<server-id> \
   --api-key=<api-key>
 ```
 

@@ -63,9 +63,9 @@ BacklogBenchmark::BacklogBenchmark(
     SyncParams sync_params)
     : loop_(loop),
       startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      cloud_provider_factory_(
-          startup_context_.get(), std::move(sync_params.server_id),
-          std::move(sync_params.api_key), std::move(sync_params.credentials)),
+      cloud_provider_factory_(startup_context_.get(),
+                              std::move(sync_params.api_key),
+                              std::move(sync_params.credentials)),
       sync_watcher_binding_(this),
       unique_key_count_(unique_key_count),
       key_size_(key_size),
