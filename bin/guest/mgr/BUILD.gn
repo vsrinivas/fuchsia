@@ -8,12 +8,12 @@ source_set("lib") {
   visibility = [ ":*" ]
 
   sources = [
+    "environment_controller_impl.cc",
+    "environment_controller_impl.h",
+    "environment_manager_impl.cc",
+    "environment_manager_impl.h",
     "guest_component.cc",
     "guest_component.h",
-    "guest_environment_impl.cc",
-    "guest_environment_impl.h",
-    "guest_manager_impl.cc",
-    "guest_manager_impl.h",
     "guest_vsock_endpoint.cc",
     "guest_vsock_endpoint.h",
     "host_vsock_endpoint.cc",

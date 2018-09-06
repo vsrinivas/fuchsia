@@ -32,9 +32,9 @@ class GuestTest : public component::testing::TestWithEnvironment {
 
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = kGuestMgrUrl;
-    ASSERT_EQ(ZX_OK,
-              enclosing_environment_->AddServiceWithLaunchInfo(
-                  std::move(launch_info), fuchsia::guest::EnvironmentManager::Name_));
+    ASSERT_EQ(ZX_OK, enclosing_environment_->AddServiceWithLaunchInfo(
+                         std::move(launch_info),
+                         fuchsia::guest::EnvironmentManager::Name_));
 
     fuchsia::guest::LaunchInfo guest_launch_info = LaunchInfo();
 
@@ -44,13 +44,12 @@ class GuestTest : public component::testing::TestWithEnvironment {
 
     enclosing_environment_->ConnectToService(guest_mgr_.NewRequest());
     ASSERT_TRUE(guest_mgr_);
-    guest_mgr_->Create(guest_launch_info.url,
-                                  guest_env_.NewRequest());
+    guest_mgr_->Create(guest_launch_info.url, guest_env_.NewRequest());
     ASSERT_TRUE(guest_env_);
 
     guest_env_->LaunchInstance(std::move(guest_launch_info),
-                            guest_controller_.NewRequest(),
-                            [](fuchsia::guest::InstanceInfo) {});
+                               guest_controller_.NewRequest(),
+                               [](fuchsia::guest::InstanceInfo) {});
     ASSERT_TRUE(guest_controller_);
 
     zx::socket socket;

@@ -28,8 +28,8 @@ void handle_launch(int argc, const char* argv[], async::Loop* loop,
     launch_info.args.push_back(argv[i + 1]);
   }
   fuchsia::guest::InstanceInfo guest_info;
-  guest_env->LaunchInstance(std::move(launch_info), guest_controller.NewRequest(),
-                         &guest_info);
+  guest_env->LaunchInstance(std::move(launch_info),
+                            guest_controller.NewRequest(), &guest_info);
   guest_controller.set_error_handler([loop] { loop->Shutdown(); });
 
   // Create the framebuffer view.

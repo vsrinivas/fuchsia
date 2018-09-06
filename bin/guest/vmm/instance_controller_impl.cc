@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/vmm/guest_controller_impl.h"
+#include "garnet/bin/guest/vmm/instance_controller_impl.h"
 
 #include "lib/fxl/logging.h"
 
@@ -17,8 +17,8 @@ static T duplicate(const T& handle, zx_rights_t rights) {
   return handle_out;
 }
 
-ControllerImpl::ControllerImpl(component::StartupContext* context,
-                                         const machina::PhysMem& phys_mem)
+InstanceControllerImpl::InstanceControllerImpl(
+    component::StartupContext* context, const machina::PhysMem& phys_mem)
     : vmo_(duplicate(phys_mem.vmo(), kVmoRights)) {
   zx_status_t status = zx::socket::create(0, &server_socket_, &client_socket_);
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";
@@ -26,16 +26,16 @@ ControllerImpl::ControllerImpl(component::StartupContext* context,
   context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
-void ControllerImpl::GetPhysicalMemory(
+void InstanceControllerImpl::GetPhysicalMemory(
     GetPhysicalMemoryCallback callback) {
   callback(duplicate(vmo_, ZX_RIGHT_SAME_RIGHTS));
 }
 
-void ControllerImpl::GetSerial(GetSerialCallback callback) {
+void InstanceControllerImpl::GetSerial(GetSerialCallback callback) {
   callback(duplicate(client_socket_, ZX_RIGHT_SAME_RIGHTS));
 }
 
-void ControllerImpl::GetViewProvider(GetViewProviderCallback callback) {
+void InstanceControllerImpl::GetViewProvider(GetViewProviderCallback callback) {
   if (view_provider_ == nullptr) {
     // AddBinding gives a "valid" handle to a null ImplPtr, so we explicitly
     // pass a nullptr to the callback here.

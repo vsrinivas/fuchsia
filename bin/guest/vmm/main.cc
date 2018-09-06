@@ -23,8 +23,8 @@
 #include <zircon/syscalls/hypervisor.h>
 
 #include "garnet/bin/guest/vmm/guest_config.h"
-#include "garnet/bin/guest/vmm/guest_controller_impl.h"
 #include "garnet/bin/guest/vmm/guest_view.h"
+#include "garnet/bin/guest/vmm/instance_controller_impl.h"
 #include "garnet/bin/guest/vmm/linux.h"
 #include "garnet/bin/guest/vmm/zircon.h"
 #include "garnet/lib/machina/address.h"
@@ -156,7 +156,7 @@ static zx_status_t setup_zircon_framebuffer(
 static zx_status_t setup_scenic_framebuffer(
     component::StartupContext* startup_context, machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
-    ControllerImpl* guest_controller,
+    InstanceControllerImpl* instance_controller,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
   fbl::unique_ptr<ScenicScanout> scenic_scanout;
   zx_status_t status =
@@ -164,7 +164,7 @@ static zx_status_t setup_scenic_framebuffer(
   if (status != ZX_OK) {
     return status;
   }
-  guest_controller->set_view_provider(scenic_scanout.get());
+  instance_controller->set_view_provider(scenic_scanout.get());
   *scanout = std::move(scenic_scanout);
   return gpu->AddScanout(scanout->get());
 }
@@ -202,7 +202,8 @@ int main(int argc, char** argv) {
   }
 
   // Instantiate the controller service.
-  ControllerImpl guest_controller(startup_context.get(), guest.phys_mem());
+  InstanceControllerImpl instance_controller(startup_context.get(),
+                                             guest.phys_mem());
 
   // Setup UARTs.
   machina::Uart uart[kNumUarts];
@@ -309,7 +310,7 @@ int main(int argc, char** argv) {
 
   // Setup console
   machina::VirtioConsole console(guest.phys_mem(), guest.device_dispatcher(),
-                                 guest_controller.TakeSocket());
+                                 instance_controller.TakeSocket());
   status = console.Start();
   if (status != ZX_OK) {
     return status;
@@ -380,7 +381,7 @@ int main(int argc, char** argv) {
       // Expose a view that can be composited by mozart. Input events will be
       // injected by the view events.
       status = setup_scenic_framebuffer(startup_context.get(), &gpu,
-                                        &input_dispatcher, &guest_controller,
+                                        &input_dispatcher, &instance_controller,
                                         &gpu_scanout);
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to create scenic view " << status;

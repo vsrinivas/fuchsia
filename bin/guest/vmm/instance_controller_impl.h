@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_VMM_GUEST_CONTROLLER_IMPL_H_
-#define GARNET_BIN_GUEST_VMM_GUEST_CONTROLLER_IMPL_H_
+#ifndef GARNET_BIN_GUEST_VMM_INSTANCE_CONTROLLER_IMPL_H_
+#define GARNET_BIN_GUEST_VMM_INSTANCE_CONTROLLER_IMPL_H_
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
@@ -14,10 +14,10 @@
 
 // Provides an implementation of the |fuchsia::guest::InstanceController|
 // interface. This exposes some guest services over FIDL.
-class ControllerImpl : public fuchsia::guest::InstanceController {
+class InstanceControllerImpl : public fuchsia::guest::InstanceController {
  public:
-  ControllerImpl(component::StartupContext* context,
-                      const machina::PhysMem& phys_mem);
+  InstanceControllerImpl(component::StartupContext* context,
+                         const machina::PhysMem& phys_mem);
 
   void set_view_provider(::fuchsia::ui::viewsv1::ViewProvider* view_provider) {
     view_provider_ = view_provider;
@@ -44,4 +44,4 @@ class ControllerImpl : public fuchsia::guest::InstanceController {
   ::fuchsia::ui::viewsv1::ViewProvider* view_provider_;
 };
 
-#endif  // GARNET_BIN_GUEST_VMM_GUEST_CONTROLLER_IMPL_H_
+#endif  // GARNET_BIN_GUEST_VMM_INSTANCE_CONTROLLER_IMPL_H_

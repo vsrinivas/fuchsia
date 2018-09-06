@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/mgr/guest_manager_impl.h"
+#include "garnet/bin/guest/mgr/environment_manager_impl.h"
 
 #include "lib/fxl/logging.h"
 

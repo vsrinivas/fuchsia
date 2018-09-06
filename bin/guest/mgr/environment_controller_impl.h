@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_MGR_GUEST_ENVIRONMENT_IMPL_H_
-#define GARNET_BIN_GUEST_MGR_GUEST_ENVIRONMENT_IMPL_H_
+#ifndef GARNET_BIN_GUEST_MGR_ENVIRONMENT_CONTROLLER_IMPL_H_
+#define GARNET_BIN_GUEST_MGR_ENVIRONMENT_CONTROLLER_IMPL_H_
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -45,9 +45,10 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
       fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller,
       LaunchInstanceCallback callback) override;
   void ListInstances(ListInstancesCallback callback) override;
-  void ConnectToInstance(uint32_t id,
-                      fidl::InterfaceRequest<fuchsia::guest::InstanceController>
-                          controller) override;
+  void ConnectToInstance(
+      uint32_t id,
+      fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller)
+      override;
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint)
       override;
@@ -74,4 +75,4 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
 
 }  // namespace guestmgr
 
-#endif  // GARNET_BIN_GUEST_MGR_GUEST_ENVIRONMENT_IMPL_H_
+#endif  // GARNET_BIN_GUEST_MGR_ENVIRONMENT_CONTROLLER_IMPL_H_

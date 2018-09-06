@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/mgr/guest_environment_impl.h"
+#include "garnet/bin/guest/mgr/environment_controller_impl.h"
 
 #include <lib/fxl/logging.h>
 
@@ -30,7 +30,8 @@ EnvironmentControllerImpl::EnvironmentControllerImpl(
   AddBinding(std::move(request));
 }
 
-void EnvironmentControllerImpl::set_unbound_handler(std::function<void()> handler) {
+void EnvironmentControllerImpl::set_unbound_handler(
+    std::function<void()> handler) {
   bindings_.set_empty_set_handler(std::move(handler));
 }
 
@@ -86,7 +87,8 @@ void EnvironmentControllerImpl::GetHostVsockEndpoint(
   host_vsock_endpoint_.AddBinding(std::move(request));
 }
 
-fidl::VectorPtr<fuchsia::guest::InstanceInfo> EnvironmentControllerImpl::ListGuests() {
+fidl::VectorPtr<fuchsia::guest::InstanceInfo>
+EnvironmentControllerImpl::ListGuests() {
   fidl::VectorPtr<fuchsia::guest::InstanceInfo> guest_infos =
       fidl::VectorPtr<fuchsia::guest::InstanceInfo>::New(0);
   for (const auto& it : guests_) {

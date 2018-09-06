@@ -10,10 +10,10 @@ source_set("lib") {
   sources = [
     "guest_config.cc",
     "guest_config.h",
-    "guest_controller_impl.cc",
-    "guest_controller_impl.h",
     "guest_view.cc",
     "guest_view.h",
+    "instance_controller_impl.cc",
+    "instance_controller_impl.h",
     "kernel.cc",
     "kernel.h",
     "linux.cc",
@@ -25,8 +25,8 @@ source_set("lib") {
   public_deps = [
     "//garnet/bin/guest/third_party/fdt",
     "//garnet/lib/machina",
-    "//garnet/public/lib/fsl",
     "//garnet/public/fidl/fuchsia.guest",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
