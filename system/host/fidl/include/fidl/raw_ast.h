@@ -364,8 +364,8 @@ public:
 
 class EnumMember : public SourceElement {
 public:
-    EnumMember(Token end, std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> value, std::unique_ptr<AttributeList> attributes)
-        : SourceElement(identifier->start_, end), identifier(std::move(identifier)), value(std::move(value)), attributes(std::move(attributes)) {}
+    EnumMember(Token start, Token end, std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> value, std::unique_ptr<AttributeList> attributes)
+        : SourceElement(start, end), identifier(std::move(identifier)), value(std::move(value)), attributes(std::move(attributes)) {}
 
     void Accept(TreeVisitor& visitor);
 
@@ -451,10 +451,10 @@ public:
 
 class StructMember : public SourceElement {
 public:
-    StructMember(Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
+    StructMember(Token start, Token end, std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
                  std::unique_ptr<Constant> maybe_default_value,
                  std::unique_ptr<AttributeList> attributes)
-        : SourceElement(type->start_, end), type(std::move(type)), identifier(std::move(identifier)),
+        : SourceElement(start, end), type(std::move(type)), identifier(std::move(identifier)),
           maybe_default_value(std::move(maybe_default_value)), attributes(std::move(attributes)) {}
 
     void Accept(TreeVisitor& visitor);

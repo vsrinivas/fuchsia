@@ -63,12 +63,26 @@ public:
         OnBlankLineRequiringNode();
         TreeVisitor::OnInterfaceDeclaration(element);
     }
+
     virtual void OnSourceElementStart(const SourceElement& element) override {
         OnSourceElementShared(element.start_);
     }
 
     virtual void OnSourceElementEnd(const SourceElement& element) override {
         OnSourceElementShared(element.end_);
+    }
+
+    virtual void OnAttributeList(std::unique_ptr<AttributeList> const& element) override {
+        // Disabling these in case we're in an interface method and it thinks
+        // the next line needs to be indented more.  We don't want an indent
+        // after a newline following an attribute list.  It will be reenabled by
+        // the next visited AST node in the method.
+        newline_means_indent_more_ = false;
+        interface_method_alignment_ = false;
+	// This prevents the above from being reenabled during our walk of the
+        // AttributeList
+        ScopedBool suppress(is_member_decl_, false);
+        TreeVisitor::OnAttributeList(element);
     }
 
     virtual void OnUsing(std::unique_ptr<Using> const& element) override {
@@ -102,6 +116,7 @@ public:
         ScopedBool mem(is_member_decl_);
         TreeVisitor::OnInterfaceMethod(element);
     }
+
     virtual void OnStructDeclaration(std::unique_ptr<StructDeclaration> const& element) override {
         OnBlankLineRequiringNode();
         TreeVisitor::OnStructDeclaration(element);

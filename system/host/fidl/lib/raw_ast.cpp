@@ -136,6 +136,9 @@ void ConstDeclaration::Accept(TreeVisitor& visitor) {
 
 void EnumMember::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
+    if (attributes != nullptr) {
+        visitor.OnAttributeList(attributes);
+    }
     visitor.OnIdentifier(identifier);
     visitor.OnConstant(value);
 }
@@ -202,6 +205,9 @@ void InterfaceDeclaration::Accept(TreeVisitor& visitor) {
 
 void StructMember::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
+    if (attributes != nullptr) {
+        visitor.OnAttributeList(attributes);
+    }
     visitor.OnType(type);
     visitor.OnIdentifier(identifier);
     if (maybe_default_value != nullptr) {
@@ -224,6 +230,9 @@ void StructDeclaration::Accept(TreeVisitor& visitor) {
 
 void UnionMember::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
+    if (attributes != nullptr) {
+        visitor.OnAttributeList(attributes);
+    }
     visitor.OnType(type);
     visitor.OnIdentifier(identifier);
 }

@@ -34,6 +34,9 @@ union MyUnion { // super annoying!
     string? s;
 };
 
+/// Doc comments
+/// of multiple
+/// lines
 struct Foo {
     request<Iface>? nullable_request;
     vector<handle<channel>> monoid;
@@ -48,7 +51,10 @@ interface Iface
 {
     1: Foo()
            -> (int i);
-    122: Analyze(handle<process> process, handle<thread> thread) -> ();
+
+    [Awesome]
+    122: Analyze(handle<process> process, handle<thread> thread)
+             -> ();
 
     // Figure it out.
     2: -> Bar(int32 i, int32 k);
@@ -79,6 +85,15 @@ interface Iface
 
     1024: MethodResponse3(int64 a)
               -> ();
+
+    /// Doc Comment and
+    [Attribute]
+    2048: -> End();
+
+    /// Multiple
+    /// Doc Comments and
+    [Attribute]
+    2048: -> End();
 };
 
 // Comments at EOF

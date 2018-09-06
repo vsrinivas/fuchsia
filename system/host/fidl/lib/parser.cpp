@@ -250,11 +250,18 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
     return std::make_unique<raw::Attribute>(name->start_, MarkLastUseful(), str_name, str_value);
 }
 
-std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList() {
-    Token start = ConsumeToken(Token::Kind::kLeftSquare);
+std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(std::unique_ptr<raw::Attribute>&& doc_comment) {
+    Token start;
+    auto attributes = std::make_unique<raw::Attributes>();
+    if (doc_comment) {
+        start = doc_comment->start_;
+        attributes->Insert(std::move(doc_comment));
+        ConsumeToken(Token::Kind::kLeftSquare, true);
+    } else {
+        start = ConsumeToken(Token::Kind::kLeftSquare);
+    }
     if (!Ok())
         return Fail();
-    auto attributes = std::make_unique<raw::Attributes>();
     for (;;) {
         auto attribute = ParseAttribute();
         if (!Ok())
@@ -278,41 +285,40 @@ std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList() {
 
 std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
     std::string str_value("");
+    Token start;
+    Token end;
+
     Token doc_line;
     while (Peek() == Token::Kind::kDocComment) {
-        doc_line = ConsumeToken(Token::Kind::kDocComment);
+        // Most of the tokens are discarded, except the first and last, which we
+        // retroactively mark useful.
+        doc_line = ConsumeToken(Token::Kind::kDocComment, true);
+        if (start.kind() == Token::Kind::kNotAToken) {
+            start = MarkLastUseful();
+        }
         str_value += std::string(doc_line.location().data().data() + 3, doc_line.location().data().size() - 2);
         assert(Ok());
     }
-    return std::make_unique<raw::Attribute>(doc_line, MarkLastUseful(), "doc", str_value);
+    end = MarkLastUseful();
+    return std::make_unique<raw::Attribute>(start, end, "doc", str_value);
 }
 
 std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList() {
     std::unique_ptr<raw::Attribute> doc_comment;
-    Token start;
     // Doc comments must appear above attributes
     if (Peek() == Token::Kind::kDocComment) {
         doc_comment = ParseDocComment();
     }
     if (Peek() == Token::Kind::kLeftSquare) {
-        auto list = ParseAttributeList();
-        if (list && doc_comment) {
-          auto attribute_name = doc_comment->name;
-          if (!list->attributes_->Insert(std::move(doc_comment))) {
-            std::string message("Duplicate attribute with name '");
-            message += attribute_name;
-            message += "'";
-            Fail(message);
-            return nullptr;
-          }
-        }
-        return list;
+        return ParseAttributeList(std::move(doc_comment));
     }
     // no generic attributes, start the attribute list
     if (doc_comment) {
         auto attributes = std::make_unique<raw::Attributes>();
+        Token start = doc_comment->start_;
+        Token end = doc_comment->end_;
         attributes->Insert(std::move(doc_comment));
-        return std::make_unique<raw::AttributeList>(MarkLastUseful(), MarkLastUseful(), std::move(attributes));
+        return std::make_unique<raw::AttributeList>(start, end, std::move(attributes));
     }
     return nullptr;
 }
@@ -640,7 +646,13 @@ std::unique_ptr<raw::EnumMember> Parser::ParseEnumMember() {
     if (!Ok())
         return Fail();
 
-    return std::make_unique<raw::EnumMember>(MarkLastUseful(), std::move(identifier), std::move(member_value), std::move(attributes));
+    Token start;
+    if (attributes != nullptr) {
+        start = attributes->start_;
+    } else {
+        start = identifier->start_;
+    }
+    return std::make_unique<raw::EnumMember>(start, MarkLastUseful(), std::move(identifier), std::move(member_value), std::move(attributes));
 }
 
 std::unique_ptr<raw::EnumDeclaration>
@@ -890,7 +902,13 @@ std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
             return Fail();
     }
 
-    return std::make_unique<raw::StructMember>(MarkLastUseful(),
+    Token start;
+    if (attributes != nullptr) {
+        start = attributes->start_;
+    } else {
+        start = type->start_;
+    }
+    return std::make_unique<raw::StructMember>(start, MarkLastUseful(),
                                                std::move(type), std::move(identifier),
                                                std::move(maybe_default_value), std::move(attributes));
 }
@@ -952,7 +970,13 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
     if (!Ok())
         return Fail();
 
-    return std::make_unique<raw::UnionMember>(type->start_, MarkLastUseful(), std::move(type), std::move(identifier), std::move(attributes));
+    Token start;
+    if (attributes != nullptr) {
+        start = attributes->start_;
+    } else {
+        start = type->start_;
+    }
+    return std::make_unique<raw::UnionMember>(start, MarkLastUseful(), std::move(type), std::move(identifier), std::move(attributes));
 }
 
 std::unique_ptr<raw::UnionDeclaration>

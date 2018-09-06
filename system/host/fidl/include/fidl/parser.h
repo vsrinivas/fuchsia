@@ -46,9 +46,9 @@ private:
         return Lex();
     }
 
-    // This consumes a token.  If it is not read on return, is_discarded should
-    // be true.  That allows the parser to track its source location, in case it
-    // should become interesting to the AST.
+    // This consumes a token.  If it is not retained on return, is_discarded
+    // should be true.  That allows the parser to track its source location, in
+    // case it should become interesting to the AST.
     Token ConsumeToken(Token::Kind kind, bool is_discarded = false) {
         auto actual_kind = Peek();
         if (actual_kind != kind) {
@@ -115,7 +115,7 @@ private:
 
     std::unique_ptr<raw::Attribute> ParseAttribute();
     std::unique_ptr<raw::Attribute> ParseDocComment();
-    std::unique_ptr<raw::AttributeList> ParseAttributeList();
+    std::unique_ptr<raw::AttributeList> ParseAttributeList(std::unique_ptr<raw::Attribute>&& doc_comment);
     std::unique_ptr<raw::AttributeList> MaybeParseAttributeList();
 
     std::unique_ptr<raw::Using> ParseUsing();
