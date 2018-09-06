@@ -44,11 +44,13 @@ FuturePtr<> StoryStorage::WriteModuleData(ModuleData module_data) {
 }
 
 namespace {
+
 struct UpdateModuleDataState {
   fidl::VectorPtr<fidl::StringPtr> module_path;
   std::function<void(ModuleDataPtr*)> mutate_fn;
   OperationQueue sub_operations;
 };
+
 }  // namespace
 
 FuturePtr<> StoryStorage::UpdateModuleData(
@@ -157,21 +159,21 @@ StoryStorage::LinkWatcherAutoCancel StoryStorage::WatchLink(
 }
 
 namespace {
+
 constexpr char kJsonNull[] = "null";
 
-class ReadLinkDataCall
-    : public Operation<StoryStorage::Status, fidl::StringPtr> {
+class ReadVmoCall
+    : public Operation<fuchsia::ledger::Status, fuchsia::mem::BufferPtr> {
  public:
-  ReadLinkDataCall(PageClient* page_client, fidl::StringPtr key,
-                   ResultCall result_call)
-      : Operation("StoryStorage::ReadLinkDataCall", std::move(result_call)),
+  ReadVmoCall(PageClient* page_client, fidl::StringPtr key,
+              ResultCall result_call)
+      : Operation("StoryStorage::ReadVmoCall", std::move(result_call)),
         page_client_(page_client),
         key_(std::move(key)) {}
 
  private:
   void Run() override {
     FlowToken flow{this, &status_, &value_};
-    status_ = StoryStorage::Status::OK;
 
     page_snapshot_ = page_client_->NewSnapshot([this, weak_ptr = GetWeakPtr()] {
       if (!weak_ptr) {
@@ -181,38 +183,16 @@ class ReadLinkDataCall
       // will ensure that the FlowToken it has captured below while waiting for
       // a connected channel will be destroyed, and the operation will be
       // complete.
-      status_ = StoryStorage::Status::LEDGER_ERROR;
+      status_ = fuchsia::ledger::Status::UNKNOWN_ERROR;
       page_snapshot_ = fuchsia::ledger::PageSnapshotPtr();
     });
 
-    page_snapshot_->Get(
-        to_array(key_), [this, flow](fuchsia::ledger::Status status,
+    page_snapshot_->Get(to_array(key_),
+                        [this, flow](fuchsia::ledger::Status status,
                                      fuchsia::mem::BufferPtr value) {
-          std::string value_as_string;
-          switch (status) {
-            case fuchsia::ledger::Status::KEY_NOT_FOUND:
-              // Leave value_ as a null-initialized StringPtr.
-              return;
-            case fuchsia::ledger::Status::OK:
-              if (!value) {
-                value_ = kJsonNull;
-                return;
-              }
-
-              if (!fsl::StringFromVmo(*value, &value_as_string)) {
-                FXL_LOG(ERROR) << trace_name() << " VMO could not be copied.";
-                status_ = StoryStorage::Status::VMO_COPY_ERROR;
-                return;
-              }
-              value_ = value_as_string;
-              return;
-            default:
-              FXL_LOG(ERROR) << trace_name() << " PageSnapshot.Get() "
-                             << fidl::ToUnderlying(status);
-              status_ = StoryStorage::Status::LEDGER_ERROR;
-              return;
-          }
-        });
+                          status_ = status;
+                          value_ = std::move(value);
+                        });
   }
 
   // Input parameters.
@@ -223,28 +203,57 @@ class ReadLinkDataCall
   fuchsia::ledger::PageSnapshotPtr page_snapshot_;
 
   // Return values.
-  StoryStorage::Status status_;
-  fidl::StringPtr value_;
+  fuchsia::ledger::Status status_;
+  fuchsia::mem::BufferPtr value_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ReadVmoCall);
 };
+
+// TODO(rosswang): this is a temporary migration helper
+std::tuple<StoryStorage::Status, fidl::StringPtr> ToLinkValue(
+    fuchsia::ledger::Status ledger_status,
+    fuchsia::mem::BufferPtr ledger_value) {
+  StoryStorage::Status link_value_status = StoryStorage::Status::OK;
+  fidl::StringPtr link_value;
+
+  switch (ledger_status) {
+    case fuchsia::ledger::Status::KEY_NOT_FOUND:
+      // Leave link_value as a null-initialized StringPtr.
+      break;
+    case fuchsia::ledger::Status::OK:
+      if (!ledger_value) {
+        link_value = kJsonNull;
+      } else {
+        std::string link_value_string;
+        if (fsl::StringFromVmo(*ledger_value, &link_value_string)) {
+          link_value = std::move(link_value_string);
+        } else {
+          FXL_LOG(ERROR) << "VMO could not be copied.";
+          link_value_status = StoryStorage::Status::VMO_COPY_ERROR;
+        }
+      }
+      break;
+    default:
+      FXL_LOG(ERROR) << "PageSnapshot.Get() "
+                     << fidl::ToUnderlying(ledger_status);
+      link_value_status = StoryStorage::Status::LEDGER_ERROR;
+      break;
+  }
+
+  return {link_value_status, link_value};
+}
+
 }  // namespace
 
-FuturePtr<StoryStorage::Status, fidl::StringPtr> StoryStorage::GetLinkValue(
+FuturePtr<StoryStorage::Status, std::string> StoryStorage::GetLinkValue(
     const LinkPath& link_path) {
   auto key = MakeLinkKey(link_path);
-  auto ret = Future<Status, fidl::StringPtr>::Create(
+  auto ret = Future<fuchsia::ledger::Status, fuchsia::mem::BufferPtr>::Create(
       "StoryStorage::GetLinkValue " + key);
-  operation_queue_.Add(new ReadLinkDataCall(this, key, ret->Completer()));
-  // We use AsyncMap here, even though we could semantically use Map, because
-  // we need to return >1 value and only AsyncMap lets you do that.
-  return ret->AsyncMap([](StoryStorage::Status status, fidl::StringPtr value) {
-    if (value.is_null()) {
-      value = kJsonNull;
-    }
-    return Future<StoryStorage::Status, fidl::StringPtr>::CreateCompleted(
-        "StoryStorage.GetLinkValue.AsyncMap", std::move(status),
-        std::move(value));
+  operation_queue_.Add(new ReadVmoCall(this, key, ret->Completer()));
+
+  return ret->Map(ToLinkValue)->Map([](Status status, fidl::StringPtr value) {
+    return std::make_tuple(status, value ? *value : kJsonNull);
   });
 }
 
@@ -323,16 +332,17 @@ class UpdateLinkCall : public Operation<StoryStorage::Status, fidl::StringPtr> {
     FlowToken flow{this, &status_, &new_value_};
 
     operation_queue_.Add(
-        new ReadLinkDataCall(page_client_, key_,
-                             [this, flow](StoryStorage::Status status,
-                                          fidl::StringPtr current_value) {
-                               status_ = status;
-                               if (status != StoryStorage::Status::OK) {
-                                 return;
-                               }
+        new ReadVmoCall(page_client_, key_,
+                        [this, flow](fuchsia::ledger::Status status,
+                                     fuchsia::mem::BufferPtr current_value) {
+                          fidl::StringPtr json_current_value;
+                          std::tie(status_, json_current_value) =
+                              ToLinkValue(status, std::move(current_value));
 
-                               Mutate(flow, std::move(current_value));
-                             }));
+                          if (status_ == StoryStorage::Status::OK) {
+                            Mutate(flow, std::move(json_current_value));
+                          }
+                        }));
   }
 
   void Mutate(FlowToken flow, fidl::StringPtr current_value) {

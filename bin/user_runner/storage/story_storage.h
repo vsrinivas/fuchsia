@@ -110,9 +110,8 @@ class StoryStorage : public PageClient {
   // Returns the value for |link_path|.
   //
   // The returned value will be stringified JSON. If no value is found, returns
-  // "null", the JSON string for a null value. The returned value will never be
-  // a null StringPtr: ie, retval.is_null() == false always.
-  FuturePtr<Status, fidl::StringPtr> GetLinkValue(const LinkPath& link_path);
+  // "null", the JSON string for a null value.
+  FuturePtr<Status, std::string> GetLinkValue(const LinkPath& link_path);
 
   // Fetches the link value at |link_path| and passes it to |mutate_fn|.
   // |mutate_fn| must synchronously update the StringPtr with the desired new
