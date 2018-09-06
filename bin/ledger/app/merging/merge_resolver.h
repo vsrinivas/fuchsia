@@ -85,6 +85,12 @@ class MergeResolver : public storage::CommitWatcher {
   void CheckConflicts(DelayedStatus delayed_status);
   void ResolveConflicts(DelayedStatus delayed_status,
                         std::vector<storage::CommitId> heads);
+  void MergeCommitsWithSameContent(std::unique_ptr<const storage::Commit> head1,
+                                  std::unique_ptr<const storage::Commit> head2,
+                                  fit::closure on_successful_merge);
+  void FindCommonAncestorAndMerge(std::unique_ptr<const storage::Commit> head1,
+                                  std::unique_ptr<const storage::Commit> head2,
+                                  fit::closure on_successful_merge);
 
   coroutine::CoroutineService* coroutine_service_;
   storage::PageStorage* const storage_;

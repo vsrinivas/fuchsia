@@ -175,141 +175,153 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
     storage_->GetCommit(id, waiter->NewCallback());
   }
   waiter->Finalize(TRACE_CALLBACK(
-      task_runner_.MakeScoped([this, delayed_status,
-                               cleanup = std::move(cleanup),
-                               tracing = std::move(tracing)](
-                                  storage::Status status,
-                                  std::vector<
-                                      std::unique_ptr<const storage::Commit>>
-                                      commits) mutable {
-        FXL_DCHECK(commits.size() == 2);
-        FXL_DCHECK(commits[0]->GetTimestamp() <= commits[1]->GetTimestamp());
-
-        if (commits[0]->GetParentIds().size() == 2 &&
-            commits[1]->GetParentIds().size() == 2) {
-          if (delayed_status == DelayedStatus::MAY_DELAY) {
-            // If trying to merge 2 merge commits, add some delay with
-            // exponential backoff.
-            auto delay_callback = [this] {
-              in_delay_ = false;
-              CheckConflicts(DelayedStatus::DONT_DELAY);
-            };
-            in_delay_ = true;
-            task_runner_.PostDelayedTask(
-                TRACE_CALLBACK(std::move(delay_callback), "ledger",
-                               "merge_delay"),
-                backoff_->GetNext());
-            cleanup.cancel();
-            merge_in_progress_ = false;
-            // We don't want to continue merging if nobody is interested
-            // (all clients disconnected).
-            if (on_empty_callback_) {
-              on_empty_callback_();
+      task_runner_.MakeScoped(
+          [this, delayed_status, cleanup = std::move(cleanup),
+           tracing = std::move(tracing)](
+              storage::Status status,
+              std::vector<std::unique_ptr<const storage::Commit>>
+                  commits) mutable {
+            if (status != storage::Status::OK) {
+              FXL_LOG(ERROR)
+                  << "Failed to retrieve head commits. Status: " << status;
+              return;
             }
-            return;
-          }
-          // If delayed_status is not intial, report the merge.
-          ReportEvent(CobaltEvent::MERGED_COMMITS_MERGED);
-        } else {
-          // No longer merging 2 merge commits, reinitialize the
-          // exponential backoff.
-          backoff_->Reset();
-        }
+            FXL_DCHECK(commits.size() == 2);
+            FXL_DCHECK(commits[0]->GetTimestamp() <=
+                       commits[1]->GetTimestamp());
 
-        // Check if the 2 parents have the same content.
-        if (commits[0]->GetRootIdentifier() ==
-            commits[1]->GetRootIdentifier()) {
-          // In that case, the result must be a commit with the same
-          // content.
-          storage_->StartMergeCommit(
-              commits[0]->GetId(), commits[1]->GetId(),
-              TRACE_CALLBACK(
-                  task_runner_.MakeScoped(
-                      [this, cleanup = std::move(cleanup),
-                       tracing = std::move(tracing)](
-                          storage::Status status,
-                          std::unique_ptr<storage::Journal> journal) mutable {
-                        if (status != storage::Status::OK) {
-                          FXL_LOG(ERROR) << "Unable to start merge commit "
-                                            "for identical commits.";
-                          return;
-                        }
-                        has_merged_ = true;
-                        storage_->CommitJournal(
-                            std::move(journal),
-                            [cleanup = std::move(cleanup),
-                             tracing = std::move(tracing)](
-                                storage::Status status,
-                                std::unique_ptr<const storage::Commit>) {
-                              if (status != storage::Status::OK) {
-                                FXL_LOG(ERROR) << "Unable to merge "
-                                                  "identical commits.";
-                                return;
-                              }
+            if (commits[0]->GetParentIds().size() == 2 &&
+                commits[1]->GetParentIds().size() == 2) {
+              if (delayed_status == DelayedStatus::MAY_DELAY) {
+                // If trying to merge 2 merge commits, add some delay with
+                // exponential backoff.
+                auto delay_callback = [this] {
+                  in_delay_ = false;
+                  CheckConflicts(DelayedStatus::DONT_DELAY);
+                };
+                in_delay_ = true;
+                task_runner_.PostDelayedTask(
+                    TRACE_CALLBACK(std::move(delay_callback), "ledger",
+                                   "merge_delay"),
+                    backoff_->GetNext());
+                cleanup.cancel();
+                merge_in_progress_ = false;
+                // We don't want to continue merging if nobody is interested
+                // (all clients disconnected).
+                if (on_empty_callback_) {
+                  on_empty_callback_();
+                }
+                return;
+              }
+              // If delayed_status is not initial, report the merge.
+              ReportEvent(CobaltEvent::MERGED_COMMITS_MERGED);
+            } else {
+              // No longer merging 2 merge commits, reinitialize the exponential
+              // backoff.
+              backoff_->Reset();
+            }
 
-                              // Report the merge.
-                              ReportEvent(CobaltEvent::COMMITS_MERGED);
-                            });
-                      }),
-                  "ledger", "merge_same_commit_journal"));
-          return;
-        }
+            // Check if the 2 parents have the same content.
+            if (commits[0]->GetRootIdentifier() ==
+                commits[1]->GetRootIdentifier()) {
+              // In that case, the result must be a commit with the same
+              // content.
+              MergeCommitsWithSameContent(
+                  std::move(commits[0]), std::move(commits[1]),
+                  [cleanup = std::move(cleanup), tracing = std::move(tracing)] {
+                    // Report the merge.
+                    ReportEvent(CobaltEvent::COMMITS_MERGED);
+                  });
+              return;
+            }
 
-        // If the strategy has been changed, bail early.
-        if (has_next_strategy_) {
-          return;
-        }
+            // If the strategy has been changed, bail early.
+            if (has_next_strategy_) {
+              return;
+            }
 
-        if (status != storage::Status::OK) {
-          FXL_LOG(ERROR) << "Failed to retrieve head commits.";
-          return;
-        }
-
-        // Merge the first two commits using the most recent one as the
-        // base.
-        auto head1 = std::move(commits[0]);
-        auto head2 = std::move(commits[1]);
-        FindCommonAncestor(
-            coroutine_service_, storage_, head1->Clone(), head2->Clone(),
-            TRACE_CALLBACK(
-                task_runner_.MakeScoped(
-                    [this, head1 = std::move(head1), head2 = std::move(head2),
-                     cleanup = std::move(cleanup),
-                     tracing = std::move(tracing)](
-                        Status status, std::unique_ptr<const storage::Commit>
-                                           common_ancestor) mutable {
-                      // If the strategy has been changed, bail
-                      // early.
-                      if (has_next_strategy_) {
-                        return;
-                      }
-
-                      if (status != Status::OK) {
-                        FXL_LOG(ERROR) << "Failed to find common ancestor "
-                                          "of head commits.";
-                        return;
-                      }
-                      auto strategy_callback =
-                          [cleanup = std::move(cleanup),
-                           tracing = std::move(tracing)](Status status) {
-                            if (status != Status::OK) {
-                              FXL_LOG(WARNING) << "Merging failed. "
-                                                  "Will try again "
-                                                  "later.";
-                              return;
-                            }
-                            ReportEvent(CobaltEvent::COMMITS_MERGED);
-                          };
-                      has_merged_ = true;
-                      strategy_->Merge(
-                          storage_, page_manager_, std::move(head1),
-                          std::move(head2), std::move(common_ancestor),
-                          TRACE_CALLBACK(std::move(strategy_callback), "ledger",
-                                         "merge_strategy_merge"));
-                    }),
-                "ledger", "merge_find_common_ancestor"));
-      }),
+            // Merge the first two commits using the most recent one as the
+            // base.
+            FindCommonAncestorAndMerge(
+                std::move(commits[0]), std::move(commits[1]),
+                [cleanup = std::move(cleanup), tracing = std::move(tracing)] {
+                  ReportEvent(CobaltEvent::COMMITS_MERGED);
+                });
+          }),
       "ledger", "merge_get_commit_finalize"));
+}
+
+void MergeResolver::MergeCommitsWithSameContent(
+    std::unique_ptr<const storage::Commit> head1,
+    std::unique_ptr<const storage::Commit> head2,
+    fit::closure on_successful_merge) {
+  storage_->StartMergeCommit(
+      head1->GetId(), head2->GetId(),
+      TRACE_CALLBACK(
+          task_runner_.MakeScoped(
+              [this, on_successful_merge = std::move(on_successful_merge)](
+                  storage::Status status,
+                  std::unique_ptr<storage::Journal> journal) mutable {
+                if (status != storage::Status::OK) {
+                  FXL_LOG(ERROR)
+                      << "Unable to start merge commit for identical commits.";
+                  return;
+                }
+                has_merged_ = true;
+                storage_->CommitJournal(
+                    std::move(journal),
+                    [on_successful_merge = std::move(on_successful_merge)](
+                        storage::Status status,
+                        std::unique_ptr<const storage::Commit>) {
+                      if (status != storage::Status::OK) {
+                        FXL_LOG(ERROR) << "Unable to merge identical commits.";
+                        return;
+                      }
+                      on_successful_merge();
+                    });
+              }),
+          "ledger", "merge_same_commit_journal"));
+}
+
+void MergeResolver::FindCommonAncestorAndMerge(
+    std::unique_ptr<const storage::Commit> head1,
+    std::unique_ptr<const storage::Commit> head2,
+    fit::closure on_successful_merge) {
+  FindCommonAncestor(
+      coroutine_service_, storage_, head1->Clone(), head2->Clone(),
+      TRACE_CALLBACK(
+          task_runner_.MakeScoped(
+              [this, head1 = std::move(head1), head2 = std::move(head2),
+               on_successful_merge = std::move(on_successful_merge)](
+                  Status status, std::unique_ptr<const storage::Commit>
+                                     common_ancestor) mutable {
+                // If the strategy has been changed, bail early.
+                if (has_next_strategy_) {
+                  return;
+                }
+
+                if (status != Status::OK) {
+                  FXL_LOG(ERROR) << "Failed to find common ancestor "
+                                    "of head commits.";
+                  return;
+                }
+                auto strategy_callback = [on_successful_merge =
+                                              std::move(on_successful_merge)](
+                                             Status status) {
+                  if (status != Status::OK) {
+                    FXL_LOG(WARNING) << "Merging failed. Will try again later.";
+                    return;
+                  }
+                  on_successful_merge();
+                };
+                has_merged_ = true;
+                strategy_->Merge(
+                    storage_, page_manager_, std::move(head1), std::move(head2),
+                    std::move(common_ancestor),
+                    TRACE_CALLBACK(std::move(strategy_callback), "ledger",
+                                   "merge_strategy_merge"));
+              }),
+          "ledger", "merge_find_common_ancestor"));
 }
 
 }  // namespace ledger
