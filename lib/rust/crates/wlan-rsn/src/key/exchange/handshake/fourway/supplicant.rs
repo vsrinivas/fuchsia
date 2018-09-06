@@ -10,7 +10,7 @@ use crate::key::exchange::Key;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data;
-use crate::rsna::{SecAssocResult, SecAssocUpdate};
+use crate::rsna::{UpdateSink, SecAssocUpdate};
 use crate::rsne::Rsne;
 use crate::Error;
 use eapol;
@@ -178,13 +178,14 @@ enum State {
 impl State {
     pub fn on_eapol_key_frame(
         self,
+        update_sink: &mut UpdateSink,
         shared: &mut SharedState,
         frame: FourwayHandshakeFrame,
-    ) -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error> {
+    ) -> Result<State, failure::Error> {
         match fourway::message_number(frame.get()) {
             // Only process first and third message of the Handshake.
-            fourway::MessageNumber::Message1 => self.on_message_1(shared, frame),
-            fourway::MessageNumber::Message3 => self.on_message_3(shared, frame),
+            fourway::MessageNumber::Message1 => self.on_message_1(update_sink, shared, frame),
+            fourway::MessageNumber::Message3 => self.on_message_3(update_sink, shared, frame),
             // Drop any other message with an error.
             unexpected_msg => bail!(Error::Unexpected4WayHandshakeMessage(unexpected_msg)),
         }
@@ -192,64 +193,58 @@ impl State {
 
     fn on_message_1(
         self,
+        update_sink: &mut UpdateSink,
         shared: &mut SharedState,
         msg1: FourwayHandshakeFrame,
-    ) -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error> {
+    ) -> Result<State, failure::Error> {
         // Always reset Handshake when first message was received.
         match self {
             // If the Handshake already completed, simply drop the message.
-            State::Completed => return Ok((self, None)),
+            State::Completed => return Ok(self),
             // If the Handshake is already advanced further, restart the entire Handshake.
-            State::GtkInit(_) => return Ok((State::PtkInit(PtkInitState {}), None)),
+            State::GtkInit(_) => return Ok(State::PtkInit(PtkInitState {})),
             // Else, if the message was expected, proceed.
             _ => (),
         };
 
         // Only the PTK-Init state processes the first message.
-        match self {
+        Ok(match self {
             State::PtkInit(ptk_init) => {
                 let (msg2, ptk) = ptk_init.on_message_1(shared, msg1)?;
                 // If the first message was processed successfully the PTK is known and the GTK
                 // can be exchanged with the Authenticator. Move the state machine forward.
-                Ok((
-                    State::GtkInit(GtkInitState {}),
-                    Some(vec![
-                        SecAssocUpdate::TxEapolKeyFrame(msg2),
-                        SecAssocUpdate::Key(Key::Ptk(ptk)),
-                    ]),
-                ))
+                update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
+                update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk)));
+                State::GtkInit(GtkInitState {})
             }
             // This should never happen.
             _ => panic!("tried to process first message of 4-Way Handshake in illegal state"),
-        }
+        })
     }
 
     fn on_message_3(
         self,
+        update_sink: &mut UpdateSink,
         shared: &mut SharedState,
         msg3: FourwayHandshakeFrame,
-    ) -> Result<(State, Option<Vec<SecAssocUpdate>>), failure::Error> {
+    ) -> Result<State, failure::Error> {
         // Third message of Handshake is only processed once to prevent replay attacks such as
         // KRACK. A replayed third message will be dropped and has no effect on the Supplicant.
         // TODO(hahnr): Decide whether this client side fix should be kept, which will reduce
         // reliability, or if instead the Supplicant should trust the Authenticator to be patched.
-        match self {
+        Ok(match self {
             State::GtkInit(gtk_init) => {
                 let (msg4, gtk) = gtk_init.on_message_3(shared, msg3)?;
                 // The third message was successfully processed and the handshake completed.
-                Ok((
-                    State::Completed,
-                    Some(vec![
-                        SecAssocUpdate::TxEapolKeyFrame(msg4),
-                        SecAssocUpdate::Key(Key::Gtk(gtk)),
-                    ]),
-                ))
+                update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
+                update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk)));
+                State::Completed
             }
             // At this point keys are either already installed and this message is a replay of a
             // previous one, or, the message was received before the first message. In any case,
             // drop the frame.
-            _ => Ok((self, None)),
-        }
+            _ => self,
+        })
     }
 }
 
@@ -301,15 +296,16 @@ impl Supplicant {
         &self.shared.anonce[..]
     }
 
-    pub fn on_eapol_key_frame(&mut self, frame: FourwayHandshakeFrame) -> SecAssocResult {
-        self.state.take().map_or_else(
-            || Ok(vec![]),
-            |state| {
-                let (state, updates) = state.on_eapol_key_frame(&mut self.shared, frame)?;
-                self.state = Some(state);
-                Ok(updates.unwrap_or_default())
-            },
-        )
+    pub fn on_eapol_key_frame(&mut self, update_sink: &mut UpdateSink, frame: FourwayHandshakeFrame)
+        -> Result<(), failure::Error>
+    {
+        self.state = match self.state.take() {
+            None => bail!("Supplicant's 4-Way Handshake state can never be None"),
+            Some(state) => {
+                Some(state.on_eapol_key_frame(update_sink, &mut self.shared, frame)?)
+            }
+        };
+        Ok(())
     }
 
     pub fn destroy(self) -> fourway::Config {

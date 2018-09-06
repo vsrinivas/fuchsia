@@ -284,21 +284,16 @@ fn make_handshake() -> Fourway {
     Fourway::new(cfg, pmk).expect("error while creating 4-Way Handshake")
 }
 
-fn compute_ptk(a_nonce: &[u8], supplicant_result: &SecAssocResult) -> Option<Ptk> {
-    match supplicant_result {
-        Ok(updates) => {
-            for u in updates {
-                match u {
-                    SecAssocUpdate::TxEapolKeyFrame(msg2) => {
-                        let snonce = msg2.key_nonce;
-                        let derived_ptk = test_util::get_ptk(a_nonce, &snonce[..]);
-                        return Some(derived_ptk);
-                    }
-                    _ => {}
-                }
+fn compute_ptk(a_nonce: &[u8], supplicant_updates: &UpdateSink) -> Option<Ptk> {
+    for u in supplicant_updates {
+        match u {
+            SecAssocUpdate::TxEapolKeyFrame(msg2) => {
+                let snonce = msg2.key_nonce;
+                let derived_ptk = test_util::get_ptk(a_nonce, &snonce[..]);
+                return Some(derived_ptk);
             }
+            _ => {}
         }
-        _ => {}
     }
     None
 }
@@ -309,9 +304,8 @@ pub struct FourwayHandshakeTestEnv {
     ptk: Option<Ptk>,
 }
 
-pub fn send_msg1<F>(msg_modifier: F) -> (FourwayHandshakeTestEnv, SecAssocResult)
-where
-    F: Fn(&mut eapol::KeyFrame),
+pub fn send_msg1<F>(update_sink: &mut UpdateSink, msg_modifier: F)
+    -> (FourwayHandshakeTestEnv, Result<(), failure::Error>) where F: Fn(&mut eapol::KeyFrame)
 {
     let mut handshake = make_handshake();
 
@@ -322,9 +316,9 @@ where
         frame: &frame,
         kd_plaintext: Bytes::from(vec![]),
     };
-    let result = handshake.on_eapol_key_frame(0, msg1);
+    let result = handshake.on_eapol_key_frame(update_sink, 0, msg1);
 
-    let ptk = compute_ptk(&a_nonce[..], &result);
+    let ptk = compute_ptk(&a_nonce[..], update_sink);
     (
         FourwayHandshakeTestEnv {
             handshake,
@@ -336,9 +330,8 @@ where
 }
 
 impl FourwayHandshakeTestEnv {
-    pub fn send_msg3<F>(&mut self, gtk: Vec<u8>, msg_modifier: F) -> SecAssocResult
-    where
-        F: Fn(&mut eapol::KeyFrame),
+    pub fn send_msg3<F>(&mut self, update_sink: &mut UpdateSink, gtk: Vec<u8>, msg_modifier: F)
+        -> Result<(), failure::Error> where F: Fn(&mut eapol::KeyFrame)
     {
         // Send third message of 4-Way Handshake to Supplicant.
         let ptk = self.ptk.as_ref().unwrap();
@@ -347,6 +340,6 @@ impl FourwayHandshakeTestEnv {
             frame: &frame,
             kd_plaintext,
         };
-        self.handshake.on_eapol_key_frame(0, msg3)
+        self.handshake.on_eapol_key_frame(update_sink, 0, msg3)
     }
 }

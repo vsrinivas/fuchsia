@@ -328,7 +328,7 @@ pub enum SecAssocUpdate {
     Status(SecAssocStatus),
 }
 
-pub type SecAssocResult = Result<Vec<SecAssocUpdate>, failure::Error>;
+pub type UpdateSink = Vec<SecAssocUpdate>;
 
 #[cfg(test)]
 mod tests {

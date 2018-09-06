@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::key::exchange::handshake::fourway::{Config, FourwayHandshakeFrame};
-use crate::rsna::SecAssocResult;
+use crate::rsna::UpdateSink;
 use failure;
 
 #[derive(Debug, PartialEq)]
@@ -22,11 +22,12 @@ impl Authenticator {
 
     pub fn on_eapol_key_frame(
         &self,
+        _update_sink: &mut UpdateSink,
         _key_replay_counter: u64,
         _frame: FourwayHandshakeFrame,
-    ) -> SecAssocResult {
+    ) -> Result<(), failure::Error> {
         // TODO(hahnr): Implement.
-        Ok(vec![])
+        Ok(())
     }
 
     pub fn snonce(&self) -> &[u8] {

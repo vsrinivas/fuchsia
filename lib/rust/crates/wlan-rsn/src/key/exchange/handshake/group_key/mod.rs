@@ -5,7 +5,7 @@
 use bytes::Bytes;
 use crate::akm::Akm;
 use crate::key::exchange::{self, handshake::group_key::supplicant::Supplicant};
-use crate::rsna::{Role, SecAssocResult, VerifiedKeyFrame};
+use crate::rsna::{Role, UpdateSink, VerifiedKeyFrame};
 use eapol;
 use failure::{self, bail, ensure};
 
@@ -158,13 +158,14 @@ impl GroupKey {
 
     pub fn on_eapol_key_frame(
         &mut self,
+        update_sink: &mut UpdateSink,
         _key_replay_counter: u64,
         frame: VerifiedKeyFrame,
-    ) -> SecAssocResult {
+    ) -> Result<(), failure::Error> {
         match &mut self.0 {
             RoleHandler::Supplicant(s) => {
                 let frame = GroupKeyHandshakeFrame::from_verified(frame, Role::Supplicant)?;
-                s.on_eapol_key_frame(frame)
+                s.on_eapol_key_frame(update_sink, frame)
             }
         }
     }

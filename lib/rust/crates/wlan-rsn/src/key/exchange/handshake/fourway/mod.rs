@@ -9,7 +9,7 @@ use self::authenticator::Authenticator;
 use self::supplicant::Supplicant;
 use bytes::Bytes;
 use crate::key::exchange;
-use crate::rsna::{NegotiatedRsne, Role, SecAssocResult, VerifiedKeyFrame};
+use crate::rsna::{NegotiatedRsne, Role, UpdateSink, VerifiedKeyFrame};
 use crate::rsne::Rsne;
 use crate::Error;
 use eapol;
@@ -124,19 +124,20 @@ impl Fourway {
 
     pub fn on_eapol_key_frame(
         &mut self,
+        update_sink: &mut UpdateSink,
         key_replay_counter: u64,
         frame: VerifiedKeyFrame,
-    ) -> SecAssocResult {
+    ) -> Result<(), failure::Error> {
         match &mut self.0 {
             RoleHandler::Authenticator(a) => {
                 let frame =
                     FourwayHandshakeFrame::from_verified(frame, Role::Authenticator, a.snonce())?;
-                a.on_eapol_key_frame(key_replay_counter, frame)
+                a.on_eapol_key_frame(update_sink, key_replay_counter, frame)
             }
             RoleHandler::Supplicant(s) => {
                 let frame =
                     FourwayHandshakeFrame::from_verified(frame, Role::Supplicant, s.anonce())?;
-                s.on_eapol_key_frame(frame)
+                s.on_eapol_key_frame(update_sink, frame)
             }
         }
     }
@@ -414,13 +415,14 @@ fn is_zero(slice: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::rsna::test_util;
+    use crate::rsna::{test_util, UpdateSink};
 
     // First messages of 4-Way Handshake must carry a zeroed IV in all protocol versions.
 
     #[test]
     fn test_random_iv_msg1_v1() {
-        let (_, msg1_result) = test_util::send_msg1(|msg1| {
+        let mut update_sink = UpdateSink::default();
+        let (_, msg1_result) = test_util::send_msg1(&mut update_sink, |msg1| {
             msg1.version = 1;
             msg1.key_iv = [0xFFu8; 16];
         });
@@ -433,7 +435,8 @@ mod tests {
 
     #[test]
     fn test_random_iv_msg1_v2() {
-        let (_, msg1_result) = test_util::send_msg1(|msg1| {
+        let mut update_sink = UpdateSink::default();
+        let (_, msg1_result) = test_util::send_msg1(&mut update_sink, |msg1| {
             msg1.version = 2;
             msg1.key_iv = [0xFFu8; 16];
         });
@@ -451,13 +454,14 @@ mod tests {
 
     #[test]
     fn test_random_iv_msg3_v1() {
-        let (mut env, msg1_result) = test_util::send_msg1(|_| {});
+        let mut update_sink = UpdateSink::default();
+        let (mut env, msg1_result) = test_util::send_msg1(&mut update_sink, |_| {});
         assert!(
             msg1_result.is_ok(),
             "error, expected success for processing first msg but result is: {:?}",
             msg1_result
         );
-        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+        let msg3_result = env.send_msg3(&mut update_sink, vec![42u8; 16], |msg3| {
             msg3.version = 1;
             msg3.key_iv = [0xFFu8; 16];
         });
@@ -470,13 +474,14 @@ mod tests {
 
     #[test]
     fn test_random_iv_msg3_v2() {
-        let (mut env, msg1_result) = test_util::send_msg1(|_| {});
+        let mut update_sink = UpdateSink::default();
+        let (mut env, msg1_result) = test_util::send_msg1(&mut update_sink, |_| {});
         assert!(
             msg1_result.is_ok(),
             "error, expected success for processing first msg but result is: {:?}",
             msg1_result
         );
-        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+        let msg3_result = env.send_msg3(&mut update_sink, vec![42u8; 16], |msg3| {
             msg3.version = 2;
             msg3.key_iv = [0xFFu8; 16];
         });
@@ -489,13 +494,14 @@ mod tests {
 
     #[test]
     fn test_zeroed_iv_msg3_v2() {
-        let (mut env, msg1_result) = test_util::send_msg1(|_| {});
+        let mut update_sink = UpdateSink::default();
+        let (mut env, msg1_result) = test_util::send_msg1(&mut update_sink, |_| {});
         assert!(
             msg1_result.is_ok(),
             "error, expected success for processing first msg but result is: {:?}",
             msg1_result
         );
-        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+        let msg3_result = env.send_msg3(&mut update_sink, vec![42u8; 16], |msg3| {
             msg3.version = 2;
             msg3.key_iv = [0u8; 16];
         });
@@ -508,13 +514,14 @@ mod tests {
 
     #[test]
     fn test_random_iv_msg3_v3() {
-        let (mut env, msg1_result) = test_util::send_msg1(|_| {});
+        let mut update_sink = UpdateSink::default();
+        let (mut env, msg1_result) = test_util::send_msg1(&mut update_sink, |_| {});
         assert!(
             msg1_result.is_ok(),
             "error, expected success for processing first msg but result is: {:?}",
             msg1_result
         );
-        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+        let msg3_result = env.send_msg3(&mut update_sink, vec![42u8; 16], |msg3| {
             msg3.version = 3;
             msg3.key_iv = [0xFFu8; 16];
         });

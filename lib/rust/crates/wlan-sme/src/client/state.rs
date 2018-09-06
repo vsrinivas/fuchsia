@@ -5,7 +5,7 @@
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
 use log::{error, log, warn};
 use wlan_rsn::key::exchange::Key;
-use wlan_rsn::rsna::{NegotiatedRsne, SecAssocUpdate, SecAssocStatus};
+use wlan_rsn::rsna::{self, NegotiatedRsne, SecAssocUpdate, SecAssocStatus};
 
 use super::bss::convert_bss_description;
 use super::{ConnectResult, Status, Tokens};
@@ -265,46 +265,50 @@ fn process_eapol_ind(mlme_sink: &MlmeSink, rsna: &mut Rsna, ind: &fidl_mlme::Eap
     let mic_size = rsna.negotiated_rsne.mic_size;
     let eapol_pdu = &ind.data[..];
     let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_size).to_full_result() {
-        Ok(key_frame) => Some(eapol::Frame::Key(key_frame)),
+        Ok(key_frame) => eapol::Frame::Key(key_frame),
         Err(e) => {
             error!("received invalid EAPOL Key frame: {:?}", e);
-            None
+            return RsnaStatus::Unchanged;
         }
     };
 
-    if let Some(eapol_frame) = eapol_frame {
-        let bssid = ind.src_addr;
-        let sta_addr = ind.dst_addr;
-        match rsna.esssa.on_eapol_frame(&eapol_frame) {
-            Ok(updates) => for update in updates {
-                match update {
-                    // ESS Security Association requests to send an EAPOL frame.
-                    // Forward EAPOL frame to MLME.
-                    SecAssocUpdate::TxEapolKeyFrame(frame) => {
-                        send_eapol_frame(mlme_sink, bssid, sta_addr, frame)
-                    },
-                    // ESS Security Association derived a new key.
-                    // Configure key in MLME.
-                    SecAssocUpdate::Key(key) => {
-                        send_keys(mlme_sink, bssid, &rsna.negotiated_rsne, key)
-                    },
-                    // Received a status update.
-                    // TODO(hahnr): Rework this part.
-                    // As of now, we depend on the fact that the status is always the last update.
-                    // However, this fact is not clear from the API.
-                    // We should fix the API and make this more explicit.
-                    // Then we should rework this part.
-                    SecAssocUpdate::Status(status) => match status {
-                        // ESS Security Association was successfully established. Link is now up.
-                        SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
-                        SecAssocStatus::WrongPassword => {
-                            return RsnaStatus::Failed(ConnectResult::BadCredentials);
-                        }
-                    },
+    let mut update_sink = rsna::UpdateSink::default();
+    if let Err(e) = rsna.esssa.on_eapol_frame(&mut update_sink, &eapol_frame) {
+        error!("error processing EAPOL key frame: {}", e);
+        return RsnaStatus::Unchanged;
+    }
+
+    let bssid = ind.src_addr;
+    let sta_addr = ind.dst_addr;
+    for update in update_sink {
+        match update {
+            // ESS Security Association requests to send an EAPOL frame.
+            // Forward EAPOL frame to MLME.
+            SecAssocUpdate::TxEapolKeyFrame(frame) => {
+                send_eapol_frame(mlme_sink, bssid, sta_addr, frame)
+            },
+            // ESS Security Association derived a new key.
+            // Configure key in MLME.
+            SecAssocUpdate::Key(key) => {
+                send_keys(mlme_sink, bssid, &rsna.negotiated_rsne, key)
+            },
+            // Received a status update.
+            // TODO(hahnr): Rework this part.
+            // As of now, we depend on the fact that the status is always the last update.
+            // However, this fact is not clear from the API.
+            // We should fix the API and make this more explicit.
+            // Then we should rework this part.
+            SecAssocUpdate::Status(status) => match status {
+                // ESS Security Association was successfully established. Link is now up.
+                SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
+                // TODO(hahnr): The API should not expose whether or not the connection failed
+                // because of bad credentials as it allows callers to reason about location
+                // information since the network was apparently found.
+                SecAssocStatus::WrongPassword => {
+                    return RsnaStatus::Failed(ConnectResult::BadCredentials);
                 }
-            }
-            Err(e) => error!("error processing EAPOL key frame: {}", e),
-        };
+            },
+        }
     }
 
     RsnaStatus::Unchanged

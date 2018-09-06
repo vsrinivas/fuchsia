@@ -10,7 +10,7 @@ use crate::key::exchange::{
 };
 use crate::key::{gtk::Gtk, ptk::Ptk};
 use crate::rsna::{
-    NegotiatedRsne, Role, SecAssocResult, SecAssocStatus, SecAssocUpdate, VerifiedKeyFrame,
+    NegotiatedRsne, Role, UpdateSink, SecAssocStatus, SecAssocUpdate, VerifiedKeyFrame,
 };
 use crate::Error;
 use eapol;
@@ -226,11 +226,14 @@ impl EssSa {
         }
     }
 
-    pub fn on_eapol_frame(&mut self, frame: &eapol::Frame) -> SecAssocResult {
+    pub fn on_eapol_frame(&mut self, update_sink: &mut UpdateSink, frame: &eapol::Frame)
+        -> Result<(), failure::Error>
+    {
         // Only processes EAPOL Key frames. Drop all other frames silently.
         let mut updates = match frame {
             eapol::Frame::Key(key_frame) => {
-                let updates = self.on_eapol_key_frame(&key_frame)?;
+                let mut updates = UpdateSink::default();
+                self.on_eapol_key_frame(&mut updates, &key_frame)?;
 
                 // Authenticator updates its key replay counter with every outbound EAPOL frame.
                 if let Role::Authenticator = self.role {
@@ -265,21 +268,24 @@ impl EssSa {
                     };
                 }
             });
+        update_sink.append(&mut updates);
 
         // Report if ESSSA was established successfully for the first time,
         // as well as PTK and GTK.
         if !was_esssa_established {
             if let (Some(ptk), Some(gtk)) = (self.ptksa.ptk(), self.gtksa.gtk()) {
-                updates.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
-                updates.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
-                updates.push(SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
+                update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
+                update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
+                update_sink.push(SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
             }
         }
 
-        Ok(updates)
+        Ok(())
     }
 
-    fn on_eapol_key_frame(&mut self, frame: &eapol::KeyFrame) -> SecAssocResult {
+    fn on_eapol_key_frame(&mut self, update_sink: &mut UpdateSink, frame: &eapol::KeyFrame)
+        -> Result<(), failure::Error>
+    {
         // Verify the frame complies with IEEE Std 802.11-2016, 12.7.2.
         let result = VerifiedKeyFrame::from_key_frame(
             frame,
@@ -292,7 +298,8 @@ impl EssSa {
         let verified_frame = match result {
             Err(e) => match e.cause().downcast_ref::<Error>() {
                 Some(Error::WrongAesKeywrapKey) => {
-                    return Ok(vec![SecAssocUpdate::Status(SecAssocStatus::WrongPassword)])
+                    update_sink.push(SecAssocUpdate::Status(SecAssocStatus::WrongPassword));
+                    return Ok(());
                 }
                 _ => bail!(e),
             },
@@ -310,28 +317,21 @@ impl EssSa {
         // Forward frame to correct security association.
         // PMKSA must be established before any other security association can be established.
         match self.pmksa.pmk {
-            None => self.pmksa.method.on_eapol_key_frame(verified_frame),
+            None => self.pmksa.method.on_eapol_key_frame(update_sink, verified_frame),
             Some(_) => match (&mut self.ptksa, &mut self.gtksa) {
-                (Ptksa::Uninitialized(_), _) => Ok(vec![]),
-                (Ptksa::Initialized(ptksa), Gtksa::Uninitialized(_)) => ptksa
-                    .method
-                    .on_eapol_key_frame(self.key_replay_counter, verified_frame),
+                (Ptksa::Uninitialized(_), _) => Ok(()),
+                (Ptksa::Initialized(ptksa), Gtksa::Uninitialized(_)) => {
+                    ptksa.method.on_eapol_key_frame(update_sink, self.key_replay_counter, verified_frame)
+                },
                 (Ptksa::Initialized(ptksa), Gtksa::Initialized(gtksa)) => {
                     // IEEE Std 802.11-2016, 12.7.2 b.2)
                     if frame.key_info.key_type() == eapol::KEY_TYPE_PAIRWISE {
-                        ptksa
-                            .method
-                            .on_eapol_key_frame(self.key_replay_counter, verified_frame)
+                        ptksa.method.on_eapol_key_frame(update_sink, self.key_replay_counter, verified_frame)
                     } else if frame.key_info.key_type() == eapol::KEY_TYPE_GROUP_SMK {
-                        gtksa
-                            .method
-                            .on_eapol_key_frame(self.key_replay_counter, verified_frame)
+                        gtksa.method.on_eapol_key_frame(update_sink, self.key_replay_counter, verified_frame)
                     } else {
-                        eprintln!(
-                            "unsupported EAPOL Key frame key type: {:?}",
-                            frame.key_info.key_type()
-                        );
-                        Ok(vec![])
+                        eprintln!("unsupported EAPOL Key frame key type: {:?}", frame.key_info.key_type());
+                        Ok(())
                     }
                 }
             },
@@ -352,85 +352,95 @@ mod tests {
     fn test_zero_key_replay_counter_msg1() {
         let mut esssa = test_util::get_esssa();
 
-        let result = send_msg1(&mut esssa, |msg1| {
+        let (result, updates) = send_msg1(&mut esssa, |msg1| {
             msg1.key_replay_counter = 0;
         });
-        let updates = result.expect("Supplicant failed processing 1st message");
+        assert!(result.is_ok());
         let msg2 =
             extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
         let ptk = extract_ptk(msg2);
 
-        send_msg3(&mut esssa, &ptk, |_| {}).expect("Supplicant failed processing 3rd message");
+        let (result, _) = send_msg3(&mut esssa, &ptk, |_| {});
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_nonzero_key_replay_counter_msg1() {
         let mut esssa = test_util::get_esssa();
 
-        send_msg1(&mut esssa, |msg1| {
+        let (result, _) = send_msg1(&mut esssa, |msg1| {
             msg1.key_replay_counter = 1;
-        }).expect("Supplicant failed processing 1st message");
+        });
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_zero_key_replay_counter_lower_msg3_counter() {
         let mut esssa = test_util::get_esssa();
 
-        let updates = send_msg1(&mut esssa, |msg1| {
+        let (result, updates) = send_msg1(&mut esssa, |msg1| {
             msg1.key_replay_counter = 1;
-        }).expect("Supplicant failed processing 1st message");
+        });
+        assert!(result.is_ok());
         let msg2 =
             extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
         let ptk = extract_ptk(msg2);
 
-        send_msg3(&mut esssa, &ptk, |msg3| {
+        let (result, _) = send_msg3(&mut esssa, &ptk, |msg3| {
             msg3.key_replay_counter = 0;
-        }).expect("Supplicant failed processing 3rd message");
+        });
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_zero_key_replay_counter_valid_msg3() {
         let mut esssa = test_util::get_esssa();
 
-        let updates = send_msg1(&mut esssa, |msg1| {
+        let (result, updates) = send_msg1(&mut esssa, |msg1| {
             msg1.key_replay_counter = 0;
-        }).expect("Supplicant failed processing 1st message");
+        });
+        assert!(result.is_ok());
         let msg2 =
             extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
         let ptk = extract_ptk(msg2);
 
-        send_msg3(&mut esssa, &ptk, |msg3| {
+        let (result, _) = send_msg3(&mut esssa, &ptk, |msg3| {
             msg3.key_replay_counter = 1;
-        }).expect("Supplicant failed processing 3rd message");
+        });
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_zero_key_replay_counter_replayed_msg3() {
         let mut esssa = test_util::get_esssa();
 
-        let updates = send_msg1(&mut esssa, |msg1| {
+        let (result, updates) = send_msg1(&mut esssa, |msg1| {
             msg1.key_replay_counter = 0;
-        }).expect("Supplicant failed processing 1st message");
+        });
+        assert!(result.is_ok());
         let msg2 =
             extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
         let ptk = extract_ptk(msg2);
 
-        send_msg3(&mut esssa, &ptk, |msg3| {
+        let (result, _) = send_msg3(&mut esssa, &ptk, |msg3| {
             msg3.key_replay_counter = 2;
-        }).expect("Supplicant failed processing 3rd message");
+        });
+        assert!(result.is_ok());
 
         // The just sent third message increased the key replay counter.
         // All successive EAPOL frames are required to have a larger key replay counter.
 
         // Send an invalid message.
-        send_msg3(&mut esssa, &ptk, |msg3| {
+        let (result, _) = send_msg3(&mut esssa, &ptk, |msg3| {
             msg3.key_replay_counter = 2;
-        }).expect_err("Supplicant should have failed processing second, invalid, 3rd message");
+        });
+        assert!(result.is_err());
 
         // Send a valid message.
-        send_msg3(&mut esssa, &ptk, |msg3| {
+        let (result, _) = send_msg3(&mut esssa, &ptk, |msg3| {
             msg3.key_replay_counter = 3;
-        }).expect("Supplicant failed processing third, valid, 3rd message");
+        });
+        assert!(result.is_ok());
     }
 
     // Integration test for WPA2 CCMP-128 PSK with a Supplicant role.
@@ -440,8 +450,8 @@ mod tests {
         let mut esssa = test_util::get_esssa();
 
         // Send first message
-        let result = send_msg1(&mut esssa, |_| {});
-        let updates = result.expect("Supplicant failed processing 1st message");
+        let (result, updates) = send_msg1(&mut esssa, |_| {});
+        assert!(result.is_ok());
 
         // Verify 2nd message.
         let msg2 =
@@ -466,8 +476,9 @@ mod tests {
 
         // Send 3rd message.
         let ptk = extract_ptk(msg2);
-        let updates =
-            send_msg3(&mut esssa, &ptk, |_| {}).expect("Supplicant failed processing 3rd message");
+        let (result, updates) =
+            send_msg3(&mut esssa, &ptk, |_| {});
+        assert!(result.is_ok());
 
         // Verify 4th message was received and is correct.
         let msg4 =
@@ -510,8 +521,8 @@ mod tests {
 
         // Cause re-keying of GTK via Group-Key Handshake.
 
-        let updates = send_group_key_msg1(&mut esssa, &ptk, |_| {})
-            .expect("Supplicant failed processing 1st message of group key handshake");
+        let (result, updates) = send_group_key_msg1(&mut esssa, &ptk, |_| {});
+        assert!(result.is_ok());
 
         // Verify 4th message was received and is correct.
         let msg2 = extract_eapol_resp(&updates[..])
@@ -585,27 +596,30 @@ mod tests {
             }).next()
     }
 
-    fn send_msg1<F>(esssa: &mut EssSa, msg_modifier: F) -> SecAssocResult
-    where
-        F: Fn(&mut eapol::KeyFrame),
+    fn send_msg1<F>(esssa: &mut EssSa, msg_modifier: F)
+        -> (Result<(), failure::Error>, UpdateSink) where F: Fn(&mut eapol::KeyFrame)
     {
         let msg = test_util::get_4whs_msg1(&ANONCE[..], msg_modifier);
-        esssa.on_eapol_frame(&eapol::Frame::Key(msg))
+        let mut update_sink = UpdateSink::default();
+        let result = esssa.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg));
+        (result, update_sink)
     }
 
-    fn send_msg3<F>(esssa: &mut EssSa, ptk: &Ptk, msg_modifier: F) -> SecAssocResult
-    where
-        F: Fn(&mut eapol::KeyFrame),
+    fn send_msg3<F>(esssa: &mut EssSa, ptk: &Ptk, msg_modifier: F)
+        -> (Result<(), failure::Error>, UpdateSink) where F: Fn(&mut eapol::KeyFrame)
     {
         let (msg, _) = test_util::get_4whs_msg3(ptk, &ANONCE[..], &GTK[..], msg_modifier);
-        esssa.on_eapol_frame(&eapol::Frame::Key(msg))
+        let mut update_sink = UpdateSink::default();
+        let result = esssa.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg));
+        (result, update_sink)
     }
 
-    fn send_group_key_msg1<F>(esssa: &mut EssSa, ptk: &Ptk, msg_modifier: F) -> SecAssocResult
-    where
-        F: Fn(&mut eapol::KeyFrame),
+    fn send_group_key_msg1<F>(esssa: &mut EssSa, ptk: &Ptk, msg_modifier: F)
+        -> (Result<(), failure::Error>, UpdateSink) where F: Fn(&mut eapol::KeyFrame)
     {
         let (msg, _) = test_util::get_group_key_hs_msg1(ptk, &GTK_REKEY[..], msg_modifier);
-        esssa.on_eapol_frame(&eapol::Frame::Key(msg))
+        let mut update_sink = UpdateSink::default();
+        let result = esssa.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg));
+        (result, update_sink)
     }
 }

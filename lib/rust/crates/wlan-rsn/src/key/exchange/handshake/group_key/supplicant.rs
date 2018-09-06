@@ -10,7 +10,7 @@ use crate::key::exchange::{
 };
 use crate::key::gtk::Gtk;
 use crate::key_data;
-use crate::rsna::{SecAssocResult, SecAssocUpdate};
+use crate::rsna::{UpdateSink, SecAssocUpdate};
 use crate::Error;
 use eapol;
 use failure::{self, bail};
@@ -23,7 +23,9 @@ pub struct Supplicant {
 
 impl Supplicant {
     // IEEE Std 802.11-2016, 12.7.7.2
-    pub fn on_eapol_key_frame(&mut self, msg1: GroupKeyHandshakeFrame) -> SecAssocResult {
+    pub fn on_eapol_key_frame(&mut self, update_sink: &mut UpdateSink, msg1: GroupKeyHandshakeFrame)
+        -> Result<(), failure::Error>
+    {
         // Extract GTK from data.
         let mut gtk: Option<key_data::kde::Gtk> = None;
         let elements = key_data::extract_elements(&msg1.key_data_plaintext()[..])?;
@@ -41,10 +43,10 @@ impl Supplicant {
         // Construct second message of handshake.
         let msg2 = self.create_message_2(msg1.get())?;
 
-        Ok(vec![
-            SecAssocUpdate::TxEapolKeyFrame(msg2),
-            SecAssocUpdate::Key(Key::Gtk(gtk)),
-        ])
+        update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
+        update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk)));
+
+        Ok(())
     }
 
     // IEEE Std 802.11-2016, 12.7.7.3

@@ -5,7 +5,7 @@
 pub mod psk;
 
 use self::psk::Psk;
-use crate::rsna::{SecAssocResult, VerifiedKeyFrame};
+use crate::rsna::{UpdateSink, VerifiedKeyFrame};
 use failure;
 
 #[derive(Debug, PartialEq)]
@@ -20,11 +20,11 @@ impl Method {
         }
     }
 
-    pub fn on_eapol_key_frame(&self, _frame: VerifiedKeyFrame) -> SecAssocResult {
-        match self {
-            // None of the supported authentication methods requires EAPOL frame exchange.
-            _ => Ok(vec![]),
-        }
+    // Unused as only PSK is supported so far.
+    pub fn on_eapol_key_frame(&self, _update_sink: &mut UpdateSink, _frame: VerifiedKeyFrame)
+        -> Result<(), failure::Error>
+    {
+        Ok(())
     }
 }
 

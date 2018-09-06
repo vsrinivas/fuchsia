@@ -11,7 +11,7 @@ use self::handshake::{
 use crate::akm::Akm;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
-use crate::rsna::{Role, SecAssocResult, VerifiedKeyFrame};
+use crate::rsna::{Role, UpdateSink, VerifiedKeyFrame};
 use crate::rsne::Rsne;
 use failure;
 
@@ -36,12 +36,13 @@ pub enum Method {
 impl Method {
     pub fn on_eapol_key_frame(
         &mut self,
+        update_sink: &mut UpdateSink,
         key_replay_counter: u64,
         frame: VerifiedKeyFrame,
-    ) -> SecAssocResult {
+    ) -> Result<(), failure::Error> {
         match self {
-            Method::FourWayHandshake(hs) => hs.on_eapol_key_frame(key_replay_counter, frame),
-            Method::GroupKeyHandshake(hs) => hs.on_eapol_key_frame(key_replay_counter, frame),
+            Method::FourWayHandshake(hs) => hs.on_eapol_key_frame(update_sink, key_replay_counter, frame),
+            Method::GroupKeyHandshake(hs) => hs.on_eapol_key_frame(update_sink, key_replay_counter, frame),
         }
     }
 
