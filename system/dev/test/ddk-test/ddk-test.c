@@ -14,7 +14,6 @@
 #include <string.h>
 #include <limits.h>
 
-extern struct test_case_element* test_case_ddk_iotxn;
 extern struct test_case_element* test_case_ddk_usb_request;
 
 static void ddk_test_output_func(const char* line, int len, void* arg) {
@@ -51,13 +50,13 @@ static zx_status_t ddk_test_func(void* cookie, test_report_t* report, const void
     return report->n_failed == 0 ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
-zx_status_t ddk_test_bind(void* ctx, zx_device_t* dev, void** cookie) {
+zx_status_t ddk_test_bind(void* ctx, zx_device_t* parent) {
     test_protocol_t proto;
-    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_TEST, &proto);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_TEST, &proto);
     if (status != ZX_OK) {
         return status;
     }
 
-    proto.ops->set_test_func(proto.ctx, ddk_test_func, dev);
+    proto.ops->set_test_func(proto.ctx, ddk_test_func, parent);
     return ZX_OK;
 }
