@@ -87,6 +87,11 @@ int FfmpegVideoDecoder::BuildAVFrame(
   uint8_t* buffer = static_cast<uint8_t*>(
       allocator->AllocatePayloadBuffer(frame_layout_.buffer_size()));
 
+  // Check that the allocator has met the common alignment requirements and
+  // that those requirements are good enough for the decoder.
+  FXL_DCHECK(PayloadAllocator::IsAligned(buffer));
+  FXL_DCHECK(PayloadAllocator::kByteAlignment >= kFrameBufferAlign);
+
   // TODO(dalesat): For investigation purposes only...remove one day.
   if (first_frame_) {
     first_frame_ = false;

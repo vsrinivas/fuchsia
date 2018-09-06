@@ -81,6 +81,11 @@ int FfmpegAudioDecoder::BuildAVFrame(
     FXL_LOG(FATAL) << "Ran out of memory for decoded audio.";
   }
 
+  // Check that the allocator has met the common alignment requirements and
+  // that those requirements are good enough for the decoder.
+  FXL_DCHECK(PayloadAllocator::IsAligned(buffer));
+  FXL_DCHECK(PayloadAllocator::kByteAlignment >= kChannelAlign);
+
   if (!av_sample_fmt_is_planar(av_sample_format)) {
     // Samples are interleaved. There's just one buffer.
     av_frame->data[0] = buffer;

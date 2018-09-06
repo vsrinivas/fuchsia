@@ -298,7 +298,13 @@ void* FidlAudioRenderer::AllocatePayloadBuffer(size_t size) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(size != 0);
   std::lock_guard<std::mutex> locker(mutex_);
-  return buffer_.PtrFromOffset(allocator_.AllocateRegion(size));
+  // The region allocated at the top of the VMO will be aligned to 4096 bytes.
+  // We ensure that subsequent allocations will be |kByteAlignment|-aligned by
+  // aligning-up all the sizes.
+  void* result =
+      buffer_.PtrFromOffset(allocator_.AllocateRegion(AlignUp(size)));
+  FXL_DCHECK(IsAligned(result));
+  return result;
 }
 
 void FidlAudioRenderer::ReleasePayloadBuffer(void* buffer) {

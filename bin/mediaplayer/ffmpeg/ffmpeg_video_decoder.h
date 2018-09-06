@@ -34,6 +34,10 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
   const char* label() const override;
 
  private:
+  // Frame buffers must be aligned on 32-byte boundaries to enable SIMD
+  // operations.
+  static const int kFrameBufferAlign = 32;
+
   FfmpegVideoFrameLayout frame_layout_;
   std::unique_ptr<StreamType> revised_stream_type_;
 

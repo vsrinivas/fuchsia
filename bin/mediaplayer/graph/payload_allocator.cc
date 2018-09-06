@@ -28,7 +28,8 @@ class DefaultAllocator : public PayloadAllocator,
 
 void* DefaultAllocator::AllocatePayloadBuffer(size_t size) {
   FXL_DCHECK(size > 0);
-  return std::malloc(size);
+  // |std::aligned_alloc| requires the size to the aligned.
+  return std::aligned_alloc(kByteAlignment, AlignUp(size));
 }
 
 void DefaultAllocator::ReleasePayloadBuffer(void* buffer) {
