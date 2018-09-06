@@ -137,6 +137,8 @@ zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr,
   size_t size;
   zx_status_t status = load_firmware(zxdev(), name, &vmo, &size);
   if (status != ZX_OK) {
+    errorf("failed to load firmware '%s': %s\n", name,
+           zx_status_get_string(status));
     return ZX_HANDLE_INVALID;
   }
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size,
