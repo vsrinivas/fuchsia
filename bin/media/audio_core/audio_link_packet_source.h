@@ -5,11 +5,10 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_LINK_PACKET_SOURCE_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_LINK_PACKET_SOURCE_H_
 
+#include <fbl/ref_ptr.h>
 #include <deque>
 #include <memory>
 #include <mutex>
-
-#include <fbl/ref_ptr.h>
 
 #include "garnet/bin/media/audio_core/audio_link.h"
 #include "garnet/bin/media/audio_core/audio_packet_ref.h"

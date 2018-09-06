@@ -4,14 +4,13 @@
 
 #include "garnet/bin/media/audio_core/driver_output.h"
 
-#include <iomanip>
-
 #include <audio-proto-utils/format-utils.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
 #include <zircon/process.h>
+#include <iomanip>
 
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
 #include "garnet/lib/media/wav_writer/wav_writer.h"

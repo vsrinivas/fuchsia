@@ -5,10 +5,9 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_FWD_DECLS_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_FWD_DECLS_H_
 
+#include <fbl/ref_ptr.h>
 #include <memory>
 #include <set>
-
-#include <fbl/ref_ptr.h>
 
 namespace media {
 namespace audio {

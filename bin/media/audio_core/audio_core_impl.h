@@ -5,12 +5,11 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_CORE_IMPL_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_CORE_IMPL_H_
 
-#include <mutex>
-
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <mutex>
 
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
 #include "garnet/bin/media/audio_core/audio_packet_ref.h"

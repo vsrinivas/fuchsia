@@ -4,11 +4,10 @@
 
 #include "garnet/bin/media/audio_core/mixer/output_producer.h"
 
-#include <limits>
-#include <type_traits>
-
 #include <fbl/algorithm.h>
 #include <math.h>
+#include <limits>
+#include <type_traits>
 
 #include "garnet/bin/media/audio_core/mixer/constants.h"
 #include "lib/fidl/cpp/clone.h"

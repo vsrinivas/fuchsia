@@ -5,9 +5,6 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_DRIVER_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_DRIVER_H_
 
-#include <mutex>
-#include <string>
-
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-timer.h>
 #include <fbl/auto_lock.h>
@@ -16,6 +13,8 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/audio.h>
+#include <mutex>
+#include <string>
 
 #include "garnet/bin/media/audio_core/audio_device.h"
 #include "garnet/bin/media/audio_core/audio_device_settings.h"

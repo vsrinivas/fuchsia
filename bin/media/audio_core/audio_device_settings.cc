@@ -13,11 +13,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "lib/fxl/files/directory.h"
-
 #include "garnet/bin/media/audio_core/audio_device_settings.h"
 #include "garnet/bin/media/audio_core/audio_driver.h"
 #include "garnet/bin/media/audio_core/schema/audio_device_settings_schema.inl"
+#include "lib/fxl/files/directory.h"
 
 namespace media {
 namespace audio {

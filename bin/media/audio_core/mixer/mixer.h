@@ -5,9 +5,8 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_MIXER_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_MIXER_H_
 
-#include <memory>
-
 #include <fuchsia/media/cpp/fidl.h>
+#include <memory>
 
 #include "garnet/bin/media/audio_core/mixer/constants.h"
 #include "garnet/bin/media/audio_core/mixer/gain.h"

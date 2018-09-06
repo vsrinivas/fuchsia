@@ -4,10 +4,9 @@
 
 #include "garnet/bin/media/audio_core/mixer/test/audio_analysis.h"
 
+#include <fbl/algorithm.h>
 #include <iomanip>
 #include <vector>
-
-#include <fbl/algorithm.h>
 
 #include "lib/fxl/logging.h"
 

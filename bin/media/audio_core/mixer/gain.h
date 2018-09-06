@@ -5,10 +5,9 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_GAIN_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_GAIN_H_
 
-#include <atomic>
-
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
+#include <atomic>
 
 #include "garnet/bin/media/audio_core/mixer/constants.h"
 

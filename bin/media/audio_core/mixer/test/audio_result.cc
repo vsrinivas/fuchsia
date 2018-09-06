@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/audio_core/mixer/test/audio_result.h"
+
 #include <stdio.h>
 #include <string>
+
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 
 namespace media {

@@ -5,13 +5,12 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_UTILS_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_UTILS_H_
 
-#include <atomic>
-#include <vector>
-
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 #include <zircon/device/audio.h>
 #include <zircon/types.h>
+#include <atomic>
+#include <vector>
 
 #include "garnet/bin/media/audio_core/mixer/constants.h"
 

@@ -5,12 +5,11 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_FX_PROCESSOR_H_
 #define GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_FX_PROCESSOR_H_
 
+#include <zircon/types.h>
 #include <vector>
 
-#include <zircon/types.h>
-
 #include "garnet/bin/media/audio_core/mixer/fx_loader.h"
-#include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
+#include "lib/media/audio_dfx/audio_device_fx.h"
 
 namespace media {
 namespace audio {

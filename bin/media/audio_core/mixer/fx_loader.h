@@ -7,7 +7,7 @@
 
 #include <zircon/types.h>
 
-#include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
+#include "lib/media/audio_dfx/audio_device_fx.h"
 
 namespace media {
 namespace audio {

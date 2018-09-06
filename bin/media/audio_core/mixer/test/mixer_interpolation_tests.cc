@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
+
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 
 namespace media {

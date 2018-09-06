@@ -6,7 +6,7 @@
 
 #include <dlfcn.h>
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace audio {

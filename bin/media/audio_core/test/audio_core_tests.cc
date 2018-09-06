@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cmath>
-
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <cmath>
 
 #include "lib/component/cpp/environment_services_helper.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"

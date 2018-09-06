@@ -5,11 +5,6 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_DEVICE_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_DEVICE_H_
 
-#include <deque>
-#include <memory>
-#include <set>
-#include <thread>
-
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-wakeup-event.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -17,6 +12,10 @@
 #include <fbl/ref_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <zircon/device/audio.h>
+#include <deque>
+#include <memory>
+#include <set>
+#include <thread>
 
 #include "garnet/bin/media/audio_core/audio_device_settings.h"
 #include "garnet/bin/media/audio_core/audio_object.h"
