@@ -161,6 +161,8 @@ void x86_feature_debug(void);
 #define X86_FEATURE_PT                  X86_CPUID_BIT(0x7, 1, 25)
 #define X86_FEATURE_UMIP                X86_CPUID_BIT(0x7, 2, 2)
 #define X86_FEATURE_PKU                 X86_CPUID_BIT(0x7, 2, 3)
+#define X86_FEATURE_IBRS_IBPB           X86_CPUID_BIT(0x7, 3, 26)
+
 #define X86_FEATURE_KVM_PVCLOCK_STABLE  X86_CPUID_BIT(0x40000001, 0, 24)
 #define X86_FEATURE_AMD_TOPO            X86_CPUID_BIT(0x80000001, 2, 22)
 #define X86_FEATURE_SYSCALL             X86_CPUID_BIT(0x80000001, 3, 11)

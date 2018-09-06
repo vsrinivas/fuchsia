@@ -279,6 +279,8 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
                 guest_state->rbx &= ~(1u << X86_FEATURE_INVPCID.bit);
             // Disable the Processor Trace bit.
             guest_state->rbx &= ~(1u << X86_FEATURE_PT.bit);
+            // Disable the Indirect Branch Prediction Barrier bit.
+            guest_state->rdx &= ~(1u << X86_FEATURE_IBRS_IBPB.bit);
             break;
         }
         return ZX_OK;
