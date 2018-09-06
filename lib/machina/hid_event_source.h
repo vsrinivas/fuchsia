@@ -13,7 +13,7 @@
 #include <hid/hid.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/machina/input_dispatcher.h"
+#include "garnet/lib/machina/input_dispatcher_impl.h"
 
 namespace machina {
 

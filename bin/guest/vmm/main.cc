@@ -15,6 +15,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
@@ -31,7 +32,7 @@
 #include "garnet/lib/machina/framebuffer_scanout.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/hid_event_source.h"
-#include "garnet/lib/machina/input_dispatcher.h"
+#include "garnet/lib/machina/input_dispatcher_impl.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 #include "garnet/lib/machina/pci.h"
 #include "garnet/lib/machina/uart.h"
@@ -155,16 +156,17 @@ static zx_status_t setup_zircon_framebuffer(
 
 static zx_status_t setup_scenic_framebuffer(
     component::StartupContext* startup_context, machina::VirtioGpu* gpu,
-    machina::InputDispatcherImpl* input_dispatcher,
     InstanceControllerImpl* instance_controller,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
+  fuchsia::ui::input::InputDispatcherPtr input_dispatcher;
+  instance_controller->GetInputDispatcher(input_dispatcher.NewRequest());
   fbl::unique_ptr<ScenicScanout> scenic_scanout;
   zx_status_t status =
-      ScenicScanout::Create(startup_context, input_dispatcher, &scenic_scanout);
+      ScenicScanout::Create(startup_context, std::move(input_dispatcher), &scenic_scanout);
   if (status != ZX_OK) {
     return status;
   }
-  instance_controller->set_view_provider(scenic_scanout.get());
+  instance_controller->SetViewProvider(scenic_scanout.get());
   *scanout = std::move(scenic_scanout);
   return gpu->AddScanout(scanout->get());
 }
@@ -320,17 +322,19 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  machina::InputDispatcherImpl input_dispatcher(kInputQueueDepth);
-  machina::HidEventSource hid_event_source(&input_dispatcher);
-  machina::VirtioKeyboard keyboard(input_dispatcher.Keyboard(),
+  machina::InputDispatcherImpl input_dispatcher_impl(kInputQueueDepth);
+  machina::HidEventSource hid_event_source(&input_dispatcher_impl);
+  machina::VirtioKeyboard keyboard(input_dispatcher_impl.Keyboard(),
                                    guest.phys_mem(), "machina-keyboard",
                                    "serial-number");
-  machina::VirtioRelativePointer mouse(input_dispatcher.Mouse(),
+  machina::VirtioRelativePointer mouse(input_dispatcher_impl.Mouse(),
                                        guest.phys_mem(), "machina-mouse",
                                        "serial-number");
   machina::VirtioAbsolutePointer touch(
-      input_dispatcher.Touch(), guest.phys_mem(), "machina-touch",
+      input_dispatcher_impl.Touch(), guest.phys_mem(), "machina-touch",
       "serial-number");
+  instance_controller.SetInputDispatcher(&input_dispatcher_impl);
+
   machina::VirtioGpu gpu(guest.phys_mem(), guest.device_dispatcher());
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
 
@@ -380,8 +384,7 @@ int main(int argc, char** argv) {
     } else {
       // Expose a view that can be composited by mozart. Input events will be
       // injected by the view events.
-      status = setup_scenic_framebuffer(startup_context.get(), &gpu,
-                                        &input_dispatcher, &instance_controller,
+      status = setup_scenic_framebuffer(startup_context.get(), &gpu, &instance_controller,
                                         &gpu_scanout);
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to create scenic view " << status;

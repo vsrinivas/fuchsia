@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_INPUT_DISPATCHER_H_
-#define GARNET_LIB_MACHINA_INPUT_DISPATCHER_H_
+#ifndef GARNET_LIB_MACHINA_INPUT_DISPATCHER_IMPL_H_
+#define GARNET_LIB_MACHINA_INPUT_DISPATCHER_IMPL_H_
 
 #include <condition_variable>
 #include <mutex>
@@ -61,4 +61,4 @@ class InputDispatcherImpl : public fuchsia::ui::input::InputDispatcher {
 
 }  // namespace machina
 
-#endif  // GARNET_LIB_MACHINA_INPUT_DISPATCHER_H_
+#endif  // GARNET_LIB_MACHINA_INPUT_DISPATCHER_IMPL_H_

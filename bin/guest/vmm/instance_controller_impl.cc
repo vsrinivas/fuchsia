@@ -44,3 +44,11 @@ void InstanceControllerImpl::GetViewProvider(GetViewProviderCallback callback) {
   }
   callback(view_provider_bindings_.AddBinding(view_provider_));
 }
+
+void InstanceControllerImpl::GetInputDispatcher(
+    fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher>
+        input_dispatcher_request) {
+  FXL_DCHECK(input_dispatcher_ != nullptr);
+  input_dispatcher_bindings_.AddBinding(input_dispatcher_,
+                                        std::move(input_dispatcher_request));
+}

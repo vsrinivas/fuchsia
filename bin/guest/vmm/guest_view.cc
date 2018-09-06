@@ -13,15 +13,15 @@
 
 // static
 zx_status_t ScenicScanout::Create(component::StartupContext* startup_context,
-                                  machina::InputDispatcherImpl* input_dispatcher,
+                                  fuchsia::ui::input::InputDispatcherPtr input_dispatcher,
                                   fbl::unique_ptr<ScenicScanout>* out) {
-  *out = fbl::make_unique<ScenicScanout>(startup_context, input_dispatcher);
+  *out = fbl::make_unique<ScenicScanout>(startup_context, std::move(input_dispatcher));
   return ZX_OK;
 }
 
 ScenicScanout::ScenicScanout(component::StartupContext* startup_context,
-                             machina::InputDispatcherImpl* input_dispatcher)
-    : input_dispatcher_(input_dispatcher), startup_context_(startup_context) {
+                             fuchsia::ui::input::InputDispatcherPtr input_dispatcher)
+    : input_dispatcher_(std::move(input_dispatcher)), startup_context_(startup_context) {
   // The actual framebuffer can't be created until we've connected to the
   // mozart service.
   SetReady(false);
@@ -40,7 +40,7 @@ void ScenicScanout::CreateView(
   auto view_manager =
       startup_context_
           ->ConnectToEnvironmentService<::fuchsia::ui::viewsv1::ViewManager>();
-  view_ = fbl::make_unique<GuestView>(this, input_dispatcher_,
+  view_ = fbl::make_unique<GuestView>(this, std::move(input_dispatcher_),
                                       std::move(view_manager),
                                       std::move(view_owner_request));
   if (view_) {
@@ -55,14 +55,14 @@ void ScenicScanout::InvalidateRegion(const machina::GpuRect& rect) {
 }
 
 GuestView::GuestView(
-    machina::GpuScanout* scanout, machina::InputDispatcherImpl* input_dispatcher,
+    machina::GpuScanout* scanout, fuchsia::ui::input::InputDispatcherPtr input_dispatcher,
     ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
       background_node_(session()),
       material_(session()),
-      input_dispatcher_(input_dispatcher) {
+      input_dispatcher_(std::move(input_dispatcher)) {
   background_node_.SetMaterial(material_);
   parent_node().AddChild(background_node_);
 
@@ -119,6 +119,18 @@ bool GuestView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
     // Override the pointer type to touch because the view event positions are
     // always absolute.
     event.pointer().type = fuchsia::ui::input::PointerEventType::TOUCH;
+
+    // Ignore unsupported event phases. Note that these are opt-out so that if
+    // new phases are added, VirtioInput will log a warning message.
+    switch (event.pointer().phase) {
+      case fuchsia::ui::input::PointerEventPhase::ADD:
+      case fuchsia::ui::input::PointerEventPhase::HOVER:
+      case fuchsia::ui::input::PointerEventPhase::REMOVE:
+      case fuchsia::ui::input::PointerEventPhase::CANCEL:
+        return true;
+      default:
+        break;
+    }
   }
   input_dispatcher_->DispatchEvent(std::move(event));
   return false;

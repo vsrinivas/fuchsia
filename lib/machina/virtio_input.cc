@@ -178,6 +178,7 @@ constexpr uint32_t kMediaKeyboardLastCode = 0x2bf;
 constexpr uint32_t kButtonMousePrimaryCode = 0x110;
 constexpr uint32_t kButtonMouseSecondaryCode = 0x111;
 constexpr uint32_t kButtonMouseTertiaryCode = 0x112;
+constexpr uint32_t kButtonTouchCode = 0x14a;
 
 // TODO(MAC-164): Use real touch/pen digitizer resolutions.
 constexpr uint32_t kAbsMaxX = UINT16_MAX;
@@ -469,6 +470,7 @@ zx_status_t VirtioAbsolutePointer::UpdateConfig(uint64_t addr,
       SetConfigBit(kButtonMousePrimaryCode, &config_);
       SetConfigBit(kButtonMouseSecondaryCode, &config_);
       SetConfigBit(kButtonMouseTertiaryCode, &config_);
+      SetConfigBit(kButtonTouchCode, &config_);
       config_.size = sizeof(config_.u);
     } else if (config_.subsel == VIRTIO_INPUT_EV_ABS) {
       memset(&config_.u, 0, sizeof(config_.u));
@@ -512,7 +514,7 @@ zx_status_t VirtioAbsolutePointer::HandleEvent(const fuchsia::ui::input::InputEv
                 fuchsia::ui::input::kMouseTertiaryButton) {
         key_code = kButtonMouseTertiaryCode;
       } else {
-        return ZX_ERR_NOT_SUPPORTED;
+        key_code = kButtonTouchCode;
       }
       virtio_input_key_event_value key_value =
           event.pointer().phase == fuchsia::ui::input::PointerEventPhase::DOWN

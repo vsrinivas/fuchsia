@@ -8,6 +8,7 @@
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
+#include "garnet/lib/machina/input_dispatcher_impl.h"
 #include "garnet/lib/machina/phys_mem.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -19,8 +20,11 @@ class InstanceControllerImpl : public fuchsia::guest::InstanceController {
   InstanceControllerImpl(component::StartupContext* context,
                          const machina::PhysMem& phys_mem);
 
-  void set_view_provider(::fuchsia::ui::viewsv1::ViewProvider* view_provider) {
+  void SetViewProvider(::fuchsia::ui::viewsv1::ViewProvider* view_provider) {
     view_provider_ = view_provider;
+  }
+  void SetInputDispatcher(machina::InputDispatcherImpl* input_dispatcher) {
+    input_dispatcher_ = input_dispatcher;
   }
 
   // Extracts the socket handle to be used for the host end of serial
@@ -32,16 +36,22 @@ class InstanceControllerImpl : public fuchsia::guest::InstanceController {
   void GetPhysicalMemory(GetPhysicalMemoryCallback callback) override;
   void GetSerial(GetSerialCallback callback) override;
   void GetViewProvider(GetViewProviderCallback callback) override;
+  void GetInputDispatcher(
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher>
+          input_dispatcher_request) override;
 
  private:
   fidl::BindingSet<fuchsia::guest::InstanceController> bindings_;
   fidl::BindingSet<::fuchsia::ui::viewsv1::ViewProvider>
       view_provider_bindings_;
+  fidl::BindingSet<fuchsia::ui::input::InputDispatcher>
+      input_dispatcher_bindings_;
 
   const zx::vmo vmo_;
   zx::socket server_socket_;
   zx::socket client_socket_;
   ::fuchsia::ui::viewsv1::ViewProvider* view_provider_;
+  machina::InputDispatcherImpl* input_dispatcher_;
 };
 
 #endif  // GARNET_BIN_GUEST_VMM_INSTANCE_CONTROLLER_IMPL_H_

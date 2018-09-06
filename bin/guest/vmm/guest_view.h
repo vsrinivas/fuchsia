@@ -8,9 +8,10 @@
 #include <lib/async/dispatcher.h>
 #include <zircon/types.h>
 
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "garnet/lib/machina/gpu_scanout.h"
-#include "garnet/lib/machina/input_dispatcher.h"
+#include "garnet/lib/machina/input_dispatcher_impl.h"
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -33,11 +34,11 @@ class ScenicScanout : public machina::GpuScanout,
                       public ::fuchsia::ui::viewsv1::ViewProvider {
  public:
   static zx_status_t Create(component::StartupContext* startup_context,
-                            machina::InputDispatcherImpl* input_dispatcher,
+                            fuchsia::ui::input::InputDispatcherPtr input_dispatcher,
                             fbl::unique_ptr<ScenicScanout>* out);
 
   ScenicScanout(component::StartupContext* startup_context,
-                machina::InputDispatcherImpl* input_dispatcher);
+                fuchsia::ui::input::InputDispatcherPtr input_dispatcher);
 
   // |GpuScanout|
   void InvalidateRegion(const machina::GpuRect& rect) override;
@@ -49,7 +50,7 @@ class ScenicScanout : public machina::GpuScanout,
                       view_services) override;
 
  private:
-  machina::InputDispatcherImpl* input_dispatcher_;
+  fuchsia::ui::input::InputDispatcherPtr input_dispatcher_;
   component::StartupContext* startup_context_;
   fidl::BindingSet<ViewProvider> bindings_;
   fbl::unique_ptr<GuestView> view_;
@@ -58,7 +59,7 @@ class ScenicScanout : public machina::GpuScanout,
 class GuestView : public mozart::BaseView {
  public:
   GuestView(machina::GpuScanout* scanout,
-            machina::InputDispatcherImpl* input_dispatcher,
+            fuchsia::ui::input::InputDispatcherPtr input_dispatcher,
             ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
             fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
                 view_owner_request);
@@ -76,7 +77,7 @@ class GuestView : public mozart::BaseView {
   fuchsia::images::ImageInfo image_info_;
   fbl::unique_ptr<scenic::HostMemory> memory_;
 
-  machina::InputDispatcherImpl* input_dispatcher_;
+  fuchsia::ui::input::InputDispatcherPtr input_dispatcher_;
 
   bool view_ready_ = false;
 
