@@ -4,6 +4,7 @@
 
 library fuchsia.wlan.mlme;
 using fuchsia.wlan.stats;
+using fuchsia.wlan.minstrel;
 
 // Custom primitives for communicating between the wlan service and the MLME drivers.
 // The primitives defined here are not part of the official 802.11 MLME SAP interface specification,
@@ -55,6 +56,18 @@ struct DeviceQueryConfirm {
 
 struct StatsQueryResponse {
     fuchsia.wlan.stats.IfaceStats stats;
+};
+
+struct MinstrelListResponse {
+    fuchsia.wlan.minstrel.Peers peers;
+};
+
+struct MinstrelStatsRequest {
+    array<uint8>:6 mac_addr;
+};
+
+struct MinstrelStatsResponse {
+    fuchsia.wlan.minstrel.Peer? peer;
 };
 
 // Method ordinals are defined in wlan_mlme.fidl to prevent error prone overlaps with official

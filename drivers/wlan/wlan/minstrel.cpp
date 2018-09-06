@@ -10,6 +10,7 @@
 #include <random>
 
 namespace wlan {
+namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 
 zx::duration HeaderTxTimeErp() {
     // TODO(eyw): Implement Erp preamble and header
@@ -212,7 +213,6 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     if (assoc_ctx.supported_rates_cnt + assoc_ctx.ext_supported_rates_cnt > 0) {
         AddErp(&peer.tx_stats_map, assoc_ctx);
     }
-
     debugmstl("tx_stats_map populated. size: %zu.\n", peer.tx_stats_map.size());
 
     if (peer.tx_stats_map.size() == 0) {
@@ -336,6 +336,45 @@ Peer* MinstrelRateSelector::GetPeer(const common::MacAddr& addr) {
     auto iter = peer_map_.find(addr);
     if (iter != peer_map_.end()) { return &(iter->second); }
     return nullptr;
+}
+
+zx_status_t MinstrelRateSelector::GetListToFidl(wlan_minstrel::Peers* peers_fidl) const {
+    peers_fidl->peers.resize(peer_map_.size());
+    size_t idx = 0;
+    for (const auto& iter : peer_map_) {
+        iter.first.CopyTo((*peers_fidl->peers)[idx++].mutable_data());
+    }
+    return ZX_OK;
+}
+
+wlan_minstrel::StatsEntry TxStats::ToFidl() const {
+    return wlan_minstrel::StatsEntry {
+        .tx_vector_idx = tx_vector_idx,
+        .tx_vec_desc = debug::Describe(tx_vector_idx),
+        .success_cur = success_cur,
+        .attempts_cur = attempts_cur,
+        .probability = probability,
+        .cur_tp = cur_tp,
+        .success_total = success_total,
+        .attempts_total = attempts_total,
+    };
+}
+
+zx_status_t MinstrelRateSelector::GetStatsToFidl(
+    const common::MacAddr& peer_addr, wlan_minstrel::Peer* peer_fidl) const {
+    auto iter = peer_map_.find(peer_addr);
+    if (iter == peer_map_.end()) { return ZX_ERR_INVALID_ARGS; }
+
+    peer_addr.CopyTo(peer_fidl->mac_addr.mutable_data());
+
+    peer_fidl->entries.resize(iter->second.tx_stats_map.size());
+
+    size_t idx = 0;
+    for (const auto& tx_stats_iter : iter->second.tx_stats_map) {
+        (*peer_fidl->entries)[idx++] = tx_stats_iter.second.ToFidl();
+    }
+
+    return ZX_OK;
 }
 
 namespace debug {

@@ -6,7 +6,6 @@
 
 #include <ddk/device.h>
 #include <fbl/limits.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <wlan/common/channel.h>
@@ -35,7 +34,7 @@
 
 namespace wlan {
 
-namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t wlan_device_ops = {
@@ -519,6 +518,19 @@ fbl::RefPtr<DeviceState> Device::GetState() {
 
 const wlanmac_info_t& Device::GetWlanInfo() const {
     return wlanmac_info_;
+}
+
+zx_status_t Device::GetMinstrelPeers(wlan_minstrel::Peers* peers_fidl) {
+    if (minstrel_ == nullptr) { return ZX_ERR_NOT_SUPPORTED; }
+    std::lock_guard<std::mutex> lock(lock_);
+    return minstrel_->GetListToFidl(peers_fidl);
+}
+
+zx_status_t Device::GetMinstrelStats(const common::MacAddr& addr,
+                                       wlan_minstrel::Peer* peer_fidl) {
+    if (minstrel_ == nullptr) { return ZX_ERR_NOT_SUPPORTED; }
+    std::lock_guard<std::mutex> lock(lock_);
+    return minstrel_->GetStatsToFidl(addr, peer_fidl);
 }
 
 void Device::MainLoop() {

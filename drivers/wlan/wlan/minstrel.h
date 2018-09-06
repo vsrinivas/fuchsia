@@ -14,7 +14,7 @@
 #include <fbl/unique_ptr.h>
 #include <zx/time.h>
 
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <fuchsia/wlan/minstrel/cpp/fidl.h>
 
 #include <unordered_map>
 #include <unordered_set>
@@ -27,6 +27,8 @@ static constexpr float kMinstrelExpWeight = 0.75;  // Used to calculate moving a
 static constexpr float kMinstrelProbabilityThreshold =
     0.8;  // If probability is past this level, only consider throughput
 
+
+// LINT.IfChange
 struct TxStats {
     tx_vec_idx_t tx_vector_idx;
     zx::duration perfect_tx_time;
@@ -36,6 +38,8 @@ struct TxStats {
     float cur_tp = 0.0;                                 // Expected average throughput.
     size_t success_total = 0;                           // cumulative succcess counts.
     size_t attempts_total = 0;                          // cumulative attempts.
+
+    ::fuchsia::wlan::minstrel::StatsEntry ToFidl() const;
 };
 
 struct Peer {
@@ -49,6 +53,7 @@ struct Peer {
     tx_vec_idx_t max_tp = 0;           // optimality based on expected throughput.
     tx_vec_idx_t max_probability = 0;  // optimality based on success probability.
 };
+// LINT.ThenChange(//garnet/public/fidl/fuchsia.wlan.minstrel/wlan_minstrel.fidl)
 
 class MinstrelRateSelector {
    public:
@@ -58,6 +63,9 @@ class MinstrelRateSelector {
     // Called after every tx packet.
     void HandleTxStatusReport(const wlan_tx_status_t& tx_status);
     void HandleTimeout();
+    zx_status_t GetListToFidl(::fuchsia::wlan::minstrel::Peers* peers_fidl) const;
+    zx_status_t GetStatsToFidl(const common::MacAddr& peer_addr,
+                               ::fuchsia::wlan::minstrel::Peer* peer_fidl) const;
 
    private:
     void GenerateProbeSequence();

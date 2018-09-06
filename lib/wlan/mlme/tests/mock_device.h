@@ -11,6 +11,8 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 
+#include <fuchsia/wlan/minstrel/cpp/fidl.h>
+
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
@@ -138,6 +140,17 @@ struct MockDevice : public DeviceInterface {
     fbl::RefPtr<DeviceState> GetState() override final { return state; }
 
     const wlanmac_info_t& GetWlanInfo() const override final { return wlanmac_info; }
+
+    zx_status_t GetMinstrelPeers(
+        ::fuchsia::wlan::minstrel::Peers* peers_fidl) override final {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx_status_t GetMinstrelStats(
+        const common::MacAddr& addr,
+        ::fuchsia::wlan::minstrel::Peer* resp) override final {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     // Convenience methods.
 

@@ -5,10 +5,13 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
 #include <wlan/protocol/if-impl.h>
+
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+
+#include <mutex>
 
 namespace wlanif {
 
@@ -48,6 +51,8 @@ class Device : public wlan_mlme::MLME {
     void EapolReq(wlan_mlme::EapolRequest req) override;
     void DeviceQueryReq(wlan_mlme::DeviceQueryRequest req) override;
     void StatsQueryReq() override;
+    void MinstrelListReq() override;
+    void MinstrelStatsReq(wlan_mlme::MinstrelStatsRequest req) override;
 
     // wlanif_impl_ifc (wlanif-impl -> ::fuchsia::wlan::mlme)
     void OnScanResult(wlanif_scan_result_t* result);

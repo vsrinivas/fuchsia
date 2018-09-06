@@ -4,14 +4,8 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.wlan.mlme") {
+fidl("fuchsia.wlan.minstrel") {
   sources = [
-    "wlan_mlme.fidl",
-    "wlan_mlme_ext.fidl",
-  ]
-
-  deps = [
-    "//garnet/public/fidl/fuchsia.wlan.stats",
-    "//garnet/public/fidl/fuchsia.wlan.minstrel",
+    "wlan_minstrel.fidl"
   ]
 }

@@ -21,6 +21,8 @@
 #include <wlan/mlme/packet.h>
 #include <zircon/compiler.h>
 
+#include <fuchsia/wlan/minstrel/cpp/fidl.h>
+
 #include <mutex>
 #include <thread>
 
@@ -78,6 +80,9 @@ class Device : public DeviceInterface {
     zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) override final;
     fbl::RefPtr<DeviceState> GetState() override final;
     const wlanmac_info_t& GetWlanInfo() const override final;
+    zx_status_t GetMinstrelPeers(::fuchsia::wlan::minstrel::Peers* peers_fidl) override final;
+    zx_status_t GetMinstrelStats(const common::MacAddr& addr,
+                             ::fuchsia::wlan::minstrel::Peer* peer_fidl) override final;
 
    private:
     enum class DevicePacket : uint64_t {
