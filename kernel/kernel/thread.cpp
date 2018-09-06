@@ -1077,11 +1077,11 @@ void thread_secondary_cpu_init_early(thread_t* t) {
     t->stack = stack;
 }
 
+/**
+ * @brief The last routine called on the secondary cpu's bootstrap thread.
+ */
 void thread_secondary_cpu_entry(void) {
-    uint cpu = arch_curr_cpu_num();
-
     mp_set_curr_cpu_active(true);
-    mp_set_cpu_idle(cpu);
 
     dpc_init_for_cpu();
 
