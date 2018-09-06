@@ -35,6 +35,7 @@
         "garnet/packages/tests/go_stdlib_tests",
         "garnet/packages/tests/guest",
         "garnet/packages/tests/image_pipe_swapchain",
+        "garnet/packages/tests/iquery_golden_test",
         "garnet/packages/tests/json",
         "garnet/packages/tests/lib",
         "garnet/packages/tests/libc",

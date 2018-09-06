@@ -1,0 +1,4 @@
+# Output the object properties for one object in text format.
+iquery objects/table0x0
+table0x0:
+  object_name = Example Table

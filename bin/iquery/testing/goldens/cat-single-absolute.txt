@@ -1,0 +1,4 @@
+# Absolute paths gives the full path to each object from the root directory.
+iquery --absolute_paths objects/table0x0 > /tmp/t; sed 's/\/\d*\//\/*\//g' /tmp/t;
+/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/table0x0:
+  object_name = Example Table

@@ -1,0 +1,4 @@
+# Full paths lists the relative path to the object listed.
+iquery --full_paths objects/table0x0
+objects/table0x0:
+  object_name = Example Table

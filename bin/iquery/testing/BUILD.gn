@@ -1,0 +1,128 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+executable("bin") {
+  output_name = "iquery_example_component"
+
+  sources = [
+    "example.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("test") {
+  testonly = true
+  output_name = "iquery_golden_test"
+
+  sources = [
+    "test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("iquery_golden_test") {
+  deps = [
+    ":bin",
+    ":test",
+  ]
+
+  binaries = [
+    {
+      name = "iquery_example_component"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/iquery_example_component.cmx")
+      dest = "iquery_example_component.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "iquery_golden_test"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("goldens/find.txt")
+      dest = "iquery_goldens/find.txt"
+    },
+    {
+      path = rebase_path("goldens/find-recursive.txt")
+      dest = "iquery_goldens/find-recursive.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-single.txt")
+      dest = "iquery_goldens/cat-single.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-single-full.txt")
+      dest = "iquery_goldens/cat-single-full.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-single-absolute.txt")
+      dest = "iquery_goldens/cat-single-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/ls.txt")
+      dest = "iquery_goldens/ls.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive.txt")
+      dest = "iquery_goldens/cat-recursive.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-full.txt")
+      dest = "iquery_goldens/cat-recursive-full.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-absolute.txt")
+      dest = "iquery_goldens/cat-recursive-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-json.txt")
+      dest = "iquery_goldens/cat-recursive-json.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-json-full.txt")
+      dest = "iquery_goldens/cat-recursive-json-full.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-json-absolute.txt")
+      dest = "iquery_goldens/cat-recursive-json-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/find-recursive-json.txt")
+      dest = "iquery_goldens/find-recursive-json.txt"
+    },
+    {
+      path = rebase_path("goldens/ls-json.txt")
+      dest = "iquery_goldens/ls-json.txt"
+    },
+    {
+      path = rebase_path("goldens/ls-json-full.txt")
+      dest = "iquery_goldens/ls-json-full.txt"
+    },
+    {
+      path = rebase_path("goldens/ls-json-absolute.txt")
+      dest = "iquery_goldens/ls-json-absolute.txt"
+    },
+  ]
+}
