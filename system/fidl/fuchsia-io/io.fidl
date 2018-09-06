@@ -9,7 +9,8 @@ using zx;
 // Interfaces which may be returned by NodeInfo, an object
 // returned when calling Open or Describe:
 
-// The default protocol, interface information must be acquired via ListInterfaces.
+// The default protocol, interface information must be acquired some
+// other way.
 struct Service {
     uint8 reserved;
 };
@@ -88,9 +89,6 @@ interface Node {
 
     // Terminates connection with object.
     0x80000002: Close() -> (zx.status s);
-
-    // Closes handle if the requested interface not supported.
-    0x80000005: Bind(string:kMaxPath interface_name);
 
     // Returns extra information about the type of the object.
     // If the |Describe| operation fails, the connection is closed.
@@ -213,9 +211,6 @@ interface File : Node {
     // Acquire a VMO representing this file, if there is one, with the
     // requested access rights.
     0x82000009: GetVmo(uint32 flags) -> (zx.status s, handle<vmo>? vmo);
-
-    // Acquire a VMO representing this file, limited to a particular range.
-    0x8200000a: GetVmoAt(uint32 flags, uint64 offset, uint64 length) -> (zx.status s, handle<vmo>? vmo);
 };
 
 // Dirent type information associated with the results of ReadDirents.

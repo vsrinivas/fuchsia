@@ -144,7 +144,6 @@ zx_status_t Method ## Op(void* ctx, Args... args) {                       \
 
 ZXFIDL_OPERATION(NodeClone)
 ZXFIDL_OPERATION(NodeClose)
-ZXFIDL_OPERATION(NodeBind)
 ZXFIDL_OPERATION(NodeDescribe)
 ZXFIDL_OPERATION(NodeSync)
 ZXFIDL_OPERATION(NodeGetAttr)
@@ -154,7 +153,6 @@ ZXFIDL_OPERATION(NodeIoctl)
 const fuchsia_io_Node_ops kNodeOps = {
     .Clone = NodeCloneOp,
     .Close = NodeCloseOp,
-    .Bind = NodeBindOp,
     .Describe = NodeDescribeOp,
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
@@ -171,12 +169,10 @@ ZXFIDL_OPERATION(FileTruncate)
 ZXFIDL_OPERATION(FileGetFlags)
 ZXFIDL_OPERATION(FileSetFlags)
 ZXFIDL_OPERATION(FileGetVmo)
-ZXFIDL_OPERATION(FileGetVmoAt)
 
 const fuchsia_io_File_ops kFileOps = {
     .Clone = NodeCloneOp,
     .Close = NodeCloseOp,
-    .Bind = NodeBindOp,
     .Describe = NodeDescribeOp,
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
@@ -191,7 +187,6 @@ const fuchsia_io_File_ops kFileOps = {
     .GetFlags = FileGetFlagsOp,
     .SetFlags = FileSetFlagsOp,
     .GetVmo = FileGetVmoOp,
-    .GetVmoAt = FileGetVmoAtOp,
 };
 
 ZXFIDL_OPERATION(DirectoryOpen)
@@ -205,7 +200,6 @@ ZXFIDL_OPERATION(DirectoryLink)
 const fuchsia_io_Directory_ops kDirectoryOps {
     .Clone = NodeCloneOp,
     .Close = NodeCloseOp,
-    .Bind = NodeBindOp,
     .Describe = NodeDescribeOp,
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
@@ -382,11 +376,6 @@ zx_status_t Connection::NodeClose(fidl_txn_t* txn) {
     fuchsia_io_NodeClose_reply(txn, status);
 
     return ERR_DISPATCHER_DONE;
-}
-
-zx_status_t Connection::NodeBind(const char* interface_name_data, size_t interface_name_size) {
-    fprintf(stderr, "ObjectBind not yet implemented\n");
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Connection::NodeDescribe(fidl_txn_t* txn) {
@@ -739,12 +728,6 @@ zx_status_t Connection::FileGetVmo(uint32_t flags, fidl_txn_t* txn) {
     return fuchsia_io_FileGetVmo_reply(txn, status, handle);
 }
 
-zx_status_t Connection::FileGetVmoAt(uint32_t flags, uint64_t offset,
-                                     uint64_t length, fidl_txn_t* txn) {
-    fprintf(stderr, "FileGetVmoAt not yet implemented\n");
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t Connection::DirectoryOpen(uint32_t flags, uint32_t mode, const char* path_data,
                                       size_t path_size, zx_handle_t object) {
     zx::channel channel(object);
@@ -832,7 +815,7 @@ zx_status_t Connection::HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
         hdr->ordinal <= fuchsia_io_NodeIoctlOrdinal) {
         return fuchsia_io_Node_dispatch(this, txn, msg, &kNodeOps);
     } else if (hdr->ordinal >= fuchsia_io_FileReadOrdinal &&
-               hdr->ordinal <= fuchsia_io_FileGetVmoAtOrdinal) {
+               hdr->ordinal <= fuchsia_io_FileGetVmoOrdinal) {
         return fuchsia_io_File_dispatch(this, txn, msg, &kFileOps);
     } else if (hdr->ordinal >= fuchsia_io_DirectoryOpenOrdinal &&
                hdr->ordinal <= fuchsia_io_DirectoryLinkOrdinal) {

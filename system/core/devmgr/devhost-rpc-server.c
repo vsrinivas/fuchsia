@@ -280,11 +280,6 @@ static zx_status_t fidl_node_close(void* ctx, fidl_txn_t* txn) {
     return ERR_DISPATCHER_DONE;
 }
 
-static zx_status_t fidl_node_bind(void* ctx, const char* name, size_t namelen) {
-    fprintf(stderr, "devhost: Object Bind not yet implemented\n");
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
     fprintf(stderr, "devhost: Object Describe not yet implemented\n");
     return ZX_ERR_NOT_SUPPORTED;
@@ -498,11 +493,6 @@ static zx_status_t fidl_file_getvmo(void* ctx, uint32_t flags, fidl_txn_t* txn) 
     return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_NOT_SUPPORTED, ZX_HANDLE_INVALID);
 }
 
-static zx_status_t fidl_file_getvmoat(void* ctx, uint32_t flags, uint64_t offset,
-                                         uint64_t length, fidl_txn_t* txn) {
-    return fuchsia_io_FileGetVmoAt_reply(txn, ZX_ERR_NOT_SUPPORTED, ZX_HANDLE_INVALID);
-}
-
 static const fuchsia_io_File_ops_t kFileOps = {
     .Read = fidl_file_read,
     .ReadAt = fidl_file_readat,
@@ -513,7 +503,6 @@ static const fuchsia_io_File_ops_t kFileOps = {
     .GetFlags = fidl_file_getflags,
     .SetFlags = fidl_file_setflags,
     .GetVmo = fidl_file_getvmo,
-    .GetVmoAt = fidl_file_getvmoat,
 };
 
 static zx_status_t fidl_node_sync(void* ctx, fidl_txn_t* txn) {
@@ -582,7 +571,6 @@ static zx_status_t fidl_node_ioctl(void* ctx, uint32_t opcode, uint64_t max_out,
 static const fuchsia_io_Node_ops_t kNodeOps = {
     .Clone = fidl_node_clone,
     .Close = fidl_node_close,
-    .Bind = fidl_node_bind,
     .Describe = fidl_node_describe,
     .Sync = fidl_node_sync,
     .GetAttr = fidl_node_getattr,
@@ -596,7 +584,7 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
         hdr->ordinal <= fuchsia_io_NodeIoctlOrdinal) {
         return fuchsia_io_Node_dispatch(cookie, txn, msg, &kNodeOps);
     } else if (hdr->ordinal >= fuchsia_io_FileReadOrdinal &&
-               hdr->ordinal <= fuchsia_io_FileGetVmoAtOrdinal) {
+               hdr->ordinal <= fuchsia_io_FileGetVmoOrdinal) {
         return fuchsia_io_File_dispatch(cookie, txn, msg, &kFileOps);
     } else if (hdr->ordinal >= fuchsia_io_DirectoryOpenOrdinal &&
                hdr->ordinal <= fuchsia_io_DirectoryLinkOrdinal) {

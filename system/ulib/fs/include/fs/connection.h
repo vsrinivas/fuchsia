@@ -67,7 +67,6 @@ public:
     // Node Operations.
     zx_status_t NodeClone(uint32_t flags, zx_handle_t object);
     zx_status_t NodeClose(fidl_txn_t* txn);
-    zx_status_t NodeBind(const char* interface_name_data, size_t interface_name_size);
     zx_status_t NodeDescribe(fidl_txn_t* txn);
     zx_status_t NodeSync(fidl_txn_t* txn);
     zx_status_t NodeGetAttr(fidl_txn_t* txn);
@@ -89,7 +88,6 @@ public:
     zx_status_t FileGetFlags(fidl_txn_t* txn);
     zx_status_t FileSetFlags(uint32_t flags, fidl_txn_t* txn);
     zx_status_t FileGetVmo(uint32_t flags, fidl_txn_t* txn);
-    zx_status_t FileGetVmoAt(uint32_t flags, uint64_t offset, uint64_t length, fidl_txn_t* txn);
 
     // Directory Operations.
     zx_status_t DirectoryOpen(uint32_t flags, uint32_t mode, const char* path_data,
