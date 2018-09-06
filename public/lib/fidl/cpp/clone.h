@@ -7,9 +7,7 @@
 
 #include <lib/fidl/cpp/array.h>
 #include <zircon/assert.h>
-
 #include <memory>
-
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"

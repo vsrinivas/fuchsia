@@ -363,8 +363,11 @@ void PlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
   SendStatusUpdates();
 }
 
-void PlayerImpl::SetHttpSource(fidl::StringPtr http_url) {
-  BeginSetReader(HttpReader::Create(startup_context_, http_url));
+void PlayerImpl::SetHttpSource(
+    fidl::StringPtr http_url,
+    fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) {
+  BeginSetReader(
+      HttpReader::Create(startup_context_, http_url, std::move(headers))) ;
 }
 
 void PlayerImpl::SetFileSource(zx::channel file_channel) {

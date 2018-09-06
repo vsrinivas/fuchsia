@@ -6,6 +6,7 @@ library fuchsia.mediaplayer;
 
 using fuchsia.math;
 using fuchsia.media;
+using fuchsia.net.oldhttp;
 using fuchsia.ui.viewsv1;
 using fuchsia.ui.viewsv1token;
 
@@ -18,8 +19,10 @@ interface Player {
   // These methods will remain in Player.
   // TODO(dalesat): Player will inherit SourceManager and SinkManager.
 
-  // Sets an HTTP URL to read from.
-  0x1001: SetHttpSource(string http_url);
+  // Sets an HTTP URL to read from. The provided headers are added to each
+  // HTTP request issued to the URL.
+  0x1001: SetHttpSource(string http_url,
+                        vector<fuchsia.net.oldhttp.HttpHeader>? headers);
 
   // Sets a file channel to read from.
   0x1002: SetFileSource(handle<channel> file_channel);

@@ -5,12 +5,10 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_PLAYER_IMPL_H_
 #define GARNET_BIN_MEDIAPLAYER_PLAYER_IMPL_H_
 
-#include <unordered_map>
-
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-
+#include <unordered_map>
 #include "garnet/bin/mediaplayer/core/player_core.h"
 #include "garnet/bin/mediaplayer/decode/decoder.h"
 #include "garnet/bin/mediaplayer/demux/demux.h"
@@ -38,7 +36,9 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
   ~PlayerImpl() override;
 
   // MediaPlayer implementation.
-  void SetHttpSource(fidl::StringPtr http_url) override;
+  void SetHttpSource(
+      fidl::StringPtr http_url,
+      fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) override;
 
   void SetFileSource(zx::channel file_channel) override;
 

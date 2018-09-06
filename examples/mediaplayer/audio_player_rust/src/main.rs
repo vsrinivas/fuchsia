@@ -79,7 +79,7 @@ impl App {
             let channel = channel_from_file(file)?;
             player.set_file_source(channel)?;
         } else {
-            player.set_http_source(url.as_str())?;
+            player.set_http_source(url.as_str(), None)?;
         }
         player.play()?;
 

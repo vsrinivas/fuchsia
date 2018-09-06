@@ -174,7 +174,7 @@ void MediaPlayerTestView::SetUrl(const std::string url_as_string) {
     media_player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(
         fxl::UniqueFD(open(url.path().c_str(), O_RDONLY)).get()));
   } else {
-    media_player_->SetHttpSource(url_as_string);
+    media_player_->SetHttpSource(url_as_string, nullptr);
   }
 }
 

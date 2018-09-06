@@ -20,10 +20,12 @@ namespace media_player {
 class HttpReader : public Reader {
  public:
   static std::shared_ptr<HttpReader> Create(
-      component::StartupContext* startup_context, const std::string& url);
+      component::StartupContext* startup_context, const std::string& url,
+    fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers);
 
   HttpReader(component::StartupContext* startup_context,
-             const std::string& url);
+             const std::string& url,
+    fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers);
 
   ~HttpReader() override;
 
@@ -50,6 +52,7 @@ class HttpReader : public Reader {
   void LoadAndReadFromSocket();
 
   std::string url_;
+  fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers_;
   ::fuchsia::net::oldhttp::URLLoaderPtr url_loader_;
   Result result_ = Result::kOk;
   uint64_t size_ = kUnknownSize;

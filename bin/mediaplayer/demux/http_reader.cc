@@ -6,9 +6,9 @@
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async/default.h>
-
 #include "garnet/bin/http/http_errors.h"
 #include "lib/component/cpp/connect.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 
 namespace media_player {
@@ -30,13 +30,17 @@ constexpr uint32_t kStatusNotFound = 404u;
 
 // static
 std::shared_ptr<HttpReader> HttpReader::Create(
-    component::StartupContext* startup_context, const std::string& url) {
-  return std::make_shared<HttpReader>(startup_context, url);
+    component::StartupContext* startup_context, const std::string& url,
+    fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) {
+  return std::make_shared<HttpReader>(startup_context, url, std::move(headers));
 }
 
-HttpReader::HttpReader(component::StartupContext* startup_context,
-                       const std::string& url)
-    : url_(url), ready_(async_get_default_dispatcher()) {
+HttpReader::HttpReader(
+    component::StartupContext* startup_context, const std::string& url,
+    fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers)
+    : url_(url),
+      headers_(std::move(headers)),
+      ready_(async_get_default_dispatcher()) {
   http::HttpServicePtr network_service =
       startup_context->ConnectToEnvironmentService<http::HttpService>();
 
@@ -46,6 +50,9 @@ HttpReader::HttpReader(component::StartupContext* startup_context,
   url_request.url = url_;
   url_request.method = "HEAD";
   url_request.auto_follow_redirects = true;
+  if (headers_) {
+    url_request.headers = fidl::Clone(headers_);
+  }
 
   url_loader_->Start(std::move(url_request), [this](
                                                  http::URLResponse response) {
@@ -216,6 +223,10 @@ void HttpReader::LoadAndReadFromSocket() {
   http::URLRequest request;
   request.url = url_;
   request.method = "GET";
+  request.auto_follow_redirects = true;
+  if (headers_) {
+    request.headers = fidl::Clone(headers_);
+  }
 
   if (read_at_position_ != 0) {
     std::ostringstream value;
