@@ -237,7 +237,7 @@ zx_device_t* device_get_parent(zx_device_t* dev);
 //     protocol_xyz_ops_t* ops;
 //     void* ctx;
 // } protocol_xyz_t;
-zx_status_t device_get_protocol(zx_device_t* dev, uint32_t proto_id, void* protocol);
+zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_id, void* protocol);
 
 
 // Direct Device Ops Functions

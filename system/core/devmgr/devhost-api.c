@@ -124,7 +124,7 @@ typedef struct {
     void* ctx;
 } generic_protocol_t;
 
-__EXPORT zx_status_t device_get_protocol(zx_device_t* dev, uint32_t proto_id, void* out) {
+__EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_id, void* out) {
     generic_protocol_t* proto = out;
     if (dev->ops->get_protocol) {
         return dev->ops->get_protocol(dev->ctx, proto_id, out);
