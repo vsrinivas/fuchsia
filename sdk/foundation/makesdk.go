@@ -20,6 +20,7 @@ import (
 )
 
 var archive = flag.Bool("archive", true, "Whether to archive the output")
+var manifest = flag.String("manifest", "topaz", "Which SDK manifest to create the layout from")
 var output = flag.String("output", "fuchsia-sdk.tgz", "Name of the archive")
 var outDir = flag.String("out-dir", "", "Output directory")
 var toolchainLibs = flag.Bool("toolchain-lib", true, "Include toolchain libraries in SDK. Typically used when --toolchain is false")
@@ -266,7 +267,7 @@ only module.
 		}
 	}
 
-	createLayout("topaz", fuchsiaRoot, *outDir)
+	createLayout(*manifest, fuchsiaRoot, *outDir)
 
 	for _, c := range components {
 		if *c.flag {
