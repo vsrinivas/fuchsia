@@ -15,50 +15,19 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
+#include "peridot/lib/firebase_auth/testing/service_account_test_constants.h"
+
 namespace service_account {
-
-namespace http = ::fuchsia::net::oldhttp;
-
 namespace {
-
-constexpr fxl::StringView kTestConfig =
-    "{"
-    "\"private_key\": \""
-    "-----BEGIN RSA PRIVATE KEY-----\\n"
-    "MIIBOQIBAAJBALTlyNACX5j/oFWdgy/KvAZL9qj+eNuhXGBSvQM9noaPKqVhOXFH\\n"
-    "hycW+TBzlHzj4Ga5uGtVJNzZaxdpfbqxV1cCAwEAAQJAZDJShESMRuZwHHveSf51\\n"
-    "Hte8i+ZHcv9xdzjc0Iq037pGGmHh/TiNNZPtqgVbxQuGGdGQqJ54DMpz3Ja2ck1V\\n"
-    "wQIhAOMyXwq0Se8+hCXFFFIo6QSVpDn5ZnXTyz+GBdiwkVXZAiEAy9TIRCCUd9j+\\n"
-    "cy77lTCx6k6Pw5lY1LM5jTUR7dAD6K8CIBie1snUK8bvYWauartUj5vdk4Rs0Huo\\n"
-    "Tfg+T9fhmn5RAiB5nfEL7SCIzbksgqjroE1Xjx5qR5Hf/zvki/ixmz7p0wIgdxLS\\n"
-    "T/hN67jcu9a+/2geGTnk1ku2nhVlxS7UPCTq0os=\\n"
-    "-----END RSA PRIVATE KEY-----"
-    "\","
-    "\"client_email\": \"fake_email@example.com\","
-    "\"client_id\": \"fake_id\""
-    "}";
-
-constexpr fxl::StringView kWrongKeyTestConfig =
-    "{"
-    "\"private_key\": \""
-    "-----BEGIN DSA PRIVATE KEY-----\\n"
-    "MIH4AgEAAkEAteW2IBzioOu0aNGrQFv5RZ6VxS8NAyuNwvOrmjq8pxJSzTyrwD52\\n"
-    "9XJmNVVXv/UWKvyPtr0rzrsJVpSzCEwaewIVAJT9/8i3lQrQEeACuO9bwzaG28Lh\\n"
-    "AkAnvmU9Ogz6eTof5V58Lv1f8uKF6ZujgVb+Wc1gudx8wKIexKUBhE7rsnJUfLYw\\n"
-    "HMXC8xZ5XJTEYog2U0vLKke7AkEApEq8XBO8qwEzP3VicpC/Huxa/zNZ2lveNgWm\\n"
-    "tr089fvp3PSf4DwKTOKGZyg9NYsOSCfaCSvkWMeFCW4Y7XTpTAIUV9YTY3SlInIv\\n"
-    "Ho2twE3HuzNZpLQ=\\n"
-    "-----END DSA PRIVATE KEY-----\\n"
-    "\","
-    "\"client_email\": \"fake_email@example.com\","
-    "\"client_id\": \"fake_id\""
-    "}";
+namespace http = ::fuchsia::net::oldhttp;
 
 class ServiceAccountTokenProviderTest : public gtest::TestLoopFixture {
  public:
   ServiceAccountTokenProviderTest()
       : network_wrapper_(dispatcher()),
-        token_provider_(&network_wrapper_, "user_id") {}
+        token_provider_(&network_wrapper_,
+                        Credentials::Parse(kTestServiceAccountConfig),
+                        "user_id") {}
 
  protected:
   std::string GetSuccessResponseBody(std::string token, size_t expiration) {
@@ -108,8 +77,6 @@ class ServiceAccountTokenProviderTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(ServiceAccountTokenProviderTest, GetToken) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
-
   network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 3600)));
 
@@ -121,8 +88,6 @@ TEST_F(ServiceAccountTokenProviderTest, GetToken) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, GetTokenFromCache) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
-
   network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 3600)));
 
@@ -145,8 +110,6 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenFromCache) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, GetTokenNoCacheCache) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
-
   network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 0)));
 
@@ -167,15 +130,7 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenNoCacheCache) {
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }
 
-TEST_F(ServiceAccountTokenProviderTest, IncorrectCredentials) {
-  EXPECT_FALSE(token_provider_.LoadCredentials(""));
-  EXPECT_FALSE(token_provider_.LoadCredentials("{}"));
-  EXPECT_FALSE(token_provider_.LoadCredentials(kWrongKeyTestConfig));
-}
-
 TEST_F(ServiceAccountTokenProviderTest, NetworkError) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
-
   auto network_error = http::HttpError::New();
   network_error->description = "Error";
 
@@ -191,8 +146,6 @@ TEST_F(ServiceAccountTokenProviderTest, NetworkError) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, AuthenticationError) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
-
   network_wrapper_.SetResponse(GetResponse(nullptr, 401, "Unauthorized"));
 
   fuchsia::modular::auth::FirebaseTokenPtr token;
@@ -205,8 +158,6 @@ TEST_F(ServiceAccountTokenProviderTest, AuthenticationError) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, ResponseFormatError) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
-
   network_wrapper_.SetResponse(GetResponse(nullptr, 200, ""));
 
   fuchsia::modular::auth::FirebaseTokenPtr token;

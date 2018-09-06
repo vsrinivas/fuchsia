@@ -14,6 +14,7 @@
 #include <lib/network_wrapper/network_wrapper_impl.h>
 
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
+#include "peridot/lib/firebase_auth/testing/credentials.h"
 #include "peridot/lib/firebase_auth/testing/service_account_token_provider.h"
 
 namespace cloud_provider_firestore {
@@ -25,9 +26,10 @@ namespace cloud_provider_firestore {
 // the cloud provider.
 class CloudProviderFactory {
  public:
-  CloudProviderFactory(component::StartupContext* startup_context,
-                       std::string server_id, std::string api_key,
-                       std::string credentials);
+  CloudProviderFactory(
+      component::StartupContext* startup_context, std::string server_id,
+      std::string api_key,
+      std::unique_ptr<service_account::Credentials> credentials);
   ~CloudProviderFactory();
 
   void Init();
@@ -44,7 +46,7 @@ class CloudProviderFactory {
   component::StartupContext* const startup_context_;
   const std::string server_id_;
   const std::string api_key_;
-  const std::string credentials_;
+  std::unique_ptr<service_account::Credentials> credentials_;
 
   // Loop on which the token manager runs.
   async::Loop services_loop_;

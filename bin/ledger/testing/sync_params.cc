@@ -37,6 +37,23 @@ void WarnIncorrectSyncParams() {
 
 namespace ledger {
 
+SyncParams::SyncParams() = default;
+
+SyncParams::SyncParams(SyncParams&& other) = default;
+
+SyncParams::SyncParams(const SyncParams& other) { *this = other; }
+
+SyncParams& SyncParams::operator=(SyncParams&& other) = default;
+
+SyncParams& SyncParams::operator=(const SyncParams& other) {
+  server_id = other.server_id;
+  api_key = other.api_key;
+  if (other.credentials) {
+    credentials = other.credentials->Clone();
+  }
+  return *this;
+}
+
 std::string GetSyncParamsUsage() {
   std::ostringstream result;
   result << " --" << kServerIdFlag << "=<string>";
@@ -47,7 +64,6 @@ std::string GetSyncParamsUsage() {
 
 bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
                                     SyncParams* sync_params) {
-  std::string credentials_path;
   bool ret = command_line.GetOptionValue(kServerIdFlag.ToString(),
                                          &sync_params->server_id) &&
              command_line.GetOptionValue(kApiKeyFlag.ToString(),
@@ -57,12 +73,12 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
     return false;
   }
 
-  if (!files::ReadFileToString(kCredentialsDefaultPath.ToString(),
-                               &sync_params->credentials)) {
+  std::string credentials;
+  std::string credentials_path = kCredentialsDefaultPath.ToString();
+  if (!files::ReadFileToString(credentials_path, &credentials)) {
     std::cerr << "Cannot access the default credentials location: "
               << kCredentialsDefaultPath << std::endl;
 
-    std::string credentials_path;
     if (!command_line.GetOptionValue(kCredentialsPathFlag.ToString(),
                                      &credentials_path)) {
       std::cerr << "Please set the GN argument " << kGnCredentialsPathArg
@@ -72,10 +88,16 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
       return false;
     }
 
-    if (!files::ReadFileToString(credentials_path, &sync_params->credentials)) {
+    if (!files::ReadFileToString(credentials_path, &credentials)) {
       std::cerr << "Cannot access " << credentials_path << std::endl;
       return false;
     }
+  }
+  sync_params->credentials = service_account::Credentials::Parse(credentials);
+  if (!sync_params->credentials) {
+    std::cerr << "Cannot parse credentials at " << credentials_path
+              << std::endl;
+    return false;
   }
   return true;
 }

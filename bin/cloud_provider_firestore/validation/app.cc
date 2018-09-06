@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
       component::StartupContext::CreateFromStartupInfo();
   cloud_provider_firestore::CloudProviderFactory factory(
       startup_context.get(), sync_params.server_id, sync_params.api_key,
-      sync_params.credentials);
+      sync_params.credentials->Clone());
 
   cloud_provider::ValidationTestsLauncher launcher(
       startup_context.get(), [&factory](auto request) {

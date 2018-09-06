@@ -25,30 +25,14 @@
 
 #include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/firebase_auth/testing/json_schema.h"
 
 namespace service_account {
 
 namespace http = ::fuchsia::net::oldhttp;
 
 namespace {
-const char kServiceAccountConfigurationSchema[] = R"({
-  "type": "object",
-  "additionalProperties": true,
-  "properties": {
-    "private_key": {
-      "type": "string"
-    },
-    "client_email": {
-      "type": "string"
-    },
-    "client_id": {
-      "type": "string"
-    }
-  },
-  "required": ["private_key", "client_email", "client_id"]
-})";
-
-const char kIdentityResponseSchema[] = R"({
+constexpr fxl::StringView kIdentityResponseSchema = R"({
   "type": "object",
   "additionalProperties": true,
   "properties": {
@@ -61,6 +45,12 @@ const char kIdentityResponseSchema[] = R"({
   },
   "required": ["idToken", "expiresIn"]
 })";
+
+rapidjson::SchemaDocument& GetResponseSchema() {
+  static auto schema = json_schema::InitSchema(kIdentityResponseSchema);
+  FXL_DCHECK(schema);
+  return *schema;
+}
 
 std::string GetHeader() {
   rapidjson::StringBuffer string_buffer;
@@ -88,38 +78,7 @@ fuchsia::modular::auth::AuthErr GetError(fuchsia::modular::auth::Status status,
   return error;
 }
 
-std::unique_ptr<rapidjson::SchemaDocument> InitSchema(const char schemaSpec[]) {
-  rapidjson::Document schema_document;
-  if (schema_document.Parse(schemaSpec).HasParseError()) {
-    FXL_DCHECK(false) << "Schema validation spec itself is not valid JSON.";
-  }
-  return std::make_unique<rapidjson::SchemaDocument>(schema_document);
-}
-
-bool ValidateSchema(const rapidjson::Value& value,
-                    const rapidjson::SchemaDocument& schema) {
-  rapidjson::SchemaValidator validator(schema);
-  if (!value.Accept(validator)) {
-    rapidjson::StringBuffer uri_buffer;
-    validator.GetInvalidSchemaPointer().StringifyUriFragment(uri_buffer);
-    FXL_LOG(ERROR) << "Incorrect schema at " << uri_buffer.GetString()
-                   << " , schema violation: "
-                   << validator.GetInvalidSchemaKeyword();
-    return false;
-  }
-  return true;
-}
-
 }  // namespace
-
-struct ServiceAccountTokenProvider::Credentials {
-  std::string client_email;
-  std::string client_id;
-
-  bssl::UniquePtr<EVP_PKEY> private_key;
-
-  std::unique_ptr<rapidjson::SchemaDocument> response_schema;
-};
 
 struct ServiceAccountTokenProvider::CachedToken {
   std::string id_token;
@@ -127,8 +86,11 @@ struct ServiceAccountTokenProvider::CachedToken {
 };
 
 ServiceAccountTokenProvider::ServiceAccountTokenProvider(
-    network_wrapper::NetworkWrapper* network_wrapper, std::string user_id)
-    : network_wrapper_(network_wrapper), user_id_(std::move(user_id)) {}
+    network_wrapper::NetworkWrapper* network_wrapper,
+    std::unique_ptr<Credentials> credentials, std::string user_id)
+    : network_wrapper_(network_wrapper),
+      credentials_(std::move(credentials)),
+      user_id_(std::move(user_id)) {}
 
 ServiceAccountTokenProvider::~ServiceAccountTokenProvider() {
   for (const auto& pair : in_progress_callbacks_) {
@@ -137,39 +99,6 @@ ServiceAccountTokenProvider::~ServiceAccountTokenProvider() {
         GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR,
                  "Account provider deleted with requests in flight."));
   }
-}
-
-bool ServiceAccountTokenProvider::LoadCredentials(fxl::StringView json) {
-  rapidjson::Document document;
-  document.Parse(json.data(), json.size());
-  if (document.HasParseError() || !document.IsObject()) {
-    FXL_LOG(ERROR) << "Json file is incorrect: " << json;
-    return false;
-  }
-
-  auto service_account_schema = InitSchema(kServiceAccountConfigurationSchema);
-  if (!ValidateSchema(document, *service_account_schema)) {
-    return false;
-  }
-
-  credentials_ = std::make_unique<Credentials>();
-  credentials_->client_email = document["client_email"].GetString();
-  credentials_->client_id = document["client_id"].GetString();
-
-  bssl::UniquePtr<BIO> bio(
-      BIO_new_mem_buf(document["private_key"].GetString(),
-                      document["private_key"].GetStringLength()));
-  credentials_->private_key.reset(
-      PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr));
-
-  if (EVP_PKEY_id(credentials_->private_key.get()) != EVP_PKEY_RSA) {
-    FXL_LOG(ERROR) << "Provided key is not a RSA key.";
-    return false;
-  }
-
-  credentials_->response_schema = InitSchema(kIdentityResponseSchema);
-
-  return true;
 }
 
 void ServiceAccountTokenProvider::GetAccessToken(
@@ -230,7 +159,7 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
 }
 
 void ServiceAccountTokenProvider::GetClientId(GetClientIdCallback callback) {
-  callback(credentials_->client_id);
+  callback(credentials_->client_id());
 }
 
 std::string ServiceAccountTokenProvider::GetClaims() {
@@ -240,10 +169,10 @@ std::string ServiceAccountTokenProvider::GetClaims() {
   writer.StartObject();
 
   writer.Key("iss");
-  writer.String(credentials_->client_email);
+  writer.String(credentials_->client_email());
 
   writer.Key("sub");
-  writer.String(credentials_->client_email);
+  writer.String(credentials_->client_email());
 
   writer.Key("aud");
   writer.String(
@@ -272,7 +201,7 @@ bool ServiceAccountTokenProvider::GetCustomToken(std::string* custom_token) {
 
   bssl::ScopedEVP_MD_CTX md_ctx;
   if (EVP_DigestSignInit(md_ctx.get(), nullptr, EVP_sha256(), nullptr,
-                         credentials_->private_key.get()) != 1) {
+                         credentials_->private_key().get()) != 1) {
     FXL_LOG(ERROR) << ERR_reason_error_string(ERR_get_error());
     return false;
   }
@@ -400,7 +329,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
     return;
   }
 
-  if (!ValidateSchema(document, *credentials_->response_schema)) {
+  if (!json_schema::ValidateSchema(document, GetResponseSchema())) {
     ResolveCallbacks(api_key, nullptr,
                      GetError(fuchsia::modular::auth::Status::BAD_RESPONSE,
                               "Malformed response: " + response_body));

@@ -26,7 +26,8 @@ class CloudProviderFactory::TokenProviderContainer {
  public:
   TokenProviderContainer(
       component::StartupContext* startup_context,
-      async_dispatcher_t* dispatcher, fxl::StringView credentials,
+      async_dispatcher_t* dispatcher,
+      std::unique_ptr<service_account::Credentials> credentials,
       std::string user_id,
       fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request)
       : startup_context_(startup_context),
@@ -36,13 +37,9 @@ class CloudProviderFactory::TokenProviderContainer {
               return startup_context_
                   ->ConnectToEnvironmentService<http::HttpService>();
             }),
-        token_provider_(&network_wrapper_, std::move(user_id)),
-        binding_(&token_provider_, std::move(request)) {
-    if (!token_provider_.LoadCredentials(credentials)) {
-      FXL_LOG(ERROR) << "Failed to load token provider credentials: "
-                     << credentials;
-    }
-  }
+        token_provider_(&network_wrapper_, std::move(credentials),
+                        std::move(user_id)),
+        binding_(&token_provider_, std::move(request)) {}
 
   void set_on_empty(fit::closure on_empty) {
     binding_.set_error_handler(std::move(on_empty));
@@ -59,7 +56,8 @@ class CloudProviderFactory::TokenProviderContainer {
 
 CloudProviderFactory::CloudProviderFactory(
     component::StartupContext* startup_context, std::string server_id,
-    std::string api_key, std::string credentials)
+    std::string api_key,
+    std::unique_ptr<service_account::Credentials> credentials)
     : startup_context_(startup_context),
       server_id_(std::move(server_id)),
       api_key_(std::move(api_key)),
@@ -97,7 +95,8 @@ void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
       fxl::MakeCopyable([this, user_id = std::move(user_id),
                          request = token_provider.NewRequest()]() mutable {
         token_providers_.emplace(startup_context_, services_loop_.dispatcher(),
-                                 credentials_, user_id, std::move(request));
+                                 credentials_->Clone(), user_id,
+                                 std::move(request));
       }));
 
   cloud_provider_firestore::Config firebase_config;

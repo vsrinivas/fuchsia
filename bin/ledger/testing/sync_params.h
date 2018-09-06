@@ -11,18 +11,26 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/strings/string_view.h>
 
+#include "peridot/lib/firebase_auth/testing/credentials.h"
+
 namespace ledger {
 
 // Parameters needed to configure synchronization against a real server.
 struct SyncParams {
+  SyncParams();
+  SyncParams(const SyncParams& other);
+  SyncParams(SyncParams&& other);
+  SyncParams& operator=(const SyncParams& other);
+  SyncParams& operator=(SyncParams&& other);
+
   // ID of the Firestore instance.
   std::string server_id;
 
   // API key used to access the database.
   std::string api_key;
 
-  // Content of the service account JSON credentials.
-  std::string credentials;
+  // Credentials for the cloud service.
+  std::unique_ptr<service_account::Credentials> credentials;
 };
 
 // Returns a string listing the command-line parameters which need to be

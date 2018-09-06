@@ -13,32 +13,19 @@
 #include <lib/fxl/strings/string_view.h>
 #include <lib/network_wrapper/network_wrapper.h>
 
+#include "peridot/lib/firebase_auth/testing/credentials.h"
+
 namespace service_account {
 
 // An implementation of |TokenProvider| that uses a Firebase service account to
 // register a new user of the given id and mint tokens for it.
-//
-// A Firebase service account with admin access to the project is automatically
-// created for every Firebase project.
-//
-// In order to download the JSON credential file corresponding to this account,
-// visit `Settings > Service accounts > Firebase admin SDK` in the Firebase
-// Console and click on the 'Generate new private key' button. This JSON file
-// must be available on the device, and its path must be passed to the
-// LoadCredentials() method to initialize this class.
 class ServiceAccountTokenProvider
     : public fuchsia::modular::auth::TokenProvider {
  public:
   ServiceAccountTokenProvider(network_wrapper::NetworkWrapper* network_wrapper,
+                              std::unique_ptr<Credentials> credentials,
                               std::string user_id);
   ~ServiceAccountTokenProvider() override;
-
-  // Loads the service account credentials.
-  //
-  // This method must be called before this class is usable. |json| must be the
-  // content of the service account configuration file that can be retrieved
-  // from the firebase admin console (see the class-level comment).
-  bool LoadCredentials(fxl::StringView json);
 
   // fuchsia::modular::auth::TokenProvider:
   void GetAccessToken(GetAccessTokenCallback callback) override;
@@ -48,7 +35,6 @@ class ServiceAccountTokenProvider
   void GetClientId(GetClientIdCallback callback) override;
 
  private:
-  struct Credentials;
   struct CachedToken;
 
   std::string GetClaims();
@@ -65,8 +51,8 @@ class ServiceAccountTokenProvider
                         fuchsia::modular::auth::AuthErr error);
 
   network_wrapper::NetworkWrapper* network_wrapper_;
-  const std::string user_id_;
   std::unique_ptr<Credentials> credentials_;
+  const std::string user_id_;
   std::map<std::string, std::unique_ptr<CachedToken>> cached_tokens_;
   std::map<std::string, std::vector<GetFirebaseAuthTokenCallback>>
       in_progress_callbacks_;
