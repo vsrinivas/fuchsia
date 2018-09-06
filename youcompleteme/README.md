@@ -41,6 +41,11 @@ automatically find the config for any fuchsia repository:
 ln -s $FUCHSIA_DIR/scripts/youcompleteme/ycm_extra_conf.py $FUCHSIA_DIR/.ycm_extra_conf.py
 ```
 
+**Googlers only**: you'll also need to setup
+`${FUCHSIA_DIR}/scripts/youcompleteme/default_settings.json` as the default
+settings path in your editor, in order to disable the internal `use_clangd` flag
+that we do not support for Fuchsia yet.
+
 ## See also
 
 [Zircon editor integration](

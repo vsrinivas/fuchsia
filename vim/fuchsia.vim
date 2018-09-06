@@ -11,6 +11,9 @@ if jiri_manifest != ""
   let g:fuchsia_build_dir = systemlist(g:fuchsia_dir . "/scripts/fx get-build-dir")[0]
   " Tell YCM where to find its configuration script
   let g:ycm_global_ycm_extra_conf = g:fuchsia_dir . '/scripts/youcompleteme/ycm_extra_conf.py'
+  " Do not load fuchsia/.ycm_extra_conf in case the user created a symlink for
+  " other editors.
+  let g:ycm_extra_conf_globlist = [ '!' . g:fuchsia_dir . '/*']
   let g:ycm_use_clangd = 0
 
   let &runtimepath = g:fuchsia_dir . "/scripts/vim/," .
