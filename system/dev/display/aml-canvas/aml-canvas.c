@@ -112,6 +112,7 @@ static zx_status_t aml_canvas_config(void* ctx, zx_handle_t vmo,
 
     *canvas_idx = index;
 fail:
+    zx_handle_close(vmo);
     mtx_unlock(&canvas->lock);
     return status;
 }
@@ -166,11 +167,16 @@ static zx_status_t aml_canvas_proxy_cb(platform_proxy_args_t* args, void* cookie
     rpc_canvas_rsp_t* resp = (rpc_canvas_rsp_t*)args->resp;
     args->resp_actual_size = sizeof(*resp);
     args->resp_actual_handles = 0;
+    uint32_t handles_consumed = 0;
 
     switch (req->header.op) {
     case CANVAS_CONFIG: {
+        if (args->req_handle_count < 1) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
         resp->header.status = aml_canvas_config(cookie, args->req_handles[0], req->offset,
                                                 &req->info, &resp->idx);
+        handles_consumed = 1;
         break;
     }
     case CANVAS_FREE: {
@@ -178,7 +184,13 @@ static zx_status_t aml_canvas_proxy_cb(platform_proxy_args_t* args, void* cookie
         break;
     }
     default:
+        for (uint32_t i = 0; i < args->req_handle_count; i++) {
+            zx_handle_close(args->req_handles[i]);
+        }
         return ZX_ERR_NOT_SUPPORTED;
+    }
+    for (uint32_t i = handles_consumed; i < args->req_handle_count; i++) {
+        zx_handle_close(args->req_handles[i]);
     }
     return ZX_OK;
 }

@@ -293,7 +293,11 @@ static void vim_apply_configuration(void* ctx,
 
 static zx_status_t allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out) {
     vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
-    return zx_vmo_create_contiguous(display->bti, size, 0, vmo_out);
+    zx_status_t status = zx_vmo_create_contiguous(display->bti, size, 0, vmo_out);
+    static const char kVmoName[] = "vim_framebuffer";
+    if (status == ZX_OK)
+        zx_object_set_property(*vmo_out, ZX_PROP_NAME, kVmoName, sizeof(kVmoName));
+    return status;
 }
 
 static display_controller_protocol_ops_t display_controller_ops = {

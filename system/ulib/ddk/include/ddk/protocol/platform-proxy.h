@@ -35,7 +35,7 @@ typedef struct {
     platform_proxy_rsp_t* resp;
     // Size of resp.
     uint32_t resp_size;
-    // Handles passed with request.
+    // Handles passed with request (callee takes ownership).
     zx_handle_t* req_handles;
     // Number of handles passed with request.
     uint32_t req_handle_count;

@@ -437,6 +437,8 @@ zx_status_t fb_alloc_image_buffer(zx_handle_t* vmo_out) {
         }
         return status;
     }
+    static const char kVmoName[] = "framebuffer";
+    zx_object_set_property(*vmo_out, ZX_PROP_NAME, kVmoName, sizeof(kVmoName));
     return ZX_OK;
 }
 
