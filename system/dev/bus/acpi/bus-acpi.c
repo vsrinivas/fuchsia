@@ -495,6 +495,10 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
 
     if ((!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
          !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH))) {
+// TODO(cja): Stubbed out for userspace PCI development
+#ifdef ENABLE_USER_PCI
+        register_pci_root(object);
+#else
         if (!ctx->found_pci) {
             // Publish PCI root as top level
             // Only publish one PCI root device for all PCI roots
@@ -511,6 +515,7 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
                           "(status %u)\n", (const char*)&info->Name, status);
         }
         zxlogf(TRACE, "acpi: found pci root #%u\n", ctx->last_pci);
+#endif
     } else if (!memcmp(hid, BATTERY_HID_STRING, HID_LENGTH)) {
         battery_init(parent, object);
     } else if (!memcmp(hid, PWRSRC_HID_STRING, HID_LENGTH)) {

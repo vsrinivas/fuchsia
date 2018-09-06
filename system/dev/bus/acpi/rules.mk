@@ -19,11 +19,16 @@ MODULE_COMPILEFLAGS += -Wno-null-pointer-arithmetic
 endif
 MODULE_CFLAGS += -fno-strict-aliasing
 
+ifeq ($(call TOBOOL, $(ENABLE_USER_PCI)), true)
+MODULE_DEFINES := ENABLE_USER_PCI=1
+endif
+
 MODULE_COMPILEFLAGS += -Ithird_party/lib/acpica/source/include
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/bus-acpi.c \
     $(LOCAL_DIR)/cpu-trace.c \
+    $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/dev-battery.c \
     $(LOCAL_DIR)/dev-cros-ec/dev.cpp \
     $(LOCAL_DIR)/dev-cros-ec/motion.cpp \
@@ -32,12 +37,12 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/dev-pwrsrc.c \
     $(LOCAL_DIR)/dev-tbmc.cpp \
     $(LOCAL_DIR)/dev-thermal.c \
-    $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/init.c \
     $(LOCAL_DIR)/iommu.c \
-    $(LOCAL_DIR)/nhlt.c \
     $(LOCAL_DIR)/methods.cpp \
+    $(LOCAL_DIR)/nhlt.c \
     $(LOCAL_DIR)/pci.c \
+    $(LOCAL_DIR)/pci.cpp \
     $(LOCAL_DIR)/pciroot.cpp \
     $(LOCAL_DIR)/power.c \
     $(LOCAL_DIR)/resources.c \
@@ -50,12 +55,13 @@ MODULE_STATIC_LIBS := \
     third_party/ulib/acpica \
     third_party/ulib/chromiumos-platform-ec \
     system/ulib/zxcpp \
+    system/ulib/region-alloc \
     system/ulib/fbl \
 
 MODULE_LIBS := \
+    system/ulib/c \
     system/ulib/driver \
     system/ulib/zircon \
-    system/ulib/c \
 
 else # !ARCH=x86
 
