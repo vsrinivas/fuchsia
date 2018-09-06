@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <trace-provider/provider.h>
 
 #include "garnet/examples/escher/common/demo_harness.h"
 #include "lib/component/cpp/startup_context.h"
@@ -43,6 +44,7 @@ class DemoHarnessFuchsia : public DemoHarness {
   // create its own if necessary.
   async::Loop* loop_;
   std::unique_ptr<async::Loop> owned_loop_;
+  trace::TraceProvider trace_provider_;
 
   std::unique_ptr<component::StartupContext> startup_context_;
 };

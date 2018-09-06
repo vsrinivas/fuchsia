@@ -5,6 +5,7 @@
 #include "lib/escher/impl/gpu_mem_slab.h"
 
 #include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/gpu_allocator.h"
 #include "lib/fxl/logging.h"
 
@@ -28,6 +29,7 @@ GpuMemSlabPtr GpuMemSlab::New(vk::Device device,
                               vk::MemoryRequirements reqs,
                               vk::MemoryPropertyFlags flags,
                               GpuAllocator* allocator) {
+  TRACE_DURATION("gfx", "escher::GpuMemSlab::New");
   vk::DeviceMemory vk_mem;
   uint8_t* mapped_ptr = nullptr;
   uint32_t memory_type_index = 0;
@@ -50,12 +52,16 @@ GpuMemSlabPtr GpuMemSlab::New(vk::Device device,
     memory_type_index =
         GetMemoryTypeIndex(physical_device, reqs.memoryTypeBits, flags);
 
-    vk::MemoryAllocateInfo info;
-    info.allocationSize = reqs.size;
-    info.memoryTypeIndex = memory_type_index;
-    vk_mem = ESCHER_CHECKED_VK_RESULT(device.allocateMemory(info));
+    {
+      TRACE_DURATION("gfx", "escher::GpuMemSlab::New[alloc]");
+      vk::MemoryAllocateInfo info;
+      info.allocationSize = reqs.size;
+      info.memoryTypeIndex = memory_type_index;
+      vk_mem = ESCHER_CHECKED_VK_RESULT(device.allocateMemory(info));
+    }
 
     if (needs_mapped_ptr) {
+      TRACE_DURATION("gfx", "escher::GpuMemSlab::New[map]");
       auto ptr =
           ESCHER_CHECKED_VK_RESULT(device.mapMemory(vk_mem, 0, reqs.size));
       mapped_ptr = reinterpret_cast<uint8_t*>(ptr);

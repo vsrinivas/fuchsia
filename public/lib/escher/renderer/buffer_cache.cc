@@ -4,6 +4,7 @@
 
 #include "lib/escher/renderer/buffer_cache.h"
 
+#include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/gpu_allocator.h"
 
 namespace escher {
@@ -32,6 +33,7 @@ BufferCache::~BufferCache() {
 }
 
 BufferPtr BufferCache::NewHostBuffer(vk::DeviceSize vk_size) {
+  TRACE_DURATION("gfx", "escher::BufferCache::NewHostBuffer");
   BufferPtr buffer;
   // See if there's a buffer of the right size. Or, find the smallest buffer
   // that is big enough to handle the size request.

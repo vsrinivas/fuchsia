@@ -26,6 +26,7 @@ DemoHarnessFuchsia::DemoHarnessFuchsia(async::Loop* loop,
       loop_(loop),
       owned_loop_(loop_ ? nullptr
                         : new async::Loop(&kAsyncLoopConfigAttachToThread)),
+      trace_provider_((loop_ ? loop_ : owned_loop_.get())->dispatcher()),
       startup_context_(component::StartupContext::CreateFromStartupInfo()) {
   // Provide a PseudoDir where the demo can register debugging services.
   fbl::RefPtr<fs::PseudoDir> debug_dir(fbl::AdoptRef(new fs::PseudoDir));

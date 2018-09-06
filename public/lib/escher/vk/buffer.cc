@@ -6,6 +6,7 @@
 
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/resources/resource_manager.h"
+#include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/gpu_allocator.h"
 
 namespace escher {
@@ -18,6 +19,7 @@ BufferPtr Buffer::New(ResourceManager* manager, GpuAllocator* allocator,
                       vk::DeviceSize size, vk::BufferUsageFlags usage_flags,
                       vk::MemoryPropertyFlags memory_property_flags,
                       vk::DeviceSize offset) {
+  TRACE_DURATION("gfx", "escher::Buffer::New[allocator]");
   FXL_DCHECK(manager);
   FXL_DCHECK(allocator);
 
@@ -43,6 +45,7 @@ BufferPtr Buffer::New(ResourceManager* manager, GpuAllocator* allocator,
 BufferPtr Buffer::New(ResourceManager* manager, GpuMemPtr mem,
                       vk::BufferUsageFlags usage_flags, vk::DeviceSize size,
                       vk::DeviceSize offset) {
+  TRACE_DURATION("gfx", "escher::Buffer::New[mem]");
   auto device = manager->vulkan_context().device;
 
   // Create buffer.

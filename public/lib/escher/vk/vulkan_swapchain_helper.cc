@@ -8,6 +8,9 @@
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/framebuffer.h"
 
+#include <chrono>
+#include <thread>
+
 namespace escher {
 
 VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
@@ -37,6 +40,28 @@ void VulkanSwapchainHelper::DrawFrame(DrawFrameCallback draw_callback) {
 
     if (result.result == vk::Result::eSuboptimalKHR) {
       FXL_DLOG(WARNING) << "suboptimal swapchain configuration";
+    } else if (result.result == vk::Result::eTimeout) {
+      int retry_count = 0;
+      int timeout = 2;
+      while (result.result == vk::Result::eTimeout) {
+        TRACE_DURATION("gfx", "escher::VulkanSwapchain::Acquire[retry]");
+        if (retry_count++ > 10) {
+          FXL_LOG(WARNING) << "failed to acquire next swapchain image"
+                           << " : Timeout (giving up after 10 tries)";
+          return;
+        }
+
+        std::chrono::duration<double, std::milli> chrono_timeout(timeout);
+        std::this_thread::sleep_for(chrono_timeout);
+        timeout *= 2;
+
+        device_.waitIdle();
+
+        result = device_.acquireNextImageKHR(
+            swapchain_.swapchain, UINT64_MAX,
+            image_available_semaphore->vk_semaphore(), nullptr);
+      }
+
     } else if (result.result != vk::Result::eSuccess) {
       FXL_LOG(WARNING) << "failed to acquire next swapchain image"
                        << " : " << to_string(result.result);

@@ -38,6 +38,7 @@ BatchGpuUploader::Writer::~Writer() {
 void BatchGpuUploader::Writer::WriteBuffer(const BufferPtr& target,
                                            vk::BufferCopy region,
                                            SemaphorePtr semaphore) {
+  TRACE_DURATION("gfx", "escher::BatchGpuUploader::Writer::WriteBuffer");
   if (semaphore) {
     target->SetWaitSemaphore(semaphore);
     command_buffer_->impl()->AddSignalSemaphore(std::move(semaphore));
@@ -49,6 +50,7 @@ void BatchGpuUploader::Writer::WriteBuffer(const BufferPtr& target,
 void BatchGpuUploader::Writer::WriteImage(const ImagePtr& target,
                                           vk::BufferImageCopy region,
                                           SemaphorePtr semaphore) {
+  TRACE_DURATION("gfx", "escher::BatchGpuUploader::Writer::WriteImage");
   command_buffer_->impl()->TransitionImageLayout(
       target, vk::ImageLayout::eUndefined,
       vk::ImageLayout::eTransferDstOptimal);
