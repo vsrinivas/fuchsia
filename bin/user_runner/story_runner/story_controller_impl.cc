@@ -1545,6 +1545,14 @@ StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindAnchor(
   return anchor;
 }
 
+void StoryControllerImpl::HandleModuleViewReady(
+    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
+  const auto view_id = PathString(module_path);
+  // Story shell has no knowledge of embedded modules, and thus will ignore
+  // the ViewReady signal for an embedded module.
+  story_shell_->ViewReady(view_id);
+}
+
 void StoryControllerImpl::HandleModuleDone(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
   operation_queue_.Add(

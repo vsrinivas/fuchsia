@@ -53,6 +53,13 @@ interface StoryShell {
                   vector<ContainerLayout> layout,
                   vector<ContainerRelationEntry> relationships,
                   vector<ContainerView> views);
+
+  // Called when the view by the given |view_id| is ready to be displayed.
+  // On invocation, the story shell can assume that the view's scene is ready to
+  // be rendered. |ViewReady| calls for unrecognized |view_id| may be sent when
+  // an embedded module, which story shells have no knowledge of, becomes ready.
+  // Story shell must ignore requests for unrecognized |view_id| and no-op.
+  6: ViewReady(string view_id);
 };
 
 // Maps the node_name to the specific mozart view resulting from resolving and
