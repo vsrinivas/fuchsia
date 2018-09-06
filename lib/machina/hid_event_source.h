@@ -21,10 +21,10 @@ namespace machina {
 class HidInputDevice
     : public fbl::SinglyLinkedListable<fbl::unique_ptr<HidInputDevice>> {
  public:
-  HidInputDevice(InputDispatcher* input_dispatcher, fbl::unique_fd fd)
+  HidInputDevice(InputDispatcherImpl* input_dispatcher, fbl::unique_fd fd)
       : fd_(std::move(fd)), input_dispatcher_(input_dispatcher) {}
 
-  explicit HidInputDevice(InputDispatcher* input_dispatcher)
+  explicit HidInputDevice(InputDispatcherImpl* input_dispatcher)
       : input_dispatcher_(input_dispatcher) {}
 
   // Spawn a thread to read key reports from the keyboard device.
@@ -42,12 +42,12 @@ class HidInputDevice
 
   fbl::unique_fd fd_;
   hid_keys_t prev_keys_ = {};
-  InputDispatcher* input_dispatcher_;
+  InputDispatcherImpl* input_dispatcher_;
 };
 
 class HidEventSource {
  public:
-  HidEventSource(InputDispatcher* input_dispatcher)
+  HidEventSource(InputDispatcherImpl* input_dispatcher)
       : input_dispatcher_(input_dispatcher) {}
 
   zx_status_t Start();
@@ -58,7 +58,7 @@ class HidEventSource {
   // Invoked whenever a new node appears under the /dev/class/input directory.
   zx_status_t AddInputDevice(int dirfd, int event, const char* fn);
 
-  InputDispatcher* input_dispatcher_;
+  InputDispatcherImpl* input_dispatcher_;
   std::mutex mutex_;
   fbl::SinglyLinkedList<fbl::unique_ptr<HidInputDevice>> devices_
       __TA_GUARDED(mutex_);

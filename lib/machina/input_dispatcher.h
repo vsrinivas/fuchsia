@@ -9,56 +9,9 @@
 #include <mutex>
 
 #include <fbl/array.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 
 namespace machina {
-
-enum class InputEventType {
-  KEYBOARD,
-  BARRIER,
-  POINTER,
-  BUTTON,
-};
-
-enum class KeyState {
-  PRESSED,
-  RELEASED,
-};
-
-struct KeyEvent {
-  uint32_t hid_usage;
-  KeyState state;
-};
-
-enum class PointerType {
-  RELATIVE,
-  ABSOLUTE,
-};
-
-struct PointerEvent {
-  float x;
-  float y;
-  PointerType type;
-};
-
-enum class Button {
-  BTN_MOUSE_PRIMARY,
-  BTN_MOUSE_SECONDARY,
-  BTN_MOUSE_TERTIARY,
-};
-
-struct ButtonEvent {
-  Button button;
-  KeyState state;
-};
-
-struct InputEvent {
-  InputEventType type;
-  union {
-    KeyEvent key;
-    PointerEvent pointer;
-    ButtonEvent button;
-  };
-};
 
 class InputEventQueue {
  public:
@@ -66,20 +19,21 @@ class InputEventQueue {
 
   // Adds an input event the the queue. If the queue is full the oldest element
   // will be overwritten.
-  void PostEvent(const InputEvent& event, bool flush = false);
+  void PostEvent(fuchsia::ui::input::InputEvent event);
 
   // Blocks until an InputEvent is available.
-  InputEvent Wait() __TA_NO_THREAD_SAFETY_ANALYSIS;
+  fuchsia::ui::input::InputEvent Wait() __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   size_t size() const;
 
  private:
-  void WriteEventToRingLocked(const InputEvent&) __TA_REQUIRES(mutex_);
+  void WriteEventToRingLocked(fuchsia::ui::input::InputEvent event)
+      __TA_REQUIRES(mutex_);
   void DropOldestLocked() __TA_REQUIRES(mutex_);
 
   std::condition_variable cv_;
   mutable std::mutex mutex_;
-  fbl::Array<InputEvent> pending_ __TA_GUARDED(mutex_);
+  fbl::Array<fuchsia::ui::input::InputEvent> pending_ __TA_GUARDED(mutex_);
   size_t index_ __TA_GUARDED(mutex_) = 0;
   size_t size_ __TA_GUARDED(mutex_) = 0;
 };
@@ -87,14 +41,17 @@ class InputEventQueue {
 // The InputDispatcher maintains InputEventQueues of pending InputEvents. This
 // class serves as a point of indirection between components that generate input
 // events, and devices that consume them.
-class InputDispatcher {
+class InputDispatcherImpl : public fuchsia::ui::input::InputDispatcher {
  public:
-  InputDispatcher(size_t queue_depth)
+  InputDispatcherImpl(size_t queue_depth)
       : keyboard_(queue_depth), mouse_(queue_depth), touch_(queue_depth) {}
 
   InputEventQueue* Keyboard() { return &keyboard_; }
   InputEventQueue* Mouse() { return &mouse_; }
   InputEventQueue* Touch() { return &touch_; }
+
+  // |InputDispatcher|
+  void DispatchEvent(fuchsia::ui::input::InputEvent event) override;
 
  private:
   InputEventQueue keyboard_;

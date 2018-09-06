@@ -24,13 +24,15 @@ static constexpr hid_keys_t kAllKeysUp = {};
 // InputDispatcher.
 class InputDispatcherVerifier {
  public:
-  InputDispatcherVerifier(InputDispatcher* dispatcher) { Reset(dispatcher); }
+  InputDispatcherVerifier(InputDispatcherImpl* dispatcher) {
+    Reset(dispatcher);
+  }
 
-  void Reset(InputDispatcher* dispatcher) {
+  void Reset(InputDispatcherImpl* dispatcher) {
     queued_events_.reset();
     while (dispatcher->Keyboard()->size() > 0) {
-      InputEvent event = dispatcher->Keyboard()->Wait();
-      queued_events_.push_back(event);
+      auto event = dispatcher->Keyboard()->Wait();
+      queued_events_.push_back(std::move(event));
     }
   }
 
@@ -38,11 +40,12 @@ class InputDispatcherVerifier {
 
   // Check for an evdev event between |min| and |max| inclusive in the
   // output stream.
-  bool HasKeyEvent(size_t min, size_t max, uint32_t hid_usage, KeyState state) {
+  bool HasKeyEvent(size_t min, size_t max, uint32_t hid_usage,
+                   fuchsia::ui::input::KeyboardEventPhase phase) {
     for (size_t i = min; i < max + 1 && i < queued_events_.size(); ++i) {
-      auto event = queued_events_[i];
-      if (event.type == InputEventType::KEYBOARD &&
-          event.key.hid_usage == hid_usage && event.key.state == state) {
+      auto& event = queued_events_[i];
+      if (event.is_keyboard() && event.keyboard().hid_usage == hid_usage &&
+          event.keyboard().phase == phase) {
         return true;
       }
     }
@@ -50,24 +53,21 @@ class InputDispatcherVerifier {
   }
 
   bool HasKeyPress(size_t min, size_t max, uint32_t usage) {
-    return HasKeyEvent(min, max, usage, KeyState::PRESSED);
+    return HasKeyEvent(min, max, usage,
+                       fuchsia::ui::input::KeyboardEventPhase::PRESSED);
   }
 
   bool HasKeyRelease(size_t min, size_t max, uint32_t usage) {
-    return HasKeyEvent(min, max, usage, KeyState::RELEASED);
-  }
-
-  bool HasBarrier(size_t i) {
-    auto event = queued_events_[i];
-    return event.type == InputEventType::BARRIER;
+    return HasKeyEvent(min, max, usage,
+                       fuchsia::ui::input::KeyboardEventPhase::RELEASED);
   }
 
  private:
-  fbl::Vector<InputEvent> queued_events_;
+  fbl::Vector<fuchsia::ui::input::InputEvent> queued_events_;
 };
 
 TEST(HidEventSourceTest, HandleKeyPress) {
-  InputDispatcher dispatcher(kInputQueueSize);
+  InputDispatcherImpl dispatcher(kInputQueueSize);
   HidInputDevice hid_device(&dispatcher);
 
   // Set 'A' as pressed.
@@ -77,13 +77,12 @@ TEST(HidEventSourceTest, HandleKeyPress) {
   ASSERT_EQ(hid_device.HandleHidKeys(keys), ZX_OK);
 
   InputDispatcherVerifier verifier(&dispatcher);
-  ASSERT_EQ(verifier.events(), 2u);
+  ASSERT_EQ(verifier.events(), 1u);
   EXPECT_TRUE(verifier.HasKeyPress(0, 0, HID_USAGE_KEY_A));
-  EXPECT_TRUE(verifier.HasBarrier(1));
 }
 
 TEST(HidEventSourceTest, HandleMultipleKeyPress) {
-  InputDispatcher dispatcher(kInputQueueSize);
+  InputDispatcherImpl dispatcher(kInputQueueSize);
   HidInputDevice hid_device(&dispatcher);
 
   // Set 'ABCD' as pressed.
@@ -96,16 +95,15 @@ TEST(HidEventSourceTest, HandleMultipleKeyPress) {
   ASSERT_EQ(hid_device.HandleHidKeys(keys), ZX_OK);
 
   InputDispatcherVerifier verifier(&dispatcher);
-  ASSERT_EQ(verifier.events(), 5u);
+  ASSERT_EQ(verifier.events(), 4u);
   EXPECT_TRUE(verifier.HasKeyPress(0, 3, HID_USAGE_KEY_A));
   EXPECT_TRUE(verifier.HasKeyPress(0, 3, HID_USAGE_KEY_B));
   EXPECT_TRUE(verifier.HasKeyPress(0, 3, HID_USAGE_KEY_C));
   EXPECT_TRUE(verifier.HasKeyPress(0, 3, HID_USAGE_KEY_D));
-  EXPECT_TRUE(verifier.HasBarrier(4));
 }
 
 TEST(HidEventSourceTest, HandleKeyRelease) {
-  InputDispatcher dispatcher(kInputQueueSize);
+  InputDispatcherImpl dispatcher(kInputQueueSize);
   HidInputDevice hid_device(&dispatcher);
 
   // Initialize with 'A' key pressed.
@@ -118,13 +116,12 @@ TEST(HidEventSourceTest, HandleKeyRelease) {
   ASSERT_EQ(hid_device.HandleHidKeys(kAllKeysUp), ZX_OK);
   verifier.Reset(&dispatcher);
 
-  ASSERT_EQ(verifier.events(), 2u);
+  ASSERT_EQ(verifier.events(), 1u);
   EXPECT_TRUE(verifier.HasKeyRelease(0, 0, HID_USAGE_KEY_A));
-  EXPECT_TRUE(verifier.HasBarrier(1));
 }
 
 TEST(HidEventSourceTest, HandleMultipleKeyRelease) {
-  InputDispatcher dispatcher(kInputQueueSize);
+  InputDispatcherImpl dispatcher(kInputQueueSize);
   HidInputDevice hid_device(&dispatcher);
 
   // Set 'ABCD' as pressed.
@@ -140,17 +137,16 @@ TEST(HidEventSourceTest, HandleMultipleKeyRelease) {
   ASSERT_EQ(hid_device.HandleHidKeys(kAllKeysUp), ZX_OK);
   verifier.Reset(&dispatcher);
 
-  ASSERT_EQ(verifier.events(), 5u);
+  ASSERT_EQ(verifier.events(), 4u);
   EXPECT_TRUE(verifier.HasKeyRelease(0, 3, HID_USAGE_KEY_A));
   EXPECT_TRUE(verifier.HasKeyRelease(0, 3, HID_USAGE_KEY_B));
   EXPECT_TRUE(verifier.HasKeyRelease(0, 3, HID_USAGE_KEY_C));
   EXPECT_TRUE(verifier.HasKeyRelease(0, 3, HID_USAGE_KEY_D));
-  EXPECT_TRUE(verifier.HasBarrier(4));
 }
 
 // Test keys both being pressed and released in a single HID report.
 TEST(HidEventSourceTest, HandleKeyPressAndRelease) {
-  InputDispatcher dispatcher(kInputQueueSize);
+  InputDispatcherImpl dispatcher(kInputQueueSize);
   HidInputDevice hid_device(&dispatcher);
 
   // Set 'AB' as pressed.
@@ -167,12 +163,11 @@ TEST(HidEventSourceTest, HandleKeyPressAndRelease) {
   ASSERT_EQ(hid_device.HandleHidKeys(keys_cd), ZX_OK);
   verifier.Reset(&dispatcher);
 
-  ASSERT_EQ(verifier.events(), 5u);
+  ASSERT_EQ(verifier.events(), 4u);
   EXPECT_TRUE(verifier.HasKeyPress(0, 3, HID_USAGE_KEY_C));
   EXPECT_TRUE(verifier.HasKeyPress(0, 3, HID_USAGE_KEY_D));
   EXPECT_TRUE(verifier.HasKeyRelease(0, 3, HID_USAGE_KEY_A));
   EXPECT_TRUE(verifier.HasKeyRelease(0, 3, HID_USAGE_KEY_B));
-  EXPECT_TRUE(verifier.HasBarrier(4));
 }
 
 }  // namespace

@@ -37,15 +37,12 @@ zx_status_t HidInputDevice::Start() {
 }
 
 zx_status_t HidInputDevice::HandleHidKeys(const hid_keys_t& curr_keys) {
-  bool send_barrier = false;
-
   // Send key-down events.
   uint8_t keycode;
   hid_keys_t pressed;
   hid_kbd_pressed_keys(&prev_keys_, &curr_keys, &pressed);
   hid_for_every_key(&pressed, keycode) {
     SendKeyEvent(keycode, true);
-    send_barrier = true;
   }
 
   // Send key-up events.
@@ -53,11 +50,6 @@ zx_status_t HidInputDevice::HandleHidKeys(const hid_keys_t& curr_keys) {
   hid_kbd_released_keys(&prev_keys_, &curr_keys, &released);
   hid_for_every_key(&released, keycode) {
     SendKeyEvent(keycode, false);
-    send_barrier = true;
-  }
-
-  if (send_barrier) {
-    SendBarrier(input_dispatcher_->Keyboard());
   }
 
   prev_keys_ = curr_keys;
@@ -86,19 +78,13 @@ zx_status_t HidInputDevice::HidEventLoop() {
 }
 
 void HidInputDevice::SendKeyEvent(uint32_t hid_usage, bool pressed) {
-  InputEvent event;
-  event.type = InputEventType::KEYBOARD;
-  event.key = {
-      .hid_usage = hid_usage,
-      .state = pressed ? KeyState::PRESSED : KeyState::RELEASED,
-  };
-  input_dispatcher_->Keyboard()->PostEvent(event);
-}
-
-void HidInputDevice::SendBarrier(InputEventQueue* event_queue) {
-  InputEvent event;
-  event.type = InputEventType::BARRIER;
-  event_queue->PostEvent(event);
+  fuchsia::ui::input::KeyboardEvent keyboard_event{};
+  keyboard_event.phase = pressed ? fuchsia::ui::input::KeyboardEventPhase::PRESSED
+                             : fuchsia::ui::input::KeyboardEventPhase::RELEASED;
+  keyboard_event.hid_usage = hid_usage;
+  fuchsia::ui::input::InputEvent event{};
+  event.set_keyboard(std::move(keyboard_event));
+  input_dispatcher_->DispatchEvent(std::move(event));
 }
 
 zx_status_t HidEventSource::Start() {

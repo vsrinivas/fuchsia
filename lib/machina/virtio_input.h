@@ -7,6 +7,7 @@
 
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid/hid.h>
 #include <virtio/input.h>
 #include <virtio/virtio_ids.h>
@@ -39,17 +40,21 @@ class VirtioInput : public VirtioDevice<VIRTIO_ID_INPUT, VIRTIO_INPUT_Q_COUNT,
 
   virtual zx_status_t UpdateConfig(uint64_t addr, const IoValue& value);
 
+ protected:
+  zx_status_t SendKeyEvent(uint16_t code, virtio_input_key_event_value value);
+  zx_status_t SendRepEvent(uint16_t code, virtio_input_key_event_value value);
+  zx_status_t SendRelEvent(virtio_input_rel_event_code code, uint32_t value);
+  zx_status_t SendAbsEvent(virtio_input_abs_event_code code, uint32_t value);
+  zx_status_t SendSynEvent();
+
  private:
   zx_status_t PollEventQueue();
-
-  zx_status_t OnInputEvent(const InputEvent& event);
-  zx_status_t OnPointerEvent(const PointerEvent& pointer_event);
-  zx_status_t OnBarrierEvent();
-  zx_status_t OnKeyEvent(const KeyEvent& event);
-  zx_status_t OnButtonEvent(const ButtonEvent& button_event);
-
   zx_status_t SendVirtioEvent(const virtio_input_event_t& event,
                               uint8_t actions);
+  // Process a fuchsia event and pass it to the guest.
+  // Note: event positions should be normalized such that 0..1 maps to the
+  // extents of the guest.
+  virtual zx_status_t HandleEvent(const fuchsia::ui::input::InputEvent& event) = 0;
 
   const char* device_name_;
   const char* device_serial_;
@@ -62,8 +67,9 @@ class VirtioKeyboard : public VirtioInput {
                  const char* device_name, const char* device_serial)
       : VirtioInput(event_queue, phys_mem, device_name, device_serial) {}
 
- protected:
+ private:
   zx_status_t UpdateConfig(uint64_t addr, const IoValue& value) override;
+  zx_status_t HandleEvent(const fuchsia::ui::input::InputEvent& event) override;
 };
 
 class VirtioRelativePointer : public VirtioInput {
@@ -72,25 +78,20 @@ class VirtioRelativePointer : public VirtioInput {
                         const char* device_name, const char* device_serial)
       : VirtioInput(event_queue, phys_mem, device_name, device_serial) {}
 
- protected:
+ private:
   zx_status_t UpdateConfig(uint64_t addr, const IoValue& value) override;
+  zx_status_t HandleEvent(const fuchsia::ui::input::InputEvent& event) override;
 };
 
 class VirtioAbsolutePointer : public VirtioInput {
  public:
   VirtioAbsolutePointer(InputEventQueue* event_queue, const PhysMem& phys_mem,
-                        const char* device_name, const char* device_serial,
-                        uint32_t max_width, uint32_t max_height)
-      : VirtioInput(event_queue, phys_mem, device_name, device_serial),
-        max_width_(max_width),
-        max_height_(max_height) {}
-
- protected:
-  zx_status_t UpdateConfig(uint64_t addr, const IoValue& value) override;
+                        const char* device_name, const char* device_serial)
+      : VirtioInput(event_queue, phys_mem, device_name, device_serial) {}
 
  private:
-  uint32_t max_width_;
-  uint32_t max_height_;
+  zx_status_t UpdateConfig(uint64_t addr, const IoValue& value) override;
+  zx_status_t HandleEvent(const fuchsia::ui::input::InputEvent& event) override;
 };
 
 }  // namespace machina

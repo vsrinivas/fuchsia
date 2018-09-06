@@ -5,6 +5,7 @@
 #include "garnet/lib/machina/virtio_input.h"
 
 #include <fcntl.h>
+#include <iomanip>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -12,6 +13,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <lib/fxl/logging.h>
+#include <lib/ui/input/cpp/formatting.h>
 
 #include "garnet/lib/machina/bits.h"
 
@@ -177,6 +179,32 @@ constexpr uint32_t kButtonMousePrimaryCode = 0x110;
 constexpr uint32_t kButtonMouseSecondaryCode = 0x111;
 constexpr uint32_t kButtonMouseTertiaryCode = 0x112;
 
+// TODO(MAC-164): Use real touch/pen digitizer resolutions.
+constexpr uint32_t kAbsMaxX = UINT16_MAX;
+constexpr uint32_t kAbsMaxY = UINT16_MAX;
+
+// Retrieves the position of a pointer event and translates it into the
+// coordinate space expected in the VIRTIO_INPUT_EV_[REL/ABS] event payload.
+// The incoming event coordinates are expected to be in the floating-point 0..1
+// range, which are mapped to the nearest integer in 0..kAbsMax[X/Y].
+static void GetPointerCoordinate(const fuchsia::ui::input::PointerEvent& event,
+                                 uint32_t* x_out, uint32_t* y_out) {
+  float x_in = event.x;
+  float y_in = event.y;
+  if (x_in < 0.0f || x_in > 1.0f) {
+    FXL_LOG(WARNING) << "PointerEvent::x out of range (" << std::fixed
+                     << std::setprecision(7) << x_in << ")";
+    x_in = std::min(1.0f, std::max(0.0f, x_in));
+  }
+  if (y_in < 0.0f || y_in > 1.0f) {
+    FXL_LOG(WARNING) << "PointerEvent::y out of range (" << std::fixed
+                     << std::setprecision(7) << y_in << ")";
+    y_in = std::min(1.0f, std::max(0.0f, y_in));
+  }
+  *x_out = static_cast<uint32_t>(x_in * kAbsMaxX + 0.5f);
+  *y_out = static_cast<uint32_t>(y_in * kAbsMaxY + 0.5f);
+}
+
 VirtioInput::VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
                          const char* device_name, const char* device_serial)
     : VirtioDevice(phys_mem, 0 /* device_features */,
@@ -229,6 +257,96 @@ zx_status_t VirtioInput::UpdateConfig(uint64_t addr, const IoValue& value) {
   return ZX_OK;
 }
 
+zx_status_t VirtioInput::SendKeyEvent(uint16_t code,
+                                      virtio_input_key_event_value value) {
+  virtio_input_event_t event{};
+  event.type = VIRTIO_INPUT_EV_KEY;
+  event.code = code;
+  event.value = value;
+  return SendVirtioEvent(event, VirtioQueue::SET_QUEUE);
+}
+
+zx_status_t VirtioInput::SendRepEvent(uint16_t code,
+                                      virtio_input_key_event_value value) {
+  virtio_input_event_t event{};
+  event.type = VIRTIO_INPUT_EV_REP;
+  event.code = code;
+  event.value = value;
+  return SendVirtioEvent(event, VirtioQueue::SET_QUEUE);
+}
+
+zx_status_t VirtioInput::SendRelEvent(virtio_input_rel_event_code code,
+                                      uint32_t value) {
+  virtio_input_event_t event{};
+  event.type = VIRTIO_INPUT_EV_REL;
+  event.code = code;
+  event.value = value;
+  return SendVirtioEvent(event, VirtioQueue::SET_QUEUE);
+}
+
+zx_status_t VirtioInput::SendAbsEvent(virtio_input_abs_event_code code,
+                                      uint32_t value) {
+  virtio_input_event_t event{};
+  event.type = VIRTIO_INPUT_EV_ABS;
+  event.code = code;
+  event.value = value;
+  return SendVirtioEvent(event, VirtioQueue::SET_QUEUE);
+}
+
+zx_status_t VirtioInput::SendSynEvent() {
+  virtio_input_event_t event{};
+  event.type = VIRTIO_INPUT_EV_SYN;
+  return SendVirtioEvent(event, VirtioQueue::SET_QUEUE | VirtioQueue::TRY_INTERRUPT);
+}
+
+zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event,
+                                         uint8_t actions) {
+  uint16_t head;
+  event_queue()->Wait(&head);
+
+  VirtioDescriptor desc;
+  zx_status_t status = event_queue()->ReadDesc(head, &desc);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto event_out = static_cast<virtio_input_event_t*>(desc.addr);
+  memcpy(event_out, &event, sizeof(event));
+
+  return event_queue()->Return(head, sizeof(event), actions);
+}
+
+zx_status_t VirtioInput::Start() {
+  thrd_t thread;
+  auto poll_thread = [](void* arg) {
+    return reinterpret_cast<VirtioInput*>(arg)->PollEventQueue();
+  };
+  char thrd_name[ZX_MAX_NAME_LEN]{};
+  FXL_DCHECK(device_name_ != nullptr);
+  snprintf(thrd_name, sizeof(thrd_name), "virtio-input-%s", device_name_);
+  int ret = thrd_create_with_name(&thread, poll_thread, this, thrd_name);
+  if (ret != thrd_success) {
+    return ZX_ERR_INTERNAL;
+  }
+  ret = thrd_detach(thread);
+  if (ret != thrd_success) {
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
+}
+
+zx_status_t VirtioInput::PollEventQueue() {
+  while (true) {
+    auto event = event_queue_->Wait();
+    zx_status_t status = HandleEvent(event);
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+      FXL_LOG(INFO) << "Unsupported event received:\n" << event;
+    } else if (status != ZX_OK) {
+      return status;
+    }
+  }
+}
+
 zx_status_t VirtioKeyboard::UpdateConfig(uint64_t addr, const IoValue& value) {
   zx_status_t status = VirtioInput::UpdateConfig(addr, value);
   if (status != ZX_OK) {
@@ -270,6 +388,42 @@ zx_status_t VirtioKeyboard::UpdateConfig(uint64_t addr, const IoValue& value) {
   return ZX_OK;
 }
 
+zx_status_t VirtioKeyboard::HandleEvent(const fuchsia::ui::input::InputEvent& event) {
+  if (!event.is_keyboard() ||
+      event.keyboard().hid_usage >= (sizeof(kKeyMap) / sizeof(kKeyMap[0]))) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto code = kKeyMap[event.keyboard().hid_usage];
+  switch (event.keyboard().phase) {
+    case fuchsia::ui::input::KeyboardEventPhase::PRESSED: {
+      zx_status_t status = SendKeyEvent(code, VIRTIO_INPUT_EV_KEY_PRESSED);
+      if (status != ZX_OK) {
+        return status;
+      }
+      return SendSynEvent();
+    }
+    case fuchsia::ui::input::KeyboardEventPhase::REPEAT: {
+      zx_status_t status = SendRepEvent(code, VIRTIO_INPUT_EV_KEY_PRESSED);
+      if (status != ZX_OK) {
+        return status;
+      }
+      return SendSynEvent();
+    }
+    case fuchsia::ui::input::KeyboardEventPhase::RELEASED:
+    case fuchsia::ui::input::KeyboardEventPhase::CANCELLED: {
+      zx_status_t status = SendKeyEvent(code, VIRTIO_INPUT_EV_KEY_RELEASED);
+      if (status != ZX_OK) {
+        return status;
+      }
+      return SendSynEvent();
+    }
+    default: {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  }
+}
+
 zx_status_t VirtioRelativePointer::UpdateConfig(uint64_t addr,
                                                 const IoValue& value) {
   zx_status_t status = VirtioInput::UpdateConfig(addr, value);
@@ -299,6 +453,12 @@ zx_status_t VirtioRelativePointer::UpdateConfig(uint64_t addr,
   return ZX_OK;
 }
 
+// TODO(MAC-165): [virtio-input] Implement VirtioRelativePointer
+zx_status_t VirtioRelativePointer::HandleEvent(const fuchsia::ui::input::InputEvent& event) {
+  FXL_NOTIMPLEMENTED();
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t VirtioAbsolutePointer::UpdateConfig(uint64_t addr,
                                                 const IoValue& value) {
   zx_status_t status = VirtioInput::UpdateConfig(addr, value);
@@ -321,144 +481,76 @@ zx_status_t VirtioAbsolutePointer::UpdateConfig(uint64_t addr,
   } else if (config_.select == VIRTIO_INPUT_CFG_ABS_INFO) {
     if (config_.subsel == VIRTIO_INPUT_EV_ABS_X) {
       config_.u.abs.min = 0;
-      config_.u.abs.max = max_width_;
+      config_.u.abs.max = kAbsMaxX;
       config_.size = sizeof(config_.u.abs);
     } else if (config_.subsel == VIRTIO_INPUT_EV_ABS_Y) {
       config_.u.abs.min = 0;
-      config_.u.abs.max = max_height_;
+      config_.u.abs.max = kAbsMaxY;
       config_.size = sizeof(config_.u.abs);
     }
   }
   return ZX_OK;
 }
 
-zx_status_t VirtioInput::Start() {
-  thrd_t thread;
-  auto poll_thread = [](void* arg) {
-    return reinterpret_cast<VirtioInput*>(arg)->PollEventQueue();
-  };
-  int ret = thrd_create_with_name(&thread, poll_thread, this, "virtio-input");
-  if (ret != thrd_success) {
-    return ZX_ERR_INTERNAL;
+zx_status_t VirtioAbsolutePointer::HandleEvent(const fuchsia::ui::input::InputEvent& event) {
+  if (!event.is_pointer()) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
-  ret = thrd_detach(thread);
-  if (ret != thrd_success) {
-    return ZX_ERR_INTERNAL;
-  }
-  return ZX_OK;
-}
 
-zx_status_t VirtioInput::PollEventQueue() {
-  while (true) {
-    InputEvent event = event_queue_->Wait();
-    zx_status_t status = OnInputEvent(event);
-    if (status != ZX_OK) {
-      return status;
+  uint32_t pos_x = 0;
+  uint32_t pos_y = 0;
+  GetPointerCoordinate(event.pointer(), &pos_x, &pos_y);
+
+  switch (event.pointer().phase) {
+    case fuchsia::ui::input::PointerEventPhase::DOWN:
+    case fuchsia::ui::input::PointerEventPhase::UP: {
+      uint32_t key_code = 0;
+      if (event.pointer().buttons & fuchsia::ui::input::kMousePrimaryButton) {
+        key_code = kButtonMousePrimaryCode;
+      } else if (event.pointer().buttons &
+                fuchsia::ui::input::kMouseSecondaryButton) {
+        key_code = kButtonMouseSecondaryCode;
+      } else if (event.pointer().buttons &
+                fuchsia::ui::input::kMouseTertiaryButton) {
+        key_code = kButtonMouseTertiaryCode;
+      } else {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      virtio_input_key_event_value key_value =
+          event.pointer().phase == fuchsia::ui::input::PointerEventPhase::DOWN
+              ? VIRTIO_INPUT_EV_KEY_PRESSED
+              : VIRTIO_INPUT_EV_KEY_RELEASED;
+      // Send position events, then the key event.
+      zx_status_t status = SendAbsEvent(VIRTIO_INPUT_EV_ABS_X, pos_x);
+      if (status != ZX_OK) {
+        return status;
+      }
+      status = SendAbsEvent(VIRTIO_INPUT_EV_ABS_Y, pos_y);
+      if (status != ZX_OK) {
+        return status;
+      }
+      status = SendKeyEvent(key_code, key_value);
+      if (status != ZX_OK) {
+        return status;
+      }
+      return SendSynEvent();
+    }
+    case fuchsia::ui::input::PointerEventPhase::MOVE: {
+      // Send position events.
+      zx_status_t status = SendAbsEvent(VIRTIO_INPUT_EV_ABS_X, pos_x);
+      if (status != ZX_OK) {
+        return status;
+      }
+      status = SendAbsEvent(VIRTIO_INPUT_EV_ABS_Y, pos_y);
+      if (status != ZX_OK) {
+        return status;
+      }
+      return SendSynEvent();
+    }
+    default: {
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-}
-
-zx_status_t VirtioInput::OnInputEvent(const InputEvent& event) {
-  switch (event.type) {
-    case InputEventType::BARRIER:
-      return OnBarrierEvent();
-    case InputEventType::KEYBOARD:
-      return OnKeyEvent(event.key);
-    case InputEventType::POINTER:
-      return OnPointerEvent(event.pointer);
-    case InputEventType::BUTTON:
-      return OnButtonEvent(event.button);
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-
-zx_status_t VirtioInput::OnKeyEvent(const KeyEvent& key_event) {
-  if (key_event.hid_usage >= (sizeof(kKeyMap) / sizeof(kKeyMap[0]))) {
-    return ZX_OK;
-  }
-
-  virtio_input_event_t virtio_event;
-  virtio_event.type = VIRTIO_INPUT_EV_KEY;
-  virtio_event.code = kKeyMap[key_event.hid_usage];
-  virtio_event.value = key_event.state == KeyState::PRESSED
-                           ? VIRTIO_INPUT_EV_KEY_PRESSED
-                           : VIRTIO_INPUT_EV_KEY_RELEASED;
-  return SendVirtioEvent(virtio_event, VirtioQueue::SET_QUEUE);
-}
-
-zx_status_t VirtioInput::OnPointerEvent(const PointerEvent& pointer_event) {
-  virtio_input_event_t x_event, y_event;
-  switch (pointer_event.type) {
-    case PointerType::RELATIVE:
-      x_event.type = VIRTIO_INPUT_EV_REL;
-      x_event.code = VIRTIO_INPUT_EV_REL_X;
-      y_event.type = VIRTIO_INPUT_EV_REL;
-      y_event.code = VIRTIO_INPUT_EV_REL_Y;
-      break;
-    case PointerType::ABSOLUTE:
-      x_event.type = VIRTIO_INPUT_EV_ABS;
-      x_event.code = VIRTIO_INPUT_EV_ABS_X;
-      y_event.type = VIRTIO_INPUT_EV_ABS;
-      y_event.code = VIRTIO_INPUT_EV_ABS_Y;
-      break;
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-  x_event.value = static_cast<int32_t>(pointer_event.x);
-  y_event.value = static_cast<int32_t>(pointer_event.y);
-  zx_status_t status = SendVirtioEvent(x_event, VirtioQueue::SET_QUEUE);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return SendVirtioEvent(y_event, VirtioQueue::SET_QUEUE);
-}
-
-zx_status_t VirtioInput::OnButtonEvent(const ButtonEvent& button_event) {
-  virtio_input_event_t virtio_event;
-  switch (button_event.button) {
-    case machina::Button::BTN_MOUSE_PRIMARY:
-      virtio_event.code = kButtonMousePrimaryCode;
-      break;
-    case machina::Button::BTN_MOUSE_SECONDARY:
-      virtio_event.code = kButtonMouseSecondaryCode;
-      break;
-    case machina::Button::BTN_MOUSE_TERTIARY:
-      virtio_event.code = kButtonMouseSecondaryCode;
-      break;
-    default:
-      return ZX_OK;
-  }
-  virtio_event.type = VIRTIO_INPUT_EV_KEY;
-  virtio_event.value = button_event.state == KeyState::PRESSED
-                           ? VIRTIO_INPUT_EV_KEY_PRESSED
-                           : VIRTIO_INPUT_EV_KEY_RELEASED;
-  return SendVirtioEvent(virtio_event, VirtioQueue::SET_QUEUE);
-}
-
-zx_status_t VirtioInput::OnBarrierEvent() {
-  virtio_input_event_t virtio_event = {};
-  virtio_event.type = VIRTIO_INPUT_EV_SYN;
-  return SendVirtioEvent(virtio_event,
-                         VirtioQueue::SET_QUEUE | VirtioQueue::TRY_INTERRUPT);
-}
-
-zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event,
-                                         uint8_t actions) {
-  uint16_t head;
-  event_queue()->Wait(&head);
-
-  VirtioDescriptor desc;
-  zx_status_t status = event_queue()->ReadDesc(head, &desc);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  auto event_out = static_cast<virtio_input_event_t*>(desc.addr);
-  memcpy(event_out, &event, sizeof(event));
-
-  // To be less chatty, we'll only send interrupts on barrier events.
-  return event_queue()->Return(head, sizeof(event), actions);
 }
 
 }  // namespace machina

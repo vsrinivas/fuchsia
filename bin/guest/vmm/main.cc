@@ -155,7 +155,7 @@ static zx_status_t setup_zircon_framebuffer(
 
 static zx_status_t setup_scenic_framebuffer(
     component::StartupContext* startup_context, machina::VirtioGpu* gpu,
-    machina::InputDispatcher* input_dispatcher,
+    machina::InputDispatcherImpl* input_dispatcher,
     InstanceControllerImpl* instance_controller,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
   fbl::unique_ptr<ScenicScanout> scenic_scanout;
@@ -320,7 +320,7 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  machina::InputDispatcher input_dispatcher(kInputQueueDepth);
+  machina::InputDispatcherImpl input_dispatcher(kInputQueueDepth);
   machina::HidEventSource hid_event_source(&input_dispatcher);
   machina::VirtioKeyboard keyboard(input_dispatcher.Keyboard(),
                                    guest.phys_mem(), "machina-keyboard",
@@ -330,7 +330,7 @@ int main(int argc, char** argv) {
                                        "serial-number");
   machina::VirtioAbsolutePointer touch(
       input_dispatcher.Touch(), guest.phys_mem(), "machina-touch",
-      "serial-number", kGuestViewDisplayWidth, kGuestViewDisplayHeight);
+      "serial-number");
   machina::VirtioGpu gpu(guest.phys_mem(), guest.device_dispatcher());
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
 

@@ -13,14 +13,14 @@
 
 // static
 zx_status_t ScenicScanout::Create(component::StartupContext* startup_context,
-                                  machina::InputDispatcher* input_dispatcher,
+                                  machina::InputDispatcherImpl* input_dispatcher,
                                   fbl::unique_ptr<ScenicScanout>* out) {
   *out = fbl::make_unique<ScenicScanout>(startup_context, input_dispatcher);
   return ZX_OK;
 }
 
 ScenicScanout::ScenicScanout(component::StartupContext* startup_context,
-                             machina::InputDispatcher* input_dispatcher)
+                             machina::InputDispatcherImpl* input_dispatcher)
     : input_dispatcher_(input_dispatcher), startup_context_(startup_context) {
   // The actual framebuffer can't be created until we've connected to the
   // mozart service.
@@ -55,7 +55,7 @@ void ScenicScanout::InvalidateRegion(const machina::GpuRect& rect) {
 }
 
 GuestView::GuestView(
-    machina::GpuScanout* scanout, machina::InputDispatcher* input_dispatcher,
+    machina::GpuScanout* scanout, machina::InputDispatcherImpl* input_dispatcher,
     ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request)
@@ -101,88 +101,25 @@ void GuestView::OnSceneInvalidated(
   scenic::HostImage image(*memory_, 0u, image_info_);
   material_.SetTexture(image);
 
-  pointer_scale_x_ = static_cast<float>(kGuestViewDisplayWidth) / width;
-  pointer_scale_y_ = static_cast<float>(kGuestViewDisplayHeight) / height;
   view_ready_ = true;
 }
 
-zx_status_t FromMozartButton(uint32_t event, machina::Button* button) {
-  switch (event) {
-    case fuchsia::ui::input::kMousePrimaryButton:
-      *button = machina::Button::BTN_MOUSE_PRIMARY;
-      return ZX_OK;
-    case fuchsia::ui::input::kMouseSecondaryButton:
-      *button = machina::Button::BTN_MOUSE_SECONDARY;
-      return ZX_OK;
-    case fuchsia::ui::input::kMouseTertiaryButton:
-      *button = machina::Button::BTN_MOUSE_TERTIARY;
-      return ZX_OK;
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-
 bool GuestView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
-  if (event.is_keyboard()) {
-    const fuchsia::ui::input::KeyboardEvent& key_event = event.keyboard();
-
-    machina::InputEvent event;
-    event.type = machina::InputEventType::KEYBOARD;
-    event.key.hid_usage = key_event.hid_usage;
-    switch (key_event.phase) {
-      case fuchsia::ui::input::KeyboardEventPhase::PRESSED:
-        event.key.state = machina::KeyState::PRESSED;
-        break;
-      case fuchsia::ui::input::KeyboardEventPhase::RELEASED:
-      case fuchsia::ui::input::KeyboardEventPhase::CANCELLED:
-        event.key.state = machina::KeyState::RELEASED;
-        break;
-      default:
-        // Ignore events for unsupported phases.
-        return true;
-    }
-    input_dispatcher_->Keyboard()->PostEvent(event, true);
-    return true;
-  } else if (event.is_pointer()) {
-    const fuchsia::ui::input::PointerEvent& pointer_event = event.pointer();
+  if (event.is_pointer()) {
     if (!view_ready_) {
       // Ignore pointer events that come in before the view is ready.
       return true;
     }
-    machina::InputEvent event;
-    switch (pointer_event.phase) {
-      case fuchsia::ui::input::PointerEventPhase::MOVE:
-        event.type = machina::InputEventType::POINTER;
-        event.pointer.x = pointer_event.x * pointer_scale_x_;
-        event.pointer.y = pointer_event.y * pointer_scale_y_;
-        event.pointer.type = machina::PointerType::ABSOLUTE;
-        break;
-      case fuchsia::ui::input::PointerEventPhase::DOWN:
-        event.type = machina::InputEventType::BUTTON;
-        event.button.state = machina::KeyState::PRESSED;
-        if (FromMozartButton(pointer_event.buttons, &event.button.button) !=
-            ZX_OK) {
-          // Ignore events for unsupported buttons.
-          return true;
-        }
-        break;
-      case fuchsia::ui::input::PointerEventPhase::UP:
-        event.type = machina::InputEventType::BUTTON;
-        event.button.state = machina::KeyState::RELEASED;
-        if (FromMozartButton(pointer_event.buttons, &event.button.button) !=
-            ZX_OK) {
-          // Ignore events for unsupported buttons.
-          return true;
-        }
-        break;
-      default:
-        // Ignore events for unsupported phases.
-        return true;
-    }
-    // The pointer events get routed to the touch event queue because the
-    // pointer positions are always absolute.
-    input_dispatcher_->Touch()->PostEvent(event, true);
-    return true;
+
+    // Normalize pointer positions to 0..1.
+    // TODO(SCN-921): pointer event positions outside view boundaries.
+    event.pointer().x /= logical_size().width;
+    event.pointer().y /= logical_size().height;
+
+    // Override the pointer type to touch because the view event positions are
+    // always absolute.
+    event.pointer().type = fuchsia::ui::input::PointerEventType::TOUCH;
   }
+  input_dispatcher_->DispatchEvent(std::move(event));
   return false;
 }
