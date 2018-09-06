@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <float.h>
 #include <math.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -84,7 +85,7 @@ bool TestExponentialReverseMap() {
     // -inf     5 8  14       26      +inf
     HistogramOptions options =
         HistogramOptions::Exponential(/*bucket_count=*/3, /*base=*/2, /*scalar=*/3, /*offset=*/5);
-    EXPECT_EQ(options.reverse_map_fn(/*bucket_index=*/0, options), -INFINITY);
+    EXPECT_EQ(options.reverse_map_fn(/*bucket_index=*/0, options), -DBL_MAX);
     EXPECT_EQ(options.reverse_map_fn(1, options), 5);
     EXPECT_EQ(options.reverse_map_fn(2, options), 8);
     EXPECT_EQ(options.reverse_map_fn(3, options), 14);
@@ -152,7 +153,7 @@ bool TestLinearReverseMap() {
     // -inf    -10  -8  -6   -4        +inf
     HistogramOptions options =
         HistogramOptions::Linear(/*bucket_count=*/3, /*scalar=*/2, /*offset=*/-10);
-    EXPECT_EQ(options.reverse_map_fn(/*bucket_index=*/0, options), -INFINITY);
+    EXPECT_EQ(options.reverse_map_fn(/*bucket_index=*/0, options), -DBL_MAX);
     EXPECT_EQ(options.reverse_map_fn(1, options), -10);
     EXPECT_EQ(options.reverse_map_fn(2, options), -8);
     EXPECT_EQ(options.reverse_map_fn(3, options), -6);

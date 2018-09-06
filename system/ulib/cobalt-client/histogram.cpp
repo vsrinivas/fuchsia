@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <float.h>
 #include <math.h>
 #include <string.h>
+
+#include <cobalt-client/cpp/histogram.h>
 
 #include <cobalt-client/cpp/histogram-internal.h>
 #include <cobalt-client/cpp/histogram-options.h>
@@ -16,14 +19,14 @@ namespace {
 
 double GetLinearBucketValue(uint32_t bucket_index, const HistogramOptions& options) {
     if (bucket_index == 0) {
-        return -INFINITY;
+        return -DBL_MAX;
     }
     return options.scalar * (bucket_index - 1) + options.offset;
 }
 
 double GetExponentialBucketValue(uint32_t bucket_index, const HistogramOptions& options) {
     if (bucket_index == 0) {
-        return -INFINITY;
+        return -DBL_MAX;
     }
     return options.scalar * pow(options.base, bucket_index - 1) + options.offset;
 }
@@ -144,5 +147,41 @@ HistogramOptions HistogramOptions::Linear(uint32_t bucket_count, uint32_t scalar
     options.reverse_map_fn = internal::GetLinearBucketValue;
     return options;
 }
+
+Histogram::Histogram(HistogramOptions* options, internal::RemoteHistogram* remote_histogram)
+    : options_(options), remote_histogram_(remote_histogram) {}
+
+Histogram::Histogram(const Histogram&) = default;
+Histogram::Histogram(Histogram&&) = default;
+Histogram& Histogram::operator=(const Histogram&) = default;
+Histogram& Histogram::operator=(Histogram&&) = default;
+Histogram::~Histogram() = default;
+
+template <typename ValueType>
+void Histogram::Add(ValueType value, Histogram::Count times) {
+    double dbl_value = static_cast<double>(value);
+    uint32_t bucket = options_->map_fn(dbl_value, *options_);
+    remote_histogram_->IncrementCount(bucket, times);
+}
+
+template <typename ValueType>
+Histogram::Count Histogram::GetRemoteCount(ValueType value) const {
+    double dbl_value = static_cast<double>(value);
+    uint32_t bucket = options_->map_fn(dbl_value, *options_);
+    return remote_histogram_->GetCount(bucket);
+}
+
+// Supported template instantiations.
+template void Histogram::Add<double>(double, Histogram::Count);
+template void Histogram::Add<int32_t>(int32_t, Histogram::Count);
+template void Histogram::Add<uint32_t>(uint32_t, Histogram::Count);
+template void Histogram::Add<int64_t>(int64_t, Histogram::Count);
+template void Histogram::Add<uint64_t>(uint64_t, Histogram::Count);
+
+template Histogram::Count Histogram::GetRemoteCount<double>(double) const;
+template Histogram::Count Histogram::GetRemoteCount<int32_t>(int32_t) const;
+template Histogram::Count Histogram::GetRemoteCount<uint32_t>(uint32_t) const;
+template Histogram::Count Histogram::GetRemoteCount<int64_t>(int64_t) const;
+template Histogram::Count Histogram::GetRemoteCount<uint64_t>(uint64_t) const;
 
 } // namespace cobalt_client
