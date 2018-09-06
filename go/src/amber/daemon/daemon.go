@@ -7,6 +7,7 @@ package daemon
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/url"
@@ -835,20 +836,12 @@ func WriteUpdateToPkgFS(data *GetResult, dst *os.File) (string, error) {
 	if err != nil {
 		return "", NewErrProcessPackage("couldn't truncate file destination %s", e)
 	}
-
-	// TODO(XXX) Consider a more efficient implementation that reads chunks, for now this
-	// is pretty safe because meta FARs are small
-	fileBytes, err := ioutil.ReadAll(data)
-	if err != nil {
-		return "", NewErrProcessPackage("reading from temp file failed: %s", err)
-	}
-
-	written, err := dst.Write(fileBytes)
+	written, err := io.Copy(dst, data)
 	if err != nil {
 		return "", NewErrProcessPackage("couldn't write update to file %s", err)
 	}
 
-	if int64(written) != i.Size() {
+	if written != i.Size() {
 		return "", NewErrProcessPackage("pkg blob incomplete, only wrote %d out of %d bytes", written, i.Size())
 	}
 
