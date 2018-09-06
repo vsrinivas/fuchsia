@@ -16,6 +16,10 @@ impl <S> StateMachine<S> {
         self.state = Some(map(self.state.take().expect("State can never be None")));
     }
 
+    pub fn state(&self) -> &S {
+        &self.state.as_ref().expect("State can never be None")
+    }
+
     pub fn into_state(self) -> S {
         self.state.expect("State can never be None")
     }

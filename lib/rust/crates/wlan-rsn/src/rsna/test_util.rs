@@ -334,7 +334,7 @@ impl FourwayHandshakeTestEnv {
         -> Result<(), failure::Error> where F: Fn(&mut eapol::KeyFrame)
     {
         // Send third message of 4-Way Handshake to Supplicant.
-        let ptk = self.ptk.as_ref().unwrap();
+        let ptk = self.ptk.as_ref().expect("PTK is not present");
         let (frame, kd_plaintext) = get_4whs_msg3(ptk, &self.a_nonce[..], &gtk[..], msg_modifier);
         let msg3 = VerifiedKeyFrame {
             frame: &frame,

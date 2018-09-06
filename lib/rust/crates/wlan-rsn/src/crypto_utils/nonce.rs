@@ -18,6 +18,13 @@ pub struct NonceReader {
     key_counter: Mutex<BigUint>,
 }
 
+// There should only ever be one NonceReader which renders this comparison superfluous. In addition,
+// this check would require acquiring the lock to access the underlying counter. As a result, simply
+// always assume two NonceReader match.
+impl PartialEq for NonceReader {
+    fn eq(&self, _other: &NonceReader) -> bool { true }
+}
+
 impl NonceReader {
     pub fn new(sta_addr: &[u8]) -> Result<NonceReader, failure::Error> {
         // Write time and STA's address to buffer for PRF-256.

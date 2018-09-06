@@ -5,8 +5,8 @@
 mod authenticator;
 mod supplicant;
 
-use self::supplicant::Supplicant;
 use bytes::Bytes;
+use crate::crypto_utils::nonce::NonceReader;
 use crate::key::exchange;
 use crate::rsna::{NegotiatedRsne, Role, SecAssocUpdate, UpdateSink, VerifiedKeyFrame};
 use crate::rsne::Rsne;
@@ -18,7 +18,7 @@ use failure::{self, bail, ensure};
 #[derive(Debug, PartialEq)]
 enum RoleHandler {
     Authenticator(StateMachine<authenticator::State>),
-    Supplicant(Supplicant),
+    Supplicant(StateMachine<supplicant::State>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -116,8 +116,12 @@ pub struct Fourway(RoleHandler);
 
 impl Fourway {
     pub fn new(cfg: Config, pmk: Vec<u8>) -> Result<Fourway, failure::Error> {
+        let nonce_rdr = NonceReader::new(&cfg.s_addr[..])?;
         let handler = match &cfg.role {
-            Role::Supplicant => RoleHandler::Supplicant(Supplicant::new(cfg, pmk)?),
+            Role::Supplicant => {
+                let state = supplicant::new(cfg, pmk, nonce_rdr);
+                RoleHandler::Supplicant(StateMachine::new(state))
+            },
             Role::Authenticator => {
                 let state = authenticator::new(cfg, pmk);
                 RoleHandler::Authenticator(StateMachine::new(state))
@@ -156,22 +160,23 @@ impl Fourway {
                 });
                 Ok(())
             }
-            // TODO(hahnr): Follow Authenticator design for Supplicant.
-            RoleHandler::Supplicant(s) => {
-                let frame =
-                    FourwayHandshakeFrame::from_verified(frame, Role::Supplicant, Some(s.anonce()))?;
-                s.on_eapol_key_frame(update_sink, frame)
+            RoleHandler::Supplicant(state_machine) => {
+                let anonce = state_machine.state().anonce();
+                let frame = FourwayHandshakeFrame::from_verified(frame, Role::Supplicant, anonce)?;
+                state_machine.replace_state(|state| {
+                    state.on_eapol_key_frame(update_sink, frame)
+                });
+                Ok(())
             }
         }
     }
 
     pub fn destroy(self) -> exchange::Config {
-        match self.0 {
-            RoleHandler::Supplicant(s) => exchange::Config::FourWayHandshake(s.destroy()),
-            RoleHandler::Authenticator(state_machine) => {
-                exchange::Config::FourWayHandshake(state_machine.into_state().destroy())
-            },
-        }
+        let cfg = match self.0 {
+            RoleHandler::Supplicant(state_machine) => state_machine.into_state().destroy(),
+            RoleHandler::Authenticator(state_machine) => state_machine.into_state().destroy(),
+        };
+        exchange::Config::FourWayHandshake(cfg)
     }
 }
 
