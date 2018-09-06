@@ -15,6 +15,7 @@
 #include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/macros.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/last_one_wins_merge_strategy.h"
@@ -23,13 +24,120 @@
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
-#include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/testing/test_backoff.h"
 
 namespace ledger {
 namespace {
+
+using ::testing::UnorderedElementsAre;
+
+class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
+ public:
+  FakePageStorageImpl(std::unique_ptr<storage::PageStorage> page_storage)
+      : storage_(std::move(page_storage)) {}
+
+  void MarkCommitContentsUnavailable(storage::CommitIdView commit_id) {
+    removed_commit_ids_.insert(commit_id.ToString());
+  }
+
+  void GetHeadCommitIds(
+      fit::function<void(storage::Status, std::vector<storage::CommitId>)>
+          callback) override {
+    storage_->GetHeadCommitIds(std::move(callback));
+  }
+
+  void GetCommit(storage::CommitIdView commit_id,
+                 fit::function<void(storage::Status,
+                                    std::unique_ptr<const storage::Commit>)>
+                     callback) override {
+    storage_->GetCommit(commit_id, std::move(callback));
+  }
+
+  storage::Status AddCommitWatcher(storage::CommitWatcher* watcher) override {
+    return storage_->AddCommitWatcher(watcher);
+  }
+
+  storage::Status RemoveCommitWatcher(
+      storage::CommitWatcher* watcher) override {
+    return storage_->RemoveCommitWatcher(watcher);
+  }
+
+  void GetObject(storage::ObjectIdentifier object_identifier, Location location,
+                 fit::function<void(storage::Status,
+                                    std::unique_ptr<const storage::Object>)>
+                     callback) override {
+    storage_->GetObject(std::move(object_identifier), location,
+                        std::move(callback));
+  }
+
+  void StartCommit(
+      const storage::CommitId& commit_id, storage::JournalType journal_type,
+      fit::function<void(storage::Status, std::unique_ptr<storage::Journal>)>
+          callback) override {
+    storage_->StartCommit(commit_id, journal_type, std::move(callback));
+  }
+
+  void StartMergeCommit(
+      const storage::CommitId& left, const storage::CommitId& right,
+      fit::function<void(storage::Status, std::unique_ptr<storage::Journal>)>
+          callback) override {
+    storage_->StartMergeCommit(left, right, std::move(callback));
+  }
+
+  void CommitJournal(std::unique_ptr<storage::Journal> journal,
+                     fit::function<void(storage::Status,
+                                        std::unique_ptr<const storage::Commit>)>
+                         callback) override {
+    storage_->CommitJournal(std::move(journal), std::move(callback));
+  }
+
+  void RollbackJournal(std::unique_ptr<storage::Journal> journal,
+                       fit::function<void(storage::Status)> callback) override {
+    storage_->RollbackJournal(std::move(journal), std::move(callback));
+  }
+
+  void AddObjectFromLocal(
+      std::unique_ptr<storage::DataSource> data_source,
+      fit::function<void(storage::Status, storage::ObjectIdentifier)> callback)
+      override {
+    storage_->AddObjectFromLocal(std::move(data_source), std::move(callback));
+  }
+
+  void GetCommitContents(
+      const storage::Commit& commit, std::string min_key,
+      fit::function<bool(storage::Entry)> on_next,
+      fit::function<void(storage::Status)> on_done) override {
+    storage_->GetCommitContents(commit, std::move(min_key), std::move(on_next),
+                                std::move(on_done));
+  }
+
+  void GetCommitContentsDiff(
+      const storage::Commit& base_commit, const storage::Commit& other_commit,
+      std::string min_key,
+      fit::function<bool(storage::EntryChange)> on_next_diff,
+      fit::function<void(storage::Status)> on_done) override {
+    if (removed_commit_ids_.find(base_commit.GetId()) !=
+            removed_commit_ids_.end() ||
+        removed_commit_ids_.find(other_commit.GetId()) !=
+            removed_commit_ids_.end()) {
+      on_done(storage::Status::NOT_CONNECTED_ERROR);
+      return;
+    }
+    storage_->GetCommitContentsDiff(base_commit, other_commit,
+                                    std::move(min_key), std::move(on_next_diff),
+                                    std::move(on_done));
+  }
+
+ private:
+  std::set<storage::CommitId> removed_commit_ids_;
+
+  std::unique_ptr<storage::PageStorage> storage_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakePageStorageImpl);
+};
+
 class RecordingTestStrategy : public MergeStrategy {
  public:
   RecordingTestStrategy() {}
@@ -74,7 +182,9 @@ class MergeResolverTest : public TestWithPageStorage {
 
   void SetUp() override {
     TestWithPageStorage::SetUp();
-    ASSERT_TRUE(CreatePageStorage(&page_storage_));
+    std::unique_ptr<storage::PageStorage> storage;
+    ASSERT_TRUE(CreatePageStorage(&storage));
+    page_storage_ = std::make_unique<FakePageStorageImpl>(std::move(storage));
   }
 
   storage::CommitId CreateCommit(
@@ -157,7 +267,7 @@ class MergeResolverTest : public TestWithPageStorage {
     return result;
   }
 
-  std::unique_ptr<storage::PageStorage> page_storage_;
+  std::unique_ptr<FakePageStorageImpl> page_storage_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(MergeResolverTest);
@@ -347,6 +457,54 @@ TEST_F(MergeResolverTest, LastOneWins) {
   EXPECT_EQ("key3", content_vector[1].key);
   EXPECT_TRUE(GetValue(content_vector[1].object_identifier, &value));
   EXPECT_EQ("val3.0", value);
+}
+
+TEST_F(MergeResolverTest, LastOneWinsDiffNotAvailable) {
+  // Set up conflict
+  storage::CommitId commit_1 = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+
+  storage::CommitId commit_2 =
+      CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
+
+  storage::CommitId commit_3 =
+      CreateCommit(commit_2, AddKeyValueToJournal("key3", "val3.0"));
+
+  storage::CommitId commit_4 =
+      CreateCommit(commit_2, DeleteKeyFromJournal("key1"));
+
+  storage::CommitId commit_5 =
+      CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
+
+  bool called;
+  storage::Status status;
+  std::vector<storage::CommitId> ids;
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(callback::SetWhenCalled(&called), &status, &ids));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_THAT(ids, UnorderedElementsAre(commit_3, commit_5));
+
+  page_storage_->MarkCommitContentsUnavailable(commit_2);
+
+  std::unique_ptr<LastOneWinsMergeStrategy> strategy =
+      std::make_unique<LastOneWinsMergeStrategy>();
+  MergeResolver resolver([] {}, &environment_, page_storage_.get(),
+                         std::make_unique<TestBackoff>());
+  resolver.SetMergeStrategy(std::move(strategy));
+  resolver.set_on_empty(callback::SetWhenCalled(&called));
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_TRUE(resolver.IsEmpty());
+  ids.clear();
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(callback::SetWhenCalled(&called), &status, &ids));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(2u, ids.size());
 }
 
 TEST_F(MergeResolverTest, None) {

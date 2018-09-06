@@ -22,7 +22,6 @@
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/bin/ledger/testing/test_backoff.h"
 
 namespace ledger {
@@ -41,9 +40,8 @@ class ConflictResolverClientTest : public TestWithPageStorage {
     ASSERT_TRUE(CreatePageStorage(&page_storage));
     page_storage_ = page_storage.get();
 
-    std::unique_ptr<MergeResolver> resolver =
-        std::make_unique<MergeResolver>([] {}, &environment_, page_storage_,
-                                        std::make_unique<TestBackoff>());
+    std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
+        [] {}, &environment_, page_storage_, std::make_unique<TestBackoff>());
     resolver->SetMergeStrategy(nullptr);
     resolver->set_on_empty(QuitLoopClosure());
     merge_resolver_ = resolver.get();

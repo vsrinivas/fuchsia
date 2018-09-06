@@ -27,6 +27,94 @@
 
 namespace ledger {
 
+// Enumerates merge candidates' indexes among current head commits.
+class MergeResolver::MergeCandidates {
+ public:
+  MergeCandidates();
+
+  // Resets the MergeCandidates and sets the total number of head commits to
+  // |head_count|.
+  void ResetCandidates(size_t head_count);
+
+  // Returns whether MergeCandidates should be reset. A reset is necessary
+  // when the head commits have changed, i.e. when there is a successful merge
+  // or on a new commit.
+  bool NeedsReset() { return needs_reset_; }
+
+  // Returns the current pair on indexes of head commits to be merged.
+  std::pair<size_t, size_t> GetCurrentPair();
+
+  // Returns whether there is a merge candidate pair available.
+  bool HasCandidate();
+
+  // Returns true if there was a network error in one of the previous merge
+  // attempts. This does not include merges before |ResetCandidates| was
+  // called.
+  bool HadNetworkErrors() { return had_network_errors_; }
+
+  // Should be called after a successful merge.
+  void OnMergeSuccess();
+
+  // Should be called after an unsuccessful merge.
+  void OnMergeError(Status status);
+
+  // Should be called when new commits are available.
+  void OnNewCommits();
+
+  // Returns the number of head commits.
+  size_t head_count() { return head_count_; }
+
+ private:
+  // Advances to the next available pair of merge candidates.
+  void PrepareNext();
+
+  size_t head_count_;
+  std::pair<size_t, size_t> current_pair_;
+  bool needs_reset_ = true;
+  bool had_network_errors_ = false;
+};
+
+MergeResolver::MergeCandidates::MergeCandidates() {}
+
+void MergeResolver::MergeCandidates::ResetCandidates(size_t head_count) {
+  head_count_ = head_count;
+  current_pair_ = {0, 1};
+  needs_reset_ = false;
+  had_network_errors_ = false;
+}
+
+bool MergeResolver::MergeCandidates::HasCandidate() {
+  return current_pair_.first != head_count_ - 1;
+}
+
+std::pair<size_t, size_t> MergeResolver::MergeCandidates::GetCurrentPair() {
+  return current_pair_;
+}
+
+void MergeResolver::MergeCandidates::OnMergeSuccess() { needs_reset_ = true; }
+
+void MergeResolver::MergeCandidates::OnMergeError(Status status) {
+  if (status == Status::NETWORK_ERROR) {
+    // The contents of the common ancestor are unavailable locally and it wasn't
+    // possible to retrieve them through the network: Ignore this pair of heads
+    // for now.
+    had_network_errors_ = true;
+    PrepareNext();
+  } else {
+    FXL_LOG(WARNING) << "Merging failed. Will try again later.";
+  }
+}
+
+void MergeResolver::MergeCandidates::OnNewCommits() { needs_reset_ = true; }
+
+void MergeResolver::MergeCandidates::PrepareNext() {
+  ++current_pair_.second;
+  if (current_pair_.second == head_count_) {
+    ++current_pair_.first;
+    current_pair_.second = current_pair_.first + 1;
+  }
+}
+
 MergeResolver::MergeResolver(fit::closure on_destroyed,
                              Environment* environment,
                              storage::PageStorage* storage,
@@ -34,6 +122,7 @@ MergeResolver::MergeResolver(fit::closure on_destroyed,
     : coroutine_service_(environment->coroutine_service()),
       storage_(storage),
       backoff_(std::move(backoff)),
+      merge_candidates_(std::make_unique<MergeCandidates>()),
       on_destroyed_(std::move(on_destroyed)),
       task_runner_(environment->dispatcher()) {
   storage_->AddCommitWatcher(this);
@@ -53,7 +142,8 @@ bool MergeResolver::IsEmpty() { return !merge_in_progress_; }
 
 bool MergeResolver::HasUnfinishedMerges() {
   return merge_in_progress_ || check_conflicts_in_progress_ ||
-         check_conflicts_task_count_ != 0 || in_delay_;
+         check_conflicts_task_count_ != 0 || in_delay_ ||
+         merge_candidates_->HadNetworkErrors();
 }
 
 void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
@@ -85,6 +175,7 @@ void MergeResolver::RegisterNoConflictCallback(
 void MergeResolver::OnNewCommits(
     const std::vector<std::unique_ptr<const storage::Commit>>& /*commits*/,
     storage::ChangeSource source) {
+  merge_candidates_->OnNewCommits();
   PostCheckConflicts(source == storage::ChangeSource::LOCAL
                          ? DelayedStatus::DONT_DELAY
                          // We delay remote commits.
@@ -111,12 +202,20 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
       [this, delayed_status](storage::Status s,
                              std::vector<storage::CommitId> heads) {
         check_conflicts_in_progress_ = false;
-        if (s != storage::Status::OK || heads.size() == 1) {
-          // An error occurred, or there is no conflict. In either case, return
-          // early.
+
+        if (merge_candidates_->NeedsReset()) {
+          merge_candidates_->ResetCandidates(heads.size());
+        }
+        FXL_DCHECK(merge_candidates_->head_count() == heads.size())
+            << merge_candidates_->head_count() << " != " << heads.size();
+
+        if (s != storage::Status::OK || heads.size() == 1 ||
+            !(merge_candidates_->HasCandidate())) {
+          // An error occurred, or there is no conflict we can resolve. In
+          // either case, return early.
           if (s != storage::Status::OK) {
             FXL_LOG(ERROR) << "Failed to get head commits with status " << s;
-          } else {
+          } else if (heads.size() == 1) {
             for (auto& callback : no_conflict_callbacks_) {
               callback(has_merged_
                            ? ConflictResolutionWaitStatus::CONFLICTS_RESOLVED
@@ -137,14 +236,16 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
           return;
         }
         merge_in_progress_ = true;
-        heads.resize(2);
-        ResolveConflicts(delayed_status, std::move(heads));
+        std::pair<size_t, size_t> head_indexes =
+            merge_candidates_->GetCurrentPair();
+        ResolveConflicts(delayed_status, std::move(heads[head_indexes.first]),
+                         std::move(heads[head_indexes.second]));
       }));
 }
 
 void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
-                                     std::vector<storage::CommitId> heads) {
-  FXL_DCHECK(heads.size() == 2);
+                                     storage::CommitId head1,
+                                     storage::CommitId head2) {
   auto cleanup =
       fxl::MakeAutoCall(task_runner_.MakeScoped([this, delayed_status] {
         // |merge_in_progress_| must be reset before calling
@@ -171,9 +272,8 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
   auto waiter = fxl::MakeRefCounted<callback::Waiter<
       storage::Status, std::unique_ptr<const storage::Commit>>>(
       storage::Status::OK);
-  for (const storage::CommitId& id : heads) {
-    storage_->GetCommit(id, waiter->NewCallback());
-  }
+  storage_->GetCommit(head1, waiter->NewCallback());
+  storage_->GetCommit(head2, waiter->NewCallback());
   waiter->Finalize(TRACE_CALLBACK(
       task_runner_.MakeScoped(
           [this, delayed_status, cleanup = std::move(cleanup),
@@ -301,19 +401,20 @@ void MergeResolver::FindCommonAncestorAndMerge(
                 }
 
                 if (status != Status::OK) {
-                  FXL_LOG(ERROR) << "Failed to find common ancestor "
-                                    "of head commits.";
+                  FXL_LOG(ERROR)
+                      << "Failed to find common ancestor of head commits.";
                   return;
                 }
-                auto strategy_callback = [on_successful_merge =
-                                              std::move(on_successful_merge)](
-                                             Status status) {
-                  if (status != Status::OK) {
-                    FXL_LOG(WARNING) << "Merging failed. Will try again later.";
-                    return;
-                  }
-                  on_successful_merge();
-                };
+                auto strategy_callback =
+                    [this, on_successful_merge =
+                               std::move(on_successful_merge)](Status status) {
+                      if (status != Status::OK) {
+                        merge_candidates_->OnMergeError(status);
+                        return;
+                      }
+                      merge_candidates_->OnMergeSuccess();
+                      on_successful_merge();
+                    };
                 has_merged_ = true;
                 strategy_->Merge(
                     storage_, page_manager_, std::move(head1), std::move(head2),

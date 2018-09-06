@@ -53,6 +53,8 @@ class MergeResolver : public storage::CommitWatcher {
       fit::function<void(ConflictResolutionWaitStatus)> callback);
 
  private:
+  class MergeCandidates;
+
   // DelayedStatus allows us to avoid merge storms (several devices battling
   // to merge branches but not agreeing). We use the following algorithm:
   // - Old (local or originally remote) changes are always merged right away.
@@ -83,11 +85,11 @@ class MergeResolver : public storage::CommitWatcher {
 
   void PostCheckConflicts(DelayedStatus delayed_status);
   void CheckConflicts(DelayedStatus delayed_status);
-  void ResolveConflicts(DelayedStatus delayed_status,
-                        std::vector<storage::CommitId> heads);
+  void ResolveConflicts(DelayedStatus delayed_status, storage::CommitId head1,
+                        storage::CommitId head2);
   void MergeCommitsWithSameContent(std::unique_ptr<const storage::Commit> head1,
-                                  std::unique_ptr<const storage::Commit> head2,
-                                  fit::closure on_successful_merge);
+                                   std::unique_ptr<const storage::Commit> head2,
+                                   fit::closure on_successful_merge);
   void FindCommonAncestorAndMerge(std::unique_ptr<const storage::Commit> head1,
                                   std::unique_ptr<const storage::Commit> head2,
                                   fit::closure on_successful_merge);
@@ -112,6 +114,7 @@ class MergeResolver : public storage::CommitWatcher {
   int check_conflicts_task_count_ = 0;
   bool check_conflicts_in_progress_ = false;
   bool in_delay_ = false;
+  std::unique_ptr<MergeCandidates> merge_candidates_;
   fit::closure on_empty_callback_;
   fit::closure on_destroyed_;
   std::vector<fit::function<void(ConflictResolutionWaitStatus)>>
