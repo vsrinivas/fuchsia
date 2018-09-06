@@ -8,7 +8,7 @@
 
 namespace fsl {
 
-SizedVmo::SizedVmo(nullptr_t) : vmo_(), size_(0u) {}
+SizedVmo::SizedVmo(std::nullptr_t) : vmo_(), size_(0u) {}
 
 SizedVmo::SizedVmo(zx::vmo vmo, uint64_t size)
     : vmo_(std::move(vmo)), size_(size) {

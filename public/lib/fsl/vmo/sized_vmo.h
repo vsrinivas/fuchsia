@@ -5,6 +5,8 @@
 #ifndef LIB_FSL_VMO_SIZED_VMO_H_
 #define LIB_FSL_VMO_SIZED_VMO_H_
 
+#include <cstddef>
+
 #include <fuchsia/mem/cpp/fidl.h>
 
 #include <lib/zx/vmo.h>
@@ -16,7 +18,7 @@ namespace fsl {
 // page-aligned.
 class SizedVmo {
  public:
-  SizedVmo(nullptr_t = nullptr);
+  SizedVmo(std::nullptr_t = nullptr);
   SizedVmo(zx::vmo vmo, uint64_t size);
   SizedVmo(SizedVmo&& other);
   ~SizedVmo();
