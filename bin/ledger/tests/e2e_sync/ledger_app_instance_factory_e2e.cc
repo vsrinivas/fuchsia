@@ -6,7 +6,9 @@
 
 #include <utility>
 
+#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/random/uuid.h>
@@ -40,6 +42,7 @@ class LedgerAppInstanceImpl final
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
 
   std::unique_ptr<component::StartupContext> startup_context_;
+  component::ServiceProviderImpl service_provider_impl_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
 
   fuchsia::sys::ComponentControllerPtr controller_;
@@ -58,7 +61,14 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       cloud_provider_factory_(startup_context_.get(),
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
-      user_id_(std::move(user_id)) {}
+      user_id_(std::move(user_id)) {
+  service_provider_impl_.AddService<fuchsia::modular::auth::TokenProvider>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider>
+                 request) {
+        cloud_provider_factory_.MakeTokenProviderWithGivenUserId(
+            user_id_, std::move(request));
+      });
+}
 
 void LedgerAppInstanceImpl::Init(
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
@@ -70,6 +80,10 @@ void LedgerAppInstanceImpl::Init(
   launch_info.url = "ledger";
   launch_info.directory_request = child_services.NewRequest();
   launch_info.arguments.push_back("--disable_reporting");
+  fuchsia::sys::ServiceList service_list;
+  service_list.names.push_back(fuchsia::modular::auth::TokenProvider::Name_);
+  service_provider_impl_.AddBinding(service_list.provider.NewRequest());
+  launch_info.additional_services = fidl::MakeOptional(std::move(service_list));
 
   startup_context_->launcher()->CreateComponent(std::move(launch_info),
                                                 controller_.NewRequest());

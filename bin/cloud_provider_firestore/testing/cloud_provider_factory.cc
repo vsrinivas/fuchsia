@@ -87,14 +87,8 @@ void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
     std::string user_id,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   fuchsia::modular::auth::TokenProviderPtr token_provider;
-  async::PostTask(
-      services_loop_.dispatcher(),
-      fxl::MakeCopyable([this, user_id = std::move(user_id),
-                         request = token_provider.NewRequest()]() mutable {
-        token_providers_.emplace(startup_context_, services_loop_.dispatcher(),
-                                 credentials_->Clone(), user_id,
-                                 std::move(request));
-      }));
+  MakeTokenProviderWithGivenUserId(std::move(user_id),
+                                   token_provider.NewRequest());
 
   cloud_provider_firestore::Config firebase_config;
   firebase_config.server_id = credentials_->project_id();
@@ -108,6 +102,23 @@ void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
                          << fidl::ToUnderlying(status);
         }
       });
+}
+
+void CloudProviderFactory::MakeTokenProvider(
+    fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request) {
+  MakeTokenProviderWithGivenUserId(fxl::GenerateUUID(), std::move(request));
+}
+
+void CloudProviderFactory::MakeTokenProviderWithGivenUserId(
+    std::string user_id,
+    fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request) {
+  async::PostTask(services_loop_.dispatcher(),
+                  fxl::MakeCopyable([this, user_id = std::move(user_id),
+                                     request = std::move(request)]() mutable {
+                    token_providers_.emplace(
+                        startup_context_, services_loop_.dispatcher(),
+                        credentials_->Clone(), user_id, std::move(request));
+                  }));
 }
 
 }  // namespace cloud_provider_firestore

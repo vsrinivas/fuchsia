@@ -40,6 +40,13 @@ class CloudProviderFactory {
       std::string user_id,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
+  void MakeTokenProvider(
+      fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request);
+
+  void MakeTokenProviderWithGivenUserId(
+      std::string user_id,
+      fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request);
+
  private:
   class TokenProviderContainer;
   component::StartupContext* const startup_context_;
