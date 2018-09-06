@@ -10,7 +10,7 @@
 #include <fbl/algorithm.h>
 #include <math.h>
 
-#include "garnet/bin/media/audio_core/constants.h"
+#include "garnet/bin/media/audio_core/mixer/constants.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 

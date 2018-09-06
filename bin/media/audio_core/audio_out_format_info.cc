@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/audio_core/audio_out_format_info.h"
 #include "garnet/bin/media/audio_core/audio_out_impl.h"
-#include "garnet/bin/media/audio_core/constants.h"
+#include "garnet/bin/media/audio_core/mixer/constants.h"
 #include "lib/media/timeline/timeline.h"
 
 namespace media {

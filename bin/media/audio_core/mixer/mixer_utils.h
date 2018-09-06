@@ -7,11 +7,8 @@
 
 #include <type_traits>
 
-// #include <fbl/algorithm.h>
-// #include <zircon/compiler.h>
-
-#include "garnet/bin/media/audio_core/constants.h"
-#include "garnet/bin/media/audio_core/gain.h"
+#include "garnet/bin/media/audio_core/mixer/constants.h"
+#include "garnet/bin/media/audio_core/mixer/gain.h"
 
 namespace media {
 namespace audio {

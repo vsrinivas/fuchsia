@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_GAIN_H_
-#define GARNET_BIN_MEDIA_AUDIO_CORE_GAIN_H_
+#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_GAIN_H_
+#define GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_GAIN_H_
 
 #include <atomic>
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 
-#include "garnet/bin/media/audio_core/constants.h"
+#include "garnet/bin/media/audio_core/mixer/constants.h"
 
 namespace media {
 namespace audio {
@@ -78,4 +78,4 @@ class Gain {
 }  // namespace audio
 }  // namespace media
 
-#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_GAIN_H_
+#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_GAIN_H_

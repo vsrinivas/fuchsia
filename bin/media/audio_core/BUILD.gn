@@ -20,40 +20,6 @@ action_foreach("generate_schemas") {
   ]
 }
 
-source_set("audio_mixer_lib") {
-  sources = [
-    "//garnet/public/lib/media/audio_dfx/audio_device_fx.h",
-    "constants.h",
-    "gain.cc",
-    "gain.h",
-    "mixer/fx_loader.cc",
-    "mixer/fx_loader.h",
-    "mixer/fx_processor.cc",
-    "mixer/fx_processor.h",
-    "mixer/linear_sampler.cc",
-    "mixer/linear_sampler.h",
-    "mixer/mixer.cc",
-    "mixer/mixer.h",
-    "mixer/mixer_utils.h",
-    "mixer/no_op.cc",
-    "mixer/no_op.h",
-    "mixer/output_producer.cc",
-    "mixer/output_producer.h",
-    "mixer/point_sampler.cc",
-    "mixer/point_sampler.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/fidl/fuchsia.media",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/timeline:no_converters",
-    "//zircon/public/lib/fbl",
-  ]
-}
-
 executable("audio_core") {
   sources = [
     "audio_core_impl.cc",
@@ -108,7 +74,7 @@ executable("audio_core") {
 
   deps = [
     ":generate_schemas",
-    "//garnet/bin/media/audio_core:audio_mixer_lib",
+    "//garnet/bin/media/audio_core/mixer:audio_mixer_lib",
     "//garnet/bin/media/util",
     "//garnet/lib/media/wav_writer",
     "//garnet/public/fidl/fuchsia.media",

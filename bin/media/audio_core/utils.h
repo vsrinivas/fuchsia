@@ -13,7 +13,7 @@
 #include <zircon/device/audio.h>
 #include <zircon/types.h>
 
-#include "garnet/bin/media/audio_core/constants.h"
+#include "garnet/bin/media/audio_core/mixer/constants.h"
 
 namespace media {
 namespace audio {

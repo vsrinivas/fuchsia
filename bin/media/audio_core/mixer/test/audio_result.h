@@ -6,8 +6,8 @@
 #define GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_TEST_AUDIO_RESULT_H_
 
 #include <cmath>
-#include "garnet/bin/media/audio_core/constants.h"
-#include "garnet/bin/media/audio_core/gain.h"
+#include "garnet/bin/media/audio_core/mixer/constants.h"
+#include "garnet/bin/media/audio_core/mixer/gain.h"
 #include "garnet/bin/media/audio_core/mixer/test/frequency_set.h"
 
 namespace media {

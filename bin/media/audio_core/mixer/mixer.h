@@ -9,8 +9,8 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 
-#include "garnet/bin/media/audio_core/constants.h"
-#include "garnet/bin/media/audio_core/gain.h"
+#include "garnet/bin/media/audio_core/mixer/constants.h"
+#include "garnet/bin/media/audio_core/mixer/gain.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media {

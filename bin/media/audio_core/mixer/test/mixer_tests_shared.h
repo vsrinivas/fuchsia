@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_TEST_MIXER_TESTS_SHARED_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_TEST_MIXER_TESTS_SHARED_H_
 
-#include "garnet/bin/media/audio_core/gain.h"
+#include "garnet/bin/media/audio_core/mixer/gain.h"
 #include "garnet/bin/media/audio_core/mixer/mixer.h"
 #include "garnet/bin/media/audio_core/mixer/output_producer.h"
 #include "garnet/bin/media/audio_core/mixer/test/audio_analysis.h"

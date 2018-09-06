@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <limits>
 
-#include "garnet/bin/media/audio_core/constants.h"
+#include "garnet/bin/media/audio_core/mixer/constants.h"
 #include "garnet/bin/media/audio_core/mixer/mixer_utils.h"
 #include "lib/fxl/logging.h"
 
