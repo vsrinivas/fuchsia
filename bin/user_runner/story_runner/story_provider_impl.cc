@@ -36,7 +36,7 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 
 // In tests prefetching mondrian saved ~30ms in story start up time.
-#define PREFETCH_MONDRIAN 0
+#define PREFETCH_MONDRIAN 1
 
 namespace modular {
 
