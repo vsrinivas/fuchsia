@@ -124,6 +124,25 @@ void AmlogicVideo::GateClocks() {
       .WriteTo(hiubus_.get());
 }
 
+void AmlogicVideo::InitializeCore(std::unique_ptr<DecoderCore> core) {
+  core_ = std::move(core);
+}
+
+void AmlogicVideo::ResetCore() {
+  if (core_) {
+    core_->PowerOff();
+    core_.reset();
+  }
+}
+
+void AmlogicVideo::ClearDecoderInstance() {
+  std::lock_guard<std::mutex> lock(video_decoder_lock_);
+  assert(decoder_instances_.size() <= 1u);
+  decoder_instances_.clear();
+  video_decoder_ = nullptr;
+  stream_buffer_ = nullptr;
+}
+
 zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer,
                                                uint32_t size) {
   zx_status_t status = io_buffer_init(buffer->buffer(), bti_.get(), size,

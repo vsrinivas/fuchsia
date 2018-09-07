@@ -80,19 +80,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
     return video_decoder_->pts_manager();
   }
 
- private:
-  friend class TestH264;
-  friend class TestMpeg2;
-  friend class TestVP9;
-  friend class TestFrameProvider;
-  friend class CodecAdapterH264;
-
-  __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer,
-                                                        uint32_t size);
-
-  void InitializeStreamInput(bool use_parser);
-  void SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder)
-      __TA_REQUIRES(video_decoder_lock_);
+  void InitializeCore(std::unique_ptr<DecoderCore> core);
+  void ResetCore();
+  void ClearDecoderInstance();
 
   __WARN_UNUSED_RESULT
   zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size);
@@ -103,6 +93,28 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT
   zx_status_t WaitForParsingCompleted(zx_duration_t deadline);
   void CancelParsing();
+
+  void SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder)
+      __TA_REQUIRES(video_decoder_lock_);
+  __WARN_UNUSED_RESULT
+  std::mutex* video_decoder_lock() __TA_RETURN_CAPABILITY(video_decoder_lock_) {
+    return &video_decoder_lock_;
+  }
+  __WARN_UNUSED_RESULT
+  VideoDecoder* video_decoder() __TA_REQUIRES(video_decoder_lock_) {
+    return video_decoder_;
+  }
+
+ private:
+  friend class TestH264;
+  friend class TestMpeg2;
+  friend class TestVP9;
+  friend class TestFrameProvider;
+
+  __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer,
+                                                        uint32_t size);
+
+  void InitializeStreamInput(bool use_parser);
 
   __WARN_UNUSED_RESULT
   zx_status_t ProcessVideoNoParser(void* data, uint32_t len,

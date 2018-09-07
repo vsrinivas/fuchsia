@@ -141,66 +141,65 @@ void CodecAdapterH264::CoreCodecStartStream() {
     parsed_video_size_ = 0;
     is_input_end_of_stream_queued_ = false;
     is_stream_failed_ = false;
-    video_->core_ = std::make_unique<Vdec1>(video_);
-    video_->core()->PowerOn();
+    auto core = std::make_unique<Vdec1>(video_);
+    core->PowerOn();
+    video_->InitializeCore(std::move(core));
   }  // ~lock
 
-  {
-    std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
-    video_->SetDefaultInstance(std::make_unique<H264Decoder>(video_));
+  auto decoder = std::make_unique<H264Decoder>(video_);
+  decoder->SetFrameReadyNotifier([this](std::shared_ptr<VideoFrame> frame) {
+    // The Codec interface requires that emitted frames are cache clean
+    // at least for now.  We invalidate without skipping over stride-width
+    // per line, at least partly because stride - width is small (possibly
+    // always 0) for this decoder.  But we do invalidate the UV section
+    // separately in case uv_plane_offset happens to leave significant
+    // space after the Y section (regardless of whether there's actually
+    // ever much padding there).
+    //
+    // TODO(dustingreen): Probably there's not ever any significant
+    // padding between Y and UV for this decoder, so probably can make one
+    // invalidate call here instead of two with no downsides.
+    //
+    // TODO(dustingreen): Skip this when the buffer isn't map-able.
+    io_buffer_cache_flush_invalidate(&frame->buffer, 0,
+                                     frame->stride * frame->height);
+    io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
+                                     frame->stride * frame->height / 2);
+
+    CodecPacket* packet = frame->codec_packet;
+    ZX_DEBUG_ASSERT(packet);
+
+    packet->SetStartOffset(0);
+    uint64_t total_size_bytes = frame->stride * frame->height * 3 / 2;
+    packet->SetValidLengthBytes(total_size_bytes);
+
+    if (frame->has_pts) {
+      packet->SetTimstampIsh(frame->pts);
+    } else {
+      packet->ClearTimestampIsh();
+    }
+
+    events_->onCoreCodecOutputPacket(packet, false, false);
+  });
+  decoder->SetInitializeFramesHandler(
+      fit::bind_member(this, &CodecAdapterH264::InitializeFramesHandler));
+  decoder->SetErrorHandler([this] { OnCoreCodecFailStream(); });
+
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+    video_->SetDefaultInstance(std::move(decoder));
     status = video_->InitializeStreamBuffer(true, PAGE_SIZE);
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("InitializeStreamBuffer() failed");
       return;
     }
-    status = video_->video_decoder_->Initialize();
+    status = video_->video_decoder()->Initialize();
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec(
           "video_->video_decoder_->Initialize() failed");
       return;
     }
-
-    video_->video_decoder_->SetFrameReadyNotifier(
-        [this](std::shared_ptr<VideoFrame> frame) {
-          // The Codec interface requires that emitted frames are cache clean
-          // at least for now.  We invalidate without skipping over stride-width
-          // per line, at least partly because stride - width is small (possibly
-          // always 0) for this decoder.  But we do invalidate the UV section
-          // separately in case uv_plane_offset happens to leave significant
-          // space after the Y section (regardless of whether there's actually
-          // ever much padding there).
-          //
-          // TODO(dustingreen): Probably there's not ever any significant
-          // padding between Y and UV for this decoder, so probably can make one
-          // invalidate call here instead of two with no downsides.
-          //
-          // TODO(dustingreen): Skip this when the buffer isn't map-able.
-          io_buffer_cache_flush_invalidate(&frame->buffer, 0,
-                                           frame->stride * frame->height);
-          io_buffer_cache_flush_invalidate(&frame->buffer,
-                                           frame->uv_plane_offset,
-                                           frame->stride * frame->height / 2);
-
-          CodecPacket* packet = frame->codec_packet;
-          ZX_DEBUG_ASSERT(packet);
-
-          packet->SetStartOffset(0);
-          uint64_t total_size_bytes = frame->stride * frame->height * 3 / 2;
-          packet->SetValidLengthBytes(total_size_bytes);
-
-          if (frame->has_pts) {
-            packet->SetTimstampIsh(frame->pts);
-          } else {
-            packet->ClearTimestampIsh();
-          }
-
-          events_->onCoreCodecOutputPacket(packet, false, false);
-        });
-    video_->video_decoder_->SetInitializeFramesHandler(
-        fit::bind_member(this, &CodecAdapterH264::InitializeFramesHandler));
-    video_->video_decoder_->SetErrorHandler(
-        [this] { OnCoreCodecFailStream(); });
-  }
+  }  // ~lock
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
@@ -288,18 +287,8 @@ void CodecAdapterH264::CoreCodecStopStream() {
   // AmlogicVideo to be more re-usable without the stuff in this method, then
   // DecoderCore, then VideoDecoder.
 
-  {  // scope lock
-    std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
-    assert(video_->decoder_instances_.size() <= 1u);
-    video_->decoder_instances_.clear();
-    video_->video_decoder_ = nullptr;
-    video_->stream_buffer_ = nullptr;
-  }  // ~lock
-
-  if (video_->core_) {
-    video_->core_->PowerOff();
-    video_->core_.reset();
-  }
+  video_->ClearDecoderInstance();
+  video_->ResetCore();
 
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -342,8 +331,8 @@ void CodecAdapterH264::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   }
 
   {  // scope lock
-    std::lock_guard<std::mutex> lock(video_->video_decoder_lock_);
-    video_->video_decoder_->ReturnFrame(frame);
+    std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+    video_->video_decoder()->ReturnFrame(frame);
   }  // ~lock
 }
 
@@ -646,6 +635,11 @@ void CodecAdapterH264::ProcessInput() {
     // that free output frames will become free on an ongoing basis, which isn't
     // really what'll happen when video output is paused.
     if (ZX_OK != video_->ParseVideo(data, len)) {
+      OnCoreCodecFailStream();
+      return;
+    }
+    if (ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
+      video_->CancelParsing();
       OnCoreCodecFailStream();
       return;
     }
