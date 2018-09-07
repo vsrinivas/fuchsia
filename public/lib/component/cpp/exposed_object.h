@@ -28,6 +28,16 @@ class ExposedObject {
   explicit ExposedObject(const std::string& name);
   virtual ~ExposedObject();
 
+  ExposedObject(const ExposedObject& other) { *this = other; }
+
+  void operator=(const ExposedObject& other) {
+    if (this != &other) {
+      remove_from_parent();
+    }
+    parent_ = other.parent_;
+    object_dir_ = other.object_dir_;
+  }
+
   // Explicitly set the parent of this object. This method handles removing the
   // object from its current parent, if any, and attaching it to the new parent.
   void set_parent(const ObjectDir* parent);
@@ -54,7 +64,7 @@ class ExposedObject {
   ObjectDir parent_;
 
   // The object itself, accessible through object().
-  const ObjectDir object_dir_;
+  ObjectDir object_dir_;
 };
 
 }  // namespace component

@@ -150,7 +150,7 @@ class ObjectDir {
                       Property property) const;
 
   // The wrapper object.
-  const fbl::RefPtr<Object> object_;
+  fbl::RefPtr<Object> object_;
 };
 
 }  // namespace component
