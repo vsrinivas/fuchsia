@@ -9,7 +9,6 @@ mod config;
 mod client;
 mod device;
 mod known_ess_store;
-mod future_util;
 mod shim;
 mod state_machine;
 

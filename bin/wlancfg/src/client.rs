@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 use crate::{
-    Never,
-    future_util::retry_until,
     known_ess_store::{KnownEssStore, KnownEss},
     state_machine::{self, IntoStateExt},
 };
@@ -13,19 +11,15 @@ use {
     failure::{bail, format_err},
     fidl::endpoints2::create_endpoints,
     fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_async::temp::{Either, TempFutureExt, TempStreamExt},
+    fuchsia_zircon::prelude::*,
     futures::{
         channel::{oneshot, mpsc},
-        future,
         prelude::*,
         select,
         stream,
     },
-    std::{
-        boxed::PinBox,
-        sync::Arc,
-    },
-    fuchsia_zircon::prelude::*,
+    pin_utils::pin_mut,
+    std::sync::Arc,
 };
 
 const AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
@@ -75,18 +69,7 @@ pub fn new_client(iface_id: u16,
         sme,
         ess_store: Arc::clone(&ess_store)
     };
-    let state_machine = future::lazy(move |_| {
-        auto_connect_state(services, req_receiver.into_future())
-            .into_future()
-            .map_ok(Never::into_any::<()>)
-            .unwrap_or_else(move |e| eprintln!("wlancfg: Client station state machine \
-                    for iface {} terminated with an error: {}", iface_id, e))
-    }).then(|fut| fut);
-    let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>()
-        .map_ok(move |()| println!("wlancfg: Client station removed (iface {})", iface_id))
-        .unwrap_or_else(move |e|
-            println!("wlancfg: Removing client station (iface {}) because of an error: {}", iface_id, e));
-    let fut = state_machine.select(removal_watcher).map(|_| ());
+    let fut = serve(iface_id, services, sme_event_stream, req_receiver);
     let client = Client { req_sender };
     (client, fut)
 }
@@ -100,20 +83,44 @@ struct Services {
     ess_store: Arc<KnownEssStore>,
 }
 
-fn auto_connect_state(services: Services, next_req: NextReqFut) -> State {
+async fn serve(iface_id: u16,
+               services: Services,
+               sme_event_stream: fidl_sme::ClientSmeEventStream,
+               req_stream: mpsc::UnboundedReceiver<ManualRequest>)
+{
+    let mut state_machine = auto_connect_state(services, req_stream.into_future())
+            .into_state_machine();
+    let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
+    select! {
+        state_machine => match state_machine {
+            Ok(never) => never.into_any(),
+            Err(e) => println!("wlancfg: Client station state machine \
+                                for iface #{} terminated with an error: {}", iface_id, e)
+        },
+        removal_watcher => if let Err(e) = removal_watcher {
+            println!("wlancfg: Error reading from Client SME channel of iface #{}: {}",
+                     iface_id, e);
+        },
+    }
+    println!("wlancfg: Removed client station for iface #{}", iface_id);
+}
+
+async fn auto_connect_state(services: Services, mut next_req: NextReqFut)
+    -> Result<State, failure::Error>
+{
     println!("wlancfg: Starting auto-connect loop");
-    PinBox::new(auto_connect(services.clone())).select_unpin(next_req)
-        .map(move |r| match r {
-            Either::Left((services_res, next_req)) => {
-                match services_res {
-                    Ok(_) => Ok(connected_state(services, next_req)),
-                    Err(e) => Err(e),
-                }
-            },
-            Either::Right((_, (req, req_stream))) =>
-                handle_manual_request(services, req, req_stream),
-        })
-        .into_state()
+    let auto_connected = auto_connect(&services);
+    pin_mut!(auto_connected);
+    select! {
+        auto_connected => {
+            let _ssid = auto_connected?;
+            Ok(connected_state(services.clone(), next_req).into_state())
+        },
+        next_req => {
+            let (req, req_stream) = next_req;
+            handle_manual_request(services.clone(), req, req_stream)
+        },
+    }
 }
 
 fn handle_manual_request(services: Services,
@@ -123,7 +130,7 @@ fn handle_manual_request(services: Services,
 {
     match req {
         Some(ManualRequest::Connect(req)) => {
-            Ok(manual_connect_state(services, req_stream.into_future(), req))
+            Ok(manual_connect_state(services, req_stream.into_future(), req).into_state())
         },
         Some(ManualRequest::Disconnect(responder)) => {
             Ok(disconnected_state(responder, services, req_stream.into_future()).into_state())
@@ -132,103 +139,96 @@ fn handle_manual_request(services: Services,
     }
 }
 
-fn auto_connect(services: Services)
-    -> impl Future<Output = Result<Vec<u8>, failure::Error>>
-{
-    retry_until(AUTO_CONNECT_RETRY_SECONDS.seconds(),
-        move || attempt_auto_connect(services.clone()))
+async fn auto_connect(services: &Services) -> Result<Vec<u8>, failure::Error> {
+    loop {
+        if let Some(ssid) = await!(attempt_auto_connect(services))? {
+            return Ok(ssid);
+        }
+        await!(fuchsia_async::Timer::new(AUTO_CONNECT_RETRY_SECONDS.seconds().after_now()));
+    }
 }
 
-fn attempt_auto_connect(services: Services)
-    -> impl Future<Output = Result<Option<Vec<u8>>, failure::Error>>
-{
+async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, failure::Error> {
     // first check if we have saved networks
     if services.ess_store.known_network_count() < 1 {
-        return Either::Left(future::ready(Ok(None)))
+        return Ok(None);
     }
 
-    future::ready(start_scan_txn(&services.sme))
-        .and_then(fetch_scan_results)
-        .and_then(move |results| {
-            let known_networks = {
-                let services = services.clone();
-                results.into_iter()
-                    .filter_map(move |ess| {
-                        services.ess_store.lookup(&ess.best_bss.ssid)
-                            .map(|known_ess| (ess.best_bss.ssid, known_ess))
-                    })
-            };
-            stream::iter(known_networks)
-                .map(Ok)
-                .try_skip_while(move |(ssid, known_ess)| {
-                    connect_to_known_network(&services.sme, ssid, known_ess)
-                        .map_ok(|connected| !connected)
-                })
-                .first_elem().map(Option::transpose)
-        })
-        .map_ok(|item| item.map(|(ssid, _)| ssid))
-        .right_future()
+    let txn = start_scan_txn(&services.sme)?;
+    let results = await!(fetch_scan_results(txn))?;
+    let known_networks = results.into_iter()
+        .filter_map(|ess| {
+            services.ess_store.lookup(&ess.best_bss.ssid)
+                .map(|known_ess| (ess.best_bss.ssid, known_ess))
+        });
+    for (ssid, known_ess) in known_networks {
+        if await!(connect_to_known_network(&services.sme, ssid.clone(), known_ess))? {
+            return Ok(Some(ssid));
+        }
+    }
+    Ok(None)
 }
 
-fn connect_to_known_network(sme: &fidl_sme::ClientSmeProxy, ssid: &[u8], known_ess: &KnownEss)
-    -> impl Future<Output = Result<bool, failure::Error>>
+async fn connect_to_known_network(sme: &fidl_sme::ClientSmeProxy, ssid: Vec<u8>, ess: KnownEss)
+    -> Result<bool, failure::Error>
 {
-    let ssid_str = String::from_utf8_lossy(ssid).into_owned();
+    let ssid_str = String::from_utf8_lossy(&ssid).into_owned();
     println!("wlancfg: Auto-connecting to '{}'", ssid_str);
-    future::ready(start_connect_txn(sme, &ssid, &known_ess.password))
-        .and_then(wait_until_connected)
-        .map_ok(move |r| match r {
-            fidl_sme::ConnectResultCode::Success => {
-                println!("wlancfg: Auto-connected to '{}'", ssid_str);
-                true
-            },
-            other => {
-                println!("wlancfg: Failed to auto-connect to '{}': {:?}", ssid_str, other);
-                false
-            },
-        })
+    let txn = start_connect_txn(sme, &ssid, &ess.password)?;
+    match await!(wait_until_connected(txn))? {
+        fidl_sme::ConnectResultCode::Success => {
+            println!("wlancfg: Auto-connected to '{}'", ssid_str);
+            Ok(true)
+        },
+        other => {
+            println!("wlancfg: Failed to auto-connect to '{}': {:?}", ssid_str, other);
+            Ok(false)
+        },
+    }
 }
 
-fn manual_connect_state(services: Services, next_req: NextReqFut, req: ConnectRequest) -> State {
+async fn manual_connect_state(services: Services, mut next_req: NextReqFut, req: ConnectRequest)
+    -> Result<State, failure::Error>
+{
     println!("wlancfg: Connecting to '{}' because of a manual request from the user",
         String::from_utf8_lossy(&req.ssid));
-    let connect_fut = future::ready(start_connect_txn(&services.sme, &req.ssid, &req.password))
-        .and_then(wait_until_connected);
+    let txn = start_connect_txn(&services.sme, &req.ssid, &req.password)?;
+    let connected = wait_until_connected(txn);
+    pin_mut!(connected);
 
-    connect_fut.select_unpin(next_req)
-        .map(move |r| match r {
-            Either::Left((res, next_req)) => {
-                let error_code = res?;
-                req.responder.send(error_code).unwrap_or_else(|_| ());
-                Ok(match error_code {
-                    fidl_sme::ConnectResultCode::Success => {
-                        println!("wlancfg: Successfully connected to '{}'", String::from_utf8_lossy(&req.ssid));
-                        services.ess_store.store(req.ssid.clone(), KnownEss {
-                            password: req.password.clone()
-                        }).unwrap_or_else(|e| eprintln!("wlancfg: Failed to store network password: {}", e));
-                        connected_state(services, next_req)
-                    },
-                    other => {
-                        println!("wlancfg: Failed to connect to '{}': {:?}",
-                                 String::from_utf8_lossy(&req.ssid), other);
-                        auto_connect_state(services, next_req)
-                    }
-                })
-            },
-            Either::Right((_coonect_fut, (new_req, req_stream))) => {
-                req.responder.send(fidl_sme::ConnectResultCode::Canceled).unwrap_or_else(|_| ());
-                handle_manual_request(services, new_req, req_stream)
-            }
-        })
-        .into_state()
+    select! {
+        connected => {
+            let code = connected?;
+            req.responder.send(code).unwrap_or_else(|_| ());
+            Ok(match code {
+                fidl_sme::ConnectResultCode::Success => {
+                    println!("wlancfg: Successfully connected to '{}'",
+                             String::from_utf8_lossy(&req.ssid));
+                    let ess = KnownEss { password: req.password.clone() };
+                    services.ess_store.store(req.ssid.clone(), ess).unwrap_or_else(
+                            |e| eprintln!("wlancfg: Failed to store network password: {}", e));
+                    connected_state(services, next_req).into_state()
+                },
+                other => {
+                    println!("wlancfg: Failed to connect to '{}': {:?}",
+                             String::from_utf8_lossy(&req.ssid), other);
+                    auto_connect_state(services, next_req).into_state()
+                }
+            })
+        },
+        next_req => {
+            let (new_req, req_stream) = next_req;
+            req.responder.send(fidl_sme::ConnectResultCode::Canceled).unwrap_or_else(|_| ());
+            handle_manual_request(services, new_req, req_stream)
+        },
+    }
 }
 
-fn connected_state(services: Services, next_req: NextReqFut) -> State {
+async fn connected_state(services: Services, next_req: NextReqFut) -> Result<State, failure::Error>
+{
     // TODO(gbonik): monitor connection status and jump back to auto-connect state when disconnected
-    next_req
-        .map(|(req, req_stream)| {
-            handle_manual_request(services, req, req_stream)
-        }).into_state()
+    let (req, req_stream) = await!(next_req);
+    handle_manual_request(services, req, req_stream)
 }
 
 async fn disconnected_state(responder: oneshot::Sender<()>,
@@ -304,34 +304,35 @@ fn start_connect_txn(sme: &fidl_sme::ClientSmeProxy, ssid: &[u8], password: &[u8
     Ok(connect_txn)
 }
 
-fn wait_until_connected(txn: fidl_sme::ConnectTransactionProxy)
-    -> impl Future<Output = Result<fidl_sme::ConnectResultCode, failure::Error>>
+async fn wait_until_connected(txn: fidl_sme::ConnectTransactionProxy)
+    -> Result<fidl_sme::ConnectResultCode, failure::Error>
 {
-    txn.take_event_stream()
-        .map_ok(|fidl_sme::ConnectTransactionEvent::OnFinished { code }| code)
-        .first_elem()
-        .map(Option::transpose)
-        .err_into()
-        .and_then(|code| future::ready(code.ok_or_else(||
-            format_err!("Server closed the ConnectTransaction channel before sending a response"))))
+    let mut stream = txn.take_event_stream();
+    while let Some(event) = await!(stream.try_next())? {
+        match event {
+            fidl_sme::ConnectTransactionEvent::OnFinished { code } => return Ok(code),
+        }
+    }
+    Err(format_err!("Server closed the ConnectTransaction channel before sending a response"))
 }
 
-fn fetch_scan_results(txn: fidl_sme::ScanTransactionProxy)
-    -> impl Future<Output = Result<Vec<fidl_sme::EssInfo>, failure::Error>>
+async fn fetch_scan_results(txn: fidl_sme::ScanTransactionProxy)
+    -> Result<Vec<fidl_sme::EssInfo>, failure::Error>
 {
-    txn.take_event_stream().try_fold(Vec::new(), |mut old_aps, event| {
-        future::ready(match event {
-            fidl_sme::ScanTransactionEvent::OnResult { aps } => {
-                old_aps.extend(aps);
-                Ok(old_aps)
-            },
-            fidl_sme::ScanTransactionEvent::OnFinished { } => Ok(old_aps),
+    let mut stream = txn.take_event_stream();
+    let mut all_aps = vec![];
+    while let Some(event) = await!(stream.next()) {
+        match event? {
+            fidl_sme::ScanTransactionEvent::OnResult { aps } => all_aps.extend(aps),
+            fidl_sme::ScanTransactionEvent::OnFinished { } => return Ok(all_aps),
             fidl_sme::ScanTransactionEvent::OnError { error } => {
                 eprintln!("wlancfg: Scanning failed with error: {:?}", error);
-                Ok(old_aps)
+                return Ok(all_aps)
             }
-        })
-    }).err_into()
+        }
+    }
+    eprintln!("Server closed the ScanTransaction channel before sending a Finished or Error event");
+    Ok(all_aps)
 }
 
 #[cfg(test)]
@@ -351,8 +352,9 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
-        let (_client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let (_client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
 
         // the ess store should be empty
         assert_eq!(0, ess_store.known_network_count());
@@ -382,8 +384,9 @@ mod tests {
         ess_store.store(b"bar".to_vec(), KnownEss { password: b"qwerty".to_vec() })
             .expect("failed to store a network password");
 
-        let (_client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let (_client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
 
         // Expect the state machine to initiate the scan, then send results back without the saved
         // network
@@ -421,8 +424,9 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
-        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
 
         // Send a manual connect request and expect the state machine
         // to start connecting to the network immediately
@@ -453,8 +457,9 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
-        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
 
         // Send the first manual connect request
         let mut receiver_one = send_manual_connect_request(&client, b"foo");
@@ -501,8 +506,9 @@ mod tests {
         ess_store.store(b"foo".to_vec(), KnownEss { password: b"12345".to_vec() })
             .expect("failed to store a network password");
 
-        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
 
         // Get the state machine into the connected state by auto-connecting to a known network
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
@@ -539,8 +545,9 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
-        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
 
         // Send a manual connect request and expect the state machine
         // to start connecting to the network immediately.
@@ -579,8 +586,9 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
-        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
 
         // Transition to disconnected state
         let (sender, mut receiver) = oneshot::channel();
@@ -606,8 +614,9 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
-        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
 
         // Transition to disconnected state
         let (sender, mut receiver_one) = oneshot::channel();
@@ -642,8 +651,9 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
-        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
 
         // Transition to disconnected state
         let (sender, mut receiver) = oneshot::channel();
@@ -670,8 +680,9 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
-        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
 
         // Send the first manual connect request and expect a corresponding message to SME
         let mut connect_receiver = send_manual_connect_request(&client, b"foo");
@@ -703,8 +714,9 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
-        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let (client, fut, sme_server) = create_client(Arc::clone(&ess_store));
         let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
 
         // Save the network that we will auto-connect to
         ess_store.store(b"foo".to_vec(), KnownEss { password: b"12345".to_vec() })

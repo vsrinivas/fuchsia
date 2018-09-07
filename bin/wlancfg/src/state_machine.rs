@@ -18,12 +18,6 @@ use {
 
 pub struct State<E>(FutureObj<'static, Result<State<E>, E>>);
 
-impl<E> State<E> {
-    pub fn into_future(self) -> StateMachine<E> {
-        StateMachine{ cur_state: self }
-    }
-}
-
 pub struct StateMachine<E>{
     cur_state: State<E>
 }
@@ -49,6 +43,14 @@ pub trait IntoStateExt<E>: Future<Output = Result<State<E>, E>> {
     {
         State(FutureObj::new(Box::new(self)))
     }
+
+    fn into_state_machine(self) -> StateMachine<E>
+        where Self: Sized + Send + 'static
+    {
+        StateMachine {
+            cur_state: self.into_state()
+        }
+    }
 }
 
 impl<F, E> IntoStateExt<E> for F where F: Future<Output = Result<State<E>, E>> {}
@@ -66,7 +68,7 @@ mod tests {
     fn state_machine() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (sender, receiver) = mpsc::unbounded();
-        let mut state_machine = sum_state(0, receiver).into_future();
+        let mut state_machine = sum_state(0, receiver).into_state_machine();
 
         let r = exec.run_until_stalled(&mut state_machine);
         assert_eq!(Poll::Pending, r);
@@ -79,12 +81,18 @@ mod tests {
         assert_eq!(Poll::Ready(Err(5)), r);
     }
 
-    fn sum_state(current: u32, stream: mpsc::UnboundedReceiver<u32>) -> State<u32> {
-        stream.into_future()
-            .map(move |(number, stream)| match number {
-                Some(number) => Ok(sum_state(current + number, stream)),
-                None => Err(current),
-            })
-            .into_state()
+    async fn sum_state(current: u32, stream: mpsc::UnboundedReceiver<u32>)
+        -> Result<State<u32>, u32>
+    {
+        let (number, stream) = await!(stream.into_future());
+        match number {
+            Some(number) => Ok(make_sum_state(current + number, stream)),
+            None => Err(current),
+        }
+    }
+
+    // A workaround for the "recursive impl Trait" problem in the compiler
+    fn make_sum_state(current: u32, stream: mpsc::UnboundedReceiver<u32>) -> State<u32> {
+        sum_state(current, stream).into_state()
     }
 }
