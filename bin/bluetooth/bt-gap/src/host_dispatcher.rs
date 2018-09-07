@@ -9,15 +9,21 @@ use failure::Error;
 use fidl;
 use fidl::encoding::OutOfLine;
 use fidl_fuchsia_bluetooth;
-use fidl_fuchsia_bluetooth_control::{AdapterInfo, BondingControlHandle, ControlControlHandle,
-                                     PairingDelegateMarker, PairingDelegateProxy};
+use fidl_fuchsia_bluetooth_control::{
+    AdapterInfo, BondingControlHandle, ControlControlHandle, PairingDelegateMarker,
+    PairingDelegateProxy,
+};
 use fidl_fuchsia_bluetooth_control::{InputCapabilityType, OutputCapabilityType};
 use fidl_fuchsia_bluetooth_host::HostProxy;
 use fidl_fuchsia_bluetooth_le::CentralProxy;
-use fuchsia_async::{self as fasync,
-                    temp::Either::{Left, Right},
-                    TimeoutExt};
-use fuchsia_bluetooth::{self as bt, bt_fidl_status, util::clone_host_info};
+use fuchsia_async::{
+    self as fasync,
+    temp::Either::{Left, Right},
+    TimeoutExt,
+};
+use fuchsia_bluetooth::{
+    self as bt, bt_fidl_status, error::Error as BTError, util::clone_host_info,
+};
 use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon as zx;
@@ -46,7 +52,7 @@ pub struct DiscoveryRequestToken {
 impl Drop for DiscoveryRequestToken {
     fn drop(&mut self) {
         if let Some(host) = self.adap.upgrade() {
-            let mut host = host.write();
+            let host = host.write();
             host.stop_discovery();
         }
     }
@@ -124,7 +130,8 @@ impl HostDispatcher {
     }
 
     pub fn set_name(
-        hd: Arc<RwLock<HostDispatcher>>, name: Option<String>,
+        hd: Arc<RwLock<HostDispatcher>>,
+        name: Option<String>,
     ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
         hd.write().name = match name {
             Some(name) => name,
@@ -160,12 +167,10 @@ impl HostDispatcher {
     pub fn start_discovery(
         hd: Arc<RwLock<HostDispatcher>>,
     ) -> impl Future<
-        Output = fidl::Result<
-            (
-                fidl_fuchsia_bluetooth::Status,
-                Option<Arc<DiscoveryRequestToken>>,
-            )
-        >,
+        Output = fidl::Result<(
+            fidl_fuchsia_bluetooth::Status,
+            Option<Arc<DiscoveryRequestToken>>,
+        )>,
     > {
         let strong_current_token = match hd.read().discovery {
             Some(ref token) => token.upgrade(),
@@ -204,12 +209,10 @@ impl HostDispatcher {
     pub fn set_discoverable(
         hd: Arc<RwLock<HostDispatcher>>,
     ) -> impl Future<
-        Output = fidl::Result<
-            (
-                fidl_fuchsia_bluetooth::Status,
-                Option<Arc<DiscoverableRequestToken>>,
-            ),
-        >,
+        Output = fidl::Result<(
+            fidl_fuchsia_bluetooth::Status,
+            Option<Arc<DiscoverableRequestToken>>,
+        )>,
     > {
         let strong_current_token = match hd.read().discoverable {
             Some(ref token) => token.upgrade(),
@@ -294,7 +297,8 @@ impl HostDispatcher {
     }
 
     pub fn connect(
-        hd: Arc<RwLock<HostDispatcher>>, device_id: String,
+        hd: Arc<RwLock<HostDispatcher>>,
+        device_id: String,
     ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
         HostDispatcher::connect_le_central(hd.clone()).and_then(move |central| {
             let (service_local, service_remote) = fidl::endpoints::create_proxy().unwrap();
@@ -321,7 +325,8 @@ impl HostDispatcher {
     }
 
     pub fn forget(
-        hd: Arc<RwLock<HostDispatcher>>, device_id: String,
+        hd: Arc<RwLock<HostDispatcher>>,
+        device_id: String,
     ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
         let id = device_id.clone();
         HostDispatcher::get_active_adapter(hd.clone())
@@ -348,7 +353,8 @@ impl HostDispatcher {
             })
     }
     pub fn disconnect(
-        hd: Arc<RwLock<HostDispatcher>>, device_id: String,
+        hd: Arc<RwLock<HostDispatcher>>,
+        device_id: String,
     ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
         HostDispatcher::get_active_adapter(hd).and_then(move |adapter| match adapter {
             Some(adapter) => Right(adapter.write().rm_gatt(device_id)),
@@ -473,50 +479,61 @@ impl Future for OnAdaptersFound {
 
 /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
 /// watcher
-fn add_adapter(
-    hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf,
-) -> impl Future<Output = Result<(), Error>> {
+async fn add_adapter(hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf) -> Result<(), Error> {
     fx_log_info!("Adding Adapter: {:?}", host_path);
-    let host = File::open(host_path.clone()).unwrap();
-    let handle = bt::host::open_host_channel(&host).unwrap();
-    let host = HostProxy::new(fasync::Channel::from_channel(handle.into()).unwrap());
-    host.get_info()
-        .and_then(move |adapter_info| {
-            // Set the adapter as connectable
-            host.set_connectable(true)
-                .and_then(|_| future::ready(Ok((host, adapter_info, host_path))))
-        }).and_then(move |(host, adapter_info, path)| {
-            // Add to the adapters
-            let id = adapter_info.identifier.clone();
-            let host_device = Arc::new(RwLock::new(HostDevice::new(path, host, adapter_info)));
-            hd.write().add_host(id, host_device.clone());
-            future::ready(Ok((hd.clone(), host_device)))
-        }).and_then(|(hd, host_device)| {
-            // Connect the pairing delegate to the host
-            let (delegate_local, delegate_remote) = zx::Channel::create().unwrap();
-            let delegate_local = fasync::Channel::from_channel(delegate_local).unwrap();
-            let delegate_ptr =
-                fidl::endpoints::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
-            host_device.read()
-                .set_host_pairing_delegate(hd.read().input, hd.read().output, delegate_ptr);
-            fasync::spawn(
-                services::start_pairing_delegate(hd.clone(), delegate_local)
-                    .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
-            );
-            future::ready(Ok((hd, host_device)))
-        }).and_then(|(hd, host_device)| {
-            for listener in hd.read().event_listeners.iter() {
-                let _res = listener
-                    .send_on_adapter_updated(&mut clone_host_info(host_device.read().get_info()));
-            }
-            fx_log_info!("Host added: {:?}", host_device.read().get_info().identifier);
-            hd.write().resolve_host_requests();
-            host_device::run(hd.clone(), host_device.clone())
-        }).map_err(|e| e.into())
+
+    // Connect to the host device.
+    let host =
+        File::open(host_path.clone()).map_err(|_| BTError::new("failed to open bt-host device"))?;
+    let handle = bt::host::open_host_channel(&host)?;
+    let handle = fasync::Channel::from_channel(handle.into())?;
+    let host = HostProxy::new(handle);
+
+    // TODO(NET-1445): Only the active host should be made connectable.
+    await!(host.set_connectable(true)).map_err(|_| BTError::new("failed to set connectable"))?;
+
+    // Obtain basic information and create and entry in the disptacher's map.
+    let adapter_info = await!(host.get_info())
+        .map_err(|_| BTError::new("failed to obtain bt-host information"))?;
+    let id = adapter_info.identifier.clone();
+    let host_device = Arc::new(RwLock::new(HostDevice::new(host_path, host, adapter_info)));
+
+    // Initialize bt-gap as this host's pairing delegate.
+    // TODO(NET-1445): Do this only for the active host. This will make sure that non-active hosts
+    // always reject pairing.
+    let (delegate_local, delegate_remote) = zx::Channel::create()?;
+    let delegate_local = fasync::Channel::from_channel(delegate_local)?;
+    let delegate_ptr = fidl::endpoints::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
+    host_device
+        .read()
+        .set_host_pairing_delegate(hd.read().input, hd.read().output, delegate_ptr);
+    fasync::spawn(
+        services::start_pairing_delegate(hd.clone(), delegate_local)
+            .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
+    );
+
+    fx_log_info!("Host added: {:?}", host_device.read().get_info().identifier);
+    hd.write().add_host(id, host_device.clone());
+
+    // Notify Control interface clients about the new device.
+    // TODO(armansito): This layering isn't quite right. It's better to do this in
+    // HostDispatcher::add_host instead.
+    for listener in hd.read().event_listeners.iter() {
+        let _res =
+            listener.send_on_adapter_updated(&mut clone_host_info(host_device.read().get_info()));
+    }
+
+    // Resolve pending adapter futures.
+    hd.write().resolve_host_requests();
+
+    // Start listening to Host interface events.
+    await!(host_device::run(hd.clone(), host_device.clone()))
+        .map_err(|_| BTError::new("Host interface event stream error").into())
 }
 
 pub fn rm_adapter(
-    hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf,
+    hd: Arc<RwLock<HostDispatcher>>,
+    host_path: PathBuf,
 ) -> impl Future<Output = Result<(), Error>> {
     fx_log_info!("Host removed: {:?}", host_path);
 
