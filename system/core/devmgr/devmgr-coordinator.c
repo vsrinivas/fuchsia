@@ -1073,6 +1073,13 @@ static zx_status_t dc_load_firmware(device_t* dev, const char* path,
     return ZX_ERR_NOT_FOUND;
 }
 
+// Returns true if the parent path is equal to or specifies a child device of the parent.
+static bool path_is_child(const char* parent_path, const char* child_path) {
+    int parent_length = strlen(parent_path);
+    return (!strncmp(parent_path, child_path, parent_length) &&
+        (child_path[parent_length] == 0 || child_path[parent_length] == '/'));
+}
+
 static zx_status_t dc_get_metadata(device_t* dev, uint32_t type, void* buffer, size_t buflen,
                                    size_t* actual) {
     dc_metadata_t* md;
@@ -1103,7 +1110,7 @@ static zx_status_t dc_get_metadata(device_t* dev, uint32_t type, void* buffer, s
     dc_metadata_t* temp;
     list_for_every_entry_safe(&published_metadata, md, temp, dc_metadata_t, node) {
         char* md_path = (char*)md->data + md->length;
-        if (md->type == type && !strcmp(md_path, path)) {
+        if (md->type == type && path_is_child(md_path, path)) {
             if (md->length > buflen) {
                 return ZX_ERR_BUFFER_TOO_SMALL;
             }
@@ -1139,9 +1146,7 @@ static zx_status_t dc_publish_metadata(device_t* dev, const char* path, uint32_t
     }
 
     // Check to see if the specified path is a child of the caller's path
-    int caller_length = strlen(caller_path);
-    if (!strncmp(path, caller_path, caller_length) &&
-        (path[caller_length] == 0 || path[caller_length] == '/')) {
+    if (path_is_child(caller_path, path)) {
         // Caller is adding a path that matches itself or one of its children, which is allowed.
     } else {
         // Adding metadata to arbitrary paths is restricted to drivers running in the sys devhost.
