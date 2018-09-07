@@ -61,6 +61,14 @@ static const pbus_boot_metadata_t eth_metadata[] = {
     },
 };
 
+
+static const pbus_i2c_channel_t vim2_mcu_i2c[] = {
+    {
+        .bus_id = 1,
+        .address = 0x18,
+    },
+};
+
 static pbus_dev_t eth_dev = {
     .name = "ethernet",
     .vid = PDEV_VID_KHADAS,
@@ -76,6 +84,8 @@ static pbus_dev_t eth_dev = {
     .irq_count = countof(eth_irqs),
     .boot_metadata = eth_metadata,
     .boot_metadata_count = countof(eth_metadata),
+    .i2c_channels = vim2_mcu_i2c,
+    .i2c_channel_count = countof(vim2_mcu_i2c),
 };
 
 zx_status_t vim_eth_init(vim_bus_t* bus) {

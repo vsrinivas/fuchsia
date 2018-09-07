@@ -9,6 +9,7 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/i2c.h>
 #include <ddk/protocol/test.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
@@ -115,7 +116,7 @@ private:
 
     int Thread() __TA_EXCLUDES(lock_);
 
-    zx_status_t GetMAC(uint8_t* addr);
+    zx_status_t GetMAC(zx_device_t* dev);
 
     //Number each of tx/rx transaction descriptors
     static constexpr uint32_t kNumDesc = 32;
@@ -146,6 +147,7 @@ private:
     zx::interrupt dma_irq_;
 
     platform_device_protocol_t pdev_;
+    i2c_protocol_t i2c_;
 
     io_buffer_t periph_regs_iobuff_;
     io_buffer_t hhi_regs_iobuff_;

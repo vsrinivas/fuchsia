@@ -29,6 +29,9 @@ enum {
     PHY_INTR,
 };
 
+#define MCU_I2C_REG_BOOT_EN_WOL              0x21
+#define MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE 0x03
+
 template <typename T, typename U>
 static inline T* offset_ptr(U* ptr, size_t offset) {
     return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(ptr) + offset);
@@ -141,6 +144,12 @@ zx_status_t AmlDWMacDevice::InitPdev() {
         return status;
     }
 
+    // i2c for MCU messages
+    status = device_get_protocol(parent_, ZX_PROTOCOL_I2C, &i2c_);
+    if (status != ZX_OK) {
+        return status;
+    }
+
     return status;
 }
 
@@ -153,6 +162,40 @@ void AmlDWMacDevice::ResetPhy() {
 
 void AmlDWMacDevice::ConfigPhy() {
     uint32_t val;
+
+    // WOL reset
+    MDIOWrite(MII_EPAGSR, 0xd40);
+    MDIOWrite(22, 0x20);
+    MDIOWrite(MII_EPAGSR, 0);
+
+    MDIOWrite(MII_EPAGSR, 0xd8c);
+    MDIOWrite(16, (mac_[1] << 8) | mac_[0]);
+    MDIOWrite(17, (mac_[3] << 8) | mac_[2]);
+    MDIOWrite(18, (mac_[5] << 8) | mac_[4]);
+    MDIOWrite(MII_EPAGSR, 0);
+
+    MDIOWrite(MII_EPAGSR, 0xd8a);
+    MDIOWrite(17, 0x9fff);
+    MDIOWrite(MII_EPAGSR, 0);
+
+    MDIOWrite(MII_EPAGSR, 0xd8a);
+    MDIOWrite(16, 0x1000);
+    MDIOWrite(MII_EPAGSR, 0);
+
+    MDIOWrite(MII_EPAGSR, 0xd80);
+    MDIOWrite(16, 0x3000);
+    MDIOWrite(17, 0x0020);
+    MDIOWrite(18, 0x03c0);
+    MDIOWrite(19, 0x0000);
+    MDIOWrite(20, 0x0000);
+    MDIOWrite(21, 0x0000);
+    MDIOWrite(22, 0x0000);
+    MDIOWrite(23, 0x0000);
+    MDIOWrite(MII_EPAGSR, 0);
+
+    MDIOWrite(MII_EPAGSR, 0xd8a);
+    MDIOWrite(19, 0x1002);
+    MDIOWrite(MII_EPAGSR, 0);
 
     // Fix txdelay issuee for rtl8211.  When a hw reset is performed
     //  on the phy, it defaults to having an extra delay in the TXD path.
@@ -201,10 +244,8 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
     set_bitsl(1 << 3, offset_ptr<uint32_t>(hregs, HHI_GCLK_MPEG1));
     clr_bitsl((1 << 3) | (1 << 2), offset_ptr<uint32_t>(hregs, HHI_MEM_PD_REG0));
 
-    // Save the mac address, the reset below will clear out this register
-    //  This is temporary until we get mac address from platform
-    uint32_t tempmachi = mac_device->dwmac_regs_->macaddr0hi;
-    uint32_t tempmaclo = mac_device->dwmac_regs_->macaddr0lo;
+    // get and cache the mac address
+    mac_device->GetMAC(device);
 
     //Reset the dma peripheral
     mac_device->dwdma_regs_->busmode |= DMAMAC_SRST;
@@ -217,8 +258,13 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
         return ZX_ERR_TIMED_OUT;
     }
 
-    mac_device->dwmac_regs_->macaddr0hi = tempmachi;
-    mac_device->dwmac_regs_->macaddr0lo = tempmaclo;
+    // mac address register was erased by the reset; set it!
+    mac_device->dwmac_regs_->macaddr0hi = (mac_device->mac_[5] << 8)
+                                        | (mac_device->mac_[4] << 0);
+    mac_device->dwmac_regs_->macaddr0lo = (mac_device->mac_[3] << 24)
+                                        | (mac_device->mac_[2] << 16)
+                                        | (mac_device->mac_[1] <<  8)
+                                        | (mac_device->mac_[0] << 0);
 
     auto cleanup = fbl::MakeAutoCall([&]() { mac_device->ShutDown(); });
 
@@ -230,6 +276,12 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
     mac_device->ResetPhy();
     //configure phy
     mac_device->ConfigPhy();
+    // WOL reset enable to MCU
+    uint8_t write_buf[2] = { MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE };
+    status = i2c_transact_sync(&mac_device->i2c_, 0, write_buf, sizeof write_buf, NULL, 0);
+    if (status) {
+        zxlogf(ERROR, "aml-dwmac: WOL reset enable to MCU failed: %d\n", status);
+    }
 
     mac_device->InitDevice();
 
@@ -393,31 +445,31 @@ zx_status_t AmlDWMacDevice::ShutDown() {
     return ZX_OK;
 }
 
-zx_status_t AmlDWMacDevice::GetMAC(uint8_t* addr) {
+zx_status_t AmlDWMacDevice::GetMAC(zx_device_t* dev) {
     // look for MAC address device metadata
     // metadata is padded so we need buffer size > 6 bytes
     uint8_t buffer[16];
     size_t actual;
-    zx_status_t status = device_get_metadata(zxdev(), DEVICE_METADATA_MAC_ADDRESS, buffer,
+    zx_status_t status = device_get_metadata(dev, DEVICE_METADATA_MAC_ADDRESS, buffer,
                                              sizeof(buffer), &actual);
-    if (status == ZX_OK && actual >= 6) {
-        zxlogf(INFO, "aml_dwmac: MAC address %02x:%02x:%02x:%02x:%02x:%02x\n",
-               buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5]);
-        memcpy(addr, buffer, 6);
-        return ZX_OK;
+    if (status != ZX_OK || actual < 6) {
+        zxlogf(ERROR, "aml_dwmac: MAC address metadata load failed. Falling back on HW setting.");
+        // read MAC address from hardware register
+        uint32_t hi = dwmac_regs_->macaddr0hi;
+        uint32_t lo = dwmac_regs_->macaddr0lo;
+
+        /* Extract the MAC address from the high and low words */
+        buffer[0] = static_cast<uint8_t>(lo & 0xff);
+        buffer[1] = static_cast<uint8_t>((lo >> 8) & 0xff);
+        buffer[2] = static_cast<uint8_t>((lo >> 16) & 0xff);
+        buffer[3] = static_cast<uint8_t>((lo >> 24) & 0xff);
+        buffer[4] = static_cast<uint8_t>(hi & 0xff);
+        buffer[5] = static_cast<uint8_t>((hi >> 8) & 0xff);
     }
 
-    // else read MAC address from hardware register
-    uint32_t hi = dwmac_regs_->macaddr0hi;
-    uint32_t lo = dwmac_regs_->macaddr0lo;
-
-    /* Extract the MAC address from the high and low words */
-    addr[0] = static_cast<uint8_t>(lo & 0xff);
-    addr[1] = static_cast<uint8_t>((lo >> 8) & 0xff);
-    addr[2] = static_cast<uint8_t>((lo >> 16) & 0xff);
-    addr[3] = static_cast<uint8_t>((lo >> 24) & 0xff);
-    addr[4] = static_cast<uint8_t>(hi & 0xff);
-    addr[5] = static_cast<uint8_t>((hi >> 8) & 0xff);
+    zxlogf(INFO, "aml_dwmac: MAC address %02x:%02x:%02x:%02x:%02x:%02x\n",
+           buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5]);
+    memcpy(mac_, buffer, sizeof mac_);
     return ZX_OK;
 }
 
@@ -425,7 +477,7 @@ zx_status_t AmlDWMacDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     memset(info, 0, sizeof(*info));
     info->features = ETHMAC_FEATURE_DMA;
     info->mtu = 1500;
-    GetMAC(info->mac);
+    memcpy(info->mac, mac_, sizeof info->mac);
     return ZX_OK;
 }
 
