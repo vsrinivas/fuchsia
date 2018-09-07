@@ -55,25 +55,27 @@ __PRINTFLIKE(2, 3) void __brcmf_err(const char* func, const char* fmt, ...);
  * messages are important to us.
  */
 // TODO(cphoenix): Add rate limiting
-#define brcmf_err(fmt, ...)                                                                   \
-    do {                                                                                      \
-        if (IS_ENABLED(CONFIG_BRCMDBG) || IS_ENABLED(CONFIG_BRCM_TRACING)) \
-            __brcmf_err(__func__, fmt, ##__VA_ARGS__);                                        \
+#define brcmf_err(fmt, ...)                                                             \
+    do {                                                                                \
+        if (IS_ENABLED(CONFIG_BRCMFMAC_DBG)) __brcmf_err(__func__, fmt, ##__VA_ARGS__); \
     } while (0)
 
-#if defined(DEBUG) || defined(CONFIG_BRCM_TRACING)
+#if defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG)
 
 /* For debug/tracing purposes treat info messages as errors */
 #define brcmf_info brcmf_err
 
 __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...);
 #define brcmf_dbg(filter, fmt, ...)                                      \
-    do {                                                                \
+    do {                                                                 \
         __brcmf_dbg(BRCMF_##filter##_VAL, __func__, fmt, ##__VA_ARGS__); \
     } while (0)
 
-#define THROTTLE(n, event) { static atomic_long times; if (atomic_fetch_add(&times, 1) <= n) \
-                             { event; } }
+#define THROTTLE(n, event)                               \
+    {                                                    \
+        static atomic_long times;                        \
+        if (atomic_fetch_add(&times, 1) <= n) { event; } \
+    }
 
 // clang-format off
 
@@ -87,7 +89,7 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
 #define BRCMF_FWCON_ON() (brcmf_msg_filter & BRCMF_FWCON_VAL)
 #define BRCMF_SCAN_ON()  (brcmf_msg_filter & BRCMF_SCAN_VAL)
 
-#else /* defined(DEBUG) || defined(CONFIG_BRCM_TRACING) */
+#else /* defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG) */
 
 #define brcmf_info(fmt, ...)                          \
     do {                                              \
@@ -108,7 +110,7 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
 
 // clang-format on
 
-#endif /* defined(DEBUG) || defined(CONFIG_BRCM_TRACING) */
+#endif /* defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG) */
 
 // TODO(cphoenix): The call to brcmf_hexdump was originally trace_brcmf_hexdump, so this is
 // probably too spammy.
@@ -117,6 +119,9 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
         brcmf_hexdump((void*)data, len);                             \
         if (test) brcmu_dbg_hex_dump(data, len, fmt, ##__VA_ARGS__); \
     } while (0)
+
+void brcm_dbg_clear_err();
+bool brcm_dbg_has_err();
 
 void brcmf_hexdump(const void* buf, size_t len);
 

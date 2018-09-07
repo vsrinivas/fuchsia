@@ -29,7 +29,6 @@
 #include "debug.h"
 #include "linuxisms.h"
 #include "proto.h"
-#include "tracepoint.h"
 
 #define MAX_HEX_DUMP_LEN 64
 

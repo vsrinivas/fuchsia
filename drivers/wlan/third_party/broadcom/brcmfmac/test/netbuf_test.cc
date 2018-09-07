@@ -14,40 +14,36 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-extern "C" {
 #include <stdio.h>
-#include "netbuf.h"
-
-bool error_happened;
-
-void __brcmf_err(const char* func, const char* fmt, ...) {
-    error_happened = true;
-}
-
-void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {}
-
-} // extern "C"
 
 #include "gtest/gtest.h"
+
+extern "C" {
+
+#include "../debug.h"
+#include "../netbuf.h"
+
+}  // extern "C"
 
 namespace {
 
 #define SMALL_SIZE (17u)
-#define BIG_SIZE (16u*1024u)
+#define BIG_SIZE (16u * 1024u)
 
 class TestPattern {
-public:
+   public:
     TestPattern();
     void Set(void* target, size_t len);
     void Check(void* target, size_t len);
-private:
+
+   private:
     uint8_t pattern[BIG_SIZE];
 };
 
 TestPattern::TestPattern() {
     pattern[0] = 17;
     for (size_t i = 1; i < BIG_SIZE; i++) {
-        pattern[i] = (pattern[i-1] << 1) ^ i;
+        pattern[i] = (pattern[i - 1] << 1) ^ i;
     }
 }
 
@@ -62,26 +58,26 @@ void TestPattern::Check(void* target, size_t len) {
 static TestPattern testPattern;
 
 class Netbuf : public testing::Test {
-public:
+   public:
     Netbuf();
     ~Netbuf();
     struct brcmf_netbuf* buf = nullptr;
 };
 
 Netbuf::Netbuf() {
-    error_happened = false;
+    brcm_dbg_clear_err();
     buf = brcmf_netbuf_allocate(BIG_SIZE);
     EXPECT_NE(buf, nullptr);
 }
 
 Netbuf::~Netbuf() {
     brcmf_netbuf_free(buf);
-    EXPECT_EQ(error_happened, false);
+    EXPECT_FALSE(brcm_dbg_has_err());
 }
 
 TEST_F(Netbuf, CanAllocate) {
     EXPECT_NE(buf, nullptr);
-    EXPECT_EQ(error_happened, false);
+    EXPECT_FALSE(brcm_dbg_has_err());
 }
 
 TEST_F(Netbuf, HasRightSize) {
@@ -182,7 +178,7 @@ TEST_F(Netbuf, ReduceLength) {
 }
 
 class NetbufList : public testing::Test {
-public:
+   public:
     NetbufList();
     ~NetbufList();
     struct brcmf_netbuf* Buf(int32_t tag);
@@ -214,7 +210,7 @@ void NetbufList::ExpectOrder(int32_t* tags) {
 }
 
 NetbufList::NetbufList() {
-    error_happened = false;
+    brcm_dbg_clear_err();
     brcmf_netbuf_list_init(&list);
 }
 
@@ -222,10 +218,8 @@ NetbufList::~NetbufList() {
     struct brcmf_netbuf* buf;
     struct brcmf_netbuf* temp;
     EXPECT_EQ(list.qlen, list_length(&list.listnode));
-    brcmf_netbuf_list_for_every_safe(&list, buf, temp) {
-        brcmf_netbuf_free(buf);
-    }
-    EXPECT_EQ(error_happened, false);
+    brcmf_netbuf_list_for_every_safe(&list, buf, temp) { brcmf_netbuf_free(buf); }
+    EXPECT_FALSE(brcm_dbg_has_err());
 }
 
 // It's hard to test length without adding, so I combined the tests.

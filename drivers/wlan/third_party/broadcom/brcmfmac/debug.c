@@ -26,6 +26,52 @@
 
 static zx_handle_t root_folder;
 
+bool __brcm_dbg_err_flag = false;
+void __brcm_dbg_set_err() { __brcm_dbg_err_flag = true; }
+bool brcm_dbg_has_err() { return __brcm_dbg_err_flag; }
+void brcm_dbg_clear_err() { __brcm_dbg_err_flag = false; }
+
+#if CONFIG_BRCMFMAC_DBG
+
+void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {
+    if (true || brcmf_msg_filter & filter) {
+        // TODO(cphoenix): After bringup: Re-enable filter check
+        char msg[512]; // Same value hard-coded throughout devhost.c
+        va_list args;
+        va_start(args, fmt);
+        int n_printed = vsnprintf(msg, 512, fmt, args);
+        va_end(args);
+        if (n_printed < 0) {
+            snprintf(msg, 512, "(Formatting error from string '%s')", fmt);
+        } else if (n_printed > 0 && msg[n_printed - 1] == '\n') {
+            msg[--n_printed] = 0;
+        }
+        zxlogf(INFO, "brcmfmac (%s): '%s'\n", func, msg);
+    }
+}
+
+void __brcmf_err(const char* func, const char* fmt, ...) {
+    char msg[512]; // Same value hard-coded throughout devhost.c
+    va_list args;
+    va_start(args, fmt);
+    int n_printed = vsnprintf(msg, 512, fmt, args);
+    va_end(args);
+    if (n_printed < 0) {
+        snprintf(msg, 512, "(Formatting error from string '%s')", fmt);
+    } else if (n_printed > 0 && msg[n_printed - 1] == '\n') {
+        msg[--n_printed] = 0;
+    }
+    __brcm_dbg_set_err();
+    zxlogf(ERROR, "brcmfmac (%s): '%s'\n", func, msg);
+}
+
+#else
+
+void __brcmf_dbg(uint32_t filter, const char* fucn, const char* fmt, ...) {}
+void __brcmf_err(const char* func, const char* fmt, ...) {}
+
+#endif  // CONFIG_BRCMFMAC_DBG
+
 void brcmf_hexdump(const void* buf, size_t len) {
     if (len > 4096) {
         brcmf_dbg(INFO, "Truncating hexdump to 4096 bytes");

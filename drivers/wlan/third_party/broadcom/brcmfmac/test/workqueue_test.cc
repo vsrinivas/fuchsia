@@ -15,17 +15,10 @@
  */
 
 extern "C" {
-#include "workqueue.h"
 
-static bool error_happened;
+#include "../workqueue.h"
 
-void __brcmf_err(const char* func, const char* fmt, ...) {
-    error_happened = true;
-}
-
-void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {}
-
-} // extern "C"
+}  // extern "C"
 
 #include <lib/sync/completion.h>
 
@@ -42,9 +35,7 @@ struct TestWork {
     TestWork();
 };
 
-TestWork::TestWork() :
-    state(0) {
-}
+TestWork::TestWork() : state(0) {}
 
 static void handler(struct work_struct* work) {
     TestWork* tester = containerof(work, TestWork, work);
@@ -137,9 +128,7 @@ struct WorkCanceler {
     WorkCanceler();
 };
 
-WorkCanceler::WorkCanceler() :
-    state(0) {
-}
+WorkCanceler::WorkCanceler() : state(0) {}
 
 static void cancel_handler(struct work_struct* work) {
     WorkCanceler* canceler = containerof(work, WorkCanceler, work);

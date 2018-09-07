@@ -18,13 +18,12 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//garnet/tools/cipd.gni")
 
-driver_module("brcmfmac_driver") {
-  output_name = "brcmfmac"
-
+source_set("brcmfmac_srcs") {
   defines = [
-    "CONFIG_BRCMFMAC_USB",
-    "CONFIG_BRCMFMAC_SDIO",
-    "CONFIG_BRCMFMAC_PCIE",
+    "CONFIG_BRCMFMAC_USB=1",
+    "CONFIG_BRCMFMAC_SDIO=1",
+    "CONFIG_BRCMFMAC_PCIE=1",
+    "CONFIG_BRCMFMAC_DBG=0",
   ]
 
   sources = [
@@ -81,8 +80,6 @@ driver_module("brcmfmac_driver") {
     "proto.h",
     "sdio.c",
     "sdio.h",
-    "tracepoint.c",
-    "tracepoint.h",
     "usb.c",
     "usb.h",
     "utils.c",
@@ -93,17 +90,24 @@ driver_module("brcmfmac_driver") {
   ]
 
   deps = [
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
-    "//zircon/public/lib/usb",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
+    "//garnet/lib/wlan/protocol",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/broadcom",
-    "//garnet/lib/wlan/protocol"
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+driver_module("brcmfmac_driver") {
+  output_name = "brcmfmac"
+  deps = [
+    ":brcmfmac_srcs",
+  ]
 }
 
 if (internal_access) {
@@ -111,60 +115,18 @@ if (internal_access) {
   copy("brcmfmac-firmware-copy") {
     sources = [
       "firmware/brcmfmac43242a.bin",
+      "firmware/brcmfmac43455-sdio.bin",
+      "firmware/brcmfmac43455-sdio.txt",
       "firmware/brcmfmac4356-pcie.bin",
       "firmware/brcmfmac4356-sdio.bin",
       "firmware/brcmfmac4356-sdio.txt",
       "firmware/brcmfmac4359-sdio.bin",
       "firmware/brcmfmac4359-sdio.txt",
-      "firmware/brcmfmac43455-sdio.bin",
-      "firmware/brcmfmac43455-sdio.txt",
     ]
     outputs = [
       "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
     ]
   }
-}
-
-executable("workqueue_test") {
-  output_name = "workqueue_test"
-  testonly = true
-  sources = [
-    "workqueue.c",
-    "workqueue.h",
-    "workqueue_test.cc",
-  ]
-
-  deps = [
-    "//third_party/googletest:gtest_main",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/fbl",
-    "//third_party/googletest:gtest_main",
-    "//zircon/public/lib/async-loop",
-  ]
-}
-
-executable("netbuf_test") {
-  output_name = "netbuf_test"
-  testonly = true
-  sources = [
-    "netbuf.c",
-    "netbuf.h",
-    "netbuf_test.cc",
-  ]
-
-  deps = [
-    "//third_party/googletest:gtest_main",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/fbl",
-    "//third_party/googletest:gtest_main",
-    "//zircon/public/lib/async-loop",
-  ]
 }
 
 package("brcmfmac") {
@@ -215,24 +177,4 @@ package("brcmfmac") {
       },
     ]
   }
-}
-
-package("brcmfmac_test") {
-  testonly = true
-
-  package_name = "brcmfmac_test"
-
-  deps = [
-    ":workqueue_test",
-    ":netbuf_test",
-  ]
-
-  tests = [
-    {
-      name = "workqueue_test"
-    },
-    {
-      name = "netbuf_test"
-    },
-  ]
 }

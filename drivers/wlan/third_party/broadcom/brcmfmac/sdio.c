@@ -96,7 +96,6 @@ struct rte_console {
 #include "bus.h"
 #include "debug.h"
 #include "device.h"
-#include "tracepoint.h"
 
 #define TXQLEN 2048         /* bulk tx queue length */
 #define TXHI (TXQLEN - 256) /* turn on flow control above TXHI */
@@ -2972,14 +2971,14 @@ done:
 }
 
 static zx_status_t brcmf_sdio_forensic_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(seq->private);
+    struct brcmf_bus* bus_if = dev_to_bus(seq->private_data);
     struct brcmf_sdio* bus = bus_if->bus_priv.sdio->bus;
 
     return brcmf_sdio_died_dump(seq, bus);
 }
 
 static zx_status_t brcmf_debugfs_sdio_count_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(seq->private);
+    struct brcmf_bus* bus_if = dev_to_bus(seq->private_data);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio_count* sdcnt = &sdiodev->bus->sdcnt;
 

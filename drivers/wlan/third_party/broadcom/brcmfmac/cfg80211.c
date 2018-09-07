@@ -40,7 +40,6 @@
 #include "p2p.h"
 #include "pno.h"
 #include "proto.h"
-#include "tracepoint.h"
 #include "vendor.h"
 #include "workqueue.h"
 

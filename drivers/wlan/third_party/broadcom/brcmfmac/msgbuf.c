@@ -36,7 +36,6 @@
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "proto.h"
-#include "tracepoint.h"
 #include "workqueue.h"
 
 #define MSGBUF_IOCTL_RESP_TIMEOUT_MSEC (2000)
@@ -1254,7 +1253,7 @@ void brcmf_msgbuf_delete_flowring(struct brcmf_pub* drvr, uint16_t flowid) {
 
 #ifdef DEBUG
 static zx_status_t brcmf_msgbuf_stats_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(seq->private);
+    struct brcmf_bus* bus_if = dev_to_bus(seq->private_data);
     struct brcmf_pub* drvr = bus_if->drvr;
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
     struct brcmf_commonring* commonring;

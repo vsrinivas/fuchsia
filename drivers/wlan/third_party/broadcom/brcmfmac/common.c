@@ -32,7 +32,6 @@
 #include "fwil_types.h"
 #include "linuxisms.h"
 #include "of.h"
-#include "tracepoint.h"
 
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("Broadcom 802.11 wireless LAN fullmac driver.");
@@ -362,41 +361,6 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 done:
     return err;
 }
-
-#ifndef CONFIG_BRCM_TRACING
-void __brcmf_err(const char* func, const char* fmt, ...) {
-    struct va_format vaf;
-    va_list args;
-
-    va_start(args, fmt);
-
-    vaf.fmt = fmt;
-    vaf.va = &args;
-    zxlogf(ERROR, "brcmfmac: %s: %pV", func, &vaf);
-
-    va_end(args);
-}
-#endif
-
-#if defined(CONFIG_BRCM_TRACING) || defined(CONFIG_BRCMDBG)
-void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {
-    va_list args;
-
-    if (brcmf_msg_filter & filter) {
-        // TODO(cphoenix): After bringup: Re-enable filter check
-        char msg[512]; // Same value hard-coded throughout devhost.c
-        va_start(args, fmt);
-        int n_printed = vsnprintf(msg, 512, fmt, args);
-        va_end(args);
-        if (n_printed < 0) {
-            snprintf(msg, 512, "(Formatting error from string '%s')", fmt);
-        } else if (n_printed > 0 && msg[n_printed - 1] == '\n') {
-            msg[--n_printed] = 0;
-        }
-        zxlogf(INFO, "brcmfmac (%s): '%s'\n", func, msg);
-    }
-}
-#endif
 
 static void brcmf_mp_attach(void) {
     /* If module param firmware path is set then this will always be used,

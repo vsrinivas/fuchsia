@@ -21,12 +21,12 @@
 // code in this driver. Do not expect defines/enums to have correct values, or struct fields to have
 // correct types. Function prototypes are even less accurate.
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_LINUXISMS_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_LINUXISMS_H_
+#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
+#define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/usb.h> // Remove when the USB structs move out
+#include <ddk/protocol/usb.h>  // Remove when the USB structs move out
 #include <netinet/if_ether.h>
 #include <pthread.h>
 #include <stdarg.h>
@@ -433,9 +433,6 @@ enum nl80211_band {
 };
 #define NL80211_BAND_COUNT (NL80211_BAND_60GHZ + 1)
 
-#define CONFIG_BRCMDBG 0
-#define CONFIG_BRCM_TRACING 0
-
 enum brcmf_bus_type { BRCMF_BUSTYPE_SDIO, BRCMF_BUSTYPE_USB, BRCMF_BUSTYPE_PCIE };
 
 #define TP_PROTO(args...) args
@@ -633,7 +630,7 @@ struct in6_addr {
 };
 
 struct seq_file {
-    void* private;
+    void* private_data;
 };
 
 typedef uint64_t dma_addr_t;
@@ -927,4 +924,4 @@ struct va_format {
     const char* fmt;
 };
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_LINUXISMS_H_
+#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_

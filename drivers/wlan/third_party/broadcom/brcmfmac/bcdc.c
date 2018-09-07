@@ -31,7 +31,6 @@
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "proto.h"
-#include "tracepoint.h"
 
 struct brcmf_proto_bcdc_dcmd {
     uint32_t cmd;       /* dongle command value */

@@ -1007,7 +1007,7 @@ fail:
 }
 
 static zx_status_t brcmf_revinfo_read(struct seq_file* s, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(s->private);
+    struct brcmf_bus* bus_if = dev_to_bus(s->private_data);
     struct brcmf_rev_info* ri = &bus_if->drvr->revinfo;
     char drev[BRCMU_DOTREV_LEN];
     char brev[BRCMU_BOARDREV_LEN];
