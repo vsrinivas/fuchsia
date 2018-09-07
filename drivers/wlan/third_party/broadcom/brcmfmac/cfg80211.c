@@ -18,6 +18,7 @@
 
 #include "cfg80211.h"
 
+#include <wlan/protocol/if-impl.h>
 #include <zircon/status.h>
 
 #include <threads.h>
@@ -5075,6 +5076,212 @@ static struct cfg80211_ops brcmf_cfg80211_ops = {
     .set_pmk = brcmf_cfg80211_set_pmk,
     .del_pmk = brcmf_cfg80211_del_pmk,
 };
+
+static zx_status_t brcmf_setup_wiphybands(struct wiphy* wiphy);
+
+static void brcmf_cfg80211_set_country(struct wiphy* wiphy, char code[3]) {
+    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
+    struct brcmf_if* ifp = cfg_to_if(cfg);
+    struct brcmf_fil_country_le ccreq;
+    zx_status_t err;
+
+    brcmf_dbg(TRACE, "Enter: code=%c%c\n", code[0], code[1]);
+
+    err = brcmf_fil_iovar_data_get(ifp, "country", &ccreq, sizeof(ccreq));
+    if (err != ZX_OK) {
+        brcmf_err("Country code iovar returned err = %d\n", err);
+        return;
+    }
+
+    //memset(&ccreq, 0, sizeof(ccreq));
+    //ccreq.rev = country_codes->table[found_index].rev;
+    brcmf_dbg(TEMP, "ccode 0x%x, abbrev 0x%x, rev %d", *(uint32_t*)ccreq.ccode,
+              *(uint32_t*)ccreq.country_abbrev, ccreq.rev);
+    ccreq.ccode[0] = code[0];
+    ccreq.ccode[1] = code[1];
+    ccreq.ccode[2] = 0;
+    ccreq.country_abbrev[0] = code[0];
+    ccreq.country_abbrev[1] = code[1];
+    ccreq.country_abbrev[2] = 0;
+
+    err = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq));
+    if (err != ZX_OK) {
+        brcmf_err("Firmware rejected country setting\n");
+        return;
+    }
+    brcmf_setup_wiphybands(wiphy);
+}
+
+static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, void* cookie) {
+    struct net_device* ndev = ctx;
+
+    brcmf_dbg(TEMP, "Enter");
+    ndev->if_callbacks = malloc(sizeof(*ifc));
+    memcpy(ndev->if_callbacks, ifc, sizeof(*ifc));
+    ndev->if_callback_cookie = cookie;
+    brcmf_netdev_open(ndev);
+    ndev->flags = IFF_UP;
+    brcmf_cfg80211_set_country(ndev_to_wiphy(ndev), "US");
+    return ZX_OK;
+}
+
+static void brcmf_if_stop(void* ctx) {
+    struct net_device* ndev = ctx;
+
+    brcmf_dbg(TEMP, "Enter");
+    free(ndev->if_callbacks);
+    ndev->if_callbacks = NULL;
+}
+
+void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
+    brcmf_dbg(TEMP, "Enter");
+}
+
+void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
+    brcmf_dbg(TEMP, "Enter, ssid %s, bssid %lx", req->selected_bss.ssid,
+              *(uint64_t*)(req->selected_bss.bssid) & 0xffffffffffff);
+}
+
+void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
+    brcmf_dbg(TEMP, "Enter");
+}
+
+void brcmf_hook_auth_ind(void* ctx, wlanif_auth_ind_t* ind) {
+    brcmf_dbg(TEMP, "Called hook auth_ind");
+}
+
+void brcmf_hook_deauth_req(void* ctx, wlanif_deauth_req_t* req) {
+    brcmf_dbg(TEMP, "Called hook deauth_req");
+}
+
+void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
+    brcmf_dbg(TEMP, "Enter");
+}
+
+void brcmf_hook_assoc_ind(void* ctx, wlanif_assoc_ind_t* ind) {
+    brcmf_dbg(TEMP, "Called hook assoc_ind");
+}
+
+void brcmf_hook_disassoc_req(void* ctx, wlanif_disassoc_req_t* req) {
+    brcmf_dbg(TEMP, "Called hook disassoc_req");
+}
+
+void brcmf_hook_reset_req(void* ctx, wlanif_reset_req_t* req) {
+    brcmf_dbg(TEMP, "Called hook reset_req");
+}
+
+void brcmf_hook_start_req(void* ctx, wlanif_start_req_t* req) {
+    brcmf_dbg(TEMP, "Called hook start_req");
+}
+
+void brcmf_hook_stop_req(void* ctx, wlanif_stop_req_t* req) {
+    brcmf_dbg(TEMP, "Called hook stop_req");
+}
+
+void brcmf_hook_set_keys_req(void* ctx, wlanif_set_keys_req_t* req) {
+    brcmf_dbg(TEMP, "Called hook set_keys_req");
+}
+
+void brcmf_hook_del_keys_req(void* ctx, wlanif_del_keys_req_t* req) {
+    brcmf_dbg(TEMP, "Called hook del_keys_req");
+}
+
+void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
+    brcmf_dbg(TEMP, "Called hook eapol_req");
+}
+
+void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
+    brcmf_dbg(TEMP, "Enter");
+
+    memset(info, 0, sizeof(*info));
+
+    // role
+    info->role = WLAN_MAC_ROLE_CLIENT;
+}
+
+void brcmf_hook_stats_query_req(void* ctx) {
+    brcmf_dbg(TEMP, "Enter");
+}
+
+zx_status_t brcmf_hook_data_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+    brcmf_dbg(TEMP, "Enter. Options %d 0x%x, len %d", options, options, netbuf->len);
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static wlanif_impl_protocol_ops_t if_impl_proto_ops = {
+    .start = brcmf_if_start,
+    .stop = brcmf_if_stop,
+    .start_scan = brcmf_hook_start_scan,
+    .join_req = brcmf_hook_join_req,
+    .auth_req = brcmf_hook_auth_req,
+    .auth_ind = brcmf_hook_auth_ind,
+    .deauth_req = brcmf_hook_deauth_req,
+    .assoc_req = brcmf_hook_assoc_req,
+    .assoc_ind = brcmf_hook_assoc_ind,
+    .disassoc_req = brcmf_hook_disassoc_req,
+    .reset_req = brcmf_hook_reset_req,
+    .start_req = brcmf_hook_start_req,
+    .stop_req = brcmf_hook_stop_req,
+    .set_keys_req = brcmf_hook_set_keys_req,
+    .del_keys_req = brcmf_hook_del_keys_req,
+    .eapol_req = brcmf_hook_eapol_req,
+    .query = brcmf_hook_query,
+    .stats_query_req = brcmf_hook_stats_query_req,
+    .data_queue_tx = brcmf_hook_data_queue_tx,
+};
+
+static void brcmf_release_zx_if_device(void* ctx) {
+    // TODO(cphoenix): Implement unbind/release
+    // Unbind - remove device from tree
+    // Release - dealloc resources
+    brcmf_err("* * Need to unload and release all driver structs");
+}
+
+static zx_protocol_device_t if_impl_device_ops = {
+    .version = DEVICE_OPS_VERSION,
+    .release = brcmf_release_zx_if_device,
+};
+
+zx_status_t brcmf_phy_create_iface(void* ctx, uint16_t role, uint16_t* iface_id) {
+    struct brcmf_if* ifp = ctx;
+    struct net_device* ndev = ifp->ndev;
+    struct wireless_dev* wdev = ndev_to_wdev(ndev);
+    zx_status_t result;
+
+    brcmf_dbg(TEMP, "brcmf_phy_create_iface called!");
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "broadcom-wlanif", // TODO(cphoenix): Uniquify this?
+        .ctx = ndev,
+        .ops = &if_impl_device_ops,
+        .proto_id = ZX_PROTOCOL_WLANIF_IMPL,
+        .proto_ops = &if_impl_proto_ops,
+    };
+
+    struct brcmf_device* device = ifp->drvr->bus_if->dev;
+    brcmf_dbg(TEMP, "About to add if_dev");
+    result = device_add(device->phy_zxdev, &args, &device->if_zxdev);
+    if (result != ZX_OK) {
+        brcmf_err("Failed to device_add: %s", zx_status_get_string(result));
+        return result;
+    }
+    brcmf_dbg(TEMP, "device_add() succeeded. Added iface hooks.");
+
+    *iface_id = 42;
+
+    wdev->iftype = role;
+
+    /* set appropriate operations */
+    ndev->initialized_for_ap = true;
+
+    /* set the mac address & netns */
+    memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
+    ndev->priv_destructor = brcmf_free_net_device_vif;
+    brcmf_dbg(INFO, "%s: Broadcom Dongle Host Driver\n", ndev->name);
+
+    return ZX_OK;
+}
 
 zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, enum nl80211_iftype type,
                             struct brcmf_cfg80211_vif** vif_out) {
