@@ -18,27 +18,18 @@ static constexpr uint64_t kAddr1mb      = 0x0000000000100000;
 
 namespace machina {
 
-size_t e820_entries(size_t size) { return size > kAddr1mb ? 4 : 3; }
-
-void create_e820(void* addr, size_t size) {
-  auto entry = static_cast<e820entry_t*>(addr);
+E820Map::E820Map(size_t pmem_size) {
   // 0 to 32kb is reserved.
-  entry[0].addr = 0;
-  entry[0].size = kAddr32kb;
-  entry[0].type = E820_RESERVED;
+  entries.emplace_back(e820entry_t{0, kAddr32kb, E820_RESERVED});
   // 32kb to to 512kb is available (for Linux's real mode trampoline).
-  entry[1].addr = kAddr32kb;
-  entry[1].size = kAddr512kb - kAddr32kb;
-  entry[1].type = E820_RAM;
+  entries.emplace_back(
+      e820entry_t{kAddr32kb, kAddr512kb - kAddr32kb, E820_RAM});
   // 512kb to 1mb is reserved.
-  entry[2].addr = kAddr512kb;
-  entry[2].size = kAddr1mb - kAddr512kb;
-  entry[2].type = E820_RESERVED;
-  if (size > kAddr1mb) {
-    // 1mb to min(size, 1mb) is available.
-    entry[3].addr = kAddr1mb;
-    entry[3].size = size - kAddr1mb;
-    entry[3].type = E820_RAM;
+  entries.emplace_back(
+      e820entry_t{kAddr512kb, kAddr1mb - kAddr512kb, E820_RESERVED});
+  // 1mb to min(size, 1mb) is available.
+  if (pmem_size > kAddr1mb) {
+    entries.emplace_back(e820entry_t{kAddr1mb, pmem_size - kAddr1mb, E820_RAM});
   }
 }
 

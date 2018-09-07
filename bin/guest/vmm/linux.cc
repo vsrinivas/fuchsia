@@ -278,16 +278,17 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
 
 #if __x86_64__
   // Setup e820 memory map.
-  size_t e820_entries = machina::e820_entries(phys_mem.size());
+  machina::E820Map e820_map(phys_mem.size());
+  size_t e820_entries = e820_map.size();
   if (e820_entries > kMaxE820Entries) {
     FXL_LOG(ERROR) << "Not enough space for e820 memory map";
     return ZX_ERR_BAD_STATE;
   }
   bp(phys_mem, E820_COUNT) = static_cast<uint8_t>(e820_entries);
   const size_t e820_size = e820_entries * sizeof(e820entry_t);
-  void* e820_addr =
-      phys_mem.as<void>(kKernelOffset + kE820MapOffset, e820_size);
-  machina::create_e820(e820_addr, phys_mem.size());
+  e820entry_t* e820_addr =
+      phys_mem.as<e820entry_t>(kKernelOffset + kE820MapOffset, e820_size);
+  e820_map.copy(e820_addr);
 #endif
   return ZX_OK;
 }
