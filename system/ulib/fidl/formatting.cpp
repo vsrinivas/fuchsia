@@ -126,8 +126,66 @@ void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
     case fidl::kFidlTypeHandle:
         str->Append("handle");
         if (type->coded_handle.handle_subtype) {
-            // TODO(jeffbrown): Print the subtype as a string.
-            str->AppendPrintf("<%" PRIu32 ">", type->coded_handle.handle_subtype);
+            str->Append("<");
+            switch (type->coded_handle.handle_subtype) {
+            case fidl::kFidlHandleSubtypeHandle:
+                str->Append("handle");
+                break;
+            case fidl::kFidlHandleSubtypeProcess:
+                str->Append("process");
+                break;
+            case fidl::kFidlHandleSubtypeThread:
+                str->Append("thread");
+                break;
+            case fidl::kFidlHandleSubtypeVmo:
+                str->Append("vmo");
+                break;
+            case fidl::kFidlHandleSubtypeChannel:
+                str->Append("channel");
+                break;
+            case fidl::kFidlHandleSubtypeEvent:
+                str->Append("event");
+                break;
+            case fidl::kFidlHandleSubtypePort:
+                str->Append("port");
+                break;
+            case fidl::kFidlHandleSubtypeInterrupt:
+                str->Append("interrupt");
+                break;
+            case fidl::kFidlHandleSubtypeLog:
+                str->Append("log");
+                break;
+            case fidl::kFidlHandleSubtypeSocket:
+                str->Append("socket");
+                break;
+            case fidl::kFidlHandleSubtypeResource:
+                str->Append("resource");
+                break;
+            case fidl::kFidlHandleSubtypeEventpair:
+                str->Append("eventpair");
+                break;
+            case fidl::kFidlHandleSubtypeJob:
+                str->Append("job");
+                break;
+            case fidl::kFidlHandleSubtypeVmar:
+                str->Append("vmar");
+                break;
+            case fidl::kFidlHandleSubtypeFifo:
+                str->Append("fifo");
+                break;
+            case fidl::kFidlHandleSubtypeGuest:
+                str->Append("guest");
+                break;
+            case fidl::kFidlHandleSubtypeTimer:
+                str->Append("timer");
+                break;
+            // TODO(pascallouis): Add support for iomap, pci, and hypervisor
+            // when they are supported in FIDL.
+            default:
+                str->AppendPrintf("%" PRIu32, type->coded_handle.handle_subtype);
+                break;
+            }
+            str->Append(">");
         }
         FormatNullability(str, type->coded_handle.nullable);
         break;

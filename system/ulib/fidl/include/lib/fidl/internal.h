@@ -9,6 +9,7 @@
 
 #include <lib/fidl/coding.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 // All sizes here are given as uint32_t. Fidl message sizes are bounded to well below UINT32_MAX.
 // This also applies to arrays and vectors. For arrays, element_count * element_size will always fit
@@ -107,10 +108,31 @@ struct FidlCodedArray {
         : element(element), array_size(array_size), element_size(element_size) {}
 };
 
+// Note: must keep in sync with fidlc types.h HandleSubtype.
+enum FidlHandleSubtype : zx_obj_type_t {
+    // special case to indicate subtype is not specified.
+    kFidlHandleSubtypeHandle = ZX_OBJ_TYPE_NONE,
+
+    kFidlHandleSubtypeProcess = ZX_OBJ_TYPE_PROCESS,
+    kFidlHandleSubtypeThread = ZX_OBJ_TYPE_THREAD,
+    kFidlHandleSubtypeVmo = ZX_OBJ_TYPE_VMO,
+    kFidlHandleSubtypeChannel = ZX_OBJ_TYPE_CHANNEL,
+    kFidlHandleSubtypeEvent = ZX_OBJ_TYPE_EVENT,
+    kFidlHandleSubtypePort = ZX_OBJ_TYPE_PORT,
+    kFidlHandleSubtypeInterrupt = ZX_OBJ_TYPE_INTERRUPT,
+    kFidlHandleSubtypeLog = ZX_OBJ_TYPE_LOG,
+    kFidlHandleSubtypeSocket = ZX_OBJ_TYPE_SOCKET,
+    kFidlHandleSubtypeResource = ZX_OBJ_TYPE_RESOURCE,
+    kFidlHandleSubtypeEventpair = ZX_OBJ_TYPE_EVENTPAIR,
+    kFidlHandleSubtypeJob = ZX_OBJ_TYPE_JOB,
+    kFidlHandleSubtypeVmar = ZX_OBJ_TYPE_VMAR,
+    kFidlHandleSubtypeFifo = ZX_OBJ_TYPE_FIFO,
+    kFidlHandleSubtypeGuest = ZX_OBJ_TYPE_GUEST,
+    kFidlHandleSubtypeTimer = ZX_OBJ_TYPE_TIMER,
+};
+
 struct FidlCodedHandle {
-    // Note that an explicitly sized type is used here, as zx_obj_type_t is a C enum and hence has
-    // no guaranteed ABI.
-    const uint32_t handle_subtype;
+    const zx_obj_type_t handle_subtype;
     const FidlNullability nullable;
 
     constexpr FidlCodedHandle(uint32_t handle_subtype, FidlNullability nullable)

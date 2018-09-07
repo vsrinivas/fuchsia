@@ -50,10 +50,10 @@ bool handle_types() {
 
     EXPECT_NAME_EQ("handle", &nonnullable_handle, 1024);
     EXPECT_NAME_EQ("handle?", &nullable_handle, 1024);
-    EXPECT_NAME_EQ("handle<4>?", &nullable_channel_handle, 1024);
-    EXPECT_NAME_EQ("handle<3>?", &nullable_vmo_handle, 1024);
-    EXPECT_NAME_EQ("handle<4>", &nonnullable_channel_handle, 1024);
-    EXPECT_NAME_EQ("handle<3>", &nonnullable_vmo_handle, 1024);
+    EXPECT_NAME_EQ("handle<channel>?", &nullable_channel_handle, 1024);
+    EXPECT_NAME_EQ("handle<vmo>?", &nullable_vmo_handle, 1024);
+    EXPECT_NAME_EQ("handle<channel>", &nonnullable_channel_handle, 1024);
+    EXPECT_NAME_EQ("handle<vmo>", &nonnullable_vmo_handle, 1024);
 
     END_TEST;
 }
