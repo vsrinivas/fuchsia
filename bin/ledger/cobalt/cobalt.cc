@@ -4,50 +4,42 @@
 
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 
+#include <lib/cobalt/cpp/cobalt_logger.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/file.h>
-
-#include "peridot/lib/cobalt/cobalt.h"
+#include <lib/fxl/functional/auto_call.h>
 
 namespace ledger {
 namespace {
 constexpr char kConfigBinProtoPath[] =
     "/pkg/data/ledger_cobalt_config.binproto";
 constexpr int32_t kCobaltMetricId = 2;
-constexpr int32_t kCobaltEncodingId = 2;
 
-cobalt::CobaltContext* g_cobalt_context = nullptr;
+cobalt::CobaltLogger* g_cobalt_logger = nullptr;
 
 }  // namespace
 
 fxl::AutoCall<fit::closure> InitializeCobalt(
     async_dispatcher_t* dispatcher, component::StartupContext* context) {
-  std::unique_ptr<cobalt::CobaltContext> cobalt_context;
-  FXL_DCHECK(!g_cobalt_context);
+  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger;
+  FXL_DCHECK(!g_cobalt_logger);
 
-  fsl::SizedVmo config;
-  FXL_CHECK(fsl::VmoFromFilename(kConfigBinProtoPath, &config))
-      << "Could not read Cobalt config file into VMO";
+  cobalt_logger =
+      cobalt::NewCobaltLogger(dispatcher, context, kConfigBinProtoPath);
 
-  cobalt_context =
-      cobalt::MakeCobaltContext(dispatcher, context, std::move(config));
-  g_cobalt_context = cobalt_context.get();
+  g_cobalt_logger = cobalt_logger.get();
   return fxl::MakeAutoCall<fit::closure>(
-      [cobalt_context = std::move(cobalt_context)] {
-        g_cobalt_context = nullptr;
+      [cobalt_logger = std::move(cobalt_logger)] {
+        g_cobalt_logger = nullptr;
       });
 }
 
 void ReportEvent(CobaltEvent event) {
   // Do not do anything if cobalt reporting is disabled.
-  if (!g_cobalt_context) {
+  if (!g_cobalt_logger) {
     return;
   }
-  fuchsia::cobalt::Value value;
-  value.set_index_value(static_cast<uint32_t>(event));
-  cobalt::CobaltObservation observation(kCobaltMetricId, kCobaltEncodingId,
-                                        std::move(value));
-  g_cobalt_context->ReportObservation(observation);
+  g_cobalt_logger->LogEvent(kCobaltMetricId, static_cast<uint32_t>(event));
 }
 
 }  // namespace ledger
