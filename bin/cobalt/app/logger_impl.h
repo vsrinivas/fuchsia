@@ -13,10 +13,10 @@
 #include "third_party/cobalt/config/client_config.h"
 #include "third_party/cobalt/encoder/client_secret.h"
 #include "third_party/cobalt/encoder/encoder.h"
-#include "third_party/cobalt/encoder/observation_store_dispatcher.h"
+#include "third_party/cobalt/encoder/observation_store.h"
 #include "third_party/cobalt/encoder/project_context.h"
 #include "third_party/cobalt/encoder/send_retryer.h"
-#include "third_party/cobalt/encoder/shipping_dispatcher.h"
+#include "third_party/cobalt/encoder/shipping_manager.h"
 #include "third_party/cobalt/encoder/shuffler_client.h"
 #include "third_party/cobalt/util/encrypted_message_util.h"
 
@@ -26,9 +26,9 @@ class LoggerImpl : public fuchsia::cobalt::Logger {
  public:
   LoggerImpl(std::unique_ptr<encoder::ProjectContext> project_context,
              encoder::ClientSecret client_secret,
-             encoder::ObservationStoreDispatcher* store_dispatcher,
+             encoder::ObservationStore* observation_store,
              util::EncryptedMessageMaker* encrypt_to_analyzer,
-             encoder::ShippingDispatcher* shipping_dispatcher,
+             encoder::ShippingManager* shipping_manager,
              const encoder::SystemData* system_data,
              TimerManager* timer_manager);
 
@@ -93,10 +93,10 @@ class LoggerImpl : public fuchsia::cobalt::Logger {
                 uint32_t timeout_s, EndTimerCallback callback) override;
 
   cobalt::encoder::Encoder encoder_;
-  encoder::ObservationStoreDispatcher* store_dispatcher_;  // not owned
-  util::EncryptedMessageMaker* encrypt_to_analyzer_;       // not owned
-  encoder::ShippingDispatcher* shipping_dispatcher_;       // not owned
-  TimerManager* timer_manager_;                            // not owned
+  encoder::ObservationStore* observation_store_;      // not owned
+  util::EncryptedMessageMaker* encrypt_to_analyzer_;  // not owned
+  encoder::ShippingManager* shipping_manager_;        // not owned
+  TimerManager* timer_manager_;                       // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LoggerImpl);
 };

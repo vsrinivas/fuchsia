@@ -17,8 +17,7 @@ const int32_t kFuchsiaCustomerId = 1;
 
 namespace {
 template <class Profile>
-std::unique_ptr<ProjectContext> CreateProjectContext(
-    Profile profile) {
+std::unique_ptr<ProjectContext> CreateProjectContext(Profile profile) {
   fuchsia::mem::Buffer config_buffer{.vmo = std::move(profile.config.vmo),
                                      .size = profile.config.size};
   fsl::SizedVmo config_vmo;
@@ -49,18 +48,17 @@ std::unique_ptr<ProjectContext> CreateProjectContext(
       kFuchsiaCustomerId, config_id_pair.second, project_config));
   return project_context;
 }
-} // namespace
+}  // namespace
 
 CobaltEncoderFactoryImpl::CobaltEncoderFactoryImpl(
-    ClientSecret client_secret,
-    ObservationStoreDispatcher* store_dispatcher,
+    ClientSecret client_secret, ObservationStore* observation_store,
     util::EncryptedMessageMaker* encrypt_to_analyzer,
-    ShippingDispatcher* shipping_dispatcher, const SystemData* system_data,
+    ShippingManager* shipping_manager, const SystemData* system_data,
     TimerManager* timer_manager)
     : client_secret_(std::move(client_secret)),
-      store_dispatcher_(store_dispatcher),
+      observation_store_(observation_store),
       encrypt_to_analyzer_(encrypt_to_analyzer),
-      shipping_dispatcher_(shipping_dispatcher),
+      shipping_manager_(shipping_manager),
       system_data_(system_data),
       timer_manager_(timer_manager) {}
 
@@ -74,10 +72,9 @@ void CobaltEncoderFactoryImpl::CreateLogger(
     return;
   }
 
-  std::unique_ptr<LoggerImpl> logger_impl(
-      new LoggerImpl(std::move(project_context), client_secret_,
-                     store_dispatcher_, encrypt_to_analyzer_,
-                     shipping_dispatcher_, system_data_, timer_manager_));
+  std::unique_ptr<LoggerImpl> logger_impl(new LoggerImpl(
+      std::move(project_context), client_secret_, observation_store_,
+      encrypt_to_analyzer_, shipping_manager_, system_data_, timer_manager_));
   logger_bindings_.AddBinding(std::move(logger_impl), std::move(request));
   callback(Status2::OK);
 }
@@ -92,10 +89,9 @@ void CobaltEncoderFactoryImpl::CreateLoggerExt(
     return;
   }
 
-  std::unique_ptr<LoggerExtImpl> logger_ext_impl(
-      new LoggerExtImpl(std::move(project_context), client_secret_,
-                        store_dispatcher_, encrypt_to_analyzer_,
-                        shipping_dispatcher_, system_data_, timer_manager_));
+  std::unique_ptr<LoggerExtImpl> logger_ext_impl(new LoggerExtImpl(
+      std::move(project_context), client_secret_, observation_store_,
+      encrypt_to_analyzer_, shipping_manager_, system_data_, timer_manager_));
   logger_ext_bindings_.AddBinding(std::move(logger_ext_impl),
                                   std::move(request));
   callback(Status2::OK);
@@ -111,10 +107,9 @@ void CobaltEncoderFactoryImpl::CreateLoggerSimple(
     return;
   }
 
-  std::unique_ptr<LoggerSimpleImpl> logger_simple_impl(
-      new LoggerSimpleImpl(std::move(project_context), client_secret_,
-                           store_dispatcher_, encrypt_to_analyzer_,
-                           shipping_dispatcher_, system_data_, timer_manager_));
+  std::unique_ptr<LoggerSimpleImpl> logger_simple_impl(new LoggerSimpleImpl(
+      std::move(project_context), client_secret_, observation_store_,
+      encrypt_to_analyzer_, shipping_manager_, system_data_, timer_manager_));
   logger_simple_bindings_.AddBinding(std::move(logger_simple_impl),
                                      std::move(request));
   callback(Status2::OK);
@@ -131,9 +126,8 @@ void CobaltEncoderFactoryImpl::GetEncoderForProject(
   }
 
   std::unique_ptr<CobaltEncoderImpl> cobalt_encoder_impl(new CobaltEncoderImpl(
-      std::move(project_context), client_secret_, store_dispatcher_,
-      encrypt_to_analyzer_, shipping_dispatcher_, system_data_,
-      timer_manager_));
+      std::move(project_context), client_secret_, observation_store_,
+      encrypt_to_analyzer_, shipping_manager_, system_data_, timer_manager_));
   cobalt_encoder_bindings_.AddBinding(std::move(cobalt_encoder_impl),
                                       std::move(request));
   callback(Status::OK);

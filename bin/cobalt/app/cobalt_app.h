@@ -21,8 +21,9 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/network_wrapper/network_wrapper_impl.h"
 #include "third_party/cobalt/encoder/client_secret.h"
+#include "third_party/cobalt/encoder/file_observation_store.h"
 #include "third_party/cobalt/encoder/send_retryer.h"
-#include "third_party/cobalt/encoder/shipping_dispatcher.h"
+#include "third_party/cobalt/encoder/shipping_manager.h"
 #include "third_party/cobalt/encoder/shuffler_client.h"
 
 namespace cobalt {
@@ -53,10 +54,10 @@ class CobaltApp {
   encoder::ShufflerClient shuffler_client_;
   encoder::send_retryer::SendRetryer send_retryer_;
   network_wrapper::NetworkWrapperImpl network_wrapper_;
-  encoder::ObservationStoreDispatcher store_dispatcher_;
+  encoder::FileObservationStore observation_store_;
   util::EncryptedMessageMaker encrypt_to_analyzer_;
-  encoder::ShippingDispatcher shipping_dispatcher_;
   util::EncryptedMessageMaker encrypt_to_shuffler_;
+  encoder::LegacyShippingManager shipping_manager_;
   TimerManager timer_manager_;
 
   std::shared_ptr<config::ClientConfig> client_config_;

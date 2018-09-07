@@ -14,15 +14,15 @@ using cobalt::TimerVal;
 
 CobaltEncoderImpl::CobaltEncoderImpl(
     std::unique_ptr<ProjectContext> project_context, ClientSecret client_secret,
-    ObservationStoreDispatcher* store_dispatcher,
+    ObservationStore* observation_store,
     util::EncryptedMessageMaker* encrypt_to_analyzer,
-    ShippingDispatcher* shipping_dispatcher, const SystemData* system_data,
+    ShippingManager* shipping_manager, const SystemData* system_data,
     TimerManager* timer_manager)
     : encoder_(std::move(project_context), std::move(client_secret),
                system_data),
-      store_dispatcher_(store_dispatcher),
+      observation_store_(observation_store),
       encrypt_to_analyzer_(encrypt_to_analyzer),
-      shipping_dispatcher_(shipping_dispatcher),
+      shipping_manager_(shipping_manager),
       timer_manager_(timer_manager) {}
 
 // Duplicated in logger_impl.cc
@@ -54,18 +54,12 @@ void CobaltEncoderImpl::AddEncodedObservation(
     callback(Status::INTERNAL_ERROR);
   }
   // AddEncryptedObservation returns a StatusOr<ObservationStore::StoreStatus>.
-  auto result_or = store_dispatcher_->AddEncryptedObservation(
+  auto add_result = observation_store_->AddEncryptedObservation(
       std::move(message), std::move(result->metadata));
 
-  // If the StatusOr is not ok(), that means there was no configured store for
-  // the metadata's backend.
-  if (!result_or.ok()) {
-    callback(Status::INTERNAL_ERROR);
-  }
-
   // Unpack the inner StoreStatus and convert it to a cobalt Status.
-  Status status = ToCobaltStatus(result_or.ConsumeValueOrDie());
-  shipping_dispatcher_->NotifyObservationsAdded();
+  Status status = ToCobaltStatus(add_result);
+  shipping_manager_->NotifyObservationsAdded();
   callback(status);
 }
 void CobaltEncoderImpl::AddStringObservation(

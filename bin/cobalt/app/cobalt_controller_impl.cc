@@ -8,15 +8,15 @@
 
 namespace cobalt {
 
-using encoder::ShippingDispatcher;
+using encoder::ShippingManager;
 
-CobaltControllerImpl::CobaltControllerImpl(
-    async_dispatcher_t* dispatcher, ShippingDispatcher* shipping_dispatcher)
-    : dispatcher_(dispatcher), shipping_dispatcher_(shipping_dispatcher) {}
+CobaltControllerImpl::CobaltControllerImpl(async_dispatcher_t* dispatcher,
+                                           ShippingManager* shipping_manager)
+    : dispatcher_(dispatcher), shipping_manager_(shipping_manager) {}
 
 void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
   // invokes |callback| on the main thread
-  shipping_dispatcher_->RequestSendSoon(
+  shipping_manager_->RequestSendSoon(
       fxl::MakeCopyable([dispatcher = dispatcher_,
                          callback = std::move(callback)](bool success) mutable {
         async::PostTask(dispatcher, [callback = std::move(callback), success] {
@@ -27,17 +27,17 @@ void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
 
 void CobaltControllerImpl::BlockUntilEmpty(uint32_t max_wait_seconds,
                                            BlockUntilEmptyCallback callback) {
-  shipping_dispatcher_->WaitUntilIdle(std::chrono::seconds(max_wait_seconds));
+  shipping_manager_->WaitUntilIdle(std::chrono::seconds(max_wait_seconds));
   callback();
 }
 
 void CobaltControllerImpl::GetNumSendAttempts(
     GetNumSendAttemptsCallback callback) {
-  callback(shipping_dispatcher_->NumSendAttempts());
+  callback(shipping_manager_->num_send_attempts());
 }
 
 void CobaltControllerImpl::GetFailedSendAttempts(
     GetFailedSendAttemptsCallback callback) {
-  callback(shipping_dispatcher_->NumFailedAttempts());
+  callback(shipping_manager_->num_failed_attempts());
 }
 }  // namespace cobalt

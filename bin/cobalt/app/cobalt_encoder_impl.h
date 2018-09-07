@@ -13,10 +13,10 @@
 #include "third_party/cobalt/config/client_config.h"
 #include "third_party/cobalt/encoder/client_secret.h"
 #include "third_party/cobalt/encoder/encoder.h"
-#include "third_party/cobalt/encoder/observation_store_dispatcher.h"
+#include "third_party/cobalt/encoder/observation_store.h"
 #include "third_party/cobalt/encoder/project_context.h"
 #include "third_party/cobalt/encoder/send_retryer.h"
-#include "third_party/cobalt/encoder/shipping_dispatcher.h"
+#include "third_party/cobalt/encoder/shipping_manager.h"
 #include "third_party/cobalt/encoder/shuffler_client.h"
 #include "third_party/cobalt/util/encrypted_message_util.h"
 
@@ -27,9 +27,9 @@ class CobaltEncoderImpl : public fuchsia::cobalt::Encoder {
  public:
   CobaltEncoderImpl(std::unique_ptr<encoder::ProjectContext> project_context,
                     ClientSecret client_secret,
-                    ObservationStoreDispatcher* store_dispatcher,
+                    ObservationStore* observation_store,
                     util::EncryptedMessageMaker* encrypt_to_analyzer,
-                    ShippingDispatcher* shipping_dispatcher,
+                    ShippingManager* shipping_manager,
                     const SystemData* system_data, TimerManager* timer_manager);
 
  private:
@@ -88,9 +88,9 @@ class CobaltEncoderImpl : public fuchsia::cobalt::Encoder {
   void SendObservations(SendObservationsCallback callback) override;
 
   cobalt::encoder::Encoder encoder_;
-  ObservationStoreDispatcher* store_dispatcher_;      // not owned
+  ObservationStore* observation_store_;               // not owned
   util::EncryptedMessageMaker* encrypt_to_analyzer_;  // not owned
-  ShippingDispatcher* shipping_dispatcher_;           // not owned
+  ShippingManager* shipping_manager_;                 // not owned
   TimerManager* timer_manager_;                       // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltEncoderImpl);

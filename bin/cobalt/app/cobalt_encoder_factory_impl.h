@@ -13,8 +13,8 @@
 #include "garnet/bin/cobalt/app/logger_impl.h"
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "third_party/cobalt/encoder/observation_store_dispatcher.h"
-#include "third_party/cobalt/encoder/shipping_dispatcher.h"
+#include "third_party/cobalt/encoder/observation_store.h"
+#include "third_party/cobalt/encoder/shipping_manager.h"
 #include "third_party/cobalt/util/encrypted_message_util.h"
 
 namespace cobalt {
@@ -24,9 +24,9 @@ class CobaltEncoderFactoryImpl : public fuchsia::cobalt::LoggerFactory,
                                  public fuchsia::cobalt::EncoderFactory {
  public:
   CobaltEncoderFactoryImpl(ClientSecret client_secret,
-                           ObservationStoreDispatcher* store_dispatcher,
+                           ObservationStore* observation_store,
                            util::EncryptedMessageMaker* encrypt_to_analyzer,
-                           ShippingDispatcher* shipping_dispatcher,
+                           ShippingManager* shipping_manager,
                            const SystemData* system_data,
                            TimerManager* timer_manager);
 
@@ -63,9 +63,9 @@ class CobaltEncoderFactoryImpl : public fuchsia::cobalt::LoggerFactory,
   fidl::BindingSet<fuchsia::cobalt::Encoder,
                    std::unique_ptr<fuchsia::cobalt::Encoder>>
       cobalt_encoder_bindings_;
-  ObservationStoreDispatcher* store_dispatcher_;      // not owned
+  ObservationStore* observation_store_;               // not owned
   util::EncryptedMessageMaker* encrypt_to_analyzer_;  // not owned
-  ShippingDispatcher* shipping_dispatcher_;           // not owned
+  ShippingManager* shipping_manager_;                 // not owned
   const SystemData* system_data_;                     // not owned
   TimerManager* timer_manager_;                       // not owned
 

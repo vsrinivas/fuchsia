@@ -8,15 +8,15 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
-#include "third_party/cobalt/encoder/shipping_dispatcher.h"
+#include "third_party/cobalt/encoder/shipping_manager.h"
 
 namespace cobalt {
 
 class CobaltControllerImpl : public fuchsia::cobalt::Controller {
  public:
-  // Does not take ownerhsip of |shipping_dispatcher|.
+  // Does not take ownerhsip of |shipping_manager|.
   CobaltControllerImpl(async_dispatcher_t* dispatcher,
-                       encoder::ShippingDispatcher* shipping_dispatcher);
+                       encoder::ShippingManager* shipping_manager);
 
  private:
   void RequestSendSoon(RequestSendSoonCallback callback) override;
@@ -29,7 +29,7 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
   void GetFailedSendAttempts(GetFailedSendAttemptsCallback callback) override;
 
   async_dispatcher_t* const dispatcher_;
-  encoder::ShippingDispatcher* shipping_dispatcher_;  // not owned
+  encoder::ShippingManager* shipping_manager_;  // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltControllerImpl);
 };

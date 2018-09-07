@@ -77,16 +77,16 @@ std::tuple<std::string, std::string, std::string> ThreePartMetricPartNames(
 
 LoggerImpl::LoggerImpl(std::unique_ptr<encoder::ProjectContext> project_context,
                        encoder::ClientSecret client_secret,
-                       encoder::ObservationStoreDispatcher* store_dispatcher,
+                       encoder::ObservationStore* observation_store,
                        util::EncryptedMessageMaker* encrypt_to_analyzer,
-                       encoder::ShippingDispatcher* shipping_dispatcher,
+                       encoder::ShippingManager* shipping_manager,
                        const encoder::SystemData* system_data,
                        TimerManager* timer_manager)
     : encoder_(std::move(project_context), std::move(client_secret),
                system_data),
-      store_dispatcher_(store_dispatcher),
+      observation_store_(observation_store),
       encrypt_to_analyzer_(encrypt_to_analyzer),
-      shipping_dispatcher_(shipping_dispatcher),
+      shipping_manager_(shipping_manager),
       timer_manager_(timer_manager) {}
 
 template <class ValueType, class CB>
@@ -204,18 +204,12 @@ void LoggerImpl::AddEncodedObservation(cobalt::encoder::Encoder::Result* result,
     callback(Status2::INTERNAL_ERROR);
   }
   // AddEncryptedObservation returns a StatusOr<ObservationStore::StoreStatus>.
-  auto result_or = store_dispatcher_->AddEncryptedObservation(
+  auto add_result = observation_store_->AddEncryptedObservation(
       std::move(message), std::move(result->metadata));
 
-  // If the StatusOr is not ok(), that means there was no configured store for
-  // the metadata's backend.
-  if (!result_or.ok()) {
-    callback(Status2::INTERNAL_ERROR);
-  }
-
   // Unpack the inner StoreStatus and convert it to a cobalt Status.
-  Status2 status = ToStatus2(ToCobaltStatus(result_or.ConsumeValueOrDie()));
-  shipping_dispatcher_->NotifyObservationsAdded();
+  Status2 status = ToStatus2(ToCobaltStatus(add_result));
+  shipping_manager_->NotifyObservationsAdded();
   callback(status);
 }
 
