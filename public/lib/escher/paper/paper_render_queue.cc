@@ -228,7 +228,7 @@ PaperRenderQueue::SortKey PaperRenderQueue::SortKey::NewOpaque(
     Hash pipeline_hash, Hash draw_hash, float depth) {
   // Depth must be non-negative, otherwise comparing the bit representations
   // won't work.
-  FXL_DCHECK(depth >= 0);
+  FXL_DCHECK(depth >= 0) << "is: " << depth;
 
   // Prioritize minimizing pipeline changes over depth-sorting; both are more
   // important than minimizing mesh/texture state changes (in practice, almost

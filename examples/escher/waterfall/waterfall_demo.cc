@@ -163,34 +163,18 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
                       << (sort_by_pipeline_ ? "true" : "false");
         return true;
       case '1':
-        current_scene_ = 0;
-        return true;
       case '2':
-        current_scene_ = 1;
-        return true;
       case '3':
-        current_scene_ = 2;
-        return true;
       case '4':
-        current_scene_ = 3;
-        return true;
       case '5':
-        current_scene_ = 4;
-        return true;
       case '6':
-        current_scene_ = 5;
-        return true;
       case '7':
-        current_scene_ = 6;
-        return true;
       case '8':
-        current_scene_ = 7;
-        return true;
       case '9':
-        current_scene_ = 8;
-        return true;
       case '0':
-        current_scene_ = 9;
+        current_scene_ =
+            (scenes_.size() + (key_char - '0') - 1) % scenes_.size();
+        FXL_LOG(INFO) << "Current scene index: " << current_scene_;
         return true;
       default:
         return Demo::HandleKeyPress(key);

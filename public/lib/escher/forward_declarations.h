@@ -39,6 +39,7 @@ class Object;
 class PipelineLayout;
 class PaperRenderer;
 class PaperRenderQueue;
+class PaperShapeCache;
 class Resource;
 class ResourceRecycler;
 class Renderer;

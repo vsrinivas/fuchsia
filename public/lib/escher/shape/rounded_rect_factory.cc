@@ -40,29 +40,39 @@ MeshPtr RoundedRectFactory::NewRoundedRect(
                                      vk::BufferUsageFlagBits::eTransferDst,
                                  vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-  auto writer = batch_gpu_uploader->AcquireWriter(vertex_buffer_size);
-  GenerateRoundedRectVertices(spec, mesh_spec, writer->host_ptr(),
-                              writer->size());
-  writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
-                      Semaphore::New(vk_device()));
-  batch_gpu_uploader->PostWriter(std::move(writer));
-
-  const BoundingBox bounding_box =
-      spec.width > 0.f && spec.height > 0.f
-          ? BoundingBox(-0.5f * vec3(spec.width, spec.height, 0),
-                        0.5f * vec3(spec.width, spec.height, 0))
-          : BoundingBox();
+  const auto bounding_box =
+      BoundingBox::NewChecked(-0.5f * vec3(spec.width, spec.height, 0),
+                              0.5f * vec3(spec.width, spec.height, 0), 1);
 
   switch (mesh_spec.vertex_buffer_count()) {
-    case 1:
+    case 1: {
+      auto writer = batch_gpu_uploader->AcquireWriter(vertex_buffer_size);
+      GenerateRoundedRectVertices(spec, mesh_spec, writer->host_ptr(),
+                                  writer->size());
+      writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
+                          Semaphore::New(vk_device()));
+      batch_gpu_uploader->PostWriter(std::move(writer));
+
       return fxl::MakeRefCounted<Mesh>(
           static_cast<ResourceRecycler*>(this), mesh_spec, bounding_box,
           vertex_count, index_count, vertex_buffer, std::move(index_buffer));
-    case 2:
+    }
+    case 2: {
+      auto writer = batch_gpu_uploader->AcquireWriter(vertex_buffer_size);
+      GenerateRoundedRectVertices(
+          spec, mesh_spec, writer->host_ptr(),
+          vertex_count * primary_buffer_stride,
+          writer->host_ptr() + vertex_count * primary_buffer_stride,
+          vertex_count * secondary_buffer_stride);
+      writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
+                          Semaphore::New(vk_device()));
+      batch_gpu_uploader->PostWriter(std::move(writer));
+
       return fxl::MakeRefCounted<Mesh>(
           static_cast<ResourceRecycler*>(this), mesh_spec, bounding_box,
           vertex_count, index_count, vertex_buffer, std::move(vertex_buffer),
           std::move(index_buffer), 0, vertex_count * primary_buffer_stride, 0);
+    }
     default:
       FXL_CHECK(false) << "unsupported vertex buffer count: "
                        << mesh_spec.vertex_buffer_count();

@@ -45,16 +45,11 @@ class WaterfallDemo : public Demo {
   void ProcessCommandLineArgs(int argc, char** argv);
 
   void InitializeEscherStage(const DemoHarness::WindowParams& window_params);
-  void InitializeDemoScene();
+  void InitializeDemoScenes(escher::PaperShapeCache* shape_cache);
 
   WaterfallRendererPtr renderer_;
 
   escher::Stage stage_;
-
-  escher::MeshPtr ring_;
-  escher::TexturePtr texture_;
-  escher::MaterialPtr material_;
-  escher::MaterialPtr material2_;
 
   // 4 camera projection modes:
   // - orthographic full-screen
@@ -63,7 +58,9 @@ class WaterfallDemo : public Demo {
   // - perspective from tilted viewpoint (from corner).
   int camera_projection_mode_ = 0;
 
-  std::unique_ptr<Scene> scene_;
+  int current_scene_ = 0;
+  std::vector<std::unique_ptr<Scene>> scenes_;
+
   escher::Stopwatch stopwatch_;
   uint64_t frame_count_ = 0;
   uint64_t first_frame_microseconds_;

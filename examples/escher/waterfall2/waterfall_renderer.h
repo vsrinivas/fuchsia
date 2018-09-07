@@ -10,6 +10,7 @@
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/paper/paper_render_queue.h"
+#include "lib/escher/paper/paper_shape_cache.h"
 #include "lib/escher/renderer/renderer.h"
 
 class WaterfallRenderer;
@@ -30,6 +31,8 @@ class WaterfallRenderer final : public escher::Renderer {
   // through.
   void SetNumDepthBuffers(size_t count);
 
+  escher::PaperShapeCache* shape_cache() { return &shape_cache_; }
+
  private:
   explicit WaterfallRenderer(escher::EscherWeakPtr escher);
 
@@ -37,6 +40,7 @@ class WaterfallRenderer final : public escher::Renderer {
                        const escher::ImagePtr& output_image);
   void EndRenderPass(const escher::FramePtr& frame);
 
+  escher::PaperShapeCache shape_cache_;
   escher::PaperRenderQueue render_queue_;
   std::vector<escher::TexturePtr> depth_buffers_;
 };

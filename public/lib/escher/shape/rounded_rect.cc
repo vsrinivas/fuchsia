@@ -6,6 +6,7 @@
 
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/shape/mesh_spec.h"
+#include "lib/escher/util/trace_macros.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {
@@ -68,6 +69,8 @@ std::pair<uint32_t, uint32_t> GetRoundedRectMeshVertexAndIndexCounts(
 void GenerateRoundedRectIndices(const RoundedRectSpec& spec,
                                 const MeshSpec& mesh_spec, void* indices_out,
                                 uint32_t max_bytes) {
+  TRACE_DURATION("gfx", "escher::GenerateRoundedRectIndices");
+
   FXL_DCHECK(max_bytes == kIndexCount * sizeof(uint32_t));
   uint32_t* indices = static_cast<uint32_t*>(indices_out);
 
@@ -159,6 +162,8 @@ namespace {
 // Helper for GenerateRoundedRectVertices().
 template <typename VertT>
 void GenerateRoundedRectVertexUVs(const RoundedRectSpec& spec, VertT* verts) {
+  TRACE_DURATION("gfx", "escher::GenerateRoundedRectVertexUVs");
+
   const float width = spec.width;
   const float height = spec.height;
 
@@ -235,6 +240,8 @@ template <typename UvVertT, typename PosVertT>
 void GenerateRoundedRectVertexPositionsFromUVs(const RoundedRectSpec& spec,
                                                UvVertT* uv_verts,
                                                PosVertT* pos_verts) {
+  TRACE_DURATION("gfx", "escher::GenerateRoundedRectVertexPositionsFromUVs");
+
   const vec2 extent(spec.width, spec.height);
   const vec2 offset = -0.5f * extent;
   for (size_t i = 0; i < kVertexCount; ++i) {
@@ -247,47 +254,59 @@ void GenerateRoundedRectVertexPositionsFromUVs(const RoundedRectSpec& spec,
 void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
                                  const MeshSpec& mesh_spec, void* vertices_out,
                                  uint32_t max_bytes) {
+  TRACE_DURATION("gfx", "escher::GenerateRoundedRectVertices");
+
   const float width = spec.width;
   const float height = spec.height;
   FXL_DCHECK(width >= spec.top_left_radius + spec.top_right_radius);
   FXL_DCHECK(width >= spec.bottom_left_radius + spec.bottom_right_radius);
   FXL_DCHECK(height >= spec.top_left_radius + spec.bottom_left_radius);
   FXL_DCHECK(height >= spec.top_right_radius + spec.bottom_right_radius);
+  FXL_DCHECK(mesh_spec.total_attribute_count() == 2);
+  FXL_DCHECK(mesh_spec.attributes[0] ==
+             (MeshAttribute::kPosition2D | MeshAttribute::kUV));
+  FXL_DCHECK(max_bytes == kVertexCount * mesh_spec.stride(0));
+  FXL_DCHECK(sizeof(PosUvVertex) == mesh_spec.stride(0));
+  FXL_DCHECK(0U == mesh_spec.attribute_offset(0, MeshAttribute::kPosition2D));
+  FXL_DCHECK(sizeof(vec2) == mesh_spec.attribute_offset(0, MeshAttribute::kUV));
 
   // We first generate the UV-coordinates for each vertex, then make a second
   // pass where we use these UV-coords to generate the vertex positions.
+  PosUvVertex* const verts = static_cast<PosUvVertex*>(vertices_out);
+  GenerateRoundedRectVertexUVs(spec, verts);
+  GenerateRoundedRectVertexPositionsFromUVs(spec, verts, verts);
+}
 
-  size_t vertex_buffer_count = mesh_spec.vertex_buffer_count();
-  FXL_DCHECK(vertex_buffer_count <= 2);
+void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
+                                 const MeshSpec& mesh_spec,
+                                 void* primary_attributes_out,
+                                 uint32_t max_primary_attribute_bytes,
+                                 void* secondary_attributes_out,
+                                 uint32_t max_secondary_attribute_bytes) {
+  TRACE_DURATION("gfx", "escher::GenerateRoundedRectVertices");
 
-  if (vertex_buffer_count == 1) {
-    FXL_DCHECK(max_bytes == kVertexCount * mesh_spec.stride(0));
-    FXL_DCHECK(mesh_spec.has_attributes(
-        0, (MeshAttribute::kPosition2D | MeshAttribute::kUV)));
-    FXL_DCHECK(0U == mesh_spec.attribute_offset(0, MeshAttribute::kPosition2D));
-    FXL_DCHECK(sizeof(vec2) ==
-               mesh_spec.attribute_offset(0, MeshAttribute::kUV));
-    FXL_DCHECK(sizeof(PosUvVertex) == mesh_spec.stride(0));
+  const float width = spec.width;
+  const float height = spec.height;
+  FXL_DCHECK(width >= spec.top_left_radius + spec.top_right_radius);
+  FXL_DCHECK(width >= spec.bottom_left_radius + spec.bottom_right_radius);
+  FXL_DCHECK(height >= spec.top_left_radius + spec.bottom_left_radius);
+  FXL_DCHECK(height >= spec.top_right_radius + spec.bottom_right_radius);
+  FXL_DCHECK(mesh_spec.total_attribute_count() == 2);
+  FXL_DCHECK(mesh_spec.attributes[0] == MeshAttribute::kPosition2D);
+  FXL_DCHECK(mesh_spec.attributes[1] == MeshAttribute::kUV);
+  FXL_DCHECK(max_primary_attribute_bytes ==
+             kVertexCount * (mesh_spec.stride(0)));
+  FXL_DCHECK(max_secondary_attribute_bytes ==
+             kVertexCount * (mesh_spec.stride(1)));
+  FXL_DCHECK(sizeof(PosVertex) == mesh_spec.stride(0));
+  FXL_DCHECK(sizeof(UvVertex) == mesh_spec.stride(1));
 
-    // Output vertices are writen here.
-    PosUvVertex* const verts = static_cast<PosUvVertex*>(vertices_out);
-
-    GenerateRoundedRectVertexUVs(spec, verts);
-    GenerateRoundedRectVertexPositionsFromUVs(spec, verts, verts);
-  } else {
-    FXL_DCHECK(max_bytes ==
-               kVertexCount * (mesh_spec.stride(0) + mesh_spec.stride(1)));
-    FXL_DCHECK(0U == mesh_spec.attribute_offset(0, MeshAttribute::kPosition2D));
-    FXL_DCHECK(0U == mesh_spec.attribute_offset(1, MeshAttribute::kUV));
-    FXL_DCHECK(sizeof(PosVertex) == mesh_spec.stride(0));
-    FXL_DCHECK(sizeof(UvVertex) == mesh_spec.stride(1));
-
-    PosVertex* const positions = static_cast<PosVertex*>(vertices_out);
-    UvVertex* const uvs = reinterpret_cast<UvVertex*>(positions + kVertexCount);
-
-    GenerateRoundedRectVertexUVs(spec, uvs);
-    GenerateRoundedRectVertexPositionsFromUVs(spec, uvs, positions);
-  }
+  // We first generate the UV-coordinates for each vertex, then make a second
+  // pass where we use these UV-coords to generate the vertex positions.
+  PosVertex* const positions = static_cast<PosVertex*>(primary_attributes_out);
+  UvVertex* const uvs = reinterpret_cast<UvVertex*>(secondary_attributes_out);
+  GenerateRoundedRectVertexUVs(spec, uvs);
+  GenerateRoundedRectVertexPositionsFromUVs(spec, uvs, positions);
 }
 
 bool RoundedRectSpec::ContainsPoint(vec2 point) const {
@@ -357,6 +376,20 @@ bool RoundedRectSpec::ContainsPoint(vec2 point) const {
 
   // Point isn't in the corner areas, so it is definitely contained.
   return true;
+}
+
+RoundedRectSpec RoundedRectSpec::operator*(float t) const {
+  return RoundedRectSpec(width * t, height * t, top_left_radius * t,
+                         top_right_radius * t, bottom_right_radius * t,
+                         bottom_left_radius * t);
+}
+
+RoundedRectSpec RoundedRectSpec::operator+(const RoundedRectSpec& other) const {
+  return RoundedRectSpec(width + other.width, height + other.height,
+                         top_left_radius + other.top_left_radius,
+                         top_right_radius + other.top_right_radius,
+                         bottom_right_radius + other.bottom_right_radius,
+                         bottom_left_radius + other.bottom_left_radius);
 }
 
 }  // namespace escher

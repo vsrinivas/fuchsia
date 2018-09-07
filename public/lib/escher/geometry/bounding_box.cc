@@ -4,6 +4,8 @@
 
 #include "lib/escher/geometry/bounding_box.h"
 
+#include "lib/escher/geometry/intersection.h"
+#include "lib/escher/geometry/plane_ops.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {
@@ -18,6 +20,18 @@ BoundingBox::BoundingBox(vec3 min, vec3 max) : min_(min), max_(max) {
   // Should use empty bounding-box if box is 1D or 0D.
   FXL_DCHECK(dimensions >= 2);
 #endif
+}
+
+BoundingBox BoundingBox::NewChecked(vec3 min, vec3 max,
+                                    uint32_t max_degenerate_dimensions) {
+  vec3 diff = max - min;
+  if (diff.x < 0.f || diff.y < 0.f || diff.z < 0.f)
+    return BoundingBox();
+
+  uint32_t dimensions = (diff.x == 0.f ? 0 : 1) + (diff.y == 0.f ? 0 : 1) +
+                        (diff.z == 0.f ? 0 : 1);
+  return dimensions > max_degenerate_dimensions ? BoundingBox()
+                                                : BoundingBox(min, max);
 }
 
 BoundingBox& BoundingBox::Join(const BoundingBox& box) {
@@ -75,6 +89,29 @@ BoundingBox operator*(const mat4& matrix, const BoundingBox& box) {
              glm::max(vec3(za), vec3(zb)) + vec3(matrix[3]);
 
   return BoundingBox(min, max);
+}
+
+uint32_t BoundingBox::NumClippedCorners(const plane2& plane) const {
+  uint32_t count = 0;
+  count += PlaneClipsPoint(plane, vec2(min_.x, min_.y)) ? 2 : 0;
+  count += PlaneClipsPoint(plane, vec2(min_.x, max_.y)) ? 2 : 0;
+  count += PlaneClipsPoint(plane, vec2(max_.x, max_.y)) ? 2 : 0;
+  count += PlaneClipsPoint(plane, vec2(max_.x, min_.y)) ? 2 : 0;
+  return count;
+}
+
+uint32_t BoundingBox::NumClippedCorners(const plane3& plane) const {
+  uint32_t count = 0;
+  count += PlaneClipsPoint(plane, vec3(min_.x, min_.y, min_.z)) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(min_.x, min_.y, max_.z)) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(min_.x, max_.y, min_.z)) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(min_.x, max_.y, max_.z)) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(max_.x, min_.y, min_.z)) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(max_.x, min_.y, max_.z)) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(max_.x, max_.y, min_.z)) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(max_.x, max_.y, max_.z)) ? 1 : 0;
+
+  return count;
 }
 
 }  // namespace escher

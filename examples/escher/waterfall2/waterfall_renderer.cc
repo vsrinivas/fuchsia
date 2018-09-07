@@ -5,6 +5,7 @@
 #include "garnet/examples/escher/waterfall2/waterfall_renderer.h"
 
 #include "lib/escher/escher.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/util/trace_macros.h"
@@ -21,7 +22,9 @@ WaterfallRendererPtr WaterfallRenderer::New(EscherWeakPtr escher) {
 }
 
 WaterfallRenderer::WaterfallRenderer(EscherWeakPtr weak_escher)
-    : Renderer(weak_escher), render_queue_(std::move(weak_escher)) {
+    : Renderer(weak_escher),
+      shape_cache_(weak_escher),
+      render_queue_(std::move(weak_escher)) {
   // Need at least one.
   SetNumDepthBuffers(1);
 }
@@ -42,7 +45,14 @@ void WaterfallRenderer::DrawFrame(const escher::FramePtr& frame,
       output_image, vk::PipelineStageFlagBits::eColorAttachmentOutput);
 
   render_queue_.InitFrame(frame, *stage, camera);
-  scene->Update(stopwatch, frame_count, stage, &render_queue_);
+  {
+    auto gpu_uploader = escher::BatchGpuUploader::New(escher()->GetWeakPtr());
+    shape_cache_.BeginFrame(gpu_uploader.get(), frame->frame_number());
+    scene->Update(stopwatch, frame_count, stage, &render_queue_);
+    shape_cache_.EndFrame();
+    gpu_uploader->Submit(escher::SemaphorePtr());
+  }
+
   render_queue_.Sort();
   BeginRenderPass(frame, output_image);
   render_queue_.GenerateCommands(cb, nullptr);

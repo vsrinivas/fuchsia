@@ -11,10 +11,16 @@ namespace escher {
 
 class BoundingBox {
  public:
-  // Non-empty box.
+  // Non-empty box.  No error-checking; it is up to the caller to ensure that
+  // all components of max are >= the corresponding component of min.
   BoundingBox(vec3 min, vec3 max);
   // Empty box.
   constexpr BoundingBox() : min_{1, 1, 1}, max_{0, 0, 0} {}
+  // Return an empty box if max < min along any of the coordinate axes,
+  // or if max == min along more than |max_degenerate_dimensions| of the
+  // coordinate axes.  Otherwise return a non-empty box.
+  static BoundingBox NewChecked(vec3 min, vec3 max,
+                                uint32_t max_degenerate_dimensions = 0);
 
   const vec3& min() const { return min_; }
   const vec3& max() const { return max_; }
@@ -40,6 +46,15 @@ class BoundingBox {
   }
 
   bool is_empty() const { return *this == BoundingBox(); }
+
+  // Return the number of bounding box corners that are clipped by the the
+  // specified plane (between 0 and 8).  Since this is a 2D plane, the z
+  // coordinate is ignored, and only 4 corners need to be tested.
+  uint32_t NumClippedCorners(const plane2& plane) const;
+
+  // Return the number of bounding box corners that are clipped by the the
+  // specified plane (between 0 and 8).
+  uint32_t NumClippedCorners(const plane3& plane) const;
 
  private:
   vec3 min_;

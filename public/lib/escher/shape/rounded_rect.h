@@ -29,6 +29,10 @@ struct RoundedRectSpec {
   float bottom_left_radius;
 
   bool ContainsPoint(vec2 point) const;
+
+  // Make RoundedRectSpec lerpable.
+  RoundedRectSpec operator*(float t) const;
+  RoundedRectSpec operator+(const RoundedRectSpec& other) const;
 };
 
 // Return the number of vertices and indices that are required to tessellate the
@@ -46,8 +50,19 @@ void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
                                  uint32_t max_bytes);
 
 void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
-                                 const MeshSpec& mesh_spec, void* vertices_out,
-                                 uint32_t max_bytes);
+                                 const MeshSpec& mesh_spec,
+                                 void* primary_attributes_out,
+                                 uint32_t max_primary_attribute_bytes,
+                                 void* secondary_attributes_out,
+                                 uint32_t max_secondary_attribute_bytes);
+
+// Inline function definitions.
+
+// Provide a corresponding function to RoundedRectSpec::operator*, so that
+// scalar multiplication is commutative.
+inline RoundedRectSpec operator*(float t, const RoundedRectSpec& spec) {
+  return spec * t;
+}
 
 }  // namespace escher
 

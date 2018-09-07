@@ -32,6 +32,13 @@ T* NextAlignedPtr(void* ptr) {
   return reinterpret_cast<T*>(std::align(alignof(T), sizeof(T), ptr, space));
 }
 
+template <typename T>
+T* NextAlignedTriviallyDestructiblePtr(void* ptr) {
+  static_assert(std::is_trivially_destructible<T>::value,
+                "Type must be trivially destructible.");
+  return NextAlignedPtr<T>(ptr);
+}
+
 }  // namespace escher
 
 #endif  // LIB_ESCHER_UTIL_ALIGN_H_

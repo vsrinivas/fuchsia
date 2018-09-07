@@ -4,6 +4,7 @@
 
 #include "garnet/examples/escher/waterfall2/waterfall_demo.h"
 
+#include "garnet/examples/escher/waterfall/scenes/paper_scene.h"
 #include "garnet/examples/escher/waterfall/scenes/ring_tricks2.h"
 #include "lib/escher/defaults/default_shader_program_factory.h"
 #include "lib/escher/geometry/tessellation.h"
@@ -27,9 +28,6 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness, "Waterfall Demo") {
   ProcessCommandLineArgs(argc, argv);
 
-  InitializeEscherStage(harness->GetWindowParams());
-  InitializeDemoScene();
-
   // Initialize filesystem with files before creating renderer; it will use them
   // to generate the necessary ShaderPrograms.
   escher()->shader_program_factory()->filesystem()->InitializeWithRealFiles(
@@ -41,6 +39,9 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
 
   renderer_ = WaterfallRenderer::New(GetEscherWeakPtr());
   renderer_->SetNumDepthBuffers(harness->GetVulkanSwapchain().images.size());
+
+  InitializeEscherStage(harness->GetWindowParams());
+  InitializeDemoScenes(renderer_->shape_cache());
 }
 
 WaterfallDemo::~WaterfallDemo() {
@@ -66,19 +67,12 @@ void WaterfallDemo::InitializeEscherStage(
   stage_.set_fill_light(escher::AmbientLight(1.f - kLightIntensity));
 }
 
-void WaterfallDemo::InitializeDemoScene() {
-  auto texture = escher()->NewTexture(escher()->NewGradientImage(4, 256),
-                                      vk::Filter::eLinear);
-  material_ = Material::New(vec4(1, 1, 1, 1), texture);
-  material2_ = Material::New(vec4(0.4f, 0.3f, 1.f, 0.6f), texture);
-  material2_->set_opaque(false);
-
-  ring_ = escher::NewRingMesh(
-      escher(), MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV}, 4,
-      vec2(0.f, 0.f), 300.f, 200.f);
-
-  scene_ = std::make_unique<RingTricks2>(this);
-  scene_->Init(&stage_);
+void WaterfallDemo::InitializeDemoScenes(escher::PaperShapeCache* shape_cache) {
+  scenes_.emplace_back(new PaperScene(this, shape_cache));
+  scenes_.emplace_back(new RingTricks2(this));
+  for (auto& scene : scenes_) {
+    scene->Init(&stage_);
+  }
 }
 
 void WaterfallDemo::ProcessCommandLineArgs(int argc, char** argv) {
@@ -112,6 +106,20 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
       }
       case 'D':
         show_debug_info_ = !show_debug_info_;
+        return true;
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+      case '0':
+        current_scene_ =
+            (scenes_.size() + (key_char - '0') - 1) % scenes_.size();
+        FXL_LOG(INFO) << "Current scene index: " << current_scene_;
         return true;
       default:
         return Demo::HandleKeyPress(key);
@@ -166,8 +174,7 @@ void WaterfallDemo::DrawFrame(const FramePtr& frame,
       GenerateCamera(camera_projection_mode_, stage_.viewing_volume());
 
   renderer_->DrawFrame(frame, &stage_, camera, stopwatch_, frame_count(),
-                       scene_.get(), output_image);
-
+                       scenes_[current_scene_].get(), output_image);
   if (++frame_count_ == 1) {
     first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();
     stopwatch_.Reset();
