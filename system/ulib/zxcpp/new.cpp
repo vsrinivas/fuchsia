@@ -88,3 +88,18 @@ void* operator new[](size_t , void* p) {
     return p;
 }
 
+// These are the mangled names of all the functions above.  Because these
+// functions are magical in the language, the compiler insists on making
+// default-visibility definitions regardless of all the ways to tell it to use
+// hidden visibility.  So there is nothing left but to go around the compiler's
+// back and force them to .hidden via assembler directives.
+asm(".hidden _ZdaPv");
+asm(".hidden _ZdaPvm");
+asm(".hidden _ZdlPv");
+asm(".hidden _ZdlPvm");
+asm(".hidden _Znam");
+asm(".hidden _ZnamPv");
+asm(".hidden _ZnamRKSt9nothrow_t");
+asm(".hidden _Znwm");
+asm(".hidden _ZnwmPv");
+asm(".hidden _ZnwmRKSt9nothrow_t");
