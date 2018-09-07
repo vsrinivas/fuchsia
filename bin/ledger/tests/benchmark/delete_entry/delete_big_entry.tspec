@@ -10,7 +10,7 @@
       "type": "duration",
       "event_name": "delete_entry",
       "event_category": "benchmark",
-      "split_samples_at": [1]
+      "split_first": true
     }
   ]
 }

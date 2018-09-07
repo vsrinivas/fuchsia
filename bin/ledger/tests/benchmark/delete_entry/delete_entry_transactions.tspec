@@ -11,7 +11,7 @@
       "event_name": "transaction",
       "event_category": "benchmark",
       "expected_sample_count": 10,
-      "split_samples_at": [1]
+      "split_first": true
     },
 
     {
@@ -19,7 +19,7 @@
       "event_name": "commit",
       "event_category": "benchmark",
       "expected_sample_count": 10,
-      "split_samples_at": [1]
+      "split_first": true
     },
 
     {
@@ -27,7 +27,7 @@
       "event_name": "delete_entry",
       "event_category": "benchmark",
       "expected_sample_count": 100,
-      "split_samples_at": [1]
+      "split_first": true
     }
   ]
 }

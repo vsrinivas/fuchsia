@@ -35,7 +35,7 @@
       "type": "duration",
       "event_name": "get_entries_partial",
       "event_category": "benchmark",
-      "split_samples_at": [1]
+      "split_first": true
     },
     {
       "type": "duration",

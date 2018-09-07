@@ -10,13 +10,13 @@
       "event_name": "Fetch (cumulative)",
       "event_category": "benchmark",
       "expected_sample_count": 20,
-      "split_samples_at": [1]
+      "split_first": true
     },
     {
       "type": "duration",
       "event_name": "FetchPartial",
       "event_category": "benchmark",
-      "split_samples_at": [1]
+      "split_first": true
     }
   ]
 }
