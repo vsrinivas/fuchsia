@@ -90,6 +90,8 @@ source_set("sources") {
     "video_frame.h",
     "vp9_decoder.cc",
     "vp9_decoder.h",
+    "vp9_utils.cc",
+    "vp9_utils.h",
 
     # CodecFactory+Codec interface handling:
     "codec_adapter.cc",
@@ -100,6 +102,8 @@ source_set("sources") {
     "codec_adapter_h264.h",
     "codec_adapter_mpeg2.cc",
     "codec_adapter_mpeg2.h",
+    "codec_adapter_vp9.cc",
+    "codec_adapter_vp9.h",
     "codec_admission_control.cc",
     "codec_admission_control.h",
     "codec_buffer.cc",

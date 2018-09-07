@@ -80,15 +80,165 @@ uint8_t GetNalUnitType(const uint8_t* nal_unit) {
   return *next_start & 0xf;
 }
 
+struct __attribute__((__packed__)) IvfHeader {
+  uint32_t signature;
+  uint16_t version;
+  uint16_t header_length;
+  uint32_t fourcc;
+  uint16_t width;
+  uint16_t height;
+  uint32_t frame_rate;
+  uint32_t time_scale;
+  uint32_t frame_count;
+  uint32_t unused;
+};
+
+struct __attribute__((__packed__)) IvfFrameHeader {
+  uint32_t size_bytes;
+  uint64_t presentation_timestamp;
+};
+
+enum class Format {
+  kH264,
+  kVp9,
+};
+
 }  // namespace
 
-void use_h264_decoder(async::Loop* main_loop,
-                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-                      const std::string& input_file,
-                      const std::string& output_file,
-                      uint8_t md_out[SHA256_DIGEST_LENGTH],
-                      std::vector<std::pair<bool, uint64_t>>* timestamps_out,
-                      FrameSink* frame_sink) {
+void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
+                     size_t input_size) {
+  // We assign fake PTS values starting at 0 partly to verify that 0 is
+  // treated as a valid PTS.
+  uint64_t input_frame_pts_counter = 0;
+  // Raw .h264 has start code 00 00 01 or 00 00 00 01 before each NAL, and
+  // the start codes don't alias in the middle of NALs, so we just scan
+  // for NALs and send them in to the decoder.
+  auto queue_access_unit = [&codec_client, &input_bytes,
+                            &input_frame_pts_counter](uint8_t* bytes,
+                                                      size_t byte_count) {
+    size_t bytes_so_far = 0;
+    // printf("queuing offset: %ld byte_count: %zu\n", bytes -
+    // input_bytes.get(), byte_count);
+    while (bytes_so_far != byte_count) {
+      std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet =
+          codec_client->BlockingGetFreeInputPacket();
+      const CodecBuffer& buffer =
+          codec_client->GetInputBufferByIndex(packet->header.packet_index);
+      size_t bytes_to_copy =
+          std::min(byte_count - bytes_so_far, buffer.size_bytes());
+      packet->stream_lifetime_ordinal = kStreamLifetimeOrdinal;
+      packet->start_offset = 0;
+      packet->valid_length_bytes = bytes_to_copy;
+
+      packet->has_timestamp_ish = false;
+      packet->timestamp_ish = 0;
+      if (bytes_so_far == 0) {
+        uint8_t nal_unit_type = GetNalUnitType(bytes);
+        if (nal_unit_type == 1 || nal_unit_type == 5) {
+          packet->has_timestamp_ish = true;
+          packet->timestamp_ish = input_frame_pts_counter++;
+        }
+      }
+
+      packet->start_access_unit = (bytes_so_far == 0);
+      packet->known_end_access_unit =
+          (bytes_so_far + bytes_to_copy == byte_count);
+      memcpy(buffer.base(), bytes + bytes_so_far, bytes_to_copy);
+      codec_client->QueueInputPacket(std::move(packet));
+      bytes_so_far += bytes_to_copy;
+    }
+  };
+  for (size_t i = 0; i < input_size;) {
+    size_t start_code_size_bytes;
+    if (!is_start_code(&input_bytes[i], input_size - i,
+                       &start_code_size_bytes)) {
+      if (i == 0) {
+        Exit(
+            "Didn't find a start code at the start of the file, and this "
+            "example doesn't scan forward (for now).");
+      } else {
+        Exit(
+            "Fell out of sync somehow - previous NAL offset + previous "
+            "NAL length not a start code.");
+      }
+    }
+    if (i + start_code_size_bytes == input_size) {
+      Exit("Start code at end of file unexpected");
+    }
+    size_t nal_start_offset = i + start_code_size_bytes;
+    // Scan for end of NAL.  The end of NAL can be because we're out of
+    // data, or because we hit another start code.
+    size_t find_end_iter = nal_start_offset;
+    size_t ignore_start_code_size_bytes;
+    while (find_end_iter <= input_size &&
+           !is_start_code(&input_bytes[find_end_iter],
+                          input_size - find_end_iter,
+                          &ignore_start_code_size_bytes)) {
+      find_end_iter++;
+    }
+    FXL_DCHECK(find_end_iter <= input_size);
+    if (find_end_iter == nal_start_offset) {
+      Exit("Two adjacent start codes unexpected.");
+    }
+    FXL_DCHECK(find_end_iter > nal_start_offset);
+    size_t nal_length = find_end_iter - nal_start_offset;
+    queue_access_unit(&input_bytes[i], start_code_size_bytes + nal_length);
+    // start code + NAL payload
+    i += start_code_size_bytes + nal_length;
+  }
+
+  // Send through QueueInputEndOfStream().
+  codec_client->QueueInputEndOfStream(kStreamLifetimeOrdinal);
+  // input thread done
+}
+void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
+                    size_t input_size) {
+  auto queue_access_unit = [&codec_client, &input_bytes](uint8_t* bytes,
+                                                         size_t byte_count,
+                                                         uint32_t frame_pts) {
+    std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet =
+        codec_client->BlockingGetFreeInputPacket();
+    const CodecBuffer& buffer =
+        codec_client->GetInputBufferByIndex(packet->header.packet_index);
+    // VP9 decoder doesn't yet support splitting access units into multiple
+    // packets.
+    FXL_DCHECK(byte_count <= buffer.size_bytes());
+    packet->stream_lifetime_ordinal = kStreamLifetimeOrdinal;
+    packet->start_offset = 0;
+    packet->valid_length_bytes = byte_count;
+
+    packet->has_timestamp_ish = true;
+    packet->timestamp_ish = frame_pts;
+
+    packet->start_access_unit = true;
+    packet->known_end_access_unit = true;
+    memcpy(buffer.base(), bytes, byte_count);
+    codec_client->QueueInputPacket(std::move(packet));
+  };
+  IvfHeader* header = (IvfHeader*)&input_bytes[0];
+  for (size_t i = header->header_length; i < input_size;) {
+    if (i + sizeof(IvfFrameHeader) > input_size)
+      Exit("Frame header truncated.");
+    IvfFrameHeader* frame_header = (IvfFrameHeader*)&input_bytes[i];
+    if (i + sizeof(IvfFrameHeader) + frame_header->size_bytes > input_size)
+      Exit("Frame truncated.");
+    queue_access_unit(&input_bytes[i + sizeof(IvfFrameHeader)],
+                      frame_header->size_bytes,
+                      frame_header->presentation_timestamp);
+    i += sizeof(IvfFrameHeader) + frame_header->size_bytes;
+  }
+
+  // Send through QueueInputEndOfStream().
+  codec_client->QueueInputEndOfStream(kStreamLifetimeOrdinal);
+  // input thread done
+}
+
+static void use_video_decoder(
+    async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+    Format format, const std::string& input_file,
+    const std::string& output_file, uint8_t md_out[SHA256_DIGEST_LENGTH],
+    std::vector<std::pair<bool, uint64_t>>* timestamps_out,
+    FrameSink* frame_sink) {
   VLOGF("use_h264_decoder()\n");
   FXL_DCHECK(!timestamps_out || timestamps_out->empty());
   memset(md_out, 0, SHA256_DIGEST_LENGTH);
@@ -114,15 +264,26 @@ void use_h264_decoder(async::Loop* main_loop,
   VLOGF("before CodecClient::CodecClient()...\n");
   CodecClient codec_client(&loop);
 
+  const char* mime_type;
+  switch (format) {
+    case Format::kH264:
+      mime_type = "video/h264";
+      break;
+
+    case Format::kVp9:
+      mime_type = "video/vp9";
+      break;
+  }
+
   async::PostTask(
       main_loop->dispatcher(),
-      [&codec_factory,
-       codec_client_request = codec_client.GetTheRequestOnce()]() mutable {
+      [&codec_factory, codec_client_request = codec_client.GetTheRequestOnce(),
+       mime_type]() mutable {
         VLOGF("before codec_factory->CreateDecoder() (async)\n");
         codec_factory->CreateDecoder(
             fuchsia::mediacodec::CreateDecoder_Params{
                 .input_details.format_details_version_ordinal = 0,
-                .input_details.mime_type = "video/h264",
+                .input_details.mime_type = mime_type,
                 // This is required for timestamp_ish values to transit the
                 // Codec.
                 .promise_separate_access_units_on_input = true,
@@ -167,91 +328,16 @@ void use_h264_decoder(async::Loop* main_loop,
 
   VLOGF("before starting in_thread...\n");
   std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>(
-      [&codec_client, &input_bytes, input_size]() {
-        // We assign fake PTS values starting at 0 partly to verify that 0 is
-        // treated as a valid PTS.
-        uint64_t input_frame_pts_counter = 0;
-        // Raw .h264 has start code 00 00 01 or 00 00 00 01 before each NAL, and
-        // the start codes don't alias in the middle of NALs, so we just scan
-        // for NALs and send them in to the decoder.
-        auto queue_access_unit = [&codec_client, &input_bytes,
-                                  &input_frame_pts_counter](uint8_t* bytes,
-                                                            size_t byte_count) {
-          size_t bytes_so_far = 0;
-          // printf("queuing offset: %ld byte_count: %zu\n", bytes -
-          // input_bytes.get(), byte_count);
-          while (bytes_so_far != byte_count) {
-            std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet =
-                codec_client.BlockingGetFreeInputPacket();
-            const CodecBuffer& buffer =
-                codec_client.GetInputBufferByIndex(packet->header.packet_index);
-            size_t bytes_to_copy =
-                std::min(byte_count - bytes_so_far, buffer.size_bytes());
-            packet->stream_lifetime_ordinal = kStreamLifetimeOrdinal;
-            packet->start_offset = 0;
-            packet->valid_length_bytes = bytes_to_copy;
+      [&codec_client, &input_bytes, input_size, format]() {
+        switch (format) {
+          case Format::kH264:
+            QueueH264Frames(&codec_client, input_bytes.get(), input_size);
+            break;
 
-            packet->has_timestamp_ish = false;
-            packet->timestamp_ish = 0;
-            if (bytes_so_far == 0) {
-              uint8_t nal_unit_type = GetNalUnitType(bytes);
-              if (nal_unit_type == 1 || nal_unit_type == 5) {
-                packet->has_timestamp_ish = true;
-                packet->timestamp_ish = input_frame_pts_counter++;
-              }
-            }
-
-            packet->start_access_unit = (bytes_so_far == 0);
-            packet->known_end_access_unit =
-                (bytes_so_far + bytes_to_copy == byte_count);
-            memcpy(buffer.base(), bytes + bytes_so_far, bytes_to_copy);
-            codec_client.QueueInputPacket(std::move(packet));
-            bytes_so_far += bytes_to_copy;
-          }
-        };
-        for (size_t i = 0; i < input_size;) {
-          size_t start_code_size_bytes;
-          if (!is_start_code(&input_bytes[i], input_size - i,
-                             &start_code_size_bytes)) {
-            if (i == 0) {
-              Exit(
-                  "Didn't find a start code at the start of the file, and this "
-                  "example doesn't scan forward (for now).");
-            } else {
-              Exit(
-                  "Fell out of sync somehow - previous NAL offset + previous "
-                  "NAL length not a start code.");
-            }
-          }
-          if (i + start_code_size_bytes == input_size) {
-            Exit("Start code at end of file unexpected");
-          }
-          size_t nal_start_offset = i + start_code_size_bytes;
-          // Scan for end of NAL.  The end of NAL can be because we're out of
-          // data, or because we hit another start code.
-          size_t find_end_iter = nal_start_offset;
-          size_t ignore_start_code_size_bytes;
-          while (find_end_iter <= input_size &&
-                 !is_start_code(&input_bytes[find_end_iter],
-                                input_size - find_end_iter,
-                                &ignore_start_code_size_bytes)) {
-            find_end_iter++;
-          }
-          FXL_DCHECK(find_end_iter <= input_size);
-          if (find_end_iter == nal_start_offset) {
-            Exit("Two adjacent start codes unexpected.");
-          }
-          FXL_DCHECK(find_end_iter > nal_start_offset);
-          size_t nal_length = find_end_iter - nal_start_offset;
-          queue_access_unit(&input_bytes[i],
-                            start_code_size_bytes + nal_length);
-          // start code + NAL payload
-          i += start_code_size_bytes + nal_length;
+          case Format::kVp9:
+            QueueVp9Frames(&codec_client, input_bytes.get(), input_size);
+            break;
         }
-
-        // Send through QueueInputEndOfStream().
-        codec_client.QueueInputEndOfStream(kStreamLifetimeOrdinal);
-        // input thread done
       });
 
   // Separate thread to process the output.
@@ -557,4 +643,28 @@ void use_h264_decoder(async::Loop* main_loop,
   // ~loop
   // ~codec_factory
   return;
+}
+
+void use_h264_decoder(async::Loop* main_loop,
+                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+                      const std::string& input_file,
+                      const std::string& output_file,
+                      uint8_t md_out[SHA256_DIGEST_LENGTH],
+                      std::vector<std::pair<bool, uint64_t>>* timestamps_out,
+                      FrameSink* frame_sink) {
+  use_video_decoder(main_loop, std::move(codec_factory), Format::kH264,
+                    input_file, output_file, md_out, timestamps_out,
+                    frame_sink);
+}
+
+void use_vp9_decoder(async::Loop* main_loop,
+                     fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+                     const std::string& input_file,
+                     const std::string& output_file,
+                     uint8_t md_out[SHA256_DIGEST_LENGTH],
+                     std::vector<std::pair<bool, uint64_t>>* timestamps_out,
+                     FrameSink* frame_sink) {
+  use_video_decoder(main_loop, std::move(codec_factory), Format::kVp9,
+                    input_file, output_file, md_out, timestamps_out,
+                    frame_sink);
 }

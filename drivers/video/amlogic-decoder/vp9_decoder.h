@@ -42,6 +42,8 @@ class Vp9Decoder : public VideoDecoder {
   void HandleInterrupt() override;
   void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
+  void SetInitializeFramesHandler(InitializeFramesHandler handler) override;
+  void SetErrorHandler(fit::closure error_handler) override;
 
  private:
   friend class Vp9UnitTest;
@@ -169,6 +171,8 @@ class Vp9Decoder : public VideoDecoder {
 
   WorkingBuffers working_buffers_;
   FrameReadyNotifier notifier_;
+  InitializeFramesHandler initialize_frames_handler_;
+  fit::closure error_handler_;
 
   std::vector<std::unique_ptr<Frame>> frames_;
   Frame* last_frame_ = nullptr;

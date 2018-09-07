@@ -60,6 +60,17 @@ int main(int argc, char* argv[]) {
 
   uint8_t md[SHA256_DIGEST_LENGTH];
 
+  bool use_imagepipe = command_line.HasOption("imagepipe");
+
+  if (use_imagepipe) {
+    // We must do this part of setup on the main thread, not in use_decoder
+    // which runs on drive_decoder_thread.  This is because we want the
+    // FrameSink (or rather, code it uses) to bind to loop (whether explicitly
+    // or implicitly), and we want that setup/binding to occur on the same
+    // thread as runs that loop (the current thread), as that's a typical
+    // assumption of setup/binding code.
+    frame_sink = FrameSink::Create(startup_context.get(), &main_loop);
+  }
   // We set up a closure here just to avoid forcing the two decoder types to
   // take the same parameters, but still be able to share the
   // drive_decoder_thread code below.
@@ -71,23 +82,18 @@ int main(int argc, char* argv[]) {
                       output_file, md);
     };
   } else if (command_line.HasOption("h264")) {
-    bool use_imagepipe = command_line.HasOption("imagepipe");
-
-    if (use_imagepipe) {
-      // We must do this part of setup on the main thread, not in use_decoder
-      // which runs on drive_decoder_thread.  This is because we want the
-      // FrameSink (or rather, code it uses) to bind to loop (whether explicitly
-      // or implicitly), and we want that setup/binding to occur on the same
-      // thread as runs that loop (the current thread), as that's a typical
-      // assumption of setup/binding code.
-      frame_sink = FrameSink::Create(startup_context.get(), &main_loop);
-    }
-
     use_decoder = [&main_loop, codec_factory = std::move(codec_factory),
                    input_file, output_file, &md,
                    frame_sink = frame_sink.get()]() mutable {
       use_h264_decoder(&main_loop, std::move(codec_factory), input_file,
                        output_file, md, nullptr, frame_sink);
+    };
+  } else if (command_line.HasOption("vp9")) {
+    use_decoder = [&main_loop, codec_factory = std::move(codec_factory),
+                   input_file, output_file, &md,
+                   frame_sink = frame_sink.get()]() mutable {
+      use_vp9_decoder(&main_loop, std::move(codec_factory), input_file,
+                      output_file, md, nullptr, frame_sink);
     };
   } else {
     usage(command_line.argv0().c_str());

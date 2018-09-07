@@ -48,4 +48,13 @@ void use_h264_decoder(async::Loop* main_loop,
                       std::vector<std::pair<bool, uint64_t>>* timestamps_out,
                       FrameSink* frame_sink);
 
+// The same as use_h264_decoder, but for a VP9 file wrapped in an IVF container.
+void use_vp9_decoder(async::Loop* main_loop,
+                     fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+                     const std::string& input_file,
+                     const std::string& output_file,
+                     uint8_t md_out[SHA256_DIGEST_LENGTH],
+                     std::vector<std::pair<bool, uint64_t>>* timestamps_out,
+                     FrameSink* frame_sink);
+
 #endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_H264_DECODER_H_

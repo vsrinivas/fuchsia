@@ -4,6 +4,7 @@
 
 #include "vp9_decoder.h"
 
+#include "codec_packet.h"
 #include "firmware_blob.h"
 #include "macros.h"
 #include "memory_barriers.h"
@@ -619,7 +620,7 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height,
   }
 
   uint32_t buffer_address =
-      truncate_to_32(io_buffer_phys(&current_frame_->frame->buffer));
+      truncate_to_32(current_frame_->frame->buffer.phys_list[0]);
 
   HevcSaoYStartAddr::Get().FromValue(buffer_address).WriteTo(owner_->dosbus());
   HevcSaoYWptr::Get().FromValue(buffer_address).WriteTo(owner_->dosbus());
@@ -802,40 +803,133 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
     return false;
   }
 
+  uint32_t display_width, display_height;
+  if (params->render_size_present) {
+    display_width = params->render_width;
+    display_height = params->render_height;
+  } else {
+    display_width = params->width;
+    display_height = params->height;
+  }
+  // TODO: keep old frames that are larger than the new frame size, to avoid
+  // reallocating as often.
   if (!new_frame->frame || (new_frame->frame->width != params->width) ||
       (new_frame->frame->height != params->height)) {
-    auto video_frame = std::make_unique<VideoFrame>();
-    video_frame->width = params->width;
-    video_frame->height = params->height;
-    video_frame->stride = fbl::round_up(video_frame->width, 32u);
-    video_frame->uv_plane_offset = video_frame->stride * video_frame->height;
-    video_frame->index = new_frame->index;
-
-    assert(video_frame->height % 2 == 0);
-    zx_status_t status = io_buffer_init_aligned(
-        &video_frame->buffer, owner_->bti(),
-        video_frame->uv_plane_offset +
-            video_frame->stride * video_frame->height / 2,
-        16, IO_BUFFER_RW | IO_BUFFER_CONTIG);
-    if (status != ZX_OK) {
-      DECODE_ERROR("Failed to make video_frame: %d\n", status);
-      return false;
+    BarrierBeforeRelease();
+    // It's simplest to allocate all frames at once on resize, though that can
+    // cause problems if show_existing_frame happens after the resize.
+    for (uint32_t i = 0; i < frames_.size(); i++) {
+      frames_[i]->frame.reset();
     }
-    io_buffer_cache_flush(&video_frame->buffer, 0,
-                          io_buffer_size(&video_frame->buffer, 0));
 
-    new_frame->frame = std::move(video_frame);
+    std::vector<CodecFrame> frames;
+    uint32_t stride = fbl::round_up(params->width, 32u);
+
+    uint32_t frame_vmo_bytes =
+        params->height * stride + params->height * stride / 2;
+    if (initialize_frames_handler_) {
+      ::zx::bti duplicated_bti;
+      zx_status_t dup_result =
+          ::zx::unowned_bti(owner_->bti())
+              ->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
+      if (dup_result != ZX_OK) {
+        DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
+        return false;
+      }
+      zx_status_t initialize_result = initialize_frames_handler_(
+          std::move(duplicated_bti), frames_.size(), params->width,
+          params->height, stride, display_width, display_height, &frames);
+      if (initialize_result != ZX_OK) {
+        if (initialize_result != ZX_ERR_STOP) {
+          DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n",
+                       initialize_result);
+        }
+        return false;
+      }
+    } else {
+      for (uint32_t i = 0; i < frames_.size(); i++) {
+        ::zx::vmo frame_vmo;
+        zx_status_t vmo_create_result =
+            zx_vmo_create_contiguous(owner_->bti(), frame_vmo_bytes, 0,
+                                     frame_vmo.reset_and_get_address());
+        if (vmo_create_result != ZX_OK) {
+          DECODE_ERROR("zx_vmo_create_contiguous failed - status: %d\n",
+                       vmo_create_result);
+          return false;
+        }
+        fuchsia::mediacodec::CodecBufferData codec_buffer_data;
+        codec_buffer_data.set_vmo(fuchsia::mediacodec::CodecBufferDataVmo{
+            .vmo_handle = std::move(frame_vmo),
+            .vmo_usable_start = 0,
+            .vmo_usable_size = frame_vmo_bytes,
+        });
+        frames.emplace_back(CodecFrame{
+            .codec_buffer =
+                fuchsia::mediacodec::CodecBuffer{
+                    .buffer_lifetime_ordinal =
+                        next_non_codec_buffer_lifetime_ordinal_,
+                    .buffer_index = 0,
+                    .data = std::move(codec_buffer_data),
+                },
+            .codec_packet = nullptr,
+        });
+      }
+      next_non_codec_buffer_lifetime_ordinal_++;
+    }
+
+    for (uint32_t i = 0; i < frames_.size(); i++) {
+      auto video_frame = std::make_shared<VideoFrame>();
+      video_frame->width = params->width;
+      video_frame->height = params->height;
+      video_frame->stride = stride;
+      video_frame->uv_plane_offset = video_frame->stride * video_frame->height;
+      video_frame->index = i;
+
+      video_frame->codec_packet = frames[i].codec_packet;
+      if (frames[i].codec_packet) {
+        frames[i].codec_packet->SetVideoFrame(video_frame);
+      }
+
+      assert(video_frame->height % 2 == 0);
+      zx_status_t status = io_buffer_init_vmo(
+          &video_frame->buffer, owner_->bti(),
+          frames[i].codec_buffer.data.vmo().vmo_handle.get(), 0, IO_BUFFER_RW);
+      if (status != ZX_OK) {
+        DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n",
+                     status);
+        return false;
+      }
+      size_t vmo_size = io_buffer_size(&video_frame->buffer, 0);
+      if (vmo_size < frame_vmo_bytes) {
+        DECODE_ERROR("Insufficient frame vmo bytes: %ld < %d\n", vmo_size,
+                     frame_vmo_bytes);
+        return false;
+      }
+      status = io_buffer_physmap(&video_frame->buffer);
+      if (status != ZX_OK) {
+        DECODE_ERROR("Failed to io_buffer_physmap - status: %d\n", status);
+        return false;
+      }
+
+      for (uint32_t i = 1; i < vmo_size / PAGE_SIZE; i++) {
+        if (video_frame->buffer.phys_list[i - 1] + PAGE_SIZE !=
+            video_frame->buffer.phys_list[i]) {
+          DECODE_ERROR("VMO isn't contiguous\n");
+          return false;
+        }
+      }
+
+      io_buffer_cache_flush(&video_frame->buffer, 0,
+                            io_buffer_size(&video_frame->buffer, 0));
+
+      frames_[i]->frame = std::move(video_frame);
+    }
 
     BarrierAfterFlush();
   }
 
-  if (params->render_size_present) {
-    new_frame->frame->display_width = params->render_width;
-    new_frame->frame->display_height = params->render_height;
-  } else {
-    new_frame->frame->display_width = params->width;
-    new_frame->frame->display_height = params->height;
-  }
+  new_frame->frame->display_width = display_width;
+  new_frame->frame->display_height = display_height;
 
   current_frame_ = new_frame;
   current_frame_->refcount++;
@@ -980,6 +1074,14 @@ void Vp9Decoder::InitializeHardwarePictureList() {
   for (uint32_t i = 0; i < 32; ++i) {
     HevcdMppAncCanvasDataAddr::Get().FromValue(0).WriteTo(owner_->dosbus());
   }
+}
+
+void Vp9Decoder::SetInitializeFramesHandler(InitializeFramesHandler handler) {
+  initialize_frames_handler_ = handler;
+}
+
+void Vp9Decoder::SetErrorHandler(fit::closure error_handler) {
+  error_handler_ = std::move(error_handler);
 }
 
 void Vp9Decoder::InitializeParser() {
