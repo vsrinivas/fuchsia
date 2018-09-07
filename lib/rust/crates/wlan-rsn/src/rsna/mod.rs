@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Bytes;
 use crate::akm::Akm;
 use crate::cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
-use crate::key::{exchange::Key, gtk::Gtk, ptk::Ptk};
+use crate::key::exchange::Key;
 use crate::rsne::Rsne;
 use crate::Error;
 use eapol;
@@ -61,11 +60,83 @@ impl NegotiatedRsne {
     }
 }
 
+pub struct EncryptedKeyData<'a> {
+    key_data: &'a [u8],
+}
+
+impl <'a> EncryptedKeyData<'a> {
+    pub fn decrypt(&self, kek: &[u8], akm: &Akm) -> Result<Vec<u8>, failure::Error> {
+        Ok(akm.keywrap_algorithm().ok_or(Error::UnsupportedAkmSuite)?.unwrap(kek, self.key_data)?)
+    }
+}
+
+pub struct UnverifiedMic<'a> {
+    frame: &'a eapol::KeyFrame,
+}
+
+impl <'a> UnverifiedMic<'a> {
+    pub fn verify_mic(&self, kck: &[u8], akm: &Akm)
+        -> Result<&'a eapol::KeyFrame, failure::Error>
+    {
+        // IEEE Std 802.11-2016, 12.7.2 h)
+        // IEEE Std 802.11-2016, 12.7.2 b.6)
+        let mic_bytes = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
+        ensure!(self.frame.key_mic.len() == mic_bytes as usize, Error::InvalidMicSize);
+
+        // If a MIC is set but the PTK was not yet derived, the MIC cannot be verified.
+        let mut buf = Vec::with_capacity(self.frame.len());
+        self.frame.as_bytes(true, &mut buf);
+        let valid_mic = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?
+            .verify(kck, &buf[..], &self.frame.key_mic[..]);
+        ensure!(valid_mic, Error::InvalidMic);
+
+        Ok(self.frame)
+    }
+}
+
+pub enum KeyFrameKeyDataState<'a> {
+    Encrypted(EncryptedKeyData<'a>),
+    Unencrypted(&'a [u8]),
+}
+
+impl <'a> KeyFrameKeyDataState<'a> {
+    pub fn from_frame(frame: &'a eapol::KeyFrame) -> KeyFrameKeyDataState<'a> {
+        if frame.key_info.encrypted_key_data()  {
+            KeyFrameKeyDataState::Encrypted(EncryptedKeyData{ key_data: &frame.key_data[..] })
+        } else {
+            KeyFrameKeyDataState::Unencrypted(&frame.key_data[..])
+        }
+    }
+}
+
+pub enum KeyFrameState<'a> {
+    UnverifiedMic(UnverifiedMic<'a>),
+    NoMic(&'a eapol::KeyFrame),
+}
+
+impl <'a> KeyFrameState<'a> {
+    pub fn from_frame(frame: &'a eapol::KeyFrame) -> KeyFrameState<'a> {
+        if frame.key_info.key_mic()  {
+            KeyFrameState::UnverifiedMic(UnverifiedMic{ frame })
+        } else {
+            KeyFrameState::NoMic(frame)
+        }
+    }
+
+    /// CAUTION: Returns the underlying frame without verifying its MIC if one is present.
+    /// Only use this if you know what you are doing.
+    pub fn unsafe_get_raw(&self) -> &'a eapol::KeyFrame {
+        match self {
+            KeyFrameState::UnverifiedMic(UnverifiedMic{ frame }) => frame,
+            KeyFrameState::NoMic(frame) => frame,
+        }
+    }
+}
+
 // EAPOL Key frames carried in this struct comply with IEEE Std 802.11-2016, 12.7.2.
 #[derive(Debug, Clone, PartialEq)]
 pub struct VerifiedKeyFrame<'a> {
     frame: &'a eapol::KeyFrame,
-    kd_plaintext: Bytes,
 }
 
 impl<'a> VerifiedKeyFrame<'a> {
@@ -74,8 +145,6 @@ impl<'a> VerifiedKeyFrame<'a> {
         role: &Role,
         rsne: &NegotiatedRsne,
         key_replay_counter: u64,
-        ptk: Option<&Ptk>,
-        gtk: Option<&Gtk>,
     ) -> Result<VerifiedKeyFrame<'a>, failure::Error> {
         let sender = match role {
             Role::Supplicant => Role::Authenticator,
@@ -123,30 +192,10 @@ impl<'a> VerifiedKeyFrame<'a> {
         }
 
         // IEEE Std 802.11-2016, 12.7.2 b.6)
-        // MIC is validated at the end once all other basic validations succeeded.
-
         // IEEE Std 802.11-2016, 12.7.2 b.7)
-        if frame.key_info.secure() {
-            let ptk_established = ptk.map_or(false, |_| true);
-            let gtk_established = gtk.map_or(false, |_| true);
-
-            match sender {
-                // Frames sent by the Authenticator must not have the secure bit set before the
-                // Supplicant *can derive* the PTK and GTK, which allows the Authenticator to send
-                // "unsecured" frames after the PTK was derived but before the GTK was received.
-                // Because the 4-Way Handshake is the only supported method for PTK and GTK
-                // derivation so far and no known key exchange method sends such "unsecured" frames
-                // in between PTK and GTK derivation, we can relax IEEE's assumption and require the
-                // secure bit to only be set if at least the PTK was derived.
-                Role::Authenticator => ensure!(ptk_established, Error::SecureBitWithUnknownPtk),
-                // Frames sent by Supplicant must have the secure bit set once PTKSA and GTKSA are
-                // established.
-                Role::Supplicant => ensure!(
-                    ptk_established && gtk_established,
-                    Error::SecureBitNotSetWithKnownPtkGtk
-                ),
-            };
-        }
+        // MIC and Secure bit depend on specific key-exchange methods and can not be verified now.
+        // More specifically, there are frames which can carry a MIC or secure bit but are required
+        // to compute the PTK and/or GTK and thus cannot be verified up-front.
 
         // IEEE Std 802.11-2016, 12.7.2 b.8)
         if let Role::Authenticator = sender {
@@ -216,30 +265,8 @@ impl<'a> VerifiedKeyFrame<'a> {
 
         // IEEE Std 802.11-2016, 12.7.2 h)
         // IEEE Std 802.11-2016, 12.7.2 b.6)
-        let mic_bytes = rsne.akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
-        ensure!(
-            frame.key_mic.len() == mic_bytes as usize,
-            Error::InvalidMicSize
-        );
-
-        if frame.key_info.key_mic() {
-            // If a MIC is set but the PTK was not yet derived, the MIC cannot be verified.
-            match ptk {
-                // Verify MIC if PTK was derived.
-                Some(ptk) => {
-                    let mut buf = Vec::with_capacity(frame.len());
-                    frame.as_bytes(true, &mut buf);
-                    let valid_mic = rsne
-                        .akm
-                        .integrity_algorithm()
-                        .ok_or(Error::UnsupportedAkmSuite)?
-                        .verify(ptk.kck(), &buf[..], &frame.key_mic[..]);
-                    ensure!(valid_mic, Error::InvalidMic);
-                }
-                // If a MIC is set but the PTK was not yet derived, the MIC cannot be verified.
-                None => bail!(Error::UnexpectedMic),
-            };
-        }
+        // See explanation for IEEE Std 802.11-2016, 12.7.2 b.7) why the MIC cannot be verified
+        // here.
 
         // IEEE Std 802.11-2016, 12.7.2 i) & j)
         // IEEE Std 802.11-2016, 12.7.2 b.10)
@@ -247,32 +274,16 @@ impl<'a> VerifiedKeyFrame<'a> {
             frame.key_data_len as usize == frame.key_data.len(),
             Error::InvalidKeyDataLength
         );
-        let kd_plaintext: Bytes;
-        if frame.key_info.encrypted_key_data() {
-            kd_plaintext = Bytes::from(match ptk {
-                Some(ptk) => rsne
-                    .akm
-                    .keywrap_algorithm()
-                    .ok_or(Error::UnsupportedAkmSuite)?
-                    .unwrap(ptk.kek(), &frame.key_data[..])?,
-                None => bail!(Error::UnexpectedEncryptedKeyData),
-            });
-        } else {
-            kd_plaintext = Bytes::from(&frame.key_data[..]);
-        }
 
-        Ok(VerifiedKeyFrame {
-            frame,
-            kd_plaintext,
-        })
+        Ok(VerifiedKeyFrame { frame })
     }
 
-    pub fn get(&self) -> &'a eapol::KeyFrame {
-        self.frame
+    pub fn get(&self) -> KeyFrameState<'a> {
+        KeyFrameState::from_frame(self.frame)
     }
 
-    pub fn key_data_plaintext(&self) -> &[u8] {
-        &self.kd_plaintext[..]
+    pub fn get_key_data(&self) -> KeyFrameKeyDataState<'a> {
+        KeyFrameKeyDataState::from_frame(self.frame)
     }
 }
 

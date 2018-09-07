@@ -10,7 +10,7 @@ use crate::key::exchange::{
 };
 use crate::key::gtk::Gtk;
 use crate::key_data;
-use crate::rsna::{UpdateSink, SecAssocUpdate};
+use crate::rsna::{KeyFrameState, KeyFrameKeyDataState, UpdateSink, SecAssocUpdate};
 use crate::Error;
 use eapol;
 use failure::{self, bail};
@@ -19,6 +19,7 @@ use failure::{self, bail};
 pub struct Supplicant {
     pub cfg: group_key::Config,
     pub kck: Bytes,
+    pub kek: Bytes,
 }
 
 impl Supplicant {
@@ -26,9 +27,25 @@ impl Supplicant {
     pub fn on_eapol_key_frame(&mut self, update_sink: &mut UpdateSink, msg1: GroupKeyHandshakeFrame)
         -> Result<(), failure::Error>
     {
+        let frame = match &msg1.get() {
+            KeyFrameState::UnverifiedMic(unverified) => {
+                let frame = unverified.verify_mic(&self.kck[..], &self.cfg.akm)?;
+                frame
+            },
+            KeyFrameState::NoMic(_) => bail!("msg1 of Group-Key Handshake must carry a MIC"),
+        };
+
         // Extract GTK from data.
         let mut gtk: Option<key_data::kde::Gtk> = None;
-        let elements = key_data::extract_elements(&msg1.key_data_plaintext()[..])?;
+        let key_data = match &msg1.get_key_data() {
+            KeyFrameKeyDataState::Unencrypted(_) => {
+                bail!("msg1 of Group-Key Handshake must carry encrypted key data")
+            },
+            KeyFrameKeyDataState::Encrypted(encrypted) => {
+                encrypted.decrypt(&self.kek[..], &self.cfg.akm)?
+            },
+        };
+        let elements = key_data::extract_elements(&key_data[..])?;
         for ele in elements {
             match ele {
                 key_data::Element::Gtk(_, e) => gtk = Some(e),
@@ -41,7 +58,7 @@ impl Supplicant {
         };
 
         // Construct second message of handshake.
-        let msg2 = self.create_message_2(msg1.get())?;
+        let msg2 = self.create_message_2(frame)?;
 
         update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
         update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk)));

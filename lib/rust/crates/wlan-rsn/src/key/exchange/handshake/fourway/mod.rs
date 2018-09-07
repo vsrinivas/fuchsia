@@ -5,13 +5,12 @@
 mod authenticator;
 mod supplicant;
 
-use bytes::Bytes;
-use crate::crypto_utils::nonce::NonceReader;
 use crate::key::exchange;
-use crate::rsna::{NegotiatedRsne, Role, SecAssocUpdate, UpdateSink, VerifiedKeyFrame};
+use crate::rsna::{NegotiatedRsne, Role, VerifiedKeyFrame, UpdateSink, KeyFrameState, KeyFrameKeyDataState, SecAssocUpdate};
 use crate::rsne::Rsne;
 use crate::state_machine::StateMachine;
 use crate::Error;
+use crate::crypto_utils::nonce::NonceReader;
 use eapol;
 use failure::{self, bail, ensure};
 
@@ -33,7 +32,6 @@ pub enum MessageNumber {
 // IEEE Std 802.11-2016, 12.7.6.
 pub struct FourwayHandshakeFrame<'a> {
     frame: &'a eapol::KeyFrame,
-    kd_plaintext: Bytes,
 }
 
 impl<'a> FourwayHandshakeFrame<'a> {
@@ -42,8 +40,8 @@ impl<'a> FourwayHandshakeFrame<'a> {
         role: Role,
         nonce: Option<&[u8]>,
     ) -> Result<FourwayHandshakeFrame<'a>, failure::Error> {
-        let frame = valid_frame.get();
-        let kd_plaintext = valid_frame.key_data_plaintext();
+        // Safe since the frame will be wrapped again in a `KeyFrameState` when being accessed.
+        let frame = valid_frame.get().unsafe_get_raw();
 
         // Drop messages which were not expected by the configured role.
         let msg_no = message_number(frame);
@@ -68,17 +66,15 @@ impl<'a> FourwayHandshakeFrame<'a> {
             MessageNumber::Message4 => validate_message_4(frame),
         }?;
 
-        Ok(FourwayHandshakeFrame {
-            frame,
-            kd_plaintext: Bytes::from(kd_plaintext),
-        })
+        Ok(FourwayHandshakeFrame { frame })
     }
 
-    pub fn get(&self) -> &'a eapol::KeyFrame {
-        self.frame
+    pub fn get(&self) -> KeyFrameState<'a> {
+        KeyFrameState::from_frame(self.frame)
     }
-    pub fn key_data_plaintext(&self) -> &[u8] {
-        &self.kd_plaintext[..]
+
+    pub fn get_key_data(&self) -> KeyFrameKeyDataState<'a> {
+        KeyFrameKeyDataState::from_frame(self.frame)
     }
 }
 

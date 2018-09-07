@@ -5,7 +5,7 @@
 use bytes::Bytes;
 use crate::akm::Akm;
 use crate::key::exchange::{self, handshake::group_key::supplicant::Supplicant};
-use crate::rsna::{Role, UpdateSink, VerifiedKeyFrame};
+use crate::rsna::{Role, UpdateSink, VerifiedKeyFrame, KeyFrameState, KeyFrameKeyDataState};
 use eapol;
 use failure::{self, bail, ensure};
 
@@ -20,7 +20,6 @@ enum RoleHandler {
 // IEEE Std 802.11-2016, 12.7.7.
 pub struct GroupKeyHandshakeFrame<'a> {
     frame: &'a eapol::KeyFrame,
-    kd_plaintext: Bytes,
 }
 
 impl<'a> GroupKeyHandshakeFrame<'a> {
@@ -28,13 +27,13 @@ impl<'a> GroupKeyHandshakeFrame<'a> {
         valid_frame: VerifiedKeyFrame<'a>,
         role: Role,
     ) -> Result<GroupKeyHandshakeFrame<'a>, failure::Error> {
+        // Safe since the frame will be wrapped again in a `KeyFrameState` when being accessed.
+        let frame = valid_frame.get().unsafe_get_raw();
+
         let sender = match role {
             Role::Supplicant => Role::Authenticator,
             Role::Authenticator => Role::Supplicant,
         };
-
-        let frame = valid_frame.get();
-        let kd_plaintext = valid_frame.key_data_plaintext();
 
         // IEEE Std 802.11-2016, 12.7.7.2 & IEEE Std 802.11-2016, 12.7.7.3
         ensure!(
@@ -113,18 +112,15 @@ impl<'a> GroupKeyHandshakeFrame<'a> {
             }
         };
 
-        Ok(GroupKeyHandshakeFrame {
-            frame,
-            kd_plaintext: Bytes::from(kd_plaintext),
-        })
+        Ok(GroupKeyHandshakeFrame { frame })
     }
 
-    pub fn get(&self) -> &'a eapol::KeyFrame {
-        self.frame
+    pub fn get(&self) -> KeyFrameState<'a> {
+        KeyFrameState::from_frame(self.frame)
     }
 
-    pub fn key_data_plaintext(&self) -> &[u8] {
-        &self.kd_plaintext[..]
+    pub fn get_key_data(&self) -> KeyFrameKeyDataState<'a> {
+        KeyFrameKeyDataState::from_frame(self.frame)
     }
 }
 
@@ -138,11 +134,12 @@ pub struct Config {
 pub struct GroupKey(RoleHandler);
 
 impl GroupKey {
-    pub fn new(cfg: Config, kck: &[u8]) -> Result<GroupKey, failure::Error> {
+    pub fn new(cfg: Config, kck: &[u8], kek: &[u8]) -> Result<GroupKey, failure::Error> {
         let handler = match &cfg.role {
             Role::Supplicant => RoleHandler::Supplicant(Supplicant {
                 cfg,
                 kck: Bytes::from(kck),
+                kek: Bytes::from(kek),
             }),
             _ => bail!("Authenticator not yet support in Group-Key Handshake"),
         };

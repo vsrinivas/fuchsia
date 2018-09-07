@@ -177,7 +177,7 @@ pub fn get_4whs_msg3<F>(
     anonce: &[u8],
     gtk: &[u8],
     msg_modifier: F,
-) -> (eapol::KeyFrame, Bytes)
+) -> eapol::KeyFrame
 where
     F: Fn(&mut eapol::KeyFrame),
 {
@@ -221,12 +221,11 @@ where
     let mic = compute_mic(ptk.kck(), &msg);
     msg.key_mic = Bytes::from(mic);
 
-    (msg, Bytes::from(&buf[..]))
+    msg
 }
 
-pub fn get_group_key_hs_msg1<F>(ptk: &Ptk, gtk: &[u8], msg_modifier: F) -> (eapol::KeyFrame, Bytes)
-where
-    F: Fn(&mut eapol::KeyFrame),
+pub fn get_group_key_hs_msg1<F>(ptk: &Ptk, gtk: &[u8], msg_modifier: F)
+    -> eapol::KeyFrame where F: Fn(&mut eapol::KeyFrame),
 {
     let mut buf = Vec::with_capacity(256);
 
@@ -264,7 +263,7 @@ where
     let mic = compute_mic(ptk.kck(), &msg);
     msg.key_mic = Bytes::from(mic);
 
-    (msg, Bytes::from(&buf[..]))
+    msg
 }
 
 pub fn is_zero(slice: &[u8]) -> bool {
@@ -312,10 +311,7 @@ pub fn send_msg1<F>(update_sink: &mut UpdateSink, msg_modifier: F)
     // Send first message of Handshake to Supplicant and verify result.
     let a_nonce = get_nonce();
     let frame = get_4whs_msg1(&a_nonce[..], msg_modifier);
-    let msg1 = VerifiedKeyFrame {
-        frame: &frame,
-        kd_plaintext: Bytes::from(vec![]),
-    };
+    let msg1 = VerifiedKeyFrame { frame: &frame };
     let result = handshake.on_eapol_key_frame(update_sink, 0, msg1);
 
     let ptk = compute_ptk(&a_nonce[..], update_sink);
@@ -334,12 +330,9 @@ impl FourwayHandshakeTestEnv {
         -> Result<(), failure::Error> where F: Fn(&mut eapol::KeyFrame)
     {
         // Send third message of 4-Way Handshake to Supplicant.
-        let ptk = self.ptk.as_ref().expect("PTK is not present");
-        let (frame, kd_plaintext) = get_4whs_msg3(ptk, &self.a_nonce[..], &gtk[..], msg_modifier);
-        let msg3 = VerifiedKeyFrame {
-            frame: &frame,
-            kd_plaintext,
-        };
+        let ptk = self.ptk.as_ref().unwrap();
+        let frame = get_4whs_msg3(ptk, &self.a_nonce[..], &gtk[..], msg_modifier);
+        let msg3 = VerifiedKeyFrame { frame: &frame };
         self.handshake.on_eapol_key_frame(update_sink, 0, msg3)
     }
 }

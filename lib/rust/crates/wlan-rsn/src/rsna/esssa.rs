@@ -91,7 +91,7 @@ struct GtksaCfg {
 }
 
 impl Gtksa {
-    fn initialize(&mut self, kck: &[u8]) -> Result<(), failure::Error> {
+    fn initialize(&mut self, kck: &[u8], kek: &[u8]) -> Result<(), failure::Error> {
         let cfg = match self {
             Gtksa::Uninitialized(cfg) => cfg.take(),
             _ => bail!("GTKSA already initialized"),
@@ -99,7 +99,7 @@ impl Gtksa {
 
         let method = match cfg {
             Some(exchange::Config::GroupKeyHandshake(cfg)) => {
-                exchange::Method::GroupKeyHandshake(GroupKey::new(cfg, kck)?)
+                exchange::Method::GroupKeyHandshake(GroupKey::new(cfg, kck, kek)?)
             }
             _ => bail!("unsupported method for GTKSA: {:?}", cfg),
         };
@@ -189,7 +189,7 @@ impl EssSa {
                 // The PTK carries KEK and KCK which is used in the Group Key Handshake, thus,
                 // reset GTKSA whenever the PTK changed.
                 self.gtksa.reset();
-                self.gtksa.initialize(ptk.kck())?;
+                self.gtksa.initialize(ptk.kck(), ptk.kek())?;
 
                 if let Ptksa::Initialized(ptksa) = &mut self.ptksa {
                     ptksa.ptk = Some(ptk);
@@ -292,8 +292,6 @@ impl EssSa {
             &self.role,
             &self.negotiated_rsne,
             self.key_replay_counter,
-            self.ptksa.ptk(),
-            self.gtksa.gtk(),
         );
         let verified_frame = match result {
             Err(e) => match e.cause().downcast_ref::<Error>() {
@@ -608,7 +606,7 @@ mod tests {
     fn send_msg3<F>(esssa: &mut EssSa, ptk: &Ptk, msg_modifier: F)
         -> (Result<(), failure::Error>, UpdateSink) where F: Fn(&mut eapol::KeyFrame)
     {
-        let (msg, _) = test_util::get_4whs_msg3(ptk, &ANONCE[..], &GTK[..], msg_modifier);
+        let msg = test_util::get_4whs_msg3(ptk, &ANONCE[..], &GTK[..], msg_modifier);
         let mut update_sink = UpdateSink::default();
         let result = esssa.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg));
         (result, update_sink)
@@ -617,7 +615,7 @@ mod tests {
     fn send_group_key_msg1<F>(esssa: &mut EssSa, ptk: &Ptk, msg_modifier: F)
         -> (Result<(), failure::Error>, UpdateSink) where F: Fn(&mut eapol::KeyFrame)
     {
-        let (msg, _) = test_util::get_group_key_hs_msg1(ptk, &GTK_REKEY[..], msg_modifier);
+        let msg = test_util::get_group_key_hs_msg1(ptk, &GTK_REKEY[..], msg_modifier);
         let mut update_sink = UpdateSink::default();
         let result = esssa.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg));
         (result, update_sink)

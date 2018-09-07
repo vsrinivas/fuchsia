@@ -13,7 +13,7 @@ use crate::key::exchange::Key;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data::{self, kde};
-use crate::rsna::{derive_key_descriptor_version, NegotiatedRsne, SecAssocUpdate, UpdateSink};
+use crate::rsna::{derive_key_descriptor_version, KeyFrameState, KeyFrameKeyDataState, NegotiatedRsne, SecAssocUpdate, UpdateSink};
 use crate::Error;
 use failure::{self, bail, ensure};
 use std::rc::Rc;
@@ -67,7 +67,8 @@ impl State {
                 State::Idle { cfg, pmk }
             }
             State::AwaitingMsg2 { pmk, cfg, anonce, last_krc } => {
-                match fourway::message_number(frame.get()) {
+                // Safe since the frame is only used for deriving the message number.
+                match fourway::message_number(frame.get().unsafe_get_raw()) {
                     fourway::MessageNumber::Message2 => {
                         match process_message_2(update_sink, &pmk[..], &cfg, &anonce[..], last_krc, last_krc + 1, frame) {
                             Ok((ptk, gtk)) => {
@@ -86,7 +87,7 @@ impl State {
                 }
             },
             State::AwaitingMsg4 { pmk, ptk, gtk, cfg, last_krc } => {
-                match process_message_4(update_sink, &gtk, last_krc, frame) {
+                match process_message_4(update_sink, &cfg, &ptk, &gtk, last_krc, frame) {
                     Ok(()) => State::Completed { cfg },
                     Err(e) => {
                         eprintln!("error: {:?}", e);
@@ -139,11 +140,13 @@ fn process_message_2(
 
 fn process_message_4(
     update_sink: &mut UpdateSink,
+    cfg: &Config,
+    ptk: &Ptk,
     gtk: &Gtk,
     last_krc: u64,
     frame: FourwayHandshakeFrame,
 ) -> Result<(), failure::Error> {
-    handle_message_4(last_krc, frame)?;
+    handle_message_4(cfg, ptk.kck(), last_krc, frame)?;
     update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
     Ok(())
 }
@@ -192,14 +195,9 @@ pub fn handle_message_2(
     krc: u64,
     frame: FourwayHandshakeFrame,
 ) -> Result<Ptk, failure::Error> {
-    ensure!(
-        frame.get().key_replay_counter == krc,
-        "error, expected Supplicant response to message {:?} but was {:?}",
-        krc,
-        frame.get().key_replay_counter
-    );
-
-    let snonce = &frame.get().key_nonce[..];
+    // Safe since the frame's nonce must be accessed in order to compute the PTK which allows MIC
+    // verification.
+    let snonce = &frame.get().unsafe_get_raw().key_nonce[..];
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
 
     let ptk = Ptk::new(
@@ -211,6 +209,17 @@ pub fn handle_message_2(
         &rsne.akm,
         &rsne.pairwise,
     )?;
+
+    // PTK was computed, verify the frame's MIC.
+    let frame = match &frame.get() {
+        KeyFrameState::UnverifiedMic(unverified) => {
+            unverified.verify_mic(ptk.kck(), &rsne.akm)?
+        },
+        KeyFrameState::NoMic(_) => bail!("msg2 of 4-Way Handshake must carry a MIC"),
+    };
+    ensure!(frame.key_replay_counter == krc,
+            "error, expected Supplicant response to message {:?} but was {:?}",
+            krc, frame.key_replay_counter);
 
     // TODO(hahnr): Key data must carry RSNE. Verify.
 
@@ -292,13 +301,23 @@ fn create_message_3(
 }
 
 // IEEE Std 802.11-2016, 12.7.6.5
-pub fn handle_message_4(krc: u64, frame: FourwayHandshakeFrame) -> Result<(), failure::Error> {
+pub fn handle_message_4(
+    cfg: &Config,
+    kck: &[u8],
+    krc: u64,
+    frame: FourwayHandshakeFrame
+) -> Result<(), failure::Error> {
+    let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
+    let frame = match &frame.get() {
+        KeyFrameState::UnverifiedMic(unverified) => {
+            unverified.verify_mic(kck, &rsne.akm)?
+        },
+        KeyFrameState::NoMic(_) => bail!("msg4 of 4-Way Handshake must carry a MIC"),
+    };
     ensure!(
-        frame.get().key_replay_counter == krc,
+        frame.key_replay_counter == krc,
         "error, expected Supplicant response to message {:?} but was {:?}",
-        krc,
-        frame.get().key_replay_counter
-    );
+        krc, frame.key_replay_counter);
 
     // Note: The message's integrity was already verified by low layers.
 

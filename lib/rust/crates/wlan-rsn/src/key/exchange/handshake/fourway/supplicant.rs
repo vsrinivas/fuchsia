@@ -10,7 +10,7 @@ use crate::key::exchange::Key;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data;
-use crate::rsna::{UpdateSink, NegotiatedRsne, SecAssocUpdate};
+use crate::rsna::{KeyFrameState, KeyFrameKeyDataState, UpdateSink, NegotiatedRsne, SecAssocUpdate};
 use crate::rsne::Rsne;
 use crate::Error;
 use eapol;
@@ -25,11 +25,16 @@ fn handle_message_1(
     snonce: &[u8],
     msg1: FourwayHandshakeFrame,
 ) -> Result<(eapol::KeyFrame, Ptk, Nonce), failure::Error> {
-    let anonce = &msg1.get().key_nonce;
+    let frame = match msg1.get() {
+        // Note: This is only true if PTK re-keying is not supported.
+        KeyFrameState::UnverifiedMic(_) => bail!("msg1 of 4-Way Handshake cannot carry a MIC"),
+        KeyFrameState::NoMic(frame) => frame,
+    };
+    let anonce = frame.key_nonce;
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
 
     let ptk = Ptk::new(pmk, &cfg.a_addr, &cfg.s_addr, &anonce[..], snonce, &rsne.akm, &rsne.pairwise)?;
-    let msg2 = create_message_2(cfg, ptk.kck(), &rsne, msg1.get(), &snonce[..])?;
+    let msg2 = create_message_2(cfg, ptk.kck(), &rsne, frame, &snonce[..])?;
 
     Ok((msg2, ptk, anonce.to_vec()))
 }
@@ -77,12 +82,30 @@ fn create_message_2(
 fn handle_message_3(
     cfg: &Config,
     kck: &[u8],
+    kek: &[u8],
     msg3: FourwayHandshakeFrame,
 ) -> Result<(eapol::KeyFrame, Gtk), failure::Error> {
+    let negotiated_rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
+    let frame = match &msg3.get() {
+        KeyFrameState::UnverifiedMic(unverified) => {
+            unverified.verify_mic(kck, &negotiated_rsne.akm)?
+        },
+        KeyFrameState::NoMic(_) => bail!("msg3 of 4-Way Handshake must carry a MIC"),
+    };
+
+    let key_data = match &msg3.get_key_data() {
+        KeyFrameKeyDataState::Unencrypted(_) => {
+            bail!("msg3 of 4-Way Handshake must carry encrypted key data")
+        },
+        KeyFrameKeyDataState::Encrypted(encrypted) => {
+            encrypted.decrypt(kek, &negotiated_rsne.akm)?
+        },
+    };
+
     let mut gtk: Option<key_data::kde::Gtk> = None;
     let mut rsne: Option<Rsne> = None;
     let mut _second_rsne: Option<Rsne> = None;
-    let elements = key_data::extract_elements(&msg3.key_data_plaintext()[..])?;
+    let elements = key_data::extract_elements(&key_data[..])?;
     for ele in elements {
         match (ele, rsne.as_ref()) {
             (key_data::Element::Gtk(_, e), _) => gtk = Some(e),
@@ -96,8 +119,7 @@ fn handle_message_3(
     match (gtk, rsne) {
         (Some(gtk), Some(rsne)) => {
             ensure!(&rsne == &cfg.a_rsne, Error::InvalidKeyDataRsne);
-            let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
-            let msg4 = create_message_4(&rsne, kck, msg3.get())?;
+            let msg4 = create_message_4(&negotiated_rsne, kck, frame)?;
             Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id())))
         }
         _ => bail!(Error::InvalidKeyDataContent),
@@ -172,7 +194,8 @@ impl State {
     ) -> Self {
         match self {
             State::AwaitingMsg1 { pmk, cfg, mut nonce_rdr } => {
-                match fourway::message_number(frame.get()) {
+                // Safe since the frame is only used for deriving the message number.
+                match fourway::message_number(frame.get().unsafe_get_raw()) {
                     fourway::MessageNumber::Message1 => {
                         let snonce = match nonce_rdr.next() {
                             Ok(nonce) => nonce,
@@ -200,7 +223,8 @@ impl State {
                 }
             },
             State::AwaitingMsg3 { pmk, ptk, cfg, nonce_rdr, .. } => {
-                match fourway::message_number(frame.get()) {
+                // Safe since the frame is only used for deriving the message number.
+                match fourway::message_number(frame.get().unsafe_get_raw()) {
                     // Restart handshake if first message was received.
                     fourway::MessageNumber::Message1 => {
                         State::AwaitingMsg1 { pmk, cfg, nonce_rdr }
@@ -208,7 +232,7 @@ impl State {
                     // Third message of the handshake is only processed once to prevent replay
                     // attacks.
                     fourway::MessageNumber::Message3 => {
-                        match handle_message_3(&cfg, ptk.kck(), frame) {
+                        match handle_message_3(&cfg, ptk.kck(), ptk.kek(), frame) {
                             Err(e) => {
                                 eprintln!("error: {:?}", e);
                                 State::AwaitingMsg1 { pmk, cfg, nonce_rdr }
@@ -228,7 +252,8 @@ impl State {
 
             },
             State::Completed { pmk, cfg, nonce_rdr } => {
-                match fourway::message_number(frame.get()) {
+                // Safe since the frame is only used for deriving the message number.
+                match fourway::message_number(frame.get().unsafe_get_raw()) {
                     // Restart handshake if first message was received to support re-keying.
                     fourway::MessageNumber::Message1 => State::AwaitingMsg1 { pmk, cfg, nonce_rdr },
                     _ => State::Completed { pmk, cfg, nonce_rdr }
