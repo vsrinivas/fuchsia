@@ -521,8 +521,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   AsyncMapResult AsyncMap(Callback callback) {
     return SubfutureCreate(
         AsyncMapResult::element_type::Create(trace_name_ + "(AsyncMap)"),
-        SubfutureMapCallback(callback),
-        SubfutureAsyncMapCompleter<AsyncMapResult>(), [] { return true; });
+        std::move(callback), SubfutureAsyncMapCompleter<AsyncMapResult>(),
+        [] { return true; });
   }
 
   template <typename Callback, typename T,
@@ -534,29 +534,35 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   AsyncMapResult WeakAsyncMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
     return SubfutureCreate(
         AsyncMapResult::element_type::Create(trace_name_ + "(WeakAsyncMap)"),
-        SubfutureMapCallback(callback),
-        SubfutureAsyncMapCompleter<AsyncMapResult>(),
+        std::move(callback), SubfutureAsyncMapCompleter<AsyncMapResult>(),
         [weak_ptr] { return !!weak_ptr; });
   }
 
   // Attaches a |callback| that is invoked when this future is completed with
   // Complete(). The returned future is completed with |callback|'s return
-  // value, when |callback| finishes executing.
+  // value, when |callback| finishes executing. Returned tuples are flattened
+  // into variadic futures.
+  //
+  // To return a future that produces a tuple (uncommon), wrap the map result
+  // in another tuple (or use |AsyncMap|).
+  //
+  // That is:
+  // Callback return type              | Returned future
+  // ----------------------------------+----------------
+  // T                                 | FuturePtr<T>
+  // std::tuple<T, U, ...>             | FuturePtr<T, U, ...>
+  // std::tuple<std::tuple<T, U, ...>> | FuturePtr<std::tuple<T, U, ...>>
   template <typename Callback,
             typename MapResult = std::result_of_t<Callback(Result...)>>
-  FuturePtr<MapResult> Map(Callback callback) {
-    return SubfutureCreate(Future<MapResult>::Create(trace_name_ + "(Map)"),
-                           SubfutureMapCallback(std::move(callback)),
-                           SubfutureCompleter<MapResult>(),
-                           [] { return true; });
+  auto Map(Callback callback) {
+    return Map(std::move(callback), Tag<MapResult>{});
   }
 
   template <typename Callback, typename T,
             typename MapResult = std::result_of_t<Callback(Result...)>>
   FuturePtr<MapResult> WeakMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
     return SubfutureCreate(Future<MapResult>::Create(trace_name_ + "(WeakMap)"),
-                           SubfutureMapCallback(std::move(callback)),
-                           SubfutureCompleter<MapResult>(),
+                           std::move(callback), SubfutureCompleter<MapResult>(),
                            [weak_ptr] { return !!weak_ptr; });
   }
 
@@ -565,6 +571,16 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
  private:
   template <typename... Args>
   friend class Future;
+
+  // This is a utility class used as a template parameter to determine function
+  // overloading; see
+  // <https://www.boost.org/community/generic_programming.html#tag_dispatching>
+  // for more info.
+  //
+  // It is used in the |Map| overloads to "specialize" for |std::tuple| and
+  // capture its parameter pack.
+  template <typename T>
+  class Tag {};
 
   template <typename ResultsFuture, typename... Args>
   friend fxl::RefPtr<ResultsFuture> Wait(
@@ -696,25 +712,15 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     };
   }
 
-  // Returns a lambda that calls |callback|, and returns an empty tuple. This is
-  // designed to be used with the SubfutureMapCallback() method (below), which
-  // returns a one-element tuple, so that calling either function will always
-  // return a std::tuple<T...>. The consistent return type enables generic
-  // programming techniques to be applied to |callback| since the return type is
-  // consistent (it's always a std::tuple<T...>).
+  // Returns a lambda that calls |callback|, and returns an empty tuple. The
+  // consistent return type enables generic programming techniques to be
+  // applied to |callback| since the return type is consistent (it's always a
+  // |std::tuple<T...>|).
   template <typename... CoercedResult, typename Callback>
   auto SubfutureVoidCallback(Callback&& callback) {
     return [callback](CoercedResult&&... result) {
       callback(std::forward<CoercedResult>(result)...);
       return std::make_tuple();
-    };
-  }
-
-  // See the documentation for SubfutureVoidCallback() above.
-  template <typename Callback>
-  auto SubfutureMapCallback(Callback&& callback) {
-    return [callback](Result&&... result) {
-      return std::make_tuple(callback(std::forward<Result>(result)...));
     };
   }
 
@@ -747,6 +753,26 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
                     std::move(std::get<0>(transformed_result)));
               });
     };
+  }
+
+  // The following overloads enable |Map| to flatten out functions that map to
+  // |std::tuple|.
+
+  template <typename Callback, typename MapResult>
+  FuturePtr<MapResult> Map(Callback callback, Tag<MapResult>) {
+    // Directly passing |callback| like this ends up relying on an implicit
+    // |std::tuple| memberwise constructor, which should be fine. It will
+    // convert from |MapResult| to |std::tuple<MapResult>| implicitly.
+    return Map(std::move(callback), Tag<std::tuple<MapResult>>{});
+  }
+
+  template <typename Callback, typename... MapResult>
+  FuturePtr<MapResult...> Map(Callback callback,
+                              Tag<std::tuple<MapResult...>>) {
+    return SubfutureCreate(Future<MapResult...>::Create(trace_name_ + "(Map)"),
+                           std::move(callback),
+                           SubfutureCompleter<MapResult...>(),
+                           [] { return true; });
   }
 
   std::string trace_name_;

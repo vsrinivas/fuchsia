@@ -844,6 +844,33 @@ TEST_F(FutureTest, Map) {
   EXPECT_EQ(3, async_expectations.count());
 }
 
+TEST_F(FutureTest, MapToTuple) {
+  float fresult;
+  std::string sresult;
+
+  auto f1 = Future<int>::Create(__PRETTY_FUNCTION__);
+  FuturePtr<float, std::string> f2 = f1->Map(
+      [](int i) { return std::make_tuple(i / 2.f, std::to_string(i)); });
+
+  f2->Then([&](float fvalue, const std::string& svalue) {
+    fresult = fvalue;
+    sresult = std::move(svalue);
+  });
+
+  f1->Complete(3);
+
+  EXPECT_EQ(1.5f, fresult);
+  EXPECT_EQ("3", sresult);
+}
+
+// compile-time test
+namespace MapToTupleTuple {
+FuturePtr<std::tuple<float, std::string>> f =
+    Future<int>::Create("MapToTupleTuple")->Map([](int i) {
+      return std::make_tuple(std::make_tuple(i / 2.f, std::to_string(i)));
+    });
+}
+
 TEST_F(FutureTest, trace_name) {
   auto f = Future<>::Create("test");
   EXPECT_EQ(f->trace_name(), "test");
