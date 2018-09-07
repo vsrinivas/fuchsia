@@ -25,8 +25,9 @@
 namespace machina {
 
 // Virtio input device.
-class VirtioInput : public VirtioDevice<VIRTIO_ID_INPUT, VIRTIO_INPUT_Q_COUNT,
-                                        virtio_input_config_t> {
+class VirtioInput
+    : public VirtioInprocessDevice<VIRTIO_ID_INPUT, VIRTIO_INPUT_Q_COUNT,
+                                   virtio_input_config_t> {
  public:
   VirtioQueue* event_queue() { return queue(VIRTIO_INPUT_Q_EVENTQ); }
 

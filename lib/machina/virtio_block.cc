@@ -23,7 +23,7 @@ namespace machina {
 
 VirtioBlock::VirtioBlock(const PhysMem& phys_mem,
                          std::unique_ptr<BlockDispatcher> dispatcher)
-    : VirtioDevice(
+    : VirtioInprocessDevice(
           phys_mem,
           // Virtio 1.0: 5.2.5.2: Devices SHOULD alwaysoffer VIRTIO_BLK_F_FLUSH.
           // VIRTIO_BLK_F_BLK_SIZE is required by Zircon guests.

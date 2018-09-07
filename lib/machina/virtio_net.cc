@@ -227,7 +227,7 @@ void VirtioNet::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
 
 VirtioNet::VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
     // TODO(abdulla): Support VIRTIO_NET_F_STATUS via IOCTL_ETHERNET_GET_STATUS.
-    : VirtioDevice(phys_mem, VIRTIO_NET_F_MAC),
+    : VirtioInprocessDevice(phys_mem, VIRTIO_NET_F_MAC),
       rx_stream_(phys_mem, dispatcher, rx_queue(), rx_trace_flow_id()),
       tx_stream_(phys_mem, dispatcher, tx_queue(), tx_trace_flow_id()) {
   config_.status = VIRTIO_NET_S_LINK_UP;

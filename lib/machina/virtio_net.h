@@ -29,8 +29,9 @@ static_assert(kVirtioNetRxQueueIndex != kVirtioNetTxQueueIndex,
               "RX and TX queues must be distinct");
 
 // Implements a Virtio Ethernet device.
-class VirtioNet : public VirtioDevice<VIRTIO_ID_NET, kVirtioNetNumQueues,
-                                      virtio_net_config_t> {
+class VirtioNet
+    : public VirtioInprocessDevice<VIRTIO_ID_NET, kVirtioNetNumQueues,
+                                   virtio_net_config_t> {
  public:
   VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher);
   ~VirtioNet() override;

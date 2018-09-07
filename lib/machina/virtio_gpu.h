@@ -29,8 +29,9 @@ using ResourceId = uint32_t;
 using ScanoutId = uint32_t;
 
 // Virtio 2D GPU device.
-class VirtioGpu : public VirtioDevice<VIRTIO_ID_GPU, VIRTIO_GPU_Q_COUNT,
-                                          virtio_gpu_config_t> {
+class VirtioGpu
+    : public VirtioInprocessDevice<VIRTIO_ID_GPU, VIRTIO_GPU_Q_COUNT,
+                                   virtio_gpu_config_t> {
  public:
   VirtioGpu(const PhysMem& phys_mem, async_dispatcher_t* dispatcher);
   ~VirtioGpu() override;

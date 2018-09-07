@@ -81,9 +81,9 @@ static zx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags,
   return ZX_OK;
 }
 
-zx_status_t VirtioBalloon::HandleDescriptor(uint16_t queue) {
+zx_status_t VirtioBalloon::HandleDescriptor(uint16_t q) {
   queue_ctx_t ctx;
-  switch (queue) {
+  switch (q) {
     case VIRTIO_BALLOON_Q_STATSQ:
       return ZX_OK;
     case VIRTIO_BALLOON_Q_INFLATEQ:
@@ -99,7 +99,7 @@ zx_status_t VirtioBalloon::HandleDescriptor(uint16_t queue) {
       return ZX_ERR_INVALID_ARGS;
   }
   ctx.vmo = phys_mem_.vmo().get();
-  return queues_[queue].HandleDescriptor(&queue_range_op, &ctx);
+  return queue(q)->HandleDescriptor(&queue_range_op, &ctx);
 }
 
 zx_status_t VirtioBalloon::HandleQueueNotify(uint16_t queue) {
@@ -114,9 +114,9 @@ zx_status_t VirtioBalloon::HandleQueueNotify(uint16_t queue) {
 }
 
 VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
-    : VirtioDevice(phys_mem,
-                   VIRTIO_BALLOON_F_STATS_VQ | VIRTIO_BALLOON_F_DEFLATE_ON_OOM,
-                   fit::bind_member(this, &VirtioBalloon::HandleQueueNotify)) {}
+    : VirtioInprocessDevice(
+          phys_mem, VIRTIO_BALLOON_F_STATS_VQ | VIRTIO_BALLOON_F_DEFLATE_ON_OOM,
+          fit::bind_member(this, &VirtioBalloon::HandleQueueNotify)) {}
 
 void VirtioBalloon::WaitForStatsBuffer(VirtioQueue* stats_queue) {
   if (!stats_.has_buffer) {

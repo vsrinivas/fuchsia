@@ -24,8 +24,8 @@ namespace machina {
 static constexpr uint16_t kVirtioVsockNumQueues = 3;
 
 class VirtioVsock
-    : public VirtioDevice<VIRTIO_ID_VSOCK, kVirtioVsockNumQueues,
-                              virtio_vsock_config_t>,
+    : public VirtioInprocessDevice<VIRTIO_ID_VSOCK, kVirtioVsockNumQueues,
+                                   virtio_vsock_config_t>,
       public fuchsia::guest::GuestVsockEndpoint,
       public fuchsia::guest::GuestVsockAcceptor {
  public:

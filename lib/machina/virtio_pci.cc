@@ -436,8 +436,9 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t write_device_config(VirtioDeviceConfig* device_config,
-                                       uint64_t addr, const IoValue& value) {
+static zx_status_t write_device_config(
+    VirtioDeviceConfig* device_config, uint64_t addr,
+    const IoValue& value) {
   switch (value.access_size) {
     case 1: {
       std::lock_guard<std::mutex> lock(device_config->mutex);

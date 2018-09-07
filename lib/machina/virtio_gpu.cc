@@ -18,7 +18,7 @@
 namespace machina {
 
 VirtioGpu::VirtioGpu(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
-    : VirtioDevice(phys_mem, 0 /* device_features */),
+    : VirtioInprocessDevice(phys_mem, 0 /* device_features */),
       dispatcher_(dispatcher) {}
 
 VirtioGpu::~VirtioGpu() = default;

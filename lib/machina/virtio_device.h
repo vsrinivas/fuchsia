@@ -24,7 +24,7 @@ static constexpr uint32_t kVirtioBusFeatures = 0;
 
 // Interface for all virtio devices.
 template <uint8_t DeviceId, uint16_t NumQueues, typename ConfigType>
-class VirtioDevice {
+class VirtioInprocessDevice {
  public:
   PciDevice* pci_device() { return &pci_; }
 
@@ -35,9 +35,10 @@ class VirtioDevice {
   VirtioPci pci_;
   VirtioQueue queues_[NumQueues];
 
-  VirtioDevice(const PhysMem& phys_mem, uint32_t device_features,
-               VirtioDeviceConfig::NotifyQueueFn notify_queue,
-               VirtioDeviceConfig::UpdateConfigFn update_config)
+  VirtioInprocessDevice(
+      const PhysMem& phys_mem, uint32_t device_features,
+      VirtioDeviceConfig::NotifyQueueFn notify_queue,
+      VirtioDeviceConfig::UpdateConfigFn update_config)
       : phys_mem_(phys_mem),
         device_config_{
             .device_id = DeviceId,
@@ -56,20 +57,22 @@ class VirtioDevice {
     for (int i = 0; i < NumQueues; ++i) {
       queues_[i].set_phys_mem(&phys_mem);
       queues_[i].set_interrupt(
-          fit::bind_member(this, &VirtioDevice::Interrupt));
+          fit::bind_member(this, &VirtioInprocessDevice::Interrupt));
     }
   }
 
-  VirtioDevice(const PhysMem& phys_mem, uint32_t device_features,
-               VirtioDeviceConfig::NotifyQueueFn notify_queue)
-      : VirtioDevice(phys_mem, device_features, std::move(notify_queue),
-                     [](uint64_t, const IoValue&) { return ZX_OK; }) {}
+  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
+                        VirtioDeviceConfig::NotifyQueueFn notify_queue)
+      : VirtioInprocessDevice(phys_mem, device_features,
+                              std::move(notify_queue),
+                              [](uint64_t, const IoValue&) { return ZX_OK; }) {}
 
-  VirtioDevice(const PhysMem& phys_mem, uint32_t device_features)
-      : VirtioDevice(phys_mem, device_features,
-                     fit::bind_member(this, &VirtioDevice::NotifyQueue)) {}
+  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features)
+      : VirtioInprocessDevice(
+            phys_mem, device_features,
+            fit::bind_member(this, &VirtioInprocessDevice::NotifyQueue)) {}
 
-  virtual ~VirtioDevice() = default;
+  virtual ~VirtioInprocessDevice() = default;
 
   // Sets interrupt flag, and possibly sends interrupt to the driver.
   zx_status_t Interrupt(uint8_t actions) {
