@@ -24,6 +24,12 @@ TEST(DevMemTest, BadRanges) {
   EXPECT_FALSE(dev_mem.AddRange(0, 0x1000));
   EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrLowerBound - 1, 1));
   EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrUpperBound, 0x1000));
+
+  EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrLowerBound - 1, 2));
+  EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrLowerBound - 1, 2));
+  EXPECT_FALSE(
+      dev_mem.AddRange(DevMem::kAddrUpperBound - 1,
+                       DevMem::kAddrUpperBound - DevMem::kAddrLowerBound + 2));
 }
 
 TEST(DevMemTest, NoOverlappingRanges) {
