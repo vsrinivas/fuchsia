@@ -129,6 +129,10 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
     // TODO(porce): Do something with the validation result.
     ValidateBssDesc(bss_desc_, has_dsss_param_set_chan_, dsss_param_set_chan_);
 
+    auto chan = DeriveChanFromBssDesc(bss_desc_, bcn_rx_chan_.primary, has_dsss_param_set_chan_,
+                                   dsss_param_set_chan_);
+    bss_desc_.chan = common::ToFidl(chan);
+
     return ZX_OK;
 }
 
@@ -433,6 +437,81 @@ bool ValidateBssDesc(const wlan_mlme::BSSDescription& bss_desc, bool has_dsss_pa
 
 #undef DBCBCN
     return true;
+}
+
+wlan_channel_t DeriveChanFromBssDesc(const wlan_mlme::BSSDescription &bss_desc,
+                                     uint8_t bcn_rx_chan_primary, bool has_dsss_param_set_chan,
+                                     uint8_t dsss_param_set_chan) {
+    wlan_channel_t chan = {
+        .primary = has_dsss_param_set_chan? dsss_param_set_chan : bcn_rx_chan_primary,
+        .cbw = CBW20,  // default
+        .secondary80 = 0,
+    };
+
+    // See IEEE 802.11-2016, Table 9-250, Table 11-24.
+
+    auto has_ht = (bss_desc.ht_cap != nullptr && bss_desc.ht_op != nullptr);
+    if (!has_ht) {
+        // No HT or VHT support. Even if there was attached an incomplete set of
+        // HT/VHT IEs, those are not be properly decodable.
+        return chan;
+    }
+
+    chan.primary = bss_desc.ht_op->primary_chan;
+
+    switch (bss_desc.ht_op->ht_op_info.secondary_chan_offset) {
+    case wlan_mlme::SecChanOffset::SECONDARY_ABOVE:
+        chan.cbw = CBW40ABOVE;
+        break;
+    case wlan_mlme::SecChanOffset::SECONDARY_BELOW:
+        chan.cbw = CBW40BELOW;
+    default:
+        chan.cbw = CBW20;
+        break;
+    }
+
+    // This overrides Secondary Channel Offset.
+    // TODO(NET-677): Conditionally apply
+    if (bss_desc.ht_op->ht_op_info.sta_chan_width == wlan_mlme::StaChanWidth::TWENTY) {
+        chan.cbw = CBW20;
+        return chan;
+    }
+
+    auto has_vht = (bss_desc.vht_cap != nullptr && bss_desc.vht_op != nullptr);
+    if (!has_vht) {
+        // No VHT support. Even if there was attached an incomplete set of
+        // VHT IEs, those are not be properly decodable.
+        return chan;
+    }
+
+    // has_ht and has_vht
+    switch (bss_desc.vht_op->vht_cbw) {
+    case wlan_mlme::VhtCbw::CBW_20_40:
+        return chan;
+    case wlan_mlme::VhtCbw::CBW_80_160_80P80: {
+        // See IEEE Std 802.11-2016, Table 9-253
+        auto seg0 = bss_desc.vht_op->center_freq_seg0;
+        auto seg1 = bss_desc.vht_op->center_freq_seg1;
+        auto gap = (seg0 >= seg1) ? (seg0 - seg1) : (seg1 - seg0);
+
+        if (seg1 > 0 && gap < 8) {
+            // Reserved case. Fallback to HT CBW
+        } else if (seg1 > 0 && (gap > 8 && gap <= 16)) {
+            // Reserved case. Fallback to HT CBW
+        } else if (seg1 == 0) {
+            chan.cbw = CBW80;
+        } else if (gap == 8) {
+            chan.cbw = CBW160;
+        } else if (gap > 16) {
+            chan.cbw = CBW80P80;
+        }
+
+        return chan;
+    }
+    default:
+        // Deprecated
+        return chan;
+    }
 }
 
 }  // namespace wlan

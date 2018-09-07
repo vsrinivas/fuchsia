@@ -89,7 +89,11 @@ class Bss : public fbl::RefCounted<Bss> {
 using BssMap = MacAddrMap<fbl::RefPtr<Bss>, macaddr_map_type::kBss>;
 
 ::fuchsia::wlan::mlme::BSSTypes GetBssType(const CapabilityInfo& cap);
+
 bool ValidateBssDesc(const ::fuchsia::wlan::mlme::BSSDescription& bss_desc,
                      bool has_dsss_param_set_chan, uint8_t dsss_param_set_chan);
+wlan_channel_t DeriveChanFromBssDesc(const ::fuchsia::wlan::mlme::BSSDescription& bss_desc,
+                                     uint8_t bcn_rx_chan_primary, bool has_dsss_param_set_chan,
+                                     uint8_t dsss_param_set_chan = 0);
 
 }  // namespace wlan

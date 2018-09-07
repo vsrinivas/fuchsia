@@ -255,7 +255,7 @@ enum SecChanOffset : uint8 {
 };
 
 enum StaChanWidth : uint8 {
-    TWENTY = 0;  // MHz
+    TWENTY = 0;  // 20 MHz
     ANY = 1;     // Any in the Supported Channel Width set
 };
 
