@@ -226,6 +226,7 @@ pub enum {{ $interface.Name }}Event {
 	{{- end -}}
 }
 
+#[deprecated(note = "use {{ $interface.Name }}RequestStream instead")]
 pub trait {{ $interface.Name }} {
 	type OnOpenFut: Future<Output = ()> + Send;
 	fn on_open(&mut self, control_handle: {{ $interface.Name }}ControlHandle) -> Self::OnOpenFut;
@@ -534,6 +535,7 @@ pub enum {{ $interface.Name }}Request {
 	{{- end }}
 }
 
+#[deprecated(note = "use {{ $interface.Name }}RequestStream instead")]
 pub struct {{ $interface.Name }}Impl<
 	{{ template "GenerateImplGenerics" $interface }}
 > {

@@ -7,6 +7,9 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
+// TODO: Remove this line when #53984 is fixed in rust.
+#![allow(deprecated)]
+
 use fuchsia_app::client::connect_to_service;
 use failure::{Error, ResultExt};
 use fidl::encoding2::OutOfLine;
@@ -14,9 +17,12 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::future::ready;
 
+
 // Include the generated FIDL bindings for the `Logger` service.
-use fidl_fuchsia_logger::{LogFilterOptions, LogListener, LogListenerImpl, LogListenerMarker,
+use fidl_fuchsia_logger::{LogFilterOptions, LogListenerMarker,
                           LogListenerServer, LogMarker, LogMessage};
+#[allow(deprecated)]
+use fidl_fuchsia_logger::{LogListener, LogListenerImpl};
 
 /// This trait is used to pass log message back to client.
 pub trait LogProcessor {
@@ -29,6 +35,7 @@ pub trait LogProcessor {
     fn done(&mut self);
 }
 
+#[allow(deprecated)]
 fn log_listener<U>(processor: U) -> impl LogListener
 where
     U: Sized + LogProcessor,
@@ -56,6 +63,7 @@ where
 
 /// This fn will connect to fuchsia.logger.Log service and then
 /// register listener or log dumper based on the parameters passed.
+#[allow(deprecated)]
 pub fn run_log_listener<U>(
     processor: U, options: Option<&mut LogFilterOptions>, dump_logs: bool,
 ) -> Result<LogListenerServer<impl LogListener>, Error>

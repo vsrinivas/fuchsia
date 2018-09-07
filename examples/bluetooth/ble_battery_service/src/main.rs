@@ -27,9 +27,10 @@ use fidl_fuchsia_power::{
     PowerManager,
     PowerManagerMarker,
     PowerManagerWatcher,
-    PowerManagerWatcherImpl,
     PowerManagerWatcherMarker,
 };
+#[allow(deprecated)]
+use fidl_fuchsia_power::PowerManagerWatcherImpl;
 use gatt::ServiceDelegate;
 use le::PeripheralDelegate;
 use parking_lot::Mutex;
@@ -84,6 +85,7 @@ struct BatteryState {
 fn gatt_service_delegate(state: Arc<Mutex<BatteryState>>, channel: async::Channel)
     -> impl Future<Item = (), Error = Never>
 {
+    #[allow(deprecated)]
     gatt::ServiceDelegateImpl {
         state,
         on_characteristic_configuration: |state, _, peer_id, notify, indicate, _|
@@ -206,6 +208,7 @@ struct BatteryPeripheralState {
 fn peripheral_delegate(state: Arc<Mutex<BatteryPeripheralState>>, channel: async::Channel)
     -> impl Future<Item = (), Error = Never>
 {
+    #[allow(deprecated)]
     le::PeripheralDelegateImpl {
         state,
         on_central_connected: |_state, _, central, _| catch_and_log_err("on_central_connected", || {

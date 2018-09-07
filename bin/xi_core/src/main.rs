@@ -9,7 +9,7 @@
 use {
     failure::{Error, ResultExt},
     fidl::endpoints2::ServiceMarker,
-    fidl_fuchsia_xi::{Json, JsonImpl, JsonMarker},
+    fidl_fuchsia_xi::JsonMarker,
     fuchsia_app::server::ServicesServer,
     fuchsia_async as fasync,
     fuchsia_zircon::{AsHandleRef, Signals, Socket, Status, Time},
@@ -22,6 +22,8 @@ use {
     xi_core_lib::XiCore,
     xi_rpc::RpcLoop,
 };
+#[allow(deprecated)]
+use fidl_fuchsia_xi::{Json, JsonImpl};
 
 // TODO: this should be moved into fuchsia_zircon.
 pub struct BlockingSocket(Arc<Socket>);
@@ -65,6 +67,7 @@ fn editor_main(sock: Socket) {
     let _ = rpc_looper.mainloop(|| my_in, &mut state);
 }
 
+#[allow(deprecated)]
 fn spawn_json_server(chan: fasync::Channel) {
     fasync::spawn(
     JsonImpl {
