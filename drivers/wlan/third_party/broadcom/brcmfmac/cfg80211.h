@@ -412,9 +412,9 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
 void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg);
 zx_status_t brcmf_cfg80211_up(struct net_device* ndev);
 zx_status_t brcmf_cfg80211_down(struct net_device* ndev);
-enum nl80211_iftype brcmf_cfg80211_get_iftype(struct brcmf_if* ifp);
+uint16_t brcmf_cfg80211_get_iftype(struct brcmf_if* ifp);
 
-zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, enum nl80211_iftype type,
+zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
                             struct brcmf_cfg80211_vif** vif_out);
 void brcmf_free_vif(struct brcmf_cfg80211_vif* vif);
 

@@ -420,7 +420,7 @@ static struct brcmf_vs_tlv* brcmf_find_wpsie(const uint8_t* parse, uint32_t len)
 
 static zx_status_t brcmf_vif_change_validate(struct brcmf_cfg80211_info* cfg,
                                              struct brcmf_cfg80211_vif* vif,
-                                             enum nl80211_iftype new_type) {
+                                             uint16_t new_type) {
     struct brcmf_cfg80211_vif* pos;
     bool check_combos = false;
     zx_status_t ret = ZX_OK;
@@ -446,7 +446,7 @@ static zx_status_t brcmf_vif_change_validate(struct brcmf_cfg80211_info* cfg,
 }
 
 static zx_status_t brcmf_vif_add_validate(struct brcmf_cfg80211_info* cfg,
-                                          enum nl80211_iftype new_type) {
+                                          uint16_t new_type) {
     struct brcmf_cfg80211_vif* pos;
     struct iface_combination_params params = {
         .num_different_channels = 1,
@@ -495,8 +495,7 @@ static void brcmf_cfg80211_update_proto_addr_mode(struct wireless_dev* wdev) {
     vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
     ifp = vif->ifp;
 
-    if ((wdev->iftype == NL80211_IFTYPE_ADHOC) || (wdev->iftype == NL80211_IFTYPE_AP) ||
-            (wdev->iftype == NL80211_IFTYPE_P2P_GO)) {
+    if (wdev->iftype == WLAN_MAC_ROLE_AP) {
         brcmf_proto_configure_addr_mode(ifp->drvr, ifp->ifidx, ADDR_DIRECT);
     } else {
         brcmf_proto_configure_addr_mode(ifp->drvr, ifp->ifidx, ADDR_INDIRECT);
@@ -562,7 +561,7 @@ static zx_status_t brcmf_ap_add_vif(struct wiphy* wiphy, const char* name,
 
     brcmf_dbg(INFO, "Adding vif \"%s\"\n", name);
 
-    err = brcmf_alloc_vif(cfg, NL80211_IFTYPE_AP, &vif);
+    err = brcmf_alloc_vif(cfg, WLAN_MAC_ROLE_AP, &vif);
     if (err != ZX_OK) {
         if (dev_out) {
             *dev_out = NULL;
@@ -617,18 +616,14 @@ fail:
 }
 
 static bool brcmf_is_apmode(struct brcmf_cfg80211_vif* vif) {
-    enum nl80211_iftype iftype;
+    uint16_t iftype;
 
     iftype = vif->wdev.iftype;
-    return iftype == NL80211_IFTYPE_AP || iftype == NL80211_IFTYPE_P2P_GO;
-}
-
-static bool brcmf_is_ibssmode(struct brcmf_cfg80211_vif* vif) {
-    return vif->wdev.iftype == NL80211_IFTYPE_ADHOC;
+    return iftype == WLAN_MAC_ROLE_AP;
 }
 
 zx_status_t brcmf_cfg80211_add_iface(struct wiphy* wiphy, const char* name,
-                                     unsigned char name_assign_type, enum nl80211_iftype type,
+                                     unsigned char name_assign_type, uint16_t type,
                                      struct vif_params* params, struct wireless_dev** wdev_out) {
     zx_status_t err;
 
@@ -642,25 +637,12 @@ zx_status_t brcmf_cfg80211_add_iface(struct wiphy* wiphy, const char* name,
         return err;
     }
     switch (type) {
-    case NL80211_IFTYPE_ADHOC:
-    case NL80211_IFTYPE_STATION:
-    case NL80211_IFTYPE_AP_VLAN:
-    case NL80211_IFTYPE_WDS:
-    case NL80211_IFTYPE_MONITOR:
-    case NL80211_IFTYPE_MESH_POINT:
-        if (wdev_out) {
-            *wdev_out = NULL;
-        }
-        return ZX_ERR_WRONG_TYPE;
-    case NL80211_IFTYPE_AP:
+    case WLAN_MAC_ROLE_AP:
         err = brcmf_ap_add_vif(wiphy, name, params, wdev_out);
         break;
-    case NL80211_IFTYPE_P2P_CLIENT:
-    case NL80211_IFTYPE_P2P_GO:
-    case NL80211_IFTYPE_P2P_DEVICE:
+    case WLAN_MAC_ROLE_CLIENT:
         err = brcmf_p2p_add_vif(wiphy, name, type, params, wdev_out);
         break;
-    case NL80211_IFTYPE_UNSPECIFIED:
     default:
         if (wdev_out) {
             *wdev_out = NULL;
@@ -822,20 +804,10 @@ static int brcmf_cfg80211_del_iface(struct wiphy* wiphy, struct wireless_dev* wd
     }
 
     switch (wdev->iftype) {
-    case NL80211_IFTYPE_ADHOC:
-    case NL80211_IFTYPE_STATION:
-    case NL80211_IFTYPE_AP_VLAN:
-    case NL80211_IFTYPE_WDS:
-    case NL80211_IFTYPE_MONITOR:
-    case NL80211_IFTYPE_MESH_POINT:
-        return ZX_ERR_NOT_SUPPORTED;
-    case NL80211_IFTYPE_AP:
+    case WLAN_MAC_ROLE_AP:
         return brcmf_cfg80211_del_ap_iface(wiphy, wdev);
-    case NL80211_IFTYPE_P2P_CLIENT:
-    case NL80211_IFTYPE_P2P_GO:
-    case NL80211_IFTYPE_P2P_DEVICE:
+    case WLAN_MAC_ROLE_CLIENT:
         return brcmf_p2p_del_vif(wiphy, wdev);
-    case NL80211_IFTYPE_UNSPECIFIED:
     default:
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -843,9 +815,7 @@ static int brcmf_cfg80211_del_iface(struct wiphy* wiphy, struct wireless_dev* wd
 }
 
 static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_device* ndev,
-                                               enum nl80211_iftype type,
-                                               struct vif_params* params) {
-    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
+                                               uint16_t type, struct vif_params* params) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_cfg80211_vif* vif = ifp->vif;
     int32_t infra = 0;
@@ -854,54 +824,16 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
 
     brcmf_dbg(TRACE, "Enter, bsscfgidx=%d, type=%d\n", ifp->bsscfgidx, type);
 
-    /* WAR: There are a number of p2p interface related problems which
-     * need to be handled initially (before doing the validate).
-     * wpa_supplicant tends to do iface changes on p2p device/client/go
-     * which are not always possible/allowed. However we need to return
-     * OK otherwise the wpa_supplicant wont start. The situation differs
-     * on configuration and setup (p2pon=1 module param). The first check
-     * is to see if the request is a change to station for p2p iface.
-     */
-    if ((type == NL80211_IFTYPE_STATION) && ((vif->wdev.iftype == NL80211_IFTYPE_P2P_CLIENT) ||
-            (vif->wdev.iftype == NL80211_IFTYPE_P2P_GO) ||
-            (vif->wdev.iftype == NL80211_IFTYPE_P2P_DEVICE))) {
-        brcmf_dbg(TRACE, "Ignoring cmd for p2p if\n");
-        /* Now depending on whether module param p2pon=1 was used the
-         * response needs to be either 0 or ZX_ERR_NOT_SUPPORTED. The reason is
-         * that if p2pon=1 is used, but a newer supplicant is used then
-         * we should return an error, as this combination wont work.
-         * In other situations 0 is returned and supplicant will start
-         * normally. It will give a trace in cfg80211, but it is the
-         * only way to get it working. Unfortunately this will result
-         * in situation where we wont support new supplicant in
-         * combination with module param p2pon=1, but that is the way
-         * it is. If the user tries this then unloading of driver might
-         * fail/lock.
-         */
-        if (cfg->p2p.p2pdev_dynamically) {
-            return ZX_ERR_NOT_SUPPORTED;
-        } else {
-            return ZX_OK;
-        }
-    }
     err = brcmf_vif_change_validate(wiphy_to_cfg(wiphy), vif, type);
     if (err != ZX_OK) {
         brcmf_err("iface validation failed: err=%d\n", err);
         return err;
     }
     switch (type) {
-    case NL80211_IFTYPE_MONITOR:
-    case NL80211_IFTYPE_WDS:
-        brcmf_err("type (%d) : currently we do not support this type\n", type);
-        return ZX_ERR_NOT_SUPPORTED;
-    case NL80211_IFTYPE_ADHOC:
-        infra = 0;
-        break;
-    case NL80211_IFTYPE_STATION:
+    case WLAN_MAC_ROLE_CLIENT:
         infra = 1;
         break;
-    case NL80211_IFTYPE_AP:
-    case NL80211_IFTYPE_P2P_GO:
+    case WLAN_MAC_ROLE_AP:
         ap = 1;
         break;
     default:
@@ -910,13 +842,7 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
     }
 
     if (ap) {
-        if (type == NL80211_IFTYPE_P2P_GO) {
-            brcmf_dbg(INFO, "IF Type = P2P GO\n");
-            err = brcmf_p2p_ifchange(cfg, BRCMF_FIL_P2P_IF_GO);
-        }
-        if (err == ZX_OK) {
-            brcmf_dbg(INFO, "IF Type = AP\n");
-        }
+        brcmf_dbg(INFO, "IF Type = AP\n");
     } else {
         err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, infra);
         if (err != ZX_OK) {
@@ -924,7 +850,7 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
             err = ZX_ERR_UNAVAILABLE;
             goto done;
         }
-        brcmf_dbg(INFO, "IF Type = %s\n", brcmf_is_ibssmode(vif) ? "Adhoc" : "Infra");
+        brcmf_dbg(INFO, "IF Type = Infra");
     }
     ndev->ieee80211_ptr->iftype = type;
 
@@ -1269,8 +1195,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
         if (err != ZX_OK) {
             brcmf_err("WLC_DISASSOC failed (%d)\n", err);
         }
-        if ((vif->wdev.iftype == NL80211_IFTYPE_STATION) ||
-                (vif->wdev.iftype == NL80211_IFTYPE_P2P_CLIENT)) {
+        if (vif->wdev.iftype == WLAN_MAC_ROLE_CLIENT) {
             cfg80211_disconnected(vif->wdev.netdev, reason, NULL, 0, true);
         }
     }
@@ -2485,48 +2410,6 @@ out_kfree:
     free(buf);
 }
 
-static zx_status_t brcmf_cfg80211_get_station_ibss(struct brcmf_if* ifp,
-                                                   struct station_info* sinfo) {
-    struct brcmf_scb_val_le scbval;
-    struct brcmf_pktcnt_le pktcnt;
-    zx_status_t err;
-    uint32_t rate;
-    uint32_t rssi;
-
-    /* Get the current tx rate */
-    err = brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_RATE, &rate);
-    if (err != ZX_OK) {
-        brcmf_err("BRCMF_C_GET_RATE error (%d)\n", err);
-        return err;
-    }
-    sinfo->filled |= BIT(NL80211_STA_INFO_TX_BITRATE);
-    sinfo->txrate.legacy = rate * 5;
-
-    memset(&scbval, 0, sizeof(scbval));
-    err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_RSSI, &scbval, sizeof(scbval));
-    if (err != ZX_OK) {
-        brcmf_err("BRCMF_C_GET_RSSI error (%d)\n", err);
-        return err;
-    }
-    rssi = scbval.val;
-    sinfo->filled |= BIT(NL80211_STA_INFO_SIGNAL);
-    sinfo->signal = rssi;
-
-    err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_GET_PKTCNTS, &pktcnt, sizeof(pktcnt));
-    if (err != ZX_OK) {
-        brcmf_err("BRCMF_C_GET_GET_PKTCNTS error (%d)\n", err);
-        return err;
-    }
-    sinfo->filled |= BIT(NL80211_STA_INFO_RX_PACKETS) | BIT(NL80211_STA_INFO_RX_DROP_MISC) |
-                     BIT(NL80211_STA_INFO_TX_PACKETS) | BIT(NL80211_STA_INFO_TX_FAILED);
-    sinfo->rx_packets = pktcnt.rx_good_pkt;
-    sinfo->rx_dropped_misc = pktcnt.rx_bad_pkt;
-    sinfo->tx_packets = pktcnt.tx_good_pkt;
-    sinfo->tx_failed = pktcnt.tx_bad_pkt;
-
-    return ZX_OK;
-}
-
 static zx_status_t brcmf_cfg80211_get_station(struct wiphy* wiphy, struct net_device* ndev,
                                               const uint8_t* mac, struct station_info* sinfo) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
@@ -2543,10 +2426,6 @@ static zx_status_t brcmf_cfg80211_get_station(struct wiphy* wiphy, struct net_de
     brcmf_dbg(TRACE, "Enter, MAC %pM\n", mac);
     if (!check_vif_up(ifp->vif)) {
         return ZX_ERR_IO;
-    }
-
-    if (brcmf_is_ibssmode(ifp->vif)) {
-        return brcmf_cfg80211_get_station_ibss(ifp, sinfo);
     }
 
     memset(&sta_info_le, 0, sizeof(sta_info_le));
@@ -2683,11 +2562,6 @@ static zx_status_t brcmf_cfg80211_set_power_mgmt(struct wiphy* wiphy, struct net
     }
 
     pm = enabled ? PM_FAST : PM_OFF;
-    /* Do not enable the power save after assoc if it is a p2p interface */
-    if (ifp->vif->wdev.iftype == NL80211_IFTYPE_P2P_CLIENT) {
-        brcmf_dbg(INFO, "Do not enable power save for P2P clients\n");
-        pm = PM_OFF;
-    }
     brcmf_dbg(INFO, "power save %s\n", (pm ? "enabled" : "disabled"));
 
     err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PM, pm);
@@ -2824,85 +2698,6 @@ static zx_status_t brcmf_inform_bss(struct brcmf_cfg80211_info* cfg) {
     return err;
 }
 
-static zx_status_t brcmf_inform_ibss(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
-                                     const uint8_t* bssid) {
-    struct wiphy* wiphy = cfg_to_wiphy(cfg);
-    struct ieee80211_channel* notify_channel;
-    struct brcmf_bss_info_le* bi = NULL;
-    struct ieee80211_supported_band* band;
-    struct cfg80211_bss* bss;
-    struct brcmu_chan ch;
-    uint8_t* buf = NULL;
-    zx_status_t err = ZX_OK;
-    uint32_t freq;
-    uint16_t notify_capability;
-    uint16_t notify_interval;
-    uint8_t* notify_ie;
-    size_t notify_ielen;
-    int32_t notify_signal;
-
-    brcmf_dbg(TRACE, "Enter\n");
-
-    buf = calloc(1, WL_BSS_INFO_MAX);
-    if (buf == NULL) {
-        err = ZX_ERR_NO_MEMORY;
-        goto CleanUp;
-    }
-
-    *(uint32_t*)buf = WL_BSS_INFO_MAX;
-
-    err = brcmf_fil_cmd_data_get(ndev_to_if(ndev), BRCMF_C_GET_BSS_INFO, buf, WL_BSS_INFO_MAX);
-    if (err != ZX_OK) {
-        brcmf_err("WLC_GET_BSS_INFO failed: %d\n", err);
-        goto CleanUp;
-    }
-
-    bi = (struct brcmf_bss_info_le*)(buf + 4);
-
-    ch.chspec = bi->chanspec;
-    cfg->d11inf.decchspec(&ch);
-
-    if (ch.band == BRCMU_CHAN_BAND_2G) {
-        band = wiphy->bands[NL80211_BAND_2GHZ];
-    } else {
-        band = wiphy->bands[NL80211_BAND_5GHZ];
-    }
-
-    freq = ieee80211_channel_to_frequency(ch.control_ch_num, band->band);
-    cfg->channel = freq;
-    notify_channel = ieee80211_get_channel(wiphy, freq);
-
-    notify_capability = bi->capability;
-    notify_interval = bi->beacon_period;
-    notify_ie = (uint8_t*)bi + bi->ie_offset;
-    notify_ielen = bi->ie_length;
-    notify_signal = (int16_t)bi->RSSI * 100;
-
-    brcmf_dbg(CONN, "channel: %d(%d)\n", ch.control_ch_num, freq);
-    brcmf_dbg(CONN, "capability: %X\n", notify_capability);
-    brcmf_dbg(CONN, "beacon interval: %d\n", notify_interval);
-    brcmf_dbg(CONN, "signal: %d\n", notify_signal);
-
-    bss = cfg80211_inform_bss(wiphy, notify_channel, CFG80211_BSS_FTYPE_UNKNOWN, bssid, 0,
-                              notify_capability, notify_interval, notify_ie, notify_ielen,
-                              notify_signal);
-
-    if (!bss) {
-        err = ZX_ERR_NO_MEMORY;
-        goto CleanUp;
-    }
-
-    cfg80211_put_bss(wiphy, bss);
-
-CleanUp:
-
-    free(buf);
-
-    brcmf_dbg(TRACE, "Exit\n");
-
-    return err;
-}
-
 static zx_status_t brcmf_update_bss_info(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp) {
     struct brcmf_bss_info_le* bi;
     const struct brcmf_tlv* tim;
@@ -2913,9 +2708,6 @@ static zx_status_t brcmf_update_bss_info(struct brcmf_cfg80211_info* cfg, struct
     zx_status_t err = ZX_OK;
 
     brcmf_dbg(TRACE, "Enter\n");
-    if (brcmf_is_ibssmode(ifp->vif)) {
-        return err;
-    }
 
     *(uint32_t*)cfg->extra_buf = WL_EXTRA_BUF_MAX;
     err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSS_INFO, cfg->extra_buf, WL_EXTRA_BUF_MAX);
@@ -3085,13 +2877,6 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
         if (bi_length != escan_buflen - WL_ESCAN_RESULTS_FIXED_SIZE) {
             brcmf_err("Ignoring invalid bss_info length: %d\n", bi_length);
             goto exit;
-        }
-
-        if (!(cfg_to_wiphy(cfg)->interface_modes & BIT(NL80211_IFTYPE_ADHOC))) {
-            if (bss_info_le->capability & WLAN_CAPABILITY_IBSS) {
-                brcmf_err("Ignoring IBSS result\n");
-                goto exit;
-            }
         }
 
         list = (struct brcmf_scan_results*)cfg->escan_info.escan_buf;
@@ -3794,11 +3579,7 @@ static zx_status_t brcmf_configure_opensecurity(struct brcmf_if* ifp) {
         return err;
     }
     /* set upper-layer auth */
-    if (brcmf_is_ibssmode(ifp->vif)) {
-        wpa_val = WPA_AUTH_NONE;
-    } else {
-        wpa_val = WPA_AUTH_DISABLED;
-    }
+    wpa_val = WPA_AUTH_DISABLED;
     err = brcmf_fil_bsscfg_int_set(ifp, "wpa_auth", wpa_val);
     if (err != ZX_OK) {
         brcmf_err("wpa_auth error %d\n", err);
@@ -4317,8 +4098,7 @@ static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_devic
     const struct brcmf_tlv* rsn_ie;
     const struct brcmf_vs_tlv* wpa_ie;
     struct brcmf_join_params join_params;
-    enum nl80211_iftype dev_role;
-    struct brcmf_fil_bss_enable_le bss_enable;
+    uint16_t dev_role;
     uint16_t chanspec = chandef_to_chanspec(&cfg->d11inf, &settings->chandef);
     bool mbss;
     int is_11d;
@@ -4419,7 +4199,7 @@ static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_devic
             }
         }
 
-        if ((dev_role == NL80211_IFTYPE_AP) &&
+        if ((dev_role == WLAN_MAC_ROLE_AP) &&
                 ((ifp->ifidx == 0) || !brcmf_feat_is_enabled(ifp, BRCMF_FEAT_RSDB))) {
             err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1);
             if (err != ZX_OK) {
@@ -4441,7 +4221,7 @@ static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_devic
     }
 
     /* Interface specific setup */
-    if (dev_role == NL80211_IFTYPE_AP) {
+    if (dev_role == WLAN_MAC_ROLE_AP) {
         if ((brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MBSS)) && (!mbss)) {
             brcmf_fil_iovar_int_set(ifp, "mbss", 1);
         }
@@ -4490,26 +4270,6 @@ static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_devic
         }
 
         brcmf_dbg(TRACE, "AP mode configuration complete\n");
-    } else if (dev_role == NL80211_IFTYPE_P2P_GO) {
-        err = brcmf_fil_iovar_int_set(ifp, "chanspec", chanspec);
-        if (err != ZX_OK) {
-            brcmf_err("Set Channel failed: chspec=%d, %d\n", chanspec, err);
-            goto exit;
-        }
-        err = brcmf_fil_bsscfg_data_set(ifp, "ssid", &ssid_le, sizeof(ssid_le));
-        if (err != ZX_OK) {
-            brcmf_err("setting ssid failed %d\n", err);
-            goto exit;
-        }
-        bss_enable.bsscfgidx = ifp->bsscfgidx;
-        bss_enable.enable = 1;
-        err = brcmf_fil_iovar_data_set(ifp, "bss", &bss_enable, sizeof(bss_enable));
-        if (err != ZX_OK) {
-            brcmf_err("bss_enable config failed %d\n", err);
-            goto exit;
-        }
-
-        brcmf_dbg(TRACE, "GO mode configuration complete\n");
     } else {
         WARN_ON(1);
     }
@@ -4534,7 +4294,7 @@ static zx_status_t brcmf_cfg80211_stop_ap(struct wiphy* wiphy, struct net_device
 
     brcmf_dbg(TRACE, "Enter\n");
 
-    if (ifp->vif->wdev.iftype == NL80211_IFTYPE_AP) {
+    if (ifp->vif->wdev.iftype == WLAN_MAC_ROLE_AP) {
         /* Due to most likely deauths outstanding we sleep */
         /* first to make sure they get processed by fw. */
         msleep(400);
@@ -5283,7 +5043,7 @@ zx_status_t brcmf_phy_create_iface(void* ctx, uint16_t role, uint16_t* iface_id)
     return ZX_OK;
 }
 
-zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, enum nl80211_iftype type,
+zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
                             struct brcmf_cfg80211_vif** vif_out) {
     struct brcmf_cfg80211_vif* vif_walk;
     struct brcmf_cfg80211_vif* vif;
@@ -5303,10 +5063,10 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, enum nl80211_iftype
 
     brcmf_init_prof(&vif->profile);
 
-    if (type == NL80211_IFTYPE_AP) {
+    if (type == WLAN_MAC_ROLE_AP) {
         mbss = false;
         list_for_every_entry(&cfg->vif_list, vif_walk, struct brcmf_cfg80211_vif, list) {
-            if (vif_walk->wdev.iftype == NL80211_IFTYPE_AP) {
+            if (vif_walk->wdev.iftype == WLAN_MAC_ROLE_AP) {
                 mbss = true;
                 break;
             }
@@ -5594,8 +5354,6 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
                                                const struct brcmf_event_msg* e, void* data) {
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
     struct net_device* ndev = ifp->ndev;
-    struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
-    struct ieee80211_channel* chan;
     zx_status_t err = ZX_OK;
 
     if ((e->event_code == BRCMF_E_DEAUTH) || (e->event_code == BRCMF_E_DEAUTH_IND) ||
@@ -5608,34 +5366,19 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
         err = brcmf_notify_connect_status_ap(cfg, ndev, e, data);
     } else if (brcmf_is_linkup(ifp->vif, e)) {
         brcmf_dbg(CONN, "Linkup\n");
-        if (brcmf_is_ibssmode(ifp->vif)) {
-            brcmf_inform_ibss(cfg, ndev, e->addr);
-            chan = ieee80211_get_channel(cfg->wiphy, cfg->channel);
-            memcpy(profile->bssid, e->addr, ETH_ALEN);
-            cfg80211_ibss_joined(ndev, e->addr, chan);
-            brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
-            brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
-        } else {
-            brcmf_bss_connect_done(cfg, ndev, e, true);
-        }
+        brcmf_bss_connect_done(cfg, ndev, e, true);
         brcmf_net_setcarrier(ifp, true);
     } else if (brcmf_is_linkdown(e)) {
         brcmf_dbg(CONN, "Linkdown\n");
-        if (!brcmf_is_ibssmode(ifp->vif)) {
-            brcmf_bss_connect_done(cfg, ndev, e, false);
-            brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e));
-            brcmf_init_prof(ndev_to_prof(ndev));
-            if (ndev != cfg_to_ndev(cfg)) {
-                sync_completion_signal(&cfg->vif_disabled);
-            }
-            brcmf_net_setcarrier(ifp, false);
+        brcmf_bss_connect_done(cfg, ndev, e, false);
+        brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e));
+        brcmf_init_prof(ndev_to_prof(ndev));
+        if (ndev != cfg_to_ndev(cfg)) {
+            sync_completion_signal(&cfg->vif_disabled);
         }
+        brcmf_net_setcarrier(ifp, false);
     } else if (brcmf_is_nonetwork(cfg, e)) {
-        if (brcmf_is_ibssmode(ifp->vif)) {
-            brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
-        } else {
-            brcmf_bss_connect_done(cfg, ndev, e, false);
-        }
+        brcmf_bss_connect_done(cfg, ndev, e, false);
     }
 
     return err;
@@ -6298,33 +6041,6 @@ static zx_status_t brcmf_setup_wiphybands(struct wiphy* wiphy) {
     return ZX_OK;
 }
 
-static const struct ieee80211_txrx_stypes brcmf_txrx_stypes[NUM_NL80211_IFTYPES] = {
-    [NL80211_IFTYPE_STATION] = {
-        .tx = 0xffff,
-        .rx = BIT(IEEE80211_STYPE_ACTION >> 4) |
-        BIT(IEEE80211_STYPE_PROBE_REQ >> 4)
-    },
-    [NL80211_IFTYPE_P2P_CLIENT] = {
-        .tx = 0xffff,
-        .rx = BIT(IEEE80211_STYPE_ACTION >> 4) |
-        BIT(IEEE80211_STYPE_PROBE_REQ >> 4)
-    },
-    [NL80211_IFTYPE_P2P_GO] = {
-        .tx = 0xffff,
-        .rx = BIT(IEEE80211_STYPE_ASSOC_REQ >> 4) |
-        BIT(IEEE80211_STYPE_REASSOC_REQ >> 4) |
-        BIT(IEEE80211_STYPE_PROBE_REQ >> 4) |
-        BIT(IEEE80211_STYPE_DISASSOC >> 4) |
-        BIT(IEEE80211_STYPE_AUTH >> 4) |
-        BIT(IEEE80211_STYPE_DEAUTH >> 4) |
-        BIT(IEEE80211_STYPE_ACTION >> 4)
-    },
-    [NL80211_IFTYPE_P2P_DEVICE] = {
-        .tx = 0xffff,
-        .rx = BIT(IEEE80211_STYPE_ACTION >> 4) | BIT(IEEE80211_STYPE_PROBE_REQ >> 4)
-    }
-};
-
 /**
  * brcmf_setup_ifmodes() - determine interface modes and combinations.
  *
@@ -6360,70 +6076,33 @@ static zx_status_t brcmf_setup_ifmodes(struct wiphy* wiphy, struct brcmf_if* ifp
     struct ieee80211_iface_limit* c0_limits = NULL;
     struct ieee80211_iface_limit* p2p_limits = NULL;
     struct ieee80211_iface_limit* mbss_limits = NULL;
-    bool mbss, p2p;
+    bool mbss;
     int i, c, n_combos;
 
     mbss = brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MBSS);
-    p2p = brcmf_feat_is_enabled(ifp, BRCMF_FEAT_P2P);
 
-    n_combos = 1 + !!p2p + !!mbss;
+    n_combos = 1 + !!mbss;
     combo = calloc(n_combos, sizeof(*combo));
     if (!combo) {
         goto err;
     }
 
-    wiphy->interface_modes =
-        BIT(NL80211_IFTYPE_STATION) | BIT(NL80211_IFTYPE_ADHOC) | BIT(NL80211_IFTYPE_AP);
+    wiphy->interface_modes = WLAN_MAC_ROLE_CLIENT | WLAN_MAC_ROLE_AP;
 
     c = 0;
     i = 0;
-    c0_limits = calloc(p2p ? 3 : 2, sizeof(*c0_limits));
+    c0_limits = calloc(2, sizeof(*c0_limits));
     if (!c0_limits) {
         goto err;
     }
     c0_limits[i].max = 1;
-    c0_limits[i++].types = BIT(NL80211_IFTYPE_STATION);
-    if (p2p) {
-        if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MCHAN)) {
-            combo[c].num_different_channels = 2;
-        } else {
-            combo[c].num_different_channels = 1;
-        }
-        wiphy->interface_modes |= BIT(NL80211_IFTYPE_P2P_CLIENT) | BIT(NL80211_IFTYPE_P2P_GO) |
-                                  BIT(NL80211_IFTYPE_P2P_DEVICE);
-        c0_limits[i].max = 1;
-        c0_limits[i++].types = BIT(NL80211_IFTYPE_P2P_DEVICE);
-        c0_limits[i].max = 1;
-        c0_limits[i++].types = BIT(NL80211_IFTYPE_P2P_CLIENT) | BIT(NL80211_IFTYPE_P2P_GO);
-    } else {
-        combo[c].num_different_channels = 1;
-        c0_limits[i].max = 1;
-        c0_limits[i++].types = BIT(NL80211_IFTYPE_AP);
-    }
+    c0_limits[i++].types = WLAN_MAC_ROLE_CLIENT;
+    combo[c].num_different_channels = 1;
+    c0_limits[i].max = 1;
+    c0_limits[i++].types = WLAN_MAC_ROLE_AP;
     combo[c].max_interfaces = i;
     combo[c].n_limits = i;
     combo[c].limits = c0_limits;
-
-    if (p2p) {
-        c++;
-        i = 0;
-        p2p_limits = calloc(4, sizeof(*p2p_limits));
-        if (!p2p_limits) {
-            goto err;
-        }
-        p2p_limits[i].max = 1;
-        p2p_limits[i++].types = BIT(NL80211_IFTYPE_STATION);
-        p2p_limits[i].max = 1;
-        p2p_limits[i++].types = BIT(NL80211_IFTYPE_AP);
-        p2p_limits[i].max = 1;
-        p2p_limits[i++].types = BIT(NL80211_IFTYPE_P2P_CLIENT);
-        p2p_limits[i].max = 1;
-        p2p_limits[i++].types = BIT(NL80211_IFTYPE_P2P_DEVICE);
-        combo[c].num_different_channels = 1;
-        combo[c].max_interfaces = i;
-        combo[c].n_limits = i;
-        combo[c].limits = p2p_limits;
-    }
 
     if (mbss) {
         c++;
@@ -6433,7 +6112,7 @@ static zx_status_t brcmf_setup_ifmodes(struct wiphy* wiphy, struct brcmf_if* ifp
             goto err;
         }
         mbss_limits[i].max = 4;
-        mbss_limits[i++].types = BIT(NL80211_IFTYPE_AP);
+        mbss_limits[i++].types = WLAN_MAC_ROLE_AP;
         combo[c].beacon_int_infra_match = true;
         combo[c].num_different_channels = 1;
         combo[c].max_interfaces = 4;
@@ -6549,7 +6228,6 @@ static zx_status_t brcmf_setup_wiphy(struct wiphy* wiphy, struct brcmf_if* ifp) 
         brcmf_dbg(TEMP, "* * Set feature NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_PSK on wiphy");
         brcmf_dbg(TEMP, "* * Set feature NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_1X on wiphy");
     }
-    wiphy->mgmt_stypes = brcmf_txrx_stypes;
     wiphy->max_remain_on_channel_duration = 5000;
     if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_PNO)) {
         gscan = brcmf_feat_is_enabled(ifp, BRCMF_FEAT_GSCAN);
@@ -6709,7 +6387,7 @@ zx_status_t brcmf_cfg80211_down(struct net_device* ndev) {
     return err;
 }
 
-enum nl80211_iftype brcmf_cfg80211_get_iftype(struct brcmf_if* ifp) {
+uint16_t brcmf_cfg80211_get_iftype(struct brcmf_if* ifp) {
     struct wireless_dev* wdev = &ifp->vif->wdev;
 
     return wdev->iftype;
@@ -6929,7 +6607,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     init_vif_event(&cfg->vif_event);
     list_initialize(&cfg->vif_list);
 
-    err = brcmf_alloc_vif(cfg, NL80211_IFTYPE_STATION, &vif);
+    err = brcmf_alloc_vif(cfg, WLAN_MAC_ROLE_CLIENT, &vif);
     if (err != ZX_OK) {
         goto wiphy_out;
     }
