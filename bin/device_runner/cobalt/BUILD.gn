@@ -28,7 +28,7 @@ source_set("cobalt") {
   deps = [
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
-    "//peridot/lib/cobalt",
+    "//garnet/public/lib/cobalt/cpp:cobalt_logger",
     "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }

@@ -97,7 +97,8 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
           // this operation is done.
           controller_->Sync([flow] {});
 
-          ReportStoryLaunchTime(zx_clock_get(ZX_CLOCK_UTC) - start_time_);
+          ReportStoryLaunchTime(
+              zx::duration(zx_clock_get(ZX_CLOCK_UTC) - start_time_));
         });
   }
 

@@ -276,8 +276,9 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
       (*i)->OnNewModule(std::move(module_data));
     }
 
-    ReportModuleLaunchTime(module_data_.module_url,
-                           zx_clock_get(ZX_CLOCK_UTC) - start_time_);
+    ReportModuleLaunchTime(
+        module_data_.module_url,
+        zx::duration(zx_clock_get(ZX_CLOCK_UTC) - start_time_));
   }
 
   // Connects to the module's intent handler and sends it the intent from
