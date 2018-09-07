@@ -70,7 +70,8 @@ struct BlobfsInfo {
 
 // Helper for streaming operations (such as read, write) which may need to be
 // repeated multiple times.
-template <typename T, typename U> inline int StreamAll(T func, int fd, U* buf, size_t max) {
+template <typename T, typename U>
+inline int StreamAll(T func, int fd, U* buf, size_t max) {
     size_t n = 0;
     while (n != max) {
         ssize_t d = func(fd, &buf[n], max - n);
@@ -161,7 +162,8 @@ fbl::String GetNegativeLookupPath(const fbl::String& fs_path) {
 
 class BlobfsTest {
 public:
-    BlobfsTest(BlobfsInfo&& info) : info_(fbl::move(info)) {}
+    BlobfsTest(BlobfsInfo&& info)
+        : info_(fbl::move(info)) {}
 
     // Measure how much time each of the operations in the Fs takes, for a known size.
     // First we add as many blobs as we need to, and then, we proceed to execute each operation.
@@ -174,7 +176,7 @@ public:
         for (int64_t curr = 0; curr < info_.blob_count; ++curr) {
             MakeBlob(fixture->fs_path(), info_.blob_size, fixture->mutable_seed(), &new_blob);
             fbl::unique_fd fd(open(new_blob->path.c_str(), O_CREAT | O_RDWR));
-            ASSERT_TRUE(fd);
+            ASSERT_TRUE(fd, strerror(errno));
             ASSERT_EQ(ftruncate(fd.get(), info_.blob_size), 0, strerror(errno));
             ASSERT_EQ(StreamAll(write, fd.get(), new_blob->data.get(), new_blob->size_data), 0,
                       strerror(errno));
