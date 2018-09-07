@@ -129,7 +129,7 @@ impl HostDevice {
 }
 
 pub fn run(
-    hd: Arc<RwLock<HostDispatcher>>, host: Arc<RwLock<HostDevice>>,
+    hd: HostDispatcher, host: Arc<RwLock<HostDevice>>,
 ) -> impl Future<Output = Result<(), fidl::Error>> {
     make_clones!(host => host_stream, host);
     let stream = host_stream.read().host.take_event_stream();
@@ -141,7 +141,7 @@ pub fn run(
             // TODO(NET-968): Add integration test for this.
             HostEvent::OnDeviceUpdated { mut device } => {
                 // TODO(NET-1297): generic method for this pattern
-                for listener in hd.read().event_listeners.iter() {
+                for listener in hd.event_listeners().iter() {
                     let _res = listener
                         .send_on_device_updated(&mut device)
                         .map_err(|e| fx_log_err!("Failed to send device updated event: {:?}", e));
@@ -149,7 +149,7 @@ pub fn run(
             }
             // TODO(NET-1038): Add integration test for this.
             HostEvent::OnDeviceRemoved { identifier } => {
-                for listener in hd.read().event_listeners.iter() {
+                for listener in hd.event_listeners().iter() {
                     let _res = listener
                         .send_on_device_removed(&identifier)
                         .map_err(|e| fx_log_err!("Failed to send device removed event: {:?}", e));
@@ -157,7 +157,7 @@ pub fn run(
             }
             HostEvent::OnNewBondingData { data } => {
                 fx_log_info!("Received bonding data");
-                if let Err(e) = hd.write().stash.store_bond(data) {
+                if let Err(e) = hd.store_bond(data) {
                     fx_log_err!("Failed to persist bonding data: {:#?}", e);
                 }
             }

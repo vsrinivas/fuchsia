@@ -9,29 +9,30 @@ use crate::util;
 use failure::Error;
 use fidl;
 use fidl::encoding::OutOfLine;
+use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_bluetooth;
 use fidl_fuchsia_bluetooth_control::{
     AdapterInfo,
     ControlControlHandle,
     PairingDelegateMarker,
     PairingDelegateProxy,
+    InputCapabilityType,
+    OutputCapabilityType
 };
-use fidl_fuchsia_bluetooth_control::{InputCapabilityType, OutputCapabilityType};
+use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
+use fidl_fuchsia_bluetooth_gatt::Server_Marker;
 use fidl_fuchsia_bluetooth_host::HostProxy;
-use fidl_fuchsia_bluetooth_le::CentralProxy;
-use fuchsia_async::{
-    self as fasync,
-    temp::Either::{Left, Right},
-    TimeoutExt,
-};
+use fidl_fuchsia_bluetooth_le::{CentralProxy, CentralMarker, PeripheralMarker};
+
 use fuchsia_bluetooth::{
     self as bt, bt_fidl_status, error::Error as BTError, util::clone_host_info,
 };
+use fuchsia_async::{self as fasync, TimeoutExt};
 use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_vfs_watcher as vfs_watcher;
+use fuchsia_vfs_watcher::{WatchEvent, WatchMessage};
 use fuchsia_zircon as zx;
 use fuchsia_zircon::Duration;
-use futures::future;
 use futures::TryStreamExt;
 use futures::{task::{LocalWaker, Waker}, Future, Poll, TryFutureExt};
 use parking_lot::RwLock;
@@ -48,6 +49,18 @@ pub static HOST_INIT_TIMEOUT: i64 = 5; // Seconds
 static BT_HOST_DIR: &'static str = "/dev/class/bt-host";
 static DEFAULT_NAME: &'static str = "fuchsia";
 
+/// Available FIDL services that can be provided by a particular Host
+pub enum HostService {
+    LeCentral,
+    LePeripheral,
+    LeGatt,
+    Profile
+}
+
+// We use tokens to track the reference counting for discovery/discoverable states
+// As long as at least one user maintains an Arc<> to the token, the state persists
+// Once all references are dropped, the `Drop` trait on the token causes the state
+// to be terminated.
 pub struct DiscoveryRequestToken {
     adap: Weak<RwLock<HostDevice>>,
 }
@@ -55,8 +68,7 @@ pub struct DiscoveryRequestToken {
 impl Drop for DiscoveryRequestToken {
     fn drop(&mut self) {
         if let Some(host) = self.adap.upgrade() {
-            let host = host.write();
-            host.stop_discovery();
+            host.write().stop_discovery();
         }
     }
 }
@@ -74,7 +86,10 @@ impl Drop for DiscoverableRequestToken {
     }
 }
 
-pub struct HostDispatcher {
+/// The HostDispatcher acts as a proxy aggregating multiple HostAdapters
+/// It appears as a Host to higher level systems, and is responsible for
+/// routing commands to the appropriate HostAdapter
+struct HostDispatcherState {
     host_devices: HashMap<String, Arc<RwLock<HostDevice>>>,
     active_id: Option<String>,
 
@@ -95,20 +110,23 @@ pub struct HostDispatcher {
     host_requests: Slab<Waker>,
 }
 
-impl HostDispatcher {
-    pub fn new(stash: Stash) -> HostDispatcher {
-        HostDispatcher {
-            active_id: None,
-            stash: stash,
-            host_devices: HashMap::new(),
-            name: DEFAULT_NAME.to_string(),
-            input: InputCapabilityType::None,
-            output: OutputCapabilityType::None,
-            discovery: None,
-            discoverable: None,
-            pairing_delegate: None,
-            event_listeners: vec![],
-            host_requests: Slab::new(),
+impl HostDispatcherState {
+    /// Set the active adapter for this HostDispatcher
+    pub fn set_active_adapter(&mut self, adapter_id: String) -> fidl_fuchsia_bluetooth::Status {
+        if let Some(ref id) = self.active_id {
+            if *id == adapter_id {
+                return bt_fidl_status!(Already, "Adapter already active");
+            }
+
+            // Shut down the previously active host.
+            let _ = self.host_devices[id].write().close();
+        }
+
+        if self.host_devices.contains_key(&adapter_id) {
+            self.set_active_id(Some(adapter_id));
+            bt_fidl_status!()
+        } else {
+            bt_fidl_status!(NotFound, "Attempting to activate an unknown adapter")
         }
     }
 
@@ -145,252 +163,32 @@ impl HostDispatcher {
         self.pairing_delegate.clone()
     }
 
-    pub fn set_name(
-        hd: Arc<RwLock<HostDispatcher>>,
-        name: Option<String>,
-    ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
-        hd.write().name = match name {
-            Some(name) => name,
-            None => DEFAULT_NAME.to_string(),
-        };
-        HostDispatcher::get_active_adapter(hd.clone()).and_then(move |adapter| match adapter {
-            Some(adapter) => Left(adapter.write().set_name(hd.read().name.clone())),
-            None => Right(future::ready(Ok(bt_fidl_status!(
-                BluetoothNotAvailable,
-                "No Adapter found"
-            )))),
-        })
-    }
-
-    /// Return the active id. If the ID is current not set,
-    /// this fn will make the first ID in it's host_devices active
+    /// Return the active id. If the ID is currently not set,
+    /// it will make the first ID in it's host_devices active
     fn get_active_id(&mut self) -> Option<String> {
         match self.active_id {
-            None => {
-                let id = match self.host_devices.keys().next() {
-                    None => {
-                        return None;
-                    }
-                    Some(id) => id.clone(),
-                };
-                self.set_active_id(Some(id));
-                self.active_id.clone()
-            }
+            None => match self.host_devices.keys().next() {
+                None => None,
+                Some(id) => {
+                    self.set_active_id(Some(id.clone()));
+                    self.active_id.clone()
+                }
+            },
             ref id => id.clone(),
         }
     }
 
-    pub fn start_discovery(
-        hd: Arc<RwLock<HostDispatcher>>,
-    ) -> impl Future<
-        Output = fidl::Result<(
-            fidl_fuchsia_bluetooth::Status,
-            Option<Arc<DiscoveryRequestToken>>,
-        )>,
-    > {
-        let strong_current_token = match hd.read().discovery {
-            Some(ref token) => token.upgrade(),
-            None => None,
-        };
-        if let Some(token) = strong_current_token {
-            return Left(future::ready(Ok((
-                bt_fidl_status!(),
-                Some(Arc::clone(&token)),
-            ))));
-        }
-
-        Right(HostDispatcher::get_active_adapter(hd.clone()).and_then(
-            move |adapter| match adapter {
-                Some(adapter) => {
-                    let weak_adapter = Arc::downgrade(&adapter);
-                    Right(adapter.write().start_discovery().and_then(
-                        move |resp| match resp.error {
-                            Some(_) => future::ready(Ok((resp, None))),
-                            None => {
-                                let token = Arc::new(DiscoveryRequestToken { adap: weak_adapter });
-                                hd.write().discovery = Some(Arc::downgrade(&token));
-                                future::ready(Ok((resp, Some(token))))
-                            }
-                        },
-                    ))
-                }
-                None => Left(future::ready(Ok((
-                    bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
-                    None,
-                )))),
-            },
-        ))
+    /// Return the active host. If the Host is currently not set,
+    /// it will make the first ID in it's host_devices active
+    fn get_active_host(&mut self) -> Option<Arc<RwLock<HostDevice>>> {
+        self.get_active_id()
+            .as_ref()
+            .and_then(|id| self.host_devices.get(id))
+            .map(|host| host.clone())
     }
 
-    pub fn set_discoverable(
-        hd: Arc<RwLock<HostDispatcher>>,
-    ) -> impl Future<
-        Output = fidl::Result<(
-            fidl_fuchsia_bluetooth::Status,
-            Option<Arc<DiscoverableRequestToken>>,
-        )>,
-    > {
-        let strong_current_token = match hd.read().discoverable {
-            Some(ref token) => token.upgrade(),
-            None => None,
-        };
-        if let Some(token) = strong_current_token {
-            return Left(future::ready(Ok((
-                bt_fidl_status!(),
-                Some(Arc::clone(&token)),
-            ))));
-        }
-
-        Right(HostDispatcher::get_active_adapter(hd.clone()).and_then(
-            move |adapter| match adapter {
-                Some(adapter) => {
-                    let weak_adapter = Arc::downgrade(&adapter);
-                    let res =
-                        adapter
-                            .write()
-                            .set_discoverable(true)
-                            .and_then(move |resp| match resp.error {
-                                Some(_) => future::ready(Ok((resp, None))),
-                                None => {
-                                    let token =
-                                        Arc::new(DiscoverableRequestToken { adap: weak_adapter });
-                                    hd.write().discoverable = Some(Arc::downgrade(&token));
-                                    future::ready(Ok((resp, Some(token))))
-                                }
-                            });
-                    Right(res)
-                }
-                None => Left(future::ready(Ok((
-                    bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
-                    None,
-                )))),
-            },
-        ))
-    }
-
-    pub fn set_active_adapter(&mut self, adapter_id: String) -> fidl_fuchsia_bluetooth::Status {
-        if let Some(ref id) = self.active_id {
-            if *id == adapter_id {
-                return bt_fidl_status!(Already, "Adapter already active");
-            }
-
-            // Shut down the previously active host.
-            let _ = self.host_devices[id].write().close();
-        }
-
-        if self.host_devices.contains_key(&adapter_id) {
-            self.set_active_id(Some(adapter_id));
-            bt_fidl_status!()
-        } else {
-            bt_fidl_status!(NotFound, "Attempting to activate an unknown adapter")
-        }
-    }
-
-    pub fn get_active_adapter_info(&mut self) -> Option<AdapterInfo> {
-        match self.get_active_id() {
-            Some(ref id) => {
-                // Id must always be valid
-                let host = self.host_devices.get(id).unwrap().read();
-                Some(util::clone_host_info(host.get_info()))
-            }
-            None => None,
-        }
-    }
-
-    pub fn connect_le_central(
-        hd: Arc<RwLock<HostDispatcher>>,
-    ) -> impl Future<Output = fidl::Result<Option<CentralProxy>>> {
-        OnAdaptersFound::new(hd.clone()).and_then(|hd| {
-            let mut hd = hd.write();
-            future::ready(Ok(match hd.get_active_id() {
-                Some(ref id) => {
-                    let host = hd.host_devices.get(id).unwrap();
-                    Some(host.write().connect_le_central().unwrap())
-                }
-                None => None,
-            }))
-        })
-    }
-
-    pub fn connect(
-        hd: Arc<RwLock<HostDispatcher>>,
-        device_id: String,
-    ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
-        HostDispatcher::connect_le_central(hd.clone()).and_then(move |central| {
-            let (service_local, service_remote) = fidl::endpoints::create_proxy().unwrap();
-
-            let central = central.unwrap();
-            let connected = central.connect_peripheral(device_id.as_str(), service_remote);
-            connected.and_then(move |status| {
-                let host = hd.clone();
-                // TODO(NET-1092): We want this as a host.fidl API
-                HostDispatcher::get_active_adapter(host).and_then(move |adapter| match adapter {
-                    Some(adapter) => {
-                        adapter
-                            .write()
-                            .store_gatt(device_id, central, service_local);
-                        future::ready(Ok(status))
-                    }
-                    None => future::ready(Ok(bt_fidl_status!(
-                        BluetoothNotAvailable,
-                        "Adapter went away"
-                    ))),
-                })
-            })
-        })
-    }
-
-    pub fn forget(
-        _hd: Arc<RwLock<HostDispatcher>>,
-        _device_id: String,
-    ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
-        // TODO(NET-1148): This function should perform the following:
-        // 1. Remove the device from bt-gap's in-memory list of devices, once it exists.
-        // 2. Remove bonding data from store::Stash.
-        // 3. Call Host.Forget(), once it exists.
-        future::ready(Ok(bt_fidl_status!(NotSupported, "Operation not supported")))
-    }
-
-    pub fn disconnect(
-        hd: Arc<RwLock<HostDispatcher>>,
-        device_id: String,
-    ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
-        HostDispatcher::get_active_adapter(hd).and_then(move |adapter| match adapter {
-            Some(adapter) => Right(adapter.write().rm_gatt(device_id)),
-            None => Left(future::ready(Ok(bt_fidl_status!(
-                BluetoothNotAvailable,
-                "Adapter went away"
-            )))),
-        })
-    }
-
-    pub fn get_active_adapter(
-        hd: Arc<RwLock<HostDispatcher>>,
-    ) -> impl Future<Output = fidl::Result<Option<Arc<RwLock<HostDevice>>>>> {
-        OnAdaptersFound::new(hd.clone()).and_then(|hd| {
-            let mut hd = hd.write();
-            future::ready(Ok(match hd.get_active_id() {
-                Some(ref id) => Some(hd.host_devices.get(id).unwrap().clone()),
-                None => None,
-            }))
-        })
-    }
-
-    pub fn get_adapters(
-        hd: &mut Arc<RwLock<HostDispatcher>>,
-    ) -> impl Future<Output = fidl::Result<Vec<AdapterInfo>>> {
-        OnAdaptersFound::new(hd.clone()).and_then(|hd| {
-            let mut result = vec![];
-            for host in hd.read().host_devices.values() {
-                let host = host.read();
-                result.push(util::clone_host_info(host.get_info()));
-            }
-            future::ready(Ok(result))
-        })
-    }
-
-    // Resolves all pending OnAdapterFuture's. Called when we leave the init period (by seeing the
-    // first host device or when the init timer expires).
+    /// Resolves all pending OnAdapterFuture's. Called when we leave the init period (by seeing the
+    /// first host device or when the init timer expires).
     fn resolve_host_requests(&mut self) {
         for waker in &self.host_requests {
             waker.1.wake();
@@ -401,7 +199,7 @@ impl HostDispatcher {
         self.host_devices.insert(id, host);
     }
 
-    // Updates the active adapter and sends a FIDL event.
+    /// Updates the active adapter and sends a FIDL event.
     fn set_active_id(&mut self, id: Option<String>) {
         fx_log_info!("New active adapter: {:?}", id);
         self.active_id = id;
@@ -411,20 +209,269 @@ impl HostDispatcher {
             }
         }
     }
+
+    pub fn get_active_adapter_info(&mut self) -> Option<AdapterInfo> {
+        self.get_active_host().map(|host| util::clone_host_info(host.read().get_info()))
+    }
+}
+
+#[derive(Clone)]
+pub struct HostDispatcher {
+    state: Arc<RwLock<HostDispatcherState>>,
+}
+
+impl HostDispatcher {
+  pub fn new(stash: Stash) -> HostDispatcher {
+        let hd = HostDispatcherState {
+            active_id: None,
+            host_devices: HashMap::new(),
+            name: DEFAULT_NAME.to_string(),
+            input: InputCapabilityType::None,
+            output: OutputCapabilityType::None,
+            stash: stash,
+            discovery: None,
+            discoverable: None,
+            pairing_delegate: None,
+            event_listeners: vec![],
+            host_requests: Slab::new(),
+        };
+        HostDispatcher {
+            state: Arc::new(RwLock::new(hd)),
+        }
+    }
+
+    pub fn get_active_adapter_info(&mut self) -> Option<AdapterInfo> {
+        self.state.write().get_active_adapter_info()
+    }
+
+    pub async fn on_adapters_found(&self) -> fidl::Result<HostDispatcher> {
+        await!(OnAdaptersFound::new(self.clone()))
+    }
+
+    pub async fn set_name(
+        &mut self, name: Option<String>,
+    ) -> fidl::Result<fidl_fuchsia_bluetooth::Status> {
+        self.state.write().name = name.unwrap_or(DEFAULT_NAME.to_string());
+
+        match await!(self.get_active_adapter())? {
+            Some(adapter) => await!(adapter.write().set_name(self.state.read().name.clone())),
+            None => Ok(bt_fidl_status!(BluetoothNotAvailable, "No Adapter found")),
+        }
+    }
+
+    /// Set the active adapter for this HostDispatcher
+    pub fn set_active_adapter(&mut self, adapter_id: String) -> fidl_fuchsia_bluetooth::Status {
+        self.state.write().set_active_adapter(adapter_id)
+    }
+
+    pub fn set_pairing_delegate(&mut self, delegate: Option<PairingDelegateProxy>) -> bool {
+        self.state.write().set_pairing_delegate(delegate)
+    }
+
+    pub async fn start_discovery(
+        &mut self,
+    ) -> fidl::Result<(
+        fidl_fuchsia_bluetooth::Status,
+        Option<Arc<DiscoveryRequestToken>>,
+    )> {
+        let strong_current_token = self
+            .state
+            .read()
+            .discovery
+            .as_ref()
+            .and_then(|token| token.upgrade());
+        if let Some(token) = strong_current_token {
+            return Ok((bt_fidl_status!(), Some(Arc::clone(&token))));
+        }
+
+        match await!(self.get_active_adapter())? {
+            Some(adapter) => {
+                let weak_adapter = Arc::downgrade(&adapter);
+                let resp = await!(adapter.write().start_discovery())?;
+                match resp.error {
+                    Some(_) => Ok((resp, None)),
+                    None => {
+                        let token = Arc::new(DiscoveryRequestToken { adap: weak_adapter });
+                        self.state.write().discovery = Some(Arc::downgrade(&token));
+                        Ok((resp, Some(token)))
+                    }
+                }
+            }
+            None => Ok((
+                bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
+                None,
+            )),
+        }
+    }
+
+    pub async fn set_discoverable(
+        &mut self,
+    ) -> fidl::Result<(
+        fidl_fuchsia_bluetooth::Status,
+        Option<Arc<DiscoverableRequestToken>>,
+    )> {
+        let strong_current_token = self
+            .state
+            .read()
+            .discoverable
+            .as_ref()
+            .and_then(|token| token.upgrade());
+        if let Some(token) = strong_current_token {
+            return Ok((bt_fidl_status!(), Some(Arc::clone(&token))));
+        }
+
+        match await!(self.get_active_adapter())? {
+            Some(adapter) => {
+                let weak_adapter = Arc::downgrade(&adapter);
+                let resp = await!(adapter.write().set_discoverable(true))?;
+                match resp.error {
+                    Some(_) => Ok((resp, None)),
+                    None => {
+                        let token = Arc::new(DiscoverableRequestToken { adap: weak_adapter });
+                        self.state.write().discoverable = Some(Arc::downgrade(&token));
+                        Ok((resp, Some(token)))
+                    }
+                }
+            }
+            None => Ok((
+                bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
+                None,
+            )),
+        }
+    }
+
+    pub async fn connect_le_central(&mut self) -> fidl::Result<Option<CentralProxy>> {
+        let adapter = await!(self.on_adapters_found())?;
+        let mut adapter = adapter.state.write();
+        match adapter.get_active_host() {
+            Some(host) => host.write().connect_le_central().map(|central| Some(central)),
+            None => Ok(None),
+        }
+    }
+
+    pub async fn connect(
+        &mut self, device_id: String,
+    ) -> fidl::Result<fidl_fuchsia_bluetooth::Status> {
+        let central = await!(self.connect_le_central())?;
+        let central = match central {
+            Some(c) => c,
+            None => return Ok(bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"))
+        };
+        let (service_local, service_remote) = fidl::endpoints::create_proxy().unwrap();
+        let connected = await!(central.connect_peripheral(device_id.as_str(), service_remote));
+        // TODO(NET-1092): We want this as a host.fidl API
+        match await!(self.get_active_adapter())? {
+            Some(adapter) => {
+                adapter
+                    .write()
+                    .store_gatt(device_id, central, service_local);
+                connected
+            }
+            None => Ok(bt_fidl_status!(BluetoothNotAvailable, "Adapter went away")),
+        }
+    }
+
+    pub async fn forget(
+        &mut self, _device_id: String
+    ) -> fidl::Result<fidl_fuchsia_bluetooth::Status> {
+        // TODO(NET-1148): This function should perform the following:
+        // 1. Remove the device from bt-gap's in-memory list of devices, once it exists.
+        // 2. Remove bonding data from store::Stash.
+        // 3. Call Host.Forget(), once it exists.
+        Ok(bt_fidl_status!(NotSupported, "Operation not supported"))
+    }
+
+    pub async fn disconnect(
+        &mut self, device_id: String,
+    ) -> fidl::Result<fidl_fuchsia_bluetooth::Status> {
+        let adapter = await!(self.get_active_adapter())?;
+        match adapter {
+            Some(adapter) => await!(adapter.write().rm_gatt(device_id)),
+            None => Ok(bt_fidl_status!(BluetoothNotAvailable, "Adapter went away")),
+        }
+    }
+
+    pub async fn get_active_adapter(&mut self) -> fidl::Result<Option<Arc<RwLock<HostDevice>>>> {
+        let adapter = await!(self.on_adapters_found())?;
+        let mut wstate = adapter.state.write();
+        Ok(wstate.get_active_host())
+    }
+
+    pub async fn get_adapters(&mut self) -> fidl::Result<Vec<AdapterInfo>> {
+        let _ = await!(self.on_adapters_found());
+        let mut result = vec![];
+        for host in self.state.read().host_devices.values() {
+            let host = host.read();
+            result.push(util::clone_host_info(host.get_info()));
+        }
+        Ok(result)
+    }
+
+    pub async fn request_host_service(mut self, chan: fasync::Channel, service: HostService) {
+        let adapter = await!(self.get_active_adapter());
+        match adapter {
+            Ok(Some(adapter)) => {
+                let adapter = adapter.read();
+                let host = adapter.get_host();
+                match service {
+                    HostService::LeCentral => {
+                        let remote = ServerEnd::<CentralMarker>::new(chan.into());
+                        let _ = host.request_low_energy_central(remote);
+                    }
+                    HostService::LePeripheral => {
+                        let remote = ServerEnd::<PeripheralMarker>::new(chan.into());
+                        let _ = host.request_low_energy_peripheral(remote);
+                    }
+                    HostService::LeGatt => {
+                        let remote = ServerEnd::<Server_Marker>::new(chan.into());
+                        let _ = host.request_gatt_server_(remote);
+                    }
+                    HostService::Profile => {
+                        let remote = ServerEnd::<ProfileMarker>::new(chan.into());
+                        let _ = host.request_profile(remote);
+                    }
+                }
+            },
+            Ok(None) => eprintln!("Failed to spawn, no active adapter"),
+            Err(e) => eprintln!("Failed to spawn, error resolving adapter {:?}", e),
+        }
+    }
+
+    pub fn set_io_capability(&self, input: InputCapabilityType, output: OutputCapabilityType) {
+        let mut state = self.state.write();
+        state.input = input;
+        state.output = output;
+    }
+
+    pub fn add_event_listener(&self, handle: ControlControlHandle) {
+        self.state.write().event_listeners.push(handle);
+    }
+
+    pub fn event_listeners(&self) -> Vec<ControlControlHandle> {
+        self.state.read().event_listeners.clone()
+    }
+
+    /// Returns the current pairing delegate proxy if it exists and has not been closed. Clears the
+    /// if the handle is closed.
+    pub fn pairing_delegate(&self) -> Option<PairingDelegateProxy> {
+        self.state.write().pairing_delegate()
+    }
+    
+    pub fn store_bond(&self, bond_data: fidl_fuchsia_bluetooth_host::BondingData) -> Result<(),Error> {
+        self.state.write().stash.store_bond(bond_data)
+    }
 }
 
 /// A future that completes when at least one adapter is available.
 #[must_use = "futures do nothing unless polled"]
 struct OnAdaptersFound {
-    hd: Arc<RwLock<HostDispatcher>>,
+    hd: HostDispatcher,
     waker_key: Option<usize>,
 }
 
 impl OnAdaptersFound {
     // Constructs an OnAdaptersFound that completes at the latest after HOST_INIT_TIMEOUT seconds.
-    fn new(
-        hd: Arc<RwLock<HostDispatcher>>,
-    ) -> impl Future<Output = fidl::Result<Arc<RwLock<HostDispatcher>>>> {
+    fn new(hd: HostDispatcher) -> impl Future<Output = fidl::Result<HostDispatcher>> {
         OnAdaptersFound {
             hd: hd.clone(),
             waker_key: None,
@@ -432,10 +479,10 @@ impl OnAdaptersFound {
             Duration::from_seconds(HOST_INIT_TIMEOUT).after_now(),
             move || {
                 {
-                    let mut hd = hd.write();
-                    if hd.host_devices.len() == 0 {
+                    let mut inner = hd.state.write();
+                    if inner.host_devices.len() == 0 {
                         fx_log_info!("No bt-host devices found");
-                        hd.resolve_host_requests();
+                        inner.resolve_host_requests();
                     }
                 }
                 Ok(hd)
@@ -445,7 +492,7 @@ impl OnAdaptersFound {
 
     fn remove_waker(&mut self) {
         if let Some(key) = self.waker_key {
-            self.hd.write().host_requests.remove(key);
+            self.hd.state.write().host_requests.remove(key);
         }
         self.waker_key = None;
     }
@@ -460,13 +507,13 @@ impl Drop for OnAdaptersFound {
 impl Unpin for OnAdaptersFound {}
 
 impl Future for OnAdaptersFound {
-    type Output = fidl::Result<Arc<RwLock<HostDispatcher>>>;
+    type Output = fidl::Result<HostDispatcher>;
 
     fn poll(mut self: ::std::pin::Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
-        if self.hd.read().host_devices.len() == 0 {
+        if self.hd.state.read().host_devices.len() == 0 {
             let hd = self.hd.clone();
             if self.waker_key.is_none() {
-                self.waker_key = Some(hd.write().host_requests.insert(lw.clone().into_waker()));
+                self.waker_key = Some(hd.state.write().host_requests.insert(lw.clone().into_waker()));
             }
             Poll::Pending
         } else {
@@ -478,7 +525,7 @@ impl Future for OnAdaptersFound {
 
 /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
 /// watcher
-async fn add_adapter(hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf) -> Result<(), Error> {
+async fn add_adapter(hd: HostDispatcher, host_path: PathBuf) -> Result<(), Error> {
     fx_log_info!("Adding Adapter: {:?}", host_path);
 
     // Connect to the host device.
@@ -496,7 +543,7 @@ async fn add_adapter(hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf) -> Res
     let host_device = Arc::new(RwLock::new(HostDevice::new(host_path, host, adapter_info)));
 
     // Load bonding data that use this host's `address` as their "local identity address".
-    if let Some(iter) = hd.read().stash.list_bonds(&address) {
+    if let Some(iter) = hd.state.read().stash.list_bonds(&address) {
         if let Err(e) = await!(
             host_device
                 .read()
@@ -524,38 +571,34 @@ async fn add_adapter(hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf) -> Res
     let delegate_ptr = fidl::endpoints::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
     host_device
         .read()
-        .set_host_pairing_delegate(hd.read().input, hd.read().output, delegate_ptr);
+        .set_host_pairing_delegate(hd.state.read().input, hd.state.read().output, delegate_ptr);
     fasync::spawn(
         services::start_pairing_delegate(hd.clone(), delegate_local)
             .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
     );
-
     fx_log_info!("Host added: {:?}", host_device.read().get_info().identifier);
-    hd.write().add_host(id, host_device.clone());
+    hd.state.write().add_host(id, host_device.clone());
 
     // Notify Control interface clients about the new device.
     // TODO(armansito): This layering isn't quite right. It's better to do this in
     // HostDispatcher::add_host instead.
-    for listener in hd.read().event_listeners.iter() {
+    for listener in hd.state.read().event_listeners.iter() {
         let _res =
             listener.send_on_adapter_updated(&mut clone_host_info(host_device.read().get_info()));
     }
 
     // Resolve pending adapter futures.
-    hd.write().resolve_host_requests();
+    hd.state.write().resolve_host_requests();
 
     // Start listening to Host interface events.
     await!(host_device::run(hd.clone(), host_device.clone()))
         .map_err(|_| BTError::new("Host interface event stream error").into())
 }
 
-pub fn rm_adapter(
-    hd: Arc<RwLock<HostDispatcher>>,
-    host_path: PathBuf,
-) -> impl Future<Output = Result<(), Error>> {
+pub fn rm_adapter(hd: HostDispatcher, host_path: PathBuf) -> Result<(), Error> {
     fx_log_info!("Host removed: {:?}", host_path);
 
-    let mut hd = hd.write();
+    let mut hd = hd.state.write();
     let active_id = hd.active_id.clone();
 
     // Get the host IDs that match `host_path`.
@@ -581,40 +624,44 @@ pub fn rm_adapter(
         let _ = hd.get_active_id();
     }
 
-    future::ready(Ok(()))
+    Ok(())
 }
 
-pub fn watch_hosts(hd: Arc<RwLock<HostDispatcher>>) -> impl Future<Output = Result<(), Error>> {
+fn bluetooth_device_path(msg: &WatchMessage) -> PathBuf {
+    PathBuf::from(format!(
+        "{}/{}",
+        BT_HOST_DIR,
+        msg.filename.to_string_lossy()
+    ))
+}
+
+pub async fn watch_hosts(hd: HostDispatcher) -> Result<(), Error> {
     let dev = File::open(&BT_HOST_DIR);
     let watcher = vfs_watcher::Watcher::new(&dev.unwrap()).unwrap();
-    watcher
-        .try_for_each(move |msg| {
-            let path = PathBuf::from(format!(
-                "{}/{}",
-                BT_HOST_DIR,
-                msg.filename.to_string_lossy()
-            ));
-            match msg.event {
-                vfs_watcher::WatchEvent::EXISTING | vfs_watcher::WatchEvent::ADD_FILE => {
-                    fx_log_info!("Adding device from {:?}", path);
-                    Left(Left(add_adapter(hd.clone(), path).map_err(|e| {
-                        io::Error::new(io::ErrorKind::Other, e.to_string())
-                    })))
-                }
-                vfs_watcher::WatchEvent::REMOVE_FILE => {
-                    fx_log_info!("Removing device from {:?}", path);
-                    Left(Right(rm_adapter(hd.clone(), path).map_err(|e| {
-                        io::Error::new(io::ErrorKind::Other, e.to_string())
-                    })))
-                }
-                vfs_watcher::WatchEvent::IDLE => {
-                    fx_log_info!("HostDispatcher is IDLE");
-                    Right(future::ready(Ok(())))
-                }
-                e => {
-                    fx_log_warn!("Unrecognized host watch event: {:?}", e);
-                    Right(future::ready(Ok(())))
-                }
-            }
-        }).map_err(|e| e.into())
+    await!(watcher.try_for_each(|msg| handle_device(hd.clone(), msg))).map_err(|e| e.into())
+}
+
+pub async fn handle_device(hd: HostDispatcher, msg: WatchMessage) -> Result<(), io::Error> {
+    let path = bluetooth_device_path(&msg);
+    match msg.event {
+        WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
+            fx_log_info!("Adding device from {:?}", path);
+            await!(
+                add_adapter(hd, path)
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
+            )
+        }
+        WatchEvent::REMOVE_FILE => {
+            fx_log_info!("Removing device from {:?}", path);
+            rm_adapter(hd, path).map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
+        }
+        WatchEvent::IDLE => {
+            fx_log_info!("HostDispatcher is IDLE");
+            Ok(())
+        }
+        e => {
+            fx_log_warn!("Unrecognized host watch event: {:?}", e);
+            Ok(())
+        }
+    }
 }
