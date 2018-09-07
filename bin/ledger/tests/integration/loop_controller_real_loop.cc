@@ -44,6 +44,41 @@ bool RunGivenLoopWithTimeout(async::Loop* loop, zx::duration timeout) {
 
 namespace ledger {
 
+// Implementation of a SubLoop that uses a real loop.
+class SubLoopRealLoop : public SubLoop {
+ public:
+  SubLoopRealLoop() : loop_(&kAsyncLoopConfigNoAttachToThread) {
+    loop_.StartThread();
+  };
+  ~SubLoopRealLoop() override { loop_.Shutdown(); }
+  async_dispatcher_t* dispatcher() override { return loop_.dispatcher(); }
+
+ private:
+  async::Loop loop_;
+};
+
+LoopControllerRealLoop::LoopControllerRealLoop()
+    : loop_(&kAsyncLoopConfigAttachToThread) {}
+
+void LoopControllerRealLoop::RunLoop() {
+  loop_.Run();
+  loop_.ResetQuit();
+}
+
+void LoopControllerRealLoop::StopLoop() { loop_.Quit(); }
+
+std::unique_ptr<SubLoop> LoopControllerRealLoop::StartNewLoop() {
+  return std::make_unique<SubLoopRealLoop>();
+}
+
+async_dispatcher_t* LoopControllerRealLoop::dispatcher() {
+  return loop_.dispatcher();
+}
+
+fit::closure LoopControllerRealLoop::QuitLoopClosure() {
+  return [this] { loop_.Quit(); };
+}
+
 bool LoopControllerRealLoop::RunLoopUntil(fit::function<bool()> condition) {
   while (true) {
     if (condition()) {

@@ -25,8 +25,6 @@ class LedgerAppInstanceFactoryBuilder {
   virtual ~LedgerAppInstanceFactoryBuilder(){};
   // Returns a new LedgerAppInstanceFactory.
   virtual std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const = 0;
-  // Returns a new LoopController.
-  virtual std::unique_ptr<LoopController> NewLoopController() const = 0;
 };
 
 // Base class for client tests.
@@ -74,8 +72,11 @@ class LedgerAppInstanceFactory {
 
   // Starts a new instance of the Ledger. The |loop_controller| must allow to
   // control the loop that is used to access the LedgerAppInstance.
-  virtual std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance(
-      LoopController* loop_controller) = 0;
+  virtual std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() = 0;
+
+  // Returns the Loop controller controlling the loops of the LedgerAppInstances
+  // created by this.
+  virtual LoopController* GetLoopController() = 0;
 };
 
 // Returns the list of LedgerAppInstanceFactoryBuilder to be passed as

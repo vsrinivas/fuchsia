@@ -17,13 +17,16 @@ namespace ledger {
 
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
-  explicit LedgerAppInstanceFactoryImpl(SyncParams sync_params);
+  explicit LedgerAppInstanceFactoryImpl(
+      std::unique_ptr<LoopController> loop_controller, SyncParams sync_params);
   ~LedgerAppInstanceFactoryImpl() override;
 
-  std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance(
-      LoopController* loop_controller) override;
+  std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
+
+  LoopController* GetLoopController() override;
 
  private:
+  std::unique_ptr<LoopController> loop_controller_;
   const SyncParams sync_params_;
   const std::string user_id_;
 };

@@ -68,7 +68,7 @@ zx::socket BaseIntegrationTest::StreamDataToSocket(std::string data) {
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 BaseIntegrationTest::NewLedgerAppInstance() {
-  return GetAppFactory()->NewLedgerAppInstance(this);
+  return GetAppFactory()->NewLedgerAppInstance();
 }
 
 IntegrationTest::IntegrationTest() = default;
@@ -77,7 +77,6 @@ IntegrationTest::~IntegrationTest() = default;
 
 void IntegrationTest::SetUp() {
   auto factory_builder = GetParam();
-  loop_controller_ = factory_builder->NewLoopController();
   factory_ = factory_builder->NewFactory();
   BaseIntegrationTest::SetUp();
 }
@@ -88,8 +87,8 @@ LedgerAppInstanceFactory* IntegrationTest::GetAppFactory() {
 }
 
 LoopController* IntegrationTest::GetLoopController() {
-  FXL_DCHECK(loop_controller_) << "|SetUp| has not been called.";
-  return loop_controller_.get();
+  FXL_DCHECK(factory_) << "|SetUp| has not been called.";
+  return factory_->GetLoopController();
 }
 
 }  // namespace ledger

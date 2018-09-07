@@ -41,7 +41,7 @@ class BaseIntegrationTest : public ::testing::Test, public LoopController {
   async_dispatcher_t* dispatcher() override;
   fit::closure QuitLoopClosure() override;
   bool RunLoopUntil(fit::function<bool()> condition) override;
-  bool RunLoopFor(zx::duration duration);
+  bool RunLoopFor(zx::duration duration) override;
 
  protected:
   // ::testing::Test:
@@ -79,7 +79,6 @@ class IntegrationTest : public BaseIntegrationTest,
 
  private:
   std::unique_ptr<LedgerAppInstanceFactory> factory_;
-  std::unique_ptr<LoopController> loop_controller_;
 };
 
 // Initializes test environment based on the command line arguments.

@@ -21,11 +21,8 @@ ledger::SyncParams* sync_params_ptr = nullptr;
 class FactoryBuilderE2eImpl : public LedgerAppInstanceFactoryBuilder {
  public:
   std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const override {
-    return std::make_unique<LedgerAppInstanceFactoryImpl>(*sync_params_ptr);
-  }
-
-  std::unique_ptr<LoopController> NewLoopController() const override {
-    return std::make_unique<LoopControllerRealLoop>();
+    return std::make_unique<LedgerAppInstanceFactoryImpl>(
+        std::make_unique<LoopControllerRealLoop>(), *sync_params_ptr);
   }
 };
 

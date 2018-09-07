@@ -198,19 +198,23 @@ enum EnableP2PMesh { NO, YES };
 
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
-  LedgerAppInstanceFactoryImpl(InjectNetworkError inject_network_error,
+  LedgerAppInstanceFactoryImpl(std::unique_ptr<LoopController> loop_controller,
+                               InjectNetworkError inject_network_error,
                                EnableP2PMesh enable_p2p_mesh)
-      : services_loop_(&kAsyncLoopConfigNoAttachToThread),
+      : loop_controller_(std::move(loop_controller)),
+        services_loop_(&kAsyncLoopConfigNoAttachToThread),
         cloud_provider_(FakeCloudProvider::Builder().SetInjectNetworkError(
             inject_network_error)),
         enable_p2p_mesh_(enable_p2p_mesh) {}
   ~LedgerAppInstanceFactoryImpl() override;
   void Init();
 
-  std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance(
-      LoopController* loop_controller) override;
+  std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
+
+  LoopController* GetLoopController() override;
 
  private:
+  std::unique_ptr<LoopController> loop_controller_;
   // Loop on which to run services.
   async::Loop services_loop_;
   fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
@@ -229,8 +233,7 @@ LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {
 }
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
-LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
-    LoopController* loop_controller) {
+LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory_ptr;
   fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
       repository_factory_request = repository_factory_ptr.NewRequest();
@@ -243,11 +246,15 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
         std::move(host_name));
   }
   auto result = std::make_unique<LedgerAppInstanceImpl>(
-      loop_controller, services_loop_.dispatcher(),
+      loop_controller_.get(), services_loop_.dispatcher(),
       std::move(repository_factory_request), std::move(repository_factory_ptr),
       &cloud_provider_, std::move(user_communicator_factory));
   app_instance_counter_++;
   return result;
+}
+
+LoopController* LedgerAppInstanceFactoryImpl::GetLoopController() {
+  return loop_controller_.get();
 }
 
 namespace {
@@ -259,14 +266,10 @@ class FactoryBuilderIntegrationImpl : public LedgerAppInstanceFactoryBuilder {
       : inject_error_(inject_error), enable_p2p_(enable_p2p){};
 
   std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const override {
-    auto factory = std::make_unique<LedgerAppInstanceFactoryImpl>(inject_error_,
-                                                                  enable_p2p_);
+    auto factory = std::make_unique<LedgerAppInstanceFactoryImpl>(
+        std::make_unique<LoopControllerRealLoop>(), inject_error_, enable_p2p_);
     factory->Init();
     return factory;
-  }
-
-  std::unique_ptr<LoopController> NewLoopController() const override {
-    return std::make_unique<LoopControllerRealLoop>();
   }
 
  private:

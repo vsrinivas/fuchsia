@@ -14,44 +14,26 @@
 
 namespace ledger {
 
-// Implementation of a SubLoop that uses a real loop.
-class SubLoopRealLoop : public SubLoop {
- public:
-  SubLoopRealLoop() : loop_(&kAsyncLoopConfigNoAttachToThread) {
-    loop_.StartThread();
-  };
-  ~SubLoopRealLoop() override { loop_.Shutdown(); }
-  async_dispatcher_t* dispatcher() override { return loop_.dispatcher(); }
-
- private:
-  async::Loop loop_;
-};
-
 // Implementation of a LoopController that uses a real loop.
 class LoopControllerRealLoop : public LoopController {
  public:
-  LoopControllerRealLoop() : loop_(&kAsyncLoopConfigAttachToThread) {}
+  LoopControllerRealLoop();
 
-  void RunLoop() override {
-    loop_.Run();
-    loop_.ResetQuit();
-  }
+  void RunLoop() override;
 
-  void StopLoop() override { loop_.Quit(); }
+  void StopLoop() override;
 
-  std::unique_ptr<SubLoop> StartNewLoop() override {
-    return std::make_unique<SubLoopRealLoop>();
-  }
+  std::unique_ptr<SubLoop> StartNewLoop() override;
 
-  async_dispatcher_t* dispatcher() override { return loop_.dispatcher(); }
+  async_dispatcher_t* dispatcher() override;
 
-  fit::closure QuitLoopClosure() override {
-    return [this] { loop_.Quit(); };
-  }
+  fit::closure QuitLoopClosure() override;
+
   bool RunLoopUntil(fit::function<bool()> condition) override;
 
   bool RunLoopFor(zx::duration duration) override;
 
+ private:
   async::Loop loop_;
 };
 

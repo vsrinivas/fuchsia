@@ -103,22 +103,27 @@ cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
 }  // namespace
 
 LedgerAppInstanceFactoryImpl::LedgerAppInstanceFactoryImpl(
-    SyncParams sync_params)
-    : sync_params_(std::move(sync_params)),
+    std::unique_ptr<LoopController> loop_controller, SyncParams sync_params)
+    : loop_controller_(std::move(loop_controller)),
+      sync_params_(std::move(sync_params)),
       user_id_("e2e_test_" + fxl::GenerateUUID()) {}
 
 LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {}
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
-LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
-    LoopController* loop_controller) {
+LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
   fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
       repository_factory_request = repository_factory.NewRequest();
   auto result = std::make_unique<LedgerAppInstanceImpl>(
-      loop_controller, std::move(repository_factory), sync_params_, user_id_);
+      loop_controller_.get(), std::move(repository_factory), sync_params_,
+      user_id_);
   result->Init(std::move(repository_factory_request));
   return result;
+}
+
+LoopController* LedgerAppInstanceFactoryImpl::GetLoopController() {
+  return loop_controller_.get();
 }
 
 }  // namespace ledger

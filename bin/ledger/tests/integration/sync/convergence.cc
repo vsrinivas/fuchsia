@@ -222,7 +222,6 @@ class ConvergenceTest
     std::tie(merge_function_type_, num_ledgers_, factory_builder) = GetParam();
 
     app_instance_factory_ = factory_builder->NewFactory();
-    loop_controller_ = factory_builder->NewLoopController();
 
     BaseIntegrationTest::SetUp();
 
@@ -255,8 +254,8 @@ class ConvergenceTest
   }
 
   LoopController* GetLoopController() override {
-    FXL_DCHECK(loop_controller_) << "|SetUp| has not been called.";
-    return loop_controller_.get();
+    FXL_DCHECK(app_instance_factory_) << "|SetUp| has not been called.";
+    return app_instance_factory_->GetLoopController();
   }
 
   std::unique_ptr<PageWatcherImpl> WatchPageContents(PagePtr* page) {
@@ -320,7 +319,6 @@ class ConvergenceTest
 
  private:
   std::unique_ptr<LedgerAppInstanceFactory> app_instance_factory_;
-  std::unique_ptr<LoopController> loop_controller_;
 };
 
 // Verify that the Ledger converges over different settings of merging functions
