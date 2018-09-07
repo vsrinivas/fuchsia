@@ -10,37 +10,6 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-readonly LOCK_FILE="${FUCHSIA_DIR}"/.build_lock
-
-# Use a lock file around a command if possible.
-# Print a message if the lock isn't immediately entered,
-# and block until it is.
-function try_locked {
-  if !(command -v shlock >/dev/null); then
-    # Can't lock! Fall back to unlocked operation.
-    "$@"
-  elif shlock -f "${LOCK_FILE}" -p $$; then
-    # This will cause a deadlock if any subcommand calls back to fx build,
-    # because shlock isn't reentrant by forked processes.
-    cmd_locked "$@"
-  else
-    echo "Locked by ${LOCK_FILE}..."
-    while ! shlock -f "${LOCK_FILE}" -p $$; do sleep .1; done
-    cmd_locked "$@"
-  fi
-}
-
-# Exit trap to clean up lock file
-function _rmlock () {
-  [[ -n "${LOCK_FILE}" ]] && rm -f "${LOCK_FILE}"
-}
-
-function cmd_locked {
-  trap _rmlock EXIT
-  "$@"
-  exit $?
-}
-
 function main {
   # TERM is passed for the pretty ninja UI
   # PATH is passed as some tools are referenced via $PATH due to platform differences.
@@ -53,7 +22,8 @@ function main {
     # Only limit maximum load on Darwin.
     max_load="$(fx-cpu-count)"
   fi
-  try_locked env -i TERM="${TERM}" PATH="${PATH}" ${TMPDIR+"TMPDIR=$TMPDIR"} \
+  fx-try-locked env -i TERM="${TERM}" PATH="${PATH}" \
+    ${TMPDIR+"TMPDIR=$TMPDIR"} \
     "${FUCHSIA_DIR}/buildtools/ninja" -j "$(fx-choose-build-concurrency)" \
                                       -l ${max_load} \
                                       -C "${FUCHSIA_BUILD_DIR}" "$@"

@@ -231,3 +231,35 @@ function fx-cpu-count {
   local -r cpu_count=$(getconf _NPROCESSORS_ONLN)
   echo "$cpu_count"
 }
+
+# Define the global lock file in a readonly variable, setting its value if it
+# was never defined before. Need to do it in two steps since "readonly
+# FX_LOCK_FILE=..." does not work because we include this file multiple times in
+# one `fx` run.
+: ${FX_LOCK_FILE:="${FUCHSIA_DIR}/.build_lock"}
+readonly FX_LOCK_FILE
+
+# Use a lock file around a command if possible.
+# Print a message if the lock isn't immediately entered,
+# and block until it is.
+function fx-try-locked {
+  if !(command -v shlock >/dev/null); then
+    # Can't lock! Fall back to unlocked operation.
+    "$@"
+  elif shlock -f "${FX_LOCK_FILE}" -p $$; then
+    # This will cause a deadlock if any subcommand calls back to fx build,
+    # because shlock isn't reentrant by forked processes.
+    fx-cmd-locked "$@"
+  else
+    echo "Locked by ${FX_LOCK_FILE}..."
+    while ! shlock -f "${FX_LOCK_FILE}" -p $$; do sleep .1; done
+    fx-cmd-locked "$@"
+  fi
+}
+
+function fx-cmd-locked {
+  # Exit trap to clean up lock file
+  trap "[[ -n \"${FX_LOCK_FILE}\" ]] && rm -f \"${FX_LOCK_FILE}\"" EXIT
+  "$@"
+  exit $?
+}
