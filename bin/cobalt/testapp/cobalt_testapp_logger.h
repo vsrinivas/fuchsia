@@ -13,7 +13,7 @@
 namespace cobalt {
 namespace testapp {
 
-std::string StatusToString(fuchsia::cobalt::Status2 status);
+std::string StatusToString(fuchsia::cobalt::Status status);
 
 class CobaltTestAppLogger {
  public:
@@ -63,8 +63,7 @@ class CobaltTestAppLogger {
   // two string parts, |num_observations_per_batch_| times, using the given
   // parameters. Then invokes CheckForSuccessfulSend().
   bool LogStringPairAndSend(uint32_t metric_id, const std::string& part0,
-                            uint32_t encoding_id0, const std::string& val0,
-                            const std::string& part1, uint32_t encoding_id1,
+                            const std::string& val0, const std::string& part1,
                             const std::string& val1,
                             bool use_request_send_soon);
 

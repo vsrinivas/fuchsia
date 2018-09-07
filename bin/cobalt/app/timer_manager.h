@@ -25,12 +25,11 @@ using fuchsia::cobalt::Status;
 
 namespace cobalt {
 
-// Used to store all necessary values for a Timer to be able to create an
-// Observation.
+// Used to store all necessary values for a Timer to be able to log an Event.
 struct TimerVal {
-  // The metric_id of the observation we will create.
+  // The metric_id of the event we will create.
   uint32_t metric_id;
-  // The encoding_id used in the observation we will create.
+  // The encoding_id used in the event we will log.
   uint32_t encoding_id;
   // When the timer starts.
   int64_t start_timestamp;
@@ -42,15 +41,12 @@ struct TimerVal {
   async::TaskClosure expiry_task;
   // The name of the timer field/part if it is a multipart obervation.
   std::string part_name;
-  // The remaining fields of a multipart obervation.
-  fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation;
 
   // Stores the start-related arguments in the given TimerVal.
   void AddStart(uint32_t metric_id, uint32_t encoding_id, int64_t timestamp);
 
   // Stores the end-related arguments in the given TimerVal.
-  void AddEnd(int64_t timestamp, const std::string& part_name,
-              fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation);
+  void AddEnd(int64_t timestamp, const std::string& part_name);
 };
 
 // Stores partial timer values as they are encountered. Once both the start and
@@ -64,13 +60,10 @@ class TimerManager {
 
   ~TimerManager();
 
-  // Checks if the given TimerVal contains all the information it needs to send
-  // an observation. That means it was populated by both StartTimer and EndTimer
+  // Checks if the given TimerVal contains all the information it needs to log
+  // an event. That means it was populated by both StartTimer and EndTimer
   // calls.
   static bool isReady(const std::unique_ptr<TimerVal>& timer_val_ptr);
-
-  // Checks if the given TimerVal contains a multipart observation.
-  static bool isMultipart(const std::unique_ptr<TimerVal>& timer_val_ptr);
 
   // Checks that the arguments are valid timer arguments.
   static bool isValidTimerArguments(fidl::StringPtr timer_id, int64_t timestamp,
@@ -99,11 +92,9 @@ class TimerManager {
   // valid timer with the timer_id. If no valid timer exists it creates a new
   // timer with the end data and resets the TimerVal ptr. If a timer with the
   // same timer_id and different end timestamp exists it returns an error.
-  Status GetTimerValWithEnd(
-      const std::string& timer_id, int64_t timestamp, uint32_t timeout_s,
-      const std::string& part_name,
-      fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation,
-      std::unique_ptr<TimerVal>* timer_val_ptr);
+  Status GetTimerValWithEnd(const std::string& timer_id, int64_t timestamp,
+                            uint32_t timeout_s, const std::string& part_name,
+                            std::unique_ptr<TimerVal>* timer_val_ptr);
 
   // Tests can use private methods for setup.
   friend class TimerManagerTests;

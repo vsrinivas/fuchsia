@@ -17,10 +17,10 @@ Status ToCobaltStatus(ObservationStore::StoreStatus s) {
       return Status::OK;
 
     case ObservationStore::kObservationTooBig:
-      return Status::OBSERVATION_TOO_BIG;
+      return Status::EVENT_TOO_BIG;
 
     case ObservationStore::kStoreFull:
-      return Status::TEMPORARILY_FULL;
+      return Status::BUFFER_FULL;
 
     case ObservationStore::kWriteFailed:
       return Status::INTERNAL_ERROR;

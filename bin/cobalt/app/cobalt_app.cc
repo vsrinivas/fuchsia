@@ -17,7 +17,6 @@ namespace http = ::fuchsia::net::oldhttp;
 using clearcut::ClearcutUploader;
 using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
-using encoder::CobaltEncoderFactoryImpl;
 using encoder::FileObservationStore;
 using encoder::LegacyShippingManager;
 using encoder::PosixFileSystem;
@@ -55,7 +54,11 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
           [this] {
             return context_->ConnectToEnvironmentService<http::HttpService>();
           }),
-      observation_store_(fuchsia::cobalt::MAX_BYTES_PER_OBSERVATION,
+      // NOTE: Currently all observations are immediate observations and so it
+      // makes sense to use MAX_BYTES_PER_EVENT as the value of
+      // max_bytes_per_observation. But when we start implementing non-immediate
+      // observations this needs to be revisited.
+      observation_store_(fuchsia::cobalt::MAX_BYTES_PER_EVENT,
                          kMaxBytesPerEnvelope, kMaxBytesTotal,
                          std::make_unique<PosixFileSystem>(),
                          kLegacyObservationStorePath),
@@ -74,15 +77,12 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
           new CobaltControllerImpl(dispatcher, &shipping_manager_)) {
   shipping_manager_.Start();
 
-  factory_impl_.reset(new CobaltEncoderFactoryImpl(
+  logger_factory_impl_.reset(new LoggerFactoryImpl(
       getClientSecret(), &observation_store_, &encrypt_to_analyzer_,
       &shipping_manager_, &system_data_, &timer_manager_));
 
   context_->outgoing().AddPublicService(
-      encoder_factory_bindings_.GetHandler(factory_impl_.get()));
-
-  context_->outgoing().AddPublicService(
-      logger_factory_bindings_.GetHandler(factory_impl_.get()));
+      logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));
 
   context_->outgoing().AddPublicService(
       controller_bindings_.GetHandler(controller_impl_.get()));

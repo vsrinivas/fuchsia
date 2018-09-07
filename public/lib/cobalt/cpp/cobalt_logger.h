@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_PUBLIC_LIB_COBALT_CPP_COBALT_LOGGER_H_
-#define GARNET_PUBLIC_LIB_COBALT_CPP_COBALT_LOGGER_H_
+#ifndef LIB_COBALT_CPP_COBALT_LOGGER_H_
+#define LIB_COBALT_CPP_COBALT_LOGGER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
@@ -331,12 +331,12 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
 // |context| A pointer to the StartupContext that provides access to the
 // environment of the component using this CobaltLogger.
 //
-// |profile| The ProjectProfile2 struct that contains the configuration for this
+// |profile| The ProjectProfile struct that contains the configuration for this
 // CobaltLogger.
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
     async_dispatcher_t* dispatcher, component::StartupContext* context,
-    fuchsia::cobalt::ProjectProfile2 profile);
+    fuchsia::cobalt::ProjectProfile profile);
 
 }  // namespace cobalt
 
-#endif  // GARNET_PUBLIC_LIB_COBALT_CPP_COBALT_LOGGER_H_
+#endif  // LIB_COBALT_CPP_COBALT_LOGGER_H_

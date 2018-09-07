@@ -9,7 +9,6 @@
 #include <sstream>
 #include <string>
 
-#include "garnet/bin/cobalt/testapp/cobalt_testapp_encoder.h"
 #include "garnet/bin/cobalt/testapp/cobalt_testapp_logger.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -30,7 +29,6 @@ class CobaltTestApp {
                 int num_observations_per_batch)
       : do_environment_test_(do_environment_test),
         context_(component::StartupContext::CreateFromStartupInfo()),
-        encoder_(use_network, num_observations_per_batch, &cobalt_controller_),
         logger_(use_network, num_observations_per_batch, &cobalt_controller_) {}
 
   // We have multiple testing strategies based on the method we use to
@@ -48,10 +46,6 @@ class CobaltTestApp {
   // Loads the CobaltConfig proto for this project and writes it to a VMO.
   // Returns the VMO and the size of the proto in bytes.
   fuchsia::cobalt::ProjectProfile LoadCobaltConfig();
-
-  // Loads the CobaltConfig proto for this project and writes it to a VMO.
-  // Returns the VMO and the size of the proto in bytes.
-  fuchsia::cobalt::ProjectProfile2 LoadCobaltConfig2();
 
   // Tests using the strategy of using the scheduling parameters (9999999, 0)
   // meaning that no scheduled sends will occur and RequestSendSoon() will cause
@@ -81,7 +75,6 @@ class CobaltTestApp {
   std::unique_ptr<component::StartupContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
-  CobaltTestAppEncoder encoder_;
   CobaltTestAppLogger logger_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);

@@ -5,7 +5,7 @@
 use failure::{format_err, Error, ResultExt};
 use fdio;
 use fidl_fuchsia_cobalt::{HistogramBucket, LoggerExtProxy, LoggerFactoryMarker, LoggerProxy,
-                          ProjectProfile2, ReleaseStage, Status2};
+                          ProjectProfile, ReleaseStage, Status};
 use fidl_fuchsia_mem as fuchsia_mem;
 use futures::channel::mpsc;
 use futures::prelude::*;
@@ -96,14 +96,14 @@ async fn get_cobalt_loggers() -> Result<(LoggerProxy, LoggerExtProxy), Error> {
     let config_ext = fuchsia_mem::Buffer { vmo: vmo_ext, size };
 
     let create_logger_fut = logger_factory.create_logger(
-        &mut ProjectProfile2 {
+        &mut ProjectProfile {
             config,
             release_stage: ReleaseStage::Ga,
         },
         server_end,
     );
     let create_logger_ext_fut = logger_factory.create_logger_ext(
-        &mut ProjectProfile2 {
+        &mut ProjectProfile {
             config: config_ext,
             release_stage: ReleaseStage::Ga,
         },
@@ -116,10 +116,10 @@ async fn get_cobalt_loggers() -> Result<(LoggerProxy, LoggerExtProxy), Error> {
 }
 
 fn handle_cobalt_factory_result(
-    r: Result<Status2, fidl::Error>, context: &str,
+    r: Result<Status, fidl::Error>, context: &str,
 ) -> Result<(), failure::Error> {
     match r {
-        Ok(Status2::Ok) => Ok(()),
+        Ok(Status::Ok) => Ok(()),
         Ok(other) => Err(format_err!("{}: {:?}", context, other)),
         Err(e) => Err(format_err!("{}: {}", context, e)),
     }
@@ -175,19 +175,19 @@ async fn send_cobalt_events(mut receiver: mpsc::Receiver<Event>) {
     }
 }
 
-fn handle_cobalt_response(resp: Result<Status2, fidl::Error>, metric_id: u32, is_full: &mut bool) {
+fn handle_cobalt_response(resp: Result<Status, fidl::Error>, metric_id: u32, is_full: &mut bool) {
     if let Err(e) = throttle_cobalt_error(resp, metric_id, is_full) {
         error!("{}", e);
     }
 }
 
 fn throttle_cobalt_error(
-    resp: Result<Status2, fidl::Error>, metric_id: u32, is_full: &mut bool,
+    resp: Result<Status, fidl::Error>, metric_id: u32, is_full: &mut bool,
 ) -> Result<(), failure::Error> {
     let was_full = *is_full;
-    *is_full = resp.as_ref().ok() == Some(&Status2::BufferFull);
+    *is_full = resp.as_ref().ok() == Some(&Status::BufferFull);
     match resp {
-        Ok(Status2::BufferFull) => {
+        Ok(Status::BufferFull) => {
             if !was_full {
                 Err(format_err!(
                     "Cobalt buffer became full. Cannot report the stats"
@@ -196,7 +196,7 @@ fn throttle_cobalt_error(
                 Ok(())
             }
         }
-        Ok(Status2::Ok) => Ok(()),
+        Ok(Status::Ok) => Ok(()),
         Ok(other) => Err(format_err!(
             "Cobalt returned an error for metric {}: {:?}",
             metric_id,
@@ -213,29 +213,29 @@ fn throttle_cobalt_error(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_cobalt::Status2;
+    use fidl_fuchsia_cobalt::Status;
 
     #[test]
     fn throttle_errors() {
         let mut is_full = false;
 
-        let cobalt_resp = Ok(Status2::Ok);
+        let cobalt_resp = Ok(Status::Ok);
         assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
         assert_eq!(is_full, false);
 
-        let cobalt_resp = Ok(Status2::InvalidArguments);
+        let cobalt_resp = Ok(Status::InvalidArguments);
         assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_err());
         assert_eq!(is_full, false);
 
-        let cobalt_resp = Ok(Status2::BufferFull);
+        let cobalt_resp = Ok(Status::BufferFull);
         assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_err());
         assert_eq!(is_full, true);
 
-        let cobalt_resp = Ok(Status2::BufferFull);
+        let cobalt_resp = Ok(Status::BufferFull);
         assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
         assert_eq!(is_full, true);
 
-        let cobalt_resp = Ok(Status2::Ok);
+        let cobalt_resp = Ok(Status::Ok);
         assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
         assert_eq!(is_full, false);
 

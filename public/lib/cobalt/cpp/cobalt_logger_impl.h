@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_PUBLIC_LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_
-#define GARNET_PUBLIC_LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_
+#ifndef LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_
+#define LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_
 
 #include "garnet/public/lib/cobalt/cpp/cobalt_logger.h"
 
@@ -22,7 +22,7 @@ class Event {
   virtual ~Event() = default;
   virtual void Log(fuchsia::cobalt::LoggerPtr* logger,
                    fuchsia::cobalt::LoggerExtPtr* logger_ext,
-                   fit::function<void(fuchsia::cobalt::Status2)> callback) = 0;
+                   fit::function<void(fuchsia::cobalt::Status)> callback) = 0;
   uint32_t metric_id() const { return metric_id_; }
 
  private:
@@ -35,7 +35,7 @@ class OccurrenceEvent : public Event {
       : Event(metric_id), event_type_index_(event_type_index) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fuchsia::cobalt::LoggerExtPtr* logger_ext,
-           fit::function<void(fuchsia::cobalt::Status2)> callback) {
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
     (*logger)->LogEvent(metric_id(), event_type_index_, std::move(callback));
   }
   uint32_t event_type_index() const { return event_type_index_; }
@@ -56,7 +56,7 @@ class CountEvent : public Event {
         count_(count) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fuchsia::cobalt::LoggerExtPtr* logger_ext,
-           fit::function<void(fuchsia::cobalt::Status2)> callback) {
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
     (*logger)->LogEventCount(metric_id(), event_type_index_, component_,
                              period_duration_micros_, count_,
                              std::move(callback));
@@ -83,7 +83,7 @@ class ElapsedTimeEvent : public Event {
         elapsed_micros_(elapsed_micros) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fuchsia::cobalt::LoggerExtPtr* logger_ext,
-           fit::function<void(fuchsia::cobalt::Status2)> callback) {
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
     (*logger)->LogElapsedTime(metric_id(), event_type_index_, component_,
                               elapsed_micros_, std::move(callback));
   }
@@ -107,7 +107,7 @@ class FrameRateEvent : public Event {
         fps_(fps) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fuchsia::cobalt::LoggerExtPtr* logger_ext,
-           fit::function<void(fuchsia::cobalt::Status2)> callback) {
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
     (*logger)->LogFrameRate(metric_id(), event_type_index_, component_, fps_,
                             std::move(callback));
   }
@@ -131,7 +131,7 @@ class MemoryUsageEvent : public Event {
         bytes_(bytes) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fuchsia::cobalt::LoggerExtPtr* logger_ext,
-           fit::function<void(fuchsia::cobalt::Status2)> callback) {
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
     (*logger)->LogMemoryUsage(metric_id(), event_type_index_, component_,
                               bytes_, std::move(callback));
   }
@@ -151,7 +151,7 @@ class StringUsedEvent : public Event {
       : Event(metric_id), s_(s) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fuchsia::cobalt::LoggerExtPtr* logger_ext,
-           fit::function<void(fuchsia::cobalt::Status2)> callback) {
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
     (*logger)->LogString(metric_id(), s_, std::move(callback));
   }
   const std::string& s() const { return s_; }
@@ -173,7 +173,7 @@ class StartTimerEvent : public Event {
         timeout_s_(timeout_s) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fuchsia::cobalt::LoggerExtPtr* logger_ext,
-           fit::function<void(fuchsia::cobalt::Status2)> callback) {
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
     (*logger)->StartTimer(metric_id(), event_type_index_, component_, timer_id_,
                           timestamp_, timeout_s_, std::move(callback));
   }
@@ -201,7 +201,7 @@ class EndTimerEvent : public Event {
         timeout_s_(timeout_s) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fuchsia::cobalt::LoggerExtPtr* logger_ext,
-           fit::function<void(fuchsia::cobalt::Status2)> callback) {
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
     (*logger)->EndTimer(timer_id_, timestamp_, timeout_s_, std::move(callback));
   }
   const std::string& timer_id() const { return timer_id_; }
@@ -225,7 +225,7 @@ class IntHistogramEvent : public Event {
         histogram_(std::move(histogram)) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fuchsia::cobalt::LoggerExtPtr* logger_ext,
-           fit::function<void(fuchsia::cobalt::Status2)> callback) {
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
     fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram;
     FXL_CHECK(fidl::Clone(histogram_, &histogram) == ZX_OK);
     (*logger_ext)
@@ -251,7 +251,7 @@ class CustomEvent : public Event {
       : Event(metric_id), event_values_(std::move(event_values)) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fuchsia::cobalt::LoggerExtPtr* logger_ext,
-           fit::function<void(fuchsia::cobalt::Status2)> callback) {
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
     fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values;
     FXL_CHECK(fidl::Clone(event_values_, &event_values) == ZX_OK);
     (*logger_ext)
@@ -271,7 +271,7 @@ class CobaltLoggerImpl : public CobaltLogger {
  public:
   CobaltLoggerImpl(async_dispatcher_t* dispatcher,
                    component::StartupContext* context,
-                   fuchsia::cobalt::ProjectProfile2 profile);
+                   fuchsia::cobalt::ProjectProfile profile);
   ~CobaltLoggerImpl() override;
   void LogEvent(uint32_t metric_id, uint32_t event_type_index) override;
   void LogEventCount(uint32_t metric_id, uint32_t event_type_index,
@@ -300,12 +300,12 @@ class CobaltLoggerImpl : public CobaltLogger {
 
  private:
   void ConnectToCobaltApplication();
-  fuchsia::cobalt::ProjectProfile2 CloneProjectProfile();
+  fuchsia::cobalt::ProjectProfile CloneProjectProfile();
   void OnConnectionError();
   void LogEventOnMainThread(std::unique_ptr<Event> event);
   void SendEvents();
   void OnTransitFail();
-  void LogEventCallback(const Event* event, fuchsia::cobalt::Status2 status);
+  void LogEventCallback(const Event* event, fuchsia::cobalt::Status status);
   void LogEvent(std::unique_ptr<Event> event);
 
   backoff::ExponentialBackoff backoff_;
@@ -313,7 +313,7 @@ class CobaltLoggerImpl : public CobaltLogger {
   component::StartupContext* context_;
   fuchsia::cobalt::LoggerPtr logger_;
   fuchsia::cobalt::LoggerExtPtr logger_ext_;
-  const fuchsia::cobalt::ProjectProfile2 profile_;
+  const fuchsia::cobalt::ProjectProfile profile_;
   std::set<std::unique_ptr<Event>> events_to_send_;
   std::set<std::unique_ptr<Event>> events_in_transit_;
 
@@ -322,4 +322,4 @@ class CobaltLoggerImpl : public CobaltLogger {
 
 }  // namespace cobalt
 
-#endif  // GARNET_PUBLIC_LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_
+#endif  // LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_

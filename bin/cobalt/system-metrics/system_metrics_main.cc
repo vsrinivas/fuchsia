@@ -47,31 +47,29 @@ zx_status_t get_root_resource(zx::resource* resource_out) {
   return ZX_OK;
 }
 
-std::string StatusToString(fuchsia::cobalt::Status2 status) {
+std::string StatusToString(fuchsia::cobalt::Status status) {
   switch (status) {
-    case fuchsia::cobalt::Status2::OK:
+    case fuchsia::cobalt::Status::OK:
       return "OK";
-    case fuchsia::cobalt::Status2::INVALID_ARGUMENTS:
+    case fuchsia::cobalt::Status::INVALID_ARGUMENTS:
       return "INVALID_ARGUMENTS";
-    case fuchsia::cobalt::Status2::EVENT_TOO_BIG:
+    case fuchsia::cobalt::Status::EVENT_TOO_BIG:
       return "EVENT_TOO_BIG";
-    case fuchsia::cobalt::Status2::BUFFER_FULL:
+    case fuchsia::cobalt::Status::BUFFER_FULL:
       return "BUFFER_FULL";
-    case fuchsia::cobalt::Status2::INTERNAL_ERROR:
+    case fuchsia::cobalt::Status::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
   }
 };
 
 // Loads the CobaltConfig proto for this project and writes it to a VMO.
-fuchsia::cobalt::ProjectProfile2 LoadCobaltConfig() {
+fuchsia::cobalt::ProjectProfile LoadCobaltConfig() {
   fsl::SizedVmo config_vmo;
   bool success = fsl::VmoFromFilename(kConfigBinProtoPath, &config_vmo);
   FXL_CHECK(success) << "Could not read Cobalt config file into VMO";
 
-  fuchsia::cobalt::ProjectProfile2 profile;
-  fuchsia::mem::Buffer buf = std::move(config_vmo).ToTransport();
-  profile.config.vmo = std::move(buf.vmo);
-  profile.config.size = buf.size;
+  fuchsia::cobalt::ProjectProfile profile;
+  profile.config = std::move(config_vmo).ToTransport();
   return profile;
 }
 
@@ -93,13 +91,13 @@ class SystemMetricsApp {
   void GatherMetrics();
 
   // LogUptime returns the status returned by its call to Add*Observation.
-  fuchsia::cobalt::Status2 LogUptime(std::chrono::minutes uptime_minutes);
+  fuchsia::cobalt::Status LogUptime(std::chrono::minutes uptime_minutes);
 
   // LogMemoryUsage returns the status OK if everything went fine, or the
   // logging was skipped due to scheduling, INTERNAL_ERROR if it was somehow
   // unable to get the memory usage information and whatever was returned by
   // Add*Observation otherwise.
-  fuchsia::cobalt::Status2 LogMemoryUsage(std::chrono::minutes uptime_minutes);
+  fuchsia::cobalt::Status LogMemoryUsage(std::chrono::minutes uptime_minutes);
 
  private:
   std::unique_ptr<component::StartupContext> context_;
@@ -124,16 +122,16 @@ void SystemMetricsApp::GatherMetrics() {
   LogMemoryUsage(uptime_minutes);
 }
 
-fuchsia::cobalt::Status2 SystemMetricsApp::LogUptime(
+fuchsia::cobalt::Status SystemMetricsApp::LogUptime(
     std::chrono::minutes uptime_minutes) {
   while (next_uptime_bucket_ <= uptime_minutes.count()) {
-    fuchsia::cobalt::Status2 status = fuchsia::cobalt::Status2::INTERNAL_ERROR;
+    fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
 
     logger_->LogElapsedTime(kUptimeMetricId, 0, "", next_uptime_bucket_,
                             &status);
     // If we failed to send an observation, we stop gathering metrics for up to
     // one minute.
-    if (status != fuchsia::cobalt::Status2::OK) {
+    if (status != fuchsia::cobalt::Status::OK) {
       FXL_LOG(ERROR) << "LogElapsedTime() => " << StatusToString(status);
       return status;
     }
@@ -145,20 +143,20 @@ fuchsia::cobalt::Status2 SystemMetricsApp::LogUptime(
     }
   }
 
-  return fuchsia::cobalt::Status2::OK;
+  return fuchsia::cobalt::Status::OK;
 }
 
-fuchsia::cobalt::Status2 SystemMetricsApp::LogMemoryUsage(
+fuchsia::cobalt::Status SystemMetricsApp::LogMemoryUsage(
     std::chrono::minutes uptime_minutes) {
   if (uptime_minutes.count() < next_log_memory_usage_) {
-    return fuchsia::cobalt::Status2::OK;
+    return fuchsia::cobalt::Status::OK;
   }
 
   zx::resource root_resource;
   zx_status_t status = get_root_resource(&root_resource);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "get_root_resource failed!!!";
-    return fuchsia::cobalt::Status2::INTERNAL_ERROR;
+    return fuchsia::cobalt::Status::INTERNAL_ERROR;
   }
 
   zx_info_kmem_stats_t stats;
@@ -166,20 +164,20 @@ fuchsia::cobalt::Status2 SystemMetricsApp::LogMemoryUsage(
                               sizeof(stats), NULL, NULL);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_object_get_info failed with " << status << ".";
-    return fuchsia::cobalt::Status2::INTERNAL_ERROR;
+    return fuchsia::cobalt::Status::INTERNAL_ERROR;
   }
 
-  auto cobalt_status = fuchsia::cobalt::Status2::INTERNAL_ERROR;
+  auto cobalt_status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogMemoryUsage(kMemoryUsageMetricId, 0, "",
                           stats.total_bytes - stats.free_bytes, &cobalt_status);
-  if (cobalt_status != fuchsia::cobalt::Status2::OK) {
+  if (cobalt_status != fuchsia::cobalt::Status::OK) {
     FXL_LOG(ERROR) << "LogMemoryUsage() => " << StatusToString(cobalt_status);
     return cobalt_status;
   }
 
   // The next time to log is in 5 minutes.
   next_log_memory_usage_ = uptime_minutes.count() + 5;
-  return fuchsia::cobalt::Status2::OK;
+  return fuchsia::cobalt::Status::OK;
 }
 
 void SystemMetricsApp::Main(async::Loop* loop) {
@@ -196,9 +194,9 @@ void SystemMetricsApp::ConnectToEnvironmentService() {
   fuchsia::cobalt::LoggerFactorySyncPtr factory;
   context_->ConnectToEnvironmentService(factory.NewRequest());
 
-  fuchsia::cobalt::Status2 status = fuchsia::cobalt::Status2::INTERNAL_ERROR;
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   factory->CreateLogger(LoadCobaltConfig(), logger_.NewRequest(), &status);
-  FXL_CHECK(status == fuchsia::cobalt::Status2::OK)
+  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLogger() => " << StatusToString(status);
 }
 

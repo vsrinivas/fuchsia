@@ -19,14 +19,14 @@
 #include <zx/time.h>
 
 using fuchsia::cobalt::LoggerFactory;
-using fuchsia::cobalt::ProjectProfile2;
-using fuchsia::cobalt::Status2;
+using fuchsia::cobalt::ProjectProfile;
+using fuchsia::cobalt::Status;
 
 namespace cobalt {
 
 CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
                                    component::StartupContext* context,
-                                   ProjectProfile2 profile)
+                                   ProjectProfile profile)
     : dispatcher_(dispatcher), context_(context), profile_(std::move(profile)) {
   ConnectToCobaltApplication();
 }
@@ -121,8 +121,8 @@ void CobaltLoggerImpl::LogEvent(std::unique_ptr<Event> event) {
   });
 }
 
-ProjectProfile2 CobaltLoggerImpl::CloneProjectProfile() {
-  ProjectProfile2 cloned_profile;
+ProjectProfile CobaltLoggerImpl::CloneProjectProfile() {
+  ProjectProfile cloned_profile;
   FXL_CHECK(profile_.config.vmo.duplicate(
                 ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
                 &cloned_profile.config.vmo) == ZX_OK)
@@ -136,8 +136,8 @@ void CobaltLoggerImpl::ConnectToCobaltApplication() {
   auto logger_factory = context_->ConnectToEnvironmentService<LoggerFactory>();
 
   logger_factory->CreateLogger(
-      CloneProjectProfile(), logger_.NewRequest(), [this](Status2 status) {
-        if (status == Status2::OK) {
+      CloneProjectProfile(), logger_.NewRequest(), [this](Status status) {
+        if (status == Status::OK) {
           if (logger_) {
             logger_.set_error_handler([this]() { OnConnectionError(); });
             SendEvents();
@@ -150,8 +150,8 @@ void CobaltLoggerImpl::ConnectToCobaltApplication() {
       });
 
   logger_factory->CreateLoggerExt(
-      CloneProjectProfile(), logger_ext_.NewRequest(), [this](Status2 status) {
-        if (status == Status2::OK) {
+      CloneProjectProfile(), logger_ext_.NewRequest(), [this](Status status) {
+        if (status == Status::OK) {
           if (logger_ext_) {
             logger_ext_.set_error_handler([this]() { OnConnectionError(); });
             SendEvents();
@@ -209,7 +209,7 @@ void CobaltLoggerImpl::SendEvents() {
     auto callback = waiter->NewCallback();
     event->Log(&logger_, &logger_ext_,
                [this, event_ptr = event.get(),
-                callback = std::move(callback)](Status2 status) {
+                callback = std::move(callback)](Status status) {
                  LogEventCallback(event_ptr, status);
                  callback();
                });
@@ -235,15 +235,15 @@ void CobaltLoggerImpl::SendEvents() {
   });
 }
 
-void CobaltLoggerImpl::LogEventCallback(const Event* event, Status2 status) {
+void CobaltLoggerImpl::LogEventCallback(const Event* event, Status status) {
   switch (status) {
-    case Status2::INVALID_ARGUMENTS:
-    case Status2::EVENT_TOO_BIG:  // fall through
+    case Status::INVALID_ARGUMENTS:
+    case Status::EVENT_TOO_BIG:  // fall through
       // Log the failure.
       FXL_LOG(WARNING) << "Cobalt rejected event for metric: "
                        << event->metric_id()
                        << " with status: " << fidl::ToUnderlying(status);
-    case Status2::OK:  // fall through
+    case Status::OK:  // fall through
       // Remove the event from the set of events to send.
       events_in_transit_.erase(std::lower_bound(
           events_in_transit_.begin(), events_in_transit_.end(), event,
@@ -251,8 +251,8 @@ void CobaltLoggerImpl::LogEventCallback(const Event* event, Status2 status) {
             return a.get() < b;
           }));
       break;
-    case Status2::INTERNAL_ERROR:
-    case Status2::BUFFER_FULL:
+    case Status::INTERNAL_ERROR:
+    case Status::BUFFER_FULL:
       // Keep the event for re-queueing.
       break;
   }

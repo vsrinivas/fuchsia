@@ -11,10 +11,8 @@ source_set("lib") {
     "cobalt_app.h",
     "cobalt_controller_impl.cc",
     "cobalt_controller_impl.h",
-    "cobalt_encoder_factory_impl.cc",
-    "cobalt_encoder_factory_impl.h",
-    "cobalt_encoder_impl.cc",
-    "cobalt_encoder_impl.h",
+    "logger_factory_impl.cc",
+    "logger_factory_impl.h",
     "logger_impl.cc",
     "logger_impl.h",
     "product_hack.h",
@@ -36,8 +34,8 @@ source_set("lib") {
     "//third_party/cobalt/util:pem_util",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

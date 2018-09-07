@@ -130,9 +130,6 @@ class LoggerSimpleImpl : public LoggerImpl,
                        fidl::VectorPtr<uint32_t> bucket_indices,
                        fidl::VectorPtr<uint64_t> bucket_counts,
                        LogIntHistogramCallback callback) override;
-
-  void LogCustomEvent(uint32_t metric_id, fidl::StringPtr json_string,
-                      LogCustomEventCallback callback) override;
 };
 
 }  // namespace cobalt

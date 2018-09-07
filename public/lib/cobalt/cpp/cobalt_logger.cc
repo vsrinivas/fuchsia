@@ -9,7 +9,7 @@
 #include <lib/fsl/vmo/file.h>
 #include <lib/fxl/logging.h>
 
-using fuchsia::cobalt::ProjectProfile2;
+using fuchsia::cobalt::ProjectProfile;
 
 namespace cobalt {
 
@@ -23,7 +23,7 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
     return nullptr;
   }
 
-  ProjectProfile2 profile;
+  ProjectProfile profile;
   profile.config = std::move(config_vmo).ToTransport();
   profile.release_stage = release_stage;
   return std::make_unique<CobaltLoggerImpl>(dispatcher, context,
@@ -32,7 +32,7 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
 
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
     async_dispatcher_t* dispatcher, component::StartupContext* context,
-    ProjectProfile2 profile) {
+    ProjectProfile profile) {
   return std::make_unique<CobaltLoggerImpl>(dispatcher, context,
                                             std::move(profile));
 }

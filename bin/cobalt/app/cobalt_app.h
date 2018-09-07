@@ -15,8 +15,7 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/bin/cobalt/app/cobalt_controller_impl.h"
-#include "garnet/bin/cobalt/app/cobalt_encoder_factory_impl.h"
-#include "garnet/bin/cobalt/app/cobalt_encoder_impl.h"
+#include "garnet/bin/cobalt/app/logger_factory_impl.h"
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/network_wrapper/network_wrapper_impl.h"
@@ -65,8 +64,7 @@ class CobaltApp {
   std::unique_ptr<fuchsia::cobalt::Controller> controller_impl_;
   fidl::BindingSet<fuchsia::cobalt::Controller> controller_bindings_;
 
-  std::unique_ptr<encoder::CobaltEncoderFactoryImpl> factory_impl_;
-  fidl::BindingSet<fuchsia::cobalt::EncoderFactory> encoder_factory_bindings_;
+  std::unique_ptr<fuchsia::cobalt::LoggerFactory> logger_factory_impl_;
   fidl::BindingSet<fuchsia::cobalt::LoggerFactory> logger_factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);

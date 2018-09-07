@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // This application is intenteded to be used for manual testing of
-// the Cobalt encoder client on Fuchsia by Cobalt engineers.
+// the Cobalt logger client on Fuchsia by Cobalt engineers.
 //
 // It also serves as an example of how to use the Cobalt FIDL API.
 //
@@ -40,7 +40,6 @@ constexpr fxl::StringView kNumObservationsPerBatch =
 // environment.
 constexpr fxl::StringView kSkipEnvironmentTest = "skip_environment_test";
 
-
 int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
@@ -51,7 +50,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   cobalt::testapp::CobaltTestApp app(use_network, do_environment_test,
-                                    num_observations_per_batch);
+                                     num_observations_per_batch);
   if (!app.RunTests()) {
     FXL_LOG(ERROR) << "FAIL";
     return 1;

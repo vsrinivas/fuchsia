@@ -76,27 +76,6 @@ TEST_F(TimerManagerTests, GetValidTimer) {
   EXPECT_TRUE(TimerManager::isReady(timer_val_ptr));
 }
 
-TEST_F(TimerManagerTests, GetValidMultipartTimer) {
-  std::unique_ptr<TimerVal> timer_val_ptr;
-
-  auto status = timer_manager_->GetTimerValWithStart(
-      kMetricId, kEncodingId, kTimerId, kStartTimestamp, kTimeoutSec,
-      &timer_val_ptr);
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
-
-  fidl::VectorPtr<fuchsia::cobalt::ObservationValue> parts(1);
-  parts->at(0).name = "test_part";
-  parts->at(0).encoding_id = kEncodingId;
-  parts->at(0).value.set_string_value("test_value");
-
-  status = timer_manager_->GetTimerValWithEnd(kTimerId, kEndTimestamp,
-                                              kTimeoutSec, "test_timer",
-                                              std::move(parts), &timer_val_ptr);
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(TimerManager::isReady(timer_val_ptr));
-}
-
 TEST_F(TimerManagerTests, GetValidTimerReverseOrder) {
   std::unique_ptr<TimerVal> timer_val_ptr;
 
@@ -124,7 +103,7 @@ TEST_F(TimerManagerTests, TwoStartTimers) {
   status = timer_manager_->GetTimerValWithStart(kMetricId, kEncodingId,
                                                 kTimerId, kStartTimestamp,
                                                 kTimeoutSec, &timer_val_ptr);
-  EXPECT_EQ(Status::FAILED_PRECONDITION, status);
+  EXPECT_EQ(Status::INVALID_ARGUMENTS, status);
 }
 
 TEST_F(TimerManagerTests, TwoEndTimers) {
@@ -138,7 +117,7 @@ TEST_F(TimerManagerTests, TwoEndTimers) {
 
   status = timer_manager_->GetTimerValWithEnd(kTimerId, kEndTimestamp,
                                               kTimeoutSec, &timer_val_ptr);
-  EXPECT_EQ(Status::FAILED_PRECONDITION, status);
+  EXPECT_EQ(Status::INVALID_ARGUMENTS, status);
 }
 
 TEST_F(TimerManagerTests, NewStartTimerAfterExpiredStartTimer) {
@@ -280,7 +259,7 @@ TEST_F(TimerManagerTests, TwoStartTimersFirstExpiryIsCancelled) {
   status = timer_manager_->GetTimerValWithStart(kMetricId, kEncodingId,
                                                 kTimerId, kStartTimestamp,
                                                 kTimeoutSec, &timer_val_ptr);
-  EXPECT_EQ(Status::FAILED_PRECONDITION, status);
+  EXPECT_EQ(Status::INVALID_ARGUMENTS, status);
 
   EXPECT_FALSE(RunLoopFor(zx::sec(10)));  // expiry task did not execute.
 }

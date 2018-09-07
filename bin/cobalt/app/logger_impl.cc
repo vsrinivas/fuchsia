@@ -12,24 +12,9 @@ namespace cobalt {
 
 using cobalt::TimerManager;
 using cobalt::TimerVal;
-using fuchsia::cobalt::Status2;
+using fuchsia::cobalt::Status;
 
 namespace {
-Status2 ToStatus2(Status s) {
-  switch (s) {
-    case Status::OK:
-      return Status2::OK;
-    case Status::INVALID_ARGUMENTS:
-      return Status2::INVALID_ARGUMENTS;
-    case Status::OBSERVATION_TOO_BIG:
-      return Status2::EVENT_TOO_BIG;
-    case Status::TEMPORARILY_FULL:
-      return Status2::BUFFER_FULL;
-    default:
-      return Status2::INTERNAL_ERROR;
-  }
-}
-
 // Returns a tuple of the names of the three MetricParts used to report a
 // Metric with at most one int/float part, one string part and one index part.
 // The 0th item will be the name of the int/float part, the 1st item will be the
@@ -98,7 +83,7 @@ void LoggerImpl::LogThreePartMetric(const std::string& value_part_name,
   const Metric* metric = encoder_.GetMetric(metric_id);
   if (!metric) {
     FXL_LOG(ERROR) << "There is no metric with ID = " << metric_id << ".";
-    callback(Status2::INVALID_ARGUMENTS);
+    callback(Status::INVALID_ARGUMENTS);
     return;
   }
   const std::string& metric_name = metric->name();
@@ -120,7 +105,7 @@ void LoggerImpl::LogThreePartMetric(const std::string& value_part_name,
           << value_part_name
           << " must be provided "
              "(event_type_index must be 0 and component must be empty).";
-      callback(Status2::INVALID_ARGUMENTS);
+      callback(Status::INVALID_ARGUMENTS);
       return;
     }
     if (std::is_same<ValueType, int64_t>::value) {
@@ -139,7 +124,7 @@ void LoggerImpl::LogThreePartMetric(const std::string& value_part_name,
       FXL_LOG(ERROR) << "Metric " << metric_name
                      << " must have a numeric part to be a valid "
                      << value_part_name << " metric.";
-      callback(Status2::INVALID_ARGUMENTS);
+      callback(Status::INVALID_ARGUMENTS);
       return;
     }
 
@@ -150,7 +135,7 @@ void LoggerImpl::LogThreePartMetric(const std::string& value_part_name,
       FXL_LOG(ERROR) << "Metric " << metric_name
                      << " is a two part metric with no string part so "
                         "component must be empty";
-      callback(Status2::INVALID_ARGUMENTS);
+      callback(Status::INVALID_ARGUMENTS);
       return;
     }
 
@@ -161,13 +146,13 @@ void LoggerImpl::LogThreePartMetric(const std::string& value_part_name,
       FXL_LOG(ERROR) << "Metric " << metric_name
                      << " is a two part metric with no index part so "
                         "event_type_index must be 0";
-      callback(Status2::INVALID_ARGUMENTS);
+      callback(Status::INVALID_ARGUMENTS);
       return;
     }
   } else {
     FXL_LOG(ERROR) << "Metric " << metric_name << " is not a valid "
                    << value_part_name << " metric.";
-    callback(Status2::INVALID_ARGUMENTS);
+    callback(Status::INVALID_ARGUMENTS);
     return;
   }
 
@@ -185,14 +170,14 @@ void LoggerImpl::AddEncodedObservation(cobalt::encoder::Encoder::Result* result,
     case cobalt::encoder::Encoder::kInsufficientBuildLevel:
       FXL_LOG(WARNING)
           << "Cobalt metric reporting attempt with insufficient build level";
-      callback(Status2::OK);
+      callback(Status::OK);
       return;
     case cobalt::encoder::Encoder::kInvalidArguments:
-      callback(Status2::INVALID_ARGUMENTS);
+      callback(Status::INVALID_ARGUMENTS);
       return;
     case cobalt::encoder::Encoder::kInvalidConfig:
     case cobalt::encoder::Encoder::kEncodingFailed:
-      callback(Status2::INTERNAL_ERROR);
+      callback(Status::INTERNAL_ERROR);
       FXL_LOG(WARNING) << "Cobalt internal error: " << result->status;
       return;
   }
@@ -201,14 +186,14 @@ void LoggerImpl::AddEncodedObservation(cobalt::encoder::Encoder::Result* result,
   if (!encrypt_to_analyzer_->Encrypt(*(result->observation), message.get())) {
     FXL_LOG(WARNING)
         << "Cobalt internal error. Unable to encrypt observations.";
-    callback(Status2::INTERNAL_ERROR);
+    callback(Status::INTERNAL_ERROR);
   }
   // AddEncryptedObservation returns a StatusOr<ObservationStore::StoreStatus>.
   auto add_result = observation_store_->AddEncryptedObservation(
       std::move(message), std::move(result->metadata));
 
   // Unpack the inner StoreStatus and convert it to a cobalt Status.
-  Status2 status = ToStatus2(ToCobaltStatus(add_result));
+  Status status = ToCobaltStatus(add_result);
   shipping_manager_->NotifyObservationsAdded();
   callback(status);
 }
@@ -235,7 +220,7 @@ void LoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_type_index,
                           LogEventCallback callback) {
   uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
   if (encoding_id == 0) {
-    callback(Status2::INVALID_ARGUMENTS);
+    callback(Status::INVALID_ARGUMENTS);
     return;
   }
 
@@ -259,7 +244,7 @@ void LoggerImpl::LogEventCount(uint32_t metric_id, uint32_t event_type_index,
                       "method LogEventCount is unsupported in the current "
                       "version of Cobalt. Pass the value 0 for now. Metric="
                    << metric_name;
-    callback(Status2::INVALID_ARGUMENTS);
+    callback(Status::INVALID_ARGUMENTS);
     return;
   }
   LogThreePartMetric("event count", metric_id, event_type_index, component,
@@ -292,7 +277,7 @@ void LoggerImpl::LogString(uint32_t metric_id, fidl::StringPtr s,
                            LogStringCallback callback) {
   uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
   if (encoding_id == 0) {
-    callback(Status2::INVALID_ARGUMENTS);
+    callback(Status::INVALID_ARGUMENTS);
     return;
   }
 
@@ -306,7 +291,7 @@ void LoggerImpl::AddTimerObservationIfReady(
   if (!TimerManager::isReady(timer_val_ptr)) {
     // TimerManager has not received both StartTimer and EndTimer calls. Return
     // OK status and wait for the other call.
-    callback(Status2::OK);
+    callback(Status::OK);
     return;
   }
 
@@ -323,19 +308,19 @@ void LoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_type_index,
   if (event_type_index != 0 || !component->empty()) {
     FXL_LOG(ERROR) << "event_type_index and component are not currently "
                       "consumed. Pass in 0 and empty string respectively.";
-    callback(Status2::INVALID_ARGUMENTS);
+    callback(Status::INVALID_ARGUMENTS);
   }
   std::unique_ptr<TimerVal> timer_val_ptr;
   uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
   if (encoding_id == 0) {
-    callback(Status2::INVALID_ARGUMENTS);
+    callback(Status::INVALID_ARGUMENTS);
     return;
   }
-  auto status = ToStatus2(timer_manager_->GetTimerValWithStart(
-      metric_id, encoding_id, timer_id.get(), timestamp, timeout_s,
-      &timer_val_ptr));
+  auto status = timer_manager_->GetTimerValWithStart(metric_id, encoding_id,
+                                                     timer_id.get(), timestamp,
+                                                     timeout_s, &timer_val_ptr);
 
-  if (status != Status2::OK) {
+  if (status != Status::OK) {
     callback(status);
     return;
   }
@@ -346,10 +331,10 @@ void LoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_type_index,
 void LoggerImpl::EndTimer(fidl::StringPtr timer_id, uint64_t timestamp,
                           uint32_t timeout_s, EndTimerCallback callback) {
   std::unique_ptr<TimerVal> timer_val_ptr;
-  auto status = ToStatus2(timer_manager_->GetTimerValWithEnd(
-      timer_id.get(), timestamp, timeout_s, &timer_val_ptr));
+  auto status = timer_manager_->GetTimerValWithEnd(timer_id.get(), timestamp,
+                                                   timeout_s, &timer_val_ptr);
 
-  if (status != Status2::OK) {
+  if (status != Status::OK) {
     callback(status);
     return;
   }
@@ -373,7 +358,7 @@ void LoggerExtImpl::LogIntHistogram(
                       "LogIntHistogram is unsupported in the current version "
                       "of Cobalt. Pass in the value 0 for now. Metric="
                    << metric_name;
-    callback(Status2::INVALID_ARGUMENTS);
+    callback(Status::INVALID_ARGUMENTS);
     return;
   }
   if (!component->empty()) {
@@ -381,13 +366,13 @@ void LoggerExtImpl::LogIntHistogram(
                       "is unsupported in the current version of Cobalt. Pass "
                       "in an empty string for now. Metric="
                    << metric_name;
-    callback(Status2::INVALID_ARGUMENTS);
+    callback(Status::INVALID_ARGUMENTS);
     return;
   }
 
   uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
   if (encoding_id == 0) {
-    callback(Status2::INVALID_ARGUMENTS);
+    callback(Status::INVALID_ARGUMENTS);
     return;
   }
 
@@ -432,7 +417,7 @@ void LoggerExtImpl::LogCustomEvent(
         break;
       }
       default:
-        callback(Status2::INVALID_ARGUMENTS);
+        callback(Status::INVALID_ARGUMENTS);
         FXL_LOG(ERROR)
             << "Cobalt: Unrecognized value type for observation part "
             << event_val.dimension_name;
@@ -450,14 +435,7 @@ void LoggerSimpleImpl::LogIntHistogram(uint32_t metric_id,
                                        fidl::VectorPtr<uint64_t> bucket_counts,
                                        LogIntHistogramCallback callback) {
   FXL_LOG(ERROR) << "Not yet implemented";
-  callback(Status2::INTERNAL_ERROR);
-}
-
-void LoggerSimpleImpl::LogCustomEvent(uint32_t metric_id,
-                                      fidl::StringPtr json_string,
-                                      LogCustomEventCallback callback) {
-  FXL_LOG(ERROR) << "Not yet implemented";
-  callback(Status2::INTERNAL_ERROR);
+  callback(Status::INTERNAL_ERROR);
 }
 
 }  // namespace cobalt

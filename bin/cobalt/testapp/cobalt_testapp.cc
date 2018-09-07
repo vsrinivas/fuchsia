@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 //
 // This application is intenteded to be used for manual testing of
-// the Cobalt encoder client on Fuchsia by Cobalt engineers.
+// the Cobalt logger client on Fuchsia by Cobalt engineers.
 //
 // It also serves as an example of how to use the Cobalt FIDL API.
 //
@@ -18,7 +18,6 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/bin/cobalt/testapp/cobalt_testapp_encoder.h"
 #include "garnet/bin/cobalt/testapp/cobalt_testapp_logger.h"
 #include "garnet/bin/cobalt/testapp/tests.h"
 #include "lib/component/cpp/startup_context.h"
@@ -46,21 +45,7 @@ fuchsia::cobalt::ProjectProfile CobaltTestApp::LoadCobaltConfig() {
   FXL_CHECK(success) << "Could not read Cobalt config file into VMO";
 
   fuchsia::cobalt::ProjectProfile profile;
-  fuchsia::mem::Buffer buf = std::move(config_vmo).ToTransport();
-  profile.config.vmo = std::move(buf.vmo);
-  profile.config.size = buf.size;
-  return profile;
-}
-
-fuchsia::cobalt::ProjectProfile2 CobaltTestApp::LoadCobaltConfig2() {
-  fsl::SizedVmo config_vmo;
-  bool success = fsl::VmoFromFilename(kConfigBinProtoPath, &config_vmo);
-  FXL_CHECK(success) << "Could not read Cobalt config file into VMO";
-
-  fuchsia::cobalt::ProjectProfile2 profile;
-  fuchsia::mem::Buffer buf = std::move(config_vmo).ToTransport();
-  profile.config.vmo = std::move(buf.vmo);
-  profile.config.size = buf.size;
+  profile.config = std::move(config_vmo).ToTransport();
   return profile;
 }
 
@@ -110,33 +95,24 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
     FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });
 
-  fuchsia::cobalt::EncoderFactorySyncPtr factory;
-  services.ConnectToService(factory.NewRequest());
-
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  factory->GetEncoderForProject(LoadCobaltConfig(),
-                                encoder_.encoder_.NewRequest(), &status);
-  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
-      << "GetEncoderForProject() => " << StatusToString(status);
-
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory;
   services.ConnectToService(logger_factory.NewRequest());
 
-  fuchsia::cobalt::Status2 status2 = fuchsia::cobalt::Status2::INTERNAL_ERROR;
-  logger_factory->CreateLogger(LoadCobaltConfig2(),
-                               logger_.logger_.NewRequest(), &status2);
-  FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
-      << "CreateLogger() => " << StatusToString(status2);
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  logger_factory->CreateLogger(LoadCobaltConfig(), logger_.logger_.NewRequest(),
+                               &status);
+  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
+      << "CreateLogger() => " << StatusToString(status);
 
-  logger_factory->CreateLoggerExt(LoadCobaltConfig2(),
-                                  logger_.logger_ext_.NewRequest(), &status2);
-  FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
-      << "CreateLoggerExt() => " << StatusToString(status2);
+  logger_factory->CreateLoggerExt(LoadCobaltConfig(),
+                                  logger_.logger_ext_.NewRequest(), &status);
+  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
+      << "CreateLoggerExt() => " << StatusToString(status);
 
   logger_factory->CreateLoggerSimple(
-      LoadCobaltConfig2(), logger_.logger_simple_.NewRequest(), &status2);
-  FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
-      << "CreateLoggerSimple() => " << StatusToString(status2);
+      LoadCobaltConfig(), logger_.logger_simple_.NewRequest(), &status);
+  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
+      << "CreateLoggerSimple() => " << StatusToString(status);
 
   services.ConnectToService(cobalt_controller_.NewRequest());
 }
@@ -163,11 +139,11 @@ bool CobaltTestApp::RunTestsWithRequestSendSoon() {
 bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
   Connect(1, 0);
 
-  // Invoke TestRareEventWithStringsUsingBlockUntilEmpty() three times and
+  // Invoke TestLogStringUsingBlockUntilEmpty() three times and
   // return true if it succeeds all three times.
   for (int i = 0; i < 3; i++) {
     FXL_LOG(INFO) << "\nRunTestsWithBlockUntilEmpty iteration " << i << ".";
-    if (!TestRareEventWithStringsUsingBlockUntilEmpty(&encoder_)) {
+    if (!TestLogStringUsingBlockUntilEmpty(&logger_)) {
       return false;
     }
   }
@@ -177,41 +153,31 @@ bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
 
 bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   // Connect to the Cobalt FIDL service provided by the environment.
-  fuchsia::cobalt::EncoderFactorySyncPtr factory;
-  context_->ConnectToEnvironmentService(factory.NewRequest());
-
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-
-  factory->GetEncoderForProject(LoadCobaltConfig(),
-                                encoder_.encoder_.NewRequest(), &status);
-  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
-      << "GetEncoderForProject() => " << StatusToString(status);
-
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory;
   context_->ConnectToEnvironmentService(logger_factory.NewRequest());
 
-  fuchsia::cobalt::Status2 status2 = fuchsia::cobalt::Status2::INTERNAL_ERROR;
-  logger_factory->CreateLogger(LoadCobaltConfig2(),
-                               logger_.logger_.NewRequest(), &status2);
-  FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
-      << "CreateLogger() => " << StatusToString(status2);
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  logger_factory->CreateLogger(LoadCobaltConfig(), logger_.logger_.NewRequest(),
+                               &status);
+  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
+      << "CreateLogger() => " << StatusToString(status);
 
-  logger_factory->CreateLoggerExt(LoadCobaltConfig2(),
-                                  logger_.logger_ext_.NewRequest(), &status2);
-  FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
-      << "CreateLoggerExt() => " << StatusToString(status2);
+  logger_factory->CreateLoggerExt(LoadCobaltConfig(),
+                                  logger_.logger_ext_.NewRequest(), &status);
+  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
+      << "CreateLoggerExt() => " << StatusToString(status);
 
   logger_factory->CreateLoggerSimple(
-      LoadCobaltConfig2(), logger_.logger_simple_.NewRequest(), &status2);
-  FXL_CHECK(status2 == fuchsia::cobalt::Status2::OK)
-      << "CreateLoggerSimple() => " << StatusToString(status2);
+      LoadCobaltConfig(), logger_.logger_simple_.NewRequest(), &status);
+  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
+      << "CreateLoggerSimple() => " << StatusToString(status);
 
-  // Invoke TestRareEventWithIndicesUsingServiceFromEnvironment() three times
+  // Invoke TestLogEventUsingServiceFromEnvironment() three times
   // and return true if it succeeds all three times.
   for (int i = 0; i < 3; i++) {
     FXL_LOG(INFO) << "\nRunTestsUsingServiceFromEnvironment iteration " << i
                   << ".";
-    if (!TestRareEventWithIndicesUsingServiceFromEnvironment(&encoder_)) {
+    if (!TestLogEventUsingServiceFromEnvironment(&logger_)) {
       return false;
     }
   }
@@ -220,36 +186,6 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
 }
 
 bool CobaltTestApp::RequestSendSoonTests() {
-  if (!TestRareEventWithStrings(&encoder_)) {
-    return false;
-  }
-  if (!TestRareEventWithIndices(&encoder_)) {
-    return false;
-  }
-  if (!TestModuleUris(&encoder_)) {
-    return false;
-  }
-  if (!TestNumStarsInSky(&encoder_)) {
-    return false;
-  }
-  if (!TestSpaceshipVelocity(&encoder_)) {
-    return false;
-  }
-  if (!TestAvgReadTime(&encoder_)) {
-    return false;
-  }
-  if (!TestModulePairs(&encoder_)) {
-    return false;
-  }
-  if (!TestModInitializationTime(&encoder_)) {
-    return false;
-  }
-  if (!TestAppStartupTime(&encoder_)) {
-    return false;
-  }
-  if (!TestV1Backend(&encoder_)) {
-    return false;
-  }
   if (!TestLogEvent(&logger_)) {
     return false;
   }
