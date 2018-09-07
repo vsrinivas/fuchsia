@@ -239,6 +239,8 @@ class VirtioQueue {
   zx::event event_;
   uint16_t avail_event_num_ __TA_GUARDED(mutex_) = 1;
   bool use_event_index_ __TA_GUARDED(mutex_) = false;
+
+  friend class VirtioQueueFake;
 };
 
 }  // namespace machina

@@ -22,10 +22,9 @@ TEST(VirtioQueueTest, HandleOverflow) {
 
   // Setup queue pointers so that the next descriptor will wrap avail->idx
   // to 0.
-  queue->UpdateRing<void>([](VirtioRing* ring) {
-    const_cast<uint16_t&>(ring->avail->idx) = UINT16_MAX;
-    ring->index = UINT16_MAX;
-  });
+  VirtioRing* ring = queue_fake.ring();
+  const_cast<uint16_t&>(ring->avail->idx) = UINT16_MAX;
+  ring->index = UINT16_MAX;
 
   uint16_t expected_desc;
   uint32_t data = 0x12345678;

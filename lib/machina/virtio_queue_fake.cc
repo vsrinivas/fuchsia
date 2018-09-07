@@ -11,12 +11,8 @@
 
 namespace machina {
 
-VirtioQueueFake::VirtioQueueFake(VirtioQueue* queue) : queue_(queue) {
-  // Get ring from queue for testing, unsafe under other circumstances.
-  queue_->UpdateRing<void>([this](VirtioRing* r) { ring_ = r; });
-}
-
-VirtioQueueFake::~VirtioQueueFake() { queue_->Configure(0, 0, 0, 0); }
+VirtioQueueFake::VirtioQueueFake(VirtioQueue* queue)
+    : queue_(queue), ring_(&queue_->ring_) {}
 
 zx_status_t VirtioQueueFake::Init(uint16_t queue_size) {
   fbl::unique_ptr<uint8_t[]> desc;
@@ -67,10 +63,8 @@ zx_status_t VirtioQueueFake::Init(uint16_t queue_size) {
                     reinterpret_cast<zx_gpaddr_t>(used_ring_buf_.get()));
 
   // Disable interrupt generation.
-  queue_->UpdateRing<void>([](VirtioRing* ring) {
-    ring->used->flags = 1;
-    *const_cast<uint16_t*>(ring->used_event) = 0xffff;
-  });
+  ring_->used->flags = 1;
+  *const_cast<uint16_t*>(ring_->used_event) = 0xffff;
   return ZX_OK;
 }
 

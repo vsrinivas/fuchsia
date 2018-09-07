@@ -67,7 +67,6 @@ class DescBuilder {
 class VirtioQueueFake {
  public:
   explicit VirtioQueueFake(VirtioQueue* queue);
-  ~VirtioQueueFake();
 
   // Allocate memory for a queue with the given size and wire up the queue
   // to use those buffers.
