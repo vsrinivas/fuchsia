@@ -48,6 +48,10 @@
    identifier in a .cc or .h file, hit Ctrl-], and YCM will take you
    to the definition of the identifier.
 
+   If you build a compilation database, YCM will use it, which may be more
+   reliable and efficient than the default `ycm_extra_config.py` configuration.
+   Use `fx compdb` to build a compilation database.
+
 ## See also
 
 [Zircon editor integration](

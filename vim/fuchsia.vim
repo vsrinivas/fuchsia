@@ -9,12 +9,22 @@ if jiri_manifest != ""
   let g:fuchsia_dir = fnamemodify(jiri_manifest, ":h")
   " Get the current build dir from fx
   let g:fuchsia_build_dir = systemlist(g:fuchsia_dir . "/scripts/fx get-build-dir")[0]
+  " Get the current buildtools dir from paths.py
+  let g:fuchsia_buildtools_dir = systemlist(g:fuchsia_dir . "/scripts/youcompleteme/paths.py BUILDTOOLS_PATH")[0]
   " Tell YCM where to find its configuration script
   let g:ycm_global_ycm_extra_conf = g:fuchsia_dir . '/scripts/youcompleteme/ycm_extra_conf.py'
   " Do not load fuchsia/.ycm_extra_conf in case the user created a symlink for
   " other editors.
   let g:ycm_extra_conf_globlist = [ '!' . g:fuchsia_dir . '/*']
-  let g:ycm_use_clangd = 0
+  " Google-internal options - use clangd completer if the user has a compilation
+  " database (built with `fx compdb`).
+  if filereadable(g:fuchsia_dir . '/compile_commands.json')
+    let g:ycm_use_clangd = 1
+    let g:ycm_clangd_binary_path = g:fuchsia_buildtools_dir . "/clang/bin/clangd"
+  else
+    let g:ycm_use_clangd = 0
+  endif
+
 
   let &runtimepath .= "," .
         \ g:fuchsia_dir . "/scripts/vim/," .

@@ -46,5 +46,6 @@
   "racerd_binary_path": "",
   "python_binary_path": "",
   "java_jdtls_use_clean_workspace": 1,
-  "use_clangd": 0
+  "use_clangd": 0,
+  "clangd_binary_path": ""
 }

@@ -28,6 +28,11 @@ The general [Vim Fuchsia instructions](
 https://fuchsia.googlesource.com/scripts/+/master/vim/README.md) will do this
 automatically.
 
+The setup will use a compilation database (and the clangd backend if you are a
+Googler) provided one is detected, and fallback on a `ycm_extra_conf.py`
+configuration otherwise. You can build a compilation database with `fx compdb`,
+or `fx -i compdb` if you want it rebuilt automatically as you edit files.
+
 ### Other editors (ycmd)
 
 You'll need to set the ycmd config option `global_ycm_extra_conf` to point to
@@ -43,8 +48,11 @@ ln -s $FUCHSIA_DIR/scripts/youcompleteme/ycm_extra_conf.py $FUCHSIA_DIR/.ycm_ext
 
 **Googlers only**: you'll also need to setup
 `${FUCHSIA_DIR}/scripts/youcompleteme/default_settings.json` as the default
-settings path in your editor, in order to disable the internal `use_clangd` flag
-that we do not support for Fuchsia yet.
+settings path in your editor, in order to disable the internal `use_clangd`
+flag. If you want to use clangd, you can additionally edit that file to set
+`use_clangd` to 1, and `clang_binary_path` to
+`${FUCHSIA_BUILDTOOLS_DIR}/clang/bin/clangd`. Remember that in that case, you'll
+need to build a compilation database with `fx compdb`.
 
 ## See also
 
