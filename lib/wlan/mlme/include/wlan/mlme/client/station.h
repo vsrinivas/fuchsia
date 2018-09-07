@@ -41,9 +41,13 @@ struct AssocContext {
     // TODO(porce): Move association-related variables of class Station to here
     zx::time ts_start;  // timestamp of the beginning of the association
 
+    // BSSID of the association.
+    // Not necessarily the same as the BSSID that is used outside this context.
+    // E.g., during joining, authenticating, asssociating, off-channel scanning.
     common::MacAddr bssid;
+
     CapabilityInfo cap;
-    uint16_t aid;
+    uint16_t aid = 0;
 
     // Negotiated configurations
     // This is an outcome of intersection of capabilities and configurations.
@@ -67,6 +71,8 @@ struct AssocContext {
     bool is_ht = false;
     bool is_cbw40_rx = false;
     bool is_cbw40_tx = false;
+
+    void set_aid(uint16_t aid) { aid = aid & kAidMask; }
 };
 
 // TODO(NET-1322): Replace by a FIDL struct
@@ -100,8 +106,6 @@ class Station {
         if (!bss_) { return nullptr; }
         return &bssid_;
     }
-
-    uint16_t aid() const { return aid_; }
 
     wlan_channel_t GetBssChan() const {
         ZX_DEBUG_ASSERT(bss_ != nullptr);
@@ -141,7 +145,6 @@ class Station {
     // Maximum number of packets buffered while station is in power saving mode.
     // TODO(NET-687): Find good BU limit.
     static constexpr size_t kMaxPowerSavingQueueSize = 30;
-
 
     zx_status_t HandleAnyMgmtFrame(MgmtFrame<>&&);
     zx_status_t HandleAnyDataFrame(DataFrame<>&&);
@@ -214,7 +217,7 @@ class Station {
     // Note: During channel switching, `auto_deauth_last_accounted_` is set to the timestamp
     //       we go back on channel (to make computation easier).
     zx::time auto_deauth_last_accounted_;
-    uint16_t aid_ = 0;
+
     common::MovingAverageDbm<20> avg_rssi_dbm_;
     AuthAlgorithm auth_alg_ = AuthAlgorithm::kOpenSystem;
     eapol::PortState controlled_port_ = eapol::PortState::kBlocked;

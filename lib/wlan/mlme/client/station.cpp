@@ -254,7 +254,8 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     MgmtFrame<Authentication> frame;
     auto status = CreateMgmtFrame(&frame);
     if (status != ZX_OK) {
-        errorf("authenticating: failed to build authentication frame: %s\n", zx_status_get_string(status));
+        errorf("authenticating: failed to build authentication frame: %s\n",
+               zx_status_get_string(status));
         return status;
     }
 
@@ -481,9 +482,7 @@ zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
         return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
     }
 
-    if (state_ != WlanState::kAssociated) {
-        return ZX_OK;
-    }
+    if (state_ != WlanState::kAssociated) { return ZX_OK; }
 
     remaining_auto_deauth_timeout_ = FullAutoDeauthDuration();
     auto_deauth_last_accounted_ = timer_mgr_.Now();
@@ -498,7 +497,7 @@ zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
         case element_id::kTim: {
             auto tim = reader.read<TimElement>();
             if (tim == nullptr) goto done_iter;
-            if (tim->traffic_buffered(aid_)) { SendPsPoll(); }
+            if (tim->traffic_buffered(assoc_ctx_.aid)) { SendPsPoll(); }
             break;
         }
         default:
@@ -609,10 +608,10 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     // TODO(porce): Move into |assoc_ctx_|
     common::MacAddr bssid(bss_->bssid.data());
     state_ = WlanState::kAssociated;
-    aid_ = assoc->aid & kAidMask;
+    assoc_ctx_.set_aid(assoc->aid);
 
     // Spread the good news upward
-    service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::SUCCESS, aid_);
+    service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::SUCCESS, assoc_ctx_.aid);
     // Spread the good news downward
     NotifyAssocContext();
 
@@ -626,9 +625,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     remaining_auto_deauth_timeout_ = FullAutoDeauthDuration();
     status = timer_mgr_.Schedule(timer_mgr_.Now() + remaining_auto_deauth_timeout_,
                                  &auto_deauth_timeout_);
-    if (status != ZX_OK) {
-        warnf("could not set auto-deauthentication timeout event\n");
-    }
+    if (status != ZX_OK) { warnf("could not set auto-deauthentication timeout event\n"); }
 
     // Open port if user connected to an open network.
     if (bss_->rsn.is_null()) {
@@ -1020,9 +1017,7 @@ zx_status_t Station::HandleTimeout() {
             auto reason_code = wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH;
             service::SendDeauthIndication(device_, bssid_, reason_code);
             auto status = SendDeauthFrame(reason_code);
-            if (status != ZX_OK) {
-                errorf("could not send deauth packet: %d\n", status);
-            }
+            if (status != ZX_OK) { errorf("could not send deauth packet: %d\n", status); }
         }
     }
 
@@ -1366,7 +1361,7 @@ zx_status_t Station::SendPsPoll() {
     ZX_DEBUG_ASSERT(frame.HasValidLen());
     frame.hdr()->fc.set_type(FrameType::kControl);
     frame.hdr()->fc.set_subtype(ControlSubtype::kPsPoll);
-    frame.body()->aid = aid_;
+    frame.body()->aid = assoc_ctx_.aid;
     frame.body()->bssid = common::MacAddr(bss_->bssid.data());
     frame.body()->ta = self_addr();
 
