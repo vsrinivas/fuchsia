@@ -56,9 +56,5 @@ private:
     fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling_;
     opp_info_t opp_info_;
     thermal_device_info_t thermal_config_;
-    thrd_t notification_thread_;
-    fbl::atomic<bool> running_;
-    zx_handle_t port_;
-    uint32_t current_trip_idx_ = 0;
 };
 } // namespace thermal

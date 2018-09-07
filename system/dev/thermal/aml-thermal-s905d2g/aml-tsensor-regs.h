@@ -12,17 +12,22 @@
 // Register offset
 #define AML_TRIM_INFO           0x268
 #define AML_HHI_TS_CLK_CNTL     0x64 << 2
-#define AML_TS_CFG_REG1         0x800 + (0x1 << 2)
-#define AML_TS_CFG_REG2         0x800 + (0x2 << 2)
-#define AML_TS_CFG_REG3         0x800 + (0x3 << 2)
-#define AML_TS_CFG_REG4         0x800 + (0x4 << 2)
-#define AML_TS_CFG_REG5         0x800 + (0x5 << 2)
-#define AML_TS_CFG_REG6         0x800 + (0x6 << 2)
-#define AML_TS_CFG_REG7         0x800 + (0x7 << 2)
-#define AML_TS_CFG_REG8         0x800 + (0x8 << 2)
-#define AML_TS_STAT0            0x800 + (0x10 << 2)
-#define AML_TS_STAT1            0x800 + (0x11 << 2)
-
+#define AML_TS_CFG_REG1         (0x800 + (0x1 << 2))
+#define AML_TS_CFG_REG2         (0x800 + (0x2 << 2))
+#define AML_TS_CFG_REG3         (0x800 + (0x3 << 2))
+#define AML_TS_CFG_REG4         (0x800 + (0x4 << 2))
+#define AML_TS_CFG_REG5         (0x800 + (0x5 << 2))
+#define AML_TS_CFG_REG6         (0x800 + (0x6 << 2))
+#define AML_TS_CFG_REG7         (0x800 + (0x7 << 2))
+#define AML_TS_CFG_REG8         (0x800 + (0x8 << 2))
+#define AML_TS_STAT0            (0x800 + (0x10 << 2))
+#define AML_TS_STAT1            (0x800 + (0x11 << 2))
+#define IRQ_FALL_ENABLE_SHIFT   28
+#define IRQ_RISE_ENABLE_SHIFT   24
+#define IRQ_FALL_STAT_CLR_SHIFT 20
+#define IRQ_RISE_STAT_CLR_SHIFT 16
+#define AML_RISE_THRESHOLD_IRQ  0xf
+#define AML_FALL_THRESHOLD_IRQ  0xf0
 #define AML_TEMP_CAL            1
 #define AML_TS_TEMP_MASK        0xfff
 #define AML_TS_CH_SEL           0x3 /* set 3'b011 for work */
@@ -85,15 +90,7 @@ public:
     DEF_FIELD(23, 12, rise_th0);
     DEF_FIELD(11, 0, rise_th1);
 
-    static auto Get() { return hwreg::RegisterAddr<TsCfgReg4>(AML_TS_CFG_REG4); }
-};
-
-class TsCfgReg5 : public hwreg::RegisterBase<TsCfgReg5, uint32_t> {
-public:
-    DEF_FIELD(23, 12, rise_th2);
-    DEF_FIELD(11, 0, rise_th3);
-
-    static auto Get() { return hwreg::RegisterAddr<TsCfgReg5>(AML_TS_CFG_REG5); }
+    static auto Get() { return hwreg::RegisterAddr<TsCfgReg4>(0); }
 };
 
 class TsCfgReg6 : public hwreg::RegisterBase<TsCfgReg6, uint32_t> {
@@ -101,15 +98,7 @@ public:
     DEF_FIELD(23, 12, fall_th0);
     DEF_FIELD(11, 0, fall_th1);
 
-    static auto Get() { return hwreg::RegisterAddr<TsCfgReg6>(AML_TS_CFG_REG6); }
-};
-
-class TsCfgReg7 : public hwreg::RegisterBase<TsCfgReg7, uint32_t> {
-public:
-    DEF_FIELD(23, 12, fall_th2);
-    DEF_FIELD(11, 0, fall_th3);
-
-    static auto Get() { return hwreg::RegisterAddr<TsCfgReg7>(AML_TS_CFG_REG7); }
+    static auto Get() { return hwreg::RegisterAddr<TsCfgReg6>(0); }
 };
 
 class TsStat0 : public hwreg::RegisterBase<TsStat0, uint32_t> {

@@ -28,7 +28,7 @@ zx_status_t AmlVoltageRegulator::Init(zx_device_t* parent, opp_info_t* opp_info)
     // Create a PWM period = 1250, hwpwm - 1 to signify using PWM_D from PWM_C/D.
     // Source: Amlogic SDK.
     fbl::AllocChecker ac;
-    pwm_ = fbl::make_unique_checked<thermal::AmlPwm>(&ac, 1250, 1);
+    pwm_ = fbl::make_unique_checked<AmlPwm>(&ac, 1250, 1);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
