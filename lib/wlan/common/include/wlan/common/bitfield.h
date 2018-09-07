@@ -84,12 +84,12 @@ template <> struct IntegerType<64> { using type = uint64_t; };
 template <size_t N> struct Integer : IntegerType<next_bitsize(N)> {};
 }  // namespace internal
 
-#define WLAN_BIT_FIELD(name, offset, len)                               \
-    void set_##name(::wlan::common::internal::Integer<len>::type val) { \
-        this->template set_bits<offset, len>(val);                      \
-    }                                                                   \
-    ::wlan::common::internal::Integer<len>::type name() const {         \
-        return this->template get_bits<offset, len>();                  \
+#define WLAN_BIT_FIELD(name, offset, len)                                 \
+    void set_##name(::wlan::common::internal::Integer<len>::type val) {   \
+        this->template set_bits<offset, len>(val);                        \
+    }                                                                     \
+    constexpr ::wlan::common::internal::Integer<len>::type name() const { \
+        return this->template get_bits<offset, len>();                    \
     }
 
 }  // namespace common

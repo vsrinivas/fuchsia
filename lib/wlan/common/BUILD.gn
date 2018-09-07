@@ -23,8 +23,10 @@ source_set("common") {
     "include/wlan/common/macaddr.h",
     "include/wlan/common/moving_average.h",
     "include/wlan/common/stats.h",
+    "include/wlan/common/tx_vector.h",
     "mac_frame.cpp",
     "macaddr.cpp",
+    "tx_vector.cpp",
   ]
 
   public_deps = [

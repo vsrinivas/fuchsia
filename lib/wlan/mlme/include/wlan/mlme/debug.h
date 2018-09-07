@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <wlan/common/tx_vector.h>
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
@@ -19,6 +20,10 @@ std::string Describe(const SequenceControl& sc);
 std::string Describe(const FrameHeader& hdr);
 std::string Describe(const MgmtFrameHeader& hdr);
 std::string Describe(const DataFrameHeader& hdr);
+
+std::string Describe(const PHY& phy);
+std::string Describe(const GI& gi);
+std::string Describe(const TxVector& tx_vec);
 
 std::string HexDump(const uint8_t bytes[], size_t bytes_len);
 std::string HexDumpOneline(const uint8_t bytes[], size_t bytes_len);

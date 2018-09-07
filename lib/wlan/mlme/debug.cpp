@@ -140,6 +140,70 @@ std::string Describe(const DataFrameHeader& hdr) {
     return std::string(buf);
 }
 
+std::string Describe(const PHY& phy) {
+    char buf[16];
+    size_t offset = 0;
+    switch (phy) {
+    case WLAN_PHY_DSSS:
+        BUFFER("DSSS");
+        break;
+    case WLAN_PHY_ERP:
+        BUFFER("ERP");
+        break;
+    case WLAN_PHY_HT:
+        BUFFER("HT");
+        break;
+    case WLAN_PHY_VHT:
+        BUFFER("VHT");
+        break;
+    default:
+        BUFFER("PHY Unknown");
+        break;
+    }
+    return std::string(buf);
+}
+
+std::string Describe(const GI& gi) {
+        char buf[16];
+        size_t offset = 0;
+        switch (gi) {
+          case WLAN_GI_800NS:
+              BUFFER("GI800");
+              break;
+          case WLAN_GI_400NS:
+              BUFFER("GI400");
+              break;
+          case WLAN_GI_200NS:
+              BUFFER("GI200");
+              break;
+          case WLAN_GI_1600NS:
+              BUFFER("GI1600");
+              break;
+          case WLAN_GI_3200NS:
+              BUFFER("GI3200");
+              break;
+          default:
+              BUFFER("GI Unknown");
+              break;
+        }
+        return std::string(buf);
+    }
+
+std::string Describe(const TxVector& tx_vec) {
+    char buf[128];
+    size_t offset = 0;
+    buf[0] = 0;
+
+    BUFFER("%s", Describe(tx_vec.phy).c_str());
+    BUFFER("%s", Describe(tx_vec.gi).c_str());
+    BUFFER("%s", ::wlan::common::kCbwStr[tx_vec.cbw]);
+    BUFFER("NSS %u", tx_vec.nss);
+    BUFFER("MCS %u." , tx_vec.mcs_idx);
+    BUFFER("is_valid: %u", tx_vec.IsValid());
+
+    return std::string(buf);
+}
+
 std::string DumpToAscii(const uint8_t bytes[], size_t bytes_len) {
     char buf[kBytesLenLimit + 2];
     size_t dump_len = std::min(kBytesLenLimit, bytes_len);
