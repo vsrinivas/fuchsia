@@ -198,6 +198,16 @@ int main(int argc, char** argv) {
     return status;
   }
 
+  // To ensure that device memory and physical memory do not overlap we only
+  // need to check that we have not requested too much physical memory. This
+  // is because the guest will be told physical memory is from
+  // 0 -> phys_mem.size() and devices might start at DevMem::kAddrLowerBound.
+  if (cfg.memory() >= machina::DevMem::kAddrLowerBound) {
+    FXL_LOG(ERROR) << "Requested memory must be less than "
+                   << machina::DevMem::kAddrLowerBound;
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   machina::Guest guest;
   status = guest.Init(cfg.memory());
   if (status != ZX_OK) {

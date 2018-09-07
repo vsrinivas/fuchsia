@@ -237,6 +237,9 @@ static zx_status_t create_zbi(const GuestConfig& cfg,
   }
   // E820 memory map.
   machina::E820Map e820_map(phys_mem.size());
+  for (const auto& range : dev_mem) {
+    e820_map.AddReservedRegion(range.addr, range.size);
+  }
   const size_t e820_size = e820_map.size() * sizeof(e820entry_t);
   void* e820_addr = nullptr;
   res = zbi_create_section(container_hdr, zbi_max, e820_size,

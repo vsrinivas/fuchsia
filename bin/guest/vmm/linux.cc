@@ -231,6 +231,7 @@ static zx_status_t read_boot_params(const machina::PhysMem& phys_mem,
 }
 
 static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
+                                     const machina::DevMem& dev_mem,
                                      const std::string& cmdline,
                                      const int dtb_overlay_fd,
                                      const size_t initrd_size) {
@@ -279,6 +280,9 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
 #if __x86_64__
   // Setup e820 memory map.
   machina::E820Map e820_map(phys_mem.size());
+  for (const auto& range : dev_mem) {
+    e820_map.AddReservedRegion(range.addr, range.size);
+  }
   size_t e820_entries = e820_map.size();
   if (e820_entries > kMaxE820Entries) {
     FXL_LOG(ERROR) << "Not enough space for e820 memory map";
@@ -494,8 +498,6 @@ static std::string linux_cmdline(std::string cmdline) {
 #endif
 }
 
-// NOTE(abdulla): dev_mem is currently unused, but will be used in the future to
-// modify the e820 or DTS memory map.
 zx_status_t setup_linux(const GuestConfig& cfg,
                         const machina::PhysMem& phys_mem,
                         const machina::DevMem& dev_mem, uintptr_t* guest_ip,
@@ -539,8 +541,8 @@ zx_status_t setup_linux(const GuestConfig& cfg,
     if (status != ZX_OK) {
       return status;
     }
-    status =
-        write_boot_params(phys_mem, cmdline, dtb_overlay_fd.get(), initrd_size);
+    status = write_boot_params(phys_mem, dev_mem, cmdline, dtb_overlay_fd.get(),
+                               initrd_size);
     if (status != ZX_OK) {
       return status;
     }
@@ -555,6 +557,10 @@ zx_status_t setup_linux(const GuestConfig& cfg,
       FXL_LOG(ERROR) << "Failed to open device tree " << kDtbPath;
       return ZX_ERR_IO;
     }
+    // All of our virtio devices and their associated resources get enumerated
+    // through PCI and are not placed in the device tree. Since there is no
+    // meaningful way to mark arbitrary memory regions in the device tree as
+    // used, there is no reason to pass dev_mem into load_device_tree.
     status = load_device_tree(dtb_fd.get(), phys_mem, cmdline,
                               dtb_overlay_fd.get(), initrd_size, cfg);
     if (status != ZX_OK) {
