@@ -13,8 +13,6 @@ source_set("machina") {
     "dev_mem.h",
     "framebuffer_scanout.cc",
     "framebuffer_scanout.h",
-    "gpu_bitmap.cc",
-    "gpu_bitmap.h",
     "gpu_resource.cc",
     "gpu_resource.h",
     "gpu_scanout.cc",
@@ -110,6 +108,7 @@ source_set("machina") {
   public_deps = [
     "//garnet/public/fidl/fuchsia.guest",
     "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/images/cpp",
     "//garnet/public/lib/ui/input/cpp",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/ddk",

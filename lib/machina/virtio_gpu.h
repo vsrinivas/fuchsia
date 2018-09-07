@@ -13,6 +13,10 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <map>
+
+#include "garnet/lib/machina/gpu_scanout.h"
+
 #include "garnet/lib/machina/virtio_device.h"
 
 #define VIRTIO_GPU_Q_CONTROLQ 0
@@ -28,6 +32,13 @@ class VirtioGpu;
 using ResourceId = uint32_t;
 using ScanoutId = uint32_t;
 
+// Returns true iff a and b overlap.
+bool Overlaps(virtio_gpu_rect_t a, virtio_gpu_rect_t b);
+
+// Returns a new rect formed by clipping 'rect' with 'clip'. If clip does not
+// overlap rect, the returned rect is degenerate (width and/or height = 0).
+virtio_gpu_rect_t Clip(virtio_gpu_rect_t rect, virtio_gpu_rect_t clip);
+
 // Virtio 2D GPU device.
 class VirtioGpu
     : public VirtioInprocessDevice<VIRTIO_ID_GPU, VIRTIO_GPU_Q_COUNT,
@@ -35,6 +46,7 @@ class VirtioGpu
  public:
   VirtioGpu(const PhysMem& phys_mem, async_dispatcher_t* dispatcher);
   ~VirtioGpu() override;
+  zx_status_t OnDeviceReady(uint32_t negotiated_features);
 
   VirtioQueue* control_queue() { return queue(VIRTIO_GPU_Q_CONTROLQ); }
   VirtioQueue* cursor_queue() { return queue(VIRTIO_GPU_Q_CURSORQ); }
@@ -42,14 +54,11 @@ class VirtioGpu
   // Begins processing any descriptors that become available in the queues.
   zx_status_t Init();
 
-  // Adds a scanout to the GPU.
-  //
-  // Currently only a single scanout is supported. ZX_ERR_ALREADY_EXISTS will
-  // be returned if this method is called multiple times.
-  zx_status_t AddScanout(GpuScanout* scanout);
-
   zx_status_t HandleGpuCommand(VirtioQueue* queue, uint16_t head,
                                uint32_t* used);
+
+  GpuScanout* scanout() { return &scanout_; }
+  zx_status_t NotifyGuestScanoutsChanged();
 
  protected:
   // VIRTIO_GPU_CMD_GET_DISPLAY_INFO
@@ -88,21 +97,16 @@ class VirtioGpu
                      virtio_gpu_ctrl_hdr_t* response);
 
   // VIRTIO_GPU_CMD_UPDATE_CURSOR
+
+  void UpdateCursor(const virtio_gpu_update_cursor_t* request);
+
   // VIRTIO_GPU_CMD_MOVE_CURSOR
-  void MoveOrUpdateCursor(const virtio_gpu_update_cursor_t* request);
+  void MoveCursor(const virtio_gpu_update_cursor_t* request);
 
  private:
-  GpuScanout* scanout_ = nullptr;
-
-  // Fix the number of hash table buckets to 1 because linux and zircon
-  // virtcons only use a single resource.
-  static constexpr size_t kNumHashTableBuckets = 1;
-  using ResourceTable =
-      fbl::HashTable<ResourceId, fbl::unique_ptr<GpuResource>,
-                     fbl::SinglyLinkedList<fbl::unique_ptr<GpuResource>>,
-                     size_t, kNumHashTableBuckets>;
-
-  ResourceTable resources_;
+  bool ready_ = false;
+  GpuScanout scanout_;
+  std::map<uint32_t, std::unique_ptr<GpuResource>> resources_;
   async_dispatcher_t* dispatcher_;
   async::Wait control_queue_wait_;
   async::Wait cursor_queue_wait_;

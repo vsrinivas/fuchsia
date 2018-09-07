@@ -10,15 +10,45 @@
 #include <fbl/unique_ptr.h>
 #include <trace/event.h>
 
-#include "garnet/lib/machina/gpu_bitmap.h"
 #include "garnet/lib/machina/gpu_resource.h"
 #include "garnet/lib/machina/gpu_scanout.h"
 #include "lib/fxl/logging.h"
 
 namespace machina {
 
+bool Overlaps(virtio_gpu_rect_t a, virtio_gpu_rect_t b) {
+  if (a.x > (b.x + b.width) || b.x > (a.x + a.width)) {
+    return false;
+  }
+  if (a.y > (b.y + b.height) || b.y > (a.y + a.height)) {
+    return false;
+  }
+  return true;
+}
+
+virtio_gpu_rect_t Clip(virtio_gpu_rect_t rect, virtio_gpu_rect_t clip) {
+  if (rect.x < clip.x) {
+    rect.width -= clip.x - rect.x;
+    rect.x = clip.x;
+  }
+  if (rect.y < clip.y) {
+    rect.height -= clip.y - rect.y;
+    rect.y = clip.y;
+  }
+  if (rect.x + rect.width > clip.x + clip.width) {
+    rect.width = clip.x + clip.width - rect.x;
+  }
+  if (rect.y + rect.height > clip.y + clip.height) {
+    rect.height = clip.y + clip.height - rect.y;
+  }
+  return rect;
+}
+
 VirtioGpu::VirtioGpu(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
-    : VirtioInprocessDevice(phys_mem, 0 /* device_features */),
+    : VirtioInprocessDevice(phys_mem, 0 /* device_features */,
+                            noop_config_device,
+                            fit::bind_member(this, &VirtioGpu::OnDeviceReady)),
+      scanout_(this),
       dispatcher_(dispatcher) {}
 
 VirtioGpu::~VirtioGpu() = default;
@@ -32,20 +62,22 @@ zx_status_t VirtioGpu::Init() {
         dispatcher_, &cursor_queue_wait_,
         fit::bind_member(this, &VirtioGpu::HandleGpuCommand));
   }
+  std::lock_guard<std::mutex> lock(device_config_.mutex);
+  config_.num_scanouts = 1;
   return status;
 }
 
-zx_status_t VirtioGpu::AddScanout(GpuScanout* scanout) {
-  if (scanout_ != nullptr) {
-    return ZX_ERR_ALREADY_EXISTS;
-  }
+zx_status_t VirtioGpu::OnDeviceReady(uint32_t negotiated_features) {
+  ready_ = true;
+  return ZX_OK;
+}
 
-  {
-    std::lock_guard<std::mutex> lock(device_config_.mutex);
-    FXL_DCHECK(config_.num_scanouts == 0);
-    config_.num_scanouts = 1;
+zx_status_t VirtioGpu::NotifyGuestScanoutsChanged() {
+  std::lock_guard<std::mutex> lock(device_config_.mutex);
+  if (ready_) {
+    config_.events_read |= VIRTIO_GPU_EVENT_DISPLAY;
+    return Interrupt(VirtioQueue::SET_CONFIG | VirtioQueue::TRY_INTERRUPT);
   }
-  scanout_ = scanout;
   return ZX_OK;
 }
 
@@ -264,11 +296,18 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
       *used += sizeof(*response);
       break;
     }
-    case VIRTIO_GPU_CMD_UPDATE_CURSOR:
+    case VIRTIO_GPU_CMD_UPDATE_CURSOR: {
+      auto request =
+          reinterpret_cast<virtio_gpu_update_cursor_t*>(request_desc.addr);
+      UpdateCursor(request);
+      MoveCursor(request);
+      *used = 0;
+      break;
+    }
     case VIRTIO_GPU_CMD_MOVE_CURSOR: {
       auto request =
           reinterpret_cast<virtio_gpu_update_cursor_t*>(request_desc.addr);
-      MoveOrUpdateCursor(request);
+      MoveCursor(request);
       *used = 0;
       break;
     }
@@ -313,30 +352,20 @@ void VirtioGpu::GetDisplayInfo(const virtio_gpu_ctrl_hdr_t* request,
                                virtio_gpu_resp_display_info_t* response) {
   TRACE_DURATION("machina", "virtio_gpu_get_display_info");
   virtio_gpu_display_one_t* display = &response->pmodes[0];
-  if (scanout_ == nullptr) {
-    memset(display, 0, sizeof(*display));
-    response->hdr.type = VIRTIO_GPU_RESP_ERR_UNSPEC;
-    return;
-  }
-
   display->enabled = 1;
-  display->r.x = 0;
-  display->r.y = 0;
-  display->r.width = scanout_->width();
-  display->r.height = scanout_->height();
+  display->r = scanout_.extents();
   response->hdr.type = VIRTIO_GPU_RESP_OK_DISPLAY_INFO;
 }
 
 void VirtioGpu::ResourceCreate2D(const virtio_gpu_resource_create_2d_t* request,
                                  virtio_gpu_ctrl_hdr_t* response) {
   TRACE_DURATION("machina", "virtio_gpu_resource_create_2d");
-  fbl::unique_ptr<GpuResource> res = GpuResource::Create(phys_mem_, request);
-  if (!res) {
-    response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
-    return;
+  std::unique_ptr<GpuResource> res;
+  response->type = GpuResource::Create(&phys_mem_, request->format,
+                                       request->width, request->height, &res);
+  if (res) {
+    resources_[request->resource_id] = std::move(res);
   }
-  resources_.insert(std::move(res));
-  response->type = VIRTIO_GPU_RESP_OK_NODATA;
 }
 
 void VirtioGpu::ResourceUnref(const virtio_gpu_resource_unref_t* request,
@@ -357,22 +386,22 @@ void VirtioGpu::SetScanout(const virtio_gpu_set_scanout_t* request,
   if (request->resource_id == 0) {
     // Resource ID 0 is a special case and means the provided scanout
     // should be disabled.
-    scanout_->SetResource(nullptr, request);
+    scanout_.OnSetScanout(nullptr, {});
     response->type = VIRTIO_GPU_RESP_OK_NODATA;
     return;
   }
-  if (request->scanout_id != 0 || scanout_ == nullptr) {
+  if (request->scanout_id != 0) {
     // Only a single scanout is supported.
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_SCANOUT_ID;
     return;
   }
 
-  auto res = resources_.find(request->resource_id);
-  if (res == resources_.end()) {
+  auto it = resources_.find(request->resource_id);
+  if (it == resources_.end()) {
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
     return;
   }
-  scanout_->SetResource(&*res, request);
+  scanout_.OnSetScanout(it->second.get(), request->r);
 
   response->type = VIRTIO_GPU_RESP_OK_NODATA;
 }
@@ -387,7 +416,7 @@ void VirtioGpu::ResourceAttachBacking(
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
     return;
   }
-  response->type = it->AttachBacking(mem_entries, request->nr_entries);
+  response->type = it->second->AttachBacking(mem_entries, request->nr_entries);
 }
 
 void VirtioGpu::ResourceDetachBacking(
@@ -399,7 +428,7 @@ void VirtioGpu::ResourceDetachBacking(
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
     return;
   }
-  response->type = it->DetachBacking();
+  response->type = it->second->DetachBacking();
 }
 
 void VirtioGpu::TransferToHost2D(
@@ -411,7 +440,7 @@ void VirtioGpu::TransferToHost2D(
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
     return;
   }
-  response->type = it->TransferToHost2D(request);
+  response->type = it->second->TransferToHost2D(request->r, request->offset);
 }
 
 void VirtioGpu::ResourceFlush(const virtio_gpu_resource_flush_t* request,
@@ -422,26 +451,34 @@ void VirtioGpu::ResourceFlush(const virtio_gpu_resource_flush_t* request,
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
     return;
   }
-  response->type = it->Flush(request);
+  scanout_.OnResourceFlush(it->second.get(), request->r);
+  response->type = VIRTIO_GPU_RESP_OK_NODATA;
 }
 
-void VirtioGpu::MoveOrUpdateCursor(const virtio_gpu_update_cursor_t* request) {
-  bool is_update = request->hdr.type == VIRTIO_GPU_CMD_UPDATE_CURSOR;
-  TRACE_DURATION("machina", is_update ? "virtio_gpu_update_cursor"
-                                      : "virtio_gpu_move_cursor");
-  GpuResource* resource = nullptr;
-  if (is_update && request->resource_id != 0) {
-    auto it = resources_.find(request->resource_id);
-    if (it == resources_.end()) {
-      return;
-    }
-    resource = &*it;
+void VirtioGpu::UpdateCursor(const virtio_gpu_update_cursor_t* request) {
+  TRACE_DURATION("machina", "virtio_gpu_update_cursor");
+  if (request->resource_id == 0) {
+    scanout_.OnUpdateCursor(nullptr, 0, 0);
+    return;
   }
-  if (request->pos.scanout_id != 0 || scanout_ == nullptr) {
+  auto it = resources_.find(request->resource_id);
+  if (it == resources_.end()) {
+    return;
+  }
+  scanout_.OnUpdateCursor(it->second.get(), request->hot_x, request->hot_y);
+}
+
+void VirtioGpu::MoveCursor(const virtio_gpu_update_cursor_t* request) {
+  TRACE_DURATION("machina", "virtio_gpu_move_cursor");
+  auto it = resources_.find(request->resource_id);
+  if (it == resources_.end()) {
+    return;
+  }
+  if (request->pos.scanout_id != 0) {
     // Only a single scanout is supported.
     return;
   }
-  scanout_->MoveOrUpdateCursor(resource, request);
+  scanout_.OnMoveCursor(request->pos.x, request->pos.y);
 }
 
 }  // namespace machina

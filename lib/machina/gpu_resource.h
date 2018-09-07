@@ -5,83 +5,65 @@
 #ifndef GARNET_LIB_MACHINA_GPU_RESOURCE_H_
 #define GARNET_LIB_MACHINA_GPU_RESOURCE_H_
 
-#include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
+#include <lib/fxl/macros.h>
 #include <virtio/gpu.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/machina/gpu_bitmap.h"
+#include <memory>
+#include <vector>
+
 #include "garnet/lib/machina/virtio_gpu.h"
 
 namespace machina {
 
-class GpuScanout;
-
-// A resource corresponds to a single display buffer.
-class GpuResource
-    : public fbl::SinglyLinkedListable<fbl::unique_ptr<GpuResource>> {
+// A 2D GPU resource encapsulating guest and host memory.
+class GpuResource {
  public:
-  static fbl::unique_ptr<GpuResource> Create(
-      const PhysMem& phys_mem, const virtio_gpu_resource_create_2d_t* request);
+  static virtio_gpu_ctrl_type Create(const PhysMem* phys_mem, uint32_t format,
+                                     uint32_t width, uint32_t height,
+                                     std::unique_ptr<GpuResource>* out);
+  GpuResource(GpuResource&&) = default;
 
-  // The driver will provide a scatter-gather list of memory pages to back
-  // the framebuffer in guest physical memory.
-  struct BackingPages
-      : public fbl::SinglyLinkedListable<fbl::unique_ptr<BackingPages>> {
-    uint64_t addr;
-    uint32_t length;
+  uint32_t width() const { return width_; }
+  uint32_t height() const { return height_; }
+  uint32_t stride() const { return width() * kPixelSizeInBytes; }
+  uint32_t pixel_size() const { return kPixelSizeInBytes; }
+  const uint8_t* data() const { return host_backing_.get(); }
 
-    BackingPages(uint64_t addr_, uint32_t length_)
-        : addr(addr_), length(length_) {}
-  };
-
-  GpuResource(const PhysMem& phys_mem, ResourceId, GpuBitmap);
-
-  const GpuBitmap& bitmap() const { return bitmap_; }
-
-  void AttachToScanout(GpuScanout* scanout) { scanout_ = scanout; }
-
-  void DetachFromScanout() { scanout_ = nullptr; }
-
-  virtio_gpu_ctrl_type SetScanout(GpuScanout* scanout);
-
-  // Handle a VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING command for this
-  // resource.
+  // Called in response to VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING. This command
+  // associates a set of guest memory pages with the resource.
   virtio_gpu_ctrl_type AttachBacking(const virtio_gpu_mem_entry_t* mem_entries,
                                      uint32_t num_entries);
 
-  // Handle a VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING command for this
-  // resource.
+  // Called in response to VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING. This command
+  // clears guest memory associations with the resource.
   virtio_gpu_ctrl_type DetachBacking();
 
-  // Handle a VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D command for this
-  // resource.
-  virtio_gpu_ctrl_type TransferToHost2D(
-      const virtio_gpu_transfer_to_host_2d_t* request);
-
-  // Handle a VIRTIO_GPU_CMD_RESOURCE_FLUSH command for this
-  // resource.
-  virtio_gpu_ctrl_type Flush(const virtio_gpu_resource_flush_t* request);
-
-  // Handle a VIRTIO_GPU_CMD_SET_SCANOUT command for this
-  // resource.
-  virtio_gpu_ctrl_type Flush(GpuScanout* scanout);
-
-  // Trait implementation for fbl::HashTable
-  ResourceId GetKey() const { return res_id_; }
-  static size_t GetHash(ResourceId key) { return key; }
+  // Called in response to VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D. This command
+  // notifies the device that it should walk the set of guest backing pages and
+  // copy the requested content region to host memory.
+  virtio_gpu_ctrl_type TransferToHost2D(const virtio_gpu_rect_t& rect,
+                                        uint64_t offset);
 
  private:
-  // Copies bytes from the linked list of backing pages in guest memory into
-  // a host resource.
+  GpuResource() = default;
+  FXL_DISALLOW_COPY_AND_ASSIGN(GpuResource);
+
   void CopyBytes(uint64_t offset, uint8_t* dest, size_t size);
 
-  const PhysMem& phys_mem_;
-  ResourceId res_id_;
-  fbl::SinglyLinkedList<fbl::unique_ptr<BackingPages>> backing_;
+  static constexpr uint32_t kPixelSizeInBytes = 4;
 
-  GpuBitmap bitmap_;
-  GpuScanout* scanout_;
+  const PhysMem* phys_mem_;
+  uint32_t format_;
+  uint32_t width_;
+  uint32_t height_;
+  struct BackingPage {
+    uint64_t addr;
+    uint32_t length;
+  };
+  std::vector<BackingPage> guest_backing_;
+  std::unique_ptr<uint8_t[]> host_backing_;
+  size_t host_backing_size_;
 };
 
 }  // namespace machina

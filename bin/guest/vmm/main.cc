@@ -145,33 +145,6 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
   return ZX_OK;
 }
 
-static zx_status_t setup_zircon_framebuffer(
-    machina::VirtioGpu* gpu, fbl::unique_ptr<machina::GpuScanout>* scanout) {
-  // Try software framebuffer.
-  zx_status_t status = machina::FramebufferScanout::Create(scanout);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return gpu->AddScanout(scanout->get());
-}
-
-static zx_status_t setup_scenic_framebuffer(
-    component::StartupContext* startup_context, machina::VirtioGpu* gpu,
-    InstanceControllerImpl* instance_controller,
-    fbl::unique_ptr<machina::GpuScanout>* scanout) {
-  fuchsia::ui::input::InputDispatcherPtr input_dispatcher;
-  instance_controller->GetInputDispatcher(input_dispatcher.NewRequest());
-  fbl::unique_ptr<ScenicScanout> scenic_scanout;
-  zx_status_t status =
-      ScenicScanout::Create(startup_context, std::move(input_dispatcher), &scenic_scanout);
-  if (status != ZX_OK) {
-    return status;
-  }
-  instance_controller->SetViewProvider(scenic_scanout.get());
-  *scanout = std::move(scenic_scanout);
-  return gpu->AddScanout(scanout->get());
-}
-
 static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
                                   GuestConfig* cfg) {
   GuestConfigParser parser(cfg);
@@ -341,13 +314,15 @@ int main(int argc, char** argv) {
   machina::VirtioRelativePointer mouse(input_dispatcher_impl.Mouse(),
                                        guest.phys_mem(), "machina-mouse",
                                        "serial-number");
-  machina::VirtioAbsolutePointer touch(
-      input_dispatcher_impl.Touch(), guest.phys_mem(), "machina-touch",
-      "serial-number");
+  machina::VirtioAbsolutePointer touch(input_dispatcher_impl.Touch(),
+                                       guest.phys_mem(), "machina-touch",
+                                       "serial-number");
   instance_controller.SetInputDispatcher(&input_dispatcher_impl);
 
   machina::VirtioGpu gpu(guest.phys_mem(), guest.device_dispatcher());
-  fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
+
+  std::unique_ptr<machina::FramebufferScanout> framebuffer_scanout;
+  std::unique_ptr<ScenicScanout> scenic_scanout;
 
   if (cfg.display() != GuestDisplay::NONE) {
     // Setup keyboard device.
@@ -384,7 +359,8 @@ int main(int argc, char** argv) {
 
     if (cfg.display() == GuestDisplay::FRAMEBUFFER) {
       // Setup GPU device.
-      status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
+      status = machina::FramebufferScanout::Create(gpu.scanout(),
+                                                   &framebuffer_scanout);
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to acquire framebuffer " << status;
         return status;
@@ -392,25 +368,26 @@ int main(int argc, char** argv) {
       // When displaying to the framebuffer, we should read input events
       // directly from the input devics.
       status = hid_event_source.Start();
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to start the HID event source " << status;
+        return status;
+      }
     } else {
       // Expose a view that can be composited by mozart. Input events will be
       // injected by the view events.
-      status = setup_scenic_framebuffer(startup_context.get(), &gpu, &instance_controller,
-                                        &gpu_scanout);
-      if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to create scenic view " << status;
-        return status;
-      }
+      fuchsia::ui::input::InputDispatcherPtr input_dispatcher;
+      instance_controller.GetInputDispatcher(input_dispatcher.NewRequest());
+      scenic_scanout = std::make_unique<ScenicScanout>(
+          startup_context.get(), std::move(input_dispatcher), gpu.scanout());
+      instance_controller.SetViewProvider(scenic_scanout.get());
     }
-    if (status == ZX_OK) {
-      status = gpu.Init();
-      if (status != ZX_OK) {
-        return status;
-      }
-      status = bus.Connect(gpu.pci_device());
-      if (status != ZX_OK) {
-        return status;
-      }
+    status = gpu.Init();
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = bus.Connect(gpu.pci_device());
+    if (status != ZX_OK) {
+      return status;
     }
   }
 
@@ -536,23 +513,10 @@ int main(int argc, char** argv) {
 
   guest.RegisterVcpuFactory(initialize_vcpu);
 
-  // GPU back-ends can take some time to initialize. Wait for them to be
-  // created before starting the VCPU so that we can ensure we have the
-  // framebuffer allocated before software attempts to interface with it.
-  auto start_task = [&loop, &guest, guest_ip] {
-    zx_status_t status = guest.StartVcpu(guest_ip, 0 /* id */);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to start VCPU-0 " << status;
-      loop.Quit();
-    }
-  };
-  if (gpu_scanout) {
-    gpu_scanout->WhenReady([&loop, &start_task] {
-      async::PostTask(loop.dispatcher(), start_task);
-    });
-
-  } else {
-    start_task();
+  status = guest.StartVcpu(guest_ip, 0 /* id */);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to start VCPU-0 " << status;
+    loop.Quit();
   }
 
   loop.Run();

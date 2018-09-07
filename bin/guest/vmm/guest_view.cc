@@ -10,22 +10,15 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/images/cpp/images.h>
 
-// static
-zx_status_t ScenicScanout::Create(component::StartupContext* startup_context,
-                                  fuchsia::ui::input::InputDispatcherPtr input_dispatcher,
-                                  fbl::unique_ptr<ScenicScanout>* out) {
-  *out = fbl::make_unique<ScenicScanout>(startup_context, std::move(input_dispatcher));
-  return ZX_OK;
-}
-
-ScenicScanout::ScenicScanout(component::StartupContext* startup_context,
-                             fuchsia::ui::input::InputDispatcherPtr input_dispatcher)
-    : input_dispatcher_(std::move(input_dispatcher)), startup_context_(startup_context) {
-  // The actual framebuffer can't be created until we've connected to the
-  // mozart service.
-  SetReady(false);
-
+ScenicScanout::ScenicScanout(
+    component::StartupContext* startup_context,
+    fuchsia::ui::input::InputDispatcherPtr input_dispatcher,
+    machina::GpuScanout* scanout)
+    : scanout_(scanout),
+      input_dispatcher_(std::move(input_dispatcher)),
+      startup_context_(startup_context) {
   startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
@@ -40,65 +33,91 @@ void ScenicScanout::CreateView(
   auto view_manager =
       startup_context_
           ->ConnectToEnvironmentService<::fuchsia::ui::viewsv1::ViewManager>();
-  view_ = fbl::make_unique<GuestView>(this, std::move(input_dispatcher_),
+  view_ = std::make_unique<GuestView>(scanout_, std::move(input_dispatcher_),
                                       std::move(view_manager),
                                       std::move(view_owner_request));
-  if (view_) {
-    view_->SetReleaseHandler([this] { view_.reset(); });
-  }
-  SetReady(true);
-}
-
-void ScenicScanout::InvalidateRegion(const machina::GpuRect& rect) {
-  async::PostTask(async_get_default_dispatcher(),
-                  [this] { view_->InvalidateScene(); });
+  view_->SetReleaseHandler([this] { view_.reset(); });
 }
 
 GuestView::GuestView(
-    machina::GpuScanout* scanout, fuchsia::ui::input::InputDispatcherPtr input_dispatcher,
+    machina::GpuScanout* scanout,
+    fuchsia::ui::input::InputDispatcherPtr input_dispatcher,
     ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
       background_node_(session()),
       material_(session()),
+      scanout_(scanout),
       input_dispatcher_(std::move(input_dispatcher)) {
   background_node_.SetMaterial(material_);
   parent_node().AddChild(background_node_);
 
-  image_info_.width = kGuestViewDisplayWidth;
-  image_info_.height = kGuestViewDisplayHeight;
-  image_info_.stride = kGuestViewDisplayWidth * 4;
-  image_info_.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
+  scanout_->SetFlushHandler(
+      [this](virtio_gpu_rect_t rect) { InvalidateScene(); });
 
-  // Allocate a framebuffer and attach it as a GPU scanout.
-  memory_ = fbl::make_unique<scenic::HostMemory>(
-      session(), scenic::Image::ComputeSize(image_info_));
-  machina::GpuBitmap bitmap(kGuestViewDisplayWidth, kGuestViewDisplayHeight,
-                            ZX_PIXEL_FORMAT_ARGB_8888,
-                            reinterpret_cast<uint8_t*>(memory_->data_ptr()));
-  scanout->SetBitmap(std::move(bitmap));
+  scanout_->SetUpdateSourceHandler([this](uint32_t width, uint32_t height) {
+    scanout_source_width_ = width;
+    scanout_source_height_ = height;
+    InvalidateScene();
+  });
 }
 
 GuestView::~GuestView() = default;
 
 void GuestView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {
-  if (!has_logical_size()) {
+  if (!has_logical_size() || !has_physical_size()) {
     return;
   }
 
-  const uint32_t width = logical_size().width;
-  const uint32_t height = logical_size().height;
+  if (physical_size().width != image_info_.width ||
+      physical_size().height != image_info_.height) {
+    image_info_.width = physical_size().width;
+    image_info_.height = physical_size().height;
+    image_info_.stride = image_info_.width * 4;
+    image_info_.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
+
+    // Allocate a framebuffer and attach it as a GPU scanout.
+    zx::vmo scanout_vmo;
+    auto vmo_size = images::ImageSize(image_info_);
+    zx_status_t status = zx::vmo::create(vmo_size, 0, &scanout_vmo);
+    FXL_CHECK(status == ZX_OK)
+        << "Scanout target VMO creation failed " << status;
+    zx::vmo scenic_vmo;
+    status = scanout_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &scenic_vmo);
+    FXL_CHECK(status == ZX_OK)
+        << "Scanout target VMO duplication failed " << status;
+    memory_ = std::make_unique<scenic::Memory>(
+        session(), std::move(scenic_vmo),
+        fuchsia::images::MemoryType::HOST_MEMORY);
+
+    scanout_->SetFlushTarget(std::move(scanout_vmo), vmo_size,
+                             image_info_.width, image_info_.height,
+                             image_info_.stride);
+  }
+
+  const float width = logical_size().width;
+  const float height = logical_size().height;
   scenic::Rectangle background_shape(session(), width, height);
   background_node_.SetShape(background_shape);
-
   static constexpr float kBackgroundElevation = 0.f;
   const float center_x = width * .5f;
   const float center_y = height * .5f;
-  background_node_.SetTranslation(center_x, center_y, kBackgroundElevation);
+  const float scale_x =
+      static_cast<float>(image_info_.width) / scanout_source_width_;
+  const float scale_y =
+      static_cast<float>(image_info_.height) / scanout_source_height_;
 
-  scenic::HostImage image(*memory_, 0u, image_info_);
+  // Scale the background node such that the scanout resource sub-region
+  // matches the image size. Ideally, this would just be a scale transform of
+  // the material itself.
+  // TODO(SCN-958): Materials should support transforms
+  background_node_.SetAnchor(-center_x, -center_y, 0.0f);
+  background_node_.SetTranslation(center_x, center_y, kBackgroundElevation);
+  background_node_.SetScale(scale_x, scale_y, 1.0f);
+
+  scenic::Image image(*memory_, 0u, image_info_);
   material_.SetTexture(image);
 
   view_ready_ = true;

@@ -89,19 +89,25 @@ class VirtioInprocessDevice
     : public VirtioDevice<DeviceId, NumQueues, ConfigType> {
  protected:
   VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
-                        VirtioDeviceConfig::ConfigDeviceFn config_device)
+                        VirtioDeviceConfig::ConfigDeviceFn config_device,
+                        VirtioDeviceConfig::ReadyDeviceFn ready_device)
       : VirtioInprocessDevice(
             phys_mem, device_features,
             fit::bind_member(this, &VirtioInprocessDevice::ConfigQueue),
             fit::bind_member(this, &VirtioInprocessDevice::NotifyQueue),
-            std::move(config_device)) {}
+            std::move(config_device), std::move(ready_device)) {}
+
+  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
+                        VirtioDeviceConfig::ConfigDeviceFn config_device)
+      : VirtioInprocessDevice(phys_mem, device_features,
+                              std::move(config_device), noop_ready_device) {}
 
   VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
                         VirtioDeviceConfig::NotifyQueueFn notify_queue)
       : VirtioInprocessDevice(
             phys_mem, device_features,
             fit::bind_member(this, &VirtioInprocessDevice::ConfigQueue),
-            std::move(notify_queue), noop_config_device) {}
+            std::move(notify_queue), noop_config_device, noop_ready_device) {}
 
   VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features)
       : VirtioInprocessDevice(phys_mem, device_features, noop_config_device) {}
@@ -157,11 +163,12 @@ class VirtioInprocessDevice
   VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
                         VirtioDeviceConfig::ConfigQueueFn config_queue,
                         VirtioDeviceConfig::NotifyQueueFn notify_queue,
-                        VirtioDeviceConfig::ConfigDeviceFn config_device)
+                        VirtioDeviceConfig::ConfigDeviceFn config_device,
+                        VirtioDeviceConfig::ReadyDeviceFn ready_device)
       : VirtioDevice<DeviceId, NumQueues, ConfigType>(
             phys_mem, device_features, std::move(config_queue),
             std::move(notify_queue), std::move(config_device),
-            noop_ready_device) {
+            std::move(ready_device)) {
     for (int i = 0; i < NumQueues; ++i) {
       queues_[i].set_phys_mem(&phys_mem);
       queues_[i].set_interrupt(

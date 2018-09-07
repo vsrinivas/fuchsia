@@ -8,6 +8,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <virtio/gpu.h>
+#include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/gpu_scanout.h"
@@ -15,23 +16,27 @@
 namespace machina {
 
 // A scanout that renders to a zircon framebuffer device.
-class FramebufferScanout : public GpuScanout {
+class FramebufferScanout {
  public:
   ~FramebufferScanout();
 
-  // Create a scanout that owns a zircon framebuffer device.
-  static zx_status_t Create(fbl::unique_ptr<GpuScanout>* out);
-
-  // | GpuScanout|
-  void InvalidateRegion(const GpuRect& rect) override;
-
-  void SetResource(GpuResource* res,
-                   const virtio_gpu_set_scanout_t* request) override;
+  // Create a zircon framebuffer device and set it as the target for scanout.
+  static zx_status_t Create(GpuScanout* scanout,
+                            std::unique_ptr<FramebufferScanout>* out);
+  void OnFlush(virtio_gpu_rect_t rect);
 
  private:
-  FramebufferScanout(GpuBitmap surface, uint8_t* buf);
-
+  FramebufferScanout() = default;
+  GpuScanout* scanout_;
+  uint32_t framebuffer_width_;
+  uint32_t framebuffer_height_;
+  uint32_t framebuffer_linear_stride_px_;
+  zx_pixel_format_t framebuffer_format_;
   uint8_t* buf_;
+  bool direct_rendering_ok_;
+  zx::vmo compatible_vmo_;
+  size_t compatible_vmo_size_;
+  uintptr_t compatible_vmo_data_;
 };
 
 }  // namespace machina
