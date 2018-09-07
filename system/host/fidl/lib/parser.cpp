@@ -149,9 +149,9 @@ std::unique_ptr<raw::CompoundIdentifier> Parser::ParseCompoundIdentifier() {
     std::vector<std::unique_ptr<raw::Identifier>> components;
 
     components.emplace_back(ParseIdentifier());
-    Token first_token = components[0]->start_;
     if (!Ok())
         return Fail();
+    Token first_token = components[0]->start_;
 
     auto parse_component = [&components, this]() {
         switch (Peek()) {
