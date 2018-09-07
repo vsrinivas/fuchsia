@@ -19,7 +19,6 @@ namespace {
 constexpr char kConfigBinProtoPath[] =
     "/pkg/data/firebase_auth_cobalt_config.binproto";
 constexpr int32_t kCobaltAuthFailureMetricId = 3;
-constexpr int32_t kCobaltNoOpEncodingId = 3;
 
 // Returns true if the authentication failure may be transient.
 bool IsRetriableError(fuchsia::modular::auth::Status status) {
@@ -50,14 +49,10 @@ FirebaseAuthImpl::FirebaseAuthImpl(
       cobalt_client_name_(std::move(config.cobalt_client_name)),
       task_runner_(dispatcher) {
   if (startup_context) {
-    fsl::SizedVmo config;
-    FXL_CHECK(fsl::VmoFromFilename(kConfigBinProtoPath, &config))
-        << "Could not read Cobalt config file into VMO";
-
-    cobalt_context_ = cobalt::MakeCobaltContext(dispatcher, startup_context,
-                                                std::move(config));
+    cobalt_logger_ = cobalt::NewCobaltLogger(dispatcher, startup_context,
+                                             kConfigBinProtoPath);
   } else {
-    cobalt_context_ = nullptr;
+    cobalt_logger_ = nullptr;
   }
 }
 
@@ -65,13 +60,13 @@ FirebaseAuthImpl::FirebaseAuthImpl(
     Config config, async_dispatcher_t* dispatcher,
     fuchsia::modular::auth::TokenProviderPtr token_provider,
     std::unique_ptr<backoff::Backoff> backoff,
-    std::unique_ptr<cobalt::CobaltContext> cobalt_context)
+    std::unique_ptr<cobalt::CobaltLogger> cobalt_logger)
     : api_key_(std::move(config.api_key)),
       token_provider_(std::move(token_provider)),
       backoff_(std::move(backoff)),
       max_retries_(config.max_retries),
       cobalt_client_name_(std::move(config.cobalt_client_name)),
-      cobalt_context_(std::move(cobalt_context)),
+      cobalt_logger_(std::move(cobalt_logger)),
       task_runner_(dispatcher) {}
 
 void FirebaseAuthImpl::set_error_handler(fit::closure on_error) {
@@ -144,20 +139,11 @@ void FirebaseAuthImpl::GetToken(
 }
 
 void FirebaseAuthImpl::ReportError(fuchsia::modular::auth::Status status) {
-  if (cobalt_client_name_.empty() || cobalt_context_ == nullptr) {
+  if (cobalt_client_name_.empty() || cobalt_logger_ == nullptr) {
     return;
   }
-  auto parts = fidl::VectorPtr<fuchsia::cobalt::ObservationValue>::New(2);
-  parts->at(0).name = "client-name";
-  parts->at(0).encoding_id = kCobaltNoOpEncodingId;
-  parts->at(0).value.set_string_value(cobalt_client_name_);
-
-  parts->at(1).name = "failure-type";
-  parts->at(1).encoding_id = kCobaltNoOpEncodingId;
-  parts->at(1).value.set_index_value(static_cast<uint32_t>(status));
-
-  cobalt::CobaltObservation observation(
-      static_cast<uint32_t>(kCobaltAuthFailureMetricId), std::move(parts));
-  cobalt_context_->ReportObservation(observation);
+  cobalt_logger_->LogEventCount(kCobaltAuthFailureMetricId,
+                                static_cast<uint32_t>(status),
+                                cobalt_client_name_, zx::duration(0), 1);
 }
 }  // namespace firebase_auth

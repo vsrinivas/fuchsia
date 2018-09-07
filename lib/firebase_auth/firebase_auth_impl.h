@@ -14,10 +14,10 @@
 #include <lib/backoff/backoff.h>
 #include <lib/callback/cancellable.h>
 #include <lib/callback/scoped_task_runner.h>
+#include <lib/cobalt/cpp/cobalt_logger.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 
-#include "peridot/lib/cobalt/cobalt.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 
 namespace firebase_auth {
@@ -53,7 +53,7 @@ class FirebaseAuthImpl : public FirebaseAuth {
   FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
                    fuchsia::modular::auth::TokenProviderPtr token_provider,
                    std::unique_ptr<backoff::Backoff> backoff,
-                   std::unique_ptr<cobalt::CobaltContext> cobalt_context);
+                   std::unique_ptr<cobalt::CobaltLogger> cobalt_logger);
 
   // FirebaseAuth:
   void set_error_handler(fit::closure on_error) override;
@@ -86,7 +86,7 @@ class FirebaseAuthImpl : public FirebaseAuth {
 
   // Members for Cobalt reporting.
   const std::string cobalt_client_name_;
-  std::unique_ptr<cobalt::CobaltContext> cobalt_context_;
+  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger_;
 
   // Must be the last member field.
   callback::ScopedTaskRunner task_runner_;
