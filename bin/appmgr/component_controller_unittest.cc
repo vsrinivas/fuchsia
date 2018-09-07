@@ -6,6 +6,7 @@
 
 #include <fs/pseudo-dir.h>
 #include <fs/remote-dir.h>
+#include <fs/synchronous-vfs.h>
 #include <lib/fdio/spawn.h>
 
 #include "gtest/gtest.h"
@@ -56,6 +57,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
+    vfs_.SetDispatcher(async_get_default_dispatcher());
 
     // create child job
     zx_status_t status = zx::job::create(*zx::job::default_job(), 0u, &job_);
@@ -100,6 +102,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
   zx::job job_;
   std::string process_koid_;
   zx::process process_;
+  fs::SynchronousVfs vfs_;
 };
 
 class ComponentBridgeTest : public gtest::RealLoopFixture,
@@ -109,6 +112,7 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
       : binding_(this), binding_error_handler_called_(false) {}
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
+    vfs_.SetDispatcher(async_get_default_dispatcher());
     binding_.Bind(remote_controller_.NewRequest());
     binding_.set_error_handler([this] {
       binding_error_handler_called_ = true;
@@ -150,6 +154,7 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
   FakeRunner runner_;
   ::fidl::Binding<fuchsia::sys::ComponentController> binding_;
   fuchsia::sys::ComponentControllerPtr remote_controller_;
+  fs::SynchronousVfs vfs_;
   int64_t errcode_ = 1;
 
   bool binding_error_handler_called_;
@@ -310,12 +315,18 @@ TEST_F(ComponentControllerTest, DetachController) {
 TEST_F(ComponentControllerTest, Hub) {
   zx::channel export_dir, export_dir_req;
   ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(),
+                      std::move(export_dir));
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
   auto component =
       create_component(component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
                        std::move(export_dir_req));
+
+  RunLoopWithTimeoutOrUntil(
+      [this, &component] { return path_exists(component->hub_dir(), "out"); },
+      zx::sec(10));
 
   EXPECT_STREQ(get_value(component->hub_dir(), "name").c_str(), "test-label");
   EXPECT_STREQ(get_value(component->hub_dir(), "args").c_str(), "test-arg");
@@ -479,12 +490,18 @@ TEST_F(ComponentBridgeTest, DetachController) {
 TEST_F(ComponentBridgeTest, Hub) {
   zx::channel export_dir, export_dir_req;
   ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(),
+                      std::move(export_dir));
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
   auto component = create_component_bridge(
       component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
       std::move(export_dir_req));
+
+  RunLoopWithTimeoutOrUntil(
+      [this, &component] { return path_exists(component->hub_dir(), "out"); },
+      zx::sec(10));
 
   EXPECT_STREQ(get_value(component->hub_dir(), "name").c_str(), "test-label");
   EXPECT_STREQ(get_value(component->hub_dir(), "args").c_str(), "test-arg");

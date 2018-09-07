@@ -138,9 +138,24 @@ ComponentControllerBase::ComponentControllerBase(
       FXL_LOG(ERROR) << "Failed to clone exported directory.";
     } else {
       zx::channel chan(std::move(dir_client));
-      hub_.PublishOut(fbl::AdoptRef(new fs::RemoteDir(fbl::move(chan))));
+      out_wait_ = std::make_unique<OutputWait>(
+          this, exported_dir_.get(), ZX_CHANNEL_PEER_CLOSED | ZX_USER_SIGNAL_0);
+      output_dir_ = fbl::AdoptRef(new fs::RemoteDir(fbl::move(chan)));
+      zx_status_t status = out_wait_->Begin(async_get_default_dispatcher());
+      FXL_DCHECK(status == ZX_OK);
     }
   }
+}
+
+void ComponentControllerBase::OutputDirectoryHandler(
+    async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+    const zx_packet_signal* signal) {
+  // Publish the output directory only if it was mounted.
+  // Vfs directories signal USER_SIGNAL_0 when mounted.
+  if (signal->observed & ZX_USER_SIGNAL_0) {
+    hub_.PublishOut(output_dir_);
+  }
+  out_wait_.reset();
 }
 
 ComponentControllerBase::~ComponentControllerBase() {}

@@ -131,6 +131,14 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   fidl::Binding<fuchsia::sys::ComponentController> binding_;
 
  private:
+  // Called when the output directory is either mounted or closed.
+  void OutputDirectoryHandler(async_dispatcher_t* dispatcher,
+                              async::WaitBase* wait, zx_status_t status,
+                              const zx_packet_signal* signal);
+  using OutputWait =
+      async::WaitMethod<ComponentControllerBase,
+                        &ComponentControllerBase::OutputDirectoryHandler>;
+
   std::string label_;
   std::string hub_instance_id_;
 
@@ -139,6 +147,9 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   zx::channel exported_dir_;
 
   fxl::RefPtr<Namespace> ns_;
+
+  std::unique_ptr<OutputWait> out_wait_;
+  fbl::RefPtr<fs::Vnode> output_dir_;
 };
 
 class ComponentControllerImpl : public ComponentControllerBase {
