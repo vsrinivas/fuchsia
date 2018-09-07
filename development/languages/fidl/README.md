@@ -42,6 +42,9 @@ Fuchsia has adopted a [readability rubric](../../api/fidl.md) for FIDL libraries
 
 See the [tutorial](tutorial.md) to learn about Fidl service development.
 
+FIDL Plugins exist for multiple editors and IDEs.  See the
+[editor page](editors.md) to learn more.
+
 ## FIDL Tuning Proposals
 
 Substantial changes to FIDL (whether the language, the wire format, or
