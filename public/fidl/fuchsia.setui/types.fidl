@@ -22,7 +22,7 @@ struct TimeZoneInfo {
     /// To update the time zone, set this value.
     TimeZone? current;
 
-    /// An ordered list of the availble time zones.
+    /// An ordered list of the available time zones.
     vector<TimeZone> available;
 };
 
@@ -107,16 +107,19 @@ struct WirelessInterface {
     WirelessAccessPoint current_access_point;
 
     /// The Available networks to connect to. (read-only)
-    vector<WirelessAccessPoint> availble_access_points;
+    vector<WirelessAccessPoint> available_access_points;
+};
+
+union NetworkInterface {
+    WiredInterface wired_interface;
+
+    WirelessInterface wireless_interface;
 };
 
 struct NetworkState {
     /// The overall connection status. (read-only)
     ConnectionStatus status;
 
-    /// The available wireless interfaces. (read-only)
-    vector<WirelessInterface> wireless_interfaces;
-
-    /// The available wired_interfaces. (read-only)
-    vector<WiredInterface> wired_interfaces;
+    /// The available interfaces. (read-only)
+    vector<NetworkInterface> interfaces;
 };
