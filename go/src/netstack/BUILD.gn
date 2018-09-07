@@ -13,7 +13,9 @@ package("netstack") {
     ":netstack_bin",
   ]
 
-  binary = "netstack"
+  binaries = [ 
+    { name = "netstack" },
+  ]
 
   meta = [
     {
