@@ -75,6 +75,7 @@ zx_status_t Station::HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg) {
 
 zx_status_t Station::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
     ZX_DEBUG_ASSERT(pkt->peer() == Packet::Peer::kWlan);
+    WLAN_STATS_INC(rx_frame.in);
 
     if (auto possible_mgmt_frame = MgmtFrameView<>::CheckType(pkt.get())) {
         auto mgmt_frame = possible_mgmt_frame.CheckLength();

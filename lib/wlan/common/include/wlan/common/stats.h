@@ -121,6 +121,7 @@ struct ClientMlmeStats {
     PacketCounter data_frame;
     PacketCounter mgmt_frame;
     PacketCounter tx_frame;
+    PacketCounter rx_frame;
     RssiStats assoc_data_rssi;
     RssiStats beacon_rssi;
     ::fuchsia::wlan::stats::ClientMlmeStats ToFidl() const {
@@ -128,6 +129,7 @@ struct ClientMlmeStats {
                                                        .data_frame = data_frame.ToFidl(),
                                                        .mgmt_frame = mgmt_frame.ToFidl(),
                                                        .tx_frame = tx_frame.ToFidl(),
+                                                       .rx_frame = rx_frame.ToFidl(),
                                                        .assoc_data_rssi = assoc_data_rssi.ToFidl(),
                                                        .beacon_rssi = beacon_rssi.ToFidl()};
     };
@@ -136,6 +138,7 @@ struct ClientMlmeStats {
         data_frame.Reset();
         mgmt_frame.Reset();
         tx_frame.Reset();
+        rx_frame.Reset();
         assoc_data_rssi.Reset();
         beacon_rssi.Reset();
     }
