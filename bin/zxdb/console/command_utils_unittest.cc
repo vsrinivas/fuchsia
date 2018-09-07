@@ -8,6 +8,8 @@
 
 #include <limits>
 
+#include "garnet/bin/zxdb/client/symbols/function.h"
+#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -166,4 +168,56 @@ TEST(CommandUtils, ParseHostPort) {
   EXPECT_TRUE(ParseHostPort("google.com:0", &host, &port).has_error());
   EXPECT_TRUE(ParseHostPort("google.com:99999999", &host, &port).has_error());
 }
+
+TEST(CommandUtils, DescribeLocation) {
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
+  EXPECT_EQ("<invalid address>", DescribeLocation(Location(), true));
+
+  // Address-only location.
+  EXPECT_EQ(
+      "0x12345",
+      DescribeLocation(Location(Location::State::kAddress, 0x12345), false));
+
+  // Function-only location.
+  fxl::RefPtr<Function> function(fxl::MakeRefCounted<Function>());
+  function->set_assigned_name("Func");
+  function->set_code_ranges({{0x1200, 0x1300}});
+  EXPECT_EQ("Func() + 0x34 (no line info)",
+            DescribeLocation(Location(0x1234, FileLine(), 0, symbol_context,
+                                      LazySymbol(function)),
+                             false));
+
+  // Same as above but location is before the function address (probably
+  // something is corrupt). It should omit the offset.
+  EXPECT_EQ("Func()",
+            DescribeLocation(Location(0x1100, FileLine(), 0, symbol_context,
+                                      LazySymbol(function)),
+                             false));
+
+  // File/line-only location.
+  EXPECT_EQ("foo.cc:21",
+            DescribeLocation(Location(0x1234, FileLine("/path/foo.cc", 21), 0,
+                                      symbol_context),
+                             false));
+
+  // Full location.
+  Location loc(0x1234, FileLine("/path/foo.cc", 21), 0, symbol_context,
+               LazySymbol(function));
+  EXPECT_EQ("0x1234, Func() • foo.cc:21", DescribeLocation(loc, true));
+  EXPECT_EQ("Func() • foo.cc:21", DescribeLocation(loc, false));
+}
+
+TEST(CommandUtils, DescribeFileLine) {
+  FileLine fl("/path/to/foo.cc", 21);
+  EXPECT_EQ("/path/to/foo.cc:21", DescribeFileLine(fl, true));
+  EXPECT_EQ("foo.cc:21", DescribeFileLine(fl, false));
+
+  // Missing line number.
+  EXPECT_EQ("foo.cc:?", DescribeFileLine(FileLine("/path/foo.cc", 0), false));
+
+  // Missing both.
+  EXPECT_EQ("?:?", DescribeFileLine(FileLine(), false));
+}
+
 }  // namespace zxdb

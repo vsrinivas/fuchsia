@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/client/symbols/dwarf_symbol_factory.h"
 
+#include <algorithm>
+
 #include "garnet/bin/zxdb/client/symbols/array_type.h"
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
 #include "garnet/bin/zxdb/client/symbols/code_block.h"
@@ -46,6 +48,11 @@ CodeBlock::CodeRanges MakeCodeRanges(
       code_ranges.push_back(CodeBlock::CodeRange(*low_pc, high_pc->value));
     }
   }
+
+  // Generally DWARF will put these in order, but we want to guarantee they're
+  // sorted.
+  std::sort(code_ranges.begin(), code_ranges.end());
+
   return code_ranges;
 }
 

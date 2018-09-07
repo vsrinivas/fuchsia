@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
+#include "garnet/bin/zxdb/client/symbols/function.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/symbols/symbol_utils.h"
 #include "garnet/bin/zxdb/client/target.h"
@@ -240,9 +241,8 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
                                context->IdForTarget(settings.scope_target));
     case BreakpointSettings::Scope::kThread:
       return fxl::StringPrintf(
-          "pr %d t %d",
-          context->IdForTarget(
-              settings.scope_thread->GetProcess()->GetTarget()),
+          "pr %d t %d", context->IdForTarget(
+                            settings.scope_thread->GetProcess()->GetTarget()),
           context->IdForThread(settings.scope_thread));
   }
   FXL_NOTREACHED();
@@ -364,20 +364,47 @@ std::string DescribeLocation(const Location& loc, bool always_show_address) {
   if (always_show_address)
     result = fxl::StringPrintf("0x%" PRIx64 ", ", loc.address());
 
-  if (loc.function()) {
-    const std::string& func_name = loc.function().Get()->GetFullName();
-    if (!func_name.empty())
-      result += func_name + " " + GetBullet() + " ";
+  const Function* func = loc.function().Get()->AsFunction();
+  if (func) {
+    const std::string& func_name = func->GetFullName();
+    if (!func_name.empty()) {
+      result += func_name;
+      if (loc.file_line().is_valid()) {
+        // Separator between function and file/line.
+        result += " " + GetBullet() + " ";
+      } else if (func->GetFirstAddress() <= loc.address()) {
+        // Inside a function but no file/line known. Show the offset.
+        result += fxl::StringPrintf(" + 0x%" PRIx64 " (no line info)",
+                                    loc.address() - func->GetFirstAddress());
+      }
+    }
   }
-  result += DescribeFileLine(loc.file_line());
+
+  if (loc.file_line().is_valid())
+    result += DescribeFileLine(loc.file_line());
   return result;
 }
 
 std::string DescribeFileLine(const FileLine& file_line, bool show_path) {
-  return fxl::StringPrintf("%s:%d",
-                           show_path ? file_line.file().c_str()
-                                     : file_line.GetFileNamePart().c_str(),
-                           file_line.line());
+  std::string result;
+
+  // Name.
+  if (file_line.file().empty())
+    result = "?";
+  else if (show_path)
+    result = file_line.file();
+  else
+    result = file_line.GetFileNamePart();
+
+  result.push_back(':');
+
+  // Line.
+  if (file_line.line() == 0)
+    result.push_back('?');
+  else
+    result.append(fxl::StringPrintf("%d", file_line.line()));
+
+  return result;
 }
 
 }  // namespace zxdb

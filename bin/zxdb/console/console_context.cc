@@ -458,10 +458,10 @@ void ConsoleContext::OnThreadStopped(
   const Location& location = frames[0]->GetLocation();
   out.Append("at ");
   out.Append(DescribeLocation(location, false));
-  if (location.file_line().file().empty()) {
-    out.Append(" (no symbol info)\n");
-  } else {
+  if (location.has_symbols()) {
     out.Append("\n");
+  } else {
+    out.Append(" (no symbol info)\n");
   }
   console->Output(std::move(out));
   Err err = OutputSourceContext(thread->GetProcess(), location,

@@ -36,9 +36,11 @@ class Location {
   bool is_valid() const { return state_ != State::kInvalid; }
 
   // The different between "symbolized" and "has_symbols" is that the former
-  // means we tried to symbolize it, and the latter means we actually succeeded.
+  // means we tried to symbolize it, and the latter means we actually
+  // succeeded to symbolize EITHER the line or the function. One or the other
+  // could be missing, however.
   bool is_symbolized() const { return state_ == State::kSymbolized; }
-  bool has_symbols() const { return file_line_.is_valid(); }
+  bool has_symbols() const { return file_line_.is_valid() || function_; }
 
   // The absolute address of this location.
   uint64_t address() const { return address_; }

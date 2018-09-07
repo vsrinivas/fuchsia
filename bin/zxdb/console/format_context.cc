@@ -102,7 +102,8 @@ OutputBuffer HighlightLine(std::string str, int column) {
 
 Err OutputSourceContext(Process* process, const Location& location,
                         SourceAffinity source_affinity) {
-  if (source_affinity != SourceAffinity::kAssembly && location.has_symbols()) {
+  if (source_affinity != SourceAffinity::kAssembly &&
+      location.file_line().is_valid()) {
     // Synchronous source output.
     FormatSourceOpts source_opts;
     source_opts.active_line = location.file_line().line();

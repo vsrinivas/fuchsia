@@ -14,6 +14,12 @@ CodeBlock::~CodeBlock() = default;
 
 const CodeBlock* CodeBlock::AsCodeBlock() const { return this; }
 
+uint64_t CodeBlock::GetFirstAddress() const {
+  if (code_ranges_.empty())
+    return 0;
+  return code_ranges_[0].first;
+}
+
 bool CodeBlock::ContainsAddress(const SymbolContext& symbol_context,
                                 uint64_t absolute_address) const {
   if (code_ranges_.empty())

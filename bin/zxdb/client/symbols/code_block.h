@@ -28,7 +28,8 @@ class CodeBlock : public Symbol {
   // The valid ranges of code for this block. In many cases there will be only
   // one range (most functions specify DW_AT_low_pc and DW_AT_high_pc), but
   // some blocks, especially inlined subroutines, may be at multiple
-  // discontiguous ranges in the code (DW_AT_ranges are specified).
+  // discontiguous ranges in the code (DW_AT_ranges are specified). In this
+  // case, the ranges will be in sorted order.
   //
   // Some lexical blocks won't have location information in them. These are
   // often strictly to hold groups of variables, each of which has their own
@@ -40,6 +41,9 @@ class CodeBlock : public Symbol {
   // convenient to just have one type representing both.
   const CodeRanges& code_ranges() const { return code_ranges_; }
   void set_code_ranges(CodeRanges r) { code_ranges_ = std::move(r); }
+
+  // The beginning of the first code range, if any. Otherwise 0.
+  uint64_t GetFirstAddress() const;
 
   // The lexical blocks that are children of this one.
   const std::vector<LazySymbol>& inner_blocks() const { return inner_blocks_; }
