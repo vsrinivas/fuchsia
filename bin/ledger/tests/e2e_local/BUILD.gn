@@ -10,6 +10,7 @@ executable("e2e_local") {
   testonly = true
 
   sources = [
+    "get_ledger_test.cc",
     "ledger_e2e_test.cc",
   ]
 
@@ -18,6 +19,7 @@ executable("e2e_local") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/bin/ledger/fidl",
+    "//peridot/bin/ledger/testing:get_ledger",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/testing/cloud_provider",
     "//peridot/lib/scoped_tmpfs",

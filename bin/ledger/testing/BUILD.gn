@@ -13,8 +13,8 @@ source_set("lib") {
   sources = [
     "data_generator.cc",
     "data_generator.h",
-    "get_ledger.cc",
-    "get_ledger.h",
+    "get_page_ensure_initialized.cc",
+    "get_page_ensure_initialized.h",
     "ledger_matcher.cc",
     "ledger_matcher.h",
     "page_data_generator.cc",
@@ -32,22 +32,18 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/fidl/include",
-    "//peridot/bin/ledger/fidl_helpers",
-    "//peridot/bin/ledger/filesystem",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing:service_account",
     "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/fidl/fuchsia.ledger.cloud",
     "//peridot/public/fidl/fuchsia.modular.auth",
     "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace-provider",
   ]
@@ -94,11 +90,40 @@ source_set("ledger_instance_factory") {
   configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
+# TODO(https://fuchsia.atlassian.net/projects/LE/issues/LE-607): Consider moving to benchmarks/.
+source_set("get_ledger") {
+  testonly = true
+
+  sources = [
+    "get_ledger.cc",
+    "get_ledger.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/fidl/include",
+    "//peridot/bin/ledger/filesystem",
+    "//peridot/lib/convert",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//garnet/public/lib/callback",
+    "//peridot/bin/ledger/fidl",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
 source_set("unittests") {
   testonly = true
 
   sources = [
-    "get_ledger_unittest.cc",
     "ledger_app_instance_factory_unittest.cc",
     "ledger_matcher_unittest.cc",
   ]

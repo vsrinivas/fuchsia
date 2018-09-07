@@ -8,6 +8,7 @@
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {

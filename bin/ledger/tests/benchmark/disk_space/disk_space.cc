@@ -20,6 +20,7 @@
 #include "garnet/public/lib/callback/waiter.h"
 #include "peridot/bin/ledger/filesystem/get_directory_content_size.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
+#include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 

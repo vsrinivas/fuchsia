@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/waiter.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/vector.h>
@@ -14,7 +17,7 @@
 
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
-#include "peridot/bin/ledger/testing/get_ledger.h"
+#include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/lib/convert/convert.h"
 

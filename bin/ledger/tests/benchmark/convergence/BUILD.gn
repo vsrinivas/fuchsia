@@ -22,6 +22,7 @@ executable("ledger_benchmark_convergence") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firestore/testing",
+    "//peridot/bin/ledger/testing:get_ledger",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/convert",
     "//peridot/public/fidl/fuchsia.ledger",

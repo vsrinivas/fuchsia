@@ -19,6 +19,7 @@ source_set("sync") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/storage/public",
+    "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",
   ]

@@ -8,8 +8,10 @@
 #include <utility>
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
+#include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/files/unique_fd.h>
@@ -17,6 +19,7 @@
 #include <lib/svc/cpp/services.h>
 
 #include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
@@ -86,35 +89,6 @@ void GetLedger(component::StartupContext* context,
               });
               callback(Status::OK, std::move(*ledger));
             });
-      });
-}
-
-void GetPageEnsureInitialized(
-    LedgerPtr* ledger, PageIdPtr requested_id,
-    fit::function<void()> error_handler,
-    fit::function<void(Status, PagePtr, PageId)> callback) {
-  auto page = std::make_unique<PagePtr>();
-  auto request = page->NewRequest();
-  (*ledger)->GetPage(
-      std::move(requested_id), std::move(request),
-      [page = std::move(page), error_handler = std::move(error_handler),
-       callback = std::move(callback)](Status status) mutable {
-        if (status != Status::OK) {
-          FXL_LOG(ERROR) << "Failure while getting a page.";
-          callback(status, nullptr, {});
-          return;
-        }
-
-        page->set_error_handler([error_handler = std::move(error_handler)] {
-          FXL_LOG(ERROR) << "The page connection was closed, quitting.";
-          error_handler();
-        });
-
-        auto page_ptr = (*page).get();
-        page_ptr->GetId([page = std::move(page),
-                         callback = std::move(callback)](PageId page_id) {
-          callback(Status::OK, std::move(*page), page_id);
-        });
       });
 }
 

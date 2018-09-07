@@ -9,12 +9,8 @@
 #include <string>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <fuchsia/modular/auth/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/strings/string_view.h>
 
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
@@ -31,14 +27,6 @@ void GetLedger(component::StartupContext* context,
                const DetachedPath& ledger_repository_path,
                fit::function<void()> error_handler,
                fit::function<void(Status, LedgerPtr)> callback);
-
-// Retrieves the requested page of the given Ledger instance amd returns after
-// ensuring that it is initialized. If |id| is nullptr, a new page with a unique
-// id is created.
-void GetPageEnsureInitialized(
-    LedgerPtr* ledger, PageIdPtr requested_id,
-    fit::function<void()> error_handler,
-    fit::function<void(Status, PagePtr, PageId)> callback);
 
 // Kills the remote ledger process controlled by |controller|.
 void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller);
