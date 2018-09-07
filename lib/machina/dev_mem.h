@@ -20,12 +20,12 @@ class DevMem {
     zx_gpaddr_t addr;
     size_t size;
 
-    bool operator<(const Range& r) const { return addr + size < r.addr; }
+    bool operator<(const Range& r) const { return addr + size <= r.addr; }
   };
   using RangeSet = std::set<Range>;
 
   bool AddRange(zx_gpaddr_t addr, size_t size) {
-    return addr < kAddrLowerBound || addr >= kAddrUpperBound
+    return size == 0 || addr < kAddrLowerBound || addr >= kAddrUpperBound
                ? false
                : ranges.emplace(Range{addr, size}).second;
   }

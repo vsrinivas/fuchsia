@@ -39,5 +39,23 @@ TEST(DevMemTest, NoOverlappingRanges) {
   EXPECT_FALSE(dev_mem.AddRange(kGoodDeviceAddr + 0x1fff, 2));
 }
 
+TEST(DevMemTest, CanHaveAdjacentRanges) {
+  DevMem dev_mem;
+
+  EXPECT_TRUE(dev_mem.AddRange(kGoodDeviceAddr, 0x2000));
+
+  EXPECT_TRUE(dev_mem.AddRange(kGoodDeviceAddr - 1, 1));
+  EXPECT_TRUE(dev_mem.AddRange(kGoodDeviceAddr + 0x2000, 1));
+}
+
+TEST(DevMemTest, SizedRanges) {
+  DevMem dev_mem;
+
+  EXPECT_FALSE(dev_mem.AddRange(kGoodDeviceAddr, 0));
+  EXPECT_FALSE(dev_mem.AddRange(0, 0));
+  EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrLowerBound - 1, 0));
+  EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrUpperBound, 0));
+}
+
 }  // namespace
 }  // namespace machina
