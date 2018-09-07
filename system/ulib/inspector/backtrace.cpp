@@ -219,7 +219,13 @@ btprint_callback(void* vdata, uintptr_t pc, const char* filename, int lineno,
 }
 
 static void btprint(FILE* f, DebugInfoCache* di_cache,
-                    int n, uintptr_t pc, uintptr_t sp) {
+                    int n, uintptr_t pc, uintptr_t sp,
+                    bool use_new_format) {
+    if (use_new_format) {
+        fprintf(f, "{{{bt: %#" PRIxPTR "}}}\n", pc);
+        return;
+    }
+
     inspector_dsoinfo_t* dso;
     backtrace_state* bt_state;
     auto status = di_cache->GetDebugInfo(pc, &dso, &bt_state);
@@ -273,12 +279,13 @@ static int dso_lookup_for_unw(void* context, unw_word_t pc,
     return 1;
 }
 
-extern "C"
-void inspector_print_backtrace(FILE* f,
-                               zx_handle_t process, zx_handle_t thread,
-                               inspector_dsoinfo_t* dso_list,
-                               uintptr_t pc, uintptr_t sp, uintptr_t fp,
-                               bool use_libunwind) {
+static
+void inspector_print_backtrace_impl(FILE* f,
+                                    zx_handle_t process, zx_handle_t thread,
+                                    inspector_dsoinfo_t* dso_list,
+                                    uintptr_t pc, uintptr_t sp, uintptr_t fp,
+                                    bool use_libunwind,
+                                    bool use_new_format) {
     // Set up libunwind if requested.
 
     bool libunwind_ok = use_libunwind;
@@ -337,7 +344,7 @@ void inspector_print_backtrace(FILE* f,
     // On with the show.
 
     int n = 1;
-    btprint(f, &di_cache, n++, pc, sp);
+    btprint(f, &di_cache, n++, pc, sp, use_new_format);
     while ((sp >= 0x1000000) && (n < 50)) {
         if (libunwind_ok) {
             int ret = unw_step(&cursor);
@@ -362,12 +369,34 @@ void inspector_print_backtrace(FILE* f,
                 break;
             }
         }
-        btprint(f, &di_cache, n++, pc, sp);
+        btprint(f, &di_cache, n++, pc, sp, use_new_format);
     }
-    fprintf(f, "bt#%02d: end\n", n);
+    if (!use_new_format) {
+        fprintf(f, "bt#%02d: end\n", n);
+    }
 
     unw_destroy_addr_space(remote_as);
     unw_destroy_fuchsia(fuchsia);
+}
+
+extern "C"
+void inspector_print_backtrace_markup(FILE* f,
+                                      zx_handle_t process, zx_handle_t thread,
+                                      inspector_dsoinfo_t* dso_list,
+                                      uintptr_t pc, uintptr_t sp, uintptr_t fp,
+                                      bool use_libunwind) {
+    inspector_print_backtrace_impl(f, process, thread, dso_list, pc, sp, fp,
+                                  use_libunwind, true);
+}
+
+extern "C"
+void inspector_print_backtrace(FILE* f,
+                               zx_handle_t process, zx_handle_t thread,
+                               inspector_dsoinfo_t* dso_list,
+                               uintptr_t pc, uintptr_t sp, uintptr_t fp,
+                               bool use_libunwind) {
+    inspector_print_backtrace_impl(f, process, thread, dso_list, pc, sp, fp,
+                                  use_libunwind, false);
 }
 
 }  // namespace inspector
