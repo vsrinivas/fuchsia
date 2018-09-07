@@ -580,7 +580,7 @@ void H264Decoder::ReceivedFrames(uint32_t frame_count) {
         << 16;
 
     PtsManager::LookupResult pts_result =
-        owner_->pts_manager()->Lookup(stream_byte_offset);
+        pts_manager_->Lookup(stream_byte_offset);
     video_frames_[buffer_index].frame->has_pts = pts_result.has_pts();
     video_frames_[buffer_index].frame->pts = pts_result.pts();
     if (pts_result.is_end_of_stream()) {

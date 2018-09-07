@@ -60,9 +60,6 @@ class AmlogicVideo final : public VideoDecoder::Owner,
                                                     size_t size,
                                                     uint32_t alignment_log2,
                                                     uint32_t flags) override;
-  __WARN_UNUSED_RESULT PtsManager* pts_manager() override {
-    return pts_manager_.get();
-  }
   __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) override
       __TA_NO_THREAD_SAFETY_ANALYSIS {
     assert(decoder);
@@ -74,6 +71,14 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   MmioRegisters* mmio() override { return registers_.get(); }
   void UngateClocks() override;
   void GateClocks() override;
+
+  // The pts manager has its own locking, so don't worry about the video decoder
+  // lock.
+  __WARN_UNUSED_RESULT PtsManager* pts_manager()
+      __TA_NO_THREAD_SAFETY_ANALYSIS {
+    ZX_DEBUG_ASSERT(video_decoder_);
+    return video_decoder_->pts_manager();
+  }
 
  private:
   friend class TestH264;
@@ -153,7 +158,6 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   std::unique_ptr<DecoderCore> core_;
 
-  std::unique_ptr<PtsManager> pts_manager_;
   std::mutex video_decoder_lock_;
   // This is the video decoder that's currently attached to the hardware.
   __TA_GUARDED(video_decoder_lock_)

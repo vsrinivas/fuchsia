@@ -19,6 +19,7 @@
 
 #include "codec_frame.h"
 #include "decoder_core.h"
+#include "pts_manager.h"
 #include "registers.h"
 #include "video_frame.h"
 
@@ -79,10 +80,11 @@ class VideoDecoder {
     virtual __WARN_UNUSED_RESULT zx_status_t
     AllocateIoBuffer(io_buffer_t* buffer, size_t size, uint32_t alignement_log2,
                      uint32_t flags) = 0;
-    virtual __WARN_UNUSED_RESULT PtsManager* pts_manager() = 0;
     virtual __WARN_UNUSED_RESULT bool IsDecoderCurrent(
         VideoDecoder* decoder) = 0;
   };
+
+  VideoDecoder() { pts_manager_ = std::make_unique<PtsManager>(); }
 
   virtual __WARN_UNUSED_RESULT zx_status_t Initialize() = 0;
   virtual void HandleInterrupt() = 0;
@@ -96,7 +98,10 @@ class VideoDecoder {
   virtual void ReturnFrame(std::shared_ptr<VideoFrame> frame) = 0;
   virtual ~VideoDecoder() {}
 
+  __WARN_UNUSED_RESULT PtsManager* pts_manager() { return pts_manager_.get(); }
+
  protected:
+  std::unique_ptr<PtsManager> pts_manager_;
   uint64_t next_non_codec_buffer_lifetime_ordinal_ = 0;
 };
 

@@ -164,6 +164,7 @@ class Vp9Decoder : public VideoDecoder {
 
   Owner* owner_;
   InputType input_type_;
+
   FrameDataProvider* frame_data_provider_ = nullptr;
 
   WorkingBuffers working_buffers_;

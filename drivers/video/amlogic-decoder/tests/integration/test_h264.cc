@@ -69,8 +69,6 @@ class TestH264 {
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
 
-    video->pts_manager_ = std::make_unique<PtsManager>();
-
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
     {
@@ -143,7 +141,6 @@ class TestH264 {
 
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
-    video->pts_manager_ = std::make_unique<PtsManager>();
 
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
@@ -220,7 +217,6 @@ class TestH264 {
 
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
-    video->pts_manager_ = std::make_unique<PtsManager>();
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
 
@@ -281,7 +277,7 @@ class TestH264 {
     for (auto& nal : split_nal) {
       uint8_t nal_type = GetNalUnitType(nal);
       if (nal_type == 1 || nal_type == 5) {
-        video->pts_manager_->InsertPts(parsed_video_size, pts_count++);
+        video->pts_manager()->InsertPts(parsed_video_size, pts_count++);
       }
       if (use_parser) {
         EXPECT_EQ(ZX_OK, video->ParseVideo(nal.data(), nal.size()));

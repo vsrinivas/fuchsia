@@ -265,8 +265,6 @@ class TestVP9 {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
 
-    video->pts_manager_ = std::make_unique<PtsManager>();
-
     video->core_ = std::make_unique<HevcDec>(video.get());
     video->core_->PowerOn();
 
@@ -369,8 +367,6 @@ class TestVP9 {
     auto test_ivf =
         TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
     ASSERT_NE(nullptr, test_ivf);
-    video->pts_manager_ = std::make_unique<PtsManager>();
-
     video->core_ = std::make_unique<HevcDec>(video.get());
     video->core_->PowerOn();
     {
@@ -425,8 +421,8 @@ class TestVP9 {
       auto aml_data = ConvertIvfToAmlVFrames(test_ivf->ptr, test_ivf->size);
       uint32_t stream_offset = 0;
       for (auto& data : aml_data) {
-        video->pts_manager_->InsertPts(stream_offset,
-                                       data.presentation_timestamp);
+        video->pts_manager()->InsertPts(stream_offset,
+                                        data.presentation_timestamp);
         EXPECT_EQ(ZX_OK, video->ParseVideo(data.data.data(), data.data.size()));
         EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));
         stream_offset += data.data.size();
@@ -446,8 +442,6 @@ class TestVP9 {
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
-
-    video->pts_manager_ = std::make_unique<PtsManager>();
 
     video->core_ = std::make_unique<HevcDec>(video.get());
     video->core_->PowerOn();
@@ -517,8 +511,6 @@ class TestVP9 {
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
-
-    video->pts_manager_ = std::make_unique<PtsManager>();
 
     video->core_ = std::make_unique<HevcDec>(video.get());
     video->core_->PowerOn();

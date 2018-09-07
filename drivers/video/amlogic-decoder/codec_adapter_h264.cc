@@ -138,7 +138,6 @@ void CodecAdapterH264::CoreCodecStartStream() {
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
-    video_->pts_manager_ = std::make_unique<PtsManager>();
     parsed_video_size_ = 0;
     is_input_end_of_stream_queued_ = false;
     is_stream_failed_ = false;
@@ -597,7 +596,7 @@ void CodecAdapterH264::ProcessInput() {
     }
 
     if (item.is_end_of_stream()) {
-      video_->pts_manager_->SetEndOfStreamOffset(parsed_video_size_);
+      video_->pts_manager()->SetEndOfStreamOffset(parsed_video_size_);
       if (ZX_OK !=
           video_->ParseVideo(reinterpret_cast<void*>(&new_stream_h264[0]),
                              new_stream_h264_len)) {
@@ -631,8 +630,8 @@ void CodecAdapterH264::ProcessInput() {
     uint32_t len = item.packet()->valid_length_bytes();
 
     if (item.packet()->has_timestamp_ish()) {
-      video_->pts_manager_->InsertPts(parsed_video_size_,
-                                      item.packet()->timestamp_ish());
+      video_->pts_manager()->InsertPts(parsed_video_size_,
+                                       item.packet()->timestamp_ish());
     }
     parsed_video_size_ += len;
 

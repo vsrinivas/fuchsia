@@ -686,8 +686,7 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   uint32_t stream_offset =
       HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
 
-  PtsManager::LookupResult result =
-      owner_->pts_manager()->Lookup(stream_offset);
+  PtsManager::LookupResult result = pts_manager_->Lookup(stream_offset);
   frame->frame->has_pts = result.has_pts();
   frame->frame->pts = result.pts();
   if (result.is_end_of_stream()) {
@@ -738,8 +737,7 @@ void Vp9Decoder::PrepareNewFrame() {
   uint32_t stream_offset =
       HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
 
-  PtsManager::LookupResult result =
-      owner_->pts_manager()->Lookup(stream_offset);
+  PtsManager::LookupResult result = pts_manager_->Lookup(stream_offset);
   current_frame_data_.has_pts = result.has_pts();
   current_frame_data_.pts = result.pts();
   if (result.is_end_of_stream()) {
