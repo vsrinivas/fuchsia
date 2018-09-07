@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/audio_mixer_tests"
+    },
+    "sandbox": {
+        "services": [ ]
+    }
+}

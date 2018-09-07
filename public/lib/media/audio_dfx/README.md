@@ -14,7 +14,7 @@ The following interfaces, structures and constants are specified in the
 ## **System description**
 The Fuchsia audio system calls these device effects using the "C" ABI specified
 by the following nine interface calls and their related structs and consts. The
-system dynamically loads the library `libaudio_dfx.so` by name and calls the
+system dynamically loads the library `audio_dfx.so` by name and calls the
 synchronous functions described below, to query and configure the effect, and
 subsequently to process audio while it is actively streaming.
 
@@ -35,7 +35,7 @@ set of values for those settings.
 This low-level interface does not provide effects with any knowledge of where
 they are being inserted in the processing chain. This allows the system to be
 flexibly configured. However, a settings file that accompanies the
-libaudio_dfx.so (discussed elsewhere, TBD) is used to instruct the system which
+audio_dfx.so (discussed elsewhere, TBD) is used to instruct the system which
 effects should be used, in which topology, with which control values.
 
 The settings file, and the FIDL interface to control the enabling, ordering and
@@ -46,7 +46,7 @@ separate README (TBD) for that higher level API.
 ## **APIs**
 Below are input parameters, return values and usage notes for the Audio DFX
 (device effects) APIs. Each of these nine functions must be implemented in the
-libaudio_dfx.so shared library.
+audio_dfx.so shared library.
 
 ### **fuchsia_audio_dfx_get_num_effects**
 ```

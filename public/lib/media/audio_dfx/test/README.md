@@ -11,6 +11,6 @@ a suggested starting point for the tests that vendors should create to verify
 correct operation of their library.
 
 Coupled with the `audio_device_fx.h` file from parent directory, this example
-test binary is built along with the `libaudio_dfx.so` shared library itself.
+test binary is built along with the `audio_dfx.so` shared library itself.
 Note that the two binaries (library and test) are built in the same package, so
 that the test binary can directly load and call the library.

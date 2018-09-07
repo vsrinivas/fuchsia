@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 source_set("audio_mixer_lib") {
   sources = [
@@ -38,7 +38,7 @@ source_set("audio_mixer_lib") {
   ]
 }
 
-test("tests") {
+executable("test_bin") {
   testonly = true
   output_name = "audio_mixer_tests"
 
@@ -68,5 +68,17 @@ test("tests") {
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
+  ]
+}
+
+test_package("audio_mixer_tests") {
+  deps = [
+    ":test_bin",
+  ]
+
+  tests = [
+    {
+      name = "audio_mixer_tests"
+    },
   ]
 }

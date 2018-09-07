@@ -18,7 +18,7 @@
 // a lot of duplicate SO-loading and export-checking code, plus we can now
 // directly use/test the fx_loader itself. Otherwise, we would be able to test
 // it only within the context of the audio_core process itself, which would
-// prevent us from using a test binary, or using a libaudio_dfx.so library that
+// prevent us from using a test binary, or using a audio_dfx.so library that
 // was built outside the audio_core package.
 
 namespace media {

@@ -26,8 +26,8 @@ loadable_module("audio_dfx") {
   ]
 }
 
-# This standalone test expects to find a libaudio_dfx.so in this package.
-test("tests") {
+# This standalone test expects to find a audio_dfx.so in this package.
+test("test_bin") {
   testonly = true
   output_name = "audio_dfx_tests"
 
@@ -47,5 +47,28 @@ test("tests") {
     "//garnet/bin/media/audio_core/mixer:audio_mixer_lib",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("audio_dfx_tests") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    ":audio_dfx",
+    ":test_bin",
+  ]
+
+  loadable_modules = [
+    {
+      # This test-only library is hosted in the audio_dfx_tests process.
+      name = "audio_dfx.so"
+    },
+  ]
+
+  tests = [
+    {
+      name = "audio_dfx_tests"
+    },
   ]
 }

@@ -1,6 +1,10 @@
 {
     "packages": [
-        "//garnet/bin/media:tests",
-        "//garnet/examples/media:tests"
+        "//garnet/bin/media/audio_core:audio_core_tests",
+        "//garnet/bin/media/audio_core/mixer:audio_mixer_tests",
+        "//garnet/examples/media:tests",
+        "//garnet/public/lib/media/audio_dfx:audio_dfx_tests",
+        "//garnet/public/lib/media/timeline:media_lib_timeline_tests",
+        "//garnet/public/lib/media/transport:media_lib_transport_tests"
     ]
 }

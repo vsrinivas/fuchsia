@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 source_set("timeline") {
   sources = [
@@ -30,7 +30,8 @@ source_set("no_converters") {
   ]
 }
 
-test("tests") {
+executable("test_bin") {
+  testonly = true
   output_name = "media_lib_timeline_tests"
 
   sources = [
@@ -42,5 +43,17 @@ test("tests") {
     ":timeline",
     "//garnet/public/lib/fsl",
     "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("media_lib_timeline_tests") {
+  deps = [
+    ":test_bin",
+  ]
+
+  tests = [
+    {
+      name = "media_lib_timeline_tests"
+    },
   ]
 }
