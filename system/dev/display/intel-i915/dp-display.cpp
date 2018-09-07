@@ -915,6 +915,21 @@ bool DpDisplay::Query() {
             LOG_ERROR("Failed to read edp capabilities\n");
             return false;
         }
+
+        dpcd::EdpConfigCap config_cap;
+        dpcd::EdpGeneralCap1 general_cap;
+        dpcd::EdpBacklightCap backlight_cap;
+
+        config_cap.set_reg_value(dpcd_capability(dpcd::DPCD_EDP_CONFIG));
+        general_cap.set_reg_value(dpcd_edp_capability(dpcd::DPCD_EDP_GENERAL_CAP1));
+        backlight_cap.set_reg_value(dpcd_edp_capability(dpcd::DPCD_EDP_BACKLIGHT_CAP));
+
+        backlight_aux_power_ = config_cap.dpcd_display_ctrl_capable()
+                && general_cap.tcon_backlight_adjustment_cap()
+                && general_cap.backlight_aux_enable_cap();
+        backlight_aux_brightness_ = config_cap.dpcd_display_ctrl_capable()
+                && general_cap.tcon_backlight_adjustment_cap()
+                && backlight_cap.brightness_aux_set_cap();
     }
 
     dpcd::LaneCount max_lc;
@@ -1189,33 +1204,18 @@ bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode,
     trans_conf.set_interlaced_mode(!!(mode.flags & MODE_FLAG_INTERLACED));
     trans_conf.WriteTo(mmio_space());
 
-    if (controller()->igd_opregion().IsEdp(ddi())) {
-        dpcd::EdpConfigCap config_cap;
-        dpcd::EdpGeneralCap1 general_cap;
-        dpcd::EdpBacklightCap backlight_cap;
+    return true;
+}
 
-        config_cap.set_reg_value(dpcd_capability(dpcd::DPCD_EDP_CONFIG));
-        general_cap.set_reg_value(dpcd_edp_capability(dpcd::DPCD_EDP_GENERAL_CAP1));
-        backlight_cap.set_reg_value(dpcd_edp_capability(dpcd::DPCD_EDP_BACKLIGHT_CAP));
-
-        backlight_aux_power_ = config_cap.dpcd_display_ctrl_capable()
-                && general_cap.tcon_backlight_adjustment_cap()
-                && general_cap.backlight_aux_enable_cap();
-        backlight_aux_brightness_ = config_cap.dpcd_display_ctrl_capable()
-                && general_cap.tcon_backlight_adjustment_cap()
-                && backlight_cap.brightness_aux_set_cap();
-
-        if (backlight_aux_brightness_) {
-            dpcd::EdpBacklightModeSet mode;
-            mode.set_brightness_ctrl_mode(mode.kAux);
-            if (!DpcdWrite(dpcd::DPCD_EDP_BACKLIGHT_MODE_SET, mode.reg_value_ptr(), 1)) {
-                LOG_ERROR("Failed to init backlight\n");
-                return false;
-            }
+bool DpDisplay::InitBacklightHw() {
+    if (backlight_aux_brightness_) {
+        dpcd::EdpBacklightModeSet mode;
+        mode.set_brightness_ctrl_mode(mode.kAux);
+        if (!DpcdWrite(dpcd::DPCD_EDP_BACKLIGHT_MODE_SET, mode.reg_value_ptr(), 1)) {
+            LOG_ERROR("Failed to init backlight\n");
+            return false;
         }
-        return SetBacklightOn(true);
     }
-
     return true;
 }
 

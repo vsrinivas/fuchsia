@@ -141,7 +141,13 @@ bool DisplayDevice::Init() {
 
     inited_ = true;
 
-    if (HasBacklight()) {
+    InitBacklight();
+
+    return true;
+}
+
+void DisplayDevice::InitBacklight() {
+    if (HasBacklight() && InitBacklightHw()) {
         fbl::AllocChecker ac;
         auto display_ref = fbl::make_unique_checked<display_ref_t>(&ac);
         zx_status_t status = ZX_ERR_NO_MEMORY;
@@ -170,9 +176,9 @@ bool DisplayDevice::Init() {
         if (display_ref_ == nullptr) {
             LOG_WARN("Failed to add backlight (%d)\n", status);
         }
-    }
 
-    return true;
+        SetBacklightState(true, 255);
+    }
 }
 
 bool DisplayDevice::Resume() {

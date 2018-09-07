@@ -44,6 +44,8 @@ public:
     virtual bool Query() = 0;
     // Does display mode agnostic ddi initialization - subclasses implement InitDdi.
     bool Init();
+    // Initializes the display backlight for an already initialized display.
+    void InitBacklight();
     // Resumes the ddi after suspend.
     bool Resume();
     // Loads ddi state from the hardware at driver startup.
@@ -72,6 +74,7 @@ public:
 protected:
     // Attempts to initialize the ddi.
     virtual bool InitDdi() = 0;
+    virtual bool InitBacklightHw() { return false; }
 
     // Configures the hardware to display content at the given resolution.
     virtual bool DdiModeset(const display_mode_t& mode,

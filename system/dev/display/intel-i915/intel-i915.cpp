@@ -702,6 +702,8 @@ void Controller::InitDisplays() {
             if (!LoadHardwareState(ddi, device)) {
                 ddi_needs_reset[ddi] = true;
                 device_needs_init[ddi] = device;
+            } else {
+                device->InitBacklight();
             }
         }
     }

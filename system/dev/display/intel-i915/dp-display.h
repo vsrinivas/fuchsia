@@ -77,6 +77,7 @@ private:
     bool LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::TrainingLaneSet* lanes);
 
     bool SetBacklightOn(bool on);
+    bool InitBacklightHw() override;
 
     bool IsBacklightOn();
     // Sets the backlight brightness with |val| as a coefficient on the maximum
