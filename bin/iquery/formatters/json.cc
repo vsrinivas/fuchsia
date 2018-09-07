@@ -19,8 +19,8 @@ namespace {
 //               passes the writer to a templatized version of FormatCat, Ls
 //               and Find.
 template <typename OutputStream>
-std::unique_ptr<rapidjson::PrettyWriter<OutputStream>> GetJsonWriter(OutputStream& os,
-                                                               const Options&) {
+std::unique_ptr<rapidjson::PrettyWriter<OutputStream>> GetJsonWriter(
+    OutputStream& os, const Options&) {
   // NOTE(donosoc): When json formatter options are given, create the
   //                appropriate json writer and configure it here.
   return std::make_unique<rapidjson::PrettyWriter<OutputStream>>(os);
@@ -52,8 +52,8 @@ std::string FormatLs(const Options& options,
 
   writer->StartArray();
   for (const auto& node : results) {
-    // The path already considers the object name.
-    writer->String(FormatPath(options.path_format, node.basepath, ""));
+    writer->String(
+        FormatPath(options.path_format, node.basepath, node.object.name));
   }
   writer->EndArray();
 
@@ -66,15 +66,6 @@ template <typename OutputStream>
 void RecursiveFormatCat(rapidjson::PrettyWriter<OutputStream>* writer,
                         const Options& options, const ObjectNode& root) {
   writer->StartObject();
-
-  writer->String("name");
-  writer->String(root.object.name);
-
-  if (options.path_format != Options::PathFormatting::NONE) {
-    writer->String("path");
-    // The path already considers the object name.
-    writer->String(FormatPath(options.path_format, root.basepath));
-  }
 
   // Properties.
   for (const auto& property : *root.object.properties) {
@@ -103,7 +94,16 @@ std::string FormatCat(const Options& options,
 
   writer->StartArray();
   for (const auto& node : results) {
+    writer->StartObject();
+    writer->String("path");
+    writer->String(
+        FormatPath(options.path_format, node.basepath, node.object.name));
+    writer->String("contents");
+    writer->StartObject();
+    writer->String(node.object.name);
     RecursiveFormatCat(writer.get(), options, node);
+    writer->EndObject();
+    writer->EndObject();
   }
   writer->EndArray();
 

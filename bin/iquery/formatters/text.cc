@@ -42,7 +42,8 @@ std::string RecursiveFormatCat(const Options& options, const ObjectNode& root,
   // We print recursively. The recursion nature of the cat called is already
   // taken care of by now.
   for (const auto& child : root.children) {
-    ss << Indent(indent) << FormatPath(options.path_format, child.basepath)
+    ss << Indent(indent)
+       << FormatPath(options.path_format, child.basepath, child.object.name)
        << ":" << std::endl;
     ss << RecursiveFormatCat(options, child, indent + 1);
   }
@@ -74,7 +75,9 @@ std::string FormatCat(const Options& options,
                       const std::vector<ObjectNode>& results) {
   std::ostringstream ss;
   for (const auto& root_node : results) {
-    ss << FormatPath(options.path_format, root_node.basepath) << ":" << std::endl;
+    ss << FormatPath(options.path_format, root_node.basepath,
+                     root_node.object.name)
+       << ":" << std::endl;
     ss << RecursiveFormatCat(options, root_node, 1);
   }
 
