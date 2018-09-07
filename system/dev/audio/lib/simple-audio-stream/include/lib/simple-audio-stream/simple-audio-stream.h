@@ -113,7 +113,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // 1) Supply a valid null-terminated UTF-8 encoded manufacturer name in the
     //    mfr_name_ member.
     // 2) Supply a valid null-terminated UTF-8 encoded product name in the
-    //    mfr_name_ member.
+    //    prod_name_ member.
     //
     // Note: The execution domain has not been created at this point.  Because
     // of this, it is safe to assert that we are holding the domain token and to
