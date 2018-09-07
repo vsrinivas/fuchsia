@@ -25,7 +25,7 @@ class DevMem {
   using RangeSet = std::set<Range>;
 
   bool AddRange(zx_gpaddr_t addr, size_t size) {
-    return addr < kAddrLowerBound || kAddrUpperBound >= addr
+    return addr < kAddrLowerBound || addr >= kAddrUpperBound
                ? false
                : ranges.emplace(Range{addr, size}).second;
   }

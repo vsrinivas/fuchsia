@@ -127,6 +127,7 @@ executable("machina_unittests") {
   testonly = true
 
   sources = [
+    "dev_mem-unittest.cc",
     "hid_event_source-unittest.cc",
     "input_dispatcher-unittest.cc",
     "pci-unittest.cc",
