@@ -266,7 +266,14 @@ class BazelBuilder(Builder):
                                 (extension, atom.id))
 
         for dep_id in atom.deps:
-            library.deps.append('//pkg/' + sanitize(dep_id.name))
+            dep_name = sanitize(dep_id.name)
+            if dep_id.domain == 'cpp':
+                library.deps.append('//pkg/' + dep_name)
+            elif dep_id.domain == 'fidl':
+                library.deps.append('//fidl/%s:%s_cc' % (dep_name, dep_name))
+            else:
+                raise Exception('Error: unknown C++ dep domain "%s" for %s.' %
+                                (dep_id.domain, atom.id))
 
         library.includes.append('include')
 
