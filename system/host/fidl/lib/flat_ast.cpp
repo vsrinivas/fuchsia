@@ -230,7 +230,7 @@ fidl::StringView Decl::GetAttribute(fidl::StringView name) const {
     for (const auto& attribute : attributes->attributes_->attributes_) {
         if (StringView(attribute->name) == name) {
             if (attribute->value != "") {
-                auto value = attribute->value;
+                const auto& value = attribute->value;
                 return fidl::StringView(value.data(), value.size());
             }
             // Don't search for another attribute with the same name.
