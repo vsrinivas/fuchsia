@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_GRAPH_PAYLOAD_BUFFER_H_
-#define GARNET_BIN_MEDIAPLAYER_GRAPH_PAYLOAD_BUFFER_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_GRAPH_PAYLOADS_PAYLOAD_BUFFER_H_
+#define GARNET_BIN_MEDIAPLAYER_GRAPH_PAYLOADS_PAYLOAD_BUFFER_H_
 
 #include <fbl/recycler.h>
 #include <fbl/ref_counted.h>
@@ -80,4 +80,4 @@ class PayloadBuffer final : public fbl::RefCounted<PayloadBuffer>,
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_GRAPH_PAYLOAD_BUFFER_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_GRAPH_PAYLOADS_PAYLOAD_BUFFER_H_

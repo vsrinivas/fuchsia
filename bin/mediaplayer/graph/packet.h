@@ -7,7 +7,7 @@
 
 #include <limits>
 #include <memory>
-#include "garnet/bin/mediaplayer/graph/payload_allocator.h"
+#include "garnet/bin/mediaplayer/graph/payloads/payload_allocator.h"
 #include "garnet/bin/mediaplayer/graph/types/stream_type.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"

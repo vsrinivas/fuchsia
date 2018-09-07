@@ -4,7 +4,7 @@
 
 #include "garnet/bin/mediaplayer/graph/packet.h"
 
-#include "garnet/bin/mediaplayer/graph/payload_allocator.h"
+#include "garnet/bin/mediaplayer/graph/payloads/payload_allocator.h"
 #include "lib/fxl/logging.h"
 
 namespace media_player {

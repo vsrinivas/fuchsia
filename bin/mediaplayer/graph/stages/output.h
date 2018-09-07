@@ -6,7 +6,7 @@
 #define GARNET_BIN_MEDIAPLAYER_GRAPH_STAGES_OUTPUT_H_
 
 #include "garnet/bin/mediaplayer/graph/packet.h"
-#include "garnet/bin/mediaplayer/graph/payload_allocator.h"
+#include "garnet/bin/mediaplayer/graph/payloads/payload_allocator.h"
 
 namespace media_player {
 

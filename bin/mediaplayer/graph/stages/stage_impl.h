@@ -15,7 +15,7 @@
 #include "garnet/bin/mediaplayer/graph/models/node.h"
 #include "garnet/bin/mediaplayer/graph/models/stage.h"
 #include "garnet/bin/mediaplayer/graph/packet.h"
-#include "garnet/bin/mediaplayer/graph/payload_allocator.h"
+#include "garnet/bin/mediaplayer/graph/payloads/payload_allocator.h"
 #include "garnet/bin/mediaplayer/graph/stages/input.h"
 #include "garnet/bin/mediaplayer/graph/stages/output.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
