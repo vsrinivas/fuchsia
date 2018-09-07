@@ -79,10 +79,11 @@ struct EventSender {
     }
 
     void SendSetChannelEvent(uint16_t wlanmac_id, wlan_channel_t* channel) {
-        wlantap::SetChannelArgs args = {.wlanmac_id = wlanmac_id,
-                                        .chan = {.primary = channel->primary,
-                                                 .cbw = channel->cbw,
-                                                 .secondary80 = channel->secondary80}};
+        wlantap::SetChannelArgs args = {
+            .wlanmac_id = wlanmac_id,
+            .chan = {.primary = channel->primary,
+                     .cbw = static_cast<::fuchsia::wlan::mlme::CBW>(channel->cbw),
+                     .secondary80 = channel->secondary80}};
         Send(EventOrdinal::SetChannel, &args);
     }
 

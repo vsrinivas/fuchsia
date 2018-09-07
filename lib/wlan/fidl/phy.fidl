@@ -3,21 +3,7 @@
 // found in the LICENSE file.
 
 library fuchsia.wlan.device;
-
-enum ChannelBandwidth {
-  CBW20 = 0;
-  CBW40ABOVE = 1;
-  CBW40BELOW = 2;
-  CBW80 = 3;
-  CBW160 = 4;
-  CBW80P80 = 5;
-};
-
-struct Channel {
-  uint8 primary;
-  uint8 cbw;
-  uint8 secondary80;
-};
+using fuchsia.wlan.mlme;
 
 enum SupportedPhy {
   DSSS = 0;

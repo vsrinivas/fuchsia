@@ -8,6 +8,7 @@
 use {
     byteorder::{LittleEndian, ReadBytesExt},
     fidl_fuchsia_wlan_device as wlan_device,
+    fidl_fuchsia_wlan_mlme as wlan_mlme,
     fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async as fasync,
     fuchsia_zircon::prelude::*,
@@ -70,16 +71,16 @@ fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
 }
 
 struct State {
-    current_channel: wlan_device::Channel,
+    current_channel: wlan_mlme::WlanChan,
     frame_buf: Vec<u8>,
 }
 
 impl State {
     fn new() -> Self {
         Self {
-            current_channel: wlan_device::Channel {
+            current_channel: wlan_mlme::WlanChan {
                 primary: 0,
-                cbw: 0,
+                cbw: wlan_mlme::Cbw::Cbw20,
                 secondary80: 0
             },
             frame_buf: vec![]
@@ -87,7 +88,7 @@ impl State {
     }
 }
 
-fn send_beacon(frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: &[u8; 6],
+fn send_beacon(frame_buf: &mut Vec<u8>, channel: &wlan_mlme::WlanChan, bss_id: &[u8; 6],
                ssid: &str, proxy: &wlantap::WlantapPhyProxy)
     -> Result<(), failure::Error>
 {
@@ -120,7 +121,7 @@ fn send_beacon(frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: 
     Ok(())
 }
 
-fn send_authentication(frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: &[u8; 6],
+fn send_authentication(frame_buf: &mut Vec<u8>, channel: &wlan_mlme::WlanChan, bss_id: &[u8; 6],
                        proxy: &wlantap::WlantapPhyProxy)
     -> Result<(), failure::Error>
 {
@@ -151,7 +152,7 @@ fn send_authentication(frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, 
 }
 
 fn send_association_response(
-    frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: &[u8; 6],
+    frame_buf: &mut Vec<u8>, channel: &wlan_mlme::WlanChan, bss_id: &[u8; 6],
     proxy: &wlantap::WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
@@ -183,13 +184,13 @@ fn send_association_response(
     Ok(())
 }
 
-fn create_rx_info(channel: &wlan_device::Channel) -> wlantap::WlanRxInfo {
+fn create_rx_info(channel: &wlan_mlme::WlanChan) -> wlantap::WlanRxInfo {
     wlantap::WlanRxInfo {
         rx_flags: 0,
         valid_fields: 0,
         phy: 0,
         data_rate: 0,
-        chan: wlan_device::Channel { // TODO(FIDL-54): use clone()
+        chan: wlan_mlme::WlanChan { // TODO(FIDL-54): use clone()
             primary: channel.primary,
             cbw: channel.cbw,
             secondary80: channel.secondary80

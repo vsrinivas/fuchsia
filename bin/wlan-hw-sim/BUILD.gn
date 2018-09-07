@@ -15,6 +15,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/crates/wlantap-client",
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
+    "//garnet/public/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//garnet/public/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/crates/fuchsia-app",

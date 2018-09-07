@@ -10,6 +10,10 @@ fidl("fidl") {
   sources = [
     "phy.fidl",
   ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.wlan.mlme",
+  ]
 }
 
 fidl("sme") {
@@ -43,5 +47,6 @@ fidl("wlantap") {
 
   public_deps = [
     ":fidl",
+    "//garnet/public/fidl/fuchsia.wlan.mlme"
   ]
 }

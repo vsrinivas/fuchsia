@@ -116,7 +116,7 @@ struct WlantapMacImpl : WlantapMac {
                                              .phy = rx_info.phy,
                                              .data_rate = rx_info.data_rate,
                                              .chan = {.primary = rx_info.chan.primary,
-                                                      .cbw = rx_info.chan.cbw,
+                                                      .cbw = static_cast<uint8_t>(rx_info.chan.cbw),
                                                       .secondary80 = rx_info.chan.secondary80},
                                              .mcs = rx_info.mcs,
                                              .rssi_dbm = rx_info.rssi_dbm,
