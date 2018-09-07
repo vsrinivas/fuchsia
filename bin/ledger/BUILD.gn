@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/testing/secret_spec.gni")
 import("//peridot/bin/ledger/testing/sync_params.gni")
 
 visibility = [ "//peridot/*" ]
@@ -42,6 +43,7 @@ package("ledger_tests") {
   testonly = true
 
   deps = [
+    ":ledger_e2e_sync_credentials",
     ":ledger_unittests",
     "tests/e2e_local",
     "tests/e2e_sync",
@@ -113,6 +115,12 @@ package("ledger_tests") {
       },
     ]
   }
+}
+
+secret_spec("ledger_e2e_sync_credentials") {
+  key_name = "ledger-tests-remote"
+
+  ciphertext_file = "ledger_e2e_sync_credentials.ciphertext"
 }
 
 config("ledger_config") {
