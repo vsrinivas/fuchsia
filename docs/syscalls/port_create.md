@@ -18,7 +18,11 @@ zx_status_t zx_port_create(uint32_t options, zx_handle_t* out);
 **port_create**() creates an port; a waitable object that can be used to
 read packets queued by kernel or by user-mode.
 
-*options* must be **0**.
+If you need this port to be bound to an interrupt, pass **ZX_PORT_BIND_TO_INTERRUPT**to *options*,
+otherwise it should be **0**.
+
+In the case where a port is bound to an interrupt, the interrupt packets are delivered via a
+dedicated queue on ports and are higher priority than other non-interrupt packets.
 
 The returned handle will have ZX_RIGHT_TRANSFER (allowing them to be sent
 to another process via channel write), ZX_RIGHT_WRITE (allowing

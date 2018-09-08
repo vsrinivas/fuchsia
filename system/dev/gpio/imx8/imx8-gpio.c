@@ -463,7 +463,7 @@ static zx_status_t imx8_gpio_bind(void* ctx, zx_device_t* parent)
         goto fail;
     }
 
-    status = zx_port_create(1/*PORT_BIND_TO_INTERRUPT*/, &gpio->porth);
+    status = zx_port_create(ZX_PORT_BIND_TO_INTERRUPT, &gpio->porth);
     if (status != ZX_OK) {
             zxlogf(ERROR, "%s: zx_port_create failed %d\n", __FUNCTION__, status);
             goto fail;

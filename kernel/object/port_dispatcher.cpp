@@ -168,7 +168,7 @@ PortAllocator* PortDispatcher::DefaultPortAllocator() {
 
 zx_status_t PortDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
                                    zx_rights_t* rights) {
-    if (options && options != PORT_BIND_TO_INTERRUPT) {
+    if (options && options != ZX_PORT_BIND_TO_INTERRUPT) {
         return ZX_ERR_INVALID_ARGS;
     }
     fbl::AllocChecker ac;
@@ -285,7 +285,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
     canary_.Assert();
 
     while (true) {
-        if (options_ == PORT_BIND_TO_INTERRUPT) {
+        if (options_ == ZX_PORT_BIND_TO_INTERRUPT) {
             Guard<SpinLock, IrqSave> guard{&spinlock_};
             PortInterruptPacket* port_interrupt_packet = interrupt_packets_.pop_front();
             if (port_interrupt_packet != nullptr) {

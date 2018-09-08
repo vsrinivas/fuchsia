@@ -27,6 +27,9 @@ __BEGIN_CDECLS
 #define ZX_PKT_TYPE_INTERRUPT       ((uint8_t)0x07u)
 #define ZX_PKT_TYPE_EXCEPTION(n)    ((uint32_t)(0x08u | (((n) & 0xFFu) << 8)))
 
+// For options passed to port_create
+#define ZX_PORT_BIND_TO_INTERRUPT   ((uint32_t)(0x1u << 0))
+
 #define ZX_PKT_TYPE_MASK            ((uint32_t)0x000000FFu)
 
 #define ZX_PKT_IS_USER(type)        ((type) == ZX_PKT_TYPE_USER)

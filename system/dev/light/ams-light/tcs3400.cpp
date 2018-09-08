@@ -355,7 +355,7 @@ zx_status_t Tcs3400Device::Bind() {
         return status;
     }
 
-    status = zx_port_create(1 /*PORT_BIND_TO_INTERRUPT*/, &port_handle_);
+    status = zx_port_create(ZX_PORT_BIND_TO_INTERRUPT, &port_handle_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "Tcs3400Device::Bind: port_create failed: %d\n", status);
         return status;

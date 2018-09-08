@@ -169,7 +169,7 @@ public:
     ~PortDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PORT; }
 
-    bool can_bind_to_interrupt() const { return options_ & PORT_BIND_TO_INTERRUPT; }
+    bool can_bind_to_interrupt() const { return options_ & ZX_PORT_BIND_TO_INTERRUPT; }
     void on_zero_handles() final;
 
     zx_status_t Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count);
@@ -189,9 +189,6 @@ public:
     // Called under the handle table lock when |handle| is not null.
     // When |handle| is null, ephemeral PortPackets are removed from the queue but not freed.
     bool CancelQueued(const void* handle, uint64_t key);
-
-    // Bits for options passed to port_create
-    static constexpr uint32_t PORT_BIND_TO_INTERRUPT = (1u << 0);
 
 private:
     friend class ExceptionPort;
