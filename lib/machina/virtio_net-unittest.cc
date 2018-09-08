@@ -16,10 +16,11 @@ static constexpr uint16_t kVirtioNetQueueSize = 8;
 
 class VirtioNetTest : public ::gtest::TestLoopFixture {
  public:
-  VirtioNetTest() : net_(phys_mem_, dispatcher()), queue_(net_.rx_queue()) {}
+  VirtioNetTest()
+      : net_(phys_mem_, dispatcher()),
+        queue_(net_.rx_queue(), kVirtioNetQueueSize) {}
 
   void SetUp() override {
-    ASSERT_EQ(queue_.Init(kVirtioNetQueueSize), ZX_OK);
     ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize, sizeof(eth_fifo_entry_t), 0,
                              &fifos_.rx_fifo, &fifo_[0]),
               ZX_OK);

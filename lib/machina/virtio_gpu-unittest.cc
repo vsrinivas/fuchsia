@@ -25,7 +25,7 @@ static constexpr uint32_t kCursorAlphaPixelValue = 0x56789ABC;
 static constexpr uint32_t kCursorAlphaPixelExpectedResult = 0xC79AA5B1;
 static constexpr uint32_t kPixelFormat = VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM;
 static constexpr uint8_t kPixelSize = 4;
-static constexpr uint16_t kQueueSize = 32;
+static constexpr uint16_t kVirtioGpuQueueSize = 32;
 static constexpr uint32_t kRootResourceId = 1;
 static constexpr uint32_t kCursorResourceId = 2;
 static constexpr uint32_t kScanoutId = 0;
@@ -41,18 +41,12 @@ struct BackingPages
 class VirtioGpuTest : public ::gtest::TestLoopFixture {
  public:
   VirtioGpuTest()
-      : gpu_(phys_mem_, dispatcher()), control_queue_(gpu_.control_queue()) {}
+      : gpu_(phys_mem_, dispatcher()),
+        control_queue_(gpu_.control_queue(), kVirtioGpuQueueSize) {}
 
-  zx_status_t Init() {
-    zx_status_t status = control_queue_.Init(kQueueSize);
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = gpu_.Init();
-    if (status != ZX_OK) {
-      return status;
-    }
-    return CreateScanout(kDisplayWidth, kDisplayHeight);
+  void SetUp() override {
+    ASSERT_EQ(ZX_OK, gpu_.Init());
+    ASSERT_EQ(ZX_OK, CreateScanout(kDisplayWidth, kDisplayHeight));
   }
 
   VirtioGpu& gpu() { return gpu_; }
@@ -225,8 +219,6 @@ class VirtioGpuTest : public ::gtest::TestLoopFixture {
 };
 
 TEST_F(VirtioGpuTest, HandleGetDisplayInfo) {
-  ASSERT_EQ(Init(), ZX_OK);
-
   virtio_gpu_ctrl_hdr_t request = {};
   request.type = VIRTIO_GPU_CMD_GET_DISPLAY_INFO;
   virtio_gpu_resp_display_info_t response = {};
@@ -249,16 +241,12 @@ TEST_F(VirtioGpuTest, HandleGetDisplayInfo) {
 
 // Test the basic device initialization sequence.
 TEST_F(VirtioGpuTest, HandleInitialization) {
-  ASSERT_EQ(Init(), ZX_OK);
-
   ASSERT_EQ(CreateRootResource(), ZX_OK);
   ASSERT_EQ(AttachRootBacking(), ZX_OK);
   ASSERT_EQ(SetScanout(), ZX_OK);
 }
 
 TEST_F(VirtioGpuTest, SetScanoutToInvalidResource) {
-  ASSERT_EQ(Init(), ZX_OK);
-
   ASSERT_EQ(CreateRootResource(), ZX_OK);
   ASSERT_EQ(AttachRootBacking(), ZX_OK);
 
@@ -288,8 +276,6 @@ TEST_F(VirtioGpuTest, SetScanoutToInvalidResource) {
 
 // Verify a basic transfer 2d command correctly fills in the scanout.
 TEST_F(VirtioGpuTest, HandleTransfer2D) {
-  ASSERT_EQ(Init(), ZX_OK);
-
   ASSERT_EQ(CreateRootResource(), ZX_OK);
   ASSERT_EQ(AttachRootBacking(), ZX_OK);
   ASSERT_EQ(SetScanout(), ZX_OK);
@@ -336,8 +322,6 @@ TEST_F(VirtioGpuTest, HandleTransfer2D) {
 }
 
 TEST_F(VirtioGpuTest, DrawCursor) {
-  ASSERT_EQ(Init(), ZX_OK);
-
   ASSERT_EQ(CreateRootResource(), ZX_OK);
   ASSERT_EQ(AttachRootBacking(), ZX_OK);
   ASSERT_EQ(SetScanout(), ZX_OK);

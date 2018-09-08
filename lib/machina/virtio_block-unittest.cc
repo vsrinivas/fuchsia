@@ -18,11 +18,11 @@
 #include "garnet/lib/machina/virtio_queue.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"
 
-#define QUEUE_SIZE 8u
-#define DATA_SIZE 512u
-
 namespace machina {
 namespace {
+
+static constexpr uint16_t kVirtioBlockQueueSize = 32;
+static constexpr ssize_t kDataSize = 512;
 
 class VirtioBlockTest : public ::gtest::TestLoopFixture {
  protected:
@@ -47,8 +47,9 @@ class VirtioBlockTest : public ::gtest::TestLoopFixture {
       return status;
     }
     block_ = std::make_unique<VirtioBlock>(phys_mem_, std::move(dispatcher));
-    queue_ = std::make_unique<VirtioQueueFake>(block_->request_queue());
-    return queue_->Init(QUEUE_SIZE);
+    queue_ = std::make_unique<VirtioQueueFake>(block_->request_queue(),
+                                               kVirtioBlockQueueSize);
+    return ZX_OK;
   }
 
   zx_status_t WriteSector(uint8_t value, uint32_t sector, size_t len) {
@@ -141,12 +142,12 @@ TEST_F(VirtioBlockTest, BadStatus) {
   uint16_t desc;
   uint32_t used = 0;
   virtio_blk_req_t header = {};
-  uint8_t data[DATA_SIZE];
+  uint8_t data[kDataSize];
   uint8_t status = 0xff;
 
   ASSERT_EQ(queue_->BuildDescriptor()
                 .AppendReadable(&header, sizeof(header))
-                .AppendReadable(data, DATA_SIZE)
+                .AppendReadable(data, kDataSize)
                 .AppendReadable(&status, 0)
                 .Build(&desc),
             ZX_OK);
@@ -166,7 +167,7 @@ TEST_F(VirtioBlockTest, BadRequest) {
   uint16_t desc;
   uint32_t used = 0;
   virtio_blk_req_t header = {};
-  uint8_t data[DATA_SIZE];
+  uint8_t data[kDataSize];
   uint8_t status = 0;
   header.type = UINT32_MAX;
 
@@ -211,7 +212,7 @@ TEST_F(VirtioBlockTest, Read) {
   uint16_t desc;
   uint32_t used = 0;
   virtio_blk_req_t header = {};
-  uint8_t data[DATA_SIZE];
+  uint8_t data[kDataSize];
   uint8_t status = 0;
   header.type = VIRTIO_BLK_T_IN;
   memset(data, UINT8_MAX, sizeof(data));
@@ -226,10 +227,10 @@ TEST_F(VirtioBlockTest, Read) {
   ASSERT_EQ(block_->HandleBlockRequest(block_->request_queue(), desc, &used),
             ZX_OK);
 
-  uint8_t expected[DATA_SIZE];
+  uint8_t expected[kDataSize];
   ASSERT_EQ(status, VIRTIO_BLK_S_OK);
-  memset(expected, 0, DATA_SIZE);
-  ASSERT_EQ(memcmp(data, expected, DATA_SIZE), 0);
+  memset(expected, 0, kDataSize);
+  ASSERT_EQ(memcmp(data, expected, kDataSize), 0);
 }
 
 TEST_F(VirtioBlockTest, ReadChain) {
@@ -239,8 +240,8 @@ TEST_F(VirtioBlockTest, ReadChain) {
   uint16_t desc;
   uint32_t used = 0;
   virtio_blk_req_t header = {};
-  uint8_t data1[DATA_SIZE];
-  uint8_t data2[DATA_SIZE];
+  uint8_t data1[kDataSize];
+  uint8_t data2[kDataSize];
   uint8_t status = 0;
   header.type = VIRTIO_BLK_T_IN;
   memset(data1, UINT8_MAX, sizeof(data1));
@@ -256,11 +257,11 @@ TEST_F(VirtioBlockTest, ReadChain) {
   ASSERT_EQ(block_->HandleBlockRequest(block_->request_queue(), desc, &used),
             ZX_OK);
 
-  uint8_t expected[DATA_SIZE];
-  memset(expected, 0, DATA_SIZE);
+  uint8_t expected[kDataSize];
+  memset(expected, 0, kDataSize);
   ASSERT_EQ(status, VIRTIO_BLK_S_OK);
-  ASSERT_EQ(memcmp(data1, expected, DATA_SIZE), 0);
-  ASSERT_EQ(memcmp(data2, expected, DATA_SIZE), 0);
+  ASSERT_EQ(memcmp(data1, expected, kDataSize), 0);
+  ASSERT_EQ(memcmp(data2, expected, kDataSize), 0);
   ASSERT_EQ(used, sizeof(data1) + sizeof(data2) + sizeof(status));
 }
 
@@ -271,7 +272,7 @@ TEST_F(VirtioBlockTest, Write) {
   uint16_t desc;
   uint32_t used = 0;
   virtio_blk_req_t header = {};
-  uint8_t data[DATA_SIZE];
+  uint8_t data[kDataSize];
   uint8_t status = 0;
   header.type = VIRTIO_BLK_T_OUT;
   memset(data, UINT8_MAX, sizeof(data));
@@ -285,14 +286,14 @@ TEST_F(VirtioBlockTest, Write) {
   ASSERT_EQ(block_->HandleBlockRequest(block_->request_queue(), desc, &used),
             ZX_OK);
 
-  uint8_t actual[DATA_SIZE];
+  uint8_t actual[kDataSize];
   ASSERT_EQ(status, VIRTIO_BLK_S_OK);
   ASSERT_EQ(lseek(fd_.get(), 0, SEEK_SET), 0);
-  ASSERT_EQ(read(fd_.get(), actual, DATA_SIZE), DATA_SIZE);
+  ASSERT_EQ(read(fd_.get(), actual, kDataSize), kDataSize);
 
-  uint8_t expected[DATA_SIZE];
-  memset(expected, UINT8_MAX, DATA_SIZE);
-  ASSERT_EQ(memcmp(actual, expected, DATA_SIZE), 0);
+  uint8_t expected[kDataSize];
+  memset(expected, UINT8_MAX, kDataSize);
+  ASSERT_EQ(memcmp(actual, expected, kDataSize), 0);
 }
 
 TEST_F(VirtioBlockTest, WriteChain) {
@@ -302,8 +303,8 @@ TEST_F(VirtioBlockTest, WriteChain) {
   uint16_t desc;
   uint32_t used = 0;
   virtio_blk_req_t header = {};
-  uint8_t data1[DATA_SIZE];
-  uint8_t data2[DATA_SIZE];
+  uint8_t data1[kDataSize];
+  uint8_t data2[kDataSize];
   uint8_t status = 0;
   header.type = VIRTIO_BLK_T_OUT;
   memset(data1, UINT8_MAX, sizeof(data1));
@@ -319,14 +320,14 @@ TEST_F(VirtioBlockTest, WriteChain) {
   ASSERT_EQ(block_->HandleBlockRequest(block_->request_queue(), desc, &used),
             ZX_OK);
 
-  uint8_t actual[DATA_SIZE];
+  uint8_t actual[kDataSize];
   ASSERT_EQ(status, VIRTIO_BLK_S_OK);
   ASSERT_EQ(lseek(fd_.get(), 0, SEEK_SET), 0);
-  ASSERT_EQ(read(fd_.get(), actual, DATA_SIZE), DATA_SIZE);
+  ASSERT_EQ(read(fd_.get(), actual, kDataSize), kDataSize);
 
-  uint8_t expected[DATA_SIZE];
-  memset(expected, UINT8_MAX, DATA_SIZE);
-  ASSERT_EQ(memcmp(actual, expected, DATA_SIZE), 0);
+  uint8_t expected[kDataSize];
+  memset(expected, UINT8_MAX, kDataSize);
+  ASSERT_EQ(memcmp(actual, expected, kDataSize), 0);
   ASSERT_EQ(used, sizeof(status));
 }
 
@@ -357,7 +358,7 @@ TEST_F(VirtioBlockTest, FlushWithData) {
   uint16_t desc;
   uint32_t used = 0;
   virtio_blk_req_t header = {};
-  uint8_t data[DATA_SIZE];
+  uint8_t data[kDataSize];
   uint8_t status = 0;
   header.type = VIRTIO_BLK_T_FLUSH;
   memset(data, UINT8_MAX, sizeof(data));
@@ -379,7 +380,7 @@ struct TestBlockRequest {
   uint16_t desc;
   uint32_t used;
   virtio_blk_req_t header;
-  uint8_t data[DATA_SIZE];
+  uint8_t data[kDataSize];
   uint8_t status;
 };
 
@@ -392,7 +393,7 @@ TEST_F(VirtioBlockTest, ReadMultipleDescriptors) {
   // Request 1 (descriptors 0,1,2).
   TestBlockRequest request1;
   const uint8_t request1_bitpattern = 0xaa;
-  memset(request1.data, UINT8_MAX, DATA_SIZE);
+  memset(request1.data, UINT8_MAX, kDataSize);
   request1.used = 0;
   request1.header.type = VIRTIO_BLK_T_IN;
   request1.header.sector = 0;
@@ -406,7 +407,7 @@ TEST_F(VirtioBlockTest, ReadMultipleDescriptors) {
   // Request 2 (descriptors 3,4,5).
   TestBlockRequest request2;
   const uint8_t request2_bitpattern = 0xdd;
-  memset(request2.data, UINT8_MAX, DATA_SIZE);
+  memset(request2.data, UINT8_MAX, kDataSize);
   request2.used = 0;
   request2.header.type = VIRTIO_BLK_T_IN;
   request2.header.sector = 1;
@@ -418,8 +419,8 @@ TEST_F(VirtioBlockTest, ReadMultipleDescriptors) {
             ZX_OK);
 
   // Initalize block device. Write unique bit patterns to sector 1 and 2.
-  ASSERT_EQ(WriteSector(request1_bitpattern, 0, DATA_SIZE), ZX_OK);
-  ASSERT_EQ(WriteSector(request2_bitpattern, 1, DATA_SIZE), ZX_OK);
+  ASSERT_EQ(WriteSector(request1_bitpattern, 0, kDataSize), ZX_OK);
+  ASSERT_EQ(WriteSector(request2_bitpattern, 1, kDataSize), ZX_OK);
   ASSERT_EQ(block_->HandleBlockRequest(block_->request_queue(), request1.desc,
                                        &request1.used),
             ZX_OK);
@@ -428,17 +429,17 @@ TEST_F(VirtioBlockTest, ReadMultipleDescriptors) {
             ZX_OK);
 
   // Verify request 1.
-  uint8_t expected[DATA_SIZE];
-  memset(expected, request1_bitpattern, DATA_SIZE);
-  ASSERT_EQ(memcmp(request1.data, expected, DATA_SIZE), 0);
+  uint8_t expected[kDataSize];
+  memset(expected, request1_bitpattern, kDataSize);
+  ASSERT_EQ(memcmp(request1.data, expected, kDataSize), 0);
   ASSERT_EQ(request1.status, VIRTIO_BLK_S_OK);
-  ASSERT_EQ(request1.used, DATA_SIZE + sizeof(request1.status));
+  ASSERT_EQ(request1.used, kDataSize + sizeof(request1.status));
 
   // Verify request 2.
-  memset(expected, request2_bitpattern, DATA_SIZE);
-  ASSERT_EQ(memcmp(request2.data, expected, DATA_SIZE), 0);
+  memset(expected, request2_bitpattern, kDataSize);
+  ASSERT_EQ(memcmp(request2.data, expected, kDataSize), 0);
   ASSERT_EQ(request2.status, VIRTIO_BLK_S_OK);
-  ASSERT_EQ(request2.used, DATA_SIZE + sizeof(request2.status));
+  ASSERT_EQ(request2.used, kDataSize + sizeof(request2.status));
 }
 
 TEST_F(VirtioBlockTest, WriteToReadOnlyDevice) {
@@ -448,7 +449,7 @@ TEST_F(VirtioBlockTest, WriteToReadOnlyDevice) {
   uint16_t desc;
   uint32_t used = 0;
   virtio_blk_req_t header = {};
-  uint8_t data[DATA_SIZE];
+  uint8_t data[kDataSize];
   uint8_t status = 0;
   header.type = VIRTIO_BLK_T_OUT;
 
@@ -466,15 +467,15 @@ TEST_F(VirtioBlockTest, WriteToReadOnlyDevice) {
   ASSERT_EQ(used, sizeof(status));
 
   // Read back bytes from the file.
-  uint8_t actual[DATA_SIZE];
+  uint8_t actual[kDataSize];
   ASSERT_EQ(lseek(fd_.get(), 0, SEEK_SET), 0);
-  ASSERT_EQ(read(fd_.get(), actual, DATA_SIZE), DATA_SIZE);
+  ASSERT_EQ(read(fd_.get(), actual, kDataSize), kDataSize);
 
   // The image file is initialized to all 0's and we attempted to write all
   // 1's. Verify that the file contents are unchanged.
-  uint8_t expected[DATA_SIZE];
-  memset(expected, 0, DATA_SIZE);
-  ASSERT_EQ(memcmp(actual, expected, DATA_SIZE), 0);
+  uint8_t expected[kDataSize];
+  memset(expected, 0, kDataSize);
+  ASSERT_EQ(memcmp(actual, expected, kDataSize), 0);
 }
 
 }  // namespace

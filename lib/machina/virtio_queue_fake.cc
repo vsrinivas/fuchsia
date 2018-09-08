@@ -11,61 +11,28 @@
 
 namespace machina {
 
-VirtioQueueFake::VirtioQueueFake(VirtioQueue* queue)
-    : queue_(queue), ring_(&queue_->ring_) {}
+VirtioQueueFake::VirtioQueueFake(VirtioQueue* queue, uint16_t queue_size)
+    : queue_(queue),
+      ring_(&queue_->ring_),
+      queue_size_(queue_size),
+      desc_buf_(queue_size * sizeof(ring_->desc[0])),
+      avail_buf_(sizeof(*ring_->avail) +
+                 (queue_size * sizeof(ring_->avail->ring[0])) +
+                 sizeof(*ring_->used_event)),
+      used_buf_(sizeof(*ring_->used) +
+                (queue_size * sizeof(ring_->used->ring[0])) +
+                sizeof(*ring_->avail_event)) {
+  std::fill(desc_buf_.begin(), desc_buf_.end(), 0);
+  std::fill(avail_buf_.begin(), avail_buf_.end(), 0);
+  std::fill(used_buf_.begin(), used_buf_.end(), 0);
 
-zx_status_t VirtioQueueFake::Init(uint16_t queue_size) {
-  fbl::unique_ptr<uint8_t[]> desc;
-  fbl::unique_ptr<uint8_t[]> avail;
-  fbl::unique_ptr<uint8_t[]> used;
-
-  {
-    fbl::AllocChecker ac;
-    size_t desc_size = queue_->size() * sizeof(ring_->desc[0]);
-    desc.reset(new (&ac) uint8_t[desc_size]);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    memset(desc.get(), 0, desc_size);
-  }
-
-  {
-    fbl::AllocChecker ac;
-    size_t avail_size = sizeof(*ring_->avail) +
-                        (queue_->size() * sizeof(ring_->avail->ring[0])) +
-                        sizeof(*ring_->used_event);
-    avail.reset(new (&ac) uint8_t[avail_size]);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    memset(avail.get(), 0, avail_size);
-  }
-
-  {
-    fbl::AllocChecker ac;
-    size_t used_size = sizeof(*ring_->used) +
-                       (ring_->size * sizeof(ring_->used->ring[0])) +
-                       sizeof(*ring_->avail_event);
-    used.reset(new (&ac) uint8_t[used_size]);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    memset(used.get(), 0, used_size);
-  }
-
-  queue_size_ = queue_size;
-  desc_buf_ = std::move(desc);
-  avail_ring_buf_ = std::move(avail);
-  used_ring_buf_ = std::move(used);
-
-  queue_->Configure(queue_size, reinterpret_cast<zx_gpaddr_t>(desc_buf_.get()),
-                    reinterpret_cast<zx_gpaddr_t>(avail_ring_buf_.get()),
-                    reinterpret_cast<zx_gpaddr_t>(used_ring_buf_.get()));
+  queue_->Configure(queue_size, reinterpret_cast<zx_gpaddr_t>(desc_buf_.data()),
+                    reinterpret_cast<zx_gpaddr_t>(avail_buf_.data()),
+                    reinterpret_cast<zx_gpaddr_t>(used_buf_.data()));
 
   // Disable interrupt generation.
   ring_->used->flags = 1;
   *const_cast<uint16_t*>(ring_->used_event) = 0xffff;
-  return ZX_OK;
 }
 
 zx_status_t VirtioQueueFake::SetNext(uint16_t desc_index, uint16_t next_index) {
@@ -76,6 +43,7 @@ zx_status_t VirtioQueueFake::SetNext(uint16_t desc_index, uint16_t next_index) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  std::lock_guard<std::mutex> lock(queue_->mutex_);
   auto& desc = const_cast<volatile vring_desc&>(ring_->desc[desc_index]);
   desc.flags |= VRING_DESC_F_NEXT;
   desc.next = next_index;
@@ -92,6 +60,7 @@ zx_status_t VirtioQueueFake::WriteDescriptor(void* buf, size_t len,
 
   next_free_desc_++;
 
+  std::lock_guard<std::mutex> lock(queue_->mutex_);
   auto& desc = const_cast<volatile vring_desc&>(ring_->desc[desc_index]);
   desc.addr = reinterpret_cast<uint64_t>(buf);
   desc.len = static_cast<uint32_t>(len);
@@ -104,17 +73,20 @@ zx_status_t VirtioQueueFake::WriteDescriptor(void* buf, size_t len,
 }
 
 void VirtioQueueFake::WriteToAvail(uint16_t desc) {
+  std::lock_guard<std::mutex> lock(queue_->mutex_);
   auto avail = const_cast<volatile vring_avail*>(ring_->avail);
   uint16_t& avail_idx = const_cast<uint16_t&>(ring_->avail->idx);
   avail->ring[avail_idx++ % queue_size_] = desc;
 }
 
 bool VirtioQueueFake::HasUsed() const {
+  std::lock_guard<std::mutex> lock(queue_->mutex_);
   return ring_->used->idx != used_index_;
 }
 
 struct vring_used_elem VirtioQueueFake::NextUsed() {
   FXL_DCHECK(HasUsed());
+  std::lock_guard<std::mutex> lock(queue_->mutex_);
   return const_cast<struct vring_used_elem&>(
       ring_->used->ring[used_index_++ % queue_size_]);
 }

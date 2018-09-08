@@ -5,7 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_QUEUE_FAKE_H_
 #define GARNET_LIB_MACHINA_VIRTIO_QUEUE_FAKE_H_
 
-#include <fbl/unique_ptr.h>
+#include <vector>
+
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
@@ -66,16 +67,12 @@ class DescBuilder {
 // simulated guest physical address space aliases our address space.
 class VirtioQueueFake {
  public:
-  explicit VirtioQueueFake(VirtioQueue* queue);
-
-  // Allocate memory for a queue with the given size and wire up the queue
-  // to use those buffers.
-  zx_status_t Init(uint16_t size);
+  explicit VirtioQueueFake(VirtioQueue* queue, uint16_t queue_size);
 
   // Access the underlying VirtioQueue.
   VirtioQueue* queue() const { return queue_; }
   // Access the underlying VirtioRing.
-  VirtioRing* ring() const { return ring_; }
+  VirtioRing* ring() const __TA_NO_THREAD_SAFETY_ANALYSIS { return ring_; }
 
   // Allocate and write a descriptor. |addr|, |len|, and |flags| correspond
   // to the fields in vring_desc.
@@ -111,12 +108,12 @@ class VirtioQueueFake {
   struct vring_used_elem NextUsed();
 
  private:
-  VirtioQueue* queue_ = nullptr;
-  VirtioRing* ring_ = nullptr;
-  uint16_t queue_size_ = 0;
-  fbl::unique_ptr<uint8_t[]> desc_buf_;
-  fbl::unique_ptr<uint8_t[]> avail_ring_buf_;
-  fbl::unique_ptr<uint8_t[]> used_ring_buf_;
+  VirtioQueue* const queue_ = nullptr;
+  VirtioRing* const ring_ __TA_GUARDED(queue_->mutex_) = nullptr;
+  const uint16_t queue_size_ = 0;
+  std::vector<uint8_t> desc_buf_;
+  std::vector<uint8_t> avail_buf_;
+  std::vector<uint8_t> used_buf_;
 
   // The next entry in the descriptor table that is available.
   uint16_t next_free_desc_ = 0;

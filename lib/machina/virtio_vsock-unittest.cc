@@ -157,12 +157,10 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
  public:
   VirtioVsockTest()
       : vsock_(nullptr, phys_mem_, dispatcher()),
-        rx_queue_(vsock_.rx_queue()),
-        tx_queue_(vsock_.tx_queue()) {}
+        rx_queue_(vsock_.rx_queue(), kVirtioVsockQueueSize),
+        tx_queue_(vsock_.tx_queue(), kVirtioVsockQueueSize) {}
 
   void SetUp() override {
-    ASSERT_EQ(rx_queue_.Init(kVirtioVsockQueueSize), ZX_OK);
-    ASSERT_EQ(tx_queue_.Init(kVirtioVsockQueueSize), ZX_OK);
     FillRxQueue();
     ASSERT_EQ(endpoint_binding_.Bind(endpoint_.NewRequest()), ZX_OK);
     endpoint_->SetContextId(kVirtioVsockGuestCid,

@@ -21,7 +21,6 @@ TEST_F(VirtioQueueWaiterTest, Wait) {
                              wait_complete = true;
                            });
 
-  ASSERT_EQ(device.Init(), ZX_OK);
   EXPECT_EQ(ZX_OK, waiter.Begin());
 
   RunLoopUntilIdle();
@@ -35,7 +34,7 @@ TEST_F(VirtioQueueWaiterTest, Wait) {
   // Add a descriptor and signal again. This should invoke the waiter.
   uint8_t buf[8];
   ASSERT_EQ(device.queue_fake()
-                .BuildDescriptor()
+                ->BuildDescriptor()
                 .AppendReadable(buf, sizeof(buf))
                 .Build(),
             ZX_OK);
