@@ -83,6 +83,48 @@ if (zircon_boot_groups == "all") {
 #
 images = []
 
+# Write a JSON metadata file about the packages in the build.
+_packages_json = {
+  _all = []
+  monolith = []
+  foreach(pkg, monolith_packages) {
+    monolith += [ get_label_info(pkg, "name") ]
+    _all += [ pkg ]
+    _all -= [ pkg ]
+    _all += [ pkg ]
+  }
+  preinstall = []
+  foreach(pkg, preinstall_packages) {
+    preinstall += [ get_label_info(pkg, "name") ]
+    _all += [ pkg ]
+    _all -= [ pkg ]
+    _all += [ pkg ]
+  }
+  available = []
+  foreach(pkg, available_packages) {
+    available += [ get_label_info(pkg, "name") ]
+    _all += [ pkg ]
+    _all -= [ pkg ]
+    _all += [ pkg ]
+  }
+  packages = []
+  foreach(pkg, _all) {
+    packages += [
+      {
+        dir = get_label_info(pkg, "dir")
+        name = get_label_info(pkg, "name")
+        build_dir =
+            rebase_path(get_label_info(pkg, "target_out_dir"), root_build_dir)
+      },
+    ]
+  }
+}
+write_file("$root_build_dir/packages.json",
+           {
+             forward_variables_from(_packages_json, "*", [ "_all" ])
+           },
+           "json")
+
 # TODO(mcgrathr): Temporary until scripts and recipes get updated.
 legacy_images_dir = "$root_out_dir/images"
 board = "qemu"
@@ -833,8 +875,8 @@ images += [
 group("images") {
   testonly = true
   deps = [
-    ":ids.txt",
     ":default-legacy-images",
+    ":ids.txt",
     "zedboot",
   ]
   foreach(image, images) {
@@ -1267,7 +1309,7 @@ foreach(image, images) {
         {
           source = image_sources[0]
           dest = "target/$target_cpu/${image.sdk}"
-        }
+        },
       ]
 
       non_sdk_deps = image.deps
