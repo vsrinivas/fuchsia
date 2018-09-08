@@ -119,7 +119,17 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
     // IE's.
     auto ie_chains = beacon.elements;
     size_t ie_chains_len = frame_len - beacon.len();
-    return ParseIE(ie_chains, ie_chains_len);
+
+    auto status = ParseIE(ie_chains, ie_chains_len);
+    if (status != ZX_OK) { return status; }
+
+    // Post processing after IE parsing
+
+    // Interop: Do not discard the beacon unless it is confirmed to be safe to do.
+    // TODO(porce): Do something with the validation result.
+    ValidateBssDesc(bss_desc_, has_dsss_param_set_chan_, dsss_param_set_chan_);
+
+    return ZX_OK;
 }
 
 void Bss::ParseCapabilityInfo(const CapabilityInfo& cap) {
@@ -374,6 +384,55 @@ wlan_mlme::BSSTypes GetBssType(const CapabilityInfo& cap) {
         // Undefined
         return ::fuchsia::wlan::mlme::BSSTypes::ANY_BSS;
     }
+}
+
+// Validate by testing the intra-consistency of the presence and the values of the information.
+bool ValidateBssDesc(const wlan_mlme::BSSDescription& bss_desc, bool has_dsss_param_set_chan,
+                     uint8_t dsss_param_set_chan) {
+    bool has_ht_cap = bss_desc.ht_cap != nullptr;
+    bool has_ht_op = bss_desc.ht_op != nullptr;
+    bool has_vht_cap = bss_desc.vht_cap != nullptr;
+    bool has_vht_op = bss_desc.vht_op != nullptr;
+
+#define DBGBCN(msg)                                                                       \
+    debugbcn("beacon from BSSID %s malformed: " msg                                       \
+             " : has_dsss_param %u dsss_chan %u ht_cap %u ht_op %u "                      \
+             "vht_cap %u vht_op %u ht_op_primary_chan %u",                                \
+             common::MacAddr(bss_desc.bssid).ToString().c_str(), has_dsss_param_set_chan, \
+             dsss_param_set_chan, has_ht_cap, has_ht_op, has_vht_cap, has_vht_op,         \
+             has_ht_op ? bss_desc.ht_op->primary_chan : 0);
+
+    // IEEE Std 802.11-2016 Table 9-27, the use of MIB dot11HighThroughputOptionImplemented
+    // Either both present or both absent
+    if (has_ht_cap != has_ht_op) {
+        DBGBCN("Inconsistent presence of ht_cap and ht_op");
+        return false;
+    }
+
+    // IEEE Std 802.11-2016, B.4.2's CFHT, B.4.17.1's HTM1.1, B.4.25.1's VHTM1.1
+    if (has_vht_cap && !has_ht_cap) {
+        DBGBCN("Inconsistent presence of ht_cap and vht_cap");
+        return false;
+    }
+
+    // See IEEE Std 802.11-2016 Table 9-27, the use of MIB dot11VHTOptionImplemented
+    // Either both present or both absent
+    if (has_vht_cap != has_vht_op) {
+        DBGBCN("Inconsistent presence of vht_cap and vht_op");
+        return false;
+    }
+
+    // No particular clause in the stadnard. See dot11CurrentChannel, and
+    // related MIBs
+    if (has_dsss_param_set_chan && bss_desc.ht_cap != nullptr) {
+        if (dsss_param_set_chan != bss_desc.ht_op->primary_chan) {
+            DBGBCN("dss param chan != ht_op chan");
+            return false;
+        }
+    }
+
+#undef DBCBCN
+    return true;
 }
 
 }  // namespace wlan
