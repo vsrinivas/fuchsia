@@ -57,16 +57,16 @@ static wlanif_impl_ifc_t wlanif_impl_ifc_ops = {
                      { DEV(cookie)->JoinConf(resp); },
     .auth_conf = [](void* cookie, wlanif_auth_confirm_t* resp)
                      { DEV(cookie)->AuthenticateConf(resp); },
-    .auth_resp = [](void* cookie, wlanif_auth_resp_t* resp)
-                     { DEV(cookie)->AuthenticateResp(resp); },
+    .auth_ind = [](void* cookie, wlanif_auth_ind_t* ind)
+                     { DEV(cookie)->AuthenticateInd(ind); },
     .deauth_conf = [](void* cookie, wlanif_deauth_confirm_t* resp)
                        { DEV(cookie)->DeauthenticateConf(resp); },
     .deauth_ind = [](void* cookie, wlanif_deauth_indication_t* ind)
                       { DEV(cookie)->DeauthenticateInd(ind); },
     .assoc_conf = [](void* cookie, wlanif_assoc_confirm_t* resp)
                       { DEV(cookie)->AssociateConf(resp); },
-    .assoc_resp = [](void* cookie, wlanif_assoc_response_t* resp)
-                      { DEV(cookie)->AssociateResp(resp); },
+    .assoc_ind = [](void* cookie, wlanif_assoc_ind_t* ind)
+                      { DEV(cookie)->AssociateInd(ind); },
     .disassoc_conf = [](void* cookie, wlanif_disassoc_confirm_t* resp)
                          { DEV(cookie)->DisassociateConf(resp); },
     .disassoc_ind = [](void* cookie, wlanif_disassoc_indication_t* ind)
@@ -149,10 +149,10 @@ zx_status_t Device::Bind() {
     VERIFY_PROTO_OP(start_scan);
     VERIFY_PROTO_OP(join_req);
     VERIFY_PROTO_OP(auth_req);
-    VERIFY_PROTO_OP(auth_ind);
+    VERIFY_PROTO_OP(auth_resp);
     VERIFY_PROTO_OP(deauth_req);
     VERIFY_PROTO_OP(assoc_req);
-    VERIFY_PROTO_OP(assoc_ind);
+    VERIFY_PROTO_OP(assoc_resp);
     VERIFY_PROTO_OP(disassoc_req);
     VERIFY_PROTO_OP(reset_req);
     VERIFY_PROTO_OP(start_req);
@@ -349,18 +349,16 @@ void Device::AuthenticateReq(wlan_mlme::AuthenticateRequest req) {
     wlanif_impl_.ops->auth_req(wlanif_impl_.ctx, &impl_req);
 }
 
-void Device::AuthenticateInd(wlan_mlme::AuthenticateIndication ind) {
-    SetDataStateUnlocked(OFFLINE);
-
-    wlanif_auth_ind_t impl_ind = {};
+void Device::AuthenticateResp(wlan_mlme::AuthenticateResponse resp) {
+    wlanif_auth_resp_t impl_resp = {};
 
     // peer_sta_address
-    std::memcpy(impl_ind.peer_sta_address, ind.peer_sta_address.data(), ETH_ALEN);
+    std::memcpy(impl_resp.peer_sta_address, resp.peer_sta_address.data(), ETH_ALEN);
 
-    // auth_type
-    impl_ind.auth_type = ConvertAuthType(ind.auth_type);
+    // result_code
+    impl_resp.result_code = ConvertAuthResultCode(resp.result_code);
 
-    wlanif_impl_.ops->auth_ind(wlanif_impl_.ctx, &impl_ind);
+    wlanif_impl_.ops->auth_resp(wlanif_impl_.ctx, &impl_resp);
 }
 
 void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
@@ -396,22 +394,19 @@ void Device::AssociateReq(wlan_mlme::AssociateRequest req) {
     wlanif_impl_.ops->assoc_req(wlanif_impl_.ctx, &impl_req);
 }
 
-void Device::AssociateInd(wlan_mlme::AssociateIndication ind) {
-    wlanif_assoc_ind_t impl_ind = {};
+void Device::AssociateResp(wlan_mlme::AssociateResponse resp) {
+    wlanif_assoc_resp_t impl_resp = {};
 
     // peer_sta_address
-    std::memcpy(impl_ind.peer_sta_address, ind.peer_sta_address.data(), ETH_ALEN);
+    std::memcpy(impl_resp.peer_sta_address, resp.peer_sta_address.data(), ETH_ALEN);
 
-    // listen_interval
-    impl_ind.listen_interval = ind.listen_interval;
+    // result_code
+    impl_resp.result_code = ConvertAssocResultCode(resp.result_code);
 
-    // ssid
-    CopySSID(ind.ssid, impl_ind.ssid);
+    // association_id
+    impl_resp.association_id = resp.association_id;
 
-    // rsne
-    CopyRSNE(ind.rsn, impl_ind.rsne, &impl_ind.rsne_len);
-
-    wlanif_impl_.ops->assoc_ind(wlanif_impl_.ctx, &impl_ind);
+    wlanif_impl_.ops->assoc_resp(wlanif_impl_.ctx, &impl_resp);
 }
 
 void Device::DisassociateReq(wlan_mlme::DisassociateRequest req) {
@@ -658,24 +653,20 @@ void Device::AuthenticateConf(wlanif_auth_confirm_t* resp) {
     binding_.events().AuthenticateConf(std::move(fidl_resp));
 }
 
-void Device::AuthenticateResp(wlanif_auth_resp_t* resp) {
+void Device::AuthenticateInd(wlanif_auth_ind_t* ind) {
     std::lock_guard<std::mutex> lock(lock_);
 
-    SetDataStateLocked(OFFLINE);
+    if (!binding_.is_bound()) { return; }
 
-    if (!binding_.is_bound()) {
-        return;
-    }
-
-    wlan_mlme::AuthenticateResponse fidl_resp;
+    wlan_mlme::AuthenticateIndication fidl_ind;
 
     // peer_sta_address
-    std::memcpy(fidl_resp.peer_sta_address.mutable_data(), resp->peer_sta_address, ETH_ALEN);
+    std::memcpy(fidl_ind.peer_sta_address.mutable_data(), ind->peer_sta_address, ETH_ALEN);
 
-    // result_code
-    fidl_resp.result_code = ConvertAuthResultCode(resp->result_code);
+    // auth_type
+    fidl_ind.auth_type = ConvertAuthType(ind->auth_type);
 
-    binding_.events().AuthenticateResp(std::move(fidl_resp));
+    binding_.events().AuthenticateInd(std::move(fidl_ind));
 }
 
 void Device::DeauthenticateConf(wlanif_deauth_confirm_t* resp) {
@@ -737,24 +728,31 @@ void Device::AssociateConf(wlanif_assoc_confirm_t* resp) {
     binding_.events().AssociateConf(std::move(fidl_resp));
 }
 
-void Device::AssociateResp(wlanif_assoc_response_t* resp) {
+void Device::AssociateInd(wlanif_assoc_ind_t* ind) {
     std::lock_guard<std::mutex> lock(lock_);
     if (!binding_.is_bound()) {
         return;
     }
 
-    wlan_mlme::AssociateResponse fidl_resp;
+    wlan_mlme::AssociateIndication fidl_ind;
 
     // peer_sta_address
-    std::memcpy(fidl_resp.peer_sta_address.mutable_data(), resp->peer_sta_address, ETH_ALEN);
+    std::memcpy(fidl_ind.peer_sta_address.mutable_data(), ind->peer_sta_address, ETH_ALEN);
 
-    // result_code
-    fidl_resp.result_code = ConvertAssocResultCode(resp->result_code);
+    // listen_interval
+    fidl_ind.listen_interval = ind->listen_interval;
 
-    // association_id
-    fidl_resp.association_id = resp->association_id;
+    // TODO(NET-1460): SSID in wlanif_assoc_ind_t is a char[] but should be a uint8_t[] as the
+    // SSID is not a string. Another problem is that wlanif_assoc_ind_t doesn't carry the
+    // SSID's length and thus we cannot determine if the SSID is optional or not.
 
-    binding_.events().AssociateResp(std::move(fidl_resp));
+    // rsne
+    bool is_protected = ind->rsne_len != 0;
+    if (is_protected) {
+        memcpy(fidl_ind.rsn->data(), ind->rsne, ind->rsne_len);
+    }
+
+    binding_.events().AssociateInd(std::move(fidl_ind));
 }
 
 void Device::DisassociateConf(wlanif_disassoc_confirm_t* resp) {

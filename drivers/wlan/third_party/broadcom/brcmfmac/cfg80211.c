@@ -4836,8 +4836,8 @@ void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
     brcmf_dbg(TEMP, "Enter");
 }
 
-void brcmf_hook_auth_ind(void* ctx, wlanif_auth_ind_t* ind) {
-    brcmf_dbg(TEMP, "Called hook auth_ind");
+void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
+    brcmf_dbg(TEMP, "Called hook auth_resp");
 }
 
 void brcmf_hook_deauth_req(void* ctx, wlanif_deauth_req_t* req) {
@@ -4848,8 +4848,8 @@ void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
     brcmf_dbg(TEMP, "Enter");
 }
 
-void brcmf_hook_assoc_ind(void* ctx, wlanif_assoc_ind_t* ind) {
-    brcmf_dbg(TEMP, "Called hook assoc_ind");
+void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
+    brcmf_dbg(TEMP, "Called hook assoc_resp");
 }
 
 void brcmf_hook_disassoc_req(void* ctx, wlanif_disassoc_req_t* req) {
@@ -4941,10 +4941,10 @@ static wlanif_impl_protocol_ops_t if_impl_proto_ops = {
     .start_scan = brcmf_hook_start_scan,
     .join_req = brcmf_hook_join_req,
     .auth_req = brcmf_hook_auth_req,
-    .auth_ind = brcmf_hook_auth_ind,
+    .auth_resp = brcmf_hook_auth_resp,
     .deauth_req = brcmf_hook_deauth_req,
     .assoc_req = brcmf_hook_assoc_req,
-    .assoc_ind = brcmf_hook_assoc_ind,
+    .assoc_resp = brcmf_hook_assoc_resp,
     .disassoc_req = brcmf_hook_disassoc_req,
     .reset_req = brcmf_hook_reset_req,
     .start_req = brcmf_hook_start_req,

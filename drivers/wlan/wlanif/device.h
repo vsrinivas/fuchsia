@@ -35,10 +35,10 @@ class Device : public wlan_mlme::MLME {
     void StartScan(wlan_mlme::ScanRequest req) override;
     void JoinReq(wlan_mlme::JoinRequest req) override;
     void AuthenticateReq(wlan_mlme::AuthenticateRequest req) override;
-    void AuthenticateInd(wlan_mlme::AuthenticateIndication ind) override;
+    void AuthenticateResp(wlan_mlme::AuthenticateResponse resp) override;
     void DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) override;
     void AssociateReq(wlan_mlme::AssociateRequest req) override;
-    void AssociateInd(wlan_mlme::AssociateIndication ind) override;
+    void AssociateResp(wlan_mlme::AssociateResponse resp) override;
     void DisassociateReq(wlan_mlme::DisassociateRequest req) override;
     void ResetReq(wlan_mlme::ResetRequest req) override;
     void StartReq(wlan_mlme::StartRequest req) override;
@@ -54,11 +54,11 @@ class Device : public wlan_mlme::MLME {
     void OnScanEnd(wlanif_scan_end_t* result);
     void JoinConf(wlanif_join_confirm_t* resp);
     void AuthenticateConf(wlanif_auth_confirm_t* resp);
-    void AuthenticateResp(wlanif_auth_resp_t* resp);
+    void AuthenticateInd(wlanif_auth_ind_t* ind);
     void DeauthenticateConf(wlanif_deauth_confirm_t* resp);
     void DeauthenticateInd(wlanif_deauth_indication_t* ind);
     void AssociateConf(wlanif_assoc_confirm_t* resp);
-    void AssociateResp(wlanif_assoc_response_t* resp);
+    void AssociateInd(wlanif_assoc_ind_t* ind);
     void DisassociateConf(wlanif_disassoc_confirm_t* resp);
     void DisassociateInd(wlanif_disassoc_indication_t* ind);
     void StartConf(wlanif_start_confirm_t* resp);

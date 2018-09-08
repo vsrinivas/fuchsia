@@ -303,11 +303,11 @@ typedef struct wlanif_assoc_confirm {
     uint16_t association_id;
 } wlanif_assoc_confirm_t;
 
-typedef struct wlanif_assoc_response {
+typedef struct wlanif_assoc_resp {
     uint8_t peer_sta_address[ETH_ALEN];
     uint8_t result_code; // WLAN_ASSOC_RESULT_*
     uint16_t association_id;
-} wlanif_assoc_response_t;
+} wlanif_assoc_resp_t;
 
 typedef struct wlanif_disassoc_confirm {
     int32_t status;
@@ -418,11 +418,11 @@ typedef struct wlanif_impl_ifc {
     void (*on_scan_end)(void* cookie, wlanif_scan_end_t* end);
     void (*join_conf)(void* cookie, wlanif_join_confirm_t* resp);
     void (*auth_conf)(void* cookie, wlanif_auth_confirm_t* resp);
-    void (*auth_resp)(void* cookie, wlanif_auth_resp_t* resp);
+    void (*auth_ind)(void* cookie, wlanif_auth_ind_t* resp);
     void (*deauth_conf)(void* cookie, wlanif_deauth_confirm_t* resp);
     void (*deauth_ind)(void* cookie, wlanif_deauth_indication_t* ind);
     void (*assoc_conf)(void* cookie, wlanif_assoc_confirm_t* resp);
-    void (*assoc_resp)(void* cookie, wlanif_assoc_response_t* resp);
+    void (*assoc_ind)(void* cookie, wlanif_assoc_ind_t* resp);
     void (*disassoc_conf)(void* cookie, wlanif_disassoc_confirm_t* resp);
     void (*disassoc_ind)(void* cookie, wlanif_disassoc_indication_t* ind);
     void (*start_conf)(void* cookie, wlanif_start_confirm_t* resp);
@@ -451,10 +451,10 @@ typedef struct wlanif_impl_protocol_ops {
     void (*start_scan)(void* ctx, wlanif_scan_req_t* req);
     void (*join_req)(void* ctx, wlanif_join_req_t* req);
     void (*auth_req)(void* ctx, wlanif_auth_req_t* req);
-    void (*auth_ind)(void* ctx, wlanif_auth_ind_t* ind);
+    void (*auth_resp)(void* ctx, wlanif_auth_resp_t* resp);
     void (*deauth_req)(void* ctx, wlanif_deauth_req_t* req);
     void (*assoc_req)(void* ctx, wlanif_assoc_req_t* req);
-    void (*assoc_ind)(void* ctx, wlanif_assoc_ind_t* ind);
+    void (*assoc_resp)(void* ctx, wlanif_assoc_resp_t* resp);
     void (*disassoc_req)(void* ctx, wlanif_disassoc_req_t* req);
     void (*reset_req)(void* ctx, wlanif_reset_req_t* req);
     void (*start_req)(void* ctx, wlanif_start_req_t* req);

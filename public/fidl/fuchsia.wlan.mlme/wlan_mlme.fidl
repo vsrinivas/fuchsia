@@ -813,8 +813,8 @@ interface MLME {
     5: AuthenticateReq(AuthenticateRequest req);
     6: -> AuthenticateConf(AuthenticateConfirm resp);
 
-    7: AuthenticateInd(AuthenticateIndication ind);
-    8: -> AuthenticateResp(AuthenticateResponse resp);
+    7: -> AuthenticateInd(AuthenticateIndication ind);
+    8: AuthenticateResp(AuthenticateResponse resp);
 
     9: DeauthenticateReq(DeauthenticateRequest req);
     10: -> DeauthenticateConf(DeauthenticateConfirm resp);
@@ -824,8 +824,8 @@ interface MLME {
     12: AssociateReq(AssociateRequest req);
     13: -> AssociateConf(AssociateConfirm resp);
 
-    14: AssociateInd(AssociateIndication ind);
-    15: -> AssociateResp(AssociateResponse resp);
+    14: -> AssociateInd(AssociateIndication ind);
+    15: AssociateResp(AssociateResponse resp);
 
     16: DisassociateReq(DisassociateRequest req);
     17: -> DisassociateConf(DisassociateConfirm resp);

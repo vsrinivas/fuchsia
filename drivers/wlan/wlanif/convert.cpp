@@ -493,6 +493,25 @@ wlan_mlme::AuthenticateResultCodes ConvertAuthResultCode(uint8_t code) {
     }
 }
 
+uint8_t ConvertAuthResultCode(wlan_mlme::AuthenticateResultCodes code) {
+    switch (code) {
+    case wlan_mlme::AuthenticateResultCodes::SUCCESS:
+        return WLAN_AUTH_RESULT_SUCCESS;
+    case wlan_mlme::AuthenticateResultCodes::REFUSED:
+        return WLAN_AUTH_RESULT_REFUSED;
+    case wlan_mlme::AuthenticateResultCodes::ANTI_CLOGGING_TOKEN_REQUIRED:
+        return WLAN_AUTH_RESULT_ANTI_CLOGGING_TOKEN_REQUIRED;
+    case wlan_mlme::AuthenticateResultCodes::FINITE_CYCLIC_GROUP_NOT_SUPPORTED:
+        return WLAN_AUTH_RESULT_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
+    case wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED:
+        return WLAN_AUTH_RESULT_REJECTED;
+    case wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT:
+        return WLAN_AUTH_RESULT_FAILURE_TIMEOUT;
+    default:
+        ZX_ASSERT(0);
+    }
+}
+
 wlan_mlme::ReasonCode ConvertDeauthReasonCode(uint16_t reason) {
     switch (reason) {
     case WLAN_DEAUTH_REASON_UNSPECIFIED:
@@ -642,6 +661,31 @@ wlan_mlme::AssociateResultCodes ConvertAssocResultCode(uint8_t code) {
         return wlan_mlme::AssociateResultCodes::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED;
     case WLAN_ASSOC_RESULT_REFUSED_TEMPORARILY:
         return wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY;
+    default:
+        ZX_ASSERT(0);
+    }
+}
+
+uint8_t ConvertAssocResultCode(wlan_mlme::AssociateResultCodes code) {
+    switch (code) {
+    case wlan_mlme::AssociateResultCodes::SUCCESS:
+        return WLAN_ASSOC_RESULT_SUCCESS;
+    case wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED:
+        return WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED;
+    case wlan_mlme::AssociateResultCodes::REFUSED_NOT_AUTHENTICATED:
+        return WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED;
+    case wlan_mlme::AssociateResultCodes::REFUSED_CAPABILITIES_MISMATCH:
+        return WLAN_ASSOC_RESULT_REFUSED_CAPABILITIES_MISMATCH;
+    case wlan_mlme::AssociateResultCodes::REFUSED_EXTERNAL_REASON:
+        return WLAN_ASSOC_RESULT_REFUSED_EXTERNAL_REASON;
+    case wlan_mlme::AssociateResultCodes::REFUSED_AP_OUT_OF_MEMORY:
+        return WLAN_ASSOC_RESULT_REFUSED_AP_OUT_OF_MEMORY;
+    case wlan_mlme::AssociateResultCodes::REFUSED_BASIC_RATES_MISMATCH:
+        return WLAN_ASSOC_RESULT_REFUSED_BASIC_RATES_MISMATCH;
+    case wlan_mlme::AssociateResultCodes::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED:
+        return WLAN_ASSOC_RESULT_REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED;
+    case wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY:
+        return WLAN_ASSOC_RESULT_REFUSED_TEMPORARILY;
     default:
         ZX_ASSERT(0);
     }
