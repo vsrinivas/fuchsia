@@ -9,6 +9,7 @@
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
+#include <memory>
 #include <string>
 
 namespace wlan {
@@ -247,7 +248,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.ht_cap = HtCapabilitiesToFidl(*ie);
+            bss_desc_.ht_cap = ie->ToFidl();
 
             debugbcn("%s HtCapabilities parsed\n", dbgmsghdr);
             debugbcn("%s\n", debug::Describe(*ie).c_str());
@@ -260,7 +261,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.ht_op = HtOperationToFidl(*ie);
+            bss_desc_.ht_op = ie->ToFidl();
             debugbcn("%s HtOperation parsed\n", dbgmsghdr);
             break;
         }
@@ -271,7 +272,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.vht_cap = VhtCapabilitiesToFidl(*ie);
+            bss_desc_.vht_cap = ie->ToFidl();
             debugbcn("%s VhtCapabilities parsed\n", dbgmsghdr);
             break;
         }
@@ -282,7 +283,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.vht_op = VhtOperationToFidl(*ie);
+            bss_desc_.vht_op = ie->ToFidl();
             debugbcn("%s VhtOperation parsed\n", dbgmsghdr);
             break;
         }
@@ -297,219 +298,6 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
 
     debugbcn("  IE Summary: parsed %u / all %u\n", (ie_cnt - ie_unparsed_cnt), ie_cnt);
     return ZX_OK;
-}
-
-wlan_mlme::HtCapabilityInfo HtCapabilityInfoToFidl(const HtCapabilityInfo& hci) {
-    wlan_mlme::HtCapabilityInfo fidl;
-
-    fidl.ldpc_coding_cap = (hci.ldpc_coding_cap() == 1);
-    fidl.chan_width_set = static_cast<wlan_mlme::ChanWidthSet>(hci.chan_width_set());
-    fidl.sm_power_save = static_cast<wlan_mlme::SmPowerSave>(hci.sm_power_save());
-    fidl.greenfield = (hci.greenfield() == 1);
-    fidl.short_gi_20 = (hci.short_gi_20() == 1);
-    fidl.short_gi_40 = (hci.short_gi_40() == 1);
-    fidl.tx_stbc = (hci.tx_stbc() == 1);
-    fidl.rx_stbc = hci.rx_stbc();
-    fidl.delayed_block_ack = (hci.delayed_block_ack() == 1);
-    fidl.max_amsdu_len = static_cast<wlan_mlme::MaxAmsduLen>(hci.max_amsdu_len());
-    fidl.dsss_in_40 = (hci.dsss_in_40() == 1);
-    fidl.intolerant_40 = (hci.intolerant_40() == 1);
-    fidl.lsig_txop_protect = (hci.lsig_txop_protect() == 1);
-
-    return fidl;
-}
-
-wlan_mlme::AmpduParams AmpduParamsToFidl(const AmpduParams& ap) {
-    wlan_mlme::AmpduParams fidl;
-
-    fidl.exponent = ap.exponent();
-    fidl.min_start_spacing = static_cast<wlan_mlme::MinMpduStartSpacing>(ap.min_start_spacing());
-
-    return fidl;
-}
-
-wlan_mlme::SupportedMcsSet SupportedMcsSetToFidl(const SupportedMcsSet& sms) {
-    wlan_mlme::SupportedMcsSet fidl;
-
-    fidl.rx_mcs_set = sms.rx_mcs_head.bitmask();
-    fidl.rx_highest_rate = sms.rx_mcs_tail.highest_rate();
-    fidl.tx_mcs_set_defined = (sms.tx_mcs.set_defined() == 1);
-    fidl.tx_rx_diff = (sms.tx_mcs.rx_diff() == 1);
-    fidl.tx_max_ss = sms.tx_mcs.max_ss_human();  // Converting to human readable
-    fidl.tx_ueqm = (sms.tx_mcs.ueqm() == 1);
-
-    return fidl;
-}
-
-wlan_mlme::HtExtCapabilities HtExtCapabilitiesToFidl(const HtExtCapabilities& hec) {
-    wlan_mlme::HtExtCapabilities fidl;
-
-    fidl.pco = (hec.pco() == 1);
-    fidl.pco_transition = static_cast<wlan_mlme::PcoTransitionTime>(hec.pco_transition());
-    fidl.mcs_feedback = static_cast<wlan_mlme::McsFeedback>(hec.mcs_feedback());
-    fidl.htc_ht_support = (hec.htc_ht_support() == 1);
-    fidl.rd_responder = (hec.rd_responder() == 1);
-
-    return fidl;
-}
-
-wlan_mlme::TxBfCapability TxBfCapabilityToFidl(const TxBfCapability& tbc) {
-    wlan_mlme::TxBfCapability fidl;
-
-    fidl.implicit_rx = (tbc.implicit_rx() == 1);
-    fidl.rx_stag_sounding = (tbc.rx_stag_sounding() == 1);
-    fidl.tx_stag_sounding = (tbc.tx_stag_sounding() == 1);
-    fidl.rx_ndp = (tbc.rx_ndp() == 1);
-    fidl.tx_ndp = (tbc.tx_ndp() == 1);
-    fidl.implicit = (tbc.implicit() == 1);
-    fidl.calibration = static_cast<wlan_mlme::Calibration>(tbc.calibration());
-    fidl.csi = (tbc.csi() == 1);
-    fidl.noncomp_steering = (tbc.noncomp_steering() == 1);
-    fidl.comp_steering = (tbc.comp_steering() == 1);
-    fidl.csi_feedback = static_cast<wlan_mlme::Feedback>(tbc.csi_feedback());
-    fidl.noncomp_feedback = static_cast<wlan_mlme::Feedback>(tbc.noncomp_feedback());
-    fidl.comp_feedback = static_cast<wlan_mlme::Feedback>(tbc.comp_feedback());
-    fidl.min_grouping = static_cast<wlan_mlme::MinGroup>(tbc.min_grouping());
-    fidl.csi_antennas = tbc.csi_antennas_human();                    // Converting to human readable
-    fidl.noncomp_steering_ants = tbc.noncomp_steering_ants_human();  // Converting to human readable
-    fidl.comp_steering_ants = tbc.comp_steering_ants_human();        // Converting to human readable
-    fidl.csi_rows = tbc.csi_rows_human();                            // Converting to human readable
-    fidl.chan_estimation = tbc.chan_estimation_human();              // Converting to human readable
-
-    return fidl;
-}
-
-wlan_mlme::AselCapability AselCapabilityToFidl(const AselCapability& ac) {
-    wlan_mlme::AselCapability fidl;
-
-    fidl.asel = (ac.asel() == 1);
-    fidl.csi_feedback_tx_asel = (ac.csi_feedback_tx_asel() == 1);
-    fidl.ant_idx_feedback_tx_asel = (ac.ant_idx_feedback_tx_asel() == 1);
-    fidl.explicit_csi_feedback = (ac.explicit_csi_feedback() == 1);
-    fidl.antenna_idx_feedback = (ac.antenna_idx_feedback() == 1);
-    fidl.rx_asel = (ac.rx_asel() == 1);
-    fidl.tx_sounding_ppdu = (ac.tx_sounding_ppdu() == 1);
-
-    return fidl;
-}
-
-std::unique_ptr<wlan_mlme::HtCapabilities> HtCapabilitiesToFidl(const HtCapabilities& ie) {
-    auto fidl = wlan_mlme::HtCapabilities::New();
-
-    fidl->ht_cap_info = HtCapabilityInfoToFidl(ie.ht_cap_info);
-    fidl->ampdu_params = AmpduParamsToFidl(ie.ampdu_params);
-    fidl->mcs_set = SupportedMcsSetToFidl(ie.mcs_set);
-    fidl->ht_ext_cap = HtExtCapabilitiesToFidl(ie.ht_ext_cap);
-    fidl->txbf_cap = TxBfCapabilityToFidl(ie.txbf_cap);
-    fidl->asel_cap = AselCapabilityToFidl(ie.asel_cap);
-
-    return fidl;
-}
-
-wlan_mlme::HTOperationInfo HtOpInfoToFidl(const HtOpInfoHead& head, const HtOpInfoTail tail) {
-    wlan_mlme::HTOperationInfo fidl;
-
-    fidl.secondary_chan_offset =
-        static_cast<wlan_mlme::SecChanOffset>(head.secondary_chan_offset());
-    fidl.sta_chan_width = static_cast<wlan_mlme::StaChanWidth>(head.sta_chan_width());
-    fidl.rifs_mode = (head.rifs_mode() == 1);
-    fidl.ht_protect = static_cast<wlan_mlme::HtProtect>(head.ht_protect());
-    fidl.nongreenfield_present = (head.nongreenfield_present() == 1);
-    fidl.obss_non_ht = (head.obss_non_ht() == 1);
-    fidl.center_freq_seg2 = head.center_freq_seg2();
-    fidl.dual_beacon = (head.dual_beacon() == 1);
-    fidl.dual_cts_protect = (head.dual_cts_protect() == 1);
-
-    fidl.stbc_beacon = (tail.stbc_beacon() == 1);
-    fidl.lsig_txop_protect = (tail.lsig_txop_protect() == 1);
-    fidl.pco_active = (tail.pco_active() == 1);
-    fidl.pco_phase = (tail.pco_phase() == 1);
-
-    return fidl;
-}
-
-std::unique_ptr<wlan_mlme::HtOperation> HtOperationToFidl(const HtOperation& ie) {
-    auto fidl = wlan_mlme::HtOperation::New();
-
-    fidl->primary_chan = ie.primary_chan;
-    fidl->ht_op_info = HtOpInfoToFidl(ie.head, ie.tail);
-    fidl->basic_mcs_set = SupportedMcsSetToFidl(ie.basic_mcs_set);
-
-    return fidl;
-}
-
-wlan_mlme::VhtMcsNss VhtMcsNssToFidl(const VhtMcsNss& vmn) {
-    wlan_mlme::VhtMcsNss fidl;
-
-    for (uint8_t ss_num = 1; ss_num <= 8; ss_num++) {
-        fidl.rx_max_mcs[ss_num - 1] = static_cast<wlan_mlme::VhtMcs>(vmn.get_rx_max_mcs_ss(ss_num));
-    }
-    fidl.rx_max_data_rate = vmn.rx_max_data_rate();
-    fidl.max_nsts = vmn.max_nsts();
-
-    for (uint8_t ss_num = 1; ss_num <= 8; ss_num++) {
-        fidl.tx_max_mcs[ss_num - 1] = static_cast<wlan_mlme::VhtMcs>(vmn.get_tx_max_mcs_ss(ss_num));
-    }
-    fidl.tx_max_data_rate = vmn.tx_max_data_rate();
-    fidl.ext_nss_bw = (vmn.ext_nss_bw() == 1);
-
-    return fidl;
-}
-
-wlan_mlme::BasicVhtMcsNss BasicVhtMcsNssToFidl(const BasicVhtMcsNss& vmn) {
-    wlan_mlme::BasicVhtMcsNss fidl;
-
-    for (uint8_t ss_num = 1; ss_num <= 8; ss_num++) {
-        fidl.max_mcs[ss_num - 1] = static_cast<wlan_mlme::VhtMcs>(vmn.get_max_mcs_ss(ss_num));
-    }
-    return fidl;
-}
-
-wlan_mlme::VhtCapabilitiesInfo VhtCapabilitiesInfoToFidl(const VhtCapabilitiesInfo& vci) {
-    wlan_mlme::VhtCapabilitiesInfo fidl;
-
-    fidl.max_mpdu_len = static_cast<wlan_mlme::MaxMpduLen>(vci.max_mpdu_len());
-    fidl.supported_cbw_set = vci.supported_cbw_set();
-    fidl.rx_ldpc = (vci.rx_ldpc() == 1);
-    fidl.sgi_cbw80 = (vci.sgi_cbw80() == 1);
-    fidl.sgi_cbw160 = (vci.sgi_cbw160() == 1);
-    fidl.tx_stbc = (vci.tx_stbc() == 1);
-    fidl.rx_stbc = (vci.rx_stbc() == 1);
-    fidl.su_bfer = (vci.su_bfer() == 1);
-    fidl.su_bfee = (vci.su_bfee() == 1);
-    fidl.bfee_sts = vci.bfee_sts();
-    fidl.num_sounding = vci.num_sounding();
-    fidl.mu_bfer = (vci.mu_bfer() == 1);
-    fidl.mu_bfee = (vci.mu_bfee() == 1);
-    fidl.txop_ps = (vci.txop_ps() == 1);
-    fidl.htc_vht = (vci.htc_vht() == 1);
-    fidl.max_ampdu_exp = vci.max_ampdu_exp();
-    fidl.link_adapt = static_cast<wlan_mlme::VhtLinkAdaptation>(vci.link_adapt());
-    fidl.rx_ant_pattern = (vci.rx_ant_pattern() == 1);
-    fidl.tx_ant_pattern = (vci.tx_ant_pattern() == 1);
-    fidl.ext_nss_bw = vci.ext_nss_bw();
-
-    return fidl;
-}
-
-std::unique_ptr<wlan_mlme::VhtCapabilities> VhtCapabilitiesToFidl(const VhtCapabilities& ie) {
-    auto fidl = wlan_mlme::VhtCapabilities::New();
-
-    fidl->vht_cap_info = VhtCapabilitiesInfoToFidl(ie.vht_cap_info);
-    fidl->vht_mcs_nss = VhtMcsNssToFidl(ie.vht_mcs_nss);
-
-    return fidl;
-}
-
-std::unique_ptr<wlan_mlme::VhtOperation> VhtOperationToFidl(const VhtOperation& ie) {
-    auto fidl = wlan_mlme::VhtOperation::New();
-
-    fidl->vht_cbw = static_cast<wlan_mlme::VhtCbw>(ie.vht_cbw);
-    fidl->center_freq_seg0 = ie.center_freq_seg0;
-    fidl->center_freq_seg1 = ie.center_freq_seg1;
-    fidl->basic_mcs = BasicVhtMcsNssToFidl(ie.basic_mcs);
-
-    return fidl;
 }
 
 BeaconHash Bss::GetBeaconSignature(const Beacon& beacon, size_t frame_len) const {

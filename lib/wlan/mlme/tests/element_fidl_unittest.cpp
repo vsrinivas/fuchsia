@@ -16,7 +16,7 @@ namespace {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-TEST(BssTest, VhtMcsNssBitFieldToFidl) {
+TEST(ElementFidlTest, VhtMcsNssBitFieldToFidl) {
     VhtMcsNss vmn;
     vmn.set_rx_max_mcs_ss1(1);
     vmn.set_rx_max_mcs_ss2(2);
@@ -40,7 +40,7 @@ TEST(BssTest, VhtMcsNssBitFieldToFidl) {
     vmn.set_tx_max_data_rate(8191);
     vmn.set_ext_nss_bw(1);
 
-    auto fidl = VhtMcsNssToFidl(vmn);
+    auto fidl = vmn.ToFidl();
 
     EXPECT_EQ(static_cast<uint8_t>(fidl.rx_max_mcs[0]), 1);
     EXPECT_EQ(static_cast<uint8_t>(fidl.rx_max_mcs[1]), 2);
@@ -65,7 +65,7 @@ TEST(BssTest, VhtMcsNssBitFieldToFidl) {
     EXPECT_EQ(fidl.ext_nss_bw, 1);
 }
 
-TEST(BssTest, HtCapabilitiesBitFieldOrHuman) {
+TEST(ElementFidlTest, HtCapabilitiesBitFieldOrHuman) {
     HtCapabilities hc;
 
     hc.mcs_set.tx_mcs.set_max_ss_human(3);
@@ -97,7 +97,7 @@ TEST(BssTest, HtCapabilitiesBitFieldOrHuman) {
     EXPECT_EQ(hc.txbf_cap.chan_estimation_human(), 4);
 }
 
-TEST(BssTest, HtCapabilitiesToFidlHuman) {
+TEST(ElementFidlTest, HtCapabilitiesToFidlHuman) {
     HtCapabilities hc;
 
     hc.mcs_set.rx_mcs_head.set_bitmask(0xfedcba9876543210);
@@ -108,19 +108,18 @@ TEST(BssTest, HtCapabilitiesToFidlHuman) {
     hc.txbf_cap.set_csi_rows_human(2);
     hc.txbf_cap.set_chan_estimation_human(3);
 
-    auto fidl = HtCapabilitiesToFidl(hc);
-    ASSERT_NE(fidl, nullptr);
-
-    EXPECT_EQ(fidl->mcs_set.rx_mcs_set, static_cast<uint64_t>(0xfedcba9876543210));
-    EXPECT_EQ(fidl->mcs_set.tx_max_ss, 3);
-    EXPECT_EQ(fidl->txbf_cap.csi_antennas, 4);
-    EXPECT_EQ(fidl->txbf_cap.noncomp_steering_ants, 2);
-    EXPECT_EQ(fidl->txbf_cap.comp_steering_ants, 1);
-    EXPECT_EQ(fidl->txbf_cap.csi_rows, 2);
-    EXPECT_EQ(fidl->txbf_cap.chan_estimation, 3);
+    auto fidl_ptr = hc.ToFidl();
+    ASSERT_NE(fidl_ptr, nullptr);
+    EXPECT_EQ(fidl_ptr->mcs_set.rx_mcs_set, static_cast<uint64_t>(0xfedcba9876543210));
+    EXPECT_EQ(fidl_ptr->mcs_set.tx_max_ss, 3);
+    EXPECT_EQ(fidl_ptr->txbf_cap.csi_antennas, 4);
+    EXPECT_EQ(fidl_ptr->txbf_cap.noncomp_steering_ants, 2);
+    EXPECT_EQ(fidl_ptr->txbf_cap.comp_steering_ants, 1);
+    EXPECT_EQ(fidl_ptr->txbf_cap.csi_rows, 2);
+    EXPECT_EQ(fidl_ptr->txbf_cap.chan_estimation, 3);
 }
 
-TEST(BssTest, HtOperationToFidl) {
+TEST(ElementFidlTest, HtOperationToFidl) {
     HtOperation hto;
 
     hto.primary_chan = 169;
@@ -142,12 +141,11 @@ TEST(BssTest, HtOperationToFidl) {
 
     hto.basic_mcs_set.rx_mcs_head.set_bitmask(0x89abcdef01234567);
 
-    auto fidl = HtOperationToFidl(hto);
-    ASSERT_NE(fidl, nullptr);
+    auto fidl_ptr = hto.ToFidl();
+    ASSERT_NE(fidl_ptr, nullptr);
+    EXPECT_EQ(fidl_ptr->primary_chan, 169);
 
-    EXPECT_EQ(fidl->primary_chan, 169);
-
-    const auto& htoi = fidl->ht_op_info;
+    const auto& htoi = fidl_ptr->ht_op_info;
     EXPECT_EQ(htoi.secondary_chan_offset, wlan_mlme::SecChanOffset::SECONDARY_ABOVE);
     EXPECT_EQ(htoi.sta_chan_width, wlan_mlme::StaChanWidth::ANY);
     EXPECT_TRUE(htoi.rifs_mode);
@@ -163,7 +161,7 @@ TEST(BssTest, HtOperationToFidl) {
     EXPECT_TRUE(htoi.pco_active);
     EXPECT_TRUE(htoi.pco_phase);
 
-    EXPECT_EQ(fidl->basic_mcs_set.rx_mcs_set, static_cast<uint64_t>(0x89abcdef01234567));
+    EXPECT_EQ(fidl_ptr->basic_mcs_set.rx_mcs_set, static_cast<uint64_t>(0x89abcdef01234567));
 }
 }  // namespace
 }  // namespace wlan
