@@ -354,7 +354,7 @@ type Interface struct {
 }
 
 func GetDocString(node Annotated) []string {
-	value, ok := node.LookupAttribute("doc")
+	value, ok := node.LookupAttribute("Doc")
 	if !ok {
 		return nil
 	}
