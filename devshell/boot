@@ -5,13 +5,14 @@
 
 ### run bootserver in zedboot disk paver mode
 
-## usage: fx boot [--netboot] [--no-data]
+## usage: fx boot [--netboot] [--no-data] [--force-pave]
 ##                [--artifacts <dir>]
 ##                [--sign-tool <path_to_sign_tool>]
 ##                [--bootloader <path_to_prebuilt_bootloader>]
 ##                [<type>] -- [bootserver arguments]
 ##   <type>        see "--help" for list (default: x64 for x64 / arm64 for arm64)
 ##   --netboot     Boot from ramdisk containing FVM
+##   --force-pave  Force the target device to pave to persistent storage
 ##   --no-data     Use FVM images without a /data partition (preserve existing
 ##                 data)
 ##   --artifacts   a directory to load files to send to the target where the
@@ -33,7 +34,7 @@ declare -a disks=()
 fuchsia_dir="${FUCHSIA_BUILD_DIR}"
 zircon_dir="${ZIRCON_BUILD_DIR}"
 zircon_tools="${ZIRCON_TOOLS_DIR}"
-add_fvm=true
+force_pave=false
 
 usage() {
     fx-command-help
@@ -61,6 +62,9 @@ while [[ $# -gt 0 ]]; do
   --netboot)
     netboot=true
     machine_type="netboot"
+    ;;
+  --force-pave)
+    force_pave=true
     ;;
   --no-data)
     echo >&2 "##"
@@ -119,6 +123,16 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+if $force_pave; then
+  case "${machine_type}" in
+    ram|netboot|zedboot)
+      echo >&2 "error: Cannot force paving while targeting ${machine_type}"
+      exit 1
+    ;;
+  esac
+fi
+
+add_fvm=true
 ramdisk="${fuchsia_dir}/${IMAGE_BOOT_RAM}"
 
 case "${machine_type}" in
@@ -156,7 +170,7 @@ case "${machine_type}" in
                         -o "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.gauss.signed"
     disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.gauss.signed" \
                          --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.gauss.signed")
-    add_fvm=false
+    add_fvm=$force_pave
   ;;
   astro)
     if [[ ! -z "${sign_tool}" ]]; then
@@ -171,7 +185,7 @@ case "${machine_type}" in
                          -o "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.astro.signed"
     disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.astro.signed"\
                          --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.astro.signed")
-    add_fvm=false
+    add_fvm=$force_pave
   ;;
   ""|*)
     if [[ -n "$machine_type" ]]; then
