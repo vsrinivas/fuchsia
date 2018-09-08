@@ -16,7 +16,63 @@ namespace {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-TEST(ElementFidlTest, VhtMcsNssBitFieldToFidl) {
+TEST(FidlToElement, VhtMcsNssFidlToBitField) {
+    wlan_mlme::VhtMcsNss fidl;
+
+    fidl.rx_max_mcs[0] = static_cast<wlan_mlme::VhtMcs>(1);
+    fidl.rx_max_mcs[1] = static_cast<wlan_mlme::VhtMcs>(2);
+    fidl.rx_max_mcs[2] = static_cast<wlan_mlme::VhtMcs>(3);
+    fidl.rx_max_mcs[3] = static_cast<wlan_mlme::VhtMcs>(1);
+    fidl.rx_max_mcs[4] = static_cast<wlan_mlme::VhtMcs>(2);
+    fidl.rx_max_mcs[5] = static_cast<wlan_mlme::VhtMcs>(3);
+    fidl.rx_max_mcs[6] = static_cast<wlan_mlme::VhtMcs>(1);
+    fidl.rx_max_mcs[7] = static_cast<wlan_mlme::VhtMcs>(2);
+
+    fidl.tx_max_mcs[0] = static_cast<wlan_mlme::VhtMcs>(3);
+    fidl.tx_max_mcs[1] = static_cast<wlan_mlme::VhtMcs>(2);
+    fidl.tx_max_mcs[2] = static_cast<wlan_mlme::VhtMcs>(1);
+    fidl.tx_max_mcs[3] = static_cast<wlan_mlme::VhtMcs>(3);
+    fidl.tx_max_mcs[4] = static_cast<wlan_mlme::VhtMcs>(2);
+    fidl.tx_max_mcs[5] = static_cast<wlan_mlme::VhtMcs>(1);
+    fidl.tx_max_mcs[6] = static_cast<wlan_mlme::VhtMcs>(3);
+    fidl.tx_max_mcs[7] = static_cast<wlan_mlme::VhtMcs>(2);
+
+    fidl.rx_max_data_rate = 1234;
+    fidl.max_nsts = 7;
+
+    fidl.tx_max_data_rate = 8191;
+    fidl.ext_nss_bw = 1;
+
+    VhtMcsNss out = VhtMcsNss::FromFidl(fidl);
+
+    EXPECT_EQ(out.val(), 0x3FFFB6DBE4D29E79ULL);
+
+    EXPECT_EQ(out.rx_max_mcs_ss1(), 1);
+    EXPECT_EQ(out.rx_max_mcs_ss2(), 2);
+    EXPECT_EQ(out.rx_max_mcs_ss3(), 3);
+    EXPECT_EQ(out.rx_max_mcs_ss4(), 1);
+    EXPECT_EQ(out.rx_max_mcs_ss5(), 2);
+    EXPECT_EQ(out.rx_max_mcs_ss6(), 3);
+    EXPECT_EQ(out.rx_max_mcs_ss7(), 1);
+    EXPECT_EQ(out.rx_max_mcs_ss8(), 2);
+
+    EXPECT_EQ(out.tx_max_mcs_ss1(), 3);
+    EXPECT_EQ(out.tx_max_mcs_ss2(), 2);
+    EXPECT_EQ(out.tx_max_mcs_ss3(), 1);
+    EXPECT_EQ(out.tx_max_mcs_ss4(), 3);
+    EXPECT_EQ(out.tx_max_mcs_ss5(), 2);
+    EXPECT_EQ(out.tx_max_mcs_ss6(), 1);
+    EXPECT_EQ(out.tx_max_mcs_ss7(), 3);
+    EXPECT_EQ(out.tx_max_mcs_ss8(), 2);
+
+    EXPECT_EQ(out.rx_max_data_rate(), 1234);
+    EXPECT_EQ(out.max_nsts(), 7);
+
+    EXPECT_EQ(out.tx_max_data_rate(), 8191);
+    EXPECT_EQ(out.ext_nss_bw(), 1);
+}
+
+TEST(ElementToFidl, VhtMcsNssBitFieldToFidl) {
     VhtMcsNss vmn;
     vmn.set_rx_max_mcs_ss1(1);
     vmn.set_rx_max_mcs_ss2(2);
@@ -65,7 +121,7 @@ TEST(ElementFidlTest, VhtMcsNssBitFieldToFidl) {
     EXPECT_EQ(fidl.ext_nss_bw, 1);
 }
 
-TEST(ElementFidlTest, HtCapabilitiesBitFieldOrHuman) {
+TEST(ElementHumanAccessor, HtCapabilitiesBitFieldOrHuman) {
     HtCapabilities hc;
 
     hc.mcs_set.tx_mcs.set_max_ss_human(3);
@@ -97,7 +153,33 @@ TEST(ElementFidlTest, HtCapabilitiesBitFieldOrHuman) {
     EXPECT_EQ(hc.txbf_cap.chan_estimation_human(), 4);
 }
 
-TEST(ElementFidlTest, HtCapabilitiesToFidlHuman) {
+TEST(FidlToElement, HtCapabilitiesFidlToBitField) {
+    wlan_mlme::HtCapabilities fidl;
+
+    fidl.mcs_set.rx_mcs_set = 0xfedcba9876543210;
+    fidl.mcs_set.tx_max_ss = 3;
+    fidl.txbf_cap.csi_antennas = 4;
+    fidl.txbf_cap.noncomp_steering_ants = 2;
+    fidl.txbf_cap.comp_steering_ants = 1;
+    fidl.txbf_cap.csi_rows = 2;
+    fidl.txbf_cap.chan_estimation = 3;
+
+    HtCapabilities out = HtCapabilities::FromFidl(fidl);
+
+    EXPECT_EQ(out.mcs_set.rx_mcs_head.bitmask(), 0xfedcba9876543210ULL);
+    EXPECT_EQ(out.mcs_set.tx_mcs.max_ss_human(), 3);
+    EXPECT_EQ(out.mcs_set.tx_mcs.max_ss(), 2);
+    EXPECT_EQ(out.txbf_cap.csi_antennas_human(), 4);
+    EXPECT_EQ(out.txbf_cap.csi_antennas(), 3);
+    EXPECT_EQ(out.txbf_cap.noncomp_steering_ants_human(), 2);
+    EXPECT_EQ(out.txbf_cap.noncomp_steering_ants(), 1);
+    EXPECT_EQ(out.txbf_cap.comp_steering_ants_human(), 1);
+    EXPECT_EQ(out.txbf_cap.comp_steering_ants(), 0);
+    EXPECT_EQ(out.txbf_cap.chan_estimation_human(), 3);
+    EXPECT_EQ(out.txbf_cap.chan_estimation(), 2);
+}
+
+TEST(ElementToFidl, HtCapabilitiesToFidlHuman) {
     HtCapabilities hc;
 
     hc.mcs_set.rx_mcs_head.set_bitmask(0xfedcba9876543210);
@@ -118,7 +200,7 @@ TEST(ElementFidlTest, HtCapabilitiesToFidlHuman) {
     EXPECT_EQ(fidl.txbf_cap.chan_estimation, 3);
 }
 
-TEST(ElementFidlTest, HtOperationToFidl) {
+TEST(ElementToFidl, HtOperationToFidl) {
     HtOperation hto;
 
     hto.primary_chan = 169;
