@@ -6,7 +6,7 @@
 #![feature(arbitrary_self_types, async_await, await_macro, futures_api, pin)]
 
 use fidl_fuchsia_bluetooth::Bool;
-use fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice};
+use fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice, TechnologyType};
 use fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy};
 use fuchsia_async::{self as fasync, TimeoutExt};
 use fuchsia_bluetooth::error::Error as BtError;
@@ -115,7 +115,7 @@ impl HostTest {
         );
         AdapterStateFuture::new(test_state, target_state)
             .on_timeout(TIMEOUT.seconds().after_now(), move || {
-                Err(BtError::new(err_msg.as_str()).into())
+                Err(BtError::new(&err_msg).into())
             })
     }
 
@@ -132,7 +132,7 @@ impl HostTest {
         );
         RemoteDeviceStateFuture::new(test_state, id, Some(target_state))
             .on_timeout(TIMEOUT.seconds().after_now(), move || {
-                Err(BtError::new(err_msg.as_str()).into())
+                Err(BtError::new(&err_msg).into())
             })
     }
 
@@ -148,6 +148,13 @@ impl HostTest {
         if self.host_state_tasks.contains(key) {
             self.host_state_tasks.remove(key);
         }
+    }
+
+    fn find_device_by_address(&self, address: &str) -> Result<&RemoteDevice, Error> {
+        self.remote_devices
+            .values()
+            .find(|dev| dev.address == address)
+            .ok_or(BtError::new(&format!("device with address '{}' not found", address)).into())
     }
 
     // Handle the OnAdapterStateChanged event.
@@ -263,6 +270,8 @@ macro_rules! compare_fields {
 #[derive(Clone, Debug, Default)]
 struct RemoteDeviceExpectation {
     name: Option<String>,
+    address: Option<String>,
+    technology: Option<TechnologyType>,
     connected: Option<bool>,
     bonded: Option<bool>,
 }
@@ -283,7 +292,11 @@ fn compare_adapter_states(base: &AdapterState, target: &AdapterState) -> bool {
 }
 
 fn compare_remote_device(base: &RemoteDevice, target: &RemoteDeviceExpectation) -> bool {
-    compare_fields!(base, target, [(name), connected, bonded])
+    compare_fields!(
+        base,
+        target,
+        [(name), address, technology, connected, bonded]
+    )
 }
 
 struct StateUpdateFutureInner {
@@ -562,20 +575,47 @@ macro_rules! run_test {
     }};
 }
 
+fn expect_eq<T>(expected: &T, actual: &T) -> Result<(), Error>
+where
+    T: std::fmt::Debug + std::cmp::PartialEq,
+{
+    if *expected == *actual {
+        Ok(())
+    } else {
+        Err(BtError::new(&format!(
+            "failed - expected '{:#?}', found: '{:#?}'",
+            expected, actual
+        ))
+        .into())
+    }
+}
+
 macro_rules! expect_eq {
-    ($expected:expr, $actual:expr) => {{
-        let expected_val = $expected;
-        let actual_val = $actual;
-        if expected_val == actual_val {
+    ($expected:expr, $actual:expr) => {
+        expect_eq(&$expected, &$actual)
+    };
+}
+
+macro_rules! expect_true {
+    ($condition:expr) => {
+        if $condition{
             Ok(())
         } else {
             Err(BtError::new(&format!(
-                "failed - expected '{}', found: '{}'",
-                expected_val, actual_val
-            ))
-            .into())
-        }
-    }};
+                "condition is not true: {}",
+                stringify!($condition)
+            )).into())
+        } as Result<(), Error>
+    }
+}
+
+fn expect_remote_device(
+    test_state: &HostTestPtr, address: &str, expected: &RemoteDeviceExpectation,
+) -> Result<(), Error> {
+    expect_true!(compare_remote_device(
+        test_state.read().find_device_by_address(address)?,
+        expected
+    ))
 }
 
 // ========= Test Cases =========
@@ -584,7 +624,7 @@ macro_rules! expect_eq {
 async fn test_bd_addr(test_state: HostTestPtr) -> Result<(), Error> {
     let info = await!(test_state.read().host_proxy.get_info())
         .map_err(|_| BtError::new("failed to read adapter info"))?;
-    expect_eq!("00:00:00:00:00:00", info.address)
+    expect_eq!("00:00:00:00:00:00", info.address.as_str())
 }
 
 // Tests that setting the local name succeeds.
@@ -655,7 +695,7 @@ async fn test_discovery(test_state: HostTestPtr) -> Result<(), Error> {
     ))?;
 
     // The host should discover a fake device.
-    // TODO(armansito): The name is currently hard-coded in
+    // TODO(NET-1457): The name is currently hard-coded in
     // garnet/drivers/bluetooth/hci/fake/fake-device.cpp:89. Configure this dynamically when it is
     // supported.
     let new_device = RemoteDeviceExpectation {
@@ -718,6 +758,47 @@ async fn test_close(test_state: HostTestPtr) -> Result<(), Error> {
     Ok(())
 }
 
+// Tests that "list_devices" returns devices from a host's cache.
+async fn test_list_devices(test_state: HostTestPtr) -> Result<(), Error> {
+    // Devices should be initially empty.
+    let mut devices = await!(test_state.read().host_proxy.list_devices())?;
+    expect_eq!(vec![] as Vec<RemoteDevice>, devices)?;
+
+    // Wait for all fake devices to be discovered.
+    // TODO(NET-1457): Add support for setting these up programmatically instead of hardcoding
+    // them. The fake HCI driver currently sets up one LE and one BR/EDR device.
+    await!(test_state.read().host_proxy.start_discovery())?;
+    let expected_le = RemoteDeviceExpectation {
+        address: Some("00:00:00:00:00:01".to_string()),
+        technology: Some(TechnologyType::LowEnergy),
+        ..Default::default()
+    };
+    let expected_bredr = RemoteDeviceExpectation {
+        address: Some("00:00:00:00:00:02".to_string()),
+        technology: Some(TechnologyType::Classic),
+        ..Default::default()
+    };
+    await!(HostTest::on_device_update(
+        test_state.clone(),
+        None,
+        expected_le.clone()
+    ))?;
+    await!(HostTest::on_device_update(
+        test_state.clone(),
+        None,
+        expected_bredr.clone()
+    ))?;
+
+    // List the host's devices
+    devices = await!(test_state.read().host_proxy.list_devices())?;
+
+    // Both fake devices should be in the map.
+    expect_eq!(2, devices.len())?;
+    expect_remote_device(&test_state, "00:00:00:00:00:01", &expected_le)?;
+    expect_remote_device(&test_state, "00:00:00:00:00:02", &expected_bredr)?;
+    Ok(())
+}
+
 fn main() -> Result<(), Error> {
     println!("TEST BEGIN");
 
@@ -726,6 +807,7 @@ fn main() -> Result<(), Error> {
     run_test!(test_discoverable)?;
     run_test!(test_discovery)?;
     run_test!(test_close)?;
+    run_test!(test_list_devices)?;
 
     println!("ALL TESTS PASSED");
     Ok(())
