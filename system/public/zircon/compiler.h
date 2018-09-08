@@ -96,12 +96,6 @@
 #define __DEPRECATE __attribute__((__deprecated__))
 #endif
 
-#if ENABLE_DDK_DEPRECATIONS
-#define __DDK_DEPRECATE __DEPRECATE
-#else
-#define __DDK_DEPRECATE
-#endif
-
 /* TODO: add type check */
 #if !defined(countof)
 #define countof(a) (sizeof(a) / sizeof((a)[0]))
