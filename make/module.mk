@@ -137,7 +137,6 @@ else
 # kernel module
 # add a local include dir to the global include path for kernel code
 KERNEL_INCLUDES += $(MODULE_SRCDIR)/include
-KERNEL_DEFINES += $(addsuffix =1,$(addprefix WITH_,$(patsubst third_party/%,%,$(patsubst kernel/%,%,$(MODULE)))))
 MODULE_SRCDEPS += $(KERNEL_CONFIG_HEADER)
 endif
 
