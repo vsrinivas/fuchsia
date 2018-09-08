@@ -28,6 +28,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/usb.h> // Remove when the USB structs move out
 #include <netinet/if_ether.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -573,6 +574,15 @@ struct wireless_dev {
     struct wiphy* wiphy;
     struct brcmf_cfg80211_info* cfg80211_info;
 };
+
+// This stubs the use of struct sdio_func, which we only use for locking.
+
+struct sdio_func {
+    pthread_mutex_t lock;
+};
+
+void sdio_claim_host(struct sdio_func* func);
+void sdio_release_host(struct sdio_func* func);
 
 struct cfg80211_ssid {
     size_t ssid_len;

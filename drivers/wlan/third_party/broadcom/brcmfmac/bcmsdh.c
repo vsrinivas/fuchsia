@@ -24,6 +24,7 @@
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 
+#include <pthread.h>
 #include <stdatomic.h>
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE // Enables thrd_create_with_name in <threads.h>.
@@ -176,6 +177,8 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
         }
         sdiodev->irq_wake = true;
 
+        sdio_claim_host(sdiodev->func1);
+
         if (sdiodev->bus_if->chip == BRCM_CC_43362_CHIP_ID) {
             /* assign GPIO to SDIO core */
             addr = CORE_CC_REG(SI_ENUM_BASE, gpiocontrol);
@@ -199,12 +202,15 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
             data |= SDIO_CCCR_BRCM_SEPINT_ACT_HI;
         }
         brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, data, &ret);
+        sdio_release_host(sdiodev->func1);
     } else {
         brcmf_dbg(SDIO, "Entering\n");
+        sdio_claim_host(sdiodev->func1);
         sdio_enable_fn_intr(sdiodev->sdio_proto, SDIO_FN_1);
         (void)brcmf_sdiod_ib_irqhandler; // TODO(cphoenix): If we use these, plug them in later.
         sdio_enable_fn_intr(sdiodev->sdio_proto, SDIO_FN_2);
         (void)brcmf_sdiod_dummy_irqhandler;
+        sdio_release_host(sdiodev->func1);
         sdiodev->sd_irq_requested = true;
     }
 
@@ -219,8 +225,10 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
         struct brcmfmac_sdio_pd* pdata;
 
         pdata = &sdiodev->settings->bus.sdio;
+        sdio_claim_host(sdiodev->func1);
         brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, 0, NULL);
         brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_INT_ENABLE, 0, NULL);
+        sdio_release_host(sdiodev->func1);
 
         sdiodev->oob_irq_requested = false;
         if (sdiodev->irq_wake) {
@@ -232,8 +240,10 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
     }
 
     if (sdiodev->sd_irq_requested) {
+        sdio_claim_host(sdiodev->func1);
         sdio_disable_fn_intr(sdiodev->sdio_proto, SDIO_FN_2);
         sdio_disable_fn_intr(sdiodev->sdio_proto, SDIO_FN_1);
+        sdio_release_host(sdiodev->func1);
         sdiodev->sd_irq_requested = false;
     }
 }
@@ -589,6 +599,8 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
         dsize = size;
     }
 
+    sdio_claim_host(sdiodev->func1);
+
     /* Do the transfer(s) */
     while (size) {
         /* Set the backplane window to include the start address */
@@ -633,6 +645,8 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
 
     brcmf_netbuf_free(pkt);
 
+    sdio_release_host(sdiodev->func1);
+
     return err;
 }
 
@@ -675,12 +689,16 @@ static zx_status_t brcmf_sdiod_freezer_on(struct brcmf_sdio_dev* sdiodev) {
     atomic_store(&sdiodev->freezer->freezing, 1);
     brcmf_sdio_trigger_dpc(sdiodev->bus);
     sync_completion_wait(&sdiodev->freezer->thread_freeze, ZX_TIME_INFINITE);
+    sdio_claim_host(sdiodev->func1);
     res = brcmf_sdio_sleep(sdiodev->bus, true);
+    sdio_release_host(sdiodev->func1);
     return res;
 }
 
 static void brcmf_sdiod_freezer_off(struct brcmf_sdio_dev* sdiodev) {
+    sdio_claim_host(sdiodev->func1);
     brcmf_sdio_sleep(sdiodev->bus, false);
+    sdio_release_host(sdiodev->func1);
     atomic_store(&sdiodev->freezer->freezing, 0);
     sync_completion_signal(&sdiodev->freezer->resumed);
 }
@@ -725,10 +743,14 @@ static zx_status_t brcmf_sdiod_remove(struct brcmf_sdio_dev* sdiodev) {
     brcmf_sdiod_freezer_detach(sdiodev);
 
     /* Disable Function 2 */
+    sdio_claim_host(sdiodev->func2);
     sdio_disable_fn(sdiodev->sdio_proto, SDIO_FN_2);
+    sdio_release_host(sdiodev->func2);
 
     /* Disable Function 1 */
+    sdio_claim_host(sdiodev->func1);
     sdio_disable_fn(sdiodev->sdio_proto, SDIO_FN_1);
+    sdio_release_host(sdiodev->func1);
 
     sdiodev->sbwad = 0;
 
@@ -831,9 +853,12 @@ static void brcmf_sdiod_acpi_set_power_manageable(struct brcmf_device* dev, int 
 
 zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto) {
     zx_status_t err;
-    struct brcmf_sdio_dev* sdiodev;
-    struct brcmf_bus* bus_if;
     struct brcmf_device* dev;
+
+    struct brcmf_bus* bus_if = NULL;
+    struct sdio_func* func1 = NULL;
+    struct sdio_func* func2 = NULL;
+    struct brcmf_sdio_dev* sdiodev = NULL;
 
     brcmf_dbg(SDIO, "Enter\n");
     sdio_hw_info_t devinfo;
@@ -841,6 +866,15 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto)
     if (devinfo.dev_hw_info.num_funcs < 3) {
         brcmf_err("Not enough SDIO funcs (need 3, have %d)", devinfo.dev_hw_info.num_funcs);
         return ZX_ERR_IO;
+    }
+
+    pthread_mutexattr_t mutex_attr;
+    if (pthread_mutexattr_init(&mutex_attr)) {
+        return ZX_ERR_INTERNAL;
+    }
+    if (pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_RECURSIVE)) {
+        err = ZX_ERR_NO_MEMORY;
+        goto fail;
     }
 
     // We don't get "class" info in the current API.
@@ -861,18 +895,45 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto)
 
     bus_if = calloc(1, sizeof(struct brcmf_bus));
     if (!bus_if) {
-        return ZX_ERR_NO_MEMORY;
+        err = ZX_ERR_NO_MEMORY;
+        goto fail;
+    }
+    func1 = calloc(1, sizeof(struct sdio_func));
+    if (!func1) {
+        err = ZX_ERR_NO_MEMORY;
+        goto fail;
+    } else {
+        if (pthread_mutex_init(&func1->lock, &mutex_attr)) {
+            free(func1);
+            func1 = NULL;
+            err = ZX_ERR_INTERNAL;
+            goto fail;
+        }
+    }
+    func2 = calloc(1, sizeof(struct sdio_func));
+    if (!func2) {
+        err = ZX_ERR_NO_MEMORY;
+        goto fail;
+    } else {
+        if (pthread_mutex_init(&func2->lock, &mutex_attr)) {
+            free(func2);
+            func2 = NULL;
+            err = ZX_ERR_INTERNAL;
+            goto fail;
+        }
     }
     sdiodev = calloc(1, sizeof(struct brcmf_sdio_dev));
     if (!sdiodev) {
-        free(bus_if);
-        return ZX_ERR_NO_MEMORY;
+        err = ZX_ERR_NO_MEMORY;
+        goto fail;
     }
     dev = &sdiodev->dev;
     dev->zxdev = zxdev;
     sdiodev->sdio_proto = sdio_proto;
 
     sdiodev->bus_if = bus_if;
+    sdiodev->func1 = func1;
+    sdiodev->func2 = func2;
     bus_if->bus_priv.sdio = sdiodev;
     bus_if->proto_type = BRCMF_PROTO_BCDC;
     dev->bus = bus_if;
@@ -889,13 +950,22 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto)
         goto fail;
     }
 
+    pthread_mutexattr_destroy(&mutex_attr);
     brcmf_dbg(SDIO, "F2 init completed...\n");
     return ZX_OK;
 
 fail:
-    dev->bus = NULL;
     free(sdiodev);
+    if (func2) {
+        pthread_mutex_destroy(&func2->lock);
+        free(func2);
+    }
+    if (func1) {
+        pthread_mutex_destroy(&func1->lock);
+        free(func1);
+    }
     free(bus_if);
+    pthread_mutexattr_destroy(&mutex_attr);
     return err;
 }
 
@@ -917,6 +987,14 @@ static void brcmf_ops_sdio_remove(struct brcmf_sdio_dev* sdiodev) {
         brcmf_sdiod_remove(sdiodev);
 
         free(bus_if);
+        if (sdiodev->func1) {
+            pthread_mutex_destroy(&sdiodev->func1->lock);
+            free(sdiodev->func1);
+        }
+        if (sdiodev->func2) {
+            pthread_mutex_destroy(&sdiodev->func2->lock);
+            free(sdiodev->func2);
+        }
         free(sdiodev);
     }
 

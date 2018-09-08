@@ -181,6 +181,8 @@ struct brcmf_sdio;
 struct brcmf_sdiod_freezer;
 
 struct brcmf_sdio_dev {
+    struct sdio_func *func1;
+    struct sdio_func *func2;
     uint32_t manufacturer_id;
     uint32_t product_id;
     sdio_protocol_t* sdio_proto;
