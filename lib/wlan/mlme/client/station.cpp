@@ -76,6 +76,7 @@ zx_status_t Station::HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg) {
 zx_status_t Station::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
     ZX_DEBUG_ASSERT(pkt->peer() == Packet::Peer::kWlan);
     WLAN_STATS_INC(rx_frame.in);
+    WLAN_STATS_ADD(pkt->len(), rx_frame.in_bytes);
 
     if (auto possible_mgmt_frame = MgmtFrameView<>::CheckType(pkt.get())) {
         auto mgmt_frame = possible_mgmt_frame.CheckLength();
@@ -1396,8 +1397,12 @@ zx_status_t Station::SendDeauthFrame(wlan_mlme::ReasonCode reason_code) {
 }
 
 zx_status_t Station::SendWlan(fbl::unique_ptr<Packet> packet) {
+    auto packet_bytes = packet->len();
     zx_status_t status = device_->SendWlan(fbl::move(packet));
-    if (status == ZX_OK) { WLAN_STATS_INC(tx_frame.out); }
+    if (status == ZX_OK) {
+        WLAN_STATS_INC(tx_frame.out);
+        WLAN_STATS_ADD(packet_bytes, tx_frame.out_bytes);
+    }
     return status;
 }
 
