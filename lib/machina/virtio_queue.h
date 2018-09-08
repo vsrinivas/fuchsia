@@ -21,29 +21,12 @@ struct vring_used;
 
 namespace machina {
 
-// We initialize Virtio devices with a ring size so that a sensible size is set,
-// even if they do not configure one themselves.
-static constexpr uint16_t kDefaultVirtioRingSize = 128;
-
 // Stores the Virtio queue based on the ring provided by the guest.
 //
 // NOTE(abdulla): This structure points to guest-controlled memory.
 struct VirtioRing {
-  // Queue addresses as defined in Virtio 1.0 Section 4.1.4.3.
-  union {
-    struct {
-      uint64_t desc;
-      uint64_t avail;
-      uint64_t used;
-    };
-
-    // Software will access these using 32 bit operations. Provide a
-    // convenience interface for these use cases.
-    uint32_t words[6];
-  } addr;
-
   // Number of entries in the descriptor table.
-  uint16_t size = kDefaultVirtioRingSize;
+  uint16_t size;
   uint16_t index;
 
   const volatile struct vring_desc* desc;  // guest-controlled
@@ -76,12 +59,6 @@ class VirtioQueue {
   static constexpr zx_signals_t SIGNAL_QUEUE_AVAIL = ZX_USER_SIGNAL_0;
 
   VirtioQueue();
-
-  template <typename Result, typename Func>
-  Result UpdateRing(Func func) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return func(&ring_);
-  }
 
   // Sets the guest physical memory for the queue.
   void set_phys_mem(const PhysMem* phys_mem) { phys_mem_ = phys_mem; }
@@ -131,10 +108,9 @@ class VirtioQueue {
   // asserted.
   zx_handle_t event() const { return event_.get(); }
 
-  void GetAddrs(zx_gpaddr_t* desc_addr, zx_gpaddr_t* avail_addr,
-                zx_gpaddr_t* used_addr) const;
-  void Configure(uint16_t size, zx_gpaddr_t desc_addr, zx_gpaddr_t avail_addr,
-                 zx_gpaddr_t used_addr);
+  // Configure the queue using a set of addresses, and set the queue size.
+  void Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                 zx_gpaddr_t used);
 
   // Get the index of the next descriptor in the available ring.
   //

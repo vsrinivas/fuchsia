@@ -6,25 +6,34 @@
 #define GARNET_LIB_MACHINA_VIRTIO_DEVICE_H_
 
 #include <atomic>
-#include <mutex>
 
 #include <trace-engine/types.h>
 #include <trace/event.h>
-#include <virtio/virtio.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 #include "garnet/lib/machina/virtio_pci.h"
 #include "garnet/lib/machina/virtio_queue.h"
 
 namespace machina {
 
-// Set of features that are supported by the bus transparently for all devices.
-static constexpr uint32_t kVirtioBusFeatures = 0;
+// Set of features that are supported transparently for all devices.
+static constexpr uint32_t kVirtioFeatures = 0;
+
+constexpr zx_status_t noop_config_queue(uint16_t queue, uint16_t size,
+                                        zx_gpaddr_t desc, zx_gpaddr_t avail,
+                                        zx_gpaddr_t used) {
+  return ZX_OK;
+}
+constexpr zx_status_t noop_notify_queue(uint16_t queue) { return ZX_OK; }
+constexpr zx_status_t noop_config_device(uint64_t addr, const IoValue& value) {
+  return ZX_OK;
+}
+constexpr zx_status_t noop_ready_device(uint32_t negotiated_features) {
+  return ZX_OK;
+}
 
 // Interface for all virtio devices.
 template <uint8_t DeviceId, uint16_t NumQueues, typename ConfigType>
-class VirtioInprocessDevice {
+class VirtioDevice {
  public:
   PciDevice* pci_device() { return &pci_; }
 
@@ -33,46 +42,31 @@ class VirtioInprocessDevice {
   ConfigType config_ __TA_GUARDED(device_config_.mutex) = {};
   VirtioDeviceConfig device_config_;
   VirtioPci pci_;
-  VirtioQueue queues_[NumQueues];
+  VirtioQueueConfig queue_configs_[NumQueues] __TA_GUARDED(
+      device_config_.mutex) = {};
 
-  VirtioInprocessDevice(
-      const PhysMem& phys_mem, uint32_t device_features,
-      VirtioDeviceConfig::NotifyQueueFn notify_queue,
-      VirtioDeviceConfig::UpdateConfigFn update_config)
+  VirtioDevice(const PhysMem& phys_mem, uint32_t device_features,
+               VirtioDeviceConfig::ConfigQueueFn config_queue,
+               VirtioDeviceConfig::NotifyQueueFn notify_queue,
+               VirtioDeviceConfig::ConfigDeviceFn config_device,
+               VirtioDeviceConfig::ReadyDeviceFn ready_device)
       : phys_mem_(phys_mem),
         device_config_{
             .device_id = DeviceId,
             // Advertise support for common/bus features.
-            .device_features = device_features | kVirtioBusFeatures,
+            .device_features = device_features | kVirtioFeatures,
             .config = &config_,
             .config_size = sizeof(ConfigType),
-            .queues = queues_,
+            .queue_configs = queue_configs_,
             .num_queues = NumQueues,
+            .config_device = std::move(config_device),
             .notify_queue = std::move(notify_queue),
-            .update_config = std::move(update_config),
-            // TODO(abdulla): Use this in a multi-process VMM.
-            .ready_device = [](uint32_t) { return ZX_OK; },
+            .config_queue = std::move(config_queue),
+            .ready_device = std::move(ready_device),
         },
-        pci_(&device_config_) {
-    for (int i = 0; i < NumQueues; ++i) {
-      queues_[i].set_phys_mem(&phys_mem);
-      queues_[i].set_interrupt(
-          fit::bind_member(this, &VirtioInprocessDevice::Interrupt));
-    }
-  }
+        pci_(&device_config_) {}
 
-  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
-                        VirtioDeviceConfig::NotifyQueueFn notify_queue)
-      : VirtioInprocessDevice(phys_mem, device_features,
-                              std::move(notify_queue),
-                              [](uint64_t, const IoValue&) { return ZX_OK; }) {}
-
-  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features)
-      : VirtioInprocessDevice(
-            phys_mem, device_features,
-            fit::bind_member(this, &VirtioInprocessDevice::NotifyQueue)) {}
-
-  virtual ~VirtioInprocessDevice() = default;
+  virtual ~VirtioDevice() = default;
 
   // Sets interrupt flag, and possibly sends interrupt to the driver.
   zx_status_t Interrupt(uint8_t actions) {
@@ -87,10 +81,31 @@ class VirtioInprocessDevice {
     }
     return ZX_OK;
   }
+};
+
+template <uint8_t DeviceId, uint16_t NumQueues, typename ConfigType>
+class VirtioInprocessDevice
+    : public VirtioDevice<DeviceId, NumQueues, ConfigType> {
+ protected:
+  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
+                        VirtioDeviceConfig::ConfigDeviceFn config_device)
+      : VirtioInprocessDevice(
+            phys_mem, device_features,
+            fit::bind_member(this, &VirtioInprocessDevice::ConfigQueue),
+            fit::bind_member(this, &VirtioInprocessDevice::NotifyQueue),
+            std::move(config_device)) {}
+
+  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
+                        VirtioDeviceConfig::NotifyQueueFn notify_queue)
+      : VirtioInprocessDevice(
+            phys_mem, device_features,
+            fit::bind_member(this, &VirtioInprocessDevice::ConfigQueue),
+            std::move(notify_queue), noop_config_device) {}
+
+  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features)
+      : VirtioInprocessDevice(phys_mem, device_features, noop_config_device) {}
 
   // Processes notifications on a queue from the driver.
-  //
-  // TODO(abdulla): Remove this once all devices are out-of-process.
   zx_status_t NotifyQueue(uint16_t queue) {
     if (queue >= NumQueues) {
       return ZX_ERR_OUT_OF_RANGE;
@@ -116,7 +131,7 @@ class VirtioInprocessDevice {
 
     // Send an interrupt back to the guest if we've generated one while
     // processing the queue.
-    zx_status_t status = pci_.Interrupt();
+    zx_status_t status = this->pci_.Interrupt();
     if (status != ZX_OK) {
       return status;
     }
@@ -134,8 +149,35 @@ class VirtioInprocessDevice {
   }
 
  private:
+  VirtioQueue queues_[NumQueues];
   // One flow ID slot for each device queue, used for IO correlation tracing.
   std::atomic<trace_async_id_t> trace_flow_ids_[NumQueues] = {};
+
+  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
+                        VirtioDeviceConfig::ConfigQueueFn config_queue,
+                        VirtioDeviceConfig::NotifyQueueFn notify_queue,
+                        VirtioDeviceConfig::ConfigDeviceFn config_device)
+      : VirtioDevice<DeviceId, NumQueues, ConfigType>(
+            phys_mem, device_features, std::move(config_queue),
+            std::move(notify_queue), std::move(config_device),
+            noop_ready_device) {
+    for (int i = 0; i < NumQueues; ++i) {
+      queues_[i].set_phys_mem(&phys_mem);
+      queues_[i].set_interrupt(
+          fit::bind_member<zx_status_t,
+                           VirtioDevice<DeviceId, NumQueues, ConfigType>>(
+              this, &VirtioInprocessDevice::Interrupt));
+    }
+  }
+
+  zx_status_t ConfigQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                          zx_gpaddr_t avail, zx_gpaddr_t used) {
+    if (queue >= NumQueues) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    queues_[queue].Configure(size, desc, avail, used);
+    return ZX_OK;
+  }
 };
 
 }  // namespace machina

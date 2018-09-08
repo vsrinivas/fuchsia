@@ -207,11 +207,8 @@ static void GetPointerCoordinate(const fuchsia::ui::input::PointerEvent& event,
 
 VirtioInput::VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
                          const char* device_name, const char* device_serial)
-    : VirtioInprocessDevice(
-          phys_mem, 0 /* device_features */,
-          fit::bind_member<zx_status_t, VirtioInprocessDevice>(
-              this, &VirtioInput::NotifyQueue),
-          fit::bind_member(this, &VirtioInput::UpdateConfig)),
+    : VirtioInprocessDevice(phys_mem, 0 /* device_features */,
+                            fit::bind_member(this, &VirtioInput::UpdateConfig)),
       device_name_(device_name),
       device_serial_(device_serial),
       event_queue_(event_queue) {}

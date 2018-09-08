@@ -19,42 +19,31 @@ VirtioQueue::VirtioQueue() {
   FXL_CHECK(zx::event::create(0, &event_) == ZX_OK);
 }
 
-void VirtioQueue::GetAddrs(zx_gpaddr_t* desc_addr, zx_gpaddr_t* avail_addr,
-                           zx_gpaddr_t* used_addr) const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  *desc_addr = ring_.addr.desc;
-  *avail_addr = ring_.addr.avail;
-  *used_addr = ring_.addr.used;
-}
-
-void VirtioQueue::Configure(uint16_t size, zx_gpaddr_t desc_addr,
-                            zx_gpaddr_t avail_addr, zx_gpaddr_t used_addr) {
+void VirtioQueue::Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                            zx_gpaddr_t used) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   // Configure the ring size.
   ring_.size = size;
 
   // Configure the descriptor table.
-  ring_.addr.desc = desc_addr;
   const uintptr_t desc_size = ring_.size * sizeof(ring_.desc[0]);
-  ring_.desc = phys_mem_->as<vring_desc>(desc_addr, desc_size);
+  ring_.desc = phys_mem_->as<vring_desc>(desc, desc_size);
 
   // Configure the available ring.
-  ring_.addr.avail = avail_addr;
   const uintptr_t avail_size =
       sizeof(*ring_.avail) + (ring_.size * sizeof(ring_.avail->ring[0]));
-  ring_.avail = phys_mem_->as<vring_avail>(avail_addr, avail_size);
+  ring_.avail = phys_mem_->as<vring_avail>(avail, avail_size);
 
-  const uintptr_t used_event_addr = avail_addr + avail_size;
+  const uintptr_t used_event_addr = avail + avail_size;
   ring_.used_event = phys_mem_->as<uint16_t>(used_event_addr);
 
   // Configure the used ring.
-  ring_.addr.used = used_addr;
   const uintptr_t used_size =
       sizeof(*ring_.used) + (ring_.size * sizeof(ring_.used->ring[0]));
-  ring_.used = phys_mem_->as<vring_used>(used_addr, used_size);
+  ring_.used = phys_mem_->as<vring_used>(used, used_size);
 
-  const uintptr_t avail_event_addr = used_addr + used_size;
+  const uintptr_t avail_event_addr = used + used_size;
   ring_.avail_event = phys_mem_->as<uint16_t>(avail_event_addr);
 }
 

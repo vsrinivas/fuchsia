@@ -12,7 +12,31 @@
 
 namespace machina {
 
-class VirtioQueue;
+// Virtio PCI Bar Layout.
+//
+// Expose all read/write fields on BAR0 using a strongly ordered mapping.
+// Map the Queue notify region to BAR1 with a BELL type that does not require
+// the guest to decode any instruction fields. The queue to notify can be
+// inferred based on the address accessed alone.
+//
+//          BAR0                BAR1
+//      ------------  00h   ------------  00h
+//     | Virtio PCI |      |  Queue 0   |
+//     |   Common   |      |   Notify   |
+//     |   Config   |      |------------| 04h
+//     |------------| 38h  |  Queue 1   |
+//     | ISR Config |      |   Notify   |
+//     |------------| 3ch  |------------|
+//     |  Device-   |      |    ...     |
+//     | Specific   |      |------------| 04 * N
+//     |  Config    |      |  Queue N   |
+//     |            |      |   Notify   |
+//      ------------        ------------
+// These structures are defined in Virtio 1.0 Section 4.1.4.
+static constexpr uint8_t kVirtioPciBar = 0;
+static constexpr uint8_t kVirtioPciNotifyBar = 1;
+static_assert(kVirtioPciBar < kPciMaxBars && kVirtioPciNotifyBar < kPciMaxBars,
+              "Not enough BAR registers available");
 
 // Virtio 1.0 Section 4.1.4.4: notify_off_multiplier is combined with the
 // queue_notify_off to derive the Queue Notify address within a BAR for a
@@ -34,6 +58,27 @@ static constexpr size_t kVirtioPciNotifyCfgMultiplier = 4;
 
 static constexpr size_t kVirtioPciNumCapabilities = 4;
 
+// We initialize Virtio devices with a ring size so that a sensible size is set,
+// even if they do not configure one themselves.
+static constexpr uint16_t kDefaultVirtioQueueSize = 128;
+
+// Queue addresses as defined in Virtio 1.0 Section 4.1.4.3.
+struct VirtioQueueConfig {
+  union {
+    struct {
+      uint64_t desc;
+      uint64_t avail;
+      uint64_t used;
+    };
+
+    // Software will access these using 32 bit operations. Provide a
+    // convenience interface for these use cases.
+    uint32_t words[6] = {};
+  };
+
+  uint16_t size = kDefaultVirtioQueueSize;
+};
+
 struct VirtioDeviceConfig {
   mutable std::mutex mutex;
 
@@ -54,10 +99,16 @@ struct VirtioDeviceConfig {
   const uint64_t config_size = 0;
 
   // Virtio queues for this device.
-  VirtioQueue* const queues = nullptr;
+  VirtioQueueConfig* const queue_configs __TA_GUARDED(mutex) = nullptr;
 
   // Number of Virtio queues.
   const uint16_t num_queues = 0;
+
+  // Invoked when the driver has made a change to the queue configuration.
+  using ConfigQueueFn =
+      fit::function<zx_status_t(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                                zx_gpaddr_t avail, zx_gpaddr_t used)>;
+  const ConfigQueueFn config_queue;
 
   // Invoked when the driver sends notifications on a queue to the device.
   //
@@ -66,9 +117,9 @@ struct VirtioDeviceConfig {
   const NotifyQueueFn notify_queue;
 
   // Invoked when the driver has made a change to the device configuration.
-  using UpdateConfigFn =
+  using ConfigDeviceFn =
       fit::function<zx_status_t(uint64_t addr, const IoValue& value)>;
-  const UpdateConfigFn update_config;
+  const ConfigDeviceFn config_device;
 
   // Invoked when the driver has accepted features and set the device into a
   // 'Ready' state.
@@ -138,7 +189,7 @@ class VirtioPci : public PciDevice {
 
   void SetupCaps();
 
-  VirtioQueue* selected_queue() const;
+  uint16_t queue_sel() const;
 
   VirtioDeviceConfig* const device_config_;
 
