@@ -8,6 +8,7 @@
 #include "iface-device.h"
 
 #include <ddk/debug.h>
+#include <wlan/common/element.h>
 #include <wlan/protocol/ioctl.h>
 #include <wlan/protocol/phy.h>
 
@@ -112,12 +113,14 @@ wlan_device::PhyInfo get_info() {
 
     wlan_device::BandInfo band24;
     band24.description = "2.4 GHz";
-    band24.ht_caps.ht_capability_info = 0x01fe;
-    auto& band24mcs = band24.ht_caps.supported_mcs_set;
-    std::fill(band24mcs.begin(), band24mcs.end(), 0);
-    band24mcs[0] = 0xff;
-    band24mcs[3] = 0x80;
-    band24mcs[12] = 0x10;
+
+    HtCapabilities ht_caps;
+    ht_caps.ht_cap_info.set_val(0x01fe);
+    ht_caps.mcs_set.rx_mcs_head.set_val(0x01000000ff);
+    ht_caps.mcs_set.rx_mcs_tail.set_val(0);
+    ht_caps.mcs_set.tx_mcs.set_val(0x10);
+    band24.ht_caps = ht_caps.ToFidl();
+
     band24.basic_rates.reset(std::vector<uint8_t>({2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108}));
     band24.supported_channels.base_freq = 2417;
     band24.supported_channels.channels.reset(
@@ -127,13 +130,14 @@ wlan_device::PhyInfo get_info() {
 
     wlan_device::BandInfo band5;
     band5.description = "5 GHz";
-    band5.ht_caps.ht_capability_info = 0x01fe;
-    auto& band5mcs = band5.ht_caps.supported_mcs_set;
-    std::fill(band5mcs.begin(), band5mcs.end(), 0);
-    band5mcs[0] = 0xff;
-    band5mcs[1] = 0xff;
-    band5mcs[3] = 0x80;
-    band5mcs[12] = 0x10;
+
+    ht_caps = HtCapabilities{};
+    ht_caps.ht_cap_info.set_val(0x01fe);
+    ht_caps.mcs_set.rx_mcs_head.set_val(0x010000ffff);
+    ht_caps.mcs_set.rx_mcs_tail.set_val(0);
+    ht_caps.mcs_set.tx_mcs.set_val(0x10);
+    band5.ht_caps = ht_caps.ToFidl();
+
     band5.basic_rates.reset(std::vector<uint8_t>({12, 18, 24, 36, 48, 72, 96, 108}));
     band5.supported_channels.base_freq = 5000;
     band5.supported_channels.channels.reset(std::vector<uint8_t>(

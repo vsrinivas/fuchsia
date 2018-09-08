@@ -29,16 +29,72 @@ const BSSID: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x73, 0x73];
 fn create_2_4_ghz_band_info() -> wlan_device::BandInfo {
     wlan_device::BandInfo{
         description: String::from("2.4 GHz"),
-        ht_caps: wlan_device::HtCapabilities{
-            ht_capability_info: 0x01fe,
-            ampdu_params: 0,
-            supported_mcs_set: [
-                // 0  1  2     3     4  5  6  7  8  9 10 11    12 13 14 15
-                0xff, 0, 0, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0, 0x01, 0, 0, 0
-            ],
-            ht_ext_capabilities: 0,
-            tx_beamforming_capabilities: 0,
-            asel_capabilities: 0
+        ht_caps: wlan_mlme::HtCapabilities {
+            ht_cap_info: wlan_mlme::HtCapabilityInfo {
+                ldpc_coding_cap: false,
+                chan_width_set: wlan_mlme::ChanWidthSet::TwentyForty,
+                sm_power_save: wlan_mlme::SmPowerSave::Disabled,
+                greenfield: true,
+                short_gi_20: true,
+                short_gi_40: true,
+                tx_stbc: true,
+                rx_stbc: 1,
+                delayed_block_ack: false,
+                max_amsdu_len: wlan_mlme::MaxAmsduLen::Octets3839,
+                dsss_in_40: false,
+                intolerant_40: false,
+                lsig_txop_protect: false,
+            },
+            ampdu_params: wlan_mlme::AmpduParams {
+                exponent: 0,
+                min_start_spacing: wlan_mlme::MinMpduStartSpacing::NoRestrict,
+            },
+            mcs_set: wlan_mlme::SupportedMcsSet {
+                rx_mcs_set: 0x01000000ff,
+                rx_highest_rate: 0,
+                tx_mcs_set_defined: true,
+                tx_rx_diff: false,
+                tx_max_ss: 1,
+                tx_ueqm: false,
+            },
+            ht_ext_cap: wlan_mlme::HtExtCapabilities {
+                pco: false,
+                pco_transition: wlan_mlme::PcoTransitionTime::PcoReserved,
+                mcs_feedback: wlan_mlme::McsFeedback::McsNofeedback,
+                htc_ht_support: false,
+                rd_responder: false,
+            },
+            txbf_cap: wlan_mlme::TxBfCapability {
+                implicit_rx: false,
+                rx_stag_sounding: false,
+                tx_stag_sounding: false,
+                rx_ndp: false,
+                tx_ndp: false,
+                implicit: false,
+                calibration: wlan_mlme::Calibration::CalibrationNone,
+                csi: false,
+                noncomp_steering: false,
+                comp_steering: false,
+                csi_feedback: wlan_mlme::Feedback::FeedbackNone,
+                noncomp_feedback: wlan_mlme::Feedback::FeedbackNone,
+                comp_feedback: wlan_mlme::Feedback::FeedbackNone,
+                min_grouping: wlan_mlme::MinGroup::MinGroupOne,
+                csi_antennas: 1,
+                noncomp_steering_ants: 1,
+                comp_steering_ants: 1,
+                csi_rows: 1,
+                chan_estimation: 1,
+            },
+            asel_cap: wlan_mlme::AselCapability {
+                asel: false,
+                csi_feedback_tx_asel: false,
+                ant_idx_feedback_tx_asel: false,
+                explicit_csi_feedback: false,
+                antenna_idx_feedback: false,
+                rx_asel: false,
+                tx_sounding_ppdu: false,
+            }
+
         },
         vht_caps: None,
         basic_rates: vec![2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108],

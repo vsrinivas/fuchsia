@@ -7,6 +7,7 @@
 #include <ddk/protocol/ethernet.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <lib/fxl/arraysize.h>
+#include <wlan/common/element.h>
 #include <wlan/protocol/info.h>
 
 namespace wlan_device = ::fuchsia::wlan::device;
@@ -105,18 +106,13 @@ void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_band_info_t* out) {
     memset(out, 0, sizeof(*out));
     strlcpy(out->desc, in.description->c_str(), sizeof(out->desc));
 
-    out->ht_caps.ht_capability_info = in.ht_caps.ht_capability_info;
-    out->ht_caps.ampdu_params = in.ht_caps.ampdu_params;
-    memcpy(out->ht_caps.supported_mcs_set, in.ht_caps.supported_mcs_set.data(),
-           sizeof(out->ht_caps.supported_mcs_set));
-    out->ht_caps.ht_ext_capabilities = in.ht_caps.ht_ext_capabilities;
-    out->ht_caps.tx_beamforming_capabilities = in.ht_caps.tx_beamforming_capabilities;
-    out->ht_caps.asel_capabilities = in.ht_caps.asel_capabilities;
+    out->ht_caps = ::wlan::HtCapabilities::FromFidl(in.ht_caps).ToDdk();
 
-    out->vht_supported = (in.vht_caps != nullptr);
-    if (in.vht_caps) {
-        out->vht_caps.vht_capability_info = in.vht_caps->vht_capability_info;
-        out->vht_caps.supported_vht_mcs_and_nss_set = in.vht_caps->supported_vht_mcs_and_nss_set;
+    if (in.vht_caps != nullptr) {
+        out->vht_supported = true;
+        out->vht_caps = ::wlan::VhtCapabilities::FromFidl(*in.vht_caps).ToDdk();
+    } else {
+        out->vht_supported = false;
     }
 
     std::copy_n(in.basic_rates->data(),
@@ -142,4 +138,3 @@ zx_status_t ConvertPhyInfo(wlan_info_t* out, const wlan_device::PhyInfo& in) {
     }
     return ZX_OK;
 }
-

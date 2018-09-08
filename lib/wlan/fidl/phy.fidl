@@ -52,8 +52,8 @@ struct ChannelList {
 
 struct BandInfo {
   string description;
-  HtCapabilities ht_caps;
-  VhtCapabilities? vht_caps;
+  fuchsia.wlan.mlme.HtCapabilities ht_caps;
+  fuchsia.wlan.mlme.VhtCapabilities? vht_caps;
   vector<uint8>:16 basic_rates;
   ChannelList supported_channels;
 };

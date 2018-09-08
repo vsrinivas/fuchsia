@@ -6,15 +6,19 @@
 
 #include <ddk/device.h>
 #include <net/ethernet.h>
+#include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/ioctl.h>
 #include <zircon/status.h>
+
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include "driver.h"
 
 namespace wlanphy {
 
 namespace wlan_device = ::fuchsia::wlan::device;
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 Device::Device(zx_device_t* device, wlanphy_impl_protocol_t wlanphy_impl_proto)
     : parent_(device), wlanphy_impl_(wlanphy_impl_proto), dispatcher_(wlanphy_async_t()) {
@@ -151,26 +155,6 @@ static void ConvertPhyCaps(::fidl::VectorPtr<wlan_device::Capability>* Capabilit
     }
 }
 
-static void ConvertPhyHTCapabilities(wlan_device::HtCapabilities* HTCaps,
-                                     const wlan_ht_caps_t* phy_ht_caps) {
-    HTCaps->ht_capability_info = phy_ht_caps->ht_capability_info;
-    HTCaps->ampdu_params = phy_ht_caps->ampdu_params;
-    size_t phy_mcs_set_size = countof(phy_ht_caps->supported_mcs_set);
-    ZX_DEBUG_ASSERT(HTCaps->supported_mcs_set.count() >= phy_mcs_set_size);
-    for (size_t index = 0; index < phy_mcs_set_size; index++) {
-        HTCaps->supported_mcs_set[index] = phy_ht_caps->supported_mcs_set[index];
-    }
-    HTCaps->ht_ext_capabilities = phy_ht_caps->ht_ext_capabilities;
-    HTCaps->tx_beamforming_capabilities = phy_ht_caps->tx_beamforming_capabilities;
-    HTCaps->asel_capabilities = phy_ht_caps->asel_capabilities;
-}
-
-static void ConvertPhyVHTCapabilities(wlan_device::BandInfo* Band,
-                                      const wlan_vht_caps* phy_vht_caps) {
-    Band->vht_caps->vht_capability_info = phy_vht_caps->vht_capability_info;
-    Band->vht_caps->supported_vht_mcs_and_nss_set = phy_vht_caps->supported_vht_mcs_and_nss_set;
-}
-
 static void ConvertPhyChannels(wlan_device::ChannelList* Channels,
                                const wlan_chan_list_t* phy_channels) {
     // base_freq
@@ -197,12 +181,12 @@ static void ConvertPhyBandInfo(::fidl::VectorPtr<wlan_device::BandInfo>* BandInf
         Band.description = phy_band->desc;
 
         // ht_caps
-        ConvertPhyHTCapabilities(&Band.ht_caps, &phy_bands->ht_caps);
+        Band.ht_caps = ::wlan::HtCapabilities::FromDdk(phy_bands->ht_caps).ToFidl();
 
         // vht_caps
         if (phy_bands->vht_supported) {
-            Band.vht_caps = std::make_unique<wlan_device::VhtCapabilities>();
-            ConvertPhyVHTCapabilities(&Band, &phy_bands->vht_caps);
+            Band.vht_caps = std::make_unique<wlan_mlme::VhtCapabilities>(
+                ::wlan::VhtCapabilities::FromDdk(phy_bands->vht_caps).ToFidl());
         }
 
         // basic_rates
