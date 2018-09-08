@@ -283,7 +283,7 @@ bool timer_cancel(timer_t* timer) {
 
     // mark the timer as canceled
     timer->cancel = true;
-    smp_mb();
+    mb();
 
     // wake up any spinners on the cancel signal
     arch_spinloop_signal();
@@ -405,7 +405,7 @@ void timer_tick(zx_time_t now) {
 
         // mark it not busy
         timer->active_cpu = -1;
-        smp_mb();
+        mb();
 
         // make sure any spinners wake up
         arch_spinloop_signal();
