@@ -62,10 +62,8 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
             return result;
     }
 
-#if WITH_LIB_KTRACE
     auto koid = static_cast<uint32_t>(up->GetKoidForHandle(handle_value));
     ktrace(TAG_WAIT_ONE, koid, signals, (uint32_t)deadline, (uint32_t)(deadline >> 32));
-#endif
 
     // event_wait() will return ZX_OK if already signaled,
     // even if the deadline has passed.  It will return ZX_ERR_TIMED_OUT
@@ -79,9 +77,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
     // Regardless of wait outcome, we must call End().
     auto signals_state = wait_state_observer.End();
 
-#if WITH_LIB_KTRACE
     ktrace(TAG_WAIT_ONE_DONE, koid, signals_state, result, 0);
-#endif
 
     if (observed) {
         zx_status_t status = observed.copy_to_user(signals_state);

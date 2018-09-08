@@ -289,7 +289,6 @@ void ResourceDispatcher::Dump() {
     }
 }
 
-#ifdef WITH_LIB_CONSOLE
 #include <lib/console.h>
 
 static int cmd_resources(int argc, const cmd_args* argv, uint32_t flags) {
@@ -300,5 +299,3 @@ static int cmd_resources(int argc, const cmd_args* argv, uint32_t flags) {
 STATIC_COMMAND_START
 STATIC_COMMAND("resource", "Inspect physical address space resource allocations", &cmd_resources)
 STATIC_COMMAND_END(resources);
-#endif
-

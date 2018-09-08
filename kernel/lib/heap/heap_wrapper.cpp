@@ -305,7 +305,6 @@ void heap_page_free(void* _ptr, size_t pages) {
 }
 
 #if LK_DEBUGLEVEL > 1
-#if WITH_LIB_CONSOLE
 
 #include <lib/console.h>
 
@@ -350,5 +349,4 @@ static int cmd_heap(int argc, const cmd_args* argv, uint32_t flags) {
     return 0;
 }
 
-#endif
 #endif

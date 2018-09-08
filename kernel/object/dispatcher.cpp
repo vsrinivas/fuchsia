@@ -79,9 +79,7 @@ Dispatcher::Dispatcher(zx_signals_t signals)
 }
 
 Dispatcher::~Dispatcher() {
-#if WITH_LIB_KTRACE
     ktrace(TAG_OBJECT_DELETE, (uint32_t)koid_, 0, 0, 0);
-#endif
     kcounter_add(dispatcher_destroy_count, 1);
 }
 

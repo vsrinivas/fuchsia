@@ -5,8 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifdef WITH_LIB_CONSOLE
-
 #include <ctype.h>
 #include <debug.h>
 #include <err.h>
@@ -776,5 +774,3 @@ STATIC_COMMAND("pciregions",
                "Dump information on present PCI address region allocations",
                &PcieDebugConsole::CmdPciRegionDump)
 STATIC_COMMAND_END(pcie);
-
-#endif  // WITH_LIB_CONSOLE

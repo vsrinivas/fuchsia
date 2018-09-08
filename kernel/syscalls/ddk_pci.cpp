@@ -32,7 +32,6 @@
 
 #define LOCAL_TRACE 0
 
-#if WITH_LIB_GFXCONSOLE
 // If we were built with the GFX console, make sure that it is un-bound when
 // user mode takes control of PCI.  Note: there should probably be a cleaner way
 // of doing this.  Not all system have PCI, and (eventually) not all systems
@@ -42,9 +41,6 @@
 static inline void shutdown_early_init_console() {
     gfxconsole_bind_display(nullptr, nullptr);
 }
-#else
-static inline void shutdown_early_init_console() {}
-#endif
 
 #ifdef WITH_DEV_PCIE
 #include <dev/pcie_bus_driver.h>

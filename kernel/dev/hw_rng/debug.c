@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 
-#ifdef WITH_LIB_CONSOLE
 #include <debug.h>
 #include <dev/hw_rng.h>
 #include <lib/console.h>
@@ -64,5 +63,3 @@ STATIC_COMMAND("rng",
                "Generate and print N random bytes using the HW RNG",
                &cmd_rng)
 STATIC_COMMAND_END(hw_rng);
-
-#endif  // WITH_LIB_CONSOLE

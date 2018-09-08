@@ -41,7 +41,6 @@ typedef struct {
 } cmd;
 
 /* register a static block of commands at init time */
-#if WITH_LIB_CONSOLE
 
 /* enable the panic shell if we're being built */
 #if !defined(ENABLE_PANIC_SHELL) && PLATFORM_SUPPORTS_PANIC_SHELL
@@ -55,15 +54,6 @@ typedef struct {
 
 #define STATIC_COMMAND(command_str, help_str, func) { command_str, help_str, func, CMD_AVAIL_NORMAL },
 #define STATIC_COMMAND_MASKED(command_str, help_str, func, availability_mask) { command_str, help_str, func, availability_mask },
-
-#else
-
-/* no command blocks, so null them out */
-#define STATIC_COMMAND_START
-#define STATIC_COMMAND_END(name)
-#define STATIC_COMMAND(command_str, help_str, func)
-
-#endif
 
 /* external api */
 int console_run_script(const char *string);

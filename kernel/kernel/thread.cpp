@@ -1258,7 +1258,6 @@ thread_t* thread_id_to_thread_slow(uint64_t tid) {
 
 /** @} */
 
-#if WITH_LIB_KTRACE
 // Used by ktrace at the start of a trace to ensure that all
 // the running threads, processes, and their names are known
 void ktrace_report_live_threads(void) {
@@ -1276,7 +1275,6 @@ void ktrace_report_live_threads(void) {
         }
     }
 }
-#endif
 
 #define THREAD_BACKTRACE_DEPTH 16
 typedef struct thread_backtrace {

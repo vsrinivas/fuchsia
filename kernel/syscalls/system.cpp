@@ -11,6 +11,7 @@
 #include <kernel/cmdline.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
+#include <lib/debuglog.h>
 #include <libzbi/zbi-cpp.h>
 #include <mexec.h>
 #include <object/process_dispatcher.h>
@@ -28,10 +29,6 @@
 #include <zircon/syscalls/resource.h>
 #include <zircon/syscalls/system.h>
 #include <zircon/types.h>
-
-#if WITH_LIB_DEBUGLOG
-#include <lib/debuglog.h>
-#endif
 
 #include "system_priv.h"
 
@@ -362,10 +359,8 @@ static void platform_graceful_halt(platform_halt_action action) {
     thread_migrate_to_cpu(BOOT_CPU_ID);
     platform_halt_secondary_cpus();
 
-#if WITH_LIB_DEBUGLOG
     // Delay shutdown of debuglog to ensure log messages emitted by above calls will be written.
     dlog_shutdown();
-#endif
 
     platform_halt(action, HALT_REASON_SW_RESET);
     panic("ERROR: failed to halt the platform\n");

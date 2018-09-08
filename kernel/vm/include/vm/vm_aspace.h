@@ -148,10 +148,8 @@ public:
                                   size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
                                   uint arch_mmu_flags);
 
-#if WITH_LIB_VDSO
     uintptr_t vdso_base_address() const;
     uintptr_t vdso_code_address() const;
-#endif
 
 protected:
     // Share the aspace lock with VmAddressRegion/VmMapping so they can serialize
@@ -212,9 +210,7 @@ private:
     // architecturally specific part of the aspace
     ArchVmAspace arch_aspace_;
 
-#if WITH_LIB_VDSO
     fbl::RefPtr<VmMapping> vdso_code_mapping_;
-#endif
 
     // initialization routines need to construct the singleton kernel address space
     // at a particular points in the bootup process

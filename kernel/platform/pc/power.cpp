@@ -18,11 +18,8 @@
 #include <platform/keyboard.h>
 
 #include <lib/console.h>
-#include <lib/version.h>
-
-#if WITH_LIB_DEBUGLOG
 #include <lib/debuglog.h>
-#endif
+#include <lib/version.h>
 
 // The I/O port to write to for QEMU debug exit.
 const uint16_t kQEMUDebugExitPort = 0xf4;
@@ -77,9 +74,7 @@ void platform_panic_start(void) {
 
     static fbl::atomic<int> panic_started(0);
     if (panic_started.exchange(1) == 0) {
-#if WITH_LIB_DEBUGLOG
         dlog_bluescreen_init();
-#endif
     }
 
     halt_other_cpus();
@@ -118,10 +113,8 @@ void platform_halt(
     }
 
     if (reason == HALT_REASON_SW_PANIC) {
-#if WITH_LIB_DEBUGLOG
         thread_print_current_backtrace();
         dlog_bluescreen_halt();
-#endif
     }
 
     if (!halt_on_panic) {

@@ -7,6 +7,7 @@
 #include <vm/vm_aspace.h>
 
 #include "vm_priv.h"
+
 #include <assert.h>
 #include <err.h>
 #include <fbl/alloc_checker.h>
@@ -20,6 +21,7 @@
 #include <kernel/thread_lock.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
+#include <lib/vdso.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -30,10 +32,6 @@
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
 #include <zircon/types.h>
-
-#if WITH_LIB_VDSO
-#include <lib/vdso.h>
-#endif
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -250,11 +248,9 @@ zx_status_t VmAspace::Destroy() {
 
     Guard<fbl::Mutex> guard{&lock_};
 
-#if WITH_LIB_VDSO
     // Don't let a vDSO mapping prevent destroying a VMAR
     // when the whole process is being destroyed.
     vdso_code_mapping_.reset();
-#endif
 
     // tear down and free all of the regions in our address space
     if (root_vmar_) {
@@ -597,7 +593,6 @@ void VmAspace::InitializeAslr() {
     aslr_prng_.AddEntropy(aslr_seed_, sizeof(aslr_seed_));
 }
 
-#if WITH_LIB_VDSO
 uintptr_t VmAspace::vdso_base_address() const {
     Guard<fbl::Mutex> guard{&lock_};
     return VDso::base_address(vdso_code_mapping_);
@@ -607,4 +602,3 @@ uintptr_t VmAspace::vdso_code_address() const {
     Guard<fbl::Mutex> guard{&lock_};
     return vdso_code_mapping_ ? vdso_code_mapping_->base() : 0;
 }
-#endif

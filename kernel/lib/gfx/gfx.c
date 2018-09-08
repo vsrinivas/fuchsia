@@ -813,8 +813,6 @@ static void gfx_draw_pattern_white(void)
     gfx_surface_destroy(surface);
 }
 
-#if defined(WITH_LIB_CONSOLE)
-
 #if LK_DEBUGLEVEL > 1
 #include <lib/console.h>
 
@@ -900,5 +898,4 @@ static int cmd_gfx(int argc, const cmd_args *argv, uint32_t flags)
     return 0;
 }
 
-#endif
 #endif

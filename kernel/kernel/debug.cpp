@@ -30,7 +30,6 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-#if WITH_LIB_CONSOLE
 #include <lib/console.h>
 
 static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags);
@@ -280,4 +279,3 @@ static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
 
     return 0;
 }
-#endif // WITH_LIB_CONSOLE

@@ -304,7 +304,6 @@ typedef struct unitest_testcase_registration {
     size_t                          test_cnt;
 } unittest_testcase_registration_t;
 
-#ifdef WITH_LIB_UNITTEST
 #define UNITTEST_START_TESTCASE(_global_id)  \
     static const unittest_registration_t __unittest_table_##_global_id[] = {
 
@@ -321,10 +320,5 @@ typedef struct unitest_testcase_registration {
         .tests = __unittest_table_##_global_id,                         \
         .test_cnt = countof(__unittest_table_##_global_id),             \
     }
-#else   // WITH_LIB_UNITTEST
-#define UNITTEST_START_TESTCASE(_global_id)
-#define UNITTEST(_name, _fn)
-#define UNITTEST_END_TESTCASE(_global_id, _name, _desc)
-#endif  // WITH_LIB_UNITTEST
 
 __END_CDECLS

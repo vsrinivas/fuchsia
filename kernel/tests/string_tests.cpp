@@ -289,7 +289,6 @@ static void validate_memset(void) {
     }
 }
 
-#if defined(WITH_LIB_CONSOLE)
 #include <lib/console.h>
 
 static int string_tests(int argc, const cmd_args* argv, uint32_t flags) {
@@ -351,5 +350,3 @@ static int string_tests(int argc, const cmd_args* argv, uint32_t flags) {
 STATIC_COMMAND_START
 STATIC_COMMAND("string", "memcpy tests", &string_tests)
 STATIC_COMMAND_END(stringtests);
-
-#endif

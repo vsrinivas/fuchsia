@@ -523,7 +523,6 @@ static void dump_timer_queues(char* buf, size_t len) {
     }
 }
 
-#if WITH_LIB_CONSOLE
 #include <lib/console.h>
 
 static int cmd_timers(int argc, const cmd_args* argv, uint32_t flags) {
@@ -549,5 +548,3 @@ STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("timers", "dump the current kernel timer queues", &cmd_timers, CMD_AVAIL_NORMAL)
 #endif
 STATIC_COMMAND_END(kernel);
-
-#endif // WITH_LIB_CONSOLE

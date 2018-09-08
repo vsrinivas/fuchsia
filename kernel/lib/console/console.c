@@ -198,7 +198,6 @@ static const cmd *match_command(const char *command, const uint8_t availability_
     return NULL;
 }
 
-#if WITH_LIB_DEBUGLOG
 static inline int cgetchar(void) {
     char c;
     int r = platform_dgetc(&c, true);
@@ -210,17 +209,6 @@ static inline void cputchar(char c) {
 static inline void cputs(const char* s) {
     platform_dputs_thread(s, strlen(s));
 }
-#else
-static inline int cgetchar(void) {
-    return getchar();
-}
-static inline void cputchar(char c) {
-    putchar(c);
-}
-static inline void cputs(const char* s) {
-    puts(s);
-}
-#endif
 
 static int read_debug_line(const char **outbuffer, void *cookie)
 {

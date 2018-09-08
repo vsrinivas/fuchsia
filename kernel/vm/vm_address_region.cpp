@@ -11,16 +11,13 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <inttypes.h>
+#include <lib/vdso.h>
 #include <pow2.h>
 #include <trace.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <zircon/types.h>
-
-#if WITH_LIB_VDSO
-#include <lib/vdso.h>
-#endif
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -157,13 +154,11 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
         }
     }
 
-// Notice if this is an executable mapping from the vDSO VMO
-// before we lose the VMO reference via fbl::move(vmo).
-#if WITH_LIB_VDSO
+    // Notice if this is an executable mapping from the vDSO VMO
+    // before we lose the VMO reference via fbl::move(vmo).
     const bool is_vdso_code = (vmo &&
                                (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) &&
                                VDso::vmo_is_vdso(vmo));
-#endif
 
     fbl::AllocChecker ac;
     fbl::RefPtr<VmAddressRegionOrMapping> vmar;
@@ -180,7 +175,6 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
         return ZX_ERR_NO_MEMORY;
     }
 
-#if WITH_LIB_VDSO
     if (is_vdso_code) {
         // For an executable mapping of the vDSO, allow only one per process
         // and only for the valid range of the image.
@@ -190,7 +184,6 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
         }
         aspace_->vdso_code_mapping_ = fbl::RefPtr<VmMapping>::Downcast(vmar);
     }
-#endif
 
     vmar->Activate();
     *out = fbl::move(vmar);
@@ -675,14 +668,12 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
         return ZX_OK;
     }
 
-#if WITH_LIB_VDSO
     // Any unmap spanning the vDSO code mapping is verboten.
     if (aspace_->vdso_code_mapping_ &&
         aspace_->vdso_code_mapping_->base() >= base &&
         aspace_->vdso_code_mapping_->base() - base < size) {
         return ZX_ERR_ACCESS_DENIED;
     }
-#endif
 
     const vaddr_t end_addr = base + size;
     auto end = subregions_.lower_bound(end_addr);
@@ -822,11 +813,9 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
         if (!itr->is_valid_mapping_flags(new_arch_mmu_flags)) {
             return ZX_ERR_ACCESS_DENIED;
         }
-#if WITH_LIB_VDSO
         if (itr->as_vm_mapping() == aspace_->vdso_code_mapping_) {
             return ZX_ERR_ACCESS_DENIED;
         }
-#endif
 
         last_mapped = itr->base() + itr->size();
     }

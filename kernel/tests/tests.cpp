@@ -10,7 +10,6 @@
 #include <debug.h>
 #include <zircon/compiler.h>
 
-#if defined(WITH_LIB_CONSOLE)
 #include <lib/console.h>
 
 #include <assert.h>
@@ -28,5 +27,3 @@ STATIC_COMMAND("spinner", "create a spinning thread", &spinner)
 STATIC_COMMAND("timer_tests", "tests timers", &timer_tests)
 STATIC_COMMAND("uart_tests", "tests uart Tx", &uart_tests)
 STATIC_COMMAND_END(tests);
-
-#endif

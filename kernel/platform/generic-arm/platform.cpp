@@ -46,9 +46,7 @@
 
 #include <lib/console.h>
 #include <lib/memory_limit.h>
-#if WITH_LIB_DEBUGLOG
 #include <lib/debuglog.h>
-#endif
 #if WITH_PANIC_BACKTRACE
 #include <kernel/thread.h>
 #endif
@@ -113,9 +111,7 @@ void platform_panic_start(void) {
     halt_other_cpus();
 
     if (atomic_swap(&panic_started, 1) == 0) {
-#if WITH_LIB_DEBUGLOG
         dlog_bluescreen_init();
-#endif
     }
 }
 
@@ -461,10 +457,8 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
     }
 
     if (reason == HALT_REASON_SW_PANIC) {
-#if WITH_LIB_DEBUGLOG
         thread_print_current_backtrace();
         dlog_bluescreen_halt();
-#endif
         if (!halt_on_panic) {
             power_reboot(REBOOT_NORMAL);
             printf("reboot failed\n");

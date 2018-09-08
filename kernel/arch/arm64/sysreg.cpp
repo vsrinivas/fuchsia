@@ -12,7 +12,6 @@
 #include <string.h>
 
 #if ARCH_ARM64
-#if WITH_LIB_CONSOLE
 #include <lib/console.h>
 
 #define SYSREG_READ_COMMAND(sysreg_string)                                      \
@@ -71,5 +70,4 @@ static int cmd_sysreg(int argc, const cmd_args* argv, uint32_t flags) {
     return 0;
 }
 
-#endif // WITH_LIB_CONSOLE
 #endif // ARCH_ARM64

@@ -74,7 +74,6 @@ bool unittest_expect_bytes(const uint8_t* expected,
     return true;
 }
 
-#if defined(WITH_LIB_CONSOLE)
 #include <lib/console.h>
 
 // External references to the testcase registration tables.
@@ -298,5 +297,3 @@ static int run_unittests(int argc, const cmd_args* argv, uint32_t flags) {
 STATIC_COMMAND_START
 STATIC_COMMAND("ut", "Run unittests", run_unittests)
 STATIC_COMMAND_END(unittests);
-
-#endif
