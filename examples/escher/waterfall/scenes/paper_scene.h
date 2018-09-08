@@ -15,14 +15,14 @@
 // (e.g. PaperShapeCache and PaperRenderQueue).
 class PaperScene : public Scene {
  public:
-  PaperScene(Demo* demo, escher::PaperShapeCache* shape_cache);
+  explicit PaperScene(Demo* demo);
   ~PaperScene();
 
   void Init(escher::Stage* stage) override;
 
   escher::Model* Update(const escher::Stopwatch& stopwatch,
                         uint64_t frame_count, escher::Stage* stage,
-                        escher::PaperRenderQueue* render_queue) override;
+                        escher::PaperRenderer2* renderer) override;
 
  private:
   struct AnimatedState {
@@ -61,8 +61,6 @@ class PaperScene : public Scene {
 
   std::vector<RectState> rectangles_;
   std::vector<ClipPlaneState> clip_planes_;
-
-  escher::PaperShapeCache* const shape_cache_;
 
   escher::MaterialPtr red_;
   escher::MaterialPtr bg_;

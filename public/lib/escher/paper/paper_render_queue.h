@@ -18,6 +18,7 @@ namespace escher {
 class PaperRenderQueue {
  public:
   explicit PaperRenderQueue(EscherWeakPtr escher);
+  ~PaperRenderQueue();
 
   // Set up view-point specific data that is used for the rest of the frame.
   // This includes both uniforms that will be passed to shaders, as well as

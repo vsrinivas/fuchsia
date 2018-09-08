@@ -54,6 +54,8 @@ PaperRenderQueue::PaperRenderQueue(EscherWeakPtr escher)
       white_texture_(CreateWhiteTexture(escher_.get())),
       view_projection_uniform_{} {}
 
+PaperRenderQueue::~PaperRenderQueue() = default;
+
 void PaperRenderQueue::InitFrame(const FramePtr& frame, const Stage& stage,
                                  const Camera& camera) {
   FXL_DCHECK(!frame_ && view_projection_uniform_.buffer == nullptr);

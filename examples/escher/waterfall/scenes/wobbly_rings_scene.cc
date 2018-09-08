@@ -76,7 +76,7 @@ WobblyRingsScene::~WobblyRingsScene() {}
 
 escher::Model* WobblyRingsScene::Update(
     const escher::Stopwatch& stopwatch, uint64_t frame_count,
-    escher::Stage* stage, escher::PaperRenderQueue* render_queue) {
+    escher::Stage* stage, escher::PaperRenderer2* renderer) {
   stage->set_clear_color(clear_color_);
   float current_time_sec = stopwatch.GetElapsedSeconds();
 

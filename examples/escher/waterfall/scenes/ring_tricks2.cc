@@ -83,7 +83,7 @@ RingTricks2::~RingTricks2() {}
 
 escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
                                    uint64_t frame_count, escher::Stage* stage,
-                                   escher::PaperRenderQueue* render_queue) {
+                                   escher::PaperRenderer2* renderer) {
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
   float screen_width = stage->viewing_volume().width();
@@ -163,7 +163,9 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
   // and this method signature will be changed to no longer return a Model.
   // Therefore it will no longer be necessary to collect these objects in a
   // vector.
-  if (render_queue) {
+  if (renderer) {
+    auto render_queue = renderer->render_queue();
+
     render_queue->PushObject(circle1);
     render_queue->PushObject(circle2);
     render_queue->PushObject(inner_ring);

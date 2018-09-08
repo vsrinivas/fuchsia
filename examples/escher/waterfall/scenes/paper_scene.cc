@@ -28,8 +28,7 @@ using escher::plane2;
 using escher::vec2;
 using escher::vec3;
 
-PaperScene::PaperScene(Demo* demo, escher::PaperShapeCache* shape_cache)
-    : Scene(demo), shape_cache_(shape_cache) {}
+PaperScene::PaperScene(Demo* demo) : Scene(demo) {}
 
 void PaperScene::Init(escher::Stage* stage) {
   red_ = fxl::MakeRefCounted<escher::Material>();
@@ -77,9 +76,10 @@ PaperScene::~PaperScene() {}
 
 escher::Model* PaperScene::Update(const escher::Stopwatch& stopwatch,
                                   uint64_t frame_count, escher::Stage* stage,
-                                  escher::PaperRenderQueue* render_queue) {
-  FXL_CHECK(render_queue)
-      << "PaperScene can only be rendered via PaperRenderQueue.";
+                                  escher::PaperRenderer2* renderer) {
+  FXL_CHECK(renderer) << "PaperScene can only be rendered via PaperRenderer2.";
+  auto render_queue = renderer->render_queue();
+  auto shape_cache = renderer->shape_cache();
 
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
@@ -106,7 +106,7 @@ escher::Model* PaperScene::Update(const escher::Stopwatch& stopwatch,
     const RoundedRectSpec rect_spec = escher::Lerp(rect.spec1, rect.spec2, t);
 
     if (auto* mesh =
-            shape_cache_->GetRoundedRectMesh(rect_spec, rect_clip_planes)) {
+            shape_cache->GetRoundedRectMesh(rect_spec, rect_clip_planes)) {
       render_queue->PushObject(
           escher::Object(position, escher::MeshPtr(mesh), rect.material));
     }

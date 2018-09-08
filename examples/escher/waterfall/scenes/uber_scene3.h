@@ -18,7 +18,7 @@ class UberScene3 : public Scene {
 
   escher::Model* Update(const escher::Stopwatch& stopwatch,
                         uint64_t frame_count, escher::Stage* stage,
-                        escher::PaperRenderQueue* render_queue) override;
+                        escher::PaperRenderer2* renderer) override;
 
  private:
   std::unique_ptr<escher::Model> model_;

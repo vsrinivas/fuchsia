@@ -19,7 +19,7 @@ class RingTricks2 : public Scene {
 
   escher::Model* Update(const escher::Stopwatch& stopwatch,
                         uint64_t frame_count, escher::Stage* stage,
-                        escher::PaperRenderQueue* render_queue) override;
+                        escher::PaperRenderer2* renderer) override;
 
  private:
   escher::RoundedRectFactory factory_;

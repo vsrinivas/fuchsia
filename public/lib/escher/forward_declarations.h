@@ -60,6 +60,7 @@ class ViewingVolume;
 struct VulkanContext;
 struct VulkanSwapchain;
 
+typedef fxl::RefPtr<BatchGpuUploader> BatchGpuUploaderPtr;
 typedef fxl::RefPtr<Buffer> BufferPtr;
 typedef fxl::RefPtr<CommandBuffer> CommandBufferPtr;
 typedef fxl::WeakPtr<Escher> EscherWeakPtr;

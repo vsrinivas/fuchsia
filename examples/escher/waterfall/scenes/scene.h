@@ -7,7 +7,7 @@
 
 #include "garnet/examples/escher/common/demo.h"
 #include "lib/escher/escher.h"
-#include "lib/escher/paper/paper_render_queue.h"
+#include "lib/escher/paper/paper_renderer2.h"
 
 namespace escher {
 class Stopwatch;
@@ -31,10 +31,9 @@ class Scene {
   // Model, and the latter by pushing objects into |render_queue|.  In the
   // near-ish future, Waterfall will be deleted, and the |render_queue| argument
   // to this method will become non-optional.
-  virtual escher::Model* Update(
-      const escher::Stopwatch& stopwatch, uint64_t frame_count,
-      escher::Stage* stage,
-      escher::PaperRenderQueue* render_queue = nullptr) = 0;
+  virtual escher::Model* Update(const escher::Stopwatch& stopwatch,
+                                uint64_t frame_count, escher::Stage* stage,
+                                escher::PaperRenderer2* renderer = nullptr) = 0;
 
   // Optionally returns a |Model| for the specified time, frame_count, and
   // screen dimensions.  The returned Model only needs to be valid for the

@@ -7,8 +7,6 @@ executable("waterfall2") {
     "waterfall_demo.cc",
     "waterfall_demo.h",
     "waterfall_main.cc",
-    "waterfall_renderer.cc",
-    "waterfall_renderer.h",
   ]
 
   deps = [

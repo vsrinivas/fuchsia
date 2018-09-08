@@ -272,6 +272,8 @@ source_set("escher") {
     "math/lerp.h",
     "math/rotations.cc",
     "math/rotations.h",
+    "paper/paper_renderer2.cc",
+    "paper/paper_renderer2.h",
     "paper/paper_render_funcs.cc",
     "paper/paper_render_funcs.h",
     "paper/paper_render_queue.cc",

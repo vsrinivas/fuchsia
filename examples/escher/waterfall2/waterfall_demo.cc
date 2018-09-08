@@ -37,11 +37,11 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
        "shaders/model_renderer/shadow_map_lighting.frag",
        "shaders/model_renderer/wobble_position.vert"});
 
-  renderer_ = WaterfallRenderer::New(GetEscherWeakPtr());
+  renderer_ = escher::PaperRenderer2::New(GetEscherWeakPtr());
   renderer_->SetNumDepthBuffers(harness->GetVulkanSwapchain().images.size());
 
   InitializeEscherStage(harness->GetWindowParams());
-  InitializeDemoScenes(renderer_->shape_cache());
+  InitializeDemoScenes();
 }
 
 WaterfallDemo::~WaterfallDemo() {
@@ -67,8 +67,8 @@ void WaterfallDemo::InitializeEscherStage(
   stage_.set_fill_light(escher::AmbientLight(1.f - kLightIntensity));
 }
 
-void WaterfallDemo::InitializeDemoScenes(escher::PaperShapeCache* shape_cache) {
-  scenes_.emplace_back(new PaperScene(this, shape_cache));
+void WaterfallDemo::InitializeDemoScenes() {
+  scenes_.emplace_back(new PaperScene(this));
   scenes_.emplace_back(new RingTricks2(this));
   for (auto& scene : scenes_) {
     scene->Init(&stage_);
@@ -173,8 +173,14 @@ void WaterfallDemo::DrawFrame(const FramePtr& frame,
   Camera camera =
       GenerateCamera(camera_projection_mode_, stage_.viewing_volume());
 
-  renderer_->DrawFrame(frame, &stage_, camera, stopwatch_, frame_count(),
-                       scenes_[current_scene_].get(), output_image);
+  renderer_->BeginFrame(frame, &stage_, camera, output_image);
+  {
+    TRACE_DURATION("gfx", "WaterfallDemo::DrawFrame[scene]");
+    scenes_[current_scene_]->Update(stopwatch_, frame_count(), &stage_,
+                                    renderer_.get());
+  }
+  renderer_->EndFrame();
+
   if (++frame_count_ == 1) {
     first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();
     stopwatch_.Reset();

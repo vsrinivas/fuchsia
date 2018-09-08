@@ -12,11 +12,11 @@
 #include "garnet/examples/escher/common/demo.h"
 #include "garnet/examples/escher/common/demo_harness.h"
 #include "garnet/examples/escher/waterfall/scenes/scene.h"
-#include "garnet/examples/escher/waterfall2/waterfall_renderer.h"
 
 #include "lib/escher/escher.h"
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/fs/hack_filesystem.h"
+#include "lib/escher/paper/paper_renderer2.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/util/stopwatch.h"
 #include "lib/fxl/logging.h"
@@ -45,9 +45,9 @@ class WaterfallDemo : public Demo {
   void ProcessCommandLineArgs(int argc, char** argv);
 
   void InitializeEscherStage(const DemoHarness::WindowParams& window_params);
-  void InitializeDemoScenes(escher::PaperShapeCache* shape_cache);
+  void InitializeDemoScenes();
 
-  WaterfallRendererPtr renderer_;
+  escher::PaperRenderer2Ptr renderer_;
 
   escher::Stage stage_;
 
