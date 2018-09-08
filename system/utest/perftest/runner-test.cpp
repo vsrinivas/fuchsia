@@ -7,6 +7,8 @@
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
 
+#include <fbl/algorithm.h>
+
 // This is a helper for creating a FILE* that we can redirect output to, in
 // order to make the tests below less noisy.  We don't look at the output
 // that is sent to the stream.
@@ -309,7 +311,7 @@ static bool test_parsing_command_args() {
                           "--startup-delay=456"};
     perftest::internal::CommandArgs args;
     perftest::internal::ParseCommandArgs(
-        countof(argv), const_cast<char**>(argv), &args);
+        fbl::count_of(argv), const_cast<char**>(argv), &args);
     EXPECT_EQ(args.run_count, 123);
     EXPECT_STR_EQ(args.output_filename, "dest_file");
     EXPECT_STR_EQ(args.filter_regex, "some_regex");

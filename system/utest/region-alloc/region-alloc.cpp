@@ -7,6 +7,8 @@
 #include <unittest/unittest.h>
 #include <inttypes.h>
 
+#include <fbl/algorithm.h>
+
 #include "common.h"
 
 namespace {
@@ -251,7 +253,7 @@ static bool ralloc_alloc_walk_test() {
         { .base = 0x80000000, .size = 1 << 20 },
         { .base = 0x90000000, .size = 1 << 20 },
     };
-    constexpr size_t r_cnt = countof(test_regions);
+    constexpr size_t r_cnt = fbl::count_of(test_regions);
 
     RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
     EXPECT_EQ(ZX_OK, alloc.AddRegion({ .base = 0, .size = UINT64_MAX}));

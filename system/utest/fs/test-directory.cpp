@@ -16,6 +16,8 @@
 
 #include <zircon/compiler.h>
 
+#include <fbl/algorithm.h>
+
 #include "filesystems.h"
 #include "misc.h"
 
@@ -117,7 +119,7 @@ bool test_directory_coalesce_helper(const int* unlink_order) {
         "::coalesce/dddddddd",
         "::coalesce/eeeeeeee",
     };
-    int num_files = countof(files);
+    int num_files = fbl::count_of(files);
 
     // Allocate a bunch of files in a directory
     ASSERT_EQ(mkdir("::coalesce", 0755), 0);
@@ -268,7 +270,7 @@ bool test_directory_readdir(void) {
     expected_dirent_t empty_dir[] = {
         {false, ".", DT_DIR},
     };
-    ASSERT_TRUE(check_dir_contents("::a", empty_dir, countof(empty_dir)));
+    ASSERT_TRUE(check_dir_contents("::a", empty_dir, fbl::count_of(empty_dir)));
 
     ASSERT_EQ(mkdir("::a/dir1", 0755), 0);
     int fd = open("::a/file1", O_RDWR | O_CREAT | O_EXCL, 0644);
@@ -287,7 +289,7 @@ bool test_directory_readdir(void) {
         {false, "file1", DT_REG},
         {false, "file2", DT_REG},
     };
-    ASSERT_TRUE(check_dir_contents("::a", filled_dir, countof(filled_dir)));
+    ASSERT_TRUE(check_dir_contents("::a", filled_dir, fbl::count_of(filled_dir)));
 
     ASSERT_EQ(rmdir("::a/dir2"), 0);
     ASSERT_EQ(unlink("::a/file2"), 0);
@@ -296,11 +298,11 @@ bool test_directory_readdir(void) {
         {false, "dir1", DT_DIR},
         {false, "file1", DT_REG},
     };
-    ASSERT_TRUE(check_dir_contents("::a", partial_dir, countof(partial_dir)));
+    ASSERT_TRUE(check_dir_contents("::a", partial_dir, fbl::count_of(partial_dir)));
 
     ASSERT_EQ(rmdir("::a/dir1"), 0);
     ASSERT_EQ(unlink("::a/file1"), 0);
-    ASSERT_TRUE(check_dir_contents("::a", empty_dir, countof(empty_dir)));
+    ASSERT_TRUE(check_dir_contents("::a", empty_dir, fbl::count_of(empty_dir)));
     ASSERT_EQ(unlink("::a"), 0);
 
     END_TEST;
@@ -386,8 +388,8 @@ bool test_directory_rewind(void) {
 
     // We should be able to repeatedly access the directory without
     // re-opening it.
-    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)));
-    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)));
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
 
     ASSERT_EQ(mkdirat(dirfd(dir), "b", 0755), 0);
     ASSERT_EQ(mkdirat(dirfd(dir), "c", 0755), 0);
@@ -399,14 +401,14 @@ bool test_directory_rewind(void) {
         {false, "b", DT_DIR},
         {false, "c", DT_DIR},
     };
-    ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, countof(dir_contents)));
-    ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, countof(dir_contents)));
+    ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, fbl::count_of(dir_contents)));
+    ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, fbl::count_of(dir_contents)));
 
     ASSERT_EQ(rmdir("::a/b"), 0);
     ASSERT_EQ(rmdir("::a/c"), 0);
 
-    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)));
-    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)));
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
 
     ASSERT_EQ(closedir(dir), 0);
     ASSERT_EQ(rmdir("::a"), 0);
@@ -428,11 +430,11 @@ bool test_directory_after_rmdir(void) {
     // We can make and delete subdirectories, since "::dir" exists...
     ASSERT_EQ(mkdir("::dir/subdir", 0755), 0);
     ASSERT_EQ(rmdir("::dir/subdir"), 0);
-    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)));
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
 
     // Remove the directory. It's still open, so it should appear empty.
     ASSERT_EQ(rmdir("::dir"), 0);
-    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)));
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
 
     // But we can't make new files / directories, by path...
     ASSERT_EQ(mkdir("::dir/subdir", 0755), -1);
@@ -445,12 +447,12 @@ bool test_directory_after_rmdir(void) {
     // In fact, the "dir" path should still be usable, even as a file!
     fd = open("::dir", O_CREAT | O_EXCL | O_RDWR);
     ASSERT_GT(fd, 0);
-    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)));
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(unlink("::dir"), 0);
 
     // After all that, dir still looks like an empty directory...
-    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)));
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
     ASSERT_EQ(closedir(dir), 0);
 
     END_TEST;

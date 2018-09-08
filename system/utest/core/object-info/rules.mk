@@ -15,6 +15,8 @@ MODULE_SRCS += \
 
 MODULE_NAME := object-info-test
 
+MODULE_STATIC_LIBS := system/ulib/fbl
+
 MODULE_LIBS := \
     system/ulib/mini-process system/ulib/unittest \
 	system/ulib/fdio system/ulib/zircon system/ulib/c

@@ -7,6 +7,8 @@
 #include <unittest/unittest.h>
 #include <utf_conversion/utf_conversion.h>
 
+#include <fbl/algorithm.h>
+
 #if (BYTE_ORDER == BIG_ENDIAN)
 static constexpr uint32_t HOST_ENDIAN_FLAG   = UTF_CONVERT_FLAG_FORCE_BIG_ENDIAN;
 static constexpr uint32_t INVERT_ENDIAN_FLAG = UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN;
@@ -164,7 +166,7 @@ static bool utf16to8_paired_surrogates(void) {
         snprintf(case_id, sizeof(case_id), "case id [0x%04hx : 0x%04hx]", v.src[0], v.src[1]);
         ::memset(actual, 0xAB, sizeof(actual));
 
-        res = utf16_to_utf8(v.src, countof(v.src), actual, &encoded_len);
+        res = utf16_to_utf8(v.src, fbl::count_of(v.src), actual, &encoded_len);
         ASSERT_EQ(ZX_OK, res, case_id);
         ASSERT_UTF8_EQ(v.expected, sizeof(v.expected),
                        actual, sizeof(actual),
@@ -253,7 +255,7 @@ static bool utf16to8_dst_buffer_lengths(void) {
         ::memset(actual, 0xAB, sizeof(actual));
 
         ASSERT_LE(encoded_len, sizeof(actual), case_id);
-        res = utf16_to_utf8(src, countof(src), actual, &encoded_len);
+        res = utf16_to_utf8(src, fbl::count_of(src), actual, &encoded_len);
 
         ASSERT_EQ(ZX_OK, res, case_id);
         ASSERT_EQ(sizeof(expected), encoded_len, case_id);
@@ -296,7 +298,7 @@ static bool utf16to8_endianness_and_bom(void) {
         0xEF, 0xBF, 0xBE, 0xE5, 0x90, 0x80, 0xE6,
         0x94, 0x80, 0xE7, 0x8C, 0x80, 0xE7, 0x90,
         0x80 };
-    uint8_t actual[countof(bom_encoded_inverted)];
+    uint8_t actual[fbl::count_of(bom_encoded_inverted)];
 
 #define EXPECT(e) { e, sizeof(e) }
     static const struct {
@@ -337,7 +339,7 @@ static bool utf16to8_endianness_and_bom(void) {
                      (e.flags & HOST_ENDIAN_FLAG) ? "host" :
                      (e.flags & INVERT_ENDIAN_FLAG) ? "invert" : "detect");
 
-            res = utf16_to_utf8(s.src, countof(s.src), actual, &enc_len, e.flags);
+            res = utf16_to_utf8(s.src, fbl::count_of(s.src), actual, &enc_len, e.flags);
             ASSERT_EQ(ZX_OK, res, case_id);
 
             if (s.host_order) {

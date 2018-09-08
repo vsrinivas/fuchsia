@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include "codec_state.h"
 
+#include <fbl/algorithm.h>
+
 namespace audio {
 namespace intel_hda {
 
@@ -71,7 +73,7 @@ void Dump(const AmpCaps& caps, const AudioWidgetState::AmpState* amp_state = nul
 
     if (amp_state != nullptr) {
         printf(" [");
-        for (size_t i = 0; i < countof(amp_state->gain); ++i) {
+        for (size_t i = 0; i < fbl::count_of(amp_state->gain); ++i) {
             if (i) printf(", ");
             printf("%c:", !i ? 'L' : 'R');
 
@@ -322,7 +324,7 @@ static const flag_lut_entry_t PIN_CAPS_FLAGS[] = {
 };
 
 #define DUMP_FLAGS(flags, table, suffix, no_flags_text) \
-    ihda_dump_flags(flags, table, countof(table), suffix, no_flags_text)
+    ihda_dump_flags(flags, table, fbl::count_of(table), suffix, no_flags_text)
 
 static void ihda_dump_conn_list(const AudioWidgetState& widget) {
     if (!widget.conn_list_len_) {
@@ -397,7 +399,7 @@ static void ihda_dump_widget(const AudioWidgetState& widget, uint32_t id, uint32
         } else {
             for (uint8_t i = 0; i < widget.conn_list_len_; ++i) {
                 char tag[32];
-                snprintf(tag, countof(tag), "InputAmp[nid %hu]", widget.conn_list_[i].nid_);
+                snprintf(tag, fbl::count_of(tag), "InputAmp[nid %hu]", widget.conn_list_[i].nid_);
                 printf(FMT(""), tag);
                 Dump(widget.input_amp_caps_, &widget.conn_list_[i].amp_state_);
             }

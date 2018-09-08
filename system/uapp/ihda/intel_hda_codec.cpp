@@ -4,6 +4,8 @@
 
 #include "intel_hda_codec.h"
 
+#include <fbl/algorithm.h>
+
 namespace audio {
 namespace intel_hda {
 
@@ -467,12 +469,12 @@ zx_status_t IntelHDACodec::DumpCodec(int argc, const char** argv) {
     return ZX_OK;
 }
 
-#define RUN_COMMAND_LIST(_tgt, _nid, _list, _fail_msg, ...) {   \
-    res = RunCommandList(_tgt, _nid, _list, countof(_list));    \
-    if (res != ZX_OK) {                                      \
-        printf(_fail_msg " (res %d)\n", ##__VA_ARGS__, res);    \
-        return res;                                             \
-    }                                                           \
+#define RUN_COMMAND_LIST(_tgt, _nid, _list, _fail_msg, ...) {        \
+    res = RunCommandList(_tgt, _nid, _list, fbl::count_of(_list));   \
+    if (res != ZX_OK) {                                              \
+        printf(_fail_msg " (res %d)\n", ##__VA_ARGS__, res);         \
+        return res;                                                  \
+    }                                                                \
 }
 
 zx_status_t IntelHDACodec::ReadCodecState() {
@@ -848,7 +850,7 @@ zx_status_t IntelHDACodec::ReadAmpState(uint16_t nid, bool is_input, uint8_t ndx
     CodecResponse resp;
     zx_status_t   res;
 
-    for (size_t i = 0; i < countof(state_out->gain); ++i) {
+    for (size_t i = 0; i < fbl::count_of(state_out->gain); ++i) {
         res = DoCodecCmd(nid, GET_AMPLIFIER_GAIN_MUTE(is_input, (i > 0), ndx), &resp);
         if (res != ZX_OK) {
             printf("Failed to get amp settings for nid %hu's %s %s amplifier #%u (res %d)\n",

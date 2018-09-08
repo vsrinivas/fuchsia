@@ -9,6 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -58,7 +59,7 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
 
 zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const mkfs_options_t* options) {
     const char* argv[] = {"/boot/bin/mkfs-msdosfs", device_path};
-    return cb(countof(argv), argv, NULL, NULL, 0);
+    return cb(fbl::count_of(argv), argv, NULL, NULL, 0);
 }
 
 } // namespace

@@ -5,6 +5,7 @@
 #include <zircon/device/intel-hda.h>
 #include <lib/fdio/io.h>
 
+#include <fbl/algorithm.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 
 #include "intel_hda_controller.h"
@@ -82,7 +83,7 @@ static void ihda_dump_stream_regs(const char* name,
         }
         printf("\n");
 
-        for (size_t reg = 0; reg < countof(STREAM_REGS); ++reg) {
+        for (size_t reg = 0; reg < fbl::count_of(STREAM_REGS); ++reg) {
             for (size_t j = 0; j < todo; ++j) {
                 const hda_stream_desc_regs_t* r = regs + i + j;
                 done = STREAM_REGS[reg].dump_fn(STREAM_REGS[reg].name,

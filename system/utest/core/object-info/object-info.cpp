@@ -15,6 +15,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <fbl/algorithm.h>
+
 #define LOCAL_TRACE 0
 #define LTRACEF(str, x...)                                  \
     do {                                                    \
@@ -878,14 +880,14 @@ bool handle_count_valid() {
     ASSERT_EQ(zx_event_create(0u, &event[0]), ZX_OK);
     EXPECT_EQ(handle_count_or_zero(event[0]), 1u);
 
-    for (size_t i = 1; i != countof(event); ++i) {
+    for (size_t i = 1; i != fbl::count_of(event); ++i) {
         ASSERT_EQ(zx_handle_duplicate(
                       event[0], ZX_RIGHT_SIGNAL, &event[i]),
                   ZX_OK);
         EXPECT_EQ(handle_count_or_zero(event[0]), i + 1);
     }
 
-    for (size_t i = countof(event) - 1; i != 0; --i) {
+    for (size_t i = fbl::count_of(event) - 1; i != 0; --i) {
         ASSERT_EQ(zx_handle_close(event[i]), ZX_OK);
         EXPECT_EQ(handle_count_or_zero(event[0]), i);
     }

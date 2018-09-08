@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/algorithm.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/channel.h>
@@ -100,7 +101,7 @@ static void HandOffException(const zx::job& root_job, const zx::channel& channel
 
     zx_handle_t handles[] = {exception_process.release(), exception_thread.release()};
     zx_status_t status =
-        channel.write(0, &packet.type, sizeof(packet.type), handles, countof(handles));
+        channel.write(0, &packet.type, sizeof(packet.type), handles, fbl::count_of(handles));
     if (status != ZX_OK) {
         // If the channel write failed, things are going badly, attempt to
         // resume the excepted  thread which will typically result in the

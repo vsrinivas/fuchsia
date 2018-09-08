@@ -6,6 +6,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <fbl/algorithm.h>
 #include <intel-hda/utils/utils.h>
 
 namespace audio {
@@ -82,8 +83,8 @@ static const struct {
     size_t lut_size;
     uint16_t family_flag;
 } FRAME_RATE_LUTS[] = {
-    { FRAME_RATE_LUT_48K,   countof(FRAME_RATE_LUT_48K),   ASF_RANGE_FLAG_FPS_48000_FAMILY },
-    { FRAME_RATE_LUT_44_1K, countof(FRAME_RATE_LUT_44_1K), ASF_RANGE_FLAG_FPS_44100_FAMILY },
+    { FRAME_RATE_LUT_48K,   fbl::count_of(FRAME_RATE_LUT_48K),   ASF_RANGE_FLAG_FPS_48000_FAMILY },
+    { FRAME_RATE_LUT_44_1K, fbl::count_of(FRAME_RATE_LUT_44_1K), ASF_RANGE_FLAG_FPS_44100_FAMILY },
 };
 
 zx_obj_type_t GetHandleType(const zx::handle& handle) {

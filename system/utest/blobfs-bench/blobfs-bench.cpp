@@ -10,6 +10,7 @@
 #include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
+#include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
@@ -89,7 +90,7 @@ fbl::String GetNameForSize(size_t size_in_bytes) {
     size_t current_unit = 0;
     size_t current_size = size_in_bytes;
     size_t size;
-    while (current_unit < countof(kUnits) && current_size >= (1u << (10 * (current_unit + 1)))) {
+    while (current_unit < fbl::count_of(kUnits) && current_size >= (1u << (10 * (current_unit + 1)))) {
         current_size = current_size / (1 << 10 * current_unit);
         ++current_unit;
     }

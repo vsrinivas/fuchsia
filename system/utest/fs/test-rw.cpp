@@ -55,7 +55,7 @@ bool TestOffsetOperations(void) {
 
     constexpr size_t kBufferSize = PAGE_SIZE;
     uint8_t expected[kBufferSize];
-    for (size_t i = 0; i < countof(expected); i++) {
+    for (size_t i = 0; i < fbl::count_of(expected); i++) {
         expected[i] = static_cast<uint8_t>(rand());
     }
 

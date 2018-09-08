@@ -20,6 +20,7 @@
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/remoteio.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
@@ -152,10 +153,10 @@ zx_status_t systemfs_add_file(const char* path, zx_handle_t vmo, zx_off_t off, s
 static const char* mount_points[] = {
     "/data", "/volume", "/system", "/install", "/blob", "/pkgfs"
 };
-static fbl::RefPtr<fs::Vnode> mount_nodes[countof(mount_points)];
+static fbl::RefPtr<fs::Vnode> mount_nodes[fbl::count_of(mount_points)];
 
 zx_status_t vfs_install_fs(const char* path, zx_handle_t h) {
-    for (unsigned n = 0; n < countof(mount_points); n++) {
+    for (unsigned n = 0; n < fbl::count_of(mount_points); n++) {
         if (!strcmp(path, mount_points[n])) {
             return memfs::root_vfs.InstallRemote(mount_nodes[n], fs::MountChannel(h));
         }
@@ -178,7 +179,7 @@ VnodeDir* vfs_create_global_root() {
         memfs::root_vfs.MountSubtree(memfs::global_root.get(), BootfsRoot());
         memfs::root_vfs.MountSubtree(memfs::global_root.get(), MemfsRoot());
 
-        for (unsigned n = 0; n < countof(mount_points); n++) {
+        for (unsigned n = 0; n < fbl::count_of(mount_points); n++) {
             fbl::StringPiece pathout;
 
             r = memfs::root_vfs.Open(memfs::global_root, &mount_nodes[n],

@@ -207,7 +207,7 @@ static bool init_environment() {
 
     // assemble workers
     const char* where = "::";
-    for (unsigned n = 0; n < countof(WORK); n++) {
+    for (unsigned n = 0; n < fbl::count_of(WORK); n++) {
         ASSERT_TRUE(worker_new(where, WORK[n].name, WORK[n].work,
                                WORK[n].size, WORK[n].flags));
     }

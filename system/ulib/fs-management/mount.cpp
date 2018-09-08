@@ -223,7 +223,7 @@ zx_status_t Mounter::MountFat(unique_fd device, const mount_options_t& options, 
         blockfd_arg,
         "mount",
     };
-    return LaunchAndMount(cb, options, argv, countof(argv));
+    return LaunchAndMount(cb, options, argv, fbl::count_of(argv));
 }
 
 zx_status_t Mounter::Mount(unique_fd device, disk_format_t format, const mount_options_t& options,

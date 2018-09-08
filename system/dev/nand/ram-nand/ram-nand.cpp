@@ -11,6 +11,7 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/bad-block.h>
 #include <ddk/metadata/nand.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <zircon/assert.h>
@@ -67,7 +68,7 @@ zx_status_t NandDevice::Bind(const ram_nand_info_t& info) {
         {BIND_NAND_CLASS, 0, params_.nand_class},
     };
 
-    status = DdkAdd(name, DEVICE_ADD_INVISIBLE, props, countof(props));
+    status = DdkAdd(name, DEVICE_ADD_INVISIBLE, props, fbl::count_of(props));
     if (status != ZX_OK) {
         return status;
     }

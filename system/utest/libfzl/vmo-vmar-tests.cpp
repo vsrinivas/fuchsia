@@ -8,6 +8,8 @@
 #include <zircon/limits.h>
 #include <zircon/rights.h>
 
+#include <fbl/algorithm.h>
+
 #include "vmo-probe.h"
 
 namespace {
@@ -39,7 +41,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
     RefPtr<VmarManager> managers[2];
     RefPtr<VmarManager> target_vmar;
 
-    ASSERT_LE(vmar_levels, countof(managers));
+    ASSERT_LE(vmar_levels, fbl::count_of(managers));
     size_t vmar_size = kSubVmarTestSize;
     for (uint32_t i = 0; i < vmar_levels; ++i) {
         managers[i] = VmarManager::Create(vmar_size, i ? managers[i - 1] : nullptr);
@@ -102,11 +104,11 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
 
     for (uint32_t pass = 0; pass < 2; ++pass) {
         {
-            VmoMapper mappers[countof(kVmoTests)];
-            zx::vmo vmo_handles[countof(kVmoTests)];
+            VmoMapper mappers[fbl::count_of(kVmoTests)];
+            zx::vmo vmo_handles[fbl::count_of(kVmoTests)];
             zx_status_t res;
 
-            for (size_t i = 0; i < countof(kVmoTests); ++i) {
+            for (size_t i = 0; i < fbl::count_of(kVmoTests); ++i) {
                 auto& t = kVmoTests[i];
 
                 for (uint32_t create_map_pass = 0; create_map_pass < 2; ++create_map_pass) {

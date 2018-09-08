@@ -1579,7 +1579,7 @@ bool TestSliceAccessNonContiguousPhysical(void) {
         {0, GUID_TEST_SYS_VALUE, "sys", request.slice_count},
     };
 
-    for (size_t i = 0; i < countof(vparts); i++) {
+    for (size_t i = 0; i < fbl::count_of(vparts); i++) {
         strcpy(request.name, vparts[i].name);
         memcpy(request.type, vparts[i].guid, GUID_LEN);
         vparts[i].fd = fvm_allocate_partition(fd, &request);
@@ -1722,7 +1722,7 @@ bool TestSliceAccessNonContiguousVirtual(void) {
         {0, GUID_TEST_SYS_VALUE, "sys", request.slice_count, request.slice_count},
     };
 
-    for (size_t i = 0; i < countof(vparts); i++) {
+    for (size_t i = 0; i < fbl::count_of(vparts); i++) {
         strcpy(request.name, vparts[i].name);
         memcpy(request.type, vparts[i].guid, GUID_LEN);
         vparts[i].fd = fvm_allocate_partition(fd, &request);

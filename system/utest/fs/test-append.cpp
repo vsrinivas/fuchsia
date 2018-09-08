@@ -11,6 +11,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
@@ -210,7 +211,7 @@ bool test_append_atomic() {
         ASSERT_EQ(memcmp(&buf[i], tmp, sizeof(tmp)), 0, "Non-atomic Append Detected");
     }
 
-    for (size_t i = 0; i < countof(counts); i++) {
+    for (size_t i = 0; i < fbl::count_of(counts); i++) {
         ASSERT_EQ(counts[i], kNumWrites, "Unexpected number of writes from a thread");
     }
 

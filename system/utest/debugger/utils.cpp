@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fbl/algorithm.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <test-utils/test-utils.h>
@@ -206,8 +207,8 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inf
 
     launchpad_t* lp;
     unittest_printf("Creating process \"%s\"\n", name);
-    status = create_inferior(name, countof(argv), argv, NULL, countof(handles), handles, handle_ids,
-                             &lp);
+    status = create_inferior(name, fbl::count_of(argv), argv, NULL, fbl::count_of(handles),
+                             handles, handle_ids, &lp);
     ASSERT_EQ(status, ZX_OK, "failed to create inferior");
 
     // Note: |inferior| is a borrowed handle here.

@@ -421,7 +421,7 @@ static launchpad_t* setup_test_child(zx_handle_t job, const char* arg,
         arg,
         verbosity_string,
     };
-    int argc = countof(argv);
+    int argc = fbl::count_of(argv);
     zx_handle_t handles[1] = { their_channel };
     uint32_t handle_ids[1] = { PA_USER0 };
     *out_channel = our_channel;

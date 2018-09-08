@@ -19,6 +19,7 @@
 #include <zircon/types.h>
 #include <zircon/device/input.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 
 #include <lib/fdio/watcher.h>
@@ -96,7 +97,7 @@ static zx_status_t parse_input_report_type(const char* arg, input_report_type_t*
         { .name = "feature", .type = INPUT_REPORT_FEATURE },
     };
 
-    for (size_t i = 0; i < countof(LUT); ++i) {
+    for (size_t i = 0; i < fbl::count_of(LUT); ++i) {
         if (!strcasecmp(arg, LUT[i].name)) {
             *out_type = LUT[i].type;
             return ZX_OK;
@@ -199,7 +200,7 @@ static ssize_t get_report_ids(int fd, const char* name, size_t num_reports) {
         };
 
         bool found = false;
-        for (size_t j = 0; j < countof(TYPES); ++j) {
+        for (size_t j = 0; j < fbl::count_of(TYPES); ++j) {
             input_get_report_size_t arg = { .id = ids[i], .type = TYPES[j].type };
             input_report_size_t size;
             ssize_t size_rc;

@@ -14,6 +14,7 @@ MODULE_SRCS += \
 MODULE_NAME := utf-conversion-test
 
 MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
     system/ulib/pretty \
     system/ulib/utf_conversion \
     system/ulib/zxcpp \
