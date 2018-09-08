@@ -108,8 +108,25 @@ TEST_F(GAP_RemoteDeviceCacheTest, LookUp) {
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest,
-       NewDeviceDoesNotCrashWhenNoCallbackIsReigstered) {
+       NewDeviceDoesNotCrashWhenNoCallbackIsRegistered) {
   RemoteDeviceCache().NewDevice(kAddrLePublic, true);
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest, ForEachEmpty) {
+  bool found = false;
+  cache()->ForEach([&](const auto&) { found = true; });
+  EXPECT_FALSE(found);
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest, ForEach) {
+  int count = 0;
+  NewDevice(kAddrLePublic, true);
+  cache()->ForEach([&](const auto& dev) {
+    count++;
+    EXPECT_EQ(device()->identifier(), dev.identifier());
+    EXPECT_EQ(device()->address(), dev.address());
+  });
+  EXPECT_EQ(1, count);
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest,

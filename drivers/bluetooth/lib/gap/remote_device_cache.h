@@ -33,9 +33,8 @@ namespace gap {
 // to support more complex features such as LE private address resolution.
 class RemoteDeviceCache final {
  public:
-  using DeviceUpdatedCallback = fit::function<void(const RemoteDevice& device)>;
-  using DeviceRemovedCallback =
-      fit::function<void(const std::string& identifier)>;
+  using DeviceCallback = fit::function<void(const RemoteDevice& device)>;
+  using DeviceIdCallback = fit::function<void(const std::string& identifier)>;
 
   RemoteDeviceCache() = default;
 
@@ -43,6 +42,14 @@ class RemoteDeviceCache final {
   // an entry matching |address| already exists in the cache.
   RemoteDevice* NewDevice(const common::DeviceAddress& address,
                           bool connectable);
+
+  // Iterates over all current devices in the map, running |f| on each entry
+  // synchronously. This is intended for IPC methods that request a list of
+  // devices.
+  //
+  // Clients should use the FindDeviceBy*() methods below to interact with
+  // RemoteDevice objects.
+  void ForEach(DeviceCallback f);
 
   // Creates a new non-temporary device entry using the given |identifier| and
   // identity |address|. This is intended to initialize this RemoteDeviceCache
@@ -86,20 +93,20 @@ class RemoteDeviceCache final {
 
   // When set, |callback| will be invoked whenever a device is added
   // or updated.
-  void set_device_updated_callback(DeviceUpdatedCallback callback) {
+  void set_device_updated_callback(DeviceCallback callback) {
     device_updated_callback_ = std::move(callback);
   }
 
   // When set, |callback| will be invoked whenever a device is
   // removed.
-  void set_device_removed_callback(DeviceRemovedCallback callback) {
+  void set_device_removed_callback(DeviceIdCallback callback) {
     device_removed_callback_ = std::move(callback);
   }
 
   // When this callback is set, |callback| will be invoked whenever the bonding
   // data of a device is updated and should be persisted. The caller must ensure
   // that |callback| outlives |this|.
-  void set_device_bonded_callback(DeviceUpdatedCallback callback) {
+  void set_device_bonded_callback(DeviceCallback callback) {
     device_bonded_callback_ = std::move(callback);
   }
 
@@ -157,9 +164,9 @@ class RemoteDeviceCache final {
   // device identity, to handle bonded LE devices that use privacy.
   std::unordered_map<common::DeviceAddress, std::string> address_map_;
 
-  DeviceUpdatedCallback device_updated_callback_;
-  DeviceRemovedCallback device_removed_callback_;
-  DeviceUpdatedCallback device_bonded_callback_;
+  DeviceCallback device_updated_callback_;
+  DeviceIdCallback device_removed_callback_;
+  DeviceCallback device_bonded_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteDeviceCache);
 };

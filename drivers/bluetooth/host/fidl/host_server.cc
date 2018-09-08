@@ -34,6 +34,7 @@ using fuchsia::bluetooth::control::BondingData;
 using fuchsia::bluetooth::control::Key;
 using fuchsia::bluetooth::control::LEData;
 using fuchsia::bluetooth::control::LTK;
+using fuchsia::bluetooth::control::RemoteDevice;
 
 HostServer::HostServer(zx::channel channel,
                        fxl::WeakPtr<::btlib::gap::Adapter> adapter,
@@ -72,6 +73,17 @@ HostServer::~HostServer() { Close(); }
 
 void HostServer::GetInfo(GetInfoCallback callback) {
   callback(fidl_helpers::NewAdapterInfo(*adapter()));
+}
+
+void HostServer::ListDevices(ListDevicesCallback callback) {
+  std::vector<RemoteDevice> fidl_devices;
+  adapter()->remote_device_cache()->ForEach(
+      [&fidl_devices](const btlib::gap::RemoteDevice& dev) {
+        if (dev.connectable()) {
+          fidl_devices.push_back(fidl_helpers::NewRemoteDevice(dev));
+        }
+      });
+  callback(fidl::VectorPtr<RemoteDevice>(std::move(fidl_devices)));
 }
 
 void HostServer::SetLocalName(::fidl::StringPtr local_name,
@@ -127,6 +139,9 @@ void HostServer::StartLEDiscovery(StartDiscoveryCallback callback) {
     }
 
     // Set up a general-discovery filter for connectable devices.
+    // NOTE(armansito): This currently has no effect since OnDeviceUpdated
+    // events are generated based on RemoteDeviceCache events. |session|'s
+    // "result callback" is unused.
     session->filter()->set_connectable(true);
     session->filter()->SetGeneralDiscoveryFlags();
 
@@ -229,6 +244,7 @@ void HostServer::SetConnectable(bool connectable,
 void HostServer::AddBondedDevices(
     ::fidl::VectorPtr<fuchsia::bluetooth::control::BondingData> bonds,
     AddBondedDevicesCallback callback) {
+  bt_log(TRACE, "bt-host", "AddBondedDevices");
   if (!bonds) {
     callback(fidl_helpers::NewFidlError(ErrorCode::NOT_SUPPORTED,
                                         "No bonds were added"));
@@ -452,9 +468,10 @@ void HostServer::ConfirmPairing(std::string id, ConfirmCallback confirm) {
   bt_log(INFO, "bt-host", "pairing request for device: %s", id.c_str());
   auto found_device = adapter()->remote_device_cache()->FindDeviceById(id);
   ZX_DEBUG_ASSERT(found_device);
-  auto device = fidl_helpers::NewRemoteDevice(*found_device);
+  auto device = fidl_helpers::NewRemoteDevicePtr(*found_device);
   ZX_DEBUG_ASSERT(device);
 
+  ZX_DEBUG_ASSERT(pairing_delegate_);
   pairing_delegate_->OnPairingRequest(
       std::move(*device), fuchsia::bluetooth::control::PairingMethod::CONSENT,
       nullptr,
@@ -467,10 +484,11 @@ void HostServer::DisplayPasskey(std::string id, uint32_t passkey,
   bt_log(INFO, "bt-host", "pairing request for device: %s", id.c_str());
   bt_log(INFO, "bt-host", "enter passkey: %06u", passkey);
 
-  auto device = fidl_helpers::NewRemoteDevice(
+  auto device = fidl_helpers::NewRemoteDevicePtr(
       *adapter()->remote_device_cache()->FindDeviceById(id));
   ZX_DEBUG_ASSERT(device);
 
+  ZX_DEBUG_ASSERT(pairing_delegate_);
   pairing_delegate_->OnPairingRequest(
       std::move(*device),
       fuchsia::bluetooth::control::PairingMethod::PASSKEY_DISPLAY,
@@ -481,10 +499,11 @@ void HostServer::DisplayPasskey(std::string id, uint32_t passkey,
 
 void HostServer::RequestPasskey(std::string id,
                                 PasskeyResponseCallback respond) {
-  auto device = fidl_helpers::NewRemoteDevice(
+  auto device = fidl_helpers::NewRemoteDevicePtr(
       *adapter()->remote_device_cache()->FindDeviceById(id));
   ZX_DEBUG_ASSERT(device);
 
+  ZX_DEBUG_ASSERT(pairing_delegate_);
   pairing_delegate_->OnPairingRequest(
       std::move(*device),
       fuchsia::bluetooth::control::PairingMethod::PASSKEY_ENTRY, nullptr,
@@ -511,7 +530,11 @@ void HostServer::OnConnectionError(Server* server) {
 
 void HostServer::OnRemoteDeviceUpdated(
     const ::btlib::gap::RemoteDevice& remote_device) {
-  auto fidl_device = fidl_helpers::NewRemoteDevice(remote_device);
+  if (!remote_device.connectable()) {
+    return;
+  }
+
+  auto fidl_device = fidl_helpers::NewRemoteDevicePtr(remote_device);
   if (!fidl_device) {
     bt_log(TRACE, "bt-host", "ignoring malformed device update");
     return;
@@ -521,6 +544,8 @@ void HostServer::OnRemoteDeviceUpdated(
 }
 
 void HostServer::OnRemoteDeviceRemoved(const std::string& identifier) {
+  // TODO(armansito): Notify only if the device is connectable for symmetry with
+  // OnDeviceUpdated?
   this->binding()->events().OnDeviceRemoved(identifier);
 }
 

@@ -69,7 +69,9 @@ btlib::sm::PairingData PairingDataFromFidl(
 // Functions to construct FIDL control library objects from library objects.
 fuchsia::bluetooth::control::AdapterInfo NewAdapterInfo(
     const ::btlib::gap::Adapter& adapter);
-fuchsia::bluetooth::control::RemoteDevicePtr NewRemoteDevice(
+fuchsia::bluetooth::control::RemoteDevice NewRemoteDevice(
+    const ::btlib::gap::RemoteDevice& device);
+fuchsia::bluetooth::control::RemoteDevicePtr NewRemoteDevicePtr(
     const ::btlib::gap::RemoteDevice& device);
 
 // TODO(armansito): Incorporate BR/EDR bonding data here.

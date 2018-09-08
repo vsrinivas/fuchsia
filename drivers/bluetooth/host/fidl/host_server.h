@@ -40,6 +40,7 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
  private:
   // ::fuchsia::bluetooth::Host overrides:
   void GetInfo(GetInfoCallback callback) override;
+  void ListDevices(ListDevicesCallback callback) override;
   void AddBondedDevices(
       ::fidl::VectorPtr<fuchsia::bluetooth::control::BondingData> bonds,
       AddBondedDevicesCallback callback) override;

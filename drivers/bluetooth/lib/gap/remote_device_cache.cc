@@ -39,6 +39,13 @@ RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
   return device;
 }
 
+void RemoteDeviceCache::ForEach(DeviceCallback f) {
+  ZX_DEBUG_ASSERT(f);
+  for (const auto& iter : devices_) {
+    f(*iter.second.device());
+  }
+}
+
 bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
                                         const common::DeviceAddress& address,
                                         const sm::PairingData& bond_data) {

@@ -234,29 +234,28 @@ ctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {
   return adapter_info;
 }
 
-ctrl::RemoteDevicePtr NewRemoteDevice(
-    const ::btlib::gap::RemoteDevice& device) {
-  auto fidl_device = ctrl::RemoteDevice::New();
-  fidl_device->identifier = device.identifier();
-  fidl_device->address = device.address().value().ToString();
-  fidl_device->technology = TechnologyTypeToFidl(device.technology());
-  fidl_device->connected = device.connected();
-  fidl_device->bonded = device.bonded();
+ctrl::RemoteDevice NewRemoteDevice(const ::btlib::gap::RemoteDevice& device) {
+  ctrl::RemoteDevice fidl_device;
+  fidl_device.identifier = device.identifier();
+  fidl_device.address = device.address().value().ToString();
+  fidl_device.technology = TechnologyTypeToFidl(device.technology());
+  fidl_device.connected = device.connected();
+  fidl_device.bonded = device.bonded();
 
   // Set default value for device appearance.
-  fidl_device->appearance = ctrl::Appearance::UNKNOWN;
+  fidl_device.appearance = ctrl::Appearance::UNKNOWN;
 
   // |service_uuids| is not a nullable field, so we need to assign something
   // to it.
-  fidl_device->service_uuids.resize(0);
+  fidl_device.service_uuids.resize(0);
 
   if (device.rssi() != ::btlib::hci::kRSSIInvalid) {
-    fidl_device->rssi = Int8::New();
-    fidl_device->rssi->value = device.rssi();
+    fidl_device.rssi = Int8::New();
+    fidl_device.rssi->value = device.rssi();
   }
 
   if (device.name()) {
-    fidl_device->name = *device.name();
+    fidl_device.name = *device.name();
   }
 
   if (device.le()) {
@@ -268,19 +267,26 @@ ctrl::RemoteDevicePtr NewRemoteDevice(
     }
 
     for (const auto& uuid : adv_data.service_uuids()) {
-      fidl_device->service_uuids.push_back(uuid.ToString());
+      fidl_device.service_uuids.push_back(uuid.ToString());
     }
     if (adv_data.appearance()) {
-      fidl_device->appearance =
+      fidl_device.appearance =
           static_cast<ctrl::Appearance>(le16toh(*adv_data.appearance()));
     }
     if (adv_data.tx_power()) {
       auto fidl_tx_power = Int8::New();
       fidl_tx_power->value = *adv_data.tx_power();
-      fidl_device->tx_power = std::move(fidl_tx_power);
+      fidl_device.tx_power = std::move(fidl_tx_power);
     }
   }
 
+  return fidl_device;
+}
+
+ctrl::RemoteDevicePtr NewRemoteDevicePtr(
+    const ::btlib::gap::RemoteDevice& device) {
+  auto fidl_device = ctrl::RemoteDevice::New();
+  *fidl_device = NewRemoteDevice(device);
   return fidl_device;
 }
 
