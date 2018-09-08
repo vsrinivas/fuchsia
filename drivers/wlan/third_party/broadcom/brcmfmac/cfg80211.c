@@ -108,19 +108,19 @@ static bool check_vif_up(struct brcmf_cfg80211_vif* vif) {
 #define RATETAB_ENT(_rateid, _flags) \
     { .bitrate = RATE_TO_BASE100KBPS(_rateid), .hw_value = (_rateid), .flags = (_flags), }
 
-static struct ieee80211_rate __wl_rates[] = {
-    RATETAB_ENT(BRCM_RATE_1M, 0),
-    RATETAB_ENT(BRCM_RATE_2M, IEEE80211_RATE_SHORT_PREAMBLE),
-    RATETAB_ENT(BRCM_RATE_5M5, IEEE80211_RATE_SHORT_PREAMBLE),
-    RATETAB_ENT(BRCM_RATE_11M, IEEE80211_RATE_SHORT_PREAMBLE),
-    RATETAB_ENT(BRCM_RATE_6M, 0),
-    RATETAB_ENT(BRCM_RATE_9M, 0),
-    RATETAB_ENT(BRCM_RATE_12M, 0),
-    RATETAB_ENT(BRCM_RATE_18M, 0),
-    RATETAB_ENT(BRCM_RATE_24M, 0),
-    RATETAB_ENT(BRCM_RATE_36M, 0),
-    RATETAB_ENT(BRCM_RATE_48M, 0),
-    RATETAB_ENT(BRCM_RATE_54M, 0),
+static uint16_t __wl_rates[] = {
+    BRCM_RATE_1M,
+    BRCM_RATE_2M,
+    BRCM_RATE_5M5,
+    BRCM_RATE_11M,
+    BRCM_RATE_6M,
+    BRCM_RATE_9M,
+    BRCM_RATE_12M,
+    BRCM_RATE_18M,
+    BRCM_RATE_24M,
+    BRCM_RATE_36M,
+    BRCM_RATE_48M,
+    BRCM_RATE_54M,
 };
 
 #define wl_g_rates (__wl_rates + 0)
@@ -140,68 +140,13 @@ static struct ieee80211_rate __wl_rates[] = {
         .max_antenna_gain = 0, .max_power = 30,                                                    \
     }
 
-static struct ieee80211_channel __wl_2ghz_channels[] = {
-    CHAN2G(1, 2412),
-    CHAN2G(2, 2417),
-    CHAN2G(3, 2422),
-    CHAN2G(4, 2427),
-    CHAN2G(5, 2432),
-    CHAN2G(6, 2437),
-    CHAN2G(7, 2442),
-    CHAN2G(8, 2447),
-    CHAN2G(9, 2452),
-    CHAN2G(10, 2457),
-    CHAN2G(11, 2462),
-    CHAN2G(12, 2467),
-    CHAN2G(13, 2472),
-    CHAN2G(14, 2484)
+static uint8_t __wl_2ghz_channels[] = {
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
 };
 
-static struct ieee80211_channel __wl_5ghz_channels[] = {
-    CHAN5G(34),
-    CHAN5G(36),
-    CHAN5G(38),
-    CHAN5G(40),
-    CHAN5G(42),
-    CHAN5G(44),
-    CHAN5G(46),
-    CHAN5G(48),
-    CHAN5G(52),
-    CHAN5G(56),
-    CHAN5G(60),
-    CHAN5G(64),
-    CHAN5G(100),
-    CHAN5G(104),
-    CHAN5G(108),
-    CHAN5G(112),
-    CHAN5G(116),
-    CHAN5G(120),
-    CHAN5G(124),
-    CHAN5G(128),
-    CHAN5G(132),
-    CHAN5G(136),
-    CHAN5G(140),
-    CHAN5G(144),
-    CHAN5G(149),
-    CHAN5G(153),
-    CHAN5G(157),
-    CHAN5G(161),
-    CHAN5G(165)
-};
-
-/* Band templates duplicated per wiphy. The channel info
- * above is added to the band during setup.
- */
-static const struct ieee80211_supported_band __wl_band_2ghz = {
-    .band = NL80211_BAND_2GHZ,
-    .bitrates = wl_g_rates,
-    .n_bitrates = wl_g_rates_size,
-};
-
-static const struct ieee80211_supported_band __wl_band_5ghz = {
-    .band = NL80211_BAND_5GHZ,
-    .bitrates = wl_a_rates,
-    .n_bitrates = wl_a_rates_size,
+static uint8_t __wl_5ghz_channels[] = {
+    34, 36, 38, 40, 42, 44, 46, 48, 52, 56, 60, 64,
+    100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165
 };
 
 /* This is to override regulatory domains defined in cfg80211 module (reg.c)
@@ -231,21 +176,6 @@ static const struct ieee80211_regdomain brcmf_regdom = {
     }
 };
 #endif // REGULATORY_DOMAIN_OVERRIDE
-
-/* Note: brcmf_cipher_suites is an array of int defining which cipher suites
- * are supported. A pointer to this array and the number of entries is passed
- * on to upper layers. AES_CMAC defines whether or not the driver supports MFP.
- * So the cipher suite AES_CMAC has to be the last one in the array, and when
- * device does not support MFP then the number of suites will be decreased by 1
- */
-static const uint32_t brcmf_cipher_suites[] = {
-    WLAN_CIPHER_SUITE_WEP40,
-    WLAN_CIPHER_SUITE_WEP104,
-    WLAN_CIPHER_SUITE_TKIP,
-    WLAN_CIPHER_SUITE_CCMP,
-    /* Keep as last entry: */
-    WLAN_CIPHER_SUITE_AES_CMAC
-};
 
 /* Vendor specific ie. id = 221, oui and type defines exact ie */
 struct brcmf_vs_tlv {
@@ -4951,16 +4881,53 @@ void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
 }
 
 void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
+    struct net_device* ndev = ctx;
+    struct brcmf_if* ifp = ndev_to_if(ndev);
+    struct wireless_dev* wdev = ndev_to_wdev(ndev);
+
     brcmf_dbg(TEMP, "Enter");
 
     memset(info, 0, sizeof(*info));
 
+    // mac_addr
+    memcpy(info->mac_addr, ifp->mac_addr, ETH_ALEN);
+
     // role
-    info->role = WLAN_MAC_ROLE_CLIENT;
+    info->role = wdev->iftype;
+
+    // features (none)
+
+    // bands
+    info->num_bands = 2;
+
+    // 2Ghz band
+    wlanif_band_capabilities_t* band = &info->bands[0];
+    band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_g_rates_size);
+    memcpy(band->basic_rates, wl_g_rates, band->num_basic_rates * sizeof(uint16_t));
+    band->base_frequency = 2407;
+    band->num_channels = min(WLAN_CHANNELS_MAX_LEN, ARRAY_SIZE(__wl_2ghz_channels));
+    memcpy(band->channels, __wl_2ghz_channels, band->num_channels);
+
+
+    // 5Ghz band
+    band = &info->bands[1];
+    band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_a_rates_size);
+    memcpy(band->basic_rates, wl_a_rates, band->num_basic_rates * sizeof(uint16_t));
+    band->base_frequency = 5000;
+    band->num_channels = min(WLAN_CHANNELS_MAX_LEN, ARRAY_SIZE(__wl_5ghz_channels));
+    memcpy(band->channels, __wl_5ghz_channels, band->num_channels);
 }
 
 void brcmf_hook_stats_query_req(void* ctx) {
+    struct net_device* ndev = ctx;
+
     brcmf_dbg(TEMP, "Enter");
+    wlanif_stats_query_response_t response = {};
+    wlanif_mlme_stats_t mlme_stats = {};
+    response.stats.mlme_stats = &mlme_stats;
+    // TODO(cphoenix): Fill in all the stats fields.
+
+    ndev->if_callbacks->stats_query_resp(ndev->if_callback_cookie, &response);
 }
 
 zx_status_t brcmf_hook_data_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
@@ -6041,252 +6008,6 @@ static zx_status_t brcmf_setup_wiphybands(struct wiphy* wiphy) {
     return ZX_OK;
 }
 
-/**
- * brcmf_setup_ifmodes() - determine interface modes and combinations.
- *
- * @wiphy: wiphy object.
- * @ifp: interface object needed for feat module api.
- *
- * The interface modes and combinations are determined dynamically here
- * based on firmware functionality.
- *
- * no p2p and no mbss:
- *
- *  #STA <= 1, #AP <= 1, channels = 1, 2 total
- *
- * no p2p and mbss:
- *
- *  #STA <= 1, #AP <= 1, channels = 1, 2 total
- *  #AP <= 4, matching BI, channels = 1, 4 total
- *
- * p2p, no mchan, and mbss:
- *
- *  #STA <= 1, #P2P-DEV <= 1, #{P2P-CL, P2P-GO} <= 1, channels = 1, 3 total
- *  #STA <= 1, #P2P-DEV <= 1, #AP <= 1, #P2P-CL <= 1, channels = 1, 4 total
- *  #AP <= 4, matching BI, channels = 1, 4 total
- *
- * p2p, mchan, and mbss:
- *
- *  #STA <= 1, #P2P-DEV <= 1, #{P2P-CL, P2P-GO} <= 1, channels = 2, 3 total
- *  #STA <= 1, #P2P-DEV <= 1, #AP <= 1, #P2P-CL <= 1, channels = 1, 4 total
- *  #AP <= 4, matching BI, channels = 1, 4 total
- */
-static zx_status_t brcmf_setup_ifmodes(struct wiphy* wiphy, struct brcmf_if* ifp) {
-    struct ieee80211_iface_combination* combo = NULL;
-    struct ieee80211_iface_limit* c0_limits = NULL;
-    struct ieee80211_iface_limit* p2p_limits = NULL;
-    struct ieee80211_iface_limit* mbss_limits = NULL;
-    bool mbss;
-    int i, c, n_combos;
-
-    mbss = brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MBSS);
-
-    n_combos = 1 + !!mbss;
-    combo = calloc(n_combos, sizeof(*combo));
-    if (!combo) {
-        goto err;
-    }
-
-    wiphy->interface_modes = WLAN_MAC_ROLE_CLIENT | WLAN_MAC_ROLE_AP;
-
-    c = 0;
-    i = 0;
-    c0_limits = calloc(2, sizeof(*c0_limits));
-    if (!c0_limits) {
-        goto err;
-    }
-    c0_limits[i].max = 1;
-    c0_limits[i++].types = WLAN_MAC_ROLE_CLIENT;
-    combo[c].num_different_channels = 1;
-    c0_limits[i].max = 1;
-    c0_limits[i++].types = WLAN_MAC_ROLE_AP;
-    combo[c].max_interfaces = i;
-    combo[c].n_limits = i;
-    combo[c].limits = c0_limits;
-
-    if (mbss) {
-        c++;
-        i = 0;
-        mbss_limits = calloc(1, sizeof(*mbss_limits));
-        if (!mbss_limits) {
-            goto err;
-        }
-        mbss_limits[i].max = 4;
-        mbss_limits[i++].types = WLAN_MAC_ROLE_AP;
-        combo[c].beacon_int_infra_match = true;
-        combo[c].num_different_channels = 1;
-        combo[c].max_interfaces = 4;
-        combo[c].n_limits = i;
-        combo[c].limits = mbss_limits;
-    }
-
-    wiphy->n_iface_combinations = n_combos;
-    wiphy->iface_combinations = combo;
-    return ZX_OK;
-
-err:
-    free(c0_limits);
-    free(p2p_limits);
-    free(mbss_limits);
-    free(combo);
-    return ZX_ERR_NO_MEMORY;
-}
-
-#ifdef CONFIG_PM
-static const struct wiphy_wowlan_support brcmf_wowlan_support = {
-    .flags = WIPHY_WOWLAN_MAGIC_PKT | WIPHY_WOWLAN_DISCONNECT,
-    .n_patterns = BRCMF_WOWL_MAXPATTERNS,
-    .pattern_max_len = BRCMF_WOWL_MAXPATTERNSIZE,
-    .pattern_min_len = 1,
-    .max_pkt_offset = 1500,
-};
-#endif
-
-static void brcmf_wiphy_wowl_params(struct wiphy* wiphy, struct brcmf_if* ifp) {
-#ifdef CONFIG_PM
-    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct wiphy_wowlan_support* wowl;
-
-    wowl = brcmu_alloc_and_copy(&brcmf_wowlan_support, sizeof(brcmf_wowlan_support));
-    if (!wowl) {
-        brcmf_err("only support basic wowlan features\n");
-        wiphy->wowlan = &brcmf_wowlan_support;
-        return;
-    }
-
-    if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_PNO)) {
-        if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_WOWL_ND)) {
-            wowl->flags |= WIPHY_WOWLAN_NET_DETECT;
-            wowl->max_nd_match_sets = BRCMF_PNO_MAX_PFN_COUNT;
-            cfg->wowl.nd_data_wait = SYNC_COMPLETION_INIT;
-        }
-    }
-    if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_WOWL_GTK)) {
-        wowl->flags |= WIPHY_WOWLAN_SUPPORTS_GTK_REKEY;
-        wowl->flags |= WIPHY_WOWLAN_GTK_REKEY_FAILURE;
-    }
-
-    wiphy->wowlan = wowl;
-#endif
-}
-
-static zx_status_t brcmf_setup_wiphy(struct wiphy* wiphy, struct brcmf_if* ifp) {
-    struct brcmf_pub* drvr = ifp->drvr;
-    const struct ieee80211_iface_combination* combo;
-    struct ieee80211_supported_band* band;
-    uint16_t max_interfaces = 0;
-    bool gscan;
-    uint32_t bandlist[3];
-    uint32_t n_bands;
-    zx_status_t err;
-    int i;
-
-    wiphy->max_scan_ssids = WL_NUM_SCAN_MAX;
-    wiphy->max_scan_ie_len = BRCMF_SCAN_IE_LEN_MAX;
-    wiphy->max_num_pmkids = BRCMF_MAXPMKID;
-
-    err = brcmf_setup_ifmodes(wiphy, ifp);
-    if (err != ZX_OK) {
-        return err;
-    }
-
-    for (i = 0, combo = wiphy->iface_combinations; i < wiphy->n_iface_combinations; i++, combo++) {
-        max_interfaces = max(max_interfaces, combo->max_interfaces);
-    }
-
-    for (i = 0; i < max_interfaces && i < (int)ARRAY_SIZE(drvr->addresses); i++) {
-        uint8_t* addr = drvr->addresses[i].addr;
-
-        memcpy(addr, drvr->mac, ETH_ALEN);
-        if (i) {
-            addr[0] |= BIT(1);
-            addr[ETH_ALEN - 1] ^= i;
-        }
-    }
-    wiphy->addresses = drvr->addresses;
-    wiphy->n_addresses = i;
-
-    wiphy->signal_type = CFG80211_SIGNAL_TYPE_MBM;
-    wiphy->cipher_suites = brcmf_cipher_suites;
-    wiphy->n_cipher_suites = ARRAY_SIZE(brcmf_cipher_suites);
-    if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP)) {
-        wiphy->n_cipher_suites--;
-    }
-    wiphy->bss_select_support = BIT(NL80211_BSS_SELECT_ATTR_RSSI) |
-                                BIT(NL80211_BSS_SELECT_ATTR_BAND_PREF) |
-                                BIT(NL80211_BSS_SELECT_ATTR_RSSI_ADJUST);
-
-    wiphy->flags |= WIPHY_FLAG_NETNS_OK | WIPHY_FLAG_PS_ON_BY_DEFAULT | WIPHY_FLAG_OFFCHAN_TX |
-                    WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL;
-    if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_TDLS)) {
-        wiphy->flags |= WIPHY_FLAG_SUPPORTS_TDLS;
-    }
-    if (!ifp->drvr->settings->roamoff) {
-        wiphy->flags |= WIPHY_FLAG_SUPPORTS_FW_ROAM;
-    }
-    if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_FWSUP)) {
-        brcmf_dbg(TEMP, "* * Set feature NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_PSK on wiphy");
-        brcmf_dbg(TEMP, "* * Set feature NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_1X on wiphy");
-    }
-    wiphy->max_remain_on_channel_duration = 5000;
-    if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_PNO)) {
-        gscan = brcmf_feat_is_enabled(ifp, BRCMF_FEAT_GSCAN);
-        brcmf_pno_wiphy_params(wiphy, gscan);
-    }
-    /* vendor commands/events support */
-    wiphy->vendor_commands = brcmf_vendor_cmds;
-    wiphy->n_vendor_commands = BRCMF_VNDR_CMDS_LAST - 1;
-
-    if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_WOWL)) {
-        brcmf_wiphy_wowl_params(wiphy, ifp);
-    }
-    err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BANDLIST, &bandlist, sizeof(bandlist));
-    if (err != ZX_OK) {
-        brcmf_err("could not obtain band info: err=%d\n", err);
-        return err;
-    }
-    /* first entry in bandlist is number of bands */
-    n_bands = bandlist[0];
-    for (i = 1; i <= (int)n_bands && i < (int)ARRAY_SIZE(bandlist); i++) {
-        if (bandlist[i] == WLC_BAND_2G) {
-            band = brcmu_alloc_and_copy(&__wl_band_2ghz, sizeof(__wl_band_2ghz));
-            if (!band) {
-                return ZX_ERR_NO_MEMORY;
-            }
-
-            band->channels = brcmu_alloc_and_copy(&__wl_2ghz_channels, sizeof(__wl_2ghz_channels));
-            if (!band->channels) {
-                free(band);
-                return ZX_ERR_NO_MEMORY;
-            }
-
-            band->n_channels = ARRAY_SIZE(__wl_2ghz_channels);
-            wiphy->bands[NL80211_BAND_2GHZ] = band;
-        }
-        if (bandlist[i] == WLC_BAND_5G) {
-            band = brcmu_alloc_and_copy(&__wl_band_5ghz, sizeof(__wl_band_5ghz));
-            if (!band) {
-                return ZX_ERR_NO_MEMORY;
-            }
-
-            band->channels = brcmu_alloc_and_copy(&__wl_5ghz_channels, sizeof(__wl_5ghz_channels));
-            if (!band->channels) {
-                free(band);
-                return ZX_ERR_NO_MEMORY;
-            }
-
-            band->n_channels = ARRAY_SIZE(__wl_5ghz_channels);
-            wiphy->bands[NL80211_BAND_5GHZ] = band;
-        }
-    }
-
-    // TODO(cphoenix): Apply channel limits from device tree equivalent
-    brcmf_dbg(TEMP, "* * Tried to wiphy_read_of_freq_limits(wiphy)");
-    brcmf_dbg(TEMP, "* * This reads and applies channel limits from device tree");
-
-    return ZX_OK;
-}
-
 static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
     struct net_device* ndev;
     struct wireless_dev* wdev;
@@ -6632,11 +6353,6 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     }
     cfg->d11inf.io_type = (uint8_t)io_type;
     brcmu_d11_attach(&cfg->d11inf);
-
-    err = brcmf_setup_wiphy(wiphy, ifp);
-    if (err != ZX_OK) {
-        goto priv_out;
-    }
 
     brcmf_dbg(INFO, "Registering custom regulatory\n");
     wiphy->reg_notifier = brcmf_cfg80211_reg_notifier;
