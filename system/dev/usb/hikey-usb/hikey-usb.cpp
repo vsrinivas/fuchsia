@@ -17,6 +17,7 @@
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/protocol/gpio.h>
+#include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 
 enum {
@@ -73,7 +74,7 @@ zx_status_t HikeyUsb::Init() {
     args.ctx = this;
     args.ops = &ddk_device_proto_;
     args.props = props;
-    args.prop_count = countof(props);
+    args.prop_count = static_cast<uint32_t>(fbl::count_of(props));
     args.proto_id = ddk_proto_id_;
     args.proto_ops = ddk_proto_ops_;
 

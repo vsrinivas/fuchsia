@@ -484,7 +484,7 @@ zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
             { SAD_RATE_192000, 192000 },
         };
 
-        for (uint32_t j = 0; j < countof(RATE_LUT); ++j) {
+        for (uint32_t j = 0; j < fbl::count_of(RATE_LUT); ++j) {
             const auto& start = RATE_LUT[j];
             if (!(rates & start.flag)) {
                 continue;
@@ -494,7 +494,7 @@ zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
             // to add at least one new entry into the set of format ranges.
             // Find the end of this range.
             uint32_t k;
-            for (k = j + 1; k < countof(RATE_LUT); ++k) {
+            for (k = j + 1; k < fbl::count_of(RATE_LUT); ++k) {
                 if (!(rates & RATE_LUT[k].flag)) {
                     break;
                 }
@@ -620,7 +620,7 @@ void Vim2SpdifAudioStream::SetMode(uint32_t frame_rate, audio_sample_format_t fm
     };
 
     uint32_t rate_ndx;
-    for (rate_ndx = 0; rate_ndx < countof(RATE_LUT); ++rate_ndx) {
+    for (rate_ndx = 0; rate_ndx < fbl::count_of(RATE_LUT); ++rate_ndx) {
         if (RATE_LUT[rate_ndx].frame_rate == frame_rate) {
             break;
         }
@@ -629,11 +629,11 @@ void Vim2SpdifAudioStream::SetMode(uint32_t frame_rate, audio_sample_format_t fm
     // The requested frame rate should already have been validated by the code
     // before us.  If something has gone terribly wrong, log a warning and
     // default to 48K.
-    if (rate_ndx >= countof(RATE_LUT)) {
+    if (rate_ndx >= fbl::count_of(RATE_LUT)) {
         constexpr uint32_t DEFAULT_RATE_NDX = 1;
         zxlogf(WARN, "Failed to find requested frame rate (%u) in LUT!  Defaulting to 48000\n",
                frame_rate);
-        static_assert(DEFAULT_RATE_NDX < countof(RATE_LUT), "Invalid default rate index!");
+        static_assert(DEFAULT_RATE_NDX < fbl::count_of(RATE_LUT), "Invalid default rate index!");
         rate_ndx = DEFAULT_RATE_NDX;
     }
 

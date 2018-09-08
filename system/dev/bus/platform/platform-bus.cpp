@@ -16,6 +16,7 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/platform-defs.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/boot/image.h>
@@ -497,7 +498,7 @@ zx_status_t PlatformBus::Init(zx::vmo zbi) {
         {BIND_PLATFORM_DEV_PID, 0, board_info_.pid},
     };
 
-    return DdkAdd("platform", 0, props, countof(props));
+    return DdkAdd("platform", 0, props, fbl::count_of(props));
 }
 
 } // namespace platform_bus

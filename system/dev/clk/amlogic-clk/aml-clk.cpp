@@ -111,37 +111,37 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
     // Populate the correct register blocks.
     switch (info.did) {
     case PDEV_DID_AMLOGIC_AXG_CLK: {
-        clk_gates = (meson_clk_gate_t*)calloc(countof(axg_clk_gates), sizeof(meson_clk_gate_t));
+        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(axg_clk_gates), sizeof(meson_clk_gate_t));
         if (clk_gates == nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        memcpy(clk_gates, axg_clk_gates, sizeof(meson_clk_gate_t) * countof(axg_clk_gates));
+        memcpy(clk_gates, axg_clk_gates, sizeof(meson_clk_gate_t) * fbl::count_of(axg_clk_gates));
 
-        gates_.reset(clk_gates, countof(axg_clk_gates));
+        gates_.reset(clk_gates, fbl::count_of(axg_clk_gates));
         clk_msr_ = false;
         break;
     }
     case PDEV_DID_AMLOGIC_GXL_CLK: {
-        clk_gates = (meson_clk_gate_t*)calloc(countof(gxl_clk_gates), sizeof(meson_clk_gate_t));
+        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(gxl_clk_gates), sizeof(meson_clk_gate_t));
         if (clk_gates == nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        memcpy(clk_gates, gxl_clk_gates, sizeof(meson_clk_gate_t) * countof(axg_clk_gates));
+        memcpy(clk_gates, gxl_clk_gates, sizeof(meson_clk_gate_t) * fbl::count_of(axg_clk_gates));
 
-        gates_.reset(clk_gates, countof(gxl_clk_gates));
+        gates_.reset(clk_gates, fbl::count_of(gxl_clk_gates));
         clk_msr_ = false;
         break;
     }
     case PDEV_DID_AMLOGIC_G12A_CLK: {
         clk_msr_offsets_ = g12_clk_msr;
-        clk_table_.reset(g12a_clk_table, countof(g12a_clk_table));
-        clk_gates = (meson_clk_gate_t*)calloc(countof(g12a_clk_gates), sizeof(meson_clk_gate_t));
+        clk_table_.reset(g12a_clk_table, fbl::count_of(g12a_clk_table));
+        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(g12a_clk_gates), sizeof(meson_clk_gate_t));
         if (clk_gates == nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        memcpy(clk_gates, g12a_clk_gates, sizeof(meson_clk_gate_t) * countof(g12a_clk_gates));
+        memcpy(clk_gates, g12a_clk_gates, sizeof(meson_clk_gate_t) * fbl::count_of(g12a_clk_gates));
 
-        gates_.reset(clk_gates, countof(g12a_clk_gates));
+        gates_.reset(clk_gates, fbl::count_of(g12a_clk_gates));
         break;
     }
     default:

@@ -206,7 +206,7 @@ void Client::HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImage
     dc_image.width = req->image_config.width;
     dc_image.pixel_format = req->image_config.pixel_format;
     dc_image.type = req->image_config.type;
-    for (uint32_t i = 0; i < countof(dc_image.planes); i++) {
+    for (uint32_t i = 0; i < fbl::count_of(dc_image.planes); i++) {
         dc_image.planes[i].byte_offset = req->image_config.planes[i].byte_offset;
         dc_image.planes[i].bytes_per_row = req->image_config.planes[i].bytes_per_row;
     }

@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <ddk/debug.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <zircon/assert.h>
@@ -438,7 +439,7 @@ void InputDevice::ReceiveEvent(virtio_input_event_t* event) {
         if (event->code == 0) {
             return;
         }
-        if (event->code >= countof(kEventCodeMap)) {
+        if (event->code >= fbl::count_of(kEventCodeMap)) {
             LTRACEF("unknown key\n");
             return;
         }

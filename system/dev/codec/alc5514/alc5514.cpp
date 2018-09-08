@@ -7,6 +7,7 @@
 #include <zircon/device/i2c.h>
 #include <zircon/assert.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
 #include "alc5514.h"
@@ -104,7 +105,7 @@ void Alc5514Device::DumpRegs() {
         VERSION_ID,
         DEVICE_ID,
     };
-    for (uint i = 0; i < countof(REGS); i++) {
+    for (uint i = 0; i < fbl::count_of(REGS); i++) {
         zxlogf(INFO, "%04x: %08x\n", REGS[i], ReadReg(REGS[i]));
     }
 }

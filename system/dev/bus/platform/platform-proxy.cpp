@@ -12,6 +12,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 
 #include "platform-proxy-client.h"
@@ -128,7 +129,7 @@ zx_status_t PlatformProxy::RegisterProtocol(uint32_t proto_id, const void* proto
         args.name = info.name;
         args.proto_id = ZX_PROTOCOL_PLATFORM_DEV;
         args.props = props;
-        args.prop_count = countof(props);
+        args.prop_count = fbl::count_of(props);
 
         status = ProxyDevice::CreateChild(zxdev(), ROOT_DEVICE_ID, fbl::RefPtr<PlatformProxy>(this),
                                           &args);

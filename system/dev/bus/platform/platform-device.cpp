@@ -369,7 +369,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     uint32_t resp_handle_count = 0;
 
     auto status = zx_channel_read(channel, 0, &req_buf, req_handles, sizeof(req_buf),
-                                  countof(req_handles), &actual, &req_handle_count);
+                                  fbl::count_of(req_handles), &actual, &req_handle_count);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d\n", status);
         return status;
@@ -536,7 +536,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             .req_handles = req_handles,
             .req_handle_count = req_handle_count,
             .resp_handles = resp_handles,
-            .resp_handle_count = countof(resp_handles),
+            .resp_handle_count = fbl::count_of(resp_handles),
             .resp_actual_size = 0,
             .resp_actual_handles = 0,
         };
@@ -593,7 +593,7 @@ zx_status_t PlatformDevice::Start() {
             {BIND_PLATFORM_DEV_DID, 0, did_},
         };
 
-        status = DdkAdd(name, device_add_flags, props, countof(props), ZX_PROTOCOL_PLATFORM_DEV,
+        status = DdkAdd(name, device_add_flags, props, fbl::count_of(props), ZX_PROTOCOL_PLATFORM_DEV,
                         argstr);
     }
 

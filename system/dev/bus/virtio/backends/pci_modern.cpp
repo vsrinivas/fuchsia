@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 #include <inttypes.h>
@@ -177,7 +178,7 @@ void PciModernBackend::DeviceConfigWrite(uint16_t offset, uint64_t value) {
 // mapped and we have stored a valid handle in the structure then just return
 // ZX_OK.
 zx_status_t PciModernBackend::MapBar(uint8_t bar) {
-    if (bar >= countof(bar_)) {
+    if (bar >= fbl::count_of(bar_)) {
         return ZX_ERR_INVALID_ARGS;
     }
 

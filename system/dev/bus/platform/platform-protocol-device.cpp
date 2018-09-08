@@ -218,7 +218,7 @@ zx_status_t ProtocolDevice::Start() {
         device_add_flags |= DEVICE_ADD_INVISIBLE;
     }
 
-    auto status = DdkAdd(name, device_add_flags, props, countof(props));
+    auto status = DdkAdd(name, device_add_flags, props, fbl::count_of(props));
     if (status != ZX_OK) {
         return status;
     }

@@ -14,6 +14,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 
 #include "platform-proxy.h"
@@ -35,7 +36,7 @@ zx_status_t ProxyClient::Create(uint32_t proto_id, zx_device_t* parent,
         {BIND_PLATFORM_PROTO, 0, proto_id},
     };
 
-    auto status = client->DdkAdd(name, 0, props, countof(props));
+    auto status = client->DdkAdd(name, 0, props, fbl::count_of(props));
     if (status != ZX_OK) {
         return status;
     }

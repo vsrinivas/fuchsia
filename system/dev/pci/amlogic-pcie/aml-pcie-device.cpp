@@ -7,6 +7,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/protocol/platform-defs.h>
+#include <fbl/algorithm.h>
 #include <zircon/driver/binding.h>
 
 #include "aml-pcie-clk.h"
@@ -144,7 +145,7 @@ device_add_args_t pci_dev_args = []() {
     result.name = "aml-dw-pcie";
     result.ops = &aml_pcie_device_proto,
     result.props = props;
-    result.prop_count = countof(props);
+    result.prop_count = fbl::count_of(props);
 
     return result;
 }();
