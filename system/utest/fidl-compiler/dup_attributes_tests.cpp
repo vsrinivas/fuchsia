@@ -42,7 +42,7 @@ bool no_two_same_doc_attribute_test() {
 library fidl.test.dupattributes;
 
 /// first
-[doc = "second"]
+[Doc = "second"]
 interface A {
     1: MethodA();
 };
@@ -51,7 +51,7 @@ interface A {
     EXPECT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "Duplicate attribute with name 'doc'");
+    ASSERT_STR_STR(errors[0].c_str(), "Duplicate attribute with name 'Doc'");
 
     END_TEST;
 }

@@ -300,7 +300,7 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
         assert(Ok());
     }
     end = MarkLastUseful();
-    return std::make_unique<raw::Attribute>(start, end, "doc", str_value);
+    return std::make_unique<raw::Attribute>(start, end, "Doc", str_value);
 }
 
 std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList() {
