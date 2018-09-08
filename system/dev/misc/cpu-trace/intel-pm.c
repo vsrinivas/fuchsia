@@ -10,8 +10,8 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 
-#include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
-#include <lib/zircon-internal/mtrace.h>
+#include <zircon/device/cpu-trace/intel-pm.h>
+#include <zircon/mtrace.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
@@ -38,20 +38,20 @@
 typedef enum {
 #define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
     symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_FIXED, id),
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
 } fixed_event_id_t;
 
 // Verify each fixed counter regnum < IPM_MAX_FIXED_COUNTERS.
 #define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
     && (regnum) < IPM_MAX_FIXED_COUNTERS
 static_assert(1
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
     , "");
 
 typedef enum {
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
     symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
-#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
 } misc_event_id_t;
 
 // Misc event ids needn't be consecutive.
@@ -59,7 +59,7 @@ typedef enum {
 typedef enum {
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
     symbol ## _NUMBER,
-#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
     NUM_MISC_EVENTS
 } misc_event_number_t;
 
@@ -67,7 +67,7 @@ typedef enum {
 static cpuperf_event_id_t misc_event_table_contents[NUM_MISC_EVENTS] = {
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
     CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
-#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
 };
 
 // Const accessor to give the illusion of the table being const.
@@ -78,13 +78,13 @@ static void ipm_init_misc_event_table(void);
 typedef enum {
 #define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, description) \
     symbol,
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
 } arch_event_t;
 
 typedef enum {
 #define DEF_SKL_EVENT(symbol, id, event, umask, flags, name, description) \
     symbol,
-#include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
+#include <zircon/device/cpu-trace/skylake-pm-events.inc>
 } model_event_t;
 
 typedef struct {
@@ -96,26 +96,26 @@ typedef struct {
 static const event_details_t kArchEvents[] = {
 #define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, description) \
     { event, umask, flags },
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
 };
 
 static const event_details_t kModelEvents[] = {
 #define DEF_SKL_EVENT(symbol, id, event, umask, flags, name, description) \
     { event, umask, flags },
-#include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
+#include <zircon/device/cpu-trace/skylake-pm-events.inc>
 };
 
 static const uint16_t kArchEventMap[] = {
 #define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, description) \
     [id] = symbol,
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
 };
 static_assert(countof(kArchEventMap) <= CPUPERF_MAX_EVENT + 1, "");
 
 static const uint16_t kModelEventMap[] = {
 #define DEF_SKL_EVENT(symbol, id, event, umask, flags, name, description) \
     [id] = symbol,
-#include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
+#include <zircon/device/cpu-trace/skylake-pm-events.inc>
 };
 static_assert(countof(kModelEventMap) <= CPUPERF_MAX_EVENT + 1, "");
 
@@ -227,7 +227,7 @@ static unsigned ipm_fixed_counter_number(cpuperf_event_id_t id) {
     enum {
 #define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
         symbol ## _NUMBER = regnum,
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
     };
     switch (id) {
     case FIXED_INSTRUCTIONS_RETIRED_ID:

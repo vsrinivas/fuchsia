@@ -63,10 +63,10 @@
 #include <vm/vm_object_physical.h>
 #include <lib/ktrace.h>
 #include <lib/pci/pio.h>
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
-#include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
+#include <zircon/device/cpu-trace/cpu-perf.h>
+#include <zircon/device/cpu-trace/intel-pm.h>
 #include <lib/zircon-internal/ktrace.h>
-#include <lib/zircon-internal/mtrace.h>
+#include <zircon/mtrace.h>
 #include <zircon/thread_annotations.h>
 #include <zxcpp/new.h>
 #include <pow2.h>
@@ -85,14 +85,14 @@
 typedef enum {
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
     symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
-#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
 } misc_event_id_t;
 
 // h/w address of misc events.
 typedef enum {
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
     symbol ## _OFFSET = offset,
-#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
 } misc_event_offset_t;
 
 // TODO(dje): Freeze-on-PMI doesn't work in skylake.
@@ -156,7 +156,7 @@ const uint16_t supported_mem_device_ids[] = {
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
     && (offset >= UNC_IMC_STATS_BEGIN && (offset + size/8) <= UNC_IMC_STATS_END + 1)
 static_assert(1
-#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
     , "");
 
 // These aren't constexpr as we iterate to fill in values for each counter.
@@ -519,7 +519,7 @@ static unsigned x86_perfmon_lookup_fixed_counter(cpuperf_event_id_t id) {
     switch (CPUPERF_EVENT_ID_EVENT(id)) {
 #define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
     case id: return regnum;
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
+#include <zircon/device/cpu-trace/intel-pm-events.inc>
     default: return IPM_MAX_FIXED_COUNTERS;
     }
 }
@@ -828,7 +828,7 @@ static zx_status_t x86_ipm_verify_misc_config(
             switch (CPUPERF_EVENT_ID_EVENT(id)) {
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
             case id: break;
-#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
             default:
                 TRACEF("Invalid misc event id |misc_ids[%zu]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
@@ -963,7 +963,7 @@ static void x86_ipm_stage_misc_config(const zx_x86_ipm_config_t* config,
         switch (CPUPERF_EVENT_ID_EVENT(state->misc_ids[i])) {
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
         case id:
-#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
+#include <zircon/device/cpu-trace/skylake-misc-events.inc>
             state->need_mchbar = true;
             break;
         default:

@@ -12,7 +12,7 @@
 
 #include "lib/mtrace.h"
 
-#include <lib/zircon-internal/mtrace.h>
+#include <zircon/mtrace.h>
 
 zx_status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,
                            user_inout_ptr<void> arg, size_t size) {

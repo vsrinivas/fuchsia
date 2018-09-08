@@ -9,8 +9,8 @@
 #include <err.h>
 #include <stdint.h>
 
-#include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <zircon/compiler.h>
+#include <zircon/device/cpu-trace/intel-pt.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
