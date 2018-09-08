@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async;
-use async::{temp::TempFutureExt, TimeoutExt};
-use bt::error::Error as BTError;
 use failure::Error;
-use fidl_ble::{AdvertisingData, ScanFilter};
-use fidl_gatt::ServiceInfo;
+use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
+use fidl_fuchsia_bluetooth_le::{AdvertisingData, ScanFilter};
+use fuchsia_async::{self as fasync, temp::TempFutureExt, unsafe_many_futures, TimeoutExt};
+use fuchsia_bluetooth::error::Error as BTError;
+use fuchsia_syslog::macros::*;
+use fuchsia_zircon::prelude::*;
 use futures::future::ready as fready;
 use futures::prelude::*;
 use futures::FutureExt;
 use parking_lot::RwLock;
 use serde_json::{to_value, Value};
 use std::sync::Arc;
-use zx::prelude::*;
 
 // Bluetooth-related functionality
-use bluetooth::constants::*;
-use bluetooth::facade::BluetoothFacade;
-use bluetooth::types::{BleConnectPeripheralResponse, BluetoothMethod};
+use crate::bluetooth::constants::*;
+use crate::bluetooth::facade::BluetoothFacade;
+use crate::bluetooth::types::{BleConnectPeripheralResponse, BluetoothMethod};
 
 macro_rules! parse_arg {
     ($args:ident, $func:ident, $name:expr) => {
@@ -288,7 +288,7 @@ fn start_scan_async(
     // Based on if a scan count is provided, either use TIMEOUT as termination criteria
     // or custom future to terminate when <count> remote devices are discovered
     let event_fut = if count.is_none() {
-        async::Timer::new(timeout_ms.after_now()).left_future()
+        fasync::Timer::new(timeout_ms.after_now()).left_future()
     } else {
         // Future resolves when number of devices discovered is equal to count
         let custom_fut =

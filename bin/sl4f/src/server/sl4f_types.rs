@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use failure::Error;
+use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::mpsc;
 

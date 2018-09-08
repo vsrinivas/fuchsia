@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_gatt::ServiceInfo;
+use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
+use serde_derive::{Deserialize, Serialize};
 
 /// Enum for supported FIDL commands, to extend support for new commands, add to this
 /// definition, update ble_method_to_fidl, and implement helper methods in BluetoothFacade

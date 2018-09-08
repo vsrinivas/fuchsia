@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use app;
-use async;
-use async::temp::Either::{Left, Right};
-use bt::error::Error as BTError;
 use failure::{Error, Fail, ResultExt};
 use fidl;
 use fidl::encoding2::OutOfLine;
-use fidl_ble::{AdvertisingData, PeripheralMarker, PeripheralProxy, RemoteDevice};
-use fidl_ble::{CentralEvent, CentralMarker, CentralProxy, ScanFilter};
-use fidl_gatt::{ClientProxy, ServiceInfo};
-use fidl_gatt::{LocalServiceDelegateMarker, LocalServiceMarker, LocalServiceProxy, Server_Marker,
-                Server_Proxy};
+use fidl_fuchsia_bluetooth_gatt::{ClientProxy, ServiceInfo};
+use fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateMarker, LocalServiceMarker,
+                                  LocalServiceProxy, Server_Marker, Server_Proxy};
+use fidl_fuchsia_bluetooth_le::{AdvertisingData, PeripheralMarker, PeripheralProxy, RemoteDevice};
+use fidl_fuchsia_bluetooth_le::{CentralEvent, CentralMarker, CentralProxy, ScanFilter};
+use fuchsia_app as app;
+use fuchsia_async::{self as fasync,
+                    temp::Either::{Left, Right}};
+use fuchsia_bluetooth::error::Error as BTError;
+use fuchsia_syslog::macros::*;
+use fuchsia_zircon as zx;
 use futures::future::ready as fready;
 use futures::prelude::*;
 use parking_lot::RwLock;
@@ -22,11 +24,10 @@ use std::collections::HashMap;
 use std::marker::Unpin;
 use std::pin::PinMut;
 use std::sync::Arc;
-use zx;
 
 // Sl4f-Constants and Bluetooth related functionality
-use bluetooth::constants::*;
-use bluetooth::types::{BleAdvertiseResponse, BleScanResponse};
+use crate::bluetooth::constants::*;
+use crate::bluetooth::types::{BleAdvertiseResponse, BleScanResponse};
 
 // BluetoothFacade: Stores Central and Peripheral proxies used for
 // bluetooth scan and advertising requests.
@@ -70,7 +71,7 @@ pub struct BluetoothFacade {
 
     // service_proxies: HashMap of key = String (randomly generated local_service_id) and val:
     // LocalServiceProxy
-    service_proxies: HashMap<String, (LocalServiceProxy, async::Channel)>,
+    service_proxies: HashMap<String, (LocalServiceProxy, fasync::Channel)>,
 }
 
 impl BluetoothFacade {
@@ -100,10 +101,10 @@ impl BluetoothFacade {
                 Some(p)
             }
             None => {
-                let peripheral_svc: PeripheralProxy =
-                    app::client::connect_to_service::<PeripheralMarker>()
-                        .context("Failed to connect to BLE Peripheral service.")
-                        .unwrap();
+                let peripheral_svc: PeripheralProxy = app::client::connect_to_service::<
+                    PeripheralMarker,
+                >().context("Failed to connect to BLE Peripheral service.")
+                .unwrap();
                 Some(peripheral_svc)
             }
         };
@@ -134,7 +135,7 @@ impl BluetoothFacade {
         bt_facade.write().central = new_central;
         // Only spawn if a central hadn't been created
         if !central_modified {
-            async::spawn(BluetoothFacade::listen_central_events(bt_facade.clone()))
+            fasync::spawn(BluetoothFacade::listen_central_events(bt_facade.clone()))
         }
     }
 
@@ -250,7 +251,7 @@ impl BluetoothFacade {
         &self.server_proxy
     }
 
-    pub fn get_service_proxies(&self) -> &HashMap<String, (LocalServiceProxy, async::Channel)> {
+    pub fn get_service_proxies(&self) -> &HashMap<String, (LocalServiceProxy, fasync::Channel)> {
         &self.service_proxies
     }
 
@@ -572,14 +573,14 @@ impl BluetoothFacade {
 
         // TODO(NET-1289): Ensure unwrap() safety
         let (service_local, service_remote) = zx::Channel::create().unwrap();
-        let service_local = async::Channel::from_channel(service_local).unwrap();
+        let service_local = fasync::Channel::from_channel(service_local).unwrap();
         let service_server = fidl::endpoints2::ServerEnd::<LocalServiceMarker>::new(service_remote);
 
         // Otherwise, store the local proxy in map with unique local_service_id string
         let service_proxy = LocalServiceProxy::new(service_local);
 
         let (delegate_local, delegate_remote) = zx::Channel::create().unwrap();
-        let delegate_local = async::Channel::from_channel(delegate_local).unwrap();
+        let delegate_local = fasync::Channel::from_channel(delegate_local).unwrap();
         let delegate_ptr =
             fidl::endpoints2::ClientEnd::<LocalServiceDelegateMarker>::new(delegate_remote);
 

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bt::error::Error as BTError;
 use failure::Error;
+use fuchsia_bluetooth::error::Error as BTError;
+use fuchsia_syslog::macros::*;
 use futures::channel::mpsc;
 use parking_lot::{Mutex, RwLock};
-use rouille;
-use rouille::{Request, Response};
+use rouille::{self, router, Request, Response};
 use serde;
 use serde_json;
 use serde_json::{to_value, Value};
@@ -17,11 +17,12 @@ use std::io::Read;
 use std::sync::Arc;
 
 // Standardized sl4f types and constants
-use server::constants::{COMMAND_DELIMITER, COMMAND_SIZE};
-use server::sl4f_types::{AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse};
+use crate::server::constants::{COMMAND_DELIMITER, COMMAND_SIZE};
+use crate::server::sl4f_types::{AsyncRequest, AsyncResponse, ClientData, CommandRequest,
+                                CommandResponse};
 
 // Bluetooth related includes (do the same for each connectivity stack)
-use bluetooth::facade::BluetoothFacade;
+use crate::bluetooth::facade::BluetoothFacade;
 
 /// Sl4f object. This stores all information about state for each connectivity stack.
 /// Every session will have a new Sl4f object.
