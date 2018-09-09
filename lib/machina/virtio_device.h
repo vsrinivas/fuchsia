@@ -180,6 +180,59 @@ class VirtioInprocessDevice
   }
 };
 
+static constexpr zx_signals_t kUserSignalShift =
+    __builtin_ctz(ZX_USER_SIGNAL_ALL);
+
+// Interface for all virtio device components.
+template <uint8_t DeviceId, uint16_t NumQueues, typename ConfigType>
+class VirtioComponentDevice
+    : public VirtioDevice<DeviceId, NumQueues, ConfigType> {
+ protected:
+  VirtioComponentDevice(const PhysMem& phys_mem, uint32_t device_features,
+                        VirtioDeviceConfig::ConfigQueueFn config_queue,
+                        VirtioDeviceConfig::ReadyDeviceFn ready_device)
+      : VirtioDevice<DeviceId, NumQueues, ConfigType>(
+            phys_mem, device_features, std::move(config_queue),
+            noop_notify_queue, noop_config_device, std::move(ready_device)) {
+    zx_status_t status = zx::event::create(0, &event_);
+    FXL_CHECK(status == ZX_OK) << "Failed to create event";
+    wait_.set_object(event_.get());
+    wait_.set_trigger(ZX_USER_SIGNAL_ALL);
+  }
+
+  zx_status_t WaitForInterrupt(async_dispatcher_t* dispatcher) {
+    return wait_.Begin(dispatcher);
+  }
+
+  const zx::event& event() const { return event_; }
+
+ private:
+  void OnInterrupt(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                   zx_status_t status, const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+      return;
+    }
+    status = this->Interrupt(signal->observed >> kUserSignalShift);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to raise device interrupt " << status;
+      return;
+    }
+    status = event_.signal(ZX_USER_SIGNAL_ALL, 0);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to clear interrupt signal " << status;
+      return;
+    }
+    status = wait->Begin(dispatcher);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to wait for interrupt " << status;
+    }
+  }
+
+  zx::event event_;
+  async::WaitMethod<VirtioComponentDevice, &VirtioComponentDevice::OnInterrupt>
+      wait_{this};
+};
+
 }  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_VIRTIO_DEVICE_H_
