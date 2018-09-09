@@ -475,10 +475,47 @@ struct Union : public Decl {
     bool recursive = false;
 };
 
+class Libraries {
+public:
+    // Insert |library|.
+    bool Insert(std::unique_ptr<Library> library);
+
+    // Lookup a library by its |library_name|.
+    bool Lookup(const std::vector<StringView>& library_name,
+                Library** out_library) const;
+private:
+    std::map<std::vector<StringView>, std::unique_ptr<Library>> all_libraries_;
+};
+
+class Dependencies {
+public:
+    // Register a dependency to a library. The newly recorded dependent library
+    // will be referenced by its name, and may also be optionally be referenced
+    // by an alias.
+    bool Register(StringView filename, Library* dep_library,
+                 const std::unique_ptr<raw::Identifier>& maybe_alias);
+
+    // Lookup a dependent library by |filename| and |name|.
+    bool Lookup(StringView filename, const std::vector<StringView>& name,
+                Library** out_library);
+
+    const std::set<Library*>& dependencies() const { return dependencies_aggregate_; };
+
+private:
+    bool InsertByName(StringView filename, const std::vector<StringView>& name,
+                      Library* library);
+
+    typedef std::map<std::vector<StringView>, Library*> ByName;
+    typedef std::map<std::string, std::unique_ptr<ByName>> ByFilename;
+
+    ByFilename dependencies_;
+    std::set<Library*> dependencies_aggregate_;
+};
+
 class Library {
 public:
-    Library(const std::map<std::vector<StringView>, std::unique_ptr<Library>>* all_libraries,
-            ErrorReporter* error_reporter);
+    Library(const Libraries* all_libraries, ErrorReporter* error_reporter)
+        : all_libraries_(all_libraries), error_reporter_(error_reporter) {}
 
     bool ConsumeFile(std::unique_ptr<raw::File> file);
     bool Compile();
@@ -496,13 +533,6 @@ private:
                                    SourceLocation location, Name* out_name);
 
     bool ParseSize(std::unique_ptr<Constant> constant, Size* out_size);
-
-    bool RegisterDependentLibrary(Library* library,
-                                  const std::unique_ptr<raw::Identifier>& maybe_alias,
-                                  StringView filename);
-    bool InsertDependentLibraryByName(const std::vector<StringView>& library_name,
-                                      Library* library,
-                                      StringView filename);
 
     void RegisterConst(Const* decl);
     bool RegisterDecl(Decl* decl);
@@ -643,7 +673,7 @@ public:
 
     bool HasAttribute(fidl::StringView name) const;
 
-    const std::map<std::vector<StringView>, Library*>& dependencies() const { return dependencies_; };
+    const std::set<Library*>& dependencies() const;
 
     std::vector<StringView> library_name_;
 
@@ -661,11 +691,8 @@ public:
 private:
     std::unique_ptr<raw::AttributeList> attributes_;
 
-    // TODO(pascal): Refactor into a `Dependencies` object which nicely ties
-    // all these things together, and offers a simpler API.
-    std::map<std::vector<StringView>, Library*> dependencies_;
-    std::set<std::pair<std::vector<StringView>, std::string>> dependencies_by_filename_;
-    const std::map<std::vector<StringView>, std::unique_ptr<Library>>* all_libraries_;
+    Dependencies dependencies_;
+    const Libraries* all_libraries_;
 
     // All Name, Constant, Using, and Decl pointers here are non-null and are
     // owned by the various foo_declarations_.

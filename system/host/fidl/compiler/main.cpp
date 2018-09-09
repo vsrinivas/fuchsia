@@ -317,14 +317,13 @@ int main(int argc, char* argv[]) {
 
     fidl::IdentifierTable identifier_table;
     fidl::ErrorReporter error_reporter;
-    std::map<std::vector<fidl::StringView>, std::unique_ptr<fidl::flat::Library>> compiled_libraries;
+    fidl::flat::Libraries all_libraries;
     const fidl::flat::Library* final_library = nullptr;
-    std::vector<fidl::StringView> final_library_name;
     for (const auto& source_manager : source_managers) {
         if (source_manager.sources().empty()) {
             continue;
         }
-        auto library = std::make_unique<fidl::flat::Library>(&compiled_libraries, &error_reporter);
+        auto library = std::make_unique<fidl::flat::Library>(&all_libraries, &error_reporter);
         for (const auto& source_file : source_manager.sources()) {
             if (!Parse(*source_file, &identifier_table, &error_reporter, library.get())) {
                 error_reporter.PrintReports();
@@ -336,12 +335,8 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         final_library = library.get();
-        std::vector<fidl::StringView> library_name = library->name();
-        final_library_name = library_name;
-        auto name_and_library = std::make_pair(std::move(library_name), std::move(library));
-        auto iter = compiled_libraries.insert(std::move(name_and_library));
-        if (!iter.second) {
-            const auto& name = iter.first->first;
+        if (!all_libraries.Insert(std::move(library))) {
+            const auto& name = library->name();
             Fail("Mulitple libraries with the same name: '%s'\n",
                  NameLibrary(name).data());
         }
@@ -351,7 +346,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Verify that the produced library's name matches the expected name.
-    std::string final_name = NameLibrary(final_library_name);
+    std::string final_name = NameLibrary(final_library->name());
     if (!library_name.empty() && final_name != library_name) {
         Fail("Generated library '%s' did not match --name argument: %s\n",
              final_name.data(), library_name.data());

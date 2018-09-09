@@ -285,6 +285,72 @@ bool Interface::Method::Parameter::IsSimple() const {
     }
 }
 
+bool Libraries::Insert(std::unique_ptr<Library> library) {
+    std::vector<fidl::StringView> library_name = library->name();
+    auto iter = all_libraries_.emplace(library_name, std::move(library));
+    return iter.second;
+}
+
+bool Libraries::Lookup(const std::vector<StringView>& library_name,
+                          Library** out_library) const {
+    auto iter = all_libraries_.find(library_name);
+    if (iter == all_libraries_.end()) {
+        return false;
+    }
+
+    *out_library = iter->second.get();
+    return true;
+}
+
+bool Dependencies::Register(StringView filename, Library* dep_library,
+                            const std::unique_ptr<raw::Identifier>& maybe_alias) {
+    auto library_name = dep_library->name();
+    if (!InsertByName(filename, library_name, dep_library)) {
+        return false;
+    }
+
+    if (maybe_alias) {
+        std::vector<StringView> alias_name = {maybe_alias->location().data()};
+        if (!InsertByName(filename, alias_name, dep_library)) {
+            return false;
+        }
+    }
+
+    dependencies_aggregate_.insert(dep_library);
+
+    return true;
+}
+
+bool Dependencies::InsertByName(StringView filename, const std::vector<StringView>& name,
+                                Library* library) {
+    auto iter = dependencies_.find(filename);
+    if (iter == dependencies_.end()) {
+        dependencies_.emplace(filename, std::make_unique<ByName>());
+    }
+
+    iter = dependencies_.find(filename);
+    assert(iter != dependencies_.end());
+
+    auto insert = iter->second->emplace(name, library);
+    return insert.second;
+}
+
+bool Dependencies::Lookup(StringView filename, const std::vector<StringView>& name,
+                          Library** out_library) {
+    auto iter1 = dependencies_.find(filename);
+    if (iter1 == dependencies_.end()) {
+        return false;
+    }
+
+    auto iter2 = iter1->second->find(name);
+    if (iter2 == iter1->second->end()) {
+        return false;
+    }
+
+    *out_library = iter2->second;
+    return true;
+}
+
 // Consuming the AST is primarily concerned with walking the tree and
 // flattening the representation. The AST's declaration nodes are
 // converted into the Library's foo_declaration structures. This means pulling
@@ -312,10 +378,6 @@ bool Library::Fail(const SourceLocation& location, StringView message) {
     return false;
 }
 
-Library::Library(const std::map<std::vector<StringView>, std::unique_ptr<Library>>* all_libraries,
-                 ErrorReporter* error_reporter)
-    : all_libraries_(all_libraries), error_reporter_(error_reporter) {}
-
 bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                         SourceLocation location, Name* name_out) {
     const auto& components = compound_identifier->components;
@@ -335,17 +397,9 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
         library_name.push_back((*iter)->location().data());
     }
 
-    // TODO(pascal): Refactor by introducing a Dependencies object which
-    // supports Add(filename, name, library), Lookup(filename, name), and also
-    // offers an iterator over all depedencies.
-
-    // First, verify that this specific compound identifier within this file
-    // can refer to the library.
     auto filename = location.source_file().filename();
-    std::vector<StringView> library_name_copy = library_name;
-    const auto name_and_filename = std::make_pair(std::move(library_name_copy), filename);
-    auto iter = dependencies_by_filename_.find(name_and_filename);
-    if (iter == dependencies_by_filename_.end()) {
+    Library* dep_library = nullptr;
+    if (!dependencies_.Lookup(filename, library_name, &dep_library)) {
         std::string message("Unknown dependent library ");
         message += NameLibrary(library_name);
         message += ". Did you require it with `using`?";
@@ -353,13 +407,8 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
         return Fail(location, message);
     }
 
-    // Second, retrieve the library by name.
-    auto iter2 = dependencies_.find(library_name);
-    assert(iter2 != dependencies_.end());
-
     // Resolve the name.
-    *name_out = Name(iter2->second, decl_name);
-
+    *name_out = Name(dep_library, decl_name);
     return true;
 }
 
@@ -519,8 +568,8 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
         library_name.push_back(component->location().data());
     }
 
-    auto iter = all_libraries_->find(library_name);
-    if (iter == all_libraries_->end()) {
+    Library* dep_library = nullptr;
+    if (!all_libraries_->Lookup(library_name, &dep_library)) {
         std::string message("Could not find library named ");
         message += NameLibrary(library_name);
         message += ". Did you include its sources with --files?";
@@ -528,49 +577,19 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
         return Fail(location, message);
     }
 
-    return RegisterDependentLibrary(iter->second.get(), using_directive->maybe_alias, using_directive->location().source_file().filename());
-}
-
-bool Library::RegisterDependentLibrary(Library* library,
-                                       const std::unique_ptr<raw::Identifier>& maybe_alias,
-                                       StringView filename) {
-    // Allow library to be referenced by fully qualified name, or alias if present.
-    if (!InsertDependentLibraryByName(library->name(), library, filename)) {
-      return false;
-    }
-    if (maybe_alias) {
-      std::vector<StringView> alias_name = {maybe_alias->location().data()};
-      if (!InsertDependentLibraryByName(std::move(alias_name), library, filename)) {
-        return false;
-      }
-    }
-
-    // Import declarations, and type aliases of dependent library.
-    const auto& declarations = library->declarations_;
-    declarations_.insert(declarations.begin(), declarations.end());
-    const auto& type_aliases = library->type_aliases_;
-    type_aliases_.insert(type_aliases.begin(), type_aliases.end());
-    return true;
-}
-
-bool Library::InsertDependentLibraryByName(const std::vector<StringView>& library_name,
-                                           Library* library,
-                                           StringView filename) {
-    // We require every dependency to be declared on a per file basis, and
-    // also track library depedencies at the library level. Here, we need
-    // to do double bookkeeping.
-
-    // Record that filename is allowed to depend on library_name.
-    auto insert = dependencies_by_filename_.emplace(library_name, filename);
-    if (!insert.second) {
+    auto filename = using_directive->location().source_file().filename();
+    if (!dependencies_.Register(filename, dep_library, using_directive->maybe_alias)) {
         std::string message("Library ");
         message += NameLibrary(library_name);
         message += " already imported. Did you require it twice?";
         return Fail(message);
     }
 
-    // Record that this library depends on library_name.
-    dependencies_.emplace(library_name, std::move(library));
+    // Import declarations, and type aliases of dependent library.
+    const auto& declarations = dep_library->declarations_;
+    declarations_.insert(declarations.begin(), declarations.end());
+    const auto& type_aliases = dep_library->type_aliases_;
+    type_aliases_.insert(type_aliases.begin(), type_aliases.end());
     return true;
 }
 
@@ -1336,9 +1355,8 @@ bool Library::CompileLibraryName() {
 }
 
 bool Library::Compile() {
-    for (const auto& name_and_library : dependencies_) {
-        const Library* library = name_and_library.second;
-        constants_.insert(library->constants_.begin(), library->constants_.end());
+    for (const auto& dep_library : dependencies_.dependencies()) {
+        constants_.insert(dep_library->constants_.begin(), dep_library->constants_.end());
     }
 
     // Verify that the library's name is valid.
@@ -1566,6 +1584,10 @@ bool Library::HasAttribute(fidl::StringView name) const {
     if (!attributes_)
         return false;
     return attributes_->HasAttribute(name);
+}
+
+const std::set<Library*>& Library::dependencies() const {
+    return dependencies_.dependencies();
 }
 
 } // namespace flat
