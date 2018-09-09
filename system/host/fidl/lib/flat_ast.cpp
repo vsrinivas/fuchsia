@@ -365,16 +365,12 @@ std::string LibraryName(const Library* library, StringView separator) {
 }
 
 bool Library::Fail(StringView message) {
-    auto formatted_message = std::string(message) + "\n";
-    error_reporter_->ReportError(std::move(formatted_message));
+    error_reporter_->ReportError(message);
     return false;
 }
 
 bool Library::Fail(const SourceLocation& location, StringView message) {
-    // Many editors and IDEs recognize errors in the form of
-    // filename:linenumber:column: error: descriptive-test-here\n
-    auto formatted_message = location.position() + ": error: " + std::string(message) + "\n";
-    error_reporter_->ReportError(std::move(formatted_message));
+    error_reporter_->ReportError(location, message);
     return false;
 }
 

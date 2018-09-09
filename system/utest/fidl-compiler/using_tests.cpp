@@ -93,11 +93,8 @@ struct Foo {
     ASSERT_FALSE(library.Compile());
     const auto& errors = library.errors();
     ASSERT_EQ(1, errors.size());
-    // TODO(pascal): Refactor. We should check the error message, not
-    // necessarily the formatted message with filename:linenum:colnum. Consider
-    // introducing ASSERT_STR_CONTAINS.
-    ASSERT_STR_EQ(errors[0].c_str(),
-        "uzing.fidl:7:2: error: Unknown dependent library fidl.test.uzing.dependent. Did you require it with `using`?\n");
+    ASSERT_STR_STR(errors[0].c_str(),
+        "Unknown dependent library fidl.test.uzing.dependent. Did you require it with `using`?");
 
     END_TEST;
 }
@@ -124,11 +121,8 @@ using fidl.test.uzing.dependent; // duplicated
     ASSERT_FALSE(library.Compile());
     const auto& errors = library.errors();
     ASSERT_EQ(1, errors.size());
-    // TODO(pascal): Refactor. We should check the error message, not
-    // necessarily the formatted message with filename:linenum:colnum. Consider
-    // introducing ASSERT_STR_CONTAINS.
-    ASSERT_STR_EQ(errors[0].c_str(),
-        "Library fidl.test.uzing.dependent already imported. Did you require it twice?\n");
+    ASSERT_STR_STR(errors[0].c_str(),
+        "Library fidl.test.uzing.dependent already imported. Did you require it twice?");
 
     END_TEST;
 }

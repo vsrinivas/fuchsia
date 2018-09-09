@@ -79,59 +79,13 @@ bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
     return true;
 }
 
-std::string MakeSquiggle(const std::string& surrounding_line, int column) {
-    std::string squiggle;
-    for (int i = 0; i < column - 1; i++) {
-        switch (surrounding_line[i]) {
-        case '\t':
-            squiggle += "\t";
-        default:
-            squiggle += " ";
-        }
-    }
-    squiggle += "^";
-    return squiggle;
-}
-
 decltype(nullptr) Parser::Fail() {
   return Fail("found unexpected token");
 }
 
 decltype(nullptr) Parser::Fail(StringView message) {
     if (ok_) {
-        auto token_location = last_token_.location();
-        auto token_data = token_location.data();
-
-        SourceFile::Position position;
-        std::string surrounding_line = token_location.SourceLine(&position);
-        auto line_number = std::to_string(position.line);
-        auto column_number = std::to_string(position.column);
-
-        std::string squiggle = MakeSquiggle(surrounding_line, position.column);
-        size_t squiggle_size = token_data.size();
-        if (squiggle_size != 0u) {
-            --squiggle_size;
-        }
-        squiggle += std::string(squiggle_size, '~');
-        // Some tokens (like string literals) can span multiple
-        // lines. Truncate the string to just one line at most. The
-        // containing line contains a newline, so drop it when
-        // comparing sizes.
-        size_t line_size = surrounding_line.size() - 1;
-        if (squiggle.size() > line_size) {
-            squiggle.resize(line_size);
-        }
-
-        // Many editors and IDEs recognize errors in the form of
-        // filename:linenumber:column: error: descriptive-test-here\n
-        std::string error = token_location.position();
-        error += ": error: ";
-        error += message;
-        error += "\n";
-        error += surrounding_line;
-        error += squiggle + "\n";
-
-        error_reporter_->ReportError(std::move(error));
+        error_reporter_->ReportError(last_token_, std::move(message));
         ok_ = false;
     }
     return nullptr;
