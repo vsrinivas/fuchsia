@@ -4,6 +4,6 @@
     },
     "runner": "guest_runner",
     "sandbox": {
-        "features": [ "deprecated-all-services" ]
+        "services": []
     }
 }
