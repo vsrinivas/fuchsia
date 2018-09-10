@@ -141,8 +141,8 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
                  "time", presentation_time, "interval", presentation_interval);
 
   uint64_t trace_number = timings.get() ? timings->frame_number() : 0;
-  auto gpu_uploader = escher::BatchGpuUploader::Create(escher_, trace_number);
-  command_context_.batch_gpu_uploader = &gpu_uploader;
+  auto gpu_uploader = escher::BatchGpuUploader::New(escher_, trace_number);
+  command_context_.batch_gpu_uploader = gpu_uploader.get();
   command_context_.MakeValid();
 
   bool has_updates = session_manager_->ApplyScheduledSessionUpdates(

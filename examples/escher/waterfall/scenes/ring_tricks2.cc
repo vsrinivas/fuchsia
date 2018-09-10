@@ -43,7 +43,7 @@ void RingTricks2::Init(escher::Stage* stage) {
       escher()->NewGradientImage(128, 128), vk::Filter::eLinear));
   gradient_->set_color(vec3(0.98f, 0.15f, 0.15f));
 
-  auto gpu_uploader = escher::BatchGpuUploader::Create(escher()->GetWeakPtr());
+  auto gpu_uploader = escher::BatchGpuUploader::New(escher()->GetWeakPtr());
   // Create meshes for fancy wobble effect.
   {
     MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kPositionOffset |
@@ -64,8 +64,9 @@ void RingTricks2::Init(escher::Stage* stage) {
 #else
     MeshSpec mesh_spec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}};
 #endif
-    rounded_rect1_ = factory_.NewRoundedRect(
-        RoundedRectSpec(200, 400, 90, 20, 20, 50), mesh_spec, &gpu_uploader);
+    rounded_rect1_ =
+        factory_.NewRoundedRect(RoundedRectSpec(200, 400, 90, 20, 20, 50),
+                                mesh_spec, gpu_uploader.get());
   }
 
   // Create sphere.
@@ -75,7 +76,7 @@ void RingTricks2::Init(escher::Stage* stage) {
   }
 
   // Upload mesh data to the GPU.
-  gpu_uploader.Submit(escher::SemaphorePtr());
+  gpu_uploader->Submit(escher::SemaphorePtr());
 }
 
 RingTricks2::~RingTricks2() {}

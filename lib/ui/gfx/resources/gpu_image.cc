@@ -77,8 +77,9 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id,
   escher_image_info.width = image_info.width;
   escher_image_info.height = image_info.height;
   escher_image_info.sample_count = 1;
-  escher_image_info.usage =
-      vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+  escher_image_info.usage = vk::ImageUsageFlagBits::eTransferSrc |
+                            vk::ImageUsageFlagBits::eTransferDst |
+                            vk::ImageUsageFlagBits::eSampled;
   escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
   vk::Device vk_device = session->engine()->vk_device();

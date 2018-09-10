@@ -33,7 +33,8 @@ class BufferCache : public ResourceRecycler {
   fxl::WeakPtr<BufferCache> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // Obtain an unused Buffer with the required properties.  A new Buffer might
-  // be created, or an existing one reused.
+  // be created, or an existing one reused.  NOTE: the buffer is not guaranteed
+  // to be exactly the requested size; it may be larger.
   BufferPtr NewHostBuffer(vk::DeviceSize size);
 
   // |ResourceRecycler|
@@ -51,7 +52,8 @@ class BufferCache : public ResourceRecycler {
   // TODO(SCN-851) Grow this class to handle different buffer usage and memory
   // flags. It should work with the UniformBlockAllocator.
   const vk::BufferUsageFlags kUsageFlags =
-      vk::BufferUsageFlagBits::eTransferSrc;
+      vk::BufferUsageFlagBits::eTransferSrc |
+      vk::BufferUsageFlagBits::eTransferDst;
   const vk::MemoryPropertyFlags kMemoryPropertyFlags =
       vk::MemoryPropertyFlagBits::eHostVisible |
       vk::MemoryPropertyFlagBits::eHostCoherent;

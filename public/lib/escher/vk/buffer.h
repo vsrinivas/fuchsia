@@ -48,6 +48,9 @@ class Buffer : public WaitableResource {
   // Return the size of the buffer.
   vk::DeviceSize size() const { return range_.size; }
 
+  // Return the offset of the buffer.
+  vk::DeviceSize offset() const { return range_.offset; }
+
   // If the buffer is host-accessible, then this returns a direct pointer to
   // cache-coherent device memory.  Otherwise, returns nullptr.
   uint8_t* host_ptr() const { return host_ptr_; }

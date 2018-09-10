@@ -17,22 +17,17 @@
 
 namespace escher {
 
+class BatchGpuUploader;
+using BatchGpuUploaderPtr = fxl::RefPtr<BatchGpuUploader>;
+
 // Provides host-accessible GPU memory for clients to upload Images and Buffers
 // to the GPU. Offers the ability to batch uploads into consolidated submissions
 // to the GPU driver.
 // TODO(SCN-844) Migrate users of impl::GpuUploader to this class.
-class BatchGpuUploader {
+class BatchGpuUploader : public Reffable {
  public:
-  static BatchGpuUploader Create(EscherWeakPtr weak_escher,
+  static BatchGpuUploaderPtr New(EscherWeakPtr weak_escher,
                                  int64_t frame_trace_number = 0);
-
-  BatchGpuUploader(BatchGpuUploader&& o) {
-    this->writer_count_ = o.writer_count_;
-    o.writer_count_ = 0;
-    this->buffer_cache_ = std::move(o.buffer_cache_);
-    this->frame_ = std::move(o.frame_);
-    this->dummy_for_tests_ = o.dummy_for_tests_;
-  }
 
   ~BatchGpuUploader();
 
@@ -70,6 +65,39 @@ class BatchGpuUploader {
     FXL_DISALLOW_COPY_AND_ASSIGN(Writer);
   };
 
+  // Provides a pointer in host-accessible GPU memory, and methods to copy into
+  // this memory from Images and Buffers on the GPU.
+  class Reader {
+   public:
+    Reader(CommandBufferPtr command_buffer, BufferPtr buffer);
+    ~Reader();
+
+    // Schedule a buffer-to-buffer copy that will be submitted when Submit()
+    // is called.  Retains a reference to the target until the submission's
+    // CommandBuffer is retired.
+    void ReadBuffer(const BufferPtr& source, vk::BufferCopy region,
+                    SemaphorePtr semaphore);
+
+    // Schedule a image-to-buffer copy that will be submitted when Submit()
+    // is called.  Retains a reference to the target until the submission's
+    // CommandBuffer is retired.
+    void ReadImage(const ImagePtr& source, vk::BufferImageCopy region,
+                   SemaphorePtr semaphore);
+
+    const BufferPtr buffer() { return buffer_; }
+
+   private:
+    friend class BatchGpuUploader;
+    // Gets the CommandBuffer to batch commands with all other posted writers.
+    // This writer cannot be used after the command buffer has been retreived.
+    CommandBufferPtr TakeCommandsAndShutdown();
+
+    CommandBufferPtr command_buffer_;
+    BufferPtr buffer_;
+
+    FXL_DISALLOW_COPY_AND_ASSIGN(Reader);
+  };
+
   // Obtain a Writer that has the specified amount of write space.
   //
   // TODO(SCN-846) Only one writer can be acquired at a time. When we move to
@@ -77,29 +105,41 @@ class BatchGpuUploader {
   // acquired at once and their writes can be parallelized across threads.
   std::unique_ptr<Writer> AcquireWriter(size_t size);
 
+  // Obtain a Reader that has the specified amount of space to read into.
+  std::unique_ptr<Reader> AcquireReader(size_t size);
+
   // Post a Writer to the batch uploader. The Writer's work will be posted to
   // the GPU on Submit();
   void PostWriter(std::unique_ptr<Writer> writer);
 
-  // Submits all Writers' work to the GPU. No Writers can be posted once Submit
-  // is called.
+  // Post a Reader to the batch uploader. The Readers's work will be posted to
+  // the host on Submit(). After submit, the callback will be called with the
+  // buffer read from the GPU.
+  void PostReader(std::unique_ptr<Reader> reader,
+                  std::function<void(escher::BufferPtr buffer)> callback);
+
+  // Submits all Writers' and Reader's work to the GPU. No Writers or Readers
+  // can be posted once Submit is called.
   void Submit(const escher::SemaphorePtr& upload_done_semaphore,
               const std::function<void()>& callback = [] {});
 
  private:
-  BatchGpuUploader() { dummy_for_tests_ = true; }
   BatchGpuUploader(BufferCacheWeakPtr weak_buffer_cache, FramePtr frame);
-
+  BatchGpuUploader() { dummy_for_tests_ = true; }
 
   int32_t writer_count_ = 0;
+  int32_t reader_count_ = 0;
   BufferCacheWeakPtr buffer_cache_ = BufferCacheWeakPtr();
   FramePtr frame_ = nullptr;
 
   // Temporary flag for tests that need to build and run with a null escher.
   // Allows the uploader to be created and skips submit without crashing, but
-  // when this flag is set, BatchGpuUploader is not functional and does not 
+  // when this flag is set, BatchGpuUploader is not functional and does not
   // provide any dummy functiionality.
   bool dummy_for_tests_ = false;
+
+  std::vector<std::pair<BufferPtr, std::function<void(BufferPtr)>>>
+      read_callbacks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BatchGpuUploader);
 };

@@ -156,6 +156,7 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
   info.height = height;
   info.sample_count = 1;
   info.usage = additional_flags | vk::ImageUsageFlagBits::eTransferDst |
+               vk::ImageUsageFlagBits::eTransferSrc |
                vk::ImageUsageFlagBits::eSampled;
 
   // Create the new image.
