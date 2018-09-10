@@ -417,4 +417,4 @@ static zx_driver_ops_t kpci_driver_ops = {
 ZIRCON_DRIVER_BEGIN(pci_proxy, kpci_driver_ops, "zircon", "0.1", 1)
     BI_ABORT_IF_AUTOBIND,
 ZIRCON_DRIVER_END(pci_proxy)
-    // clang-format on
+// clang-format on

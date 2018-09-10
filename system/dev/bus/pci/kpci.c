@@ -324,6 +324,10 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
         {BIND_PCI_BDF_ADDR, 0, BIND_PCI_BDF_PACK(info.bus_id, info.dev_id, info.func_id)},
     };
 
+    // The most important detail here is the handling of DEVICE_ADD_MUST_ISOLATE. With that
+    // flag passed to devmgr it will create the bottom half devhost and attempt to load the
+    // proxy by looking for pci.proxy.so. It calls the create() hook defined in that driver,
+    // which is implemented in system/dev/bus/pci/proxy.c.
     char argstr[64];
     snprintf(argstr, sizeof(argstr),
              "pci#%u:%04x:%04x,%u", index,
