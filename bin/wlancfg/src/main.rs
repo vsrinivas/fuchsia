@@ -61,7 +61,7 @@ fn main() -> Result<(), Error> {
     let listener = device::Listener::new(wlan_svc, cfg, legacy_client);
     let ess_store = Arc::new(KnownEssStore::new()?);
     let fut = watcher_proxy.take_event_stream()
-        .try_for_each(move |evt| device::handle_event(&listener, evt, &ess_store).map(Ok))
+        .try_for_each(|evt| device::handle_event(&listener, evt, Arc::clone(&ess_store)).map(Ok))
         .err_into()
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
 
