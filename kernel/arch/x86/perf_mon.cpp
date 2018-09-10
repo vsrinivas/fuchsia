@@ -1529,25 +1529,11 @@ zx_status_t x86_ipm_start() {
 }
 
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
-static void x86_ipm_finalize_buffer(PerfmonState* state, uint32_t cpu) TA_NO_THREAD_SAFETY_ANALYSIS {
-    zx_time_t now = rdtsc();
+static void x86_ipm_write_last_records(PerfmonState* state, uint32_t cpu) TA_NO_THREAD_SAFETY_ANALYSIS {
     PerfmonCpuData* data = &state->cpu_data[cpu];
-
-    LTRACEF("Collecting last data for cpu %u\n", cpu);
-    cpuperf_buffer_header_t* hdr = data->buffer_start;
     cpuperf_record_header_t* next = data->buffer_next;
 
-    // KISS. There may be enough space to write some of what we want to write
-    // here, but don't try. Just use the same simple check that
-    // |pmi_interrupt_handler()| does.
-    size_t space_needed = get_max_space_needed_for_all_records(state);
-    if (reinterpret_cast<char*>(next) + space_needed > data->buffer_end) {
-        // Flag the last record as having filled the buffer.
-        hdr->flags |= CPUPERF_BUFFER_FLAG_FULL;
-        LTRACEF("Buffer overflow on cpu %u\n", cpu);
-        return;
-    }
-
+    zx_time_t now = rdtsc();
     next = x86_perfmon_write_time_record(next, CPUPERF_EVENT_ID_NONE, now);
 
     // If the counter triggers interrupts then the PMI handler will
@@ -1611,6 +1597,26 @@ static void x86_ipm_finalize_buffer(PerfmonState* state, uint32_t cpu) TA_NO_THR
     }
 
     data->buffer_next = next;
+}
+
+// This is invoked via mp_sync_exec which thread safety analysis cannot follow.
+static void x86_ipm_finalize_buffer(PerfmonState* state, uint32_t cpu) TA_NO_THREAD_SAFETY_ANALYSIS {
+    LTRACEF("Collecting last data for cpu %u\n", cpu);
+
+    PerfmonCpuData* data = &state->cpu_data[cpu];
+    cpuperf_buffer_header_t* hdr = data->buffer_start;
+
+    // KISS. There may be enough space to write some of what we want to write
+    // here, but don't try. Just use the same simple check that
+    // |pmi_interrupt_handler()| does.
+    size_t space_needed = get_max_space_needed_for_all_records(state);
+    if (reinterpret_cast<char*>(data->buffer_next) + space_needed > data->buffer_end) {
+        hdr->flags |= CPUPERF_BUFFER_FLAG_FULL;
+        LTRACEF("Buffer overflow on cpu %u\n", cpu);
+    } else {
+        x86_ipm_write_last_records(state, cpu);
+    }
+
     hdr->capture_end =
         reinterpret_cast<char*>(data->buffer_next) -
         reinterpret_cast<char*>(data->buffer_start);
