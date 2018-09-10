@@ -321,9 +321,6 @@ pub mod server {
                 DirectoryRequest::Sync { responder, } => {
                     responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
                 }
-                DirectoryRequest::Bind { interface_name: _, control_handle: _ } => {
-                    Ok(())
-                }
                 DirectoryRequest::Unlink { path: _, responder, } => {
                     responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
                 }

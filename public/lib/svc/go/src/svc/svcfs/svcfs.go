@@ -17,18 +17,18 @@ type Provider func(name string, c zx.Channel)
 
 type Namespace struct {
 	Provider Provider
-	service io.DirectoryService
+	service  io.DirectoryService
 }
 
-func (n *Namespace) Clone(flags uint32, req io.ObjectInterfaceRequest) error {
+func (n *Namespace) Clone(flags uint32, req io.NodeInterfaceRequest) error {
 	c := ((fidl.InterfaceRequest)(req)).Channel
 	if err := n.Serve(c); err != nil {
 		c.Close()
 		return err
 	}
 	if flags&io.KOpenFlagDescribe != 0 {
-		pxy := io.ObjectEventProxy(fidl.Proxy{c})
-		info := &io.ObjectInfo{ObjectInfoTag: io.ObjectInfoService}
+		pxy := io.NodeEventProxy(fidl.Proxy{c})
+		info := &io.NodeInfo{NodeInfoTag: io.NodeInfoService}
 		return pxy.OnOpen(zx.ErrOk, info)
 	}
 	return nil
@@ -46,8 +46,8 @@ func (n *Namespace) Bind(iface string) error {
 	return nil
 }
 
-func (n *Namespace) Describe() (io.ObjectInfo, error) {
-	return io.ObjectInfo{ObjectInfoTag: io.ObjectInfoDirectory}, nil
+func (n *Namespace) Describe() (io.NodeInfo, error) {
+	return io.NodeInfo{NodeInfoTag: io.NodeInfoDirectory}, nil
 }
 
 func (n *Namespace) Sync() (zx.Status, error) {
@@ -62,17 +62,17 @@ func (n *Namespace) SetAttr(flags uint32, attributes io.NodeAttributes) (zx.Stat
 	return zx.ErrNotSupported, nil
 }
 
-func (n *Namespace) Ioctl(opcode uint32,maxOut uint64,handles []zx.Handle,in []uint8) (zx.Status, []zx.Handle, []uint8, error) {
+func (n *Namespace) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (zx.Status, []zx.Handle, []uint8, error) {
 	return zx.ErrNotSupported, nil, nil, nil
 }
 
 // Open opens a service and emits an OnOpen event when ready.
-func (n *Namespace) Open(flags, _ uint32, path string, obj io.ObjectInterfaceRequest) error {
+func (n *Namespace) Open(flags, _ uint32, path string, obj io.NodeInterfaceRequest) error {
 	respond := func(status zx.Status) error {
 		if flags&io.KOpenFlagDescribe != 0 {
-			info := &io.ObjectInfo{ObjectInfoTag: io.ObjectInfoService}
+			info := &io.NodeInfo{NodeInfoTag: io.NodeInfoService}
 			c := fidl.InterfaceRequest(obj).Channel
-			pxy := io.ObjectEventProxy(fidl.Proxy{Channel: c})
+			pxy := io.NodeEventProxy(fidl.Proxy{Channel: c})
 			return pxy.OnOpen(status, info)
 		}
 		return nil

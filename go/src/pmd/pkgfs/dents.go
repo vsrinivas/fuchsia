@@ -4,12 +4,20 @@
 
 package pkgfs
 
-import "thinfs/fs"
+import (
+	"thinfs/fs"
+
+	"syscall/zx/io"
+)
 
 type dirDirEnt string
 
 func (d dirDirEnt) GetType() fs.FileType {
 	return fs.FileTypeDirectory
+}
+
+func (d dirDirEnt) GetIno() uint64 {
+	return io.KInoUnknown
 }
 
 func (d dirDirEnt) GetName() string {
@@ -20,6 +28,10 @@ type fileDirEnt string
 
 func (d fileDirEnt) GetType() fs.FileType {
 	return fs.FileTypeRegularFile
+}
+
+func (d fileDirEnt) GetIno() uint64 {
+	return io.KInoUnknown
 }
 
 func (d fileDirEnt) GetName() string {

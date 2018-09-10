@@ -188,6 +188,9 @@ const (
 type Dirent interface {
 	// GetType returns the generic FileType of a Dirent.
 	GetType() FileType
+	// GetIno return the inode associated with the dirent,
+	// if there is one.
+	GetIno() uint64
 	// GetName returns the name of a Dirent.
 	GetName() string
 }
