@@ -259,13 +259,13 @@ FuturePtr<StoryStorage::Status, std::string> StoryStorage::GetLinkValue(
 
 namespace {
 
-class WriteLinkDataCall : public Operation<StoryStorage::Status> {
+class WriteVmoCall : public Operation<StoryStorage::Status> {
  public:
-  WriteLinkDataCall(PageClient* page_client, fidl::StringPtr key,
-                    fidl::StringPtr value, ResultCall result_call)
-      : Operation("StoryStorage::WriteLinkDataCall", std::move(result_call)),
+  WriteVmoCall(PageClient* page_client, const std::string& key,
+               fuchsia::mem::BufferPtr value, ResultCall result_call)
+      : Operation("StoryStorage::WriteVmoCall", std::move(result_call)),
         page_client_(page_client),
-        key_(std::move(key)),
+        key_(key),
         value_(std::move(value)) {}
 
  private:
@@ -273,42 +273,44 @@ class WriteLinkDataCall : public Operation<StoryStorage::Status> {
     FlowToken flow{this, &status_};
     status_ = StoryStorage::Status::OK;
 
-    fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString(*value_, &vmo));
     page_client_->page()->CreateReferenceFromBuffer(
-        std::move(vmo).ToTransport(),
-        [this, flow, weak_ptr = GetWeakPtr()](
-            fuchsia::ledger::Status status,
-            std::unique_ptr<fuchsia::ledger::Reference> reference) {
-          if (weak_ptr && reference) {
-            PutReference(std::move(reference), flow);
+        std::move(*value_), [this, flow, weak_ptr = GetWeakPtr()](
+                                fuchsia::ledger::Status status,
+                                fuchsia::ledger::ReferencePtr reference) {
+          if (weak_ptr) {
+            if (status == fuchsia::ledger::Status::OK) {
+              FXL_DCHECK(reference);
+              PutReference(std::move(reference), flow);
+            } else {
+              FXL_LOG(ERROR) << "StoryStorage.WriteVmoCall " << key_ << " "
+                             << " Page.CreateReferenceFromBuffer() "
+                             << fidl::ToUnderlying(status);
+              status_ = StoryStorage::Status::LEDGER_ERROR;
+            }
           }
         });
   }
 
-  void PutReference(std::unique_ptr<fuchsia::ledger::Reference> reference,
-                    FlowToken flow) {
+  void PutReference(fuchsia::ledger::ReferencePtr reference, FlowToken flow) {
     page_client_->page()->PutReference(
         to_array(key_), std::move(*reference), fuchsia::ledger::Priority::EAGER,
         [this, flow, weak_ptr = GetWeakPtr()](fuchsia::ledger::Status status) {
-          if (!weak_ptr) {
-            return;
-          }
-          if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << "StoryStorage.WriteLinkDataCall " << key_ << " "
-                           << " Page.Put() " << fidl::ToUnderlying(status);
+          if (weak_ptr && status != fuchsia::ledger::Status::OK) {
+            FXL_LOG(ERROR) << "StoryStorage.WriteVmoCall " << key_ << " "
+                           << " Page.PutReference() "
+                           << fidl::ToUnderlying(status);
             status_ = StoryStorage::Status::LEDGER_ERROR;
           }
         });
   }
 
   PageClient* const page_client_;
-  fidl::StringPtr key_;
-  fidl::StringPtr value_;
+  std::string key_;
+  fuchsia::mem::BufferPtr value_;
 
   StoryStorage::Status status_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(WriteVmoCall);
 };
 
 // Returns the status of the mutation and the new value. If no mutation
@@ -367,19 +369,25 @@ class UpdateLinkCall : public Operation<StoryStorage::Status, fidl::StringPtr> {
       return;
     }
 
-    operation_queue_.Add(new WriteLinkDataCall(
-        page_client_, key_, new_value_,
-        [this, flow](StoryStorage::Status status) {
-          status_ = status;
+    auto vmo = fuchsia::mem::Buffer::New();
+    if (fsl::VmoFromString(*new_value_, vmo.get())) {
+      operation_queue_.Add(new WriteVmoCall(
+          page_client_, key_, std::move(vmo),
+          [this, flow](StoryStorage::Status status) {
+            status_ = status;
 
-          // If we succeeded AND we set a new value, we need to wait for
-          // confirmation from the ledger.
-          if (status == StoryStorage::Status::OK && new_value_) {
-            wait_for_write_fn_(key_, new_value_)->Then([this, flow] {
-              Done(std::move(status_), std::move(new_value_));
-            });
-          }
-        }));
+            // If we succeeded AND we set a new value, we need to wait for
+            // confirmation from the ledger.
+            if (status == StoryStorage::Status::OK && new_value_) {
+              wait_for_write_fn_(key_, new_value_)->Then([this, flow] {
+                Done(std::move(status_), std::move(new_value_));
+              });
+            }
+          }));
+    } else {
+      FXL_LOG(ERROR) << "VMO could not be copied.";
+      status_ = StoryStorage::Status::VMO_COPY_ERROR;
+    }
   }
 
   // Input parameters.
