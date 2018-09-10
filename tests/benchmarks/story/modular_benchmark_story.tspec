@@ -12,38 +12,36 @@
     {
       "type": "duration",
       "event_name": "link/set",
-      "event_category": "benchmark",
-      "split_samples_at": [10]
+      "event_category": "benchmark"
     },
     {
       "type": "duration",
       "event_name": "link/trans",
-      "event_category": "benchmark",
-      "split_samples_at": [10]
+      "event_category": "benchmark"
     },
     {
       "type": "duration",
       "event_name": "story/create",
       "event_category": "benchmark",
-      "split_samples_at": [1]
+      "split_first": true
     },
     {
       "type": "duration",
       "event_name": "story/info",
       "event_category": "benchmark",
-      "split_samples_at": [1]
+      "split_first": true
     },
     {
       "type": "duration",
       "event_name": "story/start",
       "event_category": "benchmark",
-      "split_samples_at": [1]
+      "split_first": true
     },
     {
       "type": "duration",
       "event_name": "story/stop",
       "event_category": "benchmark",
-      "split_samples_at": [1]
+      "split_first": true
     },
     {
       "type": "duration",
