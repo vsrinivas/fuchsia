@@ -7,12 +7,10 @@
 #include "gtest/gtest.h"
 
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/fake_channel_test.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
 #include "garnet/drivers/bluetooth/lib/sdp/pdu.h"
 #include "garnet/drivers/bluetooth/lib/sdp/status.h"
-#include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
-#include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 
 namespace btlib {
 namespace sdp {
@@ -21,70 +19,17 @@ namespace {
 using common::LowerBits;
 using common::UpperBits;
 
-using ::btlib::testing::FakeController;
-
-using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
-
-constexpr hci::ConnectionHandle kTestHandle = 1;
-
-class SDP_ServerTest : public TestingBase {
+class SDP_ServerTest : public l2cap::testing::FakeChannelTest {
  public:
   SDP_ServerTest() = default;
   ~SDP_ServerTest() = default;
 
  protected:
-  void SetUp() override {
-    l2cap_ = l2cap::testing::FakeLayer::Create();
-    l2cap_->set_channel_callback(
-        [this](auto fake_chan) { channel_ = std::move(fake_chan); });
-    l2cap_->Initialize();
-    l2cap_->AddACLConnection(kTestHandle, hci::Connection::Role::kSlave,
-                             nullptr, nullptr);
-    server_ = std::make_unique<Server>(l2cap_);
-  }
+  void SetUp() override { server_ = std::make_unique<Server>(); }
 
-  void TearDown() override {
-    channel_ = nullptr;
-    server_ = nullptr;
-    l2cap_ = nullptr;
-  }
+  void TearDown() override { server_ = nullptr; }
 
   Server* server() const { return server_.get(); }
-
-  fbl::RefPtr<l2cap::testing::FakeLayer> l2cap() const { return l2cap_; }
-
-  fbl::RefPtr<l2cap::testing::FakeChannel> fake_chan() const {
-    return channel_;
-  }
-
-  bool Expect(const common::ByteBuffer& expected) {
-    if (!fake_chan()) {
-      bt_log(ERROR, "unittest", "no channel, failing!");
-      return false;
-    }
-
-    bool success = false;
-    auto cb = [&expected, &success, this](auto cb_packet) {
-      success = common::ContainersEqual(expected, *cb_packet);
-    };
-
-    fake_chan()->SetSendCallback(cb, dispatcher());
-    RunLoopUntilIdle();
-
-    return success;
-  }
-
-  bool ReceiveAndExpect(const common::ByteBuffer& packet,
-                        const common::ByteBuffer& expected_response) {
-    if (!fake_chan()) {
-      bt_log(ERROR, "unittest", "no channel, failing!");
-      return false;
-    }
-
-    fake_chan()->Receive(packet);
-
-    return Expect(expected_response);
-  }
 
   ServiceHandle AddSPP() {
     ServiceHandle handle;
@@ -122,8 +67,6 @@ class SDP_ServerTest : public TestingBase {
   }
 
  private:
-  fbl::RefPtr<l2cap::testing::FakeChannel> channel_;
-  fbl::RefPtr<l2cap::testing::FakeLayer> l2cap_;
   std::unique_ptr<Server> server_;
 };
 
@@ -139,9 +82,11 @@ constexpr l2cap::ChannelId kSdpChannel = 0x0041;
 //  - Packets that are the wrong length are responded to with kInvalidSize
 //  - Answers with the same TransactionID as sent
 TEST_F(SDP_ServerTest, BasicError) {
-  l2cap()->TriggerInboundChannel(kTestHandle, l2cap::kSDP, kSdpChannel, 0x0bad);
-  RunLoopUntilIdle();
-  ASSERT_TRUE(fake_chan());
+  {
+    auto fake_chan = CreateFakeChannel(ChannelOptions(kSdpChannel));
+    EXPECT_TRUE(server()->AddConnection(std::string("one"), fake_chan));
+  }
+
   EXPECT_TRUE(fake_chan()->activated());
 
   const auto kRspErrSize = SDP_ERROR_RSP(0x1001, ErrorCode::kInvalidSize);
@@ -217,12 +162,13 @@ TEST_F(SDP_ServerTest, RegisterService) {
 //  - fails when there are no items or too many items in the search
 //  - doesn't return more than the max requested
 TEST_F(SDP_ServerTest, ServiceSearchRequest) {
+  {
+    auto fake_chan = CreateFakeChannel(ChannelOptions(kSdpChannel));
+    EXPECT_TRUE(server()->AddConnection(std::string("one"), fake_chan));
+  }
+
   ServiceHandle spp_handle = AddSPP();
   ServiceHandle a2dp_handle = AddA2DPSink();
-
-  l2cap()->TriggerInboundChannel(kTestHandle, l2cap::kSDP, kSdpChannel, 0x0bad);
-  RunLoopUntilIdle();
-
   const auto kL2capSearch = common::CreateStaticByteBuffer(
       0x02,        // SDP_ServiceSearchRequest
       0x10, 0x01,  // Transaction ID (0x1001)
@@ -321,8 +267,10 @@ TEST_F(SDP_ServerTest, ServiceSearchRequest) {
 // Test ServiceSearchRequest:
 //  - doesn't return more than the max requested
 TEST_F(SDP_ServerTest, ServiceSearchRequestOneOfMany) {
-  l2cap()->TriggerInboundChannel(kTestHandle, l2cap::kSDP, kSdpChannel, 0x0bad);
-  RunLoopUntilIdle();
+  {
+    auto fake_chan = CreateFakeChannel(ChannelOptions(kSdpChannel));
+    EXPECT_TRUE(server()->AddConnection(std::string("one"), fake_chan));
+  }
 
   ServiceHandle spp_handle = AddSPP();
   ServiceHandle a2dp_handle = AddA2DPSink();
@@ -393,8 +341,10 @@ TEST_F(SDP_ServerTest, ServiceAttributeRequest) {
 
   EXPECT_TRUE(added);
 
-  l2cap()->TriggerInboundChannel(kTestHandle, l2cap::kSDP, kSdpChannel, 0x0bad);
-  RunLoopUntilIdle();
+  {
+    auto fake_chan = CreateFakeChannel(ChannelOptions(kSdpChannel));
+    EXPECT_TRUE(server()->AddConnection(std::string("two"), fake_chan));
+  }
 
   const auto kRequestAttr = common::CreateStaticByteBuffer(
       0x04,                        // SDP_ServiceAttritbuteRequest
@@ -552,8 +502,10 @@ TEST_F(SDP_ServerTest, SearchAttributeRequest) {
 
   EXPECT_TRUE(added);
 
-  l2cap()->TriggerInboundChannel(kTestHandle, l2cap::kSDP, kSdpChannel, 0x0bad);
-  RunLoopUntilIdle();
+  {
+    auto fake_chan = CreateFakeChannel(ChannelOptions(kSdpChannel));
+    EXPECT_TRUE(server()->AddConnection(std::string("two"), fake_chan));
+  }
 
   const auto kRequestAttr = common::CreateStaticByteBuffer(
       0x06,        // SDP_ServiceAttritbuteRequest

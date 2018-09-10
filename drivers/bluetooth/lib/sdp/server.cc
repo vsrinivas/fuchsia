@@ -48,57 +48,44 @@ void SendErrorResponse(const fbl::RefPtr<l2cap::Channel>& chan,
 
 }  // namespace
 
-Server::Server(fbl::RefPtr<l2cap::L2CAP> l2cap)
-    : l2cap_(l2cap),
-      next_handle_(kFirstUnreservedHandle),
+Server::Server()
+    : next_handle_(kFirstUnreservedHandle),
       db_state_(0),
       weak_ptr_factory_(this) {
-  ZX_DEBUG_ASSERT(l2cap_);
-
   auto* sdp_record = MakeNewRecord(kSDPHandle);
   ZX_DEBUG_ASSERT(sdp_record);
   PopulateServiceDiscoveryService(sdp_record);
-
-  bool registered = l2cap_->RegisterService(
-      l2cap::kSDP,
-      [self = weak_ptr_factory_.GetWeakPtr()](auto channel) {
-        if (self)
-          self->AddConnection(channel);
-      },
-      async_get_default_dispatcher());
-  ZX_DEBUG_ASSERT(registered);
 }
 
-Server::~Server() { l2cap_->UnregisterService(l2cap::kSDP); }
+bool Server::AddConnection(const std::string& peer_id,
+                           fbl::RefPtr<l2cap::Channel> channel) {
+  bt_log(TRACE, "sdp", "add connection: %s", peer_id.c_str());
 
-bool Server::AddConnection(fbl::RefPtr<l2cap::Channel> channel) {
-  bt_log(TRACE, "sdp", "add conneciton handle %#.4x", channel->link_handle());
-
-  hci::ConnectionHandle handle = channel->link_handle();
-  auto iter = channels_.find(channel->link_handle());
+  auto iter = channels_.find(peer_id);
   if (iter != channels_.end()) {
-    bt_log(WARN, "sdp", "handle %#.4x already connected", handle);
+    bt_log(WARN, "sdp", "peer already connected: %s", peer_id.c_str());
     return false;
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   bool activated = channel->Activate(
-      [self, handle](const l2cap::SDU& sdu) {
+      [self, peer_id](const l2cap::SDU& sdu) {
         if (self) {
-          self->OnRxBFrame(handle, sdu);
+          self->OnRxBFrame(peer_id, sdu);
         }
       },
-      [self, handle] {
+      [self, peer_id]() {
         if (self) {
-          self->OnChannelClosed(handle);
+          self->OnChannelClosed(peer_id);
         }
       },
       async_get_default_dispatcher());
   if (!activated) {
-    bt_log(WARN, "sdp", "failed to activate channel (handle %#.4x)", handle);
+    bt_log(WARN, "sdp", "failed to activate channel (peer: %s)",
+           peer_id.c_str());
     return false;
   }
-  self->channels_.emplace(handle, std::move(channel));
+  self->channels_.emplace(peer_id, std::move(channel));
   return true;
 }
 
@@ -245,19 +232,18 @@ ServiceSearchAttributeResponse Server::SearchAllServiceAttributes(
   return resp;
 }
 
-void Server::OnChannelClosed(const hci::ConnectionHandle& handle) {
-  channels_.erase(handle);
+void Server::OnChannelClosed(const std::string& peer_id) {
+  channels_.erase(peer_id);
 }
 
-void Server::OnRxBFrame(const hci::ConnectionHandle& handle,
-                        const l2cap::SDU& sdu) {
+void Server::OnRxBFrame(const std::string& peer_id, const l2cap::SDU& sdu) {
   uint16_t length = sdu.length();
   if (length < sizeof(Header)) {
     bt_log(TRACE, "sdp", "PDU too short; dropping");
     return;
   }
 
-  auto it = channels_.find(handle);
+  auto it = channels_.find(peer_id);
   if (it == channels_.end()) {
     bt_log(TRACE, "sdp", "can't find peer to respond to; dropping");
     return;

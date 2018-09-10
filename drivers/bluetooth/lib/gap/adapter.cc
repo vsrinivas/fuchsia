@@ -547,7 +547,8 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
     bredr_discovery_manager_ =
         std::make_unique<BrEdrDiscoveryManager>(hci_, mode, &device_cache_);
 
-    sdp_server_ = std::make_unique<sdp::Server>(l2cap_);
+    // TODO(jamuraa): hook up l2cap here when it is done
+    sdp_server_ = std::make_unique<sdp::Server>();
   }
 
   // Set the local name default.
