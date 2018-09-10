@@ -90,9 +90,11 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
     next_pc(guest_state);
     const WaitInstruction wi(iss);
     if (wi.is_wfe) {
+        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_WFE_INSTRUCTION);
         thread_reschedule();
         return ZX_OK;
     }
+    ktrace_vcpu(TAG_VCPU_EXIT, VCPU_WFI_INSTRUCTION);
 
     bool pending = gich_state->active_interrupts.GetOne(kTimerVector);
     bool enabled = guest_state->cntv_ctl_el0 & TimerControl::ENABLE;
@@ -322,7 +324,6 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
     switch (syndrome.ec) {
     case ExceptionClass::WFI_WFE_INSTRUCTION:
         LTRACEF("handling wfi/wfe instruction, iss %#x\n", syndrome.iss);
-        ktrace_vcpu(TAG_VCPU_EXIT, VCPU_WFI_WFE_INSTRUCTION);
         status = handle_wfi_wfe_instruction(syndrome.iss, guest_state, gich_state);
         break;
     case ExceptionClass::SMC_INSTRUCTION:
