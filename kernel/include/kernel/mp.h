@@ -88,9 +88,9 @@ struct mp_state {
     // cpus that are currently schedulable
     volatile cpu_mask_t active_cpus;
 
-    // only safely accessible with thread lock held
-    cpu_mask_t idle_cpus;
-    cpu_mask_t realtime_cpus;
+    // both are only safely accessible with thread lock held
+    cpu_mask_t idle_cpus TA_GUARDED(thread_lock);
+    cpu_mask_t realtime_cpus TA_GUARDED(thread_lock);
 
     spin_lock_t ipi_task_lock;
     // list of outstanding tasks for CPUs to execute.  Should only be
@@ -103,56 +103,72 @@ struct mp_state {
 
 extern struct mp_state mp;
 
-void mp_set_curr_cpu_online(bool online);
-void mp_set_curr_cpu_active(bool active);
-
-static inline int mp_is_cpu_active(cpu_num_t cpu) {
-    return atomic_load((int*)&mp.active_cpus) & cpu_num_to_mask(cpu);
-}
-
-static inline int mp_is_cpu_idle(cpu_num_t cpu) {
-    return mp.idle_cpus & cpu_num_to_mask(cpu);
-}
-
-static inline int mp_is_cpu_online(cpu_num_t cpu) {
-    return mp.online_cpus & cpu_num_to_mask(cpu);
-}
-
-// must be called with the thread lock held
-
 // idle/busy is used to track if the cpu is running anything or has a non empty run queue
 // idle == (cpu run queue empty & cpu running idle thread)
 // busy == !idle
-static inline void mp_set_cpu_idle(cpu_num_t cpu) {
-    mp.idle_cpus |= cpu_num_to_mask(cpu);
-}
-
-static inline void mp_set_cpu_busy(cpu_num_t cpu) {
-    mp.idle_cpus &= ~cpu_num_to_mask(cpu);
-}
-
-static inline cpu_mask_t mp_get_idle_mask(void) {
+// must be called with the thread lock held
+static inline cpu_mask_t mp_get_idle_mask(void) TA_REQ(thread_lock) {
     return mp.idle_cpus;
 }
 
-static inline cpu_mask_t mp_get_active_mask(void) {
-    return atomic_load((int*)&mp.active_cpus);
+static inline void mp_set_cpu_idle(cpu_num_t cpu) TA_REQ(thread_lock) {
+    mp.idle_cpus |= cpu_num_to_mask(cpu);
 }
 
-static inline cpu_mask_t mp_get_online_mask(void) {
-    return mp.online_cpus;
+static inline void mp_set_cpu_busy(cpu_num_t cpu) TA_REQ(thread_lock) {
+    mp.idle_cpus &= ~cpu_num_to_mask(cpu);
 }
 
-static inline void mp_set_cpu_realtime(cpu_num_t cpu) {
+static inline int mp_is_cpu_idle(cpu_num_t cpu) TA_REQ(thread_lock) {
+    return mp_get_idle_mask() & cpu_num_to_mask(cpu);
+}
+
+// marks whether or not a cpu is currently running a realtime thread or not
+// must be called with the thread lock held
+static inline void mp_set_cpu_realtime(cpu_num_t cpu) TA_REQ(thread_lock) {
     mp.realtime_cpus |= cpu_num_to_mask(cpu);
 }
 
-static inline void mp_set_cpu_non_realtime(cpu_num_t cpu) {
+static inline void mp_set_cpu_non_realtime(cpu_num_t cpu) TA_REQ(thread_lock) {
     mp.realtime_cpus &= ~cpu_num_to_mask(cpu);
 }
 
-static inline cpu_mask_t mp_get_realtime_mask(void) {
+static inline cpu_mask_t mp_get_realtime_mask(void) TA_REQ(thread_lock) {
     return mp.realtime_cpus;
+}
+
+// tracks if a cpu is online and initialized
+static inline void mp_set_curr_cpu_online(bool online) {
+    if (online) {
+        atomic_or((volatile int*)&mp.online_cpus, cpu_num_to_mask(arch_curr_cpu_num()));
+    } else {
+        atomic_and((volatile int*)&mp.online_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
+    }
+}
+
+static inline cpu_mask_t mp_get_online_mask(void) {
+    return atomic_load((volatile int *)&mp.online_cpus);
+}
+
+static inline int mp_is_cpu_online(cpu_num_t cpu) {
+    return mp_get_online_mask() & cpu_num_to_mask(cpu);
+}
+
+// tracks if a cpu is active and schedulable
+static inline void mp_set_curr_cpu_active(bool active) {
+    if (active) {
+        atomic_or((volatile int*)&mp.active_cpus, cpu_num_to_mask(arch_curr_cpu_num()));
+    } else {
+        atomic_and((volatile int*)&mp.active_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
+    }
+}
+
+static inline cpu_mask_t mp_get_active_mask(void) {
+    return atomic_load((volatile int*)&mp.active_cpus);
+}
+
+static inline int mp_is_cpu_active(cpu_num_t cpu) {
+    return mp_get_active_mask() & cpu_num_to_mask(cpu);
 }
 
 __END_CDECLS

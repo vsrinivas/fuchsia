@@ -391,22 +391,6 @@ cleanup_mutex:
     return status;
 }
 
-void mp_set_curr_cpu_online(bool online) {
-    if (online) {
-        atomic_or((volatile int*)&mp.online_cpus, cpu_num_to_mask(arch_curr_cpu_num()));
-    } else {
-        atomic_and((volatile int*)&mp.online_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
-    }
-}
-
-void mp_set_curr_cpu_active(bool active) {
-    if (active) {
-        atomic_or((volatile int*)&mp.active_cpus, cpu_num_to_mask(arch_curr_cpu_num()));
-    } else {
-        atomic_and((volatile int*)&mp.active_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
-    }
-}
-
 void mp_mbx_generic_irq() {
     DEBUG_ASSERT(arch_ints_disabled());
     const cpu_num_t local_cpu = arch_curr_cpu_num();

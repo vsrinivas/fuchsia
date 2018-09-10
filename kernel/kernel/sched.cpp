@@ -142,7 +142,7 @@ static cpu_mask_t rand_cpu(cpu_mask_t mask) {
 }
 
 // find a cpu to wake up
-static cpu_mask_t find_cpu_mask(thread_t* t) {
+static cpu_mask_t find_cpu_mask(thread_t* t) TA_REQ(thread_lock) {
     // get the last cpu the thread ran on
     cpu_mask_t last_ran_cpu_mask = cpu_num_to_mask(t->last_cpu);
 
@@ -200,7 +200,7 @@ static cpu_mask_t find_cpu_mask(thread_t* t) {
 }
 
 // run queue manipulation
-static void insert_in_run_queue_head(cpu_num_t cpu, thread_t* t) {
+static void insert_in_run_queue_head(cpu_num_t cpu, thread_t* t) TA_REQ(thread_lock) {
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
     list_add_head(&percpu[cpu].run_queue[t->effec_priority], &t->queue_node);
@@ -210,7 +210,7 @@ static void insert_in_run_queue_head(cpu_num_t cpu, thread_t* t) {
     mp_set_cpu_busy(cpu);
 }
 
-static void insert_in_run_queue_tail(cpu_num_t cpu, thread_t* t) {
+static void insert_in_run_queue_tail(cpu_num_t cpu, thread_t* t) TA_REQ(thread_lock) {
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
     list_add_tail(&percpu[cpu].run_queue[t->effec_priority], &t->queue_node);
@@ -221,7 +221,7 @@ static void insert_in_run_queue_tail(cpu_num_t cpu, thread_t* t) {
 }
 
 // remove the thread from the run queue it's in
-static void remove_from_run_queue(thread_t* t, int prio_queue) {
+static void remove_from_run_queue(thread_t* t, int prio_queue) TA_REQ(thread_lock) {
     DEBUG_ASSERT(t->state == THREAD_READY);
     DEBUG_ASSERT(is_valid_cpu_num(t->curr_cpu));
 
@@ -235,12 +235,12 @@ static void remove_from_run_queue(thread_t* t, int prio_queue) {
 }
 
 // using the per cpu run queue bitmap, find the highest populated queue
-static uint highest_run_queue(const struct percpu* c) {
+static uint highest_run_queue(const struct percpu* c) TA_REQ(thread_lock) {
     return HIGHEST_PRIORITY - __builtin_clz(c->run_queue_bitmap) -
            (sizeof(c->run_queue_bitmap) * CHAR_BIT - NUM_PRIORITIES);
 }
 
-static thread_t* sched_get_top_thread(cpu_num_t cpu) {
+static thread_t* sched_get_top_thread(cpu_num_t cpu) TA_REQ(thread_lock) {
     // pop the head of the highest priority queue with any threads
     // queued up on the passed in cpu.
 
@@ -275,7 +275,7 @@ void sched_init_thread(thread_t* t, int priority) {
     compute_effec_priority(t);
 }
 
-void sched_block(void) {
+void sched_block() {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     __UNUSED thread_t* current_thread = get_current_thread();
@@ -291,7 +291,8 @@ void sched_block(void) {
 
 // find a cpu to run the thread on, put it in the run queue for that cpu, and accumulate a list
 // of cpus we'll need to reschedule, including the local cpu.
-static void find_cpu_and_insert(thread_t* t, bool* local_resched, cpu_mask_t* accum_cpu_mask) {
+static void find_cpu_and_insert(thread_t* t, bool* local_resched,
+                                cpu_mask_t* accum_cpu_mask) TA_REQ(thread_lock) {
     // find a core to run it on
     cpu_mask_t cpu = find_cpu_mask(t);
     cpu_num_t cpu_num;
@@ -379,7 +380,7 @@ void sched_unblock_idle(thread_t* t) {
 }
 
 // the thread is voluntarily giving up its time slice
-void sched_yield(void) {
+void sched_yield() {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     thread_t* current_thread = get_current_thread();
@@ -401,7 +402,7 @@ void sched_yield(void) {
 }
 
 // the current thread is being preempted from interrupt context
-void sched_preempt(void) {
+void sched_preempt() {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     thread_t* current_thread = get_current_thread();
@@ -434,7 +435,7 @@ void sched_preempt(void) {
 }
 
 // the current thread is voluntarily reevaluating the scheduler on the current cpu
-void sched_reschedule(void) {
+void sched_reschedule() {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     thread_t* current_thread = get_current_thread();
@@ -750,7 +751,7 @@ __NO_SAFESTACK static void final_context_switch(thread_t* oldthread,
 // Internal reschedule routine. The current thread needs to already be in whatever
 // state and queues it needs to be in. This routine simply picks the next thread and
 // switches to it.
-void sched_resched_internal(void) {
+void sched_resched_internal() {
     thread_t* current_thread = get_current_thread();
     uint cpu = arch_curr_cpu_num();
 
@@ -870,7 +871,7 @@ void sched_resched_internal(void) {
     final_context_switch(oldthread, newthread);
 }
 
-void sched_init_early(void) {
+void sched_init_early() {
     // initialize the run queues
     for (unsigned int cpu = 0; cpu < SMP_MAX_CPUS; cpu++)
         for (unsigned int i = 0; i < NUM_PRIORITIES; i++)

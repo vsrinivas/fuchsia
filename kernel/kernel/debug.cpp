@@ -202,6 +202,8 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
                " ints (hw  tmr tmr_cb)"
                " ipi (rs  gen)\n");
         for (uint i = 0; i < SMP_MAX_CPUS; i++) {
+            Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
+
             // dont display time for inactive cpus
             if (!mp_is_cpu_active(i))
                 continue;
@@ -258,7 +260,7 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
     static RecurringCallback cb([]() {
         for (uint i = 0; i < SMP_MAX_CPUS; i++) {
-            Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+            Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
 
             // dont display time for inactive cpus
             if (!mp_is_cpu_active(i))
