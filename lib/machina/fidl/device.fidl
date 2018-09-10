@@ -1,0 +1,51 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.guest.device;
+
+using zx;
+
+// Contains the details of a device trap.
+struct Trap {
+  // The address of the device trap. This must be page-aligned.
+  zx.gpaddr addr;
+
+  // The size of the device trap. This must be a multiple of the page size.
+  uint64 size;
+};
+
+// Contains the basic information required to start execution of a device.
+struct StartInfo {
+  // The trap associated with a device. It is up to the device to set this trap
+  // during device setup.
+  Trap trap;
+
+  // The guest associated with a device. This handle should be used to setup
+  // device traps, and then be released before device operation begins.
+  handle<guest> guest;
+
+  // The event associated with a device interrupt. This is how the device will
+  // notify the guest of events it should process.
+  handle<event> event;
+
+  // The VMO used to represent guest physical memory.
+  handle<vmo> vmo;
+};
+
+interface VirtioDevice {
+  // Configure a |queue| for the device. This specifies the |size| and the guest
+  // physical addresses of the queue: |desc|, |avail|, and |used|.
+  0x80000001: Configure(uint16 queue, uint16 size, zx.gpaddr desc,
+                        zx.gpaddr avail, zx.gpaddr used);
+
+  // Ready a device. This provides the set of |negotiated_features| that the
+  // driver and device have agreed upon.
+  0x80000002: Ready(uint32 negotiated_features);
+};
+
+[Discoverable]
+interface VirtioConsole : VirtioDevice {
+  // Start the console device. This uses |socket| to handle input and output.
+  0x81000001: Start(StartInfo start_info, handle<socket> socket);
+};
