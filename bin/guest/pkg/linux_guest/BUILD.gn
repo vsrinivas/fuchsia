@@ -14,6 +14,7 @@ action("block") {
     rebase_path("images/${target_cpu}/disk.img", root_build_dir),
     rebase_path(disk_image, root_build_dir)
   ]
+  sources = ["images/${target_cpu}/disk.img"]
   outputs = [ disk_image ]
 }
 
@@ -24,6 +25,7 @@ action("kernel") {
     rebase_path("images/${target_cpu}/Image", root_build_dir),
     rebase_path(linux_image, root_build_dir)
   ]
+  sources = ["images/${target_cpu}/Image"]
   outputs = [ linux_image ]
 }
 
