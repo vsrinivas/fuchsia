@@ -23,5 +23,6 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/zx \
+    system/ulib/zxcpp \
 
 include make/module.mk

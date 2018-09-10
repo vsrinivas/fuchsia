@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/auto_call.h>
+#include <fbl/vector.h>
 #include <fs-management/ramdisk.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
@@ -13,18 +14,20 @@ namespace {
 // This is a simple test of biotime (a block device IO performance
 // measurement tool).  It runs biotime on a ramdisk and just checks that it
 // returns a success status.
-bool run_biotime(const char* option_arg) {
+bool run_biotime(fbl::Vector<const char*>&& args) {
     char ramdisk_path[PATH_MAX];
     ASSERT_EQ(create_ramdisk(1024, 100, ramdisk_path), 0);
     auto ac = fbl::MakeAutoCall([&] {
         EXPECT_EQ(destroy_ramdisk(ramdisk_path), 0);
     });
 
-    const char* argv[] = { "/boot/bin/biotime", option_arg, ramdisk_path,
-                           nullptr };
+    args.insert(0, "/boot/bin/biotime");
+    args.push_back(ramdisk_path);
+    args.push_back(nullptr); // fdio_spawn() wants a null-terminated array.
+
     zx::process process;
-    ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv,
-                         process.reset_and_get_address()), ZX_OK);
+    ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, args[0],
+                         args.get(), process.reset_and_get_address()), ZX_OK);
 
     // Wait for the process to exit.
     ASSERT_EQ(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(),
@@ -38,19 +41,35 @@ bool run_biotime(const char* option_arg) {
 
 bool test_biotime_linear_access() {
     BEGIN_TEST;
-    EXPECT_TRUE(run_biotime("-linear"));
+
+    fbl::Vector<const char*> args = {"-linear"};
+    EXPECT_TRUE(run_biotime(fbl::move(args)));
+
     END_TEST;
 }
 
 bool test_biotime_random_access() {
     BEGIN_TEST;
-    EXPECT_TRUE(run_biotime("-random"));
+
+    fbl::Vector<const char*> args = {"-random"};
+    EXPECT_TRUE(run_biotime(fbl::move(args)));
+
+    END_TEST;
+}
+
+bool test_biotime_write() {
+    BEGIN_TEST;
+
+    fbl::Vector<const char*> args = {"-write", "-live-dangerously"};
+    EXPECT_TRUE(run_biotime(fbl::move(args)));
+
     END_TEST;
 }
 
 BEGIN_TEST_CASE(biotime_tests)
 RUN_TEST(test_biotime_linear_access)
 RUN_TEST(test_biotime_random_access)
+RUN_TEST(test_biotime_write)
 END_TEST_CASE(biotime_tests)
 
 }

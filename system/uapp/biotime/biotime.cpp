@@ -124,6 +124,7 @@ typedef struct {
     size_t xfer;
     uint64_t seed;
     int max_pending;
+    bool write;
     bool linear;
 
     fbl::atomic<int> pending;
@@ -156,7 +157,7 @@ static int bio_random_thread(void* arg) {
         block_fifo_request_t req = {};
         req.reqid = next_reqid.fetch_add(1);
         req.vmoid = a->blk->vmoid;
-        req.opcode = BLOCKIO_READ;
+        req.opcode = a->write ? BLOCKIO_WRITE : BLOCKIO_READ;
         req.length = static_cast<uint32_t>(xfer);
         req.vmo_offset = off;
 
@@ -261,7 +262,10 @@ void usage(void) {
                     "args:  -bs <num>     transfer block size (multiple of 4K)\n"
                     "       -tt <num>     total bytes to transfer\n"
                     "       -mo <num>     maximum outstanding ops (1..128)\n"
-                    "       -linear       transfers in linear order\n"
+                    "       -read         test reading from the block device (default)\n"
+                    "       -write        test writing to the block device\n"
+                    "       -live-dangerously  required if using \"-write\"\n"
+                    "       -linear       transfers in linear order (default)\n"
                     "       -random       random transfers across total range\n"
                     "       -output-file <filename>  destination file for "
                     "writing results in JSON format\n"
@@ -280,11 +284,13 @@ void usage(void) {
 int main(int argc, char** argv) {
     blkdev_t blk;
 
+    bool live_dangerously = false;
     bio_random_args_t a = {};
     a.blk = &blk;
     a.xfer = 32768;
     a.seed = 7891263897612ULL;
     a.max_pending = 128;
+    a.write = false;
     a.linear = true;
     const char* output_file = nullptr;
 
@@ -311,6 +317,12 @@ int main(int argc, char** argv) {
                 error("error: max pending must be between 1 and 128\n");
             }
             a.max_pending = static_cast<int>(n);
+        } else if (!strcmp(argv[0], "-read")) {
+            a.write = false;
+        } else if (!strcmp(argv[0], "-write")) {
+            a.write = true;
+        } else if (!strcmp(argv[0], "-live-dangerously")) {
+            live_dangerously = true;
         } else if (!strcmp(argv[0], "-linear")) {
             a.linear = true;
         } else if (!strcmp(argv[0], "-random")) {
@@ -331,6 +343,10 @@ int main(int argc, char** argv) {
     }
     if (argc > 1) {
         error("error: unexpected arguments\n");
+    }
+    if (a.write && !live_dangerously) {
+        error("error: the option \"-live-dangerously\" is required when using"
+              " \"-write\"\n");
     }
     const char* device_filename = argv[0];
 
