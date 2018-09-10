@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <lib/callback/auto_cleanable.h>
+#include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
@@ -18,6 +19,7 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace ledger {
+
 // Manages the strategies for handling merges and conflicts for a ledger as
 // managed by |LedgerManager|.
 // Holds a ConflictResolverFactory if the client provides one.
@@ -27,12 +29,13 @@ class LedgerMergeManager {
   explicit LedgerMergeManager(Environment* environment);
   ~LedgerMergeManager();
 
-  void SetFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory);
+  void AddFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory);
 
   std::unique_ptr<MergeResolver> GetMergeResolver(
       storage::PageStorage* storage);
 
  private:
+  void ResetFactory();
   void RemoveResolver(const storage::PageId& page_id);
   void GetResolverStrategyForPage(
       const storage::PageId& page_id,
@@ -40,7 +43,17 @@ class LedgerMergeManager {
   void ResetStrategyForPage(storage::PageId page_id);
 
   Environment* const environment_;
-  ConflictResolverFactoryPtr conflict_resolver_factory_;
+
+  class ConflictResolverFactoryPtrContainer;
+
+  // Inactive, available conflict resolver factories
+  callback::AutoCleanableSet<ConflictResolverFactoryPtrContainer>
+      conflict_resolver_factories_;
+  // The ConflictResolverFactory that is currently in use
+  fidl::InterfacePtr<ConflictResolverFactory>
+      current_conflict_resolver_factory_;
+  // |true| if using the default last-one-wins conflict resolver factory
+  bool using_default_conflict_resolver_ = true;
 
   std::map<storage::PageId, MergeResolver*> resolvers_;
 

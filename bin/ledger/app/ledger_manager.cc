@@ -523,7 +523,7 @@ void LedgerManager::CheckEmpty() {
 
 void LedgerManager::SetConflictResolverFactory(
     fidl::InterfaceHandle<ConflictResolverFactory> factory) {
-  merge_manager_.SetFactory(std::move(factory));
+  merge_manager_.AddFactory(std::move(factory));
 }
 
 void LedgerManager::BindLedgerDebug(

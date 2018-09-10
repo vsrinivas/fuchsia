@@ -349,6 +349,8 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
     ASSERT_TRUE(new_conflict_resolver_waiter_->RunUntilCalled());
   }
 
+  void Disconnect() { binding_.Unbind(); }
+
  private:
   // ConflictResolverFactory:
   void GetPolicy(PageId /*page_id*/, GetPolicyCallback callback) override {
@@ -1121,14 +1123,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 
-  // Waiting for the conflict resolution request and for the disconnect.
-  resolver_impl->RunUntilDisconnected();
-  resolver_factory2->RunUntilNewConflictResolverCalled();
+  resolver_factory->Disconnect();
 
-  // The previous resolver should have been disconnected.
-  EXPECT_TRUE(resolver_impl->disconnected);
-  // It shouldn't have been called again.
-  EXPECT_EQ(1u, resolver_impl->requests.size());
+  // Waiting for the conflict resolution request
+  resolver_factory2->RunUntilNewConflictResolverCalled();
 
   // We should ask again for a resolution on a new resolver.
   EXPECT_EQ(1u, resolver_factory2->resolvers.size());
@@ -1152,108 +1150,6 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
 
   EXPECT_TRUE(resolver_impl2->requests[0].Merge(std::move(merged_values)));
   RunLoopFor(zx::msec(200));
-}
-
-// Tests for a race between setting the new conflict resolver and sending the
-// resolution request. Specifically, the resolution request must be sent to the
-// new resolver, not the old one.
-TEST_P(MergingIntegrationTest,
-       CustomConflictResolutionResetFactory_FactoryRace) {
-  auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
-  auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
-      this, MergePolicy::CUSTOM, resolver_factory_ptr.NewRequest(), nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
-  auto waiter = NewWaiter();
-  Status status;
-  ledger_ptr->SetConflictResolverFactory(
-      std::move(resolver_factory_ptr),
-      callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  PagePtr page1 = instance->GetTestPage();
-  waiter = NewWaiter();
-  PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  PagePtr page2 =
-      instance->GetPage(fidl::MakeOptional(test_page_id), Status::OK);
-
-  waiter = NewWaiter();
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  resolver_factory->RunUntilNewConflictResolverCalled();
-
-  // We now have a conflict.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
-  ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
-  resolver_impl->RunUntilResolveCalled();
-  EXPECT_FALSE(resolver_impl->disconnected);
-  EXPECT_EQ(1u, resolver_impl->requests.size());
-
-  // Change the factory.
-  ConflictResolverFactoryPtr resolver_factory_ptr2;
-  auto resolver_factory2 = std::make_unique<TestConflictResolverFactory>(
-      this, MergePolicy::CUSTOM, resolver_factory_ptr2.NewRequest(), nullptr,
-      zx::msec(250));
-  waiter = NewWaiter();
-  ledger_ptr->SetConflictResolverFactory(
-      std::move(resolver_factory_ptr2),
-      callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  // Waiting for the conflict resolution request and for the disconnect.
-  resolver_impl->RunUntilDisconnected();
-  resolver_factory2->RunUntilNewConflictResolverCalled();
-
-  // The previous resolver should have been disconnected.
-  EXPECT_TRUE(resolver_impl->disconnected);
-  // It shouldn't have been called again.
-  EXPECT_EQ(1u, resolver_impl->requests.size());
-
-  // We should ask again for a resolution on a new resolver.
-  EXPECT_EQ(1u, resolver_factory2->resolvers.size());
-  ASSERT_NE(
-      resolver_factory2->resolvers.end(),
-      resolver_factory2->resolvers.find(convert::ToString(test_page_id.id)));
-  ConflictResolverImpl* resolver_impl2 =
-      &(resolver_factory2->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
-  resolver_impl2->RunUntilResolveCalled();
-  ASSERT_EQ(1u, resolver_impl2->requests.size());
 }
 
 TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
@@ -2028,6 +1924,398 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   EXPECT_EQ("Alice", ToString(final_entries[1].value));
   EXPECT_EQ("phone", convert::ExtendedStringView(final_entries[2].key));
   EXPECT_EQ("0123456789", ToString(final_entries[2].value));
+}
+
+// Test that multiple ConflictResolverFactories can be registered, and that
+// when registering a new one:
+//  - the existing conflict resolvers are not updated
+//  - the first factory is still used for new pages
+TEST_P(MergingIntegrationTest, ConflictResolverFactoryNotChanged) {
+  auto resolver_factory_waiter1 = NewWaiter();
+  auto resolver_factory_waiter2 = NewWaiter();
+  auto instance = NewLedgerAppInstance();
+  ConflictResolverFactoryPtr resolver_factory_ptr1;
+  auto resolver_factory1 = std::make_unique<TestConflictResolverFactory>(
+      this, MergePolicy::LAST_ONE_WINS, resolver_factory_ptr1.NewRequest(),
+      resolver_factory_waiter1->GetCallback());
+  ConflictResolverFactoryPtr resolver_factory_ptr2;
+  auto resolver_factory2 = std::make_unique<TestConflictResolverFactory>(
+      this, MergePolicy::LAST_ONE_WINS, resolver_factory_ptr2.NewRequest(),
+      resolver_factory_waiter2->GetCallback());
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
+
+  auto waiter = NewWaiter();
+  Status status;
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr1),
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  PagePtr page1 = instance->GetTestPage();
+
+  // resolver_factory1 has received one request for page1
+  ASSERT_TRUE(resolver_factory_waiter1->RunUntilCalled());
+  EXPECT_EQ(1u, resolver_factory1->get_policy_calls);
+
+  // Connect resolver_factory2 on ledger_ptr1. It does not receive requests
+  waiter = NewWaiter();
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr2),
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  RunLoopFor(zx::msec(250));
+  EXPECT_EQ(0u, resolver_factory2->get_policy_calls);
+
+  PagePtr page2 = instance->GetTestPage();
+  // resolver_factory1 has received one request for page2
+  ASSERT_TRUE(resolver_factory_waiter1->RunUntilCalled());
+  EXPECT_EQ(2u, resolver_factory1->get_policy_calls);
+  EXPECT_EQ(0u, resolver_factory2->get_policy_calls);
+}
+
+// Tests that when a conflict resolution factory disconnects:
+//  - the next factory is used
+//  - already open pages update their policy
+TEST_P(MergingIntegrationTest, ConflictResolutionFactoryFailover) {
+  auto resolver_factory_waiter1 = NewWaiter();
+  auto resolver_factory_waiter2 = NewWaiter();
+  auto instance = NewLedgerAppInstance();
+  ConflictResolverFactoryPtr resolver_factory_ptr1;
+  auto resolver_factory1 = std::make_unique<TestConflictResolverFactory>(
+      this, MergePolicy::LAST_ONE_WINS, resolver_factory_ptr1.NewRequest(),
+      resolver_factory_waiter1->GetCallback());
+  ConflictResolverFactoryPtr resolver_factory_ptr2;
+  auto resolver_factory2 = std::make_unique<TestConflictResolverFactory>(
+      this, MergePolicy::LAST_ONE_WINS, resolver_factory_ptr2.NewRequest(),
+      resolver_factory_waiter2->GetCallback());
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
+
+  auto waiter = NewWaiter();
+  Status status;
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr1),
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  PagePtr page1 = instance->GetTestPage();
+
+  // resolver_factory1 has received one request for page1
+  ASSERT_TRUE(resolver_factory_waiter1->RunUntilCalled());
+  EXPECT_EQ(1u, resolver_factory1->get_policy_calls);
+
+  // Connect resolver_factory2 on ledger_ptr1. It does not receive requests
+  waiter = NewWaiter();
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr2),
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  // Disconnect resolver_factory1
+  resolver_factory1->Disconnect();
+  ASSERT_TRUE(resolver_factory_waiter2->RunUntilCalled());
+  EXPECT_EQ(1u, resolver_factory2->get_policy_calls);
+
+  PagePtr page2 = instance->GetTestPage();
+  // resolver_factory2 has received one request for page2
+  ASSERT_TRUE(resolver_factory_waiter2->RunUntilCalled());
+  EXPECT_EQ(2u, resolver_factory2->get_policy_calls);
+}
+
+// Tests that when a conflict resolution factory disconnects, already
+// open pages still get their conflicts resolved
+TEST_P(MergingIntegrationTest,
+       ConflictResolutionFactoryUnavailableMergingContinues) {
+  auto resolver_factory_waiter = NewWaiter();
+  auto instance = NewLedgerAppInstance();
+  ConflictResolverFactoryPtr resolver_factory_ptr;
+  auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
+      this, MergePolicy::LAST_ONE_WINS, resolver_factory_ptr.NewRequest(),
+      resolver_factory_waiter->GetCallback());
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
+
+  auto waiter = NewWaiter();
+  Status status;
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  PagePtr page_conn1 = instance->GetTestPage();
+  PageId test_page_id;
+  waiter = NewWaiter();
+  page_conn1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  PagePtr page_conn2 =
+      instance->GetPage(fidl::MakeOptional(test_page_id), Status::OK);
+
+  // wait for the conflict resolver to be set up, then disconnect
+  ASSERT_TRUE(resolver_factory_waiter->RunUntilCalled());
+  resolver_factory->Disconnect();
+
+  PageWatcherPtr watcher1_ptr;
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter->GetCallback());
+  PageSnapshotPtr snapshot1;
+  waiter = NewWaiter();
+  page_conn1->GetSnapshot(snapshot1.NewRequest(),
+                          fidl::VectorPtr<uint8_t>::New(0),
+                          std::move(watcher1_ptr),
+                          callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  PageWatcherPtr watcher2_ptr;
+  Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter->GetCallback());
+  PageSnapshotPtr snapshot2;
+  waiter = NewWaiter();
+  page_conn2->GetSnapshot(snapshot2.NewRequest(),
+                          fidl::VectorPtr<uint8_t>::New(0),
+                          std::move(watcher2_ptr),
+                          callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  waiter = NewWaiter();
+  page_conn1->StartTransaction(
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+  waiter = NewWaiter();
+  page_conn1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+                  callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  waiter = NewWaiter();
+  page_conn2->StartTransaction(
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+  waiter = NewWaiter();
+  page_conn2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
+                  callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  waiter = NewWaiter();
+  page_conn1->Commit(callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  ASSERT_TRUE(watcher_waiter->RunUntilCalled());
+  EXPECT_EQ(1u, watcher1.changes_seen);
+  PageChange change = std::move(watcher1.last_page_change_);
+  ASSERT_EQ(1u, change.changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
+  EXPECT_EQ("Alice", ToString(change.changed_entries->at(0).value));
+
+  waiter = NewWaiter();
+  page_conn2->Commit(callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  ASSERT_TRUE(watcher_waiter->RunUntilCalled());
+  EXPECT_EQ(1u, watcher2.changes_seen);
+  change = std::move(watcher2.last_page_change_);
+  ASSERT_EQ(1u, change.changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
+  EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
+
+  ASSERT_TRUE(watcher_waiter->RunUntilCalled());
+  PageSnapshotPtr snapshot3;
+  waiter = NewWaiter();
+  page_conn1->GetSnapshot(snapshot3.NewRequest(),
+                          fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                          callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(status, Status::OK);
+
+  fuchsia::ledger::InlinedValuePtr val1;
+  waiter = NewWaiter();
+  snapshot3->GetInline(
+      convert::ToArray("name"),
+      callback::Capture(waiter->GetCallback(), &status, &val1));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(status, Status::OK);
+
+  PageSnapshotPtr snapshot4;
+  waiter = NewWaiter();
+  page_conn1->GetSnapshot(snapshot4.NewRequest(),
+                          fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                          callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(status, Status::OK);
+
+  fuchsia::ledger::InlinedValuePtr val2;
+  waiter = NewWaiter();
+  snapshot4->GetInline(
+      convert::ToArray("name"),
+      callback::Capture(waiter->GetCallback(), &status, &val2));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(status, Status::OK);
+
+  EXPECT_EQ(convert::ToString(val1->value), convert::ToString(val2->value));
+}
+
+// Tests that pages opened after disconnection of a conflict resolver
+// factory do not see their conflict resolved, including if another connection
+// is present with no conflict resolution set
+TEST_P(MergingIntegrationTest,
+       ConflictResolutionFactoryUnavailableNewPagesMergeBlocked) {
+  auto resolver_factory_waiter = NewWaiter();
+  auto instance = NewLedgerAppInstance();
+  ConflictResolverFactoryPtr resolver_factory_ptr;
+  auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
+      this, MergePolicy::LAST_ONE_WINS, resolver_factory_ptr.NewRequest(),
+      resolver_factory_waiter->GetCallback());
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
+
+  // Open another connection to check that its (null) strategy is not used
+  LedgerPtr ledger_ptr2 = instance->GetTestLedger();
+
+  auto waiter = NewWaiter();
+  Status status;
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  resolver_factory->Disconnect();
+
+  PagePtr page_conn1 = instance->GetTestPage();
+  PageId test_page_id;
+  waiter = NewWaiter();
+  page_conn1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  PagePtr page_conn2 =
+      instance->GetPage(fidl::MakeOptional(test_page_id), Status::OK);
+
+  PageWatcherPtr watcher1_ptr;
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter->GetCallback());
+  PageSnapshotPtr snapshot1;
+  waiter = NewWaiter();
+  page_conn1->GetSnapshot(snapshot1.NewRequest(),
+                          fidl::VectorPtr<uint8_t>::New(0),
+                          std::move(watcher1_ptr),
+                          callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  PageWatcherPtr watcher2_ptr;
+  Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter->GetCallback());
+  PageSnapshotPtr snapshot2;
+  waiter = NewWaiter();
+  page_conn2->GetSnapshot(snapshot2.NewRequest(),
+                          fidl::VectorPtr<uint8_t>::New(0),
+                          std::move(watcher2_ptr),
+                          callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  waiter = NewWaiter();
+  page_conn1->StartTransaction(
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+  waiter = NewWaiter();
+  page_conn1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+                  callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  waiter = NewWaiter();
+  page_conn2->StartTransaction(
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+  waiter = NewWaiter();
+  page_conn2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
+                  callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  waiter = NewWaiter();
+  page_conn1->Commit(callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  ASSERT_TRUE(watcher_waiter->RunUntilCalled());
+  EXPECT_EQ(1u, watcher1.changes_seen);
+  PageChange change = std::move(watcher1.last_page_change_);
+  ASSERT_EQ(1u, change.changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
+  EXPECT_EQ("Alice", ToString(change.changed_entries->at(0).value));
+
+  waiter = NewWaiter();
+  page_conn2->Commit(callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  ASSERT_TRUE(watcher_waiter->RunUntilCalled());
+  EXPECT_EQ(1u, watcher2.changes_seen);
+  change = std::move(watcher2.last_page_change_);
+  ASSERT_EQ(1u, change.changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
+  EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
+
+  RunLoopFor(zx::sec(1));
+  EXPECT_TRUE(watcher_waiter->NotCalledYet());
+
+  waiter = NewWaiter();
+  auto resolver_factory_waiter2 = NewWaiter();
+  ConflictResolverFactoryPtr resolver_factory_ptr2;
+  auto resolver_factory2 = std::make_unique<TestConflictResolverFactory>(
+      this, MergePolicy::LAST_ONE_WINS, resolver_factory_ptr2.NewRequest(),
+      resolver_factory_waiter2->GetCallback());
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr2),
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  ASSERT_TRUE(watcher_waiter->RunUntilCalled());
+
+  PageSnapshotPtr snapshot3;
+  waiter = NewWaiter();
+  page_conn1->GetSnapshot(snapshot3.NewRequest(),
+                          fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                          callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(status, Status::OK);
+
+  fuchsia::ledger::InlinedValuePtr val1;
+  waiter = NewWaiter();
+  snapshot3->GetInline(
+      convert::ToArray("name"),
+      callback::Capture(waiter->GetCallback(), &status, &val1));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(status, Status::OK);
+
+  PageSnapshotPtr snapshot4;
+  waiter = NewWaiter();
+  page_conn1->GetSnapshot(snapshot4.NewRequest(),
+                          fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                          callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(status, Status::OK);
+
+  fuchsia::ledger::InlinedValuePtr val2;
+  waiter = NewWaiter();
+  snapshot4->GetInline(
+      convert::ToArray("name"),
+      callback::Capture(waiter->GetCallback(), &status, &val2));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(status, Status::OK);
+
+  EXPECT_EQ(convert::ToString(val1->value), convert::ToString(val2->value));
 }
 
 INSTANTIATE_TEST_CASE_P(

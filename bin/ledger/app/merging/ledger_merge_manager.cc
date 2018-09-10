@@ -9,6 +9,7 @@
 
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fit/function.h>
 
 #include "peridot/bin/ledger/app/merging/auto_merge_strategy.h"
@@ -17,14 +18,64 @@
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 
 namespace ledger {
+
+class LedgerMergeManager::ConflictResolverFactoryPtrContainer {
+ public:
+  explicit ConflictResolverFactoryPtrContainer(
+      fidl::InterfaceHandle<ConflictResolverFactory> factory)
+      : ptr_(factory.Bind()) {
+    ptr_.set_error_handler([this] { OnEmpty(); });
+  }
+
+  void set_on_empty(fit::closure on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
+  }
+
+  // Returns the pointer and disappear from the AutoCleanableMap
+  ConflictResolverFactoryPtr TakePtr() {
+    ConflictResolverFactoryPtr ptr = std::move(ptr_);
+    ptr.set_error_handler(nullptr);
+    // Deletes |this|
+    OnEmpty();
+    return ptr;
+  }
+
+ private:
+  // Deletes the object when in an AutoCleanableMap
+  void OnEmpty() {
+    if (on_empty_callback_)
+      on_empty_callback_();
+  }
+
+  ConflictResolverFactoryPtr ptr_;
+  fit::closure on_empty_callback_;
+};
+
 LedgerMergeManager::LedgerMergeManager(Environment* environment)
     : environment_(environment) {}
 
 LedgerMergeManager::~LedgerMergeManager() {}
 
-void LedgerMergeManager::SetFactory(
+void LedgerMergeManager::AddFactory(
     fidl::InterfaceHandle<ConflictResolverFactory> factory) {
-  conflict_resolver_factory_ = factory.Bind();
+  using_default_conflict_resolver_ = false;
+
+  conflict_resolver_factories_.emplace(std::move(factory));
+
+  if (!current_conflict_resolver_factory_) {
+    ResetFactory();
+  }
+}
+
+void LedgerMergeManager::ResetFactory() {
+  if (conflict_resolver_factories_.empty())
+    return;
+
+  current_conflict_resolver_factory_ =
+      conflict_resolver_factories_.begin()->TakePtr();
+  current_conflict_resolver_factory_.set_error_handler(
+      [this] { this->ResetFactory(); });
+
   for (const auto& item : resolvers_) {
     item.second->SetMergeStrategy(nullptr);
     GetResolverStrategyForPage(
@@ -63,14 +114,16 @@ std::unique_ptr<MergeResolver> LedgerMergeManager::GetMergeResolver(
 void LedgerMergeManager::GetResolverStrategyForPage(
     const storage::PageId& page_id,
     fit::function<void(std::unique_ptr<MergeStrategy>)> strategy_callback) {
-  if (!conflict_resolver_factory_) {
+  if (using_default_conflict_resolver_) {
     strategy_callback(std::make_unique<LastOneWinsMergeStrategy>());
-  } else if (!conflict_resolver_factory_.is_bound()) {
-    strategy_callback(nullptr);
+  } else if (!current_conflict_resolver_factory_) {
+    // When no |ConflictResolverFactory| is connected, no conflict resolution
+    // happens for pages where conflict resolution has not been setup.
+    // Conflict resolution continues for pages that already have a policy.
   } else {
     ledger::PageId converted_page_id;
     convert::ToArray(page_id, &converted_page_id.id);
-    conflict_resolver_factory_->GetPolicy(
+    current_conflict_resolver_factory_->GetPolicy(
         converted_page_id,
         [this, page_id, converted_page_id,
          strategy_callback = std::move(strategy_callback)](MergePolicy policy) {
@@ -80,7 +133,7 @@ void LedgerMergeManager::GetResolverStrategyForPage(
               break;
             case MergePolicy::AUTOMATIC_WITH_FALLBACK: {
               ConflictResolverPtr conflict_resolver;
-              conflict_resolver_factory_->NewConflictResolver(
+              current_conflict_resolver_factory_->NewConflictResolver(
                   converted_page_id, conflict_resolver.NewRequest());
               std::unique_ptr<AutoMergeStrategy> auto_merge_strategy =
                   std::make_unique<AutoMergeStrategy>(
@@ -94,7 +147,7 @@ void LedgerMergeManager::GetResolverStrategyForPage(
               ledger::PageId converted_page_id;
               convert::ToArray(page_id, &converted_page_id.id);
               ConflictResolverPtr conflict_resolver;
-              conflict_resolver_factory_->NewConflictResolver(
+              current_conflict_resolver_factory_->NewConflictResolver(
                   converted_page_id, conflict_resolver.NewRequest());
               std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
                   std::make_unique<CustomMergeStrategy>(

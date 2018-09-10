@@ -273,6 +273,27 @@ class LedgerManagerTest : public TestWithEnvironment {
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManagerTest);
 };
 
+class StubConflictResolverFactory : public ConflictResolverFactory {
+ public:
+  explicit StubConflictResolverFactory(
+      fidl::InterfaceRequest<ConflictResolverFactory> request)
+      : binding_(this, std::move(request)) {
+    binding_.set_error_handler([this] { disconnected = true; });
+  }
+
+  bool disconnected = false;
+
+ private:
+  void GetPolicy(PageId page_id,
+                 fit::function<void(MergePolicy)> callback) override {}
+
+  void NewConflictResolver(
+      PageId page_id,
+      fidl::InterfaceRequest<ConflictResolver> resolver) override {}
+
+  fidl::Binding<ConflictResolverFactory> binding_;
+};
+
 // Verifies that LedgerImpl proxies vended by LedgerManager work correctly,
 // that is, make correct calls to ledger storage.
 TEST_F(LedgerManagerTest, LedgerImpl) {
@@ -831,6 +852,59 @@ TEST_F(LedgerManagerTest, OpenPageWithDeletePageStorageInProgress) {
 
   EXPECT_TRUE(get_page_called);
   EXPECT_EQ(Status::OK, get_page_status);
+}
+
+TEST_F(LedgerManagerTest, ChangeConflictResolver) {
+  fidl::InterfaceHandle<ConflictResolverFactory> handle1;
+  fidl::InterfaceHandle<ConflictResolverFactory> handle2;
+  StubConflictResolverFactory factory1(handle1.NewRequest());
+  StubConflictResolverFactory factory2(handle2.NewRequest());
+  Status status;
+  bool called;
+
+  ledger_->SetConflictResolverFactory(
+      std::move(handle1),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  ledger_->SetConflictResolverFactory(
+      std::move(handle2),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_FALSE(factory1.disconnected);
+  EXPECT_FALSE(factory2.disconnected);
+}
+
+TEST_F(LedgerManagerTest, MultipleConflictResolvers) {
+  fidl::InterfaceHandle<ConflictResolverFactory> handle1;
+  fidl::InterfaceHandle<ConflictResolverFactory> handle2;
+  StubConflictResolverFactory factory1(handle1.NewRequest());
+  StubConflictResolverFactory factory2(handle2.NewRequest());
+  Status status;
+  bool called;
+
+  LedgerPtr ledger2;
+  ledger_manager_->BindLedger(ledger2.NewRequest());
+
+  ledger_->SetConflictResolverFactory(
+      std::move(handle1),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  ledger2->SetConflictResolverFactory(
+      std::move(handle2),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_FALSE(factory1.disconnected);
+  EXPECT_FALSE(factory2.disconnected);
 }
 
 }  // namespace

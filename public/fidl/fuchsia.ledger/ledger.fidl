@@ -57,11 +57,15 @@ interface Ledger {
   2: GetRootPage(request<Page> page_request) -> (Status status);
 
   // Sets the |ConflictResolverFactory| to use for resolving conflicts on pages.
-  // If |factory| is NULL or this method is not called, a global last one wins
-  // policy will be used. If a factory is set and later on disconnected, pages
-  // for which no conflict resolution is set up will not get their conflict
+  // If this method has never been called, a last-one-wins policy will be used
+  // for every page. If this method is called multiple times, the factories are
+  // kept and conflict resolver requests are sent to one of the connected
+  // factories. If all factories are later disconnected, pages that already have
+  // a conflict resolution strategy (because they were opened before the factory
+  // disconnected) will continue using their current strategy. The pages for
+  // which no conflict resolution is set up will not get their conflicts
   // resolved until this method is called again.
-  3: SetConflictResolverFactory(ConflictResolverFactory? factory)
+  3: SetConflictResolverFactory(ConflictResolverFactory factory)
       -> (Status status);
 };
 
