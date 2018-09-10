@@ -23,6 +23,7 @@ typedef struct pci_ecam_baas {
     uint32_t reserved0;
 } pci_mcfg_allocation_t;
 
+zx_status_t pci_init(void);
 void register_pci_root(ACPI_HANDLE dev_obj);
 
 zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size);

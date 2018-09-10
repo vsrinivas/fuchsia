@@ -500,6 +500,29 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
         register_pci_root(object);
 #else
         if (!ctx->found_pci) {
+            // Report current resources to kernel PCI driver
+            zx_status_t status = pci_report_current_resources(get_root_resource());
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "acpi: WARNING: ACPI failed to report all current resources!\n");
+            }
+
+            // Initialize kernel PCI driver
+            zx_pci_init_arg_t* arg;
+            uint32_t arg_size;
+            status = get_pci_init_arg(&arg, &arg_size);
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "acpi: erorr %d in get_pci_init_arg\n", status);
+                return AE_ERROR;
+            }
+
+            status = zx_pci_init(get_root_resource(), arg, arg_size);
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "acpi: error %d in zx_pci_init\n", status);
+                return AE_ERROR;
+            }
+
+            free(arg);
+
             // Publish PCI root as top level
             // Only publish one PCI root device for all PCI roots
             // TODO: store context for PCI root protocol
@@ -583,29 +606,6 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     }
 
     zxlogf(TRACE, "acpi: initialized\n");
-
-    // Report current resources to kernel PCI driver
-    status = pci_report_current_resources(get_root_resource());
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "acpi: WARNING: ACPI failed to report all current resources!\n");
-    }
-
-    // Initialize kernel PCI driver
-    zx_pci_init_arg_t* arg;
-    uint32_t arg_size;
-    status = get_pci_init_arg(&arg, &arg_size);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "acpi: erorr %d in get_pci_init_arg\n", status);
-        return status;
-    }
-
-    status = zx_pci_init(get_root_resource(), arg, arg_size);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "acpi: error %d in zx_pci_init\n", status);
-        return status;
-    }
-
-    free(arg);
 
     // publish sys root
     device_add_args_t args = {
