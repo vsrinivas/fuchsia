@@ -15,10 +15,7 @@ use crate::{Context, EventDispatcher};
 
 /// Receive an ICMP message in an IP packet.
 pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
-    ctx: &mut Context<D>,
-    src_ip: A,
-    dst_ip: A,
-    buffer: BufferAndRange<B>,
+    ctx: &mut Context<D>, src_ip: A, dst_ip: A, buffer: BufferAndRange<B>,
 ) -> bool {
     trace!("receive_icmp_packet({}, {})", src_ip, dst_ip);
 

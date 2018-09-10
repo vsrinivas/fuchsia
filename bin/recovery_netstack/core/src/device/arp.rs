@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::hash::Hash;
 
 use crate::device::ethernet::EthernetArpDevice;
-use crate::wire::{arp::{ArpPacket, HType, PType},
-                  BufferAndRange, SerializationRequest};
+use crate::wire::{arp::{ArpPacket, ArpPacketSerializer, HType, PType},
+                  BufferAndRange, InnerSerializationRequest, SerializationRequest};
 use crate::{Context, EventDispatcher};
 
 /// The type of an ARP operation.
@@ -180,10 +180,39 @@ pub fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     // How do we associate them with the right ARP reply? How do we retreive
     // them when we get that ARP reply? How do we time out so we don't hold onto
     // a stale frame forever?
-    AD::get_arp_state(ctx, device_id)
+    let result = AD::get_arp_state(ctx, device_id)
         .table
         .lookup(lookup)
-        .cloned()
+        .cloned();
+
+    // Send an ARP Request if the address is not in our cache
+    if result.is_none() {
+        // RFC 826 does not specify what to do if we don't have a local address, but there is no
+        // reasonable way to send an ARP request without one (as the receiver will cache our local
+        // address on receiving the packet. So, if this is the case, we do not send an ARP request.
+        if let Some(sender_protocol_addr) = AD::get_protocol_addr(ctx, device_id) {
+            AD::send_arp_frame(
+                ctx,
+                device_id,
+                AD::BROADCAST,
+                ArpPacketSerializer::new(
+                    ArpOp::Request,
+                    local_addr,
+                    sender_protocol_addr,
+                    // This is meaningless, since RFC 826 does not specify the behaviour.
+                    // However, the broadcast address is sensible, as this is the actual
+                    // address we are sending the packet to.
+                    AD::BROADCAST,
+                    lookup,
+                ).serialize_outer(),
+            );
+
+            // TODO(wesleyac): Set timeout to resend ARP request
+            AD::get_arp_state(ctx, device_id).table.set_waiting(lookup);
+        }
+    }
+
+    result
 }
 
 /// The state associated with an instance of the Address Resolution Protocol
@@ -226,7 +255,10 @@ impl<H, P: Hash + Eq> ArpTable<H, P> {
         self.table.insert(net, ArpValue::Known(hw));
     }
 
-    // TODO(wesleyac): figure out how to send arp requests on cache misses
+    fn set_waiting(&mut self, net: P) {
+        self.table.insert(net, ArpValue::Waiting);
+    }
+
     fn lookup(&self, addr: P) -> Option<&H> {
         match self.table.get(&addr) {
             Some(ArpValue::Known(x)) => Some(x),
@@ -260,6 +292,31 @@ mod tests {
     const TEST_TARGET_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
     const TEST_SENDER_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_TARGET_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
+
+    #[test]
+    #[should_panic(expected = "not yet implemented")]
+    fn test_send_arp_request_on_cache_miss() {
+        let mut state = StackState::default();
+        let dev_id = state
+            .device
+            .add_ethernet_device(Mac::new([4, 4, 4, 4, 4, 4]));
+        let dispatcher = DummyEventDispatcher {};
+        let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
+        set_ip_addr(
+            &mut ctx,
+            dev_id.id,
+            TEST_TARGET_IPV4,
+            Subnet::new(TEST_TARGET_IPV4, 24),
+        );
+
+        // Currently expected to panic at unimplemented in DummyEventDispatcher
+        lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            &mut ctx,
+            0,
+            TEST_TARGET_MAC,
+            TEST_SENDER_IPV4,
+        );
+    }
 
     #[test]
     fn test_recv_arp_response() {
