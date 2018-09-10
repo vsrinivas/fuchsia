@@ -11,7 +11,7 @@ use crate::Ssid;
 fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescription {
     fidl_mlme::BssDescription {
         bssid: [0, 0, 0, 0, 0, 0],
-        ssid: String::from_utf8_lossy(&ssid).to_string(),
+        ssid,
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         beacon_period: 100,
         dtim_period: 100,

@@ -370,8 +370,9 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     assoc->listen_interval = 0;
 
     ElementWriter w(assoc->elements, reserved_ie_len);
-    if (!w.write<SsidElement>(bss_->ssid->data())) {
-        errorf("could not write ssid \"%s\" to association request\n", bss_->ssid->data());
+    if (!w.write<SsidElement>(bss_->ssid->data(), bss_->ssid->size())) {
+        errorf("could not write ssid \"%.*s\" to association request\n",
+               static_cast<int>(bss_->ssid->size()), bss_->ssid->data());
         service::SendAssocConfirm(device_,
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;

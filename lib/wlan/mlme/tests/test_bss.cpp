@@ -21,9 +21,9 @@ namespace wlan {
 
 namespace wlan_mlme = wlan_mlme;
 
-zx_status_t WriteSsid(ElementWriter* w, const char* ssid) {
-    if (!w->write<SsidElement>(ssid)) {
-        errorf("could not write ssid \"%s\" to Beacon\n", ssid);
+zx_status_t WriteSsid(ElementWriter* w, const uint8_t* ssid, size_t ssid_len) {
+    if (!w->write<SsidElement>(ssid, ssid_len)) {
+        errorf("could not write ssid \"%.*s\" to Beacon\n", static_cast<int>(ssid_len), ssid);
         return ZX_ERR_IO;
     }
     return ZX_OK;
@@ -124,7 +124,8 @@ zx_status_t CreateJoinRequest(MlmeMsg<wlan_mlme::JoinRequest>* out_msg) {
 
     auto bss_desc = &req->selected_bss;
     std::memcpy(bss_desc->bssid.mutable_data(), bssid.byte, common::kMacAddrLen);
-    bss_desc->ssid = kSsid;
+    std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
+    bss_desc->ssid.reset(std::move(ssid));
     bss_desc->bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE;
     bss_desc->beacon_period = kBeaconPeriodTu;
     bss_desc->dtim_period = kDtimPeriodTu;
@@ -198,7 +199,7 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
     bcn->cap.set_short_preamble(1);
 
     ElementWriter w(bcn->elements, body_payload_len);
-    if (WriteSsid(&w, kSsid) != ZX_OK) { return ZX_ERR_IO; }
+    if (WriteSsid(&w, kSsid, sizeof(kSsid)) != ZX_OK) { return ZX_ERR_IO; }
 
     std::vector<SupportedRate> rates(std::cbegin(kSupportedRates), std::cend(kSupportedRates));
     if (WriteSupportedRates(&w, rates) != ZX_OK) { return ZX_ERR_IO; }

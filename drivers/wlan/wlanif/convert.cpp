@@ -70,25 +70,14 @@ void ConvertWlanChan(wlan_channel_t* wlanif_chan, wlan_mlme::WlanChan* fidl_chan
     wlanif_chan->secondary80 = fidl_chan->secondary80;
 }
 
-void CopySSID(::fidl::StringPtr in_ssid, char* out_ssid) {
-    const char* in_str = in_ssid->c_str();
-    size_t in_strlen = std::strlen(in_str);
-    if (in_strlen > WLAN_MAX_SSID_LEN) {
-        warnf("wlanif: truncating ssid from %zu to %d\n", in_strlen, WLAN_MAX_SSID_LEN);
-        in_strlen = WLAN_MAX_SSID_LEN;
+void CopySSID(const ::fidl::VectorPtr<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid) {
+    size_t ssid_len = in_ssid->size();
+    if (ssid_len > WLAN_MAX_SSID_LEN) {
+        warnf("wlanif: truncating ssid from %zu to %d\n", ssid_len, WLAN_MAX_SSID_LEN);
+        ssid_len = WLAN_MAX_SSID_LEN;
     }
-    std::memcpy(out_ssid, in_str, in_strlen);
-    out_ssid[in_strlen] = '\0';
-}
-
-void CopySSID(const ::fidl::VectorPtr<uint8_t>& in_ssid, char* out_ssid) {
-    size_t in_strlen = in_ssid->size();
-    if (in_strlen > WLAN_MAX_SSID_LEN) {
-        warnf("wlanif: truncating ssid from %zu to %d\n", in_strlen, WLAN_MAX_SSID_LEN);
-        in_strlen = WLAN_MAX_SSID_LEN;
-    }
-    std::memcpy(out_ssid, in_ssid->data(), in_strlen);
-    out_ssid[in_strlen] = '\0';
+    std::memcpy(out_ssid->data, in_ssid->data(), ssid_len);
+    out_ssid->len = ssid_len;
 }
 
 void CopyRSNE(const ::fidl::VectorPtr<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len) {
@@ -108,7 +97,7 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
     std::memcpy(wlanif_desc->bssid, fidl_desc->bssid.data(), ETH_ALEN);
 
     // ssid
-    CopySSID(fidl_desc->ssid, wlanif_desc->ssid);
+    CopySSID(fidl_desc->ssid, &wlanif_desc->ssid);
 
     // bss_type
     wlanif_desc->bss_type = ConvertBSSType(fidl_desc->bss_type);
@@ -201,7 +190,9 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
     std::memcpy(fidl_desc->bssid.mutable_data(), wlanif_desc->bssid, ETH_ALEN);
 
     // ssid
-    fidl_desc->ssid = wlanif_desc->ssid;
+    auto in_ssid = &wlanif_desc->ssid;
+    std::vector<uint8_t> ssid(in_ssid->data, in_ssid->data + in_ssid->len);
+    fidl_desc->ssid.reset(std::move(ssid));
 
     // bss_type
     fidl_desc->bss_type = ConvertBSSType(wlanif_desc->bss_type);

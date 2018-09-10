@@ -51,14 +51,14 @@ struct ScanRequest {
     uint64 txn_id;
     BSSTypes bss_type;
     array<uint8>:6 bssid;
-    string ssid;
+    vector<uint8>:32 ssid;
     ScanTypes scan_type;
     uint32 probe_delay;  // in TimeUnits
     vector<uint8>? channel_list;
     uint32 min_channel_time;  // in TimeUnits
     uint32 max_channel_time;  // in TimeUnits
     // RequestInformation
-    vector<string>? ssid_list;
+    vector<vector<uint8>:32>? ssid_list;
     // ChannelUsage
     // AccessNetworkType
     // HESSID
@@ -374,8 +374,7 @@ struct VhtOperation {
 struct BSSDescription {
     array<uint8>:6 bssid;
 
-    // TODO(NET-698): Use vector<uint8>:32
-    string ssid;
+    vector<uint8>:32 ssid;
 
     BSSTypes bss_type;
     uint16 beacon_period;  // in TU
@@ -682,7 +681,7 @@ struct ResetRequest {
 // MLME-START.request (IEEE Std 802.11-2016, 6.3.11.2)
 
 struct StartRequest {
-    string ssid;
+    vector<uint8>:32 ssid;
     BSSTypes bss_type;
     uint16 beacon_period;  // in TU
     uint8 dtim_period;
@@ -716,7 +715,7 @@ struct StartConfirm {
 // MLME-STOP.request (IEEE Std 802.11-2016, 6.3.12.2)
 
 struct StopRequest {
-    string ssid;
+    vector<uint8>:32 ssid;
 };
 
 // MLME-SETKEYS.request (IEEE Std 802.11-2016 6.3.19.1)

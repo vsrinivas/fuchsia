@@ -133,7 +133,8 @@ TEST(ElementWriter, Insert) {
     ElementWriter w(buf, sizeof(buf));
     EXPECT_EQ(0u, w.size());
 
-    EXPECT_TRUE(w.write<SsidElement>("test"));
+    const uint8_t ssid[] = {'t', 'e', 's', 't'};
+    EXPECT_TRUE(w.write<SsidElement>(ssid, sizeof(ssid)));
     EXPECT_EQ(6u, w.size());
 
     std::vector<SupportedRate> rates = {SupportedRate(1), SupportedRate(2), SupportedRate(3),
@@ -159,19 +160,20 @@ class Elements : public ::testing::Test {
 };
 
 TEST_F(Elements, Ssid) {
-    const char kSsid[] = "test ssid";
-    EXPECT_TRUE(SsidElement::Create(buf_, sizeof(buf_), &actual_, kSsid));
-    EXPECT_EQ(sizeof(SsidElement) + strlen(kSsid), actual_);
+    const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
+    EXPECT_TRUE(SsidElement::Create(buf_, sizeof(buf_), &actual_, ssid, sizeof(ssid)));
+    EXPECT_EQ(sizeof(SsidElement) + sizeof(ssid), actual_);
 
     auto element = FromBytes<SsidElement>(buf_, sizeof(buf_));
     ASSERT_NE(nullptr, element);
-    EXPECT_EQ(0, std::memcmp(kSsid, element->ssid, strlen(kSsid)));
+    EXPECT_EQ(0, std::memcmp(ssid, element->ssid, sizeof(ssid)));
 }
 
 TEST_F(Elements, SsidTooLong) {
-    const char kSsid[] = "this ssid is too long to be a proper ssid";
-    ASSERT_GT(strlen(kSsid), SsidElement::kMaxLen);
-    EXPECT_FALSE(SsidElement::Create(buf_, sizeof(buf_), &actual_, kSsid));
+    uint8_t ssid[33];
+    std::fill_n(ssid, sizeof(ssid), 'x');
+    ASSERT_GT(sizeof(ssid), SsidElement::kMaxLen);
+    EXPECT_FALSE(SsidElement::Create(buf_, sizeof(buf_), &actual_, ssid, sizeof(ssid)));
 }
 
 TEST_F(Elements, SupportedRates) {

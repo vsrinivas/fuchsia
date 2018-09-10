@@ -35,7 +35,7 @@ static constexpr wlan_channel_t kBssChannel = {
     .cbw = CBW20,
     .primary = 11,
 };
-static constexpr char kSsid[] = "Fuchsia-AP";
+static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's', 'i', 'a', '-', 'A', 'P'};;
 static constexpr SupportedRate kSupportedRates[] = {SupportedRate(2), SupportedRate(12), SupportedRate(24), SupportedRate(48), SupportedRate(54), SupportedRate(96), SupportedRate(108)};
 static constexpr SupportedRate kExtendedSupportedRates[] = {SupportedRate(1), SupportedRate(16), SupportedRate(36)};
 

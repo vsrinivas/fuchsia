@@ -22,7 +22,7 @@ struct Error {
 
 struct AP {
   vector<uint8> bssid;
-  string       ssid; // TODO(NET-698): ssid should be []byte for unicode handling
+  string       ssid;
   int8         rssi_dbm;
   bool         is_secure;
   bool         is_compatible; // with respect to Fuchsia

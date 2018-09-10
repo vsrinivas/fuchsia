@@ -4828,8 +4828,8 @@ void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
 }
 
 void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
-    brcmf_dbg(TEMP, "Enter, ssid %s, bssid %lx", req->selected_bss.ssid,
-              *(uint64_t*)(req->selected_bss.bssid) & 0xffffffffffff);
+    brcmf_dbg(TEMP, "Enter, ssid %.*s, bssid %lx", req->selected_bss.ssid.len,
+              req->selected_bss.ssid.data, *(uint64_t*)(req->selected_bss.bssid) & 0xffffffffffff);
 }
 
 void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {

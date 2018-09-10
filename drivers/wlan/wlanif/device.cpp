@@ -267,7 +267,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
     std::memcpy(impl_req.bssid, req.bssid.data(), ETH_ALEN);
 
     // ssid
-    CopySSID(req.ssid, impl_req.ssid);
+    CopySSID(req.ssid, &impl_req.ssid);
 
     // scan_type
     impl_req.scan_type = ConvertScanType(req.scan_type);
@@ -298,7 +298,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
         num_ssids = WLAN_SCAN_MAX_SSIDS;
     }
     for (size_t ndx = 0; ndx < num_ssids; ndx++) {
-        CopySSID((*req.ssid_list)[ndx], impl_req.ssid_list[ndx]);
+        CopySSID((*req.ssid_list)[ndx], &impl_req.ssid_list[ndx]);
     }
     impl_req.num_ssids = num_ssids;
 
@@ -443,7 +443,7 @@ void Device::StartReq(wlan_mlme::StartRequest req) {
     wlanif_start_req_t impl_req = {};
 
     // ssid
-    CopySSID(req.ssid, impl_req.ssid);
+    CopySSID(req.ssid, &impl_req.ssid);
 
     // bss_type
     impl_req.bss_type = ConvertBSSType(req.bss_type);
@@ -469,7 +469,7 @@ void Device::StopReq(wlan_mlme::StopRequest req) {
     wlanif_stop_req_t impl_req = {};
 
     // ssid
-    impl_req.ssid = req.ssid->c_str();
+    CopySSID(req.ssid, &impl_req.ssid);
 
     wlanif_impl_.ops->stop_req(wlanif_impl_.ctx, &impl_req);
 }

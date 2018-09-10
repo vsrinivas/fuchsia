@@ -27,7 +27,7 @@ pub struct EssInfo {
 pub fn convert_bss_description(bss: &BssDescription) -> BssInfo {
     BssInfo {
         bssid: bss.bssid.clone(),
-        ssid: bss.ssid.bytes().collect(),
+        ssid: bss.ssid.clone(),
         rx_dbm: get_rx_dbm(bss),
         channel: bss.chan.primary,
         protected: bss.rsn.is_some(),
@@ -91,7 +91,7 @@ mod tests {
     fn bss(_rssi_dbm: i8, _rcpi_dbmh: i16, compatible: bool) -> fidl_mlme::BssDescription {
         let ret = fidl_mlme::BssDescription {
             bssid: [0, 0, 0, 0, 0, 0],
-            ssid: String::new(),
+            ssid: vec![],
 
             bss_type: fidl_mlme::BssTypes::Infrastructure,
             beacon_period: 100,

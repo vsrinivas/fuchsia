@@ -82,7 +82,8 @@ TEST(ProbeRequest, Validate) {
     uint8_t buf[128];
     ElementWriter writer(buf, sizeof(buf));
 
-    ASSERT_TRUE(writer.write<SsidElement>("test ssid"));
+    const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
+    ASSERT_TRUE(writer.write<SsidElement>(ssid, sizeof(ssid)));
 
     std::vector<SupportedRate> rates{SupportedRate(2), SupportedRate(4), SupportedRate(11),
                                      SupportedRate(22)};
@@ -100,7 +101,8 @@ TEST(ProbeRequest, OutOfOrderElements) {
                                      SupportedRate(22)};
     ASSERT_TRUE(writer.write<SupportedRatesElement>(rates));
 
-    ASSERT_TRUE(writer.write<SsidElement>("test ssid"));
+    const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
+    ASSERT_TRUE(writer.write<SsidElement>(ssid, sizeof(ssid)));
 
     auto probe_request = FromBytes<ProbeRequest>(buf, writer.size());
     EXPECT_FALSE(probe_request->Validate(writer.size()));
@@ -110,7 +112,8 @@ TEST(ProbeRequest, InvalidElement) {
     uint8_t buf[128];
     ElementWriter writer(buf, sizeof(buf));
 
-    ASSERT_TRUE(writer.write<SsidElement>("test ssid"));
+    const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
+    ASSERT_TRUE(writer.write<SsidElement>(ssid, sizeof(ssid)));
     ASSERT_TRUE(writer.write<CfParamSetElement>(1, 2, 3, 4));
 
     auto probe_request = FromBytes<ProbeRequest>(buf, writer.size());

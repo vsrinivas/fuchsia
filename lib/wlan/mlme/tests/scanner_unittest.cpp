@@ -74,7 +74,7 @@ class ScannerTest : public ::testing::Test {
         req_->channel_list.resize(0);
         req_->channel_list->push_back(1);
         req_->max_channel_time = 1u;
-        req_->ssid = "";
+        req_->ssid.resize(0);
     }
 
     zx_status_t Start() {
@@ -205,7 +205,10 @@ TEST_F(ScannerTest, ScanResponse) {
 
     auto bss = ExpectScanResult().bss;
     EXPECT_EQ(0, std::memcmp(kBeacon + 16, bss.bssid.data(), 6));
-    EXPECT_STREQ("test ssid", bss.ssid.get().c_str());
+    EXPECT_EQ(bss.ssid->size(), static_cast<size_t>(9));
+
+    const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
+    EXPECT_EQ(0, std::memcmp(ssid, bss.ssid->data(), sizeof(ssid)));
     EXPECT_EQ(wlan_mlme::BSSTypes::INFRASTRUCTURE, bss.bss_type);
     EXPECT_EQ(100u, bss.beacon_period);
     EXPECT_EQ(1024u, bss.timestamp);

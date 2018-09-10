@@ -82,9 +82,9 @@ bool BeaconSender::ShouldSendProbeResponse(const MgmtFrameView<ProbeRequest>& pr
             }
 
             // Send ProbeResponse if request was targeted towards this BSS.
-            size_t ssid_len = strlen(req_.ssid->data());
+            size_t ssid_len = req_.ssid->size();
             bool to_bss =
-                hdr->len == ssid_len && strncmp(ie->ssid, req_.ssid->data(), ssid_len) == 0;
+                (hdr->len == ssid_len) && (memcmp(ie->ssid, req_.ssid->data(), ssid_len) == 0);
             return to_bss;
         }
         default:
@@ -236,9 +236,10 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
 }
 
 zx_status_t BeaconSender::WriteSsid(ElementWriter* w) {
-    if (!w->write<SsidElement>(req_.ssid->data())) {
-        errorf("[bcn-sender] [%s] could not write ssid \"%s\" to Beacon\n",
-               bss_->bssid().ToString().c_str(), req_.ssid->data());
+    if (!w->write<SsidElement>(req_.ssid->data(), req_.ssid->size())) {
+        errorf("[bcn-sender] [%s] could not write ssid \"%.*s\" to Beacon\n",
+               bss_->bssid().ToString().c_str(), static_cast<int>(req_.ssid->size()),
+               req_.ssid->data());
         return ZX_ERR_IO;
     }
     return ZX_OK;

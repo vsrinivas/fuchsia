@@ -236,12 +236,12 @@ impl<T: Tokens> State<T> {
             {
                 Status {
                     connected_to: None,
-                    connecting_to: Some(cmd.bss.ssid.as_bytes().to_vec()),
+                    connecting_to: Some(cmd.bss.ssid.clone()),
                 }
             },
             State::Associated { bss, link_state: LinkState::EstablishingRsna(..), .. } => Status {
                 connected_to: None,
-                connecting_to: Some(bss.ssid.as_bytes().to_vec()),
+                connecting_to: Some(bss.ssid.clone()),
             },
             State::Associated { bss, link_state: LinkState::LinkUp(..), .. } => Status {
                 connected_to: Some(convert_bss_description(bss)),

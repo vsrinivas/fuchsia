@@ -67,7 +67,8 @@ void InfraBss::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
     }
 
     debugbss("[infra-bss] [%s] starting BSS\n", bssid_.ToString().c_str());
-    debugbss("    SSID: %s\n", req.body()->ssid->data());
+    debugbss("    SSID: %.*s\n", static_cast<int>(req.body()->ssid->size()),
+             req.body()->ssid->data());
     debugbss("    Beacon Period: %u\n", req.body()->beacon_period);
     debugbss("    DTIM Period: %u\n", req.body()->dtim_period);
     debugbss("    Channel: %u\n", req.body()->channel);

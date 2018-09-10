@@ -35,17 +35,16 @@ ElementWriter::ElementWriter(uint8_t* buf, size_t len) : buf_(buf), len_(len) {}
 
 const size_t SsidElement::kMaxLen;
 
-bool SsidElement::Create(void* buf, size_t len, size_t* actual, const char* ssid) {
-    size_t ssidlen = 0;
-    if (ssid != nullptr) { ssidlen = strnlen(ssid, kMaxLen + 1); }
-    if (ssidlen == kMaxLen + 1) return false;
-    size_t elem_size = sizeof(SsidElement) + ssidlen;
-    if (elem_size > len) return false;
+bool SsidElement::Create(void* buf, size_t len, size_t* actual, const uint8_t* ssid,
+                         size_t ssid_len) {
+    if (ssid_len > kMaxLen) { return false; }
+    size_t elem_size = sizeof(SsidElement) + ssid_len;
+    if (elem_size > len) { return false; }
 
     auto elem = static_cast<SsidElement*>(buf);
     elem->hdr.id = element_id::kSsid;
-    elem->hdr.len = ssidlen;
-    std::memcpy(elem->ssid, ssid, ssidlen);
+    elem->hdr.len = ssid_len;
+    std::memcpy(elem->ssid, ssid, ssid_len);
     *actual = elem_size;
     return true;
 }

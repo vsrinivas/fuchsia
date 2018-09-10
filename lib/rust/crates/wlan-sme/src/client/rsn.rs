@@ -46,7 +46,7 @@ pub fn get_rsna(device_info: &DeviceInfo, password: &[u8], bss: &BssDescription)
     let a_rsne = rsne::from_bytes(&a_rsne_bytes[..]).to_full_result()
         .map_err(|e| format_err!("invalid RSNE {:?}: {:?}", &a_rsne_bytes[..], e))?;
     let s_rsne = derive_s_rsne(&a_rsne)?;
-    let esssa = make_ess_sa(bss.ssid.as_bytes(), &password[..], device_info.addr,
+    let esssa = make_ess_sa(&bss.ssid[..], &password[..], device_info.addr,
                             s_rsne.clone(), bss.bssid, a_rsne)
         .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;
     let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;

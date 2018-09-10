@@ -105,9 +105,7 @@ impl<T: Tokens> ApSme<T> {
                 self.user_sink.send(UserEvent::StopComplete { token });
             },
             State::Started { ssid } => {
-                let req = fidl_mlme::StopRequest {
-                    ssid: String::from_utf8_lossy(&ssid).to_string(),
-                };
+                let req = fidl_mlme::StopRequest { ssid: ssid.clone() };
                 self.mlme_sink.send(MlmeRequest::StopAp(req));
                 // Currently, MLME doesn't send any response back. We simply assume
                 // that the stop request succeeded immediately
@@ -126,7 +124,7 @@ impl<T: Tokens> super::Station for ApSme<T> {
 
 fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
     fidl_mlme::StartRequest {
-        ssid: String::from_utf8_lossy(&config.ssid).to_string(),
+        ssid: config.ssid.clone(),
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,

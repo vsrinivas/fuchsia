@@ -22,11 +22,16 @@ enum {
 
 #define WLAN_SCAN_MAX_SSIDS 32
 
+typedef struct wlanif_ssid {
+    uint8_t len;
+    uint8_t data[WLAN_MAX_SSID_LEN];
+} wlanif_ssid_t;
+
 typedef struct wlanif_scan_req {
     uint64_t txn_id;
     uint8_t bss_type; // WLAN_BSS_TYPE_*
     uint8_t bssid[ETH_ALEN];
-    char ssid[WLAN_MAX_SSID_LEN + 1];
+    wlanif_ssid_t ssid;
     uint8_t scan_type; // WLAN_SCAN_TYPE_*
     uint32_t probe_delay;
     size_t num_channels;
@@ -34,7 +39,7 @@ typedef struct wlanif_scan_req {
     uint32_t min_channel_time;
     uint32_t max_channel_time;
     size_t num_ssids;
-    char ssid_list[WLAN_SCAN_MAX_SSIDS][WLAN_MAX_SSID_LEN + 1];
+    wlanif_ssid_t ssid_list[WLAN_SCAN_MAX_SSIDS];
 } wlanif_scan_req_t;
 
 // IEEE Std 802.11-2016, 9.4.2.25.1
@@ -42,7 +47,7 @@ typedef struct wlanif_scan_req {
 
 typedef struct wlanif_bss_description {
     uint8_t bssid[ETH_ALEN];
-    char ssid[WLAN_MAX_SSID_LEN + 1];
+    wlanif_ssid_t ssid;
     uint8_t bss_type; // WLAN_BSS_TYPE_*
     uint32_t beacon_period;
     uint32_t dtim_period;
@@ -166,7 +171,7 @@ typedef struct wlanif_assoc_req {
 typedef struct wlanif_assoc_ind {
     uint8_t peer_sta_address[ETH_ALEN];
     uint16_t listen_interval;
-    char ssid[WLAN_MAX_SSID_LEN + 1];
+    wlanif_ssid_t ssid;
     size_t rsne_len;
     uint8_t rsne[WLAN_RSNE_MAX_LEN];
 } wlanif_assoc_ind_t;
@@ -182,7 +187,7 @@ typedef struct wlanif_reset_req {
 } wlanif_reset_req_t;
 
 typedef struct wlanif_start_req {
-    char ssid[WLAN_MAX_SSID_LEN + 1];
+    wlanif_ssid_t ssid;
     uint8_t bss_type; // WLAN_BSS_TYPE_*
     uint32_t beacon_period;
     uint32_t dtim_period;
@@ -192,7 +197,7 @@ typedef struct wlanif_start_req {
 } wlanif_start_req_t;
 
 typedef struct wlanif_stop_req {
-    const char* ssid;
+    wlanif_ssid_t ssid;
 } wlanif_stop_req_t;
 
 typedef struct set_key_descriptor {

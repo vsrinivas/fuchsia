@@ -89,7 +89,7 @@ impl State {
 }
 
 fn send_beacon(frame_buf: &mut Vec<u8>, channel: &wlan_mlme::WlanChan, bss_id: &[u8; 6],
-               ssid: &str, proxy: &wlantap::WlantapPhyProxy)
+               ssid: &[u8], proxy: &wlantap::WlantapPhyProxy)
     -> Result<(), failure::Error>
 {
     frame_buf.clear();
@@ -112,7 +112,7 @@ fn send_beacon(frame_buf: &mut Vec<u8>, channel: &wlan_mlme::WlanChan, bss_id: &
                 beacon_interval: 100,
                 capability_info: mac_frames::CapabilityInfo(0),
             })?
-        .ssid(ssid.as_bytes())?
+        .ssid(ssid)?
         .supported_rates(&[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?
         .dsss_parameter_set(channel.primary)?;
 
@@ -253,7 +253,7 @@ fn main() -> Result<(), failure::Error> {
             if state.current_channel.primary == 6 {
                 eprintln!("sending beacon!");
                 send_beacon(&mut state.frame_buf, &state.current_channel,
-                         &BSSID, "fakenet", &proxy).unwrap();
+                         &BSSID, "fakenet".as_bytes(), &proxy).unwrap();
             }
             }
     };
@@ -270,11 +270,11 @@ mod tests {
     };
 
     const BSS_FOO: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f];
-    const SSID_FOO: &str = "foo";
+    const SSID_FOO: &[u8] = b"foo";
     const BSS_BAR: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x72];
-    const SSID_BAR: &str = "bar";
+    const SSID_BAR: &[u8] = b"bar";
     const BSS_BAZ: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x7a];
-    const SSID_BAZ: &str = "baz";
+    const SSID_BAZ: &[u8] = b"baz";
 
     #[test]
     fn simulate_scan() {
@@ -293,9 +293,9 @@ mod tests {
             .into_iter().map(|ap| (ap.ssid, ap.bssid)).collect();
         aps.sort();
         let mut expected_aps = [
-            ( SSID_FOO.to_string(), BSS_FOO.to_vec() ),
-            ( SSID_BAR.to_string(), BSS_BAR.to_vec() ),
-            ( SSID_BAZ.to_string(), BSS_BAZ.to_vec() ),
+            ( String::from_utf8_lossy(SSID_FOO).to_string(), BSS_FOO.to_vec() ),
+            ( String::from_utf8_lossy(SSID_BAR).to_string(), BSS_BAR.to_vec() ),
+            ( String::from_utf8_lossy(SSID_BAZ).to_string(), BSS_BAZ.to_vec() ),
         ];
         expected_aps.sort();
         assert_eq!(&expected_aps, &aps[..]);

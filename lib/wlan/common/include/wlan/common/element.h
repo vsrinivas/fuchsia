@@ -137,12 +137,12 @@ class ElementWriter {
 
 // IEEE Std 802.11-2016, 9.4.2.2
 struct SsidElement : public Element<SsidElement, element_id::kSsid> {
-    static bool Create(void* buf, size_t len, size_t* actual, const char* ssid);
+    static bool Create(void* buf, size_t len, size_t* actual, const uint8_t* ssid, size_t ssid_len);
     static const size_t kMinLen = 0;
     static const size_t kMaxLen = 32;
 
     ElementHeader hdr;
-    char ssid[];
+    uint8_t ssid[];
 } __PACKED;
 
 // IEEE 802.11-2016 9.4.2.3.
