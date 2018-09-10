@@ -405,25 +405,23 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
     const fidl::StringPtr& user_shell_url,
     fuchsia::modular::AppConfig story_shell) {
   // NOTE: There is an awkward service exchange here between
-  // fuchsia::modular::UserIntelligenceProvider, AgentRunner, StoryProviderImpl,
-  // FocusHandler, VisibleStoriesHandler.
+  // UserIntelligenceProvider, AgentRunner, StoryProviderImpl, FocusHandler,
+  // VisibleStoriesHandler.
   //
-  // AgentRunner needs a fuchsia::modular::UserIntelligenceProvider to expose
-  // services from Maxwell through its GetIntelligenceServices() method.
-  // Initializing the Maxwell process (through
-  // fuchsia::modular::UserIntelligenceProviderFactory) requires a
-  // fuchsia::modular::ComponentContext. fuchsia::modular::ComponentContext
-  // requires an AgentRunner, which creates a circular dependency.
+  // AgentRunner needs a UserIntelligenceProvider to expose services from
+  // Maxwell through its GetIntelligenceServices() method.  Initializing the
+  // Maxwell process (through UserIntelligenceProviderFactory) requires a
+  // ComponentContext. ComponentContext requires an AgentRunner, which creates
+  // a circular dependency.
   //
-  // Because of FIDL late bindings, we can get around this by creating
-  // a new InterfaceRequest here (|intelligence_provider_request|),
-  // making the InterfacePtr a valid proxy to be passed to AgentRunner
-  // and StoryProviderImpl, even though it won't be bound to a real
-  // implementation (provided by Maxwell) until later. It works, but
-  // it's not a good pattern.
+  // Because of FIDL late bindings, we can get around this by creating a new
+  // InterfaceRequest here (|intelligence_provider_request|), making the
+  // InterfacePtr a valid proxy to be passed to AgentRunner and
+  // StoryProviderImpl, even though it won't be bound to a real implementation
+  // (provided by Maxwell) until later. It works, but it's not a good pattern.
   //
   // A similar relationship holds between FocusHandler and
-  // fuchsia::modular::UserIntelligenceProvider.
+  // UserIntelligenceProvider.
   auto intelligence_provider_request = user_intelligence_provider_.NewRequest();
   AtEnd(Reset(&user_intelligence_provider_));
 
