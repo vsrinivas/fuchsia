@@ -347,6 +347,7 @@ private:
 
     void OnBlankLineRequiringNode() {
         blank_line_requiring_node_ = true;
+        blank_line_respecting_node_ = true;
     }
 
     void OnBlankLineRespectingNode() {

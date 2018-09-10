@@ -26,6 +26,8 @@ const uint32 y = 9021;
 // My wonderful constant
 const uint32 z = 9021;
 
+// Comment requiring space
+
 enum Enum2 : uint32 {
     enum_0 = 0; // More comments
 };
