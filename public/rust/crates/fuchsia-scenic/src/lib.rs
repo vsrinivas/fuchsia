@@ -384,6 +384,12 @@ impl EntityNode {
             ResourceArgs::EntityNode(args),
         )))
     }
+
+    pub fn export_as_request(&self) -> EventPair {
+        let (mine, theirs) = EventPair::create().unwrap();
+        self.enqueue(cmd::export_resource(self.id(), mine));
+        theirs
+    }
 }
 
 impl Deref for EntityNode {

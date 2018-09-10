@@ -203,7 +203,7 @@ impl Executor {
                         // TODO: loop but don't starve
                         if let Some(task) = self.inner.ready_tasks.try_pop() {
                             let waker = local_waker_ref_from_nonlocal(&task);
-                            let mut cx = &mut task::Context::new(&waker, executor_two);
+                            let cx = &mut task::Context::new(&waker, executor_two);
                             task.future.try_poll(cx);
                         }
                     }
