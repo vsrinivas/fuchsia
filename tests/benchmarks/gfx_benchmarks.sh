@@ -21,20 +21,21 @@ bench () {
   RENDERER_PARAMS=$3
   # Example of using runbench_exec:
   # runbench_exec
-  #   "${OUT_DIR}/${BENCHMARK}.json"    # Output file path.
-  #   "${RUN_SCENIC_BENCHMARK}"         # Scenic benchmark runner, followed by
-  #                                     #   its arguments.
-  #   "${OUT_DIR}"                      # Output directory.
-  #   "${OUT_DIR}/${BENCHMARK}.json"    # Output file path.
-  #   "${BENCHMARK}"                    # Label for benchmark.
-  #   "test_binary"                     # Command that is being benchmarked.
-  #   --unshadowed --clipping_disabled  # Arguments to set_renderer_params.
+  #   "${OUT_DIR}/${BENCHMARK}.json"               # Output file path.
+  #   "${RUN_SCENIC_BENCHMARK}"                    # Scenic benchmark runner, followed by
+  #                                                #   its arguments.
+  #   --out_dir "${OUT_DIR}"                       # Output directory.
+  #   --out_file "${OUT_DIR}/${BENCHMARK}.json"    # Output file path.
+  #   --benchmark_label "${BENCHMARK}"             # Label for benchmark.
+  #   --cmd "test_binary"                          # Command that is being benchmarked.
+  #   --unshadowed --clipping_disabled             # Arguments to set_renderer_params.
   runbench_exec "${OUT_DIR}/${BENCHMARK}.json"                           \
       "/pkgfs/packages/scenic_benchmarks/0/bin/run_scenic_benchmark.sh"  \
-      "${OUT_DIR}"                                                       \
-      "${OUT_DIR}/${BENCHMARK}.json"                                     \
-      "${BENCHMARK}"                                                     \
-      "${COMMAND}" ${RENDERER_PARAMS}
+      --out_dir "${OUT_DIR}"                                             \
+      --out_file "${OUT_DIR}/${BENCHMARK}.json"                          \
+      --benchmark_label "${BENCHMARK}"                                   \
+      --cmd "${COMMAND}"                                                 \
+      ${RENDERER_PARAMS}
 }
 
 #
