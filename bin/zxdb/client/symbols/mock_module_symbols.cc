@@ -18,6 +18,10 @@ void MockModuleSymbols::AddSymbol(const std::string& name,
   symbols_[name] = std::move(addrs);
 }
 
+void MockModuleSymbols::AddLineDetails(uint64_t address, LineDetails details) {
+  lines_[address] = std::move(details);
+}
+
 ModuleSymbolStatus MockModuleSymbols::GetStatus() const {
   ModuleSymbolStatus status;
   status.name = local_file_name_;
@@ -28,13 +32,18 @@ ModuleSymbolStatus MockModuleSymbols::GetStatus() const {
 
 Location MockModuleSymbols::LocationForAddress(
     const SymbolContext& symbol_context, uint64_t absolute_address) const {
-  // Currently only name -> address mappings are supported by this mock.
+  // Not yet supported by this mock.
   return Location(Location::State::kAddress, absolute_address);
 }
 
 LineDetails MockModuleSymbols::LineDetailsForAddress(
-    const SymbolContext& symbol_context, uint64_t address) const {
-  return LineDetails();
+    const SymbolContext& symbol_context, uint64_t absolute_address) const {
+  // This mock assumes all addresses are absolute so the symbol context is not
+  // used.
+  auto found = lines_.find(absolute_address);
+  if (found == lines_.end())
+    return LineDetails();
+  return found->second;
 }
 
 std::vector<uint64_t> MockModuleSymbols::AddressesForFunction(

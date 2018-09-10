@@ -49,8 +49,8 @@ class StepThreadController : public ThreadController {
 
   // Range of addresses we're currently stepping in. This may change when we're
   // stepping over source lines and wind up in a region with no line numbers.
-  // It will be empty when stepping by instructions.
-  AddressRange range_;
+  // It will be empty when stepping by instruction.
+  AddressRange current_range_;
 };
 
 }  // namespace zxdb

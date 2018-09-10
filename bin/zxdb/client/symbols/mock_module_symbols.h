@@ -19,6 +19,10 @@ class MockModuleSymbols : public ModuleSymbols {
   // Adds a mock mapping from the given name to the addresses.
   void AddSymbol(const std::string& name, std::vector<uint64_t> addrs);
 
+  // Adds a mock mapping from address to line details. This matches an exact
+  // address only, not a range.
+  void AddLineDetails(uint64_t absolute_address, LineDetails details);
+
   // ModuleSymbols implementation.
   ModuleSymbolStatus GetStatus() const override;
   Location LocationForAddress(const SymbolContext& symbol_context,
@@ -38,6 +42,9 @@ class MockModuleSymbols : public ModuleSymbols {
 
   // Maps manually-added symbols to their addresses.
   std::map<std::string, std::vector<uint64_t>> symbols_;
+
+  // Maps manually-added addresses to line details.
+  std::map<uint64_t, LineDetails> lines_;
 };
 
 }  // namespace zxdb

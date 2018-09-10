@@ -28,6 +28,8 @@ class LineDetails {
   LineDetails(FileLine fl);
   ~LineDetails();
 
+  bool is_valid() const { return !entries_.empty(); }
+
   const FileLine& file_line() const { return file_line_; }
 
   const std::vector<LineEntry>& entries() const { return entries_; }

@@ -7,9 +7,11 @@
 #include <memory>
 
 #include "garnet/bin/zxdb/client/remote_api_test.h"
+#include "garnet/bin/zxdb/client/symbols/system_symbols.h"
 
 namespace zxdb {
 
+class MockModuleSymbols;
 class Process;
 class Thread;
 
@@ -34,6 +36,15 @@ class ThreadControllerTest : public RemoteAPITest {
   uint32_t last_breakpoint_id() const { return last_breakpoint_id_; }
   uint64_t last_breakpoint_address() const { return last_breakpoint_address_; }
 
+  // Load address that the mock module is loaded at. Addresses you want to
+  // support symbol lookup for need to be larger than this.
+  static const uint64_t kModuleAddress;
+
+  // The mock module symbols. Addresses above kModuleAddress will be handled
+  // by this mock. Test code should inject the responses it wants into this
+  // mock.
+  MockModuleSymbols* module_symbols() const { return module_symbols_; }
+
  private:
   class ControllerTestSink;
   friend ControllerTestSink;
@@ -50,6 +61,14 @@ class ThreadControllerTest : public RemoteAPITest {
   int remove_breakpoint_count_ = 0;
   uint32_t last_breakpoint_id_ = 0;
   uint64_t last_breakpoint_address_ = 0;
+
+  // Non-owning (the pointer is owned by the SystemSymbols and held alive
+  // because of our ModuleRef below).
+  MockModuleSymbols* module_symbols_ = nullptr;
+
+  // This reference ensures the module_symbols_ pointer above is kept alive
+  // for the duration of the test.
+  fxl::RefPtr<SystemSymbols::ModuleRef> symbol_module_ref_;
 };
 
 }  // namespace zxdb

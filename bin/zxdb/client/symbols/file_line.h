@@ -31,4 +31,7 @@ class FileLine {
 // Comparison function for use in set and map.
 bool operator<(const FileLine& a, const FileLine& b);
 
+bool operator==(const FileLine& a, const FileLine& b);
+bool operator!=(const FileLine& a, const FileLine& b);
+
 }  // namespace zxdb

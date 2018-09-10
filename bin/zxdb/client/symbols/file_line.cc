@@ -23,4 +23,12 @@ bool operator<(const FileLine& a, const FileLine& b) {
   return a.file() < b.file();
 }
 
+bool operator==(const FileLine& a, const FileLine& b) {
+  return a.line() == b.line() && a.file() == b.file();
+}
+
+bool operator!=(const FileLine& a, const FileLine& b) {
+  return !operator==(a, b);
+}
+
 }  // namespace zxdb
