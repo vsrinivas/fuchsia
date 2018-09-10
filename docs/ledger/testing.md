@@ -25,8 +25,19 @@ need to set up a test instance and set the credentials to access it in the
 execution environment.
 
 First, ensure you have an instance of the server configured and take note of the
-configuration params (credentials file, server ID and API key) - in order to
-obtain those, follow the [server configuration] instructions.
+configuration params (service account credentials file and API key) - in order
+to obtain those, follow the [server configuration] instructions.
+
+Then, create a json sync credentials file file of the following format:
+```javascript
+{
+  "api-key": "<API_KEY>",
+  "service-account": <SERVICE_ACCOUNT_FILE_CONTENT>
+}
+```
+where <API_KEY> is the api key retrieved from the firebase console, and
+<SERVICE_ACCOUNT_FILE_CONTENT> is the content of the service account credentials
+file.
 
 Then, put the sync credentials file whenever you like, and set the full path to
 it in the GN variable:
@@ -129,8 +140,7 @@ real server.
 You can run the tests from the host as follows:
 
 ```sh
-fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/e2e_sync.cmx \
-  --api-key=<api-key>
+fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/e2e_sync.cmx"
 ```
 
 ## See also

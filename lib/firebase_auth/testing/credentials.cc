@@ -44,25 +44,31 @@ Credentials::Credentials(std::string project_id, std::string client_email,
 std::unique_ptr<Credentials> Credentials::Parse(fxl::StringView json) {
   rapidjson::Document document;
   document.Parse(json.data(), json.size());
-  static auto service_account_schema =
-      json_schema::InitSchema(kServiceAccountConfigurationSchema);
 
   if (document.HasParseError() || !document.IsObject()) {
     FXL_LOG(ERROR) << "Json file is incorrect: " << json;
     return nullptr;
   }
 
-  if (!json_schema::ValidateSchema(document, *service_account_schema)) {
+  return Parse(document);
+}
+
+std::unique_ptr<Credentials> Credentials::Parse(const rapidjson::Value& json) {
+  static auto service_account_schema =
+      json_schema::InitSchema(kServiceAccountConfigurationSchema);
+
+  FXL_DCHECK(json.IsObject());
+  if (!json_schema::ValidateSchema(json, *service_account_schema)) {
     return nullptr;
   }
 
-  auto project_id = document["project_id"].GetString();
-  auto client_email = document["client_email"].GetString();
-  auto client_id = document["client_id"].GetString();
+  auto project_id = json["project_id"].GetString();
+  auto client_email = json["client_email"].GetString();
+  auto client_id = json["client_id"].GetString();
 
   bssl::UniquePtr<BIO> bio(
-      BIO_new_mem_buf(document["private_key"].GetString(),
-                      document["private_key"].GetStringLength()));
+      BIO_new_mem_buf(json["private_key"].GetString(),
+                      json["private_key"].GetStringLength()));
   bssl::UniquePtr<EVP_PKEY> private_key(
       PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr));
 

@@ -30,7 +30,11 @@ service cloud.firestore {
 In order to run tests (end-to-end sync tests, sync benchmarks, validation tests)
 against a Firestore instance, you need the following:
 
- - **server ID** - this is the ID of your Firestore instance
  - **API key** - available in `Project Settings / General`
  - **credentials file** for a service account - available in `Project Settings /
      Service accounts`. Click on "Generate new private key".
+
+See [cloud sync set-up instructions] for instructions on how to use this
+information to run these tests.
+
+[cloud sync set-up instructions]: /docs/ledger/testing.md#cloud-sync

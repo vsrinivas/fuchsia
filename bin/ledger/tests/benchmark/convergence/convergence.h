@@ -32,7 +32,6 @@ namespace ledger {
 //   --entry-count=<int> the number of entries to be put by each device
 //   --value-size=<int> the size of a single value in bytes
 //   --device-count=<int> number of devices writing to the same page
-//   --api-key=<string> the API key used to access the Firestore instance
 //   --credentials-path=<file path> Firestore service account credentials
 class ConvergenceBenchmark : public PageWatcher {
  public:

@@ -67,8 +67,7 @@ configure the build environment and obtain the sync parameters needed below.
 Then, run the selected benchmark as follows:
 
 ```sh
-trace record --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/sync.tspec \
-  --append-args=--api-key=<api key>
+trace record --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/sync.tspec
 ```
 
 ### A note regarding benchmark apps

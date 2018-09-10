@@ -34,7 +34,6 @@ namespace ledger {
 //   --entries-per-change=<int> number of entries added in the transaction
 //   --refs=(on|off) reference strategy: on to put values as references, off to
 //     put them as FIDL arrays.
-//   --api-key=<string> the API key used to access the Firestore instance
 //   --credentials-path=<file path> Firestore service account credentials
 class SyncBenchmark : public PageWatcher {
  public:

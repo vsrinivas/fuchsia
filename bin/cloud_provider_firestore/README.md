@@ -15,13 +15,12 @@ fx run-test cloud_provider_firestore_unittests
 
 In order to run the [validation tests], follow the [cloud sync set-up
 instructions] to set up a Firestore instance, configure the build environment
-and obtain the sync parameters needed below.
+and obtain the sync parameters.
 
 Then, run the validation tests as follows:
 
 ```sh
-fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/validation_firestore.cmx \
-  --api-key=<api-key>
+fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/validation_firestore.cmx"
 ```
 
 

@@ -81,11 +81,11 @@ source_set("service_account") {
   public_deps = [
     "//garnet/public/lib/fxl",
     "//third_party/boringssl",
+    "//third_party/rapidjson",
   ]
 
   deps = [
     ":json_schema",
-    "//third_party/rapidjson",
   ]
 }
 

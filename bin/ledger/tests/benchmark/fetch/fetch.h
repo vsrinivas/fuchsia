@@ -27,7 +27,6 @@ namespace ledger {
 //   --value-size=<int> the size of a single value in bytes
 //   --part-size=<int> the size of the part to be read with one Fetch
 //   call. If equal to zero, the whole value will be read.
-//   --api-key=<string> the API key used to access the Firestore instance
 //   --credentials-path=<file path> Firestore service account credentials
 class FetchBenchmark : public SyncWatcher {
  public:

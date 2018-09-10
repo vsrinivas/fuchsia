@@ -8,9 +8,24 @@
 
 #include <lib/fxl/files/file.h>
 
+#include "peridot/lib/firebase_auth/testing/credentials.h"
+#include "peridot/lib/firebase_auth/testing/json_schema.h"
+
 namespace {
 
-constexpr fxl::StringView kApiKeyFlag = "api-key";
+constexpr fxl::StringView kSyncParamsSchema = R"({
+  "type": "object",
+  "properties": {
+    "api-key": {
+      "type": "string"
+    },
+    "service-account": {
+      "type": "object"
+    }
+  },
+  "required": ["api-key", "service-account"]
+})";
+
 constexpr fxl::StringView kCredentialsPathFlag = "credentials-path";
 constexpr fxl::StringView kGnCredentialsPathArg =
     "ledger_sync_credentials_file";
@@ -18,16 +33,19 @@ constexpr fxl::StringView kCredentialsDefaultPath =
     "/pkg/data/sync_credentials.json";
 
 void WarnIncorrectSyncParams() {
-  std::cerr << "Missing one or more of the sync parameters." << std::endl;
+  std::cerr << "Missing the sync parameters." << std::endl;
   std::cerr << "This binary needs an ID of a configured Firestore instance "
                "to run along with access credentials. "
-               "If you're running it from a .tspec file, make sure "
+            << std::endl;
+  std::cerr << "Please set the GN argument " << kGnCredentialsPathArg
+            << " at build time to embed the credentials in the binary "
+            << " or pass " << kCredentialsPathFlag
+            << " at run time to override the default location" << std::endl;
+  std::cerr << "If you're running it from a .tspec file, make sure "
                "you add --append-args=\""
-            << "--" << kApiKeyFlag << "=<string>,"
-            << "\"." << std::endl;
-  std::cerr << "You can also pass the "
-            << "--" << kCredentialsPathFlag << "=<file path>"
-            << "if the access credentials are not embedded in the binary "
+               "--"
+            << kCredentialsPathFlag << "=<file path>" << std::endl;
+  std::cerr << "if the access credentials are not embedded in the binary "
             << "at build." << std::endl;
 }
 
@@ -53,20 +71,12 @@ SyncParams& SyncParams::operator=(const SyncParams& other) {
 
 std::string GetSyncParamsUsage() {
   std::ostringstream result;
-  result << " --" << kApiKeyFlag << "=<string>";
   result << " [--" << kCredentialsPathFlag << "=<file path>]";
   return result.str();
 }
 
 bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
                                     SyncParams* sync_params) {
-  bool ret = command_line.GetOptionValue(kApiKeyFlag.ToString(),
-                                         &sync_params->api_key);
-  if (!ret) {
-    WarnIncorrectSyncParams();
-    return false;
-  }
-
   std::string credentials;
   std::string credentials_path = kCredentialsDefaultPath.ToString();
   if (!files::ReadFileToString(credentials_path, &credentials)) {
@@ -75,10 +85,7 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
 
     if (!command_line.GetOptionValue(kCredentialsPathFlag.ToString(),
                                      &credentials_path)) {
-      std::cerr << "Please set the GN argument " << kGnCredentialsPathArg
-                << " at build time to embed the credentials in the binary "
-                << " or pass " << kCredentialsPathFlag
-                << " at run time to override the default location" << std::endl;
+      WarnIncorrectSyncParams();
       return false;
     }
 
@@ -87,7 +94,23 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
       return false;
     }
   }
-  sync_params->credentials = service_account::Credentials::Parse(credentials);
+
+  rapidjson::Document document;
+  document.Parse(credentials);
+  if (document.HasParseError()) {
+    std::cerr << "Cannot parse credentials at " << credentials_path
+              << std::endl;
+    return false;
+  }
+  auto sync_params_schema =  json_schema::InitSchema(kSyncParamsSchema);
+  if (!json_schema::ValidateSchema(document, *sync_params_schema)) {
+    std::cerr << "Cannot parse credentials at " << credentials_path
+              << std::endl;
+    return false;
+  }
+
+  sync_params->api_key = document["api-key"].GetString();
+  sync_params->credentials = service_account::Credentials::Parse(document["service-account"]);
   if (!sync_params->credentials) {
     std::cerr << "Cannot parse credentials at " << credentials_path
               << std::endl;
@@ -97,7 +120,7 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
 }
 
 std::set<std::string> GetSyncParamFlags() {
-  return {kApiKeyFlag.ToString(), kCredentialsPathFlag.ToString()};
+  return {kCredentialsPathFlag.ToString()};
 }
 
 }  // namespace ledger
