@@ -60,6 +60,11 @@ inline bool operator!=(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
   return !(lhs == rhs);
 }
 
+inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
+                         {{ .Namespace }}::{{ .Name }}* result) {
+  return value.Clone(result);
+}
+
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
 
@@ -203,7 +208,7 @@ struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {
-  return value.Clone(result);
+  return {{ .Namespace }}::Clone(value, result);
 }
 {{- end }}
 `

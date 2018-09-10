@@ -11,6 +11,12 @@ enum class {{ .Name }} : {{ .Type }} {
   {{ .Name }} = {{ .Value }},
   {{- end }}
 };
+
+inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
+                         {{ .Namespace }}::{{ .Name }}* result) {
+  *result = value;
+  return ZX_OK;
+}
 {{ end }}
 
 {{- define "EnumTraits" }}
@@ -30,8 +36,7 @@ struct CodingTraits<{{ .Namespace }}::{{ .Name }}> {
 
 inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
                          {{ .Namespace }}::{{ .Name }}* result) {
-  *result = value;
-  return ZX_OK;
+  return {{ .Namespace }}::Clone(value, result);
 }
 {{- end }}
 `

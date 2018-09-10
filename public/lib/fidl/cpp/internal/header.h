@@ -37,4 +37,9 @@
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fidl/cpp/vector.h"
 
+// clone.h must be imported before any of the generated Clone methods are
+// defined, so that calls to Clone in clone.h are referencing the ADL
+// implementation and are not ambiguous.
+#include "lib/fidl/cpp/clone.h"
+
 #endif  // LIB_FIDL_CPP_INTERNAL_HEADER_H_
