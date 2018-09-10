@@ -3,89 +3,90 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-function help {
-  cat <<END
+## usage: pave-prebuilt <prebuilt-path>
+##
+## Take the pre-built path and use it to pave a device. The pre-built path may
+## point to a directory or a TAR-ed (and optionally gzipped) file.
+##
+## The pre-built should contain the following
+##   - bootserver in a directory called 'tools'
+##   - zircon.bin at its root
+##   - any relevant kernel bootdatas at its root
+##   - the args.gn used to do the build that produced these outputs at the root
+##   - an 'images' directory containing the images to feed to bootserver
 
-usage: pave-prebuilt <prebuilt-path>
+# NOTE: This tool must be able to be run with only the //scripts repo
+# present: the workflows that use it do not have a fuchsia checkout.
 
-Take the pre-built path and use it to pave a device. The pre-built path may
-point to a directory or a TAR-ed (and optionally gzipped) file.
+# TESTING: Unit tests live in ./tests/pave-prebuilt-tests.
+# This file must not run any commands when being 'source'-ed while TESTING=1.
 
-The pre-built should contain the following
-  - bootserver in a directory called 'tools'
-  - zircon.bin at its root
-  - any relevant kernel bootdatas at its root
-  - the args.gn used to do the build that produced these outputs at the root
-  - an 'images' directory containing the images to feed to bootserver
+set -o errexit
+set -o nounset
+set -o pipefail
 
-END
+function usage {
+  # Prints lines from this file that begin with ##.
+  sed -n -e 's/^## //p' -e 's/^##$//p' < "${BASH_SOURCE[0]}"
 }
 
-function file_to_dir {
-  local filename=$(basename "$1")
-  filename="${filename%%\.tar*}"
-  echo "${filename}"
-}
-
-function expand_archive {
-  local tar_dir="$2"
-  if [[ ! -d "$tar_dir" ]]; then
-    mkdir -p -- "$tar_dir"
-  fi
-
-  local tar_flags="-xf"
-
-  local strip_gz="${1%%\.tar\.gz}"
-  if [[ "${strip_gz}" != "$1" ]]; then
-    tar_flags="${tar_flags}z"
-  fi
-
-  tar "${tar_flags}" "$1" -C "$tar_dir" &>/dev/null
-  if [[ $? -eq 0 ]]; then
-    echo "${tar_dir}"
-  else
-    echo ""
-  fi
-}
-
-function main {
-  if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
-     help
-     return 0
-  fi
-
-  if [[ $# -lt 1 ]]; then
-    >&2 echo "A path to a directory or compressed file must be supplied."
-    help
+# archive_to_unique_id <path-to-archive>
+#
+# Prints stable, unique ID associated with the archive, with a prefix indicating
+# where the ID came from.
+function archive_to_unique_id {
+  local archive="$1"
+  if [[ ! -f "${archive}" ]]; then
+    >&2 echo "ERROR: ${archive} does not exist or is not a file"
     return 1
   fi
 
-  local top_level_dir="$(pwd)/$(dirname $(dirname "${BASH_SOURCE[0]}"))/"
+  # Just the filename.
+  local base_name="$(basename "${archive}")"
 
-  local dir_src
-  if [[ $# -lt 1 ]]; then
-    echo "Please supply a file or directory to containing the build to use"
-    help
-    return 1
-  fi
+  if [[ "${base_name}" =~ ^fuchsia\..* ]]; then
+    # fuchsia.tar.gz files tend to live in directories named after their build
+    # numbers.
 
-  if [[ -d "$1" ]]; then
-    dir_src="$1"
-  elif [[ -f "$1" ]]; then
-    local targ_dir=$(file_to_dir "$1")
-    local clean_tld="${top_level_dir%/}"
-    targ_dir="${clean_tld}/${targ_dir}"
-    echo "Expanding '${1}' to '${targ_dir}'"
-    dir_src=$(expand_archive "$1" "${targ_dir}")
-    if [[ -z "${dir_src}" ]]; then
-      >&2 echo "Archive expansion failed!"
-      return 1
+    # Absolute path to the file's parent directory.
+    local parent_dir
+    # Note: 'local' will swallow failures on the same line, so do the
+    # cd/pwd on a separate line.
+    parent_dir="$(cd "$(dirname "${archive}")" && pwd)"
+
+    # The directory name should be the buildbucket ID, a decimal string
+    # with around 19 digits. Check for 15 to give it some leeway.
+    local build_id="$(basename "${parent_dir}")"
+    if [[ "${build_id}" =~ ^[0-9]{15,}$ ]]; then
+      echo "build-${build_id}"
+      return 0
     fi
+    # Else, fall through to the "hash the file" case.
   else
-    >&2 echo "Supplied path '${1}' is invalid"
-    help
-    return 1
+    # Before 2018-09, downloaded files were named <sha-hash>.tar[.gz], where
+    # the hash component had 40+ characters. See if this file looks like a
+    # hash-named file.
+    if [[ "${base_name}" =~ ^[0-9a-f]{40,}\..*$ ]]; then
+      # Starts with 40 or more hex characters immediately followed by
+      # an extension. Print everything before the first dot.
+      echo "stem-${base_name%%.*}"
+      return 0
+    fi
   fi
+
+  # The archive path doesn't have an obvious ID; use a SHA-1 hash of the
+  # archive data.
+  echo -n 'hash-'
+  # shasum will print "<hash><whitespace><filename>"; the sed command removes
+  # everything but the hash. It will also print the filename to stderr, so send
+  # that output to /dev/null.
+  shasum --binary --algorithm=1 "${archive}" 2> /dev/null \
+    | sed -e 's/[[:space:]].*//'
+}
+
+# run_bootserver <expanded-archive-root>
+function run_bootserver {
+  local dir_src="$1"
 
   local bootserver="${dir_src}/tools/bootserver"
   local kernel="${dir_src}/zircon.bin"
@@ -93,23 +94,99 @@ function main {
   local -a bootserver_args=()
 
   local esp_raw="${dir_src}/images/local-pc.esp.blk"
-  if [[ -r "$esp_raw" ]]; then
-    bootserver_args+=(--efi "$esp_raw")
+  if [[ -r "${esp_raw}" ]]; then
+    bootserver_args+=(--efi "${esp_raw}")
   fi
   local vboot="${dir_src}/images/zircon-pc.vboot"
-  if [[ -r "$vboot" ]]; then
-    bootserver_args+=(--kernc "$vboot")
+  if [[ -r "${vboot}" ]]; then
+    bootserver_args+=(--kernc "${vboot}")
   fi
 
-  bootserver_args+=(--zircona "$bootdata" --zirconr "$bootdata")
+  bootserver_args+=(--zircona "${bootdata}" --zirconr "${bootdata}")
 
   bootserver_args+=(--fvm "${dir_src}/images/fvm.sparse.blk")
-  bootserver_args+=(--fvm "${dir_src}/images/fvm.data.sparse.blk")
+  local fvm_data="${dir_src}/images/fvm.data.sparse.blk"
+  if [[ -r "${fvm_data}" ]]; then
+    bootserver_args+=(--fvm "${fvm_data}")
+  fi
 
-  bootserver_args+=("$kernel" "$bootdata")
+  bootserver_args+=("${kernel}" "${bootdata}")
 
   echo "Starting bootserver"
-  "$bootserver" "${bootserver_args[@]}"
+  (
+    set -x  # Print the commandline before running it.
+    "${bootserver}" "${bootserver_args[@]}"
+  )
 }
 
-main "$@"
+function main {
+  if [[ $# -lt 1 ]]; then
+    >&2 echo "ERROR: Missing build archive/directory argument"
+    usage
+    return 1
+  fi
+  if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+     usage
+     return 0
+  fi
+  local input_path="$1"
+
+  # The directory containing the files to pave.
+  local dir_src
+
+  if [[ -d "${input_path}" ]]; then
+    # The commandline arg points to a directory. See if it contains an
+    # already-expanded archive.
+    if [[ ! -f "${input_path}/tools/bootserver" ]]; then
+      >&2 echo "ERROR: Supplied path '${input_path}' does not contain an "$(
+          )"expanded fuchsia.tar.gz archive"
+      usage
+      return 1
+    fi
+
+    dir_src="${input_path}"
+  elif [[ -f "${input_path}" ]]; then
+    # The commandline arg points to a file. Treat it as an archive to expand.
+
+    # A stable, unique ID associated with this archive.
+    local unique_id
+    unique_id="$(archive_to_unique_id "${input_path}")"
+
+    # The parent directory of the //scripts checkout.
+    local top_level_dir
+    top_level_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+    # The directory to expand the archive to; a sibling of the //scripts
+    # checkout.
+    local targ_dir="${top_level_dir}/expanded-images/${unique_id}"
+
+    if [[ -f "${targ_dir}/tools/bootserver" ]]; then
+      echo "Re-using previously expanded archive contents under '${targ_dir}'"
+    else
+      echo "Expanding '${input_path}' to '${targ_dir}'"
+      mkdir -p "${targ_dir}"
+
+      local failed=0
+      tar xf "${input_path}" -C "${targ_dir}" &>/dev/null || failed=1
+      if (( failed )); then
+        # The "|| failed=1" trick prevents "set -o errexit" from immediately
+        # killing this script if tar fails, giving us a chance to print a
+        # message.
+        >&2 echo "ERROR: Failed to expand '${input_path}'"
+        return 1
+      fi
+    fi
+    dir_src="${targ_dir}"
+  else
+    >&2 echo "ERROR: Supplied path '${input_path}' is not a file or directory"
+    usage
+    return 1
+  fi
+
+  run_bootserver "${dir_src}"
+}
+
+# ./tests/pave-prebuilt-tests will set TESTING=1 when sourcing this file.
+if [[ "${TESTING:-0}" != '1' ]]; then
+  main "$@"
+fi

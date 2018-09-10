@@ -1,0 +1,180 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Unit tests for //scripts/pave-prebuilt.
+#
+# Usage: pave-prebuilt-tests
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+# Read in the tool under test. Set TESTING=1 to avoid invoking main().
+readonly PARENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TESTING=1 source "${PARENT_DIR}/../pave-prebuilt"
+
+# expect_archive_produces_id <archive-path> <expected-id>
+function expect_archive_produces_id {
+  local archive="$1"
+  local expected_id="$2"
+
+  # archive_to_unique_id expects the file to live in the filesystem,
+  # so create an empty file at a related path under a temp directory.
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  local full_archive="${tmpdir}/${archive}"
+  mkdir -p "$(dirname "${full_archive}")"
+  touch "${full_archive}"
+
+  EXPECT_EQ \
+    "${expected_id}" \
+    "$(archive_to_unique_id "${full_archive}")" \
+    "input filename '${full_archive}'"
+
+  rm -rf "${tmpdir}"
+}
+
+function test::archive_to_unique_id {
+  # Expected ID when falling back to the "hash the archive contents" case.
+  # Hash is the SHA-1 sum of an empty file.
+  local fallback_hash='hash-da39a3ee5e6b4b0d3255bfef95601890afd80709'
+
+  # Stem tests #
+
+  # A long hex hash followed by an extension is a stem.
+  expect_archive_produces_id \
+    '/home/USER/Downloads/625284e057cc25a77cdab944d46ab3de692bade1.tar' \
+    'stem-625284e057cc25a77cdab944d46ab3de692bade1'
+
+  # Extension doesn't matter.
+  expect_archive_produces_id \
+    '/home/USER/Downloads/625284e057cc25a77cdab944d46ab3de692bade1.png' \
+    'stem-625284e057cc25a77cdab944d46ab3de692bade1'
+
+  # A short hex hash is not a stem, and falls back to hashing.
+  expect_archive_produces_id \
+    '/home/USER/Downloads/625284e0.tar' \
+    "${fallback_hash}"
+
+  # A long hex hash followed by non-hex before the extension is not a stem,
+  # and falls back to hashing.
+  expect_archive_produces_id \
+    '/home/USER/Downloads/625284e057cc25a77cdab944d46ab3de692bade1__ZZZZZ.tar' \
+    "${fallback_hash}"
+
+  # Build ID tests #
+
+  # A "fuchsia.*" file living in a numbered directory is a build ID.
+  expect_archive_produces_id \
+    '/home/USER/.cache/builds/8937296116261653552/fuchsia.tar.gz' \
+    'build-8937296116261653552'
+
+  # Extension dosen't matter.
+  expect_archive_produces_id \
+    '/home/USER/.cache/builds/8937296116261653552/fuchsia.png' \
+    'build-8937296116261653552'
+
+  # A "fuchsia.*" file living in a small-numbered directory is not a build ID,
+  # and falls back to hashing.
+  expect_archive_produces_id \
+    '/home/USER/.cache/builds/552/fuchsia.tar.gz' \
+    "${fallback_hash}"
+
+  # A "fuchsia.*" file living in a number-prefixed directory is not a build ID,
+  # and falls back to hashing.
+  expect_archive_produces_id \
+    '/home/USER/.cache/builds/8937296116261653552__ZZZZZ/fuchsia.tar.gz' \
+    "${fallback_hash}"
+
+  # A "fuchsia.*" file living in a non-numbered directory is not a build ID,
+  # and falls back to hashing.
+  expect_archive_produces_id \
+    '/home/USER/Downloads/fuchsia.tar.gz' \
+    "${fallback_hash}"
+}
+
+# Build ID is sniffed even when archive is passed as a relative path.
+function test::archive_to_unique_id_relative {
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  local archive='/home/USER/.cache/builds/8937296116261653552/fuchsia.tar.gz'
+  local full_archive="${tmpdir}/${archive}"
+  mkdir -p "$(dirname "${full_archive}")"
+  touch "${full_archive}"
+
+  local unique_id
+  unique_id="$(
+    cd "$(dirname "${full_archive}")"
+    archive_to_unique_id ./fuchsia.tar.gz
+  )"
+
+  EXPECT_EQ \
+    'build-8937296116261653552' \
+    "${unique_id}" \
+    "input filename './fuchsia.tar.gz'"
+
+  rm -rf "${tmpdir}"
+}
+
+#
+# Test framework.
+# TOOD(dbort): Move this to a common file if other tools want to use it.
+#
+
+# Any failing assert/expect should set this to 1.
+FAILED=0
+
+function EXPECT_EQ {
+  local v1="$1"
+  shift
+  local v2="$1"
+  shift
+  if [[ "${v1}" != "${v2}" ]]; then
+    local msg="$@"
+    if [[ -n "${msg}" ]]; then
+      msg=": ${msg}"
+    fi
+    echo "TEST FAILURE: '${v1}' != '${v2}'${msg}"
+    FAILED=1
+    return 1
+  fi
+}
+
+# Prints the names of all functions with a test:: prefix.
+function print_test_functions {
+  # "declare -F" prints all declared function names, with lines like
+  # "declare -f funcname".
+  declare -F \
+    | grep -E '^declare -f test::' \
+    | sed -e 's/^declare -f //'
+}
+
+function test_main {
+  local num_tests=0
+  local num_failures=0
+  for t in $(print_test_functions); do
+    num_tests=$(( num_tests + 1 ))
+    FAILED=0
+    echo "RUNNING: ${t}"
+    "${t}" || FAILED=1
+    if (( FAILED )); then
+      num_failures=$(( num_failures + 1 ))
+      echo "FAILED: ${t}"
+    else
+      echo "PASSED: ${t}"
+    fi
+  done
+  if (( num_failures == 0 )); then
+    echo "All ${num_tests} tests passed!"
+    echo "PASS"
+    return 0
+  else
+    echo "${num_failures}/${num_tests} tests failed"
+    echo "FAIL"
+    return 1
+  fi
+}
+
+test_main "$@"
