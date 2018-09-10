@@ -842,17 +842,18 @@ struct HtCapabilities : public Element<HtCapabilities, element_id::kHtCapabiliti
         return ddk;
     }
 
-    std::unique_ptr<::fuchsia::wlan::mlme::HtCapabilities> ToFidl() const {
-        auto fidl_ptr = ::fuchsia::wlan::mlme::HtCapabilities::New();
 
-        fidl_ptr->ht_cap_info = ht_cap_info.ToFidl();
-        fidl_ptr->ampdu_params = ampdu_params.ToFidl();
-        fidl_ptr->mcs_set = mcs_set.ToFidl();
-        fidl_ptr->ht_ext_cap = ht_ext_cap.ToFidl();
-        fidl_ptr->txbf_cap = txbf_cap.ToFidl();
-        fidl_ptr->asel_cap = asel_cap.ToFidl();
+    ::fuchsia::wlan::mlme::HtCapabilities ToFidl() const {
+        ::fuchsia::wlan::mlme::HtCapabilities fidl;
 
-        return fidl_ptr;
+        fidl.ht_cap_info = ht_cap_info.ToFidl();
+        fidl.ampdu_params = ampdu_params.ToFidl();
+        fidl.mcs_set = mcs_set.ToFidl();
+        fidl.ht_ext_cap = ht_ext_cap.ToFidl();
+        fidl.txbf_cap = txbf_cap.ToFidl();
+        fidl.asel_cap = asel_cap.ToFidl();
+
+        return fidl;
     }
 } __PACKED;
 
@@ -954,13 +955,13 @@ struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
         return ddk;
     }
 
-    std::unique_ptr<::fuchsia::wlan::mlme::HtOperation> ToFidl() const {
-        auto fidl_ptr = ::fuchsia::wlan::mlme::HtOperation::New();
+    ::fuchsia::wlan::mlme::HtOperation ToFidl() const {
+        ::fuchsia::wlan::mlme::HtOperation fidl;
 
-        fidl_ptr->primary_chan = primary_chan;
-        fidl_ptr->basic_mcs_set = basic_mcs_set.ToFidl();
+        fidl.primary_chan = primary_chan;
+        fidl.basic_mcs_set = basic_mcs_set.ToFidl();
 
-        auto* ht_op_info = &fidl_ptr->ht_op_info;
+        auto* ht_op_info = &fidl.ht_op_info;
         ht_op_info->secondary_chan_offset =
             static_cast<::fuchsia::wlan::mlme::SecChanOffset>(head.secondary_chan_offset());
         ht_op_info->sta_chan_width =
@@ -978,7 +979,7 @@ struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
         ht_op_info->pco_active = (tail.pco_active() == 1);
         ht_op_info->pco_phase = (tail.pco_phase() == 1);
 
-        return fidl_ptr;
+        return fidl;
     }
 } __PACKED;
 
@@ -1176,13 +1177,15 @@ struct VhtCapabilities : public Element<VhtCapabilities, element_id::kVhtCapabil
         return ddk;
     }
 
-    std::unique_ptr<::fuchsia::wlan::mlme::VhtCapabilities> ToFidl() const {
-        auto fidl_ptr = ::fuchsia::wlan::mlme::VhtCapabilities::New();
 
-        fidl_ptr->vht_cap_info = vht_cap_info.ToFidl();
-        fidl_ptr->vht_mcs_nss = vht_mcs_nss.ToFidl();
 
-        return fidl_ptr;
+    ::fuchsia::wlan::mlme::VhtCapabilities ToFidl() const {
+        ::fuchsia::wlan::mlme::VhtCapabilities fidl;
+
+        fidl.vht_cap_info = vht_cap_info.ToFidl();
+        fidl.vht_mcs_nss = vht_mcs_nss.ToFidl();
+
+        return fidl;
     }
 } __PACKED;
 
@@ -1271,15 +1274,15 @@ struct VhtOperation : public Element<VhtOperation, element_id::kVhtOperation> {
         return dst;
     }
 
-    std::unique_ptr<::fuchsia::wlan::mlme::VhtOperation> ToFidl() const {
-        auto fidl_ptr = ::fuchsia::wlan::mlme::VhtOperation::New();
+    ::fuchsia::wlan::mlme::VhtOperation ToFidl() const {
+        ::fuchsia::wlan::mlme::VhtOperation fidl;
 
-        fidl_ptr->vht_cbw = static_cast<::fuchsia::wlan::mlme::VhtCbw>(vht_cbw);
-        fidl_ptr->center_freq_seg0 = center_freq_seg0;
-        fidl_ptr->center_freq_seg1 = center_freq_seg1;
-        fidl_ptr->basic_mcs = basic_mcs.ToFidl();
+        fidl.vht_cbw = static_cast<::fuchsia::wlan::mlme::VhtCbw>(vht_cbw);
+        fidl.center_freq_seg0 = center_freq_seg0;
+        fidl.center_freq_seg1 = center_freq_seg1;
+        fidl.basic_mcs = basic_mcs.ToFidl();
 
-        return fidl_ptr;
+        return fidl;
     }
 } __PACKED;
 

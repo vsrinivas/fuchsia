@@ -248,7 +248,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.ht_cap = ie->ToFidl();
+            bss_desc_.ht_cap = std::make_unique<wlan_mlme::HtCapabilities>(ie->ToFidl());
 
             debugbcn("%s HtCapabilities parsed\n", dbgmsghdr);
             debugbcn("%s\n", debug::Describe(*ie).c_str());
@@ -261,7 +261,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.ht_op = ie->ToFidl();
+            bss_desc_.ht_op = std::make_unique<wlan_mlme::HtOperation>(ie->ToFidl());
             debugbcn("%s HtOperation parsed\n", dbgmsghdr);
             break;
         }
@@ -272,7 +272,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.vht_cap = ie->ToFidl();
+            bss_desc_.vht_cap = std::make_unique<wlan_mlme::VhtCapabilities>(ie->ToFidl());
             debugbcn("%s VhtCapabilities parsed\n", dbgmsghdr);
             break;
         }
@@ -283,7 +283,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.vht_op = ie->ToFidl();
+            bss_desc_.vht_op = std::make_unique<wlan_mlme::VhtOperation>(ie->ToFidl());
             debugbcn("%s VhtOperation parsed\n", dbgmsghdr);
             break;
         }

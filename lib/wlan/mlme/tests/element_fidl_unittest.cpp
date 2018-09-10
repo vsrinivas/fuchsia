@@ -108,15 +108,14 @@ TEST(ElementFidlTest, HtCapabilitiesToFidlHuman) {
     hc.txbf_cap.set_csi_rows_human(2);
     hc.txbf_cap.set_chan_estimation_human(3);
 
-    auto fidl_ptr = hc.ToFidl();
-    ASSERT_NE(fidl_ptr, nullptr);
-    EXPECT_EQ(fidl_ptr->mcs_set.rx_mcs_set, static_cast<uint64_t>(0xfedcba9876543210));
-    EXPECT_EQ(fidl_ptr->mcs_set.tx_max_ss, 3);
-    EXPECT_EQ(fidl_ptr->txbf_cap.csi_antennas, 4);
-    EXPECT_EQ(fidl_ptr->txbf_cap.noncomp_steering_ants, 2);
-    EXPECT_EQ(fidl_ptr->txbf_cap.comp_steering_ants, 1);
-    EXPECT_EQ(fidl_ptr->txbf_cap.csi_rows, 2);
-    EXPECT_EQ(fidl_ptr->txbf_cap.chan_estimation, 3);
+    auto fidl = hc.ToFidl();
+    EXPECT_EQ(fidl.mcs_set.rx_mcs_set, static_cast<uint64_t>(0xfedcba9876543210));
+    EXPECT_EQ(fidl.mcs_set.tx_max_ss, 3);
+    EXPECT_EQ(fidl.txbf_cap.csi_antennas, 4);
+    EXPECT_EQ(fidl.txbf_cap.noncomp_steering_ants, 2);
+    EXPECT_EQ(fidl.txbf_cap.comp_steering_ants, 1);
+    EXPECT_EQ(fidl.txbf_cap.csi_rows, 2);
+    EXPECT_EQ(fidl.txbf_cap.chan_estimation, 3);
 }
 
 TEST(ElementFidlTest, HtOperationToFidl) {
@@ -141,11 +140,10 @@ TEST(ElementFidlTest, HtOperationToFidl) {
 
     hto.basic_mcs_set.rx_mcs_head.set_bitmask(0x89abcdef01234567);
 
-    auto fidl_ptr = hto.ToFidl();
-    ASSERT_NE(fidl_ptr, nullptr);
-    EXPECT_EQ(fidl_ptr->primary_chan, 169);
+    auto fidl = hto.ToFidl();
+    EXPECT_EQ(fidl.primary_chan, 169);
 
-    const auto& htoi = fidl_ptr->ht_op_info;
+    const auto& htoi = fidl.ht_op_info;
     EXPECT_EQ(htoi.secondary_chan_offset, wlan_mlme::SecChanOffset::SECONDARY_ABOVE);
     EXPECT_EQ(htoi.sta_chan_width, wlan_mlme::StaChanWidth::ANY);
     EXPECT_TRUE(htoi.rifs_mode);
@@ -161,7 +159,7 @@ TEST(ElementFidlTest, HtOperationToFidl) {
     EXPECT_TRUE(htoi.pco_active);
     EXPECT_TRUE(htoi.pco_phase);
 
-    EXPECT_EQ(fidl_ptr->basic_mcs_set.rx_mcs_set, static_cast<uint64_t>(0x89abcdef01234567));
+    EXPECT_EQ(fidl.basic_mcs_set.rx_mcs_set, static_cast<uint64_t>(0x89abcdef01234567));
 }
 }  // namespace
 }  // namespace wlan
