@@ -151,3 +151,8 @@ files may confuse Ninja. It's unclear whether this is a real issue or not.
 
 A: You'll need to `jiri update` against a *jiri snapshot file*, an XML file that
 captures the state of each repo tracked by jiri.
+
+## Q: I'm building on Mac, how to do I stop getting spammed with 'incoming network connection' notifications?
+
+A: You'll want to run `fx setup-macos`, which registers all the relevant Fuchsia
+tools with the MacOS Application Firewall.
