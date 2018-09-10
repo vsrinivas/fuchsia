@@ -660,6 +660,8 @@ static void aml_sd_emmc_setup_cmd_desc(aml_sd_emmc_t* dev, sdmmc_req_t* req,
     }
     update_bits(&cmd_info, AML_SD_EMMC_CMD_INFO_CMD_IDX_MASK, AML_SD_EMMC_CMD_INFO_CMD_IDX_LOC,
                 AML_SD_EMMC_COMMAND(req->cmd_idx));
+    update_bits(&cmd_info, AML_SD_EMMC_CMD_INFO_TIMEOUT_MASK, AML_SD_EMMC_CMD_INFO_TIMEOUT_LOC,
+                AML_SD_EMMC_DEFAULT_CMD_TIMEOUT);
     cmd_info &= ~AML_SD_EMMC_CMD_INFO_ERROR;
     cmd_info |= AML_SD_EMMC_CMD_INFO_OWNER;
     cmd_info &= ~AML_SD_EMMC_CMD_INFO_END_OF_CHAIN;
@@ -752,6 +754,8 @@ static zx_status_t aml_sd_emmc_setup_data_descs_dma(aml_sd_emmc_t* dev, sdmmc_re
             desc->cmd_info |= AML_SD_EMMC_CMD_INFO_DATA_WR;
         }
         desc->cmd_info |= AML_SD_EMMC_CMD_INFO_OWNER;
+        update_bits(&desc->cmd_info, AML_SD_EMMC_CMD_INFO_TIMEOUT_MASK,
+                    AML_SD_EMMC_CMD_INFO_TIMEOUT_LOC, AML_SD_EMMC_DEFAULT_CMD_TIMEOUT);
         desc->cmd_info &= ~AML_SD_EMMC_CMD_INFO_ERROR;
 
         uint32_t blocksize = req->blocksize;

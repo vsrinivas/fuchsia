@@ -28,6 +28,8 @@
 #define AML_SD_EMMC_MAX_TUNING_TRIES         7
 #define AML_SD_EMMC_ADJ_DELAY_TEST_ATTEMPTS  10
 
+#define AML_SD_EMMC_DEFAULT_CMD_TIMEOUT     0xc          //2^12 ms.
+
 #define AML_SD_EMMC_SRAM_MEMORY_BASE         0x200
 #define AML_SD_EMMC_SRAM_MEMORY_SIZE         512
 #define AML_SD_EMMC_PING_BUFFER_BASE         0x400
