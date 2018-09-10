@@ -78,7 +78,7 @@ void Controller::PopulateDisplayMode(const edid::timing_params_t& params, displa
     static_assert(MODE_FLAG_DOUBLE_CLOCKED == edid::timing_params::kDoubleClocked, "");
 }
 
-bool Controller::PopulateDisplayTimings(DisplayInfo* info) {
+void Controller::PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) {
     // Go through all the display mode timings and record whether or not
     // a basic layer configuration is acceptable.
     layer_t test_layer = {};
@@ -127,24 +127,19 @@ bool Controller::PopulateDisplayTimings(DisplayInfo* info) {
             }
         }
     }
-
-    // It's possible that the display could be removed after the mutex is unlocked, but
-    // that gets taken care of with the disconnect hotplug event.
-    bool res = !info->edid_timings.is_empty();
-    return res;
 }
 
 void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_t added_count,
                                    uint64_t* displays_removed, uint32_t removed_count) {
-    fbl::unique_ptr<fbl::unique_ptr<DisplayInfo>[]> added_success;
+    fbl::unique_ptr<fbl::RefPtr<DisplayInfo>[]> added_success;
     fbl::unique_ptr<uint64_t[]> removed;
     fbl::unique_ptr<async::Task> task;
     uint32_t added_success_count = 0;
 
     fbl::AllocChecker ac;
     if (added_count) {
-        added_success = fbl::unique_ptr<fbl::unique_ptr<DisplayInfo>[]>(
-                new (&ac) fbl::unique_ptr<DisplayInfo>[added_count]);
+        added_success = fbl::unique_ptr<fbl::RefPtr<DisplayInfo>[]>(
+                new (&ac) fbl::RefPtr<DisplayInfo>[added_count]);
         if (!ac.check()) {
             zxlogf(ERROR, "No memory when processing hotplug\n");
             return;
@@ -166,9 +161,23 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
 
     fbl::AutoLock lock(&mtx_);
 
+    for (unsigned i = 0; i < removed_count; i++) {
+        auto target = displays_.erase(displays_removed[i]);
+        if (target) {
+            image_node_t* n;
+            while ((n = list_remove_head_type(&target->images, image_node_t, link))) {
+                n->self->StartRetire();
+                n->self->OnRetire();
+                n->self.reset();
+            }
+        } else {
+            zxlogf(TRACE, "Unknown display %ld removed\n", displays_removed[i]);
+        }
+    }
+
     for (unsigned i = 0; i < added_count; i++) {
         fbl::AllocChecker ac, ac2;
-        fbl::unique_ptr<DisplayInfo> info = fbl::make_unique_checked<DisplayInfo>(&ac);
+        fbl::RefPtr<DisplayInfo> info = fbl::AdoptRef(new (&ac) DisplayInfo);
         if (!ac.check()) {
             zxlogf(INFO, "Out of memory when processing display hotplug\n");
             break;
@@ -260,48 +269,35 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
             info->params = display_params.panel.params;
         }
 
-        added_success[added_success_count++] = fbl::move(info);
+        if (displays_.insert_or_find(info)) {
+            added_success[added_success_count++] = fbl::move(info);
+        } else {
+            zxlogf(INFO, "Ignoring duplicate display\n");
+        }
     }
 
     task->set_handler([this,
                        added_ptr = added_success.release(), removed_ptr = removed.release(),
-                       added_success_capture = added_success_count, removed_count]
+                       added_success_count, removed_count]
                        (async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
             if (status == ZX_OK) {
-                uint32_t added_success_count = added_success_capture;
                 for (unsigned i = 0; i < added_success_count; i++) {
-                    if (added_ptr[i]->has_edid
-                            && !PopulateDisplayTimings(added_ptr[i].get())) {
-                        zxlogf(WARN, "Ignoring display with no compatible edid timings\n");
-
-                        added_ptr[i] = fbl::move(added_ptr[--added_success_count]);
-                        i--;
+                    if (added_ptr[i]->has_edid) {
+                        PopulateDisplayTimings(added_ptr[i]);
                     }
                 }
                 fbl::AutoLock lock(&mtx_);
 
-                for (unsigned i = 0; i < removed_count; i++) {
-                    auto target = displays_.erase(removed_ptr[i]);
-                    if (target) {
-                        image_node_t* n;
-                        while ((n = list_remove_head_type(&target->images, image_node_t, link))) {
-                            n->self->StartRetire();
-                            n->self->OnRetire();
-                            n->self.reset();
-                        }
-                    } else {
-                        zxlogf(TRACE, "Unknown display %ld removed\n", removed_ptr[i]);
-                    }
-                }
-
                 uint64_t added_ids[added_success_count];
                 uint32_t final_added_success_count = 0;
                 for (unsigned i = 0; i < added_success_count; i++) {
-                    uint64_t id = added_ptr[i]->id;
-                    if (displays_.insert_or_find(fbl::move(added_ptr[i]))) {
-                        added_ids[final_added_success_count++] = id;
+                    // Dropping some add events can result in spurious removes, but
+                    // those are filtered out in the clients.
+                    if (!added_ptr[i]->has_edid || !added_ptr[i]->edid_timings.is_empty()) {
+                        added_ids[final_added_success_count++] = added_ptr[i]->id;
+                        added_ptr[i]->init_done = true;
                     } else {
-                        zxlogf(INFO, "Ignoring duplicate display\n");
+                        zxlogf(WARN, "Ignoring display with no compatible edid timings\n");
                     }
                 }
 
@@ -673,7 +669,9 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
                         uint64_t current_displays[displays_.size()];
                         int idx = 0;
                         for (const DisplayInfo& display : displays_) {
-                            current_displays[idx++] = display.id;
+                            if (display.init_done) {
+                                current_displays[idx++] = display.id;
+                            }
                         }
                         client_ptr->OnDisplaysChanged(current_displays, idx, nullptr, 0);
                     }

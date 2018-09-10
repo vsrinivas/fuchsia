@@ -1135,14 +1135,14 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_co
     req->hdr.ordinal = fuchsia_display_ControllerDisplaysChangedOrdinal;
     req->added.count = 0;
     req->added.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
-    req->removed.count = removed_count;
+    req->removed.count = 0;
     req->removed.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
 
     for (unsigned i = 0; i < removed_count; i++) {
-        auto display = configs_.erase(displays_removed[i]);
-        if (display) {
-            display->pending_layers_.clear();
-            display->current_layers_.clear();
+        // TODO(stevensd): Delayed removal can cause conflicts if the driver reuses
+        // display ids. Move display id generation into the core driver.
+        if (configs_.find(displays_removed[i]).IsValid()) {
+            req->removed.count++;
         }
     }
 
@@ -1257,19 +1257,29 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_co
         }
     }
 
-    if (removed_count > 0) {
-        auto removed_ids = builder.NewArray<int32_t>(removed_count);
-        memcpy(removed_ids, displays_removed, sizeof(int32_t) * removed_count);
+    if (req->removed.count > 0) {
+        auto removed_ids = builder.NewArray<uint64_t>(static_cast<uint32_t>(req->removed.count));
+        uint32_t idx = 0;
+        for (unsigned i = 0; i < removed_count; i++) {
+            auto display = configs_.erase(displays_removed[i]);
+            if (display) {
+                display->pending_layers_.clear();
+                display->current_layers_.clear();
+                removed_ids[idx++] = display->id;
+            }
+        }
     }
 
-    fidl::Message msg(builder.Finalize(), fidl::HandlePart());
-    const char* err;
-    ZX_DEBUG_ASSERT_MSG(
-            msg.Validate(&fuchsia_display_ControllerDisplaysChangedEventTable, &err) == ZX_OK,
-            "Failed to validate \"%s\"", err);
+    if (req->added.count > 0 || req->removed.count > 0) {
+        fidl::Message msg(builder.Finalize(), fidl::HandlePart());
+        const char* err;
+        ZX_DEBUG_ASSERT_MSG(
+                msg.Validate(&fuchsia_display_ControllerDisplaysChangedEventTable, &err) == ZX_OK,
+                "Failed to validate \"%s\"", err);
 
-    if ((status = msg.Write(server_handle_, 0)) != ZX_OK) {
-        zxlogf(ERROR, "Error writing remove message %d\n", status);
+        if ((status = msg.Write(server_handle_, 0)) != ZX_OK) {
+            zxlogf(ERROR, "Error writing remove message %d\n", status);
+        }
     }
 }
 
