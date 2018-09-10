@@ -300,7 +300,24 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
         B: AsRef<[u8]> + AsMut<[u8]>,
         F: SerializationCallback<B>,
     {
-        log_unimplemented!((), "device::ethernet::send_arp_frame: Not implemented");
+        use crate::wire::ethernet::{MAX_HEADER_LEN, MIN_BODY_LEN};
+        let mut buffer = get_buffer(MAX_HEADER_LEN, MIN_BODY_LEN);
+        let range_len = {
+            let range = buffer.range();
+            range.end - range.start
+        };
+        if range_len < MIN_BODY_LEN {
+            // This is guaranteed to succeed so long as get_buffer satisfies its
+            // contract.
+            //
+            // SECURITY: Use _zero to ensure we zero padding bytes to prevent
+            // leaking information from packets previously stored in this buffer.
+            buffer.extend_forwards_zero(MIN_BODY_LEN - range_len);
+        }
+        let src = get_device_state(ctx, device_id).mac;
+        let buffer = EthernetFrame::serialize(buffer, src, dst, EtherType::Ipv4);
+        ctx.dispatcher()
+            .send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
     }
 
     fn get_arp_state<D: EventDispatcher>(
