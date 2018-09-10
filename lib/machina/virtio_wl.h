@@ -5,9 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_WL_H_
 #define GARNET_LIB_MACHINA_VIRTIO_WL_H_
 
-#include <unordered_set>
+#include <unordered_map>
 
-#include <fbl/unique_ptr.h>
 #include <lib/async/cpp/wait.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/wl.h>
@@ -28,16 +27,21 @@ namespace machina {
 class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
                                               virtio_wl_config_t> {
  public:
-  VirtioWl(const PhysMem& phys_mem, async_dispatcher_t* dispatcher);
+  VirtioWl(const PhysMem& phys_mem, zx::vmar vmar,
+           async_dispatcher_t* dispatcher);
   ~VirtioWl() override;
 
   VirtioQueue* in_queue() { return queue(VIRTWL_VQ_IN); }
   VirtioQueue* out_queue() { return queue(VIRTWL_VQ_OUT); }
 
+  zx::vmar* vmar() { return &vmar_; }
+
   // Begins processing any descriptors that become available in the queues.
   zx_status_t Init();
 
  private:
+  class Vfd;
+
   zx_status_t HandleCommand(VirtioQueue* queue, uint16_t head, uint32_t* used);
   void HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
                  virtio_wl_ctrl_vfd_new_t* response);
@@ -54,10 +58,18 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
   void HandleDmabufSync(const virtio_wl_ctrl_vfd_dmabuf_sync_t* request,
                         virtio_wl_ctrl_hdr_t* response);
 
+  // Allocate memory of |size| that is shared between guest and host.
+  // Returns a valid Vfd instance on success. |guest_addr| will be
+  // page-aligned and non-zero on success. |size| will be rounded up to
+  // the next page size boundary and returned in |actual_size|.
+  std::unique_ptr<Vfd> AllocateMemory(uint32_t size, zx_gpaddr_t* guest_addr,
+                                      uint64_t* actual_size);
+
+  zx::vmar vmar_;
   async_dispatcher_t* dispatcher_;
   async::Wait in_queue_wait_;
   async::Wait out_queue_wait_;
-  std::unordered_set<uint32_t> vfds_;
+  std::unordered_map<uint32_t, std::unique_ptr<Vfd>> vfds_;
 };
 
 }  // namespace machina

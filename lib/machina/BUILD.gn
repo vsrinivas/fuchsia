@@ -140,6 +140,7 @@ executable("machina_unittests") {
     "virtio_queue_fake.h",
     "virtio_queue_waiter-unittest.cc",
     "virtio_vsock-unittest.cc",
+    "virtio_wl-unittest.cc",
     "volatile_write_block_dispatcher-unittest.cc",
   ]
 

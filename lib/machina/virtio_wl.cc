@@ -4,12 +4,28 @@
 
 #include "garnet/lib/machina/virtio_wl.h"
 
+#include "garnet/lib/machina/dev_mem.h"
 #include "lib/fxl/logging.h"
 
 namespace machina {
 
-VirtioWl::VirtioWl(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
+class VirtioWl::Vfd {
+ public:
+  Vfd(zx::vmar* vmar, uintptr_t addr, uint64_t size, zx::vmo vmo)
+      : vmar_(vmar), addr_(addr), size_(size), vmo_(std::move(vmo)) {}
+  ~Vfd() { vmar_->unmap(addr_, size_); }
+
+ private:
+  zx::vmar* const vmar_;
+  const uintptr_t addr_;
+  const uint64_t size_;
+  zx::vmo vmo_;
+};
+
+VirtioWl::VirtioWl(const PhysMem& phys_mem, zx::vmar vmar,
+                   async_dispatcher_t* dispatcher)
     : VirtioInprocessDevice(phys_mem, VIRTIO_WL_F_TRANS_FLAGS),
+      vmar_(std::move(vmar)),
       dispatcher_(dispatcher) {}
 
 VirtioWl::~VirtioWl() = default;
@@ -126,8 +142,29 @@ void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  FXL_LOG(ERROR) << __FUNCTION__ << ": Not implemented";
-  response->hdr.type = VIRTIO_WL_RESP_INVALID_CMD;
+  zx_gpaddr_t guest_addr;
+  uint64_t actual_size;
+  std::unique_ptr<Vfd> vfd =
+      AllocateMemory(request->size, &guest_addr, &actual_size);
+  if (!vfd) {
+    response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
+    return;
+  }
+
+  bool inserted;
+  std::tie(std::ignore, inserted) =
+      vfds_.insert({request->vfd_id, std::move(vfd)});
+  if (!inserted) {
+    response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
+    return;
+  }
+
+  response->hdr.type = VIRTIO_WL_RESP_VFD_NEW;
+  response->hdr.flags = 0;
+  response->vfd_id = request->vfd_id;
+  response->flags = VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE;
+  response->pfn = guest_addr / PAGE_SIZE;
+  response->size = actual_size;
 }
 
 void VirtioWl::HandleClose(const virtio_wl_ctrl_vfd_t* request,
@@ -191,7 +228,9 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  if (!vfds_.insert(request->vfd_id).second) {
+  bool inserted;
+  std::tie(std::ignore, inserted) = vfds_.insert({request->vfd_id, nullptr});
+  if (!inserted) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
   }
@@ -213,7 +252,9 @@ void VirtioWl::HandleNewPipe(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  if (!vfds_.insert(request->vfd_id).second) {
+  bool inserted;
+  std::tie(std::ignore, inserted) = vfds_.insert({request->vfd_id, nullptr});
+  if (!inserted) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
   }
@@ -251,6 +292,36 @@ void VirtioWl::HandleDmabufSync(const virtio_wl_ctrl_vfd_dmabuf_sync_t* request,
 
   // TODO(reveman): Add synchronization code when using GPU buffers.
   response->type = VIRTIO_WL_RESP_OK;
+}
+
+std::unique_ptr<VirtioWl::Vfd> VirtioWl::AllocateMemory(uint32_t size,
+                                                        uintptr_t* guest_addr,
+                                                        uint64_t* actual_size) {
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(size, 0, &vmo);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to allocate VMO (size=" << size
+                   << "): " << status;
+    return nullptr;
+  }
+
+  status = vmo.get_size(actual_size);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed get VMO size: " << status;
+    return nullptr;
+  }
+
+  // TODO(reveman): Remove ZX_VM_PERM_EXECUTE when MAC-166 has been resolved.
+  status = vmar_.map(0, vmo, 0, *actual_size,
+                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE,
+                     guest_addr);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to map VMO into guest vmar: " << status;
+    return nullptr;
+  }
+
+  return std::make_unique<Vfd>(&vmar_, *guest_addr, *actual_size,
+                               std::move(vmo));
 }
 
 }  // namespace machina

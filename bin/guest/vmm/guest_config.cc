@@ -47,6 +47,8 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--display={scenic,framebuffer,  Configures the display backend to use for the guest. 'scenic'\n";
   std::cerr << "\t           none}                (default) will render to a scenic view. 'framebuffer will draw\n";
   std::cerr << "\t                                to a zircon framebuffer. 'none' disables graphical output.\n";
+  std::cerr << "\t--wayland-memory=[bytes]        Reserve 'bytes' of device memory for wayland buffers. The\n";
+  std::cerr << "\t                                suffixes 'k', 'M', and 'G' are accepted\n";
 #if __aarch64__
   std::cerr << "\t--gic={2,3}                     Version 2 or 3\n";
 #endif
@@ -358,6 +360,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
       {"display", parse_display(&cfg_->display_)},
       {"network", set_flag(&cfg_->network_, true)},
       {"block-wait", set_flag(&cfg_->block_wait_, true)},
+      {"wayland-memory", parse_mem_size(&cfg_->wayland_memory_)},
 #if __aarch64__
       {"gic", parse_gic(&cfg_->gic_version_)},
 #endif

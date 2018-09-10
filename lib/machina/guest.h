@@ -59,6 +59,9 @@ class Guest {
   // Waits for all VCPUs associated with the guest to finish executing.
   zx_status_t Join();
 
+  // Creates a vmar for a specific region of guest memory.
+  zx_status_t CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar);
+
  private:
   // TODO(alexlegg): Consolidate this constant with other definitions in Garnet.
   static constexpr size_t kMaxVcpus = 16u;

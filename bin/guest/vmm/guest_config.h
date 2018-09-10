@@ -59,6 +59,7 @@ class GuestConfig {
   bool balloon_demand_page() const { return balloon_demand_page_; }
   GuestDisplay display() const { return display_; }
   bool network() const { return network_; }
+  size_t wayland_memory() const { return wayland_memory_; }
 #if __aarch64__
   machina::GicVersion gic_version() const { return gic_version_; }
 #endif
@@ -79,6 +80,7 @@ class GuestConfig {
   bool balloon_demand_page_ = false;
   GuestDisplay display_ = GuestDisplay::SCENIC;
   bool network_ = true;
+  size_t wayland_memory_ = 1 << 30;
 #if __aarch64__
   machina::GicVersion gic_version_ = machina::GicVersion::V2;
 #endif

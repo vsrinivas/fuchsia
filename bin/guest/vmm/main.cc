@@ -437,8 +437,23 @@ int main(int argc, char** argv) {
     return status;
   }
 
+  machina::DevMem dev_mem;
+
   // Setup wayland device.
-  machina::VirtioWl wl(guest.phys_mem(), guest.device_dispatcher());
+  zx_gpaddr_t wl_dev_mem_offset = machina::DevMem::kAddrLowerBound;
+  size_t wl_dev_mem_size = cfg.wayland_memory();
+  if (!dev_mem.AddRange(wl_dev_mem_offset, wl_dev_mem_size)) {
+    FXL_LOG(INFO) << "Could not reserve device memory range for wayland device";
+    return status;
+  }
+  zx::vmar wl_vmar;
+  status = guest.CreateSubVmar(wl_dev_mem_offset, wl_dev_mem_size, &wl_vmar);
+  if (status != ZX_OK) {
+    FXL_LOG(INFO) << "Could not create VMAR for wayland device";
+    return status;
+  }
+  machina::VirtioWl wl(guest.phys_mem(), std::move(wl_vmar),
+                       guest.device_dispatcher());
   status = wl.Init();
   if (status != ZX_OK) {
     FXL_LOG(INFO) << "Could not init wayland device";
@@ -471,7 +486,6 @@ int main(int argc, char** argv) {
 #endif  // __x86_64__
 
   // Setup kernel.
-  machina::DevMem dev_mem;
   uintptr_t guest_ip = 0;
   uintptr_t boot_ptr = 0;
   switch (cfg.kernel()) {
