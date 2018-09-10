@@ -330,7 +330,7 @@ class BazelBuilder(Builder):
             shutil.copy2(file.source, dest)
             data.srcs.append(file.destination)
         for dep_id in atom.deps:
-            data.deps.append('//fidl/' + sanitize(dep_id.name))
+            data.deps.append(sanitize(dep_id.name))
         self.write_file(os.path.join(base, 'BUILD'), 'fidl', data)
 
 

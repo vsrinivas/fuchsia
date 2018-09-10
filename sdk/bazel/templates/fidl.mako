@@ -15,7 +15,7 @@ fidl_library(
     ],
     deps = [
         % for dep in sorted(data.deps):
-        "${dep}",
+        "//fidl/${dep}",
         % endfor
     ],
 )
@@ -23,4 +23,11 @@ fidl_library(
 cc_fidl_library(
     name = "${data.name}_cc",
     library = ":${data.name}",
+    # TODO(DX-288): remove explicit deps once C++ compilation API is available
+    #     in Skylark and generated through the cc_fidl_library rule.
+    deps = [
+        % for dep in sorted(data.deps):
+        "//fidl/${dep}:${dep}_cc",
+        % endfor
+    ],
 )
