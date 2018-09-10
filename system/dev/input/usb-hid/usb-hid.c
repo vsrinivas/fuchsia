@@ -39,7 +39,7 @@ typedef struct usb_hid_device {
     void* cookie;
 
     uint8_t interface;
-    usb_hid_descriptor_t* hid_desc;
+    usb_hid_descriptor_t hid_desc;
 } usb_hid_device_t;
 
 static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
@@ -135,8 +135,8 @@ static zx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type,
                                           void** data, size_t* len) {
     usb_hid_device_t* hid = ctx;
     int desc_idx = -1;
-    for (int i = 0; i < hid->hid_desc->bNumDescriptors; i++) {
-        if (hid->hid_desc->descriptors[i].bDescriptorType == desc_type) {
+    for (int i = 0; i < hid->hid_desc.bNumDescriptors; i++) {
+        if (hid->hid_desc.descriptors[i].bDescriptorType == desc_type) {
             desc_idx = i;
             break;
         }
@@ -145,7 +145,7 @@ static zx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type,
         return ZX_ERR_NOT_FOUND;
     }
 
-    size_t desc_len = hid->hid_desc->descriptors[desc_idx].wDescriptorLength;
+    size_t desc_len = hid->hid_desc.descriptors[desc_idx].wDescriptorLength;
     uint8_t* desc_buf = malloc(desc_len);
     zx_status_t status = usb_hid_control(hid, USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
                                          USB_REQ_GET_DESCRIPTOR, desc_type << 8,
@@ -295,7 +295,7 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
         usbhid->usbdev = dev;
         memcpy(&usbhid->usb, &usb, sizeof(usbhid->usb));
         usbhid->interface = usbhid->info.dev_num = intf->bInterfaceNumber;
-        usbhid->hid_desc = hid_desc;
+        memcpy(&usbhid->hid_desc, hid_desc, sizeof(usbhid->hid_desc));
 
         usbhid->info.boot_device = intf->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
         usbhid->info.dev_class = HID_DEV_CLASS_OTHER;
