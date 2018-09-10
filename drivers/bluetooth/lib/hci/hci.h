@@ -1080,9 +1080,6 @@ struct InquiryResultRSSI {
   // Reserved (no meaning as of v1.2)
   uint8_t page_scan_period_mode;
 
-  // Reserved (no meaning as of v1.2)
-  uint8_t page_scan_mode;
-
   // Class of device
   common::DeviceClass class_of_device;
 

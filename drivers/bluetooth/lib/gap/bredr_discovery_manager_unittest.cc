@@ -112,11 +112,10 @@ const auto kInquiryResult = common::CreateStaticByteBuffer(
 
 const auto kRSSIInquiryResult = common::CreateStaticByteBuffer(
   hci::kInquiryResultWithRSSIEventCode,
-  0x10, // parameter_total_size (16 bytes)
+  0x0F, // parameter_total_size (15 bytes)
   0x01, // num_responses
   0x02, 0x00, 0x00, 0x00, 0x00, 0x00, // bd_addr[0]
   0x00, // page_scan_repetition_mode[0] (R0)
-  0x00, // unused / reserved
   0x00, // unused / reserved
   0x00, 0x1F, 0x00, // class_of_device[0] (unspecified)
   0x00, 0x00, // clock_offset[0]
@@ -677,14 +676,14 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, ExtendedInquiry) {
   RemoteDevice* device1 =
       device_cache()->FindDeviceByAddress(common::DeviceAddress(
           common::DeviceAddress::Type::kBREDR, "00:00:00:00:00:02"));
-  EXPECT_TRUE(device1);
+  ASSERT_TRUE(device1);
   EXPECT_EQ(-20, device1->rssi());
 
   RemoteDevice* device2 =
       device_cache()->FindDeviceByAddress(common::DeviceAddress(
           common::DeviceAddress::Type::kBREDR, "00:00:00:00:00:03"));
 
-  EXPECT_TRUE(device2);
+  ASSERT_TRUE(device2);
   ASSERT_TRUE(device2->name());
   EXPECT_EQ("Fuchsia💖", *device2->name());
 
