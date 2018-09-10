@@ -36,11 +36,37 @@
 namespace component {
 
 struct RealmArgs {
+  static RealmArgs Make(
+      Realm* parent,
+      fidl::StringPtr label,
+      const std::shared_ptr<component::Services>& env_services,
+      bool run_virtual_console);
+
+  static RealmArgs MakeWithHostDir(
+      Realm* parent,
+      fidl::StringPtr label,
+      const std::shared_ptr<component::Services>& env_services,
+      bool run_virtual_console,
+      zx::channel host_directory);
+
+  static RealmArgs MakeWithAdditionalServices(
+      Realm* parent,
+      fidl::StringPtr label,
+      const std::shared_ptr<component::Services>& env_services,
+      bool run_virtual_console,
+      fuchsia::sys::ServiceListPtr additional_services,
+      bool inherit_parent_services);
+
   Realm* parent;
-  const std::shared_ptr<component::Services> environment_services;
-  zx::channel host_directory;
   fidl::StringPtr label;
+  std::shared_ptr<component::Services> environment_services;
   bool run_virtual_console;
+
+  // Must set at most one of |host_directory| or
+  // |additional_services|.
+  zx::channel host_directory;
+  fuchsia::sys::ServiceListPtr additional_services;
+  bool inherit_parent_services;
 };
 
 class Realm : public ComponentContainer<ComponentControllerImpl> {
@@ -62,11 +88,14 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   zx::job DuplicateJob() const;
 
-  void CreateNestedJob(
-      zx::channel host_directory,
+  void CreateNestedEnvironment(
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
-      fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
-      fidl::StringPtr label);
+      fidl::InterfaceRequest<fuchsia::sys::EnvironmentController>
+          controller_request,
+      fidl::StringPtr label,
+      zx::channel host_directory,
+      fuchsia::sys::ServiceListPtr additional_services,
+      bool inherit_parent_services);
 
   using ComponentObjectCreatedCallback =
       fit::function<void(ComponentControllerImpl* component)>;

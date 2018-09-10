@@ -42,7 +42,7 @@ interface Environment {
   1: CreateNestedEnvironment(request<Environment> environment,
                              request<EnvironmentController>? controller,
                              string? label,
-                             handle<channel> host_directory,
+                             handle<channel>? host_directory,
                              ServiceList? additional_services,
                              bool inherit_parent_services);
 

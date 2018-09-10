@@ -42,7 +42,6 @@ class Namespace : public fuchsia::sys::Environment,
   // fuchsia::sys::Environment implementation:
   //
 
-  // TODO(CP-124): Support |additional_services| and |inherit_parent_services|.
   void CreateNestedEnvironment(
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
       fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
@@ -90,7 +89,10 @@ class Namespace : public fuchsia::sys::Environment,
   fbl::RefPtr<JobProviderImpl> job_provider_;
   fxl::RefPtr<Namespace> parent_;
   Realm* const realm_;
-  fuchsia::sys::ServiceProviderPtr additional_services_;
+  // Set if |additional_services.provider| was set.
+  fuchsia::sys::ServiceProviderPtr service_provider_;
+  // Set if |additional_services.host_directory| was set.
+  zx::channel service_host_directory_;
   fuchsia::sys::LoaderPtr loader_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Namespace);

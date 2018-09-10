@@ -63,7 +63,12 @@ struct ServiceList {
   vector<string> names;
 
   // A service provider to get the services listed in |names| from.
-  ServiceProvider provider;
+  ServiceProvider? provider;
+
+  // The directory hosting the services in |names|.
+  // TODO(CP-124): Support |host_directory| for CreateComponent and deprecate
+  // |provider|.
+  handle<channel>? host_directory;
 };
 
 // An interface for creating component instances.

@@ -53,14 +53,27 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
 
   if (additional_services) {
     auto& names = additional_services->names;
-    additional_services_ = additional_services->provider.Bind();
+    service_provider_ = additional_services->provider.Bind();
+    service_host_directory_ = std::move(additional_services->host_directory);
     for (auto& name : *names) {
-      services_->AddService(
-          fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
-            additional_services_->ConnectToService(name, std::move(channel));
-            return ZX_OK;
-          })),
-          name);
+      if (service_host_directory_) {
+        services_->AddService(
+            fbl::AdoptRef(new fs::Service(
+                [this, name](zx::channel channel) {
+                  fdio_service_connect_at(service_host_directory_.get(),
+                                          name->c_str(), channel.release());
+                  return ZX_OK;
+                })),
+            name);
+      } else {
+        services_->AddService(
+            fbl::AdoptRef(new fs::Service(
+                [this, name](zx::channel channel) {
+                  service_provider_->ConnectToService(name, std::move(channel));
+                  return ZX_OK;
+                })),
+            name);
+      }
     }
   }
 }
@@ -79,8 +92,10 @@ void Namespace::CreateNestedEnvironment(
     zx::channel host_directory,
     fuchsia::sys::ServiceListPtr additional_services,
     bool inherit_parent_services) {
-  realm_->CreateNestedJob(std::move(host_directory), std::move(environment),
-                          std::move(controller), label);
+  realm_->CreateNestedEnvironment(
+      std::move(environment), std::move(controller), label,
+      std::move(host_directory), std::move(additional_services),
+      inherit_parent_services);
 }
 
 void Namespace::GetLauncher(fidl::InterfaceRequest<Launcher> launcher) {

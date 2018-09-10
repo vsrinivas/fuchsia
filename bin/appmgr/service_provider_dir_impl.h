@@ -14,6 +14,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 

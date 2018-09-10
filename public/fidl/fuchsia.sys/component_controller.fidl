@@ -21,6 +21,8 @@ enum TerminationReason {
   RUNNER_FAILED = 6;
   // A Runner terminated while attempting to run a component.
   RUNNER_TERMINATED = 7;
+  // Attempted to use an unsupported feature.
+  UNSUPPORTED = 8;
 };
 
 // An interface for controlling components.

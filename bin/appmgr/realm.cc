@@ -163,13 +163,59 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
 
 }  // namespace
 
+// static
+RealmArgs RealmArgs::Make(
+    Realm* parent,
+    fidl::StringPtr label,
+    const std::shared_ptr<component::Services>& env_services,
+    bool run_virtual_console) {
+  return {.parent = parent,
+          .label = label,
+          .environment_services = env_services,
+          .run_virtual_console = run_virtual_console,
+          .host_directory = zx::channel(),
+          .additional_services = nullptr,
+          .inherit_parent_services = false};
+}
+
+// static
+RealmArgs RealmArgs::MakeWithHostDir(
+      Realm* parent,
+      fidl::StringPtr label,
+      const std::shared_ptr<component::Services>& env_services,
+      bool run_virtual_console,
+      zx::channel host_directory) {
+  return {.parent = parent,
+          .label = label,
+          .environment_services = env_services,
+          .run_virtual_console = run_virtual_console,
+          .host_directory = std::move(host_directory),
+          .additional_services = nullptr,
+          .inherit_parent_services = false};
+}
+
+// static
+RealmArgs RealmArgs::MakeWithAdditionalServices(
+      Realm* parent,
+      fidl::StringPtr label,
+      const std::shared_ptr<component::Services>& env_services,
+      bool run_virtual_console,
+      fuchsia::sys::ServiceListPtr additional_services,
+      bool inherit_parent_services) {
+  return {.parent = parent,
+          .label = label,
+          .environment_services = env_services,
+          .run_virtual_console = run_virtual_console,
+          .host_directory = zx::channel(),
+          .additional_services = std::move(additional_services),
+          .inherit_parent_services = inherit_parent_services};
+}
+
 uint32_t Realm::next_numbered_label_ = 1u;
 
 Realm::Realm(RealmArgs args)
     : parent_(args.parent),
       run_virtual_console_(args.run_virtual_console),
-      default_namespace_(
-          fxl::MakeRefCounted<Namespace>(nullptr, this, nullptr)),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
       info_vfs_(async_get_default_dispatcher()),
       environment_services_(args.environment_services) {
@@ -190,10 +236,23 @@ Realm::Realm(RealmArgs args)
   FXL_CHECK(zx::job::create(*parent_job, 0u, &job_) == ZX_OK);
 
   koid_ = std::to_string(fsl::GetKoid(job_.get()));
-  if (args.label->size() == 0)
+  if (args.label->size() == 0) {
     label_ = fxl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
-  else
+  } else {
     label_ = args.label.get().substr(0, fuchsia::sys::kLabelMaxLength);
+  }
+
+  if (args.inherit_parent_services) {
+    default_namespace_ = fxl::MakeRefCounted<Namespace>(
+        parent_->default_namespace_, this, std::move(args.additional_services));
+  } else {
+    default_namespace_ = fxl::MakeRefCounted<Namespace>(
+        nullptr, this, std::move(args.additional_services));
+  }
+  if (args.host_directory) {
+    default_namespace_->services()->set_backing_dir(
+        std::move(args.host_directory));
+  }
 
   fsl::SetObjectName(job_.get(), label_);
   hub_.SetName(label_);
@@ -217,8 +276,6 @@ Realm::Realm(RealmArgs args)
         })),
         fuchsia::sys::Loader::Name_);
   }
-  default_namespace_->services()->set_backing_dir(
-      std::move(args.host_directory));
 
   fuchsia::sys::ServiceProviderPtr service_provider;
   default_namespace_->services()->AddBinding(service_provider.NewRequest());
@@ -256,14 +313,39 @@ zx::job Realm::DuplicateJob() const {
   return duplicate_job;
 }
 
-void Realm::CreateNestedJob(
-    zx::channel host_directory,
+void Realm::CreateNestedEnvironment(
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController>
         controller_request,
-    fidl::StringPtr label) {
-  RealmArgs args{this, environment_services_, std::move(host_directory), label,
-                 false};
+    fidl::StringPtr label,
+    zx::channel host_directory,
+    fuchsia::sys::ServiceListPtr additional_services,
+    bool inherit_parent_services) {
+  if (host_directory && additional_services) {
+    FXL_LOG(ERROR) << "CreateNestedEnvironment may not specify both "
+                   << "|host_directory| and |additional_services|.";
+    return;
+  }
+  if (additional_services && !additional_services->host_directory) {
+    FXL_LOG(ERROR) << "|additional_services.provider| is not supported for "
+                   << "CreateNestedEnvironment. Use "
+                   << "|additional_services.host_directory| instead.";
+    return;
+  }
+
+  RealmArgs args;
+  if (host_directory) {
+    args = RealmArgs::MakeWithHostDir(
+        this, label, environment_services_, /*run_virtual_console=*/false,
+        std::move(host_directory));
+  } else if (additional_services) {
+    args = RealmArgs::MakeWithAdditionalServices(
+        this, label, environment_services_, /*run_virtual_console=*/false,
+        std::move(additional_services), inherit_parent_services);
+  } else {
+    args = RealmArgs::Make(
+        this, label, environment_services_, /*run_virtual_console=*/false);
+  }
   auto controller = std::make_unique<EnvironmentControllerImpl>(
       std::move(controller_request), std::make_unique<Realm>(std::move(args)));
   Realm* child = controller->realm();
@@ -300,6 +382,14 @@ void Realm::CreateComponent(
     ComponentObjectCreatedCallback callback) {
   ComponentRequestWrapper component_request(
       std::move(controller), MakeForwardingTerminationCallback());
+  if (launch_info.additional_services &&
+      launch_info.additional_services->host_directory) {
+    FXL_LOG(ERROR) << "|host_directory| is not yet supported for "
+                   << "CreateComponent. Use |provider| until it's supported.";
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::UNSUPPORTED);
+    return;
+  }
   if (launch_info.url.get().empty()) {
     FXL_LOG(ERROR) << "Cannot create application because launch_info contains"
                       " an empty url";
