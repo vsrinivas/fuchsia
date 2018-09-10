@@ -291,6 +291,32 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 			Type: Type(fmt.Sprintf("zx_chan_%s_server", c.compileCompoundIdentifier(p.Type.RequestSubtype, ""))),
 			Name: c.compileIdentifier(p.Name, ""),
 		}
+	case types.ArrayType:
+		inLine, outOfLine, handle := c.compileStructMember(types.StructMember{
+			Name: types.Identifier(c.compileIdentifier(p.Name, OutOfLineSuffix)),
+			Type: (*p.Type.ElementType),
+		})
+
+		i = StructMember{
+			Type: Type(fmt.Sprintf("array[%s, %v]", inLine.Type, *p.Type.ElementCount)),
+			Name: c.compileIdentifier(p.Name, InLineSuffix),
+		}
+
+		// Variable-size, out-of-line data
+		if outOfLine != nil {
+			o = &StructMember{
+				Type: Type(fmt.Sprintf("array[%s, %v]", outOfLine.Type, *p.Type.ElementCount)),
+				Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
+			}
+		}
+
+		// Out-of-line handles
+		if handle != nil {
+			h = &StructMember{
+				Type: Type(fmt.Sprintf("array[%s, %v]", handle.Type, *p.Type.ElementCount)),
+				Name: c.compileIdentifier(p.Name, HandlesSuffix),
+			}
+		}
 	case types.StringType:
 		// Constant-size, in-line data
 		i = StructMember{
@@ -344,6 +370,17 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 		case types.EnumDeclType:
 			i = StructMember{
 				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(p.Type.Identifier, ""), c.compilePrimitiveSubtype(c.enums[p.Type.Identifier].Type))),
+				Name: c.compileIdentifier(p.Name, ""),
+			}
+		case types.InterfaceDeclType:
+			i = StructMember{
+				Type: Type("flags[fidl_handle_presence, int32]"),
+				Name: c.compileIdentifier(p.Name, ""),
+			}
+
+			// Out-of-line handles
+			h = &StructMember{
+				Type: Type(fmt.Sprintf("zx_chan_%s_client", c.compileCompoundIdentifier(p.Type.Identifier, ""))),
 				Name: c.compileIdentifier(p.Name, ""),
 			}
 		case types.UnionDeclType:
