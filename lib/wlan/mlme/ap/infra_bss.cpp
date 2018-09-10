@@ -217,6 +217,27 @@ void InfraBss::HandleEthFrame(EthFrame&& frame) {
     }
 }
 
+zx_status_t InfraBss::HandleMlmeMsg(const BaseMlmeMsg& msg) {
+    common::MacAddr peer_addr;
+    if (auto auth_resp = msg.As<wlan_mlme::AuthenticateResponse>()) {
+        peer_addr = common::MacAddr(auth_resp->body()->peer_sta_address.data());
+    } else if (auto assoc_resp = msg.As<wlan_mlme::AssociateResponse>()) {
+        peer_addr = common::MacAddr(assoc_resp->body()->peer_sta_address.data());
+    } else {
+        warnf("[infra-bss] received unsupported MLME msg; ordinal: %u\n", msg.ordinal());
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    ZX_DEBUG_ASSERT(clients_.Has(peer_addr));
+    if (clients_.Has(peer_addr)) {
+        return clients_.GetClient(peer_addr)->HandleMlmeMsg(msg);
+    } else {
+        warnf("[infra-bss] unrecognized peer address in MlmeMsg: %s -- ordinal: %u\n",
+              peer_addr.ToString().c_str(), msg.ordinal());
+    }
+    return ZX_OK;
+}
+
 void InfraBss::HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>& frame) {
     auto& client_addr = frame.hdr()->addr2;
     ZX_DEBUG_ASSERT(!clients_.Has(client_addr));

@@ -6,8 +6,9 @@ mod rsn;
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
-use crate::ap::rsn::create_wpa2_psk_rsne;
+use log::{debug, error, warn};
 
+use crate::ap::rsn::create_wpa2_psk_rsne;
 use crate::{MlmeRequest, Ssid};
 use crate::sink::MlmeSink;
 
@@ -118,8 +119,36 @@ impl<T: Tokens> ApSme<T> {
 }
 
 impl<T: Tokens> super::Station for ApSme<T> {
-    fn on_mlme_event(&mut self, _event: MlmeEvent) {
-        // The MLME driver currently doesn't send any events
+    fn on_mlme_event(&mut self, event: MlmeEvent) {
+        debug!("received MLME event: {:?}", event);
+        match event {
+            MlmeEvent::AuthenticateInd { ind } => {
+                let result_code = if ind.auth_type == fidl_mlme::AuthenticationTypes::OpenSystem {
+                    fidl_mlme::AuthenticateResultCodes::Success
+                } else {
+                    error!("unsupported authentication type {:?}", ind.auth_type);
+                    fidl_mlme::AuthenticateResultCodes::Refused
+                };
+                let resp = fidl_mlme::AuthenticateResponse {
+                    peer_sta_address: ind.peer_sta_address,
+                    result_code,
+                };
+                self.mlme_sink.send(MlmeRequest::AuthResponse(resp));
+            }
+            MlmeEvent::AssociateInd { ind } => {
+                // TODO(NET-1466): Check RSNE before constructing a response.
+                let resp = fidl_mlme::AssociateResponse {
+                    peer_sta_address: ind.peer_sta_address,
+                    result_code: fidl_mlme::AssociateResultCodes::Success,
+                    // TODO(NET-1465): currently MLME generates and keeps track of the
+                    //                 association IDs. SME should generate instead and keep
+                    //                 track of them as well.
+                    association_id: 0u16,
+                };
+                self.mlme_sink.send(MlmeRequest::AssocResponse(resp));
+            }
+            _ => warn!("unsupported MlmeEvent type {:?}; ignoring", event),
+        }
     }
 }
 

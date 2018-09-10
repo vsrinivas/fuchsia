@@ -5,6 +5,7 @@
 #pragma once
 
 #include <wlan/mlme/frame_handler.h>
+#include <wlan/mlme/service.h>
 
 namespace wlan {
 
@@ -18,6 +19,7 @@ class RemoteClientInterface : public FrameHandler {
 
     virtual void HandleTimeout() = 0;
     virtual zx_status_t HandleAnyFrame(fbl::unique_ptr<Packet>) = 0;
+    virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& mlme_msg) = 0;
 };
 
 }  // namespace wlan

@@ -5,16 +5,25 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/wlan.h>
 
+#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <gtest/gtest.h>
 
 #include <memory>
 #include <utility>
+
+#include "mock_device.h"
 
 namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 namespace {
+
+struct ServiceTest : public ::testing::Test {
+    ServiceTest() : device() {}
+
+    MockDevice device;
+};
 
 template <typename T>
 static fbl::unique_ptr<Packet> IntoPacket(const T& msg, uint32_t ordinal = 42) {
@@ -76,6 +85,81 @@ TEST(MlmeMsg, CorruptedPacket) {
     MlmeMsg<wlan_mlme::DeauthenticateRequest> mlme_msg;
     auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::FromPacket(fbl::move(pkt), &mlme_msg);
     ASSERT_NE(status, ZX_OK);
+}
+
+TEST_F(ServiceTest, SendAuthInd) {
+    const common::MacAddr peer_sta({0x48, 0x0f, 0xcf, 0x54, 0xb9, 0xb1});
+    wlan_mlme::AuthenticationTypes auth_type = wlan_mlme::AuthenticationTypes::OPEN_SYSTEM;
+
+    service::SendAuthIndication(&device, peer_sta, auth_type);
+
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    auto inds = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal>);
+    ASSERT_EQ(inds.size(), static_cast<size_t>(1));
+    ASSERT_EQ(inds[0]->peer(), Packet::Peer::kService);
+    MlmeMsg<wlan_mlme::AuthenticateIndication> msg;
+    auto status = MlmeMsg<wlan_mlme::AuthenticateIndication>::FromPacket(fbl::move(inds[0]), &msg);
+    ASSERT_EQ(status, ZX_OK);
+
+    ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
+    ASSERT_EQ(msg.body()->auth_type, wlan_mlme::AuthenticationTypes::OPEN_SYSTEM);
+}
+
+TEST_F(ServiceTest, SendAssocInd) {
+    // -- prepare
+    const common::MacAddr peer_sta({0x48, 0x0f, 0xcf, 0x54, 0xb9, 0xb1});
+    uint16_t listen_interval = 100;
+
+    constexpr uint8_t sside_bytes[] = {0u, 7u, 'F', 'U', 'C', 'H', 'S', 'I', 'A'};
+    auto ssid_elem = reinterpret_cast<const SsidElement*>(sside_bytes);
+
+    constexpr uint8_t rsne_bytes[] = {0x30, 8u, 1, 2, 3, 4, 5, 6, 7, 8};
+    auto rsn_elem = reinterpret_cast<const RsnElement*>(rsne_bytes);
+
+    // -- execute
+    service::SendAssocIndication(&device, peer_sta, listen_interval, *ssid_elem, rsn_elem);
+
+    // -- verify
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    auto inds = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
+    ASSERT_EQ(inds.size(), static_cast<size_t>(1));
+    ASSERT_EQ(inds[0]->peer(), Packet::Peer::kService);
+    MlmeMsg<wlan_mlme::AssociateIndication> msg;
+    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::FromPacket(fbl::move(inds[0]), &msg);
+    ASSERT_EQ(status, ZX_OK);
+
+    ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
+    ASSERT_EQ(msg.body()->listen_interval, 100);
+    ASSERT_EQ(std::memcmp(msg.body()->ssid->data(), sside_bytes + 2, sizeof(sside_bytes) - 2), 0);
+    ASSERT_EQ(std::memcmp(msg.body()->rsn->data(), rsne_bytes, sizeof(rsne_bytes)), 0);
+}
+
+TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
+    // -- prepare
+    const common::MacAddr peer_sta({0x48, 0x0f, 0xcf, 0x54, 0xb9, 0xb1});
+    uint16_t listen_interval = 100;
+
+    constexpr uint8_t sside_bytes[] = {0u, 7u, 'F', 'U', 'C', 'H', 'S', 'I', 'A'};
+    auto ssid_elem = reinterpret_cast<const SsidElement*>(sside_bytes);
+
+    RsnElement* rsn_elem = nullptr;
+
+    // -- execute
+    service::SendAssocIndication(&device, peer_sta, listen_interval, *ssid_elem, rsn_elem);
+
+    // -- verify
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    auto inds = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
+    ASSERT_EQ(inds.size(), static_cast<size_t>(1));
+    ASSERT_EQ(inds[0]->peer(), Packet::Peer::kService);
+    MlmeMsg<wlan_mlme::AssociateIndication> msg;
+    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::FromPacket(fbl::move(inds[0]), &msg);
+    ASSERT_EQ(status, ZX_OK);
+
+    ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
+    ASSERT_EQ(msg.body()->listen_interval, 100);
+    ASSERT_EQ(std::memcmp(msg.body()->ssid->data(), sside_bytes + 2, sizeof(sside_bytes) - 2), 0);
+    ASSERT_TRUE(msg.body()->rsn.is_null());
 }
 
 }  // namespace

@@ -49,9 +49,7 @@ zx_status_t ApMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     } else if (auto stop_req = msg.As<wlan_mlme::StopRequest>()) {
         return HandleMlmeStopReq(*stop_req);
     }
-
-    // TODO(hahnr): Forward MLME primitives to BSS.
-    return ZX_OK;
+    return bss_->HandleMlmeMsg(msg);
 }
 
 zx_status_t ApMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {

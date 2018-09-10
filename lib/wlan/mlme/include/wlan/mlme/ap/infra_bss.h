@@ -14,6 +14,7 @@
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/sequence.h>
+#include <wlan/mlme/service.h>
 
 #include <wlan/common/macaddr.h>
 #include <zircon/types.h>
@@ -40,6 +41,8 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
 
     // Entry point for ethernet and WLAN frames.
     void HandleAnyFrame(fbl::unique_ptr<Packet>);
+    // Entry point for MLME messages except START-/STOP.request which are handled in the `ApMlme`.
+    zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg);
     zx_status_t HandleTimeout(const common::MacAddr& client_addr);
 
     // BssInterface implementation

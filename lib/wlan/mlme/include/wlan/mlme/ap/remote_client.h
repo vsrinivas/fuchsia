@@ -11,6 +11,7 @@
 #include <wlan/mlme/eapol.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 
 #include <zircon/types.h>
@@ -33,6 +34,7 @@ class RemoteClient : public RemoteClientInterface {
     // RemoteClientInterface implementation
     void HandleTimeout() override;
     zx_status_t HandleAnyFrame(fbl::unique_ptr<Packet>) override;
+    zx_status_t HandleMlmeMsg(const BaseMlmeMsg& mlme_msg) override;
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
     zx_status_t SendDeauthentication(reason_code::ReasonCode reason_code);
@@ -92,6 +94,7 @@ class BaseState : public FrameHandler {
     virtual void OnEnter() {}
     virtual void OnExit() {}
     virtual void HandleTimeout() {}
+    virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) { return ZX_OK; }
 
     virtual const char* name() const = 0;
 
@@ -129,14 +132,13 @@ class AuthenticatingState : public BaseState {
    public:
     AuthenticatingState(RemoteClient* client, const MgmtFrame<Authentication>& frame);
 
-    void OnEnter() override;
+    zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
 
     inline const char* name() const override { return kName; }
 
    private:
     static constexpr const char* kName = "Authenticating";
-
-    status_code::StatusCode status_code_;
+    zx_status_t FinalizeAuthenticationAttempt(const status_code::StatusCode st_code);
 };
 
 class AuthenticatedState : public BaseState {
@@ -167,7 +169,8 @@ class AssociatingState : public BaseState {
    public:
     AssociatingState(RemoteClient* client, const MgmtFrame<AssociationRequest>& frame);
 
-    void OnEnter() override;
+    zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
+    zx_status_t FinalizeAssociationAttempt(status_code::StatusCode st_code);
 
     inline const char* name() const override { return kName; }
 

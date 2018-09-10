@@ -55,13 +55,12 @@ AuthenticatingState::AuthenticatingState(RemoteClient* client,
     ZX_DEBUG_ASSERT(frame.hdr()->addr2 == client_->addr());
     debugbss("[client] [%s] received Authentication request...\n",
              client_->addr().ToString().c_str());
-    status_code_ = status_code::kRefusedReasonUnspecified;
 
     auto auth_alg = frame.body()->auth_algorithm_number;
     if (auth_alg != AuthAlgorithm::kOpenSystem) {
         errorf("[client] [%s] received auth attempt with unsupported algorithm: %u\n",
                client_->addr().ToString().c_str(), auth_alg);
-        status_code_ = status_code::kUnsupportedAuthAlgorithm;
+        FinalizeAuthenticationAttempt(status_code::kUnsupportedAuthAlgorithm);
         return;
     }
 
@@ -69,20 +68,48 @@ AuthenticatingState::AuthenticatingState(RemoteClient* client,
     if (auth_txn_seq_no != 1) {
         errorf("[client] [%s] received auth attempt with invalid tx seq no: %u\n",
                client_->addr().ToString().c_str(), auth_txn_seq_no);
-        status_code_ = status_code::kRefused;
+        FinalizeAuthenticationAttempt(status_code::kRefused);
         return;
     }
-    status_code_ = status_code::kSuccess;
+
+    // TODO(NET-1463): set timeout to transition back to deauthenticating state if response from
+    //                 SME doesn't arrive
+    service::SendAuthIndication(client_->device(), client_->addr(),
+                                wlan_mlme::AuthenticationTypes::OPEN_SYSTEM);
 }
 
-void AuthenticatingState::OnEnter() {
-    bool auth_success = status_code_ == status_code::kSuccess;
-    auto status = client_->SendAuthentication(status_code_);
+zx_status_t AuthenticatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
+    if (auto auth_resp = msg.As<wlan_mlme::AuthenticateResponse>()) {
+        ZX_DEBUG_ASSERT(client_->addr() ==
+                        common::MacAddr(auth_resp->body()->peer_sta_address.data()));
+        status_code::StatusCode st_code;
+        if (auth_resp->body()->result_code == wlan_mlme::AuthenticateResultCodes::SUCCESS) {
+            st_code = status_code::kSuccess;
+        } else {
+            // TODO(NET-1464): map result code to status code;
+            st_code = status_code::kRefused;
+        }
+        return FinalizeAuthenticationAttempt(st_code);
+    } else {
+        warnf("[client] [%s] unexpected MLME msg type in authenticating state; ordinal: %u\n",
+              client_->addr().ToString().c_str(), msg.ordinal());
+        return ZX_ERR_INVALID_ARGS;
+    }
+}
+
+zx_status_t AuthenticatingState::FinalizeAuthenticationAttempt(
+    const status_code::StatusCode st_code) {
+
+    bool auth_success = st_code == status_code::kSuccess;
+    auto status = client_->SendAuthentication(st_code);
     if (auth_success && status == ZX_OK) {
         MoveToState<AuthenticatedState>();
     } else {
+        // note that in the case where SME sends a success AuthenticateResponse but device fails
+        // to transmit the frame, MLME's state would diverge from SME
         MoveToState<DeauthenticatingState>();
     }
+    return status;
 }
 
 // AuthenticatedState implementation.
@@ -152,20 +179,63 @@ AssociatingState::AssociatingState(RemoteClient* client, const MgmtFrame<Associa
         return;
     }
 
-    status_code_ = status_code::kSuccess;
     aid_ = aid;
+
+    auto assoc_req_frame = frame.View().NextFrame();
+    size_t elements_len = assoc_req_frame.body_len();
+    ElementReader reader(frame.body()->elements, elements_len);
+
+    const SsidElement* ssid_element = nullptr;
+    const RsnElement* rsn_element = nullptr;
+    while (reader.is_valid()) {
+        const ElementHeader* header = reader.peek();
+        ZX_DEBUG_ASSERT(header != nullptr);
+        if (header->id == SsidElement::element_id()) {
+            ssid_element = reader.read<SsidElement>();
+        } else if (header->id == RsnElement::element_id()) {
+            rsn_element = reader.read<RsnElement>();
+        }
+        reader.skip(*header);
+    }
+
+    ZX_DEBUG_ASSERT(ssid_element != nullptr);
+
+    // TODO(NET-1463): set timeout to transition back to deauthenticated state if response from
+    //                 SME doesn't arrive
+    service::SendAssocIndication(client_->device(), client_->addr(), frame.body()->listen_interval,
+                                 *ssid_element, rsn_element);
 }
 
-void AssociatingState::OnEnter() {
-    // TODO(hahnr): Send MLME-Authenticate.indication and wait for response.
-    // For now simply send association response.
-    bool assoc_success = (status_code_ == status_code::kSuccess);
-    auto status = client_->SendAssociationResponse(aid_, status_code_);
+zx_status_t AssociatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
+    if (auto assoc_resp = msg.As<wlan_mlme::AssociateResponse>()) {
+        ZX_DEBUG_ASSERT(client_->addr() ==
+                        common::MacAddr(assoc_resp->body()->peer_sta_address.data()));
+        status_code::StatusCode st_code;
+        if (assoc_resp->body()->result_code == wlan_mlme::AssociateResultCodes::SUCCESS) {
+            st_code = status_code::kSuccess;
+        } else {
+            // TODO(NET-1464): map result code to status code;
+            st_code = status_code::kRefused;
+        }
+        return FinalizeAssociationAttempt(st_code);
+    } else {
+        warnf("[client] [%s] unexpected MLME msg type in associating state; ordinal: %u\n",
+              client_->addr().ToString().c_str(), msg.ordinal());
+        return ZX_ERR_INVALID_ARGS;
+    }
+}
+
+zx_status_t AssociatingState::FinalizeAssociationAttempt(status_code::StatusCode st_code) {
+    bool assoc_success = st_code == status_code::kSuccess;
+    auto status = client_->SendAssociationResponse(aid_, st_code);
     if (assoc_success && status == ZX_OK) {
         MoveToState<AssociatedState>(aid_);
     } else {
+        // note that in the case where SME sends a success AssociateResponse but device fails
+        // to transmit the frame, MLME's state would diverge from SME
         MoveToState<DeauthenticatingState>();
     }
+    return status;
 }
 
 // AssociatedState implementation.
@@ -604,6 +674,10 @@ void RemoteClient::HandleTimeout() {
 zx_status_t RemoteClient::HandleAnyFrame(fbl::unique_ptr<Packet> pkt) {
     // TODO(hahnr): forward directly to state rather than using dispatcher.
     return DispatchFramePacket(fbl::move(pkt), state_.get());
+}
+
+zx_status_t RemoteClient::HandleMlmeMsg(const BaseMlmeMsg& msg) {
+    return state_->HandleMlmeMsg(msg);
 }
 
 zx_status_t RemoteClient::StartTimer(zx::time deadline) {
