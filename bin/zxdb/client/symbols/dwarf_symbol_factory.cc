@@ -41,17 +41,15 @@ CodeBlock::CodeRanges MakeCodeRanges(
     const llvm::Optional<DwarfDieDecoder::HighPC>& high_pc) {
   CodeBlock::CodeRanges code_ranges;
   if (low_pc && high_pc) {
-    if (high_pc->is_constant) {
-      code_ranges.push_back(
-          CodeBlock::CodeRange(*low_pc, *low_pc + high_pc->value));
-    } else {
-      code_ranges.push_back(CodeBlock::CodeRange(*low_pc, high_pc->value));
-    }
+    if (high_pc->is_constant)
+      code_ranges.push_back(AddressRange(*low_pc, *low_pc + high_pc->value));
+    else
+      code_ranges.push_back(AddressRange(*low_pc, high_pc->value));
   }
 
   // Generally DWARF will put these in order, but we want to guarantee they're
   // sorted.
-  std::sort(code_ranges.begin(), code_ranges.end());
+  std::sort(code_ranges.begin(), code_ranges.end(), AddressRangeBeginCmp());
 
   return code_ranges;
 }

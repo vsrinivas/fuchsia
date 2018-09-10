@@ -77,8 +77,8 @@ void ThreadImpl::Continue() {
     // isn't necessarily bad.
     ThreadController::ContinueOp op = controllers_.back()->GetContinueOp();
     request.how = op.how;
-    request.range_begin = op.range_begin;
-    request.range_end = op.range_end;
+    request.range_begin = op.range.begin();
+    request.range_end = op.range.end();
   }
 
   session()->remote_api()->Resume(

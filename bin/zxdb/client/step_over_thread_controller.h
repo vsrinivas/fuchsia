@@ -7,16 +7,18 @@
 #include <memory>
 
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
+#include "garnet/bin/zxdb/client/step_mode.h"
 #include "garnet/bin/zxdb/client/thread_controller.h"
+#include "garnet/bin/zxdb/common/address_range.h"
 
 namespace zxdb {
 
 class FinishThreadController;
-class StepInRangeThreadController;
+class StepThreadController;
 
 // This controller causes the thread to single-step as long as the CPU is in
 // a given address range or any stack frame called from it. Contrast with
-// the StepInRangeThreadController which does not do the sub-frames.
+// the StepThreadController which does not do the sub-frames.
 //
 // This class works by:
 //   1. Single-stepping in the range.
@@ -25,25 +27,13 @@ class StepInRangeThreadController;
 //   4. Repeat.
 class StepOverThreadController : public ThreadController {
  public:
-  enum ConstructionMode {
-    // Does "next" for a specific address range.
-    kAddressRange,
-
-    // Does "next" for the current source line. If there is no source line,
-    // this does "kInstruction" mode.
-    kSourceLine,
-
-    // Does "next" for the current CPU instruction (stepping over calls).
-    kInstruction
-  };
-
   // Constructor for kSourceLine and kInstruction modes. It will initialize
   // itself to the thread's current position when the thread is attached.
-  explicit StepOverThreadController(ConstructionMode mode);
+  explicit StepOverThreadController(StepMode mode);
 
-  // Constructor for a kAddressRange mode. Continues execution as long as the
-  // IP is in [begin, end)
-  StepOverThreadController(uint64_t begin, uint64_t end);
+  // Constructor for a kAddressRange mode (the mode is implicit). Continues
+  // execution as long as the IP is in range.
+  explicit StepOverThreadController(AddressRange range);
 
   ~StepOverThreadController() override;
 
@@ -56,17 +46,15 @@ class StepOverThreadController : public ThreadController {
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
 
  private:
-  ConstructionMode construction_mode_;
-
   // The fingerprint of the frame we're stepping in. Anything newer than this
   // is a child frame we should step through, and anything older than this
   // means we exited the function and should stop stepping.
   FrameFingerprint frame_fingerprint_;
 
-  // Always non-null.
-  std::unique_ptr<StepInRangeThreadController> step_in_range_;
+  // Always non-null, manages stepping in the original function.
+  std::unique_ptr<StepThreadController> step_into_;
 
-  // Only set when we're stepping out.
+  // Only set when we're stepping out to get back to the original function.
   std::unique_ptr<FinishThreadController> finish_;
 };
 

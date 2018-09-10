@@ -9,8 +9,8 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/step_into_thread_controller.h"
 #include "garnet/bin/zxdb/client/step_over_thread_controller.h"
+#include "garnet/bin/zxdb/client/step_thread_controller.h"
 #include "garnet/bin/zxdb/client/symbols/code_block.h"
 #include "garnet/bin/zxdb/client/symbols/function.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
@@ -335,7 +335,7 @@ Err DoNext(ConsoleContext* context, const Command& cmd) {
     return err;
 
   auto controller = std::make_unique<StepOverThreadController>(
-      StepOverThreadController::kSourceLine);
+      StepMode::kSourceLine);
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);
@@ -390,7 +390,7 @@ Err DoNexti(ConsoleContext* context, const Command& cmd) {
     return err;
 
   auto controller = std::make_unique<StepOverThreadController>(
-      StepOverThreadController::kInstruction);
+      StepMode::kInstruction);
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);
@@ -591,7 +591,8 @@ Err DoStep(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  auto controller = std::make_unique<StepIntoThreadController>();
+  auto controller = std::make_unique<StepThreadController>(
+      StepMode::kSourceLine);
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);

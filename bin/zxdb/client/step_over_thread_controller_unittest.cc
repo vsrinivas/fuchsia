@@ -43,14 +43,13 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
   InjectException(exception);
 
   // Continue the thread with the controller stepping in range.
-  auto step_over_unique =
-      std::make_unique<StepOverThreadController>(kBeginAddr, kEndAddr);
+  auto step_over = std::make_unique<StepOverThreadController>(
+      AddressRange(kBeginAddr, kEndAddr));
   bool continued = false;
-  thread()->ContinueWith(std::move(step_over_unique),
-                         [&continued](const Err& err) {
-                           if (!err.has_error())
-                             continued = true;
-                         });
+  thread()->ContinueWith(std::move(step_over), [&continued](const Err& err) {
+    if (!err.has_error())
+      continued = true;
+  });
 
   // It should have been able to step without doing any further async work.
   EXPECT_TRUE(continued);
@@ -82,6 +81,8 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
 
   // Send a breakpoint completion notification at the previous stack frame.
   exception.frames.erase(exception.frames.begin());  // Erase topmost.
+  // Breakpoint exceptions are "software".
+  exception.type = debug_ipc::NotifyException::Type::kSoftware;
   exception.hit_breakpoints.resize(1);
   exception.hit_breakpoints[0].breakpoint_id = last_breakpoint_id();
   exception.hit_breakpoints[0].hit_count = 1;

@@ -17,7 +17,7 @@ const CodeBlock* CodeBlock::AsCodeBlock() const { return this; }
 uint64_t CodeBlock::GetFirstAddress() const {
   if (code_ranges_.empty())
     return 0;
-  return code_ranges_[0].first;
+  return code_ranges_[0].begin();
 }
 
 bool CodeBlock::ContainsAddress(const SymbolContext& symbol_context,
@@ -26,8 +26,8 @@ bool CodeBlock::ContainsAddress(const SymbolContext& symbol_context,
     return true;  // No defined code range, assume always valid.
 
   for (const auto& range : code_ranges_) {
-    if (absolute_address >= symbol_context.RelativeToAbsolute(range.first) &&
-        absolute_address < symbol_context.RelativeToAbsolute(range.second))
+    if (absolute_address >= symbol_context.RelativeToAbsolute(range.begin()) &&
+        absolute_address < symbol_context.RelativeToAbsolute(range.end()))
       return true;
   }
   return false;

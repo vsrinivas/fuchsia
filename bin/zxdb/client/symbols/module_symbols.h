@@ -52,6 +52,14 @@ class ModuleSymbols {
   // returns the entire set of contiguous line table entries with code ranges
   // with the same line as the given address.
   //
+  // This function may return a 0 line number for code that does not have
+  // an associated line (could be bookkeeping by compiler). These can't
+  // be merged with the previous or next line since it could be misleading:
+  // say the bookkeeping code was at the end of an if block, the previous line
+  // would be inside the block, but that block may not have been executed and
+  // showing the location there would be misleading. Generally code blocks
+  // with a "0" line number should be skipped over.
+  //
   // The SymbolContext will be used to interpret the absolute input address.
   virtual LineDetails LineDetailsForAddress(
       const SymbolContext& symbol_context, uint64_t absolute_address) const = 0;

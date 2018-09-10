@@ -7,6 +7,7 @@
 #include <functional>
 #include <vector>
 
+#include "garnet/bin/zxdb/common/address_range.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -42,22 +43,19 @@ class ThreadController {
       result.how = debug_ipc::ResumeRequest::How::kStepInstruction;
       return result;
     }
-    static ContinueOp StepInRange(uint64_t r_begin, uint64_t r_end) {
+    static ContinueOp StepInRange(AddressRange range) {
       ContinueOp result;
       result.how = debug_ipc::ResumeRequest::How::kStepInRange;
-      result.range_begin = r_begin;
-      result.range_end = r_end;
+      result.range = range;
       return result;
     }
 
     debug_ipc::ResumeRequest::How how =
         debug_ipc::ResumeRequest::How::kContinue;
 
-    // When how == kStepInRange, these variables define the address range to
-    // step in. As long as the instruction pointer is inside [range_begin,
-    // range_end), execution will continue.
-    uint64_t range_begin = 0;
-    uint64_t range_end = 0;
+    // When how == kStepInRange, this defines the address range to step in. As
+    // long as the instruction pointer is inside, execution will continue.
+    AddressRange range;
   };
 
   ThreadController();

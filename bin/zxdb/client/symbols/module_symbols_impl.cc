@@ -251,10 +251,6 @@ Location ModuleSymbolsImpl::LocationForAddress(
                   std::move(lazy_function));
 }
 
-// By policy this function decides that line table entries with a "0" line
-// index count with the previous non-zero entry. The compiler will generate
-// a row with a 0 line number to indicate an instruction range that isn't
-// associated with a source line.
 LineDetails ModuleSymbolsImpl::LineDetailsForAddress(
     const SymbolContext& symbol_context, uint64_t absolute_address) const {
   uint64_t relative_address =
@@ -282,22 +278,13 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(
       rows[found_row_index].EndSequence)
     return LineDetails();
 
-  // Might have landed on a "0" line (see function comment above). Back up.
-  while (found_row_index > 0 && rows[found_row_index].Line == 0)
-    found_row_index--;
-  if (rows[found_row_index].Line == 0)
-    return LineDetails();  // Nothing has a real line number, give up.
-
-  // Back up to the first row matching the file/line of the found one for the
-  // address.
+  // Adjust the beginning and end ranges greedily to include all matching
+  // entries of the same line.
   uint32_t first_row_index = found_row_index;
   while (first_row_index > 0 &&
          SameFileLine(rows[found_row_index], rows[first_row_index - 1])) {
     first_row_index--;
   }
-
-  // Search forward for the end of the sequence. Also include entries with
-  // a "0" line number as descrived above.
   uint32_t last_row_index = found_row_index;
   while (last_row_index < rows.size() - 1 &&
          SameFileLine(rows[found_row_index], rows[last_row_index + 1])) {

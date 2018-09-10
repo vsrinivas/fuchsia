@@ -33,6 +33,9 @@ class LineDetails {
   const std::vector<LineEntry>& entries() const { return entries_; }
   std::vector<LineEntry>& entries() { return entries_; }
 
+  // Computes the full extent of this line's ranges.
+  AddressRange GetExtent() const;
+
   // For debugging, writes this to a stream.
   void Dump(std::ostream& out) const;
 

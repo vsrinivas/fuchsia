@@ -5,6 +5,7 @@
 #pragma once
 
 #include "garnet/bin/zxdb/client/symbols/symbol.h"
+#include "garnet/bin/zxdb/common/address_range.h"
 
 namespace zxdb {
 
@@ -19,8 +20,7 @@ class CodeBlock : public Symbol {
 
   // A [begin, end) range of code blocks. These are addresses RELATIVE to the
   // beginning of the module they're inside of.
-  using CodeRange = std::pair<uint64_t, uint64_t>;
-  using CodeRanges = std::vector<CodeRange>;
+  using CodeRanges = std::vector<AddressRange>;
 
   // Symbol overrides.
   const CodeBlock* AsCodeBlock() const override;

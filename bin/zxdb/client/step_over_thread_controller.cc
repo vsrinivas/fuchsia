@@ -7,7 +7,7 @@
 #include "garnet/bin/zxdb/client/finish_thread_controller.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/step_in_range_thread_controller.h"
+#include "garnet/bin/zxdb/client/step_thread_controller.h"
 #include "garnet/bin/zxdb/client/symbols/line_details.h"
 #include "garnet/bin/zxdb/client/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -16,15 +16,13 @@
 
 namespace zxdb {
 
-StepOverThreadController::StepOverThreadController(ConstructionMode mode)
-    : construction_mode_(mode) {
-  FXL_DCHECK(mode != kAddressRange);
+StepOverThreadController::StepOverThreadController(StepMode mode)
+    : step_into_(std::make_unique<StepThreadController>(mode)) {
+  FXL_DCHECK(mode != StepMode::kAddressRange);
 }
 
-StepOverThreadController::StepOverThreadController(uint64_t begin, uint64_t end)
-    : construction_mode_(kAddressRange),
-      step_in_range_(
-          std::make_unique<StepInRangeThreadController>(begin, end)) {}
+StepOverThreadController::StepOverThreadController(AddressRange range)
+    : step_into_(std::make_unique<StepThreadController>(range)) {}
 
 StepOverThreadController::~StepOverThreadController() = default;
 
@@ -32,45 +30,19 @@ void StepOverThreadController::InitWithThread(
     Thread* thread, std::function<void(const Err&)> cb) {
   set_thread(thread);
 
-  // Save the info for the frame we're stepping in.
+  // Save the info for the frame we're stepping inside of for future possible
+  // stepping out.
   frame_fingerprint_ = thread->GetFrameFingerprint(0);
 
-  auto frames = thread->GetFrames();
-  uint64_t ip = frames[0]->GetAddress();
-  switch (construction_mode_) {
-    case kAddressRange: {
-      FXL_DCHECK(step_in_range_.get());  // Should have been made in ctor.
-      break;
-    }
-    case kSourceLine: {
-      LineDetails line_details =
-          thread->GetProcess()->GetSymbols()->LineDetailsForAddress(ip);
-      if (!line_details.entries().empty()) {
-        step_in_range_ = std::make_unique<StepInRangeThreadController>(
-            line_details.entries()[0].range.begin(),
-            line_details.entries().back().range.end());
-      } else {
-        // No source information, fall back to instruction-based.
-        step_in_range_ =
-            std::make_unique<StepInRangeThreadController>(ip, ip + 1);
-      }
-      break;
-    }
-    case kInstruction: {
-      // To step a single instruction, make a range of one byte to step in.
-      step_in_range_ =
-          std::make_unique<StepInRangeThreadController>(ip, ip + 1);
-      break;
-    }
-  }
+  // Stepping in the function itself is managed by the StepInto controller.
 
-  step_in_range_->InitWithThread(thread, std::move(cb));
+  step_into_->InitWithThread(thread, std::move(cb));
 }
 
 ThreadController::ContinueOp StepOverThreadController::GetContinueOp() {
   if (finish_)
     return finish_->GetContinueOp();
-  return step_in_range_->GetContinueOp();
+  return step_into_->GetContinueOp();
 }
 
 ThreadController::StopOp StepOverThreadController::OnThreadStop(
@@ -84,10 +56,18 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     // Done stepping out. The "finish" operation is complete, but we may need
     // to resume single-stepping in the outer frame.
     finish_.reset();
-  }
 
-  if (step_in_range_->OnThreadStop(stop_type, hit_breakpoints) == kContinue)
-    return kContinue;  // Still in range, keep stepping.
+    // Ignore the stop type when giving control back to the "step into"
+    // controller. In this case the stop type will be a software debug
+    // exception (from the breakpoint inserted by the "finish" controller).
+    // We want the "step into" controller to check for contiuation even though
+    // this stop type doesn't match what it's looking for.
+    if (step_into_->OnThreadStopIgnoreType(hit_breakpoints) == kContinue)
+      return kContinue;  // Still in range, keep stepping.
+  } else {
+    if (step_into_->OnThreadStop(stop_type, hit_breakpoints) == kContinue)
+      return kContinue;  // Still in range, keep stepping.
+  }
 
   // If we get here the thread is no longer in range but could be in a sub-
   // frame that we need to step out of.
