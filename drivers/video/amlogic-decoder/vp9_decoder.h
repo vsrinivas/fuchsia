@@ -117,12 +117,15 @@ class Vp9Decoder : public VideoDecoder {
 
     io_buffer_t compressed_data = {};
 
-    // This stores the motion vectors used to decode this frame for use in
-    // calculating motion vectors for the next frame.
-    io_buffer_t mv_mpred_buffer = {};
-
     // This is decoded_frame_count_ when this frame was decoded into.
     uint32_t decoded_index = 0xffffffff;
+  };
+
+  struct MpredBuffer {
+    ~MpredBuffer();
+    // This stores the motion vectors used to decode a frame for use in
+    // calculating motion vectors for the next frame.
+    io_buffer_t mv_mpred_buffer = {};
   };
 
   struct PictureData {
@@ -179,6 +182,14 @@ class Vp9Decoder : public VideoDecoder {
 
   PictureData last_frame_data_;
   PictureData current_frame_data_;
+
+  std::unique_ptr<MpredBuffer> last_mpred_buffer_;
+  std::unique_ptr<MpredBuffer> current_mpred_buffer_;
+
+  // One previously-used buffer is kept around so a new buffer doesn't have to
+  // be allocated each frame.
+  std::unique_ptr<MpredBuffer> cached_mpred_buffer_;
+
   // The VP9 specification requires that 8 reference frames can be stored -
   // they're saved in this structure.
   Frame* reference_frame_map_[8] = {};

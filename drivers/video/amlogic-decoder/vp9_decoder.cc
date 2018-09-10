@@ -371,6 +371,9 @@ void Vp9Decoder::ProcessCompletedFrames() {
   }
   last_frame_ = current_frame_;
   current_frame_ = nullptr;
+
+  cached_mpred_buffer_ = std::move(last_mpred_buffer_);
+  last_mpred_buffer_ = std::move(current_mpred_buffer_);
 }
 
 void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
@@ -478,6 +481,8 @@ void Vp9Decoder::ConfigureMcrcc() {
   HevcdMcrccCtl1::Get().FromValue(0xff0).WriteTo(owner_->dosbus());
 }
 
+Vp9Decoder::MpredBuffer::~MpredBuffer() { io_buffer_release(&mv_mpred_buffer); }
+
 void Vp9Decoder::ConfigureMotionPrediction() {
   // Intra frames and frames after intra frames can't use the previous
   // frame's mvs.
@@ -507,14 +512,14 @@ void Vp9Decoder::ConfigureMotionPrediction() {
       .WriteTo(owner_->dosbus());
 
   uint32_t mv_mpred_addr =
-      truncate_to_32(io_buffer_phys(&current_frame_->mv_mpred_buffer));
+      truncate_to_32(io_buffer_phys(&current_mpred_buffer_->mv_mpred_buffer));
   HevcMpredMvWrStartAddr::Get()
       .FromValue(mv_mpred_addr)
       .WriteTo(owner_->dosbus());
   HevcMpredMvWptr::Get().FromValue(mv_mpred_addr).WriteTo(owner_->dosbus());
-  if (last_frame_) {
+  if (last_mpred_buffer_) {
     uint32_t last_mv_mpred_addr =
-        truncate_to_32(io_buffer_phys(&last_frame_->mv_mpred_buffer));
+        truncate_to_32(io_buffer_phys(&last_mpred_buffer_->mv_mpred_buffer));
     HevcMpredMvRdStartAddr::Get()
         .FromValue(last_mv_mpred_addr)
         .WriteTo(owner_->dosbus());
@@ -523,7 +528,8 @@ void Vp9Decoder::ConfigureMotionPrediction() {
         .WriteTo(owner_->dosbus());
 
     uint32_t last_end_addr =
-        last_mv_mpred_addr + io_buffer_size(&last_frame_->mv_mpred_buffer, 0);
+        last_mv_mpred_addr +
+        io_buffer_size(&last_mpred_buffer_->mv_mpred_buffer, 0);
     HevcMpredMvRdEndAddr::Get()
         .FromValue(last_end_addr)
         .WriteTo(owner_->dosbus());
@@ -781,7 +787,6 @@ void Vp9Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
 Vp9Decoder::Frame::~Frame() {
   io_buffer_release(&compressed_header);
   io_buffer_release(&compressed_data);
-  io_buffer_release(&mv_mpred_buffer);
 }
 
 bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
@@ -824,19 +829,6 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
 
     new_frame->frame = std::move(video_frame);
 
-    // The largest coding unit is assumed to be 64x32.
-    constexpr uint32_t kLcuMvBytes = 0x240;
-    constexpr uint32_t kLcuCount = 4096 * 2048 / (64 * 32);
-    status = io_buffer_init_aligned(&new_frame->mv_mpred_buffer, owner_->bti(),
-                                    kLcuCount * kLcuMvBytes, 16,
-                                    IO_BUFFER_CONTIG | IO_BUFFER_RW);
-    if (status != ZX_OK) {
-      DECODE_ERROR("Alloc buffer error: %d\n", status);
-      return false;
-    }
-    io_buffer_cache_flush_invalidate(&new_frame->mv_mpred_buffer, 0,
-                                     kLcuCount * kLcuMvBytes);
-
     BarrierAfterFlush();
   }
 
@@ -851,6 +843,26 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
   current_frame_ = new_frame;
   current_frame_->refcount++;
   current_frame_->decoded_index = decoded_frame_count_++;
+
+  if (cached_mpred_buffer_) {
+    current_mpred_buffer_ = std::move(cached_mpred_buffer_);
+  } else {
+    current_mpred_buffer_ = std::make_unique<MpredBuffer>();
+    // The largest coding unit is assumed to be 64x32.
+    constexpr uint32_t kLcuMvBytes = 0x240;
+    constexpr uint32_t kLcuCount = 4096 * 2048 / (64 * 32);
+    zx_status_t status = io_buffer_init_aligned(
+        &current_mpred_buffer_->mv_mpred_buffer, owner_->bti(),
+        kLcuCount * kLcuMvBytes, 16, IO_BUFFER_CONTIG | IO_BUFFER_RW);
+    if (status != ZX_OK) {
+      DECODE_ERROR("Alloc buffer error: %d\n", status);
+      return false;
+    }
+    io_buffer_cache_flush_invalidate(&current_mpred_buffer_->mv_mpred_buffer, 0,
+                                     kLcuCount * kLcuMvBytes);
+    BarrierAfterFlush();
+  }
+
   return true;
 }
 
