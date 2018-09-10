@@ -68,12 +68,6 @@ interface StoryProvider {
   // EXPERIMENTAL
   13: CreateStoryWithOptions(StoryOptions story_options)
                              -> (string story_id);
-
-  // Sets to |is_kind_of_proto_story| the |kind_of_proto_story| field of the
-  // story options.
-  // EXPERIMENTAL
-  14: SetKindOfProtoStoryOption(string story_id,
-                                bool is_kind_of_proto_story) -> ();
 };
 
 // Implemented by clients of StoryProvider.

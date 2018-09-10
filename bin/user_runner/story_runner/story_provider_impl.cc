@@ -618,29 +618,6 @@ void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
       "StoryProviderImpl::RunningStories", on_run, done, callback));
 }
 
-// |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::SetKindOfProtoStoryOption(
-    fidl::StringPtr story_id, bool is_kind_of_proto_story,
-    SetKindOfProtoStoryOptionCallback callback) {
-  auto on_run =
-      Future<>::Create("StoryProviderImpl.SetKindOfProtoStoryOption.on_run");
-  auto done =
-      on_run
-          ->AsyncMap([this, story_id, is_kind_of_proto_story] {
-            return session_storage_->GetStoryData(story_id);
-          })
-          ->AsyncMap([this, story_id, is_kind_of_proto_story](
-                         fuchsia::modular::internal::StoryDataPtr data) {
-            fuchsia::modular::StoryOptions new_options;
-            data->story_options.Clone(&new_options);
-            new_options.kind_of_proto_story = is_kind_of_proto_story;
-            return session_storage_->UpdateStoryOptions(story_id,
-                                                        std::move(new_options));
-          });
-  operation_queue_.Add(WrapFutureAsOperation(
-      "StoryProviderImpl::UpdateStoryOptions", on_run, done, callback));
-}
-
 void StoryProviderImpl::OnStoryStorageUpdated(
     fidl::StringPtr story_id,
     fuchsia::modular::internal::StoryData story_data) {

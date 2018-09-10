@@ -41,10 +41,6 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
     return last_created_kind_of_proto_story_;
   }
 
-  const std::string& last_promoted_story() const {
-    return last_promoted_story_;
-  }
-
   const std::string& deleted_story() const { return deleted_story_; }
 
  private:
@@ -124,19 +120,8 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
     FXL_LOG(FATAL) << "StoryProviderMock::Duplicate() not implemented.";
   }
 
-  // |fuchsia::modular::StoryProvider|
-  void SetKindOfProtoStoryOption(
-      fidl::StringPtr story_id, bool kind_of_proto_story,
-      SetKindOfProtoStoryOptionCallback callback) override {
-    if (story_id == last_created_kind_of_proto_story_ && !kind_of_proto_story) {
-      last_promoted_story_ = story_id;
-    }
-    callback();
-  }
-
   std::string last_created_story_;
   std::string last_created_kind_of_proto_story_;
-  std::string last_promoted_story_;
   std::string deleted_story_;
   StoryControllerMock controller_mock_;
   fidl::BindingSet<fuchsia::modular::StoryController> binding_set_;

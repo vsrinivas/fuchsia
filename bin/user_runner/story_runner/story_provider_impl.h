@@ -172,11 +172,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void Duplicate(
       fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
 
-  // |fuchsia::modular::StoryProvider|
-  void SetKindOfProtoStoryOption(
-      fidl::StringPtr story_id, bool is_kind_of_proto_story,
-      SetKindOfProtoStoryOptionCallback callback) override;
-
   // |fuchsia::modular::FocusWatcher|
   void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;
 
