@@ -188,11 +188,6 @@ static zx_status_t sdio_write_data16(sdmmc_device_t *dev, uint8_t fn_idx, uint32
     return ZX_OK;
 }
 
-zx_status_t sdio_get_oob_irq_host(void *ctx, zx_handle_t *oob_irq) {
-    sdmmc_device_t *dev = ctx;
-    return sdmmc_get_sdio_oob_irq(&dev->host, oob_irq);
-}
-
 zx_status_t sdio_get_device_hw_info(void *ctx, sdio_hw_info_t *dev_info) {
     sdmmc_device_t *dev = ctx;
     sdio_device_t *sdio_dev = &(dev->sdio_dev);

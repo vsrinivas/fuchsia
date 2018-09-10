@@ -65,7 +65,6 @@ typedef struct sdio_rw_txn {
 
 typedef struct sdio_protocol_ops {
     zx_status_t (*get_dev_hw_info)(void* ctx, sdio_hw_info_t *hw_info);
-    zx_status_t (*get_oob_irq)(void* ctx, zx_handle_t *oob_irq);
     zx_status_t (*enable_fn)(void *ctx, uint8_t fn_idx);
     zx_status_t (*disable_fn)(void *ctx, uint8_t fn_idx);
     zx_status_t (*enable_fn_intr)(void *ctx, uint8_t fn_idx);
@@ -113,10 +112,6 @@ static inline zx_status_t sdio_get_block_size(sdio_protocol_t* sdio, uint8_t fn_
 static inline zx_status_t sdio_do_rw_txn(sdio_protocol_t* sdio, uint8_t fn_idx,
                                          sdio_rw_txn_t *txn) {
     return sdio->ops->do_rw_txn(sdio->ctx, fn_idx, txn);
-}
-
-static inline zx_status_t sdio_get_oob_irq(sdio_protocol_t* sdio, zx_handle_t *oob_irq) {
-    return sdio->ops->get_oob_irq(sdio->ctx, oob_irq);
 }
 
 static inline zx_status_t sdio_get_dev_hw_info(sdio_protocol_t* sdio,

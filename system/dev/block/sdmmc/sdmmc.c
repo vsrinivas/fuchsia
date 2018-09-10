@@ -278,7 +278,6 @@ static block_protocol_ops_t block_proto = {
 
 // SDIO protocol
 static sdio_protocol_ops_t sdio_proto = {
-    .get_oob_irq = sdio_get_oob_irq_host,
     .enable_fn = sdio_enable_function,
     .disable_fn = sdio_disable_function,
     .enable_fn_intr = sdio_enable_interrupt,
