@@ -147,7 +147,8 @@ class VirtioQueue {
   // This method should only be called using descriptor indices acquired with
   // virtio_queue_next_avail (including any chained descriptors) and before
   // they've been released with virtio_queue_return.
-  zx_status_t ReadDesc(uint16_t index, VirtioDescriptor* desc);
+  zx_status_t __WARN_UNUSED_RESULT ReadDesc(uint16_t index,
+                                            VirtioDescriptor* desc);
 
   // Callback for |Poll| and |PollAsync|.
   //

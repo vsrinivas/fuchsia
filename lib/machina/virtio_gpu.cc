@@ -84,7 +84,11 @@ const char* command_to_string(uint32_t command) {
 zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
                                         uint32_t* used) {
   VirtioDescriptor request_desc;
-  queue->ReadDesc(head, &request_desc);
+  zx_status_t status = queue->ReadDesc(head, &request_desc);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to read descriptor";
+    return status;
+  }
   const auto request_header =
       reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(request_desc.addr);
   const uint32_t command_type = request_header->type;
@@ -117,7 +121,11 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
   switch (command_type) {
     case VIRTIO_GPU_CMD_GET_DISPLAY_INFO: {
       VirtioDescriptor response_desc;
-      queue->ReadDesc(request_desc.next, &response_desc);
+      status = queue->ReadDesc(request_desc.next, &response_desc);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read descriptor";
+        return status;
+      }
       auto request =
           reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(request_desc.addr);
       auto response =
@@ -129,7 +137,11 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
     }
     case VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: {
       VirtioDescriptor response_desc;
-      queue->ReadDesc(request_desc.next, &response_desc);
+      status = queue->ReadDesc(request_desc.next, &response_desc);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read descriptor";
+        return status;
+      }
       auto request =
           reinterpret_cast<virtio_gpu_resource_create_2d_t*>(request_desc.addr);
       auto response =
@@ -141,7 +153,11 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
     }
     case VIRTIO_GPU_CMD_SET_SCANOUT: {
       VirtioDescriptor response_desc;
-      queue->ReadDesc(request_desc.next, &response_desc);
+      status = queue->ReadDesc(request_desc.next, &response_desc);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read descriptor";
+        return status;
+      }
       auto request =
           reinterpret_cast<virtio_gpu_set_scanout_t*>(request_desc.addr);
       auto response =
@@ -153,7 +169,11 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
     }
     case VIRTIO_GPU_CMD_RESOURCE_FLUSH: {
       VirtioDescriptor response_desc;
-      queue->ReadDesc(request_desc.next, &response_desc);
+      status = queue->ReadDesc(request_desc.next, &response_desc);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read descriptor";
+        return status;
+      }
       auto request =
           reinterpret_cast<virtio_gpu_resource_flush_t*>(request_desc.addr);
       auto response =
@@ -165,7 +185,11 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
     }
     case VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D: {
       VirtioDescriptor response_desc;
-      queue->ReadDesc(request_desc.next, &response_desc);
+      status = queue->ReadDesc(request_desc.next, &response_desc);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read descriptor";
+        return status;
+      }
       auto request = reinterpret_cast<virtio_gpu_transfer_to_host_2d_t*>(
           request_desc.addr);
       auto response =
@@ -177,14 +201,22 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
     }
     case VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING: {
       VirtioDescriptor response_desc;
-      queue->ReadDesc(request_desc.next, &response_desc);
+      status = queue->ReadDesc(request_desc.next, &response_desc);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read descriptor";
+        return status;
+      }
 
       // This may or may not be on the same descriptor.
       virtio_gpu_mem_entry_t* mem_entries;
       if (response_desc.has_next) {
         mem_entries =
             reinterpret_cast<virtio_gpu_mem_entry_t*>(response_desc.addr);
-        queue->ReadDesc(response_desc.next, &response_desc);
+        status = queue->ReadDesc(response_desc.next, &response_desc);
+        if (status != ZX_OK) {
+          FXL_LOG(ERROR) << "Failed to read descriptor";
+          return status;
+        }
       } else {
         uintptr_t addr = reinterpret_cast<uintptr_t>(request_desc.addr) +
                          sizeof(virtio_gpu_resource_attach_backing_t);
@@ -202,7 +234,11 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
     }
     case VIRTIO_GPU_CMD_RESOURCE_UNREF: {
       VirtioDescriptor response_desc;
-      queue->ReadDesc(request_desc.next, &response_desc);
+      status = queue->ReadDesc(request_desc.next, &response_desc);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read descriptor";
+        return status;
+      }
       auto request =
           reinterpret_cast<virtio_gpu_resource_unref_t*>(request_desc.addr);
       auto response =
@@ -214,7 +250,11 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
     }
     case VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING: {
       VirtioDescriptor response_desc;
-      queue->ReadDesc(request_desc.next, &response_desc);
+      status = queue->ReadDesc(request_desc.next, &response_desc);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read descriptor";
+        return status;
+      }
       auto request = reinterpret_cast<virtio_gpu_resource_detach_backing_t*>(
           request_desc.addr);
       auto response =
@@ -237,7 +277,11 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
                      << "'" << command_label << "' (" << command_type << ")";
       // ACK.
       VirtioDescriptor response_desc;
-      queue->ReadDesc(request_desc.next, &response_desc);
+      status = queue->ReadDesc(request_desc.next, &response_desc);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read descriptor";
+        return status;
+      }
       auto response =
           reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(response_desc.addr);
       response_header = response;
