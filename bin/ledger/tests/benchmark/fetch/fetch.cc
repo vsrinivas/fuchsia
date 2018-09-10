@@ -2,30 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/benchmark/fetch/fetch.h"
-
 #include <iostream>
+#include <memory>
+#include <vector>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
+#include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
+#include "peridot/bin/ledger/testing/page_data_generator.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
+#include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
 
+namespace ledger {
 namespace {
+
 constexpr fxl::StringView kBinaryPath =
     "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/fetch.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/fetch";
@@ -43,13 +53,64 @@ void PrintUsage() {
             // Comment to make clang format not break formatting.
             << " --" << kEntryCountFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
-            << " --" << kPartSizeFlag << "=<int>"
-            << ledger::GetSyncParamsUsage() << std::endl;
+            << " --" << kPartSizeFlag << "=<int>" << GetSyncParamsUsage()
+            << std::endl;
 }
 
-}  // namespace
+// Benchmark that measures time to fetch lazy values from server.
+// Parameters:
+//   --entry-count=<int> the number of entries to be put
+//   --value-size=<int> the size of a single value in bytes
+//   --part-size=<int> the size of the part to be read with one Fetch
+//   call. If equal to zero, the whole value will be read.
+//   --credentials-path=<file path> Firestore service account credentials
+class FetchBenchmark : public SyncWatcher {
+ public:
+  FetchBenchmark(async::Loop* loop, size_t entry_count, size_t value_size,
+                 size_t part_size, SyncParams sync_params);
 
-namespace ledger {
+  void Run();
+
+  // SyncWatcher:
+  void SyncStateChanged(SyncState download, SyncState upload,
+                        SyncStateChangedCallback callback) override;
+
+ private:
+  void Populate();
+  void WaitForWriterUpload();
+  void ConnectReader();
+  void WaitForReaderDownload();
+
+  void FetchValues(PageSnapshotPtr snapshot, size_t i);
+  void FetchPart(PageSnapshotPtr snapshot, size_t i, size_t part);
+
+  void ShutDown();
+  fit::closure QuitLoopClosure();
+
+  async::Loop* const loop_;
+  DataGenerator generator_;
+  PageDataGenerator page_data_generator_;
+  std::unique_ptr<component::StartupContext> startup_context_;
+  cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
+  fidl::Binding<SyncWatcher> sync_watcher_binding_;
+  const size_t entry_count_;
+  const size_t value_size_;
+  const size_t part_size_;
+  const std::string user_id_;
+  files::ScopedTempDir writer_tmp_dir_;
+  files::ScopedTempDir reader_tmp_dir_;
+  fuchsia::sys::ComponentControllerPtr writer_controller_;
+  fuchsia::sys::ComponentControllerPtr reader_controller_;
+  LedgerPtr writer_;
+  LedgerPtr reader_;
+  PageId page_id_;
+  PagePtr writer_page_;
+  PagePtr reader_page_;
+  std::vector<fidl::VectorPtr<uint8_t>> keys_;
+  fit::function<void(SyncState, SyncState)> on_sync_state_changed_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(FetchBenchmark);
+};
 
 FetchBenchmark::FetchBenchmark(async::Loop* loop, size_t entry_count,
                                size_t value_size, size_t part_size,
@@ -252,9 +313,7 @@ fit::closure FetchBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace ledger
-
-int main(int argc, const char** argv) {
+int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   std::string entry_count_str;
@@ -263,7 +322,7 @@ int main(int argc, const char** argv) {
   size_t value_size;
   std::string part_size_str;
   size_t part_size;
-  ledger::SyncParams sync_params;
+  SyncParams sync_params;
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
                                    &entry_count_str) ||
       !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
@@ -274,13 +333,18 @@ int main(int argc, const char** argv) {
       value_size == 0 ||
       !command_line.GetOptionValue(kPartSizeFlag.ToString(), &part_size_str) ||
       !fxl::StringToNumberWithError(part_size_str, &part_size) ||
-      !ledger::ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
+      !ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
     PrintUsage();
     return -1;
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  ledger::FetchBenchmark app(&loop, entry_count, value_size, part_size,
-                             std::move(sync_params));
-  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
+  FetchBenchmark app(&loop, entry_count, value_size, part_size,
+                     std::move(sync_params));
+  return RunWithTracing(&loop, [&app] { app.Run(); });
 }
+
+}  // namespace
+}  // namespace ledger
+
+int main(int argc, const char** argv) { return ledger::Main(argc, argv); }

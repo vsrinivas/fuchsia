@@ -31,7 +31,6 @@ executable("ledger_benchmark_disk_space") {
 
   sources = [
     "disk_space.cc",
-    "disk_space.h",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

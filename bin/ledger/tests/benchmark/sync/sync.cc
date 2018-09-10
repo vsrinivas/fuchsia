@@ -2,30 +2,39 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/benchmark/sync/sync.h"
-
 #include <iostream>
+#include <memory>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
+#include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
+#include "peridot/bin/ledger/testing/page_data_generator.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
+#include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
 
+namespace ledger {
 namespace {
+
 constexpr fxl::StringView kBinaryPath =
     "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/sync.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/sync";
@@ -47,18 +56,74 @@ void PrintUsage() {
             << " --" << kValueSizeFlag << "=<int>"
             << " --" << kEntriesPerChangeFlag << "=<int>"
             << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag
-            << ")" << ledger::GetSyncParamsUsage() << std::endl;
+            << ")" << GetSyncParamsUsage() << std::endl;
 }
 
-}  // namespace
+// Benchmark that measures sync latency between two Ledger instances syncing
+// through the cloud. This emulates syncing between devices, as the Ledger
+// instances have separate disk storage.
+//
+// Cloud sync needs to be configured on the device in order for the benchmark to
+// run.
+//
+// Parameters:
+//   --change-count=<int> the number of changes to be made to the page (each
+//   change is done as transaction and can include several put operations).
+//   --value-size=<int> the size of a single value in bytes
+//   --entries-per-change=<int> number of entries added in the transaction
+//   --refs=(on|off) reference strategy: on to put values as references, off to
+//     put them as FIDL arrays.
+//   --credentials-path=<file path> Firestore service account credentials
+class SyncBenchmark : public PageWatcher {
+ public:
+  SyncBenchmark(async::Loop* loop, size_t change_count, size_t value_size,
+                size_t entries_per_change,
+                PageDataGenerator::ReferenceStrategy reference_strategy,
+                SyncParams sync_params);
 
-namespace ledger {
+  void Run();
+
+  // PageWatcher:
+  void OnChange(PageChange page_change, ResultState result_state,
+                OnChangeCallback callback) override;
+
+ private:
+  void RunSingleChange(size_t change_number);
+
+  void ShutDown();
+  fit::closure QuitLoopClosure();
+
+  async::Loop* const loop_;
+  DataGenerator generator_;
+  PageDataGenerator page_data_generator_;
+  std::unique_ptr<component::StartupContext> startup_context_;
+  cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
+  const size_t change_count_;
+  const size_t value_size_;
+  const size_t entries_per_change_;
+  const PageDataGenerator::ReferenceStrategy reference_strategy_;
+  const std::string user_id_;
+  fidl::Binding<PageWatcher> page_watcher_binding_;
+  files::ScopedTempDir alpha_tmp_dir_;
+  files::ScopedTempDir beta_tmp_dir_;
+  fuchsia::sys::ComponentControllerPtr alpha_controller_;
+  fuchsia::sys::ComponentControllerPtr beta_controller_;
+  LedgerPtr alpha_;
+  LedgerPtr beta_;
+  PageId page_id_;
+  PagePtr alpha_page_;
+  PagePtr beta_page_;
+
+  size_t changed_entries_received_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(SyncBenchmark);
+};
 
 SyncBenchmark::SyncBenchmark(
     async::Loop* loop, size_t change_count, size_t value_size,
     size_t entries_per_change,
     PageDataGenerator::ReferenceStrategy reference_strategy,
-    ledger::SyncParams sync_params)
+    SyncParams sync_params)
     : loop_(loop),
       startup_context_(component::StartupContext::CreateFromStartupInfo()),
       cloud_provider_factory_(startup_context_.get(),
@@ -96,9 +161,9 @@ void SyncBenchmark::Run() {
   GetLedger(
       startup_context_.get(), alpha_controller_.NewRequest(),
       std::move(cloud_provider_alpha), "sync",
-      ledger::DetachedPath(std::move(alpha_path)), QuitLoopClosure(),
-      [this, beta_path = std::move(beta_path)](
-          ledger::Status status, ledger::LedgerPtr ledger) mutable {
+      DetachedPath(std::move(alpha_path)), QuitLoopClosure(),
+      [this, beta_path = std::move(beta_path)](Status status,
+                                               LedgerPtr ledger) mutable {
         if (QuitOnError(QuitLoopClosure(), status, "alpha ledger")) {
           return;
         };
@@ -110,17 +175,16 @@ void SyncBenchmark::Run() {
 
         GetLedger(
             startup_context_.get(), beta_controller_.NewRequest(),
-            std::move(cloud_provider_beta), "sync",
-            ledger::DetachedPath(beta_path), QuitLoopClosure(),
-            [this, beta_path](ledger::Status status, ledger::LedgerPtr ledger) {
+            std::move(cloud_provider_beta), "sync", DetachedPath(beta_path),
+            QuitLoopClosure(),
+            [this, beta_path](Status status, LedgerPtr ledger) {
               if (QuitOnError(QuitLoopClosure(), status, "beta ledger")) {
                 return;
               }
               beta_ = std::move(ledger);
               GetPageEnsureInitialized(
                   &alpha_, nullptr, QuitLoopClosure(),
-                  [this](ledger::Status status, ledger::PagePtr page,
-                         ledger::PageId id) {
+                  [this](Status status, PagePtr page, PageId id) {
                     if (QuitOnError(QuitLoopClosure(), status,
                                     "alpha page initialization")) {
                       return;
@@ -131,11 +195,11 @@ void SyncBenchmark::Run() {
                         fidl::MakeOptional(id), beta_page_.NewRequest(),
                         QuitOnErrorCallback(QuitLoopClosure(), "GetPage"));
 
-                    ledger::PageSnapshotPtr snapshot;
+                    PageSnapshotPtr snapshot;
                     beta_page_->GetSnapshot(
                         snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                         page_watcher_binding_.NewBinding(),
-                        [this](ledger::Status status) {
+                        [this](Status status) {
                           if (QuitOnError(QuitLoopClosure(), status,
                                           "GetSnapshot")) {
                             return;
@@ -147,19 +211,18 @@ void SyncBenchmark::Run() {
       });
 }
 
-void SyncBenchmark::OnChange(ledger::PageChange page_change,
-                             ledger::ResultState result_state,
+void SyncBenchmark::OnChange(PageChange page_change, ResultState result_state,
                              OnChangeCallback callback) {
   FXL_DCHECK(!page_change.changed_entries->empty());
   size_t i =
       std::stoul(convert::ToString(page_change.changed_entries->at(0).key));
   changed_entries_received_ += page_change.changed_entries->size();
-  if (result_state == ledger::ResultState::COMPLETED ||
-      result_state == ledger::ResultState::PARTIAL_STARTED) {
+  if (result_state == ResultState::COMPLETED ||
+      result_state == ResultState::PARTIAL_STARTED) {
     TRACE_ASYNC_END("benchmark", "sync latency", i);
   }
-  if (result_state == ledger::ResultState::COMPLETED ||
-      result_state == ledger::ResultState::PARTIAL_COMPLETED) {
+  if (result_state == ResultState::COMPLETED ||
+      result_state == ResultState::PARTIAL_COMPLETED) {
     FXL_DCHECK(changed_entries_received_ == entries_per_change_);
     RunSingleChange(i + 1);
   }
@@ -182,8 +245,7 @@ void SyncBenchmark::RunSingleChange(size_t change_number) {
   TRACE_ASYNC_BEGIN("benchmark", "sync latency", change_number);
   page_data_generator_.Populate(
       &alpha_page_, std::move(keys), value_size_, entries_per_change_,
-      reference_strategy_, ledger::Priority::EAGER,
-      [this](ledger::Status status) {
+      reference_strategy_, Priority::EAGER, [this](Status status) {
         if (QuitOnError(QuitLoopClosure(), status,
                         "PageDataGenerator::Populate")) {
           return;
@@ -201,9 +263,7 @@ fit::closure SyncBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace ledger
-
-int main(int argc, const char** argv) {
+int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   std::string change_count_str;
@@ -213,7 +273,7 @@ int main(int argc, const char** argv) {
   std::string entries_per_change_str;
   size_t entries_per_change;
   std::string reference_strategy_str;
-  ledger::SyncParams sync_params;
+  SyncParams sync_params;
   if (!command_line.GetOptionValue(kChangeCountFlag.ToString(),
                                    &change_count_str) ||
       !fxl::StringToNumberWithError(change_count_str, &change_count) ||
@@ -228,17 +288,16 @@ int main(int argc, const char** argv) {
                                     &entries_per_change) ||
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
-      !ledger::ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
+      !ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
     PrintUsage();
     return -1;
   }
 
-  ledger::PageDataGenerator::ReferenceStrategy reference_strategy;
+  PageDataGenerator::ReferenceStrategy reference_strategy;
   if (reference_strategy_str == kRefsOnFlag) {
-    reference_strategy =
-        ledger::PageDataGenerator::ReferenceStrategy::REFERENCE;
+    reference_strategy = PageDataGenerator::ReferenceStrategy::REFERENCE;
   } else if (reference_strategy_str == kRefsOffFlag) {
-    reference_strategy = ledger::PageDataGenerator::ReferenceStrategy::INLINE;
+    reference_strategy = PageDataGenerator::ReferenceStrategy::INLINE;
   } else {
     std::cerr << "Unknown option " << reference_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;
@@ -247,7 +306,12 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  ledger::SyncBenchmark app(&loop, change_count, value_size, entries_per_change,
-                            reference_strategy, std::move(sync_params));
-  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
+  SyncBenchmark app(&loop, change_count, value_size, entries_per_change,
+                    reference_strategy, std::move(sync_params));
+  return RunWithTracing(&loop, [&app] { app.Run(); });
 }
+
+}  // namespace
+}  // namespace ledger
+
+int main(int argc, const char** argv) { return ledger::Main(argc, argv); }

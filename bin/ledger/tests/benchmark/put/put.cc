@@ -2,26 +2,111 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/benchmark/put/put.h"
+#include <iostream>
+#include <memory>
+#include <set>
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
+#include <lib/fxl/memory/ref_ptr.h>
+#include <lib/fxl/random/rand.h>
+#include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
+#include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
+#include "peridot/bin/ledger/testing/page_data_generator.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
+#include "peridot/bin/ledger/testing/run_with_tracing.h"
 #include "peridot/lib/convert/convert.h"
 
+namespace ledger {
+namespace {
+
+// Benchmark that measures performance of the Put() operation.
+//
+// Parameters:
+//   --entry-count=<int> the number of entries to be put
+//   --transaction-size=<int> the size of a single transaction in number of put
+//     operations. If equal to 0, no explicit transactions will be made.
+//   --key-size=<int> the size of a single key in bytes
+//   --value-size=<int> the size of a single value in bytes
+//   --refs=(on|off) the reference strategy: on if every value is inserted
+//     as a reference, off if every value is inserted as a FIDL array.
+//   --update whether operations will update existing entries (put with existing
+//     keys and new values)
+//   --seed=<int> (optional) the seed for key and value generation
+class PutBenchmark : public PageWatcher {
+ public:
+  PutBenchmark(async::Loop* loop, int entry_count, int transaction_size,
+               int key_size, int value_size, bool update,
+               PageDataGenerator::ReferenceStrategy reference_strategy,
+               uint64_t seed);
+
+  void Run();
+
+  // PageWatcher:
+  void OnChange(PageChange page_change, ResultState result_state,
+                OnChangeCallback callback) override;
+
+ private:
+  // Initilizes the keys to be used in the benchmark. In case the benchmark is
+  // on updating entries, it also adds these keys in the ledger with some
+  // initial values.
+  void InitializeKeys(
+      fit::function<void(std::vector<fidl::VectorPtr<uint8_t>>)> on_done);
+
+  void BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys);
+  void RunSingle(int i, std::vector<fidl::VectorPtr<uint8_t>> keys);
+  void CommitAndRunNext(int i, size_t key_number,
+                        std::vector<fidl::VectorPtr<uint8_t>> keys);
+  void PutEntry(fidl::VectorPtr<uint8_t> key, fidl::VectorPtr<uint8_t> value,
+                fit::function<void()> on_done);
+
+  void ShutDown();
+  fit::closure QuitLoopClosure();
+
+  async::Loop* const loop_;
+  DataGenerator generator_;
+  PageDataGenerator page_data_generator_;
+
+  files::ScopedTempDir tmp_dir_;
+  std::unique_ptr<component::StartupContext> startup_context_;
+  const int entry_count_;
+  const int transaction_size_;
+  const int key_size_;
+  const int value_size_;
+  const bool update_;
+
+  fidl::Binding<PageWatcher> page_watcher_binding_;
+  const PageDataGenerator::ReferenceStrategy reference_strategy_;
+
+  fuchsia::sys::ComponentControllerPtr component_controller_;
+  LedgerPtr ledger_;
+  PagePtr page_;
+  // Keys that we use to identify a change event. For transaction_size = 1 it
+  // contains all the keys, otherwise only the last changed key for each
+  // transaction.
+  std::set<size_t> keys_to_receive_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(PutBenchmark);
+};
+
+}  // namespace
+}  // namespace ledger
+
+namespace ledger {
 namespace {
 
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/put";
-
-}  // namespace
-
-namespace ledger {
 
 PutBenchmark::PutBenchmark(
     async::Loop* loop, int entry_count, int transaction_size, int key_size,
@@ -261,4 +346,107 @@ fit::closure PutBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
+}  // namespace
 }  // namespace ledger
+
+namespace ledger {
+namespace {
+constexpr fxl::StringView kBinaryPath =
+    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/put.cmx";
+constexpr fxl::StringView kEntryCountFlag = "entry-count";
+constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
+constexpr fxl::StringView kKeySizeFlag = "key-size";
+constexpr fxl::StringView kValueSizeFlag = "value-size";
+constexpr fxl::StringView kRefsFlag = "refs";
+constexpr fxl::StringView kUpdateFlag = "update";
+constexpr fxl::StringView kSeedFlag = "seed";
+
+constexpr fxl::StringView kRefsOnFlag = "on";
+constexpr fxl::StringView kRefsOffFlag = "off";
+
+void PrintUsage() {
+  std::cout << "Usage: trace record "
+            << kBinaryPath
+            // Comment to make clang format not break formatting.
+            << " --" << kEntryCountFlag << "=<int>"
+            << " --" << kTransactionSizeFlag << "=<int>"
+            << " --" << kKeySizeFlag << "=<int>"
+            << " --" << kValueSizeFlag << "=<int>"
+            << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag
+            << ")"
+            << " [--" << kSeedFlag << "=<int>]"
+            << " [--" << kUpdateFlag << "]" << std::endl;
+}
+
+bool GetPositiveIntValue(const fxl::CommandLine& command_line,
+                         fxl::StringView flag, int* value) {
+  std::string value_str;
+  int found_value;
+  if (!command_line.GetOptionValue(flag.ToString(), &value_str) ||
+      !fxl::StringToNumberWithError(value_str, &found_value) ||
+      found_value <= 0) {
+    return false;
+  }
+  *value = found_value;
+  return true;
+}
+
+int Main(int argc, const char** argv) {
+  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+
+  int entry_count;
+  std::string transaction_size_str;
+  int transaction_size;
+  int key_size;
+  int value_size;
+  bool update = command_line.HasOption(kUpdateFlag.ToString());
+  if (!GetPositiveIntValue(command_line, kEntryCountFlag, &entry_count) ||
+      !command_line.GetOptionValue(kTransactionSizeFlag.ToString(),
+                                   &transaction_size_str) ||
+      !fxl::StringToNumberWithError(transaction_size_str, &transaction_size) ||
+      transaction_size < 0 ||
+      !GetPositiveIntValue(command_line, kKeySizeFlag, &key_size) ||
+      !GetPositiveIntValue(command_line, kValueSizeFlag, &value_size)) {
+    PrintUsage();
+    return -1;
+  }
+
+  std::string ref_strategy_str;
+  if (!command_line.GetOptionValue(kRefsFlag.ToString(), &ref_strategy_str)) {
+    PrintUsage();
+    return -1;
+  }
+  PageDataGenerator::ReferenceStrategy ref_strategy;
+  if (ref_strategy_str == kRefsOnFlag) {
+    ref_strategy = PageDataGenerator::ReferenceStrategy::REFERENCE;
+  } else if (ref_strategy_str == kRefsOffFlag) {
+    ref_strategy = PageDataGenerator::ReferenceStrategy::INLINE;
+  } else {
+    std::cerr << "Unknown option " << ref_strategy_str << " for "
+              << kRefsFlag.ToString() << std::endl;
+    PrintUsage();
+    return -1;
+  }
+
+  int seed;
+  std::string seed_str;
+  if (command_line.GetOptionValue(kSeedFlag.ToString(), &seed_str)) {
+    if (!fxl::StringToNumberWithError(seed_str, &seed)) {
+      PrintUsage();
+      return -1;
+    }
+  } else {
+    seed = fxl::RandUint64();
+  }
+
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  PutBenchmark app(&loop, entry_count, transaction_size, key_size, value_size,
+                   update, ref_strategy, seed);
+
+  return RunWithTracing(&loop, [&app] { app.Run(); });
+}
+
+}  // namespace
+}  // namespace ledger
+
+int main(int argc, const char** argv) { return ledger::Main(argc, argv); }

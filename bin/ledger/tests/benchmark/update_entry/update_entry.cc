@@ -2,27 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/benchmark/update_entry/update_entry.h"
-
 #include <iostream>
+#include <memory>
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
+#include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
+#include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 #include "peridot/lib/convert/convert.h"
 
+namespace ledger {
 namespace {
+
 constexpr fxl::StringView kBinaryPath =
     "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/update_entry.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/update_entry";
@@ -41,9 +48,45 @@ void PrintUsage() {
             << " --" << kTransactionSizeFlag << "=<int>" << std::endl;
 }
 
-}  // namespace
+// Benchmark that measures a performance of Put() operation under the condition
+// that it modifies the same entry.
+//
+// Parameters:
+//   --entry-count=<int> the number of entries to be put
+//   --value-size=<int> the size of the value for each entry
+//   --transaction-size=<int> the size of a single transaction in number of put
+//     operations. If equal to 0, every put operation will be executed
+//     individually (implicit transaction).
+class UpdateEntryBenchmark {
+ public:
+  UpdateEntryBenchmark(async::Loop* loop, int entry_count, int value_size,
+                       int transaction_size);
 
-namespace ledger {
+  void Run();
+
+ private:
+  void RunSingle(int i, fidl::VectorPtr<uint8_t> key);
+  void CommitAndRunNext(int i, fidl::VectorPtr<uint8_t> key);
+
+  void ShutDown();
+  fit::closure QuitLoopClosure();
+
+  async::Loop* const loop_;
+  DataGenerator generator_;
+
+  files::ScopedTempDir tmp_dir_;
+  std::unique_ptr<component::StartupContext> startup_context_;
+  const int entry_count_;
+  const int transaction_size_;
+  const int key_size_;
+  const int value_size_;
+
+  fuchsia::sys::ComponentControllerPtr component_controller_;
+  LedgerPtr ledger_;
+  PagePtr page_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(UpdateEntryBenchmark);
+};
 
 UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop, int entry_count,
                                            int value_size, int transaction_size)
@@ -157,9 +200,7 @@ fit::closure UpdateEntryBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace ledger
-
-int main(int argc, const char** argv) {
+int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   std::string entry_count_str;
@@ -185,7 +226,11 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  ledger::UpdateEntryBenchmark app(&loop, entry_count, value_size,
-                                   transaction_size);
-  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
+  UpdateEntryBenchmark app(&loop, entry_count, value_size, transaction_size);
+  return RunWithTracing(&loop, [&app] { app.Run(); });
 }
+
+}  // namespace
+}  // namespace ledger
+
+int main(int argc, const char** argv) { return ledger::Main(argc, argv); }

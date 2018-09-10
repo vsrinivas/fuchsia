@@ -32,7 +32,6 @@ executable("ledger_benchmark_delete_entry") {
 
   sources = [
     "delete_entry.cc",
-    "delete_entry.h",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

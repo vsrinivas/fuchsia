@@ -2,29 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/benchmark/delete_entry/delete_entry.h"
-
 #include <iostream>
+#include <memory>
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/callback/waiter.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/filesystem/get_directory_content_size.h"
+#include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
+#include "peridot/bin/ledger/testing/page_data_generator.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 #include "peridot/lib/convert/convert.h"
 
+namespace ledger {
 namespace {
+
 constexpr fxl::StringView kBinaryPath =
     "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/delete_entry.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/delete_entry";
@@ -43,9 +50,45 @@ void PrintUsage() {
             << " --" << kValueSizeFlag << "=<int>" << std::endl;
 }
 
-}  // namespace
+// Benchmark that measures the time taken to delete an entry from a page.
+//
+// Parameters:
+//   --entry-count=<int> the number of entries to be put and deleted
+//   --transaction_size=<int> number of delete operations in each transaction. 0
+//     means no explicit transactions.
+//   --key-size=<int> size of the keys for the entries
+//   --value-size=<int> the size of a single value in bytes
+class DeleteEntryBenchmark {
+ public:
+  DeleteEntryBenchmark(async::Loop* loop, size_t entry_count,
+                       size_t transaction_size, size_t key_size,
+                       size_t value_size);
 
-namespace ledger {
+  void Run();
+
+ private:
+  void Populate();
+  void RunSingle(size_t i);
+  void CommitAndRunNext(size_t i);
+  void ShutDown();
+  fit::closure QuitLoopClosure();
+
+  async::Loop* const loop_;
+  files::ScopedTempDir tmp_dir_;
+  DataGenerator generator_;
+  PageDataGenerator page_data_generator_;
+  std::unique_ptr<component::StartupContext> startup_context_;
+  const size_t entry_count_;
+  const size_t transaction_size_;
+  const size_t key_size_;
+  const size_t value_size_;
+  fuchsia::sys::ComponentControllerPtr component_controller_;
+  LedgerPtr ledger_;
+  PagePtr page_;
+  std::vector<fidl::VectorPtr<uint8_t>> keys_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteEntryBenchmark);
+};
 
 DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
                                            size_t entry_count,
@@ -177,9 +220,7 @@ fit::closure DeleteEntryBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace ledger
-
-int main(int argc, const char** argv) {
+int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   std::string entry_count_str;
@@ -208,8 +249,13 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  ledger::DeleteEntryBenchmark app(&loop, entry_count, transaction_size,
-                                   key_size, value_size);
+  DeleteEntryBenchmark app(&loop, entry_count, transaction_size, key_size,
+                           value_size);
 
-  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
+  return RunWithTracing(&loop, [&app] { app.Run(); });
 }
+
+}  // namespace
+}  // namespace ledger
+
+int main(int argc, const char** argv) { return ledger::Main(argc, argv); }

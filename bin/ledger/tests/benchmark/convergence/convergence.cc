@@ -2,16 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/benchmark/convergence/convergence.h"
-
 #include <iostream>
+#include <memory>
+#include <set>
+#include <vector>
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/waiter.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/random/uuid.h>
@@ -19,12 +23,17 @@
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
+#include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
+#include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
 
+namespace ledger {
 namespace {
 constexpr fxl::StringView kBinaryPath =
     "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/convergence.cmx";
@@ -39,24 +48,67 @@ void PrintUsage() {
             // Comment to make clang format not break formatting.
             << " --" << kEntryCountFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
-            << " --" << kDeviceCountFlag << "=<int>"
-            << ledger::GetSyncParamsUsage() << std::endl;
+            << " --" << kDeviceCountFlag << "=<int>" << GetSyncParamsUsage()
+            << std::endl;
 }
 
 constexpr size_t kKeySize = 100;
 
-}  // namespace
+// Benchmark that measures the time it takes to sync and reconcile concurrent
+// writes.
+//
+// In this scenario there are specified number of (emulated) devices. At each
+// step, every device makes a concurrent write, and we measure the time until
+// all the changes are visible to all devices.
+//
+// Parameters:
+//   --entry-count=<int> the number of entries to be put by each device
+//   --value-size=<int> the size of a single value in bytes
+//   --device-count=<int> number of devices writing to the same page
+//   --credentials-path=<file path> Firestore service account credentials
+class ConvergenceBenchmark : public PageWatcher {
+ public:
+  ConvergenceBenchmark(async::Loop* loop, int entry_count, int value_size,
+                       int device_count, SyncParams sync_params);
 
-namespace ledger {
+  void Run();
 
-// Instances needed to control the Ledger process associated with a device and
-// interact with it.
-struct ConvergenceBenchmark::DeviceContext {
-  std::unique_ptr<files::ScopedTempDir> storage_directory;
-  fuchsia::sys::ComponentControllerPtr controller;
-  LedgerPtr ledger;
-  PagePtr page_connection;
-  std::unique_ptr<fidl::Binding<PageWatcher>> page_watcher;
+  // PageWatcher:
+  void OnChange(PageChange page_change, ResultState result_state,
+                OnChangeCallback callback) override;
+
+ private:
+  // Instances needed to control the Ledger process associated with a device and
+  // interact with it.
+  struct DeviceContext {
+    std::unique_ptr<files::ScopedTempDir> storage_directory;
+    fuchsia::sys::ComponentControllerPtr controller;
+    LedgerPtr ledger;
+    PagePtr page_connection;
+    std::unique_ptr<fidl::Binding<PageWatcher>> page_watcher;
+  };
+
+  void Start(int step);
+
+  void ShutDown();
+  fit::closure QuitLoopClosure();
+
+  async::Loop* const loop_;
+  DataGenerator generator_;
+  std::unique_ptr<component::StartupContext> startup_context_;
+  cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
+  const int entry_count_;
+  const int value_size_;
+  const int device_count_;
+  const std::string user_id_;
+  // Track all Ledger instances running for this test and allow to interact with
+  // it.
+  std::vector<std::unique_ptr<DeviceContext>> devices_;
+  PageId page_id_;
+  std::multiset<std::string> remaining_keys_;
+  int current_step_ = -1;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ConvergenceBenchmark);
 };
 
 ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
@@ -185,9 +237,7 @@ fit::closure ConvergenceBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace ledger
-
-int main(int argc, const char** argv) {
+int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   std::string entry_count_str;
@@ -196,7 +246,7 @@ int main(int argc, const char** argv) {
   int value_size;
   std::string device_count_str;
   int device_count;
-  ledger::SyncParams sync_params;
+  SyncParams sync_params;
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
                                    &entry_count_str) ||
       !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
@@ -215,7 +265,12 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  ledger::ConvergenceBenchmark app(&loop, entry_count, value_size, device_count,
-                                   std::move(sync_params));
-  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
+  ConvergenceBenchmark app(&loop, entry_count, value_size, device_count,
+                           std::move(sync_params));
+  return RunWithTracing(&loop, [&app] { app.Run(); });
 }
+
+}  // namespace
+}  // namespace ledger
+
+int main(int argc, const char** argv) { return ledger::Main(argc, argv); }

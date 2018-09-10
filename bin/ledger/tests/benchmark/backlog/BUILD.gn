@@ -33,6 +33,5 @@ executable("ledger_benchmark_backlog") {
 
   sources = [
     "backlog.cc",
-    "backlog.h",
   ]
 }

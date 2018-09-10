@@ -33,7 +33,6 @@ executable("ledger_benchmark_convergence") {
 
   sources = [
     "convergence.cc",
-    "convergence.h",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

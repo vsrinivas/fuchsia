@@ -2,26 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/benchmark/get_page/get_page.h"
-
 #include <iostream>
+#include <vector>
 
-#include <lib/fidl/cpp/clone.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
+#include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 
+namespace ledger {
 namespace {
+
 constexpr fxl::StringView kBinaryPath =
     "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/get_page.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/get_page";
@@ -35,9 +40,39 @@ void PrintUsage() {
             << " --" << kPageCountFlag << "=<int>"
             << " [--" << kReuseFlag << "]" << std::endl;
 }
-}  // namespace
 
-namespace ledger {
+// Benchmark that measures the time taken to get a page.
+//
+// Parameters:
+//   --requests-count=<int> number of requests made.
+//   --reuse - if this flag is specified, the same id will be used. Otherwise, a
+//   new page with a random id is requested every time.
+class GetPageBenchmark {
+ public:
+  GetPageBenchmark(async::Loop* loop, size_t requests_count, bool reuse);
+
+  void Run();
+
+ private:
+  void RunSingle(size_t request_number);
+  void ShutDown();
+  fit::closure QuitLoopClosure();
+
+  async::Loop* const loop_;
+  files::ScopedTempDir tmp_dir_;
+  DataGenerator generator_;
+  std::unique_ptr<component::StartupContext> startup_context_;
+  const size_t requests_count_;
+  const bool reuse_;
+  fuchsia::sys::ComponentControllerPtr component_controller_;
+  LedgerPtr ledger_;
+  PageIdPtr page_id_;
+  std::vector<PagePtr> pages_;
+  bool get_page_called_ = false;
+  bool get_page_id_called_ = false;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetPageBenchmark);
+};
 
 GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
                                    bool reuse)
@@ -76,7 +111,7 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
   get_page_called_ = false;
   get_page_id_called_ = false;
   ledger_->GetPage(
-      reuse_ ? fidl::Clone(page_id_) : nullptr, page.NewRequest(),
+      reuse_ ? fidl::MakeOptional(*page_id_) : nullptr, page.NewRequest(),
       [this, request_number](Status status) {
         if (QuitOnError(QuitLoopClosure(), status, "Ledger::GetPage")) {
           return;
@@ -115,9 +150,7 @@ fit::closure GetPageBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace ledger
-
-int main(int argc, const char** argv) {
+int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   std::string requests_count_str;
@@ -132,7 +165,12 @@ int main(int argc, const char** argv) {
   bool reuse = command_line.HasOption(kReuseFlag);
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  ledger::GetPageBenchmark app(&loop, requests_count, reuse);
+  GetPageBenchmark app(&loop, requests_count, reuse);
 
-  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
+  return RunWithTracing(&loop, [&app] { app.Run(); });
 }
+
+}  // namespace
+}  // namespace ledger
+
+int main(int argc, const char** argv) { return ledger::Main(argc, argv); }

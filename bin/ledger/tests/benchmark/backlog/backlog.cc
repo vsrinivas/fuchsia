@@ -2,30 +2,39 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/benchmark/backlog/backlog.h"
-
 #include <iostream>
+#include <memory>
+#include <vector>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/waiter.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/random/uuid.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <trace/event.h>
-#include "lib/fidl/cpp/clone.h"
 
+#include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/filesystem/get_directory_content_size.h"
+#include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/get_page_ensure_initialized.h"
+#include "peridot/bin/ledger/testing/page_data_generator.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
+#include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
+
+namespace ledger {
 
 namespace {
 constexpr fxl::StringView kBinaryPath =
@@ -50,12 +59,94 @@ void PrintUsage() {
             << " --" << kValueSizeFlag << "=<int>"
             << " --" << kCommitCountFlag << "=<int>"
             << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag
-            << ")" << ledger::GetSyncParamsUsage() << std::endl;
+            << ")" << GetSyncParamsUsage() << std::endl;
 }
 
-}  // namespace
+// Benchmark that measures time taken by a page connection to upload all local
+// changes to the cloud; and for another connection to the same page to download
+// all these changes.
+//
+// In contrast to the sync benchmark, backlog benchmark initiates the second
+// connection only after the first one has uploaded all changes. It is designed
+// to model the situation of adding new device instead of continuous
+// synchronisation.
+//
+// Cloud sync needs to be configured on the device in order for the benchmark to
+// run.
+//
+// Parameters:
+//   --unique-key-count=<int> the number of unique keys to populate the page
+//   with.
+//   --key-size=<int> size of a key for each entry.
+//   --value-size=<int> the size of values to populate the page with.
+//   --commit-count=<int> the number of commits made to the page.
+//   If this number is smaller than unique-key-count, changes will be bundled
+//   into transactions. If it is bigger, some or all of the changes will use the
+//   same keys, modifying the value.
+//   --refs=(on|off) reference strategy: on to put values as references, off to
+//     put them as FIDL arrays.
+//   --credentials-path=<file path> Firestore service account credentials
+class BacklogBenchmark : public SyncWatcher {
+ public:
+  BacklogBenchmark(async::Loop* loop, size_t unique_key_count, size_t key_size,
+                   size_t value_size, size_t commit_count,
+                   PageDataGenerator::ReferenceStrategy reference_strategy,
+                   SyncParams sync_params);
 
-namespace ledger {
+  void Run();
+
+  // SyncWatcher:
+  void SyncStateChanged(SyncState download, SyncState upload,
+                        SyncStateChangedCallback callback) override;
+
+ private:
+  void ConnectWriter();
+  void Populate();
+  void DisconnectAndRecordWriter();
+  void ConnectUploader();
+  void WaitForUploaderUpload();
+  void ConnectReader();
+  void WaitForReaderDownload();
+
+  void GetReaderSnapshot();
+  void GetEntriesStep(std::unique_ptr<Token> token, size_t entries_left);
+  void CheckStatusAndGetMore(Status status, size_t entries_left,
+                             std::unique_ptr<Token> next_token);
+
+  void RecordDirectorySize(const std::string& event_name,
+                           const std::string& path);
+  void ShutDown();
+  fit::closure QuitLoopClosure();
+
+  async::Loop* const loop_;
+  DataGenerator generator_;
+  PageDataGenerator page_data_generator_;
+  std::unique_ptr<component::StartupContext> startup_context_;
+  cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
+  fidl::Binding<SyncWatcher> sync_watcher_binding_;
+  const size_t unique_key_count_;
+  const size_t key_size_;
+  const size_t value_size_;
+  const size_t commit_count_;
+  const PageDataGenerator::ReferenceStrategy reference_strategy_;
+  const std::string user_id_;
+  files::ScopedTempDir writer_tmp_dir_;
+  files::ScopedTempDir reader_tmp_dir_;
+  fuchsia::sys::ComponentControllerPtr writer_controller_;
+  fuchsia::sys::ComponentControllerPtr uploader_controller_;
+  fuchsia::sys::ComponentControllerPtr reader_controller_;
+  LedgerPtr uploader_;
+  LedgerPtr writer_;
+  LedgerPtr reader_;
+  PageId page_id_;
+  PagePtr writer_page_;
+  PagePtr uploader_page_;
+  PagePtr reader_page_;
+  PageSnapshotPtr reader_snapshot_;
+  fit::function<void(SyncState, SyncState)> on_sync_state_changed_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(BacklogBenchmark);
+};
 
 BacklogBenchmark::BacklogBenchmark(
     async::Loop* loop, size_t unique_key_count, size_t key_size,
@@ -177,8 +268,8 @@ void BacklogBenchmark::ConnectUploader() {
         TRACE_ASYNC_BEGIN("benchmark", "get_uploader_page", 0);
         TRACE_ASYNC_BEGIN("benchmark", "upload", 0);
         uploader_->GetPage(
-            fidl::MakeOptional(fidl::Clone(page_id_)),
-            uploader_page_.NewRequest(), [this](Status status) {
+            fidl::MakeOptional(page_id_), uploader_page_.NewRequest(),
+            [this](Status status) {
               if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
                 return;
               }
@@ -321,9 +412,7 @@ fit::closure BacklogBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-}  // namespace ledger
-
-int main(int argc, const char** argv) {
+int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   std::string unique_key_count_str;
@@ -335,7 +424,7 @@ int main(int argc, const char** argv) {
   std::string commit_count_str;
   size_t commit_count;
   std::string reference_strategy_str;
-  ledger::SyncParams sync_params;
+  SyncParams sync_params;
   if (!command_line.GetOptionValue(kUniqueKeyCountFlag.ToString(),
                                    &unique_key_count_str) ||
       !fxl::StringToNumberWithError(unique_key_count_str, &unique_key_count) ||
@@ -352,17 +441,16 @@ int main(int argc, const char** argv) {
       commit_count <= 0 ||
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
-      !ledger::ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
+      !ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
     PrintUsage();
     return -1;
   }
 
-  ledger::PageDataGenerator::ReferenceStrategy reference_strategy;
+  PageDataGenerator::ReferenceStrategy reference_strategy;
   if (reference_strategy_str == kRefsOnFlag) {
-    reference_strategy =
-        ledger::PageDataGenerator::ReferenceStrategy::REFERENCE;
+    reference_strategy = PageDataGenerator::ReferenceStrategy::REFERENCE;
   } else if (reference_strategy_str == kRefsOffFlag) {
-    reference_strategy = ledger::PageDataGenerator::ReferenceStrategy::INLINE;
+    reference_strategy = PageDataGenerator::ReferenceStrategy::INLINE;
   } else {
     std::cerr << "Unknown option " << reference_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;
@@ -371,8 +459,13 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  ledger::BacklogBenchmark app(&loop, unique_key_count, key_size, value_size,
-                               commit_count, reference_strategy,
-                               std::move(sync_params));
-  return ledger::RunWithTracing(&loop, [&app] { app.Run(); });
+  BacklogBenchmark app(&loop, unique_key_count, key_size, value_size,
+                       commit_count, reference_strategy,
+                       std::move(sync_params));
+  return RunWithTracing(&loop, [&app] { app.Run(); });
 }
+
+}  // namespace
+}  // namespace ledger
+
+int main(int argc, const char** argv) { return ledger::Main(argc, argv); }

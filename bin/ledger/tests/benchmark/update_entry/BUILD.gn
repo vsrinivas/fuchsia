@@ -31,7 +31,6 @@ executable("ledger_benchmark_update_entry") {
 
   sources = [
     "update_entry.cc",
-    "update_entry.h",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
