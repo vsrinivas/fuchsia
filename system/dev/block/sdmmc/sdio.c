@@ -90,8 +90,6 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
 
     while (rem_blocks > 0) {
         uint32_t num_blocks = 1;
-        //TODO (ravoorir) : Re-enable multi block support after fixing the
-        //multi block failures.
         if (mbs) {
             uint32_t max_host_blocks = (dev->host_info.max_transfer_size) / (func_blk_size);
             // multiblock is supported, determine max number of blocks per cmd
