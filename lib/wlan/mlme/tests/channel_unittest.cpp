@@ -4,11 +4,14 @@
 
 #include <gtest/gtest.h>
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/channel.h>
 
 namespace wlan {
 namespace common {
 namespace {
+
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 class ChannelTest : public ::testing::Test {
    protected:
@@ -67,6 +70,13 @@ TEST_F(ChannelTest, Equality) {
     lhs.cbw = CBW40;
     EXPECT_EQ(true, lhs == rhs);
 
+    lhs.cbw = CBW40ABOVE;
+    EXPECT_EQ(true, lhs == rhs);
+
+    rhs.cbw = CBW40BELOW;
+    EXPECT_EQ(false, lhs == rhs);
+
+    rhs.cbw = CBW40;
     rhs.primary = 2;
     EXPECT_EQ(true, lhs != rhs);
 
@@ -127,6 +137,39 @@ TEST_F(ChannelTest, GetValidCbw) {
             .cbw = tv.cbw,
         };
         EXPECT_EQ(tv.want, GetValidCbw(chan));
+    }
+}
+
+TEST_F(ChannelTest, Conversion) {
+    struct TestVector {
+        wlan_channel_t ddk;
+        wlan_mlme::WlanChan fidl;
+        bool is_same;
+    };
+
+    std::vector<TestVector> tvs = {
+        // clang-format off
+        {{  0, CBW20,      0}, {  0, wlan_mlme::CBW::CBW20,      0}, true,},
+        {{  1, CBW20,      0}, { 11, wlan_mlme::CBW::CBW20,      0}, false,},
+        {{ 11, CBW40BELOW, 0}, { 11, wlan_mlme::CBW::CBW20,      0}, false,},
+        {{ 36, CBW20,      0}, { 36, wlan_mlme::CBW::CBW40,      0}, false,},
+        {{ 36, CBW40,      0}, { 36, wlan_mlme::CBW::CBW20,      0}, false,},
+        {{ 36, CBW40,      0}, { 36, wlan_mlme::CBW::CBW80,      0}, false,},
+        {{ 36, CBW40,      0}, { 36, wlan_mlme::CBW::CBW160,     0}, false,},
+        {{ 36, CBW40,    155}, { 36, wlan_mlme::CBW::CBW80P80, 155}, false,},
+        {{169, CBW160,     0}, {169, wlan_mlme::CBW::CBW160,     0}, true,},
+        {{  6, CBW40,      0}, {  6, wlan_mlme::CBW::CBW40,      0}, true,},
+        {{  6, CBW40ABOVE, 0}, {  6, wlan_mlme::CBW::CBW40,      0}, true,},
+        {{  6, CBW40ABOVE, 0}, {  6, wlan_mlme::CBW::CBW40BELOW, 0}, false,},
+        // clang-format on
+    };
+
+    for (auto tv : tvs) {
+        auto got_fidl = ToFidl(tv.ddk);
+        EXPECT_EQ(tv.is_same, tv.fidl == got_fidl);
+
+        auto got_ddk = FromFidl(tv.fidl);
+        EXPECT_EQ(tv.is_same, tv.ddk == got_ddk);
     }
 }
 

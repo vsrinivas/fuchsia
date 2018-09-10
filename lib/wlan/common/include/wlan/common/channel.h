@@ -52,6 +52,7 @@ struct Channel {
 };
 
 wlan_channel_t FromFidl(const ::fuchsia::wlan::mlme::WlanChan& fidl_chan);
+::fuchsia::wlan::mlme::WlanChan ToFidl(const wlan_channel_t& chan);
 
 }  // namespace common
 }  // namespace wlan

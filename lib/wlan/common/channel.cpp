@@ -178,6 +178,15 @@ wlan_channel_t FromFidl(const wlan_mlme::WlanChan& fidl_chan) {
     return wlan_channel_t{
         .primary = fidl_chan.primary,
         .cbw = static_cast<uint8_t>(fidl_chan.cbw),
+        .secondary80 = fidl_chan.secondary80,
+    };
+}
+
+wlan_mlme::WlanChan ToFidl(const wlan_channel_t& chan) {
+    return wlan_mlme::WlanChan{
+        .primary = chan.primary,
+        .cbw = static_cast<wlan_mlme::CBW>(chan.cbw),
+        .secondary80 = chan.secondary80,
     };
 }
 
