@@ -22,8 +22,8 @@ cobalt::CobaltContext* g_cobalt_context = nullptr;
 
 fxl::AutoCall<fit::closure> InitializeCobalt(
     async_dispatcher_t* dispatcher, component::StartupContext* context) {
-  static std::unique_ptr<cobalt::CobaltContext> cobalt_context;
-  FXL_DCHECK(!cobalt_context);
+  std::unique_ptr<cobalt::CobaltContext> cobalt_context;
+  FXL_DCHECK(!g_cobalt_context);
 
   fsl::SizedVmo config;
   FXL_CHECK(fsl::VmoFromFilename(kConfigBinProtoPath, &config))
@@ -32,10 +32,10 @@ fxl::AutoCall<fit::closure> InitializeCobalt(
   cobalt_context =
       cobalt::MakeCobaltContext(dispatcher, context, std::move(config));
   g_cobalt_context = cobalt_context.get();
-  return fxl::MakeAutoCall<fit::closure>([&] {
-    g_cobalt_context = nullptr;
-    cobalt_context.reset();
-  });
+  return fxl::MakeAutoCall<fit::closure>(
+      [cobalt_context = std::move(cobalt_context)] {
+        g_cobalt_context = nullptr;
+      });
 }
 
 void ReportEvent(CobaltEvent event) {
