@@ -14,6 +14,9 @@ const Interface = `
 {{- if .RequestHandles }}
 {{ template "StructDefinition" .RequestHandles }}
 {{- end }}
+{{- if .Response }}
+{{ template "StructDefinition" .Response }}
+{{- end }}
 {{- if .ResponseHandles }}
 {{ template "StructDefinition" .ResponseHandles }}
 {{- end }}

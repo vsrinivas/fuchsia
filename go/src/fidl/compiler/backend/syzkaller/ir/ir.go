@@ -258,12 +258,10 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	return e
 }
 
-func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *StructMember, *StructMember, []Struct, []Union) {
+func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *StructMember, *StructMember) {
 	var i StructMember
 	var o *StructMember
 	var h *StructMember
-	var s []Struct
-	var u []Union
 
 	switch p.Type.Kind {
 	case types.PrimitiveType:
@@ -313,12 +311,10 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 		}
 
 		// Variable-size, out-of-line data
-		inLine, outOfLine, handle, structs, unions := c.compileStructMember(types.StructMember{
+		inLine, outOfLine, handle := c.compileStructMember(types.StructMember{
 			Name: types.Identifier(c.compileIdentifier(p.Name, OutOfLineSuffix)),
 			Type: (*p.Type.ElementType),
 		})
-		s = append(s, structs...)
-		u = append(u, unions...)
 		o = &StructMember{
 			Type: Type(fmt.Sprintf("array[%s]", inLine.Type)),
 			Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
@@ -351,16 +347,10 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 				Name: c.compileIdentifier(p.Name, ""),
 			}
 		case types.UnionDeclType:
-			inLine, outOfLine, handles, structs, unions := c.compileUnion(c.unions[p.Type.Identifier])
-			s = append(s, structs...)
-			u = append(u, unions...)
+			_, outOfLine, handles := c.compileUnion(c.unions[p.Type.Identifier])
 
 			// Constant-size, in-line data
 			t := c.compileCompoundIdentifier(p.Type.Identifier, InLineSuffix)
-			u = append(u, Union{
-				Name:    t,
-				Members: inLine,
-			})
 			i = StructMember{
 				Type: Type(t),
 				Name: c.compileIdentifier(p.Name, InLineSuffix),
@@ -369,10 +359,6 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 			// Variable-size, out-of-line data
 			if outOfLine != nil {
 				t := c.compileCompoundIdentifier(p.Type.Identifier, OutOfLineSuffix)
-				u = append(u, Union{
-					Name:    t,
-					Members: outOfLine,
-				})
 				o = &StructMember{
 					Type: Type(t),
 					Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
@@ -382,26 +368,16 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 			// Out-of-line handles
 			if handles != nil {
 				t := c.compileCompoundIdentifier(p.Type.Identifier, HandlesSuffix)
-				u = append(u, Union{
-					Name:    t,
-					Members: handles,
-				})
 				h = &StructMember{
 					Type: Type(t),
 					Name: c.compileIdentifier(p.Name, ""),
 				}
 			}
 		case types.StructDeclType:
-			inLine, outOfLine, handles, structs, unions := c.compileStruct(c.structs[p.Type.Identifier])
-			s = append(s, structs...)
-			u = append(u, unions...)
+			_, outOfLine, handles := c.compileStruct(c.structs[p.Type.Identifier])
 
 			// Constant-size, in-line data
 			t := c.compileCompoundIdentifier(p.Type.Identifier, InLineSuffix)
-			s = append(s, Struct{
-				Name:    t,
-				Members: inLine,
-			})
 			i = StructMember{
 				Type: Type(t),
 				Name: c.compileIdentifier(p.Name, InLineSuffix),
@@ -410,10 +386,6 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 			// Variable-size, out-of-line data
 			if outOfLine != nil {
 				t := c.compileCompoundIdentifier(p.Type.Identifier, OutOfLineSuffix)
-				s = append(s, Struct{
-					Name:    t,
-					Members: outOfLine,
-				})
 				o = &StructMember{
 					Type: Type(t),
 					Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
@@ -423,10 +395,6 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 			// Out-of-line handles
 			if handles != nil {
 				t := c.compileCompoundIdentifier(p.Type.Identifier, HandlesSuffix)
-				s = append(s, Struct{
-					Name:    t,
-					Members: handles,
-				})
 				h = &StructMember{
 					Type: Type(t),
 					Name: c.compileIdentifier(p.Name, ""),
@@ -435,7 +403,7 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 		}
 	}
 
-	return i, o, h, s, u
+	return i, o, h
 }
 
 func (c *compiler) compileMessageHeader(Ordinal types.Ordinal) StructMember {
@@ -445,13 +413,11 @@ func (c *compiler) compileMessageHeader(Ordinal types.Ordinal) StructMember {
 	}
 }
 
-func (c *compiler) compileStruct(p types.Struct) ([]StructMember, []StructMember, []StructMember, []Struct, []Union) {
+func (c *compiler) compileStruct(p types.Struct) ([]StructMember, []StructMember, []StructMember) {
 	var i, o, h []StructMember
-	var s []Struct
-	var u []Union
 
 	for _, m := range p.Members {
-		inLine, outOfLine, handles, structs, unions := c.compileStructMember(m)
+		inLine, outOfLine, handles := c.compileStructMember(m)
 
 		i = append(i, inLine)
 
@@ -462,22 +428,30 @@ func (c *compiler) compileStruct(p types.Struct) ([]StructMember, []StructMember
 		if handles != nil {
 			h = append(h, *handles)
 		}
-
-		s = append(s, structs...)
-
-		u = append(u, unions...)
 	}
 
-	return i, o, h, s, u
+	if len(o) == 0 {
+		o = append(o, StructMember{
+			Name: "void",
+			Type: "void",
+		})
+	}
+
+	if len(h) == 0 {
+		h = append(h, StructMember{
+			Name: "void",
+			Type: "void",
+		})
+	}
+
+	return i, o, h
 }
 
-func (c *compiler) compileUnion(p types.Union) ([]StructMember, []StructMember, []StructMember, []Struct, []Union) {
+func (c *compiler) compileUnion(p types.Union) ([]StructMember, []StructMember, []StructMember) {
 	var i, o, h []StructMember
-	var s []Struct
-	var u []Union
 
 	for _, m := range p.Members {
-		inLine, outOfLine, handles, structs, unions := c.compileStructMember(types.StructMember{
+		inLine, outOfLine, handles := c.compileStructMember(types.StructMember{
 			Type:   m.Type,
 			Name:   m.Name,
 			Offset: m.Offset,
@@ -495,16 +469,12 @@ func (c *compiler) compileUnion(p types.Union) ([]StructMember, []StructMember, 
 		if handles != nil {
 			h = append(h, *handles)
 		}
-
-		s = append(s, structs...)
-
-		u = append(u, unions...)
 	}
 
-	return i, o, h, s, u
+	return i, o, h
 }
 
-func (c *compiler) compileParameters(name string, ordinal types.Ordinal, params []types.Parameter) (Struct, Struct, []Struct, []Union) {
+func (c *compiler) compileParameters(name string, ordinal types.Ordinal, params []types.Parameter) (Struct, Struct) {
 	var args types.Struct
 	for _, p := range params {
 		args.Members = append(args.Members, types.StructMember{
@@ -514,13 +484,10 @@ func (c *compiler) compileParameters(name string, ordinal types.Ordinal, params 
 		})
 	}
 
-	i, o, h, structs, unions := c.compileStruct(args)
+	i, o, h := c.compileStruct(args)
 
-	if len(h) == 0 {
-		h = append(h, StructMember{
-			Type: "void",
-			Name: "void",
-		})
+	if len(o) == 1 && o[0].Type == "void" {
+		o = []StructMember{}
 	}
 
 	msg := Struct{
@@ -533,7 +500,7 @@ func (c *compiler) compileParameters(name string, ordinal types.Ordinal, params 
 		Members: h,
 	}
 
-	return msg, handles, structs, unions
+	return msg, handles
 }
 
 func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val types.Method) Method {
@@ -544,11 +511,9 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 	}
 
 	if val.HasRequest {
-		request, requestHandles, structs, unions := c.compileParameters(r.Name+RequestSuffix, r.Ordinal, val.Request)
+		request, requestHandles := c.compileParameters(r.Name+RequestSuffix, r.Ordinal, val.Request)
 		r.Request = &request
 		r.RequestHandles = &requestHandles
-		r.Structs = append(r.Structs, structs...)
-		r.Unions = append(r.Unions, unions...)
 	}
 
 	// For response, we only extract handles for now.
@@ -557,19 +522,9 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 		if !val.HasRequest {
 			suffix = EventSuffix
 		}
-		_, responseHandles, structs, unions := c.compileParameters(r.Name+suffix, r.Ordinal, val.Response)
+		response, responseHandles := c.compileParameters(r.Name+suffix, r.Ordinal, val.Response)
+		r.Response = &response
 		r.ResponseHandles = &responseHandles
-		for _, s := range structs {
-			if strings.HasSuffix(s.Name, HandlesSuffix) {
-				r.Structs = append(r.Structs, s)
-			}
-		}
-		for _, u := range unions {
-			if strings.HasSuffix(u.Name, HandlesSuffix) {
-				u.VarLen = true
-				r.Unions = append(r.Unions, u)
-			}
-		}
 	}
 
 	return r
@@ -599,18 +554,66 @@ func Compile(fidlData types.Root) Root {
 
 	root.HeaderPath = fmt.Sprintf("%s/c/fidl.h", formatLibraryPath(libraryName))
 
-	for _, v := range fidlData.Structs {
-		c.structs[v.Name] = v
-	}
-
-	for _, v := range fidlData.Unions {
-		c.unions[v.Name] = v
-	}
-
 	for _, v := range fidlData.Enums {
 		c.enums[v.Name] = v
 
 		root.Enums = append(root.Enums, c.compileEnum(v))
+	}
+
+	for _, v := range fidlData.Structs {
+		c.structs[v.Name] = v
+
+		i, o, h := c.compileStruct(v)
+		root.Structs = append(root.Structs, Struct{
+			Name:    c.compileCompoundIdentifier(v.Name, InLineSuffix),
+			Members: i,
+		})
+
+		root.Structs = append(root.Structs, Struct{
+			Name:    c.compileCompoundIdentifier(v.Name, OutOfLineSuffix),
+			Members: o,
+		})
+
+		root.Structs = append(root.Structs, Struct{
+			Name:    c.compileCompoundIdentifier(v.Name, HandlesSuffix),
+			Members: h,
+		})
+	}
+
+	for _, v := range fidlData.Unions {
+		c.unions[v.Name] = v
+
+		i, o, h := c.compileUnion(v)
+		root.Unions = append(root.Unions, Union{
+			Name:    c.compileCompoundIdentifier(v.Name, InLineSuffix),
+			Members: i,
+		})
+
+		if len(o) == 0 {
+			o = append(o, StructMember{
+				Name: "void",
+				Type: "void",
+			})
+		}
+
+		if len(h) == 0 {
+			h = append(h, StructMember{
+				Name: "void",
+				Type: "void",
+			})
+		}
+
+		root.Unions = append(root.Unions, Union{
+			Name:    c.compileCompoundIdentifier(v.Name, OutOfLineSuffix),
+			Members: o,
+			VarLen:  true,
+		})
+
+		root.Unions = append(root.Unions, Union{
+			Name:    c.compileCompoundIdentifier(v.Name, HandlesSuffix),
+			Members: h,
+			VarLen:  true,
+		})
 	}
 
 	for _, v := range fidlData.Interfaces {
