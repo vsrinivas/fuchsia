@@ -1,0 +1,14 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.acpi;
+
+using zx;
+
+[Layout="ddk-protocol", DefaultProtocol]
+interface Acpi {
+  1: MapResource(uint32 resource_id, uint32 cache_policy) -> (zx.status s, vector<void>? vaddr,
+                                                              handle<resource> @handle);
+  2: MapInterrupt(int64 irq_id) -> (zx.status s, handle<interrupt> @handle);
+};

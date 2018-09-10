@@ -274,7 +274,7 @@ unlock:
     return st;
 }
 
-static zx_status_t acpi_op_map_interrupt(void* ctx, int which_irq, zx_handle_t* out_handle) {
+static zx_status_t acpi_op_map_interrupt(void* ctx, int64_t which_irq, zx_handle_t* out_handle) {
     acpi_device_t* dev = (acpi_device_t*)ctx;
     mtx_lock(&dev->lock);
 

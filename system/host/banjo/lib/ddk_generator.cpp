@@ -71,7 +71,7 @@ void EmitFileComment(std::ostream* file, banjo::StringView name) {
     *file << "// Use of this source code is governed by a BSD-style license that can be\n";
     *file << "// found in the LICENSE file.\n\n";
     *file << "// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.\n";
-    *file << "//          MODIFY system/fidl/protocols/" << name << ".fidl INSTEAD.\n\n";
+    *file << "//          MODIFY system/fidl/protocols/" << name << ".banjo INSTEAD.\n\n";
 }
 
 void EmitHeaderGuard(std::ostream* file) {
