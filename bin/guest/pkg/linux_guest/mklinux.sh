@@ -55,7 +55,7 @@ if [ ! -d "${LINUX_DIR}/.git" ]; then
 fi
 
 # Update the repository.
-cd "${LINUX_DIR}"
+pushd "${LINUX_DIR}"
 if [[ `git branch --list ${LINUX_BRANCH} ` ]]; then
   git checkout ${LINUX_BRANCH}
   git pull --depth 1 origin ${LINUX_BRANCH}
@@ -67,6 +67,7 @@ fi
 # Build Linux.
 make machina_defconfig
 make -j $(getconf _NPROCESSORS_ONLN)
+popd
 
 if [ -n "${LINUX_OUT}" ]; then
   mv "${LINUX_IMAGE}" "${LINUX_OUT}"
