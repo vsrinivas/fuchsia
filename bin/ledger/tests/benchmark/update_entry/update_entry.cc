@@ -59,8 +59,10 @@ void PrintUsage() {
 //     individually (implicit transaction).
 class UpdateEntryBenchmark {
  public:
-  UpdateEntryBenchmark(async::Loop* loop, int entry_count, int value_size,
-                       int transaction_size);
+  UpdateEntryBenchmark(
+      async::Loop* loop,
+      std::unique_ptr<component::StartupContext> startup_context,
+      int entry_count, int value_size, int transaction_size);
 
   void Run();
 
@@ -88,11 +90,13 @@ class UpdateEntryBenchmark {
   FXL_DISALLOW_COPY_AND_ASSIGN(UpdateEntryBenchmark);
 };
 
-UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop, int entry_count,
-                                           int value_size, int transaction_size)
+UpdateEntryBenchmark::UpdateEntryBenchmark(
+    async::Loop* loop,
+    std::unique_ptr<component::StartupContext> startup_context, int entry_count,
+    int value_size, int transaction_size)
     : loop_(loop),
       tmp_dir_(kStoragePath),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(std::move(startup_context)),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(kKeySize),
@@ -202,6 +206,8 @@ fit::closure UpdateEntryBenchmark::QuitLoopClosure() {
 
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   std::string entry_count_str;
   size_t entry_count;
@@ -225,8 +231,8 @@ int Main(int argc, const char** argv) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  UpdateEntryBenchmark app(&loop, entry_count, value_size, transaction_size);
+  UpdateEntryBenchmark app(&loop, std::move(startup_context), entry_count,
+                           value_size, transaction_size);
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }
 

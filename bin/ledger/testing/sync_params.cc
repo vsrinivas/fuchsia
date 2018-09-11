@@ -76,6 +76,7 @@ std::string GetSyncParamsUsage() {
 }
 
 bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
+                                    component::StartupContext* startup_context,
                                     SyncParams* sync_params) {
   std::string credentials;
   std::string credentials_path = kCredentialsDefaultPath.ToString();

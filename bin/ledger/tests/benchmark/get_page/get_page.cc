@@ -49,7 +49,9 @@ void PrintUsage() {
 //   new page with a random id is requested every time.
 class GetPageBenchmark {
  public:
-  GetPageBenchmark(async::Loop* loop, size_t requests_count, bool reuse);
+  GetPageBenchmark(async::Loop* loop,
+                   std::unique_ptr<component::StartupContext> startup_context,
+                   size_t requests_count, bool reuse);
 
   void Run();
 
@@ -74,11 +76,13 @@ class GetPageBenchmark {
   FXL_DISALLOW_COPY_AND_ASSIGN(GetPageBenchmark);
 };
 
-GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
-                                   bool reuse)
+GetPageBenchmark::GetPageBenchmark(
+    async::Loop* loop,
+    std::unique_ptr<component::StartupContext> startup_context,
+    size_t requests_count, bool reuse)
     : loop_(loop),
       tmp_dir_(kStoragePath),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(std::move(startup_context)),
       requests_count_(requests_count),
       reuse_(reuse) {
   FXL_DCHECK(loop_);
@@ -152,6 +156,8 @@ fit::closure GetPageBenchmark::QuitLoopClosure() {
 
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   std::string requests_count_str;
   size_t requests_count;
@@ -164,8 +170,8 @@ int Main(int argc, const char** argv) {
   }
   bool reuse = command_line.HasOption(kReuseFlag);
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  GetPageBenchmark app(&loop, requests_count, reuse);
+  GetPageBenchmark app(&loop, std::move(startup_context), requests_count,
+                       reuse);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

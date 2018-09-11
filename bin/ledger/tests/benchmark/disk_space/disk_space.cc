@@ -79,9 +79,10 @@ void PrintUsage() {
 //   --value-size=<int> size of a value for each entry.
 class DiskSpaceBenchmark {
  public:
-  DiskSpaceBenchmark(async::Loop* loop, size_t page_count,
-                     size_t unique_key_count, size_t commit_count,
-                     size_t key_size, size_t value_size);
+  DiskSpaceBenchmark(async::Loop* loop,
+                     std::unique_ptr<component::StartupContext> startup_context,
+                     size_t page_count, size_t unique_key_count,
+                     size_t commit_count, size_t key_size, size_t value_size);
 
   void Run();
 
@@ -107,13 +108,14 @@ class DiskSpaceBenchmark {
   FXL_DISALLOW_COPY_AND_ASSIGN(DiskSpaceBenchmark);
 };
 
-DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop, size_t page_count,
-                                       size_t unique_key_count,
-                                       size_t commit_count, size_t key_size,
-                                       size_t value_size)
+DiskSpaceBenchmark::DiskSpaceBenchmark(
+    async::Loop* loop,
+    std::unique_ptr<component::StartupContext> startup_context,
+    size_t page_count, size_t unique_key_count, size_t commit_count,
+    size_t key_size, size_t value_size)
     : loop_(loop),
       tmp_dir_(kStoragePath),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(std::move(startup_context)),
       page_count_(page_count),
       unique_key_count_(unique_key_count),
       commit_count_(commit_count),
@@ -202,6 +204,8 @@ fit::closure DiskSpaceBenchmark::QuitLoopClosure() {
 
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   std::string page_count_str;
   size_t page_count;
@@ -232,9 +236,8 @@ int Main(int argc, const char** argv) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  DiskSpaceBenchmark app(&loop, page_count, unique_key_count, commit_count,
-                         key_size, value_size);
+  DiskSpaceBenchmark app(&loop, std::move(startup_context), page_count,
+                         unique_key_count, commit_count, key_size, value_size);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

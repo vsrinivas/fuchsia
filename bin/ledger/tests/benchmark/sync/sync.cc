@@ -76,7 +76,9 @@ void PrintUsage() {
 //   --credentials-path=<file path> Firestore service account credentials
 class SyncBenchmark : public PageWatcher {
  public:
-  SyncBenchmark(async::Loop* loop, size_t change_count, size_t value_size,
+  SyncBenchmark(async::Loop* loop,
+                std::unique_ptr<component::StartupContext> startup_context,
+                size_t change_count, size_t value_size,
                 size_t entries_per_change,
                 PageDataGenerator::ReferenceStrategy reference_strategy,
                 SyncParams sync_params);
@@ -120,12 +122,13 @@ class SyncBenchmark : public PageWatcher {
 };
 
 SyncBenchmark::SyncBenchmark(
-    async::Loop* loop, size_t change_count, size_t value_size,
-    size_t entries_per_change,
+    async::Loop* loop,
+    std::unique_ptr<component::StartupContext> startup_context,
+    size_t change_count, size_t value_size, size_t entries_per_change,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     SyncParams sync_params)
     : loop_(loop),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(std::move(startup_context)),
       cloud_provider_factory_(startup_context_.get(),
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
@@ -265,6 +268,8 @@ fit::closure SyncBenchmark::QuitLoopClosure() {
 
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   std::string change_count_str;
   size_t change_count;
@@ -288,7 +293,8 @@ int Main(int argc, const char** argv) {
                                     &entries_per_change) ||
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
-      !ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
+      !ParseSyncParamsFromCommandLine(command_line, startup_context.get(),
+                                      &sync_params)) {
     PrintUsage();
     return -1;
   }
@@ -305,9 +311,9 @@ int Main(int argc, const char** argv) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  SyncBenchmark app(&loop, change_count, value_size, entries_per_change,
-                    reference_strategy, std::move(sync_params));
+  SyncBenchmark app(&loop, std::move(startup_context), change_count, value_size,
+                    entries_per_change, reference_strategy,
+                    std::move(sync_params));
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }
 

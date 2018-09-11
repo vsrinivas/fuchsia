@@ -60,9 +60,11 @@ void PrintUsage() {
 //   --value-size=<int> the size of a single value in bytes
 class DeleteEntryBenchmark {
  public:
-  DeleteEntryBenchmark(async::Loop* loop, size_t entry_count,
-                       size_t transaction_size, size_t key_size,
-                       size_t value_size);
+  DeleteEntryBenchmark(
+      async::Loop* loop,
+      std::unique_ptr<component::StartupContext> startup_context,
+      size_t entry_count, size_t transaction_size, size_t key_size,
+      size_t value_size);
 
   void Run();
 
@@ -90,13 +92,14 @@ class DeleteEntryBenchmark {
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteEntryBenchmark);
 };
 
-DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
-                                           size_t entry_count,
-                                           size_t transaction_size,
-                                           size_t key_size, size_t value_size)
+DeleteEntryBenchmark::DeleteEntryBenchmark(
+    async::Loop* loop,
+    std::unique_ptr<component::StartupContext> startup_context,
+    size_t entry_count, size_t transaction_size, size_t key_size,
+    size_t value_size)
     : loop_(loop),
       tmp_dir_(kStoragePath),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(std::move(startup_context)),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),
@@ -222,6 +225,8 @@ fit::closure DeleteEntryBenchmark::QuitLoopClosure() {
 
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   std::string entry_count_str;
   size_t entry_count;
@@ -248,9 +253,8 @@ int Main(int argc, const char** argv) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  DeleteEntryBenchmark app(&loop, entry_count, transaction_size, key_size,
-                           value_size);
+  DeleteEntryBenchmark app(&loop, std::move(startup_context), entry_count,
+                           transaction_size, key_size, value_size);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

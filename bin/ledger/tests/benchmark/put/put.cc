@@ -46,8 +46,10 @@ namespace {
 //   --seed=<int> (optional) the seed for key and value generation
 class PutBenchmark : public PageWatcher {
  public:
-  PutBenchmark(async::Loop* loop, int entry_count, int transaction_size,
-               int key_size, int value_size, bool update,
+  PutBenchmark(async::Loop* loop,
+               std::unique_ptr<component::StartupContext> startup_context,
+               int entry_count, int transaction_size, int key_size,
+               int value_size, bool update,
                PageDataGenerator::ReferenceStrategy reference_strategy,
                uint64_t seed);
 
@@ -109,13 +111,14 @@ namespace {
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/put";
 
 PutBenchmark::PutBenchmark(
-    async::Loop* loop, int entry_count, int transaction_size, int key_size,
-    int value_size, bool update,
+    async::Loop* loop,
+    std::unique_ptr<component::StartupContext> startup_context, int entry_count,
+    int transaction_size, int key_size, int value_size, bool update,
     PageDataGenerator::ReferenceStrategy reference_strategy, uint64_t seed)
     : loop_(loop),
       generator_(seed),
       tmp_dir_(kStoragePath),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(std::move(startup_context)),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),
@@ -393,6 +396,8 @@ bool GetPositiveIntValue(const fxl::CommandLine& command_line,
 
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   int entry_count;
   std::string transaction_size_str;
@@ -439,9 +444,9 @@ int Main(int argc, const char** argv) {
     seed = fxl::RandUint64();
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  PutBenchmark app(&loop, entry_count, transaction_size, key_size, value_size,
-                   update, ref_strategy, seed);
+  PutBenchmark app(&loop, std::move(startup_context), entry_count,
+                   transaction_size, key_size, value_size, update, ref_strategy,
+                   seed);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

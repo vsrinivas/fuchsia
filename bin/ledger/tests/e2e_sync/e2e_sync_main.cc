@@ -5,6 +5,8 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/strings/string_view.h>
 
@@ -41,13 +43,19 @@ GetLedgerAppInstanceFactoryBuilders() {
 
 int main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-
   ledger::SyncParams sync_params;
-  if (!ledger::ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
-    std::cerr << ledger::GetSyncParamsUsage();
-    return -1;
+
+  {
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    auto startup_context = component::StartupContext::CreateFromStartupInfo();
+
+    if (!ledger::ParseSyncParamsFromCommandLine(
+            command_line, startup_context.get(), &sync_params)) {
+      std::cerr << ledger::GetSyncParamsUsage();
+      return -1;
+    }
+    ledger::sync_params_ptr = &sync_params;
   }
-  ledger::sync_params_ptr = &sync_params;
 
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

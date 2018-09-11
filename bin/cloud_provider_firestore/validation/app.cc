@@ -29,9 +29,12 @@ void PrintUsage(const char* executable_name) {
 
 int main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
 
   ledger::SyncParams sync_params;
-  if (!ledger::ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
+  if (!ledger::ParseSyncParamsFromCommandLine(command_line, startup_context.get(), &sync_params)) {
     cloud_provider_firestore::PrintUsage(argv[0]);
     return -1;
   }
@@ -45,9 +48,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
   cloud_provider_firestore::CloudProviderFactory factory(
       startup_context.get(), sync_params.api_key,
       sync_params.credentials->Clone());

@@ -88,8 +88,10 @@ void PrintUsage() {
 //   --credentials-path=<file path> Firestore service account credentials
 class BacklogBenchmark : public SyncWatcher {
  public:
-  BacklogBenchmark(async::Loop* loop, size_t unique_key_count, size_t key_size,
-                   size_t value_size, size_t commit_count,
+  BacklogBenchmark(async::Loop* loop,
+                   std::unique_ptr<component::StartupContext> startup_context,
+                   size_t unique_key_count, size_t key_size, size_t value_size,
+                   size_t commit_count,
                    PageDataGenerator::ReferenceStrategy reference_strategy,
                    SyncParams sync_params);
 
@@ -149,12 +151,14 @@ class BacklogBenchmark : public SyncWatcher {
 };
 
 BacklogBenchmark::BacklogBenchmark(
-    async::Loop* loop, size_t unique_key_count, size_t key_size,
-    size_t value_size, size_t commit_count,
+    async::Loop* loop,
+    std::unique_ptr<component::StartupContext> startup_context,
+    size_t unique_key_count, size_t key_size, size_t value_size,
+    size_t commit_count,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     SyncParams sync_params)
     : loop_(loop),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(std::move(startup_context)),
       cloud_provider_factory_(startup_context_.get(),
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
@@ -414,6 +418,8 @@ fit::closure BacklogBenchmark::QuitLoopClosure() {
 
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   std::string unique_key_count_str;
   size_t unique_key_count;
@@ -441,7 +447,8 @@ int Main(int argc, const char** argv) {
       commit_count <= 0 ||
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
-      !ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
+      !ParseSyncParamsFromCommandLine(command_line, startup_context.get(),
+                                      &sync_params)) {
     PrintUsage();
     return -1;
   }
@@ -458,9 +465,8 @@ int Main(int argc, const char** argv) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  BacklogBenchmark app(&loop, unique_key_count, key_size, value_size,
-                       commit_count, reference_strategy,
+  BacklogBenchmark app(&loop, std::move(startup_context), unique_key_count,
+                       key_size, value_size, commit_count, reference_strategy,
                        std::move(sync_params));
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

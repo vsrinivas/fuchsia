@@ -68,8 +68,11 @@ constexpr size_t kKeySize = 100;
 //   --credentials-path=<file path> Firestore service account credentials
 class ConvergenceBenchmark : public PageWatcher {
  public:
-  ConvergenceBenchmark(async::Loop* loop, int entry_count, int value_size,
-                       int device_count, SyncParams sync_params);
+  ConvergenceBenchmark(
+      async::Loop* loop,
+      std::unique_ptr<component::StartupContext> startup_context,
+      int entry_count, int value_size, int device_count,
+      SyncParams sync_params);
 
   void Run();
 
@@ -111,11 +114,12 @@ class ConvergenceBenchmark : public PageWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(ConvergenceBenchmark);
 };
 
-ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
-                                           int value_size, int device_count,
-                                           SyncParams sync_params)
+ConvergenceBenchmark::ConvergenceBenchmark(
+    async::Loop* loop,
+    std::unique_ptr<component::StartupContext> startup_context, int entry_count,
+    int value_size, int device_count, SyncParams sync_params)
     : loop_(loop),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(std::move(startup_context)),
       cloud_provider_factory_(startup_context_.get(),
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
@@ -239,6 +243,8 @@ fit::closure ConvergenceBenchmark::QuitLoopClosure() {
 
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   std::string entry_count_str;
   int entry_count;
@@ -259,14 +265,14 @@ int Main(int argc, const char** argv) {
                                    &device_count_str) ||
       !fxl::StringToNumberWithError(device_count_str, &device_count) ||
       device_count <= 0 ||
-      !ParseSyncParamsFromCommandLine(command_line, &sync_params)) {
+      !ParseSyncParamsFromCommandLine(command_line, startup_context.get(),
+                                      &sync_params)) {
     PrintUsage();
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  ConvergenceBenchmark app(&loop, entry_count, value_size, device_count,
-                           std::move(sync_params));
+  ConvergenceBenchmark app(&loop, std::move(startup_context), entry_count,
+                           value_size, device_count, std::move(sync_params));
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }
 
