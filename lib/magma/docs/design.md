@@ -21,7 +21,7 @@ Clients can cause the gpu to hang or fault, and when this happens it will affect
 
 As mentioned in the overview, the Magma architecture involves two driver components: a client library, and a privileged system driver process.  Both are gpu-specific; the client library must compile software from IR (intermediate representation, for example SPIR-V) into machine code, and format command buffers correctly for consumption by the hardware.  These are fed to the Magma system driver, which performs that actual programming of the hardware.
 
-![](block_diagram.svg)
+![](block_diagram.png)
 
 Magma defines two interfaces to gpu-specific code:
 * The **magma** interface provides the foundation for the client driver, typically libvulkan
