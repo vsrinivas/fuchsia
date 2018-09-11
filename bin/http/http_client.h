@@ -439,15 +439,10 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
       done += todo;
     } while (done < size);
 
-    if (loader_->response_body_mode_ ==
-        ::fuchsia::net::oldhttp::ResponseBodyMode::BUFFER) {
-      response_.body->set_buffer(std::move(vmo));
-    } else {
-      FXL_DCHECK(loader_->response_body_mode_ ==
-                 ::fuchsia::net::oldhttp::ResponseBodyMode::SIZED_BUFFER);
-      response_.body->set_sized_buffer(
-          fsl::SizedVmo(std::move(vmo), size).ToTransport());
-    }
+    FXL_DCHECK(loader_->response_body_mode_ ==
+               ::fuchsia::net::oldhttp::ResponseBodyMode::SIZED_BUFFER);
+    response_.body->set_sized_buffer(
+        fsl::SizedVmo(std::move(vmo), size).ToTransport());
   }
   return ZX_OK;
 }
@@ -505,7 +500,6 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
       response.body = std::make_unique<::fuchsia::net::oldhttp::URLBody>();
 
       switch (loader_->response_body_mode_) {
-        case ::fuchsia::net::oldhttp::ResponseBodyMode::BUFFER:
         case ::fuchsia::net::oldhttp::ResponseBodyMode::SIZED_BUFFER:
           response_ = std::move(response);
 

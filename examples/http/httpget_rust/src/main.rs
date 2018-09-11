@@ -85,8 +85,7 @@ async fn http_get(url: String) -> Result<(), Error> {
 
     let mut socket = match resp.body.map(|x| *x) {
         Some(http::UrlBody::Stream(s)) => fasync::Socket::from_socket(s)?,
-        Some(http::UrlBody::Buffer(_))
-        | Some(http::UrlBody::SizedBuffer(_))
+        Some(http::UrlBody::SizedBuffer(_))
         | None => return Ok(()),
     };
 
