@@ -2408,6 +2408,14 @@ static void brcmf_iedump(uint8_t* ie, size_t length) {
 }
 #endif // WANTED_FOR_DEBUG
 
+void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet) {
+    struct net_device* ndev = ifp->ndev;
+    brcmf_dbg(TEMP, "Calling data_recv with data 0x%016lx %016lx len %d", *(uint64_t*)packet->data,
+              *(uint64_t*)(packet->data+8), packet->len);
+    ndev->if_callbacks->data_recv(ndev->if_callback_cookie, packet->data, packet->len, 0);
+    brcmu_pkt_buf_free_netbuf(packet);
+}
+
 static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, const uint8_t* bssid,
                                         uint16_t capability, uint16_t interval, uint8_t* ie,
                                         size_t ie_len, int16_t rssi_dbm) {
@@ -4895,8 +4903,10 @@ void brcmf_hook_stats_query_req(void* ctx) {
 }
 
 zx_status_t brcmf_hook_data_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+    struct net_device* ndev = ctx;
     brcmf_dbg(TEMP, "Enter. Options %d 0x%x, len %d", options, options, netbuf->len);
-    return ZX_ERR_NOT_SUPPORTED;
+    brcmf_netdev_start_xmit(ndev, netbuf);
+    return ZX_OK;
 }
 
 static wlanif_impl_protocol_ops_t if_impl_proto_ops = {

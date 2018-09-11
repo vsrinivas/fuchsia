@@ -241,7 +241,7 @@ void brcmf_netdev_set_multicast_list(struct net_device* ndev) {
     workqueue_schedule_default(&ifp->multicast_work);
 }
 
-void brcmf_netdev_start_xmit(struct brcmf_netbuf* netbuf, struct net_device* ndev) {
+void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* ethmac_netbuf) {
     zx_status_t ret;
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_pub* drvr = ifp->drvr;
@@ -254,10 +254,15 @@ void brcmf_netdev_start_xmit(struct brcmf_netbuf* netbuf, struct net_device* nde
     if (drvr->bus_if->state != BRCMF_BUS_UP) {
         brcmf_err("xmit rejected state=%d\n", drvr->bus_if->state);
         netif_stop_queue(ndev);
-        brcmf_netbuf_free(netbuf);
         ret = ZX_ERR_UNAVAILABLE;
         goto done;
     }
+
+    struct brcmf_netbuf* netbuf = brcmf_netbuf_allocate(ethmac_netbuf->len + drvr->hdrlen);
+    brcmf_netbuf_grow_tail(netbuf, ethmac_netbuf->len + drvr->hdrlen);
+    brcmf_netbuf_shrink_head(netbuf, drvr->hdrlen);
+    memcpy(netbuf->data, ethmac_netbuf->data, ethmac_netbuf->len);
+    brcmf_hexdump(netbuf->data, 32);
 
     /* Make sure there's enough writeable headroom */
     if (brcmf_netbuf_head_space(netbuf) < drvr->hdrlen) {
@@ -346,8 +351,8 @@ void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
     ifp->ndev->stats.rx_bytes += netbuf->len;
     ifp->ndev->stats.rx_packets++;
 
-    brcmf_dbg(DATA, "rx proto=0x%X\n", be16toh(netbuf->protocol));
-    netif_rx_ni(netbuf);
+    brcmf_dbg(DATA, "rx proto=0x%X len %d\n", be16toh(netbuf->protocol), netbuf->len);
+    brcmf_cfg80211_rx(ifp, netbuf);
 }
 
 static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf,
@@ -372,9 +377,9 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
     // and that we don't worry about "older Novell" IPX.
     // TODO(cphoenix): This is an ugly hack, probably buggy, to replace some of eth_type_trans.
     // See https://elixir.bootlin.com/linux/v4.17-rc7/source/net/ethernet/eth.c#L156
-    brcmf_dbg(TEMP, "Packet header:");
-    brcmf_hexdump(netbuf->data, min(netbuf->len, 32));
-    brcmf_alphadump(netbuf->data, netbuf->len);
+    //brcmf_dbg(TEMP, "Packet header:");
+    //brcmf_hexdump(netbuf->data, min(netbuf->len, 32));
+    //brcmf_alphadump(netbuf->data, netbuf->len);
     if (address_is_multicast(netbuf->data)) {
         if (address_is_broadcast(netbuf->data)) {
             netbuf->pkt_type = ADDRESSED_TO_BROADCAST;
@@ -391,9 +396,6 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
         netbuf->protocol = htobe16(ETH_P_802_2);
     }
     netbuf->eth_header = netbuf->data;
-    if (netbuf->len >= 14) {
-        brcmf_netbuf_shrink_head(netbuf, 14);
-    }
     //netbuf->protocol = eth_type_trans(netbuf, (*ifp)->ndev);
     return ZX_OK;
 }
@@ -403,7 +405,7 @@ void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* netbuf, bool 
     struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
-    brcmf_dbg(DATA, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
+    //brcmf_dbg(DATA, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
 
     if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
         brcmf_dbg(TEMP, "hdrpull returned nonzero");
