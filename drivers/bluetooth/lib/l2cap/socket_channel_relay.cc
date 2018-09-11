@@ -9,7 +9,7 @@
 #include <lib/async/default.h>
 #include <zircon/assert.h>
 
-#include "lib/fxl/logging.h"
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 
 namespace btlib {
 namespace l2cap {
@@ -43,8 +43,10 @@ SocketChannelRelay::~SocketChannelRelay() {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   if (state_ != RelayState::kDeactivated) {
-    FXL_VLOG(5) << "l2cap: Deactivating relay for channel " << channel_->id()
-                << " in dtor; will require Channel's mutex";
+    bt_log(DEBUG, "l2cap",
+           "Deactivating relay for channel %u in dtor; will require Channel's "
+           "mutex",
+           channel_->id());
     Deactivate();
   }
 }
@@ -72,17 +74,19 @@ bool SocketChannelRelay::Activate() {
         if (self) {
           self->OnChannelDataReceived(std::move(sdu));
         } else {
-          FXL_VLOG(5) << "Ignoring SDU received on destroyed relay (channel_id="
-                      << channel_id << ")";
+          bt_log(DEBUG, "l2cap",
+                 "Ignoring SDU received on destroyed relay (channel_id=%#.4x)",
+                 channel_id);
         }
       },
       [self, channel_id] {
         if (self) {
           self->OnChannelClosed();
         } else {
-          FXL_VLOG(5)
-              << "Ignoring channel closure on destroyed relay (channel_id="
-              << channel_id << ")";
+          bt_log(
+              DEBUG, "l2cap",
+              "Ignoring channel closure on destroyed relay (channel_id=%#.4x)",
+              channel_id);
         }
       },
       dispatcher_);
@@ -99,9 +103,9 @@ void SocketChannelRelay::Deactivate() {
 
   state_ = RelayState::kDeactivating;
   if (!socket_write_queue_.empty()) {
-    FXL_VLOG(1) << "l2cap: Dropping " << socket_write_queue_.size()
-                << " SDUs from channel " << channel_->id()
-                << " due to channel closure";
+    bt_log(TRACE, "l2cap",
+           "Dropping %zu SDUs from channel %u due to channel closure",
+           socket_write_queue_.size(), channel_->id());
     socket_write_queue_.clear();
   }
   channel_->Deactivate();
@@ -157,9 +161,9 @@ void SocketChannelRelay::OnChannelDataReceived(SDU sdu) {
   ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivated);
 
   if (state_ == RelayState::kDeactivating) {
-    FXL_LOG(INFO) << "l2cap: Ignorning " << __func__
-                  << " on socket for channel " << channel_->id()
-                  << " while deactivating";
+    bt_log(TRACE, "l2cap",
+           "Ignorning %s on socket for channel %u while deactivating", __func__,
+           channel_->id());
     return;
   }
 
@@ -173,8 +177,9 @@ void SocketChannelRelay::OnChannelClosed() {
   ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivated);
 
   if (state_ == RelayState::kDeactivating) {
-    FXL_LOG(INFO) << "l2cap: Ignoring " << __func__ << " on socket for channel "
-                  << channel_->id() << " while deactivating";
+    bt_log(TRACE, "l2cap",
+           "Ignorning %s on socket for channel %u while deactivating", __func__,
+           channel_->id());
     return;
   }
 
@@ -206,15 +211,14 @@ bool SocketChannelRelay::CopyFromSocketToChannel() {
                         "(n_bytes_read=%zu, read_buf_size=%zu)", n_bytes_read,
                         read_buf_size);
     if (read_res == ZX_ERR_SHOULD_WAIT) {
-      ZX_DEBUG_ASSERT(n_bytes_read == 0);
-      FXL_VLOG(5) << "l2cap: Failed to read from socket for channel "
-                  << channel_->id() << ": " << zx_status_get_string(read_res);
+      bt_log(DEBUG, "l2cap", "Failed to read from socket for channel %u: %s",
+             channel_->id(), zx_status_get_string(read_res));
       return true;
     }
 
     if (read_res == ZX_ERR_PEER_CLOSED) {
-      FXL_VLOG(5) << "l2cap: Failed to read from socket for channel "
-                  << channel_->id() << ": " << zx_status_get_string(read_res);
+      bt_log(DEBUG, "l2cap", "Failed to read from socket for channel %u: %s",
+             channel_->id(), zx_status_get_string(read_res));
       return false;
     }
 
@@ -229,8 +233,8 @@ bool SocketChannelRelay::CopyFromSocketToChannel() {
         channel_->Send(std::make_unique<common::DynamicByteBuffer>(
             common::BufferView(read_buf, n_bytes_read)));
     if (!write_success) {
-      FXL_VLOG(5) << "l2cap: Failed to write " << n_bytes_read
-                  << " bytes to channel " << channel_->id();
+      bt_log(DEBUG, "l2cap", "Failed to write %zu bytes to channel %u",
+             n_bytes_read, channel_->id());
     }
   } while (read_res == ZX_OK);
 
@@ -261,9 +265,9 @@ void SocketChannelRelay::ServiceSocketWriteQueue() {
                               "%s", zx_status_get_string(write_res));
           if (write_res != ZX_OK) {
             ZX_DEBUG_ASSERT(n_bytes_written == 0);
-            FXL_VLOG(5) << "l2cap: Failed to write " << pdu.size()
-                        << " bytes to socket for channel " << channel_->id()
-                        << ": " << zx_status_get_string(write_res);
+            bt_log(SPEW, "l2cap",
+                   "Failed to write %zu bytes to socket for channel %u: %s",
+                   pdu.size(), channel_->id(), zx_status_get_string(write_res));
             return;
           }
           ZX_DEBUG_ASSERT(n_bytes_written == pdu.size());
@@ -303,8 +307,8 @@ void SocketChannelRelay::BindWait(zx_signals_t trigger, const char* wait_name,
                         "(%s, channel_id=%u)", wait_name, channel_id);
 
     if (status == ZX_ERR_CANCELED) {  // Dispatcher is shutting down.
-      FXL_VLOG(1) << "l2cap: " << wait_name
-                  << " canceled on socket for channel " << channel_id;
+      bt_log(TRACE, "l2cap", "%s canceled on socket for channel %u", wait_name,
+             channel_id);
       self->DeactivateAndRequestDestruction();
       return;
     }
@@ -320,9 +324,9 @@ void SocketChannelRelay::BindWait(zx_signals_t trigger, const char* wait_name,
                         "(%s, channel_id=%u)", wait_name, channel_id);
 
     if (self->state_ == RelayState::kDeactivating) {
-      FXL_LOG(INFO) << "l2cap: Ignoring " << wait_name
-                    << " on socket for channel " << channel_id
-                    << " while deactivating";
+      bt_log(TRACE, "l2cap",
+             "Ignorning %s on socket for channel %u while deactivating",
+             wait_name, channel_id);
       return;
     }
     handler(status);
@@ -341,8 +345,8 @@ bool SocketChannelRelay::BeginWait(const char* wait_name, async::Wait* wait) {
   ZX_DEBUG_ASSERT(wait_res == ZX_OK || wait_res == ZX_ERR_BAD_STATE);
 
   if (wait_res != ZX_OK) {
-    FXL_LOG(ERROR) << "l2cap: Failed to enable waiting on " << wait_name << ": "
-                   << zx_status_get_string(wait_res);
+    bt_log(ERROR, "l2cap", "Failed to enable waiting on %s: ", wait_name,
+           zx_status_get_string(wait_res));
     return false;
   }
 

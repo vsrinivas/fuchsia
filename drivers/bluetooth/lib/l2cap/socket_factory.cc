@@ -7,8 +7,7 @@
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
-#include "lib/fxl/logging.h"
-
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/socket_channel_relay.h"
 
 namespace btlib {
@@ -25,8 +24,8 @@ zx::socket SocketFactory::MakeSocketForChannel(fbl::RefPtr<Channel> channel) {
   ZX_DEBUG_ASSERT(channel);
 
   if (channel_to_relay_.find(channel->id()) != channel_to_relay_.end()) {
-    FXL_LOG(ERROR) << "l2cap: " << __func__ << ": channel " << channel->id()
-                   << " is already bound to a socket.";
+    bt_log(ERROR, "l2cap", "channel %u is already bound to a socket",
+           channel->id());
     return {};
   }
 
@@ -34,8 +33,8 @@ zx::socket SocketFactory::MakeSocketForChannel(fbl::RefPtr<Channel> channel) {
   const auto status =
       zx::socket::create(ZX_SOCKET_STREAM, &local_socket, &remote_socket);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "l2cap: Failed to create socket for channel "
-                   << channel->id() << ": " << zx_status_get_string(status);
+    bt_log(ERROR, "l2cap", "Failed to create socket for channel %u: %s",
+           channel->id(), zx_status_get_string(status));
     return {};
   }
 
@@ -53,8 +52,8 @@ zx::socket SocketFactory::MakeSocketForChannel(fbl::RefPtr<Channel> channel) {
   // Note: Activate() may abort, if |channel| has been Activated() without going
   // through this SocketFactory.
   if (!relay->Activate()) {
-    FXL_LOG(ERROR) << "l2cap: Failed to Activate() relay for channel "
-                   << channel->id();
+    bt_log(ERROR, "l2cap", "Failed to Activate() relay for channel %u",
+           channel->id());
     return {};
   }
 

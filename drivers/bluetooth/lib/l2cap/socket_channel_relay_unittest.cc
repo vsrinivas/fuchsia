@@ -12,6 +12,7 @@
 
 #include "gtest/gtest.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
 
@@ -56,8 +57,8 @@ class L2CAP_SocketChannelRelayTest : public ::testing::Test {
         write_res = local_socket_unowned_->write(
             0, spam_data.data(), spam_data.size(), &n_iter_bytes_written);
         if (write_res != ZX_OK && write_res != ZX_ERR_SHOULD_WAIT) {
-          FXL_LOG(ERROR) << "Failure in zx_socket_write(): "
-                         << zx_status_get_string(write_res);
+          bt_log(ERROR, "l2cap", "Failure in zx_socket_write(): %s",
+                 zx_status_get_string(write_res));
           return 0;
         }
         n_total_bytes_written += n_iter_bytes_written;
@@ -79,8 +80,8 @@ class L2CAP_SocketChannelRelayTest : public ::testing::Test {
       read_res = remote_socket_.read(0, received_data.mutable_data(),
                                      received_data.size(), &n_iter_bytes_read);
       if (read_res != ZX_OK && read_res != ZX_ERR_SHOULD_WAIT) {
-        FXL_LOG(ERROR) << "Failure in zx_socket_read(): "
-                       << zx_status_get_string(read_res);
+        bt_log(ERROR, "l2cap", "Failure in zx_socket_read(): %s",
+               zx_status_get_string(read_res));
         return false;
       }
       if (read_res == ZX_ERR_SHOULD_WAIT) {
@@ -306,8 +307,8 @@ class L2CAP_SocketChannelRelayRxTest
         remote_socket()->read(0, socket_read_buffer.mutable_data(),
                               socket_read_buffer.size(), &n_bytes_read);
     if (read_res != ZX_OK) {
-      FXL_LOG(ERROR) << "Failure in zx_socket_read(): "
-                     << zx_status_get_string(read_res);
+      bt_log(ERROR, "l2cap", "Failure in zx_socket_read(): %s",
+             zx_status_get_string(read_res));
       return {};
     }
     return common::DynamicByteBuffer(
