@@ -192,7 +192,6 @@ void AstroDisplay::CheckConfiguration(const display_config_t** display_configs,
 void AstroDisplay::ApplyConfiguration(const display_config_t** display_configs,
                                       uint32_t display_count) {
     ZX_DEBUG_ASSERT(display_configs);
-    ZX_DEBUG_ASSERT(display_configs[0]);
 
     fbl::AutoLock lock(&display_lock_);
 
