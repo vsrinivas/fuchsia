@@ -17,7 +17,7 @@
 #include <arch/x86/cpu_topology.h>
 #include <arch/x86/mmu.h>
 #include <assert.h>
-#if defined(WITH_DEV_PCIE)
+#if defined(WITH_KERNEL_PCIE)
 #include <dev/pcie_bus_driver.h>
 #endif
 #include <dev/uart.h>
@@ -663,7 +663,7 @@ void platform_mexec_prep(uintptr_t new_bootimage_addr, size_t new_bootimage_len)
     // Leaving PCI running will also leave DMA running which may cause memory
     // corruption after boot.
     // Disabling PCI may cause devices to fail to enumerate after boot.
-#ifdef WITH_DEV_PCIE
+#ifdef WITH_KERNEL_PCIE
     if (cmdline_get_bool("kernel.mexec-pci-shutdown", true)) {
         PcieBusDriver::GetDriver()->DisableBus();
     }

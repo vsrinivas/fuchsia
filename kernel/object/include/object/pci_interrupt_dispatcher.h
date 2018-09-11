@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #pragma once
-#if WITH_DEV_PCIE
+#if WITH_KERNEL_PCIE
 
 #include <fbl/canary.h>
 #include <object/interrupt_dispatcher.h>
@@ -44,4 +44,4 @@ private:
     const bool maskable_;
 };
 
-#endif  // if WITH_DEV_PCIE
+#endif  // if WITH_KERNEL_PCIE

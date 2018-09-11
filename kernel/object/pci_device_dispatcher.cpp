@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#if WITH_DEV_PCIE
+#if WITH_KERNEL_PCIE
 
 #include <object/pci_device_dispatcher.h>
 
@@ -224,4 +224,4 @@ zx_status_t PciDeviceDispatcher::SetIrqMode(zx_pci_irq_mode_t mode, uint32_t req
     return ret;
 }
 
-#endif  // if WITH_DEV_PCIE
+#endif  // if WITH_KERNEL_PCIE

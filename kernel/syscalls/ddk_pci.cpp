@@ -42,7 +42,7 @@ static inline void shutdown_early_init_console() {
     gfxconsole_bind_display(nullptr, nullptr);
 }
 
-#ifdef WITH_DEV_PCIE
+#ifdef WITH_KERNEL_PCIE
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_root.h>
 #include <object/pci_device_dispatcher.h>
@@ -633,7 +633,7 @@ zx_status_t sys_pci_set_irq_mode(zx_handle_t dev_handle,
 
     return pci_device->SetIrqMode((zx_pci_irq_mode_t)mode, requested_irq_count);
 }
-#else  // WITH_DEV_PCIE
+#else  // WITH_KERNEL_PCIE
 zx_status_t sys_pci_init(zx_handle_t, user_in_ptr<const zx_pci_init_arg_t>, uint32_t) {
     shutdown_early_init_console();
     return ZX_OK;
@@ -695,4 +695,4 @@ zx_status_t sys_pci_query_irq_mode(zx_handle_t, uint32_t, user_out_ptr<uint32_t>
 zx_status_t sys_pci_set_irq_mode(zx_handle_t, uint32_t, uint32_t) {
     return ZX_ERR_NOT_SUPPORTED;
 }
-#endif // WITH_DEV_PCIE
+#endif // WITH_KERNEL_PCIE

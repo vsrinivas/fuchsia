@@ -7,7 +7,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#if WITH_DEV_PCIE
+#if WITH_KERNEL_PCIE
 
 #include <arch/x86/feature.h>
 #include <dev/pcie_bus_driver.h>
@@ -201,4 +201,4 @@ extern const PcieBusDriver::QuirkHandler pcie_quirk_handlers[] = {
     nullptr,
 };
 
-#endif // WITH_DEV_PCIE
+#endif // WITH_KERNEL_PCIE

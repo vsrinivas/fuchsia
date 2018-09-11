@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #pragma once
-#if WITH_DEV_PCIE
+#if WITH_KERNEL_PCIE
 
 #include <dev/pci_common.h>
 #include <dev/pcie_device.h>
@@ -73,4 +73,4 @@ private:
     bool irqs_maskable_   TA_GUARDED(lock_) = false;
 };
 
-#endif  // if WITH_DEV_PCIE
+#endif  // if WITH_KERNEL_PCIE

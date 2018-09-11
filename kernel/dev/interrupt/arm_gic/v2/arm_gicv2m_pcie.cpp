@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#if WITH_DEV_PCIE
+#if WITH_KERNEL_PCIE
 #include <dev/interrupt/arm_gicv2m_msi.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_platform.h>
@@ -81,4 +81,4 @@ static void arm_gicv2_pcie_init(const void* driver_data, uint32_t length) {
 
 LK_PDEV_INIT(arm_gicv2_pcie_init, KDRV_ARM_GIC_V2, arm_gicv2_pcie_init, LK_INIT_LEVEL_PLATFORM);
 
-#endif // if WITH_DEV_PCIE
+#endif // if WITH_KERNEL_PCIE

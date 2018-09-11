@@ -7,7 +7,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#if WITH_DEV_PCIE
+#if WITH_KERNEL_PCIE
 
 #include <dev/interrupt.h>
 #include <dev/pcie_bus_driver.h>
@@ -140,4 +140,4 @@ static void x86_pcie_init_hook(uint level) {
 
 LK_INIT_HOOK(x86_pcie_init, x86_pcie_init_hook, LK_INIT_LEVEL_PLATFORM);
 
-#endif // WITH_DEV_PCIE
+#endif // WITH_KERNEL_PCIE

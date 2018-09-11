@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#if WITH_DEV_PCIE
+#if WITH_KERNEL_PCIE
 
 #include <object/pci_interrupt_dispatcher.h>
 
@@ -86,4 +86,4 @@ void PciInterruptDispatcher::UnregisterInterruptHandler() {
     device_->RegisterIrqHandler(vector_, nullptr, nullptr);
 }
 
-#endif  // if WITH_DEV_PCIE
+#endif  // if WITH_KERNEL_PCIE
