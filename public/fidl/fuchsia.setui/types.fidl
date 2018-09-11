@@ -3,7 +3,8 @@ library fuchsia.setui;
 enum SettingType {
     UNKNOWN = 0;
     TIME_ZONE = 1;
-    NETWORK = 2;
+    CONNECTIVITY = 2;
+    WIRELESS = 3;
 };
 
 union SettingData {
@@ -13,8 +14,11 @@ union SettingData {
     /// time zones.
     TimeZoneInfo time_zone_value;
 
-    /// The current network state. (read-only)
-    NetworkState network_state;
+    /// The current connected state. (read-only)
+    ConnectedState connectivity;
+
+    /// The wireless state (read-only).
+    WirelessState wireless;
 };
 
 struct TimeZoneInfo {
@@ -53,15 +57,6 @@ enum ConnectionStatus {
     DISCONNECTING = 4;
 };
 
-struct WiredInterface {
-    /// The underlying ID value; shouldn't be displayed to the end user.
-    /// (internal / read-only)
-    int64 interface_id;
-
-    /// The current connection status to the current access point. (read-only)
-    ConnectionStatus status;
-};
-
 enum WirelessSecurity {
     UNKNOWN = 0;
 
@@ -89,37 +84,24 @@ struct WirelessAccessPoint {
     /// The password set by the user to connect to the access point. This
     /// should never be populated by the server. (write)
     string password;
-};
 
-struct WirelessInterface {
-    /// The underlying ID value; shouldn't be displayed to the end user.
-    /// (internal / read-only)
-    int64 interface_id;
-
-    /// Whether the interface is currently powered on. (read-only)
-    bool powered;
-
-    /// The current connection status to the current access point. (read-only)
+    /// The current connection state of the access point.
     ConnectionStatus status;
-
-    /// The access point the interface is currently connected or connecting to.
-    /// (read/write)
-    WirelessAccessPoint current_access_point;
-
-    /// The Available networks to connect to. (read-only)
-    vector<WirelessAccessPoint> available_access_points;
 };
 
-union NetworkInterface {
-    WiredInterface wired_interface;
-
-    WirelessInterface wireless_interface;
+struct WirelessState {
+    /// The available access points to connect to.
+    vector<WirelessAccessPoint> access_points;
 };
 
-struct NetworkState {
-    /// The overall connection status. (read-only)
-    ConnectionStatus status;
+enum Reachability {
+    UNKNOWN = 0;
 
-    /// The available interfaces. (read-only)
-    vector<NetworkInterface> interfaces;
+    /// we have access to the wide area network.
+    WAN = 1;
+};
+
+struct ConnectedState {
+    /// The current level of connection access.
+    Reachability reachability;
 };
