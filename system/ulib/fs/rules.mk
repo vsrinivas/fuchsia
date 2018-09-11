@@ -80,6 +80,4 @@ MODULE_HEADER_DEPS += system/ulib/zircon-internal
 MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib \
 
-MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
-
 include make/module.mk

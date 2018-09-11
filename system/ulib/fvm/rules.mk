@@ -58,6 +58,4 @@ MODULE_HOST_LIBS := \
     system/ulib/digest.hostlib \
     system/ulib/fbl.hostlib \
 
-MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
-
 include make/module.mk

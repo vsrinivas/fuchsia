@@ -44,8 +44,6 @@ MODULE_HOST_LIBS := \
     system/ulib/digest.hostlib \
     system/ulib/minfs.hostlib \
 
-MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
-
 MODULE_PACKAGE := bin
 
 include make/module.mk

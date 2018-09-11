@@ -34,6 +34,4 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/fs-host/include \
 
-MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
-
 include make/module.mk

@@ -75,6 +75,4 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/bitmap/include \
 
-MODULE_DEFINES := DISABLE_THREAD_ANNOTATIONS
-
 include make/module.mk

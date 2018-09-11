@@ -45,10 +45,4 @@ MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib \
     system/ulib/fs.hostlib \
 
-# The VFS library uses Clang's thread annotations extensively, but
-# the mutex implementation is not shared between target / host. As a
-# consequence, host-side thread annotations are disabled so all
-# thread annotation macros (referencing mutexes) are ignored.
-MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
-
 include make/module.mk

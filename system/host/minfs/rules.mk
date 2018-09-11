@@ -32,8 +32,6 @@ MODULE_HOST_LIBS := \
     system/ulib/minfs.hostlib \
     system/ulib/fs-host.hostlib \
 
-MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
-
 MODULE_PACKAGE := bin
 
 include make/module.mk

@@ -45,11 +45,7 @@
 #define __LEAF_FN
 #define __OPTIMIZE(x)
 #define __EXTERNALLY_VISIBLE
-#ifndef DISABLE_THREAD_ANNOTATIONS
 #define __THREAD_ANNOTATION(x) __attribute__((x))
-#else
-#define __THREAD_ANNOTATION(x)
-#endif
 #define __NO_SAFESTACK __attribute__((__no_sanitize__("safe-stack")))
 #endif
 

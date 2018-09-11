@@ -51,6 +51,4 @@ MODULE_HOST_LIBS := \
     system/ulib/digest.hostlib \
     system/uapp/blobfs.hostlib \
 
-MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
-
 include make/module.mk

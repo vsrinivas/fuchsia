@@ -27,6 +27,7 @@
 #include <fbl/unique_ptr.h>
 
 #include <fs/block-txn.h>
+#include <fs/locking.h>
 #include <lib/fzl/mapped-vmo.h>
 #include <fs/ticker.h>
 #include <fs/trace.h>
@@ -145,9 +146,9 @@ public:
     zx_status_t VnodeNew(Transaction* state, fbl::RefPtr<VnodeMinfs>* out, uint32_t type);
 
     // Insert, lookup, and remove vnode from hash map.
-    void VnodeInsert(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
-    fbl::RefPtr<VnodeMinfs> VnodeLookup(uint32_t ino) __TA_EXCLUDES(hash_lock_);
-    void VnodeRelease(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
+    void VnodeInsert(VnodeMinfs* vn) FS_TA_EXCLUDES(hash_lock_);
+    fbl::RefPtr<VnodeMinfs> VnodeLookup(uint32_t ino) FS_TA_EXCLUDES(hash_lock_);
+    void VnodeRelease(VnodeMinfs* vn) FS_TA_EXCLUDES(hash_lock_);
 
     // Allocate a new data block.
     void BlockNew(Transaction* state, blk_t* out_bno);
@@ -281,7 +282,7 @@ private:
 #ifdef __Fuchsia__
     fbl::Mutex hash_lock_;
 #endif
-    HashTable vnode_hash_ __TA_GUARDED(hash_lock_){};
+    HashTable vnode_hash_ FS_TA_GUARDED(hash_lock_){};
 
     bool collecting_metrics_ = false;
 #ifdef __Fuchsia__

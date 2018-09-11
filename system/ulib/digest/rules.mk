@@ -39,6 +39,4 @@ MODULE_HOST_LIBS := \
     third_party/ulib/uboringssl.hostlib \
     system/ulib/fbl.hostlib \
 
-MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
-
 include make/module.mk

@@ -82,6 +82,4 @@ MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib \
     system/ulib/fs.hostlib \
 
-MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
-
 include make/module.mk
