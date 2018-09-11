@@ -34,7 +34,7 @@ static void aml_canvas_release(void* ctx) {
 }
 
 static zx_status_t aml_canvas_config(void* ctx, zx_handle_t vmo,
-                                     size_t offset, canvas_info_t* info,
+                                     size_t offset, const canvas_info_t* info,
                                      uint8_t* canvas_idx) {
     aml_canvas_t* canvas = ctx;
     zx_status_t status = ZX_OK;
