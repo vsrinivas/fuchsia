@@ -4,6 +4,7 @@
 
 #define HAS_DEVICE_TREE 1
 #define USE_DEVICE_TREE_CPU_COUNT 1
+#define USE_DEVICE_TREE_GIC_VERSION 1
 
 static zbi_cpu_config_t cpu_config = {
     .cluster_count = 1,
@@ -66,6 +67,12 @@ static const zbi_platform_id_t platform_id = {
     .board_name = "qemu",
 };
 
+static int saved_gic_version = -1;
+
+static void set_gic_version(int gic_version) {
+    saved_gic_version = gic_version;
+}
+
 static void append_board_boot_item(zbi_header_t* bootdata) {
     // add CPU configuration
     append_boot_item(bootdata, ZBI_TYPE_CPU_CONFIG, 0, &cpu_config,
@@ -79,10 +86,18 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
     // add kernel drivers
     append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_PL011_UART, &uart_driver,
                     sizeof(uart_driver));
-    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &gicv3_driver,
-                    sizeof(gicv3_driver));
-    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &gicv2_driver,
-                    sizeof(gicv2_driver));
+
+    // append the gic information for either the specific gic version we detected from the
+    // device tree, or both if we didn't detect either (-1)
+    if (saved_gic_version < 0 || saved_gic_version == 3) {
+        append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &gicv3_driver,
+                        sizeof(gicv3_driver));
+    }
+    if (saved_gic_version < 0 || saved_gic_version == 2) {
+        append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &gicv2_driver,
+                        sizeof(gicv2_driver));
+    }
+
     append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI, &psci_driver,
                     sizeof(psci_driver));
     append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,

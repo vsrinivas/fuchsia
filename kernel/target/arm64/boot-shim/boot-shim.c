@@ -51,6 +51,8 @@ typedef enum {
     NODE_NONE,
     NODE_CHOSEN,
     NODE_MEMORY,
+    NODE_CPU,
+    NODE_INTC,
 } node_t;
 
 typedef struct {
@@ -61,6 +63,7 @@ typedef struct {
     char* cmdline;
     size_t cmdline_length;
     uint32_t cpu_count;
+    int gic_version;
 } device_tree_context_t;
 
 static int node_callback(int depth, const char *name, void *cookie) {
@@ -76,11 +79,13 @@ static int node_callback(int depth, const char *name, void *cookie) {
         ctx->node = NODE_CHOSEN;
     } else if (!strcmp(name, "memory") || !strcmp(name, "memory@00000000")) {
         ctx->node = NODE_MEMORY;
+    } else if (!strncmp(name, "cpu@", 4)) {
+        ctx->node = NODE_CPU;
+        ctx->cpu_count++;
+    } else if (!strcmp(name, "intc")) {
+        ctx->node = NODE_INTC;
     } else {
         ctx->node = NODE_NONE;
-        if (!strncmp(name, "cpu@", 4)) {
-            ctx->cpu_count++;
-        }
     }
 
     return 0;
@@ -92,12 +97,12 @@ static int prop_callback(const char *name, uint8_t *data, uint32_t size, void *c
     uart_puts(name);
     uart_puts(" size: ");
     uart_print_hex(size);
-    uart_puts("\n");
 #endif
 
     device_tree_context_t* ctx = cookie;
 
-    if (ctx->node == NODE_CHOSEN) {
+    switch (ctx->node) {
+    case NODE_CHOSEN:
         if (!strcmp(name, "linux,initrd-start")) {
             if (size == sizeof(uint32_t)) {
                 ctx->initrd_start = dt_rd32(data);
@@ -112,7 +117,8 @@ static int prop_callback(const char *name, uint8_t *data, uint32_t size, void *c
             ctx->cmdline = (char *)data;
             ctx->cmdline_length = size;
         }
-    } else if (ctx->node == NODE_MEMORY) {
+        break;
+    case NODE_MEMORY:
         if (!strcmp(name, "reg") && size == 16) {
             // memory size is big endian uint64_t at offset 0
             uint64_t most = dt_rd32(data + 0);
@@ -123,7 +129,27 @@ static int prop_callback(const char *name, uint8_t *data, uint32_t size, void *c
             least = dt_rd32(data + 12);
             ctx->memory_size = (most << 32) | least;
         }
+        break;
+    case NODE_INTC:
+        if (!strcmp(name, "compatible")) {
+            if (!strncmp((const char *)data, "arm,gic-v3", size)) {
+                ctx->gic_version = 3;
+            } else if (!strncmp((const char *)data, "arm,cortex-a15-gic", size)) {
+                ctx->gic_version = 2;
+            }
+#ifdef PRINT_DEVICE_TREE
+            uart_puts(" gic version ");
+            uart_print_hex(ctx->gic_version);
+#endif
+        }
+        break;
+    default:
+        ;
     }
+
+#ifdef PRINT_DEVICE_TREE
+    uart_puts("\n");
+#endif
 
     return 0;
 }
@@ -136,6 +162,7 @@ static void* read_device_tree(void* device_tree, device_tree_context_t* ctx) {
     ctx->memory_size = 0;
     ctx->cmdline = NULL;
     ctx->cpu_count = 0;
+    ctx->gic_version = -1;
 
     devicetree_t dt;
     dt.error = uart_puts;
@@ -147,6 +174,9 @@ static void* read_device_tree(void* device_tree, device_tree_context_t* ctx) {
 
 #if USE_DEVICE_TREE_CPU_COUNT
     set_cpu_count(ctx->cpu_count);
+#endif
+#if USE_DEVICE_TREE_GIC_VERSION
+    set_gic_version(ctx->gic_version);
 #endif
 
     // Use the device tree initrd as the ZBI.

@@ -10,7 +10,8 @@ MODULE := $(LOCAL_DIR)
 KERNEL_INCLUDES += kernel/dev/interrupt/arm_gic/v2/include
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/arm_gicv3.c
+	$(LOCAL_DIR)/arm_gicv3.c \
+	$(LOCAL_DIR)/arm_gicv3_pcie.cpp
 
 MODULE_DEPS += \
 	kernel/dev/interrupt \

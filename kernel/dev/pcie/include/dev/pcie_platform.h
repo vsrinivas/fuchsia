@@ -136,4 +136,13 @@ private:
     const bool supports_msi_masking_;
 };
 
+// A thin vaneer version that declares no MSI
+class NoMsiPciePlatformInterface : public PciePlatformInterface {
+public:
+    NoMsiPciePlatformInterface()
+        : PciePlatformInterface(MsiSupportLevel::NONE) {}
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(NoMsiPciePlatformInterface);
+};
+
 #endif  // __cplusplus
