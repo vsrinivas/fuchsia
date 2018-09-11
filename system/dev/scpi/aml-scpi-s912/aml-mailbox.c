@@ -34,8 +34,8 @@ static int aml_get_rx_mailbox(uint32_t tx_mailbox) {
 }
 
 static zx_status_t aml_mailbox_send_cmd(void* ctx,
-                                        mailbox_channel_t* channel,
-                                        mailbox_data_buf_t* mdata) {
+                                        const mailbox_channel_t* channel,
+                                        const mailbox_data_buf_t* mdata) {
     aml_mailbox_t* mailbox = ctx;
     int rx_mailbox_id;
     if (!channel || !mdata) {
@@ -53,7 +53,7 @@ static zx_status_t aml_mailbox_send_cmd(void* ctx,
 
     if (mdata->tx_size != 0) {
         uint32_t num = GET_NUM_WORDS(mdata->tx_size);
-        uint32_t* tx_payload = (uint32_t*)(mdata->tx_buf);
+        uint32_t* tx_payload = (uint32_t*)(mdata->tx_buffer);
         for (uint32_t i = 0; i < num; i++) {
             // AP writes parameters to Payload
             WRITE32_MAILBOX_PL_REG(tx_mailbox->payload_offset + i, tx_payload[i]);
@@ -73,7 +73,7 @@ static zx_status_t aml_mailbox_send_cmd(void* ctx,
     // AP reads the Payload to get requested information
     if (channel->rx_size != 0) {
         uint32_t num = GET_NUM_WORDS(channel->rx_size);
-        uint32_t* rx_payload = (uint32_t*)(channel->rx_buf);
+        uint32_t* rx_payload = (uint32_t*)(channel->rx_buffer);
         for (uint32_t i = 0; i < num; i++) {
             rx_payload[i] = READ32_MAILBOX_PL_REG(rx_mailbox->payload_offset + i);
         }
@@ -103,7 +103,7 @@ static zx_protocol_device_t aml_mailbox_device_protocol = {
 };
 
 static mailbox_protocol_ops_t mailbox_ops = {
-    .send_cmd = aml_mailbox_send_cmd,
+    .send_command = aml_mailbox_send_cmd,
 };
 
 static zx_status_t aml_mailbox_bind(void* ctx, zx_device_t* parent) {

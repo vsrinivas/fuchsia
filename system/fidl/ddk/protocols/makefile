@@ -41,4 +41,7 @@ gpio:
 gpio-impl: $(LOCAL_DIR)/gpio.banjo
 	$(run-banjo)
 
+mailbox:
+	$(run-banjo)
+
 all: acpi amlogic-canvas bad-block clk gpio

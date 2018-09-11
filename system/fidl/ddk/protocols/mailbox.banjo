@@ -1,0 +1,22 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.mailbox;
+
+using zx;
+
+struct MailboxDataBuf {
+    uint32 cmd;
+    vector<void> tx;
+};
+
+struct MailboxChannel {
+    uint32 mailbox;
+    vector<void> rx;
+};
+
+[Layout="ddk-protocol"]
+interface Mailbox {
+  1: SendCommand(MailboxChannel channel, MailboxDataBuf mdata) -> (zx.status s);
+};
