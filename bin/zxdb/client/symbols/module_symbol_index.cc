@@ -419,7 +419,8 @@ void ModuleSymbolIndex::IndexCompileUnitSourceFiles(
   std::string file_name;
   for (size_t i = 0; i < line_table->Rows.size(); i++) {
     auto file_id = line_table->Rows[i].File;  // 1-based!
-    FXL_DCHECK(file_id >= 1 && file_id <= added_file.size());
+    if (file_id < 1 || file_id > added_file.size())
+      continue;
     auto file_index = file_id - 1;
 
     if (!added_file[file_index]) {
