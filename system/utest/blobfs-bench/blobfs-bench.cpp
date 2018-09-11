@@ -90,7 +90,8 @@ fbl::String GetNameForSize(size_t size_in_bytes) {
     size_t current_unit = 0;
     size_t current_size = size_in_bytes;
     size_t size;
-    while (current_unit < fbl::count_of(kUnits) && current_size >= (1u << (10 * (current_unit + 1)))) {
+    while (current_unit < fbl::count_of(kUnits) &&
+           current_size >= (1u << (10 * (current_unit + 1)))) {
         current_size = current_size / (1 << 10 * current_unit);
         ++current_unit;
     }
@@ -122,8 +123,13 @@ bool MakeBlob(fbl::String fs_path, size_t blob_size, unsigned int* seed,
     EXPECT_EQ(ac.check(), true);
     info->data.reset(new (&ac) char[blob_size]);
     EXPECT_EQ(ac.check(), true);
+    // rand_r produces a cyclic sequence, in order to avoid hitting that cap
+    // and generating identical blobs, we avoid consuming an element of the
+    // sequence for each byte. We did hit this issue, which translates into
+    // test failures.
+    unsigned int initial_seed = rand_r(seed);
     for (size_t i = 0; i < blob_size; i++) {
-        info->data[i] = (char)rand_r(seed);
+        info->data[i] = static_cast<char>(rand_r(&initial_seed));
     }
     info->size_data = blob_size;
 
