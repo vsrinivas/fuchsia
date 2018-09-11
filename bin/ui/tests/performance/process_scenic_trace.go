@@ -414,6 +414,9 @@ func main() {
 		if err := testResultsFile.Encode(outputFile); err != nil {
 			log.Fatalf("failed to write results to %s: %v", outputFilename, err)
 		}
+		if err:= outputFile.Close(); err != nil {
+			log.Fatalf("failed to close results file %s: %v", outputFilename, err)
+		}
 
 		fmt.Printf("\n\nWrote benchmark values to file '%s'.\n", outputFilename)
 	}
