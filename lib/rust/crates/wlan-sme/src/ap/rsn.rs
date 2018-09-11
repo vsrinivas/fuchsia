@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Allow unused as RSNE is not yet part of MLME-START.request.
-#![allow(unused)]
-
 use bytes::Bytes;
-use wlan_rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI};
+use wlan_rsn::{akm, cipher, rsne::{Rsne, RsnCapabilities}, suite_selector::OUI};
 
 fn make_cipher(suite_type: u8) -> cipher::Cipher {
     cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type }
@@ -21,6 +18,7 @@ fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {
     rsne.group_data_cipher_suite = data.map(make_cipher);
     rsne.pairwise_cipher_suites = pairwise.into_iter().map(make_cipher).collect();
     rsne.akm_suites = akms.into_iter().map(make_akm).collect();
+    rsne.rsn_capabilities = Some(RsnCapabilities(0));
     rsne
 }
 
@@ -41,8 +39,8 @@ mod tests {
     fn test_as_bytes() {
         // Compliant with IEEE Std 802.11-2016, 9.4.2.25.
         let expected: Vec<u8> = vec![
-            0x30, 0x12, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04,
-            0x01, 0x00, 0x00, 0x0f, 0xac, 0x02
+            0x30, 0x14, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04,
+            0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00
         ];
         let actual = create_wpa2_psk_rsne();
         assert_eq!(&expected[..], &actual[..]);

@@ -6,6 +6,7 @@ mod rsn;
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
+use crate::ap::rsn::create_wpa2_psk_rsne;
 
 use crate::{MlmeRequest, Ssid};
 use crate::sink::MlmeSink;
@@ -24,7 +25,7 @@ pub trait Tokens {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Config {
     pub ssid: Ssid,
-    pub _password: Vec<u8>,
+    pub password: Vec<u8>,
     pub channel: u8
 }
 
@@ -129,6 +130,6 @@ fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: config.channel,
-        rsne: None,
+        rsne: if config.password.is_empty() { None } else { Some(create_wpa2_psk_rsne()) },
     }
 }

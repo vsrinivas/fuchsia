@@ -116,7 +116,7 @@ async fn start(sme: &Arc<Mutex<Sme>>, config: fidl_sme::ApConfig) -> fidl_sme::S
     let (sender, receiver) = oneshot::channel();
     let sme_config = ap_sme::Config {
         ssid: config.ssid,
-        _password: config.password,
+        password: config.password,
         channel: config.channel,
     };
     sme.lock().unwrap().on_start_command(sme_config, sender);
