@@ -78,7 +78,8 @@ UserProviderImpl::UserProviderImpl(
       story_shell_(story_shell),
       account_provider_(account_provider),
       token_manager_factory_(token_manager_factory),
-      delegate_(delegate) {
+      delegate_(delegate),
+      auth_context_provider_binding_(this) {
   FXL_DCHECK(delegate);
 
   // There might not be a file of users persisted. If config file doesn't
@@ -314,6 +315,12 @@ void UserProviderImpl::RemoveUserV2(fidl::StringPtr account_id,
   FXL_CHECK(token_manager_factory_);
 }
 
+void UserProviderImpl::GetAuthenticationUIContext(
+    fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) {
+  // TODO(ukode): Provide impl here.
+  FXL_LOG(INFO) << "GetAuthenticationUIContext() is unimplemented.";
+}
+
 bool UserProviderImpl::WriteUsersDb(const std::string& serialized_users,
                                     std::string* const error) {
   if (!Parse(serialized_users)) {
@@ -350,15 +357,27 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
 
 void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
                                      fuchsia::modular::UserLoginParams params) {
+  auto account_id = account ? account->id.get() : GetRandomId();
+
   // Get token provider factory for this user.
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory;
   account_provider_->GetTokenProviderFactory(
-      account ? account->id.get() : GetRandomId(),
-      token_provider_factory.NewRequest());
+      account_id, token_provider_factory.NewRequest());
 
-  // TODO(ukode): Add impl to get token_manager from token_manager_factory for
-  // the given user.
+  // TODO(ukode): List of supported auth providers will be provided by a
+  // config package in the future.
+  auto auth_provider_type = "google";
+  fuchsia::auth::AuthProviderConfig google_auth_provider_config;
+  google_auth_provider_config.auth_provider_type = auth_provider_type;
+  google_auth_provider_config.url = "google_auth_provider";
+
+  fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
+  auth_provider_configs.push_back(std::move(google_auth_provider_config));
+
   fuchsia::auth::TokenManagerPtr token_manager;
+  token_manager_factory_->GetTokenManager(
+      account_id, "user_provider_url", std::move(auth_provider_configs),
+      auth_context_provider_binding_.NewBinding(), token_manager.NewRequest());
 
   auto user_shell = params.user_shell_config
                         ? std::move(*params.user_shell_config)

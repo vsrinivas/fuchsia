@@ -23,7 +23,8 @@ struct UsersStorage;
 
 namespace modular {
 
-class UserProviderImpl : fuchsia::modular::UserProvider {
+class UserProviderImpl : fuchsia::modular::UserProvider,
+                         fuchsia::auth::AuthenticationContextProvider {
  public:
   // Users of UserProviderImpl must register a Delegate object.
   class Delegate {
@@ -87,6 +88,11 @@ class UserProviderImpl : fuchsia::modular::UserProvider {
   void RemoveUser(fidl::StringPtr account_id,
                   RemoveUserCallback callback) override;
 
+  // |fuchsia::auth::AuthenticationContextProvider|
+  void GetAuthenticationUIContext(
+      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request)
+      override;
+
   // Add user using the Token Manager Factory interface |fuchsia.auth|.
   void AddUserV2(fuchsia::modular::auth::IdentityProvider identity_provider,
                  AddUserCallback callback);
@@ -119,6 +125,9 @@ class UserProviderImpl : fuchsia::modular::UserProvider {
       user_controllers_;
 
   Delegate* const delegate_;  // Neither owned nor copied.
+
+  fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
+      auth_context_provider_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserProviderImpl);
 };
