@@ -34,6 +34,21 @@ package("token_manager_rust") {
   ]
 }
 
+package("account_manager") {
+  deps = [
+    "//garnet/bin/auth/rust/account_manager:account_manager",
+  ]
+
+  binary = "rust_crates/account_manager"
+
+  meta = [
+    {
+      path = rebase_path("rust/meta/account_manager.cmx")
+      dest = "account_manager.cmx"
+    },
+  ]
+}
+
 package("oauth_examples") {
   testonly = true
   deprecated_system_image = true
@@ -56,6 +71,7 @@ package("rust_tests") {
   deps = [
     "rust/cache:cache",
     "rust/store:store",
+    "rust/account_manager:account_manager",
     "rust/testing/dev_auth_provider:dev_auth_provider_rust_bin",
     "rust/testing/dev_auth_provider_iotid:dev_auth_provider_iotid_rust_bin",
   ]
@@ -63,6 +79,7 @@ package("rust_tests") {
   tests = [
     { name = "auth_cache_lib_test_rustc" },
     { name = "auth_store_lib_test_rustc" },
+    { name = "account_manager_bin_test_rustc" },
     { name = "dev_auth_provider_rust_bin_test_rustc"},
     { name = "dev_auth_provider_iotid_rust_bin_test_rustc"},
   ]
