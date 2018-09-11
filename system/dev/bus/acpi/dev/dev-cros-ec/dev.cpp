@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "dev.h"
-#include "../dev.h"
+#include "../../include/dev.h"
 
 #include <ddk/debug.h>
 
@@ -20,7 +20,7 @@
 
 #include <acpica/acpi.h>
 
-#include "../errors.h"
+#include "../../include/errors.h"
 
 zx_status_t AcpiCrOsEc::Create(fbl::RefPtr<AcpiCrOsEc>* out) {
     if (!CrOsEc::IsLpc3Supported()) {

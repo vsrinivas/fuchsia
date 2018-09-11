@@ -33,7 +33,7 @@
 
 #include <acpica/acpi.h>
 
-#include "../errors.h"
+#include "../../include/errors.h"
 
 AcpiCrOsEcMotionDevice::AcpiCrOsEcMotionDevice(fbl::RefPtr<AcpiCrOsEc> ec, zx_device_t* parent,
                                                ACPI_HANDLE acpi_handle)
