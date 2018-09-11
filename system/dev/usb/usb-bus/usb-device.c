@@ -196,7 +196,6 @@ static zx_status_t usb_device_ioctl(void* ctx, uint32_t op, const void* in_buf, 
         size_t desc_length = le16toh(descriptor->wTotalLength);
         if (out_len < desc_length) return ZX_ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptor, desc_length);
-        return desc_length;
         *out_actual = desc_length;
         return ZX_OK;
     }
