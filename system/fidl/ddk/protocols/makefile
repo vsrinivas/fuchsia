@@ -32,4 +32,7 @@ amlogic-canvas:
 bad-block:
 	$(run-banjo)
 
+clk:
+	$(run-banjo)
+
 all: acpi amlogic-canvas bad-block
