@@ -928,7 +928,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
         return false;
     }
 
-    uint32_t display_cfg_result;
+    uint32_t display_cfg_result = CONFIG_DISPLAY_OK;
     DC_IMPL_CALL(check_configuration, configs, &display_cfg_result,
                  display_layer_cfg_results, config_idx);
 
