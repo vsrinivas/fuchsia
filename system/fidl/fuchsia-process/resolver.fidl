@@ -4,6 +4,7 @@
 
 library fuchsia.process;
 
+using fuchsia.ldsvc;
 using zx;
 
 [Discoverable, Layout = "Simple"]
@@ -19,5 +20,5 @@ interface Resolver {
     // library loader scoped to that package.
     1: Resolve(string:4096 name) -> (zx.status status,
                                      handle<vmo>? executable,
-                                     handle<channel>? ldsvc);
+                                     fuchsia.ldsvc.Loader? ldsvc);
 };

@@ -38,6 +38,7 @@ MODULE_SO_NAME := fdio
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-ldsvc \
     system/fidl/fuchsia-net \
     system/fidl/fuchsia-process
 
