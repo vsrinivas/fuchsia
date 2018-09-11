@@ -404,6 +404,10 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
     return;
   }
 
+  // ACLDataChannel::Initialize is synchronous so L2CAP can be initialized
+  // immediately after.
+  l2cap_->Initialize();
+
   ZX_DEBUG_ASSERT(init_seq_runner_->IsReady());
   ZX_DEBUG_ASSERT(!init_seq_runner_->HasQueuedCommands());
 

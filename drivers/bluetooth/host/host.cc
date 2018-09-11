@@ -31,6 +31,8 @@ bool Host::Initialize(InitCallback callback) {
     return false;
   }
 
+  // L2CAP will be initialized by GAP because it both sets up the HCI ACL data
+  // channel that L2CAP relies on and registers L2CAP services.
   l2cap_ = l2cap::L2CAP::Create(hci, "bt-host (l2cap)");
   if (!l2cap_)
     return false;
@@ -46,14 +48,13 @@ bool Host::Initialize(InitCallback callback) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(l2cap_);
 
-  // Called when the GAP layer is ready. We initialize L2CAP and the GATT
-  // profile after initial setup in GAP (which sets up ACL data).
-  auto gap_init_callback = [l2cap = l2cap_, gatt_host = gatt_host_,
+  // Called when the GAP layer is ready. We initialize the GATT profile after
+  // initial setup in GAP.
+  auto gap_init_callback = [gatt_host = gatt_host_,
                             callback = std::move(callback)](bool success) {
     bt_log(TRACE, "bt-host", "GAP initialized");
 
     if (success) {
-      l2cap->Initialize();
       gatt_host->Initialize();
     }
 
