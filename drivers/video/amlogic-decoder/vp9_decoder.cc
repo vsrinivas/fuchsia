@@ -808,8 +808,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
     video_frame->width = params->width;
     video_frame->height = params->height;
     video_frame->stride = fbl::round_up(video_frame->width, 32u);
-    video_frame->uv_plane_offset =
-        fbl::round_up(video_frame->stride * video_frame->height, 1u << 16);
+    video_frame->uv_plane_offset = video_frame->stride * video_frame->height;
     video_frame->index = new_frame->index;
 
     assert(video_frame->height % 2 == 0);
