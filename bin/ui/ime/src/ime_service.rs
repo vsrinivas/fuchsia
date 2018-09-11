@@ -15,6 +15,19 @@ pub struct ImeServiceState {
     pub visibility_listeners: Vec<uii::ImeVisibilityServiceControlHandle>,
 }
 
+impl ImeServiceState {
+    pub fn update_keyboard_visibility(&mut self, visible: bool) {
+        self.keyboard_visible = visible;
+
+        self.visibility_listeners.retain(|listener| {
+            // drop listeners if they error on send
+            listener
+                .send_on_keyboard_visibility_changed(visible)
+                .is_ok()
+        });
+    }
+}
+
 #[derive(Clone)]
 pub struct ImeService(Arc<Mutex<ImeServiceState>>);
 
@@ -27,16 +40,20 @@ impl ImeService {
         })))
     }
 
-    pub fn update_keyboard_visibility(&self, visible: bool) {
+    /// Only updates the keyboard visibility if IME passed in is active
+    pub fn update_keyboard_visibility_from_ime(&self, check_ime: &Arc<Mutex<IME>>, visible: bool) {
         let mut state = self.0.lock();
-        state.keyboard_visible = visible;
-
-        state.visibility_listeners.retain(|listener| {
-            // drop listeners if they error on send
-            listener
-                .send_on_keyboard_visibility_changed(visible)
-                .is_ok()
-        });
+        let active_ime_weak = match &state.active_ime {
+            Some(val) => val,
+            None => return,
+        };
+        let active_ime = match active_ime_weak.upgrade() {
+            Some(val) => val,
+            None => return,
+        };
+        if Arc::ptr_eq(check_ime, &active_ime) {
+            state.update_keyboard_visibility(visible);
+        }
     }
 }
 
@@ -56,7 +73,13 @@ impl uii::ImeService for ImeService {
         if let Ok(edit_stream) = editor.into_stream() {
             if let Ok(client_proxy) = client.into_proxy() {
                 let ime_ref = Arc::downgrade(
-                    &IME::new(keyboard_type, action, initial_state, client_proxy).bind(edit_stream),
+                    &IME::new(
+                        keyboard_type,
+                        action,
+                        initial_state,
+                        client_proxy,
+                        self.clone(),
+                    ).bind(edit_stream),
                 );
                 let mut state = self.0.lock();
                 state.active_ime = Some(ime_ref);
@@ -69,7 +92,7 @@ impl uii::ImeService for ImeService {
     fn show_keyboard(
         &mut self, _control_handle: uii::ImeServiceControlHandle,
     ) -> Self::ShowKeyboardFut {
-        self.update_keyboard_visibility(true);
+        self.0.lock().update_keyboard_visibility(true);
         future::ready(())
     }
 
@@ -77,7 +100,7 @@ impl uii::ImeService for ImeService {
     fn hide_keyboard(
         &mut self, _control_handle: uii::ImeServiceControlHandle,
     ) -> Self::HideKeyboardFut {
-        self.update_keyboard_visibility(false);
+        self.0.lock().update_keyboard_visibility(false);
         future::ready(())
     }
 

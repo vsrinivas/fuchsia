@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::ime_service::ImeService;
 use fidl::encoding2::OutOfLine;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::InputMethodEditorRequest as ImeReq;
@@ -24,29 +25,40 @@ pub struct IME {
     client: Box<uii::InputMethodEditorClientProxyInterface>,
     keyboard_type: uii::KeyboardType,
     action: uii::InputMethodAction,
+    ime_service: ImeService,
 }
 
 impl IME {
     pub fn new<I: 'static + uii::InputMethodEditorClientProxyInterface>(
         keyboard_type: uii::KeyboardType, action: uii::InputMethodAction,
-        initial_state: uii::TextInputState, client: I,
+        initial_state: uii::TextInputState, client: I, ime_service: ImeService,
     ) -> IME {
         IME {
             state: initial_state,
             client: Box::new(client),
             keyboard_type: keyboard_type,
             action: action,
+            ime_service: ime_service,
         }
     }
 
     pub fn bind(self, edit_stream: uii::InputMethodEditorRequestStream) -> Arc<Mutex<Self>> {
         let self_mutex = Arc::new(Mutex::new(self));
-        let self_mutex_clone = self_mutex.clone();
+        let self_mutex_2 = self_mutex.clone();
+        let self_mutex_3 = self_mutex.clone();
         let stream_complete = edit_stream
             .try_for_each(move |edit_request| {
-                Self::handle_request(self_mutex_clone.clone(), edit_request);
+                Self::handle_request(self_mutex_2.clone(), edit_request);
                 future::ready(Ok(()))
-            }).unwrap_or_else(|e| fx_log_err!("error running ime server: {:?}", e));
+            }).unwrap_or_else(|e| fx_log_err!("error running ime server: {:?}", e))
+            .then(move |_| {
+                let ime_service = {
+                    // in block so we don't hold more than one lock at a time
+                    self_mutex_3.lock().ime_service.clone()
+                };
+                ime_service.update_keyboard_visibility_from_ime(&self_mutex_3, false);
+                future::ready(())
+            });
         fuchsia_async::spawn(stream_complete);
         self_mutex
     }
@@ -268,6 +280,7 @@ mod test {
             uii::InputMethodAction::Search,
             state,
             client,
+            ImeService::new(),
         );
         (ime, statechan, actionchan)
     }
@@ -349,6 +362,7 @@ mod test {
             uii::InputMethodAction::Search,
             default_state(),
             client,
+            ImeService::new(),
         );
         assert_eq!(true, statechan.try_recv().is_err());
         assert_eq!(true, actionchan.try_recv().is_err());
