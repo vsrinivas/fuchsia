@@ -6,31 +6,35 @@ library fuchsia.fonts;
 
 using fuchsia.mem;
 
-enum Slant {
-    UPRIGHT = 1;
-    ITALIC = 2;
+enum FontSlant {
+  UPRIGHT = 1;
+  ITALIC = 2;
 };
 
-struct Request {
-    // For example, "Roboto".
-    string family;
+struct FontRequest {
+  // For example, "Roboto".
+  string family;
 
-    // For example, 400 is normal, 700 is bold.
-    uint32 weight = 400;
+  // For example, 400 is normal, 700 is bold.
+  uint32 weight = 400;
 
-    // Numeric values matching OS/2 & Windows Metrics usWidthClass table.
-    // https://www.microsoft.com/typography/otspec/os2.htm
-    // For example, 5 is normal.
-    uint32 width = 5;
+  // Numeric values matching OS/2 & Windows Metrics usWidthClass table.
+  // https://www.microsoft.com/typography/otspec/os2.htm
+  // For example, 5 is normal.
+  uint32 width = 5;
 
-    Slant slant = UPRIGHT;
+  FontSlant slant = UPRIGHT;
 };
 
-struct Response {
-    fuchsia.mem.Buffer buffer;
+struct FontData {
+  fuchsia.mem.Buffer buffer;
+};
+
+struct FontResponse {
+  FontData data;
 };
 
 [Discoverable]
-interface Provider {
-    1: GetFont(Request @request) -> (Response? response);
+interface FontProvider {
+  1: GetFont(FontRequest @request) -> (FontResponse? response);
 };

@@ -18,23 +18,23 @@ struct FontInfo {
 }
 
 async fn get_font_info(
-    font_provider: &fonts::ProviderProxy, name: String,
+    font_provider: &fonts::FontProviderProxy, name: String,
 ) -> Result<FontInfo, Error> {
-    let font = await!(font_provider.get_font(&mut fonts::Request {
+    let font = await!(font_provider.get_font(&mut fonts::FontRequest {
         family: name.clone(),
         weight: 400,
         width: 5,
-        slant: fonts::Slant::Upright,
+        slant: fonts::FontSlant::Upright,
     }))?;
     let font = *font.ok_or_else(|| format_err!("Received empty response for {}", name))?;
 
-    assert!(font.buffer.size > 0);
-    assert!(font.buffer.size <= font.buffer.vmo.get_size()?);
+    assert!(font.data.buffer.size > 0);
+    assert!(font.data.buffer.size <= font.data.buffer.vmo.get_size()?);
 
-    let vmo_koid = font.buffer.vmo.as_handle_ref().get_koid()?;
+    let vmo_koid = font.data.buffer.vmo.as_handle_ref().get_koid()?;
     Ok(FontInfo {
         vmo_koid,
-        size: font.buffer.size,
+        size: font.data.buffer.size,
     })
 }
 
@@ -43,7 +43,7 @@ async fn run_tests() -> Result<(), Error> {
     let app = launcher.launch("fonts".to_string(), None)
                       .context("Failed to launch echo service")?;
 
-    let font_provider = app.connect_to_service(fonts::ProviderMarker)
+    let font_provider = app.connect_to_service(fonts::FontProviderMarker)
         .context("Failed to connect to FontProvider")?;
 
     let default = await!(get_font_info(&font_provider, "".to_string()))

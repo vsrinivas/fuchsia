@@ -10,7 +10,7 @@ mod manifest;
 use self::font_service::FontService;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::ServiceMarker;
-use fidl_fuchsia_fonts::ProviderMarker as FontProviderMarker;
+use fidl_fuchsia_fonts::FontProviderMarker;
 use fuchsia_app::server::ServicesServer;
 use std::sync::Arc;
 
