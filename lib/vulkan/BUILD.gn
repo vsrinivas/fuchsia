@@ -27,19 +27,9 @@ sdk_atom("vulkan_layers") {
 
   category = "partner"
 
-  meta = {
-    dest = "pkg/vulkan_layers/meta.json"
-    # TODO(DX-340): this metadata is bogus, define a proper type.
-    schema = "image"
-    value = {
-      type = "image"
-      name = "vulkan_layers"
-      root = "pkg/vulkan_layers"
-    }
-  }
-
   files = []
   new_files = []
+  dest_files = []
 
   resources =
       vulkan_validation_layers.resources + image_pipe_swapchain.resources
@@ -55,12 +45,14 @@ sdk_atom("vulkan_layers") {
         dest = "data/" + resource.dest
       },
     ]
+    destination = "pkg/vulkan_layers/data/" + resource.dest
     new_files += [
       {
         source = resource.path
-        dest = "pkg/vulkan_layers/data/" + resource.dest
+        dest = destination
       }
     ]
+    dest_files += [ destination ]
   }
 
   foreach(loadable_module, loadable_modules) {
@@ -71,12 +63,27 @@ sdk_atom("vulkan_layers") {
         packaged = true
       },
     ]
+    destination = "arch/$target_cpu/dist/" + loadable_module.name
     new_files += [
       {
         source = "$root_out_dir/" + loadable_module.name
-        dest = "arch/$target_cpu/dist/" + loadable_module.name
+        dest = destination
       },
     ]
+    dest_files += [ destination ]
+  }
+
+  meta = {
+    dest = "pkg/vulkan_layers/meta.json"
+    # TODO(DX-430): this metadata is bogus, define a proper type.
+    schema = "host_tool"
+    value = {
+      type = "host_tool"
+      name = "vulkan_layers"
+      root = "pkg/vulkan_layers"
+      files = []
+      files = dest_files
+    }
   }
 }
 
