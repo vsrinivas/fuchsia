@@ -200,6 +200,51 @@ TEST(ElementToFidl, HtCapabilitiesToFidlHuman) {
     EXPECT_EQ(fidl.txbf_cap.chan_estimation, 3);
 }
 
+TEST(FidlToElement, HtOperationFidlToBitField) {
+    wlan_mlme::HtOperation fidl;
+
+    fidl.primary_chan = 169;
+
+    auto* ht_op_info = &fidl.ht_op_info;
+    ht_op_info->secondary_chan_offset = wlan_mlme::SecChanOffset::SECONDARY_ABOVE;
+    ht_op_info->sta_chan_width = wlan_mlme::StaChanWidth::ANY;
+    ht_op_info->rifs_mode = true;
+    ht_op_info->ht_protect = wlan_mlme::HtProtect::TWENTY_MHZ;
+    ht_op_info->nongreenfield_present = true;
+    ht_op_info->obss_non_ht = true;
+    ht_op_info->center_freq_seg2 = 155;
+    ht_op_info->dual_beacon = true;
+    ht_op_info->dual_cts_protect = true;
+
+    ht_op_info->stbc_beacon = true;
+    ht_op_info->lsig_txop_protect = true;
+    ht_op_info->pco_active = true;
+    ht_op_info->pco_phase = true;
+
+    fidl.basic_mcs_set.rx_mcs_set = 0x89abcdef01234567ULL;
+
+    HtOperation elem = HtOperation::FromFidl(fidl);
+
+    EXPECT_EQ(elem.primary_chan, 169);
+
+    EXPECT_EQ(elem.head.secondary_chan_offset(), 1);
+    EXPECT_EQ(elem.head.sta_chan_width(), 1);
+    EXPECT_EQ(elem.head.rifs_mode(), 1);
+    EXPECT_EQ(elem.head.ht_protect(), 2);
+    EXPECT_EQ(elem.head.nongreenfield_present(), 1);
+    EXPECT_EQ(elem.head.obss_non_ht(), 1);
+    EXPECT_EQ(elem.head.center_freq_seg2(), 155);
+    EXPECT_EQ(elem.head.dual_beacon(), 1);
+    EXPECT_EQ(elem.head.dual_cts_protect(), 1);
+
+    EXPECT_EQ(elem.tail.stbc_beacon(), 1);
+    EXPECT_EQ(elem.tail.lsig_txop_protect(), 1);
+    EXPECT_EQ(elem.tail.pco_active(), 1);
+    EXPECT_EQ(elem.tail.pco_phase(), 1);
+
+    EXPECT_EQ(elem.basic_mcs_set.rx_mcs_head.bitmask(), 0x89abcdef01234567ULL);
+}
+
 TEST(ElementToFidl, HtOperationToFidl) {
     HtOperation hto;
 
@@ -243,5 +288,70 @@ TEST(ElementToFidl, HtOperationToFidl) {
 
     EXPECT_EQ(fidl.basic_mcs_set.rx_mcs_set, static_cast<uint64_t>(0x89abcdef01234567));
 }
+
+TEST(FidlToElement, VhtOperationFidlToBitField) {
+    wlan_mlme::VhtOperation fidl;
+
+    fidl.vht_cbw = wlan_mlme::VhtCbw::CBW_160;
+    fidl.center_freq_seg0 = 155;
+    fidl.center_freq_seg1 = 169;
+    fidl.basic_mcs.max_mcs[0] = wlan_mlme::VhtMcs::SET_0_TO_8;
+    fidl.basic_mcs.max_mcs[1] = wlan_mlme::VhtMcs::SET_0_TO_9;
+    fidl.basic_mcs.max_mcs[2] = wlan_mlme::VhtMcs::SET_NONE;
+    fidl.basic_mcs.max_mcs[3] = wlan_mlme::VhtMcs::SET_0_TO_9;
+    fidl.basic_mcs.max_mcs[4] = wlan_mlme::VhtMcs::SET_0_TO_8;
+    fidl.basic_mcs.max_mcs[5] = wlan_mlme::VhtMcs::SET_NONE;
+    fidl.basic_mcs.max_mcs[6] = wlan_mlme::VhtMcs::SET_0_TO_8;
+    fidl.basic_mcs.max_mcs[7] = wlan_mlme::VhtMcs::SET_0_TO_9;
+
+    VhtOperation elem = VhtOperation::FromFidl(fidl);
+
+    EXPECT_EQ(elem.vht_cbw, 2);
+    EXPECT_EQ(elem.center_freq_seg0, 155);
+    EXPECT_EQ(elem.center_freq_seg1, 169);
+
+    EXPECT_EQ(elem.basic_mcs.val(), 0x9db9);
+    EXPECT_EQ(elem.basic_mcs.ss1(), 1);
+    EXPECT_EQ(elem.basic_mcs.ss2(), 2);
+    EXPECT_EQ(elem.basic_mcs.ss3(), 3);
+    EXPECT_EQ(elem.basic_mcs.ss4(), 2);
+    EXPECT_EQ(elem.basic_mcs.ss5(), 1);
+    EXPECT_EQ(elem.basic_mcs.ss6(), 3);
+    EXPECT_EQ(elem.basic_mcs.ss7(), 1);
+    EXPECT_EQ(elem.basic_mcs.ss8(), 2);
+}
+
+TEST(ElementToFidl, VhtOperationBitFieldToField) {
+    VhtOperation elem;
+
+    elem.vht_cbw = 2;
+    elem.center_freq_seg0 = 155;
+    elem.center_freq_seg1 = 169;
+
+    elem.basic_mcs.set_ss1(1);
+    elem.basic_mcs.set_ss2(2);
+    elem.basic_mcs.set_ss3(3);
+    elem.basic_mcs.set_ss4(2);
+    elem.basic_mcs.set_ss5(1);
+    elem.basic_mcs.set_ss6(3);
+    elem.basic_mcs.set_ss7(1);
+    elem.basic_mcs.set_ss8(2);
+
+    wlan_mlme::VhtOperation fidl = elem.ToFidl();
+
+    EXPECT_EQ(fidl.vht_cbw, wlan_mlme::VhtCbw::CBW_160);
+    EXPECT_EQ(fidl.center_freq_seg0, 155);
+    EXPECT_EQ(fidl.center_freq_seg1, 169);
+
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[0], wlan_mlme::VhtMcs::SET_0_TO_8);
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[1], wlan_mlme::VhtMcs::SET_0_TO_9);
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[2], wlan_mlme::VhtMcs::SET_NONE);
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[3], wlan_mlme::VhtMcs::SET_0_TO_9);
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[4], wlan_mlme::VhtMcs::SET_0_TO_8);
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[5], wlan_mlme::VhtMcs::SET_NONE);
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[6], wlan_mlme::VhtMcs::SET_0_TO_8);
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[7], wlan_mlme::VhtMcs::SET_0_TO_9);
+}
+
 }  // namespace
 }  // namespace wlan

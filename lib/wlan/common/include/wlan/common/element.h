@@ -1063,6 +1063,33 @@ struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
         return ddk;
     }
 
+    static HtOperation FromFidl(const ::fuchsia::wlan::mlme::HtOperation& fidl) {
+        HtOperation dst;
+
+        dst.primary_chan = fidl.primary_chan;
+        dst.basic_mcs_set = SupportedMcsSet::FromFidl(fidl.basic_mcs_set);
+
+        const auto& hoi = fidl.ht_op_info;
+
+        dst.head.set_secondary_chan_offset(
+            static_cast<HtOpInfoHead::SecChanOffset>(hoi.secondary_chan_offset));
+        dst.head.set_sta_chan_width(static_cast<HtOpInfoHead::StaChanWidth>(hoi.sta_chan_width));
+        dst.head.set_rifs_mode(hoi.rifs_mode ? 1 : 0);
+        dst.head.set_ht_protect(static_cast<HtOpInfoHead::HtProtect>(hoi.ht_protect));
+        dst.head.set_nongreenfield_present(hoi.nongreenfield_present ? 1 : 0);
+        dst.head.set_obss_non_ht(hoi.obss_non_ht ? 1 : 0);
+        dst.head.set_center_freq_seg2(hoi.center_freq_seg2);
+        dst.head.set_dual_beacon(hoi.dual_beacon ? 1 : 0);
+        dst.head.set_dual_cts_protect(hoi.dual_cts_protect ? 1 : 0);
+
+        dst.tail.set_stbc_beacon(hoi.stbc_beacon ? 1 : 0);
+        dst.tail.set_lsig_txop_protect(hoi.lsig_txop_protect ? 1 : 0);
+        dst.tail.set_pco_active(hoi.pco_active ? 1 : 0);
+        dst.tail.set_pco_phase(hoi.pco_phase ? 1 : 0);
+
+        return dst;
+    }
+
     ::fuchsia::wlan::mlme::HtOperation ToFidl() const {
         ::fuchsia::wlan::mlme::HtOperation fidl;
 
@@ -1398,6 +1425,25 @@ struct BasicVhtMcsNss : public common::BitField<uint16_t> {
         return (val() & mask) >> offset;
     }
 
+    void set_max_mcs_ss(uint8_t ss_num, ::fuchsia::wlan::mlme::VhtMcs mcs) {
+        ZX_DEBUG_ASSERT(1 <= ss_num && ss_num <= 8);
+        constexpr uint8_t kMcsBitOffset = 0;  // ss1
+        constexpr uint8_t kBitWidth = 2;
+        uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
+        uint64_t mcs_val = static_cast<uint64_t>(mcs) << offset;
+        set_val(val() | mcs_val);
+    }
+
+    static BasicVhtMcsNss FromFidl(const ::fuchsia::wlan::mlme::BasicVhtMcsNss& fidl) {
+        BasicVhtMcsNss dst;
+
+        for (uint8_t ss_num = 1; ss_num <= 8; ++ss_num) {
+            dst.set_max_mcs_ss(ss_num, fidl.max_mcs[ss_num - 1]);
+        }
+
+        return dst;
+    }
+
     ::fuchsia::wlan::mlme::BasicVhtMcsNss ToFidl() const {
         ::fuchsia::wlan::mlme::BasicVhtMcsNss fidl;
 
@@ -1449,6 +1495,17 @@ struct VhtOperation : public Element<VhtOperation, element_id::kVhtOperation> {
         dst.center_freq_seg0 = center_freq_seg0;
         dst.center_freq_seg1 = center_freq_seg1;
         dst.basic_mcs = basic_mcs.val();
+        return dst;
+    }
+
+    static VhtOperation FromFidl(const ::fuchsia::wlan::mlme::VhtOperation& fidl) {
+        VhtOperation dst;
+
+        dst.vht_cbw = static_cast<VhtChannelBandwidth>(fidl.vht_cbw);
+        dst.center_freq_seg0 = fidl.center_freq_seg0;
+        dst.center_freq_seg1 = fidl.center_freq_seg1;
+        dst.basic_mcs = BasicVhtMcsNss::FromFidl(fidl.basic_mcs);
+
         return dst;
     }
 
