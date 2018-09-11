@@ -32,6 +32,8 @@ GN_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "gn")
 GO_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, host_platform, "go", "bin", "gofmt")
 CHECK_HEADER_GUARDS_TOOL = os.path.join(paths.FUCHSIA_ROOT, "scripts", "style",
                                         "check-header-guards.py")
+JSON_FMT_TOOL = os.path.join(paths.FUCHSIA_ROOT, "scripts", "style",
+                             "json-fmt.py")
 
 CLANG_CMD = [
     CLANG_TOOL, "-style=file", "-fallback-style=Google", "-sort-includes",
@@ -41,9 +43,11 @@ DART_CMD = [DART_TOOL, "-w"]
 GN_CMD = [GN_TOOL, "format"]
 GO_CMD = [GO_TOOL, "-w"]
 FIX_HEADER_GUARDS_COMMAND = [CHECK_HEADER_GUARDS_TOOL, "--fix"]
+JSON_FMT_CMD = [JSON_FMT_TOOL]
 
 EXT_TO_COMMANDS = {
     ".cc": [CLANG_CMD],
+    ".cmx": [JSON_FMT_CMD],
     ".cpp": [CLANG_CMD],
     ".dart": [DART_CMD],
     ".gn": [GN_CMD],
