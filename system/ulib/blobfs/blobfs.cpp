@@ -1087,7 +1087,7 @@ zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
             if (r < 0) {
                 return r;
             }
-            uint64_t ino = fuchsia_io_kInoUnknown;
+            uint64_t ino = fuchsia_io_INO_UNKNOWN;
             if ((r = df.Next(fbl::StringPiece(name, Digest::kLength * 2),
                              VTYPE_TO_DTYPE(V_TYPE_FILE), ino)) != ZX_OK) {
                 break;

@@ -630,9 +630,9 @@ zx_status_t Connection::FileWriteAt(const uint8_t* data_data, size_t data_count,
 }
 
 zx_status_t Connection::FileSeek(int64_t offset, fuchsia_io_SeekOrigin start, fidl_txn_t* txn) {
-    static_assert(SEEK_SET == fuchsia_io_SeekOrigin_Start, "");
-    static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_Current, "");
-    static_assert(SEEK_END == fuchsia_io_SeekOrigin_End, "");
+    static_assert(SEEK_SET == fuchsia_io_SeekOrigin_START, "");
+    static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_CURRENT, "");
+    static_assert(SEEK_END == fuchsia_io_SeekOrigin_END, "");
 
     if (IsPathOnly(flags_)) {
         return fuchsia_io_FileSeek_reply(txn, ZX_ERR_BAD_HANDLE, offset_);

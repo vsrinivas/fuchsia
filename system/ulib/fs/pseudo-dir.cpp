@@ -53,7 +53,7 @@ zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, siz
     fs::DirentFiller df(data, len);
     zx_status_t r = 0;
     if (cookie->n < kDotId) {
-        uint64_t ino = fuchsia_io_kInoUnknown;
+        uint64_t ino = fuchsia_io_INO_UNKNOWN;
         if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR), ino)) != ZX_OK) {
             *out_actual = df.BytesFilled();
             return r;

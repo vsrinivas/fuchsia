@@ -180,9 +180,9 @@ zx_status_t fidl_readat(zxrio_t* rio, void* data, uint64_t length, off_t offset,
     return status;
 }
 
-static_assert(SEEK_SET == fuchsia_io_SeekOrigin_Start, "");
-static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_Current, "");
-static_assert(SEEK_END == fuchsia_io_SeekOrigin_End, "");
+static_assert(SEEK_SET == fuchsia_io_SeekOrigin_START, "");
+static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_CURRENT, "");
+static_assert(SEEK_END == fuchsia_io_SeekOrigin_END, "");
 
 zx_status_t fidl_seek(zxrio_t* rio, off_t offset, int whence, off_t* out) {
     zx_status_t io_status, status;

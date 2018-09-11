@@ -424,13 +424,13 @@ static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrig
     size_t end, n;
     end = dev_op_get_size(ios->dev);
     switch (start) {
-    case fuchsia_io_SeekOrigin_Start:
+    case fuchsia_io_SeekOrigin_START:
         if ((offset < 0) || ((size_t)offset > end)) {
             goto bad_args;
         }
         n = offset;
         break;
-    case fuchsia_io_SeekOrigin_Current:
+    case fuchsia_io_SeekOrigin_CURRENT:
         // TODO: track seekability with flag, don't update off
         // at all on read/write if not seekable
         n = ios->io_off + offset;
@@ -448,7 +448,7 @@ static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrig
             }
         }
         break;
-    case fuchsia_io_SeekOrigin_End:
+    case fuchsia_io_SeekOrigin_END:
         n = end + offset;
         if (offset <= 0) {
             // if negative or exact-end seek

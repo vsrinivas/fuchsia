@@ -59,7 +59,7 @@ zx_status_t LazyDir::Readdir(vdircookie_t* cookie, void* dirents, size_t len, si
     fs::DirentFiller df(dirents, len);
     zx_status_t r = 0;
 
-    const uint64_t ino = fuchsia_io_kInoUnknown;
+    const uint64_t ino = fuchsia_io_INO_UNKNOWN;
     if (DoDot(cookie)) {
         if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR), ino)) != ZX_OK) {
             *out_actual = df.BytesFilled();

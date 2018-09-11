@@ -135,7 +135,7 @@ zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
 zx_status_t VnodeBlob::Getattr(vnattr_t* a) {
     memset(a, 0, sizeof(vnattr_t));
     a->mode = (IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE) | V_IRUSR;
-    a->inode = fuchsia_io_kInoUnknown;
+    a->inode = fuchsia_io_INO_UNKNOWN;
     a->size = IsDirectory() ? 0 : SizeData();
     a->blksize = kBlobfsBlockSize;
     a->blkcount = inode_.num_blocks * (kBlobfsBlockSize / VNATTR_BLKSIZE);

@@ -334,7 +334,7 @@ static zx_status_t fill_dirent(vdirent_t* de, size_t delen,
     if (sz > delen || len > NAME_MAX) {
         return ZX_ERR_INVALID_ARGS;
     }
-    de->ino = fuchsia_io_kInoUnknown;
+    de->ino = fuchsia_io_INO_UNKNOWN;
     de->size = len;
     de->type = type;
     memcpy(de->name, name, len);
@@ -365,7 +365,7 @@ static zx_status_t mxdir_readdir_locked(mxdir_t* dir, void* buf, size_t len) {
 static zx_status_t mxdir_get_attr(fdio_t* io, vnattr_t* attr) {
     memset(attr, 0, sizeof(*attr));
     attr->mode = V_TYPE_DIR | V_IRUSR;
-    attr->inode = fuchsia_io_kInoUnknown;
+    attr->inode = fuchsia_io_INO_UNKNOWN;
     attr->nlink = 1;
     return ZX_OK;
 }

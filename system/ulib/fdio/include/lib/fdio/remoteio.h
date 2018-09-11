@@ -20,12 +20,10 @@ __BEGIN_CDECLS
 
 // FIDL Ordinals
 
-// Object
+// Node
 #define ZXFIDL_CLONE      0x80000001
 #define ZXFIDL_CLOSE      0x80000002
 #define ZXFIDL_ON_OPEN    0x80000007
-
-// Node
 #define ZXFIDL_SYNC       0x81000001
 #define ZXFIDL_STAT       0x81000002
 #define ZXFIDL_SETATTR    0x81000003
