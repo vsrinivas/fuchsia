@@ -296,35 +296,6 @@ TEST(Spec, DecodeMeasureTimeBetween) {
             result.measurements->time_between[0]);
 }
 
-TEST(Spec, DecodeMeasurementSplitSamplesAt) {
-  std::string json = R"({
-    "measure": [
-      {
-        "type": "duration",
-        "event_name": "foo",
-        "event_category": "bar",
-        "split_samples_at": [1,42]
-      },
-      {
-        "type": "time_between",
-        "first_event_name": "foo1",
-        "first_event_category": "bar1",
-        "second_event_name": "foo2",
-        "second_event_category": "bar2",
-        "split_samples_at": [2]
-      }
-    ]
-  })";
-
-  Spec spec;
-  ASSERT_TRUE(DecodeSpec(json, &spec));
-  auto measurements = std::move(*spec.measurements);
-  EXPECT_EQ(1u, measurements.duration.size());
-  auto expected = std::unordered_map<uint64_t, std::vector<size_t>>{
-      {0u, {1u, 42u}}, {1u, {2u}}};
-  EXPECT_EQ(expected, measurements.split_samples_at);
-}
-
 TEST(Spec, DecodeMeasurementExpectedSampleCount) {
   std::string json = R"({
     "measure": [

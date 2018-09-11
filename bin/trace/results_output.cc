@@ -63,39 +63,23 @@ void OutputResults(std::ostream& out,
 
   for (auto& result : results) {
     out << result.label << " -> ";
-    if (result.samples.empty() && result.values.empty()) {
+    if (result.values.empty()) {
       out << " no results" << std::endl;
       continue;
     }
 
-    if (result.values.size() > 0) {
-      if (result.split_first) {
-        out << std::endl;
-        out << "  first sample: " << result.values.front() << result.unit
-            << std::endl;
-        out << "  samples 1 to " << result.values.size() - 1 << ":";
-        std::vector<double> tail(result.values.begin() + 1,
-                                 result.values.end());
-        OutputSamples(out, tail, result.unit);
-        out << std::endl;
-        continue;
-      }
+    if (!result.split_first) {
       OutputSamples(out, result.values, result.unit);
-      out << std::endl;
-    }
-
-    if (result.samples.size() == 1) {
-      OutputSamples(out, result.samples.front().values, result.unit);
       out << std::endl;
       continue;
     }
 
     out << std::endl;
-    for (const measure::SampleGroup& sample_group : result.samples) {
-      out << "  " << sample_group.label << ": ";
-      OutputSamples(out, sample_group.values, result.unit);
-      out << std::endl;
-    }
+    out << "  sample 0: " << result.values.front() << result.unit << std::endl;
+    out << "  samples 1 to " << result.values.size() - 1 << ": ";
+    std::vector<double> tail(result.values.begin() + 1, result.values.end());
+    OutputSamples(out, tail, result.unit);
+    out << std::endl;
   }
 }
 

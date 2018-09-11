@@ -16,19 +16,9 @@
 namespace tracing {
 namespace measure {
 
-// A group of recorded samples.
-struct SampleGroup {
-  std::vector<double> values;
-  std::string label;
-};
-
 // Result of a single measurement.
 struct Result {
   std::vector<double> values;
-  // In the old schema, values are grouped together.
-  // TODO(LE-590): Get rid of it and migrate fully to the flattened new schema
-  // once we make sure it works for all clients.
-  std::vector<SampleGroup> samples;
   std::string unit;
   std::string label;
   std::string test_suite;

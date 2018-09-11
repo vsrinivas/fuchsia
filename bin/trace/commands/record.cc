@@ -489,7 +489,7 @@ void Record::ProcessMeasurements() {
   // we can notice when benchmarks break (e.g. in CQ or on perfbots).
   bool errored = false;
   for (auto& result : results) {
-    if (result.samples.empty() && result.values.empty()) {
+    if (result.values.empty()) {
       FXL_LOG(ERROR) << "No results for measurement \"" << result.label
                      << "\".";
       errored = true;

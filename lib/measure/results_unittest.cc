@@ -9,13 +9,10 @@
 namespace tracing {
 namespace measure {
 
-bool operator==(const SampleGroup& lhs, const SampleGroup& rhs) {
-  return lhs.values == rhs.values && lhs.label == rhs.label;
-}
-
 bool operator==(const Result& lhs, const Result& rhs) {
-  return lhs.samples == rhs.samples && lhs.unit == rhs.unit &&
-         lhs.label == rhs.label;
+  return lhs.values == rhs.values && lhs.unit == rhs.unit &&
+         lhs.label == rhs.label && lhs.test_suite == rhs.test_suite &&
+         lhs.split_first == rhs.split_first;
 }
 
 namespace {
@@ -34,8 +31,7 @@ TEST(Results, Duration) {
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {
-      {}, {{{1.0, 2.0, 3.0}, "samples 0 to 2"}}, "ms", "foo (bar)", "", false};
+  Result expected = {{1.0, 2.0, 3.0}, "ms", "foo (bar)", "", false};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
@@ -48,9 +44,7 @@ TEST(Results, ArgumentValue) {
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {{},   {{{1.0, 2.0, 3.0}, "samples 0 to 2"}},
-                     "MB", "foo (bar), disk space",
-                     "",   false};
+  Result expected = {{1.0, 2.0, 3.0}, "MB", "foo (bar), disk space", "", false};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
@@ -69,32 +63,8 @@ TEST(Results, TimeBetween) {
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {{},   {{{1.0, 2.0, 3.0}, "samples 0 to 2"}},
-                     "ms", "foo1 (bar1) to foo2 (bar2)",
-                     "",   false};
-  EXPECT_EQ(1u, results.size());
-  EXPECT_EQ(expected, results[0]);
-}
-
-TEST(Results, SplitSamples) {
-  Measurements measurements;
-  measurements.duration = {{42u, {"foo", "bar"}}};
-  measurements.split_samples_at[42u] = {1u, 2u};
-
-  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
-  ticks[42u] = {1u, 2u, 3u, 4u};
-
-  auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {{},
-                     {
-                         {{1.0}, "samples 0 to 0"},
-                         {{2.0}, "samples 1 to 1"},
-                         {{3.0, 4.0}, "samples 2 to 3"},
-                     },
-                     "ms",
-                     "foo (bar)",
-                     "",
-                     false};
+  Result expected = {
+      {1.0, 2.0, 3.0}, "ms", "foo1 (bar1) to foo2 (bar2)", "", false};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
@@ -108,7 +78,7 @@ TEST(Results, SplitFirst) {
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {{1.0, 2.0, 3.0}, {}, "ms", "foo (bar)", "", true};
+  Result expected = {{1.0, 2.0, 3.0}, "ms", "foo (bar)", "", true};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
@@ -122,8 +92,7 @@ TEST(Results, ExpectedSampleCount) {
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {
-      {}, {{{1.0, 2.0, 3.0}, "samples 0 to 2"}}, "ms", "foo (bar)", "", false};
+  Result expected = {{1.0, 2.0, 3.0}, "ms", "foo (bar)", "", false};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
@@ -137,7 +106,7 @@ TEST(Results, ExpectedSampleCountMismatch) {
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {{}, {}, "ms", "foo (bar)", "", false};
+  Result expected = {{}, "ms", "foo (bar)", "", false};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }

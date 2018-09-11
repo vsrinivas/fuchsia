@@ -17,26 +17,8 @@ namespace {
 const char kLabelKey[] = "label";
 const char kTestSuiteKey[] = "test_suite";
 const char kUnitKey[] = "unit";
-const char kSamplesKey[] = "samples";
 const char kSplitFirstKey[] = "split_first";
 const char kValuesKey[] = "values";
-
-void EncodeSampleGroup(rapidjson::Writer<rapidjson::StringBuffer>* writer,
-                       const measure::SampleGroup& sample_group) {
-  writer->StartObject();
-  {
-    writer->Key(kLabelKey);
-    writer->String(sample_group.label);
-
-    writer->Key(kValuesKey);
-    writer->StartArray();
-    for (double value : sample_group.values) {
-      writer->Double(value);
-    }
-    writer->EndArray();
-  }
-  writer->EndObject();
-}
 
 void EncodeResult(rapidjson::Writer<rapidjson::StringBuffer>* writer,
                   const measure::Result& result) {
@@ -53,27 +35,15 @@ void EncodeResult(rapidjson::Writer<rapidjson::StringBuffer>* writer,
     writer->Key(kUnitKey);
     writer->String(result.unit.c_str());
 
-    if (result.split_first) {
-      // New schema
-      writer->Key(kSplitFirstKey);
-      writer->Bool(result.split_first);
+    writer->Key(kSplitFirstKey);
+    writer->Bool(result.split_first);
 
-      writer->Key(kValuesKey);
-      writer->StartArray();
-      for (const auto& value : result.values) {
-        writer->Double(value);
-      }
-      writer->EndArray();
-    } else {
-      // Old schema
-      // TODO(LE-590) Get rid of it once we finish the migration process.
-      writer->Key(kSamplesKey);
-      writer->StartArray();
-      for (const auto& sample_group : result.samples) {
-        EncodeSampleGroup(writer, sample_group);
-      }
-      writer->EndArray();
+    writer->Key(kValuesKey);
+    writer->StartArray();
+    for (const auto& value : result.values) {
+      writer->Double(value);
     }
+    writer->EndArray();
   }
   writer->EndObject();
 }

@@ -21,10 +21,6 @@ struct Measurements {
   std::vector<measure::ArgumentValueSpec> argument_value;
   std::vector<measure::TimeBetweenSpec> time_between;
 
-  // Maps measurement ids to numbers indicating the samples at which the
-  // recorded results must be split into consecutive sample groups.
-  std::unordered_map<uint64_t, std::vector<size_t>> split_samples_at;
-
   // Maps measurement ids to flags indicating whether or not the first run must
   // be recorded separately.
   std::unordered_map<uint64_t, bool> split_first;

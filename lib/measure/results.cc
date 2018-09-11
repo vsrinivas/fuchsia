@@ -43,15 +43,8 @@ std::string GetUnit(const measure::DurationSpec& spec) { return "ms"; }
 
 std::string GetUnit(const measure::TimeBetweenSpec& spec) { return "ms"; }
 
-std::string GetSampleGroupLabel(size_t begin, size_t end) {
-  std::ostringstream os;
-  os << "samples " << begin << " to " << end - 1;
-  return os.str();
-}
-
 template <typename Spec, typename T>
 Result ComputeSingle(Spec spec, const std::vector<T>& recorded_values,
-                     std::vector<size_t> split_samples_at,
                      size_t expected_sample_count, bool split_first) {
   Result result;
   result.label = GetLabel(spec);
@@ -67,41 +60,8 @@ Result ComputeSingle(Spec spec, const std::vector<T>& recorded_values,
     return result;
   }
 
-  if (recorded_values.empty()) {
-    return result;
-  }
-
-  if (split_first) {
-    // New schema doesn't support custom separators, instead relying on the
-    // catapult converter to put the first run aside. The values are stored in
-    // a flat array.
-    std::copy(recorded_values.begin(), recorded_values.end(),
-              std::back_inserter(result.values));
-    return result;
-  }
-
-  // Discard separators that are out of range and ensure that there is a final
-  // separator corresponding to the end of the last range.
-  while (!split_samples_at.empty() &&
-         split_samples_at.back() >= recorded_values.size()) {
-    split_samples_at.pop_back();
-  }
-  split_samples_at.push_back(recorded_values.size());
-
-  auto begin = recorded_values.begin();
-  for (size_t end_index : split_samples_at) {
-    auto end = recorded_values.begin() + end_index;
-    SampleGroup group;
-    group.label =
-        GetSampleGroupLabel(begin - recorded_values.begin(), end_index);
-
-    while (begin != end) {
-      group.values.push_back(*begin);
-      begin++;
-    }
-    result.samples.push_back(std::move(group));
-  }
-
+  std::copy(recorded_values.begin(), recorded_values.end(),
+            std::back_inserter(result.values));
   return result;
 }
 
@@ -136,8 +96,6 @@ std::vector<Result> ComputeResults(
         ticks_per_second);
     results.push_back(ComputeSingle(
         measure_spec, duration_values,
-        get_or_default(measurements.split_samples_at, measure_spec.id,
-                       no_split),
         get_or_default(measurements.expected_sample_count, measure_spec.id,
                        0uL),
         get_or_default(measurements.split_first, measure_spec.id, false)));
@@ -147,8 +105,6 @@ std::vector<Result> ComputeResults(
         get_or_default(recorded_values, measure_spec.id, no_recorded_values);
     results.push_back(ComputeSingle(
         measure_spec, argument_values,
-        get_or_default(measurements.split_samples_at, measure_spec.id,
-                       no_split),
         get_or_default(measurements.expected_sample_count, measure_spec.id,
                        0uL),
         get_or_default(measurements.split_first, measure_spec.id, false)));
@@ -159,8 +115,6 @@ std::vector<Result> ComputeResults(
         ticks_per_second);
     results.push_back(ComputeSingle(
         measure_spec, time_between_values,
-        get_or_default(measurements.split_samples_at, measure_spec.id,
-                       no_split),
         get_or_default(measurements.expected_sample_count, measure_spec.id,
                        0uL),
         get_or_default(measurements.split_first, measure_spec.id, false)));
