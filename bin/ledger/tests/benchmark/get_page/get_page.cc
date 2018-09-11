@@ -111,7 +111,7 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
   get_page_called_ = false;
   get_page_id_called_ = false;
   ledger_->GetPage(
-      reuse_ ? fidl::MakeOptional(*page_id_) : nullptr, page.NewRequest(),
+      reuse_ ? fidl::Clone(page_id_) : nullptr, page.NewRequest(),
       [this, request_number](Status status) {
         if (QuitOnError(QuitLoopClosure(), status, "Ledger::GetPage")) {
           return;
