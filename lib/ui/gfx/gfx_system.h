@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_GFX_SYSTEM_H_
 #define GARNET_LIB_UI_GFX_GFX_SYSTEM_H_
 
+#include <memory>
+
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
@@ -20,7 +22,8 @@ class GfxSystem : public TempSystemDelegate {
  public:
   static constexpr TypeId kTypeId = kGfx;
 
-  explicit GfxSystem(SystemContext context);
+  explicit GfxSystem(SystemContext context,
+                     std::unique_ptr<DisplayManager> display_manager);
   ~GfxSystem();
 
   std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
@@ -44,14 +47,15 @@ class GfxSystem : public TempSystemDelegate {
 
  protected:
   // Protected so test classes can expose.
-  std::unique_ptr<Engine> engine_;
   virtual std::unique_ptr<escher::Escher> InitializeEscher();
   virtual std::unique_ptr<Engine> InitializeEngine();
 
- private:
-  void Initialize();
+  std::unique_ptr<Engine> engine_;
+  std::unique_ptr<DisplayManager> display_manager_;
 
-  DisplayManager display_manager_;
+ private:
+  fit::closure DelayedInitClosure();
+  void Initialize();
 
   // TODO(MZ-452): Remove this when we externalize Displays.
   void GetDisplayInfoImmediately(

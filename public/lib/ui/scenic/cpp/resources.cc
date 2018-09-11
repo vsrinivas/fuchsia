@@ -507,6 +507,18 @@ void DisplayCompositor::SetLayerStack(uint32_t layer_stack_id) {
   session()->Enqueue(NewSetLayerStackCmd(id(), layer_stack_id));
 }
 
+Compositor::Compositor(Session* session) : Resource(session) {
+  session->Enqueue(NewCreateCompositorCmd(id()));
+}
+
+Compositor::Compositor(Compositor&& moved) : Resource(std::move(moved)) {}
+
+Compositor::~Compositor() = default;
+
+void Compositor::SetLayerStack(uint32_t layer_stack_id) {
+  session()->Enqueue(NewSetLayerStackCmd(id(), layer_stack_id));
+}
+
 Light::Light(Session* session) : Resource(session) {}
 
 Light::Light(Light&& moved) : Resource(std::move(moved)) {}

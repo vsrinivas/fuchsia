@@ -19,18 +19,17 @@
 namespace scenic_impl {
 namespace gfx {
 
-GfxSystem::GfxSystem(SystemContext context)
-    : TempSystemDelegate(std::move(context), false) {
-  display_manager_.WaitForDefaultDisplay([this]() {
-    // Don't initialize Vulkan and the system until display is ready.
-    Initialize();
-    initialized_ = true;
+GfxSystem::GfxSystem(SystemContext context,
+                     std::unique_ptr<DisplayManager> display_manager)
+    : TempSystemDelegate(std::move(context), false),
+      display_manager_(std::move(display_manager)) {
+  if (display_manager_->default_display() &&
+      display_manager_->default_display()->is_test_display()) {
+    async::PostTask(async_get_default_dispatcher(), DelayedInitClosure());
+    return;
+  }
 
-    for (auto& closure : run_after_initialized_) {
-      closure();
-    }
-    run_after_initialized_.clear();
-  });
+  display_manager_->WaitForDefaultDisplay(DelayedInitClosure());
 }
 
 GfxSystem::~GfxSystem() {
@@ -52,7 +51,8 @@ std::unique_ptr<CommandDispatcher> GfxSystem::CreateCommandDispatcher(
 }
 
 std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
-  return std::make_unique<Engine>(&display_manager_, escher_->GetWeakPtr());
+  return std::make_unique<Engine>(display_manager_.get(),
+                                  escher_->GetWeakPtr());
 }
 
 std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
@@ -132,8 +132,23 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
                                           std::move(shader_fs));
 }
 
+fit::closure GfxSystem::DelayedInitClosure() {
+  // This must *not* be executed  directly in the constructor, due to the use of
+  // virtual methods, such as InitializeEscher() inside Initialize().
+  return [this] {
+    // Don't initialize Vulkan and the system until display is ready.
+    Initialize();
+    initialized_ = true;
+
+    for (auto& closure : run_after_initialized_) {
+      closure();
+    }
+    run_after_initialized_.clear();
+  };
+}
+
 void GfxSystem::Initialize() {
-  Display* display = display_manager_.default_display();
+  Display* display = display_manager_->default_display();
   if (!display) {
     FXL_LOG(ERROR) << "No default display, Graphics system exiting";
     context()->Quit();
@@ -141,9 +156,13 @@ void GfxSystem::Initialize() {
   }
 
   if (!escher::VulkanIsSupported()) {
-    FXL_LOG(ERROR) << "No Vulkan on device, Graphics system exiting.";
-    context()->Quit();
-    return;
+    if (display->is_test_display()) {
+      FXL_LOG(INFO) << "No Vulkan found, but using a test-only \"display\".";
+    } else {
+      FXL_LOG(ERROR) << "No Vulkan on device, Graphics system exiting.";
+      context()->Quit();
+      return;
+    }
   }
 
   escher_ = InitializeEscher();

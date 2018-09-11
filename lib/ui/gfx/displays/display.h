@@ -19,6 +19,7 @@ namespace gfx {
 class Display {
  public:
   Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px);
+  virtual ~Display() = default;
 
   // Obtain the time of the last Vsync, in nanoseconds.
   zx_time_t GetLastVsyncTime();
@@ -39,6 +40,8 @@ class Display {
   // Event signaled by DisplayManager when ownership of the display
   // changes. This event backs Scenic's GetDisplayOwnershipEvent API.
   const zx::event& ownership_event() { return ownership_event_; };
+
+  virtual bool is_test_display() const { return false; }
 
  private:
   // Temporary friendship to allow FrameScheduler to feed back the Vsync timings

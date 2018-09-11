@@ -130,6 +130,12 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::FocusEvent& value) {
+  return os << "{FocusEvent:focus=" << (value.focused ? "true" : "false")
+            << ", timestamp=" << value.event_time << "}";
+}
+
+std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::Range& value) {
   return os << "{Range[" << value.min << "," << value.max << "]}";
 }

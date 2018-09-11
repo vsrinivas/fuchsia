@@ -570,6 +570,21 @@ class DisplayCompositor final : public Resource {
   void SetLayerStack(uint32_t layer_stack_id);
 };
 
+// Represents a display-less compositor resource in a session.
+class Compositor final : public Resource {
+ public:
+  explicit Compositor(Session* session);
+  Compositor(Compositor&& moved);
+  ~Compositor();
+
+  // Sets the layer-stack that is to be composited.
+  void SetLayerStack(const LayerStack& layer_stack) {
+    ZX_DEBUG_ASSERT(session() == layer_stack.session());
+    SetLayerStack(layer_stack.id());
+  }
+  void SetLayerStack(uint32_t layer_stack_id);
+};
+
 }  // namespace scenic
 
 #endif  // LIB_UI_SCENIC_CPP_RESOURCES_H_

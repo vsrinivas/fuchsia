@@ -34,7 +34,8 @@ std::ostream& operator<<(std::ostream& os, const ViewStack& value) {
     os << "empty";
   } else {
     for (size_t i = 0; i < value.stack.size(); ++i) {
-      os << value.stack[i];
+      os << value.stack[i].id;
+      os << ", global_transform=<elided>";
       if (i + 1 < value.stack.size()) {
         os << ", ";
       }

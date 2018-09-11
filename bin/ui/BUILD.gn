@@ -13,6 +13,7 @@ package("scenic_tests") {
     "presentation_mode/tests",
     "view_manager/tests",
     "//garnet/lib/ui/gfx/tests",
+    "//garnet/lib/ui/input/tests",
     "//garnet/lib/ui/scenic/tests",
     "//garnet/public/lib/ui/geometry/cpp:tests",
   ]
@@ -29,6 +30,9 @@ package("scenic_tests") {
     },
     {
       name = "input_apptests"
+    },
+    {
+      name = "input_unittests"
     },
     {
       name = "presentation_mode_unittests"

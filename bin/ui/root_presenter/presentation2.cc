@@ -70,6 +70,7 @@ Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
   scene_.AddChild(root_node_);
+  root_node_.SetTranslation(0.f, 0.f, 0.1f);  // TODO(SCN-371).
   root_node_.AddChild(view_holder_node_);
   view_holder_node_.Attach(view_holder_);
 

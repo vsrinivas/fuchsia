@@ -56,7 +56,7 @@ class InputCommandDispatcher : public CommandDispatcher {
 
   // Enqueue the pointer event into the view's SessionListener.
   void EnqueueEventToView(gfx::ViewPtr view,
-                          fuchsia::ui::input::PointerEvent keyboard);
+                          fuchsia::ui::input::PointerEvent pointer);
 
   gfx::GfxSystem* const gfx_system_ = nullptr;
 

@@ -14,7 +14,7 @@ namespace gfx {
 
 // Describes where a hit occurred within the content of a tagged node.
 struct Hit {
-  // The node's tag value. Non-zero values participate in the hit test.
+  // The node's tag value. Non-zero values participate in the SessionHitTester.
   uint32_t tag_value;
 
   // The View that owns the node that was hit.

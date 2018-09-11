@@ -28,6 +28,8 @@ std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::PointerEvent& value);
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::KeyboardEvent& value);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::FocusEvent& value);
 
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::Range& value);

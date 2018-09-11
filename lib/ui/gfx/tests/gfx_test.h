@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_TESTS_GFX_TEST_H_
 #define GARNET_LIB_UI_GFX_TESTS_GFX_TEST_H_
 
+#include <memory>
+
 #include "garnet/lib/ui/gfx/gfx_system.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
@@ -18,9 +20,9 @@ class GfxSystemForTest : public GfxSystem {
   static constexpr TypeId kTypeId = kGfx;
 
   explicit GfxSystemForTest(
-      SystemContext context,
+      SystemContext context, std::unique_ptr<DisplayManager> display_manager,
       escher::impl::CommandBufferSequencer* command_buffer_sequencer)
-      : GfxSystem(std::move(context)),
+      : GfxSystem(std::move(context), std::move(display_manager)),
         command_buffer_sequencer_(command_buffer_sequencer) {}
 
   Engine* engine() { return engine_.get(); }
@@ -28,8 +30,8 @@ class GfxSystemForTest : public GfxSystem {
  private:
   std::unique_ptr<Engine> InitializeEngine() override {
     return std::make_unique<EngineForTest>(
-        &display_manager_, std::make_unique<ReleaseFenceSignallerForTest>(
-                               command_buffer_sequencer_));
+        display_manager_.get(), std::make_unique<ReleaseFenceSignallerForTest>(
+                                    command_buffer_sequencer_));
   }
 
   std::unique_ptr<escher::Escher> InitializeEscher() override {
@@ -37,7 +39,6 @@ class GfxSystemForTest : public GfxSystem {
   }
 
   escher::impl::CommandBufferSequencer* command_buffer_sequencer_;
-  DisplayManager display_manager_;
 };
 
 class GfxSystemTest : public ::scenic_impl::test::ScenicTest {
@@ -65,7 +66,7 @@ class GfxSystemTest : public ::scenic_impl::test::ScenicTest {
 
   void InitializeScenic(Scenic* scenic) override {
     gfx_system_ = scenic->RegisterSystem<GfxSystemForTest>(
-        command_buffer_sequencer_.get());
+        std::make_unique<DisplayManager>(), command_buffer_sequencer_.get());
   }
 };
 

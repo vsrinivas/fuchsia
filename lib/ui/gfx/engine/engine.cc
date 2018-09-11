@@ -141,19 +141,27 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
                  "time", presentation_time, "interval", presentation_interval);
 
   uint64_t trace_number = timings.get() ? timings->frame_number() : 0;
-  auto gpu_uploader = escher::BatchGpuUploader::New(escher_, trace_number);
-  command_context_.batch_gpu_uploader = gpu_uploader.get();
-  command_context_.MakeValid();
+  bool has_updates = false;
+  if (display_manager_->default_display() &&
+      display_manager_->default_display()->is_test_display()) {
+    has_updates = session_manager_->ApplyScheduledSessionUpdates(
+        presentation_time, presentation_interval);
+  } else {
+    auto gpu_uploader = escher::BatchGpuUploader::New(escher_, trace_number);
+    command_context_.batch_gpu_uploader = gpu_uploader.get();
+    command_context_.MakeValid();
 
-  bool has_updates = session_manager_->ApplyScheduledSessionUpdates(
-      presentation_time, presentation_interval);
-  // Submit regardless of whether or not there are updates to release the
-  // underlying CommandBuffer so the pool and sequencer don't stall out.
-  // TODO(ES-115) to remove this restriction.
-  command_context_.batch_gpu_uploader->Submit(escher::SemaphorePtr());
+    has_updates = session_manager_->ApplyScheduledSessionUpdates(
+        presentation_time, presentation_interval);
 
-  // Invalidate the commands' context.
-  command_context_.Invalidate();
+    // Submit regardless of whether or not there are updates to release the
+    // underlying CommandBuffer so the pool and sequencer don't stall out.
+    // TODO(ES-115) to remove this restriction.
+    command_context_.batch_gpu_uploader->Submit(escher::SemaphorePtr());
+
+    // Invalidate the commands' context.
+    command_context_.Invalidate();
+  }
 
   if (!has_updates && !force_render) {
     return false;

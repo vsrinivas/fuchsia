@@ -4,6 +4,7 @@
     "fuchsia.ui.input/PointerEvent",
     "fuchsia.ui.input/Point3F",
     "fuchsia.ui.input/KeyboardEvent",
+    "fuchsia.ui.input/FocusEvent",
     "fuchsia.ui.input/Range",
     "fuchsia.ui.input/Axis",
     "fuchsia.ui.input/KeyboardDescriptor",

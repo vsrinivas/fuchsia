@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "garnet/lib/ui/gfx/id.h"
+#include "lib/escher/geometry/types.h"
 
 namespace scenic_impl {
 namespace input {
@@ -27,7 +28,11 @@ struct ViewId {
 
 // The top-level View is index 0, and grows downward.
 struct ViewStack {
-  std::vector<ViewId> stack;
+  struct Entry {
+    ViewId id;
+    glm::mat4 global_transform;  // The model-to-global transform for each View.
+  };
+  std::vector<Entry> stack;
 };
 
 bool operator==(const ViewId& lhs, const ViewId& rhs);

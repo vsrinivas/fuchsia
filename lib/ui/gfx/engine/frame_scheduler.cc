@@ -5,6 +5,7 @@
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/async/cpp/time.h>
 #include <lib/async/default.h>
 #include <trace/event.h>
 #include <zircon/syscalls.h>
@@ -62,7 +63,7 @@ FrameScheduler::ComputeTargetPresentationAndWakeupTimes(
     const zx_time_t requested_presentation_time) const {
   const zx_time_t last_vsync_time = display_->GetLastVsyncTime();
   const zx_time_t vsync_interval = display_->GetVsyncInterval();
-  const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t now = async::Now(dispatcher_).get();
   const zx_time_t required_render_time = PredictRequiredFrameRenderTime();
 
   // Compute the number of full vsync intervals between the last vsync and the
@@ -231,7 +232,7 @@ void FrameScheduler::OnFramePresented(FrameTimings* timings) {
                              timings->target_presentation_time()) /
         1000;
 
-    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t now = async::Now(dispatcher_).get();
     FXL_DCHECK(now >= timings->actual_presentation_time());
     uint64_t elapsed_since_presentation_usecs =
         static_cast<int64_t>(now - timings->actual_presentation_time()) / 1000;
