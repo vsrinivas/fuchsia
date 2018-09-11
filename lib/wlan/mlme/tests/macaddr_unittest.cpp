@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include <lib/fidl/cpp/array.h>
 #include <wlan/common/macaddr.h>
 
 namespace wlan {
@@ -61,6 +62,10 @@ TEST_F(MacAddrTest, Constructors) {
     MacAddr addr9;
     addr9 = addr8;
 
+    ::fidl::Array<uint8_t, 6> fidl_addr;
+    memcpy(fidl_addr.mutable_data(), addr8.byte, kMacAddrLen);
+    MacAddr addr10(fidl_addr);
+
     EXPECT_EQ(true, addr1 == addr2);
     EXPECT_EQ(false, addr1 != addr2);
     EXPECT_EQ(true, addr2 == addr3);
@@ -71,6 +76,7 @@ TEST_F(MacAddrTest, Constructors) {
     EXPECT_EQ(true, addr7 == addr1);
     EXPECT_EQ(true, addr8 == MacAddr(arr));
     EXPECT_EQ(true, addr9 == addr8);
+    EXPECT_EQ(true, addr10 == addr9);
 }
 
 TEST_F(MacAddrTest, Conversion) {
