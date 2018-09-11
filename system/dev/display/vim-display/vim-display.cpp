@@ -12,6 +12,7 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/display-controller.h>
+#include <ddk/protocol/i2c-impl.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <fbl/auto_call.h>
@@ -44,8 +45,7 @@ typedef struct image_info {
 void populate_added_display_args(vim2_display_t* display, added_display_args_t* args) {
     args->display_id = display->display_id;
     args->edid_present = true;
-    args->panel.edid.data = display->edid_buf;
-    args->panel.edid.length = display->edid_length;
+    args->panel.i2c_bus_id = 0;
     args->pixel_formats = &_gsupported_pixel_formats;
     args->pixel_format_count = sizeof(_gsupported_pixel_formats) / sizeof(zx_pixel_format_t);
     args->cursor_info_count = 0;
@@ -68,6 +68,12 @@ static void vim_set_display_controller_cb(void* ctx, void* cb_ctx, display_contr
         added_display_args_t args;
         populate_added_display_args(display, &args);
         display->dc_cb->on_displays_changed(display->dc_cb_ctx, &args, 1, NULL, 0);
+
+        if (args.is_standard_srgb_out) {
+            display->output_color_format = HDMI_COLOR_FORMAT_RGB;
+        } else {
+            display->output_color_format = HDMI_COLOR_FORMAT_444;
+        }
     }
     mtx_unlock(&display->display_lock);
 }
@@ -217,9 +223,10 @@ static void vim_check_configuration(void* ctx,
         return;
     }
 
-    // TODO: Add support for modesetting
-    if (display_configs[0]->mode.h_addressable != display->width
-            || display_configs[0]->mode.v_addressable != display->height) {
+    struct hdmi_param p;
+    if ((memcmp(&display->cur_display_mode, &display_configs[0]->mode, sizeof(display_mode_t))
+            && get_vic(&display_configs[0]->mode, &p) != ZX_OK)
+            || (display_configs[0]->mode.v_addressable % 8)) {
         mtx_unlock(&display->display_lock);
         *display_cfg_result = CONFIG_DISPLAY_UNSUPPORTED_MODES;
         return;
@@ -229,9 +236,11 @@ static void vim_check_configuration(void* ctx,
     if (display_configs[0]->layer_count != 1) {
         success = display_configs[0]->layer_count == 0;
     } else {
+        uint32_t width = display_configs[0]->mode.h_addressable;
+        uint32_t height = display_configs[0]->mode.v_addressable;
         primary_layer_t* layer = &display_configs[0]->layers[0]->cfg.primary;
         frame_t frame = {
-                .x_pos = 0, .y_pos = 0, .width = display->width, .height = display->height,
+                .x_pos = 0, .y_pos = 0, .width = width, .height = height,
         };
         uint32_t bytes_per_row = vim_compute_linear_stride(display,
                                                            layer->image.width,
@@ -239,8 +248,8 @@ static void vim_check_configuration(void* ctx,
                 * ZX_PIXEL_FORMAT_BYTES(layer->image.pixel_format);
         success = display_configs[0]->layers[0]->type == LAYER_PRIMARY
                 && layer->transform_mode == FRAME_TRANSFORM_IDENTITY
-                && layer->image.width == display->width
-                && layer->image.height == display->height
+                && layer->image.width == width
+                && layer->image.height == height
                 && layer->image.planes[0].byte_offset == 0
                 && (layer->image.planes[0].bytes_per_row == bytes_per_row ||
                     layer->image.planes[0].bytes_per_row == 0)
@@ -265,6 +274,21 @@ static void vim_apply_configuration(void* ctx,
     mtx_lock(&display->display_lock);
 
     if (display_count == 1 && display_configs[0]->layer_count) {
+        if (memcmp(&display->cur_display_mode, &display_configs[0]->mode, sizeof(display_mode_t))) {
+            zx_status_t status = get_vic(&display_configs[0]->mode, display->p);
+            if (status != ZX_OK) {
+                mtx_unlock(&display->display_lock);
+                zxlogf(ERROR, "Apply with bad mode\n");
+                return;
+            }
+
+            memcpy(&display->cur_display_mode, &display_configs[0]->mode, sizeof(display_mode_t));
+
+            init_hdmi_interface(display, display->p);
+            configure_osd(display, 1);
+            configure_vd(display, 0);
+        }
+
         // The only way a checked configuration could now be invalid is if display was
         // unplugged. If that's the case, then the upper layers will give a new configuration
         // once they finish handling the unplug event. So just return.
@@ -310,6 +334,83 @@ static display_controller_protocol_ops_t display_controller_ops = {
     .allocate_vmo = allocate_vmo,
 };
 
+static uint32_t get_bus_count(void* ctx) {
+    return 1;
+}
+
+static zx_status_t get_max_transfer_size(void* ctx, uint32_t bus_id, size_t* out_size) {
+    *out_size = UINT32_MAX;
+    return ZX_OK;
+}
+
+static zx_status_t set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitrate) {
+    // no-op
+    return ZX_OK;
+}
+
+static zx_status_t transact(void* ctx, uint32_t bus_id, uint16_t address, i2c_impl_op_t* ops,
+                            size_t count) {
+    // TODO(stevensd): update this driver to implement multi-writes/reads support
+    if (count != 2 || ops[0].is_read != false || ops[1].is_read != true) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
+    mtx_lock(&display->i2c_lock);
+    // The HDMITX_DWC_I2CM registers are a limited interface to the i2c bus for the E-DDC
+    // protocol, which is good enough for the bus this device provides.
+    if (address == 0x30 && ops[0].length == 1 && ops[1].length == 0) {
+        // Save the segment so that we can write to the registers in the correct order.
+        display->i2c_segment = *((const uint8_t*) ops[0].buf);
+    } else if (address == 0x50 && (ops[0].length == 1) && ops[1].length) {
+        if (ops[1].length % 8 != 0) {
+            mtx_unlock(&display->i2c_lock);
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        uint8_t addr = *(const uint8_t*) ops[0].buf;
+        for (uint32_t i = 0; i < ops[1].length; i += 8) {
+            hdmitx_writereg(display, HDMITX_DWC_I2CM_SLAVE, 0x50);
+            hdmitx_writereg(display, HDMITX_DWC_I2CM_SEGADDR, 0x30);
+            hdmitx_writereg(display, HDMITX_DWC_I2CM_SEGPTR, display->i2c_segment);
+            hdmitx_writereg(display, HDMITX_DWC_I2CM_ADDRESS, addr + i);
+            hdmitx_writereg(display, HDMITX_DWC_I2CM_OPERATION, 1 << 2);
+
+            uint32_t timeout = 0;
+            while ((!(hdmitx_readreg(display, HDMITX_DWC_IH_I2CM_STAT0) & (1 << 1)))
+                    && (timeout < 5)) {
+                usleep(1000);
+                timeout ++;
+            }
+            if (timeout == 5) {
+                DISP_ERROR("HDMI DDC TimeOut\n");
+                mtx_unlock(&display->i2c_lock);
+                return ZX_ERR_TIMED_OUT;
+            }
+            usleep(1000);
+            hdmitx_writereg(display, HDMITX_DWC_IH_I2CM_STAT0, 1 << 1);        // clear INT
+
+            for (int j = 0; j < 8; j++) {
+                uint32_t address = static_cast<uint32_t>(HDMITX_DWC_I2CM_READ_BUFF0 + j);
+                ((uint8_t*) ops[1].buf)[i + j] =
+                        static_cast<uint8_t>(hdmitx_readreg(display, address));
+            }
+        }
+    } else {
+        mtx_unlock(&display->i2c_lock);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    mtx_unlock(&display->i2c_lock);
+    return ZX_OK;
+}
+
+static i2c_impl_protocol_ops_t i2c_impl_ops = {
+    .get_bus_count = get_bus_count,
+    .get_max_transfer_size = get_max_transfer_size,
+    .set_bitrate = set_bitrate,
+    .transact = transact,
+};
+
 static void display_release(void* ctx) {
     vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
 
@@ -347,7 +448,6 @@ static void display_release(void* ctx) {
         zx_handle_close(display->bti);
         zx_handle_close(display->vsync_interrupt);
         zx_handle_close(display->inth);
-        free(display->edid_buf);
         free(display->p);
     }
     free(display);
@@ -359,9 +459,24 @@ static void display_unbind(void* ctx) {
     device_remove(display->mydevice);
 }
 
+static zx_status_t display_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
+    if (proto_id == ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL) {
+        auto ops = static_cast<display_controller_protocol_t*>(protocol);
+        ops->ctx = ctx;
+        ops->ops = &display_controller_ops;
+    } else if (proto_id == ZX_PROTOCOL_I2C_IMPL) {
+        auto ops = static_cast<i2c_impl_protocol_t*>(protocol);
+        ops->ctx = ctx;
+        ops->ops = &i2c_impl_ops;
+    } else {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return ZX_OK;
+}
+
 static zx_protocol_device_t main_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .get_protocol = nullptr,
+    .get_protocol = display_get_protocol,
     .open = nullptr,
     .open_at = nullptr,
     .close = nullptr,
@@ -376,44 +491,6 @@ static zx_protocol_device_t main_device_proto = {
     .rxrpc = nullptr,
     .message = nullptr,
 };
-
-static zx_status_t setup_hdmi(vim2_display_t* display)
-{
-    zx_status_t status;
-    // initialize HDMI
-    status = init_hdmi_hardware(display);
-    if (status != ZX_OK) {
-        DISP_ERROR("HDMI hardware initialization failed\n");
-        return status;
-    }
-
-    status = get_preferred_res(display, EDID_BUF_SIZE);
-    if (status != ZX_OK) {
-        DISP_ERROR("No display connected!\n");
-        return status;
-
-    }
-
-    // allocate frame buffer
-    display->format = ZX_PIXEL_FORMAT_RGB_x888;
-    display->width  = display->p->timings.hactive;
-    display->height = display->p->timings.vactive;
-    display->stride = vim_compute_linear_stride(
-                      display, display->p->timings.hactive, display->format);
-    display->input_color_format = _ginput_color_format;
-    display->color_depth = _gcolor_depth;
-
-    status = init_hdmi_interface(display, display->p);
-    if (status != ZX_OK) {
-        DISP_ERROR("HDMI interface initialization failed\n");
-        return status;
-    }
-
-    configure_osd(display, 1);
-    configure_vd(display, 0);
-
-    return ZX_OK;
-}
 
 static int hdmi_irq_handler(void *arg) {
     vim2_display_t* display = static_cast<vim2_display_t*>(arg);
@@ -439,12 +516,12 @@ static int hdmi_irq_handler(void *arg) {
         uint64_t display_removed = INVALID_DISPLAY_ID;
         if (hpd && !display->display_attached) {
             DISP_ERROR("Display is connected\n");
-            if (setup_hdmi(display) == ZX_OK) {
-                display->display_attached = true;
-                populate_added_display_args(display, &args);
-                display_added = true;
-                gpio_set_polarity(&display->gpio, 0, GPIO_POLARITY_LOW);
-            }
+
+            display->display_attached = true;
+            memset(&display->cur_display_mode, 0, sizeof(display_mode_t));
+            populate_added_display_args(display, &args);
+            display_added = true;
+            gpio_set_polarity(&display->gpio, 0, GPIO_POLARITY_LOW);
         } else if (!hpd && display->display_attached) {
             DISP_ERROR("Display Disconnected!\n");
             hdmi_shutdown(display);
@@ -463,6 +540,21 @@ static int hdmi_irq_handler(void *arg) {
                                                 display_added ? 1 : 0,
                                                 &display_removed,
                                                 display_removed != INVALID_DISPLAY_ID);
+            if (display_added) {
+                // See if we need to change output color to RGB
+                if (args.is_standard_srgb_out) {
+                    display->output_color_format = HDMI_COLOR_FORMAT_RGB;
+                } else {
+                    display->output_color_format = HDMI_COLOR_FORMAT_444;
+                }
+                display->audio_format_count = args.audio_format_count;
+
+                display->manufacturer_name = args.manufacturer_name;
+                memcpy(display->monitor_name, args.monitor_name, sizeof(args.monitor_name));
+                memcpy(display->monitor_serial, args.monitor_serial, sizeof(args.monitor_serial));
+                static_assert(sizeof(display->monitor_name) == sizeof(args.monitor_name), "");
+                static_assert(sizeof(display->monitor_serial) == sizeof(args.monitor_serial), "");
+            }
         }
 
         mtx_unlock(&display->display_lock);
@@ -471,7 +563,7 @@ static int hdmi_irq_handler(void *arg) {
             vim2_audio_on_display_removed(display, display_removed);
         }
 
-        if (display_added) {
+        if (display_added && args.audio_format_count) {
             vim2_audio_on_display_added(display, display->display_id);
         }
     }
@@ -656,13 +748,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     *((uint32_t*)(static_cast<uint8_t*>(display->mmio_vpu.virt) + VPU_VIU_MISC_CTRL0)) &= ~(1 << 8);
 
     fbl::AllocChecker ac;
-    // Create EDID Buffer
-    display->edid_buf = new(&ac) uint8_t[EDID_BUF_SIZE]();
-    if (!ac.check()) {
-        DISP_ERROR("Could not allocated EDID BUf of size %d\n", EDID_BUF_SIZE);
-        return status;
-    }
-
     display->p = new(&ac) struct hdmi_param();
     if (!ac.check()) {
         DISP_ERROR("Could not allocated hdmi param structure\n");
@@ -670,6 +755,11 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         display_release(display);
         return status;
     }
+
+    // initialize HDMI
+    display->input_color_format = _ginput_color_format;
+    display->color_depth = _gcolor_depth;
+    init_hdmi_hardware(display);
 
     device_add_args_t add_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -695,6 +785,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     list_initialize(&display->imported_images);
     mtx_init(&display->display_lock, mtx_plain);
     mtx_init(&display->image_lock, mtx_plain);
+    mtx_init(&display->i2c_lock, mtx_plain);
 
     thrd_create_with_name(&display->main_thread, hdmi_irq_handler, display, "hdmi_irq_handler");
     thrd_create_with_name(&display->vsync_thread, vsync_thread, display, "vsync_thread");

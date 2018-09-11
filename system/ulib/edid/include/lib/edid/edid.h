@@ -320,9 +320,9 @@ public:
     uint16_t edid_length() const { return len_; }
 
     uint16_t product_code();
-    void manufacturer_id(char* c1, char* c2, char* c3);
     bool is_standard_rgb();
     bool supports_basic_audio();
+    const char* manufacturer_name() { return manufacturer_name_; }
     const char* monitor_name() { return monitor_name_; }
     const char* monitor_serial() { return monitor_serial_; }
 
@@ -383,6 +383,7 @@ private:
 
     char monitor_name_[sizeof(Descriptor::Monitor::data) + 1];
     char monitor_serial_[sizeof(Descriptor::Monitor::data) + 1];
+    const char* manufacturer_name_ = nullptr;
 
     friend timing_iterator;
     friend audio_data_block_iterator;

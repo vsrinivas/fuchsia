@@ -10,7 +10,6 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/edid.cpp \
-    $(LOCAL_DIR)/eisa_vid_lut.cpp \
     $(LOCAL_DIR)/hdmitx.cpp \
     $(LOCAL_DIR)/hdmitx_clk.cpp \
     $(LOCAL_DIR)/registers.cpp \

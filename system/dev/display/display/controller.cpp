@@ -313,26 +313,7 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
                display_params.cursor_info_count * sizeof(cursor_info_t));
 
         info->has_edid = display_params.edid_present;
-        if (info->has_edid && display_params.panel.edid.data) {
-            // TODO(stevensd): Remove this branch when vim2 is moved to i2c ops
-            info->edid_data_ = fbl::Array<uint8_t>(
-                    new (&ac) uint8_t[display_params.panel.edid.length],
-                    display_params.panel.edid.length);
-            if (!ac.check()) {
-                zxlogf(INFO, "Out of memory when processing display hotplug\n");
-                break;
-            }
-            memcpy(info->edid_data_.get(),
-                   display_params.panel.edid.data,
-                   display_params.panel.edid.length);
-
-            const char* edid_err = "No preferred timing";
-            if (!info->edid.Init(info->edid_data_.get(),
-                                 static_cast<uint16_t>(info->edid_data_.size()), &edid_err)) {
-                zxlogf(TRACE, "Failed to parse edid \"%s\"\n", edid_err);
-                continue;
-            }
-        } else if (info->has_edid) {
+        if (info->has_edid) {
             if (!has_i2c_ops_) {
                 zxlogf(ERROR, "Presented edid display with no i2c bus\n");
                 continue;
@@ -351,7 +332,7 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
                 }
                 edid_attempt++;
 
-                struct i2c_bus i2c = { &i2c_ops_, display_params.panel.edid.i2c_bus_id };
+                struct i2c_bus i2c = { &i2c_ops_, display_params.panel.i2c_bus_id };
                 success = info->edid.Init(&i2c, ddc_tx, &edid_err);
                 if (success && !info->edid.CheckForHdmi(&display_params.is_hdmi_out)) {
                     edid_err = "Failed to parse edid for hdmi";
@@ -385,15 +366,12 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
                     sizeof(edid::Descriptor::Monitor::data) + 1, "Possible overflow");
             strcpy(display_params.monitor_name, info->edid.monitor_name());
             strcpy(display_params.monitor_serial, info->edid.monitor_serial());
-            info->edid.manufacturer_id(display_params.mfr_id + 2, display_params.mfr_id + 1,
-                                       display_params.mfr_id);
+            display_params.manufacturer_name = info->edid.manufacturer_name();
 
 
             if (zxlog_level_enabled_etc(DDK_LOG_TRACE)) {
-                char c1, c2, c3;
-                info->edid.manufacturer_id(&c1, &c2, &c3);
-                zxlogf(TRACE, "Manufacturer %c%c%c, product %04x\n",
-                       c1, c2, c3, info->edid.product_code());
+                zxlogf(TRACE, "Manufacturer %s, product %04x\n",
+                       info->edid.manufacturer_name(), info->edid.product_code());
                 info->edid.Print([](const char* str) {zxlogf(TRACE, "%s", str);});
             }
         } else {

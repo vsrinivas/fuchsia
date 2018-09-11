@@ -84,8 +84,8 @@ void configure_vd(vim2_display* display, uint32_t vd_index) {
     hwreg::RegisterIo vpu(io_buffer_virt(&display->mmio_vpu));
     uint32_t x_start, x_end, y_start, y_end;
     x_start = y_start = 0;
-    x_end = display->width - 1;
-    y_end = display->height - 1;
+    x_end = display->cur_display_mode.h_addressable - 1;
+    y_end = display->cur_display_mode.v_addressable - 1;
 
     auto vd = registers::Vd(vd_index);
     vd.IfLumaX0().FromValue(0).set_end(x_end).set_start(x_start).WriteTo(&vpu);
@@ -104,8 +104,8 @@ void configure_vd(vim2_display* display, uint32_t vd_index) {
         .WriteTo(&vpu);
     vd.FmtW()
         .FromValue(0)
-        .set_horizontal_width(display->width)
-        .set_vertical_width(display->width / 2)
+        .set_horizontal_width(display->cur_display_mode.h_addressable)
+        .set_vertical_width(display->cur_display_mode.h_addressable / 2)
         .WriteTo(&vpu);
 
     vd.IfRptLoop().FromValue(0).WriteTo(&vpu);
@@ -162,8 +162,8 @@ void disable_osd(vim2_display_t* display, uint32_t osd_index) {
 zx_status_t configure_osd(vim2_display_t* display, uint32_t osd_index) {
     uint32_t x_start, x_end, y_start, y_end;
     x_start = y_start = 0;
-    x_end = display->width - 1;
-    y_end = display->height - 1;
+    x_end = display->cur_display_mode.h_addressable - 1;
+    y_end = display->cur_display_mode.v_addressable - 1;
 
     disable_osd(display, osd_index);
     hwreg::RegisterIo vpu(io_buffer_virt(&display->mmio_vpu));
@@ -194,7 +194,9 @@ zx_status_t configure_osd(vim2_display_t* display, uint32_t osd_index) {
     registers::VpuVppOsdScoHStartEnd::Get().FromValue(0).WriteTo(&vpu);
     registers::VpuVppOsdScoVStartEnd::Get().FromValue(0).WriteTo(&vpu);
 
-    registers::VpuVppPostblendHSize::Get().FromValue(display->width).WriteTo(&vpu);
+    registers::VpuVppPostblendHSize::Get()
+        .FromValue(display->cur_display_mode.h_addressable)
+        .WriteTo(&vpu);
     registers::VpuVppOsdSciWhM1::Get().FromValue(0).WriteTo(&vpu);
 
     return ZX_OK;

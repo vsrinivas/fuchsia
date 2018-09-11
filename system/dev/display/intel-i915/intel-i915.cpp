@@ -773,8 +773,7 @@ void Controller::CallOnDisplaysChanged(DisplayDevice** added, uint32_t added_cou
     for (unsigned i = 0; i < added_count; i++) {
         added_args[i].display_id = added[i]->id();
         added_args[i].edid_present = true;
-        added_args[i].panel.edid.data = nullptr;
-        added_args[i].panel.edid.i2c_bus_id = added[i]->i2c_bus_id();
+        added_args[i].panel.i2c_bus_id = added[i]->i2c_bus_id();
         added_args[i].pixel_formats = supported_formats;
         added_args[i].pixel_format_count = static_cast<uint32_t>(fbl::count_of(supported_formats));
         added_args[i].cursor_infos = cursor_infos;

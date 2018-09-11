@@ -70,6 +70,7 @@ typedef struct vim2_display {
     mtx_t                               display_lock;
     // Lock for imported images.
     mtx_t                               image_lock;
+    mtx_t                               i2c_lock;
 
     // TODO(stevensd): This can race if this is changed right after
     // vsync but before the interrupt is handled.
@@ -91,21 +92,16 @@ typedef struct vim2_display {
     bool                                display_attached;
     // The current display id (if display_attached), or the next display id
     uint64_t                            display_id;
-    uint32_t                            width;
-    uint32_t                            height;
-    uint32_t                            stride;
-    zx_pixel_format_t                   format;
+    const char* manufacturer_name;
+    char monitor_name[14];
+    char monitor_serial[14];
 
     uint8_t                             input_color_format;
     uint8_t                             output_color_format;
     uint8_t                             color_depth;
 
-    uint8_t*                            edid_buf;
-    uint16_t                            edid_length;
     struct hdmi_param*                  p;
-    detailed_timing_t                   std_raw_dtd;
-    disp_timing_t                       std_disp_timing;
-    disp_timing_t                       pref_disp_timing;
+    display_mode_t                      cur_display_mode;
 
     display_controller_cb_t*            dc_cb;
     void*                               dc_cb_ctx;
@@ -114,6 +110,9 @@ typedef struct vim2_display {
     // A reference to the object which controls the VIM2 DAIs used to feed audio
     // into the HDMI stream.
     vim2_audio_t*                       audio;
+    uint32_t                            audio_format_count;
+    // TODO(ZX-2487): Remove this once the i2c_impl interface gets updated
+    uint8_t                             i2c_segment;
 } vim2_display_t;
 
 void disable_vd(vim2_display_t* display, uint32_t vd_index);

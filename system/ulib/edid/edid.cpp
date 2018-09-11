@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
+#include "eisa_vid_lut.h"
 
 namespace {
 
@@ -153,6 +154,12 @@ bool Edid::Init(const uint8_t* bytes, uint16_t len, const char** err_msg) {
     if (monitor_serial_[0] == '\0') {
         sprintf(monitor_serial_, "%d", base_edid_.serial_number);
     }
+
+    uint8_t c1 = static_cast<uint8_t>(((base_edid_.manufacturer_id1 & 0x7c) >> 2) + 'A' - 1);
+    uint8_t c2 = static_cast<uint8_t>((((base_edid_.manufacturer_id1 & 0x03) << 3)
+            | (base_edid_.manufacturer_id2 & 0xe0) >> 5) + 'A' - 1);
+    uint8_t c3  = static_cast<uint8_t>(((base_edid_.manufacturer_id2 & 0x1f)) + 'A' - 1);
+    manufacturer_name_ = lookup_eisa_vid(EISA_ID(c1, c2, c3));
 
     // TODO(stevensd): Do all validation up front instead of in ::GetBlock
     return true;
@@ -536,13 +543,6 @@ void Edid::Print(void (*print_fn)(const char* str)) const {
 
 uint16_t Edid::product_code() {
     return base_edid_.product_code;
-}
-
-void Edid::manufacturer_id(char* c1, char* c2, char* c3) {
-    *c1 = static_cast<uint8_t>(((base_edid_.manufacturer_id1 & 0x7c) >> 2) + 'A' - 1);
-    *c2 = static_cast<uint8_t>((((base_edid_.manufacturer_id1 & 0x03) << 3)
-            | (base_edid_.manufacturer_id2 & 0xe0) >> 5) + 'A' - 1);
-    *c3  = static_cast<uint8_t>(((base_edid_.manufacturer_id2 & 0x1f)) + 'A' - 1);
 }
 
 bool Edid::is_standard_rgb() {

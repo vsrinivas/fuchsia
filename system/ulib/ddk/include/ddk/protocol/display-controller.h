@@ -76,13 +76,8 @@ typedef struct added_display_args {
     // undefined, and drivers should ignore it in check_configuration and apply_configuration.
     bool edid_present;
     union {
-        struct {
-            // TODO(stevensd): Remove these when vim2 stops using them
-            const uint8_t* data;
-            uint16_t length;
-            // the bus_id to use to read this display's edid from the device's i2c protocol
-            uint32_t i2c_bus_id;
-        } edid;
+        // the bus_id to use to read this display's edid from the device's i2c protocol
+        uint32_t i2c_bus_id;
         // the display's parameters if an edid is not present
         display_params_t params;
     } panel;
@@ -107,7 +102,7 @@ typedef struct added_display_args {
 
     uint32_t audio_format_count;
 
-    char mfr_id[3]; // TODO(stevensd): Return the resolved name
+    const char* manufacturer_name;
     char monitor_name[14]; // null-terminated
     char monitor_serial[14]; // null-terminated
 } added_display_args_t;

@@ -84,7 +84,7 @@ void hdmi_shutdown(vim2_display_t* display)
         WRITE32_REG(HHI,HHI_HDMI_PLL_CNTL, 0);
 }
 
-zx_status_t init_hdmi_hardware(vim2_display_t* display) {
+void init_hdmi_hardware(vim2_display_t* display) {
 
 
     /* Step 1: Initialize various clocks related to the HDMI Interface*/
@@ -150,7 +150,6 @@ zx_status_t init_hdmi_hardware(vim2_display_t* display) {
     // d. disable any SCDC operations for now
     hdmitx_writereg(display, HDMITX_DWC_I2CM_SCDC_UPDATE, 0);
     DISP_INFO("done!!\n");
-    return ZX_OK;
 }
 
 static void hdmi_config_csc(vim2_display_t* display, const struct hdmi_param* p) {
@@ -778,7 +777,7 @@ void hdmi_test(vim2_display_t* display, uint32_t width) {
 }
 #endif
 
-zx_status_t init_hdmi_interface(vim2_display_t* display, const struct hdmi_param* p) {
+void init_hdmi_interface(vim2_display_t* display, const struct hdmi_param* p) {
 
     uint8_t scdc_data = 0;
     uint32_t regval = 0;
@@ -876,7 +875,6 @@ zx_status_t init_hdmi_interface(vim2_display_t* display, const struct hdmi_param
     hdmitx_writereg(display, HDMITX_DWC_FC_GCP, (1 << 0));
 
     DISP_INFO("done!!\n");
-    return ZX_OK;
 }
 
 void dump_regs(vim2_display_t* display)

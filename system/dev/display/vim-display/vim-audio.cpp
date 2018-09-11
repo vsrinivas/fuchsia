@@ -85,34 +85,6 @@ void Vim2Audio::OnDisplayAdded(const vim2_display_t* display, uint64_t display_i
         return;
     }
 
-    // Start by checking our EDID to see if it has basic audio support.  If it
-    // does not, then there is no point in continuing.
-    //
-    // TODO(johngro): this check could be more rigorous.  There is no
-    // requirement that the CEA E-EDID block be block 1; in theory it could show
-    // up in a later block.  Right now, we are assuming that code above us has
-    // verified that, if there is a second block, that it is a valid CEA block.
-    if ((display->edid_buf == nullptr) || (display->edid_length < 256)) {
-        zxlogf(INFO, "Display EDID either missing or too short to contain CEA block.  "
-                     "Skipping audio (len %hu)\n", display->edid_length);
-        return;
-    }
-
-    // TODO(johngro): I'd say that I should clean up this magic number garbage,
-    // but stevensd@ is currently working on more forma EDID parsing code.
-    // Eventually, this code should be driven by the results of his parse,
-    // instead of dealing with the encoding directly.
-    //
-    // At any rate, support for basic audio is signalled in bit 6 of byte 3 in
-    // the CEA EDID block.  Displays are *required* to set this bit and support
-    // stereo, 16 bit, 48k audio if the support any audio at all, so it is an
-    // easy check.
-    const uint8_t* cea_block = display->edid_buf + 128;
-    if (!(cea_block[3] & (1u << 6))) {
-        zxlogf(INFO, "Display does not indicate support for basic audio.\n");
-        return;
-    }
-
     if (!display->p) {
         zxlogf(WARN, "HDMI parameters are not set up.  Cannot enable audio!\n");
         return;

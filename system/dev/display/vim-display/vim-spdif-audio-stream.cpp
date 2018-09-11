@@ -8,7 +8,6 @@
 #include <fbl/limits.h>
 #include <soc/aml-s912/s912-audio.h>
 
-#include "eisa_vid_lut.h"
 #include "hdmitx.h"
 #include "vim-display.h"
 #include "vim-spdif-audio-stream.h"
@@ -39,19 +38,6 @@ static const struct {
     { .rate =  88200, .N = 12544 },
     { .rate = 176400, .N = 28028 },
 };
-
-static uint32_t DecompressEisaVid(const uint8_t* vpid) {
-    uint32_t data = (static_cast<uint32_t>(vpid[0]) << 8) | vpid[1];
-    uint32_t a = (data >> 10) & 0x1F;
-    uint32_t b = (data >>  5) & 0x1F;
-    uint32_t c = (data >>  0) & 0x1F;
-
-    if (!a || (a > 26) || !b || (b > 26) || !c || (c > 26)) {
-        return 0;
-    }
-
-    return EISA_ID(a + 'A' - 1 , b + 'A' - 1, c + 'A' - 1);
-}
 }   // anon namespace
 
 Vim2SpdifAudioStream::Vim2SpdifAudioStream(const vim2_display* display,
@@ -64,7 +50,8 @@ Vim2SpdifAudioStream::Vim2SpdifAudioStream(const vim2_display* display,
       display_id_(display_id),
       regs_(fbl::move(regs)),
       ring_buffer_vmo_(fbl::move(ring_buffer_vmo)),
-      pinned_ring_buffer_(fbl::move(pinned_ring_buffer)) { }
+      pinned_ring_buffer_(fbl::move(pinned_ring_buffer)) {
+}
 
 void Vim2SpdifAudioStream::ShutdownHook() {
     vim2_display_disable_audio(display_);
@@ -280,62 +267,20 @@ zx_status_t Vim2SpdifAudioStream::Init() {
         return res;
     }
 
-    // In order to have gotten this far, we must have an EDID, and it must be at
-    // least 256 bytes long.  Without these pre-requisites, there should be no
-    // way to signal audio support in the sink, and we should not even be here.
-    ZX_DEBUG_ASSERT((display_->edid_buf != nullptr) && (display_->edid_length >= 256));
-
     // Seed our SHA with a constant number taken from 'uuidgen'.
     static const uint8_t SEED[] = { 0xd8, 0x27, 0x52, 0xb7, 0x60, 0x9a, 0x46, 0xd4,
                                     0xa6, 0xc4, 0xdc, 0x32, 0xf5, 0xce, 0x1b, 0x7d };
     sha.Update(SEED, sizeof(SEED));
 
-    // Add in the VPID block.  Extract the mfr EISA ID at the same time.  Note
-    // that the 3 character EISA ID is actually stored in "compressed ascii"
-    // format so that it takes only two bytes.  This must be expanded before
-    // passing it to the EISA LUT;
-    const uint8_t* vpid = display_->edid_buf + 0x08;
-    const char* mfr_name = lookup_eisa_vid(DecompressEisaVid(vpid));
-    sha.Update(vpid, 10);
-    snprintf(mfr_name_, sizeof(mfr_name_), "%s", mfr_name ? mfr_name : "<unknown>");
+    snprintf(mfr_name_, sizeof(mfr_name_), "%s",
+             strlen(display_->manufacturer_name) ? display_->manufacturer_name : "<unknown>");
+    snprintf(prod_name_, sizeof(prod_name_), "%s",
+             strlen(display_->monitor_name) ? display_->monitor_name : "Generic HDMI");
 
-    // Now go looking for the first monitor descriptor.  See section A.2.10.13
-    // of CTA-861-G for details.
-    constexpr uint32_t DTD_LEN = 18;
-    const uint8_t* vesa_desc_block = display_->edid_buf + 0x36;
-    static const uint8_t MONITOR_NAME_TAG[] = { 0x00, 0x00, 0x00, 0xFC, 0x00 };
-
-    snprintf(prod_name_, sizeof(prod_name_), "Generic HDMI");
-
-    for (uint32_t i = 0; i < 4; ++i, vesa_desc_block += DTD_LEN) {
-        if (memcmp(vesa_desc_block, MONITOR_NAME_TAG, sizeof(MONITOR_NAME_TAG)) == 0) {
-            // Found a monitor name.  Stuff the block into our SHA.
-            sha.Update(vesa_desc_block, DTD_LEN);
-
-            // Then compute the name's str len and use it to populate the
-            // product name field.
-            uint32_t len;
-            for (len = 0; (len < 13) && vesa_desc_block[5 + len] != 0x0A; ++len)
-                ; // note: deliberate lack of for-loop body
-
-            snprintf(prod_name_, fbl::min<uint32_t>(len, sizeof(prod_name_)),
-                     "%s", reinterpret_cast<const char*>(vesa_desc_block + 5));
-
-            break;
-        }
-    }
-
-    // Finally, go looking for a monitor serial number block in the DTD section
-    // of the CEA/CTA extension
-    const uint8_t* cea_block = display_->edid_buf + 128;
-    static const uint8_t MONITOR_SERIAL_NUM_TAG[] = { 0x00, 0x00, 0x00, 0xFF, 0x00 };
-    for (uint32_t i = cea_block[2]; (i + DTD_LEN) <= 128; i += DTD_LEN) {
-        vesa_desc_block = cea_block + i;
-        if (memcmp(vesa_desc_block, MONITOR_SERIAL_NUM_TAG, sizeof(MONITOR_SERIAL_NUM_TAG)) == 0) {
-            sha.Update(vesa_desc_block, DTD_LEN);
-            break;
-        }
-    }
+    sha.Update(mfr_name_, strnlen(mfr_name_, sizeof(mfr_name_)));
+    sha.Update(prod_name_, strnlen(prod_name_, sizeof(prod_name_)));
+    sha.Update(display_->monitor_serial,
+               strnlen(display_->monitor_serial, sizeof(display_->monitor_serial)));
 
     // Finish the SHA and attempt to copy as much of the results to our internal
     // cached representation as we can.
@@ -381,141 +326,42 @@ zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
     // no factor of 7 in the clock feeding the audio units.  Because of this, we
     // cannot generate any of the 44.1k family of audio rates.  We can, however,
     // generate clock rates up to 192KHz, and can generate 16, 20, and 24 bit audio.
-    //
-    // So, start by looking for the SADs in the  CEA/CTA EDID block and build
-    // the list by filtering each of these based on the capabilities of the S912
-    // audio units.  If there are no SADs present, then just list the basic
-    // audio formats, but without the 44.1k frequency.
-    //
-    ZX_DEBUG_ASSERT((display_->edid_buf != nullptr) && (display_->edid_length >= 256));
-    const uint8_t* cea_block = display_->edid_buf + 128;
-    const uint8_t* sads = nullptr;
-    uint32_t sad_cnt = 0;
-    uint32_t cea_db_end = fbl::min<uint32_t>(cea_block[2], 128);
+    for (unsigned i = 0; i < display_->audio_format_count; i++) {
+        audio_stream_format_range_t range;
+        zx_status_t status = display_->dc_cb->get_audio_format(
+                display_->dc_cb_ctx, display_->display_id, i, &range);
+        ZX_ASSERT(status == ZX_OK);
 
-    // Look for the SAD block.  Each CEA/CTA data block header requires just a
-    // single byte, and the data block section starts at byte 4 into the cea
-    // block.
-    for (uint32_t off = 4; off < cea_db_end; off += (1 + (cea_block[off] & 0x1F))) {
-        // The audio data block ID is 0x1; block IDs are bits [5, 7] of the header.
-        if ((cea_block[off] >> 5) == 0x01) {
-            sads = cea_block + off + 1;
-            sad_cnt = fbl::min<uint32_t>(cea_db_end - off - 1, cea_block[off] & 0x1F) / 3;
-            break;
+        constexpr uint32_t SUPPORTED_FORMATS = AUDIO_SAMPLE_FORMAT_16BIT |
+                AUDIO_SAMPLE_FORMAT_24BIT_PACKED | AUDIO_SAMPLE_FORMAT_24BIT_IN32;
+        range.sample_formats =
+                static_cast<audio_sample_format_t>(range.sample_formats & SUPPORTED_FORMATS);
+        if (range.sample_formats == 0) {
+            continue;
         }
-    }
 
-    bool has_audio_block = (sad_cnt && (sads != nullptr));
-    {
+        // Require stereo
+        if (range.max_channels <  2) {
+            continue;
+        }
+        range.max_channels = fbl::min<uint8_t>(range.max_channels, 2);
+
+        constexpr uint32_t MIN_SUPPORTED_RATE = 32000;
+        constexpr uint32_t MAX_SUPPORTED_RATE = 192000;
+        range.flags &= ASF_RANGE_FLAG_FPS_48000_FAMILY;
+        if (range.flags == 0
+                || range.max_frames_per_second < MIN_SUPPORTED_RATE
+                || range.min_frames_per_second > MAX_SUPPORTED_RATE) {
+            continue;
+        }
+        range.max_frames_per_second = fbl::min(MAX_SUPPORTED_RATE, range.max_frames_per_second);
+        range.min_frames_per_second = fbl::max(MIN_SUPPORTED_RATE, range.min_frames_per_second);
+
         fbl::AllocChecker ac;
-        supported_formats_.reserve(1, &ac);
+        supported_formats_.push_back(range, &ac);
         if (!ac.check()) {
             zxlogf(ERROR, "Out of memory attempting to construct supported format list.\n");
             return ZX_ERR_NO_MEMORY;
-        }
-    }
-
-    // Add the range for basic audio support.
-    audio_stream_format_range_t range;
-
-    range.min_channels = 2;
-    range.max_channels = 2;
-    range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-    range.min_frames_per_second = 32000;
-    range.max_frames_per_second = 48000;
-    range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
-
-    supported_formats_.push_back(range);
-
-    // No short audio descriptors?  If not, basic audio only.
-    if (!has_audio_block) {
-        return ZX_OK;
-    }
-
-    // Go over the list of SADs and extract the formats we support.
-    for (uint32_t i = 0; i < sad_cnt; ++i) {
-        const uint8_t* sad = &sads[i * 3];
-
-        // If this is not an LPCM format according to the format code in the
-        // first byte of the SAD, skip it.
-        if (((sad[0] >> 3) & 0xF) != 0x1) {
-            continue;
-        }
-
-        // If this is not a stereo format, skip it.
-        if ((sad[0] & 0x7) != 0x1) {
-            continue;
-        }
-
-        // Extract only the rates that we support.  If this leaves this entry
-        // with nothing, skip it.
-        constexpr uint32_t SUPPORTED_RATES = SAD_RATE_32000 |
-                                             SAD_RATE_48000 |
-                                             SAD_RATE_96000 |
-                                             SAD_RATE_192000;
-        uint32_t rates = sad[1] & SUPPORTED_RATES;
-        if (!rates) {
-            continue;
-        }
-
-        uint32_t fmts =
-            (sad[2] & SAD_BPS_16 ? static_cast<uint32_t>(AUDIO_SAMPLE_FORMAT_16BIT) : 0) |
-            (sad[2] & SAD_BPS_20 ? static_cast<uint32_t>(AUDIO_SAMPLE_FORMAT_20BIT_IN32) : 0) |
-            (sad[2] & SAD_BPS_24 ? static_cast<uint32_t>(AUDIO_SAMPLE_FORMAT_24BIT_PACKED |
-                                                         AUDIO_SAMPLE_FORMAT_24BIT_IN32) : 0);
-
-        // If this entry applies to both 32k and 48k audio rates, then merge its
-        // bits-per-samples in with the basic audio entry.
-        constexpr uint32_t R32_48 = SAD_RATE_32000 | SAD_RATE_48000;
-        if ((rates & R32_48) == R32_48) {
-            auto& r = supported_formats_[0];
-            r.sample_formats = static_cast<audio_sample_format_t>(r.sample_formats | fmts);
-            rates &= ~R32_48;
-        }
-
-        // Now build continuous ranges of sample rates in the 48k family from
-        // what is left and add them to the set.
-        static const struct {
-            uint32_t flag, val;
-        } RATE_LUT[] = {
-            { SAD_RATE_32000,   32000 },
-            { SAD_RATE_48000,   48000 },
-            { SAD_RATE_96000,   96000 },
-            { SAD_RATE_192000, 192000 },
-        };
-
-        for (uint32_t j = 0; j < fbl::count_of(RATE_LUT); ++j) {
-            const auto& start = RATE_LUT[j];
-            if (!(rates & start.flag)) {
-                continue;
-            }
-
-            // We found the start of a range.  At this point, we are guaranteed
-            // to add at least one new entry into the set of format ranges.
-            // Find the end of this range.
-            uint32_t k;
-            for (k = j + 1; k < fbl::count_of(RATE_LUT); ++k) {
-                if (!(rates & RATE_LUT[k].flag)) {
-                    break;
-                }
-            }
-
-            const auto& end = RATE_LUT[k - 1];
-            j = k - 1;
-
-            // Now, add the range to our set.
-            range.sample_formats = static_cast<audio_sample_format_t>(fmts);
-            range.min_frames_per_second = start.val;
-            range.max_frames_per_second = end.val;
-
-            {
-                fbl::AllocChecker ac;
-                supported_formats_.push_back(range, &ac);
-                if (!ac.check()) {
-                    zxlogf(ERROR, "Out of memory attempting to construct supported format list.\n");
-                    return ZX_ERR_NO_MEMORY;
-                }
-            }
         }
     }
 

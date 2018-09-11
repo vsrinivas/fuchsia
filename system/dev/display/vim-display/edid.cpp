@@ -2,417 +2,129 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddk/debug.h>
-#include <ddk/binding.h>
-#include <ddk/io-buffer.h>
-#include <ddk/protocol/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
 
-#include <zircon/syscalls.h>
-#include <zircon/assert.h>
-#include <hw/reg.h>
 #include "vim-display.h"
-#include "hdmitx.h"
 #include "edid.h"
 
-
-bool edid_has_extension(const uint8_t* edid_buf)
+zx_status_t get_vic(const display_mode_t* disp_timing, struct hdmi_param* p)
 {
-    const edid_t* edid = (edid_t *) edid_buf;
-
-    return (edid->ext_flag == 1);
-}
-
-bool edid_rgb_disp(const uint8_t* edid_buf)
-{
-    const edid_t* edid = (edid_t *) edid_buf;
-    return (!!((edid->feature_support & (1 << 2)) >> 2));
-}
-
-static uint16_t get_prod_id(const uint8_t* edid_buf)
-{
-    return static_cast<uint16_t>((edid_buf[11] << 8) | (edid_buf[10]));
-}
-
-static void edid_dump_disp_timing(const disp_timing_t* d)
-{
-    DISP_INFO("pixel_clk = 0x%x (%d)\n", d->pixel_clk, d->pixel_clk);
-    DISP_INFO("HActive = 0x%x (%d)\n", d->HActive, d->HActive);
-    DISP_INFO("HBlanking = 0x%x (%d)\n", d->HBlanking, d->HBlanking);
-    DISP_INFO("VActive = 0x%x (%d)\n", d->VActive, d->VActive);
-    DISP_INFO("VBlanking = 0x%x (%d)\n", d->VBlanking, d->VBlanking);
-    DISP_INFO("HSyncOffset = 0x%x (%d)\n", d->HSyncOffset, d->HSyncOffset);
-    DISP_INFO("HSyncPulseWidth = 0x%x (%d)\n", d->HSyncPulseWidth, d->HSyncPulseWidth);
-    DISP_INFO("VSyncOffset = 0x%x (%d)\n", d->VSyncOffset, d->VSyncOffset);
-    DISP_INFO("VSyncPulseWidth = 0x%x (%d)\n", d->VSyncPulseWidth, d->VSyncPulseWidth);
-    DISP_INFO("HImageSize = 0x%x (%d)\n", d->HImageSize, d->HImageSize);
-    DISP_INFO("VImageSize = 0x%x (%d)\n", d->VImageSize, d->VImageSize);
-    DISP_INFO("HBorder = 0x%x (%d)\n", d->HBorder, d->HBorder);
-    DISP_INFO("VBorder = 0x%x (%d)\n", d->VBorder, d->VBorder);
-    DISP_INFO("Flags = 0x%x (%d)\n", d->Flags, d->Flags);
-}
-
-
-static void populate_timings(detailed_timing_t* raw_dtd, disp_timing_t* disp_timing)
-{
-    disp_timing->pixel_clk = static_cast<uint16_t>(raw_dtd->raw_pixel_clk[1] << 8 |
-                                                        raw_dtd->raw_pixel_clk[0]);
-    disp_timing->HActive = static_cast<uint16_t>((((raw_dtd->raw_Hact_HBlank & 0xf0)>>4) << 8) |
-                                                        raw_dtd->raw_Hact);
-    disp_timing->HBlanking = static_cast<uint16_t>(((raw_dtd->raw_Hact_HBlank & 0x0f) << 8) |
-                                                        raw_dtd->raw_HBlank);
-    disp_timing->VActive = static_cast<uint16_t>((((raw_dtd->raw_Vact_VBlank & 0xf0)>>4) << 8) |
-                                                        raw_dtd->raw_Vact);
-    disp_timing->VBlanking = static_cast<uint16_t>(((raw_dtd->raw_Vact_VBlank & 0x0f) << 8) |
-                                                        raw_dtd->raw_VBlank);
-    disp_timing->HSyncOffset = static_cast<uint16_t>((((raw_dtd->raw_HSync_VSync_OFF_PW & 0xc0)>>6) << 8) |
-                                                        raw_dtd->raw_HSyncOff);
-    disp_timing->HSyncPulseWidth = static_cast<uint16_t>((((raw_dtd->raw_HSync_VSync_OFF_PW & 0x30)>>4) << 8) |
-                                                        raw_dtd->raw_HSyncPW);
-    disp_timing->VSyncOffset = static_cast<uint8_t>((((raw_dtd->raw_HSync_VSync_OFF_PW & 0x0c)>>2) << 4) |
-                                                        (raw_dtd->raw_VSyncOff_VSyncPW & 0xf0)>>4);
-    disp_timing->VSyncPulseWidth = static_cast<uint8_t>(((raw_dtd->raw_HSync_VSync_OFF_PW & 0x03) << 4) |
-                                                        (raw_dtd->raw_VSyncOff_VSyncPW & 0x0f));
-    disp_timing->HImageSize = static_cast<uint16_t>((((raw_dtd->raw_H_V_ImageSize & 0xf0)>>4)<<8) |
-                                                        raw_dtd->raw_HImageSize);
-    disp_timing->VImageSize = static_cast<uint16_t>(((raw_dtd->raw_H_V_ImageSize & 0x0f)<<8) |
-                                                        raw_dtd->raw_VImageSize);
-    disp_timing->HBorder = raw_dtd->raw_HBorder;
-    disp_timing->VBorder = raw_dtd->raw_VBorder;
-    disp_timing->Flags = raw_dtd->raw_Flags;
-}
-
-
-/* This function reads the detailed timing found in block0 and block1 (referred to standard
- * and preferred
- */
-zx_status_t edid_parse_display_timing(const uint8_t* edid_buf, uint16_t edid_length,
-                                      detailed_timing_t* raw_dtd,
-                                      disp_timing_t* std_disp_timing,
-                                      disp_timing_t* pref_disp_timing)
-{
-    const uint8_t* start_dtd;
-    const uint8_t* start_ext;
-
-    uint8_t* s_r_dtd = (uint8_t*) raw_dtd;
-
-    ZX_DEBUG_ASSERT(edid_buf);
-    ZX_DEBUG_ASSERT(raw_dtd);
-    ZX_DEBUG_ASSERT(std_disp_timing);
-    ZX_DEBUG_ASSERT(pref_disp_timing);
-
-    start_dtd = &edid_buf[0x36];
-
-    // populate raw structure first
-    memcpy(s_r_dtd, start_dtd, 18);
-    populate_timings(raw_dtd, std_disp_timing);
-
-    if (edid_length == 128) {
-        return ZX_OK;
-    }
-
-    // It has extension. Read from start of DTD until you hit 00 00
-    start_ext = &edid_buf[128];
-
-    if (start_ext[2] == 0) {
-        DISP_ERROR("%s: Invalid DTD pointer! 0x%x\n", __FUNCTION__, start_ext[2]);
-        return ZX_ERR_WRONG_TYPE;
-    }
-
-    start_dtd = &start_ext[0] + start_ext[2];
-
-    // populate raw structure first
-    memcpy(s_r_dtd, start_dtd, 18);
-    populate_timings(&raw_dtd[0], pref_disp_timing);
-
-    return ZX_OK;
-}
-
-static uint8_t getInterlaced(uint8_t flag)
-{
-    return ((flag & (0x80)) >> 7); // TODO: bit defs)
-}
-
-static uint8_t getHPol(uint8_t flag)
-{
-    if(((flag & 0x18) >> 3) == 0x3) {
-        // sync type is 3 (i.e. digitail separate)
-        return ((flag & (0x02)) >> 1);
-    }
-    return 0;
-}
-
-static uint8_t getVPol(uint8_t flag)
-{
-    if(((flag & 0x18) >> 3) == 0x3) {
-        // sync type is 3 (i.e. digitail separate)
-        return ((flag & (0x04)) >> 2);
-    }
-    return 0;
-}
-
-static zx_status_t get_vic(vim2_display_t* display)
-{
-    disp_timing_t* disp_timing;
-    disp_timing= &display->std_disp_timing;
-    ZX_DEBUG_ASSERT(disp_timing);
-
     // Monitor has its own preferred timings. Use that
-    display->p->timings.interlace_mode =     getInterlaced(disp_timing->Flags);
-    display->p->timings.pfreq =              (disp_timing->pixel_clk * 10); // KHz
+    p->timings.interlace_mode =     disp_timing->flags & MODE_FLAG_INTERLACED;
+    p->timings.pfreq =              (disp_timing->pixel_clock_10khz * 10); // KHz
     //TODO: pixel repetition is 0 for most progressive. We don't support interlaced
-    display->p->timings.pixel_repeat =       0;
-    display->p->timings.hactive =            disp_timing->HActive;
-    display->p->timings.hblank =             disp_timing->HBlanking;
-    display->p->timings.hfront =             disp_timing->HSyncOffset;
-    display->p->timings.hsync =              disp_timing->HSyncPulseWidth;
-    display->p->timings.htotal =             (display->p->timings.hactive) +
-                                                (display->p->timings.hblank);
-    display->p->timings.hback =              (display->p->timings.hblank) -
-                                                (display->p->timings.hfront +
-                                                    display->p->timings.hsync);
-    display->p->timings.hpol =               getHPol(disp_timing->Flags);
+    p->timings.pixel_repeat =       0;
+    p->timings.hactive =            disp_timing->h_addressable;
+    p->timings.hblank =             disp_timing->h_blanking;
+    p->timings.hfront =             disp_timing->h_front_porch;
+    p->timings.hsync =              disp_timing->h_sync_pulse;
+    p->timings.htotal =             (p->timings.hactive) + (p->timings.hblank);
+    p->timings.hback =              (p->timings.hblank) - (p->timings.hfront + p->timings.hsync);
+    p->timings.hpol =               disp_timing->flags & MODE_FLAG_HSYNC_POSITIVE;
 
-    display->p->timings.vactive =            disp_timing->VActive;
-    display->p->timings.vblank0 =            disp_timing->VBlanking;
-    display->p->timings.vfront =             disp_timing->VSyncOffset;
-    display->p->timings.vsync =              disp_timing->VSyncPulseWidth;
-    display->p->timings.vtotal =             (display->p->timings.vactive) +
-                                                (display->p->timings.vblank0);
-    display->p->timings.vback =              (display->p->timings.vblank0) -
-                                                (display->p->timings.vfront +
-                                                    display->p->timings.vsync);
-    display->p->timings.vpol =               getVPol(disp_timing->Flags);
+    p->timings.vactive =            disp_timing->v_addressable;
+    p->timings.vblank0 =            disp_timing->v_blanking;
+    p->timings.vfront =             disp_timing->v_front_porch;
+    p->timings.vsync =              disp_timing->v_sync_pulse;
+    p->timings.vtotal =             (p->timings.vactive) + (p->timings.vblank0);
+    p->timings.vback =              (p->timings.vblank0) - (p->timings.vfront + p->timings.vsync);
+    p->timings.vpol =               disp_timing->flags & MODE_FLAG_VSYNC_POSITIVE;
 
     //FIXE: VENC Repeat is undocumented. It seems to be only needed for the following
     // resolutions: 1280x720p60, 1280x720p50, 720x480p60, 720x480i60, 720x576p50, 720x576i50
     // For now, we will simply not support this feature.
-    display->p->timings.venc_pixel_repeat = 0;
+    p->timings.venc_pixel_repeat = 0;
     // Let's make sure we support what we've got so far
-    if (display->p->timings.interlace_mode) {
-        DISP_ERROR("ERROR: UNSUPPORTED DISPLAY!!!! Pixel Freq = %d (%s mode)\n",
-            display->p->timings.pfreq,
-            display->p->timings.interlace_mode? "Interlaced": "Progressive");
-        DISP_ERROR("Loading 640x480p as Default\n");
-
-        display->p->timings.interlace_mode =     0;
-        display->p->timings.pfreq =              (25175); // KHz
-        display->p->timings.pixel_repeat =       0;
-        display->p->timings.hactive =            640;
-        display->p->timings.hblank =             160;
-        display->p->timings.hfront =             16;
-        display->p->timings.hsync =              96;
-        display->p->timings.htotal =             (display->p->timings.hactive) +
-                                                    (display->p->timings.hblank);
-        display->p->timings.hback =              (display->p->timings.hblank) -
-                                                    (display->p->timings.hfront +
-                                                        display->p->timings.hsync);
-        display->p->timings.hpol =               1;
-        display->p->timings.vactive =            480;
-        display->p->timings.vblank0 =            45;
-        display->p->timings.vfront =             10;
-        display->p->timings.vsync =              2;
-        display->p->timings.vtotal =             (display->p->timings.vactive) +
-                                                    (display->p->timings.vblank0);
-        display->p->timings.vback =              (display->p->timings.vblank0) -
-                                                    (display->p->timings.vfront +
-                                                        display->p->timings.vsync);
-        display->p->timings.vpol =               1;
+    if (p->timings.interlace_mode) {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    if (display->p->timings.vactive == 2160) {
+    if (p->timings.vactive == 2160) {
         DISP_INFO("4K Monitor Detected.\n");
 
-        if (display->p->timings.pfreq == 533250) {
+        if (p->timings.pfreq == 533250) {
             // FIXME: 4K with reduced blanking (533.25MHz) does not work
             DISP_INFO("4K @ 30Hz\n");
-            display->p->timings.interlace_mode =     0;
-            display->p->timings.pfreq =              (297000); // KHz
-            display->p->timings.pixel_repeat =       0;
-            display->p->timings.hactive =            3840;
-            display->p->timings.hblank =             560;
-            display->p->timings.hfront =             176;
-            display->p->timings.hsync =              88;
-            display->p->timings.htotal =             (display->p->timings.hactive) +
-                                                        (display->p->timings.hblank);
-            display->p->timings.hback =              (display->p->timings.hblank) -
-                                                        (display->p->timings.hfront +
-                                                            display->p->timings.hsync);
-            display->p->timings.hpol =               1;
-            display->p->timings.vactive =            2160;
-            display->p->timings.vblank0 =            90;
-            display->p->timings.vfront =             8;
-            display->p->timings.vsync =              10;
-            display->p->timings.vtotal =             (display->p->timings.vactive) +
-                                                        (display->p->timings.vblank0);
-            display->p->timings.vback =              (display->p->timings.vblank0) -
-                                                        (display->p->timings.vfront +
-                                                            display->p->timings.vsync);
-            display->p->timings.vpol =               1;
+            p->timings.interlace_mode =     0;
+            p->timings.pfreq =              (297000); // KHz
+            p->timings.pixel_repeat =       0;
+            p->timings.hactive =            3840;
+            p->timings.hblank =             560;
+            p->timings.hfront =             176;
+            p->timings.hsync =              88;
+            p->timings.htotal =             (p->timings.hactive) + (p->timings.hblank);
+            p->timings.hback =              (p->timings.hblank) -
+                                               (p->timings.hfront + p->timings.hsync);
+            p->timings.hpol =               1;
+            p->timings.vactive =            2160;
+            p->timings.vblank0 =            90;
+            p->timings.vfront =             8;
+            p->timings.vsync =              10;
+            p->timings.vtotal =             (p->timings.vactive) + (p->timings.vblank0);
+            p->timings.vback =              (p->timings.vblank0) -
+                                               (p->timings.vfront + p->timings.vsync);
+            p->timings.vpol =               1;
         }
     }
 
-    if (display->p->timings.pfreq > 500000) {
-        display->p->is4K = true;
+    if (p->timings.pfreq > 500000) {
+        p->is4K = true;
     } else {
-        display->p->is4K = false;
+        p->is4K = false;
     }
 
-    // Picture aspect ratio determination. 4:3 otherwise 16:9
-    if (display->p->timings.hactive * 3 == display->p->timings.vactive * 4) {
-        display->p->aspect_ratio = HDMI_ASPECT_RATIO_4x3;
-    } else if (display->p->timings.hactive * 9 == display->p->timings.vactive * 16) {
-        display->p->aspect_ratio = HDMI_ASPECT_RATIO_16x9;
+    if (p->timings.hactive * 3 == p->timings.vactive * 4) {
+        p->aspect_ratio = HDMI_ASPECT_RATIO_4x3;
+    } else if (p->timings.hactive * 9 == p->timings.vactive * 16) {
+        p->aspect_ratio = HDMI_ASPECT_RATIO_16x9;
     } else {
-        zxlogf(INFO, "HDMI monitor with non-standard aspect ratio\n");
-        display->p->aspect_ratio = HDMI_ASPECT_RATIO_NONE;
+        p->aspect_ratio = HDMI_ASPECT_RATIO_NONE;
     }
 
-    display->p->colorimetry = HDMI_COLORIMETRY_ITU601;
+    p->colorimetry = HDMI_COLORIMETRY_ITU601;
 
-    if (display->p->timings.pfreq > 500000) {
-        display->p->phy_mode = 1;
-    } else if (display->p->timings.pfreq > 200000) {
-        display->p->phy_mode = 2;
-    } else if (display->p->timings.pfreq > 100000) {
-        display->p->phy_mode = 3;
+    if (p->timings.pfreq > 500000) {
+        p->phy_mode = 1;
+    } else if (p->timings.pfreq > 200000) {
+        p->phy_mode = 2;
+    } else if (p->timings.pfreq > 100000) {
+        p->phy_mode = 3;
     } else {
-        display->p->phy_mode = 4;
+        p->phy_mode = 4;
     }
 
     //TODO: We probably need a more sophisticated method for calculating
     // clocks. This will do for now.
-    display->p->pll_p_24b.viu_channel =          1;
-    display->p->pll_p_24b.viu_type =             VIU_ENCP;
-    display->p->pll_p_24b.vid_pll_div =          VID_PLL_DIV_5;
-    display->p->pll_p_24b.vid_clk_div =          2;
-    display->p->pll_p_24b.hdmi_tx_pixel_div =    1;
-    display->p->pll_p_24b.encp_div =             1;
-    display->p->pll_p_24b.od1 =                  1;
-    display->p->pll_p_24b.od2 =                  1;
-    display->p->pll_p_24b.od3 =                  1;
+    p->pll_p_24b.viu_channel =          1;
+    p->pll_p_24b.viu_type =             VIU_ENCP;
+    p->pll_p_24b.vid_pll_div =          VID_PLL_DIV_5;
+    p->pll_p_24b.vid_clk_div =          2;
+    p->pll_p_24b.hdmi_tx_pixel_div =    1;
+    p->pll_p_24b.encp_div =             1;
+    p->pll_p_24b.od1 =                  1;
+    p->pll_p_24b.od2 =                  1;
+    p->pll_p_24b.od3 =                  1;
 
-    display->p->pll_p_24b.hpll_clk_out = (display->p->timings.pfreq * 10);
-    while (display->p->pll_p_24b.hpll_clk_out < 2900000) {
-        if (display->p->pll_p_24b.od1 < 4) {
-            display->p->pll_p_24b.od1 *= 2;
-            display->p->pll_p_24b.hpll_clk_out *= 2;
-        } else if (display->p->pll_p_24b.od2 < 4) {
-            display->p->pll_p_24b.od2 *= 2;
-            display->p->pll_p_24b.hpll_clk_out *= 2;
-        } else if (display->p->pll_p_24b.od3 < 4) {
-            display->p->pll_p_24b.od3 *= 2;
-            display->p->pll_p_24b.hpll_clk_out *= 2;
+    p->pll_p_24b.hpll_clk_out = (p->timings.pfreq * 10);
+    while (p->pll_p_24b.hpll_clk_out < 2900000) {
+        if (p->pll_p_24b.od1 < 4) {
+            p->pll_p_24b.od1 *= 2;
+            p->pll_p_24b.hpll_clk_out *= 2;
+        } else if (p->pll_p_24b.od2 < 4) {
+            p->pll_p_24b.od2 *= 2;
+            p->pll_p_24b.hpll_clk_out *= 2;
+        } else if (p->pll_p_24b.od3 < 4) {
+            p->pll_p_24b.od3 *= 2;
+            p->pll_p_24b.hpll_clk_out *= 2;
         } else {
             return ZX_ERR_OUT_OF_RANGE;
         }
     }
-    if(display->p->pll_p_24b.hpll_clk_out > 6000000) {
+    if(p->pll_p_24b.hpll_clk_out > 6000000) {
         DISP_ERROR("Something went wrong in clock calculation (pll_out = %d)\n",
-            display->p->pll_p_24b.hpll_clk_out);
+            p->pll_p_24b.hpll_clk_out);
         return ZX_ERR_OUT_OF_RANGE;
     }
 
     return ZX_OK;
-}
-
-static void dump_raw_edid(const uint8_t* edid_buf, uint16_t edid_buf_size)
-{
-    ZX_DEBUG_ASSERT(edid_buf);
-    zxlogf(INFO, "\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
-    zxlogf(INFO,"$$$$$$$$$$$$ RAW EDID INFO $$$$$$$$$$$$\n");
-    zxlogf(INFO, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n\n");
-    for (int i = 0; i < edid_buf_size; i++) {
-        zxlogf(INFO, "0x%02x ", edid_buf[i]);
-        if ( ((i + 1) % 8) == 0) {
-            zxlogf(INFO, "\n");
-        }
-    }
-    zxlogf(INFO, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n\n");
-}
-
-zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size)
-{
-    uint32_t timeout = 0;
-    uint32_t addr = 0;
-    uint32_t i;
-    zx_status_t status;
-
-    ZX_DEBUG_ASSERT(edid_buf_size <= EDID_BUF_SIZE);
-    ZX_DEBUG_ASSERT(display);
-    ZX_DEBUG_ASSERT(display->edid_buf);
-    ZX_DEBUG_ASSERT(display->p);
-
-    memset(display->edid_buf, 0, edid_buf_size);
-
-    for (addr = 0; addr < edid_buf_size; addr+=8) {
-        // Program SLAVE/SEGMENT/ADDR
-        hdmitx_writereg(display, HDMITX_DWC_I2CM_SLAVE, 0x50);
-        hdmitx_writereg(display, HDMITX_DWC_I2CM_SEGADDR, 0x30);
-        hdmitx_writereg(display, HDMITX_DWC_I2CM_SEGPTR, 1);
-        hdmitx_writereg(display, HDMITX_DWC_I2CM_ADDRESS, addr);
-        hdmitx_writereg(display, HDMITX_DWC_I2CM_OPERATION, 1 << 2);
-
-        timeout = 0;
-        while ((!(hdmitx_readreg(display, HDMITX_DWC_IH_I2CM_STAT0) & (1 << 1))) && (timeout < 5)) {
-            usleep(1000);
-            timeout ++;
-        }
-        if (timeout == 5) {
-            DISP_ERROR("HDMI DDC TimeOut\n");
-            return ZX_ERR_TIMED_OUT;
-        }
-        usleep(1000);
-        hdmitx_writereg(display, HDMITX_DWC_IH_I2CM_STAT0, 1 << 1);        // clear INT
-
-        for (i = 0; i < 8; i ++) {
-            uint32_t address = static_cast<uint32_t>(HDMITX_DWC_I2CM_READ_BUFF0 + i);
-            display->edid_buf[addr+i] =
-                    static_cast<uint8_t>(hdmitx_readreg(display, address));
-        }
-    }
-
-    display->edid_length = 128;
-    if (edid_has_extension(display->edid_buf)) {
-        if (display->edid_buf[128] == 0x02) {
-            display->edid_length = 256;
-        } else {
-            DISP_ERROR("%s: Unknown tag! %d\n", __FUNCTION__, display->edid_buf[128]);
-        }
-    }
-
-    if ((status = edid_parse_display_timing(display->edid_buf, display->edid_length,
-            &display->std_raw_dtd, &display->std_disp_timing,
-            &display->pref_disp_timing)) != ZX_OK) {
-            DISP_ERROR("Something went wrong in EDID Parsing (%d)\n", status);
-            return status;
-    }
-
-    // Find out whether we support the preferred format or not
-    status = get_vic(display);
-
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not get a proper display timing\n");
-        return status;
-    }
-
-    // See if we need to change output color to RGB
-    if (edid_rgb_disp(display->edid_buf)) {
-        display->output_color_format = HDMI_COLOR_FORMAT_RGB;
-    } else {
-        display->output_color_format = HDMI_COLOR_FORMAT_444;
-    }
-
-    dump_raw_edid(display->edid_buf, display->edid_length);
-
-    return ZX_OK;
-
 }

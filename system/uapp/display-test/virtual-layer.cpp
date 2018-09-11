@@ -128,9 +128,13 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
             return false;
         }
 
-        images_[0]->Import(dc_handle, &layer->import_info[0]);
+        if (!images_[0]->Import(dc_handle, &layer->import_info[0])) {
+            return false;
+        }
         if (layer_flipping_) {
-            images_[1]->Import(dc_handle, &layer->import_info[1]);
+            if (!images_[1]->Import(dc_handle, &layer->import_info[1])) {
+                return false;
+            }
         } else {
             zx_object_signal(layer->import_info[alt_image_].events[WAIT_EVENT],
                              0, ZX_EVENT_SIGNALED);

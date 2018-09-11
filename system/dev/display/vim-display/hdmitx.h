@@ -148,7 +148,7 @@ static const struct reg_val_pair ENC_LUT_GEN[] = {
 };
 
 struct cea_timing {
-    uint8_t             interlace_mode;
+    bool                interlace_mode;
     uint32_t            pfreq;
     uint8_t             ln;
     uint8_t             pixel_repeat;
@@ -161,7 +161,7 @@ struct cea_timing {
     uint32_t            hfront;
     uint32_t            hsync;
     uint32_t            hback;
-    uint8_t             hpol;
+    bool                hpol;
 
     uint32_t            vfreq;
     uint32_t            vactive;
@@ -171,7 +171,7 @@ struct cea_timing {
     uint32_t            vfront;
     uint32_t            vsync;
     uint32_t            vback;
-    uint8_t             vpol;
+    bool                vpol;
 };
 
 #define VID_PLL_DIV_1      0
@@ -313,9 +313,9 @@ struct vim2_display;  // fwd decl
 
 void hdmitx_writereg(const struct vim2_display* display, uint32_t addr, uint32_t data);
 uint32_t hdmitx_readreg(const struct vim2_display* display, uint32_t addr);
-zx_status_t init_hdmi_hardware(struct vim2_display* display);
+void init_hdmi_hardware(struct vim2_display* display);
 void dump_regs(struct vim2_display* display);
-zx_status_t init_hdmi_interface(struct vim2_display* display, const struct hdmi_param* p);
+void init_hdmi_interface(struct vim2_display* display, const struct hdmi_param* p);
 void hdmi_test(struct vim2_display* display, uint32_t width);
 zx_status_t configure_pll(struct vim2_display* display, const struct hdmi_param* p,
     const struct pll_param* pll);
