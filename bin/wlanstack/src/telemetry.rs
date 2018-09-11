@@ -31,6 +31,8 @@ enum CobaltMetricId {
     ClientAssocDataRssi = 6,
     ClientBeaconRssi = 7,
     ConnectionTime = 8,
+    RxTxFrameCount = 9,
+    RxTxFrameBytes = 10,
 }
 
 // Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
@@ -160,6 +162,55 @@ fn report_client_mlme_stats(
         &last_stats.beacon_rssi,
         &current_stats.beacon_rssi,
         sender,
+    );
+
+    report_client_mlme_rx_tx_frames(&last_stats, &current_stats, sender);
+}
+
+fn report_client_mlme_rx_tx_frames(
+    last_stats: &fidl_stats::ClientMlmeStats, current_stats: &fidl_stats::ClientMlmeStats,
+    sender: &mut CobaltSender,
+) {
+    // These indexes must match the Cobalt config from
+    // //third_party/cobalt_config/fuchsia/wlan/config.yaml
+    const CLIENT_MLME_RX_FRAME_COUNT_INDEX: u32 = 0;
+    const CLIENT_MLME_TX_FRAME_COUNT_INDEX: u32 = 1;
+    sender.log_event_count(
+        CobaltMetricId::RxTxFrameCount as u32,
+        CLIENT_MLME_RX_FRAME_COUNT_INDEX,
+        get_diff(
+            last_stats.rx_frame.in_.count,
+            current_stats.rx_frame.in_.count,
+        ) as i64,
+    );
+    sender.log_event_count(
+        CobaltMetricId::RxTxFrameCount as u32,
+        CLIENT_MLME_TX_FRAME_COUNT_INDEX,
+        get_diff(
+            last_stats.tx_frame.out.count,
+            current_stats.rx_frame.out.count,
+        ) as i64,
+    );
+
+    // These indexes must match the Cobalt config from
+    // //third_party/cobalt_config/fuchsia/wlan/config.yaml
+    const CLIENT_MLME_RX_FRAME_BYTES_INDEX: u32 = 0;
+    const CLIENT_MLME_TX_FRAME_BYTES_INDEX: u32 = 1;
+    sender.log_event_count(
+        CobaltMetricId::RxTxFrameBytes as u32,
+        CLIENT_MLME_RX_FRAME_BYTES_INDEX,
+        get_diff(
+            last_stats.rx_frame.in_bytes.count,
+            current_stats.rx_frame.in_bytes.count,
+        ) as i64,
+    );
+    sender.log_event_count(
+        CobaltMetricId::RxTxFrameBytes as u32,
+        CLIENT_MLME_TX_FRAME_BYTES_INDEX,
+        get_diff(
+            last_stats.tx_frame.out_bytes.count,
+            current_stats.tx_frame.out_bytes.count,
+        ) as i64,
     );
 }
 
