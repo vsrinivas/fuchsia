@@ -29,7 +29,7 @@ public:
 private:
     PowerWellRef(Power* power, PowerWell power_well);
 
-    Power* power_;
+    Power* power_ = nullptr;
     PowerWell power_well_;
 
     friend Power;
