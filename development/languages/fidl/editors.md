@@ -21,7 +21,8 @@ Repositories** and search for **FIDL**.
 [Sublime syntax highlighting support can be found here](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/tools/sublime).
 
 To install, go to **Sublime Text > Preferences > Browse Packages** and copy the
-file ``FIDL.sublime-syntax`` into the **User** package.
+files ``FIDL.sublime-syntax``, and ``Comments (FIDL).tmPreferences`` into the
+**User** package.
 
 ## Vim
 
