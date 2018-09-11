@@ -16,7 +16,7 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_i2c_impl_get_max_transfer_size, I2cImpl
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_i2c_impl_set_bitrate, I2cImplSetBitRate,
         zx_status_t (C::*)(uint32_t, uint32_t));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_i2c_impl_transact, I2cImplTransact,
-        zx_status_t (C::*)(uint32_t, size_t*));
+        zx_status_t (C::*)(uint32_t, uint16_t, i2c_impl_op_t*, size_t));
 
 template <typename D>
 constexpr void CheckI2cImplProtocolSubclass() {

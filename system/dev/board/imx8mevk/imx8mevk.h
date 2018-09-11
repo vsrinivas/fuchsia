@@ -32,5 +32,6 @@ typedef struct {
 
 zx_status_t imx8m_gpio_init(imx8mevk_bus_t* bus);
 zx_status_t imx_usb_init(imx8mevk_bus_t* bus);
+zx_status_t imx_i2c_init(imx8mevk_bus_t* bus);
 zx_status_t imx_gpu_init(imx8mevk_bus_t* bus);
 zx_status_t imx8m_sdhci_init(imx8mevk_bus_t* bus);

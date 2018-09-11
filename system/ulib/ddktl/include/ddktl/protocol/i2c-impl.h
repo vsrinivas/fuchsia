@@ -69,7 +69,7 @@ private:
         return static_cast<D*>(ctx)->I2cImplGetMaxTransferSize(bus_id, out_size);
     }
     static zx_status_t I2cImplSetBitRate(void* ctx, uint32_t bus_id, uint32_t bitrate) {
-        return static_cast<D*>(ctx)->I2cImplGetMaxTransferSize(bus_id, bitrate);
+        return static_cast<D*>(ctx)->I2cImplSetBitRate(bus_id, bitrate);
     }
     static zx_status_t I2cImplTransact(void* ctx, uint32_t bus_id, uint16_t address,
                                        i2c_impl_op_t* ops, size_t count) {

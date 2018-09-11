@@ -25,6 +25,14 @@
 #define IMX8M_VPU_LENGTH                                    MB(2)
 #define IMX8M_GIC_BASE                                      0x38800000
 #define IMX8M_GIC_LENGTH                                    MB(1)
+#define IMX8M_I2C1_BASE                                     0x30A20000
+#define IMX8M_I2C1_LENGTH                                   20
+#define IMX8M_I2C2_BASE                                     0x30A30000
+#define IMX8M_I2C2_LENGTH                                   20
+#define IMX8M_I2C3_BASE                                     0x30A40000
+#define IMX8M_I2C3_LENGTH                                   20
+#define IMX8M_I2C4_BASE                                     0x30A50000
+#define IMX8M_I2C4_LENGTH                                   20
 
 /* iMX8M AIPS (Peripheral) Memory */
 #define IMX8M_AIPS_LENGTH                                   KB(64)

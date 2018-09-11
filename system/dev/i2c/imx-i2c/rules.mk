@@ -9,22 +9,21 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/imx8mevk.c \
-    $(LOCAL_DIR)/imx8mevk-gpio.c \
-    $(LOCAL_DIR)/imx8mevk-gpu.c \
-    $(LOCAL_DIR)/imx8mevk-i2c.c \
-    $(LOCAL_DIR)/imx8mevk-usb.c \
-    $(LOCAL_DIR)/imx8mevk-sdhci.c \
-
+    $(LOCAL_DIR)/imx-i2c.c \
+    $(LOCAL_DIR)/imx-i2c.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/dev/lib/imx8m \
     system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/hwreg \
     system/ulib/sync \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/c \
-    system/ulib/zircon
+    system/ulib/zircon \
 
 include make/module.mk
