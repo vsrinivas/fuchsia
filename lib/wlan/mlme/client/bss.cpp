@@ -465,7 +465,7 @@ wlan_channel_t DeriveChanFromBssDesc(const wlan_mlme::BSSDescription &bss_desc,
         break;
     case wlan_mlme::SecChanOffset::SECONDARY_BELOW:
         chan.cbw = CBW40BELOW;
-    default:
+    default:  // SECONDARY_NONE or RESERVED
         chan.cbw = CBW20;
         break;
     }

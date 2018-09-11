@@ -46,11 +46,13 @@ executable("client_tests") {
   testonly = true
 
   sources = [
+    "bss_unittest.cpp",
     "client_unittest.cpp",
   ]
 
   deps = [
     ":test_main",
+    "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/mlme",
     "//third_party/googletest:gtest",
   ]
