@@ -12,6 +12,7 @@
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_register.h"
+#include "garnet/bin/zxdb/console/format_register_arm64.h"
 #include "garnet/bin/zxdb/console/format_register_x64.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -53,8 +54,8 @@ Err InternalFormatGeneric(const std::vector<Register>& registers,
     row.push_back(std::move(value_buffer));
   }
 
-  auto colspecs = std::vector<ColSpec>({ColSpec(Align::kLeft, 0, "Name"),
-                                        ColSpec(Align::kRight, 0, "Value")});
+  auto colspecs = std::vector<ColSpec>(
+      {ColSpec(Align::kLeft, 0, "Name"), ColSpec(Align::kRight, 0, "Value")});
   FormatTable(colspecs, rows, out);
   return Err();
 }
@@ -106,7 +107,13 @@ Err FormatCategory(debug_ipc::Arch arch, RegisterCategory::Type category,
   if (arch == debug_ipc::Arch::kX64) {
     if (FormatCategoryX64(category, registers, &category_out, &err)) {
       if (err.ok())
-        out->Append(category_out);
+        out->Append(std::move(category_out));
+      return err;
+    }
+  } else if (arch == debug_ipc::Arch::kArm64) {
+    if (FormatCategoryARM64(category, registers, &category_out, &err)) {
+      if (err.ok())
+        out->Append(std::move(category_out));
       return err;
     }
   }

@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/format_register_x64.h"
+#include "garnet/bin/zxdb/console/format_register_arm64.h"
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_formatters.h"
-#include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/strings/string_printf.h"
 
 using debug_ipc::RegisterCategory;
@@ -17,67 +16,62 @@ using debug_ipc::RegisterID;
 
 namespace zxdb {
 
-constexpr int kRflagsCarryFlagShift = 0;
-constexpr int kRflagsParityFlagShift = 2;
-constexpr int kRflagsAuxCarryFlagShift = 4;
-constexpr int kRflagsZeroFlagShift = 6;
-constexpr int kRflagsSignFlagShift = 7;
-constexpr int kRflagsTrapFlagShift = 8;
-constexpr int kRflagsInterruptEnableFlagShift = 9;
-constexpr int kRflagsDirectionFlagShift = 10;
-constexpr int kRflagsOverflowFlagShift = 11;
+#ifdef ENABLE_ARM64_SYSTEM_FLAGS
 
-#ifdef ENABLE_X64_SYSTEM_FLAGS
-
-constexpr int kRflagsIoPriviledgeLevelShift = 12;
-constexpr int kRflagsNestedTaskShift = 14;
-constexpr int kRflagsResumeFlagShift = 16;
-constexpr int kRflagsVirtual8086ModeShift = 17;
-constexpr int kRflagsAlignmentCheckShift = 18;
-constexpr int kRflagsVirtualInterruptFlagShift = 19;
-constexpr int kRflagsVirtualInterruptPendingShift = 20;
-constexpr int kRflagsIdFlagShift = 21;
+constexpr int kCpsrExceptionLevelShift = 0;
+constexpr int kCpsrFShift = 6;     // FIQ mask bit.
+constexpr int kCpsrIShift = 7;     // IRQ mask bit.
+constexpr int kCpsrAShift = 8;     // SError mask bit.
+constexpr int kCpsrDShift = 9;     // Debug exception mask bit.
+constexpr int kCpsrILShift = 20;   // Illegal Execution bit.
+constexpr int kCpsrSSShift = 21;   // Single Step.
+constexpr int kCpsrPANShift = 22;  // Privilege Access Never. (System).
+constexpr int kCpsrUAOShift = 23;  // Load/Store privilege access. (System).
 
 #endif
+
+constexpr int kCpsrVShift = 28;  // Overflow bit.
+constexpr int kCpsrCShift = 29;  // Carry bit.
+constexpr int kCpsrZShift = 30;  // Zero bit.
+constexpr int kCpsrNShift = 31;  // Negative bit.
 
 #define FLAG_VALUE(value, shift, mask) (uint8_t)((value >> shift) & mask)
 
 namespace {
 
-Err FormatRflags(const Register& rflags, TextForegroundColor color,
-                 OutputBuffer* out) {
-  uint64_t value = rflags.GetValue();
+Err FormatCPSR(const Register& cpsr, TextForegroundColor color,
+               OutputBuffer* out) {
+  uint64_t value = cpsr.GetValue();
+
+  // We format as table, but we only need one row.
   std::vector<std::vector<OutputBuffer>> rows(1);
   auto& row = rows.back();
 
+  // Register name.
   OutputBuffer buf;
-  buf = OutputBuffer(RegisterIDToString(rflags.id()));
+  buf = OutputBuffer(RegisterIDToString(cpsr.id()));
   buf.SetForegroundColor(color);
   row.push_back(std::move(buf));
 
+  // Value.
   buf = OutputBuffer();
   buf.SetForegroundColor(color);
   std::string hex_out;
-  Err err = GetLittleEndianHexOutput(rflags.data(), &hex_out, 4);
+  // Get the hex formatted value.
+  Err err = GetLittleEndianHexOutput(cpsr.data(), &hex_out, 4);
   if (!err.ok())
     return err;
   buf.Append(fxl::StringPrintf(" %s ", hex_out.data()));
+
+  // Get the custom formatting.
   buf.Append(fxl::StringPrintf(
-      "(CF=%d, PF=%d, AF=%d, ZF=%d, SF=%d, TF=%d, IF=%d, DF=%d, OF=%d)",
-      FLAG_VALUE(value, kRflagsCarryFlagShift, 0x1),
-      FLAG_VALUE(value, kRflagsParityFlagShift, 0x1),
-      FLAG_VALUE(value, kRflagsAuxCarryFlagShift, 0x1),
-      FLAG_VALUE(value, kRflagsZeroFlagShift, 0x1),
-      FLAG_VALUE(value, kRflagsSignFlagShift, 0x1),
-      FLAG_VALUE(value, kRflagsTrapFlagShift, 0x1),
-      FLAG_VALUE(value, kRflagsInterruptEnableFlagShift, 0x1),
-      FLAG_VALUE(value, kRflagsDirectionFlagShift, 0x1),
-      FLAG_VALUE(value, kRflagsOverflowFlagShift, 0x1)));
+      "(V = %d, C = %d, Z = %d, N = %d)", FLAG_VALUE(value, kCpsrVShift, 0x1),
+      FLAG_VALUE(value, kCpsrCShift, 0x1), FLAG_VALUE(value, kCpsrZShift, 0x1),
+      FLAG_VALUE(value, kCpsrNShift, 0x1)));
   row.push_back(std::move(buf));
 
-  // TODO(donosoc): Do the correct formatting when we enable
-  //                ENABLE_X64_SYSTEM_FLAGS
-
+  // TODO(donosoc): Implement system formatting when we enable
+  //                ENABLE_ARM64_SYSTEM_FLAGS
   auto colspecs = std::vector<ColSpec>(2);
   FormatTable(std::move(colspecs), rows, out);
   return Err();
@@ -99,25 +93,22 @@ Err FormatGenericRow(const Register& reg, TextForegroundColor color,
   return Err();
 }
 
-// Using a vector of output buffers make it easy to not have to worry about
-// appending new lines per each new section.
 Err FormatGeneralRegisters(const std::vector<Register>& registers,
                            OutputBuffer* out) {
   // Title.
   out->Append(OutputBuffer(Syntax::kHeading, "General Purpose Registers\n"));
 
-  // We need it separate to maintain the indentation.
-  OutputBuffer rflags_out;
+  OutputBuffer cpsr_out;
   std::vector<std::vector<OutputBuffer>> rows;
   for (const Register& reg : registers) {
+    // Different row colors for easier reading.
     auto color = rows.size() % 2 == 0 ? TextForegroundColor::kDefault
                                       : TextForegroundColor::kLightGray;
-    // We still want to output the hex value.
     Err err;
-    if (reg.id() == RegisterID::kX64_rflags) {
-      err = FormatRflags(reg, color, &rflags_out);
+    if (reg.id() == RegisterID::kARMv8_cpsr) {
+      err = FormatCPSR(reg, color, &cpsr_out);
     } else {
-      // Other register get the default value treatment.
+      // Other registers get default treatment.
       rows.emplace_back();
       err = FormatGenericRow(reg, color, &rows.back());
     }
@@ -125,27 +116,31 @@ Err FormatGeneralRegisters(const std::vector<Register>& registers,
     if (!err.ok())
       return err;
   }
+
   auto colspecs = std::vector<ColSpec>(
       {ColSpec(Align::kLeft, 0, "Name"), ColSpec(Align::kRight, 0, "Value")});
   if (!rows.empty()) {
     FormatTable(colspecs, rows, out);
     // Separate rflags if appropriate.
-    if (!rflags_out.empty())
+    if (!cpsr_out.empty())
       out->Append("\n");
   }
-  if (!rflags_out.empty())
-    out->Append(std::move(rflags_out));
+  if (!cpsr_out.empty())
+    out->Append(std::move(cpsr_out));
+  return Err();
+
   return Err();
 }
 
 }  // namespace
 
-bool FormatCategoryX64(debug_ipc::RegisterCategory::Type category,
-                       const std::vector<Register>& registers,
-                       OutputBuffer* out, Err* err) {
-  // For now, we only specialize the general registers.
+bool FormatCategoryARM64(debug_ipc::RegisterCategory::Type category,
+                         const std::vector<Register>& registers,
+                         OutputBuffer* out, Err* err) {
+  // Only general registers specialized for now.
   if (category != RegisterCategory::Type::kGeneral)
     return false;
+
   *err = FormatGeneralRegisters(registers, out);
   return true;
 }

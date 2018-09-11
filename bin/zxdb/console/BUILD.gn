@@ -27,6 +27,8 @@ static_library("console") {
     "format_frame.h",
     "format_register.cc",
     "format_register.h",
+    "format_register_arm64.cc",
+    "format_register_arm64.h",
     "format_register_x64.cc",
     "format_register_x64.h",
     "format_table.cc",

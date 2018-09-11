@@ -283,8 +283,8 @@ TEST(FormatRegisters, RFlagsValues) {
       FilterRegisters(register_set, &filtered_set, cats_to_show, "rflags");
   ASSERT_FALSE(err.has_error()) << err.msg();
 
-  auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
   // filtered_set now holds a pointer to rflags that we can change.
+  auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
   SetRegisterValue(&reg, 0b1110100110010101010101);
 
   OutputBuffer out;
@@ -294,6 +294,32 @@ TEST(FormatRegisters, RFlagsValues) {
   EXPECT_EQ(
       "General Purpose Registers\n"
       "rflags  003a6555 (CF=1, PF=1, AF=1, ZF=1, SF=0, TF=1, IF=0, DF=1, OF=0)\n"
+      "\n",
+      out.AsString());
+}
+
+TEST(FormatRegisters, CPSRValues) {
+  RegisterSet register_set;
+  auto& cat = register_set.category_map()[RegisterCategory::Type::kGeneral];
+  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_cpsr, 0));
+
+  std::vector<RegisterCategory::Type> cats_to_show = {
+      RegisterCategory::Type::kGeneral};
+  FilteredRegisterSet filtered_set;
+  Err err = FilterRegisters(register_set, &filtered_set, cats_to_show, "cpsr");
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  // filtered_set now holds a pointer to rflags that we can change.
+  auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
+  SetRegisterValue(&reg, 0xA1234567);
+
+  OutputBuffer out;
+  err = FormatRegisters(debug_ipc::Arch::kArm64, filtered_set, &out);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  EXPECT_EQ(
+      "General Purpose Registers\n"
+      "cpsr  a1234567 (V = 0, C = 1, Z = 0, N = 1)\n"
       "\n",
       out.AsString());
 }
