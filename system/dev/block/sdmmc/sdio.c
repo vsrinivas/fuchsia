@@ -87,11 +87,12 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
     uint32_t func_blk_size = (dev->sdio_dev.funcs[fn_idx]).cur_blk_size;
     uint32_t rem_blocks = (func_blk_size == 0) ? 0 : (data_size / func_blk_size);
     uint32_t data_processed = 0;
-
     while (rem_blocks > 0) {
         uint32_t num_blocks = 1;
         if (mbs) {
-            uint32_t max_host_blocks = (dev->host_info.max_transfer_size) / (func_blk_size);
+            uint32_t max_host_blocks;
+            max_host_blocks = use_dma ? ((dev->host_info.max_transfer_size) / func_blk_size) :
+                                      ((dev->host_info.max_transfer_size_non_dma) / func_blk_size);
             // multiblock is supported, determine max number of blocks per cmd
             num_blocks = MIN(MIN(SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD, max_host_blocks), rem_blocks);
         }

@@ -1046,6 +1046,7 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
     } else {
         dev->info.max_transfer_size = AML_SD_EMMC_MAX_PIO_DATA_SIZE;
     }
+    dev->info.max_transfer_size_non_dma = AML_SD_EMMC_MAX_PIO_DATA_SIZE;
 
     dev->max_freq = dev_config.max_freq;
     dev->min_freq = dev_config.min_freq;

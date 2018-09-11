@@ -82,7 +82,7 @@ typedef struct sdmmc_host_info {
 #define SDMMC_HOST_CAP_AUTO_CMD12    (1 << 4)
     // Maximum data request size
     uint64_t max_transfer_size;
-
+    uint64_t max_transfer_size_non_dma;
     // Host specific preferences
     uint64_t prefs;
 #define SDMMC_HOST_PREFS_DISABLE_HS400         (1 << 0)

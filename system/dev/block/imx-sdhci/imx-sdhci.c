@@ -1207,6 +1207,7 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
         dev->dma_mode = false;
         dev->info.max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED;
 #endif
+    dev->info.max_transfer_size_non_dma = BLOCK_MAX_TRANSFER_UNBOUNDED;
 
     // Disable all interrupts
     dev->regs->int_signal_en = 0;

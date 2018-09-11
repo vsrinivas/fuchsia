@@ -972,6 +972,7 @@ static zx_status_t sdhci_controller_init(sdhci_device_t* dev) {
         // no maximum if only PIO supported
         dev->info.max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED;
     }
+    dev->info.max_transfer_size_non_dma = BLOCK_MAX_TRANSFER_UNBOUNDED;
 
     // Configure the clock.
     ctrl1 = dev->regs->ctrl1;
