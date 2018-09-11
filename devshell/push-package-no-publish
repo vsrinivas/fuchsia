@@ -54,6 +54,7 @@ function main {
   # The target doesn't support expansions, and a local expansion makes a command
   # too long to spawn, so sending a loop makes things work ok.
   local cmd="
+    set -e
     for c in $pkgs; do
       amber_ctl get_up -n \"\${c}\";
       manifest_path=\"/pkgfs/packages/\${c}/0/meta/module.json\";
