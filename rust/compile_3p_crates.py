@@ -69,6 +69,9 @@ def main():
     parser.add_argument("--clang_prefix",
                         help="Path to the clang prefix",
                         required=True)
+    parser.add_argument("--mmacosx-version-min",
+                        help="Select macosx framework version",
+                        required=False)
     # TODO(cramertj) make these args required when the third_party/rust-crates change lands
     parser.add_argument("--sysroot",
                         help="Path to the sysroot",
@@ -91,17 +94,24 @@ def main():
     env["CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER"] = clang_c_compiler
     env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler
     env["CARGO_TARGET_%s_LINKER" % args.target.replace("-", "_").upper()] = clang_c_compiler
+
+    mac_link_arg = ""
+    if args.mmacosx_version_min:
+        mac_link_arg = " -Clink-arg=-mmacosx-version-min=%s" % args.mmacosx_version_min
+
     if args.sysroot and args.shared_libs_root:
         env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
             "-Clink-arg=--target=" + args.target +
             " -Copt-level=" + args.opt_level +
             " -Clink-arg=--sysroot=" + args.sysroot +
-            " -Lnative=" + args.shared_libs_root
+            " -Lnative=" + args.shared_libs_root +
+            mac_link_arg
         )
     else:
         env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
             "-Clink-arg=--target=" + args.target +
-            " -Copt-level=" + args.opt_level
+            " -Copt-level=" + args.opt_level +
+            mac_link_arg
         )
     env["CARGO_TARGET_DIR"] = args.out_dir
     env["CARGO_BUILD_DEP_INFO_BASEDIR"] = args.out_dir
