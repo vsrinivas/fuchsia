@@ -372,12 +372,13 @@ static usb_speed_t usb_interface_get_speed(void* ctx) {
     return intf->device->speed;
 }
 
-static zx_status_t usb_interface_set_interface(void* ctx, int interface_number, int alt_setting) {
+static zx_status_t usb_interface_set_interface(void* ctx, uint8_t interface_number,
+                                               uint8_t alt_setting) {
     usb_interface_t* intf = ctx;
     return usb_device_set_interface(intf->device, interface_number, alt_setting);
 }
 
-static zx_status_t usb_interface_set_configuration(void* ctx, int configuration) {
+static zx_status_t usb_interface_set_configuration(void* ctx, uint8_t configuration) {
     usb_interface_t* intf = ctx;
     return usb_device_set_configuration(intf->device, configuration);
 }

@@ -143,8 +143,8 @@ typedef struct usb_protocol_ops {
     // queues a USB request
     void (*request_queue)(void* ctx, usb_request_t* usb_request);
     usb_speed_t (*get_speed)(void* ctx);
-    zx_status_t (*set_interface)(void* ctx, int interface_number, int alt_setting);
-    zx_status_t (*set_configuration)(void* ctx, int configuration);
+    zx_status_t (*set_interface)(void* ctx, uint8_t interface_number, uint8_t alt_setting);
+    zx_status_t (*set_configuration)(void* ctx, uint8_t configuration);
     zx_status_t (*reset_endpoint)(void* ctx, uint8_t ep_address);
     size_t (*get_max_transfer_size)(void* ctx, uint8_t ep_address);
     uint32_t (*get_device_id)(void* ctx);
@@ -272,12 +272,12 @@ static inline usb_speed_t usb_get_speed(const usb_protocol_t* usb) {
     return usb->ops->get_speed(usb->ctx);
 }
 
-static inline zx_status_t usb_set_interface(const usb_protocol_t* usb, int interface_number,
-                                            int alt_setting) {
+static inline zx_status_t usb_set_interface(const usb_protocol_t* usb, uint8_t interface_number,
+                                            uint8_t alt_setting) {
     return usb->ops->set_interface(usb->ctx, interface_number, alt_setting);
 }
 
-static inline zx_status_t usb_set_configuration(const usb_protocol_t* usb, int configuration) {
+static inline zx_status_t usb_set_configuration(const usb_protocol_t* usb, uint8_t configuration) {
     return usb->ops->set_configuration(usb->ctx, configuration);
 }
 
