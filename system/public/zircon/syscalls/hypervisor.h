@@ -12,16 +12,16 @@
 __BEGIN_CDECLS
 
 // clang-format off
-enum {
-    ZX_GUEST_TRAP_BELL  = 0,
-    ZX_GUEST_TRAP_MEM   = 1,
-    ZX_GUEST_TRAP_IO    = 2,
-};
+typedef uint32_t zx_guest_trap_t;
 
-enum {
-    ZX_VCPU_STATE       = 0,
-    ZX_VCPU_IO          = 1,
-};
+#define ZX_GUEST_TRAP_BELL ((zx_guest_trap_t) 0u)
+#define ZX_GUEST_TRAP_MEM  ((zx_guest_trap_t) 1u)
+#define ZX_GUEST_TRAP_IO   ((zx_guest_trap_t) 2u)
+
+typedef uint32_t zx_vcpu_t;
+
+#define ZX_VCPU_STATE ((zx_vcpu_t) 0u)
+#define ZX_VCPU_IO    ((zx_vcpu_t) 1u)
 // clang-format on
 
 // Structure to read and write VCPU state.
