@@ -174,7 +174,7 @@ static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_
     if (st == ZX_OK) {
         // Grab the payload and copy the handle over if one was passed back to us
         *out_bar = resp.bar;
-        if (out_bar->type == PCI_BAR_TYPE_PIO) {
+        if (out_bar->type == ZX_PCI_BAR_TYPE_PIO) {
 #if __x86_64__
             // x86 PIO space access requires permission in the I/O bitmap
             // TODO: this is the last remaining use of get_root_resource in pci
@@ -213,7 +213,7 @@ static zx_status_t pci_op_map_bar(void* ctx,
     }
 
     // TODO(cja): PIO may be mappable on non-x86 architectures
-    if (bar.type == PCI_BAR_TYPE_PIO || bar.handle == ZX_HANDLE_INVALID) {
+    if (bar.type == ZX_PCI_BAR_TYPE_PIO || bar.handle == ZX_HANDLE_INVALID) {
         return ZX_ERR_WRONG_TYPE;
     }
 

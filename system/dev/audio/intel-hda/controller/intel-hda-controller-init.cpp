@@ -197,9 +197,9 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
         return res;
     }
 
-    if (bar_info.type != PCI_BAR_TYPE_MMIO) {
+    if (bar_info.type != ZX_PCI_BAR_TYPE_MMIO) {
         LOG(ERROR, "Bad register window type (expected %u got %u)\n",
-                PCI_BAR_TYPE_MMIO, bar_info.type);
+                ZX_PCI_BAR_TYPE_MMIO, bar_info.type);
         return ZX_ERR_INTERNAL;
     }
 

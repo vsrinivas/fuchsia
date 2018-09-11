@@ -47,7 +47,7 @@ zx_status_t PciLegacyBackend::Init() {
         return status;
     }
 
-    if (bar0.type != PCI_BAR_TYPE_PIO) {
+    if (bar0.type != ZX_PCI_BAR_TYPE_PIO) {
         return ZX_ERR_WRONG_TYPE;
     }
 

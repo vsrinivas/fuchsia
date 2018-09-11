@@ -245,9 +245,9 @@ zx_status_t IntelHDADSP::GetMmio(zx_handle_t* out_vmo, size_t* out_size) {
         return res;
     }
 
-    if (bar_info.type != PCI_BAR_TYPE_MMIO) {
+    if (bar_info.type != ZX_PCI_BAR_TYPE_MMIO) {
         LOG(ERROR, "Bad register window type (expected %u got %u)\n",
-                PCI_BAR_TYPE_MMIO, bar_info.type);
+                ZX_PCI_BAR_TYPE_MMIO, bar_info.type);
         return ZX_ERR_INTERNAL;
     }
 

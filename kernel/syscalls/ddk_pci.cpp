@@ -503,7 +503,7 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle,
     // back to the caller as a VMO.
     zx_pci_bar_t bar = {};
     bar.size = info->size;
-    bar.type = (info->is_mmio) ? PCI_BAR_TYPE_MMIO : PCI_BAR_TYPE_PIO;
+    bar.type = (info->is_mmio) ? ZX_PCI_BAR_TYPE_MMIO : ZX_PCI_BAR_TYPE_PIO;
 
     // MMIO based bars are passed back using a VMO. If we end up creating one here
     // without errors then later a handle will be passed back to the caller.

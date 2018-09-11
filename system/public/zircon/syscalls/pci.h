@@ -17,11 +17,10 @@ __BEGIN_CDECLS
 // in the case of an MMIO bar, as well as a PIO addr/size pair for the memory region
 // to access if a PIO bar. In the latter case, the protocol will acquire the appropriate
 // permissions for the process to write to that PIO region on that architecture.
-typedef enum {
-    PCI_BAR_TYPE_UNUSED = 0,
-    PCI_BAR_TYPE_MMIO,
-    PCI_BAR_TYPE_PIO,
-} zx_pci_bar_types_t;
+typedef uint32_t zx_pci_bar_types_t;
+#define ZX_PCI_BAR_TYPE_UNUSED ((zx_pci_bar_types_t) 0u)
+#define ZX_PCI_BAR_TYPE_MMIO ((zx_pci_bar_types_t) 1u)
+#define ZX_PCI_BAR_TYPE_PIO ((zx_pci_bar_types_t) 2u)
 
 // TODO(cja): This makes some assumptions that anything in an arch's PIO region
 // is going to be defined as a base address and size. This will need to be
@@ -106,11 +105,10 @@ typedef struct zx_pci_init_arg {
                                   sizeof(zx_pci_init_arg_t))
 
 // Enum used to select PCIe IRQ modes
-typedef enum {
-    ZX_PCIE_IRQ_MODE_DISABLED = 0,
-    ZX_PCIE_IRQ_MODE_LEGACY   = 1,
-    ZX_PCIE_IRQ_MODE_MSI      = 2,
-    ZX_PCIE_IRQ_MODE_MSI_X    = 3,
-} zx_pci_irq_mode_t;
+typedef uint32_t zx_pci_irq_mode_t;
+#define ZX_PCIE_IRQ_MODE_DISABLED ((zx_pci_irq_mode_t) 0u)
+#define ZX_PCIE_IRQ_MODE_LEGACY ((zx_pci_irq_mode_t) 1u)
+#define ZX_PCIE_IRQ_MODE_MSI ((zx_pci_irq_mode_t) 2u)
+#define ZX_PCIE_IRQ_MODE_MSI_X ((zx_pci_irq_mode_t) 3u)
 
 __END_CDECLS
