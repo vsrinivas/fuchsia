@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 
 #include "gtest/gtest.h"
@@ -136,7 +137,7 @@ class L2CAP_SocketChannelRelayLifetimeTest
     return was_deactivation_callback_invoked_;
   }
   internal::SocketChannelRelay* relay() {
-    FXL_DCHECK(relay_);
+    ZX_DEBUG_ASSERT(relay_);
     return relay_.get();
   }
   void DestroyRelay() { relay_ = nullptr; }

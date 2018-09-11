@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <lib/async/default.h>
+#include <zircon/assert.h>
 
 #include "lib/fxl/logging.h"
 
@@ -24,9 +25,9 @@ SocketChannelRelay::SocketChannelRelay(zx::socket socket,
       dispatcher_(async_get_default_dispatcher()),
       deactivation_cb_(std::move(deactivation_cb)),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(dispatcher_);
-  FXL_DCHECK(socket_);
-  FXL_DCHECK(channel_);
+  ZX_DEBUG_ASSERT(dispatcher_);
+  ZX_DEBUG_ASSERT(socket_);
+  ZX_DEBUG_ASSERT(channel_);
 
   // Note: binding |this| is safe, as BindWait() wraps the bound method inside
   // of a lambda which verifies that |this| hasn't been destroyed.
@@ -39,7 +40,7 @@ SocketChannelRelay::SocketChannelRelay(zx::socket socket,
 }
 
 SocketChannelRelay::~SocketChannelRelay() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   if (state_ != RelayState::kDeactivated) {
     FXL_VLOG(5) << "l2cap: Deactivating relay for channel " << channel_->id()
@@ -49,7 +50,7 @@ SocketChannelRelay::~SocketChannelRelay() {
 }
 
 bool SocketChannelRelay::Activate() {
-  FXL_DCHECK(state_ == RelayState::kActivating);
+  ZX_DEBUG_ASSERT(state_ == RelayState::kActivating);
 
   // Note: we assume that BeginWait() does not synchronously dispatch any
   // events. The wait handler will assert otherwise.
@@ -94,7 +95,7 @@ bool SocketChannelRelay::Activate() {
 }
 
 void SocketChannelRelay::Deactivate() {
-  FXL_DCHECK(state_ != RelayState::kDeactivated);
+  ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivated);
 
   state_ = RelayState::kDeactivating;
   if (!socket_write_queue_.empty()) {
@@ -107,8 +108,8 @@ void SocketChannelRelay::Deactivate() {
 
   // We assume that UnbindAndCancelWait() will not trigger a re-entrant call
   // into Deactivate(). And the RelayIsDestroyedWhenDispatcherIsShutDown test
-  // verifies that to be the case. (If we had re-entrant calls, a FXL_DCHECK()
-  // in the lambda bound by BindWait() would cause an abort.)
+  // verifies that to be the case. (If we had re-entrant calls, a
+  // ZX_DEBUG_ASSERT() in the lambda bound by BindWait() would cause an abort.)
   UnbindAndCancelWait(&sock_read_waiter_);
   UnbindAndCancelWait(&sock_write_waiter_);
   UnbindAndCancelWait(&sock_close_waiter_);
@@ -131,7 +132,7 @@ void SocketChannelRelay::DeactivateAndRequestDestruction() {
 }
 
 void SocketChannelRelay::OnSocketReadable(zx_status_t status) {
-  FXL_DCHECK(state_ == RelayState::kActivated);
+  ZX_DEBUG_ASSERT(state_ == RelayState::kActivated);
   if (!CopyFromSocketToChannel() ||
       !BeginWait("socket read waiter", &sock_read_waiter_)) {
     DeactivateAndRequestDestruction();
@@ -139,21 +140,21 @@ void SocketChannelRelay::OnSocketReadable(zx_status_t status) {
 }
 
 void SocketChannelRelay::OnSocketWritable(zx_status_t status) {
-  FXL_DCHECK(state_ == RelayState::kActivated);
-  FXL_DCHECK(!socket_write_queue_.empty());
+  ZX_DEBUG_ASSERT(state_ == RelayState::kActivated);
+  ZX_DEBUG_ASSERT(!socket_write_queue_.empty());
   ServiceSocketWriteQueue();
 }
 
 void SocketChannelRelay::OnSocketClosed(zx_status_t status) {
-  FXL_DCHECK(state_ == RelayState::kActivated);
+  ZX_DEBUG_ASSERT(state_ == RelayState::kActivated);
   DeactivateAndRequestDestruction();
 }
 
 void SocketChannelRelay::OnChannelDataReceived(SDU sdu) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   // Note: kActivating is deliberately permitted, as ChannelImpl::Activate()
   // will synchronously deliver any queued frames.
-  FXL_DCHECK(state_ != RelayState::kDeactivated);
+  ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivated);
 
   if (state_ == RelayState::kDeactivating) {
     FXL_LOG(INFO) << "l2cap: Ignorning " << __func__
@@ -167,9 +168,9 @@ void SocketChannelRelay::OnChannelDataReceived(SDU sdu) {
 }
 
 void SocketChannelRelay::OnChannelClosed() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(state_ != RelayState::kActivating);
-  FXL_DCHECK(state_ != RelayState::kDeactivated);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(state_ != RelayState::kActivating);
+  ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivated);
 
   if (state_ == RelayState::kDeactivating) {
     FXL_LOG(INFO) << "l2cap: Ignoring " << __func__ << " on socket for channel "
@@ -177,7 +178,7 @@ void SocketChannelRelay::OnChannelClosed() {
     return;
   }
 
-  FXL_DCHECK(state_ == RelayState::kActivated);
+  ZX_DEBUG_ASSERT(state_ == RelayState::kActivated);
   if (!socket_write_queue_.empty()) {
     ServiceSocketWriteQueue();
   }
@@ -198,14 +199,14 @@ bool SocketChannelRelay::CopyFromSocketToChannel() {
   do {
     size_t n_bytes_read = 0;
     read_res = socket_.read(0, read_buf, read_buf_size, &n_bytes_read);
-    FXL_DCHECK(read_res == ZX_OK || read_res == ZX_ERR_SHOULD_WAIT ||
-               read_res == ZX_ERR_PEER_CLOSED)
-        << ": " << zx_status_get_string(read_res);
-    FXL_DCHECK(n_bytes_read <= read_buf_size)
-        << "(n_bytes_read=" << n_bytes_read
-        << ", read_buf_size=" << read_buf_size << ")";
-
+    ZX_DEBUG_ASSERT_MSG(read_res == ZX_OK || read_res == ZX_ERR_SHOULD_WAIT ||
+                            read_res == ZX_ERR_PEER_CLOSED,
+                        "%s", zx_status_get_string(read_res));
+    ZX_DEBUG_ASSERT_MSG(n_bytes_read <= read_buf_size,
+                        "(n_bytes_read=%zu, read_buf_size=%zu)", n_bytes_read,
+                        read_buf_size);
     if (read_res == ZX_ERR_SHOULD_WAIT) {
+      ZX_DEBUG_ASSERT(n_bytes_read == 0);
       FXL_VLOG(5) << "l2cap: Failed to read from socket for channel "
                   << channel_->id() << ": " << zx_status_get_string(read_res);
       return true;
@@ -217,7 +218,7 @@ bool SocketChannelRelay::CopyFromSocketToChannel() {
       return false;
     }
 
-    FXL_DCHECK(n_bytes_read > 0);
+    ZX_DEBUG_ASSERT(n_bytes_read > 0);
     if (n_bytes_read > channel_->tx_mtu()) {
       return false;
     }
@@ -244,9 +245,9 @@ void SocketChannelRelay::ServiceSocketWriteQueue() {
   // shouldn't be an issue. However, latency might be.
   zx_status_t write_res;
   do {
-    FXL_DCHECK(!socket_write_queue_.empty());
-    FXL_DCHECK(socket_write_queue_.front().is_valid());
-    FXL_DCHECK(socket_write_queue_.front().length());
+    ZX_DEBUG_ASSERT(!socket_write_queue_.empty());
+    ZX_DEBUG_ASSERT(socket_write_queue_.front().is_valid());
+    ZX_DEBUG_ASSERT(socket_write_queue_.front().length());
 
     const SDU& sdu = socket_write_queue_.front();
     PDU::Reader(&sdu).ReadNext(
@@ -254,17 +255,18 @@ void SocketChannelRelay::ServiceSocketWriteQueue() {
           size_t n_bytes_written = 0;
           write_res =
               socket_.write(0, pdu.data(), pdu.size(), &n_bytes_written);
-          FXL_DCHECK(write_res == ZX_OK || write_res == ZX_ERR_SHOULD_WAIT ||
-                     write_res == ZX_ERR_PEER_CLOSED)
-              << ": " << zx_status_get_string(write_res);
+          ZX_DEBUG_ASSERT_MSG(write_res == ZX_OK ||
+                                  write_res == ZX_ERR_SHOULD_WAIT ||
+                                  write_res == ZX_ERR_PEER_CLOSED,
+                              "%s", zx_status_get_string(write_res));
           if (write_res != ZX_OK) {
-            FXL_DCHECK(n_bytes_written == 0);
+            ZX_DEBUG_ASSERT(n_bytes_written == 0);
             FXL_VLOG(5) << "l2cap: Failed to write " << pdu.size()
                         << " bytes to socket for channel " << channel_->id()
                         << ": " << zx_status_get_string(write_res);
             return;
           }
-          FXL_DCHECK(n_bytes_written == pdu.size());
+          ZX_DEBUG_ASSERT(n_bytes_written == pdu.size());
         });
     if (write_res == ZX_OK) {
       // Subtle: We can't do this inside the lambda, because ReadNext requires
@@ -288,17 +290,17 @@ void SocketChannelRelay::BindWait(zx_signals_t trigger, const char* wait_name,
   wait->set_trigger(trigger);
   wait->set_handler([self = weak_ptr_factory_.GetWeakPtr(),
                      channel_id = channel_->id(), wait_name,
-                     expected_wait = wait,
-                     dcheck_suffix = fxl::StringPrintf(
-                         "(%s, channel_id=%d)", wait_name, channel_->id()),
-                     handler = std::move(handler)](
+                     expected_wait = wait, handler = std::move(handler)](
                         async_dispatcher_t* actual_dispatcher,
                         async::WaitBase* actual_wait, zx_status_t status,
                         const zx_packet_signal_t* signal) {
-    FXL_DCHECK(self) << dcheck_suffix;
-    FXL_DCHECK(actual_dispatcher == self->dispatcher_) << dcheck_suffix;
-    FXL_DCHECK(actual_wait == expected_wait) << dcheck_suffix;
-    FXL_DCHECK(status == ZX_OK || status == ZX_ERR_CANCELED) << dcheck_suffix;
+    ZX_DEBUG_ASSERT_MSG(self, "(%s, channel_id=%u)", wait_name, channel_id);
+    ZX_DEBUG_ASSERT_MSG(actual_dispatcher == self->dispatcher_,
+                        "(%s, channel_id=%u)", wait_name, channel_id);
+    ZX_DEBUG_ASSERT_MSG(actual_wait == expected_wait, "(%s, channel_id=%u)",
+                        wait_name, channel_id);
+    ZX_DEBUG_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_CANCELED,
+                        "(%s, channel_id=%u)", wait_name, channel_id);
 
     if (status == ZX_ERR_CANCELED) {  // Dispatcher is shutting down.
       FXL_VLOG(1) << "l2cap: " << wait_name
@@ -307,12 +309,15 @@ void SocketChannelRelay::BindWait(zx_signals_t trigger, const char* wait_name,
       return;
     }
 
-    FXL_DCHECK(signal) << dcheck_suffix;
-    FXL_DCHECK(signal->trigger == expected_wait->trigger()) << dcheck_suffix;
-    FXL_DCHECK(self->thread_checker_.IsCreationThreadCurrent())
-        << dcheck_suffix;
-    FXL_DCHECK(self->state_ != RelayState::kActivating) << dcheck_suffix;
-    FXL_DCHECK(self->state_ != RelayState::kDeactivated) << dcheck_suffix;
+    ZX_DEBUG_ASSERT_MSG(signal, "(%s, channel_id=%u)", wait_name, channel_id);
+    ZX_DEBUG_ASSERT_MSG(signal->trigger == expected_wait->trigger(),
+                        "(%s, channel_id=%u)", wait_name, channel_id);
+    ZX_DEBUG_ASSERT_MSG(self->thread_checker_.IsCreationThreadCurrent(),
+                        "(%s, channel_id=%u)", wait_name, channel_id);
+    ZX_DEBUG_ASSERT_MSG(self->state_ != RelayState::kActivating,
+                        "(%s, channel_id=%u)", wait_name, channel_id);
+    ZX_DEBUG_ASSERT_MSG(self->state_ != RelayState::kDeactivated,
+                        "(%s, channel_id=%u)", wait_name, channel_id);
 
     if (self->state_ == RelayState::kDeactivating) {
       FXL_LOG(INFO) << "l2cap: Ignoring " << wait_name
@@ -325,15 +330,15 @@ void SocketChannelRelay::BindWait(zx_signals_t trigger, const char* wait_name,
 }
 
 bool SocketChannelRelay::BeginWait(const char* wait_name, async::Wait* wait) {
-  FXL_DCHECK(state_ != RelayState::kDeactivating);
-  FXL_DCHECK(state_ != RelayState::kDeactivated);
+  ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivating);
+  ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivated);
 
   if (wait->is_pending()) {
     return true;
   }
 
   zx_status_t wait_res = wait->Begin(dispatcher_);
-  FXL_DCHECK(wait_res == ZX_OK || wait_res == ZX_ERR_BAD_STATE);
+  ZX_DEBUG_ASSERT(wait_res == ZX_OK || wait_res == ZX_ERR_BAD_STATE);
 
   if (wait_res != ZX_OK) {
     FXL_LOG(ERROR) << "l2cap: Failed to enable waiting on " << wait_name << ": "
@@ -345,13 +350,13 @@ bool SocketChannelRelay::BeginWait(const char* wait_name, async::Wait* wait) {
 }
 
 void SocketChannelRelay::UnbindAndCancelWait(async::Wait* wait) {
-  FXL_DCHECK(state_ != RelayState::kActivating);
-  FXL_DCHECK(state_ != RelayState::kDeactivated);
+  ZX_DEBUG_ASSERT(state_ != RelayState::kActivating);
+  ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivated);
   zx_status_t cancel_res;
   wait->set_handler(nullptr);
   cancel_res = wait->Cancel();
-  FXL_DCHECK(cancel_res == ZX_OK || cancel_res == ZX_ERR_NOT_FOUND)
-      << "Cancel failed: " << zx_status_get_string(cancel_res);
+  ZX_DEBUG_ASSERT_MSG(cancel_res == ZX_OK || cancel_res == ZX_ERR_NOT_FOUND,
+                      "Cancel failed: %s", zx_status_get_string(cancel_res));
 }
 
 }  // namespace internal

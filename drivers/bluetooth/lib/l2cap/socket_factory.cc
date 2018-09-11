@@ -4,6 +4,7 @@
 
 #include "socket_factory.h"
 
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include "lib/fxl/logging.h"
@@ -16,12 +17,12 @@ namespace l2cap {
 SocketFactory::SocketFactory() : weak_ptr_factory_(this) {}
 
 SocketFactory::~SocketFactory() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 }
 
 zx::socket SocketFactory::MakeSocketForChannel(fbl::RefPtr<Channel> channel) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(channel);
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(channel);
 
   if (channel_to_relay_.find(channel->id()) != channel_to_relay_.end()) {
     FXL_LOG(ERROR) << "l2cap: " << __func__ << ": channel " << channel->id()
@@ -43,10 +44,10 @@ zx::socket SocketFactory::MakeSocketForChannel(fbl::RefPtr<Channel> channel) {
       internal::SocketChannelRelay::DeactivationCallback(
           [self =
                weak_ptr_factory_.GetWeakPtr()](ChannelId channel_id) mutable {
-            FXL_DCHECK(self) << "(channel_id=" << channel_id << ")";
-            auto n_erased = self->channel_to_relay_.erase(channel_id);
-            FXL_DCHECK(n_erased == 1) << "(n_erased=" << n_erased
-                                      << ", channel_id=" << channel_id << ")";
+            ZX_DEBUG_ASSERT_MSG(self, "(channel_id=%u)", channel_id);
+            size_t n_erased = self->channel_to_relay_.erase(channel_id);
+            ZX_DEBUG_ASSERT_MSG(n_erased == 1, "(n_erased=%zu, channel_id=%u)",
+                                n_erased, channel_id);
           }));
 
   // Note: Activate() may abort, if |channel| has been Activated() without going
