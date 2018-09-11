@@ -702,7 +702,11 @@ func (f *TUFSource) Close() {
 
 func (f *TUFSource) closeIdleConnections() {
 	if f.httpClient != nil {
-		if transport, ok := f.httpClient.Transport.(*http.Transport); ok {
+		transport := f.httpClient.Transport
+		if transport == nil {
+			transport = http.DefaultTransport
+		}
+		if transport, ok := transport.(*http.Transport); ok {
 			transport.CloseIdleConnections()
 		}
 	}
