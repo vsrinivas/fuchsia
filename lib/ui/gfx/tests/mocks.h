@@ -17,17 +17,19 @@ namespace test {
 
 class SessionForTest : public Session {
  public:
-  SessionForTest(SessionId id, Engine* engine, EventReporter* event_reporter,
-                 ErrorReporter* error_reporter);
+  SessionForTest(SessionId id, Engine* engine,
+                 EventReporter* event_reporter = EventReporter::Default(),
+                 ErrorReporter* error_reporter = ErrorReporter::Default());
 
   virtual void TearDown() override;
 };
 
 class SessionHandlerForTest : public SessionHandler {
  public:
-  SessionHandlerForTest(CommandDispatcherContext context, Engine* engine,
-                        SessionId session_id, EventReporter* event_reporter,
-                        ErrorReporter* error_reporter);
+  SessionHandlerForTest(
+      CommandDispatcherContext context, Engine* engine, SessionId session_id,
+      EventReporter* event_reporter = EventReporter::Default(),
+      ErrorReporter* error_reporter = ErrorReporter::Default());
 
   // |scenic::CommandDispatcher|
   void DispatchCommand(fuchsia::ui::scenic::Command command) override;

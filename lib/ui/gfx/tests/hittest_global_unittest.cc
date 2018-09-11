@@ -13,6 +13,7 @@
 #include <lib/zx/eventpair.h>
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
+#include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/hit.h"
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
@@ -25,11 +26,9 @@
 #include "lib/escher/forward_declarations.h"
 #include "lib/fostr/fidl/fuchsia/ui/scenic/formatting.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/commands.h"
-
 
 // The test setup here is sufficiently different from hittest_unittest.cc to
 // merit its own file.  We access the global hit test through the compositor,
@@ -40,40 +39,20 @@ namespace gfx {
 namespace test {
 
 // Session wrapper that references a common Engine.
-// TODO(SCN-888): Try reduce boilerplate for testing.
-class CustomSession : public EventReporter, public ErrorReporter {
+//
+// This class calls Session::TearDown directly and so avoids pulling in
+// SessionHandler and SessionManager; these make a call to TearDown that's
+// triggered by Engine::RenderFrame, and we don't need that here.
+class CustomSession {
  public:
-  CustomSession(SessionId id, Engine* engine) : engine_(engine) {
-    FXL_CHECK(engine_);
-    session_ = fxl::MakeRefCounted<SessionForTest>(
-        id, engine_, /*EventReporter*/ this, /*ErrorReporter*/ this);
+  CustomSession(SessionId id, Engine* engine) {
+    FXL_CHECK(engine);
+    session_ = fxl::MakeRefCounted<SessionForTest>(id, engine);
   }
 
   ~CustomSession() {
     session_->TearDown();
     session_ = nullptr;
-    engine_ = nullptr;
-  }
-
-  // |EventReporter|
-  void EnqueueEvent(fuchsia::ui::gfx::Event event) override {
-    FXL_LOG(INFO) << event;
-  }
-
-  // |EventReporter|
-  void EnqueueEvent(fuchsia::ui::input::InputEvent event) override {
-    FXL_LOG(INFO) << event;
-  }
-
-  // |EventReporter|
-  void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override {
-    FXL_LOG(INFO) << unhandled;
-  }
-
-  // |ErrorReporter|
-  void ReportError(fxl::LogSeverity severity,
-                   std::string error_string) override {
-    FXL_LOG(FATAL) << "Unexpected error in CustomSession: " << error_string;
   }
 
   void Apply(::fuchsia::ui::gfx::Command command) {
@@ -82,7 +61,6 @@ class CustomSession : public EventReporter, public ErrorReporter {
   }
 
  private:
-  Engine* engine_;  // No ownership, just reference to a common engine.
   fxl::RefPtr<SessionForTest> session_;
 };
 
@@ -95,11 +73,11 @@ using MultiSessionHitTestTest = ::gtest::TestLoopFixture;
 TEST_F(MultiSessionHitTestTest, GlobalHits) {
   DisplayManager display_manager;
   display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
-      /*id*/ 0, /*px-width*/ 8, /*px-height*/ 8));
+      /*id*/ 0, /*px-width*/ 9, /*px-height*/ 9));
   std::unique_ptr<Engine> engine = std::make_unique<EngineForTest>(
       &display_manager, /*release fence signaller*/ nullptr);
 
-  // Create our eventpair tokens for View/Viewholder creation.
+  // Create our eventpair tokens for View/ViewHolder creation.
   zx::eventpair token_v1, token_vh1, token_v2, token_vh2;
   {
     zx_status_t status;
@@ -121,7 +99,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     s_r.Apply(scenic::NewSetLayerStackCmd(kCompositorId, kLayerStackId));
     s_r.Apply(scenic::NewCreateLayerCmd(kLayerId));
     s_r.Apply(scenic::NewSetSizeCmd(
-        kLayerId, (float[2]){/*px-width*/ 8, /*px-height*/ 8}));
+        kLayerId, (float[2]){/*px-width*/ 9, /*px-height*/ 9}));
     s_r.Apply(scenic::NewAddLayerCmd(kLayerStackId, kLayerId));
 
     const uint32_t kSceneId = 1004;  // Hit
@@ -136,8 +114,6 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     // TODO(SCN-885) - Adjust hit count; an EntityNode shouldn't be hit.
     const uint32_t kRootNodeId = 1007;  // Hit
     s_r.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
-    s_r.Apply(scenic::NewSetTranslationCmd(
-        kRootNodeId, (float[3]){/*px-width*/ 4, /*px-height*/ 4, 0}));
 
     const uint32_t kViewHolder1Id = 1008;
     s_r.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
@@ -165,11 +141,11 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     s_1.Apply(scenic::NewCreateShapeNodeCmd(kChildId));
     s_1.Apply(scenic::NewAddChildCmd(kRootNodeId, kChildId));
     s_1.Apply(scenic::NewSetTranslationCmd(kChildId,
-                                           (float[3]){0.f, 0.f, /*z*/ 2.f}));
+                                           (float[3]){4.f, 4.f, /*z*/ 2.f}));
 
     const uint32_t kShapeId = 2004;
-    s_1.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 8.f,
-                                            /*px-height*/ 8.f));
+    s_1.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
+                                            /*px-height*/ 9.f));
     s_1.Apply(scenic::NewSetShapeCmd(kChildId, kShapeId));
   }
 
@@ -186,11 +162,11 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     s_2.Apply(scenic::NewCreateShapeNodeCmd(kChildId));
     s_2.Apply(scenic::NewAddChildCmd(kRootNodeId, kChildId));
     s_2.Apply(scenic::NewSetTranslationCmd(kChildId,
-                                           (float[3]){0.f, 0.f, /*z*/ 3.f}));
+                                           (float[3]){4.f, 4.f, /*z*/ 3.f}));
 
     const uint32_t kShapeId = 3004;
-    s_2.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 8.f,
-                                            /*px-height*/ 8.f));
+    s_2.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
+                                            /*px-height*/ 9.f));
     s_2.Apply(scenic::NewSetShapeCmd(kChildId, kShapeId));
   }
 
@@ -208,7 +184,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     ASSERT_NE(layer_stack.get(), nullptr);
 
     escher::ray4 ray;
-    ray.origin = escher::vec4(0.f, 0.f, -1.f, 1.f);
+    ray.origin = escher::vec4(4.f, 4.f, -1.f, 1.f);
     ray.direction = escher::vec4(0.f, 0.f, 1.f, 0.f);
     GlobalHitTester hit_tester;
     hits = layer_stack->HitTest(ray, &hit_tester);
