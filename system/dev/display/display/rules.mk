@@ -20,6 +20,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
+    system/ulib/audio-proto-utils \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/edid \

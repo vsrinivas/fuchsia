@@ -94,6 +94,22 @@ struct DetailedTimingDescriptor {
 
 static_assert(sizeof(DetailedTimingDescriptor) == 18, "Size check for EdidTimingDesc");
 
+union Descriptor {
+    DetailedTimingDescriptor timing;
+    struct Monitor {
+        uint16_t generic_tag;
+        uint8_t padding;
+        uint8_t type;
+        static constexpr uint8_t kDummyType = 0x10;
+        static constexpr uint8_t kName = 0xfc;
+        static constexpr uint8_t kSerial = 0xff;
+
+        uint8_t padding2;
+        uint8_t data[13];
+    } monitor;
+};
+static_assert(sizeof(Descriptor) == 18, "bad struct");
+
 struct StandardTimingDescriptor {
     uint32_t horizontal_resolution() const { return (byte1 + 31) * 8; }
     uint32_t vertical_resolution(uint8_t edid_version, uint8_t edid_revision) const {
@@ -137,7 +153,8 @@ struct BaseEdid {
     uint8_t manufacturer_id1;
     uint8_t manufacturer_id2;
     uint16_t product_code;
-    uint8_t unused1[6];
+    uint32_t serial_number;
+    uint8_t unused1[2];
     uint8_t edid_version;
     uint8_t edid_revision;
     uint8_t video_input_definition;
@@ -149,14 +166,14 @@ struct BaseEdid {
 
     uint8_t various[14]; // Fields that we don't need to read yet.
     StandardTimingDescriptor standard_timings[8];
-    DetailedTimingDescriptor detailed_timings[4];
+    Descriptor detailed_descriptors[4];
     uint8_t num_extensions;
     uint8_t checksum_byte;
 };
 
 static_assert(offsetof(BaseEdid, edid_version) == 0x12, "Layout check");
 static_assert(offsetof(BaseEdid, standard_timings) == 0x26, "Layout check");
-static_assert(offsetof(BaseEdid, detailed_timings) == 0x36, "Layout check");
+static_assert(offsetof(BaseEdid, detailed_descriptors) == 0x36, "Layout check");
 
 // EDID block type map. Block 1 if there are >1 blocks, and block
 // 128 if there are >128 blocks. See EDID specification for the meaning
@@ -196,9 +213,20 @@ struct ShortAudioDescriptor {
 
     uint8_t format_and_channels;
     DEF_SUBFIELD(format_and_channels, 6, 3, format);
+    static constexpr uint8_t kLPcm = 1;
     DEF_SUBFIELD(format_and_channels, 2, 0, num_channels_minus_1);
     uint8_t sampling_frequencies;
+    static constexpr uint8_t kHz192 = (1 << 6);
+    static constexpr uint8_t kHz176 = (1 << 5);
+    static constexpr uint8_t kHz96 = (1 << 4);
+    static constexpr uint8_t kHz88 = (1 << 3);
+    static constexpr uint8_t kHz48 = (1 << 2);
+    static constexpr uint8_t kHz44 = (1 << 1);
+    static constexpr uint8_t kHz32 = (1 << 0);
     uint8_t bitrate;
+    DEF_SUBBIT(bitrate, 2, lpcm_24);
+    DEF_SUBBIT(bitrate, 1, lpcm_20);
+    DEF_SUBBIT(bitrate, 0, lpcm_16);
 };
 static_assert(sizeof(ShortAudioDescriptor) == 3, "Bad size for ShortAudioDescriptor");
 
@@ -250,7 +278,7 @@ struct DataBlock {
     DEF_SUBFIELD(header, 4, 0, length);
 
     union {
-        ShortAudioDescriptor audio;
+        ShortAudioDescriptor audio[10];
         // Only valid up to the index specified by length;
         ShortVideoDescriptor video[31];
         VendorSpecificBlock vendor;
@@ -273,48 +301,11 @@ static constexpr uint8_t kDdcSegmentI2cAddress = 0x30;
 // The I2C address for writing the DDC data offset/reading DDC data
 static constexpr uint8_t kDdcDataI2cAddress = 0x50;
 
+class timing_iterator;
+class audio_data_block_iterator;
+
 class Edid {
 public:
-    // Iterator that returns all of the timing modes of the display. The iterator
-    // **does not** filter out duplicates.
-    class timing_iterator {
-    public:
-        timing_iterator() { }
-
-        timing_iterator& operator++();
-
-        const timing_params& operator*() {
-            return params_;
-        }
-
-        const timing_params* operator->() const {
-            return &params_;
-        }
-
-        bool operator!=(const timing_iterator& rhs) const {
-            return !(edid_ == rhs.edid_
-                    && block_idx_ == rhs.block_idx_
-                    && timing_idx_ == rhs.timing_idx_);
-        }
-
-    private:
-        friend Edid;
-        explicit timing_iterator(const Edid* edid, uint8_t block_idx, uint32_t timing_idx)
-                : edid_(edid), block_idx_(block_idx), timing_idx_(timing_idx) {
-            ++(*this);
-        }
-        void Advance();
-
-        timing_params params_;
-
-        const Edid* edid_ = nullptr;
-        // The block index in which we're looking for DTDs. If it's num_blocks+1, then
-        // we're looking at standard timings. If it's UINT8_MAX, then we're at the end.
-        uint8_t block_idx_ = UINT8_MAX;
-        uint32_t timing_idx_ = UINT32_MAX;
-    };
-
-
     // Creates an Edid from the EdidDdcSource. Does not retain a reference to the source.
     bool Init(void* ctx, ddc_i2c_transact edid_source, const char** err_msg);
     // Creates an Edid from raw bytes. The bytes array must remain valid for the duration
@@ -331,9 +322,9 @@ public:
     uint16_t product_code();
     void manufacturer_id(char* c1, char* c2, char* c3);
     bool is_standard_rgb();
-
-    timing_iterator begin() const { return timing_iterator(this, 0, UINT32_MAX); }
-    timing_iterator end() const { return timing_iterator(this, UINT8_MAX, UINT32_MAX); }
+    bool supports_basic_audio();
+    const char* monitor_name() { return monitor_name_; }
+    const char* monitor_serial() { return monitor_serial_; }
 
 private:
     bool CheckBlockMap(uint8_t block_num, bool* is_hdmi) const;
@@ -345,8 +336,116 @@ private:
 
     fbl::unique_ptr<uint8_t[]> edid_bytes_;
 
+    class descriptor_iterator {
+    public:
+        explicit descriptor_iterator(const Edid* edid) : edid_(edid) { ++(*this); }
+
+        descriptor_iterator& operator++();
+        bool is_valid() const { return edid_ != nullptr; }
+
+        uint8_t block_idx() const { return block_idx_; }
+        const Descriptor* operator->() const { return &descriptor_; }
+        const Descriptor* get() const { return &descriptor_; }
+
+    private:
+        // Set to null when the iterator is exhausted.
+        const Edid* edid_;
+        // The block index in which we're looking for descriptors.
+        uint8_t block_idx_ = 0;
+        // The index of the current descriptor in the current block.
+        uint32_t descriptor_idx_ = UINT32_MAX;
+
+        Descriptor descriptor_ = {};
+    };
+
+    class data_block_iterator {
+    public:
+        explicit data_block_iterator(const Edid* edid) : edid_(edid) { ++(*this); }
+
+        data_block_iterator& operator++();
+        bool is_valid() const { return edid_ != nullptr; }
+
+        const DataBlock* operator->() const { return &db_; }
+
+    private:
+        // Set to null when the iterator is exhausted.
+        const Edid* edid_;
+        // The block index in which we're looking for descriptors. No dbs in the 1st block.
+        uint8_t block_idx_ = 1;
+        // The index of the current descriptor in the current block.
+        uint32_t db_idx_ = UINT32_MAX;
+
+        DataBlock db_ = {};
+    };
+
     const uint8_t* bytes_;
     uint16_t len_;
+
+    char monitor_name_[sizeof(Descriptor::Monitor::data) + 1];
+    char monitor_serial_[sizeof(Descriptor::Monitor::data) + 1];
+
+    friend timing_iterator;
+    friend audio_data_block_iterator;
+};
+
+// Iterator that returns all of the timing modes of the display. The iterator
+// **does not** filter out duplicates.
+class timing_iterator {
+public:
+    explicit timing_iterator(const Edid* edid)
+            : edid_(edid), state_(kDtds), state_index_(0), descriptors_(edid), dbs_(edid) {
+        ++(*this);
+    }
+
+    timing_iterator& operator++();
+
+    const timing_params& operator*() const { return params_; }
+    const timing_params* operator->() const { return &params_; }
+
+    bool is_valid() const { return state_ != kDone; }
+private:
+    // The order in which timings are returned is:
+    //   1) Detailed timings in order across base EDID and CEA blocks
+    //   2) Short video descriptors in CEA data blocks
+    //   3) Standard timings in base edid
+    // TODO: Standart timings in descriptors
+    // TODO: GTF/CVT timings in descriptors/monitor range limits
+    // TODO: Established timings
+    static constexpr uint8_t kDtds = 0;
+    static constexpr uint8_t kSvds = 1;
+    static constexpr uint8_t kStds = 2;
+    static constexpr uint8_t kDone = 3;
+
+    void Advance();
+
+    timing_params params_;
+
+    const Edid* edid_;
+    uint8_t state_;
+    uint16_t state_index_;
+    Edid::descriptor_iterator descriptors_;
+    Edid::data_block_iterator dbs_;
+};
+
+class audio_data_block_iterator {
+public:
+    explicit audio_data_block_iterator(const Edid* edid)
+            : edid_(edid), sad_idx_(UINT8_MAX), dbs_(edid) {
+        ++(*this);
+    }
+
+    audio_data_block_iterator& operator++();
+
+    const ShortAudioDescriptor& operator*() const { return descriptor_; }
+    const ShortAudioDescriptor* operator->() const { return &descriptor_; }
+
+    bool is_valid() const { return edid_ != nullptr; }
+private:
+    const Edid* edid_;
+    uint8_t sad_idx_;
+    Edid::data_block_iterator dbs_;
+
+    ShortAudioDescriptor descriptor_;
 };
 
 } // namespace edid

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
+#include <zircon/device/audio.h>
 #include <zircon/types.h>
 #include <zircon/pixelformat.h>
 
@@ -103,6 +104,12 @@ typedef struct added_display_args {
     // Out parameters will be populated before on_displays_changed returns.
     bool is_hdmi_out;
     bool is_standard_srgb_out;
+
+    uint32_t audio_format_count;
+
+    char mfr_id[3]; // TODO(stevensd): Return the resolved name
+    char monitor_name[14]; // null-terminated
+    char monitor_serial[14]; // null-terminated
 } added_display_args_t;
 
 // The client will not make any ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL calls into the device
@@ -125,6 +132,9 @@ typedef struct display_controller_cb {
     // displayed, in increasing z-order.
     void (*on_display_vsync)(void* ctx, uint64_t display_id, zx_time_t timestamp,
                              void** handles, uint32_t handle_count);
+
+    zx_status_t (*get_audio_format)(void* ctx, uint64_t display_id, uint32_t fmt_idx,
+                                    audio_stream_format_range_t* fmt_out);
 } display_controller_cb_t;
 
 #define ALPHA_DISABLE 0
