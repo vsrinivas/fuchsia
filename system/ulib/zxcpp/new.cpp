@@ -7,7 +7,15 @@
 #include <zircon/assert.h>
 #include <stdlib.h>
 
-#if !_KERNEL
+// In ASan builds, the ASan runtime supplies the operator new/delete functions.
+// Those versions check for mismatches between allocation entry path and
+// deallocation entry path, so we don't want to override them.  Also, in
+// certain complex static linking situations, it's difficult to avoid sometimes
+// getting the definition of one from this library and another from libc++.
+#if !__has_feature(address_sanitizer)
+
+# if !_KERNEL
+
 // The kernel does not want non-AllocCheckered non-placement new
 // overloads, but userspace can have them.
 void* operator new(size_t s) {
@@ -46,7 +54,7 @@ void* operator new[](size_t s, const std::nothrow_t&) noexcept {
     return ::malloc(s);
 }
 
-#else // _KERNEL
+# else  // _KERNEL
 
 // kernel versions may pass through the call site to the underlying allocator
 void* operator new(size_t s, void* caller, const std::nothrow_t&) noexcept {
@@ -63,7 +71,7 @@ void* operator new[](size_t s, void* caller, const std::nothrow_t&) noexcept {
     return ::malloc_debug_caller(s, caller);
 }
 
-#endif // _KERNEL
+# endif  // _KERNEL
 
 void operator delete(void *p) {
     return ::free(p);
@@ -80,6 +88,11 @@ void operator delete(void *p, size_t s) {
 void operator delete[](void *p, size_t s) {
     return ::free(p);
 }
+
+#endif  // !__has_feature(address_sanitizer)
+
+// Placement new is always the same trivial no-op everywhere.
+
 void* operator new(size_t , void *p) {
     return p;
 }
@@ -92,7 +105,9 @@ void* operator new[](size_t , void* p) {
 // functions are magical in the language, the compiler insists on making
 // default-visibility definitions regardless of all the ways to tell it to use
 // hidden visibility.  So there is nothing left but to go around the compiler's
-// back and force them to .hidden via assembler directives.
+// back and force them to .hidden via assembler directives.  These declarations
+// have no effect and do no harm when not all of these functions are defined
+// here (kernel, ASan).
 asm(".hidden _ZdaPv");
 asm(".hidden _ZdaPvm");
 asm(".hidden _ZdlPv");
