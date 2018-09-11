@@ -62,7 +62,7 @@ class UserProviderImpl : fuchsia::modular::UserProvider,
                    const fuchsia::modular::AppConfig& story_shell,
                    fuchsia::modular::auth::AccountProvider* account_provider,
                    fuchsia::auth::TokenManagerFactory* token_manager_factory,
-                   Delegate* const delegate);
+                   bool use_token_manager_factory, Delegate* const delegate);
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request);
 
@@ -93,13 +93,27 @@ class UserProviderImpl : fuchsia::modular::UserProvider,
       fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request)
       override;
 
-  // Add user using the Token Manager Factory interface |fuchsia.auth|.
-  void AddUserV2(fuchsia::modular::auth::IdentityProvider identity_provider,
-                 AddUserCallback callback);
+  // Add user using |fuchsia::modular::auth::AccountProvider| interface.
+  void AddUserV1(
+      const fuchsia::modular::auth::IdentityProvider identity_provider,
+      AddUserCallback callback);
 
-  // Remove user using the Token Manager Factory interface |fuchsia.auth|.
-  void RemoveUserV2(fidl::StringPtr account_id, RemoveUserCallback callback);
+  // Add user using |fuchsia::auth::TokenManagerFactory| interface.
+  void AddUserV2(
+      const fuchsia::modular::auth::IdentityProvider identity_provider,
+      AddUserCallback callback);
 
+  // Remove user using |fuchsia::modular::auth::AccountProvider| interface.
+  void RemoveUserV1(fuchsia::modular::auth::AccountPtr account,
+                    RemoveUserCallback callback);
+
+  // Remove user using |fuchsia::auth::TokenManagerFactory| interface.
+  void RemoveUserV2(fuchsia::modular::auth::AccountPtr account,
+                    RemoveUserCallback callback);
+
+  bool AddUserToAccountsDB(fuchsia::modular::auth::AccountPtr account,
+                           std::string* error);
+  bool RemoveUserFromAccountsDB(fidl::StringPtr account_id, std::string* error);
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);
 
@@ -117,17 +131,16 @@ class UserProviderImpl : fuchsia::modular::UserProvider,
       account_provider_;  // Neither owned nor copied.
   fuchsia::auth::TokenManagerFactory* const
       token_manager_factory_;  // Neither owned nor copied.
+  bool use_token_manager_factory_ = false;
+  Delegate* const delegate_;   // Neither owned nor copied.
+  fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
+      auth_context_provider_binding_;
 
   std::string serialized_users_;
   const fuchsia::modular::UsersStorage* users_storage_ = nullptr;
 
   std::map<UserControllerImpl*, std::unique_ptr<UserControllerImpl>>
       user_controllers_;
-
-  Delegate* const delegate_;  // Neither owned nor copied.
-
-  fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
-      auth_context_provider_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserProviderImpl);
 };

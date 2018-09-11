@@ -23,6 +23,17 @@ namespace {
 
 constexpr char kUsersConfigurationFile[] = "/data/modular/users-v5.db";
 
+// Url of the application launching token manager
+constexpr char kUserProviderAppUrl[] = "user_provider_url";
+
+// Dev auth provider configuration
+constexpr char kDevAuthProviderType[] = "dev";
+constexpr char kDevAuthProviderUrl[] = "dev_auth_provider";
+
+// Google auth provider configuration
+constexpr char kGoogleAuthProviderType[] = "google";
+constexpr char kGoogleAuthProviderUrl[] = "google_auth_provider";
+
 fuchsia::modular::auth::AccountPtr Convert(
     const fuchsia::modular::UserStorage* const user) {
   FXL_DCHECK(user);
@@ -62,6 +73,40 @@ std::string GetRandomId() {
   return std::to_string(random_number);
 }
 
+// Returns the corresponding |auth_provider_type| string that maps to
+// |fuchsia::modular::auth::IdentityProvider| value.
+// TODO(ukode): Convert enum |fuchsia::modular::auth::IdentityProvider| to
+// fidl::String datatype to make it consistent in the future.
+std::string MapIdentityProviderToAuthProviderType(
+    const fuchsia::modular::auth::IdentityProvider idp) {
+  switch (idp) {
+    case fuchsia::modular::auth::IdentityProvider::DEV:
+      return kDevAuthProviderType;
+    case fuchsia::modular::auth::IdentityProvider::GOOGLE:
+      return kGoogleAuthProviderType;
+  }
+  FXL_DCHECK(false) << "Unrecognized IDP.";
+}
+
+// Returns a list of supported auth provider configurations that includes the
+// type, startup parameters and the url of the auth provider component.
+// TODO(ukode): This list will be derived from a config package in the future.
+fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> GetAuthProviderConfigs() {
+  fuchsia::auth::AuthProviderConfig dev_auth_provider_config;
+  dev_auth_provider_config.auth_provider_type = kDevAuthProviderType;
+  dev_auth_provider_config.url = kDevAuthProviderUrl;
+
+  fuchsia::auth::AuthProviderConfig google_auth_provider_config;
+  google_auth_provider_config.auth_provider_type = kGoogleAuthProviderType;
+  google_auth_provider_config.url = kGoogleAuthProviderUrl;
+
+  fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
+  auth_provider_configs.push_back(std::move(google_auth_provider_config));
+  auth_provider_configs.push_back(std::move(dev_auth_provider_config));
+
+  return auth_provider_configs;
+}
+
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
@@ -71,13 +116,14 @@ UserProviderImpl::UserProviderImpl(
     const fuchsia::modular::AppConfig& story_shell,
     fuchsia::modular::auth::AccountProvider* const account_provider,
     fuchsia::auth::TokenManagerFactory* const token_manager_factory,
-    Delegate* const delegate)
+    bool use_token_manager_factory, Delegate* const delegate)
     : context_(std::move(context)),
       user_runner_(user_runner),
       default_user_shell_(default_user_shell),
       story_shell_(story_shell),
       account_provider_(account_provider),
       token_manager_factory_(token_manager_factory),
+      use_token_manager_factory_(use_token_manager_factory),
       delegate_(delegate),
       auth_context_provider_binding_(this) {
   FXL_DCHECK(delegate);
@@ -176,66 +222,11 @@ void UserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
 void UserProviderImpl::AddUser(
     fuchsia::modular::auth::IdentityProvider identity_provider,
     AddUserCallback callback) {
-  account_provider_->AddAccount(
-      identity_provider, [this, identity_provider, callback](
-                             fuchsia::modular::auth::AccountPtr account,
-                             fidl::StringPtr error_code) {
-        if (!account) {
-          callback(nullptr, error_code);
-          return;
-        }
-
-        flatbuffers::FlatBufferBuilder builder;
-        std::vector<flatbuffers::Offset<fuchsia::modular::UserStorage>> users;
-
-        // Reserialize existing users.
-        if (users_storage_) {
-          for (const auto* user : *(users_storage_->users())) {
-            users.push_back(fuchsia::modular::CreateUserStorage(
-                builder, builder.CreateString(user->id()),
-                user->identity_provider(),
-                builder.CreateString(user->display_name()),
-                builder.CreateString(user->profile_url()),
-                builder.CreateString(user->image_url()),
-                builder.CreateString(user->profile_id())));
-          }
-        }
-
-        fuchsia::modular::IdentityProvider flatbuffer_identity_provider;
-        switch (account->identity_provider) {
-          case fuchsia::modular::auth::IdentityProvider::DEV:
-            flatbuffer_identity_provider =
-                fuchsia::modular::IdentityProvider::IdentityProvider_DEV;
-            break;
-          case fuchsia::modular::auth::IdentityProvider::GOOGLE:
-            flatbuffer_identity_provider =
-                fuchsia::modular::IdentityProvider::IdentityProvider_GOOGLE;
-            break;
-          default:
-            FXL_DCHECK(false) << "Unrecongized IDP.";
-        }
-        users.push_back(fuchsia::modular::CreateUserStorage(
-            builder, builder.CreateString(account->id),
-            flatbuffer_identity_provider,
-            builder.CreateString(account->display_name),
-            builder.CreateString(account->url),
-            builder.CreateString(account->image_url),
-            builder.CreateString(account->profile_id)));
-
-        builder.Finish(fuchsia::modular::CreateUsersStorage(
-            builder, builder.CreateVector(users)));
-        std::string new_serialized_users = std::string(
-            reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
-            builder.GetSize());
-
-        std::string error;
-        if (!WriteUsersDb(new_serialized_users, &error)) {
-          callback(nullptr, error);
-          return;
-        }
-
-        callback(std::move(account), error_code);
-      });
+  if (!use_token_manager_factory_) {
+    AddUserV1(identity_provider, std::move(callback));
+  } else {
+    AddUserV2(identity_provider, std::move(callback));
+  }
 }
 
 void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
@@ -254,65 +245,248 @@ void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
     return;
   }
 
+  if (!use_token_manager_factory_) {
+    RemoveUserV1(std::move(account), std::move(callback));
+  } else {
+    RemoveUserV2(std::move(account), std::move(callback));
+  }
+}
+
+void UserProviderImpl::AddUserV1(
+    const fuchsia::modular::auth::IdentityProvider identity_provider,
+    AddUserCallback callback) {
   FXL_DCHECK(account_provider_);
+
+  account_provider_->AddAccount(
+      identity_provider, [this, identity_provider, callback](
+                             fuchsia::modular::auth::AccountPtr account,
+                             fidl::StringPtr error_code) {
+        if (!account) {
+          callback(nullptr, error_code);
+          return;
+        }
+
+        std::string error;
+        if (!AddUserToAccountsDB(fidl::Clone(account), &error)) {
+          callback(nullptr, error);
+          return;
+        }
+
+        callback(std::move(account), error_code);
+      });
+}
+
+void UserProviderImpl::AddUserV2(
+    const fuchsia::modular::auth::IdentityProvider identity_provider,
+    AddUserCallback callback) {
+  FXL_DCHECK(token_manager_factory_);
+
+  // Creating a new user, the initial bootstrapping will be done by
+  // AccountManager in the future. For now, create an account_id that
+  // uniquely maps to a token manager instance at runtime.
+  const std::string& account_id = GetRandomId();
+
+  fuchsia::auth::TokenManagerPtr token_manager;
+  token_manager_factory_->GetTokenManager(
+      account_id, kUserProviderAppUrl, GetAuthProviderConfigs(),
+      auth_context_provider_binding_.NewBinding(), token_manager.NewRequest());
+  token_manager.set_error_handler([this, account_id] {
+    FXL_LOG(INFO) << "Token Manager for account:" << account_id
+                  << " disconnected";
+  });
+
+  // TODO(ukode): Fuchsia mod configuration that is requesting OAuth tokens.
+  // This includes OAuth client specific details such as client id, secret,
+  // list of scopes etc. These could be supplied by a config package in the
+  // future.
+  fuchsia::auth::AppConfig fuchsia_app_config;
+  fuchsia_app_config.auth_provider_type =
+      MapIdentityProviderToAuthProviderType(identity_provider);
+  auto scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  token_manager->Authorize(
+      std::move(fuchsia_app_config), std::move(scopes), "", "",
+      [this, identity_provider, account_id, callback](
+          fuchsia::auth::Status status,
+          fuchsia::auth::UserProfileInfoPtr user_profile_info) {
+        if (status != fuchsia::auth::Status::OK) {
+          FXL_DLOG(INFO) << "Token Manager Authorize() call returned error";
+          callback(nullptr, "Failed to authorize user");
+          return;
+        }
+
+        if (!user_profile_info) {
+          FXL_DLOG(INFO) << "Token Manager Authorize() call returned empty "
+                            "user profile info";
+          callback(nullptr,
+                   "Empty user profile info returned by auth_provider");
+          return;
+        }
+
+        auto account = fuchsia::modular::auth::Account::New();
+        account->id = account_id;
+        account->identity_provider = identity_provider;
+        account->display_name = user_profile_info->display_name;
+        account->url = user_profile_info->url;
+        account->image_url = user_profile_info->image_url;
+        account->profile_id = user_profile_info->id;
+
+        std::string error;
+        if (!AddUserToAccountsDB(fidl::Clone(account), &error)) {
+          callback(nullptr, error);
+          return;
+        }
+
+        callback(std::move(account), "");
+      });
+}
+
+bool UserProviderImpl::AddUserToAccountsDB(
+    fuchsia::modular::auth::AccountPtr account, std::string* error) {
+  FXL_DCHECK(account);
+
+  flatbuffers::FlatBufferBuilder builder;
+  std::vector<flatbuffers::Offset<fuchsia::modular::UserStorage>> users;
+
+  // Reserialize existing users.
+  if (users_storage_) {
+    for (const auto* user : *(users_storage_->users())) {
+      users.push_back(fuchsia::modular::CreateUserStorage(
+          builder, builder.CreateString(user->id()), user->identity_provider(),
+          builder.CreateString(user->display_name()),
+          builder.CreateString(user->profile_url()),
+          builder.CreateString(user->image_url()),
+          builder.CreateString(user->profile_id())));
+    }
+  }
+
+  auto account_identity_provider = account->identity_provider;
+  auto flatbuffer_identity_provider = [account_identity_provider]() {
+    switch (account_identity_provider) {
+      case fuchsia::modular::auth::IdentityProvider::DEV:
+        return fuchsia::modular::IdentityProvider::IdentityProvider_DEV;
+      case fuchsia::modular::auth::IdentityProvider::GOOGLE:
+        return fuchsia::modular::IdentityProvider::IdentityProvider_GOOGLE;
+    }
+    FXL_DCHECK(false) << "Unrecognized IDP.";
+    // TODO(ukode): Move |UserStorage::identity_provider| to string
+    // datatype. Use DEV identity provider as default in the interim.
+    return fuchsia::modular::IdentityProvider::IdentityProvider_DEV;
+  }();
+
+  // Add new user
+  users.push_back(fuchsia::modular::CreateUserStorage(
+      builder, builder.CreateString(account->id), flatbuffer_identity_provider,
+      builder.CreateString(account->display_name),
+      builder.CreateString(account->url),
+      builder.CreateString(account->image_url),
+      builder.CreateString(account->id)));
+
+  // Write user info to disk
+  builder.Finish(fuchsia::modular::CreateUsersStorage(
+      builder, builder.CreateVector(users)));
+  std::string new_serialized_users = std::string(
+      reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
+      builder.GetSize());
+
+  return WriteUsersDb(new_serialized_users, error);
+}
+
+void UserProviderImpl::RemoveUserV1(fuchsia::modular::auth::AccountPtr account,
+                                    RemoveUserCallback callback) {
+  FXL_DCHECK(account);
+  FXL_DCHECK(account_provider_);
+
   account_provider_->RemoveAccount(
       std::move(*account), false /* disable single logout*/,
-      [this, account_id = account_id,
+      [this, account = std::move(account),
        callback](fuchsia::modular::auth::AuthErr auth_err) {
         if (auth_err.status != fuchsia::modular::auth::Status::OK) {
           callback(auth_err.message);
           return;
         }
 
-        // update user storage after deleting user credentials.
-        flatbuffers::FlatBufferBuilder builder;
-        std::vector<flatbuffers::Offset<fuchsia::modular::UserStorage>> users;
-        for (const auto* user : *(users_storage_->users())) {
-          if (user->id()->str() == account_id) {
-            // TODO(alhaad): We need to delete the local ledger data for a user
-            // who has been removed. Re-visit this when sandboxing the user
-            // runner.
-            continue;
-          }
-
-          users.push_back(fuchsia::modular::CreateUserStorage(
-              builder, builder.CreateString(user->id()),
-              user->identity_provider(),
-              builder.CreateString(user->display_name()),
-              builder.CreateString(user->profile_url()),
-              builder.CreateString(user->image_url()),
-              builder.CreateString(user->profile_id())));
-        }
-
-        builder.Finish(fuchsia::modular::CreateUsersStorage(
-            builder, builder.CreateVector(users)));
-        std::string new_serialized_users = std::string(
-            reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
-            builder.GetSize());
-
         std::string error;
-        if (!WriteUsersDb(new_serialized_users, &error)) {
-          FXL_LOG(ERROR) << "Writing to user database failed with: " << error;
+        if (!RemoveUserFromAccountsDB(fidl::Clone(account->id), &error)) {
+          FXL_LOG(ERROR) << "Error in updating user database: " << error;
           callback(error);
           return;
         }
 
         callback("");  // success
-        return;
       });
 }
 
-void UserProviderImpl::AddUserV2(
-    fuchsia::modular::auth::IdentityProvider identity_provider,
-    AddUserCallback callback) {
-  // TODO(ukode): Provide impl here.
-  FXL_CHECK(token_manager_factory_);
+void UserProviderImpl::RemoveUserV2(fuchsia::modular::auth::AccountPtr account,
+                                    RemoveUserCallback callback) {
+  FXL_DCHECK(token_manager_factory_);
+  FXL_DCHECK(account);
+  auto account_id = account->id;
+
+  fuchsia::auth::TokenManagerPtr token_manager;
+  token_manager_factory_->GetTokenManager(
+      account_id, kUserProviderAppUrl, GetAuthProviderConfigs(),
+      auth_context_provider_binding_.NewBinding(), token_manager.NewRequest());
+  token_manager.set_error_handler([this, account_id] {
+    FXL_LOG(INFO) << "Token Manager for account:" << account_id
+                  << " disconnected";
+  });
+
+  // TODO(ukode): Delete tokens for all the supported auth provider configs just
+  // not Google. This will be replaced by AccountManager::RemoveUser api in the
+  // future.
+  fuchsia::auth::AppConfig fuchsia_app_config;
+  fuchsia_app_config.auth_provider_type = kGoogleAuthProviderType;
+  token_manager->DeleteAllTokens(
+      fuchsia_app_config, account->profile_id,
+      [this, account_id, callback](fuchsia::auth::Status status) {
+        if (status != fuchsia::auth::Status::OK) {
+          FXL_DLOG(INFO) << "Token Manager Authorize() call returned error";
+          callback("Unable to remove user");
+          return;
+        }
+
+        std::string error;
+        if (!RemoveUserFromAccountsDB(fidl::Clone(account_id), &error)) {
+          FXL_LOG(ERROR) << "Error in updating user database: " << error;
+          callback(error);
+          return;
+        }
+
+        callback("");  // success
+      });
 }
 
-void UserProviderImpl::RemoveUserV2(fidl::StringPtr account_id,
-                                    RemoveUserCallback callback) {
-  // TODO(ukode): Provide impl here.
-  FXL_CHECK(token_manager_factory_);
+// Update user storage after deleting user credentials.
+bool UserProviderImpl::RemoveUserFromAccountsDB(fidl::StringPtr account_id,
+                                                std::string* error) {
+  FXL_DCHECK(account_id);
+  FXL_DCHECK(error);
+
+  flatbuffers::FlatBufferBuilder builder;
+  std::vector<flatbuffers::Offset<fuchsia::modular::UserStorage>> users;
+  for (const auto* user : *(users_storage_->users())) {
+    if (user->id()->str() == account_id) {
+      // TODO(alhaad): We need to delete the local ledger data for a user
+      // who has been removed. Re-visit this when sandboxing the user
+      // runner.
+      continue;
+    }
+
+    users.push_back(fuchsia::modular::CreateUserStorage(
+        builder, builder.CreateString(user->id()), user->identity_provider(),
+        builder.CreateString(user->display_name()),
+        builder.CreateString(user->profile_url()),
+        builder.CreateString(user->image_url()),
+        builder.CreateString(user->profile_id())));
+  }
+
+  builder.Finish(fuchsia::modular::CreateUsersStorage(
+      builder, builder.CreateVector(users)));
+  std::string new_serialized_users = std::string(
+      reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
+      builder.GetSize());
+
+  return WriteUsersDb(new_serialized_users, error);
 }
 
 void UserProviderImpl::GetAuthenticationUIContext(
@@ -357,26 +531,21 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
 
 void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
                                      fuchsia::modular::UserLoginParams params) {
+  FXL_DCHECK(token_manager_factory_);
   auto account_id = account ? account->id.get() : GetRandomId();
 
-  // Get token provider factory for this user.
+  // Get |fuchsia::modular::auth::TokenManagerFactory| for this user.
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory;
   account_provider_->GetTokenProviderFactory(
       account_id, token_provider_factory.NewRequest());
 
-  // TODO(ukode): List of supported auth providers will be provided by a
-  // config package in the future.
-  auto auth_provider_type = "google";
-  fuchsia::auth::AuthProviderConfig google_auth_provider_config;
-  google_auth_provider_config.auth_provider_type = auth_provider_type;
-  google_auth_provider_config.url = "google_auth_provider";
-
-  fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
-  auth_provider_configs.push_back(std::move(google_auth_provider_config));
-
+  // Get a new |fuchsia::auth::TokenManager| handle for this user, that is
+  // passed to user_runner.
+  // TODO(ukode): Maybe its better to pass token_manager_factory_ptr to
+  // user_runner.
   fuchsia::auth::TokenManagerPtr token_manager;
   token_manager_factory_->GetTokenManager(
-      account_id, "user_provider_url", std::move(auth_provider_configs),
+      account_id, kUserProviderAppUrl, GetAuthProviderConfigs(),
       auth_context_provider_binding_.NewBinding(), token_manager.NewRequest());
 
   auto user_shell = params.user_shell_config

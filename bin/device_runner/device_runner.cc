@@ -384,6 +384,7 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     fuchsia::modular::AppConfig token_manager_config;
     token_manager_config.url = settings_.account_provider.url;
     if (settings_.enable_garnet_token_manager) {
+      FXL_DLOG(INFO) << "Initialzing token_manager_factory_app()";
       token_manager_factory_app_ =
           std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
               context_->launcher().get(), CloneStruct(token_manager_config));
@@ -406,7 +407,8 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     user_provider_impl_.reset(new UserProviderImpl(
         context_, settings_.user_runner, settings_.user_shell,
         settings_.story_shell, account_provider_->primary_service().get(),
-        token_manager_factory_.get(), this));
+        token_manager_factory_.get(), settings_.enable_garnet_token_manager,
+        this));
 
     ReportEvent(ModularEvent::BOOTED_TO_DEVICE_RUNNER);
   }
