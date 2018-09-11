@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_GUEST_VMM_KERNEL_H_
 #define GARNET_BIN_GUEST_VMM_KERNEL_H_
 
-#include "garnet/lib/machina/phys_mem.h"
+#include "garnet/lib/machina/device/phys_mem.h"
 
 static constexpr uintptr_t kRamdiskOffset = 0x4000000;
 

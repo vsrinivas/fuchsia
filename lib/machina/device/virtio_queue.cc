@@ -2,16 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/virtio_queue.h"
+#include "garnet/lib/machina/device/virtio_queue.h"
 
-#include <stdio.h>
-#include <string.h>
+#include <threads.h>
 
-#include <fbl/unique_ptr.h>
 #include <lib/fxl/logging.h>
 #include <virtio/virtio_ring.h>
-
-#include "garnet/lib/machina/virtio_device.h"
 
 namespace machina {
 
@@ -106,7 +102,7 @@ struct poll_task_args_t {
 
 static int virtio_queue_poll_task(void* ctx) {
   zx_status_t result = ZX_OK;
-  fbl::unique_ptr<poll_task_args_t> args(static_cast<poll_task_args_t*>(ctx));
+  std::unique_ptr<poll_task_args_t> args(static_cast<poll_task_args_t*>(ctx));
   while (true) {
     uint16_t descriptor;
     args->queue->Wait(&descriptor);

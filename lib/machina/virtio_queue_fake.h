@@ -10,7 +10,7 @@
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
-#include "garnet/lib/machina/virtio_queue.h"
+#include "garnet/lib/machina/device/virtio_queue.h"
 
 namespace machina {
 

@@ -29,8 +29,6 @@ source_set("machina") {
     "io.h",
     "pci.cc",
     "pci.h",
-    "phys_mem.cc",
-    "phys_mem.h",
     "qcow.cc",
     "qcow.h",
     "qcow_refcount.cc",
@@ -52,8 +50,6 @@ source_set("machina") {
     "virtio_net.h",
     "virtio_pci.cc",
     "virtio_pci.h",
-    "virtio_queue.cc",
-    "virtio_queue.h",
     "virtio_queue_waiter.cc",
     "virtio_queue_waiter.h",
     "virtio_vsock.cc",
@@ -95,26 +91,12 @@ source_set("machina") {
     include_dirs = [ "//zircon/third_party/lib/acpica/source/include" ]
   }
 
-  public_deps = [
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/fidl/fuchsia.guest",
-    "//garnet/public/lib/ui/input/cpp",
-    "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/hid",
-    "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-engine",
-    "//zircon/public/lib/virtio",
-    "//zircon/public/lib/zx",
-  ]
-
   defines = [ "_ALL_SOURCE=1" ]
 
   deps = [
+    "//garnet/lib/machina/device",
+    "//garnet/lib/machina/fidl:fuchsia.guest.device",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-testutils",
     "//zircon/public/lib/block-client",
@@ -123,6 +105,19 @@ source_set("machina") {
     "//zircon/public/lib/framebuffer",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxcpp",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/fidl/fuchsia.guest",
+    "//garnet/public/lib/ui/input/cpp",
+    "//zircon/public/lib/bitmap",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-engine",
+    "//zircon/public/lib/virtio",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -134,6 +129,7 @@ executable("machina_unittests") {
     "hid_event_source-unittest.cc",
     "input_dispatcher_impl-unittest.cc",
     "pci-unittest.cc",
+    "phys_mem_fake.h",
     "qcow-unittest.cc",
     "virtio_block-unittest.cc",
     "virtio_device_fake.h",
@@ -156,6 +152,7 @@ executable("machina_unittests") {
 
   deps = [
     ":machina",
+    "//garnet/lib/machina/device",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",

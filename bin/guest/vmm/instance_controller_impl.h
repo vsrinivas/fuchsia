@@ -8,8 +8,8 @@
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
+#include "garnet/lib/machina/device/phys_mem.h"
 #include "garnet/lib/machina/input_dispatcher_impl.h"
-#include "garnet/lib/machina/phys_mem.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 

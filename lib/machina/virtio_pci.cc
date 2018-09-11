@@ -10,6 +10,7 @@
 #include <virtio/virtio_ids.h>
 
 #include "garnet/lib/machina/bits.h"
+#include "garnet/lib/machina/device/config.h"
 #include "garnet/lib/machina/virtio_device.h"
 #include "lib/fxl/logging.h"
 
@@ -412,9 +413,8 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t write_device_config(
-    VirtioDeviceConfig* device_config, uint64_t addr,
-    const IoValue& value) {
+static zx_status_t write_device_config(VirtioDeviceConfig* device_config,
+                                       uint64_t addr, const IoValue& value) {
   switch (value.access_size) {
     case 1: {
       std::lock_guard<std::mutex> lock(device_config->mutex);
@@ -479,9 +479,8 @@ void VirtioPci::SetupCaps() {
             kVirtioPciCommonCfgBase);
 
   // Notify configuration.
-  notify_cfg_cap_.notify_off_multiplier = kVirtioPciNotifyCfgMultiplier;
-  size_t notify_size =
-      device_config_->num_queues * kVirtioPciNotifyCfgMultiplier;
+  notify_cfg_cap_.notify_off_multiplier = kQueueNotifyMultiplier;
+  size_t notify_size = device_config_->num_queues * kQueueNotifyMultiplier;
   setup_cap(&capabilities_[1], &notify_cfg_cap_.cap, VIRTIO_PCI_CAP_NOTIFY_CFG,
             sizeof(notify_cfg_cap_), notify_size, kVirtioPciNotifyBar,
             kVirtioPciNotifyCfgBase);
@@ -517,11 +516,11 @@ uint16_t VirtioPci::queue_sel() const {
 }
 
 zx_status_t VirtioPci::NotifyBarWrite(uint64_t offset, const IoValue& value) {
-  if (!is_aligned(offset, kVirtioPciNotifyCfgMultiplier)) {
+  if (!is_aligned(offset, kQueueNotifyMultiplier)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto queue = static_cast<uint16_t>(offset / kVirtioPciNotifyCfgMultiplier);
+  auto queue = static_cast<uint16_t>(offset / kQueueNotifyMultiplier);
   return device_config_->notify_queue(queue);
 }
 

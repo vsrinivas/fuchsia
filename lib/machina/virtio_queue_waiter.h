@@ -9,7 +9,7 @@
 #include <lib/fit/function.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/machina/virtio_queue.h"
+#include "garnet/lib/machina/device/virtio_queue.h"
 
 namespace machina {
 

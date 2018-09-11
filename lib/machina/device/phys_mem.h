@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_PHYS_MEM_H_
-#define GARNET_LIB_MACHINA_PHYS_MEM_H_
+#ifndef GARNET_LIB_MACHINA_DEVICE_PHYS_MEM_H_
+#define GARNET_LIB_MACHINA_DEVICE_PHYS_MEM_H_
 
+#include <lib/fxl/logging.h>
 #include <lib/zx/vmo.h>
-
-#include "garnet/public/lib/fxl/logging.h"
 
 namespace machina {
 
@@ -45,4 +44,4 @@ class PhysMem {
 
 }  // namespace machina
 
-#endif  // GARNET_LIB_MACHINA_PHYS_MEM_H_
+#endif  // GARNET_LIB_MACHINA_DEVICE_PHYS_MEM_H_

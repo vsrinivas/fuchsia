@@ -6,7 +6,7 @@
 #define GARNET_BIN_GUEST_VMM_ZIRCON_H_
 
 #include "garnet/lib/machina/dev_mem.h"
-#include "garnet/lib/machina/phys_mem.h"
+#include "garnet/lib/machina/device/phys_mem.h"
 
 class GuestConfig;
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_VIRTIO_QUEUE_H_
-#define GARNET_LIB_MACHINA_VIRTIO_QUEUE_H_
+#ifndef GARNET_LIB_MACHINA_DEVICE_VIRTIO_QUEUE_H_
+#define GARNET_LIB_MACHINA_DEVICE_VIRTIO_QUEUE_H_
 
 #include <mutex>
 #include <string>
@@ -13,7 +13,7 @@
 #include <lib/zx/event.h>
 #include <virtio/virtio.h>
 
-#include "garnet/lib/machina/phys_mem.h"
+#include "garnet/lib/machina/device/phys_mem.h"
 
 struct vring_desc;
 struct vring_avail;
@@ -222,4 +222,4 @@ class VirtioQueue {
 
 }  // namespace machina
 
-#endif  // GARNET_LIB_MACHINA_VIRTIO_QUEUE_H_
+#endif  // GARNET_LIB_MACHINA_DEVICE_VIRTIO_QUEUE_H_

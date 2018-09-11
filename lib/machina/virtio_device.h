@@ -10,8 +10,9 @@
 #include <trace-engine/types.h>
 #include <trace/event.h>
 
+#include "garnet/lib/machina/device/config.h"
+#include "garnet/lib/machina/device/virtio_queue.h"
 #include "garnet/lib/machina/virtio_pci.h"
-#include "garnet/lib/machina/virtio_queue.h"
 
 namespace machina {
 
@@ -180,9 +181,6 @@ class VirtioInprocessDevice
   }
 };
 
-static constexpr zx_signals_t kUserSignalShift =
-    __builtin_ctz(ZX_USER_SIGNAL_ALL);
-
 // Interface for all virtio device components.
 template <uint8_t DeviceId, uint16_t NumQueues, typename ConfigType>
 class VirtioComponentDevice
@@ -212,7 +210,7 @@ class VirtioComponentDevice
     if (status != ZX_OK) {
       return;
     }
-    status = this->Interrupt(signal->observed >> kUserSignalShift);
+    status = this->Interrupt(signal->observed >> kDeviceInterruptShift);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to raise device interrupt " << status;
       return;

@@ -13,7 +13,7 @@
 #include <zx/guest.h>
 #include <zx/vmar.h>
 
-#include "garnet/lib/machina/phys_mem.h"
+#include "garnet/lib/machina/device/phys_mem.h"
 #include "garnet/lib/machina/vcpu.h"
 
 namespace machina {

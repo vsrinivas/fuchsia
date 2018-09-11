@@ -6,7 +6,7 @@
 
 #include <limits.h>
 
-#include "garnet/lib/machina/phys_mem.h"
+#include "garnet/lib/machina/device/phys_mem.h"
 
 static constexpr size_t kMaxSize = 512ull << 30;
 static constexpr size_t kMinSize = 4 * (4 << 10);
