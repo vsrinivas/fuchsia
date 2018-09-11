@@ -3,6 +3,11 @@
         "binary": "test/disabled/ledger_e2e_sync"
     },
     "sandbox": {
-        "features": ["deprecated-all-services"]
+        "features": [],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.tracelink.Registry"
+        ]
     }
 }

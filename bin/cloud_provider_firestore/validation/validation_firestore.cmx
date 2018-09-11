@@ -3,6 +3,10 @@
         "binary": "test/disabled/launch_validation_tests_firestore"
     },
     "sandbox": {
-        "features": ["deprecated-all-services"]
+        "features": [],
+        "services": [
+            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.sys.Launcher"
+        ]
     }
 }

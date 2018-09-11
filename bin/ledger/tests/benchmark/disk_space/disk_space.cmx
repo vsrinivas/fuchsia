@@ -3,6 +3,12 @@
         "binary": "bin/ledger_benchmark_disk_space"
     },
     "sandbox": {
-        "features": ["persistent-storage", "deprecated-all-services"]
+        "features": [
+            "persistent-storage"
+        ],
+        "services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.sys.Launcher"
+        ]
     }
 }

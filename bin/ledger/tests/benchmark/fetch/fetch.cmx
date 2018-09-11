@@ -3,6 +3,13 @@
         "binary": "bin/ledger_benchmark_fetch"
     },
     "sandbox": {
-        "features": ["persistent-storage", "deprecated-all-services"]
+        "features": [
+            "persistent-storage"
+        ],
+        "services": [
+            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.sys.Launcher"
+        ]
     }
 }

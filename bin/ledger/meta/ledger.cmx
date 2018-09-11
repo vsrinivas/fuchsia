@@ -2,8 +2,14 @@
     "program": {
         "binary": "bin/app"
     },
-
     "sandbox": {
-        "features": [ "deprecated-all-services" ]
+        "features": [],
+        "services": [
+            "fuchsia.modular.auth.TokenProvider",
+            "fuchsia.netconnector.NetConnector",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.net.LegacySocketProvider",
+            "fuchsia.cobalt.LoggerFactory"
+        ]
     }
 }
