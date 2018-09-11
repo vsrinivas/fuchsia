@@ -540,6 +540,9 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             .resp_actual_handles = 0,
         };
         status = bus_->Proxy(&args);
+        if (status == ZX_OK) {
+            status = args.resp->status;
+        }
         resp_len = args.resp_actual_size;
         resp_handle_count = args.resp_actual_handles;
         break;
