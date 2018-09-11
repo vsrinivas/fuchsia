@@ -28,8 +28,7 @@ import (
 	"github.com/google/netstack/tcpip/transport/udp"
 )
 
-// TODO(tkilbourn): change the default to false after tracking down NET-1077
-var pprofServer = flag.Bool("pprof", true, "run the pprof http server")
+var pprofServer = flag.Bool("pprof", false, "run the pprof http server")
 
 var ns *Netstack
 
