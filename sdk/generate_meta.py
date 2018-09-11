@@ -37,7 +37,7 @@ def main():
                 args.target_arch,
             ],
         },
-        'parts': filter(lambda m: m, [a.metadata for a in atoms]),
+        'parts': sorted(filter(lambda m: m, [a.metadata for a in atoms])),
     }
 
     with open(args.meta, 'w') as meta_file:

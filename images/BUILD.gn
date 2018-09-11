@@ -1279,6 +1279,7 @@ foreach(image, images) {
       category = "partner"
       testonly = true
 
+      file_content = "target/$target_cpu/${image.sdk}"
       meta = {
         dest = "images/${image.sdk}-meta.json"
         schema = "image"
@@ -1286,6 +1287,14 @@ foreach(image, images) {
           type = "image"
           name = "${image.sdk}"
           root = "images"
+          file = {}
+          if (target_cpu == "x64") {
+            file.x64 = file_content
+          } else if (target_cpu == "arm64") {
+            file.arm64 = file_content
+          } else {
+            assert(false, "Unsupported target architecture: $target_cpu")
+          }
         }
       }
 
@@ -1327,6 +1336,7 @@ sdk_atom(zircon_bin_sdk_target_name) {
   category = "partner"
   testonly = true
 
+  file_content = "target/$target_cpu/zircon.bin"
   meta = {
     dest = "images/zircon.bin-meta.json"
     schema = "image"
@@ -1334,6 +1344,14 @@ sdk_atom(zircon_bin_sdk_target_name) {
       type = "image"
       name = "zircon.bin"
       root = "images"
+      file = {}
+      if (target_cpu == "x64") {
+        file.x64 = file_content
+      } else if (target_cpu == "arm64") {
+        file.arm64 = file_content
+      } else {
+        assert(false, "Unsupported target architecture: $target_cpu")
+      }
     }
   }
 
@@ -1361,6 +1379,7 @@ if (target_cpu == "arm64") {
     category = "partner"
     testonly = true
 
+    file_content = "target/$target_cpu/qemu-zircon.bin"
     meta = {
       dest = "images/qemu-zircon.bin-meta.json"
       schema = "image"
@@ -1368,6 +1387,14 @@ if (target_cpu == "arm64") {
         type = "image"
         name = "qemu-zircon.bin"
         root = "images"
+        file = {}
+        if (target_cpu == "x64") {
+          file.x64 = file_content
+        } else if (target_cpu == "arm64") {
+          file.arm64 = file_content
+        } else {
+          assert(false, "Unsupported target architecture: $target_cpu")
+        }
       }
     }
 

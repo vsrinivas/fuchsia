@@ -13,10 +13,28 @@
           "enum": [
             "image"
           ]
+        },
+        "file": {
+          "description": "The image, per architecture",
+          "type": "object",
+          "properties": {
+            "x64": {
+              "description": "File for the x64 architecture",
+              "$ref": "common.json#/definitions/file"
+            },
+            "arm64": {
+              "description": "File for the arm64 architecture",
+              "$ref": "common.json#/definitions/file"
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1,
+          "maxProperties": 2
         }
       },
       "required": [
-        "type"
+        "type",
+        "file"
       ]
     }
   ]

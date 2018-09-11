@@ -13,10 +13,18 @@
           "enum": [
             "host_tool"
           ]
+        },
+        "files": {
+          "description": "The list of files pertaining to the element",
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/definitions/file"
+          }
         }
       },
       "required": [
-        "type"
+        "type",
+        "files"
       ]
     }
   ]
