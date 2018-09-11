@@ -228,8 +228,8 @@ zx_status_t NandPartDevice::GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t NandPartDevice::GetBadBlockList(uint32_t* bad_block_list, uint32_t bad_block_list_len,
-                                            uint32_t* bad_block_count) {
+zx_status_t NandPartDevice::BadBlockGetBadBlockList(
+    uint32_t* bad_block_list, size_t bad_block_list_len, size_t* bad_block_count) {
 
     if (!bad_block_list_) {
         const zx_status_t status = bad_block_->GetBadBlockList(
@@ -242,8 +242,8 @@ zx_status_t NandPartDevice::GetBadBlockList(uint32_t* bad_block_list, uint32_t b
         }
     }
 
-    *bad_block_count = static_cast<uint32_t>(bad_block_list_.size());
-    zxlogf(TRACE, "nandpart: %s: Bad block count: %u\n", name(), *bad_block_count);
+    *bad_block_count = bad_block_list_.size();
+    zxlogf(TRACE, "nandpart: %s: Bad block count: %zu\n", name(), *bad_block_count);
 
     if (bad_block_list_len == 0 || bad_block_list_.size() == 0) {
         return ZX_OK;
@@ -257,7 +257,7 @@ zx_status_t NandPartDevice::GetBadBlockList(uint32_t* bad_block_list, uint32_t b
     return ZX_OK;
 }
 
-zx_status_t NandPartDevice::MarkBlockBad(uint32_t block) {
+zx_status_t NandPartDevice::BadBlockMarkBlockBad(uint32_t block) {
     if (block >= nand_info_.num_blocks) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -278,7 +278,7 @@ zx_status_t NandPartDevice::DdkGetProtocol(uint32_t proto_id, void* protocol) {
         proto->ops = &nand_proto_ops_;
         break;
     case ZX_PROTOCOL_BAD_BLOCK:
-        proto->ops = &bad_block_proto_ops_;
+        proto->ops = &bad_block_protocol_ops_;
         break;
     default:
         return ZX_ERR_NOT_SUPPORTED;

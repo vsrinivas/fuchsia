@@ -167,7 +167,7 @@ zx_status_t SkipBlockDevice::Create(zx_device_t* parent) {
 }
 
 zx_status_t SkipBlockDevice::GetBadBlockList(fbl::Array<uint32_t>* bad_blocks) {
-    uint32_t bad_block_count;
+    size_t bad_block_count;
     zx_status_t status = bad_block_.GetBadBlockList(nullptr, 0, &bad_block_count);
     if (status != ZX_OK) {
         return status;
@@ -176,7 +176,7 @@ zx_status_t SkipBlockDevice::GetBadBlockList(fbl::Array<uint32_t>* bad_blocks) {
         bad_blocks->reset();
         return ZX_OK;
     }
-    const uint32_t bad_block_list_len = bad_block_count;
+    const size_t bad_block_list_len = bad_block_count;
     fbl::unique_ptr<uint32_t[]> bad_block_list(new uint32_t[bad_block_count]);
     status = bad_block_.GetBadBlockList(bad_block_list.get(), bad_block_list_len, &bad_block_count);
     if (status != ZX_OK) {

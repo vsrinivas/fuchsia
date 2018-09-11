@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+//          MODIFY system/fidl/protocols/bad_block.banjo INSTEAD.
+
 #pragma once
 
 #include <ddk/protocol/bad-block.h>
@@ -10,21 +13,23 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_get_bad_block_list2, GetBadBlockList,
-                                     zx_status_t (C::*)(uint32_t*, uint32_t, uint32_t*));
-
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_mark_block_bad, MarkBlockBad,
-                                     zx_status_t (C::*)(uint32_t));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_bad_block_protocol_get_bad_block_list,
+                                     BadBlockGetBadBlockList,
+                                     zx_status_t (C::*)(uint32_t* out_bad_blocks_list,
+                                                        size_t bad_blocks_count,
+                                                        size_t* out_bad_blocks_actual));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_bad_block_protocol_mark_block_bad, BadBlockMarkBlockBad,
+                                     zx_status_t (C::*)(uint32_t block));
 
 template <typename D>
-constexpr void CheckBadBlockable() {
-    static_assert(internal::has_get_bad_block_list2<D>::value,
+constexpr void CheckBadBlockProtocolSubclass() {
+    static_assert(internal::has_bad_block_protocol_get_bad_block_list<D>::value,
                   "BadBlockProtocol subclasses must implement "
-                  "GetBadBlockList(uint32_t* bad_blocks, "
-                  "uint32_t bad_block_len, uint32_t* num_bad_blocks)");
-    static_assert(internal::has_mark_block_bad<D>::value,
+                  "zx_status_t BadBlockGetBadBlockList(uint32_t* out_bad_blocks_list, size_t "
+                  "bad_blocks_count, size_t* out_bad_blocks_actual");
+    static_assert(internal::has_bad_block_protocol_mark_block_bad<D>::value,
                   "BadBlockProtocol subclasses must implement "
-                  "MarkBlockBad(uint32_t block)");
+                  "zx_status_t BadBlockMarkBlockBad(uint32_t block");
 }
 
 } // namespace internal
