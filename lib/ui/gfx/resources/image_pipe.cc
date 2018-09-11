@@ -7,8 +7,7 @@
 #include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/session.h"
-#include "garnet/lib/ui/gfx/resources/gpu_memory.h"
-#include "garnet/lib/ui/gfx/resources/host_memory.h"
+#include "garnet/lib/ui/gfx/resources/memory.h"
 #include "lib/escher/flib/fence.h"
 
 namespace scenic_impl {
@@ -40,18 +39,10 @@ void ImagePipe::AddImage(uint32_t image_id,
     CloseConnectionAndCleanUp();
     return;
   }
-  vk::Device device = session()->engine()->vk_device();
-  MemoryPtr memory;
-  switch (memory_type) {
-    case fuchsia::images::MemoryType::VK_DEVICE_MEMORY:
-      memory = GpuMemory::New(session(), 0u, device, std::move(vmo),
-                              session()->error_reporter());
-      break;
-    case fuchsia::images::MemoryType::HOST_MEMORY:
-      memory = HostMemory::New(session(), 0u, device, std::move(vmo),
-                               session()->error_reporter());
-      break;
-  }
+  ::fuchsia::ui::gfx::MemoryArgs memory_args;
+  memory_args.memory_type = memory_type;
+  memory_args.vmo = std::move(vmo);
+  MemoryPtr memory = Memory::New(session(), 0u, std::move(memory_args));
   if (!memory) {
     session()->error_reporter()->ERROR()
         << "ImagePipe::AddImage: Unable to create a memory object.";

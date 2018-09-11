@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_BUFFER_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_BUFFER_H_
 
-#include "garnet/lib/ui/gfx/resources/gpu_memory.h"
+#include "garnet/lib/ui/gfx/resources/memory.h"
 #include "lib/escher/vk/buffer.h"
 
 namespace scenic_impl {
@@ -16,17 +16,17 @@ class Buffer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Buffer(Session* session, ResourceId id, GpuMemoryPtr memory, uint32_t size,
+  Buffer(Session* session, ResourceId id, MemoryPtr memory, uint32_t size,
          uint32_t offset);
 
   void Accept(class ResourceVisitor* visitor) override;
 
-  const GpuMemoryPtr& memory() const { return memory_; }
+  const MemoryPtr& memory() const { return memory_; }
   const escher::BufferPtr& escher_buffer() const { return escher_buffer_; }
   vk::DeviceSize size() const { return escher_buffer_->size(); }
 
  private:
-  GpuMemoryPtr memory_;
+  MemoryPtr memory_;
   escher::BufferPtr escher_buffer_;
 };
 

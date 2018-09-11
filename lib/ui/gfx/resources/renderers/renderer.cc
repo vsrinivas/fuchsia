@@ -82,9 +82,7 @@ std::vector<escher::Object> Renderer::Visitor::TakeDisplayList() {
   return std::move(display_list_);
 }
 
-void Renderer::Visitor::Visit(GpuMemory* r) { FXL_CHECK(false); }
-
-void Renderer::Visitor::Visit(HostMemory* r) { FXL_CHECK(false); }
+void Renderer::Visitor::Visit(Memory* r) { FXL_CHECK(false); }
 
 void Renderer::Visitor::Visit(Image* r) { FXL_CHECK(false); }
 

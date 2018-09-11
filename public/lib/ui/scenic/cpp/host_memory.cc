@@ -6,8 +6,8 @@
 
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <memory>
 #include <zircon/assert.h>
+#include <memory>
 
 #include "lib/ui/scenic/cpp/commands.h"
 
@@ -28,18 +28,21 @@ std::pair<zx::vmo, std::shared_ptr<HostData>> AllocateMemory(size_t size) {
   auto data = std::make_shared<HostData>(local_vmo, 0u, size);
 
   // Drop rights before we transfer the VMO to the session manager.
+  // TODO(MA-492): Now that host-local memory may be concurrently used as
+  // device-local memory on UMA platforms, we need to keep all permissions on
+  // the duplicated vmo handle, until Vulkan can import read-only memory.
   zx::vmo remote_vmo;
-  status = local_vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-                             &remote_vmo);
+  status = local_vmo.replace(ZX_RIGHT_SAME_RIGHTS, &remote_vmo);
   ZX_ASSERT_MSG(status == ZX_OK, "replace rights failed: status=%d", status);
   return std::make_pair(std::move(remote_vmo), std::move(data));
 }
 
 }  // namespace
 
-HostData::HostData(const zx::vmo& vmo, off_t offset, size_t size,
-                   uint32_t flags)
+HostData::HostData(const zx::vmo& vmo, off_t offset, size_t size)
     : size_(size) {
+  static const uint32_t flags =
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE;
   uintptr_t ptr;
   zx_status_t status =
       zx::vmar::root_self()->map(0, vmo, offset, size, flags, &ptr);
