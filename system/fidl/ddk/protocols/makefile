@@ -35,4 +35,7 @@ bad-block:
 clk:
 	$(run-banjo)
 
-all: acpi amlogic-canvas bad-block
+gpio:
+	$(run-banjo)
+
+all: acpi amlogic-canvas bad-block clk gpio

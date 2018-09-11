@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-//          MODIFY system/fidl/protocols/clk.fidl INSTEAD.
+//          MODIFY system/fidl/protocols/clk.banjo INSTEAD.
 
 #pragma once
 
