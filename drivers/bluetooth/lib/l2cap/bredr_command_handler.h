@@ -8,7 +8,7 @@
 #include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/signaling_channel.h"
 
 namespace btlib {

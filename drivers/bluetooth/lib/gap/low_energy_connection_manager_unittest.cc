@@ -9,12 +9,13 @@
 
 #include <zircon/assert.h>
 
+#include "garnet/drivers/bluetooth/lib/data/fake_domain.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/gatt/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
@@ -56,7 +57,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
     test_device()->set_settings(settings);
 
     dev_cache_ = std::make_unique<RemoteDeviceCache>();
-    l2cap_ = l2cap::testing::FakeLayer::Create();
+    l2cap_ = data::testing::FakeDomain::Create();
     l2cap_->Initialize();
 
     // TODO(armansito): Pass a fake connector here.
@@ -91,7 +92,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
 
   RemoteDeviceCache* dev_cache() const { return dev_cache_.get(); }
   LowEnergyConnectionManager* conn_mgr() const { return conn_mgr_.get(); }
-  l2cap::testing::FakeLayer* fake_l2cap() const { return l2cap_.get(); }
+  data::testing::FakeDomain* fake_l2cap() const { return l2cap_.get(); }
 
   // Addresses of currently connected fake devices.
   using DeviceList = std::unordered_set<common::DeviceAddress>;
@@ -131,7 +132,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
     }
   }
 
-  fbl::RefPtr<l2cap::testing::FakeLayer> l2cap_;
+  fbl::RefPtr<data::testing::FakeDomain> l2cap_;
 
   std::unique_ptr<RemoteDeviceCache> dev_cache_;
   std::unique_ptr<hci::LowEnergyConnector> connector_;

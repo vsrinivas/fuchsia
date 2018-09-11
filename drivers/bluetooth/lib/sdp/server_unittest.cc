@@ -7,8 +7,9 @@
 #include "gtest/gtest.h"
 
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
+#include "garnet/drivers/bluetooth/lib/data/fake_domain.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/sdp/pdu.h"
 #include "garnet/drivers/bluetooth/lib/sdp/status.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
@@ -34,7 +35,7 @@ class SDP_ServerTest : public TestingBase {
 
  protected:
   void SetUp() override {
-    l2cap_ = l2cap::testing::FakeLayer::Create();
+    l2cap_ = data::testing::FakeDomain::Create();
     l2cap_->set_channel_callback(
         [this](auto fake_chan) { channel_ = std::move(fake_chan); });
     l2cap_->Initialize();
@@ -51,7 +52,7 @@ class SDP_ServerTest : public TestingBase {
 
   Server* server() const { return server_.get(); }
 
-  fbl::RefPtr<l2cap::testing::FakeLayer> l2cap() const { return l2cap_; }
+  fbl::RefPtr<data::testing::FakeDomain> l2cap() const { return l2cap_; }
 
   fbl::RefPtr<l2cap::testing::FakeChannel> fake_chan() const {
     return channel_;
@@ -121,7 +122,7 @@ class SDP_ServerTest : public TestingBase {
 
  private:
   fbl::RefPtr<l2cap::testing::FakeChannel> channel_;
-  fbl::RefPtr<l2cap::testing::FakeLayer> l2cap_;
+  fbl::RefPtr<data::testing::FakeDomain> l2cap_;
   std::unique_ptr<Server> server_;
 };
 
@@ -137,7 +138,8 @@ constexpr l2cap::ChannelId kSdpChannel = 0x0041;
 //  - Packets that are the wrong length are responded to with kInvalidSize
 //  - Answers with the same TransactionID as sent
 TEST_F(SDP_ServerTest, BasicError) {
-  l2cap()->TriggerInboundChannel(kTestHandle, l2cap::kSDP, kSdpChannel, 0x0bad);
+  l2cap()->TriggerInboundL2capChannel(kTestHandle, l2cap::kSDP, kSdpChannel,
+                                      0x0bad);
   RunLoopUntilIdle();
   ASSERT_TRUE(fake_chan());
   EXPECT_TRUE(fake_chan()->activated());
@@ -281,7 +283,8 @@ TEST_F(SDP_ServerTest, ServiceSearchRequest) {
   ServiceHandle spp_handle = AddSPP();
   ServiceHandle a2dp_handle = AddA2DPSink();
 
-  l2cap()->TriggerInboundChannel(kTestHandle, l2cap::kSDP, kSdpChannel, 0x0bad);
+  l2cap()->TriggerInboundL2capChannel(kTestHandle, l2cap::kSDP, kSdpChannel,
+                                      0x0bad);
   RunLoopUntilIdle();
 
   const auto kL2capSearch = common::CreateStaticByteBuffer(
@@ -382,7 +385,8 @@ TEST_F(SDP_ServerTest, ServiceSearchRequest) {
 // Test ServiceSearchRequest:
 //  - doesn't return more than the max requested
 TEST_F(SDP_ServerTest, ServiceSearchRequestOneOfMany) {
-  l2cap()->TriggerInboundChannel(kTestHandle, l2cap::kSDP, kSdpChannel, 0x0bad);
+  l2cap()->TriggerInboundL2capChannel(kTestHandle, l2cap::kSDP, kSdpChannel,
+                                      0x0bad);
   RunLoopUntilIdle();
 
   ServiceHandle spp_handle = AddSPP();
@@ -449,7 +453,8 @@ TEST_F(SDP_ServerTest, ServiceAttributeRequest) {
 
   EXPECT_TRUE(handle);
 
-  l2cap()->TriggerInboundChannel(kTestHandle, l2cap::kSDP, kSdpChannel, 0x0bad);
+  l2cap()->TriggerInboundL2capChannel(kTestHandle, l2cap::kSDP, kSdpChannel,
+                                      0x0bad);
   RunLoopUntilIdle();
 
   const auto kRequestAttr = common::CreateStaticByteBuffer(
@@ -602,7 +607,8 @@ TEST_F(SDP_ServerTest, SearchAttributeRequest) {
 
   EXPECT_TRUE(handle2);
 
-  l2cap()->TriggerInboundChannel(kTestHandle, l2cap::kSDP, kSdpChannel, 0x0bad);
+  l2cap()->TriggerInboundL2capChannel(kTestHandle, l2cap::kSDP, kSdpChannel,
+                                      0x0bad);
   RunLoopUntilIdle();
 
   const auto kRequestAttr = common::CreateStaticByteBuffer(

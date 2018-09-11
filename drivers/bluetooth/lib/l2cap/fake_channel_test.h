@@ -9,7 +9,7 @@
 
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_loop_fixture.h"
 

@@ -38,6 +38,7 @@ static_library("gap") {
 
   public_deps = [
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/data",
     "//garnet/drivers/bluetooth/lib/gatt",
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/l2cap",
@@ -68,8 +69,8 @@ source_set("tests") {
 
   deps = [
     ":gap",
+    "//garnet/drivers/bluetooth/lib/data:testing",
     "//garnet/drivers/bluetooth/lib/gatt:testing",
-    "//garnet/drivers/bluetooth/lib/l2cap:testing",
     "//garnet/drivers/bluetooth/lib/testing",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",

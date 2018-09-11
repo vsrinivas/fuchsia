@@ -31,25 +31,26 @@ bool Host::Initialize(InitCallback callback) {
     return false;
   }
 
-  // L2CAP will be initialized by GAP because it both sets up the HCI ACL data
-  // channel that L2CAP relies on and registers L2CAP services.
-  l2cap_ = l2cap::L2CAP::Create(hci, "bt-host (l2cap)");
-  if (!l2cap_)
+  data_domain_ = data::Domain::Create(hci, "bt-host (data)");
+  if (!data_domain_)
     return false;
 
   gatt_host_ = GattHost::Create("bt-host (gatt)");
   if (!gatt_host_)
     return false;
 
-  gap_ = std::make_unique<gap::Adapter>(hci, l2cap_, gatt_host_->profile());
+  gap_ =
+      std::make_unique<gap::Adapter>(hci, data_domain_, gatt_host_->profile());
   if (!gap_)
     return false;
 
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
-  ZX_DEBUG_ASSERT(l2cap_);
+  ZX_DEBUG_ASSERT(data_domain_);
 
   // Called when the GAP layer is ready. We initialize the GATT profile after
-  // initial setup in GAP.
+  // initial setup in GAP. The data domain will be initialized by GAP because it
+  // both sets up the HCI ACL data channel that L2CAP relies on and registers
+  // L2CAP services.
   auto gap_init_callback = [gatt_host = gatt_host_,
                             callback = std::move(callback)](bool success) {
     bt_log(TRACE, "bt-host", "GAP initialized");
@@ -74,13 +75,14 @@ void Host::ShutDown() {
   // Closes all FIDL channels owned by |host_server_|.
   host_server_ = nullptr;
 
-  // This shuts down the GATT profile and L2CAP and all of their clients.
+  // This shuts down the GATT profile and all of its clients.
   gatt_host_->ShutDown();
-  l2cap_->ShutDown();
 
   // Make sure that |gap_| gets shut down and destroyed on its creation thread
-  // as it is not thread-safe.
+  // as it is not thread-safe. This shuts down the data domain.
   gap_ = nullptr;
+  data_domain_ = nullptr;
+  gatt_host_ = nullptr;
 }
 
 void Host::BindHostInterface(zx::channel channel) {

@@ -6,6 +6,7 @@ group("lib") {
   public_deps = [
     "//garnet/drivers/bluetooth/lib/att",
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/data",
     "//garnet/drivers/bluetooth/lib/gap",
     "//garnet/drivers/bluetooth/lib/gatt",
     "//garnet/drivers/bluetooth/lib/hci",
@@ -24,8 +25,8 @@ group("tests") {
     "//garnet/drivers/bluetooth/lib/gatt:tests",
     "//garnet/drivers/bluetooth/lib/hci:tests",
     "//garnet/drivers/bluetooth/lib/l2cap:tests",
+    "//garnet/drivers/bluetooth/lib/rfcomm:tests",
     "//garnet/drivers/bluetooth/lib/sdp:tests",
     "//garnet/drivers/bluetooth/lib/sm:tests",
-    "//garnet/drivers/bluetooth/lib/rfcomm:tests",
   ]
 }

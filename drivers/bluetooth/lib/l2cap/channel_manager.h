@@ -108,12 +108,13 @@ class ChannelManager final {
   fbl::RefPtr<Channel> OpenFixedChannel(hci::ConnectionHandle connection_handle,
                                         ChannelId channel_id);
 
+  // Open an out-bound connection-oriented L2CAP channel.
   void OpenChannel(hci::ConnectionHandle handle, PSM psm, ChannelCallback cb,
                    async_dispatcher_t* dispatcher);
 
+  // Register/Unregister a callback for incoming service connections.
   bool RegisterService(PSM psm, ChannelCallback cb,
                        async_dispatcher_t* dispatcher);
-
   void UnregisterService(PSM psm);
 
  private:

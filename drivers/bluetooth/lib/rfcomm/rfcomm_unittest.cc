@@ -6,15 +6,13 @@
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel_test.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/channel_manager.h"
 
 namespace btlib {
 namespace rfcomm {
 namespace {
 
-constexpr l2cap::ChannelId kL2CAPChannelId1 = 0x0040;
-constexpr l2cap::ChannelId kL2CAPChannelId2 = 0x0041;
+constexpr l2cap::ChannelId kL2CAPChannelId = 0x0040;
 constexpr hci::ConnectionHandle kHandle1 = 1;
 
 void DoNothingWithChannel(fbl::RefPtr<Channel> channel,
@@ -39,46 +37,51 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
   };
 
   void SetUp() override {
-    l2cap_ = l2cap::testing::FakeLayer::Create();
-    ZX_DEBUG_ASSERT(l2cap_);
-
-    l2cap_->Initialize();
-    l2cap_->AddACLConnection(
-        kHandle1, hci::Connection::Role::kMaster,
-        [] { bt_log(WARN, "rfcomm-test", "unimplemented"); }, dispatcher());
-    // Any new L2CAP channels (incoming our outgoing) opened by our
-    // ChannelManager will be captured and stored in |handle_to_fake_channel_|.
-    // Subsequently, all channels will have listeners attached to them, and any
-    // frames sent from our RFCOMM sessions will be put into the queues in
-    // |handle_to_incoming_frames_|.
-    l2cap_->set_channel_callback(
-        [this](fbl::RefPtr<l2cap::testing::FakeChannel> l2cap_channel) {
-          ZX_DEBUG_ASSERT(l2cap_channel);
-          auto handle = l2cap_channel->link_handle();
-          handle_to_fake_channel_.emplace(handle, l2cap_channel);
-          l2cap_channel->SetSendCallback(
-              [this, handle](auto sdu) {
-                if (handle_to_incoming_frames_.find(handle) ==
-                    handle_to_incoming_frames_.end()) {
-                  handle_to_incoming_frames_.emplace(
-                      handle,
-                      std::queue<std::unique_ptr<const common::ByteBuffer>>());
-                }
-                handle_to_incoming_frames_[handle].push(std::move(sdu));
-              },
-              dispatcher());
-        });
-
-    channel_manager_ = std::make_unique<ChannelManager>(l2cap_.get());
+    channel_manager_ = std::make_unique<ChannelManager>(fit::bind_member(
+        this, &RFCOMM_ChannelManagerTest::OpenRfcommL2capChannel));
     ZX_DEBUG_ASSERT(channel_manager_);
   }
 
   void TearDown() override {
     channel_manager_ = nullptr;
-    l2cap_ = nullptr;
     handle_to_peer_state_.clear();
     handle_to_fake_channel_.clear();
     handle_to_incoming_frames_.clear();
+  }
+
+  // Fake channels are captured and stored in |handle_to_fake_channel_|.
+  // Subsequently, all channels will have listeners attached to them, and any
+  // frames sent from our RFCOMM sessions will be put into the queues in
+  // |handle_to_incoming_frames_|.
+  fbl::RefPtr<l2cap::testing::FakeChannel> CreateFakeL2capChannel(
+      hci::ConnectionHandle handle) {
+    ChannelOptions options(kL2CAPChannelId);
+    options.conn_handle = handle;
+    options.link_type = hci::Connection::LinkType::kACL;
+
+    auto chan = CreateFakeChannel(options);
+    ZX_DEBUG_ASSERT(chan);
+    handle_to_fake_channel_.emplace(handle, chan);
+    chan->SetSendCallback(
+        [this, handle](auto sdu) {
+          if (handle_to_incoming_frames_.find(handle) ==
+              handle_to_incoming_frames_.end()) {
+            handle_to_incoming_frames_.emplace(
+                handle,
+                std::queue<std::unique_ptr<const common::ByteBuffer>>());
+          }
+          handle_to_incoming_frames_[handle].push(std::move(sdu));
+        },
+        dispatcher());
+
+    return chan;
+  }
+
+  // Called by ChannelManager::OpenRemoteChannel().
+  void OpenRfcommL2capChannel(hci::ConnectionHandle handle,
+                              l2cap::ChannelCallback cb) {
+    auto chan = CreateFakeL2capChannel(handle);
+    async::PostTask(dispatcher(), [chan, cb = std::move(cb)] { cb(chan); });
   }
 
   // Emplace a new PeerState for a new fake peer. Should be called for each fake
@@ -145,8 +148,6 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
 
   std::unique_ptr<ChannelManager> channel_manager_;
 
-  fbl::RefPtr<l2cap::testing::FakeLayer> l2cap_;
-
   std::unordered_map<hci::ConnectionHandle,
                      std::queue<std::unique_ptr<const common::ByteBuffer>>>
       handle_to_incoming_frames_;
@@ -181,14 +182,8 @@ fbl::RefPtr<Channel> RFCOMM_ChannelManagerTest::OpenOutgoingChannel(
       dispatcher());
   RunLoopUntilIdle();
 
-  // If the fake L2CAP channel doesn't exist yet, we need to trigger its
-  // creation with TriggerOutboundChannel.
-  if (handle_to_fake_channel_.find(handle) == handle_to_fake_channel_.end()) {
-    l2cap_->TriggerOutboundChannel(handle, l2cap::kRFCOMM, kL2CAPChannelId1,
-                                   kL2CAPChannelId2);
-    RunLoopUntilIdle();
-  }
-
+  ZX_DEBUG_ASSERT(handle_to_fake_channel_.find(handle) !=
+                  handle_to_fake_channel_.end());
   EXPECT_FALSE(handle_to_incoming_frames_.find(handle) ==
                handle_to_incoming_frames_.end());
   auto& queue = handle_to_incoming_frames_[handle];
@@ -282,8 +277,7 @@ void RFCOMM_ChannelManagerTest::OpenIncomingChannel(
   PeerState& state = handle_to_peer_state_[handle];
 
   if (handle_to_fake_channel_.find(handle) == handle_to_fake_channel_.end()) {
-    l2cap_->TriggerInboundChannel(handle, l2cap::kRFCOMM, kL2CAPChannelId1,
-                                  kL2CAPChannelId2);
+    channel_manager_->RegisterL2CAPChannel(CreateFakeL2capChannel(handle));
     RunLoopUntilIdle();
 
     // If channel didn't exist, then we need to do mux startup and parameter
@@ -348,8 +342,7 @@ void RFCOMM_ChannelManagerTest::OpenIncomingChannel(
 // Expect that registration of an L2CAP channel with the Channel Manager results
 // in the L2CAP channel's eventual activation.
 TEST_F(RFCOMM_ChannelManagerTest, RegisterL2CAPChannel) {
-  ChannelOptions l2cap_channel_options(kL2CAPChannelId1);
-  auto l2cap_channel = CreateFakeChannel(l2cap_channel_options);
+  auto l2cap_channel = CreateFakeL2capChannel(kHandle1);
   EXPECT_TRUE(channel_manager_->RegisterL2CAPChannel(l2cap_channel));
   EXPECT_TRUE(l2cap_channel->activated());
 }
@@ -361,8 +354,6 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartupAndParamNegotiation_Timeout) {
 
   channel_manager_->OpenRemoteChannel(kHandle1, kMinServerChannel,
                                       &DoNothingWithChannel, dispatcher());
-  l2cap_->TriggerOutboundChannel(kHandle1, l2cap::kRFCOMM, kL2CAPChannelId1,
-                                 kL2CAPChannelId2);
   RunLoopUntilIdle();
 
   auto channel = GetFakeChannel(kHandle1);
@@ -381,8 +372,7 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartupAndParamNegotiation_Timeout) {
 TEST_F(RFCOMM_ChannelManagerTest, MuxStartupAndParamNegotiation_Responder) {
   AddFakePeerState(kHandle1, PeerState{true /*credits*/, Role::kUnassigned});
 
-  l2cap_->TriggerInboundChannel(kHandle1, l2cap::kRFCOMM, kL2CAPChannelId1,
-                                kL2CAPChannelId2);
+  channel_manager_->RegisterL2CAPChannel(CreateFakeL2capChannel(kHandle1));
   RunLoopUntilIdle();
 
   // Receive a multiplexer startup frame on the session
@@ -407,8 +397,6 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartupAndParamNegotiation_Initiator) {
         channel = ch;
       },
       dispatcher());
-  l2cap_->TriggerOutboundChannel(kHandle1, l2cap::kRFCOMM, kL2CAPChannelId1,
-                                 kL2CAPChannelId2);
   RunLoopUntilIdle();
 
   ExpectFrame(kHandle1, FrameType::kSetAsynchronousBalancedMode,
@@ -476,8 +464,6 @@ TEST_F(RFCOMM_ChannelManagerTest,
         channel = ch;
       },
       dispatcher());
-  l2cap_->TriggerOutboundChannel(kHandle1, l2cap::kRFCOMM, kL2CAPChannelId1,
-                                 kL2CAPChannelId2);
   RunLoopUntilIdle();
 
   ExpectFrame(kHandle1, FrameType::kSetAsynchronousBalancedMode,
@@ -555,8 +541,6 @@ TEST_F(RFCOMM_ChannelManagerTest,
         channel_delivered = true;
       },
       dispatcher());
-  l2cap_->TriggerOutboundChannel(kHandle1, l2cap::kRFCOMM, kL2CAPChannelId1,
-                                 kL2CAPChannelId2);
   RunLoopUntilIdle();
 
   // Expect initial mux-opening SABM
@@ -630,8 +614,6 @@ TEST_F(RFCOMM_ChannelManagerTest,
         channel_delivered = true;
       },
       dispatcher());
-  l2cap_->TriggerOutboundChannel(kHandle1, l2cap::kRFCOMM, kL2CAPChannelId1,
-                                 kL2CAPChannelId2);
   RunLoopUntilIdle();
 
   ExpectFrame(kHandle1, FrameType::kSetAsynchronousBalancedMode,
@@ -695,8 +677,6 @@ TEST_F(RFCOMM_ChannelManagerTest,
         channel_delivered = true;
       },
       dispatcher());
-  l2cap_->TriggerOutboundChannel(kHandle1, l2cap::kRFCOMM, kL2CAPChannelId1,
-                                 kL2CAPChannelId2);
   RunLoopUntilIdle();
 
   ExpectFrame(kHandle1, FrameType::kSetAsynchronousBalancedMode,

@@ -15,29 +15,11 @@
 namespace btlib {
 namespace rfcomm {
 
-ChannelManager::ChannelManager(l2cap::L2CAP* l2cap)
+ChannelManager::ChannelManager(OnL2capConnectionRequest l2cap_delegate)
     : dispatcher_(async_get_default_dispatcher()),
-      l2cap_(l2cap),
+      l2cap_delegate_(std::move(l2cap_delegate)),
       weak_ptr_factory_(this) {
-  ZX_DEBUG_ASSERT(l2cap_);
-  l2cap_->RegisterService(
-      l2cap::kRFCOMM,
-      [cm = weak_ptr_factory_.GetWeakPtr()](auto l2cap_channel) {
-        if (!cm) {
-          return;
-        }
-
-        if (!cm->RegisterL2CAPChannel(l2cap_channel)) {
-          bt_log(WARN, "rfcomm",
-                 "failed to register incoming channel with handle %#.4x",
-                 l2cap_channel->link_handle());
-          return;
-        }
-
-        bt_log(TRACE, "rfcomm", "registered incoming channel with handle %#.4x",
-               l2cap_channel->link_handle());
-      },
-      dispatcher_);
+  ZX_DEBUG_ASSERT(l2cap_delegate_);
 }
 
 bool ChannelManager::RegisterL2CAPChannel(
@@ -69,10 +51,9 @@ void ChannelManager::OpenRemoteChannel(hci::ConnectionHandle handle,
   ZX_DEBUG_ASSERT(dispatcher);
 
   auto session_it = handle_to_session_.find(handle);
-
   if (session_it == handle_to_session_.end()) {
-    l2cap_->OpenChannel(
-        handle, l2cap::kRFCOMM,
+    l2cap_delegate_(
+        handle,
         [this, handle, server_channel, dispatcher,
          cb = std::move(channel_opened_cb)](auto l2cap_channel) mutable {
           if (!l2cap_channel) {
@@ -88,6 +69,7 @@ void ChannelManager::OpenRemoteChannel(hci::ConnectionHandle handle,
                  handle);
           ZX_DEBUG_ASSERT(handle_to_session_.find(handle) ==
                           handle_to_session_.end());
+
           handle_to_session_.emplace(
               handle,
               Session::Create(
@@ -101,8 +83,7 @@ void ChannelManager::OpenRemoteChannel(hci::ConnectionHandle handle,
                             OpenRemoteChannel(handle, server_channel,
                                               std::move(cb_), dispatcher);
                           });
-        },
-        dispatcher_);
+        });
     return;
   }
 

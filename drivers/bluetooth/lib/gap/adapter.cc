@@ -46,17 +46,18 @@ std::string GetHostname() {
 }  // namespace
 
 Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
-                 fbl::RefPtr<l2cap::L2CAP> l2cap, fbl::RefPtr<gatt::GATT> gatt)
+                 fbl::RefPtr<data::Domain> data_domain,
+                 fbl::RefPtr<gatt::GATT> gatt)
     : identifier_(fxl::GenerateUUID()),
       dispatcher_(async_get_default_dispatcher()),
       hci_(hci),
       init_state_(State::kNotInitialized),
       max_lmp_feature_page_index_(0),
-      l2cap_(l2cap),
+      data_domain_(data_domain),
       gatt_(gatt),
       weak_ptr_factory_(this) {
   ZX_DEBUG_ASSERT(hci_);
-  ZX_DEBUG_ASSERT(l2cap_);
+  ZX_DEBUG_ASSERT(data_domain_);
   ZX_DEBUG_ASSERT(gatt_);
   ZX_DEBUG_ASSERT_MSG(dispatcher_, "must create on a thread with a dispatcher");
 
@@ -405,9 +406,9 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
     return;
   }
 
-  // ACLDataChannel::Initialize is synchronous so L2CAP can be initialized
-  // immediately after.
-  l2cap_->Initialize();
+  // Initialize the data Domain to make L2CAP available for the next
+  // initialization step.
+  data_domain_->Initialize();
 
   ZX_DEBUG_ASSERT(init_seq_runner_->IsReady());
   ZX_DEBUG_ASSERT(!init_seq_runner_->HasQueuedCommands());
@@ -544,14 +545,14 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
   le_discovery_manager_->set_directed_connectable_callback(
       std::move(directed_conn_cb));
   le_connection_manager_ = std::make_unique<LowEnergyConnectionManager>(
-      hci_, hci_le_connector_.get(), &device_cache_, l2cap_, gatt_);
+      hci_, hci_le_connector_.get(), &device_cache_, data_domain_, gatt_);
   le_advertising_manager_ =
       std::make_unique<LowEnergyAdvertisingManager>(hci_le_advertiser_.get());
 
   // Initialize the BR/EDR manager objects if the controller supports BR/EDR.
   if (state_.IsBREDRSupported()) {
     bredr_connection_manager_ = std::make_unique<BrEdrConnectionManager>(
-        hci_, &device_cache_, l2cap_,
+        hci_, &device_cache_, data_domain_,
         state_.features().HasBit(0, hci::LMPFeature::kInterlacedPageScan));
 
     hci::InquiryMode mode = hci::InquiryMode::kStandard;
@@ -566,7 +567,7 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
     bredr_discovery_manager_ =
         std::make_unique<BrEdrDiscoveryManager>(hci_, mode, &device_cache_);
 
-    sdp_server_ = std::make_unique<sdp::Server>(l2cap_);
+    sdp_server_ = std::make_unique<sdp::Server>(data_domain_);
   }
 
   // Set the local name default.
@@ -639,6 +640,7 @@ void Adapter::CleanUp() {
   state_ = AdapterState();
   transport_closed_cb_ = nullptr;
 
+  sdp_server_ = nullptr;
   bredr_discovery_manager_ = nullptr;
 
   le_advertising_manager_ = nullptr;
@@ -647,6 +649,9 @@ void Adapter::CleanUp() {
 
   hci_le_connector_ = nullptr;
   hci_le_advertiser_ = nullptr;
+
+  // Clean up the data domain as it gets initialized by the Adapter.
+  data_domain_->ShutDown();
 
   // TODO(armansito): hci::Transport::ShutDown() should send a shutdown message
   // to the bt-hci device, which would be responsible for sending HCI_Reset upon

@@ -67,13 +67,12 @@ hci::CommandChannel::EventHandlerId BrEdrConnectionManager::AddEventHandler(
   return event_id;
 }
 
-BrEdrConnectionManager::BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
-                                               RemoteDeviceCache* device_cache,
-                                               fbl::RefPtr<l2cap::L2CAP> l2cap,
-                                               bool use_interlaced_scan)
+BrEdrConnectionManager::BrEdrConnectionManager(
+    fxl::RefPtr<hci::Transport> hci, RemoteDeviceCache* device_cache,
+    fbl::RefPtr<data::Domain> data_domain, bool use_interlaced_scan)
     : hci_(hci),
       cache_(device_cache),
-      l2cap_(l2cap),
+      data_domain_(data_domain),
       interrogator_(cache_, hci_, async_get_default_dispatcher()),
       page_scan_interval_(0),
       page_scan_window_(0),
@@ -82,6 +81,7 @@ BrEdrConnectionManager::BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
       weak_ptr_factory_(this) {
   ZX_DEBUG_ASSERT(hci_);
   ZX_DEBUG_ASSERT(cache_);
+  ZX_DEBUG_ASSERT(data_domain_);
   ZX_DEBUG_ASSERT(dispatcher_);
 
   hci_cmd_runner_ =
@@ -324,7 +324,7 @@ void BrEdrConnectionManager::OnConnectionComplete(
         }
 
         // Register with L2CAP to handle services on the ACL signaling channel.
-        self->l2cap_->AddACLConnection(
+        self->data_domain_->AddACLConnection(
             conn_ptr->handle(), conn_ptr->role(),
             [self, conn_ptr = conn_ptr->WeakPtr()] {
               if (!self || !conn_ptr) {
@@ -376,7 +376,7 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
          device->identifier().c_str(), event.ToStatus().ToString().c_str(),
          handle, params.reason);
 
-  l2cap_->RemoveConnection(handle);
+  data_domain_->RemoveConnection(handle);
 
   // Connection is already closed, so we don't need to send a disconnect.
   conn->set_closed();

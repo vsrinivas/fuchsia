@@ -10,7 +10,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
 namespace btlib {
 

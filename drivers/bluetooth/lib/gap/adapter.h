@@ -12,11 +12,11 @@
 #include <lib/fit/function.h>
 #include <zircon/assert.h>
 
+#include "garnet/drivers/bluetooth/lib/data/domain.h"
 #include "garnet/drivers/bluetooth/lib/gap/adapter_state.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/sdp/server.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -56,7 +56,7 @@ class Adapter final {
   //
   // This will take ownership of |hci_device|.
   explicit Adapter(fxl::RefPtr<hci::Transport> hci,
-                   fbl::RefPtr<l2cap::L2CAP> l2cap,
+                   fbl::RefPtr<data::Domain> data_domain,
                    fbl::RefPtr<gatt::GATT> gatt);
   ~Adapter();
 
@@ -231,9 +231,8 @@ class Adapter final {
   // devices.
   RemoteDeviceCache device_cache_;
 
-  // The L2CAP layer. We use this reference to manage logical links and obtain
-  // fixed channels.
-  fbl::RefPtr<l2cap::L2CAP> l2cap_;
+  // The data domain used by GAP to interact with L2CAP and RFCOMM layers.
+  fbl::RefPtr<data::Domain> data_domain_;
 
   // The GATT profile. We use this reference to add and remove data bearers and
   // for service discovery.

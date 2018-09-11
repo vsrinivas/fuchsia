@@ -7,12 +7,12 @@
 
 #include "lib/fxl/memory/weak_ptr.h"
 
+#include "garnet/drivers/bluetooth/lib/data/domain.h"
 #include "garnet/drivers/bluetooth/lib/gap/bredr_interrogator.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
 namespace btlib {
 
@@ -33,7 +33,7 @@ class BrEdrConnectionManager final {
  public:
   BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
                          RemoteDeviceCache* device_cache,
-                         fbl::RefPtr<l2cap::L2CAP> l2cap,
+                         fbl::RefPtr<data::Domain> data_domain,
                          bool use_interlaced_scan);
   ~BrEdrConnectionManager();
 
@@ -88,7 +88,7 @@ class BrEdrConnectionManager final {
   // This object must outlive this instance.
   RemoteDeviceCache* cache_;
 
-  fbl::RefPtr<l2cap::L2CAP> l2cap_;
+  fbl::RefPtr<data::Domain> data_domain_;
 
   // Interregator for new connections to pass.
   BrEdrInterrogator interrogator_;

@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 #include "garnet/drivers/bluetooth/lib/sdp/pdu.h"
 
 namespace btlib {
@@ -102,17 +103,17 @@ DataElement WriteRFCOMMChannel(const DataElement& protocol_list,
 
 }  // namespace
 
-Server::Server(fbl::RefPtr<l2cap::L2CAP> l2cap)
-    : l2cap_(l2cap),
+Server::Server(fbl::RefPtr<data::Domain> data_domain)
+    : data_domain_(data_domain),
       next_handle_(kFirstUnreservedHandle),
       db_state_(0),
       weak_ptr_factory_(this) {
-  ZX_DEBUG_ASSERT(l2cap_);
+  ZX_DEBUG_ASSERT(data_domain_);
 
   records_.emplace(kSDPHandle, MakeServiceDiscoveryService());
 
   // Register SDP
-  l2cap_->RegisterService(
+  data_domain_->RegisterService(
       l2cap::kSDP,
       [self = weak_ptr_factory_.GetWeakPtr()](auto channel) {
         if (self)
@@ -130,7 +131,7 @@ Server::Server(fbl::RefPtr<l2cap::L2CAP> l2cap)
   });
 }
 
-Server::~Server() { l2cap_->UnregisterService(l2cap::kSDP); }
+Server::~Server() { data_domain_->UnregisterService(l2cap::kSDP); }
 
 bool Server::AddConnection(fbl::RefPtr<l2cap::Channel> channel) {
   bt_log(TRACE, "sdp", "add connection handle %#.4x", channel->link_handle());
@@ -250,7 +251,7 @@ ServiceHandle Server::RegisterService(ServiceRecord record,
             psm,
             [primary_list = primary_list.Clone(), conn_cb = std::move(conn_cb)](
                 zx::socket conn) { conn_cb(std::move(conn), primary_list); });
-        l2cap_->RegisterService(
+        data_domain_->RegisterService(
             psm,
             [psm, self = weak_ptr_factory_.GetWeakPtr()](auto channel) {
               if (self)
@@ -285,7 +286,7 @@ bool Server::UnregisterService(ServiceHandle handle) {
   auto psms_it = record_psms_.find(handle);
   if (psms_it != record_psms_.end()) {
     for (const auto& psm : psms_it->second) {
-      l2cap_->UnregisterService(psm);
+      data_domain_->UnregisterService(psm);
       psm_callbacks_.erase(psm);
     }
     record_psms_.erase(psms_it);

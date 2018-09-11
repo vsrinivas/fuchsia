@@ -11,6 +11,7 @@
 
 #include "garnet/drivers/bluetooth/lib/l2cap/bredr_command_handler.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/dynamic_channel_registry.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/signaling_channel.h"
 
 namespace btlib {

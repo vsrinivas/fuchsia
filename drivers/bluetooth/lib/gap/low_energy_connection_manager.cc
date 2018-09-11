@@ -84,10 +84,10 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
 
   // Registers this connection with L2CAP and initializes the fixed channel
   // protocols.
-  void InitializeFixedChannels(
-      fbl::RefPtr<l2cap::L2CAP> l2cap, fbl::RefPtr<gatt::GATT> gatt,
-      l2cap::L2CAP::LEConnectionParameterUpdateCallback cp_cb,
-      l2cap::L2CAP::LinkErrorCallback link_error_cb) {
+  void InitializeFixedChannels(fbl::RefPtr<data::Domain> data_domain,
+                               fbl::RefPtr<gatt::GATT> gatt,
+                               l2cap::LEConnectionParameterUpdateCallback cp_cb,
+                               l2cap::LinkErrorCallback link_error_cb) {
     auto self = weak_ptr_factory_.GetWeakPtr();
     auto channels_cb = [self, gatt](fbl::RefPtr<l2cap::Channel> att,
                                     fbl::RefPtr<l2cap::Channel> smp) {
@@ -138,9 +138,9 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
       self->pairing_ = std::move(pairing);
     };
 
-    l2cap->AddLEConnection(link_->handle(), link_->role(), std::move(cp_cb),
-                           std::move(link_error_cb), std::move(channels_cb),
-                           dispatcher_);
+    data_domain->AddLEConnection(
+        link_->handle(), link_->role(), std::move(link_error_cb),
+        std::move(channels_cb), std::move(cp_cb), dispatcher_);
   }
 
   // Cancels any on-going pairing procedures and sets up SMP to use the provided
@@ -329,19 +329,19 @@ void LowEnergyConnectionManager::PendingRequestData::NotifyCallbacks(
 
 LowEnergyConnectionManager::LowEnergyConnectionManager(
     fxl::RefPtr<hci::Transport> hci, hci::LowEnergyConnector* connector,
-    RemoteDeviceCache* device_cache, fbl::RefPtr<l2cap::L2CAP> l2cap,
+    RemoteDeviceCache* device_cache, fbl::RefPtr<data::Domain> data_domain,
     fbl::RefPtr<gatt::GATT> gatt)
     : hci_(hci),
       request_timeout_ms_(kLECreateConnectionTimeoutMs),
       dispatcher_(async_get_default_dispatcher()),
       device_cache_(device_cache),
-      l2cap_(l2cap),
+      data_domain_(data_domain),
       gatt_(gatt),
       connector_(connector),
       weak_ptr_factory_(this) {
   ZX_DEBUG_ASSERT(dispatcher_);
   ZX_DEBUG_ASSERT(device_cache_);
-  ZX_DEBUG_ASSERT(l2cap_);
+  ZX_DEBUG_ASSERT(data_domain_);
   ZX_DEBUG_ASSERT(gatt_);
   ZX_DEBUG_ASSERT(hci_);
   ZX_DEBUG_ASSERT(connector_);
@@ -648,7 +648,8 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
   // Initialize connection.
   auto conn = std::make_unique<internal::LowEnergyConnection>(
       device_id, std::move(link), dispatcher_, weak_ptr_factory_.GetWeakPtr());
-  conn->InitializeFixedChannels(l2cap_, gatt_, std::move(conn_param_update_cb),
+  conn->InitializeFixedChannels(data_domain_, gatt_,
+                                std::move(conn_param_update_cb),
                                 std::move(link_error_cb));
 
   auto first_ref = conn->AddRef();
@@ -692,7 +693,7 @@ void LowEnergyConnectionManager::CleanUpConnection(
 
   // Remove the connection from L2CAP. This will invalidate all channels that
   // are associated with this link.
-  l2cap_->RemoveConnection(conn->handle());
+  data_domain_->RemoveConnection(conn->handle());
 
   if (!close_link) {
     // Mark the connection as already closed so that hci::Connection::Close()

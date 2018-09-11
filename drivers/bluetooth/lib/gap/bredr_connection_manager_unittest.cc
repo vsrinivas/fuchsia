@@ -5,9 +5,9 @@
 #include "garnet/drivers/bluetooth/lib/gap/bredr_connection_manager.h"
 
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
+#include "garnet/drivers/bluetooth/lib/data/fake_domain.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 
@@ -105,10 +105,10 @@ class BrEdrConnectionManagerTest : public TestingBase {
     InitializeACLDataChannel();
 
     device_cache_ = std::make_unique<RemoteDeviceCache>();
-    l2cap_ = l2cap::testing::FakeLayer::Create();
-    l2cap_->Initialize();
+    data_domain_ = data::testing::FakeDomain::Create();
+    data_domain_->Initialize();
     connection_manager_ = std::make_unique<BrEdrConnectionManager>(
-        transport(), device_cache_.get(), l2cap_, true);
+        transport(), device_cache_.get(), data_domain_, true);
 
     StartTestDevice();
   }
@@ -124,7 +124,7 @@ class BrEdrConnectionManagerTest : public TestingBase {
     }
     RunLoopUntilIdle();
     test_device()->Stop();
-    l2cap_ = nullptr;
+    data_domain_ = nullptr;
     device_cache_ = nullptr;
     TestingBase::TearDown();
   }
@@ -135,14 +135,14 @@ class BrEdrConnectionManagerTest : public TestingBase {
     connection_manager_ = std::move(mgr);
   }
 
-  l2cap::testing::FakeLayer* l2cap() const { return l2cap_.get(); }
+  data::testing::FakeDomain* data_domain() const { return data_domain_.get(); }
 
   RemoteDeviceCache* device_cache() const { return device_cache_.get(); }
 
  private:
   std::unique_ptr<BrEdrConnectionManager> connection_manager_;
   std::unique_ptr<RemoteDeviceCache> device_cache_;
-  fbl::RefPtr<l2cap::testing::FakeLayer> l2cap_;
+  fbl::RefPtr<data::testing::FakeDomain> data_domain_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BrEdrConnectionManagerTest);
 };
@@ -684,7 +684,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
   test_device()->QueueCommandTransaction(CommandTransaction(
       kDisconnect, {&kDisconnectRsp, &kDisconnectionComplete}));
 
-  l2cap()->TriggerLinkError(kConnectionHandle);
+  data_domain()->TriggerLinkError(kConnectionHandle);
 
   RunLoopUntilIdle();
 

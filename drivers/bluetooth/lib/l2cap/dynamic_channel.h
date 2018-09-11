@@ -10,7 +10,7 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
 namespace btlib {
 namespace l2cap {

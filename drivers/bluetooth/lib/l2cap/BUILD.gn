@@ -6,7 +6,11 @@
 # emulation.
 source_set("definitions") {
   sources = [
-    "l2cap_defs.h",
+    "l2cap.h",
+  ]
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib/hci:definitions",
   ]
 }
 
@@ -28,8 +32,6 @@ static_library("l2cap") {
     "dynamic_channel_registry.h",
     "fragmenter.cc",
     "fragmenter.h",
-    "l2cap.cc",
-    "l2cap.h",
     "le_signaling_channel.cc",
     "le_signaling_channel.h",
     "logical_link.cc",
@@ -65,8 +67,6 @@ source_set("testing") {
     "fake_channel.h",
     "fake_channel_test.cc",
     "fake_channel_test.h",
-    "fake_layer.cc",
-    "fake_layer.h",
     "fake_signaling_channel.cc",
     "fake_signaling_channel.h",
   ]

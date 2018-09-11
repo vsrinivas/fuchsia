@@ -49,7 +49,7 @@ void FakeChannel::SetSendCallback(SendCallback callback,
   send_dispatcher_ = dispatcher;
 }
 
-void FakeChannel::SetLinkErrorCallback(L2CAP::LinkErrorCallback callback,
+void FakeChannel::SetLinkErrorCallback(LinkErrorCallback callback,
                                        async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
 

@@ -13,16 +13,10 @@
 
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/channel.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/session.h"
 
 namespace btlib {
-
-namespace l2cap {
-class L2CAP;
-}  // namespace l2cap
-
 namespace rfcomm {
 
 // The main entry point for managing RFCOMM connections. ChannelManager has
@@ -36,9 +30,18 @@ namespace rfcomm {
 // dispatcher of the thread it was created on.
 class ChannelManager {
  public:
-  // Construct a new ChannelManager and register it as the L2CAP service handler
-  // for RFCOMM. |l2cap| must be valid as long as the ChannelManager exists.
-  ChannelManager(l2cap::L2CAP* l2cap);
+  // |l2cap_delegate| is responsible for initiating a connection-oriented L2CAP
+  // channel for the RFCOMM PSM and reporting the resultant channel in a
+  // ChannelCallback. This is invoked by OpenRemoteChannel to initiate a new
+  // RFCOMM session when a session does not exist. The ChannelCallback parameter
+  // of |l2cap_delegate| must run on this ChannelManager's creation thread.
+  //
+  // TODO(armansito): Consider separating the concern of initiating an L2CAP
+  // connection from managing RFCOMM sessions by removing this dependency by
+  // making data::Domain take care of the former.
+  using OnL2capConnectionRequest =
+      fit::function<void(hci::ConnectionHandle, l2cap::ChannelCallback)>;
+  explicit ChannelManager(OnL2capConnectionRequest l2cap_delegate);
 
   // Registers |l2cap_channel| with RFCOMM. After this call, we will be able to
   // use OpenRemoteChannel() to get an RFCOMM channel multiplexed on top of this
@@ -54,7 +57,9 @@ class ChannelManager {
       fit::function<void(fbl::RefPtr<Channel>, ServerChannel)>;
 
   // Open an outgoing RFCOMM channel to the remote device represented by
-  // |handle|. Registers an L2CAP channel to |handle| if necessary.
+  // |handle|. If a session corresponding to |handle| does not exist, a new
+  // L2CAP connection to the RFCOMM PSM will be requested by invoking the
+  // |l2cap_delegate| passed to the constructor.
   void OpenRemoteChannel(hci::ConnectionHandle handle,
                          ServerChannel server_channel,
                          ChannelOpenedCallback channel_opened_cb,
@@ -84,11 +89,7 @@ class ChannelManager {
 
   // The dispatcher which ChannelManager uses to run its own tasks.
   async_dispatcher_t* const dispatcher_;
-
-  // A reference to the top-level L2CAP object, which creates and owns this
-  // ChannelManager object. This reference is guaranteed to exist. Note that
-  // using a RefPtr here would create a cyclical reference.
-  l2cap::L2CAP* const l2cap_;
+  const OnL2capConnectionRequest l2cap_delegate_;
 
   fxl::WeakPtrFactory<ChannelManager> weak_ptr_factory_;
 

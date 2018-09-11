@@ -14,12 +14,12 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
+#include "garnet/drivers/bluetooth/lib/data/domain.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -92,7 +92,7 @@ class LowEnergyConnectionManager final {
   LowEnergyConnectionManager(fxl::RefPtr<hci::Transport> hci,
                              hci::LowEnergyConnector* connector,
                              RemoteDeviceCache* device_cache,
-                             fbl::RefPtr<l2cap::L2CAP> l2cap,
+                             fbl::RefPtr<data::Domain> data_domain,
                              fbl::RefPtr<gatt::GATT> gatt);
   ~LowEnergyConnectionManager();
 
@@ -330,10 +330,10 @@ class LowEnergyConnectionManager final {
   // connetion parameters, etc). Expected to outlive this instance.
   RemoteDeviceCache* device_cache_;  // weak
 
-  // The L2CAP layer reference, used to manage LE logical links and fixed
-  // channels. LE-specific L2CAP signaling events (e.g. connection parameter
-  // update) are received here.
-  fbl::RefPtr<l2cap::L2CAP> l2cap_;
+  // The reference to the data domain, used to interact with the L2CAP layer to
+  // manage LE logical links, fixed channels, and LE-specific L2CAP signaling
+  // events (e.g. connection parameter update).
+  fbl::RefPtr<data::Domain> data_domain_;
 
   // The GATT layer reference, used to add and remove ATT data bearers and
   // service discovery.

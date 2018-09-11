@@ -30,6 +30,7 @@ static_library("sdp") {
 
   public_deps = [
     ":definitions",
+    "//garnet/drivers/bluetooth/lib/data",
     "//garnet/drivers/bluetooth/lib/l2cap",
     "//garnet/drivers/bluetooth/lib/rfcomm",
     "//garnet/public/lib/fxl",
@@ -49,6 +50,7 @@ source_set("tests") {
   deps = [
     ":sdp",
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/data:testing",
     "//garnet/drivers/bluetooth/lib/l2cap:testing",
     "//garnet/drivers/bluetooth/lib/testing",
     "//third_party/googletest:gtest",

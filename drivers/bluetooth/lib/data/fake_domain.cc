@@ -2,18 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fake_layer.h"
+#include "fake_domain.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "fake_channel.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
 
 namespace btlib {
-namespace l2cap {
+
+using l2cap::testing::FakeChannel;
+
+namespace data {
 namespace testing {
 
-void FakeLayer::TriggerLEConnectionParameterUpdate(
+void FakeDomain::TriggerLEConnectionParameterUpdate(
     hci::ConnectionHandle handle,
     const hci::LEPreferredConnectionParameters& params) {
   ZX_DEBUG_ASSERT(initialized_);
@@ -24,8 +27,10 @@ void FakeLayer::TriggerLEConnectionParameterUpdate(
       [params, cb = link_data.le_conn_param_cb.share()] { cb(params); });
 }
 
-void FakeLayer::TriggerOutboundChannel(hci::ConnectionHandle handle, PSM psm,
-                                       ChannelId id, ChannelId remote_id) {
+void FakeDomain::TriggerOutboundL2capChannel(hci::ConnectionHandle handle,
+                                             l2cap::PSM psm,
+                                             l2cap::ChannelId id,
+                                             l2cap::ChannelId remote_id) {
   ZX_DEBUG_ASSERT(initialized_);
 
   LinkData& link_data = FindLinkData(handle);
@@ -36,7 +41,7 @@ void FakeLayer::TriggerOutboundChannel(hci::ConnectionHandle handle, PSM psm,
   std::list<ChannelDelivery>& handlers = cb_iter->second;
   ZX_DEBUG_ASSERT(!handlers.empty());
 
-  ChannelCallback& cb = handlers.front().first;
+  l2cap::ChannelCallback& cb = handlers.front().first;
   auto chan = OpenFakeChannel(&link_data, id, remote_id);
   async_dispatcher_t* const dispatcher = handlers.front().second;
   async::PostTask(dispatcher, [cb = std::move(cb), chan = std::move(chan)] {
@@ -49,8 +54,9 @@ void FakeLayer::TriggerOutboundChannel(hci::ConnectionHandle handle, PSM psm,
   }
 }
 
-void FakeLayer::TriggerInboundChannel(hci::ConnectionHandle handle, PSM psm,
-                                      ChannelId id, ChannelId remote_id) {
+void FakeDomain::TriggerInboundL2capChannel(hci::ConnectionHandle handle,
+                                            l2cap::PSM psm, l2cap::ChannelId id,
+                                            l2cap::ChannelId remote_id) {
   ZX_DEBUG_ASSERT(initialized_);
 
   LinkData& link_data = FindLinkData(handle);
@@ -58,7 +64,7 @@ void FakeLayer::TriggerInboundChannel(hci::ConnectionHandle handle, PSM psm,
   ZX_DEBUG_ASSERT_MSG(cb_iter != inbound_conn_cbs_.end(),
                       "no service registered for PSM %#.4x", psm);
 
-  ChannelCallback& cb = cb_iter->second.first;
+  l2cap::ChannelCallback& cb = cb_iter->second.first;
   async_dispatcher_t* const dispatcher = cb_iter->second.second;
   auto chan = OpenFakeChannel(&link_data, id, remote_id);
   async::PostTask(dispatcher, [cb = std::move(cb), chan = std::move(chan)] {
@@ -66,7 +72,7 @@ void FakeLayer::TriggerInboundChannel(hci::ConnectionHandle handle, PSM psm,
   });
 }
 
-void FakeLayer::TriggerLinkError(hci::ConnectionHandle handle) {
+void FakeDomain::TriggerLinkError(hci::ConnectionHandle handle) {
   ZX_DEBUG_ASSERT(initialized_);
 
   LinkData& link_data = FindLinkData(handle);
@@ -74,14 +80,14 @@ void FakeLayer::TriggerLinkError(hci::ConnectionHandle handle) {
                   [cb = link_data.link_error_cb.share()] { cb(); });
 }
 
-void FakeLayer::Initialize() { initialized_ = true; }
+void FakeDomain::Initialize() { initialized_ = true; }
 
-void FakeLayer::ShutDown() { initialized_ = false; }
+void FakeDomain::ShutDown() { initialized_ = false; }
 
-void FakeLayer::AddACLConnection(hci::ConnectionHandle handle,
-                                 hci::Connection::Role role,
-                                 LinkErrorCallback link_error_cb,
-                                 async_dispatcher_t* dispatcher) {
+void FakeDomain::AddACLConnection(hci::ConnectionHandle handle,
+                                  hci::Connection::Role role,
+                                  l2cap::LinkErrorCallback link_error_cb,
+                                  async_dispatcher_t* dispatcher) {
   if (!initialized_)
     return;
 
@@ -89,10 +95,11 @@ void FakeLayer::AddACLConnection(hci::ConnectionHandle handle,
                    std::move(link_error_cb), dispatcher);
 }
 
-void FakeLayer::AddLEConnection(
+void FakeDomain::AddLEConnection(
     hci::ConnectionHandle handle, hci::Connection::Role role,
-    LEConnectionParameterUpdateCallback conn_param_cb,
-    LinkErrorCallback link_error_cb, AddLEConnectionCallback channel_callback,
+    l2cap::LinkErrorCallback link_error_cb,
+    l2cap::LEFixedChannelsCallback channel_cb,
+    l2cap::LEConnectionParameterUpdateCallback conn_param_cb,
     async_dispatcher_t* dispatcher) {
   if (!initialized_)
     return;
@@ -103,21 +110,21 @@ void FakeLayer::AddLEConnection(
   data->le_conn_param_cb = std::move(conn_param_cb);
 
   // Open the ATT and SMP fixed channels.
-  auto att = OpenFakeFixedChannel(data, kATTChannelId);
-  auto smp = OpenFakeFixedChannel(data, kLESMPChannelId);
+  auto att = OpenFakeFixedChannel(data, l2cap::kATTChannelId);
+  auto smp = OpenFakeFixedChannel(data, l2cap::kLESMPChannelId);
   async::PostTask(dispatcher, [att = std::move(att), smp = std::move(smp),
-                               cb = std::move(channel_callback)]() mutable {
+                               cb = std::move(channel_cb)]() mutable {
     cb(std::move(att), std::move(smp));
   });
 }
 
-void FakeLayer::RemoveConnection(hci::ConnectionHandle handle) {
+void FakeDomain::RemoveConnection(hci::ConnectionHandle handle) {
   links_.erase(handle);
 }
 
-void FakeLayer::OpenChannel(hci::ConnectionHandle handle, PSM psm,
-                            ChannelCallback cb,
-                            async_dispatcher_t* dispatcher) {
+void FakeDomain::OpenL2capChannel(hci::ConnectionHandle handle, l2cap::PSM psm,
+                                  l2cap::ChannelCallback cb,
+                                  async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(initialized_);
 
   LinkData& link_data = FindLinkData(handle);
@@ -125,8 +132,9 @@ void FakeLayer::OpenChannel(hci::ConnectionHandle handle, PSM psm,
       std::make_pair(std::move(cb), dispatcher));
 }
 
-void FakeLayer::RegisterService(PSM psm, ChannelCallback channel_callback,
-                                async_dispatcher_t* dispatcher) {
+void FakeDomain::RegisterService(l2cap::PSM psm,
+                                 l2cap::ChannelCallback channel_callback,
+                                 async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(initialized_);
   ZX_DEBUG_ASSERT(inbound_conn_cbs_.count(psm) == 0);
 
@@ -134,8 +142,8 @@ void FakeLayer::RegisterService(PSM psm, ChannelCallback channel_callback,
       psm, std::make_pair(std::move(channel_callback), dispatcher));
 }
 
-void FakeLayer::RegisterService(PSM psm, SocketCallback socket_callback,
-                                async_dispatcher_t* cb_dispatcher) {
+void FakeDomain::RegisterService(l2cap::PSM psm, SocketCallback socket_callback,
+                                 async_dispatcher_t* cb_dispatcher) {
   RegisterService(
       psm,
       [this, psm, cb = std::move(socket_callback),
@@ -151,15 +159,15 @@ void FakeLayer::RegisterService(PSM psm, SocketCallback socket_callback,
       async_get_default_dispatcher());
 }
 
-void FakeLayer::UnregisterService(PSM psm) {
+void FakeDomain::UnregisterService(l2cap::PSM psm) {
   ZX_DEBUG_ASSERT(initialized_);
 
   inbound_conn_cbs_.erase(psm);
 }
 
-FakeLayer::LinkData* FakeLayer::RegisterInternal(
+FakeDomain::LinkData* FakeDomain::RegisterInternal(
     hci::ConnectionHandle handle, hci::Connection::Role role,
-    hci::Connection::LinkType link_type, LinkErrorCallback link_error_cb,
+    hci::Connection::LinkType link_type, l2cap::LinkErrorCallback link_error_cb,
     async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT_MSG(links_.find(handle) == links_.end(),
                       "connection handle re-used (handle: %#.4x)", handle);
@@ -175,9 +183,8 @@ FakeLayer::LinkData* FakeLayer::RegisterInternal(
   return &insert_res.first->second;
 }
 
-fbl::RefPtr<FakeChannel> FakeLayer::OpenFakeChannel(LinkData* link,
-                                                    ChannelId id,
-                                                    ChannelId remote_id) {
+fbl::RefPtr<FakeChannel> FakeDomain::OpenFakeChannel(
+    LinkData* link, l2cap::ChannelId id, l2cap::ChannelId remote_id) {
   auto chan =
       fbl::AdoptRef(new FakeChannel(id, remote_id, link->handle, link->type));
   chan->SetLinkErrorCallback(link->link_error_cb.share(), link->dispatcher);
@@ -189,12 +196,12 @@ fbl::RefPtr<FakeChannel> FakeLayer::OpenFakeChannel(LinkData* link,
   return chan;
 }
 
-fbl::RefPtr<FakeChannel> FakeLayer::OpenFakeFixedChannel(LinkData* link,
-                                                         ChannelId id) {
+fbl::RefPtr<FakeChannel> FakeDomain::OpenFakeFixedChannel(LinkData* link,
+                                                          l2cap::ChannelId id) {
   return OpenFakeChannel(link, id, id);
 }
 
-FakeLayer::LinkData& FakeLayer::FindLinkData(hci::ConnectionHandle handle) {
+FakeDomain::LinkData& FakeDomain::FindLinkData(hci::ConnectionHandle handle) {
   auto link_iter = links_.find(handle);
   ZX_DEBUG_ASSERT_MSG(link_iter != links_.end(),
                       "fake link not found (handle: %#.4x)", handle);
@@ -202,5 +209,5 @@ FakeLayer::LinkData& FakeLayer::FindLinkData(hci::ConnectionHandle handle) {
 }
 
 }  // namespace testing
-}  // namespace l2cap
+}  // namespace data
 }  // namespace btlib

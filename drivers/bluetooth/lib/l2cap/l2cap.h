@@ -1,160 +1,366 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_L2CAP_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_L2CAP_H_
 
-#include <lib/zx/socket.h>
+// clang-format off
 
-#include <fbl/ref_counted.h>
+#include <cstdint>
+
 #include <fbl/ref_ptr.h>
+#include <lib/fit/function.h>
+#include <zircon/compiler.h>
 
-#include "garnet/drivers/bluetooth/lib/l2cap/le_signaling_channel.h"
 #include "lib/fxl/macros.h"
+
+#include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 
 namespace btlib {
 namespace l2cap {
 
 class Channel;
+using ChannelCallback = fit::function<void(fbl::RefPtr<Channel>)>;
 
-// This is the root object of the L2CAP layer. It owns the internal blocks of
-// L2CAP, including:
-//
-//   * The ChannelManager which handles the ACL > Link > Channel routing and
-//     signaling;
-//
-//   * Waiting on L2CAP sockets;
-//
-// A production L2CAP (obtained via L2CAP::Create()) spawns a thread with a
-// dispatcher which is used to serially dispatch all internal L2CAP tasks.
-//
-// L2CAP is defined as a pure-virtual interface, so that a fake can be injected
-// while testing layers that depend on it.
-//
-// L2CAP is thread-safe. All public functions are asynchronous and can be called
-// from any thread.
-class L2CAP : public fbl::RefCounted<L2CAP> {
- public:
-  using LEConnectionParameterUpdateCallback =
-      internal::LESignalingChannel::ConnectionParameterUpdateCallback;
-  using LinkErrorCallback = fit::closure;
+// Callback invoked when a logical link should be closed due to an error.
+using LinkErrorCallback = fit::closure;
 
-  // Constructs an uninitialized L2CAP object that can be used in production.
-  // This spawns a thread on which L2CAP tasks will be scheduled (using
-  // |thread_name| as the name).
-  static fbl::RefPtr<L2CAP> Create(fxl::RefPtr<hci::Transport> hci,
-                                   std::string thread_name);
+// Callback called to notify LE preferred connection parameters during the "LE
+// Connection Parameter Update" procedure.
+using LEConnectionParameterUpdateCallback =
+    fit::function<void(const hci::LEPreferredConnectionParameters&)>;
 
-  // These send a Initialize/Shutdown message to the L2CAP task runner. It is
-  // safe for the caller to drop its reference after ShutDown is called.
-  //
-  // Operations on an uninitialized/shut-down L2CAP have no effect.
-  virtual void Initialize() = 0;
-  virtual void ShutDown() = 0;
+// Callback used to deliver LE fixed channels that are created when a LE link is
+// registered with L2CAP.
+using LEFixedChannelsCallback =
+    fit::function<void(fbl::RefPtr<Channel> att, fbl::RefPtr<Channel> smp)>;
 
-  // Registers an ACL connection with the L2CAP layer. L2CAP channels can be
-  // opened on the logical link represented by |handle| after a call to this
-  // method.
-  //
-  // |link_error_callback| will be used to notify when a channel signals a link
-  // error. It will be posted onto |dispatcher|.
-  //
-  // Has no effect if L2CAP is uninitialized or shut down.
-  virtual void AddACLConnection(hci::ConnectionHandle handle,
-                                hci::Connection::Role role,
-                                LinkErrorCallback link_error_callback,
-                                async_dispatcher_t* dispatcher) = 0;
+// L2CAP channel identifier uniquely identifies fixed and connection-oriented
+// channels over a logical link.
+// (see Core Spec v5.0, Vol 3, Part A, Section 2.1)
+using ChannelId = uint16_t;
 
-  // Registers an LE connection with the L2CAP layer. L2CAP channels can be
-  // opened on the logical link represented by |handle| after a call to this
-  // method.
-  //
-  // |conn_param_callback| will be used to notify the caller if new connection
-  // parameters were accepted from the remote end of the link.
-  //
-  // |link_error_callback| will be used to notify when a channel signals a link
-  // error.
-  //
-  // Upon successful registration of the link, |channel_callback| will be called
-  // with the ATT and SMP fixed channels.
-  //
-  // Has no effect if L2CAP is uninitialized or shut down.
-  using AddLEConnectionCallback =
-      fit::function<void(fbl::RefPtr<Channel> att, fbl::RefPtr<Channel> smp)>;
-  virtual void AddLEConnection(
-      hci::ConnectionHandle handle, hci::Connection::Role role,
-      LEConnectionParameterUpdateCallback conn_param_callback,
-      LinkErrorCallback link_error_callback,
-      AddLEConnectionCallback channel_callback,
-      async_dispatcher_t* dispatcher) = 0;
+// Null ID, "never be used as a destination endpoint"
+constexpr ChannelId kInvalidChannelId = 0x0000;
 
-  // Removes a previously registered connection. All corresponding Channels will
-  // be closed and all incoming data packets on this link will be dropped.
-  //
-  // NOTE: It is recommended that a link entry be removed AFTER the controller
-  // sends a HCI Disconnection Complete Event for the corresponding logical
-  // link. This is to prevent incorrectly buffering data if the controller has
-  // more packets to send after removing the link entry.
-  //
-  // Has no effect if L2CAP is uninitialized or shut down.
-  virtual void RemoveConnection(hci::ConnectionHandle handle) = 0;
+// Fixed channel identifiers used in BR/EDR & AMP (i.e. ACL-U, ASB-U, and AMP-U
+// logical links)
+constexpr ChannelId kSignalingChannelId = 0x0001;
+constexpr ChannelId kConnectionlessChannelId = 0x0002;
+constexpr ChannelId kAMPManagerChannelId = 0x0003;
+constexpr ChannelId kSMPChannelId = 0x0007;
+constexpr ChannelId kAMPTestManagerChannelId = 0x003F;
 
-  // Open an outbound dynamic channel against a peer's Protocol/Service
-  // Multiplexing (PSM) code |psm| on a link identified by |handle|.
-  //
-  // |cb| will be called on |dispatcher| with the channel created to the remote,
-  // or nullptr if the channel creation resulted in an error.
-  //
-  // Has no effect if L2CAP is uninitialized or shut down.
-  virtual void OpenChannel(hci::ConnectionHandle handle, PSM psm,
-                           ChannelCallback cb,
-                           async_dispatcher_t* dispatcher) = 0;
+// Fixed channel identifiers used in LE
+constexpr ChannelId kATTChannelId = 0x0004;
+constexpr ChannelId kLESignalingChannelId = 0x0005;
+constexpr ChannelId kLESMPChannelId = 0x0006;
 
-  // Registers a handler for peer-initiated dynamic channel requests that have
-  // the Protocol/Service Multiplexing (PSM) code |psm|.
-  //
-  // |channel_callback| will be called on |dispatcher| with the channel created
-  // by each inbound connection request received. Handlers must be unregistered
-  // before they are replaced.
-  //
-  // Inbound connection requests with a PSM that has no registered handler will
-  // be rejected.
-  //
-  // Has no effect if L2CAP is uninitialized or shut down.
-  //
-  // TODO(xow): NET-1084 Pass in required channel configurations. Call signature
-  //            will likely change.
-  // TODO(xow): Dynamic PSMs may need their routing space (ACL or LE) identified
-  virtual void RegisterService(PSM psm, ChannelCallback channel_callback,
-                               async_dispatcher_t* dispatcher) = 0;
 
-  // Similar to RegisterService, but instead of providing a l2cap::Channel,
-  // provides a zx::socket which can be used to communicate on the channel.
-  // The underlying l2cap::Channel is activated; the socket provided will
-  // receive any data sent to the channel and any data sent to the socket
-  // will be sent as if sent by l2cap::Channel::Send.
-  // |link_handle| disambiguates which remote device initiated the channel.
-  using SocketCallback =
-      fit::function<void(zx::socket, hci::ConnectionHandle link_handle)>;
-  virtual void RegisterService(PSM psm, SocketCallback socket_callback,
-                               async_dispatcher_t* dispatcher) = 0;
+// Range of dynamic channel identifiers; each logical link has its own set of
+// channel IDs (except for ACL-U and AMP-U, which share a namespace)
+// (see Tables 2.1 and 2.2 in v5.0, Vol 3, Part A, Section 2.1)
+constexpr ChannelId kFirstDynamicChannelId = 0x0040;
+constexpr ChannelId kLastACLDynamicChannelId = 0xFFFF;
+constexpr ChannelId kLastLEDynamicChannelId = 0x007F;
 
-  // Removes the handler for inbound channel requests for the previously-
-  // registered service identified by |psm|. This only prevents new inbound
-  // channels from being opened but does not close already-open channels.
-  //
-  // Has no effect if L2CAP is uninitialized or shut down.
-  virtual void UnregisterService(PSM psm) = 0;
+// Basic L2CAP header. This corresponds to the header used in a B-frame (Basic Information Frame)
+// and is the basis of all other frame types.
+struct BasicHeader {
+  uint16_t length;
+  ChannelId channel_id;
+} __PACKED;
 
- protected:
-  friend class fbl::RefPtr<L2CAP>;
-  L2CAP() = default;
-  virtual ~L2CAP() = default;
+// The L2CAP MTU defines the maximum SDU size and is asymmetric. The following are the minimum and
+// default MTU sizes that a L2CAP implementation must support (see Core Spec v5.0, Vol 3, Part A,
+// Section 5.1).
+constexpr uint16_t kDefaultMTU = 672;
+constexpr uint16_t kMinACLMTU = 48;
+constexpr uint16_t kMinLEMTU = 23;
 
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(L2CAP);
+// The maximum length of a L2CAP B-frame information payload.
+constexpr uint16_t kMaxBasicFramePayloadSize = 65535;
+
+// Signaling packet formats (Core Spec v5.0, Vol 3, Part A, Section 4):
+
+using CommandCode = uint8_t;
+
+enum class RejectReason : uint16_t {
+  kNotUnderstood = 0x0000,
+  kSignalingMTUExceeded = 0x0001,
+  kInvalidCID = 0x0002,
 };
+
+// Results field in Connection Response and Create Channel Response
+enum class ConnectionResult : uint16_t {
+  kSuccess = 0x0000,
+  kPending = 0x0001,
+  kPSMNotSupported = 0x0002,
+  kSecurityBlock = 0x0003,
+  kNoResources = 0x0004,
+  kControllerNotSupported = 0x0005,  // for Create Channel only
+  kInvalidSourceCID = 0x0006,
+  kSourceCIDAlreadyAllocated = 0x0007,
+};
+
+enum class ConnectionStatus : uint16_t {
+  kNoInfoAvailable = 0x0000,
+  kAuthenticationPending = 0x0001,
+  kAuthorizationPending = 0x0002,
+};
+
+// Flags field in Configuration request and response, continuation bit mask
+constexpr uint16_t kConfigurationContinuation = 0x0001;
+
+enum class ConfigurationResult : uint16_t {
+  kSuccess = 0x0000,
+  kUnacceptableParameters = 0x0001,
+  kRejected = 0x0002,
+  kUnknownOptions = 0x0003,
+  kPending = 0x0004,
+  kFlowSpecRejected = 0x0005,
+};
+
+enum class InformationType : uint16_t {
+  kConnectionlessMTU = 0x0001,
+  kExtendedFeaturesSupported = 0x0002,
+  kFixedChannelsSupported = 0x0003,
+};
+
+enum class InformationResult : uint16_t {
+  kSuccess = 0x0000,
+  kNotSupported = 0x0001,
+};
+
+// Type and bit masks for Extended Features Supported in the Information
+// Response data field (Vol 3, Part A, Section 4.12)
+using ExtendedFeatures = uint32_t;
+constexpr ExtendedFeatures kExtendedFeaturesBitFlowControl = 1 << 0;
+constexpr ExtendedFeatures kExtendedFeaturesBitRetransmission = 1 << 1;
+constexpr ExtendedFeatures kExtendedFeaturesBitBidirectionalQoS = 1 << 2;
+constexpr ExtendedFeatures kExtendedFeaturesBitEnhancedRetransmission = 1 << 3;
+constexpr ExtendedFeatures kExtendedFeaturesBitStreaming = 1 << 4;
+constexpr ExtendedFeatures kExtendedFeaturesBitFCSOption = 1 << 5;
+constexpr ExtendedFeatures kExtendedFeaturesBitExtendedFlowSpecification = 1 << 6;
+constexpr ExtendedFeatures kExtendedFeaturesBitFixedChannels = 1 << 7;
+constexpr ExtendedFeatures kExtendedFeaturesBitExtendedWindowSize = 1 << 8;
+constexpr ExtendedFeatures kExtendedFeaturesBitUnicastConnectionlessDataRx = 1 << 9;
+
+// Type and bit masks for Fixed Channels Supported in the Information Response
+// data field (Vol 3, Part A, Section 4.12)
+using FixedChannelsSupported = uint64_t;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitNull = 1ULL << 0;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitSignaling = 1ULL << 1;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitConnectionless = 1ULL << 2;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitAMPManager = 1ULL << 3;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitATT = 1ULL << 4;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitLESignaling = 1ULL << 5;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitSMP = 1ULL << 6;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitSM = 1ULL << 7;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitAMPTestManager = 1ULL << 63;
+
+enum class ConnectionParameterUpdateResult : uint16_t {
+  kAccepted = 0x0000,
+  kRejected = 0x0001,
+};
+
+enum class LECreditBasedConnectionResult : uint16_t {
+  kSuccess = 0x0000,
+  kPSMNotSupported = 0x0002,
+  kNoResources = 0x0004,
+  kInsufficientAuthentication = 0x0005,
+  kInsufficientAuthorization = 0x0006,
+  kInsufficientEncryptionKeySize = 0x0007,
+  kInsufficientEncryption = 0x0008,
+  kInvalidSourceCID = 0x0009,
+  kSourceCIDAlreadyAllocated = 0x000A,
+  kUnacceptableParameters = 0x000B,
+};
+
+// Type used for all Protocol and Service Multiplexer (PSM) identifiers,
+// including those dynamically-assigned/-obtained
+using PSM = uint16_t;
+constexpr PSM kInvalidPSM = 0x0000;
+
+// Well-known Protocol and Service Multiplexer values defined by the Bluetooth
+// SIG in Logical Link Control Assigned Numbers
+// https://www.bluetooth.com/specifications/assigned-numbers/logical-link-control
+constexpr PSM kSDP = 0x0001;
+constexpr PSM kRFCOMM = 0x0003;
+constexpr PSM kTCSBIN = 0x0005; // Telephony Control Specification
+constexpr PSM kTCSBINCordless = 0x0007;
+constexpr PSM kBNEP = 0x0009; // Bluetooth Network Encapsulation Protocol
+constexpr PSM kHIDControl = 0x0011; // Human Interface Device
+constexpr PSM kHIDInteerup = 0x0013; // Human Interface Device
+constexpr PSM kAVCTP = 0x0017; // Audio/Video Control Transport Protocol
+constexpr PSM kAVDTP = 0x0019; // Audio/Video Distribution Transport Protocol
+constexpr PSM kAVCTP_Browse = 0x001B; // Audio/Video Remote Control Profile (Browsing)
+constexpr PSM kATT = 0x001F; // ATT
+constexpr PSM k3DSP = 0x0021; // 3D Synchronization Profile
+constexpr PSM kLE_IPSP = 0x0023; // Internet Protocol Support Profile
+constexpr PSM kOTS = 0x0025; // Object Transfer Service
+
+// Identifier assigned to each signaling transaction. This is used to match each
+// signaling channel request with a response.
+using CommandId = uint8_t;
+
+constexpr CommandId kInvalidCommandId = 0x00;
+
+// Signaling command header.
+struct CommandHeader {
+  CommandCode code;
+  CommandId id;
+  uint16_t length;  // Length of the remaining payload
+} __PACKED;
+
+// ACL-U & LE-U
+constexpr CommandCode kCommandRejectCode = 0x01;
+constexpr size_t kCommandRejectMaxDataLength = 4;
+struct CommandRejectPayload {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CommandRejectPayload);
+
+  // See RejectReason for possible values.
+  uint16_t reason;
+
+  // Up to 4 octets of optional data (see Vol 3, Part A, Section 4.1)
+  uint8_t data[];
+} __PACKED;
+
+// ACL-U
+constexpr CommandCode kConnectionRequest = 0x02;
+struct ConnectionRequestPayload {
+  uint16_t psm;
+  ChannelId src_cid;
+} __PACKED;
+
+// ACL-U
+constexpr CommandCode kConnectionResponse = 0x03;
+struct ConnectionResponsePayload {
+  ChannelId dst_cid;
+  ChannelId src_cid;
+  ConnectionResult result;
+  ConnectionStatus status;
+} __PACKED;
+
+// ACL-U
+constexpr CommandCode kConfigurationRequest = 0x04;
+constexpr size_t kConfigurationOptionMaxDataLength = 22;
+
+// Element of configuration payload data (see Vol 3, Part A, Section 5)
+struct ConfigurationOption {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(ConfigurationOption);
+
+  uint8_t type;
+  uint8_t length;
+
+  // Up to 22 octets of data
+  uint8_t data[];
+} __PACKED;
+
+struct ConfigurationRequestPayload {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(ConfigurationRequestPayload);
+
+  ChannelId dst_cid;
+  uint16_t flags;
+
+  // Followed by zero or more configuration options of varying length
+  uint8_t data[];
+} __PACKED;
+
+// ACL-U
+constexpr CommandCode kConfigurationResponse = 0x05;
+struct ConfigurationResponsePayload {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(ConfigurationResponsePayload);
+
+  ChannelId src_cid;
+  uint16_t flags;
+  ConfigurationResult result;
+
+  // Followed by zero or more configuration options of varying length
+  uint8_t data[];
+} __PACKED;
+
+// ACL-U & LE-U
+constexpr CommandCode kDisconnectionRequest = 0x06;
+struct DisconnectionRequestPayload {
+  ChannelId dst_cid;
+  ChannelId src_cid;
+} __PACKED;
+
+// ACL-U & LE-U
+constexpr CommandCode kDisconnectionResponse = 0x07;
+struct DisconnectionResponsePayload {
+  ChannelId dst_cid;
+  ChannelId src_cid;
+} __PACKED;
+
+// ACL-U
+constexpr CommandCode kEchoRequest = 0x08;
+
+// ACL-U
+constexpr CommandCode kEchoResponse = 0x09;
+
+// ACL-U
+constexpr CommandCode kInformationRequest = 0x0A;
+struct InformationRequestPayload {
+  InformationType type;
+} __PACKED;
+
+// ACL-U
+constexpr CommandCode kInformationResponse = 0x0B;
+constexpr size_t kInformationResponseMaxDataLength = 8;
+struct InformationResponsePayload {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(InformationResponsePayload);
+
+  InformationType type;
+  InformationResult result;
+
+  // Up to 8 octets of optional data (see Vol 3, Part A, Section 4.11)
+  uint8_t data[];
+} __PACKED;
+
+// LE-U
+constexpr CommandCode kConnectionParameterUpdateRequest = 0x12;
+struct ConnectionParameterUpdateRequestPayload {
+  uint16_t interval_min;
+  uint16_t interval_max;
+  uint16_t slave_latency;
+  uint16_t timeout_multiplier;
+} __PACKED;
+
+// LE-U
+constexpr CommandCode kConnectionParameterUpdateResponse = 0x13;
+struct ConnectionParameterUpdateResponsePayload {
+  ConnectionParameterUpdateResult result;
+} __PACKED;
+
+// LE-U
+constexpr CommandCode kLECreditBasedConnectionRequest = 0x14;
+struct LECreditBasedConnectionRequestPayload {
+  uint16_t le_psm;
+  ChannelId src_cid;
+  uint16_t mtu;  // Max. SDU size
+  uint16_t mps;  // Max. PDU size
+  uint16_t initial_credits;
+} __PACKED;
+
+// LE-U
+constexpr CommandCode kLECreditBasedConnectionResponse = 0x15;
+struct LECreditBasedConnectionResponsePayload {
+  ChannelId dst_cid;
+  uint16_t mtu;  // Max. SDU size
+  uint16_t mps;  // Max. PDU size
+  uint16_t initial_credits;
+  LECreditBasedConnectionResult result;
+} __PACKED;
+
+// LE-U
+constexpr CommandCode kLEFlowControlCredit = 0x16;
+struct LEFlowControlCreditParams {
+  ChannelId cid;
+  uint16_t credits;
+} __PACKED;
 
 }  // namespace l2cap
 }  // namespace btlib

@@ -12,10 +12,10 @@
 #include <lib/fit/function.h>
 #include <zx/socket.h>
 
+#include "garnet/drivers/bluetooth/lib/data/domain.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
-#include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 #include "garnet/drivers/bluetooth/lib/sdp/pdu.h"
 #include "garnet/drivers/bluetooth/lib/sdp/sdp.h"
 #include "garnet/drivers/bluetooth/lib/sdp/service_record.h"
@@ -33,7 +33,7 @@ class Server final {
  public:
   // A new SDP server, which starts with just a ServiceDiscoveryService record.
   // Registers itself with |l2cap| when created.
-  explicit Server(fbl::RefPtr<l2cap::L2CAP> l2cap);
+  explicit Server(fbl::RefPtr<data::Domain> data_domain);
   ~Server();
 
   // Initialize a new SDP profile connection with |peer_id| on |channel|.
@@ -76,16 +76,16 @@ class Server final {
       const std::unordered_set<common::UUID>& search_pattern,
       const std::list<AttributeRange>& attribute_ranges) const;
 
-  // l2cap::channel callbacks
+  // l2cap::Channel callbacks
   void OnChannelClosed(const hci::ConnectionHandle& handle);
   void OnRxBFrame(const hci::ConnectionHandle& handle, const l2cap::SDU& sdu);
 
   // l2cap::RegisterService callback
   void OnChannelConnected(l2cap::PSM psm, fbl::RefPtr<l2cap::Channel> channel);
 
-  // The L2CAP layer this server is running on.  Used to register callbacks for
+  // The data domain that owns the L2CAP layer. Used to register callbacks for
   // the channels of services registered.
-  fbl::RefPtr<l2cap::L2CAP> l2cap_;
+  fbl::RefPtr<data::Domain> data_domain_;
 
   std::unordered_map<hci::ConnectionHandle, l2cap::ScopedChannel> channels_;
   std::unordered_map<ServiceHandle, ServiceRecord> records_;

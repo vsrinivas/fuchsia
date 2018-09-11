@@ -50,7 +50,7 @@ source_set("sources") {
   ]
 
   deps = [
-    "//garnet/drivers/bluetooth/lib/gap",
+    "//garnet/drivers/bluetooth/lib",
     "//garnet/lib/bluetooth/c",
     "//garnet/lib/bluetooth/fidl:fuchsia.bluetooth.host",
     "//garnet/public/fidl/fuchsia.bluetooth",
