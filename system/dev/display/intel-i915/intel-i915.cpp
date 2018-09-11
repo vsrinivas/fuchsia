@@ -139,14 +139,15 @@ static zx_status_t set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitrate) {
     return static_cast<i915::Controller*>(ctx)->SetBitrate(bus_id, bitrate);
 }
 
-static zx_status_t transact(void* ctx, uint32_t bus_id, uint16_t address, i2c_impl_op_t* ops,
+static zx_status_t transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* ops,
                             size_t count) {
     // TODO(stevensd): update this driver to implement multi-writes/reads support
-    if (count != 2 || ops[0].is_read != false || ops[1].is_read != true) {
+    if (count != 2 || ops[0].is_read != false || ops[1].is_read != true ||
+        ops[0].address != ops[1].address) {
         return ZX_ERR_INVALID_ARGS;
     }
     return static_cast<i915::Controller*>(ctx)->Transact(
-            bus_id, address, ops[0].buf, ops[0].length, ops[1].buf, ops[1].length);
+            bus_id, ops[0].address, ops[0].buf, ops[0].length, ops[1].buf, ops[1].length);
 }
 
 static i2c_impl_protocol_ops_t i2c_ops = {

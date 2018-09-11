@@ -44,18 +44,21 @@ zx_status_t ImxI2cDevice::I2cImplSetBitRate(uint32_t bus_id, uint32_t bitrate) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t ImxI2cDevice::I2cImplTransact(uint32_t bus_id, uint16_t address, i2c_impl_op_t* ops,
-                                          size_t count) {
+zx_status_t ImxI2cDevice::I2cImplTransact(uint32_t bus_id, i2c_impl_op_t* ops, size_t count) {
     if (!atomic_load(&ready_)) {
         return ZX_ERR_SHOULD_WAIT;
     }
     zx_status_t status = ZX_OK;
     for (size_t i = 0; i < count; ++i) {
-        ZX_ASSERT(address <= 0xFF);
+        if (ops[i].address > 0xFF) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
         if (ops[i].is_read) {
-            status = Read(static_cast<uint8_t>(address), ops[i].buf, ops[i].length, ops[i].stop);
+            status = Read(static_cast<uint8_t>(ops[i].address), ops[i].buf, ops[i].length,
+                          ops[i].stop);
         } else {
-            status = Write(static_cast<uint8_t>(address), ops[i].buf, ops[i].length, ops[i].stop);
+            status = Write(static_cast<uint8_t>(ops[i].address), ops[i].buf, ops[i].length,
+                           ops[i].stop);
         }
         if (status != ZX_OK) {
             Reset();
@@ -220,10 +223,10 @@ int ImxI2cDevice::Thread() {
         uint8_t data_write = static_cast<uint8_t>(i);
         uint8_t data_read[2];
         i2c_impl_op_t ops[] = {
-            {.buf = &data_write, .length = 1, .is_read = false, .stop = false},
-            {.buf = data_read, .length = 2, .is_read = true, .stop = true},
+            {.address = 0x50, .buf = &data_write, .length = 1, .is_read = false, .stop = false},
+            {.address = 0x50, .buf = data_read, .length = 2, .is_read = true, .stop = true},
         };
-        I2cImplTransact(0, 0x50, ops, 2);
+        I2cImplTransact(0, ops, 2);
         zxlogf(INFO, "USB-C Reg:0x%02X Value:0x%02X%02X\n", i, data_read[1], data_read[0]);
     }
 #endif

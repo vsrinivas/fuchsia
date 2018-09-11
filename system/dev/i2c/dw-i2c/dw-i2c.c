@@ -167,8 +167,7 @@ static int i2c_dw_irq_thread(void* arg) {
     return ZX_OK;
 }
 
-static zx_status_t i2c_dw_transact(void* ctx, uint32_t bus_id, uint16_t address,
-                                   i2c_impl_op_t* rws, size_t count) {
+static zx_status_t i2c_dw_transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* rws, size_t count) {
     size_t i;
     for (i = 0; i < count; ++i) {
         if (rws[i].length > I2C_DW_MAX_TRANSFER) {
@@ -184,7 +183,15 @@ static zx_status_t i2c_dw_transact(void* ctx, uint32_t bus_id, uint16_t address,
 
     i2c_dw_dev_t* dev = &i2c->i2c_devs[bus_id];
 
-    i2c_dw_set_slave_addr(dev, address);
+    if (count == 0) {
+        return ZX_OK;
+    }
+    for (i = 1; i < count; ++i) {
+        if (rws[i].address != rws[0].address) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+    }
+    i2c_dw_set_slave_addr(dev, rws[0].address);
     i2c_dw_enable(dev);
     i2c_dw_disable_interrupts(dev);
     i2c_dw_clear_intrrupts(dev);

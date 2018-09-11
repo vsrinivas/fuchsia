@@ -82,6 +82,8 @@ int PlatformI2cBus::I2cThread() {
             ZX_ASSERT(txn->cnt < I2C_MAX_RW_OPS);
             i2c_impl_op_t ops[I2C_MAX_RW_OPS];
             for (size_t i = 0; i < txn->cnt; ++i) {
+                // Same address for all ops, since there is one address per channel.
+                ops[i].address = txn->address;
                 ops[i].length = rpc_ops[i].length;
                 ops[i].is_read = rpc_ops[i].is_read;
                 ops[i].stop = rpc_ops[i].stop;
@@ -93,7 +95,7 @@ int PlatformI2cBus::I2cThread() {
                     p_writes += ops[i].length;
                 }
             }
-            auto status = i2c_.Transact(bus_id_, txn->address, ops, txn->cnt);
+            auto status = i2c_.Transact(bus_id_, ops, txn->cnt);
             size_t actual = status == ZX_OK ? p_reads - read_buffer.get() : sizeof(rpc_i2c_rsp_t);
             Complete(txn, status, read_buffer.get(), actual);
 

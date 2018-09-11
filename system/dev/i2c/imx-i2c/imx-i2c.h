@@ -34,8 +34,7 @@ public:
     uint32_t I2cImplGetBusCount();
     zx_status_t I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size);
     zx_status_t I2cImplSetBitRate(uint32_t bus_id, uint32_t bitrate);
-    zx_status_t I2cImplTransact(uint32_t bus_id, uint16_t address, i2c_impl_op_t* ops,
-                                size_t count);
+    zx_status_t I2cImplTransact(uint32_t bus_id, i2c_impl_op_t* ops, size_t count);
 
 private:
     enum class Wait {

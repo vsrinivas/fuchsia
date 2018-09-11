@@ -16,7 +16,7 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_i2c_impl_get_max_transfer_size, I2cImpl
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_i2c_impl_set_bitrate, I2cImplSetBitRate,
         zx_status_t (C::*)(uint32_t, uint32_t));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_i2c_impl_transact, I2cImplTransact,
-        zx_status_t (C::*)(uint32_t, uint16_t, i2c_impl_op_t*, size_t));
+        zx_status_t (C::*)(uint32_t, i2c_impl_op_t*, size_t));
 
 template <typename D>
 constexpr void CheckI2cImplProtocolSubclass() {
@@ -31,8 +31,7 @@ constexpr void CheckI2cImplProtocolSubclass() {
                   "I2cImplSetBitRate(uint32_t bus_id, uint32_t bitrate)");
     static_assert(internal::has_i2c_impl_transact<D>::value,
                   "I2cImplProtocol subclasses must implement "
-                  "I2cImplTransact(uint32_t bus_id, uint16_t address, i2c_impl_op_t* ops,"
-                  "size_t count)");
+                  "I2cImplTransact(uint32_t bus_id, i2c_impl_op_t* ops, size_t count)");
  }
 
 }  // namespace internal

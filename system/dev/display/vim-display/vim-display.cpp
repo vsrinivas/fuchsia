@@ -348,20 +348,20 @@ static zx_status_t set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitrate) {
     return ZX_OK;
 }
 
-static zx_status_t transact(void* ctx, uint32_t bus_id, uint16_t address, i2c_impl_op_t* ops,
-                            size_t count) {
+static zx_status_t transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* ops, size_t count) {
     // TODO(stevensd): update this driver to implement multi-writes/reads support
-    if (count != 2 || ops[0].is_read != false || ops[1].is_read != true) {
+    if (count != 2 || ops[0].is_read != false || ops[1].is_read != true ||
+        ops[0].address != ops[1].address) {
         return ZX_ERR_INVALID_ARGS;
     }
     vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
     mtx_lock(&display->i2c_lock);
     // The HDMITX_DWC_I2CM registers are a limited interface to the i2c bus for the E-DDC
     // protocol, which is good enough for the bus this device provides.
-    if (address == 0x30 && ops[0].length == 1 && ops[1].length == 0) {
+    if (ops[0].address == 0x30 && ops[0].length == 1 && ops[1].length == 0) {
         // Save the segment so that we can write to the registers in the correct order.
         display->i2c_segment = *((const uint8_t*) ops[0].buf);
-    } else if (address == 0x50 && (ops[0].length == 1) && ops[1].length) {
+    } else if (ops[0].address == 0x50 && (ops[0].length == 1) && ops[1].length) {
         if (ops[1].length % 8 != 0) {
             mtx_unlock(&display->i2c_lock);
             return ZX_ERR_NOT_SUPPORTED;

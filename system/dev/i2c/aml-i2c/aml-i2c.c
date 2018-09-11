@@ -294,8 +294,7 @@ static zx_status_t aml_i2c_set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitr
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t aml_i2c_transact(void* ctx, uint32_t bus_id, uint16_t address,
-                                    i2c_impl_op_t* rws, size_t count) {
+static zx_status_t aml_i2c_transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* rws, size_t count) {
     size_t i;
     for (i = 0; i < count; ++i) {
         if (rws[i].length > AML_I2C_MAX_TRANSFER) {
@@ -308,12 +307,12 @@ static zx_status_t aml_i2c_transact(void* ctx, uint32_t bus_id, uint16_t address
     }
     aml_i2c_dev_t *dev = &i2c->i2c_devs[bus_id];
 
-    zx_status_t status = aml_i2c_set_slave_addr(dev, address);
-    if (status != ZX_OK) {
-        return status;
-    }
-
+    zx_status_t status = ZX_OK;
     for (i = 0; i < count; ++i) {
+        status = aml_i2c_set_slave_addr(dev, rws[i].address);
+        if (status != ZX_OK) {
+            return status;
+        }
         if (rws[i].is_read) {
             status = aml_i2c_read(dev, rws[i].buf, rws[i].length, rws[i].stop);
         } else {
