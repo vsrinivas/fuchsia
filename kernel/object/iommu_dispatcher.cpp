@@ -16,10 +16,8 @@
 #include <inttypes.h>
 #include <trace.h>
 
-#if WITH_DEV_IOMMU_DUMMY
 #include <dev/iommu/dummy.h>
-#endif
-#if WITH_DEV_IOMMU_INTEL
+#if ARCH_X86
 #include <dev/iommu/intel.h>
 #endif
 
@@ -32,12 +30,10 @@ zx_status_t IommuDispatcher::Create(uint32_t type, fbl::unique_ptr<const uint8_t
     fbl::RefPtr<Iommu> iommu;
     zx_status_t status;
     switch (type) {
-#if WITH_DEV_IOMMU_DUMMY
         case ZX_IOMMU_TYPE_DUMMY:
             status = DummyIommu::Create(fbl::move(desc), desc_len, &iommu);
             break;
-#endif
-#if WITH_DEV_IOMMU_INTEL
+#if ARCH_X86
         case ZX_IOMMU_TYPE_INTEL:
             status = IntelIommu::Create(fbl::move(desc), desc_len, &iommu);
             break;
@@ -64,4 +60,3 @@ IommuDispatcher::IommuDispatcher(fbl::RefPtr<Iommu> iommu)
 
 IommuDispatcher::~IommuDispatcher() {
 }
-
