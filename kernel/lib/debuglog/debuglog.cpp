@@ -108,10 +108,6 @@ zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
     const uint8_t* ptr = static_cast<const uint8_t*>(data_ptr);
     dlog_t* log = &DLOG;
 
-    if (dlog_bypass_) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     if (len > DLOG_MAX_DATA) {
         return ZX_ERR_OUT_OF_RANGE;
     }

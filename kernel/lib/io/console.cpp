@@ -53,10 +53,19 @@ void __kernel_console_write(const char* str, size_t len) {
 
 static void __kernel_stdout_write(const char *str, size_t len)
 {
-    if (dlog_write(0, str, len)) {
-        __kernel_console_write(str, len);
-        __kernel_serial_write(str, len);
+    bool do_dlog = false;
+
+#if WITH_LIB_DEBUGLOG
+    if (dlog_bypass() == false)
+        do_dlog = true;
+#endif
+
+    if (do_dlog) {
+        if (dlog_write(0, str, len) == ZX_OK)
+            return;
     }
+    __kernel_console_write(str, len);
+    __kernel_serial_write(str, len);
 }
 
 #if WITH_DEBUG_LINEBUFFER
