@@ -21,10 +21,7 @@
           "$ref": "#/definitions/parameterArray"
         }
       },
-      "required": [
-        "action",
-        "parameters"
-      ]
+      "required": ["action", "parameters"]
     },
     "parameterArray": {
       "type": "array",
@@ -47,10 +44,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "name",
-        "type"
-      ],
+      "required": ["name", "type"],
       "additionalProperties": false
     },
     "alphaNumString": {
@@ -59,10 +53,11 @@
     },
     "compositionPattern": {
       "type": "string",
-      "enum": [
-        "ticker",
-        "comments-right"
-      ]
+      "enum": ["ticker", "comments-right"]
+    },
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#([A-Fa-f0-9]{6})$"
     }
   },
   "type": "object",
@@ -87,16 +82,15 @@
     },
     "@version": {
       "type": "integer"
+    },
+    "placeholder_color": {
+      "$ref": "#definitions/hexColor"
     }
   },
-  "required": [
-    "binary"
-  ],
+  "required": ["binary"],
   "dependencies": {
     "intent_filters": {
-      "required": [
-        "@version"
-      ]
+      "required": ["@version"]
     }
   },
   "additionalProperties": false

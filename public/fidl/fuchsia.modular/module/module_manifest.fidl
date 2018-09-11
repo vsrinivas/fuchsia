@@ -19,6 +19,9 @@ struct ModuleManifest {
 
   // Identifies the pattern with which to compose this module with others.
   string? composition_pattern;
+
+  // Defines the color of the placeholder widget used while the module loads.
+  string? placeholder_color;
 };
 
 // This struct is used to describe an intent that a module is able to handle.

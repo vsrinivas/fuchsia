@@ -47,11 +47,12 @@ void XdrModuleManifest_v2(XdrContext* const xdr,
   xdr->Field("composition_pattern", &data->composition_pattern);
   xdr->Field("intent_filters", &data->intent_filters,
              XdrModuleManifestIntentFilters);
+  xdr->Field("placeholder_color", &data->placeholder_color);
 }
 
-// New fields should be added to latest version (i.e., no need to do a version
-// bump). Removing old fields needs a new version, in which case all xdr filter
-// for previous versions should be updated to provide a polyfill.
+// New nullable fields may be added to latest version (i.e., no need to do a
+// version bump). Removing old fields needs a new version, in which case all xdr
+// filter for previous versions should be updated to provide a polyfill.
 extern const XdrFilterType<fuchsia::modular::ModuleManifest>
     XdrModuleManifest[] = {
         XdrModuleManifest_v2,
