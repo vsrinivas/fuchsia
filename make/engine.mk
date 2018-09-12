@@ -404,7 +404,11 @@ SYSROOT_DEPS :=
 KERNEL_DEFINES += WITH_PANIC_BACKTRACE=1 WITH_FRAME_POINTERS=1
 KERNEL_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
 
+# TODO(cja) Used for the transition between Kernel and userspace PCI
+# Flip Kernel PCI on / off depending whether userspace PCI was enabled
+ifeq ($(call TOBOOL, $(ENABLE_USER_PCI)),false)
 KERNEL_DEFINES += WITH_KERNEL_PCIE=1
+endif
 
 # Kernel lock dependency tracking.
 ifeq ($(call TOBOOL,$(ENABLE_LOCK_DEP)),true)
