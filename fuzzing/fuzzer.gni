@@ -57,6 +57,7 @@ template("_fuzzed_executable") {
 template("fuzz_target") {
   assert(defined(invoker.sources), "`sources` must be defined for $target_name")
   _fuzzed_executable(target_name) {
+    public_deps = []
     forward_variables_from(invoker,
                            "*",
                            [
@@ -65,6 +66,7 @@ template("fuzz_target") {
                              "options",
                              "output_name",
                            ])
+    public_deps += [ ":${target_name}_cmx(${toolchain_variant.base})" ]
     testonly = true
   }
 
@@ -73,6 +75,7 @@ template("fuzz_target") {
   # knowing the original file names when building the package manifest.  These
   # files only need to be written once, so only do it in the base toolchain.
   if (current_toolchain == toolchain_variant.base) {
+
     # Copy the corpora available for the fuzzer
     data = []
     if (defined(invoker.corpora)) {
@@ -93,6 +96,28 @@ template("fuzz_target") {
       data += invoker.options
     }
     write_file("${target_gen_dir}/${target_name}/options", data)
+
+    # Create a component manifest
+    fuzz_name = target_name
+    action("${fuzz_name}_cmx") {
+      visibility = [ ":${fuzz_name}" ]
+      script = "//build/fuzzing/gen_fuzzer_cmx.py"
+      outputs = [
+        "${target_gen_dir}/${fuzz_name}/${fuzz_name}.cmx",
+      ]
+      args = [
+        "--out",
+        rebase_path("${target_gen_dir}/${fuzz_name}/${fuzz_name}.cmx"),
+        "--bin",
+        "${fuzz_name}",
+      ]
+      if (defined(invoker.cmx)) {
+        args += [
+          "--cmx",
+          rebase_path(invoker.cmx),
+        ]
+      }
+    }
   } else {
     not_needed(invoker, "*")
   }
@@ -137,6 +162,7 @@ template("fuzz_package") {
       binaries = []
       deps = []
       resources = []
+      meta = []
       forward_variables_from(invoker,
                              [
                                "binaries",
@@ -218,6 +244,13 @@ template("fuzz_package") {
           {
             path = "${fuzz_gen_dir}/options"
             dest = "${fuzz_name}/options"
+          },
+        ]
+
+        fuzz.meta += [
+          {
+            path = "${fuzz_gen_dir}/${fuzz_name}.cmx"
+            dest = "${fuzz_name}.cmx"
           },
         ]
       } else {
