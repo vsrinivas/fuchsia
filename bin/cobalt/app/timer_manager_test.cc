@@ -28,7 +28,7 @@ class TimerManagerTests : public ::gtest::TestLoopFixture {
 
   void SetTimeSec(uint32_t time_s) {
     test_clock_->Set(zx::time(ZX_SEC(time_s)));
-    AdvanceTimeTo(zx::time(ZX_SEC(time_s)));
+    RunLoopUntil(zx::time(ZX_SEC(time_s)));
   }
 
   std::unique_ptr<TimerManager> timer_manager_;
