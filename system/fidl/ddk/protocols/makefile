@@ -32,6 +32,9 @@ amlogic-canvas:
 bad-block:
 	$(run-banjo)
 
+bt-hci:
+	$(run-banjo)
+
 clk:
 	$(run-banjo)
 
@@ -47,4 +50,4 @@ iommu:
 mailbox:
 	$(run-banjo)
 
-all: acpi amlogic-canvas bad-block clk gpio
+all: acpi amlogic-canvas bad-block clk gpio gpio-impl iommu mailbox

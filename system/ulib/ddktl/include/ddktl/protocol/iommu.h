@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-//          MODIFY system/fidl/protocols/iommu.fidl INSTEAD.
+//          MODIFY system/fidl/protocols/iommu.banjo INSTEAD.
 
 #pragma once
 
