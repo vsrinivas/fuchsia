@@ -182,6 +182,11 @@
              remote="https://fuchsia.googlesource.com/third_party/googletest"
              gerrithost="https://fuchsia-review.googlesource.com"
              revision="f854f1d27488996dc8a6db3c9453f80b02585e12"/>
+    <project name="third_party/github.com/gperftools/gperftools"
+             path="third_party/gperftools"
+             remote="https://fuchsia.googlesource.com/third_party/github.com/gperftools/gperftools"
+             revision="e9ab4c53041ac62feefbbb076d326e9a77dd1567"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
     <!-- gRPC contact: rudominer. -->
     <project name="third_party/grpc"
              path="third_party/grpc"

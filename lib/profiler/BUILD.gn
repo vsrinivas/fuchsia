@@ -1,0 +1,55 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+gperftools_src_root = "//third_party/gperftools/src/"
+
+config("headers_config") {
+  include_dirs = [
+    gperftools_src_root,
+    "include",
+  ]
+}
+
+static_library("profiler") {
+  public_configs = [ ":headers_config" ]
+
+  gperftools_sources = [
+    "gperftools/profiler.h",
+    "profiledata.h",
+    "profile-handler.h",
+    "getpc.h",
+    "base/basictypes.h",
+    "base/commandlineflags.h",
+    "base/googleinit.h",
+    "base/logging.h",
+    "base/simple_mutex.h",
+    "base/sysinfo.h",
+
+    "profiler.cc",
+    "profile-handler.cc",
+    "profiledata.cc",
+    "stacktrace.cc",
+    "emergency_malloc_for_stacktrace.cc",
+
+    "base/spinlock.cc",
+    "base/spinlock_internal.cc",
+    "base/sysinfo.cc",
+    "base/logging.cc",
+  ]
+
+  additional_sources = [
+    "test.h",
+    "test.cc",
+  ]
+
+  sources = rebase_path(gperftools_sources, ".", gperftools_src_root) +
+            additional_sources
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}

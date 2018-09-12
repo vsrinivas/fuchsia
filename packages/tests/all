@@ -58,6 +58,7 @@
         "garnet/packages/tests/pmd",
         "garnet/packages/tests/power_manager",
         "garnet/packages/tests/process",
+        "garnet/packages/tests/profiler",
         "garnet/packages/tests/recovery_netstack",
         "garnet/packages/tests/run_test_component",
         "garnet/packages/tests/run_tests",
