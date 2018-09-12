@@ -353,7 +353,8 @@ zx_status_t UsbVideoStream::CreateStream(
   }
 
   if (max_frame_size_ > buffer_collection.vmo_size) {
-    zxlogf(ERROR, "buffer provided is less than max size.\n");
+    zxlogf(ERROR, "buffer provided %lu is less than max size %u.\n",
+           buffer_collection.vmo_size, max_frame_size_);
     return ZX_ERR_INVALID_ARGS;
   }
 

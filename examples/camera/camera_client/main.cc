@@ -9,6 +9,8 @@
 
 #include "garnet/examples/camera/camera_client/camera_client.h"
 
+#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
+
 using namespace fuchsia::camera;
 
 // This is a stand-in for some actual gralloc type service which would allocate
@@ -18,8 +20,8 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
   // In the future, some special alignment might happen here, or special
   // memory allocated...
   // Simple GetBufferSize.  Only valid for simple formats:
-  size_t buffer_size =
-      format.format.height * format.format.planes[0].bytes_per_row;
+  size_t buffer_size = ROUNDUP(
+      format.format.height * format.format.planes[0].bytes_per_row, PAGE_SIZE);
   buffer_collection->buffer_count = num_buffers;
   buffer_collection->vmo_size = buffer_size;
   buffer_collection->format.set_image(std::move(format.format));
