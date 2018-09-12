@@ -31,6 +31,7 @@ MODULE_SRCS += \
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-crash \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 # ddk is needed only for ddk/device.h
 MODULE_HEADER_DEPS := \

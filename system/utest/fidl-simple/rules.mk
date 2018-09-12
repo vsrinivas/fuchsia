@@ -38,6 +38,7 @@ MODULE_NAME := fidl-simple-test
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-crash \
     system/fidl/fuchsia-ldsvc \
+    system/fidl/fuchsia-mem \
     system/utest/fidl-simple.spaceship \
 
 MODULE_STATIC_LIBS := \

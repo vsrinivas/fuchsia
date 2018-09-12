@@ -16,6 +16,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-crash \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-logger \
+    system/fidl/fuchsia-mem \
     system/fidl/fuchsia-process \
     system/fidl/fuchsia-sysmem \
 

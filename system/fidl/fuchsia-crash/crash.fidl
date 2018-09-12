@@ -4,16 +4,7 @@
 
 library fuchsia.crash;
 
-// Copied from system/fidl/fuchsia-mem/buffer.fidl.
-// TODO(ZX-2406): Switch to the original once the build system works.
-struct Buffer {
-    // The vmo.
-    handle<vmo> vmo;
-
-    // The size of the data in the vmo. This size must be smaller than the
-    // physical size of the vmo.
-    uint64 size;
-};
+using fuchsia.mem;
 
 // Analyzes crashed processes.
 [Discoverable, Layout = "Simple"]
@@ -33,5 +24,5 @@ interface Analyzer {
     // The behavior of this method varies depending on the implementation, but
     // a typical implementation might print the crash log to the system log or
     // upload a crash report to a server with the log as attachment.
-    2: Process(Buffer crashlog) -> ();
+    2: Process(fuchsia.mem.Buffer crashlog) -> ();
 };
