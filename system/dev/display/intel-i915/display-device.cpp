@@ -218,9 +218,21 @@ bool DisplayDevice::AttachPipe(Pipe* pipe) {
 }
 
 bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
-    if (memcmp(&mode->h_addressable, &info_.h_addressable,
-               sizeof(display_mode_t) - offsetof(display_mode_t, h_addressable))) {
+    // Check the clock and the flags later
+    size_t cmp_start = offsetof(display_mode_t, h_addressable);
+    size_t cmp_end = offsetof(display_mode_t, flags);
+    if (memcmp(&mode->h_addressable, &info_.h_addressable, cmp_end - cmp_start)) {
         // Modeset is necessary if display params other than the clock frequency differ
+        LOG_SPEW("Modeset necessary for display params");
+        return true;
+    }
+
+    // TODO(stevensd): There are still some situations where the BIOS is better at setting up
+    // the display than we are. The BIOS seems to not always set the hsync/vsync polarity, so
+    // don't include that in the check for already initialized displays. Once we're better at
+    // initializing displays, merge the flags check back into the above memcmp.
+    if ((mode->flags & MODE_FLAG_INTERLACED) != (info_.flags & MODE_FLAG_INTERLACED)) {
+        LOG_SPEW("Modeset necessary for display flags");
         return true;
     }
 
@@ -240,7 +252,7 @@ bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
     }
 
     if (current_state == nullptr) {
-        // Modeset is necessary if the ddi doesn't have a clock
+        LOG_SPEW("Modeset necessary for clock");
         return true;
     }
 
@@ -251,7 +263,11 @@ bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
     }
 
     // Modesetting is necessary if the states are not equal
-    return !Controller::CompareDpllStates(*current_state, new_state);
+    bool res = !Controller::CompareDpllStates(*current_state, new_state);
+    if (res) {
+        LOG_SPEW("Modeset necessary for clock state");
+    }
+    return res;
 }
 
 void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
