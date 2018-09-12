@@ -88,7 +88,7 @@ zx_status_t MtkSdMmc::Create(zx_device_t* parent) {
 
 void MtkSdMmc::Init() {
     // Set bus clock to f_OD (400 kHZ) for identification mode.
-    SetBusFreq(kIdentificationModeBusFreq);
+    SdmmcSetBusFreq(kIdentificationModeBusFreq);
 
     // Set read timeout to the maximum so SEND_EXT_CSD at f_OD succeeds.
     SdcCfg::Get()
@@ -98,28 +98,28 @@ void MtkSdMmc::Init() {
         .WriteTo(&mmio_);
 }
 
-zx_status_t MtkSdMmc::HostInfo(sdmmc_host_info_t* info) {
+zx_status_t MtkSdMmc::SdmmcHostInfo(sdmmc_host_info_t* info) {
     memcpy(info, &info_, sizeof(info_));
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::SetSignalVoltage(sdmmc_voltage_t voltage) {
+zx_status_t MtkSdMmc::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
     // TODO(bradenkell): According to the schematic VCCQ is fixed at 1.8V. Verify this and update.
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::SetBusWidth(sdmmc_bus_width_t bus_width) {
+zx_status_t MtkSdMmc::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
     uint32_t bus_width_value;
 
     switch (bus_width) {
     case SDMMC_BUS_WIDTH_MAX:
-    case SDMMC_BUS_WIDTH_8:
+    case SDMMC_BUS_WIDTH_EIGHT:
         bus_width_value = SdcCfg::kBusWidth8;
         break;
-    case SDMMC_BUS_WIDTH_4:
+    case SDMMC_BUS_WIDTH_FOUR:
         bus_width_value = SdcCfg::kBusWidth4;
         break;
-    case SDMMC_BUS_WIDTH_1:
+    case SDMMC_BUS_WIDTH_ONE:
     default:
         bus_width_value = SdcCfg::kBusWidth1;
         break;
@@ -130,7 +130,7 @@ zx_status_t MtkSdMmc::SetBusWidth(sdmmc_bus_width_t bus_width) {
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::SetBusFreq(uint32_t bus_freq) {
+zx_status_t MtkSdMmc::SdmmcSetBusFreq(uint32_t bus_freq) {
     if (bus_freq == 0) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -155,7 +155,7 @@ zx_status_t MtkSdMmc::SetBusFreq(uint32_t bus_freq) {
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::SetTiming(sdmmc_timing_t timing) {
+zx_status_t MtkSdMmc::SdmmcSetTiming(sdmmc_timing_t timing) {
     uint32_t ck_mode;
 
     switch (timing) {
@@ -176,11 +176,11 @@ zx_status_t MtkSdMmc::SetTiming(sdmmc_timing_t timing) {
     return ZX_OK;
 }
 
-void MtkSdMmc::HwReset() {
+void MtkSdMmc::SdmmcHwReset() {
     // TODO(bradenkell): Use MSDC0_RTSB (GPIO 114) to reset the eMMC chip.
 }
 
-zx_status_t MtkSdMmc::PerformTuning(uint32_t cmd_idx) {
+zx_status_t MtkSdMmc::SdmmcPerformTuning(uint32_t cmd_idx) {
     // TODO(bradenkell): Implement this.
     return ZX_OK;
 }
@@ -269,7 +269,7 @@ zx_status_t MtkSdMmc::ReadResponsePolled(sdmmc_req_t* req) {
     }
 
     uint32_t bytes_remaining = req->blockcount * req->blocksize;
-    uint8_t* data_ptr = reinterpret_cast<uint8_t*>(req->virt) + req->buf_offset;
+    uint8_t* data_ptr = reinterpret_cast<uint8_t*>(req->virt_buffer) + req->buf_offset;
     while (bytes_remaining > 0) {
         uint32_t fifo_count = MsdcFifoCs::Get().ReadFrom(&mmio_).rx_fifo_count();
 
@@ -283,7 +283,7 @@ zx_status_t MtkSdMmc::ReadResponsePolled(sdmmc_req_t* req) {
     return ZX_OK;
 }
 
-zx_status_t MtkSdMmc::Request(sdmmc_req_t* req) {
+zx_status_t MtkSdMmc::SdmmcRequest(sdmmc_req_t* req) {
     uint32_t is_data_request = req->cmd_flags & SDMMC_RESP_DATA_PRESENT;
     if (is_data_request && !(req->cmd_flags & SDMMC_CMD_READ)) {
         // TODO(bradenkell): Implement block write.

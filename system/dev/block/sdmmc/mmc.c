@@ -71,9 +71,9 @@ static zx_status_t mmc_set_bus_width(sdmmc_device_t* dev, sdmmc_bus_width_t bus_
 
 static uint8_t mmc_select_bus_width(sdmmc_device_t* dev) {
     // TODO verify host 8-bit support
-    uint8_t bus_widths[] = { SDMMC_BUS_WIDTH_8, MMC_EXT_CSD_BUS_WIDTH_8,
-                             SDMMC_BUS_WIDTH_4, MMC_EXT_CSD_BUS_WIDTH_4,
-                             SDMMC_BUS_WIDTH_1, MMC_EXT_CSD_BUS_WIDTH_1 };
+    uint8_t bus_widths[] = { SDMMC_BUS_WIDTH_EIGHT, MMC_EXT_CSD_BUS_WIDTH_8,
+                             SDMMC_BUS_WIDTH_FOUR, MMC_EXT_CSD_BUS_WIDTH_4,
+                             SDMMC_BUS_WIDTH_ONE, MMC_EXT_CSD_BUS_WIDTH_1 };
     for (unsigned i = 0; i < (sizeof(bus_widths)/sizeof(uint8_t)); i += 2) {
         if (mmc_set_bus_width(dev, bus_widths[i], bus_widths[i+1]) == ZX_OK) {
             break;
@@ -270,13 +270,13 @@ zx_status_t sdmmc_probe_mmc(sdmmc_device_t* dev) {
     }
 
     dev->type = SDMMC_TYPE_MMC;
-    dev->bus_width = SDMMC_BUS_WIDTH_1;
-    dev->signal_voltage = SDMMC_VOLTAGE_330;
+    dev->bus_width = SDMMC_BUS_WIDTH_ONE;
+    dev->signal_voltage = SDMMC_VOLTAGE_V330;
 
     // Switch to high-speed timing
     if (mmc_supports_hs(dev) || mmc_supports_hsddr(dev) || mmc_supports_hs200(dev)) {
         // Switch to 1.8V signal voltage
-        sdmmc_voltage_t new_voltage = SDMMC_VOLTAGE_180;
+        sdmmc_voltage_t new_voltage = SDMMC_VOLTAGE_V180;
         if ((st = sdmmc_set_signal_voltage(&dev->host, new_voltage)) != ZX_OK) {
             zxlogf(ERROR, "mmc: failed to switch to 1.8V signalling, retcode = %d\n", st);
             goto err;
@@ -286,7 +286,7 @@ zx_status_t sdmmc_probe_mmc(sdmmc_device_t* dev) {
         mmc_select_bus_width(dev);
 
         // Must perform tuning at HS200 first if HS400 is supported
-        if (mmc_supports_hs200(dev) && dev->bus_width != SDMMC_BUS_WIDTH_1 &&
+        if (mmc_supports_hs200(dev) && dev->bus_width != SDMMC_BUS_WIDTH_ONE &&
                 !(dev->host_info.prefs & SDMMC_HOST_PREFS_DISABLE_HS200)) {
             if ((st = mmc_switch_timing(dev, SDMMC_TIMING_HS200)) != ZX_OK) {
                 goto err;
@@ -301,7 +301,7 @@ zx_status_t sdmmc_probe_mmc(sdmmc_device_t* dev) {
                 goto err;
             }
 
-            if (mmc_supports_hs400(dev) && dev->bus_width == SDMMC_BUS_WIDTH_8 &&
+            if (mmc_supports_hs400(dev) && dev->bus_width == SDMMC_BUS_WIDTH_EIGHT &&
                     !(dev->host_info.prefs & SDMMC_HOST_PREFS_DISABLE_HS400)) {
                 if ((st = mmc_switch_timing(dev, SDMMC_TIMING_HS)) != ZX_OK) {
                     goto err;
@@ -311,7 +311,7 @@ zx_status_t sdmmc_probe_mmc(sdmmc_device_t* dev) {
                     goto err;
                 }
 
-                if ((st = mmc_set_bus_width(dev, SDMMC_BUS_WIDTH_8,
+                if ((st = mmc_set_bus_width(dev, SDMMC_BUS_WIDTH_EIGHT,
                                             MMC_EXT_CSD_BUS_WIDTH_8_DDR)) != ZX_OK) {
                     goto err;
                 }
@@ -329,12 +329,12 @@ zx_status_t sdmmc_probe_mmc(sdmmc_device_t* dev) {
                 goto err;
             }
 
-            if (mmc_supports_hsddr(dev) && (dev->bus_width != SDMMC_BUS_WIDTH_1)) {
+            if (mmc_supports_hsddr(dev) && (dev->bus_width != SDMMC_BUS_WIDTH_ONE)) {
                 if ((st = mmc_switch_timing(dev, SDMMC_TIMING_HSDDR)) != ZX_OK) {
                     goto err;
                 }
 
-                uint8_t mmc_bus_width = (dev->bus_width == SDMMC_BUS_WIDTH_4) ?
+                uint8_t mmc_bus_width = (dev->bus_width == SDMMC_BUS_WIDTH_FOUR) ?
                                             MMC_EXT_CSD_BUS_WIDTH_4_DDR :
                                             MMC_EXT_CSD_BUS_WIDTH_8_DDR;
                 if ((st = mmc_set_bus_width(dev, dev->bus_width, mmc_bus_width)) != ZX_OK) {

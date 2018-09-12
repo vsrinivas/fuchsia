@@ -1,0 +1,20 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zircon.device.block;
+
+[repr="C"]
+struct BlockInfo {
+    /// The number of blocks in this block device.
+    uint64 block_count;
+    /// The size of a single block.
+    uint32 block_size;
+    /// Max size in bytes per transfer.
+    /// May be BLOCK_MAXRANSFER_UNBOUNDED if there
+    /// is no restriction.
+    uint32 max_transfer_size;
+    uint32 flags;
+    uint32 reserved;
+};
+

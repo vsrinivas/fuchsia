@@ -356,7 +356,7 @@ static void imx_sdhci_data_stage_read_ready_locked(imx_sdhci_device_t* dev) {
     // Sequentially read each block
     for (size_t byteid = 0; byteid < req->blocksize; byteid += 4) {
         const size_t offset = dev->data_blockid * req->blocksize + byteid;
-        uint32_t* wrd = req->virt + offset;
+        uint32_t* wrd = req->virt_buffer + offset;
         *wrd = readl(&dev->regs->data_buff_acc_port); //TODO: Can't read this if DMA is enabled!
     }
     dev->data_blockid += 1;
@@ -375,7 +375,7 @@ static void imx_sdhci_data_stage_write_ready_locked(imx_sdhci_device_t* dev) {
     // Sequentially write each block
     for (size_t byteid = 0; byteid < req->blocksize; byteid += 4) {
         const size_t offset = dev->data_blockid * req->blocksize + byteid;
-        uint32_t* wrd = req->virt + offset;
+        uint32_t* wrd = req->virt_buffer + offset;
         writel(*wrd, &dev->regs->data_buff_acc_port); //TODO: Can't write if DMA is enabled
     }
     dev->data_blockid += 1;
@@ -779,7 +779,7 @@ static zx_status_t imx_sdhci_set_signal_voltage(void* ctx, sdmmc_voltage_t volta
 }
 
 /* SDMMC PROTOCOL Implementations: set_bus_width */
-static zx_status_t imx_sdhci_set_bus_width(void* ctx, uint32_t bus_width) {
+static zx_status_t imx_sdhci_set_bus_width(void* ctx, sdmmc_bus_width_t bus_width) {
     SDHCI_FUNC_ENTRY_LOG;
     if (bus_width >= SDMMC_BUS_WIDTH_MAX) {
         return ZX_ERR_INVALID_ARGS;
@@ -789,22 +789,22 @@ static zx_status_t imx_sdhci_set_bus_width(void* ctx, uint32_t bus_width) {
 
     mtx_lock(&dev->mtx);
 
-    if ((bus_width == SDMMC_BUS_WIDTH_8) && !(dev->info.caps & SDMMC_HOST_CAP_BUS_WIDTH_8)) {
+    if ((bus_width == SDMMC_BUS_WIDTH_EIGHT) && !(dev->info.caps & SDMMC_HOST_CAP_BUS_WIDTH_8)) {
         SDHCI_ERROR("8-bit bus width not supported\n");
         status = ZX_ERR_NOT_SUPPORTED;
         goto unlock;
     }
 
     switch (bus_width) {
-        case SDMMC_BUS_WIDTH_1:
+        case SDMMC_BUS_WIDTH_ONE:
             clr_bitsl(IMX_SDHC_PROT_CTRL_DTW_MASK, &dev->regs->prot_ctrl);
             set_bitsl(IMX_SDHC_PROT_CTRL_DTW_1, &dev->regs->prot_ctrl);
             break;
-        case SDMMC_BUS_WIDTH_4:
+        case SDMMC_BUS_WIDTH_FOUR:
             clr_bitsl(IMX_SDHC_PROT_CTRL_DTW_MASK, &dev->regs->prot_ctrl);
             set_bitsl(IMX_SDHC_PROT_CTRL_DTW_4, &dev->regs->prot_ctrl);
             break;
-        case SDMMC_BUS_WIDTH_8:
+        case SDMMC_BUS_WIDTH_EIGHT:
             clr_bitsl(IMX_SDHC_PROT_CTRL_DTW_MASK, &dev->regs->prot_ctrl);
             set_bitsl(IMX_SDHC_PROT_CTRL_DTW_8, &dev->regs->prot_ctrl);
             break;
@@ -988,7 +988,7 @@ static void imx_sdhci_hw_reset(void* ctx) {
     // enable clocks
     mtx_unlock(&dev->mtx);
     imx_sdhci_set_bus_freq(dev, SD_FREQ_SETUP_HZ);
-    imx_sdhci_set_bus_width(dev, SDMMC_BUS_WIDTH_1);
+    imx_sdhci_set_bus_width(dev, SDMMC_BUS_WIDTH_ONE);
 }
 
 /* SDMMC PROTOCOL Implementations: request */

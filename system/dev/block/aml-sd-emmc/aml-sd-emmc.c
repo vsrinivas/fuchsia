@@ -213,7 +213,7 @@ static zx_status_t aml_sd_emmc_host_info(void* ctx, sdmmc_host_info_t* info) {
     return ZX_OK;
 }
 
-static zx_status_t aml_sd_emmc_set_bus_width(void* ctx, uint32_t bw) {
+static zx_status_t aml_sd_emmc_set_bus_width(void* ctx, sdmmc_bus_width_t bw) {
     aml_sd_emmc_t* dev = (aml_sd_emmc_t*)ctx;
 
     mtx_lock(&dev->mtx);
@@ -221,15 +221,15 @@ static zx_status_t aml_sd_emmc_set_bus_width(void* ctx, uint32_t bw) {
     uint32_t config = regs->sd_emmc_cfg;
 
     switch (bw) {
-    case SDMMC_BUS_WIDTH_1:
+    case SDMMC_BUS_WIDTH_ONE:
         update_bits(&config, AML_SD_EMMC_CFG_BUS_WIDTH_MASK, AML_SD_EMMC_CFG_BUS_WIDTH_LOC,
                     AML_SD_EMMC_CFG_BUS_WIDTH_1BIT);
         break;
-    case SDMMC_BUS_WIDTH_4:
+    case SDMMC_BUS_WIDTH_FOUR:
         update_bits(&config, AML_SD_EMMC_CFG_BUS_WIDTH_MASK, AML_SD_EMMC_CFG_BUS_WIDTH_LOC,
                     AML_SD_EMMC_CFG_BUS_WIDTH_4BIT);
         break;
-    case SDMMC_BUS_WIDTH_8:
+    case SDMMC_BUS_WIDTH_EIGHT:
         update_bits(&config, AML_SD_EMMC_CFG_BUS_WIDTH_MASK, AML_SD_EMMC_CFG_BUS_WIDTH_LOC,
                     AML_SD_EMMC_CFG_BUS_WIDTH_8BIT);
         break;
@@ -252,7 +252,8 @@ static zx_status_t aml_sd_emmc_do_tuning_transfer(aml_sd_emmc_t* dev, uint8_t* t
         .blockcount = 1,
         .blocksize = blk_pattern_size,
         .use_dma = false,
-        .virt = tuning_res,
+        .virt_buffer = tuning_res,
+        .virt_size = blk_pattern_size,
     };
     return aml_sd_emmc_request(dev, &tuning_req);
 }
@@ -616,7 +617,7 @@ static int aml_sd_emmc_irq_thread(void* ctx) {
                 goto complete;
             }
             uint32_t data_copied = 0;
-            uint32_t* dest = (uint32_t*)req->virt;
+            uint32_t* dest = (uint32_t*)req->virt_buffer;
             volatile uint32_t* src = (volatile uint32_t*)((uintptr_t)dev->mmio.vaddr +
                                                           AML_SD_EMMC_PING_BUFFER_BASE);
             while (length) {
@@ -806,7 +807,7 @@ static zx_status_t aml_sd_emmc_setup_data_descs_pio(aml_sd_emmc_t* dev, sdmmc_re
         desc->cmd_info |= AML_SD_EMMC_CMD_INFO_DATA_WR;
         uint32_t data_copied = 0;
         uint32_t data_remaining = length;
-        uint32_t* src = (uint32_t*)req->virt;
+        uint32_t* src = (uint32_t*)req->virt_buffer;
         volatile uint32_t* dest = (volatile uint32_t*)((uintptr_t)dev->mmio.vaddr +
                                                        AML_SD_EMMC_PING_BUFFER_BASE);
         while (data_remaining) {

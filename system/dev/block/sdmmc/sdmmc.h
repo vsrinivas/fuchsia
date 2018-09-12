@@ -92,7 +92,7 @@ typedef struct sdmmc_device {
 } sdmmc_device_t;
 
 static inline bool sdmmc_use_dma(sdmmc_device_t* dev) {
-    return (dev->host_info.caps & (SDMMC_HOST_CAP_ADMA2 | SDMMC_HOST_CAP_64BIT));
+    return (dev->host_info.caps & (SDMMC_HOST_CAP_ADMA2 | SDMMC_HOST_CAP_SIXTY_FOUR_BIT));
 }
 
 // SD/MMC shared ops

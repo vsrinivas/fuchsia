@@ -386,7 +386,7 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
     zx_status_t st = ZX_OK;
     if (sdmmc_use_dma(dev)) {
         req->use_dma = true;
-        req->virt = NULL;
+        req->virt_buffer = NULL;
         req->pmt = ZX_HANDLE_INVALID;
         req->dma_vmo =  txn->bop.rw.vmo;
         req->buf_offset = txn->bop.rw.offset_vmo;
@@ -394,12 +394,13 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
         req->use_dma = false;
         st = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                          0, txn->bop.rw.vmo, txn->bop.rw.offset_vmo, txn->bop.rw.length,
-                         (uintptr_t*)&req->virt);
+                         (uintptr_t*)&req->virt_buffer);
         if (st != ZX_OK) {
             zxlogf(TRACE, "sdmmc: do_txn vmo map error %d\n", st);
             block_complete(&txn->bop, st, dev);
             return;
         }
+        req->virt_size = txn->bop.rw.length;
     }
 
     st = sdmmc_request(&dev->host, req);
@@ -418,7 +419,7 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
     }
 exit:
     if (!req->use_dma) {
-        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)req->virt, txn->bop.rw.length);
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)req->virt_buffer, req->virt_size);
     }
     block_complete(&txn->bop, st, dev);
     zxlogf(TRACE, "sdmmc: do_txn complete\n");

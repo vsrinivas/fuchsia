@@ -15,21 +15,21 @@ namespace sdmmc {
 class MtkSdMmc;
 using DeviceType = ddk::Device<MtkSdMmc>;
 
-class MtkSdMmc : public DeviceType, public ddk::SdMmcProtocol<MtkSdMmc> {
+class MtkSdMmc : public DeviceType, public ddk::SdmmcProtocol<MtkSdMmc> {
 
 public:
     static zx_status_t Create(zx_device_t* parent);
 
     void DdkRelease() { delete this; }
 
-    zx_status_t HostInfo(sdmmc_host_info_t* info);
-    zx_status_t SetSignalVoltage(sdmmc_voltage_t voltage);
-    zx_status_t SetBusWidth(sdmmc_bus_width_t bus_width);
-    zx_status_t SetBusFreq(uint32_t bus_freq);
-    zx_status_t SetTiming(sdmmc_timing_t timing);
-    void HwReset();
-    zx_status_t PerformTuning(uint32_t cmd_idx);
-    zx_status_t Request(sdmmc_req_t* req);
+    zx_status_t SdmmcHostInfo(sdmmc_host_info_t* info);
+    zx_status_t SdmmcSetSignalVoltage(sdmmc_voltage_t voltage);
+    zx_status_t SdmmcSetBusWidth(sdmmc_bus_width_t bus_width);
+    zx_status_t SdmmcSetBusFreq(uint32_t bus_freq);
+    zx_status_t SdmmcSetTiming(sdmmc_timing_t timing);
+    void SdmmcHwReset();
+    zx_status_t SdmmcPerformTuning(uint32_t cmd_idx);
+    zx_status_t SdmmcRequest(sdmmc_req_t* req);
 
 private:
     MtkSdMmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info)

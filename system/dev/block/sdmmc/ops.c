@@ -120,7 +120,7 @@ zx_status_t sd_switch_uhs_voltage(sdmmc_device_t *dev, uint32_t ocr) {
         .use_dma = sdmmc_use_dma(dev),
     };
 
-    if (dev->signal_voltage == SDMMC_VOLTAGE_180) {
+    if (dev->signal_voltage == SDMMC_VOLTAGE_V180) {
         return ZX_OK;
     }
 
@@ -131,7 +131,7 @@ zx_status_t sd_switch_uhs_voltage(sdmmc_device_t *dev, uint32_t ocr) {
     }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
     //TODO: clock gating while switching voltage
-    st = sdmmc_set_signal_voltage(&dev->host, SDMMC_VOLTAGE_180);
+    st = sdmmc_set_signal_voltage(&dev->host, SDMMC_VOLTAGE_V180);
     if (st != ZX_OK) {
         zxlogf(TRACE, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d\n", st);
         return st;
@@ -239,11 +239,12 @@ zx_status_t sdio_io_rw_extended(sdmmc_device_t *dev, bool write, uint32_t fn_idx
     };
 
     if (use_dma) {
-        req.virt = NULL;
+        req.virt_buffer = NULL;
         req.dma_vmo = dma_vmo;
         req.buf_offset = buf_offset;
     } else {
-        req.virt = buf + buf_offset;
+        req.virt_buffer = buf + buf_offset;
+        req.virt_size = blk_size;
     }
     req.use_dma = use_dma;
 
@@ -334,7 +335,8 @@ zx_status_t mmc_send_ext_csd(sdmmc_device_t* dev, uint8_t ext_csd[512]) {
         .blockcount = 1,
         .blocksize = 512,
         .use_dma = false,
-        .virt = ext_csd,
+        .virt_buffer = ext_csd,
+        .virt_size = 512,
         .cmd_flags = MMC_SEND_EXT_CSD_FLAGS,
     };
     zx_status_t st = sdmmc_request(&dev->host, &req);

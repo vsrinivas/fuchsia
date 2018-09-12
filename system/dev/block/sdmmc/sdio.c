@@ -539,13 +539,13 @@ static zx_status_t sdio_enable_4bit_bus(sdmmc_device_t *dev) {
         zxlogf(ERROR, "sdio: Error while switching the bus width\n");
         return st;
     }
-    if ((st = sdmmc_set_bus_width(&dev->host, SDMMC_BUS_WIDTH_4)) != ZX_OK) {
+    if ((st = sdmmc_set_bus_width(&dev->host, SDMMC_BUS_WIDTH_FOUR)) != ZX_OK) {
           zxlogf(ERROR, "sdio: failed to switch the host bus width to %d, retcode = %d\n",
-                 SDMMC_BUS_WIDTH_4, st);
+                 SDMMC_BUS_WIDTH_FOUR, st);
           return ZX_ERR_INTERNAL;
     }
 
-    dev->bus_width = SDMMC_BUS_WIDTH_4;
+    dev->bus_width = SDMMC_BUS_WIDTH_FOUR;
     return ZX_OK;
 }
 
@@ -777,7 +777,7 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     dev->type = SDMMC_TYPE_SDIO;
-    dev->signal_voltage = SDMMC_VOLTAGE_180;
+    dev->signal_voltage = SDMMC_VOLTAGE_V180;
     dev->sdio_dev.hw_info.num_funcs = get_bits(ocr, SDIO_SEND_OP_COND_RESP_NUM_FUNC_MASK,
                                                SDIO_SEND_OP_COND_RESP_NUM_FUNC_LOC);
     uint16_t addr = 0;
