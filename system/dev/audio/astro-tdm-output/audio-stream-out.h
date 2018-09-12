@@ -40,6 +40,8 @@ protected:
                           zx::vmo* out_buffer) __TA_REQUIRES(domain_->token()) override;
     zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_->token()) override;
     zx_status_t Stop() __TA_REQUIRES(domain_->token()) override;
+    zx_status_t SetGain(const audio_proto::SetGainReq& req)
+        __TA_REQUIRES(domain_->token()) override;
     void ShutdownHook() __TA_REQUIRES(domain_->token()) override;
     zx_status_t InitPost() override;
 

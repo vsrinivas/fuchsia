@@ -155,6 +155,15 @@ void AstroAudioStreamOut::ShutdownHook() {
     audio_en_.Write(0);
 }
 
+zx_status_t AstroAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
+    zx_status_t status = codec_->SetGain(req.gain);
+    if (status != ZX_OK) {
+        return status;
+    }
+    cur_gain_state_.cur_gain = codec_->GetGain();
+    return ZX_OK;
+}
+
 zx_status_t AstroAudioStreamOut::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
                                            uint32_t* out_num_rb_frames,
                                            zx::vmo* out_buffer) {
