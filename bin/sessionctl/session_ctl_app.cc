@@ -11,6 +11,54 @@ SessionCtlApp::SessionCtlApp(
       loop_(loop),
       logger_(logger) {}
 
+std::string SessionCtlApp::ExecuteRemoveModCommand() {
+  std::string story_name;
+  std::string mod_name;
+  std::vector<std::string> missing_flags;
+
+  if (command_line_.HasOption("story_name")) {
+    command_line_.GetOptionValue("story_name", &story_name);
+  } else {
+    missing_flags.push_back("story_name");
+  }
+
+  if (command_line_.HasOption("mod_name")) {
+    command_line_.GetOptionValue("mod_name", &mod_name);
+  } else {
+    missing_flags.push_back("mod_name");
+  }
+
+  std::string error = GenerateMissingFlagString(missing_flags);
+  if (!error.empty()) {
+    logger_.LogError("add_mod", error);
+    return error;
+  }
+
+  auto commands = MakeRemoveModCommands(mod_name);
+
+  std::map<std::string, std::string> params = {{"mod_name", mod_name},
+                                               {"story_name", story_name}};
+
+  puppet_master_->ControlStory(story_name, story_puppet_master_.NewRequest());
+
+  // Get input
+  async::PostTask(loop_->dispatcher(), [this, commands = std::move(commands),
+                                        params]() mutable {
+    ExecuteAction(std::move(commands), params.at("story_name"))
+        ->Then([this, params](bool has_error, std::string result) {
+          if (has_error) {
+            logger_.LogError("remove_mod", result);
+          } else {
+            auto params_copy = params;
+            params_copy.emplace("story_id", result);
+            logger_.Log("remove_mod", params_copy);
+          }
+          loop_->Quit();
+        });
+  });
+  return error;
+}
+
 std::string SessionCtlApp::ExecuteAddModCommand() {
   std::string mod_url;
   std::string story_name;
@@ -111,6 +159,18 @@ SessionCtlApp::MakeAddModCommands(const std::string& mod_url,
   command.set_add_mod(std::move(add_mod));
   commands.push_back(std::move(command));
 
+  return commands;
+}
+
+fidl::VectorPtr<fuchsia::modular::StoryCommand>
+SessionCtlApp::MakeRemoveModCommands(const std::string& mod_name) {
+  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+  fuchsia::modular::StoryCommand command;
+
+  fuchsia::modular::RemoveMod remove_mod;
+  remove_mod.mod_name.push_back(mod_name);
+  command.set_remove_mod(std::move(remove_mod));
+  commands.push_back(std::move(command));
   return commands;
 }
 

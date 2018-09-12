@@ -25,6 +25,7 @@ class SessionCtlApp {
                          const modular::Logger& logger);
 
   std::string ExecuteAddModCommand();
+  std::string ExecuteRemoveModCommand();
 
  private:
   // Focus the story to which the mod we are adding belongs.
@@ -38,6 +39,9 @@ class SessionCtlApp {
 
   fidl::VectorPtr<fuchsia::modular::StoryCommand> MakeAddModCommands(
       const std::string& mod_url, const std::string& mod_name);
+
+  fidl::VectorPtr<fuchsia::modular::StoryCommand> MakeRemoveModCommands(
+      const std::string& mod_name);
 
   modular::FuturePtr<bool, std::string> ExecuteAction(
       fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,

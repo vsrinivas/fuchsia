@@ -136,6 +136,8 @@ int main(int argc, const char** argv) {
   std::string error;
   if (cmd == "add_mod") {
     error = app.ExecuteAddModCommand();
+  } else if (cmd == "remove_mod") {
+    error = app.ExecuteRemoveModCommand();
   } else {
     // Print help if command doesn't match a valid command.
     std::cout << GetUsage() << std::endl;
