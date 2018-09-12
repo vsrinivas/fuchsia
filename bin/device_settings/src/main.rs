@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(futures_api)]
+#![feature(async_await, await_macro, futures_api)]
 // #![deny(warnings)]
 
 use failure::{Error, ResultExt};
@@ -12,10 +12,7 @@ use fuchsia_async as fasync;
 use fuchsia_syslog as syslog;
 use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
-use futures::prelude::*;
-use futures::future;
-use futures::io;
-use futures::prelude::*;
+use futures::{future, io, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -23,8 +20,7 @@ use std::io::prelude::*;
 use std::sync::Arc;
 
 // Include the generated FIDL bindings for the `DeviceSetting` service.
-use fidl_fuchsia_devicesettings::{DeviceSettingsManager, DeviceSettingsManagerImpl,
-                                  DeviceSettingsManagerMarker, DeviceSettingsManagerRequest,
+use fidl_fuchsia_devicesettings::{DeviceSettingsManagerMarker, DeviceSettingsManagerRequest,
                                   DeviceSettingsManagerRequestStream, DeviceSettingsWatcherProxy,
                                   Status, ValueType};
 
@@ -281,95 +277,71 @@ mod tests {
 
     #[test]
     fn test_int() {
-        async_test(&["TestKey"], |device_settings| {
-            device_settings
-                .set_integer("TestKey", 18)
-                .and_then(move |response| {
-                    assert!(response, "set_integer failed");
-                    device_settings.get_integer("TestKey")
-                }).map_ok(move |response| {
-                    assert_eq!(response, (18, Status::Ok));
-                })
+        async_test(&["TestKey"], async move |device_settings| {
+            let response = await!(device_settings.set_integer("TestKey", 18))?;
+            assert!(response, "set_integer failed");
+            let response = await!(device_settings.get_integer("TestKey"))?;
+            assert_eq!(response, (18, Status::Ok));
+            Ok(())
         });
     }
 
     #[test]
     fn test_string() {
-        async_test(&["TestKey"], |device_settings| {
-            device_settings
-                .set_string("TestKey", "mystring")
-                .and_then(move |response| {
-                    assert!(response, "set_string failed");
-                    device_settings.get_string("TestKey")
-                }).map_ok(move |response| {
-                    assert_eq!(response, ("mystring".to_string(), Status::Ok));
-                })
+        async_test(&["TestKey"], async move |device_settings| {
+            let response = await!(device_settings.set_string("TestKey", "mystring"))?;
+            assert!(response, "set_string failed");
+            let response = await!(device_settings.get_string("TestKey"))?;
+            assert_eq!(response, ("mystring".to_string(), Status::Ok));
+            Ok(())
         });
     }
 
     #[test]
     fn test_invalid_key() {
-        async_test(&[], |device_settings| {
-            device_settings
-                .get_string("TestKey")
-                .and_then(move |response| {
-                    assert_eq!(response, ("".to_string(), Status::ErrInvalidSetting));
-                    device_settings.get_integer("TestKey")
-                }).map_ok(move |response| {
-                    assert_eq!(response, (0, Status::ErrInvalidSetting));
-                })
+        async_test(&[], async move |device_settings| {
+            let response = await!(device_settings.get_string("TestKey"))?;
+            assert_eq!(response, ("".to_string(), Status::ErrInvalidSetting));
+            let response = await!(device_settings.get_integer("TestKey"))?;
+            assert_eq!(response, (0, Status::ErrInvalidSetting));
+            Ok(())
         });
     }
 
     #[test]
     fn test_incorrect_type() {
-        async_test(&["TestKey"], |device_settings| {
-            device_settings
-                .set_string("TestKey", "mystring")
-                .and_then(move |response| {
-                    assert!(response, "set_string failed");
-                    device_settings.get_integer("TestKey")
-                }).map_ok(move |response| {
-                    assert_eq!(response, (0, Status::ErrIncorrectType));
-                })
+        async_test(&["TestKey"], async move |device_settings| {
+            let response = await!(device_settings.set_string("TestKey", "mystring"))?;
+            assert!(response, "set_string failed");
+            let response = await!(device_settings.get_integer("TestKey"))?;
+            assert_eq!(response, (0, Status::ErrIncorrectType));
+            Ok(())
         });
     }
 
     #[test]
     fn test_not_set_err() {
-        async_test(&["TestKey"], |device_settings| {
-            device_settings
-                .get_integer("TestKey")
-                .and_then(move |response| {
-                    assert_eq!(response, (0, Status::ErrNotSet));
-                    device_settings.get_string("TestKey")
-                }).map_ok(move |response| {
-                    assert_eq!(response, ("".to_string(), Status::ErrNotSet));
-                })
+        async_test(&["TestKey"], async move |device_settings| {
+            let response = await!(device_settings.get_integer("TestKey"))?;
+            assert_eq!(response, (0, Status::ErrNotSet));
+            let response = await!(device_settings.get_string("TestKey"))?;
+            assert_eq!(response, ("".to_string(), Status::ErrNotSet));
+            Ok(())
         });
     }
 
     #[test]
     fn test_multiple_keys() {
-        async_test(&["TestKey1", "TestKey2"], |device_settings| {
-            device_settings
-                .set_integer("TestKey1", 18)
-                .and_then(move |response| {
-                    assert!(response, "set_integer failed");
-                    device_settings
-                        .set_string("TestKey2", "mystring")
-                        .map_ok(move |response| (response, device_settings))
-                }).and_then(|(response, device_settings)| {
-                    assert!(response, "set_string failed");
-                    device_settings
-                        .get_integer("TestKey1")
-                        .map_ok(move |response| (response, device_settings))
-                }).and_then(|(response, device_settings)| {
-                    assert_eq!(response, (18, Status::Ok));
-                    device_settings.get_string("TestKey2")
-                }).map_ok(|response| {
-                    assert_eq!(response, ("mystring".to_string(), Status::Ok));
-                })
+        async_test(&["TestKey1", "TestKey2"], async move |device_settings| {
+            let response = await!(device_settings.set_integer("TestKey1", 18))?;
+            assert!(response, "set_integer failed");
+            let response = await!(device_settings.set_string("TestKey2", "mystring"))?;
+            assert!(response, "set_string failed");
+            let response = await!(device_settings.get_integer("TestKey1"))?;
+            assert_eq!(response, (18, Status::Ok));
+            let response = await!(device_settings.get_string("TestKey2"))?;
+            assert_eq!(response, ("mystring".to_string(), Status::Ok));
+            Ok(())
         });
     }
 }
