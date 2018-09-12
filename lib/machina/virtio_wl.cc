@@ -4,31 +4,82 @@
 
 #include "garnet/lib/machina/virtio_wl.h"
 
+#include <lib/zx/socket.h>
+
 #include "garnet/lib/machina/dev_mem.h"
 #include "lib/fxl/logging.h"
 
 static constexpr uint32_t kMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
 
 namespace machina {
+namespace {
 
-class VirtioWl::Vfd {
+// Vfd type that holds a region of memory that is mapped into the guest's
+// physical address space. The memory region is unmapped when instance is
+// destroyed.
+class Memory : public VirtioWl::Vfd {
  public:
-  Vfd(zx::vmar* vmar, uintptr_t addr, uint64_t size, zx::vmo vmo)
-      : vmar_(vmar), addr_(addr), size_(size), vmo_(std::move(vmo)) {}
-  ~Vfd() { vmar_->unmap(addr_, size_); }
+  Memory(zx::vmo vmo, uintptr_t addr, uint64_t size, zx::vmar* vmar)
+      : VirtioWl::Vfd(vmo.release()), addr_(addr), size_(size), vmar_(vmar) {}
+  ~Memory() override { vmar_->unmap(addr_, size_); }
+
+  // Create a memory instance by mapping |vmo| into |vmar|. Returns a valid
+  // instance on success.
+  static std::unique_ptr<Memory> Create(zx::vmo vmo, zx::vmar* vmar) {
+    // Get the VMO size that has been rounded up to the next page size boundary.
+    uint64_t size;
+    zx_status_t status = vmo.get_size(&size);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed get VMO size: " << status;
+      return nullptr;
+    }
+
+    // Map memory into VMAR. |addr| is guaranteed to be page-aligned and
+    // non-zero on success.
+    zx_gpaddr_t addr;
+    status = vmar->map(0, vmo, 0, size, kMapFlags, &addr);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to map VMO into guest VMAR: " << status;
+      return nullptr;
+    }
+
+    return std::make_unique<Memory>(std::move(vmo), addr, size, vmar);
+  }
+
+  uintptr_t addr() const { return addr_; }
+  uint64_t size() const { return size_; }
 
  private:
-  zx::vmar* const vmar_;
   const uintptr_t addr_;
   const uint64_t size_;
-  zx::vmo vmo_;
+  zx::vmar* const vmar_;
 };
 
+// Vfd type that holds a wayland dispatcher connection.
+class Connection : public VirtioWl::Vfd {
+ public:
+  explicit Connection(zx::channel channel) : VirtioWl::Vfd(channel.release()) {}
+};
+
+// Vfd type that holds a socket for data transfers.
+class Pipe : public VirtioWl::Vfd {
+ public:
+  Pipe(zx::socket socket, zx::socket remote_socket)
+      : VirtioWl::Vfd(remote_socket.release()), socket_(std::move(socket)) {}
+
+ private:
+  zx::socket socket_;
+};
+
+}  // namespace
+
 VirtioWl::VirtioWl(const PhysMem& phys_mem, zx::vmar vmar,
-                   async_dispatcher_t* dispatcher)
+                   async_dispatcher_t* dispatcher,
+                   OnNewConnectionCallback on_new_connection_callback)
     : VirtioInprocessDevice(phys_mem, VIRTIO_WL_F_TRANS_FLAGS),
       vmar_(std::move(vmar)),
-      dispatcher_(dispatcher) {}
+      dispatcher_(dispatcher),
+      on_new_connection_callback_(std::move(on_new_connection_callback)) {}
 
 VirtioWl::~VirtioWl() = default;
 
@@ -144,14 +195,23 @@ void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  zx_gpaddr_t guest_addr;
-  uint64_t actual_size;
-  std::unique_ptr<Vfd> vfd =
-      AllocateMemory(request->size, &guest_addr, &actual_size);
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(request->size, 0, &vmo);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to allocate VMO (size=" << request->size
+                   << "): " << status;
+    response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
+    return;
+  }
+
+  std::unique_ptr<Memory> vfd = Memory::Create(std::move(vmo), &vmar_);
   if (!vfd) {
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
+
+  zx_gpaddr_t addr = vfd->addr();
+  uint64_t size = vfd->size();
 
   bool inserted;
   std::tie(std::ignore, inserted) =
@@ -165,8 +225,8 @@ void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
   response->hdr.flags = 0;
   response->vfd_id = request->vfd_id;
   response->flags = VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE;
-  response->pfn = guest_addr / PAGE_SIZE;
-  response->size = actual_size;
+  response->pfn = addr / PAGE_SIZE;
+  response->size = size;
 }
 
 void VirtioWl::HandleClose(const virtio_wl_ctrl_vfd_t* request,
@@ -198,7 +258,22 @@ void VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request,
     response->type = VIRTIO_WL_RESP_ERR;
     return;
   }
+  num_bytes -= request->vfd_count * sizeof(*vfds);
+  if (num_bytes > ZX_CHANNEL_MAX_MSG_BYTES) {
+    FXL_LOG(ERROR) << "Message too large for channel (size=" << num_bytes
+                   << ")";
+    response->type = VIRTIO_WL_RESP_ERR;
+    return;
+  }
 
+  if (request->vfd_count > ZX_CHANNEL_MAX_MSG_HANDLES) {
+    FXL_LOG(ERROR) << "Too many VFDs for message (vfds=" << request->vfd_count
+                   << ")";
+    response->type = VIRTIO_WL_RESP_ERR;
+    return;
+  }
+
+  zx::handle handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   for (uint32_t i = 0; i < request->vfd_count; ++i) {
     auto it = vfds_.find(vfds[i]);
     if (it == vfds_.end()) {
@@ -206,18 +281,29 @@ void VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request,
       return;
     }
 
-    // TODO(reveman): Duplicate handle for message.
+    zx_status_t status =
+        it->second->handle().duplicate(ZX_RIGHT_SAME_RIGHTS, &handles[i]);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to duplicate handle: " << status;
+      response->type = VIRTIO_WL_RESP_INVALID_ID;
+      return;
+    }
   }
 
-  // TODO(reveman): Write message to server channel.
-  //
-  // zx_channel_write(server_handle,
-  //                  options,
-  //                  reinterpret_cast<void*>(vfds + request->vfd_count),
-  //                  num_bytes - request->vfd_count * sizeof(*vfds),
-  //                  handles,
-  //                  num_handles);
-  //
+  // The handles are consumed by zx_channel_write call below.
+  zx_handle_t raw_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  for (uint32_t i = 0; i < request->vfd_count; ++i) {
+    raw_handles[i] = handles[i].release();
+  }
+  zx_status_t status =
+      zx_channel_write(it->second->handle().get(), 0, vfds + request->vfd_count,
+                       num_bytes, raw_handles, request->vfd_count);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to write message to channel: " << status;
+    response->type = VIRTIO_WL_RESP_ERR;
+    return;
+  }
+
   response->type = VIRTIO_WL_RESP_OK;
 }
 
@@ -230,12 +316,30 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
+  zx::channel channel, remote_channel;
+  zx_status_t status =
+      zx::channel::create(ZX_SOCKET_STREAM, &channel, &remote_channel);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to create channel: " << status;
+    response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
+    return;
+  }
+
+  auto vfd = std::make_unique<Connection>(std::move(channel));
+  if (!vfd) {
+    response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
+    return;
+  }
+
   bool inserted;
-  std::tie(std::ignore, inserted) = vfds_.insert({request->vfd_id, nullptr});
+  std::tie(std::ignore, inserted) =
+      vfds_.insert({request->vfd_id, std::move(vfd)});
   if (!inserted) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
   }
+
+  on_new_connection_callback_(std::move(remote_channel));
 
   response->hdr.type = VIRTIO_WL_RESP_VFD_NEW;
   response->hdr.flags = 0;
@@ -254,8 +358,25 @@ void VirtioWl::HandleNewPipe(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
+  zx::socket socket, remote_socket;
+  zx_status_t status =
+      zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to create socket: " << status;
+    response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
+    return;
+  }
+
+  auto vfd =
+      std::make_unique<Pipe>(std::move(socket), std::move(remote_socket));
+  if (!vfd) {
+    response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
+    return;
+  }
+
   bool inserted;
-  std::tie(std::ignore, inserted) = vfds_.insert({request->vfd_id, nullptr});
+  std::tie(std::ignore, inserted) =
+      vfds_.insert({request->vfd_id, std::move(vfd)});
   if (!inserted) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
@@ -294,33 +415,6 @@ void VirtioWl::HandleDmabufSync(const virtio_wl_ctrl_vfd_dmabuf_sync_t* request,
 
   // TODO(reveman): Add synchronization code when using GPU buffers.
   response->type = VIRTIO_WL_RESP_OK;
-}
-
-std::unique_ptr<VirtioWl::Vfd> VirtioWl::AllocateMemory(uint32_t size,
-                                                        uintptr_t* guest_addr,
-                                                        uint64_t* actual_size) {
-  zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(size, 0, &vmo);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to allocate VMO (size=" << size
-                   << "): " << status;
-    return nullptr;
-  }
-
-  status = vmo.get_size(actual_size);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed get VMO size: " << status;
-    return nullptr;
-  }
-
-  status = vmar_.map(0, vmo, 0, *actual_size, kMapFlags, guest_addr);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to map VMO into guest vmar: " << status;
-    return nullptr;
-  }
-
-  return std::make_unique<Vfd>(&vmar_, *guest_addr, *actual_size,
-                               std::move(vmo));
 }
 
 }  // namespace machina

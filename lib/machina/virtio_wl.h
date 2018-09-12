@@ -8,6 +8,8 @@
 #include <unordered_map>
 
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
+#include <lib/zx/channel.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/wl.h>
 #include <zircon/compiler.h>
@@ -27,8 +29,22 @@ namespace machina {
 class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
                                               virtio_wl_config_t> {
  public:
+  class Vfd {
+   public:
+    virtual ~Vfd() {}
+
+    const zx::handle& handle() const { return handle_; }
+
+   protected:
+    explicit Vfd(zx_handle_t handle) : handle_(handle) {}
+
+    zx::handle handle_;
+  };
+  using OnNewConnectionCallback = fit::function<void(zx::channel)>;
+
   VirtioWl(const PhysMem& phys_mem, zx::vmar vmar,
-           async_dispatcher_t* dispatcher);
+           async_dispatcher_t* dispatcher,
+           OnNewConnectionCallback on_new_connection_callback);
   ~VirtioWl() override;
 
   VirtioQueue* in_queue() { return queue(VIRTWL_VQ_IN); }
@@ -40,8 +56,6 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
   zx_status_t Init();
 
  private:
-  class Vfd;
-
   zx_status_t HandleCommand(VirtioQueue* queue, uint16_t head, uint32_t* used);
   void HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
                  virtio_wl_ctrl_vfd_new_t* response);
@@ -58,15 +72,9 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
   void HandleDmabufSync(const virtio_wl_ctrl_vfd_dmabuf_sync_t* request,
                         virtio_wl_ctrl_hdr_t* response);
 
-  // Allocate memory of |size| that is shared between guest and host.
-  // Returns a valid Vfd instance on success. |guest_addr| will be
-  // page-aligned and non-zero on success. |size| will be rounded up to
-  // the next page size boundary and returned in |actual_size|.
-  std::unique_ptr<Vfd> AllocateMemory(uint32_t size, zx_gpaddr_t* guest_addr,
-                                      uint64_t* actual_size);
-
   zx::vmar vmar_;
-  async_dispatcher_t* dispatcher_;
+  async_dispatcher_t* const dispatcher_;
+  OnNewConnectionCallback on_new_connection_callback_;
   async::Wait in_queue_wait_;
   async::Wait out_queue_wait_;
   std::unordered_map<uint32_t, std::unique_ptr<Vfd>> vfds_;

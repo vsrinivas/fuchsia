@@ -433,7 +433,7 @@ int main(int argc, char** argv) {
     return status;
   }
   machina::VirtioWl wl(guest.phys_mem(), std::move(wl_vmar),
-                       guest.device_dispatcher());
+                       guest.device_dispatcher(), [](zx::channel channel) {});
   status = wl.Init();
   if (status != ZX_OK) {
     FXL_LOG(INFO) << "Could not init wayland device";
