@@ -117,9 +117,18 @@ func getProcessesWithName(model benchmarking.Model, processName string) []benchm
 
 // Project |events| to just their durations, i.e. |events[i].Dur|.
 func extractDurations(events []benchmarking.Event) []float64 {
-	result := make([]float64, 0)
-	for _, e := range events {
-		result = append(result, e.Dur)
+	result := make([]float64, len(events))
+	for i, e := range events {
+		result[i] = e.Dur
+	}
+	return result
+}
+
+// Convert an array of values in microseconds to milliseconds.
+func convertMicrosToMillis(array []float64) []float64 {
+	result := make([]float64, len(array))
+	for i, item := range array {
+		result[i] = item / OneMsecInUsecs
 	}
 	return result
 }
@@ -278,9 +287,9 @@ func reportFlutterFpsForInstance(model benchmarking.Model, testSuite string, tes
 	frameStr := "Frame"
 	frameEvents := uiThread.FindEvents(benchmarking.EventsFilter{Name: &frameStr})
 
-	frameDurations := extractDurations(frameEvents)
+	frameDurations := convertMicrosToMillis(extractDurations(frameEvents))
 
-	const buildBudget float64 = 8.0 * 1000
+	const buildBudget float64 = 8.0
 
 	averageFrameBuildTimeMillis := computeAverage(frameDurations)
 	worstFrameBuildTimeMillis := computeMax(frameDurations)
@@ -288,7 +297,7 @@ func reportFlutterFpsForInstance(model benchmarking.Model, testSuite string, tes
 
 	drawStr := "GPURasterizer::Draw"
 	rasterizerEvents := gpuThread.FindEvents(benchmarking.EventsFilter{Name: &drawStr})
-	rasterizerDurations := extractDurations(rasterizerEvents)
+	rasterizerDurations := convertMicrosToMillis(extractDurations(rasterizerEvents))
 
 	averageFrameRasterizerTimeMillis := computeAverage(rasterizerDurations)
 	percentile90FrameRasterizerTimeMillis := computePercentile(rasterizerDurations, 90)
@@ -414,7 +423,7 @@ func main() {
 		if err := testResultsFile.Encode(outputFile); err != nil {
 			log.Fatalf("failed to write results to %s: %v", outputFilename, err)
 		}
-		if err:= outputFile.Close(); err != nil {
+		if err := outputFile.Close(); err != nil {
 			log.Fatalf("failed to close results file %s: %v", outputFilename, err)
 		}
 
