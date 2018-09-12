@@ -65,4 +65,8 @@ run $CMD &
 trace record --categories=gfx --duration=10 --buffer-size=12 --output-file=$TRACE_FILE
 
 echo "== $BENCHMARK_LABEL: Processing trace..."
-/pkgfs/packages/scenic_benchmarks/0/bin/process_scenic_trace -test_suite_name="${BENCHMARK_LABEL}" -benchmarks_out_filename="${OUT_FILE}" "${TRACE_FILE}"
+/pkgfs/packages/scenic_benchmarks/0/bin/process_scenic_trace \
+  -flutter_app_name="${FLUTTER_APP_NAME}" \
+  -test_suite_name="${BENCHMARK_LABEL}" \
+  -benchmarks_out_filename="${OUT_FILE}" \
+  "${TRACE_FILE}"
