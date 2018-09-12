@@ -184,14 +184,6 @@ zx::time TestLoop::Now() const {
     return time_keeper_->Now();
 }
 
-void TestLoop::AdvanceTimeTo(zx::time time) {
-    time_keeper_->AdvanceTimeTo(time);
-}
-
-void TestLoop::AdvanceTimeBy(zx::duration delta) {
-    AdvanceTimeTo(Now() + delta);
-}
-
 void TestLoop::Quit() {
     has_quit_ = true;
 }
@@ -205,10 +197,10 @@ bool TestLoop::RunUntil(zx::time deadline) {
         if (!HasPendingWork()) {
             zx::time next_due_time = GetNextTaskDueTime();
             if (next_due_time > deadline) {
-                AdvanceTimeTo(deadline);
+                time_keeper_->AdvanceTimeTo(deadline);
                 break;
             }
-            AdvanceTimeTo(next_due_time);
+            time_keeper_->AdvanceTimeTo(next_due_time);
         }
 
         Randomize(&state_);

@@ -37,13 +37,6 @@ public:
     // Returns the current fake clock time.
     zx::time Now() const;
 
-    // Advances the fake clock time to |time|, if |time| is greater than the
-    // current time; else, nothing happens.
-    void AdvanceTimeTo(zx::time time);
-
-    // Advances the fake clock time by |delta|.
-    void AdvanceTimeBy(zx::duration delta);
-
     // Quits the message loop. If called while running, it will immediately
     // exit and dispatch no further tasks or waits; if called before running,
     // then next call to run will immediately exit. Further calls to run will
