@@ -291,8 +291,8 @@ void trace_engine_request_save_buffer(uint32_t wrapped_count,
         if (context) {
             auto tcontext = reinterpret_cast<trace_context_t*>(context);
             tcontext->HandleSaveRollingBufferRequest(wrapped_count, durable_data_end);
+            trace_release_prolonged_context(context);
         }
-        trace_release_prolonged_context(context);
     });
 }
 

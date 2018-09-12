@@ -390,7 +390,8 @@ bool test_event_with_inline_everything() {
 
 bool test_circular_mode() {
     const size_t kBufferSize = 4096u;
-    BEGIN_TRACE_TEST_ETC(TRACE_BUFFERING_MODE_CIRCULAR, kBufferSize);
+    BEGIN_TRACE_TEST_ETC(kNoAttachToThread,
+                         TRACE_BUFFERING_MODE_CIRCULAR, kBufferSize);
 
     fixture_start_tracing();
 
@@ -456,7 +457,8 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
 
 bool test_streaming_mode() {
     const size_t kBufferSize = 4096u;
-    BEGIN_TRACE_TEST_ETC(TRACE_BUFFERING_MODE_STREAMING, kBufferSize);
+    BEGIN_TRACE_TEST_ETC(kNoAttachToThread,
+                         TRACE_BUFFERING_MODE_STREAMING, kBufferSize);
 
     fixture_start_tracing();
 
@@ -615,6 +617,45 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
     END_TRACE_TEST;
 }
 
+// This test exercises DX-441 where a buffer becomes full at immediately
+// thereafter tracing is stopped. This causes the "please save buffer"
+// processing to run when tracing is not active.
+bool test_shutdown_when_full() {
+    const size_t kBufferSize = 4096u;
+
+    // This test needs the trace engine to run in the same thread as the test:
+    // We need to control when buffer full handling happens.
+    BEGIN_TRACE_TEST_ETC(kAttachToThread,
+                         TRACE_BUFFERING_MODE_STREAMING, kBufferSize);
+
+    fixture_start_tracing();
+
+    // Keep writing records until we just fill the buffer.
+    // Since the engine loop is on the same loop as us, we can't rely on
+    // handler notifications: They won't get run.
+    {
+        auto context = trace::TraceProlongedContext::Acquire();
+        for (;;) {
+            TRACE_INSTANT("+enabled", "name", TRACE_SCOPE_GLOBAL,
+                          "k1", TA_INT32(1));
+
+            trace_buffer_header header;
+            trace_context_snapshot_buffer_header(context.get(), &header);
+            if (header.wrapped_count > 0) {
+                break;
+            }
+        }
+    }
+
+    // At this point there should be no references to the context except for
+    // the engine's. Then when remaining tasks in the loop are run the
+    // |trace_engine_request_save_buffer()| task will have no context in
+    // which to process the request and should gracefully fail.
+    fixture_stop_tracing();
+
+    END_TRACE_TEST;
+}
+
 // NOTE: The functions for writing trace records are exercised by other trace tests.
 
 } // namespace
@@ -636,4 +677,5 @@ RUN_TEST(test_maximum_record_length)
 RUN_TEST(test_event_with_inline_everything)
 RUN_TEST(test_circular_mode)
 RUN_TEST(test_streaming_mode)
+RUN_TEST(test_shutdown_when_full)
 END_TEST_CASE(engine_tests)

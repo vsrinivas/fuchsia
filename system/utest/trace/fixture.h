@@ -22,6 +22,15 @@
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>
 
+// Specifies whether the trace engine async loop uses the same thread as the
+// app or a different thread.
+typedef enum {
+    // Use different thread from app.
+    kNoAttachToThread,
+    // Use same thread as app.
+    kAttachToThread,
+} attach_to_thread_t;
+
 #ifdef __cplusplus
 
 // FixtureSquelch is used to filter out elements of a trace record that may
@@ -59,7 +68,8 @@ void fixture_snapshot_buffer_header(trace_buffer_header* header);
 
 __BEGIN_CDECLS
 
-void fixture_set_up(trace_buffering_mode_t mode, size_t buffer_size);
+void fixture_set_up(attach_to_thread_t attach_to_thread,
+                    trace_buffering_mode_t mode, size_t buffer_size);
 void fixture_tear_down(void);
 void fixture_start_tracing(void);
 void fixture_stop_tracing(void);
@@ -76,14 +86,15 @@ static inline void fixture_scope_cleanup(bool* scope) {
 
 #define DEFAULT_BUFFER_SIZE_BYTES (1024u * 1024u)
 
-#define BEGIN_TRACE_TEST_ETC(mode, buffer_size)                   \
+// This isn't a do-while because of the cleanup.
+#define BEGIN_TRACE_TEST_ETC(attach_to_thread, mode, buffer_size) \
     BEGIN_TEST;                                                   \
     __attribute__((cleanup(fixture_scope_cleanup))) bool __scope; \
     (void)__scope;                                                \
-    fixture_set_up((mode), (buffer_size));
+    fixture_set_up((attach_to_thread), (mode), (buffer_size))
 
 #define BEGIN_TRACE_TEST \
-    BEGIN_TRACE_TEST_ETC(TRACE_BUFFERING_MODE_ONESHOT, \
+    BEGIN_TRACE_TEST_ETC(kNoAttachToThread, TRACE_BUFFERING_MODE_ONESHOT, \
                          DEFAULT_BUFFER_SIZE_BYTES)
 
 #define END_TRACE_TEST \
