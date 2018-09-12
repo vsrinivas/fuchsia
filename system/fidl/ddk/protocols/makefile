@@ -53,7 +53,10 @@ mailbox:
 scpi:
 	$(run-banjo)
 
+sdhci: $(LOCAL_DIR)/libs/sdhci.banjo
+	$(run-banjo)
+
 sdio:
 	$(run-banjo)
 
-all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl iommu mailbox scpi sdio
+all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl iommu mailbox scpi sdhci sdio

@@ -49,7 +49,7 @@ static zx_status_t pci_sdhci_get_interrupt(void* ctx, zx_handle_t* handle_out) {
     }
 }
 
-static zx_status_t pci_sdhci_get_mmio(void* ctx, volatile sdhci_regs_t** out) {
+static zx_status_t pci_sdhci_get_mmio(void* ctx, zx_handle_t* out) {
     pci_sdhci_device_t* dev = ctx;
     if (dev->regs == NULL) {
         zx_status_t status = pci_map_bar_buffer(&dev->pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
@@ -60,8 +60,7 @@ static zx_status_t pci_sdhci_get_mmio(void* ctx, volatile sdhci_regs_t** out) {
         }
         dev->regs = dev->mmio.vaddr;
     }
-    *out = dev->regs;
-    return ZX_OK;
+    return zx_vmo_clone(dev->mmio.vmo, ZX_RIGHT_SAME_RIGHTS, 0, dev->mmio.size, out);
 }
 
 static zx_status_t pci_sdhci_get_bti(void* ctx, uint32_t index, zx_handle_t* out_handle) {

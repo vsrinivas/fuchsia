@@ -133,9 +133,9 @@ static inline zx_status_t sdio_do_rw_byte(const sdio_protocol_t* proto, bool wri
     return proto->ops->do_rw_byte(proto->ctx, write, fn_idx, addr, write_byte, out_read_byte);
 }
 
-#define SDIO_FN_2 UINT8_C(0)
+#define SDIO_FN_2 UINT8_C(2)
 
-#define SDIO_FN_1 UINT8_C(0)
+#define SDIO_FN_1 UINT8_C(1)
 
 #define SDIO_FN_0 UINT8_C(0)
 

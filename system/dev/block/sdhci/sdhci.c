@@ -29,6 +29,7 @@
 #include <hw/sdmmc.h>
 
 // Zircon Includes
+#include <zircon/process.h>
 #include <zircon/threads.h>
 #include <zircon/assert.h>
 #include <lib/sync/completion.h>
@@ -76,6 +77,7 @@ typedef struct sdhci_device {
     zx_handle_t irq_handle;
     thrd_t irq_thread;
 
+    zx_handle_t regs_handle;
     volatile sdhci_regs_t* regs;
 
     sdhci_protocol_t sdhci;
@@ -808,11 +810,11 @@ static zx_status_t sdhci_set_timing(void* ctx, sdmmc_timing_t timing) {
     return st;
 }
 
-static void sdhci_hw_reset(void* ctx) {
+static void sdhci_hw_reset2(void* ctx) {
     sdhci_device_t* dev = ctx;
     mtx_lock(&dev->mtx);
     if (dev->sdhci.ops->hw_reset) {
-        dev->sdhci.ops->hw_reset(dev->sdhci.ctx);
+        sdhci_hw_reset(&dev->sdhci);
     }
     mtx_unlock(&dev->mtx);
 }
@@ -902,7 +904,7 @@ static sdmmc_protocol_ops_t sdmmc_proto = {
     .set_bus_width = sdhci_set_bus_width,
     .set_bus_freq = sdhci_set_bus_freq,
     .set_timing = sdhci_set_timing,
-    .hw_reset = sdhci_hw_reset,
+    .hw_reset = sdhci_hw_reset2,
     .perform_tuning = sdhci_perform_tuning,
     .request = sdhci_request,
 };
@@ -919,6 +921,8 @@ static void sdhci_unbind(void* ctx) {
 
 static void sdhci_release(void* ctx) {
     sdhci_device_t* dev = ctx;
+    zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)dev->regs, sizeof(dev->regs));
+    zx_handle_close(dev->regs_handle);
     zx_handle_close(dev->irq_handle);
     zx_handle_close(dev->bti_handle);
     zx_handle_close(dev->iobuf.vmo_handle);
@@ -1053,12 +1057,18 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map the Device Registers so that we can perform MMIO against the device.
-    status = dev->sdhci.ops->get_mmio(dev->sdhci.ctx, &dev->regs);
+    status = dev->sdhci.ops->get_mmio(dev->sdhci.ctx, &dev->regs_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "sdhci: error %d in get_mmio\n", status);
         goto fail;
     }
-
+    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
+                         dev->regs_handle, 0, ROUNDUP(sizeof(dev->regs), PAGE_SIZE),
+                         (uintptr_t*)&dev->regs);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "sdhci: error %d in zx_vmar_map\n", status);
+        goto fail;
+    }
     status = dev->sdhci.ops->get_bti(dev->sdhci.ctx, 0, &dev->bti_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "sdhci: error %d in get_bti\n", status);
