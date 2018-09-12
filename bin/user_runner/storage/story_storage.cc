@@ -456,7 +456,7 @@ void StoryStorage::OnPageChange(const std::string& key,
                                 const std::string& value) {
   // If there are any operations waiting on this particular write
   // having happened, tell them to continue.
-  auto it = pending_writes_.find(std::make_pair(key, value));
+  auto it = pending_writes_.find({key, value});
   if (it != pending_writes_.end()) {
     auto local_futures = std::move(it->second);
     for (auto fut : local_futures) {

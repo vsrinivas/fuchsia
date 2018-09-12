@@ -62,16 +62,8 @@ void PageClient::OnChange(fuchsia::ledger::PageChange page,
   // should be null.
   FXL_DCHECK(page.changed_entries);
   for (auto& entry : *page.changed_entries) {
-    // Remove prefix maybe?
-    const std::string key = to_string(entry.key);
-    std::string value;
-    if (!fsl::StringFromVmo(*entry.value, &value)) {
-      FXL_LOG(ERROR) << "PageClient::OnChange() " << context_ << ": "
-                     << "Unable to extract data.";
-      continue;
-    }
-
-    OnPageChange(key, value);
+    // Remove key prefix maybe?
+    OnPageChange(to_string(entry.key), std::move(entry.value));
   }
 
   for (auto& key : *page.deleted_keys) {
@@ -79,6 +71,17 @@ void PageClient::OnChange(fuchsia::ledger::PageChange page,
   }
 
   callback(nullptr);
+}
+
+void PageClient::OnPageChange(const std::string& key,
+                              fuchsia::mem::BufferPtr value) {
+  std::string value_string;
+  if (fsl::StringFromVmo(*value, &value_string)) {
+    OnPageChange(key, value_string);
+  } else {
+    FXL_LOG(ERROR) << "PageClient::OnChange() " << context_ << ": "
+                   << "Unable to read/copy data.";
+  }
 }
 
 void PageClient::OnPageChange(const std::string& /*key*/,

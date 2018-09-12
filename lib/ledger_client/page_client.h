@@ -96,10 +96,20 @@ class PageClient : fuchsia::ledger::PageWatcher {
     bool merged_is_deleted{};
   };
 
+ protected:
+  // Derived classes implement this method as needed. The default implementation
+  // copies the VMO to a string and forwards to |OnPageChange(const
+  // std::string&, const std::string&)|.
+  virtual void OnPageChange(const std::string& key,
+                            fuchsia::mem::BufferPtr value);
+
  private:
-  // Derived classes implement these methods as needed. The default
-  // implementation does nothing.
+  // Derived classes implement this method as needed. The default implementation
+  // does nothing. This method is only called if forwarded from
+  // |OnPageChange(const std::string&, fuchsia::mem::BufferPtr)|.
   virtual void OnPageChange(const std::string& key, const std::string& value);
+  // Derived classes implement this method as needed. The default implementation
+  // does nothing.
   virtual void OnPageDelete(const std::string& key);
 
   // Derived classes implement this method as needed. The default implementation
