@@ -36,8 +36,6 @@ class VnodeMemfs : public fs::Vnode {
 public:
     virtual zx_status_t Setattr(const vnattr_t* a) final;
     virtual void Sync(SyncCallback closure) final;
-    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                      void* out_buf, size_t out_len, size_t* out_actual) final;
     zx_status_t AttachRemote(fs::MountChannel h) final;
 
     // To be more specific: Is this vnode connected into the directory hierarchy?
@@ -101,7 +99,7 @@ public:
     VnodeDir(Vfs* vfs);
     virtual ~VnodeDir();
 
-    virtual zx_status_t ValidateFlags(uint32_t flags) final;
+    zx_status_t ValidateFlags(uint32_t flags) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) final;
 
@@ -116,13 +114,14 @@ public:
 
     // Use the watcher container to implement a directory watcher
     void Notify(fbl::StringPiece name, unsigned event) final;
-    zx_status_t WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
+    zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
+    zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
 
     // The vnode is acting as a mount point for a remote filesystem or device.
-    virtual bool IsRemote() const final;
-    virtual zx::channel DetachRemote() final;
-    virtual zx_handle_t GetRemote() const final;
-    virtual void SetRemote(zx::channel remote) final;
+    bool IsRemote() const final;
+    zx::channel DetachRemote() final;
+    zx_handle_t GetRemote() const final;
+    void SetRemote(zx::channel remote) final;
 
 private:
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,

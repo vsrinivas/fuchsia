@@ -13,6 +13,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/atomic.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fdio/vfs.h>
 #include <fs/vfs.h>
@@ -22,6 +23,11 @@
 #include "dnode.h"
 
 namespace memfs {
+namespace {
+
+constexpr const char kFsName[] = "memfs";
+
+}
 
 VnodeDir::VnodeDir(Vfs* vfs) : VnodeMemfs(vfs) {
     link_count_ = 1; // Implied '.'
@@ -37,8 +43,17 @@ zx_status_t VnodeDir::ValidateFlags(uint32_t flags) {
 
 void VnodeDir::Notify(fbl::StringPiece name, unsigned event) { watcher_.Notify(name, event); }
 
-zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
-    return watcher_.WatchDir(vfs, this, cmd);
+zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) {
+    return watcher_.WatchDir(vfs, this, mask, options, fbl::move(watcher));
+}
+
+zx_status_t VnodeDir::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
+    static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
+                  "Memfs name too long");
+    memset(info, 0, sizeof(*info));
+    //TODO(planders): eventually report something besides 0.
+    strlcpy(reinterpret_cast<char*>(info->name), kFsName, fuchsia_io_MAX_FS_NAME_BUFFER);
+    return ZX_OK;
 }
 
 zx_status_t VnodeDir::GetVmo(int flags, zx_handle_t* out) {

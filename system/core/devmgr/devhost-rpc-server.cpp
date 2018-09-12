@@ -220,17 +220,6 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
     case IOCTL_DEVICE_DEBUG_RESUME: {
         return dev_op_resume(dev, 0);
     }
-    case IOCTL_VFS_QUERY_FS: {
-        const char* devhost_name = "devfs:host";
-        if (out_len < sizeof(vfs_query_info_t) + strlen(devhost_name)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        vfs_query_info_t* info = (vfs_query_info_t*) out_buf;
-        memset(info, 0, sizeof(*info));
-        memcpy(info->name, devhost_name, strlen(devhost_name));
-        *out_actual = sizeof(vfs_query_info_t) + strlen(devhost_name);
-        return ZX_OK;
-    }
     case IOCTL_DEVICE_GET_DRIVER_LOG_FLAGS: {
         if (!dev->driver) {
             return ZX_ERR_UNAVAILABLE;
@@ -349,6 +338,12 @@ static zx_status_t fidl_directory_link(void* ctx, const char* src_data,
     return fuchsia_io_DirectoryLink_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
+static zx_status_t fidl_directory_watch(void* ctx, uint32_t mask, uint32_t options,
+                                        zx_handle_t watcher, fidl_txn_t* txn) {
+    zx_handle_close(watcher);
+    return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
 static const fuchsia_io_Directory_ops_t kDirectoryOps = []() {
     fuchsia_io_Directory_ops_t ops;
     ops.Open = fidl_directory_open;
@@ -358,6 +353,52 @@ static const fuchsia_io_Directory_ops_t kDirectoryOps = []() {
     ops.GetToken = fidl_directory_gettoken;
     ops.Rename = fidl_directory_rename;
     ops.Link = fidl_directory_link;
+    ops.Watch = fidl_directory_watch;
+    return ops;
+}();
+
+static zx_status_t fidl_directory_admin_mount(void* ctx, zx_handle_t h, fidl_txn_t* txn) {
+    zx_handle_close(h);
+    return fuchsia_io_DirectoryAdminMount_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t fidl_directory_admin_mount_and_create(void* ctx, zx_handle_t h,
+                                                         const char* name, size_t len,
+                                                         uint32_t flags, fidl_txn_t* txn) {
+    zx_handle_close(h);
+    return fuchsia_io_DirectoryAdminMountAndCreate_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t fidl_directory_admin_unmount(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_io_DirectoryAdminUnmount_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t fidl_directory_admin_unmount_node(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_io_DirectoryAdminUnmountNode_reply(txn, ZX_ERR_NOT_SUPPORTED,
+                                                      ZX_HANDLE_INVALID);
+}
+
+static zx_status_t fidl_directory_admin_query_filesystem(void* ctx, fidl_txn_t* txn) {
+    fuchsia_io_FilesystemInfo info;
+    memset(&info, 0, sizeof(info));
+    const char* devhost_name = "devfs:host";
+    strlcpy((char*) info.name, devhost_name, fuchsia_io_MAX_FS_NAME_BUFFER);
+    return fuchsia_io_DirectoryAdminQueryFilesystem_reply(txn, ZX_OK, &info);
+}
+
+static zx_status_t fidl_directory_admin_get_device_path(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_io_DirectoryAdminGetDevicePath_reply(txn, ZX_ERR_NOT_SUPPORTED,
+                                                        NULL, 0);
+}
+
+static const fuchsia_io_DirectoryAdmin_ops_t kDirectoryAdminOps = []() {
+    fuchsia_io_DirectoryAdmin_ops_t ops;
+    ops.Mount = fidl_directory_admin_mount;
+    ops.MountAndCreate = fidl_directory_admin_mount_and_create;
+    ops.Unmount = fidl_directory_admin_unmount;
+    ops.UnmountNode = fidl_directory_admin_unmount_node;
+    ops.QueryFilesystem = fidl_directory_admin_query_filesystem;
+    ops.GetDevicePath = fidl_directory_admin_get_device_path;
     return ops;
 }();
 
@@ -611,8 +652,11 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
                hdr->ordinal <= fuchsia_io_FileGetVmoOrdinal) {
         return fuchsia_io_File_dispatch(cookie, txn, msg, &kFileOps);
     } else if (hdr->ordinal >= fuchsia_io_DirectoryOpenOrdinal &&
-               hdr->ordinal <= fuchsia_io_DirectoryLinkOrdinal) {
+               hdr->ordinal <= fuchsia_io_DirectoryWatchOrdinal) {
         return fuchsia_io_Directory_dispatch(cookie, txn, msg, &kDirectoryOps);
+    } else if (hdr->ordinal >= fuchsia_io_DirectoryAdminMountOrdinal &&
+               hdr->ordinal <= fuchsia_io_DirectoryAdminGetDevicePathOrdinal) {
+        return fuchsia_io_DirectoryAdmin_dispatch(cookie, txn, msg, &kDirectoryAdminOps);
     } else {
         auto ios = static_cast<devhost_iostate_t*>(cookie);
         return dev_op_message(ios->dev, msg, txn);

@@ -13,7 +13,9 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/vfs.h>
+#include <lib/fzl/fdio.h>
 #include <minfs/format.h>
 #include <unittest/unittest.h>
 #include <zircon/device/vfs.h>
@@ -23,21 +25,18 @@
 
 namespace {
 
-bool QueryInfo(char* buf, size_t buf_size) {
+bool QueryInfo(fuchsia_io_FilesystemInfo* info) {
     BEGIN_HELPER;
-    ASSERT_GE(buf_size, sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1);
-
-    int fd = open(kMountPath, O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(fd, 0);
-
-    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
-    ssize_t rv = ioctl_vfs_query_fs(fd, info, buf_size - 1);
-    ASSERT_EQ(close(fd), 0);
-
-    ASSERT_EQ(rv, sizeof(vfs_query_info_t) + strlen("minfs"), "Failed to query filesystem");
-
-    buf[rv] = '\0';  // NULL terminate the name.
-    ASSERT_EQ(strncmp("minfs", info->name, strlen("minfs")), 0);
+    fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(fd);
+    zx_status_t status;
+    fzl::FdioCaller caller(fbl::move(fd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    const char* kFsName = "minfs";
+    const char* name = reinterpret_cast<const char*>(info->name);
+    ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
     ASSERT_EQ(info->block_size, minfs::kMinfsBlockSize);
     ASSERT_EQ(info->max_filename_size, minfs::kMinfsMaxNameSize);
     ASSERT_EQ(info->fs_type, VFS_TYPE_MINFS);
@@ -50,29 +49,24 @@ bool QueryInfo(char* buf, size_t buf_size) {
 
 bool VerifyQueryInfo(size_t expected_nodes) {
     BEGIN_HELPER;
-    size_t buf_size = sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1;
-    char buf[buf_size];
 
-    ASSERT_TRUE(QueryInfo(&buf[0], buf_size));
+    fuchsia_io_FilesystemInfo info;
+    ASSERT_TRUE(QueryInfo(&info));
 
-    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
-    ASSERT_EQ(info->total_bytes, 8 * 1024 * 1024);
+    ASSERT_EQ(info.total_bytes, 8 * 1024 * 1024);
 
     // TODO(ZX-1372): Adjust this once minfs accounting on truncate is fixed.
-    ASSERT_EQ(info->used_bytes, 2 * minfs::kMinfsBlockSize);
-    ASSERT_EQ(info->total_nodes, 32 * 1024);
-    ASSERT_EQ(info->used_nodes, expected_nodes + 2);
+    ASSERT_EQ(info.used_bytes, 2 * minfs::kMinfsBlockSize);
+    ASSERT_EQ(info.total_nodes, 32 * 1024);
+    ASSERT_EQ(info.used_nodes, expected_nodes + 2);
     END_HELPER;
 }
 
 bool GetUsedBlocks(uint32_t* used_blocks) {
     BEGIN_HELPER;
-    size_t buf_size = sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1;
-    char buf[buf_size];
-    ASSERT_TRUE(QueryInfo(&buf[0], buf_size));
-    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
-
-    *used_blocks = static_cast<uint32_t>((info->total_bytes - info->used_bytes) / info->block_size);
+    fuchsia_io_FilesystemInfo info;
+    ASSERT_TRUE(QueryInfo(&info));
+    *used_blocks = static_cast<uint32_t>((info.total_bytes - info.used_bytes) / info.block_size);
     END_HELPER;
 }
 

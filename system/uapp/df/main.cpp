@@ -14,6 +14,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/device/vfs.h>
 
 int usage(void) {
@@ -98,15 +101,14 @@ void print_human_readable(int padding, size_t size) {
 }
 
 void print_fs_type(const char* name, const df_options_t* options,
-                   const vfs_query_info_t* info, const int name_len,
-                   const char* device_path) {
+                   const fuchsia_io_FilesystemInfo* info, const char* device_path) {
     if (options->node_usage) {
         size_t nodes_total = info ? info->total_nodes : 0;
         size_t nodes_used = info ? info->used_nodes : 0;
         size_t nodes_available = nodes_total - nodes_used;
         size_t use_percentage = nodes_total ? nodes_used * 100 / nodes_total : 0;
         printf(ffmt,
-               info != NULL ? info->name : "?",
+               info != nullptr ? reinterpret_cast<const char*>(info->name) : "?",
                nodes_total,
                nodes_used,
                nodes_available,
@@ -120,7 +122,7 @@ void print_fs_type(const char* name, const df_options_t* options,
             size_t bytes_used = info ? info->used_bytes : 0;
             size_t bytes_available = bytes_total - bytes_used;
             size_t use_percentage = bytes_total ? bytes_used * 100 / bytes_total : 0;
-            printf("%-10s ", info != NULL ? info->name : "?");
+            printf("%-10s ", info != nullptr ? reinterpret_cast<const char*>(info->name) : "?");
             print_human_readable(5, bytes_total);
             print_human_readable(5, bytes_used);
             print_human_readable(5, bytes_available);
@@ -133,7 +135,7 @@ void print_fs_type(const char* name, const df_options_t* options,
             size_t blocks_available = blocks_total - blocks_used;
             size_t use_percentage = blocks_total ? blocks_used * 100 / blocks_total : 0;
             printf(ffmt,
-                   info != NULL ? info->name : "?",
+                   info != nullptr ? reinterpret_cast<const char*>(info->name) : "?",
                    blocks_total,
                    blocks_used,
                    blocks_available,
@@ -144,13 +146,6 @@ void print_fs_type(const char* name, const df_options_t* options,
     }
 
 }
-typedef union {
-    vfs_query_info_t info;
-    struct {
-        alignas(vfs_query_info_t) char h[sizeof(vfs_query_info_t)];
-        char name[MAX_FS_NAME_LEN + 1];
-    };
-} vfs_query_info_wrapper_t;
 
 int main(int argc, const char** argv) {
     const char** dirs;
@@ -178,29 +173,46 @@ int main(int argc, const char** argv) {
     // Try to open path with O_ADMIN so we can query for underlying block devices.
     // If we fail, open directory without O_ADMIN. Block devices will not be returned.
     for (size_t i = 0; i < dircount; i++) {
-        int fd;
+        fbl::unique_fd fd;
         bool admin = true;
-        if ((fd = open(dirs[i], O_RDONLY | O_ADMIN)) < 0) {
-            if ((fd = open(dirs[i], O_RDONLY)) < 0) {
+        fd.reset(open(dirs[i], O_RDONLY | O_ADMIN));
+        if (!fd) {
+            fd.reset(open(dirs[i], O_RDONLY));
+            if (!fd) {
                 fprintf(stderr, "df: Could not open target: %s\n", dirs[i]);
                 continue;
             }
             admin = false;
         }
 
-        vfs_query_info_wrapper_t wrapper;
-        char device_path[1024];
-        ssize_t r = ioctl_vfs_query_fs(fd, &wrapper.info, sizeof(wrapper) - 1);
-        int name_len = r - sizeof(vfs_query_info_t);
+        fuchsia_io_FilesystemInfo info;
+        zx_status_t status;
+        fzl::FdioCaller caller(fbl::move(fd));
+        zx_status_t io_status = fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(),
+                                                                         &status, &info);
+        if (io_status != ZX_OK || status != ZX_OK) {
+            print_fs_type(dirs[i], &options, nullptr, "Unknown; cannot query filesystem");
+            continue;
+        }
+        info.name[fuchsia_io_MAX_FS_NAME_BUFFER - 1] = '\0';
 
-        if (name_len > 0) {
-            wrapper.name[name_len] = '\0';
+        char device_buffer[1024];
+        char* device_path = static_cast<char*>(device_buffer);
+        size_t path_len;
+        io_status = fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
+                                                           device_path, sizeof(device_buffer) - 1,
+                                                           &path_len);
+        const char* path = nullptr;
+        if (io_status == ZX_OK) {
+            if (status == ZX_OK) {
+                device_buffer[path_len] = '\0';
+                path = device_path;
+            } else if (!admin && status == ZX_ERR_ACCESS_DENIED) {
+                path = "Unknown; missing O_ADMIN";
+            }
         }
 
-        ssize_t s = ioctl_vfs_get_device_path(fd, device_path, sizeof(device_path));
-        const char* path = (s > 0 ? device_path : (admin ? NULL : "unknown; missing O_ADMIN"));
-        print_fs_type(dirs[i], &options, name_len > 0 ? &wrapper.info : NULL, name_len, path);
-        close(fd);
+        print_fs_type(dirs[i], &options, &info, path);
     }
 
     return 0;

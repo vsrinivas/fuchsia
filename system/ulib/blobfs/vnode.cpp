@@ -16,6 +16,7 @@
 #include <zircon/device/vfs.h>
 
 #include <fbl/ref_ptr.h>
+#include <fbl/string_piece.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/vfs.h>
 #include <lib/sync/completion.h>
@@ -167,49 +168,6 @@ zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
     return ZX_OK;
 }
 
-constexpr const char kFsName[] = "blobfs";
-
-zx_status_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                             size_t out_len, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_VFS_QUERY_FS: {
-        if (out_len < sizeof(vfs_query_info_t) + strlen(kFsName)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
-        memset(info, 0, sizeof(*info));
-        info->block_size = kBlobfsBlockSize;
-        info->max_filename_size = Digest::kLength * 2;
-        info->fs_type = VFS_TYPE_BLOBFS;
-        info->fs_id = blobfs_->GetFsId();
-        info->total_bytes = blobfs_->info_.block_count * blobfs_->info_.block_size;
-        info->used_bytes = blobfs_->info_.alloc_block_count * blobfs_->info_.block_size;
-        info->total_nodes = blobfs_->info_.inode_count;
-        info->used_nodes = blobfs_->info_.alloc_inode_count;
-        memcpy(info->name, kFsName, strlen(kFsName));
-        *out_actual = sizeof(vfs_query_info_t) + strlen(kFsName);
-        return ZX_OK;
-    }
-#ifdef __Fuchsia__
-    case IOCTL_VFS_GET_DEVICE_PATH: {
-        ssize_t len = ioctl_device_get_topo_path(blobfs_->Fd(), static_cast<char*>(out_buf), out_len);
-
-        if ((ssize_t)out_len < len) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        if (len >= 0) {
-            *out_actual = len;
-        }
-        return len > 0 ? ZX_OK : static_cast<zx_status_t>(len);
-    }
-#endif
-    default: {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    }
-}
-
 zx_status_t VnodeBlob::Truncate(size_t len) {
     TRACE_DURATION("blobfs", "VnodeBlob::Truncate", "len", len);
 
@@ -219,6 +177,37 @@ zx_status_t VnodeBlob::Truncate(size_t len) {
 
     return SpaceAllocate(len);
 }
+
+#ifdef __Fuchsia__
+
+constexpr const char kFsName[] = "blobfs";
+
+zx_status_t VnodeBlob::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
+    static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
+                  "Blobfs name too long");
+
+    memset(info, 0, sizeof(*info));
+    info->block_size = kBlobfsBlockSize;
+    info->max_filename_size = Digest::kLength * 2;
+    info->fs_type = VFS_TYPE_BLOBFS;
+    info->fs_id = blobfs_->GetFsId();
+    info->total_bytes = blobfs_->info_.block_count * blobfs_->info_.block_size;
+    info->used_bytes = blobfs_->info_.alloc_block_count * blobfs_->info_.block_size;
+    info->total_nodes = blobfs_->info_.inode_count;
+    info->used_nodes = blobfs_->info_.alloc_inode_count;
+    strlcpy(reinterpret_cast<char*>(info->name), kFsName, fuchsia_io_MAX_FS_NAME_BUFFER);
+    return ZX_OK;
+}
+
+zx_status_t VnodeBlob::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
+    ssize_t len = ioctl_device_get_topo_path(blobfs_->Fd(), out_name, buffer_len);
+    if (len < 0) {
+        return static_cast<zx_status_t>(len);
+    }
+    *out_len = len;
+    return ZX_OK;
+}
+#endif
 
 zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
     TRACE_DURATION("blobfs", "VnodeBlob::Unlink", "name", name, "must_be_dir", must_be_dir);

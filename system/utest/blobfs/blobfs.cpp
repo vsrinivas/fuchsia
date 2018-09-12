@@ -26,9 +26,11 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
+#include <fuchsia/io/c/fidl.h>
 #include <fvm/fvm.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/io.h>
+#include <lib/fzl/fdio.h>
 #include <lib/memfs/memfs.h>
 #include <unittest/unittest.h>
 #include <zircon/device/device.h>
@@ -411,16 +413,19 @@ bool BlobfsTest::GetRamdiskCount(uint64_t* blk_count) const {
 bool BlobfsTest::CheckInfo(const char* mount_path) {
     fbl::unique_fd fd(open(mount_path, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
-    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
-    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
-    ssize_t r = ioctl_vfs_query_fs(fd.get(), info, sizeof(buf) - 1);
-    ASSERT_EQ(r, (ssize_t)(sizeof(vfs_query_info_t) + strlen("blobfs")), "Failed to query filesystem");
-    buf[r] = '\0';
-    const char* name = reinterpret_cast<const char*>(buf + sizeof(vfs_query_info_t));
-    ASSERT_EQ(strncmp("blobfs", name, strlen("blobfs")), 0, "Unexpected filesystem mounted");
-    ASSERT_LE(info->used_nodes, info->total_nodes, "Used nodes greater than free nodes");
-    ASSERT_LE(info->used_bytes, info->total_bytes, "Used bytes greater than free bytes");
-    ASSERT_EQ(close(fd.release()), 0);
+
+    zx_status_t status;
+    fuchsia_io_FilesystemInfo info;
+    fzl::FdioCaller caller(fbl::move(fd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    const char* kFsName = "blobfs";
+    const char* name = reinterpret_cast<const char*>(info.name);
+    ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
+    ASSERT_LE(info.used_nodes, info.total_nodes, "Used nodes greater than free nodes");
+    ASSERT_LE(info.used_bytes, info.total_bytes, "Used bytes greater than free bytes");
+    ASSERT_EQ(close(caller.release().release()), 0);
     return true;
 }
 
@@ -602,29 +607,30 @@ bool QueryInfo(size_t expected_nodes, size_t expected_bytes) {
     fbl::unique_fd fd(open(MOUNT_PATH, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
 
-    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
-    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
-    ssize_t rv = ioctl_vfs_query_fs(fd.get(), info, sizeof(buf) - 1);
-    ASSERT_EQ(close(fd.release()), 0);
-
-    ASSERT_EQ(rv, sizeof(vfs_query_info_t) + strlen("blobfs"), "Failed to query filesystem");
-
-    buf[rv] = '\0';  // NULL terminate the name.
-    ASSERT_EQ(strncmp("blobfs", info->name, strlen("blobfs")), 0);
-    ASSERT_EQ(info->block_size, blobfs::kBlobfsBlockSize);
-    ASSERT_EQ(info->max_filename_size, Digest::kLength * 2);
-    ASSERT_EQ(info->fs_type, VFS_TYPE_BLOBFS);
-    ASSERT_NE(info->fs_id, 0);
+    zx_status_t status;
+    fuchsia_io_FilesystemInfo info;
+    fzl::FdioCaller caller(fbl::move(fd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    const char* kFsName = "blobfs";
+    const char* name = reinterpret_cast<const char*>(info.name);
+    ASSERT_EQ(close(caller.release().release()), 0);
+    ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
+    ASSERT_EQ(info.block_size, blobfs::kBlobfsBlockSize);
+    ASSERT_EQ(info.max_filename_size, Digest::kLength * 2);
+    ASSERT_EQ(info.fs_type, VFS_TYPE_BLOBFS);
+    ASSERT_NE(info.fs_id, 0);
 
     // Check that used_bytes are within a reasonable range
-    ASSERT_GE(info->used_bytes, expected_bytes);
-    ASSERT_LE(info->used_bytes, info->total_bytes);
+    ASSERT_GE(info.used_bytes, expected_bytes);
+    ASSERT_LE(info.used_bytes, info.total_bytes);
 
     // Check that total_bytes are a multiple of slice_size
-    ASSERT_GE(info->total_bytes, kTestFvmSliceSize);
-    ASSERT_EQ(info->total_bytes % kTestFvmSliceSize, 0);
-    ASSERT_EQ(info->total_nodes, kTestFvmSliceSize / blobfs::kBlobfsInodeSize);
-    ASSERT_EQ(info->used_nodes, expected_nodes);
+    ASSERT_GE(info.total_bytes, kTestFvmSliceSize);
+    ASSERT_EQ(info.total_bytes % kTestFvmSliceSize, 0);
+    ASSERT_EQ(info.total_nodes, kTestFvmSliceSize / blobfs::kBlobfsInodeSize);
+    ASSERT_EQ(info.used_nodes, expected_nodes);
     return true;
 }
 
@@ -1465,7 +1471,11 @@ static bool InvalidOps(BlobfsTest* blobfsTest) {
     ASSERT_LT(utime(info->path, nullptr), 0);
 
     // Test that a blob fd cannot unmount the entire blobfs.
-    ASSERT_LT(ioctl_vfs_unmount_fs(fd.get()), 0);
+    zx_status_t status;
+    fzl::FdioCaller caller(fbl::move(fd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
+    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
+    fd.reset(caller.release().release());
 
     // Access the file once more, after these operations
     ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
@@ -2028,8 +2038,16 @@ static bool QueryDevicePath(BlobfsTest* blobfsTest) {
     fbl::unique_fd dirfd(open(MOUNT_PATH "/.", O_RDONLY | O_ADMIN));
     ASSERT_TRUE(dirfd, "Cannot open root directory");
 
-    char device_path[1024];
-    ssize_t path_len = ioctl_vfs_get_device_path(dirfd.get(), device_path, sizeof(device_path));
+    char device_buffer[1024];
+    char* device_path = static_cast<char*>(device_buffer);
+    zx_status_t status;
+    size_t path_len;
+    fzl::FdioCaller caller(fbl::move(dirfd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
+                                                     device_path, sizeof(device_buffer),
+                                                     &path_len), ZX_OK);
+    dirfd = caller.release();
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_GT(path_len, 0, "Device path not found");
 
     char actual_path[PATH_MAX];
@@ -2039,8 +2057,13 @@ static bool QueryDevicePath(BlobfsTest* blobfsTest) {
 
     dirfd.reset(open(MOUNT_PATH "/.", O_RDONLY));
     ASSERT_TRUE(dirfd, "Cannot open root directory");
-    path_len = ioctl_vfs_get_device_path(dirfd.get(), device_path, sizeof(device_path));
-    ASSERT_LT(path_len, 0);
+    caller.reset(fbl::move(dirfd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
+                                                     device_path, sizeof(device_buffer),
+                                                     &path_len), ZX_OK);
+    dirfd = caller.release();
+    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
+    ASSERT_EQ(path_len, 0);
     ASSERT_EQ(close(dirfd.release()), 0);
     END_HELPER;
 }

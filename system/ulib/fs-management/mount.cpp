@@ -16,9 +16,12 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs/client.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/device/vfs.h>
@@ -28,6 +31,18 @@
 namespace {
 
 using fbl::unique_fd;
+
+zx_status_t MountFs(int fd, zx_handle_t root) {
+    zx_status_t status;
+    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
+    zx_status_t io_status = fuchsia_io_DirectoryAdminMount(caller.borrow_channel(),
+                                                           root, &status);
+    caller.release().release();
+    if (io_status != ZX_OK) {
+        return io_status;
+    }
+    return status;
+}
 
 void UnmountHandle(zx_handle_t root, bool wait_until_ready) {
     // We've entered a failure case where the filesystem process (which may or may not be alive)
@@ -123,21 +138,16 @@ zx_status_t Mounter::MakeDirAndMount(const mount_options_t& options) {
         return ZX_ERR_IO;
     }
 
-    size_t config_size = sizeof(mount_mkdir_config_t) + strlen(name) + 1;
-    fbl::AllocChecker checker;
-    fbl::unique_ptr<char[]> config_buffer(new (&checker) char[config_size]);
-    mount_mkdir_config_t* config = reinterpret_cast<mount_mkdir_config_t*>(config_buffer.get());
-    if (!checker.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    config->fs_root = root_;
-    config->flags = flags_;
-    strcpy(config->name, name);
-
     cleanup.cancel();
 
-    // Ioctl will close root for us if an error occurs
-    return static_cast<zx_status_t>(ioctl_vfs_mount_mkdir_fs(parent.get(), config, config_size));
+    zx_status_t status;
+    fzl::FdioCaller caller(fbl::move(parent));
+    zx_status_t io_status = fuchsia_io_DirectoryAdminMountAndCreate(
+            caller.borrow_channel(), root_, name, strlen(name), flags_, &status);
+    if (io_status != ZX_OK) {
+        return io_status;
+    }
+    return status;
 }
 
 // Calls the 'launch callback' and mounts the remote handle to the target vnode, if successful.
@@ -167,8 +177,7 @@ zx_status_t Mounter::LaunchAndMount(LaunchCallback cb, const mount_options_t& op
     if (options.create_mountpoint) {
         return MakeDirAndMount(options);
     }
-    // Ioctl will close root for us if an error occurs
-    return static_cast<zx_status_t>(ioctl_vfs_mount_fs(fd_, &root_));
+    return MountFs(fd_, root_);
 }
 
 zx_status_t Mounter::MountNativeFs(const char* binary, unique_fd device,
@@ -341,13 +350,19 @@ zx_status_t mount(int device_fd, const char* mount_path, disk_format_t df,
 
 zx_status_t fumount(int mount_fd) {
     zx_handle_t h;
-    zx_status_t status = static_cast<zx_status_t>(ioctl_vfs_unmount_node(mount_fd, &h));
-    if (status < 0) {
-        fprintf(stderr, "Could not unmount filesystem: %d\n", status);
-    } else {
-        status = vfs_unmount_handle(h, ZX_TIME_INFINITE);
+    zx_status_t status;
+    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(mount_fd)));
+    zx_status_t io_status = fuchsia_io_DirectoryAdminUnmountNode(caller.borrow_channel(),
+                                                                 &status, &h);
+    caller.release().release();
+    if (io_status != ZX_OK) {
+        return io_status;
     }
-    return status;
+    zx::channel c(h);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return vfs_unmount_handle(c.release(), ZX_TIME_INFINITE);
 }
 
 zx_status_t umount(const char* mount_path) {

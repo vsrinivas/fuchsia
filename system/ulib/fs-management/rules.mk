@@ -35,6 +35,9 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-io
+
 MODULE_EXPORT := so
 MODULE_SO_NAME := fs-management
 

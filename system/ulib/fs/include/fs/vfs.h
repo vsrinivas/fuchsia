@@ -123,8 +123,6 @@ public:
                      fbl::StringPiece path, fbl::StringPiece* pathout,
                      uint32_t flags, uint32_t mode) FS_TA_EXCLUDES(vfs_lock_);
     zx_status_t Unlink(fbl::RefPtr<Vnode> vn, fbl::StringPiece path) FS_TA_EXCLUDES(vfs_lock_);
-    zx_status_t Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
-                      void* out_buf, size_t out_len, size_t* out_actual) FS_TA_EXCLUDES(vfs_lock_);
 
     // Sets whether this file system is read-only.
     void SetReadonly(bool value) FS_TA_EXCLUDES(vfs_lock_);

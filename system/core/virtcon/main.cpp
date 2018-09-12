@@ -11,10 +11,14 @@
 #include <unistd.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
 #include <port/port.h>
 #include <zircon/device/pty.h>
 #include <zircon/device/vfs.h>
@@ -248,7 +252,7 @@ static zx_status_t new_vc_cb(port_handler_t* ph, zx_signals_t signals, uint32_t 
 }
 
 static void input_dir_event(unsigned evt, const char* name) {
-    if ((evt != VFS_WATCH_EVT_EXISTING) && (evt != VFS_WATCH_EVT_ADDED)) {
+    if ((evt != fuchsia_io_WATCH_EVENT_EXISTING) && (evt != fuchsia_io_WATCH_EVENT_ADDED)) {
         return;
     }
 
@@ -266,26 +270,31 @@ static void setup_dir_watcher(const char* dir,
                               zx_status_t (*cb)(port_handler_t*, zx_signals_t, uint32_t),
                               port_handler_t* ph,
                               int* fd_out) {
-    if ((*fd_out = open(dir, O_DIRECTORY | O_RDONLY)) >= 0) {
-        vfs_watch_dir_t wd;
-        wd.mask = VFS_WATCH_MASK_ALL;
-        wd.options = 0;
-        if (zx_channel_create(0, &wd.channel, &ph->handle) == ZX_OK) {
-            if ((ioctl_vfs_watch_dir(*fd_out, &wd)) == ZX_OK) {
-                ph->waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-                ph->func = cb;
-                port_wait(&port, ph);
-            } else {
-                zx_handle_close(wd.channel);
-                zx_handle_close(ph->handle);
-                close(*fd_out);
-                *fd_out = -1;
-            }
-        } else {
-            close(*fd_out);
-            *fd_out = -1;
-        }
+    *fd_out = -1;
+    fbl::unique_fd fd(open(dir, O_DIRECTORY | O_RDONLY));
+    if (!fd) {
+        return;
     }
+    zx::channel client, server;
+    if (zx::channel::create(0, &client, &server) != ZX_OK) {
+        return;
+    }
+
+    fzl::FdioCaller caller(fbl::move(fd));
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_io_DirectoryWatch(caller.borrow_channel(),
+                                                      fuchsia_io_WATCH_MASK_ALL, 0,
+                                                      server.release(),
+                                                      &status);
+    if (io_status != ZX_OK || status != ZX_OK) {
+        return;
+    }
+
+    *fd_out = caller.release().release();
+    ph->handle = client.release();
+    ph->waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    ph->func = cb;
+    port_wait(&port, ph);
 }
 
 static bool handle_dir_event(port_handler_t* ph, zx_signals_t signals,
@@ -297,7 +306,7 @@ static bool handle_dir_event(port_handler_t* ph, zx_signals_t signals,
     // Buffer contains events { Opcode, Len, Name[Len] }
     // See zircon/device/vfs.h for more detail
     // extra byte is for temporary NUL
-    uint8_t buf[VFS_WATCH_MSG_MAX + 1];
+    uint8_t buf[fuchsia_io_MAX_BUF + 1];
     uint32_t len;
     if (zx_channel_read(ph->handle, 0, buf, NULL, sizeof(buf) - 1, 0, &len, NULL) < 0) {
         return false;

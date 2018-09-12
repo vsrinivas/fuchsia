@@ -17,8 +17,10 @@
 
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
+#include <lib/fzl/fdio.h>
 #include <fs-test-utils/fixture.h>
 #include <fs-test-utils/unittest.h>
+#include <fuchsia/io/c/fidl.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
 #include <zircon/device/ramdisk.h>
@@ -29,14 +31,6 @@
 #include <fs-management/ramdisk.h>
 
 namespace {
-
-typedef union {
-    vfs_query_info_t info;
-    struct {
-        alignas(vfs_query_info_t) char h[sizeof(vfs_query_info_t)];
-        char name[MAX_FS_NAME_LEN];
-    };
-} vfs_query_info_wrapper_t;
 
 fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {
     fs_test_utils::FixtureOptions options =
@@ -49,19 +43,19 @@ fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {
 
 bool CheckMountedFs(const char* path, const char* fs_name, size_t len) {
     BEGIN_HELPER;
-    int fd = open(path, O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(fd, 0);
-    vfs_query_info_wrapper_t wrapper;
-    ssize_t r = ioctl_vfs_query_fs(fd, &wrapper.info, sizeof(wrapper) - 1);
-    ASSERT_EQ(r, (ssize_t)(sizeof(vfs_query_info_t) + len), "Failed to query filesystem");
-    wrapper.name[r - sizeof(vfs_query_info_t)] = '\0';
-    ASSERT_EQ(strncmp(fs_name, wrapper.name, len), 0, "Unexpected filesystem mounted");
-    ASSERT_LE(wrapper.info.used_nodes, wrapper.info.total_nodes,
-              "Used nodes greater than free nodes");
-    ASSERT_LE(wrapper.info.used_bytes, wrapper.info.total_bytes,
-              "Used bytes greater than free bytes");
+    fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(fd);
+
+    fuchsia_io_FilesystemInfo info;
+    zx_status_t status;
+    fzl::FdioCaller caller(fbl::move(fd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(strncmp(fs_name, reinterpret_cast<char*>(info.name), strlen(fs_name)), 0);
+    ASSERT_LE(info.used_nodes, info.total_nodes, "Used nodes greater than free nodes");
+    ASSERT_LE(info.used_bytes, info.total_bytes, "Used bytes greater than free bytes");
     // TODO(planders): eventually check that total/used counts are > 0
-    ASSERT_EQ(close(fd), 0);
     END_HELPER;
 }
 
@@ -222,17 +216,24 @@ bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
 
     // Let's try telling the target filesystem to shut down
     // WITHOUT O_ADMIN
-    int badfd = open(mount_path, O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(badfd, 0);
-    ASSERT_EQ(ioctl_vfs_unmount_fs(badfd), ZX_ERR_ACCESS_DENIED);
-    ASSERT_EQ(close(badfd), 0);
+    fbl::unique_fd badfd(open(mount_path, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(badfd);
+    zx_status_t status;
+    fzl::FdioCaller caller(fbl::move(badfd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
+    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
+    ASSERT_EQ(close(caller.release().release()), 0);
 
     // Let's try unmounting the filesystem WITHOUT O_ADMIN
     // (unpinning the remote handle from the parent FS).
-    badfd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    badfd.reset(open(mount_path, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(badfd);
     zx_handle_t h;
-    ASSERT_EQ(ioctl_vfs_unmount_node(badfd, &h), ZX_ERR_ACCESS_DENIED);
-    ASSERT_EQ(close(badfd), 0);
+    caller.reset(fbl::move(badfd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminUnmountNode(caller.borrow_channel(), &status, &h), ZX_OK);
+    ASSERT_EQ(h, ZX_HANDLE_INVALID);
+    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
+    ASSERT_EQ(close(caller.release().release()), 0);
 
     // When we unmount with an O_ADMIN handle, it should successfully detach.
     ASSERT_EQ(fumount(mountfd), ZX_OK);
@@ -296,22 +297,26 @@ bool UmountTestEvil() {
     ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
 
     // Try re-opening the root without O_ADMIN. We shouldn't be able to umount.
-    int weak_root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(weak_root_fd, 0);
-    ASSERT_LT(ioctl_vfs_unmount_fs(weak_root_fd), 0);
+    fbl::unique_fd weak_root_fd(open(mount_path, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(weak_root_fd);
+    zx_status_t status;
+    fzl::FdioCaller caller(fbl::move(weak_root_fd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
+    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
+    weak_root_fd.reset(caller.release().release());
 
     // Try opening a non-root directory without O_ADMIN. We shouldn't be able
     // to umount.
-    ASSERT_EQ(mkdirat(weak_root_fd, "subdir", 0666), 0);
-    int weak_subdir_fd = openat(weak_root_fd, "subdir", O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(weak_subdir_fd, 0);
-    ASSERT_LT(ioctl_vfs_unmount_fs(weak_subdir_fd), 0);
-    ASSERT_EQ(close(weak_subdir_fd), 0);
+    ASSERT_EQ(mkdirat(weak_root_fd.get(), "subdir", 0666), 0);
+    fbl::unique_fd  weak_subdir_fd(openat(weak_root_fd.get(), "subdir", O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(weak_subdir_fd);
+    caller.reset(fbl::move(weak_subdir_fd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
+    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
 
     // Try opening a new directory with O_ADMIN. It shouldn't open.
-    weak_subdir_fd = openat(weak_root_fd, "subdir", O_RDONLY | O_DIRECTORY | O_ADMIN);
-    ASSERT_LT(weak_subdir_fd, 0);
-    ASSERT_EQ(close(weak_root_fd), 0);
+    weak_subdir_fd.reset(openat(weak_root_fd.get(), "subdir", O_RDONLY | O_DIRECTORY | O_ADMIN));
+    ASSERT_FALSE(weak_subdir_fd);
 
     // Finally, umount using O_NOREMOTE and acquiring the connection
     // that has "O_ADMIN" set.
@@ -431,12 +436,17 @@ bool MountGetDevice() {
     ASSERT_EQ(mkdir(mount_path, 0666), 0);
     ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
 
-    int mountfd = open(mount_path, O_RDONLY | O_ADMIN);
-    ASSERT_GT(mountfd, 0);
-    char device_path[1024];
-    ssize_t path_len = ioctl_vfs_get_device_path(mountfd, device_path, sizeof(device_path));
-    ASSERT_LT(path_len, 0);
-    ASSERT_EQ(close(mountfd), 0);
+    fbl::unique_fd mountfd(open(mount_path, O_RDONLY | O_ADMIN));
+    ASSERT_TRUE(mountfd);
+    char device_buffer[1024];
+    char* device_path = static_cast<char*>(device_buffer);
+    zx_status_t status;
+    size_t path_len;
+    fzl::FdioCaller caller(fbl::move(mountfd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
+                                                     device_path, sizeof(device_buffer),
+                                                     &path_len), ZX_OK);
+    ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0);
@@ -444,27 +454,34 @@ bool MountGetDevice() {
               ZX_OK);
     ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
 
-    mountfd = open(mount_path, O_RDONLY | O_ADMIN);
-    ASSERT_GT(mountfd, 0);
-    path_len = ioctl_vfs_get_device_path(mountfd, device_path, sizeof(device_path));
+    mountfd.reset(open(mount_path, O_RDONLY | O_ADMIN));
+    ASSERT_TRUE(mountfd);
+    caller.reset(fbl::move(mountfd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
+                                                     device_path, sizeof(device_buffer),
+                                                     &path_len), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_GT(path_len, 0, "Device path not found");
     ASSERT_EQ(strncmp(ramdisk_path, device_path, path_len), 0, "Unexpected device path");
-    ASSERT_EQ(close(mountfd), 0);
 
-    mountfd = open(mount_path, O_RDONLY);
-    ASSERT_GT(mountfd, 0);
-    path_len = ioctl_vfs_get_device_path(mountfd, device_path, sizeof(device_path));
-    ASSERT_LT(path_len, 0);
-    ASSERT_EQ(close(mountfd), 0);
+    mountfd.reset(open(mount_path, O_RDONLY));
+    ASSERT_TRUE(mountfd);
+    caller.reset(fbl::move(mountfd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
+                                                     device_path, sizeof(device_buffer),
+                                                     &path_len), ZX_OK);
+    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
 
     ASSERT_EQ(umount(mount_path), ZX_OK);
     ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
 
-    mountfd = open(mount_path, O_RDONLY | O_ADMIN);
-    ASSERT_GT(mountfd, 0);
-    path_len = ioctl_vfs_get_device_path(fd, device_path, sizeof(device_path));
-    ASSERT_LT(path_len, 0);
-    ASSERT_EQ(close(mountfd), 0);
+    mountfd.reset(open(mount_path, O_RDONLY | O_ADMIN));
+    ASSERT_TRUE(mountfd);
+    caller.reset(fbl::move(mountfd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
+                                                     device_path, sizeof(device_buffer),
+                                                     &path_len), ZX_OK);
+    ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0);
     ASSERT_EQ(unlink(mount_path), 0);

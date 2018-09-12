@@ -33,10 +33,12 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
+#include <fuchsia/io/c/fidl.h>
 #include <fvm/fvm.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/zx/vmo.h>
+#include <lib/fzl/fdio.h>
 #include <lib/memfs/memfs.h>
+#include <lib/zx/vmo.h>
 #include <minfs/format.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
@@ -2225,23 +2227,23 @@ bool TestMounting(void) {
                     launch_stdio_async),
               ZX_OK);
 
-    // Verify that the mount was successful
-    int rootfd = open(kMountPath, O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(rootfd, 0);
-    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
-    vfs_query_info_t* out = reinterpret_cast<vfs_query_info_t*>(buf);
-    ssize_t r = ioctl_vfs_query_fs(rootfd, out, sizeof(buf));
-    ASSERT_EQ(r, static_cast<ssize_t>(sizeof(vfs_query_info_t) + strlen("minfs")),
-              "Failed to query filesystem");
-    out->name[r - sizeof(vfs_query_info_t)] = '\0';
-    ASSERT_EQ(strcmp("minfs", out->name), 0, "Unexpected filesystem mounted");
+    // Verify that the mount was successful.
+    fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(rootfd);
+    zx_status_t status;
+    fuchsia_io_FilesystemInfo info;
+    fzl::FdioCaller caller(fbl::move(rootfd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status,
+                                                       &info), ZX_OK);
+    const char* kFsName = "minfs";
+    const char* name = reinterpret_cast<const char*>(info.name);
+    ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
 
     // Verify that MinFS does not try to use more of the VPartition than
     // was originally allocated.
-    ASSERT_LE(out->total_bytes, slice_size * request.slice_count);
+    ASSERT_LE(info.total_bytes, slice_size * request.slice_count);
 
-    // Clean up
-    ASSERT_EQ(close(rootfd), 0);
+    // Clean up.
     ASSERT_EQ(umount(kMountPath), ZX_OK);
     ASSERT_EQ(rmdir(kMountPath), 0);
     ASSERT_EQ(close(fd), 0);
@@ -2310,22 +2312,22 @@ bool TestMkfs(void) {
                     launch_stdio_async), ZX_OK);
 
     // Verify that the mount was successful.
-    int rootfd = open(kMountPath, O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(rootfd, 0);
-    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
-    vfs_query_info_t* out = reinterpret_cast<vfs_query_info_t*>(buf);
-    ssize_t r = ioctl_vfs_query_fs(rootfd, out, sizeof(buf));
-    ASSERT_EQ(r, static_cast<ssize_t>(sizeof(vfs_query_info_t) + strlen("minfs")),
-              "Failed to query filesystem");
-    out->name[r - sizeof(vfs_query_info_t)] = '\0';
-    ASSERT_EQ(strcmp("minfs", out->name), 0, "Unexpected filesystem mounted");
+    fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(rootfd);
+    zx_status_t status;
+    fuchsia_io_FilesystemInfo info;
+    fzl::FdioCaller caller(fbl::move(rootfd));
+    ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status,
+                                                       &info), ZX_OK);
+    const char* kFsName = "minfs";
+    const char* name = reinterpret_cast<const char*>(info.name);
+    ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
 
     // Verify that MinFS does not try to use more of the VPartition than
     // was originally allocated.
-    ASSERT_LE(out->total_bytes, slice_size * request.slice_count);
+    ASSERT_LE(info.total_bytes, slice_size * request.slice_count);
 
     // Clean up.
-    ASSERT_EQ(close(rootfd), 0);
     ASSERT_EQ(umount(kMountPath), ZX_OK);
     ASSERT_EQ(rmdir(kMountPath), 0);
     ASSERT_EQ(close(fd), 0);

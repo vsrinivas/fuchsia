@@ -21,13 +21,17 @@ LOCAL_STATIC_LIBS := \
     system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/fzl \
+    system/ulib/zx \
 
 LOCAL_LIBS := \
     system/ulib/fdio \
     system/ulib/zircon \
     system/ulib/c
 
-LOCAL_FIDL_LIBS := system/fidl/fuchsia-display
+LOCAL_FIDL_LIBS := \
+    system/fidl/fuchsia-display \
+    system/fidl/fuchsia-io \
 
 # virtual-console
 

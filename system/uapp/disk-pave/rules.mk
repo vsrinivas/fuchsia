@@ -45,6 +45,9 @@ MODULE_LIBS := \
 
 MODULE_PACKAGE := src
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-io \
+
 include make/module.mk
 
 # Unit tests.

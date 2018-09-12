@@ -12,6 +12,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <fbl/string_piece.h>
 #include <fs/block-txn.h>
 #include <zircon/device/vfs.h>
 #include <zircon/time.h>
@@ -1517,8 +1518,9 @@ VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs) {}
 
 #ifdef __Fuchsia__
 void VnodeMinfs::Notify(fbl::StringPiece name, unsigned event) { watcher_.Notify(name, event); }
-zx_status_t VnodeMinfs::WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
-    return watcher_.WatchDir(vfs, this, cmd);
+zx_status_t VnodeMinfs::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options,
+                                 zx::channel watcher) {
+    return watcher_.WatchDir(vfs, this, mask, options, fbl::move(watcher));
 }
 
 bool VnodeMinfs::IsRemote() const { return remoter_.IsRemote(); }
@@ -1638,50 +1640,31 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
     return status;
 }
 
+#ifdef __Fuchsia__
+
 constexpr const char kFsName[] = "minfs";
 
-zx_status_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                              size_t out_len, size_t* out_actual) {
-    switch (op) {
-        case IOCTL_VFS_QUERY_FS: {
-            if (out_len < (sizeof(vfs_query_info_t) + strlen(kFsName))) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-
-            vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
-            memset(info, 0, sizeof(*info));
-            info->block_size = kMinfsBlockSize;
-            info->max_filename_size = kMinfsMaxNameSize;
-            info->fs_type = VFS_TYPE_MINFS;
-#ifdef __Fuchsia__
-            info->fs_id = fs_->GetFsId();
-#endif
-            info->total_bytes = fs_->Info().block_count * fs_->Info().block_size;
-            info->used_bytes = fs_->Info().alloc_block_count * fs_->Info().block_size;
-            info->total_nodes = fs_->Info().inode_count;
-            info->used_nodes = fs_->Info().alloc_inode_count;
-            memcpy(info->name, kFsName, strlen(kFsName));
-            *out_actual = sizeof(vfs_query_info_t) + strlen(kFsName);
-            return ZX_OK;
-        }
-#ifdef __Fuchsia__
-        case IOCTL_VFS_GET_DEVICE_PATH: {
-            ssize_t len = fs_->bc_->GetDevicePath(static_cast<char*>(out_buf), out_len);
-
-            if ((ssize_t)out_len < len) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            if (len >= 0) {
-                *out_actual = len;
-            }
-            return len > 0 ? ZX_OK : static_cast<zx_status_t>(len);
-        }
-#endif
-        default: {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-    }
+zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
+    static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
+                  "Minfs name too long");
+    memset(info, 0, sizeof(*info));
+    info->block_size = kMinfsBlockSize;
+    info->max_filename_size = kMinfsMaxNameSize;
+    info->fs_type = VFS_TYPE_MINFS;
+    info->fs_id = fs_->GetFsId();
+    info->total_bytes = fs_->Info().block_count * fs_->Info().block_size;
+    info->used_bytes = fs_->Info().alloc_block_count * fs_->Info().block_size;
+    info->total_nodes = fs_->Info().inode_count;
+    info->used_nodes = fs_->Info().alloc_inode_count;
+    strlcpy(reinterpret_cast<char*>(info->name), kFsName, fuchsia_io_MAX_FS_NAME_BUFFER);
+    return ZX_OK;
 }
+
+zx_status_t VnodeMinfs::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
+    return fs_->bc_->GetDevicePath(buffer_len, out_name, out_len);
+}
+
+#endif
 
 zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
     TRACE_DURATION("minfs", "VnodeMinfs::Unlink", "name", name);

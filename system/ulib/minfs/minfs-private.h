@@ -14,6 +14,7 @@
 #include <fs/managed-vfs.h>
 #include <fs/remote.h>
 #include <fs/watcher.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #endif
@@ -25,17 +26,14 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-
 #include <fs/block-txn.h>
 #include <fs/locking.h>
-#include <lib/fzl/mapped-vmo.h>
 #include <fs/ticker.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-
+#include <lib/fzl/mapped-vmo.h>
 #include <lib/zircon-internal/fnv1hash.h>
-
 #include <minfs/allocator.h>
 #include <minfs/format.h>
 #include <minfs/inode-manager.h>
@@ -379,8 +377,10 @@ private:
                        bool src_must_be_dir, bool dst_must_be_dir) final;
     zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
     zx_status_t Truncate(size_t len) final;
-    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                      size_t out_len, size_t* out_actual) final;
+#ifdef __Fuchsia__
+    zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
+    zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
+#endif
 
     // Internal functions
     zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
@@ -621,7 +621,7 @@ private:
 
     // Use the watcher container to implement a directory watcher
     void Notify(fbl::StringPiece name, unsigned event) final;
-    zx_status_t WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
+    zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
 
     // The vnode is acting as a mount point for a remote filesystem or device.
     bool IsRemote() const final;

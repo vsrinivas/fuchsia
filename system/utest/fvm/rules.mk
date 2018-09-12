@@ -25,6 +25,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fvm \
     system/ulib/fs \
+    system/ulib/fzl \
     system/ulib/gpt \
     system/ulib/minfs \
     system/ulib/sync \
@@ -42,5 +43,8 @@ MODULE_LIBS := \
     system/ulib/trace-engine \
     system/ulib/unittest \
     system/ulib/zircon \
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-io \
 
 include make/module.mk

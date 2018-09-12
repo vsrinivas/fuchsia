@@ -25,7 +25,7 @@ WatcherContainer::WatcherContainer() = default;
 WatcherContainer::~WatcherContainer() = default;
 
 WatcherContainer::VnodeWatcher::VnodeWatcher(zx::channel h, uint32_t mask) : h(fbl::move(h)),
-    mask(mask & ~(VFS_WATCH_MASK_EXISTING | VFS_WATCH_MASK_IDLE)) {}
+    mask(mask & ~(fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE)) {}
 
 WatcherContainer::VnodeWatcher::~VnodeWatcher() {}
 
@@ -42,7 +42,7 @@ public:
 
 private:
     size_t watch_buf_size_ = 0;
-    char watch_buf_[VFS_WATCH_MSG_MAX]{};
+    char watch_buf_[fuchsia_io_MAX_BUF]{};
 };
 
 zx_status_t WatchBuffer::AddMsg(const zx::channel& c, unsigned event, fbl::StringPiece name) {
@@ -66,7 +66,8 @@ zx_status_t WatchBuffer::AddMsg(const zx::channel& c, unsigned event, fbl::Strin
 zx_status_t WatchBuffer::Send(const zx::channel& c) {
     if (watch_buf_size_ > 0) {
         // Only write if we have something to write
-        zx_status_t status = c.write(0, watch_buf_, static_cast<uint32_t>(watch_buf_size_), nullptr, 0);
+        zx_status_t status = c.write(0, watch_buf_, static_cast<uint32_t>(watch_buf_size_),
+                                     nullptr, 0);
         watch_buf_size_ = 0;
         if (status != ZX_OK) {
             return status;
@@ -75,26 +76,26 @@ zx_status_t WatchBuffer::Send(const zx::channel& c) {
     return ZX_OK;
 }
 
-zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd) {
-    zx::channel c = zx::channel(cmd->channel);
-    if ((cmd->mask & VFS_WATCH_MASK_ALL) == 0) {
+zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint32_t options,
+                                       zx::channel channel) {
+    if ((mask & fuchsia_io_WATCH_MASK_ALL) == 0) {
         // No events to watch
         return ZX_ERR_INVALID_ARGS;
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(fbl::move(c), cmd->mask));
+    fbl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(fbl::move(channel), mask));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if (cmd->mask & VFS_WATCH_MASK_EXISTING) {
+    if (mask & fuchsia_io_WATCH_MASK_EXISTING) {
         vdircookie_t dircookie;
         memset(&dircookie, 0, sizeof(dircookie));
         char readdir_buf[FDIO_CHUNK_SIZE];
         WatchBuffer wb;
         {
-            // Send "VFS_WATCH_EVT_EXISTING" for all entries in readdir
+            // Send "fuchsia_io_WATCH_EVENT_EXISTING" for all entries in readdir
             while (true) {
                 size_t actual;
                 zx_status_t status = vfs->Readdir(vn, &dircookie, readdir_buf,
@@ -106,7 +107,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, const vfs_watch_dir_
                 while (actual >= sizeof(vdirent_t)) {
                     auto dirent = reinterpret_cast<vdirent_t*>(ptr);
                     if (dirent->name[0]) {
-                        wb.AddMsg(watcher->h, VFS_WATCH_EVT_EXISTING,
+                        wb.AddMsg(watcher->h, fuchsia_io_WATCH_EVENT_EXISTING,
                                   fbl::StringPiece(dirent->name, dirent->size));
                     }
                     size_t entry_len = dirent->size + sizeof(vdirent_t);
@@ -119,9 +120,9 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, const vfs_watch_dir_
             }
         }
 
-        // Send VFS_WATCH_EVT_IDLE to signify that readdir has completed
-        if (cmd->mask & VFS_WATCH_MASK_IDLE) {
-            wb.AddMsg(watcher->h, VFS_WATCH_EVT_IDLE, "");
+        // Send fuchsia_io_WATCH_EVENT_IDLE to signify that readdir has completed
+        if (mask & fuchsia_io_WATCH_MASK_IDLE) {
+            wb.AddMsg(watcher->h, fuchsia_io_WATCH_EVENT_IDLE, "");
         }
 
         wb.Send(watcher->h);
@@ -133,7 +134,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, const vfs_watch_dir_
 }
 
 void WatcherContainer::Notify(fbl::StringPiece name, unsigned event) {
-    if (name.length() > VFS_WATCH_NAME_MAX) {
+    if (name.length() > fuchsia_io_MAX_FILENAME) {
         return;
     }
 
@@ -150,7 +151,7 @@ void WatcherContainer::Notify(fbl::StringPiece name, unsigned event) {
     memcpy(vmsg->name, name.data(), name.length());
 
     for (auto it = watch_list_.begin(); it != watch_list_.end();) {
-        if (!(it->mask & VFS_WATCH_EVT_MASK(event))) {
+        if (!(it->mask & (1 << event))) {
             ++it;
             continue;
         }

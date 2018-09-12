@@ -31,6 +31,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
@@ -2284,33 +2285,41 @@ int shutdown(int fd, int how) {
 
 __EXPORT
 int fstatfs(int fd, struct statfs* buf) {
-    char buffer[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
-    vfs_query_info_t* info = (vfs_query_info_t*)buffer;
-
-    ssize_t rv = ioctl_vfs_query_fs(fd, info, sizeof(buffer) - 1);
-    if (rv < 0) {
-        return ERRNO(fdio_status_to_errno(rv));
+    fdio_t* io;
+    if ((io = fd_to_io(fd)) == NULL) {
+        return ERRNO(EBADF);
+    }
+    zx_handle_t handle = __fdio_borrow_channel(io);
+    if (handle == ZX_HANDLE_INVALID) {
+        fdio_release(io);
+        return ERRNO(ENOTSUP);
+    }
+    zx_status_t status;
+    fuchsia_io_FilesystemInfo info;
+    zx_status_t io_status = fuchsia_io_DirectoryAdminQueryFilesystem(handle, &status, &info);
+    fdio_release(io);
+    if (io_status != ZX_OK) {
+        return ERRNO(fdio_status_to_errno(io_status));
+    } else if (status != ZX_OK) {
+        return ERRNO(fdio_status_to_errno(status));
     }
 
-    if ((size_t)rv < sizeof(vfs_query_info_t) || (size_t)rv >= sizeof(buffer)) {
-        return ERRNO(EIO);
-    }
-    buffer[rv] = '\0';
+    info.name[fuchsia_io_MAX_FS_NAME_BUFFER - 1] = '\0';
 
     struct statfs stats = {};
 
-    if (info->block_size) {
-        stats.f_bsize = info->block_size;
-        stats.f_blocks = info->total_bytes / stats.f_bsize;
-        stats.f_bfree = stats.f_blocks - info->used_bytes / stats.f_bsize;
+    if (info.block_size) {
+        stats.f_bsize = info.block_size;
+        stats.f_blocks = info.total_bytes / stats.f_bsize;
+        stats.f_bfree = stats.f_blocks - info.used_bytes / stats.f_bsize;
     }
     stats.f_bavail = stats.f_bfree;
-    stats.f_files = info->total_nodes;
-    stats.f_ffree = info->total_nodes - info->used_nodes;
-    stats.f_namelen = info->max_filename_size;
-    stats.f_type = info->fs_type;
-    stats.f_fsid.__val[0] = info->fs_id;
-    stats.f_fsid.__val[1] = info->fs_id >> 32;
+    stats.f_files = info.total_nodes;
+    stats.f_ffree = info.total_nodes - info.used_nodes;
+    stats.f_namelen = info.max_filename_size;
+    stats.f_type = info.fs_type;
+    stats.f_fsid.__val[0] = info.fs_id;
+    stats.f_fsid.__val[1] = info.fs_id >> 32;
 
     *buf = stats;
     return 0;

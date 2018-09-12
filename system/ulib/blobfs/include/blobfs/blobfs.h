@@ -31,6 +31,7 @@
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fzl/mapped-vmo.h>
 #include <lib/zx/event.h>
@@ -95,9 +96,6 @@ public:
     }
 
     bool IsDirectory() const { return flags_ & kBlobFlagDirectory; }
-
-    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                      void* out_buf, size_t out_len, size_t* out_actual) final;
 
     bool DeletionQueued() const {
         return flags_ & kBlobFlagDeletable;
@@ -217,6 +215,8 @@ private:
     zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
                        uint32_t mode) final;
     zx_status_t Truncate(size_t len) final;
+    zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
+    zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
     zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
     zx_status_t GetVmo(int flags, zx_handle_t* out) final;
     void Sync(SyncCallback closure) final;

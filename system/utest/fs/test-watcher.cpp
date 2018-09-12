@@ -15,6 +15,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
 #include <zircon/device/vfs.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
@@ -24,7 +28,7 @@
 
 typedef struct {
     // Buffer containing cached messages
-    uint8_t buf[VFS_WATCH_MSG_MAX];
+    uint8_t buf[fuchsia_io_MAX_BUF];
     // Offset into 'buf' of next message
     uint8_t* ptr;
     // Maximum size of buffer
@@ -32,11 +36,10 @@ typedef struct {
 } watch_buffer_t;
 
 // Try to read from the channel when it should be empty.
-bool check_for_empty(watch_buffer_t* wb, zx_handle_t h) {
+bool check_for_empty(watch_buffer_t* wb, const zx::channel& c) {
     char name[NAME_MAX + 1];
     ASSERT_NULL(wb->ptr);
-    ASSERT_EQ(zx_channel_read(h, 0, &name, nullptr, sizeof(name), 0, nullptr, nullptr),
-              ZX_ERR_SHOULD_WAIT);
+    ASSERT_EQ(c.read(0, &name, sizeof(name), nullptr, nullptr, 0, nullptr), ZX_ERR_SHOULD_WAIT);
     return true;
 }
 
@@ -58,19 +61,17 @@ bool check_local_event(watch_buffer_t* wb, const char* expected, uint8_t event) 
 }
 
 // Try to read the 'expected' name off the channel.
-bool check_for_event(watch_buffer_t* wb, zx_handle_t h, const char* expected, uint8_t event) {
+bool check_for_event(watch_buffer_t* wb, const zx::channel& c, const char* expected,
+                     uint8_t event) {
     if (wb->ptr != nullptr) {
         return check_local_event(wb, expected, event);
     }
 
     zx_signals_t observed;
-    ASSERT_EQ(zx_object_wait_one(h, ZX_CHANNEL_READABLE,
-                                 zx_deadline_after(ZX_SEC(5)), &observed),
-              ZX_OK);
+    ASSERT_EQ(c.wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(zx::sec(5)), &observed), ZX_OK);
     ASSERT_EQ(observed & ZX_CHANNEL_READABLE, ZX_CHANNEL_READABLE);
     uint32_t actual;
-    ASSERT_EQ(zx_channel_read(h, 0, wb->buf, nullptr, sizeof(wb->buf), 0,
-                              &actual, nullptr), ZX_OK);
+    ASSERT_EQ(c.read(0, wb->buf, sizeof(wb->buf), &actual, nullptr, 0, nullptr), ZX_OK);
     wb->size = actual;
     wb->ptr = wb->buf;
     return check_local_event(wb, expected, event);
@@ -86,40 +87,43 @@ bool test_watcher_add(void) {
     ASSERT_EQ(mkdir("::dir", 0666), 0);
     DIR* dir = opendir("::dir");
     ASSERT_NONNULL(dir);
-    zx_handle_t h;
-    vfs_watch_dir_t request;
-    ASSERT_EQ(zx_channel_create(0, &h, &request.channel), ZX_OK);
-    request.mask = VFS_WATCH_MASK_ADDED;
-    request.options = 0;
-    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), ZX_OK);
+    zx::channel client, server;
+    ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+    fzl::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_io_DirectoryWatch(caller.borrow_channel(), fuchsia_io_WATCH_MASK_ADDED, 0,
+                                        server.release(), &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+
     watch_buffer_t wb;
     memset(&wb, 0, sizeof(wb));
 
     // The channel should be empty
-    ASSERT_TRUE(check_for_empty(&wb, h));
+    ASSERT_TRUE(check_for_empty(&wb, client));
 
     // Creating a file in the directory should trigger the watcher
     int fd = open("::dir/foo", O_RDWR | O_CREAT);
     ASSERT_GT(fd, 0);
     ASSERT_EQ(close(fd), 0);
-    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_ADDED));
+    ASSERT_TRUE(check_for_event(&wb, client, "foo", fuchsia_io_WATCH_EVENT_ADDED));
 
     // Renaming into directory should trigger the watcher
     ASSERT_EQ(rename("::dir/foo", "::dir/bar"), 0);
-    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_ADDED));
+    ASSERT_TRUE(check_for_event(&wb, client, "bar", fuchsia_io_WATCH_EVENT_ADDED));
 
     // Linking into directory should trigger the watcher
     ASSERT_EQ(link("::dir/bar", "::dir/blat"), 0);
-    ASSERT_TRUE(check_for_event(&wb, h, "blat", VFS_WATCH_EVT_ADDED));
+    ASSERT_TRUE(check_for_event(&wb, client, "blat", fuchsia_io_WATCH_EVENT_ADDED));
 
     // Clean up
     ASSERT_EQ(unlink("::dir/bar"), 0);
     ASSERT_EQ(unlink("::dir/blat"), 0);
 
     // There shouldn't be anything else sitting around on the channel
-    ASSERT_TRUE(check_for_empty(&wb, h));
-    ASSERT_EQ(zx_handle_close(h), 0);
+    ASSERT_TRUE(check_for_empty(&wb, client));
 
+    // The fd is still owned by "dir".
+    caller.release().release();
     ASSERT_EQ(closedir(dir), 0);
     ASSERT_EQ(rmdir("::dir"), 0);
 
@@ -147,44 +151,48 @@ bool test_watcher_existing(void) {
 
     // These files should be visible to the watcher through the "EXISTING"
     // mechanism.
-    zx_handle_t h;
-    vfs_watch_dir_t request;
-    ASSERT_EQ(zx_channel_create(0, &h, &request.channel), ZX_OK);
-    request.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_EXISTING | VFS_WATCH_MASK_IDLE;
-    request.options = 0;
-    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), ZX_OK);
+    zx::channel client, server;
+    ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+    fzl::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
+    zx_status_t status;
+    uint32_t mask = fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE;
+    ASSERT_EQ(fuchsia_io_DirectoryWatch(caller.borrow_channel(), mask, 0,
+                                        server.release(), &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     watch_buffer_t wb;
     memset(&wb, 0, sizeof(wb));
 
     // The channel should see the contents of the directory
-    ASSERT_TRUE(check_for_event(&wb, h, ".", VFS_WATCH_EVT_EXISTING));
-    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_EXISTING));
-    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_EXISTING));
-    ASSERT_TRUE(check_for_event(&wb, h, "", VFS_WATCH_EVT_IDLE));
-    ASSERT_TRUE(check_for_empty(&wb, h));
+    ASSERT_TRUE(check_for_event(&wb, client, ".", fuchsia_io_WATCH_EVENT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb, client, "foo", fuchsia_io_WATCH_EVENT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb, client, "bar", fuchsia_io_WATCH_EVENT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb, client, "", fuchsia_io_WATCH_EVENT_IDLE));
+    ASSERT_TRUE(check_for_empty(&wb, client));
 
     // Now, if we choose to add additional files, they'll show up separately
     // with an "ADD" event.
     fd = open("::dir/baz", O_RDWR | O_CREAT);
     ASSERT_GT(fd, 0);
     ASSERT_EQ(close(fd), 0);
-    ASSERT_TRUE(check_for_event(&wb, h, "baz", VFS_WATCH_EVT_ADDED));
-    ASSERT_TRUE(check_for_empty(&wb, h));
+    ASSERT_TRUE(check_for_event(&wb, client, "baz", fuchsia_io_WATCH_EVENT_ADDED));
+    ASSERT_TRUE(check_for_empty(&wb, client));
 
     // If we create a secondary watcher with the "EXISTING" request, we'll
     // see all files in the directory, but the first watcher won't see anything.
-    zx_handle_t h2;
-    ASSERT_EQ(zx_channel_create(0, &h2, &request.channel), ZX_OK);
-    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), ZX_OK);
+    zx::channel client2;
+    ASSERT_EQ(zx::channel::create(0, &client2, &server), ZX_OK);
+    ASSERT_EQ(fuchsia_io_DirectoryWatch(caller.borrow_channel(), mask, 0,
+                                        server.release(), &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     watch_buffer_t wb2;
     memset(&wb2, 0, sizeof(wb2));
-    ASSERT_TRUE(check_for_event(&wb2, h2, ".", VFS_WATCH_EVT_EXISTING));
-    ASSERT_TRUE(check_for_event(&wb2, h2, "foo", VFS_WATCH_EVT_EXISTING));
-    ASSERT_TRUE(check_for_event(&wb2, h2, "bar", VFS_WATCH_EVT_EXISTING));
-    ASSERT_TRUE(check_for_event(&wb2, h2, "baz", VFS_WATCH_EVT_EXISTING));
-    ASSERT_TRUE(check_for_event(&wb2, h2, "", VFS_WATCH_EVT_IDLE));
-    ASSERT_TRUE(check_for_empty(&wb2, h2));
-    ASSERT_TRUE(check_for_empty(&wb, h));
+    ASSERT_TRUE(check_for_event(&wb2, client2, ".", fuchsia_io_WATCH_EVENT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb2, client2, "foo", fuchsia_io_WATCH_EVENT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb2, client2, "bar", fuchsia_io_WATCH_EVENT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb2, client2, "baz", fuchsia_io_WATCH_EVENT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb2, client2, "", fuchsia_io_WATCH_EVENT_IDLE));
+    ASSERT_TRUE(check_for_empty(&wb2, client2));
+    ASSERT_TRUE(check_for_empty(&wb, client));
 
     // Clean up
     ASSERT_EQ(unlink("::dir/foo"), 0);
@@ -192,11 +200,11 @@ bool test_watcher_existing(void) {
     ASSERT_EQ(unlink("::dir/baz"), 0);
 
     // There shouldn't be anything else sitting around on either channel
-    ASSERT_TRUE(check_for_empty(&wb, h));
-    ASSERT_EQ(zx_handle_close(h), 0);
-    ASSERT_TRUE(check_for_empty(&wb2, h2));
-    ASSERT_EQ(zx_handle_close(h2), 0);
+    ASSERT_TRUE(check_for_empty(&wb, client));
+    ASSERT_TRUE(check_for_empty(&wb2, client2));
 
+    // The fd is still owned by "dir".
+    caller.release().release();
     ASSERT_EQ(closedir(dir), 0);
     ASSERT_EQ(rmdir("::dir"), 0);
 
@@ -213,37 +221,40 @@ bool test_watcher_removed(void) {
     ASSERT_EQ(mkdir("::dir", 0666), 0);
     DIR* dir = opendir("::dir");
     ASSERT_NONNULL(dir);
-    zx_handle_t h;
-    vfs_watch_dir_t request;
 
-    ASSERT_EQ(zx_channel_create(0, &h, &request.channel), ZX_OK);
-    request.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_REMOVED;
-    request.options = 0;
+    zx::channel client, server;
+    ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+    uint32_t mask = fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_REMOVED;
+    zx_status_t status;
+    fzl::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
+    ASSERT_EQ(fuchsia_io_DirectoryWatch(caller.borrow_channel(), mask, 0,
+                                        server.release(), &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     watch_buffer_t wb;
     memset(&wb, 0, sizeof(wb));
-    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), ZX_OK);
 
-    ASSERT_TRUE(check_for_empty(&wb, h));
+    ASSERT_TRUE(check_for_empty(&wb, client));
 
     int fd = openat(dirfd(dir), "foo", O_CREAT | O_RDWR | O_EXCL);
     ASSERT_GT(fd, 0);
     ASSERT_EQ(close(fd), 0);
 
-    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_ADDED));
-    ASSERT_TRUE(check_for_empty(&wb, h));
+    ASSERT_TRUE(check_for_event(&wb, client, "foo", fuchsia_io_WATCH_EVENT_ADDED));
+    ASSERT_TRUE(check_for_empty(&wb, client));
 
     ASSERT_EQ(rename("::dir/foo", "::dir/bar"), 0);
 
-    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_REMOVED));
-    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_ADDED));
-    ASSERT_TRUE(check_for_empty(&wb, h));
+    ASSERT_TRUE(check_for_event(&wb, client, "foo", fuchsia_io_WATCH_EVENT_REMOVED));
+    ASSERT_TRUE(check_for_event(&wb, client, "bar", fuchsia_io_WATCH_EVENT_ADDED));
+    ASSERT_TRUE(check_for_empty(&wb, client));
 
     ASSERT_EQ(unlink("::dir/bar"), 0);
-    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_REMOVED));
-    ASSERT_TRUE(check_for_empty(&wb, h));
+    ASSERT_TRUE(check_for_event(&wb, client, "bar", fuchsia_io_WATCH_EVENT_REMOVED));
+    ASSERT_TRUE(check_for_empty(&wb, client));
 
-    zx_handle_close(h);
+    // The fd is still owned by "dir".
+    caller.release().release();
     ASSERT_EQ(closedir(dir), 0);
     ASSERT_EQ(rmdir("::dir"), 0);
 

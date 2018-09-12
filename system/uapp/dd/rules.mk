@@ -20,4 +20,7 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/c
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-io \
+
 include make/module.mk

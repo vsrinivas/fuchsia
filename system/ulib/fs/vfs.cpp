@@ -172,7 +172,9 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
             }
             return r;
         }
-        vndir->Notify(path, VFS_WATCH_EVT_ADDED);
+#ifdef __Fuchsia__
+        vndir->Notify(path, fuchsia_io_WATCH_EVENT_ADDED);
+#endif
     } else {
     try_open:
         r = vfs_lookup(fbl::move(vndir), &vn, path);
@@ -237,7 +239,9 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path) {
     if (r != ZX_OK) {
         return r;
     }
-    vndir->Notify(path, VFS_WATCH_EVT_REMOVED);
+#ifdef __Fuchsia__
+    vndir->Notify(path, fuchsia_io_WATCH_EVENT_REMOVED);
+#endif
     return ZX_OK;
 }
 
@@ -342,8 +346,8 @@ zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
     if (r != ZX_OK) {
         return r;
     }
-    oldparent->Notify(oldStr, VFS_WATCH_EVT_REMOVED);
-    newparent->Notify(newStr, VFS_WATCH_EVT_ADDED);
+    oldparent->Notify(oldStr, fuchsia_io_WATCH_EVENT_REMOVED);
+    newparent->Notify(newStr, fuchsia_io_WATCH_EVENT_ADDED);
     return ZX_OK;
 }
 
@@ -393,7 +397,7 @@ zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent,
     if (r != ZX_OK) {
         return r;
     }
-    newparent->Notify(newStr, VFS_WATCH_EVT_ADDED);
+    newparent->Notify(newStr, fuchsia_io_WATCH_EVENT_ADDED);
     return ZX_OK;
 }
 
@@ -433,63 +437,6 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) 
 }
 
 #endif // ifdef __Fuchsia__
-
-zx_status_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
-                       void* out_buf, size_t out_len, size_t* out_actual) {
-    switch (op) {
-#ifdef __Fuchsia__
-    case IOCTL_VFS_WATCH_DIR: {
-        if (in_len != sizeof(vfs_watch_dir_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        const vfs_watch_dir_t* request = reinterpret_cast<const vfs_watch_dir_t*>(in_buf);
-        *out_actual = 0;
-        return vn->WatchDir(this, request);
-    }
-    case IOCTL_VFS_MOUNT_FS: {
-        if ((in_len != sizeof(zx_handle_t)) || (out_len != 0)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        MountChannel h = MountChannel(*reinterpret_cast<const zx_handle_t*>(in_buf));
-        *out_actual = 0;
-        return Vfs::InstallRemote(vn, fbl::move(h));
-    }
-    case IOCTL_VFS_MOUNT_MKDIR_FS: {
-        size_t namelen = in_len - sizeof(mount_mkdir_config_t);
-        const mount_mkdir_config_t* config = reinterpret_cast<const mount_mkdir_config_t*>(in_buf);
-        fbl::StringPiece name(config->name, namelen - 1);
-        if ((in_len < sizeof(mount_mkdir_config_t)) ||
-            (namelen < 1) || (namelen > PATH_MAX) || (name[namelen - 1] != 0) ||
-            (out_len != 0)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        *out_actual = 0;
-        return Vfs::MountMkdir(fbl::move(vn), fbl::move(name),
-                               MountChannel(config->fs_root), config->flags);
-    }
-    case IOCTL_VFS_UNMOUNT_NODE: {
-        if ((in_len != 0) || (out_len != sizeof(zx_handle_t))) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        zx_handle_t* h = (zx_handle_t*)out_buf;
-        zx::channel c;
-        *out_actual = 0;
-        zx_status_t s = Vfs::UninstallRemote(vn, &c);
-        *h = c.release();
-        return s;
-    }
-    case IOCTL_VFS_UNMOUNT_FS: {
-        Vfs::UninstallAll(ZX_TIME_INFINITE);
-        *out_actual = 0;
-        vn->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
-        return ZX_OK;
-    }
-#endif
-    default:
-        return vn->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
-    }
-}
 
 void Vfs::SetReadonly(bool value) {
 #ifdef __Fuchsia__

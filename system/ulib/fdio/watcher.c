@@ -8,11 +8,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/private.h>
+#include <lib/fdio/watcher.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 #include <zircon/device/vfs.h>
-
-#include <lib/fdio/watcher.h>
 
 typedef struct fdio_watcher {
     zx_handle_t h;
@@ -27,25 +28,40 @@ static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    // Try V2 Protocol First
-    vfs_watch_dir_t wd = {
-        .mask = VFS_WATCH_MASK_ALL,
-        .options = 0,
-    };
-    if (zx_channel_create(0, &wd.channel, &watcher->h) < 0) {
-        free(watcher);
-        return ZX_ERR_NO_RESOURCES;
+    zx_handle_t client;
+    zx_status_t status, io_status;
+    if ((status = zx_channel_create(0, &client, &watcher->h)) != ZX_OK) {
+        goto fail_allocated;
     }
-    ssize_t r;
-    if ((r = ioctl_vfs_watch_dir(dirfd, &wd)) < 0) {
-        //TODO: if MASK_EXISTING was rejected, set NEED_DIR_SCAN and try without
-        zx_handle_close(wd.channel);
-        zx_handle_close(watcher->h);
-        return r;
+
+    fdio_t* io = __fdio_fd_to_io(dirfd);
+    zx_handle_t dir_channel = __fdio_borrow_channel(io);
+    if (dir_channel == ZX_HANDLE_INVALID) {
+        __fdio_release(io);
+        status = ZX_ERR_NOT_SUPPORTED;
+        goto fail_two_channels;
+    }
+
+    io_status = fuchsia_io_DirectoryWatch(dir_channel, fuchsia_io_WATCH_MASK_ALL, 0,
+                                          client, &status);
+    __fdio_release(io);
+    if (io_status != ZX_OK) {
+        status = io_status;
+        goto fail_one_channel;
+    } else if (status != ZX_OK) {
+        goto fail_one_channel;
     }
 
     *out = watcher;
     return ZX_OK;
+
+fail_two_channels:
+    zx_handle_close(client);
+fail_one_channel:
+    zx_handle_close(watcher->h);
+fail_allocated:
+    free(watcher);
+    return status;
 }
 
 // watcher process expects the msg buffer to be len + 1 in length
@@ -61,14 +77,14 @@ static zx_status_t fdio_watcher_process(fdio_watcher_t* w, uint8_t* msg, size_t 
         }
 
         switch (event) {
-        case VFS_WATCH_EVT_ADDED:
-        case VFS_WATCH_EVT_EXISTING:
+        case fuchsia_io_WATCH_EVENT_ADDED:
+        case fuchsia_io_WATCH_EVENT_EXISTING:
             event = WATCH_EVENT_ADD_FILE;
             break;
-        case VFS_WATCH_EVT_REMOVED:
+        case fuchsia_io_WATCH_EVENT_REMOVED:
             event = WATCH_EVENT_REMOVE_FILE;
             break;
-        case VFS_WATCH_EVT_IDLE:
+        case fuchsia_io_WATCH_EVENT_IDLE:
             event = WATCH_EVENT_IDLE;
             break;
         default:
@@ -94,8 +110,8 @@ static zx_status_t fdio_watcher_process(fdio_watcher_t* w, uint8_t* msg, size_t 
 static zx_status_t fdio_watcher_loop(fdio_watcher_t* w, zx_time_t deadline) {
     for (;;) {
         // extra byte for watcher process use
-        uint8_t msg[VFS_WATCH_MSG_MAX + 1];
-        uint32_t sz = VFS_WATCH_MSG_MAX;
+        uint8_t msg[fuchsia_io_MAX_BUF + 1];
+        uint32_t sz = fuchsia_io_MAX_BUF;
         zx_status_t status;
         if ((status = zx_channel_read(w->h, 0, msg, NULL, sz, 0, &sz, NULL)) < 0) {
             if (status != ZX_ERR_SHOULD_WAIT) {

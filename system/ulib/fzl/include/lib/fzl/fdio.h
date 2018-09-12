@@ -26,6 +26,12 @@ public:
         release();
     }
 
+    void reset(fbl::unique_fd fd) {
+        release();
+        fd_ = fbl::move(fd);
+        io_ = __fdio_fd_to_io(fd_.get());
+    }
+
     fbl::unique_fd release() {
         if (io_ != nullptr) {
             __fdio_release(io_);

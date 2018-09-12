@@ -65,28 +65,6 @@ void VnodeMemfs::Sync(SyncCallback closure) {
     closure(ZX_OK);
 }
 
-constexpr const char kFsName[] = "memfs";
-
-zx_status_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                              void* out_buf, size_t out_len, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_VFS_QUERY_FS: {
-        if (out_len < sizeof(vfs_query_info_t) + strlen(kFsName)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
-        memset(info, 0, sizeof(*info));
-        //TODO(planders): eventually report something besides 0.
-        memcpy(info->name, kFsName, strlen(kFsName));
-        *out_actual = sizeof(vfs_query_info_t) + strlen(kFsName);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 zx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
     if (!IsDirectory()) {
         return ZX_ERR_NOT_DIR;

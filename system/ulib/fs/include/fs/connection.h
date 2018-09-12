@@ -100,6 +100,17 @@ public:
                                 const char* dst_data, size_t dst_size, fidl_txn_t* txn);
     zx_status_t DirectoryLink(const char* src_data, size_t src_size, zx_handle_t dst_parent_token,
                               const char* dst_data, size_t dst_size, fidl_txn_t* txn);
+    zx_status_t DirectoryWatch(uint32_t mask, uint32_t options, zx_handle_t watcher,
+                               fidl_txn_t* txn);
+
+    // DirectoryAdmin Operations.
+    zx_status_t DirectoryAdminMount(zx_handle_t remote, fidl_txn_t* txn);
+    zx_status_t DirectoryAdminMountAndCreate(zx_handle_t remote, const char* name, size_t name_size,
+                                             uint32_t flags, fidl_txn_t* txn);
+    zx_status_t DirectoryAdminUnmount(fidl_txn_t* txn);
+    zx_status_t DirectoryAdminUnmountNode(fidl_txn_t* txn);
+    zx_status_t DirectoryAdminQueryFilesystem(fidl_txn_t* txn);
+    zx_status_t DirectoryAdminGetDevicePath(fidl_txn_t* txn);
 
 private:
     void HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,

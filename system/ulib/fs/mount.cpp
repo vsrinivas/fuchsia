@@ -101,7 +101,7 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountC
         return r;
     }
     if (vn->IsRemote()) {
-        if (flags & MOUNT_MKDIR_FLAG_REPLACE) {
+        if (flags & fuchsia_io_MOUNT_CREATE_FLAG_REPLACE) {
             // There is an old remote handle on this vnode; shut it down and
             // replace it with our own.
             zx::channel old_remote;

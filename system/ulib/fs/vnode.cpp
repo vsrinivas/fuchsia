@@ -26,7 +26,7 @@ zx_status_t Vnode::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
     return ZX_OK;
 }
 
-zx_status_t Vnode::WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd) {
+zx_status_t Vnode::WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 #endif
@@ -77,11 +77,6 @@ zx_status_t Vnode::Create(fbl::RefPtr<Vnode>* out, fbl::StringPiece name, uint32
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t Vnode::Unlink(fbl::StringPiece name, bool must_be_dir) {
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -109,6 +104,15 @@ void Vnode::Sync(SyncCallback closure) {
 }
 
 #ifdef __Fuchsia__
+
+zx_status_t Vnode::QueryFilesystem(fuchsia_io_FilesystemInfo* out) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Vnode::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t Vnode::AttachRemote(MountChannel h) {
     return ZX_ERR_NOT_SUPPORTED;
 }

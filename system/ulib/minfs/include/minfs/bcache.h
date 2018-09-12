@@ -78,7 +78,7 @@ public:
     uint32_t Maxblk() const { return blockmax_; };
 
 #ifdef __Fuchsia__
-    ssize_t GetDevicePath(char* out, size_t out_len);
+    zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len);
     zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out) const;
 
     zx_status_t FVMQuery(fvm_info_t* info) {
