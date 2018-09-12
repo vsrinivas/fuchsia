@@ -38,7 +38,8 @@ zx_status_t PlatformBus::Proxy(platform_proxy_args_t* args) {
     return ZX_OK;
 }
 
-zx_status_t PlatformBus::GetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle_t* out_handle) {
+zx_status_t PlatformBus::IommuGetBti(uint32_t iommu_index, uint32_t bti_id,
+                                     zx_handle_t* out_handle) {
     if (iommu_index != 0) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -246,7 +247,7 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
             // return default implementation
             auto proto = static_cast<iommu_protocol_t*>(out);
             proto->ctx = this;
-            proto->ops = &iommu_proto_ops_;
+            proto->ops = &iommu_protocol_ops_;
             return ZX_OK;
         }
         break;

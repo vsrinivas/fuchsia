@@ -123,7 +123,7 @@ zx_status_t PlatformDevice::RpcGetBti(const DeviceResources* dr, uint32_t index,
 
     const pbus_bti_t& bti = dr->bti(index);
 
-    zx_status_t status = bus_->GetBti(bti.iommu_index, bti.bti_id, out_handle);
+    zx_status_t status = bus_->IommuGetBti(bti.iommu_index, bti.bti_id, out_handle);
 
     if (status == ZX_OK) {
         *out_handle_count = 1;

@@ -180,7 +180,7 @@ zx_status_t ProtocolDevice::GetBti(uint32_t index, zx_handle_t* out_handle) {
 
     const pbus_bti_t& bti = resources_.bti(index);
 
-    return bus_->GetBti(bti.iommu_index, bti.bti_id, out_handle);
+    return bus_->IommuGetBti(bti.iommu_index, bti.bti_id, out_handle);
 }
 
 zx_status_t ProtocolDevice::GetDeviceInfo(pdev_device_info_t* out_info) {

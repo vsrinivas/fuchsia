@@ -54,7 +54,7 @@ public:
     zx_status_t SetBoardInfo(const pbus_board_info_t* info);
 
     // IOMMU protocol implementation.
-    zx_status_t GetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle_t* out_handle);
+    zx_status_t IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle_t* out_handle);
 
     // Returns the resource handle to be used for creating MMIO regions and IRQs.
     // Currently this just returns the root resource, but we may change this to a more

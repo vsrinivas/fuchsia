@@ -41,6 +41,9 @@ gpio:
 gpio-impl: $(LOCAL_DIR)/gpio.banjo
 	$(run-banjo)
 
+iommu:
+	$(run-banjo)
+
 mailbox:
 	$(run-banjo)
 
