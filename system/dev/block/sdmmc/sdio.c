@@ -14,6 +14,7 @@
 #include <ddk/protocol/sdmmc.h>
 #include <ddk/protocol/sdio.h>
 
+#include <hw/sdio.h>
 #include <zircon/process.h>
 #include <zircon/threads.h>
 
@@ -54,7 +55,7 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
     // Use io_rw_direct whenever possible.
     if (!use_dma && data_size == 1) {
         return sdio_rw_byte(dev, txn->write, fn_idx, addr,
-                            *(uintptr_t*)(txn->virt), txn->virt);
+                            *(uintptr_t*)(txn->virt_buffer), txn->virt_buffer);
     }
 
     if ((data_size % 4) != 0) {
@@ -65,7 +66,7 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     bool dma_supported = sdmmc_use_dma(dev);
-    void *buf = use_dma ? NULL : txn->virt;
+    void *buf = use_dma ? NULL : txn->virt_buffer;
     zx_handle_t dma_vmo = use_dma ? txn->dma_vmo : ZX_HANDLE_INVALID;
     uint64_t buf_offset = txn->buf_offset;
 
@@ -131,7 +132,8 @@ static zx_status_t sdio_read_data32(sdmmc_device_t *dev, uint8_t fn_idx, uint32_
     sdio_rw_txn_t txn;
     txn.addr = addr;
     txn.write = false;
-    txn.virt = dword;
+    txn.virt_buffer = dword;
+    txn.virt_size = 4;
     txn.data_size = 4;
     txn.incr = true;
     txn.use_dma = false;
@@ -144,7 +146,8 @@ static zx_status_t sdio_write_data32(sdmmc_device_t *dev, uint8_t fn_idx, uint32
     sdio_rw_txn_t txn;
     txn.addr = addr;
     txn.write = true;
-    txn.virt = (void *)&dword;
+    txn.virt_buffer = (void *)&dword;
+    txn.virt_size = 4;
     txn.data_size = 4;
     txn.incr = true;
     txn.use_dma = false;
@@ -242,7 +245,7 @@ static zx_status_t sdio_process_cccr(sdmmc_device_t *dev) {
         dev->sdio_dev.hw_info.caps |= SDIO_CARD_LOW_SPEED;
     }
     if (card_caps & SDIO_CIA_CCCR_CARD_CAP_4BLS) {
-        dev->sdio_dev.hw_info.caps |= SDIO_CARD_4BIT_BUS;
+        dev->sdio_dev.hw_info.caps |= SDIO_CARD_FOUR_BIT_BUS;
     }
 
     //speed
@@ -279,13 +282,13 @@ static zx_status_t sdio_process_cccr(sdmmc_device_t *dev) {
         return status;
     }
     if (drv_strength & SDIO_CIA_CCCR_DRV_STRENGTH_SDTA) {
-        dev->sdio_dev.hw_info.caps |= SDIO_DRIVER_TYPE_A;
+        dev->sdio_dev.hw_info.caps |= SDIO_CARD_TYPE_A;
     }
     if (drv_strength & SDIO_CIA_CCCR_DRV_STRENGTH_SDTB) {
-        dev->sdio_dev.hw_info.caps |= SDIO_DRIVER_TYPE_B;
+        dev->sdio_dev.hw_info.caps |= SDIO_CARD_TYPE_B;
     }
     if (drv_strength & SDIO_CIA_CCCR_DRV_STRENGTH_SDTD) {
-        dev->sdio_dev.hw_info.caps |= SDIO_DRIVER_TYPE_D;
+        dev->sdio_dev.hw_info.caps |= SDIO_CARD_TYPE_D;
     }
     return status;
 }
@@ -519,7 +522,7 @@ static zx_status_t sdio_switch_uhs(sdmmc_device_t *dev) {
 static zx_status_t sdio_enable_4bit_bus(sdmmc_device_t *dev) {
     zx_status_t st = ZX_OK;
     if ((dev->sdio_dev.hw_info.caps & SDIO_CARD_LOW_SPEED) &&
-        !(dev->sdio_dev.hw_info.caps & SDIO_CARD_4BIT_BUS)) {
+        !(dev->sdio_dev.hw_info.caps & SDIO_CARD_FOUR_BIT_BUS)) {
         zxlogf(ERROR, "sdio: Switching to 4-bit bus unsupported\n");
         return ZX_ERR_NOT_SUPPORTED;
     }

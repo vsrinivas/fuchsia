@@ -25,6 +25,9 @@ typedef struct sdio_device {
     sdio_function_t funcs[SDIO_MAX_FUNCS];
 } sdio_device_t;
 
+static inline bool sdio_fn_idx_valid(uint8_t fn_idx) {
+    return (fn_idx < SDIO_MAX_FUNCS);
+}
 
 static inline bool sdio_is_uhs_supported(uint32_t hw_caps) {
     return ((hw_caps & SDIO_CARD_UHS_SDR50) || (hw_caps & SDIO_CARD_UHS_SDR104) ||

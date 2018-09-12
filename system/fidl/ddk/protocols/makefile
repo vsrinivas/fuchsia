@@ -53,4 +53,7 @@ mailbox:
 scpi:
 	$(run-banjo)
 
-all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl iommu mailbox scpi
+sdio:
+	$(run-banjo)
+
+all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl iommu mailbox scpi sdio
