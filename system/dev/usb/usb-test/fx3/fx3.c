@@ -38,9 +38,11 @@ static zx_status_t fx3_write(fx3_t* fx3, uint8_t* buf, size_t len, uint32_t addr
     zx_status_t status = usb_control(&fx3->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                                      FX3_REQ_FIRMWARE_TRANSFER, LSW(addr), MSW(addr), buf, len,
                                      ZX_SEC(VENDOR_REQ_TIMEOUT_SECS), &out_len);
-    if (status != ZX_OK || out_len != len) {
-        zxlogf(ERROR, "fx3_write failed, err: %d, want: %lu, got: %lu\n", status, len, out_len);
+    if (status != ZX_OK) {
         return status;
+    } else if (out_len != len) {
+        zxlogf(ERROR, "fx3_write returned bad len, want: %lu, got: %lu\n", len, out_len);
+        return ZX_ERR_IO;
     }
     return ZX_OK;
 }
@@ -132,6 +134,7 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo) {
         }
         status = fx3_write_section(fx3, fw_vmo, offset, len_dwords * 4, ram_addr, &checksum);
         if (status != ZX_OK) {
+            zxlogf(ERROR, "fx3_write_section failed, err: %d\n", status);
             return status;
         }
         offset += (len_dwords * 4);
@@ -150,7 +153,18 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo) {
         zxlogf(ERROR, "got bad checksum %u, want %u\n", checksum, expected_checksum);
         return ZX_ERR_BAD_STATE;
     }
-    return fx3_program_entry(fx3, ram_addr);
+    status = fx3_program_entry(fx3, ram_addr);
+    if (status == ZX_OK) {
+        return ZX_OK;
+    } else if (status == ZX_ERR_IO_REFUSED) {
+        // When using the second stage bootloader, the control request may send an error code
+        // back after we jump to the program entry.
+        zxlogf(TRACE, "fx3_program_entry got expected err: %d\n", status);
+        return ZX_OK;
+    } else {
+        zxlogf(ERROR, "fx3_program_entry got unexpected err: %d\n", status);
+        return status;
+    }
 }
 
 static zx_status_t fx3_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
@@ -230,8 +244,9 @@ static zx_driver_ops_t fx3_driver_ops = {
     .bind = fx3_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(fx3, fx3_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(fx3, fx3_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, CYPRESS_VID),
-    BI_MATCH_IF(EQ, BIND_USB_PID, FX3_PID),
+    BI_MATCH_IF(EQ, BIND_USB_PID, FX3_DEFAULT_BOOTLOADER_PID),
+    BI_MATCH_IF(EQ, BIND_USB_PID, FX3_SECOND_STAGE_BOOTLOADER_PID),
 ZIRCON_DRIVER_END(fx3)
