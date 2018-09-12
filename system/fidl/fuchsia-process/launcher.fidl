@@ -4,10 +4,8 @@
 
 library fuchsia.process;
 
+using fuchsia.io;
 using zx;
-
-// TODO: Add when Zircon's build supports library dependencies.
-// using io;
 
 struct HandleInfo {
     // The handle to use for this argument.
@@ -24,8 +22,7 @@ struct NameInfo {
     string path;
 
     // The associated directory.
-    // TODO: Use io.Directory when Zircon's build supports library dependencies.
-    handle<channel> directory;
+    fuchsia.io.Directory directory;
 };
 
 struct LaunchInfo {
