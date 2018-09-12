@@ -196,8 +196,8 @@
 #define S905D2_PWM_D                  S905D2_GPIOE(1)
 #define S905D2_PWM_D_FN               3
 
-#define S905D2_PDM_BASE               (0xff640000)
-#define S905D2_PDM_LENGTH             (0x2000)
+#define S905D2_EE_PDM_BASE               (0xff640000)
+#define S905D2_EE_PDM_LENGTH             (0x2000)
 
 #define S905D2_EE_AUDIO_BASE          (0xff642000)
 #define S905D2_EE_AUDIO_LENGTH        (0x1000)

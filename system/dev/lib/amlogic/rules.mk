@@ -15,6 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/s905d2-hiu.c \
     $(LOCAL_DIR)/s905d2-pll-rates.c \
     $(LOCAL_DIR)/aml-tdm-audio.cpp \
+    $(LOCAL_DIR)/aml-pdm-audio.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
