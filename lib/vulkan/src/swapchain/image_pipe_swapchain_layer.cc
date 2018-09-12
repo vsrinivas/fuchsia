@@ -64,14 +64,13 @@ struct SupportedImageProperties {
 
 class ImagePipeSurface {
  public:
-  ImagePipeSurface(zx_handle_t image_pipe_handle) {
+  ImagePipeSurface() {
     std::vector<VkSurfaceFormatKHR> formats(
         {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
     supported_image_properties_ = {formats};
-    image_pipe_.Bind(zx::channel(image_pipe_handle));
   }
 
-  fuchsia::images::ImagePipeSyncPtr& image_pipe() { return image_pipe_; }
+  virtual ~ImagePipeSurface() = default;
 
   SupportedImageProperties& supported_image_properties() {
     return supported_image_properties_;
@@ -84,10 +83,47 @@ class ImagePipeSurface {
     return next_image_id_;
   }
 
+  virtual void AddImage(uint32_t image_id,
+                        fuchsia::images::ImageInfo image_info,
+                        zx::vmo buffer) = 0;
+  virtual void RemoveImage(uint32_t image_id) = 0;
+  virtual void PresentImage(uint32_t image_id,
+                            fidl::VectorPtr<zx::event> acquire_fences,
+                            fidl::VectorPtr<zx::event> release_fences) = 0;
+
  private:
-  fuchsia::images::ImagePipeSyncPtr image_pipe_;
   SupportedImageProperties supported_image_properties_;
   uint32_t next_image_id_ = UINT32_MAX - 1;  // Exercise rollover
+};
+
+class ImagePipeSurfaceSync : public ImagePipeSurface {
+ public:
+  ImagePipeSurfaceSync(zx_handle_t image_pipe_handle) {
+    image_pipe_.Bind(zx::channel(image_pipe_handle));
+  }
+
+  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
+                zx::vmo buffer) override {
+    image_pipe_->AddImage(image_id, std::move(image_info), std::move(buffer),
+                          fuchsia::images::MemoryType::VK_DEVICE_MEMORY, 0);
+  }
+
+  void RemoveImage(uint32_t image_id) override {
+    image_pipe_->RemoveImage(image_id);
+  }
+
+  void PresentImage(uint32_t image_id,
+                    fidl::VectorPtr<zx::event> acquire_fences,
+                    fidl::VectorPtr<zx::event> release_fences) override {
+    fuchsia::images::PresentationInfo info;
+    constexpr uint64_t kPresentationTime = 0;
+    image_pipe_->PresentImage(image_id, kPresentationTime,
+                              std::move(acquire_fences),
+                              std::move(release_fences), &info);
+  }
+
+ private:
+  fuchsia::images::ImagePipeSyncPtr image_pipe_;
 };
 
 struct ImagePipeImage {
@@ -305,9 +341,7 @@ VkResult ImagePipeSwapchain::Initialize(
     image_info.color_space = fuchsia::images::ColorSpace::SRGB;
     image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
 
-    surface()->image_pipe()->AddImage(
-        images_[i].id, std::move(image_info), std::move(vmo),
-        fuchsia::images::MemoryType::VK_DEVICE_MEMORY, 0);
+    surface()->AddImage(images_[i].id, std::move(image_info), std::move(vmo));
 
     available_ids_.push_back(i);
 
@@ -358,7 +392,7 @@ void ImagePipeSwapchain::Cleanup(VkDevice device,
           ->device_dispatch_table;
 
   for (auto& image : images_) {
-    surface()->image_pipe()->RemoveImage(image.id);
+    surface()->RemoveImage(image.id);
     pDisp->DestroyImage(device, image.image, pAllocator);
   }
   for (auto memory : memories_) {
@@ -559,10 +593,8 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
     fidl::VectorPtr<zx::event> release_fences;
     release_fences.push_back(std::move(release_fence));
 
-    fuchsia::images::PresentationInfo info;
-    surface()->image_pipe()->PresentImage(images_[index].id, 0,
-                                          std::move(acquire_fences),
-                                          std::move(release_fences), &info);
+    surface()->PresentImage(images_[index].id, std::move(acquire_fences),
+                            std::move(release_fences));
   }
 
   return VK_SUCCESS;
@@ -596,7 +628,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMagmaSurfaceKHR(
     VkInstance instance, const VkMagmaSurfaceCreateInfoKHR* pCreateInfo,
     const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface) {
   *pSurface = reinterpret_cast<VkSurfaceKHR>(
-      new ImagePipeSurface(pCreateInfo->imagePipeHandle));
+      new ImagePipeSurfaceSync(pCreateInfo->imagePipeHandle));
   return VK_SUCCESS;
 }
 
