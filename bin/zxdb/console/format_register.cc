@@ -60,46 +60,13 @@ Err InternalFormatGeneric(const std::vector<Register>& registers,
   return Err();
 }
 
-Err InternalFormatFP(const std::vector<Register>& registers,
-                     OutputBuffer* out) {
-  // Registers.
-  std::vector<std::vector<OutputBuffer>> rows;
-  for (const Register& reg : registers) {
-    rows.emplace_back();
-    auto& row = rows.back();
-
-    auto color = rows.size() % 2 == 1 ? TextForegroundColor::kDefault
-                                      : TextForegroundColor::kLightGray;
-
-    auto name = OutputBuffer(RegisterIDToString(reg.id()));
-    name.SetForegroundColor(color);
-    row.push_back(std::move(name));
-
-    std::string out;
-    Err err = GetLittleEndianHexOutput(reg.data(), &out);
-    if (!err.ok())
-      return err;
-    OutputBuffer value_buffer(out);
-    row.push_back(std::move(value_buffer));
-
-    err = GetFPString(reg.data(), &out);
-    if (!err.ok())
-      return err;
-    OutputBuffer fp_val(out);
-    fp_val.SetForegroundColor(color);
-    row.push_back(std::move(fp_val));
-  }
-
-  auto colspecs = std::vector<ColSpec>({ColSpec(Align::kLeft, 0, "Name"),
-                                        ColSpec(Align::kRight, 0, "Value", 2),
-                                        ColSpec(Align::kRight, 0, "FP")});
-  FormatTable(std::move(colspecs), rows, out);
-  return Err();
-}
-
 Err FormatCategory(debug_ipc::Arch arch, RegisterCategory::Type category,
                    const std::vector<Register>& registers, OutputBuffer* out) {
   FXL_DCHECK(!registers.empty());
+
+  auto title = fxl::StringPrintf(
+      "%s Registers\n", RegisterCategoryTypeToString(category));
+  out->Append(OutputBuffer(Syntax::kHeading, std::move(title)));
 
   // We see if architecture specific printing wants to take over.
   Err err;
@@ -118,17 +85,8 @@ Err FormatCategory(debug_ipc::Arch arch, RegisterCategory::Type category,
     }
   }
 
-  // Title.
-  auto category_title = fxl::StringPrintf(
-      "%s Registers\n", RegisterCategoryTypeToString(category).data());
-  out->Append(OutputBuffer(Syntax::kHeading, category_title));
-
-  if (category == RegisterCategory::Type::kFloatingPoint) {
-    err = InternalFormatFP(registers, &category_out);
-  } else {
-    // Generic case.
-    err = InternalFormatGeneric(registers, &category_out);
-  }
+  // Generic case.
+  err = InternalFormatGeneric(registers, &category_out);
   if (!err.ok())
     return err;
 
@@ -231,7 +189,7 @@ Err FormatRegisters(debug_ipc::Arch arch,
 
 // Formatting helpers ----------------------------------------------------------
 
-std::string RegisterCategoryTypeToString(RegisterCategory::Type type) {
+const char* RegisterCategoryTypeToString(RegisterCategory::Type type) {
   switch (type) {
     case RegisterCategory::Type::kGeneral:
       return "General Purpose";

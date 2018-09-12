@@ -16,6 +16,31 @@ using debug_ipc::RegisterID;
 
 namespace zxdb {
 
+namespace {
+
+#define FLAG_VALUE(value, shift, mask) (uint8_t)((value >> shift) & mask)
+
+inline void PushName(const Register& reg, TextForegroundColor color,
+                    std::vector<OutputBuffer>* row) {
+  OutputBuffer buf(RegisterIDToString(reg.id()));
+  buf.SetForegroundColor(color);
+  row->emplace_back(std::move(buf));
+}
+
+inline Err PushHex(const Register& reg, TextForegroundColor color,
+    std::vector<OutputBuffer>* row, int length) {
+  std::string hex_out;
+  Err err = GetLittleEndianHexOutput(reg.data(), &hex_out, length);
+  if (!err.ok())
+    return err;
+  OutputBuffer buf(std::move(hex_out));
+  buf.SetForegroundColor(color);
+  row->emplace_back(std::move(buf));
+  return Err();
+}
+
+// Format General Registers -----------------------------------------------------
+
 #ifdef ENABLE_ARM64_SYSTEM_FLAGS
 
 constexpr int kCpsrExceptionLevelShift = 0;
@@ -35,10 +60,6 @@ constexpr int kCpsrCShift = 29;  // Carry bit.
 constexpr int kCpsrZShift = 30;  // Zero bit.
 constexpr int kCpsrNShift = 31;  // Negative bit.
 
-#define FLAG_VALUE(value, shift, mask) (uint8_t)((value >> shift) & mask)
-
-namespace {
-
 Err FormatCPSR(const Register& cpsr, TextForegroundColor color,
                OutputBuffer* out) {
   uint64_t value = cpsr.GetValue();
@@ -47,32 +68,25 @@ Err FormatCPSR(const Register& cpsr, TextForegroundColor color,
   std::vector<std::vector<OutputBuffer>> rows(1);
   auto& row = rows.back();
 
-  // Register name.
-  OutputBuffer buf;
-  buf = OutputBuffer(RegisterIDToString(cpsr.id()));
-  buf.SetForegroundColor(color);
-  row.push_back(std::move(buf));
+  PushName(cpsr, color, &row);
 
-  // Value.
-  buf = OutputBuffer();
-  buf.SetForegroundColor(color);
-  std::string hex_out;
-  // Get the hex formatted value.
-  Err err = GetLittleEndianHexOutput(cpsr.data(), &hex_out, 4);
+  Err err = PushHex(cpsr, color, &row, 4);
   if (!err.ok())
     return err;
-  buf.Append(fxl::StringPrintf(" %s ", hex_out.data()));
 
   // Get the custom formatting.
-  buf.Append(fxl::StringPrintf(
-      "(V = %d, C = %d, Z = %d, N = %d)", FLAG_VALUE(value, kCpsrVShift, 0x1),
+  OutputBuffer cpsr_out(fxl::StringPrintf(
+      "V = %d, C = %d, Z = %d, N = %d", FLAG_VALUE(value, kCpsrVShift, 0x1),
       FLAG_VALUE(value, kCpsrCShift, 0x1), FLAG_VALUE(value, kCpsrZShift, 0x1),
       FLAG_VALUE(value, kCpsrNShift, 0x1)));
-  row.push_back(std::move(buf));
-
   // TODO(donosoc): Implement system formatting when we enable
   //                ENABLE_ARM64_SYSTEM_FLAGS
-  auto colspecs = std::vector<ColSpec>(2);
+  cpsr_out.SetForegroundColor(color);
+  row.push_back(std::move(cpsr_out));
+
+  auto colspecs = std::vector<ColSpec>({ColSpec(Align::kLeft, 0, "Name"),
+                                        ColSpec(Align::kLeft, 0, "Raw", 1),
+                                        ColSpec(Align::kLeft, 0, "Value", 1)});
   FormatTable(std::move(colspecs), rows, out);
   return Err();
 }
@@ -82,22 +96,13 @@ Err FormatGenericRow(const Register& reg, TextForegroundColor color,
   auto name = OutputBuffer(RegisterIDToString(reg.id()));
   name.SetForegroundColor(color);
   row->push_back(std::move(name));
-
-  std::string value;
-  Err err = GetLittleEndianHexOutput(reg.data(), &value);
-  if (!err.ok())
-    return err;
-  OutputBuffer value_buffer(value);
-  value_buffer.SetForegroundColor(color);
-  row->push_back(std::move(value_buffer));
-  return Err();
+  PushName(reg, color, row);
+  Err err = PushHex(reg, color, row, 8);
+  return err;
 }
 
 Err FormatGeneralRegisters(const std::vector<Register>& registers,
                            OutputBuffer* out) {
-  // Title.
-  out->Append(OutputBuffer(Syntax::kHeading, "General Purpose Registers\n"));
-
   OutputBuffer cpsr_out;
   std::vector<std::vector<OutputBuffer>> rows;
   for (const Register& reg : registers) {
@@ -119,12 +124,8 @@ Err FormatGeneralRegisters(const std::vector<Register>& registers,
 
   auto colspecs = std::vector<ColSpec>(
       {ColSpec(Align::kLeft, 0, "Name"), ColSpec(Align::kRight, 0, "Value")});
-  if (!rows.empty()) {
+  if (!rows.empty())
     FormatTable(colspecs, rows, out);
-    // Separate rflags if appropriate.
-    if (!cpsr_out.empty())
-      out->Append("\n");
-  }
   if (!cpsr_out.empty())
     out->Append(std::move(cpsr_out));
   return Err();

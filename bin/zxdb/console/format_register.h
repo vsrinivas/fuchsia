@@ -34,7 +34,7 @@ Err FormatRegisters(debug_ipc::Arch, const FilteredRegisterSet&,
 
 // Formatting helpers ----------------------------------------------------------
 
-std::string RegisterCategoryTypeToString(debug_ipc::RegisterCategory::Type);
+const char* RegisterCategoryTypeToString(debug_ipc::RegisterCategory::Type);
 
 const char* RegisterIDToString(debug_ipc::RegisterID);
 

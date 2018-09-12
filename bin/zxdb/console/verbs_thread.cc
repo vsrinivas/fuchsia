@@ -712,7 +712,11 @@ void OnRegsComplete(const Err& cmd_err, const RegisterSet& register_set,
   }
 
   OutputBuffer out;
-  FormatRegisters(register_set.arch(), filtered_set, &out);
+  err = FormatRegisters(register_set.arch(), filtered_set, &out);
+  if (!err.ok()) {
+    console->Output(err);
+    return;
+  }
   console->Output(out);
 }
 
