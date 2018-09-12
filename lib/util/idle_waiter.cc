@@ -18,7 +18,9 @@ IdleWaiter::Activity::Activity(fxl::WeakPtr<IdleWaiter> tracker)
 IdleWaiter::Activity::~Activity() {
   if (tracker_) {
     tracker_->activity_ = nullptr;
-    tracker_->PostIdleCheck();
+    if (tracker_->loop_) {
+      tracker_->PostIdleCheck();
+    }
   }
 }
 
