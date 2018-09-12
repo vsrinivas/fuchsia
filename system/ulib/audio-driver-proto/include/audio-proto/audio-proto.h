@@ -26,12 +26,12 @@ using StreamSetFmtReq  = audio_stream_cmd_set_format_req_t;
 using StreamSetFmtResp = audio_stream_cmd_set_format_resp_t;
 
 // AUDIO_STREAM_CMD_GET_GAIN
-using GetGainReq  = audio_stream_cmd_get_gain_req;
-using GetGainResp = audio_stream_cmd_get_gain_resp;
+using GetGainReq  = audio_stream_cmd_get_gain_req_t;
+using GetGainResp = audio_stream_cmd_get_gain_resp_t;
 
 // AUDIO_STREAM_CMD_SET_GAIN
-using SetGainReq  = audio_stream_cmd_set_gain_req;
-using SetGainResp = audio_stream_cmd_set_gain_resp;
+using SetGainReq  = audio_stream_cmd_set_gain_req_t;
+using SetGainResp = audio_stream_cmd_set_gain_resp_t;
 
 // AUDIO_STREAM_CMD_PLUG_DETECT
 using PlugDetectReq  = audio_stream_cmd_plug_detect_req_t;
