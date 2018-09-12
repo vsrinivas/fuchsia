@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "imx8mevk.h"
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/usb-mode-switch.h>
+#include <hw/reg.h>
+#include <limits.h>
+#include <soc/imx8m/imx8m-gpio.h>
 #include <soc/imx8m/imx8m-hw.h>
 #include <soc/imx8m/imx8m-iomux.h>
-#include <soc/imx8m/imx8m-gpio.h>
 #include <soc/imx8m/imx8m-sip.h>
-#include <limits.h>
-#include <hw/reg.h>
 #include <zircon/syscalls/smc.h>
-#include "imx8mevk.h"
 
 static const pbus_mmio_t usb1_mmios[] = {
     {
@@ -41,11 +41,10 @@ static usb_mode_t usb1_mode = USB_MODE_HOST;
 
 static const pbus_metadata_t usb1_metadata[] = {
     {
-        .type       = DEVICE_METADATA_USB_MODE,
-        .data       = &usb1_mode,
-        .len        = sizeof(usb1_mode),
-    }
-};
+        .type = DEVICE_METADATA_USB_MODE,
+        .data = &usb1_mode,
+        .len = sizeof(usb1_mode),
+    }};
 
 // USB1 is USB-C OTG port
 static const pbus_dev_t usb1_dev = {
@@ -87,11 +86,10 @@ static usb_mode_t usb2_mode = USB_MODE_HOST;
 
 static const pbus_metadata_t usb2_metadata[] = {
     {
-        .type       = DEVICE_METADATA_USB_MODE,
-        .data       = &usb2_mode,
-        .len        = sizeof(usb2_mode),
-    }
-};
+        .type = DEVICE_METADATA_USB_MODE,
+        .data = &usb2_mode,
+        .len = sizeof(usb2_mode),
+    }};
 
 // USB1 is USB-A port, host only
 static const pbus_dev_t usb2_dev = {
@@ -113,7 +111,7 @@ zx_status_t imx_usb_phy_init(zx_paddr_t usb_base, size_t usb_length, zx_handle_t
     uint32_t reg;
     io_buffer_t usb_buf;
     zx_status_t status = io_buffer_init_physical(&usb_buf, bti, usb_base, usb_length,
-                                        get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+                                                 get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s io_buffer_init_physical failed %d\n", __FUNCTION__, status);
         return status;
@@ -198,4 +196,3 @@ zx_status_t imx_usb_init(imx8mevk_bus_t* bus) {
     }
     return ZX_OK;
 }
-

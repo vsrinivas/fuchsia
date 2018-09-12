@@ -30,8 +30,8 @@
 
 static pbus_mmio_t imx8mevk_display_mmios[] = {
     {
-        .base =     IMX8M_AIPS_DC_MST1_BASE,
-        .length =   IMX8M_AIPS_LENGTH,
+        .base = IMX8M_AIPS_DC_MST1_BASE,
+        .length = IMX8M_AIPS_LENGTH,
     },
 };
 
@@ -57,39 +57,39 @@ static const pbus_dev_t display_dev = {
 iomux_cfg_struct imx8mevk_pinmux[] = {
     // UART1 RX
     MAKE_PIN_CFG_UART(0, SW_MUX_CTL_PAD_UART1_RXD,
-                            SW_PAD_CTL_PAD_UART1_RXD,
-                            UART1_RXD_SELECT_INPUT),
+                      SW_PAD_CTL_PAD_UART1_RXD,
+                      UART1_RXD_SELECT_INPUT),
     // UART1 TX
     MAKE_PIN_CFG_UART(0, SW_MUX_CTL_PAD_UART1_TXD,
-                            SW_PAD_CTL_PAD_UART1_TXD,
-                            0x000ULL),
+                      SW_PAD_CTL_PAD_UART1_TXD,
+                      0x000ULL),
 
     // PWR_LED (used for GPIO Driver)
     MAKE_PIN_CFG_DEFAULT(0, SW_MUX_CTL_PAD_GPIO1_IO13),
 
     // eMMC (USDHC1) Pinmux
     MAKE_PIN_CFG_USDHC_CLK(0, SW_MUX_CTL_PAD_SD1_CLK,
-                            SW_PAD_CTL_PAD_SD1_CLK),
+                           SW_PAD_CTL_PAD_SD1_CLK),
     MAKE_PIN_CFG_USDHC(0, SW_MUX_CTL_PAD_SD1_CMD,
-                            SW_PAD_CTL_PAD_SD1_CMD),
+                       SW_PAD_CTL_PAD_SD1_CMD),
     MAKE_PIN_CFG_USDHC(0, SW_MUX_CTL_PAD_SD1_DATA0,
-                            SW_PAD_CTL_PAD_SD1_DATA0),
+                       SW_PAD_CTL_PAD_SD1_DATA0),
     MAKE_PIN_CFG_USDHC(0, SW_MUX_CTL_PAD_SD1_DATA1,
-                            SW_PAD_CTL_PAD_SD1_DATA1),
+                       SW_PAD_CTL_PAD_SD1_DATA1),
     MAKE_PIN_CFG_USDHC(0, SW_MUX_CTL_PAD_SD1_DATA2,
-                            SW_PAD_CTL_PAD_SD1_DATA2),
+                       SW_PAD_CTL_PAD_SD1_DATA2),
     MAKE_PIN_CFG_USDHC(0, SW_MUX_CTL_PAD_SD1_DATA3,
-                            SW_PAD_CTL_PAD_SD1_DATA3),
+                       SW_PAD_CTL_PAD_SD1_DATA3),
     MAKE_PIN_CFG_USDHC(0, SW_MUX_CTL_PAD_SD1_DATA4,
-                            SW_PAD_CTL_PAD_SD1_DATA4),
+                       SW_PAD_CTL_PAD_SD1_DATA4),
     MAKE_PIN_CFG_USDHC(0, SW_MUX_CTL_PAD_SD1_DATA5,
-                            SW_PAD_CTL_PAD_SD1_DATA5),
+                       SW_PAD_CTL_PAD_SD1_DATA5),
     MAKE_PIN_CFG_USDHC(0, SW_MUX_CTL_PAD_SD1_DATA6,
-                            SW_PAD_CTL_PAD_SD1_DATA6),
+                       SW_PAD_CTL_PAD_SD1_DATA6),
     MAKE_PIN_CFG_USDHC(0, SW_MUX_CTL_PAD_SD1_DATA7,
-                            SW_PAD_CTL_PAD_SD1_DATA7),
+                       SW_PAD_CTL_PAD_SD1_DATA7),
     MAKE_PIN_CFG_USDHC_CLK(0, SW_MUX_CTL_PAD_SD1_STROBE,
-                            SW_PAD_CTL_PAD_SD1_STROBE),
+                           SW_PAD_CTL_PAD_SD1_STROBE),
 
     MAKE_PIN_CFG_DEFAULT(5, SW_MUX_CTL_PAD_SD1_RESET_B),
 };
@@ -117,7 +117,7 @@ static int imx8mevk_start_thread(void* arg) {
     }
 
     // Pinmux
-    for (unsigned i = 0; i < sizeof(imx8mevk_pinmux)/sizeof(imx8mevk_pinmux[0]); i++) {
+    for (unsigned i = 0; i < sizeof(imx8mevk_pinmux) / sizeof(imx8mevk_pinmux[0]); i++) {
         gpio_set_alt_function(&bus->gpio, 0, imx8mevk_pinmux[i]);
     }
 

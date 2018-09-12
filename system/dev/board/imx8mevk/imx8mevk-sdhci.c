@@ -8,10 +8,10 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 
+#include <limits.h>
+#include <soc/imx8m/imx8m-gpio.h>
 #include <soc/imx8m/imx8m-hw.h>
 #include <soc/imx8m/imx8m-iomux.h>
-#include <soc/imx8m/imx8m-gpio.h>
-#include <limits.h>
 
 #include "imx8mevk.h"
 

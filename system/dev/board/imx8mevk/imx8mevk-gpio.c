@@ -7,10 +7,10 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 
+#include <limits.h>
+#include <soc/imx8m/imx8m-gpio.h>
 #include <soc/imx8m/imx8m-hw.h>
 #include <soc/imx8m/imx8m-iomux.h>
-#include <soc/imx8m/imx8m-gpio.h>
-#include <limits.h>
 
 #include "imx8mevk.h"
 
@@ -41,8 +41,7 @@ static const pbus_mmio_t gpio_mmios[] = {
     {
         .base = IMX8M_AIPS_IOMUXC_BASE,
         .length = IMX8M_AIPS_LENGTH,
-    }
-};
+    }};
 
 static const pbus_irq_t gpio_irqs[] = {
     {
@@ -119,7 +118,7 @@ zx_status_t imx8m_gpio_init(imx8mevk_bus_t* bus) {
         },
         {
             // I2C SDA Pin
-            .gpio = IMX_GPIO_PIN(5,17),
+            .gpio = IMX_GPIO_PIN(5, 17),
         },
     };
 
