@@ -199,11 +199,9 @@ LINUX_FUNCVI(cfg80211_ready_on_channel)
 LINUX_FUNCcVS(cfg80211_get_p2p_attr) // TODO(cphoenix): Can this return >0? If so, adjust usage.
 LINUX_FUNCVI(cfg80211_remain_on_channel_expired)
 LINUX_FUNCVI(cfg80211_unregister_wdev)
-LINUX_FUNCVI(cfg80211_sched_scan_stopped)
 LINUX_FUNCVI(cfg80211_rx_mgmt)
 LINUX_FUNCVI(cfg80211_mgmt_tx_status)
 LINUX_FUNCVI(cfg80211_check_combinations)
-LINUX_FUNCVI(cfg80211_scan_done)
 LINUX_FUNCVI(cfg80211_disconnected)
 LINUX_FUNCVI(cfg80211_roamed)
 LINUX_FUNCVI(cfg80211_connect_done)
@@ -258,6 +256,9 @@ LINUX_FUNCVI(dma_unmap_single) // PCI only
 
 #define KBUILD_MODNAME "brcmfmac"
 #define BRCMFMAC_PDATA_NAME ("pdata name")
+
+#define IEEE80211_MAX_SSID_LEN (32)
+
 enum {
     IEEE80211_P2P_ATTR_DEVICE_INFO = 2,
     IEEE80211_P2P_ATTR_DEVICE_ID = 3,
@@ -269,7 +270,6 @@ enum {
     IFNAMSIZ = (16),
     WLAN_PMKID_LEN = (16),
     WLAN_MAX_KEY_LEN = (128),
-    IEEE80211_MAX_SSID_LEN = (32),
     IRQF_SHARED, // TODO(cphoenix) - Used only in PCI
     IEEE80211_RATE_SHORT_PREAMBLE,
     WLAN_CIPHER_SUITE_AES_CMAC,
@@ -535,6 +535,8 @@ struct wiphy {
     int max_sched_scan_ie_len;
     int max_match_sets;
     int max_sched_scan_ssids;
+    bool scan_busy;
+    uint64_t scan_txn_id;
     uint32_t rts_threshold;
     uint32_t frag_threshold;
     uint32_t retry_long;
@@ -695,10 +697,6 @@ struct cfg80211_chan_def {
 struct iface_combination_params {
     int num_different_channels;
     int iftype_num[555];
-};
-
-struct cfg80211_scan_info {
-    int aborted;
 };
 
 struct cfg80211_ibss_params {

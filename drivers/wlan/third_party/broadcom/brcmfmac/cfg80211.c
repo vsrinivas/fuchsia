@@ -611,6 +611,19 @@ void brcmf_set_mpc(struct brcmf_if* ifp, int mpc) {
     }
 }
 
+static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
+                                  uint8_t scan_result_code) {
+        wlanif_scan_end_t args;
+        args.txn_id = txn_id;
+        args.code = scan_result_code;
+        if (ndev->if_callbacks != NULL) {
+            brcmf_dbg(TEMP, "Signaling on_scan_end with txn_id %ld and code %d", args.txn_id,
+                      args.code);
+            ndev->if_callbacks->on_scan_end(ndev->if_callback_cookie, &args);
+        }
+        ndev_to_wiphy(ndev)->scan_busy = false;
+}
+
 zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                                         bool aborted, bool fw_abort) {
     struct brcmf_scan_params_le params_le;
@@ -622,7 +635,7 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
     brcmf_dbg(SCAN, "Enter\n");
 
     /* clear scan request, because the FW abort can cause a second call */
-    /* to this functon and might cause a double cfg80211_scan_done      */
+    /* to this function and might cause a double signal_scan_end        */
     scan_request = cfg->scan_request;
     cfg->scan_request = NULL;
 
@@ -663,17 +676,17 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
             cfg->int_escan_map &= ~BIT(bucket);
             reqid = brcmf_pno_find_reqid_by_bucket(cfg->pno, bucket);
             if (!aborted) {
-                brcmf_dbg(SCAN, " * * report scan results: reqid=%lu\n", reqid);
-                //cfg80211_sched_scan_results(cfg_to_wiphy(cfg), reqid);
+                // TODO(cphoenix): Figure out how to use internal reqid infrastructure, rather
+                // than storing it separately in wiphy->scan_txn_id.
+                brcmf_dbg(SCAN, " * * report scan results: internal reqid=%lu\n", reqid);
+                brcmf_signal_scan_end(cfg_to_ndev(cfg), cfg_to_wiphy(cfg)->scan_txn_id,
+                                      WLAN_SCAN_RESULT_SUCCESS);
             }
         }
     } else if (scan_request) {
-        struct cfg80211_scan_info info = {
-            .aborted = aborted,
-        };
-
         brcmf_dbg(SCAN, "ESCAN Completed scan: %s\n", aborted ? "Aborted" : "Done");
-        cfg80211_scan_done(scan_request, &info);
+        brcmf_signal_scan_end(cfg_to_ndev(cfg), cfg_to_wiphy(cfg)->scan_txn_id,
+                              aborted ? WLAN_SCAN_RESULT_INTERNAL_ERROR : WLAN_SCAN_RESULT_SUCCESS);
     }
     if (!brcmf_test_and_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
         brcmf_dbg(SCAN, "Scan complete, probably P2P scan\n");
@@ -878,7 +891,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
         err = ZX_ERR_NO_MEMORY;
         goto exit;
     }
-    ZX_ASSERT(params_size + sizeof("escan") >= BRCMF_DCMD_MEDLEN);
+    ZX_ASSERT(params_size + sizeof("escan") < BRCMF_DCMD_MEDLEN);
     brcmf_escan_prep(cfg, &params->params_le, request);
     params->version = BRCMF_ESCAN_REQ_VERSION;
     params->action = WL_ESCAN_ACTION_START;
@@ -2507,6 +2520,21 @@ done:
     return err;
 }
 
+static void brcmf_ies_extract_name(uint8_t* ie, size_t ie_len, wlanif_ssid_t* ssid) {
+    size_t offset = 0;
+    while (offset < ie_len) {
+        uint8_t type = ie[offset];
+        uint8_t length = ie[offset + 1];
+        if (type == 0) {
+            uint8_t ssid_len = min(length, sizeof(ssid->data));
+            memcpy(ssid->data, ie + offset + 2, ssid_len);
+            ssid->len = ssid_len;
+        }
+        offset += length + 2;
+    }
+}
+
+#ifdef WANTED_FOR_DEBUG
 static void brcmf_iedump(uint8_t* ie, size_t length) {
     size_t offset = 0;
     char ieinfo[500] = "";
@@ -2532,21 +2560,47 @@ static void brcmf_iedump(uint8_t* ie, size_t length) {
         brcmf_dbg(TEMP, " * * Offset %ld didn't match length %ld", offset, length);
     }
 }
+#endif // WANTED_FOR_DEBUG
+
+static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, const uint8_t* bssid,
+                                        uint16_t capability, uint16_t interval, uint8_t* ie,
+                                        size_t ie_len, int16_t rssi_dbm) {
+    struct net_device* ndev = wiphy_to_ndev(wiphy);
+    wlanif_scan_result_t result;
+
+    if (!wiphy->scan_busy) {
+        return;
+    }
+    result.txn_id = wiphy->scan_txn_id;
+    memcpy(result.bss.bssid, bssid, ETH_ALEN);
+    brcmf_ies_extract_name(ie, ie_len, &result.bss.ssid);
+    result.bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
+    result.bss.beacon_period = 0;
+    result.bss.dtim_period = 0;
+    result.bss.timestamp = 0;
+    result.bss.local_time = 0;
+    result.bss.rsne_len = 0;
+    result.bss.chan.primary = (uint8_t)channel;
+    result.bss.chan.cbw = CBW20; // TODO(cphoenix): Don't hard-code this.
+    result.bss.rssi_dbm = (uint8_t)(min(0, max(-255, rssi_dbm)));
+    result.bss.rcpi_dbmh = 0;
+    result.bss.rsni_dbh = 0;
+    //brcmf_dbg(TEMP, "Returning scan result %s, channel %d, dbm %d, id %lu", result.bss.ssid,
+      //        result.bss.chan.primary, result.bss.rssi_dbm, result.txn_id);
+    ndev->if_callbacks->on_scan_result(ndev->if_callback_cookie, &result);
+}
 
 static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
                                            struct brcmf_bss_info_le* bi) {
     struct wiphy* wiphy = cfg_to_wiphy(cfg);
-    //struct ieee80211_channel* notify_channel;
-    //struct cfg80211_bss* bss;
     struct ieee80211_supported_band* band;
     struct brcmu_chan ch;
     uint16_t channel;
-    uint32_t freq;
     uint16_t notify_capability;
     uint16_t notify_interval;
     uint8_t* notify_ie;
     size_t notify_ielen;
-    int32_t notify_signal;
+    int16_t notify_rssi_dbm;
 
     if (bi->length > WL_BSS_INFO_MAX) {
         brcmf_err("Bss info is larger than buffer. Discarding\n");
@@ -2566,34 +2620,24 @@ static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
         band = wiphy->bands[NL80211_BAND_5GHZ];
     }
 
-    brcmf_dbg(TEMP, " * * Setting freq to channel - fix this soon!");
-    freq = channel;
-    /*freq = ieee80211_channel_to_frequency(channel, band->band);
-    notify_channel = ieee80211_get_channel(wiphy, freq);*/
-
     notify_capability = bi->capability;
     notify_interval = bi->beacon_period;
     notify_ie = (uint8_t*)bi + bi->ie_offset;
     notify_ielen = bi->ie_length;
-    notify_signal = (int16_t)bi->RSSI * 100;
+    notify_rssi_dbm = (int16_t)bi->RSSI;
 
-    brcmf_dbg(CONN, "bssid: %pM\n", bi->BSSID);
-    brcmf_dbg(CONN, "Channel: %d(%d)\n", channel, freq);
-    brcmf_dbg(CONN, "Capability: %X\n", notify_capability);
-    brcmf_dbg(CONN, "Beacon interval: %d\n", notify_interval);
-    brcmf_dbg(CONN, "Signal: %d\n", notify_signal);
+    //brcmf_dbg(CONN, "bssid: %pM\n", bi->BSSID);
+    //brcmf_dbg(CONN, "Channel: %d\n", channel);
+    //brcmf_dbg(CONN, "Capability: %X\n", notify_capability);
+    //brcmf_dbg(CONN, "Beacon interval: %d\n", notify_interval);
+    //brcmf_dbg(CONN, "Signal: %d\n", notify_rssi_dbm);
 
-    brcmf_dbg(TEMP, " * * Got a scan result:");
-    brcmf_iedump(notify_ie, notify_ielen);
-    brcmf_dbg(TEMP, " * * Would have called cfg80211_inform_bss() and cfg80211_put_bss()");
-/*    bss = cfg80211_inform_bss(wiphy, notify_channel, CFG80211_BSS_FTYPE_UNKNOWN,
-                              (const uint8_t*)bi->BSSID, 0, notify_capability, notify_interval,
-                              notify_ie, notify_ielen, notify_signal);
-    if (!bss) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    //brcmf_dbg(TEMP, " * * Got a scan result:");
+    //brcmf_iedump(notify_ie, notify_ielen);
 
-    cfg80211_put_bss(wiphy, bss);*/
+    brcmf_return_scan_result(wiphy, (uint8_t)channel,
+                                (const uint8_t*)bi->BSSID, notify_capability, notify_interval,
+                                notify_ie, notify_ielen, notify_rssi_dbm);
 
     return ZX_OK;
 }
@@ -3045,7 +3089,11 @@ static zx_status_t brcmf_notify_sched_scan_results(struct brcmf_if* ifp,
     }
 
 out_err:
-    cfg80211_sched_scan_stopped(wiphy, 0);
+    if (wiphy->scan_busy) {
+        brcmf_dbg(TEMP, "out_err %d, signaling scan end", err);
+        brcmf_signal_scan_end(wiphy_to_ndev(wiphy), wiphy->scan_txn_id,
+                              WLAN_SCAN_RESULT_INTERNAL_ERROR);
+    }
 free_req:
     free(request);
     return err;
@@ -4824,7 +4872,37 @@ static void brcmf_if_stop(void* ctx) {
 }
 
 void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
+    struct net_device* ndev = ctx;
+    struct wiphy* wiphy = ndev_to_wiphy(ndev);
+    zx_status_t result;
+
     brcmf_dbg(TEMP, "Enter");
+    if (wiphy->scan_busy) {
+        brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
+    } else {
+        wiphy->scan_txn_id = req->txn_id;
+        wiphy->scan_busy = true;
+    }
+    struct cfg80211_scan_request request;
+    memset(&request, 0, sizeof(request));
+    struct ieee80211_channel channels[11];
+    memset(channels, 0, sizeof(channels));
+    request.n_channels = 11;
+    request.wdev = ndev_to_wdev(ndev);
+    for (int i = 0; i < 11; i++) {
+        // TODO(cphoenix): Fix this hack along with ieee80211_frequency_to_channel() hack
+        // in device.h
+        channels[i].center_freq = i+1;
+        channels[i].hw_value = i+1;
+        request.channels[i] = &channels[i];
+    }
+    brcmf_dbg(TEMP, "About to scan! Txn ID %lu wiphy %p", wiphy->scan_txn_id, wiphy);
+    result = brcmf_cfg80211_scan(wiphy, &request);
+    if (result != ZX_OK) {
+        brcmf_dbg(TEMP, "Couldn't start scan: %d %s", result, zx_status_get_string(result));
+        brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
+        wiphy->scan_busy = false;
+    }
 }
 
 void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
@@ -5991,8 +6069,6 @@ static zx_status_t brcmf_setup_wiphybands(struct wiphy* wiphy) {
         (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap", &txbf_bfr_cap);
     }
 
-    //wiphy = cfg_to_wiphy(cfg);
-    // TODO(cphoenix): Why did the Linux code reset wiphy here?
     for (i = 0; i < (int32_t)ARRAY_SIZE(wiphy->bands); i++) {
         band = wiphy->bands[i];
         if (band == NULL) {

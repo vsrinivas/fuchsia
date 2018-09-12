@@ -1295,24 +1295,6 @@ static const struct brcmf_bus_ops brcmf_usb_bus_ops = {
     .get_fwname = brcmf_usb_get_fwname,
 };
 
-// TODO(cphoenix): Remove the code inside TRY_TEMP_SCAN once we have an end-to-end integrated
-// system that can be tested. For now, uncomment the next line to test whether scanning works.
-//#define TRY_TEMP_SCAN
-#ifdef TRY_TEMP_SCAN
-#include "cfg80211.h" // Temp, for call to Scan
-
-static uint8_t* brcmf_fill_ie(uint8_t* ieptr, uint8_t ie_num, void* ie_data, size_t ie_len) {
-    if (ie_len > 255) {
-        brcmf_err("Length too big to fit IE: %ld", ie_len);
-        return ieptr;
-    }
-    ieptr[0] = ie_num;
-    ieptr[1] = ie_len;
-    memcpy(ieptr + 2, ie_data, ie_len);
-    return ieptr + 2 + ie_len;
-}
-#endif
-
 static zx_status_t brcmf_usb_bus_setup(struct brcmf_usbdev_info* devinfo) {
     zx_status_t ret;
 
@@ -1332,84 +1314,7 @@ static zx_status_t brcmf_usb_bus_setup(struct brcmf_usbdev_info* devinfo) {
     if (ret != ZX_OK) {
         goto fail;
     }
-#ifdef TRY_TEMP_SCAN
-    brcmf_dbg(TEMP, "Starting scan prepare");
-    PAUSE;
-    struct brcmf_bus* bus_if = dev_to_bus(devinfo->dev);
-    struct wiphy* wiphy = bus_if->drvr->config->wiphy;
-    struct cfg80211_scan_request request;
-    memset(&request, 0, sizeof(request));
-    struct ieee80211_channel channels[11];
-    memset(channels, 0, sizeof(channels));
-    request.n_channels = 11;
-    request.wdev = &bus_if->drvr->iflist[0]->vif->wdev;
-    struct net_device* ndev = bus_if->drvr->iflist[0]->ndev;
-    brcmf_dbg(TEMP, "About to netdev_open");
-    PAUSE;
-    brcmf_netdev_open(ndev);
-    brcmf_dbg(TEMP, "Survived netdev_open");
-    PAUSE;
-    for (int i = 0; i < 11; i++) {
-        // TODO(cphoenix): Fix this hack along with ieee80211_frequency_to_channel() hack
-        // in device.h
-        channels[i].center_freq = i+1;
-        channels[i].hw_value = i+1;
-        request.channels[i] = &channels[i];
-    }
-    brcmf_dbg(TEMP, "About to scan! Wiphy %p", wiphy);
-    PAUSE;
-    ret = brcmf_cfg80211_scan(wiphy, &request);
-    brcmf_dbg(TEMP, "Back from scan, ret %d. About to sleep 3 sec....", ret);
-    msleep(3000);
-    brcmf_dbg(TEMP, "Back from sleep.");
-    struct cfg80211_connect_params sme;
-    memset(&sme, 0, sizeof(sme));
-    uint8_t ssid[32] = "GoogleGuest-Legacy";
-    char ie_0[] = "GoogleGuest-Legacy";
-    brcmf_dbg(TEMP, "About to connect to '%s'", ssid);
-    sme.ssid = ssid;
-    sme.ssid_len = strlen((char*)ssid);
-    sme.auth_type = NL80211_AUTHTYPE_OPEN_SYSTEM;
-    uint8_t ie_1[] = {0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c};
-    uint8_t ie_50[] = {0x0c, 0x12, 0x18, 0x60};
-    sme.ie_len = strlen(ie_0) + sizeof(ie_1) + sizeof(ie_50) + 2 * 3;
-    sme.ie = malloc(sme.ie_len);
-    uint8_t* ieptr = sme.ie;
-    ieptr = brcmf_fill_ie(ieptr, 0, ie_0, strlen(ie_0));
-    ieptr = brcmf_fill_ie(ieptr, 1, ie_1, sizeof(ie_1));
-    ieptr = brcmf_fill_ie(ieptr, 50, ie_50, sizeof(ie_50));
-    brcmf_dbg(TEMP, "Here's the IEs I didn't send...");
-    brcmf_hexdump(sme.ie, sme.ie_len);
-    sme.ie = NULL;
-    sme.ie_len = 0;
-    /*
-    struct {
-        int wpa_versions;
-        int ciphers_pairwise[555];
-        int n_ciphers_pairwise;
-        int cipher_group;
-        int n_akm_suites;
-        int akm_suites[555];
-        uint8_t* psk;
-    } crypto;
-    uint8_t* ie;
-    int ie_len;
-    int privacy;
-    uint32_t key_len;
-    int key_idx;
-    void* key;
-    int want_1x;
-    struct ieee80211_channel* channel;
-    void* ssid;
-    int ssid_len;
-    uint8_t* bssid;
-    struct cfg80211_bss_selection bss_select;
-    */
-    brcmf_cfg80211_connect(wiphy, ndev, &sme);
-    brcmf_dbg(TEMP, "Back from connect, about to sleep 10 seconds....");
-    msleep(10000);
-    brcmf_dbg(TEMP, "Back from sleep, all done!");
-#endif // TRY_TEMP_SCAN
+
     return ZX_OK;
 fail:
     brcmf_detach(devinfo->dev);
