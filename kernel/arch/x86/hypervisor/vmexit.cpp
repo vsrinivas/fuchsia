@@ -952,14 +952,9 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
     if (guest_paddr >= gpas->size())
         return ZX_ERR_OUT_OF_RANGE;
 
-    // By default, we mark EPT PTEs as RWX. This is so we can avoid faulting
-    // again if the guest requests additional permissions, and so that we can
-    // avoid use of INVEPT.
-    constexpr uint pf_flags = VMM_PF_FLAG_HW_FAULT | VMM_PF_FLAG_WRITE | VMM_PF_FLAG_INSTRUCTION;
-    status = gpas->PageFault(guest_paddr, pf_flags);
+    status = gpas->PageFault(guest_paddr);
     if (status != ZX_OK) {
-        dprintf(CRITICAL, "Unhandled EPT violation %#lx\n",
-                exit_info.guest_physical_address);
+        dprintf(CRITICAL, "Unhandled EPT violation %#lx\n", exit_info.guest_physical_address);
     }
     return status;
 }

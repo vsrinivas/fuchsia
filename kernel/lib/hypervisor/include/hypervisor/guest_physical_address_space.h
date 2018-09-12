@@ -69,7 +69,7 @@ public:
     zx_status_t MapInterruptController(zx_gpaddr_t guest_paddr, zx_paddr_t host_paddr, size_t len);
     zx_status_t UnmapRange(zx_gpaddr_t guest_paddr, size_t len);
     zx_status_t GetPage(zx_gpaddr_t guest_paddr, zx_paddr_t* host_paddr);
-    zx_status_t PageFault(zx_gpaddr_t guest_paddr, uint flags);
+    zx_status_t PageFault(zx_gpaddr_t guest_paddr);
     zx_status_t CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len, const char* name,
                                GuestPtr* guest_ptr);
 

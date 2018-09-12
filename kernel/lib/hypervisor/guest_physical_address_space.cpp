@@ -7,11 +7,11 @@
 #include <hypervisor/guest_physical_address_space.h>
 
 #include <arch/mmu.h>
+#include <fbl/alloc_checker.h>
 #include <kernel/range_check.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/fault.h>
 #include <vm/vm_object_physical.h>
-#include <fbl/alloc_checker.h>
 
 static constexpr uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
 
@@ -136,8 +136,25 @@ zx_status_t GuestPhysicalAddressSpace::GetPage(zx_gpaddr_t guest_paddr, zx_paddr
     return vmo_locator.vmo->Lookup(offset, PAGE_SIZE, kPfFlags, guest_lookup_page, host_paddr);
 }
 
-zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr, uint flags) {
-    return guest_aspace_->PageFault(guest_paddr, flags);
+zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
+    fbl::RefPtr<VmAddressRegionOrMapping> region = RootVmar()->FindRegion(guest_paddr);
+    if (!region || !region->is_mapping()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+    // In order to avoid re-faulting if the guest changes how it accesses guest
+    // physical memory, and to avoid the need for invalidation of the guest
+    // physical address space on x86 (through the use of INVEPT), we fault the
+    // page with the maximum allowable permissions of the mapping.
+    fbl::RefPtr<VmMapping> mapping = region->as_vm_mapping();
+    uint pf_flags = VMM_PF_FLAG_HW_FAULT;
+    if (mapping->arch_mmu_flags() & ARCH_MMU_FLAG_PERM_WRITE) {
+      pf_flags |= VMM_PF_FLAG_WRITE;
+    }
+    if (mapping->arch_mmu_flags() & ARCH_MMU_FLAG_PERM_EXECUTE) {
+      pf_flags |= VMM_PF_FLAG_INSTRUCTION;
+    }
+    Guard<fbl::Mutex> guard{guest_aspace_->lock()};
+    return mapping->PageFault(guest_paddr, pf_flags);
 }
 
 zx_status_t GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len,

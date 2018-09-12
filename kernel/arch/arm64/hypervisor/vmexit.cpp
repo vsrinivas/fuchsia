@@ -239,18 +239,12 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t handle_page_fault(zx_vaddr_t guest_paddr,
-                                     hypervisor::GuestPhysicalAddressSpace* gpas) {
-    constexpr uint pf_flags = VMM_PF_FLAG_HW_FAULT | VMM_PF_FLAG_WRITE | VMM_PF_FLAG_INSTRUCTION;
-    return gpas->PageFault(guest_paddr, pf_flags);
-}
-
 static zx_status_t handle_instruction_abort(GuestState* guest_state,
                                             hypervisor::GuestPhysicalAddressSpace* gpas) {
-    zx_status_t status = handle_page_fault(guest_state->hpfar_el2, gpas);
+    const zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
+    zx_status_t status = gpas->PageFault(guest_paddr);
     if (status != ZX_OK) {
-        dprintf(CRITICAL, "Unhandled instruction abort %#lx\n",
-                guest_state->hpfar_el2);
+        dprintf(CRITICAL, "Unhandled instruction abort %#lx\n", guest_paddr);
     }
     return status;
 }
@@ -264,7 +258,7 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
     zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
     switch (status) {
     case ZX_ERR_NOT_FOUND:
-        status = handle_page_fault(guest_paddr, gpas);
+        status = gpas->PageFault(guest_paddr);
         if (status != ZX_OK) {
             dprintf(CRITICAL, "Unhandled data abort %#lx\n", guest_paddr);
         }
