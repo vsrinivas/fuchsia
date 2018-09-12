@@ -124,8 +124,8 @@ void ProcessBuilder::CloneNamespace() {
     fidl::VectorPtr<fuchsia::process::NameInfo> names;
     for (size_t i = 0; i < flat->count; ++i) {
       names.push_back(fuchsia::process::NameInfo{
-          .path = flat->path[i],
-          .directory = fidl::InterfaceHandle<fuchsia::io::Directory>(zx::channel(flat->handle[i])),
+          flat->path[i],
+          fidl::InterfaceHandle<fuchsia::io::Directory>(zx::channel(flat->handle[i])),
       });
     }
     launcher_->AddNames(std::move(names));
