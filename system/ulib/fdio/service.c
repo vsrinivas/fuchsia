@@ -113,3 +113,18 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
         return r;
     }
 }
+
+zx_handle_t __fdio_borrow_channel(fdio_t* io) {
+    if (io == NULL) {
+        return ZX_HANDLE_INVALID;
+    }
+
+    if (io->ops == &zx_svc_ops) {
+        zxsvc_t* svc = (zxsvc_t*) io;
+        return svc->h;
+    } else if (io->ops == &zx_remote_ops) {
+        zxrio_t* rio = (zxrio_t*) io;
+        return rio->h;
+    }
+    return ZX_HANDLE_INVALID;
+}

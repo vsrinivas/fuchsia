@@ -32,6 +32,13 @@ typedef struct fdio fdio_t;
 // If the fd does not exist, it returns NULL
 fdio_t* __fdio_fd_to_io(int fd);
 
+// Returns the handle corresponding to the underlying fdio,
+// if there is one. Returns ZX_HANDLE_INVALID otherwise.
+//
+// Since this handle is borrowed from the underlying fdio_t, it
+// is unsafe to close it or use it after __fdio_release is called.
+zx_handle_t __fdio_borrow_channel(fdio_t* io);
+
 // Releases a reference on a fdio_t.  Used to "return"
 // a fdio_t obtained from __fdio_fd_to_io() when you're
 // done with it.
