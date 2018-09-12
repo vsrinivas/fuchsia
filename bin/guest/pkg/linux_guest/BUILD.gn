@@ -10,22 +10,24 @@ linux_image = "$target_out_dir/linux/Image"
 action("block") {
   visibility = [ ":*" ]
   script = "check_image.sh"
+  depfile = "$target_out_dir/block.d"
   args = [
     rebase_path("images/${target_cpu}/disk.img", root_build_dir),
-    rebase_path(disk_image, root_build_dir)
+    rebase_path(disk_image, root_build_dir),
+    rebase_path(depfile, root_build_dir)
   ]
-  sources = ["images/${target_cpu}/disk.img"]
   outputs = [ disk_image ]
 }
 
 action("kernel") {
   visibility = [ ":*" ]
   script = "check_image.sh"
+  depfile = "$target_out_dir/kernel.d"
   args = [
     rebase_path("images/${target_cpu}/Image", root_build_dir),
-    rebase_path(linux_image, root_build_dir)
+    rebase_path(linux_image, root_build_dir),
+    rebase_path(depfile, root_build_dir)
   ]
-  sources = ["images/${target_cpu}/Image"]
   outputs = [ linux_image ]
 }
 
