@@ -7,34 +7,43 @@ use crate::configuration::ServerConfig;
 use crate::protocol::{self, ConfigOption, Message, MessageType, OpCode, OptionCode};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::net::Ipv4Addr;
-use fuchsia_zircon as zx;
+use std::ops::Fn;
 
 /// A minimal DHCP server.
 ///
 /// This comment will be expanded upon in future CLs as the server design
 /// is iterated upon.
-pub struct Server {
+pub struct Server<F>
+where
+    F: Fn() -> i64,
+{
     cache: CachedClients,
     pool: AddressPool,
     config: ServerConfig,
+    time_provider: F,
 }
 
-impl Server {
+impl<F> Server<F>
+where
+    F: Fn() -> i64,
+{
     /// Returns an initialized `Server` value.
-    pub fn new() -> Self {
+    pub fn new(time_provider: F) -> Server<F> {
         Server {
             cache: HashMap::new(),
             pool: AddressPool::new(),
             config: ServerConfig::new(),
+            time_provider: time_provider,
         }
     }
 
     /// Instantiates a `Server` value from the provided `ServerConfig`.
-    pub fn from_config(config: ServerConfig) -> Self {
+    pub fn from_config(config: ServerConfig, time_provider: F) -> Server<F> {
         let mut server = Server {
             cache: HashMap::new(),
             pool: AddressPool::new(),
             config: config,
+            time_provider: time_provider,
         };
         server.pool.load_pool(&server.config.managed_addrs);
         server
@@ -72,7 +81,7 @@ impl Server {
 
     fn get_addr(&mut self, client: &Message) -> Option<Ipv4Addr> {
         if let Some(config) = self.cache.get(&client.chaddr) {
-            if !config.expired() {
+            if !config.expired((self.time_provider)()) {
                 // Free cached address so that it can be reallocated to same client.
                 self.pool.free_addr(config.client_addr);
                 return Some(config.client_addr);
@@ -98,8 +107,7 @@ impl Server {
         let config = CachedConfig {
             client_addr: client_addr,
             options: client_opts,
-            expiration: zx::Time::get(zx::ClockId::UTC)
-                + zx::Duration::from_seconds(self.config.default_lease_time as i64),
+            expiration: (self.time_provider)() + self.config.default_lease_time as i64,
         };
         self.cache.insert(client_mac, config);
         self.pool.allocate_addr(client_addr);
@@ -116,12 +124,20 @@ impl Server {
 
     fn handle_request_selecting(&mut self, req: Message) -> Option<Message> {
         let requested_ip = req.ciaddr;
-        if !is_recipient(self.config.server_ip, &req)
-            || !is_assigned(&req, requested_ip, &self.cache, &self.pool)
-        {
+        if !is_recipient(self.config.server_ip, &req) || !self.is_assigned(&req, requested_ip) {
             return None;
         }
         Some(build_ack(req, requested_ip, &self.config))
+    }
+
+    fn is_assigned(&self, req: &Message, requested_ip: Ipv4Addr) -> bool {
+        if let Some(client_config) = self.cache.get(&req.chaddr) {
+            client_config.client_addr == requested_ip
+                && !client_config.expired((self.time_provider)())
+                && self.pool.addr_is_allocated(requested_ip)
+        } else {
+            false
+        }
     }
 
     fn handle_request_init_reboot(&mut self, req: Message) -> Option<Message> {
@@ -132,7 +148,7 @@ impl Server {
         if !is_client_mac_known(req.chaddr, &self.cache) {
             return None;
         }
-        if !is_assigned(&req, requested_ip, &self.cache, &self.pool) {
+        if !self.is_assigned(&req, requested_ip) {
             return Some(build_nak(req, &self.config));
         }
         Some(build_ack(req, requested_ip, &self.config))
@@ -140,7 +156,7 @@ impl Server {
 
     fn handle_request_renewing(&mut self, req: Message) -> Option<Message> {
         let client_ip = req.ciaddr;
-        if !is_assigned(&req, client_ip, &self.cache, &self.pool) {
+        if !self.is_assigned(&req, client_ip) {
             return None;
         }
         Some(build_ack(req, client_ip, &self.config))
@@ -148,9 +164,7 @@ impl Server {
 
     fn handle_decline(&mut self, dec: Message) -> Option<Message> {
         let declined_ip = get_requested_ip_addr(&dec)?;
-        if is_recipient(self.config.server_ip, &dec)
-            && !is_assigned(&dec, declined_ip, &self.cache, &self.pool)
-        {
+        if is_recipient(self.config.server_ip, &dec) && !self.is_assigned(&dec, declined_ip) {
             self.pool.allocate_addr(declined_ip);
         }
         self.cache.remove(&dec.chaddr);
@@ -176,11 +190,11 @@ impl Server {
     /// Releases all allocated IP addresses whose leases have expired back to
     /// the pool of addresses available for allocation.
     pub fn release_expired_leases(&mut self) {
-        let now = zx::Time::get(zx::ClockId::UTC);
+        let now = (self.time_provider)();
         let expired_clients: Vec<(MacAddr, Ipv4Addr)> = self
             .cache
             .iter()
-            .filter(|(_mac, config)| config.has_expired_after(now))
+            .filter(|(_mac, config)| config.expired(now))
             .map(|(mac, config)| (*mac, config.client_addr))
             .collect();
         // Expired client entries must be removed in a separate statement because otherwise we
@@ -206,7 +220,7 @@ type MacAddr = [u8; 6];
 struct CachedConfig {
     client_addr: Ipv4Addr,
     options: Vec<ConfigOption>,
-    expiration: zx::Time,
+    expiration: i64,
 }
 
 impl Default for CachedConfig {
@@ -214,18 +228,14 @@ impl Default for CachedConfig {
         CachedConfig {
             client_addr: Ipv4Addr::new(0, 0, 0, 0),
             options: vec![],
-            expiration: zx::Time::INFINITE,
+            expiration: std::i64::MAX,
         }
     }
 }
 
 impl CachedConfig {
-    fn expired(&self) -> bool {
-        self.expiration <= zx::Time::get(zx::ClockId::UTC)
-    }
-
-    fn has_expired_after(&self, t: zx::Time) -> bool {
-        self.expiration <= t
+    fn expired(&self, now: i64) -> bool {
+        self.expiration <= now
     }
 }
 
@@ -390,18 +400,6 @@ fn is_recipient(server_ip: Ipv4Addr, req: &Message) -> bool {
     false
 }
 
-fn is_assigned(
-    req: &Message, requested_ip: Ipv4Addr, cache: &CachedClients, pool: &AddressPool,
-) -> bool {
-    if let Some(client_config) = cache.get(&req.chaddr) {
-        client_config.client_addr == requested_ip
-            && !client_config.expired()
-            && pool.addr_is_allocated(requested_ip)
-    } else {
-        false
-    }
-}
-
 fn build_ack(req: Message, requested_ip: Ipv4Addr, config: &ServerConfig) -> Message {
     let mut ack = req;
     ack.op = OpCode::BOOTREPLY;
@@ -493,8 +491,11 @@ mod tests {
     use crate::protocol::{ConfigOption, Message, MessageType, OpCode, OptionCode};
     use std::net::Ipv4Addr;
 
-    fn new_test_server() -> Server {
-        let mut server = Server::new();
+    fn new_test_server<F>(time_provider: F) -> Server<F>
+    where
+        F: Fn() -> i64,
+    {
+        let mut server = Server::new(time_provider);
         server.config.server_ip = Ipv4Addr::new(192, 168, 1, 1);
         server.config.default_lease_time = 100;
         server.config.routers.push(Ipv4Addr::new(192, 168, 1, 1));
@@ -701,7 +702,7 @@ mod tests {
     fn test_dispatch_with_discover_returns_correct_response() {
         let disc = new_test_discover();
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let got = server.dispatch(disc).unwrap();
 
         let want = new_test_offer();
@@ -713,7 +714,7 @@ mod tests {
     fn test_dispatch_with_discover_updates_server_state() {
         let disc = new_test_discover();
         let mac_addr = disc.chaddr;
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let _ = server.dispatch(disc).unwrap();
 
         assert_eq!(server.pool.available_addrs.len(), 0);
@@ -726,7 +727,7 @@ mod tests {
     #[test]
     fn test_dispatch_with_discover_client_binding_returns_bound_addr() {
         let disc = new_test_discover();
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let mut client_config = CachedConfig::default();
         let client_addr = Ipv4Addr::new(192, 168, 1, 42);
         client_config.client_addr = client_addr;
@@ -744,10 +745,10 @@ mod tests {
     #[test]
     fn test_dispatch_with_discover_expired_client_binding_returns_available_old_addr() {
         let disc = new_test_discover();
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let mut client_config = CachedConfig::default();
         client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
-        client_config.expiration = zx::Time::from_nanos(0);
+        client_config.expiration = 0;
         server.cache.insert(disc.chaddr, client_config);
         server
             .pool
@@ -765,10 +766,10 @@ mod tests {
     #[test]
     fn test_dispatch_with_discover_unavailable_expired_client_binding_returns_new_addr() {
         let disc = new_test_discover();
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let mut client_config = CachedConfig::default();
         client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
-        client_config.expiration = zx::Time::from_nanos(0);
+        client_config.expiration = 0;
         server.cache.insert(disc.chaddr, client_config);
         server
             .pool
@@ -795,7 +796,7 @@ mod tests {
             value: vec![192, 168, 1, 3],
         });
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         server
             .pool
             .available_addrs
@@ -819,7 +820,7 @@ mod tests {
             value: vec![192, 168, 1, 42],
         });
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         server
             .pool
             .available_addrs
@@ -846,13 +847,13 @@ mod tests {
         req.ciaddr = requested_ip_addr;
         req.options.remove(0);
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         server.cache.insert(
             req.chaddr,
             CachedConfig {
                 client_addr: requested_ip_addr,
                 options: vec![],
-                expiration: zx::Time::INFINITE,
+                expiration: std::i64::MAX,
             },
         );
         server.pool.allocate_addr(requested_ip_addr);
@@ -869,7 +870,7 @@ mod tests {
         req.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
         req.options.remove(0);
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let got = server.dispatch(req);
 
         assert!(got.is_none());
@@ -882,13 +883,13 @@ mod tests {
         req.ciaddr = requested_ip_addr;
         req.options.remove(0);
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         server.cache.insert(
             req.chaddr,
             CachedConfig {
                 client_addr: requested_ip_addr,
                 options: vec![],
-                expiration: zx::Time::INFINITE,
+                expiration: std::i64::MAX,
             },
         );
         server.pool.allocate_addr(requested_ip_addr);
@@ -905,13 +906,13 @@ mod tests {
         req.ciaddr = requested_ip_addr;
         req.options.remove(0);
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         server.cache.insert(
             req.chaddr,
             CachedConfig {
                 client_addr: requested_ip_addr,
                 options: vec![],
-                expiration: zx::Time::INFINITE,
+                expiration: std::i64::MAX,
             },
         );
         server.pool.allocate_addr(requested_ip_addr);
@@ -928,7 +929,7 @@ mod tests {
         req.ciaddr = requested_ip_addr;
         req.options.remove(0);
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let _ = server.dispatch(req.clone());
 
         assert!(!server.cache.contains_key(&req.chaddr));
@@ -941,13 +942,13 @@ mod tests {
         req.options.remove(2);
         let requested_ip_addr = get_requested_ip_addr(&req).unwrap();
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         server.cache.insert(
             req.chaddr,
             CachedConfig {
                 client_addr: requested_ip_addr,
                 options: vec![],
-                expiration: zx::Time::INFINITE,
+                expiration: std::i64::MAX,
             },
         );
         server.pool.allocate_addr(requested_ip_addr);
@@ -967,14 +968,14 @@ mod tests {
             value: vec![192, 168, 1, 42],
         });
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let assigned_ip = Ipv4Addr::new(192, 168, 1, 2);
         server.cache.insert(
             req.chaddr,
             CachedConfig {
                 client_addr: assigned_ip,
                 options: vec![],
-                expiration: zx::Time::INFINITE,
+                expiration: std::i64::MAX,
             },
         );
         server.pool.allocate_addr(assigned_ip);
@@ -989,7 +990,7 @@ mod tests {
         let mut req = new_test_request();
         req.options.remove(2);
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let got = server.dispatch(req);
 
         assert!(got.is_none());
@@ -1005,7 +1006,7 @@ mod tests {
             value: vec![10, 0, 0, 1],
         });
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let got = server.dispatch(req).unwrap();
 
         let want = new_test_nak();
@@ -1020,13 +1021,13 @@ mod tests {
         let client_ip = Ipv4Addr::new(192, 168, 1, 2);
         req.ciaddr = client_ip;
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         server.cache.insert(
             req.chaddr,
             CachedConfig {
                 client_addr: client_ip,
                 options: vec![],
-                expiration: zx::Time::INFINITE,
+                expiration: std::i64::MAX,
             },
         );
         server.pool.allocate_addr(client_ip);
@@ -1045,7 +1046,7 @@ mod tests {
         let client_ip = Ipv4Addr::new(192, 168, 1, 2);
         req.ciaddr = client_ip;
 
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let got = server.dispatch(req);
 
         assert!(got.is_none());
@@ -1096,14 +1097,14 @@ mod tests {
 
     #[test]
     fn test_release_expired_leases_with_none_expired_releases_none() {
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         server.pool.available_addrs.clear();
         server.cache.insert(
             [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 2),
                 options: vec![],
-                expiration: zx::Time::INFINITE,
+                expiration: std::i64::MAX,
             },
         );
         server
@@ -1115,7 +1116,7 @@ mod tests {
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 3),
                 options: vec![],
-                expiration: zx::Time::INFINITE,
+                expiration: std::i64::MAX,
             },
         );
         server
@@ -1127,7 +1128,7 @@ mod tests {
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 4),
                 options: vec![],
-                expiration: zx::Time::INFINITE,
+                expiration: std::i64::MAX,
             },
         );
         server
@@ -1144,14 +1145,14 @@ mod tests {
 
     #[test]
     fn test_release_expired_leases_with_all_expired_releases_all() {
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         server.pool.available_addrs.clear();
         server.cache.insert(
             [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 2),
                 options: vec![],
-                expiration: zx::Time::from_nanos(0),
+                expiration: 0,
             },
         );
         server
@@ -1163,7 +1164,7 @@ mod tests {
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 3),
                 options: vec![],
-                expiration: zx::Time::from_nanos(0),
+                expiration: 0,
             },
         );
         server
@@ -1175,7 +1176,7 @@ mod tests {
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 4),
                 options: vec![],
-                expiration: zx::Time::from_nanos(0),
+                expiration: 0,
             },
         );
         server
@@ -1192,14 +1193,14 @@ mod tests {
 
     #[test]
     fn test_release_expired_leases_with_some_expired_releases_expired() {
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         server.pool.available_addrs.clear();
         server.cache.insert(
             [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 2),
                 options: vec![],
-                expiration: zx::Time::INFINITE,
+                expiration: std::i64::MAX,
             },
         );
         server
@@ -1211,7 +1212,7 @@ mod tests {
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 3),
                 options: vec![],
-                expiration: zx::Time::from_nanos(0),
+                expiration: 0,
             },
         );
         server
@@ -1223,7 +1224,7 @@ mod tests {
             CachedConfig {
                 client_addr: Ipv4Addr::new(192, 168, 1, 4),
                 options: vec![],
-                expiration: zx::Time::INFINITE,
+                expiration: std::i64::MAX,
             },
         );
         server
@@ -1246,14 +1247,14 @@ mod tests {
     #[test]
     fn test_dispatch_with_known_release() {
         let release = new_test_release();
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let client_ip = Ipv4Addr::new(192, 168, 1, 2);
         server.pool.allocate_addr(client_ip);
         let client_mac = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
         let client_config = CachedConfig {
             client_addr: client_ip,
             options: vec![],
-            expiration: zx::Time::INFINITE,
+            expiration: std::i64::MAX,
         };
         server.cache.insert(client_mac, client_config.clone());
 
@@ -1282,14 +1283,14 @@ mod tests {
     #[test]
     fn test_dispatch_with_unknown_release() {
         let release = new_test_release();
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let client_ip = Ipv4Addr::new(192, 168, 1, 2);
         server.pool.allocate_addr(client_ip);
         let cached_mac = [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA];
         let client_config = CachedConfig {
             client_addr: client_ip,
             options: vec![],
-            expiration: zx::Time::INFINITE,
+            expiration: std::i64::MAX,
         };
         server.cache.insert(cached_mac, client_config.clone());
 
@@ -1318,11 +1319,11 @@ mod tests {
     #[test]
     fn test_dispatch_with_inform_returns_ack() {
         let inform = new_test_inform();
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
 
         let got = server.dispatch(inform).unwrap();
 
-        let mut want = new_test_inform_ack();
+        let want = new_test_inform_ack();
 
         assert_eq!(got, want, "expected: {:?}\ngot: {:?}", want, got);
     }
@@ -1330,13 +1331,13 @@ mod tests {
     #[test]
     fn test_dispatch_with_decline_marks_addr_allocated() {
         let decline = new_test_decline();
-        let mut server = new_test_server();
+        let mut server = new_test_server(|| 42);
         let already_used_ip = Ipv4Addr::new(192, 168, 1, 2);
         server.config.managed_addrs.push(already_used_ip);
         let client_config = CachedConfig {
             client_addr: already_used_ip,
             options: vec![],
-            expiration: zx::Time::INFINITE,
+            expiration: std::i64::MAX,
         };
         server.cache.insert(decline.chaddr, client_config);
 

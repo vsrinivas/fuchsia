@@ -636,7 +636,7 @@ mod tests {
         let result = ConfigOption::from_buffer(&buf);
         match result {
             Some(_) => assert!(false), // test failure
-            None => assert!(true),       // test success
+            None => assert!(true),     // test success
         }
     }
 
@@ -646,7 +646,7 @@ mod tests {
         let result = ConfigOption::from_buffer(&buf);
         match result {
             Some(_) => assert!(false), // test failure
-            None => assert!(true),       // test success
+            None => assert!(true),     // test success
         }
     }
 

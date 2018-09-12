@@ -17,7 +17,7 @@ use {
         Interval,
         net::UdpSocket,
     },
-    fuchsia_zircon::DurationNum,
+    fuchsia_zircon::{self as zx, DurationNum},
     futures::{Future, StreamExt, TryFutureExt, TryStreamExt},
     getopts::Options,
     std::{
@@ -42,7 +42,9 @@ fn main() -> Result<(), Error> {
     let server_ip = config.server_ip;
     let socket_addr = SocketAddr::new(IpAddr::V4(server_ip), SERVER_PORT);
     let udp_socket = UdpSocket::bind(&socket_addr).context("unable to bind socket")?;
-    let server = Mutex::new(Server::from_config(config));
+    let server = Mutex::new(Server::from_config(config, || { 
+        zx::Time::get(zx::ClockId::UTC).nanos() / 1_000_000_000
+    }));
     let msg_handling_loop = define_msg_handling_loop_future(udp_socket, &server);
     let lease_expiration_handler = define_lease_expiration_handler_future(&server);
 
@@ -72,8 +74,8 @@ fn get_server_config_file_path() -> Result<String, Error> {
 }
 
 enum Never {}
-async fn define_msg_handling_loop_future(
-    sock: UdpSocket, server: &Mutex<Server>,
+async fn define_msg_handling_loop_future<F: Fn() -> i64>(
+    sock: UdpSocket, server: &Mutex<Server<F>>,
 ) -> Result<Never, Error> {
     let mut buf = vec![0u8; BUF_SZ];
     loop {
@@ -97,8 +99,8 @@ async fn define_msg_handling_loop_future(
     }
 }
 
-fn define_lease_expiration_handler_future<'a>(
-    server: &'a Mutex<Server>,
+fn define_lease_expiration_handler_future<'a, F: Fn() -> i64>(
+    server: &'a Mutex<Server<F>>,
 ) -> impl Future<Output = Result<(), Error>> + 'a {
     let expiration_interval = Interval::new(EXPIRATION_INTERVAL_SECS.seconds());
     expiration_interval
@@ -106,5 +108,6 @@ fn define_lease_expiration_handler_future<'a>(
             println!("dhcpd: interval timer fired");
             server.lock().unwrap().release_expired_leases();
             println!("dhcpd: expired leases released");
-        }).map(|_| Ok(())).try_collect::<()>()
+        }).map(|_| Ok(()))
+        .try_collect::<()>()
 }
