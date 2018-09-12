@@ -104,9 +104,7 @@ static zx_status_t setup_bootfs_vmo(uint32_t n, uint32_t type, zx_handle_t vmo) 
         zx_handle_close(bootfs_vmo);
     }
     if (type == BOOTDATA_BOOTFS_SYSTEM) {
-        // TODO(abarth): Uncomment this line when we're ready to make /system
-        // read only.
-        // systemfs_set_readonly(getenv("zircon.system.writable") == NULL);
+        systemfs_set_readonly(getenv("zircon.system.writable") == NULL);
     }
     return ZX_OK;
 }
