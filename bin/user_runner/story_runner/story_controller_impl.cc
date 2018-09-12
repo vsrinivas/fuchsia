@@ -1569,9 +1569,11 @@ void StoryControllerImpl::InitStoryEnvironment() {
   FXL_DCHECK(!story_environment_)
       << "Story scope already running for story_id = " << story_id_;
 
+  static const auto* const kEnvServices = new std::vector<std::string>{
+      fuchsia::modular::ContextWriter::Name_};
   story_environment_ = std::make_unique<Environment>(
       story_provider_impl_->user_environment(),
-      kStoryEnvironmentLabelPrefix + story_id_.get());
+      kStoryEnvironmentLabelPrefix + story_id_.get(), *kEnvServices);
   story_environment_->AddService<fuchsia::modular::ContextWriter>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
         intelligence_services_->GetContextWriter(std::move(request));

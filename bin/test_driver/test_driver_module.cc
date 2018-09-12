@@ -11,7 +11,6 @@
 #include <lib/fdio/util.h>
 #include <lib/fsl/vmo/strings.h>
 
-#include "lib/svc/cpp/service_provider_bridge.h"
 #include "peridot/bin/test_driver/defs.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/reporting.h"
@@ -86,18 +85,10 @@ class TestApp {
   }
 
   bool CreateNestedEnv() {
-    zx::channel h1, h2;
-    if (zx::channel::create(0, &h1, &h2) < 0) {
-      modular::testing::Fail("Unable to create env.");
-      Signal(modular::testing::kTestShutdown);
-      return false;
-    }
-    module_host_->startup_context()->environment()->GetDirectory(std::move(h1));
-    service_provider_bridge_.set_backing_dir(std::move(h2));
     module_host_->startup_context()->environment()->CreateNestedEnvironment(
         test_driver_env_.NewRequest(), /*controller=*/nullptr, kSubModuleName,
-        service_provider_bridge_.OpenAsDirectory(),
-        /*additional_services=*/nullptr, /*inherit_parent_services=*/false);
+        zx::channel(), /*additional_services=*/nullptr,
+        /*inherit_parent_services=*/true);
     return true;
   }
 
@@ -153,7 +144,6 @@ class TestApp {
 
   modular::ModuleHost* const module_host_;
 
-  component::ServiceProviderBridge service_provider_bridge_;
   component::Services test_driver_services_;
   fuchsia::modular::LinkPtr link_;
   fuchsia::sys::EnvironmentPtr test_driver_env_;

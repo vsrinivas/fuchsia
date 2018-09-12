@@ -7,14 +7,17 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
+#include <fbl/ref_ptr.h>
+#include <fs/pseudo-dir.h>
+#include <fs/service.h>
+#include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <lib/svc/cpp/service_provider_bridge.h>
 
 namespace modular {
 
@@ -23,14 +26,21 @@ namespace modular {
 class Environment {
  public:
   Environment(const fuchsia::sys::EnvironmentPtr& parent_env,
-              const std::string& label);
+              const std::string& label,
+              const std::vector<std::string>& service_names);
 
-  Environment(const Environment* parent_scope, const std::string& label);
+  Environment(const Environment* parent_scope, const std::string& label,
+              const std::vector<std::string>& service_names);
 
   template <typename Interface>
   void AddService(fidl::InterfaceRequestHandler<Interface> handler,
                   const std::string& service_name = Interface::Name_) {
-    service_provider_bridge_.AddService(std::move(handler), service_name);
+    auto service = fbl::AdoptRef(new fs::Service(
+        [this, handler = std::move(handler)](zx::channel channel) {
+      handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+      return ZX_OK;
+    }));
+    services_dir_->AddEntry(service_name, service);
   }
 
   fuchsia::sys::Launcher* GetLauncher();
@@ -38,13 +48,17 @@ class Environment {
   const fuchsia::sys::EnvironmentPtr& environment() const { return env_; }
 
  private:
-  void InitEnvironment(const fuchsia::sys::EnvironmentPtr& parent_env,
-                       const std::string& label);
+  zx::channel OpenAsDirectory();
 
-  component::ServiceProviderBridge service_provider_bridge_;
+  void InitEnvironment(const fuchsia::sys::EnvironmentPtr& parent_env,
+                       const std::string& label,
+                       const std::vector<std::string>& service_names);
+
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::LauncherPtr env_launcher_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
+  fs::SynchronousVfs vfs_;
+  fbl::RefPtr<fs::PseudoDir> services_dir_;
 };
 
 }  // namespace modular

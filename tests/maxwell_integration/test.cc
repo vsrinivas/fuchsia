@@ -4,6 +4,8 @@
 
 #include "peridot/tests/maxwell_integration/test.h"
 
+#include <lib/fxl/logging.h>
+
 namespace maxwell {
 
 MaxwellTestBase::MaxwellTestBase() : loop_(&kAsyncLoopConfigAttachToThread) {

@@ -240,9 +240,12 @@ void UserRunnerImpl::InitializeUser(
   account_ = std::move(account);
   AtEnd(Reset(&account_));
 
+  static const auto* const kEnvServices = new std::vector<std::string>{
+      fuchsia::modular::DeviceMap::Name_, fuchsia::modular::Clipboard::Name_};
   user_environment_ = std::make_unique<Environment>(
       startup_context_->environment(),
-      std::string(kUserEnvironmentLabelPrefix) + GetAccountId(account_));
+      std::string(kUserEnvironmentLabelPrefix) + GetAccountId(account_),
+      *kEnvServices);
   AtEnd(Reset(&user_environment_));
 }
 
@@ -326,8 +329,11 @@ void UserRunnerImpl::InitializeLedger() {
 void UserRunnerImpl::InitializeLedgerDashboard() {
   if (test_)
     return;
+  static const auto* const kEnvServices = new std::vector<std::string>{
+      fuchsia::ledger::internal::LedgerRepositoryDebug::Name_};
   ledger_dashboard_environment_ = std::make_unique<Environment>(
-      user_environment_->environment(), std::string(kLedgerDashboardEnvLabel));
+      user_environment_->environment(), std::string(kLedgerDashboardEnvLabel),
+      *kEnvServices);
   AtEnd(Reset(&ledger_dashboard_environment_));
 
   ledger_dashboard_environment_->AddService<
