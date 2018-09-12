@@ -197,6 +197,8 @@ const char* RegisterCategoryTypeToString(RegisterCategory::Type type) {
       return "Floating Point";
     case RegisterCategory::Type::kVector:
       return "Vector";
+    case RegisterCategory::Type::kDebug:
+      return "Debug";
     case RegisterCategory::Type::kMisc:
       return "Miscellaneous";
   }
@@ -207,10 +209,10 @@ const char* RegisterIDToString(RegisterID id) {
     case RegisterID::kUnknown:
       break;
 
-      // ARMv8
-      // -------------------------------------------------------------------
+    // ARMv8
+    // -------------------------------------------------------------------
 
-      // General purpose.
+    // General purpose.
 
     case RegisterID::kARMv8_x0:
       return "x0";
@@ -281,9 +283,9 @@ const char* RegisterIDToString(RegisterID id) {
     case RegisterID::kARMv8_cpsr:
       return "cpsr";
 
-      // FP (none defined for ARM64).
+    // FP (none defined for ARM64).
 
-      // Vector.
+    // Vector.
 
     case RegisterID::kARMv8_fpcr:
       return "fpcr";
@@ -355,10 +357,10 @@ const char* RegisterIDToString(RegisterID id) {
     case RegisterID::kARMv8_v31:
       return "v31";
 
-      // x64
-      // ---------------------------------------------------------------------
+    // x64
+    // ---------------------------------------------------------------------
 
-      // General purpose.
+    // General purpose.
 
     case RegisterID::kX64_rax:
       return "rax";
@@ -397,7 +399,7 @@ const char* RegisterIDToString(RegisterID id) {
     case RegisterID::kX64_rflags:
       return "rflags";
 
-      // FP.
+    // FP.
 
     case RegisterID::kX64_fcw:
       return "fcw";
@@ -429,7 +431,7 @@ const char* RegisterIDToString(RegisterID id) {
     case RegisterID::kX64_st7:
       return "st7";
 
-      // Vector.
+    // Vector.
 
     case RegisterID::kX64_mxcsr:
       return "mxcsr";
@@ -502,7 +504,22 @@ const char* RegisterIDToString(RegisterID id) {
     case RegisterID::kX64_ymm15:
       return "ymm15";
 
-      // TODO(donosoc): Add support for AVX-512 when zircon supports it.
+    // TODO(donosoc): Add support for AVX-512 when zircon supports it.
+
+    // Debug.
+
+    case RegisterID::kX64_dr0:
+      return "dr0";
+    case RegisterID::kX64_dr1:
+      return "dr1";
+    case RegisterID::kX64_dr2:
+      return "dr2";
+    case RegisterID::kX64_dr3:
+      return "dr3";
+    case RegisterID::kX64_dr6:
+      return "dr6";
+    case RegisterID::kX64_dr7:
+      return "dr7";
   }
 
   FXL_NOTREACHED() << "Unknown register requested.";

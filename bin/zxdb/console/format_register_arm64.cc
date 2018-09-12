@@ -76,7 +76,7 @@ Err FormatCPSR(const Register& cpsr, TextForegroundColor color,
 
   // Get the custom formatting.
   OutputBuffer cpsr_out(fxl::StringPrintf(
-      "V = %d, C = %d, Z = %d, N = %d", FLAG_VALUE(value, kCpsrVShift, 0x1),
+      "V=%d, C=%d, Z=%d, N=%d", FLAG_VALUE(value, kCpsrVShift, 0x1),
       FLAG_VALUE(value, kCpsrCShift, 0x1), FLAG_VALUE(value, kCpsrZShift, 0x1),
       FLAG_VALUE(value, kCpsrNShift, 0x1)));
   // TODO(donosoc): Implement system formatting when we enable

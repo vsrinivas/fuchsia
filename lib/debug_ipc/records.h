@@ -154,6 +154,7 @@ struct RegisterCategory {
     kGeneral,
     kFloatingPoint,
     kVector,
+    kDebug,
     kMisc,  // Grabbing bag for other vectors
   };
   Type type = Type::kMisc;

@@ -55,6 +55,12 @@ inline Err PushFP(const Register& reg, TextForegroundColor color,
   return Err();
 }
 
+// Function used for interleaving color, for easier reading of a table.
+TextForegroundColor GetRowColor(size_t table_len) {
+  return table_len % 2 == 0 ? TextForegroundColor::kDefault
+                            : TextForegroundColor::kLightGray;
+}
+
 // Format General Registers -----------------------------------------------------
 
 constexpr int kRflagsCarryFlagShift = 0;
@@ -132,8 +138,7 @@ Err FormatGeneralRegisters(const std::vector<Register>& registers,
   OutputBuffer rflags_out;
   std::vector<std::vector<OutputBuffer>> rows;
   for (const Register& reg : registers) {
-    auto color = rows.size() % 2 == 0 ? TextForegroundColor::kDefault
-                                      : TextForegroundColor::kLightGray;
+    auto color = GetRowColor(rows.size());
     // We still want to output the hex value.
     Err err;
     if (reg.id() == RegisterID::kX64_rflags) {
@@ -153,7 +158,7 @@ Err FormatGeneralRegisters(const std::vector<Register>& registers,
     auto colspecs =
         std::vector<ColSpec>({ColSpec(Align::kLeft, 0, "Name"),
                               ColSpec(Align::kLeft, 0, "Value", 1)});
-    FormatTable(colspecs, rows, out);
+    FormatTable(std::move(colspecs), rows, out);
   }
   if (!rflags_out.empty())
     out->Append(std::move(rflags_out));
@@ -204,8 +209,7 @@ Err FormatFPRegisters(const std::vector<Register>& registers,
       const auto& reg = *control_registers[i];
       rows.emplace_back();
       auto& row = rows[i];
-      auto color = rows.size() % 2 == 1 ? TextForegroundColor::kDefault
-                                        : TextForegroundColor::kLightGray;
+      auto color = GetRowColor(rows.size());
 
       Err err;
       switch (reg.id()) {
@@ -240,10 +244,9 @@ Err FormatFPRegisters(const std::vector<Register>& registers,
     for (size_t i = 0; i < value_registers.size(); i++) {
       const auto& reg = *value_registers[i];
       rows.emplace_back();
+      auto color = GetRowColor(rows.size());
       auto& row = rows[i];
       row.reserve(3);
-      auto color = rows.size() % 2 == 1 ? TextForegroundColor::kDefault
-                                        : TextForegroundColor::kLightGray;
       PushName(reg, color, &row);
       Err err = PushFP(reg, color, &row);
       if (!err.ok())
@@ -263,6 +266,142 @@ Err FormatFPRegisters(const std::vector<Register>& registers,
   return Err();
 }
 
+// Format Debug Registers -------------------------------------------------------
+
+constexpr int kDr6B0Shift = 0;
+constexpr int kDr6B1Shift = 1;
+constexpr int kDr6B2Shift = 2;
+constexpr int kDr6B3Shift = 3;
+constexpr int kDr6BDShidt = 13;
+constexpr int kDr6BSShidt = 14;
+constexpr int kDr6BTShidt = 15;
+
+Err FormatDr6(const Register& dr6, TextForegroundColor color,
+              std::vector<OutputBuffer>* row) {
+  PushName(dr6, color, row);
+  Err err = PushHex(dr6, color, row, 4);
+  if (!err.ok())
+    return err;
+
+  uint64_t value = dr6.GetValue();
+  OutputBuffer dr6_out(fxl::StringPrintf(
+      "B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d",
+      FLAG_VALUE(value, kDr6B0Shift, 1), FLAG_VALUE(value, kDr6B1Shift, 1),
+      FLAG_VALUE(value, kDr6B2Shift, 1), FLAG_VALUE(value, kDr6B3Shift, 1),
+      FLAG_VALUE(value, kDr6BDShidt, 1), FLAG_VALUE(value, kDr6BSShidt, 1),
+      FLAG_VALUE(value, kDr6BTShidt, 1)));
+  dr6_out.SetForegroundColor(color);
+  row->push_back(std::move(dr6_out));
+  return Err();
+}
+
+constexpr int kDr7L0Shift = 0;
+constexpr int kDr7G0Shift = 1;
+constexpr int kDr7L1Shift = 2;
+constexpr int kDr7G1Shift = 3;
+constexpr int kDr7L2Shift = 4;
+constexpr int kDr7G2Shift = 5;
+constexpr int kDr7L3Shift = 6;
+constexpr int kDr7G3Shift = 7;
+constexpr int kDr7LEShift = 8;
+constexpr int kDr7GEShift = 9;
+constexpr int kDr7GDShift = 13;
+constexpr int kDr7RW0Shift = 16;
+constexpr int kDr7LEN0Shift = 18;
+constexpr int kDr7RW1Shift = 20;
+constexpr int kDr7LEN1Shift = 22;
+constexpr int kDr7RW2Shift = 24;
+constexpr int kDr7LEN2Shift = 26;
+constexpr int kDr7RW3Shift = 28;
+constexpr int kDr7LEN3Shift = 30;
+
+// NOTE: This function receives the table because it will append another row.
+Err FormatDr7(const Register& dr7,
+              std::vector<std::vector<OutputBuffer>>* rows) {
+  uint64_t value = dr7.GetValue();
+  rows->emplace_back();
+  // The same color for both rows.
+  auto color = GetRowColor(rows->size());
+  auto& row = rows->back();
+  row.reserve(3);
+  PushName(dr7, color, &row);
+  Err err = PushHex(dr7, color, &row, 4);
+  if (!err.ok())
+    return err;
+  OutputBuffer dr7_out(fxl::StringPrintf(
+      "L0=%d, G0=%d, L1=%d, G1=%d, L2=%d, G2=%d, L3=%d, G4=%d, LE=%d, GE=%d, "
+      "GD=%d",
+      FLAG_VALUE(value, kDr7L0Shift, 1), FLAG_VALUE(value, kDr7G0Shift, 1),
+      FLAG_VALUE(value, kDr7L1Shift, 1), FLAG_VALUE(value, kDr7G1Shift, 1),
+      FLAG_VALUE(value, kDr7L2Shift, 1), FLAG_VALUE(value, kDr7G2Shift, 1),
+      FLAG_VALUE(value, kDr7L3Shift, 1), FLAG_VALUE(value, kDr7G3Shift, 1),
+      FLAG_VALUE(value, kDr7LEShift, 1), FLAG_VALUE(value, kDr7GEShift, 1),
+      FLAG_VALUE(value, kDr7GDShift, 1)));
+  dr7_out.SetForegroundColor(color);
+  row.push_back(std::move(dr7_out));
+
+  /* // We push the second row. */
+  rows->emplace_back();
+  auto& row2 = rows->back();
+  row2.reserve(3);
+  row2.emplace_back();
+  row2.emplace_back();
+  dr7_out = OutputBuffer(fxl::StringPrintf(
+      "R/W0=%d, LEN0=%d, R/W1=%d, LEN1=%d, R/W2=%d, LEN2=%d, R/W3=%d, LEN3=%d",
+      FLAG_VALUE(value, kDr7RW0Shift, 2), FLAG_VALUE(value, kDr7LEN0Shift, 2),
+      FLAG_VALUE(value, kDr7RW1Shift, 2), FLAG_VALUE(value, kDr7LEN1Shift, 2),
+      FLAG_VALUE(value, kDr7RW2Shift, 2), FLAG_VALUE(value, kDr7LEN2Shift, 2),
+      FLAG_VALUE(value, kDr7RW3Shift, 2), FLAG_VALUE(value, kDr7LEN3Shift, 2)));
+  dr7_out.SetForegroundColor(color);
+  row2.emplace_back(std::move(dr7_out));
+  return Err();
+}
+
+Err FormatDebugRegisters(const std::vector<Register>& registers,
+                         OutputBuffer* out) {
+  // dr[0-3] and dr[6-7] have different formats, so get separate tables.
+  std::vector<std::vector<OutputBuffer>> dr03_rows;
+  std::vector<std::vector<OutputBuffer>> dr67_rows;
+
+  for (const Register& reg : registers) {
+    // We do special formatting for dr6/dr7
+    if (reg.id() == RegisterID::kX64_dr6) {
+      dr67_rows.emplace_back();
+      auto color = GetRowColor(dr67_rows.size());
+      Err err = FormatDr6(reg, color, &dr67_rows.back());
+      if (!err.ok())
+        return err;
+    } else if (reg.id() == RegisterID::kX64_dr7) {
+      // Dr7 adds two lines.
+      Err err = FormatDr7(reg, &dr67_rows);
+      if (!err.ok())
+        return err;
+    } else {
+      // Generic formatting for now.
+      dr03_rows.emplace_back();
+      auto color = GetRowColor(dr03_rows.size());
+      Err err = FormatGenericRow(reg, color, &dr03_rows.back());
+      if (!err.ok())
+        return err;
+    }
+  }
+
+  // Output each table if needed.
+  if (!dr03_rows.empty()) {
+    auto colspecs =
+        std::vector<ColSpec>({ColSpec(Align::kLeft, 0, "Name"),
+                              ColSpec(Align::kLeft, 0, "Value", 1)});
+    FormatTable(std::move(colspecs), dr03_rows, out);
+  }
+  if (!dr67_rows.empty()) {
+    auto colspecs = std::vector<ColSpec>(
+        {ColSpec(Align::kLeft, 0, "Name"), ColSpec(Align::kLeft, 0, "Raw", 1),
+         ColSpec(Align::kLeft, 0, "Value", 1)});
+    FormatTable(std::move(colspecs), dr67_rows, out);
+  }
+  return Err();
+}
+
 }  // namespace
 
 bool FormatCategoryX64(debug_ipc::RegisterCategory::Type category,
@@ -274,6 +413,9 @@ bool FormatCategoryX64(debug_ipc::RegisterCategory::Type category,
       return true;
     case RegisterCategory::Type::kFloatingPoint:
       *err = FormatFPRegisters(registers, out);
+      return true;
+    case RegisterCategory::Type::kDebug:
+      *err = FormatDebugRegisters(registers, out);
       return true;
     default:
       return false;

@@ -691,8 +691,6 @@ Examples
 
 // Switches
 constexpr int kRegsCategoriesSwitch = 1;
-const std::vector<std::string> kRegsCategoriesValues = {"general", "fp",
-                                                        "vector", "all"};
 
 void OnRegsComplete(const Err& cmd_err, const RegisterSet& register_set,
                     const std::string& search_regexp,
@@ -746,6 +744,7 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
       cats_to_show = {debug_ipc::RegisterCategory::Type::kGeneral,
                       debug_ipc::RegisterCategory::Type::kFloatingPoint,
                       debug_ipc::RegisterCategory::Type::kVector,
+                      debug_ipc::RegisterCategory::Type::kDebug,
                       debug_ipc::RegisterCategory::Type::kMisc};
     } else if (option == "general") {
       cats_to_show = {RegisterCategory::Type::kGeneral};
@@ -753,6 +752,8 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
       cats_to_show = {RegisterCategory::Type::kFloatingPoint};
     } else if (option == "vector") {
       cats_to_show = {RegisterCategory::Type::kVector};
+    } else if (option == "debug") {
+      cats_to_show = {RegisterCategory::Type::kDebug};
     } else {
       return Err(fxl::StringPrintf("Unknown category: %s", option.c_str()));
     }

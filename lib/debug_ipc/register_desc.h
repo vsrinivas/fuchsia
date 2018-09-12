@@ -183,6 +183,17 @@ enum class RegisterID : uint32_t {
   kX64_ymm15 = 2415,
 
   // TODO(donosoc): Add AVX-512 support.
+
+  // Debug.
+
+  kX64_dr0 = 2500,
+  kX64_dr1 = 2501,
+  kX64_dr2 = 2502,
+  kX64_dr3 = 2503,
+  // dr4 is reserved.
+  // dr5 is reserved.
+  kX64_dr6 = 2506,
+  kX64_dr7 = 2507
 };
 
 }  // namespace debug_ipc

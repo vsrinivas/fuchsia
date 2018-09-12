@@ -138,6 +138,25 @@ inline zx_status_t ReadVectorRegs(const zx::thread& thread,
   return ZX_OK;
 }
 
+inline zx_status_t ReadDebugRegs(const zx::thread& thread,
+                                 std::vector<debug_ipc::Register>* out) {
+  zx_thread_state_debug_regs_t debug_regs;
+  zx_status_t status = thread.read_state(ZX_THREAD_STATE_DEBUG_REGS,
+                                         &debug_regs, sizeof(debug_regs));
+  if (status != ZX_OK)
+    return status;
+
+  out->push_back(CreateRegister(RegisterID::kX64_dr0, 8u, &debug_regs.dr[0]));
+  out->push_back(CreateRegister(RegisterID::kX64_dr1, 8u, &debug_regs.dr[1]));
+  out->push_back(CreateRegister(RegisterID::kX64_dr2, 8u, &debug_regs.dr[2]));
+  out->push_back(CreateRegister(RegisterID::kX64_dr3, 8u, &debug_regs.dr[3]));
+
+  out->push_back(CreateRegister(RegisterID::kX64_dr6, 8u, &debug_regs.dr6_status));
+  out->push_back(CreateRegister(RegisterID::kX64_dr7, 8u, &debug_regs.dr7_control));
+
+  return ZX_OK;
+}
+
 }  // namespace
 
 bool GetRegisterStateFromCPU(const zx::thread& thread,
@@ -161,6 +180,13 @@ bool GetRegisterStateFromCPU(const zx::thread& thread,
   cats->push_back({debug_ipc::RegisterCategory::Type::kVector, {}});
   auto& vec_category = cats->back();
   if (ReadVectorRegs(thread, &vec_category.registers) != ZX_OK) {
+    cats->clear();
+    return false;
+  }
+
+  cats->push_back({debug_ipc::RegisterCategory::Type::kDebug, {}});
+  auto& debug_category = cats->back();
+  if (ReadDebugRegs(thread, &debug_category.registers) != ZX_OK) {
     cats->clear();
     return false;
   }
