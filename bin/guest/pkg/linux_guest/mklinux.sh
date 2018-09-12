@@ -29,6 +29,8 @@ while getopts "b:d:l:o:" OPT; do
 done
 shift $((OPTIND - 1))
 
+declare -r LINUX_DIR=${LINUX_DIR:-/tmp/linux}
+
 case "${1}" in
 arm64)
   type aarch64-linux-gnu-gcc ||
@@ -46,29 +48,31 @@ x64)
   usage;;
 esac
 
-declare -r LINUX_DIR=${LINUX_DIR:-/tmp/linux}
-declare -r LINUX_BRANCH=${LINUX_BRANCH:-machina}
+if [ -n "${LINUX_BRANCH}" ]; then
+  # Shallow clone the repository.
+  if [ ! -d "${LINUX_DIR}/.git" ]; then
+    git clone --depth 1 --branch "${LINUX_BRANCH}" https://zircon-guest.googlesource.com/third_party/linux "${LINUX_DIR}"
+  fi
 
-# Shallow clone the repository.
-if [ ! -d "${LINUX_DIR}/.git" ]; then
-  git clone --depth 1 --branch "${LINUX_BRANCH}" https://zircon-guest.googlesource.com/third_party/linux "${LINUX_DIR}"
-fi
-
-# Update the repository.
-pushd "${LINUX_DIR}"
-if [[ `git branch --list ${LINUX_BRANCH} ` ]]; then
-  git checkout ${LINUX_BRANCH}
-  git pull --depth 1 origin ${LINUX_BRANCH}
-else
-  git fetch --depth 1 origin ${LINUX_BRANCH}:${LINUX_BRANCH}
-  git checkout ${LINUX_BRANCH}
+  # Update the repository.
+  pushd "${LINUX_DIR}"
+  if [[ `git branch --list ${LINUX_BRANCH} ` ]]; then
+    git checkout ${LINUX_BRANCH}
+    git pull --depth 1 origin ${LINUX_BRANCH}
+  else
+    git fetch --depth 1 origin ${LINUX_BRANCH}:${LINUX_BRANCH}
+    git checkout ${LINUX_BRANCH}
+  fi
+  popd
 fi
 
 # Build Linux.
+pushd "${LINUX_DIR}"
 make machina_defconfig
 make -j $(getconf _NPROCESSORS_ONLN)
 popd
 
 if [ -n "${LINUX_OUT}" ]; then
+  mkdir -p $(dirname "${LINUX_OUT}")
   mv "${LINUX_IMAGE}" "${LINUX_OUT}"
 fi

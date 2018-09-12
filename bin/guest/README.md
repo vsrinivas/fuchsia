@@ -21,9 +21,12 @@ Where `${ARCH}` is one of `x64` or `arm64`.
 ### Note for external developers
 The linux_guest package expects the Linux kernel binaries to be in `garnet/bin/guest/pkg/linux_guest/`, you should create them before running `fx full-build` by running the following scripts:
 ```
-$ ./garnet/bin/guest/pkg/linux_guest/mklinux.sh -l /tmp/linux/source -o garnet/bin/guest/pkg/linux_guest/images/${ARCH}/Image ${ARCH}
+$ ./garnet/bin/guest/pkg/linux_guest/mklinux.sh -l /tmp/linux/source -o garnet/bin/guest/pkg/linux_guest/images/${ARCH}/Image -b machina-4.18 ${ARCH}
 $ ./garnet/bin/guest/pkg/linux_guest/mksysroot.sh -r -p garnet/bin/guest/pkg/linux_guest/images/${ARCH}/disk.img -d /tmp/toybox -s /tmp/dash S{ARCH}
 ```
+
+Note: `-b` specifies the branch of zircon_guest to use. You can modify this
+value if you need a different version or omit it to use a local version.
 
 ## Running guests
 After netbooting the target device, to run Zircon:
