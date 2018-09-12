@@ -33,7 +33,8 @@ SECTIONS {
         KEEP(*(.text))
     } :load_image
 
-    IMAGE_RESERVE_END = IMAGE_MEMORY_END + IMAGE_RESERVE_SIZE;
+    IMAGE_RESERVE_END = IMAGE_MEMORY_END +
+        (DEFINED(IMAGE_RESERVE_SIZE) ? IMAGE_RESERVE_SIZE : 0);
 
     /*
      * When a boot loader is actually using the ELF headers, it needs to
