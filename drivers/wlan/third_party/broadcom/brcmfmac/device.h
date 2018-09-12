@@ -171,6 +171,9 @@ struct brcmf_firmware {
     void* data;
 };
 
+// Used in net_device.flags to indicate interface is up.
+#define IFF_UP 1
+
 struct net_device {
     struct wireless_dev* ieee80211_ptr;
     bool initialized_for_ap;

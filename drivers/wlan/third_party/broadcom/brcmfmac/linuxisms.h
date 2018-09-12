@@ -205,8 +205,6 @@ LINUX_FUNCVI(cfg80211_check_combinations)
 LINUX_FUNCVI(cfg80211_disconnected)
 LINUX_FUNCVI(cfg80211_roamed)
 LINUX_FUNCVI(cfg80211_connect_done)
-LINUX_FUNCVV(cfg80211_inform_bss)
-LINUX_FUNCVV(cfg80211_put_bss)
 LINUX_FUNCVV(cfg80211_new_sta)
 LINUX_FUNCVV(cfg80211_del_sta)
 LINUX_FUNCVV(cfg80211_ibss_joined)
@@ -336,8 +334,6 @@ enum {
     CFG80211_BSS_FTYPE_UNKNOWN,
     WLAN_CAPABILITY_IBSS,
     UPDATE_ASSOC_IES,
-    WLAN_STATUS_SUCCESS,
-    WLAN_STATUS_AUTH_TIMEOUT,
     IEEE80211_HT_CAP_SGI_40,
     IEEE80211_HT_CAP_SUP_WIDTH_20_40,
     IEEE80211_HT_CAP_DSSSCCK40,
@@ -374,9 +370,7 @@ enum {
     NET_NETBUF_PAD,
     IFF_PROMISC,
     NETDEV_TX_OK,
-    IFF_UP,
     NETIF_F_IP_CSUM,
-    NETREG_REGISTERED,
     CHECKSUM_PARTIAL,
     CHECKSUM_UNNECESSARY,
     BRCMF_H2D_TXFLOWRING_MAX_ITEM,
@@ -574,7 +568,7 @@ struct vif_params {
 
 struct wireless_dev {
     struct net_device* netdev;
-    int iftype;
+    uint16_t iftype;
     uint8_t address[ETH_ALEN];
     struct wiphy* wiphy;
     struct brcmf_cfg80211_info* cfg80211_info;
@@ -710,42 +704,6 @@ struct cfg80211_ibss_params {
     uint8_t* ie;
     int ie_len;
     int basic_rates;
-};
-
-struct cfg80211_bss_selection {
-    int behaviour;
-    struct {
-        int band_pref;
-        struct {
-            int band;
-            int delta;
-        } adjust;
-    } param;
-};
-
-struct cfg80211_connect_params {
-    struct {
-        int wpa_versions;
-        int ciphers_pairwise[555];
-        int n_ciphers_pairwise;
-        int cipher_group;
-        int n_akm_suites;
-        int akm_suites[555];
-        uint8_t* psk;
-    } crypto;
-    int auth_type;
-    uint8_t* ie;
-    int ie_len;
-    int privacy;
-    uint32_t key_len;
-    int key_idx;
-    void* key;
-    int want_1x;
-    struct ieee80211_channel* channel;
-    uint8_t* ssid;
-    int ssid_len;
-    uint8_t* bssid;
-    struct cfg80211_bss_selection bss_select;
 };
 
 struct key_params {
@@ -917,15 +875,6 @@ struct cfg80211_ops { // Most of these return zx_status_t
 
 struct cfg80211_roam_info {
     struct ieee80211_channel* channel;
-    uint8_t* bssid;
-    void* req_ie;
-    int req_ie_len;
-    void* resp_ie;
-    int resp_ie_len;
-};
-
-struct cfg80211_connect_resp_params {
-    int status;
     uint8_t* bssid;
     void* req_ie;
     int req_ie_len;

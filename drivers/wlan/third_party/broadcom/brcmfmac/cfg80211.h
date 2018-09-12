@@ -436,10 +436,7 @@ void brcmf_free_net_device_vif(struct net_device* ndev);
 
 zx_status_t brcmf_phy_create_iface(void* ctx, uint16_t role, uint16_t* iface_id);
 
-// TODO(cphoenix): These three are temporary, for hard-coded testing in usb.c
-zx_status_t brcmf_cfg80211_scan(struct wiphy* wiphy, struct cfg80211_scan_request* request);
-zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
-                                   struct cfg80211_connect_params* sme);
+// TODO: Move to core.h
 zx_status_t brcmf_netdev_open(struct net_device* ndev);
 
 #endif /* BRCMFMAC_CFG80211_H */

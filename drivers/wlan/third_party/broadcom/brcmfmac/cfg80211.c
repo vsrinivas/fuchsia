@@ -196,7 +196,7 @@ struct parsed_vndr_ies {
     struct parsed_vndr_ie_info ie_info[VNDR_IE_PARSE_LIMIT];
 };
 
-static uint8_t nl80211_band_to_fwil(enum nl80211_band band) {
+uint8_t nl80211_band_to_fwil(enum nl80211_band band) {
     switch (band) {
     case NL80211_BAND_2GHZ:
         return WLC_BAND_2G;
@@ -336,7 +336,7 @@ static struct brcmf_vs_tlv* brcmf_find_wpaie(const uint8_t* parse, uint32_t len)
     return NULL;
 }
 
-static struct brcmf_vs_tlv* brcmf_find_wpsie(const uint8_t* parse, uint32_t len) {
+struct brcmf_vs_tlv* brcmf_find_wpsie(const uint8_t* parse, uint32_t len) {
     const struct brcmf_tlv* ie;
 
     while ((ie = brcmf_parse_tlvs(parse, len, WLAN_EID_VENDOR_SPECIFIC))) {
@@ -1324,20 +1324,13 @@ static zx_status_t brcmf_cfg80211_leave_ibss(struct wiphy* wiphy, struct net_dev
     return ZX_OK;
 }
 
-static zx_status_t brcmf_set_wpa_version(struct net_device* ndev,
-                                         struct cfg80211_connect_params* sme) {
+static zx_status_t brcmf_set_wpa_version_disabled(struct net_device* ndev) {
     struct brcmf_cfg80211_profile* profile = ndev_to_prof(ndev);
     struct brcmf_cfg80211_security* sec;
     int32_t val = 0;
     zx_status_t err = ZX_OK;
 
-    if (sme->crypto.wpa_versions & NL80211_WPA_VERSION_1) {
-        val = WPA_AUTH_PSK | WPA_AUTH_UNSPECIFIED;
-    } else if (sme->crypto.wpa_versions & NL80211_WPA_VERSION_2) {
-        val = WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED;
-    } else {
-        val = WPA_AUTH_DISABLED;
-    }
+    val = WPA_AUTH_DISABLED;
     brcmf_dbg(CONN, "setting wpa_auth to 0x%0x\n", val);
     err = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "wpa_auth", val);
     if (err != ZX_OK) {
@@ -1345,31 +1338,15 @@ static zx_status_t brcmf_set_wpa_version(struct net_device* ndev,
         return err;
     }
     sec = &profile->sec;
-    sec->wpa_versions = sme->crypto.wpa_versions;
+    sec->wpa_versions = 0;
     return err;
 }
 
-static zx_status_t brcmf_set_auth_type(struct net_device* ndev,
-                                       struct cfg80211_connect_params* sme) {
+static zx_status_t brcmf_set_auth_type_open(struct net_device* ndev) {
     struct brcmf_cfg80211_profile* profile = ndev_to_prof(ndev);
     struct brcmf_cfg80211_security* sec;
     int32_t val = 0;
     zx_status_t err = ZX_OK;
-
-    switch (sme->auth_type) {
-    case NL80211_AUTHTYPE_OPEN_SYSTEM:
-        val = 0;
-        brcmf_dbg(CONN, "open system\n");
-        break;
-    case NL80211_AUTHTYPE_SHARED_KEY:
-        val = 1;
-        brcmf_dbg(CONN, "shared key\n");
-        break;
-    default:
-        val = 2;
-        brcmf_dbg(CONN, "automatic, auth type (%d)\n", sme->auth_type);
-        break;
-    }
 
     err = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "auth", val);
     if (err != ZX_OK) {
@@ -1377,68 +1354,17 @@ static zx_status_t brcmf_set_auth_type(struct net_device* ndev,
         return err;
     }
     sec = &profile->sec;
-    sec->auth_type = sme->auth_type;
+    sec->auth_type = 0;
     return err;
 }
 
-static zx_status_t brcmf_set_wsec_mode(struct net_device* ndev,
-                                       struct cfg80211_connect_params* sme) {
+static zx_status_t brcmf_set_wsec_mode_zero(struct net_device* ndev) {
     struct brcmf_cfg80211_profile* profile = ndev_to_prof(ndev);
     struct brcmf_cfg80211_security* sec;
-    int32_t pval = 0;
-    int32_t gval = 0;
     int32_t wsec;
     zx_status_t err = ZX_OK;
 
-    if (sme->crypto.n_ciphers_pairwise) {
-        switch (sme->crypto.ciphers_pairwise[0]) {
-        case WLAN_CIPHER_SUITE_WEP40:
-        case WLAN_CIPHER_SUITE_WEP104:
-            pval = WEP_ENABLED;
-            break;
-        case WLAN_CIPHER_SUITE_TKIP:
-            pval = TKIP_ENABLED;
-            break;
-        case WLAN_CIPHER_SUITE_CCMP:
-            pval = AES_ENABLED;
-            break;
-        case WLAN_CIPHER_SUITE_AES_CMAC:
-            pval = AES_ENABLED;
-            break;
-        default:
-            brcmf_err("invalid cipher pairwise (%d)\n", sme->crypto.ciphers_pairwise[0]);
-            return ZX_ERR_INVALID_ARGS;
-        }
-    }
-    if (sme->crypto.cipher_group) {
-        switch (sme->crypto.cipher_group) {
-        case WLAN_CIPHER_SUITE_WEP40:
-        case WLAN_CIPHER_SUITE_WEP104:
-            gval = WEP_ENABLED;
-            break;
-        case WLAN_CIPHER_SUITE_TKIP:
-            gval = TKIP_ENABLED;
-            break;
-        case WLAN_CIPHER_SUITE_CCMP:
-            gval = AES_ENABLED;
-            break;
-        case WLAN_CIPHER_SUITE_AES_CMAC:
-            gval = AES_ENABLED;
-            break;
-        default:
-            brcmf_err("invalid cipher group (%d)\n", sme->crypto.cipher_group);
-            return ZX_ERR_INVALID_ARGS;
-        }
-    }
-
-    brcmf_dbg(CONN, "pval (%d) gval (%d)\n", pval, gval);
-    /* In case of privacy, but no security and WPS then simulate */
-    /* setting AES. WPS-2.0 allows no security                   */
-    if (brcmf_find_wpsie(sme->ie, sme->ie_len) && !pval && !gval && sme->privacy) {
-        pval = AES_ENABLED;
-    }
-
-    wsec = pval | gval;
+    wsec = 0;
     err = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "wsec", wsec);
     if (err != ZX_OK) {
         brcmf_err("error (%d)\n", err);
@@ -1446,12 +1372,12 @@ static zx_status_t brcmf_set_wsec_mode(struct net_device* ndev,
     }
 
     sec = &profile->sec;
-    sec->cipher_pairwise = sme->crypto.ciphers_pairwise[0];
-    sec->cipher_group = sme->crypto.cipher_group;
+    sec->cipher_pairwise = 0;
+    sec->cipher_group = 0;
 
     return err;
 }
-
+#ifdef FIGURE_THIS_OUT_LATER
 static zx_status_t brcmf_set_key_mgmt(struct net_device* ndev,
                                       struct cfg80211_connect_params* sme) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
@@ -1636,75 +1562,30 @@ static zx_status_t brcmf_set_sharedkey(struct net_device* ndev,
     }
     return err;
 }
+#endif // FIGURE_THIS_OUT_LATER
 
-static enum nl80211_auth_type brcmf_war_auth_type(struct brcmf_if* ifp,
-        enum nl80211_auth_type type) {
-    if (type == NL80211_AUTHTYPE_AUTOMATIC &&
-            brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_AUTO_AUTH)) {
-        brcmf_dbg(CONN, "WAR: use OPEN instead of AUTO\n");
-        type = NL80211_AUTHTYPE_OPEN_SYSTEM;
-    }
-    return type;
+static void brcmf_set_join_pref(struct brcmf_if* ifp, wlanif_join_req_t* req) {
+    // TODO(cphoenix): Do we ever want to do this?
+    brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_ASSOC_PREFER, WLC_BAND_AUTO);
+    brcmf_c_set_joinpref_default(ifp); // This sets "join_pref" iovar.
 }
 
-static void brcmf_set_join_pref(struct brcmf_if* ifp, struct cfg80211_bss_selection* bss_select) {
-    struct brcmf_join_pref_params join_pref_params[2];
-    enum nl80211_band band;
-    zx_status_t err;
-    int i = 0;
+static void brcmf_return_join_result(struct net_device* ndev, uint8_t join_result_code) {
+    wlanif_join_confirm_t result;
 
-    join_pref_params[i].len = 2;
-    join_pref_params[i].rssi_gain = 0;
-
-    if (bss_select->behaviour != NL80211_BSS_SELECT_ATTR_BAND_PREF) {
-        brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_ASSOC_PREFER, WLC_BAND_AUTO);
-    }
-
-    switch (bss_select->behaviour) {
-    case __NL80211_BSS_SELECT_ATTR_INVALID:
-        brcmf_c_set_joinpref_default(ifp);
-        return;
-    case NL80211_BSS_SELECT_ATTR_BAND_PREF:
-        join_pref_params[i].type = BRCMF_JOIN_PREF_BAND;
-        band = bss_select->param.band_pref;
-        join_pref_params[i].band = nl80211_band_to_fwil(band);
-        i++;
-        break;
-    case NL80211_BSS_SELECT_ATTR_RSSI_ADJUST:
-        join_pref_params[i].type = BRCMF_JOIN_PREF_RSSI_DELTA;
-        band = bss_select->param.adjust.band;
-        join_pref_params[i].band = nl80211_band_to_fwil(band);
-        join_pref_params[i].rssi_gain = bss_select->param.adjust.delta;
-        i++;
-        break;
-    case NL80211_BSS_SELECT_ATTR_RSSI:
-    default:
-        break;
-    }
-    join_pref_params[i].type = BRCMF_JOIN_PREF_RSSI;
-    join_pref_params[i].len = 2;
-    join_pref_params[i].rssi_gain = 0;
-    join_pref_params[i].band = 0;
-    err = brcmf_fil_iovar_data_set(ifp, "join_pref", join_pref_params, sizeof(join_pref_params));
-    if (err != ZX_OK) {
-        brcmf_err("Set join_pref error (%d)\n", err);
-    }
+    result.result_code = join_result_code;
+    ndev->if_callbacks->join_conf(ndev->if_callback_cookie, &result);
 }
 
 zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
-                                          struct cfg80211_connect_params* sme) {
+                                   wlanif_join_req_t* req) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_if* ifp = ndev_to_if(ndev);
-    struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
-    struct ieee80211_channel* chan = sme->channel;
     struct brcmf_join_params join_params;
     size_t join_params_size;
-    const struct brcmf_tlv* rsn_ie;
-    const struct brcmf_vs_tlv* wpa_ie;
     const void* ie;
     uint32_t ie_len;
     struct brcmf_ext_join_params_le* ext_join_params;
-    uint16_t chanspec;
     zx_status_t err = ZX_OK;
     uint32_t ssid_len;
 
@@ -1713,15 +1594,17 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
         return ZX_ERR_IO;
     }
 
-    if (!sme->ssid) {
-        brcmf_err("Invalid ssid\n");
-        return ZX_ERR_NOT_FOUND;
-    }
-
     if (ifp->vif == cfg->p2p.bss_idx[P2PAPI_BSSCFG_PRIMARY].vif) {
         /* A normal (non P2P) connection request setup. */
         ie = NULL;
         ie_len = 0;
+#ifdef TODO_LATER
+        // TODO(cphoenix): WPA info used to arrive in IEs in the sme data structure.
+        // When we start connecting to secured networks, we'll need to extract it at the
+        // proper time -- and maybe that means giving the join command later on in the
+        // call sequence. I'm leaving this section in for now, for reference, to show that
+        // the "wpaie" fil_iovar really was an IE. (For unprotected networks, there was no
+        // IE, so setting NULL/0 is the correct behavior for now.)
         /* find the WPA_IE */
         wpa_ie = brcmf_find_wpaie((uint8_t*)sme->ie, sme->ie_len);
         if (wpa_ie) {
@@ -1735,10 +1618,11 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
                 ie_len = rsn_ie->len + TLV_HDR_LEN;
             }
         }
+#endif // TODO_LATER
         brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len);
     }
 
-    err = brcmf_vif_set_mgmt_ie(ifp->vif, BRCMF_VNDR_IE_ASSOCREQ_FLAG, sme->ie, sme->ie_len);
+    err = brcmf_vif_set_mgmt_ie(ifp->vif, BRCMF_VNDR_IE_ASSOCREQ_FLAG, NULL, 0); //sme->ie, sme->ie_len);
     if (err != ZX_OK) {
         brcmf_err("Set Assoc REQ IE Failed\n");
     } else {
@@ -1747,37 +1631,27 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
 
     brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
 
-    if (chan) {
-        cfg->channel = ieee80211_frequency_to_channel(chan->center_freq);
-        chanspec = channel_to_chanspec(&cfg->d11inf, chan);
-        brcmf_dbg(CONN, "channel=%d, center_req=%d, chanspec=0x%04x\n", cfg->channel,
-                  chan->center_freq, chanspec);
-    } else {
-        cfg->channel = 0;
-        chanspec = 0;
-    }
+    cfg->channel = 0;
 
-    brcmf_dbg(INFO, "ie (%p), ie_len (%zd)\n", sme->ie, (ssize_t)sme->ie_len);
-
-    err = brcmf_set_wpa_version(ndev, sme);
+    err = brcmf_set_wpa_version_disabled(ndev); // wpa_auth
     if (err != ZX_OK) {
         brcmf_err("wl_set_wpa_version failed (%d)\n", err);
         goto done;
     }
 
-    sme->auth_type = brcmf_war_auth_type(ifp, sme->auth_type);
-    err = brcmf_set_auth_type(ndev, sme);
+    err = brcmf_set_auth_type_open(ndev); // TODO(cphoenix): Correct this for PSK if necessary
     if (err != ZX_OK) {
         brcmf_err("wl_set_auth_type failed (%d)\n", err);
         goto done;
     }
 
-    err = brcmf_set_wsec_mode(ndev, sme);
+    err = brcmf_set_wsec_mode_zero(ndev); // wsec
     if (err != ZX_OK) {
         brcmf_err("wl_set_set_cipher failed (%d)\n", err);
         goto done;
     }
 
+#ifdef FIGURE_THIS_OUT_LATER
     err = brcmf_set_key_mgmt(ndev, sme);
     if (err != ZX_OK) {
         brcmf_err("wl_set_key_mgmt failed (%d)\n", err);
@@ -1814,24 +1688,22 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
             goto done;
         }
     }
-
+#endif // FIGURE_THIS_OUT_LATER
     /* Join with specific BSSID and cached SSID
      * If SSID is zero join based on BSSID only
      */
     join_params_size = offsetof(struct brcmf_ext_join_params_le, assoc_le) +
                        offsetof(struct brcmf_assoc_params_le, chanspec_list);
-    if (cfg->channel) {
-        join_params_size += sizeof(uint16_t);
-    }
     ext_join_params = calloc(1, join_params_size);
     if (ext_join_params == NULL) {
         err = ZX_ERR_NO_MEMORY;
         goto done;
     }
-    ssid_len = min_t(uint32_t, sme->ssid_len, IEEE80211_MAX_SSID_LEN);
+    ssid_len = min_t(uint32_t, req->selected_bss.ssid.len, IEEE80211_MAX_SSID_LEN);
     ext_join_params->ssid_le.SSID_len = ssid_len;
-    memcpy(&ext_join_params->ssid_le.SSID, sme->ssid, ssid_len);
+    memcpy(&ext_join_params->ssid_le.SSID, req->selected_bss.ssid.data, ssid_len);
     if (ssid_len < IEEE80211_MAX_SSID_LEN) {
+        ext_join_params->ssid_le.SSID[ssid_len] = '\0';
         brcmf_dbg(CONN, "SSID \"%s\", len (%d)\n", ext_join_params->ssid_le.SSID, ssid_len);
     }
 
@@ -1839,35 +1711,13 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
     ext_join_params->scan_le.scan_type = -1;
     ext_join_params->scan_le.home_time = -1;
 
-    if (sme->bssid) {
-        memcpy(&ext_join_params->assoc_le.bssid, sme->bssid, ETH_ALEN);
-    } else {
-        fill_with_broadcast_addr(ext_join_params->assoc_le.bssid);
-    }
+    memcpy(&ext_join_params->assoc_le.bssid, req->selected_bss.bssid, ETH_ALEN);
 
-    if (cfg->channel) {
-        ext_join_params->assoc_le.chanspec_num = 1;
+    ext_join_params->scan_le.active_time = -1;
+    ext_join_params->scan_le.passive_time = -1;
+    ext_join_params->scan_le.nprobes = -1;
 
-        ext_join_params->assoc_le.chanspec_list[0] = chanspec;
-        /* Increase dwell time to receive probe response or detect
-         * beacon from target AP at a noisy air only during connect
-         * command.
-         */
-        ext_join_params->scan_le.active_time = BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS;
-        ext_join_params->scan_le.passive_time = BRCMF_SCAN_JOIN_PASSIVE_DWELL_TIME_MS;
-        /* To sync with presence period of VSDB GO send probe request
-         * more frequently. Probe request will be stopped when it gets
-         * probe response from target AP/GO.
-         */
-        ext_join_params->scan_le.nprobes =
-            BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS / BRCMF_SCAN_JOIN_PROBE_INTERVAL_MS;
-    } else {
-        ext_join_params->scan_le.active_time = -1;
-        ext_join_params->scan_le.passive_time = -1;
-        ext_join_params->scan_le.nprobes = -1;
-    }
-
-    brcmf_set_join_pref(ifp, &sme->bss_select);
+    brcmf_set_join_pref(ifp, req); // join_pref
 
     err = brcmf_fil_bsscfg_data_set(ifp, "join", ext_join_params, join_params_size);
     free(ext_join_params);
@@ -1880,28 +1730,24 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
     memset(&join_params, 0, sizeof(join_params));
     join_params_size = sizeof(join_params.ssid_le);
 
-    memcpy(&join_params.ssid_le.SSID, sme->ssid, ssid_len);
+    memcpy(&join_params.ssid_le.SSID, req->selected_bss.ssid.data, ssid_len);
     join_params.ssid_le.SSID_len = ssid_len;
 
-    if (sme->bssid) {
-        memcpy(join_params.params_le.bssid, sme->bssid, ETH_ALEN);
-    } else {
-        fill_with_broadcast_addr(join_params.params_le.bssid);
-    }
+    memcpy(join_params.params_le.bssid, req->selected_bss.bssid, ETH_ALEN);
 
-    if (cfg->channel) {
-        join_params.params_le.chanspec_list[0] = chanspec;
-        join_params.params_le.chanspec_num = 1;
-        join_params_size += sizeof(join_params.params_le);
-    }
     err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, join_params_size);
     if (err != ZX_OK) {
         brcmf_err("BRCMF_C_SET_SSID failed (%d)\n", err);
     }
 
+    // TODO(cphoenix): Find where the delayed join is handled, and report result there.
+
 done:
     if (err != ZX_OK) {
         brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+        brcmf_dbg(TEMP, "Doing early brcmf_return_join_result, err %d %s", err,
+                  zx_status_get_string(err));
+        brcmf_return_join_result(ndev, WLAN_JOIN_RESULT_FAILURE_TIMEOUT);
     }
     brcmf_dbg(TRACE, "Exit, err %s\n", zx_status_get_string(err));
     return err;
@@ -4698,6 +4544,7 @@ static zx_status_t brcmf_cfg80211_tdls_oper(struct wiphy* wiphy, struct net_devi
     return ret;
 }
 
+#if 0
 static zx_status_t brcmf_cfg80211_update_conn_params(struct wiphy* wiphy, struct net_device* ndev,
         struct cfg80211_connect_params* sme, uint32_t changed) {
     struct brcmf_if* ifp;
@@ -4717,6 +4564,7 @@ static zx_status_t brcmf_cfg80211_update_conn_params(struct wiphy* wiphy, struct
 
     return err;
 }
+#endif
 
 #ifdef CONFIG_PM
 static zx_status_t brcmf_cfg80211_set_rekey_data(struct wiphy* wiphy, struct net_device* ndev,
@@ -4810,7 +4658,7 @@ static struct cfg80211_ops brcmf_cfg80211_ops = {
     .crit_proto_start = brcmf_cfg80211_crit_proto_start,
     .crit_proto_stop = brcmf_cfg80211_crit_proto_stop,
     .tdls_oper = brcmf_cfg80211_tdls_oper,
-    .update_connect_params = brcmf_cfg80211_update_conn_params,
+//    .update_connect_params = brcmf_cfg80211_update_conn_params,
     .set_pmk = brcmf_cfg80211_set_pmk,
     .del_pmk = brcmf_cfg80211_del_pmk,
 };
@@ -4906,12 +4754,32 @@ void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
 }
 
 void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
+    struct net_device* ndev = ctx;
+    struct wiphy* wiphy = ndev_to_wiphy(ndev);
+
     brcmf_dbg(TEMP, "Enter, ssid %.*s, bssid %lx", req->selected_bss.ssid.len,
               req->selected_bss.ssid.data, *(uint64_t*)(req->selected_bss.bssid) & 0xffffffffffff);
+    brcmf_cfg80211_connect(wiphy, ndev, req);
 }
 
 void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
+    struct net_device* ndev = ctx;
+    struct brcmf_if* ifp = ndev_to_if(ndev);
+    struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
+    wlanif_auth_confirm_t response;
+
     brcmf_dbg(TEMP, "Enter");
+    response.result_code = WLAN_AUTH_RESULT_SUCCESS;
+    response.auth_type = req->auth_type;
+    // At this point, the firmware should already have fully connected, and filled in
+    // profile->bssid.
+    if (memcmp(req->peer_sta_address, profile->bssid, ETH_ALEN)) {
+        brcmf_dbg(TEMP, " * * ERROR * * Requested MAC %lx !=  connected MAC %lx",
+                  *(uint64_t*)req->peer_sta_address & 0xffffffffffff,
+                  *(uint64_t*)profile->bssid & 0xffffffffffff);
+    }
+    memcpy(&response.peer_sta_address, profile->bssid, ETH_ALEN);
+    ndev->if_callbacks->auth_conf(ndev->if_callback_cookie, &response);
 }
 
 void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
@@ -4923,7 +4791,25 @@ void brcmf_hook_deauth_req(void* ctx, wlanif_deauth_req_t* req) {
 }
 
 void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
+    struct net_device* ndev = ctx;
+    struct brcmf_if* ifp = ndev_to_if(ndev);
+    struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
+    wlanif_assoc_confirm_t response;
+
     brcmf_dbg(TEMP, "Enter");
+    if (req->rsne_len != 0) {
+        brcmf_dbg(TEMP, " * * RSNE non-zero! %ld", req->rsne_len);
+        brcmf_hexdump(req->rsne, req->rsne_len);
+    }
+    if (memcmp(req->peer_sta_address, profile->bssid, ETH_ALEN)) {
+        brcmf_dbg(TEMP, " * * ERROR * * Requested MAC %lx !=  connected MAC %lx",
+                  *(uint64_t*)req->peer_sta_address & 0xffffffffffff,
+                  *(uint64_t*)profile->bssid & 0xffffffffffff);
+    }
+    response.result_code = WLAN_ASSOC_RESULT_SUCCESS;
+    brcmf_dbg(TEMP, " * Hard-coding association_id to 42; this will likely break something!");
+    response.association_id = 42; // TODO(cphoenix): Don't hard-code this!!!
+    ndev->if_callbacks->assoc_conf(ndev->if_callback_cookie, &response);
 }
 
 void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
@@ -5139,11 +5025,13 @@ void brcmf_free_net_device_vif(struct net_device* ndev) {
     }
 }
 
+// TODO(cphoenix): Rename and/or refactor this function - it has way too many side effects for a
+// function that looks like it just returns info about state.
 static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_event_msg* e) {
     uint32_t event = e->event_code;
     uint32_t status = e->status;
 
-    brcmf_dbg(TEMP, "Enter");
+    brcmf_dbg(TEMP, "Enter code: %d, status: %d", event, status);
     if (vif->profile.use_fwsup == BRCMF_PROFILE_FWSUP_PSK && event == BRCMF_E_PSK_SUP &&
             status == BRCMF_E_STATUS_FWSUP_COMPLETED) {
         brcmf_set_bit_in_array(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state);
@@ -5331,30 +5219,21 @@ done:
 static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
                                           const struct brcmf_event_msg* e, bool completed) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
-    struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
-    struct brcmf_cfg80211_connect_info* conn_info = cfg_to_conn(cfg);
-    struct cfg80211_connect_resp_params conn_params;
 
     brcmf_dbg(TRACE, "Enter\n");
 
     if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
-        memset(&conn_params, 0, sizeof(conn_params));
         if (completed) {
             brcmf_get_assoc_ies(cfg, ifp);
             brcmf_update_bss_info(cfg, ifp);
             brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
-            conn_params.status = WLAN_STATUS_SUCCESS;
-        } else {
-            conn_params.status = WLAN_STATUS_AUTH_TIMEOUT;
         }
-        conn_params.bssid = profile->bssid;
-        conn_params.req_ie = conn_info->req_ie;
-        conn_params.req_ie_len = conn_info->req_ie_len;
-        conn_params.resp_ie = conn_info->resp_ie;
-        conn_params.resp_ie_len = conn_info->resp_ie_len;
-        cfg80211_connect_done(ndev, &conn_params);
+        // Connected bssid is in profile->bssid.
+        // connection IEs are in conn_info->req_ie, req_ie_len, resp_ie, resp_ie_len.
         brcmf_dbg(CONN, "Report connect result - connection %s\n",
-                  completed ? "succeeded" : "failed");
+                  completed ? "succeeded" : "timed out");
+        brcmf_return_join_result(ndev, completed ? WLAN_JOIN_RESULT_SUCCESS :
+                                                  WLAN_JOIN_RESULT_FAILURE_TIMEOUT);
     }
     brcmf_dbg(TRACE, "Exit\n");
     return ZX_OK;
@@ -5401,6 +5280,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
     struct net_device* ndev = ifp->ndev;
     zx_status_t err = ZX_OK;
 
+    brcmf_dbg(TEMP, "Enter, event code %d", e->event_code);
     if ((e->event_code == BRCMF_E_DEAUTH) || (e->event_code == BRCMF_E_DEAUTH_IND) ||
             (e->event_code == BRCMF_E_DISASSOC_IND) ||
             ((e->event_code == BRCMF_E_LINK) && (!e->flags))) {
