@@ -51,10 +51,10 @@ public:
     // Vnode::fbl_recycle) before the initial recycle execution terminates.
     void ResurrectRef() const {
         if (EnableAdoptionValidator) {
-            int32_t old = this->ref_count_.load(fbl::memory_order_acquire);
+            int32_t old = this->ref_count_.load(fbl::memory_order_relaxed);
             ZX_DEBUG_ASSERT_MSG(old == 0, "count %d(0x%08x) != 0\n", old, old);
         }
-        this->ref_count_.store(1, fbl::memory_order_release);
+        this->ref_count_.store(1, fbl::memory_order_relaxed);
     }
 };
 
