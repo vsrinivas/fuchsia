@@ -45,7 +45,7 @@ fn main() -> Result<(), Error> {
 
     // Create and register the service
     let mut service_def = ServiceDefinition {
-        service_class_uuids: vec![String::from("100B")], // Audio Sink UUID
+        service_class_uuids: vec![String::from("110B")], // Audio Sink UUID
         protocol_descriptors: vec![
             ProtocolDescriptor {
                 protocol: ProtocolIdentifier::L2Cap,
