@@ -36,7 +36,7 @@ static const pbus_mmio_t audio_mmios[] = {
 static const pbus_bti_t tdm_btis[] = {
     {
         .iommu_index = 0,
-        .bti_id = 0,
+        .bti_id = BTI_AUDIO_OUT,
     },
 };
 
@@ -61,6 +61,37 @@ static pbus_dev_t aml_tdm_dev = {
     .btis = tdm_btis,
     .bti_count = countof(tdm_btis),
 };
+
+//PDM input configurations
+static const pbus_mmio_t pdm_mmios[] = {
+    {
+        .base = S905D2_EE_PDM_BASE,
+        .length = S905D2_EE_PDM_LENGTH
+    },
+    {
+        .base = S905D2_EE_AUDIO_BASE,
+        .length = S905D2_EE_AUDIO_LENGTH
+    },
+};
+
+static const pbus_bti_t pdm_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_AUDIO_IN,
+    },
+};
+
+static const pbus_dev_t aml_pdm_dev = {
+    .name = "gauss-audio-in",
+    .vid = PDEV_VID_AMLOGIC,
+    .pid = PDEV_PID_AMLOGIC_S905D2,
+    .did = PDEV_DID_ASTRO_PDM,
+    .mmios = pdm_mmios,
+    .mmio_count = countof(pdm_mmios),
+    .btis = pdm_btis,
+    .bti_count = countof(pdm_btis),
+};
+
 //clang-format on
 
 zx_status_t astro_tdm_init(aml_bus_t* bus) {
@@ -102,6 +133,12 @@ zx_status_t astro_tdm_init(aml_bus_t* bus) {
     gpio_config_out(&bus->gpio, S905D2_GPIOA(5), 1);
 
     status = pbus_device_add(&bus->pbus, &aml_tdm_dev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "astro_tdm_init: pbus_device_add failed: %d\n", status);
+        return status;
+    }
+
+    status = pbus_device_add(&bus->pbus, &aml_pdm_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "astro_tdm_init: pbus_device_add failed: %d\n", status);
         return status;

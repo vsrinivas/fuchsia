@@ -22,6 +22,8 @@ enum {
     BTI_SDIO,
     BTI_CANVAS,
     BTI_THERMAL,
+    BTI_AUDIO_IN,
+    BTI_AUDIO_OUT,
 };
 
 typedef struct {

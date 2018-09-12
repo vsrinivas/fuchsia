@@ -89,6 +89,8 @@ __BEGIN_CDECLS;
 #define PDEV_DID_AMLOGIC_CANVAS     14
 #define PDEV_DID_AMLOGIC_G12A_CLK   15
 #define PDEV_DID_AMLOGIC_TDM        16
+#define PDEV_DID_ASTRO_PDM          17
+
 
 // Broadcom
 #define PDEV_VID_BROADCOM           6
