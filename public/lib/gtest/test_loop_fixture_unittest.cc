@@ -19,9 +19,6 @@ TEST_F(TestLoopFixtureTest, DefaultDispatcherIsSet) {
 TEST_F(TestLoopFixtureTest, TimeIsAdvanced) {
   EXPECT_EQ(Now(), zx::time(0));
 
-  AdvanceTimeTo(zx::time(0) + zx::sec(5));
-  EXPECT_EQ(Now(), zx::time(0) + zx::sec(5));
-
   RunLoopUntil(zx::time(0) + zx::sec(15));
   EXPECT_EQ(Now(), zx::time(0) + zx::sec(15));
 
