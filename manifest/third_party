@@ -211,7 +211,7 @@
     <project name="third_party/mesa"
              path="third_party/mesa"
              remote="https://fuchsia.googlesource.com/third_party/mesa"
-             revision="20a71578dc2349dcb36226aa6cb964fe0f0489ec"
+             revision="6ed1cd927f8e4fa87477232502184c39d610a61e"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/mini_chromium"
              path="third_party/crashpad/third_party/mini_chromium/mini_chromium"
@@ -332,7 +332,7 @@
     <project name="third_party/vulkan_loader_and_validation_layers"
              path="third_party/vulkan_loader_and_validation_layers"
              remote="https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers"
-             revision="fdfa431aa1381f85717cf005df30e34002dded0c"
+             revision="62f56959cdb0eb7f0c453c9d813b29b5e045e43d"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/yasm"
              path="third_party/yasm"

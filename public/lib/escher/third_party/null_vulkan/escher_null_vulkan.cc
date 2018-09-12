@@ -1329,12 +1329,12 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetMemoryWin32HandleNV(
 
 #endif /* VK_USE_PLATFORM_WIN32_KHR */
 
-VKAPI_ATTR void VKAPI_CALL vkGetDeviceGroupPeerMemoryFeaturesKHX(
+VKAPI_ATTR void VKAPI_CALL vkGetDeviceGroupPeerMemoryFeaturesKHR(
     VkDevice                                    device,
     uint32_t                                    heapIndex,
     uint32_t                                    localDeviceIndex,
     uint32_t                                    remoteDeviceIndex,
-    VkPeerMemoryFeatureFlagsKHX*                pPeerMemoryFeatures) {}
+    VkPeerMemoryFeatureFlagsKHR*                pPeerMemoryFeatures) {}
 
 VKAPI_ATTR void VKAPI_CALL vkCmdSetDeviceMaskKHX(
     VkCommandBuffer                             commandBuffer,
@@ -1349,14 +1349,14 @@ VKAPI_ATTR void VKAPI_CALL vkCmdDispatchBaseKHX(
     uint32_t                                    groupCountY,
     uint32_t                                    groupCountZ) {}
 
-VKAPI_ATTR VkResult VKAPI_CALL vkGetDeviceGroupPresentCapabilitiesKHX(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetDeviceGroupPresentCapabilitiesKHR(
     VkDevice                                    device,
-    VkDeviceGroupPresentCapabilitiesKHX*        pDeviceGroupPresentCapabilities) { return VK_SUCCESS; }
+    VkDeviceGroupPresentCapabilitiesKHR*        pDeviceGroupPresentCapabilities) { return VK_SUCCESS; }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkGetDeviceGroupSurfacePresentModesKHX(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetDeviceGroupSurfacePresentModesKHR(
     VkDevice                                    device,
     VkSurfaceKHR                                surface,
-    VkDeviceGroupPresentModeFlagsKHX*           pModes) { return VK_SUCCESS; }
+    VkDeviceGroupPresentModeFlagsKHR*           pModes) { return VK_SUCCESS; }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDevicePresentRectanglesKHX(
     VkPhysicalDevice                            physicalDevice,
@@ -1364,9 +1364,9 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDevicePresentRectanglesKHX(
     uint32_t*                                   pRectCount,
     VkRect2D*                                   pRects) { return VK_SUCCESS; }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImage2KHX(
+VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImage2KHR(
     VkDevice                                    device,
-    const VkAcquireNextImageInfoKHX*            pAcquireInfo,
+    const VkAcquireNextImageInfoKHR*            pAcquireInfo,
     uint32_t*                                   pImageIndex) { return VK_SUCCESS; }
 
 #ifdef VK_USE_PLATFORM_VI_NN
@@ -1379,10 +1379,10 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateViSurfaceNN(
 
 #endif /* VK_USE_PLATFORM_VI_NN */
 
-VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDeviceGroupsKHX(
+VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDeviceGroupsKHR(
     VkInstance                                  instance,
     uint32_t*                                   pPhysicalDeviceGroupCount,
-    VkPhysicalDeviceGroupPropertiesKHX*         pPhysicalDeviceGroupProperties) { return VK_SUCCESS; }
+    VkPhysicalDeviceGroupPropertiesKHR*         pPhysicalDeviceGroupProperties) { return VK_SUCCESS; }
 
 VKAPI_ATTR void VKAPI_CALL vkCmdProcessCommandsNVX(
     VkCommandBuffer                             commandBuffer,
