@@ -49,6 +49,8 @@ class BazelBuilder(Frontend):
         resulting relative paths to a list.
         '''
         for file in files:
+            if os.path.commonprefix([root, file]) != root:
+                raise Exception('%s is not within %s' % (file, root))
             relative_path = os.path.relpath(file, root)
             dest = self.dest(destination, relative_path)
             shutil.copy2(self.source(file), dest)
