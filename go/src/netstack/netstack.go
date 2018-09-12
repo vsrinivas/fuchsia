@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"netstack/dns"
+	"netstack/fidlconv"
 	"netstack/filter"
 	"netstack/link/bridge"
 	"netstack/link/eth"
@@ -427,7 +428,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) error {
 	})
 }
 
-func (ns *Netstack) addEth(topological_path string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceInterface) error {
+func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.DeviceInterface) error {
 	var client *eth.Client
 	return ns.addEndpoint(func(ifs *ifState) (stack.LinkEndpoint, error) {
 		var err error
@@ -437,7 +438,7 @@ func (ns *Netstack) addEth(topological_path string, interfaceConfig netstack.Int
 		}
 		ifs.eth = client
 		ifs.nic.Features = client.Info.Features
-		ifs.nic.Name = interfaceConfig.Name
+		ifs.nic.Name = config.Name
 		return eth.NewLinkEndpoint(client), nil
 	}, func(ifs *ifState) error {
 		// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
@@ -453,8 +454,18 @@ func (ns *Netstack) addEth(topological_path string, interfaceConfig netstack.Int
 			return fmt.Errorf("NIC %s: failed to get device status for MAC=%x: %v", ifs.nic.Name, client.Info.Mac, err)
 		}
 
-		if status == eth.LinkUp {
-			ifs.setDHCPStatus(true)
+		switch config.IpAddressConfig.Which() {
+		case netstack.IpAddressConfigDhcp:
+			if status == eth.LinkUp {
+				ifs.setDHCPStatus(true)
+			}
+		case netstack.IpAddressConfigStaticIp:
+			subnet := config.IpAddressConfig.StaticIp
+			protocol, tcpipAddr, retval := ns.validateInterfaceAddress(subnet.Addr, subnet.PrefixLen)
+			if retval.Status != netstack.StatusOk {
+				return fmt.Errorf("NIC %s: received static IpAddressConfig with an invalid IP specified: [%+v]", ifs.nic.Name, subnet)
+			}
+			ns.setInterfaceAddress(ifs.nic.ID, protocol, tcpipAddr, subnet.PrefixLen)
 		}
 		return nil
 	})
@@ -525,4 +536,22 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	ns.mu.stack.SetRouteTable(ns.flattenRouteTables())
 
 	return finalize(ifs)
+}
+
+func (ns *Netstack) validateInterfaceAddress(address netstack.NetAddress, prefixLen uint8) (tcpip.NetworkProtocolNumber, tcpip.Address, netstack.NetErr) {
+	var protocol tcpip.NetworkProtocolNumber
+	switch address.Family {
+	case netstack.NetAddressFamilyIpv4:
+		protocol = ipv4.ProtocolNumber
+	case netstack.NetAddressFamilyIpv6:
+		return 0, "", netstack.NetErr{Status: netstack.StatusIpv4Only, Message: "IPv6 not yet supported"}
+	}
+
+	addr := fidlconv.NetAddressToTCPIPAddress(address)
+
+	if (8 * len(addr)) < int(prefixLen) {
+		return 0, "", netstack.NetErr{Status: netstack.StatusParseError, Message: "prefix length exceeds address length"}
+	}
+
+	return protocol, addr, netstack.NetErr{Status: netstack.StatusOk}
 }

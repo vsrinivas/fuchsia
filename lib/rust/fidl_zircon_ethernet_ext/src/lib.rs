@@ -7,7 +7,7 @@ use fidl_zircon_ethernet as fidl;
 use bitflags::bitflags;
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(PartialEq, Eq, Serialize, Deserialize, Debug)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct MacAddress {
     pub octets: [u8; 6],
 }
@@ -37,6 +37,31 @@ impl std::fmt::Display for MacAddress {
     }
 }
 
+impl std::str::FromStr for MacAddress {
+    type Err = failure::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use failure::ResultExt;
+
+        let mut octets = [0; 6];
+        let mut iter = s.split(':');
+        for (i, octet) in octets.iter_mut().enumerate() {
+            let next_octet = iter.next().ok_or_else(|| {
+                failure::format_err!("MAC address [{}] only specifies {} out of 6 octets", s, i)
+            })?;
+            *octet = u8::from_str_radix(next_octet, 16)
+                .with_context(|_| format!("could not parse hex integer from {}", next_octet))?;
+        }
+        if iter.next().is_some() {
+            return Err(failure::format_err!(
+                "MAC address has more than six octets: {}",
+                s
+            ));
+        }
+        Ok(MacAddress { octets })
+    }
+}
+
 bitflags! {
     /// Features supported by an Ethernet device.
     #[repr(transparent)]
@@ -52,6 +77,28 @@ bitflags! {
     }
 }
 
+impl EthernetFeatures {
+    pub fn is_physical(&self) -> bool {
+        !self.intersects(Self::SYNTHETIC | Self::LOOPBACK)
+    }
+}
+
+impl std::str::FromStr for EthernetFeatures {
+    type Err = failure::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.as_ref() {
+            "synthetic" => Ok(Self::SYNTHETIC),
+            "loopback" => Ok(Self::LOOPBACK),
+            "wireless" => Ok(Self::WLAN),
+            s => Err(failure::format_err!(
+                "unknown network interface feature \"{}\"",
+                s
+            )),
+        }
+    }
+}
+
 /// Information retrieved about an Ethernet device.
 #[derive(Debug)]
 pub struct EthernetInfo {
@@ -60,12 +107,13 @@ pub struct EthernetInfo {
     /// The maximum transmission unit (MTU) of the device.
     pub mtu: u32,
     /// The MAC address of the device.
-    pub mac: fidl::MacAddress,
+    pub mac: MacAddress,
 }
 
 impl From<fidl::Info> for EthernetInfo {
     fn from(fidl::Info { features, mtu, mac }: fidl::Info) -> Self {
         let features = EthernetFeatures::from_bits_truncate(features);
+        let mac = mac.into();
         Self { features, mtu, mac }
     }
 }

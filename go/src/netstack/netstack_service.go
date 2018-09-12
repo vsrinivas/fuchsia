@@ -19,7 +19,6 @@ import (
 	"fidl/zircon/ethernet"
 
 	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
@@ -239,32 +238,12 @@ func (ni *netstackImpl) StartRouteTableTransaction(req netstack.RouteTableTransa
 	return int32(zx.ErrOk), err
 }
 
-func validateInterfaceAddress(nicid uint32, address netstack.NetAddress, prefixLen uint8) (nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, retval netstack.NetErr) {
-	switch address.Family {
-	case netstack.NetAddressFamilyIpv4:
-		protocol = ipv4.ProtocolNumber
-	case netstack.NetAddressFamilyIpv6:
-		retval = netstack.NetErr{Status: netstack.StatusIpv4Only, Message: "IPv6 not yet supported"}
-		return
-	}
-
-	nic = tcpip.NICID(nicid)
-	addr = fidlconv.NetAddressToTCPIPAddress(address)
-
-	if (8 * len(addr)) < int(prefixLen) {
-		retval = netstack.NetErr{Status: netstack.StatusParseError, Message: "Prefix length does not match address"}
-		return
-	}
-
-	retval = netstack.NetErr{Status: netstack.StatusOk, Message: ""}
-	return
-}
-
 // Add address to the given network interface.
 func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address netstack.NetAddress, prefixLen uint8) (result netstack.NetErr, endService error) {
 	log.Printf("net address %+v", address)
 
-	nic, protocol, addr, neterr := validateInterfaceAddress(nicid, address, prefixLen)
+	nic := tcpip.NICID(nicid)
+	protocol, addr, neterr := ni.ns.validateInterfaceAddress(address, prefixLen)
 	if neterr.Status != netstack.StatusOk {
 		return neterr, nil
 	}
@@ -276,7 +255,8 @@ func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address netstack.NetAd
 }
 
 func (ni *netstackImpl) RemoveInterfaceAddress(nicid uint32, address netstack.NetAddress, prefixLen uint8) (result netstack.NetErr, endService error) {
-	nic, protocol, addr, neterr := validateInterfaceAddress(nicid, address, prefixLen)
+	nic := tcpip.NICID(nicid)
+	protocol, addr, neterr := ni.ns.validateInterfaceAddress(address, prefixLen)
 
 	if neterr.Status != netstack.StatusOk {
 		return neterr, nil

@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(async_await, await_macro)]
+#![feature(async_await, await_macro, futures_api, try_from)]
 
 use std::borrow::Cow;
 use std::fs;
-use std::net::IpAddr;
 use std::os::unix::io::AsRawFd;
 use std::path;
 
@@ -15,22 +14,21 @@ use failure::{self, ResultExt};
 use futures::{self, StreamExt, TryFutureExt, TryStreamExt};
 use serde_derive::Deserialize;
 
-use fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker;
-use fidl_fuchsia_netstack::{
-    InterfaceConfig, Ipv4Address, Ipv6Address, NetAddress, NetAddressFamily, NetInterface,
-    NetstackEvent, NetstackMarker,
-};
-use fidl_zircon_ethernet::{
-    DeviceMarker, DeviceProxy, INFO_FEATURE_LOOPBACK, INFO_FEATURE_SYNTH, INFO_FEATURE_WLAN,
-};
-
 mod device_id;
 mod interface;
+mod matchers;
+
+#[derive(Debug, Deserialize)]
+pub struct DnsConfig {
+    pub servers: Vec<std::net::IpAddr>,
+}
 
 #[derive(Debug, Deserialize)]
 struct Config {
     pub device_name: Option<String>,
     pub dns_config: DnsConfig,
+    #[serde(deserialize_with = "matchers::InterfaceSpec::parse_as_tuples")]
+    pub rules: Vec<matchers::InterfaceSpec>,
 }
 
 impl Config {
@@ -45,23 +43,13 @@ impl Config {
     }
 }
 
-#[derive(Debug, Deserialize)]
-struct DnsConfig {
-    pub servers: Vec<IpAddr>,
-}
-
-fn is_physical(features: u32) -> bool {
-    (features & (INFO_FEATURE_SYNTH | INFO_FEATURE_LOOPBACK)) == 0
-}
-
-fn is_wlan(features: u32) -> bool {
-    features & INFO_FEATURE_WLAN == INFO_FEATURE_WLAN
-}
-
-fn derive_device_name(interfaces: Vec<NetInterface>) -> Option<String> {
+fn derive_device_name(interfaces: Vec<fidl_fuchsia_netstack::NetInterface>) -> Option<String> {
     interfaces
         .iter()
-        .filter(|iface| is_physical(iface.features))
+        .filter(|iface| {
+            fidl_zircon_ethernet_ext::EthernetFeatures::from_bits_truncate(iface.features)
+                .is_physical()
+        })
         .min_by(|a, b| a.id.cmp(&b.id))
         .map(|iface| device_id::device_id(&iface.hwaddr))
 }
@@ -73,19 +61,24 @@ fn main() -> Result<(), failure::Error> {
     let Config {
         device_name,
         dns_config: DnsConfig { servers },
+        rules: default_config_rules,
     } = Config::load("/pkg/data/default.json")?;
-    let mut interface_config = interface::FileBackedConfig::load(&"/data/net_interfaces.cfg.json")?;
+    let mut persisted_interface_config =
+        interface::FileBackedConfig::load(&"/data/net_interfaces.cfg.json")?;
     let mut executor = fuchsia_async::Executor::new().context("could not create executor")?;
-    let netstack = fuchsia_app::client::connect_to_service::<NetstackMarker>()
-        .context("could not connect to netstack")?;
-    let device_settings_manager =
-        fuchsia_app::client::connect_to_service::<DeviceSettingsManagerMarker>()
-            .context("could not connect to device settings manager")?;
+    let netstack =
+        fuchsia_app::client::connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+            .context("could not connect to netstack")?;
+    let device_settings_manager = fuchsia_app::client::connect_to_service::<
+        fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker,
+    >()
+    .context("could not connect to device settings manager")?;
 
     let mut servers = servers
-        .iter()
-        .map(to_net_address)
-        .collect::<Vec<NetAddress>>();
+        .into_iter()
+        .map(fidl_fuchsia_netstack_ext::NetAddress)
+        .map(Into::into)
+        .collect::<Vec<fidl_fuchsia_netstack::NetAddress>>();
 
     let () = netstack
         .set_name_servers(&mut servers.iter_mut())
@@ -95,7 +88,7 @@ fn main() -> Result<(), failure::Error> {
 
     let mut device_name_stream = futures::stream::iter(default_device_name).chain(
         netstack.take_event_stream().try_filter_map(
-            |NetstackEvent::OnInterfacesChanged { interfaces }| {
+            |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
                 futures::future::ok(derive_device_name(interfaces).map(Cow::Owned))
             },
         ),
@@ -154,40 +147,52 @@ fn main() -> Result<(), failure::Error> {
                     });
 
                     let device =
-                        fidl::endpoints::ClientEnd::<DeviceMarker>::new(client).into_proxy()?;
+                        fidl::endpoints::ClientEnd::<fidl_zircon_ethernet::DeviceMarker>::new(
+                            client,
+                        )
+                        .into_proxy()?;
                     let device_info = await!(device.get_info())?;
-                    if is_physical(device_info.features) {
+                    let device_info: fidl_zircon_ethernet_ext::EthernetInfo = device_info.into();
+
+                    if device_info.features.is_physical() {
                         let client = device
                             .into_channel()
-                            .map_err(|DeviceProxy { .. }| {
+                            .map_err(|fidl_zircon_ethernet::DeviceProxy { .. }| {
                                 failure::err_msg("failed to convert device proxy into channel")
                             })?
                             .into_zx_channel();
-                        {
-                            let name = interface_config.get_stable_name(
-                                topological_path.clone(), /* TODO(tamird): we can probably do
-                                                           * better with std::borrow::Cow. */
-                                device_info.mac.into(),
-                                is_wlan(device_info.features),
-                            )?;
 
-                            let () = netstack
-                                .add_ethernet_device(
-                                    &topological_path,
-                                    &mut InterfaceConfig {
-                                        name: name.to_string(),
-                                    },
-                                    fidl::endpoints::ClientEnd::<DeviceMarker>::new(client),
+                        let name = persisted_interface_config.get_stable_name(
+                            topological_path.clone(), /* TODO(tamird): we can probably do
+                                                       * better with std::borrow::Cow. */
+                            device_info.mac,
+                            device_info
+                                .features
+                                .contains(fidl_zircon_ethernet_ext::EthernetFeatures::WLAN),
+                        )?;
+
+                        let mut derived_interface_config = matchers::config_for_device(
+                            &device_info,
+                            name.to_string(),
+                            &topological_path,
+                            &default_config_rules,
+                        );
+
+                        let () = netstack
+                            .add_ethernet_device(
+                                &topological_path,
+                                &mut derived_interface_config,
+                                fidl::endpoints::ClientEnd::<fidl_zircon_ethernet::DeviceMarker>::new(client),
+                            )
+                            .with_context(|_| {
+                                format!(
+                                    "fidl_netstack::Netstack::add_ethernet_device({})",
+                                    filename.display()
                                 )
-                                .with_context(|_| {
-                                    format!(
-                                        "fidl_netstack::Netstack::add_ethernet_device({})",
-                                        filename.display()
-                                    )
-                                })?;
-                        }
+                            })?;
                     }
                 }
+
                 fuchsia_vfs_watcher::WatchEvent::IDLE
                 | fuchsia_vfs_watcher::WatchEvent::REMOVE_FILE => {}
                 event => {
@@ -200,23 +205,4 @@ fn main() -> Result<(), failure::Error> {
 
     let (_success, ()) = executor.run_singlethreaded(device_name.try_join(ethernet_device))?;
     Ok(())
-}
-
-fn to_net_address(addr: &IpAddr) -> NetAddress {
-    match addr {
-        IpAddr::V4(v4addr) => NetAddress {
-            family: NetAddressFamily::Ipv4,
-            ipv4: Some(Box::new(Ipv4Address {
-                addr: v4addr.octets(),
-            })),
-            ipv6: None,
-        },
-        IpAddr::V6(v6addr) => NetAddress {
-            family: NetAddressFamily::Ipv6,
-            ipv4: None,
-            ipv6: Some(Box::new(Ipv6Address {
-                addr: v6addr.octets(),
-            })),
-        },
-    }
 }

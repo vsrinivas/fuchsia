@@ -5,29 +5,27 @@
 import("//build/rust/rustc_library.gni")
 import("//build/package.gni")
 
-rustc_library("fidl_zircon_ethernet_ext") {
+rustc_library("fidl_fuchsia_netstack_ext") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//third_party/rust-crates/rustc_deps:bitflags",
+    "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:serde",
     "//third_party/rust-crates/rustc_deps:serde_derive",
     "//third_party/rust-crates/rustc_deps:serde_json",
-    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
-    "//zircon/public/fidl/zircon-ethernet:zircon-ethernet-rustc",
   ]
 }
 
 # TODO(tamird): add this to packages/tests/fidlext_tests when runtests stops crashing.
-package("fidl_zircon_ethernet_ext_tests") {
+package("fidl_fuchsia_netstack_ext_tests") {
   testonly = true
   deps = [
-    ":fidl_zircon_ethernet_ext",
+    ":fidl_fuchsia_netstack_ext",
   ]
   tests = [
     {
-      name = "fidl_zircon_ethernet_ext_lib_test_rustc"
+      name = "fidl_fuchsia_netstack_ext_lib_test_rustc"
     },
   ]
 }

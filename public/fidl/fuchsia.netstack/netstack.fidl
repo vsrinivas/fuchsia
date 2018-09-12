@@ -88,6 +88,12 @@ struct AggregateStats {
 
 struct InterfaceConfig {
     string name;
+    IpAddressConfig ip_address_config;
+};
+
+union IpAddressConfig {
+    Subnet static_ip;
+    bool dhcp;
 };
 
 // https://linux.die.net/man/7/netdevice
