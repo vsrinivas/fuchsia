@@ -80,26 +80,7 @@ func init() {
 	// # See BLD-38 for more details.                                            #
 	// ###########################################################################
 
-	dirs := []dir{
-		// TODO(BLD-250): remove these.
-		{
-			// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
-			toolchainLibs,
-			fmt.Sprintf("buildtools/%s-%s/clang/lib/clang/8.0.0/x86_64-fuchsia/lib", hostOs, hostCpu),
-			"toolchain_libs/clang/8.0.0/x86_64-fuchsia/lib",
-		},
-		{
-			// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
-			toolchainLibs,
-			fmt.Sprintf("buildtools/%s-%s/clang/lib/clang/8.0.0/aarch64-fuchsia/lib", hostOs, hostCpu),
-			"toolchain_libs/clang/8.0.0/aarch64-fuchsia/lib",
-		},
-	}
-
 	components = []component{}
-	for _, d := range dirs {
-		components = append(components, component{d.flag, d.src, d.dst, dirType, nil})
-	}
 }
 
 func createLayout(manifest, fuchsiaRoot, outDir string) {
