@@ -51,12 +51,13 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
+    system/ulib/fbl \
     system/ulib/hid \
+    system/ulib/pci \
+    system/ulib/region-alloc \
+    system/ulib/zxcpp \
     third_party/ulib/acpica \
     third_party/ulib/chromiumos-platform-ec \
-    system/ulib/zxcpp \
-    system/ulib/region-alloc \
-    system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \

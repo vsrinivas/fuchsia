@@ -12,6 +12,7 @@
 #include <pthread.h>
 
 #include <hw/inout.h>
+#include <pci/pio.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -1109,19 +1110,33 @@ static ACPI_STATUS AcpiOsReadWritePciConfiguration(
     uint8_t dev = static_cast<uint8_t>(PciId->Device);
     uint8_t func = static_cast<uint8_t>(PciId->Function);
     uint8_t offset = static_cast<uint8_t>(Register);
-    uint8_t width = static_cast<uint8_t>(Width);
-    uint32_t val = *Value & 0xFFFFFFFF; // PIO access can only be 32 bits
-    zx_status_t status = zx_pci_cfg_pio_rw(root_resource_handle, bus, dev, func, offset,
-                                           &val, width, Write);
+    zx_status_t st;
+#ifdef ENABLE_USER_PCI
+    switch(Width) {
+    case 8u: 
+        (Write) ? st = pci_pio_write8(bus, dev, func, offset, static_cast<uint8_t>(*Value))
+                : st = pci_pio_read8(bus, dev, func, offset, reinterpret_cast<uint8_t*>(Value));
+        break;
+    case 16u:
+        (Write) ? st = pci_pio_write16(bus, dev, func, offset, static_cast<uint16_t>(*Value))
+                : st = pci_pio_read16(bus, dev, func, offset, reinterpret_cast<uint16_t*>(Value));
+        break;
+    // assume 32bit by default since 64 bit reads on IO ports are not a thing supported by the spec
+    default:
+        (Write) ? st = pci_pio_write32(bus, dev, func, offset, static_cast<uint32_t>(*Value))
+                : st = pci_pio_read32(bus, dev, func, offset, reinterpret_cast<uint32_t*>(Value));
+    }
+#else
+    st = zx_pci_cfg_pio_rw(root_resource_handle, bus, dev, func, offset,
+                           reinterpret_cast<uint32_t*>(Value), static_cast<uint8_t>(Width), Write);
 
-    *Value = val;
-
+#endif // ENABLE_USER_PCI
 #ifdef ACPI_DEBUG_OUTPUT
-    if (status != ZX_OK) {
-        printf("ACPIOS: pci rw error: %d\n", status);
+    if (st != ZX_OK) {
+        printf("ACPIOS: pci rw error: %d\n", st);
     }
 #endif // ACPI_DEBUG_OUTPUT
-    return (status == ZX_OK) ? AE_OK : AE_ERROR;
+    return (st == ZX_OK) ? AE_OK : AE_ERROR;
 #endif // __x86_64__
 
     return AE_NOT_IMPLEMENTED;

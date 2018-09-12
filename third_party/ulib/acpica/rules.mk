@@ -10,6 +10,10 @@ MODULE_TYPE := userlib
 
 SRC_DIR := third_party/lib/acpica/source
 
+ifeq ($(call TOBOOL, $(ENABLE_USER_PCI)), true)
+MODULE_DEFINES += ENABLE_USER_PCI=1
+endif
+
 # We currently only support ACPICA on x86, so compile to an empty
 # lib if we're on non-x86.
 ifeq ($(ARCH),x86)
@@ -209,6 +213,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
 
 MODULE_LIBS := \
-    system/ulib/c
+    system/ulib/c \
+    system/ulib/pci \
 
 include make/module.mk
