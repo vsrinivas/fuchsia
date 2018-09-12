@@ -492,9 +492,7 @@ zx_status_t Connection::NodeIoctl(uint32_t opcode, uint64_t max_out,
 
     // Some ioctls operate on the connection only, and don't
     // require a call to Vfs::Ioctl
-    bool do_ioctl = true;
     size_t actual = 0;
-    zx_status_t status;
     switch (opcode) {
     case IOCTL_VFS_MOUNT_FS:
     case IOCTL_VFS_MOUNT_MKDIR_FS:
@@ -505,20 +503,6 @@ zx_status_t Connection::NodeIoctl(uint32_t opcode, uint64_t max_out,
         }
         // If our permissions validate, fall through to the VFS ioctl
         break;
-    case IOCTL_VFS_GET_TOKEN: {
-        // Ioctls which act on Connection
-        if (max_out != sizeof(zx_handle_t)) {
-            return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0, nullptr, 0);
-        }
-        zx::event returned_token;
-        status = vfs_->VnodeToToken(vnode_, &token_, &returned_token);
-        if (status == ZX_OK) {
-            actual = sizeof(zx_handle_t);
-            handles_out[0] = returned_token.release();
-        }
-        do_ioctl = false;
-        break;
-    }
     case IOCTL_VFS_UNMOUNT_FS: {
         // Unmounting ioctls require Connection privileges
         if (!(flags_ & ZX_FS_RIGHT_ADMIN)) {
@@ -545,12 +529,10 @@ zx_status_t Connection::NodeIoctl(uint32_t opcode, uint64_t max_out,
         break;
     }
 
-    if (do_ioctl) {
-        status = vfs_->Ioctl(vnode_, opcode, in_buf, in_count, out, max_out,
-                             &actual);
-        if (status == ZX_ERR_NOT_SUPPORTED && handles_count > 0) {
-            zx_handle_close(h);
-        }
+    zx_status_t status = vfs_->Ioctl(vnode_, opcode, in_buf, in_count, out,
+                                     max_out, &actual);
+    if (status == ZX_ERR_NOT_SUPPORTED && handles_count > 0) {
+        zx_handle_close(h);
     }
 
     if (status != ZX_OK) {

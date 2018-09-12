@@ -55,8 +55,6 @@
 // Determine which filesystem the vnode belongs to.
 #define IOCTL_VFS_QUERY_FS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_VFS, 4)
-#define IOCTL_VFS_GET_TOKEN \
-    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_VFS, 5)
 #define IOCTL_VFS_MOUNT_MKDIR_FS \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_VFS, 6)
 
@@ -149,9 +147,6 @@ typedef struct vfs_query_info {
 
 // ssize_t ioctl_vfs_query_fs(int fd, vfs_query_info_t* out, size_t out_len);
 IOCTL_WRAPPER_VAROUT(ioctl_vfs_query_fs, IOCTL_VFS_QUERY_FS, vfs_query_info_t);
-
-// ssize_t ioctl_vfs_get_token(int fd, zx_handle_t* out);
-IOCTL_WRAPPER_OUT(ioctl_vfs_get_token, IOCTL_VFS_GET_TOKEN, zx_handle_t);
 
 // ssize_t ioctl_vfs_watch_dir(int fd, vfs_watch_dir_t* in);
 IOCTL_WRAPPER_IN(ioctl_vfs_watch_dir, IOCTL_VFS_WATCH_DIR, vfs_watch_dir_t);
