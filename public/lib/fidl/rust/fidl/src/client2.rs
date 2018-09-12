@@ -62,7 +62,6 @@ pub struct Client {
     inner: Arc<ClientInner>,
 }
 
-
 /// A future representing the raw response to a FIDL query.
 pub type RawQueryResponseFut = Either<Ready<Result<zx::MessageBuf, Error>>, MessageResponse>;
 
@@ -112,6 +111,18 @@ impl Client {
                 message_interests: Mutex::new(Slab::<MessageInterest>::new()),
                 event_channel: Mutex::<EventChannel>::default(),
             })
+        }
+    }
+
+    /// Attempt to convert the `Client` back into a channel.
+    ///
+    /// This will only succeed if there are no active clones of this `Client`
+    /// and no currently-alive `EventReceiver` or `MessageResponse`s that
+    /// came from this `Client`.
+    pub fn into_channel(self) -> Result<fasync::Channel, Self> {
+        match Arc::try_unwrap(self.inner) {
+            Ok(ClientInner { channel, .. }) => Ok(channel),
+            Err(inner) => Err(Self { inner })
         }
     }
 

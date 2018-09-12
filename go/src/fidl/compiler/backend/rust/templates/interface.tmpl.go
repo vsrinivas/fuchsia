@@ -88,6 +88,15 @@ impl {{ $interface.Name }}Proxy {
 		Self { client: fidl::client2::Client::new(channel) }
 	}
 
+	/// Attempt to convert the Proxy back into a channel.
+	///
+	/// This will only succeed if there are no active clones of this Proxy
+	/// and no currently-alive EventStream or response futures that came from
+	/// this Proxy.
+	pub fn into_channel(self) -> Result<async::Channel, Self> {
+		self.client.into_channel().map_err(|client| Self { client })
+	}
+
         /// Get a Stream of events from the remote end of the {{ $interface.Name }} interface
 	pub fn take_event_stream(&self) -> {{ $interface.Name }}EventStream {
 		{{ $interface.Name }}EventStream {
