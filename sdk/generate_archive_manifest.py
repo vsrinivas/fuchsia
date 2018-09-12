@@ -12,14 +12,31 @@ from urlparse import urlparse
 from sdk_common import Atom
 
 
+class MappingAction(argparse.Action):
+    '''Parses file mappings flags.'''
+
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs is not allowed")
+        super(MappingAction, self).__init__(option_strings, dest, nargs=2,
+                                            **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        mappings = getattr(namespace, 'mappings', None)
+        if mappings is None:
+            mappings = {}
+            setattr(namespace, 'mappings', mappings)
+        mappings[values[0]] = values[1]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--manifest',
                         help='Path to the SDK\'s manifest file',
                         required=True)
-    parser.add_argument('--meta',
-                        help='Path to SDK metadata file',
-                        required=True)
+    parser.add_argument('--mapping',
+                        help='Extra files to add to the archive',
+                        action=MappingAction)
     parser.add_argument('--output',
                         help='Path to the output file manifest',
                         required=True)
@@ -40,7 +57,9 @@ def main():
     for atom in [Atom(a) for a in manifest['atoms']]:
         for file in atom.new_files:
             add(file.destination, file.source)
-    add('meta/manifest.json', args.meta)
+
+    for dest, source in args.mappings.iteritems():
+        add(dest, source)
 
     with open(args.output, 'w') as output_file:
         for mapping in sorted(all_files.iteritems()):
