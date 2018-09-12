@@ -170,7 +170,7 @@ int HandleException(zx::process process, zx::thread thread) {
              : EXIT_FAILURE;
 }
 
-int Process(fuchsia::crash::Buffer crashlog) {
+int Process(fuchsia::mem::Buffer crashlog) {
   std::unique_ptr<crashpad::CrashReportDatabase> database(
       crashpad::CrashReportDatabase::Initialize(
           base::FilePath("/data/kernel_crashes")));
@@ -276,7 +276,7 @@ class AnalyzerImpl : public fuchsia::crash::Analyzer {
     HandleException(std::move(process), std::move(thread));
   }
 
-  void Process(fuchsia::crash::Buffer crashlog,
+  void Process(fuchsia::mem::Buffer crashlog,
                ProcessCallback callback) override {
     callback();
     if (::Process(fbl::move(crashlog)) == EXIT_FAILURE) {

@@ -33,7 +33,7 @@ class CrashpadAnalyzer {
     FXL_DCHECK(context_);
   }
 
-  void Process(fuchsia::crash::Buffer crashlog) {
+  void Process(fuchsia::mem::Buffer crashlog) {
     fuchsia::crash::AnalyzerSyncPtr analyzer;
     context_->ConnectToEnvironmentService(analyzer.NewRequest());
     FXL_DCHECK(analyzer);
