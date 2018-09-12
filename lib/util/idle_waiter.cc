@@ -32,7 +32,8 @@ void IdleWaiter::SetLoop(async::Loop* loop) {
 }
 
 IdleWaiter::ActivityToken IdleWaiter::RegisterOngoingActivity() {
-  FXL_DCHECK(loop_->dispatcher() == async_get_default_dispatcher());
+  // !loop_ for unit tests
+  FXL_DCHECK(!loop_ || loop_->dispatcher() == async_get_default_dispatcher());
 
   if (activity_) {
     return ActivityToken(activity_);
@@ -49,6 +50,11 @@ void IdleWaiter::WaitUntilIdle(fxl::Closure callback) {
 }
 
 void IdleWaiter::PostIdleCheck() {
+  FXL_DCHECK(loop_) << "No message loop set for debug features. If this is a "
+                       "unit test rather than an integration test, consider "
+                       "using //garnet/public/lib/gtest gtest::TestLoopFixture "
+                       "features instead.";
+
   if (!(callbacks_.empty() || activity_ || idle_check_pending_)) {
     FXL_DCHECK(loop_->dispatcher() == async_get_default_dispatcher());
     loop_->Quit();
@@ -58,7 +64,7 @@ void IdleWaiter::PostIdleCheck() {
 
 bool IdleWaiter::FinishIdleCheck() {
   if (idle_check_pending_) {
-    FXL_DCHECK(loop_->dispatcher() == async_get_default_dispatcher());
+    FXL_DCHECK(loop_ && loop_->dispatcher() == async_get_default_dispatcher());
     loop_->RunUntilIdle();
     loop_->ResetQuit();
     if (!activity_) {
