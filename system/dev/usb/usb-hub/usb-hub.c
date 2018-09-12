@@ -421,10 +421,11 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // find our interrupt endpoint
     usb_desc_iter_t iter;
     status = usb_desc_iter_init(&usb, &iter);
-    if (status < 0) return status;
+    if (status < 0) {
+        return status;
+    }
 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
     if (!intf || intf->bNumEndpoints != 1) {
@@ -432,22 +433,25 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    uint8_t ep_addr = 0;
-    uint16_t max_packet_size = 0;
     usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
-    if (endp && usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
-        ep_addr = endp->bEndpointAddress;
-        max_packet_size = usb_ep_max_packet(endp);
-    }
-    usb_desc_iter_release(&iter);
-
-    if (!ep_addr) {
+    if (!endp || usb_ep_type(endp) != USB_ENDPOINT_INTERRUPT) {
+        usb_desc_iter_release(&iter);
         return ZX_ERR_NOT_SUPPORTED;
     }
+
+    usb_ss_ep_comp_descriptor_t* ss_comp_desc = NULL;
+    usb_descriptor_header_t* desc = usb_desc_iter_next(&iter);
+    if (desc && desc->bDescriptorType == USB_DT_SS_EP_COMPANION) {
+        ss_comp_desc = (usb_ss_ep_comp_descriptor_t *)desc;
+    }
+
+    uint8_t ep_addr = endp->bEndpointAddress;
+    uint16_t max_packet_size = usb_ep_max_packet(endp);
 
     usb_hub_t* hub = calloc(1, sizeof(usb_hub_t));
     if (!hub) {
         zxlogf(ERROR, "Not enough memory for usb_hub_t.\n");
+        usb_desc_iter_release(&iter);
         return ZX_ERR_NO_MEMORY;
     }
     atomic_init(&hub->thread_done, false);
@@ -461,12 +465,23 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
     usb_request_t* req;
     status = usb_req_alloc(&usb, &req, max_packet_size, ep_addr);
     if (status != ZX_OK) {
+        usb_desc_iter_release(&iter);
         usb_hub_free(hub);
         return status;
     }
     req->complete_cb = usb_hub_interrupt_complete;
     req->cookie = hub;
     hub->status_request = req;
+
+    status = usb_enable_endpoint(&usb, endp, ss_comp_desc, true);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: usb_enable_endpoint failed %d\n", __FUNCTION__, status);
+        usb_desc_iter_release(&iter);
+        usb_hub_free(hub);
+        return status;
+    }
+
+    usb_desc_iter_release(&iter);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -502,6 +517,6 @@ static zx_driver_ops_t usb_hub_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(usb_hub, usb_hub_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE),
     BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HUB),
 ZIRCON_DRIVER_END(usb_hub)

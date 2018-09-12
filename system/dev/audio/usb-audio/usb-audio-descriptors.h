@@ -7,7 +7,6 @@
 #include <ddk/protocol/usb.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <zircon/device/usb.h>
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>
 #include <zircon/syscalls.h>

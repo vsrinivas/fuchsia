@@ -17,10 +17,10 @@
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb-hid.h>
-#include <zircon/device/usb.h>
+#include <zircon/device/usb-device.h>
 #include <pretty/hexdump.h>
 
-#define DEV_USB "/dev/class/usb"
+#define DEV_USB "/dev/class/usb-device"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
@@ -66,16 +66,6 @@ static int do_list_device(int fd, int configuration, bool verbose, const char* d
     max_usb_string_resp_t manufacturer;
     max_usb_string_resp_t product;
     ssize_t ret = 0;
-
-    int device_type;
-    ret = ioctl_usb_get_device_type(fd, &device_type);
-    if (ret != sizeof(device_type)) {
-        printf("IOCTL_USB_GET_DEVICE_TYPE failed for %s/%s\n", DEV_USB, devname);
-        return ret;
-    }
-    if (device_type != USB_DEVICE_TYPE_DEVICE) {
-        return ret;
-    }
 
     ret = ioctl_usb_get_device_desc(fd, &device_desc);
     if (ret != sizeof(device_desc)) {
@@ -333,12 +323,6 @@ static int list_tree(void) {
         int fd = open(devname, O_RDONLY);
         if (fd < 0) {
             printf("Error opening %s\n", devname);
-            continue;
-        }
-        int device_type = -1;
-        ioctl_usb_get_device_type(fd, &device_type);
-        if (device_type != USB_DEVICE_TYPE_DEVICE) {
-            close(fd);
             continue;
         }
 

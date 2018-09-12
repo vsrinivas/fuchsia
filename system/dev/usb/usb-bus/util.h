@@ -6,11 +6,11 @@
 
 #include <ddk/device.h>
 
-zx_status_t usb_device_control(usb_device_t* dev, uint8_t request_type,  uint8_t request,
-                               uint16_t value, uint16_t index, void* data, size_t length);
+zx_status_t usb_util_control(usb_device_t* dev, uint8_t request_type,  uint8_t request,
+                             uint16_t value, uint16_t index, void* data, size_t length);
 
-zx_status_t usb_device_get_descriptor(usb_device_t* dev, uint16_t type,
-                                      uint16_t index, uint16_t language, void* data, size_t length);
+zx_status_t usb_util_get_descriptor(usb_device_t* dev, uint16_t type, uint16_t index,
+                                    uint16_t language, void* data, size_t length);
 
 // Fetch the descriptor using the provided descriptor ID and language ID.  If
 // the language ID requested is not available, the first entry of the language
@@ -24,6 +24,6 @@ zx_status_t usb_device_get_descriptor(usb_device_t* dev, uint16_t type,
 // in the string, and the result may not be null terminated if the string
 // occupies the entire provided buffer.
 //
-zx_status_t usb_device_get_string_descriptor(usb_device_t* dev,
-                                             uint8_t desc_id, uint16_t* inout_lang_id,
-                                             uint8_t* buf, size_t* inout_buflen);
+zx_status_t usb_util_get_string_descriptor(usb_device_t* dev, uint8_t desc_id,
+                                           uint16_t* inout_lang_id, uint8_t* buf,
+                                           size_t* inout_buflen);

@@ -7,7 +7,7 @@
 #include <fbl/unique_ptr.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/usb.h>
+#include <zircon/device/usb-device.h>
 #include <zircon/device/usb-test-fwloader.h>
 #include <zircon/device/usb-tester.h>
 #include <zircon/hw/usb.h>

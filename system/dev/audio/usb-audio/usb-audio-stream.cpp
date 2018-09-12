@@ -10,7 +10,6 @@
 #include <fbl/limits.h>
 #include <lib/zx/vmar.h>
 #include <string.h>
-#include <zircon/device/usb.h>
 #include <zircon/hw/usb-audio.h>
 #include <zircon/process.h>
 #include <zircon/time.h>
@@ -880,18 +879,7 @@ zx_status_t UsbAudioStream::OnStartLocked(dispatcher::Channel* channel,
     // went out on, schedule the transaction using the special "on the next USB
     // isochronous frame" sentinel value and figure out which frame that was
     // during the callback.
-    size_t read_amt;
-    resp.result = device_ioctl(parent_.parent(), IOCTL_USB_GET_CURRENT_FRAME,
-                               NULL, 0,
-                               &usb_frame_num_, sizeof(usb_frame_num_),
-                               &read_amt);
-    if ((resp.result != ZX_OK) || (read_amt != sizeof(usb_frame_num_))) {
-        LOG(ERROR, "Failed to fetch USB frame number!  (res %d, amt %zu)\n", resp.result, read_amt);
-        ifc_->ActivateIdleFormat();
-        return channel->Write(&resp, sizeof(resp));
-    }
-
-    usb_frame_num_ += 2;
+    usb_frame_num_ = usb_get_current_frame(&parent_.usb_proto()) + 2;
 
     // Flag ourselves as being in the starting state, then queue up all of our
     // transactions.
