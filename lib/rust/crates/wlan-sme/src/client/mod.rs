@@ -12,7 +12,7 @@ mod test_utils;
 
 use fidl_fuchsia_wlan_mlme::{MlmeEvent, ScanRequest};
 use futures::channel::mpsc;
-use log::{error, log};
+use log::error;
 use std::sync::Arc;
 
 use super::{DeviceInfo, MlmeRequest, MlmeStream, Ssid};

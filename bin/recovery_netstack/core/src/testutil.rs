@@ -6,7 +6,6 @@
 
 use std::collections::HashMap;
 
-use log;
 use rand::{SeedableRng, XorShiftRng};
 
 use crate::{Context, EventDispatcher};

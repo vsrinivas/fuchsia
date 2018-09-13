@@ -7,7 +7,7 @@ use fidl::endpoints2::{RequestStream, ServerEnd};
 use futures::channel::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use futures::prelude::*;
 use futures::try_join;
-use log::{error, log};
+use log::error;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;

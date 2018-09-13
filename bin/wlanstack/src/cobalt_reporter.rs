@@ -10,7 +10,7 @@ use fidl_fuchsia_mem as fuchsia_mem;
 use futures::channel::mpsc;
 use futures::prelude::*;
 use futures::StreamExt;
-use log::{error, log};
+use log::error;
 use std::fs::File;
 use std::io::Seek;
 

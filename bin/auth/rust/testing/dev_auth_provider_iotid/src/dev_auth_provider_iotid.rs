@@ -17,7 +17,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::future;
 use futures::prelude::*;
-use log::{info, log, warn};
+use log::{info, warn};
 use rand::{thread_rng, Rng};
 use std::time::Duration;
 

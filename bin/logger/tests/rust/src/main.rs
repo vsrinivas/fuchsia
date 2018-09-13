@@ -15,7 +15,7 @@ mod tests {
     use fuchsia_syslog_listener::{self as syslog_listener, LogProcessor};
     use fuchsia_zircon::DurationNum;
     use futures::TryFutureExt;
-    use log::{log, warn};
+    use log::warn;
     use parking_lot::Mutex;
 
     use std::sync::Arc;

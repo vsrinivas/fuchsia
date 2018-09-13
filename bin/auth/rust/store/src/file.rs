@@ -5,7 +5,7 @@
 use crate::serializer::{JsonSerializer, Serializer};
 use crate::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 
-use log::{log, warn};
+use log::warn;
 use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};

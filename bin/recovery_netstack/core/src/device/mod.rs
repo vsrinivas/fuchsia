@@ -10,7 +10,7 @@ pub mod ethernet;
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Display, Formatter};
 
-use log::{debug, log};
+use log::debug;
 
 use crate::device::ethernet::{EthernetDeviceState, Mac};
 use crate::ip::{IpAddr, Subnet};

@@ -296,7 +296,7 @@ mod test {
 
     use super::*;
 
-    use log::{log, trace, error, debug, info, warn};
+    use log::{trace, error, debug, info, warn};
     use self::tempdir::TempDir;
     use std::fs::File;
     use std::ptr;

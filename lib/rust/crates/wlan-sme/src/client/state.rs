@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
-use log::{error, log, warn};
+use log::{error, warn};
 use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, NegotiatedRsne, SecAssocUpdate, SecAssocStatus};
 

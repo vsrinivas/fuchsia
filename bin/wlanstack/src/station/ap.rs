@@ -8,7 +8,7 @@ use fidl_fuchsia_wlan_sme as fidl_sme;
 use futures::{select, Stream};
 use futures::channel::{oneshot, mpsc};
 use futures::prelude::*;
-use log::{error, log};
+use log::error;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};

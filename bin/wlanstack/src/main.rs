@@ -28,7 +28,7 @@ use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use futures::channel::mpsc::{self, UnboundedReceiver};
-use log::{info, log};
+use log::info;
 use std::sync::Arc;
 
 use crate::device::{PhyDevice, PhyMap, IfaceDevice, IfaceMap};

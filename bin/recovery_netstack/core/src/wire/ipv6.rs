@@ -8,7 +8,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
-use log::{debug, log};
+use log::debug;
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;

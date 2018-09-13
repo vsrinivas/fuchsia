@@ -12,7 +12,7 @@ use fuchsia_zircon as zx;
 use futures::channel::mpsc::UnboundedReceiver;
 use futures::select;
 use futures::prelude::*;
-use log::{error, info, log};
+use log::{error, info};
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::Arc;

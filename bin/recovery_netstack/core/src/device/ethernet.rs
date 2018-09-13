@@ -6,7 +6,7 @@
 
 use std::fmt::{self, Display, Formatter};
 
-use log::{debug, log};
+use log::debug;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};

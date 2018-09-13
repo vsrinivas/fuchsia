@@ -9,7 +9,7 @@ use fuchsia_wlan_dev as wlan_dev;
 use fuchsia_vfs_watcher::{Watcher, WatchEvent};
 use fuchsia_zircon::Status as zx_Status;
 use futures::prelude::*;
-use log::{error, info, log};
+use log::{error, info};
 use std::io;
 use std::fs::File;
 use std::path::{Path, PathBuf};

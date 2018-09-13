@@ -6,7 +6,7 @@
 
 use std::mem;
 
-use log::{log, trace};
+use log::trace;
 
 use crate::ip::{send_ip_packet, IpAddr, IpProto};
 use crate::wire::icmp::{IcmpPacket, Icmpv4Packet};

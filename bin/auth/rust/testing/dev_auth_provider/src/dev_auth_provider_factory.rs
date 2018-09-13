@@ -11,7 +11,7 @@ use fidl_fuchsia_auth::{AuthProviderFactoryRequest, AuthProviderFactoryRequestSt
 use fuchsia_async as fasync;
 
 use futures::prelude::*;
-use log::{info, log, warn};
+use log::{info, warn};
 
 /// The AuthProviderFactory struct is holding implementation of
 /// the `AuthProviderFactory` fidl interface.

@@ -4,7 +4,7 @@
 
 use failure::Fail;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, ScanResultCodes, ScanRequest};
-use log::{error, log};
+use log::error;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::cmp::Ordering;

@@ -10,7 +10,7 @@ use fuchsia_zircon::DurationNum;
 use futures::prelude::*;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
-use log::{error, log};
+use log::error;
 use parking_lot::Mutex;
 use std::cmp::PartialOrd;
 use std::collections::HashMap;

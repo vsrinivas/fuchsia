@@ -13,7 +13,7 @@ use fidl::endpoints2::ServiceMarker;
 use fidl_fuchsia_auth::AuthProviderFactoryMarker;
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
-use log::{info, log};
+use log::info;
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");

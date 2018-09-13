@@ -8,7 +8,7 @@ use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use futures::{prelude::*, select};
 use futures::channel::mpsc;
-use log::{error, log};
+use log::error;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};

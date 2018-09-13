@@ -10,7 +10,7 @@ use fuchsia_app::client::{App, Launcher};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
-use log::{info, log};
+use log::info;
 use std::sync::{Arc, RwLock};
 
 /// A simple wrapper to set an optional value after instantiation. The value

@@ -24,7 +24,7 @@ use fuchsia_zircon as zx;
 use futures::future::{ready as fready, FutureObj};
 use futures::prelude::*;
 use futures::try_join;
-use log::{error, log, warn};
+use log::{error, warn};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};

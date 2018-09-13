@@ -12,7 +12,7 @@ mod types;
 
 pub use self::types::*;
 
-use log::{debug, log, trace};
+use log::{debug, trace};
 use std::fmt::Debug;
 use std::mem;
 use std::ops::Range;

@@ -4,7 +4,7 @@
 
 use {
     failure::{self, bail, format_err},
-    log::{error, log},
+    log::error,
     parking_lot::{Mutex, MutexGuard},
     serde_derive::{Deserialize, Serialize},
     serde_json,

@@ -4,7 +4,7 @@
 
 #![deny(warnings)]
 
-use log;
+use log::Log;
 
 const LOG_LEVEL: log::Level = log::Level::Debug;
 

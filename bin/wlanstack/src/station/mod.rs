@@ -11,7 +11,7 @@ use fidl_fuchsia_wlan_stats::IfaceStats;
 use futures::channel::mpsc;
 use futures::prelude::*;
 use futures::select;
-use log::{log, warn};
+use log::warn;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
