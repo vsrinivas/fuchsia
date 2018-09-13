@@ -17,6 +17,7 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
+#include <wlan/mlme/timer_manager.h>
 #include <wlan/mlme/wlan.h>
 #include <wlan/protocol/ioctl.h>
 #include <zircon/assert.h>
@@ -763,7 +764,7 @@ zx_status_t Device::CreateMinstrel() {
         errorf("could not create minstrel timer: %d\n", status);
         return status;
     }
-    minstrel_.reset(new MinstrelRateSelector(fbl::move(timer)));
+    minstrel_.reset(new MinstrelRateSelector(TimerManager(fbl::move(timer))));
     return ZX_OK;
 }
 

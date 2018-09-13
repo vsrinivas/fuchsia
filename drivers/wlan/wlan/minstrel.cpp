@@ -175,8 +175,8 @@ std::vector<TxParamSet> GetSupportedHt(uint8_t nss, CBW cbw, GI gi,
     return tx_params_to_add;
 }
 
-MinstrelRateSelector::MinstrelRateSelector(fbl::unique_ptr<wlan::Timer> timer)
-    : timer_(fbl::move(timer)) {}
+MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr)
+    : timer_mgr_(fbl::move(timer_mgr)) {}
 
 void AddErp(std::vector<TxParamSet>* tx_params_list, const wlan_assoc_ctx_t& assoc_ctx) {
     std::vector<SupportedRate> legacy_rates(assoc_ctx.supported_rates_cnt +

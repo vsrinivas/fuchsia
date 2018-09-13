@@ -7,6 +7,7 @@
 
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/client/station.h>
+#include <wlan/mlme/timer_manager.h>
 #include <wlan/protocol/info.h>
 
 #include <fbl/unique_ptr.h>
@@ -54,7 +55,7 @@ struct Peer {
 
 class MinstrelRateSelector {
    public:
-    MinstrelRateSelector(fbl::unique_ptr<Timer> timer);
+    MinstrelRateSelector(TimerManager&& timer_mgr);
     void AddPeer(const wlan_assoc_ctx_t& assoc_ctx);
     void RemovePeer(const common::MacAddr& addr);
     // Called after every tx packet.
@@ -66,7 +67,7 @@ class MinstrelRateSelector {
     Peer* GetPeer(const common::MacAddr& addr);
 
     std::unordered_map<common::MacAddr, Peer, common::MacAddrHasher> peer_map_;
-    fbl::unique_ptr<Timer> timer_;
+    TimerManager timer_mgr_;
 };
 }  // namespace wlan
 
