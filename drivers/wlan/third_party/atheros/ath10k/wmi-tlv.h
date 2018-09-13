@@ -165,7 +165,7 @@ enum wmi_tlv_cmd_id {
     WMI_TLV_OFL_SCAN_PERIOD,
     WMI_TLV_P2P_DEV_SET_DEVICE_INFO = WMI_TLV_CMD(WMI_TLV_GRP_P2P),
     WMI_TLV_P2P_DEV_SET_DISCOVERABILITY,
-    WMI_TLV_P2P_GO_SET_BEACON_IE,
+    WMI_TLV_P2P_GO_SET_BEACON_IE_CMDID,
     WMI_TLV_P2P_GO_SET_PROBE_RESP_IE,
     WMI_TLV_P2P_SET_VENDOR_IE_DATA_CMDID,
     WMI_TLV_P2P_DISC_OFFLOAD_CONFIG_CMDID,
@@ -614,7 +614,7 @@ enum wmi_tlv_tag {
     WMI_TLV_TAG_STRUCT_VDEV_DELETE_CMD,
     WMI_TLV_TAG_STRUCT_VDEV_START_REQUEST_CMD,
     WMI_TLV_TAG_STRUCT_P2P_NOA_DESCRIPTOR,
-    WMI_TLV_TAG_STRUCT_P2P_GO_SET_BEACON_IE,
+    WMI_TLV_TAG_STRUCT_P2P_GO_BEACON_IE_CMD,
     WMI_TLV_TAG_STRUCT_GTK_OFFLOAD_CMD,
     WMI_TLV_TAG_STRUCT_VDEV_UP_CMD,
     WMI_TLV_TAG_STRUCT_VDEV_STOP_CMD,
@@ -629,7 +629,7 @@ enum wmi_tlv_tag {
     WMI_TLV_TAG_STRUCT_VHT_RATE_SET,
     WMI_TLV_TAG_STRUCT_BCN_TMPL_CMD,
     WMI_TLV_TAG_STRUCT_PRB_TMPL_CMD,
-    WMI_TLV_TAG_STRUCT_BCN_PRB_INFO,
+    WMI_TLV_TAG_STRUCT_BCN_PRB_INFO_CMD,
     WMI_TLV_TAG_STRUCT_PEER_TID_ADDBA_CMD,
     WMI_TLV_TAG_STRUCT_PEER_TID_DELBA_CMD,
     WMI_TLV_TAG_STRUCT_STA_POWERSAVE_MODE_CMD,
@@ -1357,7 +1357,7 @@ struct wmi_tlv_prb_tmpl_cmd {
     uint32_t buf_len;
 } __PACKED;
 
-struct wmi_tlv_p2p_go_bcn_ie {
+struct wmi_tlv_p2p_go_bcn_ie_cmd {
     uint32_t vdev_id;
     uint32_t ie_len;
 } __PACKED;
@@ -1598,7 +1598,9 @@ struct wmi_tlv_tx_pause_ev {
     WMI_TLV_MSG(VDEV_SET_WMM,       wmi_tlv_vdev_set_wmm_cmd),   \
     WMI_TLV_MSG(VDEV_START,         wmi_tlv_vdev_start_cmd),     \
     WMI_TLV_MSG(VDEV_STOP,          wmi_vdev_stop_cmd),          \
-    WMI_TLV_MSG(VDEV_UP,            wmi_vdev_up_cmd)
+    WMI_TLV_MSG(VDEV_UP,            wmi_vdev_up_cmd),            \
+    WMI_TLV_MSG(BCN_TMPL,           wmi_tlv_bcn_tmpl_cmd),       \
+    WMI_TLV_MSG(PRB_TMPL,           wmi_tlv_prb_tmpl_cmd)
 // clang-format on
 
 void ath10k_wmi_tlv_attach(struct ath10k* ar);

@@ -669,51 +669,53 @@ static int ath10k_peer_create(struct ath10k* ar,
 
     return 0;
 }
+#endif  //NEEDS PORTING
 
-static int ath10k_mac_set_kickout(struct ath10k_vif* arvif) {
+static zx_status_t ath10k_mac_set_kickout(struct ath10k_vif* arvif) {
     struct ath10k* ar = arvif->ar;
     uint32_t param;
-    int ret;
+    zx_status_t ret;
 
     param = ar->wmi.pdev_param->sta_kickout_th;
     ret = ath10k_wmi_pdev_set_param(ar, param,
                                     ATH10K_KICKOUT_THRESHOLD);
-    if (ret) {
-        ath10k_warn("failed to set kickout threshold on vdev %i: %d\n",
-                    arvif->vdev_id, ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to set kickout threshold on vdev %i: %s\n",
+                    arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
 
     param = ar->wmi.vdev_param->ap_keepalive_min_idle_inactive_time_secs;
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, param,
                                     ATH10K_KEEPALIVE_MIN_IDLE);
-    if (ret) {
-        ath10k_warn("failed to set keepalive minimum idle time on vdev %i: %d\n",
-                    arvif->vdev_id, ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to set keepalive minimum idle time on vdev %i: %s\n",
+                    arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
 
     param = ar->wmi.vdev_param->ap_keepalive_max_idle_inactive_time_secs;
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, param,
                                     ATH10K_KEEPALIVE_MAX_IDLE);
-    if (ret) {
-        ath10k_warn("failed to set keepalive maximum idle time on vdev %i: %d\n",
-                    arvif->vdev_id, ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to set keepalive maximum idle time on vdev %i: %s\n",
+                    arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
 
     param = ar->wmi.vdev_param->ap_keepalive_max_unresponsive_time_secs;
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, param,
                                     ATH10K_KEEPALIVE_MAX_UNRESPONSIVE);
-    if (ret) {
-        ath10k_warn("failed to set keepalive maximum unresponsive time on vdev %i: %d\n",
-                    arvif->vdev_id, ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to set keepalive maximum unresponsive time on vdev %i: %s\n",
+                    arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
+#if 0  // NEEDS PORTING
 static int ath10k_mac_set_rts(struct ath10k_vif* arvif, uint32_t value) {
     struct ath10k* ar = arvif->ar;
     uint32_t vdev_param;
@@ -879,6 +881,7 @@ static void ath10k_mac_vif_beacon_cleanup(struct ath10k_vif* arvif) {
 #endif  // NEEDS PORTING
 
 static inline zx_status_t ath10k_vdev_setup_sync(struct ath10k* ar) {
+
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
     if (BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CRASH_FLUSH)) { return ZX_ERR_BAD_STATE; }
@@ -1413,12 +1416,13 @@ static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif, wlan_chan
     arg.channel.max_reg_power = primary_chan->max_reg_power * 2;
     arg.channel.max_antenna_gain = primary_chan->max_antenna_gain * 2;
 
-#if 0   // NEEDS PORTING
     if (arvif->vdev_type == WMI_VDEV_TYPE_AP) {
         arg.ssid = arvif->u.ap.ssid;
         arg.ssid_len = arvif->u.ap.ssid_len;
         arg.hidden_ssid = arvif->u.ap.hidden_ssid;
+    }
 
+#if 0   // NEEDS PORTING
         /* For now allow DFS for AP mode */
         arg.channel.chan_radar =
             !!(chandef->chan->flags & IEEE80211_CHAN_RADAR);
@@ -1491,7 +1495,7 @@ static int ath10k_mac_setup_bcn_p2p_ie(struct ath10k_vif* arvif,
     ret = ath10k_wmi_p2p_go_bcn_ie(ar, arvif->vdev_id, p2p_ie);
     if (ret) {
         ath10k_warn("failed to submit p2p go bcn ie for vdev %i: %d\n",
-                    arvif->vdev_id, ret);
+                   arvif->vdev_id, ret);
         return ret;
     }
 
@@ -1529,31 +1533,32 @@ static int ath10k_mac_remove_vendor_ie(struct sk_buff* skb, unsigned int oui,
 
     return 0;
 }
+#endif  // NEEDS PORTING
 
-static int ath10k_mac_setup_bcn_tmpl(struct ath10k_vif* arvif) {
+zx_status_t ath10k_mac_setup_bcn_tmpl(struct ath10k_vif* arvif) {
     struct ath10k* ar = arvif->ar;
+    zx_status_t ret;
+
+#if 0 // NEEDS PORTING
     struct ieee80211_hw* hw = ar->hw;
     struct ieee80211_vif* vif = arvif->vif;
     struct ieee80211_mutable_offsets offs = {};
     struct sk_buff* bcn;
-    int ret;
+#endif // NEEDS PORTING
 
     if (!BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_BEACON_OFFLOAD)) {
-        return 0;
+        ath10k_err("The hardware doesn't support beacon offload.\n");
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    if (arvif->vdev_type != WMI_VDEV_TYPE_AP &&
-            arvif->vdev_type != WMI_VDEV_TYPE_IBSS) {
-        return 0;
+    if (arvif->vdev_type != WMI_VDEV_TYPE_AP && arvif->vdev_type != WMI_VDEV_TYPE_IBSS) {
+        ath10k_err("The interface is neither AP or IBSS. arvif->vdev_type=%d\n", arvif->vdev_type);
+        return ZX_ERR_BAD_STATE;
     }
 
-    bcn = ieee80211_beacon_get_template(hw, vif, &offs);
-    if (!bcn) {
-        ath10k_warn("failed to get beacon template from mac80211\n");
-        return -EPERM;
-    }
-
-    ret = ath10k_mac_setup_bcn_p2p_ie(arvif, bcn);
+#if 0  // This is not required to enable AP beaconing. But don't know it is used in other beaconing,
+       // for example, in the WiFi Direct mode. So leave it here.
+    ret = ath10k_mac_setup_bcn_p2p_ie(ar, bcn);
     if (ret) {
         ath10k_warn("failed to setup p2p go bcn ie: %d\n", ret);
         kfree_skb(bcn);
@@ -1567,57 +1572,76 @@ static int ath10k_mac_setup_bcn_tmpl(struct ath10k_vif* arvif) {
     ath10k_mac_remove_vendor_ie(bcn, WLAN_OUI_WFA, WLAN_OUI_TYPE_WFA_P2P,
                                 offsetof(struct ieee80211_mgmt,
                                          u.beacon.variable));
+#endif
 
-    ret = ath10k_wmi_bcn_tmpl(ar, arvif->vdev_id, offs.tim_offset, bcn, 0,
-                              0, NULL, 0);
-    kfree_skb(bcn);
-
-    if (ret) {
-        ath10k_warn("failed to submit beacon template command: %d\n",
-                    ret);
+    struct ath10k_msg_buf* bcn;
+    ret = ath10k_msg_buf_alloc(ar, &bcn, ATH10K_MSG_TYPE_BASE, arvif->bcn_tmpl_len);
+    if (ret != ZX_OK) {
+        ath10k_err("Cannot alloc memory for beacon template: %s\n", zx_status_get_string(ret));
         return ret;
     }
+    bcn->used = arvif->bcn_tmpl_len;
+    memcpy(bcn->vaddr, arvif->bcn_tmpl_data, bcn->used);
 
-    return 0;
+    ret = ath10k_wmi_bcn_tmpl(
+            ar, ar->arvif.vdev_id, arvif->tim_ie_offset, bcn,
+            /* prb_caps */ 0, /* prb_erp */ 0, /* prb_ies */ NULL, /* prb_ies_len */ 0);
+
+    // Beacon is used for ath10k_wmi_bcn_tmpl() to copy. Not hooked up to hardware. Free it now.
+    ath10k_msg_buf_free(bcn);
+
+    if (ret != ZX_OK) {
+        ath10k_err("ath10k_wmi_bcn_tmpl failed: %s\n", zx_status_get_string(ret));
+    }
+    return ret;
 }
 
-static int ath10k_mac_setup_prb_tmpl(struct ath10k_vif* arvif) {
+static zx_status_t ath10k_mac_setup_prb_tmpl(struct ath10k_vif* arvif) {
     struct ath10k* ar = arvif->ar;
-    struct ieee80211_hw* hw = ar->hw;
-    struct ieee80211_vif* vif = arvif->vif;
-    struct sk_buff* prb;
-    int ret;
+    struct ath10k_msg_buf* prb;
+    zx_status_t ret;
+
+    // It seems we don't need this.
+    return ZX_OK;
 
     if (!BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_BEACON_OFFLOAD)) {
-        return 0;
+        ath10k_err("The hardware don't support beacon offload.\n");
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     if (arvif->vdev_type != WMI_VDEV_TYPE_AP) {
-        return 0;
+        ath10k_err("The interface is not AP. arvif->vdev_type=%d\n", arvif->vdev_type);
+        return ZX_ERR_BAD_STATE;
     }
 
-    prb = ieee80211_proberesp_get(hw, vif);
-    if (!prb) {
-        ath10k_warn("failed to get probe resp template from mac80211\n");
-        return -EPERM;
-    }
-
-    ret = ath10k_wmi_prb_tmpl(ar, arvif->vdev_id, prb);
-    kfree_skb(prb);
-
-    if (ret) {
-        ath10k_warn("failed to submit probe resp template command: %d\n",
-                    ret);
+    ret = ath10k_msg_buf_alloc(ar, &prb, ATH10K_MSG_TYPE_WMI_TLV_PRB_TMPL, 0);
+    if (ret != ZX_OK) {
+        ath10k_err("Cannot alloc memory for probe response packet: %s\n",
+                   zx_status_get_string(ret));
         return ret;
     }
 
-    return 0;
+    static const uint8_t prb_data[] = {};
+    prb->used = sizeof(prb_data);
+    memcpy(prb->vaddr, prb_data, prb->used);
+
+    ret = ath10k_wmi_prb_tmpl(ar, ar->arvif.vdev_id, prb);
+
+    // Beacon is used for ath10k_wmi_bcn_tmpl() to copy. Not hooked up to hardware. Free it now.
+    ath10k_msg_buf_free(prb);
+
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to submit probe resp template command: %s\n",
+                    zx_status_get_string(ret));
+        return ret;
+    }
+
+    return ret;
 }
 
-static int ath10k_mac_vif_fix_hidden_ssid(struct ath10k_vif* arvif) {
+static zx_status_t ath10k_mac_vif_fix_hidden_ssid(struct ath10k_vif* arvif) {
     struct ath10k* ar = arvif->ar;
-    struct cfg80211_chan_def def;
-    int ret;
+    zx_status_t ret;
 
     /* When originally vdev is started during assign_vif_chanctx() some
      * information is missing, notably SSID. Firmware revisions with beacon
@@ -1635,25 +1659,26 @@ static int ath10k_mac_vif_fix_hidden_ssid(struct ath10k_vif* arvif) {
      * response delivery. It's probably more robust to keep it as is.
      */
     if (!BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_BEACON_OFFLOAD)) {
-        return 0;
+        ath10k_err("The hardware doesn't support beacon offload.\n");
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
+    if (arvif->vdev_type != WMI_VDEV_TYPE_AP && arvif->vdev_type != WMI_VDEV_TYPE_IBSS) {
+        ath10k_err("The interface is neither AP or IBSS. arvif->vdev_type=%d\n", arvif->vdev_type);
+        return ZX_ERR_BAD_STATE;
+    }
     if (COND_WARN(!arvif->is_started)) {
-        return -EINVAL;
+        return ZX_ERR_BAD_STATE;
     }
 
     if (COND_WARN(!arvif->is_up)) {
-        return -EINVAL;
-    }
-
-    if (COND_WARN(ath10k_mac_vif_chan(arvif->vif, &def))) {
-        return -EINVAL;
+        return ZX_ERR_BAD_STATE;
     }
 
     ret = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
-    if (ret) {
-        ath10k_warn("failed to bring down ap vdev %i: %d\n",
-                    arvif->vdev_id, ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to bring down ap vdev %i: %s\n",
+                    arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
 
@@ -1662,40 +1687,40 @@ static int ath10k_mac_vif_fix_hidden_ssid(struct ath10k_vif* arvif) {
      */
 
     ret = ath10k_mac_setup_bcn_tmpl(arvif);
-    if (ret) {
-        ath10k_warn("failed to update beacon template: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to update beacon template: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
     ret = ath10k_mac_setup_prb_tmpl(arvif);
-    if (ret) {
-        ath10k_warn("failed to update presp template: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to update presp template: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
-    ret = ath10k_vdev_restart(arvif, &def);
-    if (ret) {
-        ath10k_warn("failed to restart ap vdev %i: %d\n",
-                    arvif->vdev_id, ret);
+    ret = ath10k_vdev_restart(arvif, &ar->rx_channel);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to restart ap vdev %i: %s\n",
+                    arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
 
     ret = ath10k_wmi_vdev_up(arvif->ar, arvif->vdev_id, arvif->aid,
                              arvif->bssid);
-    if (ret) {
-        ath10k_warn("failed to bring up ap vdev %i: %d\n",
-                    arvif->vdev_id, ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to bring up ap vdev %i: %s\n",
+                    arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-static void ath10k_control_beaconing(struct ath10k_vif* arvif,
-                                     struct ieee80211_bss_conf* info) {
+static void ath10k_control_beaconing(struct ath10k_vif* arvif) {
     struct ath10k* ar = arvif->ar;
-    int ret = 0;
+    zx_status_t ret;
 
+#if 0 // NEEDS PORTING
     ASSERT_MTX_HELD(&arvif->ar->conf_mutex);
 
     if (!info->enable_beacon) {
@@ -1712,32 +1737,74 @@ static void ath10k_control_beaconing(struct ath10k_vif* arvif,
 
         return;
     }
+#endif // NEEDS PORTING
 
     arvif->tx_seq_no = 0x1000;
 
+    // AID 0 is reserved for AP.
     arvif->aid = 0;
-    memcpy(arvif->bssid, info->bssid, ETH_ALEN);
 
-    ret = ath10k_wmi_vdev_up(arvif->ar, arvif->vdev_id, arvif->aid,
-                             arvif->bssid);
-    if (ret) {
-        ath10k_warn("failed to bring up vdev %d: %i\n",
-                    arvif->vdev_id, ret);
+    ret = ath10k_wmi_vdev_up(ar, arvif->vdev_id, arvif->aid, arvif->bssid);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to bring up vdev %d: %s\n", arvif->vdev_id, zx_status_get_string(ret));
         return;
     }
 
     arvif->is_up = true;
 
     ret = ath10k_mac_vif_fix_hidden_ssid(arvif);
-    if (ret) {
-        ath10k_warn("failed to fix hidden ssid for vdev %i, expect trouble: %d\n",
-                    arvif->vdev_id, ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to fix hidden ssid for vdev %i, expect trouble: %s\n",
+                    arvif->vdev_id, zx_status_get_string(ret));
         return;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vdev %d up\n", arvif->vdev_id);
 }
 
+zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif) {
+    struct ath10k* ar = arvif->ar;
+    zx_status_t ret;
+    uint32_t vdev_param;
+
+    mtx_lock(&ar->conf_mutex);
+
+    vdev_param = ar->wmi.vdev_param->beacon_interval;
+    ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param, arvif->beacon_interval);
+    if (ret != ZX_OK) {
+        ath10k_err("Setting beacon interval failed: %s\n", zx_status_get_string(ret));
+        return ret;
+    }
+
+    vdev_param = WMI_TLV_PDEV_PARAM_BEACON_TX_MODE;
+    ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id,
+                                    vdev_param, WMI_BEACON_STAGGERED_MODE);
+    if (ret != ZX_OK) {
+        ath10k_err("Setting beacon Tx mode failed: %s\n", zx_status_get_string(ret));
+        return ret;
+    }
+
+    ret = ath10k_mac_setup_bcn_tmpl(arvif);
+    if (ret != ZX_OK) {
+        ath10k_err("ath10k_mac_setup_bcn_tmpl() failed: %s at ath10k_mac_start_ap().\n",
+                   zx_status_get_string(ret));
+        return ret;
+    }
+
+    vdev_param = WMI_TLV_VDEV_PARAM_DTIM_PERIOD;
+    ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param, arvif->dtim_period);
+    if (ret != ZX_OK) {
+        ath10k_err("Setting DTIM period failed: %s\n", zx_status_get_string(ret));
+        return ret;
+    }
+
+    ath10k_control_beaconing(arvif);
+
+    mtx_unlock(&ar->conf_mutex);
+    return ret;
+}
+
+#if 0 // NEEDS PORTING
 static void ath10k_control_ibss(struct ath10k_vif* arvif,
                                 struct ieee80211_bss_conf* info,
                                 const uint8_t self_peer[ETH_ALEN]) {
@@ -4646,7 +4713,7 @@ zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, void* cookie) {
 
     ar->num_started_vdevs = 0;
     ath10k_regd_update(ar);
-    ath10k_add_interface(ar, WLAN_MAC_ROLE_CLIENT);
+    ath10k_add_interface(ar, ar->mac_role);
 
     struct wmi_wmm_params_arg wmm_params;
 
@@ -4820,10 +4887,13 @@ static uint32_t get_nss_from_chainmask(uint16_t chain_mask) {
     }
     return 1;
 }
+#endif // NEEDS PORTING
 
-static int ath10k_mac_set_txbf_conf(struct ath10k_vif* arvif) {
+static zx_status_t ath10k_mac_set_txbf_conf(struct ath10k_vif* arvif) {
     uint32_t value = 0;
     struct ath10k* ar = arvif->ar;
+
+#if 0   // NEEDS PORTING
     int nsts;
     int sound_dim;
 
@@ -4862,11 +4932,11 @@ static int ath10k_mac_set_txbf_conf(struct ath10k_vif* arvif) {
     if (ar->vht_cap_info & IEEE80211_VHT_CAP_MU_BEAMFORMEE_CAPABLE)
         value |= (WMI_VDEV_PARAM_TXBF_MU_TX_BFEE |
                   WMI_VDEV_PARAM_TXBF_SU_TX_BFEE);
+#endif  // NEEDS PORTING
 
-    return ath10k_wmi_vdev_set_param(ar, arvif->vdev_id,
+    return ath10k_wmi_vdev_set_param(ar, ar->arvif.vdev_id,
                                      ar->wmi.vdev_param->txbf, value);
 }
-#endif  // NEEDS PORTING
 
 // Role is one of the supported roles in WLAN_MAC_ROLE_* values
 static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
@@ -4922,6 +4992,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
 #endif  // NEEDS PORTING
     case WLAN_MAC_ROLE_CLIENT:
         arvif->vdev_type = WMI_VDEV_TYPE_STA;
+        ath10k_info("Adding a station interface (vdev_id=%d) ...\n", arvif->vdev_id);
 #if 0   // NEEDS PORTING
         if (vif->p2p)
             arvif->vdev_subtype = ath10k_wmi_get_vdev_subtype
@@ -4946,6 +5017,8 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
 #endif  // NEEDS PORTING
     case WLAN_MAC_ROLE_AP:
         arvif->vdev_type = WMI_VDEV_TYPE_AP;
+        ath10k_info("Adding an AP interface (vdev_id=%d) ...\n", arvif->vdev_id);
+        break;
 
 #if 0   // NEEDS PORTING
         if (vif->p2p)
@@ -5095,6 +5168,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
     } else {
         arvif->peer_id = HTT_INVALID_PEERID;
     }
+#endif  // NEEDS PORTING
 
     if (arvif->vdev_type == WMI_VDEV_TYPE_AP) {
         ret = ath10k_mac_set_kickout(arvif);
@@ -5105,6 +5179,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
         }
     }
 
+#if 0 // NEEDS PORTING
     if (arvif->vdev_type == WMI_VDEV_TYPE_STA) {
         param = WMI_STA_PS_PARAM_RX_WAKE_POLICY;
         value = WMI_STA_PS_RX_WAKE_POLICY_WAKE;
@@ -5130,6 +5205,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
             goto err_peer_delete;
         }
     }
+#endif // NEEDS PORTING
 
     ret = ath10k_mac_set_txbf_conf(arvif);
     if (ret) {
@@ -5138,6 +5214,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
         goto err_peer_delete;
     }
 
+#if 0 // NEEDS PORTING
     ret = ath10k_mac_set_rts(arvif, ar->hw->wiphy->rts_threshold);
     if (ret) {
         ath10k_warn("failed to set rts threshold for vdev %d: %d\n",

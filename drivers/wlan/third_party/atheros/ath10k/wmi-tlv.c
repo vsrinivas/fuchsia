@@ -2556,42 +2556,42 @@ ath10k_wmi_tlv_op_gen_pktlog_disable(struct ath10k* ar) {
     ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi tlv pktlog disable\n");
     return skb;
 }
+#endif // NEEDS PORTING
 
-static struct sk_buff*
-ath10k_wmi_tlv_op_gen_bcn_tmpl(struct ath10k* ar, uint32_t vdev_id,
-                               uint32_t tim_ie_offset, struct sk_buff* bcn,
+static zx_status_t
+ath10k_wmi_tlv_op_gen_bcn_tmpl(struct ath10k* ar, struct ath10k_msg_buf** msg_buf_ptr,
+                               uint32_t vdev_id, uint32_t tim_ie_offset, struct ath10k_msg_buf* bcn,
                                uint32_t prb_caps, uint32_t prb_erp, void* prb_ies,
                                size_t prb_ies_len) {
+
     struct wmi_tlv_bcn_tmpl_cmd* cmd;
     struct wmi_tlv_bcn_prb_info* info;
     struct wmi_tlv* tlv;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
     void* ptr;
     size_t len;
+    zx_status_t status;
 
     if (COND_WARN(prb_ies_len > 0 && !prb_ies)) {
-        return ERR_PTR(-EINVAL);
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    len = sizeof(*tlv) + sizeof(*cmd) +
-          sizeof(*tlv) + sizeof(*info) + prb_ies_len +
-          sizeof(*tlv) + ROUNDUP(bcn->len, 4);
-    skb = ath10k_wmi_alloc_skb(ar, len);
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    len = sizeof(*tlv) + sizeof(*info) + prb_ies_len +
+          sizeof(*tlv) + ROUNDUP(bcn->used, 4);
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_TLV_BCN_TMPL, len);
+    if (status != ZX_OK) {
+        return ZX_ERR_NO_MEMORY;
     }
 
-    ptr = (void*)skb->data;
-    tlv = ptr;
+    tlv = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_TLV);
     tlv->tag = WMI_TLV_TAG_STRUCT_BCN_TMPL_CMD;
     tlv->len = sizeof(*cmd);
-    cmd = (void*)tlv->value;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_TLV_BCN_TMPL);
     cmd->vdev_id = vdev_id;
     cmd->tim_ie_offset = tim_ie_offset;
-    cmd->buf_len = bcn->len;
+    cmd->buf_len = bcn->used;
 
-    ptr += sizeof(*tlv);
-    ptr += sizeof(*cmd);
+    ptr = ath10k_msg_buf_get_payload(msg_buf);
 
     /* FIXME: prb_ies_len should be probably aligned to 4byte boundary but
      * then it is then impossible to pass original ie len.
@@ -2599,78 +2599,85 @@ ath10k_wmi_tlv_op_gen_bcn_tmpl(struct ath10k* ar, uint32_t vdev_id,
      * problems with beaconing or crashes firmware look here.
      */
     tlv = ptr;
-    tlv->tag = WMI_TLV_TAG_STRUCT_BCN_PRB_INFO;
+    tlv->tag = WMI_TLV_TAG_STRUCT_BCN_PRB_INFO_CMD;
     tlv->len = sizeof(*info) + prb_ies_len;
     info = (void*)tlv->value;
     info->caps = prb_caps;
     info->erp = prb_erp;
     memcpy(info->ies, prb_ies, prb_ies_len);
 
+    // Move the pointer to the end of preb_ies.
     ptr += sizeof(*tlv);
     ptr += sizeof(*info);
     ptr += prb_ies_len;
 
+    // Fill up the |bcn| passed to this function.
     tlv = ptr;
     tlv->tag = WMI_TLV_TAG_ARRAY_BYTE;
-    tlv->len = ROUNDUP(bcn->len, 4);
-    memcpy(tlv->value, bcn->data, bcn->len);
+    tlv->len = ROUNDUP(bcn->used, 4);
+    memcpy(tlv->value, bcn->vaddr, bcn->used);
 
     /* FIXME: Adjust TSF? */
 
+    *msg_buf_ptr = msg_buf;
+
     ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi tlv bcn tmpl vdev_id %i\n",
                vdev_id);
-    return skb;
+    return ZX_OK;
 }
 
-static struct sk_buff*
-ath10k_wmi_tlv_op_gen_prb_tmpl(struct ath10k* ar, uint32_t vdev_id,
-                               struct sk_buff* prb) {
+static zx_status_t
+ath10k_wmi_tlv_op_gen_prb_tmpl(struct ath10k* ar, struct ath10k_msg_buf** msg_buf_ptr,
+                               uint32_t vdev_id,
+                               struct ath10k_msg_buf* prb) {
     struct wmi_tlv_prb_tmpl_cmd* cmd;
     struct wmi_tlv_bcn_prb_info* info;
     struct wmi_tlv* tlv;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status;
     void* ptr;
     size_t len;
 
-    len = sizeof(*tlv) + sizeof(*cmd) +
-          sizeof(*tlv) + sizeof(*info) +
-          sizeof(*tlv) + ROUNDUP(prb->len, 4);
-    skb = ath10k_wmi_alloc_skb(ar, len);
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    len = sizeof(*tlv) + sizeof(*info) +
+          sizeof(*tlv) + ROUNDUP(prb->used, 4);
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_TLV_PRB_TMPL, len);
+    if (status != ZX_OK) {
+        return ZX_ERR_NO_MEMORY;
     }
 
-    ptr = (void*)skb->data;
-    tlv = ptr;
+    tlv = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_TLV);
     tlv->tag = WMI_TLV_TAG_STRUCT_PRB_TMPL_CMD;
     tlv->len = sizeof(*cmd);
-    cmd = (void*)tlv->value;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_TLV_PRB_TMPL);
     cmd->vdev_id = vdev_id;
-    cmd->buf_len = prb->len;
+    cmd->buf_len = prb->used;
 
-    ptr += sizeof(*tlv);
-    ptr += sizeof(*cmd);
+    ptr = ath10k_msg_buf_get_payload(msg_buf);
 
     tlv = ptr;
-    tlv->tag = WMI_TLV_TAG_STRUCT_BCN_PRB_INFO;
+    tlv->tag = WMI_TLV_TAG_STRUCT_BCN_PRB_INFO_CMD;
     tlv->len = sizeof(*info);
     info = (void*)tlv->value;
     info->caps = 0;
     info->erp = 0;
 
+    // Move the pointer to the end of PRB_INFO.
     ptr += sizeof(*tlv);
     ptr += sizeof(*info);
 
     tlv = ptr;
     tlv->tag = WMI_TLV_TAG_ARRAY_BYTE;
-    tlv->len = ROUNDUP(prb->len, 4);
-    memcpy(tlv->value, prb->data, prb->len);
+    tlv->len = ROUNDUP(prb->used, 4);
+    memcpy(tlv->value, prb->vaddr, prb->used);
 
+    *msg_buf_ptr = msg_buf;
     ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi tlv prb tmpl vdev_id %i\n",
                vdev_id);
-    return skb;
+    return ZX_OK;
 }
 
+#if 0// NEEDS PORTING
+// This function will compose a p2p go beacon and return in 'buf'.
 static struct sk_buff*
 ath10k_wmi_tlv_op_gen_p2p_go_bcn_ie(struct ath10k* ar, uint32_t vdev_id,
                                     const uint8_t* p2p_ie) {
@@ -3258,7 +3265,7 @@ static struct wmi_cmd_map wmi_tlv_cmd_map = {
     .ofl_scan_period = WMI_TLV_OFL_SCAN_PERIOD,
     .p2p_dev_set_device_info = WMI_TLV_P2P_DEV_SET_DEVICE_INFO,
     .p2p_dev_set_discoverability = WMI_TLV_P2P_DEV_SET_DISCOVERABILITY,
-    .p2p_go_set_beacon_ie = WMI_TLV_P2P_GO_SET_BEACON_IE,
+    .p2p_go_set_beacon_ie = WMI_TLV_P2P_GO_SET_BEACON_IE_CMDID,
     .p2p_go_set_probe_resp_ie = WMI_TLV_P2P_GO_SET_PROBE_RESP_IE,
     .p2p_set_vendor_ie_data_cmdid = WMI_TLV_P2P_SET_VENDOR_IE_DATA_CMDID,
     .ap_ps_peer_param_cmdid = WMI_TLV_AP_PS_PEER_PARAM_CMDID,
@@ -3562,6 +3569,8 @@ static const struct wmi_ops wmi_tlv_ops = {
     .gen_set_ap_ps = ath10k_wmi_tlv_op_gen_set_ap_ps,
 #endif  // NEEDS PORTING
     .gen_scan_chan_list = ath10k_wmi_tlv_op_gen_scan_chan_list,
+    .gen_bcn_tmpl = ath10k_wmi_tlv_op_gen_bcn_tmpl,
+    .gen_prb_tmpl = ath10k_wmi_tlv_op_gen_prb_tmpl,
 #if 0   // NEEDS PORTING
     .gen_beacon_dma = ath10k_wmi_tlv_op_gen_beacon_dma,
     .gen_pdev_set_wmm = ath10k_wmi_tlv_op_gen_pdev_set_wmm,
@@ -3577,8 +3586,6 @@ static const struct wmi_ops wmi_tlv_ops = {
     /* .gen_addba_send not implemented */
     /* .gen_addba_set_resp not implemented */
     /* .gen_delba_send not implemented */
-    .gen_bcn_tmpl = ath10k_wmi_tlv_op_gen_bcn_tmpl,
-    .gen_prb_tmpl = ath10k_wmi_tlv_op_gen_prb_tmpl,
     .gen_p2p_go_bcn_ie = ath10k_wmi_tlv_op_gen_p2p_go_bcn_ie,
     .gen_vdev_sta_uapsd = ath10k_wmi_tlv_op_gen_vdev_sta_uapsd,
     .gen_sta_keepalive = ath10k_wmi_tlv_op_gen_sta_keepalive,

@@ -146,7 +146,7 @@ struct wmi_ops {
                                 struct ath10k_msg_buf* bcn, uint32_t prb_caps, uint32_t prb_erp,
                                 void* prb_ies, size_t prb_ies_len);
     zx_status_t (*gen_prb_tmpl)(struct ath10k* ar, struct ath10k_msg_buf** msg_buf_ptr,
-                                uint32_t vdev_id, struct ath10k_msg_buf* bcn);
+                                uint32_t vdev_id, struct ath10k_msg_buf* prb);
     zx_status_t (*gen_p2p_go_bcn_ie)(struct ath10k* ar, struct ath10k_msg_buf** msg_buf_ptr,
                                      uint32_t vdev_id, const uint8_t* p2p_ie);
     zx_status_t (*gen_vdev_sta_uapsd)(struct ath10k* ar, struct ath10k_msg_buf** msg_buf_ptr,

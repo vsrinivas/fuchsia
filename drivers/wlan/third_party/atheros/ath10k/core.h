@@ -92,6 +92,9 @@
 /* The magic used by QCA spec */
 #define ATH10K_SMBIOS_BDF_EXT_MAGIC "BDF_"
 
+/* The maximum length allowed in beacon template */
+#define ATH10K_MAX_BCN_TMPL_SIZE 256
+
 struct ath10k;
 
 enum ath10k_bus {
@@ -674,7 +677,7 @@ struct ath10k_per_peer_tx_stats {
 struct ath10k_vif {
     uint32_t vdev_id;
     uint16_t peer_id;
-    enum wmi_vdev_type vdev_type;
+    enum wmi_vdev_type vdev_type;  // WMI_VDEV_TYPE_* defined by Atheros.
     enum wmi_vdev_subtype vdev_subtype;
     uint32_t beacon_interval;
     uint32_t dtim_period;
@@ -714,6 +717,11 @@ struct ath10k_vif {
     int num_legacy_stations;
     int txpower;
     struct wmi_wmm_params_all_arg wmm_params;
+
+    // For beacon template.
+    uint8_t bcn_tmpl_data[ATH10K_MAX_BCN_TMPL_SIZE];
+    size_t bcn_tmpl_len;
+    size_t tim_ie_offset;
 };
 
 struct ath10k {
@@ -758,7 +766,7 @@ struct ath10k {
 
     // Now we only support one interface. Need to review the below variables when supporting
     // multiple interfaces. TODO(NET-1285)
-    uint16_t mac_role;        // Either WLAN_MAC_ROLE_CLIENT or WLAN_MAC_ROLE_AP.
+    uint16_t mac_role;        // Either WLAN_MAC_ROLE_CLIENT or WLAN_MAC_ROLE_AP passed from MLME
     uint16_t num_mac_ifaces;  // Number of MAC interfaces created.
     uint16_t iface_id;        // The ID being in use.
 

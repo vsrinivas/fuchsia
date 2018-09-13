@@ -158,4 +158,6 @@ static inline void ath10k_tx_h_seq_no(struct ieee80211_vif* vif,
 }
 #endif  // NEEDS PORTING
 
+zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif);
+
 #endif /* _MAC_H_ */
