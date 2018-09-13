@@ -10,11 +10,11 @@ MODULE_NAME := cobalt_client_test
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/histogram_options_test.cpp \
     $(LOCAL_DIR)/counter_test.cpp \
     $(LOCAL_DIR)/histogram_test.cpp \
-    $(LOCAL_DIR)/histogram_options_test.cpp \
-    $(LOCAL_DIR)/types_internal_test.cpp \
     $(LOCAL_DIR)/test_main.cpp \
+    $(LOCAL_DIR)/types_internal_test.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/cobalt-client \

@@ -37,37 +37,33 @@ uint32_t GetLinearBucket(double value, const HistogramOptions& options, double m
     } else if (value >= max_value) {
         return options.bucket_count + 1;
     }
-    double tmp = (value - options.offset) / options.scalar;
-    ZX_DEBUG_ASSERT(tmp >= fbl::numeric_limits<uint32_t>::min());
-    ZX_DEBUG_ASSERT(tmp <= fbl::numeric_limits<uint32_t>::max());
-    return static_cast<uint32_t>(tmp) + 1;
+    double unshifted_bucket = (value - options.offset) / options.scalar;
+    ZX_DEBUG_ASSERT(unshifted_bucket >= fbl::numeric_limits<uint32_t>::min());
+    ZX_DEBUG_ASSERT(unshifted_bucket <= fbl::numeric_limits<uint32_t>::max());
+    return static_cast<uint32_t>(unshifted_bucket) + 1;
 }
 
 uint32_t GetExponentialBucket(double value, const HistogramOptions& options, double max_value) {
-    if (value < options.offset + options.scalar) {
+    if (value < options.scalar + options.offset) {
         return 0;
     } else if (value >= max_value) {
         return options.bucket_count + 1;
     }
-    // Use bigger size double to perform the calculations to avoid precision errors near boundaries.
-    long double tmp = static_cast<long double>(value) - options.offset;
-    if (tmp >= options.scalar) {
-        tmp = floorl((log2l(tmp) - log2l(options.scalar))) / log2l(options.base);
-    } else {
-        // Any values close to the offset, but when the diff between the value and the offset
-        // is smaller than options.scalar, will be a negative value. Avoid any erros, and just
-        // map them to the first unshifted bucket.
-        tmp = 0;
-    }
-    ZX_DEBUG_ASSERT(tmp >= fbl::numeric_limits<uint32_t>::min());
-    ZX_DEBUG_ASSERT(tmp <= fbl::numeric_limits<uint32_t>::max());
 
-    // Evaluate near boundary, just in case we are under precision error.
-    if (GetExponentialBucketValue(static_cast<uint32_t>(tmp) + 1, options) > value) {
-        --tmp;
+    // Use bigger size double to perform the calculations to avoid precision errors near boundaries.
+    double diff = value - options.offset;
+    uint32_t unshifted_bucket = 0;
+    // Only use the formula if the difference is positive.
+    if (diff >= options.scalar) {
+        unshifted_bucket = static_cast<uint32_t>(floor((log2(diff) - log2(options.scalar)) / log2(options.base)));
     }
-    // Round to smalled integer and shift the bucket.
-    return static_cast<uint32_t>(tmp) + 1;
+    ZX_DEBUG_ASSERT(unshifted_bucket <= options.bucket_count + 1);
+
+    double lower_bound = GetExponentialBucketValue(unshifted_bucket + 1, options);
+    if (lower_bound > value) {
+        --unshifted_bucket;
+    }
+    return unshifted_bucket + 1;
 }
 
 } // namespace
