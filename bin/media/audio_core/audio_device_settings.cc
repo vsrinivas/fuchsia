@@ -28,6 +28,10 @@ constexpr uint32_t kAllSetGainFlags =
     ::fuchsia::media::SetAudioGainFlag_MuteValid |
     ::fuchsia::media::SetAudioGainFlag_AgcValid;
 
+const std::string kSettingsPath = "/data/media/audio/settings";
+const std::string kDefaultSettingsPath =
+    "/system/data/media/audio/settings/default";
+
 std::ostream& operator<<(std::ostream& stream,
                          const rapidjson::ParseResult& result) {
   return stream << "(offset " << result.Offset() << " : "
@@ -73,8 +77,6 @@ std::ostream& operator<<(std::ostream& stream,
 
 }  // namespace
 
-const std::string AudioDeviceSettings::kSettingsPath =
-    "/data/media/audio/settings";
 bool AudioDeviceSettings::initialized_ = false;
 std::unique_ptr<rapidjson::SchemaDocument> AudioDeviceSettings::file_schema_;
 
@@ -119,40 +121,60 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
     return ZX_ERR_BAD_STATE;
   }
 
-  // Start by attempting to open a pre-existing file which has our settings in
-  // it.  If we cannot find such a file, or if the file exists but is invalid,
-  // simply create a new file and write out our current settings.
-  char path[256];
-  {
-    const uint8_t* x = uid_.data;
-    snprintf(
-        path, sizeof(path),
-        "%s/"
-        "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x-%s."
-        "json",
-        kSettingsPath.c_str(), x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7],
-        x[8], x[9], x[10], x[11], x[12], x[13], x[14], x[15],
-        is_input_ ? "input" : "output");
-  }
+  static const struct {
+    const std::string& prefix;
+    bool is_default;
+  } kConfigSources[2] = {
+      {.prefix = kSettingsPath, .is_default = false},
+      {.prefix = kDefaultSettingsPath, .is_default = true},
+  };
 
   FXL_DCHECK(static_cast<bool>(storage_) == false);
-  storage_.reset(::open(path, O_RDWR));
 
-  if (static_cast<bool>(storage_)) {
-    zx_status_t res = Deserialize();
-    if (res == ZX_OK) {
-      CancelCommitTimeouts();
-      return ZX_OK;
+  for (const auto& cfg_src : kConfigSources) {
+    // Start by attempting to open a pre-existing file which has our settings in
+    // it.  If we cannot find such a file, or if the file exists but is invalid,
+    // simply create a new file and write out our current settings.
+    char path[256];
+    fbl::unique_fd storage;
+
+    CreateSettingsPath(cfg_src.prefix, path, sizeof(path));
+    storage.reset(::open(path, cfg_src.is_default ? O_RDONLY : O_RDWR));
+
+    if (static_cast<bool>(storage)) {
+      zx_status_t res = Deserialize(storage);
+      if (res == ZX_OK) {
+        if (cfg_src.is_default) {
+          // If we just loaded and deserialized the fallback default config,
+          // then break out of the for loop and fall thru to the serialization
+          // code.
+          break;
+        }
+
+        // We successfully loaded out persisted settings.  Cancel and commit
+        // timer, hold onto the FD and we should be good to go.
+        CancelCommitTimeouts();
+        storage_ = std::move(storage);
+        return ZX_OK;
+      } else {
+        storage_.reset();
+        if (!cfg_src.is_default) {
+          FXL_LOG(WARNING) << "Failed to deserialize audio settings file \""
+                           << path << "\" (res " << res
+                           << ").  Re-creating file from defaults.";
+          ::unlink(path);
+        }
+      }
     }
-
-    FXL_LOG(WARNING) << "Failed to deserialize audio settings file \"" << path
-                     << "\" (res " << res
-                     << ").  Re-creating file from defaults.";
-    storage_.reset();
-    ::unlink(path);
   }
 
+  // We have failed to load our persisted settings for one reason or another.
+  // Try to create a settings file and persist our defaults to that instead.
+  char path[256];
+  CreateSettingsPath(kSettingsPath, path, sizeof(path));
+  FXL_DCHECK(static_cast<bool>(storage_) == false);
   storage_.reset(::open(path, O_RDWR | O_CREAT));
+
   if (!static_cast<bool>(storage_)) {
     FXL_LOG(ERROR) << "Failed to create new audio settings file \"" << path
                    << "\" (errno " << errno
@@ -160,9 +182,6 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
     return ZX_ERR_IO;
   }
 
-  // We have failed to load our existing settings for one reason or another, but
-  // we do have a file we can write to.  Create a new file from our current
-  // default settings.
   zx_status_t res = Serialize();
   if (res != ZX_OK) {
     FXL_LOG(WARNING) << "Failed to serialize audio settings file \"" << path
@@ -292,26 +311,24 @@ audio_set_gain_flags_t AudioDeviceSettings::SnapshotGainState(
   return ret;
 }
 
-zx_status_t AudioDeviceSettings::Deserialize() {
-  if (!static_cast<bool>(storage_)) {
-    return ZX_ERR_NOT_FOUND;
-  }
+zx_status_t AudioDeviceSettings::Deserialize(const fbl::unique_fd& storage) {
+  FXL_DCHECK(static_cast<bool>(storage));
 
   // Figure out the size of the file, then allocate storage for reading the
   // whole thing.
-  off_t file_size = ::lseek(storage_.get(), 0, SEEK_END);
+  off_t file_size = ::lseek(storage.get(), 0, SEEK_END);
   if ((file_size <= 0) ||
       (static_cast<size_t>(file_size) > kMaxSettingFileSize)) {
     return ZX_ERR_BAD_STATE;
   }
 
-  if (::lseek(storage_.get(), 0, SEEK_SET) != 0) {
+  if (::lseek(storage.get(), 0, SEEK_SET) != 0) {
     return ZX_ERR_IO;
   }
 
   // Allocate the buffer and read in the contents.
   auto buffer = std::make_unique<char[]>(file_size + 1);
-  if (::read(storage_.get(), buffer.get(), file_size) != file_size) {
+  if (::read(storage.get(), buffer.get(), file_size) != file_size) {
     return ZX_ERR_IO;
   }
   buffer[file_size] = 0;
@@ -425,6 +442,20 @@ void AudioDeviceSettings::UpdateCommitTimeouts() {
 void AudioDeviceSettings::CancelCommitTimeouts() {
   next_commit_time_ = zx::time::infinite();
   max_commit_time_ = zx::time::infinite();
+}
+
+void AudioDeviceSettings::CreateSettingsPath(const std::string& prefix,
+                                             char* out_path,
+                                             size_t out_path_len) {
+  const uint8_t* x = uid_.data;
+  snprintf(
+      out_path, out_path_len,
+      "%s/"
+      "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x-%s."
+      "json",
+      prefix.c_str(), x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8],
+      x[9], x[10], x[11], x[12], x[13], x[14], x[15],
+      is_input_ ? "input" : "output");
 }
 
 }  // namespace audio

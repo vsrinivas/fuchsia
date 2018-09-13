@@ -114,12 +114,13 @@ class AudioDeviceSettings
  private:
   AudioDeviceSettings(const AudioDriver& drv, bool is_input);
 
-  zx_status_t Deserialize();
+  zx_status_t Deserialize(const fbl::unique_fd& storage);
   zx_status_t Serialize();
   void UpdateCommitTimeouts();
   void CancelCommitTimeouts();
+  void CreateSettingsPath(const std::string& prefix, char* out_path,
+                          size_t out_path_len);
 
-  static const std::string kSettingsPath;
   static bool initialized_;
   static std::unique_ptr<rapidjson::SchemaDocument> file_schema_;
 
@@ -141,23 +142,24 @@ class AudioDeviceSettings
   // When settings are clean (in sync with storage), both will be infinite.
   // Anytime a change is introduced, the timeouts are updated as follows.
   //
-  // 1) If max is infinite, it gets set to now + MaxUpdateDelay, otherwise it is
+  // 1) If max is infinite, it gets set to now + MaxUpdateDelay, otherwise it
+  // is
   //    unchanged.
   // 2) next gets set to min(now + UpdateDelay, max_commit_time)
   //
-  // When now >= next, it is time to commit.  The general idea here is to wait a
-  // short amount of time before committing the settings to storage, because
+  // When now >= next, it is time to commit.  The general idea here is to wait
+  // a short amount of time before committing the settings to storage, because
   // another change may be arriving very soon.  This said, if the settings are
   // constantly changing, they will need to eventually be commited.  The
-  // UpdateDelay determines the maximum possible rate at which the settings will
-  // be commited, while MaxUpdateDelay determines the minimum commit rate in the
-  // event that the settings are constantly changing.
+  // UpdateDelay determines the maximum possible rate at which the settings
+  // will be commited, while MaxUpdateDelay determines the minimum commit rate
+  // in the event that the settings are constantly changing.
   zx::time next_commit_time_ = zx::time::infinite();
   zx::time max_commit_time_ = zx::time::infinite();
 
-  // The settings_lock_ protects any settings state which needs to be set by the
-  // AudioDeviceManager and observed atomically by the mix domain threads.  Any
-  // state which is used only by the AudioDeviceManager, or which can be
+  // The settings_lock_ protects any settings state which needs to be set by
+  // the AudioDeviceManager and observed atomically by the mix domain threads.
+  // Any state which is used only by the AudioDeviceManager, or which can be
   // observed using std::atomic<>, does not need to be protected by the
   // settings_lock_.
   mutable fbl::Mutex settings_lock_;
