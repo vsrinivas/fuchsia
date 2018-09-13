@@ -12,7 +12,6 @@ rustc_binary("bin") {
     "//garnet/lib/rust/crates/dhcp",
     "//garnet/public/rust/crates/fuchsia-async",
     "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
   ]
 }
 

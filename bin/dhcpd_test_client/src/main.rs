@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #![deny(warnings)]
+#![feature(async_await, await_macro)]
 
 use {
     fuchsia_async::{Executor, net::UdpSocket},
     failure::{Error, ResultExt},
-    futures::prelude::*,
     dhcp::protocol::{
         CLIENT_PORT, ConfigOption, Message, MessageType, OptionCode, SERVER_PORT,
     },
@@ -22,23 +22,21 @@ fn main() -> Result<(), Error> {
 
     let disc = build_discover();
     println!("Sending discover message: {:?}", disc);
-    let send_msgs = udp_socket.send_to(disc.serialize(), server)
-    .and_then(|sock| {
+    let send_msgs = async move {
+        let sock = await!(udp_socket.send_to(disc.serialize(), server))?;
         let buf = vec![0u8; 1024];
-        sock.recv_from(buf)
-    }).and_then(|(sock, buf, _bytes_rcvd, _addr)| {
+        let (sock, buf, _bytes_recvd, _addr) = await!(sock.recv_from(buf))?;
         let offer = Message::from_buffer(&buf).unwrap();
         println!("fake_client: msg rcvd {:?}", offer);
         let req = build_request(offer);
         println!("fake_client: sending request msg {:?}", req);
-        sock.send_to(req.serialize(), server)
-    }).and_then(|sock| {
+        let sock = await!(sock.send_to(req.serialize(), server))?;
         let buf = vec![0u8; 1024];
-        sock.recv_from(buf)
-    }).map_ok(|(_sock, buf, _rcvd, _addr)| {
+        let (_sock, buf, _rcvd, _addr) = await!(sock.recv_from(buf))?;
         let ack = Message::from_buffer(&buf).unwrap();
-        println!("fake_client: msg rcvd {:?}", ack); 
-    });
+        println!("fake_client: msg rcvd {:?}", ack);
+        Ok::<(), Error>(())
+    };
 
     println!("fake_client: sending messages...");
     exec.run_singlethreaded(send_msgs).context("could not run futures")?;
