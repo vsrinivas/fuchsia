@@ -21,6 +21,7 @@ source_set("graph") {
     "payloads/payload_allocator.h",
     "payloads/payload_buffer.cc",
     "payloads/payload_buffer.h",
+    "payloads/payload_config.h",
     "refs.cc",
     "refs.h",
     "result.h",

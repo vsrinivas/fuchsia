@@ -18,6 +18,10 @@ std::ostream& operator<<(std::ostream& os, AsNs value) {
     return os << "<no timestamp>";
   }
 
+  if (value.value_ == std::numeric_limits<int64_t>::min()) {
+    return os << "<min>";
+  }
+
   if (value.value_ == 0) {
     return os << "0";
   }
@@ -307,6 +311,55 @@ std::ostream& operator<<(std::ostream& os, const Output& value) {
   FXL_DCHECK(value.stage());
 
   return os << *value.stage() << ".output#" << value.index();
+}
+
+std::ostream& operator<<(std::ostream& os, PayloadMode value) {
+  switch (value) {
+    case PayloadMode::kNotConfigured:
+      return os << "not configured";
+    case PayloadMode::kLocalMemory:
+      return os << "local memory";
+    case PayloadMode::kExternalLocalMemory:
+      return os << "external local memory";
+    case PayloadMode::kVmos:
+      return os << "vmos";
+    case PayloadMode::kExternalVmos:
+      return os << "external vmos";
+  }
+
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, VmoAllocation value) {
+  switch (value) {
+    case VmoAllocation::kNotApplicable:
+      return os << "not applicable";
+    case VmoAllocation::kSingleVmo:
+      return os << "single vmo";
+    case VmoAllocation::kVmoPerBuffer:
+      return os << "vmo per buffer";
+    case VmoAllocation::kUnrestricted:
+      return os << "unrestricted";
+  }
+
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const PayloadConfig& value) {
+  os << fostr::Indent;
+  os << fostr::NewLine << "mode:                       " << value.mode_;
+  os << fostr::NewLine
+     << "max aggregate payload_size: " << value.max_aggregate_payload_size_;
+  os << fostr::NewLine
+     << "max payload count:          " << value.max_payload_count_;
+  os << fostr::NewLine
+     << "max payload size:           " << value.max_payload_size_;
+  os << fostr::NewLine
+     << "vmo allocation:             " << value.vmo_allocation_;
+  os << fostr::NewLine
+     << "physically contiguous:      " << value.physically_contiguous_;
+
+  return os << fostr::Outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, const PayloadVmo& value) {

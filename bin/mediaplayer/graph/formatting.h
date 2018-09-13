@@ -6,8 +6,8 @@
 #define GARNET_BIN_MEDIAPLAYER_GRAPH_FORMATTING_H_
 
 #include <ostream>
-
 #include "garnet/bin/mediaplayer/graph/packet.h"
+#include "garnet/bin/mediaplayer/graph/payloads/payload_config.h"
 #include "garnet/bin/mediaplayer/graph/result.h"
 #include "garnet/bin/mediaplayer/graph/stages/input.h"
 #include "garnet/bin/mediaplayer/graph/stages/output.h"
@@ -35,8 +35,6 @@
 
 namespace media_player {
 
-// The following overloads produce no fostr::NewLineines.
-
 std::ostream& operator<<(std::ostream& os, Result value);
 std::ostream& operator<<(std::ostream& os, const PacketPtr& value);
 std::ostream& operator<<(std::ostream& os, StreamType::Medium value);
@@ -51,6 +49,11 @@ std::ostream& operator<<(std::ostream& os, const GenericNode& value);
 std::ostream& operator<<(std::ostream& os, const StageImpl& value);
 std::ostream& operator<<(std::ostream& os, const Input& value);
 std::ostream& operator<<(std::ostream& os, const Output& value);
+std::ostream& operator<<(std::ostream& os, const StreamType& value);
+std::ostream& operator<<(std::ostream& os, const StreamTypeSet& value);
+std::ostream& operator<<(std::ostream& os, PayloadMode value);
+std::ostream& operator<<(std::ostream& os, VmoAllocation value);
+std::ostream& operator<<(std::ostream& os, const PayloadConfig& value);
 std::ostream& operator<<(std::ostream& os, const PayloadVmo& value);
 
 template <typename T>
@@ -85,11 +88,6 @@ std::ostream& operator<<(std::ostream& os, AsInlineVector<T> value) {
 
   return os;
 }
-
-// The following overloads can produce multiline output.
-
-std::ostream& operator<<(std::ostream& os, const StreamType& value);
-std::ostream& operator<<(std::ostream& os, const StreamTypeSet& value);
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& value) {
