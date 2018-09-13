@@ -1,0 +1,33 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.serial_impl;
+
+using zx;
+using ddk.protocol.serial;
+
+enum SerialState : uint32 {
+    READABLE = 0x1;
+    WRITABLE = 0x2;
+};
+
+/// Callback for notification of readable/writeable state changes
+/// This may be called from an interrupt thread it should just signal another thread
+/// and return as soon as possible. In particular, it may not be safe to make protocol calls
+/// from these callbacks.
+[Layout="ddk-callback"]
+interface SerialNotify {
+  1: Callback(SerialState state) -> ();
+};
+
+[Layout="ddk-protocol", DefaultProtocol]
+interface SerialImpl {
+  1: GetInfo() -> (zx.status s, ddk.protocol.serial.SerialPortInfo info);
+  /// Configures the given serial port.
+  2: Config(uint32 baud_rate, uint32 flags) -> (zx.status s);
+  3: Enable(bool enable) -> (zx.status s);
+  4: Read() -> (zx.status s, vector<void> buf);
+  5: Write(vector<void> buf) -> (zx.status s, usize actual);
+  6: SetNotifyCallback(SerialNotify cb) -> (zx.status s);
+};

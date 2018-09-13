@@ -2,43 +2,56 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+//          MODIFY system/fidl/protocols/serial_impl.fidl INSTEAD.
+
 #pragma once
 
-#include <ddk/driver.h>
 #include <ddk/protocol/serial-impl.h>
+#include <ddk/protocol/serial.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include "serial-impl-internal.h"
 
-// DDK serial-impl protocol support.
+// DDK serial-impl-protocol support
 //
 // :: Proxies ::
 //
-// ddk::SerialImplProtocolProxy is a simple wrappers around serial_protocol_t. It does
-// not own the pointers passed to it.
+// ddk::SerialImplProtocolProxy is a simple wrapper around
+// serial_impl_protocol_t. It does not own the pointers passed to it
 //
 // :: Mixins ::
 //
-// ddk::SerialImplProtocol is a mixin class that simplifies writing DDK drivers that
-// implement the serial protocol.
+// ddk::SerialImplProtocol is a mixin class that simplifies writing DDK drivers
+// that implement the serial-impl protocol. It doesn't set the base protocol.
 //
 // :: Examples ::
 //
-// // A driver that implements a ZX_PROTOCOL_NAND device.
-// class SerialImplDevice;
+// // A driver that implements a ZX_PROTOCOL_SERIAL_IMPL device.
+// class SerialImplDevice {
 // using SerialImplDeviceType = ddk::Device<SerialImplDevice, /* ddk mixins */>;
 //
-// class SerialImplDevice : public SerialDeviceType,
+// class SerialImplDevice : public SerialImplDeviceType,
 //                          public ddk::SerialImplProtocol<SerialImplDevice> {
 //   public:
 //     SerialImplDevice(zx_device_t* parent)
-//       : SerialImplDeviceType("my-serial-device", parent) {}
+//         : SerialImplDeviceType("my-serial-impl-protocol-device", parent) {}
 //
-//     void Query(serial_info_t* info_out, size_t* serial_op_size_out);
-//     void Queue(serial_op_t* operation);
-//     zx_status_t GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
-//                                        uint32_t* num_bad_blocks);
+//     zx_status_t SerialImplGetInfo(serial_port_info_t* out_info);
+//
+//     zx_status_t SerialImplConfig(uint32_t baud_rate, uint32_t flags);
+//
+//     zx_status_t SerialImplEnable(bool enable);
+//
+//     zx_status_t SerialImplRead(void* out_buf_buffer, size_t buf_size, size_t* out_buf_actual);
+//
+//     zx_status_t SerialImplWrite(const void* buf_buffer, size_t buf_size, size_t* out_actual);
+//
+//     zx_status_t SerialImplSetNotifyCallback(const serial_notify_t* cb);
+//
 //     ...
 // };
 
@@ -49,79 +62,79 @@ class SerialImplProtocol : public internal::base_protocol {
 public:
     SerialImplProtocol() {
         internal::CheckSerialImplProtocolSubclass<D>();
-        serial_proto_ops_.get_info = GetInfo;
-        serial_proto_ops_.config = Config;
-        serial_proto_ops_.enable = Enable;
-        serial_proto_ops_.read = Read;
-        serial_proto_ops_.write = Write;
-        serial_proto_ops_.set_notify_callback = SetNotifyCallback;
+        ops_.get_info = SerialImplGetInfo;
+        ops_.config = SerialImplConfig;
+        ops_.enable = SerialImplEnable;
+        ops_.read = SerialImplRead;
+        ops_.write = SerialImplWrite;
+        ops_.set_notify_callback = SerialImplSetNotifyCallback;
 
         // Can only inherit from one base_protocol implementation.
         ZX_ASSERT(ddk_proto_id_ == 0);
         ddk_proto_id_ = ZX_PROTOCOL_SERIAL_IMPL;
-        ddk_proto_ops_ = &serial_proto_ops_;
+        ddk_proto_ops_ = &ops_;
     }
 
 protected:
-    serial_impl_ops_t serial_proto_ops_ = {};
+    serial_impl_protocol_ops_t ops_ = {};
 
 private:
-    static zx_status_t GetInfo(void* ctx, serial_port_info_t* info) {
-        return static_cast<D*>(ctx)->GetInfo(info);
+    static zx_status_t SerialImplGetInfo(void* ctx, serial_port_info_t* out_info) {
+        return static_cast<D*>(ctx)->SerialImplGetInfo(out_info);
     }
-
-    static zx_status_t Config(void* ctx, uint32_t baud_rate, uint32_t flags) {
-        return static_cast<D*>(ctx)->Config(baud_rate, flags);
+    // Configures the given serial port.
+    static zx_status_t SerialImplConfig(void* ctx, uint32_t baud_rate, uint32_t flags) {
+        return static_cast<D*>(ctx)->SerialImplConfig(baud_rate, flags);
     }
-
-    static zx_status_t Enable(void* ctx, bool enable) {
-        return static_cast<D*>(ctx)->Enable(enable);
+    static zx_status_t SerialImplEnable(void* ctx, bool enable) {
+        return static_cast<D*>(ctx)->SerialImplEnable(enable);
     }
-
-    static zx_status_t Read(void* ctx, void* buf, size_t length, size_t* out_actual) {
-        return static_cast<D*>(ctx)->Read(buf, length, out_actual);
+    static zx_status_t SerialImplRead(void* ctx, void* out_buf_buffer, size_t buf_size,
+                                      size_t* out_buf_actual) {
+        return static_cast<D*>(ctx)->SerialImplRead(out_buf_buffer, buf_size, out_buf_actual);
     }
-
-    static zx_status_t Write(void* ctx, const void* buf, size_t length, size_t* out_actual) {
-        return static_cast<D*>(ctx)->Write(buf, length, out_actual);
+    static zx_status_t SerialImplWrite(void* ctx, const void* buf_buffer, size_t buf_size,
+                                       size_t* out_actual) {
+        return static_cast<D*>(ctx)->SerialImplWrite(buf_buffer, buf_size, out_actual);
     }
-
-    static zx_status_t SetNotifyCallback(void* ctx, serial_notify_cb cb, void* cookie) {
-        return static_cast<D*>(ctx)->SetNotifyCallback(cb, cookie);
+    static zx_status_t SerialImplSetNotifyCallback(void* ctx, const serial_notify_t* cb) {
+        return static_cast<D*>(ctx)->SerialImplSetNotifyCallback(cb);
     }
 };
 
 class SerialImplProtocolProxy {
 public:
-    SerialImplProtocolProxy(serial_impl_protocol_t* proto)
+    SerialImplProtocolProxy() : ops_(nullptr), ctx_(nullptr) {}
+    SerialImplProtocolProxy(const serial_impl_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    zx_status_t GetInfo(serial_port_info_t* info) {
-        return ops_->get_info(ctx_, info);
+    void GetProto(serial_impl_protocol_t* proto) {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
     }
-
+    bool is_valid() { return ops_ != nullptr; }
+    void clear() {
+        ctx_ = nullptr;
+        ops_ = nullptr;
+    }
+    zx_status_t GetInfo(serial_port_info_t* out_info) { return ops_->get_info(ctx_, out_info); }
+    // Configures the given serial port.
     zx_status_t Config(uint32_t baud_rate, uint32_t flags) {
         return ops_->config(ctx_, baud_rate, flags);
     }
-
-    zx_status_t Enable(bool enable) {
-        return ops_->enable(ctx_, enable);
+    zx_status_t Enable(bool enable) { return ops_->enable(ctx_, enable); }
+    zx_status_t Read(void* out_buf_buffer, size_t buf_size, size_t* out_buf_actual) {
+        return ops_->read(ctx_, out_buf_buffer, buf_size, out_buf_actual);
     }
-
-    zx_status_t Read(void* buf, size_t length, size_t* out_actual) {
-        return ops_->read(ctx_, buf, length, out_actual);
+    zx_status_t Write(const void* buf_buffer, size_t buf_size, size_t* out_actual) {
+        return ops_->write(ctx_, buf_buffer, buf_size, out_actual);
     }
-
-    zx_status_t Write(const void* buf, size_t length, size_t* out_actual) {
-        return ops_->write(ctx_, buf, length, out_actual);
-    }
-
-    zx_status_t SetNotifyCallback(serial_notify_cb cb, void* cookie) {
-        return ops_->set_notify_callback(ctx_, cb, cookie);
+    zx_status_t SetNotifyCallback(const serial_notify_t* cb) {
+        return ops_->set_notify_callback(ctx_, cb);
     }
 
 private:
-    serial_impl_ops_t* ops_;
+    serial_impl_protocol_ops_t* ops_;
     void* ctx_;
 };
 

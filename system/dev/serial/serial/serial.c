@@ -37,6 +37,8 @@ enum {
 #define EVENT_WRITABLE_SIGNAL ZX_USER_SIGNAL_1
 #define EVENT_CANCEL_SIGNAL ZX_USER_SIGNAL_2
 
+const serial_notify_t kNoCallback = {NULL, NULL};
+
 // This thread handles data transfer in both directions
 static int platform_serial_thread(void* arg) {
     serial_port_t* port = arg;
@@ -136,7 +138,7 @@ static int platform_serial_thread(void* arg) {
     }
 
     serial_impl_enable(&port->serial, false);
-    serial_impl_set_notify_callback(&port->serial, NULL, NULL);
+    serial_impl_set_notify_callback(&port->serial, &kNoCallback);
 
     zx_handle_close(port->event);
     zx_handle_close(port->socket);
@@ -149,7 +151,7 @@ static int platform_serial_thread(void* arg) {
     return 0;
 }
 
-static void platform_serial_state_cb(uint32_t state, void* cookie) {
+static void platform_serial_state_cb(void* cookie, serial_state_t state) {
     serial_port_t* port = cookie;
 
     // update our event handle signals with latest state from the serial driver
@@ -213,7 +215,8 @@ static zx_status_t serial_port_open_socket(void* ctx, zx_handle_t* out_handle) {
         goto fail;
     }
 
-    serial_impl_set_notify_callback(&port->serial, platform_serial_state_cb, port);
+    const serial_notify_t callback = {platform_serial_state_cb, port};
+    serial_impl_set_notify_callback(&port->serial, &callback);
 
     status = serial_impl_enable(&port->serial, true);
     if (status != ZX_OK) {
@@ -255,7 +258,8 @@ static zx_status_t serial_open(void* ctx, zx_device_t** dev_out, uint32_t flags)
         return ZX_ERR_ALREADY_BOUND;
     }
 
-    serial_impl_set_notify_callback(&port->serial, platform_serial_state_cb, port);
+    const serial_notify_t callback = {platform_serial_state_cb, port};
+    serial_impl_set_notify_callback(&port->serial, &callback);
 
     zx_status_t status = serial_impl_enable(&port->serial, true);
     if (status == ZX_OK) {
@@ -272,7 +276,7 @@ static zx_status_t serial_close(void* ctx, uint32_t flags) {
     mtx_lock(&port->lock);
 
     if (port->open) {
-        serial_impl_set_notify_callback(&port->serial, NULL, NULL);
+        serial_impl_set_notify_callback(&port->serial, &kNoCallback);
         serial_impl_enable(&port->serial, false);
         port->open = false;
         mtx_unlock(&port->lock);
@@ -333,7 +337,7 @@ static void serial_release(void* ctx) {
     serial_port_t* port = ctx;
 
     serial_impl_enable(&port->serial, false);
-    serial_impl_set_notify_callback(&port->serial, NULL, NULL);
+    serial_impl_set_notify_callback(&port->serial, &kNoCallback);
     zx_handle_close(port->event);
     zx_handle_close(port->socket);
     free(port);

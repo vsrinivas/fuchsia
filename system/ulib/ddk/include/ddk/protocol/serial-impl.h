@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+//          MODIFY system/fidl/protocols/serial_impl.fidl INSTEAD.
+
 #pragma once
 
 #include <ddk/protocol/serial.h>
@@ -10,76 +13,61 @@
 
 __BEGIN_CDECLS;
 
-// Low level serial protocol to be implemented by serial drivers
-// This is only used by bus drivers like platform bus
+// Forward declarations
 
-// state flags for serial_notify_cb
-enum {
-    SERIAL_STATE_READABLE = (1 << 0),
-    SERIAL_STATE_WRITABLE = (1 << 1),
+typedef uint32_t serial_state_t;
+#define SERIAL_STATE_READABLE UINT32_C(1)
+#define SERIAL_STATE_WRITABLE UINT32_C(2)
+
+typedef struct serial_notify serial_notify_t;
+typedef struct serial_impl_protocol serial_impl_protocol_t;
+
+// Declarations
+
+struct serial_notify {
+    void (*callback)(void* ctx, serial_state_t state);
+    void* ctx;
 };
 
-// Callback for notification of readable/writeable state changes
-// This may be called from an interrupt thread it should just signal another thread
-// and return as soon as possible. In particular, it may not be safe to make protocol calls
-// from these callbacks.
-typedef void (*serial_notify_cb)(uint32_t state, void* cookie);
-
-typedef struct {
-    zx_status_t (*get_info)(void* ctx, serial_port_info_t* info);
+typedef struct serial_impl_protocol_ops {
+    zx_status_t (*get_info)(void* ctx, serial_port_info_t* out_info);
     zx_status_t (*config)(void* ctx, uint32_t baud_rate, uint32_t flags);
     zx_status_t (*enable)(void* ctx, bool enable);
-    zx_status_t (*read)(void* ctx, void* buf, size_t length, size_t* out_actual);
-    zx_status_t (*write)(void* ctx, const void* buf, size_t length,
-                         size_t* out_actual);
-    zx_status_t (*set_notify_callback)(void* ctx, serial_notify_cb cb,
-                                       void* cookie);
-} serial_impl_ops_t;
+    zx_status_t (*read)(void* ctx, void* out_buf_buffer, size_t buf_size, size_t* out_buf_actual);
+    zx_status_t (*write)(void* ctx, const void* buf_buffer, size_t buf_size, size_t* out_actual);
+    zx_status_t (*set_notify_callback)(void* ctx, const serial_notify_t* cb);
+} serial_impl_protocol_ops_t;
 
-typedef struct {
-    serial_impl_ops_t* ops;
+struct serial_impl_protocol {
+    serial_impl_protocol_ops_t* ops;
     void* ctx;
-} serial_impl_protocol_t;
+};
 
-static inline zx_status_t serial_impl_get_info(serial_impl_protocol_t* serial,
-                                          serial_port_info_t* info) {
-    return serial->ops->get_info(serial->ctx, info);
+static inline zx_status_t serial_impl_get_info(const serial_impl_protocol_t* proto,
+                                               serial_port_info_t* out_info) {
+    return proto->ops->get_info(proto->ctx, out_info);
 }
-
-// Configures the given serial port
-static inline zx_status_t serial_impl_config(serial_impl_protocol_t* serial, uint32_t baud_rate,
-                                             uint32_t flags) {
-    return serial->ops->config(serial->ctx, baud_rate, flags);
+// Configures the given serial port.
+static inline zx_status_t serial_impl_config(const serial_impl_protocol_t* proto,
+                                             uint32_t baud_rate, uint32_t flags) {
+    return proto->ops->config(proto->ctx, baud_rate, flags);
 }
-
-// Enables or disables the given serial port
-static inline zx_status_t serial_impl_enable(serial_impl_protocol_t* serial, bool enable) {
-    return serial->ops->enable(serial->ctx, enable);
+static inline zx_status_t serial_impl_enable(const serial_impl_protocol_t* proto, bool enable) {
+    return proto->ops->enable(proto->ctx, enable);
 }
-
-// Reads data from the given serial port
-// Returns ZX_ERR_SHOULD_WAIT if no data is available to read
-static inline zx_status_t serial_impl_read(serial_impl_protocol_t* serial, void* buf, size_t length,
-                                           size_t* out_actual) {
-    return serial->ops->read(serial->ctx, buf, length, out_actual);
+static inline zx_status_t serial_impl_read(const serial_impl_protocol_t* proto,
+                                           void* out_buf_buffer, size_t buf_size,
+                                           size_t* out_buf_actual) {
+    return proto->ops->read(proto->ctx, out_buf_buffer, buf_size, out_buf_actual);
 }
-
-// Reads data from the given serial port
-// Returns ZX_ERR_SHOULD_WAIT if transmit buffer is full and writing is not possible
-static inline zx_status_t serial_impl_write(serial_impl_protocol_t* serial, const void* buf,
-                                            size_t length, size_t* out_actual) {
-    return serial->ops->write(serial->ctx, buf, length, out_actual);
+static inline zx_status_t serial_impl_write(const serial_impl_protocol_t* proto,
+                                            const void* buf_buffer, size_t buf_size,
+                                            size_t* out_actual) {
+    return proto->ops->write(proto->ctx, buf_buffer, buf_size, out_actual);
 }
-
-// Sets a callback to be called when the port's readable and writeble state changes
-// Pass NULL to clear previously installed callback
-// The callback may be called from an interrupt thread it should just signal another thread
-// and return as soon as possible. In particular, it may not be safe to make protocol calls
-// from the callback.
-// Returns ZX_ERR_BAD_STATE called while the driver is in enabled state.
-static inline zx_status_t serial_impl_set_notify_callback(serial_impl_protocol_t* serial,
-                                                          serial_notify_cb cb, void* cookie) {
-    return serial->ops->set_notify_callback(serial->ctx, cb, cookie);
+static inline zx_status_t serial_impl_set_notify_callback(const serial_impl_protocol_t* proto,
+                                                          const serial_notify_t* cb) {
+    return proto->ops->set_notify_callback(proto->ctx, cb);
 }
 
 __END_CDECLS;
