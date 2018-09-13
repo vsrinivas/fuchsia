@@ -32,7 +32,7 @@ class VirtioBlockTest : public ::gtest::TestLoopFixture {
   std::unique_ptr<VirtioQueueFake> queue_;
 
   zx_status_t Init(char* block_path, bool read_only) {
-    fd_.reset(CreateBlockFile(block_path));
+    fd_ = CreateBlockFile(block_path);
     if (!fd_) {
       return ZX_ERR_IO;
     }
@@ -73,15 +73,18 @@ class VirtioBlockTest : public ::gtest::TestLoopFixture {
   }
 
  private:
-  int CreateBlockFile(char* path) {
-    int fd = mkstemp(path);
-    if (fd >= 0) {
-      uint8_t zeroes[VirtioBlock::kSectorSize * 8];
-      memset(zeroes, 0, sizeof(zeroes));
-      ssize_t ret = write(fd, zeroes, sizeof(zeroes));
-      if (ret < 0) {
-        return static_cast<int>(ret);
-      }
+  fbl::unique_fd CreateBlockFile(char* path) {
+    fbl::unique_fd fd(mkstemp(path));
+    if (!fd) {
+      FXL_LOG(ERROR) << "Failed to create " << path << ": " << strerror(errno);
+      return fd;
+    }
+    uint8_t zeroes[VirtioBlock::kSectorSize * 8];
+    memset(zeroes, 0, sizeof(zeroes));
+    ssize_t ret = write(fd.get(), zeroes, sizeof(zeroes));
+    if (ret < 0) {
+      FXL_LOG(ERROR) << "Failed to write to " << path << ": " << strerror(errno);
+      fd.reset();
     }
     return fd;
   }
