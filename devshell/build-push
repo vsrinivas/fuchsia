@@ -16,6 +16,8 @@
 # XXX TODO(US-415): after US-415 is closed, this command can pass a specific
 # build target to ninja rather than running the default build target.
 
+set -e
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
