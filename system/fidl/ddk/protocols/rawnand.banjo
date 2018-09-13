@@ -1,0 +1,29 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.rawnand;
+
+using zircon.device.nand;
+using zx;
+
+[Layout="ddk-protocol"]
+interface RawNand {
+    /// Read one nand page with hwecc.
+    1: ReadPageHwecc(uint32 nandpage) -> (zx.status s, vector<void> data, vector<void> oob,
+                                          int32 ecc_correct);
+
+    /// Write one nand page with hwecc.
+    2: WritePageHwecc(vector<void> data, vector<void> oob, uint32 nandpage) -> (zx.status s);
+
+    /// Erase nand block.
+    3: EraseBlock(uint32 nandpage) -> (zx.status s);
+
+    4: GetNandInfo() -> (zx.status s, zircon.device.nand.NandInfo info);
+
+    /// Send ONFI command down to controller.
+    5: CmdCtrl(int32 cmd, uint32 ctrl) -> ();
+
+    /// Read byte (used to read status as well as other info, such as ID).
+    6: ReadByte() -> (uint8 byte);
+};

@@ -1,0 +1,24 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zircon.device.nand;
+
+[repr="C"]
+struct NandInfo {
+    /// Read/write unit size, in bytes.
+    uint32 page_size;
+    /// Erase block size, in pages.
+    uint32 pages_per_block;
+    /// Device size, in erase blocks.
+    uint32 num_blocks;
+    /// Number of ECC bits (correctable bit flips), per correction chunk.
+    uint32 ecc_bits;
+    /// Available out of band bytes per page.
+    uint32 oob_size;
+    /// NAND_CLASS_PARTMAP, NAND_CLASS_FTL or NAND_CLASS_RAW.
+    uint32 nand_class;
+    /// Partition type GUID from partition map.
+    array<uint8>:16 partition_guid;
+};
+

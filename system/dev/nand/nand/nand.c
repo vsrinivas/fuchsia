@@ -49,7 +49,8 @@ zx_status_t nand_read_page(nand_device_t* dev, void* data, void* oob, uint32_t n
     zx_status_t status;
 
     do {
-        status = raw_nand_read_page_hwecc(&dev->host, data, oob, nand_page, corrected_bits);
+        status = raw_nand_read_page_hwecc(&dev->host, nand_page, data, dev->nand_info.page_size,
+                                          NULL, oob, dev->nand_info.oob_size, NULL, corrected_bits);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: Retrying Read@%u\n", __func__, nand_page);
         }
@@ -64,7 +65,8 @@ zx_status_t nand_read_page(nand_device_t* dev, void* data, void* oob, uint32_t n
 // data, oob: pointers to user oob/data buffers.
 // nand_page : NAND page address to read.
 zx_status_t nand_write_page(nand_device_t* dev, void* data, void* oob, uint32_t nand_page) {
-    return raw_nand_write_page_hwecc(&dev->host, data, oob, nand_page);
+    return raw_nand_write_page_hwecc(&dev->host, data, dev->nand_info.page_size, oob,
+                                     dev->nand_info.oob_size, nand_page);
 }
 
 // Calls controller specific erase function.
@@ -467,7 +469,7 @@ static zx_status_t nand_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "nand: failed to get nand info, function does not exist\n");
         goto fail;
     }
-    st = raw_nand_get_info(&dev->host, &dev->nand_info);
+    st = raw_nand_get_nand_info(&dev->host, &dev->nand_info);
     if (st != ZX_OK) {
         zxlogf(ERROR, "nand: get_nand_info returned error %d\n", st);
         goto fail;

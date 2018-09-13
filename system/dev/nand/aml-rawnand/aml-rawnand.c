@@ -488,9 +488,13 @@ static bool is_page0_nand_page(uint32_t nand_page) {
 }
 
 static zx_status_t aml_read_page_hwecc(void* ctx,
-                                       void* data,
-                                       void* oob,
                                        uint32_t nand_page,
+                                       void* data,
+                                       size_t data_size,
+                                       size_t* data_actual,
+                                       void* oob,
+                                       size_t oob_size,
+                                       size_t* oob_actual,
                                        int* ecc_correct) {
     aml_raw_nand_t* raw_nand = (aml_raw_nand_t*)ctx;
     uint32_t cmd;
@@ -579,7 +583,9 @@ static zx_status_t aml_read_page_hwecc(void* ctx,
  */
 static zx_status_t aml_write_page_hwecc(void* ctx,
                                         const void* data,
+                                        size_t data_size,
                                         const void* oob,
+                                        size_t oob_size,
                                         uint32_t nand_page)
 {
     aml_raw_nand_t *raw_nand = (aml_raw_nand_t*)ctx;
@@ -842,7 +848,9 @@ static void aml_set_encryption(aml_raw_nand_t* raw_nand) {
 
 static zx_status_t aml_read_page0(aml_raw_nand_t* raw_nand,
                                   void* data,
+                                  size_t data_size,
                                   void* oob,
+                                  size_t oob_size,
                                   uint32_t nand_page,
                                   int* ecc_correct,
                                   int retries) {
@@ -850,8 +858,8 @@ static zx_status_t aml_read_page0(aml_raw_nand_t* raw_nand,
 
     retries++;
     do {
-        status = aml_read_page_hwecc(raw_nand, data, oob,
-                                     nand_page, ecc_correct);
+        status = aml_read_page_hwecc(raw_nand, nand_page, data, data_size, NULL, oob, oob_size,
+                                     NULL, ecc_correct);
     } while (status != ZX_OK && --retries > 0);
     if (status != ZX_OK)
         zxlogf(ERROR, "%s: Read error\n", __func__);
@@ -878,7 +886,7 @@ static zx_status_t aml_nand_init_from_page0(aml_raw_nand_t* raw_nand) {
      * starting at Page 0. Read the first we can.
      */
     for (uint32_t i = 0; i < 7; i++) {
-        status = aml_read_page0(raw_nand, data, NULL, i * 128,
+        status = aml_read_page0(raw_nand, data, raw_nand->writesize, NULL, 0, i * 128,
                                 &ecc_correct, 3);
         if (status == ZX_OK)
             break;
