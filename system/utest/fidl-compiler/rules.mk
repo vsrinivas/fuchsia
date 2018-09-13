@@ -39,7 +39,7 @@ EXAMPLE_FILES := \
     $(EXAMPLE_DIR)/test.fidl \
     $(EXAMPLE_DIR)/types.fidl \
     $(LOCAL_DIR)/testdata/goodformat.fidl \
-    $(LOCAL_DIR)/testdata/badformat.fidl \
+    $(LOCAL_DIR)/testdata/badformat.fidl.noformat \
 
 BUILDGEN_DIR=$(BUILDDIR)/system/utest/fidl-compiler
 
