@@ -96,8 +96,7 @@ enum EventType {
   CUSTOM,
 };
 
-class FakeLoggerImpl : public fuchsia::cobalt::Logger,
-                       public fuchsia::cobalt::LoggerExt {
+class FakeLoggerImpl : public fuchsia::cobalt::Logger {
  public:
   FakeLoggerImpl() {}
 
@@ -259,21 +258,8 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
                     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
                     CreateLoggerCallback callback) override {
-    if (!logger_) {
-      logger_.reset(new FakeLoggerImpl());
-    }
+    logger_.reset(new FakeLoggerImpl());
     logger_bindings_.AddBinding(logger_.get(), std::move(request));
-    callback(fuchsia::cobalt::Status::OK);
-  }
-
-  void CreateLoggerExt(
-      fuchsia::cobalt::ProjectProfile profile,
-      fidl::InterfaceRequest<fuchsia::cobalt::LoggerExt> request,
-      CreateLoggerExtCallback callback) override {
-    if (!logger_) {
-      logger_.reset(new FakeLoggerImpl());
-    }
-    logger_ext_bindings_.AddBinding(logger_.get(), std::move(request));
     callback(fuchsia::cobalt::Status::OK);
   }
 
@@ -289,7 +275,6 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  private:
   std::unique_ptr<FakeLoggerImpl> logger_;
   fidl::BindingSet<fuchsia::cobalt::Logger> logger_bindings_;
-  fidl::BindingSet<fuchsia::cobalt::LoggerExt> logger_ext_bindings_;
 };
 
 class CobaltLoggerTest : public gtest::TestLoopFixture {

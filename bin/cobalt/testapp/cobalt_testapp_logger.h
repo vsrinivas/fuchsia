@@ -88,7 +88,6 @@ class CobaltTestAppLogger {
   fuchsia::cobalt::ControllerSyncPtr* cobalt_controller_;
 
   fuchsia::cobalt::LoggerSyncPtr logger_;
-  fuchsia::cobalt::LoggerExtSyncPtr logger_ext_;
   fuchsia::cobalt::LoggerSimpleSyncPtr logger_simple_;
 };
 

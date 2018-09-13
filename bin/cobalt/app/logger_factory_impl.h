@@ -32,11 +32,6 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
                     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
                     CreateLoggerCallback callback);
 
-  void CreateLoggerExt(
-      fuchsia::cobalt::ProjectProfile profile,
-      fidl::InterfaceRequest<fuchsia::cobalt::LoggerExt> request,
-      CreateLoggerExtCallback callback);
-
   void CreateLoggerSimple(
       fuchsia::cobalt::ProjectProfile profile,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
@@ -46,9 +41,6 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   fidl::BindingSet<fuchsia::cobalt::Logger,
                    std::unique_ptr<fuchsia::cobalt::Logger>>
       logger_bindings_;
-  fidl::BindingSet<fuchsia::cobalt::LoggerExt,
-                   std::unique_ptr<fuchsia::cobalt::LoggerExt>>
-      logger_ext_bindings_;
   fidl::BindingSet<fuchsia::cobalt::LoggerSimple,
                    std::unique_ptr<fuchsia::cobalt::LoggerSimple>>
       logger_simple_bindings_;

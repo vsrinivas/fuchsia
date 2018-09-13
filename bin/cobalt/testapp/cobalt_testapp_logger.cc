@@ -154,8 +154,7 @@ bool CobaltTestAppLogger::LogIntHistogramAndSend(
       histogram.push_back(std::move(entry));
     }
 
-    logger_ext_->LogIntHistogram(metric_id, 0, "", std::move(histogram),
-                                 &status);
+    logger_->LogIntHistogram(metric_id, 0, "", std::move(histogram), &status);
     FXL_VLOG(1) << "LogIntHistogram() => " << StatusToString(status);
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "LogIntHistogram() => " << StatusToString(status);
@@ -179,7 +178,7 @@ bool CobaltTestAppLogger::LogStringPairAndSend(uint32_t metric_id,
     parts->at(0).value.set_string_value(val0);
     parts->at(1).dimension_name = part1;
     parts->at(1).value.set_string_value(val1);
-    logger_ext_->LogCustomEvent(metric_id, std::move(parts), &status);
+    logger_->LogCustomEvent(metric_id, std::move(parts), &status);
     FXL_VLOG(1) << "LogCustomEvent(" << val0 << ", " << val1 << ") => "
                 << StatusToString(status);
     if (status != Status::OK) {

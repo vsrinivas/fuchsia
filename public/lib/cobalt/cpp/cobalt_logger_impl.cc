@@ -148,20 +148,6 @@ void CobaltLoggerImpl::ConnectToCobaltApplication() {
           FXL_LOG(ERROR) << "CreateLogger() received invalid arguments";
         }
       });
-
-  logger_factory->CreateLoggerExt(
-      CloneProjectProfile(), logger_ext_.NewRequest(), [this](Status status) {
-        if (status == Status::OK) {
-          if (logger_ext_) {
-            logger_ext_.set_error_handler([this]() { OnConnectionError(); });
-            SendEvents();
-          } else {
-            OnConnectionError();
-          }
-        } else {
-          FXL_LOG(ERROR) << "CreateLoggerExt() received invalid arguments";
-        }
-      });
 }
 
 void CobaltLoggerImpl::OnTransitFail() {
@@ -179,7 +165,6 @@ void CobaltLoggerImpl::OnConnectionError() {
 
   OnTransitFail();
   logger_.Unbind();
-  logger_ext_.Unbind();
   async::PostDelayedTask(dispatcher_,
                          [this]() { ConnectToCobaltApplication(); },
                          backoff_.GetNext());
@@ -187,7 +172,7 @@ void CobaltLoggerImpl::OnConnectionError() {
 
 void CobaltLoggerImpl::LogEventOnMainThread(std::unique_ptr<Event> event) {
   events_to_send_.insert(std::move(event));
-  if (!logger_ || !logger_ext_ || !events_in_transit_.empty()) {
+  if (!logger_ || !events_in_transit_.empty()) {
     return;
   }
 
@@ -207,12 +192,11 @@ void CobaltLoggerImpl::SendEvents() {
   auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   for (auto& event : events_in_transit_) {
     auto callback = waiter->NewCallback();
-    event->Log(&logger_, &logger_ext_,
-               [this, event_ptr = event.get(),
-                callback = std::move(callback)](Status status) {
-                 LogEventCallback(event_ptr, status);
-                 callback();
-               });
+    event->Log(&logger_, [this, event_ptr = event.get(),
+                          callback = std::move(callback)](Status status) {
+      LogEventCallback(event_ptr, status);
+      callback();
+    });
   }
 
   waiter->Finalize([this]() {

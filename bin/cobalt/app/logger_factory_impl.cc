@@ -79,24 +79,6 @@ void LoggerFactoryImpl::CreateLogger(
   callback(Status::OK);
 }
 
-void LoggerFactoryImpl::CreateLoggerExt(
-    ProjectProfile profile,
-    fidl::InterfaceRequest<fuchsia::cobalt::LoggerExt> request,
-    CreateLoggerExtCallback callback) {
-  auto project_context = CreateProjectContext(std::move(profile));
-  if (!project_context) {
-    callback(Status::INVALID_ARGUMENTS);
-    return;
-  }
-
-  std::unique_ptr<LoggerExtImpl> logger_ext_impl(new LoggerExtImpl(
-      std::move(project_context), client_secret_, observation_store_,
-      encrypt_to_analyzer_, shipping_manager_, system_data_, timer_manager_));
-  logger_ext_bindings_.AddBinding(std::move(logger_ext_impl),
-                                  std::move(request));
-  callback(Status::OK);
-}
-
 void LoggerFactoryImpl::CreateLoggerSimple(
     ProjectProfile profile,
     fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
@@ -107,10 +89,10 @@ void LoggerFactoryImpl::CreateLoggerSimple(
     return;
   }
 
-  std::unique_ptr<LoggerSimpleImpl> logger_simple_impl(new LoggerSimpleImpl(
+  std::unique_ptr<LoggerImpl> logger_impl(new LoggerImpl(
       std::move(project_context), client_secret_, observation_store_,
       encrypt_to_analyzer_, shipping_manager_, system_data_, timer_manager_));
-  logger_simple_bindings_.AddBinding(std::move(logger_simple_impl),
+  logger_simple_bindings_.AddBinding(std::move(logger_impl),
                                      std::move(request));
   callback(Status::OK);
 }

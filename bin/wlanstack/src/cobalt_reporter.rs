@@ -4,12 +4,12 @@
 
 use failure::{format_err, Error, ResultExt};
 use fdio;
-use fidl_fuchsia_cobalt::{HistogramBucket, LoggerExtProxy, LoggerFactoryMarker, LoggerProxy,
+use fidl_fuchsia_cobalt::{HistogramBucket, LoggerFactoryMarker, LoggerProxy,
                           ProjectProfile, ReleaseStage, Status};
 use fidl_fuchsia_mem as fuchsia_mem;
 use futures::channel::mpsc;
 use futures::prelude::*;
-use futures::{join, StreamExt};
+use futures::StreamExt;
 use log::{error, log};
 use std::fs::File;
 use std::io::Seek;
@@ -79,10 +79,8 @@ pub fn serve() -> (CobaltSender, impl Future<Output = ()>) {
     (sender, fut)
 }
 
-async fn get_cobalt_loggers() -> Result<(LoggerProxy, LoggerExtProxy), Error> {
+async fn get_cobalt_logger() -> Result<LoggerProxy, Error> {
     let (logger_proxy, server_end) =
-        fidl::endpoints2::create_endpoints().context("Failed to create endpoints")?;
-    let (logger_ext_proxy, ext_server_end) =
         fidl::endpoints2::create_endpoints().context("Failed to create endpoints")?;
     let logger_factory = fuchsia_app::client::connect_to_service::<LoggerFactoryMarker>()
         .context("Failed to connect to the Cobalt LoggerFactory")?;
@@ -92,27 +90,16 @@ async fn get_cobalt_loggers() -> Result<(LoggerProxy, LoggerExtProxy), Error> {
     let size = cobalt_config.seek(std::io::SeekFrom::End(0))?;
 
     let config = fuchsia_mem::Buffer { vmo, size };
-    let vmo_ext = fdio::get_vmo_copy_from_file(&cobalt_config)?;
-    let config_ext = fuchsia_mem::Buffer { vmo: vmo_ext, size };
 
-    let create_logger_fut = logger_factory.create_logger(
+    let res = await!(logger_factory.create_logger(
         &mut ProjectProfile {
             config,
             release_stage: ReleaseStage::Ga,
         },
         server_end,
-    );
-    let create_logger_ext_fut = logger_factory.create_logger_ext(
-        &mut ProjectProfile {
-            config: config_ext,
-            release_stage: ReleaseStage::Ga,
-        },
-        ext_server_end,
-    );
-    let (res, ext_res) = join!(create_logger_fut, create_logger_ext_fut);
+    ));
     handle_cobalt_factory_result(res, "Failed to obtain Logger")?;
-    handle_cobalt_factory_result(ext_res, "Failed to obtain LoggerExt")?;
-    Ok((logger_proxy, logger_ext_proxy))
+    Ok(logger_proxy)
 }
 
 fn handle_cobalt_factory_result(
@@ -126,8 +113,8 @@ fn handle_cobalt_factory_result(
 }
 
 async fn send_cobalt_events(mut receiver: mpsc::Receiver<Event>) {
-    let (logger, logger_ext) = match await!(get_cobalt_loggers()) {
-        Ok((logger, logger_ext)) => (logger, logger_ext),
+    let logger = match await!(get_cobalt_logger()) {
+        Ok(logger) => logger,
         Err(e) => {
             error!("Error obtaining a Cobalt Logger: {}", e);
             return;
@@ -163,7 +150,7 @@ async fn send_cobalt_events(mut receiver: mpsc::Receiver<Event>) {
                 handle_cobalt_response(resp, event.metric_id, &mut is_full);
             }
             EventValue::IntHistogram { mut values } => {
-                let resp = await!(logger_ext.log_int_histogram(
+                let resp = await!(logger.log_int_histogram(
                     event.metric_id,
                     0,
                     "",

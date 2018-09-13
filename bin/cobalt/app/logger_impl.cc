@@ -216,8 +216,9 @@ uint32_t LoggerImpl::GetSinglePartMetricEncoding(uint32_t metric_id) {
   return encodings.begin()->second;
 }
 
-void LoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_type_index,
-                          LogEventCallback callback) {
+void LoggerImpl::LogEvent(
+    uint32_t metric_id, uint32_t event_type_index,
+    fuchsia::cobalt::LoggerBase::LogEventCallback callback) {
   uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
   if (encoding_id == 0) {
     callback(Status::INVALID_ARGUMENTS);
@@ -228,10 +229,10 @@ void LoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_type_index,
   AddEncodedObservation(&result, std::move(callback));
 }
 
-void LoggerImpl::LogEventCount(uint32_t metric_id, uint32_t event_type_index,
-                               fidl::StringPtr component,
-                               int64_t period_duration_micros, int64_t count,
-                               LogEventCountCallback callback) {
+void LoggerImpl::LogEventCount(
+    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    int64_t period_duration_micros, int64_t count,
+    fuchsia::cobalt::LoggerBase::LogEventCountCallback callback) {
   const Metric* metric = encoder_.GetMetric(metric_id);
   if (!metric) {
     FXL_LOG(ERROR) << "There is no metric with ID = " << metric_id << ".";
@@ -251,30 +252,32 @@ void LoggerImpl::LogEventCount(uint32_t metric_id, uint32_t event_type_index,
                      count, std::move(callback), false);
 }
 
-void LoggerImpl::LogElapsedTime(uint32_t metric_id, uint32_t event_type_index,
-                                fidl::StringPtr component,
-                                int64_t elapsed_micros,
-                                LogElapsedTimeCallback callback) {
+void LoggerImpl::LogElapsedTime(
+    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    int64_t elapsed_micros,
+    fuchsia::cobalt::LoggerBase::LogElapsedTimeCallback callback) {
   LogThreePartMetric("elapsed time", metric_id, event_type_index, component,
                      elapsed_micros, std::move(callback), true);
 }
 
-void LoggerImpl::LogFrameRate(uint32_t metric_id, uint32_t event_type_index,
-                              fidl::StringPtr component, float fps,
-                              LogFrameRateCallback callback) {
+void LoggerImpl::LogFrameRate(
+    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    float fps, fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) {
   LogThreePartMetric("frame rate", metric_id, event_type_index, component, fps,
                      std::move(callback), true);
 }
 
-void LoggerImpl::LogMemoryUsage(uint32_t metric_id, uint32_t event_type_index,
-                                fidl::StringPtr component, int64_t bytes,
-                                LogMemoryUsageCallback callback) {
+void LoggerImpl::LogMemoryUsage(
+    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    int64_t bytes,
+    fuchsia::cobalt::LoggerBase::LogMemoryUsageCallback callback) {
   LogThreePartMetric("memory usage", metric_id, event_type_index, component,
                      bytes, std::move(callback), true);
 }
 
-void LoggerImpl::LogString(uint32_t metric_id, fidl::StringPtr s,
-                           LogStringCallback callback) {
+void LoggerImpl::LogString(
+    uint32_t metric_id, fidl::StringPtr s,
+    fuchsia::cobalt::LoggerBase::LogStringCallback callback) {
   uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
   if (encoding_id == 0) {
     callback(Status::INVALID_ARGUMENTS);
@@ -301,10 +304,10 @@ void LoggerImpl::AddTimerObservationIfReady(
   AddEncodedObservation(&result, std::move(callback));
 }
 
-void LoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_type_index,
-                            fidl::StringPtr component, fidl::StringPtr timer_id,
-                            uint64_t timestamp, uint32_t timeout_s,
-                            StartTimerCallback callback) {
+void LoggerImpl::StartTimer(
+    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    fidl::StringPtr timer_id, uint64_t timestamp, uint32_t timeout_s,
+    fuchsia::cobalt::LoggerBase::StartTimerCallback callback) {
   if (event_type_index != 0 || !component->empty()) {
     FXL_LOG(ERROR) << "event_type_index and component are not currently "
                       "consumed. Pass in 0 and empty string respectively.";
@@ -328,8 +331,9 @@ void LoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_type_index,
   AddTimerObservationIfReady(std::move(timer_val_ptr), std::move(callback));
 }
 
-void LoggerImpl::EndTimer(fidl::StringPtr timer_id, uint64_t timestamp,
-                          uint32_t timeout_s, EndTimerCallback callback) {
+void LoggerImpl::EndTimer(
+    fidl::StringPtr timer_id, uint64_t timestamp, uint32_t timeout_s,
+    fuchsia::cobalt::LoggerBase::EndTimerCallback callback) {
   std::unique_ptr<TimerVal> timer_val_ptr;
   auto status = timer_manager_->GetTimerValWithEnd(timer_id.get(), timestamp,
                                                    timeout_s, &timer_val_ptr);
@@ -342,10 +346,10 @@ void LoggerImpl::EndTimer(fidl::StringPtr timer_id, uint64_t timestamp,
   AddTimerObservationIfReady(std::move(timer_val_ptr), std::move(callback));
 }
 
-void LoggerExtImpl::LogIntHistogram(
+void LoggerImpl::LogIntHistogram(
     uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
     fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,
-    LogIntHistogramCallback callback) {
+    fuchsia::cobalt::Logger::LogIntHistogramCallback callback) {
   const Metric* metric = encoder_.GetMetric(metric_id);
   if (!metric) {
     FXL_LOG(ERROR) << "There is no metric with ID = " << metric_id << ".";
@@ -385,10 +389,19 @@ void LoggerExtImpl::LogIntHistogram(
   AddEncodedObservation(&result, std::move(callback));
 }
 
-void LoggerExtImpl::LogCustomEvent(
+void LoggerImpl::LogIntHistogram(
+    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    fidl::VectorPtr<uint32_t> bucket_indices,
+    fidl::VectorPtr<uint64_t> bucket_counts,
+    fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) {
+  FXL_LOG(ERROR) << "Not yet implemented";
+  callback(Status::INTERNAL_ERROR);
+}
+
+void LoggerImpl::LogCustomEvent(
     uint32_t metric_id,
     fidl::VectorPtr<fuchsia::cobalt::CustomEventValue> event_values,
-    LogCustomEventCallback callback) {
+    fuchsia::cobalt::Logger::LogCustomEventCallback callback) {
   auto encodings = encoder_.DefaultEncodingsForMetric(metric_id);
   cobalt::encoder::Encoder::Value value;
   for (const auto& event_val : *event_values) {
@@ -426,16 +439,6 @@ void LoggerExtImpl::LogCustomEvent(
   }
   auto result = encoder_.Encode(metric_id, value);
   AddEncodedObservation(&result, std::move(callback));
-}
-
-void LoggerSimpleImpl::LogIntHistogram(uint32_t metric_id,
-                                       uint32_t event_type_index,
-                                       fidl::StringPtr component,
-                                       fidl::VectorPtr<uint32_t> bucket_indices,
-                                       fidl::VectorPtr<uint64_t> bucket_counts,
-                                       LogIntHistogramCallback callback) {
-  FXL_LOG(ERROR) << "Not yet implemented";
-  callback(Status::INTERNAL_ERROR);
 }
 
 }  // namespace cobalt

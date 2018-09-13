@@ -104,11 +104,6 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLogger() => " << StatusToString(status);
 
-  logger_factory->CreateLoggerExt(LoadCobaltConfig(),
-                                  logger_.logger_ext_.NewRequest(), &status);
-  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
-      << "CreateLoggerExt() => " << StatusToString(status);
-
   logger_factory->CreateLoggerSimple(
       LoadCobaltConfig(), logger_.logger_simple_.NewRequest(), &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
@@ -161,11 +156,6 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
                                &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLogger() => " << StatusToString(status);
-
-  logger_factory->CreateLoggerExt(LoadCobaltConfig(),
-                                  logger_.logger_ext_.NewRequest(), &status);
-  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
-      << "CreateLoggerExt() => " << StatusToString(status);
 
   logger_factory->CreateLoggerSimple(
       LoadCobaltConfig(), logger_.logger_simple_.NewRequest(), &status);
