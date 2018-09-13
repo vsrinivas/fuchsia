@@ -21,7 +21,7 @@
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/constants.h"
-#include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
+#include "peridot/bin/ledger/app/disk_cleanup_manager_impl.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -186,10 +186,10 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
 };
 
-class FakePageEvictionManager : public PageEvictionManager {
+class FakeDiskCleanupManager : public DiskCleanupManager {
  public:
-  FakePageEvictionManager() {}
-  ~FakePageEvictionManager() override {}
+  FakeDiskCleanupManager() {}
+  ~FakeDiskCleanupManager() override {}
 
   void set_on_empty(fit::closure on_empty_callback) override {}
 
@@ -211,7 +211,7 @@ class FakePageEvictionManager : public PageEvictionManager {
   int page_closed_count = 0;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakePageEvictionManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeDiskCleanupManager);
 };
 
 class LedgerManagerTest : public TestWithEnvironment {
@@ -228,11 +228,11 @@ class LedgerManagerTest : public TestWithEnvironment {
     storage_ptr = storage.get();
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     sync_ptr = sync.get();
-    page_eviction_manager_ = std::make_unique<FakePageEvictionManager>();
+    disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     ledger_manager_ = std::make_unique<LedgerManager>(
         &environment_, "test_ledger",
         std::make_unique<encryption::FakeEncryptionService>(dispatcher()),
-        std::move(storage), std::move(sync), page_eviction_manager_.get());
+        std::move(storage), std::move(sync), disk_cleanup_manager_.get());
     ledger_manager_->BindLedger(ledger_.NewRequest());
     ledger_manager_->BindLedgerDebug(ledger_debug_.NewRequest());
   }
@@ -240,7 +240,7 @@ class LedgerManagerTest : public TestWithEnvironment {
  protected:
   FakeLedgerStorage* storage_ptr;
   FakeLedgerSync* sync_ptr;
-  std::unique_ptr<FakePageEvictionManager> page_eviction_manager_;
+  std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<LedgerManager> ledger_manager_;
   LedgerPtr ledger_;
   ledger_internal::LedgerDebugPtr ledger_debug_;
@@ -557,8 +557,8 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
   PagePtr page2;
   ledger::PageId id = RandomId();
 
-  EXPECT_EQ(0, page_eviction_manager_->page_opened_count);
-  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+  EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
+  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
 
   // Open a page and check that OnPageOpened was called once.
   bool called;
@@ -569,8 +569,8 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
-  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
+  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
 
   // Open the page again and check that there is no new call to OnPageOpened.
   ledger_->GetPage(
@@ -579,29 +579,29 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
-  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
+  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
 
   // Close one of the two connections and check that there is still no call to
   // OnPageClosed.
   page1.Unbind();
   RunLoopUntilIdle();
-  EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
-  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
+  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
 
   // Close the second connection and check that OnPageClosed was called once.
   page2.Unbind();
   RunLoopUntilIdle();
-  EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
-  EXPECT_EQ(1, page_eviction_manager_->page_closed_count);
+  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
+  EXPECT_EQ(1, disk_cleanup_manager_->page_closed_count);
 }
 
 TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
   PagePtr page;
   ledger::PageId id = RandomId();
 
-  EXPECT_EQ(0, page_eviction_manager_->page_opened_count);
-  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+  EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
+  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
 
   // Make an internal request by calling PageIsClosedAndSynced. No calls to page
   // opened/closed should be made.
@@ -616,8 +616,8 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(PageClosedAndSynced::NO, page_state);
-  EXPECT_EQ(0, page_eviction_manager_->page_opened_count);
-  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+  EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
+  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
 
   // Open the same page with an external request and check that OnPageOpened
   // was called once.
@@ -627,8 +627,8 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
-  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
+  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
 }
 
 TEST_F(LedgerManagerTest, DeletePageStorageWhenPageOpenFails) {

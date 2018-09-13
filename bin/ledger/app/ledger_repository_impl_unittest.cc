@@ -21,10 +21,10 @@
 namespace ledger {
 namespace {
 
-class FakePageEvictionManager : public PageEvictionManager {
+class FakeDiskCleanupManager : public DiskCleanupManager {
  public:
-  FakePageEvictionManager() {}
-  ~FakePageEvictionManager() override {}
+  FakeDiskCleanupManager() {}
+  ~FakeDiskCleanupManager() override {}
 
   void set_on_empty(fit::closure on_empty_callback) override {}
 
@@ -44,15 +44,15 @@ class FakePageEvictionManager : public PageEvictionManager {
   fit::function<void(Status)> cleanup_callback;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakePageEvictionManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeDiskCleanupManager);
 };
 
 class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryImplTest() {
     auto fake_page_eviction_manager =
-        std::make_unique<FakePageEvictionManager>();
-    page_eviction_manager_ = fake_page_eviction_manager.get();
+        std::make_unique<FakeDiskCleanupManager>();
+    disk_cleanup_manager_ = fake_page_eviction_manager.get();
 
     repository_ = std::make_unique<LedgerRepositoryImpl>(
         DetachedPath(tmpfs_.root_fd()), &environment_, nullptr, nullptr,
@@ -64,7 +64,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   std::unique_ptr<LedgerRepositoryImpl> repository_;
-  FakePageEvictionManager* page_eviction_manager_;
+  FakeDiskCleanupManager* disk_cleanup_manager_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImplTest);
@@ -92,7 +92,7 @@ TEST_F(LedgerRepositoryImplTest, DiskCleanUpError) {
   EXPECT_EQ(Status::ILLEGAL_STATE, status2);
 
   // Call the callback and expect to see an ok status for the first one.
-  page_eviction_manager_->cleanup_callback(Status::OK);
+  disk_cleanup_manager_->cleanup_callback(Status::OK);
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called1);
   EXPECT_EQ(Status::OK, status1);

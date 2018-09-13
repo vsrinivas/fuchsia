@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/app/ledger_repository_impl.h"
+#include "peridot/bin/ledger/app/page_usage_db.h"
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <zircon/syscalls.h>
@@ -15,6 +15,7 @@
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
+#include "peridot/bin/ledger/app/ledger_repository_impl.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"

@@ -14,6 +14,7 @@
 #include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/macros.h>
 
+#include "peridot/bin/ledger/app/disk_cleanup_manager.h"
 #include "peridot/bin/ledger/app/ledger_manager.h"
 #include "peridot/bin/ledger/app/page_eviction_manager.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
@@ -36,7 +37,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
       DetachedPath content_path, Environment* environment,
       std::unique_ptr<SyncWatcherSet> watchers,
       std::unique_ptr<sync_coordinator::UserSync> user_sync,
-      std::unique_ptr<PageEvictionManager> page_eviction_manager);
+      std::unique_ptr<DiskCleanupManager> disk_cleanup_manager);
   ~LedgerRepositoryImpl() override;
 
   void set_on_empty(fit::closure on_empty_callback) {
@@ -95,7 +96,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<sync_coordinator::UserSync> user_sync_;
-  std::unique_ptr<PageEvictionManager> page_eviction_manager_;
+  std::unique_ptr<DiskCleanupManager> disk_cleanup_manager_;
   callback::AutoCleanableMap<std::string, LedgerManager,
                              convert::StringViewComparator>
       ledger_managers_;

@@ -12,33 +12,12 @@
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_view.h>
 
+#include "peridot/bin/ledger/app/page_usage_listener.h"
 #include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace ledger {
-
-class PageUsageListener {
- public:
-  PageUsageListener() {}
-  virtual ~PageUsageListener() {}
-
-  // Called when a page connection has been requested. In case of concurrent
-  // connections to the same page, this should only be called once, on the first
-  // connection.
-  virtual void OnPageOpened(fxl::StringView ledger_name,
-                            storage::PageIdView page_id) = 0;
-
-  // Called when the connection to a page closes. In case of concurrent
-  // connections to the same page, this should only be called once, when the
-  // last connection closes.
-  // TODO(nellyv): Add argument on whether the page is synced and and cache it.
-  virtual void OnPageClosed(fxl::StringView ledger_name,
-                            storage::PageIdView page_id) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageUsageListener);
-};
 
 // Manages page eviction based on page usage information.
 class PageEvictionManager : public PageUsageListener {

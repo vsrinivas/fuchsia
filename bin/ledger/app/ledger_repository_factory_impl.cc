@@ -24,7 +24,7 @@
 #include <zircon/syscalls.h>
 
 #include "peridot/bin/ledger/app/constants.h"
-#include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
+#include "peridot/bin/ledger/app/disk_cleanup_manager_impl.h"
 #include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
@@ -232,10 +232,10 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), std::move(callback));
 
-  auto page_eviction_manager = std::make_unique<PageEvictionManagerImpl>(
+  auto disk_cleanup_manager = std::make_unique<DiskCleanupManagerImpl>(
       environment_->dispatcher(), environment_->coroutine_service(),
       repository_information.page_usage_db_path);
-  Status status = page_eviction_manager->Init();
+  Status status = disk_cleanup_manager->Init();
   if (status != Status::OK) {
     container->SetRepository(status, nullptr);
     return;
@@ -245,13 +245,13 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
     FXL_LOG(WARNING) << "No cloud provider - Ledger will work locally but "
                      << "not sync. (running in Guest mode?)";
 
-    PageEvictionManagerImpl* page_eviction_manager_ptr =
-        page_eviction_manager.get();
+    DiskCleanupManagerImpl* disk_cleanup_manager_ptr =
+        disk_cleanup_manager.get();
     auto repository = std::make_unique<LedgerRepositoryImpl>(
         repository_information.content_path, environment_,
         std::make_unique<SyncWatcherSet>(), nullptr,
-        std::move(page_eviction_manager));
-    page_eviction_manager_ptr->SetDelegate(repository.get());
+        std::move(disk_cleanup_manager));
+    disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
     container->SetRepository(Status::OK, std::move(repository));
     return;
   }
@@ -266,14 +266,14 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   user_config.user_directory = repository_information.content_path;
   user_config.cloud_provider = std::move(cloud_provider_ptr);
   CreateRepository(container, repository_information, std::move(user_config),
-                   std::move(page_eviction_manager));
+                   std::move(disk_cleanup_manager));
 }
 
 void LedgerRepositoryFactoryImpl::CreateRepository(
     LedgerRepositoryContainer* container,
     const RepositoryInformation& repository_information,
     cloud_sync::UserConfig user_config,
-    std::unique_ptr<PageEvictionManagerImpl> page_eviction_manager) {
+    std::unique_ptr<DiskCleanupManagerImpl> disk_cleanup_manager) {
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   fit::closure on_version_mismatch = [this, repository_information]() mutable {
     OnVersionMismatch(repository_information);
@@ -288,12 +288,11 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
       std::move(cloud_sync), std::move(p2p_sync));
   user_sync->SetWatcher(watchers.get());
   user_sync->Start();
-  PageEvictionManagerImpl* page_eviction_manager_ptr =
-      page_eviction_manager.get();
+  DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_information.content_path, environment_, std::move(watchers),
-      std::move(user_sync), std::move(page_eviction_manager));
-  page_eviction_manager_ptr->SetDelegate(repository.get());
+      std::move(user_sync), std::move(disk_cleanup_manager));
+  disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
   container->SetRepository(Status::OK, std::move(repository));
 }
 

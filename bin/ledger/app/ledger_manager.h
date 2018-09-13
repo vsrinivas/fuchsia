@@ -20,6 +20,7 @@
 #include "peridot/bin/ledger/app/ledger_impl.h"
 #include "peridot/bin/ledger/app/merging/ledger_merge_manager.h"
 #include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/app/page_usage_listener.h"
 #include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
@@ -28,7 +29,6 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
-class PageUsageListener;
 
 // Manages a ledger instance. A ledger instance represents the data scoped to a
 // particular user and a particular client app.
