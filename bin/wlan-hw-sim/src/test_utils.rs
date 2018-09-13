@@ -21,7 +21,7 @@ use {
     },
     std::{
         marker::Unpin,
-        mem::PinMut,
+        pin::PinMut,
         sync::Arc,
     },
     wlantap_client::Wlantap,

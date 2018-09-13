@@ -35,7 +35,7 @@ use {
     fuchsia_zircon as zx,
     std::{
         marker::Unpin,
-        mem::PinMut,
+        pin::PinMut,
     },
 };
 

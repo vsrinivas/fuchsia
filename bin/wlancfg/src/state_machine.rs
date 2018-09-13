@@ -12,7 +12,7 @@ use {
     },
     std::{
         marker::Unpin,
-        mem::PinMut,
+        pin::PinMut,
     },
 };
 

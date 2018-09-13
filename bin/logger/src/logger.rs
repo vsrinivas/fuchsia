@@ -12,7 +12,8 @@ use futures::ready;
 use libc::{c_char, c_int, uint32_t, uint64_t, uint8_t};
 use std::cell::RefCell;
 use std::marker::Unpin;
-use std::mem::{self, PinMut};
+use std::mem;
+use std::pin::PinMut;
 use std::str;
 
 type FxLogSeverityT = c_int;

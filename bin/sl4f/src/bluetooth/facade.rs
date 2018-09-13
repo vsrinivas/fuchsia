@@ -20,7 +20,7 @@ use parking_lot::RwLock;
 use slab::Slab;
 use std::collections::HashMap;
 use std::marker::Unpin;
-use std::mem::PinMut;
+use std::pin::PinMut;
 use std::sync::Arc;
 use zx;
 

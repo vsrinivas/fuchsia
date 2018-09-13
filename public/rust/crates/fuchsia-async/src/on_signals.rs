@@ -4,7 +4,8 @@
 
 use std::fmt;
 use std::marker::Unpin;
-use std::mem::{self, PinMut};
+use std::mem;
+use std::pin::PinMut;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 

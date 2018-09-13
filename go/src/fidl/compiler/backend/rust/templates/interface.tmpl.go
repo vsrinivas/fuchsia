@@ -170,7 +170,7 @@ impl ::std::marker::Unpin for {{ $interface.Name }}EventStream {}
 impl Stream for {{ $interface.Name }}EventStream {
 	type Item = Result<{{ $interface.Name }}Event, fidl::Error>;
 
-	fn poll_next(mut self: ::std::mem::PinMut<Self>, cx: &mut futures::task::Context)
+	fn poll_next(mut self: ::std::pin::PinMut<Self>, cx: &mut futures::task::Context)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let mut buf = match ready!(self.event_receiver.poll_next_unpin(cx)?) {
@@ -302,12 +302,12 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 	type Output = Result<(), fidl::Error>;
 
 	fn poll(
-		mut self: ::std::mem::PinMut<Self>,
+		mut self: ::std::pin::PinMut<Self>,
 		cx: &mut futures::task::Context,
 	) -> futures::Poll<Self::Output> {
 		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
 		// isn't moved below
-		let this = unsafe { ::std::mem::PinMut::get_mut_unchecked(self) };
+		let this = unsafe { ::std::pin::PinMut::get_mut_unchecked(self) };
 		loop {
 		let mut made_progress_this_loop_iter = false;
 
@@ -318,7 +318,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 		unsafe {
 			// Safety: ensure that on_open isn't moved
 			let completed_on_open = if let Some(on_open_fut) = &mut this.on_open_fut {
-				match ::std::mem::PinMut::new_unchecked(on_open_fut).poll(cx) {
+				match ::std::pin::PinMut::new_unchecked(on_open_fut).poll(cx) {
 					futures::Poll::Ready(()) => true,
 					futures::Poll::Pending => false,
 				}
@@ -439,7 +439,7 @@ impl fidl::endpoints2::RequestStream for {{ $interface.Name }}RequestStream {
 impl Stream for {{ $interface.Name }}RequestStream {
 	type Item = Result<{{ $interface.Name }}Request, fidl::Error>;
 
-	fn poll_next(mut self: ::std::mem::PinMut<Self>, cx: &mut futures::task::Context)
+	fn poll_next(mut self: ::std::pin::PinMut<Self>, cx: &mut futures::task::Context)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;

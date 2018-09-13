@@ -6,7 +6,7 @@ use crate::RWHandle;
 
 use std::fmt;
 use std::marker::{Unpin, PhantomData, Sized};
-use std::mem::PinMut;
+use std::pin::PinMut;
 
 use futures::{task, Poll, Future, ready};
 use fuchsia_zircon::{self as zx, AsHandleRef};

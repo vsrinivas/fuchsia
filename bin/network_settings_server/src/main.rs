@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(use_extern_macros)]
 
 use crate::server::start_server;
 

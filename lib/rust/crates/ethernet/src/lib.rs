@@ -15,7 +15,7 @@ use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 
 use std::fs::File;
 use std::marker::Unpin;
-use std::mem::PinMut;
+use std::pin::PinMut;
 use std::sync::{Arc, Mutex};
 
 mod buffer;

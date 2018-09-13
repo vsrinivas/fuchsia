@@ -6,7 +6,7 @@
 
 use {
     failure::{bail, Error, ResultExt},
-    fdio::fdio_sys::*,
+    ::fdio::fdio_sys::*,
     fidl_fuchsia_mediaplayer::*,
     fuchsia_app::client::connect_to_service,
     fuchsia_async as fasync,

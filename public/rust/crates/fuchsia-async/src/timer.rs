@@ -8,7 +8,7 @@
 //! at a particular point in the future.
 
 use std::marker::Unpin;
-use std::mem::PinMut;
+use std::pin::PinMut;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 

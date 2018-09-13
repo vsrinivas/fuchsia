@@ -9,7 +9,7 @@ use futures::{Poll, Future, Stream};
 use libc;
 use std::io::{self, Read, Write};
 use std::marker::Unpin;
-use std::mem::PinMut;
+use std::pin::PinMut;
 use std::net::{self, SocketAddr};
 use std::ops::Deref;
 

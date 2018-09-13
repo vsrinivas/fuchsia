@@ -16,7 +16,7 @@ use futures::{Poll, Stream, task};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
-use std::mem::PinMut;
+use std::pin::PinMut;
 use std::marker::Unpin;
 use std::os::raw;
 use std::os::unix::ffi::OsStrExt;

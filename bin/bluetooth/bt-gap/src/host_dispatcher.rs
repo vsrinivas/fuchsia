@@ -457,7 +457,7 @@ impl Unpin for OnAdaptersFound {}
 impl Future for OnAdaptersFound {
     type Output = fidl::Result<Arc<RwLock<HostDispatcher>>>;
 
-    fn poll(mut self: ::std::mem::PinMut<Self>, ctx: &mut task::Context) -> Poll<Self::Output> {
+    fn poll(mut self: ::std::pin::PinMut<Self>, ctx: &mut task::Context) -> Poll<Self::Output> {
         if self.hd.read().host_devices.len() == 0 {
             let hd = self.hd.clone();
             if self.waker_key.is_none() {

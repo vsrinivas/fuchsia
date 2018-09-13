@@ -9,7 +9,8 @@
 #![allow(missing_docs)]
 
 use std::marker::Unpin;
-use std::mem::{self, PinMut};
+use std::mem;
+use std::pin::PinMut;
 use futures::{ready, try_ready};
 use futures::task::{self, Poll};
 use futures::future::{Future, FutureExt};

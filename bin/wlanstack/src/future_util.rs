@@ -8,7 +8,7 @@ use futures::stream::{Fuse, Stream, StreamExt};
 use futures::task;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 use std::marker::Unpin;
-use std::mem::PinMut;
+use std::pin::PinMut;
 
 use crate::Never;
 

@@ -33,8 +33,9 @@ use {
     std::{
         collections::VecDeque,
         marker::Unpin,
-        mem::{self, PinMut},
+        mem,
         ops::Deref,
+        pin::PinMut,
         sync::Arc,
     },
 };

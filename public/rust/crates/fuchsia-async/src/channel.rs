@@ -4,7 +4,7 @@
 
 use std::io;
 use std::marker::Unpin;
-use std::mem::PinMut;
+use std::pin::PinMut;
 use std::fmt;
 use std::borrow::BorrowMut;
 

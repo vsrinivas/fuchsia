@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::mem::PinMut;
+use std::pin::PinMut;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use byteorder::{BigEndian, WriteBytesExt};
 use futures::{task, Poll, Stream};

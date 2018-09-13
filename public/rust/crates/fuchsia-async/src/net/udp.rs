@@ -6,7 +6,7 @@ use futures::{task, try_ready};
 use futures::{Poll, Future};
 use std::io;
 use std::marker::Unpin;
-use std::mem::PinMut;
+use std::pin::PinMut;
 use std::net::{self, SocketAddr};
 use std::ops::Deref;
 

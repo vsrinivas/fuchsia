@@ -493,8 +493,8 @@ macro_rules! log_unimplemented {
         {
             // log doesn't play well with the new macro system; it expects all
             // of its macros to be in scope
-            use log::*;
-            log::trace!(concat!("Unimplemented: ", $fmt), $($arg),*);
+            use ::log::*;
+            trace!(concat!("Unimplemented: ", $fmt), $($arg),*);
             $nocrash
         }
     }};
