@@ -32,28 +32,28 @@ pub struct Font {
         default = "default_slant",
         deserialize_with = "deserialize_slant"
     )]
-    pub slant: fonts::FontSlant,
+    pub slant: fonts::Slant,
 
     #[serde(default = "default_weight")]
     pub weight: u32,
 }
 
-fn default_slant() -> fonts::FontSlant {
-    fonts::FontSlant::Upright
+fn default_slant() -> fonts::Slant {
+    fonts::Slant::Upright
 }
 
 fn default_weight() -> u32 {
     400
 }
 
-fn deserialize_slant<'d, D>(deserializer: D) -> Result<fonts::FontSlant, D::Error>
+fn deserialize_slant<'d, D>(deserializer: D) -> Result<fonts::Slant, D::Error>
 where
     D: Deserializer<'d>,
 {
     let s = String::deserialize(deserializer)?;
     match s.as_str() {
-        "upright" => Ok(fonts::FontSlant::Upright),
-        "italic" => Ok(fonts::FontSlant::Italic),
+        "upright" => Ok(fonts::Slant::Upright),
+        "italic" => Ok(fonts::Slant::Italic),
         x => Err(D::Error::custom(format!(
             "unknown value for slant in manifest: {}",
             x

@@ -32,7 +32,7 @@ fn clone_buffer(buf: &mem::Buffer) -> Result<mem::Buffer, Error> {
 
 struct Font {
     asset: String,
-    slant: fonts::FontSlant,
+    slant: fonts::Slant,
     weight: u32,
     buffer: RwLock<Option<mem::Buffer>>,
 }
@@ -49,7 +49,7 @@ fn load_asset_to_vmo(path: &str) -> Result<mem::Buffer, Error> {
 }
 
 impl Font {
-    fn get_font_data(&self) -> Result<fonts::FontData, Error> {
+    fn get_font_data(&self) -> Result<mem::Buffer, Error> {
         let cache_clone = self
             .buffer
             .read()
@@ -66,7 +66,7 @@ impl Font {
             }
         };
 
-        Ok(fonts::FontData { buffer })
+        Ok(buffer)
     }
 }
 
@@ -79,14 +79,14 @@ fn abs_diff(a: u32, b: u32) -> u32 {
     a.max(b) - a.min(b)
 }
 
-fn compute_font_request_score(font: &Font, request: &fonts::FontRequest) -> u32 {
+fn compute_font_request_score(font: &Font, request: &fonts::Request) -> u32 {
     let slant_score = (font.slant != request.slant) as u32 * 1000;
     let weight_score = abs_diff(request.weight, font.weight);
     slant_score + weight_score
 }
 
 impl FontFamily {
-    fn find_best_match(&self, request: &fonts::FontRequest) -> Result<fonts::FontData, Error> {
+    fn find_best_match(&self, request: &fonts::Request) -> Result<mem::Buffer, Error> {
         self.fonts
             .iter()
             .min_by_key(|f| compute_font_request_score(f, request))
@@ -157,7 +157,7 @@ impl FontCollection {
         self.families.get(&self.fallback_family).unwrap()
     }
 
-    fn find_best_match(&self, request: &fonts::FontRequest) -> Result<fonts::FontData, Error> {
+    fn find_best_match(&self, request: &fonts::Request) -> Result<mem::Buffer, Error> {
         self.families
             .get(&request.family)
             .unwrap_or_else(|| self.get_fallback_family())
@@ -191,15 +191,15 @@ impl FontService {
     }
 
     fn handle_font_provider_request(
-        &self, request: fonts::FontProviderRequest,
+        &self, request: fonts::ProviderRequest,
     ) -> impl Future<Output = Result<(), fidl::Error>> {
         match request {
-            fonts::FontProviderRequest::GetFont { request, responder } => {
+            fonts::ProviderRequest::GetFont { request, responder } => {
                 // TODO(sergeyu): Currently the service returns an empty response when
                 // it fails to load a font. This matches behavior of the old
                 // FontProvider implementation, but it isn't the right thing to do.
                 let buf = self.font_collection.find_best_match(&request).ok();
-                let mut response = buf.map(|data| fonts::FontResponse { data });
+                let mut response = buf.map(|buffer| fonts::Response { buffer });
                 future::ready(responder.send(response.as_mut().map(OutOfLine)))
             }
         }
@@ -211,7 +211,7 @@ pub fn spawn_server(font_service: Arc<FontService>, chan: fasync::Channel) {
     // load_asset_to_vmo() asynchronous and using try_for_each_concurrent()
     // instead of try_for_each() here. That would be useful only if clients can
     // send more than one concurrent request.
-    let stream_complete = fonts::FontProviderRequestStream::from_channel(chan)
+    let stream_complete = fonts::ProviderRequestStream::from_channel(chan)
         .try_for_each(move |request| font_service.handle_font_provider_request(request))
         .map(|_| ());
     fasync::spawn(stream_complete);
