@@ -1,6 +1,7 @@
 {
   "startup_agents": [
-    "usage_log"
+    "usage_log",
+    "experiment_agent"
   ],
   "kronk": "kronk",
   "mi_dashboard": true
