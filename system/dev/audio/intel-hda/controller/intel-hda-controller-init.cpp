@@ -37,7 +37,7 @@ zx_status_t IntelHDAController::ResetControllerHW() {
     // fully removing power (warm reboot == not good enough) to recover from.
     if (REG_RD(&regs()->gctl) & HDA_REG_GCTL_HWINIT) {
         // Explicitly disable all top level interrupt sources.
-        REG_WR(&regs()->intsts, 0u);
+        REG_WR(&regs()->intctl, 0u);
         hw_mb();
 
         // Count the number of streams present in the hardware and
