@@ -50,7 +50,15 @@ class SubLoopRealLoop : public SubLoop {
   SubLoopRealLoop() : loop_(&kAsyncLoopConfigNoAttachToThread) {
     loop_.StartThread();
   };
+
   ~SubLoopRealLoop() override { loop_.Shutdown(); }
+
+  void DrainAndQuit() override {
+    async::TaskClosure quit_task([this] { loop_.Quit(); });
+    quit_task.Post(loop_.dispatcher());
+    loop_.JoinThreads();
+  }
+
   async_dispatcher_t* dispatcher() override { return loop_.dispatcher(); }
 
  private:

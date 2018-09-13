@@ -42,6 +42,11 @@ class CallbackWaiter {
 class SubLoop {
  public:
   virtual ~SubLoop() {}
+
+  // Runs all currently enqueued tasks on the loop and quits the loop. The
+  // SubLoop must not be used again once this method returns.
+  virtual void DrainAndQuit() = 0;
+
   // Returns a dispatcher whose runloop is owned by |this|.
   virtual async_dispatcher_t* dispatcher() = 0;
 };
