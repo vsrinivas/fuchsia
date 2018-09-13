@@ -72,7 +72,7 @@ class InputApp {
       std::string height_str;
       if (command_line.GetOptionValue("height", &height_str)) {
         if (!fxl::StringToNumberWithError(height_str, &height)) {
-          Error("Invalid width height");
+          Error("Invalid height parameter");
           return;
         }
       }
@@ -80,7 +80,18 @@ class InputApp {
       if (positional_args[0] == "tap") {
         TapEventCommand(positional_args, width, height, duration_ms);
       } else {
-        SwipeEventCommand(positional_args, width, height, duration_ms);
+        uint32_t move_event_count = 100;
+        std::string move_event_count_str;
+        if (command_line.GetOptionValue("move_event_count",
+                                        &move_event_count_str)) {
+          if (!fxl::StringToNumberWithError(move_event_count_str,
+                                            &move_event_count)) {
+            Error("Invalid move_event_count parameter");
+            return;
+          }
+        }
+        SwipeEventCommand(positional_args, width, height, duration_ms,
+                          move_event_count);
       }
     } else if (positional_args[0] == "keyevent") {
       KeyEventCommand(positional_args, duration_ms);
@@ -112,6 +123,13 @@ class InputApp {
         << std::endl;
     std::cout
         << "\t--height=h specifies the height of the display (default: 1000)."
+        << std::endl;
+
+    std::cout << std::endl;
+    std::cout << "Swipe Options:" << std::endl;
+    std::cout
+        << "\t--move_event_count=count specifies the amount of move events to "
+           "send in between the up and down events of the swipe (default: 100)"
         << std::endl;
 
     loop_->Quit();
@@ -152,11 +170,11 @@ class InputApp {
     int32_t x, y;
 
     if (!fxl::StringToNumberWithError(args[1], &x)) {
-      Error("Invavlid x coordinate");
+      Error("Invalid x coordinate");
       return;
     }
     if (!fxl::StringToNumberWithError(args[2], &y)) {
-      Error("Invavlid y coordinate");
+      Error("Invalid y coordinate");
       return;
     }
 
@@ -206,7 +224,8 @@ class InputApp {
   }
 
   void SwipeEventCommand(const std::vector<std::string>& args, uint32_t width,
-                         uint32_t height, uint32_t duration) {
+                         uint32_t height, uint32_t duration,
+                         uint32_t move_event_count) {
     if (args.size() != 5) {
       Usage();
       return;
@@ -236,7 +255,8 @@ class InputApp {
     fuchsia::ui::input::InputDevicePtr input_device =
         RegisterTouchscreen(width, height);
 
-    SendSwipe(std::move(input_device), x0, y0, x1, y1, duration);
+    SendSwipe(std::move(input_device), x0, y0, x1, y1, duration,
+              move_event_count);
   }
 
   void SendTap(fuchsia::ui::input::InputDevicePtr input_device, uint32_t x,
@@ -310,7 +330,8 @@ class InputApp {
   }
 
   void SendSwipe(fuchsia::ui::input::InputDevicePtr input_device, uint32_t x0,
-                 uint32_t y0, uint32_t x1, uint32_t y1, uint32_t duration_ms) {
+                 uint32_t y0, uint32_t x1, uint32_t y1, uint32_t duration_ms,
+                 uint32_t move_event_count) {
     // DOWN
     fuchsia::ui::input::Touch touch;
     touch.finger_id = 1;
@@ -329,35 +350,45 @@ class InputApp {
     zx::duration delta = zx::msec(duration_ms);
     async::PostDelayedTask(
         async_get_default_dispatcher(),
-        fxl::MakeCopyable(
-            [this, device = std::move(input_device), x1, y1]() mutable {
-              // MOVE
-              fuchsia::ui::input::Touch touch;
-              touch.finger_id = 1;
-              touch.x = x1;
-              touch.y = y1;
-              fuchsia::ui::input::TouchscreenReportPtr touchscreen =
-                  fuchsia::ui::input::TouchscreenReport::New();
-              touchscreen->touches.push_back(std::move(touch));
+        fxl::MakeCopyable([this, device = std::move(input_device), x0, y0, x1,
+                           y1, move_event_count]() mutable {
+          // MOVE
+          for (uint32_t i = 0; i < move_event_count; i++) {
+            fuchsia::ui::input::Touch touch;
+            touch.finger_id = 1;
 
-              fuchsia::ui::input::InputReport report;
-              report.event_time = InputEventTimestampNow();
-              report.touchscreen = std::move(touchscreen);
-              FXL_VLOG(1) << "SendSwipe " << report;
-              device->DispatchReport(std::move(report));
+            auto blend = [](float a, float b, float factor) {
+              return a * (1.0f - factor) + b * factor;
+            };
+            float factor = float(i) / float(move_event_count);
+            touch.x = blend(x0, x1, factor);
+            touch.y = blend(y0, y1, factor);
 
-              // UP
-              touchscreen = fuchsia::ui::input::TouchscreenReport::New();
-              touchscreen->touches.resize(0);
+            fuchsia::ui::input::TouchscreenReportPtr touchscreen =
+                fuchsia::ui::input::TouchscreenReport::New();
+            touchscreen->touches.push_back(std::move(touch));
 
-              report = fuchsia::ui::input::InputReport();
-              report.event_time = InputEventTimestampNow();
-              report.touchscreen = std::move(touchscreen);
-              FXL_VLOG(1) << "SendSwipe " << report;
-              device->DispatchReport(std::move(report));
+            fuchsia::ui::input::InputReport report;
+            report.event_time = InputEventTimestampNow();
+            report.touchscreen = std::move(touchscreen);
+            FXL_VLOG(1) << "SendSwipe " << report;
+            device->DispatchReport(std::move(report));
+          }
 
-              loop_->Quit();
-            }),
+          // UP
+          fuchsia::ui::input::TouchscreenReportPtr touchscreen =
+              fuchsia::ui::input::TouchscreenReport::New();
+          touchscreen->touches.resize(0);
+
+          fuchsia::ui::input::InputReport report =
+              fuchsia::ui::input::InputReport();
+          report.event_time = InputEventTimestampNow();
+          report.touchscreen = std::move(touchscreen);
+          FXL_VLOG(1) << "SendSwipe " << report;
+          device->DispatchReport(std::move(report));
+
+          loop_->Quit();
+        }),
         delta);
   }
 
