@@ -15,6 +15,7 @@
 #include <string.h>
 #include <threads.h>
 #include <zircon/device/bt-hci.h>
+#include <zircon/device/serial.h>
 #include <zircon/status.h>
 #include <zircon/threads.h>
 

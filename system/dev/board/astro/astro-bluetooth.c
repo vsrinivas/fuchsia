@@ -14,6 +14,7 @@
 #include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
+#include <zircon/device/serial.h>
 
 #include "astro.h"
 

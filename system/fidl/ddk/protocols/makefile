@@ -65,4 +65,7 @@ sdio:
 sdmmc: $(LOCAL_DIR)/libs/listnode.banjo $(LOCAL_DIR)/libs/block.banjo $(LOCAL_DIR)/block.banjo
 	$(run-banjo)
 
-all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl iommu mailbox rawnand scpi sdhci sdio sdmmc
+serial:
+	$(run-banjo)
+
+all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl iommu mailbox rawnand scpi sdhci sdio sdmmc serial 

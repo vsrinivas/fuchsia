@@ -14,6 +14,7 @@
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
 #include <unistd.h>
+#include <zircon/device/serial.h>
 
 #include "vim.h"
 

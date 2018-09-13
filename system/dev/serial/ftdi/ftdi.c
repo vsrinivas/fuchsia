@@ -10,6 +10,7 @@
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>
+#include <zircon/device/serial.h>
 #include <zircon/listnode.h>
 #include <zircon/hw/usb.h>
 
