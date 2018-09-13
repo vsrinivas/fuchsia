@@ -16,12 +16,15 @@
 
 namespace ledger {
 
-BaseIntegrationTest::BaseIntegrationTest() {}
+BaseIntegrationTest::BaseIntegrationTest(
+    const LedgerAppInstanceFactoryBuilder* factory_builder)
+    : factory_builder_(factory_builder) {}
 
 BaseIntegrationTest::~BaseIntegrationTest() = default;
 
 void BaseIntegrationTest::SetUp() {
   ::testing::Test::SetUp();
+  factory_ = factory_builder_->NewFactory();
   trace_provider_ = std::make_unique<trace::TraceProvider>(dispatcher());
   services_loop_ = GetLoopController()->StartNewLoop();
 }
@@ -31,28 +34,28 @@ void BaseIntegrationTest::TearDown() {
   ::testing::Test::TearDown();
 }
 
-  void BaseIntegrationTest::RunLoop() { GetLoopController()->RunLoop(); }
+void BaseIntegrationTest::RunLoop() { GetLoopController()->RunLoop(); }
 
-  void BaseIntegrationTest::StopLoop() { GetLoopController()->StopLoop(); }
+void BaseIntegrationTest::StopLoop() { GetLoopController()->StopLoop(); }
 
-  std::unique_ptr<SubLoop> BaseIntegrationTest::StartNewLoop() {
-    return GetLoopController()->StartNewLoop();
-  }
+std::unique_ptr<SubLoop> BaseIntegrationTest::StartNewLoop() {
+  return GetLoopController()->StartNewLoop();
+}
 
-  async_dispatcher_t* BaseIntegrationTest::dispatcher() {
-    return GetLoopController()->dispatcher();
-  }
+async_dispatcher_t* BaseIntegrationTest::dispatcher() {
+  return GetLoopController()->dispatcher();
+}
 
-  fit::closure BaseIntegrationTest::QuitLoopClosure() {
-    return GetLoopController()->QuitLoopClosure();
-  }
-  bool BaseIntegrationTest::RunLoopUntil(fit::function<bool()> condition) {
-    return GetLoopController()->RunLoopUntil(std::move(condition));
-  }
+fit::closure BaseIntegrationTest::QuitLoopClosure() {
+  return GetLoopController()->QuitLoopClosure();
+}
+bool BaseIntegrationTest::RunLoopUntil(fit::function<bool()> condition) {
+  return GetLoopController()->RunLoopUntil(std::move(condition));
+}
 
-  void BaseIntegrationTest::RunLoopFor(zx::duration duration) {
-    GetLoopController()->RunLoopFor(duration);
-  }
+void BaseIntegrationTest::RunLoopFor(zx::duration duration) {
+  GetLoopController()->RunLoopFor(duration);
+}
 
 zx::socket BaseIntegrationTest::StreamDataToSocket(std::string data) {
   socket::SocketPair sockets;
@@ -70,24 +73,18 @@ BaseIntegrationTest::NewLedgerAppInstance() {
   return GetAppFactory()->NewLedgerAppInstance();
 }
 
-IntegrationTest::IntegrationTest() = default;
-
-IntegrationTest::~IntegrationTest() = default;
-
-void IntegrationTest::SetUp() {
-  auto factory_builder = GetParam();
-  factory_ = factory_builder->NewFactory();
-  BaseIntegrationTest::SetUp();
-}
-
-LedgerAppInstanceFactory* IntegrationTest::GetAppFactory() {
+LedgerAppInstanceFactory* BaseIntegrationTest::GetAppFactory() {
   FXL_DCHECK(factory_) << "|SetUp| has not been called.";
   return factory_.get();
 }
 
-LoopController* IntegrationTest::GetLoopController() {
+LoopController* BaseIntegrationTest::GetLoopController() {
   FXL_DCHECK(factory_) << "|SetUp| has not been called.";
   return factory_->GetLoopController();
 }
+
+IntegrationTest::IntegrationTest() : BaseIntegrationTest(GetParam()) {}
+
+IntegrationTest::~IntegrationTest() = default;
 
 }  // namespace ledger

@@ -214,16 +214,14 @@ class ConvergenceTest
       public ::testing::WithParamInterface<
           std::tuple<MergeType, int, const LedgerAppInstanceFactoryBuilder*>> {
  public:
-  ConvergenceTest() {}
+  ConvergenceTest()
+      : BaseIntegrationTest(
+            std::get<const LedgerAppInstanceFactoryBuilder*>(GetParam())) {}
   ~ConvergenceTest() override{};
 
   void SetUp() override {
-    const LedgerAppInstanceFactoryBuilder* factory_builder;
-    std::tie(merge_function_type_, num_ledgers_, factory_builder) = GetParam();
-
-    app_instance_factory_ = factory_builder->NewFactory();
-
     BaseIntegrationTest::SetUp();
+    std::tie(merge_function_type_, num_ledgers_, std::ignore) = GetParam();
 
     ASSERT_GT(num_ledgers_, 1);
 
@@ -248,16 +246,6 @@ class ConvergenceTest
   }
 
  protected:
-  LedgerAppInstanceFactory* GetAppFactory() override {
-    FXL_DCHECK(app_instance_factory_) << "|SetUp| has not been called.";
-    return app_instance_factory_.get();
-  }
-
-  LoopController* GetLoopController() override {
-    FXL_DCHECK(app_instance_factory_) << "|SetUp| has not been called.";
-    return app_instance_factory_->GetLoopController();
-  }
-
   std::unique_ptr<PageWatcherImpl> WatchPageContents(PagePtr* page) {
     PageWatcherPtr page_watcher;
     auto page_snapshot = fxl::MakeRefCounted<RefCountedPageSnapshot>();
@@ -316,9 +304,6 @@ class ConvergenceTest
       ledger_instances_;
   std::vector<PagePtr> pages_;
   DataGenerator data_generator_;
-
- private:
-  std::unique_ptr<LedgerAppInstanceFactory> app_instance_factory_;
 };
 
 // Verify that the Ledger converges over different settings of merging functions

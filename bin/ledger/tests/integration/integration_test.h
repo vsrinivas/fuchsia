@@ -26,7 +26,7 @@ namespace ledger {
 // separate thread.
 class BaseIntegrationTest : public ::testing::Test, public LoopController {
  public:
-  BaseIntegrationTest();
+  BaseIntegrationTest(const LedgerAppInstanceFactoryBuilder* factory_builder);
   ~BaseIntegrationTest() override;
 
   BaseIntegrationTest(const BaseIntegrationTest&) = delete;
@@ -53,10 +53,12 @@ class BaseIntegrationTest : public ::testing::Test, public LoopController {
   std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
   NewLedgerAppInstance();
 
-  virtual LedgerAppInstanceFactory* GetAppFactory() = 0;
-  virtual LoopController* GetLoopController() = 0;
+  virtual LedgerAppInstanceFactory* GetAppFactory();
+  virtual LoopController* GetLoopController();
 
  private:
+  const LedgerAppInstanceFactoryBuilder* factory_builder_;
+  std::unique_ptr<LedgerAppInstanceFactory> factory_;
   // Loop used to run network service and token provider tasks.
   std::unique_ptr<SubLoop> services_loop_;
   std::unique_ptr<trace::TraceProvider> trace_provider_;
@@ -68,17 +70,6 @@ class IntegrationTest : public BaseIntegrationTest,
  public:
   IntegrationTest();
   ~IntegrationTest() override;
-
- protected:
-  // ::testing::Test:
-  void SetUp() override;
-
-  // BaseIntegrationTest:
-  LedgerAppInstanceFactory* GetAppFactory() override;
-  LoopController* GetLoopController() override;
-
- private:
-  std::unique_ptr<LedgerAppInstanceFactory> factory_;
 };
 
 // Initializes test environment based on the command line arguments.
