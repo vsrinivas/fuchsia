@@ -5,15 +5,13 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_CONSOLE_H_
 #define GARNET_LIB_MACHINA_VIRTIO_CONSOLE_H_
 
-#include <array>
-
-#include <lib/async/cpp/wait.h>
+#include <fuchsia/guest/device/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/zx/socket.h>
 #include <virtio/console.h>
 #include <virtio/virtio_ids.h>
 
 #include "garnet/lib/machina/virtio_device.h"
-#include "garnet/lib/machina/virtio_queue_waiter.h"
 
 namespace machina {
 
@@ -30,21 +28,23 @@ static_assert(kVirtioConsoleNumQueues % 2 == 0,
               "There must be a queue for both RX and TX");
 
 class VirtioConsole
-    : public VirtioInprocessDevice<VIRTIO_ID_CONSOLE, kVirtioConsoleNumQueues,
+    : public VirtioComponentDevice<VIRTIO_ID_CONSOLE, kVirtioConsoleNumQueues,
                                    virtio_console_config_t> {
  public:
-  VirtioConsole(const PhysMem&, async_dispatcher_t* dispatcher,
-                zx::socket socket);
-  ~VirtioConsole();
+  explicit VirtioConsole(const PhysMem& phys_mem);
 
-  zx_status_t Start();
+  zx_status_t Start(const zx::guest& guest, zx::socket socket,
+                    fuchsia::sys::Launcher* launcher,
+                    async_dispatcher_t* dispatcher);
 
  private:
-  class Port;
+  fuchsia::sys::ComponentControllerPtr controller_;
+  // Use a sync pointer for consistency of virtual machine execution.
+  fuchsia::guest::device::VirtioConsoleSyncPtr console_;
 
-  std::mutex mutex_;
-  std::array<std::unique_ptr<Port>, kVirtioConsoleMaxNumPorts> ports_
-      __TA_GUARDED(mutex_);
+  zx_status_t Configure(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                        zx_gpaddr_t avail, zx_gpaddr_t used);
+  zx_status_t Ready(uint32_t negotiated_features);
 };
 
 }  // namespace machina

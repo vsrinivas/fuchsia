@@ -6,6 +6,7 @@
     ],
     "packages": [
         "//garnet/bin/guest/vmm",
+        "//garnet/bin/guest/vmm/device:virtio_console",
         "//garnet/bin/guest/runner:guest_runner",
         "//garnet/bin/guest/cli:guest",
         "//garnet/bin/guest/mgr:guestmgr"

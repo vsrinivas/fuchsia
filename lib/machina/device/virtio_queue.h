@@ -123,6 +123,11 @@ class FXL_EXPORT VirtioQueue {
     return NextAvailLocked(index);
   }
 
+  bool HasAvail() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return HasAvailLocked();
+  }
+
   // Blocking variant of virtio_queue_next_avail.
   //
   // TODO(PD-107): Allow this method to fail.

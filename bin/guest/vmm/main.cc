@@ -18,6 +18,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/component/cpp/startup_context.h>
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -46,7 +47,6 @@
 #include "garnet/lib/machina/virtio_vsock.h"
 #include "garnet/lib/machina/virtio_wl.h"
 #include "garnet/public/lib/fxl/files/file.h"
-#include "lib/component/cpp/startup_context.h"
 
 #if __aarch64__
 #include "garnet/lib/machina/arch/arm64/pl031.h"
@@ -161,8 +161,10 @@ static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> startup_context =
+  std::unique_ptr<component::StartupContext> context =
       component::StartupContext::CreateFromStartupInfo();
+  fuchsia::sys::LauncherPtr launcher;
+  context->environment()->GetLauncher(launcher.NewRequest());
 
   GuestConfig cfg;
   zx_status_t status =
@@ -188,8 +190,7 @@ int main(int argc, char** argv) {
   }
 
   // Instantiate the controller service.
-  InstanceControllerImpl instance_controller(startup_context.get(),
-                                             guest.phys_mem());
+  InstanceControllerImpl instance_controller(context.get(), guest.phys_mem());
 
   // Setup UARTs.
   machina::Uart uart[kNumUarts];
@@ -214,6 +215,7 @@ int main(int argc, char** argv) {
   }
 
 #if __aarch64__
+  // Setup PL031 RTC.
   machina::Pl031 pl031;
   status = pl031.Init(&guest);
   if (status != ZX_OK) {
@@ -295,14 +297,15 @@ int main(int argc, char** argv) {
   }
 
   // Setup console
-  machina::VirtioConsole console(guest.phys_mem(), guest.device_dispatcher(),
-                                 instance_controller.TakeSocket());
-  status = console.Start();
+  machina::VirtioConsole console(guest.phys_mem());
+  status = bus.Connect(console.pci_device(), true);
   if (status != ZX_OK) {
     return status;
   }
-  status = bus.Connect(console.pci_device());
+  status = console.Start(*guest.object(), instance_controller.TakeSocket(),
+                         launcher.get(), guest.device_dispatcher());
   if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to start console device " << status;
     return status;
   }
 
@@ -378,7 +381,7 @@ int main(int argc, char** argv) {
       fuchsia::ui::input::InputDispatcherPtr input_dispatcher;
       instance_controller.GetInputDispatcher(input_dispatcher.NewRequest());
       scenic_scanout = std::make_unique<ScenicScanout>(
-          startup_context.get(), std::move(input_dispatcher), gpu.scanout());
+          context.get(), std::move(input_dispatcher), gpu.scanout());
       instance_controller.SetViewProvider(scenic_scanout.get());
     }
     status = gpu.Init();
@@ -407,7 +410,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup vsock device.
-  machina::VirtioVsock vsock(startup_context.get(), guest.phys_mem(),
+  machina::VirtioVsock vsock(context.get(), guest.phys_mem(),
                              guest.device_dispatcher());
   status = bus.Connect(vsock.pci_device());
   if (status != ZX_OK) {
