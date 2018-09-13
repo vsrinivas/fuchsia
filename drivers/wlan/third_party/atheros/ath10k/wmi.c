@@ -2190,7 +2190,10 @@ zx_status_t ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct ath10k_msg_buf* b
     rx_info.data_rate = arg.rate;
 
     rx_info.valid_fields |= WLAN_RX_INFO_VALID_SNR;
-    rx_info.snr_dbh = arg.snr;
+    rx_info.snr_dbh = arg.snr * 2; // multiply by 2 to convert dB to dBh
+
+    rx_info.valid_fields |= WLAN_RX_INFO_VALID_RSSI;
+    rx_info.rssi_dbm = ATH10K_DEFAULT_NOISE_FLOOR + arg.snr;
 
     rx_info.chan.primary = arg.channel;
     rx_info.chan.cbw = CBW20;
