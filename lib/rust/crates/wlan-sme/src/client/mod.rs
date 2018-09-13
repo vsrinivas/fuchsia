@@ -51,12 +51,19 @@ pub struct ConnectConfig<T> {
     password: Vec<u8>,
 }
 
+// An automatically increasing sequence number that uniquely identifies a logical
+// connection attempt. Similar to ConnectToken except it is not necessarily tied to a
+// particular external command. For example, a new connection attempt can be triggered
+// by a DisassociateInd message from the MLME.
+pub type ConnectionAttemptId = u64;
+
 pub struct ClientSme<T: Tokens> {
     state: Option<State<T>>,
     scan_sched: ScanScheduler<T::ScanToken, ConnectConfig<T::ConnectToken>>,
     mlme_sink: MlmeSink,
     user_sink: UserSink<T>,
     device_info: Arc<DeviceInfo>,
+    att_id: ConnectionAttemptId,
 }
 
 #[derive(Debug, PartialEq)]
@@ -98,6 +105,7 @@ impl<T: Tokens> ClientSme<T> {
                 mlme_sink: MlmeSink::new(mlme_sink),
                 user_sink: UserSink::new(user_sink),
                 device_info,
+                att_id: 0,
             },
             mlme_stream,
             user_stream
@@ -171,7 +179,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                                     token: Some(token.user_token),
                                     rsna
                                 };
-                                state.connect(cmd, &self.mlme_sink, &self.user_sink)
+                                state.connect(cmd, &self.mlme_sink, &self.user_sink, &mut self.att_id)
                             },
                             Err(err) => {
                                 error!("cannot join BSS {:?} {:?}", best_bss.bssid, err);
@@ -204,7 +212,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 }
             },
             other => {
-                state.on_mlme_event(&self.device_info, other, &self.mlme_sink, &self.user_sink)
+                state.on_mlme_event(&self.device_info, other, &self.mlme_sink, &self.user_sink, &mut self.att_id)
             }
         });
     }
