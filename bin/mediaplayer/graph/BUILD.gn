@@ -56,5 +56,6 @@ source_set("graph") {
     "//garnet/bin/mediaplayer/util",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/transport",
   ]
 }

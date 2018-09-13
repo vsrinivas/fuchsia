@@ -4,12 +4,11 @@
 
 #include "garnet/bin/mediaplayer/graph/formatting.h"
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <iomanip>
 #include <iostream>
-
-#include <fuchsia/media/cpp/fidl.h>
-
 #include "garnet/bin/mediaplayer/graph/stages/stage_impl.h"
+#include "lib/fostr/zx_types.h"
 
 namespace media_player {
 
@@ -308,6 +307,11 @@ std::ostream& operator<<(std::ostream& os, const Output& value) {
   FXL_DCHECK(value.stage());
 
   return os << *value.stage() << ".output#" << value.index();
+}
+
+std::ostream& operator<<(std::ostream& os, const PayloadVmo& value) {
+  return os << "size " << value.size() << ", start " << std::hex
+            << value.start() << std::dec << ", vmo " << value.vmo();
 }
 
 }  // namespace media_player

@@ -51,6 +51,7 @@ std::ostream& operator<<(std::ostream& os, const GenericNode& value);
 std::ostream& operator<<(std::ostream& os, const StageImpl& value);
 std::ostream& operator<<(std::ostream& os, const Input& value);
 std::ostream& operator<<(std::ostream& os, const Output& value);
+std::ostream& operator<<(std::ostream& os, const PayloadVmo& value);
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, Range<T> value) {
@@ -120,6 +121,15 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
   }
 
   return os;
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const fbl::RefPtr<T>& value) {
+  if (!value) {
+    return os << "<null>";
+  }
+
+  return os << *value;
 }
 
 }  // namespace media_player
