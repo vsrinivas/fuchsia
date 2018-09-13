@@ -2,13 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-
-#include <algorithm>
-#include <unordered_map>
-#include <vector>
-
-#include <fuchsia/images/cpp/fidl.h>
+#include "image_pipe_surface.h"
 
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "vk_dispatch_table_helper.h"
@@ -18,7 +12,6 @@
 #include "vk_layer_utils.h"
 #include "vk_loader_platform.h"
 #include "vulkan/vk_layer.h"
-#include "vulkan/vulkan.h"
 
 namespace image_pipe_swapchain {
 
@@ -56,44 +49,6 @@ constexpr VkLayerProperties swapchain_layer = {
     VK_LAYER_API_VERSION,
     1,
     "Image Pipe Swapchain",
-};
-
-struct SupportedImageProperties {
-  std::vector<VkSurfaceFormatKHR> formats;
-};
-
-class ImagePipeSurface {
- public:
-  ImagePipeSurface() {
-    std::vector<VkSurfaceFormatKHR> formats(
-        {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
-    supported_image_properties_ = {formats};
-  }
-
-  virtual ~ImagePipeSurface() = default;
-
-  SupportedImageProperties& supported_image_properties() {
-    return supported_image_properties_;
-  }
-
-  uint32_t next_image_id() {
-    if (++next_image_id_ == 0) {
-      ++next_image_id_;
-    }
-    return next_image_id_;
-  }
-
-  virtual void AddImage(uint32_t image_id,
-                        fuchsia::images::ImageInfo image_info,
-                        zx::vmo buffer) = 0;
-  virtual void RemoveImage(uint32_t image_id) = 0;
-  virtual void PresentImage(uint32_t image_id,
-                            fidl::VectorPtr<zx::event> acquire_fences,
-                            fidl::VectorPtr<zx::event> release_fences) = 0;
-
- private:
-  SupportedImageProperties supported_image_properties_;
-  uint32_t next_image_id_ = UINT32_MAX - 1;  // Exercise rollover
 };
 
 class ImagePipeSurfaceSync : public ImagePipeSurface {
@@ -167,6 +122,8 @@ class ImagePipeSwapchain {
   bool image_pipe_closed_;
   VkDevice device_;
 };
+
+///////////////////////////////////////////////////////////////////////////////
 
 VkResult ImagePipeSwapchain::Initialize(
     VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo,
