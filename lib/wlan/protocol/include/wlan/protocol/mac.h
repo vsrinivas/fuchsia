@@ -75,12 +75,15 @@ enum {
 
 enum {
     WLAN_TX_INFO_VALID_DATA_RATE = (1 << 0),
-    WLAN_TX_INFO_VALID_RATE_IDX = (1 << 1),
+    WLAN_TX_INFO_VALID_TX_VECTOR_IDX = (1 << 1),
     WLAN_TX_INFO_VALID_PHY = (1 << 2),
     WLAN_TX_INFO_VALID_CHAN_WIDTH = (1 << 3),
     WLAN_TX_INFO_VALID_MCS = (1 << 4),
     // Bits 5-31 reserved
 };
+
+// TxVector is defined in //garnet/lib/wlan/common/tx_vector.h
+typedef uint16_t tx_vec_idx_t;
 
 typedef struct wlan_tx_info {
     // Transmit flags. These represent boolean options as opposed to enums or other value-based
@@ -93,9 +96,9 @@ typedef struct wlan_tx_info {
     uint32_t valid_fields;
     // The data rate to be used to transmit this packet, measured in units of 0.5 Mb/s.
     uint32_t data_rate;
-    // Used by Minstrel as an index into its rate table, will be sent back in wlan_tx_status_t if
-    // Minstrel is enabled for the device.
-    uint16_t rate_idx;
+    // Will be sent back in wlan_tx_status_t if Minstrel is enabled for the device, indicated by
+    // WLAN_TX_INFO_VALID_TX_VECTOR_IDX.
+    tx_vec_idx_t tx_vector_idx;
     // The PHY format to be used to transmit this packet.
     uint16_t phy;
     // The channel width to be used to transmit this packet.
@@ -105,11 +108,13 @@ typedef struct wlan_tx_info {
     uint8_t mcs;
 } wlan_tx_info_t;
 
+#define WLAN_TX_VECTOR_IDX_INVALID 0
+
 typedef struct wlan_tx_status {
     // Destination mac address, or addr1 in packet header.
     uint8_t peer_addr[6];
     // Used by Minstrel as an index into its rate table.
-    uint16_t rate_idx;
+    tx_vec_idx_t tx_vector_idx;
     // Number of retries after the first attempt.  0 if transmission succeeds on first attempt.
     uint16_t retries;
     // Outcome of packet transmission. True iff ACK was received from peer.

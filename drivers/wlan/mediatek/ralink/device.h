@@ -306,8 +306,8 @@ class Device {
     struct TxStatsFifoEntry {
         // Destination mac address, or addr1 in packet header.
         uint8_t peer_addr[6] = {};
-        // Used by Minstrel as an index into its rate table.
-        uint16_t rate_idx = 0;
+        // DDK index to uniquely identify a tx vector.
+        tx_vec_idx_t tx_vector_idx = WLAN_TX_VECTOR_IDX_INVALID;
         // True iff this FIFO entry is in use.
         bool in_use = false;
     };

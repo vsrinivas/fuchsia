@@ -24,12 +24,10 @@ namespace wlan {
 //
 // TODO(NET-1451) VHT will be inserted between HT and ERP.
 
-static constexpr uint8_t kHtNumMcs = 32;  // Only support MCS 0-31
 static constexpr uint8_t kHtNumGi = 2;
 static constexpr uint8_t kHtNumCbw = 2;
 static constexpr uint8_t kHtNumTxVector = kHtNumGi * kHtNumCbw * kHtNumMcs;
 
-static constexpr uint8_t kErpNumTxVector = 8;
 static constexpr uint8_t kDsssCckNumTxVector = 4;
 
 static constexpr tx_vec_idx_t kStartIdx = 1 + kInvalidTxVectorIdx;

@@ -4151,14 +4151,14 @@ wlan_tx_status Device::ReadTxStatsFifoEntry(int packet_id) {
     wlan_tx_status reported_tx_status = {};
     std::copy(std::begin(tx_stats_entry.peer_addr), std::end(tx_stats_entry.peer_addr),
               std::begin(reported_tx_status.peer_addr));
-    reported_tx_status.rate_idx = tx_stats_entry.rate_idx;
+    reported_tx_status.tx_vector_idx = tx_stats_entry.tx_vector_idx;
 
     tx_stats_entry.in_use = false;
     return reported_tx_status;
 }
 
 int Device::WriteTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
-    if ((wlan_pkt.info.tx_flags & WLAN_TX_INFO_VALID_RATE_IDX) == 0) {
+    if ((wlan_pkt.info.tx_flags & WLAN_TX_INFO_VALID_TX_VECTOR_IDX) == 0) {
         return kInvalidTxPacketId;
     }
 
@@ -4174,7 +4174,7 @@ int Device::WriteTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
         auto frame_hdr = reinterpret_cast<const wlan::FrameHeader*>(wlan_pkt.packet_head.data);
         std::copy(std::begin(frame_hdr->addr1.byte), std::end(frame_hdr->addr1.byte),
                   tx_stats.peer_addr);
-        tx_stats.rate_idx = wlan_pkt.info.rate_idx;
+        tx_stats.tx_vector_idx = wlan_pkt.info.tx_vector_idx;
         tx_stats.in_use = true;
         return packet_id;
     } else {

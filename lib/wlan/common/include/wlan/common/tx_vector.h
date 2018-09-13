@@ -7,6 +7,7 @@
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/info.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 #include <zx/time.h>
@@ -15,10 +16,10 @@
 
 namespace wlan {
 
-typedef uint16_t tx_vec_idx_t;
+static constexpr uint8_t kHtNumMcs = 32;  // Only support MCS 0-31
+static constexpr uint8_t kErpNumTxVector = 8;
 
-static constexpr uint8_t kHtMaxCbw = 40;  // MHz
-static constexpr tx_vec_idx_t kInvalidTxVectorIdx = 0;
+static constexpr tx_vec_idx_t kInvalidTxVectorIdx = WLAN_TX_VECTOR_IDX_INVALID;
 
 // Extend the definition of MCS index for ERP
 // OFDM/ERP-OFDM, represented by WLAN_PHY_ERP:
