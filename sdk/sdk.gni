@@ -189,6 +189,7 @@ template("sdk") {
     "//build/sdk/meta/fidl_library.json",
     "//build/sdk/meta/host_tool.json",
     "//build/sdk/meta/image.json",
+    "//build/sdk/meta/loadable_module.json",
     "//build/sdk/meta/manifest.json",
     "//build/sdk/meta/sysroot.json",
   ]

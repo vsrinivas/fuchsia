@@ -1,0 +1,63 @@
+{
+  "description": "A collection of object files that can be loaded at runtime",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "common.json#/definitions/sdk_element"
+    },
+    {
+      "properties": {
+        "type": {
+          "description": "Marker for this type of element",
+          "type": "string",
+          "enum": [
+            "loadable_module"
+          ]
+        },
+        "name": {
+          "description": "Name of the module",
+          "type": "string"
+        },
+        "resources": {
+          "description": "Resource files associated with the module",
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/definitions/file"
+          }
+        },
+        "binaries": {
+          "description": "The binary files for the module, per architecture",
+          "type": "object",
+          "properties": {
+            "x64": {
+              "description": "Binaries for the x64 architecture",
+              "$ref": "#/definitions/binaryGroup"
+            },
+            "arm64": {
+              "description": "Binaries for the arm64 architecture",
+              "$ref": "#/definitions/binaryGroup"
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1,
+          "maxProperties": 2
+        }
+      },
+      "required": [
+        "binaries",
+        "name",
+        "resources",
+        "type"
+      ]
+    }
+  ],
+  "definitions": {
+    "binaryGroup": {
+      "description": "A set of binary files compiled for a given architecture",
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/definitions/file"
+      }
+    }
+  }
+}
