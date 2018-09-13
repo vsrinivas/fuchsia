@@ -31,7 +31,7 @@ class LoopControllerRealLoop : public LoopController {
 
   bool RunLoopUntil(fit::function<bool()> condition) override;
 
-  bool RunLoopFor(zx::duration duration) override;
+  void RunLoopFor(zx::duration duration) override;
 
  private:
   async::Loop loop_;

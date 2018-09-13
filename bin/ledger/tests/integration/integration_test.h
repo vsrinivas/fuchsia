@@ -41,7 +41,7 @@ class BaseIntegrationTest : public ::testing::Test, public LoopController {
   async_dispatcher_t* dispatcher() override;
   fit::closure QuitLoopClosure() override;
   bool RunLoopUntil(fit::function<bool()> condition) override;
-  bool RunLoopFor(zx::duration duration) override;
+  void RunLoopFor(zx::duration duration) override;
 
  protected:
   // ::testing::Test:

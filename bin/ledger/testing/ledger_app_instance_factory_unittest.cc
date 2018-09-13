@@ -45,10 +45,7 @@ class FakeLoopController : public LoopController {
     return false;
   }
 
-  bool RunLoopFor(zx::duration /* duration */) override {
-    FXL_NOTREACHED();
-    return false;
-  }
+  void RunLoopFor(zx::duration /* duration */) override { FXL_NOTREACHED(); }
 
  private:
   fit::function<void()> on_run_;

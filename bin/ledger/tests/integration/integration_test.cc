@@ -50,10 +50,9 @@ void BaseIntegrationTest::TearDown() {
     return GetLoopController()->RunLoopUntil(std::move(condition));
   }
 
-  bool BaseIntegrationTest::RunLoopFor(zx::duration duration) {
-    return GetLoopController()->RunLoopFor(duration);
+  void BaseIntegrationTest::RunLoopFor(zx::duration duration) {
+    GetLoopController()->RunLoopFor(duration);
   }
-
 
 zx::socket BaseIntegrationTest::StreamDataToSocket(std::string data) {
   socket::SocketPair sockets;

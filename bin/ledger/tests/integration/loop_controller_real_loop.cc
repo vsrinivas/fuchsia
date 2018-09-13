@@ -10,33 +10,20 @@
 
 namespace {
 
-// Returns false if the loop was ran for less than |timeout|.
-bool RunGivenLoopWithTimeout(async::Loop* loop, zx::duration timeout) {
-  // This cannot be a local variable because the delayed task below can execute
-  // after this function returns.
-  auto canceled = std::make_shared<bool>(false);
+// Returns false if the loop returned early.
+bool RunGivenLoopUntil(async::Loop* loop, zx::time time) {
   bool timed_out = false;
-  async::PostDelayedTask(loop->dispatcher(),
-                         [loop, canceled, &timed_out] {
-                           if (*canceled) {
-                             return;
-                           }
-                           timed_out = true;
-                           loop->Quit();
-                         },
-                         timeout);
+  async::TaskClosure task([loop, &timed_out] {
+    timed_out = true;
+    loop->Quit();
+  });
+  task.PostForTime(loop->dispatcher(), time);
   loop->Run();
   loop->ResetQuit();
   // Another task can call Quit() on the message loop, which exits the
   // message loop before the delayed task executes, in which case |timed_out| is
-  // still false here because the delayed task hasn't run yet.
-  // Since the message loop isn't destroyed then (as it usually would after
-  // Quit()), and presumably can be reused after this function returns we
-  // still need to prevent the delayed task to quit it again at some later time
-  // using the canceled pointer.
-  if (!timed_out) {
-    *canceled = true;
-  }
+  // still false here because the delayed task hasn't run yet. Returning from
+  // this function will delete |task| which will unregister it from the loop.
   return timed_out;
 }
 
@@ -92,12 +79,15 @@ bool LoopControllerRealLoop::RunLoopUntil(fit::function<bool()> condition) {
     if (condition()) {
       return true;
     }
-    RunGivenLoopWithTimeout(&loop_, zx::msec(10));
+    RunGivenLoopUntil(&loop_, zx::clock::get_monotonic() + zx::msec(10));
   }
 }
 
-bool LoopControllerRealLoop::RunLoopFor(zx::duration duration) {
-  return RunGivenLoopWithTimeout(&loop_, duration);
+void LoopControllerRealLoop::RunLoopFor(zx::duration duration) {
+  zx::time deadline = zx::clock::get_monotonic() + duration;
+  while (!RunGivenLoopUntil(&loop_, deadline)) {
+    // Do nothing
+  }
 }
 
 }  // namespace ledger

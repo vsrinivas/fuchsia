@@ -73,9 +73,7 @@ class LoopController {
   // Runs the loop until |condition| returns true.
   virtual bool RunLoopUntil(fit::function<bool()> condition) = 0;
   // Runs the loop until |duration| as passed.
-  // Returns false if the loop was ran for less than |duration|.
-  // Returns true otherwise.
-  virtual bool RunLoopFor(zx::duration duration) = 0;
+  virtual void RunLoopFor(zx::duration duration) = 0;
 };
 
 }  // namespace ledger

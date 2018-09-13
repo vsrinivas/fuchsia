@@ -678,7 +678,7 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   EXPECT_EQ("0123456789", ToString(change.changed_entries->at(1).value));
 
   // Check that the resolver fectory GetPolicy method is not called.
-  EXPECT_TRUE(RunLoopFor(zx::sec(1)));
+  RunLoopFor(zx::sec(1));
   EXPECT_TRUE(resolver_factory_waiter->NotCalledYet());
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 
@@ -1036,13 +1036,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   // Remove all references to a page:
   page1 = nullptr;
   page2 = nullptr;
-  EXPECT_TRUE(RunLoopFor(zx::msec(500)));
+  RunLoopFor(zx::msec(500));
 
   // Resolution should not crash the Ledger
   fidl::VectorPtr<MergedValue> merged_values =
       fidl::VectorPtr<MergedValue>::New(0);
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
-  EXPECT_TRUE(RunLoopFor(zx::msec(200)));
+  RunLoopFor(zx::msec(200));
 }
 
 TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
@@ -1144,14 +1144,14 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   // Remove all references to a page:
   page1 = nullptr;
   page2 = nullptr;
-  EXPECT_TRUE(RunLoopFor(zx::msec(500)));
+  RunLoopFor(zx::msec(500));
 
   // Resolution should not crash the Ledger
   fidl::VectorPtr<MergedValue> merged_values =
       fidl::VectorPtr<MergedValue>::New(0);
 
   EXPECT_TRUE(resolver_impl2->requests[0].Merge(std::move(merged_values)));
-  EXPECT_TRUE(RunLoopFor(zx::msec(200)));
+  RunLoopFor(zx::msec(200));
 }
 
 // Tests for a race between setting the new conflict resolver and sending the
@@ -1895,7 +1895,7 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
 
   // Check that conflicts_resolved_callback is not called, as there are merge
   // requests pending.
-  EXPECT_TRUE(RunLoopFor(zx::msec(250)));
+  RunLoopFor(zx::msec(250));
   EXPECT_TRUE(conflicts_resolved_callback_waiter->NotCalledYet());
 
   // Merge manually.
