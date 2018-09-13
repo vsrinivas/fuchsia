@@ -28,7 +28,7 @@ static const uint8_t NHLT_UUID[] = {
 /* 0008 */ 0xA4, 0x1F, 0x7B, 0x5D, 0xCE, 0x24, 0xC5, 0x53
 };
 
-zx_status_t nhlt_publish_metadata(zx_device_t* dev, int bbn, uint64_t adr, ACPI_HANDLE object) {
+zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, ACPI_HANDLE object) {
     zx_status_t status = ZX_OK;
 
     // parameters

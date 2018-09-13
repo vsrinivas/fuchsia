@@ -465,7 +465,7 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
     // TODO: This is a temporary workaround for ACPI device enumeration.
     } else if (!memcmp(&info->Name, "HDAS", 4)) {
         // We must have already seen at least one PCI root due to traversal order.
-        if (ctx->last_pci == -1) {
+        if (ctx->last_pci == 0xFF) {
             zxlogf(ERROR, "acpi: Found HDAS node, but no prior PCI root was discovered!\n");
         } else if (!(info->Valid & ACPI_VALID_ADR)) {
             zxlogf(ERROR, "acpi: no valid ADR found for HDA device\n");
@@ -505,7 +505,7 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
             ctx->found_pci = (pcidev != NULL);
         }
         // Get the PCI base bus number
-        acpi_status = acpi_bbn_call(object, (uint8_t*)&ctx->last_pci);
+        acpi_status = acpi_bbn_call(object, &ctx->last_pci);
         if (acpi_status != AE_OK) {
             zxlogf(ERROR, "acpi: failed to get PCI base bus number for device '%s' "
                           "(acpi_status %u)\n", (const char*)&info->Name, acpi_status);
@@ -548,7 +548,7 @@ static zx_status_t publish_acpi_devices(zx_device_t* parent) {
     publish_acpi_device_ctx_t ctx = {
         .parent = parent,
         .found_pci = false,
-        .last_pci = -1,
+        .last_pci = 0xFF,
     };
     ACPI_STATUS acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE,
                                                 ACPI_ROOT_OBJECT,

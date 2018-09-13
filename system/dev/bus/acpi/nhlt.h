@@ -12,4 +12,4 @@
 // @param bbn base bus number of the PCI root the device is on
 // @param adr ADR value for the device
 // @param object handle to the device
-zx_status_t nhlt_publish_metadata(zx_device_t* dev, int bbn, uint64_t adr, ACPI_HANDLE object);
+zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, ACPI_HANDLE object);
