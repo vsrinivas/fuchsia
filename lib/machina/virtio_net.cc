@@ -17,13 +17,17 @@
 
 namespace machina {
 
+constexpr size_t kMaxPacketSize = 2048;
+
 VirtioNet::Stream::Stream(const PhysMem& phys_mem,
                           async_dispatcher_t* dispatcher, VirtioQueue* queue,
-                          std::atomic<trace_async_id_t>* trace_flow_id)
+                          std::atomic<trace_async_id_t>* trace_flow_id,
+                          IoBuffer* io_buf)
     : phys_mem_(phys_mem),
       dispatcher_(dispatcher),
       queue_(queue),
       trace_flow_id_(trace_flow_id),
+      io_buf_(io_buf),
       queue_wait_(dispatcher, queue,
                   fit::bind_member(this, &VirtioNet::Stream::OnQueueReady)) {}
 
@@ -52,6 +56,39 @@ zx_status_t VirtioNet::Stream::Start(zx_handle_t fifo, size_t fifo_max_entries,
 
 zx_status_t VirtioNet::Stream::WaitOnQueue() { return queue_wait_.Begin(); }
 
+virtio_net_hdr_t* VirtioNet::Stream::ReadPacketInfo(uint16_t index,
+                                                    uintptr_t* offset,
+                                                    uintptr_t* length) {
+  VirtioDescriptor desc;
+
+  zx_status_t status = queue_->ReadDesc(index, &desc);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to read descriptor from queue";
+    return nullptr;
+  }
+
+  auto header = reinterpret_cast<virtio_net_hdr_t*>(desc.addr);
+  if (!desc.has_next) {
+    *offset = phys_mem_.offset(header + 1);
+    *length = static_cast<uint16_t>(desc.len - sizeof(*header));
+  } else if (desc.len == sizeof(virtio_net_hdr_t)) {
+    status = queue_->ReadDesc(desc.next, &desc);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to read chained descriptor from queue";
+      return nullptr;
+    }
+    *offset = phys_mem_.offset(desc.addr, desc.len);
+    *length = static_cast<uint16_t>(desc.len);
+  }
+
+  if (desc.has_next) {
+    FXL_LOG(ERROR) << "Packet data must be on a single buffer";
+    return nullptr;
+  }
+
+  return header;
+}
+
 void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
   if (status != ZX_OK) {
     return;
@@ -68,31 +105,28 @@ void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
   }
 
   FXL_DCHECK(fifo_num_entries_ == 0);
-  VirtioDescriptor desc;
   fifo_num_entries_ = 0;
   fifo_entries_write_index_ = 0;
   do {
-    status = queue_->ReadDesc(index, &desc);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to read descriptor from queue";
-      return;
-    }
-
     uintptr_t packet_offset;
     uintptr_t packet_length;
-    auto header = reinterpret_cast<virtio_net_hdr_t*>(desc.addr);
-    if (!desc.has_next) {
-      packet_offset = phys_mem_.offset(header + 1);
-      packet_length = static_cast<uint16_t>(desc.len - sizeof(*header));
-    } else if (desc.len == sizeof(virtio_net_hdr_t)) {
-      status = queue_->ReadDesc(desc.next, &desc);
-      packet_offset = phys_mem_.offset(desc.addr, desc.len);
-      packet_length = static_cast<uint16_t>(desc.len);
+    virtio_net_hdr_t* header =
+        ReadPacketInfo(index, &packet_offset, &packet_length);
+    if (header == nullptr) {
+      return;
     }
 
-    if (desc.has_next) {
-      FXL_LOG(ERROR) << "Packet data must be on a single buffer";
+    if (packet_length > kMaxPacketSize) {
+      FXL_LOG(ERROR) << "Packet may not be longer than " << kMaxPacketSize;
       return;
+    }
+
+    uintptr_t io_offset = 0;
+    status = io_buf_->Allocate(&io_offset);
+    // We should have sized our buffer so that failure cannot happen here, but
+    // if somehow this is not true let us check to avoid any hard to find bugs.
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to allocate buffer.";
     }
     if (rx_) {
       // Section 5.1.6.4.1 Device Requirements: Processing of Incoming Packets
@@ -109,11 +143,19 @@ void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
       // flags to zero and SHOULD supply a fully checksummed packet to the
       // driver.
       header->flags = 0;
+    } else {
+      status =
+          io_buf_->vmo().write(phys_mem_.as<void>(packet_offset, packet_length),
+                               io_offset, packet_length);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to write to Ethernet VMO";
+        return;
+      }
     }
 
     FXL_DCHECK(fifo_num_entries_ < fifo_entries_.size());
     fifo_entries_[fifo_num_entries_++] = {
-        .offset = static_cast<uint32_t>(packet_offset),
+        .offset = static_cast<uint32_t>(io_offset),
         .length = static_cast<uint16_t>(packet_length),
         .flags = 0,
         .cookie = reinterpret_cast<void*>(index),
@@ -211,6 +253,30 @@ void VirtioNet::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
 
   for (size_t i = 0; i < num_entries_read; i++) {
     auto head = reinterpret_cast<uintptr_t>(entries[i].cookie);
+    auto io_offset = entries[i].offset;
+    if (rx_) {
+      // Reread the original descriptor so we can perform the copy. A malicious
+      // guest could have changed the descriptor under us so we reverify it is
+      // valid just to protect ourselves
+      uintptr_t packet_offset;
+      uintptr_t packet_length;
+      if (ReadPacketInfo(head, &packet_offset, &packet_length) == nullptr) {
+        return;
+      }
+      // entries[i].length is the actual size of the packet received by the
+      // ethdriver and to minimize copying we use this in preference to
+      // packet_length. As packet_length was what we originally gave as our
+      // buffer size to the Ethernet FIFO we are guaranteed that
+      // entries[i].length <= packet_length.
+      status = io_buf_->vmo().read(
+          phys_mem_.as<void>(packet_offset, entries[i].length), io_offset,
+          entries[i].length);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to read from Ethernet VMO";
+        return;
+      }
+    }
+    io_buf_->Free(io_offset);
     auto length = entries[i].length + sizeof(virtio_net_hdr_t);
     status = queue_->Return(head, length);
     if (status != ZX_OK) {
@@ -225,11 +291,47 @@ void VirtioNet::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
   }
 }
 
+zx_status_t VirtioNet::IoBuffer::Init(size_t count, size_t elem_size) {
+  size_t vmo_size = count * elem_size;
+  zx_status_t status = zx::vmo::create(vmo_size, ZX_VMO_NON_RESIZABLE, &vmo_);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to create VMO for buffer";
+    return status;
+  }
+
+  elem_size_ = elem_size;
+
+  free_list_.reserve(count);
+  for (size_t i = 0; i < count; i++) {
+    // push them in reverse order just for convenience of the initial
+    // allocations
+    // of buffers from Allocate progressing forwards instead of backwards.
+    free_list_.push_back(count - i - 1);
+  }
+  return ZX_OK;
+}
+
+zx_status_t VirtioNet::IoBuffer::Allocate(uintptr_t* offset) {
+  if (free_list_.empty()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  uint16_t elem = free_list_.back();
+  *offset = static_cast<uintptr_t>(elem) * elem_size_;
+  free_list_.pop_back();
+  return ZX_OK;
+}
+
+void VirtioNet::IoBuffer::Free(uintptr_t offset) {
+  free_list_.push_back(offset / elem_size_);
+}
+
 VirtioNet::VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
     // TODO(abdulla): Support VIRTIO_NET_F_STATUS via IOCTL_ETHERNET_GET_STATUS.
     : VirtioInprocessDevice(phys_mem, VIRTIO_NET_F_MAC),
-      rx_stream_(phys_mem, dispatcher, rx_queue(), rx_trace_flow_id()),
-      tx_stream_(phys_mem, dispatcher, tx_queue(), tx_trace_flow_id()) {
+      rx_stream_(phys_mem, dispatcher, rx_queue(), rx_trace_flow_id(),
+                 &io_buf_),
+      tx_stream_(phys_mem, dispatcher, tx_queue(), tx_trace_flow_id(),
+                 &io_buf_) {
   config_.status = VIRTIO_NET_S_LINK_UP;
   config_.max_virtqueue_pairs = 1;
 }
@@ -237,6 +339,10 @@ VirtioNet::VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
 VirtioNet::~VirtioNet() {
   zx_handle_close(fifos_.tx_fifo);
   zx_handle_close(fifos_.rx_fifo);
+}
+
+zx_status_t VirtioNet::InitIoBuffer(size_t count, size_t elem_size) {
+  return io_buf_.Init(count, elem_size);
 }
 
 zx_status_t VirtioNet::Start(const char* path) {
@@ -260,15 +366,26 @@ zx_status_t VirtioNet::Start(const char* path) {
     return ret;
   }
 
-  // TODO(ZX-1333): Limit how much of they guest physical address space
-  // is exposed to the Ethernet server.
-  zx_handle_t vmo;
-  zx_status_t status =
-      zx_handle_duplicate(phys_mem_.vmo().get(), ZX_RIGHT_SAME_RIGHTS, &vmo);
+  // We make some assumptions on sizing our IO buf based on how the ethernet
+  // FIFOs work. Essentially we need to ensure that we have enough buffers such
+  // that we can potentially fully fill the RX FIFO, whilst still having enough
+  // buffers that we can efficiently do TX. We would also like to ensure that
+  // being able to place an item into either RX or TX FIFO should imply that we
+  // have a free buffer. In the worst case we could have rx_depth enqueued in
+  // the RX FIFO, tx_depth enqueued in the TX FIFO and tx_depth currently in
+  // flight on the hardware. This yields the below calculation and with current
+  // FIFO depths of 256 will yield a 1.5MiB vmo.
+  zx_status_t status = InitIoBuffer((fifos_.rx_depth + fifos_.tx_depth * 2), kMaxPacketSize);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate guest physical memory";
     return status;
   }
+  zx::vmo vmo_dup;
+  status = io_buf_.vmo().duplicate(ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER, &vmo_dup);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to duplicate VMO for ethernet";
+    return status;
+  }
+  zx_handle_t vmo = vmo_dup.release();
   ret = ioctl_ethernet_set_iobuf(net_fd_.get(), &vmo);
   if (ret < 0) {
     FXL_LOG(ERROR) << "Failed to set VMO for Ethernet device";

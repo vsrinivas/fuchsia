@@ -80,7 +80,6 @@ class ZirconGuestTest : public GuestTest {
     fuchsia::guest::LaunchInfo launch_info;
     launch_info.url = kZirconGuestUrl;
     launch_info.args.push_back("--display=none");
-    launch_info.args.push_back("--network=false");
     return launch_info;
   }
 };
@@ -107,7 +106,6 @@ class LinuxGuestTest : public GuestTest {
     fuchsia::guest::LaunchInfo launch_info;
     launch_info.url = kLinuxGuestUrl;
     launch_info.args.push_back("--display=none");
-    launch_info.args.push_back("--network=false");
     launch_info.args.push_back("--cmdline-append=loglevel=0 console=hvc0");
     return launch_info;
   }

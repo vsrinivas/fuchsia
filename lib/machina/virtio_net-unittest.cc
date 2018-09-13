@@ -14,6 +14,17 @@ namespace {
 
 static constexpr uint16_t kVirtioNetQueueSize = 8;
 
+class VirtioNetFake : public VirtioNet {
+ public:
+  VirtioNetFake(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
+      : VirtioNet(phys_mem, dispatcher) {}
+
+  void SetUp(const eth_fifos_t& fifos) {
+    ASSERT_EQ(InitIoBuffer(kVirtioNetQueueSize * 2, 2048), ZX_OK);
+    ASSERT_EQ(WaitOnFifos(fifos), ZX_OK);
+  }
+};
+
 class VirtioNetTest : public ::gtest::TestLoopFixture {
  public:
   VirtioNetTest()
@@ -29,12 +40,12 @@ class VirtioNetTest : public ::gtest::TestLoopFixture {
               ZX_OK);
     fifos_.rx_depth = kVirtioNetQueueSize;
     fifos_.tx_depth = kVirtioNetQueueSize;
-    ASSERT_EQ(net_.WaitOnFifos(fifos_), ZX_OK);
+    net_.SetUp(fifos_);
   }
 
  protected:
   PhysMemFake phys_mem_;
-  VirtioNet net_;
+  VirtioNetFake net_;
   VirtioQueueFake queue_;
   // Fifo endpoints to provide to the net device.
   eth_fifos_t fifos_;
@@ -90,7 +101,8 @@ TEST_F(VirtioNetTest, HeaderOnDifferentBuffer) {
   ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], sizeof(entry[0]), entry,
                                 countof(entry), &count));
   ASSERT_EQ(1u, count);
-  ASSERT_EQ(reinterpret_cast<uintptr_t>(packet_ptr), entry[0].offset);
+  // Expect the first offset in the IoBuffer to be allocated
+  ASSERT_EQ(0u, entry[0].offset);
   ASSERT_EQ(packet_len, entry[0].length);
 }
 
