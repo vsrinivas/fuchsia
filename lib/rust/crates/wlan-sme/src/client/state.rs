@@ -101,20 +101,23 @@ impl<T: Tokens> State<T> {
             },
             State::Associating{ cmd } => match event {
                 MlmeEvent::AssociateConf { resp } => match resp.result_code {
-                    fidl_mlme::AssociateResultCodes::Success => match cmd.rsna {
-                        Some(rsna) => {
-                            State::Associated {
-                                bss: cmd.bss,
-                                last_rssi: None,
-                                link_state: LinkState::EstablishingRsna(cmd.token, rsna),
-                            }
-                        },
-                        None => {
-                            report_connect_finished(cmd.token, user_sink, ConnectResult::Success);
-                            State::Associated {
-                                bss: cmd.bss,
-                                last_rssi: None,
-                                link_state: LinkState::LinkUp(None),
+                    fidl_mlme::AssociateResultCodes::Success => {
+                        report_assoc_success(user_sink, *att_id);
+                        match cmd.rsna {
+                            Some(rsna) => {
+                                State::Associated {
+                                    bss: cmd.bss,
+                                    last_rssi: None,
+                                    link_state: LinkState::EstablishingRsna(cmd.token, rsna),
+                                }
+                            },
+                            None => {
+                                report_connect_finished(cmd.token, user_sink, ConnectResult::Success);
+                                State::Associated {
+                                    bss: cmd.bss,
+                                    last_rssi: None,
+                                    link_state: LinkState::LinkUp(None),
+                                }
                             }
                         }
                     },
@@ -203,6 +206,7 @@ impl<T: Tokens> State<T> {
             }
         ));
         *att_id += 1;
+        report_assoc_started(user_sink, *att_id);
         State::Joining { cmd }
     }
 
@@ -409,6 +413,22 @@ fn report_connect_finished<T>(token: Option<T::ConnectToken>,
     }
 }
 
+fn report_assoc_started<T>(user_sink: &UserSink<T>, att_id: ConnectionAttemptId)
+    where T: Tokens
+{
+    user_sink.send(super::UserEvent::AssociationStarted {
+        att_id,
+    })
+}
+
+fn report_assoc_success<T>(user_sink: &UserSink<T>, att_id: ConnectionAttemptId)
+    where T: Tokens
+{
+    user_sink.send(super::UserEvent::AssociationSuccess {
+        att_id,
+    })
+}
+
 fn clone_ht_capabilities(c: &fidl_mlme::HtCapabilities) -> fidl_mlme::HtCapabilities {
     fidl_mlme::HtCapabilities {
         ht_cap_info: fidl_mlme::HtCapabilityInfo { ..c.ht_cap_info },
@@ -524,6 +544,8 @@ mod tests {
         // Issue a "connect" command
         let state = state.connect(connect_command_one(), &h.mlme_sink, &h.user_sink, &mut h.att_id);
 
+        expect_assoc_started(&mut h.user_stream);
+
         // (sme->mlme) Expect a JoinRequest
         match h.mlme_stream.try_next().unwrap() {
             Some(MlmeRequest::Join(req)) => {
@@ -575,6 +597,8 @@ mod tests {
             }
         };
         let _state = state.on_mlme_event(&h.device_info, assoc_conf, &h.mlme_sink, &h.user_sink, &mut h.att_id);
+
+        expect_assoc_success(&mut h.user_stream);
 
         // User should be notified that we are connected
         expect_connect_result(&mut h.user_stream, connect_command_one().token.unwrap(),
@@ -763,7 +787,7 @@ mod tests {
     #[test]
     fn increment_att_id_on_disassociate_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(connect_command_one().bss);
+        let state = link_up_state(connect_command_no_token().bss);
         assert_eq!(h.att_id, 0);
 
         let disassociate_ind = MlmeEvent::DisassociateInd {
@@ -773,7 +797,8 @@ mod tests {
             }
         };
 
-        let _state = state.on_mlme_event(&h.device_info, disassociate_ind, &h.mlme_sink, &h.user_sink, &mut h.att_id);
+        let state = state.on_mlme_event(&h.device_info, disassociate_ind, &h.mlme_sink, &h.user_sink, &mut h.att_id);
+        assert_eq!(associating_state(connect_command_no_token()), state);
         assert_eq!(h.att_id, 1);
     }
 
@@ -837,6 +862,20 @@ mod tests {
         }
     }
 
+    fn expect_assoc_started(user_stream: &mut UserStream<FakeTokens>) {
+        match user_stream.try_next().unwrap() {
+            Some(UserEvent::AssociationStarted { .. }) => {},
+            other => panic!("expected an AssociationStarted event, got {:?}", other)
+        }
+    }
+
+    fn expect_assoc_success(user_stream: &mut UserStream<FakeTokens>) {
+        match user_stream.try_next().unwrap() {
+            Some(UserEvent::AssociationSuccess { .. }) => {},
+            other => panic!("expected an AssociationFinished event, got {:?}", other)
+        }
+    }
+
     fn connect_command_one() -> ConnectCommand<u32> {
         ConnectCommand {
             bss: Box::new(bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7])),
@@ -849,6 +888,14 @@ mod tests {
         ConnectCommand {
             bss: Box::new(bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
             token: Some(456_u32),
+            rsna: None,
+        }
+    }
+
+    fn connect_command_no_token() -> ConnectCommand<u32> {
+        ConnectCommand {
+            bss: Box::new(bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
+            token: None,
             rsna: None,
         }
     }

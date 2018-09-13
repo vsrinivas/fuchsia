@@ -6,6 +6,7 @@ use fidl_fuchsia_cobalt::HistogramBucket;
 use fidl_fuchsia_wlan_stats as fidl_stats;
 use fidl_fuchsia_wlan_stats::MlmeStats::{ApMlmeStats, ClientMlmeStats};
 use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use fuchsia_zircon::DurationNum;
 use futures::prelude::*;
 use futures::stream::FuturesUnordered;
@@ -27,6 +28,7 @@ const REPORT_PERIOD_MINUTES: i64 = 1;
 
 // These IDs must match the Cobalt config from //third_party/cobalt_config/fuchsia/wlan/config.yaml
 enum CobaltMetricId {
+    AssociationTime = 3,
     DispatcherPacketCounter = 5,
     ClientAssocDataRssi = 6,
     ClientBeaconRssi = 7,
@@ -250,6 +252,13 @@ fn report_rssi_stats(
 
 pub fn report_connection_time(sender: &mut CobaltSender, time: i64, result_index: u32) {
     sender.log_elapsed_time(CobaltMetricId::ConnectionTime as u32, result_index, time);
+}
+
+pub fn report_assoc_success_time(
+    sender: &mut CobaltSender, assoc_started_time: zx::Time, assoc_finished_time: zx::Time,
+) {
+    let time_micros = (assoc_finished_time - assoc_started_time).nanos() / 1000;
+    sender.log_elapsed_time(CobaltMetricId::AssociationTime as u32, 0, time_micros);
 }
 
 fn get_diff<T>(last_stat: T, current_stat: T) -> T

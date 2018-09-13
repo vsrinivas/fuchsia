@@ -83,7 +83,13 @@ pub enum UserEvent<T: Tokens> {
     },
     ConnectFinished {
         token: T::ConnectToken,
-        result: ConnectResult
+        result: ConnectResult,
+    },
+    AssociationStarted {
+        att_id: ConnectionAttemptId,
+    },
+    AssociationSuccess {
+        att_id: ConnectionAttemptId,
     }
 }
 
