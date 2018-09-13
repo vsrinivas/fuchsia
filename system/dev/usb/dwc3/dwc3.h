@@ -9,7 +9,7 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-mode-switch.h>
-#include <zircon/device/usb-device.h>
+#include <zircon/device/usb-peripheral.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 #include <zircon/hw/usb.h>

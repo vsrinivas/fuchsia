@@ -6,7 +6,7 @@
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <zircon/device/usb-device.h>
+#include <zircon/device/usb-peripheral.h>
 
 __BEGIN_CDECLS;
 

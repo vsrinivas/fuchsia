@@ -15,7 +15,7 @@
 #include <ddk/protocol/usb-function.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <zircon/device/usb-device.h>
+#include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb-mass-storage.h>
 
 #define BLOCK_SIZE      512

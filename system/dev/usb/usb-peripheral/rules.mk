@@ -9,7 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/usb-device.c \
+    $(LOCAL_DIR)/usb-peripheral.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk \
                       system/dev/lib/usb-request \

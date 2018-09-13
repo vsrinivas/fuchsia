@@ -8,12 +8,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/usb-device.h>
+#include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb-cdc.h>
 
 #include <zircon/types.h>
 
-#define DEV_USB_DEVICE_DIR  "/dev/class/usb-device"
+#define DEV_USB_PERIPHERAL_DIR  "/dev/class/usb-peripheral"
 
 #define GOOGLE_VID      0x18D1
 #define GOOGLE_CDC_PID  0xA020
@@ -73,16 +73,16 @@ static usb_device_descriptor_t device_desc = {
 
 static int open_usb_device(void) {
     struct dirent* de;
-    DIR* dir = opendir(DEV_USB_DEVICE_DIR);
+    DIR* dir = opendir(DEV_USB_PERIPHERAL_DIR);
     if (!dir) {
-        printf("Error opening %s\n", DEV_USB_DEVICE_DIR);
+        printf("Error opening %s\n", DEV_USB_PERIPHERAL_DIR);
         return -1;
     }
 
     while ((de = readdir(dir)) != NULL) {
        char devname[128];
 
-        snprintf(devname, sizeof(devname), "%s/%s", DEV_USB_DEVICE_DIR, de->d_name);
+        snprintf(devname, sizeof(devname), "%s/%s", DEV_USB_PERIPHERAL_DIR, de->d_name);
         int fd = open(devname, O_RDWR);
         if (fd < 0) {
             printf("Error opening %s\n", devname);
@@ -102,53 +102,53 @@ static zx_status_t device_init(int fd, const usb_function_t* function) {
     device_desc.idProduct = htole16(function->pid);
 
     // allocate string descriptors
-    zx_status_t status = ioctl_usb_device_alloc_string_desc(fd, MANUFACTURER_STRING,
-                                                            strlen(MANUFACTURER_STRING) + 1,
-                                                            &device_desc.iManufacturer);
+    zx_status_t status = ioctl_usb_peripheral_alloc_string_desc(fd, MANUFACTURER_STRING,
+                                                                strlen(MANUFACTURER_STRING) + 1,
+                                                                &device_desc.iManufacturer);
     if (status < 0) {
-        fprintf(stderr, "ioctl_usb_device_alloc_string_desc failed: %d\n", status);
+        fprintf(stderr, "ioctl_usb_peripheral_alloc_string_desc failed: %d\n", status);
         return status;
     }
-    status = ioctl_usb_device_alloc_string_desc(fd, function->product_string,
-                                                strlen(function->product_string) + 1,
+    status = ioctl_usb_peripheral_alloc_string_desc(fd, function->product_string,
+                                                    strlen(function->product_string) + 1,
                                                 &device_desc.iProduct);
     if (status < 0) {
-        fprintf(stderr, "ioctl_usb_device_alloc_string_desc failed: %d\n", status);
+        fprintf(stderr, "ioctl_usb_peripheral_alloc_string_desc failed: %d\n", status);
         return status;
     }
-    status = ioctl_usb_device_alloc_string_desc(fd, SERIAL_STRING, strlen(SERIAL_STRING) + 1,
+    status = ioctl_usb_peripheral_alloc_string_desc(fd, SERIAL_STRING, strlen(SERIAL_STRING) + 1,
                                                 &device_desc.iSerialNumber);
     if (status < 0) {
-        fprintf(stderr, "ioctl_usb_device_alloc_string_desc failed: %d\n", status);
+        fprintf(stderr, "ioctl_usb_peripheral_alloc_string_desc failed: %d\n", status);
         return status;
     }
 
     // set device descriptor
-    status = ioctl_usb_device_set_device_desc(fd, &device_desc);
+    status = ioctl_usb_peripheral_set_device_desc(fd, &device_desc);
     if (status < 0) {
-        fprintf(stderr, "ioctl_usb_device_set_device_desc failed: %d\n", status);
+        fprintf(stderr, "ioctl_usb_peripheral_set_device_desc failed: %d\n", status);
         return status;
     }
 
 
-    status = ioctl_usb_device_add_function(fd, function->desc);
+    status = ioctl_usb_peripheral_add_function(fd, function->desc);
     if (status < 0) {
-        fprintf(stderr, "ioctl_usb_device_add_function failed: %d\n", status);
+        fprintf(stderr, "ioctl_usb_peripheral_add_function failed: %d\n", status);
         return status;
     }
 
-    status = ioctl_usb_device_bind_functions(fd);
+    status = ioctl_usb_peripheral_bind_functions(fd);
     if (status < 0) {
-        fprintf(stderr, "ioctl_usb_device_bind_functions failed: %d\n", status);
+        fprintf(stderr, "ioctl_usb_peripheral_bind_functions failed: %d\n", status);
     }
 
     return status;
 }
 
-static int device_command(int argc, const char** argv) {
+static int peripheral_command(int argc, const char** argv) {
     int fd = open_usb_device();
     if (fd < 0) {
-        fprintf(stderr, "could not find a device in %s\n", DEV_USB_DEVICE_DIR);
+        fprintf(stderr, "could not find a device in %s\n", DEV_USB_PERIPHERAL_DIR);
         return fd;
     }
 
@@ -159,7 +159,7 @@ static int device_command(int argc, const char** argv) {
     zx_status_t status = ZX_OK;
     const char* command = argv[1];
     if (!strcmp(command, "reset")) {
-        status = ioctl_usb_device_clear_functions(fd);
+        status = ioctl_usb_peripheral_clear_functions(fd);
     } else if (!strcmp(command, "init-cdc")) {
         status = device_init(fd, &cdc_function);
     } else if (!strcmp(command, "init-ums")) {
@@ -188,9 +188,9 @@ static int mode_command(int argc, const char** argv) {
     if (argc == 1) {
         // print current mode
         usb_mode_t mode;
-        status = ioctl_usb_device_get_mode(fd, &mode);
+        status = ioctl_usb_peripheral_get_mode(fd, &mode);
         if (status < 0) {
-            fprintf(stderr, "ioctl_usb_device_get_mode failed: %d\n", status);
+            fprintf(stderr, "ioctl_usb_peripheral_get_mode failed: %d\n", status);
         } else {
             switch (mode) {
             case USB_MODE_NONE:
@@ -199,8 +199,8 @@ static int mode_command(int argc, const char** argv) {
             case USB_MODE_HOST:
                 printf("HOST\n");
                 break;
-            case USB_MODE_DEVICE:
-                printf("DEVICE\n");
+            case USB_MODE_PERIPHERAL:
+                printf("PERIPHERAL\n");
                 break;
             case USB_MODE_OTG:
                 printf("OTG\n");
@@ -216,8 +216,8 @@ static int mode_command(int argc, const char** argv) {
             mode = USB_MODE_NONE;
         } else if (strcasecmp(argv[1], "host") == 0) {
             mode = USB_MODE_HOST;
-        } else if (strcasecmp(argv[1], "device") == 0) {
-            mode = USB_MODE_DEVICE;
+        } else if (strcasecmp(argv[1], "peripheral") == 0) {
+            mode = USB_MODE_PERIPHERAL;
         } else if (strcasecmp(argv[1], "otg") == 0) {
             mode = USB_MODE_OTG;
         } else {
@@ -226,9 +226,9 @@ static int mode_command(int argc, const char** argv) {
         }
 
         if (status == ZX_OK) {
-            status = ioctl_usb_device_set_mode(fd, &mode);
+            status = ioctl_usb_peripheral_set_mode(fd, &mode);
             if (status < 0) {
-                fprintf(stderr, "ioctl_usb_device_set_mode failed: %d\n", status);
+                fprintf(stderr, "ioctl_usb_peripheral_set_mode failed: %d\n", status);
             }
         }
     }
@@ -245,15 +245,15 @@ typedef struct {
 
 static usbctl_command_t commands[] = {
     {
-        "device",
-        device_command,
-        "device [reset|init-cdc|init-ums] resets the device or "
+        "peripheral",
+        peripheral_command,
+        "peripheral [reset|init-cdc|init-ums] resets the peripheral or "
         "initializes the UMS function"
     },
     {
         "mode",
         mode_command,
-        "mode [none|host|device|otg] sets the current USB mode. "
+        "mode [none|host|peripheral|otg] sets the current USB mode. "
         "Returns the current mode if no additional arugment is provided."
     },
     { NULL, NULL, NULL },

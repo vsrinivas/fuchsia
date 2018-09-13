@@ -20,7 +20,7 @@
 #include <zircon/listnode.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <zircon/device/usb-device.h>
+#include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb-cdc.h>
 
 #define BULK_REQ_SIZE   2048

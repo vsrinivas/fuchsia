@@ -140,7 +140,7 @@ static void xhci_release(void* ctx) {
     if (dwc->start_device_on_xhci_release) {
         dwc3_start_peripheral_mode(dwc);
         dwc->start_device_on_xhci_release = false;
-        dwc->usb_mode = USB_MODE_DEVICE;
+        dwc->usb_mode = USB_MODE_PERIPHERAL;
     }
     mtx_unlock(&dwc->usb_mode_lock);
 }
@@ -351,8 +351,8 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
         return ZX_OK;
     }
 
-    // Shutdown if we are in device mode
-    if (dwc->usb_mode == USB_MODE_DEVICE) {
+    // Shutdown if we are in peripheral mode
+    if (dwc->usb_mode == USB_MODE_PERIPHERAL) {
         dwc3_events_stop(dwc);
         zx_handle_close(dwc->irq_handle);
         dwc->irq_handle = ZX_HANDLE_INVALID;
@@ -363,7 +363,7 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
             device_remove(dwc->xhci_dev);
             dwc->xhci_dev = NULL;
 
-            if (mode == USB_MODE_DEVICE) {
+            if (mode == USB_MODE_PERIPHERAL) {
                 dwc->start_device_on_xhci_release = true;
                 mtx_unlock(&dwc->usb_mode_lock);
                 return ZX_OK;
@@ -379,7 +379,7 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
         }
     }
 
-    if (mode == USB_MODE_DEVICE) {
+    if (mode == USB_MODE_PERIPHERAL) {
         status = pdev_map_interrupt(&dwc->pdev, IRQ_USB3, &dwc->irq_handle);
         if (status != ZX_OK) {
             zxlogf(ERROR, "dwc3_set_mode: pdev_map_interrupt failed\n");

@@ -19,7 +19,7 @@
 #include <ddk/protocol/usb-mode-switch.h>
 #include <ddk/usb-request/usb-request.h>
 #include <zircon/listnode.h>
-#include <zircon/device/usb-device.h>
+#include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb-cdc.h>
 #include <zircon/hw/usb.h>
 
@@ -40,17 +40,17 @@
 
     There are several steps needed to initialize and start USB in the peripheral role.
     The first step is setting up the USB configuration via ioctls.
-    ioctl_usb_device_set_device_desc() sets the USB device descriptor to be presented
+    ioctl_usb_peripheral_set_device_desc() sets the USB device descriptor to be presented
     to the host during enumeration.
-    Next, ioctl_usb_device_add_function() can be called one or more times to add
+    Next, ioctl_usb_peripheral_add_function() can be called one or more times to add
     descriptors for the USB functions to be included in the USB configuration.
-    Finally after all the functions have been added, ioctl_usb_device_bind_functions()
+    Finally after all the functions have been added, ioctl_usb_peripheral_bind_functions()
     tells this driver that configuration is complete and it is now possible to build
     the configuration descriptor. Once we get to this point, usb_device_t.functions_bound
     is set to true.
 
-    Independent of this configuration process, ioctl_usb_device_set_mode() can be used
-    to configure the role of the USB controller. If the role is set to USB_MODE_DEVICE
+    Independent of this configuration process, ioctl_usb_peripheral_set_mode() can be used
+    to configure the role of the USB controller. If the role is set to USB_MODE_PERIPHERAL
     and "functions_bound" is true, then we are ready to start USB in peripheral role.
     At this point, we create DDK devices for our list of functions.
     When the function drivers bind to these functions, they register an interface of type
@@ -58,18 +58,18 @@
     Once all of the function drivers have registered themselves this way,
     usb_device_t.functions_registered is set to true.
 
-    if the usb mode is set to USB_MODE_DEVICE and "functions_registered" is true,
+    if the usb mode is set to USB_MODE_PERIPHERAL and "functions_registered" is true,
     we are now finally ready to operate in the peripheral role.
     At this point we can inform the DCI driver to start running in peripheral role
-    by calling usb_mode_switch_set_mode(USB_MODE_DEVICE) on its ZX_PROTOCOL_USB_MODE_SWITCH
+    by calling usb_mode_switch_set_mode(USB_MODE_PERIPHERAL) on its ZX_PROTOCOL_USB_MODE_SWITCH
     interface. Now the USB controller hardware is up and running as a USB peripheral.
 
     Teardown of the peripheral role one of two ways:
-    First, ioctl_usb_device_clear_functions() will reset this device's list of USB functions.
-    Second, the USB mode can be set to something other than USB_MODE_DEVICE.
+    First, ioctl_usb_peripheral_clear_functions() will reset this device's list of USB functions.
+    Second, the USB mode can be set to something other than USB_MODE_PERIPHERAL.
     In this second case, we will remove the DDK devices for the USB functions
     so the function drivers will unbind, but the USB configuration remains ready to go
-    for when the USB mode is switched back to USB_MODE_DEVICE.
+    for when the USB mode is switched back to USB_MODE_PERIPHERAL.
 */
 
 #define MAX_INTERFACES 32
@@ -95,7 +95,7 @@ typedef struct usb_device {
     usb_dci_protocol_t usb_dci;
     // our parent's USB switch protocol
     usb_mode_switch_protocol_t usb_mode_switch;
-    // USB device descriptor set via ioctl_usb_device_set_device_desc()
+    // USB device descriptor set via ioctl_usb_peripheral_set_device_desc()
     usb_device_descriptor_t device_desc;
     // USB configuration descriptor, synthesized from our functions' descriptors
     usb_configuration_descriptor_t* config_desc;
@@ -111,11 +111,11 @@ typedef struct usb_device {
     list_node_t functions;
     // mutex for protecting our state
     mtx_t lock;
-    // current USB mode set via ioctl_usb_device_set_mode()
+    // current USB mode set via ioctl_usb_peripheral_set_mode()
     usb_mode_t usb_mode;
     // our parent's USB mode
      usb_mode_t dci_usb_mode;
-    // set if ioctl_usb_device_bind_functions() has been called
+    // set if ioctl_usb_peripheral_bind_functions() has been called
     // and we have a complete list of our function.
     bool functions_bound;
     // set if all our functions have registered their usb_function_interface_t
@@ -803,13 +803,13 @@ static zx_status_t usb_dev_state_changed_locked(usb_device_t* dev) {
             dev->dci_usb_mode);
 
     usb_mode_t new_dci_usb_mode = dev->dci_usb_mode;
-    bool add_function_devs = (dev->usb_mode == USB_MODE_DEVICE && dev->functions_bound);
+    bool add_function_devs = (dev->usb_mode == USB_MODE_PERIPHERAL && dev->functions_bound);
     zx_status_t status = ZX_OK;
 
-    if (dev->usb_mode == USB_MODE_DEVICE) {
+    if (dev->usb_mode == USB_MODE_PERIPHERAL) {
         if (dev->functions_registered) {
             // switch DCI to device mode
-            new_dci_usb_mode = USB_MODE_DEVICE;
+            new_dci_usb_mode = USB_MODE_PERIPHERAL;
         } else {
             new_dci_usb_mode = USB_MODE_NONE;
         }
@@ -931,19 +931,19 @@ static zx_status_t usb_dev_ioctl(void* ctx, uint32_t op, const void* in_buf, siz
     usb_device_t* dev = ctx;
 
     switch (op) {
-    case IOCTL_USB_DEVICE_SET_DEVICE_DESC:
+    case IOCTL_USB_PERIPHERAL_SET_DEVICE_DESC:
         return usb_dev_set_device_desc(dev, in_buf, in_len);
-    case IOCTL_USB_DEVICE_ALLOC_STRING_DESC:
+    case IOCTL_USB_PERIPHERAL_ALLOC_STRING_DESC:
         return usb_dev_alloc_string_desc(dev, in_buf, in_len, out_buf, out_len, out_actual);
-    case IOCTL_USB_DEVICE_ADD_FUNCTION:
+    case IOCTL_USB_PERIPHERAL_ADD_FUNCTION:
         return usb_dev_add_function(dev, in_buf, in_len);
-    case IOCTL_USB_DEVICE_BIND_FUNCTIONS:
+    case IOCTL_USB_PERIPHERAL_BIND_FUNCTIONS:
         return usb_dev_bind_functions(dev);
-    case IOCTL_USB_DEVICE_CLEAR_FUNCTIONS:
+    case IOCTL_USB_PERIPHERAL_CLEAR_FUNCTIONS:
         return usb_dev_clear_functions(dev);
-    case IOCTL_USB_DEVICE_GET_MODE:
+    case IOCTL_USB_PERIPHERAL_GET_MODE:
         return usb_dev_get_mode(dev, out_buf, out_len, out_actual);
-    case IOCTL_USB_DEVICE_SET_MODE:
+    case IOCTL_USB_PERIPHERAL_SET_MODE:
         return usb_dev_set_mode(dev, in_buf, in_len);
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -1073,10 +1073,10 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent) {
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "usb-device",
+        .name = "usb-peripheral",
         .ctx = dev,
         .ops = &device_proto,
-        .proto_id = ZX_PROTOCOL_USB_DEVICE,
+        .proto_id = ZX_PROTOCOL_USB_PERIPHERAL,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
