@@ -19,6 +19,7 @@ EventBuffer<T>::EventBuffer(const fbl::Vector<Metadata>& metadata) : flushing_(f
 template <typename T> EventBuffer<T>::EventBuffer(EventBuffer&& other) {
     flushing_.store(other.flushing_.load());
     buffer_ = fbl::move(other.buffer_);
+    metadata_ = fbl::move(other.metadata_);
 }
 
 template <typename T> EventBuffer<T>::~EventBuffer() = default;

@@ -27,8 +27,7 @@ bool RemoteCounter::Flush(const RemoteCounter::FlushFn& flush_handler) {
     }
     // Write the current value of the counter to the buffer, and reset it to 0.
     *buffer_.mutable_event_data() = static_cast<uint32_t>(this->Exchange());
-    flush_handler(metric_id_, buffer_,
-                  fbl::BindMember(&buffer_, &EventBuffer<uint32_t>::CompleteFlush));
+    flush_handler(metric_id_, buffer_, fbl::BindMember(&buffer_, &EventBuffer::CompleteFlush));
     return true;
 }
 } // namespace internal

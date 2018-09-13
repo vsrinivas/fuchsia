@@ -25,7 +25,7 @@ public:
 
     Counter() = delete;
     Counter(internal::RemoteCounter* remote_counter);
-    Counter(const Counter&) = default;
+    Counter(const Counter& other) : remote_counter_(other.remote_counter_){};
     Counter(Counter&&) = default;
     ~Counter() = default;
 

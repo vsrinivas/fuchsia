@@ -47,6 +47,9 @@ struct HistogramOptions {
     // |scalar| * current_step + offset = lowerbound(current_step).
     static HistogramOptions Linear(uint32_t bucket_count, uint32_t scalar, int64_t offset);
 
+    HistogramOptions() = default;
+    HistogramOptions(const HistogramOptions&);
+
     // Sanity check.
     bool IsValid() const {
         switch (type) {

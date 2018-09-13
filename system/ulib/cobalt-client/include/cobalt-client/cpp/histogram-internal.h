@@ -41,7 +41,9 @@ public:
 
     // Increases the count of the |bucket| bucket by 1.
     void IncrementCount(uint32_t bucket, Count val = 1) {
-        ZX_DEBUG_ASSERT_MSG(bucket < buckets_.size(), "IncrementCount bucket out of range.");
+        ZX_DEBUG_ASSERT_MSG(bucket < buckets_.size(),
+                            "IncrementCount bucket(%u) out of range(%lu).", bucket,
+                            buckets_.size());
         buckets_[bucket].Increment(val);
     }
 
@@ -67,10 +69,12 @@ public:
     // writeable again(this is buffer where the histogram is flushed).
     using FlushCompleteFn = fbl::Function<void()>;
 
+    // Alias for the EventBuffer used for histogram.
+    using EventBuffer = internal::EventBuffer<fidl::VectorView<HistogramBucket>>;
+
     // Function in charge persisting or processing the EventValue buffer.
-    using FlushFn = fbl::Function<void(uint64_t metric_id,
-                                       const EventBuffer<fidl::VectorView<HistogramBucket>>&,
-                                       FlushCompleteFn complete)>;
+    using FlushFn =
+        fbl::Function<void(uint64_t metric_id, const EventBuffer&, FlushCompleteFn complete)>;
 
     RemoteHistogram() = delete;
     RemoteHistogram(uint32_t num_buckets, uint64_t metric_id,
@@ -88,10 +92,10 @@ public:
     // | Metadata | Histogram|
     bool Flush(const FlushFn& flush_handler);
 
-private:
     // Keeps a buffer for the metadata and the metric.
-    EventBuffer<fidl::VectorView<HistogramBucket>> buffer_;
+    EventBuffer buffer_;
 
+private:
     // Buffer for out of line allocation for the data being sent
     // through fidl. This buffer is rewritten on every flush, and contains
     // an entry for each bucket.

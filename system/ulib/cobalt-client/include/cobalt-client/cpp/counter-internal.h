@@ -63,9 +63,12 @@ public:
     // writeable again(this is buffer where the counter and its metadata are flushed).
     using FlushCompleteFn = fbl::Function<void()>;
 
+    // Alias for the specific buffer instantiation.
+    using EventBuffer = internal::EventBuffer<uint32_t>;
+
     // Function in charge persisting or processing the ObservationValue buffer.
-    using FlushFn = fbl::Function<void(uint64_t metric_id, const EventBuffer<uint32_t>&,
-                                       FlushCompleteFn complete)>;
+    using FlushFn =
+        fbl::Function<void(uint64_t metric_id, const EventBuffer&, FlushCompleteFn complete)>;
 
     RemoteCounter() = delete;
     RemoteCounter(uint64_t metric_id, const fbl::Vector<Metadata>& metadata);
@@ -83,7 +86,7 @@ public:
 
 private:
     // The buffer containing the data to be flushed.
-    EventBuffer<uint32_t> buffer_;
+    EventBuffer buffer_;
 
     // Unique-Id representing this metric in the backend.
     uint64_t metric_id_;
