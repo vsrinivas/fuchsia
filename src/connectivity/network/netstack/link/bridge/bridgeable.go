@@ -3,9 +3,8 @@ package bridge
 import (
 	"sync"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 var _ stack.LinkEndpoint = (*BridgeableEndpoint)(nil)
@@ -45,14 +44,16 @@ func (e *BridgeableEndpoint) Dispatcher() stack.NetworkDispatcher {
 	return e.dispatcher
 }
 
-func (e *BridgeableEndpoint) DeliverNetworkPacket(ep stack.LinkEndpoint, src, dst tcpip.LinkAddress, p tcpip.NetworkProtocolNumber, vv buffer.VectorisedView, linkHeader buffer.View) {
+func (e *BridgeableEndpoint) DeliverNetworkPacket(ep stack.LinkEndpoint, src, dst tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) {
+	d := e.dispatcher
+
 	e.mu.RLock()
 	b := e.mu.bridge
 	e.mu.RUnlock()
 
 	if b != nil {
-		b.DeliverNetworkPacket(ep, src, dst, p, vv, linkHeader)
-	} else {
-		e.dispatcher.DeliverNetworkPacket(ep, src, dst, p, vv, linkHeader)
+		d = b
 	}
+
+	d.DeliverNetworkPacket(ep, src, dst, protocol, pkt)
 }

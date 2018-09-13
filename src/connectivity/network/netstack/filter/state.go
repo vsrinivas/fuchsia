@@ -13,10 +13,10 @@ import (
 
 	"syslog"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/ports"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/ports"
 )
 
 // Key is a key for the connection state maps.
@@ -430,7 +430,7 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 			if s.rsvdPort != 0 {
 				// Release the reserved port.
 				netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
-				pm.ReleasePort(netProtos, s.transProto, s.rsvdAddr, s.rsvdPort, s.nic)
+				pm.ReleasePort(netProtos, s.transProto, s.rsvdAddr, s.rsvdPort, ports.Flags{}, s.nic)
 			}
 		}
 		for k, s := range ss.lanToExt {

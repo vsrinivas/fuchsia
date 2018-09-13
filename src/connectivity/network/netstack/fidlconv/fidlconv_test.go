@@ -13,7 +13,7 @@ import (
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 
-	"github.com/google/netstack/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 // TODO(tkilbourn): Consider moving more of these tests to "table-driven" tests.

@@ -6,10 +6,10 @@ package filter
 
 import (
 	"encoding/binary"
-	"github.com/google/netstack/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 )
 
 // ChangePacket implements incremental checksum calculation.

@@ -12,11 +12,11 @@ import (
 
 	fidlnet "fidl/fuchsia/net"
 
-	"github.com/google/netstack/tcpip/network/arp"
-	"github.com/google/netstack/tcpip/network/ipv4"
-	"github.com/google/netstack/tcpip/network/ipv6"
-	"github.com/google/netstack/tcpip/stack"
 	"golang.org/x/net/dns/dnsmessage"
+	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 func TestLookupHostname(t *testing.T) {

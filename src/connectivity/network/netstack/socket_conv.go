@@ -13,11 +13,11 @@ import (
 
 	"syslog"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/network/ipv4"
-	"github.com/google/netstack/tcpip/network/ipv6"
-	"github.com/google/netstack/tcpip/transport/tcp"
-	"github.com/google/netstack/tcpip/transport/udp"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
 
 // #cgo CFLAGS: -D_GNU_SOURCE
@@ -214,8 +214,8 @@ func getSockOptSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, t
 func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 	switch name {
 	case C.TCP_NODELAY:
-		var v tcpip.DelayOption
-		if err := ep.GetSockOpt(&v); err != nil {
+		v, err := ep.GetSockOptInt(tcpip.DelayOption)
+		if err != nil {
 			return nil, err
 		}
 
@@ -513,11 +513,12 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		var o tcpip.DelayOption
 		if v == 0 {
-			o = 1
+			v = 1
+		} else {
+			v = 0
 		}
-		return ep.SetSockOpt(o)
+		return ep.SetSockOptInt(tcpip.DelayOption, int(v))
 
 	case C.TCP_CORK:
 		if len(optVal) < sizeOfInt32 {

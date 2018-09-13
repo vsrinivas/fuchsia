@@ -4,17 +4,17 @@ import (
 	"testing"
 	"time"
 
+	"netstack/packetbuffer"
 	"netstack/util"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/link/channel"
-	"github.com/google/netstack/tcpip/network/ipv4"
-	"github.com/google/netstack/tcpip/stack"
-	"github.com/google/netstack/tcpip/transport/tcp"
-	"github.com/google/netstack/tcpip/transport/udp"
-	"github.com/google/netstack/waiter"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
+	"gvisor.dev/gvisor/pkg/waiter"
 )
 
 // TODO: make these tests table-driven.
@@ -415,19 +415,7 @@ func TestNATLanToWanTCP(t *testing.T) {
 }
 
 func link(a, b *channel.Endpoint) {
-	for x := range a.C {
-		b.Inject(unpacketInfo(x))
+	for pktInfo := range a.C {
+		b.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
 	}
-}
-
-func unpacketInfo(p channel.PacketInfo) (tcpip.NetworkProtocolNumber, buffer.VectorisedView) {
-	var size int
-	var views []buffer.View
-	if header := p.Header; header != nil {
-		size += len(header)
-		views = append(views, header)
-	}
-	size += len(p.Payload)
-	views = append(views, p.Payload)
-	return p.Proto, buffer.NewVectorisedView(size, views)
 }

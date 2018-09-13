@@ -6,7 +6,7 @@ import (
 
 	"netstack/util"
 
-	"github.com/google/netstack/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 func TestParse(t *testing.T) {

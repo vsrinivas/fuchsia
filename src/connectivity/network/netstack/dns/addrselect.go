@@ -11,8 +11,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/transport/udp"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
 
 func sortByRFC6724(c *Client, addrs []tcpip.Address) {

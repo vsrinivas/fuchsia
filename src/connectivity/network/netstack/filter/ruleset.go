@@ -7,7 +7,7 @@ package filter
 import (
 	"sync"
 
-	"github.com/google/netstack/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 // Direction is which way (Incoming or Outgoing) a packet is moving in the stack.

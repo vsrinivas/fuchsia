@@ -14,7 +14,7 @@ import (
 
 	fidlnet "fidl/fuchsia/net"
 
-	"github.com/google/netstack/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 type nameLookupImpl struct {

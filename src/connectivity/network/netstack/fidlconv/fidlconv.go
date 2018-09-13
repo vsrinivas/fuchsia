@@ -11,7 +11,7 @@ import (
 	netfidl "fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 
-	"github.com/google/netstack/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 func toNet(addr netfidl.IpAddress) net.IP {

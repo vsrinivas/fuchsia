@@ -10,16 +10,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
-	tcpipHeader "github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/link/channel"
-	"github.com/google/netstack/tcpip/link/sniffer"
-	"github.com/google/netstack/tcpip/network/ipv4"
-	"github.com/google/netstack/tcpip/stack"
-	"github.com/google/netstack/tcpip/transport/udp"
-	"github.com/google/netstack/waiter"
+	"netstack/packetbuffer"
+
 	"github.com/pkg/errors"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	tcpipHeader "gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
+	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
+	"gvisor.dev/gvisor/pkg/waiter"
 )
 
 const (
@@ -108,8 +110,8 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 		info := c.Info()
 		go func() {
 			// Packets from the clients get sent to the server.
-			for pkt := range clientLinkEP.C {
-				serverLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+			for pktInfo := range clientLinkEP.C {
+				serverLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
 			}
 		}()
 		go func() {
@@ -123,18 +125,18 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 		// then deliver those packets to all the clients.  Each client below will
 		// send one packet as part of DHCP acquire so this makes sure that all are
 		// running before continuing the acquisition.
-		var pkts []channel.PacketInfo
-		for i := 0; i < clientCount; i++ {
-			pkts = append(pkts, <-serverLinkEP.C)
+		buffered := make([]channel.PacketInfo, clientCount)
+		for i := 0; i < len(buffered); i++ {
+			buffered[i] = <-serverLinkEP.C
 		}
-		for _, pkt := range pkts {
+		for _, pktInfo := range buffered {
 			for _, clientLinkEP := range clientLinkEPs {
-				clientLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+				clientLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
 			}
 		}
-		for pkt := range serverLinkEP.C {
+		for pktInfo := range serverLinkEP.C {
 			for _, clientLinkEP := range clientLinkEPs {
-				clientLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+				clientLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
 			}
 		}
 	}()
@@ -292,8 +294,8 @@ func TestDelayRetransmission(t *testing.T) {
 			clientStack, clientLinkEP := createTestStackWithChannel(t, nil)
 
 			go func() {
-				for pkt := range serverLinkEP.C {
-					clientLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+				for pktInfo := range serverLinkEP.C {
+					clientLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
 				}
 			}()
 
@@ -301,10 +303,8 @@ func TestDelayRetransmission(t *testing.T) {
 				if err := func() error {
 					discoverRcvd := 0
 					requestRcvd := 0
-					for pkt := range clientLinkEP.C {
-						vv := buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload})
-
-						dhcp := header(pkt.Payload)
+					for pktInfo := range clientLinkEP.C {
+						dhcp := header(pktInfo.Pkt.Data.First())
 						opts, err := dhcp.options()
 						if err != nil {
 							return err
@@ -314,20 +314,21 @@ func TestDelayRetransmission(t *testing.T) {
 							return err
 						}
 						// Avoid closing over a loop variable.
-						proto := pkt.Proto
+						pktInfo := pktInfo
+						fn := func() { serverLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt)) }
 						switch msgType {
 						case dhcpDISCOVER:
 							if discoverRcvd == 0 {
 								discoverRcvd++
-								time.AfterFunc(discoverDelay, func() { serverLinkEP.Inject(proto, vv) })
+								time.AfterFunc(discoverDelay, fn)
 							}
 						case dhcpREQUEST:
 							if requestRcvd == 0 {
 								requestRcvd++
-								time.AfterFunc(requestDelay, func() { serverLinkEP.Inject(proto, vv) })
+								time.AfterFunc(requestDelay, fn)
 							}
 						default:
-							serverLinkEP.Inject(pkt.Proto, vv)
+							fn()
 						}
 					}
 					return nil
@@ -422,14 +423,14 @@ func TestStateTransition(t *testing.T) {
 			clientStack, clientLinkEP := createTestStackWithChannel(t, nil)
 
 			go func() {
-				for pkt := range serverLinkEP.C {
-					clientLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+				for pktInfo := range serverLinkEP.C {
+					clientLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
 				}
 			}()
 
 			var blockData uint32 = 0
 			go func() {
-				for pkt := range clientLinkEP.C {
+				for pktInfo := range clientLinkEP.C {
 					if atomic.LoadUint32(&blockData) == 1 {
 						continue
 					}
@@ -437,11 +438,11 @@ func TestStateTransition(t *testing.T) {
 						// Only pass client broadcast packets back into the stack. This simulates
 						// packet loss during the client's unicast RENEWING state, forcing
 						// it into broadcast REBINDING state.
-						if tcpipHeader.IPv4(pkt.Header).DestinationAddress() != tcpipHeader.IPv4Broadcast {
+						if tcpipHeader.IPv4(pktInfo.Pkt.Header.View()).DestinationAddress() != tcpipHeader.IPv4Broadcast {
 							continue
 						}
 					}
-					serverLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+					serverLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
 				}
 			}()
 			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02"}

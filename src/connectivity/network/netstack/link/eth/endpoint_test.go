@@ -15,31 +15,38 @@ import (
 	"fidl/fuchsia/hardware/ethernet"
 	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/stack"
+	"github.com/google/go-cmp/cmp"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
-type deliverNetworkPacketArgs struct {
-	srcLinkAddr, dstLinkAddr tcpip.LinkAddress
-	protocol                 tcpip.NetworkProtocolNumber
-	vv                       buffer.VectorisedView
-	linkHeader               buffer.View
+type DeliverNetworkPacketArgs struct {
+	SrcLinkAddr, DstLinkAddr tcpip.LinkAddress
+	Protocol                 tcpip.NetworkProtocolNumber
+	Pkt                      tcpip.PacketBuffer
 }
 
-type dispatcherChan chan deliverNetworkPacketArgs
+type dispatcherChan chan DeliverNetworkPacketArgs
 
 var _ stack.NetworkDispatcher = (*dispatcherChan)(nil)
 
-func (ch *dispatcherChan) DeliverNetworkPacket(_ stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView, linkHeader buffer.View) {
-	*ch <- deliverNetworkPacketArgs{
-		srcLinkAddr: srcLinkAddr,
-		dstLinkAddr: dstLinkAddr,
-		protocol:    protocol,
-		vv:          vv,
-		linkHeader:  linkHeader,
+func (ch *dispatcherChan) DeliverNetworkPacket(_ stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) {
+	*ch <- DeliverNetworkPacketArgs{
+		SrcLinkAddr: srcLinkAddr,
+		DstLinkAddr: dstLinkAddr,
+		Protocol:    protocol,
+		Pkt:         pkt,
 	}
+}
+
+func vectorizedViewComparer(x, y buffer.VectorisedView) bool {
+	return bytes.Equal(x.ToView(), y.ToView())
+}
+
+func prependableComparer(x, y buffer.Prependable) bool {
+	return bytes.Equal(x.View(), y.View())
 }
 
 func TestEndpoint_WritePacket(t *testing.T) {
@@ -96,39 +103,44 @@ func TestEndpoint_WritePacket(t *testing.T) {
 	ch := make(dispatcherChan, 1)
 	inEndpoint.Attach(&ch)
 
-	// Test that the ethernet frame is built correctly.
+	// Test that we build the ethernet frame correctly.
 	const localLinkAddress = tcpip.LinkAddress("\x01\x02\x03\x04\x05\x06")
 	const remoteLinkAddress = tcpip.LinkAddress("\x11\x12\x13\x14\x15\x16")
-	// Test that unused bytes are not accidentally put on the wire.
+	// Test that we don't accidentally put unused bytes on the wire.
 	const header = "foo"
-	hdr := buffer.NewPrependable(10)
+	hdr := buffer.NewPrependable(len(header) + 5)
 	if want, got := len(header), copy(hdr.Prepend(len(header)), header); got != want {
 		t.Fatalf("got copy() = %d, want = %d", got, want)
 	}
 	const body = "bar"
-	payload := buffer.NewViewFromBytes([]byte(body)).ToVectorisedView()
 	const protocol = tcpip.NetworkProtocolNumber(45)
-	if err := outEndpoint.WritePacket(&stack.Route{
-		LocalLinkAddress:  localLinkAddress,
-		RemoteLinkAddress: remoteLinkAddress,
-	}, nil, hdr, payload, protocol); err != nil {
+	if err := outEndpoint.WritePacket(
+		&stack.Route{
+			LocalLinkAddress:  localLinkAddress,
+			RemoteLinkAddress: remoteLinkAddress,
+		},
+		nil,
+		protocol,
+		tcpip.PacketBuffer{
+			Data:   buffer.View(body).ToVectorisedView(),
+			Header: hdr,
+		},
+	); err != nil {
 		t.Fatal(err)
 	}
 	select {
 	case <-time.After(5 * time.Second):
 		t.Fatal("timeout waiting for ethernet packet")
 	case args := <-ch:
-		if want, got := localLinkAddress, args.srcLinkAddr; got != want {
-			t.Errorf("got srcLinkAddr = %s, want = %s", got, want)
-		}
-		if want, got := remoteLinkAddress, args.dstLinkAddr; got != want {
-			t.Errorf("got dstLinkAddr = %s, want = %s", got, want)
-		}
-		if want, got := protocol, args.protocol; got != want {
-			t.Errorf("got protocol = %d, want = %d", got, want)
-		}
-		if want, got := []byte(header+body), args.vv.ToView(); !bytes.Equal(got, want) {
-			t.Errorf("got vv = %x, want = %x", got, want)
+		if diff := cmp.Diff(args, DeliverNetworkPacketArgs{
+			SrcLinkAddr: localLinkAddress,
+			DstLinkAddr: remoteLinkAddress,
+			Protocol:    protocol,
+			Pkt: tcpip.PacketBuffer{
+				Data: buffer.View(header + body).ToVectorisedView(),
+			},
+		}, cmp.Comparer(vectorizedViewComparer), cmp.Comparer(prependableComparer)); diff != "" {
+			t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 		}
 	}
 }
@@ -191,23 +203,17 @@ func TestEndpoint_ReceivePacket(t *testing.T) {
 
 	const localLinkAddress = tcpip.LinkAddress("\x01\x02\x03\x04\x05\x06")
 	const remoteLinkAddress = tcpip.LinkAddress("\x11\x12\x13\x14\x15\x16")
-	const headerBuf = "foo"
-	const bodyBuf = "bar"
 	const protocol = tcpip.NetworkProtocolNumber(45)
-	lenHeaderBuf := len(headerBuf)
-	lenBodyBuf := len(bodyBuf)
-	ethHdr := header.EthernetFields{
+	const payload = "foobarbaz"
+	var headerBuffer [header.EthernetMinimumSize]byte
+	header.Ethernet(headerBuffer[:]).Encode(&header.EthernetFields{
 		SrcAddr: localLinkAddress,
 		DstAddr: remoteLinkAddress,
 		Type:    protocol,
-	}
-	ethHeaderBuf := make([]byte, header.EthernetMinimumSize)
-	header.Ethernet(ethHeaderBuf).Encode(&ethHdr)
+	})
 
 	// Send the first sendSize bytes of a frame from outClient to inClient.
 	send := func(sendSize int) {
-		t.Helper()
-
 		var buf eth.Buffer
 		for {
 			if buf = outClient.AllocForSend(); buf != nil {
@@ -217,48 +223,15 @@ func TestEndpoint_ReceivePacket(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		if copied := copy(buf, ethHeaderBuf); copied != header.EthernetMinimumSize {
-			t.Fatalf("got copy(_, ethHeaderBuf) = %d, want = %d", copied, header.EthernetMinimumSize)
+		used := 0
+		used += copy(buf[used:], headerBuffer[:])
+		used += copy(buf[used:], payload)
+		if want := header.EthernetMinimumSize + len(payload); used != want {
+			t.Fatalf("got used = %d, want %d", used, want)
 		}
-		used := header.EthernetMinimumSize
-		if copied := copy(buf[used:], headerBuf); copied != lenHeaderBuf {
-			t.Fatalf("got copy(_, headerBuf) = %d, want = %d", copied, lenHeaderBuf)
-		}
-		used += lenHeaderBuf
-		if copied := copy(buf[used:], bodyBuf); copied != lenBodyBuf {
-			t.Fatalf("got copy(_, bodyBuf) = %d, want = %d", copied, lenBodyBuf)
-		}
-		used += lenBodyBuf
 
 		if err := outClient.Send(buf[:sendSize]); err != nil {
 			t.Fatal(err)
-		}
-	}
-
-	// Wait for a packet to be delivered on ch and validate the delivered
-	// network packet parameters. The packet should be delivered within 5s.
-	expectedBuf := func(expectedBuf []byte) {
-		t.Helper()
-
-		select {
-		case <-time.After(5 * time.Second):
-			t.Fatal("timeout waiting for ethernet packet")
-		case args := <-ch:
-			if want, got := localLinkAddress, args.srcLinkAddr; got != want {
-				t.Fatalf("got srcLinkAddr = %s, want = %s", got, want)
-			}
-			if want, got := remoteLinkAddress, args.dstLinkAddr; got != want {
-				t.Fatalf("got dstLinkAddr = %s, want = %s", got, want)
-			}
-			if want, got := protocol, args.protocol; got != want {
-				t.Fatalf("got protocol = %d, want = %d", got, want)
-			}
-			if got := args.vv.ToView(); !bytes.Equal(got, expectedBuf) {
-				t.Fatalf("got vv = %x, want = %x", got, expectedBuf)
-			}
-			if got := args.linkHeader; !bytes.Equal(got, ethHeaderBuf) {
-				t.Fatalf("got linkHeader = %x, want = %x", got, ethHeaderBuf)
-			}
 		}
 	}
 
@@ -266,20 +239,36 @@ func TestEndpoint_ReceivePacket(t *testing.T) {
 	send(header.EthernetMinimumSize - 1)
 	select {
 	case <-time.After(time.Second):
-	case <-ch:
-		t.Fatal("should not have delivered a packet for a frame that is too small")
+	case args := <-ch:
+		t.Fatalf("unexpected packet received: %+v", args)
 	}
 
-	// Test receiving a frame that is equal to the minimum frame size.
-	send(header.EthernetMinimumSize)
-	expectedBuf([]byte{})
+	for _, extra := range []int{
+		// Test receiving a frame that is equal to the minimum frame size.
+		0,
+		// Test receiving a frame that is just greater than the minimum frame size.
+		1,
+		// Test receiving the full frame.
+		len(payload),
+	} {
+		send(header.EthernetMinimumSize + extra)
 
-	// Test receiving a frame that is just greater than the minimum frame
-	// size.
-	send(header.EthernetMinimumSize + 1)
-	expectedBuf([]byte{headerBuf[0]})
-
-	// Test receiving the normal frame.
-	send(header.EthernetMinimumSize + lenHeaderBuf + lenBodyBuf)
-	expectedBuf([]byte(headerBuf + bodyBuf))
+		// Wait for a packet to be delivered on ch and validate the delivered
+		// network packet parameters. The packet should be delivered within 5s.
+		select {
+		case <-time.After(5 * time.Second):
+			t.Fatal("timeout waiting for ethernet packet")
+		case args := <-ch:
+			if diff := cmp.Diff(args, DeliverNetworkPacketArgs{
+				SrcLinkAddr: localLinkAddress,
+				DstLinkAddr: remoteLinkAddress,
+				Protocol:    protocol,
+				Pkt: tcpip.PacketBuffer{
+					Data: buffer.View(payload[:extra]).ToVectorisedView(),
+				},
+			}, cmp.Comparer(vectorizedViewComparer), cmp.Comparer(prependableComparer)); diff != "" {
+				t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
+			}
+		}
+	}
 }

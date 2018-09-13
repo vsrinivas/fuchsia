@@ -31,14 +31,14 @@ import (
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/netstack"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/link/loopback"
-	"github.com/google/netstack/tcpip/link/sniffer"
-	"github.com/google/netstack/tcpip/network/arp"
-	"github.com/google/netstack/tcpip/network/ipv4"
-	"github.com/google/netstack/tcpip/network/ipv6"
-	"github.com/google/netstack/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
+	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
+	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 const (
@@ -748,14 +748,40 @@ func (ns *Netstack) addEndpoint(
 	ifs.mu.Lock()
 	defer ifs.mu.Unlock()
 
-	// TODO(cl/268322915): remove this.
 	if linkAddr := ep.LinkAddress(); len(linkAddr) > 0 {
-		lladdr := header.LinkLocalAddr(linkAddr)
-		if err := ns.mu.stack.AddAddress(ifs.nicid, ipv6.ProtocolNumber, lladdr); err != nil {
+		ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, ifs.nicid, linkAddr, dhcpAcquisition, dhcpBackoff, dhcpRetransmission, ifs.dhcpAcquired)
+
+		// TODO(37636): remove this. netstack automatically generates a link-local
+		// ipv6 address via a configuration option. However, the algorithm used to
+		// generate that address may differ from the algorithm used by netsvc. This
+		// matters because netsvc implements the host side of the netboot protocol
+		// which provides device discovery.
+		//
+		// This code can be removed when:
+		//
+		// device discovery moves to another mechanism which is implemented by
+		// something running on top of netstack (not netsvc)
+		//
+		// OR
+		//
+		// netsvc ceases to implement its own network stack and uses netstack
+		// directly.
+		lladdr := tcpip.Address([]byte{
+			0:  0xFE,
+			1:  0x80,
+			8:  linkAddr[0] ^ 2,
+			9:  linkAddr[1],
+			10: linkAddr[2],
+			11: 0xFF,
+			12: 0xFE,
+			13: linkAddr[3],
+			14: linkAddr[4],
+			15: linkAddr[5],
+		})
+
+		if err := ns.mu.stack.AddAddress(ifs.nicid, ipv6.ProtocolNumber, lladdr); err != nil && err != tcpip.ErrDuplicateAddress {
 			return nil, fmt.Errorf("NIC %s: adding link-local IPv6 %s failed: %s", name, lladdr, err)
 		}
-
-		ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, ifs.nicid, linkAddr, dhcpAcquisition, dhcpBackoff, dhcpRetransmission, ifs.dhcpAcquired)
 
 		syslog.Infof("NIC %s: link-local IPv6: %s", name, lladdr)
 	}

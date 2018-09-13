@@ -14,8 +14,8 @@ import (
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/filter"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 )
 
 func TestFromAction(t *testing.T) {

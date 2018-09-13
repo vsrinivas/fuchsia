@@ -1,5 +1,4 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,7 +7,7 @@ package util
 import (
 	"net"
 
-	"github.com/google/netstack/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 func IsAny(a tcpip.Address) bool {

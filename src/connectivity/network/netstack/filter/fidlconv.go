@@ -9,8 +9,8 @@ import (
 	"fidl/fuchsia/net/filter"
 	"netstack/fidlconv"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 )
 
 func fromAction(o Action) (filter.Action, error) {

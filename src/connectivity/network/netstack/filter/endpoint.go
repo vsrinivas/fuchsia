@@ -10,9 +10,9 @@ package filter
 import (
 	"sync/atomic"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 var _ stack.LinkEndpoint = (*Endpoint)(nil)
@@ -47,17 +47,20 @@ func (e *Endpoint) IsEnabled() bool {
 }
 
 // DeliverNetworkPacket implements stack.NetworkDispatcher.
-func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView, linkHeader buffer.View) {
+func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) {
 	if atomic.LoadUint32(&e.enabled) == 1 {
-		hdr := buffer.NewPrependableFromView(vv.First())
-		payload := vv
-		payload.RemoveFirst()
+		pkt := pkt
+		hdr := pkt.Header
+		if hdr.UsedLength() == 0 {
+			hdr = buffer.NewPrependableFromView(pkt.Data.First())
+			pkt.Data.RemoveFirst()
+		}
 
-		if e.filter.Run(Incoming, protocol, hdr, payload) != Pass {
+		if e.filter.Run(Incoming, protocol, hdr, pkt.Data) != Pass {
 			return
 		}
 	}
-	e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, srcLinkAddr, protocol, vv, linkHeader)
+	e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, srcLinkAddr, protocol, pkt)
 }
 
 // Attach implements stack.LinkEndpoint.
@@ -67,25 +70,24 @@ func (e *Endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 }
 
 // WritePacket implements stack.LinkEndpoint.
-func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
-	if atomic.LoadUint32(&e.enabled) == 1 && e.filter.Run(Outgoing, protocol, hdr, payload) != Pass {
+func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
+	if atomic.LoadUint32(&e.enabled) == 1 && e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) != Pass {
 		return nil
 	}
-	return e.LinkEndpoint.WritePacket(r, gso, hdr, payload, protocol)
+	return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
 }
 
 // WritePackets implements stack.LinkEndpoint.
-func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, hdrs []stack.PacketDescriptor, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	if atomic.LoadUint32(&e.enabled) == 0 {
-		return e.LinkEndpoint.WritePackets(r, gso, hdrs, payload, protocol)
+		return e.LinkEndpoint.WritePackets(r, gso, pkts, protocol)
 	}
-	h := make([]stack.PacketDescriptor, 0, len(hdrs))
-	for _, hdr := range hdrs {
-		if e.filter.Run(Outgoing, protocol, hdr.Hdr, payload) != Pass {
+	filtered := make([]tcpip.PacketBuffer, 0, len(pkts))
+	for _, pkt := range pkts {
+		if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) != Pass {
 			continue
 		}
-		h = append(h, hdr)
+		filtered = append(filtered, pkt)
 	}
-
-	return e.LinkEndpoint.WritePackets(r, gso, h, payload, protocol)
+	return e.LinkEndpoint.WritePackets(r, gso, filtered, protocol)
 }

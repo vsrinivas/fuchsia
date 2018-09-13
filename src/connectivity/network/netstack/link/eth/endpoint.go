@@ -10,10 +10,10 @@ import (
 
 	"syslog"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 var _ stack.LinkEndpoint = (*endpoint)(nil)
@@ -42,7 +42,7 @@ func (e *endpoint) IsAttached() bool {
 	return e.dispatcher != nil
 }
 
-func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
 	var buf Buffer
 	for {
 		if buf = e.client.AllocForSend(); buf != nil {
@@ -66,8 +66,8 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 	}
 	header.Ethernet(buf).Encode(ethHdr)
 	used := header.EthernetMinimumSize
-	used += copy(buf[used:], hdr.View())
-	for _, v := range payload.Views() {
+	used += copy(buf[used:], pkt.Header.View())
+	for _, v := range pkt.Data.Views() {
 		used += copy(buf[used:], v)
 	}
 	if err := e.client.Send(buf[:used]); err != nil {
@@ -80,10 +80,10 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 	return nil
 }
 
-func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, hdrs []stack.PacketDescriptor, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	var n int
-	for _, hdr := range hdrs {
-		if err := e.WritePacket(r, gso, hdr.Hdr, payload, protocol); err != nil {
+	for _, pkt := range pkts {
+		if err := e.WritePacket(r, gso, protocol, pkt); err != nil {
 			return n, err
 		}
 		n++
@@ -141,11 +141,11 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 				if len(v) < header.EthernetMinimumSize {
 					continue
 				}
-				linkHeader := v[:header.EthernetMinimumSize]
+				eth := header.Ethernet(v)
 				v.TrimFront(header.EthernetMinimumSize)
-
-				eth := header.Ethernet(linkHeader)
-				dispatcher.DeliverNetworkPacket(e, eth.SourceAddress(), eth.DestinationAddress(), eth.Type(), v.ToVectorisedView(), linkHeader)
+				dispatcher.DeliverNetworkPacket(e, eth.SourceAddress(), eth.DestinationAddress(), eth.Type(), tcpip.PacketBuffer{
+					Data: v.ToVectorisedView(),
+				})
 			}
 		}(); err != nil {
 			syslog.WarnTf("eth", "dispatch error: %s", err)

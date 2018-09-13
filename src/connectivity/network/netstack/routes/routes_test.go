@@ -11,7 +11,7 @@ import (
 
 	"netstack/routes"
 
-	"github.com/google/netstack/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 var testRouteTable = routes.ExtendedRouteTable{

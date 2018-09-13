@@ -10,10 +10,10 @@ import (
 
 	"syslog"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/ports"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/ports"
 )
 
 const chatty = false
@@ -287,7 +287,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
 			var e *tcpip.Error
 			nicID = nat.nic
-			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0, false, nat.nic)
+			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0, ports.Flags{}, nat.nic)
 			if e != nil {
 				syslog.VLogTf(syslog.TraceVerbosity, tag, "ReservePort: %v", e)
 				return Drop
@@ -422,7 +422,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
 			var e *tcpip.Error
-			newPort, e = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, false, nicID)
+			newPort, e = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, ports.Flags{}, nicID)
 			if e != nil {
 				syslog.VLogTf(syslog.DebugVerbosity, tag, "ReservePort: %v", e)
 				return Drop

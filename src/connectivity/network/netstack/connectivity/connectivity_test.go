@@ -13,7 +13,7 @@ import (
 
 	"netstack/fidlconv"
 
-	"github.com/google/netstack/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 func newV4Address(a, b, c, d uint8) netfidl.IpAddress {

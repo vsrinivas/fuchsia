@@ -15,8 +15,8 @@ import (
 
 	"netstack/util"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 )
 
 type Action uint32
@@ -38,7 +38,7 @@ type Metric uint32
 // additional attributes.
 type ExtendedRoute struct {
 	// Route used to build the route table to be fed into the
-	// github.com/google/netstack lib.
+	// gvisor.dev/gvisor/pkg lib.
 	Route tcpip.Route
 
 	// Metric acts as a tie-breaker when comparing otherwise identical routes.
@@ -210,7 +210,7 @@ func (rt *RouteTable) GetExtendedRouteTable() ExtendedRouteTable {
 }
 
 // GetNetstackTable returns the route table to be fed into the
-// github.com/google/netstack lib. It contains all routes except for disabled
+// gvisor.dev/gvisor/pkg lib. It contains all routes except for disabled
 // ones.
 func (rt *RouteTable) GetNetstackTable() []tcpip.Route {
 	rt.mu.Lock()

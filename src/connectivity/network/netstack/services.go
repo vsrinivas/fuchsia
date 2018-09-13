@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/transport/tcp"
-	"github.com/google/netstack/tcpip/transport/udp"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
 
 type serviceKey struct {

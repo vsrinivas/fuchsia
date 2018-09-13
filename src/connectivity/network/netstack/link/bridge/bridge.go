@@ -12,9 +12,9 @@ import (
 
 	"netstack/link"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 var _ stack.LinkEndpoint = (*Endpoint)(nil)
@@ -181,9 +181,9 @@ func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 	return ep.linkAddress
 }
 
-func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
 	for _, l := range ep.links {
-		if err := l.WritePacket(r, gso, hdr, payload, protocol); err != nil {
+		if err := l.WritePacket(r, gso, protocol, pkt); err != nil {
 			return err
 		}
 	}
@@ -192,10 +192,10 @@ func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, hdr buffer.Prepe
 
 // WritePackets returns the number of packets in hdrs that were successfully
 // written to all links.
-func (ep *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, hdrs []stack.PacketDescriptor, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
-	n := len(hdrs)
+func (ep *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+	n := len(pkts)
 	for _, l := range ep.links {
-		i, err := l.WritePackets(r, gso, hdrs, payload, protocol)
+		i, err := l.WritePackets(r, gso, pkts, protocol)
 		if err != nil {
 			return 0, err
 		}
@@ -224,18 +224,18 @@ func (ep *Endpoint) IsAttached() bool {
 	return ep.dispatcher != nil
 }
 
-func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, p tcpip.NetworkProtocolNumber, vv buffer.VectorisedView, linkHeader buffer.View) {
+func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) {
 	broadcast := false
 
 	switch dstLinkAddr {
 	case tcpip.LinkAddress([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}):
 		broadcast = true
 	case ep.linkAddress:
-		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv, linkHeader)
+		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, protocol, pkt)
 		return
 	default:
 		if l, ok := ep.links[dstLinkAddr]; ok {
-			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv, linkHeader)
+			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, protocol, pkt)
 			return
 		}
 	}
@@ -244,7 +244,7 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	// out of rxEP, otherwise the rest of this function would just be
 	// "ep.WritePacket and if broadcast, also deliver to ep.links."
 	if broadcast {
-		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv.Clone(nil), linkHeader)
+		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
 	}
 
 	// NB: This isn't really a valid Route; Route is a public type but cannot
@@ -254,35 +254,30 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	// underlying LinkEndpoint like MTU() will panic, but it would be
 	// extremely strange for the LinkEndpoint we're calling WritePacket on to
 	// access itself so indirectly.
-	r := stack.Route{LocalLinkAddress: srcLinkAddr, RemoteLinkAddress: dstLinkAddr, NetProto: p}
+	r := stack.Route{LocalLinkAddress: srcLinkAddr, RemoteLinkAddress: dstLinkAddr, NetProto: protocol}
 
-	// WritePacket implementations assume that `hdr` contains all packet headers. We need to bridge
-	// the gap between this API and DeliverNetworkPacket which has all packet headers in the first
-	// payload view.
-	//
-	// TODO(tamird): this recently changed upstream such that both APIs use the same type; this code
-	// should be removed once that change is imported.
-	payload := vv
-	firstView := payload.First()
-	payload.RemoveFirst() // doesn't mutate vv
-	hdr := buffer.NewPrependable(int(ep.MaxHeaderLength()) + len(firstView))
-	{
-		reserved := hdr.Prepend(len(firstView))
-		if n := copy(reserved, firstView); n != len(firstView) {
-			panic(fmt.Sprintf("copied %d/%d bytes", n, len(firstView)))
-		}
+	// The contract of WritePacket differs from that of DeliverNetworkPacket.
+	// WritePacket treats Header and Data as disjoint buffers;
+	// DeliverNetworkPacket expects Data to contain the full packet, including
+	// any Header bytes if they are present.
+	outPkt := pkt
+	header := outPkt.Data.First()
+	outPkt.Data.RemoveFirst()
+	outPkt.Header = buffer.NewPrependable(int(ep.MaxHeaderLength()) + len(header))
+	if n := copy(outPkt.Header.Prepend(len(header)), header); n != len(header) {
+		panic(fmt.Sprintf("copied %d/%d header bytes", n, len(header)))
 	}
 
 	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
 	rxaddr := rxEP.LinkAddress()
 	for linkaddr, l := range ep.links {
 		if broadcast {
-			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv.Clone(nil), linkHeader)
+			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
 		}
 		// Don't write back out interface from which the frame arrived
 		// because that causes interoperability issues with a router.
 		if linkaddr != rxaddr {
-			l.WritePacket(&r, nil, hdr, payload, p)
+			l.WritePacket(&r, nil, protocol, outPkt)
 		}
 	}
 }

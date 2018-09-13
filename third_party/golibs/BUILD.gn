@@ -99,12 +99,6 @@ golib("github.com/google/btree") {
 }
 golib("github.com/google/go-cmp") {
 }
-golib("github.com/google/netstack") {
-  deps = [
-    ":golang.org/x/sys",
-    ":golang.org/x/time",
-  ]
-}
 golib("github.com/golang/groupcache/lru") {
 }
 golib("github.com/golang/snappy") {
@@ -279,5 +273,13 @@ go_library("gopkg.in/check.v1") {
   source_dir = "//third_party/golibs/github.com/go-check/check"
   deps = [
     ":github.com/kr/pretty",
+  ]
+}
+
+golib("gvisor.dev/gvisor") {
+  deps = [
+    ":github.com/golang/protobuf",
+    ":golang.org/x/sys",
+    ":golang.org/x/time",
   ]
 }

@@ -7,19 +7,20 @@ import (
 	"time"
 
 	"netstack/link/bridge"
+	"netstack/packetbuffer"
 	"netstack/util"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/link/channel"
-	"github.com/google/netstack/tcpip/link/sniffer"
-	"github.com/google/netstack/tcpip/network/arp"
-	"github.com/google/netstack/tcpip/network/ipv4"
-	"github.com/google/netstack/tcpip/network/ipv6"
-	"github.com/google/netstack/tcpip/stack"
-	"github.com/google/netstack/tcpip/transport/tcp"
-	"github.com/google/netstack/waiter"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
+	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
+	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
+	"gvisor.dev/gvisor/pkg/waiter"
 )
 
 var (
@@ -215,10 +216,10 @@ func TestBridge(t *testing.T) {
 				"s1": s1, "s2": s2, "sb": sb,
 			}
 
-			ep2.onWritePacket = func(vv buffer.VectorisedView, linkHeader buffer.View) {
-				for _, view := range vv.Views() {
+			ep2.onWritePacket = func(pkt tcpip.PacketBuffer) {
+				for i, view := range pkt.Data.Views() {
 					if bytes.Contains(view, []byte(payload)) {
-						t.Errorf("did not expect payload %x to be sent back to ep1 in vv: %x", payload, vv)
+						t.Errorf("did not expect payload %x to be sent back to ep1 in view %d: %x", payload, i, view)
 					}
 				}
 			}
@@ -370,10 +371,10 @@ type endpoint struct {
 	linkAddr      tcpip.LinkAddress
 	dispatcher    stack.NetworkDispatcher
 	linked        *endpoint
-	onWritePacket func(buffer.VectorisedView, buffer.View)
+	onWritePacket func(tcpip.PacketBuffer)
 }
 
-func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
 	if e.linked == nil {
 		panic(fmt.Sprintf("ep %+v has not been linked to another endpoint; create endpoints with `pipe()`", e))
 	}
@@ -381,26 +382,18 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 		panic(fmt.Sprintf("ep: %+v linked endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, e.linked))
 	}
 
-	// DeliverNetworkPacket doesn't handle empty leading slices.
-	if hdr := hdr.View(); len(hdr) > 0 {
-		payload = buffer.NewVectorisedView(len(hdr)+payload.Size(), append([]buffer.View{hdr}, payload.Views()...))
-	}
-	// the "remote" address for `other` is our local address and vice versa
-	//
-	// We use nil as the link header parameter for DeliverNetworkPacket and
-	// onWritePacket as we pass a packet straight from e to the linked
-	// endpoint, e.linked, without creating an l2 header.
-	e.linked.dispatcher.DeliverNetworkPacket(e.linked, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, payload.Clone(nil), nil)
 	if fn := e.onWritePacket; fn != nil {
-		fn(payload, nil)
+		fn(pkt)
 	}
+	// the "remote" address for `other` is our local address and vice versa.
+	e.linked.dispatcher.DeliverNetworkPacket(e.linked, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
 	return nil
 }
 
-func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, hdrs []stack.PacketDescriptor, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	var n int
-	for _, hdr := range hdrs {
-		if err := e.WritePacket(r, gso, hdr.Hdr, payload, protocol); err != nil {
+	for _, pkt := range pkts {
+		if err := e.WritePacket(r, gso, protocol, pkt); err != nil {
 			return n, err
 		}
 		n++

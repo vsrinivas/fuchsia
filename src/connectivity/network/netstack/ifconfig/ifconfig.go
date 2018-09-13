@@ -21,8 +21,8 @@ import (
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/wlan/service"
 
-	"github.com/google/netstack/tcpip"
 	"github.com/pkg/errors"
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 type netstackClientApp struct {

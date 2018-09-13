@@ -9,7 +9,7 @@ import (
 
 	"fidl/fuchsia/net/dhcp"
 
-	"github.com/google/netstack/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 type clientImpl struct {
