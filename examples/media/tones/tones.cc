@@ -4,15 +4,14 @@
 
 #include "garnet/examples/media/tones/tones.h"
 
-#include <cmath>
-#include <iostream>
-#include <limits>
-
 #include <fbl/auto_call.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <cmath>
+#include <iostream>
+#include <limits>
 
 #include "garnet/examples/media/tones/midi_keyboard.h"
 #include "lib/fxl/logging.h"
@@ -38,9 +37,8 @@ static constexpr uint32_t kSharedBufferPackets = nsec_to_packets(ZX_MSEC(300));
 
 // Translates a note number into a frequency.
 float Note(int32_t note) {
-  // Map note ordinal zero to middle C (eg. C4) on a standard piano tuning.  Use
-  // A4 (440Hz) as our reference frequency, keeping in mind that A4 is 9 half
-  // steps above C4.
+  // Map note ordinal zero to middle C (eg. C4) on standard piano tuning.
+  // A4 (440Hz) is our reference frequency, and is 9 half steps above C4.
   constexpr int32_t kA4C4HalfStepDistance = 9;
   note -= kA4C4HalfStepDistance;
   return kA4Frequency * pow(2.0f, note / 12.0f);
@@ -68,39 +66,38 @@ static const std::map<int, float> notes_by_key_ = {
 
 Tones::Tones(bool interactive, fit::closure quit_callback)
     : interactive_(interactive), quit_callback_(std::move(quit_callback)) {
-  // Connect to the audio service and get a renderer.
+  // Connect to the audio service and get an AudioOut.
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   fuchsia::media::AudioPtr audio =
       startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio->CreateAudioOut(audio_renderer_.NewRequest());
+  audio->CreateAudioOut(audio_out_.NewRequest());
 
-  audio_renderer_.set_error_handler([this]() {
+  audio_out_.set_error_handler([this]() {
     std::cerr << "Unexpected error: channel to audio service closed\n";
     Quit();
   });
 
-  // Configure the stream_type of the renderer.
+  // Configure the stream_type of the AudioOut.
   fuchsia::media::AudioStreamType stream_type;
   stream_type.sample_format = kSampleFormat;
   stream_type.channels = kChannelCount;
   stream_type.frames_per_second = kFramesPerSecond;
-  audio_renderer_->SetPcmStreamType(std::move(stream_type));
+  audio_out_->SetPcmStreamType(std::move(stream_type));
 
-  // Fetch the minimum lead time.  When we know what this is, we can allocate
-  // our payload buffer and start the synthesis loop.
-  audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t nsec) {
+  // Fetch minimum lead time; allocate payload buffer; start the synthesis loop.
+  audio_out_.events().OnMinLeadTimeChanged = [this](int64_t nsec) {
     OnMinLeadTimeChanged(nsec);
   };
-  audio_renderer_->EnableMinLeadTimeEvents(true);
+  audio_out_->EnableMinLeadTimeEvents(true);
 }
 
 Tones::~Tones() {}
 
 void Tones::Quit() {
   midi_keyboard_.reset();
-  audio_renderer_.Unbind();
+  audio_out_.Unbind();
   quit_callback_();
 }
 
@@ -164,8 +161,8 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
 
   // figure out how many packets we need to keep in flight at all times.
   if (min_lead_time_nsec < 0) {
-    std::cerr << "Audio renderer reported invalid lead time ("
-              << min_lead_time_nsec << "nSec)\n";
+    std::cerr << "AudioOut reported invalid lead time (" << min_lead_time_nsec
+              << "nSec)\n";
     return;
   }
 
@@ -184,8 +181,7 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
         static_cast<size_t>(kSharedBufferPackets) * kFramesPerBuffer *
         kBytesPerFrame;
 
-    // Allocate our shared payload buffer and pass a handle to it over to the
-    // renderer.
+    // Allocate a shared payload buffer; pass its handle to the AudioOut.
     zx::vmo payload_vmo;
     zx_status_t status = payload_buffer_.CreateAndMap(
         total_mapping_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
@@ -197,17 +193,16 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
       return;
     }
 
-    // Assign our shared payload buffer to the renderer.
-    audio_renderer_->AddPayloadBuffer(0, std::move(payload_vmo));
+    // Assign our lone shared payload buffer to the AudioOut.
+    audio_out_->AddPayloadBuffer(0, std::move(payload_vmo));
 
-    // Configure the renderer to use input frames of audio as its PTS units.
-    audio_renderer_->SetPtsUnits(kFramesPerSecond, 1);
+    // Configure the AudioOut to use input frames of audio as its PTS units.
+    audio_out_->SetPtsUnits(kFramesPerSecond, 1);
 
     // Listen for keystrokes.
     WaitForKeystroke();
 
-    // If we are operating in interactive mode, go looking for a midi keyboard
-    // to listen to.
+    // If operating in interactive mode, look for a midi keyboard to listen to.
     if (interactive_) {
       midi_keyboard_ = MidiKeyboard::Create(this);
     }
@@ -226,8 +221,13 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
     }
 
     SendPackets();
-    audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
-                                 fuchsia::media::NO_TIMESTAMP);
+
+    // Begin playback, using default values for reference_time and media_time
+    // input parameters. In effect, by using NO_TIMESTAMP for these two input
+    // values, we align the following two things: "a local time of _As Soon As
+    // We Safely Can_" and "the audio that I gave a PTS of _Zero_."
+    audio_out_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
+                            fuchsia::media::NO_TIMESTAMP);
     started_ = true;
   } else {
     SendPackets();
@@ -240,6 +240,13 @@ void Tones::SendPackets() {
   while (!done() && (active_packets_in_flight_ < target_packets_in_flight_)) {
     // Allocate packet and locate its position in the buffer.
     fuchsia::media::StreamPacket packet;
+
+    // Allow default values for packet.pts and packet.payload_buffer_id to stand
+    //
+    // By not specifying a presentation timestamp for each packet (we allow the
+    // default: fuchsia::media::NO_TIMESTAMP), we rely on the AudioOut to treat
+    // the sequence of packets as a contiguous unbroken stream of audio.
+
     packet.payload_offset = (pts_ * kBytesPerFrame) % payload_buffer_.size();
     packet.payload_size = kBytesPerBuffer;
 
@@ -257,30 +264,29 @@ void Tones::SendPackets() {
     // TODO(johngro): If we really want to minimize latency through the system,
     // we should not be using the SendPacket callbacks to drive the system to
     // mix more.  Doing this means that we need to wait until the oldest packet
-    // in the pipeline is completely rendered, and then wait for the mixer to
+    // in the pipeline is completely consumed, and then wait for the mixer to
     // release to packet back to us.  It can take a bit of time for the mixer to
     // wake up and trim the packet, and it will take time for the message that a
-    // packet has been renderered to make it all of the way back to us.
+    // packet has been completed to make it all of the way back to us.
     //
-    // These delays really do not matter all that much for non-realtime tasks
-    // which can usually buffer 50 mSec or more into the future without any
-    // problem, but if we want to get rid of all of that overhead, we should
-    // really shift to a pure timing based model which allows us to wake up
-    // right before the minimum lead time, then synth and send a new packet just
-    // before the pipeline runs dry.
+    // These delays really do not matter too much for non-realtime tasks which
+    // usually buffer 50 mSec or more into the future without a problem, but if
+    // we want to trim this overhead, we should really shift to a timing-based
+    // model which allows us to awaken right before the minimum lead time, then
+    // synth and send a new packet just before the pipeline runs dry.
     //
-    // If/when we update this code to move to that model, we should really start
-    // to listen for minimum lead time changed events as well (as the lead time
-    // requirements can vary as we get routed to different outputs).
+    // If/when we update this code to move to that model, we should listen for
+    // minimum lead time changed events as well, because lead time requirements
+    // can vary as we get routed to different outputs.
     if (!done()) {
       auto on_complete = [this]() {
         FXL_DCHECK(active_packets_in_flight_ > 0);
         active_packets_in_flight_--;
         SendPackets();
       };
-      audio_renderer_->SendPacket(std::move(packet), std::move(on_complete));
+      audio_out_->SendPacket(std::move(packet), std::move(on_complete));
     } else {
-      audio_renderer_->SendPacket(std::move(packet), [this] { Quit(); });
+      audio_out_->SendPacket(std::move(packet), [this] { Quit(); });
     }
 
     active_packets_in_flight_++;
@@ -315,8 +321,7 @@ void Tones::FillBuffer(float* buffer) {
     int64_t offset = when - pts_;
     tone_generators_.emplace_back(kFramesPerSecond, frequency, kVolume, kDecay);
 
-    // Mix in the new tone generator starting at the correct offset in the
-    // buffer.
+    // Mix the new tone generator, starting at the correct buffer offset.
     tone_generators_.back().MixSamples(buffer + (offset * kChannelCount),
                                        kFramesPerBuffer - offset,
                                        kChannelCount);

@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-
 #include <lib/async-loop/cpp/loop.h>
+#include <iostream>
 
 #include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
 #include "lib/component/cpp/startup_context.h"
@@ -24,6 +23,7 @@ constexpr char kFloatFormatSwitch[] = "float";
 
 int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+
   // loop is needed by StartupContext.
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   examples::MediaApp media_app(
@@ -35,12 +35,12 @@ int main(int argc, const char** argv) {
 
   std::string low_water_mark_ms = command_line.GetOptionValueWithDefault(
       kLowWaterMarkSwitch, kLowWaterMarkDefaultValue);
-  media_app.set_low_water_mark_ms(
+  media_app.set_low_water_mark_from_ms(
       fxl::StringToNumber<int64_t>(low_water_mark_ms));
 
   std::string high_water_mark_ms = command_line.GetOptionValueWithDefault(
       kHighWaterMarkSwitch, kHighWaterMarkDefaultValue);
-  media_app.set_high_water_mark_ms(
+  media_app.set_high_water_mark_from_ms(
       fxl::StringToNumber<int64_t>(high_water_mark_ms));
 
   if (command_line.HasOption(kFloatFormatSwitch)) {

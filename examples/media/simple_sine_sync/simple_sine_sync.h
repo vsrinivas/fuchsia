@@ -17,10 +17,10 @@ class MediaApp {
   ~MediaApp();
 
   void set_verbose(bool verbose) { verbose_ = verbose; }
-  void set_low_water_mark_ms(int64_t value) {
+  void set_low_water_mark_from_ms(int64_t value) {
     low_water_mark_ = ZX_MSEC(value);
   }
-  void set_high_water_mark_ms(int64_t value) {
+  void set_high_water_mark_from_ms(int64_t value) {
     high_water_mark_ = ZX_MSEC(value);
   }
   void set_float(bool enable_float) { use_float_ = enable_float; }
@@ -28,8 +28,8 @@ class MediaApp {
   int Run();
 
  private:
-  bool AcquireRenderer();
-  void SetStreamType();
+  bool AcquireAudioOutSync();
+  bool SetStreamType();
 
   zx_status_t CreateMemoryMapping();
 
@@ -42,7 +42,7 @@ class MediaApp {
 
   void WaitForPackets(size_t num_packets);
 
-  fuchsia::media::AudioOutSyncPtr audio_renderer_;
+  fuchsia::media::AudioOutSyncPtr audio_out_sync_;
 
   std::unique_ptr<component::StartupContext> context_;
   fzl::VmoMapper payload_buffer_;
@@ -50,7 +50,7 @@ class MediaApp {
   size_t payload_size_;
   size_t total_mapping_size_;
   size_t num_packets_sent_ = 0u;
-  zx_time_t start_time_;
+  zx_time_t clock_start_time_;
   bool start_time_known_ = false;
 
   bool verbose_ = false;

@@ -20,10 +20,11 @@ class MediaApp {
   void Run(component::StartupContext* app_context);
 
  private:
-  void AcquireRenderer(component::StartupContext* app_context);
+  void AcquireAudioOut(component::StartupContext* app_context);
   void SetStreamType();
 
   zx_status_t CreateMemoryMapping();
+
   void WriteAudioIntoBuffer();
 
   fuchsia::media::StreamPacket CreatePacket(size_t packet_num);
@@ -34,11 +35,12 @@ class MediaApp {
 
   fit::closure quit_callback_;
 
-  fuchsia::media::AudioOutPtr audio_renderer_;
+  fuchsia::media::AudioOutPtr audio_out_;
 
   fzl::VmoMapper payload_buffer_;
   size_t payload_size_;
   size_t total_mapping_size_;
+
   size_t num_packets_sent_ = 0u;
   size_t num_packets_completed_ = 0u;
 };

@@ -13,25 +13,25 @@
 #include "lib/fxl/logging.h"
 
 namespace {
-// Set the renderer stream_type to: 44.1 kHz, stereo, 16-bit LPCM (signed
-// integer).
-constexpr float kRendererFrameRate = 44100.0f;
+// Set the audio stream_type to: 44.1 kHz, stereo, 16-bit LPCM (signed integer).
+constexpr double kFrameRate = 44100.0;
 constexpr size_t kNumChannels = 2;
 
 // For this example, feed audio to the system in payloads of 10 milliseconds.
 constexpr size_t kMSecsPerPayload = 10;
-constexpr size_t kFramesPerPayload =
-    kMSecsPerPayload * kRendererFrameRate / 1000;
-constexpr size_t kTotalMappingFrames = kRendererFrameRate;
+constexpr size_t kFramesPerPayload = kMSecsPerPayload * kFrameRate / 1000;
+constexpr size_t kTotalMappingFrames = kFrameRate;
 constexpr size_t kNumPayloads = kTotalMappingFrames / kFramesPerPayload;
+
 // Play a sine wave that is 439 Hz, at 1/8 of full-scale volume.
-constexpr float kFrequency = 439.0f;
-constexpr float kAmplitudeScalar = 0.125f;
-constexpr float kFrequencyScalar = kFrequency * 2 * M_PI / kRendererFrameRate;
+constexpr double kFrequency = 439.0;
+constexpr double kAmplitudeScalar = 0.125;
+constexpr double kFrequencyScalar = 2 * M_PI * kFrequency / kFrameRate;
+
 // Loop for 2 seconds.
 constexpr size_t kTotalDurationSecs = 2;
 constexpr size_t kNumPacketsToSend =
-    kTotalDurationSecs * kRendererFrameRate / kFramesPerPayload;
+    kTotalDurationSecs * kFrameRate / kFramesPerPayload;
 
 }  // namespace
 
@@ -55,15 +55,17 @@ int MediaApp::Run() {
     printf("High water mark: %ldms\n", high_water_mark_ / 1000000);
   }
 
-  if (!AcquireRenderer()) {
-    FXL_LOG(ERROR) << "Could not acquire renderer";
+  if (!AcquireAudioOutSync()) {
+    FXL_LOG(ERROR) << "Could not acquire AudioOutSync";
     return 1;
   }
 
-  SetStreamType();
+  if (!SetStreamType()) {
+    return 2;
+  }
 
   if (CreateMemoryMapping() != ZX_OK) {
-    return 2;
+    return 3;
   }
 
   WriteAudioIntoBuffer(payload_buffer_.start(), kTotalMappingFrames);
@@ -77,7 +79,7 @@ int MediaApp::Run() {
   // conditions.  Sadly, there is really no good way to do this with a purely
   // single threaded synchronous interface.
   int64_t min_lead_time;
-  audio_renderer_->GetMinLeadTime(&min_lead_time);
+  audio_out_sync_->GetMinLeadTime(&min_lead_time);
   low_water_mark_ += min_lead_time;
   high_water_mark_ += min_lead_time;
 
@@ -100,7 +102,12 @@ int MediaApp::Run() {
 
   int64_t ref_start_time;
   int64_t media_start_time;
-  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP,
+  // Begin playback now, using default values for input params reference_time
+  // and media_time. As out params, we return the actual reference and media
+  // times that were used. In effect, by using NO_TIMESTAMP for these two input
+  // values, we align the following two things: "a local time of _As Soon As
+  // We Safely Can_" and "the audio that I gave a PTS of _Zero_."
+  audio_out_sync_->Play(fuchsia::media::NO_TIMESTAMP,
                         fuchsia::media::NO_TIMESTAMP, &ref_start_time,
                         &media_start_time);
   start_time_known_ = true;
@@ -118,38 +125,42 @@ int MediaApp::Run() {
   //    control timing, instead of blindly using CLOCK_MONO.
   FXL_DCHECK(ref_start_time >= 0);
   FXL_DCHECK(media_start_time == 0);
-  start_time_ = static_cast<zx_time_t>(ref_start_time);
+  clock_start_time_ = static_cast<zx_time_t>(ref_start_time);
 
   while (num_packets_sent_ < kNumPacketsToSend) {
     WaitForPackets(num_packets_sent_);
     RefillBuffer();
   }
 
-  WaitForPackets(kNumPacketsToSend);  // Wait for last packet to complete
+  WaitForPackets(kNumPacketsToSend);  // Wait for the last packet to complete.
 
   return 0;
 }
 
-// Connect to the Audio service and get an AudioRenderer.
-bool MediaApp::AcquireRenderer() {
+// Connect (synchronously) to the Audio service and get an AudioOutSync.
+bool MediaApp::AcquireAudioOutSync() {
   fuchsia::media::AudioSyncPtr audio;
+
   context_->ConnectToEnvironmentService(audio.NewRequest());
-  return audio->CreateAudioOut(audio_renderer_.NewRequest()) == ZX_OK;
+  return audio->CreateAudioOut(audio_out_sync_.NewRequest()) == ZX_OK;
 }
 
-// Set the AudioRenderer's audio stream_type to stereo 48kHz.
-void MediaApp::SetStreamType() {
-  FXL_DCHECK(audio_renderer_);
+// Set the AudioOutSync's audio stream_type to stereo 48kHz.
+bool MediaApp::SetStreamType() {
+  FXL_DCHECK(audio_out_sync_);
 
   fuchsia::media::AudioStreamType stream_type;
   stream_type.sample_format =
       use_float_ ? fuchsia::media::AudioSampleFormat::FLOAT
                  : fuchsia::media::AudioSampleFormat::SIGNED_16;
   stream_type.channels = kNumChannels;
-  stream_type.frames_per_second = kRendererFrameRate;
+  stream_type.frames_per_second = kFrameRate;
 
-  if (audio_renderer_->SetPcmStreamType(std::move(stream_type)) != ZX_OK)
+  if (audio_out_sync_->SetPcmStreamType(std::move(stream_type)) != ZX_OK) {
     FXL_LOG(ERROR) << "Could not set stream type";
+    return false;
+  }
+  return true;
 }
 
 // Create a single Virtual Memory Object, and map enough memory for our audio
@@ -165,7 +176,8 @@ zx_status_t MediaApp::CreateMemoryMapping() {
     return status;
   }
 
-  audio_renderer_->AddPayloadBuffer(0, std::move(payload_vmo));
+  // We map a single payload buffer; each packet references a region within it.
+  audio_out_sync_->AddPayloadBuffer(0, std::move(payload_vmo));
 
   return ZX_OK;
 }
@@ -174,7 +186,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
   for (size_t frame = 0; frame < num_frames; ++frame) {
     float val =
-        kAmplitudeScalar * sin(static_cast<float>(frame) * kFrequencyScalar);
+        kAmplitudeScalar * sin(static_cast<double>(frame) * kFrequencyScalar);
 
     for (size_t chan_num = 0; chan_num < kNumChannels; ++chan_num) {
       if (use_float_) {
@@ -190,8 +202,16 @@ void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
 }
 
 // Create a packet for this payload.
+// By not specifying a presentation timestamp for each packet (we allow the
+// default value of fuchsia::media::NO_TIMESTAMP), we rely on the AudioOutSync
+// to treat the sequence of packets as a contiguous unbroken stream of audio. We
+// just need to make sure we present packets early enough.
 fuchsia::media::StreamPacket MediaApp::CreateAudioPacket(size_t payload_num) {
   fuchsia::media::StreamPacket packet;
+
+  // leave packet.pts as the default (fuchsia::media::NO_TIMESTAMP)
+  // leave packet.payload_buffer_id as default (0): we only map a single buffer
+
   packet.payload_offset = (payload_num % kNumPayloads) * payload_size_;
   packet.payload_size = payload_size_;
   return packet;
@@ -202,7 +222,7 @@ bool MediaApp::SendAudioPacket(fuchsia::media::StreamPacket packet) {
   if (verbose_) {
     const float delay =
         (start_time_known_
-             ? (float)zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time_
+             ? (float)zx_clock_get(ZX_CLOCK_MONOTONIC) - clock_start_time_
              : 0) /
         1000000;
     printf("SendAudioPacket num %zu time %.2f\n", num_packets_sent_, delay);
@@ -210,25 +230,25 @@ bool MediaApp::SendAudioPacket(fuchsia::media::StreamPacket packet) {
 
   ++num_packets_sent_;
 
-  // Note: SupplyPacketNoReply returns immediately, before packet is consumed.
-  return audio_renderer_->SendPacketNoReply(std::move(packet)) == ZX_OK;
+  // Note: SendPacketNoReply returns immediately, before packet is consumed.
+  return audio_out_sync_->SendPacketNoReply(std::move(packet)) == ZX_OK;
 }
 
 // Stay ahead of the presentation timeline, by the amount high_water_mark_.
 // We must wait until a packet is consumed before reusing its buffer space.
 // For more fine-grained awareness/control of buffers, clients should use the
-// (asynchronous) AudioRenderer interface and process callbacks from SendPacket.
+// (asynchronous) AudioOut interface and process callbacks from SendPacket.
 bool MediaApp::RefillBuffer() {
-  const zx_duration_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   const zx_duration_t time_data_needed =
-      now - std::min(now, start_time_) + high_water_mark_;
+      now - std::min(now, clock_start_time_) + high_water_mark_;
   size_t num_payloads_needed =
-      ceil((float)time_data_needed / ZX_MSEC(kMSecsPerPayload));
+      ceil(static_cast<float>(time_data_needed) / ZX_MSEC(kMSecsPerPayload));
   num_payloads_needed = std::min(kNumPacketsToSend, num_payloads_needed);
 
   if (verbose_) {
     printf("RefillBuffer  now: %.3f start: %.3f :: need %lu (%.4f), sent %lu\n",
-           (float)now / 1000000, (float)start_time_ / 1000000,
+           (float)now / 1000000, (float)clock_start_time_ / 1000000,
            num_payloads_needed * kMSecsPerPayload,
            (float)time_data_needed / 1000000,
            num_packets_sent_ * kMSecsPerPayload);
@@ -247,7 +267,7 @@ void MediaApp::WaitForPackets(size_t num_packets) {
       ZX_MSEC(kMSecsPerPayload) * num_packets_sent_;
 
   FXL_DCHECK(num_packets_sent_ <= kNumPacketsToSend);
-  zx_time_t wake_time = start_time_ + audio_submitted;
+  zx_time_t wake_time = clock_start_time_ + audio_submitted;
   if (num_packets_sent_ < kNumPacketsToSend) {
     wake_time -= low_water_mark_;
   }

@@ -33,7 +33,7 @@ constexpr bool kWavWriterEnabled = false;
 
 using media::TimelineFunction;
 
-constexpr uint32_t NUM_CHANNELS = 1u;
+constexpr uint32_t NUM_CHANNELS = 2u;
 constexpr uint32_t INPUT_FRAMES_PER_SEC = 48000u;
 constexpr uint32_t INPUT_BUFFER_LENGTH_MSEC = 10u;
 constexpr uint32_t INPUT_BUFFER_MIN_FRAMES =
@@ -151,7 +151,7 @@ class FxProcessor {
   fbl::unique_ptr<AudioInput> input_;
   fit::closure quit_callback_;
   uint32_t input_buffer_frames_ = 0;
-  fuchsia::media::AudioOutPtr audio_renderer_;
+  fuchsia::media::AudioOutPtr audio_out_;
   media::TimelineFunction clock_mono_to_input_wr_ptr_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<kWavWriterEnabled> wav_writer_;
@@ -180,10 +180,10 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
     return;
   }
 
-  // Create a renderer.  Setup connection error handlers.
-  audio->CreateAudioOut(audio_renderer_.NewRequest());
+  // Create an AudioOut.  Setup connection error handlers.
+  audio->CreateAudioOut(audio_out_.NewRequest());
 
-  audio_renderer_.set_error_handler([this]() {
+  audio_out_.set_error_handler([this]() {
     Shutdown("fuchsia::media::AudioRenderer connection closed");
   });
 
@@ -192,11 +192,10 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
   stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   stream_type.channels = input_->channel_cnt();
   stream_type.frames_per_second = input_->frame_rate();
-  audio_renderer_->SetPcmStreamType(std::move(stream_type));
+  audio_out_->SetPcmStreamType(std::move(stream_type));
 
-  // Create and map a VMO our mixing buffer and that we will use to send data to
-  // the audio renderer.  Fill the memory with silence, then send a handle to
-  // the VMO with read only rights to the audio renderer.
+  // Create and map a VMO, to mix and subsequently send data to the AudioOut.
+  // Fill it with silence, then send a (read-only) VMO handle to the AudioOut.
   output_buf_frames_ = static_cast<uint32_t>(
       (OUTPUT_BUF_TIME * input_->frame_rate()) / 1000000000u);
   output_buf_sz_ = static_cast<size_t>(input_->frame_sz()) * output_buf_frames_;
@@ -206,11 +205,12 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
       output_buf_sz_, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
       &rend_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
-  audio_renderer_->AddPayloadBuffer(0, std::move(rend_vmo));
+  // We use only a single payload buffer, and hence when creating each packet we
+  // can allow its payload_buffer_id to remain the default value of 0.
+  audio_out_->AddPayloadBuffer(0, std::move(rend_vmo));
 
-  // We want to work in units of audio frames for our PTS units.  Configure this
-  // now.
-  audio_renderer_->SetPtsUnits(input_->frame_rate(), 1);
+  // We work in Audio Frames as our PTS units. Configure this now.
+  audio_out_->SetPtsUnits(input_->frame_rate(), 1);
 
   // Start the input ring buffer.
   res = input_->StartRingBuffer();
@@ -242,10 +242,10 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
   // will be able to start to process the input stream once we know what this
   // number is.
   // TODO(johngro): Set the handler here!
-  audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t nsec) {
+  audio_out_.events().OnMinLeadTimeChanged = [this](int64_t nsec) {
     OnMinLeadTimeChanged(nsec);
   };
-  audio_renderer_->EnableMinLeadTimeEvents(true);
+  audio_out_->EnableMinLeadTimeEvents(true);
 
   // Success.  Print out the usage message, and force an update of effect
   // parameters (which will also print their status).
@@ -316,13 +316,13 @@ void FxProcessor::OnMinLeadTimeChanged(int64_t new_min_lead_time_nsec) {
     zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
     input_rp_ = clock_mono_to_input_wr_ptr_.Apply(now - PROCESS_CHUNK_TIME);
 
-    // Process the input to produce some output, then start the clock.  Note: we
-    // start the clock by explicitly mapping  'now' to PTS 0 on our presentation
-    // timeline.  We will control our clock lead time by writing explicit
-    // timestamps on our packets using the sum of the current output_buf_wp_ and
-    // lead_time_frames_.
+    // Process the input to produce some output, then start the clock. Note:
+    // upon start of playback, we choose to explicitly map the reference time
+    // 'now' to the media time (PTS) '0' on our presentation timeline. We will
+    // control our clock lead time by writing explicit timestamps on packets
+    // using the sum of the current output_buf_wp_ and lead_time_frames_.
     ProcessInput();
-    audio_renderer_->PlayNoReply(now, 0);
+    audio_out_->PlayNoReply(now, 0);
   }
 }
 
@@ -437,7 +437,7 @@ void FxProcessor::Shutdown(const char* reason) {
 
   printf("Shutting down, reason = \"%s\"\n", reason);
   shutting_down_ = true;
-  audio_renderer_.Unbind();
+  audio_out_.Unbind();
   input_.reset();
   quit_callback_();
 }
@@ -456,9 +456,9 @@ void FxProcessor::ProcessInput() {
   }
 
   // Send the packet(s)
-  audio_renderer_->SendPacketNoReply(std::move(pkt1));
+  audio_out_->SendPacketNoReply(std::move(pkt1));
   if (pkt2.payload_size) {
-    audio_renderer_->SendPacketNoReply(std::move(pkt2));
+    audio_out_->SendPacketNoReply(std::move(pkt2));
   }
 
   // If the input has been closed by the driver, shutdown.

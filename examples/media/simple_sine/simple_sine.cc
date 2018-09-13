@@ -8,11 +8,12 @@
 #include "lib/fxl/logging.h"
 
 namespace {
+// Set the AudioOut stream type to: 48 kHz, mono, 32-bit float.
+constexpr float kFrameRate = 48000.0f;
+
 // This example feeds the system 1 second of audio, in 10-millisecond payloads.
 constexpr size_t kNumPayloads = 100;
-// Set the renderer stream type to: 48 kHz, mono, 32-bit float.
-constexpr float kRendererFrameRate = 48000.0f;
-constexpr size_t kFramesPerPayload = kRendererFrameRate / kNumPayloads;
+constexpr size_t kFramesPerPayload = kFrameRate / kNumPayloads;
 
 // Play a 439 Hz sine wave at 1/8 of full-scale volume.
 constexpr double kFrequency = 439.0;
@@ -28,7 +29,7 @@ MediaApp::MediaApp(fit::closure quit_callback)
 
 // Prepare for playback, submit initial data and start the presentation timeline
 void MediaApp::Run(component::StartupContext* app_context) {
-  AcquireRenderer(app_context);
+  AcquireAudioOut(app_context);
   SetStreamType();
 
   if (CreateMemoryMapping() != ZX_OK) {
@@ -41,40 +42,46 @@ void MediaApp::Run(component::StartupContext* app_context) {
     SendPacket(CreatePacket(payload_num));
   }
 
-  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
-                               fuchsia::media::NO_TIMESTAMP);
+  // By not explicitly setting timestamp values for reference clock or media
+  // clock, we indicate that we want to start playback, with default timing.
+  // I.e., at a system reference_time of "as soon as safely possible", we will
+  // present audio corresponding to an initial media_time (PTS) of zero.
+  //
+  // AudioOut defaults to unity gain, unmuted; we need not change our volume.
+  // (Although not shown here, we would do so via the GainControl interface.)
+  audio_out_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
+                          fuchsia::media::NO_TIMESTAMP);
 }
 
 // Use StartupContext to acquire AudioPtr, which we only need in order to get
-// an AudioRendererPtr. Set an error handler, in case of channel closure.
-void MediaApp::AcquireRenderer(component::StartupContext* app_context) {
+// an AudioOutPtr. Set an error handler, in case of channel closure.
+void MediaApp::AcquireAudioOut(component::StartupContext* app_context) {
   fuchsia::media::AudioPtr audio =
       app_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio->CreateAudioOut(audio_renderer_.NewRequest());
+  audio->CreateAudioOut(audio_out_.NewRequest());
 
-  audio_renderer_.set_error_handler([this]() {
-    FXL_LOG(ERROR)
-        << "fuchsia::media::AudioRenderer connection lost. Quitting.";
+  audio_out_.set_error_handler([this]() {
+    FXL_LOG(ERROR) << "fuchsia::media::AudioOut connection lost. Quitting.";
     Shutdown();
   });
 }
 
-// Set the renderer's audio stream_type: mono 48kHz 32-bit float.
+// Set the AudioOut's audio stream_type: mono 48kHz 32-bit float.
 void MediaApp::SetStreamType() {
-  FXL_DCHECK(audio_renderer_);
+  FXL_DCHECK(audio_out_);
 
   fuchsia::media::AudioStreamType stream_type;
 
   stream_type.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   stream_type.channels = 1;
-  stream_type.frames_per_second = kRendererFrameRate;
+  stream_type.frames_per_second = kFrameRate;
 
-  audio_renderer_->SetPcmStreamType(std::move(stream_type));
+  audio_out_->SetPcmStreamType(std::move(stream_type));
 }
 
 // Create a Virtual Memory Object, and map enough memory for audio buffers.
-// Send a reduced-rights handle to AudioRenderer to act as a shared buffer.
+// Send a reduced-rights handle to AudioOut to act as a shared buffer.
 zx_status_t MediaApp::CreateMemoryMapping() {
   zx::vmo payload_vmo;
 
@@ -90,7 +97,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
     return status;
   }
 
-  audio_renderer_->AddPayloadBuffer(0, std::move(payload_vmo));
+  audio_out_->AddPayloadBuffer(0, std::move(payload_vmo));
 
   return ZX_OK;
 }
@@ -101,14 +108,22 @@ void MediaApp::WriteAudioIntoBuffer() {
 
   for (size_t frame = 0; frame < kFramesPerPayload * kNumPayloads; ++frame) {
     float_buffer[frame] =
-        kAmplitude * sin(frame * kFrequency * 2 * M_PI / kRendererFrameRate);
+        kAmplitude * sin(frame * kFrequency * 2 * M_PI / kFrameRate);
   }
 }
 
 // We divide our cross-proc buffer into different zones, called payloads.
 // Create a packet that corresponds to this particular payload.
+// By specifying NO_TIMESTAMP for each packet's presentation timestamp, we rely
+// on the AudioOut to treat the sequence of packets as a contiguous unbroken
+// stream of audio. We just need to make sure we present packets early enough,
+// and for this example we actually submit all packets before starting playback.
 fuchsia::media::StreamPacket MediaApp::CreatePacket(size_t payload_num) {
   fuchsia::media::StreamPacket packet;
+
+  // leave packet.pts as the default (fuchsia::media::NO_TIMESTAMP)
+  // leave packet.payload_buffer_id as default (0): we only map a single buffer
+
   packet.payload_offset = (payload_num * payload_size_) % total_mapping_size_;
   packet.payload_size = payload_size_;
   return packet;
@@ -119,8 +134,8 @@ fuchsia::media::StreamPacket MediaApp::CreatePacket(size_t payload_num) {
 // b. if all expected packets have completed, begin closing down the system.
 void MediaApp::SendPacket(fuchsia::media::StreamPacket packet) {
   ++num_packets_sent_;
-  audio_renderer_->SendPacket(std::move(packet),
-                              [this]() { OnSendPacketComplete(); });
+  audio_out_->SendPacket(std::move(packet),
+                         [this]() { OnSendPacketComplete(); });
 }
 
 void MediaApp::OnSendPacketComplete() {
