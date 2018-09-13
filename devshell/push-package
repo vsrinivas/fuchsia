@@ -18,6 +18,8 @@
 ## optional arguments (must be first):
 ##   -d|--device         IP address of the target
 
+set -e
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
