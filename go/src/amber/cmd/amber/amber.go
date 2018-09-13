@@ -85,7 +85,11 @@ func main() {
 		}
 	}
 
-	supMon := daemon.NewSystemUpdateMonitor(d, *autoUpdate)
+	supMon, err := daemon.NewSystemUpdateMonitor(d, *autoUpdate)
+	if err != nil {
+		log.Fatalf("failed to start system update monitor: %s", err)
+	}
+
 	go func(s *daemon.SystemUpdateMonitor) {
 		s.Start()
 		log.Println("system update monitor exited")
