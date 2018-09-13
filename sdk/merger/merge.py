@@ -97,6 +97,9 @@ def _get_files(element_meta):
     elif type == 'image':
         for arch, file in element_meta['file'].iteritems():
             arch_files[arch] = set([file])
+    elif type == 'loadable_module':
+        common_files.update(element_meta['resources'])
+        arch_files.update(element_meta['binaries'])
     elif type == 'sysroot':
         for arch, version in element_meta['versions'].iteritems():
             contents = set()
@@ -173,7 +176,7 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
     # fact identical.
     type = meta_one['type']
     meta = {}
-    if type == 'cc_prebuilt_library':
+    if type == 'cc_prebuilt_library' or type == 'loadable_module':
         meta = meta_one
         meta['binaries'].update(meta_two['binaries'])
     elif type == 'image':
