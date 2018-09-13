@@ -14,7 +14,7 @@
     <import remote="https://fuchsia.googlesource.com/scripts"
             manifest="manifest/scripts"
             name="scripts"
-            revision="e5e5db4ea3927ccc4bd25a83f595d891fd0f585d"/>
+            revision="ed5e8383f115397016ef39ea1173f27c59cf778f"/>
     <import remote="https://fuchsia.googlesource.com/zircon"
             manifest="manifest/zircon"
             name="zircon"
