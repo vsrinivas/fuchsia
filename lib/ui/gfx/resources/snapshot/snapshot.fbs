@@ -1,0 +1,104 @@
+// Flatbuffer schema for snapshot of scenic nodes.
+
+namespace snapshot;
+
+struct Vec3 {
+  x:float = 0;
+  y:float = 0;
+  z:float = 0;
+}
+
+struct Quat {
+  x:float = 0;
+  y:float = 0;
+  z:float = 0;
+  w:float = 1;
+}
+
+union Shape { Mesh, Circle, Rectangle, RoundedRectangle }
+
+table Mesh {
+}
+
+table Circle {
+  radius:float;
+}
+
+table Rectangle {
+  width:float;
+  height:float;
+}
+
+table RoundedRectangle {
+  width:float;
+  height:float;
+
+  top_left_radius:float;
+  top_right_radius:float;
+  bottom_right_radius:float;
+  bottom_left_radius:float;
+}
+
+table Color {
+  red:float;
+  green:float;
+  blue:float;
+  alpha:float;
+}
+
+table Image {
+  format:int;
+  width:int;
+  height:int;
+
+  data:[ubyte];
+}
+
+union Material { Color, Image }
+
+table AttributeBuffer {
+  buffer:[ubyte];
+  vertex_count:int;
+  stride:int;
+}
+
+table IndexBuffer {
+  buffer:[ubyte];
+  index_count:int;
+}
+
+table Geometry {
+  attributes:[AttributeBuffer];
+  indices:IndexBuffer;
+  bbox_min:Vec3;
+  bbox_max:Vec3;
+}
+
+table Transform {
+  translation:Vec3;
+  scale:Vec3;
+  rotation:Quat;
+  anchor:Vec3;
+}
+
+table Node {
+  name:string;
+  transform:Transform;
+
+  shape:Shape;
+  mesh:Geometry;
+  material:Material;
+
+  children:[Node];
+}
+
+table Scene {
+  camera:Vec3;
+  nodes:[Node];
+}
+
+table Scenes {
+  scenes:[Scene];
+}
+
+root_type Scenes;

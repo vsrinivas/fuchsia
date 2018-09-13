@@ -69,6 +69,7 @@ executable("unittests") {
     "run_all_unittests.cc",
     "session_unittest.cc",
     "shape_unittest.cc",
+    "snapshotter_unittest.cc",
     "stereo_camera_unittest.cc",
     "view_unittest.cc",
   ]

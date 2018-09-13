@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/flatbuffers/flatbuffer.gni")
+
 declare_args() {
   # 0 - use normal swapchain
   # 1 - use vulkan swapchain, but wait for real display
@@ -75,6 +77,10 @@ source_set("gfx") {
     "resources/compositor/layer.h",
     "resources/compositor/layer_stack.cc",
     "resources/compositor/layer_stack.h",
+    "resources/snapshot/serializer.h",
+    "resources/snapshot/snapshotter.cc",
+    "resources/snapshot/snapshotter.h",
+    "resources/snapshot/version.h",
     "resources/dump_visitor.cc",
     "resources/dump_visitor.h",
     "resources/gpu_image.cc",
@@ -167,6 +173,7 @@ source_set("gfx") {
   configs += [ ":swapchain" ]
 
   public_deps = [
+    ":snapshot_fbs",
     "//garnet/lib/ui/scenic",
     "//garnet/public/fidl/fuchsia.math",
     "//garnet/public/fidl/fuchsia.ui.gfx",
@@ -188,5 +195,11 @@ source_set("gfx") {
     "//zircon/public/fidl/fuchsia-display",
     "//zircon/public/fidl/fuchsia-sysmem",
     "//zircon/public/lib/trace",
+  ]
+}
+
+flatbuffer("snapshot_fbs") {
+  sources = [
+    "resources/snapshot/snapshot.fbs",
   ]
 }
