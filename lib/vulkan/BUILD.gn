@@ -29,7 +29,6 @@ sdk_atom("vulkan_layers") {
 
   files = []
   new_files = []
-  dest_files = []
 
   resources =
       vulkan_validation_layers.resources + image_pipe_swapchain.resources
@@ -38,6 +37,7 @@ sdk_atom("vulkan_layers") {
   non_sdk_deps =
       vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps
 
+  sdk_resources = []
   foreach(resource, resources) {
     files += [
       {
@@ -52,9 +52,10 @@ sdk_atom("vulkan_layers") {
         dest = destination
       }
     ]
-    dest_files += [ destination ]
+    sdk_resources += [ destination ]
   }
 
+  sdk_binaries = []
   foreach(loadable_module, loadable_modules) {
     files += [
       {
@@ -70,19 +71,26 @@ sdk_atom("vulkan_layers") {
         dest = destination
       },
     ]
-    dest_files += [ destination ]
+    sdk_binaries += [ destination ]
   }
 
   meta = {
     dest = "pkg/vulkan_layers/meta.json"
-    # TODO(DX-430): this metadata is bogus, define a proper type.
-    schema = "host_tool"
+    schema = "loadable_module"
     value = {
-      type = "host_tool"
+      type = "loadable_module"
       name = "vulkan_layers"
       root = "pkg/vulkan_layers"
-      files = []
-      files = dest_files
+      resources = []
+      resources = sdk_resources
+      binaries = {}
+      if (target_cpu == "arm64") {
+        binaries.arm64 = sdk_binaries
+      } else if (target_cpu == "x64") {
+        binaries.x64 = sdk_binaries
+      } else {
+        assert(false, "Unknown CPU type: %target_cpu")
+      }
     }
   }
 }
