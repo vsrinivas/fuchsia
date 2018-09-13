@@ -18,22 +18,23 @@ const TEST_MAC: [u8; 6] = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
 fn main() -> Result<(), Error> {
     println!("fake_client: starting...");
     let mut exec = Executor::new().context("error creating executor")?;
-    let (udp_socket, server) = build_and_bind_socket();
+    let (sock, server) = build_and_bind_socket();
 
     let disc = build_discover();
     println!("Sending discover message: {:?}", disc);
     let send_msgs = async move {
-        let sock = await!(udp_socket.send_to(disc.serialize(), server))?;
-        let buf = vec![0u8; 1024];
-        let (sock, buf, _bytes_recvd, _addr) = await!(sock.recv_from(buf))?;
-        let offer = Message::from_buffer(&buf).unwrap();
+        let serialized = disc.serialize();
+        await!(sock.send_to(&serialized, server))?;
+        let mut buf = vec![0u8; 1024];
+        let (bytes_recvd, _addr) = await!(sock.recv_from(&mut buf))?;
+        let offer = Message::from_buffer(&buf[0..bytes_recvd]).unwrap();
         println!("fake_client: msg rcvd {:?}", offer);
         let req = build_request(offer);
         println!("fake_client: sending request msg {:?}", req);
-        let sock = await!(sock.send_to(req.serialize(), server))?;
-        let buf = vec![0u8; 1024];
-        let (_sock, buf, _rcvd, _addr) = await!(sock.recv_from(buf))?;
-        let ack = Message::from_buffer(&buf).unwrap();
+        let serialized = req.serialize();
+        await!(sock.send_to(&serialized, server))?;
+        let (bytes_recvd, _addr) = await!(sock.recv_from(&mut buf))?;
+        let ack = Message::from_buffer(&buf[0..bytes_recvd]).unwrap();
         println!("fake_client: msg rcvd {:?}", ack);
         Ok::<(), Error>(())
     };
