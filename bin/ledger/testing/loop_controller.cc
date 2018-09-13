@@ -26,7 +26,7 @@ class CallbackWaiterImpl : public CallbackWaiter {
     };
   }
 
-  void RunUntilCalled() override {
+  bool RunUntilCalled() override {
     FXL_DCHECK(!waiting_);
     waiting_ = true;
     while (NotCalledYet()) {
@@ -34,6 +34,7 @@ class CallbackWaiterImpl : public CallbackWaiter {
     }
     waiting_ = false;
     ++run_until_called_;
+    return true;
   }
 
   bool NotCalledYet() override { return callback_called_ <= run_until_called_; }

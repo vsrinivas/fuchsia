@@ -48,7 +48,7 @@ TEST_P(PageIntegrationTest, LedgerRepositoryDuplicate) {
   Status status;
   repository->Duplicate(duplicated_repository.NewRequest(),
                         callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 }
 

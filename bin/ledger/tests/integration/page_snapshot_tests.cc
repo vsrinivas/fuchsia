@@ -40,7 +40,10 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
     auto waiter = NewWaiter();
     (*page)->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr,
                          callback::Capture(waiter->GetCallback(), &status));
-    waiter->RunUntilCalled();
+    if (!waiter->RunUntilCalled()) {
+      ADD_FAILURE() << "|GetSnapshot| failed to call back.";
+      return nullptr;
+    }
     EXPECT_EQ(Status::OK, status);
     return snapshot;
   }
@@ -63,7 +66,10 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
       (*snapshot)->GetKeys(
           start.Clone(), std::move(token),
           callback::Capture(waiter->GetCallback(), &status, &keys, &token));
-      waiter->RunUntilCalled();
+      if (!waiter->RunUntilCalled()) {
+        ADD_FAILURE() << "|GetKeys| failed to call back.";
+        return {};
+      }
       EXPECT_TRUE(status == Status::OK || status == Status::PARTIAL_RESULT);
       if (num_queries) {
         (*num_queries)++;
@@ -84,7 +90,10 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
     (*snapshot)->FetchPartial(
         std::move(key), offset, max_size,
         callback::Capture(waiter->GetCallback(), &status, &buffer));
-    waiter->RunUntilCalled();
+    if (!waiter->RunUntilCalled()) {
+      ADD_FAILURE() << "|FetchPartial| failed to call back.";
+      return {};
+    }
     EXPECT_EQ(Status::OK, status);
     std::string result;
     EXPECT_TRUE(fsl::StringFromVmo(*buffer, &result));
@@ -102,7 +111,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {
   auto waiter = NewWaiter();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
             callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
@@ -110,7 +119,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ("Alice", ToString(value));
 
@@ -118,7 +127,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("favorite book"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   // People don't read much these days.
   EXPECT_EQ(Status::KEY_NOT_FOUND, status);
 }
@@ -149,7 +158,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
                 });
   auto waiter = NewWaiter();
   status_waiter->Finalize(callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
   ASSERT_TRUE(value);
   EXPECT_EQ(expected_value, ToString(value));
@@ -172,7 +181,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
   Status status;
   auto waiter = NewWaiter();
   status_waiter->Finalize(callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
@@ -180,7 +189,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(value2, ToString(value));
 }
@@ -192,7 +201,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   auto waiter = NewWaiter();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
             callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
@@ -225,7 +234,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   snapshot->FetchPartial(
       convert::ToArray("favorite book"), 0, -1,
       callback::Capture(waiter->GetCallback(), &status, &value));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   // People don't read much these days.
   EXPECT_EQ(Status::KEY_NOT_FOUND, status);
 }
@@ -253,7 +262,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
     auto waiter = NewWaiter();
     page->Put(key.Clone(), RandomArray(50),
               callback::Capture(waiter->GetCallback(), &status));
-    waiter->RunUntilCalled();
+    ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
   }
   snapshot = PageGetSnapshot(&page);
@@ -335,7 +344,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
     auto waiter = NewWaiter();
     page->Put(key.Clone(), RandomArray(10),
               callback::Capture(waiter->GetCallback(), &status));
-    waiter->RunUntilCalled();
+    ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
   }
   snapshot = PageGetSnapshot(&page);
@@ -379,7 +388,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
     auto waiter = NewWaiter();
     page->Put(keys[i].Clone(), values[i].Clone(),
               callback::Capture(waiter->GetCallback(), &status));
-    waiter->RunUntilCalled();
+    ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
   }
   snapshot = PageGetSnapshot(&page);
@@ -464,7 +473,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
     page->Put(keys[i].Clone(), values[i].Clone(),
               callback::Capture(waiter->GetCallback(), &status));
 
-    waiter->RunUntilCalled();
+    ASSERT_TRUE(waiter->RunUntilCalled());
 
     EXPECT_EQ(Status::OK, status);
   }
@@ -511,7 +520,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
     auto waiter = NewWaiter();
     page->Put(keys[i].Clone(), values[i].Clone(),
               callback::Capture(waiter->GetCallback(), &status));
-    waiter->RunUntilCalled();
+    ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
   }
   snapshot = PageGetSnapshot(&page);
@@ -549,7 +558,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
     auto waiter = NewWaiter();
     page->Put(keys[i].Clone(), values[i].Clone(),
               callback::Capture(waiter->GetCallback(), &status));
-    waiter->RunUntilCalled();
+    ASSERT_TRUE(waiter->RunUntilCalled());
     EXPECT_EQ(Status::OK, status);
   }
 
@@ -587,7 +596,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
   page->CreateReferenceFromSocket(
       123, StreamDataToSocket(big_data),
       callback::Capture(waiter->GetCallback(), &status, &reference));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::IO_ERROR, status);
 }
 
@@ -604,7 +613,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   page->CreateReferenceFromSocket(
       big_data.size(), StreamDataToSocket(big_data),
       callback::Capture(waiter->GetCallback(), &status, &reference));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 
   // Set the reference under a key.
@@ -612,7 +621,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   page->PutReference(convert::ToArray("big data"), std::move(*reference),
                      Priority::EAGER,
                      callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 
   // Get a snapshot and read the value.
@@ -621,7 +630,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("big data"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(big_data, ToString(value));
@@ -642,7 +651,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   page->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(waiter->GetCallback(), &status, &reference));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 
   // Set the reference under a key.
@@ -650,7 +659,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   page->PutReference(convert::ToArray("big data"), std::move(*reference),
                      Priority::EAGER,
                      callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 
   // Get a snapshot and read the value.
@@ -659,7 +668,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("big data"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(big_data, ToString(value));
@@ -672,7 +681,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   auto waiter = NewWaiter();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
             callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
@@ -684,7 +693,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ("Alice", ToString(value));
 
@@ -692,7 +701,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("favorite book"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   // People don't read much these days.
   EXPECT_EQ(Status::KEY_NOT_FOUND, status);
 }
@@ -703,13 +712,13 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   PageId test_page_id;
   auto waiter = NewWaiter();
   page->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
 
   Status status;
   waiter = NewWaiter();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
             callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
 
   page.Unbind();
@@ -718,7 +727,7 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   PageId page_id;
   waiter = NewWaiter();
   page->GetId(callback::Capture(waiter->GetCallback(), &page_id));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(test_page_id.id, page_id.id);
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
@@ -726,7 +735,7 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ("Alice", ToString(value));
 }

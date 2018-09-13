@@ -64,7 +64,7 @@ TEST(CallbackWaiterTest, PreCall) {
   auto callback = waiter->GetCallback();
 
   callback();
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
 
   EXPECT_EQ(0u, nb_run);
   EXPECT_EQ(0u, nb_stop);
@@ -80,8 +80,8 @@ TEST(CallbackWaiterTest, MultipleGetCallback) {
   waiter->GetCallback()();
   waiter->GetCallback()();
 
-  waiter->RunUntilCalled();
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  ASSERT_TRUE(waiter->RunUntilCalled());
 
   EXPECT_EQ(0u, nb_run);
   EXPECT_EQ(0u, nb_stop);
@@ -103,7 +103,7 @@ TEST(CallbackWaiterTest, PostCall) {
   auto waiter = loop_controller.NewWaiter();
   callback = std::make_unique<fit::closure>(waiter->GetCallback());
 
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(1u, nb_run);
   EXPECT_EQ(1u, nb_stop);
 }
@@ -124,8 +124,8 @@ TEST(CallbackWaiterTest, MultipleRunUntilCalled) {
   auto waiter = loop_controller.NewWaiter();
   callback = std::make_unique<fit::closure>(waiter->GetCallback());
 
-  waiter->RunUntilCalled();
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(2u, nb_run);
   EXPECT_EQ(2u, nb_stop);
 }
@@ -146,12 +146,12 @@ TEST(CallbackWaiterTest, InterleaveRunUntilCalledAndCall) {
   auto waiter = loop_controller.NewWaiter();
   callback = std::make_unique<fit::closure>(waiter->GetCallback());
 
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(1u, nb_run);
   EXPECT_EQ(1u, nb_stop);
 
   (*callback)();
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(1u, nb_run);
   EXPECT_EQ(1u, nb_stop);
 }
@@ -165,15 +165,15 @@ TEST(CallbackWaiterTest, NotCalledYet) {
 
   callback();
   EXPECT_FALSE(waiter->NotCalledYet());
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_TRUE(waiter->NotCalledYet());
 
   callback();
   callback();
   EXPECT_FALSE(waiter->NotCalledYet());
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_FALSE(waiter->NotCalledYet());
-  waiter->RunUntilCalled();
+  ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_TRUE(waiter->NotCalledYet());
 }
 

@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/compiler_specific.h>
 #include <lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -18,20 +19,20 @@ namespace ledger {
 // For a given |CallbackWaiter|, one can retrieve a callback through
 // |GetCallback|. The callback must be called when the asynchronous event
 // ends.
-// When |RunUntilCalled| is called, it will run the event loop, until the
-// callback from |GetCallback| is called.
-// If one is waiting for the callback to be called multiple times, one can
-// execute |RunUntilCalled| multiple times. The |n|th run of |RunUntilCalled|
-// will return once the callback have been called at least |n| time.
-// |GetCallback| can be called multiple time, and all the returned callback
-// will be equivalent.
+// When |RunUntilCalled| is called, it will run the event loop, until either the
+// callback from |GetCallback| is called or or the loop determines that the
+// callback will never be called. It returns |true|, if the callback has been
+// called, |false| otherwise. If one is waiting for the callback to be called
+// multiple times, one can execute |RunUntilCalled| multiple times. The |n|th
+// run of |RunUntilCalled| will return once the callback have been called at
+// least |n| time. |GetCallback| can be called multiple time, and all the
+// returned callback will be equivalent.
 class CallbackWaiter {
  public:
   CallbackWaiter() {}
   virtual ~CallbackWaiter() {}
   virtual fit::function<void()> GetCallback() = 0;
-  // TODO: return whether the callback waiter has been called.
-  virtual void RunUntilCalled() = 0;
+  virtual bool RunUntilCalled() FXL_WARN_UNUSED_RESULT = 0;
   // Returns whether the next expected calback has not already been called. If
   // |false|, |RunUntilCalled| will return immediately.
   virtual bool NotCalledYet() = 0;

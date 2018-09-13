@@ -36,7 +36,10 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
       fsl::CloneChannelFromFileDescriptor(tmpfs_.root_fd()),
       MakeCloudProvider(), repository.NewRequest(),
       callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  if (!waiter->RunUntilCalled()) {
+    ADD_FAILURE() << "|GetRepository| failed to call back.";
+    return nullptr;
+  }
   EXPECT_EQ(Status::OK, status);
   return repository;
 }
@@ -49,7 +52,10 @@ LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
   auto waiter = loop_controller_->NewWaiter();
   repository->GetLedger(fidl::Clone(test_ledger_name_), ledger.NewRequest(),
                         callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  if (!waiter->RunUntilCalled()) {
+    ADD_FAILURE() << "|GetLedger| failed to call back.";
+    return nullptr;
+  }
   EXPECT_EQ(Status::OK, status);
   return ledger;
 }
@@ -61,7 +67,10 @@ PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
   auto waiter = loop_controller_->NewWaiter();
   ledger->GetPage(nullptr, page.NewRequest(),
                   callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  if (!waiter->RunUntilCalled()) {
+    ADD_FAILURE() << "|GetPage| failed to call back.";
+    return nullptr;
+  }
   EXPECT_EQ(Status::OK, status);
 
   return page.Bind();
@@ -75,7 +84,10 @@ PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
   auto waiter = loop_controller_->NewWaiter();
   ledger->GetPage(fidl::Clone(page_id), page_ptr.NewRequest(),
                   callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
+  if (!waiter->RunUntilCalled()) {
+    ADD_FAILURE() << "|GetPage| failed to call back.";
+    return nullptr;
+  }
   EXPECT_EQ(expected_status, status);
 
   return page_ptr;

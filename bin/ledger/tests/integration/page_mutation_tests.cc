@@ -35,7 +35,10 @@ class PageMutationTest : public IntegrationTest {
     page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                        nullptr,
                        callback::Capture(waiter->GetCallback(), &status));
-    waiter->RunUntilCalled();
+    if (!waiter->RunUntilCalled()) {
+      ADD_FAILURE() << "|GetSnapshot| failed to called back.";
+      return nullptr;
+    }
     EXPECT_EQ(Status::OK, status);
     return snapshot;
   }
@@ -92,7 +95,11 @@ class PageMutationTest : public IntegrationTest {
     Status status;
     auto waiter = NewWaiter();
     action(callback::Capture(waiter->GetCallback(), &status));
-    waiter->RunUntilCalled();
+    if (!waiter->RunUntilCalled()) {
+      return testing::AssertionFailure()
+             << "Error while executing " << operation_name
+             << ". |action| failed to call back.";
+    }
     if (status == Status::OK) {
       return testing::AssertionSuccess();
     }
