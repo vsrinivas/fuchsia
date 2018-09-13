@@ -71,4 +71,7 @@ serial-impl: $(LOCAL_DIR)/serial.banjo
 serial:
 	$(run-banjo)
 
-all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl iommu mailbox rawnand scpi sdhci sdio sdmmc serial serial-impl
+test:
+	$(run-banjo)
+
+all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl iommu mailbox rawnand scpi sdhci sdio sdmmc serial serial-impl test

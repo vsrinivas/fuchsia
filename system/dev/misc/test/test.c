@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/device/test.h>
 #include <zircon/listnode.h>
 
 typedef struct test_device {
@@ -17,7 +18,6 @@ typedef struct test_device {
     zx_handle_t output;
     zx_handle_t control;
     test_func_t test_func;
-    void* cookie;
 } test_device_t;
 
 typedef struct test_root {
@@ -50,16 +50,16 @@ static zx_handle_t test_device_get_control_channel(void* ctx) {
     return device->control;
 }
 
-static void test_device_set_test_func(void* ctx, test_func_t func, void* cookie) {
+static void test_device_set_test_func(void* ctx, const test_func_t* func) {
     test_device_t* device = ctx;
-    device->test_func = func;
-    device->cookie = cookie;
+    device->test_func = *func;
 }
 
-static zx_status_t test_device_run_tests(void *ctx, test_report_t* report, const void* arg, size_t arglen) {
+static zx_status_t test_device_run_tests(void *ctx, const void* arg, size_t arglen,
+                                         test_report_t* report) {
     test_device_t* device = ctx;
-    if (device->test_func != NULL) {
-        return device->test_func(device->cookie, report, arg, arglen);
+    if (device->test_func.callback != NULL) {
+        return device->test_func.callback(device->test_func.ctx, arg, arglen, report);
     } else {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -102,7 +102,7 @@ static zx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, siz
         if (outlen != sizeof(test_report_t)) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
-        zx_status_t status = test_device_run_tests(dev, (test_report_t*)out, in, inlen);
+        zx_status_t status = test_device_run_tests(dev, in, inlen, (test_report_t*)out);
         *out_actual = sizeof(test_report_t);
         return status;
 

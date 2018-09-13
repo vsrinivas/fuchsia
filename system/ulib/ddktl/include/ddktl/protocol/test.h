@@ -1,106 +1,144 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+//          MODIFY system/fidl/protocols/test.banjo INSTEAD.
 
 #pragma once
 
 #include <ddk/protocol/test.h>
+#include <ddktl/device-internal.h>
 #include <zircon/assert.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/socket.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
-// DDK test protocol support
+#include "test-internal.h"
+
+// DDK test-protocol support
 //
-// :: Proxy ::
+// :: Proxies ::
 //
-// ddk::TestProtocolProxy is a simple wrapper around test_protocol_t. It does not own the pointers
-// passed to it.
+// ddk::TestProtocolProxy is a simple wrapper around
+// test_protocol_t. It does not own the pointers passed to it
 //
-// :: Mixin ::
+// :: Mixins ::
 //
-// No mixins are defined, as it is not expected that there will be multiple implementations of the
-// test protocol.
+// ddk::TestProtocol is a mixin class that simplifies writing DDK drivers
+// that implement the test protocol. It doesn't set the base protocol.
 //
-// :: Example ::
+// :: Examples ::
 //
-// // A driver that communicates with a ZX_PROTOCOL_TEST device
-// class MyDevice;
-// using MyDeviceType = ddk::Device<MyDevice, /* ddk mixins */>;
+// // A driver that implements a ZX_PROTOCOL_TEST device.
+// class TestDevice {
+// using TestDeviceType = ddk::Device<TestDevice, /* ddk mixins */>;
 //
-// static zx_status_t my_test_func(void* cookie, test_report_t* report, const void* arg,
-//                                 size_t arglen) {
-//     auto dev = static_cast<MyDevice*>(cookie);
-//     // run tests and set up report
-//     return ZX_OK;
-// }
-//
-// class MyDevice : public MyDeviceType {
+// class TestDevice : public TestDeviceType,
+//                    public ddk::TestProtocol<TestDevice> {
 //   public:
-//     MyDevice(zx_device_t* parent)
-//       : MyDeviceType("my-device"),
-//         parent_(parent) {}
+//     TestDevice(zx_device_t* parent)
+//         : TestDeviceType("my-test-protocol-device", parent) {}
 //
-//     void DdkRelease() {
-//         // Clean up
-//     }
+//     void TestSetOutputSocket(zx_handle_t handle);
 //
-//     zx_status_t Bind() {
-//         test_protocol_t* ops;
-//         auto status = get_device_protocol(parent_, ZX_PROTOCOL_TEST,
-//                                           reinterpret_cast<void**>(&ops));
-//         if (status != ZX_OK) {
-//             return status;
-//         }
-//        proxy_.reset(new ddk::TestProtocolProxy(ops, parent_));
+//     zx_handle_t TestGetOutputSocket();
 //
-//        // Set up the test
-//        proxy_->SetTestFunc(my_test_func, this);
-//        return Add(parent_);
-//     }
+//     void TestSetControlChannel(zx_handle_t handle);
 //
-//   private:
-//     fbl::unique_ptr<ddk::TestProtocolProxy> proxy_;
+//     zx_handle_t TestGetControlChannel();
+//
+//     void TestSetTestFunc(const test_func_t* func);
+//
+//     zx_status_t TestRunTests(const void* arg_buffer, size_t arg_size, test_report_t* out_report);
+//
+//     void TestDestroy();
+//
+//     ...
 // };
 
 namespace ddk {
 
-class TestProtocolProxy {
-  public:
-    TestProtocolProxy(test_protocol_t* proto)
-      : ops_(proto->ops), ctx_(proto->ctx) {}
-
-    void SetOutputSocket(zx::socket socket) {
-        ops_->set_output_socket(ctx_, socket.release());
+template <typename D>
+class TestProtocol : public internal::base_mixin {
+public:
+    TestProtocol() {
+        internal::CheckTestProtocolSubclass<D>();
+        test_protocol_ops_.set_output_socket = TestSetOutputSocket;
+        test_protocol_ops_.get_output_socket = TestGetOutputSocket;
+        test_protocol_ops_.set_control_channel = TestSetControlChannel;
+        test_protocol_ops_.get_control_channel = TestGetControlChannel;
+        test_protocol_ops_.set_test_func = TestSetTestFunc;
+        test_protocol_ops_.run_tests = TestRunTests;
+        test_protocol_ops_.destroy = TestDestroy;
     }
 
-    zx::socket GetOutputSocket() {
-        return zx::socket(ops_->get_output_socket(ctx_));
+protected:
+    test_protocol_ops_t test_protocol_ops_ = {};
+
+private:
+    // Sets test output socket.
+    static void TestSetOutputSocket(void* ctx, zx_handle_t handle) {
+        static_cast<D*>(ctx)->TestSetOutputSocket(handle);
     }
-
-    void SetControlChannel(zx::channel chan) {
-        ops_->set_control_channel(ctx_, chan.release());
+    // Gets test output socket.
+    static zx_handle_t TestGetOutputSocket(void* ctx) {
+        return static_cast<D*>(ctx)->TestGetOutputSocket();
     }
-
-    zx::channel GetControlChannel() {
-        return zx::channel(ops_->get_control_channel(ctx_));
+    // Sets control channel.
+    static void TestSetControlChannel(void* ctx, zx_handle_t handle) {
+        static_cast<D*>(ctx)->TestSetControlChannel(handle);
     }
-
-    void SetTestFunc(test_func_t func, void* cookie) {
-        ops_->set_test_func(ctx_, func, cookie);
+    // Gets control channel.
+    static zx_handle_t TestGetControlChannel(void* ctx) {
+        return static_cast<D*>(ctx)->TestGetControlChannel();
     }
-
-    zx_status_t RunTests(test_report_t* report, const void* arg, size_t arglen) {
-        return ops_->run_tests(ctx_, report, arg, arglen);
+    // Sets test function.
+    static void TestSetTestFunc(void* ctx, const test_func_t* func) {
+        static_cast<D*>(ctx)->TestSetTestFunc(func);
     }
-
-    void Destroy() {
-        ops_->destroy(ctx_);
+    // Run tests, calls the function set in |SetTestFunc|.
+    static zx_status_t TestRunTests(void* ctx, const void* arg_buffer, size_t arg_size,
+                                    test_report_t* out_report) {
+        return static_cast<D*>(ctx)->TestRunTests(arg_buffer, arg_size, out_report);
     }
-
-  private:
-    test_protocol_ops_t* ops_;
-    void* ctx_;
-
+    // Calls `device_remove()`.
+    static void TestDestroy(void* ctx) { static_cast<D*>(ctx)->TestDestroy(); }
 };
 
-}  // namespace ddk
+class TestProtocolProxy {
+public:
+    TestProtocolProxy() : ops_(nullptr), ctx_(nullptr) {}
+    TestProtocolProxy(const test_protocol_t* proto) : ops_(proto->ops), ctx_(proto->ctx) {}
+
+    void GetProto(test_protocol_t* proto) {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
+    }
+    bool is_valid() { return ops_ != nullptr; }
+    void clear() {
+        ctx_ = nullptr;
+        ops_ = nullptr;
+    }
+    // Sets test output socket.
+    void SetOutputSocket(zx_handle_t handle) { ops_->set_output_socket(ctx_, handle); }
+    // Gets test output socket.
+    zx_handle_t GetOutputSocket() { return ops_->get_output_socket(ctx_); }
+    // Sets control channel.
+    void SetControlChannel(zx_handle_t handle) { ops_->set_control_channel(ctx_, handle); }
+    // Gets control channel.
+    zx_handle_t GetControlChannel() { return ops_->get_control_channel(ctx_); }
+    // Sets test function.
+    void SetTestFunc(const test_func_t* func) { ops_->set_test_func(ctx_, func); }
+    // Run tests, calls the function set in |SetTestFunc|.
+    zx_status_t RunTests(const void* arg_buffer, size_t arg_size, test_report_t* out_report) {
+        return ops_->run_tests(ctx_, arg_buffer, arg_size, out_report);
+    }
+    // Calls `device_remove()`.
+    void Destroy() { ops_->destroy(ctx_); }
+
+private:
+    test_protocol_ops_t* ops_;
+    void* ctx_;
+};
+
+} // namespace ddk
