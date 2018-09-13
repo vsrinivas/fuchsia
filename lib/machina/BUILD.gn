@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 source_set("machina") {
   sources = [
@@ -108,8 +108,8 @@ source_set("machina") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/fidl/fuchsia.guest",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/input/cpp",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/ddk",
@@ -163,9 +163,7 @@ executable("machina_unittests") {
   ]
 }
 
-package("machina_tests") {
-  testonly = true
-
+test_package("machina_tests") {
   deps = [
     ":machina_unittests",
   ]

@@ -53,7 +53,7 @@ struct VirtioDescriptor {
   bool writable;
 };
 
-class VirtioQueue {
+class FXL_EXPORT VirtioQueue {
  public:
   // The signal asserted when there are available descriptors in the queue.
   static constexpr zx_signals_t SIGNAL_QUEUE_AVAIL = ZX_USER_SIGNAL_0;
