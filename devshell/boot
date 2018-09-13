@@ -5,7 +5,7 @@
 
 ### run bootserver in zedboot disk paver mode
 
-## usage: fx boot [--netboot] [--no-data] [--force-pave]
+## usage: fx boot [--netboot] [--force-pave]
 ##                [--artifacts <dir>]
 ##                [--sign-tool <path_to_sign_tool>]
 ##                [--bootloader <path_to_prebuilt_bootloader>]
@@ -13,8 +13,6 @@
 ##   <type>        see "--help" for list (default: x64 for x64 / arm64 for arm64)
 ##   --netboot     Boot from ramdisk containing FVM
 ##   --force-pave  Force the target device to pave to persistent storage
-##   --no-data     Use FVM images without a /data partition (preserve existing
-##                 data)
 ##   --artifacts   a directory to load files to send to the target where the
 ##                 root of the directory base zircon.bin and its bootdata file
 ##                 and an images sub-directory has all the images to pave
@@ -45,7 +43,6 @@ usage() {
 }
 
 netboot=false
-add_data=true
 ip_targ=()
 bootserver_extra=()
 sign_tool=""
@@ -65,14 +62,6 @@ while [[ $# -gt 0 ]]; do
     ;;
   --force-pave)
     force_pave=true
-    ;;
-  --no-data)
-    echo >&2 "##"
-    echo >&2 "## Note: if the target has no pre-existing data partition, then"
-    echo >&2 "## none will be created. The resultant system will behave in a"
-    echo >&2 "## kind of 'incognito' fashion, as /data will be backed by ram."
-    echo >&2 "##"
-    add_data=false
     ;;
   --sign-tool)
     shift
@@ -215,7 +204,7 @@ esac
 if $add_fvm; then
   disks=("${disks[@]}" --fvm "${fuchsia_dir}/${IMAGE_FVM_SPARSE}")
 
-  if $add_data; then
+  if [[ -s "${fuchsia_dir}/${IMAGE_DATA_FVM_RAW}" ]]; then
     disks=("${disks[@]}" --fvm "${fuchsia_dir}/${IMAGE_DATA_FVM_RAW}")
   fi
 fi
