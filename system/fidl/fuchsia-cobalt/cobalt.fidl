@@ -101,18 +101,6 @@ interface LoggerFactory {
                     request<Logger> logger)
            -> (Status status);
 
-    // Creates a LoggerExt for the given ProjectProfile.
-    //
-    // |profile| A ProjectProfile describing the Cobalt project that the
-    // returned Logger is for.
-    //
-    // |status| Returns OK on success or INVALID_ARGUMENTS if the project
-    //  profile does not contain a valid Cobalt config with only a single
-    //  project_id.
-    2: CreateLoggerExt(ProjectProfile profile,
-                       request<LoggerExt> logger)
-           -> (Status status);
-
     // Creates a LoggerSimple for the given ProjectProfile.
     //
     // |profile| A ProjectProfile describing the Cobalt project that the
@@ -121,29 +109,30 @@ interface LoggerFactory {
     // |status| Returns OK on success or INVALID_ARGUMENTS if the project
     //  profile does not contain a valid Cobalt config with only a single
     //  project_id.
-    3: CreateLoggerSimple(ProjectProfile profile,
+    2: CreateLoggerSimple(ProjectProfile profile,
                           request<LoggerSimple> logger)
            -> (Status status);
 };
 
 /////////////////////////////////////////////////////////////////////
-// Logger Interface
+// LoggerBase Interface
 /////////////////////////////////////////////////////////////////////
 
-// Logger is used to log Events to the Cobalt system. The Cobalt FIDL
-// service stores the Events locally for some period of time, processes the
-// Events to form Observations, and periodically uploads batches of Observations
-// to the Cobalt server. The Cobalt server processes the Observations and
-// generates Reports. See [TODO(rudominer)] for more description of the Cobalt
-// server and Reports.
+// LoggerBase and its extensions are used to log Events to the Cobalt system.
+// The Cobalt FIDL service stores the Events locally for some period of time,
+// processes the Events to form Observations, and periodically uploads batches
+// of Observations to the Cobalt server. The Cobalt server processes the
+// Observations and generates Reports. See [TODO(rudominer)] for more
+// description of the Cobalt server and Reports.
 //
-// An instance of Logger is associated with a single Cobalt project.
+// LoggerBase or one of its extensions is associated with a single Cobalt
+// project.
 //
 // This interface conforms to the Simple layout so that Simple bindings
-// may be generated for it. For some additional methods, see also interfaces
-// LoggerExt and LoggerSimple below.
+// may be generated for it. For the full interfaces, see Logger and LoggerSimple
+// below.
 [Layout = "Simple"]
-interface Logger {
+interface LoggerBase {
     // Logs the fact that an event has occurred.
     //
     // |metric_id| ID of the metric to use. It must be one of the Metrics
@@ -387,7 +376,7 @@ interface Logger {
 };
 
 /////////////////////////////////////////////////////////////////////
-// LoggerExt Interface
+// Logger Interface
 /////////////////////////////////////////////////////////////////////
 
 // A value for a custom Event. This is used by the method LogCustomEvent().
@@ -417,12 +406,12 @@ struct HistogramBucket {
     uint64 count;
 };
 
-// LoggerExt is an extension of the Logger interface that adds some additional
+// Logger is an extension of the LoggerBase interface that adds some additional
 // methods that do not naturally conform to the Simple layout. We opt for
 // a natural easy-to-understand interface at the cost of not being "Simple".
 // See the interface LoggerSimple below for versions of some of these methods
 // that do conform to the Simple layout.
-interface LoggerExt {
+interface Logger : LoggerBase {
     // Logs a histogram over a set of integer buckets. The meaning of the
     // Metric and the buckets is specified in the Metric definition.
     //
@@ -472,24 +461,17 @@ interface LoggerExt {
 // LoggerSimple Interface
 /////////////////////////////////////////////////////////////////////
 
-// LoggerSimple is an extension of the Logger interface that adds some
+// LoggerSimple is an extension of the LoggerBase interface that adds some
 // additional methods intended to be used by lower-levels of the Fuchsia system.
 //
 // This interface conforms to the Simple layout so that Simple bindings
 // may be generated for it.
-//
-// There are two categories of methods contained in this interface:
-// (i) Versions of the methods in the LoggerExt interface that are expressed
-//     in a way that allow them to adhere to the Simple layout.
-//
-// (ii) The method BulkLog() that allows for many invocations of different
-//      Logger methods to be made via a single FIDL call.
 [Layout = "Simple"]
-interface LoggerSimple {
+interface LoggerSimple : LoggerBase {
     // Logs a histogram over a set of integer buckets. The meaning of the
     // Metric and the buckets is specified in the Metric definition.
     //
-    // See the method LogIntHistogram() in the LoggerExt interface for more
+    // See the method LogIntHistogram() in the Logger interface for more
     // information. This method is similar except that it adheres to the
     // requirements of Simple layout. Instead of a vector of HistogramBucekts
     // this version takes two parallel vectors of bucket indices and the
