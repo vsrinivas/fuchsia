@@ -32,7 +32,7 @@ class PortDispatcher;
 class ExceptionPort : public fbl::DoublyLinkedListable<fbl::RefPtr<ExceptionPort>>
                     , public fbl::RefCounted<ExceptionPort> {
 public:
-    enum class Type { NONE, DEBUGGER, THREAD, PROCESS, JOB};
+    enum class Type { NONE, JOB_DEBUGGER, DEBUGGER, THREAD, PROCESS, JOB};
 
     static zx_status_t Create(Type type, fbl::RefPtr<PortDispatcher> port,
                               uint64_t port_key,
@@ -45,6 +45,7 @@ public:
 
     void OnThreadStartForDebugger(ThreadDispatcher* thread);
     void OnThreadExitForDebugger(ThreadDispatcher* thread);
+    void OnProcessStartForDebugger(ThreadDispatcher* thread);
 
     // Records the target that the ExceptionPort is bound to, so it can
     // unbind when the underlying PortDispatcher dies.

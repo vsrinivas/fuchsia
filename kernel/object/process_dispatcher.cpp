@@ -818,3 +818,16 @@ bool ProcessDispatcher::IsHandleValidNoPolicyCheck(zx_handle_t handle_value) {
     Guard<fbl::Mutex> guard{&handle_table_lock_};
     return (GetHandleLocked(handle_value, true) != nullptr);
 }
+
+void ProcessDispatcher::OnProcessStartForJobDebugger(ThreadDispatcher *t) {
+    auto job = job_;
+    while (job) {
+      auto port = job->debugger_exception_port();
+      if (port) {
+        port->OnProcessStartForDebugger(t);
+        break;
+      } else {
+        job = job->parent();
+      }
+    }
+}

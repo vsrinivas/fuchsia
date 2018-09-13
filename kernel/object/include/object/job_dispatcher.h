@@ -126,8 +126,9 @@ public:
     // exception handling support
     zx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
     // Returns true if a port had been set.
-    bool ResetExceptionPort(bool quietly);
+    bool ResetExceptionPort(bool debugger, bool quietly);
     fbl::RefPtr<ExceptionPort> exception_port();
+    fbl::RefPtr<ExceptionPort> debugger_exception_port();
 
 private:
     enum class State {
@@ -190,6 +191,7 @@ private:
     pol_cookie_t policy_ TA_GUARDED(get_lock());
 
     fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
+    fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(get_lock());
 
     // Global list of JobDispatchers, ordered by hierarchy and
     // creation order. Used to find victims in low-resource

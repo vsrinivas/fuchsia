@@ -281,6 +281,8 @@ private:
                                                 fbl::RefPtr<Dispatcher>* dispatcher_out,
                                                 zx_rights_t* out_rights);
 
+    void OnProcessStartForJobDebugger(ThreadDispatcher *t);
+
     // Thread lifecycle support
     friend class ThreadDispatcher;
     zx_status_t AddThread(ThreadDispatcher* t, bool initial_thread);

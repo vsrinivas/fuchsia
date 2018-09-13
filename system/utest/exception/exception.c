@@ -810,6 +810,76 @@ static bool job_handler_test(void)
     END_TEST;
 }
 
+bool job_debug_handler_test_helper(zx_handle_t job, zx_handle_t eport_job_handle)
+{
+    zx_handle_t child, our_channel;
+    zx_handle_t eport = tu_io_port_create();
+    tu_set_exception_port(eport_job_handle, eport, EXCEPTION_PORT_KEY, ZX_EXCEPTION_PORT_DEBUGGER);
+    start_test_child(job, test_child_name, &child, &our_channel);
+
+    zx_info_handle_basic_t child_info;
+    tu_handle_get_basic_info(child, &child_info);
+
+    zx_port_packet_t start_packet;
+    ASSERT_TRUE(read_packet(eport, &start_packet), "error reading start exception");
+    ASSERT_TRUE(verify_exception(&start_packet, child, ZX_EXCP_PROCESS_STARTING),
+                "unexpected exception");
+    zx_koid_t packet_pid = start_packet.exception.pid;
+    zx_koid_t packet_tid = start_packet.exception.tid;
+
+    EXPECT_EQ(child_info.koid, packet_pid, "packet pid mismatch");
+
+    // set exception on process
+    zx_handle_t eport_process = tu_io_port_create();
+    tu_set_exception_port(child, eport_process, EXCEPTION_PORT_KEY, ZX_EXCEPTION_PORT_DEBUGGER);
+    tu_object_wait_async(child, eport_process, ZX_PROCESS_TERMINATED);
+
+    // resume thread from job debugger
+    resume_thread_from_exception(child, packet_tid, ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER, 0);
+
+    zx_port_packet_t start_packet_process;
+    ASSERT_TRUE(read_packet(eport_process, &start_packet_process), "error reading start exception");
+    ASSERT_TRUE(verify_exception(&start_packet_process, child, ZX_EXCP_THREAD_STARTING),
+                "unexpected exception");
+    packet_pid = start_packet.exception.pid;
+    packet_tid = start_packet.exception.tid;
+
+    EXPECT_EQ(child_info.koid, packet_pid, "packet pid mismatch");
+
+    send_msg(our_channel, MSG_DONE);
+    resume_thread_from_exception(child, packet_tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
+    wait_process_exit_from_debugger(eport_process, child, packet_tid);
+
+    tu_handle_close(child);
+    tu_handle_close(eport);
+    tu_handle_close(our_channel);
+    return true;
+}
+
+static bool nested_job_debug_handler_test(void)
+{
+    BEGIN_TEST;
+
+    zx_handle_t job = tu_job_create(zx_job_default());
+    zx_handle_t nested_job = tu_job_create(job);
+    job_debug_handler_test_helper(nested_job, job);
+    tu_handle_close(nested_job);
+    tu_handle_close(job);
+
+    END_TEST;
+}
+
+static bool job_debug_handler_test(void)
+{
+    BEGIN_TEST;
+
+    zx_handle_t job = tu_job_create(zx_job_default());
+    job_debug_handler_test_helper(job, job);
+    tu_handle_close(job);
+
+    END_TEST;
+}
+
 static bool grandparent_job_handler_test(void)
 {
     BEGIN_TEST;
@@ -1742,6 +1812,8 @@ RUN_TEST_ENABLE_CRASH_HANDLER(grandparent_job_handler_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(process_handler_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(thread_handler_test);
 RUN_TEST(packet_pid_test);
+RUN_TEST(job_debug_handler_test);
+RUN_TEST(nested_job_debug_handler_test);
 RUN_TEST(thread_state_when_starting_or_exiting_test);
 RUN_TEST(process_start_test);
 RUN_TEST(process_exit_notification_test);

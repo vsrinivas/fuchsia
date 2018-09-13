@@ -75,7 +75,7 @@ void ExceptionPort::SetTarget(const fbl::RefPtr<JobDispatcher>& target) {
 
     LTRACE_ENTRY_OBJ;
     Guard<fbl::Mutex> guard{&lock_};
-    DEBUG_ASSERT_MSG(type_ == Type::JOB,
+    DEBUG_ASSERT_MSG(type_ == Type::JOB || type_ == Type::JOB_DEBUGGER,
                      "unexpected type %d", static_cast<int>(type_));
     DEBUG_ASSERT(!IsBoundLocked());
     DEBUG_ASSERT(target != nullptr);
@@ -140,12 +140,13 @@ void ExceptionPort::OnPortZeroHandles() {
         OnTargetUnbind();
     } else {
         switch (type_) {
-            case Type::JOB: {
+            case Type::JOB:
+            case Type::JOB_DEBUGGER: {
                 DEBUG_ASSERT(target_ != nullptr);
                 auto job = DownCastDispatcher<JobDispatcher>(&target_);
                 DEBUG_ASSERT(job != nullptr);
                 guard.Release();  // The target may call our ::OnTargetUnbind
-                job->ResetExceptionPort(default_quietness);
+                job->ResetExceptionPort(type_ == Type::JOB_DEBUGGER, default_quietness);
                 break;
             }
             case Type::PROCESS:
@@ -277,6 +278,31 @@ void ExceptionPort::OnThreadStartForDebugger(ThreadDispatcher* thread) {
 
     zx_exception_report_t report;
     BuildReport(&report, ZX_EXCP_THREAD_STARTING);
+    arch_exception_context_t context;
+    // There is no iframe at the moment. We'll need one (or equivalent) if/when
+    // we want to make $pc, $sp available.
+    memset(&context, 0, sizeof(context));
+    ThreadDispatcher::ExceptionStatus estatus;
+    auto status = thread->ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
+    if (status != ZX_OK) {
+        // Ignore any errors. There's nothing we can do here, and
+        // we still want the thread to run. It's possible the thread was
+        // killed (status == ZX_ERR_INTERNAL_INTR_KILLED), the kernel will kill the
+        // thread shortly.
+    }
+}
+
+void ExceptionPort::OnProcessStartForDebugger(ThreadDispatcher* thread) {
+    canary_.Assert();
+
+    DEBUG_ASSERT(type_ == Type::JOB_DEBUGGER);
+
+    zx_koid_t pid = thread->process()->get_koid();
+    zx_koid_t tid = thread->get_koid();
+    LTRACEF("process %" PRIu64 ".%" PRIu64 " started\n", pid, tid);
+
+    zx_exception_report_t report;
+    BuildReport(&report, ZX_EXCP_PROCESS_STARTING);
     arch_exception_context_t context;
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.

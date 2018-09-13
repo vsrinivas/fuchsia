@@ -458,20 +458,34 @@ zx_status_t JobDispatcher::set_name(const char* name, size_t len) {
     return name_.set(name, len);
 }
 
-
 // Global list of all jobs.
 JobDispatcher::AllJobsList JobDispatcher::all_jobs_list_;
 
 zx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     canary_.Assert();
+    bool debugger = false;
+    switch (eport->type()) {
+    case ExceptionPort::Type::JOB_DEBUGGER:
+        debugger = true;
+        break;
+    case ExceptionPort::Type::JOB:
+        break;
+    default:
+        DEBUG_ASSERT_MSG(false, "unexpected port type: %d",
+                         static_cast<int>(eport->type()));
+        break;
+    }
 
-    DEBUG_ASSERT(eport->type() == ExceptionPort::Type::JOB);
-
-    Guard<fbl::Mutex> lock{get_lock()};
-    if (exception_port_)
-        return ZX_ERR_ALREADY_BOUND;
-    exception_port_ = fbl::move(eport);
-
+    Guard<fbl::Mutex> guard{get_lock()};
+    if (debugger) {
+        if (debugger_exception_port_)
+            return ZX_ERR_ALREADY_BOUND;
+        debugger_exception_port_ = fbl::move(eport);
+    } else {
+        if (exception_port_)
+            return ZX_ERR_ALREADY_BOUND;
+        exception_port_ = fbl::move(eport);
+    }
     return ZX_OK;
 }
 
@@ -491,13 +505,17 @@ private:
     fbl::RefPtr<ExceptionPort> eport_;
 };
 
-bool JobDispatcher::ResetExceptionPort(bool quietly) {
+bool JobDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
     canary_.Assert();
 
     fbl::RefPtr<ExceptionPort> eport;
     {
         Guard<fbl::Mutex> lock{get_lock()};
-        exception_port_.swap(eport);
+        if (debugger) {
+            debugger_exception_port_.swap(eport);
+        } else {
+            exception_port_.swap(eport);
+        }
         if (eport == nullptr) {
             // Attempted to unbind when no exception port is bound.
             return false;
@@ -535,4 +553,9 @@ bool JobDispatcher::ResetExceptionPort(bool quietly) {
 fbl::RefPtr<ExceptionPort> JobDispatcher::exception_port() {
     Guard<fbl::Mutex> lock{get_lock()};
     return exception_port_;
+}
+
+fbl::RefPtr<ExceptionPort> JobDispatcher::debugger_exception_port() {
+    Guard<fbl::Mutex> guard{get_lock()};
+    return debugger_exception_port_;
 }

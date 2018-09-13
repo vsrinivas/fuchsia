@@ -38,17 +38,17 @@ __BEGIN_CDECLS
 // Synthetic exceptions.
 
 // A thread is starting.
-// This exception is sent to debuggers only (ZX_EXCEPTION_PORT_DEBUGGER).
+// This exception is sent to debuggers only (ZX_EXCEPTION_PORT_TYPE_DEBUGGER).
 // The thread is paused until it is resumed by the debugger
-// with zx_task_resume.
+// with zx_task_resume_from_exception.
 #define ZX_EXCP_THREAD_STARTING ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 0)
 
 // A thread is exiting.
-// This exception is sent to debuggers only (ZX_EXCEPTION_PORT_DEBUGGER).
+// This exception is sent to debuggers only (ZX_EXCEPTION_PORT_TYPE_DEBUGGER).
 // This exception is different from ZX_EXCP_GONE in that a debugger can
 // still examine thread state.
 // The thread is paused until it is resumed by the debugger
-// with zx_task_resume.
+// with zx_task_resume_from_exception.
 #define ZX_EXCP_THREAD_EXITING ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 1)
 
 // This exception is generated when a syscall fails with a job policy
@@ -57,6 +57,13 @@ __BEGIN_CDECLS
 // ZX_POL_ACTION_EXCEPTION is set for the policy.  The thread that
 // invoked the syscall may be resumed with zx_task_resume().
 #define ZX_EXCP_POLICY_ERROR ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 2)
+
+// A process is starting.
+// This exception is sent to job debuggers only
+// (ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER).
+// The initial thread is paused until it is resumed by the debugger with
+// zx_task_resume_from_exception.
+#define ZX_EXCP_PROCESS_STARTING ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 3)
 
 typedef uint32_t zx_excp_type_t;
 
@@ -125,11 +132,12 @@ typedef struct zx_exception_report {
 
 // The type of exception port a thread may be waiting for a response from.
 // These values are reported in zx_info_thread_t.wait_exception_port_type.
-#define ZX_EXCEPTION_PORT_TYPE_NONE     ((uint32_t)0u)
-#define ZX_EXCEPTION_PORT_TYPE_DEBUGGER ((uint32_t)1u)
-#define ZX_EXCEPTION_PORT_TYPE_THREAD   ((uint32_t)2u)
-#define ZX_EXCEPTION_PORT_TYPE_PROCESS  ((uint32_t)3u)
-#define ZX_EXCEPTION_PORT_TYPE_JOB      ((uint32_t)4u)
+#define ZX_EXCEPTION_PORT_TYPE_NONE         ((uint32_t)0u)
+#define ZX_EXCEPTION_PORT_TYPE_DEBUGGER     ((uint32_t)1u)
+#define ZX_EXCEPTION_PORT_TYPE_THREAD       ((uint32_t)2u)
+#define ZX_EXCEPTION_PORT_TYPE_PROCESS      ((uint32_t)3u)
+#define ZX_EXCEPTION_PORT_TYPE_JOB          ((uint32_t)4u)
+#define ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER ((uint32_t)5u)
 
 __END_CDECLS
 

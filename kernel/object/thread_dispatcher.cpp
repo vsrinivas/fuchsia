@@ -30,6 +30,7 @@
 #include <object/c_user_thread.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
+#include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 
 #include <fbl/algorithm.h>
@@ -166,6 +167,8 @@ zx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
+
+    is_initial_thread_ = initial_thread;
 
     Guard<fbl::Mutex> guard{get_lock()};
 
@@ -414,6 +417,11 @@ int ThreadDispatcher::StartRoutine(void* arg) {
     LTRACE_ENTRY;
 
     ThreadDispatcher* t = (ThreadDispatcher*)arg;
+
+    // Notify job debugger if attached.
+    if (t->is_initial_thread_) {
+      t->process_->OnProcessStartForJobDebugger(t);
+    }
 
     // Notify debugger if attached.
     // This is done by first obtaining our own reference to the port so the
@@ -809,6 +817,9 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
         break;
     case ExceptionPort::Type::DEBUGGER:
         info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_DEBUGGER;
+        break;
+    case ExceptionPort::Type::JOB_DEBUGGER:
+        info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER;
         break;
     case ExceptionPort::Type::THREAD:
         info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_THREAD;

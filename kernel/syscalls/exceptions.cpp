@@ -33,9 +33,7 @@ static zx_status_t object_unbind_exception_port(zx_handle_t obj_handle, bool deb
 
     auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
     if (job) {
-        if (debugger)
-            return ZX_ERR_INVALID_ARGS;
-        return job->ResetExceptionPort(quietly)
+        return job->ResetExceptionPort(debugger, quietly)
                    ? ZX_OK
                    : ZX_ERR_BAD_STATE;  // No port was bound.
     }
@@ -77,9 +75,12 @@ static zx_status_t task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t 
 
     auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
     if (job) {
+        ExceptionPort::Type type;
         if (debugger)
-            return ZX_ERR_INVALID_ARGS;
-        status = ExceptionPort::Create(ExceptionPort::Type::JOB,
+            type = ExceptionPort::Type::JOB_DEBUGGER;
+        else
+            type = ExceptionPort::Type::JOB;
+        status = ExceptionPort::Create(type,
                                        fbl::move(port), key, &eport);
         if (status != ZX_OK)
             return status;

@@ -292,6 +292,10 @@ private:
     // Also, a simple experiment to move this to the first member (after the
     // canary) resulted in a 1K increase in text size (x86_64).
     thread_t thread_ = {};
+
+    // If true and ancestor job has a debugger attached, thread will block on
+    // start and will send a process start exception.
+    bool is_initial_thread_ = false;
 };
 
 const char* StateToString(ThreadDispatcher::State state);
