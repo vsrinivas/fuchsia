@@ -210,14 +210,14 @@ class VirtioComponentDevice
     if (status != ZX_OK) {
       return;
     }
+    status = event_.signal(signal->trigger, 0);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to clear interrupt signal " << status;
+      return;
+    }
     status = this->Interrupt(signal->observed >> kDeviceInterruptShift);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to raise device interrupt " << status;
-      return;
-    }
-    status = event_.signal(ZX_USER_SIGNAL_ALL, 0);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to clear interrupt signal " << status;
       return;
     }
     status = wait->Begin(dispatcher);

@@ -118,7 +118,10 @@ class VirtioQueue {
   // queue index pointer is incremented, and ZX_OK is returned.
   //
   // If no buffers are available ZX_ERR_SHOULD_WAIT is returned.
-  zx_status_t NextAvail(uint16_t* index);
+  zx_status_t NextAvail(uint16_t* index) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return NextAvailLocked(index);
+  }
 
   // Blocking variant of virtio_queue_next_avail.
   //

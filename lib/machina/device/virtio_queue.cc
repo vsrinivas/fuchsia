@@ -62,11 +62,6 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
   return ZX_OK;
 }
 
-zx_status_t VirtioQueue::NextAvail(uint16_t* index) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return NextAvailLocked(index);
-}
-
 bool VirtioQueue::HasAvailLocked() const {
   if (ring_.avail == nullptr) {
     return false;
