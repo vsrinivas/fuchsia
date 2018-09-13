@@ -23,7 +23,7 @@
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
-#include "peridot/bin/ledger/testing/loop_controller_real_loop.h"
+#include "peridot/bin/ledger/testing/loop_controller_test_loop.h"
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 #include "peridot/lib/socket/socket_pair.h"
@@ -261,7 +261,7 @@ class FactoryBuilderIntegrationImpl : public LedgerAppInstanceFactoryBuilder {
 
   std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const override {
     return std::make_unique<LedgerAppInstanceFactoryImpl>(
-        std::make_unique<LoopControllerRealLoop>(), inject_error_, enable_p2p_);
+        std::make_unique<LoopControllerTestLoop>(), inject_error_, enable_p2p_);
   }
 
  private:

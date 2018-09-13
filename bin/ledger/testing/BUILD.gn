@@ -76,6 +76,8 @@ source_set("ledger_instance_factory") {
     "loop_controller.h",
     "loop_controller_real_loop.cc",
     "loop_controller_real_loop.h",
+    "loop_controller_test_loop.cc",
+    "loop_controller_test_loop.h",
   ]
 
   public_deps = [

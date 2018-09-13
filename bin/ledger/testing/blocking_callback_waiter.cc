@@ -15,7 +15,7 @@ BlockingCallbackWaiter::~BlockingCallbackWaiter() {}
 
 fit::function<void()> BlockingCallbackWaiter::GetCallback() {
   return [this] {
-    ++callback_called_;
+    ++callback_called_count_;
     if (waiting_) {
       loop_controller_->StopLoop();
     }
@@ -29,12 +29,12 @@ bool BlockingCallbackWaiter::RunUntilCalled() {
   while (NotCalledYet()) {
     loop_controller_->RunLoop();
   }
-  ++run_until_called_;
+  ++run_until_called_count_;
   return true;
 }
 
 bool BlockingCallbackWaiter::NotCalledYet() {
-  return callback_called_ <= run_until_called_;
+  return callback_called_count_ <= run_until_called_count_;
 }
 
 }  // namespace ledger

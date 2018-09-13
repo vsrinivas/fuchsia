@@ -24,8 +24,8 @@ class BlockingCallbackWaiter : public CallbackWaiter {
 
  private:
   LoopController* loop_controller_;
-  size_t callback_called_ = 0;
-  size_t run_until_called_ = 0;
+  size_t callback_called_count_ = 0;
+  size_t run_until_called_count_ = 0;
   bool waiting_ = false;
 };
 
