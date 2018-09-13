@@ -14,6 +14,7 @@
         "garnet/packages/prod/runtime",
         "garnet/packages/prod/run",
         "garnet/packages/prod/sbase",
+        "garnet/packages/prod/scenic",
         "garnet/packages/prod/tracing",
         "garnet/packages/tools/tiles"
     ],
