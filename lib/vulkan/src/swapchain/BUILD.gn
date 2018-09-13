@@ -25,6 +25,7 @@ loadable_module("swapchain") {
   ]
   deps = [
     ":surface_header",
+    "//zircon/public/lib/async-loop-cpp",
     "$loader_build_root:extra_vulkan_headers",
     "$loader_build_root/layers:layer_common",
   ]

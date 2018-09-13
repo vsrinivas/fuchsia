@@ -5,7 +5,7 @@
 #include "garnet/lib/vulkan/src/swapchain/image_pipe_surface.h"
 #include "gtest/gtest.h"
 
-class MockImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
+class TestImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
  public:
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
                 zx::vmo buffer) override {}
@@ -105,8 +105,8 @@ class TestSwapchain {
     init_ = true;
   }
 
-  VkResult CreateSwapchainHelper(VkSurfaceKHR surface,
-                                 VkSwapchainKHR* swapchain_out) {
+  VkResult CreateSwapchain(VkSurfaceKHR surface,
+                           VkSwapchainKHR* swapchain_out) {
     VkSwapchainCreateInfoKHR create_info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = nullptr,
@@ -132,50 +132,14 @@ class TestSwapchain {
                                  swapchain_out);
   }
 
-  void Surface() {
-    zx::channel endpoint0, endpoint1;
-    EXPECT_EQ(ZX_OK, zx::channel::create(0, &endpoint0, &endpoint1));
-
-    VkMagmaSurfaceCreateInfoKHR create_info = {
-        .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
-        .imagePipeHandle = endpoint0.release(),
-        .pNext = nullptr,
-    };
-    VkSurfaceKHR surface;
-    EXPECT_EQ(VK_SUCCESS, vkCreateMagmaSurfaceKHR(vk_instance_, &create_info,
-                                                  nullptr, &surface));
-    vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
-  }
-
-  void CreateSwapchain() {
-    zx::channel endpoint0, endpoint1;
-    EXPECT_EQ(ZX_OK, zx::channel::create(0, &endpoint0, &endpoint1));
-
-    VkMagmaSurfaceCreateInfoKHR create_info = {
-        .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
-        .imagePipeHandle = endpoint0.release(),
-        .pNext = nullptr,
-    };
-    VkSurfaceKHR surface;
-    EXPECT_EQ(VK_SUCCESS, vkCreateMagmaSurfaceKHR(vk_instance_, &create_info,
-                                                  nullptr, &surface));
-
-    VkSwapchainKHR swapchain;
-    EXPECT_EQ(VK_SUCCESS, CreateSwapchainHelper(surface, &swapchain));
-
-    destroy_swapchain_khr_(vk_device_, swapchain, nullptr);
-    vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
-  }
-
   void AcquireNoSemaphore() {
     ASSERT_TRUE(init_);
 
-    MockImagePipeSurface surface;
+    TestImagePipeSurface surface;
     VkSwapchainKHR swapchain;
-
-    ASSERT_EQ(VK_SUCCESS,
-              CreateSwapchainHelper(reinterpret_cast<VkSurfaceKHR>(&surface),
-                                    &swapchain));
+    ASSERT_EQ(
+        VK_SUCCESS,
+        CreateSwapchain(reinterpret_cast<VkSurfaceKHR>(&surface), &swapchain));
 
     uint32_t image_index;
     EXPECT_EQ(VK_SUCCESS,
@@ -237,7 +201,3 @@ class TestSwapchain {
 };
 
 TEST(Swapchain, AcquireNoSemaphore) { TestSwapchain().AcquireNoSemaphore(); }
-
-TEST(Swapchain, Surface) { TestSwapchain().Surface(); }
-
-TEST(Swapchain, Create) { TestSwapchain().CreateSwapchain(); }

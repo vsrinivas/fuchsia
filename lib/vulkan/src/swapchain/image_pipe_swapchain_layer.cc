@@ -4,7 +4,6 @@
 
 #include "image_pipe_surface.h"
 
-#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer_config.h"
 #include "vk_layer_extension_utils.h"
@@ -12,6 +11,11 @@
 #include "vk_layer_utils.h"
 #include "vk_loader_platform.h"
 #include "vulkan/vk_layer.h"
+
+#include <lib/async-loop/cpp/loop.h>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 namespace image_pipe_swapchain {
 
@@ -51,34 +55,69 @@ constexpr VkLayerProperties swapchain_layer = {
     "Image Pipe Swapchain",
 };
 
-class ImagePipeSurfaceSync : public ImagePipeSurface {
+class ImagePipeSurfaceAsync : public ImagePipeSurface {
  public:
-  ImagePipeSurfaceSync(zx_handle_t image_pipe_handle) {
-    image_pipe_.Bind(zx::channel(image_pipe_handle));
+  ImagePipeSurfaceAsync(zx_handle_t image_pipe_handle)
+      : loop_(&kAsyncLoopConfigNoAttachToThread) {
+    image_pipe_.Bind(zx::channel(image_pipe_handle), loop_.dispatcher());
+    loop_.StartThread();
   }
 
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
                 zx::vmo buffer) override {
+    std::lock_guard<std::mutex> lock(mutex_);
     image_pipe_->AddImage(image_id, std::move(image_info), std::move(buffer),
                           fuchsia::images::MemoryType::VK_DEVICE_MEMORY, 0);
   }
 
   void RemoveImage(uint32_t image_id) override {
+    std::lock_guard<std::mutex> lock(mutex_);
     image_pipe_->RemoveImage(image_id);
   }
 
   void PresentImage(uint32_t image_id,
                     fidl::VectorPtr<zx::event> acquire_fences,
                     fidl::VectorPtr<zx::event> release_fences) override {
-    fuchsia::images::PresentationInfo info;
-    constexpr uint64_t kPresentationTime = 0;
-    image_pipe_->PresentImage(image_id, kPresentationTime,
-                              std::move(acquire_fences),
-                              std::move(release_fences), &info);
+    std::lock_guard<std::mutex> lock(mutex_);
+    queue_.push(
+        {image_id, std::move(acquire_fences), std::move(release_fences)});
+    if (queue_.size() == 1) {
+      PresentNextImageLocked();
+    }
+  }
+
+  void PresentNextImageLocked() {
+    if (queue_.empty())
+      return;
+
+    // To guarantee FIFO mode, we can't have Scenic drop any of our frames.
+    // We accomplish that sending the next one only when we receive the callback
+    // for the previous one.  We don't use the presentation info timing
+    // parameters because we really just want to push out the next image asap.
+    uint64_t presentation_time = zx_clock_get_monotonic();
+
+    auto& present = queue_.front();
+    image_pipe_->PresentImage(present.image_id, presentation_time,
+                              std::move(present.acquire_fences),
+                              std::move(present.release_fences),
+                              // This callback happening in a separate thread.
+                              [this](fuchsia::images::PresentationInfo pinfo) {
+                                std::lock_guard<std::mutex> lock(mutex_);
+                                queue_.pop();
+                                PresentNextImageLocked();
+                              });
   }
 
  private:
-  fuchsia::images::ImagePipeSyncPtr image_pipe_;
+  async::Loop loop_;
+  std::mutex mutex_;
+  fuchsia::images::ImagePipePtr image_pipe_;
+  struct PendingPresent {
+    uint32_t image_id;
+    fidl::VectorPtr<zx::event> acquire_fences;
+    fidl::VectorPtr<zx::event> release_fences;
+  };
+  std::queue<PendingPresent> queue_;
 };
 
 struct ImagePipeImage {
@@ -113,11 +152,9 @@ class ImagePipeSwapchain {
 
   ImagePipeSurface* surface_;
   std::vector<ImagePipeImage> images_;
-  std::vector<zx::event> acquire_events_;
   std::vector<VkDeviceMemory> memories_;
   std::vector<VkSemaphore> semaphores_;
   std::vector<uint32_t> acquired_ids_;
-  std::vector<uint32_t> available_ids_;
   std::vector<PendingImageInfo> pending_images_;
   bool image_pipe_closed_;
   VkDevice device_;
@@ -300,8 +337,6 @@ VkResult ImagePipeSwapchain::Initialize(
 
     surface()->AddImage(images_[i].id, std::move(image_info), std::move(vmo));
 
-    available_ids_.push_back(i);
-
     VkExportSemaphoreCreateInfoKHR export_create_info = {
         .sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO_KHR,
         .pNext = nullptr,
@@ -318,7 +353,18 @@ VkResult ImagePipeSwapchain::Initialize(
       return result;
     }
     semaphores_.push_back(semaphore);
+
+    zx::event release_fence;
+    zx_status_t status = zx::event::create(0, &release_fence);
+    if (status != ZX_OK) {
+      fprintf(stderr, "zx::event::create failed: %d\n", status);
+      return VK_ERROR_DEVICE_LOST;
+    }
+
+    release_fence.signal(0, ZX_EVENT_SIGNALED);
+    pending_images_.push_back({std::move(release_fence), i});
   }
+
   device_ = device;
   return VK_SUCCESS;
 }
@@ -397,64 +443,38 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR vk_swapchain,
 VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
                                               VkSemaphore semaphore,
                                               uint32_t* pImageIndex) {
-  if (available_ids_.empty()) {
-    // only way this can happen is if there are 0 images or if the client has
-    // already acquired all images
-    assert(!pending_images_.empty());
+  if (pending_images_.empty()) {
+    // All images acquired and none presented.  We will never acquire anything.
     if (timeout_ns == 0)
       return VK_NOT_READY;
-    // wait for image to become available
-    zx_signals_t pending;
+    std::this_thread::sleep_for(std::chrono::nanoseconds(timeout_ns));
+    return VK_TIMEOUT;
+  }
 
+  if (semaphore == VK_NULL_HANDLE) {
+    // Wait for image to become available.
+    zx_signals_t pending;
     zx_status_t status = pending_images_[0].release_fence.wait_one(
         ZX_EVENT_SIGNALED,
         timeout_ns == UINT64_MAX ? zx::time::infinite()
                                  : zx::deadline_after(zx::nsec(timeout_ns)),
         &pending);
-    if (status == ZX_ERR_TIMED_OUT) {
+    if (status == ZX_ERR_TIMED_OUT)
       return VK_TIMEOUT;
-    } else if (status != ZX_OK) {
+    if (status != ZX_OK) {
       fprintf(stderr, "event::wait_one returned %d", status);
       return VK_ERROR_DEVICE_LOST;
     }
     assert(pending & ZX_EVENT_SIGNALED);
 
-    available_ids_.push_back(pending_images_[0].image_index);
-    pending_images_.erase(pending_images_.begin());
-  }
-  *pImageIndex = available_ids_[0];
-  available_ids_.erase(available_ids_.begin());
-  acquired_ids_.push_back(*pImageIndex);
-
-  if (semaphore != VK_NULL_HANDLE) {
-    if (acquire_events_.size() == 0)
-      acquire_events_.resize(images_.size());
-
-    if (!acquire_events_[*pImageIndex]) {
-      zx_status_t status = zx::event::create(0, &acquire_events_[*pImageIndex]);
-      if (status != ZX_OK) {
-        fprintf(stderr, "zx::event::create failed: %d", status);
-        return VK_SUCCESS;
-      }
-    }
-
-    zx::event event;
-    zx_status_t status =
-        acquire_events_[*pImageIndex].duplicate(ZX_RIGHT_SAME_RIGHTS, &event);
-    if (status != ZX_OK) {
-      fprintf(stderr, "failed to duplicate acquire semaphore: %d", status);
-      return VK_SUCCESS;
-    }
-
-    event.signal(0, ZX_EVENT_SIGNALED);
-
+  } else {
     VkImportSemaphoreFuchsiaHandleInfoKHR import_info = {
         .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FUCHSIA_HANDLE_INFO_KHR,
         .pNext = nullptr,
         .semaphore = semaphore,
         .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
         .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
-        .handle = event.release()};
+        .handle = pending_images_[0].release_fence.release()};
 
     VkLayerDispatchTable* pDisp =
         GetLayerDataPtr(get_dispatch_key(device_), layer_data_map)
@@ -466,6 +486,11 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
       return VK_SUCCESS;
     }
   }
+
+  *pImageIndex = pending_images_[0].image_index;
+  pending_images_.erase(pending_images_.begin());
+  acquired_ids_.push_back(*pImageIndex);
+
   return VK_SUCCESS;
 }
 
@@ -528,8 +553,10 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
     zx::event release_fence;
 
     zx_status_t status = zx::event::create(0, &release_fence);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+      fprintf(stderr, "zx::event::create failed: %d\n", status);
       return VK_ERROR_DEVICE_LOST;
+    }
 
     zx::event image_release_fence;
     status =
@@ -585,7 +612,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMagmaSurfaceKHR(
     VkInstance instance, const VkMagmaSurfaceCreateInfoKHR* pCreateInfo,
     const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface) {
   *pSurface = reinterpret_cast<VkSurfaceKHR>(
-      new ImagePipeSurfaceSync(pCreateInfo->imagePipeHandle));
+      new ImagePipeSurfaceAsync(pCreateInfo->imagePipeHandle));
   return VK_SUCCESS;
 }
 
