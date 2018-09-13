@@ -32,8 +32,8 @@ class IqueryGoldenTest : public component::testing::TestWithEnvironment,
   IqueryGoldenTest() {
     // Create a new enclosing environment and create the example component in
     // it.
-    environment_ = CreateNewEnclosingEnvironment("test");
-    environment_->Launch();
+    environment_ = CreateNewEnclosingEnvironment("test", CreateServices());
+    WaitForEnclosingEnvToStart(environment_.get());
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url =
         "fuchsia-pkg://fuchsia.com/iquery_golden_test#meta/"
@@ -41,7 +41,6 @@ class IqueryGoldenTest : public component::testing::TestWithEnvironment,
     launch_info.arguments.push_back("--rows=5");
     launch_info.arguments.push_back("--columns=3");
     controller_ = environment_->CreateComponent(std::move(launch_info));
-    WaitForEnclosingEnvToStart(environment_.get());
     // Wait until the component's output directory shows up, and save the path
     // to it.
     RunLoopWithTimeoutOrUntil(

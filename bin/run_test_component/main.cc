@@ -168,14 +168,15 @@ int main(int argc, const char** argv) {
     parent_env->GetLauncher(launcher.NewRequest());
   } else {
     context->ConnectToEnvironmentService(parent_env.NewRequest());
-    enclosing_env = component::testing::EnclosingEnvironment::Create(
-        kEnv, std::move(parent_env));
+    auto env_services =
+        component::testing::EnvironmentServices::Create(parent_env);
     auto services = test_metadata.TakeServices();
     for (auto& service : services) {
-      enclosing_env->AddServiceWithLaunchInfo(std::move(service.second),
-                                              service.first);
+      env_services->AddServiceWithLaunchInfo(std::move(service.second),
+                                             service.first);
     }
-    enclosing_env->Launch();
+    enclosing_env = component::testing::EnclosingEnvironment::Create(
+        kEnv, parent_env, std::move(env_services));
     launcher = enclosing_env->launcher_ptr();
   }
 

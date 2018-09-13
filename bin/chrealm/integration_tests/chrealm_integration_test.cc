@@ -18,7 +18,6 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
 #include "garnet/bin/appmgr/util.h"
 #include "gtest/gtest.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
@@ -54,12 +53,11 @@ class ChrealmTest : public component::testing::TestWithEnvironment,
 
     ASSERT_EQ(files::Glob(kRealmGlob).size(), 0u);
 
-    // Create a nested realm to test with.
-    auto env = CreateNewEnclosingEnvironment(kRealm);
     // Add a TestService that the test realm can use.
-    env->AddService(bindings_.GetHandler(this));
-    env->Launch();
-    enclosing_env_ = std::move(env);
+    auto services = CreateServices();
+    ASSERT_EQ(ZX_OK, services->AddService(bindings_.GetHandler(this)));
+    // Create a nested realm to test with.
+    enclosing_env_ = CreateNewEnclosingEnvironment(kRealm, std::move(services));
     ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_env_.get()));
 
     // Get the path to the test realm in /hub. Test is running in the root

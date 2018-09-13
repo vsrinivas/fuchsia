@@ -60,7 +60,8 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
     return real_services_;
   }
 
-  // Creates a new enclosing environment inside current real environment.
+  // Creates a new enclosing environment inside current real environment with
+  // the given services.
   //
   // This environment and components created in it will not have access to any
   // of services(except Loader) and resources from the real environment unless
@@ -69,28 +70,24 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
   // After all services are added/passed through to the environment, you must
   // call Launch() to actually start it.
   std::unique_ptr<EnclosingEnvironment> CreateNewEnclosingEnvironment(
-      const std::string& label) const {
-    fuchsia::sys::EnvironmentPtr real_env;
-    real_services_->ConnectToService(real_env.NewRequest());
-    return EnclosingEnvironment::Create(label, std::move(real_env));
+      const std::string& label,
+      std::unique_ptr<EnvironmentServices> services) const {
+    return EnclosingEnvironment::Create(label, real_env_, std::move(services));
   }
 
-  // Creates a new enclosing environment inside the current real environment
-  // with a custom loader service.
+  // Returns an EnvironmentServices object that the caller can use to pass
+  // services to a new EnclosingEnvironment.
   //
-  // This environment and components created in it will not have access to any
-  // of services and resources from the real environment unless explicitly
-  // allowed by calling AllowPublicService.
-  //
-  // After all services are added/passed through to the environment, you must
-  // call Launch() to actually start it.
-  std::unique_ptr<EnclosingEnvironment> CreateNewEnclosingEnvironmentWithLoader(
-      const std::string& label,
-      const fbl::RefPtr<fs::Service> loader_service) const {
-    fuchsia::sys::EnvironmentPtr real_env;
-    real_services_->ConnectToService(real_env.NewRequest());
-    return EnclosingEnvironment::CreateWithCustomLoader(
-        label, std::move(real_env), loader_service);
+  // The returned object has the parent's loader, but no other services by
+  // default.
+  std::unique_ptr<EnvironmentServices> CreateServices() {
+    return EnvironmentServices::Create(real_env_);
+  }
+
+  std::unique_ptr<EnvironmentServices> CreateServicesWithCustomLoader(
+      const fbl::RefPtr<fs::Service>& loader_service) {
+    return EnvironmentServices::CreateWithCustomLoader(real_env_,
+                                                       loader_service);
   }
 
   // Creates component in current real environment. This component will have
@@ -118,6 +115,7 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
 
  private:
   std::shared_ptr<component::Services> real_services_;
+  fuchsia::sys::EnvironmentPtr real_env_;
   LauncherImpl real_launcher_;
 };
 

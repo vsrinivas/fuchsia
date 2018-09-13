@@ -67,13 +67,14 @@ const auto kTimeout = zx::sec(5);
 // and thus when one component controller kills its job due to a .Kill() call
 // the other component should run uninterrupted.
 TEST_F(RealmTest, CreateTwoKillOne) {
-  auto enclosing_environment = CreateNewEnclosingEnvironment(kRealm);
 
   // launch component as a service.
-  ASSERT_EQ(ZX_OK, enclosing_environment->AddServiceWithLaunchInfo(
+  auto env_services = CreateServices();
+  ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
                        CreateLaunchInfo("echo2_server_cpp"),
                        fidl::examples::echo::Echo::Name_));
-  enclosing_environment->Launch();
+  auto enclosing_environment =
+      CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
   // launch component normally
   auto controller1 = RunComponent(enclosing_environment.get(), "/boot/bin/sh");
@@ -106,11 +107,12 @@ TEST_F(RealmTest, CreateTwoKillOne) {
 }
 
 TEST_F(RealmTest, KillRealmKillsComponent) {
-  auto enclosing_environment = CreateNewEnclosingEnvironment(kRealm);
-  ASSERT_EQ(ZX_OK, enclosing_environment->AddServiceWithLaunchInfo(
+  auto env_services = CreateServices();
+  ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
                        CreateLaunchInfo("echo2_server_cpp"),
                        fidl::examples::echo::Echo::Name_));
-  enclosing_environment->Launch();
+  auto enclosing_environment =
+      CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
 
   // make sure echo service is running.
@@ -144,9 +146,8 @@ class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
               fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
           return ZX_OK;
         }));
-    enclosing_environment_ =
-        CreateNewEnclosingEnvironmentWithLoader(kRealm, loader_service_);
-    enclosing_environment_->Launch();
+    enclosing_environment_ = CreateNewEnclosingEnvironment(
+        kRealm, CreateServicesWithCustomLoader(loader_service_));
   }
 
   void LoadComponent(fidl::StringPtr url,

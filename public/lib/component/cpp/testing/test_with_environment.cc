@@ -12,9 +12,8 @@ namespace testing {
 
 TestWithEnvironment::TestWithEnvironment()
     : real_services_(component::GetEnvironmentServices()) {
-  fuchsia::sys::EnvironmentPtr real_env;
-  real_services_->ConnectToService(real_env.NewRequest());
-  real_env->GetLauncher(real_launcher_.NewRequest());
+  real_services_->ConnectToService(real_env_.NewRequest());
+  real_env_->GetLauncher(real_launcher_.NewRequest());
 }
 
 void TestWithEnvironment::CreateComponentInCurrentEnvironment(

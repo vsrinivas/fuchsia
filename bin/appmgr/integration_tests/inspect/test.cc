@@ -31,8 +31,7 @@ class InspectTest : public component::testing::TestWithEnvironment {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = kTestComponent;
 
-    environment_ = CreateNewEnclosingEnvironment("test");
-    environment_->Launch();
+    environment_ = CreateNewEnclosingEnvironment("test", CreateServices());
     environment_->CreateComponent(std::move(launch_info),
                                   controller_.NewRequest());
     WaitForEnclosingEnvToStart(environment_.get());

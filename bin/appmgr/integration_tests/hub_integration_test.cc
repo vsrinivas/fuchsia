@@ -77,8 +77,8 @@ TEST_F(HubTest, ScopePolicy) {
   std::string glob_url = "glob";
   // create nested environment
   // test that we can see nested env
-  auto nested_env = CreateNewEnclosingEnvironment("hubscopepolicytest");
-  nested_env->Launch();
+  auto nested_env =
+      CreateNewEnclosingEnvironment("hubscopepolicytest", CreateServices());
   ASSERT_TRUE(WaitForEnclosingEnvToStart(nested_env.get()));
   RunComponent(launcher_ptr(), glob_url, {"/hub/r/hubscopepolicytest/"}, 0);
 
@@ -93,8 +93,8 @@ TEST_F(HubTest, ScopePolicy) {
 TEST_F(HubTest, ThreadFiles) {
   std::string glob_url = "glob";
 
-  auto nested_env = CreateNewEnclosingEnvironment("hubscopepolicytest");
-  nested_env->Launch();
+  auto nested_env =
+      CreateNewEnclosingEnvironment("hubscopepolicytest", CreateServices());
   ASSERT_TRUE(WaitForEnclosingEnvToStart(nested_env.get()));
   RunComponent(launcher_ptr(), glob_url, {"/hub/r/hubscopepolicytest/"}, 0);
 

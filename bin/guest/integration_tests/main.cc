@@ -27,13 +27,13 @@ static constexpr char kRealm[] = "realmguestintegrationtest";
 class GuestTest : public component::testing::TestWithEnvironment {
  protected:
   void StartGuest(uint8_t num_cpus) {
-    enclosing_environment_ = CreateNewEnclosingEnvironment(kRealm);
+    auto services = CreateServices();
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = kGuestMgrUrl;
-    ASSERT_EQ(ZX_OK, enclosing_environment_->AddServiceWithLaunchInfo(
-                         std::move(launch_info),
-                         fuchsia::guest::EnvironmentManager::Name_));
-    enclosing_environment_->Launch();
+    ASSERT_EQ(ZX_OK, services->AddServiceWithLaunchInfo(
+        std::move(launch_info), fuchsia::guest::EnvironmentManager::Name_));
+    enclosing_environment_ =
+        CreateNewEnclosingEnvironment(kRealm, std::move(services));
     ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment_.get()));
 
     fuchsia::guest::LaunchInfo guest_launch_info = LaunchInfo();
