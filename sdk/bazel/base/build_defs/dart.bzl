@@ -5,12 +5,12 @@
 load(
     "@io_bazel_rules_dart//dart/build_rules/common:context.bzl",
     "collect_dart_context",
-    "make_dart_context"
+    "make_dart_context",
 )
 load(
     "@io_bazel_rules_dart//dart/build_rules/internal:common.bzl",
     "layout_action",
-    "package_spec_action"
+    "package_spec_action",
 )
 
 """Common attributes used by the `compile_kernel_action`."""
@@ -51,10 +51,19 @@ COMMON_COMPILE_KERNEL_ACTION_ATTRS = {
     ),
 }
 
-def compile_kernel_action(context, package_name, fuchsia_package_name,
-                          dart_exec, kernel_compiler, sdk_root, main, srcs,
-                          kernel_snapshot_file, manifest_file, main_dilp_file,
-                          dilp_list_file):
+def compile_kernel_action(
+        context,
+        package_name,
+        fuchsia_package_name,
+        dart_exec,
+        kernel_compiler,
+        sdk_root,
+        main,
+        srcs,
+        kernel_snapshot_file,
+        manifest_file,
+        main_dilp_file,
+        dilp_list_file):
     """Creates an action that generates the Dart kernel and its dependencies.
 
     Args:
@@ -110,7 +119,8 @@ def compile_kernel_action(context, package_name, fuchsia_package_name,
         if dc.package == package_name:
             continue
         dilp_file = context.actions.declare_file(
-            context.label.name + "_kernel.dil-" + dc.package + ".dilp")
+            context.label.name + "_kernel.dil-" + dc.package + ".dilp",
+        )
         mappings[data_root + dc.package + ".dilp"] = dilp_file
 
     # 4. Create a wrapper script around the kernel compiler.
@@ -134,6 +144,8 @@ def compile_kernel_action(context, package_name, fuchsia_package_name,
     )
 
     # 5. Compile the kernel.
+    single_root_scheme = "main-root"
+    single_root_base = "."
     context.actions.run(
         executable = kernel_script,
         arguments = [
@@ -144,13 +156,17 @@ def compile_kernel_action(context, package_name, fuchsia_package_name,
             "dart_runner",
             "--sdk-root",
             sdk_root.dirname,
+            "--single-root-scheme",
+            single_root_scheme,
+            "--single-root-base",
+            single_root_base,
             "--packages",
             package_spec.path,
             "--manifest",
             manifest_file.path,
             "--output",
             kernel_snapshot_file.path,
-            main.path,
+            "%s:///%s" % (single_root_scheme, main.path),
         ],
         inputs = build_dir_files.values() + srcs + [
             kernel_compiler,
