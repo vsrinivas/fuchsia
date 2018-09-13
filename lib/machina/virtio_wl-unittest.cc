@@ -13,6 +13,8 @@ namespace {
 
 static constexpr uint16_t kVirtioWlQueueSize = 32;
 static constexpr uint32_t kVirtioWlVmarSize = 1 << 16;
+static constexpr uint32_t kAllocateFlags =
+    ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE;
 
 class VirtioWlTest : public ::gtest::TestLoopFixture {
  public:
@@ -24,10 +26,8 @@ class VirtioWlTest : public ::gtest::TestLoopFixture {
   void SetUp() override {
     uintptr_t vmar_addr;
     ASSERT_EQ(
-        zx::vmar::root_self()->allocate(
-            0u, kVirtioWlVmarSize,
-            ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_EXECUTE,
-            wl_.vmar(), &vmar_addr),
+        zx::vmar::root_self()->allocate(0u, kVirtioWlVmarSize, kAllocateFlags,
+                                        wl_.vmar(), &vmar_addr),
         ZX_OK);
     ASSERT_EQ(ZX_OK, wl_.Init());
   }

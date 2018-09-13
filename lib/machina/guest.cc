@@ -25,8 +25,9 @@ static constexpr char kResourcePath[] = "/dev/misc/sysinfo";
 // Number of threads reading from the async device port.
 static constexpr size_t kNumAsyncWorkers = 2;
 static constexpr uint32_t kMapFlags =
-    ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_EXECUTE |
-    ZX_VM_FLAG_SPECIFIC;
+    ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE | ZX_VM_SPECIFIC;
+static constexpr uint32_t kAllocateFlags =
+    ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC;
 
 static zx_status_t guest_get_resource(zx::resource* resource) {
   fbl::unique_fd fd(open(kResourcePath, O_RDWR));
@@ -168,10 +169,7 @@ zx_status_t Guest::Join() {
 
 zx_status_t Guest::CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar) {
   uintptr_t guest_addr;
-  return vmar_.allocate(addr, size,
-                        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
-                            ZX_VM_CAN_MAP_EXECUTE | ZX_VM_SPECIFIC,
-                        vmar, &guest_addr);
+  return vmar_.allocate(addr, size, kAllocateFlags, vmar, &guest_addr);
 }
 
 }  // namespace machina

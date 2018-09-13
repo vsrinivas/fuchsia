@@ -7,6 +7,8 @@
 #include "garnet/lib/machina/dev_mem.h"
 #include "lib/fxl/logging.h"
 
+static constexpr uint32_t kMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
+
 namespace machina {
 
 class VirtioWl::Vfd {
@@ -311,10 +313,7 @@ std::unique_ptr<VirtioWl::Vfd> VirtioWl::AllocateMemory(uint32_t size,
     return nullptr;
   }
 
-  // TODO(reveman): Remove ZX_VM_PERM_EXECUTE when MAC-166 has been resolved.
-  status = vmar_.map(0, vmo, 0, *actual_size,
-                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE,
-                     guest_addr);
+  status = vmar_.map(0, vmo, 0, *actual_size, kMapFlags, guest_addr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map VMO into guest vmar: " << status;
     return nullptr;
