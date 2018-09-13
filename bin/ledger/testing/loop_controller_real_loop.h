@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_TESTS_INTEGRATION_LOOP_CONTROLLER_REAL_LOOP_H_
-#define PERIDOT_BIN_LEDGER_TESTS_INTEGRATION_LOOP_CONTROLLER_REAL_LOOP_H_
+#ifndef PERIDOT_BIN_LEDGER_TESTING_LOOP_CONTROLLER_REAL_LOOP_H_
+#define PERIDOT_BIN_LEDGER_TESTING_LOOP_CONTROLLER_REAL_LOOP_H_
 
-#include <functional>
+#include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/loop_controller.h"
 
 namespace ledger {
@@ -18,12 +17,15 @@ namespace ledger {
 class LoopControllerRealLoop : public LoopController {
  public:
   LoopControllerRealLoop();
+  ~LoopControllerRealLoop() override;
 
   void RunLoop() override;
 
   void StopLoop() override;
 
   std::unique_ptr<SubLoop> StartNewLoop() override;
+
+  std::unique_ptr<CallbackWaiter> NewWaiter() override;
 
   async_dispatcher_t* dispatcher() override;
 
@@ -39,4 +41,4 @@ class LoopControllerRealLoop : public LoopController {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_TESTS_INTEGRATION_LOOP_CONTROLLER_REAL_LOOP_H_
+#endif  // PERIDOT_BIN_LEDGER_TESTING_LOOP_CONTROLLER_REAL_LOOP_H_

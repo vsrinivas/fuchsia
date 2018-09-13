@@ -38,6 +38,7 @@ class BaseIntegrationTest : public ::testing::Test, public LoopController {
   void RunLoop() override;
   void StopLoop() override;
   std::unique_ptr<SubLoop> StartNewLoop() override;
+  std::unique_ptr<CallbackWaiter> NewWaiter() override;
   async_dispatcher_t* dispatcher() override;
   fit::closure QuitLoopClosure() override;
   bool RunLoopUntil(fit::function<bool()> condition) override;

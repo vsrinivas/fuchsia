@@ -42,6 +42,10 @@ std::unique_ptr<SubLoop> BaseIntegrationTest::StartNewLoop() {
   return GetLoopController()->StartNewLoop();
 }
 
+std::unique_ptr<CallbackWaiter> BaseIntegrationTest::NewWaiter() {
+  return GetLoopController()->NewWaiter();
+}
+
 async_dispatcher_t* BaseIntegrationTest::dispatcher() {
   return GetLoopController()->dispatcher();
 }

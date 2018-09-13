@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
+#include "peridot/bin/ledger/testing/blocking_callback_waiter.h"
 
 #include <memory>
 
@@ -30,6 +30,10 @@ class FakeLoopController : public LoopController {
     return nullptr;
   }
 
+  std::unique_ptr<CallbackWaiter> NewWaiter() override {
+    return std::make_unique<BlockingCallbackWaiter>(this);
+  }
+
   async_dispatcher_t* dispatcher() override {
     FXL_NOTREACHED();
     return nullptr;
@@ -52,7 +56,7 @@ class FakeLoopController : public LoopController {
   fit::function<void()> on_stop_;
 };
 
-TEST(CallbackWaiterTest, PreCall) {
+TEST(BlockingCallbackWaiterTest, PreCall) {
   size_t nb_run = 0;
   size_t nb_stop = 0;
   FakeLoopController loop_controller([&] { ++nb_run; }, [&] { ++nb_stop; });
@@ -67,7 +71,7 @@ TEST(CallbackWaiterTest, PreCall) {
   EXPECT_EQ(0u, nb_stop);
 }
 
-TEST(CallbackWaiterTest, MultipleGetCallback) {
+TEST(BlockingCallbackWaiterTest, MultipleGetCallback) {
   size_t nb_run = 0;
   size_t nb_stop = 0;
   FakeLoopController loop_controller([&] { ++nb_run; }, [&] { ++nb_stop; });
@@ -84,7 +88,7 @@ TEST(CallbackWaiterTest, MultipleGetCallback) {
   EXPECT_EQ(0u, nb_stop);
 }
 
-TEST(CallbackWaiterTest, PostCall) {
+TEST(BlockingCallbackWaiterTest, PostCall) {
   size_t nb_run = 0;
   size_t nb_stop = 0;
   std::unique_ptr<fit::closure> callback;
@@ -105,7 +109,7 @@ TEST(CallbackWaiterTest, PostCall) {
   EXPECT_EQ(1u, nb_stop);
 }
 
-TEST(CallbackWaiterTest, MultipleRunUntilCalled) {
+TEST(BlockingCallbackWaiterTest, MultipleRunUntilCalled) {
   size_t nb_run = 0;
   size_t nb_stop = 0;
   std::unique_ptr<fit::closure> callback;
@@ -127,7 +131,7 @@ TEST(CallbackWaiterTest, MultipleRunUntilCalled) {
   EXPECT_EQ(2u, nb_stop);
 }
 
-TEST(CallbackWaiterTest, InterleaveRunUntilCalledAndCall) {
+TEST(BlockingCallbackWaiterTest, InterleaveRunUntilCalledAndCall) {
   size_t nb_run = 0;
   size_t nb_stop = 0;
   std::unique_ptr<fit::closure> callback;
@@ -153,7 +157,7 @@ TEST(CallbackWaiterTest, InterleaveRunUntilCalledAndCall) {
   EXPECT_EQ(1u, nb_stop);
 }
 
-TEST(CallbackWaiterTest, NotCalledYet) {
+TEST(BlockingCallbackWaiterTest, NotCalledYet) {
   FakeLoopController loop_controller([] {}, [] {});
   auto waiter = loop_controller.NewWaiter();
   auto callback = waiter->GetCallback();

@@ -65,7 +65,7 @@ class LoopController {
   virtual std::unique_ptr<SubLoop> StartNewLoop() = 0;
   // Returns a waiter that can be used to run the loop until a callback has
   // been called.
-  std::unique_ptr<CallbackWaiter> NewWaiter();
+  virtual std::unique_ptr<CallbackWaiter> NewWaiter() = 0;
   // Returns the dispatcher.
   virtual async_dispatcher_t* dispatcher() = 0;
   // Returns a closure that triggers the closing of the loop.

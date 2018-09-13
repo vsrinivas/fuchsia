@@ -69,10 +69,13 @@ source_set("ledger_instance_factory") {
   testonly = true
 
   sources = [
+    "blocking_callback_waiter.cc",
+    "blocking_callback_waiter.h",
     "ledger_app_instance_factory.cc",
     "ledger_app_instance_factory.h",
-    "loop_controller.cc",
-    "loop_controller.h"
+    "loop_controller.h",
+    "loop_controller_real_loop.cc",
+    "loop_controller_real_loop.h",
   ]
 
   public_deps = [
@@ -129,7 +132,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "ledger_app_instance_factory_unittest.cc",
+    "blocking_callback_waiter_unittest.cc",
     "ledger_matcher_unittest.cc",
   ]
 

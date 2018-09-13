@@ -55,8 +55,6 @@ source_set("integration_lib") {
   sources = [
     "integration_test.cc",
     "integration_test.h",
-    "loop_controller_real_loop.cc",
-    "loop_controller_real_loop.h",
     "test_utils.cc",
     "test_utils.h",
   ]

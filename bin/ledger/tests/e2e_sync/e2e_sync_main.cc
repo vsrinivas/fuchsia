@@ -10,9 +10,9 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/strings/string_view.h>
 
+#include "peridot/bin/ledger/testing/loop_controller_real_loop.h"
 #include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/bin/ledger/tests/e2e_sync/ledger_app_instance_factory_e2e.h"
-#include "peridot/bin/ledger/tests/integration/loop_controller_real_loop.h"
 
 namespace ledger {
 namespace {
