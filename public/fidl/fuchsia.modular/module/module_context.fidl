@@ -87,11 +87,6 @@ interface ModuleContext {
   // anymore. See StoryProviderWatcher for more motivation.
   11: Active();
 
-  // Declares that this module's view is ready to be displayed. The mod's UI may
-  // be hidden behind a splash screen (possibly a snapshot from a previous run
-  // of the story), until this signal is received.
-  15: ViewReady();
-
   // When a module calls |Done()| the framework will stop the module. If there are
   // no more running modules in the story the story will be stopped.
   12: Done();

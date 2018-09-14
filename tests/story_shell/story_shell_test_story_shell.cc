@@ -122,9 +122,6 @@ class TestApp
   }
 
   // |fuchsia::modular::StoryShell|
-  void ViewReady(fidl::StringPtr /*view_id*/) override {}
-
-  // |fuchsia::modular::StoryShell|
   void AddContainer(
       fidl::StringPtr /*container_name*/, fidl::StringPtr /*parent_id*/,
       fuchsia::modular::SurfaceRelation /*relation*/,

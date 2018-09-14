@@ -158,12 +158,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
       fidl::StringPtr module_name, fuchsia::modular::Intent intent,
       fuchsia::modular::SurfaceRelationPtr surface_relation) override;
 
-  // Notifies the story shell that the module by the given |module_path| is
-  // ready to be displayed, in response to a call to |ModuleContext.ViewReady|.
-  // Called by ModuleContextImpl.
-  void HandleModuleViewReady(
-      const fidl::VectorPtr<fidl::StringPtr>& module_path);
-
   // Stops the module at |module_path| in response to a call to
   // |ModuleContext.Done|.
   void HandleModuleDone(const fidl::VectorPtr<fidl::StringPtr>& module_path);

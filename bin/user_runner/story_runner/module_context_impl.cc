@@ -126,10 +126,6 @@ void ModuleContextImpl::RequestFocus() {
 // TODO(alexmin): Remove once mods stop calling this API.
 void ModuleContextImpl::Active() {}
 
-void ModuleContextImpl::ViewReady() {
-  story_controller_impl_->HandleModuleViewReady(module_data_->module_path);
-}
-
 void ModuleContextImpl::Done() {
   story_controller_impl_->HandleModuleDone(module_data_->module_path);
 }

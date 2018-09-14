@@ -93,9 +93,6 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
   void Active() override;
 
   // |fuchsia::modular::ModuleContext|
-  void ViewReady() override;
-
-  // |fuchsia::modular::ModuleContext|
   void Done() override;
 
   // |fuchsia::modular::ModuleContext|
