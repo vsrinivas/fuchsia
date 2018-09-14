@@ -20,9 +20,7 @@ void LocalMemoryPayloadAllocator::Dump(std::ostream& os) const {
 
 fbl::RefPtr<PayloadBuffer> LocalMemoryPayloadAllocator::AllocatePayloadBuffer(
     uint64_t size) {
-  // TODO(dalesat): Use the line below when |CreateWithMalloc| is available.
-  // return PayloadBuffer::CreateWithMalloc(size);
-  return nullptr;
+  return PayloadBuffer::CreateWithMalloc(size);
 }
 
 }  // namespace media_player

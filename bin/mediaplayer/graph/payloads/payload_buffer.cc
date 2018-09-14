@@ -45,9 +45,8 @@ fbl::RefPtr<PayloadVmo> PayloadVmo::Create(uint64_t vmo_size,
 
   zx_handle_t vmar_handle = zx::vmar::root_self()->get();
   uintptr_t vmo_start;
-  status =
-      zx_vmar_map_old(vmar_handle, 0, vmo.get(), 0, vmo_size,
-                      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &vmo_start);
+  status = zx_vmar_map(vmar_handle, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
+                       vmo.get(), 0, vmo_size, &vmo_start);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map VMO, status " << status;
     return nullptr;

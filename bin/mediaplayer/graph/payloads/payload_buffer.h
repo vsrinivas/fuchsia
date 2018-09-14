@@ -44,6 +44,18 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
   // it is mapped, nullptr otherwise.
   void* start() const { return start_; }
 
+  // Returns |start()| offset by |offset| if the VMO is mapped, nullptr
+  // otherwise.
+  void* at_offset(uint64_t offset) {
+    FXL_DCHECK(offset < size_);
+
+    if (start_ == nullptr) {
+      return nullptr;
+    }
+
+    return reinterpret_cast<uint8_t*>(start_) + offset;
+  }
+
   // Returns a reference to the VMO.
   zx::vmo& vmo() { return vmo_; }
   const zx::vmo& vmo() const { return vmo_; }
@@ -125,7 +137,29 @@ class PayloadBuffer final : public fbl::RefCounted<PayloadBuffer>,
 
   // Returns the offset of the data in the VMO, if the buffer was allocated from
   // a VMO, zero otherwise.
-  uint64_t offset() { return offset_; }
+  uint64_t offset() const { return offset_; }
+
+  // Returns the ID of this |PayloadBuffer|. This value is set by the party
+  // that creates the buffer, and its semantics are defined by that party. It
+  // is intended to identify the buffer and may correspond to the fidl field
+  // media.StreamPacket.payload_buffer_id or
+  // mediacodec.CodecBuffer.buffer_index.
+  uint32_t id() const { return id_; }
+
+  // Sets the ID of this |PayloadBuffer|.
+  void SetId(uint32_t id) { id_ = id; }
+
+  // Returns the buffer config of this |PayloadBuffer|. This value is set by the
+  // party that creates the buffer, and its semantics are defined by that party.
+  // It is intended to identify the buffer configuration and may correspond to
+  // the fidl field media.StreamPacket.buffer_config or
+  // mediacodec.CodecBuffer.buffer_lifetime_ordinal.
+  uint64_t buffer_config() const { return buffer_config_; }
+
+  // Sets the ID of this |PayloadBuffer|.
+  void SetBufferConfig(uint64_t buffer_config) {
+    buffer_config_ = buffer_config;
+  }
 
   // Registers a function to be called prior to recycling. This method may only
   // be called once on a given instance. An |Action| should not hold a reference
@@ -145,6 +179,8 @@ class PayloadBuffer final : public fbl::RefCounted<PayloadBuffer>,
   void* data_;
   fbl::RefPtr<PayloadVmo> vmo_;
   uint64_t offset_;
+  uint32_t id_;
+  uint64_t buffer_config_;
   Recycler recycler_;
   Action before_recycling_;
 
