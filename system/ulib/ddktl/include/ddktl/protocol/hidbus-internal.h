@@ -1,125 +1,88 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+//          MODIFY system/fidl/protocols/hidbus.fidl INSTEAD.
+
 #pragma once
 
-#include <ddktl/device-internal.h>
-#include <zircon/types.h>
+#include <ddk/protocol/hidbus.h>
 #include <fbl/type_support.h>
-#include <fbl/unique_ptr.h>
-
-#include <stdint.h>
 
 namespace ddk {
-
-class HidBusIfcProxy;
-
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN(has_hidbus_query, HidBusQuery);
-DECLARE_HAS_MEMBER_FN(has_hidbus_start, HidBusStart);
-DECLARE_HAS_MEMBER_FN(has_hidbus_stop, HidBusStop);
-DECLARE_HAS_MEMBER_FN(has_hidbus_get_descriptor, HidBusGetDescriptor);
-DECLARE_HAS_MEMBER_FN(has_hidbus_get_report, HidBusGetReport);
-DECLARE_HAS_MEMBER_FN(has_hidbus_set_report, HidBusSetReport);
-DECLARE_HAS_MEMBER_FN(has_hidbus_get_idle, HidBusGetIdle);
-DECLARE_HAS_MEMBER_FN(has_hidbus_set_idle, HidBusSetIdle);
-DECLARE_HAS_MEMBER_FN(has_hidbus_get_protocol, HidBusGetProtocol);
-DECLARE_HAS_MEMBER_FN(has_hidbus_set_protocol, HidBusSetProtocol);
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hidbus_ifc_io_queue, HidbusIfcIoQueue,
+                                     void (C::*)(const void* buf_buffer, size_t buf_size));
 
 template <typename D>
-constexpr void CheckHidBusProtocolSubclass() {
-    static_assert(internal::has_hidbus_query<D>::value,
-                  "HidBusProtocol subclasses must implement HidBusQuery");
-    static_assert(fbl::is_same<decltype(&D::HidBusQuery),
-                                zx_status_t (D::*)(uint32_t options, hid_info_t* info)>::value,
-                  "HidBusQuery must be a non-static member function with signature "
-                  "'zx_status_t HidBusQuery(uint32_t options, hid_info_t* info)', and be visible to "
-                  "ddk::HidBusProtocol<D> (either because they are public, or because of "
-                  "friendship).");
-
-    static_assert(internal::has_hidbus_start<D>::value,
-                  "HidBusProtocol subclasses must implement HidBusStart");
-    static_assert(fbl::is_same<decltype(&D::HidBusStart),
-                                zx_status_t (D::*)(HidBusIfcProxy proxy)>::value,
-                  "HidBusStart must be a non-static member function with signature "
-                  "'zx_status_t HidBusStart(HidBusIfcProxy proxy)', and be visible to "
-                  "ddk::HidBusProtocol<D> (either because they are public, or because of "
-                  "friendship).");
-
-    static_assert(internal::has_hidbus_stop<D>::value,
-                  "HidBusProtocol subclasses must implement HidBusStop");
-    static_assert(fbl::is_same<decltype(&D::HidBusStop),
-                                void (D::*)()>::value,
-                  "HidBusStop must be a non-static member function with signature "
-                  "'void HidBusStop()', and be visible to "
-                  "ddk::HidBusProtocol<D> (either because they are public, or because of "
-                  "friendship).");
-
-    static_assert(internal::has_hidbus_get_descriptor<D>::value,
-                  "HidBusProtocol subclasses must implement HidBusGetDescriptor");
-    static_assert(fbl::is_same<decltype(&D::HidBusGetDescriptor),
-                                zx_status_t (D::*)(uint8_t desc_type, void** data, size_t* len)>::value,
-                  "HidBusGetDescriptor must be a non-static member function with signature "
-                  "'zx_status_t HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len)', and be visible to "
-                  "ddk::HidBusProtocol<D> (either because they are public, or because of "
-                  "friendship).");
-
-    static_assert(internal::has_hidbus_get_report<D>::value,
-                  "HidBusProtocol subclasses must implement HidBusGetReport");
-    static_assert(fbl::is_same<decltype(&D::HidBusGetReport),
-                                zx_status_t (D::*)(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len, size_t* out_len)>::value,
-                  "HidBusGetReport must be a non-static member function with signature "
-                  "'zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len, size_t* out_len)',"
-                  " and be visible to ddk::HidBusProtocol<D> (either because they are public, or because of "
-                  "friendship).");
-
-    static_assert(internal::has_hidbus_set_report<D>::value,
-                  "HidBusProtocol subclasses must implement HidBusSetReport");
-    static_assert(fbl::is_same<decltype(&D::HidBusSetReport),
-                                zx_status_t (D::*)(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len)>::value,
-                  "HidBusSetReport must be a non-static member function with signature "
-                  "'zx_status_t HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len)', and be visible to "
-                  "ddk::HidBusProtocol<D> (either because they are public, or because of "
-                  "friendship).");
-
-    static_assert(internal::has_hidbus_get_idle<D>::value,
-                  "HidBusProtocol subclasses must implement HidBusGetIdle");
-    static_assert(fbl::is_same<decltype(&D::HidBusGetIdle),
-                                zx_status_t (D::*)(uint8_t rpt_id, uint8_t* duration)>::value,
-                  "HidBusGetIdle must be a non-static member function with signature "
-                  "'zx_status_t HidBusGetIdle(uint8_t rpt_id, uint8_t* duration)', and be visible to "
-                  "ddk::HidBusProtocol<D> (either because they are public, or because of "
-                  "friendship).");
-
-    static_assert(internal::has_hidbus_set_idle<D>::value,
-                  "HidBusProtocol subclasses must implement HidBusSetIdle");
-    static_assert(fbl::is_same<decltype(&D::HidBusSetIdle),
-                                zx_status_t (D::*)(uint8_t rpt_id, uint8_t duration)>::value,
-                  "HidBusSetIdle must be a non-static member function with signature "
-                  "'zx_status_t HidBusSetIdle(uint8_t rpt_id, uint8_t duration)', and be visible to "
-                  "ddk::HidBusProtocol<D> (either because they are public, or because of "
-                  "friendship).");
-
-    static_assert(internal::has_hidbus_get_protocol<D>::value,
-                  "HidBusProtocol subclasses must implement HidBusGetProtocol");
-    static_assert(fbl::is_same<decltype(&D::HidBusGetProtocol),
-                                zx_status_t (D::*)(uint8_t* protocol)>::value,
-                  "HidBusGetProtocol must be a non-static member function with signature "
-                  "'zx_status_t HidBusGetProtocol(uint8_t* protocol)', and be visible to "
-                  "ddk::HidBusProtocol<D> (either because they are public, or because of "
-                  "friendship).");
-
-    static_assert(internal::has_hidbus_set_protocol<D>::value,
-                  "HidBusProtocol subclasses must implement HidBusSetProtocol");
-    static_assert(fbl::is_same<decltype(&D::HidBusSetProtocol),
-                                zx_status_t (D::*)(uint8_t protocol)>::value,
-                  "HidBusSetProtocol must be a non-static member function with signature "
-                  "'zx_status_t HidBusSetProtocol(uint8_t protocol)', and be visible to "
-                  "ddk::HidBusProtocol<D> (either because they are public, or because of "
-                  "friendship).");
+constexpr void CheckHidbusIfcSubclass() {
+    static_assert(internal::has_hidbus_ifc_io_queue<D>::value,
+                  "HidbusIfc subclasses must implement "
+                  "void HidbusIfcIoQueue(const void* buf_buffer, size_t buf_size");
 }
 
-}  // namespace internal
-}  // namespace ddk
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hidbus_protocol_query, HidbusQuery,
+                                     zx_status_t (C::*)(uint32_t options, hid_info_t* out_info));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hidbus_protocol_start, HidbusStart,
+                                     zx_status_t (C::*)(const hidbus_ifc_t* ifc));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hidbus_protocol_stop, HidbusStop, void (C::*)());
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hidbus_protocol_get_descriptor, HidbusGetDescriptor,
+                                     zx_status_t (C::*)(hid_description_type_t desc_type,
+                                                        void** out_data_buffer, size_t* data_size));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hidbus_protocol_get_report, HidbusGetReport,
+                                     zx_status_t (C::*)(hid_report_type_t rpt_type, uint8_t rpt_id,
+                                                        void* out_data_buffer, size_t data_size,
+                                                        size_t* out_data_actual));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hidbus_protocol_set_report, HidbusSetReport,
+                                     zx_status_t (C::*)(hid_report_type_t rpt_type, uint8_t rpt_id,
+                                                        const void* data_buffer, size_t data_size));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hidbus_protocol_get_idle, HidbusGetIdle,
+                                     zx_status_t (C::*)(uint8_t rpt_id, uint8_t* out_duration));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hidbus_protocol_set_idle, HidbusSetIdle,
+                                     zx_status_t (C::*)(uint8_t rpt_id, uint8_t duration));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hidbus_protocol_get_protocol, HidbusGetProtocol,
+                                     zx_status_t (C::*)(hid_protocol_t* out_protocol));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hidbus_protocol_set_protocol, HidbusSetProtocol,
+                                     zx_status_t (C::*)(hid_protocol_t protocol));
+
+template <typename D>
+constexpr void CheckHidbusProtocolSubclass() {
+    static_assert(internal::has_hidbus_protocol_query<D>::value,
+                  "HidbusProtocol subclasses must implement "
+                  "zx_status_t HidbusQuery(uint32_t options, hid_info_t* out_info");
+    static_assert(internal::has_hidbus_protocol_start<D>::value,
+                  "HidbusProtocol subclasses must implement "
+                  "zx_status_t HidbusStart(const hidbus_ifc_t* ifc");
+    static_assert(internal::has_hidbus_protocol_stop<D>::value,
+                  "HidbusProtocol subclasses must implement "
+                  "void HidbusStop(");
+    static_assert(internal::has_hidbus_protocol_get_descriptor<D>::value,
+                  "HidbusProtocol subclasses must implement "
+                  "zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, void** "
+                  "out_data_buffer, size_t* data_size");
+    static_assert(internal::has_hidbus_protocol_get_report<D>::value,
+                  "HidbusProtocol subclasses must implement "
+                  "zx_status_t HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_id, void* "
+                  "out_data_buffer, size_t data_size, size_t* out_data_actual");
+    static_assert(internal::has_hidbus_protocol_set_report<D>::value,
+                  "HidbusProtocol subclasses must implement "
+                  "zx_status_t HidbusSetReport(hid_report_type_t rpt_type, uint8_t rpt_id, const "
+                  "void* data_buffer, size_t data_size");
+    static_assert(internal::has_hidbus_protocol_get_idle<D>::value,
+                  "HidbusProtocol subclasses must implement "
+                  "zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* out_duration");
+    static_assert(internal::has_hidbus_protocol_set_idle<D>::value,
+                  "HidbusProtocol subclasses must implement "
+                  "zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration");
+    static_assert(internal::has_hidbus_protocol_get_protocol<D>::value,
+                  "HidbusProtocol subclasses must implement "
+                  "zx_status_t HidbusGetProtocol(hid_protocol_t* out_protocol");
+    static_assert(internal::has_hidbus_protocol_set_protocol<D>::value,
+                  "HidbusProtocol subclasses must implement "
+                  "zx_status_t HidbusSetProtocol(hid_protocol_t protocol");
+}
+
+} // namespace internal
+} // namespace ddk

@@ -48,7 +48,7 @@ typedef struct i2c_hid_device {
     zx_device_t* i2cdev;
 
     mtx_t ifc_lock;
-    hidbus_ifc_t* ifc;
+    hidbus_ifc_t ifc;
     void* cookie;
 
     i2c_hid_desc_t* hiddesc;
@@ -104,20 +104,19 @@ static zx_status_t i2c_hid_query(void* ctx, uint32_t options, hid_info_t* info) 
         return ZX_ERR_INVALID_ARGS;
     }
     info->dev_num = 0;
-    info->dev_class = HID_DEV_CLASS_OTHER;
+    info->device_class = HID_DEVICE_CLASS_OTHER;
     info->boot_device = false;
     return ZX_OK;
 }
 
-static zx_status_t i2c_hid_start(void* ctx, hidbus_ifc_t* ifc, void* cookie) {
+static zx_status_t i2c_hid_start(void* ctx, const hidbus_ifc_t* ifc) {
     i2c_hid_device_t* hid = ctx;
     mtx_lock(&hid->ifc_lock);
-    if (hid->ifc) {
+    if (hid->ifc.ops) {
         mtx_unlock(&hid->ifc_lock);
         return ZX_ERR_ALREADY_BOUND;
     }
-    hid->ifc = ifc;
-    hid->cookie = cookie;
+    hid->ifc = *ifc;
     mtx_unlock(&hid->ifc_lock);
     return ZX_OK;
 }
@@ -125,14 +124,13 @@ static zx_status_t i2c_hid_start(void* ctx, hidbus_ifc_t* ifc, void* cookie) {
 static void i2c_hid_stop(void* ctx) {
     i2c_hid_device_t* hid = ctx;
     mtx_lock(&hid->ifc_lock);
-    hid->ifc = NULL;
-    hid->cookie = NULL;
+    hid->ifc.ops = NULL;
     mtx_unlock(&hid->ifc_lock);
 }
 
 static zx_status_t i2c_hid_get_descriptor(void* ctx, uint8_t desc_type,
         void** data, size_t* len) {
-    if (desc_type != HID_DESC_TYPE_REPORT) {
+    if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -176,7 +174,7 @@ static zx_status_t i2c_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_i
 }
 
 static zx_status_t i2c_hid_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
-        void* data, size_t len) {
+        const void* data, size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -303,8 +301,8 @@ static int i2c_hid_noirq_thread(void* arg) {
         }
 
         mtx_lock(&dev->ifc_lock);
-        if (dev->ifc) {
-            dev->ifc->io_queue(dev->cookie, buf + 2, report_len - 2);
+        if (dev->ifc.ops) {
+            hidbus_ifc_io_queue(&dev->ifc, buf + 2, report_len - 2);
         }
         mtx_unlock(&dev->ifc_lock);
 
@@ -396,8 +394,8 @@ static int i2c_hid_irq_thread(void* arg) {
         mtx_unlock(&dev->i2c_lock);
 
         mtx_lock(&dev->ifc_lock);
-        if (dev->ifc) {
-            dev->ifc->io_queue(dev->cookie, buf + 2, report_len - 2);
+        if (dev->ifc.ops) {
+            hidbus_ifc_io_queue(&dev->ifc, buf + 2, report_len - 2);
         }
         mtx_unlock(&dev->ifc_lock);
     }

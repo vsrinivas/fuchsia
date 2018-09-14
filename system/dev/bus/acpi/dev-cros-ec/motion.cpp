@@ -8,7 +8,7 @@
 // Future work for this driver:
 // - Move individual sensor configuration to be Feature Report based.  The
 //   standard specifies ways of talking about sampling rates.
-// - Support requesting reports directly from the hardware with the HidBusGetReport
+// - Support requesting reports directly from the hardware with the HidbusGetReport
 //   interface.
 // - Synchronize the sensor FIFO better; the hardware provides support for
 //   dropping a marker into the FIFO so you can synchronize (c.f. the FLUSH
@@ -102,16 +102,16 @@ void AcpiCrOsEcMotionDevice::QueueHidReportLocked(const uint8_t* data, size_t le
     }
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidBusQuery(uint32_t options, hid_info_t* info) {
+zx_status_t AcpiCrOsEcMotionDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
     zxlogf(TRACE, "acpi-cros-ec-motion: hid bus query\n");
 
     info->dev_num = 0;
-    info->dev_class = HID_DEV_CLASS_OTHER;
+    info->device_class = HID_DEVICE_CLASS_OTHER;
     info->boot_device = false;
     return ZX_OK;
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
+zx_status_t AcpiCrOsEcMotionDevice::HidbusStart(const hidbus_ifc_t* ifc) {
     zxlogf(TRACE, "acpi-cros-ec-motion: hid bus start\n");
 
     fbl::AutoLock guard(&hid_lock_);
@@ -119,7 +119,7 @@ zx_status_t AcpiCrOsEcMotionDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
         return ZX_ERR_ALREADY_BOUND;
     }
 
-    proxy_ = proxy;
+    proxy_ = ddk::HidbusIfcProxy(ifc);
 
     zx_status_t status = FifoInterruptEnable(true);
     if (status != ZX_OK) {
@@ -155,7 +155,7 @@ zx_status_t AcpiCrOsEcMotionDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
     return ZX_OK;
 }
 
-void AcpiCrOsEcMotionDevice::HidBusStop() {
+void AcpiCrOsEcMotionDevice::HidbusStop() {
     zxlogf(TRACE, "acpi-cros-ec-motion: hid bus stop\n");
 
     fbl::AutoLock guard(&hid_lock_);
@@ -184,14 +184,14 @@ void AcpiCrOsEcMotionDevice::HidBusStop() {
     }
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t AcpiCrOsEcMotionDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
     zxlogf(TRACE, "acpi-cros-ec-motion: hid bus get descriptor\n");
 
     if (data == nullptr || len == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (desc_type != HID_DESC_TYPE_REPORT) {
+    if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -204,29 +204,29 @@ zx_status_t AcpiCrOsEcMotionDevice::HidBusGetDescriptor(uint8_t desc_type, void*
     return ZX_OK;
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t AcpiCrOsEcMotionDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                                     size_t len, size_t* out_len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
-                                                    size_t len) {
+zx_status_t AcpiCrOsEcMotionDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id,
+                                                    const void* data, size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidBusGetIdle(uint8_t rpt_id, uint8_t* duration) {
+zx_status_t AcpiCrOsEcMotionDevice::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidBusSetIdle(uint8_t rpt_id, uint8_t duration) {
+zx_status_t AcpiCrOsEcMotionDevice::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
     return ZX_OK;
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidBusGetProtocol(uint8_t* protocol) {
+zx_status_t AcpiCrOsEcMotionDevice::HidbusGetProtocol(uint8_t* protocol) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidBusSetProtocol(uint8_t protocol) {
+zx_status_t AcpiCrOsEcMotionDevice::HidbusSetProtocol(uint8_t protocol) {
     return ZX_OK;
 }
 

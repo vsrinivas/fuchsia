@@ -65,8 +65,7 @@ int HidButtonsDevice::Thread() {
                 }
                 input_rpt.padding = 0;
                 fbl::AutoLock lock(&proxy_lock_);
-                proxy_.IoQueue(reinterpret_cast<uint8_t*>(&input_rpt),
-                               sizeof(buttons_input_rpt_t));
+                proxy_.IoQueue(&input_rpt, sizeof(buttons_input_rpt_t));
                 // If report could not be filled, we do not ioqueue.
             }
             break;
@@ -79,33 +78,33 @@ int HidButtonsDevice::Thread() {
     return thrd_success;
 }
 
-zx_status_t HidButtonsDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
+zx_status_t HidButtonsDevice::HidbusStart(const hidbus_ifc_t* ifc) {
     fbl::AutoLock lock(&proxy_lock_);
     if (proxy_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        proxy_ = proxy;
+        proxy_ = ddk::HidbusIfcProxy(ifc);
     }
     return ZX_OK;
 }
 
-zx_status_t HidButtonsDevice::HidBusQuery(uint32_t options, hid_info_t* info) {
+zx_status_t HidButtonsDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
     if (!info) {
         return ZX_ERR_INVALID_ARGS;
     }
     info->dev_num = 0;
-    info->dev_class = HID_DEV_CLASS_OTHER;
+    info->device_class = HID_DEVICE_CLASS_OTHER;
     info->boot_device = false;
 
     return ZX_OK;
 }
 
-void HidButtonsDevice::HidBusStop() {
+void HidButtonsDevice::HidbusStop() {
     fbl::AutoLock lock(&proxy_lock_);
     proxy_.clear();
 }
 
-zx_status_t HidButtonsDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t HidButtonsDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
     const uint8_t* desc_ptr;
     uint8_t* buf;
     if (!len || !data) {
@@ -122,7 +121,7 @@ zx_status_t HidButtonsDevice::HidBusGetDescriptor(uint8_t desc_type, void** data
     return ZX_OK;
 }
 
-zx_status_t HidButtonsDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t HidButtonsDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                               size_t len, size_t* out_len) {
     if (!data || !out_len) {
         return ZX_ERR_INVALID_ARGS;
@@ -154,24 +153,24 @@ zx_status_t HidButtonsDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, 
     return ZX_OK;
 }
 
-zx_status_t HidButtonsDevice::HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t HidButtonsDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                               size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t HidButtonsDevice::HidBusGetIdle(uint8_t rpt_id, uint8_t* duration) {
+zx_status_t HidButtonsDevice::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t HidButtonsDevice::HidBusSetIdle(uint8_t rpt_id, uint8_t duration) {
+zx_status_t HidButtonsDevice::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t HidButtonsDevice::HidBusGetProtocol(uint8_t* protocol) {
+zx_status_t HidButtonsDevice::HidbusGetProtocol(uint8_t* protocol) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t HidButtonsDevice::HidBusSetProtocol(uint8_t protocol) {
+zx_status_t HidButtonsDevice::HidbusSetProtocol(uint8_t protocol) {
     return ZX_OK;
 }
 

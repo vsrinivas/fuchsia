@@ -177,7 +177,7 @@ zx_status_t InputDevice::virtio_input_get_report(void* ctx, uint8_t rpt_type, ui
 }
 
 zx_status_t InputDevice::virtio_input_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
-                                                 void* data, size_t len) {
+                                                 const void* data, size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -197,9 +197,9 @@ zx_status_t InputDevice::virtio_input_set_protocol(void* ctx, uint8_t protocol) 
     return ZX_OK;
 }
 
-zx_status_t InputDevice::virtio_input_start(void* ctx, hidbus_ifc_t* ifc, void* cookie) {
+zx_status_t InputDevice::virtio_input_start(void* ctx, const hidbus_ifc_t* ifc) {
     virtio::InputDevice* inp = static_cast<virtio::InputDevice*>(ctx);
-    return inp->Start(ifc, cookie);
+    return inp->Start(ifc);
 }
 
 void InputDevice::virtio_input_stop(void* ctx) {
@@ -246,10 +246,10 @@ zx_status_t InputDevice::Init() {
     // keyboard.
     if (cfg_rel_size > 0 || cfg_abs_size > 0) {
         // Pointer
-        dev_class_ = HID_DEV_CLASS_POINTER;
+        dev_class_ = HID_DEVICE_CLASS_POINTER;
     } else if (cfg_key_size > 0) {
         // Keyboard
-        dev_class_ = HID_DEV_CLASS_KBD;
+        dev_class_ = HID_DEVICE_CLASS_KBD;
     } else {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -314,7 +314,7 @@ zx_status_t InputDevice::Init() {
     hidbus_ops_.get_protocol = virtio_input_get_protocol;
     hidbus_ops_.set_protocol = virtio_input_set_protocol;
 
-    hidbus_ifc_ = nullptr;
+    hidbus_ifc_.ops = nullptr;
 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
@@ -336,26 +336,23 @@ zx_status_t InputDevice::Init() {
     return ZX_OK;
 }
 
-zx_status_t InputDevice::Start(hidbus_ifc_t* ifc, void* cookie) {
+zx_status_t InputDevice::Start(const hidbus_ifc_t* ifc) {
     fbl::AutoLock lock(&lock_);
-    if (hidbus_ifc_ != nullptr) {
+    if (hidbus_ifc_.ops != nullptr) {
         return ZX_ERR_ALREADY_BOUND;
     }
-    hidbus_ifc_ = ifc;
-    hidbus_cookie_ = cookie;
+    hidbus_ifc_ = *ifc;
     return ZX_OK;
 }
 
 void InputDevice::Stop() {
     fbl::AutoLock lock(&lock_);
-    hidbus_ifc_ = nullptr;
-    hidbus_cookie_ = nullptr;
+    hidbus_ifc_.ops = nullptr;
 }
 
 void InputDevice::Release() {
     fbl::AutoLock lock(&lock_);
-    hidbus_ifc_ = nullptr;
-    hidbus_cookie_ = nullptr;
+    hidbus_ifc_.ops = nullptr;
     for (size_t i = 0; i < kEventCount; ++i) {
         if (io_buffer_is_valid(&buffers_[i])) {
             io_buffer_release(&buffers_[i]);
@@ -365,7 +362,7 @@ void InputDevice::Release() {
 
 zx_status_t InputDevice::Query(uint32_t options, hid_info_t* info) {
     info->dev_num = dev_class_; // Use type for dev_num for now.
-    info->dev_class = dev_class_;
+    info->device_class = dev_class_;
     info->boot_device = true;
     return ZX_OK;
 }
@@ -375,7 +372,7 @@ zx_status_t InputDevice::GetDescriptor(uint8_t desc_type, void** data, size_t* l
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (desc_type != HID_DESC_TYPE_REPORT) {
+    if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
         return ZX_ERR_NOT_FOUND;
     }
     const uint8_t* buf = nullptr;
@@ -449,10 +446,10 @@ void InputDevice::ReceiveEvent(virtio_input_event_t* event) {
         }
     } else if (event->type == VIRTIO_INPUT_EV_SYN) {
         fbl::AutoLock lock(&lock_);
-        if (hidbus_ifc_) {
-            hidbus_ifc_->io_queue(hidbus_cookie_,
-                                  reinterpret_cast<const uint8_t*>(&report_),
-                                  sizeof(report_));
+        if (hidbus_ifc_.ops) {
+            hidbus_ifc_io_queue(&hidbus_ifc_,
+                                reinterpret_cast<const uint8_t*>(&report_),
+                                sizeof(report_));
         }
     }
 }

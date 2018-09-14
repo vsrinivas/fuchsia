@@ -44,6 +44,9 @@ gpio:
 gpio-impl: $(LOCAL_DIR)/gpio.banjo
 	$(run-banjo)
 
+hidbus:
+	$(run-banjo)
+
 iommu:
 	$(run-banjo)
 
@@ -74,4 +77,4 @@ serial:
 test:
 	$(run-banjo)
 
-all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl iommu mailbox rawnand scpi sdhci sdio sdmmc serial serial-impl test
+all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl hidbus iommu mailbox rawnand scpi sdhci sdio sdmmc serial serial-impl test

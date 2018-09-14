@@ -150,13 +150,11 @@ int Tcs3400Device::Thread() {
                     if (input_rpt_.illuminance > threshold_high) {
                         input_rpt_.event =
                             HID_USAGE_SENSOR_EVENT_HIGH_THRESHOLD_CROSS_UPWARD_VAL;
-                        proxy_.IoQueue(reinterpret_cast<uint8_t*>(&input_rpt_),
-                                       sizeof(ambient_light_input_rpt_t));
+                        proxy_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
                     } else if (input_rpt_.illuminance < threshold_low) {
                         input_rpt_.event =
                             HID_USAGE_SENSOR_EVENT_LOW_THRESHOLD_CROSS_DOWNWARD_VAL;
-                        proxy_.IoQueue(reinterpret_cast<uint8_t*>(&input_rpt_),
-                                       sizeof(ambient_light_input_rpt_t));
+                        proxy_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
                     }
                 }
                 // If report could not be filled, we do not ioqueue
@@ -183,8 +181,7 @@ int Tcs3400Device::Thread() {
                 if (proxy_.is_valid()) {
                     FillInputRpt(); // We ioqueue even if report filling failed reporting bad state
                     input_rpt_.event = HID_USAGE_SENSOR_EVENT_PERIOD_EXCEEDED_VAL;
-                    proxy_.IoQueue(reinterpret_cast<uint8_t*>(&input_rpt_),
-                                   sizeof(ambient_light_input_rpt_t));
+                    proxy_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
                 }
             }
             {
@@ -234,31 +231,31 @@ zx_status_t Tcs3400Device::DdkRead(void* buf, size_t count, zx_off_t off, size_t
     return ZX_OK;
 }
 
-zx_status_t Tcs3400Device::HidBusStart(ddk::HidBusIfcProxy proxy) {
+zx_status_t Tcs3400Device::HidbusStart(const hidbus_ifc_t* ifc) {
     fbl::AutoLock lock(&proxy_input_lock_);
     if (proxy_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        proxy_ = proxy;
+        proxy_ = ddk::HidbusIfcProxy(ifc);
     }
     return ZX_OK;
 }
 
-zx_status_t Tcs3400Device::HidBusQuery(uint32_t options, hid_info_t* info) {
+zx_status_t Tcs3400Device::HidbusQuery(uint32_t options, hid_info_t* info) {
     if (!info) {
         return ZX_ERR_INVALID_ARGS;
     }
     info->dev_num = 0;
-    info->dev_class = HID_DEV_CLASS_OTHER;
+    info->device_class = HID_DEVICE_CLASS_OTHER;
     info->boot_device = false;
 
     return ZX_OK;
 }
 
-void Tcs3400Device::HidBusStop() {
+void Tcs3400Device::HidbusStop() {
 }
 
-zx_status_t Tcs3400Device::HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t Tcs3400Device::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
     const uint8_t* desc_ptr;
     uint8_t* buf;
     *len = get_ambient_light_report_desc(&desc_ptr);
@@ -272,7 +269,7 @@ zx_status_t Tcs3400Device::HidBusGetDescriptor(uint8_t desc_type, void** data, s
     return ZX_OK;
 }
 
-zx_status_t Tcs3400Device::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t Tcs3400Device::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                            size_t len, size_t* out_len) {
     if (rpt_id != AMBIENT_LIGHT_RPT_ID_INPUT && rpt_id != AMBIENT_LIGHT_RPT_ID_FEATURE) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -295,7 +292,7 @@ zx_status_t Tcs3400Device::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, voi
     return ZX_OK;
 }
 
-zx_status_t Tcs3400Device::HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t Tcs3400Device::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                            size_t len) {
     if (rpt_id != AMBIENT_LIGHT_RPT_ID_FEATURE) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -305,32 +302,32 @@ zx_status_t Tcs3400Device::HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, voi
     }
     {
         fbl::AutoLock lock(&feature_lock_);
-        ambient_light_feature_rpt_t* out = static_cast<ambient_light_feature_rpt_t*>(data);
+        auto* out = static_cast<const ambient_light_feature_rpt_t*>(data);
         feature_rpt_ = *out; // TA doesn't work on a memcpy taking an address as in &feature_rpt_
     }
 
     zx_port_packet packet = {TCS_CONFIGURE, ZX_PKT_TYPE_USER, ZX_OK, {}};
     zx_status_t status = zx_port_queue(port_handle_, &packet);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "Tcs3400Device::HidBusSetReport: zx_port_queue failed: %d\n", status);
+        zxlogf(ERROR, "Tcs3400Device::HidbusSetReport: zx_port_queue failed: %d\n", status);
         return ZX_ERR_INTERNAL;
     }
     return ZX_OK;
 }
 
-zx_status_t Tcs3400Device::HidBusGetIdle(uint8_t rpt_id, uint8_t* duration) {
+zx_status_t Tcs3400Device::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Tcs3400Device::HidBusSetIdle(uint8_t rpt_id, uint8_t duration) {
+zx_status_t Tcs3400Device::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Tcs3400Device::HidBusGetProtocol(uint8_t* protocol) {
+zx_status_t Tcs3400Device::HidbusGetProtocol(uint8_t* protocol) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Tcs3400Device::HidBusSetProtocol(uint8_t protocol) {
+zx_status_t Tcs3400Device::HidbusSetProtocol(uint8_t protocol) {
     return ZX_OK;
 }
 

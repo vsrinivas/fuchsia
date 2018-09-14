@@ -27,24 +27,24 @@ class HidCtl : public ddk::Device<HidCtl, ddk::Ioctlable> {
 };
 
 class HidDevice : public ddk::Device<HidDevice, ddk::Unbindable>,
-                  public ddk::HidBusProtocol<HidDevice> {
+                  public ddk::HidbusProtocol<HidDevice> {
   public:
     HidDevice(zx_device_t* device, const hid_ioctl_config* config, zx::socket data);
 
     void DdkRelease();
     void DdkUnbind();
 
-    zx_status_t HidBusQuery(uint32_t options, hid_info_t* info);
-    zx_status_t HidBusStart(ddk::HidBusIfcProxy proxy);
-    void HidBusStop();
-    zx_status_t HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
+    zx_status_t HidbusStart(const hidbus_ifc_t* ifc);
+    void HidbusStop();
+    zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
+    zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
                                 size_t* out_len);
-    zx_status_t HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len);
-    zx_status_t HidBusGetIdle(uint8_t rpt_id, uint8_t* duration);
-    zx_status_t HidBusSetIdle(uint8_t rpt_id, uint8_t duration);
-    zx_status_t HidBusGetProtocol(uint8_t* protocol);
-    zx_status_t HidBusSetProtocol(uint8_t protocol);
+    zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
+    zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
+    zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
+    zx_status_t HidbusGetProtocol(uint8_t* protocol);
+    zx_status_t HidbusSetProtocol(uint8_t protocol);
 
     int Thread();
     void Shutdown();
@@ -59,7 +59,7 @@ class HidDevice : public ddk::Device<HidDevice, ddk::Unbindable>,
     uint32_t mtu_ = 256;  // TODO: set this based on report_desc_
 
     fbl::Mutex lock_;
-    ddk::HidBusIfcProxy proxy_ __TA_GUARDED(lock_);
+    ddk::HidbusIfcProxy proxy_ __TA_GUARDED(lock_);
     zx::socket data_;
     thrd_t thread_;
 };

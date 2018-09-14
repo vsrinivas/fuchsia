@@ -27,23 +27,23 @@ using DeviceType = ddk::Device<AcpiTbmcDevice>;
 // An instance of a GOOG0006 Tablet Motion Control device.  It presents a HID
 // interface with a single input, the state of the tablet mode switch.
 class AcpiTbmcDevice : public DeviceType,
-                       public ddk::HidBusProtocol<AcpiTbmcDevice> {
+                       public ddk::HidbusProtocol<AcpiTbmcDevice> {
 public:
     static zx_status_t Create(zx_device_t* parent, ACPI_HANDLE acpi_handle,
                               fbl::unique_ptr<AcpiTbmcDevice>* out);
 
     // hidbus protocol implementation
-    zx_status_t HidBusQuery(uint32_t options, hid_info_t* info);
-    zx_status_t HidBusStart(ddk::HidBusIfcProxy proxy);
-    void HidBusStop();
-    zx_status_t HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
+    zx_status_t HidbusStart(const hidbus_ifc_t* ifc);
+    void HidbusStop();
+    zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
+    zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
                                 size_t* out_len);
-    zx_status_t HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len);
-    zx_status_t HidBusGetIdle(uint8_t rpt_id, uint8_t* duration);
-    zx_status_t HidBusSetIdle(uint8_t rpt_id, uint8_t duration);
-    zx_status_t HidBusGetProtocol(uint8_t* protocol);
-    zx_status_t HidBusSetProtocol(uint8_t protocol);
+    zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
+    zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
+    zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
+    zx_status_t HidbusGetProtocol(uint8_t* protocol);
+    zx_status_t HidbusSetProtocol(uint8_t protocol);
 
     void DdkRelease();
     ~AcpiTbmcDevice();
@@ -64,7 +64,7 @@ private:
     bool tablet_mode_ = false;
 
     // Interface the driver is currently bound to
-    ddk::HidBusIfcProxy proxy_;
+    ddk::HidbusIfcProxy proxy_;
 
     static const uint8_t kHidDescriptor[];
     static const size_t kHidDescriptorLen;
@@ -151,41 +151,41 @@ zx_status_t AcpiTbmcDevice::QueueHidReportLocked() {
     return ZX_OK;
 }
 
-zx_status_t AcpiTbmcDevice::HidBusQuery(uint32_t options, hid_info_t* info) {
+zx_status_t AcpiTbmcDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
     zxlogf(TRACE, "acpi-tbmc: hid bus query\n");
 
     info->dev_num = 0;
-    info->dev_class = HID_DEV_CLASS_OTHER;
+    info->device_class = HID_DEVICE_CLASS_OTHER;
     info->boot_device = false;
     return ZX_OK;
 }
 
-zx_status_t AcpiTbmcDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
+zx_status_t AcpiTbmcDevice::HidbusStart(const hidbus_ifc_t* ifc) {
     zxlogf(TRACE, "acpi-tbmc: hid bus start\n");
 
     fbl::AutoLock guard(&lock_);
     if (proxy_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     }
-    proxy_ = proxy;
+    proxy_ = ddk::HidbusIfcProxy(ifc);
     return ZX_OK;
 }
 
-void AcpiTbmcDevice::HidBusStop() {
+void AcpiTbmcDevice::HidbusStop() {
     zxlogf(TRACE, "acpi-tbmc: hid bus stop\n");
 
     fbl::AutoLock guard(&lock_);
     proxy_.clear();
 }
 
-zx_status_t AcpiTbmcDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t AcpiTbmcDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
     zxlogf(TRACE, "acpi-tbmc: hid bus get descriptor\n");
 
     if (data == nullptr || len == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (desc_type != HID_DESC_TYPE_REPORT) {
+    if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -198,7 +198,7 @@ zx_status_t AcpiTbmcDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, 
     return ZX_OK;
 }
 
-zx_status_t AcpiTbmcDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t AcpiTbmcDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                             size_t len, size_t* out_len) {
     if (out_len == NULL) {
         return ZX_ERR_INVALID_ARGS;
@@ -221,24 +221,24 @@ zx_status_t AcpiTbmcDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, vo
     return ZX_OK;
 }
 
-zx_status_t AcpiTbmcDevice::HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t AcpiTbmcDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                             size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AcpiTbmcDevice::HidBusGetIdle(uint8_t rpt_id, uint8_t* duration) {
+zx_status_t AcpiTbmcDevice::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AcpiTbmcDevice::HidBusSetIdle(uint8_t rpt_id, uint8_t duration) {
+zx_status_t AcpiTbmcDevice::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
     return ZX_OK;
 }
 
-zx_status_t AcpiTbmcDevice::HidBusGetProtocol(uint8_t* protocol) {
+zx_status_t AcpiTbmcDevice::HidbusGetProtocol(uint8_t* protocol) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AcpiTbmcDevice::HidBusSetProtocol(uint8_t protocol) {
+zx_status_t AcpiTbmcDevice::HidbusSetProtocol(uint8_t protocol) {
     return ZX_OK;
 }
 

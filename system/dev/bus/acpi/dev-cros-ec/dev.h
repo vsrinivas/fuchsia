@@ -12,6 +12,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -47,24 +48,24 @@ using DeviceType = ddk::Device<AcpiCrOsEcMotionDevice>;
 
 // CrOS EC protocol to HID protocol translator for device motion sensors
 class AcpiCrOsEcMotionDevice : public DeviceType,
-                               public ddk::HidBusProtocol<AcpiCrOsEcMotionDevice> {
+                               public ddk::HidbusProtocol<AcpiCrOsEcMotionDevice> {
 public:
     static zx_status_t Create(fbl::RefPtr<AcpiCrOsEc> ec,
                               zx_device_t* parent, ACPI_HANDLE acpi_handle,
                               fbl::unique_ptr<AcpiCrOsEcMotionDevice>* out);
 
     // hidbus protocol implementation
-    zx_status_t HidBusQuery(uint32_t options, hid_info_t* info);
-    zx_status_t HidBusStart(ddk::HidBusIfcProxy proxy);
-    void HidBusStop();
-    zx_status_t HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
+    zx_status_t HidbusStart(const hidbus_ifc_t* ifc);
+    void HidbusStop();
+    zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
+    zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
                                 size_t* out_len);
-    zx_status_t HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len);
-    zx_status_t HidBusGetIdle(uint8_t rpt_id, uint8_t* duration);
-    zx_status_t HidBusSetIdle(uint8_t rpt_id, uint8_t duration);
-    zx_status_t HidBusGetProtocol(uint8_t* protocol);
-    zx_status_t HidBusSetProtocol(uint8_t protocol);
+    zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
+    zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
+    zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
+    zx_status_t HidbusGetProtocol(uint8_t* protocol);
+    zx_status_t HidbusSetProtocol(uint8_t protocol);
 
     void DdkRelease();
     ~AcpiCrOsEcMotionDevice();
@@ -119,7 +120,7 @@ private:
     const ACPI_HANDLE acpi_handle_;
 
     // Interface the driver is currently bound to
-    ddk::HidBusIfcProxy proxy_;
+    ddk::HidbusIfcProxy proxy_;
 
     fbl::Vector<SensorInfo> sensors_;
 

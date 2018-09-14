@@ -135,12 +135,12 @@ zx_status_t Ft3x27Device::Create(zx_device_t* device) {
     return ZX_OK;
 }
 
-zx_status_t Ft3x27Device::HidBusQuery(uint32_t options, hid_info_t* info) {
+zx_status_t Ft3x27Device::HidbusQuery(uint32_t options, hid_info_t* info) {
     if (!info) {
         return ZX_ERR_INVALID_ARGS;
     }
     info->dev_num = 0;
-    info->dev_class = HID_DEV_CLASS_OTHER;
+    info->device_class = HID_DEVICE_CLASS_OTHER;
     info->boot_device = false;
 
     return ZX_OK;
@@ -161,12 +161,12 @@ zx_status_t Ft3x27Device::ShutDown() {
     thrd_join(thread_, NULL);
     {
         fbl::AutoLock lock(&proxy_lock_);
-        proxy_.clear();
+        //proxy_.clear();
     }
     return ZX_OK;
 }
 
-zx_status_t Ft3x27Device::HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t Ft3x27Device::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
 
     const uint8_t* desc_ptr;
     uint8_t* buf;
@@ -181,43 +181,44 @@ zx_status_t Ft3x27Device::HidBusGetDescriptor(uint8_t desc_type, void** data, si
     return ZX_OK;
 }
 
-zx_status_t Ft3x27Device::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t Ft3x27Device::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                           size_t len, size_t* out_len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Ft3x27Device::HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t Ft3x27Device::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                           size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Ft3x27Device::HidBusGetIdle(uint8_t rpt_id, uint8_t* duration) {
+zx_status_t Ft3x27Device::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Ft3x27Device::HidBusSetIdle(uint8_t rpt_id, uint8_t duration) {
+zx_status_t Ft3x27Device::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Ft3x27Device::HidBusGetProtocol(uint8_t* protocol) {
+zx_status_t Ft3x27Device::HidbusGetProtocol(uint8_t* protocol) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Ft3x27Device::HidBusSetProtocol(uint8_t protocol) {
+zx_status_t Ft3x27Device::HidbusSetProtocol(uint8_t protocol) {
     return ZX_OK;
 }
 
-void Ft3x27Device::HidBusStop() {
+void Ft3x27Device::HidbusStop() {
     fbl::AutoLock lock(&proxy_lock_);
     proxy_.clear();
 }
 
-zx_status_t Ft3x27Device::HidBusStart(ddk::HidBusIfcProxy proxy) {
+zx_status_t Ft3x27Device::HidbusStart(const hidbus_ifc_t* ifc) {
     fbl::AutoLock lock(&proxy_lock_);
     if (proxy_.is_valid()) {
         zxlogf(ERROR, "ft3x27: Already bound!\n");
         return ZX_ERR_ALREADY_BOUND;
     } else {
+        ddk::HidbusIfcProxy proxy(ifc);
         proxy_ = proxy;
         zxlogf(INFO, "ft3x27: started\n");
     }

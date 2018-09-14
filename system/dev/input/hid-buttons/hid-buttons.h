@@ -24,7 +24,7 @@ class HidButtonsDevice;
 using DeviceType = ddk::Device<HidButtonsDevice, ddk::Unbindable>;
 
 class HidButtonsDevice : public DeviceType,
-                         public ddk::HidBusProtocol<HidButtonsDevice> {
+                         public ddk::HidbusProtocol<HidButtonsDevice> {
 public:
     explicit HidButtonsDevice(zx_device_t* device)
         : DeviceType(device) {}
@@ -32,17 +32,17 @@ public:
     zx_status_t Bind();
 
     // Methods required by the ddk mixins.
-    zx_status_t HidBusStart(ddk::HidBusIfcProxy proxy) TA_EXCL(proxy_lock_);
-    zx_status_t HidBusQuery(uint32_t options, hid_info_t* info);
-    void HidBusStop() TA_EXCL(proxy_lock_);
-    zx_status_t HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+    zx_status_t HidbusStart(const hidbus_ifc_t* ifc) TA_EXCL(proxy_lock_);
+    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
+    void HidbusStop() TA_EXCL(proxy_lock_);
+    zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
+    zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                 size_t len, size_t* out_len) TA_EXCL(proxy_lock_);
-    zx_status_t HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len);
-    zx_status_t HidBusGetIdle(uint8_t rpt_id, uint8_t* duration);
-    zx_status_t HidBusSetIdle(uint8_t rpt_id, uint8_t duration);
-    zx_status_t HidBusGetProtocol(uint8_t* protocol);
-    zx_status_t HidBusSetProtocol(uint8_t protocol);
+    zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
+    zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
+    zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
+    zx_status_t HidbusGetProtocol(uint8_t* protocol);
+    zx_status_t HidbusSetProtocol(uint8_t protocol);
 
     void DdkUnbind();
     void DdkRelease();
@@ -67,6 +67,6 @@ private:
     thrd_t thread_;
     zx_handle_t port_handle_;
     fbl::Mutex proxy_lock_;
-    ddk::HidBusIfcProxy proxy_ TA_GUARDED(proxy_lock_);
+    ddk::HidbusIfcProxy proxy_ TA_GUARDED(proxy_lock_);
 };
 }

@@ -35,7 +35,7 @@ zx_status_t HidCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
             return ZX_ERR_INVALID_ARGS;
         }
 
-        if (config->dev_class > HID_DEV_CLASS_LAST) {
+        if (config->dev_class > HID_DEVICE_CLASS_LAST) {
             return ZX_ERR_INVALID_ARGS;
         }
 
@@ -104,41 +104,41 @@ void HidDevice::DdkUnbind() {
     // The thread will call DdkRemove when it exits the loop.
 }
 
-zx_status_t HidDevice::HidBusQuery(uint32_t options, hid_info_t* info) {
+zx_status_t HidDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
     zxlogf(TRACE, "hidctl: query\n");
 
     info->dev_num = 0;
-    info->dev_class = dev_class_;
+    info->device_class = dev_class_;
     info->boot_device = boot_device_;
     return ZX_OK;
 }
 
-zx_status_t HidDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
+zx_status_t HidDevice::HidbusStart(const hidbus_ifc_t* ifc) {
     zxlogf(TRACE, "hidctl: start\n");
 
     fbl::AutoLock lock(&lock_);
     if (proxy_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     }
-    proxy_ = proxy;
+    proxy_ = ddk::HidbusIfcProxy(ifc);
     return ZX_OK;
 }
 
-void HidDevice::HidBusStop() {
+void HidDevice::HidbusStop() {
     zxlogf(TRACE, "hidctl: stop\n");
 
     fbl::AutoLock lock(&lock_);
     proxy_.clear();
 }
 
-zx_status_t HidDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t HidDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
     zxlogf(TRACE, "hidctl: get descriptor %u\n", desc_type);
 
     if (data == nullptr || len == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (desc_type != HID_DESC_TYPE_REPORT) {
+    if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -151,8 +151,8 @@ zx_status_t HidDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, size_
     return ZX_OK;
 }
 
-zx_status_t HidDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
-                            size_t* out_len) {
+zx_status_t HidDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id,
+                                       void* data, size_t len, size_t* out_len) {
     zxlogf(TRACE, "hidctl: get report type=%u id=%u\n", rpt_type, rpt_id);
 
     if (out_len == nullptr) {
@@ -163,35 +163,36 @@ zx_status_t HidDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* d
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t HidDevice::HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len) {
+zx_status_t HidDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id,
+                                       const void* data, size_t len) {
     zxlogf(TRACE, "hidctl: set report type=%u id=%u\n", rpt_type, rpt_id);
 
     // TODO: send set report message over socket
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t HidDevice::HidBusGetIdle(uint8_t rpt_id, uint8_t* duration) {
+zx_status_t HidDevice::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
     zxlogf(TRACE, "hidctl: get idle\n");
 
     // TODO: send get idle message over socket
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t HidDevice::HidBusSetIdle(uint8_t rpt_id, uint8_t duration) {
+zx_status_t HidDevice::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
     zxlogf(TRACE, "hidctl: set idle\n");
 
     // TODO: send set idle message over socket
     return ZX_OK;
 }
 
-zx_status_t HidDevice::HidBusGetProtocol(uint8_t* protocol) {
+zx_status_t HidDevice::HidbusGetProtocol(uint8_t* protocol) {
     zxlogf(TRACE, "hidctl: get protocol\n");
 
     // TODO: send get protocol message over socket
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t HidDevice::HidBusSetProtocol(uint8_t protocol) {
+zx_status_t HidDevice::HidbusSetProtocol(uint8_t protocol) {
     zxlogf(TRACE, "hidctl: set protocol\n");
 
     // TODO: send set protocol message over socket

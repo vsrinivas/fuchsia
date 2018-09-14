@@ -25,7 +25,7 @@
 
 typedef struct i8042_device {
     mtx_t lock;
-    hidbus_ifc_t* ifc;
+    hidbus_ifc_t ifc;
     void* cookie;
 
     zx_handle_t irq;
@@ -453,8 +453,8 @@ static void i8042_process_scode(i8042_device_t* dev, uint8_t scode, unsigned int
 
     const hid_boot_kbd_report_t* report = rollover ? &report_err_rollover : &dev->report.kbd;
     mtx_lock(&dev->lock);
-    if (dev->ifc) {
-        dev->ifc->io_queue(dev->cookie, (const uint8_t*)report, sizeof(*report));
+    if (dev->ifc.ops) {
+        hidbus_ifc_io_queue(&dev->ifc, (const uint8_t*)report, sizeof(*report));
     }
     mtx_unlock(&dev->lock);
 }
@@ -482,9 +482,9 @@ static void i8042_process_mouse(i8042_device_t* dev, uint8_t data, unsigned int 
         dev->report.mouse.buttons &= 0x7;
 
         mtx_lock(&dev->lock);
-        if (dev->ifc) {
-            dev->ifc->io_queue(dev->cookie, (const uint8_t*)&dev->report.mouse,
-                               sizeof(dev->report.mouse));
+        if (dev->ifc.ops) {
+            hidbus_ifc_io_queue(&dev->ifc, (const uint8_t*)&dev->report.mouse,
+                            sizeof(dev->report.mouse));
         }
         mtx_unlock(&dev->lock);
         memset(&dev->report.mouse, 0, sizeof(dev->report.mouse));
@@ -615,20 +615,19 @@ static void i8042_identify(int (*cmd)(uint8_t* param, int command)) {
 static zx_status_t i8042_query(void* ctx, uint32_t options, hid_info_t* info) {
     i8042_device_t* i8042 = ctx;
     info->dev_num = i8042->type;  // use the type for the device number for now
-    info->dev_class = i8042->type;
+    info->device_class = i8042->type;
     info->boot_device = true;
     return ZX_OK;
 }
 
-static zx_status_t i8042_start(void* ctx, hidbus_ifc_t* ifc, void* cookie) {
+static zx_status_t i8042_start(void* ctx, const hidbus_ifc_t* ifc) {
     i8042_device_t* i8042 = ctx;
     mtx_lock(&i8042->lock);
-    if (i8042->ifc != NULL) {
+    if (i8042->ifc.ops != NULL) {
         mtx_unlock(&i8042->lock);
         return ZX_ERR_ALREADY_BOUND;
     }
-    i8042->ifc = ifc;
-    i8042->cookie = cookie;
+    i8042->ifc = *ifc;
     mtx_unlock(&i8042->lock);
     return ZX_OK;
 }
@@ -636,8 +635,8 @@ static zx_status_t i8042_start(void* ctx, hidbus_ifc_t* ifc, void* cookie) {
 static void i8042_stop(void* ctx) {
     i8042_device_t* i8042 = ctx;
     mtx_lock(&i8042->lock);
-    i8042->ifc = NULL;
-    i8042->cookie = NULL;
+    i8042->ifc.ops = NULL;
+    i8042->ifc.ctx = NULL;
     mtx_unlock(&i8042->lock);
 }
 
@@ -647,7 +646,7 @@ static zx_status_t i8042_get_descriptor(void* ctx, uint8_t desc_type,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (desc_type != HID_DESC_TYPE_REPORT) {
+    if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -676,7 +675,7 @@ static zx_status_t i8042_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
 }
 
 static zx_status_t i8042_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
-        void* data, size_t len) {
+        const void* data, size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

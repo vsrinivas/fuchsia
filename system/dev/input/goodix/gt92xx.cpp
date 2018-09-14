@@ -189,12 +189,12 @@ void Gt92xxDevice::HWReset() {
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50))); // Wait for reset to complete
 }
 
-zx_status_t Gt92xxDevice::HidBusQuery(uint32_t options, hid_info_t* info) {
+zx_status_t Gt92xxDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
     if (!info) {
         return ZX_ERR_INVALID_ARGS;
     }
     info->dev_num = 0;
-    info->dev_class = HID_DEV_CLASS_OTHER;
+    info->device_class = HID_DEVICE_CLASS_OTHER;
     info->boot_device = false;
 
     return ZX_OK;
@@ -220,7 +220,7 @@ zx_status_t Gt92xxDevice::ShutDown() {
     return ZX_OK;
 }
 
-zx_status_t Gt92xxDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t Gt92xxDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
 
     const uint8_t* desc_ptr;
     uint8_t* buf;
@@ -235,44 +235,44 @@ zx_status_t Gt92xxDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, si
     return ZX_OK;
 }
 
-zx_status_t Gt92xxDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t Gt92xxDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                           size_t len, size_t* out_len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Gt92xxDevice::HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t Gt92xxDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                           size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Gt92xxDevice::HidBusGetIdle(uint8_t rpt_id, uint8_t* duration) {
+zx_status_t Gt92xxDevice::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Gt92xxDevice::HidBusSetIdle(uint8_t rpt_id, uint8_t duration) {
+zx_status_t Gt92xxDevice::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Gt92xxDevice::HidBusGetProtocol(uint8_t* protocol) {
+zx_status_t Gt92xxDevice::HidbusGetProtocol(uint8_t* protocol) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Gt92xxDevice::HidBusSetProtocol(uint8_t protocol) {
+zx_status_t Gt92xxDevice::HidbusSetProtocol(uint8_t protocol) {
     return ZX_OK;
 }
 
-void Gt92xxDevice::HidBusStop() {
+void Gt92xxDevice::HidbusStop() {
     fbl::AutoLock lock(&proxy_lock_);
     proxy_.clear();
 }
 
-zx_status_t Gt92xxDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
+zx_status_t Gt92xxDevice::HidbusStart(const hidbus_ifc_t* ifc) {
     fbl::AutoLock lock(&proxy_lock_);
     if (proxy_.is_valid()) {
         zxlogf(ERROR, "gt92xx: Already bound!\n");
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        proxy_ = proxy;
+        proxy_ = ddk::HidbusIfcProxy(ifc);
         zxlogf(INFO, "gt92xx: started\n");
     }
     return ZX_OK;

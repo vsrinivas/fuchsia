@@ -1,0 +1,66 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.hidbus;
+
+using zx;
+
+enum HidDescriptionType : uint8 {
+    REPORT = 0x22;
+};
+
+enum HidReportType : uint8 {
+    INPUT = 1;
+    OUTPUT = 2;
+    FEATURE = 3;
+};
+
+enum HidProtocol : uint8 {
+    BOOT = 0;
+    REPORT = 0;
+};
+
+enum HidDeviceClass : uint8 {
+    OTHER = 0;
+    KBD = 1;
+    POINTER = 2;
+    KBD_POINTER = 3;
+
+    FIRST = 0;
+    LAST = 3;
+};
+
+struct HidInfo {
+    uint8 dev_num;
+    HidDeviceClass device_class;
+    bool boot_device;
+};
+
+[Layout="ddk-interface"]
+interface HidbusIfc {
+    /// Queues a report received by the hidbus device.
+    1: IoQueue(vector<void> buf) -> ();
+};
+
+[Layout="ddk-protocol"]
+interface Hidbus {
+    /// Obtain information about the hidbus device and supported features.
+    /// Safe to call at any time.
+    1: Query(uint32 options) -> (zx.status s, HidInfo info);
+    /// Start the hidbus device. The device may begin queueing hid reports via
+    /// ifc->io_queue before this function returns. It is an error to start an
+    /// already-started hidbus device.
+    2: Start(HidbusIfc ifc) -> (zx.status s);
+    /// Stop the hidbus device. Safe to call if the hidbus is already stopped.
+    3: Stop() -> ();
+    /// What are the ownership semantics with regards to the data buffer passed back?
+    /// is len an input and output parameter?
+    4: GetDescriptor(HidDescriptionType desc_type) -> (zx.status s, vector<void>? data);
+    5: GetReport(HidReportType rpt_type, uint8 rpt_id) -> (zx.status s, vector<void> data);
+    6: SetReport(HidReportType rpt_type, uint8 rpt_id, vector<void> data) -> (zx.status s);
+    7: GetIdle(uint8 rpt_id) -> (zx.status s, uint8 duration);
+    8: SetIdle(uint8 rpt_id, uint8 duration) -> (zx.status s);
+    9: GetProtocol() -> (zx.status s, HidProtocol protocol);
+    10: SetProtocol(HidProtocol protocol) -> (zx.status s);
+};

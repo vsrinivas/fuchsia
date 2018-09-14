@@ -36,7 +36,7 @@ typedef struct usb_hid_device {
     bool req_queued;
 
     mtx_t lock;
-    hidbus_ifc_t* ifc;
+    hidbus_ifc_t ifc;
     void* cookie;
 
     uint8_t interface;
@@ -65,8 +65,8 @@ static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
         break;
     case ZX_OK:
         mtx_lock(&hid->lock);
-        if (hid->ifc) {
-            hid->ifc->io_queue(hid->cookie, buffer, req->response.actual);
+        if (hid->ifc.ops) {
+            hidbus_ifc_io_queue(&hid->ifc, buffer, req->response.actual);
         }
         mtx_unlock(&hid->lock);
         break;
@@ -90,20 +90,19 @@ static zx_status_t usb_hid_query(void* ctx, uint32_t options, hid_info_t* info) 
     }
     usb_hid_device_t* hid = ctx;
     info->dev_num = hid->info.dev_num;
-    info->dev_class = hid->info.dev_class;
+    info->device_class = hid->info.device_class;
     info->boot_device = hid->info.boot_device;
     return ZX_OK;
 }
 
-static zx_status_t usb_hid_start(void* ctx, hidbus_ifc_t* ifc, void* cookie) {
+static zx_status_t usb_hid_start(void* ctx, const hidbus_ifc_t* ifc) {
     usb_hid_device_t* hid = ctx;
     mtx_lock(&hid->lock);
-    if (hid->ifc) {
+    if (hid->ifc.ops) {
         mtx_unlock(&hid->lock);
         return ZX_ERR_ALREADY_BOUND;
     }
-    hid->ifc = ifc;
-    hid->cookie = cookie;
+    hid->ifc = *ifc;
     if (!hid->req_queued) {
         hid->req_queued = true;
         usb_request_queue(&hid->usb, hid->req);
@@ -117,8 +116,7 @@ static void usb_hid_stop(void* ctx) {
     // this callback
     usb_hid_device_t* hid = ctx;
     mtx_lock(&hid->lock);
-    hid->ifc = NULL;
-    hid->cookie = NULL;
+    hid->ifc.ops = NULL;
     mtx_unlock(&hid->lock);
 }
 
@@ -175,11 +173,11 @@ static zx_status_t usb_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_i
 }
 
 static zx_status_t usb_hid_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
-                                      void* data, size_t len) {
+                                      const void* data, size_t len) {
     usb_hid_device_t* hid = ctx;
     return usb_hid_control(hid, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                            USB_HID_SET_REPORT, (rpt_type << 8 | rpt_id),
-                           hid->interface, data, len, NULL);
+                           hid->interface, (void*)data, len, NULL);
 }
 
 static zx_status_t usb_hid_get_idle(void* ctx, uint8_t rpt_id, uint8_t* duration) {
@@ -290,11 +288,11 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
     usbhid->hid_desc = hid_desc;
 
     usbhid->info.boot_device = intf->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
-    usbhid->info.dev_class = HID_DEV_CLASS_OTHER;
+    usbhid->info.device_class = HID_DEVICE_CLASS_OTHER;
     if (intf->bInterfaceProtocol == USB_HID_PROTOCOL_KBD) {
-        usbhid->info.dev_class = HID_DEV_CLASS_KBD;
+        usbhid->info.device_class = HID_DEVICE_CLASS_KBD;
     } else if (intf->bInterfaceProtocol == USB_HID_PROTOCOL_MOUSE) {
-        usbhid->info.dev_class = HID_DEV_CLASS_POINTER;
+        usbhid->info.device_class = HID_DEVICE_CLASS_POINTER;
     }
 
     status = usb_request_alloc(&usbhid->req, usb_ep_max_packet(endpt),

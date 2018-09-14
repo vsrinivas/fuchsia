@@ -39,7 +39,7 @@
 namespace goodix {
 
 class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
-                     public ddk::HidBusProtocol<Gt92xxDevice> {
+                     public ddk::HidbusProtocol<Gt92xxDevice> {
 public:
     Gt92xxDevice(zx_device_t* device, ddk::I2cChannel i2c,
                  ddk::GpioPin intr, ddk::GpioPin reset)
@@ -52,19 +52,19 @@ public:
     void DdkRelease();
     void DdkUnbind() __TA_EXCLUDES(proxy_lock_);
 
-    // HidBus required methods
-    void HidBusStop();
-    zx_status_t HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+    // Hidbus required methods
+    void HidbusStop();
+    zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
+    zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                 size_t len, size_t* out_len);
-    zx_status_t HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+    zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                 size_t len);
-    zx_status_t HidBusGetIdle(uint8_t rpt_id, uint8_t* duration);
-    zx_status_t HidBusSetIdle(uint8_t rpt_id, uint8_t duration);
-    zx_status_t HidBusGetProtocol(uint8_t* protocol);
-    zx_status_t HidBusSetProtocol(uint8_t protocol);
-    zx_status_t HidBusStart(ddk::HidBusIfcProxy proxy) __TA_EXCLUDES(proxy_lock_);
-    zx_status_t HidBusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(proxy_lock_);
+    zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
+    zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
+    zx_status_t HidbusGetProtocol(uint8_t* protocol);
+    zx_status_t HidbusSetProtocol(uint8_t protocol);
+    zx_status_t HidbusStart(const hidbus_ifc_t* ifc) __TA_EXCLUDES(proxy_lock_);
+    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(proxy_lock_);
 
 private:
     // Format of data as it is read from the device
@@ -98,6 +98,6 @@ private:
     thrd_t thread_;
     fbl::atomic<bool> running_;
     fbl::Mutex proxy_lock_;
-    ddk::HidBusIfcProxy proxy_ __TA_GUARDED(proxy_lock_);
+    ddk::HidbusIfcProxy proxy_ __TA_GUARDED(proxy_lock_);
 };
 }

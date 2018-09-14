@@ -24,23 +24,23 @@
 class AcpiPwrbtnDevice;
 using DeviceType = ddk::Device<AcpiPwrbtnDevice>;
 
-class AcpiPwrbtnDevice : public DeviceType, public ddk::HidBusProtocol<AcpiPwrbtnDevice> {
+class AcpiPwrbtnDevice : public DeviceType, public ddk::HidbusProtocol<AcpiPwrbtnDevice> {
 public:
     static zx_status_t Create(zx_device_t* parent,
                               fbl::unique_ptr<AcpiPwrbtnDevice>* out);
 
     // hidbus protocol implementation
-    zx_status_t HidBusQuery(uint32_t options, hid_info_t* info);
-    zx_status_t HidBusStart(ddk::HidBusIfcProxy proxy);
-    void HidBusStop();
-    zx_status_t HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
+    zx_status_t HidbusStart(const hidbus_ifc_t* ifc);
+    void HidbusStop();
+    zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
+    zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
                                 size_t* out_len);
-    zx_status_t HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len);
-    zx_status_t HidBusGetIdle(uint8_t rpt_id, uint8_t* duration);
-    zx_status_t HidBusSetIdle(uint8_t rpt_id, uint8_t duration);
-    zx_status_t HidBusGetProtocol(uint8_t* protocol);
-    zx_status_t HidBusSetProtocol(uint8_t protocol);
+    zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
+    zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
+    zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
+    zx_status_t HidbusGetProtocol(uint8_t* protocol);
+    zx_status_t HidbusSetProtocol(uint8_t protocol);
 
     void DdkRelease();
     ~AcpiPwrbtnDevice();
@@ -57,7 +57,7 @@ private:
     fbl::Mutex lock_;
 
     // Interface the driver is currently bound to
-    ddk::HidBusIfcProxy proxy_;
+    ddk::HidbusIfcProxy proxy_;
 
     // Track the pressed state.  We don't receive up-events from ACPI, but we
     // may want to synthesize them in the future if we care about duration of
@@ -155,41 +155,41 @@ void AcpiPwrbtnDevice::QueueHidReportLocked() {
     }
 }
 
-zx_status_t AcpiPwrbtnDevice::HidBusQuery(uint32_t options, hid_info_t* info) {
+zx_status_t AcpiPwrbtnDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
     zxlogf(TRACE, "acpi-pwrbtn: hid bus query\n");
 
     info->dev_num = 0;
-    info->dev_class = HID_DEV_CLASS_OTHER;
+    info->device_class = HID_DEVICE_CLASS_OTHER;
     info->boot_device = false;
     return ZX_OK;
 }
 
-zx_status_t AcpiPwrbtnDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
+zx_status_t AcpiPwrbtnDevice::HidbusStart(const hidbus_ifc_t* ifc) {
     zxlogf(TRACE, "acpi-pwrbtn: hid bus start\n");
 
     fbl::AutoLock guard(&lock_);
     if (proxy_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     }
-    proxy_ = proxy;
+    proxy_ = ddk::HidbusIfcProxy(ifc);
     return ZX_OK;
 }
 
-void AcpiPwrbtnDevice::HidBusStop() {
+void AcpiPwrbtnDevice::HidbusStop() {
     zxlogf(TRACE, "acpi-pwrbtn: hid bus stop\n");
 
     fbl::AutoLock guard(&lock_);
     proxy_.clear();
 }
 
-zx_status_t AcpiPwrbtnDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t AcpiPwrbtnDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
     zxlogf(TRACE, "acpi-pwrbtn: hid bus get descriptor\n");
 
     if (data == nullptr || len == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (desc_type != HID_DESC_TYPE_REPORT) {
+    if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -202,7 +202,7 @@ zx_status_t AcpiPwrbtnDevice::HidBusGetDescriptor(uint8_t desc_type, void** data
     return ZX_OK;
 }
 
-zx_status_t AcpiPwrbtnDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t AcpiPwrbtnDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                               size_t len, size_t* out_len) {
     if (out_len == NULL) {
         return ZX_ERR_INVALID_ARGS;
@@ -225,24 +225,24 @@ zx_status_t AcpiPwrbtnDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, 
     return ZX_OK;
 }
 
-zx_status_t AcpiPwrbtnDevice::HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t AcpiPwrbtnDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                             size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AcpiPwrbtnDevice::HidBusGetIdle(uint8_t rpt_id, uint8_t* duration) {
+zx_status_t AcpiPwrbtnDevice::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AcpiPwrbtnDevice::HidBusSetIdle(uint8_t rpt_id, uint8_t duration) {
+zx_status_t AcpiPwrbtnDevice::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
     return ZX_OK;
 }
 
-zx_status_t AcpiPwrbtnDevice::HidBusGetProtocol(uint8_t* protocol) {
+zx_status_t AcpiPwrbtnDevice::HidbusGetProtocol(uint8_t* protocol) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AcpiPwrbtnDevice::HidBusSetProtocol(uint8_t protocol) {
+zx_status_t AcpiPwrbtnDevice::HidbusSetProtocol(uint8_t protocol) {
     return ZX_OK;
 }
 

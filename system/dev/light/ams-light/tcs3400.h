@@ -30,7 +30,7 @@ using DeviceType = ddk::Device<Tcs3400Device, ddk::Unbindable, ddk::Readable>;
 // complies with a HID descriptor that was manually scripted (i.e. - not
 // reported by the device iteself).
 class Tcs3400Device : public DeviceType,
-                      public ddk::HidBusProtocol<Tcs3400Device> {
+                      public ddk::HidbusProtocol<Tcs3400Device> {
 public:
     Tcs3400Device(zx_device_t* device)
         : DeviceType(device) {}
@@ -40,19 +40,19 @@ public:
     // Methods required by the ddk mixins
     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
 
-    zx_status_t HidBusStart(ddk::HidBusIfcProxy proxy) TA_EXCL(proxy_input_lock_);
-    zx_status_t HidBusQuery(uint32_t options, hid_info_t* info);
-    void HidBusStop();
-    zx_status_t HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+    zx_status_t HidbusStart(const hidbus_ifc_t* ifc) TA_EXCL(proxy_input_lock_);
+    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
+    void HidbusStop();
+    zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
+    zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                 size_t len, size_t* out_len)
         TA_EXCL(proxy_input_lock_, feature_lock_);
-    zx_status_t HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+    zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                 size_t len) TA_EXCL(feature_lock_);
-    zx_status_t HidBusGetIdle(uint8_t rpt_id, uint8_t* duration);
-    zx_status_t HidBusSetIdle(uint8_t rpt_id, uint8_t duration);
-    zx_status_t HidBusGetProtocol(uint8_t* protocol);
-    zx_status_t HidBusSetProtocol(uint8_t protocol);
+    zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
+    zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
+    zx_status_t HidbusGetProtocol(uint8_t* protocol);
+    zx_status_t HidbusSetProtocol(uint8_t protocol);
 
     void DdkUnbind();
     void DdkRelease();
@@ -66,7 +66,7 @@ private:
     fbl::Mutex proxy_input_lock_ TA_ACQ_BEFORE(i2c_lock_);
     fbl::Mutex feature_lock_;
     fbl::Mutex i2c_lock_;
-    ddk::HidBusIfcProxy proxy_ TA_GUARDED(proxy_input_lock_);
+    ddk::HidbusIfcProxy proxy_ TA_GUARDED(proxy_input_lock_);
     ambient_light_input_rpt_t input_rpt_ TA_GUARDED(proxy_input_lock_);
     ambient_light_feature_rpt_t feature_rpt_ TA_GUARDED(feature_lock_);
     zx_status_t FillInputRpt() TA_REQ(proxy_input_lock_);
