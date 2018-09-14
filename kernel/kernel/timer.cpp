@@ -285,9 +285,6 @@ bool timer_cancel(timer_t* timer) {
     timer->cancel = true;
     mb();
 
-    // wake up any spinners on the cancel signal
-    arch_spinloop_signal();
-
     // see if we're trying to cancel the timer we're currently in the middle of handling
     if (unlikely(timer->active_cpu == (int)cpu)) {
         // zero it out
@@ -406,9 +403,6 @@ void timer_tick(zx_time_t now) {
         // mark it not busy
         timer->active_cpu = -1;
         mb();
-
-        // make sure any spinners wake up
-        arch_spinloop_signal();
     }
 
     // get the deadline of the event at the head of the queue (if any)

@@ -22,12 +22,7 @@ __BEGIN_CDECLS
 #define ENABLE_CYCLE_COUNTER 1
 
 static inline void arch_spinloop_pause(void) {
-    __asm__ volatile("wfe" ::
-                         : "memory");
-}
-
-static inline void arch_spinloop_signal(void) {
-    __asm__ volatile("sev" ::
+    __asm__ volatile("yield" ::
                          : "memory");
 }
 

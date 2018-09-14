@@ -96,7 +96,6 @@ static void mp_sync_task(void* raw_context) {
     // use seq-cst atomic to ensure this update is not seen before the
     // side-effects of context->task
     atomic_and((int*)&context->outstanding_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
-    arch_spinloop_signal();
 }
 
 /* @brief Execute a task on the specified CPUs, and block on the calling

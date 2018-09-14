@@ -55,9 +55,6 @@ int arch_idle_thread_routine(void*) __NO_RETURN;
 
 /* function to call in spinloops to idle */
 static void arch_spinloop_pause(void);
-/* function to call when an event happens that may trigger the exit from
- * a spinloop */
-static void arch_spinloop_signal(void);
 
 /* arch optimized version of a page zero routine against a page aligned buffer */
 void arch_zero_page(void *);

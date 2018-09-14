@@ -54,10 +54,6 @@ static inline void arch_spinloop_pause(void)
     __asm__ volatile("pause" ::: "memory");
 }
 
-static inline void arch_spinloop_signal(void)
-{
-}
-
 #define mb()        __asm__ volatile ("mfence" ::: "memory")
 #define smp_mb()    mb()
 
