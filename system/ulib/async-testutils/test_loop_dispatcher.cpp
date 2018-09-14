@@ -5,6 +5,7 @@
 #include <lib/async-testutils/test_loop_dispatcher.h>
 
 #include <zircon/assert.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #define TO_NODE(type, ptr) ((list_node_t*)&ptr->state)
@@ -52,7 +53,9 @@ TestLoopDispatcher::TestLoopDispatcher(TimeKeeper* time_keeper)
     list_initialize(&task_list_);
     list_initialize(&due_list_);
     zx_status_t status = zx::port::create(0u, &port_);
-    ZX_ASSERT_MSG(status == ZX_OK, "status=%d", status);
+    ZX_ASSERT_MSG(status == ZX_OK,
+                  "zx_port_create: %s",
+                  zx_status_get_string(status));
 }
 
 TestLoopDispatcher::~TestLoopDispatcher() {
@@ -136,7 +139,10 @@ void TestLoopDispatcher::FireTimer() {
     zx_port_packet_t timer_packet{};
     timer_packet.key = kTimerExpirationKey;
     timer_packet.type = ZX_PKT_TYPE_USER;
-    ZX_ASSERT(ZX_OK == port_.queue(&timer_packet));
+    zx_status_t status = port_.queue(&timer_packet);
+    ZX_ASSERT_MSG(status == ZX_OK,
+                  "zx_port_queue: %s",
+                  zx_status_get_string(status));
 }
 
 zx::time TestLoopDispatcher::GetNextTaskDueTime() {
