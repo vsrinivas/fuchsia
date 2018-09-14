@@ -266,7 +266,7 @@ bool Importer::ImportNameRecord(const ktrace_rec_name_t* record,
 
 bool Importer::ImportProbeRecord(const ktrace_header_t* record,
                                  size_t record_size) {
-  uint32_t probe = record->tag & 0x7ff;
+  uint32_t probe = KTRACE_EVENT(record->tag) & 0x7ff;
   if (record_size >= 24) {
     uint32_t arg0 = reinterpret_cast<const uint32_t*>(record + 1)[0];
     uint32_t arg1 = reinterpret_cast<const uint32_t*>(record + 1)[1];
