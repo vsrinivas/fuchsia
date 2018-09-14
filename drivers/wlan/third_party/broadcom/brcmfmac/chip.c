@@ -370,12 +370,12 @@ static void brcmf_chip_ai_coredisable(struct brcmf_core_priv* core, uint32_t pre
     /* put in reset */
     ci->ops->write32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL, BC_CORE_RESET_CONTROL_RESET);
     usleep_range(10, 20);
-    brcmf_dbg(TEMP, "About to wait");
     /* wait till reset is 1 */
-    SPINWAIT(ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL) !=
+    uint32_t spinresult;
+    SPINWAIT((spinresult = ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL)) !=
              BC_CORE_RESET_CONTROL_RESET,
              300);
-    brcmf_dbg(TEMP, "Survived wait");
+    brcmf_dbg(TEMP, "Survived wait, spinresult %d (should be 1)", spinresult);
 in_reset_configure:
     /* in-reset configure */
     ci->ops->write32(ci->ctx, core->wrapbase + BC_CORE_CONTROL, reset | BC_CORE_CONTROL_FGC |

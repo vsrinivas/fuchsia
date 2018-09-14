@@ -1373,7 +1373,7 @@ static struct brcmf_netbuf* brcmf_fws_deq(struct brcmf_fws_info* fws, int fifo) 
     }
     p = NULL;
 done:
-    brcmf_dbg(DATA, "exit: fifo %d netbuf %p\n", fifo, p);
+    //brcmf_dbg(DATA, "exit: fifo %d netbuf %p\n", fifo, p);
     return p;
 }
 
@@ -1545,7 +1545,7 @@ static zx_status_t brcmf_fws_dbg_seqnum_check(struct brcmf_fws_info* fws, uint8_
     uint32_t timestamp;
 
     memcpy(&timestamp, &data[2], sizeof(timestamp));
-    brcmf_dbg(CTL, "received: seq %d, timestamp %d\n", data[1], timestamp);
+    //brcmf_dbg(CTL, "received: seq %d, timestamp %d\n", data[1], timestamp);
     return ZX_OK;
 }
 
@@ -1790,7 +1790,8 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
     zx_status_t err;
     enum brcmf_fws_should_schedule schedule_status;
 
-    brcmf_dbg(HDRS, "enter: ifidx %d, netbuflen %u, siglen %d\n", ifp->ifidx, netbuf->len, siglen);
+    //brcmf_dbg(HDRS, "enter: ifidx %d, netbuflen %u, siglen %d\n", ifp->ifidx, netbuf->len,
+    //          siglen);
 
     WARN_ON(siglen > (int32_t)netbuf->len);
 
@@ -1824,8 +1825,8 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
         data = signal_data + 2;
 
         err = brcmf_fws_get_tlv_len(fws, type, &tlv_len);
-        brcmf_dbg(HDRS, "tlv type=%s (%d), len=%d (%d:%d)\n", brcmf_fws_get_tlv_name(type), type,
-                  len, err, tlv_len);
+        //brcmf_dbg(HDRS, "tlv type=%s (%d), len=%d (%d:%d)\n", brcmf_fws_get_tlv_name(type), type,
+        //          len, err, tlv_len);
 
         /* abort parsing when length invalid */
         if (data_len < len + 2) {

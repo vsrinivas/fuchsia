@@ -19,6 +19,8 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include <zircon/status.h>
+
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
@@ -489,11 +491,13 @@ zx_status_t brcmfmac_module_init(zx_device_t* device) {
     memset(&async_config, 0, sizeof(async_config));
     err = async_loop_create(&async_config, &async_loop);
     if (err != ZX_OK) {
+        brcmf_err("Returning err %d %s", err, zx_status_get_string(err));
         return err;
     }
     err = async_loop_start_thread(async_loop, "async_thread", NULL);
     if (err != ZX_OK) {
         async_loop_destroy(async_loop);
+        brcmf_err("Returning err %d %s", err, zx_status_get_string(err));
         return err;
     }
     default_dispatcher = async_loop_get_dispatcher(async_loop);
@@ -505,6 +509,7 @@ zx_status_t brcmfmac_module_init(zx_device_t* device) {
     err = brcmf_core_init(device);
     if (err != ZX_OK) {
         brcmf_debugfs_exit();
+        brcmf_err("Returning err %d %s", err, zx_status_get_string(err));
     }
 
     return err;

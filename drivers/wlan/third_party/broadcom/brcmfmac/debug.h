@@ -72,6 +72,9 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
         __brcmf_dbg(BRCMF_##filter##_VAL, __func__, fmt, ##__VA_ARGS__); \
     } while (0)
 
+#define THROTTLE(n, event) { static atomic_long times; if (atomic_fetch_add(&times, 1) <= n) \
+                             { event; } }
+
 // clang-format off
 
 #define BRCMF_DATA_ON()  (brcmf_msg_filter & BRCMF_DATA_VAL)

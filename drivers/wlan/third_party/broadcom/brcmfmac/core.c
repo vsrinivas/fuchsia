@@ -248,7 +248,7 @@ void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* ethmac_ne
     struct ethhdr* eh;
     int head_delta;
 
-    brcmf_dbg(DATA, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
+    //brcmf_dbg(DATA, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
 
     /* Can the device send data? */
     if (drvr->bus_if->state != BRCMF_BUS_UP) {
@@ -351,7 +351,7 @@ void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
     ifp->ndev->stats.rx_bytes += netbuf->len;
     ifp->ndev->stats.rx_packets++;
 
-    brcmf_dbg(DATA, "rx proto=0x%X len %d\n", be16toh(netbuf->protocol), netbuf->len);
+    //brcmf_dbg(DATA, "rx proto=0x%X len %d\n", be16toh(netbuf->protocol), netbuf->len);
     brcmf_cfg80211_rx(ifp, netbuf);
 }
 
@@ -429,7 +429,7 @@ void brcmf_rx_event(struct brcmf_device* dev, struct brcmf_netbuf* netbuf) {
     struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
-    brcmf_dbg(EVENT, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
+    //brcmf_dbg(EVENT, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
 
     if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
         return;

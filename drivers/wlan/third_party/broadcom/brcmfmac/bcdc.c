@@ -242,6 +242,7 @@ static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, 
 
     ret = brcmf_proto_bcdc_cmplt(drvr, bcdc->reqid, len, &rxlen_out);
     if (ret != ZX_OK) {
+        brcmf_dbg(TEMP, "Just got back from message cmplt, result %d", ret);
         goto done;
     }
 
@@ -270,7 +271,7 @@ static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t 
                                      struct brcmf_netbuf* pktbuf) {
     struct brcmf_proto_bcdc_header* h;
 
-    brcmf_dbg(BCDC, "Enter\n");
+    //brcmf_dbg(BCDC, "Enter\n");
 
     /* Push BDC header used to convey priority for buses that don't */
     brcmf_netbuf_grow_head(pktbuf, BCDC_HEADER_LEN);
@@ -295,7 +296,7 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
     struct brcmf_proto_bcdc_header* h;
     struct brcmf_if* tmp_if;
 
-    brcmf_dbg(BCDC, "Enter\n");
+    //brcmf_dbg(BCDC, "Enter\n");
 
     /* Pop BCDC header used to convey priority for buses that don't */
     if (pktbuf->len <= BCDC_HEADER_LEN) {

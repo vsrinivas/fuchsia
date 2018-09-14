@@ -275,6 +275,7 @@ static zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t 
                                            uint32_t addr, bool write, void* data, size_t size,
                                            bool fifo) {
     sdio_rw_txn_t txn;
+    zx_status_t result;
 
     txn.addr = addr;
     txn.write = write;
@@ -284,12 +285,11 @@ static zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t 
     txn.fifo = fifo;
     txn.use_dma = false; // TODO(cphoenix): Decide when to use DMA
     txn.buf_offset = 0;
-    brcmf_dbg(TEMP, "F%d about to %s %ld bytes (0x%x) at 0x%x", func, write ? "write" : "read",
-              size, *(uint32_t*)data, addr);
-    brcmf_hexdump(data, size+12);
-    zx_status_t result = sdio_do_rw_txn(sdiodev->sdio_proto, func, &txn);
-    brcmf_hexdump(data, size+12);
-    brcmf_dbg(TEMP, "Result %d, data 0x%x", result, *(uint32_t*)data);
+
+    result = sdio_do_rw_txn(sdiodev->sdio_proto, func, &txn);
+    if (result != ZX_OK) {
+        brcmf_dbg(TEMP, "Why did this fail?? result %d %s", result, zx_status_get_string(result));
+    }
     return result;
 }
 
@@ -464,8 +464,6 @@ zx_status_t brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err = ZX_OK;
 
-    brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, pkt->len);
-
     err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
     if (err != ZX_OK) {
         goto done;
@@ -556,7 +554,7 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err;
 
-    brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, brcmf_netbuf_list_length(pktq));
+    //brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, brcmf_netbuf_list_length(pktq));
 
     err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
     if (err != ZX_OK) {
@@ -598,13 +596,14 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
     } else {
         dsize = size;
     }
-
     sdio_claim_host(sdiodev->func1);
 
     /* Do the transfer(s) */
     while (size) {
+
         /* Set the backplane window to include the start address */
         err = brcmf_sdiod_set_backplane_window(sdiodev, address);
+
         if (err != ZX_OK) {
             break;
         }
