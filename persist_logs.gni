@@ -28,11 +28,16 @@ declare_args() {
 #     [list of strings] Logs with these tags will NOT be written to the log
 #     file, even if the log has tags included in the "log_tags" section.
 #
+#   max_disk_usage (optional):
+#       [string] This persist_logs usage will be guaranteed to not use more than
+#       this amount of bytes on disk space. The default is 64,000.
+#
 # Example:
 #
 #   persist_logs("amber_logs") {
 #     log_tags = [ "amber" ]
 #     ignore_log_tags = [ "klog" ]
+#     max_disk_usage = "10000"
 #   }
 
 template("persist_logs") {
@@ -40,6 +45,7 @@ template("persist_logs") {
                          [
                            "log_tags",
                            "ignore_log_tags",
+                           "max_disk_usage",
                          ])
 
   pkg_resources = []
@@ -71,6 +77,9 @@ template("persist_logs") {
       foreach(ignore_tag, ignore_log_tags) {
         args += [ ignore_tag ]
       }
+    }
+    if (defined(max_disk_usage)) {
+      args += [ "--file-capacity", max_disk_usage ]
     }
   }
 

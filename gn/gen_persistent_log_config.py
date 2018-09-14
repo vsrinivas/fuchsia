@@ -14,6 +14,8 @@ def main():
     parser.add_argument('path', help='Path to the package file')
     parser.add_argument('--tags', help='Tag to filter for', nargs='+')
     parser.add_argument('--ignore-tags', help='Tag to ignore', nargs='+')
+    parser.add_argument('--file-capacity', help='max allowed disk usage',
+            type=int)
     args = parser.parse_args()
 
     tag_args = []
@@ -26,9 +28,13 @@ def main():
         for t in args.ignore_tags:
             ignore_tag_args += [ '--ignore-tag', t ]
 
+    file_cap_args = []
+    if args.file_capacity != None:
+        file_cap_args = [ '--file_capacity', str(args.file_capacity) ]
+
     with open(args.path, 'w') as f:
         json.dump({'apps':[["log_listener", "--file", "/data/logs."+args.name] +
-            tag_args + ignore_tag_args] }, f)
+             file_cap_args + tag_args + ignore_tag_args] }, f)
 
     return 0
 
