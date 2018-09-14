@@ -121,9 +121,7 @@ void x86_init_percpu(cpu_num_t cpu_num) {
     // But then set the default mode to off.
     x86_set_extended_register_pt_state(false);
 
-    if (cpu_num != 0) {
-        gdt_load(gdt_get());
-    }
+    gdt_load(gdt_get());
 
     x86_initialize_percpu_tss();
 
