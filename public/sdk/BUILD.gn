@@ -72,6 +72,7 @@ sdk("garnet") {
     "//zircon/public/sysroot:sysroot_sdk",
     "//zircon/public/tool/bootserver:bootserver_sdk($host_toolchain)",
     "//zircon/public/tool/fidlc:fidlc_sdk($host_toolchain)",
+    "//zircon/public/tool/fidl-format:fidl-format_sdk($host_toolchain)",
     "//zircon/public/tool/fvm:fvm_sdk($host_toolchain)",
     "//zircon/public/tool/loglistener:loglistener_sdk($host_toolchain)",
     "//zircon/public/tool/merkleroot:merkleroot_sdk($host_toolchain)",
