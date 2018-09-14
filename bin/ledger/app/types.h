@@ -7,7 +7,11 @@
 
 namespace ledger {
 
-enum class PageClosedAndSynced { YES, NO, UNKNOWN };
+enum class YesNoUnknown { YES, NO, UNKNOWN };
+
+using PageClosedAndSynced = YesNoUnknown;
+
+using PageClosedOfflineAndEmpty = YesNoUnknown;
 
 }  // namespace ledger
 

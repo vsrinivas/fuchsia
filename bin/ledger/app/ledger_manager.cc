@@ -279,66 +279,23 @@ void LedgerManager::BindLedger(fidl::InterfaceRequest<Ledger> ledger_request) {
 void LedgerManager::PageIsClosedAndSynced(
     storage::PageIdView page_id,
     fit::function<void(Status, PageClosedAndSynced)> callback) {
-  // Check if there was a previous call to this function for the same page that
-  // hasn't terminated.
-  // TODO(nellyv): Add support for two concurrent calls for the same page. See
-  // LE-500.
-  if (page_was_opened_map_.find(page_id.ToString()) !=
-      page_was_opened_map_.end()) {
-    callback(Status::OK, PageClosedAndSynced::UNKNOWN);
-    return;
-  }
+  auto is_synced = [](PageManager* page_manager,
+                      fit::function<void(Status, bool)> on_done) {
+    page_manager->IsSynced(std::move(on_done));
+  };
+  PageIsClosedAndSatisfiesPredicate(page_id, std::move(is_synced),
+                                    std::move(callback));
+}
 
-  // Start logging whether the page has been opened during the execution of
-  // this method.
-  page_was_opened_map_[page_id.ToString()] = false;
-  auto on_return = fxl::MakeAutoCall([this, page_id = page_id.ToString()] {
-    auto it = page_was_opened_map_.find(page_id);
-    FXL_DCHECK(it != page_was_opened_map_.end());
-    page_was_opened_map_.erase(it);
-  });
-
-  PageManagerContainer* container;
-
-  auto it = page_managers_.find(page_id);
-  if (it != page_managers_.end()) {
-    // The page manager is open, check if there are any open connections.
-    container = &it->second;
-    if (container->PageConnectionIsOpen()) {
-      callback(Status::OK, PageClosedAndSynced::NO);
-      return;
-    }
-  } else {
-    // Create a new container and get the PageStorage.
-    container = AddPageManagerContainer(page_id);
-    InitPageManagerContainer(container, page_id, [container](Status status) {
-      if (status == Status::PAGE_NOT_FOUND) {
-        container->SetPageManager(status, nullptr);
-      }
-    });
-  }
-
-  container->NewInternalRequest(
-      [this, page_id = page_id.ToString(), on_return = std::move(on_return),
-       callback = std::move(callback)](Status status, ExpiringToken token,
-                                       PageManager* page_manager) mutable {
-        if (status != Status::OK) {
-          callback(status, PageClosedAndSynced::UNKNOWN);
-          return;
-        }
-        FXL_DCHECK(page_manager);
-        page_manager->IsSynced(
-            [this, page_id = std::move(page_id),
-             on_return = std::move(on_return), token = std::move(token),
-             callback = std::move(callback)](Status status, bool is_synced) {
-              if (status != Status::OK || page_was_opened_map_[page_id]) {
-                callback(status, PageClosedAndSynced::UNKNOWN);
-                return;
-              }
-              callback(Status::OK, is_synced ? PageClosedAndSynced::YES
-                                             : PageClosedAndSynced::NO);
-            });
-      });
+void LedgerManager::PageIsClosedOfflineAndEmpty(
+    storage::PageIdView page_id,
+    fit::function<void(Status, PageClosedOfflineAndEmpty)> callback) {
+  auto is_offline_and_empty = [](PageManager* page_manager,
+                                 fit::function<void(Status, bool)> on_done) {
+    page_manager->IsOfflineAndEmpty(std::move(on_done));
+  };
+  PageIsClosedAndSatisfiesPredicate(page_id, std::move(is_offline_and_empty),
+                                    std::move(callback));
 }
 
 void LedgerManager::DeletePageStorage(convert::ExtendedStringView page_id,
@@ -466,6 +423,75 @@ std::unique_ptr<PageManager> LedgerManager::NewPageManager(
   return std::make_unique<PageManager>(
       environment_, std::move(page_storage), std::move(page_sync),
       merge_manager_.GetMergeResolver(page_storage.get()), state);
+}
+
+void LedgerManager::PageIsClosedAndSatisfiesPredicate(
+    storage::PageIdView page_id,
+    fit::function<void(PageManager*, fit::function<void(Status, bool)>)>
+        predicate,
+    fit::function<void(Status, YesNoUnknown)> callback) {
+  // Check if there was a previous call to this function for the same page
+  // that hasn't terminated.
+  // TODO(nellyv): Add support for two concurrent calls for the same page. See
+  // LE-500.
+  if (page_was_opened_map_.find(page_id.ToString()) !=
+      page_was_opened_map_.end()) {
+    callback(Status::OK, YesNoUnknown::UNKNOWN);
+    return;
+  }
+
+  // Start logging whether the page has been opened during the execution of
+  // this method.
+  page_was_opened_map_[page_id.ToString()] = false;
+  auto on_return = fxl::MakeAutoCall([this, page_id = page_id.ToString()] {
+    auto it = page_was_opened_map_.find(page_id);
+    FXL_DCHECK(it != page_was_opened_map_.end());
+    page_was_opened_map_.erase(it);
+  });
+
+  PageManagerContainer* container;
+
+  auto it = page_managers_.find(page_id);
+  if (it != page_managers_.end()) {
+    // The page manager is open, check if there are any open connections.
+    container = &it->second;
+    if (container->PageConnectionIsOpen()) {
+      callback(Status::OK, YesNoUnknown::NO);
+      return;
+    }
+  } else {
+    // Create a new container and get the PageStorage.
+    container = AddPageManagerContainer(page_id);
+    InitPageManagerContainer(container, page_id, [container](Status status) {
+      if (status == Status::PAGE_NOT_FOUND) {
+        container->SetPageManager(status, nullptr);
+      }
+    });
+  }
+
+  container->NewInternalRequest(
+      [this, page_id = page_id.ToString(), predicate = std::move(predicate),
+       on_return = std::move(on_return),
+       callback = std::move(callback)](Status status, ExpiringToken token,
+                                       PageManager* page_manager) mutable {
+        if (status != Status::OK) {
+          callback(status, YesNoUnknown::UNKNOWN);
+          return;
+        }
+        FXL_DCHECK(page_manager);
+        predicate(
+            page_manager,
+            [this, page_id = std::move(page_id),
+             on_return = std::move(on_return), token = std::move(token),
+             callback = std::move(callback)](Status status, bool condition) {
+              if (status != Status::OK || page_was_opened_map_[page_id]) {
+                callback(status, YesNoUnknown::UNKNOWN);
+                return;
+              }
+              callback(Status::OK,
+                       condition ? YesNoUnknown::YES : YesNoUnknown::NO);
+            });
+      });
 }
 
 void LedgerManager::MaybeMarkPageOpened(storage::PageIdView page_id) {

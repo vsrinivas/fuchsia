@@ -35,6 +35,15 @@ class PageEvictionManager : public PageUsageListener {
         fxl::StringView ledger_name, storage::PageIdView page_id,
         fit::function<void(Status, PageClosedAndSynced)> callback) = 0;
 
+    // Checks whether the given page is closed, offline and empty. The result
+    // returned in the callback will be |PageClosedOfflineAndEmpty:UNKNOWN| if
+    // the page is opened after calling this method and before the callback is
+    // called. Otherwise it will be |YES| or |NO| depending on whether the page
+    // is offline and empty.
+    virtual void PageIsClosedOfflineAndEmpty(
+        fxl::StringView ledger_name, storage::PageIdView page_id,
+        fit::function<void(Status, PageClosedOfflineAndEmpty)> callback) = 0;
+
     // Deletes the local copy of the given page from storage.
     virtual void DeletePageStorage(fxl::StringView ledger_name,
                                    storage::PageIdView page_id,
@@ -56,7 +65,11 @@ class PageEvictionManager : public PageUsageListener {
   // Returns |IO_ERROR| through the callback in case of failure to retrieve data
   // on page usage, or when trying to evict a given page; |OK| otherwise. It is
   // not an error if there is no page fulfilling the requirements.
-  virtual void TryCleanUp(fit::function<void(Status)> callback) = 0;
+  virtual void TryEvictPages(fit::function<void(Status)> callback) = 0;
+
+  virtual void EvictIfEmpty(fxl::StringView ledger_name,
+                            storage::PageIdView page_id,
+                            fit::function<void(Status)> callback) = 0;
 
   // PageUsageListener:
   void OnPageOpened(fxl::StringView ledger_name,

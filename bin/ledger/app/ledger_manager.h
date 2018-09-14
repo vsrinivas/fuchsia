@@ -58,6 +58,15 @@ class LedgerManager : public LedgerImpl::Delegate,
       storage::PageIdView page_id,
       fit::function<void(Status, PageClosedAndSynced)> callback);
 
+  // Checks whether the given page is closed, offline and empty. The result
+  // returned in the callback will be |PageClosedOfflineAndEmpty:UNKNOWN| if the
+  // page is opened after calling this method and before the callback is called.
+  // Otherwise it will be |YES| or |NO| depending on whether the page is offline
+  // and empty or not.
+  void PageIsClosedOfflineAndEmpty(
+      storage::PageIdView page_id,
+      fit::function<void(Status, PageClosedOfflineAndEmpty)> callback);
+
   // Deletes the local copy of the page. If the page is currently open, the
   // callback will be called with |ILLEGAL_STATE|.
   void DeletePageStorage(convert::ExtendedStringView page_id,
@@ -124,6 +133,17 @@ class LedgerManager : public LedgerImpl::Delegate,
   std::unique_ptr<PageManager> NewPageManager(
       std::unique_ptr<storage::PageStorage> page_storage,
       PageManager::PageStorageState state);
+
+  // Checks whether the given page is closed and staisfies the given
+  // |predicate|. The result returned in the callback will be
+  // |YesNoUnknown:UNKNOWN| if the page is opened after calling this method and
+  // before the callback is called. Otherwise it will be |YES| or |NO| depending
+  // on whether the predicate is satisfied.
+  void PageIsClosedAndSatisfiesPredicate(
+      storage::PageIdView page_id,
+      fit::function<void(PageManager*, fit::function<void(Status, bool)>)>
+          predicate,
+      fit::function<void(Status, YesNoUnknown)> callback);
 
   // If the page is among the ones whose usage is being tracked, marks this page
   // as opened. See also |page_was_opened_map_|.

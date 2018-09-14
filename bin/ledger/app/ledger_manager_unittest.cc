@@ -54,6 +54,14 @@ class DelayIsSyncedCallbackFakePageStorage
     }
   }
 
+  void IsEmpty(fit::function<void(storage::Status, bool)> callback) override {
+    callback(storage::Status::OK, true);
+  }
+
+  bool IsOnline() override {
+    return false;
+  }
+
   void DelayIsSyncedCallback(bool delay_callback) {
     delay_callback_ = delay_callback;
   }
@@ -153,6 +161,19 @@ class FakeLedgerStorage : public storage::LedgerStorage {
     page_storages_[page_id_string]->set_syned(is_synced);
   }
 
+  void set_page_storage_offline_empty(storage::PageIdView page_id,
+                                      bool is_offline_empty) {
+    storage::PageId page_id_string = page_id.ToString();
+    if (is_offline_empty) {
+      offline_empty_pages_.insert(page_id_string);
+    } else {
+      auto it = offline_empty_pages_.find(page_id_string);
+      if (it != offline_empty_pages_.end()) {
+        offline_empty_pages_.erase(it);
+      }
+    }
+  }
+
   bool should_get_page_fail = false;
   std::vector<storage::PageId> create_page_calls;
   std::vector<storage::PageId> get_page_calls;
@@ -163,6 +184,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   std::map<storage::PageId, DelayIsSyncedCallbackFakePageStorage*>
       page_storages_;
   std::set<storage::PageId> synced_pages_;
+  std::set<storage::PageId> offline_empty_pages_;
   std::set<storage::PageId> pages_with_delayed_callback;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerStorage);
@@ -445,6 +467,62 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckUnknown) {
   EXPECT_TRUE(page_is_closed_and_synced_called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(PageClosedAndSynced::UNKNOWN, is_closed_and_synced);
+}
+
+TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckNotFound) {
+  bool called;
+  Status status;
+  PageClosedOfflineAndEmpty is_closed_offline_empty;
+
+  ledger::PageId id = RandomId();
+
+  // Check for a page that doesn't exist.
+  storage_ptr->should_get_page_fail = true;
+  ledger_manager_->PageIsClosedOfflineAndEmpty(
+      id.id, callback::Capture(callback::SetWhenCalled(&called), &status,
+                               &is_closed_offline_empty));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
+}
+
+TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
+  bool called;
+  Status status;
+  PageClosedOfflineAndEmpty is_closed_offline_empty;
+
+  storage_ptr->should_get_page_fail = false;
+  PagePtr page;
+  ledger::PageId id = RandomId();
+  storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
+
+  ledger_->GetPage(
+      fidl::MakeOptional(id), page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  storage_ptr->set_page_storage_offline_empty(storage_page_id, true);
+  ledger_manager_->PageIsClosedOfflineAndEmpty(
+      storage_page_id, callback::Capture(callback::SetWhenCalled(&called),
+                                         &status, &is_closed_offline_empty));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(PageClosedOfflineAndEmpty::NO, is_closed_offline_empty);
+
+  // Close the page. PageClosedOfflineAndEmpty should now be true.
+  page.Unbind();
+  RunLoopUntilIdle();
+
+  ledger_manager_->PageIsClosedOfflineAndEmpty(
+      storage_page_id, callback::Capture(callback::SetWhenCalled(&called),
+                                         &status, &is_closed_offline_empty));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(PageClosedOfflineAndEmpty::YES, is_closed_offline_empty);
 }
 
 // Verifies that two successive calls to GetPage do not create 2 storages.

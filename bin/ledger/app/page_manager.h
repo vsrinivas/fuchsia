@@ -84,6 +84,9 @@ class PageManager : public ledger_internal::PageDebug {
   // Checks whether there are any unsynced commits or pieces in this page.
   void IsSynced(fit::function<void(Status, bool)> callback);
 
+  // Checks whether the page is offline and has no entries.
+  void IsOfflineAndEmpty(fit::function<void(Status, bool)> callback);
+
   // Returns true if this PageManager can be deleted without interrupting
   // syncing, merging, or requests related to this page.
   bool IsEmpty();

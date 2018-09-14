@@ -31,7 +31,7 @@ bool DiskCleanupManagerImpl::IsEmpty() {
 }
 
 void DiskCleanupManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
-  page_eviction_manager_.TryCleanUp(std::move(callback));
+  page_eviction_manager_.TryEvictPages(std::move(callback));
 }
 
 void DiskCleanupManagerImpl::OnPageOpened(fxl::StringView ledger_name,

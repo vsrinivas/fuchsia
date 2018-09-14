@@ -39,7 +39,10 @@ class PageEvictionManagerImpl : public PageEvictionManager {
 
   bool IsEmpty() override;
 
-  void TryCleanUp(fit::function<void(Status)> callback) override;
+  void TryEvictPages(fit::function<void(Status)> callback) override;
+
+  void EvictIfEmpty(fxl::StringView ledger_name, storage::PageIdView page_id,
+                    fit::function<void(Status)> callback) override;
 
   void OnPageOpened(fxl::StringView ledger_name,
                     storage::PageIdView page_id) override;
@@ -85,11 +88,17 @@ class PageEvictionManagerImpl : public PageEvictionManager {
   void EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
                  fit::function<void(Status)> callback);
 
-  // Checks whether a page can be evicted. We can evict pages that are not
-  // currently used and have no unsynced commits or objects.
-  Status CanEvictPage(coroutine::CoroutineHandler* handler,
-                      fxl::StringView ledger_name, storage::PageIdView page_id,
-                      bool* can_evict);
+  // Checks whether a page is not currently used and has no unsynced commits or
+  // objects, and thus can be evicted.
+  Status CanEvictSyncedPage(coroutine::CoroutineHandler* handler,
+                            fxl::StringView ledger_name,
+                            storage::PageIdView page_id, bool* can_evict);
+
+  // Checks whether a page is closed, offline and empty, and thus can be
+  // evicted.
+  Status CanEvictEmptyPage(coroutine::CoroutineHandler* handler,
+                           fxl::StringView ledger_name,
+                           storage::PageIdView page_id, bool* can_evict);
 
   // Computes the list of PageInfo for all pages that are not currently open,
   // ordered by the timestamp of their last usage, in ascending order.

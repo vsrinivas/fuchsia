@@ -131,6 +131,19 @@ void PageManager::IsSynced(fit::function<void(Status, bool)> callback) {
       });
 }
 
+void PageManager::IsOfflineAndEmpty(
+    fit::function<void(Status, bool)> callback) {
+  if (page_storage_->IsOnline()) {
+    callback(Status::OK, false);
+    return;
+  }
+  // The page is offline. Check and return if it's also empty.
+  page_storage_->IsEmpty(
+      [callback = std::move(callback)](storage::Status status, bool is_empty) {
+        callback(PageUtils::ConvertStatus(status), is_empty);
+      });
+}
+
 bool PageManager::IsEmpty() {
   return pages_.empty() && snapshots_.empty() && delaying_facades_.empty() &&
          merge_resolver_->IsEmpty() && (!page_sync_ || page_sync_->IsIdle()) &&

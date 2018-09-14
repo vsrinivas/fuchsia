@@ -54,6 +54,9 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   void PageIsClosedAndSynced(
       fxl::StringView ledger_name, storage::PageIdView page_id,
       fit::function<void(Status, PageClosedAndSynced)> callback) override;
+  void PageIsClosedOfflineAndEmpty(
+      fxl::StringView ledger_name, storage::PageIdView page_id,
+      fit::function<void(Status, PageClosedOfflineAndEmpty)> callback) override;
   void DeletePageStorage(fxl::StringView ledger_name,
                          storage::PageIdView page_id,
                          fit::function<void(Status)> callback) override;
