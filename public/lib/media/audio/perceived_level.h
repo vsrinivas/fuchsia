@@ -11,9 +11,9 @@ namespace media {
 class PerceivedLevel {
  public:
   // Converts a gain in db to an audio 'level' in the range 0.0 to 1.0
-  // inclusive. |gain| values of -60db or less yield level value 0.0. |gain|
-  // values of 0db or more yield level value 1.0.
-  static float GainToLevel(float gain);
+  // inclusive. |gain_db| values of -60db or less yield level value 0.0.
+  // |gain_db| values of 0db or more yield level value 1.0.
+  static float GainToLevel(float gain_db);
 
   // Converts an audio 'level' in the range 0.0 to 1.0 inclusive to a gain
   // in db. |level| values of 0.0 or less yield gain value -160db. |level|
@@ -22,10 +22,10 @@ class PerceivedLevel {
   static float LevelToGain(float level);
 
   // Converts a gain in db to an audio 'level' in the range 0 to |max_level|
-  // inclusive. |gain| values of -60db or less yield level value 0. |gain|
+  // inclusive. |gain_db| values of -60db or less yield level value 0. |gain_db|
   // values of 0db or more yield level value |max_level|. |max_level| must be
   // at least 1.
-  static int GainToLevel(float gain, int max_level);
+  static int GainToLevel(float gain_db, int max_level);
 
   // Converts an audio 'level' in the range 0 to |max_level| inclusive to a
   // gain in db. |level| values of 0 or less yield gain value -160db. |level|

@@ -246,7 +246,7 @@ class VolApp {
   }
 
   void FormatGainMute(std::ostream& os, const AudioGainInfo& info) {
-    int level = PerceivedLevel::GainToLevel(info.db_gain, kLevelMax);
+    int level = PerceivedLevel::GainToLevel(info.gain_db, kLevelMax);
 
     namespace flag = ::fuchsia::media;
     bool muted = (info.flags & flag::AudioGainInfoFlag_Mute) != 0;
@@ -256,7 +256,7 @@ class VolApp {
     os << std::string(level, '=') << "|" << std::string(kLevelMax - level, '-')
        << " :: [" << (muted ? " muted " : "unmuted") << "]"
        << (can_agc ? (agc ? "[agc]" : "[   ]") : "") << " " << std::fixed
-       << std::setprecision(2) << info.db_gain << " dB";
+       << std::setprecision(2) << info.gain_db << " dB";
   }
 
   // Calls |HandleKeystroke| on the message loop when console input is ready.
@@ -320,7 +320,7 @@ class VolApp {
       std::cout << "Name    : " << dev.name << std::endl;
       std::cout << "UID     : " << dev.unique_id << std::endl;
       std::cout << "Default : " << (dev.is_default ? "yes" : "no") << std::endl;
-      std::cout << "Gain    : " << dev.gain_info.db_gain << " dB" << std::endl;
+      std::cout << "Gain    : " << dev.gain_info.gain_db << " dB" << std::endl;
       std::cout << "Mute    : " << (muted ? "yes" : "no") << std::endl;
       if (can_agc) {
         std::cout << "AGC     : " << (agc_enb ? "yes" : "no") << std::endl;
@@ -341,12 +341,12 @@ class VolApp {
 
     const auto& dev_state = devices_[control_token_];
     AudioGainInfo cmd = dev_state.gain_info;
-    cmd.db_gain = relative ? (cmd.db_gain + val) : val;
+    cmd.gain_db = relative ? (cmd.gain_db + val) : val;
 
     if (!interactive()) {
       std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output")
                 << " \"" << dev_state.name << "\" gain to "
-                << std::setprecision(2) << cmd.db_gain << " dB" << std::endl;
+                << std::setprecision(2) << cmd.gain_db << " dB" << std::endl;
     }
 
     audio_->SetDeviceGain(control_token_, std::move(cmd),

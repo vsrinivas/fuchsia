@@ -31,8 +31,8 @@ class Gain {
   //
   // Examples: AudioOut gain + Output gain = combined gain for a playback path.
   // Input device gain + audio in gain = combined gain for an audio input path.
-  static constexpr float kMinGainDb = fuchsia::media::MUTED_GAIN;
-  static constexpr float kMaxGainDb = fuchsia::media::MAX_GAIN;
+  static constexpr float kMinGainDb = fuchsia::media::MUTED_GAIN_DB;
+  static constexpr float kMaxGainDb = fuchsia::media::MAX_GAIN_DB;
 
   static constexpr AScale kUnityScale = 1.0f;
   static constexpr AScale kMaxScale = 15.8489319f;  // kMaxGainDb is +24.0 dB

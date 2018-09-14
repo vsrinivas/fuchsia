@@ -793,8 +793,8 @@ void AudioInImpl::BindGainControl(
 }
 
 void AudioInImpl::SetGain(float gain_db) {
-  if ((gain_db < fuchsia::media::MUTED_GAIN) ||
-      (gain_db > fuchsia::media::MAX_GAIN)) {
+  if ((gain_db < fuchsia::media::MUTED_GAIN_DB) ||
+      (gain_db > fuchsia::media::MAX_GAIN_DB)) {
     FXL_LOG(ERROR) << "Invalid Gain " << gain_db;
     Shutdown();
     return;
@@ -844,8 +844,8 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
 
   // If our current audio in gain is muted, we have nothing to do after filling
   // with silence.
-  float capture_gain = gain_db_.load();
-  if (capture_gain <= fuchsia::media::MUTED_GAIN) {
+  float capture_gain_db = gain_db_.load();
+  if (capture_gain_db <= fuchsia::media::MUTED_GAIN_DB) {
     return true;
   }
 
@@ -878,7 +878,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
     // Figure out the fixed point gain scalar we will apply to this mix
     // operation by composing our gain with the link gain state.  The link's
     // gain helper class re-composes the source/dest gain combination if needed.
-    bk->amplitude_scale = link->gain().GetGainScale(capture_gain);
+    bk->amplitude_scale = link->gain().GetGainScale(capture_gain_db);
     // If this gain scale is at or below our mute threshold, skip this source,
     // as it will not contribute to this mix pass.
     if (bk->amplitude_scale <= Gain::MuteThreshold()) {

@@ -122,10 +122,10 @@ bool MediaApp::ParameterRangeChecks() {
   }
 
   stream_gain_db_ = fbl::clamp<float>(
-      stream_gain_db_, fuchsia::media::MUTED_GAIN, fuchsia::media::MAX_GAIN);
+      stream_gain_db_, fuchsia::media::MUTED_GAIN_DB, fuchsia::media::MAX_GAIN_DB);
 
   system_gain_db_ =
-      fbl::clamp<float>(system_gain_db_, fuchsia::media::MUTED_GAIN, 0.0f);
+      fbl::clamp<float>(system_gain_db_, fuchsia::media::MUTED_GAIN_DB, 0.0f);
 
   return ret_val;
 }

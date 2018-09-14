@@ -160,15 +160,15 @@ void AudioInput::ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
     // ridiculously small step size, just apply a clamp based on min/max.
     constexpr float kStepSizeLimit = 1e-6;
     if (caps.gain_step <= kStepSizeLimit) {
-      in_out_info->db_gain =
-          fbl::clamp(in_out_info->db_gain, caps.min_gain, caps.max_gain);
+      in_out_info->gain_db =
+          fbl::clamp(in_out_info->gain_db, caps.min_gain, caps.max_gain);
     } else {
       int32_t min_steps = static_cast<int32_t>(caps.min_gain / caps.gain_step);
       int32_t max_steps = static_cast<int32_t>(caps.max_gain / caps.gain_step);
       int32_t steps = fbl::clamp(
-          static_cast<int32_t>(in_out_info->db_gain / caps.gain_step),
+          static_cast<int32_t>(in_out_info->gain_db / caps.gain_step),
           min_steps, max_steps);
-      in_out_info->db_gain = static_cast<float>(steps) * caps.gain_step;
+      in_out_info->gain_db = static_cast<float>(steps) * caps.gain_step;
     }
   }
 }

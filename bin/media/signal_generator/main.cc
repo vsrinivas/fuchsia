@@ -90,10 +90,11 @@ void usage(const char* prog_name) {
   printf(
       "\n\t--%s=<GAIN>\t\tSet AudioOut (stream) Gain to [%.1f, %.1f] dB "
       "(default %s)\n",
-      kStreamGainSwitch, fuchsia::media::MUTED_GAIN, fuchsia::media::MAX_GAIN,
-      kStreamGainDefaultDb);
+      kStreamGainSwitch, fuchsia::media::MUTED_GAIN_DB,
+      fuchsia::media::MAX_GAIN_DB, kStreamGainDefaultDb);
   printf("\t--%s=<GAIN>\t\tSet System Gain to [%.1f, 0.0] dB (default %s)\n",
-         kSystemGainSwitch, fuchsia::media::MUTED_GAIN, kSystemGainDefaultDb);
+         kSystemGainSwitch, fuchsia::media::MUTED_GAIN_DB,
+         kSystemGainDefaultDb);
   printf("\t--%s[=<0|1>]\t\tSet System Mute (1=mute, 0=unmute, default %s)\n",
          kSystemMuteSwitch, kSystemMuteDefault);
   printf("\t\t\t\tNote: changes to System Gain/Mute persist after playback.\n");

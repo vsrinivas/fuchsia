@@ -112,7 +112,7 @@ void AudioCoreImpl::CreateAudioRenderer2(
 
 void AudioCoreImpl::SetSystemGain(float gain_db) {
   gain_db = std::max(std::min(gain_db, kMaxSystemAudioGainDb),
-                     fuchsia::media::MUTED_GAIN);
+                     fuchsia::media::MUTED_GAIN_DB);
 
   if (system_gain_db_ == gain_db) {
     return;

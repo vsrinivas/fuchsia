@@ -214,8 +214,8 @@ bool AudioDeviceSettings::SetGainInfo(
   namespace fm = ::fuchsia::media;
 
   if ((set_flags & fm::SetAudioGainFlag_GainValid) &&
-      (gain_state_.gain_db != req.db_gain)) {
-    gain_state_.gain_db = req.db_gain;
+      (gain_state_.gain_db != req.gain_db)) {
+    gain_state_.gain_db = req.gain_db;
     dirtied =
         static_cast<audio_set_gain_flags_t>(dirtied | AUDIO_SGF_GAIN_VALID);
   }
@@ -281,7 +281,7 @@ void AudioDeviceSettings::GetGainInfo(
   // contention.
   fbl::AutoLock lock(&settings_lock_);
 
-  out_info->db_gain = gain_state_.gain_db;
+  out_info->gain_db = gain_state_.gain_db;
   out_info->flags = 0;
 
   if (can_mute_ && gain_state_.muted) {
@@ -355,7 +355,7 @@ zx_status_t AudioDeviceSettings::Deserialize(const fbl::unique_fd& storage) {
   // Extract the gain information
   ::fuchsia::media::AudioGainInfo gain_info;
   const auto& gain_obj = doc["gain"].GetObject();
-  gain_info.db_gain = gain_obj["db_gain"].GetDouble();
+  gain_info.gain_db = gain_obj["db_gain"].GetDouble();
 
   if (gain_obj["mute"].GetBool()) {
     gain_info.flags |= ::fuchsia::media::AudioGainInfoFlag_Mute;
@@ -374,7 +374,7 @@ zx_status_t AudioDeviceSettings::Deserialize(const fbl::unique_fd& storage) {
 
   // Success!
   return ZX_OK;
-}  // namespace audio
+}
 
 zx_status_t AudioDeviceSettings::Serialize() {
   CancelCommitTimeouts();
@@ -393,7 +393,7 @@ zx_status_t AudioDeviceSettings::Serialize() {
   writer.Key("gain");
   writer.StartObject();
   writer.Key("db_gain");
-  writer.Double(gain_info.db_gain);
+  writer.Double(gain_info.gain_db);
   writer.Key("mute");
   writer.Bool(gain_info.flags & ::fuchsia::media::AudioGainInfoFlag_Mute);
   writer.Key("agc");

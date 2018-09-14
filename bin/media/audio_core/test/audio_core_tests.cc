@@ -221,16 +221,16 @@ TEST_F(AudioCoreTest, SetSystemGain_Basic) {
 TEST_F(AudioCoreTest, SetSystemMute_Independence) {
   SaveState();  // Sets system Gain to 0.0 dB and Mute to false.
 
-  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN);
+  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
   // Expect: callback; Gain is mute-equivalent; Mute is unchanged.
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN);
+  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN_DB);
   EXPECT_FALSE(received_mute_);
 
   audio_->SetSystemMute(true);
   // Expect: callback; Mute is set (despite Gain's kMutedGain value).
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN);
+  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN_DB);
   EXPECT_TRUE(received_mute_);
 
   audio_->SetSystemGain(-42.0f);
@@ -257,10 +257,10 @@ TEST_F(AudioCoreTest, SetSystemMute_NoCallbackIfNoChange) {
   // Expect: timeout (no callback); no change to Mute, regardless of Gain.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
 
-  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN);
+  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
   // Expect: gain-change callback received (even though Mute is set).
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN);
+  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN_DB);
   EXPECT_TRUE(received_mute_);
   audio_->SetSystemMute(true);
   // Expect: timeout (no callback); no change to Mute, regardless of Gain.
@@ -269,7 +269,7 @@ TEST_F(AudioCoreTest, SetSystemMute_NoCallbackIfNoChange) {
   audio_->SetSystemMute(false);
   // Expect: gain-change callback received; Mute is updated, Gain is unchanged.
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN);
+  EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN_DB);
   EXPECT_FALSE(received_mute_);
   audio_->SetSystemMute(false);
   // Expect: timeout (no callback); no change to Mute, regardless of Gain.
@@ -307,17 +307,17 @@ TEST_F(AudioCoreTest, SetSystemGain_NoCallbackIfNoChange) {
   // Expect: timeout (no callback); no change to Gain, regardlesss of Mute.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
 
-  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN);
+  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
   // Expect: gain-change callback received (Gain is now kMutedGain).
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN);
+  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
   // Expect: timeout (no callback); no change to Gain, regardlesss of Mute.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
 
   audio_->SetSystemMute(false);
   // Expect: gain-change callback received (Mute is now false).
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN);
+  audio_->SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
   // Expect: timeout (no callback); no change to Gain, regardlesss of Mute.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
 

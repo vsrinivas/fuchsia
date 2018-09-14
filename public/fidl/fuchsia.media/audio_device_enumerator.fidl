@@ -9,7 +9,7 @@ const uint32 AudioGainInfoFlag_AgcSupported = 0x02;
 const uint32 AudioGainInfoFlag_AgcEnabled = 0x04;
 
 struct AudioGainInfo {
-  float32 db_gain;
+  float32 gain_db;
   uint32 flags;
 };
 

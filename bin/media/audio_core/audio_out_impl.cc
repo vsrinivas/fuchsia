@@ -644,17 +644,18 @@ void AudioOutImpl::Pause(PauseCallback callback) {
 
 void AudioOutImpl::PauseNoReply() { Pause(nullptr); }
 
-void AudioOutImpl::SetGain(float gain) {
+void AudioOutImpl::SetGain(float gain_db) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
-  if (gain_db_ != gain) {
-    if (gain > fuchsia::media::MAX_GAIN) {
-      FXL_LOG(ERROR) << "Gain value too large (" << gain << ") for audio out.";
+  if (gain_db_ != gain_db) {
+    if (gain_db > fuchsia::media::MAX_GAIN_DB) {
+      FXL_LOG(ERROR) << "Gain value too large (" << gain_db
+                     << ") for audio out.";
       return;
     }
 
-    gain_db_ = gain;
+    gain_db_ = gain_db;
 
-    float effective_gain_db = mute_ ? fuchsia::media::MUTED_GAIN : gain_db_;
+    float effective_gain_db = mute_ ? fuchsia::media::MUTED_GAIN_DB : gain_db_;
 
     fbl::AutoLock links_lock(&links_lock_);
     for (const auto& link : dest_links_) {
@@ -673,7 +674,7 @@ void AudioOutImpl::SetMute(bool mute) {
   if (mute_ != mute) {
     mute_ = mute;
 
-    float effective_gain_db = mute_ ? fuchsia::media::MUTED_GAIN : gain_db_;
+    float effective_gain_db = mute_ ? fuchsia::media::MUTED_GAIN_DB : gain_db_;
 
     fbl::AutoLock links_lock(&links_lock_);
     for (const auto& link : dest_links_) {
@@ -710,8 +711,8 @@ void AudioOutImpl::ReportNewMinClockLeadTime() {
 }
 
 // Shorthand to save horizontal space for the thunks which follow.
-void AudioOutImpl::GainControlBinding::SetGain(float gain) {
-  owner_->SetGain(gain);
+void AudioOutImpl::GainControlBinding::SetGain(float gain_db) {
+  owner_->SetGain(gain_db);
 }
 
 void AudioOutImpl::GainControlBinding::SetMute(bool muted) {

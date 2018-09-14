@@ -18,6 +18,6 @@ interface GainControl {
   0x0104: -> OnGainMuteChanged(float32 gain_db, bool muted);
 };
 
-const float32 MUTED_GAIN = -160.0;
+const float32 MUTED_GAIN_DB = -160.0;
 
-const float32 MAX_GAIN = 24.0;
+const float32 MAX_GAIN_DB = 24.0;

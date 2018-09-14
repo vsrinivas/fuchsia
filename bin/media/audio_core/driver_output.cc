@@ -271,8 +271,8 @@ void DriverOutput::ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
   FXL_DCHECK(in_out_info != nullptr);
 
   // We do not currently allow more than unity gain for audio outputs.
-  if (in_out_info->db_gain > 0.0) {
-    in_out_info->db_gain = 0;
+  if (in_out_info->gain_db > 0.0) {
+    in_out_info->gain_db = 0;
   }
 
   // Audio outputs should never support AGC
