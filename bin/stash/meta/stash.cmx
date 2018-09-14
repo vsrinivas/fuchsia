@@ -4,6 +4,6 @@
     },
     "sandbox": {
         "features": [ "persistent-storage" ],
-        "services": [ "fuchsia.stash.Store" ]
+        "services": [ "fuchsia.stash.Store", "fuchsia.logger.LogSink" ]
     }
 }
