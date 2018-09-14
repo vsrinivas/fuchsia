@@ -47,32 +47,6 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
     // found.
     result_.status = fuchsia::modular::ExecuteStatus::OK;
 
-    if (mod_name_.is_null() || mod_name_->empty()) {
-      FindModule(flow);
-      return;
-    }
-
-    // Start by trying to update the mod instead of creating a new one.
-    fuchsia::modular::UpdateMod command;
-    fidl::Clone(intent_.parameters, &command.parameters);
-    command.mod_name = mod_name_.Clone();
-    AddUpdateModOperation(
-        &operation_queue_, story_storage_, std::move(command),
-        [this, flow](fuchsia::modular::ExecuteResult result) {
-          // UpdateMod failing with INVALID_MOD means that the mod to update
-          // wasn't found, doesn't exist. So the flow continues to resolve the
-          // intent and create the mod.
-          if (result.status == fuchsia::modular::ExecuteStatus::INVALID_MOD) {
-            FindModule(flow);
-            return;
-          }
-          result_ = std::move(result);
-          // Operation finishes since |flow| goes out of scope.
-        });
-  }
-
-  //  Find the module through module resolver.
-  void FindModule(FlowToken flow) {
     AddFindModulesOperation(
         &operation_queue_, story_storage_, module_resolver_, entity_resolver_,
         CloneOptional(intent_), surface_parent_mod_name_.Clone(),

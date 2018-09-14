@@ -678,7 +678,7 @@ TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
 
   // Create AddMod intent for a mod with the same name as the one we created
   // previously.
-  fuchsia::modular::Intent intent2;
+  auto intent2 = CreateEmptyIntent("intent_action", "mod_url");
   AddJsonParameter(&intent2, "param_json", R"({"@type": "baz"})");
   fuchsia::modular::AddMod add_mod;
   add_mod.mod_name.reset({"parent_mod", "mod"});

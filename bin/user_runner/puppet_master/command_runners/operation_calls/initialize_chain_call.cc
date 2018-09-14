@@ -71,11 +71,7 @@ class InitializeChainCall
         AddSetLinkValueOperation(
             &operations_, story_storage_, std::move(out_path),
             [initial_json](fidl::StringPtr* value) {
-              if (value->is_null()) {
-                // This is a new link. If it weren't, *value
-                // would be set to some valid JSON.
                 *value = initial_json;
-              }
             },
             [this, flow](fuchsia::modular::ExecuteResult result) {
               if (result.status != fuchsia::modular::ExecuteStatus::OK) {
