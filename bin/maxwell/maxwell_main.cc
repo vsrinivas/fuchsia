@@ -51,8 +51,7 @@ const char kConfigSchema[] = R"SCHEMA(
     "session_agents": {
       "type": "array",
       "items": { "type": "string" }
-    },
-    "mi_dashboard": { "type": "boolean" }
+    }
   },
   "required": [ "startup_agents" ],
   "extra_properties": false
@@ -96,10 +95,6 @@ bool LoadAndValidateConfig(const std::string& path, Config* out) {
 
   // Read values into the |out| struct.
 
-  if (config_doc.HasMember("mi_dashboard")) {
-    out->mi_dashboard = config_doc["mi_dashboard"].GetBool();
-  }
-
   for (const auto& agent : config_doc["startup_agents"].GetArray()) {
     out->startup_agents.push_back(agent.GetString());
   }
@@ -131,8 +126,7 @@ with the following format:
   "session_agents": [
     "/path/to/binary1",
     "/path/to/binary2",
-  ],
-  "mi_dashboard": true/false,
+  ]
 }
 )USAGE";
 
@@ -156,8 +150,8 @@ int main(int argc, const char** argv) {
       return 1;
     }
 
-    // Startup agents from all config files will be merged.  mi_dashboard and
-    // other global settings will be superseded by later files.
+    // Startup agents from all config files will be merged. Other global
+    // settings will be superseded by later files.
     for (size_t i = 1; i < config_paths_list.size(); i++) {
       auto const& path = config_paths_list[i];
       if (files::IsFile(path) &&

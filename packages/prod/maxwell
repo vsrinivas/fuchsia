@@ -1,6 +1,5 @@
 {
     "packages": [
-        "//peridot/bin/action_log",
         "//peridot/bin/context_engine",
         "//peridot/bin/agents/clipboard:clipboard_agent",
         "//peridot/bin/maxwell",

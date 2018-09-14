@@ -10,10 +10,6 @@ fidl("fuchsia.modular") {
   sdk_category = "partner"
 
   sources = [
-    "action_log/component.fidl",
-    "action_log/factory.fidl",
-    "action_log/listener.fidl",
-    "action_log/user.fidl",
     "agent/agent.fidl",
     "agent/agent_context.fidl",
     "agent/agent_controller/agent_controller.fidl",

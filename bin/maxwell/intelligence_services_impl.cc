@@ -11,12 +11,10 @@ namespace maxwell {
 IntelligenceServicesImpl::IntelligenceServicesImpl(
     fuchsia::modular::ComponentScope scope,
     fuchsia::modular::ContextEngine* context_engine,
-    fuchsia::modular::SuggestionEngine* suggestion_engine,
-    fuchsia::modular::UserActionLog* user_action_log)
+    fuchsia::modular::SuggestionEngine* suggestion_engine)
     : scope_(std::move(scope)),
       context_engine_(context_engine),
-      suggestion_engine_(suggestion_engine),
-      user_action_log_(user_action_log) {}
+      suggestion_engine_(suggestion_engine) {}
 
 fuchsia::modular::ComponentScope IntelligenceServicesImpl::CloneScope() {
   fuchsia::modular::ComponentScope scope;
@@ -50,11 +48,6 @@ void IntelligenceServicesImpl::GetProposalPublisher(
   // ComponentInfo.
   suggestion_engine_->RegisterProposalPublisher(component_id,
                                                 std::move(request));
-}
-
-void IntelligenceServicesImpl::GetActionLog(
-    fidl::InterfaceRequest<fuchsia::modular::ComponentActionLog> request) {
-  user_action_log_->GetComponentActionLog(CloneScope(), std::move(request));
 }
 
 void IntelligenceServicesImpl::RegisterQueryHandler(

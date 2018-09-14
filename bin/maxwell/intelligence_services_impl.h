@@ -16,8 +16,7 @@ class IntelligenceServicesImpl : public fuchsia::modular::IntelligenceServices {
   IntelligenceServicesImpl(
       fuchsia::modular::ComponentScope scope,
       fuchsia::modular::ContextEngine* context_engine,
-      fuchsia::modular::SuggestionEngine* suggestion_engine,
-      fuchsia::modular::UserActionLog* user_action_log);
+      fuchsia::modular::SuggestionEngine* suggestion_engine);
 
   void GetContextReader(
       fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) override;
@@ -27,9 +26,6 @@ class IntelligenceServicesImpl : public fuchsia::modular::IntelligenceServices {
   void GetProposalPublisher(
       fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> request)
       override;
-
-  void GetActionLog(fidl::InterfaceRequest<fuchsia::modular::ComponentActionLog>
-                        request) override;
 
   void RegisterQueryHandler(
       fidl::InterfaceHandle<fuchsia::modular::QueryHandler> query_handler)
@@ -41,7 +37,6 @@ class IntelligenceServicesImpl : public fuchsia::modular::IntelligenceServices {
   fuchsia::modular::ComponentScope scope_;
   fuchsia::modular::ContextEngine* const context_engine_;        // Not owned.
   fuchsia::modular::SuggestionEngine* const suggestion_engine_;  // Not owned.
-  fuchsia::modular::UserActionLog* const user_action_log_;       // Not owned.
 };
 
 }  // namespace maxwell

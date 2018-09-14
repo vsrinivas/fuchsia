@@ -84,7 +84,6 @@ class UserIntelligenceProviderImpl
   fuchsia::modular::ContextEnginePtr context_engine_;
   component::Services suggestion_services_;
   fuchsia::modular::SuggestionEnginePtr suggestion_engine_;
-  fuchsia::modular::UserActionLogPtr user_action_log_;
 
   std::map<std::string, SessionAgentData> session_agents_;
 

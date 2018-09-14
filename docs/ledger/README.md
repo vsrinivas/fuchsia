@@ -55,6 +55,5 @@ Design documentation:
 
 
 [cloud provider]: /public/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
-[component]: /public/fidl/fuchsia.modular/action_log/component.fidl
 [component context]: /public/fidl/fuchsia.modular/component/component_context.fidl
 [Firestore]: /bin/cloud_provider_firestore/README.md

@@ -18,9 +18,6 @@ struct Config {
   // A list of Agents that get session capabilities such as Puppet master and
   // are started during Maxwell initialization.
   std::list<std::string> session_agents;
-
-  // Set to true if the MI Dashboard should be started.
-  bool mi_dashboard = false;
 };
 
 std::ostream& operator<<(std::ostream& out, const Config& config);

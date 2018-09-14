@@ -18,7 +18,6 @@ namespace maxwell {
 
 namespace {
 
-constexpr char kMIDashboardUrl[] = "mi_dashboard";
 constexpr char kUsageLogUrl[] = "usage_log";
 constexpr char kKronkUrl[] = "kronk";
 constexpr char kStoryInfoAgentUrl[] = "story_info";
@@ -106,8 +105,6 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   suggestion_engine_->Initialize(std::move(context_writer),
                                  std::move(context_reader),
                                  Duplicate(puppet_master_));
-
-  StartActionLog(suggestion_engine_.get());
 }
 
 void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
@@ -115,8 +112,7 @@ void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
     fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
   intelligence_services_bindings_.AddBinding(
       std::make_unique<IntelligenceServicesImpl>(
-          std::move(scope), context_engine_.get(), suggestion_engine_.get(),
-          user_action_log_.get()),
+          std::move(scope), context_engine_.get(), suggestion_engine_.get()),
       std::move(request));
 }
 
@@ -142,10 +138,6 @@ void UserIntelligenceProviderImpl::StartAgents(
 
   for (const auto& agent : config_.session_agents) {
     StartSessionAgent(agent);
-  }
-
-  if (config_.mi_dashboard) {
-    StartAgent(kMIDashboardUrl);
   }
 
   for (const auto& agent : config_.startup_agents) {
@@ -182,20 +174,6 @@ void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
   component_context_->ConnectToAgent(url, services.NewRequest(),
                                      controller.NewRequest());
   agent_controllers_.push_back(std::move(controller));
-}
-
-void UserIntelligenceProviderImpl::StartActionLog(
-    fuchsia::modular::SuggestionEngine* suggestion_engine) {
-  std::string url = "action_log";
-  component::Services action_log_services = StartTrustedApp(url);
-  fuchsia::modular::UserActionLogFactoryPtr action_log_factory =
-      action_log_services
-          .ConnectToService<fuchsia::modular::UserActionLogFactory>();
-  fuchsia::modular::ProposalPublisherPtr proposal_publisher;
-  suggestion_engine->RegisterProposalPublisher(url,
-                                               proposal_publisher.NewRequest());
-  action_log_factory->GetUserActionLog(std::move(proposal_publisher),
-                                       user_action_log_.NewRequest());
 }
 
 void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
@@ -291,7 +269,7 @@ UserIntelligenceProviderImpl::AddStandardServices(
         visible_stories_provider_->Duplicate(std::move(request));
       });
 
-  if (url == kMIDashboardUrl || url == kUsageLogUrl) {
+  if (url == kUsageLogUrl) {
     service_names.push_back(fuchsia::modular::ContextDebug::Name_);
     agent_host->AddService<fuchsia::modular::ContextDebug>(
         [this](fidl::InterfaceRequest<fuchsia::modular::ContextDebug> request) {
@@ -303,13 +281,6 @@ UserIntelligenceProviderImpl::AddStandardServices(
         [this](
             fidl::InterfaceRequest<fuchsia::modular::SuggestionDebug> request) {
           suggestion_services_.ConnectToService(std::move(request));
-        });
-
-    service_names.push_back(fuchsia::modular::UserActionLog::Name_);
-    agent_host->AddService<fuchsia::modular::UserActionLog>(
-        [this](
-            fidl::InterfaceRequest<fuchsia::modular::UserActionLog> request) {
-          user_action_log_->Duplicate(std::move(request));
         });
   }
 

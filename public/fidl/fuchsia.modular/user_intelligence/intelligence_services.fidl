@@ -14,7 +14,6 @@ interface IntelligenceServices {
   2: GetContextWriter(request<ContextWriter> context_writer);
 
   3: GetProposalPublisher(request<ProposalPublisher> proposal_publisher);
-  4: GetActionLog(request<ComponentActionLog> action_log);
 
-  5: RegisterQueryHandler(QueryHandler query_handler);
+  4: RegisterQueryHandler(QueryHandler query_handler);
 };
