@@ -75,10 +75,10 @@ ihda_dsp_protocol_ops_t IntelHDADSP::DSP_PROTO_THUNKS = {
         ZX_DEBUG_ASSERT(ctx);
         DEV->Disable();
     },
-    .irq_enable = [](void* ctx, ihda_dsp_irq_callback_t* callback, void* cookie) -> zx_status_t
+    .irq_enable = [](void* ctx, const ihda_dsp_irq_t* callback) -> zx_status_t
     {
         ZX_DEBUG_ASSERT(ctx);
-        return DEV->IrqEnable(callback, cookie);
+        return DEV->IrqEnable(callback);
     },
     .irq_disable = [](void* ctx)
     {
@@ -163,16 +163,16 @@ void IntelHDADSP::ProcessIRQ() {
     if (pp_regs() == nullptr) {
         return;
     }
-    if (irq_callback_ == nullptr) {
+    if (irq_callback_.callback == nullptr) {
         return;
     }
-    ZX_DEBUG_ASSERT(irq_cookie_ != nullptr);
+    ZX_DEBUG_ASSERT(irq_callback_.ctx != nullptr);
     ZX_DEBUG_ASSERT(pp_regs() != nullptr);
     uint32_t ppsts = REG_RD(&pp_regs()->ppsts);
     if (!(ppsts & HDA_PPSTS_PIS)) {
         return;
     }
-    irq_callback_(irq_cookie_);
+    irq_callback_.callback(irq_callback_.ctx);
 }
 
 zx_status_t IntelHDADSP::DeviceGetProtocol(uint32_t proto_id, void* protocol) {
@@ -282,15 +282,14 @@ void IntelHDADSP::Disable() {
     REG_WR(&pp_regs()->ppctl, 0u);
 }
 
-zx_status_t IntelHDADSP::IrqEnable(ihda_dsp_irq_callback_t* callback, void* cookie) {
+zx_status_t IntelHDADSP::IrqEnable(const ihda_dsp_irq_t* callback) {
     fbl::AutoLock dsp_lock(&dsp_lock_);
-    if (irq_callback_ != nullptr) {
+    if (irq_callback_.callback != nullptr) {
         return ZX_ERR_ALREADY_EXISTS;
     }
-    ZX_DEBUG_ASSERT(irq_cookie_ == nullptr);
+    ZX_DEBUG_ASSERT(irq_callback_.ctx == nullptr);
 
-    irq_callback_ = callback;
-    irq_cookie_ = cookie;
+    irq_callback_ = *callback;
 
     REG_SET_BITS<uint32_t>(&pp_regs()->ppctl, HDA_PPCTL_PIE);
 
@@ -300,8 +299,8 @@ zx_status_t IntelHDADSP::IrqEnable(ihda_dsp_irq_callback_t* callback, void* cook
 void IntelHDADSP::IrqDisable() {
     fbl::AutoLock dsp_lock(&dsp_lock_);
     REG_CLR_BITS<uint32_t>(&pp_regs()->ppctl, HDA_PPCTL_PIE);
-    irq_callback_ = nullptr;
-    irq_cookie_ = nullptr;
+    irq_callback_.callback = nullptr;
+    irq_callback_.ctx = nullptr;
 }
 
 zx_status_t IntelHDADSP::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out) {

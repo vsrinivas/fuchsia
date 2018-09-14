@@ -67,7 +67,7 @@ private:
     zx_status_t GetBti(zx_handle_t* out_handle);
     void Enable();
     void Disable();
-    zx_status_t IrqEnable(ihda_dsp_irq_callback_t* callback, void* cookie);
+    zx_status_t IrqEnable(const ihda_dsp_irq_t* callback);
     void IrqDisable();
 
     // ZX_PROTOCOL_IHDA_CODEC Interface
@@ -87,8 +87,7 @@ private:
     IntelHDAController& controller_;
 
     fbl::Mutex dsp_lock_;
-    ihda_dsp_irq_callback_t* irq_callback_ TA_GUARDED(dsp_lock_) = nullptr;
-    void* irq_cookie_ TA_GUARDED(dsp_lock_) = nullptr;
+    ihda_dsp_irq_t irq_callback_ TA_GUARDED(dsp_lock_) = {nullptr, nullptr};
 
     // Driver connection state
     fbl::Mutex codec_driver_channel_lock_;

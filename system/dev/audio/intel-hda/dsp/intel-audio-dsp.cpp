@@ -164,11 +164,15 @@ zx_status_t IntelAudioDsp::SetupDspDevice() {
 
     // Set IRQ handler and enable HDA interrupt.
     // Interrupts are still masked at the DSP level.
-    res = ihda_dsp_irq_enable(&ihda_dsp_,
-                              [](void* cookie) {
-                                  auto thiz = static_cast<IntelAudioDsp*>(cookie);
-                                  thiz->ProcessIrq();
-                              }, this);
+
+    ihda_dsp_irq_t callback = {
+        [](void* cookie) {
+            auto thiz = static_cast<IntelAudioDsp*>(cookie);
+            thiz->ProcessIrq();
+        },
+        this,
+    };
+    res = ihda_dsp_irq_enable(&ihda_dsp_, &callback);
     if (res != ZX_OK) {
         LOG(ERROR, "Failed to set DSP interrupt callback (res %d)\n", res);
         return res;
@@ -179,7 +183,8 @@ zx_status_t IntelAudioDsp::SetupDspDevice() {
 
 zx_status_t IntelAudioDsp::ParseNhlt() {
     size_t size = 0;
-    zx_status_t res = device_get_metadata(codec_device(), MD_KEY_NHLT,
+    zx_status_t res = device_get_metadata(codec_device(),
+                                          *reinterpret_cast<const uint32_t*>(MD_KEY_NHLT),
                                           nhlt_buf_, sizeof(nhlt_buf_), &size);
     if (res != ZX_OK) {
         LOG(ERROR, "Failed to fetch NHLT (res %d)\n", res);
