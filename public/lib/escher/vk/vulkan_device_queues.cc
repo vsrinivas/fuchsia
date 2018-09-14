@@ -155,6 +155,7 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
 #if defined(OS_FUCHSIA)
   params.extension_names.insert(
       VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME);
+  params.extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
 #endif
 
   vk::PhysicalDevice physical_device;

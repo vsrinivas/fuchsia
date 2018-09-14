@@ -31,6 +31,11 @@ VulkanInstance::ProcAddrs::ProcAddrs(vk::Instance instance,
 }
 
 fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
+  params.extension_names.insert(
+      VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+  params.extension_names.insert(
+      VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
+
   FXL_DCHECK(ValidateLayers(params.layer_names));
   FXL_DCHECK(ValidateExtensions(params.extension_names));
 
