@@ -91,8 +91,8 @@ public:
     zx_status_t MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* size_out);
     zx_status_t UnmapPciMmio(uint32_t pci_bar);
     zx_status_t GetPciBti(uint32_t index, zx_handle_t* bti_out);
-    zx_status_t RegisterInterruptCallback(zx_intel_gpu_core_interrupt_callback_t callback,
-                                          void* data, uint32_t interrupt_mask);
+    zx_status_t RegisterInterruptCallback(const zx_intel_gpu_core_interrupt_t* callback,
+                                          uint32_t interrupt_mask);
     zx_status_t UnregisterInterruptCallback();
     uint64_t GttGetSize();
     zx_status_t GttAlloc(uint64_t page_count, uint64_t* addr_out);

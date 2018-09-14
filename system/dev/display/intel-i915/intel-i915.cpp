@@ -76,10 +76,10 @@ static zx_status_t get_pci_bti(void* ctx, uint32_t index, zx_handle_t* bti_out) 
 }
 
 static zx_status_t register_interrupt_callback(void* ctx,
-                                               zx_intel_gpu_core_interrupt_callback_t callback,
-                                               void* data, uint32_t interrupt_mask) {
+                                               const zx_intel_gpu_core_interrupt_t* callback,
+                                               uint32_t interrupt_mask) {
     return static_cast<i915::Controller*>(ctx)
-            ->RegisterInterruptCallback(callback, data, interrupt_mask);
+            ->RegisterInterruptCallback(callback, interrupt_mask);
 }
 
 static zx_status_t unregister_interrupt_callback(void* ctx) {
@@ -108,7 +108,7 @@ static zx_status_t gtt_insert(void* ctx, uint64_t addr, zx_handle_t buffer, uint
 }
 
 static zx_intel_gpu_core_protocol_ops_t i915_gpu_core_protocol_ops = {
-    .read_pci_config_16 = read_pci_config_16,
+    .read_pci_config16 = read_pci_config_16,
     .map_pci_mmio = map_pci_mmio,
     .unmap_pci_mmio = unmap_pci_mmio,
     .get_pci_bti = get_pci_bti,
@@ -1661,13 +1661,14 @@ zx_status_t Controller::GetPciBti(uint32_t index, zx_handle_t* bti_out) {
     return pci_get_bti(&pci_, index, bti_out);
 }
 
-zx_status_t Controller::RegisterInterruptCallback(zx_intel_gpu_core_interrupt_callback_t callback,
-                                                  void* data, uint32_t interrupt_mask) {
-    return interrupts_.SetInterruptCallback(callback, data, interrupt_mask);
+zx_status_t Controller::RegisterInterruptCallback(const zx_intel_gpu_core_interrupt_t* callback,
+                                                  uint32_t interrupt_mask) {
+    return interrupts_.SetInterruptCallback(callback, interrupt_mask);
 }
 
 zx_status_t Controller::UnregisterInterruptCallback() {
-    interrupts_.SetInterruptCallback(nullptr, nullptr, 0);
+    constexpr zx_intel_gpu_core_interrupt_t kNoCallback = {nullptr, nullptr};
+    interrupts_.SetInterruptCallback(&kNoCallback, 0);
     return ZX_OK;
 }
 

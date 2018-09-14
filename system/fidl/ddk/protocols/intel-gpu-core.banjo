@@ -1,0 +1,58 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.intel_gpu_core;
+
+using zx;
+
+const uint32 IMAGE_TYPE_X_TILED = 1;
+const uint32 IMAGE_TYPE_Y_LEGACY_TILED = 2;
+const uint32 IMAGE_TYPE_YF_TILED = 3;
+
+[Layout="ddk-callback"]
+interface ZxIntelGpuCoreInterrupt {
+    1: Callback(uint32 master_interrupt_control) -> ();
+};
+
+[Layout="ddk-protocol"]
+interface ZxIntelGpuCore {
+    /// Reads 16 bits from pci config space; returned in |value_out|.
+    1: ReadPciConfig16(uint16 addr) -> (zx.status s, uint16 value);
+
+    /// Maps the given |pci_bar|; address returned in |addr_out|, size in bytes returned in
+    /// |size_out|.
+    2: MapPciMmio(uint32 pci_bar) -> (zx.status s, vector<void>? buf);
+
+    /// Unmaps the given |pci_bar|.
+    3: UnmapPciMmio(uint32 pci_bar) -> (zx.status s);
+
+    /// Returns a bus transaction initiator.
+    4: GetPciBti(uint32 index) -> (zx.status s, handle<bti> bti);
+
+    /// Registers the given |callback| to be invoked with parameter |data| when an interrupt occurs
+    /// matching |interrupt_mask|.
+    5: RegisterInterruptCallback(ZxIntelGpuCoreInterrupt callback,
+                                 uint32 interrupt_mask) -> (zx.status s);
+
+    /// Un-registers a previously registered interrupt callback.
+    6: UnregisterInterruptCallback() -> (zx.status s);
+
+    /// Returns the size of the GTT (global translation table) in bytes.
+    7: GttGetSize() -> (uint64 size);
+
+    /// Allocates a region of the GTT of the given |page_count|, returning the page-aligned virtual
+    /// address in |addr_out|.
+    8: GttAlloc(uint64 page_count) -> (zx.status s, uint64 addr);
+
+    /// Frees the GTT allocation given by |addr|.
+    9: GttFree(uint64 addr) -> (zx.status s);
+
+    /// Clears the page table entries for the GTT allocation given by |addr|.
+    10: GttClear(uint64 addr) -> (zx.status s);
+
+    /// Inserts page tables entries for the GTT allocation given by |addr| for the vmo represented by
+    /// handle |buffer|, at the given |page_offset| and |page_count|. Takes ownership of |buffer|.
+    11: GttInsert(uint64 addr, handle<vmo> buffer, uint64 page_offset,
+                  uint64 page_count) -> (zx.status s);
+};

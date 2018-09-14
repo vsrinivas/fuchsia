@@ -77,7 +77,7 @@ int Interrupts::IrqLoop() {
         {
             fbl::AutoLock lock(&lock_);
             if (interrupt_ctrl.reg_value() & interrupt_mask_) {
-                interrupt_cb_(interrupt_cb_data_, interrupt_ctrl.reg_value());
+                interrupt_cb_.callback(interrupt_cb_.ctx, interrupt_ctrl.reg_value());
             }
         }
 
@@ -135,14 +135,13 @@ void Interrupts::EnableHotplugInterrupts() {
     }
 }
 
-zx_status_t Interrupts::SetInterruptCallback(zx_intel_gpu_core_interrupt_callback_t callback,
-                                             void *data, uint32_t interrupt_mask) {
+zx_status_t Interrupts::SetInterruptCallback(const zx_intel_gpu_core_interrupt_t* callback,
+                                             uint32_t interrupt_mask) {
     fbl::AutoLock lock(&lock_);
-    if (callback != nullptr && interrupt_cb_ != nullptr) {
+    if (callback != nullptr && interrupt_cb_.callback != nullptr) {
         return ZX_ERR_ALREADY_BOUND;
     }
-    interrupt_cb_ = callback;
-    interrupt_cb_data_ = data;
+    interrupt_cb_ = *callback;
     interrupt_mask_ = interrupt_mask;
     return ZX_OK;
 }
