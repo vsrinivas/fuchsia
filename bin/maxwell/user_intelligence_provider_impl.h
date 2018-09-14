@@ -54,6 +54,13 @@ class UserIntelligenceProviderImpl
                            GetServicesForAgentCallback callback) override;
 
  private:
+  struct SessionAgentData {
+    SessionAgentData();
+    fuchsia::modular::AgentControllerPtr controller;
+    fuchsia::sys::ServiceProviderPtr services;
+    modular::RateLimitedRetry restart;
+  };
+
   using ServiceProviderInitializer = std::function<void(
       const std::string& url, component::ServiceNamespace* agent_host)>;
   // A ServiceProviderInitializer that adds standard agent services, including
@@ -69,7 +76,7 @@ class UserIntelligenceProviderImpl
   void StartAgent(const std::string& url);
 
   void StartActionLog(fuchsia::modular::SuggestionEngine* suggestion_engine);
-  void StartKronk();
+  void StartSessionAgent(const std::string& url);
 
   component::StartupContext* context_;  // Not owned.
   const Config config_;
@@ -79,10 +86,7 @@ class UserIntelligenceProviderImpl
   fuchsia::modular::SuggestionEnginePtr suggestion_engine_;
   fuchsia::modular::UserActionLogPtr user_action_log_;
 
-  std::string kronk_url_;
-  modular::RateLimitedRetry kronk_restart_;
-  fuchsia::sys::ServiceProviderPtr kronk_services_;
-  fuchsia::modular::AgentControllerPtr kronk_controller_;
+  std::map<std::string, SessionAgentData> session_agents_;
 
   fidl::BindingSet<fuchsia::modular::IntelligenceServices,
                    std::unique_ptr<fuchsia::modular::IntelligenceServices>>

@@ -3,6 +3,8 @@
     "usage_log",
     "experiment_agent"
   ],
-  "kronk": "kronk",
+  "session_agents": [
+    "kronk"
+  ],
   "mi_dashboard": true
 }

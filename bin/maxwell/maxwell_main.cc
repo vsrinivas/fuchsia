@@ -48,7 +48,10 @@ const char kConfigSchema[] = R"SCHEMA(
       "type": "array",
       "items": { "type": "string" }
     },
-    "kronk": { "type": "string" },
+    "session_agents": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "mi_dashboard": { "type": "boolean" }
   },
   "required": [ "startup_agents" ],
@@ -93,16 +96,16 @@ bool LoadAndValidateConfig(const std::string& path, Config* out) {
 
   // Read values into the |out| struct.
 
-  if (config_doc.HasMember("kronk")) {
-    out->kronk = config_doc["kronk"].GetString();
-  }
-
   if (config_doc.HasMember("mi_dashboard")) {
     out->mi_dashboard = config_doc["mi_dashboard"].GetBool();
   }
 
   for (const auto& agent : config_doc["startup_agents"].GetArray()) {
     out->startup_agents.push_back(agent.GetString());
+  }
+
+  for (const auto& agent : config_doc["session_agents"].GetArray()) {
+    out->session_agents.push_back(agent.GetString());
   }
 
   return true;
@@ -124,6 +127,10 @@ with the following format:
     "/path/to/binary1",
     "/path/to/binary2",
     ...
+  ],
+  "session_agents": [
+    "/path/to/binary1",
+    "/path/to/binary2",
   ],
   "mi_dashboard": true/false,
 }

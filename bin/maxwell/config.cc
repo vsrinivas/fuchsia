@@ -8,9 +8,12 @@ namespace maxwell {
 
 std::ostream& operator<<(std::ostream& out, const Config& config) {
   out << "mi_dashboard: " << config.mi_dashboard << std::endl
-      << "kronk: " << config.kronk << std::endl
       << "startup_agents:" << std::endl;
   for (const auto& agent : config.startup_agents) {
+    out << "  " << agent << std::endl;
+  }
+  out << "session_agents:" << std::endl;
+  for (const auto& agent : config.session_agents) {
     out << "  " << agent << std::endl;
   }
   return out;

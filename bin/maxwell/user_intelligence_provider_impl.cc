@@ -20,10 +20,10 @@ namespace {
 
 constexpr char kMIDashboardUrl[] = "mi_dashboard";
 constexpr char kUsageLogUrl[] = "usage_log";
+constexpr char kKronkUrl[] = "kronk";
 constexpr char kStoryInfoAgentUrl[] = "story_info";
-
-constexpr modular::RateLimitedRetry::Threshold kKronkRetryLimit = {3,
-                                                                   zx::sec(45)};
+static constexpr modular::RateLimitedRetry::Threshold kSessionAgentRetryLimit =
+    {3, zx::sec(45)};
 
 // Calls Duplicate() on an InterfacePtr<> and returns the newly bound
 // InterfaceHandle<>.
@@ -63,6 +63,9 @@ fuchsia::modular::ComponentScope CloneScope(
 
 }  // namespace
 
+UserIntelligenceProviderImpl::SessionAgentData::SessionAgentData()
+    : restart(kSessionAgentRetryLimit) {};
+
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     component::StartupContext* context, const Config& config,
     fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
@@ -74,7 +77,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider_handle,
     fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master_handle)
-    : context_(context), config_(config), kronk_restart_(kKronkRetryLimit) {
+    : context_(context), config_(config) {
   context_engine_.Bind(std::move(context_engine_handle));
   story_provider_.Bind(std::move(story_provider_handle));
   focus_provider_.Bind(std::move(focus_provider_handle));
@@ -124,8 +127,9 @@ void UserIntelligenceProviderImpl::GetSuggestionProvider(
 
 void UserIntelligenceProviderImpl::GetSpeechToText(
     fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) {
-  if (kronk_services_) {
-    component::ConnectToService(kronk_services_.get(), std::move(request));
+  auto it = session_agents_.find(kKronkUrl);
+  if (it != session_agents_.end() && it->second.services) {
+    component::ConnectToService(it->second.services.get(), std::move(request));
   } else {
     FXL_LOG(WARNING) << "No speech-to-text agent loaded";
   }
@@ -136,11 +140,8 @@ void UserIntelligenceProviderImpl::StartAgents(
         component_context_handle) {
   component_context_.Bind(std::move(component_context_handle));
 
-  if (!config_.kronk.empty()) {
-    // TODO(rosswang): We are in the process of switching to in-tree Kronk.
-    // (This comment is left at the request of the security team.)
-    kronk_url_ = config_.kronk;
-    StartKronk();
+  for (const auto& agent : config_.session_agents) {
+    StartSessionAgent(agent);
   }
 
   if (config_.mi_dashboard) {
@@ -197,12 +198,15 @@ void UserIntelligenceProviderImpl::StartActionLog(
                                        user_action_log_.NewRequest());
 }
 
-void UserIntelligenceProviderImpl::StartKronk() {
-  component_context_->ConnectToAgent(kronk_url_, kronk_services_.NewRequest(),
-                                     kronk_controller_.NewRequest());
+void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
+  SessionAgentData* const agent_data = &session_agents_[url];
 
-  fuchsia::modular::KronkInitializerPtr initializer;
-  component::ConnectToService(kronk_services_.get(), initializer.NewRequest());
+  component_context_->ConnectToAgent(url, agent_data->services.NewRequest(),
+                                     agent_data->controller.NewRequest());
+
+  fuchsia::modular::SessionAgentInitializerPtr initializer;
+  component::ConnectToService(agent_data->services.get(),
+                              initializer.NewRequest());
   initializer->Initialize(Duplicate(focus_provider_),
                           Duplicate(puppet_master_));
 
@@ -211,26 +215,31 @@ void UserIntelligenceProviderImpl::StartKronk() {
   // this.
   //
   // NOTE(rosswang,mesch): Although the interface we're actually interested in
-  // is kronk_services_, we still need to put the restart handler on the
-  // controller. When the agent crashes, kronk_services_ often gets closed quite
-  // a bit earlier (~1 second) than the agent runner notices via the application
-  // controller (which it must use as opposed to any interface on the agent
-  // itself since the agent is not required to implement any interfaces itself,
-  // even though it is recommended that it does). If we try to restart the agent
-  // at that time, the agent runner would attempt to simply send the connection
-  // request to the crashed agent instance and not relaunch the agent.
-  kronk_controller_.set_error_handler([this] {
-    kronk_services_.Unbind();
-    kronk_controller_.Unbind();
+  // is |data[url].services|, we still need to put the restart handler on the
+  // controller. When the agent crashes, |data[url].services| often gets closed
+  // quite a bit earlier (~1 second) than the agent runner notices via the
+  // application controller (which it must use as opposed to any interface on
+  // the agent itself since the agent is not required to implement any
+  // interfaces itself, even though it is recommended that it does). If we try
+  // to restart the agent at that time, the agent runner would attempt to simply
+  // send the connection request to the crashed agent instance and not relaunch
+  // the agent.
+  agent_data->controller.set_error_handler([this, url] {
+    auto it = session_agents_.find(url);
+    FXL_DCHECK(it != session_agents_.end())
+        << "Controller and services not registered for " << url;
+    auto& agent_data = it->second;
+    agent_data.services.Unbind();
+    agent_data.controller.Unbind();
 
-    if (kronk_restart_.ShouldRetry()) {
-      FXL_LOG(INFO) << "Restarting Kronk...";
-      StartKronk();
+    if (agent_data.restart.ShouldRetry()) {
+      FXL_LOG(INFO) << "Restarting " << url << "...";
+      StartSessionAgent(url);
     } else {
-      FXL_LOG(WARNING) << "Kronk failed to restart more than "
-                       << kKronkRetryLimit.count << " times in "
-                       << kKronkRetryLimit.period.to_secs()
-                       << " seconds. Speech capture disabled.";
+      FXL_LOG(WARNING) << url << " failed to restart more than "
+                       << kSessionAgentRetryLimit.count << " times in "
+                       << kSessionAgentRetryLimit.period.to_secs()
+                       << " seconds.";
     }
   });
 }

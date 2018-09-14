@@ -1,4 +1,5 @@
 {
   "startup_agents": [],
+  "session_agents": [],
   "mi_dashboard": false
 }
