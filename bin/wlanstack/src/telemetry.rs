@@ -188,7 +188,7 @@ fn report_client_mlme_rx_tx_frames(
         CLIENT_MLME_TX_FRAME_COUNT_INDEX,
         get_diff(
             last_stats.tx_frame.out.count,
-            current_stats.rx_frame.out.count,
+            current_stats.tx_frame.out.count,
         ) as i64,
     );
 
