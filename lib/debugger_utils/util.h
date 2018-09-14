@@ -11,6 +11,7 @@
 #include <vector>
 
 #ifdef __Fuchsia__
+#include <lib/zx/object.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 #endif  // __Fuchsia__
@@ -87,6 +88,20 @@ const char* basename(const char* path);
 void hexdump_ex(FILE* out, const void* ptr, size_t len, uint64_t disp_addr);
 
 #ifdef __Fuchsia__
+
+// Return the koid of |handle|.
+zx_koid_t GetKoid(zx_handle_t handle);
+// Convenience wrapper that takes an object.
+zx_koid_t GetKoid(const zx::object_base& object);
+
+// Return the "related" koid of |handle|.
+// What the "related" koid is for each object is dependent on the object type.
+// Not all objects have related koids. This function is just a simple wrapper
+// on the zx_object_get_info(ZX_INFO_HANDLE_BASIC) syscall and returns whatever
+// the syscalls provides.
+zx_koid_t GetRelatedKoid(zx_handle_t handle);
+// Convenience wrapper that takes an object.
+zx_koid_t GetRelatedKoid(const zx::object_base& object);
 
 // Return the name of exception |type| as a C string.
 const char* ExceptionName(zx_excp_type_t type);

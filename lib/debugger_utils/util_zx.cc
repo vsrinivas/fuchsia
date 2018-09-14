@@ -8,6 +8,8 @@
 #include <cinttypes>
 
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
@@ -16,6 +18,34 @@
 #include "byte_block.h"
 
 namespace debugger_utils {
+
+zx_koid_t GetKoid(zx_handle_t handle) {
+  zx_info_handle_basic_t info;
+  auto status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
+                                   sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return ZX_KOID_INVALID;
+  }
+  return info.koid;
+}
+
+zx_koid_t GetKoid(const zx::object_base& object) {
+  return GetKoid(object.get());
+}
+
+zx_koid_t GetRelatedKoid(zx_handle_t handle) {
+  zx_info_handle_basic_t info;
+  auto status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
+                                   sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return ZX_KOID_INVALID;
+  }
+  return info.related_koid;
+}
+
+zx_koid_t GetRelatedKoid(const zx::object_base& object) {
+  return GetRelatedKoid(object.get());
+}
 
 std::string ZxErrorString(zx_status_t status) {
   return fxl::StringPrintf("%s(%d)", zx_status_get_string(status), status);

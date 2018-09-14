@@ -76,6 +76,7 @@ executable("tests") {
     "util.h",
     "util_unittest.cc",
     "util_zx.cc",
+    "util_zx_unittest.cc",
   ]
 
   deps = [
