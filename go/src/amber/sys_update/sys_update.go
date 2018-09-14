@@ -1,6 +1,15 @@
-package daemon
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This package manages the SystemUpdateMonitor, which polls for changes to the
+// update/0 package. When a change is observed, it triggers a system update.
+
+package sys_update
 
 import (
+	"amber/daemon"
+	"amber/ipcclient"
 	"amber/pkg"
 	"bufio"
 	"encoding/hex"
@@ -17,8 +26,6 @@ import (
 	"app/context"
 	"fidl/fuchsia/amber"
 	"fidl/fuchsia/sys"
-	"syscall/zx"
-	"syscall/zx/zxwait"
 
 	"fuchsia.googlesource.com/merkle"
 )
@@ -30,7 +37,7 @@ var pkgsvrCmdRegex = regexp.MustCompile("^bin/pkgsvr\\+([0-9a-f]{64})$")
 
 type SystemUpdateMonitor struct {
 	halt              uint32
-	daemon            *Daemon
+	daemon            *daemon.Daemon
 	checkNow          chan struct{}
 	amber             *amber.ControlInterface
 	updateMerkle      string
@@ -53,7 +60,7 @@ func NewErrNoPackage(name string) ErrNoPackage {
 	return ErrNoPackage{name: name}
 }
 
-func NewSystemUpdateMonitor(d *Daemon, a bool) (*SystemUpdateMonitor, error) {
+func NewSystemUpdateMonitor(d *daemon.Daemon, a bool) (*SystemUpdateMonitor, error) {
 	amber, err := connectToUpdateSrvc()
 	if err != nil {
 		log.Printf("sys_upd_mon: binding to update service failed: %s", err)
@@ -133,7 +140,8 @@ func (upMon *SystemUpdateMonitor) Start() {
 
 		// FIXME: we need to handle the case where the version number is not 0.
 		updatePkg := &pkg.Package{Name: fmt.Sprintf("/update/%d", 0)}
-		if err := fetchPackage(updatePkg, upMon.amber); err != nil {
+
+		if err := ipcclient.GetUpdateComplete(upMon.amber, updatePkg.Name, &updatePkg.Merkle); err != nil {
 			log.Printf("sys_upd_mon: unable to fetch package update: %s", err)
 			continue
 		}
@@ -339,31 +347,6 @@ func connectToUpdateSrvc() (*amber.ControlInterface, error) {
 
 	context.ConnectToEnvService(req)
 	return pxy, nil
-}
-
-func fetchPackage(p *pkg.Package, amber *amber.ControlInterface) error {
-	h, err := amber.GetUpdateComplete(p.Name, nil, &p.Merkle)
-	if err != nil {
-		return fmt.Errorf("fetch: failed submitting update request: %s", err)
-	}
-	defer h.Close()
-
-	signals, err := zxwait.Wait(*h.Handle(), zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
-		zx.TimensecInfinite)
-	if err != nil {
-		return fmt.Errorf("fetch: error waiting on result channel: %s", err)
-	}
-
-	buf := make([]byte, 128)
-	if signals&zx.SignalChannelReadable == zx.SignalChannelReadable {
-		_, _, err := h.Read(buf, []zx.Handle{}, 0)
-		if err != nil {
-			return fmt.Errorf("fetch: error reading channel %s", err)
-		}
-	} else {
-		return fmt.Errorf("fetch: reply channel was not readable")
-	}
-	return nil
 }
 
 func statMerkle(path string) ([]byte, error) {

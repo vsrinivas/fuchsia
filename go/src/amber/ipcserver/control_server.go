@@ -16,6 +16,7 @@ import (
 	"amber/daemon"
 	"amber/lg"
 	"amber/pkg"
+	"amber/sys_update"
 
 	"syscall/zx"
 	"syscall/zx/fidl"
@@ -29,15 +30,13 @@ type ControlSrvr struct {
 	activations chan<- string
 	compReqs    chan<- *completeUpdateRequest
 	writeReqs   chan<- *startUpdateRequest
-	sysUpdate   *daemon.SystemUpdateMonitor
+	sysUpdate   *sys_update.SystemUpdateMonitor
 	blobChan    chan string
 }
 
-const ZXSIO_DAEMON_ERROR = zx.SignalUser0
-
 var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
 
-func NewControlSrvr(d *daemon.Daemon, s *daemon.SystemUpdateMonitor) *ControlSrvr {
+func NewControlSrvr(d *daemon.Daemon, s *sys_update.SystemUpdateMonitor) *ControlSrvr {
 	go fidl.Serve()
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest, 1)

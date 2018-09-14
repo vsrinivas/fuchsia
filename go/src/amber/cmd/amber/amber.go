@@ -20,6 +20,7 @@ import (
 	"amber/ipcserver"
 	"amber/pkg"
 	"amber/source"
+	"amber/sys_update"
 
 	amber_fidl "fidl/fuchsia/amber"
 
@@ -85,12 +86,12 @@ func main() {
 		}
 	}
 
-	supMon, err := daemon.NewSystemUpdateMonitor(d, *autoUpdate)
+	supMon, err := sys_update.NewSystemUpdateMonitor(d, *autoUpdate)
 	if err != nil {
 		log.Fatalf("failed to start system update monitor: %s", err)
 	}
 
-	go func(s *daemon.SystemUpdateMonitor) {
+	go func(s *sys_update.SystemUpdateMonitor) {
 		s.Start()
 		log.Println("system update monitor exited")
 	}(supMon)
@@ -145,7 +146,7 @@ func addDefaultSourceConfigs(d *daemon.Daemon, dir string) error {
 	return nil
 }
 
-func startFIDLSvr(ctx *context.Context, d *daemon.Daemon, s *daemon.SystemUpdateMonitor) {
+func startFIDLSvr(ctx *context.Context, d *daemon.Daemon, s *sys_update.SystemUpdateMonitor) {
 	apiSrvr := ipcserver.NewControlSrvr(d, s)
 	ctx.OutgoingService.AddService(amber_fidl.ControlName, func(c zx.Channel) error {
 		return apiSrvr.Bind(c)
