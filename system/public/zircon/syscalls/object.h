@@ -406,14 +406,16 @@ typedef struct zx_info_resource {
 #define ZX_PROP_PROCESS_VDSO_BASE_ADDRESS   ((uint32_t) 6u)
 
 // Argument is a size_t.
-#define ZX_PROP_SOCKET_RX_BUF_MAX           ((uint32_t) 8u)
-#define ZX_PROP_SOCKET_RX_BUF_SIZE          ((uint32_t) 9u)
-#define ZX_PROP_SOCKET_TX_BUF_MAX           ((uint32_t) 10u)
-#define ZX_PROP_SOCKET_TX_BUF_SIZE          ((uint32_t) 11u)
+#define ZX_PROP_SOCKET_RX_BUF_MAX           8u
+#define ZX_PROP_SOCKET_RX_BUF_SIZE          9u
+#define ZX_PROP_SOCKET_TX_BUF_MAX           10u
+#define ZX_PROP_SOCKET_TX_BUF_SIZE          11u
+#define ZX_PROP_SOCKET_RX_THRESHOLD         12u
+#define ZX_PROP_SOCKET_TX_THRESHOLD         13u
 
 // Argument is a size_t, describing the number of packets a channel
 // endpoint can have pending in its tx direction.
-#define ZX_PROP_CHANNEL_TX_MSG_MAX          ((uint32_t) 12u)
+#define ZX_PROP_CHANNEL_TX_MSG_MAX          14u
 
 // Basic thread states, in zx_info_thread_t.state.
 #define ZX_THREAD_STATE_NEW                 ((zx_thread_state_t) 0x0000u)

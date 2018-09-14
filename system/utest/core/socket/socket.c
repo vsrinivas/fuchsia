@@ -140,6 +140,188 @@ static bool socket_signals(void) {
     END_TEST;
 }
 
+static bool socket_signals2(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    size_t count;
+    zx_handle_t h0, h1;
+    status = zx_socket_create(0, &h0, &h1);
+    ASSERT_EQ(status, ZX_OK, "socket_create");
+
+    /* Set some invalid threshold values and verify */
+    count = 0;
+    status = zx_object_set_property(h0, ZX_PROP_SOCKET_RX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    ASSERT_EQ(status, ZX_OK, "object_set_property");
+    count = 0xefffffff;
+    status = zx_object_set_property(h0, ZX_PROP_SOCKET_RX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "object_set_property");
+    count = 0;
+    status = zx_object_set_property(h1, ZX_PROP_SOCKET_TX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    ASSERT_EQ(status, ZX_OK, "object_set_property");
+    count = 0xefffffff;
+    status = zx_object_set_property(h1, ZX_PROP_SOCKET_TX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "object_set_property");
+
+    /*
+     * In the code below, we are going to trigger the READ threshold
+     * signal as soon as 101 bytes are available to read, and triger
+     * the write threshold as long as we have 103 bytes we can write/
+     */
+
+    /* Set valid Read/Write thresholds and verify */
+#define SOCKET2_SIGNALTEST_RX_THRESHOLD     101
+    count = SOCKET2_SIGNALTEST_RX_THRESHOLD;
+    status = zx_object_set_property(h0, ZX_PROP_SOCKET_RX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    ASSERT_EQ(status, ZX_OK, "object_set_property");
+    status = zx_object_get_property(h0, ZX_PROP_SOCKET_RX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    ASSERT_EQ(status, ZX_OK, "object_get_property");
+    ASSERT_EQ(count, (size_t)SOCKET2_SIGNALTEST_RX_THRESHOLD, "");
+
+    size_t txbufmax;
+    status = zx_object_get_property(h1, ZX_PROP_SOCKET_TX_BUF_MAX,
+                                    &txbufmax, sizeof(size_t));
+    ASSERT_EQ(status, ZX_OK, "object_get_property");
+    size_t write_threshold = txbufmax - (SOCKET2_SIGNALTEST_RX_THRESHOLD + 2);
+    status = zx_object_set_property(h1, ZX_PROP_SOCKET_TX_THRESHOLD,
+                                    &write_threshold, sizeof(size_t));
+    ASSERT_EQ(status, ZX_OK, "object_set_property");
+    status = zx_object_get_property(h1, ZX_PROP_SOCKET_TX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    ASSERT_EQ(status, ZX_OK, "object_get_property");
+    ASSERT_EQ(count, write_threshold, "");
+
+
+    /* Make sure duplicates get the same thresholds ! */
+    zx_handle_t h0_clone, h1_clone;
+    status = zx_handle_duplicate(h0, ZX_RIGHT_SAME_RIGHTS, &h0_clone);
+    ASSERT_EQ(status, ZX_OK, "handle_duplicate");
+    status = zx_handle_duplicate(h1, ZX_RIGHT_SAME_RIGHTS, &h1_clone);
+    ASSERT_EQ(status, ZX_OK, "handle_duplicate");
+
+    status = zx_object_get_property(h0_clone,
+                                    ZX_PROP_SOCKET_RX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    ASSERT_EQ(status, ZX_OK, "object_get_property");
+    ASSERT_EQ(count, (size_t)SOCKET2_SIGNALTEST_RX_THRESHOLD, "");
+    status = zx_object_get_property(h1_clone,
+                                    ZX_PROP_SOCKET_TX_THRESHOLD,
+                                    &count, sizeof(size_t));
+    ASSERT_EQ(status, ZX_OK, "object_get_property");
+    ASSERT_EQ(count, write_threshold, "");
+
+    /* Test starting signal state after setting thresholds */
+    zx_signals_t signals0 = get_satisfied_signals(h0);
+    zx_signals_t signals1 = get_satisfied_signals(h1);
+    zx_signals_t signals0_clone = get_satisfied_signals(h0_clone);
+    zx_signals_t signals1_clone = get_satisfied_signals(h1_clone);
+
+    EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE, "");
+    EXPECT_EQ(signals0_clone, ZX_SOCKET_WRITABLE, "");
+    EXPECT_EQ(signals1, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_THRESHOLD, "");
+    EXPECT_EQ(signals1_clone,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_THRESHOLD, "");
+
+    /* Write data and test signals */
+    size_t bufsize = SOCKET2_SIGNALTEST_RX_THRESHOLD - 1;
+    char buf[SOCKET2_SIGNALTEST_RX_THRESHOLD - 1];
+    status = zx_socket_write(h1, 0u, buf, bufsize, &count);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(count, bufsize, "");
+
+    /*
+     * We wrote less than the read and write thresholds. So we expect
+     * the READ_THRESHOLD signal to be de-asserted and the WRITE_THRESHOLD
+     * signal to be asserted.
+     */
+    signals0 = get_satisfied_signals(h0);
+    signals1 = get_satisfied_signals(h1);
+    signals0_clone = get_satisfied_signals(h0_clone);
+    signals1_clone = get_satisfied_signals(h1_clone);
+
+    EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE, "");
+    EXPECT_EQ(signals0_clone, ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE, "");
+    EXPECT_EQ(signals1_clone,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_THRESHOLD, "");
+
+    /*
+     * Now write exactly enough data to hit the read threshold
+     */
+    bufsize = 1;
+    status = zx_socket_write(h1, 0u, buf, bufsize, &count);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(count, bufsize, "");
+    signals0 = get_satisfied_signals(h0);
+    signals1 = get_satisfied_signals(h1);
+    signals0_clone = get_satisfied_signals(h0_clone);
+    signals1_clone = get_satisfied_signals(h1_clone);
+    EXPECT_EQ(signals0,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_READ_THRESHOLD,
+              "");
+    EXPECT_EQ(signals0_clone,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_READ_THRESHOLD,
+              "");
+    EXPECT_EQ(signals1, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_THRESHOLD, "");
+    EXPECT_EQ(signals1_clone, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_THRESHOLD, "");
+
+    /*
+     * Next write enough data to de-assert WRITE Threshold
+     */
+    bufsize = write_threshold - (SOCKET2_SIGNALTEST_RX_THRESHOLD + 1);
+    char *buf2 =  (char *)malloc(bufsize);
+    status = zx_socket_write(h1, 0u, buf2, bufsize, &count);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(count, bufsize, "");
+    free(buf2);
+    signals0 = get_satisfied_signals(h0);
+    signals1 = get_satisfied_signals(h1);
+    signals0_clone = get_satisfied_signals(h0_clone);
+    signals1_clone = get_satisfied_signals(h1_clone);
+    EXPECT_EQ(signals0,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_READ_THRESHOLD,
+              "");
+    EXPECT_EQ(signals0_clone,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_READ_THRESHOLD,
+              "");
+    EXPECT_EQ(signals1, ZX_SOCKET_WRITABLE, "");
+    EXPECT_EQ(signals1_clone, ZX_SOCKET_WRITABLE, "");
+
+    /*
+     * Finally read enough data to de-assert the read threshold and
+     * re-assert the write threshold signals.
+     */
+    bufsize += 10;
+    buf2 =  (char *)malloc(bufsize);
+    status = zx_socket_read(h0, 0u, buf2, bufsize, &count);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(count, bufsize, "");
+    free(buf2);
+    signals0 = get_satisfied_signals(h0);
+    signals1 = get_satisfied_signals(h1);
+    signals0_clone = get_satisfied_signals(h0_clone);
+    signals1_clone = get_satisfied_signals(h1_clone);
+    EXPECT_EQ(signals0,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE,
+              "");
+    EXPECT_EQ(signals0_clone,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE,
+              "");
+    EXPECT_EQ(signals1, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_THRESHOLD, "");
+    EXPECT_EQ(signals1_clone, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_THRESHOLD, "");
+
+    zx_handle_close(h0);
+    zx_handle_close(h1);
+    zx_handle_close(h0_clone);
+    zx_handle_close(h1_clone);
+    END_TEST;
+}
+
 static bool socket_peer_closed(void) {
     BEGIN_TEST;
 
@@ -914,6 +1096,7 @@ RUN_TEST(socket_control_plane_shutdown)
 RUN_TEST(socket_accept)
 RUN_TEST(socket_share_invalid_handle)
 RUN_TEST(socket_share_consumes_on_failure)
+RUN_TEST(socket_signals2)
 END_TEST_CASE(socket_tests)
 
 #ifndef BUILD_COMBINED_TESTS

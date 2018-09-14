@@ -90,6 +90,8 @@ SocketDispatcher::SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> hol
       flags_(flags),
       control_msg_(fbl::move(control_msg)),
       control_msg_len_(0),
+      read_threshold_(0),
+      write_threshold_(0),
       read_disabled_(false) {
 }
 
@@ -268,13 +270,32 @@ zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const void> src, size_
     if (status)
         return status;
 
+    zx_signals_t clear = 0u;
+    zx_signals_t set = 0u;
+
     if (st > 0) {
         if (was_empty)
-            UpdateStateLocked(0u, ZX_SOCKET_READABLE);
+            set |= ZX_SOCKET_READABLE;
+        // Assert signal if we go above the read threshold
+        if ((read_threshold_ > 0) && (data_.size() >= read_threshold_))
+            set |= ZX_SOCKET_READ_THRESHOLD;
+        if (set) {
+            UpdateStateLocked(0u, set);
+        }
+        if (peer_) {
+            size_t peer_write_threshold = peer_->write_threshold_;
+            // If free space falls below threshold, de-signal
+            if ((peer_write_threshold > 0) &&
+                ((data_.max_size() - data_.size()) < peer_write_threshold))
+                clear |= ZX_SOCKET_WRITE_THRESHOLD;
+        }
     }
 
     if (peer_ && is_full())
-        peer_->UpdateStateLocked(ZX_SOCKET_WRITABLE, 0u);
+        clear |= ZX_SOCKET_WRITABLE;
+
+    if (clear)
+        peer_->UpdateStateLocked(clear, 0u);
 
     *written = st;
     return status;
@@ -311,15 +332,34 @@ zx_status_t SocketDispatcher::Read(user_out_ptr<void> dst, size_t len,
 
     auto st = data_.Read(dst, len, flags_ & ZX_SOCKET_DATAGRAM);
 
-    if (is_empty()) {
-        uint32_t set_mask = 0u;
-        if (read_disabled_)
-            set_mask |= ZX_SOCKET_READ_DISABLED;
-        UpdateStateLocked(ZX_SOCKET_READABLE, set_mask);
-    }
+    zx_signals_t clear = 0u;
+    zx_signals_t set = 0u;
 
-    if (peer_ && was_full && (st > 0))
-        peer_->UpdateStateLocked(0u, ZX_SOCKET_WRITABLE);
+    // Deassert signal if we fell below the read threshold
+    if ((read_threshold_ > 0) && (data_.size() < read_threshold_))
+        clear |= ZX_SOCKET_READ_THRESHOLD;
+
+    if (is_empty()) {
+        if (read_disabled_)
+            set |= ZX_SOCKET_READ_DISABLED;
+        clear |= ZX_SOCKET_READABLE;
+    }
+    if (set || clear) {
+        UpdateStateLocked(clear, set);
+        clear = set = 0u;
+    }
+    if (peer_) {
+        // Assert (write threshold) signal if space available is above
+        // threshold.
+        size_t peer_write_threshold = peer_->write_threshold_;
+        if (peer_write_threshold > 0 &&
+            ((data_.max_size() - data_.size()) >= peer_write_threshold))
+            set |= ZX_SOCKET_WRITE_THRESHOLD;
+        if (was_full && (st > 0))
+            set |= ZX_SOCKET_WRITABLE;
+        if (set)
+            peer_->UpdateStateLocked(0u, set);
+    }
 
     *nread = static_cast<size_t>(st);
     return ZX_OK;
@@ -451,4 +491,53 @@ void SocketDispatcher::GetInfo(zx_info_socket_t* info) const TA_NO_THREAD_SAFETY
         .tx_buf_max = peer_ ? peer_->data_.max_size() : 0,
         .tx_buf_size = peer_ ? peer_->data_.size() : 0,
     };
+}
+
+size_t SocketDispatcher::GetReadThreshold() const TA_NO_THREAD_SAFETY_ANALYSIS {
+    canary_.Assert();
+    Guard<fbl::Mutex> guard{get_lock()};
+    return read_threshold_;
+}
+
+size_t SocketDispatcher::GetWriteThreshold() const TA_NO_THREAD_SAFETY_ANALYSIS {
+    canary_.Assert();
+    Guard<fbl::Mutex> guard{get_lock()};
+    return write_threshold_;
+}
+
+zx_status_t SocketDispatcher::SetReadThreshold(size_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
+    canary_.Assert();
+    Guard<fbl::Mutex> guard{get_lock()};
+    if (value > data_.max_size())
+        return ZX_ERR_INVALID_ARGS;
+    read_threshold_ = value;
+    // Setting 0 disables thresholding. Deassert signal unconditionally.
+    if (value == 0) {
+        UpdateStateLocked(ZX_SOCKET_READ_THRESHOLD, 0u);
+    } else {
+        // Assert signal if we have queued data above the read threshold
+        if (data_.size() >= read_threshold_)
+            UpdateStateLocked(0u, ZX_SOCKET_READ_THRESHOLD);
+    }
+    return ZX_OK;
+}
+
+zx_status_t SocketDispatcher::SetWriteThreshold(size_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
+    canary_.Assert();
+    Guard<fbl::Mutex> guard{get_lock()};
+    size_t tx_buffer_max;
+    tx_buffer_max = peer_ ? peer_->data_.max_size() : 0;
+    if (value > tx_buffer_max)
+        return ZX_ERR_INVALID_ARGS;
+    write_threshold_ = value;
+    // Setting 0 disables thresholding. Deassert signal unconditionally.
+    if (value == 0) {
+        UpdateStateLocked(ZX_SOCKET_WRITE_THRESHOLD, 0u);
+    } else {
+        // Assert signal if we have available space above the write threshold
+        if (peer_ &&
+            (peer_->data_.max_size() - peer_->data_.size()) >= write_threshold_)
+            UpdateStateLocked(0u, ZX_SOCKET_WRITE_THRESHOLD);
+    }
+    return ZX_OK;
 }

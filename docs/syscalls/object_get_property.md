@@ -151,6 +151,32 @@ Allowed operations: **get**
 
 The size of the transmit buffer of a socket, in bytes.
 
+### ZX_PROP_SOCKET_READ_THRESHOLD
+
+*handle* type: **Socket**
+
+*value* type: **size_t**
+
+Allowed operations: **get**, **set**
+
+The size of the read threshold of a socket, in bytes. Setting this will
+assert ZX_SOCKET_READ_THRESHOLD if the amount of data that can be read
+is greater than or equal to the threshold. Setting this property to zero
+will result in the deasserting of ZX_SOCKET_READ_THRESHOLD.
+
+### ZX_PROP_SOCKET_WRITE_THRESHOLD
+
+*handle* type: **Socket**
+
+*value* type: **size_t**
+
+Allowed operations: **get**, **set**
+
+The size of the write threshold of a socket, in bytes. Setting this will
+assert ZX_SOCKET_WRITE_THRESHOLD if the amount of space available for writing
+is greater than or equal to the threshold. Setting this property to zero
+will result in the deasserting of ZX_SOCKET_WRITE_THRESHOLD.
+
 ### ZX_PROP_CHANNEL_TX_MSG_MAX
 
 *handle* type: **Channel**

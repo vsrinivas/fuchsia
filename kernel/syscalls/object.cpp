@@ -647,7 +647,6 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
     auto status = up->GetDispatcherWithRights(handle_value, ZX_RIGHT_GET_PROPERTY, &dispatcher);
     if (status != ZX_OK)
         return status;
-
     switch (property) {
     case ZX_PROP_NAME: {
         if (size < ZX_MAX_NAME_LEN)
@@ -710,6 +709,24 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
         if (!socket)
             return ZX_ERR_WRONG_TYPE;
         size_t value = socket->TransmitBufferSize();
+        return _value.reinterpret<size_t>().copy_to_user(value);
+    }
+    case ZX_PROP_SOCKET_RX_THRESHOLD: {
+        if (size < sizeof(size_t))
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        auto socket = DownCastDispatcher<SocketDispatcher>(&dispatcher);
+        if (!socket)
+            return ZX_ERR_WRONG_TYPE;
+        size_t value = socket->GetReadThreshold();
+        return _value.reinterpret<size_t>().copy_to_user(value);
+    }
+    case ZX_PROP_SOCKET_TX_THRESHOLD: {
+        if (size < sizeof(size_t))
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        auto socket = DownCastDispatcher<SocketDispatcher>(&dispatcher);
+        if (!socket)
+            return ZX_ERR_WRONG_TYPE;
+        size_t value = socket->GetWriteThreshold();
         return _value.reinterpret<size_t>().copy_to_user(value);
     }
     case ZX_PROP_CHANNEL_TX_MSG_MAX: {
@@ -807,6 +824,30 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
         if (status != ZX_OK)
             return status;
         return process->set_debug_addr(value);
+    }
+    case ZX_PROP_SOCKET_RX_THRESHOLD: {
+        if (size < sizeof(size_t))
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        auto socket = DownCastDispatcher<SocketDispatcher>(&dispatcher);
+        if (!socket)
+            return ZX_ERR_WRONG_TYPE;
+        size_t value = 0;
+        zx_status_t status = _value.reinterpret<const size_t>().copy_from_user(&value);
+        if (status != ZX_OK)
+            return status;
+        return socket->SetReadThreshold(value);
+    }
+    case ZX_PROP_SOCKET_TX_THRESHOLD: {
+        if (size < sizeof(size_t))
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        auto socket = DownCastDispatcher<SocketDispatcher>(&dispatcher);
+        if (!socket)
+            return ZX_ERR_WRONG_TYPE;
+        size_t value = 0;
+        zx_status_t status = _value.reinterpret<const size_t>().copy_from_user(&value);
+        if (status != ZX_OK)
+            return status;
+        return socket->SetWriteThreshold(value);
     }
     }
 

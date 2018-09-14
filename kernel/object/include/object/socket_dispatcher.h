@@ -56,6 +56,10 @@ public:
     size_t ReceiveBufferSize() const;
     size_t TransmitBufferMax() const;
     size_t TransmitBufferSize() const;
+    size_t GetReadThreshold() const;
+    zx_status_t SetReadThreshold(size_t value);
+    size_t GetWriteThreshold() const;
+    zx_status_t SetWriteThreshold(size_t value);
 
     void GetInfo(zx_info_socket_t* info) const;
 
@@ -94,5 +98,7 @@ private:
     fbl::unique_ptr<ControlMsg> control_msg_ TA_GUARDED(get_lock());
     size_t control_msg_len_ TA_GUARDED(get_lock());
     HandleOwner accept_queue_ TA_GUARDED(get_lock());
+    size_t read_threshold_;
+    size_t write_threshold_;
     bool read_disabled_ TA_GUARDED(get_lock());
 };
