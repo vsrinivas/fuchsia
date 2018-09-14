@@ -24,7 +24,6 @@
 // TODO(smklein): Assert that these align with
 // the ObjectInfo tags
 #define FDIO_PROTOCOL_SERVICE 0
-#define FDIO_PROTOCOL_REMOTE FDIO_PROTOCOL_SERVICE // Deprecated
 #define FDIO_PROTOCOL_FILE 1
 #define FDIO_PROTOCOL_DIRECTORY 2
 #define FDIO_PROTOCOL_PIPE 3
