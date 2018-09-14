@@ -19,6 +19,16 @@
 
 #define RCA_ARG(dev) ((dev)->rca << 16)
 
+zx_status_t sdmmc_request_helper(sdmmc_device_t* dev, sdmmc_req_t* req,
+                                 uint8_t retries, uint32_t wait_time) {
+    zx_status_t st;
+    while (((st = sdmmc_request(&dev->host, req)) != ZX_OK) && retries > 0) {
+        retries--;
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(wait_time)));
+    }
+    return st;
+}
+
 // SD/MMC shared ops
 
 zx_status_t sdmmc_go_idle(sdmmc_device_t* dev) {
@@ -140,7 +150,7 @@ zx_status_t sdio_send_op_cond(sdmmc_device_t* dev, uint32_t ocr, uint32_t* rocr)
         .use_dma = sdmmc_use_dma(dev),
     };
     for (size_t i = 0; i < 100; i++) {
-        if ((st = sdmmc_request(&dev->host, &req)) != ZX_OK) {
+        if ((st = sdmmc_request_helper(dev, &req, 3, 10)) != ZX_OK) {
             // fail on request error
             break;
         }

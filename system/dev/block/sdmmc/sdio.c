@@ -732,8 +732,28 @@ static zx_status_t sdio_init_func(sdmmc_device_t *dev, uint8_t fn_idx) {
     return st;
 }
 
-zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
+zx_status_t sdmmc_sdio_reset(sdmmc_device_t* dev) {
     zx_status_t st = ZX_OK;
+    uint8_t abort_byte;
+
+    st = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR, 0, &abort_byte);
+    if (st != ZX_OK) {
+        abort_byte = SDIO_CIA_CCCR_ASx_ABORT_SOFT_RESET;
+    } else {
+        abort_byte |= SDIO_CIA_CCCR_ASx_ABORT_SOFT_RESET;
+    }
+    return sdio_io_rw_direct(dev, true, 0, SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR, abort_byte, NULL);
+}
+
+
+zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
+    zx_status_t st = sdmmc_sdio_reset(dev);
+
+    if ((st = sdmmc_go_idle(dev)) != ZX_OK) {
+      zxlogf(ERROR, "sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
+      return st;
+    }
+
     uint32_t ocr;
     if ((st = sdio_send_op_cond(dev, 0, &ocr)) != ZX_OK) {
         zxlogf(ERROR, "sdmmc_probe_sdio: SDIO_SEND_OP_COND failed, retcode = %d\n", st);
