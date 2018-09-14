@@ -44,18 +44,26 @@ pub mod client {
     use super::*;
 
     #[inline]
-    /// Connect to a FIDL service using the application root namespace.
-    pub fn connect_to_service<S: ServiceMarker>()
+
+    /// Connect to a FIDL service using the provided namespace prefix.
+    pub fn connect_to_service_at<S: ServiceMarker>(service_prefix: &str)
         -> Result<S::Proxy, Error>
     {
         let (proxy, server) = zx::Channel::create()?;
 
-        let service_path = format!("/svc/{}", S::NAME);
+        let service_path = format!("{}/{}", service_prefix, S::NAME);
         fdio::service_connect(&service_path, server)
             .with_context(|_| format!("Error connecting to service path: {}", service_path))?;
 
         let proxy = fasync::Channel::from_channel(proxy)?;
         Ok(S::Proxy::from_channel(proxy))
+    }
+
+    /// Connect to a FIDL service using the application root namespace.
+    pub fn connect_to_service<S: ServiceMarker>()
+        -> Result<S::Proxy, Error>
+    {
+        connect_to_service_at::<S>("/svc")
     }
 
     /// Launcher launches Fuchsia applications.
