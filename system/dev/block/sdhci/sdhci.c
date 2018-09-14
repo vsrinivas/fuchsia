@@ -850,7 +850,7 @@ unlock_out:
     return st;
 }
 
-static zx_status_t sdhci_perform_tuning(void* ctx) {
+static zx_status_t sdhci_perform_tuning(void* ctx, uint32_t tuning_cmd_idx) {
     zxlogf(TRACE, "sdhci: perform tuning\n");
 
     sdhci_device_t* dev = ctx;
@@ -859,7 +859,7 @@ static zx_status_t sdhci_perform_tuning(void* ctx) {
     // TODO no other commands should run during tuning
 
     sdmmc_req_t req = {
-        .cmd_idx = MMC_SEND_TUNING_BLOCK,
+        .cmd_idx = tuning_cmd_idx,
         .cmd_flags = MMC_SEND_TUNING_BLOCK_FLAGS,
         .arg = 0,
         .blockcount = 0,

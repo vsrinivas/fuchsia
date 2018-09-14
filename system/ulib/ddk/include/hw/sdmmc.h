@@ -101,6 +101,7 @@ __BEGIN_CDECLS;
 #define SD_SEND_IF_COND               8
 #define SD_VOLTAGE_SWITCH             11
 #define SD_APP_SEND_SCR               51
+#define SD_SEND_TUNING_BLOCK          19
 
 // MMC Commands
 #define MMC_SEND_OP_COND              1

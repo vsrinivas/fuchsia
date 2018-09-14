@@ -785,8 +785,7 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
         }
     }
 
-    //TODO(ravoorir):Re-enable ultra high speed after evaluating a need for
-    //tuning and after wifi stack is more stable.
+    //TODO(ravoorir):Re-enable ultra high speed when wifi stack is more stable.
     /* if (sdio_is_uhs_supported(dev->sdio_dev.hw_info.caps)) {
         if ((st = sdio_switch_bus_width(dev, SDIO_BW_4BIT)) != ZX_OK) {
             zxlogf(ERROR, "sdmmc_probe_sdio: Swtiching to 4-bit bus width failed, retcode = %d\n",
@@ -796,6 +795,15 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
         if ((st = sdio_switch_uhs(dev)) != ZX_OK) {
             zxlogf(ERROR, "sdmmc_probe_sdio: Switching to high speed failed, retcode = %d\n", st);
             goto high_speed;
+        }
+        uint32_t hw_caps = dev->sdio_dev.hw_info.caps;
+
+        if ((hw_caps & SDIO_CARD_UHS_SDR104) || (hw_caps & SDIO_CARD_UHS_SDR50)) {
+            st = sdmmc_perform_tuning(&dev->host, SD_SEND_TUNING_BLOCK);
+            if (st != ZX_OK) {
+                zxlogf(ERROR, "mmc: tuning failed %d\n", st);
+                goto high_speed;
+            }
         }
         goto complete;
     }

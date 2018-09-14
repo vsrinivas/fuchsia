@@ -1024,7 +1024,7 @@ unlock_out:
 }
 
 /* SDMMC PROTOCOL Implementations: perform_tuning */
-static zx_status_t imx_sdhci_perform_tuning(void* ctx) {
+static zx_status_t imx_sdhci_perform_tuning(void* ctx, uint32_t tuning_cmd_idx) {
     SDHCI_FUNC_ENTRY_LOG;
     imx_sdhci_device_t* dev = ctx;
     uint32_t regVal;
@@ -1032,7 +1032,7 @@ static zx_status_t imx_sdhci_perform_tuning(void* ctx) {
     mtx_lock(&dev->mtx);
 
     sdmmc_req_t req = {
-        .cmd_idx = MMC_SEND_TUNING_BLOCK,
+        .cmd_idx = tuning_cmd_idx,
         .cmd_flags = MMC_SEND_TUNING_BLOCK_FLAGS,
         .arg = 0,
         .blockcount = 0,

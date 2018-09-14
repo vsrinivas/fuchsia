@@ -104,7 +104,7 @@ typedef struct sdmmc_protocol_ops {
     // issue a hw reset
     void (*hw_reset)(void* ctx);
     // perform tuning
-    zx_status_t (*perform_tuning)(void* ctx);
+    zx_status_t (*perform_tuning)(void* ctx, uint32_t cmd_idx);
     // issue a request
     zx_status_t (*request)(void* ctx, sdmmc_req_t* req);
 } sdmmc_protocol_ops_t;
@@ -140,8 +140,8 @@ static inline void sdmmc_hw_reset(sdmmc_protocol_t* sdmmc) {
     sdmmc->ops->hw_reset(sdmmc->ctx);
 }
 
-static inline zx_status_t sdmmc_perform_tuning(sdmmc_protocol_t* sdmmc) {
-    return sdmmc->ops->perform_tuning(sdmmc->ctx);
+static inline zx_status_t sdmmc_perform_tuning(sdmmc_protocol_t* sdmmc, uint32_t cmd_idx) {
+    return sdmmc->ops->perform_tuning(sdmmc->ctx, cmd_idx);
 }
 
 static inline zx_status_t sdmmc_request(sdmmc_protocol_t* sdmmc, sdmmc_req_t* req) {

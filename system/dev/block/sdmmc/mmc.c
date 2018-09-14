@@ -296,7 +296,7 @@ zx_status_t sdmmc_probe_mmc(sdmmc_device_t* dev) {
                 goto err;
             }
 
-            if ((st = sdmmc_perform_tuning(&dev->host)) != ZX_OK) {
+            if ((st = sdmmc_perform_tuning(&dev->host, MMC_SEND_TUNING_BLOCK)) != ZX_OK) {
                 zxlogf(ERROR, "mmc: tuning failed %d\n", st);
                 goto err;
             }
