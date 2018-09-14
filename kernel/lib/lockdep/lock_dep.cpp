@@ -52,8 +52,7 @@ int LockDepThread(void* /*arg*/) {
 }
 
 void LockDepInit(unsigned /*level*/) {
-    thread_t* t = thread_create("lockdep", &LockDepThread, NULL,
-                                LOW_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_t* t = thread_create("lockdep", &LockDepThread, NULL, LOW_PRIORITY);
     thread_detach_and_resume(t);
 }
 
