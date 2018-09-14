@@ -128,6 +128,7 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
             while (true) {
                 mtx.lock();
                 if (status != ZX_OK) {
+                    mtx.unlock();
                     return;
                 }
                 i = blob_index++;
