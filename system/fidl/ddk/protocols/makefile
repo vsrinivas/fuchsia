@@ -47,6 +47,9 @@ gpio-impl: $(LOCAL_DIR)/gpio.banjo
 hidbus:
 	$(run-banjo)
 
+intel-hda-codec:
+	$(run-banjo)
+
 intel-hda-dsp:
 	$(run-banjo)
 
@@ -86,4 +89,4 @@ serial:
 test:
 	$(run-banjo)
 
-all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl hidbus intel-hda-dsp iommu mailbox pci pciroot rawnand scpi sdhci sdio sdmmc serial serial-impl test
+all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl hidbus intel-hda-codec intel-hda-dsp iommu mailbox pci pciroot rawnand scpi sdhci sdio sdmmc serial serial-impl test
