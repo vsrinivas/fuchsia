@@ -38,6 +38,9 @@ class DisplayManager {
   // Fetches the necessary linear stride (in px) from the display controller.
   uint32_t FetchLinearStride(uint32_t width, zx_pixel_format_t format);
 
+  // Generates or releases an event ID that can be used with the display
+  // interface. The event can be signaled even after ReleaseEvent if it was
+  // referenced in a Flip that's pending.
   uint64_t ImportEvent(const zx::event& event);
   void ReleaseEvent(uint64_t id);
 

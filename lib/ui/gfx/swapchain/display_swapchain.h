@@ -55,6 +55,10 @@ class DisplaySwapchain : public Swapchain {
     uint64_t render_finished_event_id;
     EventTimestamper::Watch render_finished_watch;
 
+    // Event is signaled when the display is done using a frame.
+    zx::event retired_event;
+    uint64_t retired_event_id;
+
     bool presented = false;
   };
   std::unique_ptr<FrameRecord> NewFrameRecord(

@@ -291,12 +291,29 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
     return std::unique_ptr<FrameRecord>();
   }
 
+  zx::event retired_event;
+  zx_status_t status = zx::event::create(0, &retired_event);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR)
+        << "DisplaySwapchain::NewFrameRecord() failed to create retired event";
+    return std::unique_ptr<FrameRecord>();
+  }
+
+  uint64_t retired_event_id = display_manager_->ImportEvent(retired_event);
+  if (retired_event_id == fuchsia::display::invalidId) {
+    FXL_LOG(ERROR)
+        << "DisplaySwapchain::NewFrameRecord() failed to import retired event";
+    return std::unique_ptr<FrameRecord>();
+  }
+
   auto record = std::make_unique<FrameRecord>();
   record->frame_timings = frame_timings;
   record->swapchain_index = frame_timings->AddSwapchain(this);
   record->render_finished_escher_semaphore =
       std::move(render_finished_escher_semaphore);
   record->render_finished_event_id = render_finished_event_id;
+  record->retired_event = std::move(retired_event);
+  record->retired_event_id = retired_event_id;
 
   record->render_finished_watch = EventTimestamper::Watch(
       timestamper_, std::move(render_finished_event), escher::kFenceSignalled,
@@ -318,8 +335,12 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   // There must not already exist a pending record.  If there is, it indicates
   // an error in the FrameScheduler logic (or somewhere similar), which should
   // not have scheduled another frame when there are no framebuffers available.
-  FXL_CHECK(!frames_[next_frame_index_] ||
-            frames_[next_frame_index_]->frame_timings->finalized());
+  if (frames_[next_frame_index_]) {
+    FXL_CHECK(frames_[next_frame_index_]->frame_timings->finalized());
+    FXL_CHECK(frames_[next_frame_index_]->retired_event.wait_one(
+                  ZX_EVENT_SIGNALED, zx::time(), nullptr) == ZX_OK);
+  }
+
   auto& frame_record = frames_[next_frame_index_] =
       NewFrameRecord(frame_timings);
 
@@ -339,11 +360,12 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() present");
 
-  display_manager_->Flip(
-      display_, buffer.fb_id, frame_record->render_finished_event_id,
-      fuchsia::display::invalidId /* frame_signal_event_id */);
+  display_manager_->Flip(display_, buffer.fb_id,
+                         frame_record->render_finished_event_id,
+                         frame_record->retired_event_id);
 
   display_manager_->ReleaseEvent(frame_record->render_finished_event_id);
+  display_manager_->ReleaseEvent(frame_record->retired_event_id);
 
   return true;
 }
