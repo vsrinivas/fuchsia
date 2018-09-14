@@ -15,7 +15,7 @@
 namespace media {
 namespace audio {
 
-constexpr float AudioCoreImpl::kMaxSystemAudioGain;
+constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
 AudioCoreImpl::AudioCoreImpl() : device_manager_(this) {
   // Stash a pointer to our async object.
@@ -110,15 +110,15 @@ void AudioCoreImpl::CreateAudioRenderer2(
   Shutdown();
 }
 
-void AudioCoreImpl::SetSystemGain(float db_gain) {
-  db_gain = std::max(std::min(db_gain, kMaxSystemAudioGain),
+void AudioCoreImpl::SetSystemGain(float gain_db) {
+  gain_db = std::max(std::min(gain_db, kMaxSystemAudioGainDb),
                      fuchsia::media::MUTED_GAIN);
 
-  if (system_gain_db_ == db_gain) {
+  if (system_gain_db_ == gain_db) {
     return;
   }
 
-  system_gain_db_ = db_gain;
+  system_gain_db_ = gain_db;
 
   device_manager_.OnSystemGainChanged();
   NotifyGainMuteChanged();

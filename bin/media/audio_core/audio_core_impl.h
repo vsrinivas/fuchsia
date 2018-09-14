@@ -41,7 +41,7 @@ class AudioCoreImpl : public fuchsia::media::Audio {
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> audio_renderer)
       final;
 
-  void SetSystemGain(float db_gain) final;
+  void SetSystemGain(float gain_db) final;
   void SetSystemMute(bool muted) final;
 
   void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) final;
@@ -77,7 +77,7 @@ class AudioCoreImpl : public fuchsia::media::Audio {
  private:
   static constexpr float kDefaultSystemGainDb = -12.0f;
   static constexpr bool kDefaultSystemMuted = false;
-  static constexpr float kMaxSystemAudioGain = 0.0f;
+  static constexpr float kMaxSystemAudioGainDb = 0.0f;
 
   void NotifyGainMuteChanged();
   void PublishServices();

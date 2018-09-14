@@ -1046,7 +1046,7 @@ zx_status_t AudioDriver::SendSetGain(
       (gain_state.muted ? AUDIO_SGF_MUTE : 0) |
       (gain_state.agc_enabled ? AUDIO_SGF_AGC : 0));
   // clang-format on
-  req.gain = gain_state.db_gain;
+  req.gain = gain_state.gain_db;
 
   return stream_channel_->Write(&req, sizeof(req));
 }

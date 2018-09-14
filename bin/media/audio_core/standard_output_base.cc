@@ -266,7 +266,7 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
       // as needed.
       if (task_type == TaskType::Mix) {
         info->amplitude_scale =
-            packet_link->gain().GetGainScale(cur_mix_job_.sw_output_db_gain);
+            packet_link->gain().GetGainScale(cur_mix_job_.sw_output_gain_db);
       }
 
       // Now process the packet which is at the front of the audio out's queue.

@@ -87,7 +87,7 @@ AudioDeviceSettings::AudioDeviceSettings(const AudioDriver& drv, bool is_input)
       can_agc_(drv.hw_gain_state().can_agc) {
   const auto& hw = drv.hw_gain_state();
 
-  gain_state_.db_gain = hw.cur_gain;
+  gain_state_.gain_db = hw.cur_gain;
   gain_state_.muted = hw.can_mute && hw.cur_mute;
   gain_state_.agc_enabled = hw.can_agc && hw.cur_agc;
 }
@@ -214,8 +214,8 @@ bool AudioDeviceSettings::SetGainInfo(
   namespace fm = ::fuchsia::media;
 
   if ((set_flags & fm::SetAudioGainFlag_GainValid) &&
-      (gain_state_.db_gain != req.db_gain)) {
-    gain_state_.db_gain = req.db_gain;
+      (gain_state_.gain_db != req.db_gain)) {
+    gain_state_.gain_db = req.db_gain;
     dirtied =
         static_cast<audio_set_gain_flags_t>(dirtied | AUDIO_SGF_GAIN_VALID);
   }
@@ -281,7 +281,7 @@ void AudioDeviceSettings::GetGainInfo(
   // contention.
   fbl::AutoLock lock(&settings_lock_);
 
-  out_info->db_gain = gain_state_.db_gain;
+  out_info->db_gain = gain_state_.gain_db;
   out_info->flags = 0;
 
   if (can_mute_ && gain_state_.muted) {

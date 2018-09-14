@@ -55,7 +55,7 @@ class AudioOutImpl
   }
   bool format_info_valid() const { return (format_info_ != nullptr); }
 
-  float db_gain() const { return db_gain_; }
+  float gain_db() const { return gain_db_; }
 
   // AudioOut interface
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
@@ -91,7 +91,7 @@ class AudioOutImpl
   void ReportNewMinClockLeadTime();
 
   fbl::RefPtr<AudioOutFormatInfo> format_info_;
-  float db_gain_ = 0.0;
+  float gain_db_ = 0.0;
   bool mute_ = false;
   std::shared_ptr<AudioLinkPacketSource> throttle_output_link_;
 

@@ -22,7 +22,7 @@ class Gain {
   using AScale = float;
 
   // constructor
-  Gain() : db_target_rend_gain_(0.0f) {}
+  Gain() : target_src_gain_db_(0.0f) {}
 
   // Audio gains for AudioOuts/AudioIns and output devices are expressed as
   // floating-point values, in decibels. For each signal path, two gain values
@@ -48,14 +48,14 @@ class Gain {
   // their execution domain (giving us the single-threaded guarantee).
   // This value is stored in an atomic float, so that the Mixer can consume it
   // at any time without our needing to use a lock for synchronization.
-  void SetAudioOutGain(float db_gain) { db_target_rend_gain_.store(db_gain); }
+  void SetAudioOutGain(float gain_db) { target_src_gain_db_.store(gain_db); }
 
   // Retrieve the combined amplitude scalar for this Gain, when provided a gain
   // value for the "destination" side of this link (output device, or audio
   // audio in API). This will only ever be called by the mixer or the single
   // audio in for this audio path. For performance reasons, values are cached
   // and the scalar recomputed only when needed.
-  AScale GetGainScale(float output_db_gain);
+  AScale GetGainScale(float dest_gain_db);
 
   // Helper function which gives the value of the mute threshold for an
   // amplitude scale value, for any incoming sample format.
@@ -68,9 +68,9 @@ class Gain {
   static constexpr AScale MuteThreshold() { return kMinScale; }
 
  private:
-  std::atomic<float> db_target_rend_gain_;
-  float db_current_rend_gain_ = kMinGainDb;
-  float db_current_output_gain_ = kMinGainDb;
+  std::atomic<float> target_src_gain_db_;
+  float current_src_gain_db_ = kMinGainDb;
+  float current_dest_gain_db_ = kMinGainDb;
   AScale combined_gain_scale_ = 0.0f;
 };
 

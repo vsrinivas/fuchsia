@@ -646,21 +646,21 @@ void AudioOutImpl::PauseNoReply() { Pause(nullptr); }
 
 void AudioOutImpl::SetGain(float gain) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
-  if (db_gain_ != gain) {
+  if (gain_db_ != gain) {
     if (gain > fuchsia::media::MAX_GAIN) {
       FXL_LOG(ERROR) << "Gain value too large (" << gain << ") for audio out.";
       return;
     }
 
-    db_gain_ = gain;
+    gain_db_ = gain;
 
-    float effective_gain = mute_ ? fuchsia::media::MUTED_GAIN : db_gain_;
+    float effective_gain_db = mute_ ? fuchsia::media::MUTED_GAIN : gain_db_;
 
     fbl::AutoLock links_lock(&links_lock_);
     for (const auto& link : dest_links_) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
       auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-      packet_link->gain().SetAudioOutGain(effective_gain);
+      packet_link->gain().SetAudioOutGain(effective_gain_db);
     }
   }
 
@@ -673,13 +673,13 @@ void AudioOutImpl::SetMute(bool mute) {
   if (mute_ != mute) {
     mute_ = mute;
 
-    float effective_gain = mute_ ? fuchsia::media::MUTED_GAIN : db_gain_;
+    float effective_gain_db = mute_ ? fuchsia::media::MUTED_GAIN : gain_db_;
 
     fbl::AutoLock links_lock(&links_lock_);
     for (const auto& link : dest_links_) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
       auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-      packet_link->gain().SetAudioOutGain(effective_gain);
+      packet_link->gain().SetAudioOutGain(effective_gain_db);
     }
   }
 

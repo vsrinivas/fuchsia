@@ -27,7 +27,7 @@ class AudioDeviceSettings
       public fbl::WAVLTreeContainable<fbl::RefPtr<AudioDeviceSettings>> {
  public:
   struct GainState {
-    float db_gain = 0.0f;
+    float gain_db = 0.0f;
     bool muted = false;
     bool agc_enabled = false;
   };

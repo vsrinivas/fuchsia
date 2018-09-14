@@ -201,7 +201,7 @@ class AudioInImpl : public AudioObject,
   uint32_t bytes_per_frame_;
   TimelineRate frames_to_clock_mono_rate_;
   uint32_t max_frames_per_capture_;
-  std::atomic<float> db_gain_;
+  std::atomic<float> gain_db_;
 
   // Shared buffer state
   zx::vmo payload_buf_vmo_;

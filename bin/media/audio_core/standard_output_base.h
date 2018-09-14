@@ -39,7 +39,7 @@ class StandardOutputBase : public AudioOutput {
     bool accumulate;
     const TimelineFunction* local_to_output;
 
-    float sw_output_db_gain;
+    float sw_output_gain_db;
     bool sw_output_muted;
 
     // State for the job which is set up for each audio out during SetupMix

@@ -19,29 +19,28 @@ constexpr float Gain::kMaxGainDb;
 
 // Calculate a stream's gain-scale multiplier, given an output gain (in db).
 // Use a few optimizations to avoid doing the full calculation unless we must.
-Gain::AScale Gain::GetGainScale(float output_db_gain) {
-  float db_target_rend_gain = db_target_rend_gain_.load();
+Gain::AScale Gain::GetGainScale(float dest_gain_db) {
+  float target_src_gain_db = target_src_gain_db_.load();
 
   // If nothing changed, return the previously-computed amplitude scale value.
-  if ((db_current_rend_gain_ == db_target_rend_gain) &&
-      (db_current_output_gain_ == output_db_gain)) {
+  if ((current_src_gain_db_ == target_src_gain_db) &&
+      (current_dest_gain_db_ == dest_gain_db)) {
     return combined_gain_scale_;
   }
 
   // Update the internal gains, clamping in the process.
-  db_current_rend_gain_ =
-      fbl::clamp(db_target_rend_gain, kMinGainDb, kMaxGainDb);
-  db_current_output_gain_ = fbl::clamp(output_db_gain, kMinGainDb, 0.0f);
+  current_src_gain_db_ = fbl::clamp(target_src_gain_db, kMinGainDb, kMaxGainDb);
+  current_dest_gain_db_ = fbl::clamp(dest_gain_db, kMinGainDb, 0.0f);
 
   // If output and render gains cancel each other, the combined is kUnityScale.
-  if (db_current_output_gain_ == -db_current_rend_gain_) {
+  if (current_dest_gain_db_ == -current_src_gain_db_) {
     combined_gain_scale_ = kUnityScale;
-  } else if ((db_current_rend_gain_ <= kMinGainDb) ||
-             (db_current_output_gain_ <= kMinGainDb)) {
+  } else if ((current_src_gain_db_ <= kMinGainDb) ||
+             (current_dest_gain_db_ <= kMinGainDb)) {
     // If render or output is at the mute point, then silence the stream.
     combined_gain_scale_ = 0.0f;
   } else {
-    float effective_gain_db = db_current_rend_gain_ + db_current_output_gain_;
+    float effective_gain_db = current_src_gain_db_ + current_dest_gain_db_;
     // Likewise, silence the stream if the combined gain is at the mute point.
     if (effective_gain_db <= kMinGainDb) {
       combined_gain_scale_ = 0.0f;

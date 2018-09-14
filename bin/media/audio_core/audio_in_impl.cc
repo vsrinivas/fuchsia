@@ -22,7 +22,7 @@ namespace audio {
 
 zx_duration_t kAssumedWorstSourceFenceTime = ZX_MSEC(5);
 
-constexpr float kInitialCaptureGain = 0.0;
+constexpr float kInitialCaptureGainDb = 0.0;
 
 // static
 AtomicGenerationId AudioInImpl::PendingCaptureBuffer::sequence_generator;
@@ -42,7 +42,7 @@ AudioInImpl::AudioInImpl(
       owner_(owner),
       state_(State::WaitingForVmo),
       loopback_(loopback),
-      db_gain_(kInitialCaptureGain) {
+      gain_db_(kInitialCaptureGainDb) {
   // TODO(johngro) : See MG-940.  Eliminate this priority boost as soon as we
   // have a more official way of meeting real-time latency requirements.
   mix_domain_ = ::dispatcher::ExecutionDomain::Create(24);
@@ -800,7 +800,7 @@ void AudioInImpl::SetGain(float gain_db) {
     return;
   }
 
-  db_gain_.store(gain_db);
+  gain_db_.store(gain_db);
 }
 
 void AudioInImpl::SetMute(bool muted) {
@@ -844,7 +844,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
 
   // If our current audio in gain is muted, we have nothing to do after filling
   // with silence.
-  float capture_gain = db_gain_.load();
+  float capture_gain = gain_db_.load();
   if (capture_gain <= fuchsia::media::MUTED_GAIN) {
     return true;
   }
