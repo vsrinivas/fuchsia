@@ -14,9 +14,7 @@ namespace test {
 
 using PoseBufferTest = VkSessionTest;
 
-// TODO(SCN-963): Vulkan was disabled in these tests for a while,
-// and when it was re-enabled this test was failing.
-VK_TEST_F(PoseBufferTest, DISABLED_Validation) {
+VK_TEST_F(PoseBufferTest, Validation) {
   const ResourceId invalid_id = 0;
   const ResourceId scene_id = 1;
   const ResourceId camera_id = 2;
@@ -47,9 +45,10 @@ VK_TEST_F(PoseBufferTest, DISABLED_Validation) {
   EXPECT_TRUE(Apply(scenic::NewSetCameraPoseBufferCmd(
       camera_id, buffer_id, num_entries, base_time, time_interval)));
 
-  // Invalid base time in the future
+  // Invalid base time 1 second in the future
   EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
-      camera_id, buffer_id, num_entries, UINT64_MAX, time_interval)));
+      camera_id, buffer_id, num_entries, base_time + 1024 * 1024 * 1024,
+      time_interval)));
 
   // Invalid buffer id
   EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
