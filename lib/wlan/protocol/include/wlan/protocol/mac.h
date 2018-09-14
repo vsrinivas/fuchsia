@@ -109,17 +109,24 @@ typedef struct wlan_tx_info {
 } wlan_tx_info_t;
 
 #define WLAN_TX_VECTOR_IDX_INVALID 0
+#define WLAN_TX_STATUS_MAX_ENTRY 8
+
+typedef struct wlan_tx_status_entry {
+    tx_vec_idx_t tx_vector_idx;
+    // Number of total attempts with this specific tx vector, including successful attempts.
+    // DDK assumes the number of attempts per packet will not exceed 255. (usually <= 8)
+    uint8_t attempts;
+} __PACKED wlan_tx_status_entry_t;
 
 typedef struct wlan_tx_status {
+    // up to 8 different tx_vector for one PPDU frame.
+    // WLAN_TX_VECTOR_IDX_INVALID indicates no more entries.
+    wlan_tx_status_entry_t tx_status_entry[WLAN_TX_STATUS_MAX_ENTRY];
     // Destination mac address, or addr1 in packet header.
     uint8_t peer_addr[6];
-    // Used by Minstrel as an index into its rate table.
-    tx_vec_idx_t tx_vector_idx;
-    // Number of retries after the first attempt.  0 if transmission succeeds on first attempt.
-    uint16_t retries;
     // Outcome of packet transmission. True iff ACK was received from peer.
     bool success;
-} wlan_tx_status_t;
+} __PACKED wlan_tx_status_t;
 
 enum {
     WLAN_PROTECTION_NONE = 0,

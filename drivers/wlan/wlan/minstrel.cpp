@@ -237,9 +237,18 @@ void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_statu
         errorf("Peer [%s] does not exist for tx status report.\n", peer_addr.ToString().c_str());
         return;
     }
-    auto& tx_stats = peer->tx_stats_map[tx_status.tx_vector_idx];
-    tx_stats.attempts += tx_status.retries + 1;
-    tx_stats.success += tx_status.success ? 1 : 0;
+
+    auto tx_stats_map = &peer->tx_stats_map;
+    tx_vec_idx_t last_idx = kInvalidTxVectorIdx;
+    for (auto entry : tx_status.tx_status_entry) {
+        if (entry.tx_vector_idx == kInvalidTxVectorIdx) { break; }
+        last_idx = entry.tx_vector_idx;
+        (*tx_stats_map)[last_idx].attempts += entry.attempts;
+    }
+    if (tx_status.success && last_idx != kInvalidTxVectorIdx) {
+        (*tx_stats_map)[last_idx].success++;
+    }
+
     peer->has_update = true;
 }
 

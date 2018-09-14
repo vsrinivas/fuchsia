@@ -3187,7 +3187,6 @@ static uint16_t ralink_phy_to_ddk_phy(uint8_t ralink_phy) {
 
 static uint8_t ddk_phy_to_ralink_phy(uint16_t ddk_phy) {
     switch (ddk_phy) {
-
     case WLAN_PHY_CCK:
         return PhyMode::kLegacyCck;
     case WLAN_PHY_OFDM:
@@ -3815,7 +3814,8 @@ zx_status_t Device::OnTxReportInterruptTimer() {
         std::lock_guard<std::mutex> guard(lock_);
         if (wlanmac_proxy_ != nullptr) {
             wlan_tx_status reported_tx_status = ReadTxStatsFifoEntry(packet_id);
-            reported_tx_status.retries = stat_fifo_ext.txq_rty_cnt();
+            // TODO(NET-1487) parse retry chain information to provide aggregated tx report.
+            reported_tx_status.tx_status_entry[0].attempts = 1 + stat_fifo_ext.txq_rty_cnt();
             reported_tx_status.success = (stat_fifo.txq_ok() != 0);
 
             wlanmac_proxy_->ReportTxStatus(&reported_tx_status);
@@ -4151,14 +4151,15 @@ wlan_tx_status Device::ReadTxStatsFifoEntry(int packet_id) {
     wlan_tx_status reported_tx_status = {};
     std::copy(std::begin(tx_stats_entry.peer_addr), std::end(tx_stats_entry.peer_addr),
               std::begin(reported_tx_status.peer_addr));
-    reported_tx_status.tx_vector_idx = tx_stats_entry.tx_vector_idx;
+    std::memset(reported_tx_status.tx_status_entry, 0, sizeof(reported_tx_status.tx_status_entry));
+    reported_tx_status.tx_status_entry[0].tx_vector_idx = tx_stats_entry.tx_vector_idx;
 
     tx_stats_entry.in_use = false;
     return reported_tx_status;
 }
 
 int Device::WriteTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
-    if ((wlan_pkt.info.tx_flags & WLAN_TX_INFO_VALID_TX_VECTOR_IDX) == 0) {
+    if ((wlan_pkt.info.valid_fields & WLAN_TX_INFO_VALID_TX_VECTOR_IDX) == 0) {
         return kInvalidTxPacketId;
     }
 
@@ -4568,7 +4569,9 @@ zx_status_t Device::ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type) {
         WriteSharedKeyMode(skey, KeyMode::kNone);
         break;
     }
-    default: { break; }
+    default: {
+        break;
+    }
     }
     return ZX_OK;
 }
