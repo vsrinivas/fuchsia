@@ -37,8 +37,8 @@ class NamespaceTest : public ::gtest::RealLoopFixture {
   fxl::RefPtr<Namespace> MakeNamespace(
       ServiceListPtr additional_services,
       fxl::RefPtr<Namespace> parent = nullptr) {
-    return fxl::MakeRefCounted<Namespace>(parent, nullptr,
-                                          std::move(additional_services));
+    return fxl::MakeRefCounted<Namespace>(
+        parent, nullptr, std::move(additional_services), nullptr);
   }
 
   zx_status_t ConnectToService(zx_handle_t svc_dir, const std::string& name) {
@@ -76,8 +76,8 @@ class NamespaceHostDirectoryTest : public NamespaceTest {
 class NamespaceProviderTest : public NamespaceTest {
  protected:
   fxl::RefPtr<Namespace> MakeNamespace(ServiceListPtr additional_services) {
-    return fxl::MakeRefCounted<Namespace>(nullptr, nullptr,
-                                          std::move(additional_services));
+    return fxl::MakeRefCounted<Namespace>(
+        nullptr, nullptr, std::move(additional_services), nullptr);
   }
 
   void BindServiceProvider(fidl::InterfaceRequest<ServiceProvider> request) {

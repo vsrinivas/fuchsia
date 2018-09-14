@@ -138,13 +138,11 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   void CreateComponentWithProcess(fuchsia::sys::PackagePtr package,
                                   fuchsia::sys::LaunchInfo launch_info,
                                   ComponentRequestWrapper component_request,
-                                  fxl::RefPtr<Namespace> ns,
                                   ComponentObjectCreatedCallback callback);
 
   void CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
                                   fuchsia::sys::LaunchInfo launch_info,
                                   ComponentRequestWrapper component_request,
-                                  fxl::RefPtr<Namespace> ns,
                                   ComponentObjectCreatedCallback callback);
 
   void CreateElfBinaryComponentFromPackage(
