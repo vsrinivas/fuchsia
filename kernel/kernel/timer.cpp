@@ -468,6 +468,10 @@ void timer_transition_off_cpu(uint old_cpu) {
         // we just modified the head of the timer queue
         update_platform_timer(cpu, new_head->scheduled_time);
     }
+
+    // the old cpu has no tasks left, so reset the deadlines
+    percpu[old_cpu].preempt_timer_deadline = ZX_TIME_INFINITE;
+    percpu[old_cpu].next_timer_deadline = ZX_TIME_INFINITE;
 }
 
 void timer_thaw_percpu(void) {
@@ -476,6 +480,8 @@ void timer_thaw_percpu(void) {
 
     uint cpu = arch_curr_cpu_num();
 
+    // reset next_timer_deadline so that update_platform_timer will reconfigure the timer
+    percpu[cpu].next_timer_deadline = ZX_TIME_INFINITE;
     zx_time_t deadline = percpu[cpu].preempt_timer_deadline;
 
     timer_t* t = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
