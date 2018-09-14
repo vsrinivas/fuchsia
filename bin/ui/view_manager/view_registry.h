@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_VIEW_REGISTRY_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_VIEW_REGISTRY_H_
 
+#include <list>
 #include <string>
 #include <unordered_map>
 
@@ -99,6 +100,10 @@ class ViewRegistry : public ViewInspector,
   // Make child the first responder
   // Destroys |container_state| if an error occurs.
   void RequestFocus(ViewContainerState* container_state, uint32_t child_key);
+
+  void RequestSnapshotHACK(
+      ViewContainerState* container_state, uint32_t child_key,
+      fit::function<void(::fuchsia::mem::Buffer)> callback);
 
   // SERVICE PROVIDER REQUESTS
 
@@ -231,7 +236,8 @@ class ViewRegistry : public ViewInspector,
   }
 
   // Returns whether view is allowed to capture focus
-  virtual bool IsViewFocusable(::fuchsia::ui::viewsv1token::ViewToken view_token);
+  virtual bool IsViewFocusable(
+      ::fuchsia::ui::viewsv1token::ViewToken view_token);
 
   // A11Y VIEW INSPECTOR
 
@@ -259,6 +265,8 @@ class ViewRegistry : public ViewInspector,
       input_connections_by_view_token_;
   std::unordered_map<uint32_t, std::unique_ptr<InputDispatcherImpl>>
       input_dispatchers_by_view_tree_token_;
+  std::list<std::shared_ptr<::fuchsia::ui::gfx::SnapshotCallbackHACK>>
+      snapshot_bindings_;
 
   fxl::WeakPtrFactory<ViewRegistry> weak_factory_;  // must be last
 

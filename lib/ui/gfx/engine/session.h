@@ -179,18 +179,13 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
       ::fuchsia::ui::gfx::SetDisableClippingCmd command);
 
   // Resource creation functions, called by ApplyCreateResourceCmd().
-  bool ApplyCreateMemory(ResourceId id,
-                         ::fuchsia::ui::gfx::MemoryArgs args);
-  bool ApplyCreateImage(ResourceId id,
-                        ::fuchsia::ui::gfx::ImageArgs args);
+  bool ApplyCreateMemory(ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args);
+  bool ApplyCreateImage(ResourceId id, ::fuchsia::ui::gfx::ImageArgs args);
   bool ApplyCreateImagePipe(ResourceId id,
                             ::fuchsia::ui::gfx::ImagePipeArgs args);
-  bool ApplyCreateBuffer(ResourceId id,
-                         ::fuchsia::ui::gfx::BufferArgs args);
-  bool ApplyCreateScene(ResourceId id,
-                        ::fuchsia::ui::gfx::SceneArgs args);
-  bool ApplyCreateCamera(ResourceId id,
-                         ::fuchsia::ui::gfx::CameraArgs args);
+  bool ApplyCreateBuffer(ResourceId id, ::fuchsia::ui::gfx::BufferArgs args);
+  bool ApplyCreateScene(ResourceId id, ::fuchsia::ui::gfx::SceneArgs args);
+  bool ApplyCreateCamera(ResourceId id, ::fuchsia::ui::gfx::CameraArgs args);
   bool ApplyCreateStereoCamera(ResourceId id,
                                ::fuchsia::ui::gfx::StereoCameraArgs args);
   bool ApplyCreateRenderer(ResourceId id,
@@ -203,14 +198,11 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                             ::fuchsia::ui::gfx::RectangleArgs args);
   bool ApplyCreateRoundedRectangle(
       ResourceId id, ::fuchsia::ui::gfx::RoundedRectangleArgs args);
-  bool ApplyCreateCircle(ResourceId id,
-                         ::fuchsia::ui::gfx::CircleArgs args);
-  bool ApplyCreateMesh(ResourceId id,
-                       ::fuchsia::ui::gfx::MeshArgs args);
+  bool ApplyCreateCircle(ResourceId id, ::fuchsia::ui::gfx::CircleArgs args);
+  bool ApplyCreateMesh(ResourceId id, ::fuchsia::ui::gfx::MeshArgs args);
   bool ApplyCreateMaterial(ResourceId id,
                            ::fuchsia::ui::gfx::MaterialArgs args);
-  bool ApplyCreateView(ResourceId id,
-                       ::fuchsia::ui::gfx::ViewArgs args);
+  bool ApplyCreateView(ResourceId id, ::fuchsia::ui::gfx::ViewArgs args);
   bool ApplyCreateViewHolder(ResourceId id,
                              ::fuchsia::ui::gfx::ViewHolderArgs args);
   bool ApplyCreateClipNode(ResourceId id,
@@ -229,23 +221,21 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
       ResourceId id, ::fuchsia::ui::gfx::ImagePipeCompositorArgs args);
   bool ApplyCreateLayerStack(ResourceId id,
                              ::fuchsia::ui::gfx::LayerStackArgs args);
-  bool ApplyCreateLayer(ResourceId id,
-                        ::fuchsia::ui::gfx::LayerArgs args);
+  bool ApplyCreateLayer(ResourceId id, ::fuchsia::ui::gfx::LayerArgs args);
   bool ApplyCreateVariable(ResourceId id,
                            ::fuchsia::ui::gfx::VariableArgs args);
+  bool ApplyTakeSnapshotCmdHACK(
+      ::fuchsia::ui::gfx::TakeSnapshotCmdHACK command);
 
   // Actually create resources.
-  ResourcePtr CreateMemory(ResourceId id,
-                           ::fuchsia::ui::gfx::MemoryArgs args);
+  ResourcePtr CreateMemory(ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args);
   ResourcePtr CreateImage(ResourceId id, MemoryPtr memory,
                           ::fuchsia::ui::gfx::ImageArgs args);
   ResourcePtr CreateBuffer(ResourceId id, MemoryPtr memory,
                            uint32_t memory_offset, uint32_t num_bytes);
 
-  ResourcePtr CreateScene(ResourceId id,
-                          ::fuchsia::ui::gfx::SceneArgs args);
-  ResourcePtr CreateCamera(ResourceId id,
-                           ::fuchsia::ui::gfx::CameraArgs args);
+  ResourcePtr CreateScene(ResourceId id, ::fuchsia::ui::gfx::SceneArgs args);
+  ResourcePtr CreateCamera(ResourceId id, ::fuchsia::ui::gfx::CameraArgs args);
   ResourcePtr CreateStereoCamera(ResourceId id,
                                  ::fuchsia::ui::gfx::StereoCameraArgs args);
   ResourcePtr CreateRenderer(ResourceId id,
@@ -254,8 +244,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateAmbientLight(ResourceId id);
   ResourcePtr CreateDirectionalLight(ResourceId id);
 
-  ResourcePtr CreateView(ResourceId id,
-                         ::fuchsia::ui::gfx::ViewArgs args);
+  ResourcePtr CreateView(ResourceId id, ::fuchsia::ui::gfx::ViewArgs args);
   ResourcePtr CreateViewHolder(ResourceId id,
                                ::fuchsia::ui::gfx::ViewHolderArgs args);
   ResourcePtr CreateClipNode(ResourceId id,
@@ -275,12 +264,11 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
       ResourceId id, ::fuchsia::ui::gfx::ImagePipeCompositorArgs args);
   ResourcePtr CreateLayerStack(ResourceId id,
                                ::fuchsia::ui::gfx::LayerStackArgs args);
-  ResourcePtr CreateLayer(ResourceId id,
-                          ::fuchsia::ui::gfx::LayerArgs args);
+  ResourcePtr CreateLayer(ResourceId id, ::fuchsia::ui::gfx::LayerArgs args);
   ResourcePtr CreateCircle(ResourceId id, float initial_radius);
   ResourcePtr CreateRectangle(ResourceId id, float width, float height);
-  ResourcePtr CreateRoundedRectangle(ResourceId id, float width,
-                                     float height, float top_left_radius,
+  ResourcePtr CreateRoundedRectangle(ResourceId id, float width, float height,
+                                     float top_left_radius,
                                      float top_right_radius,
                                      float bottom_right_radius,
                                      float bottom_left_radius);

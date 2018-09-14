@@ -4,6 +4,8 @@
 
 library fuchsia.ui.viewsv1;
 
+using fuchsia.mem;
+
 using fuchsia.ui.viewsv1token;
 
 // A view container is an interface exposed by |View| and |ViewTree| to
@@ -140,6 +142,9 @@ interface ViewContainer {
 
   // Request the child view to get input focus for key events.
   5: RequestFocus(uint32 child_key);
+
+  // Request the snapshot of the child view.
+  6: RequestSnapshotHACK(uint32 child_key)-> (fuchsia.mem.Buffer data);
 };
 
 // An interface clients may implement to receive events from a view container.

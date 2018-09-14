@@ -40,6 +40,8 @@ std::ostream& operator<<(std::ostream& stream,
       return stream << "AddChild";
     case Command::Tag::kAddPart:
       return stream << "AddPart";
+    case Command::Tag::kTakeSnapshotCmd:
+      return stream << "TakeSnapshot";
     case Command::Tag::kDetach:
       return stream << "Detach";
     case Command::Tag::kDetachChildren:

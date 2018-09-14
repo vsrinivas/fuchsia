@@ -151,6 +151,8 @@ fuchsia::ui::gfx::Command NewSetClipCmd(uint32_t node_id, uint32_t clip_id,
 fuchsia::ui::gfx::Command NewSetTagCmd(uint32_t node_id, uint32_t tag_value);
 fuchsia::ui::gfx::Command NewSetHitTestBehaviorCmd(
     uint32_t node_id, fuchsia::ui::gfx::HitTestBehavior hit_test_behavior);
+fuchsia::ui::gfx::Command NewTakeSnapshotCmdHACK(
+    uint32_t id, fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback);
 
 // Camera and lighting operations.
 

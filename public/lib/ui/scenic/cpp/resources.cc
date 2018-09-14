@@ -12,12 +12,12 @@
 namespace scenic {
 namespace {
 
-template<class T>
+template <class T>
 constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
-    return (v < lo) ? lo : (hi < v) ? hi : v;
+  return (v < lo) ? lo : (hi < v) ? hi : v;
 }
 
-} // namespace
+}  // namespace
 
 Resource::Resource(Session* session)
     : session_(session), id_(session->AllocResourceId()) {}
@@ -268,6 +268,10 @@ EntityNode::EntityNode(Session* session) : ContainerNode(session) {
 
 void EntityNode::Attach(const ViewHolder& view_holder) {
   session()->Enqueue(NewAddChildCmd(id(), view_holder.id()));
+}
+
+void EntityNode::Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback) {
+  session()->Enqueue(NewTakeSnapshotCmdHACK(id(), std::move(callback)));
 }
 
 EntityNode::~EntityNode() = default;

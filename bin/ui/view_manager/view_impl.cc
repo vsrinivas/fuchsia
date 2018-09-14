@@ -73,6 +73,11 @@ void ViewImpl::RequestFocus(uint32_t child_key) {
   registry_->RequestFocus(state_, child_key);
 }
 
+void ViewImpl::RequestSnapshotHACK(uint32_t child_key,
+                                   RequestSnapshotHACKCallback callback) {
+  registry_->RequestSnapshotHACK(state_, child_key, std::move(callback));
+}
+
 void ViewImpl::ConnectToService(fidl::StringPtr service_name,
                                 zx::channel client_handle) {
   registry_->ConnectToViewService(state_, service_name,

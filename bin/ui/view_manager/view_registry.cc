@@ -28,6 +28,29 @@
 namespace view_manager {
 namespace {
 
+class SnapshotCallbackImpl : public fuchsia::ui::gfx::SnapshotCallbackHACK {
+ private:
+  fit::function<void(::fuchsia::mem::Buffer)> callback_;
+  fidl::Binding<::fuchsia::ui::gfx::SnapshotCallbackHACK> binding_;
+  fit::function<void()> clear_fn_;
+
+ public:
+  explicit SnapshotCallbackImpl(
+      fidl::InterfaceRequest<fuchsia::ui::gfx::SnapshotCallbackHACK> request,
+      fit::function<void(::fuchsia::mem::Buffer)> callback)
+      : callback_(std::move(callback)), binding_(this, std::move(request)) {}
+  ~SnapshotCallbackImpl() {}
+  void SetClear(fit::function<void()> clear_fn) {
+    clear_fn_ = std::move(clear_fn);
+  }
+
+  virtual void OnData(::fuchsia::mem::Buffer data) override {
+    callback_(std::move(data));
+    if (clear_fn_)
+      clear_fn_();
+  }
+};
+
 bool Validate(const ::fuchsia::ui::viewsv1::ViewLayout& value) {
   return value.size.width >= 0 && value.size.height >= 0;
 }
@@ -413,6 +436,42 @@ void ViewRegistry::RequestFocus(ViewContainerState* container_state,
   if (tree_state) {
     tree_state->RequestFocus(child_stub);
   }
+}
+
+void ViewRegistry::RequestSnapshotHACK(
+    ViewContainerState* container_state, uint32_t child_key,
+    fit::function<void(::fuchsia::mem::Buffer)> callback) {
+  FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+
+  // Check whether the child key exists in the container.
+  auto child_it = container_state->children().find(child_key);
+  if (child_it == container_state->children().end()) {
+    FXL_LOG(ERROR) << "Attempted to modify child with an invalid key: "
+                   << "container=" << container_state
+                   << ", child_key=" << child_key;
+    UnregisterViewContainer(container_state);
+    return;
+  }
+
+  // Immediately discard requests on unavailable views.
+  ViewStub* child_stub = child_it->second.get();
+  if (child_stub->is_unavailable() || child_stub->is_pending()) {
+    FXL_VLOG(1) << "RequestSnapshot called for view that is currently "
+                << (child_stub->is_unavailable() ? "unavailable" : "pending");
+    return;
+  }
+
+  fuchsia::ui::gfx::SnapshotCallbackHACKPtr snapshot_callback;
+  auto snapshot_callback_impl = std::make_shared<SnapshotCallbackImpl>(
+      snapshot_callback.NewRequest(), std::move(callback));
+  snapshot_callback_impl->SetClear([this, snapshot_callback_impl]() {
+    snapshot_bindings_.remove(snapshot_callback_impl);
+  });
+  snapshot_bindings_.push_back(std::move(snapshot_callback_impl));
+
+  // Snapshot the child.
+  child_stub->state()->top_node().Snapshot(std::move(snapshot_callback));
+  SchedulePresentSession();
 }
 
 void ViewRegistry::OnViewResolved(
@@ -1011,7 +1070,8 @@ void ViewRegistry::PerformHitTest(
 }
 
 // Not focusable if this view or any ancestor is unfocusable.
-bool ViewRegistry::IsViewFocusable(::fuchsia::ui::viewsv1token::ViewToken view_token) {
+bool ViewRegistry::IsViewFocusable(
+    ::fuchsia::ui::viewsv1token::ViewToken view_token) {
   ViewState* view = FindView(view_token.value);
   if (!view) {
     return false;

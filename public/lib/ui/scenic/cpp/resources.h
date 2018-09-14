@@ -287,6 +287,8 @@ class EntityNode : public ContainerNode {
   void SetClip(uint32_t clip_id, bool clip_to_self);
 
   void Attach(const ViewHolder& view_holder);
+
+  void Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback);
 };
 
 // Represents an imported node resource in a session.

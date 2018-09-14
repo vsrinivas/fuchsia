@@ -126,6 +126,14 @@ package("screencap") {
   binary = "screencap"
 }
 
+package("snapshot") {
+  deps = [
+    "snapshot",
+  ]
+
+  binary = "snapshot"
+}
+
 package("scenic_tools") {
   deprecated_system_image = true
 
@@ -134,6 +142,7 @@ package("scenic_tools") {
     "present_view",
     "print_input",
     "screencap",
+    "snapshot",
     "set_renderer_params_HACK:set_renderer_params",
     "set_root_view",
   ]
@@ -156,6 +165,9 @@ package("scenic_tools") {
     },
     {
       name = "screencap"
+    },
+    {
+      name = "snapshot"
     },
   ]
 }

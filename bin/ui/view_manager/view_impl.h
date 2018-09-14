@@ -53,6 +53,8 @@ class ViewImpl : public ::fuchsia::ui::viewsv1::View,
       uint32_t child_key,
       ::fuchsia::ui::viewsv1::ViewPropertiesPtr child_view_properties) override;
   void RequestFocus(uint32_t child_key) override;
+  void RequestSnapshotHACK(uint32_t child_key,
+                           RequestSnapshotHACKCallback callback) override;
 
   // |fuchsia::sys::ServiceProvider|:
   void ConnectToService(fidl::StringPtr service_name,

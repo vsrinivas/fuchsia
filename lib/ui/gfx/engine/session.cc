@@ -38,6 +38,7 @@
 #include "garnet/lib/ui/gfx/resources/shapes/mesh_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
+#include "garnet/lib/ui/gfx/resources/snapshot/snapshotter.h"
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
@@ -46,6 +47,7 @@
 #include "garnet/lib/ui/gfx/util/wrap.h"
 
 #include "lib/escher/hmd/pose_buffer.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
 #include "lib/escher/util/type_utils.h"
@@ -191,6 +193,8 @@ bool Session::ApplyCommand(::fuchsia::ui::gfx::Command command) {
     case ::fuchsia::ui::gfx::Command::Tag::kSetDisableClipping:
       return ApplySetDisableClippingCmd(
           std::move(command.set_disable_clipping()));
+    case ::fuchsia::ui::gfx::Command::Tag::kTakeSnapshotCmd:
+      return ApplyTakeSnapshotCmdHACK(std::move(command.take_snapshot_cmd()));
     case ::fuchsia::ui::gfx::Command::Tag::Invalid:
       // FIDL validation should make this impossible.
       FXL_CHECK(false);
@@ -258,8 +262,8 @@ bool Session::ApplyCreateResourceCmd(
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kShapeNode:
       return ApplyCreateShapeNode(id, std::move(command.resource.shape_node()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kCompositor:
-      return ApplyCreateCompositor(
-          id, std::move(command.resource.compositor()));
+      return ApplyCreateCompositor(id,
+                                   std::move(command.resource.compositor()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kDisplayCompositor:
       return ApplyCreateDisplayCompositor(
           id, std::move(command.resource.display_compositor()));
@@ -346,6 +350,32 @@ bool Session::ApplyAddPartCmd(::fuchsia::ui::gfx::AddPartCmd command) {
     }
   }
   return false;
+}
+
+bool Session::ApplyTakeSnapshotCmdHACK(
+    ::fuchsia::ui::gfx::TakeSnapshotCmdHACK command) {
+  async::PostTask(
+      async_get_default_dispatcher(), [weak = weak_factory_.GetWeakPtr(),
+                                       command = std::move(command)]() mutable {
+        if (!weak) {
+          return;
+        }
+        auto engine = weak->engine_;
+        if (auto node = weak->resources_.FindResource<Node>(command.node_id)) {
+          auto gpu_uploader =
+              escher::BatchGpuUploader::New(engine->GetEscherWeakPtr());
+          Snapshotter snapshotter(gpu_uploader);
+          // Take a snapshot and return the data in callback. The closure does
+          // not need the snapshotter instance and is invoked after the instance
+          // is destroyed.
+          snapshotter.TakeSnapshot(node.get(),
+                                   [callback = command.callback.Bind()](
+                                       fuchsia::mem::Buffer snapshot) {
+                                     callback->OnData(std::move(snapshot));
+                                   });
+        }
+      });
+  return true;
 }
 
 bool Session::ApplyDetachCmd(::fuchsia::ui::gfx::DetachCmd command) {
@@ -1313,8 +1343,10 @@ ResourcePtr Session::CreateRoundedRectangle(ResourceId id, float width,
                              escher::MeshAttribute::kUV};
 
   return fxl::MakeRefCounted<RoundedRectangleShape>(
-      this, id, rect_spec, factory->NewRoundedRect(rect_spec, mesh_spec, 
-        engine()->GetCommandContext()->batch_gpu_uploader));
+      this, id, rect_spec,
+      factory->NewRoundedRect(
+          rect_spec, mesh_spec,
+          engine()->GetCommandContext()->batch_gpu_uploader));
 }
 
 ResourcePtr Session::CreateMesh(ResourceId id) {
@@ -1359,9 +1391,7 @@ ErrorReporter* Session::error_reporter() const {
   return error_reporter_ ? error_reporter_ : ErrorReporter::Default();
 }
 
-EventReporter* Session::event_reporter() const {
-  return event_reporter_;
-}
+EventReporter* Session::event_reporter() const { return event_reporter_; }
 
 bool Session::AssertValueIsOfType(const ::fuchsia::ui::gfx::Value& value,
                                   const ::fuchsia::ui::gfx::Value::Tag* tags,
@@ -1540,7 +1570,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
     // The bool returned from Update() is 0 or 1, and needs_render is 0 or 1, so
     // bitwise |= is used which doesn't short-circuit.
     needs_render |= scheduled_image_pipe_updates_.top().image_pipe->Update(
-                            presentation_time, presentation_interval);
+        presentation_time, presentation_interval);
     scheduled_image_pipe_updates_.pop();
   }
 
@@ -1553,7 +1583,6 @@ void Session::EnqueueEvent(::fuchsia::ui::gfx::Event event) {
   }
   event_reporter_->EnqueueEvent(std::move(event));
 }
-
 
 void Session::EnqueueEvent(::fuchsia::ui::input::InputEvent event) {
   if (!is_valid()) {

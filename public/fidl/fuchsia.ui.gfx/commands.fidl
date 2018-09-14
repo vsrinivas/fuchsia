@@ -4,6 +4,8 @@
 
 library fuchsia.ui.gfx;
 
+using fuchsia.mem;
+
 // Commands that are used to modify the state of a |Session|.
 // TODO(SCN-237): reorder Command definitions to match the order in this union.
 union Command {
@@ -36,6 +38,7 @@ union Command {
   SetClipCmd set_clip;
   SetHitTestBehaviorCmd set_hit_test_behavior;
   SetViewPropertiesCmd set_view_properties;
+  TakeSnapshotCmdHACK take_snapshot_cmd;
 
   // Camera and lighting commands.
   SetCameraCmd set_camera;
@@ -184,6 +187,15 @@ struct AddChildCmd {
 struct AddPartCmd {
   uint32 node_id;
   uint32 part_id;
+};
+
+interface SnapshotCallbackHACK {
+  1: OnData(fuchsia.mem.Buffer data);
+};
+
+struct TakeSnapshotCmdHACK {
+  uint32 node_id;
+  SnapshotCallbackHACK callback;
 };
 
 // Detaches a parentable object from its parent (e.g. a node from a parent node,
