@@ -12,5 +12,4 @@ echo "Building zircon..."
 "${FUCHSIA_DIR}/scripts/build-zircon.sh" \
   -t "${FUCHSIA_ARCH}" \
   -j "$(fx-choose-build-concurrency)" \
-  "${FUCHSIA_BUILD_ZIRCON_ARGS[@]}" "$@" \
-  && echo "Done building zircon."
+  "${FUCHSIA_BUILD_ZIRCON_ARGS[@]}" "$@"
