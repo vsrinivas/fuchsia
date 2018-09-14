@@ -282,7 +282,7 @@ void ExceptionPort::OnThreadStartForDebugger(ThreadDispatcher* thread) {
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
     memset(&context, 0, sizeof(context));
-    ThreadDispatcher::ExceptionStatus estatus;
+    ThreadState::Exception estatus;
     auto status = thread->ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
     if (status != ZX_OK) {
         // Ignore any errors. There's nothing we can do here, and
@@ -307,7 +307,7 @@ void ExceptionPort::OnProcessStartForDebugger(ThreadDispatcher* thread) {
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
     memset(&context, 0, sizeof(context));
-    ThreadDispatcher::ExceptionStatus estatus;
+    ThreadState::Exception estatus;
     auto status = thread->ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
     if (status != ZX_OK) {
         // Ignore any errors. There's nothing we can do here, and
@@ -335,7 +335,7 @@ void ExceptionPort::OnThreadExitForDebugger(ThreadDispatcher* thread) {
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
     memset(&context, 0, sizeof(context));
-    ThreadDispatcher::ExceptionStatus estatus;
+    ThreadState::Exception estatus;
     // N.B. If the process is exiting it will have killed all threads. That
     // means all threads get marked with THREAD_SIGNAL_KILL which means this
     // exchange will return immediately with ZX_ERR_INTERNAL_INTR_KILLED.

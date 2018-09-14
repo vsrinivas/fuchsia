@@ -120,7 +120,7 @@ static zx_status_t try_exception_handler(fbl::RefPtr<ExceptionPort> eport,
                                          ThreadDispatcher* thread,
                                          const zx_exception_report_t* report,
                                          const arch_exception_context_t* arch_context,
-                                         ThreadDispatcher::ExceptionStatus* estatus) {
+                                         ThreadState::Exception* estatus) {
     LTRACEF("Trying exception port type %d\n", static_cast<int>(eport->type()));
     auto status = thread->ExceptionHandlerExchange(eport, report, arch_context, estatus);
     LTRACEF("ExceptionHandlerExchange returned status %d, estatus %d\n", status, static_cast<int>(*estatus));
@@ -157,7 +157,7 @@ static handler_status_t exception_handler_worker(uint exception_type,
 
     while (iter.Next(&eport)) {
         // Initialize for paranoia's sake.
-        ThreadDispatcher::ExceptionStatus estatus = ThreadDispatcher::ExceptionStatus::UNPROCESSED;
+        ThreadState::Exception estatus = ThreadState::Exception::UNPROCESSED;
         auto status = try_exception_handler(eport, thread, &report, context, &estatus);
         LTRACEF("handler returned %d/%d\n",
                 static_cast<int>(status), static_cast<int>(estatus));
@@ -167,10 +167,10 @@ static handler_status_t exception_handler_worker(uint exception_type,
             return HS_KILLED;
         case ZX_OK:
             switch (estatus) {
-            case ThreadDispatcher::ExceptionStatus::TRY_NEXT:
+            case ThreadState::Exception::TRY_NEXT:
                 *out_processed = true;
                 break;
-            case ThreadDispatcher::ExceptionStatus::RESUME:
+            case ThreadState::Exception::RESUME:
                 return HS_RESUME;
             default:
                 ASSERT_MSG(0, "invalid exception status %d",

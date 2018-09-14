@@ -17,6 +17,7 @@
 #include <object/dispatcher.h>
 #include <object/excp_port.h>
 #include <object/futex_node.h>
+#include <object/thread_state.h>
 
 #include <zircon/compiler.h>
 #include <zircon/syscalls/debug.h>
@@ -39,45 +40,6 @@ public:
             ThreadDispatcher& obj) {
             return obj.dll_thread_;
         }
-    };
-
-    // state of the thread
-    enum class State {
-        INITIAL,     // newly created thread
-        INITIALIZED, // LK thread state is initialized
-        RUNNING,     // thread is running
-        SUSPENDED,   // thread is suspended
-        DYING,       // thread has been signaled for kill, but has not exited yet
-        DEAD,        // thread has exited and is not running
-    };
-
-    // the exception status (disposition?) of the thread
-    enum class ExceptionStatus {
-        // The thread is not in an exception
-        IDLE,
-
-        // The thread is blocked in an exception, waiting for a response
-        UNPROCESSED,
-
-        // The exception is unhandled, try the next handler.
-        // If this is the last handler then the process is killed.
-        // As an analogy, this would be like typing "c" in gdb after a
-        // segfault. In linux the signal would be delivered to the thread,
-        // which would either terminate the process or run a signal handler if
-        // defined. In zircon this gives the next signal handler in the list
-        // a crack at the exception.
-        TRY_NEXT,
-
-        // The exception has been handled, resume the thread.
-        // As an analogy, this would be like typing "sig 0" in gdb after a
-        // segfault. The faulting instruction will be retried. If, for example,
-        // it segfaults again then the user is back in the debugger again,
-        // which is working as intended.
-        // Note: We don't, currently at least, support delivering a different
-        // exception (signal in linux parlance) to the thread. As an analogy,
-        // this would be like typing "sig 8" in gdb after getting a segfault
-        // (which is signal 11).
-        RESUME,
     };
 
     // When in a blocking syscall, or blocked in an exception, the blocking reason.
@@ -154,17 +116,19 @@ public:
     zx_status_t ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort> eport,
                                          const zx_exception_report_t* report,
                                          const arch_exception_context_t* arch_context,
-                                         ExceptionStatus* out_estatus);
+                                         ThreadState::Exception* out_estatus);
 
     // Called when an exception handler is finished processing the exception.
     // TODO(brettw) ZX-1072 Remove this when all callers are updated to use
     // the exception port variant below.
-    zx_status_t MarkExceptionHandled(ExceptionStatus estatus);
+    zx_status_t MarkExceptionHandled();
+    zx_status_t MarkExceptionNotHandled();
 
     // Called when an exception handler is finished processing the exception.
     // The exception is only continued if the eport corresponds to the current
     // exception port.
-    zx_status_t MarkExceptionHandled(PortDispatcher* eport, ExceptionStatus status);
+    zx_status_t MarkExceptionHandled(PortDispatcher* eport);
+    zx_status_t MarkExceptionNotHandled(PortDispatcher* eport);
 
     // Called when exception port |eport| is removed.
     // If the thread is waiting for the associated exception handler, continue
@@ -232,7 +196,7 @@ private:
     static void ThreadUserCallback(enum thread_user_state_change new_state, void* arg);
 
     // change states of the object, do what is appropriate for the state transition
-    void SetStateLocked(State) TA_REQ(get_lock());
+    void SetStateLocked(ThreadState::Lifecycle lifecycle) TA_REQ(get_lock());
 
     fbl::Canary<fbl::magic("THRD")> canary_;
 
@@ -248,9 +212,9 @@ private:
     uintptr_t user_arg1_ = 0;
     uintptr_t user_arg2_ = 0;
 
-    State state_ TA_GUARDED(get_lock()) = State::INITIAL;
+    ThreadState state_ TA_GUARDED(get_lock());
 
-    // This is only valid while |state_ == State::RUNNING|.
+    // This is only valid while |state_.is_running()|.
     // This is just a volatile, and not something like an atomic, because
     // the only writer is the thread itself, and readers can just pick up
     // whatever value is currently here. This value is written when the thread
@@ -263,8 +227,7 @@ private:
     fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
 
     // Support for sending an exception to an exception handler and then waiting for a response.
-    ExceptionStatus exception_status_ TA_GUARDED(get_lock())
-        = ExceptionStatus::IDLE;
+
     // The exception port of the handler the thread is waiting for a response from.
     fbl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(get_lock());
     const zx_exception_report_t* exception_report_ TA_GUARDED(get_lock());
@@ -297,5 +260,3 @@ private:
     // start and will send a process start exception.
     bool is_initial_thread_ = false;
 };
-
-const char* StateToString(ThreadDispatcher::State state);

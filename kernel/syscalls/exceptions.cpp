@@ -177,13 +177,11 @@ zx_status_t sys_task_resume(zx_handle_t handle, uint32_t options) {
         return ZX_ERR_WRONG_TYPE;
 
     if (options & ZX_RESUME_EXCEPTION) {
-        ThreadDispatcher::ExceptionStatus estatus;
         if (options & ZX_RESUME_TRY_NEXT) {
-            estatus = ThreadDispatcher::ExceptionStatus::TRY_NEXT;
+            return thread->MarkExceptionNotHandled();
         } else {
-            estatus = ThreadDispatcher::ExceptionStatus::RESUME;
+            return thread->MarkExceptionHandled();
         }
-        return thread->MarkExceptionHandled(estatus);
     } else {
         if (options != 0) {
             return ZX_ERR_INVALID_ARGS;
@@ -214,11 +212,9 @@ zx_status_t sys_task_resume_from_exception(zx_handle_t task_handle, zx_handle_t 
     if (options != 0 && options != ZX_RESUME_TRY_NEXT)
         return ZX_ERR_INVALID_ARGS;
 
-    ThreadDispatcher::ExceptionStatus estatus;
     if (options & ZX_RESUME_TRY_NEXT) {
-        estatus = ThreadDispatcher::ExceptionStatus::TRY_NEXT;
+        return thread->MarkExceptionNotHandled(eport.get());
     } else {
-        estatus = ThreadDispatcher::ExceptionStatus::RESUME;
+        return thread->MarkExceptionHandled(eport.get());
     }
-    return thread->MarkExceptionHandled(eport.get(), estatus);
 }

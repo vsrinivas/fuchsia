@@ -70,8 +70,8 @@ ThreadDispatcher::~ThreadDispatcher() {
 
     DEBUG_ASSERT(&thread_ != get_current_thread());
 
-    switch (state_) {
-    case State::DEAD: {
+    switch (state_.lifecycle()) {
+    case ThreadState::Lifecycle::DEAD: {
         // join the LK thread before doing anything else to clean up LK state and ensure
         // the thread we're destroying has stopped.
         LTRACEF("joining LK thread to clean up state\n");
@@ -80,16 +80,17 @@ ThreadDispatcher::~ThreadDispatcher() {
         DEBUG_ASSERT_MSG(ret == ZX_OK, "thread_join returned something other than ZX_OK\n");
         break;
     }
-    case State::INITIAL:
+    case ThreadState::Lifecycle::INITIAL:
         // this gets a pass, we can destruct a partially constructed thread
         break;
-    case State::INITIALIZED:
+    case ThreadState::Lifecycle::INITIALIZED:
         // as we've been initialized previously, forget the LK thread.
         // note that thread_forget is not called for self since the thread is not running
         thread_forget(&thread_);
         break;
     default:
-        DEBUG_ASSERT_MSG(false, "bad state %s, this %p\n", StateToString(state_), this);
+        DEBUG_ASSERT_MSG(false, "bad state %s, this %p\n",
+                         ThreadLifecycleToString(state_.lifecycle()), this);
     }
 
     event_destroy(&exception_event_);
@@ -100,8 +101,6 @@ zx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     LTRACE_ENTRY_OBJ;
 
     Guard<fbl::Mutex> guard{get_lock()};
-
-    DEBUG_ASSERT(state_ == State::INITIAL);
 
     // Make sure LK's max name length agrees with ours.
     static_assert(THREAD_NAME_LENGTH == ZX_MAX_NAME_LEN, "name length issue");
@@ -132,7 +131,7 @@ zx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     process_->aspace()->AttachToThread(lkthread);
 
     // we've entered the initialized state
-    SetStateLocked(State::INITIALIZED);
+    SetStateLocked(ThreadState::Lifecycle::INITIALIZED);
 
     return ZX_OK;
 }
@@ -172,7 +171,7 @@ zx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
 
     Guard<fbl::Mutex> guard{get_lock()};
 
-    if (state_ != State::INITIALIZED)
+    if (state_.lifecycle() != ThreadState::Lifecycle::INITIALIZED)
         return ZX_ERR_BAD_STATE;
 
     // save the user space entry state
@@ -190,7 +189,7 @@ zx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
     AddRef();
 
     // mark ourselves as running and resume the kernel thread
-    SetStateLocked(State::RUNNING);
+    SetStateLocked(ThreadState::Lifecycle::RUNNING);
 
     thread_.user_tid = get_koid();
     thread_.user_pid = process_->get_koid();
@@ -211,9 +210,7 @@ void ThreadDispatcher::Exit() {
     {
         Guard<fbl::Mutex> guard{get_lock()};
 
-        DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
-
-        SetStateLocked(State::DYING);
+        SetStateLocked(ThreadState::Lifecycle::DYING);
     }
 
     // exit here
@@ -230,21 +227,21 @@ void ThreadDispatcher::Kill() {
 
     Guard<fbl::Mutex> guard{get_lock()};
 
-    switch (state_) {
-    case State::INITIAL:
-    case State::INITIALIZED:
+    switch (state_.lifecycle()) {
+    case ThreadState::Lifecycle::INITIAL:
+    case ThreadState::Lifecycle::INITIALIZED:
         // thread was never started, leave in this state
         break;
-    case State::RUNNING:
-    case State::SUSPENDED:
+    case ThreadState::Lifecycle::RUNNING:
+    case ThreadState::Lifecycle::SUSPENDED:
         // deliver a kernel kill signal to the thread
         thread_kill(&thread_);
 
         // enter the dying state
-        SetStateLocked(State::DYING);
+        SetStateLocked(ThreadState::Lifecycle::DYING);
         break;
-    case State::DYING:
-    case State::DEAD:
+    case ThreadState::Lifecycle::DYING:
+    case ThreadState::Lifecycle::DEAD:
         // already going down
         break;
     }
@@ -257,9 +254,10 @@ zx_status_t ThreadDispatcher::Suspend() {
 
     Guard<fbl::Mutex> guard{get_lock()};
 
-    LTRACEF("%p: state %s\n", this, StateToString(state_));
+    LTRACEF("%p: state %s\n", this, ThreadLifecycleToString(state_.lifecycle()));
 
-    if (state_ != State::RUNNING && state_ != State::SUSPENDED)
+    if (state_.lifecycle() != ThreadState::Lifecycle::RUNNING &&
+        state_.lifecycle() != ThreadState::Lifecycle::SUSPENDED)
         return ZX_ERR_BAD_STATE;
 
     DEBUG_ASSERT(suspend_count_ >= 0);
@@ -278,14 +276,16 @@ zx_status_t ThreadDispatcher::Resume() {
 
     Guard<fbl::Mutex> guard{get_lock()};
 
-    LTRACEF("%p: state %s\n", this, StateToString(state_));
+    LTRACEF("%p: state %s\n", this, ThreadLifecycleToString(state_.lifecycle()));
 
     // TODO(brettw) ZX-1072 :The suspend_count_ == 0 check can be removed and converted to an
     // assertion when the bug is fixed. In that case, the suspend token shouldn't be calling Resume
     // unless it's previously suspended it. Currently callers can bypass this invariant using the
     // legacy suspend/resume API so give a good error.
     // DEBUG_ASSERT(suspend_count_ > 0)
-    if ((state_ != State::RUNNING && state_ != State::SUSPENDED) || suspend_count_ == 0)
+    if ((state_.lifecycle() != ThreadState::Lifecycle::RUNNING &&
+         state_.lifecycle() != ThreadState::Lifecycle::SUSPENDED) ||
+        suspend_count_ == 0)
         return ZX_ERR_BAD_STATE;
 
     suspend_count_--;
@@ -330,10 +330,8 @@ void ThreadDispatcher::Exiting() {
     {
         Guard<fbl::Mutex> guard{get_lock()};
 
-        DEBUG_ASSERT(state_ == State::DYING);
-
         // put ourselves into the dead state
-        SetStateLocked(State::DEAD);
+        SetStateLocked(ThreadState::Lifecycle::DEAD);
     }
 
     // remove ourselves from our parent process's view
@@ -369,9 +367,9 @@ void ThreadDispatcher::Suspending() {
     {
         Guard<fbl::Mutex> guard{get_lock()};
 
-        DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
-        if (state_ == State::RUNNING) {
-            SetStateLocked(State::SUSPENDED);
+        // Don't suspend if we are racing with our own death.
+        if (state_.lifecycle() != ThreadState::Lifecycle::DYING) {
+            SetStateLocked(ThreadState::Lifecycle::SUSPENDED);
         }
     }
 
@@ -386,9 +384,9 @@ void ThreadDispatcher::Resuming() {
     {
         Guard<fbl::Mutex> guard{get_lock()};
 
-        DEBUG_ASSERT(state_ == State::SUSPENDED || state_ == State::DYING);
-        if (state_ == State::SUSPENDED) {
-            SetStateLocked(State::RUNNING);
+        // Don't resume if we are racing with our own death.
+        if (state_.lifecycle() != ThreadState::Lifecycle::DYING) {
+            SetStateLocked(ThreadState::Lifecycle::RUNNING);
         }
     }
 
@@ -445,23 +443,24 @@ int ThreadDispatcher::StartRoutine(void* arg) {
     __UNREACHABLE;
 }
 
-void ThreadDispatcher::SetStateLocked(State state) {
+void ThreadDispatcher::SetStateLocked(ThreadState::Lifecycle lifecycle) {
     canary_.Assert();
 
-    LTRACEF("thread %p: state %u (%s)\n", this, static_cast<unsigned int>(state), StateToString(state));
+    LTRACEF("thread %p: state %u (%s)\n", this, static_cast<unsigned int>(lifecycle),
+            ThreadLifecycleToString(lifecycle));
 
     DEBUG_ASSERT(get_lock()->lock().IsHeld());
 
-    state_ = state;
+    state_.set(lifecycle);
 
-    switch (state) {
-    case State::RUNNING:
+    switch (lifecycle) {
+    case ThreadState::Lifecycle::RUNNING:
         UpdateStateLocked(ZX_THREAD_SUSPENDED, ZX_THREAD_RUNNING);
         break;
-    case State::SUSPENDED:
+    case ThreadState::Lifecycle::SUSPENDED:
         UpdateStateLocked(ZX_THREAD_RUNNING, ZX_THREAD_SUSPENDED);
         break;
-    case State::DEAD:
+    case ThreadState::Lifecycle::DEAD:
         UpdateStateLocked(ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED, ZX_THREAD_TERMINATED);
         break;
     default:
@@ -481,7 +480,7 @@ zx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport)
     // Lock |state_lock_| to ensure the thread doesn't transition to dead
     // while we're setting the exception handler.
     Guard<fbl::Mutex> guard{get_lock()};
-    if (state_ == State::DEAD)
+    if (state_.lifecycle() == ThreadState::Lifecycle::DEAD)
         return ZX_ERR_NOT_FOUND;
     if (exception_port_)
         return ZX_ERR_ALREADY_BOUND;
@@ -542,7 +541,7 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     fbl::RefPtr<ExceptionPort> eport,
     const zx_exception_report_t* report,
     const arch_exception_context_t* arch_context,
-    ExceptionStatus* out_estatus) {
+    ThreadState::Exception* out_estatus) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -568,7 +567,7 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         DEBUG_ASSERT(exception_wait_port_ == nullptr);
         exception_wait_port_ = eport;
 
-        exception_status_ = ExceptionStatus::UNPROCESSED;
+        state_.set(ThreadState::Exception::UNPROCESSED);
     }
 
     zx_status_t status;
@@ -600,8 +599,8 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
 
     Guard<fbl::Mutex> guard{get_lock()};
 
-    // Note: If |status| != ZX_OK, then |exception_status_| is still
-    // ExceptionStatus::UNPROCESSED.
+    // Note: If |status| != ZX_OK, then |state_| is still
+    // ThreadState::Exception::UNPROCESSED.
     switch (status) {
     case ZX_OK:
         // It's critical that at this point the event no longer be armed.
@@ -610,8 +609,6 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         // Note: The event could be signaled after event_wait_deadline returns
         // if the thread was killed while the event was signaled.
         DEBUG_ASSERT(!event_signaled(&exception_event_));
-        DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE &&
-                     exception_status_ != ExceptionStatus::UNPROCESSED);
         break;
     case ZX_ERR_INTERNAL_INTR_KILLED:
         // Thread was killed.
@@ -625,8 +622,8 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     exception_report_ = nullptr;
     thread_.exception_context = nullptr;
 
-    *out_estatus = exception_status_;
-    exception_status_ = ExceptionStatus::IDLE;
+    *out_estatus = state_.exception();
+    state_.set(ThreadState::Exception::IDLE);
 
     LTRACEF("returning status %d, estatus %d\n",
             status, static_cast<int>(*out_estatus));
@@ -635,12 +632,10 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
 
 // TODO(brettw) ZX-1072 Remove this when all callers are updated to use
 // the exception port variant below.
-zx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
+zx_status_t ThreadDispatcher::MarkExceptionHandled() {
     canary_.Assert();
 
-    LTRACEF("obj %p, estatus %d\n", this, static_cast<int>(estatus));
-    DEBUG_ASSERT(estatus != ExceptionStatus::IDLE &&
-                 estatus != ExceptionStatus::UNPROCESSED);
+    LTRACEF("obj %p\n", this);
 
     Guard<fbl::Mutex> guard{get_lock()};
     if (!InExceptionLocked())
@@ -654,22 +649,45 @@ zx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
     // first, or we might get called a second time for the same exception.
     // It's critical that we don't re-arm the event after the thread wakes up.
     // To keep things simple we take a first-one-wins approach.
-    DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
-    if (exception_status_ != ExceptionStatus::UNPROCESSED)
+    if (state_.exception() != ThreadState::Exception::UNPROCESSED)
         return ZX_ERR_BAD_STATE;
 
-    exception_status_ = estatus;
+    state_.set(ThreadState::Exception::RESUME);
     event_signal(&exception_event_, true);
     return ZX_OK;
 }
 
-zx_status_t ThreadDispatcher::MarkExceptionHandled(PortDispatcher* eport,
-                                                   ExceptionStatus estatus) {
+// TODO(brettw) ZX-1072 Remove this when all callers are updated to use
+// the exception port variant below.
+zx_status_t ThreadDispatcher::MarkExceptionNotHandled() {
     canary_.Assert();
 
-    LTRACEF("obj %p, estatus %d\n", this, static_cast<int>(estatus));
-    DEBUG_ASSERT(estatus != ExceptionStatus::IDLE &&
-                 estatus != ExceptionStatus::UNPROCESSED);
+    LTRACEF("obj %p\n", this);
+
+    Guard<fbl::Mutex> guard{get_lock()};
+    if (!InExceptionLocked())
+        return ZX_ERR_BAD_STATE;
+
+    // The thread can be in several states at this point. Alas this is a bit
+    // complicated because there is a window in the middle of
+    // ExceptionHandlerExchange between the thread going to sleep and after
+    // the thread waking up where we can obtain the lock. Things are further
+    // complicated by the fact that OnExceptionPortRemoval could get there
+    // first, or we might get called a second time for the same exception.
+    // It's critical that we don't re-arm the event after the thread wakes up.
+    // To keep things simple we take a first-one-wins approach.
+    if (state_.exception() != ThreadState::Exception::UNPROCESSED)
+        return ZX_ERR_BAD_STATE;
+
+    state_.set(ThreadState::Exception::TRY_NEXT);
+    event_signal(&exception_event_, true);
+    return ZX_OK;
+}
+
+zx_status_t ThreadDispatcher::MarkExceptionHandled(PortDispatcher* eport) {
+    canary_.Assert();
+
+    LTRACEF("obj %p\n", this);
 
     Guard<fbl::Mutex> guard{get_lock()};
     if (!InExceptionLocked())
@@ -686,11 +704,38 @@ zx_status_t ThreadDispatcher::MarkExceptionHandled(PortDispatcher* eport,
     // by the fact that OnExceptionPortRemoval could get there first, or we might get called a
     // second time for the same exception. It's critical that we don't re-arm the event after the
     // thread wakes up. To keep things simple we take a first-one-wins approach.
-    DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
-    if (exception_status_ != ExceptionStatus::UNPROCESSED)
+    if (state_.exception() != ThreadState::Exception::UNPROCESSED)
         return ZX_ERR_BAD_STATE;
 
-    exception_status_ = estatus;
+    state_.set(ThreadState::Exception::RESUME);
+    event_signal(&exception_event_, true);
+    return ZX_OK;
+}
+
+zx_status_t ThreadDispatcher::MarkExceptionNotHandled(PortDispatcher* eport) {
+    canary_.Assert();
+
+    LTRACEF("obj %p\n", this);
+
+    Guard<fbl::Mutex> guard{get_lock()};
+    if (!InExceptionLocked())
+        return ZX_ERR_BAD_STATE;
+
+    // The exception port isn't used directly but is instead proof that the caller has permission to
+    // resume from the exception. So validate that it corresponds to the task being resumed.
+    if (!exception_wait_port_->PortMatches(eport, false))
+        return ZX_ERR_ACCESS_DENIED;
+
+    // The thread can be in several states at this point. Alas this is a bit complicated because
+    // there is a window in the middle of ExceptionHandlerExchange between the thread going to sleep
+    // and after the thread waking up where we can obtain the lock. Things are further complicated
+    // by the fact that OnExceptionPortRemoval could get there first, or we might get called a
+    // second time for the same exception. It's critical that we don't re-arm the event after the
+    // thread wakes up. To keep things simple we take a first-one-wins approach.
+    if (state_.exception() != ThreadState::Exception::UNPROCESSED)
+        return ZX_ERR_BAD_STATE;
+
+    state_.set(ThreadState::Exception::TRY_NEXT);
     event_signal(&exception_event_, true);
     return ZX_OK;
 }
@@ -702,11 +747,10 @@ void ThreadDispatcher::OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& 
     Guard<fbl::Mutex> guard{get_lock()};
     if (!InExceptionLocked())
         return;
-    DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
     if (exception_wait_port_ == eport) {
         // Leave things alone if already processed. See MarkExceptionHandled.
-        if (exception_status_ == ExceptionStatus::UNPROCESSED) {
-            exception_status_ = ExceptionStatus::TRY_NEXT;
+        if (state_.exception() == ThreadState::Exception::UNPROCESSED) {
+            state_.set(ThreadState::Exception::TRY_NEXT);
             event_signal(&exception_event_, true);
         }
     }
@@ -727,7 +771,7 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
 
     *info = {};
 
-    State state;
+    ThreadState state;
     Blocked blocked_reason;
     ExceptionPort::Type excp_port_type;
     // We need to fetch all these values under lock, but once we have them
@@ -741,7 +785,7 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
             // thread is waiting for an exception response. So don't return
             // !NONE if the thread just woke up but hasn't reacquired
             // |state_lock_|.
-            exception_status_ == ExceptionStatus::UNPROCESSED) {
+            state_.exception() == ThreadState::Exception::UNPROCESSED) {
             DEBUG_ASSERT(exception_wait_port_ != nullptr);
             excp_port_type = exception_wait_port_->type();
         } else {
@@ -749,17 +793,17 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
             // event_wait_deadline has woken up but |state_lock_| has
             // not been reacquired.
             DEBUG_ASSERT(exception_wait_port_ == nullptr ||
-                         exception_status_ != ExceptionStatus::UNPROCESSED);
+                         state_.exception() != ThreadState::Exception::UNPROCESSED);
             excp_port_type = ExceptionPort::Type::NONE;
         }
     }
 
-    switch (state) {
-    case ThreadDispatcher::State::INITIAL:
-    case ThreadDispatcher::State::INITIALIZED:
+    switch (state.lifecycle()) {
+    case ThreadState::Lifecycle::INITIAL:
+    case ThreadState::Lifecycle::INITIALIZED:
         info->state = ZX_THREAD_STATE_NEW;
         break;
-    case ThreadDispatcher::State::RUNNING:
+    case ThreadState::Lifecycle::RUNNING:
         // The thread may be "running" but be blocked in a syscall or
         // exception handler.
         switch (blocked_reason) {
@@ -796,18 +840,18 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
             break;
         }
         break;
-    case ThreadDispatcher::State::SUSPENDED:
+    case ThreadState::Lifecycle::SUSPENDED:
         info->state = ZX_THREAD_STATE_SUSPENDED;
         break;
-    case ThreadDispatcher::State::DYING:
+    case ThreadState::Lifecycle::DYING:
         info->state = ZX_THREAD_STATE_DYING;
         break;
-    case ThreadDispatcher::State::DEAD:
+    case ThreadState::Lifecycle::DEAD:
         info->state = ZX_THREAD_STATE_DEAD;
         break;
     default:
         DEBUG_ASSERT_MSG(false, "unexpected run state: %d",
-                         static_cast<int>(state));
+                         static_cast<int>(state.lifecycle()));
         break;
     }
 
@@ -874,7 +918,7 @@ zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind,
     // SUSPENDED to RUNNING.
     Guard<fbl::Mutex> guard{get_lock()};
 
-    if (state_ != State::SUSPENDED && !InExceptionLocked())
+    if (state_.lifecycle() != ThreadState::Lifecycle::SUSPENDED && !InExceptionLocked())
         return ZX_ERR_BAD_STATE;
 
     switch (state_kind) {
@@ -924,7 +968,7 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
     // SUSPENDED to RUNNING.
     Guard<fbl::Mutex> guard{get_lock()};
 
-    if (state_ != State::SUSPENDED && !InExceptionLocked())
+    if (state_.lifecycle() != ThreadState::Lifecycle::SUSPENDED && !InExceptionLocked())
         return ZX_ERR_BAD_STATE;
 
     switch (state_kind) {
@@ -962,9 +1006,9 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
 
 zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
     Guard<fbl::Mutex> guard{get_lock()};
-    if ((state_ == State::INITIAL) ||
-        (state_ == State::DYING) ||
-        (state_ == State::DEAD)) {
+    if ((state_.lifecycle() == ThreadState::Lifecycle::INITIAL) ||
+        (state_.lifecycle() == ThreadState::Lifecycle::DYING) ||
+        (state_.lifecycle() == ThreadState::Lifecycle::DEAD)) {
         return ZX_ERR_BAD_STATE;
     }
     // The priority was already validated by the Profile dispatcher.
@@ -979,19 +1023,19 @@ void get_user_thread_process_name(const void* user_thread,
     ut->process()->get_name(out_name);
 }
 
-const char* StateToString(ThreadDispatcher::State state) {
-    switch (state) {
-    case ThreadDispatcher::State::INITIAL:
+const char* ThreadLifecycleToString(ThreadState::Lifecycle lifecycle) {
+    switch (lifecycle) {
+    case ThreadState::Lifecycle::INITIAL:
         return "initial";
-    case ThreadDispatcher::State::INITIALIZED:
+    case ThreadState::Lifecycle::INITIALIZED:
         return "initialized";
-    case ThreadDispatcher::State::RUNNING:
+    case ThreadState::Lifecycle::RUNNING:
         return "running";
-    case ThreadDispatcher::State::SUSPENDED:
+    case ThreadState::Lifecycle::SUSPENDED:
         return "suspended";
-    case ThreadDispatcher::State::DYING:
+    case ThreadState::Lifecycle::DYING:
         return "dying";
-    case ThreadDispatcher::State::DEAD:
+    case ThreadState::Lifecycle::DEAD:
         return "dead";
     }
     return "unknown";
