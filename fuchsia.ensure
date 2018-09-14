@@ -11,7 +11,7 @@ $ParanoidMode CheckPresence
 gn/gn/${platform} git_revision:106b823805adcc043b2bfe5bc21d58f160a28a7b
 
 # vpython
-infra/tools/luci/vpython/${platform} git_revision:b6cdec8586c9f8d3d728b1bc0bd4331330ba66fc
+infra/tools/luci/vpython/${platform} git_revision:9a931a5307c46b16b1c12e01e8239d4a73830b89
 
 # LUCI editor
 infra/tools/luci/led/${platform} git_revision:33219700e64033ed07cbafd43cef4e6db33d154a
