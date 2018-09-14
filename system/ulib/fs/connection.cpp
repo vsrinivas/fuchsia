@@ -54,7 +54,7 @@ void Describe(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
 
     // If a valid response was returned, encode it.
     response->status = r;
-    response->extra_ptr = reinterpret_cast<zxrio_object_info_t*>(r == ZX_OK ?
+    response->extra_ptr = reinterpret_cast<zxrio_node_info_t*>(r == ZX_OK ?
                                                                  FIDL_ALLOC_PRESENT :
                                                                  FIDL_ALLOC_ABSENT);
 }

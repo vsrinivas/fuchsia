@@ -365,7 +365,7 @@ bool test_get_handles() {
 
         zx::vmo vmo;
         uint32_t type;
-        zxrio_object_info_t info;
+        zxrio_node_info_t info;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::NONE);
         EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, file.GetHandles(ZX_FS_RIGHT_READABLE,
                                                         vmo.reset_and_get_address(),
@@ -379,7 +379,7 @@ bool test_get_handles() {
 
         zx::vmo vmo;
         uint32_t type;
-        zxrio_object_info_t info;
+        zxrio_node_info_t info;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::DUPLICATE);
         EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE, vmo.reset_and_get_address(),
                                          &type, &info));
@@ -402,7 +402,7 @@ bool test_get_handles() {
 
         zx::vmo vmo;
         uint32_t type;
-        zxrio_object_info_t info;
+        zxrio_node_info_t info;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
         EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
                                          vmo.reset_and_get_address(), &type, &info));
@@ -432,7 +432,7 @@ bool test_get_handles() {
 
         zx::vmo vmo;
         uint32_t type;
-        zxrio_object_info_t info;
+        zxrio_node_info_t info;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
         EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_WRITABLE, vmo.reset_and_get_address(),
                                          &type, &info));
@@ -459,7 +459,7 @@ bool test_get_handles() {
 
         zx::vmo vmo;
         uint32_t type;
-        zxrio_object_info_t info;
+        zxrio_node_info_t info;
         fs::VmoFile file(abc, PAGE_2 - 5u, 23u, false, fs::VmoFile::VmoSharing::CLONE_COW);
         EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE, vmo.reset_and_get_address(),
                                          &type, &info));
@@ -482,7 +482,7 @@ bool test_get_handles() {
 
         zx::vmo vmo;
         uint32_t type;
-        zxrio_object_info_t info;
+        zxrio_node_info_t info;
         fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
         EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
                                          vmo.reset_and_get_address(), &type, &info));
@@ -511,7 +511,7 @@ bool test_get_handles() {
 
         zx::vmo vmo;
         uint32_t type;
-        zxrio_object_info_t info;
+        zxrio_node_info_t info;
         fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
         EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_WRITABLE, vmo.reset_and_get_address(),
                                          &type, &info));

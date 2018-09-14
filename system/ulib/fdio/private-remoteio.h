@@ -61,7 +61,7 @@ zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
 //
 // Returns |ZX_OK| if a handle was returned.
 // Returns |ZX_ERR_NOT_FOUND| if no handle can be returned.
-zx_status_t zxrio_object_extract_handle(const zxrio_object_info_t* info,
+zx_status_t zxrio_object_extract_handle(const zxrio_node_info_t* info,
                                         zx_handle_t* out);
 
 // Create a fdio (if possible) from handles and info.
@@ -72,7 +72,7 @@ zx_status_t zxrio_object_extract_handle(const zxrio_object_info_t* info,
 // This function always takes control of all handles.
 // They are transferred into the |out| object on success,
 // or closed on failure.
-zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_object_info_t* info,
+zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_node_info_t* info,
                               fdio_t** out);
 
 // Wait/Read from a new client connection, with the expectation of

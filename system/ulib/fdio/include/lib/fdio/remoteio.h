@@ -128,7 +128,7 @@ typedef struct {
             zx_handle_t s;
         } socket;
     };
-} zxrio_object_info_t;
+} zxrio_node_info_t;
 
 #define ZXRIO_DESCRIBE_HDR_SZ       (__builtin_offsetof(zxrio_describe_t, extra))
 
@@ -141,8 +141,8 @@ typedef struct {
     uint32_t op;
 
     zx_status_t status;
-    zxrio_object_info_t* extra_ptr;
-    zxrio_object_info_t extra;
+    zxrio_node_info_t* extra_ptr;
+    zxrio_node_info_t extra;
 } zxrio_describe_t;
 
 #define FDIO_MMAP_FLAG_READ    (1u << 0)

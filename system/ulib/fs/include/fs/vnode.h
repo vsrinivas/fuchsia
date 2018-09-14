@@ -99,7 +99,7 @@ public:
     // may be returned by this vnode.
     // The usage of this field is dependent on the |type|.
     virtual zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                   zxrio_object_info_t* extra);
+                                   zxrio_node_info_t* extra);
 
     virtual zx_status_t WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd);
 #endif

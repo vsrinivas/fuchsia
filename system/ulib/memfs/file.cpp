@@ -159,7 +159,7 @@ zx_status_t VnodeFile::Getattr(vnattr_t* attr) {
 }
 
 zx_status_t VnodeFile::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                  zxrio_object_info_t* extra) {
+                                  zxrio_node_info_t* extra) {
     *type = FDIO_PROTOCOL_FILE;
     return ZX_OK;
 }

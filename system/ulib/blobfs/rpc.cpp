@@ -24,7 +24,7 @@
 namespace blobfs {
 
 zx_status_t VnodeBlob::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                  zxrio_object_info_t* extra) {
+                                  zxrio_node_info_t* extra) {
     if (IsDirectory()) {
         *type = FDIO_PROTOCOL_DIRECTORY;
         return ZX_OK;

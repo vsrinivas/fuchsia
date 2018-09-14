@@ -59,7 +59,7 @@ zx_status_t VnodeVmo::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
 }
 
 zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                 zxrio_object_info_t* extra) {
+                                 zxrio_node_info_t* extra) {
     zx_off_t* off = &extra->vmofile.offset;
     zx_off_t* len = &extra->vmofile.length;
     zx_handle_t vmo;

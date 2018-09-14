@@ -108,7 +108,7 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
 }
 
 zx_status_t VmoFile::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                zxrio_object_info_t* extra) {
+                                zxrio_node_info_t* extra) {
     ZX_DEBUG_ASSERT(!IsWritable(flags) || writable_); // checked by the VFS
 
     zx::vmo vmo;

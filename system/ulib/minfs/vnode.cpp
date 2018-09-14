@@ -2025,7 +2025,7 @@ zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targ
 
 #ifdef __Fuchsia__
 zx_status_t VnodeMinfs::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                   zxrio_object_info_t* extra) {
+                                   zxrio_node_info_t* extra) {
     if (IsDirectory()) {
         *type = FDIO_PROTOCOL_DIRECTORY;
     } else {

@@ -597,7 +597,7 @@ private:
 
 #ifdef __Fuchsia__
     zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                           zxrio_object_info_t* extra) final;
+                           zxrio_node_info_t* extra) final;
     void Sync(SyncCallback closure) final;
     zx_status_t AttachRemote(fs::MountChannel h) final;
     zx_status_t InitVmo();

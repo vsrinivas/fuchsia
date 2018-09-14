@@ -51,7 +51,7 @@ zx_handle_t zxrio_handle(zxrio_t* rio) {
     return rio->h;
 }
 
-zx_status_t zxrio_object_extract_handle(const zxrio_object_info_t* info,
+zx_status_t zxrio_object_extract_handle(const zxrio_node_info_t* info,
                                         zx_handle_t* out) {
     switch (info->tag) {
     case FDIO_PROTOCOL_FILE:
@@ -403,15 +403,15 @@ zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* info) {
     static_assert(__builtin_offsetof(zxrio_describe_t, extra) ==
                   FIDL_ALIGN(sizeof(fuchsia_io_NodeOnOpenEvent)),
                   "RIO Description message doesn't align with FIDL response secondary");
-    static_assert(sizeof(zxrio_object_info_t) == sizeof(fuchsia_io_NodeInfo),
-                  "RIO Object Info doesn't align with FIDL object info");
-    static_assert(__builtin_offsetof(zxrio_object_info_t, file.e) ==
+    static_assert(sizeof(zxrio_node_info_t) == sizeof(fuchsia_io_NodeInfo),
+                  "RIO Node Info doesn't align with FIDL object info");
+    static_assert(__builtin_offsetof(zxrio_node_info_t, file.e) ==
                   __builtin_offsetof(fuchsia_io_NodeInfo, file.event), "Unaligned File");
-    static_assert(__builtin_offsetof(zxrio_object_info_t, pipe.s) ==
+    static_assert(__builtin_offsetof(zxrio_node_info_t, pipe.s) ==
                   __builtin_offsetof(fuchsia_io_NodeInfo, pipe.socket), "Unaligned Pipe");
-    static_assert(__builtin_offsetof(zxrio_object_info_t, vmofile.v) ==
+    static_assert(__builtin_offsetof(zxrio_node_info_t, vmofile.v) ==
                   __builtin_offsetof(fuchsia_io_NodeInfo, vmofile.vmo), "Unaligned Vmofile");
-    static_assert(__builtin_offsetof(zxrio_object_info_t, device.e) ==
+    static_assert(__builtin_offsetof(zxrio_node_info_t, device.e) ==
                   __builtin_offsetof(fuchsia_io_NodeInfo, device.event), "Unaligned Device");
 
     return zxrio_decode_describe_handle(info, extra_handle);
@@ -491,7 +491,7 @@ zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
     fdio_t* io;
     zx_status_t r;
     int fd;
-    zxrio_object_info_t info;
+    zxrio_node_info_t info;
     zx_handle_t control_channel = ZX_HANDLE_INVALID;
 
     // Pack additional handles into |info|, if possible.
@@ -559,7 +559,7 @@ fail:
     return r;
 }
 
-zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_object_info_t* info,
+zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_node_info_t* info,
                               fdio_t** out) {
     // All failure cases which discard handles set r and break
     // to the end. All other cases in which handle ownership is moved
