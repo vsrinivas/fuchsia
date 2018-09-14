@@ -41,12 +41,7 @@ struct RealmArgs {
       const std::shared_ptr<component::Services>& env_services,
       bool run_virtual_console, bool inherit_parent_services);
 
-  static RealmArgs MakeWithHostDir(
-      Realm* parent, fidl::StringPtr label,
-      const std::shared_ptr<component::Services>& env_services,
-      bool run_virtual_console, zx::channel host_directory);
-
-  static RealmArgs MakeWithAdditionalServices(
+ static RealmArgs MakeWithAdditionalServices(
       Realm* parent, fidl::StringPtr label,
       const std::shared_ptr<component::Services>& env_services,
       bool run_virtual_console,
@@ -57,10 +52,6 @@ struct RealmArgs {
   fidl::StringPtr label;
   std::shared_ptr<component::Services> environment_services;
   bool run_virtual_console;
-
-  // Must set at most one of |host_directory| or
-  // |additional_services|.
-  zx::channel host_directory;
   fuchsia::sys::ServiceListPtr additional_services;
   bool inherit_parent_services;
   bool allow_parent_runners;
@@ -135,13 +126,11 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   void CreateComponentWithProcess(fuchsia::sys::PackagePtr package,
                                   fuchsia::sys::LaunchInfo launch_info,
                                   ComponentRequestWrapper component_request,
-                                  fxl::RefPtr<Namespace> ns,
                                   ComponentObjectCreatedCallback callback);
 
   void CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
                                   fuchsia::sys::LaunchInfo launch_info,
                                   ComponentRequestWrapper component_request,
-                                  fxl::RefPtr<Namespace> ns,
                                   ComponentObjectCreatedCallback callback);
 
   void CreateElfBinaryComponentFromPackage(

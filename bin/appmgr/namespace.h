@@ -36,8 +36,6 @@ class Namespace : public fuchsia::sys::Environment,
 
   zx::channel OpenServicesAsDirectory();
 
-  void SetServicesWhitelist(const std::vector<std::string>& services);
-
   //
   // fuchsia::sys::Environment implementation:
   //
@@ -84,7 +82,8 @@ class Namespace : public fuchsia::sys::Environment,
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);
   Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
-            fuchsia::sys::ServiceListPtr additional_services);
+            fuchsia::sys::ServiceListPtr additional_services,
+            const std::vector<std::string>* service_whitelist);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Namespace);
   ~Namespace() override;
@@ -95,7 +94,6 @@ class Namespace : public fuchsia::sys::Environment,
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<ServiceProviderDirImpl> services_;
   fbl::RefPtr<JobProviderImpl> job_provider_;
-  fxl::RefPtr<Namespace> parent_;
   Realm* const realm_;
   // Set if |additional_services.provider| was set.
   fuchsia::sys::ServiceProviderPtr service_provider_;

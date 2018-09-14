@@ -7,8 +7,9 @@
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
-
 #include "garnet/bin/appmgr/util.h"
+#include "gtest/gtest.h"
+#include "lib/fxl/strings/substitute.h"
 #include "lib/gtest/real_loop_fixture.h"
 
 namespace component {
@@ -35,7 +36,7 @@ class FakeEcho : public fidl::examples::echo::Echo {
 };
 
 class ServiceProviderTest : public ::gtest::RealLoopFixture {
- public:
+ protected:
   ServiceProviderTest() : vfs_(dispatcher()) {}
 
   fbl::RefPtr<fs::Service> CreateService(int set_value) {
@@ -57,168 +58,221 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
     }));
   }
 
+  void AddService(ServiceProviderDirImpl* service_provider,
+                  const std::string& prefix, int val) {
+    AddService(service_provider, prefix, val, CreateService(val));
+  }
+  void AddService(ServiceProviderDirImpl* service_provider,
+                  const std::string& prefix, int i,
+                  fbl::RefPtr<fs::Service> svc) {
+    const std::string service_name = fxl::Substitute("$0_service$1", prefix,
+                                                     std::to_string(i));
+    service_provider->AddService(service_name, svc);
+  }
+
   void GetService(ServiceProviderDirImpl* service_provider,
                   const fbl::String& service_name,
                   fbl::RefPtr<fs::Service>* out) {
     fbl::RefPtr<fs::Vnode> child;
-    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name));
+    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name))
+        << service_name.c_str();
     *out = fbl::RefPtr<fs::Service>(static_cast<fs::Service*>(child.get()));
   }
 
   void TestService(ServiceProviderDirImpl* service_provider,
                    const fbl::String& service_name, int expected_value) {
+    // Using Lookup.
+    value_ = -1;
     fbl::RefPtr<fs::Vnode> child;
-    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name));
+    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name))
+        << service_name.c_str();
     fbl::RefPtr<fs::Service> child_node;
     GetService(service_provider, service_name, &child_node);
     ASSERT_TRUE(child_node);
     ASSERT_EQ(ZX_OK, child_node->Serve(&vfs_, zx::channel(), 0));
-    RunLoopUntilIdle();
-    EXPECT_EQ(expected_value, value_);
+    EXPECT_EQ(expected_value, value_) << service_name.c_str();
+
+    // Using ConnectToService.
+    value_ = -1;
+    zx::channel h1, h2;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+    service_provider->ConnectToService(fidl::StringPtr(service_name.c_str()),
+                                       std::move(h2));
+    EXPECT_EQ(expected_value, value_) << service_name.c_str();
   }
 
   void TestMissingService(ServiceProviderDirImpl* service_provider,
                           const fbl::String& service_name) {
-    const int expected_value = value_;
+    // Using Lookup.
+    value_ = -1;
     fbl::RefPtr<fs::Vnode> child;
-    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name));
-    fbl::RefPtr<fs::Service> child_node;
-    GetService(service_provider, service_name, &child_node);
-    ASSERT_TRUE(child_node);
-    ASSERT_EQ(ZX_OK, child_node->Serve(&vfs_, zx::channel(), 0));
-    RunLoopUntilIdle();
+    ASSERT_EQ(ZX_ERR_NOT_FOUND, service_provider->Lookup(&child, service_name))
+        << service_name.c_str();
     // Never connected to service.
-    EXPECT_EQ(expected_value, value_);
+    EXPECT_EQ(value_, -1) << service_name.c_str();
+
+    // Using ConnectToService.
+    value_ = -1;
+    zx::channel h1, h2;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+    service_provider->ConnectToService(fidl::StringPtr(service_name.c_str()),
+                                       std::move(h2));
+    // Never connected to service.
+    EXPECT_EQ(value_, -1) << service_name.c_str();
   }
 
   zx::channel OpenAsDirectory(fbl::RefPtr<ServiceProviderDirImpl> service) {
     return Util::OpenAsDirectory(&vfs_, service);
   }
 
- protected:
   fs::SynchronousVfs vfs_;
   int value_ = 0;
   std::vector<std::unique_ptr<FakeEcho>> echo_services_;
 };
 
 TEST_F(ServiceProviderTest, SimpleService) {
-  auto service_name = "fake_service";
-  auto service = CreateService(2);
   ServiceProviderDirImpl service_provider;
-  service_provider.AddService(service, service_name);
-  TestService(&service_provider, service_name, 2);
+  AddService(&service_provider, "my", 1);
+  TestService(&service_provider, "my_service1", 1);
+  TestMissingService(&service_provider, "nonexistent_service");
 }
 
 TEST_F(ServiceProviderTest, Parent) {
-  ServiceProviderDirImpl service_provider;
-  auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl());
-  service_provider.set_parent(parent_service_provider);
-  auto service_name1 = "fake_service1";
-  auto service_name2 = "fake_service2";
-  auto service1 = CreateService(1);
-  auto service2 = CreateService(2);
-  auto service3 = CreateService(3);
-
-  service_provider.AddService(service1, service_name1);
-  parent_service_provider->AddService(service2, service_name2);
-  // add same name service to parent
-  parent_service_provider->AddService(service3, service_name1);
-
-  // should call child service
-  TestService(&service_provider, service_name1, 1);
-
-  // check that we can get parent service
-  TestService(&service_provider, service_name2, 2);
-
-  // check that parent is able to access its service
-  TestService(parent_service_provider.get(), service_name1, 3);
-}
-
-TEST_F(ServiceProviderTest, BackingDir) {
-  ServiceProviderDirImpl service_provider;
-  auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl());
-  auto backing_dir = OpenAsDirectory(parent_service_provider);
-  service_provider.set_backing_dir(std::move(backing_dir));
-
-  auto service_name1 = "fake_service1";
-  auto service_name2 = "fake_service2";
-  auto service1 = CreateService(1);
-  auto service2 = CreateEchoService("GoodBye");
-  auto service3 = CreateService(3);
-
-  service_provider.AddService(service1, service_name1);
-  parent_service_provider->AddService(service2, service_name2);
-  // add same name service to backing dir
-  parent_service_provider->AddService(service3, service_name1);
-
-  // should call child service
-  TestService(&service_provider, service_name1, 1);
-
-  // check that parent is able to access its service
-  TestService(parent_service_provider.get(), service_name1, 3);
-
-  // check that we can get backing_dir service from child
-  fbl::RefPtr<fs::Service> echo;
-  GetService(&service_provider, service_name2, &echo);
-  if (echo) {
-    fidl::examples::echo::EchoPtr echo_ptr;
-    echo->Serve(&vfs_, echo_ptr.NewRequest().TakeChannel(), 0);
-    RunLoopUntilIdle();
-    fidl::StringPtr message = "bogus";
-    echo_ptr->EchoString("Hello World!",
-                         [&](::fidl::StringPtr retval) { message = retval; });
-    RunLoopUntilIdle();
-    EXPECT_EQ("GoodBye", message);
-  }
-}
-
-TEST_F(ServiceProviderTest, ParentAndBackingDirTogther) {
-  ServiceProviderDirImpl service_provider;
-  auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl());
-  zx::channel b1, b2;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &b1, &b2));
-  service_provider.set_backing_dir(std::move(b2));
-  service_provider.set_parent(parent_service_provider);
-
-  // test that b2 was invalidated because of setting parent.
-  char msg[] = "message";
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED, b1.write(0, msg, sizeof(msg), nullptr, 0));
-
-  b1.reset();
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &b1, &b2));
-  service_provider.set_backing_dir(std::move(b2));
-
-  // test that we cannot set backing directory after setting parent.
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED, b1.write(0, msg, sizeof(msg), nullptr, 0));
-}
-
-TEST_F(ServiceProviderTest, RestrictedServices) {
-  ServiceProviderDirImpl service_provider;
-  auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl());
-  service_provider.set_parent(parent_service_provider);
-  auto service_name1 = "fake_service1";
-  auto service_name2 = "fake_service2";
-  auto service_name3 = "fake_service3";
-  auto service_name4 = "fake_service4";
-  auto service1 = CreateService(1);
-  auto service2 = CreateService(2);
   auto service3 = CreateService(3);
   auto service4 = CreateService(4);
 
-  service_provider.AddService(service1, service_name1);
-  service_provider.AddService(service2, service_name2);
-  parent_service_provider->AddService(service3, service_name3);
-  parent_service_provider->AddService(service4, service_name4);
-  service_provider.SetServicesWhitelist({service_name1, service_name3});
+  // 'fake_service1' overlaps in parent and child; the child's service should
+  // take priority.
+  ServiceProviderDirImpl service_provider;
+  AddService(&service_provider, "fake", 1);
+  auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl());
+  AddService(parent_service_provider.get(), "fake", 1, service3);
+  AddService(parent_service_provider.get(), "fake", 2);
+  service_provider.set_parent(parent_service_provider);
+  AddService(&service_provider, "fake", 2, service4);
 
-  // should be able to call service1 and service3
-  TestService(&service_provider, service_name1, 1);
-  TestService(&service_provider, service_name3, 3);
+  // should call child service
+  TestService(&service_provider, "fake_service1", 1);
 
-  // service2 and service4 are not accessible
-  TestMissingService(&service_provider, service_name2);
-  TestMissingService(&service_provider, service_name4);
+  // check that we can get parent service, because service4 was added after
+  // parent was set
+  TestService(&service_provider, "fake_service2", 2);
+
+  // check that parent is able to access its service
+  TestService(parent_service_provider.get(), "fake_service1", 3);
+
+  // check nonexistence of bogus service
+  TestMissingService(&service_provider, "nonexistent_service");
 }
+
+TEST_F(ServiceProviderTest, RestrictedServices) {
+  static const std::vector<std::string> kWhitelist{"parent_service1",
+                                                   "my_service1"};
+  auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl);
+  AddService(parent_service_provider.get(), "parent", 1);
+  AddService(parent_service_provider.get(), "parent", 2);
+  ServiceProviderDirImpl service_provider(&kWhitelist);
+  AddService(&service_provider, "my", 1);
+  AddService(&service_provider, "my", 2);
+  service_provider.set_parent(parent_service_provider);
+
+  // should be able to call "my_service1" and "parent_service1"
+  TestService(&service_provider, "my_service1", 1);
+  TestService(&service_provider, "parent_service1", 1);
+
+  // "my_service2" and "parent_service2" are not accessible
+  TestMissingService(&service_provider, "my_service2");
+  TestMissingService(&service_provider, "parent_service2");
+}
+
+class DirentChecker {
+ public:
+  DirentChecker(const void* buffer, size_t length)
+      : current_(reinterpret_cast<const uint8_t*>(buffer)),
+        remaining_(length) {}
+
+  void ExpectEnd() {
+    EXPECT_EQ(0u, remaining_);
+  }
+
+  void ExpectEntry(const char* name, uint32_t vtype) {
+    ASSERT_NE(0u, remaining_);
+    const auto entry = reinterpret_cast<const vdirent_t*>(current_);
+    const size_t entry_size = entry->size + sizeof(vdirent_t);
+    ASSERT_GE(remaining_, entry_size);
+    current_ += entry_size;
+    remaining_ -= entry_size;
+    const std::string entry_name(entry->name, strlen(name));
+    EXPECT_STREQ(entry_name.c_str(), name);
+    EXPECT_EQ(VTYPE_TO_DTYPE(vtype), entry->type)
+        << "Unexpected DTYPE for '" << name << "'.";
+  }
+
+ private:
+  const uint8_t* current_;
+  size_t remaining_;
+};
+
+constexpr size_t kBufSz = 4096;
+
+TEST_F(ServiceProviderTest, Readdir_Simple) {
+  ServiceProviderDirImpl service_provider;
+  AddService(&service_provider, "my", 1);
+  AddService(&service_provider, "my", 2);
+  AddService(&service_provider, "my", 3);
+
+  fs::vdircookie_t cookie = {};
+  uint8_t buffer[kBufSz];
+  size_t len;
+  {
+    EXPECT_EQ(ZX_OK,
+              service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
+    DirentChecker dc(buffer, len);
+    dc.ExpectEntry(".", V_TYPE_DIR);
+    dc.ExpectEntry("my_service1", V_TYPE_FILE);
+    dc.ExpectEntry("my_service2", V_TYPE_FILE);
+    dc.ExpectEntry("my_service3", V_TYPE_FILE);
+    dc.ExpectEnd();
+  }
+  {
+    EXPECT_EQ(ZX_OK,
+              service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
+    EXPECT_EQ(len, 0u);
+  }
+}
+
+TEST_F(ServiceProviderTest, Readdir_WithParent) {
+  ServiceProviderDirImpl service_provider;
+  AddService(&service_provider, "my", 1);
+  AddService(&service_provider, "my", 2);
+  auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl());
+  AddService(parent_service_provider.get(), "parent", 1);
+  AddService(parent_service_provider.get(), "parent", 2);
+  service_provider.set_parent(parent_service_provider);
+
+  fs::vdircookie_t cookie = {};
+  uint8_t buffer[kBufSz];
+  size_t len;
+  {
+    EXPECT_EQ(ZX_OK,
+              service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
+    DirentChecker dc(buffer, len);
+    dc.ExpectEntry(".", V_TYPE_DIR);
+    dc.ExpectEntry("my_service1", V_TYPE_FILE);
+    dc.ExpectEntry("my_service2", V_TYPE_FILE);
+    dc.ExpectEntry("parent_service1", V_TYPE_FILE);
+    dc.ExpectEntry("parent_service2", V_TYPE_FILE);
+    dc.ExpectEnd();
+  }
+  {
+    EXPECT_EQ(ZX_OK,
+              service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
+    EXPECT_EQ(len, 0u);
+  }
+}
+
+// NOTE: We don't test readdir with backing_dir because we know it is broken.
+// This will be fixed by removing backing_dir.
 
 }  // namespace
 }  // namespace component
