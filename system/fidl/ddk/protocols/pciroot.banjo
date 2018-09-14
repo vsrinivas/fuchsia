@@ -1,0 +1,13 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.pciroot;
+
+using zx;
+
+[Layout="ddk-protocol"]
+interface Pciroot {
+    1: GetAuxdata(string args) -> (zx.status s, vector<void> data);
+    2: GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
+};

@@ -56,6 +56,9 @@ mailbox:
 pci: $(LOCAL_DIR)/libs/pci.banjo
 	$(run-banjo)
 
+pciroot:
+	$(run-banjo)
+
 rawnand: $(LOCAL_DIR)/libs/nand.banjo
 	$(run-banjo)
 
@@ -80,4 +83,4 @@ serial:
 test:
 	$(run-banjo)
 
-all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl hidbus iommu mailbox pci rawnand scpi sdhci sdio sdmmc serial serial-impl test
+all: acpi amlogic-canvas bad-block bt-hci clk gpio gpio-impl hidbus iommu mailbox pci pciroot rawnand scpi sdhci sdio sdmmc serial serial-impl test

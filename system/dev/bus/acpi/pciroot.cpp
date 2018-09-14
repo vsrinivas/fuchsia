@@ -6,6 +6,7 @@
 #include <zircon/types.h>
 #include <zircon/device/i2c.h>
 #include <ddk/debug.h>
+#include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
 
 #include "acpi-private.h"
@@ -115,8 +116,8 @@ static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object,
 }
 
 static zx_status_t pciroot_op_get_auxdata(void* context, const char* args,
-                                          void* data, uint32_t bytes,
-                                          uint32_t* actual) {
+                                          void* data, size_t bytes,
+                                          size_t* actual) {
     acpi_device_t* dev = (acpi_device_t*)context;
 
     char type[16];
@@ -167,9 +168,9 @@ static zx_status_t pciroot_op_get_auxdata(void* context, const char* args,
         return acpi_to_zx_status(acpi_status);
     }
 
-    *actual = static_cast<uint32_t>(ctx.i * sizeof(auxdata_i2c_device_t));
+    *actual = ctx.i * sizeof(auxdata_i2c_device_t);
 
-    zxlogf(SPEW, "bus-acpi: get_auxdata '%s' %u devs actual %u\n",
+    zxlogf(SPEW, "bus-acpi: get_auxdata '%s' %u devs actual %zu\n",
            args, ctx.i, *actual);
 
     return ZX_OK;

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #pragma once
 #include <ddk/device.h>
+#include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
 
 #define MAX_NAMESPACE_DEPTH 100

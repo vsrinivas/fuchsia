@@ -84,11 +84,11 @@ static zx_status_t kpci_get_auxdata(pci_msg_t* req, kpci_device_t* device, zx_ha
     snprintf(args, sizeof(args), "%s,%02x:%02x:%02x", req->data,
              device->info.bus_id, device->info.dev_id, device->info.func_id);
 
-    uint32_t actual;
+    size_t actual;
     pci_msg_t resp = {};
     zx_status_t st = pciroot_get_auxdata(&device->pciroot, args, resp.data, req->outlen, &actual);
     if (st == ZX_OK) {
-        resp.datalen = actual;
+        resp.datalen = (uint32_t)actual;
     }
 
     return pci_rpc_reply(ch, st, 0, req, &resp);
