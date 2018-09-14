@@ -413,6 +413,7 @@ zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* info) {
                   __builtin_offsetof(fuchsia_io_NodeInfo, vmofile.vmo), "Unaligned Vmofile");
     static_assert(__builtin_offsetof(zxrio_node_info_t, device.e) ==
                   __builtin_offsetof(fuchsia_io_NodeInfo, device.event), "Unaligned Device");
+    // Connection::NodeDescribe also relies on these static_asserts.
 
     return zxrio_decode_describe_handle(info, extra_handle);
 }

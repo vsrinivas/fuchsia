@@ -34,16 +34,21 @@ void WriteDescribeError(zx::channel channel, zx_status_t status) {
     channel.write(0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
 }
 
+zx_status_t GetNodeInfo(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
+                        zxrio_node_info_t* info) {
+    if (IsPathOnly(flags)) {
+        return vn->Vnode::GetHandles(flags, &info->handle, &info->tag, info);
+    } else {
+        return vn->GetHandles(flags, &info->handle, &info->tag, info);
+    }
+}
+
 void Describe(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
               zxrio_describe_t* response, zx_handle_t* handle) {
     response->op = ZXFIDL_ON_OPEN;
-    zx_status_t r;
-    *handle = ZX_HANDLE_INVALID;
-    if (IsPathOnly(flags)) {
-        r = vn->Vnode::GetHandles(flags, handle, &response->extra.tag, &response->extra);
-    } else {
-        r = vn->GetHandles(flags, handle, &response->extra.tag, &response->extra);
-    }
+    response->extra.handle = ZX_HANDLE_INVALID;
+    zx_status_t r = GetNodeInfo(vn, flags, &response->extra);
+    *handle = response->extra.handle;
 
     // If a handle was returned, encode it.
     if (*handle != ZX_HANDLE_INVALID) {
@@ -379,8 +384,16 @@ zx_status_t Connection::NodeClose(fidl_txn_t* txn) {
 }
 
 zx_status_t Connection::NodeDescribe(fidl_txn_t* txn) {
-    fprintf(stderr, "ObjectDescribe not yet implemented\n");
-    return ZX_ERR_NOT_SUPPORTED;
+    zxrio_node_info_t info;
+    memset(&info, 0, sizeof(info));
+    zx_status_t status = GetNodeInfo(vnode_, flags_, &info);
+    if (status != ZX_OK) {
+        return status;
+    }
+    // See static_asserts in zxrio_process_open_response which ensure that this
+    // cast makes sense.
+    auto fidl_info = reinterpret_cast<fuchsia_io_NodeInfo*>(&info);
+    return fuchsia_io_NodeDescribe_reply(txn, fidl_info);
 }
 
 zx_status_t Connection::NodeSync(fidl_txn_t* txn) {

@@ -11,10 +11,14 @@ MODULE_USERTEST_GROUP := fs
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/memfs-tests.cpp \
-    $(LOCAL_DIR)/main.c
+    $(LOCAL_DIR)/fidl-tests.cpp \
+    $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/memfs-tests.cpp
 
 MODULE_NAME := memfs-test
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-io \
 
 MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \
