@@ -146,6 +146,14 @@ zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_ve
     return ZX_OK;
 }
 
+zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_regs* out) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_debug_regs* in) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t arch_get_x86_register_fs(struct thread* thread, uint64_t* out) {
     // There are no FS register on ARM.
     (void)out;

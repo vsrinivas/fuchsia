@@ -32,6 +32,7 @@
 #include <kernel/thread.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/vm.h>
 #include <zircon/compiler.h>
 
 #define LOCAL_TRACE 0
@@ -674,4 +675,68 @@ void x86_set_extended_register_pt_state(bool threads) {
     else
         xss &= ~(0ULL + X86_XSAVE_STATE_BIT_PT);
     write_msr(IA32_XSS_MSR, xss);
+}
+
+// Debug Registers --------------------------------------------------------------------------------
+
+/* Validates whether this is a valid address to save into a debug register.
+ * Will mask out reserved bits to their expected values. */
+bool x86_validate_debug_state(x86_debug_state_t* debug_state) {
+    // Validate the addresses being written.
+    for (size_t i = 0; i < 4; i++) {
+        uint64_t addr = debug_state->dr[i];
+        if (addr != 0 && !is_user_address(addr)) {
+            return false;
+        }
+    }
+
+    // DR6 is not writable from userspace, as it is a debug status registers.
+    // Zircon takes on the job of keeping it up to date.
+
+    // DR7.
+    uint64_t dr7 = debug_state->dr7;
+    debug_state->dr7 = X86_DR7_MASK;
+    uint64_t values_to_write2 = dr7 & X86_DR7_USER_MASK;
+    debug_state->dr7 |= values_to_write2;
+
+    return true;
+}
+
+void x86_read_debug_status(x86_debug_state_t* debug_state) {
+    // NOTE: There is a difference in bit 16 between Intel64 and AMD64.
+    //       In AMD, bit 16 is reserved and always set to 0.
+    //       In Intel, it can mean that an debug or breakpoint exception ocurrred during a RTM
+    //       block. For now, we mask this bit to make both platforms uniform.
+    asm("mov %%dr6, %0" :"=r" (debug_state->dr6));
+    debug_state->dr6 |= X86_DR6_MASK;
+}
+
+void x86_disable_debug_state(void) {
+    // Disabling dr7 is enough to disable the debug functionality.
+    // We need a variable loaded into a register in order to be able to transfer that value into
+    // DB7.
+    uint64_t zero_val = 0;
+    asm("mov %0, %%dr7" ::"r"(zero_val));
+
+}
+
+void x86_read_hw_debug_regs(x86_debug_state_t* debug_state) {
+    asm("mov %%dr0, %0" :"=r" (debug_state->dr[0]));
+    asm("mov %%dr1, %0" :"=r" (debug_state->dr[1]));
+    asm("mov %%dr2, %0" :"=r" (debug_state->dr[2]));
+    asm("mov %%dr3, %0" :"=r" (debug_state->dr[3]));
+
+    x86_read_debug_status(debug_state);
+
+    asm("mov %%dr7, %0" :"=r" (debug_state->dr7));
+}
+
+void x86_write_hw_debug_regs(const x86_debug_state_t* debug_state) {
+    asm("mov %0, %%dr0" ::"r"(debug_state->dr[0]));
+    asm("mov %0, %%dr1" ::"r"(debug_state->dr[1]));
+    asm("mov %0, %%dr2" ::"r"(debug_state->dr[2]));
+    asm("mov %0, %%dr3" ::"r"(debug_state->dr[3]));
+    // DR6 is not writable from userspace.
+    // IMPORTANT: DR7 should be already masked at this point by calling x86_validate_debug_state.
+    asm("mov %0, %%dr7" ::"r"(debug_state->dr7));
 }

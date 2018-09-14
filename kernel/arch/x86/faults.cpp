@@ -128,6 +128,20 @@ static bool try_dispatch_user_exception(x86_iframe_t* frame, uint kind) {
 }
 
 static void x86_debug_handler(x86_iframe_t* frame) {
+    // We now need to keep track of the debug registers.
+    thread_t* thread = get_current_thread();
+
+    // Not all debug exceptions are due to debug registers, as single-step also gets routed to
+    // this exception. In that case, we only need to track the status register so that we don't
+    // leak debug registers from another thread.
+    if (likely(!thread->arch.track_debug_state)) {
+        // Only track the status section of the debug state.
+        x86_read_debug_status(&thread->arch.debug_state);
+    } else {
+        // We are tracking the debug state, we copy all the debug state.
+        x86_read_hw_debug_regs(&thread->arch.debug_state);
+    }
+
     if (try_dispatch_user_exception(frame, ZX_EXCP_HW_BREAKPOINT))
         return;
 

@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 #include <unittest/unittest.h>
 
@@ -19,6 +20,8 @@ void WriteNaNDouble(uint64_t* output) {
 }
 
 } // namespace
+
+// Fill Test Values -------------------------------------------------------------------------------
 
 void general_regs_fill_test_values(zx_thread_state_general_regs_t* regs) {
     for (uint32_t index = 0; index < sizeof(*regs); ++index) {
@@ -94,6 +97,36 @@ void vector_regs_fill_test_values(zx_thread_state_vector_regs* regs) {
 #error Unsupported architecture
 #endif
 }
+
+void debug_regs_fill_test_values(zx_thread_state_debug_regs_t* to_write,
+                                 zx_thread_state_debug_regs_t* expected) {
+#if defined(__x86_64__)
+  // The kernel will validate that the addresses set into the debug registers are valid userspace
+  // one. We use values relative to this function, as it is guaranteed to be in the userspace
+  // range.
+  uint64_t base = reinterpret_cast<uint64_t>(debug_regs_fill_test_values);
+  to_write->dr[0] = base;
+  to_write->dr[1] = base + 0x4000;
+  to_write->dr[2] = base + 0x8000;
+  to_write->dr[3] = 0x0; // Zero is also valid.
+  to_write->dr6 = 0;
+  to_write->dr7 = 0x33; // Activate all breakpoints.
+
+  expected->dr[0] = base;
+  expected->dr[1] = base + 0x4000;
+  expected->dr[2] = base + 0x8000;
+  expected->dr[3] = 0x0;
+  expected->dr6 = 0xffff0ff0; // No breakpoint event detected.
+  expected->dr7 = 0x733;      // Activate all breakpoints.
+
+#elif defined(__aarch64__)
+    // TODO(donoso): Support arm64 debug registers.
+#else
+#error Unsupported architecture
+#endif
+}
+
+// Expect Eq Functions ----------------------------------------------------------------------------
 
 bool general_regs_expect_eq(const zx_thread_state_general_regs_t& regs1,
                             const zx_thread_state_general_regs_t& regs2) {
@@ -181,6 +214,37 @@ bool vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
 #endif
     END_HELPER;
 }
+
+bool debug_regs_expect_eq(const char* file, int line,
+                          const zx_thread_state_debug_regs_t& regs1,
+                          const zx_thread_state_debug_regs_t& regs2) {
+#if defined(__x86_64__)
+    char buf[1024];
+    BEGIN_HELPER;
+    snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR0");
+    EXPECT_EQ(regs1.dr[0], regs2.dr[0], buf);
+    snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR1");
+    EXPECT_EQ(regs1.dr[1], regs2.dr[1], buf);
+    snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR2");
+    EXPECT_EQ(regs1.dr[2], regs2.dr[2], buf);
+    snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR3");
+    EXPECT_EQ(regs1.dr[3], regs2.dr[3], buf);
+    snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR6");
+    EXPECT_EQ(regs1.dr6, regs2.dr6, buf);
+    snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR7");
+    EXPECT_EQ(regs1.dr7, regs2.dr7, buf);
+    END_HELPER;
+#elif defined(__aarch64__)
+    // TODO(donosoc): Write the debug register support.
+    (void)regs1;
+    (void)regs2;
+    return true;
+#else
+#error Unsupported architecture
+#endif
+}
+
+// Spin Functions --------------------------------------------------------------------------------
 
 // spin_with_general_regs() function.
 #if defined(__x86_64__)
@@ -390,6 +454,45 @@ __asm__(".pushsection .text, \"ax\", %progbits\n"
 #else
 #error Unsupported architecture
 #endif
+
+// spin_with_debug_regs() function.
+
+// spin_with_debug_regs
+#if defined(__x86_64__)
+static_assert(offsetof(zx_thread_state_debug_regs_t, dr) == 8 * 0, "");
+static_assert(offsetof(zx_thread_state_debug_regs_t, dr6) == 8 * 4, "");
+static_assert(offsetof(zx_thread_state_debug_regs_t, dr7) == 8 * 5, "");
+__asm__(".pushsection .text, \"ax\", @progbits\n"
+        ".global spin_with_debug_regs\n"
+        "spin_with_debug_regs:\n"
+
+        // Do nothing.
+        // The register state will be set through syscalls because setting the debug registers
+        // is a privileged instruction.
+
+        ".global spin_with_debug_regs_spin_address\n"
+        "spin_with_debug_regs_spin_address:\n"
+        "jmp spin_with_debug_regs_spin_address\n"
+        ".popsection\n");
+#elif defined(__aarch64__)
+__asm__(".pushsection .text, \"ax\", %progbits\n"
+        ".global spin_with_debug_regs\n"
+        "spin_with_debug_regs:\n"
+
+        // Do nothing.
+        // TODO(donosoc): Add ARM64 debug support.
+
+        "spin_with_debug_regs_spin_address:\n"
+        "b spin_with_debug_regs_spin_address\n"
+        ".popsection\n");
+#else
+#error Unsupported architecture
+#endif
+
+
+
+
+// Save and Exit Functions ------------------------------------------------------------------------
 
 // save_general_regs_and_exit_thread() function.
 #if defined(__x86_64__)

@@ -75,8 +75,13 @@ typedef struct zx_thread_state_vector_regs {
 typedef struct zx_thread_state_debug_regs {
   uint64_t dr[4];
   // DR4 and D5 are not used.
-  uint64_t dr6_status;
-  uint64_t dr7_control;
+  uint64_t dr6;         // Status register.
+  uint64_t dr7;         // Control register.
+  // TODO(donosoc): These values are deprecated but are still used by zxdb. We debine both values
+  //                in order to do a soft transition. Delete these values once zxdb has made the
+  //                update.
+  uint64_t dr6_status;  // Status register.
+  uint64_t dr7_control; // Control register.
 } zx_thread_state_debug_regs_t;
 
 #elif defined(__aarch64__)
@@ -147,8 +152,8 @@ typedef uint32_t zx_thread_state_topic_t;
 #define ZX_THREAD_STATE_GENERAL_REGS  ((uint32_t)0) // zx_thread_state_general_regs_t value.
 #define ZX_THREAD_STATE_FP_REGS       ((uint32_t)1) // zx_thread_state_fp_regs_t value.
 #define ZX_THREAD_STATE_VECTOR_REGS   ((uint32_t)2) // zx_thread_state_vector_regs_t value.
-#define ZX_THREAD_STATE_SINGLE_STEP   ((uint32_t)4) // zx_thread_state_single_step_t value.
-#define ZX_THREAD_STATE_DEBUG_REGS    ((uint32_t)5) // zx_thread_state_debug_regs_t value.
+#define ZX_THREAD_STATE_DEBUG_REGS    ((uint32_t)4) // zx_thread_state_debug_regs_t value.
+#define ZX_THREAD_STATE_SINGLE_STEP   ((uint32_t)5) // zx_thread_state_single_step_t value.
 #define ZX_THREAD_X86_REGISTER_FS     ((uint32_t)6) // zx_thread_x86_register_fs_t value.
 #define ZX_THREAD_X86_REGISTER_GS     ((uint32_t)7) // zx_thread_x86_register_gs_t value.
 

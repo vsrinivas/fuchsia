@@ -98,12 +98,13 @@ zx_status_t get_process(ProcessDispatcher* up,
 // This represents the local storage for thread_read/write_state. It should be large enough to
 // handle all structures passed over these APIs.
 union thread_state_local_buffer_t {
-    zx_thread_state_general_regs_t general_regs; // ZX_THREAD_STATE_GENERAL_REGS
-    zx_thread_state_fp_regs_t fp_regs;           // ZX_THREAD_STATE_FP_REGS
-    zx_thread_state_vector_regs_t vector_regs;   // ZX_THREAD_STATE_VECTOR_REGS
-    uint32_t single_step;                        // ZX_THREAD_STATE_SINGLE_STEP
-    uint64_t x86_register_fs;                    // ZX_THREAD_X86_REGISTER_FS;
-    uint64_t x86_register_gs;                    // ZX_THREAD_X86_REGISTER_GS;
+    zx_thread_state_general_regs_t general_regs;  // ZX_THREAD_STATE_GENERAL_REGS
+    zx_thread_state_fp_regs_t fp_regs;            // ZX_THREAD_STATE_FP_REGS
+    zx_thread_state_vector_regs_t vector_regs;    // ZX_THREAD_STATE_VECTOR_REGS
+    zx_thread_state_debug_regs_t debug_regs;      // ZX_THREAD_STATE_DEBUG_REGS
+    uint32_t single_step;                         // ZX_THREAD_STATE_SINGLE_STEP
+    uint64_t x86_register_fs;                     // ZX_THREAD_X86_REGISTER_FS;
+    uint64_t x86_register_gs;                     // ZX_THREAD_X86_REGISTER_GS;
 };
 
 // Validates the input topic to thread_read_state and thread_write_state is a valid value, and
@@ -119,6 +120,9 @@ zx_status_t validate_thread_state_input(uint32_t in_topic, size_t in_len, size_t
         break;
     case ZX_THREAD_STATE_VECTOR_REGS:
         *out_len = sizeof(zx_thread_state_vector_regs_t);
+        break;
+    case ZX_THREAD_STATE_DEBUG_REGS:
+        *out_len = sizeof(zx_thread_state_debug_regs_t);
         break;
     case ZX_THREAD_STATE_SINGLE_STEP:
         *out_len = sizeof(zx_thread_state_single_step_t);

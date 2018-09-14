@@ -118,6 +118,75 @@
                                          X86_FLAGS_AC | \
                                          X86_FLAGS_ID)
 
+/* DR6 */
+#define X86_DR6_B0 (1ul << 0)
+#define X86_DR6_B1 (1ul << 1)
+#define X86_DR6_B2 (1ul << 2)
+#define X86_DR6_B3 (1ul << 3)
+#define X86_DR6_BD (1ul << 13)
+#define X86_DR6_BS (1ul << 14)
+#define X86_DR6_BT (1ul << 15)
+
+// NOTE: DR6 is used as a read-only status registers, and it is not writeable through userspace.
+//       Any bits attempted to be written will be ignored.
+#define X86_DR6_USER_MASK (X86_DR6_B0 | \
+                           X86_DR6_B1 | \
+                           X86_DR6_B2 | \
+                           X86_DR6_B3 | \
+                           X86_DR6_BD | \
+                           X86_DR6_BS | \
+                           X86_DR6_BT)
+/* Only bits in X86_DR6_USER_MASK are writeable.
+ * Bits 12 and 32:63 must be written with 0, the rest as 1s */
+#define X86_DR6_MASK (0xffff0ff0ul)
+
+/* DR7 */
+#define X86_DR7_L0    (1ul << 0)
+#define X86_DR7_G0    (1ul << 1)
+#define X86_DR7_L1    (1ul << 2)
+#define X86_DR7_G1    (1ul << 3)
+#define X86_DR7_L2    (1ul << 4)
+#define X86_DR7_G2    (1ul << 5)
+#define X86_DR7_L3    (1ul << 6)
+#define X86_DR7_G3    (1ul << 7)
+#define X86_DR7_LE    (1ul << 8)
+#define X86_DR7_GE    (1ul << 9)
+#define X86_DR7_GD    (1ul << 13)
+#define X86_DR7_RW0   (3ul << 16)
+#define X86_DR7_LEN0  (3ul << 18)
+#define X86_DR7_RW1   (3ul << 20)
+#define X86_DR7_LEN1  (3ul << 22)
+#define X86_DR7_RW2   (3ul << 24)
+#define X86_DR7_LEN2  (3ul << 26)
+#define X86_DR7_RW3   (3ul << 28)
+#define X86_DR7_LEN3  (3ul << 30)
+
+// NOTE1: Even though the GD bit is writable, we disable it for the write_state syscall because it
+//        complicates a lot the reasoning about how to access the registers. This is because
+//        enabling this bit would make any other access to debug registers to issue an exception.
+//        New syscalls should be define to lock/unlock debug registers.
+// NOTE2: LE/GE bits are normally ignored, but the manual recommends always setting it to 1 in
+//        order to be backwards compatible. Hence they are not writable from userspace.
+#define X86_DR7_USER_MASK (X86_DR7_L0 |   \
+                           X86_DR7_G0 |   \
+                           X86_DR7_L1 |   \
+                           X86_DR7_G1 |   \
+                           X86_DR7_L2 |   \
+                           X86_DR7_G2 |   \
+                           X86_DR7_L3 |   \
+                           X86_DR7_G3 |   \
+                           X86_DR7_RW0 |  \
+                           X86_DR7_LEN0 | \
+                           X86_DR7_RW1 |  \
+                           X86_DR7_LEN1 | \
+                           X86_DR7_RW2 |  \
+                           X86_DR7_LEN2 | \
+                           X86_DR7_RW3 |  \
+                           X86_DR7_LEN3)
+
+/* Bits 11:12, 14:15 and 32:63 must be cleared to 0. Bit 10 must be set to 1. */
+#define X86_DR7_MASK ((1ul << 10) | X86_DR7_LE | X86_DR7_GE)
+
 #ifndef __ASSEMBLER__
 
 #include <zircon/compiler.h>
@@ -245,6 +314,38 @@ struct x86_xsave_legacy_area {
  * This function will return null and fill 0 into *size if the component is not present. */
 void* x86_get_extended_register_state_component(void* register_state, uint32_t component,
                                                 bool mark_present, uint32_t* size);
+
+/* Kernel tracking of the current state of the x86 debug registers for a particular thread */
+typedef struct x86_debug_state {
+    uint64_t dr[4];
+    uint64_t dr6;
+    uint64_t dr7;
+} x86_debug_state_t;
+
+
+/* Disables the HW debug functionalities for the current thread.
+ * There is no "enable" call. To do this, use the x86_write_debug_state call. */
+void x86_disable_debug_state(void);
+/* Checks whether the given state is valid to install on a running thread */
+bool x86_validate_debug_state(x86_debug_state_t* debug_state);
+
+/* Only update the status section of |debug_state| (DR6). All other state will not be modified */
+void x86_read_debug_status(x86_debug_state_t* debug_state);
+// TODO(donosoc): write x86_write_debug_status(x86_debug_state_t*), which is for internal use by
+//                Zircon to keep DR6 up to date.
+
+/* Read from the CPU registers into |debug_state|. */
+void x86_read_hw_debug_regs(x86_debug_state_t* debug_state);
+/* Write from the |debug_state| into the CPU registers.
+ *
+ * IMPORTANT: This function is used in the context switch, so no validation is done, just writing.
+ *            In any other context (eg. setting debug values from a syscall), you *MUST* call
+ *            x86_validate_debug_state first. */
+void x86_write_hw_debug_regs(const x86_debug_state_t* debug_state);
+
+/* Handles the context switch for debug HW functionality (drN registers).
+ * Will only copy over state if it's enabled (non-zero). */
+void x86_debug_state_context_switch(thread_t* old_thread, thread_t* new_thread);
 
 __END_CDECLS
 

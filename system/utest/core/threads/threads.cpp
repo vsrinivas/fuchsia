@@ -976,10 +976,19 @@ public:
         // instruction that spins.
         ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK);
 
-        ASSERT_TRUE(suspend_thread_synchronous(thread_handle_, &suspend_token_));
+        ASSERT_TRUE(Suspend());
 
         END_HELPER;
     }
+
+    bool Resume() {
+      return resume_thread_synchronous(thread_handle_, suspend_token_);
+    }
+
+    bool Suspend() {
+      return suspend_thread_synchronous(thread_handle_, &suspend_token_);
+    }
+
 
 private:
     zxr_thread_t thread_;
@@ -1348,6 +1357,109 @@ static bool test_writing_arm_flags_register() {
     END_TEST;
 }
 
+static bool test_write_read_debug_register_state() {
+    BEGIN_TEST;
+#if defined(__x86_64__)
+    zx_thread_state_debug_regs_t debug_regs_to_write;
+    zx_thread_state_debug_regs_t debug_regs_expected;
+    debug_regs_fill_test_values(&debug_regs_to_write, &debug_regs_expected);
+
+    // Because setting debug state is priviledged, we need to do it through syscalls:
+    // 1. Start the thread into a routine that simply spins idly.
+    // 2. Suspend it.
+    // 3. Write the expected debug state through a syscall.
+    // 4. Resume the thread.
+    // 5. Suspend it again.
+    // 6. Read the state and compare it.
+
+    RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
+    ASSERT_TRUE(setup.Init(&spin_with_debug_regs, &debug_regs_to_write));
+
+    // Write the test values to the debug registers.
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                    &debug_regs_to_write, sizeof(debug_regs_to_write)),
+              ZX_OK);
+
+    // Resume and re-suspend the thread.
+    ASSERT_TRUE(setup.Resume());
+    // Allow some time for the thread to execute again and spin for a bit.
+    ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK);
+    ASSERT_TRUE(setup.Suspend());
+
+    // Get the current debug state of the suspended thread.
+    zx_thread_state_debug_regs_t regs;
+    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                   &regs, sizeof(regs)),
+              ZX_OK);
+
+    ASSERT_TRUE(debug_regs_expect_eq(__FILE__, __LINE__, regs, debug_regs_expected));
+#endif
+    END_TEST;
+}
+
+// All writeable bits as 0.
+#define DR6_ZERO_MASK (0xffff0ff0ul)
+#define DR7_ZERO_MASK (0x700ul)
+
+static bool test_debug_registers_validation() {
+    BEGIN_TEST;
+#if defined(__x86_64__)
+    zx_thread_state_debug_regs_t debug_regs = {};
+    RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
+    ASSERT_TRUE(setup.Init(&spin_with_debug_regs, &debug_regs));
+
+    // Writing all 0s should work and should mask values.
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                    &debug_regs, sizeof(debug_regs)),
+              ZX_OK);
+
+    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                    &debug_regs, sizeof(debug_regs)),
+              ZX_OK);
+
+    for (size_t i = 0; i < 4; i++)
+        ASSERT_EQ(debug_regs.dr[i], 0);
+    ASSERT_EQ(debug_regs.dr6, DR6_ZERO_MASK);
+    ASSERT_EQ(debug_regs.dr7, DR7_ZERO_MASK);
+
+    // Writing an invalid address should fail.
+    debug_regs = {};
+    debug_regs.dr[1] = 0x1000;
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                    &debug_regs, sizeof(debug_regs)),
+              ZX_ERR_INVALID_ARGS);
+
+    // Writing an kernel address should fail.
+    debug_regs = {};
+    debug_regs.dr[2] = 0xffff00000000;
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                    &debug_regs, sizeof(debug_regs)),
+              ZX_ERR_INVALID_ARGS);
+
+    // Invalid values should be masked out.
+    debug_regs = {};
+    debug_regs.dr6 = ~DR6_ZERO_MASK;
+    // We avoid the General Detection flag, which would make us throw an exception on next write.
+    debug_regs.dr7 = ~DR7_ZERO_MASK;
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                    &debug_regs, sizeof(debug_regs)),
+              ZX_OK);
+
+    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                    &debug_regs, sizeof(debug_regs)),
+              ZX_OK);
+
+    for (size_t i = 0; i < 4; i++)
+        ASSERT_EQ(debug_regs.dr[i], 0);
+    // DR6: Should not have been written.
+    ASSERT_EQ(debug_regs.dr6, DR6_ZERO_MASK);
+    ASSERT_EQ(debug_regs.dr7, 0xffff07ff);
+#elif defined(__aarch64__)
+    // TODO(donosoc): Add ARM64 support.
+#endif
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(threads_tests)
 RUN_TEST(test_basics)
 RUN_TEST(test_detach)
@@ -1377,6 +1489,9 @@ RUN_TEST(test_writing_fp_register_state)
 RUN_TEST(test_writing_vector_register_state)
 RUN_TEST(test_noncanonical_rip_address)
 RUN_TEST(test_writing_arm_flags_register)
+RUN_TEST(test_write_read_debug_register_state);
+RUN_TEST(test_debug_registers_validation);
+
 END_TEST_CASE(threads_tests)
 
 #ifndef BUILD_COMBINED_TESTS

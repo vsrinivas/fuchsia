@@ -64,6 +64,14 @@ void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
     // initialize the fs, gs and kernel bases to 0.
     t->arch.fs_base = 0;
     t->arch.gs_base = 0;
+
+    // Initialize the debug registers to 0.
+    t->arch.track_debug_state = false;
+    for (size_t i = 0; i < 4; i++) {
+      t->arch.debug_state.dr[i] = 0;
+    }
+    t->arch.debug_state.dr6 = ~X86_DR6_USER_MASK;
+    t->arch.debug_state.dr7 = ~X86_DR7_USER_MASK;
 }
 
 void arch_thread_construct_first(thread_t* t) {
@@ -85,8 +93,11 @@ void* arch_thread_get_blocked_fp(struct thread* t) {
     return (void*)frame->rbp;
 }
 
-__NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thread_t* oldthread, thread_t* newthread) {
+__NO_SAFESTACK __attribute__((target("fsgsbase")))
+void arch_context_switch(thread_t* oldthread, thread_t* newthread) {
     x86_extended_register_context_switch(oldthread, newthread);
+
+    x86_debug_state_context_switch(oldthread, newthread);
 
     //printf("cs 0x%llx\n", kstack_top);
 
@@ -152,4 +163,18 @@ __NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thre
 #endif
 
     x86_64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
+}
+
+void x86_debug_state_context_switch(thread_t *old_thread, thread_t *new_thread) {
+    // If the new thread has debug state, so we install it, replacing the current contents.
+    if (unlikely(new_thread->arch.track_debug_state)) {
+      x86_write_hw_debug_regs(&new_thread->arch.debug_state);
+      return;
+    }
+
+    // If the old thread had debug state running and the new one doesn't uses it, disable the
+    // debug capabilities.
+    if (unlikely(old_thread->arch.track_debug_state)) {
+      x86_disable_debug_state();
+    }
 }

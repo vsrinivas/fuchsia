@@ -940,6 +940,12 @@ zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind,
         return arch_get_vector_regs(
             &thread_, static_cast<zx_thread_state_vector_regs_t*>(buffer));
     }
+    case ZX_THREAD_STATE_DEBUG_REGS: {
+        if (buffer_len != sizeof(zx_thread_state_debug_regs_t))
+            return ZX_ERR_INVALID_ARGS;
+        return arch_get_debug_regs(
+            &thread_, static_cast<zx_thread_state_debug_regs_t*>(buffer));
+    }
     case ZX_THREAD_STATE_SINGLE_STEP: {
         if (buffer_len != sizeof(zx_thread_state_single_step_t))
             return ZX_ERR_INVALID_ARGS;
@@ -975,20 +981,26 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
     case ZX_THREAD_STATE_GENERAL_REGS: {
         if (buffer_len != sizeof(zx_thread_state_general_regs_t))
             return ZX_ERR_INVALID_ARGS;
-        return arch_set_general_regs(&thread_,
-                                     static_cast<const zx_thread_state_general_regs_t*>(buffer));
+        return arch_set_general_regs(
+            &thread_, static_cast<const zx_thread_state_general_regs_t*>(buffer));
     }
     case ZX_THREAD_STATE_FP_REGS: {
         if (buffer_len != sizeof(zx_thread_state_fp_regs_t))
             return ZX_ERR_INVALID_ARGS;
-        return arch_set_fp_regs(&thread_,
-                                static_cast<const zx_thread_state_fp_regs_t*>(buffer));
+        return arch_set_fp_regs(
+            &thread_, static_cast<const zx_thread_state_fp_regs_t*>(buffer));
     }
     case ZX_THREAD_STATE_VECTOR_REGS: {
         if (buffer_len != sizeof(zx_thread_state_vector_regs_t))
             return ZX_ERR_INVALID_ARGS;
-        return arch_set_vector_regs(&thread_,
-                                    static_cast<const zx_thread_state_vector_regs_t*>(buffer));
+        return arch_set_vector_regs(
+            &thread_, static_cast<const zx_thread_state_vector_regs_t*>(buffer));
+    }
+    case ZX_THREAD_STATE_DEBUG_REGS: {
+        if (buffer_len != sizeof(zx_thread_state_debug_regs_t))
+            return ZX_ERR_INVALID_ARGS;
+        return arch_set_debug_regs(
+            &thread_, static_cast<const zx_thread_state_debug_regs_t*>(buffer));
     }
     case ZX_THREAD_STATE_SINGLE_STEP: {
         if (buffer_len != sizeof(zx_thread_state_single_step_t))

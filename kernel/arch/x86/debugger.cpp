@@ -374,6 +374,78 @@ zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_ve
                                    RegAccess::kSet);
 }
 
+static void print_debug_state(const x86_debug_state_t* debug_state) {
+  printf("DR0=0x%lx, DR1=0x%lx, DR2=0x%lx, DR3=0x%lx, DR6=0x%lx, DR7=0x%lx\n",
+      debug_state->dr[0],
+      debug_state->dr[1],
+      debug_state->dr[2],
+      debug_state->dr[3],
+      debug_state->dr6,
+      debug_state->dr7);
+}
+
+zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_regs* out) {
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+    if (thread->state == THREAD_RUNNING) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // The kernel updates this per-thread data everytime a hw debug event occurs, meaning that
+    // these values will be always up to date. If the thread is not using hw debug capabilities,
+    // these will have the default zero values.
+    out->dr[0] = thread->arch.debug_state.dr[0];
+    out->dr[1] = thread->arch.debug_state.dr[1];
+    out->dr[2] = thread->arch.debug_state.dr[2];
+    out->dr[3] = thread->arch.debug_state.dr[3];
+    out->dr6 = thread->arch.debug_state.dr6;
+    out->dr7 = thread->arch.debug_state.dr7;
+
+    return ZX_OK;
+}
+
+zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_debug_regs* in) {
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+    if (thread->state == THREAD_RUNNING) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // Replace the state of the thread with the given one. We now need to keep track of the debug
+    // state of this register across context switches.
+    x86_debug_state_t new_debug_state;
+    new_debug_state.dr[0] = in->dr[0];
+    new_debug_state.dr[1] = in->dr[1];
+    new_debug_state.dr[2] = in->dr[2];
+    new_debug_state.dr[3] = in->dr[3];
+    new_debug_state.dr6 = in->dr6;
+    new_debug_state.dr7 = in->dr7;
+
+    // Validate the new input. This will mask reserved bits to their stated values.
+    if (!x86_validate_debug_state(&new_debug_state))
+        return ZX_ERR_INVALID_ARGS;
+
+    // NOTE: This currently does a write-read round-trip to the CPU in order to ensure that
+    //       |thread->arch.debug_state| tracks the exact value as it is stored in the registers.
+    // TODO(donosoc): Ideally, we could do some querying at boot time about the format that the CPU
+    //                is storing reserved bits and we can create a mask we can apply to the input
+    //                values and avoid changing the state.
+
+    // Save the current debug state temporarily.
+    x86_debug_state_t current_debug_state;
+    x86_read_hw_debug_regs(&current_debug_state);
+
+    // Write and then read from the CPU to have real values tracked by the thread data.
+    // Mark the thread as now tracking the debug state.
+    x86_write_hw_debug_regs(&new_debug_state);
+    x86_read_hw_debug_regs(&thread->arch.debug_state);
+
+    thread->arch.track_debug_state = true;
+
+    // Restore the original debug state. Should always work as the input was already validated.
+    x86_write_hw_debug_regs(&current_debug_state);
+
+    return ZX_OK;
+}
+
 zx_status_t arch_get_x86_register_fs(struct thread* thread, uint64_t* out) {
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     if (thread->state == THREAD_RUNNING) {

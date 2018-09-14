@@ -43,6 +43,17 @@ struct arch_thread {
 
     /* if non-NULL, address to return to on page fault */
     void *page_fault_resume;
+
+    /* |track_debug_state| tells whether the kernel should keep track of the whole debug state for
+     * this thread. Normally this is set explicitly by an user that wants to make use of HW
+     * breakpoints or watchpoints.
+     * |debug_state| will still keep track of the status of the exceptions (DR6), as there are HW
+     * exceptions that are triggered without explicit debug state setting (eg. single step).
+     *
+     * Userspace can still read the complete |debug_state| even if |track_debug_state| is false.
+     * As normally the CPU only changes DR6, the |debug_state| will be up to date anyway. */
+    bool track_debug_state;
+    x86_debug_state_t debug_state;
 };
 
 static inline void x86_set_suspended_general_regs(struct arch_thread *thread,

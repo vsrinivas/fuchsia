@@ -24,6 +24,8 @@
 void general_regs_fill_test_values(zx_thread_state_general_regs_t* regs);
 void fp_regs_fill_test_values(zx_thread_state_fp_regs* regs);
 void vector_regs_fill_test_values(zx_thread_state_vector_regs* regs);
+void debug_regs_fill_test_values(zx_thread_state_debug_regs_t* to_write,
+                                 zx_thread_state_debug_regs_t* expected);
 
 // Returns whether the two register sets' values are equal.
 bool general_regs_expect_eq(const zx_thread_state_general_regs_t& regs1,
@@ -32,6 +34,9 @@ bool fp_regs_expect_eq(const zx_thread_state_fp_regs_t& regs1,
                        const zx_thread_state_fp_regs_t& regs2);
 bool vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
                            const zx_thread_state_vector_regs_t& regs2);
+bool debug_regs_expect_eq(const char* file, int line,
+                          const zx_thread_state_debug_regs_t& regs1,
+                          const zx_thread_state_debug_regs_t& regs2);
 
 // The functions below are assembly.
 __BEGIN_CDECLS;
@@ -41,10 +46,9 @@ __BEGIN_CDECLS;
 // is |spin_address|.
 void spin_with_general_regs(zx_thread_state_general_regs_t* regs);
 void spin_with_general_regs_spin_address();
-
 void spin_with_fp_regs(zx_thread_state_fp_regs_t* regs);
-
 void spin_with_vector_regs(zx_thread_state_vector_regs_t* regs);
+void spin_with_debug_regs(zx_thread_state_debug_regs_t* regs);
 
 // These assembly code routine saves the registers into a the corresponding
 // structure pointed to by the stack pointer, and then calls zx_thread_exit().
