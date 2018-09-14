@@ -15,7 +15,7 @@ struct TestPayload {
   DeviceClass class_of_device;
 } __attribute__((packed));
 
-TEST(DeviceClass, CastFromBytes) {
+TEST(DeviceClassTest, CastFromBytes) {
   std::array<uint8_t, 4> bytes{{10, 0x06, 0x02, 0x02}};
   EXPECT_EQ(bytes.size(), sizeof(TestPayload));
 
@@ -25,7 +25,7 @@ TEST(DeviceClass, CastFromBytes) {
             test_payload->class_of_device.major_class());
 }
 
-TEST(DeiceClass, ToString) {
+TEST(DeviceClassTest, ToString) {
   DeviceClass device;
 
   EXPECT_EQ("Unspecified", device.ToString());
@@ -33,6 +33,14 @@ TEST(DeiceClass, ToString) {
   device = DeviceClass({0x06, 0x02, 0x02});
 
   EXPECT_EQ("Phone", device.ToString());
+}
+
+TEST(DeviceClassTest, Comparison) {
+  DeviceClass class1(DeviceClass::MajorClass::kPhone);
+  DeviceClass class2(DeviceClass::MajorClass::kPhone);
+  DeviceClass class3(DeviceClass::MajorClass::kComputer);
+  EXPECT_EQ(class1, class2);
+  EXPECT_NE(class2, class3);
 }
 
 }  // namespace

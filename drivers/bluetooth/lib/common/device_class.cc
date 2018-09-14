@@ -9,8 +9,10 @@
 namespace btlib {
 namespace common {
 
-DeviceClass::DeviceClass()
-    : bytes_{0x00, uint8_t(MajorClass::kUnspecified), 0x00} {}
+DeviceClass::DeviceClass() : DeviceClass(MajorClass::kUnspecified) {}
+
+DeviceClass::DeviceClass(MajorClass major_class)
+    : bytes_{0x00, static_cast<uint8_t>(major_class), 0x00} {}
 
 DeviceClass::DeviceClass(std::initializer_list<uint8_t> bytes) {
   ZX_DEBUG_ASSERT(bytes.size() == bytes_.size());

@@ -19,12 +19,6 @@ namespace common {
 // for the format.
 class DeviceClass {
  public:
-  // Initializes the device to an uncategorized device with no services.
-  DeviceClass();
-
-  // Initializes the contents from |bytes|.
-  explicit DeviceClass(std::initializer_list<uint8_t> bytes);
-
   enum class MajorClass : uint8_t {
     kMiscellaneous = 0x00,
     kComputer = 0x01,
@@ -39,10 +33,23 @@ class DeviceClass {
     kUnspecified = 0x1F,
   };
 
+  // Initializes the device to an uncategorized device with no services.
+  DeviceClass();
+
+  // Initializes the contents from |bytes|.
+  explicit DeviceClass(std::initializer_list<uint8_t> bytes);
+
+  // Initializes the contents using the given |major_class|.
+  explicit DeviceClass(MajorClass major_class);
+
   MajorClass major_class() const { return MajorClass(bytes_[1] & 0x1F); }
 
   // Returns a string describing the device, like "Computer" or "Headphones"
   std::string ToString() const;
+
+  // Equality operators
+  bool operator==(const DeviceClass& rhs) const { return rhs.bytes_ == bytes_; }
+  bool operator!=(const DeviceClass& rhs) const { return rhs.bytes_ != bytes_; }
 
   // TODO(jamuraa): add MinorClass and Service classes
  private:
