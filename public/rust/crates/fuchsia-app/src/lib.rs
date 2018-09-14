@@ -32,7 +32,7 @@ use {
         LauncherProxy,
         LaunchInfo,
     },
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, Peered, Signals},
     std::{
         marker::Unpin,
         pin::PinMut,
@@ -221,6 +221,12 @@ pub mod server {
                     .ok_or(MissingStartupHandle)?;
 
             let fdio_channel = fasync::Channel::from_channel(fdio_handle.into())?;
+            fdio_channel
+                .as_ref()
+                .signal_peer(Signals::NONE, Signals::USER_0)
+                .unwrap_or_else(|e| {
+                    eprintln!("ServicesServer::start signal_peer failed with {}", e);
+                });
 
             let mut server = FdioServer {
                 connections: FuturesUnordered::new(),
