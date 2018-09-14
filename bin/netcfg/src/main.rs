@@ -3,18 +3,20 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
+#![feature(async_await, await_macro)]
 
+use std::borrow::Cow;
 use std::fs;
 use std::net::IpAddr;
 
-use failure::{Error, ResultExt};
-use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
+use failure::{self, ResultExt};
+use futures::{self, StreamExt, TryStreamExt};
 use serde_derive::Deserialize;
 
-use fuchsia_async::temp::TempFutureExt;
-use fidl_fuchsia_devicesettings::{DeviceSettingsManagerMarker};
-use fidl_fuchsia_netstack::{NetstackMarker, NetAddress, Ipv4Address, Ipv6Address, NetAddressFamily, NetInterface, NetstackEvent};
-use fidl_zircon_ethernet::{INFO_FEATURE_SYNTH, INFO_FEATURE_LOOPBACK};
+use fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker;
+use fidl_fuchsia_netstack::{Ipv4Address, Ipv6Address, NetAddress, NetAddressFamily, NetInterface,
+                            NetstackEvent, NetstackMarker};
+use fidl_zircon_ethernet::{INFO_FEATURE_LOOPBACK, INFO_FEATURE_SYNTH};
 
 mod device_id;
 
@@ -36,7 +38,8 @@ fn is_physical(n: &NetInterface) -> bool {
 }
 
 fn derive_device_name(interfaces: Vec<NetInterface>) -> Option<String> {
-    interfaces.iter()
+    interfaces
+        .iter()
         .filter(|iface| is_physical(iface))
         .min_by(|a, b| a.id.cmp(&b.id))
         .map(|iface| device_id::device_id(&iface.hwaddr))
@@ -44,45 +47,70 @@ fn derive_device_name(interfaces: Vec<NetInterface>) -> Option<String> {
 
 static DEVICE_NAME_KEY: &str = "DeviceName";
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<(), failure::Error> {
     println!("netcfg: started");
     let default_config_file = fs::File::open(DEFAULT_CONFIG_FILE)?;
     let default_config: Config = serde_json::from_reader(default_config_file)?;
     let mut executor = fuchsia_async::Executor::new().context("error creating event loop")?;
-    let netstack = fuchsia_app::client::connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
-    let device_settings_manager = fuchsia_app::client::connect_to_service::<DeviceSettingsManagerMarker>()
-        .context("failed to connect to device settings manager")?;
+    let netstack = fuchsia_app::client::connect_to_service::<NetstackMarker>()
+        .context("failed to connect to netstack")?;
+    let device_settings_manager = fuchsia_app::client::connect_to_service::<
+        DeviceSettingsManagerMarker,
+    >().context("failed to connect to device settings manager")?;
 
-    let device_name = match default_config.device_name {
-        Some(name) => {
-            device_settings_manager.set_string(DEVICE_NAME_KEY, &name).map_ok(|_| ()).left_future()
-        },
-        None => {
-            netstack.take_event_stream().try_filter_map(|NetstackEvent::OnInterfacesChanged { interfaces: is }| {
-                future::ready(Ok(derive_device_name(is)))
-            }).take(1).try_for_each(|name| {
-                device_settings_manager.set_string(DEVICE_NAME_KEY, &name).map_ok(|_| ())
-            }).map_ok(|_| ()).right_future()
-        },
-    }.map_err(Into::into);
-
-    let mut servers = default_config.dns_config.servers.iter().map(to_net_address).collect::<Vec<NetAddress>>();
+    let mut servers = default_config
+        .dns_config
+        .servers
+        .iter()
+        .map(to_net_address)
+        .collect::<Vec<NetAddress>>();
     let () = netstack.set_name_servers(&mut servers.iter_mut())?;
 
-    executor.run_singlethreaded(device_name)
+    let default_device_name = default_config
+        .device_name
+        .as_ref()
+        .map(Cow::Borrowed)
+        .map(Ok);
+
+    let mut device_name_stream = futures::stream::iter(default_device_name).chain(
+        netstack.take_event_stream().try_filter_map(
+            |NetstackEvent::OnInterfacesChanged { interfaces }| {
+                futures::future::ok(derive_device_name(interfaces).map(Cow::Owned))
+            },
+        ),
+    );
+
+    executor.run_singlethreaded(
+        async {
+            match await!(device_name_stream.try_next())? {
+                Some(device_name) => {
+                    let _success =
+                        await!(device_settings_manager.set_string(DEVICE_NAME_KEY, &device_name))?;
+                    Ok(())
+                }
+                None => Err(failure::err_msg(
+                    "netstack event stream ended without providing interfaces",
+                )),
+            }
+        },
+    )
 }
 
 fn to_net_address(addr: &IpAddr) -> NetAddress {
     match addr {
-        IpAddr::V4(v4addr) => NetAddress{
+        IpAddr::V4(v4addr) => NetAddress {
             family: NetAddressFamily::Ipv4,
-            ipv4: Some(Box::new(Ipv4Address { addr: v4addr.octets() })),
+            ipv4: Some(Box::new(Ipv4Address {
+                addr: v4addr.octets(),
+            })),
             ipv6: None,
         },
-        IpAddr::V6(v6addr) => NetAddress{
+        IpAddr::V6(v6addr) => NetAddress {
             family: NetAddressFamily::Ipv6,
             ipv4: None,
-            ipv6: Some(Box::new(Ipv6Address { addr: v6addr.octets() })),
-        }
+            ipv6: Some(Box::new(Ipv6Address {
+                addr: v6addr.octets(),
+            })),
+        },
     }
 }
