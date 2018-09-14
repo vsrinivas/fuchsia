@@ -363,7 +363,7 @@
              path="third_party/golibs/github.com/dustin/go-humanize"
              remote="https://fuchsia.googlesource.com/third_party/go-humanize"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="259d2a102b871d17f30e3cd9881a642961a1e486"/>
+             revision="9f541cc9db5d55bce703bd99987c9d5cb8eea45e"/>
     <project name="go-docopt"
              path="third_party/golibs/github.com/flynn/go-docopt"
              remote="https://fuchsia.googlesource.com/third_party/go-docopt"
