@@ -96,15 +96,17 @@ class KoidTable {
 // Jobs aren't normally nested *that* deep, but we can't assume that of course.
 class JobKoidTableStackEntry {
  public:
-  explicit JobKoidTableStackEntry(zx::job job, zx_koid_t jid, int depth,
+  explicit JobKoidTableStackEntry(zx::job job, zx_handle_t job_h,
+                                  zx_koid_t jid, int depth,
                                   std::unique_ptr<KoidTable> subjob_koids)
       : job_(std::move(job)),
+        job_h_(job_h),
         jid_(jid),
         depth_(depth),
         subjob_koids_(std::move(subjob_koids)),
         current_subjob_index_(0) {}
 
-  zx_handle_t job() const { return job_.get(); }
+  zx_handle_t job_h() const { return job_h_; }
 
   zx_koid_t jid() const { return jid_; }
 
@@ -120,7 +122,12 @@ class JobKoidTableStackEntry {
   }
 
  private:
+  // The only use of this member is to automagically free the handle when
+  // the object is destructed. In the case of the top job this object is
+  // not valid.
   zx::job job_;
+  // This is the handle of the job to use.
+  zx_handle_t job_h_;
   zx_koid_t jid_;
   int depth_;
   std::unique_ptr<KoidTable> subjob_koids_;
@@ -131,9 +138,10 @@ class JobKoidTableStackEntry {
 
 using JobKoidTableStack = std::list<JobKoidTableStackEntry>;
 
-static zx_status_t GetChild(zx_handle_t parent, zx_koid_t parent_koid,
-                            zx_koid_t koid, zx_handle_t* task) {
-  auto status = zx_object_get_child(parent, koid, ZX_RIGHT_SAME_RIGHTS, task);
+static zx_status_t GetChild(zx_handle_t parent_h, zx_koid_t parent_koid,
+                            zx_koid_t koid, zx_handle_t* out_task_h) {
+  auto status = zx_object_get_child(parent_h, koid, ZX_RIGHT_SAME_RIGHTS,
+                                    out_task_h);
   if (status != ZX_OK) {
     // The task could have terminated in the interim.
     if (status == ZX_ERR_NOT_FOUND) {
@@ -149,9 +157,9 @@ static zx_status_t GetChild(zx_handle_t parent, zx_koid_t parent_koid,
   return status;
 }
 
-static zx_status_t FetchChildren(zx_handle_t parent, zx_koid_t parent_koid,
+static zx_status_t FetchChildren(zx_handle_t parent_h, zx_koid_t parent_koid,
                                  int children_kind, const char* kind_name,
-                                 KoidTable* koids) {
+                                 KoidTable* out_koids) {
   size_t actual = 0;
   size_t avail = 0;
   zx_status_t status;
@@ -160,10 +168,10 @@ static zx_status_t FetchChildren(zx_handle_t parent, zx_koid_t parent_koid,
   // get a complete list.
   for (int pass = 0; pass < 2; ++pass) {
     if (actual < avail) {
-      koids->TryReserve(avail + kNumExtraKoids);
+      out_koids->TryReserve(avail + kNumExtraKoids);
     }
-    status = zx_object_get_info(parent, children_kind, koids->data(),
-                                koids->CapacityInBytes(), &actual, &avail);
+    status = zx_object_get_info(parent_h, children_kind, out_koids->data(),
+                                out_koids->CapacityInBytes(), &actual, &avail);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << fxl::StringPrintf(
           "zx_object_get_info(%" PRIu64 ", %s, ...) failed: %s\n", parent_koid,
@@ -184,30 +192,30 @@ static zx_status_t FetchChildren(zx_handle_t parent, zx_koid_t parent_koid,
                                           avail);
   }
 
-  koids->SetSize(actual);
+  out_koids->SetSize(actual);
   return ZX_OK;
 }
 
-static zx_status_t DoThreads(const WalkContext* ctx, zx_handle_t process,
-                             zx_handle_t pid, int depth) {
+static zx_status_t DoThreads(const WalkContext* ctx, zx_handle_t process_h,
+                             zx_koid_t pid, int depth) {
   FXL_DCHECK(ctx->thread_callback);
 
   KoidTable koids;
-  auto status = FetchChildren(process, pid, ZX_INFO_PROCESS_THREADS,
+  auto status = FetchChildren(process_h, pid, ZX_INFO_PROCESS_THREADS,
                               "ZX_INFO_PROCESS_THREADS", &koids);
   if (status != ZX_OK) {
     return status;
   }
 
   for (size_t i = 0; i < koids.size(); ++i) {
-    zx_handle_t child;
+    zx_handle_t thread_h;
     zx_koid_t tid = koids.Get(i);
-    status = GetChild(process, pid, tid, &child);
+    status = GetChild(process_h, pid, tid, &thread_h);
     if (status != ZX_OK) {
       continue;
     }
-    zx::thread thread(child);
 
+    zx::thread thread(thread_h);
     status = (*ctx->thread_callback)(&thread, tid, pid, depth);
     if (status != ZX_OK) {
       return status;
@@ -220,34 +228,36 @@ static zx_status_t DoThreads(const WalkContext* ctx, zx_handle_t process,
   return ZX_OK;
 }
 
-static zx_status_t DoProcesses(const WalkContext* ctx, zx_handle_t job,
-                               zx_handle_t jid, int depth) {
+static zx_status_t DoProcesses(const WalkContext* ctx, zx_handle_t job_h,
+                               zx_koid_t jid, int depth) {
   KoidTable koids;
-  auto status = FetchChildren(job, jid, ZX_INFO_JOB_PROCESSES,
+  auto status = FetchChildren(job_h, jid, ZX_INFO_JOB_PROCESSES,
                               "ZX_INFO_JOB_PROCESSES", &koids);
   if (status != ZX_OK) {
     return status;
   }
 
   for (size_t i = 0; i < koids.size(); ++i) {
-    zx_handle_t child;
+    zx_handle_t process_h;
     zx_koid_t pid = koids.Get(i);
-    status = GetChild(job, jid, pid, &child);
+    status = GetChild(job_h, jid, pid, &process_h);
     if (status != ZX_OK) {
       continue;
     }
-    zx::process process(child);
+
+    zx::process process(process_h);
     if (ctx->process_callback) {
       status = (*ctx->process_callback)(&process, pid, jid, depth);
       if (status != ZX_OK) {
         return status;
       }
     }
+
     // If the callback took ownership of the process handle we can still scan
     // the threads using |child|. The callback is required to not close the
     // process handle until WalkJobTree() returns.
     if (ctx->thread_callback) {
-      status = DoThreads(ctx, child, pid, depth + 1);
+      status = DoThreads(ctx, process_h, pid, depth + 1);
       if (status != ZX_OK) {
         return status;
       }
@@ -257,18 +267,25 @@ static zx_status_t DoProcesses(const WalkContext* ctx, zx_handle_t job,
   return ZX_OK;
 }
 
+// This function is bi-modal: It handles both the top job and all subjobs.
+// When processing the top job |job| is nullptr, otherwise it is a pointer
+// to the subjob's object. |job_h| is the handle of the job. In the case of
+// subjobs it is |job.get()|.
+
 static zx_status_t DoJob(JobKoidTableStack* stack, const WalkContext* ctx,
-                         zx::job* job, bool job_is_top_level_job, zx_koid_t jid,
+                         zx::job* job, zx_handle_t job_h, zx_koid_t jid,
                          zx_koid_t parent_jid, int depth) {
   zx_status_t status;
 
-  // Things are a bit tricky here as |job_callback| could take ownership of
-  // the job, but we still need to call DoProcesses().
-  auto job_h = job->get();
-  if (ctx->job_callback) {
-    status = (*ctx->job_callback)(job, jid, parent_jid, depth);
-    if (status != ZX_OK) {
-      return status;
+  if (job) {
+    // Things are a bit tricky here as |job_callback| could take ownership of
+    // the job, but we still need to call DoProcesses().
+    FXL_DCHECK(job->get() == job_h);
+    if (ctx->job_callback) {
+      status = (*ctx->job_callback)(job, jid, parent_jid, depth);
+      if (status != ZX_OK) {
+        return status;
+      }
     }
   }
 
@@ -279,12 +296,6 @@ static zx_status_t DoJob(JobKoidTableStack* stack, const WalkContext* ctx,
     }
   }
 
-  // If the job callback took ownership of the handle, that's it, we
-  // can't continue.
-  if (!job->is_valid()) {
-    return ZX_ERR_STOP;
-  }
-
   auto subjob_koids = std::unique_ptr<KoidTable>(new KoidTable());
   status = FetchChildren(job_h, jid, ZX_INFO_JOB_CHILDREN,
                          "ZX_INFO_JOB_CHILDREN", subjob_koids.get());
@@ -292,18 +303,11 @@ static zx_status_t DoJob(JobKoidTableStack* stack, const WalkContext* ctx,
     return status;
   }
   if (!subjob_koids->empty()) {
-    if (job_is_top_level_job) {
-      // Don't consume the |job| argument to WalkJobTree(), make a dupe.
-      // We've already processed the job, so if the callback was going to
-      // consume it, it already would have.
-      zx::job dupe_job;
-      status = job->duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe_job);
-      if (status != ZX_OK)
-        return status;
-      stack->emplace_front(std::move(dupe_job), jid, depth + 1,
+    if (job) {
+      stack->emplace_front(std::move(*job), job_h, jid, depth + 1,
                            std::move(subjob_koids));
     } else {
-      stack->emplace_front(std::move(*job), jid, depth + 1,
+      stack->emplace_front(zx::job(), job_h, jid, depth + 1,
                            std::move(subjob_koids));
     }
   }
@@ -318,18 +322,18 @@ static zx_status_t WalkJobTreeInternal(JobKoidTableStack* stack,
     if (stack_entry.empty()) {
       stack->pop_front();
     } else {
-      auto parent_job = stack_entry.job();
+      auto parent_job_h = stack_entry.job_h();
       auto parent_jid = stack_entry.jid();
       auto depth = stack_entry.depth();
       auto jid = stack_entry.PopNext();
       zx_handle_t job_h;
-      auto status = GetChild(parent_job, parent_jid, jid, &job_h);
+      auto status = GetChild(parent_job_h, parent_jid, jid, &job_h);
       if (status != ZX_OK) {
         return status;
       }
 
       zx::job job(job_h);
-      status = DoJob(stack, ctx, &job, false, jid, parent_jid, depth);
+      status = DoJob(stack, ctx, &job, job_h, jid, parent_jid, depth);
       if (status != ZX_OK) {
         return status;
       }
@@ -339,12 +343,12 @@ static zx_status_t WalkJobTreeInternal(JobKoidTableStack* stack,
   return ZX_OK;
 }
 
-zx_status_t WalkJobTree(zx::job* job, JobTreeJobCallback* job_callback,
+zx_status_t WalkJobTree(const zx::job& job, JobTreeJobCallback* job_callback,
                         JobTreeProcessCallback* process_callback,
                         JobTreeThreadCallback* thread_callback) {
-  FXL_DCHECK(job->is_valid());
+  FXL_DCHECK(job.is_valid());
   zx_info_handle_basic_t info;
-  auto status = zx_object_get_info(job->get(), ZX_INFO_HANDLE_BASIC, &info,
+  auto status = zx_object_get_info(job.get(), ZX_INFO_HANDLE_BASIC, &info,
                                    sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
@@ -362,7 +366,7 @@ zx_status_t WalkJobTree(zx::job* job, JobTreeJobCallback* job_callback,
   ctx.thread_callback = thread_callback;
 
   JobKoidTableStack stack;
-  status = DoJob(&stack, &ctx, job, true, jid, parent_jid, 0);
+  status = DoJob(&stack, &ctx, nullptr, job.get(), jid, parent_jid, 0);
   if (status != ZX_OK) {
     return status;
   }
@@ -370,7 +374,7 @@ zx_status_t WalkJobTree(zx::job* job, JobTreeJobCallback* job_callback,
   return WalkJobTreeInternal(&stack, &ctx);
 }
 
-zx::process FindProcess(zx::job* job, zx_koid_t pid) {
+zx::process FindProcess(const zx::job& job, zx_koid_t pid) {
   zx::process process;
   JobTreeProcessCallback find_process_callback =
       [&](zx::process* task, zx_koid_t koid, zx_koid_t parent_koid,
@@ -388,7 +392,7 @@ zx::process FindProcess(zx::job* job, zx_koid_t pid) {
 
 zx::process FindProcess(zx_handle_t job_h, zx_koid_t pid) {
   zx::job job(job_h);
-  auto result = FindProcess(&job, pid);
+  auto result = FindProcess(job, pid);
   // Don't close |job_h| when we return.
   auto released_handle __UNUSED = job.release();
   return result;
@@ -402,15 +406,15 @@ zx::job GetDefaultJob() {
     FXL_VLOG(1) << "no default job";
     return zx::job();
   }
-  zx_handle_t dupe;
-  auto status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, &dupe);
+  zx_handle_t dupe_h;
+  auto status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, &dupe_h);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "unable to create dupe of default job: "
                    << ZxErrorString(status);
     return zx::job();
   }
 
-  return zx::job(dupe);
+  return zx::job(dupe_h);
 }
 
 }  // namespace debugger_utils

@@ -24,10 +24,10 @@ using JobTreeProcessCallback = std::function<zx_status_t(
 using JobTreeThreadCallback = std::function<zx_status_t(
     zx::thread* thread, zx_koid_t koid, zx_koid_t parent_koid, int depth)>;
 
-// Walk the job tree of |job|, beginning at |job| and descending to all its
-// children. Jobs are searched in depth-first order.
-// The initial |job| argument of WalkJobTree() is not consumed, however a
-// callback may consume it (see below).
+// Walk the job tree of |job|. Jobs are searched in depth-first order, except
+// that |job| itself is not passed to the job callback. If the caller wants to
+// analyze job it can do so directly. It is done this way so that the job can
+// be passed as a const reference (which is the only thing that makes sense).
 //
 // A pointer to the zx::task object (job,process,thread) is passed to each
 // callback. If the callback wishes to take over ownership of the handle it
@@ -38,26 +38,17 @@ using JobTreeThreadCallback = std::function<zx_status_t(
 // All other handles obtained during the walk are automagically closed by the
 // time WalkJobTree() returns.
 //
-// The walk continues until either of the following happens:
-// 1) Any callback returns something other than ZX_OK.
-//    By convention if tree walking has successfully completed and you want to
-//    "early exit" then return ZX_ERR_STOP from a callback.
-// 2) |job_callback| has taken ownership of the |zx::job| object.
-//    Processes of the job and their threads are still walked, but no further
-//    jobs are walked, and ZX_ERR_STOP is returned.
-//    Remember the job handle must remain open until WalkJobTree() returns.
-//
-// TODO(dje): Maybe allow a callback to take ownership of a job handle and
-// still continue walking of further jobs (maintaining the restriction that
-// the caller can't close the handle until WalkJobTree() returns).
+// The walk continues until any callback returns something other than ZX_OK.
+// By convention if tree walking has successfully completed and you want to
+// "early exit" then return ZX_ERR_STOP from a callback.
 
-zx_status_t WalkJobTree(zx::job* job, JobTreeJobCallback* job_callback,
+zx_status_t WalkJobTree(const zx::job& job, JobTreeJobCallback* job_callback,
                         JobTreeProcessCallback* process_callback,
                         JobTreeThreadCallback* thread_callback);
 
 // Simple wrapper on WalkJobTree for finding processes.
 // Returns zx::process(ZX_HANDLE_INVALID) if not found.
-zx::process FindProcess(zx::job* job, zx_koid_t pid);
+zx::process FindProcess(const zx::job& job, zx_koid_t pid);
 zx::process FindProcess(zx_handle_t job, zx_koid_t pid);
 
 }  // namespace debugger_utils
