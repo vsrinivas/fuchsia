@@ -215,9 +215,8 @@ TEST_F(AudioCoreTest, SetSystemGain_Basic) {
   RestoreState();
 }
 
-// Test the independence of the systemwide Gain and mute settings.
-// Setting the systemwide Gain to kMutedGain -- and changing away from
-// kMutedGain -- should have no effect on the systemwide Mute.
+// Test the independence of systemwide Gain and Mute. Setting the system Gain to
+// -- and away from -- MUTED_GAIN_DB should have no effect on the system Mute.
 TEST_F(AudioCoreTest, SetSystemMute_Independence) {
   SaveState();  // Sets system Gain to 0.0 dB and Mute to false.
 
@@ -228,13 +227,13 @@ TEST_F(AudioCoreTest, SetSystemMute_Independence) {
   EXPECT_FALSE(received_mute_);
 
   audio_->SetSystemMute(true);
-  // Expect: callback; Mute is set (despite Gain's kMutedGain value).
+  // Expect: callback; Mute is set (despite Gain's MUTED_GAIN_DB value).
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
   EXPECT_EQ(received_gain_db_, fuchsia::media::MUTED_GAIN_DB);
   EXPECT_TRUE(received_mute_);
 
   audio_->SetSystemGain(-42.0f);
-  // Expect: callback; Gain is no longer kMutedGain, but Mute is unchanged.
+  // Expect: callback; Gain is no longer MUTED_GAIN_DB, but Mute is unchanged.
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
   EXPECT_EQ(received_gain_db_, -42.0f);
   EXPECT_TRUE(received_mute_);
@@ -244,7 +243,7 @@ TEST_F(AudioCoreTest, SetSystemMute_Independence) {
 
 // Test setting the systemwide Mute to the already-set value.
 // In these cases, we should receive no gain|mute callback (should timeout).
-// Verify this with permutations that include Mute=true and Gain=kMutedGain.
+// Verify this with permutations that include Mute=true and Gain=MUTED_GAIN_DB.
 // 'No callback if no change in Mute' should be the case REGARDLESS of Gain.
 // This test relies upon Gain-Mute independence verified by previous test.
 TEST_F(AudioCoreTest, SetSystemMute_NoCallbackIfNoChange) {
@@ -289,7 +288,7 @@ TEST_F(AudioCoreTest, SetSystemMute_NoCallbackIfNoChange) {
 
 // Test setting the systemwide Gain to the already-set value.
 // In these cases, we should receive no gain|mute callback (should timeout).
-// Verify this with permutations that include Mute=true and Gain=kMutedGain.
+// Verify this with permutations that include Mute=true and Gain=MUTED_GAIN_DB.
 // 'No callback if no change in Gain' should be the case REGARDLESS of Mute.
 // This test relies upon Gain-Mute independence verified by previous test.
 TEST_F(AudioCoreTest, SetSystemGain_NoCallbackIfNoChange) {
@@ -308,7 +307,7 @@ TEST_F(AudioCoreTest, SetSystemGain_NoCallbackIfNoChange) {
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
 
   audio_->SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
-  // Expect: gain-change callback received (Gain is now kMutedGain).
+  // Expect: gain-change callback received (Gain is now MUTED_GAIN_DB).
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
   audio_->SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
   // Expect: timeout (no callback); no change to Gain, regardlesss of Mute.

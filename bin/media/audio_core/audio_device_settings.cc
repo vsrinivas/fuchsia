@@ -355,7 +355,8 @@ zx_status_t AudioDeviceSettings::Deserialize(const fbl::unique_fd& storage) {
   // Extract the gain information
   ::fuchsia::media::AudioGainInfo gain_info;
   const auto& gain_obj = doc["gain"].GetObject();
-  gain_info.gain_db = gain_obj["db_gain"].GetDouble();
+
+  gain_info.gain_db = gain_obj["gain_db"].GetDouble();
 
   if (gain_obj["mute"].GetBool()) {
     gain_info.flags |= ::fuchsia::media::AudioGainInfoFlag_Mute;
@@ -392,7 +393,7 @@ zx_status_t AudioDeviceSettings::Serialize() {
   writer.StartObject();
   writer.Key("gain");
   writer.StartObject();
-  writer.Key("db_gain");
+  writer.Key("gain_db");
   writer.Double(gain_info.gain_db);
   writer.Key("mute");
   writer.Bool(gain_info.flags & ::fuchsia::media::AudioGainInfoFlag_Mute);
@@ -407,8 +408,7 @@ zx_status_t AudioDeviceSettings::Serialize() {
   writer.Bool(disallow_auto_routing());
   writer.EndObject();  // end top level object
 
-  // Truncate the file down to nothing, write the data, and finally flush the
-  // file.
+  // Truncate the file down to nothing, write the data, then flush the file.
   //
   // TODO(johngro): We should really double buffer these settings files in case
   // of power loss.  Even better would be to have a fuchsia service which

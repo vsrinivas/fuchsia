@@ -333,8 +333,8 @@ class AudioResult {
   //
   // This value would actually be infinitesimally close to zero, if it were not
   // for our -160dB limit. kPrevMinScaleNonMute is essentially the scale that
-  // leads to kMutedGain -- plus the smallest-possible increment that a float32
-  // can express.  Note the close relation to kMaxScaleMute.
+  // leads to kMutedGainDb -- plus the smallest-possible increment that a
+  // float32 can express.  Note the close relation to kMaxScaleMute.
   static constexpr Gain::AScale kPrevMinScaleNonMute = 0.000000010000000384f;
 
   // The highest (furthest-from-Mute) AScale at which full-scale data are
@@ -342,7 +342,7 @@ class AudioResult {
   //
   // This value would actually be infinitesimally close to zero, if it were not
   // for our -160dB limit. kMaxScaleMute is essentially the scale that leads to
-  // kMutedGain -- plus an increment that float32 ultimately cannot express.
+  // kMutedGainDb -- plus an increment that float32 ultimately cannot express.
   static constexpr Gain::AScale kMaxScaleMute = 0.000000010000000383f;
 
   static_assert(kMinUnityScale > kPrevScaleEpsilon,

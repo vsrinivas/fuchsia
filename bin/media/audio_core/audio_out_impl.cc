@@ -648,8 +648,7 @@ void AudioOutImpl::SetGain(float gain_db) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
   if (gain_db_ != gain_db) {
     if (gain_db > fuchsia::media::MAX_GAIN_DB) {
-      FXL_LOG(ERROR) << "Gain value too large (" << gain_db
-                     << ") for audio out.";
+      FXL_LOG(ERROR) << "Gain value too large (" << gain_db << ") for source.";
       return;
     }
 
