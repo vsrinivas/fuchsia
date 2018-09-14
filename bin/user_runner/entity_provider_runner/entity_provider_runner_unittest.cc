@@ -178,6 +178,22 @@ class MyEntityProvider : AgentImpl::Delegate,
     callback(std::move(vmo_ptr));
   }
 
+  // |fuchsia::modular::EntityProvider|
+  void WriteData(fidl::StringPtr cookie, fidl::StringPtr type,
+                 fuchsia::mem::Buffer data,
+                 WriteDataCallback callback) override {
+    // TODO(MI4-1301)
+    callback(fuchsia::modular::EntityWriteStatus::READ_ONLY);
+  }
+
+  // |fuchsia::modular::EntityProvider|
+  void Watch(
+      fidl::StringPtr cookie, fidl::StringPtr type,
+      fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override {
+    // TODO(MI4-1301)
+    FXL_NOTIMPLEMENTED();
+  }
+
  private:
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
