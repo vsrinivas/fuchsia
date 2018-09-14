@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::manifest::FontsManifest;
-use failure::{format_err, Error, ResultExt};
+use failure::{format_err, Error};
 use fdio;
 use fidl;
 use fidl::encoding2::OutOfLine;
@@ -40,7 +40,7 @@ struct AssetCollection {
 }
 
 fn load_asset_to_vmo(path: &Path) -> Result<mem::Buffer, Error> {
-    let mut file = File::open(path)?;
+    let file = File::open(path)?;
     let vmo = fdio::get_vmo_copy_from_file(&file)?;
     let size = file.metadata()?.len();
     Ok(mem::Buffer { vmo, size })
@@ -137,19 +137,12 @@ struct FontCollection {
 }
 
 impl FontCollection {
-    fn from_manifest(manifest: FontsManifest) -> Result<FontCollection, Error> {
-        let mut result = FontCollection {
+    fn new() -> FontCollection {
+        FontCollection {
             fallback_family: String::new(),
             families: BTreeMap::new(),
             assets: AssetCollection::new(),
-        };
-        result.add_from_manifest(manifest)?;
-        if result.fallback_family == "" {
-            return Err(format_err!(
-                "Font manifest didn't contain a valid fallback family."
-            ));
         }
-        Ok(result)
     }
 
     fn add_from_manifest(&mut self, mut manifest: FontsManifest) -> Result<(), Error> {
@@ -212,29 +205,24 @@ impl FontCollection {
     }
 }
 
-const FONT_MANIFEST_PATH: &str = "/pkg/data/manifest.json";
-const VENDOR_FONT_MANIFEST_PATH: &str = "/system/data/vendor/fonts/manifest.json";
-
-fn load_fonts() -> Result<FontCollection, Error> {
-    let main_font_manifest_path = Path::new(FONT_MANIFEST_PATH);
-    let mut collection = FontsManifest::load_from_file(main_font_manifest_path)
-        .and_then(|manifest| FontCollection::from_manifest(manifest))?;
-
-    let vendor_font_manifest_path = Path::new(VENDOR_FONT_MANIFEST_PATH);
-    if vendor_font_manifest_path.exists() {
-        FontsManifest::load_from_file(vendor_font_manifest_path)
-            .and_then(|manifest| collection.add_from_manifest(manifest))?;
-    }
-    Ok(collection)
-}
-
 pub struct FontService {
     font_collection: FontCollection,
 }
 
 impl FontService {
-    pub fn new() -> Result<FontService, Error> {
-        let font_collection = load_fonts().context("Failed to initialize font collection.")?;
+    pub fn new(manifests: Vec<PathBuf>) -> Result<FontService, Error> {
+        let mut font_collection = FontCollection::new();
+        for manifest in manifests {
+            font_collection.add_from_manifest(
+                FontsManifest::load_from_file(&manifest)?);
+        }
+
+        if font_collection.fallback_family == "" {
+            return Err(format_err!(
+                "Font manifest didn't contain a valid fallback family."
+            ));
+        }
+
         Ok(FontService { font_collection })
     }
 

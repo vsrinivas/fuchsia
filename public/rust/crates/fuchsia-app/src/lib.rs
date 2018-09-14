@@ -11,7 +11,8 @@
 
 #[allow(unused)] // Remove pending fix to rust-lang/rust#53682
 use {
-    failure::{Error, ResultExt, Fail},
+    failure::{Error, ResultExt, Fail, format_err},
+    fdio::fdio_sys,
     fuchsia_async as fasync,
     futures::{
         Future, Poll,
@@ -28,12 +29,15 @@ use {
     },
     fidl_fuchsia_sys::{
         ComponentControllerProxy,
+        FlatNamespace,
         LauncherMarker,
         LauncherProxy,
         LaunchInfo,
     },
     fuchsia_zircon::{self as zx, Peered, Signals},
     std::{
+        os::unix::io::IntoRawFd,
+        fs::File,
         marker::Unpin,
         pin::PinMut,
     },
@@ -66,6 +70,35 @@ pub mod client {
         connect_to_service_at::<S>("/svc")
     }
 
+    /// Options for the launcher when starting an applications.
+    pub struct LaunchOptions {
+        namespace: Option<Box<FlatNamespace>>
+    }
+
+    impl LaunchOptions {
+        /// Creates default launch options.
+        pub fn new() -> LaunchOptions {
+            LaunchOptions {
+                namespace: None
+            }
+        }
+
+        /// Adds a new directory to the namespace for the new process.
+        pub fn add_dir_to_namespace(&mut self, path: String, dir: File) -> Result<&mut Self, Error> {
+            let (mut channels, _) = fdio::transfer_fd(dir)?;
+            if channels.len() != 1 {
+                return Err(format_err!("fdio_transfer_fd() returned unexpected number of handles"));
+            }
+
+            let namespace = self.namespace.get_or_insert_with(||
+                  Box::new(FlatNamespace {paths: vec![], directories: vec![]}));
+            namespace.paths.push(path);
+            namespace.directories.push(channels.remove(0));
+
+            Ok(self)
+        }
+    }
+
     /// Launcher launches Fuchsia applications.
     pub struct Launcher {
         launcher: LauncherProxy,
@@ -84,9 +117,17 @@ pub mod client {
             &self,
             url: String,
             arguments: Option<Vec<String>>,
-        ) -> Result<App, Error>
-        {
+        ) -> Result<App, Error> {
+            self.launch_with_options(url, arguments, LaunchOptions::new())
+        }
 
+        /// Launch an application at the specified URL.
+        pub fn launch_with_options(
+            &self,
+            url: String,
+            arguments: Option<Vec<String>>,
+            options: LaunchOptions
+        ) -> Result<App, Error> {
             let (controller, controller_server_end) = zx::Channel::create()?;
             let (directory_request, directory_server_chan) = zx::Channel::create()?;
 
@@ -96,7 +137,7 @@ pub mod client {
                 out: None,
                 err: None,
                 directory_request: Some(directory_server_chan),
-                flat_namespace: None,
+                flat_namespace: options.namespace,
                 additional_services: None,
             };
 

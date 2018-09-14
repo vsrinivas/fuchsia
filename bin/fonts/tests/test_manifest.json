@@ -1,0 +1,54 @@
+{
+  "families": [
+    {
+      "family": "NotoSerifCJK",
+      "fonts": [
+        {
+          "asset": "NotoSerifCJK-Regular.ttc",
+          "index": 0,
+          "language": "ja"
+        },
+        {
+          "asset": "NotoSerifCJK-Regular.ttc",
+          "index": 1,
+          "language": "ko"
+        },
+        {
+          "asset": "NotoSerifCJK-Regular.ttc",
+          "index": 2,
+          "language": "zh-Hans"
+        },
+        {
+          "asset": "NotoSerifCJK-Regular.ttc",
+          "index": 3,
+          "language": ["zh-Hant", "zh-Bopo"]
+        }
+      ]
+    },
+    {
+      "family": "NotoSansCJK",
+      "fonts": [
+        {
+          "asset": "NotoSansCJK-Regular.ttc",
+          "index": 0,
+          "language": "ja"
+        },
+        {
+          "asset": "NotoSansCJK-Regular.ttc",
+          "index": 1,
+          "language": "ko"
+        },
+        {
+          "asset": "NotoSansCJK-Regular.ttc",
+          "index": 2,
+          "language": "zh-Hans"
+        },
+        {
+          "asset": "NotoSansCJK-Regular.ttc",
+          "index": 3,
+          "language": ["zh-Hant", "zh-Bopo"]
+        }
+      ]
+    }
+  ]
+}

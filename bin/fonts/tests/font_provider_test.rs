@@ -6,7 +6,7 @@
 
 use failure::{format_err, Error, ResultExt};
 use fidl_fuchsia_fonts as fonts;
-use fuchsia_app::client::Launcher;
+use fuchsia_app::client::{LaunchOptions, Launcher};
 use fuchsia_async::Executor;
 use fuchsia_zircon as zx;
 use fuchsia_zircon::AsHandleRef;
@@ -50,14 +50,15 @@ async fn get_font_info(
     await!(get_font_info_with_lang(font_provider, name, vec![]))
 }
 
-async fn run_tests() -> Result<(), Error> {
+async fn test_basic() -> Result<(), Error> {
     let launcher = Launcher::new().context("Failed to open launcher service")?;
     let app = launcher
         .launch("fonts".to_string(), None)
-        .context("Failed to launch echo service")?;
+        .context("Failed to launch fonts::Provider")?;
 
-    let font_provider = app.connect_to_service(fonts::ProviderMarker)
-        .context("Failed to connect to FontProvider")?;
+    let font_provider = app
+        .connect_to_service(fonts::ProviderMarker)
+        .context("Failed to connect to fonts::Provider")?;
 
     let default = await!(get_font_info(&font_provider, "".to_string()))
         .context("Failed to load default font")?;
@@ -72,6 +73,55 @@ async fn run_tests() -> Result<(), Error> {
     // RobotoSlab request should return a different font.
     assert!(default.vmo_koid != roboto_slab.vmo_koid);
     assert!(default.buffer_id != roboto_slab.buffer_id);
+
+    Ok(())
+}
+
+async fn test_font_collections() -> Result<(), Error> {
+    let mut launch_options = LaunchOptions::new();
+    launch_options.add_dir_to_namespace(
+        "/test_fonts".to_string(),
+        std::fs::File::open("/pkgfs/packages/font_provider_tests/0/data/test_fonts")?,
+    )?;
+
+    let launcher = Launcher::new().context("Failed to open launcher service")?;
+    let app = launcher
+        .launch_with_options(
+            "fonts".to_string(),
+            Some(vec![
+                "--font-manifest".to_string(),
+                "/test_fonts/manifest.json".to_string(),
+            ]),
+            launch_options,
+        ).context("Failed to launch fonts::Provider")?;
+
+    let font_provider = app
+        .connect_to_service(fonts::ProviderMarker)
+        .context("Failed to connect to fonts::Provider")?;
+
+    // Request Japanese and Simplified Chinese versions of Noto Sans CJK. Both
+    // fonts are part of the same TTC file, so font provider is expected to
+    // return the same buffer with different font index values.
+    let noto_sans_cjk_ja = await!(get_font_info_with_lang(
+        &font_provider,
+        "NotoSansCJK".to_string(),
+        vec!["ja".to_string()]
+    )).context("Failed to load NotoSansCJK font")?;
+    let noto_sans_cjk_sc = await!(get_font_info_with_lang(
+        &font_provider,
+        "NotoSansCJK".to_string(),
+        vec!["zh-Hans".to_string()]
+    )).context("Failed to load NotoSansCJK font")?;
+
+    assert!(noto_sans_cjk_ja.vmo_koid == noto_sans_cjk_sc.vmo_koid);
+    assert!(noto_sans_cjk_ja.index != noto_sans_cjk_sc.index);
+
+    Ok(())
+}
+
+async fn run_tests() -> Result<(), Error> {
+    await!(test_basic())?;
+    await!(test_font_collections())?;
 
     Ok(())
 }

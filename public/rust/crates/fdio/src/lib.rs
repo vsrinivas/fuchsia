@@ -23,7 +23,10 @@ use {
             raw,
             unix::{
                 ffi::OsStrExt,
-                io::AsRawFd,
+                io::{
+                    AsRawFd,
+                    IntoRawFd,
+                }
             },
         },
         path::Path,
@@ -80,6 +83,26 @@ pub fn service_connect_at(dir: &zx::Channel, service_path: &str, channel: zx::Ch
             c_service_path.as_ptr(),
             channel.into_raw())
     })
+}
+
+pub fn transfer_fd(file: std::fs::File) -> Result<(Vec<zx::Channel>, Vec<u32>), zx::Status> {
+    unsafe {
+        let mut channels: [zx::sys::zx_handle_t; fdio_sys::FDIO_MAX_HANDLES as usize] = [0, 0, 0];
+        let mut types: [u32; fdio_sys::FDIO_MAX_HANDLES as usize] = [0, 0, 0];
+        let res =
+            fdio_sys::fdio_transfer_fd(file.into_raw_fd(), 0, &mut channels[0], &mut types[0]);
+        if res < 0 {
+            return Err(zx::Status::from_raw(res));
+        }
+        let num_handles = res as usize;
+        Ok((
+            channels[0..num_handles]
+                .iter()
+                .map(|c| zx::Channel::from(zx::Handle::from_raw(*c)))
+                .collect(),
+            types[0..num_handles].to_vec(),
+        ))
+    }
 }
 
 /// Retrieves the topological path for a device node.
