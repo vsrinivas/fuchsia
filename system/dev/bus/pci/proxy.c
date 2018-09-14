@@ -242,7 +242,7 @@ static zx_status_t pci_op_map_bar(void* ctx,
     return status;
 }
 
-static zx_status_t pci_op_map_interrupt(void* ctx, int which_irq, zx_handle_t* out_handle) {
+static zx_status_t pci_op_map_interrupt(void* ctx, int32_t which_irq, zx_handle_t* out_handle) {
     if (!out_handle) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -316,7 +316,7 @@ static zx_status_t pci_op_get_device_info(void* ctx, zx_pcie_device_info_t* out_
 }
 
 static zx_status_t pci_op_get_auxdata(void* ctx, const char* args, void* data,
-                                      uint32_t bytes, uint32_t* actual) {
+                                      size_t bytes, size_t* actual) {
     kpci_device_t* dev = ctx;
     size_t arglen = strlen(args);
     if (arglen > PCI_MAX_DATA) {

@@ -16,6 +16,7 @@
 #include <fbl/optional.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <hw/pci.h>
 #include <threads.h>
 
 #include "display-device.h"

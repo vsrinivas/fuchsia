@@ -1,0 +1,68 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.pci;
+
+using zircon.syscalls.pci;
+using zx;
+
+enum PciCfg : uint16 {
+    VENDOR_ID = 0x00;
+    DEVICE_ID = 0x02;
+    REVISION_ID = 0x08;
+    CLASS_CODE = 0x09;
+    SUBSYSTEM_VENDOR_ID = 0x2C;
+    SUBSYSTEM_ID = 0x2E;
+    CAPABILITIES_PTR = 0x34;
+};
+
+enum PciCapId : uint8 {
+    NULL = 0x00;
+    PCI_PWR_MGMT = 0x01;
+    AGP = 0x02;
+    VPD = 0x03;
+    MSI = 0x05;
+    PCIX = 0x07;
+    HYPERTRANSPORT = 0x08;
+    VENDOR = 0x09;
+    DEBUG_PORT = 0x0A;
+    COMPACT_PCI_CRC = 0x0B;
+    PCI_HOT_PLUG = 0x0C;
+    PCI_BRIDGE_SUBSYSTEM_VID = 0x0D;
+    AGP8X = 0x0E;
+    SECURE_DEVICE = 0x0F;
+    PCI_EXPRESS = 0x10;
+    MSIX = 0x11;
+    SATA_DATA_NDX_CFG = 0x12;
+    ADVANCED_FEATURES = 0x13;
+    ENHANCED_ALLOCATION = 0x14;
+};
+
+[Layout="ddk-protocol"]
+interface Pci {
+    1: GetBar(uint32 bar_id) -> (zx.status s, zircon.syscalls.pci.ZxPciBar res);
+    2: MapBar(uint32 bar_id, uint32 cache_policy) -> (zx.status s, vector<void>? vaddr,
+                                                      handle<vmo> @handle);
+    3: EnableBusMaster(bool enable) -> (zx.status s);
+    4: ResetDevice() -> (zx.status s);
+    5: MapInterrupt(int32 which_irq) -> (zx.status s, handle<interrupt> @handle);
+    6: QueryIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode) -> (zx.status s, uint32 max_irqs);
+    7: SetIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);
+    8: GetDeviceInfo() -> (zx.status s, zircon.syscalls.pci.ZxPcieDeviceInfo into);
+    9: ConfigRead(uint16 offset, usize width) -> (zx.status s, uint32 value);
+    10: ConfigWrite(uint16 offset, usize width, uint32 value) -> (zx.status s);
+    11: GetNextCapability(uint8 type, uint8 offset) -> (uint8 cap);
+    12: GetAuxdata(string args) -> (zx.status s, vector<void> data);
+    13: GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
+};
+
+// TODO: Implement the following.
+//static inline uint8_t pci_get_first_capability(const pci_protocol_t* pci, uint8_t type) {
+//    return pci_get_next_capability(pci, kPciCfgCapabilitiesPtr - 1u, type);
+//}
+//static inline zx_status_t pci_get_auxdata(const pci_protocol_t* pci,
+//                                          const char* args, void* data,
+//                                          uint32_t bytes, uint32_t* actual) {
+//    return pci->ops->get_auxdata(pci->ctx, args, data, bytes, actual);
+//}

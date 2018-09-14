@@ -6,8 +6,10 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/i2c.h>
+#include <ddk/protocol/pci-lib.h>
 #include <hw/reg.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -782,17 +784,16 @@ static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent,
                                        pci_protocol_t* pci) {
     // get child info from aux data, max 4
     // TODO: this seems nonstandard to device model
-    uint8_t childdata[sizeof(auxdata_i2c_device_t) * 4];
+    auxdata_i2c_device_t childdata[4];
     memset(childdata, 0, sizeof(childdata));
 
-    uint32_t actual;
-    zx_status_t status = pci_get_auxdata(pci, "i2c-child", childdata, sizeof(childdata),
-                             &actual);
+    size_t actual;
+    zx_status_t status = pci_get_auxdata(pci, "i2c-child", childdata, sizeof(childdata), &actual);
     if (status != ZX_OK) {
         return;
     }
 
-    auxdata_i2c_device_t* child = (auxdata_i2c_device_t*)childdata;
+    auxdata_i2c_device_t* child = &childdata[0];
     uint32_t count = actual / sizeof(auxdata_i2c_device_t);
     uint32_t bus_speed = 0;
     while (count--) {

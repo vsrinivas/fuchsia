@@ -62,7 +62,7 @@ void e1000_pci_clear_mwi(struct e1000_hw* hw) {
  */
 int32_t e1000_read_pcie_cap_reg(struct e1000_hw* hw, u32 reg, u16* value) {
     pci_protocol_t* pci = hw2pci(hw);
-    uint8_t offset = pci_get_first_capability(pci, kPciCapIdPciExpress);
+    uint8_t offset = pci_get_first_capability(pci, PCI_CAP_ID_PCI_EXPRESS);
 
     pci_config_read16(pci, offset + reg, value);
     return E1000_SUCCESS;
@@ -73,7 +73,7 @@ int32_t e1000_read_pcie_cap_reg(struct e1000_hw* hw, u32 reg, u16* value) {
  */
 int32_t e1000_write_pcie_cap_reg(struct e1000_hw* hw, u32 reg, u16* value) {
     pci_protocol_t* pci = hw2pci(hw);
-    uint8_t offset = pci_get_first_capability(pci, kPciCapIdPciExpress);
+    uint8_t offset = pci_get_first_capability(pci, PCI_CAP_ID_PCI_EXPRESS);
 
     pci_config_write16(pci, offset + reg, *value);
     return E1000_SUCCESS;

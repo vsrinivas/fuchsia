@@ -51,6 +51,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/pci-lib.h>
 #include <hw/pci.h>
 #include <hw/reg.h>
 #include <zircon/assert.h>

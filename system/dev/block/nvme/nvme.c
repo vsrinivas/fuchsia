@@ -17,6 +17,7 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/block.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/pci-lib.h>
 
 #include <hw/reg.h>
 #include <hw/pci.h>

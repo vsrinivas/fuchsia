@@ -95,9 +95,9 @@ zx_status_t PciModernBackend::Init() {
     fbl::AutoLock lock(&lock_);
 
     // try to parse capabilities
-    for (uint8_t off = pci_get_first_capability(&pci_, kPciCapIdVendor);
+    for (uint8_t off = pci_get_first_capability(&pci_, PCI_CAP_ID_VENDOR);
          off != 0;
-         off = pci_get_next_capability(&pci_, off, kPciCapIdVendor)) {
+         off = pci_get_next_capability(&pci_, off, PCI_CAP_ID_VENDOR)) {
         virtio_pci_cap_t cap;
 
         ReadVirtioCap(&pci_, off, cap);

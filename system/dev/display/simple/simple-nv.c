@@ -5,7 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/pci.h>
+#include <hw/pci.h>
 
 #include "simple-display.h"
 

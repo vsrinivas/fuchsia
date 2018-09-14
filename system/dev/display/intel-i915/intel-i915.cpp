@@ -9,8 +9,8 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/intel-gpu-core.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/pci-lib.h>
 #include <hw/inout.h>
-#include <hw/pci.h>
 
 #include <assert.h>
 #include <fbl/unique_ptr.h>

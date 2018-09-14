@@ -10,8 +10,10 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/pci-lib.h>
 
 #include <assert.h>
+#include <hw/pci.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>

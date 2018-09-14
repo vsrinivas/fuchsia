@@ -4,6 +4,7 @@
 #pragma once
 
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/pci-lib.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <virtio/virtio.h>

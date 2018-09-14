@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/pci-lib.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/limits.h>
