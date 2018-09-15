@@ -465,7 +465,7 @@ zbi("fuchsia") {
     ":system_image.manifest",
   ]
   inputs = [
-    "${zircon_build_dir}/zircon.bin",
+    "${zircon_build_dir}/kernel.zbi",
     boot_manifest,
   ]
   manifest = [
@@ -1287,13 +1287,14 @@ foreach(image, images) {
           type = "image"
           name = "${image.sdk}"
           root = "images"
-          file = {}
-          if (target_cpu == "x64") {
-            file.x64 = file_content
-          } else if (target_cpu == "arm64") {
-            file.arm64 = file_content
-          } else {
-            assert(false, "Unsupported target architecture: $target_cpu")
+          file = {
+            if (target_cpu == "x64") {
+              x64 = file_content
+            } else if (target_cpu == "arm64") {
+              arm64 = file_content
+            } else {
+              assert(false, "Unsupported target architecture: $target_cpu")
+            }
           }
         }
       }
@@ -1344,13 +1345,14 @@ sdk_atom(zircon_bin_sdk_target_name) {
       type = "image"
       name = "zircon.bin"
       root = "images"
-      file = {}
-      if (target_cpu == "x64") {
-        file.x64 = file_content
-      } else if (target_cpu == "arm64") {
-        file.arm64 = file_content
-      } else {
-        assert(false, "Unsupported target architecture: $target_cpu")
+      file = {
+        if (target_cpu == "x64") {
+          x64 = file_content
+        } else if (target_cpu == "arm64") {
+          arm64 = file_content
+        } else {
+          assert(false, "Unsupported target architecture: $target_cpu")
+        }
       }
     }
   }
@@ -1387,13 +1389,14 @@ if (target_cpu == "arm64") {
         type = "image"
         name = "qemu-zircon.bin"
         root = "images"
-        file = {}
-        if (target_cpu == "x64") {
-          file.x64 = file_content
-        } else if (target_cpu == "arm64") {
-          file.arm64 = file_content
-        } else {
-          assert(false, "Unsupported target architecture: $target_cpu")
+        file = {
+          if (target_cpu == "x64") {
+            x64 = file_content
+          } else if (target_cpu == "arm64") {
+            arm64 = file_content
+          } else {
+            assert(false, "Unsupported target architecture: $target_cpu")
+          }
         }
       }
     }
