@@ -8,10 +8,13 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/listnode.h>
 
 #include <port/port.h>
+
+__BEGIN_CDECLS
 
 typedef struct dc_work work_t;
 typedef struct dc_pending pending_t;
@@ -240,3 +243,5 @@ zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
 
 extern bool dc_asan_drivers;
 extern bool dc_launched_first_devhost;
+
+__END_CDECLS

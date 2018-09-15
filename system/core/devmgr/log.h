@@ -7,6 +7,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
+
 #define LOG_ERROR    0x001
 #define LOG_INFO     0x002
 #define LOG_TRACE    0x004
@@ -22,3 +26,5 @@
 extern uint32_t log_flags;
 
 #define log(flag, fmt...) do { if (LOG_##flag & log_flags) printf(fmt); } while (0)
+
+__END_CDECLS

@@ -13,6 +13,7 @@
 
 #include <lib/fdio/remoteio.h>
 
+#include <zircon/compiler.h>
 #include <zircon/fidl.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
@@ -20,6 +21,7 @@
 #include <threads.h>
 #include <stdint.h>
 
+__BEGIN_CDECLS
 
 // Handle IDs for USER0 handles
 #define ID_HJOBROOT 4
@@ -147,3 +149,5 @@ static inline void DM_UNLOCK(void) __TA_RELEASE(&__devhost_api_lock) {
     mtx_unlock(&__devhost_api_lock);
 }
 #endif
+
+__END_CDECLS

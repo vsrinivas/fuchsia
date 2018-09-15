@@ -5,6 +5,9 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
 
 typedef struct proxy_iostate proxy_iostate_t;
 
@@ -125,3 +128,5 @@ static inline zx_status_t dev_op_ioctl(zx_device_t* dev, uint32_t op,
 static inline zx_status_t dev_op_message(zx_device_t* dev, fidl_msg_t* msg, fidl_txn_t* txn) {
     return dev->ops->message(dev->ctx, msg, txn);
 }
+
+__END_CDECLS
