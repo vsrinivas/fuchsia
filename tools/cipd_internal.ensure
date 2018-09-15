@@ -11,6 +11,8 @@ fuchsia_internal/firmware/ralink git_revision:12987cadb37de28719990dfc2397ec6d09
 # Broadcom wlan firmware
 @Subdir drivers/wlan/third_party/broadcom/brcmfmac/firmware
 fuchsia_internal/firmware/wlan/broadcom/brcmfmac git_revision:397a604e081fa4a7a65f31b75494f80f1e1d9e09
+@subdir drivers/wlan/third_party/broadcom/brcmfmac/firmware-internal
+fuchsia_internal/firmware/wlan/broadcom/brcmfmac cipd_unique_brcmfmac:42
 
 # Intel bluetooth firmware
 @Subdir drivers/bluetooth/hci/intel/firmware

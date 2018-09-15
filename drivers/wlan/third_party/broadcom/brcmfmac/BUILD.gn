@@ -113,6 +113,12 @@ if (internal_access) {
     sources = [
       "firmware/brcmfmac43242a.bin",
       "firmware/brcmfmac4356-pcie.bin",
+      "firmware-internal/brcmfmac4356-sdio.bin",
+      "firmware-internal/brcmfmac4356-sdio.txt",
+      "firmware-internal/brcmfmac4359-sdio.bin",
+      "firmware-internal/brcmfmac4359-sdio.txt",
+      "firmware-internal/brcmfmac43455-sdio.bin",
+      "firmware-internal/brcmfmac43455-sdio.txt",
     ]
     outputs = [
       "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
@@ -186,6 +192,24 @@ package("brcmfmac") {
     libraries = [
       {
         name = "firmware/brcmfmac/brcmfmac4356-pcie.bin"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac4356-sdio.bin"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac4356-sdio.txt"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac4359-sdio.bin"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac4359-sdio.txt"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac43455-sdio.bin"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac43455-sdio.txt"
       },
       {
         name = "firmware/brcmfmac/brcmfmac43242a.bin"
