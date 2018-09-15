@@ -107,6 +107,7 @@ def GetClangCommandFromNinjaForFilename(filename):
   stdout, stderr = p.communicate()
   if p.returncode:
     return fuchsia_flags
+  stdout = stdout.decode('utf-8')
 
   # Ninja might execute several commands to build something. We want the last
   # clang command.

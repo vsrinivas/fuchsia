@@ -4,6 +4,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
 import platform
 import re
@@ -100,9 +104,9 @@ def build_tool(package, tool):
 def main():
   variable_re = re.compile('^[A-Z][A-Z_]*$')
   def usage():
-    print 'Usage: path.py VARIABLE'
-    print 'Available variables:'
-    print '\n'.join(filter(variable_re.match, globals().keys()))
+    print('Usage: path.py VARIABLE')
+    print('Available variables:')
+    print('\n'.join(filter(variable_re.match, globals().keys())))
   if len(sys.argv) != 2:
     usage()
     return
@@ -110,7 +114,7 @@ def main():
   if not variable_re.match(variable) or variable not in globals().keys():
     usage()
     return
-  print globals()[variable]
+  print(globals()[variable])
 
 if __name__ == '__main__':
   main()
