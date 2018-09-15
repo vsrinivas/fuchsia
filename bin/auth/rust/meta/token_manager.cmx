@@ -5,8 +5,9 @@
     "sandbox": {
         "features": [ "persistent-storage" ],
         "services": [
-	       "fuchsia.tracelink.Registry",
-	       "fuchsia.sys.Launcher"
+            "fuchsia.logger.LogSink",
+	       "fuchsia.sys.Launcher",
+	       "fuchsia.tracelink.Registry"
 	   ]
     }
 }
