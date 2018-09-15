@@ -30,7 +30,7 @@ def format_manifest_file(manifest):
     return ''.join(format_manifest_entry(entry) + '\n' for entry in manifest)
 
 
-def read_manifest_lines(lines, title, manifest_cwd, result_cwd):
+def read_manifest_lines(sep, lines, title, manifest_cwd, result_cwd):
     for line in lines:
         # Remove the trailing newline.
         assert line.endswith('\n'), "Unterminated manifest line: %r" % line
@@ -45,7 +45,7 @@ def read_manifest_lines(lines, title, manifest_cwd, result_cwd):
             line = line[end + 1:]
 
         # Grok target=source syntax.
-        [target_file, build_file] = line.split('=', 1)
+        [target_file, build_file] = line.split(sep, 1)
 
         if manifest_cwd != result_cwd:
             # Expand the path based on the cwd presumed in the manifest.
@@ -74,7 +74,7 @@ def partition_manifest(manifest, select, selected_group, unselected_group):
     return selected, unselected
 
 
-def ingest_manifest_lines(lines, title, in_cwd, groups, out_cwd, output_group):
+def ingest_manifest_lines(sep, lines, title, in_cwd, groups, out_cwd, output_group):
     groups_seen = set()
     def select(group):
         groups_seen.add(group)
@@ -82,7 +82,7 @@ def ingest_manifest_lines(lines, title, in_cwd, groups, out_cwd, output_group):
             return groups
         return group in groups
     selected, unselected = partition_manifest(
-        read_manifest_lines(lines, title, in_cwd, out_cwd),
+        read_manifest_lines(sep, lines, title, in_cwd, out_cwd),
         select, output_group, None)
     return selected, unselected, groups_seen
 
@@ -94,10 +94,11 @@ def apply_source_rewrites(rewrites, entry):
     return entry
 
 
-def apply_rewrites(rewrites, entry):
+def apply_rewrites(sep, rewrites, entry):
     for pattern, line in rewrites:
         if fnmatch.fnmatchcase(entry.target, pattern):
             [new_entry] = read_manifest_lines(
+                sep,
                 [line.format(**entry._asdict()) + '\n'], entry.manifest,
                 os.path.dirname(entry.manifest),
                 os.path.dirname(entry.manifest))
@@ -146,11 +147,19 @@ class input_action_base(argparse.Action):
             namespace, values, cwd, groups, namespace.output_cwd, output_group)
 
         include = getattr(namespace, 'include', [])
+        include_source = getattr(namespace, 'include_source', [])
         exclude = getattr(namespace, 'exclude', [])
-        if include or exclude:
+        if include or exclude or include_source:
             def included(entry):
-                return (entry.target not in exclude and
-                        (not include or entry.target in include))
+                def matches(file, patterns):
+                    return any(fnmatch.fnmatch(file, pattern)
+                               for pattern in patterns)
+                if matches(entry.target, exclude):
+                    return False
+                if include and not matches(entry.target, include):
+                    return False
+                return (not include_source or
+                        matches(entry.source, include_source))
             unselected += filter(lambda entry: not included(entry), selected)
             selected = filter(included, selected)
 
@@ -158,10 +167,11 @@ class input_action_base(argparse.Action):
             selected = map(contents_entry, selected);
             unselected = map(contents_entry, unselected);
 
+        sep = getattr(namespace, 'separator', '=')
         rewrites = [entry.split('=', 1)
                      for entry in getattr(namespace, 'rewrite', [])]
-        selected = [apply_rewrites(rewrites, entry) for entry in selected]
-        unselected = [apply_rewrites(rewrites, entry) for entry in unselected]
+        selected = [apply_rewrites(sep, rewrites, entry) for entry in selected]
+        unselected = [apply_rewrites(sep, rewrites, entry) for entry in unselected]
 
         if not isinstance(groups, bool):
             unused_groups = groups - groups_seen - set([None])
@@ -186,7 +196,8 @@ class input_manifest_action(input_action_base):
             setattr(namespace, 'manifest', all_inputs)
         all_inputs.append(filename)
         with open(filename, 'r') as file:
-            return ingest_manifest_lines(file, file.name, *args)
+            return ingest_manifest_lines(getattr(namespace, 'separator', '='),
+                                         file, file.name, *args)
 
 
 class input_entry_action(input_action_base):
@@ -195,6 +206,7 @@ class input_entry_action(input_action_base):
 
     def get_manifest_lines(self, namespace, entry, *args):
         return ingest_manifest_lines(
+            getattr(namespace, 'separator', '='),
             [entry + '\n'], namespace.entry_manifest, *args)
 
 
@@ -226,6 +238,9 @@ def common_parse_args(parser):
     parser.add_argument('--include', action='append', default=[],
                         metavar='TARGET',
                         help='Include only input entries matching TARGET'),
+    parser.add_argument('--include-source', action='append', default=[],
+                        metavar='SOURCE',
+                        help='Include only input entries matching SOURCE'),
     parser.add_argument('--reset-include',
                         action='store_const', const=[], dest='include',
                         help='Reset previous --include')
@@ -235,6 +250,9 @@ def common_parse_args(parser):
     parser.add_argument('--reset-exclude',
                         action='store_const', const=[], dest='exclude',
                         help='Reset previous --exclude')
+    parser.add_argument('--separator', default='=',
+                        metavar='SEP',
+                        help='Use SEP between TARGET and SOURCE in entries')
     # Replace each `@rspfile` with the arguments from the file, and iterate.
     args = sys.argv[1:]
     i = 0
@@ -292,7 +310,7 @@ def main():
         else:
             line = entry.source
         if not args.sources:
-            line = entry.target + '=' + line
+            line = entry.target + args.separator + line
         if args.unique:
             output_sets[entry.group][entry.target] = line
         else:

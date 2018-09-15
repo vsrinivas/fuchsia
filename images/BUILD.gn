@@ -1238,8 +1238,10 @@ action("ids.txt") {
 
   deps = [
     ":system_image.manifest",
+    ":vdso-ids.txt",
   ]
   sources = [
+    "$target_out_dir/vdso-ids.txt",
     system_build_id_map,
   ]
 
@@ -1260,6 +1262,27 @@ action("ids.txt") {
            "-u",
            "-o",
          ] + rebase_path(outputs + sources, root_build_dir)
+}
+
+# The vDSO doesn't appear in any package and so doesn't get into any
+# ids.txt file produced by generate_manifest().  But it appears in memory
+# at runtime and in backtraces, so it should be in the aggregated ids.txt
+# for symbolization.  The vDSO doesn't appear in zircon_boot_manifests, so
+# fetching it out of Zircon's own ids.txt by name is the only thing to do.
+action("vdso-ids.txt") {
+  script = "manifest.py"
+  sources = [
+    "$zircon_build_dir/ids.txt",
+  ]
+  outputs = [
+    "$target_out_dir/vdso-ids.txt",
+  ]
+  args = [
+    "--separator= ",
+    "--output=" + rebase_path(outputs[0], root_build_dir),
+    "--include-source=*/libzircon.so",
+    "--manifest=" + rebase_path(sources[0], root_build_dir),
+  ]
 }
 
 ###
