@@ -112,6 +112,8 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
     bcn_hash_ = GetBeaconSignature(beacon, frame_len);
 
     // Fields that are always present.
+    bssid_.CopyTo(bss_desc_.bssid.mutable_data());
+
     bss_desc_.beacon_period = beacon.beacon_interval;  // name mismatch is spec-compliant.
     ParseCapabilityInfo(beacon.cap);
     bss_desc_.bss_type = GetBssType(beacon.cap);
@@ -130,8 +132,11 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
     ValidateBssDesc(bss_desc_, has_dsss_param_set_chan_, dsss_param_set_chan_);
 
     auto chan = DeriveChanFromBssDesc(bss_desc_, bcn_rx_chan_.primary, has_dsss_param_set_chan_,
-                                   dsss_param_set_chan_);
+                                      dsss_param_set_chan_);
     bss_desc_.chan = common::ToFidl(chan);
+    debugbcn("beacon BSSID %s Chan %u CBW %u Sec80 %u\n",
+             common::MacAddr(bss_desc_.bssid).ToString().c_str(), bss_desc_.chan.primary,
+             bss_desc_.chan.cbw, bss_desc_.chan.secondary80);
 
     return ZX_OK;
 }
@@ -250,11 +255,19 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
             }
 
             // TODO(porce): Consider pre-allocate max memory and recycle it.
+            // Don't use a unique_ptr
             // if (rsne_) delete[] rsne_;
             size_t ie_len = sizeof(ElementHeader) + ie->hdr.len;
             rsne_.reset(new uint8_t[ie_len]);
             memcpy(rsne_.get(), ie, ie_len);
             rsne_len_ = ie_len;
+
+            bss_desc_.rsn.reset();
+            if (rsne_len_ > 0) {
+                bss_desc_.rsn = fidl::VectorPtr<uint8_t>::New(rsne_len_);
+                memcpy(bss_desc_.rsn->data(), rsne_.get(), rsne_len_);
+            }
+
             debugbcn("%s RSN\n", dbgmsghdr);
             break;
         }
@@ -330,34 +343,6 @@ BeaconHash Bss::GetBeaconSignature(const Beacon& beacon, size_t frame_len) const
         hash += *(arr + idx);
     }
     return hash;
-}
-
-wlan_mlme::BSSDescription Bss::ToFidl() const {
-    // Translates the Bss object into FIDL message.
-
-    wlan_mlme::BSSDescription fidl;
-    // TODO(NET-1170): Decommission Bss::ToFidl()
-    bss_desc_.Clone(&fidl);
-
-    std::memcpy(fidl.bssid.mutable_data(), bssid_.byte, common::kMacAddrLen);
-
-    if (has_dsss_param_set_chan_) {
-        // Channel was explicitly announced by the AP
-        fidl.chan.primary = dsss_param_set_chan_;
-    } else {
-        // Fallback to the inference
-        fidl.chan.primary = bcn_rx_chan_.primary;
-    }
-    fidl.chan.cbw = static_cast<wlan_mlme::CBW>(bcn_rx_chan_.cbw);
-
-    // RSN
-    fidl.rsn.reset();
-    if (rsne_len_ > 0) {
-        fidl.rsn = fidl::VectorPtr<uint8_t>::New(rsne_len_);
-        memcpy(fidl.rsn->data(), rsne_.get(), rsne_len_);
-    }
-
-    return fidl;
 }
 
 std::string Bss::RatesToString(const std::vector<uint8_t>& rates) const {
@@ -439,11 +424,11 @@ bool ValidateBssDesc(const wlan_mlme::BSSDescription& bss_desc, bool has_dsss_pa
     return true;
 }
 
-wlan_channel_t DeriveChanFromBssDesc(const wlan_mlme::BSSDescription &bss_desc,
+wlan_channel_t DeriveChanFromBssDesc(const wlan_mlme::BSSDescription& bss_desc,
                                      uint8_t bcn_rx_chan_primary, bool has_dsss_param_set_chan,
                                      uint8_t dsss_param_set_chan) {
     wlan_channel_t chan = {
-        .primary = has_dsss_param_set_chan? dsss_param_set_chan : bcn_rx_chan_primary,
+        .primary = has_dsss_param_set_chan ? dsss_param_set_chan : bcn_rx_chan_primary,
         .cbw = CBW20,  // default
         .secondary80 = 0,
     };

@@ -167,6 +167,8 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
     bssid_.Set(bss_->bssid.data());
 
     auto chan = GetBssChan();
+    debugjoin("JoinReq BSSID %s Chan %u CBW %u Sec80 %u\n",
+              common::MacAddr(bssid_).ToString().c_str(), chan.primary, chan.cbw, chan.secondary80);
 
     // TODO(NET-1322): Receive instruction from SME
     assoc_cfg_ = {};

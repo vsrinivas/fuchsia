@@ -44,7 +44,7 @@ static zx_status_t SendResults(DeviceInterface* device, uint64_t txn_id,
     for (auto& p : bss_map) {
         wlan_mlme::ScanResult r;
         r.txn_id = txn_id;
-        r.bss = p.second.ToFidl();
+        if (p.second.bss_desc().Clone(&r.bss) != ZX_OK) { continue; }
         zx_status_t status = SendServiceMsg(device, &r, fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
         if (status != ZX_OK) { return status; }
     }
@@ -54,8 +54,7 @@ static zx_status_t SendResults(DeviceInterface* device, uint64_t txn_id,
 // TODO(NET-500): The way we handle Beacons and ProbeResponses in here is kinda gross. Refactor.
 
 Scanner::Scanner(DeviceInterface* device, ChannelScheduler* chan_sched)
-    : off_channel_handler_(this), device_(device), chan_sched_(chan_sched)
-{ }
+    : off_channel_handler_(this), device_(device), chan_sched_(chan_sched) {}
 
 zx_status_t Scanner::HandleMlmeScanReq(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
     return Start(req);
@@ -144,8 +143,8 @@ bool Scanner::OffChannelHandlerImpl::EndOffChannelTime(bool interrupted,
         return true;
     }
 
-    zx_status_t status = SendResults(scanner_->device_, scanner_->req_->txn_id,
-                                     scanner_->current_bss_);
+    zx_status_t status =
+        SendResults(scanner_->device_, scanner_->req_->txn_id, scanner_->current_bss_);
     if (status != ZX_OK) {
         errorf("scanner: failed to send results: %d\n", status);
         SendScanEnd(scanner_->device_, scanner_->req_->txn_id,
@@ -155,8 +154,7 @@ bool Scanner::OffChannelHandlerImpl::EndOffChannelTime(bool interrupted,
     }
     scanner_->current_bss_.clear();
     if (++scanner_->channel_index_ >= scanner_->req_->channel_list->size()) {
-        SendScanEnd(scanner_->device_, scanner_->req_->txn_id,
-                    wlan_mlme::ScanResultCodes::SUCCESS);
+        SendScanEnd(scanner_->device_, scanner_->req_->txn_id, wlan_mlme::ScanResultCodes::SUCCESS);
         scanner_->Reset();
         return false;
     } else {
@@ -232,11 +230,9 @@ void Scanner::ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame) {
 }
 
 OffChannelRequest Scanner::CreateOffChannelRequest() {
-   return OffChannelRequest {
-       .chan = ScanChannel(),
-       .duration = WLAN_TU(req_->max_channel_time),
-       .handler = &off_channel_handler_
-   };
+    return OffChannelRequest{.chan = ScanChannel(),
+                             .duration = WLAN_TU(req_->max_channel_time),
+                             .handler = &off_channel_handler_};
 }
 
 void Scanner::HandleHwScanAborted() {
@@ -245,7 +241,7 @@ void Scanner::HandleHwScanAborted() {
         return;
     }
     errorf("scanner: hardware scan was aborted. Throwing out %zu BSS descriptions\n",
-            current_bss_.size());
+           current_bss_.size());
     SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
     Reset();
 }

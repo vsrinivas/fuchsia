@@ -39,10 +39,9 @@ class Bss : public fbl::RefCounted<Bss> {
     // TODO(porce): Move these out of Bss class.
     std::string RatesToString(const std::vector<uint8_t>& rates) const;
 
-    ::fuchsia::wlan::mlme::BSSDescription ToFidl() const;
-
     const common::MacAddr& bssid() { return bssid_; }
     zx::time_utc ts_refreshed() { return ts_refreshed_; }
+    const ::fuchsia::wlan::mlme::BSSDescription& bss_desc() const { return bss_desc_; }
 
    private:
     bool IsBeaconValid(const Beacon& beacon) const;
