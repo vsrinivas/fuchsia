@@ -62,8 +62,23 @@ fuchsia::modular::ComponentScope CloneScope(
 
 }  // namespace
 
+template <class Interface>
+UserIntelligenceProviderImpl::SessionAgentData::DeferredInterfaceRequest::
+    DeferredInterfaceRequest(fidl::InterfaceRequest<Interface> request)
+    : name(Interface::Name_), channel(request.TakeChannel()) {}
+
 UserIntelligenceProviderImpl::SessionAgentData::SessionAgentData()
-    : restart(kSessionAgentRetryLimit) {};
+    : restart(kSessionAgentRetryLimit) {}
+
+template <class Interface>
+void UserIntelligenceProviderImpl::SessionAgentData::
+    ConnectOrQueueServiceRequest(fidl::InterfaceRequest<Interface> request) {
+  if (services) {
+    component::ConnectToService(services.get(), std::move(request));
+  } else {
+    pending_service_requests.emplace_back(std::move(request));
+  }
+}
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     component::StartupContext* context, const Config& config,
@@ -124,8 +139,8 @@ void UserIntelligenceProviderImpl::GetSuggestionProvider(
 void UserIntelligenceProviderImpl::GetSpeechToText(
     fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) {
   auto it = session_agents_.find(kKronkUrl);
-  if (it != session_agents_.end() && it->second.services) {
-    component::ConnectToService(it->second.services.get(), std::move(request));
+  if (it != session_agents_.end()) {
+    it->second.ConnectOrQueueServiceRequest(std::move(request));
   } else {
     FXL_LOG(WARNING) << "No speech-to-text agent loaded";
   }
@@ -188,6 +203,13 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
   initializer->Initialize(Duplicate(focus_provider_),
                           Duplicate(puppet_master_));
 
+  // complete any pending connection requests
+  for (auto& request : agent_data->pending_service_requests) {
+    agent_data->services->ConnectToService(request.name,
+                                           std::move(request.channel));
+  }
+  agent_data->pending_service_requests.clear();
+
   // fuchsia::modular::Agent runner closes the agent controller connection when
   // the agent terminates. We restart the agent (up to a limit) when we notice
   // this.
@@ -202,6 +224,9 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
   // to restart the agent at that time, the agent runner would attempt to simply
   // send the connection request to the crashed agent instance and not relaunch
   // the agent.
+  //
+  // It is also because of this delay that we must queue any pending service
+  // connection requests until we can restart.
   agent_data->controller.set_error_handler([this, url] {
     auto it = session_agents_.find(url);
     FXL_DCHECK(it != session_agents_.end())
@@ -218,6 +243,9 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
                        << kSessionAgentRetryLimit.count << " times in "
                        << kSessionAgentRetryLimit.period.to_secs()
                        << " seconds.";
+      // Erase so that incoming connection requests fail fast rather than
+      // enqueue forever.
+      session_agents_.erase(it);
     }
   });
 }

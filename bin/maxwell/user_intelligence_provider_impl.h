@@ -6,10 +6,13 @@
 #define PERIDOT_BIN_MAXWELL_USER_INTELLIGENCE_PROVIDER_IMPL_H_
 
 #include <deque>
+#include <string>
+#include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/svc/cpp/services.h>
+#include <lib/zx/channel.h>
 
 #include "peridot/bin/maxwell/agent_launcher.h"
 #include "peridot/bin/maxwell/config.h"
@@ -55,9 +58,28 @@ class UserIntelligenceProviderImpl
 
  private:
   struct SessionAgentData {
+    struct DeferredInterfaceRequest {
+      template <class Interface>
+      DeferredInterfaceRequest(fidl::InterfaceRequest<Interface> request);
+
+      const char* name;
+      zx::channel channel;
+    };
+
     SessionAgentData();
+
+    template <class Interface>
+    void ConnectOrQueueServiceRequest(
+        fidl::InterfaceRequest<Interface> request);
+
     fuchsia::modular::AgentControllerPtr controller;
+
     fuchsia::sys::ServiceProviderPtr services;
+    // If an agent crashes, there is a period (~1 sec) where its |services|
+    // interface is invalid before its controller is closed. During that
+    // period, we should queue requests until we've restarted the agent.
+    std::vector<DeferredInterfaceRequest> pending_service_requests;
+
     modular::RateLimitedRetry restart;
   };
 
