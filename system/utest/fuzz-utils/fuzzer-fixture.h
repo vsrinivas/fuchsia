@@ -16,15 +16,6 @@ namespace testing {
 // not be instantiated directly; use |CreateZircon| or |CreateFuchsia| below.
 class FuzzerFixture final : public Fixture {
 public:
-    // Indicates a package should include the fuzz target binary.
-    static constexpr uint8_t kHasBinary = 0x01;
-    // Indicates a package should include immutable fuzzing resources like seed corpus locations,
-    // dictionaries, and option files.
-    static constexpr uint8_t kHasResources = 0x02;
-    // Indicates a package should include mutable fuzzing data like a corpus and artifacts from
-    // previous executions.
-    static constexpr uint8_t kHasData = 0x04;
-
     // Creates a number of temporary, fake directories and files to mimic a deployment of
     // fuzz-targets on Zircon.  The files and directories are automatically deleted when the fixture
     // is destroyed.
@@ -46,7 +37,11 @@ protected:
 private:
     // Creates a fake fuzz |target| in the given |version| of a fake Fuchsia |package|. Adds fake
     // executable and data files as indicated by |flags|.
-    bool CreatePackage(const char* package, long int version, const char* target, uint8_t flags);
+    bool CreatePackage(const char* package, long int version, const char* target);
+
+    // Creates fake data mimicking outputs from a previous run of the fuzzer given by the |package|
+    // and |target|.
+    bool CreateData(const char* package, const char* target);
 
     // maps packages to maximum versions.
     StringMap max_versions_;

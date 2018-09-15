@@ -273,16 +273,19 @@ void Fuzzer::FindFuchsiaFuzzers(const char* package, const char* target, StringM
     packages->keep_if(package);
 
     for (const char* p = packages->first(); p; p = packages->next()) {
-        if (GetPackagePath(p, &path) != ZX_OK || path.Push("bin") != ZX_OK) {
+        if (GetPackagePath(p, &path) != ZX_OK || path.Push("meta") != ZX_OK) {
             continue;
         }
 
         auto targets = path.List();
         targets->keep_if(target);
+        targets->keep_if(".cmx");
 
         fbl::String abspath;
         for (const char* t = targets->first(); t; t = targets->next()) {
-            out->set(fbl::StringPrintf("%s/%s", p, t).c_str(), path.Join(t).c_str());
+            fbl::String t1(t, strlen(t) - strlen(".cmx"));
+            out->set(fbl::StringPrintf("%s/%s", p, t1.c_str()).c_str(),
+                     fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s", p, t).c_str());
         }
     }
 }
@@ -323,6 +326,9 @@ void Fuzzer::FindFuzzers(const char* name, StringMap* out) {
 
 void Fuzzer::GetArgs(StringList* out) {
     out->clear();
+    if (strstr(executable_.c_str(), "fuchsia-pkg://fuchsia.com/") == executable_.c_str()) {
+        out->push_back("/system/bin/run");
+    }
     out->push_back(executable_.c_str());
     const char* key;
     const char* val;
@@ -340,12 +346,18 @@ zx_status_t Fuzzer::Execute(bool wait_for_completion) {
 
     StringList args;
     GetArgs(&args);
-    const char* argv[args.length() + 1];
-    const char** p = argv;
-    if ((*p++ = args.first())) {
-        while ((*p++ = args.next())) {
-        }
+
+    size_t argc = args.length();
+    const char* argv[argc + 1];
+
+    argv[0] = args.first();
+    fprintf(out_, "+ %s", argv[0]);
+    for (size_t i = 1; i < argc; ++i) {
+        argv[i] = args.next();
+        fprintf(out_, " %s", argv[i]);
     }
+    argv[argc] = nullptr;
+    fprintf(out_, "\n");
 
     if ((rc = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv,
                          process_.reset_and_get_address())) != ZX_OK) {

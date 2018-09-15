@@ -199,7 +199,8 @@ bool TestFindFuchsiaFuzzers() {
 
     // Empty matches all
     test.FindFuchsiaFuzzers("", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 4);
+    EXPECT_EQ(fuzzers.size(), 5);
+    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
@@ -207,7 +208,8 @@ bool TestFindFuchsiaFuzzers() {
 
     // Idempotent
     test.FindFuchsiaFuzzers("", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 4);
+    EXPECT_EQ(fuzzers.size(), 5);
+    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
@@ -224,7 +226,8 @@ bool TestFindFuchsiaFuzzers() {
 
     fuzzers.clear();
     test.FindFuchsiaFuzzers("", "target", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 4);
+    EXPECT_EQ(fuzzers.size(), 5);
+    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
@@ -560,10 +563,6 @@ bool TestSeeds() {
     EXPECT_TRUE(test.InStdOut("//path/to/cipd/ensure/file"));
     EXPECT_TRUE(test.InStdOut("https://gcs/url"));
 
-    ASSERT_TRUE(test.Eval("seeds fuchsia1/target1"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdOut("no seed"));
-
     ASSERT_TRUE(test.Eval("seeds fuchsia1/target3"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_TRUE(test.InStdOut("//path/to/seed/corpus"));
@@ -596,17 +595,18 @@ bool TestStart() {
     ASSERT_TRUE(test.Eval("start zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
 
-    // // Fuchsia tests
+    // // // Fuchsia tests
     ASSERT_TRUE(test.InitFuchsia());
 
     // Zircon fuzzer within Fuchsia
     ASSERT_TRUE(test.Eval("start zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
@@ -616,13 +616,15 @@ bool TestStart() {
     ASSERT_TRUE(test.Eval("start fuchsia1/target1"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
 
     // Fuchsia fuzzer with resources
     ASSERT_TRUE(test.Eval("start fuchsia1/target3"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
@@ -632,7 +634,8 @@ bool TestStart() {
     ASSERT_TRUE(test.Eval("start fuchsia2/target4 /path/to/another/corpus -foo=baz"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
     EXPECT_LT(0, test.FindArg("-foo=baz"));
@@ -735,7 +738,7 @@ bool TestRepro() {
     ASSERT_TRUE(test.Eval("repro zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface").c_str()));
@@ -755,7 +758,8 @@ bool TestRepro() {
     ASSERT_TRUE(test.Eval("repro zircon/target2 fa"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
@@ -772,7 +776,8 @@ bool TestRepro() {
     ASSERT_TRUE(test.Eval("repro fuchsia2/target4"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
@@ -813,7 +818,7 @@ bool TestMerge() {
     ASSERT_TRUE(test.Eval("merge zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
@@ -825,7 +830,8 @@ bool TestMerge() {
     ASSERT_TRUE(test.Eval("merge zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
@@ -839,7 +845,8 @@ bool TestMerge() {
     ASSERT_TRUE(test.Eval("merge fuchsia2/target4"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
@@ -848,7 +855,8 @@ bool TestMerge() {
     ASSERT_TRUE(test.Eval("merge fuchsia1/target3 /path/to/another/corpus"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
@@ -857,7 +865,8 @@ bool TestMerge() {
     ASSERT_TRUE(test.Eval("merge fuchsia2/target4 /path/to/another/corpus"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s/", test.data_path()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));

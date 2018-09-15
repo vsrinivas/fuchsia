@@ -32,10 +32,10 @@ TestFuzzer::~TestFuzzer() {
 void TestFuzzer::Reset() {
     Fuzzer::Reset();
     args_.clear();
-    package_path_.clear();
-    data_path_.clear();
     executable_.clear();
+    manifest_.clear();
     dictionary_.clear();
+    data_path_.Reset();
 
     if (out_) {
         fclose(out_);
@@ -111,6 +111,7 @@ int TestFuzzer::FindArg(const char* fmt, ...) {
     buffer.AppendVPrintf(fmt, ap);
     va_end(ap);
     int result = 0;
+
     for (const char* arg = args_.first(); arg; arg = args_.next()) {
         if (strcmp(arg, buffer.c_str()) == 0) {
             return result;
@@ -130,35 +131,38 @@ bool TestFuzzer::CheckProcess(zx_handle_t process, const char* executable) {
 // Protected methods
 
 zx_status_t TestFuzzer::Execute(bool wait_for_completion) {
+    zx_status_t rc;
+
     GetArgs(&args_);
 
-    const char* arg0 = args_.first();
-    char* str = strdup(arg0 + strlen(fixture_.path().c_str()));
-    ZX_ASSERT(str);
-    auto cleanup = fbl::MakeAutoCall([str]() { free(str); });
-
-    const char *package, *version, *target;
-    if (strcmp(strsep(&str, "/"), "pkgfs") != 0) {
-        package = "zircon_fuzzers";
-        version = "0";
-        strsep(&str, "/");
-        strsep(&str, "/");
-        target = strsep(&str, "/");
+    fbl::String package, target;
+    const char* s = args_.first();
+    executable_.Set(s);
+    if (strcmp(s, "/system/bin/run") != 0) {
+        // BootFS path
+        // .../boot/test/fuzz/<target>
+        package.Set("zircon_fuzzers");
+        target.Set(s + fixture_.path("boot/test/fuzz/").length());
     } else {
-        strsep(&str, "/");
-        package = strsep(&str, "/");
-        version = strsep(&str, "/");
-        strsep(&str, "/");
-        target = strsep(&str, "/");
+        // PkgFS path
+        // fuchsia-pkg://fuchsia.com/<package>#meta/<target>.cmx
+        s = args_.next();
+        manifest_.Set(s);
+        s += strlen("fuchsia-pkg://fuchsia.com/");
+        const char* t = strchr(s, '#');
+        package.Set(s, t - s);
+        s = t + strlen("#meta/");
+        t = strrchr(s, '.');
+        target.Set(s, t - s);
+        dictionary_ = fixture_.path("pkgfs/packages/%s/%s/data/%s/dictionary", package.c_str(),
+                                    fixture_.max_version(package.c_str()), target.c_str());
     }
-    ZX_ASSERT(package);
-    ZX_ASSERT(version);
-    ZX_ASSERT(target);
-    executable_.Set(arg0);
-    data_path_.Set(fixture_.path("data/fuzzing/%s/%s", package, target).c_str());
-    dictionary_.Set(
-        fixture_.path("pkgfs/packages/%s/%s/data/%s/dictionary", package, version, target).c_str());
-    package_path_.Set(fixture_.path("pkgfs/packages/%s/%s", package, version).c_str());
+    data_path_.Reset();
+    if ((rc = data_path_.Push(fixture_.path("data/fuzzing").c_str())) != ZX_OK ||
+        (rc = data_path_.Push(package.c_str())) != ZX_OK ||
+        (rc = data_path_.Push(target.c_str())) != ZX_OK) {
+        return rc;
+    }
 
     return ZX_OK;
 }

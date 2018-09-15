@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include <fuzz-utils/fuzzer.h>
+#include <fuzz-utils/path.h>
 #include <zircon/types.h>
 
 #include "fuzzer-fixture.h"
@@ -49,13 +50,11 @@ public:
     int FindArg(const char* fmt, ...);
 
     // Various fixture locations
-    const char* package_path() const { return package_path_.c_str(); }
-    const char* data_path() const { return data_path_.c_str(); }
-    fbl::String data_path(const char* relpath) {
-        return fixture_.path("%s/%s", data_path_.c_str(), relpath ? relpath : "");
-    }
     const char* executable() const { return executable_.c_str(); }
+    const char* manifest() const { return manifest_.c_str(); }
     const char* dictionary() const { return dictionary_.c_str(); }
+    const char* data_path() const { return data_path_.c_str(); }
+    fbl::String data_path(const char* relpath) { return data_path_.Join(relpath); }
 
     // Expose parent class methods
     zx_status_t SetOption(const char* option) { return Fuzzer::SetOption(option); }
@@ -92,10 +91,10 @@ private:
     StringList args_;
 
     // Test info, captured by |Execute|
-    fbl::String package_path_;
-    fbl::String data_path_;
     fbl::String executable_;
+    fbl::String manifest_;
     fbl::String dictionary_;
+    Path data_path_;
 
     // Output stream
     FILE* out_;
