@@ -431,6 +431,7 @@ enum nl80211_band {
     NL80211_BAND_5GHZ,
     NL80211_BAND_60GHZ,
 };
+#define NL80211_BAND_COUNT (NL80211_BAND_60GHZ + 1)
 
 #define CONFIG_BRCMDBG 0
 #define CONFIG_BRCM_TRACING 0
@@ -537,7 +538,7 @@ struct wiphy {
     uint32_t retry_long;
     uint32_t retry_short;
     uint32_t interface_modes;
-    struct ieee80211_supported_band* bands[5];
+    struct ieee80211_supported_band* bands[NL80211_BAND_COUNT];
     int n_iface_combinations;
     struct ieee80211_iface_combination* iface_combinations;
     uint32_t max_scan_ssids;

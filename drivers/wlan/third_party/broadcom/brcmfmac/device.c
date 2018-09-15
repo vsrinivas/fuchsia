@@ -37,9 +37,10 @@ static void brcmf_timer_handler(async_dispatcher_t* dispatcher, async_task_t* ta
     mtx_unlock(&timer->lock);
 }
 
-void brcmf_timer_init(brcmf_timer_info_t* timer, brcmf_timer_callback_t* callback) {
+void brcmf_timer_init(brcmf_timer_info_t* timer, brcmf_timer_callback_t* callback, void* data) {
     memset(&timer->task.state, 0, sizeof(timer->task.state));
     timer->task.handler = brcmf_timer_handler;
+    timer->data = data;
     timer->callback_function = callback;
     timer->finished = SYNC_COMPLETION_INIT;
     timer->scheduled = false;

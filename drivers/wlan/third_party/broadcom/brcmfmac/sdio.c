@@ -1264,8 +1264,8 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
     //trace_brcmf_sdpcm_hdr(SDPCM_RX, header);
 
     /* hw header */
-    len = *(uint16_t*)&header;
-    checksum = *(uint16_t*)&header + sizeof(uint16_t);
+    len = *(uint16_t*)header;
+    checksum = *(uint16_t*)(header + sizeof(uint16_t));
     /* All zero means no more to read */
     if (!(len | checksum)) {
         bus->rxpending = false;
@@ -1599,7 +1599,10 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
 static int brcmf_sdio_dcmd_resp_wait(struct brcmf_sdio* bus, bool* pending) {
     /* Wait until control frame is available */
     *pending = false; // TODO(cphoenix): Does signal_pending() have meaning in Garnet?
-    return sync_completion_wait(&bus->dcmd_resp_wait, ZX_MSEC(DCMD_RESP_TIMEOUT_MSEC));
+    zx_status_t result;
+    result = sync_completion_wait(&bus->dcmd_resp_wait, ZX_MSEC(DCMD_RESP_TIMEOUT_MSEC));
+    sync_completion_reset(&bus->dcmd_resp_wait);
+    return result;
 }
 
 static zx_status_t brcmf_sdio_dcmd_resp_wake(struct brcmf_sdio* bus) {
@@ -2761,6 +2764,7 @@ static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char*
     }
 
     /* Send from dpc */
+    sync_completion_reset(&bus->ctrl_wait);
     bus->ctrl_frame_buf = msg;
     bus->ctrl_frame_len = msglen;
     atomic_thread_fence(memory_order_seq_cst);
@@ -3175,7 +3179,7 @@ static zx_status_t brcmf_sdio_download_firmware(struct brcmf_sdio* bus,
     sdio_claim_host(bus->sdiodev->func1);
     brcmf_sdio_clkctl(bus, CLK_AVAIL, false);
 
-    rstvec = *(uint32_t*)&fw->data;
+    rstvec = *(uint32_t*)fw->data;
     brcmf_dbg(SDIO, "firmware rstvec: %x\n", rstvec);
 
     bcmerror = brcmf_sdio_download_code_file(bus, fw);
@@ -4011,7 +4015,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     bus->dcmd_resp_wait = SYNC_COMPLETION_INIT;
 
     /* Set up the watchdog timer */
-    brcmf_timer_init(&bus->timer, brcmf_sdio_watchdog);
+    brcmf_timer_init(&bus->timer, brcmf_sdio_watchdog, bus);
     /* Initialize watchdog thread */
     bus->watchdog_wait = SYNC_COMPLETION_INIT;
     atomic_store(&bus->watchdog_should_stop, false);

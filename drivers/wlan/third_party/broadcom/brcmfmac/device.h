@@ -82,7 +82,7 @@ typedef struct brcmf_timer_info {
     mtx_t lock;
 } brcmf_timer_info_t;
 
-void brcmf_timer_init(brcmf_timer_info_t* timer, brcmf_timer_callback_t* callback);
+void brcmf_timer_init(brcmf_timer_info_t* timer, brcmf_timer_callback_t* callback, void* data);
 
 void brcmf_timer_set(brcmf_timer_info_t* timer, zx_duration_t delay);
 

@@ -31,10 +31,10 @@ void __brcmf_err(const char* func, const char* fmt, ...) {
     va_end(args);
     if (n_printed < 0) {
         snprintf(msg, 512, "(Formatting error from string '%s')", fmt);
-    } else if (msg[n_printed] == '\n') {
-        msg[n_printed--] = 0;
+    } else if (n_printed > 0 && msg[n_printed - 1] == '\n') {
+        msg[--n_printed] = 0;
     }
-    zxlogf(ERROR, "brcmfmac ERROR(%s): '%s'\n", func, msg);
+    zxlogf(INFO, "brcmfmac ERROR(%s): '%s'\n", func, msg);
 }
 
 #endif

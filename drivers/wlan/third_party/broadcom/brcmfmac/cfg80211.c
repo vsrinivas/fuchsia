@@ -2746,7 +2746,7 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
     cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
     /* Init scan_timeout timer */
     cfg->escan_timeout.data = cfg;
-    brcmf_timer_init(&cfg->escan_timeout, brcmf_escan_timeout);
+    brcmf_timer_init(&cfg->escan_timeout, brcmf_escan_timeout, cfg);
     workqueue_init_work(&cfg->escan_timeout_work, brcmf_cfg80211_escan_timeout_worker);
 }
 
@@ -6284,7 +6284,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
         goto ops_out;
     }
     wiphy->ops = ops;
-    wiphy->cfg80211_info = malloc(sizeof(struct brcmf_cfg80211_info));
+    wiphy->cfg80211_info = calloc(1, sizeof(struct brcmf_cfg80211_info));
     if (wiphy->cfg80211_info == NULL) {
         free(wiphy);
         goto ops_out;
