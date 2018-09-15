@@ -219,6 +219,10 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
 
     debugmstl("Minstrel peer added: %s\n", addr.ToString().c_str());
     peer_map_.emplace(addr, std::move(peer));
+    if (peer_map_.size() == 1) {
+        ZX_DEBUG_ASSERT(!next_update_event_.IsActive());
+        timer_mgr_.Schedule(timer_mgr_.Now() + kMinstrelUpdateInterval, &next_update_event_);
+    }
     // TODO(eyw): RemovePeer() needs to be called at de-association.
 }
 
@@ -228,6 +232,7 @@ void MinstrelRateSelector::RemovePeer(const common::MacAddr& addr) {
 
     outdated_peers_.erase(addr);
     peer_map_.erase(iter);
+    if (peer_map_.empty()) { next_update_event_.Cancel(); }
 }
 
 void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_status) {
@@ -253,12 +258,24 @@ void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_statu
     outdated_peers_.emplace(peer_addr);
 }
 
+void MinstrelRateSelector::HandleTimeout() {
+    if (!next_update_event_.IsActive()) { return; }
+
+    zx::time now = timer_mgr_.HandleTimeout();
+    if (next_update_event_.Triggered(now)) {
+        timer_mgr_.Schedule(now + kMinstrelUpdateInterval, &next_update_event_);
+        UpdateStats();
+    }
+}
+
 void MinstrelRateSelector::UpdateStats() {
     for (auto peer_addr : outdated_peers_) {
         auto* peer = GetPeer(peer_addr);
         ZX_DEBUG_ASSERT(peer != nullptr);
+        debugmstl("%s has update.\n", peer_addr.ToString().c_str());
+
+    	// TODO(eyw): Loop through all tx_stats and pick the best combination for next update period
     }
-    // TODO(eyw): Loop through all tx_stats and pick the best combination for next update period
     outdated_peers_.clear();
 }
 

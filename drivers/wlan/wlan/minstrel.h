@@ -25,6 +25,7 @@ static constexpr uint8_t kMaxNssHt = 4;
 static constexpr uint8_t kNumUniqueMcsHt = 8;
 
 static constexpr uint16_t kMinstrelFrameLength = 1400;  // bytes
+static constexpr zx::duration kMinstrelUpdateInterval = zx::msec(100);
 
 struct TxStats {
     tx_vec_idx_t tx_vector_idx;
@@ -50,16 +51,18 @@ class MinstrelRateSelector {
     void RemovePeer(const common::MacAddr& addr);
     // Called after every tx packet.
     void HandleTxStatusReport(const wlan_tx_status_t& tx_status);
-    void UpdateStats();  // Driven by timer at every interval, aggregate the tx reports.
+    void HandleTimeout();
 
    private:
     void GenerateProbeSequence();
+    void UpdateStats();
     Peer* GetPeer(const common::MacAddr& addr);
 
     // Holds MAC addresses of peers with at least one status report but has not been processed.
     std::unordered_set<common::MacAddr, common::MacAddrHasher> outdated_peers_;
     std::unordered_map<common::MacAddr, Peer, common::MacAddrHasher> peer_map_;
     TimerManager timer_mgr_;
+    TimedEvent next_update_event_;
 };
 }  // namespace wlan
 

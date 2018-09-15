@@ -586,7 +586,7 @@ void Device::MainLoop() {
                 break;
             case PortKeyType::kDevice: {
                 ZX_DEBUG_ASSERT(minstrel_ != nullptr);
-                minstrel_->UpdateStats();
+                minstrel_->HandleTimeout();
                 break;
             }
             default:
