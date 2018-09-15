@@ -1713,6 +1713,10 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
 
     memcpy(&ext_join_params->assoc_le.bssid, req->selected_bss.bssid, ETH_ALEN);
 
+    // TODO(cphoenix): Is this important?
+    //if (cfg->channel) {
+    //    ext_join_params->assoc_le.chanspec_num = 1;
+
     ext_join_params->scan_le.active_time = -1;
     ext_join_params->scan_le.passive_time = -1;
     ext_join_params->scan_le.nprobes = -1;

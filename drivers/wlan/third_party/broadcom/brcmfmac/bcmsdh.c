@@ -377,19 +377,60 @@ void brcmf_sdiod_func1_wl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_
     }
 }
 
+// TODO(ZX-2598): This is a workaround for a low-level SDIO bug.
+#define F2_XFER_SIZE 512
+
 zx_status_t brcmf_sdiod_read(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
                              void* data, size_t size) {
-    return brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, false);
+    zx_status_t err = ZX_OK;
+    while (func == 2 && size > F2_XFER_SIZE) {
+        err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, F2_XFER_SIZE, false);
+        if (err != ZX_OK) {
+            break;
+        }
+        data += F2_XFER_SIZE;
+        size -= F2_XFER_SIZE;
+        addr += F2_XFER_SIZE;
+    }
+    if (err == ZX_OK) {
+        err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, false);
+    }
+    return err;
 }
 
 zx_status_t brcmf_sdiod_write(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
                               void* data, size_t size) {
-    return brcmf_sdiod_transfer(sdiodev, func, addr, true, data, size, false);
+    zx_status_t err = ZX_OK;
+    while (func == 2 && size > F2_XFER_SIZE) {
+        err = brcmf_sdiod_transfer(sdiodev, func, addr, true, data, F2_XFER_SIZE, false);
+        if (err != ZX_OK) {
+            break;
+        }
+        data += F2_XFER_SIZE;
+        size -= F2_XFER_SIZE;
+        addr += F2_XFER_SIZE;
+    }
+    if (err == ZX_OK) {
+        err = brcmf_sdiod_transfer(sdiodev, func, addr, true, data, size, false);
+    }
+    return err;
 }
 
 zx_status_t brcmf_sdiod_read_fifo(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
                                   void* data, size_t size) {
-    return brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, true);
+    zx_status_t err = ZX_OK;
+    while (func == 2 && size > F2_XFER_SIZE) {
+        err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, F2_XFER_SIZE, true);
+        if (err != ZX_OK) {
+            break;
+        }
+        data += F2_XFER_SIZE;
+        size -= F2_XFER_SIZE;
+    }
+    if (err == ZX_OK) {
+        err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, true);
+    }
+    return err;
 }
 
 static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint32_t func,
@@ -576,23 +617,26 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
                               uint8_t* data, uint size) {
     zx_status_t err = ZX_OK;
     struct brcmf_netbuf* pkt;
-    uint32_t sdaddr;
-    uint dsize;
+    uint32_t this_transfer_address;
+    uint this_transfer_size;
 
-    dsize = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, size);
-    pkt = brcmf_netbuf_allocate(dsize);
+#define MAX_XFER_SIZE 0x100 // TODO(cphoenix): Remove when SDIO bug (?) is fixed.
+
+    uint packet_size = min_t(uint, MAX_XFER_SIZE, size);
+    pkt = brcmf_netbuf_allocate(packet_size);
     if (!pkt) {
-        brcmf_err("brcmf_netbuf_allocate failed: len %d\n", dsize);
+        brcmf_err("brcmf_netbuf_allocate failed: len %d\n", packet_size);
         return ZX_ERR_IO;
     }
     pkt->priority = 0;
 
     /* Determine initial transfer parameters */
-    sdaddr = address & SBSDIO_SB_OFT_ADDR_MASK;
-    if ((sdaddr + size) & SBSDIO_SBWINDOW_MASK) {
-        dsize = (SBSDIO_SB_OFT_ADDR_LIMIT - sdaddr);
+    this_transfer_address = address & SBSDIO_SB_OFT_ADDR_MASK;
+    uint32_t low_address_bits = this_transfer_address & (MAX_XFER_SIZE - 1);
+    if (low_address_bits) {
+        this_transfer_size = min(packet_size, MAX_XFER_SIZE - low_address_bits);
     } else {
-        dsize = size;
+        this_transfer_size = packet_size;
     }
     sdio_claim_host(sdiodev->func1);
 
@@ -606,19 +650,16 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
             break;
         }
 
-        brcmf_dbg(SDIO, "%s %d bytes at offset 0x%08x in window 0x%08x\n", write ? "write" : "read",
-                  dsize, sdaddr, address & SBSDIO_SBWINDOW_MASK);
+        this_transfer_address &= SBSDIO_SB_OFT_ADDR_MASK;
+        this_transfer_address |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
-        sdaddr &= SBSDIO_SB_OFT_ADDR_MASK;
-        sdaddr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
-
-        brcmf_netbuf_grow_tail(pkt, dsize);
+        brcmf_netbuf_grow_tail(pkt, this_transfer_size);
 
         if (write) {
-            memcpy(pkt->data, data, dsize);
-            err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_1, sdaddr, pkt);
+            memcpy(pkt->data, data, this_transfer_size);
+            err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_1, this_transfer_address, pkt);
         } else {
-            err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_1, sdaddr, pkt);
+            err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_1, this_transfer_address, pkt);
         }
 
         if (err != ZX_OK) {
@@ -626,17 +667,17 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
             break;
         }
         if (!write) {
-            memcpy(data, pkt->data, dsize);
+            memcpy(data, pkt->data, this_transfer_size);
         }
         brcmf_netbuf_reduce_length_to(pkt, 0);
 
         /* Adjust for next transfer (if any) */
-        size -= dsize;
+        size -= this_transfer_size;
         if (size) {
-            data += dsize;
-            address += dsize;
-            sdaddr = 0;
-            dsize = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, size);
+            data += this_transfer_size;
+            address += this_transfer_size;
+            this_transfer_address += this_transfer_size;
+            this_transfer_size = min_t(uint32_t, MAX_XFER_SIZE, size);
         }
     }
 

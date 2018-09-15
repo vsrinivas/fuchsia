@@ -43,6 +43,8 @@ void brcmf_hexdump(const void* buf, size_t len) {
         next += sprintf(next, "%02x ", *bytes++);
         if ((i % 32) == 31) {
             brcmf_dbg(INFO, "%s", output);
+            // Give the serial-line log time to drain on long dumps.
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
             next = output;
         }
     }

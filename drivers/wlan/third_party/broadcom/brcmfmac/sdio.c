@@ -2387,6 +2387,9 @@ static zx_status_t brcmf_sdio_intr_rstatus(struct brcmf_sdio* bus) {
     unsigned long val;
     zx_status_t ret;
 
+    // TODO(cphoenix): Try taking this out. It was put in to try to solve a different problem.
+    brcmf_sdio_bus_sleep(bus, false, true);
+
     addr = core->base + SD_REG(intstatus);
 
     val = brcmf_sdiod_func1_rl(bus->sdiodev, addr, &ret);
@@ -3290,7 +3293,7 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
      * a device perspective, ie. bus:txglom affects the
      * bus transfers from device to host.
      */
-    if (core->rev < 12) {
+    if (1 || core->rev < 12) { // TODO(cphoenix): Get glomming working
         /* for sdio core rev < 12, disable txgloming */
         value = 0;
         err = brcmf_iovar_data_set(dev, "bus:txglom", &value, sizeof(uint32_t));
@@ -3454,6 +3457,8 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
     }
 #endif /* DEBUG */
 
+// TODO(cphoenix): Turn "idle" back on once things are working, and see if anything breaks.
+#ifdef TEMP_DISABLE_DO_IDLE
     /* On idle timeout clear activity flag and/or turn off clock */
     if (!atomic_load(&bus->dpc_triggered)) {
         atomic_thread_fence(memory_order_seq_cst);
@@ -3473,6 +3478,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
     } else {
         bus->idlecount = 0;
     }
+#endif // TEMP_DISABLE_DO_IDLE
 }
 
 void brcmf_sdio_event_handler(struct brcmf_sdio* bus) {
@@ -3694,6 +3700,20 @@ static const struct brcmf_buscore_ops brcmf_sdio_buscore_ops = {
     .write32 = brcmf_sdio_buscore_write32,
 };
 
+// TODO(cphoenix): This thread seems to be magically necessary for the driver to work.
+// Figure out why, and get rid of it.
+// This will wait, then dump out all SDIO transactions to date (if psr() is uncommented).
+#define SDIO_PRINTER
+#ifdef SDIO_PRINTER
+pthread_t sdio_thread;
+static void* sdio_printer(void* foo) {
+    brcmf_dbg(TEMP, "SDIO printer started");
+    zx_nanosleep(zx_deadline_after(ZX_SEC(10000000)));
+    //psr();
+    return NULL;
+}
+#endif // SDIO_PRINTER
+
 static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     struct brcmf_sdio_dev* sdiodev;
     uint8_t clkctl = 0;
@@ -3704,6 +3724,10 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
 
     sdiodev = bus->sdiodev;
     sdio_claim_host(sdiodev->func1);
+
+#ifdef SDIO_PRINTER
+    pthread_create(&sdio_thread, NULL, sdio_printer, NULL);
+#endif // SDIO_PRINTER
 
     brcmf_dbg(INFO, "brcmfmac: F1 signature read @0x18000000=0x%4x\n",
              brcmf_sdiod_func1_rl(sdiodev, SI_ENUM_BASE, NULL));
@@ -3954,9 +3978,15 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
     // This was in the original driver. Once interrupts are working, figure out what's going on.
     brcmf_sdio_wd_timer(bus, true);
 
+    // Magic 200 ms pause here, because 100ms worked in the hard-coded debug recipe.
+    // In addition, Broadcom said that a pause after booting may be necessary.
+    // The original Linux driver doesn't have it, but I don't recommend removing this
+    // without LOTS of stress testing.
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
     sdio_claim_host(sdiodev->func1);
 
     /* Make sure backplane clock is on, needed to generate F2 interrupt */
+    bus->clkstate = CLK_NONE; // TODO(cphoenix): TEMP FOR DEBUG
     brcmf_sdio_clkctl(bus, CLK_AVAIL, false);
     if (bus->clkstate != CLK_AVAIL) {
         brcmf_err("Bad clockstate %d, should be %d", bus->clkstate, CLK_AVAIL);
@@ -3994,11 +4024,22 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
     }
 
     if (brcmf_chip_sr_capable(bus->ci)) {
+        brcmf_dbg(TEMP, "About to sr_init() (after 100 msec pause)"); PAUSE; PAUSE;
         brcmf_sdio_sr_init(bus);
+        PAUSE; PAUSE; brcmf_dbg(TEMP, "Did sr_init() (100 msec ago)");
     } else {
         /* Restore previous clock setting */
         brcmf_sdiod_func1_wb(sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, saveclk, &err);
     }
+
+    struct sdpcm_shared sh = {};
+
+    err = brcmf_sdio_readshared(bus, &sh);
+    brcmf_dbg(TEMP, "Readshared returned %d", err);
+    bus->console_addr = sh.console_addr;
+    brcmf_dbg(TEMP, "console_addr 0x%x", bus->console_addr);
+    brcmf_sdio_readconsole(bus);
+    brcmf_dbg(TEMP, "Should have seen readconsole output");
 
     if (err == ZX_OK) {
         /* Allow full data communication using DPC from now on. */
@@ -4023,6 +4064,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
     }
 
     sdio_release_host(sdiodev->func1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 
     err = brcmf_bus_started(dev);
     if (err != ZX_OK) {

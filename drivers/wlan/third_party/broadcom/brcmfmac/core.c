@@ -737,6 +737,8 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
     if (if_out) {
         *if_out = ifp;
     }
+    // This is probably unnecessary - just test/verify after taking it out please!
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
     brcmf_dbg(TRACE, "Exit");
     return ZX_OK;
 }
