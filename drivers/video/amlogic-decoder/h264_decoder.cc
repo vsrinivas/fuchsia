@@ -542,7 +542,7 @@ zx_status_t H264Decoder::InitializeStream() {
                             display_width, display_height);
   if (status != ZX_OK) {
     if (status != ZX_ERR_STOP) {
-      DECODE_ERROR("InitializeFrames() failed\n");
+      DECODE_ERROR("InitializeFrames() failed: status: %d\n", status);
     }
     return status;
   }
