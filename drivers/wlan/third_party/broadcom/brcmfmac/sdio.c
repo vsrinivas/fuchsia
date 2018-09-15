@@ -1966,7 +1966,7 @@ static zx_status_t brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio* bus, struct brcmf
     zx_status_t ret;
 
     sdiodev = bus->sdiodev;
-    sdio_get_block_size(sdiodev->sdio_proto, SDIO_FN_2, &blksize);
+    sdio_get_block_size(&sdiodev->sdio_proto, SDIO_FN_2, &blksize);
     /* sg entry alignment should be a divisor of block size */
     WARN_ON(blksize % bus->sgentry_align);
 
@@ -2340,7 +2340,7 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
 
         /* Turn off the bus (F2), free any pending packets */
         brcmf_dbg(INTR, "disable SDIO interrupts\n");
-        sdio_disable_fn(sdiodev->sdio_proto, SDIO_FN_2);
+        sdio_disable_fn(&sdiodev->sdio_proto, SDIO_FN_2);
 
         /* Clear any pending interrupts now that F2 is disabled */
         brcmf_sdiod_func1_wl(sdiodev, core->base + SD_REG(intstatus), local_hostintmask, NULL);
@@ -3899,7 +3899,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
     brcmf_sdiod_func1_wl(sdiod, core->base + SD_REG(tosbmailboxdata),
                        SDPCM_PROT_VERSION << SMB_DATA_VERSION_SHIFT, NULL);
 
-    err = sdio_enable_fn(sdiodev->sdio_proto, SDIO_FN_2);
+    err = sdio_enable_fn(&sdiodev->sdio_proto, SDIO_FN_2);
     brcmf_dbg(INFO, "enable F2: err=%d\n", err);
 
     /* If F2 successfully enabled, set core and enable interrupts */
@@ -3911,7 +3911,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
         brcmf_sdiod_func1_wb(sdiodev, SBSDIO_WATERMARK, 8, &err);
     } else {
         /* Disable F2 again */
-        sdio_disable_fn(sdiodev->sdio_proto, SDIO_FN_2);
+        sdio_disable_fn(&sdiodev->sdio_proto, SDIO_FN_2);
         goto release;
     }
 
@@ -4035,7 +4035,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     }
 
     /* Query the F2 block size, set roundup accordingly */
-    sdio_get_block_size(sdiodev->sdio_proto, SDIO_FN_2, &bus->blocksize);
+    sdio_get_block_size(&sdiodev->sdio_proto, SDIO_FN_2, &bus->blocksize);
     bus->roundup = min(max_roundup, bus->blocksize);
 
     /* Allocate buffers */
@@ -4053,7 +4053,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     sdio_claim_host(bus->sdiodev->func1);
 
     /* Disable F2 to clear any intermediate frame state on the dongle */
-    sdio_disable_fn(bus->sdiodev->sdio_proto, SDIO_FN_2);
+    sdio_disable_fn(&bus->sdiodev->sdio_proto, SDIO_FN_2);
 
     bus->rxflow = false;
 

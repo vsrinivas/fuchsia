@@ -206,9 +206,9 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
     } else {
         brcmf_dbg(SDIO, "Entering\n");
         sdio_claim_host(sdiodev->func1);
-        sdio_enable_fn_intr(sdiodev->sdio_proto, SDIO_FN_1);
+        sdio_enable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_1);
         (void)brcmf_sdiod_ib_irqhandler; // TODO(cphoenix): If we use these, plug them in later.
-        sdio_enable_fn_intr(sdiodev->sdio_proto, SDIO_FN_2);
+        sdio_enable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_2);
         (void)brcmf_sdiod_dummy_irqhandler;
         sdio_release_host(sdiodev->func1);
         sdiodev->sd_irq_requested = true;
@@ -241,8 +241,8 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
 
     if (sdiodev->sd_irq_requested) {
         sdio_claim_host(sdiodev->func1);
-        sdio_disable_fn_intr(sdiodev->sdio_proto, SDIO_FN_2);
-        sdio_disable_fn_intr(sdiodev->sdio_proto, SDIO_FN_1);
+        sdio_disable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_2);
+        sdio_disable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_1);
         sdio_release_host(sdiodev->func1);
         sdiodev->sd_irq_requested = false;
     }
@@ -286,7 +286,7 @@ static zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t 
     txn.use_dma = false; // TODO(cphoenix): Decide when to use DMA
     txn.buf_offset = 0;
 
-    result = sdio_do_rw_txn(sdiodev->sdio_proto, func, &txn);
+    result = sdio_do_rw_txn(&sdiodev->sdio_proto, func, &txn);
     if (result != ZX_OK) {
         brcmf_dbg(TEMP, "Why did this fail?? result %d %s", result, zx_status_get_string(result));
     }
@@ -743,12 +743,12 @@ static zx_status_t brcmf_sdiod_remove(struct brcmf_sdio_dev* sdiodev) {
 
     /* Disable Function 2 */
     sdio_claim_host(sdiodev->func2);
-    sdio_disable_fn(sdiodev->sdio_proto, SDIO_FN_2);
+    sdio_disable_fn(&sdiodev->sdio_proto, SDIO_FN_2);
     sdio_release_host(sdiodev->func2);
 
     /* Disable Function 1 */
     sdio_claim_host(sdiodev->func1);
-    sdio_disable_fn(sdiodev->sdio_proto, SDIO_FN_1);
+    sdio_disable_fn(&sdiodev->sdio_proto, SDIO_FN_1);
     sdio_release_host(sdiodev->func1);
 
     sdiodev->sbwad = 0;
@@ -771,12 +771,12 @@ static void brcmf_sdiod_host_fixup(struct mmc_host* host) {
 static zx_status_t brcmf_sdiod_probe(struct brcmf_sdio_dev* sdiodev) {
     zx_status_t ret = ZX_OK;
 
-    ret = sdio_update_block_size(sdiodev->sdio_proto, SDIO_FN_1, SDIO_FUNC1_BLOCKSIZE, false);
+    ret = sdio_update_block_size(&sdiodev->sdio_proto, SDIO_FN_1, SDIO_FUNC1_BLOCKSIZE, false);
     if (ret != ZX_OK) {
         brcmf_err("Failed to set F1 blocksize\n");
         goto out;
     }
-    ret = sdio_update_block_size(sdiodev->sdio_proto, SDIO_FN_2, SDIO_FUNC2_BLOCKSIZE, false);
+    ret = sdio_update_block_size(&sdiodev->sdio_proto, SDIO_FN_2, SDIO_FUNC2_BLOCKSIZE, false);
     if (ret != ZX_OK) {
         brcmf_err("Failed to set F2 blocksize\n");
         goto out;
@@ -787,7 +787,7 @@ static zx_status_t brcmf_sdiod_probe(struct brcmf_sdio_dev* sdiodev) {
     //sdiodev->func2->enable_timeout = SDIO_WAIT_F2RDY;
 
     /* Enable Function 1 */
-    ret = sdio_enable_fn(sdiodev->sdio_proto, SDIO_FN_1);
+    ret = sdio_enable_fn(&sdiodev->sdio_proto, SDIO_FN_1);
     if (ret != ZX_OK) {
         brcmf_err("Failed to enable F1: err=%d\n", ret);
         goto out;
@@ -928,7 +928,7 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto)
     }
     dev = &sdiodev->dev;
     dev->zxdev = zxdev;
-    sdiodev->sdio_proto = sdio_proto;
+    memcpy(&sdiodev->sdio_proto, sdio_proto, sizeof(sdiodev->sdio_proto));
 
     sdiodev->bus_if = bus_if;
     sdiodev->func1 = func1;

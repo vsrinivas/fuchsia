@@ -185,7 +185,7 @@ struct brcmf_sdio_dev {
     struct sdio_func *func2;
     uint32_t manufacturer_id;
     uint32_t product_id;
-    sdio_protocol_t* sdio_proto;
+    sdio_protocol_t sdio_proto;
     gpio_protocol_t gpio;
     zx_handle_t irq_handle;
     thrd_t isr_thread;
