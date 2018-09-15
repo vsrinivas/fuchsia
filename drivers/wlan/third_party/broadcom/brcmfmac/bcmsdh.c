@@ -835,6 +835,7 @@ static const struct sdio_device_id brcmf_sdmmc_ids[] = {
     BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_BROADCOM_4354),
     BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_BROADCOM_4356),
     BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_CYPRESS_4373),
+    BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_BROADCOM_4359),
     {/* end: all zeroes */}
 };
 #endif // TODO_ADD_SDIO_IDS

@@ -596,6 +596,7 @@ BRCMF_FW_NVRAM_DEF(43430A1, "brcmfmac43430-sdio.bin", "brcmfmac43430-sdio.txt");
 BRCMF_FW_NVRAM_DEF(43455, "brcmfmac43455-sdio.bin", "brcmfmac43455-sdio.txt");
 BRCMF_FW_NVRAM_DEF(4354, "brcmfmac4354-sdio.bin", "brcmfmac4354-sdio.txt");
 BRCMF_FW_NVRAM_DEF(4356, "brcmfmac4356-sdio.bin", "brcmfmac4356-sdio.txt");
+BRCMF_FW_NVRAM_DEF(4359, "brcmfmac4359-sdio.bin", "brcmfmac4359-sdio.txt");
 BRCMF_FW_NVRAM_DEF(4373, "brcmfmac4373-sdio.bin", "brcmfmac4373-sdio.txt");
 
 static struct brcmf_firmware_mapping brcmf_sdio_fwnames[] = {
@@ -616,6 +617,7 @@ static struct brcmf_firmware_mapping brcmf_sdio_fwnames[] = {
     BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4345_CHIP_ID, 0xFFFFFFC0, 43455),
     BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4354_CHIP_ID, 0xFFFFFFFF, 4354),
     BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4356_CHIP_ID, 0xFFFFFFFF, 4356),
+    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4359_CHIP_ID, 0xFFFFFFFF, 4359),
     BRCMF_FW_NVRAM_ENTRY(CY_CC_4373_CHIP_ID, 0xFFFFFFFF, 4373)
 };
 
@@ -831,6 +833,10 @@ static zx_status_t brcmf_sdio_clkctl(struct brcmf_sdio* bus, uint target, bool p
 
     /* Early exit if we're already there */
     if (bus->clkstate == target) {
+        return ZX_OK;
+    }
+    if (bus->ci->chip == BRCM_CC_4359_CHIP_ID && target == CLK_NONE) {
+        brcmf_dbg(TEMP, "Returning because chip is 4359");
         return ZX_OK;
     }
 

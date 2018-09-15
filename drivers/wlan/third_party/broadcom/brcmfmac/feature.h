@@ -57,10 +57,12 @@
  *
  * AUTO_AUTH: workaround needed for automatic authentication type.
  * NEED_MPC: driver needs to disable MPC during scanning operation.
+ * IS_4359: needs special-case code for 4359 chip.
  */
 #define BRCMF_QUIRK_LIST       \
     BRCMF_QUIRK_DEF(AUTO_AUTH) \
-    BRCMF_QUIRK_DEF(NEED_MPC)
+    BRCMF_QUIRK_DEF(NEED_MPC)  \
+    BRCMF_QUIRK_DEF(IS_4359)
 
 #define BRCMF_FEAT_DEF(_f) BRCMF_FEAT_##_f,
 /*

@@ -5520,6 +5520,9 @@ static zx_status_t brcmf_dongle_roam(struct brcmf_if* ifp) {
     uint32_t roamtrigger[2];
     uint32_t roam_delta[2];
 
+    if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_IS_4359)) {
+        return ZX_OK; // TODO(NET-988) Find out why, and document.
+    }
     /* Configure beacon timeout value based upon roaming setting */
     if (ifp->drvr->settings->roamoff) {
         bcn_timeout = BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_OFF;
