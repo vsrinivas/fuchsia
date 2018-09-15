@@ -493,7 +493,7 @@ struct brcmf_sdio {
 
     uint8_t* ctrl_frame_buf;
     uint16_t ctrl_frame_len;
-    bool ctrl_frame_stat;
+    atomic_bool ctrl_frame_stat;
     zx_status_t ctrl_frame_err;
 
     // spinlock_t txq_lock; /* protect bus->txq */
@@ -504,7 +504,7 @@ struct brcmf_sdio {
     sync_completion_t watchdog_wait;
     atomic_bool watchdog_should_stop;
     pthread_t watchdog_tsk;
-    bool wd_active;
+    atomic_bool wd_active;
 
     struct workqueue_struct* brcmf_wq;
     struct work_struct datawork;
@@ -2510,13 +2510,13 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
         atomic_fetch_or(&bus->intstatus, intstatus);
     }
 
-    if (bus->ctrl_frame_stat && (bus->clkstate == CLK_AVAIL) && data_ok(bus)) {
+    if (atomic_load(&bus->ctrl_frame_stat) && (bus->clkstate == CLK_AVAIL) && data_ok(bus)) {
         sdio_claim_host(bus->sdiodev->func1);
-        if (bus->ctrl_frame_stat) {
+        if (atomic_load(&bus->ctrl_frame_stat)) {
             err = brcmf_sdio_tx_ctrlframe(bus, bus->ctrl_frame_buf, bus->ctrl_frame_len);
             bus->ctrl_frame_err = err;
             atomic_thread_fence(memory_order_seq_cst);
-            bus->ctrl_frame_stat = false;
+            atomic_store(&bus->ctrl_frame_stat, false);
         }
         sdio_release_host(bus->sdiodev->func1);
         brcmf_sdio_wait_event_wakeup(bus);
@@ -2531,12 +2531,12 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
     if ((bus->sdiodev->state != BRCMF_SDIOD_DATA) || (err != ZX_OK)) {
         brcmf_err("failed backplane access over SDIO, halting operation\n");
         atomic_store(&bus->intstatus, 0);
-        if (bus->ctrl_frame_stat) {
+        if (atomic_load(&bus->ctrl_frame_stat)) {
             sdio_claim_host(bus->sdiodev->func1);
-            if (bus->ctrl_frame_stat) {
+            if (atomic_load(&bus->ctrl_frame_stat)) {
                 bus->ctrl_frame_err = ZX_ERR_IO_REFUSED;
                 atomic_thread_fence(memory_order_seq_cst);
-                bus->ctrl_frame_stat = false;
+                atomic_store(&bus->ctrl_frame_stat, false);
                 brcmf_sdio_wait_event_wakeup(bus);
             }
             sdio_release_host(bus->sdiodev->func1);
@@ -2758,16 +2758,15 @@ static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char*
     bus->ctrl_frame_buf = msg;
     bus->ctrl_frame_len = msglen;
     atomic_thread_fence(memory_order_seq_cst);
-    bus->ctrl_frame_stat = true;
-
+    atomic_store(&bus->ctrl_frame_stat, true);
     brcmf_sdio_trigger_dpc(bus);
     sync_completion_wait(&bus->ctrl_wait, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC));
     ret = ZX_OK;
-    if (bus->ctrl_frame_stat) {
+    if (atomic_load(&bus->ctrl_frame_stat)) {
         sdio_claim_host(bus->sdiodev->func1);
-        if (bus->ctrl_frame_stat) {
+        if (atomic_load(&bus->ctrl_frame_stat)) {
             brcmf_dbg(SDIO, "ctrl_frame timeout\n");
-            bus->ctrl_frame_stat = false;
+            atomic_store(&bus->ctrl_frame_stat, false);
             ret = ZX_ERR_SHOULD_WAIT;
         }
         sdio_release_host(bus->sdiodev->func1);
@@ -3810,7 +3809,7 @@ static void brcmf_sdio_watchdog(void* data) {
     if (bus->watchdog_tsk) {
         sync_completion_signal(&bus->watchdog_wait);
         /* Reschedule the watchdog */
-        if (bus->wd_active) {
+        if (atomic_load(&bus->wd_active)) {
             brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
         }
     }
@@ -4140,9 +4139,9 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
 
 void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active) {
     /* Totally stop the timer */
-    if (!active && bus->wd_active) {
+    if (!active && atomic_load(&bus->wd_active)) {
         brcmf_timer_stop(&bus->timer);
-        bus->wd_active = false;
+        atomic_store(&bus->wd_active, false);
         return;
     }
 
@@ -4152,8 +4151,8 @@ void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active) {
     }
 
     if (active) {
+        atomic_store(&bus->wd_active, true);
         brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
-        bus->wd_active = true;
     }
 }
 
