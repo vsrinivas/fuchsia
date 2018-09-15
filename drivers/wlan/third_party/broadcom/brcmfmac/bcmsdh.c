@@ -68,20 +68,6 @@ struct brcmf_sdiod_freezer {
     sync_completion_t resumed;
 };
 
-static int brcmf_sdiod_oob_irqhandler(void* cookie) {
-    struct brcmf_sdio_dev* sdiodev = cookie;
-    zx_status_t status;
-
-    while ((status = zx_interrupt_wait(sdiodev->irq_handle, NULL)) == ZX_OK) {
-        brcmf_dbg(INTR, "OOB intr triggered\n");
-
-        brcmf_sdio_isr(sdiodev->bus);
-    }
-
-    brcmf_err("ISR exiting with status %s\n", zx_status_get_string(status));
-    return (int)status;
-}
-
 static void brcmf_sdiod_ib_irqhandler(struct brcmf_sdio_dev* sdiodev) {
     brcmf_dbg(INTR, "IB intr triggered\n");
 
@@ -155,21 +141,23 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
         return ret;
     }
 
+    // If there is metadata, OOB is supported.
     if (ret == ZX_OK) {
         brcmf_dbg(SDIO, "Enter, register OOB IRQ\n");
         ret = brcmf_sdiod_configure_oob_interrupt(sdiodev, &config);
         if (ret != ZX_OK) {
             return ret;
         }
-        // TODO(cphoenix): Add error handling for thrd_create_with_name, and
+        // TODO(cphoenix): Add error handling for thrd_create_with_name and
         // thrd_detach. Note that the thrd_ functions don't return zx_status_t; check for
         // thrd_success and maybe thrd_nomem. See zircon/third_party/ulib/musl/include/threads.h
         pdata->oob_irq_supported = true;
-        thrd_create_with_name(&sdiodev->isr_thread, brcmf_sdiod_oob_irqhandler, sdiodev,
-                              "brcmf-sdio-isr");
-        thrd_detach(sdiodev->isr_thread);
+        // TODO(NET-1495): Get interrupts working.
+        brcmf_dbg(TEMP, "* * * NOT starting oob_irqhandler! Depending on watchdog.* * *");
+        //thrd_create_with_name(&sdiodev->isr_thread, brcmf_sdiod_oob_irqhandler, sdiodev,
+        //                      "brcmf-sdio-isr");
+        //thrd_detach(sdiodev->isr_thread);
         sdiodev->oob_irq_requested = true;
-
         ret = enable_irq_wake(sdiodev->irq_handle);
         if (ret != ZX_OK) {
             brcmf_err("enable_irq_wake failed %d\n", ret);
@@ -198,10 +186,12 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
 
         /* redirect, configure and enable io for interrupt signal */
         data = SDIO_CCCR_BRCM_SEPINT_MASK | SDIO_CCCR_BRCM_SEPINT_OE;
-        if (pdata->oob_irq_flags & IRQ_FLAG_LEVEL_HIGH) {
+        if (config.oob_irq_mode == ZX_INTERRUPT_MODE_LEVEL_HIGH) {
             data |= SDIO_CCCR_BRCM_SEPINT_ACT_HI;
         }
         brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, data, &ret);
+        // TODO(cphoenix): This pause is probably unnecessary.
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
         sdio_release_host(sdiodev->func1);
     } else {
         brcmf_dbg(SDIO, "Entering\n");

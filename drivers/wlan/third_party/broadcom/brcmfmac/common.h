@@ -51,7 +51,6 @@ struct brcmfmac_sdio_pd {
     int sd_head_align;
     int drive_strength;
     size_t txglomsz;
-    int oob_irq_flags;
     int oob_irq_supported;
 };
 

@@ -3361,8 +3361,6 @@ void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus) {
     }
 }
 
-static void brcmf_sdio_dataworker(struct work_struct* work);
-
 void brcmf_sdio_isr(struct brcmf_sdio* bus) {
     //brcmf_dbg(TRACE, "Enter\n");
 
@@ -3386,8 +3384,25 @@ void brcmf_sdio_isr(struct brcmf_sdio* bus) {
     workqueue_schedule(bus->brcmf_wq, &bus->datawork);
 }
 
+void brcmf_sdio_event_handler(struct brcmf_sdio* bus);
+
 static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
-    brcmf_dbg(TIMER, "Enter\n");
+    //brcmf_dbg(TIMER, "Enter\n");
+    uint32_t intstatus;
+
+    intstatus = atomic_load(&bus->intstatus);
+    if (intstatus == 0) {
+        sdio_claim_host(bus->sdiodev->func1);
+        if (brcmf_sdio_intr_rstatus(bus)) {
+            brcmf_err("failed backplane access\n");
+        }
+        sdio_release_host(bus->sdiodev->func1);
+    }
+    intstatus = atomic_load(&bus->intstatus);
+    if (intstatus != 0) {
+        atomic_store(&bus->dpc_triggered, true);
+        brcmf_sdio_event_handler(bus);
+    }
 
     /* Poll period: check device if appropriate. */
     if (!bus->sr_enabled && bus->poll && (++bus->polltick >= bus->pollrate)) {
@@ -3460,9 +3475,11 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
     }
 }
 
-static void brcmf_sdio_dataworker(struct work_struct* work) {
-    struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, datawork);
-    // We need this since dataworker can be called from both ISR and workqueue.
+void brcmf_sdio_event_handler(struct brcmf_sdio* bus) {
+
+    // We need a mutex since this function can be called from both ISR and workqueue.
+    // in the Linux driver, this was called brcmf_sdio_dataworker() and was only
+    // called from workqueue.
     static mtx_t lock = {}; //MTX_INIT;
 
     mtx_lock(&lock);
@@ -3481,6 +3498,38 @@ static void brcmf_sdio_dataworker(struct work_struct* work) {
     }
     mtx_unlock(&lock);
 }
+
+static void brcmf_sdio_dataworker(struct work_struct* work) {
+    struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, datawork);
+    brcmf_sdio_event_handler(bus);
+}
+
+int brcmf_sdio_oob_irqhandler(void* cookie) {
+    struct brcmf_sdio_dev* sdiodev = cookie;
+    zx_status_t status;
+    uint32_t intstatus;
+
+    while ((status = zx_interrupt_wait(sdiodev->irq_handle, NULL)) == ZX_OK) {
+        THROTTLE(20, brcmf_dbg(INTR, "OOB intr triggered"););
+        sdio_claim_host(sdiodev->func1);
+        if (brcmf_sdio_intr_rstatus(sdiodev->bus)) {
+            brcmf_err("failed backplane access\n");
+        }
+        intstatus = atomic_load(&sdiodev->bus->intstatus);
+        atomic_store(&sdiodev->bus->dpc_triggered, true);
+        brcmf_sdio_event_handler(sdiodev->bus);
+        sdio_release_host(sdiodev->func1);
+        if (intstatus == 0) {
+            THROTTLE(20, brcmf_dbg(TEMP, "Zero intstatus; pausing 5 msec"););
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+        }
+        THROTTLE(20, brcmf_dbg(INTR, "Done with OOB intr"););
+    }
+
+    brcmf_err("ISR exiting with status %s\n", zx_status_get_string(status));
+    return (int)status;
+}
+
 
 static void brcmf_sdio_drivestrengthinit(struct brcmf_sdio_dev* sdiodev, struct brcmf_chip* ci,
                                          uint32_t drivestrength) {
@@ -3800,11 +3849,22 @@ static void* brcmf_sdio_watchdog_thread(void* data) {
         if (atomic_load(&bus->watchdog_should_stop)) {
             break;
         }
-        brcmf_sdiod_freezer_uncount(bus->sdiodev);
-        sync_completion_wait(&bus->watchdog_wait, ZX_TIME_INFINITE);
-        brcmf_sdiod_freezer_count(bus->sdiodev);
-        brcmf_sdiod_try_freeze(bus->sdiodev);
-        brcmf_sdio_bus_watchdog(bus);
+        // TODO(NET-1495): Put back the freezer-related calls once 1495 is resolved.
+        // The polling workaround tangles up the freezer logic, and freezing is just related
+        // to power-saving. I don't know what would happen if we tried to freeze when
+        // watchdog wasn't active, so I'm commenting them out for now.
+        //brcmf_sdiod_freezer_uncount(bus->sdiodev);
+
+        // Currently we're depending on watchdog for all interrupt handling, so poll quickly
+        // instead of waiting for watchdog signal.
+        //sync_completion_wait(&bus->watchdog_wait, ZX_TIME_INFINITE);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(0.5)));
+
+        //brcmf_sdiod_freezer_count(bus->sdiodev);
+        if (atomic_load(&bus->wd_active)) {
+            brcmf_sdiod_try_freeze(bus->sdiodev);
+            brcmf_sdio_bus_watchdog(bus);
+        }
         /* Count the tick for reference */
         bus->sdcnt.tickcnt++;
         sync_completion_reset(&bus->watchdog_wait);
@@ -3817,6 +3877,12 @@ static void brcmf_sdio_watchdog(void* data) {
     struct brcmf_sdio* bus = data;
 
     if (bus->watchdog_tsk) {
+        // Currently signaling watchdog_wait does nothing; brcmf_sdio_watchdog_thread() will
+        // wake up every N msec regardless, and do its thing if bus->wd_active is true. This
+        // is because we're currently depending on watchdog for interrupt handling, and the
+        // watchdog was being activated too frequently - because, ironically, each time it
+        // was turned on, it reset the timer for 10 msec in the future. So, for now, the watchdog
+        // doesn't wait on this completion signal - but it will once NET-1495 is resolved.
         sync_completion_signal(&bus->watchdog_wait);
         /* Reschedule the watchdog */
         if (atomic_load(&bus->wd_active)) {
@@ -3884,6 +3950,8 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
 
     /* Start the watchdog timer */
     bus->sdcnt.tickcnt = 0;
+    // TODO(NET-1495): This call apparently has no effect because the state isn't BRCMF_SDIOD_DATA.
+    // This was in the original driver. Once interrupts are working, figure out what's going on.
     brcmf_sdio_wd_timer(bus, true);
 
     sdio_claim_host(sdiodev->func1);
@@ -3935,6 +4003,12 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
     if (err == ZX_OK) {
         /* Allow full data communication using DPC from now on. */
         brcmf_sdiod_change_state(bus->sdiodev, BRCMF_SDIOD_DATA);
+        // TODO(NET-1495): The next line was added to enable watchdog to take effect immediately,
+        // since it currently handles all interrupt conditions. This may or may not make the
+        // previous call to brcmf_sdio_wd_timer() unnecessary; that call apparently had no effect
+        // because the state wasn't BRCMF_SDIOD_DATA yet. Once interrupts are working, revisit
+        // and figure out this logic.
+        brcmf_sdio_wd_timer(bus, true);
 
         err = brcmf_sdiod_intr_register(sdiodev);
         if (err != ZX_OK) {

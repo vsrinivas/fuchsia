@@ -63,9 +63,6 @@
 
 #define BRCMF_ERR_FIRMWARE_UNSUPPORTED (-23)
 
-/* For use in oob_irq_flags */
-#define IRQ_FLAG_LEVEL_HIGH 0x1
-
 #define max(a, b) ((a)>(b)?(a):(b))
 
 extern async_dispatcher_t* default_dispatcher;

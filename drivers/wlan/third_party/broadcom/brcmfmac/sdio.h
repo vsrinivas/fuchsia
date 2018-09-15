@@ -397,5 +397,6 @@ void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active);
 void brcmf_sdio_wowl_config(struct brcmf_device* dev, bool enabled);
 zx_status_t brcmf_sdio_sleep(struct brcmf_sdio* bus, bool sleep);
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus);
+int brcmf_sdio_oob_irqhandler(void* cookie);
 
 #endif /* BRCMFMAC_SDIO_H */
