@@ -262,6 +262,8 @@ bool Node::SetScale(Vector3VariablePtr scale_variable) {
 }
 
 bool Node::SetRotation(const escher::quat& rotation) {
+  // TODO(SCN-967): Safer handling of quats.  Put DCHECK here; validation
+  // should happen elsewhere, before reaching this point.
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
         << "scenic::gfx::Node::SetRotation(): node of type " << type_name()
@@ -414,7 +416,7 @@ void Node::RefreshScene(Scene* new_scene) {
 View* Node::FindOwningView() const {
   const Node* node = this;
   while (node) {
-    View *view = node->view();
+    View* view = node->view();
     if (view) {
       return view;
     }

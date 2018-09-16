@@ -57,10 +57,14 @@ class PaperScene : public Scene {
 
     // Start and end direction of the normal for an oriented clip plane.
     float radians1, radians2;
+
+    // Compute an animation parameter and return the corresponding clip plane.
+    escher::plane2 Update(float current_time_sec);
   };
 
   std::vector<RectState> rectangles_;
-  std::vector<ClipPlaneState> clip_planes_;
+  std::vector<ClipPlaneState> world_space_clip_planes_;
+  std::vector<ClipPlaneState> object_space_clip_planes_;
 
   escher::MaterialPtr red_;
   escher::MaterialPtr bg_;

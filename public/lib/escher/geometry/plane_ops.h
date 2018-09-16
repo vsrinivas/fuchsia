@@ -10,14 +10,23 @@
 
 namespace escher {
 
-// Primarily a helper function for TransformPlanes(), this may also be useful if
-// the caller already has a transposed inverse matrix available.
+// Transform the world-space plane into object space.  NOTE: use the same matrix
+// that you would to transform an object into world space.  This may seem
+// counter-intuitive; here is the reasoning:
+//
+// In order to transform a plane in world-space, you multiply it by the
+// transpose of the inverse of the transform matrix.  For example, see:
+// https://stackoverflow.com/questions/7685495/transforming-a-3d-plane-using-a-4x4-matrix
+// However, we don't want to move a plane in world space, we want to move it to
+// object space.  To do this, we need the inverse of |model_to_world_matrix|.
+// However, once we have that matrix, the first thing we would naively do is
+// invert it again, then transpose it.  The two inversions cancel each other
+// out, and we can also avoid the transpose (see comment below).
 template <typename PlaneT>
-PlaneT TransformPlaneUsingTransposedInverse(
-    const mat4& transposed_inverse_matrix, const PlaneT& plane) {
-  // This is a slight misuse of Homo4, but it allows us to properly extend both
-  // vec2 and vec3 to vec4.
-  vec4 v = transposed_inverse_matrix * Homo4(plane.dir(), -plane.dist());
+PlaneT TransformPlane(const mat4& model_to_world_matrix, const PlaneT& plane) {
+  // Instead of transposing the matrix, simply do the multiplication with the
+  // vector on the left-hand side.
+  vec4 v = Homo4(plane.dir(), -plane.dist()) * model_to_world_matrix;
 
   // Must renormalize in case of scaling.
   float normalization_factor = 1 / glm::length(vec3(v));
@@ -30,15 +39,14 @@ PlaneT TransformPlaneUsingTransposedInverse(
   return PlaneT(vec3(v), -v.w);
 }
 
-// Transform the planes in-place by the specified matrix.  The reason the API
-// transforms multiple planes at once is that it requires the transposed inverse
-// of |m|, which we want to avoid computing individually for each plane.
+// Transform the world-space plane into object space.  This is an optimization
+// of TransformPlane(): it computes the same result without needing a matrix
+// multiplication.
 template <typename PlaneT>
-void TransformPlanes(const mat4& m, PlaneT* planes, size_t num_planes) {
-  mat4 matrix = glm::transpose(glm::inverse(m));
-  for (size_t i = 0; i < num_planes; ++i) {
-    planes[i] = TransformPlaneUsingTransposedInverse(matrix, planes[i]);
-  }
+PlaneT TranslatePlane(const typename PlaneT::VectorType& model_to_world_vec,
+                      const PlaneT& plane) {
+  return PlaneT(plane.dir(),
+                glm::dot(-model_to_world_vec, plane.dir()) + plane.dist());
 }
 
 // Return the distance from the point to the plane.  This distance is oriented:

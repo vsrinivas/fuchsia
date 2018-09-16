@@ -66,6 +66,9 @@ template <typename VecT>
 struct planeN {
   using VectorType = VecT;
 
+  // Default constructor.
+  planeN() : dir_(0.f), dist_(0.f) { dir_.x = 1.f; }
+
   // |direction| must be normalized.
   planeN(VecT direction, float distance) : dir_(direction), dist_(distance) {
     FXL_DCHECK(std::abs(glm::dot(direction, direction) - 1.f) < kEpsilon);

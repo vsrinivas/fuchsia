@@ -251,29 +251,46 @@ TEST(plane2, NonIntersection) {
 // Helper function for TEST(plane3, Transformation).
 template <typename PlaneT>
 void TestPlaneTransformation(const Transform& transform,
-                             const std::vector<PlaneT>& planes,
-                             std::vector<PlaneT>* output_planes_ptr) {
+                             const std::vector<PlaneT>& planes) {
   using VecT = typename PlaneT::VectorType;
 
-  // Easier to use a reference.
-  auto& output_planes = *output_planes_ptr;
-  output_planes = planes;
-  FXL_DCHECK(output_planes.size() == planes.size());
-
+  // The planes start in world-space, and are transformed into object-space.
   mat4 matrix = static_cast<mat4>(transform);
-  TransformPlanes(matrix, output_planes.data(), output_planes.size());
+  std::vector<PlaneT> output_planes;
+  for (auto& p : planes) {
+    output_planes.push_back(TransformPlane(matrix, p));
+  }
 
-  for (size_t i = 0; i < planes.size(); ++i) {
-    vec4 homo_point_on_plane = Homo4(planes[i].dir() * planes[i].dist(), 1);
-    vec4 transformed_homo_point = matrix * homo_point_on_plane;
-    VecT transformed_point =
-        VecT(transformed_homo_point) / transformed_homo_point.w;
+  // Synthesize a grid of points in object-space and verify that their
+  // distances from the object-space plane are the same as transforming them
+  // into world-space and testing against the world-space plane.
+  for (float pt_x = -17.5f; pt_x < 20.f; pt_x += 5.f) {
+    for (float pt_y = -17.5f; pt_y < 20.f; pt_y += 5.f) {
+      for (float pt_z = -17.5f; pt_z < 20.f; pt_z += 5.f) {
+        const VecT object_space_point(vec3(pt_x, pt_y, pt_z));
+        const VecT world_space_point(matrix * Homo4(object_space_point, 1));
 
-    EXPECT_NEAR(0.f, PlaneDistanceToPoint(output_planes[i], transformed_point),
-                kEpsilon * 100);
+        for (size_t i = 0; i < planes.size(); ++i) {
+          const PlaneT& world_space_plane = planes[i];
+          const PlaneT& object_space_plane = output_planes[i];
+
+          const float world_space_distance =
+              PlaneDistanceToPoint(world_space_plane, world_space_point);
+          const float object_space_distance =
+              PlaneDistanceToPoint(object_space_plane, object_space_point);
+          const float object_space_distance_scaled =
+              object_space_distance * transform.scale.x;
+
+          const float kFudgedEpsilon = kEpsilon * 1000.f;
+          EXPECT_NEAR(world_space_distance, object_space_distance_scaled,
+                      kFudgedEpsilon);
+        }
+      }
+    }
   }
 }
 
+// Test matrix transformation of world-space planes into object-space.
 TEST(plane3, Transformation) {
   // Choose some arbtrary planes to transform.
   std::vector<plane3> planes3(
@@ -281,16 +298,15 @@ TEST(plane3, Transformation) {
        plane3(glm::normalize(vec3(1, 1, 1)), 5.f),
        plane3(glm::normalize(vec3(-1, 10, 100)), -15.f),
        plane3(glm::normalize(vec3(1, -10, -100)), -15.f)});
-  std::vector<plane3> output_planes3;
 
   // To test plane2 in addition to plane3, we drop the z-coordinate and then
   // renormalize.
   std::vector<plane2> planes2;
-  std::vector<plane2> output_planes2;
   for (auto& p : planes3) {
     planes2.push_back(plane2(glm::normalize(vec2(p.dir())), p.dist()));
   }
 
+  // Step through parameter-space to generate a large number of Transforms.
   for (float trans_x = -220.f; trans_x <= 220.f; trans_x += 110.f) {
     for (float trans_y = -220.f; trans_y <= 220.f; trans_y += 110.f) {
       for (float trans_z = -220.f; trans_z <= 220.f; trans_z += 110.f) {
@@ -301,14 +317,69 @@ TEST(plane3, Transformation) {
                 Transform(vec3(trans_x, trans_y, trans_z),
                           vec3(scale, scale, scale),
                           glm::angleAxis(angle, vec3(0, 0, 1))),
-                planes2, &output_planes2);
+                planes2);
 
             // For 3D, test by rotating off the Z-axis.
             TestPlaneTransformation(
-                Transform(vec3(trans_x, trans_y, trans_z),
-                          vec3(scale, scale, scale),
-                          glm::angleAxis(angle, vec3(0, .4f, 1))),
-                planes3, &output_planes3);
+                Transform(
+                    vec3(trans_x, trans_y, trans_z), vec3(scale, scale, scale),
+                    glm::angleAxis(angle, glm::normalize(vec3(0, .4f, 1)))),
+                planes3);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Test that we get the same behavior when transforming a plane into
+// object-space via a translation vector, as with an equivalent matrix.
+TEST(plane3, Translation) {
+  std::vector<plane3> planes({
+      plane3(glm::normalize(vec3(1, 0, 0)), 5.f),
+      plane3(glm::normalize(vec3(1, 1, 1)), -5.f),
+      plane3(glm::normalize(vec3(1, 1, 1)), 5.f),
+      plane3(glm::normalize(vec3(-1, 10, 100)), -15.f),
+      plane3(glm::normalize(vec3(1, -10, -100)), -15.f),
+  });
+
+  std::vector<vec3> translations({vec3(30, 40, 50), vec3(30, 40, -50),
+                                  vec3(30, -40, 50), vec3(-30, 40, 50)});
+
+  for (auto& trans : translations) {
+    mat4 trans_matrix = glm::translate(mat4(), trans);
+
+    for (size_t i = 0; i < planes.size(); ++i) {
+      plane3& world_space_plane = planes[i];
+      plane3 translated_object_space_plane = TranslatePlane(trans, planes[i]);
+      plane3 transformed_object_space_plane =
+          TransformPlane(trans_matrix, planes[i]);
+
+      // Compute a 3D grid of object-space points, in order to compare them
+      // against the world-space and object-space planes.
+      for (float pt_x = 35.f; pt_x < 40.f; pt_x += 10.f) {
+        for (float pt_y = 35.f; pt_y < 40.f; pt_y += 10.f) {
+          for (float pt_z = 35.f; pt_z < 40.f; pt_z += 10.f) {
+            vec3 object_space_point(pt_x, pt_y, pt_z);
+            vec3 world_space_point = object_space_point + trans;
+
+            // Verify that the world-space point/plane distance matches the
+            // object-space distances, regardless of whether the translation was
+            // specified by a vector or a matrix.
+            const float world_space_distance =
+                PlaneDistanceToPoint(world_space_plane, world_space_point);
+            const float object_space_distance_1 = PlaneDistanceToPoint(
+                translated_object_space_plane, object_space_point);
+            const float object_space_distance_2 = PlaneDistanceToPoint(
+                transformed_object_space_plane, object_space_point);
+
+            // In many cases kEpsilon is sufficient, but in others there is less
+            // precision.
+            const float kFudgedEpsilon = kEpsilon * 100;
+            EXPECT_NEAR(world_space_distance, object_space_distance_1,
+                        kFudgedEpsilon);
+            EXPECT_NEAR(world_space_distance, object_space_distance_2,
+                        kFudgedEpsilon);
           }
         }
       }
