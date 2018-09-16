@@ -15,7 +15,6 @@
 #include <lib/zx/vmar.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/usb.h>
 
 #include "garnet/drivers/usb_video/camera_control_impl.h"
 #include "garnet/drivers/usb_video/usb-video-stream.h"
@@ -502,14 +501,7 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
   // payload's SOF number is not required to match the 'current' frame number.
 
   // Get the current host SOF value and host monotonic timestamp.
-  size_t len;
-  zx_status_t status = device_ioctl(parent_, IOCTL_USB_GET_CURRENT_FRAME, NULL,
-                                    0, &cur_frame_state_.host_sof,
-                                    sizeof(cur_frame_state_.host_sof), &len);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "could not get host SOF, err: %d\n", status);
-    return;
-  }
+  cur_frame_state_.host_sof = usb_get_current_frame(&usb_);
   zx_time_t host_complete_time_ns = zx_clock_get_monotonic();
 
   // Calculate the difference between when raw frame capture starts and ends.
