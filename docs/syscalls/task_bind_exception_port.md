@@ -68,6 +68,8 @@ In the event of failure, a negative error value is returned.
 or *eport* is not a valid handle. Note that when unbinding from an exception
 port *eport* is **ZX_HANDLE_INVALID**.
 
+**ZX_ERR_BAD_STATE** Unbinding a port that is not currently bound.
+
 **ZX_ERR_WRONG_TYPE**  *object* is not that of a job, process, or thread,
 and is not **ZX_HANDLE_INVALID**,
 or *eport* is not that of a port and is not **ZX_HANDLE_INVALID**.
