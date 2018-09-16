@@ -1,9 +1,0 @@
-{
-    "program": {
-        "binary": "bin/netstack"
-    },
-    "sandbox": {
-        "features": [ "deprecated-all-services" ],
-        "dev": [ "class/ethernet" ]
-    }
-}

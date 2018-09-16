@@ -30,9 +30,7 @@ test_package("netstack_integration") {
 
   meta = [
     {
-      # TODO: change real netstack.cmx program.bin to "bin/netstack" and then
-      # reference it here
-      path = rebase_path("meta/netstack.cmx")
+      path = "//garnet/go/src/netstack/meta/netstack.cmx"
       dest = "netstack.cmx"
     }
   ]
