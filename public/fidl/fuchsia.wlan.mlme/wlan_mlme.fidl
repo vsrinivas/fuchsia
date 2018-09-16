@@ -26,6 +26,14 @@ enum ScanTypes {
     //LAST = PASSIVE;
 };
 
+enum PHY {
+    HR = 1;   // IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
+    ERP = 2;  // IEEE 802.11a/g, used for ERP-OFDM
+    HT = 3;   // IEEE 802.11n
+    VHT = 4;  // IEEE 802.11ac
+    HEW = 5;  // IEEE 802.11ax
+};
+
 // LINT analyzer keyword intended for humans:
 // LINT.IfChange
 enum CBW {	// Channel Bandwidth
@@ -428,6 +436,17 @@ struct JoinRequest {
     vector<uint16> op_rate_set;
 
     // etc
+
+    // phy, cbw overrides following information that MLME knows of.
+    // - Capability Information
+    // - HT Capabilities
+    // - VHT Capabilities
+    // - Extended Capabilities
+    // These are exact, and not an upperbound.
+    bool override_phy;
+    PHY phy;
+    bool override_cbw;
+    CBW cbw;
 };
 
 // MLME-JOIN.confirm (IEEE Std 802.11-2016, 6.3.4.3)

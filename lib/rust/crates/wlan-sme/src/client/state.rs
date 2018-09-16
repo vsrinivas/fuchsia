@@ -202,7 +202,11 @@ impl<T: Tokens> State<T> {
                 selected_bss: clone_bss_desc(&cmd.bss),
                 join_failure_timeout: DEFAULT_JOIN_FAILURE_TIMEOUT,
                 nav_sync_delay: 0,
-                op_rate_set: vec![]
+                op_rate_set: vec![],
+                override_phy: false,
+                phy: fidl_mlme::Phy::Ht,
+                override_cbw: false,
+                cbw: fidl_mlme::Cbw::Cbw20,
             }
         ));
         *att_id += 1;
