@@ -45,6 +45,8 @@ template <uint16_t A> class EepromField;
 enum KeyMode : uint8_t;
 enum KeyType : uint8_t;
 struct BulkoutAggregation;
+class TxStatFifo;
+class TxStatFifoExt;
 
 class WlanmacIfcProxy {
    public:
@@ -243,8 +245,12 @@ class Device {
     void HandleRxComplete(usb_request_t* request);
     void HandleTxComplete(usb_request_t* request);
 
-    wlan_tx_status ReadTxStatsFifoEntry(int packet_id) __TA_REQUIRES(lock_);
-    int WriteTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt);
+    struct TxStatsFifoEntry;
+    TxStatsFifoEntry RemoveTxStatsFifoEntry(int packet_id) __TA_REQUIRES(lock_);
+    int AddTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt);
+    zx_status_t BuildTxStatusReport(int packet_id, const TxStatFifo& stat_fifo,
+                                    const TxStatFifoExt& stat_fifo_ext, wlan_tx_status* report)
+        __TA_REQUIRES(lock_);
 
     zx_status_t FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_pkt, int packet_id,
                                 size_t aggr_payload_len);

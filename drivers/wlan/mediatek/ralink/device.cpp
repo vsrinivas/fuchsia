@@ -16,6 +16,7 @@
 #include <wlan/common/cipher.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/mac_frame.h>
+#include <wlan/common/tx_vector.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/protocol/mac.h>
 #include <wlan/protocol/phy-impl.h>
@@ -3820,12 +3821,13 @@ zx_status_t Device::OnTxReportInterruptTimer() {
 
         std::lock_guard<std::mutex> guard(lock_);
         if (wlanmac_proxy_ != nullptr) {
-            wlan_tx_status reported_tx_status = ReadTxStatsFifoEntry(packet_id);
-            // TODO(NET-1487) parse retry chain information to provide aggregated tx report.
-            reported_tx_status.tx_status_entry[0].attempts = 1 + stat_fifo_ext.txq_rty_cnt();
-            reported_tx_status.success = (stat_fifo.txq_ok() != 0);
-
-            wlanmac_proxy_->ReportTxStatus(&reported_tx_status);
+            wlan_tx_status report{};
+            status = BuildTxStatusReport(packet_id, stat_fifo, stat_fifo_ext, &report);
+            if (status == ZX_OK) {
+                wlanmac_proxy_->ReportTxStatus(&report);
+            } else {
+                warnf("cannot build tx status report: %s.\n", zx_status_get_string(status));
+            }
         }
         tracked_tx_packet_count++;
     }
@@ -4152,7 +4154,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* wlan_pkt)
     }
 
     // Record the packet to be transmitted in the packet TX stats FIFO.
-    const int packet_id = WriteTxStatsFifoEntry(*wlan_pkt);
+    const int packet_id = AddTxStatsFifoEntry(*wlan_pkt);
     if (packet_id != kInvalidTxPacketId) {
         // The TX hardware will become busy.  Begin firing the timer immediately.
         async_tx_interrupt_timer_.set(zx::deadline_after(zx::msec(0)),
@@ -4179,31 +4181,25 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* wlan_pkt)
     return ZX_OK;
 }
 
-wlan_tx_status Device::ReadTxStatsFifoEntry(int packet_id) {
+Device::TxStatsFifoEntry Device::RemoveTxStatsFifoEntry(int packet_id) {
     // The entry in tx_stats_fifo_ is indexed by packet ID.
     ZX_DEBUG_ASSERT(kInvalidTxPacketId < packet_id && packet_id < kTxStatsFifoSize);
-    TxStatsFifoEntry& tx_stats_entry = tx_stats_fifo_[packet_id];
+    TxStatsFifoEntry entry = tx_stats_fifo_[packet_id];
 
-    wlan_tx_status reported_tx_status = {};
-    std::copy(std::begin(tx_stats_entry.peer_addr), std::end(tx_stats_entry.peer_addr),
-              std::begin(reported_tx_status.peer_addr));
-    std::memset(reported_tx_status.tx_status_entry, 0, sizeof(reported_tx_status.tx_status_entry));
-    reported_tx_status.tx_status_entry[0].tx_vector_idx = tx_stats_entry.tx_vector_idx;
-
-    tx_stats_entry.in_use = false;
-    return reported_tx_status;
+    tx_stats_fifo_[packet_id].in_use = false;
+    return entry;
 }
 
-int Device::WriteTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
+int Device::AddTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
     if ((wlan_pkt.info.valid_fields & WLAN_TX_INFO_VALID_TX_VECTOR_IDX) == 0) {
         return kInvalidTxPacketId;
     }
 
     std::lock_guard<std::mutex> guard(lock_);
-    // 0 is reserved as invalid packet ID (e.g. for beacon frames); the hardware appears to ignore
-    // the TX stats registers when packet ID 0 is used. Hence, tx_stats_fifo_counter_ iterates on
-    // the interval [0, kTxStatsFifoSize - 1) so we generate TX packet IDs on the interval
-    // [1, kTxStatsFifoSize).
+    // 0 is reserved as invalid packet ID (e.g. for beacon frames); the hardware appears to
+    // ignore the TX stats registers when packet ID 0 is used. Hence, tx_stats_fifo_counter_
+    // iterates on the interval [0, kTxStatsFifoSize - 1) so we generate TX packet IDs on the
+    // interval [1, kTxStatsFifoSize).
     const int packet_id = tx_stats_fifo_counter_ + 1;
     static size_t num_overrun = 0;
     static size_t max_overrun = 0;
@@ -4229,6 +4225,105 @@ int Device::WriteTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
         ++num_overrun;
         return kInvalidTxPacketId;
     }
+}
+
+::wlan::TxVector FromStatFifoRegister(const TxStatFifo& stat_fifo) {
+    return ::wlan::TxVector{
+        .phy = static_cast<PHY>(ralink_phy_to_ddk_phy(stat_fifo.txq_phy())),
+        .cbw = stat_fifo.txq_bw() == 1 ? CBW40 : CBW20,
+        .gi = stat_fifo.txq_sgi() == 1 ? WLAN_GI_400NS : WLAN_GI_800NS,
+        .mcs_idx = stat_fifo.txq_mcs(),
+    };
+}
+
+zx_status_t FillTxStatusEntries(tx_vec_idx_t vec_idx_first, tx_vec_idx_t vec_idx_last,
+                                const TxStatFifo& stat_fifo, const uint8_t num_retries,
+                                wlan_tx_status_entry_t* entries) {
+    if (vec_idx_last < vec_idx_first) {
+        ZX_DEBUG_ASSERT(0);
+        return ZX_ERR_INTERNAL;
+    }
+
+    if (num_retries == 1) {
+        // report first and last tx vectors only when there is only one retry
+        // because in such cases ralink doesn't always follow the fallback-by-one rule.
+        entries[0].tx_vector_idx = vec_idx_first;
+        entries[0].attempts = 1;
+        entries[1].tx_vector_idx = vec_idx_last;
+        entries[1].attempts = 1;
+        return ZX_OK;
+    }
+
+    uint8_t idx = 0;
+    for (idx = 0; idx < WLAN_TX_STATUS_MAX_ENTRY && vec_idx_last + idx <= vec_idx_first; ++idx) {
+        entries[idx].tx_vector_idx = vec_idx_first - idx;
+        entries[idx].attempts = 1;
+    }
+    --idx;
+
+    if (vec_idx_first != vec_idx_last + idx) {
+        return ZX_ERR_INTERNAL;
+    } else if (num_retries >= idx) {
+        entries[idx].attempts += num_retries - idx;
+    } else {
+        // Occasionally the number of MCS fall-back can be larger than the number of
+        // retries, when that happens, assume the retry chain is correct and the retry count
+        // is incorrect. This seems to conform to the experimental results.
+        debugmstl(
+            "error parsing retry chain. intended %s, final: %s, "
+            "retry_actual: %u, retry_calculated: %d, success: %u, stat_fifo: %x, \n",
+            ::wlan::debug::Describe(vec_idx_first).c_str(),
+            ::wlan::debug::Describe(vec_idx_last).c_str(), num_retries, idx, stat_fifo.txq_ok(),
+            stat_fifo.val());
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Device::BuildTxStatusReport(int packet_id, const TxStatFifo& stat_fifo,
+                                        const TxStatFifoExt& stat_fifo_ext,
+                                        wlan_tx_status* report) {
+    if (report == nullptr) { return ZX_ERR_INVALID_ARGS; }
+
+    ::wlan::TxVector vec_last = FromStatFifoRegister(stat_fifo);
+    tx_vec_idx_t idx_last;
+    zx_status_t status = vec_last.ToIdx(&idx_last);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+
+    // MAC addr and tx vector instructed from upper layer was put in the queue, retrieve them
+    TxStatsFifoEntry entry = RemoveTxStatsFifoEntry(packet_id);
+
+    tx_vec_idx_t idx_first = entry.tx_vector_idx;
+    ::wlan::TxVector vec_first;
+    status = ::wlan::TxVector::FromIdx(idx_first, &vec_first);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+
+    // Start by clearing out report, setting MAC address and success
+    std::memset(report, 0, sizeof(wlan_tx_status));
+    std::copy(std::begin(entry.peer_addr), std::end(entry.peer_addr),
+              std::begin(report->peer_addr));
+    report->success = stat_fifo.txq_ok() == 1;
+    uint8_t num_retries = stat_fifo_ext.txq_rty_cnt();
+
+    if (num_retries == 0) {
+        // No retry -> The transmission is attempted at the final tx vector instead of the intended.
+        if (!report->success) {
+            debugmstl("error in tx_stat_info: txq_rty_cnt == 0 but txq_ok == 0.\n");
+        }
+        idx_first = idx_last;
+        vec_first = vec_last;
+    } else if (!IsEqualExceptMcs(vec_first, vec_last)) {
+        // auto fallback changed something other than mcs,
+        // In this case only the first and last attempt can be used
+        // setting num_retries to 1 to discard the rest
+        num_retries = 1;
+        debugmstl("error: auto fallback involves major change: %s vs %s\n",
+                  ::wlan::debug::Describe(vec_first).c_str(),
+                  ::wlan::debug::Describe(vec_last).c_str());
+    }
+
+    return FillTxStatusEntries(idx_first, idx_last, stat_fifo, num_retries,
+                               report->tx_status_entry);
 }
 
 zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_pkt,
