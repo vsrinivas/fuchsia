@@ -33,6 +33,8 @@ static_library("debugger_utils") {
       "jobs.h",
       "sysinfo.cc",
       "sysinfo.h",
+      "threads.cc",
+      "threads.h",
       "util_zx.cc",
     ]
   }
@@ -73,6 +75,9 @@ executable("tests") {
     "run_all_unittests.cc",
     "sysinfo.cc",
     "sysinfo.h",
+    "threads.cc",
+    "threads.h",
+    "threads_unittest.cc",
     "util.cc",
     "util.h",
     "util_unittest.cc",
