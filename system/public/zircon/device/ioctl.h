@@ -82,6 +82,7 @@
 #define IOCTL_FAMILY_USB_TEST       0x3E
 #define IOCTL_FAMILY_CLK            0x3F
 #define IOCTL_FAMILY_NAND_BROKER    0x40
+#define IOCTL_FAMILY_QMI            0x41
 
 // IOCTL constructor
 // --K-FFNN

@@ -54,6 +54,8 @@
 
 /* CDC Class-Specific Notification Codes */
 #define USB_CDC_NC_NETWORK_CONNECTION       0x00
+#define USB_CDC_NC_RESPONSE_AVAILABLE       0x01
+#define USB_CDC_NC_SERIAL_STATE             0x20
 #define USB_CDC_NC_CONNECTION_SPEED_CHANGE  0x2A
 
 /* CDC Ethernet Class-Specific Request Codes */
