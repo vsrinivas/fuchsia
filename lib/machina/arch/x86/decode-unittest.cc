@@ -11,7 +11,7 @@
 namespace machina {
 namespace {
 
-TEST(InstDecode, failure) {
+TEST(InstDecodeTest, failure) {
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(inst_decode(nullptr, 0, 4, &vcpu_state, nullptr), ZX_ERR_BAD_STATE);
   ASSERT_EQ(inst_decode(nullptr, 32, 4, &vcpu_state, nullptr),
@@ -33,7 +33,7 @@ TEST(InstDecode, failure) {
             ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST(InstDecode, mov_89) {
+TEST(InstDecodeTest, mov_89) {
   zx_vcpu_state_t vcpu_state;
   uint8_t bad_len[] = {0x89, 0, 0};  // opcode modrm ?
   ASSERT_EQ(inst_decode(bad_len, 3, 4, &vcpu_state, nullptr),
@@ -145,7 +145,7 @@ TEST(InstDecode, mov_89) {
 }
 
 // 8-bit tests to compliment decode_mov_89.
-TEST(InstDecode, mov_88) {
+TEST(InstDecodeTest, mov_88) {
   zx_vcpu_state_t vcpu_state;
   Instruction inst;
 
@@ -176,7 +176,7 @@ TEST(InstDecode, mov_88) {
   EXPECT_EQ(inst.flags, nullptr);
 }
 
-TEST(InstDecode, mov_8b) {
+TEST(InstDecodeTest, mov_8b) {
   zx_vcpu_state_t vcpu_state;
   uint8_t bad_len[] = {0x8b, 0, 0};  // opcode modrm ?
   ASSERT_EQ(inst_decode(bad_len, 3, 4, &vcpu_state, nullptr),
@@ -288,7 +288,7 @@ TEST(InstDecode, mov_8b) {
 }
 
 // 8-bit tests to compliment decode_mov_8b.
-TEST(InstDecode, mov_8a) {
+TEST(InstDecodeTest, mov_8a) {
   zx_vcpu_state_t vcpu_state;
   Instruction inst;
 
@@ -319,7 +319,7 @@ TEST(InstDecode, mov_8a) {
   EXPECT_EQ(inst.flags, nullptr);
 }
 
-TEST(InstDecode, mov_c7) {
+TEST(InstDecodeTest, mov_c7) {
   zx_vcpu_state_t vcpu_state;
   uint8_t bad_len[] = {0xc7, 0};  // opcode modrm
   ASSERT_EQ(inst_decode(bad_len, 2, 4, &vcpu_state, nullptr),
@@ -437,7 +437,7 @@ TEST(InstDecode, mov_c7) {
 }
 
 // 8-bit tests to compliment decode_mov_c7.
-TEST(InstDecode, mov_c6) {
+TEST(InstDecodeTest, mov_c6) {
   zx_vcpu_state_t vcpu_state;
   Instruction inst;
 
@@ -451,7 +451,7 @@ TEST(InstDecode, mov_c6) {
   EXPECT_EQ(inst.flags, nullptr);
 }
 
-TEST(InstDecode, movz_0f_b6) {
+TEST(InstDecodeTest, movz_0f_b6) {
   zx_vcpu_state_t vcpu_state;
   uint8_t bad_len[] = {0x0f, 0xb6, 0b00'000'000, 0};  // opcode opcode modrm ?
   ASSERT_EQ(inst_decode(bad_len, 4, 4, &vcpu_state, nullptr),
@@ -564,7 +564,7 @@ TEST(InstDecode, movz_0f_b6) {
   EXPECT_EQ(inst.flags, nullptr);
 }
 
-TEST(InstDecode, movz_0f_b7) {
+TEST(InstDecodeTest, movz_0f_b7) {
   zx_vcpu_state_t vcpu_state;
   uint8_t bad_len[] = {0x0f, 0xb7, 0b00'000'000, 0};  // opcode opcode modrm ?
   ASSERT_EQ(inst_decode(bad_len, 4, 4, &vcpu_state, nullptr),
@@ -677,7 +677,7 @@ TEST(InstDecode, movz_0f_b7) {
   EXPECT_EQ(inst.flags, nullptr);
 }
 
-TEST(InstDecode, test_f6) {
+TEST(InstDecodeTest, test_f6) {
   zx_vcpu_state_t vcpu_state;
   uint8_t bad_len[] = {0xf6, 0b00'000'000};  // opcode modrm
   ASSERT_EQ(inst_decode(bad_len, 2, 4, &vcpu_state, nullptr),
@@ -755,7 +755,7 @@ TEST(InstDecode, test_f6) {
   EXPECT_EQ(inst.flags, &vcpu_state.rflags);
 }
 
-TEST(InstDecode, computing_flags) {
+TEST(InstDecodeTest, computing_flags) {
   EXPECT_EQ(x86_flags_for_test8(1, 1), 2);
   EXPECT_EQ(x86_flags_for_test8(1, -1), 2);
   EXPECT_EQ(x86_flags_for_test8(-1, 1), 2);
