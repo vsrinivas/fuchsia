@@ -89,7 +89,7 @@ class BatchGpuUploader : public Reffable {
    private:
     friend class BatchGpuUploader;
     // Gets the CommandBuffer to batch commands with all other posted writers.
-    // This writer cannot be used after the command buffer has been retreived.
+    // This writer cannot be used after the command buffer has been retrieved.
     CommandBufferPtr TakeCommandsAndShutdown();
 
     CommandBufferPtr command_buffer_;
@@ -112,7 +112,7 @@ class BatchGpuUploader : public Reffable {
   // the GPU on Submit();
   void PostWriter(std::unique_ptr<Writer> writer);
 
-  // Post a Reader to the batch uploader. The Readers's work will be posted to
+  // Post a Reader to the batch uploader. The Reader's work will be posted to
   // the host on Submit(). After submit, the callback will be called with the
   // buffer read from the GPU.
   void PostReader(std::unique_ptr<Reader> reader,
@@ -124,18 +124,26 @@ class BatchGpuUploader : public Reffable {
               const std::function<void()>& callback = [] {});
 
  private:
-  BatchGpuUploader(BufferCacheWeakPtr weak_buffer_cache, FramePtr frame);
-  BatchGpuUploader() { dummy_for_tests_ = true; }
+  BatchGpuUploader(EscherWeakPtr weak_escher, int64_t frame_trace_number);
+  BatchGpuUploader() : frame_trace_number_(0) { dummy_for_tests_ = true; }
+
+  void Initialize();
 
   int32_t writer_count_ = 0;
   int32_t reader_count_ = 0;
-  BufferCacheWeakPtr buffer_cache_ = BufferCacheWeakPtr();
-  FramePtr frame_ = nullptr;
+
+  EscherWeakPtr escher_;
+  bool is_initialized_ = false;
+  // The trace number for the frame. Cached to support lazy frame creation.
+  const int64_t frame_trace_number_;
+  // Lazily created when the first Reader or Writer is acquired.
+  BufferCacheWeakPtr buffer_cache_;
+  FramePtr frame_;
 
   // Temporary flag for tests that need to build and run with a null escher.
   // Allows the uploader to be created and skips submit without crashing, but
   // when this flag is set, BatchGpuUploader is not functional and does not
-  // provide any dummy functiionality.
+  // provide any dummy functionality.
   bool dummy_for_tests_ = false;
 
   std::vector<std::pair<BufferPtr, std::function<void(BufferPtr)>>>

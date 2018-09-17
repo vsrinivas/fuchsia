@@ -19,13 +19,8 @@ BatchGpuUploaderPtr BatchGpuUploader::New(EscherWeakPtr weak_escher,
     FXL_LOG(WARNING) << "Error, creating a BatchGpuUploader without an escher.";
     return fxl::AdoptRef(new BatchGpuUploader());
   }
-
-  BufferCacheWeakPtr buffer_cache = weak_escher->buffer_cache()->GetWeakPtr();
-  FramePtr frame = weak_escher->NewFrame("Gpu Uploader", frame_trace_number,
-                                         /* enable_gpu_logging */ false,
-                                         CommandBuffer::Type::kTransfer);
   return fxl::AdoptRef(
-      new BatchGpuUploader(std::move(buffer_cache), std::move(frame)));
+      new BatchGpuUploader(std::move(weak_escher), frame_trace_number));
 }
 
 BatchGpuUploader::Writer::Writer(CommandBufferPtr command_buffer,
@@ -142,18 +137,40 @@ CommandBufferPtr BatchGpuUploader::Reader::TakeCommandsAndShutdown() {
   return std::move(command_buffer_);
 }
 
-BatchGpuUploader::BatchGpuUploader(BufferCacheWeakPtr weak_buffer_cache,
-                                   FramePtr frame)
-    : buffer_cache_(std::move(weak_buffer_cache)), frame_(std::move(frame)) {
-  FXL_DCHECK(buffer_cache_);
+BatchGpuUploader::BatchGpuUploader(EscherWeakPtr weak_escher,
+                                   int64_t frame_trace_number)
+    : escher_(std::move(weak_escher)), frame_trace_number_(frame_trace_number) {
+  FXL_DCHECK(escher_);
 }
 
 BatchGpuUploader::~BatchGpuUploader() { FXL_CHECK(!frame_); }
 
+void BatchGpuUploader::Initialize() {
+  // TODO(ES-115) Back the uploader with transfer queue command buffers
+  // directly, rather than use a frame to manage GPU submits, when command
+  // buffer recycling is refactored.
+  if (!frame_) {
+      frame_ = escher_->NewFrame("Gpu Uploader", frame_trace_number_,
+                                 /* enable_gpu_logging */ false,
+                                 CommandBuffer::Type::kTransfer);
+  }
+  FXL_DCHECK(frame_);
+  if (!buffer_cache_) {
+    buffer_cache_ = escher_->buffer_cache()->GetWeakPtr();
+  }
+  FXL_DCHECK(buffer_cache_);
+
+  is_initialized_ = true;
+}
+
 std::unique_ptr<BatchGpuUploader::Writer> BatchGpuUploader::AcquireWriter(
     size_t size) {
+  if (!is_initialized_) {
+    Initialize();
+  }
   FXL_DCHECK(frame_);
   FXL_DCHECK(size);
+
   // TODO(SCN-846) Relax this check once Writers are backed by secondary
   // buffers, and the frame's primary command buffer is not moved into the
   // Writer.
@@ -173,6 +190,9 @@ std::unique_ptr<BatchGpuUploader::Writer> BatchGpuUploader::AcquireWriter(
 
 std::unique_ptr<BatchGpuUploader::Reader> BatchGpuUploader::AcquireReader(
     size_t size) {
+  if (!is_initialized_) {
+    Initialize();
+  }
   FXL_DCHECK(frame_);
   FXL_DCHECK(size);
   // TODO(SCN-846) Relax this check once Readers are backed by secondary
@@ -237,11 +257,16 @@ void BatchGpuUploader::Submit(const escher::SemaphorePtr& upload_done_semaphore,
     return;
   }
 
-  FXL_DCHECK(frame_);
   // TODO(SCN-846) Relax this check once Writers are backed by secondary
   // buffers, and the frame's primary command buffer is not moved into the
   // Writer.
   FXL_DCHECK(writer_count_ == 0 && reader_count_ == 0);
+
+  if (!is_initialized_) {
+    // This uploader was never used, nothing to submit.
+    return;
+  }
+  FXL_DCHECK(frame_);
 
   TRACE_DURATION("gfx", "BatchGpuUploader::SubmitBatch");
   frame_->EndFrame(upload_done_semaphore,
