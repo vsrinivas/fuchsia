@@ -13,7 +13,7 @@ MODULE_TYPE := userapp
 MODULE_GROUP := core
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/bootfs.c \
+    $(LOCAL_DIR)/bootfs.cpp \
     $(LOCAL_DIR)/devhost-shared.c \
     $(LOCAL_DIR)/devmgr.c \
     $(LOCAL_DIR)/devmgr-binding.c \
@@ -68,7 +68,7 @@ MODULE_TYPE := userapp
 MODULE_GROUP := core
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/bootfs.c \
+    $(LOCAL_DIR)/bootfs.cpp \
     $(LOCAL_DIR)/block-watcher.c \
     $(LOCAL_DIR)/devmgr-fdio.c \
     $(LOCAL_DIR)/fshost.cpp \

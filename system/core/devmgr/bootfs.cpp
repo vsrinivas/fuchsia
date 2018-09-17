@@ -37,7 +37,7 @@ zx_status_t bootfs_create(bootfs_t* bfs, zx_handle_t vmo) {
     }
     bfs->vmo = vmo;
     bfs->dirsize = hdr.dirsize;
-    bfs->dir = (void*)addr + sizeof(hdr);
+    bfs->dir = reinterpret_cast<char*>(addr) + sizeof(hdr);
     return ZX_OK;
 }
 
@@ -52,10 +52,10 @@ zx_status_t bootfs_parse(bootfs_t* bfs,
                          zx_status_t (*cb)(void* cookie, const bootfs_entry_t* entry),
                          void* cookie) {
     size_t avail = bfs->dirsize;
-    void* p = bfs->dir;
+    auto* p = static_cast<char*>(bfs->dir);
     zx_status_t r;
     while (avail > sizeof(bootfs_entry_t)) {
-        bootfs_entry_t* e = p;
+        auto e = reinterpret_cast<bootfs_entry_t*>(p);
         size_t sz = BOOTFS_RECSIZE(e);
         if ((e->name_len < 1) || (e->name_len > BOOTFS_MAX_NAME_LEN) ||
             (e->name[e->name_len - 1] != 0) || (sz > avail)) {
@@ -75,10 +75,10 @@ zx_status_t bootfs_open(bootfs_t* bfs, const char* name,
                         zx_handle_t* vmo_out, uint32_t* size_out) {
     size_t name_len = strlen(name) + 1;
     size_t avail = bfs->dirsize;
-    void* p = bfs->dir;
+    auto p = static_cast<char*>(bfs->dir);
     bootfs_entry_t* e;
     while (avail > sizeof(bootfs_entry_t)) {
-        e = p;
+        e = reinterpret_cast<bootfs_entry_t*>(p);
         size_t sz = BOOTFS_RECSIZE(e);
         if ((e->name_len < 1) || (e->name_len > BOOTFS_MAX_NAME_LEN) ||
             (e->name[e->name_len - 1] != 0) || (sz > avail)) {
