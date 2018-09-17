@@ -65,7 +65,10 @@ class TestEvalContext : public ExprEvalContext {
   void AddVariable(const std::string& name, ExprValue v) { values_[name] = v; }
 
   // ExprEvalContext implementation.
-  void GetVariable(
+  const Variable* GetVariableSymbol(const std::string& name) override {
+    return nullptr;  // Not needed by this test.
+  }
+  void GetVariableValue(
       const std::string& name,
       std::function<void(const Err& err, ExprValue value)> cb) override {
     auto found = values_.find(name);

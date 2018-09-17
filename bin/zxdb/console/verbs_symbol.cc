@@ -16,6 +16,8 @@
 #include "garnet/bin/zxdb/client/symbols/module_symbol_status.h"
 #include "garnet/bin/zxdb/client/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/client/symbols/target_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/type.h"
+#include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
@@ -24,6 +26,7 @@
 #include "garnet/bin/zxdb/console/format_context.h"
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -32,6 +35,51 @@ namespace {
 
 constexpr int kListAllSwitch = 1;
 constexpr int kListContextSwitch = 2;
+
+void DumpVariableLocation(const SymbolContext& symbol_context,
+                          const VariableLocation& loc, OutputBuffer* out) {
+  if (loc.is_null()) {
+    out->Append("DWARF location: <no location info>\n");
+    return;
+  }
+
+  out->Append("DWARF location (address range + DWARF expression bytes):\n");
+  for (const auto& entry : loc.locations()) {
+    // Address range.
+    if (entry.begin == 0 && entry.end == 0) {
+      out->Append("  <always valid>:");
+    } else {
+      out->Append(
+          fxl::StringPrintf("  [0x%" PRIx64 ", 0x%" PRIx64 "):",
+                            symbol_context.RelativeToAbsolute(entry.begin),
+                            symbol_context.RelativeToAbsolute(entry.end)));
+    }
+
+    // Dump the raw DWARF expression bytes. In the future we can decode if
+    // necessary (check LLVM's "dwarfdump" utility which can do this).
+    for (uint8_t byte : entry.expression)
+      out->Append(fxl::StringPrintf(" 0x%02x", byte));
+    out->Append("\n");
+  }
+}
+
+std::string GetTypeDescription(const LazySymbol& lazy_type) {
+  if (const Type* type = lazy_type.Get()->AsType())
+    return type->GetFullName();
+  return "<bad type>";
+}
+
+void DumpVariableInfo(const SymbolContext& symbol_context,
+                      const Variable* variable, OutputBuffer* out) {
+  out->Append("Variable: ");
+  out->Append(Syntax::kVariable, variable->GetAssignedName());
+  out->Append("\n");
+  out->Append(fxl::StringPrintf("Type: %s\n",
+                                GetTypeDescription(variable->type()).c_str()));
+  out->Append(fxl::StringPrintf("DWARF tag: 0x%x\n",
+                                static_cast<unsigned>(variable->tag())));
+  DumpVariableLocation(symbol_context, variable->location(), out);
+}
 
 // list ------------------------------------------------------------------------
 
@@ -233,13 +281,59 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// sym-info --------------------------------------------------------------------
+
+const char kSymInfoShortHelp[] = "sym-info: Print information about a symbol.";
+const char kSymInfoHelp[] =
+    R"(sym-info
+
+  Displays information about a given named symbol.
+
+  Currently this only shows information for variables (as that might appear in
+  an expression).
+
+  It should be expanded in the future to support global variables and functions
+  as well.
+
+Example
+
+  sym-info i
+  thread 1 frame 4 sym-info i
+)";
+Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
+  if (cmd.args().size() != 1u) {
+    return Err(
+        "sym-info expects exactly one argument that's the name of the "
+        "symbol to look up.");
+  }
+  const std::string& symbol_name = cmd.args()[0];
+
+  if (cmd.frame()) {
+    const Location& location = cmd.frame()->GetLocation();
+    fxl::RefPtr<ExprEvalContext> eval_context =
+        cmd.frame()->GetExprEvalContext();
+    if (const Variable* variable =
+            eval_context->GetVariableSymbol(symbol_name)) {
+      OutputBuffer out;
+      DumpVariableInfo(location.symbol_context(), variable, &out);
+      Console::get()->Output(std::move(out));
+      return Err();
+    }
+  }
+
+  return Err(fxl::StringPrintf("No symbol \"%s\" found in the current context.",
+                               symbol_name.c_str()));
+}
+
 // sym-stat --------------------------------------------------------------------
 
 const char kSymStatShortHelp[] = "sym-stat: Print process symbol status.";
 const char kSymStatHelp[] =
     R"(sym-stat
 
-  Prints out the symbol information for the current process.
+  Prints out the symbol information for the current process. This includes
+  which libraries are loaded, how many symbols each has, and where the symbol
+  file is located.
 
 Example
 
@@ -350,6 +444,9 @@ void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
   list.switches.emplace_back(kListContextSwitch, true, "context", 'c');
 
   (*verbs)[Verb::kList] = std::move(list);
+  (*verbs)[Verb::kSymInfo] =
+      VerbRecord(&DoSymInfo, {"sym-info"}, kSymInfoShortHelp, kSymInfoHelp,
+                 CommandGroup::kQuery);
   (*verbs)[Verb::kSymStat] =
       VerbRecord(&DoSymStat, {"sym-stat"}, kSymStatShortHelp, kSymStatHelp,
                  CommandGroup::kQuery);

@@ -46,29 +46,39 @@ SymbolEvalContext::SymbolEvalContext(
           location.symbol_context(), location.address())));
 }
 
-void SymbolEvalContext::GetVariable(const std::string& name, Callback cb) {
+const Variable* SymbolEvalContext::GetVariableSymbol(const std::string& name) {
   // Search backwards in the nested lexical scopes searching for the first
   // variable or function parameter with the given name.
   const CodeBlock* cur_block = block_.get();
   while (cur_block) {
-    if (SearchVariableVector(cur_block->variables(), name, cb))
-      return;
+    if (auto* var = SearchVariableVector(cur_block->variables(), name))
+      return var;
 
     if (const Function* function = cur_block->AsFunction()) {
       // Found a function, check for a match in its parameters.
-      if (SearchVariableVector(function->parameters(), name, cb))
-        return;
+      if (auto* var = SearchVariableVector(function->parameters(), name))
+        return var;
       break;  // Don't recurse into higher levels of nesting than a function.
     }
     if (!cur_block->parent())
       break;
     cur_block = cur_block->parent().Get()->AsCodeBlock();
   }
+  return nullptr;
+}
 
-  // Not found. In the future, it might be nice to suggest the closest
-  // match in the error message.
-  cb(Err(fxl::StringPrintf("No variable '%s' in this context.", name.c_str())),
-     ExprValue());
+void SymbolEvalContext::GetVariableValue(const std::string& name,
+                                         ValueCallback cb) {
+  if (const Variable* var = GetVariableSymbol(name)) {
+    // Resolve the variable value.
+    resolver_.ResolveVariable(symbol_context_, var, std::move(cb));
+  } else {
+    // Not found. In the future, it might be nice to suggest the closest
+    // match in the error message.
+    cb(Err(fxl::StringPrintf("No variable '%s' in this context.",
+                             name.c_str())),
+       ExprValue());
+  }
 }
 
 SymbolVariableResolver& SymbolEvalContext::GetVariableResolver() {
@@ -79,19 +89,16 @@ fxl::RefPtr<SymbolDataProvider> SymbolEvalContext::GetDataProvider() {
   return data_provider_;
 }
 
-bool SymbolEvalContext::SearchVariableVector(
-    const std::vector<LazySymbol>& vect, const std::string& search_for,
-    Callback& cb) {
+const Variable* SymbolEvalContext::SearchVariableVector(
+    const std::vector<LazySymbol>& vect, const std::string& search_for) {
   for (const auto& cur : vect) {
     const Variable* var = cur.Get()->AsVariable();
     if (!var)
       continue;  // Symbols are corrupt.
-    if (search_for == var->GetAssignedName()) {
-      resolver_.ResolveVariable(symbol_context_, var, std::move(cb));
-      return true;
-    }
+    if (search_for == var->GetAssignedName())
+      return var;
   }
-  return false;
+  return nullptr;
 }
 
 }  // namespace zxdb

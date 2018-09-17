@@ -203,11 +203,9 @@ void ArrayAccessExprNode::DoAccess(fxl::RefPtr<ExprEvalContext> context,
   uint64_t array_base = left.GetAs<uint64_t>();
   uint32_t elt_size = inner_type->GetConcreteType()->byte_size();
 
-  ResolvePointer(
-      context->GetDataProvider(),
-      array_base + elt_size * offset,
-      fxl::RefPtr<Type>(const_cast<Type*>(inner_type)),
-      std::move(cb));
+  ResolvePointer(context->GetDataProvider(), array_base + elt_size * offset,
+                 fxl::RefPtr<Type>(const_cast<Type*>(inner_type)),
+                 std::move(cb));
 }
 
 void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {
@@ -231,7 +229,7 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
 
 void IdentifierExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                               EvalCallback cb) const {
-  context->GetVariable(name_.value(), std::move(cb));
+  context->GetVariableValue(name_.value(), std::move(cb));
 }
 
 void IdentifierExprNode::Print(std::ostream& out, int indent) const {

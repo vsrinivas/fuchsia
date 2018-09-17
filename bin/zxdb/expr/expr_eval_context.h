@@ -14,6 +14,7 @@ class Err;
 class ExprValue;
 class SymbolDataProvider;
 class SymbolVariableResolver;
+class Variable;
 
 // Interface used by expression evaluation to communicate with the outside
 // world. This provides access to the variables currently in scope.
@@ -21,13 +22,18 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
  public:
   virtual ~ExprEvalContext() = default;
 
+  // Searches the current context for a variable with the given name using
+  // language scoping rules (innermost blocks first, going outward, then
+  // function parameters). If found, returns it, otherwise returns nullptr.
+  virtual const Variable* GetVariableSymbol(const std::string& name) = 0;
+
   // Issues the callback with the value of the given variable in the context of
   // the current expression evaluation.
   //
   // The callback may be issued asynchronously in the future if communication
   // with the remote debugged application is required. The callback may be
   // issued reentrantly for synchronously available data.
-  virtual void GetVariable(
+  virtual void GetVariableValue(
       const std::string& name,
       std::function<void(const Err& err, ExprValue value)>) = 0;
 
