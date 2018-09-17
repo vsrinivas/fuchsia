@@ -34,6 +34,14 @@ def sanitize(name):
     return name.replace('-', '_').replace('.', '_')
 
 
+################################################################################
+#
+# THIS FRONTEND VERSION IS OBSOLETE!! PLEASE DO MAKE CHANGES TO IT UNTIL THIS
+# BANNER DISAPPEARS.
+#
+################################################################################
+
+
 class BazelBuilder(Builder):
 
     def __init__(self, output, overlay):

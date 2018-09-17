@@ -209,7 +209,9 @@ class BazelBuilder(Frontend):
         for dep in atom['deps']:
             library.deps.append('//pkg/' + sanitize(dep))
 
-        # TODO(DX-340): add FIDL deps.
+        for dep in atom['fidl_deps']:
+            name = sanitize(dep)
+            library.deps.append('//fidl/%s:%s_cc' % (name, name))
 
         library.includes.append(os.path.relpath(atom['include_dir'],
                                                 atom['root']))
@@ -248,7 +250,7 @@ class BazelBuilder(Frontend):
         base = self.dest('fidl', name)
         self._copy_files(atom['sources'], atom['root'], base, data.srcs)
         for dep in atom['deps']:
-            data.deps.append('//fidl/' + sanitize(dep))
+            data.deps.append(sanitize(dep))
         self.write_file(os.path.join(base, 'BUILD'), 'fidl', data)
 
 
