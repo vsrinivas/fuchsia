@@ -1166,7 +1166,20 @@ static void __NO_RETURN trigger_sse_divide_by_zero(void)
     double a = 1;
     double b = 0;
     __asm__ volatile("divsd %1, %0" : "+x"(a) : "x"(b));
-    trigger_unsupported();
+
+    // QEMU's software emulation of x86 appears to have a bug where it does
+    // not correctly emulate generating division-by-zero exceptions from
+    // SSE instructions.  See https://bugs.launchpad.net/qemu/+bug/1668041.
+    // So we will reach this point on non-KVM QEMU.  In this case, make the
+    // test pass by generating a fault by other means.
+    //
+    // That means this test isn't requiring that "divsd" generates a fault.
+    // It is only requiring that the fault is handled properly
+    // (e.g. doesn't cause a kernel panic) if the instruction does fault
+    // (as on real hardware).
+    printf("trigger_sse_divide_by_zero: divsd did not fault; "
+           "assume we are running under a buggy non-KVM QEMU\n");
+    trigger_integer_divide_by_zero();
 }
 
 static void __NO_RETURN trigger_x87_divide_by_zero(void)
