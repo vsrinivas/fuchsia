@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/zbi.gni")
 import("//build/images/boot.gni")
+import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
 
 declare_args() {
@@ -127,6 +128,18 @@ zedboot_image_paths += [ "IMAGE_ZEDBOOT_ZBI=" +
 zedboot_image_paths += [ "IMAGE_ZIRCONR_ZBI=" +
                          rebase_path(zedboot_zbi_outputs[0], root_build_dir) ]
 
+if (custom_signing_script != "") {
+  custom_signed_zbi("signed") {
+    output_name = "zedboot.zbi"
+    deps = [":zbi"]
+    zbi = get_target_outputs(":zbi")
+  }
+
+  signed_zbi_outputs = get_target_outputs(":signed")
+  zedboot_image_paths += [ "IMAGE_ZIRCONR_SIGNEDZBI=" +
+                           rebase_path(signed_zbi_outputs[0], root_build_dir) ]
+}
+
 vboot("vboot") {
   output_name = "zedboot"
   deps = [
@@ -158,6 +171,9 @@ group("zedboot") {
   ]
   if (target_cpu != "arm64") {
     deps += [ ":esp" ]
+  }
+  if (custom_signing_script != "") {
+    deps += [":signed"]
   }
 }
 

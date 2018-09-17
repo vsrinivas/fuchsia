@@ -8,6 +8,7 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/packages.gni")
 import("//build/images/boot.gni")
 import("//build/images/crashpad.gni")
+import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
 import("//build/package.gni")
 import("//build/sdk/sdk_atom.gni")
@@ -505,6 +506,31 @@ images += [
     legacy_copy_dir = root_out_dir
   },
 ]
+
+if (custom_signing_script != "") {
+  custom_signed_zbi("signed") {
+    output_name = "fuchsia.zbi"
+    testonly = true
+    deps = [":fuchsia"]
+    zbi = get_target_outputs(":fuchsia")
+  }
+  images += [
+    {
+      deps = [
+        ":signed",
+      ]
+      sdk = "fuchsia.zbi.signed"
+      updater = "fuchsia.zbi.signed"
+      json = {
+        name = "zircon-a.signed"
+        type = "zbi.signed"
+      }
+      public = [
+        "IMAGE_ZIRCONA_SIGNEDZBI"
+      ]
+    }
+  ]
+}
 
 ###
 ### Complete images for booting and installing the whole system.
