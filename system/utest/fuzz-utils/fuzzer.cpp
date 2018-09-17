@@ -445,6 +445,7 @@ bool TestHelp() {
     EXPECT_TRUE(test.InStdOut("seeds"));
     EXPECT_TRUE(test.InStdOut("start"));
     EXPECT_TRUE(test.InStdOut("check"));
+    EXPECT_TRUE(test.InStdOut("stop"));
     EXPECT_TRUE(test.InStdOut("repro"));
     EXPECT_TRUE(test.InStdOut("merge"));
 
@@ -710,6 +711,31 @@ bool TestCheck() {
     END_TEST;
 }
 
+bool TestStop() {
+    BEGIN_TEST;
+    TestFuzzer test;
+
+    ASSERT_TRUE(test.InitZircon());
+
+    ASSERT_TRUE(test.Eval("stop"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("missing"));
+
+    ASSERT_TRUE(test.Eval("stop foobar"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("no match"));
+
+    ASSERT_TRUE(test.Eval("stop target"));
+    EXPECT_NE(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdErr("multiple"));
+
+    ASSERT_TRUE(test.Eval("stop zircon/target1"));
+    EXPECT_EQ(ZX_OK, test.Run());
+    EXPECT_TRUE(test.InStdOut("stopped"));
+
+    END_TEST;
+}
+
 bool TestRepro() {
     BEGIN_TEST;
     TestFuzzer test;
@@ -893,6 +919,7 @@ RUN_TEST(TestList)
 RUN_TEST(TestSeeds)
 RUN_TEST(TestStart)
 RUN_TEST(TestCheck)
+RUN_TEST(TestStop)
 RUN_TEST(TestRepro)
 RUN_TEST(TestMerge)
 END_TEST_CASE(FuzzerTest)

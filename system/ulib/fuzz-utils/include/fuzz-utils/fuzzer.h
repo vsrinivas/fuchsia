@@ -89,9 +89,10 @@ protected:
     // Spawns a fuzzer sub-process.  Runs synchronously if |wait_for_completion| is true.
     virtual zx_status_t Execute(bool wait_for_completion);
 
-    // Callback used by |Walker| to match the fuzz target sub-process and print information on it.
+    // Callback used by |Walker| to match the fuzz target sub-process and print information on it,
+    // or kill it if the |kill| parameter is true.
     friend class Walker;
-    bool CheckProcess(zx_handle_t process) const;
+    bool CheckProcess(zx_handle_t process, bool kill = false) const;
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Fuzzer);
@@ -112,6 +113,7 @@ private:
     zx_status_t Seeds();
     zx_status_t Start();
     zx_status_t Check();
+    zx_status_t Stop();
     zx_status_t Repro();
     zx_status_t Merge();
 

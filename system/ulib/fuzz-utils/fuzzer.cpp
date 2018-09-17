@@ -39,6 +39,7 @@ enum Command : uint32_t {
     kSeeds,
     kStart,
     kCheck,
+    kStop,
     kRepro,
     kMerge,
 };
@@ -58,6 +59,8 @@ const struct {
     {kCheck, "check", "name",
      "Reports information about the named fuzzer, such as execution status, corpus size, and "
      "number of artifacts."},
+    {kStop, "stop", "name",
+     "Stops all instances of the named fuzzer."},
     {kRepro, "repro", "name [...]",
      "Runs the named fuzzer on specific inputs. If no additional inputs are provided, uses "
      "previously found artifacts."},
@@ -130,6 +133,8 @@ zx_status_t Fuzzer::Run(StringList* args) {
         return Start();
     case kCheck:
         return Check();
+    case kStop:
+        return Stop();
     case kRepro:
         return Repro();
     case kMerge:
@@ -388,15 +393,24 @@ zx_status_t Fuzzer::Execute(bool wait_for_completion) {
     return ZX_OK;
 }
 
-// |fuzzing::Walked| is a |TaskEnumerator| used to find and print status information about a given
-// fuzzer |executable|.
+// |fuzzing::Walker| is a |TaskEnumerator| used to find a given fuzzer |executable| and print status
+// or end it.
 class Walker final : public TaskEnumerator {
 public:
-    explicit Walker(const Fuzzer* fuzzer) : fuzzer_(fuzzer) {}
+    explicit Walker(const Fuzzer* fuzzer, bool kill) : fuzzer_(fuzzer), kill_(kill), killed_(0) {}
     ~Walker() {}
 
+    size_t killed() const { return killed_; }
+
     zx_status_t OnProcess(int depth, zx_handle_t task, zx_koid_t koid, zx_koid_t pkoid) override {
-        return fuzzer_->CheckProcess(task) ? ZX_ERR_STOP : ZX_OK;
+        if (!fuzzer_->CheckProcess(task, kill_)) {
+            return ZX_OK;
+        }
+        if (kill_) {
+            ++killed_;
+            return ZX_OK;
+        }
+        return ZX_ERR_STOP;
     }
 
 protected:
@@ -404,13 +418,14 @@ protected:
 
 private:
     const Fuzzer* fuzzer_;
+    bool kill_;
+    size_t killed_;
 };
 
-bool Fuzzer::CheckProcess(zx_handle_t process) const {
+bool Fuzzer::CheckProcess(zx_handle_t task, bool kill) const {
     char name[ZX_MAX_NAME_LEN];
-    zx_info_process_t info;
 
-    if (zx_object_get_property(process, ZX_PROP_NAME, name, sizeof(name)) != ZX_OK) {
+    if (zx_object_get_property(task, ZX_PROP_NAME, name, sizeof(name)) != ZX_OK) {
         return false;
     }
 
@@ -419,11 +434,19 @@ bool Fuzzer::CheckProcess(zx_handle_t process) const {
     if (meta) {
         target = meta + strlen("#meta/");
     }
-    if (strcmp(name, target) != 0 || zx_object_get_info(process, ZX_INFO_PROCESS, &info,
-                                                        sizeof(info), nullptr, nullptr) != ZX_OK) {
+    if (strcmp(name, target) != 0) {
         return false;
     }
+    if (kill) {
+        zx_task_kill(task);
+        return true;
+    }
 
+    zx_info_process_t info;
+
+    if (zx_object_get_info(task, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr) != ZX_OK) {
+        return false;
+    }
     if (!info.started) {
         fprintf(out_, "%s: NOT STARTED\n", name_.c_str());
     } else if (!info.exited) {
@@ -656,7 +679,7 @@ zx_status_t Fuzzer::Check() {
     zx_status_t rc;
 
     // Report fuzzer execution status
-    Walker walker(this);
+    Walker walker(this, false /* !kill */);
     if (walker.WalkRootJobTree() != ZX_ERR_STOP) {
         fprintf(out_, "%s: STOPPED\n", name_.c_str());
     }
@@ -698,6 +721,13 @@ zx_status_t Fuzzer::Check() {
         }
     }
 
+    return ZX_OK;
+}
+
+zx_status_t Fuzzer::Stop() {
+    Walker walker(this, true /* kill */);
+    walker.WalkRootJobTree();
+    fprintf(out_, "Stopped %zu tasks.\n", walker.killed());
     return ZX_OK;
 }
 
