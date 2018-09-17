@@ -17,47 +17,41 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
 sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
 import yaml
 sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
-from layout_builder import Builder, process_manifest
+from frontend import Frontend
 
 
-class DartBuilder(Builder):
+class DartBuilder(Frontend):
 
-    def __init__(self, output):
-        super(DartBuilder, self).__init__(domains=['dart'])
-        self.output = output
+    def __init__(self, **kwargs):
+        super(DartBuilder, self).__init__(**kwargs)
 
-    def install_dart_atom(self, atom):
-        if atom.tags['type'] != 'library':
-            print('Skipping non-library atom %s.' % atom.id)
-            return
-        base = os.path.join(self.output, 'packages', atom.id.name)
+    def install_dart_library_atom(self, atom):
+        base = self.dest('packages', atom['name'])
         # Copy all the source files.
-        for file in atom.files:
-            dest = os.path.join(base, file.destination)
-            self.make_dir(dest)
-            shutil.copyfile(file.source, dest)
+        for file in atom['sources']:
+            relative_path = os.path.relpath(file, atom['root'])
+            dest = self.dest(base, relative_path)
+            shutil.copy2(self.source(file), dest)
         # Gather the list of dependencies.
         # All Fuchsia dependencies are assumed to be siblings of this atom's
         # directory.
         deps = {}
-        for dep in atom.deps:
-            name = str(dep.name)
-            deps[name] = {
-                'path': '../%s' % name,
+        for dep in atom['deps']:
+            deps[dep] = {
+                'path': '../%s' % dep,
             }
         # Add third-party dependencies.
-        for tag, value in atom.tags.iteritems():
-            if not tag.startswith('3p:'):
-                continue
-            name = tag.split(':', 1)[1]
-            if value == 'flutter_sdk':
+        for dep in atom['third_party_deps']:
+            name = dep['name']
+            version = dep['version']
+            if name == 'flutter_sdk':
                 deps[name] = {
                     'sdk': 'flutter',
                 }
             else:
-                deps[name] = '^%s' % value
+                deps[name] = '^%s' % version
         pubspec = {
-            'name': atom.id.name,
+            'name': atom['name'],
             'dependencies': deps,
         }
         manifest = os.path.join(base, 'pubspec.yaml')
@@ -68,19 +62,26 @@ class DartBuilder(Builder):
 
 def main():
     parser = argparse.ArgumentParser(
-            description=('Lays out a Dart SDK based on the given manifest'))
-    parser.add_argument('--manifest',
-                        help='Path to the SDK manifest',
-                        required=True)
+            description='Lays out a Dart SDK for a given SDK tarball.')
+    source_group = parser.add_mutually_exclusive_group(required=True)
+    source_group.add_argument('--archive',
+                              help='Path to the SDK archive to ingest',
+                              default='')
+    source_group.add_argument('--directory',
+                              help='Path to the SDK directory to ingest',
+                              default='')
     parser.add_argument('--output',
                         help='Path to the directory where to install the SDK',
                         required=True)
     args = parser.parse_args()
 
-    shutil.rmtree(args.output, True)
+    # Remove any existing output.
+    shutil.rmtree(args.output, ignore_errors=True)
 
-    builder = DartBuilder(args.output)
-    return 0 if process_manifest(args.manifest, builder) else 1
+    builder = DartBuilder(archive=args.archive,
+                          directory=args.directory,
+                          output=args.output)
+    return 0 if builder.run() else 1
 
 
 if __name__ == '__main__':
