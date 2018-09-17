@@ -87,5 +87,30 @@ services, you can add a `injected-services` clause to the manifest file's facets
 `run_test_component` will start `component_url1` and `component_url2` and the
 test will have access to `service_name1` and `service_name2`.
 
+### Network access
+Currently we cannot run an instance of netstack inside a hermetic environment,
+because it conflicts with the real netstack.  If your test needs to talk to
+netstack, it may only talk to the real netstack outside the test environment. To
+enable this workaround you need to allow some system services:
+
+```json
+"facets": {
+  "fuchsia.test": {
+    "system-services": [
+      "fuchsia.netstack.Netstack",
+      "fuchsia.net.LegacySocketProvider",
+      "fuchsia.net.Connectivity",
+      "fuchsia.net.stack.Stack"
+    ]
+  }
+}
+```
+
+Depending on your use case you can include one or more of the services above.
+However, we do not allow any other services.
+
+This option would be deprecated once we fix CP-144.
+
+
 
 
