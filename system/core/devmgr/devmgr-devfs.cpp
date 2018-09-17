@@ -72,12 +72,14 @@ extern port_t dc_port;
 
 static uint64_t next_ino = 2;
 
-static devnode_t root_devnode = {
-    .name = "",
-    .ino = 1,
-    .children = LIST_INITIAL_VALUE(root_devnode.children),
-    .iostate = LIST_INITIAL_VALUE(root_devnode.iostate),
-};
+static devnode_t root_devnode = []() {
+    devnode_t node = {};
+    node.name = "";
+    node.ino = 1;
+    node.children = LIST_INITIAL_VALUE(root_devnode.children);
+    node.iostate = LIST_INITIAL_VALUE(root_devnode.iostate);
+    return node;
+}();
 
 static devnode_t* class_devnode;
 
@@ -136,7 +138,7 @@ void describe_error(zx_handle_t h, zx_status_t status) {
 }
 
 static zx_status_t iostate_create(devnode_t* dn, zx_handle_t h) {
-    iostate_t* ios = calloc(1, sizeof(iostate_t));
+    iostate_t* ios = static_cast<iostate_t*>(calloc(1, sizeof(iostate_t)));
     if (ios == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -202,8 +204,8 @@ static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
     }
 
     uint8_t msg[VFS_WATCH_NAME_MAX + 2];
-    msg[0] = op;
-    msg[1] = len;
+    msg[0] = static_cast<uint8_t>(op);
+    msg[1] = static_cast<uint8_t>(len);
     memcpy(msg + 2, name, len);
 
     // convert to mask
@@ -216,7 +218,7 @@ static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
         if (!(w->mask & op)) {
             continue;
         }
-        if (zx_channel_write(w->handle, 0, msg, len + 2, NULL, 0) < 0) {
+        if (zx_channel_write(w->handle, 0, msg, static_cast<uint32_t>(len + 2), NULL, 0) < 0) {
             *wp = next;
             zx_handle_close(w->handle);
             free(w);
@@ -227,7 +229,7 @@ static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
 }
 
 static zx_status_t devfs_watch(devnode_t* dn, zx_handle_t h, uint32_t mask) {
-    watcher_t* watcher = calloc(1, sizeof(watcher_t));
+    watcher_t* watcher = static_cast<watcher_t*>(calloc(1, sizeof(watcher_t)));
     if (watcher == NULL) {
         zx_handle_close(h);
         return ZX_ERR_NO_MEMORY;
@@ -262,7 +264,7 @@ static zx_status_t devfs_watch(devnode_t* dn, zx_handle_t h, uint32_t mask) {
 // of name, which should be copied into the devnode.  Otherwise name
 // is guaranteed to exist for the lifetime of the devnode.
 static devnode_t* devfs_mknode(device_t* dev, const char* name, size_t namelen) {
-    devnode_t* dn = calloc(1, sizeof(devnode_t) + namelen);
+    devnode_t* dn = static_cast<devnode_t*>(calloc(1, sizeof(devnode_t) + namelen));
     if (dn == NULL) {
         return NULL;
     }
@@ -344,7 +346,8 @@ zx_status_t devfs_publish(device_t* parent, device_t* dev) {
     }
 
     // Create link in /dev/class/... if this id has a published class
-    devnode_t* dir = proto_dir(dev->protocol_id);
+    devnode_t* dir;
+    dir = proto_dir(dev->protocol_id);
     if (dir != NULL) {
         char tmp[32];
         const char* name = dev->name;
@@ -570,14 +573,14 @@ static zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino,
         return ZX_ERR_INVALID_ARGS;
     }
     de->ino = ino;
-    de->size = len;
+    de->size = static_cast<uint8_t>(len);
     de->type = type;
     memcpy(de->name, name, len);
-    return sz;
+    return static_cast<zx_status_t>(sz);
 }
 
 static zx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size_t len) {
-    void* ptr = data;
+    char* ptr = static_cast<char*>(data);
     uint64_t ino = *_ino;
 
     devnode_t* child;
@@ -599,7 +602,9 @@ static zx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size
             }
         }
         ino = child->ino;
-        zx_status_t r = fill_dirent(ptr, len, ino, child->name, strlen(child->name),
+        auto vdirent = reinterpret_cast<vdirent_t*>(ptr);
+        auto child_name_len = static_cast<uint32_t>(strlen(child->name));
+        zx_status_t r = fill_dirent(vdirent, len, ino, child->name, child_name_len,
                                     VTYPE_TO_DTYPE(V_TYPE_DIR));
         if (r < 0) {
             break;
@@ -609,7 +614,7 @@ static zx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size
     }
 
     *_ino = ino;
-    return ptr - data;
+    return static_cast<zx_status_t>(ptr - static_cast<char*>(data));
 }
 
 // Helper macros for |devfs_fidl_handler| which make it easier
@@ -634,13 +639,13 @@ static zx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size
 
 
 static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
-    iostate_t* ios = cookie;
+    auto ios = static_cast<iostate_t*>(cookie);
     devnode_t* dn = ios->devnode;
     if (dn == NULL) {
         return ZX_ERR_PEER_CLOSED;
     }
 
-    fidl_message_header_t* hdr = msg->bytes;
+    auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
 
     zx_status_t r;
     switch (hdr->ordinal) {
@@ -664,7 +669,7 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
     case ZXFIDL_OPEN: {
         DECODE_REQUEST(msg, DirectoryOpen);
         DEFINE_REQUEST(msg, DirectoryOpen);
-        uint32_t len = request->path.size;
+        uint32_t len = static_cast<uint32_t>(request->path.size);
         char* path = request->path.data;
         zx_handle_t h = request->object;
         uint32_t flags = request->flags;
