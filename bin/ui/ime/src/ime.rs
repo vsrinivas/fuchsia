@@ -3,16 +3,17 @@
 // found in the LICENSE file.
 
 use crate::ime_service::ImeService;
+use failure::ResultExt;
 use fidl::encoding::OutOfLine;
+use fidl::endpoints::RequestStream;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::InputMethodEditorRequest as ImeReq;
 use fuchsia_syslog::{fx_log, fx_log_err, fx_log_warn};
-use futures::future;
 use futures::prelude::*;
 use parking_lot::Mutex;
 use std::char;
 use std::ops::Range;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 // TODO(lard): move constants into common, centralized location?
 const HID_USAGE_KEY_BACKSPACE: u32 = 0x2a;
@@ -20,98 +21,95 @@ const HID_USAGE_KEY_RIGHT: u32 = 0x4f;
 const HID_USAGE_KEY_LEFT: u32 = 0x50;
 const HID_USAGE_KEY_ENTER: u32 = 0x28;
 
-pub struct IME {
-    state: uii::TextInputState,
+/// The internal state of the IME, usually held within the IME behind an Arc<Mutex>
+/// so it can be accessed from multiple places.
+pub struct ImeState {
+    text_state: uii::TextInputState,
     client: Box<uii::InputMethodEditorClientProxyInterface>,
     keyboard_type: uii::KeyboardType,
     action: uii::InputMethodAction,
     ime_service: ImeService,
 }
 
-impl IME {
+/// A service that talks to a text field, providing it edits and cursor state updates
+/// in response to user input.
+#[derive(Clone)]
+pub struct Ime(Arc<Mutex<ImeState>>);
+
+impl Ime {
     pub fn new<I: 'static + uii::InputMethodEditorClientProxyInterface>(
         keyboard_type: uii::KeyboardType, action: uii::InputMethodAction,
         initial_state: uii::TextInputState, client: I, ime_service: ImeService,
-    ) -> IME {
-        IME {
-            state: initial_state,
+    ) -> Ime {
+        let state = ImeState {
+            text_state: initial_state,
             client: Box::new(client),
             keyboard_type: keyboard_type,
             action: action,
             ime_service: ime_service,
-        }
-    }
-
-    pub fn bind(self, edit_stream: uii::InputMethodEditorRequestStream) -> Arc<Mutex<Self>> {
-        let self_mutex = Arc::new(Mutex::new(self));
-        let self_mutex_2 = self_mutex.clone();
-        let self_mutex_3 = self_mutex.clone();
-        let stream_complete = edit_stream
-            .try_for_each(move |edit_request| {
-                Self::handle_request(self_mutex_2.clone(), edit_request);
-                future::ready(Ok(()))
-            }).unwrap_or_else(|e| fx_log_err!("error running ime server: {:?}", e))
-            .then(move |_| {
-                let ime_service = {
-                    // in block so we don't hold more than one lock at a time
-                    self_mutex_3.lock().ime_service.clone()
-                };
-                ime_service.update_keyboard_visibility_from_ime(&self_mutex_3, false);
-                future::ready(())
-            });
-        fuchsia_async::spawn(stream_complete);
-        self_mutex
-    }
-
-    pub fn handle_request(self_mutex: Arc<Mutex<Self>>, edit_request: ImeReq) {
-        match edit_request {
-            ImeReq::SetKeyboardType { keyboard_type, .. } => {
-                let mut this = self_mutex.lock();
-                this.keyboard_type = keyboard_type;
-            }
-            ImeReq::SetState { state, .. } => {
-                let mut this = self_mutex.lock();
-                this.set_state(state);
-            }
-            ImeReq::InjectInput { event, .. } => {
-                let mut this = self_mutex.lock();
-                this.inject_input(event);
-            }
-            ImeReq::Show { .. } => {
-                // noop, call this method on ImeService instead
-                // TODO(TEXT-19): remove this later once we patch PlatformView
-            }
-            ImeReq::Hide { .. } => {
-                // noop, call this method on ImeService instead
-                // TODO(TEXT-19): remove this later once we patch PlatformView
-            }
         };
+        Ime(Arc::new(Mutex::new(state)))
     }
 
-    fn set_state(&mut self, state: uii::TextInputState) {
-        self.state = state;
+    pub fn downgrade(&self) -> Weak<Mutex<ImeState>> {
+        Arc::downgrade(&self.0)
+    }
+
+    pub fn upgrade(weak: &Weak<Mutex<ImeState>>) -> Option<Ime> {
+        weak.upgrade().map(|arc| Ime(arc))
+    }
+
+    pub fn bind_ime(&self, chan: fuchsia_async::Channel) {
+        let self_clone = self.clone();
+        let self_clone_2 = self.clone();
+        fuchsia_async::spawn(
+            async move {
+                let mut stream = uii::InputMethodEditorRequestStream::from_channel(chan);
+                while let Some(msg) = await!(stream.try_next())
+                    .context("error reading value from IME request stream")?
+                {
+                    match msg {
+                        ImeReq::SetKeyboardType { keyboard_type, .. } => {
+                            let mut state = self_clone.0.lock();
+                            state.keyboard_type = keyboard_type;
+                        }
+                        ImeReq::SetState { state, .. } => {
+                            self_clone.set_state(state);
+                        }
+                        ImeReq::InjectInput { event, .. } => {
+                            self_clone.inject_input(event);
+                        }
+                        ImeReq::Show { .. } => {
+                            // clone to ensure we only hold one lock at a time
+                            let ime_service = self_clone.0.lock().ime_service.clone();
+                            ime_service.show_keyboard();
+                        }
+                        ImeReq::Hide { .. } => {
+                            // clone to ensure we only hold one lock at a time
+                            let ime_service = self_clone.0.lock().ime_service.clone();
+                            ime_service.hide_keyboard();
+                        }
+                    }
+                }
+                Ok(())
+            }
+                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e))
+                .then(async move |()| {
+                    // this runs when IME stream closes
+                    // clone to ensure we only hold one lock at a time
+                    let ime_service = self_clone_2.0.lock().ime_service.clone();
+                    ime_service.update_keyboard_visibility_from_ime(&self_clone_2.0, false);
+                }),
+        );
+    }
+
+    fn set_state(&self, input_state: uii::TextInputState) {
+        self.0.lock().text_state = input_state;
         // the old C++ IME implementation didn't call did_update_state here, so we won't either.
     }
 
-    fn did_update_state(&mut self, e: uii::KeyboardEvent) {
-        self.client
-            .did_update_state(
-                &mut self.state,
-                Some(OutOfLine(&mut uii::InputEvent::Keyboard(e))),
-            ).unwrap_or_else(|e| fx_log_warn!("error sending state update to ImeClient: {:?}", e));
-    }
-
-    // gets start and len, and sets base/extent to start of string if don't exist
-    fn selection(&mut self) -> Range<usize> {
-        let s = &mut self.state.selection;
-        s.base = s.base.max(0).min(self.state.text.len() as i64);
-        s.extent = s.extent.max(0).min(self.state.text.len() as i64);
-        let start = s.base.min(s.extent) as usize;
-        let end = s.base.max(s.extent) as usize;
-        (start..end)
-    }
-
-    pub fn inject_input(&mut self, event: uii::InputEvent) {
+    pub fn inject_input(&self, event: uii::InputEvent) {
+        let mut state = self.0.lock();
         let keyboard_event = match event {
             uii::InputEvent::Keyboard(e) => e,
             _ => return,
@@ -121,24 +119,24 @@ impl IME {
             || keyboard_event.phase == uii::KeyboardEventPhase::Repeat
         {
             if keyboard_event.code_point != 0 {
-                self.type_keycode(keyboard_event.code_point);
-                self.did_update_state(keyboard_event)
+                state.type_keycode(keyboard_event.code_point);
+                state.did_update_state(keyboard_event)
             } else {
                 match keyboard_event.hid_usage {
                     HID_USAGE_KEY_BACKSPACE => {
-                        self.delete_backward();
-                        self.did_update_state(keyboard_event);
+                        state.delete_backward();
+                        state.did_update_state(keyboard_event);
                     }
                     HID_USAGE_KEY_LEFT => {
-                        self.cursor_horizontal_move(keyboard_event.modifiers, false);
-                        self.did_update_state(keyboard_event);
+                        state.cursor_horizontal_move(keyboard_event.modifiers, false);
+                        state.did_update_state(keyboard_event);
                     }
                     HID_USAGE_KEY_RIGHT => {
-                        self.cursor_horizontal_move(keyboard_event.modifiers, true);
-                        self.did_update_state(keyboard_event);
+                        state.cursor_horizontal_move(keyboard_event.modifiers, true);
+                        state.did_update_state(keyboard_event);
                     }
                     HID_USAGE_KEY_ENTER => {
-                        self.client.on_action(self.action).unwrap_or_else(|e| {
+                        state.client.on_action(state.action).unwrap_or_else(|e| {
                             fx_log_warn!("error sending action to ImeClient: {:?}", e)
                         });
                     }
@@ -152,9 +150,29 @@ impl IME {
             }
         }
     }
+}
 
-    fn type_keycode(&mut self, code_point: u32) {
-        self.state.revision += 1;
+impl ImeState {
+    pub fn did_update_state(&mut self, e: uii::KeyboardEvent) {
+        self.client
+            .did_update_state(
+                &mut self.text_state,
+                Some(OutOfLine(&mut uii::InputEvent::Keyboard(e))),
+            ).unwrap_or_else(|e| fx_log_warn!("error sending state update to ImeClient: {:?}", e));
+    }
+
+    // gets start and len, and sets base/extent to start of string if don't exist
+    pub fn selection(&mut self) -> Range<usize> {
+        let s = &mut self.text_state.selection;
+        s.base = s.base.max(0).min(self.text_state.text.len() as i64);
+        s.extent = s.extent.max(0).min(self.text_state.text.len() as i64);
+        let start = s.base.min(s.extent) as usize;
+        let end = s.base.max(s.extent) as usize;
+        (start..end)
+    }
+
+    pub fn type_keycode(&mut self, code_point: u32) {
+        self.text_state.revision += 1;
 
         let replacement = match char::from_u32(code_point) {
             Some(v) => v.to_string(),
@@ -162,25 +180,25 @@ impl IME {
         };
 
         let selection = self.selection();
-        self.state
+        self.text_state
             .text
             .replace_range(selection.clone(), &replacement);
 
-        self.state.selection.base = selection.start as i64 + replacement.len() as i64;
-        self.state.selection.extent = self.state.selection.base;
+        self.text_state.selection.base = selection.start as i64 + replacement.len() as i64;
+        self.text_state.selection.extent = self.text_state.selection.base;
     }
 
-    fn delete_backward(&mut self) {
-        self.state.revision += 1;
+    pub fn delete_backward(&mut self) {
+        self.text_state.revision += 1;
 
         // set base and extent to 0 if either is -1, to ensure there is a selection/cursor
         self.selection();
 
-        if self.state.selection.base == self.state.selection.extent {
-            if self.state.selection.base > 0 {
+        if self.text_state.selection.base == self.text_state.selection.extent {
+            if self.text_state.selection.base > 0 {
                 // Change cursor to 1-char selection, so that it can be uniformly handled
                 // by the selection-deletion code below.
-                self.state.selection.base -= 1;
+                self.text_state.selection.base -= 1;
             } else {
                 // Cursor is at beginning of text; there is nothing previous to delete.
                 return;
@@ -189,18 +207,18 @@ impl IME {
 
         // Delete the current selection.
         let selection = self.selection();
-        self.state.text.replace_range(selection.clone(), "");
-        self.state.selection.extent = selection.start as i64;
-        self.state.selection.base = self.state.selection.extent;
+        self.text_state.text.replace_range(selection.clone(), "");
+        self.text_state.selection.extent = selection.start as i64;
+        self.text_state.selection.base = self.text_state.selection.extent;
     }
 
-    fn cursor_horizontal_move(&mut self, modifiers: u32, go_right: bool) {
-        self.state.revision += 1;
+    pub fn cursor_horizontal_move(&mut self, modifiers: u32, go_right: bool) {
+        self.text_state.revision += 1;
 
         let shift_pressed = modifiers & uii::MODIFIER_SHIFT != 0;
         let selection = self.selection();
         let text_is_selected = selection.start != selection.end;
-        let mut new_position = self.state.selection.extent;
+        let mut new_position = self.text_state.selection.extent;
 
         if !shift_pressed && text_is_selected {
             // canceling selection, new position based on start/end of selection
@@ -216,14 +234,14 @@ impl IME {
             } else {
                 new_position -= 1
             }
-            new_position = new_position.max(0).min(self.state.text.len() as i64);
+            new_position = new_position.max(0).min(self.text_state.text.len() as i64);
         }
 
-        self.state.selection.extent = new_position;
+        self.text_state.selection.extent = new_position;
         if !shift_pressed {
-            self.state.selection.base = new_position;
+            self.text_state.selection.base = new_position;
         }
-        self.state.selection.affinity = uii::TextAffinity::Downstream;
+        self.text_state.selection.affinity = uii::TextAffinity::Downstream;
     }
 }
 
@@ -266,7 +284,7 @@ mod test {
     fn set_up(
         text: &str, base: i64, extent: i64,
     ) -> (
-        IME,
+        Ime,
         Receiver<uii::TextInputState>,
         Receiver<uii::InputMethodAction>,
     ) {
@@ -275,7 +293,7 @@ mod test {
         state.text = text.to_string();
         state.selection.base = base;
         state.selection.extent = extent;
-        let ime = IME::new(
+        let ime = Ime::new(
             uii::KeyboardType::Text,
             uii::InputMethodAction::Search,
             state,
@@ -286,7 +304,7 @@ mod test {
     }
 
     fn simulate_keypress<K: Into<u32> + Copy>(
-        ime: &mut IME, key: K, hid_key: bool, shift_pressed: bool,
+        ime: &mut Ime, key: K, hid_key: bool, shift_pressed: bool,
     ) {
         let hid_usage = if hid_key { key.into() } else { 0 };
         let code_point = if hid_key { 0 } else { key.into() };
@@ -357,7 +375,7 @@ mod test {
     #[test]
     fn test_mock_ime_channels() {
         let (client, statechan, actionchan) = MockImeClient::new();
-        let mut ime = IME::new(
+        let mut ime = Ime::new(
             uii::KeyboardType::Text,
             uii::InputMethodAction::Search,
             default_state(),

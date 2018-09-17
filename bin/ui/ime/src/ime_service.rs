@@ -2,19 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::ime::IME;
-use fidl::endpoints::{ClientEnd, ServerEnd};
+use crate::ime::{Ime, ImeState};
+use failure::ResultExt;
+use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
-use futures::future;
+use fuchsia_syslog::{fx_log, fx_log_err};
+use futures::prelude::*;
 use parking_lot::Mutex;
 use std::sync::{Arc, Weak};
 
 pub struct ImeServiceState {
     pub keyboard_visible: bool,
-    pub active_ime: Option<Weak<Mutex<IME>>>,
+    pub active_ime: Option<Weak<Mutex<ImeState>>>,
     pub visibility_listeners: Vec<uii::ImeVisibilityServiceControlHandle>,
 }
 
+/// The internal state of the IMEService, usually held behind an Arc<Mutex>
+/// so it can be accessed from multiple places.
 impl ImeServiceState {
     pub fn update_keyboard_visibility(&mut self, visible: bool) {
         self.keyboard_visible = visible;
@@ -28,6 +32,10 @@ impl ImeServiceState {
     }
 }
 
+/// The ImeService is a central, discoverable service responsible for creating new IMEs when a new
+/// text field receives focus. It also advertises the ImeVisibilityService, which allows a client
+/// (usually a soft keyboard container) to receive updates when the keyboard has been requested to
+/// be shown or hidden.
 #[derive(Clone)]
 pub struct ImeService(Arc<Mutex<ImeServiceState>>);
 
@@ -41,7 +49,9 @@ impl ImeService {
     }
 
     /// Only updates the keyboard visibility if IME passed in is active
-    pub fn update_keyboard_visibility_from_ime(&self, check_ime: &Arc<Mutex<IME>>, visible: bool) {
+    pub fn update_keyboard_visibility_from_ime(
+        &self, check_ime: &Arc<Mutex<ImeState>>, visible: bool,
+    ) {
         let mut state = self.0.lock();
         let active_ime_weak = match &state.active_ime {
             Some(val) => val,
@@ -55,91 +65,109 @@ impl ImeService {
             state.update_keyboard_visibility(visible);
         }
     }
-}
 
-impl uii::ImeService for ImeService {
-    type OnOpenFut = future::Ready<()>;
-    fn on_open(&mut self, _control_handle: uii::ImeServiceControlHandle) -> Self::OnOpenFut {
-        future::ready(())
-    }
-
-    type GetInputMethodEditorFut = future::Ready<()>;
     fn get_input_method_editor(
         &mut self, keyboard_type: uii::KeyboardType, action: uii::InputMethodAction,
         initial_state: uii::TextInputState, client: ClientEnd<uii::InputMethodEditorClientMarker>,
         editor: ServerEnd<uii::InputMethodEditorMarker>,
-        _control_handle: uii::ImeServiceControlHandle,
-    ) -> Self::GetInputMethodEditorFut {
-        if let Ok(edit_stream) = editor.into_stream() {
-            if let Ok(client_proxy) = client.into_proxy() {
-                let ime_ref = Arc::downgrade(
-                    &IME::new(
-                        keyboard_type,
-                        action,
-                        initial_state,
-                        client_proxy,
-                        self.clone(),
-                    ).bind(edit_stream),
-                );
-                let mut state = self.0.lock();
-                state.active_ime = Some(ime_ref);
+    ) {
+        if let Ok(client_proxy) = client.into_proxy() {
+            let ime = Ime::new(
+                keyboard_type,
+                action,
+                initial_state,
+                client_proxy,
+                self.clone(),
+            );
+            let mut state = self.0.lock();
+            state.active_ime = Some(ime.downgrade());
+            if let Ok(chan) = fuchsia_async::Channel::from_channel(editor.into_channel()) {
+                ime.bind_ime(chan);
             }
         }
-        future::ready(())
     }
 
-    type ShowKeyboardFut = future::Ready<()>;
-    fn show_keyboard(
-        &mut self, _control_handle: uii::ImeServiceControlHandle,
-    ) -> Self::ShowKeyboardFut {
+    pub fn show_keyboard(&self) {
         self.0.lock().update_keyboard_visibility(true);
-        future::ready(())
     }
 
-    type HideKeyboardFut = future::Ready<()>;
-    fn hide_keyboard(
-        &mut self, _control_handle: uii::ImeServiceControlHandle,
-    ) -> Self::HideKeyboardFut {
+    pub fn hide_keyboard(&self) {
         self.0.lock().update_keyboard_visibility(false);
-        future::ready(())
     }
 
-    type InjectInputFut = future::Ready<()>;
-    fn inject_input(
-        &mut self, event: uii::InputEvent, _control_handle: uii::ImeServiceControlHandle,
-    ) -> Self::InjectInputFut {
+    fn inject_input(&mut self, event: uii::InputEvent) {
         let ime = {
             let state = self.0.lock();
             let active_ime_weak = match state.active_ime {
                 Some(ref v) => v,
-                None => return future::ready(()), // no currently active IME
+                None => return, // no currently active IME
             };
-            let active_ime = match active_ime_weak.upgrade() {
-                Some(v) => v,
-                None => return future::ready(()), // IME no longer exists
-            };
-            active_ime
+            match Ime::upgrade(active_ime_weak) {
+                Some(active_ime) => active_ime,
+                None => return, // IME no longer exists
+            }
         };
-        ime.lock().inject_input(event);
-        future::ready(())
+        ime.inject_input(event);
     }
-}
 
-impl uii::ImeVisibilityService for ImeService {
-    type OnOpenFut = future::Ready<()>;
-    fn on_open(
-        &mut self, control_handle: uii::ImeVisibilityServiceControlHandle,
-    ) -> Self::OnOpenFut {
-        let mut state = self.0.lock();
+    pub fn bind_ime_service(&self, chan: fuchsia_async::Channel) {
+        let mut self_clone = self.clone();
+        fuchsia_async::spawn(
+            async move {
+                let mut stream = uii::ImeServiceRequestStream::from_channel(chan);
+                while let Some(msg) = await!(stream.try_next())
+                    .context("error reading value from IME service request stream")?
+                {
+                    match msg {
+                        uii::ImeServiceRequest::GetInputMethodEditor {
+                            keyboard_type,
+                            action,
+                            initial_state,
+                            client,
+                            editor,
+                            ..
+                        } => {
+                            self_clone.get_input_method_editor(
+                                keyboard_type,
+                                action,
+                                initial_state,
+                                client,
+                                editor,
+                            );
+                        }
+                        uii::ImeServiceRequest::ShowKeyboard { .. } => {
+                            self_clone.show_keyboard();
+                        }
+                        uii::ImeServiceRequest::HideKeyboard { .. } => {
+                            self_clone.hide_keyboard();
+                        }
+                        uii::ImeServiceRequest::InjectInput { event, .. } => {
+                            self_clone.inject_input(event);
+                        }
+                    }
+                }
+                Ok(())
+            }
+                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+        );
+    }
 
-        // send the current state on first connect, even if it hasn't changed
-        if control_handle
-            .send_on_keyboard_visibility_changed(state.keyboard_visible)
-            .is_ok()
-        {
-            state.visibility_listeners.push(control_handle);
-        }
-
-        future::ready(())
+    pub fn bind_ime_visibility_service(&self, chan: fuchsia_async::Channel) {
+        let self_clone = self.clone();
+        fuchsia_async::spawn(
+            async move {
+                let stream = uii::ImeVisibilityServiceRequestStream::from_channel(chan);
+                let control_handle = stream.control_handle();
+                let mut state = self_clone.0.lock();
+                if control_handle
+                    .send_on_keyboard_visibility_changed(state.keyboard_visible)
+                    .is_ok()
+                {
+                    state.visibility_listeners.push(control_handle);
+                }
+                Ok(())
+            }
+                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+        );
     }
 }
