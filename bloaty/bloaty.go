@@ -51,6 +51,8 @@ func run(bloatyPath, file string, out chan<- bloatyOutput) {
 	}
 	cmd := exec.Command(bloatyPath, args...)
 	stdout, err := cmd.StdoutPipe()
+	defer stdout.Close()
+
 	if err != nil {
 		out <- bloatyOutput{err: fmt.Errorf("pipe: %s: %s", file, err)}
 		return
