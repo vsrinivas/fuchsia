@@ -146,7 +146,7 @@ zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
     // physical address space on x86 (through the use of INVEPT), we fault the
     // page with the maximum allowable permissions of the mapping.
     fbl::RefPtr<VmMapping> mapping = region->as_vm_mapping();
-    uint pf_flags = VMM_PF_FLAG_HW_FAULT;
+    uint pf_flags = VMM_PF_FLAG_GUEST | VMM_PF_FLAG_HW_FAULT;
     if (mapping->arch_mmu_flags() & ARCH_MMU_FLAG_PERM_WRITE) {
       pf_flags |= VMM_PF_FLAG_WRITE;
     }
