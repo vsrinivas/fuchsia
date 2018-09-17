@@ -21,7 +21,7 @@ MODULE_SRCS := \
 	$(DEVMGR_SRCS)/devhost.cpp \
 	$(DEVMGR_SRCS)/devhost-api.cpp \
 	$(DEVMGR_SRCS)/devhost-core.c \
-	$(DEVMGR_SRCS)/devhost-rpc-server.c \
+	$(DEVMGR_SRCS)/devhost-rpc-server.cpp \
 	$(DEVMGR_SRCS)/devhost-shared.c \
 
 MODULE_FIDL_LIBS := \
