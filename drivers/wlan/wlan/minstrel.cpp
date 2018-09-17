@@ -226,6 +226,7 @@ void MinstrelRateSelector::RemovePeer(const common::MacAddr& addr) {
     auto iter = peer_map_.find(addr);
     if (iter == peer_map_.end()) { return; }
 
+    outdated_peers_.erase(addr);
     peer_map_.erase(iter);
 }
 
@@ -249,16 +250,16 @@ void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_statu
         (*tx_stats_map)[last_idx].success++;
     }
 
-    peer->has_update = true;
+    outdated_peers_.emplace(peer_addr);
 }
 
 void MinstrelRateSelector::UpdateStats() {
-    for (auto iter = peer_map_.begin(); iter != peer_map_.end(); ++iter) {
-        if (!iter->second.has_update) { continue; }
-        iter->second.has_update = false;
-
-        // TODO(eyw): Loop through all tx_stats and pick the best combination for next update period
+    for (auto peer_addr : outdated_peers_) {
+        auto* peer = GetPeer(peer_addr);
+        ZX_DEBUG_ASSERT(peer != nullptr);
     }
+    // TODO(eyw): Loop through all tx_stats and pick the best combination for next update period
+    outdated_peers_.clear();
 }
 
 Peer* MinstrelRateSelector::GetPeer(const common::MacAddr& addr) {

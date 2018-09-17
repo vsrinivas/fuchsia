@@ -17,6 +17,7 @@
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <unordered_map>
+#include <unordered_set>
 
 namespace wlan {
 
@@ -38,10 +39,8 @@ struct Peer {
     bool is_ht = false;
     bool is_vht = false;
 
-    bool has_update = false;  // has new transmission since last update.
     std::unordered_map<tx_vec_idx_t, TxStats>
         tx_stats_map;  // 1:1 mapping to tx_params_list, constantly updated.
-
 };
 
 class MinstrelRateSelector {
@@ -57,6 +56,8 @@ class MinstrelRateSelector {
     void GenerateProbeSequence();
     Peer* GetPeer(const common::MacAddr& addr);
 
+    // Holds MAC addresses of peers with at least one status report but has not been processed.
+    std::unordered_set<common::MacAddr, common::MacAddrHasher> outdated_peers_;
     std::unordered_map<common::MacAddr, Peer, common::MacAddrHasher> peer_map_;
     TimerManager timer_mgr_;
 };
