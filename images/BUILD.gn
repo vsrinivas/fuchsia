@@ -630,36 +630,6 @@ images += [
   },
 ]
 
-# fvm.sparse.blk creates a sparse FVM partition image containing the blob
-# partition produced by blob.blk.  fvm.sparse.blk is primarily invoked and
-# used by the paver boot, via `fx boot-paver`.
-generate_fvm("fvm.sparse.blk") {
-  testonly = true
-  output_name = "$target_out_dir/fvm.sparse.blk"
-  deps = [
-    ":blob.blk",
-  ]
-  args = fvm_sparse_args + [ "--blob" ]
-}
-images += [
-  {
-    deps = [
-      ":fvm.sparse.blk",
-    ]
-    json = {
-      name = "storage-sparse"
-      type = "blk"
-    }
-    installer = "fvm.sparse.blk"
-    sdk = "fvm.sparse.blk"
-    public = [
-      "IMAGE_FVM_SPARSE",
-    ]
-    legacy_copy = "fvm.sparse.blk"
-    legacy_copy_dir = legacy_images_dir
-  },
-]
-
 # data.blk creates an empty but initialized minfs data partition.
 # The partition is included in fvm.data.sparse.blk.
 zircon_tool_action("data.blk") {
@@ -684,8 +654,58 @@ images += [
   },
 ]
 
+
+# fvm.sparse.blk creates a sparse FVM partition image containing the blob
+# partition produced by blob.blk and the data partition produced by data.blk.
+# fvm.sparse.blk is primarily invoked and used by the paver boot, via `fx
+# boot`.
+zircon_tool_action("fvm.sparse.blk") {
+  testonly = true
+  visibility = [ ":*" ]
+  tool = "fvm"
+  outputs = [
+    "$target_out_dir/fvm.sparse.blk",
+  ]
+  sources = []
+  deps = [
+    ":blob.blk",
+    ":data.blk",
+  ]
+  foreach(label, deps) {
+    sources += get_target_outputs(label)
+  }
+  # Note: this action can not be expressed using the `generate_fvm` template
+  # because it needs to interleave the blob and data flags.
+  args = rebase_path(outputs, root_build_dir) + 
+    fvm_sparse_args +
+    [ "--blob" ] + 
+    rebase_path(get_target_outputs(":blob.blk"), root_build_dir) +
+    [ "--data" ] +
+    rebase_path(get_target_outputs(":data.blk"), root_build_dir)
+}
+images += [
+  {
+    deps = [
+      ":fvm.sparse.blk",
+    ]
+    json = {
+      name = "storage-sparse"
+      type = "blk"
+    }
+    installer = "fvm.sparse.blk"
+    sdk = "fvm.sparse.blk"
+    public = [
+      "IMAGE_FVM_SPARSE",
+    ]
+    legacy_copy = "fvm.sparse.blk"
+    legacy_copy_dir = legacy_images_dir
+  },
+]
+
+
 # fmv.data.sparse.blk is an FVM image containing only data.blk. It is
 # used to pave new data partitions to a device.
+# This target is deprecated and will be removed in future versions.
 generate_fvm("fvm.data.sparse.blk") {
   output_name = "$target_out_dir/fvm.data.sparse.blk"
   deps = [
