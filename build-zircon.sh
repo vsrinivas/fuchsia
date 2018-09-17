@@ -22,6 +22,7 @@ usage() {
   echo "  -V: Level 2 verbosity"
   echo "  -A: Build with ASan"
   echo "  -H: Build host tools with ASan"
+  echo "  -n: Just print make recipes to STDOUT."
   echo "  -j N: Passed along to make (number of parallel jobs)"
   echo "  -t <target>: Architecture (GN style) to build, instead of all"
   echo "  -o <outdir>: Directory in which to put the build-zircon directory."
@@ -32,17 +33,19 @@ usage() {
 
 declare ASAN="false"
 declare CLEAN="false"
+declare DRY_RUN="false"
 declare HOST_ASAN="false"
 declare OUTDIR="${ROOT_DIR}/out"
 declare VERBOSE="0"
 declare -a ARCHLIST=(arm64 x64)
 
-while getopts "AcHhj:t:p:o:vV" opt; do
+while getopts "AcHhnj:t:p:o:vV" opt; do
   case "${opt}" in
     A) ASAN="true" ;;
     c) CLEAN="true" ;;
     H) HOST_ASAN="true" ;;
     h) usage ; exit 0 ;;
+    n) DRY_RUN="true" ;;
     j) JOBS="${OPTARG}" ;;
     o) OUTDIR="${OPTARG}" ;;
     t) ARCHLIST=("${OPTARG}") ;;
@@ -53,7 +56,7 @@ while getopts "AcHhj:t:p:o:vV" opt; do
 done
 shift $(($OPTIND - 1))
 
-readonly ASAN CLEAN HOST_ASAN PROJECTS OUTDIR VERBOSE
+readonly ASAN CLEAN DRY_RUN HOST_ASAN PROJECTS OUTDIR VERBOSE
 readonly ZIRCON_BUILDROOT="${OUTDIR}/build-zircon"
 readonly -a ARCHLIST
 
@@ -75,9 +78,13 @@ else
   readonly NOT_ASAN=true
 fi
 
+if [[ "${DRY_RUN}" = "true" ]]; then
+  readonly DRY_RUN_ARGS="-Bnwk"
+fi
+
 make_zircon_common() {
   (test $QUIET -ne 0 || set -x
-   exec make --no-print-directory -C "${ROOT_DIR}/zircon" \
+   exec make ${DRY_RUN_ARGS} --no-print-directory -C "${ROOT_DIR}/zircon" \
              -j ${JOBS} DEBUG_BUILDROOT=../../zircon "$@")
 }
 

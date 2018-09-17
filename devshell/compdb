@@ -9,6 +9,9 @@
 ##        -z|--zircon to additonally generate compile_commands.json for Zircon
 ##        -z option also concatenates the two compile_commands.json
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
 generate_zircon () {
     zirc_compdb=$(which compiledb || echo)
     if [[ -z ${zirc_compdb} ]]; then
@@ -16,7 +19,7 @@ generate_zircon () {
         exit
     fi
 
-    ( cd ${FUCHSIA_DIR}/zircon; compiledb -o compile_commands.json -n make ${FUCHSIA_ARCH}) \
+    ( cd ${FUCHSIA_DIR}/zircon; "${FUCHSIA_DIR}/scripts/build-zircon.sh" -t "${FUCHSIA_ARCH}" -n | compiledb -o compile_commands.json -n) \
     || echo "An unknown error has occurred"     #TODO what errors could this be?
 }
 
