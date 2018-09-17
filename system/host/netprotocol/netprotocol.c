@@ -54,13 +54,6 @@ static int netboot_timeout_get_msec(const struct timeval *end_tv) {
     return wait_tv.tv_sec * 1000 + wait_tv.tv_usec / 1000;
 }
 
-static bool netboot_timer_is_expired(const struct timeval *end_tv) {
-    struct timeval now_tv;
-    gettimeofday(&now_tv, NULL);
-
-    return timercmp(&now_tv, end_tv, >=);
-}
-
 static int netboot_bind_to_cmd_port(int socket) {
     struct sockaddr_in6 addr;
     memset(&addr, 0, sizeof(addr));
@@ -280,9 +273,12 @@ int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, v
     bool first_wait = netboot_wait;
 
     struct timeval end_tv = netboot_timeout_init(first_wait ? 3600000 : netboot_timeout);
-    do {
-
+    for (;;) {
         int wait_ms = netboot_timeout_get_msec(&end_tv);
+        if (wait_ms < 0) {
+            // Expired.
+            break;
+        }
 
         int r = poll(&fds, 1, wait_ms);
         if (r > 0 && (fds.revents & POLLIN)) {
@@ -298,7 +294,7 @@ int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, v
             end_tv = netboot_timeout_init(netboot_timeout);
             first_wait = 0;
         }
-    } while (!netboot_timer_is_expired(&end_tv));
+    }
 
     close(s);
     if (received_packets) {
