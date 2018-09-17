@@ -43,7 +43,7 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
   }
 
   // |fuchsia::modular::Entity|
-  void WriteData(fuchsia::modular::EntityData data,
+  void WriteData(fidl::StringPtr type, fuchsia::mem::Buffer data,
                  WriteDataCallback callback) override {
     // TODO(MI4-1301)
     callback(fuchsia::modular::EntityWriteStatus::READ_ONLY);
@@ -51,6 +51,14 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
 
   // |fuchsia::modular::Entity|
   void GetReference(GetReferenceCallback callback) override {
+    // TODO(MI4-1301)
+    FXL_NOTIMPLEMENTED();
+  }
+
+  // |fuchsia::modular::Entity|
+  void Watch(
+      fidl::StringPtr type,
+      fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override {
     // TODO(MI4-1301)
     FXL_NOTIMPLEMENTED();
   }
