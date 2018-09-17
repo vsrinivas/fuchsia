@@ -16,7 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.cpp \
     $(LOCAL_DIR)/devhost-shared.c \
     $(LOCAL_DIR)/devmgr.c \
-    $(LOCAL_DIR)/devmgr-binding.c \
+    $(LOCAL_DIR)/devmgr-binding.cpp \
     $(LOCAL_DIR)/devmgr-coordinator.c \
     $(LOCAL_DIR)/devmgr-devfs.c \
     $(LOCAL_DIR)/devmgr-drivers.c \
