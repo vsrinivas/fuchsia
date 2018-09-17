@@ -6,10 +6,8 @@
 
 #include <hypervisor/guest_physical_address_space.h>
 
-#include <arch/mmu.h>
 #include <fbl/alloc_checker.h>
 #include <kernel/range_check.h>
-#include <vm/arch_vm_aspace.h>
 #include <vm/fault.h>
 #include <vm/vm_object_physical.h>
 
@@ -23,29 +21,6 @@ static constexpr uint kGuestMmuFlags =
     ARCH_MMU_FLAG_CACHED |
     ARCH_MMU_FLAG_PERM_READ |
     ARCH_MMU_FLAG_PERM_WRITE;
-
-namespace {
-
-// Locate a VMO at given |address|.
-struct VmoLocator final : public VmEnumerator {
-    const vaddr_t addr;
-    fbl::RefPtr<VmObject> vmo;
-    vaddr_t base = 0;
-
-    explicit VmoLocator(vaddr_t address) : addr(address) {}
-
-    bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) final {
-        if (addr < map->base() || addr >= (map->base() + map->size())) {
-            // Mapping does not cover 'addr', return true to keep going.
-            return true;
-        }
-        vmo = map->vmo();
-        base = map->base();
-        return false;
-    }
-};
-
-} // namespace
 
 namespace hypervisor {
 
@@ -117,41 +92,44 @@ zx_status_t GuestPhysicalAddressSpace::UnmapRange(zx_gpaddr_t guest_paddr, size_
     return RootVmar()->UnmapAllowPartial(guest_paddr, len);
 }
 
-zx_status_t GuestPhysicalAddressSpace::GetPage(zx_gpaddr_t guest_paddr, zx_paddr_t* host_paddr) {
-    // Narrow down the region that may contain the page.
-    fbl::RefPtr<VmAddressRegionOrMapping> region = RootVmar()->FindRegion(guest_paddr);
-    if (!region) {
-        return ZX_ERR_NOT_FOUND;
+static fbl::RefPtr<VmMapping> FindMapping(fbl::RefPtr<VmAddressRegion> region,
+                                          zx_gpaddr_t guest_paddr) {
+    for (fbl::RefPtr<VmAddressRegionOrMapping> next; (next = region->FindRegion(guest_paddr));
+         region = next->as_vm_address_region()) {
+        if (next->is_mapping()) {
+            return next->as_vm_mapping();
+        }
     }
+    return nullptr;
+}
 
-    // Iterate through the region to locate the VMO for the guest physical address.
-    VmoLocator vmo_locator(guest_paddr);
-    region->aspace()->EnumerateChildren(&vmo_locator);
-    if (!vmo_locator.vmo) {
+zx_status_t GuestPhysicalAddressSpace::GetPage(zx_gpaddr_t guest_paddr, zx_paddr_t* host_paddr) {
+    fbl::RefPtr<VmMapping> mapping = FindMapping(RootVmar(), guest_paddr);
+    if (!mapping) {
         return ZX_ERR_NOT_FOUND;
     }
 
     // Lookup the physical address of this page in the VMO.
-    zx_gpaddr_t offset = guest_paddr - vmo_locator.base;
-    return vmo_locator.vmo->Lookup(offset, PAGE_SIZE, kPfFlags, guest_lookup_page, host_paddr);
+    zx_gpaddr_t offset = guest_paddr - mapping->base();
+    return mapping->vmo()->Lookup(offset, PAGE_SIZE, kPfFlags, guest_lookup_page, host_paddr);
 }
 
 zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
-    fbl::RefPtr<VmAddressRegionOrMapping> region = RootVmar()->FindRegion(guest_paddr);
-    if (!region || !region->is_mapping()) {
-      return ZX_ERR_NOT_FOUND;
+    fbl::RefPtr<VmMapping> mapping = FindMapping(RootVmar(), guest_paddr);
+    if (!mapping) {
+        return ZX_ERR_NOT_FOUND;
     }
+
     // In order to avoid re-faulting if the guest changes how it accesses guest
     // physical memory, and to avoid the need for invalidation of the guest
     // physical address space on x86 (through the use of INVEPT), we fault the
     // page with the maximum allowable permissions of the mapping.
-    fbl::RefPtr<VmMapping> mapping = region->as_vm_mapping();
     uint pf_flags = VMM_PF_FLAG_GUEST | VMM_PF_FLAG_HW_FAULT;
     if (mapping->arch_mmu_flags() & ARCH_MMU_FLAG_PERM_WRITE) {
-      pf_flags |= VMM_PF_FLAG_WRITE;
+        pf_flags |= VMM_PF_FLAG_WRITE;
     }
     if (mapping->arch_mmu_flags() & ARCH_MMU_FLAG_PERM_EXECUTE) {
-      pf_flags |= VMM_PF_FLAG_INSTRUCTION;
+        pf_flags |= VMM_PF_FLAG_INSTRUCTION;
     }
     Guard<fbl::Mutex> guard{guest_aspace_->lock()};
     return mapping->PageFault(guest_paddr, pf_flags);
