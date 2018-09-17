@@ -242,7 +242,7 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype) {
 }
 
 std::string NameUnionTag(StringView union_name, const flat::Union::Member& member) {
-    return std::string(union_name) + "Tag" + NameIdentifier(member.name);
+    return std::string(union_name) + "Tag_" + NameIdentifier(member.name);
 }
 
 std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {

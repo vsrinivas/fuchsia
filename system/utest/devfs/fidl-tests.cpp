@@ -28,14 +28,14 @@ bool test_fidl_basic() {
     ASSERT_EQ(fdio_service_connect("/dev/class", request), ZX_OK);
     memset(&info, 0, sizeof(info));
     ASSERT_EQ(fuchsia_io_FileDescribe(h, &info), ZX_OK);
-    ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTagdirectory);
+    ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_directory);
     zx_handle_close(h);
 
     ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
     ASSERT_EQ(fdio_service_connect("/dev/zero", request), ZX_OK);
     memset(&info, 0, sizeof(info));
     ASSERT_EQ(fuchsia_io_FileDescribe(h, &info), ZX_OK);
-    ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTagdevice);
+    ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_device);
     ASSERT_NE(info.device.event, ZX_HANDLE_INVALID);
     zx_handle_close(info.device.event);
     zx_handle_close(h);

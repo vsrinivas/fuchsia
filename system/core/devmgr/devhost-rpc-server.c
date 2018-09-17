@@ -284,7 +284,7 @@ static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
     zx_device_t* dev = ios->dev;
     fuchsia_io_NodeInfo info;
     memset(&info, 0, sizeof(info));
-    info.tag = fuchsia_io_NodeInfoTagdevice;
+    info.tag = fuchsia_io_NodeInfoTag_device;
     if (dev->event != ZX_HANDLE_INVALID) {
         zx_status_t status = zx_handle_duplicate(
             dev->event, ZX_RIGHTS_BASIC, &info.device.event);

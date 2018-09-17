@@ -49,7 +49,7 @@ bool test_fidl_basic() {
 
     fuchsia_io_NodeInfo info = {};
     ASSERT_EQ(fuchsia_io_FileDescribe(h, &info), ZX_OK);
-    ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTagfile);
+    ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_file);
     ASSERT_EQ(info.file.event, ZX_HANDLE_INVALID);
     zx_handle_close(h);
     closedir(d);
