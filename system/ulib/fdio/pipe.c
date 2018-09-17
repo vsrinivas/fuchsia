@@ -249,16 +249,6 @@ int fdio_pipe_pair(fdio_t** _a, fdio_t** _b) {
     return 0;
 }
 
-zx_status_t fdio_pipe_pair_raw(zx_handle_t* handles, uint32_t* types) {
-    zx_status_t r;
-    if ((r = zx_socket_create(0, handles, handles + 1)) < 0) {
-        return r;
-    }
-    types[0] = PA_FDIO_PIPE;
-    types[1] = PA_FDIO_PIPE;
-    return 2;
-}
-
 zx_status_t fdio_pipe_half(zx_handle_t* handle, uint32_t* type) {
     zx_handle_t h0, h1;
     zx_status_t r;
