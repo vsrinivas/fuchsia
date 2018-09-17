@@ -71,7 +71,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/bootfs.c \
     $(LOCAL_DIR)/block-watcher.c \
     $(LOCAL_DIR)/devmgr-fdio.c \
-    $(LOCAL_DIR)/fshost.c \
+    $(LOCAL_DIR)/fshost.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp
 
 MODULE_STATIC_LIBS := \

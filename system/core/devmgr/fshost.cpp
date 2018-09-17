@@ -46,7 +46,7 @@ struct callback_data {
 };
 
 static zx_status_t callback(void* arg, const bootfs_entry_t* entry) {
-    struct callback_data* cd = arg;
+    auto cd = static_cast<callback_data*>(arg);
     //printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
     cd->add_file(entry->name, cd->vmo, entry->data_off, entry->data_len);
     ++cd->file_count;
@@ -77,6 +77,7 @@ static zx_status_t setup_bootfs_vmo(uint32_t n, uint32_t type, zx_handle_t vmo) 
 
     struct callback_data cd = {
         .vmo = vmo,
+        .file_count = 0u,
         .add_file = (type == BOOTDATA_BOOTFS_SYSTEM) ? systemfs_add_file : bootfs_add_file,
     };
     if ((type == BOOTDATA_BOOTFS_SYSTEM) && !has_secondary_bootfs) {
@@ -189,8 +190,10 @@ static void setup_bootfs(void) {
             goto done;
         }
 
-        size_t len = bootdata.length;
-        size_t off = sizeof(bootdata);
+        size_t len;
+        size_t off;
+        len = bootdata.length;
+        off = sizeof(bootdata);
 
         while (len > sizeof(bootdata)) {
             zx_status_t status = zx_vmo_read(vmo, &bootdata, off, sizeof(bootdata));
@@ -234,7 +237,7 @@ static void setup_bootfs(void) {
                     printf("fshost: failed to decompress bootdata: %s\n",
                            errmsg);
                 } else {
-                    struct bootdata_ramdisk* br = malloc(sizeof(*br));
+                    bootdata_ramdisk* br = static_cast<bootdata_ramdisk*>(malloc(sizeof(*br)));
                     br->vmo = ramdisk_vmo;
                     br->next = bootdata_ramdisk_list;
                     bootdata_ramdisk_list = br;
@@ -307,6 +310,7 @@ static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
 static zx_handle_t devfs_root;
 static zx_handle_t svc_root;
 static zx_handle_t fshost_event;
+static zx_handle_t fs_root;
 
 void fshost_start(void) {
     setup_bootfs();
@@ -330,11 +334,6 @@ zx_handle_t fs_root_clone(void) {
         return ZX_HANDLE_INVALID;
     return h;
 }
-
-static zx_handle_t fs_root;
-static zx_handle_t devfs_root;
-static zx_handle_t svc_root;
-static zx_handle_t fshost_event;
 
 #define FS_DIR_FLAGS                            \
     (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | \
