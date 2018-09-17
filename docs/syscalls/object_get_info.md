@@ -296,6 +296,9 @@ typedef struct zx_info_vmar {
 } zx_info_vmar_t;
 ```
 
+This returns a single *zx_info_vmar_t* that describes the range of address
+space that the VMAR occupies.
+
 ### ZX_INFO_JOB_CHILDREN
 
 *handle* type: **Job**
