@@ -34,12 +34,9 @@ class InspectTest : public component::testing::TestWithEnvironment {
     environment_ = CreateNewEnclosingEnvironment("test", CreateServices());
     environment_->CreateComponent(std::move(launch_info),
                                   controller_.NewRequest());
-    WaitForEnclosingEnvToStart(environment_.get());
-
-    // TODO(CP-130): Remove this when we can wait for a component to be ready.
-    RunLoopWithTimeoutOrUntil(
-        [this] { return files::Glob(GetObjectPath("*/.channel")).size() > 0; },
-        zx::sec(5));
+    bool ready = false;
+    controller_.events().OnDirectoryReady = [&ready] { ready = true; };
+    RunLoopWithTimeoutOrUntil([&ready] { return ready; }, zx::sec(10));
   }
   ~InspectTest() { CheckShutdown(); }
 

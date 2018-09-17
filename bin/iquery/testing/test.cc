@@ -43,17 +43,17 @@ class IqueryGoldenTest : public component::testing::TestWithEnvironment,
     controller_ = environment_->CreateComponent(std::move(launch_info));
     // Wait until the component's output directory shows up, and save the path
     // to it.
-    RunLoopWithTimeoutOrUntil(
-        [this] {
-          auto glob =
-              GetGlob("/hub/r/test/*/c/iquery_example_component.cmx/*/out");
-          if (glob.size() > 0) {
-            hub_directory_path_ = glob[0];
-            return true;
-          }
-          return false;
-        },
-        zx::sec(10));
+    bool ready = false;
+    controller_.events().OnDirectoryReady = [&ready] { ready = true; };
+    RunLoopWithTimeoutOrUntil([&ready] { return ready; }, zx::sec(10));
+
+    SetUpHubPath();
+  }
+
+  void SetUpHubPath() {
+    auto glob = GetGlob("/hub/r/test/*/c/iquery_example_component.cmx/*/out");
+    ASSERT_EQ(1u, glob.size());
+    hub_directory_path_ = glob[0];
   }
 
   std::vector<std::string> GetGlob(const std::string& path) {
