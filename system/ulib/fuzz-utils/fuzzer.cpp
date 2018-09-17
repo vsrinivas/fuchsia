@@ -92,7 +92,7 @@ Fuzzer::Fuzzer() : cmd_(kNone), out_(stdout), err_(stderr) {}
 void Fuzzer::Reset() {
     cmd_ = kNone;
     name_.clear();
-    executable_.clear();
+    target_.clear();
     root_.clear();
     resource_path_.Reset();
     data_path_.Reset();
@@ -326,10 +326,10 @@ void Fuzzer::FindFuzzers(const char* name, StringMap* out) {
 
 void Fuzzer::GetArgs(StringList* out) {
     out->clear();
-    if (strstr(executable_.c_str(), "fuchsia-pkg://fuchsia.com/") == executable_.c_str()) {
+    if (strstr(target_.c_str(), "fuchsia-pkg://fuchsia.com/") == target_.c_str()) {
         out->push_back("/system/bin/run");
     }
-    out->push_back(executable_.c_str());
+    out->push_back(target_.c_str());
     const char* key;
     const char* val;
     options_.begin();
@@ -409,20 +409,27 @@ private:
 bool Fuzzer::CheckProcess(zx_handle_t process) const {
     char name[ZX_MAX_NAME_LEN];
     zx_info_process_t info;
-    if (zx_object_get_property(process, ZX_PROP_NAME, name, sizeof(name)) != ZX_OK ||
-        strcmp(name, executable_.c_str()) != 0 ||
-        zx_object_get_info(process, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr) !=
-            ZX_OK) {
+
+    if (zx_object_get_property(process, ZX_PROP_NAME, name, sizeof(name)) != ZX_OK) {
+        return false;
+    }
+
+    const char* target = target_.c_str();
+    const char* meta = strstr(target, "#meta/");
+    if (meta) {
+        target = meta + strlen("#meta/");
+    }
+    if (strcmp(name, target) != 0 || zx_object_get_info(process, ZX_INFO_PROCESS, &info,
+                                                        sizeof(info), nullptr, nullptr) != ZX_OK) {
         return false;
     }
 
     if (!info.started) {
-        fprintf(out_, "Fuzzer '%s' has not started.\n", name_.c_str());
+        fprintf(out_, "%s: NOT STARTED\n", name_.c_str());
     } else if (!info.exited) {
-        fprintf(out_, "Fuzzer '%s' is running.\n", name_.c_str());
+        fprintf(out_, "%s: RUNNING\n", name_.c_str());
     } else {
-        fprintf(out_, "Fuzzer '%s' exited with return code %" PRId64 ".\n", name_.c_str(),
-                info.return_code);
+        fprintf(out_, "%s: EXITED (return code = %" PRId64 ")\n", name_.c_str(), info.return_code);
     }
 
     return true;
@@ -494,7 +501,7 @@ zx_status_t Fuzzer::SetFuzzer(const char* name) {
     fuzzers.begin();
     fuzzers.next(&name, &executable);
     name_.Set(name);
-    executable_.Set(executable);
+    target_.Set(executable);
 
     fbl::String package, target;
     if ((rc = ParseName(name_.c_str(), &package, &target)) != ZX_OK) {
@@ -649,16 +656,16 @@ zx_status_t Fuzzer::Check() {
     // Report fuzzer execution status
     Walker walker(this);
     if (walker.WalkRootJobTree() != ZX_ERR_STOP) {
-        fprintf(out_, "Fuzzer '%s' is not running.\n", name_.c_str());
+        fprintf(out_, "%s: STOPPED\n", name_.c_str());
     }
 
     // Fuzzer details
-    fprintf(out_, "The fuzzer binary is located at: %s\n", executable_.c_str());
-    fprintf(out_, "The fuzzing data is located at: %s\n", data_path_.c_str());
+    fprintf(out_, "    Target info:  %s\n", target_.c_str());
+    fprintf(out_, "    Output path:  %s\n", data_path_.c_str());
 
     // Report corpus details, if present
     if ((rc = data_path_.Push("corpus")) != ZX_OK) {
-        fprintf(out_, "No fuzzing corpus was found\n");
+        fprintf(out_, "    Corpus size:  0 inputs / 0 bytes\n");
     } else {
         auto corpus = data_path_.List();
         size_t corpus_size = 0;
@@ -669,8 +676,7 @@ zx_status_t Fuzzer::Check() {
             }
             corpus_size += input_size;
         }
-        fprintf(out_, "The fuzzing corpus has %zu inputs totaling %zu bytes.\n", corpus->length(),
-                corpus_size);
+        fprintf(out_, "    Corpus size:  %zu inputs / %zu bytes\n", corpus->length(), corpus_size);
         data_path_.Pop();
     }
 
@@ -681,11 +687,12 @@ zx_status_t Fuzzer::Check() {
     artifacts->keep_if_any(&prefixes);
     size_t num_artifacts = artifacts->length();
     if (num_artifacts == 0) {
-        fprintf(out_, "The fuzzer has not produced any artifacts.\n");
+        fprintf(out_, "    Artifacts:    None\n");
     } else {
-        fprintf(out_, "The fuzzer has produced %zu artifacts:\n", num_artifacts);
-        for (const char* artifact = artifacts->first(); artifact; artifact = artifacts->next()) {
-            fprintf(out_, "  %s\n", artifact);
+        const char* artifact = artifacts->first();
+        fprintf(out_, "    Artifacts:    %s\n", artifact);
+        while ((artifact = artifacts->next())) {
+            fprintf(out_, "                  %s\n", artifact);
         }
     }
 

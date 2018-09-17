@@ -46,7 +46,7 @@ protected:
     void set_root(const char* root) { root_.Set(root); }
     void set_out(FILE* out) { out_ = out; }
     void set_err(FILE* err) { err_ = err; }
-    void set_executable(const char* executable) { executable_.Set(executable); }
+    void set_target(const char* target) { target_.Set(target); }
 
     // Interpret the given |args| and execute the appropriate subcommand.
     zx_status_t Run(StringList* args);
@@ -120,7 +120,7 @@ private:
     // Fuzzer name; may be a user-supplied pattern until resolved into a package/target.
     fbl::String name_;
     // Path on target to the fuzzer binary
-    fbl::String executable_;
+    fbl::String target_;
     // Path that the resource and data paths are relative to; primarily used for testing.
     fbl::String root_;
     // Path on target to where immutable fuzzing resources are stored

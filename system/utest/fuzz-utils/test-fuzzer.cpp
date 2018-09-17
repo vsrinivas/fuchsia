@@ -121,9 +121,9 @@ int TestFuzzer::FindArg(const char* fmt, ...) {
     return -1;
 }
 
-bool TestFuzzer::CheckProcess(zx_handle_t process, const char* executable) {
-    if (executable) {
-        set_executable(executable);
+bool TestFuzzer::CheckProcess(zx_handle_t process, const char* target) {
+    if (target) {
+        set_target(target);
     }
     return Fuzzer::CheckProcess(process);
 }
