@@ -29,7 +29,7 @@ enum {
     PHY_INTR,
 };
 
-#define MCU_I2C_REG_BOOT_EN_WOL              0x21
+#define MCU_I2C_REG_BOOT_EN_WOL 0x21
 #define MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE 0x03
 
 template <typename T, typename U>
@@ -234,9 +234,9 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
     writel(REG2_ETH_REG2_REVERSED | REG2_INTERNAL_PHY_ID,
            offset_ptr<uint32_t>(pregs, PER_ETH_REG2));
 
-    writel(REG3_CLK_IN_EN    | REG3_ETH_REG3_19_RESVERD |
-           REG3_CFG_PHY_ADDR | REG3_CFG_MODE |
-           REG3_CFG_EN_HIGH  | REG3_ETH_REG3_2_RESERVED,
+    writel(REG3_CLK_IN_EN | REG3_ETH_REG3_19_RESVERD |
+               REG3_CFG_PHY_ADDR | REG3_CFG_MODE |
+               REG3_CFG_EN_HIGH | REG3_ETH_REG3_2_RESERVED,
            offset_ptr<uint32_t>(pregs, PER_ETH_REG3));
 
     // Enable clocks and power domain for dwmac
@@ -259,12 +259,8 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
     }
 
     // mac address register was erased by the reset; set it!
-    mac_device->dwmac_regs_->macaddr0hi = (mac_device->mac_[5] << 8)
-                                        | (mac_device->mac_[4] << 0);
-    mac_device->dwmac_regs_->macaddr0lo = (mac_device->mac_[3] << 24)
-                                        | (mac_device->mac_[2] << 16)
-                                        | (mac_device->mac_[1] <<  8)
-                                        | (mac_device->mac_[0] << 0);
+    mac_device->dwmac_regs_->macaddr0hi = (mac_device->mac_[5] << 8) | (mac_device->mac_[4] << 0);
+    mac_device->dwmac_regs_->macaddr0lo = (mac_device->mac_[3] << 24) | (mac_device->mac_[2] << 16) | (mac_device->mac_[1] << 8) | (mac_device->mac_[0] << 0);
 
     auto cleanup = fbl::MakeAutoCall([&]() { mac_device->ShutDown(); });
 
@@ -277,7 +273,7 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
     //configure phy
     mac_device->ConfigPhy();
     // WOL reset enable to MCU
-    uint8_t write_buf[2] = { MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE };
+    uint8_t write_buf[2] = {MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE};
     status = i2c_write_sync(&mac_device->i2c_, 0, write_buf, sizeof write_buf);
     if (status) {
         zxlogf(ERROR, "aml-dwmac: WOL reset enable to MCU failed: %d\n", status);
@@ -341,7 +337,8 @@ zx_status_t AmlDWMacDevice::InitBuffers() {
         tx_descriptors_[i].txrx_status = 0;
         tx_descriptors_[i].dmamac_cntl = DESC_TXCTRL_TXCHAIN;
 
-        desc_buffer_->LookupPhys((((i + 1) % kNumDesc) + kNumDesc) * sizeof(dw_dmadescr_t), &tmpaddr);
+        desc_buffer_->LookupPhys((((i + 1) % kNumDesc) + kNumDesc) * sizeof(dw_dmadescr_t),
+                                 &tmpaddr);
         rx_descriptors_[i].dmamac_next = static_cast<uint32_t>(tmpaddr);
 
         txn_buffer_->LookupPhys((i + kNumDesc) * kTxnBufSize, &tmpaddr);
@@ -371,8 +368,8 @@ zx_status_t AmlDWMacDevice::MDIOWrite(uint32_t reg, uint32_t val) {
     dwmac_regs_->miidata = val;
 
     uint32_t miiaddr = (mii_addr_ << MIIADDRSHIFT) |
-                       (reg       << MIIREGSHIFT)  |
-                        MII_WRITE;
+                       (reg << MIIREGSHIFT) |
+                       MII_WRITE;
 
     dwmac_regs_->miiaddr = miiaddr | MII_CLKRANGE_150_250M | MII_BUSY;
 

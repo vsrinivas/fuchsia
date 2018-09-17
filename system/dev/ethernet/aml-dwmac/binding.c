@@ -1,12 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <stdlib.h>
-#include <string.h>
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
+#include <stdlib.h>
+#include <string.h>
 
 extern zx_status_t aml_eth_bind(void* ctx, zx_device_t* parent);
 

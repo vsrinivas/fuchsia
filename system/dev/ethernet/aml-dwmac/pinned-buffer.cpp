@@ -27,10 +27,11 @@ fbl::RefPtr<PinnedBuffer> PinnedBuffer::Create(size_t size, const zx::bti& bti,
     }
 
     zx_status_t status = pbuf->vmo_mapper_.CreateAndMap(size,
-                                ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                                fbl::move(vmar_mgr), &pbuf->vmo_,
-                                ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_WRITE,
-                                cache_policy);
+                                                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                                        fbl::move(vmar_mgr), &pbuf->vmo_,
+                                                        ZX_RIGHT_READ | ZX_RIGHT_MAP |
+                                                            ZX_RIGHT_WRITE,
+                                                        cache_policy);
     if (status != ZX_OK) {
         zxlogf(ERROR, "pinned-buffer: vmo creation failed %d\n", status);
         return nullptr;
