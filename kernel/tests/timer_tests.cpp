@@ -7,20 +7,23 @@
 #include "tests.h"
 
 #include <err.h>
-#include <inttypes.h>
-#include <malloc.h>
-#include <platform.h>
-#include <stdio.h>
-
-#include <kernel/event.h>
-#include <kernel/thread.h>
-#include <kernel/timer.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/atomic.h>
+#include <inttypes.h>
+#include <kernel/auto_lock.h>
+#include <kernel/event.h>
+#include <kernel/mp.h>
+#include <kernel/spinlock.h>
+#include <kernel/thread.h>
+#include <kernel/timer.h>
+#include <lib/unittest/unittest.h>
+#include <malloc.h>
+#include <platform.h>
+#include <pow2.h>
+#include <stdio.h>
 #include <zircon/types.h>
 
-static void timer_cb(timer_t* timer, zx_time_t now, void* arg) {
+static void timer_diag_cb(timer_t* timer, zx_time_t now, void* arg) {
     event_t* event = (event_t*)arg;
     event_signal(event, true);
 }
@@ -32,7 +35,7 @@ static int timer_do_one_thread(void* arg) {
     event_init(&event, false, 0);
     timer_init(&timer);
 
-    timer_set(&timer, current_time() + ZX_MSEC(10), TIMER_SLACK_CENTER, 0, timer_cb, &event);
+    timer_set(&timer, current_time() + ZX_MSEC(10), TIMER_SLACK_CENTER, 0, timer_diag_cb, &event);
     event_wait(&event);
 
     printf("got timer on cpu %u\n", arch_curr_cpu_num());
@@ -42,7 +45,7 @@ static int timer_do_one_thread(void* arg) {
     return 0;
 }
 
-static void timer_test_all_cpus(void) {
+static void timer_diag_all_cpus(void) {
     thread_t* timer_threads[SMP_MAX_CPUS];
     uint max = arch_max_num_cpus();
 
@@ -69,13 +72,13 @@ static void timer_test_all_cpus(void) {
     printf("%u threads created, %u threads joined\n", max, joined);
 }
 
-static void timer_cb2(timer_t* timer, zx_time_t now, void* arg) {
+static void timer_diag_cb2(timer_t* timer, zx_time_t now, void* arg) {
     auto timer_count = static_cast<fbl::atomic<size_t>*>(arg);
     timer_count->fetch_add(1);
     thread_preempt_set_pending();
 }
 
-static void timer_test_coalescing(enum slack_mode mode, uint64_t slack, const zx_time_t* deadline,
+static void timer_diag_coalescing(enum slack_mode mode, uint64_t slack, const zx_time_t* deadline,
                                   const zx_duration_t* expected_adj, size_t count) {
     printf("testing coalsecing mode %d\n", mode);
 
@@ -87,7 +90,7 @@ static void timer_test_coalescing(enum slack_mode mode, uint64_t slack, const zx
     for (size_t ix = 0; ix != count; ++ix) {
         timer_init(&timer[ix]);
         zx_time_t dl = deadline[ix];
-        timer_set(&timer[ix], dl, mode, slack, timer_cb2, &timer_count);
+        timer_set(&timer[ix], dl, mode, slack, timer_diag_cb2, &timer_count);
         printf("[%zu] %" PRIi64 "  -> %" PRIi64 ", %" PRIi64 "\n",
                ix, dl, timer[ix].scheduled_time, timer[ix].slack);
 
@@ -104,7 +107,7 @@ static void timer_test_coalescing(enum slack_mode mode, uint64_t slack, const zx
     free(timer);
 }
 
-static void timer_test_coalescing_center(void) {
+static void timer_diag_coalescing_center(void) {
     zx_time_t when = current_time() + ZX_MSEC(1);
     zx_duration_t off = ZX_USEC(10);
     zx_duration_t slack = 2u * off;
@@ -123,11 +126,11 @@ static void timer_test_coalescing_center(void) {
     const zx_duration_t expected_adj[fbl::count_of(deadline)] = {
         0, 0, ZX_USEC(10), 0, -ZX_USEC(10), 0, ZX_USEC(10), 0};
 
-    timer_test_coalescing(
+    timer_diag_coalescing(
         TIMER_SLACK_CENTER, slack, deadline, expected_adj, fbl::count_of(deadline));
 }
 
-static void timer_test_coalescing_late(void) {
+static void timer_diag_coalescing_late(void) {
     zx_time_t when = current_time() + ZX_MSEC(1);
     zx_duration_t off = ZX_USEC(10);
     zx_duration_t slack = 3u * off;
@@ -145,11 +148,11 @@ static void timer_test_coalescing_late(void) {
     const zx_duration_t expected_adj[fbl::count_of(deadline)] = {
         0, 0, ZX_USEC(20), 0, 0, 0, ZX_USEC(10)};
 
-    timer_test_coalescing(
+    timer_diag_coalescing(
         TIMER_SLACK_LATE, slack, deadline, expected_adj, fbl::count_of(deadline));
 }
 
-static void timer_test_coalescing_early(void) {
+static void timer_diag_coalescing_early(void) {
     zx_time_t when = current_time() + ZX_MSEC(1);
     zx_duration_t off = ZX_USEC(10);
     zx_duration_t slack = 3u * off;
@@ -167,7 +170,7 @@ static void timer_test_coalescing_early(void) {
     const zx_duration_t expected_adj[fbl::count_of(deadline)] = {
         0, -ZX_USEC(20), 0, 0, 0, -ZX_USEC(10), -ZX_USEC(10)};
 
-    timer_test_coalescing(
+    timer_diag_coalescing(
         TIMER_SLACK_EARLY, slack, deadline, expected_adj, fbl::count_of(deadline));
 }
 
@@ -178,7 +181,7 @@ static void timer_far_deadline(void) {
     event_init(&event, false, 0);
     timer_init(&timer);
 
-    timer_set(&timer, ZX_TIME_INFINITE - 5, TIMER_SLACK_CENTER, 0, timer_cb, &event);
+    timer_set(&timer, ZX_TIME_INFINITE - 5, TIMER_SLACK_CENTER, 0, timer_diag_cb, &event);
     zx_status_t st = event_wait_deadline(&event, current_time() + ZX_MSEC(100), false);
     if (st != ZX_ERR_TIMED_OUT) {
         printf("error: unexpected timer fired!\n");
@@ -189,11 +192,210 @@ static void timer_far_deadline(void) {
     event_destroy(&event);
 }
 
-int timer_tests(int, const cmd_args*, uint32_t) {
-    timer_test_coalescing_center();
-    timer_test_coalescing_late();
-    timer_test_coalescing_early();
-    timer_test_all_cpus();
+// Print timer diagnostics for manual review.
+int timer_diag(int, const cmd_args*, uint32_t) {
+    timer_diag_coalescing_center();
+    timer_diag_coalescing_late();
+    timer_diag_coalescing_early();
+    timer_diag_all_cpus();
     timer_far_deadline();
     return 0;
 }
+
+struct timer_args {
+    volatile int result;
+    volatile int timer_fired;
+    volatile int remaining;
+    volatile int wait;
+    spin_lock_t* lock;
+};
+
+static void timer_cb(struct timer*, zx_time_t now, void* void_arg) {
+    timer_args* arg = reinterpret_cast<timer_args*>(void_arg);
+    atomic_store(&arg->timer_fired, 1);
+}
+
+// Set a timer and cancel it before the deadline has elapsed.
+static bool cancel_before_deadline() {
+    BEGIN_TEST;
+    timer_args arg{};
+    timer_t t = TIMER_INITIAL_VALUE(t);
+    timer_set(&t, current_time() + ZX_HOUR(5), TIMER_SLACK_CENTER, 0, timer_cb, &arg);
+    ASSERT_TRUE(timer_cancel(&t), "");
+    ASSERT_FALSE(atomic_load(&arg.timer_fired), "");
+    END_TEST;
+}
+
+// Set a timer and cancel it after it has fired.
+static bool cancel_after_fired() {
+    BEGIN_TEST;
+    timer_args arg{};
+    timer_t t = TIMER_INITIAL_VALUE(t);
+    timer_set(&t, current_time(), TIMER_SLACK_CENTER, 0, timer_cb, &arg);
+    while (!atomic_load(&arg.timer_fired)) {
+    }
+    ASSERT_FALSE(timer_cancel(&t), "");
+    END_TEST;
+}
+
+static void timer_cancel_cb(struct timer* t, zx_time_t now, void* void_arg) {
+    timer_args* arg = reinterpret_cast<timer_args*>(void_arg);
+    atomic_store(&arg->result, timer_cancel(t));
+    atomic_store(&arg->timer_fired, 1);
+}
+
+// Set a timer and cancel it from its own callback.
+static bool cancel_from_callback() {
+    BEGIN_TEST;
+    timer_args arg{};
+    arg.result = 1;
+    timer_t t = TIMER_INITIAL_VALUE(t);
+    timer_set(&t, current_time(), TIMER_SLACK_CENTER, 0, timer_cancel_cb, &arg);
+    while (!atomic_load(&arg.timer_fired)) {
+    }
+    ASSERT_FALSE(arg.result, "");
+    ASSERT_FALSE(timer_cancel(&t), "");
+    END_TEST;
+}
+
+static void timer_set_cb(struct timer* t, zx_time_t now, void* void_arg) {
+    timer_args* arg = reinterpret_cast<timer_args*>(void_arg);
+    if (atomic_add(&arg->remaining, -1) >= 1) {
+        timer_set(t, current_time() + ZX_USEC(10), TIMER_SLACK_CENTER, 0, timer_set_cb, void_arg);
+    }
+}
+
+// Set a timer that re-sets itself from its own callback.
+static bool set_from_callback() {
+    BEGIN_TEST;
+    timer_args arg{};
+    arg.remaining = 5;
+    timer_t t = TIMER_INITIAL_VALUE(t);
+    timer_set(&t, current_time(), TIMER_SLACK_CENTER, 0, timer_set_cb, &arg);
+    while (atomic_load(&arg.remaining) > 0) {
+    }
+
+    // We cannot assert the return value below because we don't know if the last timer has fired.
+    timer_cancel(&t);
+
+    END_TEST;
+}
+
+static void timer_trylock_cb(struct timer* t, zx_time_t now, void* void_arg) {
+    timer_args* arg = reinterpret_cast<timer_args*>(void_arg);
+    atomic_store(&arg->timer_fired, 1);
+    while (atomic_load(&arg->wait)) {
+    }
+
+    int result = timer_trylock_or_cancel(t, arg->lock);
+    if (!result) {
+        spin_unlock(arg->lock);
+    }
+
+    atomic_store(&arg->result, result);
+}
+
+// See that timer_trylock_or_cancel spins until the timer is canceled.
+static bool trylock_or_cancel_canceled() {
+    BEGIN_TEST;
+
+    // We need 2 or more CPUs for this test.
+    cpu_mask_t online = mp_get_online_mask();
+    if (!online || ispow2(online)) {
+        printf("skipping test trylock_or_cancel_canceled, not enough online cpus\n");
+        return true;
+    }
+
+    timer_args arg{};
+    timer_t t = TIMER_INITIAL_VALUE(t);
+
+    SpinLock lock;
+    arg.lock = lock.GetInternal();
+    arg.wait = 1;
+
+    arch_disable_ints();
+
+    uint timer_cpu = arch_curr_cpu_num();
+    timer_set(&t, current_time() + ZX_USEC(100), TIMER_SLACK_CENTER, 0, timer_trylock_cb, &arg);
+
+    // The timer is set to run on timer_cpu, switch to a different CPU, acquire the spinlock then
+    // signal the callback to proceed.
+    thread_set_cpu_affinity(get_current_thread(), ~cpu_num_to_mask(timer_cpu));
+    DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
+
+    arch_enable_ints();
+
+    {
+        AutoSpinLock guard(&lock);
+
+        while (!atomic_load(&arg.timer_fired)) {
+        }
+
+        // Callback should now be running. Tell it to stop waiting and start trylocking.
+        atomic_store(&arg.wait, 0);
+
+        // See that timer_cancel returns false indicating that the timer ran.
+        ASSERT_FALSE(timer_cancel(&t), "");
+    }
+
+    // See that the timer failed to acquire the lock.
+    ASSERT_TRUE(arg.result, "");
+    END_TEST;
+}
+
+// See that timer_trylock_or_cancel acquires the lock when the holder releases it.
+static bool trylock_or_cancel_get_lock() {
+    BEGIN_TEST;
+
+    // We need 2 or more CPUs for this test.
+    cpu_mask_t online = mp_get_online_mask();
+    if (!online || ispow2(online)) {
+        printf("skipping test trylock_or_cancel_get_lock, not enough online cpus\n");
+        return true;
+    }
+
+    timer_args arg{};
+    timer_t t = TIMER_INITIAL_VALUE(t);
+
+    SpinLock lock;
+    arg.lock = lock.GetInternal();
+    arg.wait = 1;
+
+    arch_disable_ints();
+
+    uint timer_cpu = arch_curr_cpu_num();
+    timer_set(&t, current_time() + ZX_USEC(100), TIMER_SLACK_CENTER, 0, timer_trylock_cb, &arg);
+
+    // The timer is set to run on timer_cpu, switch to a different CPU, acquire the spinlock then
+    // signal the callback to proceed.
+    thread_set_cpu_affinity(get_current_thread(), ~cpu_num_to_mask(timer_cpu));
+    DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
+
+    arch_enable_ints();
+
+    {
+        AutoSpinLock guard(&lock);
+
+        while (!atomic_load(&arg.timer_fired)) {
+        }
+
+        // Callback should now be running. Tell it to stop waiting and start trylocking.
+        atomic_store(&arg.wait, 0);
+    }
+
+    // See that timer_cancel returns false indicating that the timer ran.
+    ASSERT_FALSE(timer_cancel(&t), "");
+
+    // See that the timer acquired the lock.
+    ASSERT_FALSE(arg.result, "");
+    END_TEST;
+}
+
+UNITTEST_START_TESTCASE(timer_tests)
+UNITTEST("cancel_before_deadline", cancel_before_deadline)
+UNITTEST("cancel_after_fired", cancel_after_fired)
+UNITTEST("cancel_from_callback", cancel_from_callback)
+UNITTEST("set_from_callback", set_from_callback)
+UNITTEST("trylock_or_cancel_canceled", trylock_or_cancel_canceled)
+UNITTEST("trylock_or_cancel_get_lock", trylock_or_cancel_get_lock)
+UNITTEST_END_TESTCASE(timer_tests, "timer", "timer tests");
