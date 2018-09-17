@@ -114,12 +114,12 @@ typedef uint64_t __be64;
 
 #define LINUX_FUNC(name, paramtype, rettype)                                                   \
     static inline rettype name(paramtype foo, ...) {                                           \
-        zxlogf(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);            \
+        /*zxlogf(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);       */ \
         return (rettype)0;                                                                     \
     }
 #define LINUX_FUNCX(name)                                                                      \
     static inline int name() {                                                                 \
-        zxlogf(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);            \
+        /*zxlogf(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);       */ \
         return 0;                                                                              \
     }
 

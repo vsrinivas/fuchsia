@@ -382,7 +382,7 @@ void __brcmf_err(const char* func, const char* fmt, ...) {
 void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {
     va_list args;
 
-    if (true || brcmf_msg_filter & filter) {
+    if (brcmf_msg_filter & filter) {
         // TODO(cphoenix): After bringup: Re-enable filter check
         char msg[512]; // Same value hard-coded throughout devhost.c
         va_start(args, fmt);
