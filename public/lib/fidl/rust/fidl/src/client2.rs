@@ -531,10 +531,11 @@ mod tests {
         let client = Client::new(client_end);
 
         let server = fasync::Channel::from_channel(server_end).unwrap();
-        let mut buffer = zx::MessageBuf::new();
-        let receiver = server.recv_msg(&mut buffer).map_ok(|(_chan, buf)| {
-            assert_eq!(EXPECTED, buf.bytes());
-        });
+        let receiver = async move {
+            let mut buffer = zx::MessageBuf::new();
+            await!(server.recv_msg(&mut buffer)).expect("failed to recv msg");
+            assert_eq!(EXPECTED, buffer.bytes());
+        };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
         let receiver = receiver.on_timeout(
@@ -542,12 +543,10 @@ mod tests {
             || panic!("did not receive message in time!"));
 
         let sender = fasync::Timer::new(100.millis().after_now()).map(|()|{
-            client.send(&mut 55u8, 42).unwrap();
-            Ok(())
+            client.send(&mut 55u8, 42).expect("failed to send msg");
         });
 
-        let done = receiver.try_join(sender);
-        executor.run_singlethreaded(done).unwrap();
+        executor.run_singlethreaded(receiver.join(sender));
     }
 
     #[test]
@@ -568,8 +567,9 @@ mod tests {
 
         let server = fasync::Channel::from_channel(server_end).unwrap();
         let mut buffer = zx::MessageBuf::new();
-        let receiver = server.recv_msg(&mut buffer).map_ok(|(chan, buf)| {
-            assert_eq!(EXPECTED, buf.bytes());
+        let receiver = async move {
+            await!(server.recv_msg(&mut buffer)).expect("failed to recv msg");
+            assert_eq!(EXPECTED, buffer.bytes());
             let id = 1; // internally, the first slot in a slab returns a `0`. We then add one
                         // since FIDL txids start with `1`.
 
@@ -584,8 +584,8 @@ mod tests {
 
             let (bytes, handles) = (&mut vec![], &mut vec![]);
             Encoder::encode(bytes, handles, response).expect("Encoding failure");
-            chan.write(bytes, handles).expect("Server channel write failed");
-        });
+            server.write(bytes, handles).expect("Server channel write failed");
+        };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
         let receiver = receiver.on_timeout(
@@ -605,10 +605,9 @@ mod tests {
         let sender = sender.on_timeout(
             300.millis().after_now(),
             || panic!("did not receive response in time!")
-        ).map(Ok);
+        );
 
-        let done = receiver.try_join(sender);
-        executor.run_singlethreaded(done).unwrap();
+        executor.run_singlethreaded(receiver.join(sender));
     }
 
     #[test]

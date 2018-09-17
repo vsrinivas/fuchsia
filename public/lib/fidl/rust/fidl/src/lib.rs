@@ -4,7 +4,7 @@
 
 //! Library and runtime for fidl bindings.
 
-#![feature(futures_api, pin, arbitrary_self_types)]
+#![feature(async_await, await_macro, futures_api, pin, arbitrary_self_types)]
 #![deny(missing_docs)]
 #![deny(warnings)]
 

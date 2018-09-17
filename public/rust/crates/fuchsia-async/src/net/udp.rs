@@ -109,7 +109,7 @@ impl<'a> Unpin for SendTo<'a> {}
 impl<'a> Future for SendTo<'a> {
     type Output = io::Result<()>;
 
-    fn poll(mut self: PinMut<Self>, cx: &mut task::Context)
+    fn poll(self: PinMut<Self>, cx: &mut task::Context)
         -> Poll<Self::Output>
     {
         self.socket.async_send_to(self.buf, self.addr, cx)
