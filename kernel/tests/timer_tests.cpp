@@ -20,7 +20,9 @@
 #include <malloc.h>
 #include <platform.h>
 #include <pow2.h>
+#include <rand.h>
 #include <stdio.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 static void timer_diag_cb(timer_t* timer, zx_time_t now, void* arg) {
@@ -202,6 +204,99 @@ int timer_diag(int, const cmd_args*, uint32_t) {
     return 0;
 }
 
+struct timer_stress_args {
+    volatile int timer_stress_done;
+    volatile uint64_t num_set;
+    volatile uint64_t num_fired;
+};
+
+static void timer_stress_cb(struct timer* t, zx_time_t now, void* void_arg) {
+    timer_stress_args* args = reinterpret_cast<timer_stress_args*>(void_arg);
+    atomic_add_u64(&args->num_fired, 1);
+}
+
+// Returns a random duration between 0 and max (inclusive).
+static zx_duration_t rand_duration(zx_duration_t max) {
+    return (zx_duration_mul_int64(max, rand())) / RAND_MAX;
+}
+
+static int timer_stress_worker(void* void_arg) {
+    timer_stress_args* args = reinterpret_cast<timer_stress_args*>(void_arg);
+    while (!atomic_load(&args->timer_stress_done)) {
+        timer_t t = TIMER_INITIAL_VALUE(t);
+        zx_duration_t timer_duration = rand_duration(ZX_MSEC(5));
+
+        // Set a timer, then switch to a different CPU to ensure we race with it.
+
+        arch_disable_ints();
+        uint timer_cpu = arch_curr_cpu_num();
+        timer_set(&t, current_time() + timer_duration, TIMER_SLACK_CENTER, 0, timer_stress_cb,
+                  void_arg);
+        thread_set_cpu_affinity(get_current_thread(), ~cpu_num_to_mask(timer_cpu));
+        DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
+        arch_enable_ints();
+
+        // We're now running on something other than timer_cpu.
+
+        atomic_add_u64(&args->num_set, 1);
+
+        // Sleep for the timer duration so that this thread's timer_cancel races with the timer
+        // callback. We want to race to ensure there are no synchronization or memory visibility
+        // issues.
+        thread_sleep_relative(timer_duration);
+        timer_cancel(&t);
+    }
+    return 0;
+}
+
+static unsigned get_num_cpus_online() {
+    unsigned count = 0;
+    cpu_mask_t online = mp_get_online_mask();
+    while (online) {
+        online >>= 1;
+        ++count;
+    }
+    return count;
+}
+
+// timer_stress is a simple stress test intended to flush out bugs in kernel timers.
+int timer_stress(int argc, const cmd_args* argv, uint32_t) {
+    if (argc < 2) {
+        printf("not enough args\n");
+        printf("usage: %s <num seconds>\n", argv[0].str);
+        return ZX_ERR_INTERNAL;
+    }
+
+    // We need 2 or more CPUs for this test.
+    if (get_num_cpus_online() < 2) {
+        printf("not enough online cpus\n");
+        return ZX_ERR_INTERNAL;
+    }
+
+    timer_stress_args args{};
+
+    thread_t* threads[256];
+    for (auto& thread : threads) {
+        thread =
+            thread_create("timer-stress-worker", &timer_stress_worker, &args, DEFAULT_PRIORITY);
+    }
+
+    printf("running for %zu seconds\n", argv[1].u);
+    for (const auto& thread : threads) {
+        thread_resume(thread);
+    }
+
+    thread_sleep_relative(ZX_SEC(argv[1].u));
+    atomic_store(&args.timer_stress_done, 1);
+
+    for (const auto& thread : threads) {
+        thread_join(thread, nullptr, ZX_TIME_INFINITE);
+    }
+
+    printf("timer stress done; timer set %zu, timer fired %zu\n", args.num_set, args.num_fired);
+    return 0;
+}
+
 struct timer_args {
     volatile int result;
     volatile int timer_fired;
@@ -300,8 +395,7 @@ static bool trylock_or_cancel_canceled() {
     BEGIN_TEST;
 
     // We need 2 or more CPUs for this test.
-    cpu_mask_t online = mp_get_online_mask();
-    if (!online || ispow2(online)) {
+    if (get_num_cpus_online() < 2) {
         printf("skipping test trylock_or_cancel_canceled, not enough online cpus\n");
         return true;
     }
@@ -348,8 +442,7 @@ static bool trylock_or_cancel_get_lock() {
     BEGIN_TEST;
 
     // We need 2 or more CPUs for this test.
-    cpu_mask_t online = mp_get_online_mask();
-    if (!online || ispow2(online)) {
+    if (get_num_cpus_online() < 2) {
         printf("skipping test trylock_or_cancel_get_lock, not enough online cpus\n");
         return true;
     }

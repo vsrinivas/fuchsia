@@ -12,6 +12,8 @@
 
 __BEGIN_CDECLS
 
+#define RAND_MAX (0x7fffffff)
+
 int rand(void);
 void srand(unsigned int seed);
 
