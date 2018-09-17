@@ -4,11 +4,18 @@
 
 #include "garnet/lib/machina/arch/arm64/gic_distributor.h"
 
+#include <endian.h>
+#include <libzbi/zbi.h>
+#include <zircon/boot/driver-config.h>
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/vcpu.h"
 #include "lib/fxl/logging.h"
+
+__BEGIN_CDECLS;
+#include <libfdt.h>
+__END_CDECLS;
 
 namespace machina {
 
@@ -399,6 +406,93 @@ zx_status_t GicDistributor::TargetInterrupt(uint32_t global_irq,
     if (status != ZX_OK) {
       return status;
     }
+  }
+  return ZX_OK;
+}
+
+zx_status_t GicDistributor::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
+  const dcfg_arm_gicv2_driver_t gic_v2 = {
+      .mmio_phys = machina::kGicv2DistributorPhysBase,
+      .gicd_offset = 0x0000,
+      .gicc_offset = machina::kGicv2DistributorSize,
+      .ipi_base = 12,
+      .optional = true,
+      .use_msi = true,
+  };
+
+  const dcfg_arm_gicv3_driver_t gic_v3 = {
+      .mmio_phys = machina::kGicv3DistributorPhysBase,
+      .gicd_offset = 0x00000,
+      .gicr_offset = machina::kGicv3RedistributorSize,
+      .gicr_stride = machina::kGicv3RedistributorStride,
+      .ipi_base = 12,
+      .optional = true,
+  };
+
+  zbi_result_t res;
+  if (gic_version_ == machina::GicVersion::V2) {
+    res = zbi_append_section(zbi_base, zbi_max, sizeof(gic_v2),
+                             ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, 0, &gic_v2);
+  } else {
+    // GICv3 driver.
+    res = zbi_append_section(zbi_base, zbi_max, sizeof(gic_v3),
+                             ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, 0, &gic_v3);
+  }
+  return res == ZBI_RESULT_OK ? ZX_OK : ZX_ERR_INTERNAL;
+}
+
+static inline void gic_dtb_error(const char* reg) {
+  FXL_LOG(ERROR) << "Failed to add GiC property \"" << reg << "\" to device "
+                 << "tree, space must be reserved in the device tree";
+}
+
+zx_status_t GicDistributor::ConfigureDtb(void* dtb) const {
+  int gic_off = fdt_path_offset(dtb, "/interrupt-controller@800000000");
+  if (gic_off < 0) {
+    FXL_LOG(ERROR) << "Failed to find \"/interrupt-controller\" in device tree";
+    return ZX_ERR_BAD_STATE;
+  }
+  const char* compatible;
+  uint64_t reg_prop[4];
+
+  if (gic_version_ == machina::GicVersion::V2) {
+    compatible = "arm,gic-400";
+    // GICD memory map
+    reg_prop[0] = machina::kGicv2DistributorPhysBase;
+    reg_prop[1] = machina::kGicv2DistributorSize;
+    // GICC memory map
+    reg_prop[2] =
+        machina::kGicv2DistributorPhysBase + machina::kGicv2DistributorSize;
+    reg_prop[3] = 0x2000;
+  } else {
+    // Set V3 only properties
+    int ret = fdt_setprop_u32(dtb, gic_off, "#redistributor-regions", 1);
+    if (ret != 0) {
+      gic_dtb_error("#redistributor-regions");
+      return ZX_ERR_BAD_STATE;
+    }
+
+    compatible = "arm,gic-v3";
+    // GICD memory map
+    reg_prop[0] = machina::kGicv3DistributorPhysBase;
+    reg_prop[1] = machina::kGicv3DistributorSize;
+    // GICR memory map
+    reg_prop[2] = machina::kGicv3RedistributorPhysBase;
+    std::lock_guard<std::mutex> lock(mutex_);
+    reg_prop[3] = machina::kGicv3RedistributorStride * redistributors_.size();
+  }
+  int ret = fdt_setprop_string(dtb, gic_off, "compatible", compatible);
+  if (ret != 0) {
+    gic_dtb_error("compatible");
+    return ZX_ERR_BAD_STATE;
+  }
+  for (auto& prop : reg_prop) {
+    prop = htobe64(prop);
+  }
+  ret = fdt_setprop(dtb, gic_off, "reg", reg_prop, sizeof(reg_prop));
+  if (ret != 0) {
+    gic_dtb_error("reg");
+    return ZX_ERR_BAD_STATE;
   }
   return ZX_OK;
 }

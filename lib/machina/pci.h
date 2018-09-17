@@ -15,6 +15,7 @@
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 #include "garnet/lib/machina/io.h"
+#include "garnet/lib/machina/platform_device.h"
 
 // clang-format off
 
@@ -205,7 +206,7 @@ class PciEcamHandler : public IoHandler {
   PciBus* bus_;
 };
 
-class PciBus {
+class PciBus : public PlatformDevice {
  public:
   PciBus(Guest* guest, InterruptController* interrupt_controller);
 
@@ -246,6 +247,8 @@ class PciBus {
   void set_config_addr(uint32_t addr);
 
   PciDevice& root_complex() { return root_complex_; }
+
+  zx_status_t ConfigureDtb(void* dtb) const override;
 
  private:
   mutable std::mutex mutex_;

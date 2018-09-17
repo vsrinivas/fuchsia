@@ -326,12 +326,11 @@ static zx_status_t add_memory_entry(void* dtb, int memory_off, zx_gpaddr_t addr,
   return ZX_OK;
 }
 
-static zx_status_t load_device_tree(const int dtb_fd,
-                                    const machina::PhysMem& phys_mem,
-                                    const std::string& cmdline,
-                                    const int dtb_overlay_fd,
-                                    const size_t initrd_size,
-                                    const GuestConfig& cfg) {
+static zx_status_t load_device_tree(
+    const int dtb_fd, const machina::PhysMem& phys_mem,
+    const std::vector<machina::PlatformDevice*>& devices,
+    const std::string& cmdline, const int dtb_overlay_fd,
+    const size_t initrd_size, const GuestConfig& cfg) {
   void* dtb;
   size_t dtb_size;
   zx_status_t status = read_device_tree(dtb_fd, phys_mem, kDtbOffset,
@@ -432,59 +431,13 @@ static zx_status_t load_device_tree(const int dtb_fd,
     return status;
   }
 
-#if __aarch64__
-  int gic_off = fdt_path_offset(dtb, "/interrupt-controller@800000000");
-  if (gic_off < 0) {
-    FXL_LOG(ERROR) << "Failed to find \"/interrupt-controller\" in device tree";
-    return ZX_ERR_BAD_STATE;
-  }
-  if (cfg.gic_version() == machina::GicVersion::V2) {
-    ret = fdt_setprop_string(dtb, gic_off, "compatible", "arm,gic-400");
-    if (ret != 0) {
-      device_tree_error_msg("compatible");
-      return ZX_ERR_BAD_STATE;
-    }
-    // GICD memory map
-    status = add_memory_entry(dtb, gic_off, machina::kGicv2DistributorPhysBase,
-                              machina::kGicv2DistributorSize);
-    if (status != ZX_OK) {
-      return status;
-    }
-    // GICC memory map
-    status = add_memory_entry(
-        dtb, gic_off,
-        machina::kGicv2DistributorPhysBase + machina::kGicv2DistributorSize,
-        0x2000);
-    if (status != ZX_OK) {
-      return status;
-    }
-  } else {
-    ret = fdt_setprop_string(dtb, gic_off, "compatible", "arm,gic-v3");
-    if (ret != 0) {
-      device_tree_error_msg("compatible");
-      return ZX_ERR_BAD_STATE;
-    }
-    // GICD memory map
-    status = add_memory_entry(dtb, gic_off, machina::kGicv3DistributorPhysBase,
-                              machina::kGicv3DistributorSize);
-    if (status != ZX_OK) {
-      return status;
-    }
-    ret = fdt_setprop_u32(dtb, gic_off, "#redistributor-regions", 1);
-    if (ret != 0) {
-      device_tree_error_msg("#redistributor-regions");
-      return ZX_ERR_BAD_STATE;
-    }
-    // GICR memory map
-    uint32_t gicr_size = static_cast<uint32_t>(
-        machina::kGicv3RedistributorStride * cfg.num_cpus());
-    status = add_memory_entry(dtb, gic_off,
-                              machina::kGicv3RedistributorPhysBase, gicr_size);
+  // Add all platform devices to device tree.
+  for (auto device : devices) {
+    status = device->ConfigureDtb(dtb);
     if (status != ZX_OK) {
       return status;
     }
   }
-#endif  // __aarch64__
 
   return ZX_OK;
 }
@@ -500,8 +453,9 @@ static std::string linux_cmdline(std::string cmdline) {
 
 zx_status_t setup_linux(const GuestConfig& cfg,
                         const machina::PhysMem& phys_mem,
-                        const machina::DevMem& dev_mem, uintptr_t* guest_ip,
-                        uintptr_t* boot_ptr) {
+                        const machina::DevMem& dev_mem,
+                        const std::vector<machina::PlatformDevice*>& devices,
+                        uintptr_t* guest_ip, uintptr_t* boot_ptr) {
   // Read the kernel image.
   zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);
   if (status != ZX_OK) {
@@ -561,7 +515,7 @@ zx_status_t setup_linux(const GuestConfig& cfg,
     // through PCI and are not placed in the device tree. Since there is no
     // meaningful way to mark arbitrary memory regions in the device tree as
     // used, there is no reason to pass dev_mem into load_device_tree.
-    status = load_device_tree(dtb_fd.get(), phys_mem, cmdline,
+    status = load_device_tree(dtb_fd.get(), phys_mem, devices, cmdline,
                               dtb_overlay_fd.get(), initrd_size, cfg);
     if (status != ZX_OK) {
       return status;

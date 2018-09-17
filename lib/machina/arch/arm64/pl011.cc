@@ -4,11 +4,19 @@
 
 #include "garnet/lib/machina/arch/arm64/pl011.h"
 
+#include <endian.h>
 #include <stdio.h>
+
+#include <libzbi/zbi.h>
+#include <zircon/boot/driver-config.h>
 
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/guest.h"
 #include "lib/fxl/logging.h"
+
+__BEGIN_CDECLS;
+#include <libfdt.h>
+__END_CDECLS;
 
 namespace machina {
 
@@ -30,6 +38,7 @@ enum class Pl011Register : uint64_t {
 // clang-format on
 
 zx_status_t Pl011::Init(Guest* guest, uint64_t addr) {
+  base_addr_ = addr;
   return guest->CreateMapping(TrapType::MMIO_SYNC, addr, kPl011Size, 0, this);
 }
 
@@ -84,6 +93,31 @@ void Pl011::Print(uint8_t ch) {
     tx_offset_ = 0;
   }
   fflush(stdout);
+}
+
+zx_status_t Pl011::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
+  dcfg_simple_t zbi_uart = {
+      .mmio_phys = base_addr_, .irq = 111,
+  };
+  zbi_result_t res =
+      zbi_append_section(zbi_base, zbi_max, sizeof(zbi_uart),
+                         ZBI_TYPE_KERNEL_DRIVER, KDRV_PL011_UART, 0, &zbi_uart);
+  return res == ZBI_RESULT_OK ? ZX_OK : ZX_ERR_INTERNAL;
+}
+
+zx_status_t Pl011::ConfigureDtb(void* dtb) const {
+  uint64_t reg_val[2] = {htobe64(base_addr_), htobe64(kPl011Size)};
+  int node_off = fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
+  if (node_off < 0) {
+    FXL_LOG(ERROR) << "Failed to find Pl011 in DTB";
+    return ZX_ERR_INTERNAL;
+  }
+  int ret = fdt_node_check_compatible(dtb, node_off, "arm,pl011");
+  if (ret != 0) {
+    FXL_LOG(ERROR) << "Device with Pl011 registers is not Pl011 compatible";
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
 }
 
 }  // namespace machina

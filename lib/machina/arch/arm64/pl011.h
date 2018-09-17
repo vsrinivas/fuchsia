@@ -8,19 +8,24 @@
 #include <mutex>
 
 #include "garnet/lib/machina/io.h"
+#include "garnet/lib/machina/platform_device.h"
 
 namespace machina {
 
 class Guest;
 
 // Implements the PL011 UART.
-class Pl011 : public IoHandler {
+class Pl011 : public IoHandler, public PlatformDevice {
  public:
   zx_status_t Init(Guest* guest, uint64_t addr);
 
   // IoHandler interface.
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+  // PlatformDevice interface.
+  zx_status_t ConfigureZbi(void* zbi_base, size_t zbi_max) const override;
+  zx_status_t ConfigureDtb(void* dtb) const override;
 
  private:
   static constexpr size_t kBufferSize = 128;
@@ -30,6 +35,8 @@ class Pl011 : public IoHandler {
   uint16_t tx_offset_ __TA_GUARDED(mutex_) = 0;
 
   uint16_t control_ __TA_GUARDED(mutex_) = 0;
+
+  uint64_t base_addr_ = 0;
 
   void Print(uint8_t ch);
 };

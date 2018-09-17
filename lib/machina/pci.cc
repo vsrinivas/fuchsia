@@ -4,10 +4,15 @@
 
 #include "garnet/lib/machina/pci.h"
 
+#include <endian.h>
 #include <stdio.h>
 
 #include <hw/pci.h>
 #include <zircon/assert.h>
+
+__BEGIN_CDECLS;
+#include <libfdt.h>
+__END_CDECLS;
 
 namespace machina {
 
@@ -338,6 +343,21 @@ zx_status_t PciBus::Interrupt(PciDevice& device) {
     device.pending_irq_ = false;
   }
   return interrupt_controller_->Interrupt(device.global_irq_);
+}
+
+zx_status_t PciBus::ConfigureDtb(void* dtb) const {
+  uint64_t reg_val[2] = {htobe64(kPciEcamPhysBase), htobe64(pci_ecam_size(0, 1))};
+  int node_off = fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
+  if (node_off < 0) {
+    FXL_LOG(ERROR) << "Failed to find PCI in DTB";
+    return ZX_ERR_INTERNAL;
+  }
+  int ret = fdt_node_check_compatible(dtb, node_off, "pci-host-ecam-generic");
+  if (ret != 0) {
+    FXL_LOG(ERROR) << "Device with PCI registers is not PCI compatible";
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
 }
 
 // PCI Local Bus Spec v3.0 Section 6.7: Each capability must be DWORD aligned.

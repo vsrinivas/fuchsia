@@ -36,6 +36,7 @@
 #include "garnet/lib/machina/input_dispatcher_impl.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 #include "garnet/lib/machina/pci.h"
+#include "garnet/lib/machina/platform_device.h"
 #include "garnet/lib/machina/uart.h"
 #include "garnet/lib/machina/vcpu.h"
 #include "garnet/lib/machina/virtio_balloon.h"
@@ -192,6 +193,8 @@ int main(int argc, char** argv) {
   // Instantiate the controller service.
   InstanceControllerImpl instance_controller(context.get(), guest.phys_mem());
 
+  std::vector<machina::PlatformDevice*> platform_devices;
+
   // Setup UARTs.
   machina::Uart uart[kNumUarts];
   for (size_t i = 0; i < kNumUarts; i++) {
@@ -201,6 +204,7 @@ int main(int argc, char** argv) {
                      << " " << status;
       return status;
     }
+    platform_devices.push_back(&uart[i]);
   }
   // Setup interrupt controller.
   machina::InterruptController interrupt_controller;
@@ -213,6 +217,7 @@ int main(int argc, char** argv) {
     FXL_LOG(ERROR) << "Failed to create interrupt controller " << status;
     return status;
   }
+  platform_devices.push_back(&interrupt_controller);
 
 #if __aarch64__
   // Setup PL031 RTC.
@@ -222,6 +227,7 @@ int main(int argc, char** argv) {
     FXL_LOG(ERROR) << "Failed to create PL031 RTC " << status;
     return status;
   }
+  platform_devices.push_back(&pl031);
 #elif __x86_64__
   // Setup IO ports.
   machina::IoPort io_port;
@@ -239,6 +245,7 @@ int main(int argc, char** argv) {
     FXL_LOG(ERROR) << "Failed to create PCI bus " << status;
     return status;
   }
+  platform_devices.push_back(&bus);
 
   // Setup balloon device.
   machina::VirtioBalloon balloon(guest.phys_mem());
@@ -470,12 +477,12 @@ int main(int argc, char** argv) {
   uintptr_t boot_ptr = 0;
   switch (cfg.kernel()) {
     case Kernel::ZIRCON:
-      status =
-          setup_zircon(cfg, guest.phys_mem(), dev_mem, &guest_ip, &boot_ptr);
+      status = setup_zircon(cfg, guest.phys_mem(), dev_mem, platform_devices,
+                            &guest_ip, &boot_ptr);
       break;
     case Kernel::LINUX:
-      status =
-          setup_linux(cfg, guest.phys_mem(), dev_mem, &guest_ip, &boot_ptr);
+      status = setup_linux(cfg, guest.phys_mem(), dev_mem, platform_devices,
+                           &guest_ip, &boot_ptr);
       break;
     default:
       FXL_LOG(ERROR) << "Unknown kernel";

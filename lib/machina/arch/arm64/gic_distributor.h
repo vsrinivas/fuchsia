@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "garnet/lib/machina/io.h"
+#include "garnet/lib/machina/platform_device.h"
 
 namespace machina {
 
@@ -35,13 +36,16 @@ class GicRedistributor : public IoHandler {
 };
 
 // Implements GIC distributor.
-class GicDistributor : public IoHandler {
+class GicDistributor : public IoHandler, public PlatformDevice {
  public:
   zx_status_t Init(Guest* guest, GicVersion version,
                    uint8_t num_cpus) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+  zx_status_t ConfigureZbi(void* zbi_base, size_t zbi_max) const override;
+  zx_status_t ConfigureDtb(void* dtb) const override;
 
   zx_status_t RegisterVcpu(uint8_t vcpu_num,
                            Vcpu* vcpu) __TA_NO_THREAD_SAFETY_ANALYSIS;

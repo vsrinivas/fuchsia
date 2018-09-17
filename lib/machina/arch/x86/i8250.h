@@ -8,13 +8,14 @@
 #include <mutex>
 
 #include "garnet/lib/machina/io.h"
+#include "garnet/lib/machina/platform_device.h"
 
 namespace machina {
 
 class Guest;
 
 // Implements the I8250 UART.
-class I8250 : public IoHandler {
+class I8250 : public IoHandler, public PlatformDevice {
  public:
   zx_status_t Init(Guest* guest, uint64_t addr);
 

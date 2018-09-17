@@ -8,19 +8,23 @@
 #include <mutex>
 
 #include "garnet/lib/machina/io.h"
+#include "garnet/lib/machina/platform_device.h"
 
 namespace machina {
 
 class Guest;
 
 // Implements the PL031 RTC.
-class Pl031 : public IoHandler {
+class Pl031 : public IoHandler, public PlatformDevice {
  public:
   zx_status_t Init(Guest* guest);
 
   // IoHandler interface.
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+  // PlatformDevice interface.
+  zx_status_t ConfigureDtb(void* dtb) const override;
 };
 
 }  // namespace machina

@@ -27,6 +27,7 @@ source_set("machina") {
     "io.h",
     "pci.cc",
     "pci.h",
+    "platform_device.h",
     "qcow.cc",
     "qcow.h",
     "qcow_refcount.cc",
@@ -92,6 +93,7 @@ source_set("machina") {
   defines = [ "_ALL_SOURCE=1" ]
 
   deps = [
+    "//garnet/bin/guest/third_party/fdt",
     "//garnet/lib/machina/device",
     "//garnet/lib/machina/fidl:fuchsia.guest.device",
     "//garnet/public/lib/fsl",
@@ -101,6 +103,7 @@ source_set("machina") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/framebuffer",
+    "//zircon/public/lib/libzbi",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxcpp",
   ]

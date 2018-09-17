@@ -32,29 +32,6 @@ static constexpr zbi_platform_id_t kPlatformId = {
     .board_name = "machina",
 };
 
-static constexpr dcfg_simple_t kUartDriver = {
-    .mmio_phys = machina::kPl011PhysBase,
-    .irq = 111,
-};
-
-static constexpr dcfg_arm_gicv2_driver_t kGicV2Driver = {
-    .mmio_phys = machina::kGicv2DistributorPhysBase,
-    .gicd_offset = 0x0000,
-    .gicc_offset = machina::kGicv2DistributorSize,
-    .ipi_base = 12,
-    .optional = true,
-    .use_msi = true,
-};
-
-static constexpr dcfg_arm_gicv3_driver_t kGicV3Driver = {
-    .mmio_phys = machina::kGicv3DistributorPhysBase,
-    .gicd_offset = 0x00000,
-    .gicr_offset = machina::kGicv3RedistributorSize,
-    .gicr_stride = machina::kGicv3RedistributorStride,
-    .ipi_base = 12,
-    .optional = true,
-};
-
 static constexpr dcfg_arm_psci_driver_t kPsciDriver = {
     .use_hvc = false,
 };
@@ -107,10 +84,11 @@ static zx_status_t load_bootfs(const int fd, const machina::PhysMem& phys_mem,
   return ZX_OK;
 }
 
-static zx_status_t create_zbi(const GuestConfig& cfg,
-                              const machina::PhysMem& phys_mem,
-                              const machina::DevMem& dev_mem,
-                              const uintptr_t kernel_off, uintptr_t zbi_off) {
+static zx_status_t create_zbi(
+    const GuestConfig& cfg, const machina::PhysMem& phys_mem,
+    const machina::DevMem& dev_mem,
+    const std::vector<machina::PlatformDevice*>& devices,
+    const uintptr_t kernel_off, uintptr_t zbi_off) {
   if (ZBI_ALIGN(zbi_off) != zbi_off) {
     FXL_LOG(ERROR) << "ZBI offset has invalid alignment";
     return ZX_ERR_INVALID_ARGS;
@@ -150,6 +128,15 @@ static zx_status_t create_zbi(const GuestConfig& cfg,
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
+
+  // Any platform devices
+  for (auto device : devices) {
+    zx_status_t status = device->ConfigureZbi(container_hdr, zbi_max);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
 #if __aarch64__
   // CPU config.
   uint8_t cpu_buffer[sizeof(zbi_cpu_config_t) + sizeof(zbi_cpu_cluster_t)] = {};
@@ -190,27 +177,6 @@ static zx_status_t create_zbi(const GuestConfig& cfg,
   // Platform ID.
   res = zbi_append_section(container_hdr, zbi_max, sizeof(kPlatformId),
                            ZBI_TYPE_PLATFORM_ID, 0, 0, &kPlatformId);
-  if (res != ZBI_RESULT_OK) {
-    return ZX_ERR_INTERNAL;
-  }
-  // UART driver.
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(kUartDriver),
-                           ZBI_TYPE_KERNEL_DRIVER, KDRV_PL011_UART, 0,
-                           &kUartDriver);
-  if (res != ZBI_RESULT_OK) {
-    return ZX_ERR_INTERNAL;
-  }
-  // GICv2 driver.
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(kGicV2Driver),
-                           ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, 0,
-                           &kGicV2Driver);
-  if (res != ZBI_RESULT_OK) {
-    return ZX_ERR_INTERNAL;
-  }
-  // GICv3 driver.
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(kGicV3Driver),
-                           ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, 0,
-                           &kGicV3Driver);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
@@ -277,8 +243,9 @@ static zx_status_t check_kernel(const machina::PhysMem& phys_mem,
 
 zx_status_t setup_zircon(const GuestConfig& cfg,
                          const machina::PhysMem& phys_mem,
-                         const machina::DevMem& dev_mem, uintptr_t* guest_ip,
-                         uintptr_t* boot_ptr) {
+                         const machina::DevMem& dev_mem,
+                         const std::vector<machina::PlatformDevice*>& devices,
+                         uintptr_t* guest_ip, uintptr_t* boot_ptr) {
   // Read the kernel image.
   zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);
   if (status != ZX_OK) {
@@ -290,7 +257,8 @@ zx_status_t setup_zircon(const GuestConfig& cfg,
   }
 
   // Create the ZBI container.
-  status = create_zbi(cfg, phys_mem, dev_mem, kKernelOffset, kRamdiskOffset);
+  status = create_zbi(cfg, phys_mem, dev_mem, devices, kKernelOffset,
+                      kRamdiskOffset);
   if (status != ZX_OK) {
     return status;
   }
