@@ -188,10 +188,10 @@ func RunBloaty(bloatyPath, idsPath string, topFiles, topSyms uint64, jobs int) (
 
 	for file := range fileBuffer {
 		wg.Add(1)
-		go func() {
+		go func(file string) {
 			run(bloatyPath, file, data)
 			wg.Done()
-		}()
+		}(file)
 	}
 
 	go func() {
