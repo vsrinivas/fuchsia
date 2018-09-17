@@ -75,8 +75,11 @@ void DwarfExprEval::ContinueEval() {
       } else {
         is_success_ = true;
       }
-      completion_callback_(this, err);
-      completion_callback_ = CompletionCallback();
+
+      // The callback may delete |this| but we also want to clear the value to
+      // prevent accidental future use.
+      auto cb = std::move(completion_callback_);
+      cb(this, err);
       return;
     }
 
@@ -109,8 +112,10 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
   }
 
   // Registers 0-31.
-  if (op >= llvm::dwarf::DW_OP_reg0 && op <= llvm::dwarf::DW_OP_reg31)
+  if (op >= llvm::dwarf::DW_OP_reg0 && op <= llvm::dwarf::DW_OP_reg31) {
+    result_type_ = ResultType::kValue;
     return PushRegisterWithOffset(op - llvm::dwarf::DW_OP_reg0, 0);
+  }
 
   // Base register with SLEB128 offset.
   if (op >= llvm::dwarf::DW_OP_breg0 && op <= llvm::dwarf::DW_OP_breg31)
@@ -267,6 +272,9 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
 
 DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(
     int dwarf_register_number, int64_t offset) {
+  // This function doesn't set the result_type_ because it is called from
+  // different contexts. The callers should set the result_type_ as appropriate
+  // for their operation.
   uint64_t register_data = 0;
   if (data_provider_->GetRegister(dwarf_register_number, &register_data)) {
     // Register data available synchronously.
@@ -410,6 +418,8 @@ DwarfExprEval::Completion DwarfExprEval::OpBreg(uint8_t op) {
   int64_t offset = 0;
   if (!ReadLEBSigned(&offset))
     return Completion::kSync;
+
+  result_type_ = ResultType::kPointer;
   return PushRegisterWithOffset(reg_index, offset);
 }
 
