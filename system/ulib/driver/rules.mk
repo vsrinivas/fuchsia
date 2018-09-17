@@ -19,7 +19,7 @@ MODULE_COMPILEFLAGS := -fvisibility=hidden
 
 MODULE_SRCS := \
 	$(DEVMGR_SRCS)/devhost.c \
-	$(DEVMGR_SRCS)/devhost-api.c \
+	$(DEVMGR_SRCS)/devhost-api.cpp \
 	$(DEVMGR_SRCS)/devhost-core.c \
 	$(DEVMGR_SRCS)/devhost-rpc-server.c \
 	$(DEVMGR_SRCS)/devhost-shared.c \
