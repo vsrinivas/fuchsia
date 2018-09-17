@@ -188,6 +188,8 @@ zx_status_t Allocator::Extend(WriteTxn* txn) {
 
     if (bitmap_blocks_new > bitmap_blocks) {
         // TODO(smklein): Grow the bitmap another slice.
+        // TODO(planders): Once we start growing the [block] bitmap,
+        //                 we will need to start growing the journal as well.
         fprintf(stderr, "Minfs allocator needs to increase bitmap size\n");
         return ZX_ERR_NO_SPACE;
     }

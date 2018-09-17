@@ -17,6 +17,7 @@ COMMON_SRCS := \
     $(LOCAL_DIR)/inode-manager.cpp \
     $(LOCAL_DIR)/minfs.cpp \
     $(LOCAL_DIR)/superblock.cpp \
+    $(LOCAL_DIR)/transaction-limits.cpp \
     $(LOCAL_DIR)/vnode.cpp \
     $(LOCAL_DIR)/writeback.cpp \
 

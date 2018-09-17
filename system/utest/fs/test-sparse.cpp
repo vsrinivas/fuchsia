@@ -9,8 +9,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <minfs/format.h>
 #include <zircon/syscalls.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
@@ -75,10 +77,47 @@ bool test_sparse(void) {
     END_TEST;
 }
 
+bool TestSparseAllocation() {
+    BEGIN_TEST;
+    fbl::unique_fd sparse_fd(open("::sparse_file", O_RDWR | O_CREAT, 0644));
+    ASSERT_TRUE(sparse_fd);
+
+    char data[minfs::kMinfsBlockSize];
+    memset(data, 0xaa, sizeof(data));
+
+    // Create a file that owns blocks in |kBitmapBlocks| different bitmap blocks.
+    constexpr uint32_t kBitmapBlocks = 4;
+    for (uint32_t j = 0; j < kBitmapBlocks; j++) {
+        // Write one block to the "sparse" file.
+        ASSERT_EQ(sizeof(data), write(sparse_fd.get(), data, sizeof(data)));
+
+        char filename[128];
+        snprintf(filename, sizeof(filename), "::file_%u", j);
+        fbl::unique_fd fd(open(filename, O_RDWR | O_CREAT, 0644));
+        ASSERT_TRUE(fd);
+
+        // Write enough blocks to another file to use up the remainder of a bitmap block.
+        for (size_t i = 0; i < minfs::kMinfsBlockBits; i++) {
+            ASSERT_EQ(sizeof(data), write(fd.get(), data, sizeof(data)));
+        }
+    }
+
+    ASSERT_EQ(close(sparse_fd.release()), 0);
+    ASSERT_EQ(unlink("::sparse_file"), 0);
+
+    END_TEST;
+}
+
 constexpr size_t kBlockSize = 8192;
 constexpr size_t kDirectBlocks = 16;
 
-RUN_FOR_ALL_FILESYSTEMS(sparse_tests,
+const test_disk_t disk = {
+    .block_count = 1LLU << 24,
+    .block_size = 1LLU << 9,
+    .slice_size = 1LLU << 23,
+};
+
+RUN_FOR_ALL_FILESYSTEMS_SIZE(sparse_tests, disk,
     RUN_TEST_MEDIUM((test_sparse<0, 0, kBlockSize>))
     RUN_TEST_MEDIUM((test_sparse<kBlockSize / 2, 0, kBlockSize>))
     RUN_TEST_MEDIUM((test_sparse<kBlockSize / 2, kBlockSize, kBlockSize>))
@@ -97,4 +136,5 @@ RUN_FOR_ALL_FILESYSTEMS(sparse_tests,
     RUN_TEST_MEDIUM((test_sparse<kBlockSize * kDirectBlocks + kBlockSize,
                                  kBlockSize * kDirectBlocks + 2 * kBlockSize,
                                  kBlockSize * 32>))
+    RUN_TEST_LARGE(TestSparseAllocation)
 )

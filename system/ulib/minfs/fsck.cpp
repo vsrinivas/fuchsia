@@ -33,6 +33,7 @@ public:
     zx_status_t CheckForUnusedInodes() const;
     zx_status_t CheckLinkCounts() const;
     zx_status_t CheckAllocatedCounts() const;
+    zx_status_t CheckJournal() const;
 
     // "Set once"-style flag to identify if anything nonconforming
     // was found in the underlying filesystem -- even if it was fixed.
@@ -587,6 +588,29 @@ zx_status_t MinfsChecker::CheckAllocatedCounts() const {
     return status;
 }
 
+zx_status_t MinfsChecker::CheckJournal() const {
+    char data[kMinfsBlockSize];
+    blk_t journal_block;
+#ifdef __Fuchsia__
+    journal_block = fs_->Info().journal_start_block;
+#else
+    journal_block = fs_->offsets_.JournalStartBlock();
+#endif
+
+    if (fs_->bc_->Readblk(journal_block, data) < 0) {
+        FS_TRACE_ERROR("minfs: could not read journal block\n");
+        return ZX_ERR_IO;
+    }
+
+    const JournalInfo* journal_info = reinterpret_cast<const JournalInfo*>(data);
+    if (journal_info->magic != kJournalMagic) {
+        FS_TRACE_ERROR("minfs: invalid journal magic\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
+    return ZX_OK;
+}
+
 MinfsChecker::MinfsChecker()
     : conforming_(true), fs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), links_() {};
 
@@ -647,8 +671,7 @@ zx_status_t Fsck(fbl::unique_ptr<Bcache> bc) {
 
     zx_status_t r;
 
-    // Save an error if it occurs, but check for subsequent errors
-    // anyway.
+    // Save an error if it occurs, but check for subsequent errors anyway.
     r = chk.CheckUnlinkedInodes();
     status |= (status != ZX_OK) ? 0 : r;
     r = chk.CheckForUnusedBlocks();
@@ -658,6 +681,8 @@ zx_status_t Fsck(fbl::unique_ptr<Bcache> bc) {
     r = chk.CheckLinkCounts();
     status |= (status != ZX_OK) ? 0 : r;
     r = chk.CheckAllocatedCounts();
+    status |= (status != ZX_OK) ? 0 : r;
+    r = chk.CheckJournal();
     status |= (status != ZX_OK) ? 0 : r;
 
     //TODO: check allocated inodes that were abandoned

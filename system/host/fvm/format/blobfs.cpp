@@ -57,7 +57,7 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) 
             fvm_info_.abm_slices);
     xprintf("Blobfs: ino_blocks: %" PRIu64 ", ino_slices: %u\n", NodeMapBlocks(info_),
             fvm_info_.ino_slices);
-    xprintf("Blobfs: jnl_blocks: %" PRIu64 ", journal_slices: %u\n", JournalBlocks(info_),
+    xprintf("Blobfs: jnl_blocks: %" PRIu64 ", jnl_slices: %u\n", JournalBlocks(info_),
             fvm_info_.journal_slices);
     xprintf("Blobfs: dat_blocks: %" PRIu64 ", dat_slices: %u\n", DataBlocks(info_),
             fvm_info_.dat_slices);

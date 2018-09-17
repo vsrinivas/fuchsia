@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fvm/fvm-sparse.h>
+#include <minfs/transaction-limits.h>
 
 #include <utility>
 
@@ -59,6 +60,7 @@ MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type)
 zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
     memcpy(&fvm_blk_, &blk_, minfs::kMinfsBlockSize);
     fvm_info_.slice_size = slice_size;
+    fvm_info_.flags |= minfs::kMinfsFlagFVM;
 
     if (fvm_info_.slice_size % minfs::kMinfsBlockSize) {
         fprintf(stderr, "minfs mkfs: Slice size not multiple of minfs block\n");
@@ -68,21 +70,32 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
     size_t kBlocksPerSlice = fvm_info_.slice_size / minfs::kMinfsBlockSize;
     uint32_t ibm_blocks = info_.abm_block - info_.ibm_block;
     uint32_t abm_blocks = info_.ino_block - info_.abm_block;
-    uint32_t ino_blocks = info_.dat_block - info_.ino_block;
+    uint32_t ino_blocks = info_.journal_start_block - info_.ino_block;
+    uint32_t journal_blocks = info_.dat_block - info_.journal_start_block;
     uint32_t dat_blocks = info_.block_count;
 
+    //TODO(planders): Once blobfs journaling patch is landed, use fvm::BlocksToSlices() here.
     fvm_info_.ibm_slices = (ibm_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
     fvm_info_.abm_slices = (abm_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
     fvm_info_.ino_slices = (ino_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
+
+    // TODO(planders): Weird things may happen if we grow the journal here while it contains valid
+    //                 entries. Make sure to account for this case (or verify that the journal is
+    //                 resolved prior to extension).
+    minfs::TransactionLimits limits(fvm_info_);
+    journal_blocks = fbl::max(journal_blocks, limits.GetRecommendedJournalBlocks());
+    fvm_info_.journal_slices = (journal_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
     fvm_info_.dat_slices = (dat_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
     fvm_info_.vslice_count = 1 + fvm_info_.ibm_slices + fvm_info_.abm_slices +
-                             fvm_info_.ino_slices + fvm_info_.dat_slices;
+                             fvm_info_.ino_slices + fvm_info_.journal_slices + fvm_info_.dat_slices;
 
     xprintf("Minfs: slice_size is %" PRIu64 "u, kBlocksPerSlice is %zu\n", fvm_info_.slice_size,
             kBlocksPerSlice);
     xprintf("Minfs: ibm_blocks: %u, ibm_slices: %u\n", ibm_blocks, fvm_info_.ibm_slices);
     xprintf("Minfs: abm_blocks: %u, abm_slices: %u\n", abm_blocks, fvm_info_.abm_slices);
     xprintf("Minfs: ino_blocks: %u, ino_slices: %u\n", ino_blocks, fvm_info_.ino_slices);
+    xprintf("Minfs: jnl_blocks: %u, jnl_slices: %u\n", journal_blocks,
+            fvm_info_.journal_slices);
     xprintf("Minfs: dat_blocks: %u, dat_slices: %u\n", dat_blocks, fvm_info_.dat_slices);
 
     fvm_info_.inode_count = static_cast<uint32_t>(fvm_info_.ino_slices * fvm_info_.slice_size /
@@ -93,8 +106,8 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
     fvm_info_.ibm_block = minfs::kFVMBlockInodeBmStart;
     fvm_info_.abm_block = minfs::kFVMBlockDataBmStart;
     fvm_info_.ino_block = minfs::kFVMBlockInodeStart;
+    fvm_info_.journal_start_block = minfs::kFVMBlockJournalStart;
     fvm_info_.dat_block = minfs::kFVMBlockDataStart;
-    fvm_info_.flags |= minfs::kMinfsFlagFVM;
 
     zx_status_t status;
     // Check if bitmaps are the wrong size, slice extents run on too long, etc.
@@ -139,11 +152,19 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
         vslice_info->vslice_start = minfs::kFVMBlockInodeStart;
         vslice_info->slice_count = fvm_info_.ino_slices;
         vslice_info->block_offset = info_.ino_block;
-        vslice_info->block_count = info_.dat_block - info_.ino_block;
+        vslice_info->block_count = info_.journal_start_block - info_.ino_block;
         vslice_info->zero_fill = true;
         return ZX_OK;
     }
     case 4: {
+        vslice_info->vslice_start = minfs::kFVMBlockJournalStart;
+        vslice_info->slice_count = fvm_info_.journal_slices;
+        vslice_info->block_offset = info_.journal_start_block;
+        vslice_info->block_count = info_.dat_block - info_.journal_start_block;
+        vslice_info->zero_fill = false;
+        return ZX_OK;
+    }
+    case 5: {
         vslice_info->vslice_start = minfs::kFVMBlockDataStart;
         vslice_info->slice_count = fvm_info_.dat_slices;
         vslice_info->block_offset = info_.dat_block;
@@ -158,8 +179,7 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
 
 zx_status_t MinfsFormat::GetSliceCount(uint32_t* slices_out) const {
     CheckFvmReady();
-    *slices_out = 1 + fvm_info_.ibm_slices + fvm_info_.abm_slices + fvm_info_.ino_slices
-                  + fvm_info_.dat_slices;
+    *slices_out = fvm_info_.vslice_count;
     return ZX_OK;
 }
 

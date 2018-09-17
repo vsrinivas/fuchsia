@@ -12,10 +12,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/algorithm.h>
+#include <fbl/unique_ptr.h>
+#include <fvm/fvm.h>
+#include <minfs/format.h>
+#include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
-#include <fbl/unique_ptr.h>
-#include <unittest/unittest.h>
 
 #include "filesystems.h"
 #include "misc.h"
@@ -67,14 +70,29 @@ bool TestUseAllInodes(void) {
     END_TEST;
 }
 
+const test_disk_t disk = {
+    .block_count = 1LLU << 17,
+    .block_size = 1LLU << 9,
+    .slice_size = 1LLU << 20,
+};
+
 bool TestUseAllData(void) {
     BEGIN_TEST;
     constexpr size_t kBufSize = (1 << 20);
-    constexpr size_t kFileBufCount = 20;
+    constexpr size_t kFileBufCount = 19;
     ASSERT_TRUE(test_info->supports_resize);
 
     uint64_t disk_size = test_disk_info.block_count * test_disk_info.block_size;
-    size_t file_count = disk_size / kBufSize / kFileBufCount * 9 / 10;
+    size_t metadata_size = fvm::MetadataSize(disk_size, disk.slice_size);
+
+    ASSERT_GT(disk_size, metadata_size * 2);
+    disk_size -= 2 * metadata_size;
+
+    ASSERT_GT(disk_size, minfs::kMinfsMinimumSlices * disk.slice_size);
+    disk_size -= minfs::kMinfsMinimumSlices * disk.slice_size;
+
+    size_t file_count = disk_size / kBufSize / kFileBufCount;
+    ASSERT_GT(file_count, 0);
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBufSize]);
@@ -82,7 +100,7 @@ bool TestUseAllData(void) {
     memset(buf.get(), 0, kBufSize);
 
     for (size_t f = 0; f < file_count; f++) {
-        printf("Creating 20 MB file #%lu\n", f);
+        printf("Creating 19 MB file #%lu\n", f);
         char fname[128];
         snprintf(fname, sizeof(fname), "::%lu", f);
         int fd = open(fname, O_CREAT | O_RDWR | O_EXCL);
@@ -103,12 +121,6 @@ bool TestUseAllData(void) {
 
     END_TEST;
 }
-
-const test_disk_t disk = {
-    .block_count = 1LLU << 17,
-    .block_size = 1LLU << 9,
-    .slice_size = 1LLU << 22,
-};
 
 }  // namespace
 

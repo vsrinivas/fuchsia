@@ -15,7 +15,7 @@
 
 #define DEFAULT_SLICE_SIZE (64lu * (1 << 20)) // 64 mb
 #define PARTITION_SIZE     (1lu * (1 << 29))  // 512 mb
-#define CONTAINER_SIZE     (5lu * (1 << 30))  // 5 gb
+#define CONTAINER_SIZE     (6lu * (1 << 30))  // 6 gb
 
 #define MAX_PARTITIONS 6
 

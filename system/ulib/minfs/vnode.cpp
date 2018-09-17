@@ -1332,6 +1332,8 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* state, const void* data,
 
     zx_status_t status;
 #ifdef __Fuchsia__
+    // TODO(planders): Once we are splitting up write transactions, assert this on host as well.
+    ZX_DEBUG_ASSERT(len < TransactionLimits::kMaxWriteBytes);
     if ((status = InitVmo()) != ZX_OK) {
         return status;
     }
@@ -1656,6 +1658,7 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
 
     // Reserve 1 additional block for the new directory's initial . and .. entries.
     reserve_blocks += 1;
+    ZX_DEBUG_ASSERT(reserve_blocks <= fs_->Limits().GetMaximumMetaDataBlocks());
 
     // In addition to reserve_blocks, reserve 1 inode for the vnode to be created.
     fbl::unique_ptr<Transaction> state;

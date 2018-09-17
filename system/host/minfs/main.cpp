@@ -13,6 +13,7 @@
 #include <minfs/fsck.h>
 #include <minfs/host.h>
 #include <minfs/minfs.h>
+#include <minfs/transaction-limits.h>
 
 #include <utility>
 
@@ -312,17 +313,27 @@ zx_status_t MinfsCreator::CalculateRequiredSize(off_t* out) {
     // but for our current purposes it should be sufficient.
     uint32_t dir_blocks = dir_count + (dir_bytes_ / minfs::kMinfsBlockSize);
 
-    uint32_t inodes = minfs::kMinfsDefaultInodeCount;
-    uint32_t blocks = data_blocks_ + dir_blocks;
+    minfs::Superblock info;
+    info.flags = 0;
+    info.inode_count = minfs::kMinfsDefaultInodeCount;
+    info.block_count = data_blocks_ + dir_blocks;
 
     // Calculate number of blocks we will need for all minfs structures.
-    uint32_t inoblks = (inodes + minfs::kMinfsInodesPerBlock - 1) / minfs::kMinfsInodesPerBlock;
-    uint32_t ibmblks = (inodes + minfs::kMinfsBlockBits - 1) / minfs::kMinfsBlockBits;
-    uint32_t abmblks = (blocks + minfs::kMinfsBlockBits - 1) / minfs::kMinfsBlockBits;
+    uint32_t inode_bitmap_blocks = (info.inode_count + minfs::kMinfsBlockBits - 1)
+                                   / minfs::kMinfsBlockBits;
+    uint32_t block_bitmap_blocks = (info.block_count + minfs::kMinfsBlockBits - 1)
+                                   / minfs::kMinfsBlockBits;
+    uint32_t inode_table_blocks = (info.inode_count + minfs::kMinfsInodesPerBlock - 1)
+                                  / minfs::kMinfsInodesPerBlock;
 
-    *out = (8 + fbl::round_up(inoblks, 8u) + fbl::round_up(ibmblks, 8u) +
-            fbl::round_up(abmblks, 8u) + blocks) *
-           minfs::kMinfsBlockSize;
+    info.ibm_block = 8;
+    info.abm_block = info.ibm_block + fbl::round_up(inode_bitmap_blocks, 8u);
+    info.ino_block = info.abm_block + fbl::round_up(block_bitmap_blocks, 8u);
+    info.journal_start_block = info.ino_block + inode_table_blocks;
+    minfs::TransactionLimits limits(info);
+    info.dat_block = info.journal_start_block + limits.GetRecommendedJournalBlocks();
+
+    *out = (info.dat_block + info.block_count) * minfs::kMinfsBlockSize;
     return ZX_OK;
 }
 

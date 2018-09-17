@@ -142,20 +142,19 @@ zx_status_t Bcache::SetSparse(off_t offset, const fbl::Vector<size_t>& extent_le
         return ZX_ERR_ALREADY_BOUND;
     }
 
-    ZX_ASSERT(extent_lengths.size() == EXTENT_COUNT);
+    ZX_ASSERT(extent_lengths.size() == kExtentCount);
 
     fbl::AllocChecker ac;
-    extent_lengths_.reset(new (&ac) size_t[EXTENT_COUNT], EXTENT_COUNT);
+    extent_lengths_.reset(new (&ac) size_t[kExtentCount], kExtentCount);
 
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    extent_lengths_[0] = extent_lengths[0];
-    extent_lengths_[1] = extent_lengths[1];
-    extent_lengths_[2] = extent_lengths[2];
-    extent_lengths_[3] = extent_lengths[3];
-    extent_lengths_[4] = extent_lengths[4];
+    for (size_t i = 0; i < extent_lengths.size(); i++) {
+        extent_lengths_[i] = extent_lengths[i];
+    }
+
     offset_ = offset;
     return ZX_OK;
 }

@@ -112,10 +112,17 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
         FS_TRACE_ERROR("minfs: bsz/isz %u/%u unsupported\n", info->block_size, info->inode_size);
         return ZX_ERR_INVALID_ARGS;
     }
+
+    TransactionLimits limits(*info);
     if ((info->flags & kMinfsFlagFVM) == 0) {
         if (info->dat_block + info->block_count > max) {
             FS_TRACE_ERROR("minfs: too large for device\n");
             return ZX_ERR_INVALID_ARGS;
+        }
+
+        if (info->dat_block - info->journal_start_block < limits.GetMinimumJournalBlocks()) {
+            FS_TRACE_ERROR("minfs: journal too small\n");
+            return ZX_ERR_BAD_STATE;
         }
     } else {
         const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
@@ -194,6 +201,7 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
             FS_TRACE_ERROR("minfs: Inode bitmap collides into block bitmap\n");
             return ZX_ERR_INVALID_ARGS;
         }
+
         size_t abm_blocks_needed = (info->block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
         size_t abm_blocks_allocated = info->abm_slices * kBlocksPerSlice;
         if (abm_blocks_needed > abm_blocks_allocated) {
@@ -203,16 +211,29 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
             FS_TRACE_ERROR("minfs: Block bitmap collides with inode table\n");
             return ZX_ERR_INVALID_ARGS;
         }
+
         size_t ino_blocks_needed =
             (info->inode_count + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
         size_t ino_blocks_allocated = info->ino_slices * kBlocksPerSlice;
         if (ino_blocks_needed > ino_blocks_allocated) {
             FS_TRACE_ERROR("minfs: Not enough slices for inode table\n");
             return ZX_ERR_INVALID_ARGS;
-        } else if (ino_blocks_allocated + info->ino_block >= info->dat_block) {
+        } else if (ino_blocks_allocated + info->ino_block >= info->journal_start_block) {
             FS_TRACE_ERROR("minfs: Inode table collides with data blocks\n");
             return ZX_ERR_INVALID_ARGS;
         }
+
+        size_t journal_blocks_needed = limits.GetMinimumJournalBlocks();
+        size_t journal_blocks_allocated = info->journal_slices * kBlocksPerSlice;
+        if (journal_blocks_needed > journal_blocks_allocated) {
+            FS_TRACE_ERROR("minfs: Not enough slices for journal\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (journal_blocks_allocated + info->journal_start_block > info->dat_block) {
+            FS_TRACE_ERROR("minfs: Journal collides with data blocks\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+
         size_t dat_blocks_needed = info->block_count;
         size_t dat_blocks_allocated = info->dat_slices * kBlocksPerSlice;
         if (dat_blocks_needed > dat_blocks_allocated) {
@@ -233,25 +254,29 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
 #ifndef __Fuchsia__
 BlockOffsets::BlockOffsets(const Bcache& bc, const SuperblockManager& sb) {
     if (bc.extent_lengths_.size() > 0) {
-        ZX_ASSERT(bc.extent_lengths_.size() == EXTENT_COUNT);
+        ZX_ASSERT(bc.extent_lengths_.size() == kExtentCount);
         ibm_block_count_ = bc.extent_lengths_[1] / kMinfsBlockSize;
         abm_block_count_ = bc.extent_lengths_[2] / kMinfsBlockSize;
         ino_block_count_ = bc.extent_lengths_[3] / kMinfsBlockSize;
-        dat_block_count_ = bc.extent_lengths_[4] / kMinfsBlockSize;
+        journal_block_count_ = bc.extent_lengths_[4] / kMinfsBlockSize;
+        dat_block_count_ = bc.extent_lengths_[5] / kMinfsBlockSize;
 
         ibm_start_block_ = bc.extent_lengths_[0] / kMinfsBlockSize;
         abm_start_block_ = ibm_start_block_ + ibm_block_count_;
         ino_start_block_ = abm_start_block_ + abm_block_count_;
-        dat_start_block_ = ino_start_block_ + ino_block_count_;
+        journal_start_block_ = ino_start_block_ + ino_block_count_;
+        dat_start_block_ = journal_start_block_ + journal_block_count_;
     } else {
         ibm_start_block_ = sb.Info().ibm_block;
         abm_start_block_ = sb.Info().abm_block;
         ino_start_block_ = sb.Info().ino_block;
+        journal_start_block_ = sb.Info().journal_start_block;
         dat_start_block_ = sb.Info().dat_block;
 
         ibm_block_count_ = abm_start_block_ - ibm_start_block_;
         abm_block_count_ = ino_start_block_ - abm_start_block_;
         ino_block_count_ = dat_start_block_ - ino_start_block_;
+        journal_block_count_ = dat_start_block_ - journal_start_block_;
         dat_block_count_ = sb.Info().block_count;
     }
 }
@@ -259,6 +284,11 @@ BlockOffsets::BlockOffsets(const Bcache& bc, const SuperblockManager& sb) {
 
 zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
                                     fbl::unique_ptr<Transaction>* out) {
+    ZX_DEBUG_ASSERT(reserve_inodes <= TransactionLimits::kMaxInodeBitmapBlocks);
+#ifdef __Fuchsia__
+    // TODO(planders): Once we are splitting up write transactions, assert this on host as well.
+    ZX_DEBUG_ASSERT(reserve_blocks <= limits_.GetMaximumDataBlocks());
+#endif
     fbl::unique_ptr<WritebackWork> work(new WritebackWork(bc_.get()));
     fbl::unique_ptr<AllocatorPromise> inode_promise;
     fbl::unique_ptr<AllocatorPromise> block_promise;
@@ -280,6 +310,16 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
     return ZX_OK;
 }
 
+void Minfs::CommitTransaction(fbl::unique_ptr<Transaction> state) {
+    // On enqueue, unreserve any remaining reserved blocks/inodes tracked by work.
+#ifdef __Fuchsia__
+    ZX_DEBUG_ASSERT(state->GetWork()->BlkCount() <= limits_.GetMaximumEntryDataBlocks());
+    writeback_->Enqueue(state->RemoveWork());
+#else
+    state->GetWork()->Complete();
+#endif
+}
+
 #ifdef __Fuchsia__
 void Minfs::Sync(SyncCallback closure) {
     fbl::unique_ptr<Transaction> state;
@@ -294,13 +334,14 @@ Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
              fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
              fbl::unique_ptr<WritebackBuffer> writeback, uint64_t fs_id)
     : bc_(std::move(bc)), sb_(std::move(sb)), block_allocator_(std::move(block_allocator)),
-      inodes_(std::move(inodes)), writeback_(std::move(writeback)), fs_id_(fs_id) {}
+      inodes_(std::move(inodes)), writeback_(std::move(writeback)), fs_id_(fs_id),
+      limits_(sb_->Info()) {}
 #else
 Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
              fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
              BlockOffsets offsets)
     : bc_(std::move(bc)), sb_(std::move(sb)), block_allocator_(std::move(block_allocator)),
-      inodes_(std::move(inodes)), offsets_(std::move(offsets)) {}
+      inodes_(std::move(inodes)), offsets_(std::move(offsets)), limits_(sb_->Info()) {}
 #endif
 
 Minfs::~Minfs() {
@@ -484,25 +525,17 @@ void Minfs::RemoveUnlinked(WritebackWork* wb, VnodeMinfs* vn) {
 }
 
 zx_status_t Minfs::PurgeUnlinked() {
-    if (sb_->Info().unlinked_head == 0) {
-        // No unlinked inodes exist, so we can return early.
-        ZX_DEBUG_ASSERT(sb_->Info().unlinked_tail == 0);
-        return ZX_OK;
-    }
-
     ino_t last_ino = 0;
     ino_t next_ino = Info().unlinked_head;
     ino_t unlinked_count = 0;
 
-    fbl::unique_ptr<Transaction> state;
-    zx_status_t status = BeginTransaction(0, 0, &state);
-    if (status != ZX_OK) {
-        return status;
-    }
-
     // Loop through the unlinked list and free all allocated resources.
     while (next_ino != 0) {
-        unlinked_count++;
+        fbl::unique_ptr<Transaction> state;
+        zx_status_t status = BeginTransaction(0, 0, &state);
+        if (status != ZX_OK) {
+            return status;
+        }
 
         fbl::RefPtr<VnodeMinfs> vn;
         if ((status = VnodeMinfs::Recreate(this, next_ino, &vn)) != ZX_OK) {
@@ -518,19 +551,26 @@ zx_status_t Minfs::PurgeUnlinked() {
 
         last_ino = next_ino;
         next_ino = vn->GetInode()->next_inode;
+
+        sb_->MutableInfo()->unlinked_head = next_ino;
+
+        if (next_ino == 0) {
+            ZX_DEBUG_ASSERT(Info().unlinked_tail == last_ino);
+            sb_->MutableInfo()->unlinked_tail = 0;
+        }
+
+        sb_->Write(state->GetWork());
+        CommitTransaction(std::move(state));
+        unlinked_count++;
     }
 
-    ZX_DEBUG_ASSERT(sb_->Info().unlinked_tail == last_ino);
+    ZX_DEBUG_ASSERT(Info().unlinked_head == 0);
+    ZX_DEBUG_ASSERT(Info().unlinked_tail == 0);
 
     if (unlinked_count > 0) {
         FS_TRACE_WARN("minfs: Found and purged %u unlinked vnode(s) on mount\n", unlinked_count);
     }
 
-    sb_->MutableInfo()->unlinked_head = 0;
-    sb_->MutableInfo()->unlinked_tail = 0;
-    sb_->Write(state->GetWork());
-
-    CommitTransaction(std::move(state));
     return ZX_OK;
 }
 
@@ -695,7 +735,7 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {
 zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
                           fbl::unique_ptr<Minfs>* out) {
 #ifndef __Fuchsia__
-    if (bc->extent_lengths_.size() != 0 && bc->extent_lengths_.size() != EXTENT_COUNT) {
+    if (bc->extent_lengths_.size() != 0 && bc->extent_lengths_.size() != kExtentCount) {
         FS_TRACE_ERROR("minfs: invalid number of extents\n");
         return ZX_ERR_INVALID_ARGS;
     }
@@ -798,51 +838,6 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
     }
 
     *out = std::move(fs);
-    return ZX_OK;
-}
-
-zx_status_t GetRequiredBlockCount(size_t offset, size_t length, blk_t* num_req_blocks) {
-    if (length == 0) {
-        // Return early if no data needs to be written.
-        *num_req_blocks = 0;
-        return ZX_OK;
-    }
-
-    // Determine which range of direct blocks will be accessed given offset and length,
-    // and add to total.
-    blk_t first_direct = static_cast<blk_t>(offset / kMinfsBlockSize);
-    blk_t last_direct = static_cast<blk_t>((offset + length - 1) / kMinfsBlockSize);
-    blk_t reserve_blocks = last_direct - first_direct + 1;
-
-    if (last_direct >= kMinfsDirect) {
-        // If direct blocks go into indirect range, adjust the indices accordingly.
-        first_direct = fbl::max(first_direct, kMinfsDirect) - kMinfsDirect;
-        last_direct -= kMinfsDirect;
-
-        // Calculate indirect blocks containing first and last direct blocks, and add to total.
-        blk_t first_indirect = first_direct / kMinfsDirectPerIndirect;
-        blk_t last_indirect = last_direct / kMinfsDirectPerIndirect;
-        reserve_blocks += last_indirect - first_indirect + 1;
-
-        if (last_indirect >= kMinfsIndirect) {
-            // If indirect blocks go into doubly indirect range, adjust the indices accordingly.
-            first_indirect = fbl::max(first_indirect, kMinfsIndirect) - kMinfsIndirect;
-            last_indirect -= kMinfsIndirect;
-
-            // Calculate doubly indirect blocks containing first/last indirect blocks,
-            // and add to total
-            blk_t first_dindirect = first_indirect / kMinfsDirectPerIndirect;
-            blk_t last_dindirect = last_indirect / kMinfsDirectPerIndirect;
-            reserve_blocks += last_dindirect - first_dindirect + 1;
-
-            if (last_dindirect >= kMinfsDoublyIndirect) {
-                // We cannot allocate blocks which exceed the doubly indirect range.
-                return ZX_ERR_OUT_OF_RANGE;
-            }
-        }
-    }
-
-    *num_req_blocks = reserve_blocks;
     return ZX_OK;
 }
 
@@ -977,6 +972,16 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
         }
         info.ino_slices = 1;
 
+        TransactionLimits limits(info);
+        blk_t journal_blocks = limits.GetRecommendedJournalBlocks();
+        request.length = fbl::round_up(journal_blocks, kBlocksPerSlice) / kBlocksPerSlice;
+        request.offset = kFVMBlockJournalStart / kBlocksPerSlice;
+        if ((status = bc->FVMExtend(&request)) != ZX_OK) {
+            fprintf(stderr, "minfs mkfs: Failed to allocate journal blocks\n");
+            return status;
+        }
+        info.journal_slices = static_cast<blk_t>(request.length);
+
         ZX_ASSERT(options.fvm_data_slices > 0);
         request.length = options.fvm_data_slices;
         request.offset = kFVMBlockDataStart / kBlocksPerSlice;
@@ -999,33 +1004,66 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     // and inode bitmaps there are
     uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
     uint32_t ibmblks = (inodes + kMinfsBlockBits - 1) / kMinfsBlockBits;
-    uint32_t abmblks;
+    uint32_t abmblks = 0;
 
     info.inode_count = inodes;
     info.alloc_block_count = 0;
     info.alloc_inode_count = 0;
-    if ((info.flags & kMinfsFlagFVM) == 0) {
-        // Aligning distinct data areas to 8 block groups.
-        uint32_t non_dat_blocks = (8 + fbl::round_up(ibmblks, 8u) + inoblks);
-        if (non_dat_blocks >= blocks) {
-            fprintf(stderr, "mkfs: Partition size (%" PRIu64 " bytes) is too small\n",
-                    static_cast<uint64_t>(blocks) * kMinfsBlockSize);
-            return ZX_ERR_INVALID_ARGS;
-        }
 
-        uint32_t dat_block_count_ = blocks - non_dat_blocks;
-        abmblks = (dat_block_count_ + kMinfsBlockBits - 1) / kMinfsBlockBits;
-        info.block_count = dat_block_count_ - fbl::round_up(abmblks, 8u);
+    if ((info.flags & kMinfsFlagFVM) == 0) {
+        blk_t non_dat_blocks;
+        blk_t journal_blocks = 0;
+
         info.ibm_block = 8;
         info.abm_block = info.ibm_block + fbl::round_up(ibmblks, 8u);
-        info.ino_block = info.abm_block + fbl::round_up(abmblks, 8u);
-        info.dat_block = info.ino_block + inoblks;
+
+        for (uint32_t alloc_bitmap_rounded = 8; alloc_bitmap_rounded < blocks;
+             alloc_bitmap_rounded += 8) {
+            // Increment bitmap blocks by 8, since we will always round this value up to 8.
+            ZX_ASSERT(alloc_bitmap_rounded % 8 == 0);
+
+            info.ino_block = info.abm_block + alloc_bitmap_rounded;
+
+            // Calculate the journal size based on other metadata structures.
+            TransactionLimits limits(info);
+            journal_blocks = limits.GetRecommendedJournalBlocks();
+
+            non_dat_blocks = 8 + fbl::round_up(ibmblks, 8u) + alloc_bitmap_rounded + inoblks;
+
+            // If the recommended journal count is too high, try using the minimum instead.
+            if (non_dat_blocks + journal_blocks >= blocks) {
+                journal_blocks = limits.GetMinimumJournalBlocks();
+            }
+
+            non_dat_blocks += journal_blocks;
+            if (non_dat_blocks >= blocks) {
+                fprintf(stderr, "mkfs: Partition size (%" PRIu64 " bytes) is too small\n",
+                        static_cast<uint64_t>(blocks) * kMinfsBlockSize);
+                return ZX_ERR_INVALID_ARGS;
+            }
+
+            info.block_count = blocks - non_dat_blocks;
+            // Calculate the exact number of bitmap blocks needed to track this many data blocks.
+            abmblks = (info.block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+
+            if (alloc_bitmap_rounded >= abmblks) {
+                // It is possible that the abmblks value will actually bring us back to the next
+                // lowest tier of 8-rounded values. This means we may have 8 blocks allocated for
+                // the block bitmap which will never actually be used. This is not ideal, but is
+                // expected, and should only happen for very particular block counts.
+                break;
+            }
+        }
+
+        info.journal_start_block = info.ino_block + inoblks;
+        info.dat_block = info.journal_start_block + journal_blocks;
     } else {
         info.block_count = blocks;
         abmblks = (info.block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
         info.ibm_block = kFVMBlockInodeBmStart;
         info.abm_block = kFVMBlockDataBmStart;
         info.ino_block = kFVMBlockInodeStart;
+        info.journal_start_block = kFVMBlockJournalStart;
         info.dat_block = kFVMBlockDataStart;
     }
 
@@ -1108,6 +1146,12 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     memcpy(blk, &info, sizeof(info));
     bc->Writeblk(0, blk);
 
+    // Write the journal info block to disk.
+    memset(blk, 0, sizeof(blk));
+    JournalInfo* journal_info = reinterpret_cast<JournalInfo*>(blk);
+    journal_info->magic = kJournalMagic;
+    bc->Writeblk(info.journal_start_block, blk);
+
     fvm_cleanup.cancel();
     return ZX_OK;
 }
@@ -1136,7 +1180,7 @@ zx_status_t Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_ma
 
 zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
                        const fbl::Vector<size_t>& extent_lengths) {
-    if (extent_lengths.size() != EXTENT_COUNT) {
+    if (extent_lengths.size() != kExtentCount) {
         fprintf(stderr, "error: invalid number of extents\n");
         return ZX_ERR_INVALID_ARGS;
     }

@@ -32,7 +32,7 @@ typedef uint32_t ino_t;
 
 constexpr uint64_t kMinfsMagic0         = (0x002153466e694d21ULL);
 constexpr uint64_t kMinfsMagic1         = (0x385000d3d3d3d304ULL);
-constexpr uint32_t kMinfsVersion        = 0x00000006;
+constexpr uint32_t kMinfsVersion        = 0x00000007;
 
 constexpr ino_t    kMinfsRootIno        = 1;
 constexpr uint32_t kMinfsFlagClean      = 0x00000001; // Currently unused
@@ -50,7 +50,8 @@ constexpr uint32_t kMinfsDirectPerIndirect  = (kMinfsBlockSize / sizeof(blk_t));
 constexpr uint32_t kMinfsDirectPerDindirect = kMinfsDirectPerIndirect * kMinfsDirectPerIndirect;
 // not possible to have a block at or past this one
 // due to the limitations of the inode and indirect blocks
-// constexpr uint64_t kMinfsMaxFileBlock = (kMinfsDirect + (kMinfsIndirect * kMinfsDirectPerIndirect)
+// constexpr uint64_t kMinfsMaxFileBlock = (kMinfsDirect +
+//                                         (kMinfsIndirect * kMinfsDirectPerIndirect)
 //                                         + (kMinfsDoublyIndirect * kMinfsDirectPerIndirect
 //                                         * kMinfsDirectPerIndirect));
 // TODO(ZX-1523): Remove this artificial cap when MinFS can safely deal
@@ -70,13 +71,10 @@ constexpr uint32_t MinfsMagicType(uint32_t n) { return n & 0xFF; }
 constexpr size_t kFVMBlockInodeBmStart = 0x10000;
 constexpr size_t kFVMBlockDataBmStart  = 0x20000;
 constexpr size_t kFVMBlockInodeStart   = 0x30000;
-constexpr size_t kFVMBlockDataStart    = 0x40000;
+constexpr size_t kFVMBlockJournalStart = 0x40000;
+constexpr size_t kFVMBlockDataStart    = 0x50000;
 
-// The minimal number of slices to allocate a MinFS partition:
-// Superblock, Inode bitmap, Data bitmap, Inode Table, and actual data.
-constexpr size_t kMinfsMinimumSlices = 5;
-
-constexpr uint64_t kMinfsDefaultInodeCount = 32768;
+constexpr blk_t kJournalEntryHeaderMaxBlocks = 2040;
 
 struct Superblock {
     uint64_t magic0;
@@ -89,17 +87,19 @@ struct Superblock {
     uint32_t inode_count;   // total number of inodes
     uint32_t alloc_block_count; // total number of allocated data blocks
     uint32_t alloc_inode_count; // total number of allocated inodes
-    blk_t ibm_block;     // first blockno of inode allocation bitmap
-    blk_t abm_block;     // first blockno of block allocation bitmap
-    blk_t ino_block;     // first blockno of inode table
-    blk_t dat_block;     // first blockno available for file data
+    blk_t ibm_block;           // first blockno of inode allocation bitmap
+    blk_t abm_block;           // first blockno of block allocation bitmap
+    blk_t ino_block;           // first blockno of inode table
+    blk_t journal_start_block; // first blockno available for journal
+    blk_t dat_block;           // first blockno available for file data
     // The following flags are only valid with (flags & kMinfsFlagFVM):
-    uint64_t slice_size;    // Underlying slice size
-    uint64_t vslice_count;  // Number of allocated underlying slices
-    uint32_t ibm_slices;    // Slices allocated to inode bitmap
-    uint32_t abm_slices;    // Slices allocated to block bitmap
-    uint32_t ino_slices;    // Slices allocated to inode table
-    uint32_t dat_slices;    // Slices allocated to file data section
+    uint64_t slice_size;     // Underlying slice size
+    uint64_t vslice_count;   // Number of allocated underlying slices
+    uint32_t ibm_slices;     // Slices allocated to inode bitmap
+    uint32_t abm_slices;     // Slices allocated to block bitmap
+    uint32_t ino_slices;     // Slices allocated to inode table
+    uint32_t journal_slices; // Slices allocated to journal section
+    uint32_t dat_slices;     // Slices allocated to file data section
 
     ino_t unlinked_head;    // Index to the first unlinked (but open) inode.
     ino_t unlinked_tail;    // Index to the last unlinked (but open) inode.
@@ -108,8 +108,8 @@ struct Superblock {
 static_assert(sizeof(Superblock) <= kMinfsBlockSize,
               "minfs info size is wrong");
 // Notes:
-// - the ibm, abm, ino, and dat regions must be in that order
-//   and may not overlap
+// - the inode bitmap, block bitmap, inode table, journal, and data
+//   regions must be in that order and may not overlap
 // - the abm has an entry for every block on the volume, including
 //   the info block (0), the bitmaps, etc
 // - data blocks referenced from direct and indirect block tables
@@ -120,6 +120,24 @@ static_assert(sizeof(Superblock) <= kMinfsBlockSize,
 //     ino_block + ino / kMinfsInodesPerBlock
 //   at offset: ino % kMinfsInodesPerBlock
 // - inode 0 is never used, should be marked allocated but ignored
+
+constexpr uint64_t kJournalMagic = (0x6d696e6a75726e6cULL);
+
+// The minimal number of slices to allocate a MinFS partition:
+// Superblock, Inode bitmap, Data bitmap, Inode Table, Journal (2), and actual data.
+constexpr size_t kMinfsMinimumSlices = 7;
+
+constexpr uint64_t kMinfsDefaultInodeCount = 32768;
+
+struct JournalInfo {
+    uint64_t magic;
+    uint64_t reserved0;
+    uint64_t reserved1;
+    uint64_t reserved2;
+    uint64_t reserved3;
+};
+
+static_assert(sizeof(JournalInfo) <= kMinfsBlockSize, "Journal info size is too large");
 
 struct Inode {
     uint32_t magic;
@@ -186,7 +204,6 @@ static_assert(kMinfsMaxDirectorySize <= kMinfsReclenMask,
 //   actual size of this record can be computed from the offset at which this
 //   record starts. If the MAX_DIR_SIZE is increased, this 'last' record will
 //   also increase in size.
-
 
 // blocksize   8K    16K    32K
 // 16 dir =  128K   256K   512K
