@@ -620,9 +620,7 @@ zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_node_info_t* info,
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
-        // Currently, VMO Files don't use a client-side control channel.
-        zx_handle_close(handle);
-        *out = fdio_vmofile_create(info->vmofile.v, info->vmofile.offset,
+        *out = fdio_vmofile_create(handle, info->vmofile.v, info->vmofile.offset,
                                    info->vmofile.length);
         if (*out == NULL) {
             return ZX_ERR_NO_RESOURCES;

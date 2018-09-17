@@ -21,6 +21,7 @@
 
 typedef struct vmofile {
     fdio_t io;
+    zx_handle_t h;
     zx_handle_t vmo;
     zx_off_t off;
     zx_off_t end;
@@ -105,8 +106,13 @@ static off_t vmofile_seek(fdio_t* io, off_t offset, int whence) {
 
 static zx_status_t vmofile_close(fdio_t* io) {
     vmofile_t* vf = (vmofile_t*)io;
-    zx_handle_t h = vf->vmo;
-    vf->vmo = 0;
+    zx_handle_t h = vf->h;
+    if (h != ZX_HANDLE_INVALID) {
+        vf->h = ZX_HANDLE_INVALID;
+        zx_handle_close(h);
+    }
+    h = vf->vmo;
+    vf->vmo = ZX_HANDLE_INVALID;
     zx_handle_close(h);
     return 0;
 }
@@ -179,7 +185,8 @@ static fdio_ops_t vmofile_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
-fdio_t* fdio_vmofile_create(zx_handle_t h, zx_off_t off, zx_off_t len) {
+fdio_t* fdio_vmofile_create(zx_handle_t h, zx_handle_t vmo,
+                            zx_off_t off, zx_off_t len) {
     vmofile_t* vf = fdio_alloc(sizeof(vmofile_t));
     if (vf == NULL) {
         zx_handle_close(h);
@@ -188,7 +195,8 @@ fdio_t* fdio_vmofile_create(zx_handle_t h, zx_off_t off, zx_off_t len) {
     vf->io.ops = &vmofile_ops;
     vf->io.magic = FDIO_MAGIC;
     atomic_init(&vf->io.refcount, 1);
-    vf->vmo = h;
+    vf->h = h;
+    vf->vmo = vmo;
     vf->off = off;
     vf->end = off + len;
     vf->ptr = off;
@@ -199,7 +207,7 @@ fdio_t* fdio_vmofile_create(zx_handle_t h, zx_off_t off, zx_off_t len) {
 int fdio_vmo_fd(zx_handle_t vmo, uint64_t offset, uint64_t length) {
     fdio_t* io;
     int fd;
-    if ((io = fdio_vmofile_create(vmo, offset, length)) == NULL) {
+    if ((io = fdio_vmofile_create(ZX_HANDLE_INVALID, vmo, offset, length)) == NULL) {
         return -1;
     }
     if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {

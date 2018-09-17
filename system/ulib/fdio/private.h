@@ -135,7 +135,7 @@ zx_status_t fdio_pipe_posix_ioctl(fdio_t* io, int req, va_list va);
 
 // Wraps a vmo, offset, length with an fdio_t providing a readonly file.
 // Takens ownership of h.
-fdio_t* fdio_vmofile_create(zx_handle_t h, zx_off_t off, zx_off_t len);
+fdio_t* fdio_vmofile_create(zx_handle_t h, zx_handle_t vmo, zx_off_t off, zx_off_t len);
 
 // Wraps a socket with an fdio_t using socket io.
 fdio_t* fdio_socket_create(zx_handle_t s, int flags);
