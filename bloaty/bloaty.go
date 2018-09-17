@@ -51,23 +51,25 @@ func run(bloatyPath, file string, out chan<- bloatyOutput) {
 	}
 	cmd := exec.Command(bloatyPath, args...)
 	stdout, err := cmd.StdoutPipe()
-	defer stdout.Close()
-
 	if err != nil {
 		out <- bloatyOutput{err: fmt.Errorf("pipe: %s: %s", file, err)}
+		stdout.Close()
 		return
 	}
+
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
 	if err := cmd.Start(); err != nil {
 		out <- bloatyOutput{err: fmt.Errorf("start: %s: %s", file, cmd.Stderr)}
+		stdout.Close()
 		return
 	}
 
 	err = ReadCSV(stdout, out, file)
 	if err != nil {
 		out <- bloatyOutput{err: fmt.Errorf("csv: %s: %s", file, err)}
+		stdout.Close()
 		return
 	}
 
