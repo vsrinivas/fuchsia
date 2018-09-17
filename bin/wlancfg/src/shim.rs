@@ -95,50 +95,56 @@ async fn handle_request(client: &ClientRef, req: legacy::WlanRequest) -> Result<
             responder.send(&mut not_supported())
         },
         legacy::WlanRequest::Stats { responder } => {
-            let mut r = await!(stats(&client));
+            let mut r = await!(stats(client));
             responder.send(&mut r)
         },
     }
 }
 
-fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest)
-    -> impl Future<Output = legacy::ScanResult>
+async fn scan<'a>(client: &ClientRef, legacy_req: legacy::ScanRequest)
+    -> legacy::ScanResult
 {
-    future::ready(client.get())
-        .and_then(move |client| {
-            future::ready(start_scan_txn(&client, legacy_req)
-                .map_err(|e| {
-                    eprintln!("Failed to start a scan transaction: {}", e);
-                    internal_error()
-                }))
-        })
-        .and_then(|scan_txn| scan_txn.take_event_stream()
+    let r = await!(async move {
+        let client = client.get()?;
+        let scan_txn = start_scan_txn(&client, legacy_req)
+            .map_err(|e| {
+                eprintln!("Failed to start a scan transaction: {}", e);
+                internal_error()
+            })?;
+
+        let mut evt_stream = scan_txn.take_event_stream();
+        let mut aps = vec![];
+        let mut done = false;
+
+        while let Some(event) = await!(evt_stream.try_next())
             .map_err(|e| {
                 eprintln!("Error reading from scan transaction stream: {}", e);
                 internal_error()
-            })
-            .try_fold((Vec::new(), false), |(mut old_aps, _done), event| {
-                future::ready(match event {
-                    fidl_sme::ScanTransactionEvent::OnResult { aps } => {
-                        old_aps.extend(aps);
-                        Ok((old_aps, false))
-                    },
-                    fidl_sme::ScanTransactionEvent::OnFinished { } => Ok((old_aps, true)),
-                    fidl_sme::ScanTransactionEvent::OnError { error } => Err(convert_scan_err(error))
-                })
-            }))
-        .and_then(|(aps, done)| {
-            future::ready(if !done {
-                eprintln!("Failed to fetch all results before the channel was closed");
-                Err(internal_error())
-            } else {
-                Ok(aps.into_iter().map(|ess| convert_bss_info(ess.best_bss)).collect())
-            })
-        })
-        .map(|r| match r {
-            Ok(aps) => legacy::ScanResult { error: success(), aps: Some(aps) },
-            Err(error) => legacy::ScanResult { error, aps: None },
-        })
+            })?
+        {
+            match event {
+                fidl_sme::ScanTransactionEvent::OnResult { aps: new_aps } => {
+                    aps.extend(new_aps);
+                    done = false;
+                },
+                fidl_sme::ScanTransactionEvent::OnFinished { } => done = true,
+                fidl_sme::ScanTransactionEvent::OnError { error } =>
+                    return Err(convert_scan_err(error)),
+            }
+        }
+
+        if !done {
+            eprintln!("Failed to fetch all results before the channel was closed");
+            return Err(internal_error());
+        }
+
+        Ok(aps.into_iter().map(|ess| convert_bss_info(ess.best_bss)).collect())
+    });
+
+    match r {
+        Ok(aps) => legacy::ScanResult { error: success(), aps: Some(aps) },
+        Err(error) => legacy::ScanResult { error, aps: None },
+    }
 }
 
 fn start_scan_txn(client: &Client, legacy_req: legacy::ScanRequest)
