@@ -22,10 +22,13 @@ MODULE_HEADER_DEPS := \
 MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/fidl \
+    system/ulib/fbl \
+    system/ulib/zx \
 
 MODULE_LIBS := \
-    system/ulib/fdio \
     system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/syslog \
     system/ulib/zircon
 
 include make/module.mk

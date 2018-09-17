@@ -46,6 +46,7 @@ MODULE_LIBS := \
     system/ulib/launchpad \
     system/ulib/fdio \
     system/ulib/c \
+    system/ulib/syslog \
     system/ulib/trace-engine \
     system/ulib/zircon
 
