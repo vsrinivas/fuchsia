@@ -102,8 +102,8 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
             zxrio_t* rio = (zxrio_t*) io;
             *out = rio->h;
             rio->h = ZX_HANDLE_INVALID;
-            zx_handle_close(rio->h2);
-            rio->h2 = ZX_HANDLE_INVALID;
+            zx_handle_close(rio->event);
+            rio->event = ZX_HANDLE_INVALID;
             r = ZX_OK;
         } else {
             r = ZX_ERR_NOT_SUPPORTED;

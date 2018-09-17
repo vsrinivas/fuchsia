@@ -14,8 +14,8 @@ struct zxrio {
     // channel handle for rpc
     zx_handle_t h;
 
-    // event handle for device state signals, or socket handle
-    zx_handle_t h2;
+    // event handle for device state signals
+    zx_handle_t event;
 };
 
 // These are for the benefit of namespace.c

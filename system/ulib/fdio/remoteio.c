@@ -94,11 +94,11 @@ zx_status_t zxrio_close(fdio_t* io) {
 
     zx_status_t r = fidl_close(rio);
     zx_handle_t h = rio->h;
-    rio->h = 0;
+    rio->h = ZX_HANDLE_INVALID;
     zx_handle_close(h);
-    if (rio->h2 > 0) {
-        h = rio->h2;
-        rio->h2 = 0;
+    if (rio->event != ZX_HANDLE_INVALID) {
+        h = rio->event;
+        rio->event = ZX_HANDLE_INVALID;
         zx_handle_close(h);
     }
     return r;
@@ -753,8 +753,8 @@ static zx_status_t zxrio_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* type
     zx_status_t r;
     handles[0] = rio->h;
     types[0] = PA_FDIO_REMOTE;
-    if (rio->h2 != 0) {
-        handles[1] = rio->h2;
+    if (rio->event != ZX_HANDLE_INVALID) {
+        handles[1] = rio->event;
         types[1] = PA_FDIO_REMOTE;
         r = 2;
     } else {
@@ -765,7 +765,7 @@ static zx_status_t zxrio_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* type
 
 static void zxrio_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals) {
     zxrio_t* rio = (void*)io;
-    *handle = rio->h2;
+    *handle = rio->event;
 
     zx_signals_t signals = 0;
     // Manually add signals that don't fit within POLL_MASK
@@ -889,17 +889,17 @@ fdio_ops_t zx_remote_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
-fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t e) {
+fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event) {
     zxrio_t* rio = fdio_alloc(sizeof(*rio));
     if (rio == NULL) {
         zx_handle_close(h);
-        zx_handle_close(e);
+        zx_handle_close(event);
         return NULL;
     }
     rio->io.ops = &zx_remote_ops;
     rio->io.magic = FDIO_MAGIC;
     atomic_init(&rio->io.refcount, 1);
     rio->h = h;
-    rio->h2 = e;
+    rio->event = event;
     return &rio->io;
 }

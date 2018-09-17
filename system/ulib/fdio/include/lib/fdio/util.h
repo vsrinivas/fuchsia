@@ -65,7 +65,7 @@ fdio_t* fdio_null_create(void);
 
 // Wraps a channel with an fdio_t using remote io.
 // Takes ownership of h and e.
-fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t e);
+fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event);
 
 // Wraps a channel with an fdio_t using an unknown rpc protocl.
 // Takes ownership of h.
