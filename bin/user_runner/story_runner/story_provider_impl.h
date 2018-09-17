@@ -251,11 +251,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   fuchsia::modular::FocusProviderPtr focus_provider_;
   fidl::Binding<fuchsia::modular::FocusWatcher> focus_watcher_binding_;
 
-  // Machinery to support fuchsia::modular::StoryProvider.GetLinkPeer().
-  // NOTE: This will be removed. MI4-1085
-  struct LinkPeer;
-  std::vector<std::unique_ptr<LinkPeer>> link_peers_;
-
   // This is a container of all operations that are currently enqueued to run in
   // a FIFO manner. All operations exposed via |fuchsia::modular::StoryProvider|
   // interface are queued here.
@@ -275,15 +270,11 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   fxl::WeakPtrFactory<StoryProviderImpl> weak_factory_;
 
   // Operations implemented here.
-  class MutateStoryDataCall;
   class CreateStoryCall;
   class DeleteStoryCall;
   class GetControllerCall;
   class StopAllStoriesCall;
-  class StopStoryIfNoRunningModulesCall;
   class StopStoryShellCall;
-  class GetImportanceCall;
-  class GetLinkPeerCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

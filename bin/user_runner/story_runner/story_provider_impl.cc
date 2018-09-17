@@ -305,13 +305,6 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StopStoryShellCall);
 };
 
-struct StoryProviderImpl::LinkPeer {
-  std::unique_ptr<LedgerClient> ledger_client;
-  std::unique_ptr<StoryStorage> storage;
-  std::unique_ptr<LinkImpl> link;
-  std::unique_ptr<fidl::Binding<Link>> binding;
-};
-
 StoryProviderImpl::StoryProviderImpl(
     Environment* const user_environment, std::string device_id,
     SessionStorage* const session_storage,
