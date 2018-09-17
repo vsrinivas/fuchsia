@@ -119,6 +119,11 @@ impl Channel {
     {
         self.0.get_ref().write(bytes, handles)
     }
+
+    /// Consumes self and returns the underlying zx::Channel
+    pub fn into_zx_channel(self) -> zx::Channel {
+        self.0.into_inner()
+    }
 }
 
 impl fmt::Debug for Channel {
