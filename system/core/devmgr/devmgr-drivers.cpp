@@ -31,7 +31,7 @@ static bool is_driver_disabled(const char* name) {
 
 static void found_driver(zircon_driver_note_payload_t* note,
                          const zx_bind_inst_t* bi, void* cookie) {
-    add_ctx_t* ctx = cookie;
+    auto ctx = static_cast<add_ctx_t*>(cookie);
 
     // ensure strings are terminated
     note->name[sizeof(note->name) - 1] = 0;
@@ -59,14 +59,14 @@ static void found_driver(zircon_driver_note_payload_t* note,
     }
 
     driver_t* drv;
-    if ((drv = malloc(len)) == NULL) {
+    if ((drv = static_cast<driver_t*>(malloc(len))) == NULL) {
         return;
     }
 
     memset(drv, 0, sizeof(driver_t));
-    drv->binding_size = bindlen;
-    drv->binding = (void*) (drv + 1);
-    drv->libname = (void*) (drv->binding + note->bindcount);
+    drv->binding_size = static_cast<uint32_t>(bindlen);
+    drv->binding = reinterpret_cast<const zx_bind_inst_t*>(drv + 1);
+    drv->libname = reinterpret_cast<const char*>(drv->binding + note->bindcount);
     drv->name = drv->libname + pathlen;
 
     memcpy((void*) drv->binding, bi, bindlen);
