@@ -30,7 +30,7 @@ static zx_status_t dmctl_cmd(uint32_t op, const char* cmd, size_t cmdlen,
 
 static zx_status_t dmctl_write(void* ctx, const void* buf, size_t count, zx_off_t off,
                                size_t* actual) {
-    zx_status_t status = dmctl_cmd(DC_OP_DM_COMMAND, buf, count, NULL, 0);
+    zx_status_t status = dmctl_cmd(DC_OP_DM_COMMAND, static_cast<const char*>(buf), count, NULL, 0);
     if (status >= 0) {
         *actual = count;
         status = ZX_OK;
@@ -42,7 +42,7 @@ static zx_status_t dmctl_ioctl(void* ctx, uint32_t op,
                                const void* in_buf, size_t in_len,
                                void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
-    case IOCTL_DMCTL_COMMAND:
+    case IOCTL_DMCTL_COMMAND: {
         if (in_len != sizeof(dmctl_cmd_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -60,6 +60,7 @@ static zx_status_t dmctl_ioctl(void* ctx, uint32_t op,
             status = ZX_ERR_INTERNAL;
         }
         return status;
+    }
     case IOCTL_DMCTL_OPEN_VIRTCON:
         if (in_len != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
@@ -80,26 +81,29 @@ static zx_status_t dmctl_ioctl(void* ctx, uint32_t op,
     }
 }
 
-static zx_protocol_device_t dmctl_device_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .write = dmctl_write,
-    .ioctl = dmctl_ioctl,
-};
+static zx_protocol_device_t dmctl_device_ops = []() {
+    zx_protocol_device_t protocol = {};
+    protocol.version = DEVICE_OPS_VERSION;
+    protocol.write = dmctl_write;
+    protocol.ioctl = dmctl_ioctl;
+    return protocol;
+}();
 
 zx_status_t dmctl_bind(void* ctx, zx_device_t* parent) {
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "dmctl",
-        .ops = &dmctl_device_ops,
-    };
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "dmctl";
+    args.ops = &dmctl_device_ops;
 
     return device_add(parent, &args, &dmctl_dev);
 }
 
-static zx_driver_ops_t dmctl_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = dmctl_bind,
-};
+static zx_driver_ops_t dmctl_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = dmctl_bind;
+    return ops;
+}();
 
 ZIRCON_DRIVER_BEGIN(dmctl, dmctl_driver_ops, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),

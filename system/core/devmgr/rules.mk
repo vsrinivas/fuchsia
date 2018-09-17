@@ -148,7 +148,7 @@ MODULE_TYPE := driver
 MODULE_NAME := dmctl
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/dmctl.c \
+	$(LOCAL_DIR)/dmctl.cpp \
 	$(LOCAL_DIR)/devhost-shared.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/port
