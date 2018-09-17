@@ -196,8 +196,9 @@ fn handle_user_event(e: client_sme::UserEvent<Tokens>,
             }
         },
         client_sme::UserEvent::ConnectFinished { token, result } => {
-            let (time, result_index) = get_connection_time_observation(token.time_started, &result);
-            telemetry::report_connection_time(cobalt_sender, time, result_index);
+            let connection_finished_time = zx::Time::get(zx::ClockId::Monotonic);
+            telemetry::report_connection_time(cobalt_sender, token.time_started,
+                                              connection_finished_time, &result);
             send_connect_result(token.handle, result).unwrap_or_else(|e| {
                 if !is_peer_closed(&e) {
                     error!("Error sending connect result to user: {}", e);
@@ -274,16 +275,5 @@ fn send_connect_result(token: Option<fidl_sme::ConnectTransactionControlHandle>,
         token.send_on_finished(code)?;
     }
     Ok(())
-}
-
-fn get_connection_time_observation(time_started: zx::Time, result: &client_sme::ConnectResult
-) -> (i64, u32) {
-    let time_now = zx::Time::get(zx::ClockId::Monotonic);
-    let connection_time_micros = (time_now - time_started).nanos() / 1000;
-    let result_index = match result {
-        client_sme::ConnectResult::Success => 0,
-        _ => 1,
-    };
-    (connection_time_micros, result_index)
 }
 

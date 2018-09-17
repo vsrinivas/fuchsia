@@ -250,8 +250,21 @@ fn report_rssi_stats(
     }
 }
 
-pub fn report_connection_time(sender: &mut CobaltSender, time: i64, result_index: u32) {
-    sender.log_elapsed_time(CobaltMetricId::ConnectionTime as u32, result_index, time);
+pub fn report_connection_time(
+    sender: &mut CobaltSender, conn_started_time: zx::Time, conn_finished_time: zx::Time,
+    result: &wlan_sme::client::ConnectResult,
+) {
+    let time_micros = (conn_finished_time - conn_started_time).nanos() / 1000;
+    let result_index = match result {
+        wlan_sme::client::ConnectResult::Success => 0,
+        _ => 1,
+    };
+
+    sender.log_elapsed_time(
+        CobaltMetricId::ConnectionTime as u32,
+        result_index,
+        time_micros,
+    );
 }
 
 pub fn report_assoc_success_time(
