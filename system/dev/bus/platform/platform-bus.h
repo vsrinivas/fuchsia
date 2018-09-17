@@ -89,8 +89,8 @@ private:
         inline uint32_t GetKey() const { return proto_id_; }
         inline void GetProtocol(void* out) const { memcpy(out, &protocol_, sizeof(protocol_)); }
 
-        inline zx_status_t Proxy(platform_proxy_args_t* args) {
-            return proxy_cb_(args, proxy_cb_cookie_);
+        inline void Proxy(platform_proxy_args_t* args) {
+            proxy_cb_(args, proxy_cb_cookie_);
         }
 
     private:

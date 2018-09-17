@@ -32,7 +32,8 @@ zx_status_t PlatformBus::Proxy(platform_proxy_args_t* args) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    return proto_proxy->Proxy(args);
+    proto_proxy->Proxy(args);
+    return ZX_OK;
 }
 
 zx_status_t PlatformBus::GetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle_t* out_handle) {

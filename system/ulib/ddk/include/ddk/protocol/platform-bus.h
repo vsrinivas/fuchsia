@@ -101,7 +101,7 @@ typedef struct {
 } pbus_board_info_t;
 
 // Callback for proxy server.
-typedef zx_status_t (*platform_proxy_cb_t)(platform_proxy_args_t* args, void* cookie);
+typedef void (*platform_proxy_cb_t)(platform_proxy_args_t* args, void* cookie);
 
 typedef struct {
     zx_status_t (*device_add)(void* ctx, const pbus_dev_t* dev);
