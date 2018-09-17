@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <zircon/boot/e820.h>
+#include "garnet/lib/machina/dev_mem.h"
 #include "garnet/lib/machina/device/phys_mem.h"
 
 namespace machina {
@@ -24,9 +25,10 @@ class E820Map {
    * Create a new E820 map
    *
    * @param pmem_size Size of physical memory. The E820 map will contain as much
-   *  RAM regions as can fit in the defined physical memory.
+   *  RAM regions as can fit in the defined physical memory that do not
+   *  collide with the provided dev_mem regions.
    */
-  E820Map(size_t pmem_size);
+  E820Map(size_t pmem_size, const DevMem &dev_mem);
 
   void AddReservedRegion(zx_gpaddr_t addr, size_t size) {
     entries.emplace_back(e820entry_t{addr, size, E820_RESERVED});

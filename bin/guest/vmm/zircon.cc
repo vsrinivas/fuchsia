@@ -151,17 +151,21 @@ static zx_status_t create_zbi(
   // Memory config.
   std::vector<zbi_mem_range_t> mem_config{
       {
-          .paddr = 0,
-          .length = cfg.memory(),
-          .type = ZBI_MEM_RANGE_RAM,
-      },
-      {
           .paddr = 0x800000000,
           .length = 0x8400000,
           .type = ZBI_MEM_RANGE_PERIPHERAL,
       },
   };
-  for (const auto& range : dev_mem) {
+
+  dev_mem.YieldInverseRange(0, cfg.memory(), [&mem_config](auto range){
+    mem_config.emplace_back(zbi_mem_range_t{
+      .paddr = range.addr,
+      .length = range.size,
+      .type = ZBI_MEM_RANGE_RAM,
+    });
+  });
+
+  for (const auto& range: dev_mem) {
     mem_config.emplace_back(zbi_mem_range_t{
         .paddr = range.addr,
         .length = range.size,
@@ -202,7 +206,7 @@ static zx_status_t create_zbi(
     return ZX_ERR_INTERNAL;
   }
   // E820 memory map.
-  machina::E820Map e820_map(phys_mem.size());
+  machina::E820Map e820_map(phys_mem.size(), dev_mem);
   for (const auto& range : dev_mem) {
     e820_map.AddReservedRegion(range.addr, range.size);
   }

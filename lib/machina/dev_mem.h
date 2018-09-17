@@ -42,6 +42,26 @@ class DevMem {
   const RangeSet::const_iterator begin() const { return ranges.begin(); }
   const RangeSet::const_iterator end() const { return ranges.end(); }
 
+  // Generates, by calling the provided functor, all Range's that are in the
+  // provided range, that do not overlap with any internal ranges. This means
+  // the generated set is precisely the inverse of our contained ranges, unioned
+  // with the provided range.
+  template<typename F>
+  void YieldInverseRange(zx_gpaddr_t base, size_t size, F yield) const {
+    zx_gpaddr_t prev = base;
+    for (const auto& range: ranges) {
+      zx_gpaddr_t next_top = std::min(range.addr, base + size);
+      if (next_top > prev) {
+        yield(Range{.addr = prev, .size = next_top - prev});
+      }
+      prev = range.addr + range.size;
+    }
+    zx_gpaddr_t next_top = std::min(prev, base + size);
+    if (next_top > prev) {
+      yield(Range{.addr = prev, .size = next_top - prev});
+    }
+  }
+
  private:
   RangeSet ranges;
 };

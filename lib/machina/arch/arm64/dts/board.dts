@@ -21,11 +21,6 @@
     // CPU list will be populated at run-time.
   };
 
-  memory@0 {
-    device_type = "memory";
-    // Memory will be populated at run-time.
-  };
-
   psci {
     compatible = "arm,psci";
     method = "smc";

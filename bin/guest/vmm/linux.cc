@@ -279,7 +279,7 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
 
 #if __x86_64__
   // Setup e820 memory map.
-  machina::E820Map e820_map(phys_mem.size());
+  machina::E820Map e820_map(phys_mem.size(), dev_mem);
   for (const auto& range : dev_mem) {
     e820_map.AddReservedRegion(range.addr, range.size);
   }
@@ -328,6 +328,7 @@ static zx_status_t add_memory_entry(void* dtb, int memory_off, zx_gpaddr_t addr,
 
 static zx_status_t load_device_tree(
     const int dtb_fd, const machina::PhysMem& phys_mem,
+    const machina::DevMem& dev_mem,
     const std::vector<machina::PlatformDevice*>& devices,
     const std::string& cmdline, const int dtb_overlay_fd,
     const size_t initrd_size, const GuestConfig& cfg) {
@@ -421,12 +422,30 @@ static zx_status_t load_device_tree(
   }
 
   // Add memory to device tree.
-  int memory_off = fdt_path_offset(dtb, "/memory@0");
-  if (memory_off < 0) {
-    FXL_LOG(ERROR) << "Failed to find \"/memory\" in device tree";
+  int root_off = fdt_path_offset(dtb, "/");
+  if (root_off < 0) {
+    FXL_LOG(ERROR) << "Failed to find root node in device tree";
     return ZX_ERR_BAD_STATE;
   }
-  status = add_memory_entry(dtb, memory_off, 0, phys_mem.size());
+  status = ZX_OK;
+  dev_mem.YieldInverseRange(0, phys_mem.size(), [&status, dtb, root_off](auto range) {
+    if (status != ZX_OK) {
+      return;
+    }
+    std::stringstream ss;
+    ss << "/memory@" << std::hex << range.addr;
+    int memory_off = fdt_add_subnode(dtb, root_off, ss.str().c_str());
+    if (memory_off < 0) {
+      status = ZX_ERR_BAD_STATE;
+      return;
+    }
+    int ret = fdt_setprop_string(dtb, memory_off, "device_type", "memory");
+    if (ret != 0) {
+      status = ZX_ERR_BAD_STATE;
+      return;
+    }
+    status = add_memory_entry(dtb, memory_off, range.addr, range.size);
+  });
   if (status != ZX_OK) {
     return status;
   }
@@ -511,11 +530,7 @@ zx_status_t setup_linux(const GuestConfig& cfg,
       FXL_LOG(ERROR) << "Failed to open device tree " << kDtbPath;
       return ZX_ERR_IO;
     }
-    // All of our virtio devices and their associated resources get enumerated
-    // through PCI and are not placed in the device tree. Since there is no
-    // meaningful way to mark arbitrary memory regions in the device tree as
-    // used, there is no reason to pass dev_mem into load_device_tree.
-    status = load_device_tree(dtb_fd.get(), phys_mem, devices, cmdline,
+    status = load_device_tree(dtb_fd.get(), phys_mem, dev_mem, devices, cmdline,
                               dtb_overlay_fd.get(), initrd_size, cfg);
     if (status != ZX_OK) {
       return status;
