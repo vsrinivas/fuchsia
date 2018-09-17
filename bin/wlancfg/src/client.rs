@@ -299,7 +299,14 @@ fn start_connect_txn(sme: &fidl_sme::ClientSmeProxy, ssid: &[u8], password: &[u8
     -> Result<fidl_sme::ConnectTransactionProxy, failure::Error>
 {
     let (connect_txn, remote) = create_endpoints()?;
-    let mut req = fidl_sme::ConnectRequest { ssid: ssid.to_vec(), password: password.to_vec() };
+    let mut req = fidl_sme::ConnectRequest {
+        ssid: ssid.to_vec(),
+        password: password.to_vec(),
+        has_phy: false,
+        phy: fidl_sme::Phy::Ht,
+        has_cbw: false,
+        cbw: fidl_sme::Cbw::Cbw20
+    };
     sme.connect(&mut req, Some(remote))?;
     Ok(connect_txn)
 }

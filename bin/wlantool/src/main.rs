@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro, futures_api, arbitrary_self_types, pin)]
 #![deny(warnings)]
 
-use failure::{format_err, Error, ResultExt};
+use failure::{bail, format_err, Error, ResultExt};
 use fidl::endpoints2;
 use fidl_fuchsia_wlan_device_service::{self as wlan_service, DeviceServiceMarker,
                                        DeviceServiceProxy};
@@ -89,6 +89,39 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     Ok(())
 }
 
+
+fn parse_phy_str(phy_str: Option<String>) -> Result<(bool, fidl_sme::Phy), Error> {
+    let phy_str = match phy_str {
+        None => return Ok((false, fidl_sme::Phy::Ht)),
+        Some(x) => x.to_uppercase(),
+    };
+    let phy = match phy_str.as_str() {
+        "HR" => fidl_sme::Phy::Hr,
+        "ERP" => fidl_sme::Phy::Erp,
+        "HT" => fidl_sme::Phy::Ht,
+        "VHT" => fidl_sme::Phy::Vht,
+        "HEW" => fidl_sme::Phy::Hew,
+        other => bail!("unknown phy {}", other),
+    };
+    Ok((true, phy))
+}
+
+fn parse_cbw_str(cbw_str: Option<String>) -> Result<(bool, fidl_sme::Cbw), Error> {
+    let cbw_str = match cbw_str {
+        None => return Ok((false, fidl_sme::Cbw::Cbw20)),
+        Some(x) => x.to_uppercase(),
+    };
+    let cbw = match cbw_str.as_str() {
+        "20" => fidl_sme::Cbw::Cbw20,
+        "40" => fidl_sme::Cbw::Cbw40,
+        "80" => fidl_sme::Cbw::Cbw80,
+        "160" => fidl_sme::Cbw::Cbw160,
+        "80P80" => fidl_sme::Cbw::Cbw80P80,
+        other => bail!("unknown cbw {}", other),
+    };
+    Ok((true, cbw))
+}
+
 async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::ClientCmd::Scan { iface_id } => {
@@ -98,12 +131,18 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
             sme.scan(&mut req, remote).context("error sending scan request")?;
             await!(handle_scan_transaction(local))
         }
-        opts::ClientCmd::Connect { iface_id, ssid, password } => {
+        opts::ClientCmd::Connect { iface_id, ssid, password, phy_str, cbw_str } => {
             let sme = await!(get_client_sme(wlan_svc, iface_id))?;
             let (local, remote) = endpoints2::create_endpoints()?;
+            let (has_phy, phy) = parse_phy_str(phy_str)?;
+            let (has_cbw, cbw) = parse_cbw_str(cbw_str)?;
             let mut req = fidl_sme::ConnectRequest {
                 ssid: ssid.as_bytes().to_vec(),
                 password: password.as_bytes().to_vec(),
+                has_phy,
+                phy,
+                has_cbw,
+                cbw,
             };
             sme.connect(&mut req, Some(remote)).context("error sending connect request")?;
             await!(handle_connect_transaction(local))

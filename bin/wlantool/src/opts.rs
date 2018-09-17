@@ -103,7 +103,11 @@ pub enum ClientCmd {
         #[structopt(raw(required = "true"))]
         ssid: String,
         #[structopt(short = "p", long = "password")]
-        password: String
+        password: String,
+        #[structopt(short = "y", long = "phy")]
+        phy_str: Option<String>,
+        #[structopt(short = "w", long = "cbw")]
+        cbw_str: Option<String>,
     },
     #[structopt(name = "disconnect")]
     Disconnect {
