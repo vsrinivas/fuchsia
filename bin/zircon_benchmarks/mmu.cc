@@ -24,7 +24,7 @@ struct Helper {
   Helper() {
     ZX_ASSERT(zx::vmar::root_self()->allocate(
                   0, GB(1),
-                  ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_SPECIFIC, &vmar,
+                  ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC, &vmar,
                   &vmar_base) == ZX_OK);
 
     ZX_ASSERT(zx::vmo::create(MB(4), 0, &vmo) == ZX_OK);
@@ -47,9 +47,9 @@ struct Helper {
 zx_status_t Helper::MapInChunks(size_t chunk_size, size_t length,
                                 bool force_into_mmu) {
   zx_status_t status;
-  uint32_t flags = ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_PERM_READ;
+  zx_vm_option_t flags = ZX_VM_SPECIFIC | ZX_VM_PERM_READ;
   if (force_into_mmu) {
-    flags |= ZX_VM_FLAG_MAP_RANGE;
+    flags |= ZX_VM_MAP_RANGE;
   }
 
   for (size_t offset = 0; offset < length; offset += chunk_size) {

@@ -36,8 +36,8 @@ bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr)
     uint64_t child_addr;
     zx_status_t status =
         zx::vmar::root_self()->allocate(addr - minimum_mappable, size(),
-                                        ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                                            ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_SPECIFIC,
+                                        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                                            ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC,
                                         &vmar_, &child_addr);
     if (status != ZX_OK)
         return DRETF(false, "Failed to create vmar, status %d", status);
@@ -45,7 +45,7 @@ bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr)
 
     uintptr_t ptr;
     status = vmar_.map(0, vmo_, 0, size(),
-                       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC, &ptr);
+                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC, &ptr);
     if (status != ZX_OK)
         return DRETF(false, "failed to map vmo");
     DASSERT(ptr == addr);
@@ -72,14 +72,14 @@ bool ZirconPlatformBuffer::MapCpu(void** addr_out, uint64_t alignment)
         uintptr_t vmar_size = alignment ? size() + alignment : size();
         zx_status_t status = zx::vmar::root_self()->allocate(
             0, vmar_size,
-            ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE | ZX_VM_FLAG_CAN_MAP_SPECIFIC,
+            ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC,
             &vmar_, &child_addr);
         if (status != ZX_OK)
             return DRETF(false, "failed to make vmar");
         uintptr_t offset = alignment ? magma::round_up(child_addr, alignment) - child_addr : 0;
         status =
             vmar_.map(offset, vmo_, 0, size(),
-                      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC, &ptr);
+                      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC, &ptr);
         if (status != ZX_OK)
             return DRETF(false, "failed to map vmo");
 

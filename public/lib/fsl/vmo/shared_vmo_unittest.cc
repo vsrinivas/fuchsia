@@ -34,11 +34,11 @@ TEST(SharedVmos, Mapped) {
   zx_handle_t vmo_handle = vmo.vmo().get();
 
   auto shared_vmo = fxl::MakeRefCounted<SharedVmo>(std::move(vmo.vmo()),
-                                                   ZX_VM_FLAG_PERM_READ);
+                                                   ZX_VM_PERM_READ);
   ASSERT_NE(nullptr, shared_vmo.get());
   EXPECT_EQ(vmo_handle, shared_vmo->vmo().get());
   EXPECT_LE(content.size(), shared_vmo->vmo_size());
-  EXPECT_EQ(ZX_VM_FLAG_PERM_READ, shared_vmo->map_flags());
+  EXPECT_EQ(ZX_VM_PERM_READ, shared_vmo->map_flags());
   const char* data = static_cast<const char*>(shared_vmo->Map());
   EXPECT_NE(nullptr, data);
   EXPECT_EQ(0, memcmp(content.c_str(), data, content.size()));

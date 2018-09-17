@@ -84,7 +84,7 @@ uint32_t VerifyBufferRemove(SharedBufferSetAllocator* under_test,
 // allocations.
 TEST(SharedBufferSetAllocatorTest, TwoSmallAllocations) {
   SharedBufferSetAllocator under_test(
-      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
       ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP);
 
   uint32_t buffer_id;
@@ -102,7 +102,7 @@ TEST(SharedBufferSetAllocatorTest, TwoSmallAllocations) {
 // allocations.
 TEST(SharedBufferSetAllocatorTest, TwoLargeAllocations) {
   SharedBufferSetAllocator under_test(
-      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
       ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP);
 
   uint32_t buffer_id_0;
@@ -122,7 +122,7 @@ TEST(SharedBufferSetAllocatorTest, TwoLargeAllocations) {
 // allocations that require a new buffer.
 TEST(SharedBufferSetAllocatorTest, ManySmallAllocations) {
   SharedBufferSetAllocator under_test(
-      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
       ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP);
 
   std::vector<void*> first_buffer_allocations;
@@ -174,7 +174,7 @@ TEST(SharedBufferSetAllocatorTest, ManySmallAllocations) {
 // Tests SharedBufferSetAllocator::SetFixedBufferSize.
 TEST(SharedBufferSetAllocatorTest, SetFixedBufferSize) {
   SharedBufferSetAllocator under_test(
-      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
       ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP);
 
   EXPECT_TRUE(under_test.SetFixedBufferSize(kSmallAlloc * 3));

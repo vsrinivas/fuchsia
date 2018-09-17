@@ -20,7 +20,7 @@ Reader::Reader(int fd, uint32_t buffer_size)
   FXL_DCHECK(fd_ >= 0);
   uintptr_t addr;
   auto status = zx::vmar::root_self()->allocate(
-      0u, buffer_size_, ZX_VM_FLAG_CAN_MAP_READ, &vmar_, &addr);
+      0u, buffer_size_, ZX_VM_CAN_MAP_READ, &vmar_, &addr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to obtain vmar for reading trace data: "
                    << status;
@@ -56,7 +56,7 @@ bool Reader::MapBufferVmo(zx_handle_t vmo) {
   }
 
   auto status =
-      vmar_.map(0, current_vmo_, 0, buffer_size_, ZX_VM_FLAG_PERM_READ, &addr);
+      vmar_.map(0, current_vmo_, 0, buffer_size_, ZX_VM_PERM_READ, &addr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to map buffer vmo: " << status;
     return false;

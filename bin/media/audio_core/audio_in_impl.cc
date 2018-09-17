@@ -263,8 +263,7 @@ void AudioInImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   // Map the VMO into our process.
   uintptr_t tmp;
   res = zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_,
-                                   ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                   &tmp);
+                                   ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,  &tmp);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map payload buffer VMO (res = " << res << ")";
     return;

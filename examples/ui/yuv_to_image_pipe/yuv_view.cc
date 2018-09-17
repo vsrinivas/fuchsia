@@ -107,7 +107,7 @@ void YuvView::StartYuv() {
   uint8_t* vmo_base;
   status =
       zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
-                                 ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_READ,
+                                 ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
                                  reinterpret_cast<uintptr_t*>(&vmo_base));
 
   SetVmoPixels(vmo_base);

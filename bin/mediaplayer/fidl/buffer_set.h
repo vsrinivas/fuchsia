@@ -34,7 +34,7 @@ class BufferVmo {
   // bti_handle   : Handle to use for zx_vmo_create_contiguous if the vmo must
   //                be contiguous. Passing an invalid handle indicates that a
   //                contiguous VMO is not required.
-  zx_status_t CreateAndMap(uint64_t size, uint32_t map_flags,
+  zx_status_t CreateAndMap(uint64_t size, zx_vm_option_t map_flags,
                            zx_rights_t vmo_rights,
                            const zx::handle& bti_handle);
 

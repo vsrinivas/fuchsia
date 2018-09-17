@@ -56,8 +56,8 @@ zx_status_t TtsSpeaker::Init(
 
   zx::vmo shared_vmo;
   res = shared_buf_.CreateAndMap(
-      kSharedBufSize, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
-      &shared_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+      kSharedBufSize, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &shared_vmo,
+      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << res;

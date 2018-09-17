@@ -14,7 +14,7 @@ HostMemory::HostMemory(Session* session, ResourceId id, zx::vmo vmo,
                        uint64_t vmo_size)
     : Memory(session, id, HostMemory::kTypeInfo),
       shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo),
-                                                      ZX_VM_FLAG_PERM_READ)),
+                                                      ZX_VM_PERM_READ)),
       size_(vmo_size) {}
 
 HostMemoryPtr HostMemory::New(Session* session, ResourceId id,

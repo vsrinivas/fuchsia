@@ -105,9 +105,8 @@ zx_status_t FramebufferScanout::Create(
   // Map framebuffer VMO.
   uintptr_t fbo;
   size_t size = stride * ZX_PIXEL_FORMAT_BYTES(format) * height;
-  status =
-      zx_vmar_map_old(zx_vmar_root_self(), 0, fb_get_single_buffer(), 0, size,
-                      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &fbo);
+  status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                       0, fb_get_single_buffer(), 0, size, &fbo);
   if (status != ZX_OK) {
     return status;
   }

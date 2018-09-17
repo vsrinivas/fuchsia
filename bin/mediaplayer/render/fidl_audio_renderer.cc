@@ -232,7 +232,7 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
-    buffer_.InitNew(size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
+    buffer_.InitNew(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     allocator_.Reset(size);
 
     // Give the renderer a handle to the buffer vmo.

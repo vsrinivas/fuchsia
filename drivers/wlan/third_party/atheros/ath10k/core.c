@@ -527,8 +527,8 @@ static zx_status_t ath10k_fetch_fw_file(struct ath10k* ar, const char* dir, cons
     if (ret != ZX_OK) { return ret; }
 
     uintptr_t vaddr;
-    ret = zx_vmar_map_old(zx_vmar_root_self(), 0, firmware->vmo, 0, firmware->size,
-                          ZX_VM_FLAG_PERM_READ, &vaddr);
+    ret = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, firmware->vmo, 0,
+                      firmware->size, &vaddr);
     if (ret != ZX_OK) { goto close_vmo; }
     firmware->data = (uint8_t*)vaddr;
 

@@ -298,7 +298,7 @@ void AudioOutImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   // once teisenbe@ provides guidance on the best-practice for doing this.
   zx_status_t res;
   payload_buffer_ = fbl::AdoptRef(new fzl::RefCountedVmoMapper());
-  res = payload_buffer_->Map(payload_buffer, 0, 0, ZX_VM_FLAG_PERM_READ);
+  res = payload_buffer_->Map(payload_buffer, 0, 0, ZX_VM_PERM_READ);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map payload buffer (res = " << res << ")";
     return;

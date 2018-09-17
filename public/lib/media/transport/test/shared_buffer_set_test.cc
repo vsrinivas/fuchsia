@@ -44,21 +44,21 @@ void VerifyBuffer(const SharedBufferSet& under_test, uint32_t buffer_id,
 
 // Tests SharedBufferSet::CreateNewBuffer.
 TEST(SharedBufferSetTest, CreateNewBuffer) {
-  SharedBufferSet under_test(ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
+  SharedBufferSet under_test(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   uint32_t buffer_id = CreateNewBuffer(&under_test, 1000);
   VerifyBuffer(under_test, buffer_id, 1000);
 }
 
 // Tests SharedBufferSet::AddBuffer.
 TEST(SharedBufferSetTest, AddBuffer) {
-  SharedBufferSet under_test(ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
+  SharedBufferSet under_test(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   AddBuffer(&under_test, 1000, 0);
   VerifyBuffer(under_test, 0, 1000);
 }
 
 // Tests offset/ptr conversion with multiple buffers.
 TEST(SharedBufferSetTest, ManyBuffers) {
-  SharedBufferSet under_test(ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
+  SharedBufferSet under_test(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   AddBuffer(&under_test, 1000, 0);
   AddBuffer(&under_test, 2000, 1);
   AddBuffer(&under_test, 3000, 2);
@@ -71,7 +71,7 @@ TEST(SharedBufferSetTest, ManyBuffers) {
 
 // Tests offset/ptr conversion with removed buffers.
 TEST(SharedBufferSetTest, RemovedBuffers) {
-  SharedBufferSet under_test(ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
+  SharedBufferSet under_test(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   AddBuffer(&under_test, 1000, 0);
   AddBuffer(&under_test, 2000, 1);
   AddBuffer(&under_test, 3000, 2);
@@ -90,7 +90,7 @@ TEST(SharedBufferSetTest, RemovedBuffers) {
 
 // Tests SharedBufferSet::Validate.
 TEST(SharedBufferSetTest, Validate) {
-  SharedBufferSet under_test(ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
+  SharedBufferSet under_test(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   AddBuffer(&under_test, 1000, 0);
   VerifyBuffer(under_test, 0, 1000);
   EXPECT_FALSE(under_test.Validate(SharedBufferSet::Locator::Null(), 1));

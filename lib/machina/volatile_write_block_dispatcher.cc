@@ -30,7 +30,7 @@ zx_status_t VolatileWriteBlockDispatcher::Create(
   uintptr_t vmar_addr;
   status = zx::vmar::root_self()->map(
       0, vmo, 0, dispatcher->size(),
-      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &vmar_addr);
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &vmar_addr);
   if (status != ZX_OK) {
     return status;
   }

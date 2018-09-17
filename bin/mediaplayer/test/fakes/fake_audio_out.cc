@@ -37,7 +37,7 @@ void FakeAudioOut::SetStreamType(fuchsia::media::StreamType format) {
 
 void FakeAudioOut::AddPayloadBuffer(uint32_t id, ::zx::vmo payload_buffer) {
   FXL_DCHECK(id == 0) << "Only ID 0 is currently supported.";
-  mapped_buffer_.InitFromVmo(std::move(payload_buffer), ZX_VM_FLAG_PERM_READ);
+  mapped_buffer_.InitFromVmo(std::move(payload_buffer), ZX_VM_PERM_READ);
 }
 
 void FakeAudioOut::RemovePayloadBuffer(uint32_t id) { FXL_NOTIMPLEMENTED(); }

@@ -156,7 +156,7 @@ void FakeSession::Present(uint64_t presentation_time,
         FXL_DCHECK(memory->args_.is_memory());
         FXL_DCHECK(memory->args_.memory().vmo);
         memory->mapped_buffer_.InitFromVmo(
-            std::move(memory->args_.memory().vmo), ZX_VM_FLAG_PERM_READ);
+            std::move(memory->args_.memory().vmo), ZX_VM_PERM_READ);
       }
 
       uint64_t size = image->info.stride * image->info.height;

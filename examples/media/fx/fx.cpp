@@ -202,8 +202,8 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
 
   zx::vmo rend_vmo;
   zx_status_t res = output_buf_.CreateAndMap(
-      output_buf_sz_, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
-      &rend_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+      output_buf_sz_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &rend_vmo,
+      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   // We use only a single payload buffer, and hence when creating each packet we
   // can allow its payload_buffer_id to remain the default value of 0.

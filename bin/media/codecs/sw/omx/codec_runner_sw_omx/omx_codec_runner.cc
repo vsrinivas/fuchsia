@@ -3353,9 +3353,9 @@ bool OmxCodecRunner::Buffer::Init(bool input_require_write) {
   assert(!input_require_write || port_ == kInput);
   // Map the VMO in the local address space.
   uintptr_t tmp;
-  uint32_t flags = ZX_VM_FLAG_PERM_READ;
+  zx_vm_option_t flags = ZX_VM_PERM_READ;
   if (port_ == kOutput || input_require_write) {
-    flags |= ZX_VM_FLAG_PERM_WRITE;
+    flags |= ZX_VM_PERM_WRITE;
   }
   zx_status_t res = zx::vmar::root_self()->map(
       0, buffer_.data.vmo().vmo_handle, buffer_.data.vmo().vmo_usable_start,

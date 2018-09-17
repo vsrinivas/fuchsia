@@ -184,9 +184,8 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
     // Allocate a shared payload buffer; pass its handle to the AudioOut.
     zx::vmo payload_vmo;
     zx_status_t status = payload_buffer_.CreateAndMap(
-        total_mapping_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-        nullptr, &payload_vmo,
-        ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+        total_mapping_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+        &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
     if (status != ZX_OK) {
       std::cerr << "VmoMapper:::CreateAndMap failed - " << status << "\n";

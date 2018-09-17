@@ -8,7 +8,7 @@
 
 namespace media_player {
 
-zx_status_t BufferVmo::CreateAndMap(uint64_t size, uint32_t map_flags,
+zx_status_t BufferVmo::CreateAndMap(uint64_t size, zx_vm_option_t map_flags,
                                     zx_rights_t vmo_rights,
                                     const zx::handle& bti_handle) {
   FXL_DCHECK(size != 0);
@@ -28,8 +28,7 @@ zx_status_t BufferVmo::CreateAndMap(uint64_t size, uint32_t map_flags,
 
   zx_handle_t vmar_handle = zx::vmar::root_self()->get();
   uintptr_t tmp;
-  status =
-      zx_vmar_map_old(vmar_handle, 0, vmo_.get(), 0, size, map_flags, &tmp);
+  status = zx_vmar_map(vmar_handle, map_flags, 0, vmo_.get(), 0, size, &tmp);
   if (status != ZX_OK) {
     return status;
   }
@@ -84,7 +83,7 @@ BufferSet::BufferSet(
   if (single_vmo) {
     uint64_t vmo_size = settings_.per_packet_buffer_bytes * buffer_count();
     zx_status_t status = single_buffer_vmo_.CreateAndMap(
-        vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+        vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
         ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
             ZX_RIGHT_DUPLICATE,
         bti_handle);
@@ -99,7 +98,7 @@ BufferSet::BufferSet(
          ++buffer_index) {
       BufferVmo& vmo = buffer_vmo(buffer_index);
       zx_status_t status = vmo.CreateAndMap(
-          vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+          vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
           ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
               ZX_RIGHT_DUPLICATE,
           bti_handle);

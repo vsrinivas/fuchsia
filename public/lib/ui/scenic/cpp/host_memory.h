@@ -21,8 +21,8 @@ class HostData : public std::enable_shared_from_this<HostData> {
  public:
   // Maps a range of an existing VMO into memory.
   HostData(const zx::vmo& vmo, off_t offset, size_t size,
-           uint32_t flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                            ZX_VM_FLAG_MAP_RANGE);
+           uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                            ZX_VM_MAP_RANGE);
   ~HostData();
 
   HostData(const HostData&) = delete;

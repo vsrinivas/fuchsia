@@ -874,7 +874,7 @@ void Initialize(Struct* s) {
 
   uintptr_t vmar_addr;
   ASSERT_EQ(ZX_OK, zx::vmar::root_self()->allocate(
-                       0u, getpagesize(), ZX_VM_FLAG_CAN_MAP_READ,
+                       0u, getpagesize(), ZX_VM_CAN_MAP_READ,
                        &s->handles.vmar_handle, &vmar_addr));
 
   zx::fifo fifo1;

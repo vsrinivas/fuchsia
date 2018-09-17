@@ -77,7 +77,7 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
     return nullptr;
   }
 
-  uint32_t map_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+  uint32_t map_flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   return fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo), map_flags);
 }
 

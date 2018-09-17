@@ -168,7 +168,7 @@ bool WavRecorder::SetupPayloadBuffer() {
 
   uintptr_t tmp;
   res = zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_,
-                                   ZX_VM_FLAG_PERM_READ, &tmp);
+                                   ZX_VM_PERM_READ, &tmp);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map " << payload_buf_size_
                    << " byte payload buffer (res " << res << ")";
