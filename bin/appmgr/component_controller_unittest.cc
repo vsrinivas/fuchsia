@@ -147,6 +147,8 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
 
   void SetReturnCode(int64_t errcode) { errcode_ = errcode; }
 
+  void SendReady() { binding_.events().OnDirectoryReady(); }
+
   void SendReturnCode() {
     binding_.events().OnTerminated(errcode_, TerminationReason::EXITED);
   }
@@ -324,10 +326,11 @@ TEST_F(ComponentControllerTest, Hub) {
       create_component(component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
                        std::move(export_dir_req));
 
-  RunLoopWithTimeoutOrUntil(
-      [this, &component] { return path_exists(component->hub_dir(), "out"); },
-      zx::sec(10));
+  bool ready = false;
+  component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
+  RunLoopWithTimeoutOrUntil([&ready] { return ready; }, zx::sec(10));
 
+  EXPECT_TRUE(path_exists(component->hub_dir(), "out"));
   EXPECT_STREQ(get_value(component->hub_dir(), "name").c_str(), "test-label");
   EXPECT_STREQ(get_value(component->hub_dir(), "args").c_str(), "test-arg");
   EXPECT_STREQ(get_value(component->hub_dir(), "job-id").c_str(),
@@ -353,6 +356,7 @@ TEST_F(ComponentBridgeTest, CreateAndKill) {
   ASSERT_EQ(runner_.ComponentCount(), 1u);
 
   bool wait = false;
+  bool ready = false;
   int64_t retval;
   TerminationReason termination_reason;
   component_ptr.events().OnTerminated = [&wait, &retval, &termination_reason](
@@ -362,10 +366,13 @@ TEST_F(ComponentBridgeTest, CreateAndKill) {
     retval = errcode;
     termination_reason = tr;
   };
+  component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
   int64_t expected_retval = (1L << 60);
+  SendReady();
   SetReturnCode(expected_retval);
   component_ptr->Kill();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
+  EXPECT_TRUE(ready);
   EXPECT_EQ(expected_retval, retval);
   EXPECT_EQ(TerminationReason::EXITED, termination_reason);
 

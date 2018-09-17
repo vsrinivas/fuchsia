@@ -154,6 +154,7 @@ void ComponentControllerBase::OutputDirectoryHandler(
   // Vfs directories signal USER_SIGNAL_0 when mounted.
   if (signal->observed & ZX_USER_SIGNAL_0) {
     hub_.PublishOut(output_dir_);
+    binding_.events().OnDirectoryReady();
   }
   out_wait_.reset();
 }
@@ -291,6 +292,10 @@ ComponentBridge::ComponentBridge(
         remote_controller_.events().OnTerminated = nullptr;
         container_->ExtractComponent(this);
       };
+
+  remote_controller_.events().OnDirectoryReady = [this] {
+    binding_.events().OnDirectoryReady();
+  };
 
   remote_controller_.set_error_handler([this] {
     if (remote_controller_.events().OnTerminated != nullptr) {
