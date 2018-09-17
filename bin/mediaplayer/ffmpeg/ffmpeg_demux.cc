@@ -92,6 +92,10 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   // Runs in the ffmpeg thread doing the real work.
   void Worker();
 
+  // Notifies that initialization is complete. This method is called from the
+  // worker, and posts the notification to the main thread.
+  void NotifyInitComplete();
+
   // Waits on behalf of |Worker| for work to do.
   bool Wait(bool* packet_requested, int64_t* seek_position,
             SeekCallback* seek_callback);
@@ -233,7 +237,8 @@ void FfmpegDemuxImpl::Worker() {
                       ? fuchsia::mediaplayer::kProblemAssetNotFound
                       : fuchsia::mediaplayer::kProblemInternal,
                   "");
-    init_complete_.Occur();
+
+    NotifyInitComplete();
     return;
   }
 
@@ -244,7 +249,7 @@ void FfmpegDemuxImpl::Worker() {
     FXL_LOG(ERROR) << "AvFormatContext::OpenInput failed";
     result_ = Result::kUnsupportedOperation;
     ReportProblem(fuchsia::mediaplayer::kProblemContainerNotSupported, "");
-    init_complete_.Occur();
+    NotifyInitComplete();
     return;
   }
 
@@ -254,7 +259,7 @@ void FfmpegDemuxImpl::Worker() {
     result_ = Result::kInternalError;
     ReportProblem(fuchsia::mediaplayer::kProblemInternal,
                   "avformat_find_stream_info failed");
-    init_complete_.Occur();
+    NotifyInitComplete();
     return;
   }
 
@@ -273,7 +278,7 @@ void FfmpegDemuxImpl::Worker() {
   }
 
   result_ = Result::kOk;
-  init_complete_.Occur();
+    NotifyInitComplete();
 
   async::PostTask(dispatcher_, [this]() { SendStatus(); });
 
@@ -313,6 +318,10 @@ void FfmpegDemuxImpl::Worker() {
       }
     }
   }
+}
+
+void FfmpegDemuxImpl::NotifyInitComplete() {
+  async::PostTask(dispatcher_, [this]() { init_complete_.Occur(); });
 }
 
 bool FfmpegDemuxImpl::Wait(bool* packet_requested, int64_t* seek_position,
