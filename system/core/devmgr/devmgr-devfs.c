@@ -129,7 +129,7 @@ static void prepopulate_protocol_dirs(void) {
 void describe_error(zx_handle_t h, zx_status_t status) {
     zxrio_describe_t msg;
     memset(&msg, 0, sizeof(msg));
-    msg.op = ZXFIDL_ON_OPEN;
+    msg.hdr.ordinal = ZXFIDL_ON_OPEN;
     msg.status = status;
     zx_channel_write(h, 0, &msg, sizeof(zxrio_describe_t), NULL, 0);
     zx_handle_close(h);
@@ -545,7 +545,7 @@ fail:
         if (describe) {
             zxrio_describe_t msg;
             memset(&msg, 0, sizeof(msg));
-            msg.op = ZXFIDL_ON_OPEN;
+            msg.hdr.ordinal = ZXFIDL_ON_OPEN;
             msg.status = ZX_OK;
             msg.extra_ptr = (zxrio_node_info_t*)FIDL_ALLOC_PRESENT;
             msg.extra.tag = FDIO_PROTOCOL_DIRECTORY;

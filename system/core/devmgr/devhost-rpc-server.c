@@ -38,7 +38,7 @@
 void describe_error(zx_handle_t h, zx_status_t status) {
     zxrio_describe_t msg;
     memset(&msg, 0, sizeof(msg));
-    msg.op = ZXFIDL_ON_OPEN;
+    msg.hdr.ordinal = ZXFIDL_ON_OPEN;
     msg.status = status;
     zx_channel_write(h, 0, &msg, sizeof(msg), NULL, 0);
     zx_handle_close(h);
@@ -47,7 +47,7 @@ void describe_error(zx_handle_t h, zx_status_t status) {
 static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg,
                                       zx_handle_t* handle) {
     memset(msg, 0, sizeof(*msg));
-    msg->op = ZXFIDL_ON_OPEN;
+    msg->hdr.ordinal = ZXFIDL_ON_OPEN;
     msg->extra.tag = FDIO_PROTOCOL_DEVICE;
     msg->status = ZX_OK;
     msg->extra_ptr = (zxrio_node_info_t*)FIDL_ALLOC_PRESENT;

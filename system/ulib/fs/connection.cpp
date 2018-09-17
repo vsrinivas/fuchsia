@@ -29,7 +29,7 @@ namespace {
 void WriteDescribeError(zx::channel channel, zx_status_t status) {
     zxrio_describe_t msg;
     memset(&msg, 0, sizeof(msg));
-    msg.op = ZXFIDL_ON_OPEN;
+    msg.hdr.ordinal = ZXFIDL_ON_OPEN;
     msg.status = status;
     channel.write(0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
 }
@@ -45,7 +45,7 @@ zx_status_t GetNodeInfo(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
 
 void Describe(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
               zxrio_describe_t* response, zx_handle_t* handle) {
-    response->op = ZXFIDL_ON_OPEN;
+    response->hdr.ordinal = ZXFIDL_ON_OPEN;
     response->extra.handle = ZX_HANDLE_INVALID;
     zx_status_t r = GetNodeInfo(vn, flags, &response->extra);
     *handle = response->extra.handle;

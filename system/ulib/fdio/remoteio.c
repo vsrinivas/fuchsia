@@ -377,7 +377,7 @@ zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* info) {
     if (r != ZX_OK) {
         return r;
     }
-    if (dsize < ZXRIO_DESCRIBE_HDR_SZ || info->op != ZXFIDL_ON_OPEN) {
+    if (dsize < ZXRIO_DESCRIBE_HDR_SZ || info->hdr.ordinal != ZXFIDL_ON_OPEN) {
         r = ZX_ERR_IO;
     } else {
         r = info->status;
