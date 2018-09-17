@@ -20,6 +20,7 @@ use crate::server::sl4f::Sl4f;
 use crate::server::sl4f_types::{AsyncRequest, AsyncResponse, FacadeType};
 
 // Translation layers go here (i.e wlan_method_to_fidl)
+use crate::bluetooth::commands::ble_advertise_method_to_fidl;
 use crate::bluetooth::commands::ble_method_to_fidl;
 
 pub fn run_fidl_loop(
@@ -66,8 +67,15 @@ pub fn run_fidl_loop(
 fn method_to_fidl(
     method_type: String, method_name: String, args: Value, sl4f_session: Arc<RwLock<Sl4f>>,
 ) -> impl Future<Output = Result<Value, Error>> {
-    unsafe_many_futures!(MethodType, [Bluetooth, Wlan, Error]);
+    unsafe_many_futures!(MethodType, [BleAdvertiseFacade, Bluetooth, Wlan, Error]);
     match FacadeType::from_str(method_type) {
+        FacadeType::BleAdvertiseFacade => {
+            MethodType::BleAdvertiseFacade(ble_advertise_method_to_fidl(
+                method_name,
+                args,
+                sl4f_session.write().get_ble_advertise_facade().clone(),
+            ))
+        }
         FacadeType::Bluetooth => MethodType::Bluetooth(ble_method_to_fidl(
             method_name,
             args,

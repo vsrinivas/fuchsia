@@ -8,7 +8,7 @@ use fidl::encoding::OutOfLine;
 use fidl_fuchsia_bluetooth_gatt::{ClientProxy, ServiceInfo};
 use fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateMarker, LocalServiceMarker,
                                   LocalServiceProxy, Server_Marker, Server_Proxy};
-use fidl_fuchsia_bluetooth_le::{AdvertisingData, PeripheralMarker, PeripheralProxy, RemoteDevice};
+use fidl_fuchsia_bluetooth_le::RemoteDevice;
 use fidl_fuchsia_bluetooth_le::{CentralEvent, CentralMarker, CentralProxy, ScanFilter};
 use fuchsia_app as app;
 use fuchsia_async::{self as fasync,
@@ -26,8 +26,8 @@ use std::pin::PinMut;
 use std::sync::Arc;
 
 // Sl4f-Constants and Bluetooth related functionality
-use crate::bluetooth::constants::*;
-use crate::bluetooth::types::{BleAdvertiseResponse, BleScanResponse};
+//use crate::bluetooth::constants::*;
+use crate::bluetooth::types::BleScanResponse;
 
 // BluetoothFacade: Stores Central and Peripheral proxies used for
 // bluetooth scan and advertising requests.
@@ -47,16 +47,8 @@ pub struct BluetoothFacade {
     // central: CentralProxy used for Bluetooth connections
     central: Option<CentralProxy>,
 
-    // peripheral: PeripheralProxy used for Bluetooth Connections
-    peripheral: Option<PeripheralProxy>,
-
     // devices: HashMap of key = device id and val = RemoteDevice structs discovered from a scan
     devices: HashMap<String, RemoteDevice>,
-
-    // adv_id: Advertisement ID of device, only one advertisement at a time.
-    // TODO(NET-1290): Potentially scale up to a list/set of aid's for concurrent advertisement
-    // tests.
-    adv_id: Option<String>,
 
     // peripheral_ids: The identifier for the peripheral of a ConnectPeripheral FIDL call
     // Key = peripheral id, value = ClientProxy
@@ -75,41 +67,15 @@ pub struct BluetoothFacade {
 }
 
 impl BluetoothFacade {
-    pub fn new(
-        central_proxy: Option<CentralProxy>, peripheral_proxy: Option<PeripheralProxy>,
-    ) -> Arc<RwLock<BluetoothFacade>> {
+    pub fn new(central_proxy: Option<CentralProxy>) -> Arc<RwLock<BluetoothFacade>> {
         Arc::new(RwLock::new(BluetoothFacade {
             central: central_proxy,
-            peripheral: peripheral_proxy,
             devices: HashMap::new(),
-            adv_id: None,
             peripheral_ids: HashMap::new(),
             host_requests: Slab::new(),
             server_proxy: None,
             service_proxies: HashMap::new(),
         }))
-    }
-
-    // Set the peripheral proxy only if none exists, otherwise, use existing
-    pub fn set_peripheral_proxy(bt_facade: Arc<RwLock<BluetoothFacade>>) {
-        let new_peripheral = match bt_facade.read().peripheral.clone() {
-            Some(p) => {
-                fx_log_warn!(tag: "set_peripheral_proxy",
-                    "Current peripheral: {:?}",
-                    p,
-                );
-                Some(p)
-            }
-            None => {
-                let peripheral_svc: PeripheralProxy = app::client::connect_to_service::<
-                    PeripheralMarker,
-                >().context("Failed to connect to BLE Peripheral service.")
-                .unwrap();
-                Some(peripheral_svc)
-            }
-        };
-
-        bt_facade.write().peripheral = new_peripheral
     }
 
     // Update the central proxy if none exists, otherwise raise error
@@ -156,16 +122,6 @@ impl BluetoothFacade {
         };
 
         bt_facade.write().server_proxy = new_server;
-    }
-
-    // Set the advertisement ID if none exists already
-    pub fn set_adv_id(bt_facade: Arc<RwLock<BluetoothFacade>>, aid: Option<String>) {
-        if bt_facade.read().adv_id.is_none() {
-            bt_facade.write().adv_id = aid
-        } else {
-            fx_log_warn!(tag: "set_adv_id", "Current aid: {:?}. Attempted aid: {:?}",
-                bt_facade.read().adv_id, aid);
-        }
     }
 
     // Update the devices dictionary with a discovered RemoteDevice
@@ -220,10 +176,6 @@ impl BluetoothFacade {
         devices
     }
 
-    pub fn get_adv_id(&self) -> BleAdvertiseResponse {
-        BleAdvertiseResponse::new(self.adv_id.clone())
-    }
-
     pub fn get_periph_ids(&self) -> HashMap<String, ClientProxy> {
         self.peripheral_ids.clone()
     }
@@ -243,25 +195,12 @@ impl BluetoothFacade {
         &self.central
     }
 
-    pub fn get_peripheral_proxy(&self) -> &Option<PeripheralProxy> {
-        &self.peripheral
-    }
-
     pub fn get_server_proxy(&self) -> &Option<Server_Proxy> {
         &self.server_proxy
     }
 
     pub fn get_service_proxies(&self) -> &HashMap<String, (LocalServiceProxy, fasync::Channel)> {
         &self.service_proxies
-    }
-
-    // Close peripheral proxy
-    pub fn cleanup_peripheral_proxy(bt_facade: Arc<RwLock<BluetoothFacade>>) {
-        bt_facade.write().peripheral = None;
-    }
-
-    pub fn cleanup_central_proxy(bt_facade: Arc<RwLock<BluetoothFacade>>) {
-        bt_facade.write().central = None
     }
 
     pub fn cleanup_server_proxy(bt_facade: Arc<RwLock<BluetoothFacade>>) {
@@ -276,22 +215,17 @@ impl BluetoothFacade {
         bt_facade.write().devices.clear()
     }
 
-    pub fn cleanup_adv_id(bt_facade: Arc<RwLock<BluetoothFacade>>) {
-        bt_facade.write().adv_id = None
-    }
-
     pub fn cleanup_peripheral_ids(bt_facade: Arc<RwLock<BluetoothFacade>>) {
         bt_facade.write().peripheral_ids.clear()
+    }
+
+    pub fn cleanup_central_proxy(bt_facade: Arc<RwLock<BluetoothFacade>>) {
+        bt_facade.write().central = None
     }
 
     pub fn cleanup_central(bt_facade: Arc<RwLock<BluetoothFacade>>) {
         BluetoothFacade::cleanup_central_proxy(bt_facade.clone());
         BluetoothFacade::cleanup_devices(bt_facade.clone());
-    }
-
-    pub fn cleanup_peripheral(bt_facade: Arc<RwLock<BluetoothFacade>>) {
-        BluetoothFacade::cleanup_peripheral_proxy(bt_facade.clone());
-        BluetoothFacade::cleanup_adv_id(bt_facade.clone());
     }
 
     pub fn cleanup_gatt(bt_facade: Arc<RwLock<BluetoothFacade>>) {
@@ -301,7 +235,6 @@ impl BluetoothFacade {
 
     // Close both central and peripheral proxies
     pub fn cleanup(bt_facade: Arc<RwLock<BluetoothFacade>>) {
-        BluetoothFacade::cleanup_peripheral(bt_facade.clone());
         BluetoothFacade::cleanup_central(bt_facade.clone());
         BluetoothFacade::cleanup_peripheral_ids(bt_facade.clone());
         BluetoothFacade::cleanup_gatt(bt_facade.clone());
@@ -309,91 +242,13 @@ impl BluetoothFacade {
 
     pub fn print(&self) {
         fx_log_info!(tag: "print",
-            "BluetoothFacade: Central: {:?}, Peripheral: {:?}, Devices: {:?}, Adv_id: {:?}, Periph_ids: {:?}, Server Proxy: {:?}, Services: {:?}",
+            "BluetoothFacade: Central: {:?}, Devices: {:?}, Periph_ids: {:?}, Server Proxy: {:?}, Services: {:?}",
             self.get_central_proxy(),
-            self.get_peripheral_proxy(),
             self.get_devices(),
-            self.get_adv_id(),
             self.get_periph_ids(),
             self.get_server_proxy(),
             self.get_service_proxies(),
         );
-    }
-
-    pub fn start_adv(
-        bt_facade: Arc<RwLock<BluetoothFacade>>, adv_data: Option<AdvertisingData>,
-        interval: Option<u32>,
-    ) -> impl Future<Output = Result<(), Error>> {
-        // Default interval (ms) to 1 second
-        let intv: u32 = interval.unwrap_or(DEFAULT_BLE_ADV_INTERVAL_MS);
-
-        let mut ad = match adv_data {
-            Some(ad) => ad,
-            None => AdvertisingData {
-                name: None,
-                tx_power_level: None,
-                appearance: None,
-                service_uuids: None,
-                service_data: None,
-                manufacturer_specific_data: None,
-                solicited_service_uuids: None,
-                uris: None,
-            },
-        };
-
-        // Create peripheral proxy if necessary
-        let facade = bt_facade.clone();
-        BluetoothFacade::set_peripheral_proxy(bt_facade.clone());
-
-        match &bt_facade.read().peripheral {
-            Some(p) => Right(
-                p.start_advertising(&mut ad, None, intv, false)
-                    .map_err(|e| e.context("failed to initiate advertise.").into())
-                    .and_then(|(status, aid)| match status.error {
-                        None => {
-                            fx_log_info!(tag: "start_adv", "Started advertising id: {:?}", aid);
-                            BluetoothFacade::set_adv_id(facade, aid.clone());
-                            fready(Ok(()))
-                        }
-                        Some(e) => {
-                            let err = BTError::from(*e);
-                            fx_log_err!(tag: "start_adv", "Failed to start adveritising: {:?}", err);
-                            fready(Err(err.into()))
-                        }
-                    }),
-            ),
-            None => {
-                fx_log_err!(tag: "start_adv", "No peripheral created.");
-                Left(fready(Err(
-                    BTError::new("No peripheral proxy created.").into()
-                )))
-            }
-        }
-    }
-
-    pub fn stop_adv(&self, aid: String) -> impl Future<Output = Result<(), Error>> {
-        fx_log_info!(tag: "stop_adv", "stop_adv with aid: {:?}", aid);
-
-        match &self.peripheral {
-            Some(p) => Right(
-                p.stop_advertising(&aid)
-                    .map_err(|e| e.context("failed to stop advertise").into())
-                    .and_then(|status| match status.error {
-                        Some(e) => {
-                            let err = BTError::from(*e);
-                            fx_log_err!(tag: "stop_adv", "Failed to stop advertising: {:?}", err);
-                            fready(Err(err.into()))
-                        }
-                        None => fready(Ok(())),
-                    }),
-            ),
-            None => {
-                fx_log_err!(tag: "stop_adv", "No peripheral proxy created!");
-                Left(fready(Err(
-                    BTError::new("No peripheral proxy created.").into()
-                )))
-            }
-        }
     }
 
     pub fn start_scan(

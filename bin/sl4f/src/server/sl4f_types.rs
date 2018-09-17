@@ -119,6 +119,7 @@ impl AsyncResponse {
 /// Enum for supported connectivity stacks
 /// Make sure to update sl4f.rs:method_to_fidl() match statement
 pub enum FacadeType {
+    BleAdvertiseFacade,
     Bluetooth,
     Wlan,
     Undefined,
@@ -127,6 +128,7 @@ pub enum FacadeType {
 impl FacadeType {
     pub fn from_str(facade: String) -> FacadeType {
         match facade.as_ref() {
+            "ble_advertise_facade" => FacadeType::BleAdvertiseFacade,
             "bluetooth" => FacadeType::Bluetooth,
             "wlan" => FacadeType::Wlan,
             _ => FacadeType::Undefined,
