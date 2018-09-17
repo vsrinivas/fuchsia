@@ -72,6 +72,7 @@ bool FetchCredentials(component::StartupContext* startup_context,
   zx_status_t status =
       network_service->CreateURLLoader(url_loader.NewRequest());
   if (status != ZX_OK) {
+    FXL_LOG(WARNING) << "Unable to retrieve an URLLoader.";
     return false;
   }
 
@@ -83,6 +84,7 @@ bool FetchCredentials(component::StartupContext* startup_context,
 
   status = url_loader->Start(std::move(request), &response);
   if (status != ZX_OK) {
+    FXL_LOG(WARNING) << "Unable to start the network request.";
     return false;
   }
 
