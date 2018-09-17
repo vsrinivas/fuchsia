@@ -543,7 +543,9 @@ zx_status_t Fuzzer::LoadOptions() {
         return ZX_OK;
 
     case kMerge:
-        if ((rc = SetOption("merge", "1")) != ZX_OK) {
+        if ((rc = SetOption("merge", "1")) != ZX_OK ||
+            (rc = SetOption("merge_control_file", data_path_.Join(".mergefile").c_str())) !=
+                ZX_OK) {
             return rc;
         }
         break;

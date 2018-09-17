@@ -820,6 +820,7 @@ bool TestMerge() {
     EXPECT_EQ(0, test.FindArg(test.executable()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
+    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
 
@@ -833,6 +834,7 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
+    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
 
@@ -848,6 +850,7 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
+    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
 
@@ -858,6 +861,7 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
+    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
 
@@ -868,6 +872,7 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
+    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
 
