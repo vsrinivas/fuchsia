@@ -122,10 +122,6 @@ class SessionStorage : public PageClient {
   FuturePtr<std::unique_ptr<StoryStorage>> GetStoryStorage(
       fidl::StringPtr story_id);
 
-  // TODO(thatguy): Eliminate all users of this, and remove it. We want all
-  // interfaces with the Ledger to be contained within *Storage classes.
-  LedgerClient* ledger_client() const { return ledger_client_; }
-
  private:
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;

@@ -31,8 +31,6 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/proxy.h"
-#include "peridot/lib/ledger_client/operations.h"
-#include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
 // In tests prefetching mondrian saved ~30ms in story start up time.
@@ -78,28 +76,30 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
     // 3) If we got an initial module, add it.
     session_storage_
         ->CreateStory(std::move(extra_info_), std::move(story_options_))
-        ->WeakThen(GetWeakPtr(), [this, flow](fidl::StringPtr story_id,
-                                              fuchsia::ledger::PageId page_id) {
-          story_id_ = story_id;
-          story_page_id_ = page_id;
-          // TODO(thatguy): Remove the ability of CreateStory() to add a module.
-          storage_ = std::make_unique<StoryStorage>(
-              session_storage_->ledger_client(), story_page_id_);
-          controller_ = std::make_unique<StoryControllerImpl>(
-              story_id_, storage_.get(), story_provider_impl_);
-          if (intent_.handler) {
-            controller_->AddModule({} /* parent_module_path */, kRootModuleName,
-                                   std::move(intent_),
-                                   nullptr /* surface_relation */);
-          }
+        ->WeakAsyncMap(GetWeakPtr(),
+                       [this, flow](fidl::StringPtr story_id,
+                                    fuchsia::ledger::PageId page_id) {
+                         story_id_ = story_id;
+                         return session_storage_->GetStoryStorage(story_id_);
+                       })
+        ->WeakThen(GetWeakPtr(),
+                   [this, flow](std::unique_ptr<StoryStorage> story_storage) {
+                     storage_ = std::move(story_storage);
+                     controller_ = std::make_unique<StoryControllerImpl>(
+                         story_id_, storage_.get(), story_provider_impl_);
+                     if (intent_.handler) {
+                       controller_->AddModule(
+                           {} /* parent_module_path */, kRootModuleName,
+                           std::move(intent_), nullptr /* surface_relation */);
+                     }
 
-          // We ensure that everything has been written to the story page before
-          // this operation is done.
-          controller_->Sync([flow] {});
+                     // We ensure that everything has been written to the story
+                     // page before this operation is done.
+                     controller_->Sync([flow] {});
 
-          ReportStoryLaunchTime(
-              zx::duration(zx_clock_get(ZX_CLOCK_UTC) - start_time_));
-        });
+                     ReportStoryLaunchTime(zx::duration(
+                         zx_clock_get(ZX_CLOCK_UTC) - start_time_));
+                   });
   }
 
   SessionStorage* const session_storage_;         // Not owned
@@ -112,7 +112,6 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
   std::unique_ptr<StoryStorage> storage_;
   std::unique_ptr<StoryControllerImpl> controller_;
 
-  fuchsia::ledger::PageId story_page_id_;
   fidl::StringPtr story_id_;  // This is the result of the Operation.
 
   // Sub operations run in this queue.
@@ -216,18 +215,28 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
       return;
     }
 
-    session_storage_->GetStoryData(story_id_)->Then(
+    session_storage_->GetStoryData(story_id_)->WeakThen(
+        GetWeakPtr(),
         [this, flow](fuchsia::modular::internal::StoryDataPtr story_data) {
           if (!story_data) {
             return;
+            // Operation finishes since |flow| goes out of scope.
           }
+          story_info_ = CloneOptional(story_data->story_info);
+          Cont(flow);
+        });
+  }
+
+  void Cont(FlowToken flow) {
+    session_storage_->GetStoryStorage(story_id_)->WeakThen(
+        GetWeakPtr(),
+        [this, flow](std::unique_ptr<StoryStorage> story_storage) {
           struct StoryControllerImplContainer container;
-          container.storage = std::make_unique<StoryStorage>(
-              session_storage_->ledger_client(), *story_data->story_page_id);
+          container.storage = std::move(story_storage);
           container.impl = std::make_unique<StoryControllerImpl>(
               story_id_, container.storage.get(), story_provider_impl_);
           container.impl->Connect(std::move(request_));
-          container.current_info = CloneOptional(story_data->story_info);
+          container.current_info = std::move(story_info_);
           story_provider_impl_->story_controller_impls_.emplace(
               story_id_, std::move(container));
         });
@@ -236,6 +245,7 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
   StoryProviderImpl* const story_provider_impl_;  // not owned
   SessionStorage* const session_storage_;         // not owned
   const fidl::StringPtr story_id_;
+  fuchsia::modular::StoryInfoPtr story_info_;
   fidl::InterfaceRequest<fuchsia::modular::StoryController> request_;
 
   // Sub operations run in this queue.

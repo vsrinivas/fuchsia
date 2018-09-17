@@ -337,7 +337,7 @@ FuturePtr<std::unique_ptr<StoryStorage>> SessionStorage::GetStoryStorage(
        story_name](fuchsia::modular::internal::StoryDataPtr story_data) {
         if (story_data) {
           auto story_storage = std::make_unique<StoryStorage>(
-              ledger_client(), *story_data->story_page_id);
+              ledger_client_, *story_data->story_page_id);
           returned_future->Complete(std::move(story_storage));
         } else {
           returned_future->Complete(nullptr);
