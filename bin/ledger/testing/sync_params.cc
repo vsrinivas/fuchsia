@@ -86,7 +86,14 @@ bool FetchCredentials(component::StartupContext* startup_context,
     return false;
   }
 
-  if (response.error || response.status_code != 200) {
+  if (response.error) {
+    FXL_LOG(ERROR) << "Net error " << response.error->code << ": "
+                   << response.error->description;
+    return false;
+  }
+
+  if (response.status_code != 200) {
+    FXL_LOG(ERROR) << "Unexpected HTTP status code: " << response.status_code;
     return false;
   }
 
