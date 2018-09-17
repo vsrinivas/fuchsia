@@ -158,33 +158,41 @@ case "${machine_type}" in
       --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}")
   ;;
   gauss)
-    if [[ ! -z "${sign_tool}" ]]; then
-      GAUSS_SIGN_TOOL="${sign_tool}"
-    elif [[ -z "${GAUSS_SIGN_TOOL}" ]]; then
-      echo "Sign tool is required." >&2
-      usage
+    if [[ -z "$IMAGE_ZIRCONA_SIGNEDZBI" || -z "$IMAGE_ZIRCONR_SIGNEDZBI" ]]; then
+      if [[ ! -z "${sign_tool}" ]]; then
+        GAUSS_SIGN_TOOL="${sign_tool}"
+      elif [[ -z "${GAUSS_SIGN_TOOL}" ]]; then
+        echo "Sign tool is required." >&2
+        usage
+      fi
+      "${GAUSS_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}" \
+                          -o "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.gauss.signed"
+      export IMAGE_ZIRCONA_SIGNEDZBI="${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.gauss.signed"
+      "${GAUSS_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}" \
+                          -o "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.gauss.signed"
+      export IMAGE_ZIRCONR_SIGNEDZBI="${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.gauss.signed"
     fi
-    "${GAUSS_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}" \
-                         -o "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.gauss.signed"
-    "${GAUSS_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}" \
-                        -o "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.gauss.signed"
-    disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.gauss.signed" \
-                         --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.gauss.signed")
+    disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_SIGNEDZBI}" \
+                         --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_SIGNEDZBI}")
     add_fvm=$force_pave
   ;;
   astro)
-    if [[ ! -z "${sign_tool}" ]]; then
-      ASTRO_SIGN_TOOL="${sign_tool}"
-    elif [[ -z "${ASTRO_SIGN_TOOL}" ]]; then
-      echo "Sign tool is required." >&2
-      usage
+    if [[ -z "$IMAGE_ZIRCONA_SIGNEDZBI" || -z "$IMAGE_ZIRCONR_SIGNEDZBI" ]]; then
+      if [[ ! -z "${sign_tool}" ]]; then
+        ASTRO_SIGN_TOOL="${sign_tool}"
+      elif [[ -z "${ASTRO_SIGN_TOOL}" ]]; then
+        echo "Sign tool is required." >&2
+        usage
+      fi
+      "${ASTRO_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}" \
+                          -o "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.astro.signed"
+      export IMAGE_ZIRCONA_SIGNEDZBI="${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.astro.signed"
+      "${ASTRO_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}" \
+                          -o "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.astro.signed"
+      export IMAGE_ZIRCONR_SIGNEDZBI="${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.astro.signed"
     fi
-    "${ASTRO_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}" \
-                         -o "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.astro.signed"
-    "${ASTRO_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}" \
-                         -o "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.astro.signed"
-    disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.astro.signed"\
-                         --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.astro.signed")
+    disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_SIGNEDZBI}"\
+                         --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_SIGNEDZBI}")
     add_fvm=$force_pave
   ;;
   ""|*)
