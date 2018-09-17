@@ -158,7 +158,3 @@ zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo) {
 
     return status;
 }
-
-zx_status_t fdio_get_exact_vmo(int fd, zx_handle_t* out_vmo) {
-    return fdio_get_vmo_exact(fd, out_vmo);
-}

@@ -72,8 +72,6 @@ zx_status_t fdio_get_vmo_clone(int fd, zx_handle_t* out_vmo);
 // VMO representation of the file (e.g., if fdio_get_vmo would need to copy
 // or clone data into a new VMO).
 zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo);
-// DEPRECATED: Use "fdio_get_vmo_exact".
-zx_status_t fdio_get_exact_vmo(int fd, zx_handle_t* out_vmo) __DEPRECATE;
 
 // create a fd that is backed by the given range of the vmo.
 // This function takes ownership of the vmo and will close the vmo when the fd
