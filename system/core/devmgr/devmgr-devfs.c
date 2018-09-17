@@ -654,6 +654,13 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
         devfs_open(dn, h, path, flags | ZX_FS_FLAG_NOREMOTE);
         return ZX_OK;
     }
+    case ZXFIDL_DESCRIBE: {
+        DECODE_REQUEST(msg, NodeDescribe);
+        fuchsia_io_NodeInfo info;
+        memset(&info, 0, sizeof(info));
+        info.tag = fuchsia_io_NodeInfoTagdirectory;
+        return fuchsia_io_NodeDescribe_reply(txn, &info);
+    }
     case ZXFIDL_OPEN: {
         DECODE_REQUEST(msg, DirectoryOpen);
         DEFINE_REQUEST(msg, DirectoryOpen);

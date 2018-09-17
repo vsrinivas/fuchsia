@@ -53,9 +53,8 @@ static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg,
     msg->extra_ptr = (zxrio_node_info_t*)FIDL_ALLOC_PRESENT;
     *handle = ZX_HANDLE_INVALID;
     if (dev->event != ZX_HANDLE_INVALID) {
-        //TODO: read only?
         zx_status_t r;
-        if ((r = zx_handle_duplicate(dev->event, ZX_RIGHT_SAME_RIGHTS,
+        if ((r = zx_handle_duplicate(dev->event, ZX_RIGHTS_BASIC,
                                      handle)) != ZX_OK) {
             msg->status = r;
             return r;
@@ -281,8 +280,19 @@ static zx_status_t fidl_node_close(void* ctx, fidl_txn_t* txn) {
 }
 
 static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
-    fprintf(stderr, "devhost: Object Describe not yet implemented\n");
-    return ZX_ERR_NOT_SUPPORTED;
+    devhost_iostate_t* ios = ctx;
+    zx_device_t* dev = ios->dev;
+    fuchsia_io_NodeInfo info;
+    memset(&info, 0, sizeof(info));
+    info.tag = fuchsia_io_NodeInfoTagdevice;
+    if (dev->event != ZX_HANDLE_INVALID) {
+        zx_status_t status = zx_handle_duplicate(
+            dev->event, ZX_RIGHTS_BASIC, &info.device.event);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+    return fuchsia_io_NodeDescribe_reply(txn, &info);
 }
 
 static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
