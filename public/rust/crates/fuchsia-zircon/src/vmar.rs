@@ -32,11 +32,11 @@ impl Vmar {
         let mut mapped = 0;
         let mut handle = 0;
         let status = unsafe {
-            sys::zx_vmar_allocate_old(
+            sys::zx_vmar_allocate(
                 self.raw_handle(),
+                flags.bits(),
                 offset,
                 size,
-                flags.bits(),
                 &mut handle,
                 &mut mapped,
             )
@@ -65,13 +65,13 @@ impl Vmar {
         flags: VmarFlagsExtended,
     ) -> Result<usize, Status> {
         let mut mapped = 0;
-        let status = sys::zx_vmar_map_old(
+        let status = sys::zx_vmar_map(
             self.0.raw_handle(),
+            flags.bits(),
             vmar_offset,
             vmo.raw_handle(),
             vmo_offset,
             len,
-            flags.bits(),
             &mut mapped,
         );
         ok(status).map(|_| mapped)
@@ -82,7 +82,7 @@ impl Vmar {
     }
 
     pub unsafe fn protect(&self, addr: usize, len: usize, flags: VmarFlags) -> Result<(), Status> {
-        ok(sys::zx_vmar_protect_old(self.raw_handle(), addr, len, flags.bits()))
+        ok(sys::zx_vmar_protect(self.raw_handle(), flags.bits(), addr, len))
     }
 
     pub unsafe fn destroy(&self) -> Result<(), Status> {
@@ -95,34 +95,34 @@ impl Vmar {
 bitflags! {
     /// Flags to VMAR routines which are considered safe.
     #[repr(transparent)]
-    pub struct VmarFlags: u32 {
-        const PERM_READ             = sys::ZX_VM_FLAG_PERM_READ;
-        const PERM_WRITE            = sys::ZX_VM_FLAG_PERM_WRITE;
-        const PERM_EXECUTE          = sys::ZX_VM_FLAG_PERM_EXECUTE;
-        const COMPACT               = sys::ZX_VM_FLAG_COMPACT;
-        const SPECIFIC              = sys::ZX_VM_FLAG_SPECIFIC;
-        const CAN_MAP_SPECIFIC      = sys::ZX_VM_FLAG_CAN_MAP_SPECIFIC;
-        const CAN_MAP_READ          = sys::ZX_VM_FLAG_CAN_MAP_READ;
-        const CAN_MAP_WRITE         = sys::ZX_VM_FLAG_CAN_MAP_WRITE;
-        const CAN_MAP_EXECUTE       = sys::ZX_VM_FLAG_CAN_MAP_EXECUTE;
-        const MAP_RANGE             = sys::ZX_VM_FLAG_MAP_RANGE;
-        const REQUIRE_NON_RESIZABLE = sys::ZX_VM_FLAG_REQUIRE_NON_RESIZABLE;
+    pub struct VmarFlags: sys::zx_vm_option_t {
+        const PERM_READ             = sys::ZX_VM_PERM_READ;
+        const PERM_WRITE            = sys::ZX_VM_PERM_WRITE;
+        const PERM_EXECUTE          = sys::ZX_VM_PERM_EXECUTE;
+        const COMPACT               = sys::ZX_VM_COMPACT;
+        const SPECIFIC              = sys::ZX_VM_SPECIFIC;
+        const CAN_MAP_SPECIFIC      = sys::ZX_VM_CAN_MAP_SPECIFIC;
+        const CAN_MAP_READ          = sys::ZX_VM_CAN_MAP_READ;
+        const CAN_MAP_WRITE         = sys::ZX_VM_CAN_MAP_WRITE;
+        const CAN_MAP_EXECUTE       = sys::ZX_VM_CAN_MAP_EXECUTE;
+        const MAP_RANGE             = sys::ZX_VM_MAP_RANGE;
+        const REQUIRE_NON_RESIZABLE = sys::ZX_VM_REQUIRE_NON_RESIZABLE;
     }
 }
 
 bitflags! {
     /// Flags to all VMAR routines.
     #[repr(transparent)]
-    pub struct VmarFlagsExtended: u32 {
-        const PERM_READ          = sys::ZX_VM_FLAG_PERM_READ;
-        const PERM_WRITE         = sys::ZX_VM_FLAG_PERM_WRITE;
-        const PERM_EXECUTE       = sys::ZX_VM_FLAG_PERM_EXECUTE;
-        const COMPACT            = sys::ZX_VM_FLAG_COMPACT;
-        const SPECIFIC           = sys::ZX_VM_FLAG_SPECIFIC;
-        const SPECIFIC_OVERWRITE = sys::ZX_VM_FLAG_SPECIFIC_OVERWRITE;
-        const CAN_MAP_SPECIFIC   = sys::ZX_VM_FLAG_CAN_MAP_SPECIFIC;
-        const CAN_MAP_READ       = sys::ZX_VM_FLAG_CAN_MAP_READ;
-        const CAN_MAP_WRITE      = sys::ZX_VM_FLAG_CAN_MAP_WRITE;
-        const CAN_MAP_EXECUTE    = sys::ZX_VM_FLAG_CAN_MAP_EXECUTE;
+    pub struct VmarFlagsExtended: sys::zx_vm_option_t {
+        const PERM_READ          = sys::ZX_VM_PERM_READ;
+        const PERM_WRITE         = sys::ZX_VM_PERM_WRITE;
+        const PERM_EXECUTE       = sys::ZX_VM_PERM_EXECUTE;
+        const COMPACT            = sys::ZX_VM_COMPACT;
+        const SPECIFIC           = sys::ZX_VM_SPECIFIC;
+        const SPECIFIC_OVERWRITE = sys::ZX_VM_SPECIFIC_OVERWRITE;
+        const CAN_MAP_SPECIFIC   = sys::ZX_VM_CAN_MAP_SPECIFIC;
+        const CAN_MAP_READ       = sys::ZX_VM_CAN_MAP_READ;
+        const CAN_MAP_WRITE      = sys::ZX_VM_CAN_MAP_WRITE;
+        const CAN_MAP_EXECUTE    = sys::ZX_VM_CAN_MAP_EXECUTE;
     }
 }
