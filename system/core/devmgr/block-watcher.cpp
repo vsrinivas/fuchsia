@@ -127,7 +127,7 @@ static void old_launch_blob_init(void) {
 // That is, a manifest of name->blob is embedded in /boot/config/devmgr.
 static zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix,
                                          const char* name, zx_handle_t* vmo) {
-    const int fs_blob_fd = (intptr_t)ctx;
+    const int fs_blob_fd = static_cast<int>(reinterpret_cast<intptr_t>(ctx));
     char key[256];
     if (snprintf(key, sizeof(key), "zircon.system.pkgfs.file.%s%s",
                  prefix, name) >= (int)sizeof(key)) {
@@ -166,7 +166,7 @@ static zx_status_t pkgfs_ldsvc_publish_data_sink(void* ctx, const char* name,
 }
 
 static void pkgfs_ldsvc_finalizer(void* ctx) {
-    close((intptr_t)ctx);
+    close(static_cast<int>(reinterpret_cast<intptr_t>(ctx)));
 }
 
 static const loader_service_ops_t pkgfs_ldsvc_ops = {
@@ -208,7 +208,7 @@ static zx_status_t pkgfs_launch_load(void* ctx, launchpad_t* lp,
     }
     zx_handle_t vmo;
     zx_status_t status = pkgfs_ldsvc_load_blob(ctx, "", file, &vmo);
-    const int fs_blob_fd = (intptr_t)ctx;
+    const int fs_blob_fd = static_cast<int>(reinterpret_cast<intptr_t>(ctx));
     if (status == ZX_OK) {
         // The service takes ownership of fs_blob_fd.
         zx_handle_t ldsvc;

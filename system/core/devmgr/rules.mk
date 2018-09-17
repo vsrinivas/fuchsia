@@ -73,7 +73,7 @@ MODULE_GROUP := core
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/bootfs.cpp \
-    $(LOCAL_DIR)/block-watcher.c \
+    $(LOCAL_DIR)/block-watcher.cpp \
     $(LOCAL_DIR)/devmgr-fdio.cpp \
     $(LOCAL_DIR)/fshost.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp
