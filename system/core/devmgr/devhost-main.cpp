@@ -4,6 +4,8 @@
 
 #include <zircon/compiler.h>
 
+__BEGIN_CDECLS
+
 int device_host_main(int argc, char** argv);
 
 int main(int argc, char** argv) {
@@ -27,3 +29,5 @@ const char* __asan_default_options(void) {
     return "detect_odr_violation=0";
 }
 #endif
+
+__END_CDECLS
