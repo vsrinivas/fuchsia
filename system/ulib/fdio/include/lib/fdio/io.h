@@ -61,14 +61,6 @@ zx_status_t fdio_pipe_half(zx_handle_t* handle, uint32_t* type);
 // Get a read-only VMO containing the whole contents of the file.
 // This function creates a clone of the underlying VMO when possible, falling
 // back to eagerly reading the contents into a freshly-created VMO.
-//
-// DEPRECATED: Prefer the new name "fdio_get_vmo_copy" or
-// "fdio_get_vmo_clone", explicit about clone/copy behavior.
-zx_status_t fdio_get_vmo(int fd, zx_handle_t* out_vmo) __DEPRECATE;
-
-// Get a read-only VMO containing the whole contents of the file.
-// This function creates a clone of the underlying VMO when possible, falling
-// back to eagerly reading the contents into a freshly-created VMO.
 zx_status_t fdio_get_vmo_copy(int fd, zx_handle_t* out_vmo);
 
 // Gets a read-only VMO containing a clone of the underlying VMO.
