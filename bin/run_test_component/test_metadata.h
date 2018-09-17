@@ -28,7 +28,10 @@ namespace run {
 //    "injected-services": {
 //      "fuchsia.log.LogSink": "logger",
 //      "fuchsia.log.Log": "logger"
-//    }
+//    },
+//    "system-services": [
+//      "fuchsia.netstack.Netstack"
+//    ]
 //  }
 // }
 static constexpr char kFuchsiaTest[] = "fuchsia.test";
@@ -50,6 +53,9 @@ class TestMetadata {
 
   bool HasServices() const { return !service_url_pair_.empty(); }
   Services TakeServices() { return std::move(service_url_pair_); }
+  const std::vector<std::string>& system_services() const {
+    return system_services_;
+  }
 
  private:
   fuchsia::sys::LaunchInfo GetLaunchInfo(
@@ -58,6 +64,8 @@ class TestMetadata {
   json::JSONParser json_parser_;
   bool null_ = true;
   Services service_url_pair_;
+
+  std::vector<std::string> system_services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestMetadata);
 };

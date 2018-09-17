@@ -4,6 +4,8 @@
 
 #include "garnet/bin/run_test_component/test_metadata.h"
 
+#include <unordered_set>
+
 #include "garnet/lib/cmx/cmx.h"
 #include "lib/fxl/strings/substitute.h"
 
@@ -13,6 +15,11 @@ namespace {
 using fxl::Substitute;
 
 constexpr char kInjectedServices[] = "injected-services";
+constexpr char kSystemServices[] = "system-services";
+
+const std::unordered_set<std::string> kAllowedSystemServices = {
+    "fuchsia.netstack.Netstack", "fuchsia.net.LegacySocketProvider",
+    "fuchsia.net.Connectivity", "fuchsia.net.stack.Stack"};
 
 }  // namespace
 
@@ -61,6 +68,33 @@ bool TestMetadata::ParseFromFile(const std::string& cmx_file_path) {
       json_parser_.ReportError(
           Substitute("'$0' in 'facets' should be an object.", kFuchsiaTest));
       return false;
+    }
+    auto allow_network_services = fuchisa_test.FindMember(kSystemServices);
+    if (allow_network_services != fuchisa_test.MemberEnd()) {
+      if (!allow_network_services->value.IsArray()) {
+        json_parser_.ReportError(
+            Substitute("'$0' in '$1' should be a string array.",
+                       kSystemServices, kFuchsiaTest));
+      } else {
+        const auto& array = allow_network_services->value.GetArray();
+        std::all_of(
+            array.begin(), array.end(), [&](const rapidjson::Value& val) {
+              if (!val.IsString()) {
+                json_parser_.ReportError(
+                    Substitute("'$0' in '$1' should be a string array.",
+                               kSystemServices, kFuchsiaTest));
+                return false;
+              }
+              std::string service = val.GetString();
+              if (kAllowedSystemServices.count(service) == 0) {
+                json_parser_.ReportError(fxl::Substitute(
+                    "'$0' cannot contain '$1'.", kSystemServices, service));
+                return false;
+              }
+              system_services_.push_back(service);
+              return true;
+            });
+      }
     }
     auto services = fuchisa_test.FindMember(kInjectedServices);
     if (services != fuchisa_test.MemberEnd()) {

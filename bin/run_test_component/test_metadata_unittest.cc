@@ -122,6 +122,43 @@ TEST_F(TestMetadataTest, InvalidServicesType) {
                     "object.");
 }
 
+TEST_F(TestMetadataTest, InvalidSystemServicesType) {
+  std::string json = CreateManifestJson(R"(
+  "facets": {
+    "fuchsia.test": {
+      "system-services": "string"
+    }
+  })");
+  auto expected_error =
+      "'system-services' in 'fuchsia.test' should be a string array.";
+  ExpectFailedParse(json, expected_error);
+
+  json = CreateManifestJson(R"(
+  "facets": {
+    "fuchsia.test": {
+      "system-services": {}
+    }
+  })");
+  ExpectFailedParse(json, expected_error);
+
+  json = CreateManifestJson(R"(
+  "facets": {
+    "fuchsia.test": {
+      "system-services": [ 2, 3 ]
+    }
+  })");
+  ExpectFailedParse(json, expected_error);
+
+  json = CreateManifestJson(R"(
+  "facets": {
+    "fuchsia.test": {
+      "system-services": [ "fuchsia.netstack.Netstack", "invalid_service" ]
+    }
+  })");
+  ExpectFailedParse(json,
+                    "'system-services' cannot contain 'invalid_service'.");
+}
+
 TEST_F(TestMetadataTest, InvalidServices) {
   std::string json = CreateManifestJson(R"(
   "facets": {
@@ -197,6 +234,49 @@ TEST_F(TestMetadataTest, ValidServices) {
   launch_info.arguments.push_back("c");
   EXPECT_EQ(services[1], create_pair("2", std::move(launch_info)));
   EXPECT_EQ(services[2], create_pair("3", LaunchInfo{.url = "url3"}));
+  EXPECT_EQ(tm.system_services().size(), 0u);
+}
+
+TEST_F(TestMetadataTest, ValidSystemServices) {
+  std::string json = CreateManifestJson(R"(
+  "facets": {
+    "fuchsia.test": {
+      "system-services": [
+        "fuchsia.netstack.Netstack", "fuchsia.net.LegacySocketProvider",
+        "fuchsia.net.Connectivity", "fuchsia.net.stack.Stack"
+      ]
+    }
+  })");
+
+  {
+    TestMetadata tm;
+    EXPECT_TRUE(ParseFrom(&tm, json));
+    EXPECT_EQ(tm.system_services().size(), 4u);
+    EXPECT_THAT(tm.system_services(),
+                ::testing::ElementsAre("fuchsia.netstack.Netstack",
+                                       "fuchsia.net.LegacySocketProvider",
+                                       "fuchsia.net.Connectivity",
+                                       "fuchsia.net.stack.Stack"));
+  }
+
+  json = CreateManifestJson(R"(
+  "facets": {
+    "fuchsia.test": {
+      "system-services": [
+        "fuchsia.netstack.Netstack", "fuchsia.net.LegacySocketProvider",
+        "fuchsia.net.Connectivity"
+      ]
+    }
+  })");
+  {
+    TestMetadata tm;
+    EXPECT_TRUE(ParseFrom(&tm, json));
+    EXPECT_EQ(tm.system_services().size(), 3u);
+    EXPECT_THAT(tm.system_services(),
+                ::testing::ElementsAre("fuchsia.netstack.Netstack",
+                                       "fuchsia.net.LegacySocketProvider",
+                                       "fuchsia.net.Connectivity"));
+  }
 }
 
 }  // namespace

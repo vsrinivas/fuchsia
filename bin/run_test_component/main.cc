@@ -175,6 +175,10 @@ int main(int argc, const char** argv) {
       env_services->AddServiceWithLaunchInfo(std::move(service.second),
                                              service.first);
     }
+    auto& system_services = test_metadata.system_services();
+    for (auto& service : system_services) {
+      env_services->AllowParentService(service);
+    }
     enclosing_env = component::testing::EnclosingEnvironment::Create(
         kEnv, parent_env, std::move(env_services));
     launcher = enclosing_env->launcher_ptr();
