@@ -117,6 +117,7 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     auto bcn = frame.body();
     bcn->beacon_interval = req_.beacon_period;
     bcn->timestamp = bss_->timestamp();
+    bcn->cap.set_privacy(!req_.rsne.is_null());
     bcn->cap.set_ess(1);
     bcn->cap.set_short_preamble(1);
 
@@ -198,6 +199,7 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
     auto resp = frame.body();
     resp->beacon_interval = static_cast<uint16_t>(req_.beacon_period);
     resp->timestamp = bss_->timestamp();
+    resp->cap.set_privacy(!req_.rsne.is_null());
     resp->cap.set_ess(1);
     resp->cap.set_short_preamble(1);
 
