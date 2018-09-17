@@ -64,6 +64,7 @@ package("netstack_gotests") {
     ":netstack_filter_test",
     ":netstack_link_eth_test",
     ":netstack_netiface_test",
+    ":netstack_service_impl_test",
     "netstack_service_test",
     "//garnet/go/src/netstack/ifconfig:netstack_ifconfig_test",
     "//garnet/go/src/netstack/netstat:netstack_netstat_test",
@@ -93,6 +94,9 @@ package("netstack_gotests") {
     },
     {
       name = "netstack_netiface_test"
+    },
+    {
+      name = "netstack_service_impl_test"
     },
     {
       name = "netstack_netstat_test"
@@ -154,6 +158,13 @@ go_test("netstack_link_eth_test") {
 
 go_test("netstack_netiface_test") {
   gopackage = "netstack/netiface"
+  deps = [
+    ":netstack_lib",
+  ]
+}
+
+go_test("netstack_service_impl_test") {
+  gopackage = "netstack"
   deps = [
     ":netstack_lib",
   ]

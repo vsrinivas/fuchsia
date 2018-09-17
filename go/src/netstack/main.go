@@ -72,12 +72,13 @@ func main() {
 
 	ns := &Netstack{
 		arena:          arena,
-		stack:          stk,
 		socketServer:   s,
 		dnsClient:      dns.NewClient(stk),
 		deviceSettings: ds,
 		ifStates:       make(map[tcpip.NICID]*ifState),
 	}
+	ns.mu.stack = stk
+
 	if err := ns.addLoopback(); err != nil {
 		log.Fatalf("loopback: %s", err)
 	}

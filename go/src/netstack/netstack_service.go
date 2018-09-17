@@ -9,6 +9,8 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"syscall/zx"
+	"syscall/zx/zxwait"
 
 	"netstack/fidlconv"
 	"netstack/link/eth"
@@ -126,9 +128,12 @@ func (ni *netstackImpl) GetInterfaces() (out []netstack.NetInterface, err error)
 
 func (ni *netstackImpl) GetRouteTable() (out []netstack.RouteTableEntry, err error) {
 	ni.ns.mu.Lock()
-	table := ni.ns.stack.GetRouteTable()
-	ni.ns.mu.Unlock()
+	defer ni.ns.mu.Unlock()
+	table := ni.ns.mu.stack.GetRouteTable()
+	return nsToRouteTable(table)
+}
 
+func nsToRouteTable(table []tcpip.Route) (out []netstack.RouteTableEntry, err error) {
 	for _, route := range table {
 		// Ensure that if any of the returned addresss are "empty",
 		// they still have the appropriate NetAddressFamily.
@@ -163,7 +168,7 @@ func (ni *netstackImpl) GetRouteTable() (out []netstack.RouteTableEntry, err err
 	return out, nil
 }
 
-func (ni *netstackImpl) SetRouteTable(rt []netstack.RouteTableEntry) error {
+func routeTableToNs(rt []netstack.RouteTableEntry) []tcpip.Route {
 	routes := []tcpip.Route{}
 	for _, r := range rt {
 		route := tcpip.Route{
@@ -175,11 +180,67 @@ func (ni *netstackImpl) SetRouteTable(rt []netstack.RouteTableEntry) error {
 		routes = append(routes, route)
 	}
 
-	ni.ns.mu.Lock()
-	defer ni.ns.mu.Unlock()
-	ni.ns.stack.SetRouteTable(routes)
+	return routes
+}
 
+type routeTableTransactionImpl struct {
+	ni              *netstackImpl
+	routeTableCache []tcpip.Route
+}
+
+func (i *routeTableTransactionImpl) GetRouteTable() (out []netstack.RouteTableEntry, err error) {
+	return nsToRouteTable(i.routeTableCache)
+}
+
+func (i *routeTableTransactionImpl) SetRouteTable(rt []netstack.RouteTableEntry) error {
+	routes := routeTableToNs(rt)
+	i.routeTableCache = routes
 	return nil
+}
+
+func (i *routeTableTransactionImpl) Commit() (int32, error) {
+	i.ni.ns.mu.Lock()
+	defer i.ni.ns.mu.Unlock()
+	i.ni.ns.mu.stack.SetRouteTable(i.routeTableCache)
+	return int32(zx.ErrOk), nil
+}
+
+func (ni *netstackImpl) StartRouteTableTransaction(req netstack.RouteTableTransactionInterfaceRequest) (int32, error) {
+	{
+		ni.ns.mu.Lock()
+		defer ni.ns.mu.Unlock()
+
+		if ni.ns.mu.transactionRequest != nil {
+			oldChannel := ni.ns.mu.transactionRequest.ToChannel()
+			observed, _ := zxwait.Wait(*oldChannel.Handle(), 0, 0)
+			// If both readable is clear than there is no more data to be
+			// processed.  If writable is clear then we can't return any
+			// more results, so the channel is effectively done.  It's not
+			// enough to only look at peerclosed because the peer can close
+			// the channel while it still has data in its buffers.
+			if observed&(zx.SignalChannelReadable|zx.SignalChannelWritable) == 0 {
+				ni.ns.mu.transactionRequest = nil
+			}
+		}
+		if ni.ns.mu.transactionRequest != nil {
+			return int32(zx.ErrShouldWait), nil
+		}
+		ni.ns.mu.transactionRequest = &req
+	}
+	var routeTableService netstack.RouteTableTransactionService
+	transaction := routeTableTransactionImpl{
+		ni:              ni,
+		routeTableCache: ni.ns.mu.stack.GetRouteTable(),
+	}
+	// We don't use the error handler to free the channel because it's
+	// possible that the peer closes the channel before our service has
+	// finished processing.
+	c := req.ToChannel()
+	_, err := routeTableService.Add(&transaction, c, nil)
+	if err != nil {
+		return int32(zx.ErrShouldWait), err
+	}
+	return int32(zx.ErrOk), err
 }
 
 func validateInterfaceAddress(nicid uint32, address netstack.NetAddress, prefixLen uint8) (nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, retval netstack.NetErr) {
@@ -254,7 +315,7 @@ func (ni *netstackImpl) GetFilterStatus() (enabled bool, err error) {
 }
 
 func (ni *netstackImpl) GetAggregateStats() (stats netstack.AggregateStats, err error) {
-	s := ni.ns.stack.Stats()
+	s := ni.ns.mu.stack.Stats()
 	return netstack.AggregateStats{
 		UnknownProtocolReceivedPackets: s.UnknownProtocolRcvdPackets,
 		MalformedReceivedPackets:       s.MalformedRcvdPackets,

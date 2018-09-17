@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"syscall/zx"
 
 	"app/context"
 
@@ -159,13 +160,28 @@ func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry) error {
 	if (r.Gateway == netstack.NetAddress{}) && r.Nicid == 0 {
 		return fmt.Errorf("either gateway or iface must be provided when adding a route")
 	}
-
-	rs, err := a.netstack.GetRouteTable()
+	req, transactionInterface, err := netstack.NewRouteTableTransactionInterfaceRequest()
 	if err != nil {
-		return fmt.Errorf("Could not get route table from netstack: %s", err)
+		return fmt.Errorf("could not make a new route table transaction: %s", err)
 	}
-
-	return a.netstack.SetRouteTable(append(rs, r))
+	defer req.Close()
+	status, err := a.netstack.StartRouteTableTransaction(req)
+	if err != nil || zx.Status(status) != zx.ErrOk {
+		return fmt.Errorf("could not start a route table transaction: %s (%s)", err, zx.Status(status))
+	}
+	rs, err := transactionInterface.GetRouteTable()
+	if err != nil {
+		return fmt.Errorf("could not get route table from netstack: %s", err)
+	}
+	err = transactionInterface.SetRouteTable(append(rs, r))
+	if err != nil {
+		return fmt.Errorf("could not set route table in netstack: %s", err)
+	}
+	status, err = transactionInterface.Commit()
+	if err != nil || zx.Status(status) != zx.ErrOk {
+		return fmt.Errorf("could not commit route table in netstack: %s (%s)", err, zx.Status(status))
+	}
+	return nil
 }
 
 func equalNetAddress(a netstack.NetAddress, b netstack.NetAddress) bool {
@@ -205,16 +221,31 @@ func matchRoute(target netstack.RouteTableEntry, source netstack.RouteTableEntry
 }
 
 func (a *netstackClientApp) deleteRoute(target netstack.RouteTableEntry) error {
-	rs, err := a.netstack.GetRouteTable()
+	req, transactionInterface, err := netstack.NewRouteTableTransactionInterfaceRequest()
 	if err != nil {
-		return fmt.Errorf("Could not get route table from netstack: %s", err)
+		return fmt.Errorf("could not make a new route table transaction: %s", err)
+	}
+	defer req.Close()
+	status, err := a.netstack.StartRouteTableTransaction(req)
+	if err != nil || zx.Status(status) != zx.ErrOk {
+		return fmt.Errorf("could not start a route table transaction (maybe the route table is locked?): %s", err)
+	}
+
+	rs, err := transactionInterface.GetRouteTable()
+	if err != nil {
+		return fmt.Errorf("could not get route table from netstack: %s", err)
 	}
 	for i, r := range rs {
 		if matchRoute(target, r) {
-			return a.netstack.SetRouteTable(append(rs[:i], rs[i+1:]...))
+			transactionInterface.SetRouteTable(append(rs[:i], rs[i+1:]...))
+			_, err = transactionInterface.Commit()
+			if err != nil {
+				return fmt.Errorf("could not commit route table in netstack: %s", err)
+			}
+			return nil
 		}
 	}
-	return fmt.Errorf("Could not find route to delete in route table")
+	return fmt.Errorf("could not find route to delete in route table")
 }
 
 func routeTableEntryToString(r netstack.RouteTableEntry, ifaces []netstack.NetInterface) string {

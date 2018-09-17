@@ -20,6 +20,7 @@ import (
 	"netstack/netiface"
 
 	"fidl/fuchsia/devicesettings"
+	"fidl/fuchsia/netstack"
 	"fidl/zircon/ethernet"
 
 	"github.com/google/netstack/dhcp"
@@ -41,13 +42,16 @@ const (
 // A Netstack tracks all of the running state of the network stack.
 type Netstack struct {
 	arena        *eth.Arena
-	stack        *stack.Stack
 	socketServer *socketServer
 
 	deviceSettings *devicesettings.DeviceSettingsManagerInterface
 	dnsClient      *dns.Client
 
-	mu       sync.Mutex
+	mu struct {
+		sync.Mutex
+		stack              *stack.Stack
+		transactionRequest *netstack.RouteTableTransactionInterfaceRequest
+	}
 	nodename string
 	ifStates map[tcpip.NICID]*ifState
 
@@ -123,17 +127,17 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 		return fmt.Errorf("error parsing subnet format for NIC ID %d: %s", nic, err)
 	}
 
-	if hasSubnet, err := ns.stack.ContainsSubnet(nic, subnet); err != nil {
+	if hasSubnet, err := ns.mu.stack.ContainsSubnet(nic, subnet); err != nil {
 		return fmt.Errorf("error finding subnet %s for NIC ID %d: %s", subnet, nic, err)
 	} else if hasSubnet {
-		if err := ns.stack.RemoveSubnet(nic, subnet); err != nil {
+		if err := ns.mu.stack.RemoveSubnet(nic, subnet); err != nil {
 			return fmt.Errorf("error removing subnet %s from NIC ID %d: %s", subnet, nic, err)
 		}
 	} else {
 		return fmt.Errorf("no such subnet %s for NIC ID %d", subnet, nic)
 	}
 
-	if err := ns.stack.RemoveAddress(nic, addr); err != nil {
+	if err := ns.mu.stack.RemoveAddress(nic, addr); err != nil {
 		return fmt.Errorf("error removing address %s from NIC ID %d: %s", addr, nic, err)
 	}
 
@@ -143,7 +147,7 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 	}
 
 	{
-		addr, subnet, err := ns.stack.GetMainNICAddress(nic, protocol)
+		addr, subnet, err := ns.mu.stack.GetMainNICAddress(nic, protocol)
 		if err != nil {
 			return fmt.Errorf("error querying NIC ID %d, error: %s", nic, err)
 		}
@@ -169,11 +173,11 @@ func (ns *Netstack) setInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkP
 		return fmt.Errorf("error parsing subnet format for NIC ID %d: %s", nic, err)
 	}
 
-	if err := ns.stack.AddAddress(nic, protocol, addr); err != nil {
+	if err := ns.mu.stack.AddAddress(nic, protocol, addr); err != nil {
 		return fmt.Errorf("error adding address %s to NIC ID %d: %s", addr, nic, err)
 	}
 
-	if err := ns.stack.AddSubnet(nic, protocol, subnet); err != nil {
+	if err := ns.mu.stack.AddSubnet(nic, protocol, subnet); err != nil {
 		return fmt.Errorf("error adding subnet %s to NIC ID %d: %s", subnet, nic, err)
 	}
 
@@ -219,7 +223,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 	ifs.nic.DNSServers = config.DNS
 	ifs.ns.mu.Unlock()
 
-	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
+	ifs.ns.mu.stack.SetRouteTable(ifs.ns.flattenRouteTables())
 	ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.getRuntimeDNSServerRefs())
 
 	OnInterfacesChanged()
@@ -269,7 +273,7 @@ func (ifs *ifState) stateChange(s eth.State) {
 		ifs.nic.DNSServers = nil
 		ifs.ns.mu.Unlock()
 
-		ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
+		ifs.ns.mu.stack.SetRouteTable(ifs.ns.flattenRouteTables())
 		ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.getRuntimeDNSServerRefs())
 	case eth.StateStarted:
 		// Only call `restarted` if we are not in the initial state (which means we're still starting).
@@ -280,7 +284,7 @@ func (ifs *ifState) stateChange(s eth.State) {
 			ifs.nic.Routes = defaultRouteTable(ifs.nic.ID, "")
 			ifs.ns.mu.Unlock()
 
-			ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
+			ifs.ns.mu.stack.SetRouteTable(ifs.ns.flattenRouteTables())
 			ifs.setDHCPStatus(true)
 		}
 	}
@@ -393,17 +397,17 @@ func (ns *Netstack) addLoopback() error {
 	}
 	linkID = ifs.statsEP.Wrap(linkID)
 
-	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
+	if err := ns.mu.stack.CreateNIC(nicid, linkID); err != nil {
 		return fmt.Errorf("loopback: could not create interface: %v", err)
 	}
-	if err := ns.stack.AddAddress(nicid, ipv4.ProtocolNumber, header.IPv4Loopback); err != nil {
+	if err := ns.mu.stack.AddAddress(nicid, ipv4.ProtocolNumber, header.IPv4Loopback); err != nil {
 		return fmt.Errorf("loopback: adding ipv4 address failed: %v", err)
 	}
-	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, header.IPv6Loopback); err != nil {
+	if err := ns.mu.stack.AddAddress(nicid, ipv6.ProtocolNumber, header.IPv6Loopback); err != nil {
 		return fmt.Errorf("loopback: adding ipv6 address failed: %v", err)
 	}
 
-	ns.stack.SetRouteTable(ns.flattenRouteTables())
+	ns.mu.stack.SetRouteTable(ns.flattenRouteTables())
 
 	return nil
 }
@@ -411,7 +415,7 @@ func (ns *Netstack) addLoopback() error {
 func (ns *Netstack) Bridge(nics []tcpip.NICID) error {
 	// TODO(stijlist): save bridge in netstack state as NetInterface
 	// TODO(stijlist): initialize bridge context.Context & cancelFunc
-	b, err := ns.stack.Bridge(nics)
+	b, err := ns.mu.stack.Bridge(nics)
 	if err != nil {
 		return errors.New(err.String())
 	}
@@ -460,7 +464,7 @@ func (ns *Netstack) addEth(topo string, device ethernet.DeviceInterface) error {
 		linkID = sniffer.New(linkID)
 	}
 
-	f := filter.New(ns.stack.PortManager)
+	f := filter.New(ns.mu.stack.PortManager)
 	linkID = filter.NewEndpoint(f, linkID)
 	ns.filter = f
 
@@ -481,25 +485,25 @@ func (ns *Netstack) addEth(topo string, device ethernet.DeviceInterface) error {
 
 	log.Printf("NIC %s added using ethernet device", ifs.nic.Name)
 
-	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
+	if err := ns.mu.stack.CreateNIC(nicid, linkID); err != nil {
 		return fmt.Errorf("NIC %s: could not create NIC: %v", ifs.nic.Name, err)
 	}
-	if err := ns.stack.AddAddress(nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
+	if err := ns.mu.stack.AddAddress(nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
 		return fmt.Errorf("NIC %s: adding arp address failed: %v", ifs.nic.Name, err)
 	}
-	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, lladdr); err != nil {
+	if err := ns.mu.stack.AddAddress(nicid, ipv6.ProtocolNumber, lladdr); err != nil {
 		return fmt.Errorf("NIC %s: adding link-local IPv6 %v failed: %v", ifs.nic.Name, lladdr, err)
 	}
 	snaddr := ipv6.SolicitedNodeAddr(lladdr)
-	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, snaddr); err != nil {
+	if err := ns.mu.stack.AddAddress(nicid, ipv6.ProtocolNumber, snaddr); err != nil {
 		return fmt.Errorf("NIC %s: adding solicited-node IPv6 %v (link-local IPv6 %v) failed: %v", ifs.nic.Name, snaddr, lladdr, err)
 	}
 	log.Printf("NIC %s: link-local IPv6: %v", ifs.nic.Name, lladdr)
 
-	ifs.dhcpState.client = dhcp.NewClient(ns.stack, nicid, linkAddr, ifs.dhcpAcquired)
+	ifs.dhcpState.client = dhcp.NewClient(ns.mu.stack, nicid, linkAddr, ifs.dhcpAcquired)
 
 	// Add default route. This will get clobbered later when we get a DHCP response.
-	ns.stack.SetRouteTable(ns.flattenRouteTables())
+	ns.mu.stack.SetRouteTable(ns.flattenRouteTables())
 
 	// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
 	// in third_party/netstack.

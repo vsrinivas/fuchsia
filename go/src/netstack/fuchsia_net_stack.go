@@ -175,7 +175,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 
 func (ns *Netstack) getForwardingTable() []stack.ForwardingEntry {
 	ns.mu.Lock()
-	table := ns.stack.GetRouteTable()
+	table := ns.mu.stack.GetRouteTable()
 	ns.mu.Unlock()
 
 	entries := make([]stack.ForwardingEntry, 0)
