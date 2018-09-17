@@ -17,7 +17,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/devhost-shared.c \
     $(LOCAL_DIR)/devmgr.c \
     $(LOCAL_DIR)/devmgr-binding.cpp \
-    $(LOCAL_DIR)/devmgr-coordinator.c \
+    $(LOCAL_DIR)/devmgr-coordinator.cpp \
     $(LOCAL_DIR)/devmgr-devfs.c \
     $(LOCAL_DIR)/devmgr-drivers.cpp \
     $(LOCAL_DIR)/devmgr-fdio.cpp
@@ -48,6 +48,10 @@ MODULE_STATIC_LIBS := \
     third_party/ulib/lz4 \
     system/ulib/port \
     system/ulib/driver-info \
+    system/ulib/memfs \
+    system/ulib/fs \
+    system/ulib/fbl \
+    system/ulib/zx \
 
 MODULE_LIBS := \
     system/ulib/async.default \

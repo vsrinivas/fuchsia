@@ -25,6 +25,7 @@
 #include <lib/zircon-internal/ktrace.h>
 
 #include "devcoordinator.h"
+#include "devhost.h"
 #include "devmgr.h"
 #include "log.h"
 #include "memfs-private.h"
@@ -65,9 +66,11 @@ typedef struct {
     zx_handle_t kernel;
     zx_handle_t bootdata;
 } suspend_context_t;
-static suspend_context_t suspend_ctx = {
-    .devhosts = LIST_INITIAL_VALUE(suspend_ctx.devhosts),
-};
+static suspend_context_t suspend_ctx = []() {
+    suspend_context_t suspend = {};
+    suspend.devhosts = LIST_INITIAL_VALUE(suspend_ctx.devhosts);
+    return suspend;
+}();
 
 typedef struct {
     list_node_t node;
@@ -89,55 +92,63 @@ static void dc_continue_suspend(suspend_context_t* ctx);
 static bool suspend_fallback = false;
 static bool suspend_debug = false;
 
-static device_t root_device = {
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
-    .protocol_id = ZX_PROTOCOL_ROOT,
-    .name = "root",
-    .libname = "",
-    .args = "root,",
-    .children = LIST_INITIAL_VALUE(root_device.children),
-    .pending = LIST_INITIAL_VALUE(root_device.pending),
-    .metadata = LIST_INITIAL_VALUE(root_device.metadata),
-    .refcount = 1,
-};
+static device_t root_device = []() {
+    device_t device = {};
+    device.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
+    device.protocol_id = ZX_PROTOCOL_ROOT;
+    device.name = "root";
+    device.libname = "";
+    device.args = "root,";
+    device.children = LIST_INITIAL_VALUE(root_device.children);
+    device.pending = LIST_INITIAL_VALUE(root_device.pending);
+    device.metadata = LIST_INITIAL_VALUE(root_device.metadata);
+    device.refcount = 1;
+    return device;
+}();
 
-static device_t misc_device = {
-    .parent = &root_device,
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
-    .protocol_id = ZX_PROTOCOL_MISC_PARENT,
-    .name = "misc",
-    .libname = "",
-    .args = "misc,",
-    .children = LIST_INITIAL_VALUE(misc_device.children),
-    .pending = LIST_INITIAL_VALUE(misc_device.pending),
-    .metadata = LIST_INITIAL_VALUE(misc_device.metadata),
-    .refcount = 1,
-};
+static device_t misc_device = []() {
+    device_t device = {};
+    device.parent = &root_device;
+    device.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
+    device.protocol_id = ZX_PROTOCOL_MISC_PARENT;
+    device.name = "misc";
+    device.libname = "";
+    device.args = "misc,";
+    device.children = LIST_INITIAL_VALUE(misc_device.children);
+    device.pending = LIST_INITIAL_VALUE(misc_device.pending);
+    device.metadata = LIST_INITIAL_VALUE(misc_device.metadata);
+    device.refcount = 1;
+    return device;
+}();
 
-static device_t sys_device = {
-    .parent = &root_device,
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE,
-    .name = "sys",
-    .libname = "",
-    .args = "sys,",
-    .children = LIST_INITIAL_VALUE(sys_device.children),
-    .pending = LIST_INITIAL_VALUE(sys_device.pending),
-    .metadata = LIST_INITIAL_VALUE(sys_device.metadata),
-    .refcount = 1,
-};
+static device_t sys_device = []() {
+    device_t device = {};
+    device.parent = &root_device;
+    device.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
+    device.name = "sys";
+    device.libname = "";
+    device.args = "sys,";
+    device.children = LIST_INITIAL_VALUE(sys_device.children);
+    device.pending = LIST_INITIAL_VALUE(sys_device.pending);
+    device.metadata = LIST_INITIAL_VALUE(sys_device.metadata);
+    device.refcount = 1;
+    return device;
+}();
 
-static device_t test_device = {
-    .parent = &root_device,
-    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
-    .protocol_id = ZX_PROTOCOL_TEST_PARENT,
-    .name = "test",
-    .libname = "",
-    .args = "test,",
-    .children = LIST_INITIAL_VALUE(test_device.children),
-    .pending = LIST_INITIAL_VALUE(test_device.pending),
-    .metadata = LIST_INITIAL_VALUE(test_device.metadata),
-    .refcount = 1,
-};
+static device_t test_device = []() {
+    device_t device = {};
+    device.parent = &root_device;
+    device.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
+    device.protocol_id = ZX_PROTOCOL_TEST_PARENT;
+    device.name = "test";
+    device.libname = "";
+    device.args = "test,";
+    device.children = LIST_INITIAL_VALUE(test_device.children);
+    device.pending = LIST_INITIAL_VALUE(test_device.pending);
+    device.metadata = LIST_INITIAL_VALUE(test_device.metadata);
+    device.refcount = 1;
+    return device;
+}();
 
 
 static zx_handle_t dmctl_socket;
@@ -239,11 +250,6 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     log(ERROR, "dmctl: unknown command '%.*s'\n", (int) len, cmd);
     return ZX_ERR_NOT_SUPPORTED;
 }
-
-//TODO: these are copied from devhost.h
-#define ID_HJOBROOT 4
-zx_handle_t get_sysinfo_job_root(void);
-
 
 static zx_status_t dc_handle_device(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
 static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev);
@@ -434,7 +440,7 @@ static void dc_dump_drivers(void) {
         dmprintf("Flags   : 0x%08x\n", drv->flags);
         if (drv->binding_size) {
             char line[256];
-            uint32_t count = drv->binding_size / sizeof(drv->binding[0]);
+            uint32_t count = drv->binding_size / static_cast<uint32_t>(sizeof(drv->binding[0]));
             dmprintf("Binding : %u instruction%s (%u bytes)\n",
                      count, (count == 1) ? "" : "s", drv->binding_size);
             for (uint32_t i = 0; i < count; ++i) {
@@ -551,7 +557,7 @@ static zx_status_t dc_notify(device_t* dev, uint32_t op) {
         size_t propslen = sizeof(zx_device_prop_t) * dev->prop_count;
         size_t len = sizeof(devmgr_event_t) + propslen;
         char msg[len + DC_PATH_MAX];
-        devmgr_event_t* evt = (void*) msg;
+        auto evt = reinterpret_cast<devmgr_event_t*>(msg);
         memset(evt, 0, sizeof(devmgr_event_t));
         memcpy(msg + sizeof(devmgr_event_t), dev->props, propslen);
         if (dc_get_topo_path(dev, msg + len, DC_PATH_MAX) < 0) {
@@ -565,9 +571,9 @@ static zx_status_t dc_notify(device_t* dev, uint32_t op) {
         }
         evt->id = (uintptr_t) dev;
         evt->u.add.protocol_id = dev->protocol_id;
-        evt->u.add.props_len = propslen;
-        evt->u.add.path_len = pathlen;
-        r = zx_channel_write(dc_watch_channel, 0, msg, len, NULL, 0);
+        evt->u.add.props_len = static_cast<uint32_t>(propslen);
+        evt->u.add.path_len = static_cast<uint32_t>(pathlen);
+        r = zx_channel_write(dc_watch_channel, 0, msg, static_cast<uint32_t>(len), NULL, 0);
     } else {
         devmgr_event_t evt;
         memset(&evt, 0, sizeof(evt));
@@ -622,7 +628,7 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
     launchpad_clone(lp, LP_CLONE_ENVIRON);
 
     const char* nametable[2] = { "/boot", "/svc", };
-    size_t name_count = 0;
+    uint32_t name_count = 0;
 
     //TODO: eventually devhosts should not have vfs access
     launchpad_add_handle(lp, fs_clone("boot"),
@@ -661,7 +667,7 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
 
 static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
                                   devhost_t** out) {
-    devhost_t* dh = calloc(1, sizeof(devhost_t));
+    devhost_t* dh = static_cast<devhost_t*>(calloc(1, sizeof(devhost_t)));
     if (dh == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -770,14 +776,14 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     // allocate device struct, followed by space for props, followed
     // by space for bus arguments, followed by space for the name
     size_t sz = sizeof(*dev) + msg->datalen + msg->argslen + msg->namelen + 2;
-    if ((dev = calloc(1, sz)) == NULL) {
+    if ((dev = static_cast<device_t*>(calloc(1, sz))) == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
     list_initialize(&dev->children);
     list_initialize(&dev->pending);
     list_initialize(&dev->metadata);
     dev->hrpc = hrpc;
-    dev->prop_count = msg->datalen / sizeof(zx_device_prop_t);
+    dev->prop_count = static_cast<uint32_t>(msg->datalen / sizeof(zx_device_prop_t));
     dev->protocol_id = msg->protocol_id;
 
     char* text = (char*) (dev->props + dev->prop_count);
@@ -1075,7 +1081,7 @@ static zx_status_t dc_load_firmware(device_t* dev, const char* path,
 
 // Returns true if the parent path is equal to or specifies a child device of the parent.
 static bool path_is_child(const char* parent_path, const char* child_path) {
-    int parent_length = strlen(parent_path);
+    size_t parent_length = strlen(parent_path);
     return (!strncmp(parent_path, child_path, parent_length) &&
         (child_path[parent_length] == 0 || child_path[parent_length] == '/'));
 }
@@ -1125,7 +1131,7 @@ static zx_status_t dc_get_metadata(device_t* dev, uint32_t type, void* buffer, s
 
 static zx_status_t dc_add_metadata(device_t* dev, uint32_t type, const void* data,
                                    uint32_t length) {
-    dc_metadata_t* md = calloc(1, sizeof(dc_metadata_t) + length);
+    auto md = static_cast<dc_metadata_t*>(calloc(1, sizeof(dc_metadata_t) + length));
     if (!md) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1162,7 +1168,8 @@ static zx_status_t dc_publish_metadata(device_t* dev, const char* path, uint32_t
         }
     }
 
-    dc_metadata_t* md = calloc(1, sizeof(dc_metadata_t) + length + strlen(path) + 1);
+    auto md =
+        static_cast<dc_metadata_t*>(calloc(1, sizeof(dc_metadata_t) + length + strlen(path) + 1));
     if (!md) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1280,7 +1287,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         if (hcount == 1) {
             dmctl_socket = hin[0];
         }
-        r = handle_dmctl_write(msg.datalen, data);
+        r = handle_dmctl_write(msg.datalen, static_cast<const char*>(data));
         if (dmctl_socket != ZX_HANDLE_INVALID) {
             zx_handle_close(dmctl_socket);
             dmctl_socket = ZX_HANDLE_INVALID;
@@ -1375,9 +1382,9 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
                 log(ERROR, "devcoord: rpc: suspend '%s' status %d\n",
                     dev->name, msg.status);
             }
-            suspend_context_t* ctx = pending->ctx;
+            auto ctx = static_cast<suspend_context_t*>(pending->ctx);
             ctx->status = msg.status;
-            dc_continue_suspend((suspend_context_t*)pending->ctx);
+            dc_continue_suspend(ctx);
             break;
         }
         }
@@ -1396,7 +1403,8 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         reply.rsp.status = dc_get_metadata(dev, msg.value, &reply.data, sizeof(reply.data),
                                            &actual);
         reply.rsp.txid = msg.txid;
-        return zx_channel_write(dev->hrpc, 0, &reply, sizeof(reply.rsp) + actual, NULL, 0);
+        uint32_t reply_size = static_cast<uint32_t>(sizeof(reply.rsp) + actual);
+        return zx_channel_write(dev->hrpc, 0, &reply, reply_size, NULL, 0);
     }
     case DC_OP_ADD_METADATA: {
         if (hcount != 0) {
@@ -1545,7 +1553,7 @@ static zx_status_t dc_create_proxy(device_t* parent) {
         devlen += 6;
     }
 
-    device_t* dev = calloc(1, devlen);
+    device_t* dev = static_cast<device_t*>(calloc(1, devlen));
     if (dev == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1578,7 +1586,7 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     dc_msg_t msg;
     uint32_t mlen;
 
-    pending_t* pending = malloc(sizeof(pending_t));
+    pending_t* pending = static_cast<pending_t*>(malloc(sizeof(pending_t)));
     if (pending == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1760,7 +1768,7 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
 
     zx_handle_t rpc = ZX_HANDLE_INVALID;
 
-    pending_t* pending = malloc(sizeof(pending_t));
+    pending_t* pending = static_cast<pending_t*>(malloc(sizeof(pending_t)));
     if (pending == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1856,7 +1864,7 @@ static int suspend_timeout_thread(void* arg) {
     // 10 seconds
     zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
 
-    suspend_context_t* ctx = arg;
+    auto ctx = static_cast<suspend_context_t*>(arg);
     if (suspend_debug) {
         if (ctx->flags == RUNNING) {
             return 0; // success
@@ -2143,9 +2151,11 @@ static zx_status_t dc_control_event(port_handler_t* ph, zx_signals_t signals, ui
     return ZX_OK;
 }
 
-static port_handler_t control_handler = {
-    .func = dc_control_event,
-};
+static port_handler_t control_handler = []() {
+    port_handler_t handler;
+    handler.func = dc_control_event;
+    return handler;
+}();
 
 // Drivers added during system scan (from the dedicated thread)
 // are added to list_drivers_system for bulk processing once

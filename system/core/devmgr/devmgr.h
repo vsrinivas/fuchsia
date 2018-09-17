@@ -69,6 +69,8 @@ void bootfs_create_from_startup_handle(void);
 void fshost_start(void);
 zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_t* out_dest);
 
+zx_handle_t get_sysinfo_job_root(void);
+
 void load_system_drivers(void);
 
 void devmgr_disable_appmgr_services(void);
