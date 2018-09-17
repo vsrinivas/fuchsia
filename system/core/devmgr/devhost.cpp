@@ -28,6 +28,7 @@
 
 #include "devcoordinator.h"
 #include "devhost.h"
+#include "devhost-main.h"
 #include "log.h"
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
@@ -49,12 +50,12 @@ static port_t dh_port;
 
 typedef struct devhost_iostate iostate_t;
 
-static iostate_t root_ios = {
-    .ph = {
-        .waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-        .func = dh_handle_dc_rpc,
-    },
-};
+static iostate_t root_ios = []() {
+    iostate_t ios;
+    ios.ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    ios.ph.func = dh_handle_dc_rpc;
+    return ios;
+}();
 
 static list_node_t dh_drivers = LIST_INITIAL_VALUE(dh_drivers);
 
@@ -111,7 +112,7 @@ static uint32_t logflagval(char* flag) {
     if (!strcmp(flag, "debug4")) {
         return DDK_LOG_DEBUG4;
     }
-    return strtoul(flag, NULL, 0);
+    return static_cast<uint32_t>(strtoul(flag, NULL, 0));
 }
 
 static void logflag(char* flag, uint32_t* flags) {
@@ -133,8 +134,8 @@ static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_drive
         }
     }
 
-    int len = strlen(libname) + 1;
-    drv = calloc(1, sizeof(zx_driver_t) + len);
+    size_t len = strlen(libname) + 1;
+    drv = static_cast<zx_driver_t*>(calloc(1, sizeof(zx_driver_t) + len));
     if (drv == NULL) {
         zx_handle_close(vmo);
         return ZX_ERR_NO_MEMORY;
@@ -151,13 +152,15 @@ static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_drive
         goto done;
     }
 
-    const zircon_driver_note_t* dn = dlsym(dl, "__zircon_driver_note__");
+    const zircon_driver_note_t* dn;
+    dn = static_cast<const zircon_driver_note_t*>(dlsym(dl, "__zircon_driver_note__"));
     if (dn == NULL) {
         log(ERROR, "devhost: driver '%s' missing __zircon_driver_note__ symbol\n", libname);
         drv->status = ZX_ERR_IO;
         goto done;
     }
-    zx_driver_rec_t* dr = dlsym(dl, "__zircon_driver_rec__");
+    zx_driver_rec_t* dr;
+    dr = static_cast<zx_driver_rec_t*>(dlsym(dl, "__zircon_driver_rec__"));
     if (dr == NULL) {
         log(ERROR, "devhost: driver '%s' missing __zircon_driver_rec__ symbol\n", libname);
         drv->status = ZX_ERR_IO;
@@ -184,7 +187,8 @@ static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_drive
     // check for dprintf log level flags
     char tmp[128];
     snprintf(tmp, sizeof(tmp), "driver.%s.log", drv->name);
-    char* log = getenv(tmp);
+    char* log;
+    log = getenv(tmp);
     if (log) {
         while (log) {
             char* sep = strchr(log, ',');
@@ -217,11 +221,10 @@ done:
 }
 
 static void dh_send_status(zx_handle_t h, zx_status_t status) {
-    dc_msg_t reply = {
-        .txid = 0,
-        .op = DC_OP_STATUS,
-        .status = status,
-    };
+    dc_msg_t reply = {};
+    reply.txid = 0;
+    reply.op = DC_OP_STATUS;
+    reply.status = status;
     zx_channel_write(h, 0, &reply, sizeof(reply), NULL, 0);
 }
 
@@ -273,13 +276,13 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         goto fail;
     }
     switch (msg.op) {
-    case DC_OP_CREATE_DEVICE_STUB:
+    case DC_OP_CREATE_DEVICE_STUB: {
         log(RPC_IN, "devhost[%s] create device stub drv='%s'\n", path, name);
         if (hcount != 1) {
             r = ZX_ERR_INVALID_ARGS;
             goto fail;
         }
-        iostate_t* newios = calloc(1, sizeof(iostate_t));
+        iostate_t* newios = static_cast<iostate_t*>(calloc(1, sizeof(iostate_t)));
         if (newios == NULL) {
             r = ZX_ERR_NO_MEMORY;
             break;
@@ -287,7 +290,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
 
         //TODO: dev->ops and other lifecycle bits
         // no name means a dummy proxy device
-        if ((newios->dev = calloc(1, sizeof(zx_device_t))) == NULL) {
+        if ((newios->dev = static_cast<zx_device_t*>(calloc(1, sizeof(zx_device_t)))) == NULL) {
             free(newios);
             r = ZX_ERR_NO_MEMORY;
             break;
@@ -310,6 +313,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         }
         log(RPC_IN, "devhost[%s] created '%s' ios=%p\n", path, name, newios);
         return ZX_OK;
+    }
 
     case DC_OP_CREATE_DEVICE: {
         // This does not operate under the devhost api lock,
@@ -325,7 +329,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
-        iostate_t* newios = calloc(1, sizeof(iostate_t));
+        iostate_t* newios = static_cast<iostate_t*>(calloc(1, sizeof(iostate_t)));
         if (newios == NULL) {
             r = ZX_ERR_NO_MEMORY;
             break;
@@ -340,9 +344,9 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         }
         if (drv->ops->create) {
             // magic cookie for device create handshake
-            zx_device_t parent = {
-                .name = "device_create dummy",
-            };
+            zx_device_t parent = {};
+            char dummy_name[sizeof(parent.name)] = "device_create dummy";
+            memcpy(&parent.name, &dummy_name, sizeof(parent.name));
 
             creation_context_t ctx = {
                 .parent = &parent,
@@ -431,7 +435,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         proxy_ios_create(ios->dev, hin[0]);
         return ZX_OK;
 
-    case DC_OP_SUSPEND:
+    case DC_OP_SUSPEND: {
         if (hcount != 0) {
             r = ZX_ERR_INVALID_ARGS;
             break;
@@ -446,6 +450,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         DM_UNLOCK();
         dh_send_status(h, r);
         return ZX_OK;
+    }
 
     case DC_OP_REMOVE_DEVICE:
         if (hcount != 0) {
@@ -550,7 +555,8 @@ static zx_status_t dh_handle_proxy_rpc(port_handler_t* ph, zx_signals_t signals,
     }
     if (signals & ZX_CHANNEL_READABLE) {
         log(RPC_SDW, "proxy-rpc: rpc readable (ios=%p,dev=%p)\n", ios, ios->dev);
-        zx_status_t r = ios->dev->ops->rxrpc(ios->dev->ctx, ph->handle);
+        zx_status_t r;
+        r = ios->dev->ops->rxrpc(ios->dev->ctx, ph->handle);
         if (r != ZX_OK) {
             log(RPC_SDW, "proxy-rpc: rpc cb error %d (ios=%p,dev=%p)\n", r, ios, ios->dev);
 destroy:
@@ -575,7 +581,7 @@ static void proxy_ios_create(zx_device_t* dev, zx_handle_t h) {
     }
 
     proxy_iostate_t* ios;
-    if ((ios = calloc(sizeof(proxy_iostate_t), 1)) == NULL) {
+    if ((ios = static_cast<proxy_iostate_t*>(calloc(sizeof(proxy_iostate_t), 1))) == NULL) {
         zx_handle_close(h);
         return;
     }
@@ -624,13 +630,13 @@ static ssize_t _devhost_log_write(uint32_t flags, const void* _data, size_t len)
     }* ctx = NULL;
 
     if (ctx == NULL) {
-        if ((ctx = calloc(1, sizeof(*ctx))) == NULL) {
+        if ((ctx = static_cast<decltype(ctx)>(calloc(1, sizeof(*ctx)))) == NULL) {
             return len;
         }
         ctx->handle = devhost_log_handle;
     }
 
-    const char* data = _data;
+    const char* data = static_cast<const char*>(_data);
     size_t r = len;
 
     while (len-- > 0) {
@@ -699,7 +705,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
     snprintf(name, namelen, "%s,%s", libname, child->name);
 
     zx_status_t r;
-    iostate_t* ios = calloc(1, sizeof(*ios));
+    iostate_t* ios = static_cast<iostate_t*>(calloc(1, sizeof(*ios)));
     if (ios == NULL) {
         r = ZX_ERR_NO_MEMORY;
         goto fail;
@@ -784,7 +790,7 @@ void devhost_make_visible(zx_device_t* dev) {
 // Send message to devcoordinator informing it that this device
 // is being removed.  Called under devhost api lock.
 zx_status_t devhost_remove(zx_device_t* dev) {
-    devhost_iostate_t* ios = dev->ios;
+    devhost_iostate_t* ios = static_cast<devhost_iostate_t*>(dev->ios);
     if (ios == NULL) {
         log(ERROR, "removing device %p, ios is NULL\n", dev);
         return ZX_ERR_INTERNAL;

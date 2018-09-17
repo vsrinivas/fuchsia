@@ -4,9 +4,9 @@
 
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
+#include "devhost-main.h"
 
-int device_host_main(int argc, char** argv);
+__BEGIN_CDECLS
 
 int main(int argc, char** argv) {
     device_host_main(argc, argv);
