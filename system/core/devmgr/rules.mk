@@ -20,7 +20,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr-coordinator.c \
     $(LOCAL_DIR)/devmgr-devfs.c \
     $(LOCAL_DIR)/devmgr-drivers.c \
-    $(LOCAL_DIR)/devmgr-fdio.c
+    $(LOCAL_DIR)/devmgr-fdio.cpp
 
 # userboot supports loading via the dynamic linker, so libc (system/ulib/c)
 # can be linked dynamically.  But it doesn't support any means to look
@@ -70,7 +70,7 @@ MODULE_GROUP := core
 MODULE_SRCS := \
     $(LOCAL_DIR)/bootfs.cpp \
     $(LOCAL_DIR)/block-watcher.c \
-    $(LOCAL_DIR)/devmgr-fdio.c \
+    $(LOCAL_DIR)/devmgr-fdio.cpp \
     $(LOCAL_DIR)/fshost.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp
 

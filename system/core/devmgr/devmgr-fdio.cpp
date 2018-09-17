@@ -96,7 +96,7 @@ zx_status_t devmgr_launch(
 
     // create namespace based on FS_* flags
     const char* nametable[countof(FSTAB)] = { };
-    size_t count = 0;
+    uint32_t count = 0;
     zx_handle_t h;
     for (unsigned n = 0; n < countof(FSTAB); n++) {
         if (!(FSTAB[n].flags & flags)) {
