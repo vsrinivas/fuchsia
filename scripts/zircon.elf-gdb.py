@@ -797,7 +797,34 @@ def _offset_symbols_and_breakpoints(kernel_relocated_base=None):
   print("KASLR: Correctly reloaded kernel at 0x%x" % relocated)
   return True
 
-class KASLRBootWatchpoint(gdb.Breakpoint):
+class KASLRBreakpoint(gdb.Breakpoint):
+  """ Helper class to setup breakpoints to load symbols for KASLR. """
+  def __init__(self):
+      self._is_valid = False
+
+
+  def is_valid(self):
+    if gdb.Breakpoint.is_valid(self) == False:
+      return False
+    return self._is_valid
+
+
+  def stop(self):
+    # A breakpoint cannot change anything so get callback on the following stop
+    gdb.events.stop.connect(self._stop_callback_internal)
+    return True
+
+
+  # Callback through events so the state can be changed
+  def _stop_callback_internal(self, event):
+    gdb.events.stop.disconnect(self._stop_callback_internal)
+    self.delete()
+
+    # Call the top callback
+    self._stop_callback(event)
+
+
+class KASLRBootWatchpoint(KASLRBreakpoint):
   """ Watchpoint to catch read access to KASLR relocated address
 
   The assumption is the address was written before it is read. It is an
@@ -805,7 +832,7 @@ class KASLRBootWatchpoint(gdb.Breakpoint):
   KASLR symbol name is the same.
   """
   def __init__(self, pc):
-    self._is_valid = False
+    KASLRBreakpoint.__init__(self)
 
     base_address = _read_symbol_address(_KERNEL_BASE_ADDRESS)
     if not base_address:
@@ -823,7 +850,7 @@ class KASLRBootWatchpoint(gdb.Breakpoint):
     elif _is_arm64():
       # Search from pc to find BOOT tag
       found = False
-      for addr in range(pc, pc+0x100000, 0x1000):
+      for addr in range(pc, pc+0x10000000, 0x10000):
         data = _read_uint(addr)
         if data == _BOOT_MAGIC:
           self._relocated_base_offset -= base_address
@@ -836,33 +863,54 @@ class KASLRBootWatchpoint(gdb.Breakpoint):
         return
 
     self._is_valid = True
-    super(KASLRBootWatchpoint, self).__init__("*0x%x" % self._relocated_base_offset,
-                                              gdb.BP_WATCHPOINT,
-                                              gdb.WP_READ,
-                                              internal=True)
+    gdb.Breakpoint.__init__(self, "*0x%x" % self._relocated_base_offset,
+                            gdb.BP_WATCHPOINT,
+                            gdb.WP_READ,
+                            internal=True)
 
     self.silence = True
 
-
-  def is_valid(self):
-    if super(KASLRBootWatchpoint, self).is_valid() == False:
-      return False
-    return self._is_valid
-
-
-  def stop(self):
-    # A breakpoint cannot change anything so get callback on the following stop
-    gdb.events.stop.connect(self._stop_callback)
-    return True
-
-
-  # Callback through events so the state can be changed
+  # Callback from KASLRBreakpoint when it is safe to change state
   def _stop_callback(self, event):
-    gdb.events.stop.disconnect(self._stop_callback)
-    self.delete() # Temporary watchpoint are not supported, delete it manually
-
     # Load symbols using load_offset
     _offset_symbols_and_breakpoints(self._relocated_base_offset)
+
+
+class KASLRStartBreakpoint(KASLRBreakpoint):
+  """ Breakpoint to catch _start
+
+  The ZBI boot path result with memory being moved before _start on x86_64.
+  In this case, break on _start before setting up the watchpoint.
+  """
+  def __init__(self):
+    KASLRBreakpoint.__init__(self)
+
+    base_address = _read_symbol_address(_KERNEL_BASE_ADDRESS)
+    if not base_address:
+      return
+
+    _start = _read_symbol_address("_start")
+    if not _start:
+        return
+
+    # Get the physical address
+    _start -= base_address
+
+    self._is_valid = True
+    gdb.Breakpoint.__init__(self, "*0x%x" % _start, internal=True)
+    self.silence = True
+
+
+  # Callback from KASLRBreakpoint when it is safe to change state
+  def _stop_callback(self, event):
+    pc = _cast_ull(gdb.parse_and_eval("$pc"))
+    x = KASLRBootWatchpoint(pc)
+    if not x.is_valid():
+        print("Error: Failed create KASLR boot watchpoint after _stat")
+        return
+
+    print("Watchpoint set on KASLR relocated base variable")
+    gdb.execute("continue")
 
 
 def _align(addr, shift):
@@ -929,12 +977,18 @@ def _KASLR_stop_event(event):
     _identify_offset_to_reload(pc)
     return
 
-  x = KASLRBootWatchpoint(pc)
+  x = None
+
+  # ARM64 map _start at random place in memory, directly use the watchpoint
+  if _is_arm64():
+      x = KASLRBootWatchpoint(pc)
+  else:
+      x = KASLRStartBreakpoint()
+
   if not x.is_valid():
-    print("Error: Failed create KASLR boot watchpoint")
+    print("Error: Failed create KASLR boot first breakpoint/watchpoint")
     return
 
-  print("Watchpoint set on KASLR relocated base variable")
   gdb.execute("continue")
 
 
