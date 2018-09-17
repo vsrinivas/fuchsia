@@ -52,8 +52,7 @@ typedef struct {
     uint64_t tx_endpoint_delay; // wait time between 2 transmit requests
 
     // Interface to the ethernet layer.
-    ethmac_ifc_t* ifc;
-    void* cookie;
+    ethmac_ifc_t ifc;
 
     thrd_t thread;
     bool thread_started;
@@ -146,7 +145,7 @@ static void rndishost_recv(rndishost_t* eth, usb_request_t* request) {
             return;
         }
 
-        eth->ifc->recv(eth->cookie, read_data + data_offset, header->data_length, 0);
+        ethmac_ifc_recv(&eth->ifc, read_data + data_offset, header->data_length, 0);
 
         read_data += header->msg_length;
         len -= header->msg_length;
@@ -174,7 +173,7 @@ static void rndis_read_complete(usb_request_t* request, void* cookie) {
         }
         usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
     }
-    if ((request->response.status == ZX_OK) && eth->ifc) {
+    if ((request->response.status == ZX_OK) && eth->ifc.ops) {
         rndishost_recv(eth, request);
     } else {
         zxlogf(DEBUG1, "rndis read complete: bad status = %d\n", request->response.status);
@@ -242,22 +241,21 @@ static zx_status_t rndishost_query(void* ctx, uint32_t options, ethmac_info_t* i
 static void rndishost_stop(void* ctx) {
     rndishost_t* eth = (rndishost_t*)ctx;
     mtx_lock(&eth->mutex);
-    eth->ifc = NULL;
+    eth->ifc.ops = NULL;
     mtx_unlock(&eth->mutex);
 }
 
-static zx_status_t rndishost_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+static zx_status_t rndishost_start(void* ctx, const ethmac_ifc_t* ifc) {
     rndishost_t* eth = (rndishost_t*)ctx;
     zx_status_t status = ZX_OK;
 
     mtx_lock(&eth->mutex);
-    if (eth->ifc) {
+    if (eth->ifc.ops) {
         status = ZX_ERR_ALREADY_BOUND;
     } else {
-        eth->ifc = ifc;
-        eth->cookie = cookie;
-        // TODO: Check that the device is online before sending ETHMAC_STATUS_ONLINE.
-        eth->ifc->status(eth->cookie, ETHMAC_STATUS_ONLINE);
+        eth->ifc = *ifc;
+        // TODO: Check that the device is online before sending ETH_STATUS_ONLINE.
+        ethmac_ifc_status(&eth->ifc, ETHMAC_STATUS_ONLINE);
     }
     mtx_unlock(&eth->mutex);
 
@@ -265,9 +263,9 @@ static zx_status_t rndishost_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
 }
 
 static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
-    size_t length = netbuf->len;
+    size_t length = netbuf->data_size;
     rndishost_t* eth = (rndishost_t*)ctx;
-    uint8_t* byte_data = netbuf->data;
+    const uint8_t* byte_data = netbuf->data_buffer;
     zx_status_t status = ZX_OK;
 
     mtx_lock(&eth->mutex);
@@ -329,7 +327,8 @@ static void rndishost_release(void* ctx) {
     rndishost_free(eth);
 }
 
-static zx_status_t rndishost_set_param(void* ctx, uint32_t param, int32_t value, void* data) {
+static zx_status_t rndishost_set_param(void *ctx, uint32_t param, int32_t value, const void* data,
+                                       size_t data_size) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -550,7 +549,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
     eth->control_intf = control_intf;
     eth->bulk_in_addr = bulk_in_addr;
     eth->bulk_out_addr = bulk_out_addr;
-    eth->ifc = NULL;
+    eth->ifc.ops = NULL;
     memcpy(&eth->usb, &usb, sizeof(eth->usb));
 
     eth->parent_req_size = usb_get_request_size(&eth->usb);
@@ -586,7 +585,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
         .name = "rndishost",
         .ctx = eth,
         .ops = &rndishost_device_proto,
-        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+        .proto_id = ZX_PROTOCOL_ETHMAC,
         .proto_ops = &ethmac_ops,
         .flags = DEVICE_ADD_INVISIBLE,
     };

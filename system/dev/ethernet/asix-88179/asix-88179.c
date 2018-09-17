@@ -85,8 +85,7 @@ typedef struct {
     uint64_t rx_endpoint_delay;    // wait time between 2 recv requests
     uint64_t tx_endpoint_delay;    // wait time between 2 transmit requests
     // callback interface to attached ethernet layer
-    ethmac_ifc_t* ifc;
-    void* cookie;
+    ethmac_ifc_t ifc;
 
     size_t parent_req_size;
     thrd_t thread;
@@ -298,7 +297,7 @@ static zx_status_t ax88179_recv(ax88179_t* eth, usb_request_t* request) {
         }
         if (!drop) {
             zxlogf(SPEW, "offset = %zd\n", offset);
-            eth->ifc->recv(eth->cookie, read_data + offset + 2, pkt_len - 2, 0);
+            ethmac_ifc_recv(&eth->ifc, read_data + offset + 2, pkt_len - 2, 0);
         }
 
         // Advance past this packet in the completed read
@@ -328,7 +327,7 @@ static void ax88179_read_complete(usb_request_t* request, void* cookie) {
             eth->rx_endpoint_delay += ETHMAC_RECV_DELAY;
         }
         usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
-    } else if ((request->response.status == ZX_OK) && eth->ifc) {
+    } else if ((request->response.status == ZX_OK) && eth->ifc.ops) {
         ax88179_recv(eth, request);
     }
 
@@ -344,15 +343,15 @@ static void ax88179_read_complete(usb_request_t* request, void* cookie) {
 static zx_status_t ax88179_append_to_tx_req(usb_protocol_t* usb, usb_request_t* req,
                                             ethmac_netbuf_t* netbuf) {
     zx_off_t offset = ALIGN(req->header.length, 4);
-    if (offset + sizeof(ax88179_tx_hdr_t) + netbuf->len > USB_BUF_SIZE) {
+    if (offset + sizeof(ax88179_tx_hdr_t) + netbuf->data_size > USB_BUF_SIZE) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
     ax88179_tx_hdr_t hdr = {
-        .tx_len = htole16(netbuf->len),
+        .tx_len = htole16(netbuf->data_size),
     };
     usb_request_copy_to(req, &hdr, sizeof(hdr), offset);
-    usb_request_copy_to(req, netbuf->data, netbuf->len, offset + sizeof(hdr));
-    req->header.length = offset + sizeof(hdr) + netbuf->len;
+    usb_request_copy_to(req, netbuf->data_buffer, netbuf->data_size, offset + sizeof(hdr));
+    req->header.length = offset + sizeof(hdr) + netbuf->data_size;
     return ZX_OK;
 }
 
@@ -377,8 +376,8 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
                                                                next_netbuf) == ZX_OK) {
             list_remove_head_type(&eth->pending_netbuf, ethmac_netbuf_t, node);
             mtx_lock(&eth->mutex);
-            if (eth->ifc) {
-                eth->ifc->complete_tx(eth->cookie, next_netbuf, ZX_OK);
+            if (eth->ifc.ops) {
+                ethmac_ifc_complete_tx(&eth->ifc, next_netbuf, ZX_OK);
             }
             mtx_unlock(&eth->mutex);
             next_netbuf = list_peek_head_type(&eth->pending_netbuf, ethmac_netbuf_t, node);
@@ -443,13 +442,13 @@ static void ax88179_handle_interrupt(ax88179_t* eth, usb_request_t* request) {
                     usb_request_queue(&eth->usb, req);
                 }
                 zxlogf(TRACE, "ax88179 now online\n");
-                if (eth->ifc) {
-                    eth->ifc->status(eth->cookie, ETHMAC_STATUS_ONLINE);
+                if (eth->ifc.ops) {
+                    ethmac_ifc_status(&eth->ifc, ETHMAC_STATUS_ONLINE);
                 }
             } else if (!online && was_online) {
                 zxlogf(TRACE, "ax88179 now offline\n");
-                if (eth->ifc) {
-                    eth->ifc->status(eth->cookie, 0);
+                if (eth->ifc.ops) {
+                    ethmac_ifc_status(&eth->ifc, 0);
                 }
             }
         }
@@ -459,7 +458,7 @@ static void ax88179_handle_interrupt(ax88179_t* eth, usb_request_t* request) {
 }
 
 static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
-    size_t length = netbuf->len;
+    size_t length = netbuf->data_size;
 
     if (length > (AX88179_MTU + MAX_ETH_HDRS)) {
         zxlogf(ERROR, "ax88179: unsupported packet length %zu\n", length);
@@ -590,21 +589,20 @@ static zx_status_t ax88179_query(void* ctx, uint32_t options, ethmac_info_t* inf
 static void ax88179_stop(void* ctx) {
     ax88179_t* eth = ctx;
     mtx_lock(&eth->mutex);
-    eth->ifc = NULL;
+    eth->ifc.ops = NULL;
     mtx_unlock(&eth->mutex);
 }
 
-static zx_status_t ax88179_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+static zx_status_t ax88179_start(void* ctx, const ethmac_ifc_t* ifc) {
     ax88179_t* eth = ctx;
     zx_status_t status = ZX_OK;
 
     mtx_lock(&eth->mutex);
-    if (eth->ifc) {
+    if (eth->ifc.ops) {
         status = ZX_ERR_BAD_STATE;
     } else {
-        eth->ifc = ifc;
-        eth->cookie = cookie;
-        eth->ifc->status(eth->cookie, eth->online ? ETHMAC_STATUS_ONLINE : 0);
+        eth->ifc = *ifc;
+        ethmac_ifc_status(&eth->ifc, eth->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&eth->mutex);
 
@@ -649,7 +647,7 @@ static void set_filter_bit(const uint8_t* mac, uint8_t* filter) {
 }
 
 static zx_status_t ax88179_set_multicast_filter(ax88179_t* eth, int32_t n_addresses,
-                                                uint8_t* address_bytes) {
+                                                const uint8_t* address_bytes, size_t address_size) {
     zx_status_t status = ZX_OK;
     eth->multicast_filter_overflow = (n_addresses == ETHMAC_MULTICAST_FILTER_OVERFLOW) ||
         (n_addresses > MAX_MULTICAST_FILTER_ADDRS);
@@ -657,6 +655,8 @@ static zx_status_t ax88179_set_multicast_filter(ax88179_t* eth, int32_t n_addres
         status = ax88179_set_multicast_promisc(eth, true);
         return status;
     }
+    if (address_size < n_addresses * ETH_MAC_SIZE)
+        return ZX_ERR_OUT_OF_RANGE;
 
     uint8_t filter[MULTICAST_FILTER_NBYTES];
     memset(filter, 0, MULTICAST_FILTER_NBYTES);
@@ -672,7 +672,8 @@ static zx_status_t ax88179_set_multicast_filter(ax88179_t* eth, int32_t n_addres
 }
 
 static void ax88179_dump_regs(ax88179_t* eth);
-static zx_status_t ax88179_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
+static zx_status_t ax88179_set_param(void *ctx, uint32_t param, int32_t value, const void* data,
+                                     size_t data_size) {
     ax88179_t* eth = ctx;
     zx_status_t status = ZX_OK;
 
@@ -686,7 +687,7 @@ static zx_status_t ax88179_set_param(void *ctx, uint32_t param, int32_t value, v
         status = ax88179_set_multicast_promisc(eth, (bool)value);
         break;
     case ETHMAC_SETPARAM_MULTICAST_FILTER:
-        status = ax88179_set_multicast_filter(eth, value, (uint8_t*)data);
+        status = ax88179_set_multicast_filter(eth, value, (const uint8_t*)data, data_size);
         break;
     case ETHMAC_SETPARAM_DUMP_REGS:
         ax88179_dump_regs(eth);
@@ -997,7 +998,7 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
         .ctx = eth,
         .ops = &ax88179_device_proto,
         .flags = DEVICE_ADD_INVISIBLE,
-        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+        .proto_id = ZX_PROTOCOL_ETHMAC,
         .proto_ops = &ethmac_ops,
     };
 

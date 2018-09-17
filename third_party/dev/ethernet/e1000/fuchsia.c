@@ -130,8 +130,7 @@ struct adapter {
     eth_state state;
 
     // callback interface to attached ethernet layer
-    ethmac_ifc_t* ifc;
-    void* cookie;
+    ethmac_ifc_t ifc;
 
     uint32_t tx_wr_ptr;
     uint32_t tx_rd_ptr;
@@ -394,8 +393,8 @@ static int e1000_irq_thread(void* arg) {
             size_t len;
 
             while (adapter->txrx->eth_rx(adapter, &data, &len) == ZX_OK) {
-                if (adapter->ifc && (adapter->state == ETH_RUNNING)) {
-                    adapter->ifc->recv(adapter->cookie, data, len, 0);
+                if (adapter->ifc.ops && (adapter->state == ETH_RUNNING)) {
+                    ethmac_ifc_recv(&adapter->ifc, data, len, 0);
                 }
                 adapter->txrx->eth_rx_ack(adapter);
                 uint32_t n = adapter->rx_rd_ptr;
@@ -410,8 +409,8 @@ static int e1000_irq_thread(void* arg) {
             DEBUGOUT("ETH_IRQ_LSC fired: %d->%d\n", was_online, online);
             if (online != was_online) {
                 adapter->online = online;
-                if (adapter->ifc) {
-                    adapter->ifc->status(adapter->cookie, online ? ETHMAC_STATUS_ONLINE : 0);
+                if (adapter->ifc.ops) {
+                    ethmac_ifc_status(&adapter->ifc, online ? ETHMAC_STATUS_ONLINE : 0);
                 }
             }
         }
@@ -437,21 +436,20 @@ static zx_status_t e1000_query(void* ctx, uint32_t options, ethmac_info_t* info)
 static void e1000_stop(void* ctx) {
     struct adapter* adapter = ctx;
     mtx_lock(&adapter->lock);
-    adapter->ifc = NULL;
+    adapter->ifc.ops = NULL;
     mtx_unlock(&adapter->lock);
 }
 
-static zx_status_t e1000_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+static zx_status_t e1000_start(void* ctx, const ethmac_ifc_t* ifc) {
     struct adapter* adapter = ctx;
     zx_status_t status = ZX_OK;
 
     mtx_lock(&adapter->lock);
-    if (adapter->ifc) {
+    if (adapter->ifc.ops) {
         status = ZX_ERR_BAD_STATE;
     } else {
-        adapter->ifc = ifc;
-        adapter->cookie = cookie;
-        adapter->ifc->status(adapter->cookie, adapter->online ? ETHMAC_STATUS_ONLINE : 0);
+        adapter->ifc = *ifc;
+        ethmac_ifc_status(&adapter->ifc, adapter->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&adapter->lock);
 
@@ -505,10 +503,11 @@ static zx_status_t e1000_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* 
         return ZX_ERR_BAD_STATE;
     }
     // TODO: Add support for DMA directly from netbuf
-    return eth_tx(adapter, netbuf->data, netbuf->len);
+    return eth_tx(adapter, netbuf->data_buffer, netbuf->data_size);
 }
 
-static zx_status_t e1000_set_param(void* ctx, uint32_t param, int32_t value, void* data) {
+static zx_status_t e1000_set_param(void* ctx, uint32_t param, int32_t value, const void* data,
+                                   size_t data_size) {
     return ZX_OK;
 }
 
@@ -1115,7 +1114,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
         .name = "e1000",
         .ctx = adapter,
         .ops = &e1000_device_ops,
-        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+        .proto_id = ZX_PROTOCOL_ETHMAC,
         .proto_ops = &e1000_ethmac_ops,
     };
 

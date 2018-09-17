@@ -65,8 +65,7 @@ typedef struct {
     uint64_t tx_endpoint_delay;    // wait time between 2 transmit requests
 
     // callback interface to attached ethernet layer
-    ethmac_ifc_t* ifc;
-    void* cookie;
+    ethmac_ifc_t ifc;
 
     size_t parent_req_size;
 
@@ -179,7 +178,7 @@ static void ax88772b_recv(ax88772b_t* eth, usb_request_t* request) {
             return;
         }
 
-        eth->ifc->recv(eth->cookie, pkt, length1, 0);
+        ethmac_ifc_recv(&eth->ifc, pkt, length1, 0);
         pkt += length1;
         len -= length1;
 
@@ -196,7 +195,7 @@ static void ax88772b_recv(ax88772b_t* eth, usb_request_t* request) {
 
 // Send a netbuf to the USB interface using the provided request
 static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request, ethmac_netbuf_t* netbuf) {
-    size_t length = netbuf->len;
+    size_t length = netbuf->data_size;
 
     if (length + ETH_HEADER_SIZE > USB_BUF_OUT_SIZE) {
         zxlogf(ERROR, "ax88772b: unsupported packet length %zu\n", length);
@@ -213,7 +212,7 @@ static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request, ethmac
     header[3] = hi ^ 0xFF;
 
     usb_request_copy_to(request, header, ETH_HEADER_SIZE, 0);
-    usb_request_copy_to(request, netbuf->data, length, ETH_HEADER_SIZE);
+    usb_request_copy_to(request, netbuf->data_buffer, length, ETH_HEADER_SIZE);
     request->header.length = length + ETH_HEADER_SIZE;
 
     zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
@@ -240,7 +239,7 @@ static void ax88772b_read_complete(usb_request_t* request, void* cookie) {
             eth->rx_endpoint_delay += ETHMAC_RECV_DELAY;
         }
         usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
-    } else if ((request->response.status == ZX_OK) && eth->ifc) {
+    } else if ((request->response.status == ZX_OK) && eth->ifc.ops) {
         ax88772b_recv(eth, request);
     }
 
@@ -267,8 +266,8 @@ static void ax88772b_write_complete(usb_request_t* request, void* cookie) {
         ethmac_netbuf_t* netbuf = list_remove_head_type(&eth->pending_netbufs, ethmac_netbuf_t,
                                                         node);
         zx_status_t send_result = ax88772b_send(eth, request, netbuf);
-        if (eth->ifc) {
-            eth->ifc->complete_tx(eth->cookie, netbuf, send_result);
+        if (eth->ifc.ops) {
+            ethmac_ifc_complete_tx(&eth->ifc, netbuf, send_result);
         }
     } else {
         list_add_tail(&eth->free_write_reqs, &request->node);
@@ -312,8 +311,8 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
             bool was_online = eth->online;
             eth->online = online;
             if (online && !was_online) {
-                if (eth->ifc) {
-                    eth->ifc->status(eth->cookie, ETHMAC_STATUS_ONLINE);
+                if (eth->ifc.ops) {
+                    ethmac_ifc_status(&eth->ifc, ETHMAC_STATUS_ONLINE);
                 }
 
                 // Now that we are online, queue all our read requests
@@ -324,8 +323,8 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
                     usb_request_queue(&eth->usb, req);
                 }
             } else if (!online && was_online) {
-                if (eth->ifc) {
-                    eth->ifc->status(eth->cookie, 0);
+                if (eth->ifc.ops) {
+                    ethmac_ifc_status(&eth->ifc, 0);
                 }
             }
         }
@@ -417,21 +416,20 @@ static zx_status_t ax88772b_query(void* ctx, uint32_t options, ethmac_info_t* in
 static void ax88772b_stop(void* ctx) {
     ax88772b_t* eth = ctx;
     mtx_lock(&eth->mutex);
-    eth->ifc = NULL;
+    eth->ifc.ops = NULL;
     mtx_unlock(&eth->mutex);
 }
 
-static zx_status_t ax88772b_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+static zx_status_t ax88772b_start(void* ctx, const ethmac_ifc_t* ifc) {
     ax88772b_t* eth = ctx;
     zx_status_t status = ZX_OK;
 
     mtx_lock(&eth->mutex);
-    if (eth->ifc) {
+    if (eth->ifc.ops) {
         status = ZX_ERR_BAD_STATE;
     } else {
-        eth->ifc = ifc;
-        eth->cookie = cookie;
-        eth->ifc->status(eth->cookie, eth->online ? ETHMAC_STATUS_ONLINE : 0);
+        eth->ifc = *ifc;
+        ethmac_ifc_status(&eth->ifc, eth->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&eth->mutex);
 
@@ -458,7 +456,8 @@ static zx_status_t ax88772b_set_promisc(ax88772b_t *eth, bool on) {
     return status;
 }
 
-static zx_status_t ax88772b_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
+static zx_status_t ax88772b_set_param(void *ctx, uint32_t param, int32_t value, const void* data,
+                                      size_t data_size) {
     ax88772b_t* eth = ctx;
     zx_status_t status = ZX_OK;
 
@@ -577,7 +576,7 @@ static int ax88772b_start_thread(void* arg) {
         .name = "ax88772b",
         .ctx = eth,
         .ops = &ax88772b_device_proto,
-        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+        .proto_id = ZX_PROTOCOL_ETHMAC,
         .proto_ops = &ethmac_ops,
     };
 

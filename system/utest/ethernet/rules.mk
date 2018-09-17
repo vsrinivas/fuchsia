@@ -28,4 +28,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := system/fidl/zircon-ethernet
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-ethernet \
+
 include make/module.mk

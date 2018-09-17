@@ -16,4 +16,7 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-ethernet \
+
 include make/module.mk

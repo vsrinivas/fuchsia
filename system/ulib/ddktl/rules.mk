@@ -62,6 +62,7 @@ MODULE_LIBS := \
     system/ulib/c \
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-ethernet \
     system/banjo/ddk-protocol-test \
 
 include make/module.mk

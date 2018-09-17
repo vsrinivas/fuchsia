@@ -153,7 +153,7 @@ static ssize_t eth_promisc_helper_logic_locked(ethdev_t* edev, bool req_on, uint
         (*requesters_count)++;
         edev->state |= state_bit;
         if (*requesters_count == 1) {
-            status = edev0->mac.ops->set_param(edev0->mac.ctx, param_id, true, NULL);
+            status = ethmac_set_param(&edev0->mac, param_id, true, NULL, 0);
             if (status != ZX_OK) {
                 (*requesters_count)--;
                 edev->state &= ~state_bit;
@@ -163,7 +163,7 @@ static ssize_t eth_promisc_helper_logic_locked(ethdev_t* edev, bool req_on, uint
         (*requesters_count)--;
         edev->state &= ~state_bit;
         if (*requesters_count == 0) {
-            status = edev0->mac.ops->set_param(edev0->mac.ctx, param_id, false, NULL);
+            status = ethmac_set_param(&edev0->mac, param_id, false, NULL, 0);
             if (status != ZX_OK) {
                 (*requesters_count)++;
                 edev->state |= state_bit;
@@ -193,15 +193,15 @@ static ssize_t eth_rebuild_multicast_filter_locked(ethdev_t* edev) {
     list_for_every_entry(&edev0->list_active, edev_i, ethdev_t, node) {
         for (uint32_t i = 0; i < edev_i->n_multicast; i++) {
             if (n_multicast == MULTICAST_LIST_LIMIT) {
-                return edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_MULTICAST_FILTER,
-                                                 ETHMAC_MULTICAST_FILTER_OVERFLOW, NULL);
+                return ethmac_set_param(&edev0->mac, ETHMAC_SETPARAM_MULTICAST_FILTER,
+                                        ETHMAC_MULTICAST_FILTER_OVERFLOW, NULL, 0);
             }
             memcpy(multicast[n_multicast], edev_i->multicast[i], ETH_MAC_SIZE);
             n_multicast++;
         }
     }
-    return edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_MULTICAST_FILTER,
-                                     n_multicast, multicast);
+    return ethmac_set_param(&edev0->mac, ETHMAC_SETPARAM_MULTICAST_FILTER, n_multicast, multicast,
+                            n_multicast * ETH_MAC_SIZE);
 }
 
 static int eth_multicast_addr_index(ethdev_t* edev, const uint8_t* mac) {
@@ -226,8 +226,8 @@ static ssize_t eth_add_multicast_address_locked(ethdev_t* edev, const uint8_t* m
         return eth_rebuild_multicast_filter_locked(edev);
     } else {
         ethdev0_t* edev0 = edev->edev0;
-        return edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_MULTICAST_FILTER,
-                                         ETHMAC_MULTICAST_FILTER_OVERFLOW, NULL);
+        return ethmac_set_param(&edev0->mac, ETHMAC_SETPARAM_MULTICAST_FILTER,
+                                ETHMAC_MULTICAST_FILTER_OVERFLOW, NULL, 0);
     }
     return ZX_OK;
 }
@@ -341,7 +341,7 @@ static int tx_fifo_write(ethdev_t* edev, zircon_ethernet_FifoEntry* entries, siz
 
 // TODO: I think if this arrives at the wrong time during teardown we
 // can deadlock with the ethermac device
-static void eth0_recv(void* cookie, void* data, size_t len, uint32_t flags) {
+static void eth0_recv(void* cookie, const void* data, size_t len, uint32_t flags) {
     ethdev0_t* edev0 = cookie;
 
     ethdev_t* edev;
@@ -373,8 +373,8 @@ static void eth_put_tx_info(ethdev_t* edev, tx_info_t* tx_info) {
 static void eth0_complete_tx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status) {
     tx_info_t* tx_info = containerof(netbuf, tx_info_t, netbuf);
     ethdev_t* edev = tx_info->edev;
-    zircon_ethernet_FifoEntry entry = {.offset = netbuf->data - edev->io_buf,
-                              .length = netbuf->len,
+    zircon_ethernet_FifoEntry entry = {.offset = netbuf->data_buffer - edev->io_buf,
+                              .length = netbuf->data_size,
                               .flags = status == ZX_OK ? zircon_ethernet_FIFO_TX_OK : 0,
                               .cookie = tx_info->fifo_cookie};
 
@@ -386,7 +386,7 @@ static void eth0_complete_tx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t 
     tx_fifo_write(edev, &entry, 1);
 }
 
-static ethmac_ifc_t ethmac_ifc = {
+static ethmac_ifc_ops_t ethmac_ifc = {
     .status = eth0_status,
     .recv = eth0_recv,
     .complete_tx = eth0_complete_tx,
@@ -459,14 +459,14 @@ static int eth_send(ethdev_t* edev, zircon_ethernet_FifoEntry* entries, uint32_t
             if (opts) {
                 zxlogf(SPEW, "setting OPT_MORE (%u packets to go)\n", count);
             }
-            tx_info->netbuf.data = edev->io_buf + e->offset;
+            tx_info->netbuf.data_buffer = edev->io_buf + e->offset;
             if (edev0->info.features & ETHMAC_FEATURE_DMA) {
                 tx_info->netbuf.phys = edev->paddr_map[e->offset / PAGE_SIZE] +
                                        (e->offset & PAGE_MASK);
             }
-            tx_info->netbuf.len = e->length;
+            tx_info->netbuf.data_size = e->length;
             tx_info->fifo_cookie = e->cookie;
-            status = edev0->mac.ops->queue_tx(edev0->mac.ctx, opts, &tx_info->netbuf);
+            status = ethmac_queue_tx(&edev0->mac, opts, &tx_info->netbuf);
             if (edev->state & ETHDEV_TX_LOOPBACK) {
                 eth_tx_echo(edev0, edev->io_buf + e->offset, e->length);
             }
@@ -582,7 +582,7 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, zx_handle_t vmo) {
             status = ZX_ERR_NO_MEMORY;
             goto fail;
         }
-        zx_handle_t bti = edev->edev0->mac.ops->get_bti(edev->edev0->mac.ctx);
+        zx_handle_t bti = ethmac_get_bti(&edev->edev0->mac);
         if ((status = zx_bti_pin(bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE,
                                  vmo, 0, size, edev->paddr_map, pages, &edev->pmt)) != ZX_OK) {
             zxlogf(ERROR, "eth [%s]: bti_pin failed, can't pin vmo: %d\n",
@@ -644,7 +644,8 @@ static zx_status_t eth_start_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS
         // Re-acquire lock afterwards. Set busy to prevent problems with other ioctls.
         edev0->state |= ETHDEV0_BUSY;
         mtx_unlock(&edev0->lock);
-        status = edev0->mac.ops->start(edev0->mac.ctx, &ethmac_ifc, edev0);
+        const ethmac_ifc_t ifc = {&ethmac_ifc, edev0};
+        status = ethmac_start(&edev->edev0->mac, &ifc);
         mtx_lock(&edev0->lock);
         edev0->state &= ~ETHDEV0_BUSY;
     } else {
@@ -687,7 +688,7 @@ static zx_status_t eth_stop_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS 
                 // Re-acquire lock afterwards. Set busy to prevent problems with other ioctls.
                 edev0->state |= ETHDEV0_BUSY;
                 mtx_unlock(&edev0->lock);
-                edev0->mac.ops->stop(edev0->mac.ctx);
+                ethmac_stop(&edev->edev0->mac);
                 mtx_lock(&edev0->lock);
                 edev0->state &= ~ETHDEV0_BUSY;
             }
@@ -826,8 +827,7 @@ static zx_status_t fidl_ConfigMulticastTestFilter_locked(void* ctx, fidl_txn_t* 
 
 static zx_status_t fidl_DumpRegisters_locked(void* ctx, fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
-    zx_status_t status = edev->edev0->mac.ops->set_param(edev->edev0->mac.ctx,
-                                                         ETHMAC_SETPARAM_DUMP_REGS, 0, NULL);
+    zx_status_t status = ethmac_set_param(&edev->edev0->mac, ETHMAC_SETPARAM_DUMP_REGS, 0, NULL, 0);
     return REPLY(DumpRegisters)(txn, status);
 }
 
@@ -1022,7 +1022,7 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
     }
 
     zx_status_t status;
-    if (device_get_protocol(dev, ZX_PROTOCOL_ETHERNET_IMPL, &edev0->mac)) {
+    if (device_get_protocol(dev, ZX_PROTOCOL_ETHMAC, &edev0->mac)) {
         zxlogf(ERROR, "eth: bind: no ethermac protocol\n");
         status = ZX_ERR_INTERNAL;
         goto fail;
@@ -1037,7 +1037,7 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    if ((status = edev0->mac.ops->query(edev0->mac.ctx, 0, &edev0->info)) < 0) {
+    if ((status = ethmac_query(&edev0->mac, 0, &edev0->info)) < 0) {
         zxlogf(ERROR, "eth: bind: ethermac query failed: %d\n", status);
         goto fail;
     }
@@ -1082,6 +1082,6 @@ static zx_driver_ops_t eth_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(ethernet, eth_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ETHERNET_IMPL),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ETHMAC),
 ZIRCON_DRIVER_END(ethernet)
 // clang-format on

@@ -46,8 +46,7 @@ typedef struct {
     usb_protocol_t usb;
 
     mtx_t ethmac_mutex;
-    ethmac_ifc_t* ethmac_ifc;
-    void* ethmac_cookie;
+    ethmac_ifc_t ethmac_ifc;
 
     // Device attributes
     uint8_t mac_addr[ETH_MAC_SIZE];
@@ -85,11 +84,11 @@ static void ecm_unbind(void* cookie) {
 
     mtx_lock(&ctx->tx_mutex);
     ctx->unbound = true;
-    if (ctx->ethmac_ifc) {
+    if (ctx->ethmac_ifc.ops) {
         ethmac_netbuf_t* netbuf;
         while ((netbuf = list_remove_head_type(&ctx->tx_pending_infos, ethmac_netbuf_t, node)) !=
                NULL) {
-            ctx->ethmac_ifc->complete_tx(ctx->ethmac_cookie, netbuf, ZX_ERR_PEER_CLOSED);
+            ethmac_ifc_complete_tx(&ctx->ethmac_ifc, netbuf, ZX_ERR_PEER_CLOSED);
         }
     }
     mtx_unlock(&ctx->tx_mutex);
@@ -134,16 +133,16 @@ static void ecm_update_online_status(ecm_ctx_t* ctx, bool is_online) {
     if (is_online) {
         zxlogf(INFO, "%s: connected to network\n", module_name);
         ctx->online = true;
-        if (ctx->ethmac_ifc) {
-            ctx->ethmac_ifc->status(ctx->ethmac_cookie, ETHMAC_STATUS_ONLINE);
+        if (ctx->ethmac_ifc.ops) {
+            ethmac_ifc_status(&ctx->ethmac_ifc, ETHMAC_STATUS_ONLINE);
         } else {
             zxlogf(ERROR, "%s: not connected to ethermac interface\n", module_name);
         }
     } else {
         zxlogf(INFO, "%s: no connection to network\n", module_name);
         ctx->online = false;
-        if (ctx->ethmac_ifc) {
-            ctx->ethmac_ifc->status(ctx->ethmac_cookie, 0);
+        if (ctx->ethmac_ifc.ops) {
+            ethmac_ifc_status(&ctx->ethmac_ifc, 0);
         }
     }
 
@@ -151,14 +150,15 @@ done:
     mtx_unlock(&ctx->ethmac_mutex);
 }
 
-static zx_status_t ethmac_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+static zx_status_t ecm_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* info) {
     ecm_ctx_t* eth = ctx;
 
     zxlogf(TRACE, "%s: %s called\n", module_name, __FUNCTION__);
 
     // No options are supported
     if (options) {
-        zxlogf(ERROR, "%s: unexpected options (0x%"PRIx32") to ethmac_query\n", module_name, options);
+        zxlogf(ERROR, "%s: unexpected options (0x%"PRIx32") to ecm_ethmac_query\n", module_name,
+               options);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -169,33 +169,33 @@ static zx_status_t ethmac_query(void* ctx, uint32_t options, ethmac_info_t* info
     return ZX_OK;
 }
 
-static void ethmac_stop(void* cookie) {
+static void ecm_ethmac_stop(void* cookie) {
     zxlogf(TRACE, "%s: %s called\n", module_name, __FUNCTION__);
     ecm_ctx_t* ctx = cookie;
     mtx_lock(&ctx->ethmac_mutex);
-    ctx->ethmac_ifc = NULL;
+    ctx->ethmac_ifc.ops = NULL;
     mtx_unlock(&ctx->ethmac_mutex);
 }
 
-static zx_status_t ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* ethmac_cookie) {
+static zx_status_t ecm_ethmac_start(void* ctx_cookie, const ethmac_ifc_t* ifc) {
     zxlogf(TRACE, "%s: %s called\n", module_name, __FUNCTION__);
     ecm_ctx_t* ctx = ctx_cookie;
     zx_status_t status = ZX_OK;
 
     mtx_lock(&ctx->ethmac_mutex);
-    if (ctx->ethmac_ifc) {
+    if (ctx->ethmac_ifc.ops) {
         status = ZX_ERR_ALREADY_BOUND;
     } else {
-        ctx->ethmac_ifc = ifc;
-        ctx->ethmac_cookie = ethmac_cookie;
-        ctx->ethmac_ifc->status(ethmac_cookie, ctx->online ? ETHMAC_STATUS_ONLINE : 0);
+        ctx->ethmac_ifc = *ifc;
+        ethmac_ifc_status(&ctx->ethmac_ifc, ctx->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&ctx->ethmac_mutex);
 
     return status;
 }
 
-static zx_status_t queue_request(ecm_ctx_t* ctx, uint8_t* data, size_t length, usb_request_t* req) {
+static zx_status_t queue_request(ecm_ctx_t* ctx, const uint8_t* data, size_t length,
+                                 usb_request_t* req) {
     req->header.length = length;
     ssize_t bytes_copied = usb_request_copy_to(req, data, length, 0);
     if (bytes_copied < 0) {
@@ -207,8 +207,8 @@ static zx_status_t queue_request(ecm_ctx_t* ctx, uint8_t* data, size_t length, u
 }
 
 static zx_status_t send_locked(ecm_ctx_t* ctx, ethmac_netbuf_t* netbuf) {
-    uint8_t* byte_data = netbuf->data;
-    size_t length = netbuf->len;
+    const uint8_t* byte_data = netbuf->data_buffer;
+    size_t length = netbuf->data_size;
 
     // Make sure that we can get all of the tx buffers we need to use
     usb_request_t* tx_req = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
@@ -268,8 +268,8 @@ static void usb_write_complete(usb_request_t* request, void* cookie) {
     mtx_unlock(&ctx->tx_mutex);
 
     mtx_lock(&ctx->ethmac_mutex);
-    if (additional_tx_queued && ctx->ethmac_ifc) {
-        ctx->ethmac_ifc->complete_tx(ctx->ethmac_cookie, netbuf, send_status);
+    if (additional_tx_queued && ctx->ethmac_ifc.ops) {
+        ethmac_ifc_complete_tx(&ctx->ethmac_ifc, netbuf, send_status);
     }
     mtx_unlock(&ctx->ethmac_mutex);
 
@@ -291,8 +291,8 @@ static void usb_recv(ecm_ctx_t* ctx, usb_request_t* request) {
     }
 
     mtx_lock(&ctx->ethmac_mutex);
-    if (ctx->ethmac_ifc) {
-        ctx->ethmac_ifc->recv(ctx->ethmac_cookie, read_data, len, 0);
+    if (ctx->ethmac_ifc.ops) {
+        ethmac_ifc_recv(&ctx->ethmac_ifc, read_data, len, 0);
     }
     mtx_unlock(&ctx->ethmac_mutex);
 }
@@ -329,9 +329,9 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
     usb_request_queue(&ctx->usb, request);
 }
 
-static zx_status_t ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf_t* netbuf) {
+static zx_status_t ecm_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf_t* netbuf) {
     ecm_ctx_t* ctx = cookie;
-    size_t length = netbuf->len;
+    size_t length = netbuf->data_size;
     zx_status_t status;
 
     if (length > ctx->mtu || length == 0) {
@@ -356,16 +356,17 @@ static zx_status_t ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf
     return status;
 }
 
-static zx_status_t ethmac_set_param(void *cookie, uint32_t param, int32_t value, void* data) {
+static zx_status_t ecm_ethmac_set_param(void *cookie, uint32_t param, int32_t value,
+                                        const void* data, size_t data_size) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 static ethmac_protocol_ops_t ethmac_ops = {
-    .query = ethmac_query,
-    .stop = ethmac_stop,
-    .start = ethmac_start,
-    .queue_tx = ethmac_queue_tx,
-    .set_param = ethmac_set_param,
+    .query = ecm_ethmac_query,
+    .stop = ecm_ethmac_stop,
+    .start = ecm_ethmac_start,
+    .queue_tx = ecm_ethmac_queue_tx,
+    .set_param = ecm_ethmac_set_param,
 };
 
 static void ecm_interrupt_complete(usb_request_t* request, void* cookie) {
@@ -747,7 +748,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
         .name = "usb-cdc-ecm",
         .ctx = ecm_ctx,
         .ops = &ecm_device_proto,
-        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+        .proto_id = ZX_PROTOCOL_ETHMAC,
         .proto_ops = &ethmac_ops,
     };
     result = device_add(ecm_ctx->usb_device, &args, &ecm_ctx->zxdev);

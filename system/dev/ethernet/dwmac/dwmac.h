@@ -95,9 +95,9 @@ public:
 
     zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
     void EthmacStop() __TA_EXCLUDES(lock_);
-    zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
+    zx_status_t EthmacStart(const ethmac_ifc_t* ifc) __TA_EXCLUDES(lock_);
     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) __TA_EXCLUDES(lock_);
-    zx_status_t EthmacSetParam(uint32_t param, int32_t value, void* data);
+    zx_status_t EthmacSetParam(uint32_t param, int32_t value, const void* data, size_t data_size);
     zx_handle_t EthmacGetBti();
 
 private:
@@ -161,7 +161,7 @@ private:
     dw_dma_regs_t* dwdma_regs_ = nullptr;
 
     fbl::Mutex lock_;
-    fbl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_ __TA_GUARDED(lock_);
+    ddk::EthmacIfcProxy ethmac_proxy_ __TA_GUARDED(lock_);
 
     // Only accessed from Thread, so not locked.
     bool online_ = false;

@@ -44,8 +44,7 @@ typedef struct ethernet_device {
     bool online;
 
     // callback interface to attached ethernet layer
-    ethmac_ifc_t* ifc;
-    void* cookie;
+    ethmac_ifc_t ifc;
 } ethernet_device_t;
 
 static int irq_thread(void* arg) {
@@ -64,8 +63,8 @@ static int irq_thread(void* arg) {
             size_t len;
 
             while (eth_rx(&edev->eth, &data, &len) == ZX_OK) {
-                if (edev->ifc && (edev->state == ETH_RUNNING)) {
-                    edev->ifc->recv(edev->cookie, data, len, 0);
+                if (edev->ifc.ops && (edev->state == ETH_RUNNING)) {
+                    ethmac_ifc_recv(&edev->ifc, data, len, 0);
                 }
                 eth_rx_ack(&edev->eth);
             }
@@ -76,8 +75,8 @@ static int irq_thread(void* arg) {
             zxlogf(TRACE, "intel-eth: ETH_IRQ_LSC fired: %d->%d\n", was_online, online);
             if (online != was_online) {
                 edev->online = online;
-                if (edev->ifc) {
-                    edev->ifc->status(edev->cookie, online ? ETHMAC_STATUS_ONLINE : 0);
+                if (edev->ifc.ops) {
+                    ethmac_ifc_status(&edev->ifc, online ? ETHMAC_STATUS_ONLINE : 0);
                 }
             }
         }
@@ -104,21 +103,20 @@ static zx_status_t eth_query(void* ctx, uint32_t options, ethmac_info_t* info) {
 static void eth_stop(void* ctx) {
     ethernet_device_t* edev = ctx;
     mtx_lock(&edev->lock);
-    edev->ifc = NULL;
+    edev->ifc.ops = NULL;
     mtx_unlock(&edev->lock);
 }
 
-static zx_status_t eth_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+static zx_status_t eth_start(void* ctx, const ethmac_ifc_t* ifc) {
     ethernet_device_t* edev = ctx;
     zx_status_t status = ZX_OK;
 
     mtx_lock(&edev->lock);
-    if (edev->ifc) {
+    if (edev->ifc.ops) {
         status = ZX_ERR_BAD_STATE;
     } else {
-        edev->ifc = ifc;
-        edev->cookie = cookie;
-        edev->ifc->status(edev->cookie, edev->online ? ETHMAC_STATUS_ONLINE : 0);
+        edev->ifc = *ifc;
+        ethmac_ifc_status(&edev->ifc, edev->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&edev->lock);
 
@@ -131,10 +129,11 @@ static zx_status_t eth_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* ne
         return ZX_ERR_BAD_STATE;
     }
     // TODO: Add support for DMA directly from netbuf
-    return eth_tx(&edev->eth, netbuf->data, netbuf->len);
+    return eth_tx(&edev->eth, netbuf->data_buffer, netbuf->data_size);
 }
 
-static zx_status_t eth_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
+static zx_status_t eth_set_param(void *ctx, uint32_t param, int32_t value, const void* data,
+                                 size_t data_size) {
     ethernet_device_t* edev = ctx;
     zx_status_t status = ZX_OK;
 
@@ -305,7 +304,7 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
         .name = "intel-ethernet",
         .ctx = edev,
         .ops = &device_ops,
-        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+        .proto_id = ZX_PROTOCOL_ETHMAC,
         .proto_ops = &ethmac_ops,
     };
 

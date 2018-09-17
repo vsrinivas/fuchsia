@@ -105,8 +105,8 @@ void DWMacDevice::UpdateLinkStatus() {
     bool temp = dwmac_regs_->rgmiistatus & GMAC_RGMII_STATUS_LNKSTS;
     if (temp != online_) {
         online_ = temp;
-        if (ethmac_proxy_ != nullptr) {
-            ethmac_proxy_->Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
+        if (ethmac_proxy_.is_valid()) {
+            ethmac_proxy_.Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
         } else {
             zxlogf(ERROR, "dwmac: System not ready\n");
         }
@@ -431,7 +431,7 @@ zx_status_t DWMacDevice::ShutDown() {
     thrd_join(thread_, NULL);
     fbl::AutoLock lock(&lock_);
     online_ = false;
-    ethmac_proxy_.reset();
+    ethmac_proxy_.clear();
     DeInitDevice();
     ReleaseBuffers();
     return ZX_OK;
@@ -476,17 +476,17 @@ zx_status_t DWMacDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
 void DWMacDevice::EthmacStop() {
     zxlogf(INFO, "Stopping Ethermac\n");
     fbl::AutoLock lock(&lock_);
-    ethmac_proxy_.reset();
+    ethmac_proxy_.clear();
 }
 
-zx_status_t DWMacDevice::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
+zx_status_t DWMacDevice::EthmacStart(const ethmac_ifc_t* ifc) {
     fbl::AutoLock lock(&lock_);
 
-    if (ethmac_proxy_ != nullptr) {
+    if (ethmac_proxy_.is_valid()) {
         zxlogf(ERROR, "dwmac:  Already bound!!!");
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        ethmac_proxy_ = fbl::move(proxy);
+        ethmac_proxy_ = ddk::EthmacIfcProxy(ifc);
         UpdateLinkStatus();
         zxlogf(INFO, "dwmac: Started\n");
     }
@@ -565,9 +565,9 @@ void DWMacDevice::ProcRxBuffer(uint32_t int_status) {
 
         { // limit scope of autolock
             fbl::AutoLock lock(&lock_);
-            if ((ethmac_proxy_ != nullptr)) {
+            if ((ethmac_proxy_.is_valid())) {
 
-                ethmac_proxy_->Recv(temptr, fr_len, 0);
+                ethmac_proxy_.Recv(temptr, fr_len, 0);
 
             } else {
                 zxlogf(ERROR, "Dropping bad packet\n");
@@ -594,7 +594,7 @@ zx_status_t DWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf
         }
     }
 
-    if (netbuf->len > kTxnBufSize) {
+    if (netbuf->data_size > kTxnBufSize) {
         return ZX_ERR_INVALID_ARGS;
     }
     if (tx_descriptors_[curr_tx_buf_].txrx_status & DESC_TXSTS_OWNBYDMA) {
@@ -603,10 +603,10 @@ zx_status_t DWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf
     }
     uint8_t* temptr = &tx_buffer_[curr_tx_buf_ * kTxnBufSize];
 
-    memcpy(temptr, netbuf->data, netbuf->len);
+    memcpy(temptr, netbuf->data_buffer, netbuf->data_size);
     hw_mb();
 
-    zx_cache_flush(temptr, netbuf->len, ZX_CACHE_FLUSH_DATA);
+    zx_cache_flush(temptr, netbuf->data_size, ZX_CACHE_FLUSH_DATA);
 
     // Descriptors are pre-iniitialized with the paddr of their corresponding
     // buffers, only need to setup the control and status fields.
@@ -615,7 +615,7 @@ zx_status_t DWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf
         DESC_TXCTRL_TXLAST |
         DESC_TXCTRL_TXFIRST |
         DESC_TXCTRL_TXCHAIN |
-        (netbuf->len & DESC_TXCTRL_SIZE1MASK);
+        ((uint32_t)netbuf->data_size & DESC_TXCTRL_SIZE1MASK);
 
     tx_descriptors_[curr_tx_buf_].txrx_status = DESC_TXSTS_OWNBYDMA;
     curr_tx_buf_ = (curr_tx_buf_ + 1) % kNumDesc;
@@ -626,7 +626,8 @@ zx_status_t DWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf
     return ZX_OK;
 }
 
-zx_status_t DWMacDevice::EthmacSetParam(uint32_t param, int32_t value, void* data) {
+zx_status_t DWMacDevice::EthmacSetParam(uint32_t param, int32_t value, const void* data,
+                                        size_t data_size) {
     zxlogf(INFO, "SetParam called  %x  %x\n", param, value);
     return ZX_OK;
 }

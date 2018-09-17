@@ -21,7 +21,10 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-ethernet \
+
 MODULE_HEADER_DEPS := \
-    system/ulib/inet6 \
+	system/ulib/inet6 \
 
 include make/module.mk

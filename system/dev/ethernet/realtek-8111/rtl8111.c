@@ -63,8 +63,7 @@ typedef struct ethernet_device {
     uint8_t mac[6];
     bool online;
 
-    ethmac_ifc_t* ifc;
-    void* cookie;
+    ethmac_ifc_t ifc;
 } ethernet_device_t;
 
 static void rtl8111_init_buffers(ethernet_device_t* edev) {
@@ -172,8 +171,8 @@ static int irq_thread(void* arg) {
             if (online != was_online) {
                 zxlogf(INFO, "rtl8111: link %s\n", online ? "online" : "offline");
                 edev->online = online;
-                if (edev->ifc) {
-                    edev->ifc->status(edev->cookie, online ? ETHMAC_STATUS_ONLINE : 0);
+                if (edev->ifc.ops) {
+                    ethmac_ifc_status(&edev->ifc, online ? ETHMAC_STATUS_ONLINE : 0);
                 }
             }
         }
@@ -183,10 +182,10 @@ static int irq_thread(void* arg) {
         if (isr & RTL_INT_ROK) {
             eth_desc_t* rxd;
             while (!((rxd = edev->rxd_ring + edev->rxd_idx)->status1 & RX_DESC_OWN)) {
-                if (edev->ifc) {
+                if (edev->ifc.ops) {
                     size_t len = rxd->status1 & RX_DESC_LEN_MASK;
-                    edev->ifc->recv(
-                        edev->cookie, edev->rxb + (edev->rxd_idx * ETH_BUF_SIZE), len, 0);
+                    ethmac_ifc_recv(
+                        &edev->ifc, edev->rxb + (edev->rxd_idx * ETH_BUF_SIZE), len, 0);
                 } else {
                     zxlogf(ERROR, "rtl8111: No ethmac callback, dropping packet\n");
                 }
@@ -222,21 +221,20 @@ static zx_status_t rtl8111_query(void* ctx, uint32_t options, ethmac_info_t* inf
 static void rtl8111_stop(void* ctx) {
     ethernet_device_t* edev = ctx;
     mtx_lock(&edev->lock);
-    edev->ifc = NULL;
+    edev->ifc.ops = NULL;
     mtx_unlock(&edev->lock);
 }
 
-static zx_status_t rtl8111_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+static zx_status_t rtl8111_start(void* ctx, const ethmac_ifc_t* ifc) {
     ethernet_device_t* edev = ctx;
     zx_status_t status = ZX_OK;
 
     mtx_lock(&edev->lock);
-    if (edev->ifc) {
+    if (edev->ifc.ops) {
         status = ZX_ERR_BAD_STATE;
     } else {
-        edev->ifc = ifc;
-        edev->cookie = cookie;
-        edev->ifc->status(edev->cookie, edev->online ? ETHMAC_STATUS_ONLINE : 0);
+        edev->ifc = *ifc;
+        ethmac_ifc_status(&edev->ifc, edev->online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&edev->lock);
 
@@ -244,7 +242,7 @@ static zx_status_t rtl8111_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
 }
 
 static zx_status_t rtl8111_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
-    size_t length = netbuf->len;
+    size_t length = netbuf->data_size;
     if (length > ETH_BUF_SIZE) {
         zxlogf(ERROR, "rtl8111: Unsupported packet length %zu\n", length);
         return ZX_ERR_INVALID_ARGS;
@@ -267,7 +265,7 @@ static zx_status_t rtl8111_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
         mtx_unlock(&edev->lock);
     }
 
-    memcpy(edev->txb + (edev->txd_idx * ETH_BUF_SIZE), netbuf->data, length);
+    memcpy(edev->txb + (edev->txd_idx * ETH_BUF_SIZE), netbuf->data_buffer, length);
 
     bool is_end = edev->txd_idx == (ETH_BUF_COUNT - 1);
     edev->txd_ring[edev->txd_idx].status1 =
@@ -291,7 +289,8 @@ static zx_status_t rtl8111_set_promisc(ethernet_device_t* edev, bool on) {
     return ZX_OK;
 }
 
-static zx_status_t rtl8111_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
+static zx_status_t rtl8111_set_param(void *ctx, uint32_t param, int32_t value, const void* data,
+                                     size_t data_size) {
     ethernet_device_t* edev = ctx;
     zx_status_t status = ZX_OK;
 
@@ -410,7 +409,7 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
         .name = "rtl8111",
         .ctx = edev,
         .ops = &device_ops,
-        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+        .proto_id = ZX_PROTOCOL_ETHMAC,
         .proto_ops = &ethmac_ops,
     };
 

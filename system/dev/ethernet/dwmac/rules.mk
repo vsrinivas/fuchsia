@@ -34,6 +34,7 @@ MODULE_LIBS := \
     system/ulib/c
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-ethernet \
     system/banjo/ddk-protocol-ethernet-board \
     system/banjo/ddk-protocol-ethernet-mac \
     system/banjo/ddk-protocol-gpio \

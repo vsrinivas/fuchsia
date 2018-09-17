@@ -37,6 +37,7 @@ MODULE_LIBS := \
     system/ulib/zircon
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-ethernet \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-gpio-impl \
     system/banjo/ddk-protocol-iommu \
