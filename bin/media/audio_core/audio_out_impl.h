@@ -134,6 +134,7 @@ class AudioOutImpl
   bool IsOperating();
   bool ValidateConfig();
   void ComputePtsToFracFrames(int64_t first_pts);
+  void UnlinkThrottle();
 
   AudioCoreImpl* owner_ = nullptr;
   fidl::Binding<fuchsia::media::AudioOut> audio_out_binding_;

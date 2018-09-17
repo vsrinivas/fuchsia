@@ -53,6 +53,7 @@ void AudioOutImpl::Shutdown() {
 
   PreventNewLinks();
   Unlink();
+  UnlinkThrottle();
 
   if (audio_out_binding_.is_bound()) {
     audio_out_binding_.Unbind();
@@ -60,6 +61,11 @@ void AudioOutImpl::Shutdown() {
 
   gain_control_bindings_.CloseAll();
   payload_buffer_.reset();
+
+  // Make sure we have left the set of active audio outs.
+  if (InContainer()) {
+    owner_->GetDeviceManager().RemoveAudioOut(this);
+  }
 }
 
 void AudioOutImpl::SnapshotCurrentTimelineFunction(int64_t reference_time,
@@ -172,6 +178,13 @@ void AudioOutImpl::ComputePtsToFracFrames(int64_t first_pts) {
   pts_to_frac_frames_valid_ = true;
 }
 
+void AudioOutImpl::UnlinkThrottle() {
+  if (throttle_output_link_ != nullptr) {
+    RemoveLink(throttle_output_link_);
+    throttle_output_link_ = nullptr;
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // AudioOut Interface
@@ -225,7 +238,7 @@ void AudioOutImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format) {
   // Everything checks out.  Discard any existing links we hold (including
   // throttle output).  New links need to be created with our new format.
   Unlink();
-  throttle_output_link_ = nullptr;
+  UnlinkThrottle();
 
   // Create a new format info object so we can create links to outputs.
   // TODO(johngro): Look into eliminating most of the format_info class when we
