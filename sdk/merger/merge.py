@@ -24,8 +24,8 @@ def _open_archive(archive, directory):
         # Extract the tarball into the temporary directory.
         # This is vastly more efficient than accessing files one by one via
         # the tarfile API.
-        with tarfile.open(self._archive) as archive:
-            archive.extractall(temp_dir)
+        with tarfile.open(archive) as archive_file:
+            archive_file.extractall(temp_dir)
         try:
             yield temp_dir
         finally:
@@ -47,7 +47,7 @@ def _open_output(archive, directory):
             yield temp_dir
             # Write the archive file.
             with tarfile.open(archive, "w:gz") as archive_file:
-                archive_file.add(temp_dir, arcname=os.path.basename(temp_dir))
+                archive_file.add(temp_dir, arcname='')
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
     else:
