@@ -133,7 +133,7 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 	// TODO: recast in terms of c_sockaddr_storage
 	// TODO: split out the not-unsafe parts into socket_conv.go.
 	family := uint16(data[0]) | uint16(data[1])<<8
-	if debug2 {
+	if debug {
 		log.Printf("readSockaddrIn: family=%d", family)
 	}
 	switch family {
@@ -149,7 +149,7 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 		if !isZeros(v.sin_addr[:]) {
 			addr.Addr = tcpip.Address(v.sin_addr[:])
 		}
-		if debug2 {
+		if debug {
 			log.Printf("readSockaddrIn: addr=%v", addr)
 		}
 		return addr, nil
@@ -164,7 +164,7 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 		if !isZeros(v.sin6_addr[:]) {
 			addr.Addr = tcpip.Address(v.sin6_addr[:])
 		}
-		if debug2 {
+		if debug {
 			log.Printf("readSockaddrIn: addr=%v", addr)
 		}
 		return addr, nil

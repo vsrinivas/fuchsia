@@ -137,7 +137,7 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 				addrs = append(addrs, "\x7f\x00\x00\x01")
 			} else {
 				addrs = append(addrs, tcpip.Parse(*node))
-				if debug2 {
+				if debug {
 					log.Printf("getaddrinfo: addr=%v, err=%v", addrs, err)
 				}
 			}

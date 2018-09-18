@@ -30,8 +30,7 @@ import (
 	"github.com/google/netstack/waiter"
 )
 
-const debug = true
-const debug2 = false
+const debug = false
 
 // TODO: Replace these with a better tracing mechanism (NET-757)
 const logListen = false
@@ -198,7 +197,7 @@ func (ios *iostate) loopStreamWrite(stk *stack.Stack) {
 			continue
 		}
 
-		if debug2 {
+		if debug {
 			log.Printf("loopStreamWrite: sending packet n=%d, v=%q", n, v[:n])
 		}
 		ios.wq.EventRegister(&waitEntry, waiter.EventOut)
@@ -272,7 +271,7 @@ func (ios *iostate) loopStreamRead(stk *stack.Stack) {
 			if err == nil {
 				break
 			} else if err == tcpip.ErrWouldBlock || err == tcpip.ErrInvalidEndpointState || err == tcpip.ErrNotConnected {
-				if debug2 {
+				if debug {
 					log.Printf("loopStreamRead read err=%v", err)
 				}
 				select {
@@ -300,7 +299,7 @@ func (ios *iostate) loopStreamRead(stk *stack.Stack) {
 			return
 		}
 		ios.wq.EventUnregister(&waitEntry)
-		if debug2 {
+		if debug {
 			log.Printf("loopStreamRead: got a buffer, len(v)=%d", len(v))
 		}
 
@@ -319,7 +318,7 @@ func (ios *iostate) loopStreamRead(stk *stack.Stack) {
 				}
 				return
 			case zx.ErrShouldWait:
-				if debug2 {
+				if debug {
 					log.Printf("loopStreamRead: got zx.ErrShouldWait")
 				}
 				obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
@@ -376,7 +375,7 @@ func (ios *iostate) loopDgramRead(stk *stack.Stack) {
 					return
 				}
 			} else if err == tcpip.ErrClosedForReceive {
-				if debug2 {
+				if debug {
 					log.Printf("TODO loopDgramRead closed")
 				}
 				// TODO _, err := ios.dataHandle.Write(nil, ZX_SOCKET_HALF_CLOSE)
@@ -794,7 +793,7 @@ func (s *socketServer) opBind(ios *iostate, msg *zxsocket.Msg) (status zx.Status
 		}
 		return errStatus(err)
 	}
-	if debug2 {
+	if debug {
 		defer func() {
 			log.Printf("bind(%+v): %v", *addr, status)
 		}()
@@ -931,7 +930,7 @@ func (s *socketServer) opGetSockName(ios *iostate, msg *zxsocket.Msg) zx.Status 
 	if err != nil {
 		return mxNetError(err)
 	}
-	if debug2 {
+	if debug {
 		log.Printf("getsockname(): %v", a)
 	}
 	return fdioSockAddrReply(a, msg)
@@ -1074,7 +1073,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 		}
 		return errStatus(err)
 	}
-	if debug2 {
+	if debug {
 		defer func() {
 			log.Printf("connect(%+v): %v", *addr, status)
 		}()
@@ -1132,7 +1131,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 		}
 		return mxNetError(e)
 	}
-	if debug2 {
+	if debug {
 		log.Printf("connect: connected")
 	}
 	if ios.transProto == tcp.ProtocolNumber {
@@ -1190,7 +1189,7 @@ func (s *socketServer) opClose(ios *iostate, cookie cookie) zx.Status {
 func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVal int64) zx.Status {
 	cookie := cookie(cookieVal)
 	op := msg.Op()
-	if debug2 {
+	if debug {
 		log.Printf("zxsocketHandler: op=%v, len=%d, arg=%v, hcount=%d", op, msg.Datalen, msg.Arg, msg.Hcount)
 	}
 

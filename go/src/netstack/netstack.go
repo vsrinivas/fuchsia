@@ -310,7 +310,7 @@ func (ns *Netstack) flattenRouteTables() []tcpip.Route {
 	sort.Slice(routes, func(i, j int) bool {
 		return netiface.Less(&routes[i], &routes[j], nics)
 	})
-	if debug2 {
+	if debug {
 		for i, ifs := range ns.ifStates {
 			log.Printf("[%v] nicid: %v, addr: %v, routes: %v",
 				i, ifs.nic.ID, ifs.nic.Addr, ifs.nic.Routes)
@@ -396,7 +396,7 @@ func (ns *Netstack) addLoopback() error {
 	ns.mu.Unlock()
 
 	linkID := loopback.New()
-	if debug2 {
+	if debug {
 		linkID = sniffer.New(linkID)
 	}
 	linkID = ifs.statsEP.Wrap(linkID)
@@ -462,7 +462,7 @@ func (ns *Netstack) addEth(path string) error {
 
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.
-	if debug2 {
+	if debug {
 		// A wrapper LinkEndpoint should encapsulate the underlying one,
 		// and manifest itself to 3rd party netstack.
 		linkID = sniffer.New(linkID)

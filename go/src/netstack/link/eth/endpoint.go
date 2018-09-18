@@ -18,7 +18,7 @@ import (
 )
 
 const headerLength = 14
-const debug2 = false
+const debug = false
 
 type linkEndpoint struct {
 	c *Client
@@ -86,7 +86,7 @@ func (ep *linkEndpoint) WriteBuffer(r *stack.Route, payload *buffer.VectorisedVi
 	}
 	if err := ep.c.Send(buf); err != nil {
 		trace.DebugDrop("Send error: pktlen %d payload len %d", pktlen, payload.Size())
-		if debug2 {
+		if debug {
 			log.Printf("link: send error: %v", err)
 		}
 		return tcpip.ErrWouldBlock
