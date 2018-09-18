@@ -279,7 +279,6 @@ typedef struct zx_info_cpu_stats {
 } zx_info_cpu_stats_t;
 ```
 
-
 ### ZX_INFO_VMAR
 
 *handle* type: **VM Address Region**
@@ -298,6 +297,35 @@ typedef struct zx_info_vmar {
 
 This returns a single *zx_info_vmar_t* that describes the range of address
 space that the VMAR occupies.
+
+### ZX_INFO_SOCKET
+
+*handle* type: **Socket**
+
+*buffer* type: **zx_info_socket_t[1]**
+
+```
+typedef struct zx_info_socket {
+    // The options passed to zx_socket_create().
+    uint32_t options;
+
+    // The value of ZX_PROP_SOCKET_RX_BUF_MAX.
+    size_t rx_buf_max;
+
+    // The value of ZX_PROP_SOCKET_RX_BUF_SIZE.
+    size_t rx_buf_size;
+
+    // The value of ZX_PROP_SOCKET_TX_BUF_MAX.
+    //
+    // Will be zero if the peer endpoint is closed.
+    size_t tx_buf_max;
+
+    // The value of ZX_PROP_SOCKET_TX_BUF_SIZE.
+    //
+    // Will be zero if the peer endpoint is closed.
+    size_t tx_buf_size;
+} zx_info_socket_t;
+```
 
 ### ZX_INFO_JOB_CHILDREN
 
@@ -545,6 +573,7 @@ The resource kind is one of
 *   *ZX_RSRC_KIND_IOPORT*
 *   *ZX_RSRC_KIND_IRQ*
 *   *ZX_RSRC_KIND_HYPERVISOR*
+
 ### ZX_INFO_BTI
 
 *handle* type: **Bus Transaction Initiator**

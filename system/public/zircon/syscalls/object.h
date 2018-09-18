@@ -33,7 +33,7 @@ typedef enum {
     ZX_INFO_HANDLE_COUNT               = 19, // zx_info_handle_count_t[1]
     ZX_INFO_BTI                        = 20, // zx_info_bti_t[1]
     ZX_INFO_PROCESS_HANDLE_STATS       = 21, // zx_info_process_handle_stats_t[1]
-    ZX_INFO_LAST
+    ZX_INFO_SOCKET                     = 22, // zx_info_socket_t[1]
 } zx_object_info_topic_t;
 
 typedef uint32_t zx_obj_props_t;
@@ -154,6 +154,26 @@ typedef struct zx_info_bti {
     uint64_t aspace_size;
 } zx_info_bti_t;
 
+typedef struct zx_info_socket {
+    // The options passed to zx_socket_create().
+    uint32_t options;
+
+    // The value of ZX_PROP_SOCKET_RX_BUF_MAX.
+    size_t rx_buf_max;
+
+    // The value of ZX_PROP_SOCKET_RX_BUF_SIZE.
+    size_t rx_buf_size;
+
+    // The value of ZX_PROP_SOCKET_TX_BUF_MAX.
+    //
+    // Will be zero if the peer endpoint is closed.
+    size_t tx_buf_max;
+
+    // The value of ZX_PROP_SOCKET_TX_BUF_SIZE.
+    //
+    // Will be zero if the peer endpoint is closed.
+    size_t tx_buf_size;
+} zx_info_socket_t;
 
 // Types and values used by ZX_INFO_PROCESS_MAPS.
 

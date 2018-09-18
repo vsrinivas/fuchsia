@@ -440,3 +440,15 @@ size_t SocketDispatcher::TransmitBufferSize() const TA_NO_THREAD_SAFETY_ANALYSIS
     Guard<fbl::Mutex> guard{get_lock()};
     return peer_ ? peer_->data_.size() : 0;
 }
+
+void SocketDispatcher::GetInfo(zx_info_socket_t* info) const TA_NO_THREAD_SAFETY_ANALYSIS {
+    canary_.Assert();
+    Guard<fbl::Mutex> guard{get_lock()};
+    *info = zx_info_socket_t{
+        .options = flags_,
+        .rx_buf_max = data_.max_size(),
+        .rx_buf_size = data_.size(),
+        .tx_buf_max = peer_ ? peer_->data_.max_size() : 0,
+        .tx_buf_size = peer_ ? peer_->data_.size() : 0,
+    };
+}

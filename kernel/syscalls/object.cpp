@@ -589,6 +589,19 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
     }
 
+    case ZX_INFO_SOCKET: {
+        fbl::RefPtr<SocketDispatcher> socket;
+        auto status = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &socket);
+        if (status != ZX_OK)
+            return status;
+
+        zx_info_socket_t info = {};
+        socket->GetInfo(&info);
+
+        return single_record_result(
+            _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+    }
+
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

@@ -57,6 +57,8 @@ public:
     size_t TransmitBufferMax() const;
     size_t TransmitBufferSize() const;
 
+    void GetInfo(zx_info_socket_t* info) const;
+
     zx_status_t CheckShareable(SocketDispatcher* to_send);
 
     struct ControlMsg {
