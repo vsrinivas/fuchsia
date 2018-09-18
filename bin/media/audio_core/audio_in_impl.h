@@ -155,7 +155,14 @@ class AudioInImpl : public AudioObject,
 
   // GainControl interface.
   void SetGain(float gain_db) final;
+  void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
+                       fuchsia::media::AudioRamp rampType) final {
+    FXL_NOTIMPLEMENTED();
+  };
   void SetMute(bool muted) final;
+  // TODO(mpuryear): Need to implement SetMute.
+
+  // TODO(mpuryear): Need to implement OnGainMuteChanged event.
 
   // Methods used by the capture/mixer thread(s). Must be called from the
   // mix_domain.
@@ -201,7 +208,7 @@ class AudioInImpl : public AudioObject,
   uint32_t bytes_per_frame_;
   TimelineRate frames_to_clock_mono_rate_;
   uint32_t max_frames_per_capture_;
-  std::atomic<float> gain_db_;
+  std::atomic<float> stream_gain_db_;
 
   // Shared buffer state
   zx::vmo payload_buf_vmo_;

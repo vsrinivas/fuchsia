@@ -90,7 +90,10 @@ class FakeAudioOut : public fuchsia::media::AudioOut,
 
   // GainControl interface.
   void SetGain(float gain_db) override;
-
+  void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
+                       fuchsia::media::AudioRamp rampType) final {
+    FXL_NOTIMPLEMENTED();
+  };
   void SetMute(bool muted) override;
 
  private:

@@ -55,8 +55,6 @@ class AudioOutImpl
   }
   bool format_info_valid() const { return (format_info_ != nullptr); }
 
-  float gain_db() const { return gain_db_; }
-
   // AudioOut interface
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
   void SetStreamType(fuchsia::media::StreamType format) final;
@@ -84,6 +82,10 @@ class AudioOutImpl
 
   // GainControl interface.
   void SetGain(float gain_db) final;
+  void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
+                       fuchsia::media::AudioRamp rampType) final {
+    FXL_NOTIMPLEMENTED();
+  };
   void SetMute(bool muted) final;
 
  protected:
@@ -91,7 +93,7 @@ class AudioOutImpl
   void ReportNewMinClockLeadTime();
 
   fbl::RefPtr<AudioOutFormatInfo> format_info_;
-  float gain_db_ = 0.0;
+  float stream_gain_db_ = 0.0;
   bool mute_ = false;
   std::shared_ptr<AudioLinkPacketSource> throttle_output_link_;
 
@@ -109,6 +111,10 @@ class AudioOutImpl
 
     // GainControl interface.
     void SetGain(float gain_db) final;
+    void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
+                         fuchsia::media::AudioRamp rampType) final {
+      FXL_NOTIMPLEMENTED();
+    };
     void SetMute(bool muted) final;
     // TODO(mpuryear): Need to implement OnGainMuteChanged event.
 
