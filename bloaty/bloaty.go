@@ -180,40 +180,40 @@ func RunBloaty(bloatyPath, idsPath string, topFiles, topSyms uint64, jobs int) (
 
 	var wg sync.WaitGroup
 	data := make(chan bloatyOutput)
-
-	// Only allow up to max jobs concurrent executions
-	fileBuffer := make(chan string, jobs)
-	go func() {
-		for _, file := range files {
-			fileBuffer <- file
-		}
-		close(fileBuffer)
-	}()
-
-	for file := range fileBuffer {
-		wg.Add(1)
-		go func(file string) {
-			run(bloatyPath, file, data)
-			wg.Done()
-		}(file)
-	}
-
-	go func() {
-		wg.Wait()
-		close(data)
-	}()
-
 	output := make(map[string]*Segment)
 	fileSizes := make(map[string]uint64)
 
-	for d := range data {
-		if d.err != nil {
-			fmt.Printf("%v", d.err)
-			continue
+	// Start up the data collection process.
+	dataComplete := make(chan struct{}, 1)
+	go func() {
+		for d := range data {
+			if d.err != nil {
+				fmt.Printf("%v", d.err)
+				continue
+			}
+			addRowToOutput(&d.data, d.file, output)
+			fileSizes[d.data.File] += d.data.Filesz
 		}
-		addRowToOutput(&d.data, d.file, output)
-		fileSizes[d.data.File] += d.data.Filesz
+		dataComplete <- struct{}{}
+	}()
+
+	// Only allow up to max jobs concurrent executions.
+	sem := make(chan struct{}, jobs)
+
+	// Start a bloaty run on each file.
+	for _, file := range files {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(file string) {
+			defer wg.Done()
+			run(bloatyPath, file, data)
+			<-sem
+		}(file)
 	}
+
+	wg.Wait()
+	close(data)
+	<-dataComplete
 
 	getTopN(fileSizes, topFiles, topSyms, &output)
 	return output, nil
