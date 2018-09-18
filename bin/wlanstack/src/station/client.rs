@@ -8,7 +8,7 @@ use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use futures::{prelude::*, select};
 use futures::channel::mpsc;
-use log::error;
+use log::{error, info};
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
@@ -41,6 +41,7 @@ type Sme = client_sme::ClientSme<Tokens>;
 struct ConnectionTimes {
     att_id: ConnectionAttemptId,
     assoc_started_time: Option<zx::Time>,
+    rsna_started_time: Option<zx::Time>,
 }
 
 pub async fn serve<S>(proxy: MlmeProxy,
@@ -72,7 +73,9 @@ async fn serve_fidl(sme: Arc<Mutex<Sme>>,
     -> Result<Never, failure::Error>
 {
     let mut fidl_clients = ConcurrentTasks::new();
-    let mut connection_times = ConnectionTimes { att_id: 0, assoc_started_time: None };
+    let mut connection_times = ConnectionTimes { att_id: 0,
+                                                 assoc_started_time: None,
+                                                 rsna_started_time: None };
     loop {
         let mut user_event = user_stream.next();
         let mut new_fidl_client = new_fidl_clients.next();
@@ -172,6 +175,14 @@ fn status(sme: &Arc<Mutex<Sme>>) -> fidl_sme::ClientStatusResponse {
     }
 }
 
+fn att_id_mismatch(this: ConnectionAttemptId, other: ConnectionAttemptId) -> bool {
+    if this != other {
+        info!("Found event with different ConnectionAttemptId than expected: {}, {}", this, other);
+        return true;
+    }
+    return false;
+}
+
 fn handle_user_event(e: client_sme::UserEvent<Tokens>,
                      cobalt_sender: &mut CobaltSender,
                      connection_times: &mut ConnectionTimes,
@@ -184,15 +195,30 @@ fn handle_user_event(e: client_sme::UserEvent<Tokens>,
             connection_times.assoc_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
         },
         client_sme::UserEvent::AssociationSuccess { att_id } => {
-            if att_id != connection_times.att_id {
-                error!("Found an event with different sequence number than expected: {}, {}",
-                       att_id, connection_times.att_id);
+            if att_id_mismatch(att_id, connection_times.att_id) {
                 return;
             }
             if let Some(assoc_started_time) = connection_times.assoc_started_time {
                 let assoc_finished_time = zx::Time::get(zx::ClockId::Monotonic);
                 telemetry::report_assoc_success_time(cobalt_sender, assoc_started_time,
                                              assoc_finished_time);
+            }
+        },
+        client_sme::UserEvent::RsnaStarted { att_id } => {
+            connection_times.att_id = att_id;
+            connection_times.rsna_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
+        },
+        client_sme::UserEvent::RsnaEstablished { att_id } => {
+            if att_id_mismatch(att_id, connection_times.att_id) {
+                return;
+            }
+            match connection_times.rsna_started_time {
+                None => info!("Received UserEvent.RsnaEstablished before UserEvent.RsnaStarted"),
+                Some(rsna_started_time) => {
+                    let rsna_finished_time = zx::Time::get(zx::ClockId::Monotonic);
+                    telemetry::report_rsna_established_time(cobalt_sender, rsna_started_time,
+                                                            rsna_finished_time);
+                }
             }
         },
         client_sme::UserEvent::ConnectFinished { token, result } => {

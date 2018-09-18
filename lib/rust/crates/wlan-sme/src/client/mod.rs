@@ -90,7 +90,13 @@ pub enum UserEvent<T: Tokens> {
     },
     AssociationSuccess {
         att_id: ConnectionAttemptId,
-    }
+    },
+    RsnaStarted {
+        att_id: ConnectionAttemptId,
+    },
+    RsnaEstablished {
+        att_id: ConnectionAttemptId,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]

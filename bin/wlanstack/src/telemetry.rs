@@ -28,6 +28,7 @@ const REPORT_PERIOD_MINUTES: i64 = 1;
 
 // These IDs must match the Cobalt config from //third_party/cobalt_config/fuchsia/wlan/config.yaml
 enum CobaltMetricId {
+    RsnaTime = 2,
     AssociationTime = 3,
     DispatcherPacketCounter = 5,
     ClientAssocDataRssi = 6,
@@ -272,6 +273,13 @@ pub fn report_assoc_success_time(
 ) {
     let time_micros = (assoc_finished_time - assoc_started_time).nanos() / 1000;
     sender.log_elapsed_time(CobaltMetricId::AssociationTime as u32, 0, time_micros);
+}
+
+pub fn report_rsna_established_time(
+    sender: &mut CobaltSender, rsna_started_time: zx::Time, rsna_finished_time: zx::Time,
+) {
+    let time_micros = (rsna_finished_time - rsna_started_time).nanos() / 1000;
+    sender.log_elapsed_time(CobaltMetricId::RsnaTime as u32, 0, time_micros);
 }
 
 fn get_diff<T>(last_stat: T, current_stat: T) -> T

@@ -105,6 +105,7 @@ impl<T: Tokens> State<T> {
                         user_sink.send(UserEvent::AssociationSuccess { att_id: *att_id });
                         match cmd.rsna {
                             Some(rsna) => {
+                                user_sink.send(UserEvent::RsnaStarted { att_id: *att_id });
                                 State::Associated {
                                     bss: cmd.bss,
                                     last_rssi: None,
@@ -161,6 +162,7 @@ impl<T: Tokens> State<T> {
                     LinkState::EstablishingRsna(token, mut rsna) => {
                         match process_eapol_ind(mlme_sink, &mut rsna, &ind) {
                             RsnaStatus::Established => {
+                                user_sink.send(UserEvent::RsnaEstablished { att_id: *att_id });
                                 report_connect_finished(token, user_sink, ConnectResult::Success);
                                 let link_state = LinkState::LinkUp(Some(rsna));
                                 State::Associated { bss, last_rssi, link_state }
