@@ -6,6 +6,7 @@
 ### set up a build directory
 
 ## usage: fx set TARGET [[--build-dir] OUTDIR]
+##               [--boards B1,B2,...]
 ##               [--products P1,P2,...]
 ##               [--packages P1,P2,...]
 ##               [--netboot]
@@ -32,6 +33,10 @@
 ## optional arguments:
 ##   --build-dir OUTDIR    Using this option is deprecated.  It's the same
 ##                         as just giving OUTDIR as a non-option argument.
+##   --boards              Use the listed board target definition (seperated by
+##                         comas) in the build, each board results in an import
+##                         statement and MUST define the `fuchsia_packages`
+##                         variable as well as deal with variable re-definition.
 ##   --products            Include the listed products (separated by commas) in
 ##                         the build. Defaults to the default product for the
 ##                         current layer (e.g., "garnet/packages/default" for
@@ -100,6 +105,7 @@ function main {
       arch=arm64
       ;;
     *)
+      # TODO(alainv): Add support for extracting arch from board configs.
       echo Unknown target \"$1\"
       fx-command-help
       return 1
@@ -110,6 +116,7 @@ function main {
   local gn_cmd='gen'
   local -a gn_switches=(--check)
   local gn_args="target_cpu=\"${arch}\""
+  local boards=()
   local products=()
   local packages=()
   local zircon_args=()
@@ -122,6 +129,15 @@ function main {
   local ccache
   while [[ $# -ne 0 ]]; do
     case "$1" in
+      --boards)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        # Multiple boards may be comma separated
+        IFS=, boards+=("$2")
+        shift
+        ;;
       --products)
         if [[ $# -lt 2 ]]; then
           fx-command-help
@@ -297,6 +313,10 @@ function main {
     fi
   fi
 
+  for board in ${boards[@]}; do
+    gn_args+=" import(\"//${board}\")"
+  done
+
   # Add goma or ccache settings as appropriate.
   if [[ "${use_goma}" -eq 1 ]]; then
     gn_args+=" use_goma=true goma_dir=\"${goma_dir}\""
@@ -310,7 +330,12 @@ function main {
   done
   gn_args+="]"
 
-  gn_args+=" fuchsia_packages=["
+  if [[ -z "${boards}" ]]; then
+    gn_args+=" fuchsia_packages=["
+  else
+    # Board configs MUST declare fuchsia_packages.
+    gn_args+=" fuchsia_packages+=["
+  fi
   for package in ${packages[@]} ${extra_packages[@]}; do
     gn_args+="\"${package}\","
   done
