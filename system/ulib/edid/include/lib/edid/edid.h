@@ -175,18 +175,6 @@ static_assert(offsetof(BaseEdid, edid_version) == 0x12, "Layout check");
 static_assert(offsetof(BaseEdid, standard_timings) == 0x26, "Layout check");
 static_assert(offsetof(BaseEdid, detailed_descriptors) == 0x36, "Layout check");
 
-// EDID block type map. Block 1 if there are >1 blocks, and block
-// 128 if there are >128 blocks. See EDID specification for the meaning
-// of each entry in the tag_map
-struct BlockMap {
-    static constexpr uint8_t kTag = 0xf0;
-    bool validate() const;
-
-    uint8_t tag;
-    uint8_t tag_map[126];
-    uint8_t checksum_byte;
-};
-
 // Version 3 of the CEA EDID Timing Extension
 struct CeaEdidTimingExtension {
     static constexpr uint8_t kTag = 0x02;
@@ -312,29 +300,21 @@ public:
     // of the Edid object's lifetime.
     bool Init(const uint8_t* bytes, uint16_t len, const char** err_msg);
 
-    bool CheckForHdmi(bool* is_hdmi) const;
-
     void Print(void (*print_fn)(const char* str)) const;
 
     const uint8_t* edid_bytes() const { return bytes_; }
     uint16_t edid_length() const { return len_; }
 
-    uint16_t product_code();
-    bool is_standard_rgb();
-    bool supports_basic_audio();
-    const char* manufacturer_name() { return manufacturer_name_; }
-    const char* monitor_name() { return monitor_name_; }
-    const char* monitor_serial() { return monitor_serial_; }
+    uint16_t product_code() const { return base_edid_->product_code; }
+    bool is_standard_rgb() const { return base_edid_->standard_srgb(); }
+    bool supports_basic_audio() const;
+    const char* manufacturer_name() const { return manufacturer_name_; }
+    const char* monitor_name() const { return monitor_name_; }
+    const char* monitor_serial() const { return monitor_serial_; }
+    bool is_hdmi() const;
 
 private:
-    bool CheckBlockMap(uint8_t block_num, bool* is_hdmi) const;
-    bool CheckBlockForHdmiVendorData(uint8_t block_num, bool* is_hdmi) const;
-    template<typename T> bool GetBlock(uint8_t block_num, T* block) const;
-
-    // TODO(stevensd): make this a pointer that refers directly to edid_bytes_
-    BaseEdid base_edid_;
-
-    fbl::unique_ptr<uint8_t[]> edid_bytes_;
+    template<typename T> const T* GetBlock(uint8_t block_num) const;
 
     class descriptor_iterator {
     public:
@@ -344,8 +324,8 @@ private:
         bool is_valid() const { return edid_ != nullptr; }
 
         uint8_t block_idx() const { return block_idx_; }
-        const Descriptor* operator->() const { return &descriptor_; }
-        const Descriptor* get() const { return &descriptor_; }
+        const Descriptor* operator->() const { return descriptor_; }
+        const Descriptor* get() const { return descriptor_; }
 
     private:
         // Set to null when the iterator is exhausted.
@@ -355,17 +335,20 @@ private:
         // The index of the current descriptor in the current block.
         uint32_t descriptor_idx_ = UINT32_MAX;
 
-        Descriptor descriptor_ = {};
+        const Descriptor* descriptor_;
     };
 
     class data_block_iterator {
     public:
-        explicit data_block_iterator(const Edid* edid) : edid_(edid) { ++(*this); }
+        explicit data_block_iterator(const Edid* edid);
 
         data_block_iterator& operator++();
         bool is_valid() const { return edid_ != nullptr; }
 
-        const DataBlock* operator->() const { return &db_; }
+        // Only valid if |is_valid()| is true
+        uint8_t cea_revision() const { return cea_revision_; }
+
+        const DataBlock* operator->() const { return db_; }
 
     private:
         // Set to null when the iterator is exhausted.
@@ -375,11 +358,21 @@ private:
         // The index of the current descriptor in the current block.
         uint32_t db_idx_ = UINT32_MAX;
 
-        DataBlock db_ = {};
+        const DataBlock* db_;
+
+        uint8_t cea_revision_;
     };
 
+    // Edid bytes and length
     const uint8_t* bytes_;
     uint16_t len_;
+
+    // Ptr to base edid structure in bytes_
+    const BaseEdid* base_edid_;
+
+    // Contains the edid bytes if they are owned by this object. |bytes_| should generally
+    // be used, since this will be null if something else owns the edid bytes.
+    fbl::unique_ptr<uint8_t[]> edid_bytes_;
 
     char monitor_name_[sizeof(Descriptor::Monitor::data) + 1];
     char monitor_serial_[sizeof(Descriptor::Monitor::data) + 1];

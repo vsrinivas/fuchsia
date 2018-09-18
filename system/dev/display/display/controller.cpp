@@ -334,10 +334,6 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
 
                 struct i2c_bus i2c = { &i2c_ops_, display_params.panel.i2c_bus_id };
                 success = info->edid.Init(&i2c, ddc_tx, &edid_err);
-                if (success && !info->edid.CheckForHdmi(&display_params.is_hdmi_out)) {
-                    edid_err = "Failed to parse edid for hdmi";
-                    success = false;
-                }
             } while (!success && edid_attempt < kEdidRetries);
 
             if (!success) {
@@ -357,6 +353,7 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
                 }
             }
 
+            display_params.is_hdmi_out = info->edid.is_hdmi();
             display_params.is_standard_srgb_out = info->edid.is_standard_rgb();
             display_params.audio_format_count = static_cast<uint32_t>(info->edid_audio_.size());
 

@@ -7,7 +7,6 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
-#include <zircon/assert.h>
 #include "eisa_vid_lut.h"
 
 namespace {
@@ -40,10 +39,6 @@ namespace edid {
 bool BaseEdid::validate() const {
     static const uint8_t kEdidHeader[8] = {0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0};
     return base_validate<BaseEdid>(this) && memcmp(header, kEdidHeader, sizeof(kEdidHeader)) == 0;
-}
-
-bool BlockMap::validate() const {
-    return base_validate<BlockMap>(this);
 }
 
 bool CeaEdidTimingExtension::validate() const {
@@ -114,17 +109,26 @@ bool Edid::Init(const uint8_t* bytes, uint16_t len, const char** err_msg) {
     }
     bytes_ = bytes;
     len_ = len;
-    if (!GetBlock(0, &base_edid_)) {
-        *err_msg = "Failed to find base edid";
+    if (!(base_edid_ = GetBlock<BaseEdid>(0)) || !base_edid_->validate()) {
+        *err_msg = "Failed to validate base edid";
         return false;
     }
-    if (((base_edid_.num_extensions + 1) * kBlockSize) != len) {
+    if (((base_edid_->num_extensions + 1) * kBlockSize) != len) {
         *err_msg = "Bad extension count";
         return false;
     }
-    if (!base_edid_.digital()) {
+    if (!base_edid_->digital()) {
         *err_msg = "Analog displays not supported";
         return false;
+    }
+
+    for (uint8_t i = 1; i < len / kBlockSize; i++) {
+        if (bytes_[i * kBlockSize] == CeaEdidTimingExtension::kTag) {
+            if (!GetBlock<CeaEdidTimingExtension>(i)->validate()) {
+                *err_msg = "Failed to validate extensions";
+                return false;
+            }
+        }
     }
 
     monitor_serial_[0] = monitor_name_[0] = '\0';
@@ -152,96 +156,40 @@ bool Edid::Init(const uint8_t* bytes, uint16_t len, const char** err_msg) {
 
     // If we didn't find a valid serial descriptor, use the base serial number
     if (monitor_serial_[0] == '\0') {
-        sprintf(monitor_serial_, "%d", base_edid_.serial_number);
+        sprintf(monitor_serial_, "%d", base_edid_->serial_number);
     }
 
-    uint8_t c1 = static_cast<uint8_t>(((base_edid_.manufacturer_id1 & 0x7c) >> 2) + 'A' - 1);
-    uint8_t c2 = static_cast<uint8_t>((((base_edid_.manufacturer_id1 & 0x03) << 3)
-            | (base_edid_.manufacturer_id2 & 0xe0) >> 5) + 'A' - 1);
-    uint8_t c3  = static_cast<uint8_t>(((base_edid_.manufacturer_id2 & 0x1f)) + 'A' - 1);
+    uint8_t c1 = static_cast<uint8_t>(((base_edid_->manufacturer_id1 & 0x7c) >> 2) + 'A' - 1);
+    uint8_t c2 = static_cast<uint8_t>((((base_edid_->manufacturer_id1 & 0x03) << 3)
+            | (base_edid_->manufacturer_id2 & 0xe0) >> 5) + 'A' - 1);
+    uint8_t c3  = static_cast<uint8_t>(((base_edid_->manufacturer_id2 & 0x1f)) + 'A' - 1);
     manufacturer_name_ = lookup_eisa_vid(EISA_ID(c1, c2, c3));
 
-    // TODO(stevensd): Do all validation up front instead of in ::GetBlock
     return true;
 }
 
-template<typename T> bool Edid::GetBlock(uint8_t block_num, T* block) const {
-    if (block_num * kBlockSize > len_) {
-        return false;
-    }
-    memcpy(reinterpret_cast<void*>(block), bytes_ + block_num * kBlockSize, kBlockSize);
-    if (!block->validate()) {
-        return false;
-    }
-    return true;
+template<typename T> const T* Edid::GetBlock(uint8_t block_num) const {
+    const uint8_t* bytes = bytes_ + block_num * kBlockSize;
+    return bytes[0] == T::kTag ? reinterpret_cast<const T*>(bytes) : nullptr;
 }
 
-bool Edid::CheckBlockMap(uint8_t block_num, bool* is_hdmi) const {
-    BlockMap map;
-    if (!GetBlock(block_num, &map)) {
+bool Edid::is_hdmi() const {
+    data_block_iterator dbs(this);
+    if (!dbs.is_valid() || dbs.cea_revision() < 0x03) {
         return false;
     }
-    for (uint8_t i = 0; i < fbl::count_of(map.tag_map); i++) {
-        if (map.tag_map[i] == CeaEdidTimingExtension::kTag) {
-            if (!CheckBlockForHdmiVendorData(static_cast<uint8_t>(i + block_num), is_hdmi)) {
-                return false;
-            } else if (*is_hdmi) {
-                return true;
-            }
-        }
-    }
-    return true;
-}
 
-bool Edid::CheckBlockForHdmiVendorData(uint8_t block_num, bool* is_hdmi) const {
-    CeaEdidTimingExtension block;
-    if (!GetBlock(block_num, &block)) {
-        return false;
-    }
-    if (block.revision_number < 0x03) {
-        return true;
-    }
-    // dtd_start_idx == 0 means no detailed timing descriptors AND no data block collection.
-    if (block.dtd_start_idx == 0) {
-        return true;
-    }
-    // dtd_start_idx must be within (or immediately after) payload. If not, abort
-    // because we have a malformed edid.
-    uint8_t payload_offset = offsetof(CeaEdidTimingExtension, payload);
-    if (!(payload_offset <= block.dtd_start_idx
-            && block.dtd_start_idx <= (payload_offset + fbl::count_of(block.payload)))) {
-        return false;
-    }
-    uint32_t idx = 0;
-    size_t end = block.dtd_start_idx - offsetof(CeaEdidTimingExtension, payload);
-    while (idx < end) {
-        const DataBlock* data_block = reinterpret_cast<const DataBlock*>(block.payload + idx);
-        if (data_block->type() == VendorSpecificBlock::kType) {
+    do {
+        if (dbs->type() == VendorSpecificBlock::kType) {
             // HDMI's 24-bit IEEE registration is 0x000c03 - vendor_number is little endian
-            if (data_block->payload.vendor.vendor_number[0] == 0x03
-                    && data_block->payload.vendor.vendor_number[1] == 0x0c
-                    && data_block->payload.vendor.vendor_number[2] == 0x00) {
-                *is_hdmi = true;
+            if (dbs->payload.vendor.vendor_number[0] == 0x03
+                    && dbs->payload.vendor.vendor_number[1] == 0x0c
+                    && dbs->payload.vendor.vendor_number[2] == 0x00) {
                 return true;
             }
         }
-        idx = idx + 1 + data_block->length();
-    }
-
-    return true;
-}
-
-bool Edid::CheckForHdmi(bool* is_hdmi) const {
-    *is_hdmi = false;
-    if (base_edid_.num_extensions == 0) {
-        return true;
-    } else if (base_edid_.num_extensions == 1) {
-        // There's only one extension to check
-        return CheckBlockForHdmiVendorData(1, is_hdmi);
-    } else {
-        return CheckBlockMap(1, is_hdmi)
-            && (*is_hdmi || base_edid_.num_extensions < 128 || CheckBlockMap(128, is_hdmi));
-    }
+    } while ((++dbs).is_valid());
+    return false;
 }
 
 void convert_dtd_to_timing(const DetailedTimingDescriptor& dtd, timing_params* params) {
@@ -413,13 +361,13 @@ void timing_iterator::Advance() {
     }
 
     if (state_ == kStds) {
-        while (++state_index_ < fbl::count_of(edid_->base_edid_.standard_timings)) {
+        while (++state_index_ < fbl::count_of(edid_->base_edid_->standard_timings)) {
             const StandardTimingDescriptor* desc =
-                    edid_->base_edid_.standard_timings + state_index_;
+                    edid_->base_edid_->standard_timings + state_index_;
             if (desc->byte1 == 0x01 && desc->byte2 == 0x01) {
                 continue;
             }
-            convert_std_to_timing(edid_->base_edid_, *desc, &params_);
+            convert_std_to_timing(*edid_->base_edid_, *desc, &params_);
             return;
         }
 
@@ -451,9 +399,9 @@ Edid::descriptor_iterator& Edid::descriptor_iterator::operator++() {
     if (block_idx_ == 0) {
         descriptor_idx_++;
 
-        if (descriptor_idx_ < fbl::count_of(edid_->base_edid_.detailed_descriptors)) {
-            descriptor_ = edid_->base_edid_.detailed_descriptors[descriptor_idx_];
-            if (descriptor_.timing.pixel_clock_10khz != 0 || descriptor_.monitor.type != 0x10) {
+        if (descriptor_idx_ < fbl::count_of(edid_->base_edid_->detailed_descriptors)) {
+            descriptor_ = edid_->base_edid_->detailed_descriptors + descriptor_idx_;
+            if (descriptor_->timing.pixel_clock_10khz != 0 || descriptor_->monitor.type != 0x10) {
                 return *this;
             }
         }
@@ -463,11 +411,11 @@ Edid::descriptor_iterator& Edid::descriptor_iterator::operator++() {
     }
 
     while (block_idx_ < (edid_->len_ / kBlockSize)) {
-        CeaEdidTimingExtension cea_extn_block;
+        auto cea_extn_block = edid_->GetBlock<CeaEdidTimingExtension>(block_idx_);
         size_t offset = sizeof(CeaEdidTimingExtension::payload);
-        if (edid_->GetBlock(block_idx_, &cea_extn_block) &&
-                cea_extn_block.dtd_start_idx > offsetof(CeaEdidTimingExtension, payload)) {
-            offset = cea_extn_block.dtd_start_idx - offsetof(CeaEdidTimingExtension, payload);
+        if (cea_extn_block &&
+                cea_extn_block->dtd_start_idx > offsetof(CeaEdidTimingExtension, payload)) {
+            offset = cea_extn_block->dtd_start_idx - offsetof(CeaEdidTimingExtension, payload);
         }
 
         descriptor_idx_++;
@@ -476,9 +424,9 @@ Edid::descriptor_iterator& Edid::descriptor_iterator::operator++() {
         // Return if the descriptor is within bounds and either a timing descriptor or not
         // a dummy monitor descriptor, otherwise advance to the next block
         if (offset + sizeof(DetailedTimingDescriptor) <= sizeof(CeaEdidTimingExtension::payload)) {
-            descriptor_ = *reinterpret_cast<const Descriptor*>(cea_extn_block.payload + offset);
-            if (descriptor_.timing.pixel_clock_10khz != 0
-                    || descriptor_.monitor.type != Descriptor::Monitor::kDummyType) {
+            descriptor_ = reinterpret_cast<const Descriptor*>(cea_extn_block->payload + offset);
+            if (descriptor_->timing.pixel_clock_10khz != 0
+                    || descriptor_->monitor.type != Descriptor::Monitor::kDummyType) {
                 return *this;
             }
         }
@@ -491,17 +439,24 @@ Edid::descriptor_iterator& Edid::descriptor_iterator::operator++() {
     return *this;
 }
 
+Edid::data_block_iterator::data_block_iterator(const Edid* edid) : edid_(edid) {
+    ++(*this);
+    if (is_valid()) {
+        cea_revision_ = edid_->GetBlock<CeaEdidTimingExtension>(block_idx_)->revision_number;
+    }
+}
+
 Edid::data_block_iterator& Edid::data_block_iterator::operator++() {
     if (!edid_) {
         return *this;
     }
 
     while (block_idx_ < (edid_->len_ / kBlockSize)) {
-        CeaEdidTimingExtension cea_extn_block;
+        auto cea_extn_block = edid_->GetBlock<CeaEdidTimingExtension>(block_idx_);
         size_t dbc_end = 0;
-        if (edid_->GetBlock(block_idx_, &cea_extn_block)
-                && cea_extn_block.dtd_start_idx > offsetof(CeaEdidTimingExtension, payload)) {
-            dbc_end = cea_extn_block.dtd_start_idx - offsetof(CeaEdidTimingExtension, payload);
+        if (cea_extn_block &&
+                cea_extn_block->dtd_start_idx > offsetof(CeaEdidTimingExtension, payload)) {
+            dbc_end = cea_extn_block->dtd_start_idx - offsetof(CeaEdidTimingExtension, payload);
         }
 
         db_idx_++;
@@ -509,9 +464,9 @@ Edid::data_block_iterator& Edid::data_block_iterator::operator++() {
 
         uint32_t offset = 0;
         while (offset < dbc_end) {
-            auto* dblk = reinterpret_cast<DataBlock*>(cea_extn_block.payload + offset);
+            auto* dblk = reinterpret_cast<const DataBlock*>(cea_extn_block->payload + offset);
             if (db_to_skip == 0) {
-                db_ = *dblk;
+                db_ = dblk;
                 return *this;
             }
             db_to_skip--;
@@ -541,20 +496,12 @@ void Edid::Print(void (*print_fn)(const char* str)) const {
     }
 }
 
-uint16_t Edid::product_code() {
-    return base_edid_.product_code;
-}
-
-bool Edid::is_standard_rgb() {
-    return base_edid_.standard_srgb();
-}
-
-bool Edid::supports_basic_audio() {
+bool Edid::supports_basic_audio() const {
     uint8_t block_idx = 1; // Skip block 1, since it can't be a CEA block
     while (block_idx < (len_ / kBlockSize)) {
-        CeaEdidTimingExtension cea_extn_block;
-        if (GetBlock(block_idx, &cea_extn_block) && cea_extn_block.revision_number >= 2) {
-            return cea_extn_block.basic_audio();
+        auto cea_extn_block = GetBlock<CeaEdidTimingExtension>(block_idx);
+        if (cea_extn_block && cea_extn_block->revision_number >= 2) {
+            return cea_extn_block->basic_audio();
         }
         block_idx++;
     }
