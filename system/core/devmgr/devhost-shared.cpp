@@ -17,7 +17,7 @@
 zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
                         const void* data, size_t datalen,
                         const char* name, const char* args) {
-    uint32_t max = DC_MAX_DATA;
+    size_t max = DC_MAX_DATA;
     uint8_t* ptr = msg->data;
 
     if (data) {
@@ -27,7 +27,7 @@ zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
         memcpy(ptr, data, datalen);
         max -= datalen;
         ptr += datalen;
-        msg->datalen = datalen;
+        msg->datalen = static_cast<uint32_t>(datalen);
     } else {
         msg->datalen = 0;
     }
@@ -39,7 +39,7 @@ zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
         memcpy(ptr, name, datalen);
         max -= datalen;
         ptr += datalen;
-        msg->namelen = datalen;
+        msg->namelen = static_cast<uint32_t>(datalen);
     } else {
         msg->namelen = 0;
     }
@@ -50,11 +50,11 @@ zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
         }
         memcpy(ptr, args, datalen);
         ptr += datalen;
-        msg->argslen = datalen;
+        msg->argslen = static_cast<uint32_t>(datalen);
     } else {
         msg->argslen = 0;
     }
-    *len_out = sizeof(dc_msg_t) - DC_MAX_DATA + (ptr - msg->data);
+    *len_out = static_cast<uint32_t>(sizeof(dc_msg_t) - DC_MAX_DATA + (ptr - msg->data));
     return ZX_OK;
 }
 
@@ -108,10 +108,10 @@ zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
         .wr_handles = handles,
         .rd_bytes = rsp,
         .rd_handles = outhandle,
-        .wr_num_bytes = msglen,
-        .wr_num_handles = hcount,
-        .rd_num_bytes = rsplen,
-        .rd_num_handles = outhandle ? 1 : 0,
+        .wr_num_bytes = static_cast<uint32_t>(msglen),
+        .wr_num_handles = static_cast<uint32_t>(hcount),
+        .rd_num_bytes = static_cast<uint32_t>(rsplen),
+        .rd_num_handles = outhandle ? 1u : 0u,
     };
 
     if (outhandle) {

@@ -28,6 +28,7 @@
 #include <lib/fdio/util.h>
 
 #include "bootfs.h"
+#include "devhost.h"
 #include "devmgr.h"
 #include "memfs-private.h"
 
@@ -208,7 +209,8 @@ int crash_analyzer_listener(void* arg) {
         if (status != ZX_OK)
             goto cleanup;
 
-        const char* analyzer_command = getenv("crashsvc.analyzer");
+        const char* analyzer_command;
+        analyzer_command = getenv("crashsvc.analyzer");
         if (analyzer_command && strcmp(analyzer_command, "from-appmgr") == 0) {
             // TODO(abarth|scottmg): Appmgr appears to fail at lookups
             // containing /, so do lookup in two steps ("svc", then "Analyzer")
@@ -323,9 +325,7 @@ int service_starter(void* arg) {
                           &devmgr_launch_load, NULL, argc, args,
                           NULL, -1, NULL, NULL, 0, &proc, FS_ALL) == ZX_OK) {
             if (vruncmd) {
-                zx_info_handle_basic_t info = {
-                    .koid = 0,
-                };
+                zx_info_handle_basic_t info = {};
                 zx_object_get_info(proc, ZX_INFO_HANDLE_BASIC,
                                    &info, sizeof(info), NULL, NULL);
                 zx_handle_close(proc);
@@ -431,7 +431,7 @@ static int pwrbtn_monitor_starter(void* arg) {
 
     // create a namespace containing /dev/class/input and /dev/misc
     const char* nametable[2] = { };
-    size_t count = 0;
+    uint32_t count = 0;
     zx_handle_t fs_handle = fs_clone("dev/class/input");
     if (fs_handle != ZX_HANDLE_INVALID) {
         nametable[count] = "/input";
@@ -486,7 +486,7 @@ static void load_cmdline_from_bootfs(void) {
         return;
     }
 
-    char* cfg = malloc(file_size + 1);
+    auto cfg = static_cast<char*>(malloc(file_size + 1));
     if (cfg == NULL) {
         zx_handle_close(vmo);
         return;
@@ -640,7 +640,7 @@ static zx_status_t load_object(void* ctx, const char* name, zx_handle_t* vmo) {
     if (snprintf(tmp, sizeof(tmp), "lib/%s", name) >= (int)sizeof(tmp)) {
         return ZX_ERR_BAD_PATH;
     }
-    bootfs_t* bootfs = ctx;
+    auto bootfs = static_cast<bootfs_t*>(ctx);
     return bootfs_open(bootfs, tmp, vmo, NULL);
 }
 
@@ -657,6 +657,7 @@ static const loader_service_ops_t loader_ops = {
     .load_object = load_object,
     .load_abspath = load_abspath,
     .publish_data_sink = publish_data_sink,
+    .finalizer = nullptr,
 };
 
 static loader_service_t* loader_service;
@@ -719,7 +720,7 @@ void fshost_start(void) {
     }
 
     // pass bootdata VMOs to fshost
-    for (size_t m = 0; n < MAXHND; m++) {
+    for (uint32_t m = 0; n < MAXHND; m++) {
         uint32_t type = PA_HND(PA_VMO_BOOTDATA, m);
         if ((handles[n] = zx_take_startup_handle(type)) != ZX_HANDLE_INVALID) {
             devmgr_set_bootdata(handles[n]);
@@ -730,7 +731,7 @@ void fshost_start(void) {
     }
 
     // pass VDSO VMOS to fshost
-    for (size_t m = 0; n < MAXHND; m++) {
+    for (uint32_t m = 0; n < MAXHND; m++) {
         uint32_t type = PA_HND(PA_VMO_VDSO, m);
         if (m == 0) {
             // By this point, launchpad has already moved PA_HND(PA_VMO_VDSO, 0) into a static.
@@ -748,7 +749,7 @@ void fshost_start(void) {
     }
 
     // pass KERNEL FILE VMOS to fsboot
-    for (size_t m = 0; n < MAXHND; m++) {
+    for (uint32_t m = 0; n < MAXHND; m++) {
         uint32_t type = PA_HND(PA_VMO_KERNEL_FILE, m);
         if ((handles[n] = zx_take_startup_handle(type)) != ZX_HANDLE_INVALID) {
             types[n++] = type;
@@ -898,19 +899,26 @@ zx_status_t svchost_start(void) {
         goto error;
     }
 
-    const char* name = "svchost";
-    const char* argv[] = {"/boot/bin/svchost", require_system? "--require-system" : NULL};
-    int argc = require_system? 2 : 1;
+    const char* name;
+    name = "svchost";
+    const char* argv[2];
+    argv[0] = "/boot/bin/svchost";
+    argv[1] = require_system ? "--require-system" : NULL;
+    int argc;
+    argc = require_system? 2 : 1;
 
-    zx_handle_t svchost_vmo = devmgr_load_file(argv[0], NULL);
+    zx_handle_t svchost_vmo;
+    svchost_vmo = devmgr_load_file(argv[0], NULL);
     if (svchost_vmo == ZX_HANDLE_INVALID) {
         goto error;
     }
 
-    zx_handle_t job_copy = ZX_HANDLE_INVALID;
+    zx_handle_t job_copy;
+    job_copy = ZX_HANDLE_INVALID;
     zx_handle_duplicate(svcs_job_handle, ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MANAGE_JOB, &job_copy);
 
-    launchpad_t* lp = NULL;
+    launchpad_t* lp;
+    lp = NULL;
     launchpad_create(job_copy, name, &lp);
     launchpad_load_from_vmo(lp, svchost_vmo);
     launchpad_set_args(lp, argc, argv);
@@ -920,8 +928,10 @@ zx_status_t svchost_start(void) {
     // Remove once svchost hosts the tracelink serice itself.
     launchpad_add_handle(lp, appmgr_svc, PA_HND(PA_USER0, 0));
 
-    zx_handle_t process = ZX_HANDLE_INVALID;
-    const char* errmsg = NULL;
+    zx_handle_t process;
+    process = ZX_HANDLE_INVALID;
+    const char* errmsg;
+    errmsg = NULL;
     if ((status = launchpad_go(lp, &process, &errmsg)) < 0) {
         printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
                argv[0], name, errmsg, status);

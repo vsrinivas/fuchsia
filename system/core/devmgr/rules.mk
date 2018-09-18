@@ -14,8 +14,8 @@ MODULE_GROUP := core
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.cpp \
-    $(LOCAL_DIR)/devhost-shared.c \
-    $(LOCAL_DIR)/devmgr.c \
+    $(LOCAL_DIR)/devhost-shared.cpp \
+    $(LOCAL_DIR)/devmgr.cpp \
     $(LOCAL_DIR)/devmgr-binding.cpp \
     $(LOCAL_DIR)/devmgr-coordinator.cpp \
     $(LOCAL_DIR)/devmgr-devfs.cpp \
@@ -153,7 +153,7 @@ MODULE_NAME := dmctl
 
 MODULE_SRCS := \
 	$(LOCAL_DIR)/dmctl.cpp \
-	$(LOCAL_DIR)/devhost-shared.c \
+	$(LOCAL_DIR)/devhost-shared.cpp \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/port
 

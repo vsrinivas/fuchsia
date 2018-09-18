@@ -103,42 +103,74 @@ static zx_status_t default_message(void *ctx, fidl_msg_t* msg, fidl_txn_t* txn) 
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_protocol_device_t device_default_ops = {
-    .open = default_open,
-    .open_at = default_open_at,
-    .close = default_close,
-    .unbind = default_unbind,
-    .release = default_release,
-    .read = default_read,
-    .write = default_write,
-    .get_size = default_get_size,
-    .ioctl = default_ioctl,
-    .suspend = default_suspend,
-    .resume = default_resume,
-    .rxrpc = default_rxrpc,
-    .message = default_message,
-};
+zx_protocol_device_t device_default_ops = []() {
+    zx_protocol_device_t ops = {};
+    ops.open = default_open;
+    ops.open_at = default_open_at;
+    ops.close = default_close;
+    ops.unbind = default_unbind;
+    ops.release = default_release;
+    ops.read = default_read;
+    ops.write = default_write;
+    ops.get_size = default_get_size;
+    ops.ioctl = default_ioctl;
+    ops.suspend = default_suspend;
+    ops.resume = default_resume;
+    ops.rxrpc = default_rxrpc;
+    ops.message = default_message;
+    return ops;
+}();
 
+[[noreturn]]
 static void device_invalid_fatal(void* ctx) {
     printf("devhost: FATAL: zx_device_t used after destruction.\n");
     __builtin_trap();
 }
 
-static zx_protocol_device_t device_invalid_ops = {
-    .open = (void*) device_invalid_fatal,
-    .open_at = (void*) device_invalid_fatal,
-    .close = (void*) device_invalid_fatal,
-    .unbind = (void*) device_invalid_fatal,
-    .release = (void*) device_invalid_fatal,
-    .read = (void*) device_invalid_fatal,
-    .write = (void*) device_invalid_fatal,
-    .get_size = (void*) device_invalid_fatal,
-    .ioctl = (void*) device_invalid_fatal,
-    .suspend = (void*) device_invalid_fatal,
-    .resume = (void*) device_invalid_fatal,
-    .rxrpc = (void*) device_invalid_fatal,
-    .message = (void*) device_invalid_fatal,
-};
+static zx_protocol_device_t device_invalid_ops = []() {
+    zx_protocol_device_t ops = {};
+    ops.open = +[](void* ctx, zx_device_t**, uint32_t) -> zx_status_t {
+        device_invalid_fatal(ctx);
+    };
+    ops.open_at = +[](void* ctx, zx_device_t**, const char*, uint32_t) -> zx_status_t {
+        device_invalid_fatal(ctx);
+    };
+    ops.close = +[](void* ctx, uint32_t) -> zx_status_t {
+        device_invalid_fatal(ctx);
+    };
+    ops.unbind = +[](void* ctx) {
+        device_invalid_fatal(ctx);
+    };
+    ops.release = +[](void* ctx) {
+        device_invalid_fatal(ctx);
+    };
+    ops.read = +[](void* ctx, void*, size_t, size_t, size_t*) -> zx_status_t {
+        device_invalid_fatal(ctx);
+    };
+    ops.write = +[](void* ctx, const void*, size_t, size_t, size_t*) -> zx_status_t {
+        device_invalid_fatal(ctx);
+    };
+    ops.get_size = +[](void* ctx) -> zx_off_t {
+        device_invalid_fatal(ctx);
+    };
+    ops.ioctl = +[](void* ctx, uint32_t, const void*, size_t, void*, size_t, size_t*)
+        -> zx_status_t {
+        device_invalid_fatal(ctx);
+    };
+    ops.suspend = +[](void* ctx, uint32_t) -> zx_status_t {
+        device_invalid_fatal(ctx);
+    };
+    ops.resume = +[](void* ctx, uint32_t) -> zx_status_t {
+        device_invalid_fatal(ctx);
+    };
+    ops.rxrpc = +[](void* ctx, zx_handle_t) -> zx_status_t {
+        device_invalid_fatal(ctx);
+    };
+    ops.message = +[](void* ctx, fidl_msg_t*, fidl_txn_t*) -> zx_status_t {
+        device_invalid_fatal(ctx);
+    };
+    return ops;
+}();
 
 // Maximum number of dead devices to hold on the dead device list
 // before we start free'ing the oldest when adding a new one.
@@ -303,7 +335,7 @@ zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    zx_device_t* dev = malloc(sizeof(zx_device_t));
+    auto dev = static_cast<zx_device_t*>(malloc(sizeof(zx_device_t)));
     if (dev == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -405,7 +437,8 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
         goto fail;
     }
 
-    creation_context_t* ctx = NULL;
+    creation_context_t* ctx;
+    ctx = NULL;
 
     // if creation ctx (thread local) is set, we are in a thread
     // that is handling a bind() or create() callback and if that
