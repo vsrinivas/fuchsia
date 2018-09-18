@@ -103,13 +103,6 @@ void AudioCoreImpl::CreateAudioIn(
       AudioInImpl::Create(std::move(audio_in_request), this, loopback));
 }
 
-// TODO(dalesat): Remove.
-void AudioCoreImpl::CreateAudioRenderer2(
-    fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> audio_renderer) {
-  FXL_LOG(ERROR) << "CreateAudioRenderer2 is no longer supported.";
-  Shutdown();
-}
-
 void AudioCoreImpl::SetSystemGain(float gain_db) {
   gain_db = std::max(std::min(gain_db, kMaxSystemAudioGainDb),
                      fuchsia::media::MUTED_GAIN_DB);

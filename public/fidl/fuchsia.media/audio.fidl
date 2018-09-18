@@ -68,10 +68,6 @@ interface Audio {
   0x0705: -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
   0x0706: SetRoutingPolicy(AudioOutputRoutingPolicy policy);
-
-  // DEPRECATED
-  // TODO(dalesat): Remove.
-  0xffff: CreateAudioRenderer2(request<AudioRenderer2> renderer_request);
 };
 
 // A placeholder for various types of simple routing policies.  This should be

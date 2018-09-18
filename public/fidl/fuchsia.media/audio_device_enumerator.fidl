@@ -87,8 +87,8 @@ interface AudioDeviceEnumerator {
   // ZX_KOID_INVALID if no such device exists.
   //
   // TODO(mpuryear): solidify the concept of "default" device.  Right now, it
-  // basically means the device which would be chosen for an AudioRenderer or
-  // AudioCapturer in the absence of...
+  // basically means the device which would be chosen as the destination of an
+  // AudioOut stream (or the source for an AudioIn stream), in the absence of...
   //
   // 1) Any manual routing configuration imposed by the user.
   // 2) Any property based routing decision made by the audio service.

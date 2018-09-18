@@ -8,8 +8,8 @@ Example usage:
 
 fidlmerge -template serviceimpl \
     -json out/x64/fidling/gen/garnet/public/fidl/fuchsia.media/fidl.fidl.json \
-    -output-base audio_renderer2_impl \
-    -options interface=fuchsia.media/AudioRenderer2
+    -output-base audio_out_impl \
+    -options interface=fuchsia.media/AudioOut
 
 */}}
 

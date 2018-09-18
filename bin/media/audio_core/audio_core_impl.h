@@ -36,11 +36,6 @@ class AudioCoreImpl : public fuchsia::media::Audio {
       fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
       bool loopback) final;
 
-  // TODO(dalesat): Remove.
-  void CreateAudioRenderer2(
-      fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> audio_renderer)
-      final;
-
   void SetSystemGain(float gain_db) final;
   void SetSystemMute(bool muted) final;
 
