@@ -8,7 +8,7 @@
 #include "garnet/bin/cobalt/utils/fuchsia_http_client.h"
 #include "lib/backoff/exponential_backoff.h"
 #include "third_party/cobalt/encoder/file_observation_store.h"
-#include "third_party/cobalt/encoder/posix_file_system.h"
+#include "third_party/cobalt/util/posix_file_system.h"
 
 namespace cobalt {
 
@@ -19,8 +19,8 @@ using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
 using encoder::FileObservationStore;
 using encoder::LegacyShippingManager;
-using encoder::PosixFileSystem;
 using encoder::ShippingManager;
+using util::PosixFileSystem;
 using utils::FuchsiaHTTPClient;
 
 // Each "send attempt" is actually a cycle of potential retries. These

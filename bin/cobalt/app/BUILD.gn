@@ -31,6 +31,7 @@ source_set("lib") {
     "//garnet/public/lib/network_wrapper",
     "//third_party/cobalt/config:cobalt_config_proto",
     "//third_party/cobalt/encoder",
+    "//third_party/cobalt/util:posix_file_system",
     "//third_party/cobalt/util:pem_util",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
