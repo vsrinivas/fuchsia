@@ -25,7 +25,7 @@ struct Bookkeeping {
   ~Bookkeeping() = default;
 
   MixerPtr mixer;
-  Gain::AScale amplitude_scale;
+  Gain gain;
 
   uint32_t step_size;
   uint32_t rate_modulo;

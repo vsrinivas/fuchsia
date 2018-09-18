@@ -674,7 +674,7 @@ void AudioOutImpl::SetGain(float gain_db) {
     for (const auto& link : dest_links_) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
       auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-      packet_link->gain().SetAudioOutGain(effective_gain_db);
+      packet_link->bookkeeping()->gain.SetAudioOutGain(effective_gain_db);
     }
   }
 
@@ -694,7 +694,7 @@ void AudioOutImpl::SetMute(bool mute) {
     for (const auto& link : dest_links_) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
       auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-      packet_link->gain().SetAudioOutGain(effective_gain_db);
+      packet_link->bookkeeping()->gain.SetAudioOutGain(effective_gain_db);
     }
   }
 

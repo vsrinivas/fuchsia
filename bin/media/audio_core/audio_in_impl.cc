@@ -847,6 +847,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
   if (capture_gain_db <= fuchsia::media::MUTED_GAIN_DB) {
     return true;
   }
+  FXL_DCHECK(capture_gain_db <= fuchsia::media::MAX_GAIN_DB);
 
   bool accumulate = false;
   for (auto& link : source_link_refs_) {
@@ -874,13 +875,15 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
     Bookkeeping* bk = static_cast<Bookkeeping*>(link->bookkeeping().get());
     FXL_DCHECK(bk != nullptr);
 
-    // Figure out the fixed point gain scalar we will apply to this mix
-    // operation by composing our gain with the link gain state.  The link's
-    // gain helper class re-composes the source/dest gain combination if needed.
-    bk->amplitude_scale = link->gain().GetGainScale(capture_gain_db);
+    // Note that in capture cases, the Gain object's 'source' gain is the system
+    // (or input device) gain, whereas the (provided) 'dest' gain for this call
+    // is the stream gain. For capture links, however, we do not yet reference
+    // master or device gain, instead leaving it as its default value of 0dB.
+    // TODO(mpuryear): incorporate system (or device) gain for capture mixes.
+    //
     // If this gain scale is at or below our mute threshold, skip this source,
     // as it will not contribute to this mix pass.
-    if (bk->amplitude_scale <= Gain::MuteThreshold()) {
+    if (bk->gain.GetGainScale(capture_gain_db) <= Gain::MuteThreshold()) {
       continue;
     }
 
@@ -1049,6 +1052,11 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
       zx_cache_flush(region_source, cache_target_frames * rb->frame_size(),
                      ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
 
+      Gain::AScale amplitude_scale = bk->gain.GetGainScale(capture_gain_db);
+
+      FXL_LOG(INFO) << "Will apply amplitude_scale:" << amplitude_scale
+                    << " for capture_gain_db:" << capture_gain_db;
+
       // Looks like we are ready to go. Mix.
       // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
       //
@@ -1079,7 +1087,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
       bool consumed_source = bk->mixer->Mix(
           buf, frames_left, &output_offset, region_source,
           region_frac_frame_len, &frac_source_offset, bk->step_size,
-          bk->amplitude_scale, accumulate, bk->rate_modulo, bk->denominator());
+          amplitude_scale, accumulate, bk->rate_modulo, bk->denominator());
       FXL_DCHECK(output_offset <= frames_left);
 
       if (!consumed_source) {

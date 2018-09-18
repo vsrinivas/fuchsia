@@ -94,14 +94,14 @@ TEST(Gain, MaxClamp) {
   Gain gain, expect_gain;
   Gain::AScale amplitude_scale;
 
-  // AudioOutGain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
+  // AudioOut Gain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
   gain.SetAudioOutGain(Gain::kMaxGainDb * 2);
   amplitude_scale = gain.GetGainScale(0.0f);
   EXPECT_EQ(Gain::kMaxScale, amplitude_scale);
 
   constexpr float kScale24DbDown = 0.0630957344f;
   // System limits AudioOutGain to kMaxGainDb, even when the sum is less than 0.
-  // RenderGain +36dB (clamped to +24dB) plus OutputGain -48dB becomes -24dB.
+  // AudioOut Gain +36dB (clamped to +24dB) plus system Gain -48dB ==> -24dB.
   gain.SetAudioOutGain(Gain::kMaxGainDb * 1.5f);
   amplitude_scale = gain.GetGainScale(-2 * Gain::kMaxGainDb);
   EXPECT_EQ(kScale24DbDown, amplitude_scale);
@@ -111,16 +111,15 @@ TEST(Gain, MaxClamp) {
   amplitude_scale = gain.GetGainScale(0.05f);
   EXPECT_EQ(Gain::kMaxScale, amplitude_scale);
 
-  // System limits OutputGain to 0, independent of AudioOut gain.
-  // RendGain = -kMaxGainDb, OutGain = 1.0 (limited to 0). Expect -kMaxGainDb.
-  gain.SetAudioOutGain(-Gain::kMaxGainDb);
-  amplitude_scale = gain.GetGainScale(1.0);
+  // AudioCore limits master to 0dB, but Gain object handles up to kMaxGainDb.
+  // Master +36dB (clamped to +24dB) plus stream gain -48dB becomes -24dB.
+  gain.SetAudioOutGain(-2 * Gain::kMaxGainDb);
+  amplitude_scale = gain.GetGainScale(Gain::kMaxGainDb * 1.5f);
   EXPECT_EQ(kScale24DbDown, amplitude_scale);
 }
 
-// System independently limits AudioOutGain and OutputGain to kMinGainDb
-// (-160dB). Is scale set to zero, if either (or the combo) is at or below
-// kMinGainDb?
+// System independently limits AudioOut and Output Gains to kMinGainDb (-160dB).
+// Assert scale is zero, if either (or combo) are kMinGainDb or less.
 TEST(Gain, MinMute) {
   Gain gain;
   Gain::AScale amplitude_scale;

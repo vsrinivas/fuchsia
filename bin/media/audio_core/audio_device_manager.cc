@@ -291,6 +291,8 @@ void AudioDeviceManager::OnSystemGainChanged() {
       UpdateDeviceToSystemGain(&device);
       NotifyDeviceGainChanged(device);
     }
+    // TODO(mpuryear): update src_gain for Gain objects in capture-side links,
+    // so that master (or device) gain is accounted for in AudioIn volume.
   }
 }
 
@@ -479,7 +481,7 @@ void AudioDeviceManager::SetRoutingPolicy(
   if (!ValidateRoutingPolicy(routing_policy)) {
     FXL_LOG(ERROR) << "Out-of-range RoutingPolicy("
                    << fidl::ToUnderlying(routing_policy) << ")";
-    // TODO(mpuryear) Once AudioCore has a way to know which connection made
+    // TODO(mpuryear): Once AudioCore has a way to know which connection made
     // this request, terminate that connection now rather than doing nothing.
     return;
   }

@@ -57,7 +57,7 @@ library fuchsia.media;
 // modes: Synchronous and Asynchronous.  A description of each mode and their
 // tradeoffs is given below.
 //
-// (TODO(mpuryear) : can we come up with better names than these?  Both are
+// (TODO(mpuryear): can we come up with better names than these?  Both are
 // really async modes under the hood).
 //
 // ** Synchronous mode **
@@ -154,7 +154,7 @@ library fuchsia.media;
 // AudioIn should be expected to be in the past relative to 'now' on the
 // CLOCK_MONOTONIC timeline.
 //
-// TODO(mpuryear) : Specify the way in which timestamps relative to a different
+// TODO(mpuryear): Specify the way in which timestamps relative to a different
 // clock (such as an audio domain clock) may be delivered to a client.
 //
 // The one exception to the "everything has an explicit timestamp" rule is when
@@ -296,7 +296,7 @@ interface AudioIn : StreamBufferSet, StreamSource {
   // retrieve the stream type -- at the time the AudioIn was created -- of the
   // source (input or looped-back output) to which the AudioIn is bound.
   //
-  // TODO(mpuryear) : Get rid of this.  Eventually, AudioIns will be bindable to
+  // TODO(mpuryear): Get rid of this.  Eventually, AudioIns will be bindable to
   // a set of inputs/outputs/renderers, so the concept of a "native" stream type
   // will go away.  Mechanisms will need to be put in place to allow users to
   // enumerate the configuration of these bind-able endpoints (and perhaps to

@@ -262,13 +262,6 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
         }
       }
 
-      // Capture the amplitude to apply for the next bit of audio, recomputing
-      // as needed.
-      if (task_type == TaskType::Mix) {
-        info->amplitude_scale =
-            packet_link->gain().GetGainScale(cur_mix_job_.sw_output_gain_db);
-      }
-
       // Now process the packet which is at the front of the audio out's queue.
       // If the packet has been entirely consumed, pop it off the front and
       // proceed to the next one.  Otherwise, we are finished.
@@ -415,6 +408,10 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
   FXL_DCHECK(packet->frac_frame_len() <=
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
 
+  FXL_DCHECK(cur_mix_job_.sw_output_gain_db <= 0.0f);
+  Gain::AScale amplitude_scale =
+      info->gain.GetGainScale(cur_mix_job_.sw_output_gain_db);
+
   bool consumed_source = false;
   if (frac_input_offset < static_cast<int32_t>(packet->frac_frame_len())) {
     // When calling Mix(), we communicate the resampling rate with three
@@ -446,7 +443,7 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
     consumed_source = info->mixer->Mix(
         buf, frames_left, &output_offset, packet->payload(),
         packet->frac_frame_len(), &frac_input_offset, info->step_size,
-        info->amplitude_scale, cur_mix_job_.accumulate, info->rate_modulo,
+        amplitude_scale, cur_mix_job_.accumulate, info->rate_modulo,
         info->denominator());
     FXL_DCHECK(output_offset <= frames_left);
   }
