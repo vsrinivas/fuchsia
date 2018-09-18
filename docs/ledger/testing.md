@@ -140,7 +140,7 @@ real server.
 You can run the tests from the host as follows:
 
 ```sh
-fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/e2e_sync.cmx"
+fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/ledger_e2e_sync.cmx"
 ```
 
 ## See also

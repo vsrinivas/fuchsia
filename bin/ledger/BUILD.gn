@@ -59,8 +59,8 @@ package("ledger_tests") {
       dest = "validation_firestore.cmx"
     },
     {
-      path = rebase_path("tests/e2e_sync/e2e_sync.cmx")
-      dest = "e2e_sync.cmx"
+      path = rebase_path("tests/e2e_sync/ledger_e2e_sync.cmx")
+      dest = "ledger_e2e_sync.cmx"
     },
   ]
 
