@@ -4,14 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <dev/hw_rng.h>
+
+#include <arch/x86/feature.h>
+#include <arch/x86/x86intrin.h>
+#include <fbl/algorithm.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
-
-#include <arch/x86/feature.h>
-#include <arch/x86/x86intrin.h>
-#include <dev/hw_rng.h>
 
 enum entropy_instr {
     ENTROPY_INSTR_RDSEED,
@@ -53,18 +54,21 @@ static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-__attribute__((target("rdrnd,rdseed")))
-static bool instruction_step(enum entropy_instr instr,
-                             unsigned long long int* val) {
+__attribute__((target("rdrnd,rdseed"))) static bool instruction_step(enum entropy_instr instr,
+                                                                     unsigned long long int* val) {
     switch (instr) {
-        case ENTROPY_INSTR_RDRAND: return _rdrand64_step(val);
-        case ENTROPY_INSTR_RDSEED: return _rdseed64_step(val);
-        default: panic("Invalid entropy instruction %u\n", instr);
+    case ENTROPY_INSTR_RDRAND:
+        return _rdrand64_step(val);
+    case ENTROPY_INSTR_RDSEED:
+        return _rdseed64_step(val);
+    default:
+        panic("Invalid entropy instruction %d\n", (int)instr);
     }
 }
 
 static ssize_t get_entropy_from_instruction(void* buf, size_t len, bool block,
                                             enum entropy_instr instr) {
+
     size_t written = 0;
     while (written < len) {
         unsigned long long int val = 0;
@@ -74,8 +78,8 @@ static ssize_t get_entropy_from_instruction(void* buf, size_t len, bool block,
             }
             continue;
         }
-        const size_t to_copy = (len < sizeof(val)) ? len : sizeof(val);
-        memcpy(buf + written, &val, to_copy);
+        const size_t to_copy = fbl::min(len, sizeof(val));
+        memcpy(static_cast<uint8_t*>(buf) + written, &val, to_copy);
         written += to_copy;
     }
     if (block) {
@@ -98,8 +102,7 @@ static ssize_t get_entropy_from_rdrand(void* buf, size_t len, bool block) {
     return get_entropy_from_instruction(buf, len, block, ENTROPY_INSTR_RDRAND);
 }
 
-size_t hw_rng_get_entropy(void* buf, size_t len, bool block)
-{
+size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
     if (!len) {
         return 0;
     }
