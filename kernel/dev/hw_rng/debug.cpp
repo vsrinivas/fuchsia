@@ -5,21 +5,20 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <dev/hw_rng.h>
 
 #include <debug.h>
-#include <dev/hw_rng.h>
+#include <fbl/algorithm.h>
 #include <lib/console.h>
 #include <stdlib.h>
 
-static int cmd_rng32(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_rng32(int argc, const cmd_args* argv, uint32_t flags) {
     uint32_t val = hw_rng_get_u32();
     printf("Random val = %u (0x%08x)\n", val, val);
     return ZX_OK;
 }
 
-static int cmd_rng(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_rng(int argc, const cmd_args* argv, uint32_t flags) {
     if ((argc < 2) || (argc > 3)) {
         printf("Invalid argument count\n\n"
                "Usage : %s <N> [wait]\n"
@@ -38,7 +37,7 @@ static int cmd_rng(int argc, const cmd_args *argv, uint32_t flags)
         uint8_t bytes[16];
         size_t todo, done;
 
-        todo = MIN(sizeof(bytes), argv[1].u - offset);
+        todo = fbl::min(sizeof(bytes), argv[1].u - offset);
         done = hw_rng_get_entropy(bytes, todo, wait);
         DEBUG_ASSERT(done <= todo);
 
@@ -47,7 +46,7 @@ static int cmd_rng(int argc, const cmd_args *argv, uint32_t flags)
 
         if (done < todo) {
             printf("Entropy exhausted after %zu byte%s\n",
-                    offset, offset == 1 ? "" : "s");
+                   offset, offset == 1 ? "" : "s");
             break;
         }
     }
