@@ -10,6 +10,7 @@ import (
 
 	"thinfs/fs"
 	"thinfs/fs/msdosfs/bootrecord"
+	"thinfs/fs/msdosfs/clock"
 	"thinfs/fs/msdosfs/direntry"
 )
 
@@ -294,14 +295,14 @@ func (n *node) writeAt(buf []byte, off int64) (int, error) {
 		}
 		if err != nil {
 			if bytesWritten > 0 {
-				n.mtime = direntry.ModifyTime(time.Now())
+				n.mtime = direntry.ModifyTime(clock.Now())
 			}
 			return bytesWritten, err
 		}
 	}
 
 	if bytesWritten > 0 {
-		n.mtime = direntry.ModifyTime(time.Now())
+		n.mtime = direntry.ModifyTime(clock.Now())
 	}
 
 	// We successfully wrote as many bytes as possible, but the request was still for an unmanagable

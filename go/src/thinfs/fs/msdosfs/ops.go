@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"thinfs/fs"
+	"thinfs/fs/msdosfs/clock"
 	"thinfs/fs/msdosfs/direntry"
 	"thinfs/fs/msdosfs/node"
 )
@@ -635,7 +636,7 @@ func createIncremental(parent node.DirectoryNode, name string, flags fs.OpenFlag
 	}
 
 	// Create the child directory and ACQUIRE it from the dcache.
-	child, err := parent.Metadata().Dcache.CreateOrAcquire(parent.Metadata(), newCluster, time.Now())
+	child, err := parent.Metadata().Dcache.CreateOrAcquire(parent.Metadata(), newCluster, clock.Now())
 	if err != nil {
 		panic("Unable to create new directory after allocating cluster")
 	}

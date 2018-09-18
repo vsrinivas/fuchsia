@@ -12,6 +12,7 @@ import (
 	"github.com/golang/glog"
 
 	"thinfs/fs"
+	"thinfs/fs/msdosfs/clock"
 )
 
 // GetDirentryCallback returns the directory entry at an index.
@@ -64,7 +65,7 @@ func New(name string, cluster uint32, attr fs.FileType) *Dirent {
 
 	// Set cluster.
 	d.Cluster = cluster
-	d.WriteTime = CreateTime(time.Now()) // File creation is considered a write
+	d.WriteTime = CreateTime(clock.Now()) // File creation is considered a write
 	// "size" can be set to zero. File and directories start with zero size.
 
 	// Set Attributes

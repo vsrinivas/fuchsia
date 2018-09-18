@@ -14,12 +14,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"thinfs/block/file"
 	"thinfs/fs"
 	"thinfs/fs/msdosfs"
+	"thinfs/fs/msdosfs/clock"
 )
 
 var (
@@ -33,10 +36,21 @@ var (
 	manifest      = flag.String("manifest", "", "(optional) Path to a manifest file of the form `dst=src\n` to import to partition")
 	zedboot       = flag.String("zedboot", "", "(optional) Path to a source file for zedboot.bin")
 	cmdline       = flag.String("cmdline", "", "(optional) Bootloader cmdline file")
+	timestamp     = flag.Int64("timestamp", -1, "(optional) Unix timestamp in seconds used to "+
+		"create all files. The actual timestamp used may be different due to FAT32's limit time "+
+		"granularity")
 )
 
 // minSize is the minimum image size, as the tool currently always builds fat32.
 const minSize = 63 * 1024 * 1024
+
+type fixedClock struct {
+	now time.Time
+}
+
+func (c *fixedClock) Now() time.Time {
+	return c.now
+}
 
 func main() {
 	flag.Parse()
@@ -109,6 +123,24 @@ func main() {
 	}
 	*size = alignSize(*size)
 
+	if *timestamp >= 0 {
+		now := time.Unix(*timestamp, 0)
+
+		// FAT32 starts at 1980-01-01 to 2107-12-31, so clamp to that range.
+		if now.Year() < 1980 {
+			now = time.Date(1980, 1, 1, 0, 0, 0, 0, time.Local)
+		} else if now.Year() > 2107 {
+			now = time.Date(2107, 12, 31, 23, 59, 58, 0, time.Local)
+		}
+
+		// FAT stores modification time at 2s granularity
+		now = now.Truncate(time.Second * 2)
+
+		clock.Now = func() time.Time {
+			return now
+		}
+	}
+
 	f, err := os.Create(*target)
 	if err != nil {
 		log.Fatal(err)
@@ -122,7 +154,14 @@ func main() {
 		"-L", "ESP",
 		"-O", "Fuchsia",
 		"-b", "512",
-		*target}
+	}
+
+	if *timestamp >= 0 {
+		args = append(args, "-T", strconv.FormatInt(*timestamp, 10))
+	}
+
+	args = append(args, *target)
+
 	cmd := exec.Command(args[0], args[1:]...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -144,9 +183,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Sort the files we are going to copy to make sure the EFI partition
+	// is reproducible.
+	var dsts []string
+	for dst := range dstSrc {
+		dsts = append(dsts, dst)
+	}
+	sort.Strings(dsts)
+
 	root := fatfs.RootDirectory()
-	for dst, src := range dstSrc {
-		msCopyIn(root, src, dst)
+	for _, dst := range dsts {
+		msCopyIn(root, dstSrc[dst], dst)
 	}
 
 	root.Sync()
