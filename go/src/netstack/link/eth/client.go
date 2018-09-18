@@ -402,8 +402,11 @@ func (c *Client) WaitSend() error {
 		err := c.txCompleteLocked()
 		canSend := c.txInFlight < c.txDepth
 		c.mu.Unlock()
-		if canSend || err != nil {
+		if err != nil {
 			return err
+		}
+		if canSend {
+			return nil
 		}
 		// Errors from waiting handled in txComplete.
 		zxwait.Wait(c.tx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite)
@@ -420,23 +423,22 @@ func (c *Client) WaitRecv() {
 		} else if obs&ZXSIO_ETH_SIGNAL_STATUS != 0 {
 			// TODO(): The wired Ethernet should receive this signal upon being
 			// hooked up with a (an active) Ethernet cable.
-			m := syscall.FDIOForFD(int(c.f.Fd()))
-			status, err := IoctlGetStatus(m)
+			if status, err := c.GetStatus(); err != nil {
+				log.Printf("eth status error: %v", err)
+			} else {
+				trace.DebugTraceDeep(5, "status %d", status)
 
-			trace.DebugTraceDeep(5, "status %d FD %d", status, int(c.f.Fd()))
+				c.mu.Lock()
+				switch status {
+				case LinkDown:
+					c.changeStateLocked(StateDown)
+				case LinkUp:
+					c.changeStateLocked(StateStarted)
+				}
+				c.mu.Unlock()
 
-			c.mu.Lock()
-			switch status {
-			case 0:
-				c.changeStateLocked(StateDown)
-			case 1:
-				c.changeStateLocked(StateStarted)
-			default:
-				log.Printf("Unknown eth status=%d, %v", status, err)
+				continue
 			}
-			c.mu.Unlock()
-
-			continue
 		}
 
 		break
@@ -467,7 +469,7 @@ func (c *Client) GetStatus() (LinkStatus, error) {
 type State int
 
 const (
-	StateUnknown = State(iota)
+	StateUnknown State = iota
 	StateStarted
 	StateDown
 	StateClosed

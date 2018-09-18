@@ -37,7 +37,7 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 	}
 
 	// TODO(tkilbourn): distinguish between enabled and link up
-	var status uint32 = 0
+	var status uint32
 	if ifs.state == eth.StateStarted {
 		status |= stack.InterfaceStatusEnabled
 	}
@@ -110,7 +110,7 @@ func setInterfaceState(id uint64, enabled bool) *stack.Error {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
-	var ifs *ifState = nil
+	var ifs *ifState
 	for i, ifState := range ns.ifStates {
 		if uint64(i) == id {
 			ifs = ifState
@@ -133,7 +133,7 @@ func addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *stack.Error {
 	// The ns mutex is held in the setInterfaceAddress call below so release it
 	// after we find the right ifState.
 	ns.mu.Lock()
-	var ifs *ifState = nil
+	var ifs *ifState
 	for i, ifState := range ns.ifStates {
 		if uint64(i) == id {
 			ifs = ifState
