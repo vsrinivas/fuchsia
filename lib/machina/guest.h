@@ -62,6 +62,9 @@ class Guest {
   // Creates a vmar for a specific region of guest memory.
   zx_status_t CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar);
 
+  fbl::SinglyLinkedList<fbl::unique_ptr<IoMapping>>::const_iterator mappings_begin() const { return mappings_.begin();}
+  fbl::SinglyLinkedList<fbl::unique_ptr<IoMapping>>::const_iterator mappings_end() const { return mappings_.end();}
+
  private:
   // TODO(alexlegg): Consolidate this constant with other definitions in Garnet.
   static constexpr size_t kMaxVcpus = 16u;

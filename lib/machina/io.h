@@ -75,6 +75,11 @@ class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
     return size_;
   }
 
+  uint32_t kind() const {
+    canary_.Assert();
+    return kind_;
+  }
+
   zx_status_t Read(uint64_t addr, IoValue* value) const {
     canary_.Assert();
     const uint64_t address = addr - base_ + offset_;

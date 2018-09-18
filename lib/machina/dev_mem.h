@@ -13,9 +13,6 @@ namespace machina {
 
 class DevMem {
  public:
-  static constexpr zx_gpaddr_t kAddrLowerBound = 0xc00000000;
-  static constexpr zx_gpaddr_t kAddrUpperBound = 0x1000000000;
-
   struct Range {
     zx_gpaddr_t addr;
     size_t size;
@@ -24,19 +21,13 @@ class DevMem {
 
     bool contains(const Range& r) const { return !(r < *this) && !(*this < r); }
   };
-  static constexpr Range kAddrLowerRange = Range{0, kAddrLowerBound};
-  static constexpr Range kAddrHigherRange =
-      Range{kAddrUpperBound, SIZE_MAX - kAddrUpperBound};
   using RangeSet = std::set<Range>;
 
   bool AddRange(zx_gpaddr_t addr, size_t size) {
-    Range candidate = Range{addr, size};
-    if (size == 0 || kAddrLowerRange.contains(candidate) ||
-        kAddrHigherRange.contains(candidate)) {
+    if (size == 0) {
       return false;
-    } else {
-      return ranges.emplace(candidate).second;
     }
+    return ranges.emplace(Range{addr,size}).second;
   }
 
   const RangeSet::const_iterator begin() const { return ranges.begin(); }

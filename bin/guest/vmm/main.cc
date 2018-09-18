@@ -75,6 +75,10 @@ static constexpr uint64_t kUartBases[kNumUarts] = {
 
 static constexpr size_t kInputQueueDepth = 64;
 
+// For devices that can have their addresses anywhere we run a dynamic
+// allocator that starts fairly high in the guest physical address space.
+static constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xc00000000;
+
 static void balloon_stats_handler(machina::VirtioBalloon* balloon,
                                   uint32_t threshold,
                                   const virtio_balloon_stat_t* stats,
@@ -159,6 +163,13 @@ static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
   return parser.ParseArgcArgv(argc, argv);
 }
 
+static zx_gpaddr_t allocate_device_addr(size_t device_size) {
+  static zx_gpaddr_t next_device_addr = kFirstDynamicDeviceAddr;
+  zx_gpaddr_t ret = next_device_addr;
+  next_device_addr += device_size;
+  return ret;
+}
+
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
@@ -174,13 +185,12 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  // To ensure that device memory and physical memory do not overlap we only
-  // need to check that we have not requested too much physical memory. This
-  // is because the guest will be told physical memory is from
-  // 0 -> phys_mem.size() and devices might start at DevMem::kAddrLowerBound.
-  if (cfg.memory() >= machina::DevMem::kAddrLowerBound) {
-    FXL_LOG(ERROR) << "Requested memory must be less than "
-                   << machina::DevMem::kAddrLowerBound;
+  // Having memory overlap with dynamic device assignment will work, as any
+  // devices will get subtracted from the RAM list later. But it will probably
+  // result in much less RAM than expected and so we shall consider it an error.
+  if (cfg.memory() >= kFirstDynamicDeviceAddr) {
+    FXL_LOG(ERROR) << "Requested memory should be less than "
+                   << kFirstDynamicDeviceAddr;
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -427,8 +437,8 @@ int main(int argc, char** argv) {
   machina::DevMem dev_mem;
 
   // Setup wayland device.
-  zx_gpaddr_t wl_dev_mem_offset = machina::DevMem::kAddrLowerBound;
   size_t wl_dev_mem_size = cfg.wayland_memory();
+  zx_gpaddr_t wl_dev_mem_offset = allocate_device_addr(wl_dev_mem_size);
   if (!dev_mem.AddRange(wl_dev_mem_offset, wl_dev_mem_size)) {
     FXL_LOG(INFO) << "Could not reserve device memory range for wayland device";
     return status;
@@ -471,6 +481,16 @@ int main(int argc, char** argv) {
     return status;
   }
 #endif  // __x86_64__
+
+  // Add any trap ranges as device memory.
+  for (auto it = guest.mappings_begin(); it != guest.mappings_end(); it++) {
+    if (it->kind() == ZX_GUEST_TRAP_MEM || it->kind() == ZX_GUEST_TRAP_BELL) {
+      if (!dev_mem.AddRange(it->base(), it->size())) {
+        FXL_LOG(ERROR) << "Failed to add trap range as device memory";
+        return ZX_ERR_INTERNAL;
+      }
+    }
+  }
 
   // Setup kernel.
   uintptr_t guest_ip = 0;

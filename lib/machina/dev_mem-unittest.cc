@@ -9,28 +9,7 @@
 namespace machina {
 namespace {
 
-static constexpr zx_gpaddr_t kGoodDeviceAddr =
-    DevMem::kAddrLowerBound + 0x10000;
-
-TEST(DevMemTest, GoodRanges) {
-  EXPECT_TRUE(DevMem().AddRange(kGoodDeviceAddr, 0x2000));
-  EXPECT_TRUE(
-      DevMem().AddRange(DevMem::kAddrLowerBound,
-                        DevMem::kAddrUpperBound - DevMem::kAddrLowerBound));
-}
-
-TEST(DevMemTest, BadRanges) {
-  DevMem dev_mem;
-  EXPECT_FALSE(dev_mem.AddRange(0, 0x1000));
-  EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrLowerBound - 1, 1));
-  EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrUpperBound, 0x1000));
-
-  EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrLowerBound - 1, 2));
-  EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrLowerBound - 1, 2));
-  EXPECT_FALSE(
-      dev_mem.AddRange(DevMem::kAddrUpperBound - 1,
-                       DevMem::kAddrUpperBound - DevMem::kAddrLowerBound + 2));
-}
+static constexpr zx_gpaddr_t kGoodDeviceAddr = 0xc000000;
 
 TEST(DevMemTest, NoOverlappingRanges) {
   DevMem dev_mem;
@@ -59,8 +38,6 @@ TEST(DevMemTest, SizedRanges) {
 
   EXPECT_FALSE(dev_mem.AddRange(kGoodDeviceAddr, 0));
   EXPECT_FALSE(dev_mem.AddRange(0, 0));
-  EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrLowerBound - 1, 0));
-  EXPECT_FALSE(dev_mem.AddRange(DevMem::kAddrUpperBound, 0));
 }
 
 }  // namespace

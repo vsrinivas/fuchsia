@@ -149,13 +149,7 @@ static zx_status_t create_zbi(
     return ZX_ERR_INTERNAL;
   }
   // Memory config.
-  std::vector<zbi_mem_range_t> mem_config{
-      {
-          .paddr = 0x800000000,
-          .length = 0x8400000,
-          .type = ZBI_MEM_RANGE_PERIPHERAL,
-      },
-  };
+  std::vector<zbi_mem_range_t> mem_config;
 
   dev_mem.YieldInverseRange(0, cfg.memory(), [&mem_config](auto range){
     mem_config.emplace_back(zbi_mem_range_t{
