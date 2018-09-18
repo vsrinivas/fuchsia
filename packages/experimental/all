@@ -2,6 +2,7 @@
     "imports": [
         "garnet/packages/experimental/zircon_guest",
         "garnet/packages/experimental/linux_guest",
-        "garnet/packages/experimental/network_settings_server"
+        "garnet/packages/experimental/network_settings_server",
+        "garnet/packages/experimental/wayland_bridge"
     ]
 }

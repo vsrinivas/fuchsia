@@ -1,0 +1,51 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_binary("bin") {
+  name = "wayland_bridge"
+  edition = "2018"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/fidl/fuchsia.guest:fuchsia.guest-rustc",
+    "//garnet/public/rust/crates/fuchsia-app",
+    "//garnet/public/rust/crates/fuchsia-async",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+  ]
+}
+
+package("bridge") {
+  package_name = "wayland_bridge"
+  binary = "wayland_bridge"
+  deps = [
+    ":bin",
+  ]
+}
+
+rustc_library("wayland_bridge_test") {
+  edition = "2018"
+  with_unit_tests = true
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/fidl/fuchsia.guest:fuchsia.guest-rustc",
+    "//garnet/public/rust/crates/fuchsia-app",
+    "//garnet/public/rust/crates/fuchsia-async",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+  ]
+  source_root = "tests/integration_test.rs"
+}
+
+group("tests") {
+  public_deps = [
+    ":wayland_bridge_test",
+  ]
+}
