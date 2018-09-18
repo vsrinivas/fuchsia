@@ -178,14 +178,9 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 
 func (c *Client) changeStateLocked(s State) {
 	c.state = s
-	go func() {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-		if c.stateFunc == nil {
-			return
-		}
-		c.stateFunc(s)
-	}()
+	if fn := c.stateFunc; fn != nil {
+		fn(s)
+	}
 }
 
 // Up enables the interface.

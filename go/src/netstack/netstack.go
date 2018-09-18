@@ -243,58 +243,50 @@ func (ifs *ifState) setDHCPStatus(enabled bool) {
 
 func (ifs *ifState) stateChange(s eth.State) {
 	switch s {
-	case eth.StateDown:
-		ifs.onEthStop()
 	case eth.StateClosed:
-		ifs.onEthStop()
 		ifs.ns.mu.Lock()
 		delete(ifs.ns.ifStates, ifs.nic.ID)
 		ifs.ns.mu.Unlock()
+		fallthrough
+	case eth.StateDown:
+		log.Printf("NIC %s: stopped", ifs.nic.Name)
+		if ifs.cancel != nil {
+			ifs.cancel()
+		}
+		if ifs.dhcpState.cancel != nil {
+			// TODO: consider remembering DHCP status
+			ifs.setDHCPStatus(false)
+		}
+
+		// TODO(crawshaw): more cleanup to be done here:
+		// 	- remove link endpoint
+		//	- reclaim NICID?
+
+		ifs.ns.mu.Lock()
+		ifs.nic.Routes = nil
+		ifs.nic.Netmask = ""
+		ifs.nic.Addr = ""
+		ifs.nic.DNSServers = nil
+		ifs.ns.mu.Unlock()
+
+		ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
+		ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.getRuntimeDNSServerRefs())
 	case eth.StateStarted:
 		// Only call `restarted` if we are not in the initial state (which means we're still starting).
 		if ifs.state != eth.StateUnknown {
-			ifs.onEthRestart()
+			log.Printf("NIC %s: restarting", ifs.nic.Name)
+			ifs.ns.mu.Lock()
+			ifs.ctx, ifs.cancel = context.WithCancel(context.Background())
+			ifs.nic.Routes = defaultRouteTable(ifs.nic.ID, "")
+			ifs.ns.mu.Unlock()
+
+			ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
+			ifs.setDHCPStatus(true)
 		}
 	}
 	ifs.state = s
 	// Note: This will fire again once DHCP succeeds.
 	OnInterfacesChanged()
-}
-
-func (ifs *ifState) onEthRestart() {
-	log.Printf("NIC %s: restarting", ifs.nic.Name)
-	ifs.ns.mu.Lock()
-	ifs.ctx, ifs.cancel = context.WithCancel(context.Background())
-	ifs.nic.Routes = defaultRouteTable(ifs.nic.ID, "")
-	ifs.ns.mu.Unlock()
-
-	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-	ifs.setDHCPStatus(true)
-}
-
-func (ifs *ifState) onEthStop() {
-	log.Printf("NIC %s: stopped", ifs.nic.Name)
-	if ifs.cancel != nil {
-		ifs.cancel()
-	}
-	if ifs.dhcpState.cancel != nil {
-		// TODO: consider remembering DHCP status
-		ifs.setDHCPStatus(false)
-	}
-
-	// TODO(crawshaw): more cleanup to be done here:
-	// 	- remove link endpoint
-	//	- reclaim NICID?
-
-	ifs.ns.mu.Lock()
-	ifs.nic.Routes = nil
-	ifs.nic.Netmask = ""
-	ifs.nic.Addr = ""
-	ifs.nic.DNSServers = nil
-	ifs.ns.mu.Unlock()
-
-	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-	ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.getRuntimeDNSServerRefs())
 }
 
 func (ns *Netstack) flattenRouteTables() []tcpip.Route {
