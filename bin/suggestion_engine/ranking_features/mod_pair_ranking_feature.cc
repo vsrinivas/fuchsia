@@ -61,7 +61,6 @@ double ModPairRankingFeature::ComputeFeatureInternal(
       case fuchsia::modular::Action::Tag::kFocusModule:
       case fuchsia::modular::Action::Tag::kSetLinkValueAction:
       case fuchsia::modular::Action::Tag::kUpdateModule:
-      case fuchsia::modular::Action::Tag::kQueryAction:
       case fuchsia::modular::Action::Tag::Invalid:
         continue;
     }

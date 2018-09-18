@@ -66,7 +66,6 @@ union Action {
   UpdateModule update_module;
   SetLinkValueAction set_link_value_action;
   CustomAction custom_action;
-  QueryAction query_action;
 };
 
 // Brings an existing story into focus.
@@ -121,11 +120,4 @@ struct UpdateModule {
 // An action that calls back to the proposal publisher to be performed.
 interface CustomAction {
   1: Execute();
-};
-
-// Performs a query with the given text. Once the proposals from the query are
-// received, the first top-ranked proposal (not necessarily first proposal
-// received) is automatically executed.
-struct QueryAction {
-  UserInput input;
 };

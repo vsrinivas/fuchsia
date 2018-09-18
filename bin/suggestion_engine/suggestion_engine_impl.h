@@ -14,7 +14,6 @@
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
-#include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"
 #include "peridot/bin/suggestion_engine/navigation_processor.h"
@@ -181,8 +180,6 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
 
   void PerformDeprecatedActions(std::vector<fuchsia::modular::Action> actions);
 
-  void PerformQueryAction(const fuchsia::modular::Action& action);
-
   void PerformCustomAction(fuchsia::modular::Action* action);
 
   void RegisterRankingFeatures();
@@ -241,12 +238,6 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
 
   // The puppet master connection that is used to execute actions.
   fuchsia::modular::PuppetMasterPtr puppet_master_;
-
-  // Used to jackpot a suggestion when a fuchsia::modular::QueryAction is
-  // executed.
-  AutoSelectFirstQueryListener auto_select_first_query_listener_;
-  fidl::Binding<fuchsia::modular::QueryListener>
-      auto_select_first_query_listener_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SuggestionEngineImpl);
 };

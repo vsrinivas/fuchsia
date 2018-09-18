@@ -16,7 +16,6 @@
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/random/uuid.h"
 
-#include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/decision_policies/rank_over_threshold_decision_policy.h"
 #include "peridot/bin/suggestion_engine/filters/conjugate_ranked_passive_filter.h"
 #include "peridot/bin/suggestion_engine/filters/ranked_active_filter.h"
@@ -35,20 +34,11 @@
 
 namespace modular {
 
-namespace {
-
-constexpr int kQueryActionMaxResults = 1;
-
-}  // namespace
-
 SuggestionEngineImpl::SuggestionEngineImpl(fuchsia::media::AudioPtr audio)
     : debug_(std::make_shared<SuggestionDebugImpl>()),
       next_processor_(debug_),
       query_processor_(std::move(audio), debug_),
-      context_listener_binding_(this),
-      auto_select_first_query_listener_(this),
-      auto_select_first_query_listener_binding_(
-          &auto_select_first_query_listener_) {}
+      context_listener_binding_(this) {}
 
 SuggestionEngineImpl::~SuggestionEngineImpl() = default;
 
@@ -362,7 +352,6 @@ SuggestionEngineImpl::PerformActions(
   for (auto& action : *actions) {
     auto command = ActionToStoryCommand(action);
     // Some actions aren't supported as story commands (yet). In particular:
-    //   - QueryAction: should be transformed into a SessionCommand
     //   - CustomAction: we would like to fully remove it and all its uses.
     if (command.has_invalid_tag()) {
       pending_actions.push_back(std::move(action));
@@ -429,7 +418,6 @@ fuchsia::modular::StoryCommand SuggestionEngineImpl::ActionToStoryCommand(
       command.set_update_mod(std::move(update_mod));
       break;
     }
-    case fuchsia::modular::Action::Tag::kQueryAction:
     case fuchsia::modular::Action::Tag::kCustomAction:
     case fuchsia::modular::Action::Tag::Invalid:
       break;
@@ -441,11 +429,6 @@ void SuggestionEngineImpl::PerformDeprecatedActions(
     std::vector<fuchsia::modular::Action> actions) {
   for (auto& action : actions) {
     switch (action.Which()) {
-      case fuchsia::modular::Action::Tag::kQueryAction: {
-        FXL_LOG(INFO) << "Performing query action but it's deprecated.";
-        PerformQueryAction(action);
-        break;
-      }
       case fuchsia::modular::Action::Tag::kCustomAction: {
         FXL_LOG(INFO) << "Performing custom action but it's deprecated.";
         PerformCustomAction(&action);
@@ -468,15 +451,6 @@ void SuggestionEngineImpl::PerformDeprecatedActions(
 void SuggestionEngineImpl::PerformCustomAction(
     fuchsia::modular::Action* action) {
   action->custom_action().Bind()->Execute();
-}
-
-void SuggestionEngineImpl::PerformQueryAction(
-    const fuchsia::modular::Action& action) {
-  // TODO(miguelfrde): instead of keeping a AutoSelectFirstQueryListener as an
-  // attribute. Create and move here through an internal structure.
-  const auto& query_action = action.query_action();
-  Query(auto_select_first_query_listener_binding_.NewBinding(),
-        query_action.input, kQueryActionMaxResults);
 }
 
 void SuggestionEngineImpl::OnContextUpdate(

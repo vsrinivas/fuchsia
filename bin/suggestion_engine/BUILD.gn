@@ -36,8 +36,6 @@ executable_package("suggestion_engine") {
 
 source_set("suggestion_engine_impl") {
   sources = [
-    "auto_select_first_query_listener.cc",
-    "auto_select_first_query_listener.h",
     "media_player.cc",
     "media_player.h",
     "navigation_processor.cc",
