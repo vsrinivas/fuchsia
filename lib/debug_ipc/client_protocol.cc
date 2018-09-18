@@ -107,6 +107,7 @@ void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
   writer->WriteUint32(settings.breakpoint_id);
   writer->WriteBool(settings.one_shot);
   writer->WriteUint32(static_cast<uint32_t>(settings.stop));
+  writer->WriteUint32(static_cast<uint32_t>(settings.type));
   Serialize(settings.locations, writer);
 }
 

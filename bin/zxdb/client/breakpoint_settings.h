@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_ZXDB_CLIENT_BREAKPOINT_SETTINGS_H_
+#define GARNET_BIN_ZXDB_CLIENT_BREAKPOINT_SETTINGS_H_
 
 #include <stdint.h>
 #include <string>
 
 #include "garnet/bin/zxdb/client/input_location.h"
+#include "garnet/lib/debug_ipc/records.h"
 
 namespace zxdb {
 
@@ -35,6 +37,9 @@ struct BreakpointSettings {
     kAll       // Stop all debugged processes.
   };
 
+  // What kind of breakpoint implementation to use.
+  debug_ipc::BreakpointType type = debug_ipc::BreakpointType::kSoftware;
+
   // Enables (true) or disables (false) this breakpoint.
   bool enabled = true;
 
@@ -53,3 +58,5 @@ struct BreakpointSettings {
 };
 
 }  // namespace zxdb
+
+#endif  // GARNET_BIN_ZXDB_CLIENT_BREAKPOINT_SETTINGS_H_

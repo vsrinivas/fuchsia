@@ -8,6 +8,7 @@
 #include <map>
 
 #include "garnet/bin/debug_agent/arch.h"
+#include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
 #include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/macros.h"
@@ -29,21 +30,25 @@ class ProcessBreakpoint {
   // Call Init() immediately after construction to initalize the parts that
   // can report errors.
   explicit ProcessBreakpoint(Breakpoint* breakpoint,
+                             DebuggedProcess* debugged_process,
                              ProcessMemoryAccessor* memory_accessor,
-                             zx_koid_t process_koid, uint64_t address);
+                             uint64_t address);
   ~ProcessBreakpoint();
 
   // Call immediately after construction. If it returns failure, the breakpoint
   // will not work.
   zx_status_t Init();
 
-  zx_koid_t process_koid() const { return process_koid_; }
+  zx_koid_t process_koid() const { return process_->koid(); }
+  DebuggedProcess* process() const { return process_; }
   uint64_t address() const { return address_; }
+
+  const std::vector<Breakpoint*> breakpoints() const { return breakpoints_; }
 
   // Adds or removes breakpoints associated with this process/address.
   // Unregister returns whether there are still any breakpoints referring to
   // this address (false means this is unused and should be deleted).
-  void RegisterBreakpoint(Breakpoint* breakpoint);
+  zx_status_t RegisterBreakpoint(Breakpoint* breakpoint);
   bool UnregisterBreakpoint(Breakpoint* breakpoint);
 
   // Writing debug breakpoints changes memory contents. If an unmodified
@@ -82,6 +87,9 @@ class ProcessBreakpoint {
   bool BreakpointStepHasException(zx_koid_t thread_koid,
                                   uint32_t exception_type);
 
+  bool SoftwareBreakpointInstalled() const;
+  bool HardwareBreakpointInstalled() const;
+
  private:
   // A breakpoint could be removed in the middle of single-stepping it. We
   // need to track this to handle the race between deleting it and the
@@ -96,17 +104,33 @@ class ProcessBreakpoint {
   bool CurrentlySteppingOver() const;
 
   // Install or uninstall this breakpoint.
-  zx_status_t Install();
+  zx_status_t Update();  // Will add/remove breakpoints as needed/
   void Uninstall();
 
+  DebuggedProcess* process_;                // Not-owning.
   ProcessMemoryAccessor* memory_accessor_;  // Non-owning.
 
-  zx_koid_t process_koid_;
   uint64_t address_;
 
-  // Low-level implementations of the breakpoints. Null means not installed.
+  // Low-level implementations of the breakpoints.
+  // A ProcessBreakpoint represents the actual "installation" of a Breakpoint
+  // in a particular location (address). A Breakpoint can have many locations:
+  //
+  // b Foo() -> If Foo() is inlined, you can get 2+ locations.
+  //
+  // In that base, that Breakpoint will have two locations, which means two
+  // "installations", or ProcessBreakpoint.
+  //
+  // A Breakpoint can be a software or a hardware one. That will define what
+  // kind of installation the ProcessBreakpoint implements. Now, if a software
+  // and a separate hardware breakpoint install to the same memory address, they
+  // will implement the same ProcessBreakpoint, which will have both
+  // |software_breakpoint_| and |hardware_breakpoint_| members instanced.
+  // Null means that that particular installation is not used.
   class SoftwareBreakpoint;
+  class HardwareBreakpoint;
   std::unique_ptr<SoftwareBreakpoint> software_breakpoint_;
+  std::unique_ptr<HardwareBreakpoint> hardware_breakpoint_;
 
   // Breakpoints that refer to this ProcessBreakpoint. More than one Breakpoint
   // can refer to the same memory address.

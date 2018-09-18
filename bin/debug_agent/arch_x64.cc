@@ -8,7 +8,6 @@
 namespace debug_agent {
 namespace arch {
 
-
 const BreakInstructionType kBreakInstruction = 0xCC;
 
 uint64_t ArchProvider::BreakpointInstructionForExceptionAddress(
@@ -164,8 +163,10 @@ inline zx_status_t ReadDebugRegs(const zx::thread& thread,
   out->push_back(CreateRegister(RegisterID::kX64_dr2, 8u, &debug_regs.dr[2]));
   out->push_back(CreateRegister(RegisterID::kX64_dr3, 8u, &debug_regs.dr[3]));
 
-  out->push_back(CreateRegister(RegisterID::kX64_dr6, 8u, &debug_regs.dr6_status));
-  out->push_back(CreateRegister(RegisterID::kX64_dr7, 8u, &debug_regs.dr7_control));
+  out->push_back(
+      CreateRegister(RegisterID::kX64_dr6, 8u, &debug_regs.dr6_status));
+  out->push_back(
+      CreateRegister(RegisterID::kX64_dr7, 8u, &debug_regs.dr7_control));
 
   return ZX_OK;
 }
@@ -211,6 +212,18 @@ bool ArchProvider::GetRegisterStateFromCPU(
 #endif
 
   return true;
+}
+
+// HW Breakpoints --------------------------------------------------------------
+
+zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread* thread,
+                                              uint64_t address) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread,
+                                                uint64_t address) {
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 }  // namespace arch

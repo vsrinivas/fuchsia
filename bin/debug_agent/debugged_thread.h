@@ -42,7 +42,7 @@ class DebuggedThread {
   // a thread discoverd via a debug notification.
   DebuggedThread(DebuggedProcess* process, zx::thread thread,
                  zx_koid_t thread_koid, bool starting);
-  ~DebuggedThread();
+  virtual ~DebuggedThread();
 
   zx::thread& thread() { return thread_; }
   zx_koid_t koid() const { return koid_; }

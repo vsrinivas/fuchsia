@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_DEBUG_IPC_RECORDS_H_
+#define GARNET_LIB_DEBUG_IPC_RECORDS_H_
 
 #include <stdint.h>
 
@@ -62,14 +63,6 @@ struct MemoryBlock {
   std::vector<uint8_t> data;
 };
 
-// What threads to stop when the breakpoint is hit.
-enum class Stop : uint32_t {
-  kAll,      // Stop all threads of all processes attached to the debugger.
-  kProcess,  // Stop all threads of the process that hit the breakpoint.
-  kThread,   // Stop only the thread that hit the breakpoint.
-  kNone      // Don't stop anything but accumulate hit counts.
-};
-
 struct ProcessBreakpointSettings {
   // Required to be nonzero.
   uint64_t process_koid = 0;
@@ -80,6 +73,19 @@ struct ProcessBreakpointSettings {
 
   // Address to break at.
   uint64_t address = 0;
+};
+
+// What threads to stop when the breakpoint is hit.
+enum class Stop : uint32_t {
+  kAll,      // Stop all threads of all processes attached to the debugger.
+  kProcess,  // Stop all threads of the process that hit the breakpoint.
+  kThread,   // Stop only the thread that hit the breakpoint.
+  kNone      // Don't stop anything but accumulate hit counts.
+};
+
+enum class BreakpointType : uint32_t {
+  kSoftware,
+  kHardware,
 };
 
 struct BreakpointSettings {
@@ -94,6 +100,9 @@ struct BreakpointSettings {
 
   // What should stop when the breakpoint is hit.
   Stop stop = Stop::kAll;
+
+  // What kind of breakpoint this is.
+  BreakpointType type = BreakpointType::kSoftware;
 
   // Processes to which this breakpoint applies.
   //
@@ -164,3 +173,5 @@ struct RegisterCategory {
 #pragma pack(pop)
 
 }  // namespace debug_ipc
+
+#endif  // GARNET_LIB_DEBUG_IPC_RECORDS_H_

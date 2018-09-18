@@ -16,6 +16,7 @@
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -23,6 +24,7 @@ namespace {
 
 constexpr int kStopSwitch = 1;
 constexpr int kEnableSwitch = 2;
+constexpr int kTypeSwitch = 3;
 
 // Callback for when updating a breakpoint is done.
 void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
@@ -114,6 +116,21 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
           "or \"none\".");
     }
   }
+
+  // Type.
+  auto break_type = debug_ipc::BreakpointType::kSoftware;
+  if (cmd.HasSwitch(kTypeSwitch)) {
+    std::string type_str = cmd.GetSwitchValue(kTypeSwitch);
+    if (type_str == "software") {
+      break_type = debug_ipc::BreakpointType::kSoftware;
+    } else if (type_str == "hardware") {
+      break_type = debug_ipc::BreakpointType::kHardware;
+    } else {
+      return Err(
+          fxl::StringPrintf("Unknown breakpoint type: %s", type_str.data()));
+    }
+  }
+  settings.type = break_type;
 
   // Location.
   if (cmd.args().empty()) {
@@ -220,6 +237,13 @@ Options
       If "none" is specified, any threads hitting the breakpoint will
       immediately resume, but the hit count will continue to accumulate.
 
+  --type=[ software | hardware ]  (default: software)
+  -t [ software | hardware ]
+
+      Defines what kind of breakpoint to use. Hardware registers require support
+      from the architecture and are limited in quantity. Keep this in mind when
+      using breakpoints that will expand to several locations.
+
 Scoping to processes and threads
 
   Explicit context can be provided to scope a breakpoint to a single process
@@ -271,6 +295,10 @@ Examples
 
   frame 3 break 23
       Break at line 23 of the file referenced by frame 3.
+
+  break 32 --type=hardware
+      Break at line 23 of the file referenced by the current frame and use a
+      hardware breakpoint.
 )";
 Err DoBreak(ConsoleContext* context, const Command& cmd) {
   Err err = cmd.ValidateNouns(
@@ -404,11 +432,13 @@ Err DoEdit(ConsoleContext* context, const Command& cmd) {
 void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   SwitchRecord enable_switch(kEnableSwitch, true, "enable", 'e');
   SwitchRecord stop_switch(kStopSwitch, true, "stop", 's');
+  SwitchRecord type_switch(kTypeSwitch, true, "type", 't');
 
   VerbRecord break_record(&DoBreak, {"break", "b"}, kBreakShortHelp, kBreakHelp,
                           CommandGroup::kBreakpoint);
   break_record.switches.push_back(enable_switch);
   break_record.switches.push_back(stop_switch);
+  break_record.switches.push_back(type_switch);
   (*verbs)[Verb::kBreak] = break_record;
 
   // Note: if "edit" becomes more general than just for breakpoints, we'll

@@ -58,7 +58,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   void PauseAll(std::vector<uint64_t>* paused_koids = nullptr);
 
   // Returns the thread or null if there is no known thread for this koid.
-  DebuggedThread* GetThread(zx_koid_t thread_koid) const;
+  virtual DebuggedThread* GetThread(zx_koid_t thread_koid) const;
+  virtual std::vector<DebuggedThread*> GetThreads() const;
 
   // Populates the thread map with the current threads for this process, and
   // sends the list to the client. Used after an attach where we will not get

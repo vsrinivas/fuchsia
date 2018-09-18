@@ -146,5 +146,15 @@ bool ArchProvider::GetRegisterStateFromCPU(
   return true;
 }
 
+// HW Breakpoints --------------------------------------------------------------
+
+zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread*, uint64_t address) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread*, uint64_t address) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 }  // namespace arch
 }  // namespace debug_agent

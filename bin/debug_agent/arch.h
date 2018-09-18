@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_DEBUG_AGENT_ARCH_H_
+#define GARNET_BIN_DEBUG_AGENT_ARCH_H_
 
 #include <zx/process.h>
 #include <zx/thread.h>
@@ -28,7 +29,7 @@ class ArchProvider {
  public:
   static ArchProvider& Get();
   // Permits to mock the ArchProvider. Set to nullptr to restore.
-  static void Set(ArchProvider*);
+  static void Set(std::unique_ptr<ArchProvider>);
 
   virtual ~ArchProvider();
 
@@ -58,7 +59,13 @@ class ArchProvider {
   uint64_t* BPInRegs(zx_thread_state_general_regs* regs);
 
   ::debug_ipc::Arch GetArch();
+
+  // TODO: Support different modes.
+  virtual zx_status_t InstallHWBreakpoint(zx::thread*, uint64_t address);
+  virtual zx_status_t UninstallHWBreakpoint(zx::thread*, uint64_t address);
 };
 
 }  // namespace arch
 }  // namespace debug_agent
+
+#endif  // GARNET_BIN_DEBUG_AGENT_ARCH_H_

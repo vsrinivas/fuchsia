@@ -31,6 +31,11 @@ bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {
     return false;
   settings->stop = static_cast<Stop>(stop);
 
+  uint32_t type;
+  if (!reader->ReadUint32(&type))
+    return false;
+  settings->type = static_cast<BreakpointType>(type);
+
   return Deserialize(reader, &settings->locations);
 }
 

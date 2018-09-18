@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <string.h>
+
 #include <zircon/syscalls/exception.h>
 
 #include "garnet/bin/debug_agent/arch.h"
 #include "garnet/bin/debug_agent/breakpoint.h"
+#include "garnet/bin/debug_agent/debugged_thread.h"
 #include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
 #include "gtest/gtest.h"
@@ -88,6 +90,35 @@ class BreakpointFakeMemory {
   FakeMemory memory_;
 };
 
+class FakeProcess : public DebuggedProcess {
+ public:
+  FakeProcess(zx_koid_t koid) : DebuggedProcess(nullptr, koid, zx::process()) {}
+  ~FakeProcess() = default;
+
+  void AddThread(zx_koid_t koid) {
+    threads_[koid] =
+        std::make_unique<DebuggedThread>(this, zx::thread(), koid, false);
+  }
+
+  DebuggedThread* GetThread(zx_koid_t koid) const override {
+    auto it = threads_.find(koid);
+    if (it == threads_.end())
+      return nullptr;
+    return it->second.get();
+  }
+
+  std::vector<DebuggedThread*> GetThreads() const override {
+    std::vector<DebuggedThread*> threads;
+    threads.reserve(threads_.size());
+    for (auto& kv : threads_)
+      threads.emplace_back(kv.second.get());
+    return threads;
+  }
+
+ private:
+  std::map<zx_koid_t, std::unique_ptr<DebuggedThread>> threads_;
+};
+
 // A no-op process delegate.
 class TestProcessDelegate : public Breakpoint::ProcessDelegate {
  public:
@@ -96,13 +127,18 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
   BreakpointFakeMemory& mem() { return mem_; }
   std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>>& bps() { return bps_; }
 
+  void InjectFakeProcess(std::unique_ptr<FakeProcess> proc) {
+    procs_[proc->koid()] = std::move(proc);
+  }
+
   // This only gets called if Breakpoint.SetSettings() is called.
   zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t koid,
                                  uint64_t address) override {
     auto found = bps_.find(address);
     if (found == bps_.end()) {
-      auto pbp =
-          std::make_unique<ProcessBreakpoint>(bp, mem_.memory(), koid, address);
+      auto pbp = std::make_unique<ProcessBreakpoint>(bp, procs_[koid].get(),
+                                                     mem_.memory(), address);
+
       zx_status_t status = pbp->Init();
       if (status != ZX_OK) {
         fprintf(stderr, "Failure initializing %d\n", (int)status);
@@ -132,6 +168,70 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
   BreakpointFakeMemory mem_;
 
   std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>> bps_;
+  std::map<zx_koid_t, std::unique_ptr<FakeProcess>> procs_;
+};
+
+class FakeArchProvider : public arch::ArchProvider {
+ public:
+  zx_status_t InstallHWBreakpoint(zx::thread* thread,
+                                  uint64_t address) override {
+    installs_[address]++;
+    return ZX_OK;
+  }
+
+  zx_status_t UninstallHWBreakpoint(zx::thread* thread,
+                                    uint64_t address) override {
+    uninstalls_[address]++;
+    return ZX_OK;
+  }
+
+  size_t InstallCount(uint64_t address) const {
+    auto it = installs_.find(address);
+    if (it == installs_.end())
+      return 0;
+    return it->second;
+  }
+  size_t TotalInstallCalls() const {
+    int total = 0;
+    for (auto it : installs_) {
+      total += it.second;
+    }
+    return total;
+  }
+
+  size_t UninstallCount(uint64_t address) const {
+    auto it = uninstalls_.find(address);
+    if (it == uninstalls_.end())
+      return 0;
+    return it->second;
+  }
+  size_t TotalUninstallCalls() const {
+    int total = 0;
+    for (auto it : uninstalls_) {
+      total += it.second;
+    }
+    return total;
+  }
+
+ private:
+  std::map<uint64_t, size_t> installs_;
+  std::map<uint64_t, size_t> uninstalls_;
+};
+
+class ScopedFakeArchProvider {
+ public:
+  ScopedFakeArchProvider() {
+    auto fake_arch = std::make_unique<FakeArchProvider>();
+    fake_arch_ = fake_arch.get();
+    arch::ArchProvider::Set(std::move(fake_arch));
+  }
+
+  ~ScopedFakeArchProvider() { arch::ArchProvider::Set(nullptr); }
+
+  FakeArchProvider* get() const { return fake_arch_; }
+
+ private:
+  FakeArchProvider* fake_arch_;
 };
 
 constexpr uintptr_t BreakpointFakeMemory::kAddress;
@@ -145,8 +245,11 @@ const char
 TEST(ProcessBreakpoint, InstallAndFixup) {
   TestProcessDelegate process_delegate;
   Breakpoint main_breakpoint(&process_delegate);
+  zx_koid_t process_koid = 0x1234;
+  FakeProcess process(process_koid);
 
-  ProcessBreakpoint bp(&main_breakpoint, process_delegate.mem().memory(), 1,
+  ProcessBreakpoint bp(&main_breakpoint, &process,
+                       process_delegate.mem().memory(),
                        BreakpointFakeMemory::kAddress);
   ASSERT_EQ(ZX_OK, bp.Init());
 
@@ -179,7 +282,10 @@ TEST(ProcessBreakpoint, StepMultiple) {
   TestProcessDelegate process_delegate;
   Breakpoint main_breakpoint(&process_delegate);
 
-  ProcessBreakpoint bp(&main_breakpoint, process_delegate.mem().memory(), 1,
+  zx_koid_t process_koid = 0x1234;
+  FakeProcess process(process_koid);
+  ProcessBreakpoint bp(&main_breakpoint, &process,
+                       process_delegate.mem().memory(),
                        BreakpointFakeMemory::kAddress);
   ASSERT_EQ(ZX_OK, bp.Init());
 
@@ -269,6 +375,156 @@ TEST(ProcessBreakpoint, HitCount) {
   // Unregistering the other should delete it.
   main_breakpoint1.reset();
   ASSERT_EQ(0u, process_delegate.bps().size());
+}
+
+TEST(ProcessBreakpoint, HWBreakpointForAllThreads) {
+  constexpr zx_koid_t kProcessId = 0x1234;
+  constexpr zx_koid_t kThreadId1 = 0x1;
+  constexpr zx_koid_t kThreadId2 = 0x2;
+  constexpr zx_koid_t kThreadId3 = 0x3;
+  constexpr uint32_t kBreakpointId1 = 0x1;
+  constexpr uint64_t kAddress = 0x80000000;
+
+  auto process = std::make_unique<FakeProcess>(kProcessId);
+  process->AddThread(kThreadId1);
+  process->AddThread(kThreadId2);
+  process->AddThread(kThreadId3);
+  TestProcessDelegate process_delegate;
+  process_delegate.InjectFakeProcess(std::move(process));
+
+  // Any calls to the architecture will be routed to this instance.
+  ScopedFakeArchProvider arch_provider;
+
+  auto breakpoint = std::make_unique<Breakpoint>(&process_delegate);
+  debug_ipc::BreakpointSettings settings1 = {};
+  settings1.breakpoint_id = kBreakpointId1;
+  settings1.type = debug_ipc::BreakpointType::kHardware;
+  // This location is for all threads.
+  settings1.locations.push_back({kProcessId, 0, kAddress});
+  zx_status_t status = breakpoint->SetSettings(settings1);
+  ASSERT_EQ(status, ZX_OK);
+
+  // Should have installed the breakpoint.
+  ASSERT_EQ(process_delegate.bps().size(), 1u);
+  auto& process_bp = process_delegate.bps().begin()->second;
+  ASSERT_EQ(process_bp->address(), kAddress);
+
+  // It should have installed a HW breakpoint for each thread.
+  EXPECT_FALSE(process_bp->SoftwareBreakpointInstalled());
+  EXPECT_TRUE(process_bp->HardwareBreakpointInstalled());
+  EXPECT_EQ(arch_provider.get()->InstallCount(kAddress), 3u);
+
+  // Deleting the breakpoint should remove the process breakpoint.
+  breakpoint.reset();
+  EXPECT_EQ(arch_provider.get()->UninstallCount(kAddress), 3u);
+  EXPECT_EQ(process_delegate.bps().size(), 0u);
+}
+
+TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
+  constexpr zx_koid_t kProcessId = 0x1234;
+  constexpr zx_koid_t kThreadId1 = 0x1;
+  constexpr zx_koid_t kThreadId2 = 0x2;
+  constexpr zx_koid_t kThreadId3 = 0x3;
+  constexpr uint32_t kBreakpointId1 = 0x1;
+  constexpr uint32_t kBreakpointId2 = 0x2;
+  constexpr uint32_t kSwBreakpointId = 0x3;
+  constexpr uint64_t kAddress = BreakpointFakeMemory::kAddress;
+  constexpr uint64_t kOtherAddress = 0x8fffffff;
+
+  auto process = std::make_unique<FakeProcess>(kProcessId);
+  process->AddThread(kThreadId1);
+  process->AddThread(kThreadId2);
+  process->AddThread(kThreadId3);
+  TestProcessDelegate process_delegate;
+  process_delegate.InjectFakeProcess(std::move(process));
+
+  // Any calls to the architecture will be routed to this instance.
+  ScopedFakeArchProvider arch_provider;
+
+  auto breakpoint1 = std::make_unique<Breakpoint>(&process_delegate);
+  debug_ipc::BreakpointSettings settings1 = {};
+  settings1.breakpoint_id = kBreakpointId1;
+  settings1.type = debug_ipc::BreakpointType::kHardware;
+  settings1.locations.push_back({kProcessId, kThreadId1, kAddress});
+  zx_status_t status = breakpoint1->SetSettings(settings1);
+  ASSERT_EQ(status, ZX_OK);
+  // Should have installed the process breakpoint.
+  ASSERT_EQ(process_delegate.bps().size(), 1u);
+  auto& process_bp = process_delegate.bps().begin()->second;
+  ASSERT_EQ(process_bp->address(), kAddress);
+  // This should have installed HW breakpoint for only one thread.
+  // This should have installed only a HW breakpoint.
+  ASSERT_EQ(arch_provider.get()->TotalInstallCalls(), 1u);
+  ASSERT_EQ(arch_provider.get()->InstallCount(kAddress), 1u);
+  ASSERT_EQ(arch_provider.get()->TotalUninstallCalls(), 0u);
+  EXPECT_FALSE(process_bp->SoftwareBreakpointInstalled());
+  EXPECT_TRUE(process_bp->HardwareBreakpointInstalled());
+
+  // Register another breakpoint.
+  auto breakpoint2 = std::make_unique<Breakpoint>(&process_delegate);
+  debug_ipc::BreakpointSettings settings2 = {};
+  settings2.breakpoint_id = kBreakpointId2;
+  settings2.type = debug_ipc::BreakpointType::kHardware;
+  settings2.locations.push_back({kProcessId, kThreadId2, kAddress});
+  // This breakpoint has another location for another thread.
+  // In practice, this should not happen, but it's important that no HW
+  // breakpoint get installed if for the wrong location.
+  settings2.locations.push_back({kProcessId, kThreadId3, kOtherAddress});
+  breakpoint2->SetSettings(settings2);
+  // Registering this breakpoint should create a new ProcessBreakpoint.
+  ASSERT_EQ(process_delegate.bps().size(), 2u);
+  auto& process_bp2 = (process_delegate.bps().begin()++)->second;
+  ASSERT_EQ(process_bp2->address(), kOtherAddress);
+  // Registering the second breakpoint should install for the new thread in
+  // the old location and one in the new location.
+  ASSERT_EQ(arch_provider.get()->TotalInstallCalls(), 3u);
+  ASSERT_EQ(arch_provider.get()->InstallCount(kAddress), 2u);
+  ASSERT_EQ(arch_provider.get()->InstallCount(kOtherAddress), 1u);
+  ASSERT_EQ(arch_provider.get()->TotalUninstallCalls(), 0u);
+  EXPECT_FALSE(process_bp->SoftwareBreakpointInstalled());
+
+  // Unregistering a breakpoint should only uninstall the HW breakpoint for
+  // one thread.
+  breakpoint1.reset();
+  ASSERT_EQ(arch_provider.get()->TotalInstallCalls(), 3u);
+  ASSERT_EQ(arch_provider.get()->TotalUninstallCalls(), 1u);
+  ASSERT_EQ(arch_provider.get()->UninstallCount(kAddress), 1u);
+  ASSERT_EQ(arch_provider.get()->UninstallCount(kOtherAddress), 0u);
+  EXPECT_FALSE(process_bp->SoftwareBreakpointInstalled());
+  EXPECT_FALSE(process_bp->SoftwareBreakpointInstalled());
+  EXPECT_TRUE(process_bp->HardwareBreakpointInstalled());
+  EXPECT_TRUE(process_bp2->HardwareBreakpointInstalled());
+
+  // Adding a SW breakpoint should not install HW locations.
+  auto sw_breakpoint = std::make_unique<Breakpoint>(&process_delegate);
+  debug_ipc::BreakpointSettings sw_settings = {};
+  sw_settings.breakpoint_id = kSwBreakpointId;
+  sw_settings.type = debug_ipc::BreakpointType::kSoftware;
+  sw_settings.locations.push_back({kProcessId, 0, kAddress});
+  sw_breakpoint->SetSettings(sw_settings);
+  // Should have installed only a SW breakpoint.
+  ASSERT_EQ(arch_provider.get()->TotalInstallCalls(), 3u);
+  ASSERT_EQ(arch_provider.get()->TotalUninstallCalls(), 1u);
+  EXPECT_TRUE(process_bp->SoftwareBreakpointInstalled());
+
+  // Unregistering should remove the other hw breakpoint.
+  // And also the second process breakpoint.
+  breakpoint2.reset();
+  ASSERT_EQ(arch_provider.get()->TotalInstallCalls(), 3u);
+  ASSERT_EQ(arch_provider.get()->TotalUninstallCalls(), 3u);
+  ASSERT_EQ(arch_provider.get()->UninstallCount(kAddress), 2u);
+  ASSERT_EQ(arch_provider.get()->UninstallCount(kOtherAddress), 1u);
+  EXPECT_FALSE(process_bp->HardwareBreakpointInstalled());
+  EXPECT_TRUE(process_bp->SoftwareBreakpointInstalled());
+  ASSERT_EQ(process_delegate.bps().size(), 1u);
+  EXPECT_EQ(process_delegate.bps().begin()->second->address(), kAddress);
+
+  // Removing the SW breakpoint should work and would delete the final process
+  // breakpoint.
+  sw_breakpoint.reset();
+  ASSERT_EQ(arch_provider.get()->TotalInstallCalls(), 3u);
+  ASSERT_EQ(arch_provider.get()->TotalUninstallCalls(), 3u);
+  EXPECT_EQ(process_delegate.bps().size(), 0u);
 }
 
 }  // namespace debug_agent
