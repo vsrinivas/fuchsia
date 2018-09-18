@@ -878,7 +878,7 @@ func (s *socketServer) opIoctl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 		lastIfInfo.info[requestedIndex].Encode(msg)
 		return zx.ErrOk
 	case ioctlNetcGetNodename:
-		nodename, status, err := ns.deviceSettings.GetString(deviceSettingsManagerNodenameKey)
+		nodename, status, err := s.ns.deviceSettings.GetString(deviceSettingsManagerNodenameKey)
 		if err != nil {
 			log.Printf("ioctlNetcGetNodename: error accessing device settings: %s\n", err)
 			nodename = defaultNodename // defined in netstack.go

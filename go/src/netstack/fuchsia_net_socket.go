@@ -5,10 +5,8 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
-	"app/context"
 	"syscall/zx"
 	"syscall/zx/mxerror"
 
@@ -21,7 +19,9 @@ import (
 	"github.com/google/netstack/tcpip/transport/udp"
 )
 
-type socketProviderImpl struct{}
+type socketProviderImpl struct{
+	ns *Netstack
+}
 
 func sockProto(typ net.SocketType, protocol net.SocketProtocol) (tcpip.TransportProtocolNumber, error) {
 	switch typ {
@@ -61,7 +61,7 @@ func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p
 		return zx.Socket(zx.HandleInvalid), int32(errStatus(err)), nil
 	}
 
-	s, err := ns.socketServer.opSocket(netProto, transProto)
+	s, err := sp.ns.socketServer.opSocket(netProto, transProto)
 	if err != nil {
 		return zx.Socket(zx.HandleInvalid), int32(errStatus(err)), nil
 	}
@@ -131,7 +131,7 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 	if node == nil {
 		addrs = append(addrs, "\x00\x00\x00\x00")
 	} else {
-		addrs, err = ns.dnsClient.LookupIP(*node)
+		addrs, err = sp.ns.dnsClient.LookupIP(*node)
 		if err != nil {
 			if *node == "localhost" {
 				addrs = append(addrs, "\x7f\x00\x00\x01")
@@ -188,21 +188,4 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 	}
 
 	return 0, num, results[0], results[1], results[2], results[3], nil
-}
-
-var socketProvider *net.LegacySocketProviderService
-
-// AddLegacySocketProvider registers the legacy socket provider with the
-// application context, allowing it to respond to FIDL queries.
-func AddLegacySocketProvider(ctx *context.Context) error {
-	if socketProvider != nil {
-		return fmt.Errorf("AddLegacySocketProvider must be called only once")
-	}
-	socketProvider = &net.LegacySocketProviderService{}
-	ctx.OutgoingService.AddService(net.LegacySocketProviderName, func(c zx.Channel) error {
-		_, err := socketProvider.Add(&socketProviderImpl{}, c, nil)
-		return err
-	})
-
-	return nil
 }
