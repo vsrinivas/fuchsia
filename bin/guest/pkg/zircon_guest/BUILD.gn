@@ -6,10 +6,7 @@ import("//build/config/fuchsia/zircon.gni")
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
 guest_package("zircon_guest") {
-  # TODO(MAC-3): This should just use zircon.zbi as zircon and have no
-  # ramdisk, when the guest loader supports that.
-  zircon = "$zircon_build_dir/kernel.zbi"
-  ramdisk = "$zircon_build_dir/zircon.zbi"
+  zircon = "$zircon_build_dir/zircon.zbi"
 
   cmdline = "console.path=/dev/class/console/virtio-console " +
             "kernel.serial=legacy"
