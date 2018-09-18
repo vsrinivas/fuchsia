@@ -4,16 +4,6 @@
 
 import("//build/package.gni")
 
-copy("ls_svc_test") {
-  sources = [
-    "ls_svc_test",
-  ]
-
-  outputs = [
-    "$root_out_dir/ls_svc_test",
-  ]
-}
-
 executable("config_test") {
   testonly = true
   output_name = "config_test"
@@ -33,13 +23,9 @@ package("sysmgr_tests") {
 
   deps = [
     ":config_test",
-    ":ls_svc_test",
   ]
 
   tests = [
-    {
-      name = "ls_svc_test"
-    },
     {
       name = "config_test"
     },

@@ -4,10 +4,13 @@
 
 #include "lib/fxl/files/directory.h"
 
+#include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <string>
 #include <vector>
 
 #include "lib/fxl/files/path.h"
@@ -62,6 +65,21 @@ bool CreateDirectoryAt(int root_fd, const std::string& full_path) {
       return false;
   }
   return true;
+}
+
+bool ReadDirContents(const std::string& path, std::vector<std::string>* out) {
+  out->clear();
+  DIR* dir = opendir(path.c_str());
+  if (!dir) {
+    return false;
+  }
+  struct dirent* de;
+  errno = 0;
+  while ((de = readdir(dir)) != nullptr) {
+    out->push_back(de->d_name);
+  }
+  closedir(dir);
+  return !errno;
 }
 
 }  // namespace files

@@ -13,6 +13,7 @@ sandbox_test_package("some_services") {
     "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock"
   ]
 }
 
@@ -25,6 +26,7 @@ sandbox_test_package("all_services") {
     "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock"
   ]
 }
 
@@ -37,6 +39,7 @@ sandbox_test_package("no_services") {
     "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock"
   ]
 }
 
@@ -50,5 +53,6 @@ sandbox_test_package("multiple_components") {
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock"
   ]
 }

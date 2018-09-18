@@ -7,11 +7,16 @@
 
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
+#include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/glob.h"
+#include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/svc/cpp/services.h"
+#include "garnet/bin/sysmgr/config.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 namespace component {
 namespace {
@@ -56,38 +61,81 @@ class HubTest : public component::testing::TestWithEnvironment {
 };
 
 TEST(ProbeHub, Component) {
-  auto glob_str = fxl::StringPrintf("/hub/c/sysmgr/*/out/debug");
-  files::Glob glob(glob_str);
-  EXPECT_EQ(glob.size(), 1u) << glob_str << " expected to match once.";
+  constexpr char kGlob[] = "/hub/c/sysmgr/*/out/debug";
+  files::Glob glob(kGlob);
+  EXPECT_EQ(glob.size(), 1u) << kGlob << " expected to match once.";
 }
 
 TEST(ProbeHub, Realm) {
-  auto glob_str = fxl::StringPrintf("/hub/r/sys/*/c/");
-  files::Glob glob(glob_str);
-  EXPECT_EQ(glob.size(), 1u) << glob_str << " expected to match once.";
+  constexpr char kGlob[] = "/hub/r/sys/*/c/";
+  files::Glob glob(kGlob);
+  EXPECT_EQ(glob.size(), 1u) << kGlob << " expected to match once.";
 }
 
 TEST(ProbeHub, RealmSvc) {
-  auto glob_str = fxl::StringPrintf("/hub/r/sys/*/svc/fuchsia.sys.Environment");
-  files::Glob glob(glob_str);
+  constexpr char kGlob[] = "/hub/r/sys/*/svc/fuchsia.sys.Environment";
+  files::Glob glob(kGlob);
   EXPECT_EQ(glob.size(), 1u);
 }
 
+TEST_F(HubTest, Services) {
+  // Services for root.
+  {
+    std::vector<std::string> files;
+    ASSERT_TRUE(files::ReadDirContents("/hub/svc", &files));
+    EXPECT_THAT(files,
+                ::testing::UnorderedElementsAre(
+                    ".", "fuchsia.process.Launcher", "fuchsia.sys.Environment",
+                    "fuchsia.sys.Launcher", "fuchsia.sys.Loader"));
+  }
+
+  // Services for sys.
+  {
+    constexpr char kGlob[] = "/hub/r/sys/*/svc";
+    files::Glob glob(kGlob);
+    EXPECT_EQ(glob.size(), 1u) << kGlob << " expected to match once.";
+    const std::string path = *glob.begin();
+
+    // Expected files are built-in services plus sysmgr services.
+    std::vector<std::string> expected_files = {
+        ".", "fuchsia.process.Launcher", "fuchsia.sys.Environment",
+        "fuchsia.sys.Launcher", "fuchsia.sys.Loader"};
+    sysmgr::Config config;
+    ASSERT_TRUE(config.ParseFromDirectory("/system/data/sysmgr"));
+    const auto service_map = config.TakeServices();
+    for (const auto& e : service_map) {
+      expected_files.push_back(e.first);
+    }
+
+    // readdir should list all services.
+    std::vector<std::string> files;
+    ASSERT_TRUE(files::ReadDirContents(path, &files));
+    EXPECT_THAT(files, ::testing::UnorderedElementsAreArray(expected_files));
+
+    // Try looking up an individual service.
+    const std::string service_path =
+        fxl::Concatenate({path, "/", service_map.begin()->first});
+    EXPECT_TRUE(files::IsFile(service_path)) << service_path;
+    const std::string bogus_path = fxl::Concatenate({path, "/does_not_exist"});
+    EXPECT_FALSE(files::IsFile(bogus_path)) << bogus_path;
+  }
+}
+
 TEST_F(HubTest, ScopePolicy) {
-  std::string glob_url = "glob";
+  constexpr char kGlobUrl[] = "glob";
   // create nested environment
   // test that we can see nested env
   auto nested_env =
       CreateNewEnclosingEnvironment("hubscopepolicytest", CreateServices());
   ASSERT_TRUE(WaitForEnclosingEnvToStart(nested_env.get()));
-  RunComponent(launcher_ptr(), glob_url, {"/hub/r/hubscopepolicytest/"}, 0);
+  RunComponent(launcher_ptr(), kGlobUrl, {"/hub/r/hubscopepolicytest/"}, 0);
 
   // test that we cannot see nested env using its own launcher
-  RunComponent(nested_env->launcher_ptr(), glob_url,
+  RunComponent(nested_env->launcher_ptr(), kGlobUrl, 
                {"/hub/r/hubscopepolicytest"}, 1);
 
   // test that we can see check_hub_path
-  RunComponent(nested_env->launcher_ptr(), glob_url, {"/hub/c/glob"}, 0);
+  RunComponent(nested_env->launcher_ptr(), kGlobUrl, {"/hub/c/glob"}, 0);
 }
 
 TEST_F(HubTest, ThreadFiles) {

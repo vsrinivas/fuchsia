@@ -6,6 +6,7 @@
 #define LIB_FXL_FILES_DIRECTORY_H_
 
 #include <string>
+#include <vector>
 
 #include "lib/fxl/fxl_export.h"
 
@@ -30,6 +31,10 @@ FXL_EXPORT bool CreateDirectory(const std::string& path);
 // directory. If |path| is relative, resolve it with |root_fd| as reference. See
 // |openat(2)|.
 FXL_EXPORT bool CreateDirectoryAt(int root_fd, const std::string& path);
+
+// List the contents of a directory. If returns false, errno will be set.
+FXL_EXPORT bool ReadDirContents(const std::string& path,
+                                std::vector<std::string>* out);
 
 }  // namespace files
 

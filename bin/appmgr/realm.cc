@@ -314,7 +314,7 @@ void Realm::CreateNestedEnvironment(
   }
 
   RealmArgs args;
- if (additional_services) {
+  if (additional_services) {
     args = RealmArgs::MakeWithAdditionalServices(
         this, label, environment_services_, /*run_virtual_console=*/false,
         std::move(additional_services), inherit_parent_services);

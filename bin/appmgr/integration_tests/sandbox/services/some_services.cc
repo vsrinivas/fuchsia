@@ -4,10 +4,15 @@
 
 #include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
 
+#include <string>
+#include <vector>
+
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/testing/appmgr/cpp/fidl.h>
 #include <zircon/errors.h>
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "lib/fxl/files/directory.h"
 
 TEST_F(NamespaceTest, SomeServices) {
   // Only whitelisted service is available.
@@ -22,4 +27,11 @@ TEST_F(NamespaceTest, SomeServices) {
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, test_service2->GetMessage(&message2));
   EXPECT_EQ(message.get(), "hello");
   EXPECT_EQ(message2.get(), "");
+
+  // readdir should list services in sandbox.
+  std::vector<std::string> files;
+  ASSERT_TRUE(files::ReadDirContents("/svc", &files));
+  EXPECT_THAT(files, ::testing::UnorderedElementsAre(
+                         ".", "fuchsia.sys.Environment",
+                         "fuchsia.testing.appmgr.TestService"));
 }

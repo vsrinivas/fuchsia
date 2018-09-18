@@ -44,10 +44,12 @@ executable("hub_tests") {
   ]
 
   deps = [
+    "//garnet/bin/sysmgr:lib",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
   ]
 }
 
