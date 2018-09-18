@@ -138,7 +138,7 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
             let (has_cbw, cbw) = parse_cbw_str(cbw_str)?;
             let mut req = fidl_sme::ConnectRequest {
                 ssid: ssid.as_bytes().to_vec(),
-                password: password.as_bytes().to_vec(),
+                password: password.unwrap_or(String::new()).as_bytes().to_vec(),
                 has_phy,
                 phy,
                 has_cbw,
