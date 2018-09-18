@@ -78,7 +78,7 @@ impl Completer for CmdCompleter {
     fn complete(&self, line: &str, _pos: usize) -> Result<(usize, Vec<String>), ReadlineError> {
         let mut variants = Vec::new();
         for variant in Cmd::variants() {
-            if variant.contains(line) {
+            if variant.starts_with(line) {
                 variants.push(variant)
             }
         }
