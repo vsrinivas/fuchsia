@@ -59,7 +59,7 @@ static void found_driver(zircon_driver_note_payload_t* note,
     }
 
     driver_t* drv;
-    if ((drv = static_cast<driver_t*>(malloc(len))) == NULL) {
+    if ((drv = static_cast<driver_t*>(malloc(len))) == nullptr) {
         return;
     }
 
@@ -92,11 +92,11 @@ void find_loadable_drivers(const char* path,
                            void (*func)(driver_t* drv, const char* version)) {
 
     DIR* dir = opendir(path);
-    if (dir == NULL) {
+    if (dir == nullptr) {
         return;
     }
     struct dirent* de;
-    while ((de = readdir(dir)) != NULL) {
+    while ((de = readdir(dir)) != nullptr) {
         if (de->d_name[0] == '.') {
             continue;
         }

@@ -78,7 +78,7 @@ fail1:
 // are no longer used.
 static void old_launch_blob_init(void) {
     const char* blob_init = getenv("zircon.system.blob-init");
-    if (blob_init == NULL) {
+    if (blob_init == nullptr) {
         return;
     }
     if (secondary_bootfs_ready()) {
@@ -102,13 +102,13 @@ static void old_launch_blob_init(void) {
     argv[0] = binary;
     const char* blob_init_arg = getenv("zircon.system.blob-init-arg");
     int argc = 1;
-    if (blob_init_arg != NULL) {
+    if (blob_init_arg != nullptr) {
         argc++;
         argv[1] = blob_init_arg;
     }
 
     zx_status_t status = devmgr_launch(
-        job, "pkgfs", &fshost_launch_load, NULL, argc, &argv[0], NULL, -1,
+        job, "pkgfs", &fshost_launch_load, nullptr, argc, &argv[0], nullptr, -1,
         &handle, &type, 1, &proc, FS_DATA | FS_BLOB | FS_SVC);
 
     if (status != ZX_OK) {
@@ -134,7 +134,7 @@ static zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix,
         return ZX_ERR_BAD_PATH;
     }
     const char *blob = getenv(key);
-    if (blob == NULL) {
+    if (blob == nullptr) {
         return ZX_ERR_NOT_FOUND;
     }
     int fd = openat(fs_blob_fd, blob, O_RDONLY);
@@ -180,7 +180,7 @@ static const loader_service_ops_t pkgfs_ldsvc_ops = {
 // Always consumes fs_blob_fd.
 static zx_status_t pkgfs_ldsvc_start(int fs_blob_fd, zx_handle_t* ldsvc) {
     loader_service_t* service;
-    zx_status_t status = loader_service_create(NULL, &pkgfs_ldsvc_ops,
+    zx_status_t status = loader_service_create(nullptr, &pkgfs_ldsvc_ops,
                                                (void*)(intptr_t)fs_blob_fd,
                                                &service);
     if (status != ZX_OK) {
@@ -227,7 +227,7 @@ static zx_status_t pkgfs_launch_load(void* ctx, launchpad_t* lp,
 
 static bool pkgfs_launch(void) {
     const char* cmd = getenv("zircon.system.pkgfs.cmd");
-    if (cmd == NULL) {
+    if (cmd == nullptr) {
         return false;
     }
 
@@ -272,22 +272,22 @@ static void launch_blob_init(void) {
 static zx_status_t launch_blobfs(int argc, const char** argv, zx_handle_t* hnd,
                                  uint32_t* ids, size_t len) {
     return devmgr_launch(job, "blobfs:/blob",
-                         &fshost_launch_load, NULL, argc, argv, NULL, -1,
-                         hnd, ids, len, NULL, FS_FOR_FSPROC);
+                         &fshost_launch_load, nullptr, argc, argv, nullptr, -1,
+                         hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
 static zx_status_t launch_minfs(int argc, const char** argv, zx_handle_t* hnd,
                                 uint32_t* ids, size_t len) {
     return devmgr_launch(job, "minfs:/data",
-                         &fshost_launch_load, NULL, argc, argv, NULL, -1,
-                         hnd, ids, len, NULL, FS_FOR_FSPROC);
+                         &fshost_launch_load, nullptr, argc, argv, nullptr, -1,
+                         hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
 static zx_status_t launch_fat(int argc, const char** argv, zx_handle_t* hnd,
                               uint32_t* ids, size_t len) {
     return devmgr_launch(job, "fatfs:/volume",
-                         &fshost_launch_load, NULL, argc, argv, NULL, -1,
-                         hnd, ids, len, NULL, FS_FOR_FSPROC);
+                         &fshost_launch_load, nullptr, argc, argv, nullptr, -1,
+                         hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
 static bool data_mounted = false;
@@ -315,14 +315,14 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
             if (secondary_bootfs_ready()) {
                 return ZX_ERR_ALREADY_BOUND;
             }
-            if (getenv("zircon.system.blob-init") != NULL) {
+            if (getenv("zircon.system.blob-init") != nullptr) {
                 printf("fshost: minfs system partition ignored due to zircon.system.blob-init\n");
                 return ZX_ERR_ALREADY_BOUND;
             }
             const char* volume = getenv("zircon.system.volume");
-            if (volume != NULL && !strcmp(volume, "any")) {
+            if (volume != nullptr && !strcmp(volume, "any")) {
                 // Fall-through; we'll take anything.
-            } else if (volume != NULL && !strcmp(volume, "local")) {
+            } else if (volume != nullptr && !strcmp(volume, "local")) {
                 // Fall-through only if we can guarantee the partition
                 // is not removable.
                 block_info_t info;
@@ -335,7 +335,7 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
             }
 
             // TODO(ZX-1008): replace getenv with cmdline_bool("zircon.system.writable", false);
-            options->readonly = getenv("zircon.system.writable") == NULL;
+            options->readonly = getenv("zircon.system.writable") == nullptr;
             options->wait_until_ready = true;
 
             zx_status_t st = mount(fd, "/fs" PATH_SYSTEM, DISK_FORMAT_MINFS, options, launch_minfs);

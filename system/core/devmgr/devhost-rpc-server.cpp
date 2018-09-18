@@ -40,7 +40,7 @@ void describe_error(zx_handle_t h, zx_status_t status) {
     memset(&msg, 0, sizeof(msg));
     msg.hdr.ordinal = ZXFIDL_ON_OPEN;
     msg.status = status;
-    zx_channel_write(h, 0, &msg, sizeof(msg), NULL, 0);
+    zx_channel_write(h, 0, &msg, sizeof(msg), nullptr, 0);
     zx_handle_close(h);
 }
 
@@ -69,8 +69,8 @@ static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg,
 
 devhost_iostate_t* create_devhost_iostate(zx_device_t* dev) {
     devhost_iostate_t* ios;
-    if ((ios = static_cast<devhost_iostate_t*>(calloc(1, sizeof(devhost_iostate_t)))) == NULL) {
-        return NULL;
+    if ((ios = static_cast<devhost_iostate_t*>(calloc(1, sizeof(devhost_iostate_t)))) == nullptr) {
+        return nullptr;
     }
     ios->dev = dev;
     return ios;
@@ -85,7 +85,7 @@ static zx_status_t devhost_get_handles(zx_handle_t rh, zx_device_t* dev,
     bool describe = flags & ZX_FS_FLAG_DESCRIBE;
     flags &= (~ZX_FS_FLAG_DESCRIBE);
 
-    if ((newios = create_devhost_iostate(dev)) == NULL) {
+    if ((newios = create_devhost_iostate(dev)) == nullptr) {
         if (describe) {
             describe_error(rh, ZX_ERR_NO_MEMORY);
         }
@@ -157,7 +157,7 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
     zx_status_t r;
     switch (op) {
     case IOCTL_DEVICE_BIND: {
-        char* drv_libname = in_len > 0 ? (char*)in_buf : NULL;
+        char* drv_libname = in_len > 0 ? (char*)in_buf : nullptr;
         if (in_len > PATH_MAX) {
             return ZX_ERR_BAD_PATH;
         }
@@ -184,7 +184,7 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
             return ZX_ERR_NOT_SUPPORTED;
         }
         const char* name = dev->driver->name;
-        if (name == NULL) {
+        if (name == nullptr) {
             name = "unknown";
         }
         size_t len = strlen(name);
@@ -264,7 +264,7 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
 static zx_status_t fidl_node_clone(void* ctx, uint32_t flags, zx_handle_t object) {
     auto ios = static_cast<devhost_iostate_t*>(ctx);
     flags = ios->flags | (flags & ZX_FS_FLAG_DESCRIBE);
-    devhost_get_handles(object, ios->dev, NULL, flags);
+    devhost_get_handles(object, ios->dev, nullptr, flags);
     return ZX_OK;
 }
 
@@ -310,7 +310,7 @@ static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
     ((char*) path_data)[path_size] = 0;
 
     if (!strcmp(path_data, ".")) {
-        path_data = NULL;
+        path_data = nullptr;
     }
     devhost_get_handles(object, dev, path_data, flags);
     return ZX_OK;
@@ -322,7 +322,7 @@ static zx_status_t fidl_directory_unlink(void* ctx, const char* path_data,
 }
 
 static zx_status_t fidl_directory_readdirents(void* ctx, uint64_t max_out, fidl_txn_t* txn) {
-    return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_NOT_SUPPORTED, NULL, 0);
+    return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr, 0);
 }
 
 static zx_status_t fidl_directory_rewind(void* ctx, fidl_txn_t* txn) {
@@ -365,9 +365,9 @@ static zx_status_t fidl_file_read(void* ctx, uint64_t count, fidl_txn_t* txn) {
     auto ios = static_cast<devhost_iostate_t*>(ctx);
     zx_device_t* dev = ios->dev;
     if (!CAN_READ(ios)) {
-        return fuchsia_io_FileRead_reply(txn, ZX_ERR_ACCESS_DENIED, NULL, 0);
+        return fuchsia_io_FileRead_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr, 0);
     } else if (count > ZXFIDL_MAX_MSG_BYTES) {
-        return fuchsia_io_FileRead_reply(txn, ZX_ERR_INVALID_ARGS, NULL, 0);
+        return fuchsia_io_FileRead_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
     }
 
     uint8_t data[count];
@@ -386,9 +386,9 @@ static zx_status_t fidl_file_read(void* ctx, uint64_t count, fidl_txn_t* txn) {
 static zx_status_t fidl_file_readat(void* ctx, uint64_t count, uint64_t offset, fidl_txn_t* txn) {
     auto ios = static_cast<devhost_iostate_t*>(ctx);
     if (!CAN_READ(ios)) {
-        return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_ACCESS_DENIED, NULL, 0);
+        return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr, 0);
     } else if (count > ZXFIDL_MAX_MSG_BYTES) {
-        return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_INVALID_ARGS, NULL, 0);
+        return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
     }
 
     uint8_t data[count];
@@ -530,7 +530,7 @@ static const fuchsia_io_File_ops_t kFileOps = []() {
 static zx_status_t fidl_node_sync(void* ctx, fidl_txn_t* txn) {
     auto ios = static_cast<devhost_iostate_t*>(ctx);
     size_t actual;
-    ssize_t r = do_ioctl(ios->dev, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, &actual);
+    ssize_t r = do_ioctl(ios->dev, IOCTL_DEVICE_SYNC, nullptr, 0, nullptr, 0, &actual);
     auto status = static_cast<zx_status_t>(r);
     return fuchsia_io_NodeSync_reply(txn, status);
 }
@@ -560,8 +560,8 @@ static zx_status_t fidl_node_ioctl(void* ctx, uint32_t opcode, uint64_t max_out,
     size_t hsize = handles_count * sizeof(zx_handle_t);
     if ((in_count > FDIO_IOCTL_MAX_INPUT) || (max_out > ZXFIDL_MAX_MSG_BYTES)) {
         zx_handle_close_many(handles_data, handles_count);
-        return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_INVALID_ARGS, NULL, 0,
-                                          NULL, 0);
+        return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0,
+                                          nullptr, 0);
     }
     memcpy(in_buf, in_data, in_count);
     memcpy(in_buf, handles_data, hsize);

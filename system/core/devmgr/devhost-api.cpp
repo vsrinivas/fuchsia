@@ -26,7 +26,7 @@
 __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
                                             device_add_args_t* args, zx_device_t** out) {
     zx_status_t r;
-    zx_device_t* dev = NULL;
+    zx_device_t* dev = nullptr;
 
     if (!parent) {
         return ZX_ERR_INVALID_ARGS;
@@ -73,13 +73,13 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
         r = devhost_device_add(dev, parent, args->props, args->prop_count, args->proxy_args);
     } else if (args->flags & DEVICE_ADD_INSTANCE) {
         dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
-        r = devhost_device_add(dev, parent, NULL, 0, NULL);
+        r = devhost_device_add(dev, parent, nullptr, 0, nullptr);
     } else {
-        r = devhost_device_add(dev, parent, args->props, args->prop_count, NULL);
+        r = devhost_device_add(dev, parent, args->props, args->prop_count, nullptr);
     }
     if (r != ZX_OK) {
         if (out) {
-            *out = NULL;
+            *out = nullptr;
         }
         devhost_device_destroy(dev);
     }
@@ -129,7 +129,7 @@ __EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_
     if (dev->ops->get_protocol) {
         return dev->ops->get_protocol(dev->ctx, proto_id, out);
     }
-    if ((proto_id == dev->protocol_id) && (dev->protocol_ops != NULL)) {
+    if ((proto_id == dev->protocol_id) && (dev->protocol_ops != nullptr)) {
         proto->ops = dev->protocol_ops;
         proto->ctx = dev->ctx;
         return ZX_OK;

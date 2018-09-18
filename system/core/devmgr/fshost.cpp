@@ -105,7 +105,7 @@ static zx_status_t setup_bootfs_vmo(uint32_t n, uint32_t type, zx_handle_t vmo) 
         zx_handle_close(bootfs_vmo);
     }
     if (type == BOOTDATA_BOOTFS_SYSTEM) {
-        systemfs_set_readonly(getenv("zircon.system.writable") == NULL);
+        systemfs_set_readonly(getenv("zircon.system.writable") == nullptr);
     }
     return ZX_OK;
 }
@@ -131,7 +131,7 @@ static zx_status_t misc_device_added(int dirfd, int event, const char* fn,
         return ZX_OK;
     }
 
-    while (bootdata_ramdisk_list != NULL) {
+    while (bootdata_ramdisk_list != nullptr) {
         struct bootdata_ramdisk* br = bootdata_ramdisk_list;
         bootdata_ramdisk_list = br->next;
         zx_handle_t ramdisk_vmo = br->vmo;
@@ -157,7 +157,7 @@ static int ramctl_watcher(void* arg) {
         printf("fshost: failed to open /dev/misc: %s\n", strerror(errno));
         return -1;
     }
-    fdio_watch_directory(dirfd, &misc_device_added, ZX_TIME_INFINITE, NULL);
+    fdio_watch_directory(dirfd, &misc_device_added, ZX_TIME_INFINITE, nullptr);
     close(dirfd);
     return 0;
 }
@@ -410,7 +410,7 @@ int main(int argc, char** argv) {
         printf("fshost: cannot install namespace: %d\n", r);
     }
 
-    if ((r = loader_service_create_fs(NULL, &loader_service)) != ZX_OK) {
+    if ((r = loader_service_create_fs(nullptr, &loader_service)) != ZX_OK) {
         printf("fshost: failed to create loader service: %d\n", r);
     } else {
         loader_service_attach(loader_service, devmgr_loader);
@@ -423,13 +423,13 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (bootdata_ramdisk_list != NULL) {
+    if (bootdata_ramdisk_list != nullptr) {
         thrd_t th;
-        int err = thrd_create_with_name(&th, &ramctl_watcher, NULL,
+        int err = thrd_create_with_name(&th, &ramctl_watcher, nullptr,
                                         "ramctl-watcher");
         if (err != thrd_success) {
             printf("fshost: failed to start ramctl-watcher: %d\n", err);
-            while (bootdata_ramdisk_list != NULL) {
+            while (bootdata_ramdisk_list != nullptr) {
                 struct bootdata_ramdisk* br = bootdata_ramdisk_list;
                 bootdata_ramdisk_list = br->next;
                 zx_handle_close(br->vmo);

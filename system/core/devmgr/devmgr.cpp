@@ -45,7 +45,7 @@ static zx_handle_t appmgr_req_srv;
 
 bool getenv_bool(const char* key, bool _default) {
     const char* value = getenv(key);
-    if (value == NULL) {
+    if (value == nullptr) {
         return _default;
     }
     if ((strcmp(value, "0") == 0) ||
@@ -84,10 +84,10 @@ static const char* argv_appmgr[] = {"/system/bin/appmgr"};
 
 void do_autorun(const char* name, const char* env) {
     const char* cmd = getenv(env);
-    if (cmd != NULL) {
+    if (cmd != nullptr) {
         devmgr_launch_cmdline(env, svcs_job_handle, name,
-                              &devmgr_launch_load, NULL, cmd,
-                              NULL, NULL, 0, NULL, FS_ALL);
+                              &devmgr_launch_load, nullptr, cmd,
+                              nullptr, nullptr, 0, nullptr, FS_ALL);
     }
 }
 
@@ -101,7 +101,7 @@ static int fuchsia_starter(void* arg) {
     zx_time_t deadline = zx_deadline_after(ZX_SEC(10));
 
     do {
-        zx_status_t status = zx_object_wait_one(fshost_event, FSHOST_SIGNAL_READY, deadline, NULL);
+        zx_status_t status = zx_object_wait_one(fshost_event, FSHOST_SIGNAL_READY, deadline, nullptr);
         if (status == ZX_ERR_TIMED_OUT) {
             if (appmgr_req_srv != ZX_HANDLE_INVALID) {
                 if (require_system) {
@@ -139,10 +139,10 @@ static int fuchsia_starter(void* arg) {
                 appmgr_req_srv = ZX_HANDLE_INVALID;
             }
             devmgr_launch(fuchsia_job_handle, "appmgr",
-                          &devmgr_launch_load, NULL,
-                          countof(argv_appmgr), argv_appmgr, NULL, -1,
+                          &devmgr_launch_load, nullptr,
+                          countof(argv_appmgr), argv_appmgr, nullptr, -1,
                           appmgr_hnds, appmgr_ids, appmgr_hnd_count,
-                          NULL, FS_FOR_APPMGR);
+                          nullptr, FS_FOR_APPMGR);
             appmgr_started = true;
         }
         if (!autorun_started) {
@@ -278,7 +278,7 @@ int service_starter(void* arg) {
         zx_channel_create(0, &exception_channel, &exception_channel_passed) == ZX_OK &&
         zx_task_bind_exception_port(root_job_handle, exception_port, 0, 0) == ZX_OK) {
         thrd_t t;
-        if ((thrd_create_with_name(&t, crash_analyzer_listener, NULL,
+        if ((thrd_create_with_name(&t, crash_analyzer_listener, nullptr,
                                    "crash-analyzer-listener")) == thrd_success) {
             thrd_detach(t);
         }
@@ -287,16 +287,16 @@ int service_starter(void* arg) {
         uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1), PA_HND(PA_USER0, 2)};
         static const char* argv_crashsvc[] = {"/boot/bin/crashsvc"};
         devmgr_launch(svcs_job_handle, "crashsvc",
-                      &devmgr_launch_load, NULL,
-                      countof(argv_crashsvc), argv_crashsvc, NULL, -1,
-                      handles, handle_types, countof(handles), NULL, 0);
+                      &devmgr_launch_load, nullptr,
+                      countof(argv_crashsvc), argv_crashsvc, nullptr, -1,
+                      handles, handle_types, countof(handles), nullptr, 0);
     }
 
     char vcmd[64];
     __UNUSED bool netboot = false;
     bool vruncmd = false;
     if (!getenv_bool("netsvc.disable", false)) {
-        const char* args[] = {"/boot/bin/netsvc", NULL, NULL, NULL, NULL, NULL};
+        const char* args[] = {"/boot/bin/netsvc", nullptr, nullptr, nullptr, nullptr, nullptr};
         int argc = 1;
 
         if (getenv_bool("netsvc.netboot", false)) {
@@ -310,7 +310,7 @@ int service_starter(void* arg) {
         }
 
         const char* interface;
-        if ((interface = getenv("netsvc.interface")) != NULL) {
+        if ((interface = getenv("netsvc.interface")) != nullptr) {
             args[argc++] = "--interface";
             args[argc++] = interface;
         }
@@ -322,12 +322,12 @@ int service_starter(void* arg) {
 
         zx_handle_t proc;
         if (devmgr_launch(svcs_job_handle, "netsvc",
-                          &devmgr_launch_load, NULL, argc, args,
-                          NULL, -1, NULL, NULL, 0, &proc, FS_ALL) == ZX_OK) {
+                          &devmgr_launch_load, nullptr, argc, args,
+                          nullptr, -1, nullptr, nullptr, 0, &proc, FS_ALL) == ZX_OK) {
             if (vruncmd) {
                 zx_info_handle_basic_t info = {};
                 zx_object_get_info(proc, ZX_INFO_HANDLE_BASIC,
-                                   &info, sizeof(info), NULL, NULL);
+                                   &info, sizeof(info), nullptr, nullptr);
                 zx_handle_close(proc);
                 snprintf(vcmd, sizeof(vcmd), "dlog -f -t -p %zu", info.koid);
             }
@@ -347,7 +347,7 @@ int service_starter(void* arg) {
             }
             e++;
         }
-        envp[envc] = NULL;
+        envp[envc] = nullptr;
 
         const char* num_shells = require_system && !netboot ? "0" : "3";
 
@@ -356,9 +356,9 @@ int service_starter(void* arg) {
         zx_channel_create(0, &h, &virtcon_open);
         const char* args[] = {"/boot/bin/virtual-console", "--shells", num_shells, "--run", vcmd};
         devmgr_launch(svcs_job_handle, "virtual-console",
-                      &devmgr_launch_load, NULL,
+                      &devmgr_launch_load, nullptr,
                       vruncmd ? 5 : 3, args, envp, -1,
-                      &h, &type, (h == ZX_HANDLE_INVALID) ? 0 : 1, NULL, FS_ALL);
+                      &h, &type, (h == ZX_HANDLE_INVALID) ? 0 : 1, nullptr, FS_ALL);
     }
 
     const char* epoch = getenv("devmgr.epoch");
@@ -370,7 +370,7 @@ int service_starter(void* arg) {
     do_autorun("autorun:boot", "zircon.autorun.boot");
 
     thrd_t t;
-    if ((thrd_create_with_name(&t, fuchsia_starter, NULL, "fuchsia-starter")) == thrd_success) {
+    if ((thrd_create_with_name(&t, fuchsia_starter, nullptr, "fuchsia-starter")) == thrd_success) {
         thrd_detach(t);
     }
 
@@ -384,7 +384,7 @@ static int console_starter(void* arg) {
     // If we got a TERM environment variable (aka a TERM=... argument on
     // the kernel command line), pass this down; otherwise pass TERM=uart.
     const char* term = getenv("TERM");
-    if (term == NULL) {
+    if (term == nullptr) {
         term = "TERM=uart";
     } else {
         term -= sizeof("TERM=") - 1;
@@ -396,14 +396,14 @@ static int console_starter(void* arg) {
 
     const char* envp[] = {
         term,
-        NULL,
+        nullptr,
     };
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open(device, O_RDWR)) >= 0) {
             devmgr_launch(svcs_job_handle, "sh:console",
-                          &devmgr_launch_load, NULL,
-                          countof(argv_sh), argv_sh, envp, fd, NULL, NULL, 0, NULL, FS_ALL);
+                          &devmgr_launch_load, nullptr,
+                          countof(argv_sh), argv_sh, envp, fd, nullptr, nullptr, 0, nullptr, FS_ALL);
             break;
         }
         zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
@@ -423,7 +423,7 @@ static int pwrbtn_monitor_starter(void* arg) {
     launchpad_t* lp;
     launchpad_create(job_copy, name, &lp);
 
-    zx_status_t status = devmgr_launch_load(NULL, lp, argv[0]);
+    zx_status_t status = devmgr_launch_load(nullptr, lp, argv[0]);
     if (status != ZX_OK) {
         launchpad_abort(lp, status, "cannot load file");
     }
@@ -459,7 +459,7 @@ static int pwrbtn_monitor_starter(void* arg) {
     }
 
     const char* errmsg;
-    if ((status = launchpad_go(lp, NULL, &errmsg)) < 0) {
+    if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {
         printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
                argv[0], name, errmsg, status);
     } else {
@@ -473,7 +473,7 @@ static void start_console_shell(void) {
     // start a shell on the kernel console if it isn't already running a shell
     if (!getenv_bool("kernel.shell", false)) {
         thrd_t t;
-        if ((thrd_create_with_name(&t, console_starter, NULL, "console-starter")) == thrd_success) {
+        if ((thrd_create_with_name(&t, console_starter, nullptr, "console-starter")) == thrd_success) {
             thrd_detach(t);
         }
     }
@@ -487,7 +487,7 @@ static void load_cmdline_from_bootfs(void) {
     }
 
     auto cfg = static_cast<char*>(malloc(file_size + 1));
-    if (cfg == NULL) {
+    if (cfg == nullptr) {
         zx_handle_close(vmo);
         return;
     }
@@ -615,14 +615,14 @@ int main(int argc, char** argv) {
     }
 
     thrd_t t;
-    if ((thrd_create_with_name(&t, pwrbtn_monitor_starter, NULL,
+    if ((thrd_create_with_name(&t, pwrbtn_monitor_starter, nullptr,
                                "pwrbtn-monitor-starter")) == thrd_success) {
         thrd_detach(t);
     }
 
     start_console_shell();
 
-    if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {
+    if ((thrd_create_with_name(&t, service_starter, nullptr, "service-starter")) == thrd_success) {
         thrd_detach(t);
     }
 
@@ -641,7 +641,7 @@ static zx_status_t load_object(void* ctx, const char* name, zx_handle_t* vmo) {
         return ZX_ERR_BAD_PATH;
     }
     auto bootfs = static_cast<bootfs_t*>(ctx);
-    return bootfs_open(bootfs, tmp, vmo, NULL);
+    return bootfs_open(bootfs, tmp, vmo, nullptr);
 }
 
 static zx_status_t load_abspath(void* ctx, const char* name, zx_handle_t* vmo) {
@@ -676,7 +676,7 @@ void bootfs_create_from_startup_handle(void) {
     // to allow us to load the fshost (since we don't have filesystems before
     // the fshost starts up).
     zx_handle_t ldsvc;
-    if ((loader_service_create(NULL, &loader_ops, &bootfs, &loader_service) != ZX_OK) ||
+    if ((loader_service_create(nullptr, &loader_ops, &bootfs, &loader_service) != ZX_OK) ||
         (loader_service_connect(loader_service, &ldsvc) != ZX_OK)) {
         printf("devmgr: cannot create loader service\n");
         exit(1);
@@ -774,11 +774,11 @@ void fshost_start(void) {
         }
         e++;
     }
-    envp[envc] = NULL;
+    envp[envc] = nullptr;
 
     devmgr_launch(svcs_job_handle, "fshost",
-                  &devmgr_launch_load, NULL, argc, argv, envp, -1,
-                  handles, types, n, NULL, 0);
+                  &devmgr_launch_load, nullptr, argc, argv, envp, -1,
+                  handles, types, n, nullptr, 0);
 
     // switch to system loader service provided by fshost
     zx_handle_close(dl_set_loader_service(ldsvc));
@@ -794,7 +794,7 @@ zx_handle_t devmgr_load_file(const char* path, uint32_t* out_size) {
 }
 
 zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file) {
-    zx_handle_t vmo = devmgr_load_file(file, NULL);
+    zx_handle_t vmo = devmgr_load_file(file, nullptr);
     if (vmo != ZX_HANDLE_INVALID) {
         return launchpad_load_from_vmo(lp, vmo);
     } else {
@@ -810,7 +810,7 @@ void devmgr_vfs_exit(void) {
         return;
     } else if ((status = zx_object_wait_one(fshost_event,
                                             FSHOST_SIGNAL_EXIT_DONE,
-                                            zx_deadline_after(ZX_SEC(5)), NULL)) != ZX_OK) {
+                                            zx_deadline_after(ZX_SEC(5)), nullptr)) != ZX_OK) {
         printf("devmgr: Failed to wait for VFS exit completion\n");
     }
 }
@@ -903,12 +903,12 @@ zx_status_t svchost_start(void) {
     name = "svchost";
     const char* argv[2];
     argv[0] = "/boot/bin/svchost";
-    argv[1] = require_system ? "--require-system" : NULL;
+    argv[1] = require_system ? "--require-system" : nullptr;
     int argc;
     argc = require_system? 2 : 1;
 
     zx_handle_t svchost_vmo;
-    svchost_vmo = devmgr_load_file(argv[0], NULL);
+    svchost_vmo = devmgr_load_file(argv[0], nullptr);
     if (svchost_vmo == ZX_HANDLE_INVALID) {
         goto error;
     }
@@ -918,7 +918,7 @@ zx_status_t svchost_start(void) {
     zx_handle_duplicate(svcs_job_handle, ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MANAGE_JOB, &job_copy);
 
     launchpad_t* lp;
-    lp = NULL;
+    lp = nullptr;
     launchpad_create(job_copy, name, &lp);
     launchpad_load_from_vmo(lp, svchost_vmo);
     launchpad_set_args(lp, argc, argv);
@@ -931,7 +931,7 @@ zx_status_t svchost_start(void) {
     zx_handle_t process;
     process = ZX_HANDLE_INVALID;
     const char* errmsg;
-    errmsg = NULL;
+    errmsg = nullptr;
     if ((status = launchpad_go(lp, &process, &errmsg)) < 0) {
         printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
                argv[0], name, errmsg, status);

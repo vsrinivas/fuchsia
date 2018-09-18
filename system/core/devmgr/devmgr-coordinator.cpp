@@ -222,7 +222,7 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
             return ZX_OK;
         }
         if (!memcmp(cmd, "ktraceon", 8)) {
-            zx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, KTRACE_GRP_ALL, NULL);
+            zx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, KTRACE_GRP_ALL, nullptr);
             return ZX_OK;
         }
         if (!memcmp(cmd, "devprops", 8)) {
@@ -231,8 +231,8 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
         }
     }
     if ((len == 9) && (!memcmp(cmd, "ktraceoff", 9))) {
-        zx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, NULL);
-        zx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, NULL);
+        zx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, nullptr);
+        zx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, nullptr);
         return ZX_OK;
     }
     if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
@@ -283,7 +283,7 @@ static driver_t* libname_to_driver(const char* libname) {
             return drv;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 static zx_status_t load_vmo(const char* libname, zx_handle_t* out) {
@@ -298,7 +298,7 @@ static zx_status_t load_vmo(const char* libname, zx_handle_t* out) {
         log(ERROR, "devcoord: cannot get driver vmo '%s'\n", libname);
     }
     const char* vmo_name = strrchr(libname, '/');
-    if (vmo_name != NULL) {
+    if (vmo_name != nullptr) {
         ++vmo_name;
     } else {
         vmo_name = libname;
@@ -309,7 +309,7 @@ static zx_status_t load_vmo(const char* libname, zx_handle_t* out) {
 
 static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
     driver_t* drv = libname_to_driver(libname);
-    if (drv == NULL) {
+    if (drv == nullptr) {
         log(ERROR, "devcoord: cannot find driver '%s'\n", libname);
         return ZX_ERR_NOT_FOUND;
     }
@@ -515,7 +515,7 @@ static zx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
     *path = 0;
     size_t total = 1;
 
-    while (dev != NULL) {
+    while (dev != nullptr) {
         if (dev->flags & DEV_CTX_PROXY) {
             dev = dev->parent;
         }
@@ -573,7 +573,7 @@ static zx_status_t dc_notify(device_t* dev, uint32_t op) {
         evt->u.add.protocol_id = dev->protocol_id;
         evt->u.add.props_len = static_cast<uint32_t>(propslen);
         evt->u.add.path_len = static_cast<uint32_t>(pathlen);
-        r = zx_channel_write(dc_watch_channel, 0, msg, static_cast<uint32_t>(len), NULL, 0);
+        r = zx_channel_write(dc_watch_channel, 0, msg, static_cast<uint32_t>(len), nullptr, 0);
     } else {
         devmgr_event_t evt;
         memset(&evt, 0, sizeof(evt));
@@ -582,7 +582,7 @@ static zx_status_t dc_notify(device_t* dev, uint32_t op) {
             evt.flags |= DEVMGR_FLAGS_BOUND;
         }
         evt.id = (uintptr_t) dev;
-        r = zx_channel_write(dc_watch_channel, 0, &evt, sizeof(evt), NULL, 0);
+        r = zx_channel_write(dc_watch_channel, 0, &evt, sizeof(evt), nullptr, 0);
     }
     if (r < 0) {
         zx_handle_close(dc_watch_channel);
@@ -654,7 +654,7 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
     }
     zx_info_handle_basic_t info;
     if (zx_object_get_info(host->proc, ZX_INFO_HANDLE_BASIC, &info,
-                           sizeof(info), NULL, NULL) == ZX_OK) {
+                           sizeof(info), nullptr, nullptr) == ZX_OK) {
         host->koid = info.koid;
     }
     log(INFO, "devcoord: launch devhost '%s': pid=%zu\n",
@@ -668,7 +668,7 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
 static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
                                   devhost_t** out) {
     devhost_t* dh = static_cast<devhost_t*>(calloc(1, sizeof(devhost_t)));
-    if (dh == NULL) {
+    if (dh == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -708,8 +708,8 @@ static void dc_release_devhost(devhost_t* dh) {
     }
     log(INFO, "devcoord: destroy host %p\n", dh);
     devhost_t* parent = dh->parent;
-    if (parent != NULL) {
-        dh->parent = NULL;
+    if (parent != nullptr) {
+        dh->parent = nullptr;
         list_delete(&dh->node);
         dc_release_devhost(parent);
     }
@@ -743,12 +743,12 @@ static void dc_release_device(device_t* dev) {
         dev->hrpc = ZX_HANDLE_INVALID;
         dev->ph.handle = ZX_HANDLE_INVALID;
     }
-    dev->host = NULL;
+    dev->host = nullptr;
 
     cancel_work(&dev->work);
 
     dc_metadata_t* md;
-    while ((md = list_remove_head_type(&dev->metadata, dc_metadata_t, node)) != NULL) {
+    while ((md = list_remove_head_type(&dev->metadata, dc_metadata_t, node)) != nullptr) {
         if (md->has_path) {
             // return to published_metadata list
             list_add_tail(&published_metadata, &md->node);
@@ -776,7 +776,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     // allocate device struct, followed by space for props, followed
     // by space for bus arguments, followed by space for the name
     size_t sz = sizeof(*dev) + msg->datalen + msg->argslen + msg->namelen + 2;
-    if ((dev = static_cast<device_t*>(calloc(1, sz))) == NULL) {
+    if ((dev = static_cast<device_t*>(calloc(1, sz))) == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
     list_initialize(&dev->children);
@@ -794,7 +794,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     memcpy(text, name, msg->namelen + 1);
 
     char* text2 = strchr(text, ',');
-    if (text2 != NULL) {
+    if (text2 != nullptr) {
         *text2++ = 0;
         dev->name = text2;
         dev->libname = text;
@@ -849,7 +849,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     }
 
     if (dev->host) {
-        //TODO host == NULL should be impossible
+        //TODO host == nullptr should be impossible
         dev->host->refcount++;
         list_add_tail(&dev->host->devices, &dev->dhnode);
     }
@@ -919,12 +919,12 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
         dc_msg_t msg;
         uint32_t mlen;
         zx_status_t r;
-        if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, NULL, NULL)) < 0) {
+        if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, nullptr, nullptr)) < 0) {
             log(ERROR, "devcoord: dc_msg_pack failed in dc_remove_device\n");
         } else {
             msg.txid = 0;
             msg.op = DC_OP_REMOVE_DEVICE;
-            if ((r = zx_channel_write(dev->proxy->hrpc, 0, &msg, mlen, NULL, 0)) != ZX_OK) {
+            if ((r = zx_channel_write(dev->proxy->hrpc, 0, &msg, mlen, nullptr, 0)) != ZX_OK) {
             log(ERROR, "devcoord: zx_channel_write failed in dc_remove_devicey\n");
             }
         }
@@ -932,8 +932,8 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
 
     // detach from devhost
     devhost_t* dh = dev->host;
-    if (dh != NULL) {
-        dev->host = NULL;
+    if (dh != nullptr) {
+        dev->host = nullptr;
         list_delete(&dev->dhnode);
 
         // If we are responding to a disconnect,
@@ -944,8 +944,8 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
             dh->flags |= DEV_HOST_DYING;
 
             device_t* next;
-            device_t* last = NULL;
-            while ((next = list_peek_head_type(&dh->devices, device_t, dhnode)) != NULL) {
+            device_t* last = nullptr;
+            while ((next = list_peek_head_type(&dh->devices, device_t, dhnode)) != nullptr) {
                 if (last == next) {
                     // This shouldn't be possbile, but let's not infinite-loop if it happens
                     log(ERROR, "devcoord: fatal: failed to remove dev %p from devhost\n", next);
@@ -964,10 +964,10 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
 
     // if we have a parent, disconnect and downref it
     device_t* parent = dev->parent;
-    if (parent != NULL) {
-        dev->parent = NULL;
+    if (parent != nullptr) {
+        dev->parent = nullptr;
         if (dev->flags & DEV_CTX_PROXY) {
-            parent->proxy = NULL;
+            parent->proxy = nullptr;
         } else {
             list_delete(&dev->node);
             if (list_is_empty(&parent->children)) {
@@ -985,7 +985,7 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
                 // THEN we will want to rebind our parent
                 if (!(parent->flags & DEV_CTX_DEAD) &&
                     (parent->flags & DEV_CTX_MUST_ISOLATE) &&
-                    ((parent->host == NULL) || !(parent->host->flags & DEV_HOST_DYING))) {
+                    ((parent->host == nullptr) || !(parent->host->flags & DEV_HOST_DYING))) {
 
                     log(DEVLC, "devcoord: bus device %p name='%s' is unbound\n",
                         parent, parent->name);
@@ -1298,7 +1298,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         if (hcount != 1) {
             goto fail_wrong_hcount;
         }
-        zx_channel_write(virtcon_open, 0, NULL, 0, hin, 1);
+        zx_channel_write(virtcon_open, 0, nullptr, 0, hin, 1);
         r = ZX_OK;
         break;
 
@@ -1332,7 +1332,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         }
         reply.rsp.status = ZX_OK;
         reply.rsp.txid = msg.txid;
-        if ((r = zx_channel_write(dev->hrpc, 0, &reply, sizeof(reply), NULL, 0)) < 0) {
+        if ((r = zx_channel_write(dev->hrpc, 0, &reply, sizeof(reply), nullptr, 0)) < 0) {
             return r;
         }
         return ZX_OK;
@@ -1363,7 +1363,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         // all of these return directly and do not write a
         // reply, since this message is a reply itself
         pending_t* pending = list_remove_head_type(&dev->pending, pending_t, node);
-        if (pending == NULL) {
+        if (pending == nullptr) {
             log(ERROR, "devcoord: rpc: spurious status message\n");
             return ZX_OK;
         }
@@ -1404,7 +1404,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
                                            &actual);
         reply.rsp.txid = msg.txid;
         uint32_t reply_size = static_cast<uint32_t>(sizeof(reply.rsp) + actual);
-        return zx_channel_write(dev->hrpc, 0, &reply, reply_size, NULL, 0);
+        return zx_channel_write(dev->hrpc, 0, &reply, reply_size, nullptr, 0);
     }
     case DC_OP_ADD_METADATA: {
         if (hcount != 0) {
@@ -1428,14 +1428,14 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
 
 done:
     dcs.status = r;
-    if ((r = zx_channel_write(dev->hrpc, 0, &dcs, sizeof(dcs), NULL, 0)) < 0) {
+    if ((r = zx_channel_write(dev->hrpc, 0, &dcs, sizeof(dcs), nullptr, 0)) < 0) {
         return r;
     }
     return ZX_OK;
 
 disconnect:
     dcs.status = ZX_OK;
-    zx_channel_write(dev->hrpc, 0, &dcs, sizeof(dcs), NULL, 0);
+    zx_channel_write(dev->hrpc, 0, &dcs, sizeof(dcs), nullptr, 0);
     return ZX_ERR_STOP;
 
 fail_wrong_hcount:
@@ -1481,7 +1481,7 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     uint32_t mlen;
     zx_status_t r;
 
-    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, dev->libname, args)) < 0) {
+    if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, dev->libname, args)) < 0) {
         return r;
     }
 
@@ -1533,7 +1533,7 @@ fail_after_write:
 }
 
 static zx_status_t dc_create_proxy(device_t* parent) {
-    if (parent->proxy != NULL) {
+    if (parent->proxy != nullptr) {
         return ZX_OK;
     }
 
@@ -1554,7 +1554,7 @@ static zx_status_t dc_create_proxy(device_t* parent) {
     }
 
     device_t* dev = static_cast<device_t*>(calloc(1, devlen));
-    if (dev == NULL) {
+    if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
     char* text = (char*) (dev + 1);
@@ -1587,12 +1587,12 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     uint32_t mlen;
 
     pending_t* pending = static_cast<pending_t*>(malloc(sizeof(pending_t)));
-    if (pending == NULL) {
+    if (pending == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
     zx_status_t r;
-    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, libname, NULL)) < 0) {
+    if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, libname, nullptr)) < 0) {
         free(pending);
         return r;
     }
@@ -1613,7 +1613,7 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
 
     dev->flags |= DEV_CTX_BOUND;
     pending->op = PENDING_BIND;
-    pending->ctx = NULL;
+    pending->ctx = nullptr;
     list_add_tail(&dev->pending, &pending->node);
     return ZX_OK;
 }
@@ -1622,7 +1622,7 @@ static zx_status_t dh_connect_proxy(device_t* dev, zx_handle_t h) {
     dc_msg_t msg;
     uint32_t mlen;
     zx_status_t r;
-    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, NULL, NULL)) < 0) {
+    if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, nullptr, nullptr)) < 0) {
         zx_handle_close(h);
         return r;
     }
@@ -1640,7 +1640,7 @@ static zx_status_t dc_prepare_proxy(device_t* dev) {
     // proxy args are "processname,args"
     const char* arg0 = dev->args;
     const char* arg1 = strchr(arg0, ',');
-    if (arg1 == NULL) {
+    if (arg1 == nullptr) {
         return ZX_ERR_INTERNAL;
     }
     size_t arg0len = arg1 - arg0;
@@ -1656,7 +1656,7 @@ static zx_status_t dc_prepare_proxy(device_t* dev) {
     }
 
     // if this device has no devhost, first instantiate it
-    if (dev->proxy->host == NULL) {
+    if (dev->proxy->host == nullptr) {
         zx_handle_t h0 = ZX_HANDLE_INVALID, h1 = ZX_HANDLE_INVALID;
 
         // the immortal root devices do not provide proxy rpc
@@ -1701,7 +1701,7 @@ static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
     }
     if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
         // non-busdev is pretty simple
-        if (dev->host == NULL) {
+        if (dev->host == nullptr) {
             log(ERROR, "devcoord: can't bind to device without devhost\n");
             return ZX_ERR_BAD_STATE;
         }
@@ -1741,13 +1741,13 @@ static void dc_handle_new_device(device_t* dev) {
 static void dc_suspend_fallback(uint32_t flags) {
     log(INFO, "devcoord: suspend fallback with flags 0x%08x\n", flags);
     if (flags == DEVICE_SUSPEND_FLAG_REBOOT) {
-        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT, NULL);
+        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT, nullptr);
     } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER) {
-        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, NULL);
+        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, nullptr);
     } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY) {
-        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, NULL);
+        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, nullptr);
     } else if (flags == DEVICE_SUSPEND_FLAG_POWEROFF) {
-        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_SHUTDOWN, NULL);
+        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
     }
 }
 
@@ -1769,14 +1769,14 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
     zx_handle_t rpc = ZX_HANDLE_INVALID;
 
     pending_t* pending = static_cast<pending_t*>(malloc(sizeof(pending_t)));
-    if (pending == NULL) {
+    if (pending == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
     dc_msg_t msg;
     uint32_t mlen;
     zx_status_t r;
-    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, NULL, NULL)) < 0) {
+    if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, nullptr, nullptr)) < 0) {
         free(pending);
         return r;
     }
@@ -1784,7 +1784,7 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
     msg.op = DC_OP_SUSPEND;
     msg.value = ctx->sflags;
     rpc = dev->hrpc;
-    if ((r = zx_channel_write(rpc, 0, &msg, mlen, NULL, 0)) != ZX_OK) {
+    if ((r = zx_channel_write(rpc, 0, &msg, mlen, nullptr, 0)) != ZX_OK) {
         free(pending);
         return r;
     }
@@ -1801,7 +1801,7 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
 
 static void append_suspend_list(suspend_context_t* ctx, devhost_t* dh) {
     // suspend order is children first
-    devhost_t* child = NULL;
+    devhost_t* child = nullptr;
     list_for_every_entry(&dh->children, child, devhost_t, node) {
         list_add_head(&ctx->devhosts, &child->snode);
     }
@@ -1824,7 +1824,7 @@ static void build_suspend_list(suspend_context_t* ctx) {
 
 static void process_suspend_list(suspend_context_t* ctx) {
     devhost_t* dh = ctx->dh;
-    devhost_t* parent = NULL;
+    devhost_t* parent = nullptr;
     do {
         if (!parent || (dh->parent == parent)) {
             // send DC_OP_SUSPEND each set of children of a devhost at a time,
@@ -1836,11 +1836,11 @@ static void process_suspend_list(suspend_context_t* ctx) {
             // parent, either this devhost is the parent, a child of
             // its parent's sibling, or the parent's sibling, so stop
             // processing until all the outstanding suspends are done
-            parent = NULL;
+            parent = nullptr;
             break;
         }
     } while ((dh = list_next_type(&ctx->devhosts, &dh->snode,
-                                  devhost_t, snode)) != NULL);
+                                  devhost_t, snode)) != nullptr);
     // next devhost to process once all the outstanding suspends are done
     ctx->dh = dh;
 }
@@ -1852,7 +1852,7 @@ static bool check_pending(device_t* dev) {
     } else {
         pending = list_peek_tail_type(&dev->pending, pending_t, node);
     }
-    if ((pending == NULL) || (pending->op != PENDING_SUSPEND)) {
+    if ((pending == nullptr) || (pending->op != PENDING_SUSPEND)) {
         return false;
     } else {
         log(ERROR, "  devhost with device '%s' timed out\n", dev->name);
@@ -1965,7 +1965,7 @@ static void dc_continue_suspend(suspend_context_t* ctx) {
 
     ctx->count -= 1;
     if (ctx->count == 0) {
-        if (ctx->dh != NULL) {
+        if (ctx->dh != nullptr) {
             process_suspend_list(ctx);
         } else if (ctx->sflags == DEVICE_SUSPEND_FLAG_MEXEC) {
             zx_system_mexec(get_root_resource(), ctx->kernel, ctx->bootdata);
@@ -2101,7 +2101,7 @@ void dc_bind_driver(driver_t* drv) {
 
 void dc_handle_new_driver(void) {
     driver_t* drv;
-    while ((drv = list_remove_head_type(&list_drivers_new, driver_t, node)) != NULL) {
+    while ((drv = list_remove_head_type(&list_drivers_new, driver_t, node)) != nullptr) {
         list_add_tail(&list_drivers, &drv->node);
         dc_bind_driver(drv);
     }
@@ -2127,17 +2127,17 @@ static zx_status_t dc_control_event(port_handler_t* ph, zx_signals_t signals, ui
             // This avoids deadlocks between the devhosts hosting the block devices
             // that these drivers may be served from and the devcoordinator loading them.
             thrd_t t;
-            thrd_create_with_name(&t, system_driver_loader, NULL, "system-driver-loader");
+            thrd_create_with_name(&t, system_driver_loader, nullptr, "system-driver-loader");
         }
         break;
     case CTL_ADD_SYSTEM: {
         driver_t* drv;
         // Add system drivers to the new list
-        while ((drv = list_remove_head_type(&list_drivers_system, driver_t, node)) != NULL) {
+        while ((drv = list_remove_head_type(&list_drivers_system, driver_t, node)) != nullptr) {
             list_add_tail(&list_drivers_new, &drv->node);
         }
         // Add any remaining fallback drivers to the new list
-        while ((drv = list_remove_tail_type(&list_drivers_fallback, driver_t, node)) != NULL) {
+        while ((drv = list_remove_tail_type(&list_drivers_fallback, driver_t, node)) != nullptr) {
             printf("devcoord: fallback driver '%s' is available\n", drv->name);
             list_add_tail(&list_drivers_new, &drv->node);
         }
@@ -2231,7 +2231,7 @@ void coordinator(void) {
         printf("devcoord: full system required, ignoring fallback drivers until /system is loaded\n");
     } else {
         driver_t* drv;
-        while ((drv = list_remove_tail_type(&list_drivers_fallback, driver_t, node)) != NULL) {
+        while ((drv = list_remove_tail_type(&list_drivers_fallback, driver_t, node)) != nullptr) {
             list_add_tail(&list_drivers, &drv->node);
         }
     }

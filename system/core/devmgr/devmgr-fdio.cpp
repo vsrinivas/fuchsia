@@ -28,7 +28,7 @@ void devmgr_io_init(void) {
         return;
     }
     fdio_t* logger;
-    if ((logger = fdio_logger_create(h)) == NULL) {
+    if ((logger = fdio_logger_create(h)) == nullptr) {
         return;
     }
     close(1);
@@ -79,7 +79,7 @@ zx_status_t devmgr_launch(
     while ((_envp && _envp[0]) && (envn < MAX_ENVP)) {
         envp[envn++] = *_envp++;
     }
-    envp[envn++] = NULL;
+    envp[envn++] = nullptr;
 
     zx_handle_t job_copy = ZX_HANDLE_INVALID;
     zx_handle_duplicate(job, CHILD_JOB_RIGHTS, &job_copy);
@@ -142,7 +142,7 @@ zx_status_t devmgr_launch_cmdline(
 
     // Get the full commandline by splitting on '+'.
     char* buf = strdup(cmdline);
-    if (buf == NULL) {
+    if (buf == nullptr) {
         printf("%s: Can't parse + command: %s\n", me, cmdline);
         return ZX_ERR_UNAVAILABLE;
     }
@@ -162,7 +162,7 @@ zx_status_t devmgr_launch_cmdline(
     printf("...\n");
 
     zx_status_t status = devmgr_launch(
-        job, name, load, ctx, argc, (const char* const*)argv, NULL, -1,
+        job, name, load, ctx, argc, (const char* const*)argv, nullptr, -1,
         handles, types, hcount, proc, flags);
 
     free(buf);

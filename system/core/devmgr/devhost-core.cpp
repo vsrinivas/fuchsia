@@ -336,7 +336,7 @@ zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
     }
 
     auto dev = static_cast<zx_device_t*>(malloc(sizeof(zx_device_t)));
-    if (dev == NULL) {
+    if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -346,7 +346,7 @@ zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
     dev->driver = drv;
     list_initialize(&dev->children);
 
-    if (name == NULL) {
+    if (name == nullptr) {
         printf("devhost: dev=%p has null name.\n", dev);
         name = "invalid";
         dev->magic = 0;
@@ -367,13 +367,13 @@ zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
 }
 
 #define DEFAULT_IF_NULL(ops,method) \
-    if (ops->method == NULL) { \
+    if (ops->method == nullptr) { \
         ops->method = default_##method; \
     }
 
 static zx_status_t device_validate(zx_device_t* dev) REQ_DM_LOCK {
-    if (dev == NULL) {
-        printf("INVAL: NULL!\n");
+    if (dev == nullptr) {
+        printf("INVAL: nullptr!\n");
         return ZX_ERR_INVALID_ARGS;
     }
     if (dev->flags & DEV_FLAG_ADDED) {
@@ -383,8 +383,8 @@ static zx_status_t device_validate(zx_device_t* dev) REQ_DM_LOCK {
     if (dev->magic != DEV_MAGIC) {
         return ZX_ERR_BAD_STATE;
     }
-    if (dev->ops == NULL) {
-        printf("device add: %p(%s): NULL ops\n", dev, dev->name);
+    if (dev->ops == nullptr) {
+        printf("device add: %p(%s): nullptr ops\n", dev, dev->name);
         return ZX_ERR_INVALID_ARGS;
     }
     if ((dev->protocol_id == ZX_PROTOCOL_MISC_PARENT) ||
@@ -426,8 +426,8 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
     if ((status = device_validate(dev)) < 0) {
         goto fail;
     }
-    if (parent == NULL) {
-        printf("device_add: cannot add %p(%s) to NULL parent\n", dev, dev->name);
+    if (parent == nullptr) {
+        printf("device_add: cannot add %p(%s) to nullptr parent\n", dev, dev->name);
         status = ZX_ERR_NOT_SUPPORTED;
         goto fail;
     }
@@ -438,17 +438,17 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
     }
 
     creation_context_t* ctx;
-    ctx = NULL;
+    ctx = nullptr;
 
     // if creation ctx (thread local) is set, we are in a thread
     // that is handling a bind() or create() callback and if that
     // ctx's parent matches the one provided to add we need to do
     // some additional checking...
-    if ((creation_ctx != NULL) && (creation_ctx->parent == parent)) {
+    if ((creation_ctx != nullptr) && (creation_ctx->parent == parent)) {
         ctx = creation_ctx;
         if (ctx->rpc != ZX_HANDLE_INVALID) {
             // create() must create only one child
-            if (ctx->child != NULL) {
+            if (ctx->child != nullptr) {
                 printf("devhost: driver attempted to create multiple proxy devices!\n");
                 return ZX_ERR_BAD_STATE;
             }
@@ -500,7 +500,7 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
             printf("devhost: %p(%s): remote add failed %d\n",
                    dev, dev->name, status);
             dev_ref_release(dev->parent);
-            dev->parent = NULL;
+            dev->parent = nullptr;
 
             // since we are under the lock the whole time, we added the node
             // to the tail and then we peeled it back off the tail when we
@@ -515,7 +515,7 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
     dev->flags &= (~DEV_FLAG_BUSY);
 
     // record this device in the creation context if there is one
-    if (ctx && (ctx->child == NULL)) {
+    if (ctx && (ctx->child == nullptr)) {
         ctx->child = dev;
     }
     return ZX_OK;
@@ -564,7 +564,7 @@ static void devhost_unbind_child(zx_device_t* child) TA_REQ(&__devhost_api_lock)
 }
 
 static void devhost_unbind_children(zx_device_t* dev) REQ_DM_LOCK {
-    zx_device_t* child = NULL;
+    zx_device_t* child = nullptr;
 #if TRACE_ADD_REMOVE
     printf("devhost_unbind_children: %p(%s)\n", dev, dev->name);
 #endif
@@ -656,7 +656,7 @@ zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags) REQ_DM_LOCK {
 static zx_status_t _devhost_device_suspend(zx_device_t* dev, uint32_t flags) REQ_DM_LOCK {
     // first suspend children (so we suspend from leaf up)
     zx_status_t st;
-    zx_device_t* child = NULL;
+    zx_device_t* child = nullptr;
     list_for_every_entry(&dev->children, child, zx_device_t, node) {
         if (!(child->flags & DEV_FLAG_DEAD)) {
             st = devhost_device_suspend(child, flags);

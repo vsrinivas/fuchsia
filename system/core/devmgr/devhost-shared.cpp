@@ -74,7 +74,7 @@ zx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
         ptr += msg->datalen;
         len -= msg->datalen;
     } else {
-        *data = NULL;
+        *data = nullptr;
     }
     if (msg->namelen) {
         if (msg->namelen > len) {

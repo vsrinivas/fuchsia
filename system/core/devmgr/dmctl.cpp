@@ -20,17 +20,17 @@ static zx_status_t dmctl_cmd(uint32_t op, const char* cmd, size_t cmdlen,
                              zx_handle_t* h, uint32_t hcount) {
     dc_msg_t msg;
     uint32_t msglen;
-    if (dc_msg_pack(&msg, &msglen, cmd, cmdlen, NULL, NULL) < 0) {
+    if (dc_msg_pack(&msg, &msglen, cmd, cmdlen, nullptr, nullptr) < 0) {
         return ZX_ERR_INVALID_ARGS;
     }
     msg.op = op;
     dc_status_t rsp;
-    return dc_msg_rpc(dmctl_dev->rpc, &msg, msglen, h, hcount, &rsp, sizeof(rsp), NULL, NULL);
+    return dc_msg_rpc(dmctl_dev->rpc, &msg, msglen, h, hcount, &rsp, sizeof(rsp), nullptr, nullptr);
 }
 
 static zx_status_t dmctl_write(void* ctx, const void* buf, size_t count, zx_off_t off,
                                size_t* actual) {
-    zx_status_t status = dmctl_cmd(DC_OP_DM_COMMAND, static_cast<const char*>(buf), count, NULL, 0);
+    zx_status_t status = dmctl_cmd(DC_OP_DM_COMMAND, static_cast<const char*>(buf), count, nullptr, 0);
     if (status >= 0) {
         *actual = count;
         status = ZX_OK;
@@ -65,17 +65,17 @@ static zx_status_t dmctl_ioctl(void* ctx, uint32_t op,
         if (in_len != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return dmctl_cmd(DC_OP_DM_OPEN_VIRTCON, NULL, 0, ((zx_handle_t*) in_buf), 1);
+        return dmctl_cmd(DC_OP_DM_OPEN_VIRTCON, nullptr, 0, ((zx_handle_t*) in_buf), 1);
     case IOCTL_DMCTL_WATCH_DEVMGR:
         if (in_len != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return dmctl_cmd(DC_OP_DM_WATCH, NULL, 0, ((zx_handle_t*) in_buf), 1);
+        return dmctl_cmd(DC_OP_DM_WATCH, nullptr, 0, ((zx_handle_t*) in_buf), 1);
     case IOCTL_DMCTL_MEXEC:
         if (in_len != sizeof(dmctl_mexec_args_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return dmctl_cmd(DC_OP_DM_MEXEC, NULL, 0, ((zx_handle_t*) in_buf), 2);
+        return dmctl_cmd(DC_OP_DM_MEXEC, nullptr, 0, ((zx_handle_t*) in_buf), 2);
     default:
         return ZX_ERR_INVALID_ARGS;
     }
