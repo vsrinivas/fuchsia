@@ -318,6 +318,7 @@ type Union struct {
 	Members    []UnionMember             `json:"members"`
 	Size       int                       `json:"size"`
 	Alignment  int                       `json:"alignment"`
+	MaxHandles int                       `json:"max_handles"`
 }
 
 // UnionMember represents the declaration of a field in a FIDL union.
@@ -335,15 +336,17 @@ type Struct struct {
 	Members    []StructMember            `json:"members"`
 	Size       int                       `json:"size"`
 	Alignment  int                       `json:"alignment"`
+	MaxHandles int                       `json:"max_handles"`
 }
 
 // StructMember represents the declaration of a field in a FIDL struct.
 type StructMember struct {
 	Attributes
-	Type              Type        `json:"type"`
-	Name              Identifier  `json:"name"`
-	Offset            int         `json:"offset"`
-	MaybeDefaultValue *Constant   `json:"maybe_default_value,omitempty"`
+	Type              Type       `json:"type"`
+	Name              Identifier `json:"name"`
+	Offset            int        `json:"offset"`
+	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
+	MaxHandles        int        `json:"max_handles"`
 }
 
 // Interface represents the declaration of a FIDL interface.
