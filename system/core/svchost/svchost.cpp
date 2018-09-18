@@ -120,9 +120,6 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.sys.Environment",
     "fuchsia.sys.Launcher",
     "fuchsia.wlan.service.Wlan",
-    // fdio name for Netstack. Will be removed with the new interfaces defined
-    // in NET-863.
-    "net.Netstack",
     // TODO(IN-458): This entry is temporary, until IN-458 is resolved.
     "fuchsia.tracing.TraceController",
     nullptr,
