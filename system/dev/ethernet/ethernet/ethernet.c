@@ -917,6 +917,9 @@ static zx_status_t fidl_SetClientName_locked(void* ctx, const char* buf, size_t 
 
 static zx_status_t fidl_GetStatus_locked(void* ctx, fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
+    if (zx_object_signal_peer(edev->rx_fifo, ETH_SIGNAL_STATUS, 0) != ZX_OK) {
+        return ZX_ERR_INTERNAL;
+    }
     return REPLY(GetStatus)(txn, edev->edev0->status);
 }
 
