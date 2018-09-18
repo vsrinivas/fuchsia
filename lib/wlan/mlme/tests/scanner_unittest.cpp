@@ -6,7 +6,7 @@
 
 #include "mock_device.h"
 
-#include <wlan/mlme/clock.h>
+#include <lib/timekeeper/clock.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
@@ -60,9 +60,8 @@ struct MockOnChannelHandler : OnChannelHandler {
 class ScannerTest : public ::testing::Test {
    public:
     ScannerTest()
-      : chan_sched_(&on_channel_handler_, &mock_dev_, mock_dev_.CreateTimer(1u)),
-        scanner_(&mock_dev_, &chan_sched_)
-    {
+        : chan_sched_(&on_channel_handler_, &mock_dev_, mock_dev_.CreateTimer(1u)),
+          scanner_(&mock_dev_, &chan_sched_) {
         mock_dev_.SetChannel(wlan_channel_t{.primary = 11, .cbw = CBW20});
         SetupMessages();
     }
@@ -88,16 +87,16 @@ class ScannerTest : public ::testing::Test {
 
     wlan_mlme::ScanResult ExpectScanResult() {
         wlan_mlme::ScanResult result;
-        zx_status_t st = mock_dev_.GetQueuedServiceMsg(
-                fuchsia_wlan_mlme_MLMEOnScanResultOrdinal, &result);
+        zx_status_t st =
+            mock_dev_.GetQueuedServiceMsg(fuchsia_wlan_mlme_MLMEOnScanResultOrdinal, &result);
         EXPECT_EQ(ZX_OK, st);
         return result;
     }
 
     wlan_mlme::ScanEnd ExpectScanEnd() {
         wlan_mlme::ScanEnd scan_end;
-        zx_status_t st = mock_dev_.GetQueuedServiceMsg(
-                fuchsia_wlan_mlme_MLMEOnScanEndOrdinal, &scan_end);
+        zx_status_t st =
+            mock_dev_.GetQueuedServiceMsg(fuchsia_wlan_mlme_MLMEOnScanEndOrdinal, &scan_end);
         EXPECT_EQ(ZX_OK, st);
         EXPECT_EQ(123u, scan_end.txn_id);
         return scan_end;

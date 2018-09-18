@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <wlan/mlme/clock.h>
+#include <lib/timekeeper/test_clock.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
@@ -16,6 +16,8 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <unordered_set>
+
+#include "test_timer.h"
 
 namespace wlan {
 
@@ -188,7 +190,7 @@ struct MockDevice : public DeviceInterface {
         return matches;
     }
 
-    TestClock clock_;
+    timekeeper::TestClock clock_;
 };
 
 }  // namespace

@@ -15,6 +15,7 @@ executable("unittests") {
     "//garnet/public/lib/gtest:unittests",
     "//garnet/public/lib/netconnector/cpp:unittests",
     "//garnet/public/lib/network_wrapper:unittests",
+    "//garnet/public/lib/timekeeper:unittests",
     "//third_party/googletest:gtest_main",
   ]
 }

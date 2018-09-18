@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/timekeeper/clock.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/station.h>
-#include <wlan/mlme/clock.h>
-#include <wlan/mlme/packet.h>
 #include <wlan/mlme/mac_frame.h>
-#include <wlan/mlme/timer.h>
+#include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
+#include <wlan/mlme/timer.h>
 
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
@@ -25,9 +25,9 @@ namespace wlan {
 // This allows to easily switch between different BSS to join to.
 static constexpr uint8_t kBssid1[6] = {0xB7, 0xCD, 0x3F, 0xB0, 0x93, 0x01};
 static constexpr uint8_t kBssid2[6] = {0xAC, 0xBF, 0x34, 0x11, 0x95, 0x02};
-static constexpr uint32_t kJoinTimeout = 200;  // Beacon Periods
-static constexpr uint32_t kAuthTimeout = 200;  // Beacon Periods
-static constexpr uint32_t kAutoDeauthTimeout = 50; // Beacon Periods
+static constexpr uint32_t kJoinTimeout = 200;       // Beacon Periods
+static constexpr uint32_t kAuthTimeout = 200;       // Beacon Periods
+static constexpr uint32_t kAutoDeauthTimeout = 50;  // Beacon Periods
 static constexpr uint16_t kAid = 2;
 static constexpr uint16_t kBeaconPeriodTu = 100;
 static constexpr uint16_t kDtimPeriodTu = 2;
@@ -35,9 +35,13 @@ static constexpr wlan_channel_t kBssChannel = {
     .cbw = CBW20,
     .primary = 11,
 };
-static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's', 'i', 'a', '-', 'A', 'P'};;
-static constexpr SupportedRate kSupportedRates[] = {SupportedRate(2), SupportedRate(12), SupportedRate(24), SupportedRate(48), SupportedRate(54), SupportedRate(96), SupportedRate(108)};
-static constexpr SupportedRate kExtendedSupportedRates[] = {SupportedRate(1), SupportedRate(16), SupportedRate(36)};
+static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's', 'i', 'a', '-', 'A', 'P'};
+;
+static constexpr SupportedRate kSupportedRates[] = {
+    SupportedRate(2),  SupportedRate(12), SupportedRate(24), SupportedRate(48),
+    SupportedRate(54), SupportedRate(96), SupportedRate(108)};
+static constexpr SupportedRate kExtendedSupportedRates[] = {SupportedRate(1), SupportedRate(16),
+                                                            SupportedRate(36)};
 
 zx_status_t CreateJoinRequest(MlmeMsg<wlan_mlme::JoinRequest>*);
 zx_status_t CreateAuthRequest(MlmeMsg<wlan_mlme::AuthenticateRequest>*);
@@ -50,9 +54,7 @@ zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* payload,
                             size_t len);
 zx_status_t CreateNullDataFrame(fbl::unique_ptr<Packet>* out_packet);
-zx_status_t CreateEthFrame(fbl::unique_ptr<Packet>* out_packet,
-                           const uint8_t* payload,
-                           size_t len);
+zx_status_t CreateEthFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* payload, size_t len);
 
 template <typename F> zx_status_t CreateFrame(fbl::unique_ptr<Packet>* pkt) {
     if (std::is_same<F, Authentication>::value) { return CreateAuthFrame(pkt); }

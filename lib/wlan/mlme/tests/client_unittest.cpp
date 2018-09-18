@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/timekeeper/clock.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/station.h>
-#include <wlan/mlme/clock.h>
-#include <wlan/mlme/packet.h>
 #include <wlan/mlme/mac_frame.h>
-#include <wlan/mlme/timer.h>
+#include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
+#include <wlan/mlme/timer.h>
 
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
@@ -36,15 +36,14 @@ struct MockOnChannelHandler : public OnChannelHandler {
 struct MockOffChannelHandler : OffChannelHandler {
     void BeginOffChannelTime() override {}
     void HandleOffChannelFrame(fbl::unique_ptr<Packet>) override {}
-    bool EndOffChannelTime(bool interrupted, OffChannelRequest* next_req) override {
-        return false;
-    }
+    bool EndOffChannelTime(bool interrupted, OffChannelRequest* next_req) override { return false; }
 };
 
 struct ClientTest : public ::testing::Test {
-    ClientTest() : chan_sched(ChannelScheduler(&on_channel_handler, &device, device.CreateTimer(0))),
-                   station(&device, device.CreateTimer(1), &chan_sched),
-                   off_channel_handler(MockOffChannelHandler()) {}
+    ClientTest()
+        : chan_sched(ChannelScheduler(&on_channel_handler, &device, device.CreateTimer(0))),
+          station(&device, device.CreateTimer(1), &chan_sched),
+          off_channel_handler(MockOffChannelHandler()) {}
 
     template <typename M> zx_status_t SendMlmeMsg() {
         MlmeMsg<M> msg;
@@ -150,23 +149,23 @@ struct ClientTest : public ::testing::Test {
 
     void GoOffChannel() {
         // These numbers don't really affect below unit tests and were chosen arbitrarily.
-        OffChannelRequest off_channel_request = \
-                OffChannelRequest{.chan = {.primary = 6, .cbw = CBW20, .secondary80 = 0},
-                                           .duration = zx::msec(200),
-                                           .handler = &off_channel_handler};
+        OffChannelRequest off_channel_request =
+            OffChannelRequest{.chan = {.primary = 6, .cbw = CBW20, .secondary80 = 0},
+                              .duration = zx::msec(200),
+                              .handler = &off_channel_handler};
         chan_sched.RequestOffChannelTime(off_channel_request);
         station.PreSwitchOffChannel();
-        device.wlan_queue.erase(device.wlan_queue.begin()); // dequeue the power-saving frame
-        ASSERT_FALSE(chan_sched.OnChannel()); // sanity check
+        device.wlan_queue.erase(device.wlan_queue.begin());  // dequeue the power-saving frame
+        ASSERT_FALSE(chan_sched.OnChannel());                // sanity check
     }
 
     void GoBackToMainChannel() {
         chan_sched.EnsureOnChannel(device.GetTime() + BeaconPeriodsToDuration(1u));
-        chan_sched.HandleTimeout(); // calling this just to reset channel scheduler's
-                                    // `ensure_on_channel` flag.
+        chan_sched.HandleTimeout();  // calling this just to reset channel scheduler's
+                                     // `ensure_on_channel` flag.
         station.BackToMainChannel();
-        device.wlan_queue.erase(device.wlan_queue.begin()); // dequeue the power-saving frame
-        ASSERT_TRUE(chan_sched.OnChannel()); // sanity check
+        device.wlan_queue.erase(device.wlan_queue.begin());  // dequeue the power-saving frame
+        ASSERT_TRUE(chan_sched.OnChannel());                 // sanity check
     }
 
     void AssertJoinConfirm(fbl::unique_ptr<Packet> pkt, wlan_mlme::JoinResultCodes result_code) {
@@ -425,7 +424,8 @@ TEST_F(ClientTest, ExchangeDataAfterAssociation) {
     ASSERT_EQ(frame.body_len(), sizeof(kTestPayload));
     ASSERT_EQ(std::memcmp(frame.body()->data, kTestPayload, sizeof(kTestPayload)), 0);
 
-    // Send null data frame which shouldn't queue up any Ethernet frames but instead a "Keep Alive" one.
+    // Send null data frame which shouldn't queue up any Ethernet frames but instead a "Keep Alive"
+    // one.
     SendNullDataFrame();
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     ASSERT_TRUE(device.svc_queue.empty());
@@ -506,7 +506,8 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconReceived) {
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout - 1);
     station.HandleTimeout();
     ASSERT_TRUE(device.wlan_queue.empty());
-    auto deauths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_TRUE(deauths.empty());
 
     // Auto-deauth timeout, client should be deauthenticated.
@@ -536,7 +537,8 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconsShortlyAfterConnecting) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-    auto deauths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
@@ -568,7 +570,8 @@ TEST_F(ClientTest, AutoDeauth_DoNotDeauthWhileSwitchingChannel) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-    auto deauths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
@@ -576,7 +579,7 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
     Connect();
 
     // Going off channel.
-    IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout - 5); // -- On-channel time without beacon -- //
+    IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout - 5);  // -- On-channel time without beacon -- //
     GoOffChannel();
 
     // No deauth since off channel.
@@ -588,11 +591,11 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
     GoBackToMainChannel();
 
     // Got beacon frame, which should reset the timeout.
-    IncreaseTimeByBeaconPeriods(3); // -- On-channel time without beacon  -- //
-    SendFrame<Beacon>(); // -- Beacon timeout refresh -- ///
+    IncreaseTimeByBeaconPeriods(3);  // -- On-channel time without beacon  -- //
+    SendFrame<Beacon>();             // -- Beacon timeout refresh -- ///
 
     // No deauth since beacon was received not too long ago.
-    IncreaseTimeByBeaconPeriods(2); // -- On-channel time without beacon  -- //
+    IncreaseTimeByBeaconPeriods(2);  // -- On-channel time without beacon  -- //
     station.HandleTimeout();
     ASSERT_TRUE(device.wlan_queue.empty());
 
@@ -602,7 +605,7 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout);
     GoBackToMainChannel();
 
-    IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout - 3); // -- On-channel time without beacon -- //
+    IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout - 3);  // -- On-channel time without beacon -- //
     station.HandleTimeout();
     ASSERT_TRUE(device.wlan_queue.empty());
 
@@ -615,12 +618,13 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
     ASSERT_TRUE(device.wlan_queue.empty());
 
     // One more beacon period and auto-deauth triggers
-    IncreaseTimeByBeaconPeriods(1); // -- On-channel time without beacon -- //
+    IncreaseTimeByBeaconPeriods(1);  // -- On-channel time without beacon -- //
     station.HandleTimeout();
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-    auto deauths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
@@ -653,7 +657,8 @@ TEST_F(ClientTest, AutoDeauth_SwitchingChannelBeforeDeauthTimeoutCouldTrigger) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-    auto deauths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
@@ -668,7 +673,8 @@ TEST_F(ClientTest, AutoDeauth_ForeignBeaconShouldNotPreventDeauth) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-    auto deauths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
@@ -715,7 +721,8 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto auths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
     ASSERT_FALSE(auths.empty());
-    AssertAuthConfirm(fbl::move(*auths.begin()), wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
+    AssertAuthConfirm(fbl::move(*auths.begin()),
+                      wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
 
     // Fast forward in time would have caused a timeout.
     // The timeout however should have been canceled and we should not receive

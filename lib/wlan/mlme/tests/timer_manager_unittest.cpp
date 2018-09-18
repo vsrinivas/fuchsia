@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
+#include <lib/timekeeper/test_clock.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/timer_manager.h>
+
+#include "test_timer.h"
 
 namespace wlan {
 namespace {
@@ -28,7 +31,7 @@ public:
     zx_status_t next_set_timer = ZX_OK;
     bool canceled = false;
     zx::time deadline = zx::time(0);
-    TestClock clock;
+    timekeeper::TestClock clock;
 };
 
 struct TimerManagerTest : public ::testing::Test {
@@ -37,7 +40,7 @@ struct TimerManagerTest : public ::testing::Test {
 
     MockedTimer* timer() { return static_cast<MockedTimer*>(timer_manager->timer()); }
 
-    TestClock* clock() { return &timer()->clock; }
+    timekeeper::TestClock* clock() { return &timer()->clock; }
 
     fbl::unique_ptr<TimerManager> timer_manager;
 };

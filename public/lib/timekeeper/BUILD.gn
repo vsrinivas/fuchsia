@@ -1,0 +1,59 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("timekeeper") {
+  sources = [
+    "clock.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/zx",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+}
+
+source_set("impl") {
+  sources = [
+    "clock_impl.cc",
+    "clock_impl.h",
+  ]
+
+  public_deps = [
+    ":timekeeper",
+  ]
+}
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "async_test_clock.cc",
+    "async_test_clock.h",
+    "test_clock.cc",
+    "test_clock.h",
+  ]
+
+  public_deps = [
+    ":timekeeper",
+    "//zircon/public/lib/async-cpp",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "async_test_clock_unittest.cc",
+    "clock_impl_unittest.cc",
+    "test_clock_unittest.cc",
+  ]
+
+  deps = [
+    ":impl",
+    ":testing",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-testutils",
+  ]
+}

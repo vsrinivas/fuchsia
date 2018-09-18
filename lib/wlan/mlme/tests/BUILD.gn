@@ -27,10 +27,13 @@ source_set("test_main") {
     "test_data.cpp",
     "test_data.h",
     "test_main.cpp",
+    "test_timer.cpp",
+    "test_timer.h",
   ]
 
   public_deps = [
     "//garnet/lib/wlan/mlme",
+    "//garnet/public/lib/timekeeper:testing",
   ]
 
   deps = [

@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include <wlan/mlme/clock.h>
-
+#include <lib/timekeeper/clock_impl.h>
 #include <lib/zx/time.h>
 #include <lib/zx/timer.h>
 #include <zircon/types.h>
@@ -46,22 +45,8 @@ class SystemTimer final : public Timer {
     zx_status_t CancelTimerImpl() override;
 
    private:
-    SystemClock clock_;
+    timekeeper::ClockImpl clock_;
     zx::timer timer_;
-};
-
-class TestTimer final : public Timer {
-   public:
-    TestTimer(uint64_t id, TestClock* clock) : Timer(id), clock_(clock) {}
-
-    zx::time Now() const override { return clock_->Now(); }
-
-   protected:
-    zx_status_t SetTimerImpl(zx::time deadline) override;
-    zx_status_t CancelTimerImpl() override;
-
-   private:
-    TestClock* clock_;
 };
 
 }  // namespace wlan

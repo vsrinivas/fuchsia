@@ -35,12 +35,4 @@ zx_status_t SystemTimer::CancelTimerImpl() {
     return timer_.cancel();
 }
 
-zx_status_t TestTimer::SetTimerImpl(zx::time deadline) {
-    return ZX_OK;
-}
-
-zx_status_t TestTimer::CancelTimerImpl() {
-    return ZX_OK;
-}
-
 }  // namespace wlan
