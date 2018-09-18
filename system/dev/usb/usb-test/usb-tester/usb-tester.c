@@ -5,6 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/protocol/usb-composite.h>
 #include <ddk/usb/usb.h>
 #include <lib/sync/completion.h>
 #include <zircon/device/usb-device.h>
@@ -470,7 +471,13 @@ static zx_status_t usb_tester_bind(void* ctx, zx_device_t* device) {
     if (status != ZX_OK) {
         goto error_return;
     }
-    status = usb_claim_additional_interfaces(&usb_tester->usb, want_interface, NULL);
+
+    usb_composite_protocol_t usb_composite;
+    status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb_composite);
+    if (status != ZX_OK) {
+        goto error_return;
+    }
+    status = usb_claim_additional_interfaces(&usb_composite, want_interface, NULL);
     if (status != ZX_OK) {
         goto error_return;
     }

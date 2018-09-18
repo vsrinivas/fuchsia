@@ -8,6 +8,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-composite.h>
 #include <ddk/usb/usb.h>
 #include <zircon/hw/usb-cdc.h>
 #include <lib/sync/completion.h>
@@ -516,6 +517,11 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     if (result != ZX_OK) {
         return result;
     }
+    usb_composite_protocol_t usb_composite;
+    result = device_get_protocol(device, ZX_PROTOCOL_USB_COMPOSITE, &usb_composite);
+    if (result != ZX_OK) {
+        return result;
+    }
 
     // Allocate context
     ecm_ctx_t* ecm_ctx = calloc(1, sizeof(ecm_ctx_t));
@@ -524,7 +530,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    result = usb_claim_additional_interfaces(&usb, want_interface, NULL);
+    result = usb_claim_additional_interfaces(&usb_composite, want_interface, NULL);
     if (result != ZX_OK) {
         goto fail;
     }

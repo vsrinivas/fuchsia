@@ -303,7 +303,7 @@ static void usb_composite_remove_interfaces(usb_composite_t* comp) {
     mtx_unlock(&comp->interface_mutex);
 }
 
-zx_status_t usb_composite_claim_interface(usb_composite_t* comp, uint8_t interface_id) {
+zx_status_t usb_composite_do_claim_interface(usb_composite_t* comp, uint8_t interface_id) {
     mtx_lock(&comp->interface_mutex);
 
     interface_status_t status = comp->interface_statuses[interface_id];
@@ -353,8 +353,9 @@ static void usb_composite_release(void* ctx) {
     free(comp);
 }
 
-static zx_protocol_device_t usb_composite_proto = {
+static zx_protocol_device_t usb_composite_device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .unbind = usb_composite_unbind,
     .release = usb_composite_release,
 };
 
@@ -391,7 +392,7 @@ static zx_status_t usb_composite_bind(void* ctx, zx_device_t* parent) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = comp,
-        .ops = &usb_composite_proto,
+        .ops = &usb_composite_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 

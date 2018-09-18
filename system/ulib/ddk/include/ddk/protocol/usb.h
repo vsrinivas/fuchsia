@@ -114,7 +114,7 @@ typedef struct usb_request {
 } usb_request_t;
 
 
-typedef struct usb_protocol_ops {
+typedef struct {
     zx_status_t (*req_alloc)(void* ctx, usb_request_t** out, uint64_t data_size,
                              uint8_t ep_address);
     zx_status_t (*req_alloc_vmo)(void* ctx, usb_request_t** out, zx_handle_t vmo_handle,
@@ -156,12 +156,8 @@ typedef struct usb_protocol_ops {
                                                 usb_configuration_descriptor_t** out,
                                                 size_t* out_length);
     zx_status_t (*get_descriptor_list)(void* ctx, void** out_descriptors, size_t* out_length);
-    zx_status_t (*get_additional_descriptor_list)(void* ctx, void** out_descriptors,
-                                                  size_t* out_length);
-    zx_status_t (*get_string_descriptor)(void* ctx,
-                                         uint8_t desc_id, uint16_t* inout_lang_id,
+    zx_status_t (*get_string_descriptor)(void* ctx, uint8_t desc_id, uint16_t* inout_lang_id,
                                          uint8_t* buf, size_t* inout_buflen);
-    zx_status_t (*claim_interface)(void* ctx, usb_interface_descriptor_t* intf, size_t length);
     zx_status_t (*cancel_all)(void* ctx, uint8_t ep_address);
     uint64_t (*get_current_frame)(void* ctx);
 } usb_protocol_ops_t;
@@ -339,14 +335,6 @@ static inline zx_status_t usb_get_descriptor_list(const usb_protocol_t* usb, voi
     return usb->ops->get_descriptor_list(usb->ctx, out_descriptors, out_length);
 }
 
-// returns the USB descriptors following the interface's existing descriptors
-// the returned value is de-allocated with free()
-static inline zx_status_t usb_get_additional_descriptor_list(const usb_protocol_t* usb,
-                                                             void** out_descriptors,
-                                                             size_t* out_length) {
-    return usb->ops->get_additional_descriptor_list(usb->ctx, out_descriptors, out_length);
-}
-
 // Fetch the descriptor using the provided descriptor ID and language ID.  If
 // the language ID requested is not available, the first entry of the language
 // ID table will be used instead and be provided in the updated version of the
@@ -363,13 +351,6 @@ static inline zx_status_t usb_get_string_descriptor(const usb_protocol_t* usb,
                                                     uint8_t desc_id, uint16_t* inout_lang_id,
                                                     uint8_t* buf, size_t* inout_buflen) {
     return usb->ops->get_string_descriptor(usb->ctx, desc_id, inout_lang_id, buf, inout_buflen);
-}
-
-// marks the interface as claimed and appends the interface descriptor to the
-// interface's existing descriptors.
-static inline zx_status_t usb_claim_interface(const usb_protocol_t* usb,
-                                              usb_interface_descriptor_t* intf, size_t length) {
-    return usb->ops->claim_interface(usb->ctx, intf, length);
 }
 
 static inline zx_status_t usb_cancel_all(const usb_protocol_t* usb, uint8_t ep_address) {

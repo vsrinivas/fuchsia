@@ -34,6 +34,7 @@ DDK_PROTOCOL_DEF(PCIROOT,        'pPRT', "pci-root", PF_NOPUB)
 DDK_PROTOCOL_DEF(TPM,            'pTPM', "tpm", 0)
 DDK_PROTOCOL_DEF(USB,            'pUSB', "usb", PF_NOPUB)
 DDK_PROTOCOL_DEF(USB_BUS,        'pUBS', "usb-bus", PF_NOPUB)
+DDK_PROTOCOL_DEF(USB_COMPOSITE,  'pUBC', "usb-composite", PF_NOPUB)
 DDK_PROTOCOL_DEF(USB_DCI,        'pUDC', "usb-dci", 0)  // Device Controller Interface
 DDK_PROTOCOL_DEF(USB_DEVICE,     'pUSD', "usb-device", 0)
 DDK_PROTOCOL_DEF(USB_PERIPHERAL, 'pUSP', "usb-peripheral", 0)

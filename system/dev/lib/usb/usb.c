@@ -3,19 +3,20 @@
 // found in the LICENSE file.
 
 #include <ddk/usb/usb.h>
+#include <ddk/protocol/usb-composite.h>
 #include <zircon/compiler.h>
 #include <stdlib.h>
 #include <string.h>
 
 // initializes a usb_desc_iter_t for iterating on descriptors past the
 // interface's existing descriptors.
-static zx_status_t usb_desc_iter_additional_init(usb_protocol_t* usb,
+static zx_status_t usb_desc_iter_additional_init(usb_composite_protocol_t* comp,
                                                  usb_desc_iter_t* iter) {
     memset(iter, 0, sizeof(*iter));
 
     void* descriptors;
     size_t length;
-    zx_status_t status = usb_get_additional_descriptor_list(usb, &descriptors, &length);
+    zx_status_t status = usb_composite_get_additional_descriptor_list(comp, &descriptors, &length);
     if (status != ZX_OK) {
         return status;
     }
@@ -28,11 +29,11 @@ static zx_status_t usb_desc_iter_additional_init(usb_protocol_t* usb,
 
 // helper function for claiming additional interfaces that satisfy the want_interface predicate,
 // want_interface will be passed the supplied arg
-__EXPORT zx_status_t usb_claim_additional_interfaces(usb_protocol_t* usb,
+__EXPORT zx_status_t usb_claim_additional_interfaces(usb_composite_protocol_t* comp,
                                                      bool (*want_interface)(usb_interface_descriptor_t*, void*),
                                                      void* arg) {
     usb_desc_iter_t iter;
-    zx_status_t status = usb_desc_iter_additional_init(usb, &iter);
+    zx_status_t status = usb_desc_iter_additional_init(comp, &iter);
     if (status != ZX_OK) {
         return status;
     }
@@ -46,7 +47,7 @@ __EXPORT zx_status_t usb_claim_additional_interfaces(usb_protocol_t* usb,
         void* intf_end = next ? next : (void*)iter.desc_end;
         size_t length = intf_end - (void*)intf;
 
-        status = usb_claim_interface(usb, intf, length);
+        status = usb_composite_claim_interface(comp, intf, length);
         if (status != ZX_OK) {
             break;
         }

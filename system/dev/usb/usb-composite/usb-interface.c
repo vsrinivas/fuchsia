@@ -5,12 +5,33 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb-composite.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "usb-composite.h"
 #include "usb-interface.h"
+
+static zx_status_t usb_interface_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    usb_interface_t* intf = ctx;
+    switch (proto_id) {
+    case ZX_PROTOCOL_USB: {
+        usb_protocol_t* proto = (usb_protocol_t *)out;
+        proto->ctx = intf;
+        proto->ops = &usb_device_protocol;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_USB_COMPOSITE: {
+        usb_composite_protocol_t* proto = (usb_composite_protocol_t *)out;
+        proto->ctx = intf;
+        proto->ops = &usb_composite_device_protocol;
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
 
 static void usb_interface_unbind(void* ctx) {
     usb_interface_t* intf = ctx;
@@ -26,6 +47,7 @@ static void usb_interface_release(void* ctx) {
 
 zx_protocol_device_t usb_interface_proto = {
     .version = DEVICE_OPS_VERSION,
+    .get_protocol = usb_interface_get_protocol,
     .unbind = usb_interface_unbind,
     .release = usb_interface_release,
 };
@@ -310,7 +332,7 @@ static zx_status_t usb_interface_claim_device_interface(void* ctx,
                                                         size_t claim_length) {
     usb_interface_t* intf = ctx;
 
-    zx_status_t status = usb_composite_claim_interface(intf->comp, claim_intf->bInterfaceNumber);
+    zx_status_t status = usb_composite_do_claim_interface(intf->comp, claim_intf->bInterfaceNumber);
     if (status != ZX_OK) {
         return status;
     }
@@ -367,11 +389,14 @@ usb_protocol_ops_t usb_device_protocol = {
     .get_device_descriptor = usb_interface_get_device_descriptor,
     .get_configuration_descriptor = usb_interface_get_configuration_descriptor,
     .get_descriptor_list = usb_interface_get_descriptor_list,
-    .get_additional_descriptor_list = usb_interface_get_additional_descriptor_list,
     .get_string_descriptor = usb_interface_get_string_descriptor,
-    .claim_interface = usb_interface_claim_device_interface,
     .cancel_all = usb_interface_cancel_all,
     .get_current_frame = usb_interface_get_current_frame,
+};
+
+usb_composite_protocol_ops_t usb_composite_device_protocol = {
+    .get_additional_descriptor_list = usb_interface_get_additional_descriptor_list,
+    .claim_interface = usb_interface_claim_device_interface,
 };
 
 bool usb_interface_contains_interface(usb_interface_t* intf, uint8_t interface_id) {

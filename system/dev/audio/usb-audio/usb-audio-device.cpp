@@ -62,6 +62,13 @@ zx_status_t UsbAudioDevice::Bind() {
         return status;
     }
 
+    usb_composite_protocol_t usb_composite_proto;
+    status = device_get_protocol(parent(), ZX_PROTOCOL_USB_COMPOSITE, &usb_composite_proto);
+    if (status != ZX_OK) {
+        LOG(ERROR, "Failed to get USB composite protocol thunks (status %d)\n", status);
+        return status;
+    }
+
     // Fetch our top level device descriptor, so we know stuff like the values
     // of our VID/PID.
     usb_get_device_descriptor(&usb_proto_, &usb_dev_desc_);
@@ -86,7 +93,7 @@ zx_status_t UsbAudioDevice::Bind() {
     // class of of "audio"; this is where we will find our Audio and MIDI
     // streaming interfaces.
     status = usb_claim_additional_interfaces(
-            &usb_proto_,
+            &usb_composite_proto,
             [](usb_interface_descriptor_t* intf, void* arg) -> bool {
                 return (intf->bInterfaceClass == USB_CLASS_AUDIO &&
                         intf->bInterfaceSubClass != USB_SUBCLASS_AUDIO_CONTROL);

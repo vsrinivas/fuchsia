@@ -42,7 +42,7 @@ typedef struct {
 
 // Marks the interface as claimed, removing the device if it exists.
 // Returns an error if the interface was already claimed by another interface.
-zx_status_t usb_composite_claim_interface(usb_composite_t* comp, uint8_t interface_id);
+zx_status_t usb_composite_do_claim_interface(usb_composite_t* comp, uint8_t interface_id);
 
 zx_status_t usb_composite_set_interface(usb_composite_t* comp, uint8_t interface_id,
                                         uint8_t alt_setting);

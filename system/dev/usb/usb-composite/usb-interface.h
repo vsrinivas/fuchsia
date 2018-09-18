@@ -26,6 +26,7 @@ typedef struct {
 } usb_interface_t;
 
 extern usb_protocol_ops_t usb_device_protocol;
+extern usb_composite_protocol_ops_t usb_composite_device_protocol;
 extern zx_protocol_device_t usb_interface_proto;
 
 bool usb_interface_contains_interface(usb_interface_t* intf, uint8_t interface_id);
