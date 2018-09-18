@@ -453,17 +453,19 @@ zx_status_t DpAux::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf
     return ZX_OK;
 }
 
-zx_status_t DpAux::I2cTransact(uint32_t index, const uint8_t* write_buf, uint8_t write_length,
-                               uint8_t* read_buf, uint8_t read_length) {
+zx_status_t DpAux::I2cTransact(i2c_impl_op_t* ops, size_t count) {
     fbl::AutoLock lock(&lock_);
-    zx_status_t status = ZX_OK;
-    if (write_length) {
-        status = DpAuxWrite(DP_REQUEST_I2C_WRITE, index, write_buf, write_length);
+    for (unsigned i = 0; i < count; i++) {
+        uint8_t* buf = static_cast<uint8_t*>(ops[i].buf);
+        uint8_t len = static_cast<uint8_t>(ops[i].length);
+        zx_status_t status = ops[i].is_read
+                ? DpAuxRead(DP_REQUEST_I2C_READ, ops[i].address, buf, len)
+                : DpAuxWrite(DP_REQUEST_I2C_WRITE, ops[i].address, buf, len);
+        if (status != ZX_OK) {
+            return status;
+        }
     }
-    if (status == ZX_OK && read_length) {
-        status = DpAuxRead(DP_REQUEST_I2C_READ, index, read_buf, read_length);
-    }
-    return status;
+    return ZX_OK;
 }
 
 bool DpAux::DpcdRead(uint32_t addr, uint8_t* buf, size_t size) {

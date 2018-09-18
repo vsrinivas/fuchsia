@@ -139,15 +139,8 @@ static zx_status_t set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitrate) {
     return static_cast<i915::Controller*>(ctx)->SetBitrate(bus_id, bitrate);
 }
 
-static zx_status_t transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* ops,
-                            size_t count) {
-    // TODO(stevensd): update this driver to implement multi-writes/reads support
-    if (count != 2 || ops[0].is_read != false || ops[1].is_read != true ||
-        ops[0].address != ops[1].address) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    return static_cast<i915::Controller*>(ctx)->Transact(
-            bus_id, ops[0].address, ops[0].buf, ops[0].length, ops[1].buf, ops[1].length);
+static zx_status_t transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* ops, size_t count) {
+    return static_cast<i915::Controller*>(ctx)->Transact(bus_id, ops, count);
 }
 
 static i2c_impl_protocol_ops_t i2c_ops = {
@@ -1768,21 +1761,21 @@ zx_status_t Controller::SetBitrate(uint32_t bus_id, uint32_t bitrate) {
     return ZX_OK;
 }
 
-zx_status_t Controller::Transact(uint32_t bus_id, uint16_t address, const void* write_buf,
-                                 size_t write_length, void* read_buf, size_t read_length) {
-    if (write_length > kMaxTxSize || read_length > kMaxTxSize) {
+zx_status_t Controller::Transact(uint32_t bus_id, i2c_impl_op_t* ops, size_t count) {
+    for (unsigned i = 0; i < count; i++) {
+        if (ops[i].length > kMaxTxSize) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+    }
+    if (!ops[count - 1].stop) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    const uint8_t* wb = static_cast<const uint8_t*>(write_buf);
-    uint8_t wl = static_cast<uint8_t>(write_length);
-    uint8_t* rb = static_cast<uint8_t*>(read_buf);
-    uint8_t rl = static_cast<uint8_t>(read_length);
     if (bus_id < registers::kDdiCount) {
-        return gmbus_i2cs_[bus_id].I2cTransact(address, wb, wl, rb, rl);
+        return gmbus_i2cs_[bus_id].I2cTransact(ops, count);
     } else if (bus_id < 2 * registers::kDdiCount) {
         bus_id -= registers::kDdiCount;
-        return dp_auxs_[bus_id].I2cTransact(address, wb, wl, rb, rl);
+        return dp_auxs_[bus_id].I2cTransact(ops, count);
     } else {
         return ZX_ERR_NOT_FOUND;
     }

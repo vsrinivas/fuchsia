@@ -6,6 +6,7 @@
 
 #include "display-device.h"
 #include "dpcd.h"
+#include <ddk/protocol/i2c-impl.h>
 
 namespace i915 {
 
@@ -15,8 +16,7 @@ class DpAux {
 public:
     DpAux(registers::Ddi ddi);
 
-    zx_status_t I2cTransact(uint32_t index, const uint8_t* write_buf, uint8_t write_length,
-                            uint8_t* read_buf, uint8_t read_length);
+    zx_status_t I2cTransact(i2c_impl_op_t* ops, size_t count);
 
     bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size);
     bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size);

@@ -111,8 +111,6 @@ typedef struct vim2_display {
     // into the HDMI stream.
     vim2_audio_t*                       audio;
     uint32_t                            audio_format_count;
-    // TODO(ZX-2487): Remove this once the i2c_impl interface gets updated
-    uint8_t                             i2c_segment;
 } vim2_display_t;
 
 void disable_vd(vim2_display_t* display, uint32_t vd_index);

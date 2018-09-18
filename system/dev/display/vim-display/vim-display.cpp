@@ -349,55 +349,64 @@ static zx_status_t set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitrate) {
 }
 
 static zx_status_t transact(void* ctx, uint32_t bus_id, i2c_impl_op_t* ops, size_t count) {
-    // TODO(stevensd): update this driver to implement multi-writes/reads support
-    if (count != 2 || ops[0].is_read != false || ops[1].is_read != true ||
-        ops[0].address != ops[1].address) {
-        return ZX_ERR_INVALID_ARGS;
-    }
     vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
     mtx_lock(&display->i2c_lock);
-    // The HDMITX_DWC_I2CM registers are a limited interface to the i2c bus for the E-DDC
-    // protocol, which is good enough for the bus this device provides.
-    if (ops[0].address == 0x30 && ops[0].length == 1 && ops[1].length == 0) {
-        // Save the segment so that we can write to the registers in the correct order.
-        display->i2c_segment = *((const uint8_t*) ops[0].buf);
-    } else if (ops[0].address == 0x50 && (ops[0].length == 1) && ops[1].length) {
-        if (ops[1].length % 8 != 0) {
+
+    uint8_t segment_num = 0;
+    uint8_t offset = 0;
+    for (unsigned i = 0; i < count; i++) {
+        auto op = ops[i];
+
+        // The HDMITX_DWC_I2CM registers are a limited interface to the i2c bus for the E-DDC
+        // protocol, which is good enough for the bus this device provides.
+        if (op.address == 0x30 && !op.is_read && op.length == 1) {
+            segment_num = *((const uint8_t*) op.buf);
+        } else if (op.address == 0x50 && !op.is_read && op.length == 1) {
+            offset = *((const uint8_t*) op.buf);
+        } else if (op.address == 0x50 && op.is_read) {
+            if (op.length % 8 != 0) {
+                mtx_unlock(&display->i2c_lock);
+                return ZX_ERR_NOT_SUPPORTED;
+            }
+
+            hdmitx_writereg(display, HDMITX_DWC_I2CM_SLAVE, 0x50);
+            hdmitx_writereg(display, HDMITX_DWC_I2CM_SEGADDR, 0x30);
+            hdmitx_writereg(display, HDMITX_DWC_I2CM_SEGPTR, segment_num);
+
+            for (uint32_t i = 0; i < op.length; i += 8) {
+                hdmitx_writereg(display, HDMITX_DWC_I2CM_ADDRESS, offset);
+                hdmitx_writereg(display, HDMITX_DWC_I2CM_OPERATION, 1 << 2);
+                offset = static_cast<uint8_t>(offset + 8);
+
+                uint32_t timeout = 0;
+                while ((!(hdmitx_readreg(display, HDMITX_DWC_IH_I2CM_STAT0) & (1 << 1)))
+                        && (timeout < 5)) {
+                    usleep(1000);
+                    timeout ++;
+                }
+                if (timeout == 5) {
+                    DISP_ERROR("HDMI DDC TimeOut\n");
+                    mtx_unlock(&display->i2c_lock);
+                    return ZX_ERR_TIMED_OUT;
+                }
+                usleep(1000);
+                hdmitx_writereg(display, HDMITX_DWC_IH_I2CM_STAT0, 1 << 1);        // clear INT
+
+                for (int j = 0; j < 8; j++) {
+                    uint32_t address = static_cast<uint32_t>(HDMITX_DWC_I2CM_READ_BUFF0 + j);
+                    ((uint8_t*) op.buf)[i + j] =
+                            static_cast<uint8_t>(hdmitx_readreg(display, address));
+                }
+            }
+        } else {
             mtx_unlock(&display->i2c_lock);
             return ZX_ERR_NOT_SUPPORTED;
         }
 
-        uint8_t addr = *(const uint8_t*) ops[0].buf;
-        for (uint32_t i = 0; i < ops[1].length; i += 8) {
-            hdmitx_writereg(display, HDMITX_DWC_I2CM_SLAVE, 0x50);
-            hdmitx_writereg(display, HDMITX_DWC_I2CM_SEGADDR, 0x30);
-            hdmitx_writereg(display, HDMITX_DWC_I2CM_SEGPTR, display->i2c_segment);
-            hdmitx_writereg(display, HDMITX_DWC_I2CM_ADDRESS, addr + i);
-            hdmitx_writereg(display, HDMITX_DWC_I2CM_OPERATION, 1 << 2);
-
-            uint32_t timeout = 0;
-            while ((!(hdmitx_readreg(display, HDMITX_DWC_IH_I2CM_STAT0) & (1 << 1)))
-                    && (timeout < 5)) {
-                usleep(1000);
-                timeout ++;
-            }
-            if (timeout == 5) {
-                DISP_ERROR("HDMI DDC TimeOut\n");
-                mtx_unlock(&display->i2c_lock);
-                return ZX_ERR_TIMED_OUT;
-            }
-            usleep(1000);
-            hdmitx_writereg(display, HDMITX_DWC_IH_I2CM_STAT0, 1 << 1);        // clear INT
-
-            for (int j = 0; j < 8; j++) {
-                uint32_t address = static_cast<uint32_t>(HDMITX_DWC_I2CM_READ_BUFF0 + j);
-                ((uint8_t*) ops[1].buf)[i + j] =
-                        static_cast<uint8_t>(hdmitx_readreg(display, address));
-            }
+        if (op.stop) {
+            segment_num = 0;
+            offset = 0;
         }
-    } else {
-        mtx_unlock(&display->i2c_lock);
-        return ZX_ERR_NOT_SUPPORTED;
     }
 
     mtx_unlock(&display->i2c_lock);

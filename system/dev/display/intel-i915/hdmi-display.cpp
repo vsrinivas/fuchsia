@@ -196,25 +196,34 @@ bool GMBusI2c::SetDdcSegment(uint8_t segment_num) {
     return i2c_scl(mmio_space_, ddi_, 1);
 }
 
-zx_status_t GMBusI2c::I2cTransact(uint32_t index, const uint8_t* write_buf,
-                                  uint8_t write_length, uint8_t* read_buf, uint8_t read_length) {
+zx_status_t GMBusI2c::I2cTransact(i2c_impl_op_t* ops, size_t size) {
     // The GMBus register is a limited interface to the i2c bus - it doesn't support complex
     // transactions like setting the E-DDC segment. For now, providing a special-case interface
     // for reading the E-DDC is good enough.
-    // TODO(ZX-2487): Clean up the multi-call state when the i2c_impl interface gets updated.
     fbl::AutoLock lock(&lock_);
-    if (index == kDdcSegmentAddress && read_length == 0 && write_length == 1) {
-        registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space_);
-        if (!SetDdcSegment(*write_buf)) {
-            goto fail;
-        }
-    } else if (index == kDdcDataAddress && (read_length || write_length)) {
-        auto gmbus0 = registers::GMBus0::Get().FromValue(0);
-        gmbus0.set_pin_pair_select(ddi_to_pin(ddi_));
-        gmbus0.WriteTo(mmio_space_);
+    zx_status_t fail_res = ZX_ERR_IO;
+    bool gmbus_set = false;
+    for (unsigned i = 0; i < size; i++) {
+        i2c_impl_op_t* op = ops + i;
+        if (op->address == kDdcSegmentAddress && !op->is_read && op->length == 1) {
+            registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space_);
+            gmbus_set = false;
+            if (!SetDdcSegment(*static_cast<uint8_t*>(op->buf))) {
+                goto fail;
+            }
+        } else if (op->address == kDdcDataAddress) {
+            if (!gmbus_set) {
+                auto gmbus0 = registers::GMBus0::Get().FromValue(0);
+                gmbus0.set_pin_pair_select(ddi_to_pin(ddi_));
+                gmbus0.WriteTo(mmio_space_);
 
-        if (write_length) {
-            if (GMBusWrite(kDdcDataAddress, write_buf, write_length)) {
+                gmbus_set = true;
+            }
+
+            uint8_t* buf = static_cast<uint8_t*>(op->buf);
+            uint8_t len = static_cast<uint8_t>(op->length);
+            if (op->is_read ? GMBusRead(kDdcDataAddress, buf, len)
+                    : GMBusWrite(kDdcDataAddress, buf, len)) {
                 if (!WAIT_ON_MS(registers::GMBus2::Get().ReadFrom(mmio_space_).wait(), 10)) {
                     LOG_TRACE("Transition to wait phase timed out\n");
                     goto fail;
@@ -222,24 +231,17 @@ zx_status_t GMBusI2c::I2cTransact(uint32_t index, const uint8_t* write_buf,
             } else {
                 goto fail;
             }
-        }
-
-        if (read_length) {
-            if (GMBusRead(kDdcDataAddress, read_buf, read_length)) {
-                if (!WAIT_ON_MS(registers::GMBus2::Get().ReadFrom(mmio_space_).wait(), 10)) {
-                    LOG_TRACE("Transition to wait phase timed out\n");
-                    goto fail;
-                }
-            } else {
-                goto fail;
-            }
-        }
-
-        if (!I2cFinish()) {
+        } else {
+            fail_res = ZX_ERR_NOT_SUPPORTED;
             goto fail;
         }
-    } else {
-        return ZX_ERR_NOT_SUPPORTED;
+
+        if (op->stop) {
+            if (!I2cFinish()) {
+                goto fail;
+            }
+            gmbus_set = false;
+        }
     }
 
     return ZX_OK;
@@ -247,7 +249,7 @@ fail:
     if (!I2cClearNack()) {
         LOG_TRACE("Failed to clear nack\n");
     }
-    return ZX_ERR_IO;
+    return fail_res;
 }
 
 bool GMBusI2c::GMBusWrite(uint8_t addr, const uint8_t* buf, uint8_t size) {
@@ -512,9 +514,15 @@ bool HdmiDisplay::Query() {
     // to try to read from it over I2C.
     for (unsigned i = 0; i < 3; i++) {
         uint8_t test_data = 0;
+        i2c_impl_op_t op = {
+            .address = kDdcDataAddress,
+            .buf = &test_data,
+            .length = 1,
+            .is_read = true,
+            .stop = 1,
+        };
         registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space());
-        if (controller()->Transact(i2c_bus_id(), kDdcDataAddress,
-                                   &test_data, 1, nullptr, 0) == ZX_OK) {
+        if (controller()->Transact(i2c_bus_id(), &op, 1) == ZX_OK) {
             LOG_TRACE("Found a hdmi/dvi monitor\n");
             return true;
         }

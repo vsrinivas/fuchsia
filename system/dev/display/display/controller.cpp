@@ -44,22 +44,15 @@ typedef struct i2c_bus {
 
 edid::ddc_i2c_transact ddc_tx = [](void* ctx, edid::ddc_i2c_msg_t* msgs, uint32_t count) -> bool {
     auto i2c = static_cast<i2c_bus_t*>(ctx);
-    // TODO(ZX-2487): Remove the special casing when the i2c_impl API gets updated
-    if (count == 3) {
-        ZX_ASSERT(!msgs[0].is_read);
-        if (i2c_impl_write_read(i2c->i2c, i2c->bus_id,
-                                msgs->addr, msgs->buf, msgs->length, nullptr, 0)) {
-            return false;
-        }
-        msgs++;
+    i2c_impl_op_t ops[count];
+    for (unsigned i = 0; i < count; i++) {
+        ops[i].address = msgs[i].addr;
+        ops[i].buf = msgs[i].buf;
+        ops[i].length = msgs[i].length;
+        ops[i].is_read = msgs[i].is_read;
+        ops[i].stop = i == (count - 1);
     }
-    ZX_ASSERT(!msgs[0].is_read);
-    ZX_ASSERT(msgs[1].is_read);
-    ZX_ASSERT(msgs[0].addr == msgs[1].addr);
-
-    return i2c_impl_write_read(i2c->i2c, i2c->bus_id,
-                               msgs[0].addr, msgs[0].buf, msgs[0].length,
-                               msgs[1].buf, msgs[1].length) == ZX_OK;
+    return i2c_impl_transact(i2c->i2c, i2c->bus_id, ops, count) == ZX_OK;
 };
 
 } // namespace
