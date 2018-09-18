@@ -202,7 +202,7 @@ TEST_F(VirtioWlTest, HandleNewPipe) {
 }
 
 TEST_F(VirtioWlTest, HandleSend) {
-  ASSERT_EQ(CreateNew(1u, 0xfe), ZX_OK);
+  ASSERT_EQ(CreateNew(1u, 0xaa), ZX_OK);
   ASSERT_EQ(CreatePipe(2u), ZX_OK);
   ASSERT_EQ(CreateConnection(3u), ZX_OK);
   ASSERT_EQ(channels_.size(), 1u);
@@ -248,7 +248,7 @@ TEST_F(VirtioWlTest, HandleSend) {
       zx::vmar::root_self()->map(0, vmo, 0, PAGE_SIZE,
                                  ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr),
       ZX_OK);
-  EXPECT_EQ(*reinterpret_cast<uint8_t*>(addr), 0xfe);
+  EXPECT_EQ(*reinterpret_cast<uint8_t*>(addr), 0xaa);
   ASSERT_EQ(zx::vmar::root_self()->unmap(addr, PAGE_SIZE), ZX_OK);
 
   // Verify data transfer over pipe.
@@ -257,6 +257,100 @@ TEST_F(VirtioWlTest, HandleSend) {
   EXPECT_EQ(actual_size, sizeof(data));
 
   channels_.clear();
+}
+
+TEST_F(VirtioWlTest, Recv) {
+  ASSERT_EQ(CreateConnection(1u), ZX_OK);
+  ASSERT_EQ(channels_.size(), 1u);
+
+  zx::vmo vmo;
+  ASSERT_EQ(zx::vmo::create(PAGE_SIZE, 0, &vmo), ZX_OK);
+  uintptr_t addr;
+  ASSERT_EQ(
+      zx::vmar::root_self()->map(0, vmo, 0, PAGE_SIZE,
+                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr),
+      ZX_OK);
+  memset(reinterpret_cast<void*>(addr), 0xaa, PAGE_SIZE);
+  ASSERT_EQ(zx::vmar::root_self()->unmap(addr, PAGE_SIZE), ZX_OK);
+
+  uint32_t data = 1234u;
+  zx_handle_t handle = vmo.release();
+  ASSERT_EQ(
+      zx_channel_write(channels_[0].get(), 0, &data, sizeof(data), &handle, 1),
+      ZX_OK);
+  RunLoopUntilIdle();
+
+  uint8_t buffer[sizeof(virtio_wl_ctrl_vfd_new_t) +
+                 sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(uint32_t) +
+                 sizeof(data)];
+  virtio_wl_ctrl_vfd_new_t* new_vfd_cmd =
+      reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(buffer);
+  virtio_wl_ctrl_vfd_recv_t* header =
+      reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(new_vfd_cmd + 1);
+  uint32_t* vfds = reinterpret_cast<uint32_t*>(header + 1);
+  ASSERT_EQ(in_queue_.BuildDescriptor()
+                .AppendWritable(buffer, sizeof(buffer))
+                .Build(),
+            ZX_OK);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(in_queue_.HasUsed());
+  EXPECT_EQ(sizeof(buffer), in_queue_.NextUsed().len);
+  EXPECT_EQ(new_vfd_cmd->hdr.type, VIRTIO_WL_CMD_VFD_NEW);
+  EXPECT_EQ(new_vfd_cmd->hdr.flags, 0u);
+  EXPECT_EQ(new_vfd_cmd->vfd_id,
+            static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE));
+  EXPECT_EQ(new_vfd_cmd->flags,
+            static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
+  EXPECT_GT(new_vfd_cmd->pfn, 0u);
+  EXPECT_EQ(new_vfd_cmd->size, static_cast<uint32_t>(PAGE_SIZE));
+  EXPECT_EQ(*reinterpret_cast<uint8_t*>(new_vfd_cmd->pfn * PAGE_SIZE), 0xaa);
+  EXPECT_EQ(header->hdr.type, VIRTIO_WL_CMD_VFD_RECV);
+  EXPECT_EQ(header->hdr.flags, 0u);
+  EXPECT_EQ(header->vfd_id, 1u);
+  EXPECT_EQ(header->vfd_count, 1u);
+  EXPECT_EQ(*vfds, static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE));
+  EXPECT_EQ(*reinterpret_cast<uint32_t*>(vfds + 1), 1234u);
+
+  // Check that closing shared memory works as expected.
+  virtio_wl_ctrl_vfd_t request = {};
+  request.hdr.type = VIRTIO_WL_CMD_VFD_CLOSE;
+  request.vfd_id = VIRTWL_NEXT_VFD_ID_BASE;
+  virtio_wl_ctrl_hdr_t response = {};
+  ASSERT_EQ(out_queue_.BuildDescriptor()
+                .AppendReadable(&request, sizeof(request))
+                .AppendWritable(&response, sizeof(response))
+                .Build(),
+            ZX_OK);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(out_queue_.HasUsed());
+  EXPECT_EQ(sizeof(response), out_queue_.NextUsed().len);
+  EXPECT_EQ(response.type, VIRTIO_WL_RESP_OK);
+
+  channels_.clear();
+}
+
+TEST_F(VirtioWlTest, Hup) {
+  ASSERT_EQ(CreateConnection(1u), ZX_OK);
+  ASSERT_EQ(channels_.size(), 1u);
+
+  // Close remote side of channel.
+  channels_.clear();
+  RunLoopUntilIdle();
+
+  virtio_wl_ctrl_vfd_t header = {};
+  ASSERT_EQ(in_queue_.BuildDescriptor()
+                .AppendWritable(&header, sizeof(header))
+                .Build(),
+            ZX_OK);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(in_queue_.HasUsed());
+  EXPECT_EQ(sizeof(header), in_queue_.NextUsed().len);
+  EXPECT_EQ(header.hdr.type, VIRTIO_WL_CMD_VFD_HUP);
+  EXPECT_EQ(header.hdr.flags, 0u);
+  EXPECT_EQ(header.vfd_id, 1u);
 }
 
 }  // namespace
