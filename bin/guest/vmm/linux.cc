@@ -18,7 +18,6 @@
 #include <zircon/boot/e820.h>
 
 #include "garnet/bin/guest/vmm/guest_config.h"
-#include "garnet/bin/guest/vmm/kernel.h"
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
@@ -60,6 +59,7 @@ struct SetupData {
 } __PACKED;
 
 static constexpr char kDtbPath[] = "/pkg/data/board.dtb";
+static constexpr uintptr_t kRamdiskOffset = 0x4000000;
 static constexpr uintptr_t kDtbOffset = kRamdiskOffset - PAGE_SIZE;
 static constexpr uintptr_t kDtbOverlayOffset = kDtbOffset - PAGE_SIZE;
 static constexpr uintptr_t kDtbBootParamsOffset =
@@ -156,6 +156,10 @@ static bool is_mz(const MzHeader* header) {
          header->pe_off >= sizeof(MzHeader);
 }
 
+static inline bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
+  return x >= addr && x < addr + size;
+}
+
 static zx_status_t read_fd(const int fd, const machina::PhysMem& phys_mem,
                            const uintptr_t off, size_t* file_size) {
   struct stat stat;
@@ -170,6 +174,23 @@ static zx_status_t read_fd(const int fd, const machina::PhysMem& phys_mem,
     return ZX_ERR_IO;
   }
   *file_size = stat.st_size;
+  return ZX_OK;
+}
+
+zx_status_t load_kernel(const std::string& kernel_path,
+                        const machina::PhysMem& phys_mem,
+                        const uintptr_t kernel_off) {
+  fbl::unique_fd fd(open(kernel_path.c_str(), O_RDONLY));
+  if (!fd) {
+    FXL_LOG(ERROR) << "Failed to open kernel image " << kernel_path;
+    return ZX_ERR_IO;
+  }
+  size_t kernel_size;
+  read_fd(fd.get(), phys_mem, kernel_off, &kernel_size);
+  if (is_within(kRamdiskOffset, kernel_off, kernel_size)) {
+    FXL_LOG(ERROR) << "Kernel location overlaps RAM disk location";
+    return ZX_ERR_OUT_OF_RANGE;
+  }
   return ZX_OK;
 }
 
