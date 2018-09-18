@@ -366,6 +366,7 @@ images += [
       name = "qemu-kernel"
       type = "kernel"
     }
+    sdk = "qemu-kernel.bin"
     deps = []
     if (current_cpu == "arm64") {
       sources = [
@@ -486,7 +487,7 @@ images += [
     deps = [
       ":fuchsia",
     ]
-    sdk = "bootdata-blob.bin"
+    sdk = "fuchsia.zbi"
     updater = "zbi"
     json = {
       name = "zircon-a"
@@ -1382,95 +1383,6 @@ foreach(image, images) {
 
       non_sdk_deps = image.deps
     }
-  }
-}
-
-# TODO(alainv): Add dependency to zircon.bin when such a target exists.
-zircon_bin_sdk_target_name = "zircon.bin_sdk"
-sdk_images += [ ":$zircon_bin_sdk_target_name" ]
-sdk_atom(zircon_bin_sdk_target_name) {
-  domain = "image"
-  name = "zircon.bin"
-  id = "sdk://images/zircon.bin"
-  category = "partner"
-  testonly = true
-
-  file_content = "target/$target_cpu/zircon.bin"
-  meta = {
-    dest = "images/zircon.bin-meta.json"
-    schema = "image"
-    value = {
-      type = "image"
-      name = "zircon.bin"
-      root = "images"
-      file = {
-        if (target_cpu == "x64") {
-          x64 = file_content
-        } else if (target_cpu == "arm64") {
-          arm64 = file_content
-        } else {
-          assert(false, "Unsupported target architecture: $target_cpu")
-        }
-      }
-    }
-  }
-
-  files = [
-    {
-      source = "${zircon_build_dir}/zircon.bin"
-      dest = "zircon.bin"
-    },
-  ]
-  new_files = [
-    {
-      source = "${zircon_build_dir}/zircon.bin"
-      dest = "target/$target_cpu/zircon.bin"
-    },
-  ]
-}
-
-if (target_cpu == "arm64") {
-  qemu_zircon_bin_sdk_target_name = "qemu-zircon.bin_sdk"
-  sdk_images += [ ":$qemu_zircon_bin_sdk_target_name" ]
-  sdk_atom(qemu_zircon_bin_sdk_target_name) {
-    domain = "image"
-    name = "qemu-zircon.bin"
-    id = "sdk://images/qemu-zircon.bin"
-    category = "partner"
-    testonly = true
-
-    file_content = "target/$target_cpu/qemu-zircon.bin"
-    meta = {
-      dest = "images/qemu-zircon.bin-meta.json"
-      schema = "image"
-      value = {
-        type = "image"
-        name = "qemu-zircon.bin"
-        root = "images"
-        file = {
-          if (target_cpu == "x64") {
-            x64 = file_content
-          } else if (target_cpu == "arm64") {
-            arm64 = file_content
-          } else {
-            assert(false, "Unsupported target architecture: $target_cpu")
-          }
-        }
-      }
-    }
-
-    files = [
-      {
-        source = "${zircon_build_dir}/qemu-zircon.bin"
-        dest = "qemu-zircon.bin"
-      },
-    ]
-    new_files = [
-      {
-        source = "${zircon_build_dir}/qemu-zircon.bin"
-        dest = "target/$target_cpu/qemu-zircon.bin"
-      },
-    ]
   }
 }
 
