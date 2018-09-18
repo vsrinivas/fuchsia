@@ -50,6 +50,7 @@ func run(bloatyPath, file string, out chan<- bloatyOutput) {
 		file,
 	}
 	cmd := exec.Command(bloatyPath, args...)
+	fmt.Printf("running: %s\n", file)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		out <- bloatyOutput{err: fmt.Errorf("pipe: %s: %s", file, err)}
@@ -60,7 +61,7 @@ func run(bloatyPath, file string, out chan<- bloatyOutput) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Start(); err != nil {
-		out <- bloatyOutput{err: fmt.Errorf("start: %s: %s", file, cmd.Stderr)}
+		out <- bloatyOutput{err: fmt.Errorf("start (%s): %s: %s\n", err, file, cmd.Stderr)}
 		stdout.Close()
 		return
 	}
@@ -73,7 +74,7 @@ func run(bloatyPath, file string, out chan<- bloatyOutput) {
 	}
 
 	if err := cmd.Wait(); err != nil {
-		out <- bloatyOutput{err: fmt.Errorf("wait: %s: %s", file, cmd.Stderr)}
+		out <- bloatyOutput{err: fmt.Errorf("wait (%s): %s: %s\n", err, file, cmd.Stderr)}
 		return
 	}
 }
