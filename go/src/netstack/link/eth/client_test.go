@@ -19,7 +19,7 @@ func TestClient_AllocForSend(t *testing.T) {
 		txDepth: 1,
 	}
 
-	if txDepthMin := 1; c.txDepth < txDepthMin {
+	if txDepthMin := uint32(1); c.txDepth < txDepthMin {
 		t.Fatalf("%s is a no-op when txDepth is less than %d", t.Name(), txDepthMin)
 	}
 

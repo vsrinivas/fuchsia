@@ -62,15 +62,15 @@ const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
 // It connects to a zircon ethernet driver using a FIFO-based protocol.
 // The protocol is described in system/public/zircon/device/ethernet.h.
 type Client struct {
-	MTU  int
+	MTU  uint32
 	MAC  [6]byte
 	Path string
 
 	f       *os.File
 	tx      zx.Handle
 	rx      zx.Handle
-	txDepth int
-	rxDepth int
+	txDepth uint32
+	rxDepth uint32
 
 	Features uint32 // cache of link/eth/ioctl.go's EthInfo
 
@@ -83,10 +83,10 @@ type Client struct {
 	sendbuf   []bufferEntry // packets ready to send
 
 	// These are counters for buffer management purpose.
-	txTotal    int
-	rxTotal    int
-	txInFlight int // number of buffers in tx fifo
-	rxInFlight int // number of buffers in rx fifo
+	txTotal    uint32
+	rxTotal    uint32
+	txInFlight uint32 // number of buffers in tx fifo
+	rxInFlight uint32 // number of buffers in rx fifo
 }
 
 // NewClient creates a new ethernet Client, connecting to the driver
@@ -127,15 +127,15 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 		return nil, err
 	}
 
-	txDepth := int(fifos.txDepth)
-	rxDepth := int(fifos.rxDepth)
+	txDepth := fifos.txDepth
+	rxDepth := fifos.rxDepth
 	maxDepth := txDepth
 	if rxDepth > maxDepth {
 		maxDepth = rxDepth
 	}
 
 	c := &Client{
-		MTU:       int(info.MTU),
+		MTU:       info.MTU,
 		f:         f,
 		Path:      topo,
 		tx:        fifos.tx,
@@ -284,16 +284,20 @@ func (c *Client) AllocForSend() Buffer {
 func (c *Client) Send(b Buffer) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if _, err := c.txCompleteLocked(); err != nil {
+	if err := c.txCompleteLocked(); err != nil {
 		return err
 	}
 	c.sendbuf = append(c.sendbuf, c.arena.entry(b))
-	status, count := fifoWrite(c.tx, c.sendbuf)
-	copy(c.sendbuf, c.sendbuf[count:])
-	c.sendbuf = c.sendbuf[:len(c.sendbuf)-int(count)]
-	if status != zx.ErrOk && status != zx.ErrShouldWait {
+
+	switch status, count := fifoWrite(c.tx, c.sendbuf); status {
+	case zx.ErrOk:
+		n := copy(c.sendbuf, c.sendbuf[count:])
+		c.sendbuf = c.sendbuf[:n]
+	case zx.ErrShouldWait:
+	default:
 		return zx.Error{Status: status, Text: "eth.Client.Send"}
 	}
+
 	return nil
 }
 
@@ -308,41 +312,34 @@ func (c *Client) Free(b Buffer) {
 	c.arena.free(c, b)
 }
 
-func fifoWrite(handle zx.Handle, b []bufferEntry) (zx.Status, uint) {
+func fifoWrite(handle zx.Handle, b []bufferEntry) (zx.Status, uint32) {
 	var actual uint
 	status := zx.Sys_fifo_write(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
-	return status, actual
+	return status, uint32(actual)
 }
 
-func fifoRead(handle zx.Handle, b []bufferEntry) (zx.Status, uint) {
+func fifoRead(handle zx.Handle, b []bufferEntry) (zx.Status, uint32) {
 	var actual uint
 	status := zx.Sys_fifo_read(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
-	return status, actual
+	return status, uint32(actual)
 }
 
-func (c *Client) txCompleteLocked() (bool, error) {
+func (c *Client) txCompleteLocked() error {
 	buf := c.tmpbuf[:c.txDepth]
-	status, count := fifoRead(c.tx, buf)
-	n := int(count)
 
-	c.txInFlight -= n
-	c.txTotal += n
-	for i := 0; i < n; i++ {
-		c.arena.free(c, c.arena.bufferFromEntry(buf[i]))
+	switch status, count := fifoRead(c.tx, buf); status {
+	case zx.ErrOk:
+		c.txInFlight -= count
+		c.txTotal += count
+		for _, entry := range buf[:count] {
+			c.arena.free(c, c.arena.bufferFromEntry(entry))
+		}
+	case zx.ErrShouldWait:
+	default:
+		return zx.Error{Status: status, Text: "eth.Client.TX"}
 	}
-	canSend := c.txInFlight < c.txDepth
-	if status != zx.ErrOk && status != zx.ErrShouldWait {
-		return canSend, zx.Error{Status: status, Text: "eth.Client.TX"}
-	}
-	return canSend, nil
-}
 
-func (c *Client) popRecvLocked() Buffer {
-	c.rxTotal++
-	b := c.recvbuf[0]
-	copy(c.recvbuf, c.recvbuf[1:])
-	c.recvbuf = c.recvbuf[:len(c.recvbuf)-1]
-	return c.arena.bufferFromEntry(b)
+	return nil
 }
 
 // Recv receives a Buffer from the ethernet driver.
@@ -351,20 +348,26 @@ func (c *Client) popRecvLocked() Buffer {
 // returns a nil Buffer and zx.ErrShouldWait.
 //
 // If the client is closed, Recv returns zx.ErrPeerClosed.
-func (c *Client) Recv() (b Buffer, err error) {
+func (c *Client) Recv() (Buffer, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if len(c.recvbuf) > 0 {
-		return c.popRecvLocked(), nil
+	if len(c.recvbuf) == 0 {
+		status, count := fifoRead(c.rx, c.recvbuf[:cap(c.recvbuf)])
+		if status != zx.ErrOk {
+			return nil, zx.Error{Status: status, Text: "eth.Client.Recv"}
+		}
+
+		c.recvbuf = c.recvbuf[:count]
+		c.rxInFlight -= count
+		if err := c.rxCompleteLocked(); err != nil {
+			return nil, err
+		}
 	}
-	status, count := fifoRead(c.rx, c.recvbuf[:cap(c.recvbuf)])
-	n := int(count)
+	c.rxTotal++
+	b := c.recvbuf[0]
+	n := copy(c.recvbuf, c.recvbuf[1:])
 	c.recvbuf = c.recvbuf[:n]
-	c.rxInFlight -= n
-	if status != zx.ErrOk {
-		return nil, zx.Error{Status: status, Text: "eth.Client.Recv"}
-	}
-	return c.popRecvLocked(), c.rxCompleteLocked()
+	return c.arena.bufferFromEntry(b), nil
 }
 
 func (c *Client) rxCompleteLocked() error {
@@ -380,13 +383,13 @@ func (c *Client) rxCompleteLocked() error {
 		return nil // nothing to do
 	}
 	status, count := fifoWrite(c.rx, buf)
-	for _, entry := range buf[count:] {
-		b := c.arena.bufferFromEntry(entry)
-		c.arena.free(c, b)
-	}
-	c.rxInFlight += int(count)
 	if status != zx.ErrOk {
 		return zx.Error{Status: status, Text: "eth.Client.RX"}
+	}
+
+	c.rxInFlight += count
+	for _, entry := range buf[count:] {
+		c.arena.free(c, c.arena.bufferFromEntry(entry))
 	}
 	return nil
 }
@@ -396,7 +399,8 @@ func (c *Client) rxCompleteLocked() error {
 func (c *Client) WaitSend() error {
 	for {
 		c.mu.Lock()
-		canSend, err := c.txCompleteLocked()
+		err := c.txCompleteLocked()
+		canSend := c.txInFlight < c.txDepth
 		c.mu.Unlock()
 		if canSend || err != nil {
 			return err
@@ -480,6 +484,6 @@ func (s State) String() string {
 	case StateClosed:
 		return "eth stopped"
 	default:
-		return fmt.Sprintf("eth bad state(%d)", int(s))
+		return fmt.Sprintf("eth bad state (%d)", s)
 	}
 }
