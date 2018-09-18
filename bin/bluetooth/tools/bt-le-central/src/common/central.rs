@@ -5,19 +5,24 @@
 // TODO(armansito): Remove this once a server channel can be killed using a Controller
 #![allow(unreachable_code)]
 
-use async::temp::Either::{Left, Right};
-use bt::error::Error as BTError;
-use common::gatt::start_gatt_loop;
-use failure::Error;
-use fidl::endpoints2;
-use fidl_ble::{CentralEvent, CentralProxy, RemoteDevice};
-use futures::future;
-use futures::prelude::*;
-use parking_lot::RwLock;
-use std::fmt;
-use std::process::exit;
-use std::string::String;
-use std::sync::Arc;
+use {
+    crate::common::gatt::start_gatt_loop,
+    failure::Error,
+    fidl::endpoints2,
+    fidl_fuchsia_bluetooth_le::{CentralEvent, CentralProxy, RemoteDevice},
+    fuchsia_async::temp::Either::{Left, Right},
+    fuchsia_bluetooth::error::Error as BTError,
+    futures::{
+        future,
+        prelude::*,
+    },
+    parking_lot::RwLock,
+    std::{
+        fmt,
+        process::exit,
+        sync::Arc,
+    },
+};
 
 type CentralStatePtr = Arc<RwLock<CentralState>>;
 

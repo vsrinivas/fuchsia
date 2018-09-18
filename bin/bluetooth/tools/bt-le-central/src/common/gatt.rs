@@ -2,24 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async;
-
-use async::temp::Either::{Left, Right};
-use bt::error::Error as BTError;
-use common::gatt_types::Service;
-use failure::Error;
-use fidl::endpoints2;
-use fidl_gatt::{Characteristic as FidlCharacteristic, ClientProxy, RemoteServiceEvent,
-                RemoteServiceProxy, ServiceInfo};
-use futures::channel::mpsc::channel;
-use futures::future::FutureObj;
-use futures::{future, Future, TryFutureExt, Stream, StreamExt, TryStreamExt};
-
-use parking_lot::RwLock;
-use std::io::{self, Read, Write};
-use std::string::String;
-use std::sync::Arc;
-use std::thread;
+use {
+    crate::common::gatt_types::Service,
+    failure::Error,
+    fidl::endpoints2,
+    fidl_fuchsia_bluetooth_gatt::{
+        Characteristic as FidlCharacteristic,
+        ClientProxy, RemoteServiceEvent,
+        RemoteServiceProxy, ServiceInfo,
+    },
+    fuchsia_async::{
+        self as fasync,
+        temp::Either::{Left, Right},
+    },
+    fuchsia_bluetooth::error::Error as BTError,
+    futures::{
+        channel::mpsc::channel,
+        future::FutureObj,
+        future, Future, TryFutureExt, Stream, StreamExt, TryStreamExt,
+    },
+    parking_lot::RwLock,
+    std::{
+        io::{self, Read, Write},
+        sync::Arc,
+        thread,
+    },
+};
 
 macro_rules! left_ok {
     () => {
@@ -159,7 +167,7 @@ fn discover_characteristics(client: GattClientPtr) -> impl Future<Output = Resul
                         .as_ref()
                         .unwrap()
                         .take_event_stream();
-                    async::spawn(
+                    fasync::spawn(
                         event_stream
                             .try_for_each(move |evt| {
                                 match evt {
