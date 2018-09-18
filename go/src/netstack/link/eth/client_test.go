@@ -16,10 +16,12 @@ func TestClient_AllocForSend(t *testing.T) {
 
 	c := Client{
 		arena: arena,
-		txDepth: 1,
+		fifos: ethfifos{
+			txDepth: 1,
+		},
 	}
 
-	if txDepthMin := uint32(1); c.txDepth < txDepthMin {
+	if txDepthMin := uint32(1); c.fifos.txDepth < txDepthMin {
 		t.Fatalf("%s is a no-op when txDepth is less than %d", t.Name(), txDepthMin)
 	}
 
@@ -34,7 +36,7 @@ func TestClient_AllocForSend(t *testing.T) {
 	arena.mu.freebufs = arena.mu.freebufs[:cap(arena.mu.freebufs)]
 
 	// Saturate the client.
-	for i := c.txDepth; i > 0; i--  {
+	for i := c.fifos.txDepth; i > 0; i-- {
 		if got := c.AllocForSend(); got == nil {
 			t.Fatalf("AllocForSend() = %v, want non-nil", got)
 		}

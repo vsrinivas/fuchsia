@@ -471,7 +471,7 @@ func (ns *Netstack) addEth(path string) error {
 
 	nicid := ns.countNIC + 1
 	ifs.nic.ID = nicid
-	ifs.nic.Features = client.Features
+	ifs.nic.Features = client.Info.Features
 	setNICName(ifs.nic)
 
 	ifs.nic.Routes = defaultRouteTable(nicid, "")
@@ -503,7 +503,7 @@ func (ns *Netstack) addEth(path string) error {
 
 	// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
 	// in third_party/netstack.
-	if client.Features&ethernet.InfoFeatureWlan != 0 {
+	if client.Info.Features&ethernet.InfoFeatureWlan != 0 {
 		// WLAN: Upon 802.1X port open, the state change will ensue, which
 		// will invoke the DHCP Client.
 		return nil
@@ -511,7 +511,7 @@ func (ns *Netstack) addEth(path string) error {
 
 	status, err := client.GetStatus()
 	if err != nil {
-		return fmt.Errorf("failed to getStatus for MAC[%v], error %v", client.MAC, err)
+		return fmt.Errorf("failed to getStatus for MAC[%v], error %v", client.Info.MAC, err)
 	}
 
 	if status == eth.LinkUp {

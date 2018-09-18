@@ -61,7 +61,7 @@ func getInterfaces() (out []netstack.NetInterface) {
 
 		var mac []uint8
 		if eth := ifs.eth; eth != nil {
-			mac = eth.MAC[:]
+			mac = eth.Info.MAC[:]
 		}
 
 		outif := netstack.NetInterface{

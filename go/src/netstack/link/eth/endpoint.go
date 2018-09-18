@@ -27,9 +27,9 @@ type linkEndpoint struct {
 	views [1]buffer.View
 }
 
-func (ep *linkEndpoint) MTU() uint32                    { return uint32(ep.c.MTU) }
+func (ep *linkEndpoint) MTU() uint32                    { return ep.c.Info.MTU }
 func (ep *linkEndpoint) MaxHeaderLength() uint16        { return headerLength }
-func (ep *linkEndpoint) LinkAddress() tcpip.LinkAddress { return tcpip.LinkAddress(ep.c.MAC[:]) }
+func (ep *linkEndpoint) LinkAddress() tcpip.LinkAddress { return tcpip.LinkAddress(ep.c.Info.MAC[:]) }
 
 // TODO(stijlist): modified from WritePacket below. These two implementations are the same except for where header and payload
 // are read.
@@ -55,7 +55,7 @@ func (ep *linkEndpoint) WriteBuffer(r *stack.Route, payload *buffer.VectorisedVi
 	if r.LocalLinkAddress != "" {
 		copy(ethHdr[6:], r.LocalLinkAddress)
 	} else {
-		copy(ethHdr[6:], ep.c.MAC[:])
+		copy(ethHdr[6:], ep.c.Info.MAC[:])
 	}
 	ethHdr[12] = uint8(protocol >> 8)
 	ethHdr[13] = uint8(protocol)
