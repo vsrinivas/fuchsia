@@ -20,9 +20,9 @@ class PayloadAllocator {
 
   virtual ~PayloadAllocator() = default;
 
-  // Allocates and returns a |PayloadBuffer| with the specified size. Returns
-  // nullptr if the allocation fails. Buffers returned by this method will be
-  // aligned to |kByteAlignment| bytes.
+  // Allocates and returns a |PayloadBuffer| of at least the specified size.
+  // Returns nullptr if the allocation fails. Buffers returned by this method
+  // will be aligned to |kByteAlignment| bytes.
   virtual fbl::RefPtr<PayloadBuffer> AllocatePayloadBuffer(uint64_t size) = 0;
 };
 

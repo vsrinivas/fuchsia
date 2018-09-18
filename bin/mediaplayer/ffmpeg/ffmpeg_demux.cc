@@ -278,7 +278,7 @@ void FfmpegDemuxImpl::Worker() {
   }
 
   result_ = Result::kOk;
-    NotifyInitComplete();
+  NotifyInitComplete();
 
   async::PostTask(dispatcher_, [this]() { SendStatus(); });
 
@@ -379,13 +379,14 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
   bool keyframe = av_packet->flags & AV_PKT_FLAG_KEY;
 
   fbl::RefPtr<PayloadBuffer> payload_buffer;
-  if (av_packet->size != 0) {
+  uint64_t size = av_packet->size;
+  if (size != 0) {
     // The recycler used here just holds a captured reference to the |AVPacket|
     // so the memory underlying the |AVPacket| and the |PayloadBuffer| is not
     // deleted/recycled. This doesn't prevent the demux from generating more
     // |AVPackets|.
     payload_buffer = PayloadBuffer::Create(
-        av_packet->size, av_packet->data,
+        size, av_packet->data,
         [av_packet = std::move(av_packet)](PayloadBuffer* payload_buffer) {
           // The deallocation happens when |av_packet|
           // goes out of scope. The |PayloadBuffer|
@@ -394,7 +395,7 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
   }
 
   return Packet::Create(pts, streams_[*stream_index_out]->pts_rate(), keyframe,
-                        false, std::move(payload_buffer));
+                        false, size, std::move(payload_buffer));
 }
 
 PacketPtr FfmpegDemuxImpl::PullEndOfStreamPacket(size_t* stream_index_out) {

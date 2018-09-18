@@ -146,6 +146,9 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
 
   set_next_pts(pts + av_frame.nb_samples);
 
+  uint64_t payload_size =
+      stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
+
   if (lpcm_util_) {
     // We need to interleave. The non-interleaved frames are in
     // |payload_buffer|, which was allocated from the default allocator. That
@@ -155,16 +158,16 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
     FXL_DCHECK(stream_type_);
     FXL_DCHECK(stream_type_->audio());
 
-    uint64_t payload_size =
-        stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
     auto new_payload_buffer = allocator->AllocatePayloadBuffer(payload_size);
     if (!new_payload_buffer) {
       // TODO(dalesat): Renderer VMO is full. What can we do about this?
       FXL_LOG(FATAL) << "Ran out of memory for decoded, interleaved audio.";
     }
 
-    lpcm_util_->Interleave(payload_buffer->data(), payload_buffer->size(),
-                           new_payload_buffer->data(), av_frame.nb_samples);
+    lpcm_util_->Interleave(
+        payload_buffer->data(),
+        av_frame.linesize[0] * stream_type_->audio()->channels(),
+        new_payload_buffer->data(), av_frame.nb_samples);
 
     // |new_payload_buffer| is the buffer we want to attach to the |Packet|.
     // This assignment drops the reference to the original |payload_buffer|, so
@@ -176,7 +179,7 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
       pts, pts_rate(),
       false,  // Not a keyframe
       false,  // Not end-of-stream. The base class handles end-of-stream.
-      std::move(payload_buffer));
+      payload_size, std::move(payload_buffer));
 }
 
 const char* FfmpegAudioDecoder::label() const { return "audio_decoder"; }

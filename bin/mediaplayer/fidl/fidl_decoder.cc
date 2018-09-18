@@ -389,8 +389,9 @@ void FidlDecoder::OnOutputPacket(fuchsia::mediacodec::CodecPacket packet,
         // The |PayloadBuffer| deletes itself.
       });
 
-  auto output_packet = Packet::Create(next_pts_, pts_rate_, true, false,
-                                      std::move(payload_buffer));
+  auto output_packet =
+      Packet::Create(next_pts_, pts_rate_, true, false,
+                     packet.valid_length_bytes, std::move(payload_buffer));
 
   if (revised_stream_type_) {
     output_packet->SetRevisedStreamType(std::move(revised_stream_type_));

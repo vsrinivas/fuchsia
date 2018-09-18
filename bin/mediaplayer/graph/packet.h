@@ -30,14 +30,15 @@ class Packet {
 
   // Creates a packet.
   static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate,
-                          bool keyframe, bool end_of_stream,
-                          fbl::RefPtr<PayloadBuffer> load_buffer);
+                          bool keyframe, bool end_of_stream, size_t size,
+                          fbl::RefPtr<PayloadBuffer> payload_buffer);
 
   // Creates an end-of-stream packet with no payload.
   static PacketPtr CreateEndOfStream(int64_t pts, media::TimelineRate pts_rate);
 
   Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
-         bool end_of_stream, fbl::RefPtr<PayloadBuffer> load_buffer);
+         bool end_of_stream, size_t size,
+         fbl::RefPtr<PayloadBuffer> payload_buffer);
 
   virtual ~Packet();
 
@@ -59,7 +60,7 @@ class Packet {
 
   // Returns the size in bytes of the packet payload or 0 if the packet has no
   // payload.
-  size_t size() const { return payload_buffer_ ? payload_buffer_->size() : 0; }
+  size_t size() const { return size_; }
 
   // Returns a pointer to the packet payload or nullptr if there is no payload
   // or the payload isn't mapped into process local memory.
@@ -67,8 +68,8 @@ class Packet {
     return payload_buffer_ ? payload_buffer_->data() : nullptr;
   }
 
-  // Returns a raw pointer to the packet's payload buffer.
-  PayloadBuffer* payload_buffer() { return payload_buffer_.get(); }
+  // Returns the packet's payload buffer.
+  fbl::RefPtr<PayloadBuffer> payload_buffer() { return payload_buffer_; }
 
   // Retrieves the PTS using the specified PTS tick rate. Use this method to
   // obtain the PTS at a specific tick rate once, possibly at the cost of a
@@ -100,6 +101,7 @@ class Packet {
   media::TimelineRate pts_rate_;
   bool keyframe_;
   bool end_of_stream_;
+  size_t size_;
   fbl::RefPtr<PayloadBuffer> payload_buffer_;
   std::unique_ptr<StreamType> revised_stream_type_;
 };

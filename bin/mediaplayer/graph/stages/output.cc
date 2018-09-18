@@ -53,7 +53,7 @@ void Output::SupplyPacket(PacketPtr packet) const {
 
     packet =
         Packet::Create(packet->pts(), packet->pts_rate(), packet->keyframe(),
-                       packet->end_of_stream(), std::move(buffer));
+                       packet->end_of_stream(), size, std::move(buffer));
   }
 
   mate_->PutPacket(std::move(packet));

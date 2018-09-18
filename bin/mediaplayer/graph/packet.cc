@@ -11,9 +11,9 @@ namespace media_player {
 
 // static
 PacketPtr Packet::Create(int64_t pts, media::TimelineRate pts_rate,
-                         bool keyframe, bool end_of_stream,
+                         bool keyframe, bool end_of_stream, size_t size,
                          fbl::RefPtr<PayloadBuffer> payload_buffer) {
-  return std::make_shared<Packet>(pts, pts_rate, keyframe, end_of_stream,
+  return std::make_shared<Packet>(pts, pts_rate, keyframe, end_of_stream, size,
                                   std::move(payload_buffer));
 }
 
@@ -22,16 +22,21 @@ PacketPtr Packet::CreateEndOfStream(int64_t pts, media::TimelineRate pts_rate) {
   return std::make_shared<Packet>(pts, pts_rate,
                                   false,     // keyframe
                                   true,      // end_of_stream
+                                  0,         // size
                                   nullptr);  // payload_buffer
 }
 
 Packet::Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
-               bool end_of_stream, fbl::RefPtr<PayloadBuffer> payload_buffer)
+               bool end_of_stream, size_t size,
+               fbl::RefPtr<PayloadBuffer> payload_buffer)
     : pts_(pts),
       pts_rate_(pts_rate),
       keyframe_(keyframe),
       end_of_stream_(end_of_stream),
-      payload_buffer_(std::move(payload_buffer)) {}
+      size_(size),
+      payload_buffer_(std::move(payload_buffer)) {
+  FXL_DCHECK(!payload_buffer_ || (payload_buffer_->size() >= size_));
+}
 
 Packet::~Packet() {}
 
