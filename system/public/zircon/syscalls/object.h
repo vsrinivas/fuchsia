@@ -36,10 +36,9 @@ typedef enum {
     ZX_INFO_LAST
 } zx_object_info_topic_t;
 
-typedef enum {
-    ZX_OBJ_PROP_NONE            = 0,
-    ZX_OBJ_PROP_WAITABLE        = 1,
-} zx_obj_props_t;
+typedef uint32_t zx_obj_props_t;
+#define ZX_OBJ_PROP_NONE ((zx_obj_props_t)0u)
+#define ZX_OBJ_PROP_WAITABLE ((zx_obj_props_t)1u)
 
 typedef struct zx_info_handle_basic {
     // The unique id assigned by kernel to the object referenced by the
@@ -52,7 +51,7 @@ typedef struct zx_info_handle_basic {
     zx_rights_t rights;
 
     // The object type: channel, event, socket, etc.
-    uint32_t type;                // zx_obj_type_t;
+    zx_obj_type_t type;
 
     // If the object referenced by the handle is related to another (such
     // as the the other end of a channel, or the parent of a job) then
@@ -63,7 +62,7 @@ typedef struct zx_info_handle_basic {
 
     // Set to ZX_OBJ_PROP_WAITABLE if the object referenced by the
     // handle can be waited on; zero otherwise.
-    uint32_t props;               // zx_obj_props_t;
+    zx_obj_props_t props;
 } zx_info_handle_basic_t;
 
 typedef struct zx_info_handle_count {
