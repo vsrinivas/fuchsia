@@ -77,6 +77,7 @@ executable("unittests") {
   ]
   deps = [
     ":testing_deps",
+    "//garnet/lib/ui/gfx:object_linker",
   ]
   include_dirs = [
     "//garnet/public/lib/escher",

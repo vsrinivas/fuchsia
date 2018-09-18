@@ -47,8 +47,6 @@ source_set("gfx") {
     "engine/hit.h",
     "engine/hit_tester.cc",
     "engine/hit_tester.h",
-    "engine/object_linker.cc",
-    "engine/object_linker.h",
     "engine/resource_linker.cc",
     "engine/resource_linker.h",
     "engine/resource_map.cc",
@@ -189,6 +187,7 @@ source_set("gfx") {
   ]
 
   deps = [
+    ":object_linker",
     "//garnet/lib/ui/yuv",
     "//garnet/public/lib/escher/util:check_vulkan_support",
     "//garnet/public/lib/images/cpp",
@@ -196,6 +195,20 @@ source_set("gfx") {
     "//zircon/public/fidl/fuchsia-display",
     "//zircon/public/fidl/fuchsia-sysmem",
     "//zircon/public/lib/trace",
+  ]
+}
+
+source_set("object_linker") {
+  sources = [
+    "engine/object_linker.h",
+    "engine/object_linker.cc"
+  ]
+
+  public_deps = [
+    "//garnet/lib/ui/scenic/util",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
   ]
 }
 

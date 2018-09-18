@@ -7,7 +7,8 @@
 
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
-#include <lib/zx/eventpair.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/object_traits.h>
 #include <zircon/types.h>
 #include <memory>
 #include <type_traits>
@@ -20,11 +21,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-// Allows linking of peer objects in different sessions via eventpairs.  Two
-// objects are considered peers if they each hold either end of an eventpair.
-//
-// This class contains common link functionality and operates on type-erased
-// objects.  Use ObjectLinker to link objects of concrete types together.
+// Contains common linking functionality that operates on type-erased objects.
+// Use ObjectLinker to link objects of concrete types together.
 class ObjectLinkerBase {
  public:
   ~ObjectLinkerBase() = default;
@@ -35,30 +33,30 @@ class ObjectLinkerBase {
   size_t UnresolvedImportCount() { return unresolved_imports_.size(); }
 
  protected:
-  // Information for one end of a link registered with the linker.
+  // Information for one end of a Link registered with the linker.
   struct Endpoint {
     zx_koid_t peer_endpoint_id = ZX_KOID_INVALID;
     void* object = nullptr;  // Opaque pointer to client object
     fit::function<void(void* linked_object)> link_resolved;
-    fit::closure link_disconnected;  // TODO: How to handle multiple imports?
+    fit::closure link_failed;  // TODO(SCN-769): How to multiple imports?
   };
 
   // Information used to match one end of a link with its peer(s) on the
   // other end.
   struct UnresolvedEndpoint {
-    zx::eventpair token;  // Token for initial matching to peer endpoint
+    zx::handle token;  // Token for initial matching to peer endpoint.
     std::unique_ptr<async::Wait> peer_death_waiter;
   };
 
   // Only concrete ObjectLinker types should instantiate these.
   ObjectLinkerBase() = default;
 
-  // Creates a new Endpoint for linking and reports any errors in creation using
-  // |error_reporter|.
+  // Creates a new Endpoint for linking and reports any errors in creation
+  // using |error_reporter|.
   //
-  // Returns a koid that can be used to identify the registered Endpoint, or
+  // Returns a zx_koid_t that uniquely identifies the registered Endpoint, or
   // ZX_KOID_INVALID if creation failed.
-  zx_koid_t CreateEndpoint(zx::eventpair token, ErrorReporter* error_reporter,
+  zx_koid_t CreateEndpoint(zx::handle token, ErrorReporter* error_reporter,
                            bool is_import);
 
   // Destroys the Endpoint pointed to by |endpoint_id| and removes all traces
@@ -66,25 +64,26 @@ class ObjectLinkerBase {
   // will be notified of the Endpoint's destruction.
   void DestroyEndpoint(zx_koid_t endpoint_id, bool is_import);
 
-  // Puts the Endpoint pointed to by |endpoint_id| into an initialized state by
-  // supplying it with an object and connection callbacks.  The Endpoint will
-  // not be linked until its peer is also initialized.
+  // Puts the Endpoint pointed to by |endpoint_id| into an initialized state
+  // by supplying it with an object and connection callbacks.  The Endpoint
+  // will not be linked until its peer is also initialized.
   void InitializeEndpoint(
       zx_koid_t endpoint_id, void* object,
       fit::function<void(void* linked_object)> link_resolved,
-      fit::closure link_disconnected, bool is_import);
+      fit::closure link_failed, bool is_import);
 
   // Attempts linking of the endpoints associated with |endpoint_id| and
   // |peer_endpoint_id|.
   //
-  // The link will only succeed if both endpoints have been initialized first.
+  // The operation will only succeed if both endpoints have been initialized
+  // first.
   void AttemptLinking(zx_koid_t endpoint_id, zx_koid_t peer_endpoint_id,
                       bool is_import);
 
   // Sets up an async::Wait on |Endpoint| that will fire a callback if the
   // Endpoint peer's token is destroyed before a link has been established.
-  std::unique_ptr<async::Wait> WaitForPeerDeath(zx_handle_t Endpoint_handle,
-                                                zx_koid_t Endpoint_koid,
+  std::unique_ptr<async::Wait> WaitForPeerDeath(zx_handle_t endpoint_handle,
+                                                zx_koid_t endpoint_id,
                                                 bool is_import);
 
   std::unordered_map<zx_koid_t, Endpoint> exports_;
@@ -95,31 +94,33 @@ class ObjectLinkerBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(ObjectLinkerBase);
 };
 
-// Class which adds type information to ObjectLinkerBase.
+// Allows direct linking of peer objects, regardless of which session(s) they
+// exist in.  Once the objects are linked, they have direct references to each
+// other.
 //
-// Allows linking of peer objects in different sessions via eventpairs.  Two
-// objects are considered peers if they each hold either end of an eventpair.
+// This linking is accomplished via lookup between pairable kernel objects.
+// zx::eventpair objects are a natural fit for this purpose and are commonly
+// used.
 //
-// Accepts one endpoint of an eventpair and returns a Link object in response.
-// The Link can be connected with its peer by providing a concrete object to
-// link along with callbacks for both successful and unsuccessful resolution of
-// the link.
+// To create a Link, provide a handle to one half of a pairable kernel object
+// (zx::object_traits:supports_duplication is true) to the |CreateExport| or
+// |CreateImport| methods.  It can be connected with its peer by providing a
+// concrete object to link along with callbacks for both successful and
+// unsuccessful resolution.
 //
-// When the other endpoint of the eventpair is registered with the ObjectLinker,
-// and Initialize() is called on the cooresponding Link, the provided resolution
-// callbacks in both Links will be fired.
+// When the other half of the kernel object is registered with the
+// ObjectLinker, and Initialize() is called on the corresponding Link, the
+// provided resolution callbacks in both Links will be fired.  The callback
+// associated with the Export will always fire first.
 //
-// If either endpoint is destroyed, this will cause the provided disconnection
-// callback in its peer to be fired.  If the peer has not provided any callbacks
-// yet via Initialize(), the disconnection callback will be fired when
-// Initialize() is first called on the peer.  The callback will be fired
-// regardless which peer is registered first.
+// If either Link endpoint is destroyed, this will cause the provided
+// disconnection callback on its peer endpoint to be fired.  If the peer
+// endpoint has not been provided any callbacks yet via Initialize(), the
+// disconnection callback will be fired later when Initialize() is first called
+// on it.
 //
-// If the link was successful, the two peer objects have direct access to each
-// other via pointers.
-//
-// Attempts to register either eventpair peer multiple times will result in an
-// error.
+// Attempts to register either half of the kernel object multiple times, even
+// through cloned handles, will result in an error.
 // TODO(SCN-769): Allow multiple Imports.
 //
 // This class is thread-hostile.  It requires the owning thread to have a
@@ -127,41 +128,45 @@ class ObjectLinkerBase {
 template <typename Export, typename Import>
 class ObjectLinker : public ObjectLinkerBase {
  public:
-  // Represents one endpoint of a Link.  This is returned by the CreateExport
-  // and CreateImport calls.
+  // Represents one endpoint of a Link between two objects in different
+  // |Session|s.
+  //
+  // Links can be moved, but not copied.  Valid Links can only be constructed by
+  // the CreateExport and CreateImport methods.
   template <bool is_import>
   class Link {
    public:
     using Obj = typename std::conditional<is_import, Import, Export>::type;
-    using LinkedObj =
-        typename std::conditional<is_import, Export, Import>::type;
+    using PeerObj = typename std::conditional<is_import, Export, Import>::type;
 
-    // Move assignment/constructor.  These explicitly invalidate |other| after
-    // they are called.
+    Link() {}
+    ~Link() { Invalidate(); }
     Link(Link&& other) { *this = std::move(other); }
+    Link& operator=(nullptr_t) { Invalidate(); }
     Link& operator=(Link&& other);
-
-    // The destructor will disconnect and invalidate the Link if it is still
-    // connected.
-    ~Link();
 
     bool valid() const { return linker_ && endpoint_id_ != ZX_KOID_INVALID; }
     bool initialized() const { return valid() && initialized_; }
+    PeerObj* peer() { return peer_object_; }
 
-    void Initialize(
-        Obj* object,
-        fit::function<void(LinkedObj* linked_object)> link_resolved =
-            [](LinkedObj*) {},
-        fit::closure link_disconnected = []() {});
+    // Initialize the Link with an |object| and callbacks for |link_resolved|
+    // and |link_failed| events, making it ready for connection to its
+    // peer.
+    void Initialize(Obj* object,
+                    fit::function<void(PeerObj* peer_object)> link_resolved =
+                        [](PeerObj*) {},
+                    fit::closure link_failed = []() {});
 
    private:
-    // Kept private so only an ObjectLinker can construct a Link.
+    // Kept private so only an ObjectLinker can construct a valid Link.
     Link(zx_koid_t endpoint_id, fxl::WeakPtr<ObjectLinker> linker)
         : linker_(std::move(linker)), endpoint_id_(endpoint_id) {}
-    void Destroy();
+
+    void Invalidate(bool destroy_endpoint = true);
 
     fxl::WeakPtr<ObjectLinker> linker_;
     zx_koid_t endpoint_id_ = ZX_KOID_INVALID;
+    PeerObj* peer_object_ = nullptr;
     bool initialized_ = false;
 
     friend class ObjectLinker;
@@ -172,111 +177,106 @@ class ObjectLinker : public ObjectLinkerBase {
   ObjectLinker() : weak_factory_(this) {}
   ~ObjectLinker() = default;
 
-  // Creates a cross-Session Link so an object can be associated with a paired
-  // object in another Session.  The ObjectLinker takes ownership over the
-  // provided |token|, which is used to locate the paired object.
+  // Creates an outgoing cross-session ExportLink between two objects, which
+  // can be used to initiate and close the connection between them.
   //
-  // If a link cannot be created for some reason, |error_reporter| will be
-  // used to flag an error.
+  // The ObjectLinker uses the provided |token| to locate the paired ImportLink.
+  // |token| must reference a pairable kernel object type such as |zx::channel|
+  // or |zx::eventpair|.  |token| may not reference a kernel object that is in
+  // use by this ObjectLinker.
   //
-  // Once the objects are linked, they can communicate directly via pointers
-  // within Scenic. This is true as soon as the Initialize() method is called on
-  // the Links for both objects.
+  // If a link cannot be created, |error_reporter| will be used to flag an
+  // error.
   //
-  // The returned |ExportLink| is used to initiate and close the connection.
-  ExportLink CreateExport(zx::eventpair token, ErrorReporter* error_reporter);
+  // The objects are linked as soon as the |Initialize()| method is called on
+  // the links for both objects.
+  template <typename T,
+            typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
+  ExportLink CreateExport(T token, ErrorReporter* error_reporter) {
+    const zx_koid_t endpoint_id =
+        CreateEndpoint(std::move(token), error_reporter, false);
+    return ExportLink(endpoint_id, weak_factory_.GetWeakPtr());
+  }
 
-  // Creates a cross-Session Link so an object can be associated with a paired
-  // object in another Session.  The ObjectLinker takes ownership over the
-  // provided |token|, which is used to locate the paired object.
+  // Creates an incoming cross-session ImportLink between two objects, which
+  // can be used to initiate and close the connection between them.
   //
-  // If a link cannot be created for some reason, |error_reporter| will be
-  // used to flag an error.
+  // The ObjectLinker uses the provided |token| to locate the paired ExportLink.
+  // |token| must reference a pairable kernel object type such as |zx::channel|
+  // or |zx::eventpair|.  |token| may not reference a kernel object that is in
+  // use by this ObjectLinker.
   //
-  // Once the objects are linked, they can communicate directly via pointers
-  // within Scenic. This is true as soon as the Initialize() method is called on
-  // the Links for both objects.
-  //
-  // The returned |ImportLink| is used to initiate and close the connection.
-  ImportLink CreateImport(zx::eventpair token, ErrorReporter* error_reporter);
+  // If a link cannot be created, |error_reporter| will be used to flag an
+
+  // the links for both objects.
+  template <typename T,
+            typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
+  ImportLink CreateImport(T token, ErrorReporter* error_reporter) {
+    const zx_koid_t endpoint_id =
+        CreateEndpoint(std::move(token), error_reporter, true);
+    return ImportLink(endpoint_id, weak_factory_.GetWeakPtr());
+  }
 
  private:
   // Should be last.  See weak_ptr.h.
   fxl::WeakPtrFactory<ObjectLinker> weak_factory_;
 };
 
-// Template functions must be defined in the header.
 template <typename Export, typename Import>
 template <bool is_import>
-auto ObjectLinker<Export, Import>::Link<is_import>::operator=(
-    Link<is_import>&& other) -> Link<is_import>& {
-  linker_ = std::move(other.linker_);
+auto ObjectLinker<Export, Import>::Link<is_import>::operator=(Link&& other)
+    -> Link& {
+  // Invalidate the existing Link if its still valid.
+  Invalidate();
+
+  // Move data from the other Link and invalidate it, so it won't destroy
+  // its endpoint when it dies.
+  linker_ = other.linker_;
+  peer_object_ = other.peer_object_;
   endpoint_id_ = other.endpoint_id_;
   initialized_ = other.initialized_;
+  other.Invalidate(false /* destroy_endpoint */);
 
-  // Invalidate it, so it won't cause a disconnection when it dies.
-  other.endpoint_id_ = ZX_KOID_INVALID;
-  other.initialized_ = false;
   return *this;
 }
 
-// Template functions must be defined in the header.
-template <typename Export, typename Import>
-template <bool is_import>
-ObjectLinker<Export, Import>::Link<is_import>::~Link() {
-  if (valid()) {
-    Destroy();
-  }
-}
-
-// Template functions must be defined in the header.
 template <typename Export, typename Import>
 template <bool is_import>
 void ObjectLinker<Export, Import>::Link<is_import>::Initialize(
-    Obj* object, fit::function<void(LinkedObj* linked_object)> link_resolved,
-    fit::closure link_disconnected) {
+    Obj* object, fit::function<void(PeerObj* peer_object)> link_resolved,
+    fit::closure link_failed) {
   FXL_DCHECK(valid());
   FXL_DCHECK(!initialized());
+  FXL_DCHECK(!peer());
   FXL_DCHECK(object);
   FXL_DCHECK(link_resolved);
-  FXL_DCHECK(link_disconnected);
+  FXL_DCHECK(link_failed);
 
   linker_->InitializeEndpoint(
       endpoint_id_, object,
-      [resolved_cb = std::move(link_resolved)](void* object) {
-        resolved_cb(static_cast<LinkedObj*>(object));
+      [this, resolved_cb = std::move(link_resolved)](void* object) {
+        peer_object_ = static_cast<PeerObj*>(object);
+        resolved_cb(peer_object_);
       },
-      std::move(link_disconnected), is_import);
+      [this, disconnected_cb = std::move(link_failed)]() {
+        Invalidate();
+        disconnected_cb();
+      },
+      is_import);
   initialized_ = true;
 }
 
-// Template functions must be defined in the header.
 template <typename Export, typename Import>
 template <bool is_import>
-void ObjectLinker<Export, Import>::Link<is_import>::Destroy() {
-  FXL_DCHECK(valid());
-
-  linker_->DestroyEndpoint(endpoint_id_, is_import);
-}
-
-// Template functions must be defined in the header.
-template <typename Export, typename Import>
-typename ObjectLinker<Export, Import>::ExportLink
-ObjectLinker<Export, Import>::CreateExport(zx::eventpair token,
-                                           ErrorReporter* error_reporter) {
-  zx_koid_t endpoint_id =
-      CreateEndpoint(std::move(token), error_reporter, false);
-  return ExportLink(endpoint_id, weak_factory_.GetWeakPtr());
-}
-
-// Template functions must be defined in the header.
-template <typename Export, typename Import>
-typename ObjectLinker<Export, Import>::ImportLink
-ObjectLinker<Export, Import>::CreateImport(zx::eventpair token,
-                                           ErrorReporter* error_reporter) {
-  zx_koid_t endpoint_id =
-      CreateEndpoint(std::move(token), error_reporter, true);
-  return ImportLink(endpoint_id, weak_factory_.GetWeakPtr());
+void ObjectLinker<Export, Import>::Link<is_import>::Invalidate(
+    bool destroy_endpoint) {
+  if (valid() && destroy_endpoint) {
+    linker_->DestroyEndpoint(endpoint_id_, is_import);
+  }
+  linker_.reset();
+  peer_object_ = nullptr;
+  endpoint_id_ = ZX_KOID_INVALID;
+  initialized_ = false;
 }
 
 }  // namespace gfx

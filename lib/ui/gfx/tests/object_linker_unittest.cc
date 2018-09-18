@@ -49,10 +49,8 @@ TEST_F(ObjectLinkerTest, AllowsExport) {
 }
 
 TEST_F(ObjectLinkerTest, CannotExportInvalidToken) {
-  zx::eventpair export_token{ZX_HANDLE_INVALID};
-
   TestObjectLinker::ExportLink export_link =
-      object_linker_.CreateExport(std::move(export_token), error_reporter());
+      object_linker_.CreateExport(zx::eventpair(), error_reporter());
   EXPECT_ERROR_COUNT(1);  // CreateExport throws an error.
   EXPECT_FALSE(export_link.valid());
   EXPECT_FALSE(export_link.initialized());
@@ -504,15 +502,17 @@ TEST_F(ObjectLinkerTest, EarlyImportTokenDeathCausesExportDisconnection) {
   EXPECT_TRUE(RunLoopUntilIdle());
   EXPECT_FALSE(import_disconnected);
   EXPECT_EQ(1u, object_linker_.ExportCount());
-  EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
+  EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
 
   export_link.Initialize(&export_obj, ERROR_IF_CALLED("export.link_resolved"),
                          [&import_disconnected]() {
                            EXPECT_FALSE(import_disconnected);
                            import_disconnected = true;
                          });
-  EXPECT_TRUE(export_link.initialized());
-  EXPECT_EQ(1u, object_linker_.ExportCount());
+  EXPECT_FALSE(export_link.initialized());
+  EXPECT_FALSE(export_link.valid());
+  EXPECT_TRUE(import_disconnected);
+  EXPECT_EQ(0u, object_linker_.ExportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
 }
 
@@ -543,9 +543,10 @@ TEST_F(ObjectLinkerTest, ImportTokenDeathCausesExportDisconnection) {
   // eventloop ticks.
   import_token.reset();
   EXPECT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(export_link.initialized());
+  EXPECT_FALSE(export_link.initialized());
+  EXPECT_FALSE(export_link.valid());
   EXPECT_TRUE(import_disconnected);
-  EXPECT_EQ(1u, object_linker_.ExportCount());
+  EXPECT_EQ(0u, object_linker_.ExportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
 }
 
@@ -569,16 +570,17 @@ TEST_F(ObjectLinkerTest, EarlyExportTokenDeathCausesImportDisconnection) {
   EXPECT_TRUE(RunLoopUntilIdle());
   EXPECT_FALSE(export_disconnected);
   EXPECT_EQ(1u, object_linker_.ImportCount());
-  EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
+  EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
 
   import_link.Initialize(&import_obj, ERROR_IF_CALLED("import.link_resolved"),
                          [&export_disconnected]() {
                            EXPECT_FALSE(export_disconnected);
                            export_disconnected = true;
                          });
-  EXPECT_TRUE(import_link.initialized());
+  EXPECT_FALSE(import_link.initialized());
+  EXPECT_FALSE(import_link.valid());
   EXPECT_TRUE(export_disconnected);
-  EXPECT_EQ(1u, object_linker_.ImportCount());
+  EXPECT_EQ(0u, object_linker_.ImportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
 }
 
@@ -609,9 +611,10 @@ TEST_F(ObjectLinkerTest, ExportTokenDeathCausesImportDisconnection) {
   // eventloop ticks.
   export_token.reset();
   EXPECT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(import_link.initialized());
+  EXPECT_FALSE(import_link.valid());
+  EXPECT_FALSE(import_link.initialized());
   EXPECT_TRUE(export_disconnected);
-  EXPECT_EQ(1u, object_linker_.ImportCount());
+  EXPECT_EQ(0u, object_linker_.ImportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
 }
 
