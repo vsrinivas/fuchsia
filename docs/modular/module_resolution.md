@@ -12,7 +12,6 @@ either the [`fuchsia::modular::ModuleContext`](../../public/lib/module/fidl/modu
 [`fuchsia::modular::StoryController`](../../public/lib/story/fidl/story_controller.fidl) (for
 privileged platform clients). Specifically, clients would call either
 `fuchsia::modular::ModuleContext.StartModule()` or `fuchsia::modular::StoryController.fuchsia::modular::AddModule()`.
-> TODO: add detail and other entry-points for creating Modules from Daisies.
 
 This document outlines what happens behind the scenes of those two calls.
 
