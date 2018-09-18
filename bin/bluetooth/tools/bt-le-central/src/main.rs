@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(futures_api)]
+#![feature(futures_api, async_await, await_macro)]
 #![deny(warnings)]
 
 use {
@@ -160,23 +160,29 @@ fn main() -> Result<(), Error> {
     let state = CentralState::new(central_svc);
 
     let command = &args[1];
-    let command_fut = match command.as_str() {
-        "scan" => {
-            let mut central = state.write();
-            let (scan_once, connect, fut) = do_scan(&args[2..], central.get_svc());
-            central.scan_once = scan_once;
-            central.connect = connect;
-            Left(fut)
+    let fut = async {
+        match command.as_str() {
+            "scan" => {
+                let fut = {
+                    let mut central = state.write();
+                    let (scan_once, connect, fut) = do_scan(&args[2..], central.get_svc());
+                    central.scan_once = scan_once;
+                    central.connect = connect;
+                    fut
+                };
+                await!(fut)?
+            }
+            "connect" => await!(do_connect(&args[2..], state.read().get_svc()))?,
+            _ => {
+                println!("Invalid command: {}", command);
+                usage(appname);
+                return Err(BTError::new("invalid input").into());
+            }
         }
-        "connect" => Right(do_connect(&args[2..], state.read().get_svc())),
-        _ => {
-            println!("Invalid command: {}", command);
-            usage(appname);
-            return Err(BTError::new("invalid input").into());
-        }
+
+        await!(listen_central_events(state));
+        Ok(())
     };
 
-    let event_fut = listen_central_events(state);
-    let fut = command_fut.and_then(|_| event_fut.map(Ok));
-    executor.run_singlethreaded(fut).map_err(Into::into)
+    executor.run_singlethreaded(fut)
 }

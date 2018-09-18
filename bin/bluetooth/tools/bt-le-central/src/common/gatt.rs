@@ -11,15 +11,11 @@ use {
         ClientProxy, RemoteServiceEvent,
         RemoteServiceProxy, ServiceInfo,
     },
-    fuchsia_async::{
-        self as fasync,
-        temp::Either::{Left, Right},
-    },
+    fuchsia_async as fasync,
     fuchsia_bluetooth::error::Error as BTError,
     futures::{
         channel::mpsc::channel,
-        future::FutureObj,
-        future, Future, TryFutureExt, Stream, StreamExt, TryStreamExt,
+        TryFutureExt, Stream, StreamExt, TryStreamExt,
     },
     parking_lot::RwLock,
     std::{
@@ -28,12 +24,6 @@ use {
         thread,
     },
 };
-
-macro_rules! left_ok {
-    () => {
-        Left(future::ready(Ok(())))
-    };
-}
 
 type GattClientPtr = Arc<RwLock<GattClient>>;
 
@@ -93,149 +83,153 @@ impl GattClient {
 
 // Starts the GATT REPL. This first requests a list of remote services and resolves the
 // returned future with an error if no services are found.
-pub fn start_gatt_loop(proxy: ClientProxy) -> impl Future<Output = Result<(), Error>> {
+pub async fn start_gatt_loop<'a>(proxy: ClientProxy) -> Result<(), Error> {
     let client = GattClient::new(proxy);
 
-    // |client| is moved into the AndThen closure while |client2| is borrowed. |client2|
-    // is later moved into the ForEach closure below.
-    let client2 = client.clone();
-
     println!("  discovering services...");
-    let get_services = client2
+    let list_services = client
         .read()
         .proxy
-        .list_services(None)
+        .list_services(None);
+
+    let (status, services) = await!(list_services)
         .map_err(|e| {
             let err = BTError::new(&format!("failed to list services: {}", e));
             println!("{}", e);
-            err.into()
-        })
-        .and_then(move |(status, services)| future::ready(match status.error {
-            None => {
-                client.write().set_services(services);
-                Ok(())
-            }
-            Some(e) => {
-                let err = BTError::from(*e).into();
-                println!("failed to list services: {}", err);
-                Err(err)
-            }
-        }));
+            err
+        })?;
 
-    get_services.and_then(|_| {
-        stdin_stream()
-            .map(Ok)
-            .try_for_each(move |cmd| {
-                if cmd == "exit" {
-                    Left(future::ready(Err(BTError::new("exited").into())))
-                } else {
-                    Right(
-                        handle_cmd(cmd, client2.clone())
-                            .map_err(|e| {
-                                println!("Error: {}", e);
-                                e
-                            })
-                            .map_ok(|_| {
-                                print!("> ");
-                                io::stdout().flush().unwrap();
-                            }),
-                    )
-                }
-            })
-            .map_ok(|_| ())
-    })
+    match status.error {
+        None => client.write().set_services(services),
+        Some(e) => {
+            let err = BTError::from(*e).into();
+            println!("failed to list services: {}", err);
+            return Err(err)
+        }
+    }
+
+    let mut stdin_stream = stdin_stream();
+    while let Some(cmd) = await!(stdin_stream.next()) {
+        if cmd == "exit" {
+            return Err(BTError::new("exited").into());
+        } else {
+            await!(handle_cmd(cmd, &client))
+                .map_err(|e| {
+                    println!("Error: {}", e);
+                    e
+                })?;
+            print!("> ");
+            io::stdout().flush().unwrap();
+        }
+    }
+
+    Ok(())
 }
 
 // Discover the characteristics of |client|'s currently connected service and
 // cache them. |client.service_proxy| MUST be valid.
-fn discover_characteristics(client: GattClientPtr) -> impl Future<Output = Result<(), Error>> {
-    let client2 = client.clone();
-    client
+async fn discover_characteristics(client: &GattClientPtr) -> Result<(), Error> {
+    let discover_characteristics = client
         .read()
         .active_proxy
         .as_ref()
         .unwrap()
-        .discover_characteristics()
-        .map_err(|_| BTError::new("Failed to send message").into())
-        .and_then(move |(status, chrcs)| {
-            match status.error {
-                Some(e) => println!("Failed to read characteristics: {}", BTError::from(*e)),
-                None => {
-                    let event_stream = client2
-                        .read()
-                        .active_proxy
-                        .as_ref()
-                        .unwrap()
-                        .take_event_stream();
-                    fasync::spawn(
-                        event_stream
-                            .try_for_each(move |evt| {
-                                match evt {
-                                    RemoteServiceEvent::OnCharacteristicValueUpdated { id, value }
-                                        => println!("(id = {}) value updated: {:X?}", id, value),
-                                }
-                                future::ready(Ok(()))
-                            })
-                            .map_ok(|_| ())
-                            .unwrap_or_else(|e| {
-                                eprintln!("Failed to listen for RemoteService events {:?}", e)
-                            }),
-                    );
+        .discover_characteristics();
 
-                    client2.write().on_discover_characteristics(chrcs);
-                }
+    let (status, chrcs) = await!(discover_characteristics)
+        .map_err(|_| BTError::new("Failed to send message"))?;
+
+    if let Some(e) = status.error {
+        println!("Failed to read characteristics: {}", BTError::from(*e));
+        return Ok(());
+    }
+
+    let mut event_stream = client
+        .read()
+        .active_proxy
+        .as_ref()
+        .unwrap()
+        .take_event_stream();
+
+    fasync::spawn(async move {
+        while let Some(evt) = await!(event_stream.try_next())? {
+            match evt {
+                RemoteServiceEvent::OnCharacteristicValueUpdated { id, value }
+                    => println!("(id = {}) value updated: {:X?}", id, value),
             }
-            future::ready(Ok(()))
-        })
+        }
+        Ok::<(), fidl::Error>(())
+    }.unwrap_or_else(|e| eprintln!("Failed to listen for RemoteService events {:?}", e)));
+
+    client.write().on_discover_characteristics(chrcs);
+
+    Ok(())
 }
 
-fn read_characteristic(client: GattClientPtr, id: u64) -> impl Future<Output = Result<(), Error>> {
-    client
-        .read()
-        .active_proxy
-        .as_ref()
-        .unwrap()
-        .read_characteristic(id)
-        .map_err(|_| BTError::new("Failed to send message").into())
-        .map_ok(move |(status, value)| match status.error {
-            Some(e) => println!("Failed to read characteristic: {}", BTError::from(*e)),
-            None => println!("(id = {}) value: {:X?}", id, value),
-        })
-}
-
-fn read_long_characteristic(client: GattClientPtr, id: u64, offset: u16, max_bytes: u16)
-    -> impl Future<Output = Result<(), Error>>
+async fn read_characteristic(client: &GattClientPtr, id: u64)
+    -> Result<(), Error>
 {
-    client
+    let read_characteristic = client
         .read()
         .active_proxy
         .as_ref()
         .unwrap()
-        .read_long_characteristic(id, offset, max_bytes)
-        .map_err(|_| BTError::new("Failed to send message").into())
-        .map_ok(move |(status, value)| match status.error {
-            Some(e) => println!("Failed to read characteristic: {}", BTError::from(*e)),
-            None => println!("(id = {}, offset = {}) value: {:X?}", id, offset, value),
-        })
+        .read_characteristic(id);
+
+    let (status, value) = await!(read_characteristic)
+        .map_err(|_| BTError::new("Failed to send message"))?;
+
+    match status.error {
+        Some(e) => println!("Failed to read characteristic: {}", BTError::from(*e)),
+        None => println!("(id = {}) value: {:X?}", id, value),
+    }
+
+    Ok(())
 }
 
-fn write_characteristic(
-    client: GattClientPtr, id: u64, value: Vec<u8>,
-) -> impl Future<Output = Result<(), Error>> {
-    client
+async fn read_long_characteristic(client: &GattClientPtr, id: u64, offset: u16, max_bytes: u16)
+    -> Result<(), Error>
+{
+    let read_long_characteristic = client
         .read()
         .active_proxy
         .as_ref()
         .unwrap()
-        .write_characteristic(id, 0, &mut value.into_iter())
-        .map_err(|_| BTError::new("Failed to send message").into())
-        .map_ok(move |status| match status.error {
-            Some(e) => println!("Failed to write to characteristic: {}", BTError::from(*e)),
-            None => println!("(id = {}]) done", id),
-        })
+        .read_long_characteristic(id, offset, max_bytes);
+
+    let (status, value) = await!(read_long_characteristic)
+        .map_err(|_| BTError::new("Failed to send message"))?;
+
+    match status.error {
+        Some(e) => println!("Failed to read characteristic: {}", BTError::from(*e)),
+        None => println!("(id = {}, offset = {}) value: {:X?}", id, offset, value),
+    }
+
+    Ok(())
 }
 
-fn write_without_response(client: GattClientPtr, id: u64, value: Vec<u8>)
+async fn write_characteristic(
+    client: &GattClientPtr, id: u64, value: Vec<u8>,
+) -> Result<(), Error> {
+    let write_characteristic = client
+        .read()
+        .active_proxy
+        .as_ref()
+        .unwrap()
+        .write_characteristic(id, 0, &mut value.into_iter());
+
+    let status = await!(write_characteristic)
+        .map_err(|_| BTError::new("Failed to send message"))?;
+
+    match status.error {
+        Some(e) => println!("Failed to write to characteristic: {}", BTError::from(*e)),
+        None => println!("(id = {}]) done", id),
+    }
+
+    Ok(())
+}
+
+fn write_without_response(client: &GattClientPtr, id: u64, value: Vec<u8>)
     -> Result<(), Error>
 {
     client
@@ -262,7 +256,7 @@ fn do_help() {
     println!("    exit                             Quit and disconnect the peripheral");
 }
 
-fn do_list(args: Vec<&str>, client: GattClientPtr) {
+fn do_list(args: &[&str], client: &GattClientPtr) {
     if !args.is_empty() {
         println!("list: expected 0 arguments");
     } else {
@@ -270,18 +264,18 @@ fn do_list(args: Vec<&str>, client: GattClientPtr) {
     }
 }
 
-fn do_connect(args: Vec<&str>, client: GattClientPtr)
-    -> impl Future<Output = Result<(), Error>>
+async fn do_connect<'a>(args: &'a [&'a str], client: &'a GattClientPtr)
+    -> Result<(), Error>
 {
     if args.len() != 1 {
         println!("usage: connect <index>");
-        return left_ok!();
+        return Ok(());
     }
 
     let index: usize = match args[0].parse() {
         Err(_) => {
             println!("invalid index: {}", args[0]);
-            return left_ok!();
+            return Ok(());
         }
         Ok(i) => i,
     };
@@ -289,71 +283,66 @@ fn do_connect(args: Vec<&str>, client: GattClientPtr)
     let svc_id = match client.read().services.get(index) {
         None => {
             println!("index out of bounds! ({})", index);
-            return left_ok!();
+            return Ok(());
         }
         Some(s) => s.info.id,
     };
 
     // Initialize the remote service proxy.
-    match endpoints2::create_endpoints() {
-        Err(e) => Left(future::ready(Err(e.into()))),
-        Ok((proxy, server)) => {
-            // First close the connection to the currently active service.
-            if client.read().active_proxy.is_some() {
-                client.write().active_proxy = None;
-            }
+    let (proxy, server) = endpoints2::create_endpoints()?;
 
-            if let Err(e) = client.read().proxy.connect_to_service(svc_id, server) {
-                return Left(future::ready(Err(e.into())));
-            }
-            client.write().active_index = index;
-            client.write().active_proxy = Some(proxy);
-            Right(discover_characteristics(client))
-        }
+    // First close the connection to the currently active service.
+    if client.read().active_proxy.is_some() {
+        client.write().active_proxy = None;
     }
+
+    client.read().proxy.connect_to_service(svc_id, server)?;
+    client.write().active_index = index;
+    client.write().active_proxy = Some(proxy);
+    await!(discover_characteristics(client))
 }
 
-fn do_read_chr(args: Vec<&str>, client: GattClientPtr)
-    -> impl Future<Output = Result<(), Error>>
+async fn do_read_chr<'a>(args: &'a [&'a str], client: &'a GattClientPtr)
+    -> Result<(), Error>
 {
     if args.len() != 1 {
         println!("usage: read-chr <id>");
-        return left_ok!();
+        return Ok(());
     }
 
     if client.read().active_proxy.is_none() {
         println!("no service connected");
-        return left_ok!();
+        return Ok(());
     }
 
     let id: u64 = match args[0].parse() {
         Err(_) => {
             println!("invalid id: {}", args[0]);
-            return left_ok!();
+            return Ok(());
         }
         Ok(i) => i,
     };
 
-    Right(read_characteristic(client, id))
+    await!(read_characteristic(client, id))
 }
 
-fn do_read_long(args: Vec<&str>, client: GattClientPtr)
-    -> impl Future<Output = Result<(), Error>>
+async fn do_read_long<'a>(args: &'a [&'a str], client: &'a GattClientPtr)
+    -> Result<(), Error>
 {
     if args.len() != 3 {
         println!("usage: read-long <id> <offset> <max bytes>");
-        return left_ok!();
+        return Ok(());
     }
 
     if client.read().active_proxy.is_none() {
         println!("no service connected");
-        return left_ok!();
+        return Ok(());
     }
 
     let id: u64 = match args[0].parse() {
         Err(_) => {
             println!("invalid id: {}", args[0]);
-            return left_ok!();
+            return Ok(());
         }
         Ok(i) => i,
     };
@@ -361,7 +350,7 @@ fn do_read_long(args: Vec<&str>, client: GattClientPtr)
     let offset: u16 = match args[1].parse() {
         Err(_) => {
             println!("invalid offset: {}", args[1]);
-            return left_ok!();
+            return Ok(());
         }
         Ok(i) => i,
     };
@@ -369,25 +358,25 @@ fn do_read_long(args: Vec<&str>, client: GattClientPtr)
     let max_bytes: u16 = match args[2].parse() {
         Err(_) => {
             println!("invalid max bytes: {}", args[2]);
-            return left_ok!();
+            return Ok(());
         }
         Ok(i) => i,
     };
 
-    Right(read_long_characteristic(client, id, offset, max_bytes))
+    await!(read_long_characteristic(client, id, offset, max_bytes))
 }
 
-fn do_write_chr(mut args: Vec<&str>, client: GattClientPtr)
-    -> impl Future<Output = Result<(), Error>>
+async fn do_write_chr<'a>(mut args: Vec<&'a str>, client: &'a GattClientPtr)
+    -> Result<(), Error>
 {
     if args.len() < 1 {
         println!("usage: write-chr [-w] <id> <value>");
-        return left_ok!();
+        return Ok(());
     }
 
     if client.read().active_proxy.is_none() {
         println!("no service connected");
-        return left_ok!();
+        return Ok(());
     }
 
     let without_response: bool = args[0] == "-w";
@@ -398,7 +387,7 @@ fn do_write_chr(mut args: Vec<&str>, client: GattClientPtr)
     let id: u64 = match args[0].parse() {
         Err(_) => {
             println!("invalid id: {}", args[0]);
-            return left_ok!();
+            return Ok(());
         }
         Ok(i) => i,
     };
@@ -408,128 +397,126 @@ fn do_write_chr(mut args: Vec<&str>, client: GattClientPtr)
     match value {
         Err(_) => {
             println!("invalid value");
-            left_ok!()
+            Ok(())
         }
-        Ok(v) => Right(
+        Ok(v) => {
             if without_response {
-                Left(future::ready(write_without_response(client, id, v)))
+                write_without_response(client, id, v)
             } else {
-                Right(write_characteristic(client, id, v))
+                await!(write_characteristic(client, id, v))
             }
-        )
+        },
     }
 }
 
-fn do_enable_notify(
-    args: Vec<&str>, client: GattClientPtr,
-) -> impl Future<Output = Result<(), Error>> {
+async fn do_enable_notify<'a>(
+    args: &'a [&'a str], client: &'a GattClientPtr,
+) -> Result<(), Error> {
     if args.len() != 1 {
         println!("usage: enable-notify <id>");
-        return left_ok!();
+        return Ok(());
     }
 
     if client.read().active_proxy.is_none() {
         println!("no service connected");
-        return left_ok!();
+        return Ok(());
     }
 
     let id: u64 = match args[0].parse() {
         Err(_) => {
             println!("invalid id: {}", args[0]);
-            return left_ok!();
+            return Ok(());
         }
         Ok(i) => i,
     };
 
-    Right(
-        client
+    let notify_characteristic = client
             .read()
             .active_proxy
             .as_ref()
             .unwrap()
-            .notify_characteristic(id, true)
-            .map_err(|_| BTError::new("Failed to send message").into())
-            .map_ok(move |status| match status.error {
-                Some(e) => println!("Failed to enable notifications: {}", BTError::from(*e)),
-                None => println!("(id = {}]) done", id),
-            }),
-    )
+            .notify_characteristic(id, true);
+
+    let status = await!(notify_characteristic)
+        .map_err(|_| BTError::new("Failed to send message"))?;
+
+    match status.error {
+        Some(e) => println!("Failed to enable notifications: {}", BTError::from(*e)),
+        None => println!("(id = {}]) done", id),
+    }
+
+    Ok(())
 }
 
-fn do_disable_notify(
-    args: Vec<&str>, client: GattClientPtr,
-) -> impl Future<Output = Result<(), Error>> {
+async fn do_disable_notify<'a>(
+    args: &'a [&'a str], client: &'a GattClientPtr,
+) -> Result<(), Error> {
     if args.len() != 1 {
         println!("usage: disable-notify <id>");
-        return left_ok!();
+        return Ok(());
     }
 
     if client.read().active_proxy.is_none() {
         println!("no service connected");
-        return left_ok!();
+        return Ok(());
     }
 
     let id: u64 = match args[0].parse() {
         Err(_) => {
             println!("invalid id: {}", args[0]);
-            return left_ok!();
+            return Ok(());
         }
         Ok(i) => i,
     };
 
-    Right(
+    let notify_characteristic =
         client
             .read()
             .active_proxy
             .as_ref()
             .unwrap()
-            .notify_characteristic(id, false)
-            .map_err(|_| BTError::new("Failed to send message").into())
-            .map_ok(move |status| match status.error {
-                Some(e) => println!("Failed to disable notifications: {}", BTError::from(*e)),
-                None => println!("(id = {}]) done", id),
-            }),
-    )
-}
+            .notify_characteristic(id, false);
 
-// Helper macro for boxing and casting the impl Future results of command handlers below. This is
-// because the handlers potentially return different concrete types which can't be returned in the
-// same Either branch.
-macro_rules! right_cmd {
-    ($cmd:expr) => {
-        Right(FutureObj::<'static, Result<(), Error>>::new(Box::new($cmd)))
-    };
+    let status = await!(notify_characteristic)
+            .map_err(|_| BTError::new("Failed to send message"))?;
+
+    match status.error {
+        Some(e) => println!("Failed to disable notifications: {}", BTError::from(*e)),
+        None => println!("(id = {}]) done", id),
+    }
+
+    Ok(())
 }
 
 // Processes |cmd| and returns its result.
 // TODO(armansito): Use clap for fancier command processing.
-fn handle_cmd(line: String, client: GattClientPtr)
-    -> impl Future<Output = Result<(), Error>>
+async fn handle_cmd<'a>(line: String, client: &'a GattClientPtr)
+    -> Result<(), Error>
 {
     let mut components = line.trim().split_whitespace();
     let cmd = components.next();
-    let args = components.collect();
+    let args: Vec<&str> = components.collect();
 
     match cmd {
         Some("help") => {
             do_help();
-            Left(future::ready(Ok(())))
+            Ok(())
         },
         Some("list") => {
-            do_list(args, client);
-            Left(future::ready(Ok(())))
+            do_list(&args, client);
+            Ok(())
         },
-        Some("connect") => right_cmd!(do_connect(args, client)),
-        Some("read-chr") => right_cmd!(do_read_chr(args, client)),
-        Some("read-long") => right_cmd!(do_read_long(args, client)),
-        Some("write-chr") => right_cmd!(do_write_chr(args, client)),
-        Some("enable-notify") => right_cmd!(do_enable_notify(args, client)),
-        Some("disable-notify") => right_cmd!(do_disable_notify(args, client)),
+        Some("connect") => await!(do_connect(&args, client)),
+        Some("read-chr") => await!(do_read_chr(&args, client)),
+        Some("read-long") => await!(do_read_long(&args, client)),
+        Some("write-chr") => await!(do_write_chr(args, client)),
+        Some("enable-notify") => await!(do_enable_notify(&args, client)),
+        Some("disable-notify") => await!(do_disable_notify(&args, client)),
         Some(cmd) => {
             eprintln!("Unknown command: {}", cmd);
-            left_ok!()
+            Ok(())
         }
-        None => left_ok!(),
+        None => Ok(()),
     }
 }
 
@@ -563,5 +550,5 @@ fn stdin_stream() -> impl Stream<Item = String> {
 
         Ok(())
     });
-    Box::new(receiver)
+    receiver
 }
