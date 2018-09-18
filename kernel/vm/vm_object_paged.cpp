@@ -874,7 +874,7 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool w
         auto status = GetPageLocked(src_offset,
                                     VMM_PF_FLAG_SW_FAULT | (write ? VMM_PF_FLAG_WRITE : 0),
                                     nullptr, nullptr, &pa);
-        if (status < 0)
+        if (status != ZX_OK)
             return status;
 
         // compute the kernel mapping of this page

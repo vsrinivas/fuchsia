@@ -122,7 +122,7 @@ zx_status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ino
 
         // copy it out into user space
         auto status = buffer.element_offset(index).copy_to_user(pa);
-        if (unlikely(status < 0))
+        if (unlikely(status != ZX_OK))
             return status;
     }
 

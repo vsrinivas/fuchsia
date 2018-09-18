@@ -270,7 +270,7 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     if (base_ == base || base + size == base_ + size_) {
         LTRACEF("unmapping base %#lx size %#zx\n", base, size);
         zx_status_t status = aspace_->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
-        if (status < 0) {
+        if (status != ZX_OK) {
             return status;
         }
 
@@ -305,7 +305,7 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     // Unmap the middle segment
     LTRACEF("unmapping base %#lx size %#zx\n", base, size);
     zx_status_t status = aspace_->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
-    if (status < 0) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -377,7 +377,7 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
 
     zx_status_t status = aspace_->arch_aspace().Unmap(unmap_base,
                                                       static_cast<size_t>(len_new) / PAGE_SIZE, nullptr);
-    if (status < 0)
+    if (status != ZX_OK)
         return status;
 
     return ZX_OK;
@@ -503,7 +503,7 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
         zx_status_t status;
         paddr_t pa;
         status = object_->GetPageLocked(vmo_offset, pf_flags, nullptr, nullptr, &pa);
-        if (status < 0) {
+        if (status != ZX_OK) {
             // no page to map
             if (commit) {
                 // fail when we can't commit every requested page
@@ -642,7 +642,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     paddr_t new_pa;
     vm_page_t* page;
     zx_status_t status = object_->GetPageLocked(vmo_offset, pf_flags, nullptr, &page, &new_pa);
-    if (status < 0) {
+    if (status != ZX_OK) {
         // TODO(cpu): This trace was originally TRACEF() always on, but it fires if the
         // VMO was resized, rather than just when the system is running out of memory.
         LTRACEF("ERROR: failed to fault in or grab existing page\n");
@@ -679,7 +679,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
 
             // same page, different permission
             status = aspace_->arch_aspace().Protect(va, 1, mmu_flags);
-            if (status < 0) {
+            if (status != ZX_OK) {
                 TRACEF("failed to modify permissions on existing mapping\n");
                 return ZX_ERR_NO_MEMORY;
             }
@@ -694,14 +694,14 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
 
             // unmap the old one and put the new one in place
             status = aspace_->arch_aspace().Unmap(va, 1, nullptr);
-            if (status < 0) {
+            if (status != ZX_OK) {
                 TRACEF("failed to remove old mapping before replacing\n");
                 return ZX_ERR_NO_MEMORY;
             }
 
             size_t mapped;
             status = aspace_->arch_aspace().MapContiguous(va, new_pa, 1, mmu_flags, &mapped);
-            if (status < 0) {
+            if (status != ZX_OK) {
                 TRACEF("failed to map replacement page\n");
                 return ZX_ERR_NO_MEMORY;
             }
@@ -719,7 +719,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
 
         size_t mapped;
         status = aspace_->arch_aspace().MapContiguous(va, new_pa, 1, mmu_flags, &mapped);
-        if (status < 0) {
+        if (status != ZX_OK) {
             TRACEF("failed to map page\n");
             return ZX_ERR_NO_MEMORY;
         }

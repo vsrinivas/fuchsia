@@ -462,7 +462,7 @@ zx_status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t a
         // commit memory to the object
         uint64_t committed;
         status = vmo->CommitRange(0, size, &committed);
-        if (status < 0)
+        if (status != ZX_OK)
             return status;
         if (static_cast<size_t>(committed) < size) {
             LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
