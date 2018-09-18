@@ -89,7 +89,9 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
 
   // Always claim that 50 more bytes are available. Due to the 16kB of padding
   // at the end this is always true.
-  uint32_t GetInputDataSize() override { return 50; }
+  void ReadMoreInputData(Vp9Decoder* decoder) override {
+    decoder->UpdateDecodeSize(50);
+  }
 
   // Called while the decoder lock is held.
   void FrameWasOutput() override __TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -126,6 +128,8 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
       EXPECT_EQ(ZX_OK, video_->core_->InitializeInputContext(
                            current_instance->input_context()));
     }
+    static_cast<Vp9Decoder*>(current_instance->decoder())->state_ =
+        Vp9Decoder::DecoderState::kSwappedOut;
     video_->core_->SaveInputContext(current_instance->input_context());
     video_->core_->StopDecoding();
     video_->core()->WaitForIdle();
@@ -141,7 +145,9 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
     video_->video_decoder_ = current_instance->decoder();
     video_->stream_buffer_ = current_instance->stream_buffer();
     video_->core()->PowerOn();
-    static_cast<Vp9Decoder*>(video_->video_decoder_)->InitializeHardware();
+    EXPECT_EQ(
+        ZX_OK,
+        static_cast<Vp9Decoder*>(video_->video_decoder_)->InitializeHardware());
     if (!current_instance->input_context()) {
       video_->InitializeStreamInput(false);
       video_->core_->InitializeDirectInput();
@@ -152,7 +158,7 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
     } else {
       video_->core_->RestoreInputContext(current_instance->input_context());
     }
-    video_->core()->StartDecoding();
+    static_cast<Vp9Decoder*>(video_->video_decoder())->UpdateDecodeSize(50);
   }
 
   AmlogicVideo* video_;
@@ -401,11 +407,19 @@ class TestVP9 {
     // Force all frames to be processed.
     uint8_t padding[16384] = {};
     EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(padding, sizeof(padding)));
-    video->core()->StartDecoding();
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      static_cast<Vp9Decoder*>(video->video_decoder())->UpdateDecodeSize(50);
+    }
 
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(2)));
 
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->decoder_instances_.clear();
+      video->video_decoder_ = nullptr;
+    }
     video.reset();
   }
 
@@ -524,7 +538,10 @@ class TestVP9 {
       offset += sizeof(padding);
       io_buffer_cache_flush(buffer->buffer(), 0, offset);
     }
-    video->core()->StartDecoding();
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      static_cast<Vp9Decoder*>(video->video_decoder())->UpdateDecodeSize(50);
+    }
 
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(10)));

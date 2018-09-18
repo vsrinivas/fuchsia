@@ -104,6 +104,8 @@ class Vp9UnitTest {
     memcpy(dosbus_memory_copy, dosbus_memory, sizeof(dosbus_memory));
     memset(dosbus_memory, 0, sizeof(dosbus_memory));
 
+    decoder->state_ = Vp9Decoder::DecoderState::kSwappedOut;
+
     EXPECT_EQ(ZX_OK, decoder->InitializeHardware());
     EXPECT_EQ(0, memcmp(dosbus_memory, dosbus_memory_copy,
                         sizeof(dosbus_memory_copy)));

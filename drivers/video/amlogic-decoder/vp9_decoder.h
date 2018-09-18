@@ -24,31 +24,68 @@ class Vp9Decoder : public VideoDecoder {
     kMultiStream,
     // Multiple streams, each with input buffers divided on frame boundaries,
     // are decoded at once.
-
     kMultiFrameBased
   };
   class FrameDataProvider {
    public:
-    // Returns how much data is currently available to be decoded.
-    virtual uint32_t GetInputDataSize() = 0;
+    // Called with the decoder locked.
+    virtual void ReadMoreInputData(Vp9Decoder* decoder) {}
     virtual void FrameWasOutput() = 0;
   };
+  enum class DecoderState {
+    // In these two states the decoder is stopped because UpdateDecodeSize needs
+    // to be called. The difference between these two is how it needs to be
+    // restarted.
+    kInitialWaitingForInput,
+    kStoppedWaitingForInput,
+
+    // A frame was produced and the hardware is waiting for permission to decode
+    // another frame.
+    kFrameJustProduced,
+
+    // The hardware is currently processing data.
+    kRunning,
+
+    // The hardware is waiting for reference frames and outputs to be
+    // initialized after decoding the uncompressed header and before decoding
+    // the compressed data.
+    kPausedAtHeader,
+
+    // The hardware's state doesn't reflect that of the Vp9Decoder.
+    kSwappedOut,
+  };
+
   explicit Vp9Decoder(Owner* owner, InputType input_type);
   Vp9Decoder(const Vp9Decoder&) = delete;
 
   ~Vp9Decoder() override;
 
-  zx_status_t Initialize() override;
+  __WARN_UNUSED_RESULT zx_status_t Initialize() override;
   void HandleInterrupt() override;
   void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
   void SetInitializeFramesHandler(InitializeFramesHandler handler) override;
   void SetErrorHandler(fit::closure error_handler) override;
 
+  void SetFrameDataProvider(FrameDataProvider* provider) {
+    frame_data_provider_ = provider;
+  }
+  void UpdateDecodeSize(uint32_t size);
+
+  __WARN_UNUSED_RESULT bool needs_more_input_data() const {
+    return state_ == DecoderState::kStoppedWaitingForInput ||
+           state_ == DecoderState::kInitialWaitingForInput;
+  }
+
+  __WARN_UNUSED_RESULT bool swapped_out() const {
+    return state_ == DecoderState::kSwappedOut;
+  }
+
  private:
   friend class Vp9UnitTest;
   friend class TestVP9;
   friend class TestFrameProvider;
+  friend class CodecAdapterVp9;
   class WorkingBuffer;
 
   class BufferAllocator {
@@ -157,12 +194,9 @@ class Vp9Decoder : public VideoDecoder {
   void ConfigureMotionPrediction();
   void ConfigureReferenceFrameHardware();
   void SetRefFrames(HardwareRenderParams* params);
-  zx_status_t InitializeBuffers();
-  zx_status_t InitializeHardware();
+  __WARN_UNUSED_RESULT zx_status_t InitializeBuffers();
+  __WARN_UNUSED_RESULT zx_status_t InitializeHardware();
   void InitializeLoopFilterData();
-  void SetFrameDataProvider(FrameDataProvider* provider) {
-    frame_data_provider_ = provider;
-  }
 
   Owner* owner_;
   InputType input_type_;
@@ -173,6 +207,7 @@ class Vp9Decoder : public VideoDecoder {
   FrameReadyNotifier notifier_;
   InitializeFramesHandler initialize_frames_handler_;
   fit::closure error_handler_;
+  DecoderState state_ = DecoderState::kSwappedOut;
 
   std::vector<std::unique_ptr<Frame>> frames_;
   Frame* last_frame_ = nullptr;
@@ -184,6 +219,8 @@ class Vp9Decoder : public VideoDecoder {
 
   // This is the count of frames decoded since this object was created.
   uint32_t decoded_frame_count_ = 0;
+
+  uint32_t frame_done_count_ = 0;
 
   PictureData last_frame_data_;
   PictureData current_frame_data_;

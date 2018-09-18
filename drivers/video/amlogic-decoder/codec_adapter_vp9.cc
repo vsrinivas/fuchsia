@@ -69,6 +69,9 @@ constexpr uint32_t kFlushThroughBytes = 16384;
 constexpr uint32_t kEndOfStreamWidth = 42;
 constexpr uint32_t kEndOfStreamHeight = 52;
 
+// Zero-initialized, so it shouldn't take up space on-disk.
+const uint8_t kFlushThroughZeroes[kFlushThroughBytes] = {};
+
 static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
                                              uint8_t d) {
   return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
@@ -136,7 +139,8 @@ void CodecAdapterVp9::CoreCodecStartStream() {
   }  // ~lock
 
   auto decoder = std::make_unique<Vp9Decoder>(
-      video_, Vp9Decoder::InputType::kSingleStream);
+      video_, Vp9Decoder::InputType::kMultiFrameBased);
+  decoder->SetFrameDataProvider(this);
   decoder->SetFrameReadyNotifier([this](std::shared_ptr<VideoFrame> frame) {
     // The Codec interface requires that emitted frames are cache clean
     // at least for now.  We invalidate without skipping over stride-width
@@ -178,12 +182,13 @@ void CodecAdapterVp9::CoreCodecStartStream() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
     video_->SetDefaultInstance(std::move(decoder));
-    status = video_->InitializeStreamBuffer(true, PAGE_SIZE);
+    status = video_->InitializeStreamBuffer(false, PAGE_SIZE * 512);
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("InitializeStreamBuffer() failed");
       return;
     }
-    status = video_->video_decoder()->Initialize();
+    status =
+        static_cast<Vp9Decoder*>(video_->video_decoder())->InitializeBuffers();
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec(
           "video_->video_decoder_->Initialize() failed");
@@ -193,11 +198,7 @@ void CodecAdapterVp9::CoreCodecStartStream() {
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
-    status = video_->InitializeEsParser();
-    if (status != ZX_OK) {
-      events_->onCoreCodecFailCodec("InitializeEsParser() failed");
-      return;
-    }
+    video_->core()->InitializeDirectInput();
   }  // ~lock
 }
 
@@ -543,6 +544,26 @@ void CodecAdapterVp9::QueueInputItem(CodecInputItem input_item) {
   }
 }
 
+void CodecAdapterVp9::ProcessInput() {
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    is_process_input_queued_ = false;
+  }  // ~lock
+  std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+  auto decoder = static_cast<Vp9Decoder*>(video_->video_decoder());
+  // We don't actually support more than one stream at a time currently.
+  // TODO: we'll need to avoid interrupting a different decoder mid-stream.
+  if (decoder->swapped_out()) {
+    if (ZX_OK != decoder->InitializeHardware()) {
+      OnCoreCodecFailStream();
+      return;
+    }
+  }
+  if (decoder->needs_more_input_data()) {
+    ReadMoreInputData(decoder);
+  }
+}
+
 CodecInputItem CodecAdapterVp9::DequeueInputItem() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
@@ -556,11 +577,14 @@ CodecInputItem CodecAdapterVp9::DequeueInputItem() {
   }  // ~lock
 }
 
-void CodecAdapterVp9::ProcessInput() {
-  {  // scope lock
-    std::lock_guard<std::mutex> lock(lock_);
-    is_process_input_queued_ = false;
-  }  // ~lock
+// The decoder lock is held by caller during this method.
+void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
+  if (queued_frame_sizes_.size()) {
+    decoder->UpdateDecodeSize(queued_frame_sizes_.front());
+    queued_frame_sizes_.erase(queued_frame_sizes_.begin());
+    return;
+  }
+
   while (true) {
     CodecInputItem item = DequeueInputItem();
     if (!item.is_valid()) {
@@ -580,28 +604,20 @@ void CodecAdapterVp9::ProcessInput() {
       SplitSuperframe(
           reinterpret_cast<const uint8_t*>(&new_stream_ivf[kHeaderSkipBytes]),
           new_stream_ivf_len - kHeaderSkipBytes, &split_data);
-      if (ZX_OK != video_->ParseVideo(split_data.data(), split_data.size())) {
+      if (ZX_OK !=
+          video_->ProcessVideoNoParser(split_data.data(), split_data.size())) {
         OnCoreCodecFailStream();
         return;
       }
-      if (ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
-        video_->CancelParsing();
+      if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes,
+                                                sizeof(kFlushThroughZeroes))) {
         OnCoreCodecFailStream();
         return;
       }
-      auto bytes = std::make_unique<uint8_t[]>(kFlushThroughBytes);
-      memset(bytes.get(), 0, kFlushThroughBytes);
-      if (ZX_OK != video_->ParseVideo(reinterpret_cast<void*>(bytes.get()),
-                                      kFlushThroughBytes)) {
-        OnCoreCodecFailStream();
-        return;
-      }
-      if (ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
-        video_->CancelParsing();
-        OnCoreCodecFailStream();
-        return;
-      }
-      continue;
+      // Intentionally not including kFlushThroughZeroes - this only includes
+      // data in AMLV frames.
+      decoder->UpdateDecodeSize(split_data.size());
+      return;
     }
 
     ZX_DEBUG_ASSERT(item.is_packet());
@@ -615,27 +631,43 @@ void CodecAdapterVp9::ProcessInput() {
                                        item.packet()->timestamp_ish());
     }
     std::vector<uint8_t> split_data;
-    SplitSuperframe(data, len, &split_data);
+    std::vector<uint32_t> new_queued_frame_sizes;
+    SplitSuperframe(data, len, &split_data, &new_queued_frame_sizes);
 
-    parsed_video_size_ += split_data.size();
+    parsed_video_size_ += split_data.size() + kFlushThroughBytes;
 
-    // This call is the main reason the current thread exists, as this call can
-    // wait synchronously until there are empty output frames available to
-    // decode into, which can require the shared_fidl_thread() to get those free
-    // frames to the Codec server.
-    //
-    // TODO(dustingreen): The current wait duration ParseVideo() assumes that
-    // free output frames will become free on an ongoing basis, which isn't
-    // really what'll happen when video output is paused.
-    if (ZX_OK != video_->ParseVideo(split_data.data(), split_data.size())) {
+    // If attempting to over-fill the ring buffer, this will fail, currently.
+    // That should be rare, since only one superframe will be in the ringbuffer
+    // at a time.
+    // TODO: Check for short writes and either feed in extra data as space is
+    // made or resize the buffer to fit.
+    if (ZX_OK !=
+        video_->ProcessVideoNoParser(split_data.data(), split_data.size())) {
       OnCoreCodecFailStream();
       return;
     }
-    if (ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
-      video_->CancelParsing();
+
+    // Always flush through padding before calling UpdateDecodeSize or else the
+    // decoder may not see the data because it's stuck in a fifo somewhere and
+    // we can get hangs.
+    {
+      if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes,
+                                                sizeof(kFlushThroughZeroes))) {
+        OnCoreCodecFailStream();
+        return;
+      }
+    }
+    queued_frame_sizes_ = std::move(new_queued_frame_sizes);
+
+    if (queued_frame_sizes_.size() == 0) {
       OnCoreCodecFailStream();
       return;
     }
+    // Only one frame per superframe should be given at a time, as otherwise the
+    // data for frames after that will be thrown away after that first frame is
+    // decoded.
+    decoder->UpdateDecodeSize(queued_frame_sizes_.front());
+    queued_frame_sizes_.erase(queued_frame_sizes_.begin());
 
     events_->onCoreCodecInputPacketDone(item.packet());
     // At this point CodecInputItem is holding a packet pointer which may get
@@ -643,6 +675,7 @@ void CodecAdapterVp9::ProcessInput() {
     // going away here.
     //
     // ~item
+    return;
   }
 }
 

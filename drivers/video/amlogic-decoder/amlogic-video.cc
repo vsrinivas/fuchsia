@@ -441,13 +441,14 @@ void AmlogicVideo::CancelParsing() {
   }
 }
 
-zx_status_t AmlogicVideo::ProcessVideoNoParser(void* data, uint32_t len,
+zx_status_t AmlogicVideo::ProcessVideoNoParser(const void* data, uint32_t len,
                                                uint32_t* written_out) {
   return ProcessVideoNoParserAtOffset(data, len, core_->GetStreamInputOffset(),
                                       written_out);
 }
 
-zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(void* data, uint32_t len,
+zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data,
+                                                       uint32_t len,
                                                        uint32_t write_offset,
                                                        uint32_t* written_out) {
   uint32_t read_offset = core_->GetReadOffset();
@@ -479,7 +480,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(void* data, uint32_t len,
       write_length = io_buffer_size(stream_buffer_->buffer(), 0) - write_offset;
     memcpy(static_cast<uint8_t*>(io_buffer_virt(stream_buffer_->buffer())) +
                write_offset,
-           static_cast<uint8_t*>(data) + input_offset, write_length);
+           static_cast<const uint8_t*>(data) + input_offset, write_length);
     io_buffer_cache_flush(stream_buffer_->buffer(), write_offset, write_length);
     write_offset += write_length;
     if (write_offset == io_buffer_size(stream_buffer_->buffer(), 0))

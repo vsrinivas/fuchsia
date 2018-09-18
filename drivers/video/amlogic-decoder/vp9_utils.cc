@@ -62,7 +62,8 @@ std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data,
 }
 
 void SplitSuperframe(const uint8_t* data, uint32_t frame_size,
-                     std::vector<uint8_t>* output_vector) {
+                     std::vector<uint8_t>* output_vector,
+                     std::vector<uint32_t>* superframe_byte_sizes) {
   std::vector<uint32_t> frame_sizes =
       TryParseSuperframeHeader(data, frame_size);
 
@@ -102,6 +103,9 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size,
     memcpy(output, &data[frame_offset], size);
     output += size;
     frame_offset += size;
+    if (superframe_byte_sizes) {
+      superframe_byte_sizes->push_back(size + kOutputHeaderSize);
+    }
   }
   ZX_DEBUG_ASSERT(output - output_vector->data() ==
                   static_cast<int64_t>(output_vector->size()));

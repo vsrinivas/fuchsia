@@ -11,11 +11,15 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/bti.h>
 
+#include "vp9_decoder.h"
+
 class AmlogicVideo;
 struct CodecFrame;
 class DeviceCtx;
 struct VideoFrame;
-class CodecAdapterVp9 : public CodecAdapter {
+
+class CodecAdapterVp9 : public CodecAdapter,
+                        public Vp9Decoder::FrameDataProvider {
  public:
   explicit CodecAdapterVp9(std::mutex& lock,
                            CodecAdapterEvents* codec_adapter_events,
@@ -46,6 +50,9 @@ class CodecAdapterVp9 : public CodecAdapter {
       bool buffer_constraints_action_required) override;
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
+
+  void ReadMoreInputData(Vp9Decoder* decoder) override;
+  void FrameWasOutput() override {}
 
  private:
   void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
@@ -111,6 +118,12 @@ class CodecAdapterVp9 : public CodecAdapter {
   bool is_input_end_of_stream_queued_ = false;
 
   bool is_stream_failed_ = false;
+
+  // Guarded by decoder lock.
+  // This is a list of frame (not superframe) sizes for frames already in the
+  // ringbuffer. It can hold at most 9 frames (the maximum for a superframe),
+  // but will typically have 2 or less.
+  std::vector<uint32_t> queued_frame_sizes_;
 
   CodecAdapterVp9() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterVp9);

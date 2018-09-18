@@ -209,6 +209,7 @@ zx_status_t Vp9Decoder::InitializeBuffers() {
 }
 
 zx_status_t Vp9Decoder::InitializeHardware() {
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kSwappedOut);
   assert(owner_->IsDecoderCurrent(this));
   uint8_t* firmware;
   uint32_t firmware_size;
@@ -320,8 +321,12 @@ zx_status_t Vp9Decoder::InitializeHardware() {
 
   // In the multi-stream case, don't start yet to give the caller the chance
   // to restore the input state.
-  if (input_type_ == InputType::kSingleStream)
+  if (input_type_ == InputType::kSingleStream) {
+    state_ = DecoderState::kRunning;
     owner_->core()->StartDecoding();
+  } else {
+    state_ = DecoderState::kInitialWaitingForInput;
+  }
   return ZX_OK;
 }
 
@@ -395,13 +400,19 @@ enum Vp9Command {
   // that the compressed frame body should be decoded.
   kVp9CommandDecodeSlice = 5,
 
-  // Sent from the device to the host to say that all of the input data (from
-  // HevcDecodeSize) has been processed. Only sent in multi-stream mode.
-  kVp9CommandDecodingDataDone = 0xa,
-
   // Sent from the device to the host to say that a frame has finished decoding.
   // This is only sent in multi-stream mode.
+  kVp9CommandDecodingDataDone = 0xa,
+
+  // Sent from the device to the host to say that all of the input data (from
+  // HevcDecodeSize) has been processed. Only sent in multi-stream mode.
   kVp9CommandNalDecodeDone = 0xe,
+
+  // Sent from the device if it's attempted to read HevcDecodeSize bytes, but
+  // couldn't because there wasn't enough input data. This can happen if the
+  // ringbuffer is out of data or if there wasn't enough padding to flush enough
+  // data through the HEVC parser fifo.
+  kVp9InputBufferEmpty = 0x20,
 
   // Sent from the device to the host to say that a VP9 header has been
   // decoded and the parameter buffer has data. In single-stream mode this also
@@ -413,8 +424,31 @@ enum Vp9Command {
   kVp9ActionDone = 0xff,
 };
 
+void Vp9Decoder::UpdateDecodeSize(uint32_t size) {
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kStoppedWaitingForInput ||
+                  state_ == DecoderState::kInitialWaitingForInput);
+  uint32_t old_decode_count =
+      HevcDecodeCount::Get().ReadFrom(owner_->dosbus()).reg_value();
+  if (old_decode_count != frame_done_count_) {
+    HevcDecodeSize::Get().FromValue(0).WriteTo(owner_->dosbus());
+    HevcDecodeCount::Get()
+        .FromValue(frame_done_count_)
+        .WriteTo(owner_->dosbus());
+  }
+  HevcDecodeSize::Get()
+      .FromValue(HevcDecodeSize::Get().ReadFrom(owner_->dosbus()).reg_value() +
+                 size)
+      .WriteTo(owner_->dosbus());
+  if (state_ == DecoderState::kStoppedWaitingForInput) {
+    HevcDecStatusReg::Get().FromValue(kVp9ActionDone).WriteTo(owner_->dosbus());
+  }
+  owner_->core()->StartDecoding();
+  state_ = DecoderState::kRunning;
+}
+
 void Vp9Decoder::HandleInterrupt() {
-  DLOG("Got VP9 interrupt\n");
+  DLOG("%p Got VP9 interrupt\n", this);
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
 
   HevcAssistMbox0ClrReg::Get().FromValue(1).WriteTo(owner_->dosbus());
 
@@ -425,21 +459,32 @@ void Vp9Decoder::HandleInterrupt() {
 
   DLOG("Decoder state: %x %x\n", dec_status, adapt_prob_status);
 
-  if (dec_status == kVp9CommandDecodingDataDone) {
-    // Signal that there's more data that can be decoded.
-    uint32_t new_input_data_size = frame_data_provider_->GetInputDataSize();
-    HevcDecodeSize::Get()
-        .FromValue(
-            HevcDecodeSize::Get().ReadFrom(owner_->dosbus()).reg_value() +
-            new_input_data_size)
-        .WriteTo(owner_->dosbus());
-    HevcDecStatusReg::Get().FromValue(kVp9ActionDone).WriteTo(owner_->dosbus());
+  if (dec_status == kVp9InputBufferEmpty) {
+    // TODO: We'll want to use this to continue filling input data of
+    // particularly large input frames, if we can get this to work. Currently
+    // attempting to restart decoding after this in frame-based decoding mode
+    // causes old data to be skipped.
+    DECODE_ERROR("Input buffer empty, insufficient padding?\n");
+    return;
+  }
+  if (dec_status == kVp9CommandNalDecodeDone) {
+    owner_->core()->StopDecoding();
+    state_ = DecoderState::kStoppedWaitingForInput;
+    frame_data_provider_->ReadMoreInputData(this);
     return;
   }
   ProcessCompletedFrames();
 
-  if (dec_status == kVp9CommandNalDecodeDone) {
+  if (dec_status == kVp9CommandDecodingDataDone) {
+    state_ = DecoderState::kFrameJustProduced;
+    frame_done_count_++;
     frame_data_provider_->FrameWasOutput();
+    if (state_ != DecoderState::kSwappedOut) {
+      state_ = DecoderState::kRunning;
+      HevcDecStatusReg::Get()
+          .FromValue(kVp9ActionDone)
+          .WriteTo(owner_->dosbus());
+    }
     return;
   }
   if (dec_status != kProcessedHeader) {
@@ -447,7 +492,10 @@ void Vp9Decoder::HandleInterrupt() {
     return;
   };
 
+  state_ = DecoderState::kPausedAtHeader;
+
   PrepareNewFrame();
+  DLOG("Done handling VP9 interrupt\n");
 
   // PrepareNewFrame will tell the firmware to continue decoding if necessary.
 }
@@ -701,9 +749,11 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
     frame->refcount++;
     notifier_(frame->frame);
   }
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
   HevcDecStatusReg::Get()
       .FromValue(kVp9CommandDecodeSlice)
       .WriteTo(owner_->dosbus());
+  state_ = DecoderState::kRunning;
 }
 
 void Vp9Decoder::PrepareNewFrame() {
@@ -774,9 +824,11 @@ void Vp9Decoder::PrepareNewFrame() {
 
   UpdateLoopFilter(&params);
 
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
   HevcDecStatusReg::Get()
       .FromValue(kVp9CommandDecodeSlice)
       .WriteTo(owner_->dosbus());
+  state_ = DecoderState::kRunning;
 }
 
 void Vp9Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
@@ -1113,6 +1165,7 @@ void Vp9Decoder::InitializeParser() {
       owner_->dosbus());
   HevcParserCoreControl::Get().FromValue(0).set_clock_enable(true).WriteTo(
       owner_->dosbus());
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kSwappedOut);
   HevcDecStatusReg::Get().FromValue(0).WriteTo(owner_->dosbus());
 
   HevcIqitScalelutWrAddr::Get().FromValue(0).WriteTo(owner_->dosbus());
@@ -1139,16 +1192,11 @@ void Vp9Decoder::InitializeParser() {
       break;
   }
   DecodeMode::Get().FromValue(decode_mode).WriteTo(owner_->dosbus());
+  // For multi-stream UpdateDecodeSize() should be called before
+  // StartDecoding(), because the hardware treats size 0 as infinite.
   if (input_type_ == InputType::kSingleStream) {
     HevcDecodeSize::Get().FromValue(0).WriteTo(owner_->dosbus());
     HevcDecodeCount::Get().FromValue(0).WriteTo(owner_->dosbus());
-  } else {
-    HevcDecodeSize::Get()
-        .FromValue(frame_data_provider_->GetInputDataSize())
-        .WriteTo(owner_->dosbus());
-    HevcDecodeCount::Get()
-        .FromValue(decoded_frame_count_)
-        .WriteTo(owner_->dosbus());
   }
 
   HevcParserCmdWrite::Get().FromValue(1 << 16).WriteTo(owner_->dosbus());

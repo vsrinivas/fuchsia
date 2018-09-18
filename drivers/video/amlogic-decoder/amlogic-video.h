@@ -93,6 +93,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT
   zx_status_t WaitForParsingCompleted(zx_duration_t deadline);
   void CancelParsing();
+  __WARN_UNUSED_RESULT
+  zx_status_t ProcessVideoNoParser(const void* data, uint32_t len,
+                                   uint32_t* written_out = nullptr);
 
   void SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder)
       __TA_REQUIRES(video_decoder_lock_);
@@ -117,10 +120,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   void InitializeStreamInput(bool use_parser);
 
   __WARN_UNUSED_RESULT
-  zx_status_t ProcessVideoNoParser(void* data, uint32_t len,
-                                   uint32_t* written_out = nullptr);
-  __WARN_UNUSED_RESULT
-  zx_status_t ProcessVideoNoParserAtOffset(void* data, uint32_t len,
+  zx_status_t ProcessVideoNoParserAtOffset(const void* data, uint32_t len,
                                            uint32_t current_offset,
                                            uint32_t* written_out = nullptr);
   void InitializeInterrupts();
