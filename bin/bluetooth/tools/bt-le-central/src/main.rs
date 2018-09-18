@@ -107,30 +107,23 @@ fn do_scan(
     (scan_once, connect, fut)
 }
 
-fn do_connect(args: &[String], central: &CentralProxy)
-    -> impl Future<Output = Result<(), Error>>
+async fn do_connect<'a>(args: &'a [String], central: &'a CentralProxy)
+    -> Result<(), Error>
 {
     if args.len() != 1 {
         println!("connect: peer-id is required");
-        return Left(future::ready(Err(BTError::new("invalid input").into())));
+        return Err(BTError::new("invalid input").into());
     }
 
-    let (_, server_end) = match fidl::endpoints2::create_endpoints() {
-        Err(e) => {
-            return Left(future::ready(Err(e.into())));
-        }
-        Ok(x) => x,
-    };
+    let (_, server_end) = fidl::endpoints2::create_endpoints()?;
 
-    Right(
-        central
-            .connect_peripheral(&mut args[0].clone(), server_end)
-            .map_err(|e| e.context("failed to connect to peripheral").into())
-            .and_then(|status| future::ready(match status.error {
-                None => Ok(()),
-                Some(e) => Err(BTError::from(*e).into()),
-            })),
-    )
+    let status = await!(central.connect_peripheral(&args[0], server_end))
+        .context("failed to connect to peripheral")?;
+
+    match status.error {
+        None => Ok(()),
+        Some(e) => Err(BTError::from(*e).into()),
+    }
 }
 
 fn usage(appname: &str) -> () {
@@ -172,7 +165,10 @@ fn main() -> Result<(), Error> {
                 };
                 await!(fut)?
             }
-            "connect" => await!(do_connect(&args[2..], state.read().get_svc()))?,
+            "connect" => {
+                let svc = state.read().get_svc().clone();
+                await!(do_connect(&args[2..], &svc))?
+            },
             _ => {
                 println!("Invalid command: {}", command);
                 usage(appname);
