@@ -103,6 +103,39 @@ TEST_F(SDP_PDUTest, ServiceSearchRequestParse) {
   EXPECT_FALSE(req3.valid());
 };
 
+TEST_F(SDP_PDUTest, ServiceSearchRequestGetPDU) {
+  ServiceSearchRequest req;
+
+  req.set_search_pattern({protocol::kATT, protocol::kL2CAP});
+  req.set_max_service_record_count(64);
+
+  // Order is not specified, so there are two valid PDUs representing this.
+  const auto kExpected = common::CreateStaticByteBuffer(
+      kServiceSearchRequest, 0x12, 0x34,  // Transaction ID
+      0x00, 0x0B,                         // Parameter length (11 bytes)
+      // ServiceSearchPattern
+      0x35, 0x06,        // Sequence uint8 6 bytes
+      0x19, 0x00, 0x07,  // UUID (ATT)
+      0x19, 0x01, 0x00,  // UUID (L2CAP)
+      0x00, 0x40,        // MaximumServiceRecordCount: 64
+      0x00               // No continuation state
+  );
+  const auto kExpected2 = common::CreateStaticByteBuffer(
+      kServiceSearchRequest, 0x12, 0x34,  // Transaction ID
+      0x00, 0x0B,                         // Parameter length (11 bytes)
+      // ServiceSearchPattern
+      0x35, 0x06,        // Sequence uint8 6 bytes
+      0x19, 0x01, 0x00,  // UUID (L2CAP)
+      0x19, 0x00, 0x07,  // UUID (ATT)
+      0x00, 0x40,        // MaximumServiceRecordCount: 64
+      0x00               // No continuation state
+  );
+
+  auto pdu = req.GetPDU(0x1234);
+  EXPECT_TRUE(ContainersEqual(kExpected, *pdu) ||
+              ContainersEqual(kExpected2, *pdu));
+};
+
 TEST_F(SDP_PDUTest, ServiceSearchResponseParse) {
   const auto kValidResponse = common::CreateStaticByteBuffer(
       0x00, 0x02,              // Total service record count: 2
@@ -351,6 +384,30 @@ TEST_F(SDP_PDUTest, ServiceAttributeRequestParse) {
   EXPECT_FALSE(req_baditems.valid());
 }
 
+TEST_F(SDP_PDUTest, ServiceAttributeRequestGetPDU) {
+  ServiceAttributeRequest req;
+  req.AddAttribute(0xF00F);
+  req.AddAttributeRange(0x0001, 0xBECA);
+
+  req.set_service_record_handle(0xEFFECACE);
+  req.set_max_attribute_byte_count(32);
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      kServiceAttributeRequest, 0x12, 0x34,  // transaction id
+      0x00, 0x11,                            // Parameter Length (17 bytes)
+      0xEF, 0xFE, 0xCA, 0xCE,                // ServiceRecordHandle (0xEFFECACE)
+      0x00, 0x20,                            // MaxAttributeByteCount (32)
+      // Attribute ID list
+      0x35, 0x08,                    // Sequence uint8 8 bytes
+      0x0A, 0x00, 0x01, 0xBE, 0xCA,  // uint32_t (0x0001BECA)
+      0x09, 0xF0, 0x0F,              // uint16_t (0xF00F)
+      0x00                           // No continuation state
+  );
+
+  auto pdu = req.GetPDU(0x1234);
+  EXPECT_TRUE(ContainersEqual(kExpected, *pdu));
+}
+
 TEST_F(SDP_PDUTest, ServiceAttributeResponseParse) {
   const auto kValidResponseEmpty = common::CreateStaticByteBuffer(
       0x00, 0x02,  // AttributeListByteCount (2 bytes)
@@ -544,6 +601,49 @@ TEST_F(SDP_PDUTest, ServiceSearchAttributeRequestParse) {
 
   ServiceSearchAttributeRequest req_toomany(kInvalidTooManyItems);
   EXPECT_FALSE(req_toomany.valid());
+}
+
+TEST_F(SDP_PDUTest, ServiceSearchAttributeRequestGetPDU) {
+  ServiceSearchAttributeRequest req;
+  req.AddAttribute(0xF00F);
+  req.AddAttributeRange(0x0001, 0xBECA);
+
+  req.set_search_pattern({protocol::kATT, protocol::kL2CAP});
+  req.set_max_attribute_byte_count(32);
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      kServiceSearchAttributeRequest, 0x12, 0x34,  // transaction id
+      0x00, 0x15,  // Parameter Length (21 bytes)
+      // ServiceSearchPattern
+      0x35, 0x06,        // Sequence uint8 6 bytes
+      0x19, 0x00, 0x07,  // UUID (ATT)
+      0x19, 0x01, 0x00,  // UUID (L2CAP)
+      0x00, 0x20,        // MaxAttributeByteCount (32)
+      // Attribute ID list
+      0x35, 0x08,                    // Sequence uint8 8 bytes
+      0x0A, 0x00, 0x01, 0xBE, 0xCA,  // uint32_t (0x0001BECA)
+      0x09, 0xF0, 0x0F,              // uint16_t (0xF00F)
+      0x00                           // No continuation state
+  );
+
+  const auto kExpected2 = common::CreateStaticByteBuffer(
+      kServiceSearchAttributeRequest, 0x12, 0x34,  // transaction id
+      0x00, 0x15,  // Parameter Length (21 bytes)
+      // ServiceSearchPattern
+      0x35, 0x06,        // Sequence uint8 6 bytes
+      0x19, 0x01, 0x00,  // UUID (L2CAP)
+      0x19, 0x00, 0x07,  // UUID (ATT)
+      0x00, 0x20,        // MaxAttributeByteCount (32)
+      // Attribute ID list
+      0x35, 0x08,                    // Sequence uint8 8 bytes
+      0x0A, 0x00, 0x01, 0xBE, 0xCA,  // uint32_t (0x0001BECA)
+      0x09, 0xF0, 0x0F,              // uint16_t (0xF00F)
+      0x00                           // No continuation state
+  );
+
+  auto pdu = req.GetPDU(0x1234);
+  EXPECT_TRUE(ContainersEqual(kExpected, *pdu) ||
+              ContainersEqual(kExpected2, *pdu));
 }
 
 TEST_F(SDP_PDUTest, ServiceSearchAttributeResponseParse) {

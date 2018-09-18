@@ -464,13 +464,14 @@ common::ByteBufferPtr ServiceAttributeRequest::GetPDU(TransactionId tid) const {
   if (!buf) {
     return nullptr;
   }
+  size_t written = sizeof(Header);
 
   uint32_t be32 = htobe32(service_record_handle_);
-  buf->Write(reinterpret_cast<uint8_t*>(&be32), sizeof(uint32_t));
-  size_t written = sizeof(uint32_t);
+  buf->Write(reinterpret_cast<uint8_t*>(&be32), sizeof(uint32_t), written);
+  written += sizeof(uint32_t);
 
   uint16_t be = htobe16(max_attribute_byte_count_);
-  buf->Write(reinterpret_cast<uint8_t*>(&be), sizeof(uint16_t));
+  buf->Write(reinterpret_cast<uint8_t*>(&be), sizeof(uint16_t), written);
   written += sizeof(uint16_t);
 
   auto mut_view = buf->mutable_view(written);
@@ -478,7 +479,7 @@ common::ByteBufferPtr ServiceAttributeRequest::GetPDU(TransactionId tid) const {
 
   mut_view = buf->mutable_view(written);
   written += WriteContinuationState(&mut_view);
-  ZX_DEBUG_ASSERT(written == size);
+  ZX_DEBUG_ASSERT(written == sizeof(Header) + size);
   return buf;
 }
 
@@ -778,7 +779,7 @@ common::ByteBufferPtr ServiceSearchAttributeRequest::GetPDU(
   written += search_pattern.Write(&mut_view);
 
   uint16_t be = htobe16(max_attribute_byte_count_);
-  buf->Write((uint8_t*)(&be), sizeof(uint16_t));
+  buf->Write((uint8_t*)(&be), sizeof(uint16_t), written);
   written += sizeof(uint16_t);
 
   mut_view = buf->mutable_view(written);
@@ -786,7 +787,7 @@ common::ByteBufferPtr ServiceSearchAttributeRequest::GetPDU(
 
   mut_view = buf->mutable_view(written);
   written += WriteContinuationState(&mut_view);
-  ZX_DEBUG_ASSERT(written == size);
+  ZX_DEBUG_ASSERT(written == sizeof(Header) + size);
   return buf;
 }
 
