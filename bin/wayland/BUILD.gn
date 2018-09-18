@@ -1,0 +1,24 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("wayland_tests") {
+  testonly = true
+  deps = [
+    "core:tests",
+    "scanner:tests",
+  ]
+  tests = [
+    {
+      name = "wayland_scanner_front_end_test_lib_test_rustc"
+    },
+    {
+      name = "wayland_scanner_back_end_test_lib_test_rustc"
+    },
+    {
+      name = "fuchsia_wayland_core_lib_test_rustc"
+    },
+  ]
+}

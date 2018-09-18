@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="test_protocol">
+  <!--
+       Add new types to the end of the interface since the test depends on the
+       specific opcodes listed here (which are implied by the ordering).
+  -->
+  <interface name="test_interface" version="1">
+    <!-- Opcode 0: uint request/event -->
+    <request name="uint">
+      <arg name="arg" type="uint"/>
+    </request>
+    <event name="uint">
+      <arg name="arg" type="uint"/>
+    </event>
+
+    <!-- Opcode 1: int request/event -->
+    <request name="int">
+      <arg name="arg" type="int"/>
+    </request>
+    <event name="int">
+      <arg name="arg" type="int"/>
+    </event>
+
+    <!-- Opcode 2: fixed request/event -->
+    <request name="fixed">
+      <arg name="arg" type="fixed"/>
+    </request>
+    <event name="fixed">
+      <arg name="arg" type="fixed"/>
+    </event>
+
+    <!-- Opcode 3: string request/event -->
+    <request name="string">
+      <arg name="arg" type="string"/>
+    </request>
+    <event name="string">
+      <arg name="arg" type="string"/>
+    </event>
+
+    <!-- Opcode 4: object request/event -->
+    <request name="object">
+      <arg name="arg" type="object"/>
+    </request>
+    <event name="object">
+      <arg name="arg" type="object"/>
+    </event>
+
+    <!-- Opcode 5: new_id request/event -->
+    <request name="new_id">
+      <arg name="arg" type="new_id"/>
+    </request>
+    <event name="new_id">
+      <arg name="arg" type="new_id"/>
+    </event>
+
+    <!-- Opcode 6: array request/event -->
+    <request name="array">
+      <arg name="arg" type="array"/>
+    </request>
+    <event name="array">
+      <arg name="arg" type="array"/>
+    </event>
+
+    <!-- Opcode 7: new_id request/event -->
+    <request name="handle">
+      <arg name="arg" type="fd"/>
+    </request>
+    <event name="handle">
+      <arg name="arg" type="fd"/>
+    </event>
+
+    <!-- Opcode 8: compound request/event -->
+    <request name="complex">
+      <arg name="uint_arg" type="uint" />
+      <arg name="int_arg" type="int" />
+      <arg name="handle_arg1" type="fd" />
+      <arg name="object_arg" type="object" />
+      <arg name="handle_arg2" type="fd" />
+      <arg name="string_arg" type="string" />
+      <arg name="array_arg" type="array" />
+    </request>
+    <event name="complex">
+      <arg name="uint_arg" type="uint" />
+      <arg name="int_arg" type="int" />
+      <arg name="handle_arg1" type="fd" />
+      <arg name="object_arg" type="object" />
+      <arg name="handle_arg2" type="fd" />
+      <arg name="string_arg" type="string" />
+      <arg name="array_arg" type="array" />
+    </event>
+  </interface>
+</protocol>
