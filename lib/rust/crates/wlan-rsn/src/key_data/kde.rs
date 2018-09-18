@@ -12,7 +12,6 @@ use nom::{le_u8, IResult, Needed};
 pub const OUI: [u8; 3] = [0x00, 0x0F, 0xAC];
 pub const TYPE: u8 = 0xDD;
 const PADDING_DATA_LEN: u8 = 0;
-#[allow(unused)]
 const HDR_LEN: usize = 6;
 const GTK_DATA_TYPE: u8 = 1;
 
@@ -45,7 +44,6 @@ impl Header {
         }
     }
 
-    #[allow(unused)]
     pub fn as_bytes(&self, buf: &mut Vec<u8>) {
         buf.reserve(HDR_LEN);
         buf.put_u8(self.type_);
@@ -56,9 +54,8 @@ impl Header {
 }
 
 // IEEE Std 802.11-2016, 12.7.2, j)
-#[allow(unused)]
 pub enum GtkInfoTx {
-    OnlyRx = 0,
+    _OnlyRx = 0,
     BothRxTx = 1,
 }
 
@@ -66,8 +63,8 @@ pub enum GtkInfoTx {
 bitfield! {
     pub struct GtkInfo(u8);
     impl Debug;
-    pub key_id, set_key_id: 2, 0;
-    pub tx, set_tx: 3, 2;
+    pub key_id, set_key_id: 1, 0;
+    pub tx, set_tx: 2, 2;
     // Bit 3-7 reserved.
     pub value, _: 7,0;
 }
@@ -81,7 +78,6 @@ pub struct Gtk {
 }
 
 impl Gtk {
-    #[allow(unused)]
     pub fn new(key_id: u8, tx: GtkInfoTx, gtk: &[u8]) -> Element {
         let mut gtk_info = GtkInfo(0);
         gtk_info.set_key_id(key_id);
@@ -106,7 +102,6 @@ impl Gtk {
         self.gtk.len() + 2
     }
 
-    #[allow(unused)]
     pub fn as_bytes(&self, buf: &mut Vec<u8>) {
         buf.reserve(2 + self.gtk.len());
         buf.put_u8(self.info.value());
@@ -194,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_create_gtk_element() {
-        let gtk_ele = Gtk::new(1, GtkInfoTx::OnlyRx, &vec![24; 16][..]);
+        let gtk_ele = Gtk::new(1, GtkInfoTx::_OnlyRx, &vec![24; 16][..]);
         match gtk_ele {
             Element::Gtk(hdr, gtk) => {
                 assert_eq!(hdr.type_, TYPE);

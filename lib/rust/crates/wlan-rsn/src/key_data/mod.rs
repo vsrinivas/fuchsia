@@ -20,6 +20,21 @@ pub enum Element {
     UnsupportedKde(kde::Header),
     UnsupportedIe(u8, u8),
 }
+impl Element {
+
+    pub fn as_bytes(&self, buf: &mut Vec<u8>) {
+        match self {
+            Element::Gtk(hdr, gtk) => {
+                hdr.as_bytes(buf);
+                gtk.as_bytes(buf);
+            },
+            Element::Rsne(rsne) => {
+                rsne.as_bytes(buf);
+            },
+            _ => {},
+        }
+    }
+}
 
 fn peek_u8_at<'a>(input: &'a [u8], index: usize) -> IResult<&'a [u8], u8> {
     if input.len() <= index {

@@ -443,7 +443,103 @@ fn is_zero(slice: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::rsna::{test_util, UpdateSink};
+    use {
+        crate::rsna::{
+            Role, test_util, UpdateSink, SecAssocUpdate, NegotiatedRsne, VerifiedKeyFrame
+        },
+        crate::key::{exchange::Key, gtk::Gtk, ptk::Ptk},
+    };
+
+    // Create an Authenticator and Supplicant and perfoms the entire 4-Way Handshake.
+    #[test]
+    fn test_supplicant_with_authenticator() {
+        let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
+            .expect("could not derive negotiated RSNE");
+
+        let mut supplicant = test_util::make_handshake(Role::Supplicant);
+        let mut authenticator = test_util::make_handshake(Role::Authenticator);
+
+        // Initiate 4-Way Handshake. The Authenticator will send message #1 of the handshake.
+        let mut a_update_sink = vec![];
+        let result = authenticator.initiate(&mut a_update_sink, 12);
+        assert!(result.is_ok(), "Authenticator failed initiating: {}", result.unwrap_err());
+        assert_eq!(a_update_sink.len(), 1);
+
+        // Verify message #1 was sent correctly.
+        let msg1 = extract_eapol_resp(&a_update_sink[..])
+            .expect("Authenticator did not send msg #1");
+        let result = VerifiedKeyFrame::from_key_frame(msg1, &Role::Supplicant, &rsne, 12);
+        assert!(result.is_ok(), "failed verifying msg #1 from Authenticator: {}", result.unwrap_err());
+
+        // Supplicant responds with message #2 of the handshake.
+        let mut s_update_sink = vec![];
+        let result = supplicant.on_eapol_key_frame(&mut s_update_sink, 0, result.unwrap());
+        assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
+        assert_eq!(s_update_sink.len(), 2);
+        let msg2 = extract_eapol_resp(&s_update_sink[..])
+            .expect("Supplicant did not send msg #2");
+        let result = VerifiedKeyFrame::from_key_frame(msg2, &Role::Authenticator, &rsne, 12);
+        assert!(result.is_ok(), "failed verifying msg #2 from Supplicant: {}", result.unwrap_err());
+        let s_ptk = extract_reported_ptk(&s_update_sink[..])
+            .expect("Supplicant did not derive PTK").clone();
+
+        // Authenticator responds with message #3 of the handshake.
+        let mut a_update_sink = vec![];
+        let result = authenticator.on_eapol_key_frame(&mut a_update_sink, 13, result.unwrap());
+        assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
+        assert_eq!(a_update_sink.len(), 2);
+        let msg3 = extract_eapol_resp(&a_update_sink[..])
+            .expect("Authenticator did not send msg #3");
+        let result = VerifiedKeyFrame::from_key_frame(msg3, &Role::Supplicant, &rsne, 13);
+        assert!(result.is_ok(), "failed verifying msg #3 from Authenticator: {}", result.unwrap_err());
+        let a_ptk = extract_reported_ptk(&a_update_sink[..])
+            .expect("Authenticator did not derive PTK").clone();
+
+        // Supplicant responds with message #4 of the handshake.
+        let mut s_update_sink = vec![];
+        let result = supplicant.on_eapol_key_frame(&mut s_update_sink, 0, result.unwrap());
+        assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
+        assert_eq!(s_update_sink.len(), 2);
+        let msg4 = extract_eapol_resp(&s_update_sink[..])
+            .expect("Supplicant did not send msg #4");
+        let result = VerifiedKeyFrame::from_key_frame(msg4, &Role::Authenticator, &rsne, 13);
+        assert!(result.is_ok(), "failed verifying msg #4 from Supplicant: {}", result.unwrap_err());
+        let s_gtk = extract_reported_gtk(&s_update_sink[..])
+            .expect("Supplicant did not derive GTK").clone();
+
+        // Authenticator needs to process message #4 of the handshake.
+        let mut a_update_sink = vec![];
+        let result = authenticator.on_eapol_key_frame(&mut a_update_sink, 0, result.unwrap());
+        assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
+        assert_eq!(a_update_sink.len(), 1);
+        let a_gtk = extract_reported_gtk(&a_update_sink[..])
+            .expect("Authenticator did not derive GTK").clone();
+
+        // Finally verify that Supplicant and Authenticator derived the same keys.
+        assert_eq!(s_ptk, a_ptk);
+        assert_eq!(s_gtk, a_gtk);
+    }
+
+    fn extract_eapol_resp(updates: &[SecAssocUpdate]) -> Option<&eapol::KeyFrame> {
+        updates.iter().filter_map(|u| match u {
+            SecAssocUpdate::TxEapolKeyFrame(resp) => Some(resp),
+            _ => None,
+        }).next()
+    }
+
+    fn extract_reported_ptk(updates: &[SecAssocUpdate]) -> Option<&Ptk> {
+        updates.iter().filter_map(|u| match u {
+            SecAssocUpdate::Key(Key::Ptk(ptk)) => Some(ptk),
+            _ => None,
+        }).next()
+    }
+
+    fn extract_reported_gtk(updates: &[SecAssocUpdate]) -> Option<&Gtk> {
+        updates.iter().filter_map(|u| match u {
+            SecAssocUpdate::Key(Key::Gtk(gtk)) => Some(gtk),
+            _ => None,
+        }).next()
+    }
 
     // First messages of 4-Way Handshake must carry a zeroed IV in all protocol versions.
 

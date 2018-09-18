@@ -50,9 +50,9 @@ impl State {
     pub fn initiate(self, update_sink: &mut UpdateSink, krc: u64, anonce: Vec<u8>) -> Self {
         match self {
             State::Idle { cfg, pmk } => match initiate_internal(update_sink, &cfg, krc, &anonce[..]) {
-                Ok(()) => State::AwaitingMsg2 {anonce, cfg, pmk, last_krc: krc },
+                Ok(()) => State::AwaitingMsg2 {anonce, cfg, pmk, last_krc: krc + 1 },
                 Err(e) => {
-                    eprintln!("error: {:?}", e);
+                    eprintln!("error: {}", e);
                     State::Idle { cfg, pmk }
                 }
             },
@@ -75,7 +75,7 @@ impl State {
                                 State::AwaitingMsg4 { pmk, ptk, gtk, cfg, last_krc: krc + 1 }
                             },
                             Err(e) => {
-                                eprintln!("error: {:?}", e);
+                                eprintln!("error: {}", e);
                                 State::AwaitingMsg2 { pmk, cfg, anonce, last_krc }
                             },
                         }
@@ -90,7 +90,7 @@ impl State {
                 match process_message_4(update_sink, &cfg, &ptk, &gtk, last_krc, frame) {
                     Ok(()) => State::Completed { cfg },
                     Err(e) => {
-                        eprintln!("error: {:?}", e);
+                        eprintln!("error: {}", e);
                         State::AwaitingMsg4 { pmk, ptk, gtk, cfg, last_krc }
                     },
                 }
@@ -239,16 +239,10 @@ fn create_message_3(
     // Construct key data which contains the Beacon's RSNE and a GTK KDE.
     // Write RSNE to key data.
     let mut key_data = vec![];
-    cfg.s_rsne.as_bytes(&mut key_data);
+    cfg.a_rsne.as_bytes(&mut key_data);
 
     // Write GTK KDE to key data.
-    let mut gtk_info = kde::GtkInfo(0);
-    gtk_info.set_key_id(gtk.key_id());
-    gtk_info.set_tx(kde::GtkInfoTx::BothRxTx as u8);
-    let gtk_kde = kde::Gtk {
-        info: gtk_info,
-        gtk: gtk.gtk().to_vec(),
-    };
+    let gtk_kde = kde::Gtk::new(gtk.key_id(), kde::GtkInfoTx::BothRxTx, gtk.gtk());
     gtk_kde.as_bytes(&mut key_data);
 
     // Add optional padding and encrypt the key data.
@@ -266,6 +260,7 @@ fn create_message_3(
     key_info.set_key_type(eapol::KEY_TYPE_PAIRWISE);
     key_info.set_key_ack(true);
     key_info.set_key_mic(true);
+    key_info.set_install(true);
     key_info.set_secure(true);
     key_info.set_encrypted_key_data(true);
 
