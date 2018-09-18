@@ -71,10 +71,10 @@ zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, siz
         if ((r = it->node()->Getattr(&attr)) != ZX_OK) {
             continue;
         }
-        if ((r = df.Next(it->name().ToStringPiece(),
-                         VTYPE_TO_DTYPE(attr.mode), attr.inode)) != ZX_OK) {
+        if (df.Next(it->name().ToStringPiece(),
+                         VTYPE_TO_DTYPE(attr.mode), attr.inode) != ZX_OK) {
             *out_actual = df.BytesFilled();
-            return r;
+            return ZX_OK;
         }
         cookie->n = it->id();
     }
