@@ -24,7 +24,6 @@
 #include "gtest/gtest.h"
 
 namespace netstack {
-namespace {
 
 const int32_t kTimeout = 10000;  // 10 seconds
 const int32_t kRepeatEach = 1;   // How many times to repeat each test
@@ -774,6 +773,22 @@ TEST(NetDatagramTest, DatagramSendto) {
   }
 }
 
+extern void DatagramSendtoRecvfrom();
+
+TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
+  for (int i = 0; i < kRepeatEach; i++) {
+    DatagramSendtoRecvfrom();
+  }
+}
+
+extern void DatagramSendtoRecvfromV6();
+
+TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
+  for (int i = 0; i < kRepeatEach; i++) {
+    DatagramSendtoRecvfromV6();
+  }
+}
+
 // NetDatagramTest.DatagramConnectWrite
 
 void DatagramConnectWrite() {
@@ -911,5 +926,4 @@ TEST(NetInvalidArgTest, Socket) {
 
 // TODO port reuse
 
-}  // namespace
 }  // namespace netstack
