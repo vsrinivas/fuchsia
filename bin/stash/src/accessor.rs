@@ -74,7 +74,6 @@ impl Accessor {
                     ));
                 }
                 (_, Some(val)) => {
-                    fx_log_info!("uncommitted value found: {:?}", val);
                     return Ok(Some(store::clone_value(val)?));
                 }
                 (_, None) => return Ok(None),
@@ -99,7 +98,7 @@ impl Accessor {
                 "client attempted to set a value with a read-only accessor",
             ));
         }
-        if self.enable_bytes {
+        if !self.enable_bytes {
             if let Value::Bytesval(_) = val {
                 return Err(err_msg(
                     "client attempted to set bytes when the type is disabled",
@@ -163,6 +162,8 @@ impl Accessor {
             .lock()
             .get_prefix(&self.client_name, &prefix)?;
 
+        let enable_bytes = self.enable_bytes;
+
         fasync::spawn(async move {
             let serverChan = fasync::Channel::from_channel(serverEnd.into_channel())?;
             let mut stream = GetIteratorRequestStream::from_channel(serverChan);
@@ -171,6 +172,13 @@ impl Accessor {
             {
                 let split_at = get_results.len() - GET_PREFIX_CHUNK_SIZE.min(get_results.len());
                 let mut chunk = get_results.split_off(split_at);
+                if !enable_bytes {
+                    for item in chunk.iter() {
+                        if let Value::Bytesval(_) = item.val {
+                            Err(err_msg("client attempted to access bytes when the type is disabled"))?;
+                        }
+                    }
+                }
                 responder.send(&mut chunk.iter_mut())?;
             }
             Ok(())

@@ -92,3 +92,8 @@ interface Store {
     // interface can be used to inspect and modify the state of the store.
     2: CreateAccessor(bool read_only, request<StoreAccessor> accessor_request);
 };
+
+// Interface used to interact with a given client's key/value store. The bytes
+// type is disabled in this store.
+[Discoverable]
+interface SecureStore : Store { };

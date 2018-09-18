@@ -24,18 +24,18 @@ mod accessor;
 mod instance;
 mod store;
 
-use fidl_fuchsia_stash::{StoreMarker, StoreRequest, StoreRequestStream};
+use fidl_fuchsia_stash::{SecureStoreMarker, StoreMarker, StoreRequest, StoreRequestStream};
 
 struct StashSettings {
     backing_file: String,
-    enable_bytes: bool,
+    secure_mode: bool,
 }
 
 impl Default for StashSettings {
     fn default() -> StashSettings {
         StashSettings {
             backing_file: "/data/stash.store".to_string(),
-            enable_bytes: false,
+            secure_mode: false,
         }
     }
 }
@@ -55,7 +55,7 @@ impl TryFrom<env::Args> for StashSettings {
                         return Err(());
                     }
                 }
-                "--enable_bytes" => res.enable_bytes = true,
+                "--secure" => res.secure_mode = true,
                 _ => return Err(()),
             }
         }
@@ -79,11 +79,17 @@ fn main() -> Result<(), Error> {
                 &opts.backing_file,
             ))?));
 
+            let marker = if opts.secure_mode {
+                SecureStoreMarker::NAME
+            } else {
+                StoreMarker::NAME
+            };
+
             let fut = ServicesServer::new()
-                .add_service((StoreMarker::NAME, move |chan| {
+                .add_service((marker, move |chan| {
                     stash_server(
                         store_manager.clone(),
-                        opts.enable_bytes,
+                        !opts.secure_mode,
                         chan,
                     )
                 })).start()
@@ -105,8 +111,8 @@ USAGE:
     stash [FLAGS]
 
 FLAGS:
-        --enable_bytes          Enables support for handling raw bytes. Should be diabled when
-                                running in critical path of verified boot.
+        --secure                Disables support for handling raw bytes. This flag Should be used
+                                when running in critical path of verified boot.
         --backing_file <FILE>   location of backing file for the store"
     )
 }

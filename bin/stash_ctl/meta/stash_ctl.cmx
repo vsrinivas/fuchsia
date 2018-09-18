@@ -3,6 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "services": [ "fuchsia.stash.Store" ]
+        "services": [ "fuchsia.stash.Store", "fuchsia.stash.SecureStore" ]
     }
 }

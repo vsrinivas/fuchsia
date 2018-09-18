@@ -15,24 +15,39 @@ use std::convert::{TryFrom, TryInto};
 use std::env;
 use std::str;
 
-use fidl_fuchsia_stash::{KeyValue, ListItem, StoreMarker, Value};
+use fidl_fuchsia_stash::{KeyValue, ListItem, StoreMarker, SecureStoreMarker, Value};
 
 fn main() -> Result<(), Error> {
-    let opts = env::args().try_into()?;
+    let cfg: StashCtlConfig = env::args().try_into()?;
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
-    let stashserver = connect_to_service::<StoreMarker>()?;
+    let acc = if cfg.secure {
+        let stashserver = connect_to_service::<SecureStoreMarker>()?;
 
-    // Identify
-    let fut = stashserver.identify("stash_ctl")?;
+        // Identify
+        let fut = stashserver.identify("stash_ctl")?;
 
-    // Create an accessor
-    let (acc, serverEnd) = create_proxy()?;
-    stashserver.create_accessor(false, serverEnd)?;
+        // Create an accessor
+        let (acc, serverEnd) = create_proxy()?;
+        stashserver.create_accessor(false, serverEnd)?;
+
+        acc
+    } else {
+        let stashserver = connect_to_service::<StoreMarker>()?;
+
+        // Identify
+        let fut = stashserver.identify("stash_ctl")?;
+
+        // Create an accessor
+        let (acc, serverEnd) = create_proxy()?;
+        stashserver.create_accessor(false, serverEnd)?;
+
+        acc
+    };
 
     // Perform the operation
-    match opts {
+    match cfg.op {
         StashOperation::Get(k) => {
             let fut = acc.get_value(&k)
                 .map(|res| match res {
@@ -91,6 +106,11 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
+struct StashCtlConfig {
+    secure: bool,
+    op: StashOperation,
+}
+
 enum StashOperation {
     Get(String),
     Set(String, Value),
@@ -100,41 +120,47 @@ enum StashOperation {
     DeletePrefix(String),
 }
 
-impl TryFrom<env::Args> for StashOperation {
+impl TryFrom<env::Args> for StashCtlConfig {
     type Error = Error;
-    fn try_from(mut args: env::Args) -> Result<StashOperation, Error> {
+    fn try_from(mut args: env::Args) -> Result<StashCtlConfig, Error> {
+        let mut args = args.peekable();
         // ignore arg[0]
         let _ = args.next();
+        let secure = args.peek() == Some(&"--secure".to_string());
+        if secure {
+            let _ = args.next();
+        }
         // take advantage of the fact that `next()` will keep returning `None`
         let op  = args.next();
         let key = args.next();
         let ty  = args.next();
         let val = args.next();
 
-        match (
+        let op = match (
             op.as_ref().map(|s| s.as_str()),
             key,
             ty.as_ref().map(|s| s.as_str()),
             val.as_ref().map(|s| s.as_str()),
         ) {
             (Some("get"), Some(key), None, None) =>
-                Ok(StashOperation::Get(key)),
+                StashOperation::Get(key),
             (Some("set"), Some(key), Some(type_), Some(val)) =>
-                Ok(StashOperation::Set(key, to_val(type_, val)?)),
+                StashOperation::Set(key, to_val(type_, val)?),
             (Some("delete"), Some(key), None, None) =>
-                Ok(StashOperation::Delete(key)),
+                StashOperation::Delete(key),
             (Some("list-prefix"), Some(key), None, None) =>
-                Ok(StashOperation::ListPrefix(key)),
+                StashOperation::ListPrefix(key),
             (Some("get-prefix"), Some(key), None, None) =>
-                Ok(StashOperation::GetPrefix(key)),
+                StashOperation::GetPrefix(key),
             (Some("delete-prefix"), Some(key), None, None) =>
-                Ok(StashOperation::DeletePrefix(key)),
+                StashOperation::DeletePrefix(key),
 
             _ => {
                 help();
-                Err(err_msg("unable to parse args"))
+                return Err(err_msg("unable to parse args"));
             }
-        }
+        };
+        Ok(StashCtlConfig{ secure, op })
     }
 }
 
@@ -161,12 +187,14 @@ fn to_val(typ: &str, input: &str) -> Result<Value, Error> {
 
 fn help() {
     println!(
-        r"Usage: stash_ctl get NAME
-       stash_ctl set NAME [int|float|text|bool|bytes] VALUE
-       stash_ctl delete NAME
-       stash_ctl list-prefix PREFIX
-       stash_ctl get-prefix PREFIX
-       stash_ctl delete-prefix PREFIX"
+        r"Usage: stash_ctl [--secure] get NAME
+       stash_ctl [--secure] set NAME [int|float|text|bool|bytes] VALUE
+       stash_ctl [--secure] delete NAME
+       stash_ctl [--secure] list-prefix PREFIX
+       stash_ctl [--secure] get-prefix PREFIX
+       stash_ctl [--secure] delete-prefix PREFIX
+
+       NOTE: --secure will access a version of the store where the bytes type is disabled"
     )
 }
 
