@@ -53,7 +53,14 @@ void TestFileComponentInfo(const fbl::String path,
     if (strncmp(path.c_str(), kPkgPrefix, strlen(kPkgPrefix)) != 0) {
         return;
     }
-    const auto folder_path = DirectoryName(DirectoryName(path));
+
+    // Consume suffixes of the form
+    // "test/<test filename>" or "test/disabled/<test filename>"
+    bool is_disabled = (strstr(path.c_str(), "/disabled/") != nullptr);
+    const auto folder_path = is_disabled?
+                             DirectoryName(DirectoryName(DirectoryName(path))):
+                             DirectoryName(DirectoryName(path));
+
     // folder_path should also start with |kPkgPrefix| and should not be equal
     // to |kPkgPrefix|.
     if (strncmp(folder_path.c_str(), kPkgPrefix, strlen(kPkgPrefix)) != 0 ||

@@ -132,6 +132,15 @@ bool TestFileComponentInfoTest() {
     EXPECT_STR_EQ("/pkgfs/packages/pname/foo/bar/meta/file.cmx",
                   cmx_file_path.c_str());
 
+    component_url = "";
+    cmx_file_path = "";
+    TestFileComponentInfo("/pkgfs/packages/pname/0/test/disabled/test_name",
+                          &component_url, &cmx_file_path);
+    EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/test_name.cmx",
+                  component_url.c_str());
+    EXPECT_STR_EQ("/pkgfs/packages/pname/0/meta/test_name.cmx",
+                  cmx_file_path.c_str());
+
     END_TEST;
 }
 
