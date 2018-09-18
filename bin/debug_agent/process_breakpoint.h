@@ -104,11 +104,9 @@ class ProcessBreakpoint {
   zx_koid_t process_koid_;
   uint64_t address_;
 
-  // Set to true when the instruction has been replaced.
-  bool installed_ = false;
-
-  // Previous memory contents before being replaced with the break instruction.
-  arch::BreakInstructionType previous_data_ = 0;
+  // Low-level implementations of the breakpoints. Null means not installed.
+  class SoftwareBreakpoint;
+  std::unique_ptr<SoftwareBreakpoint> software_breakpoint_;
 
   // Breakpoints that refer to this ProcessBreakpoint. More than one Breakpoint
   // can refer to the same memory address.

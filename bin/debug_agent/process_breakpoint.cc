@@ -2,17 +2,42 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/debug_agent/process_breakpoint.h"
-
 #include <inttypes.h>
-#include <zircon/syscalls/exception.h>
 
 #include <algorithm>
 
+#include <zircon/syscalls/exception.h>
+
 #include "garnet/bin/debug_agent/breakpoint.h"
+#include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "lib/fxl/logging.h"
 
 namespace debug_agent {
+
+// Software Breakpoint ---------------------------------------------------------
+
+class ProcessBreakpoint::SoftwareBreakpoint {
+ public:
+  SoftwareBreakpoint(ProcessBreakpoint*, ProcessMemoryAccessor*);
+  ~SoftwareBreakpoint();
+
+  zx_status_t Install();
+  void Uninstall();
+
+  void FixupMemoryBlock(debug_ipc::MemoryBlock* block);
+
+ private:
+  // Set to true when the instruction has been replaced.
+  bool installed_ = false;
+
+  // Previous memory contents before being replaced with the break instruction.
+  arch::BreakInstructionType previous_data_ = 0;
+
+  ProcessBreakpoint* process_breakpoint_;   // Not owning.
+  ProcessMemoryAccessor* memory_accessor_;  // Not owning.
+};
+
+// ProcessBreakpoint Implementation --------------------------------------------
 
 ProcessBreakpoint::ProcessBreakpoint(Breakpoint* breakpoint,
                                      ProcessMemoryAccessor* memory_accessor,
@@ -45,22 +70,8 @@ bool ProcessBreakpoint::UnregisterBreakpoint(Breakpoint* breakpoint) {
 }
 
 void ProcessBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {
-  if (block->data.empty())
-    return;  // Nothing to do.
-  FXL_DCHECK(static_cast<size_t>(block->size) == block->data.size());
-
-  size_t src_size = sizeof(arch::BreakInstructionType);
-  const uint8_t* src = reinterpret_cast<uint8_t*>(&previous_data_);
-
-  // Simple implementation to prevent boundary errors (ARM instructions are
-  // 32-bits and could be hanging partially off either end of the requested
-  // buffer).
-  for (size_t i = 0; i < src_size; i++) {
-    uint64_t dest_address = address() + i;
-    if (dest_address >= block->address &&
-        dest_address < block->address + block->size)
-      block->data[dest_address - block->address] = src[i];
-  }
+  if (software_breakpoint_)
+    software_breakpoint_->FixupMemoryBlock(block);
 }
 
 void ProcessBreakpoint::OnHit(
@@ -115,12 +126,34 @@ bool ProcessBreakpoint::CurrentlySteppingOver() const {
 }
 
 zx_status_t ProcessBreakpoint::Install() {
+  if (!software_breakpoint_) {
+    software_breakpoint_ =
+        std::make_unique<SoftwareBreakpoint>(this, memory_accessor_);
+  }
+  return software_breakpoint_->Install();
+}
+
+void ProcessBreakpoint::Uninstall() { software_breakpoint_.reset(); }
+
+// ProcessBreakpoint::SoftwareBreakpoint Implementation ------------------------
+
+ProcessBreakpoint::SoftwareBreakpoint::SoftwareBreakpoint(
+    ProcessBreakpoint* process_breakpoint,
+    ProcessMemoryAccessor* memory_accessor)
+    : process_breakpoint_(process_breakpoint),
+      memory_accessor_(memory_accessor) {}
+
+ProcessBreakpoint::SoftwareBreakpoint::~SoftwareBreakpoint() { Uninstall(); }
+
+zx_status_t ProcessBreakpoint::SoftwareBreakpoint::Install() {
   FXL_DCHECK(!installed_);
+
+  uint64_t address = process_breakpoint_->address();
 
   // Read previous instruction contents.
   size_t actual = 0;
   zx_status_t status = memory_accessor_->ReadProcessMemory(
-      address(), &previous_data_, sizeof(arch::BreakInstructionType), &actual);
+      address, &previous_data_, sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK)
     return status;
   if (actual != sizeof(arch::BreakInstructionType))
@@ -128,7 +161,7 @@ zx_status_t ProcessBreakpoint::Install() {
 
   // Replace with breakpoint instruction.
   status = memory_accessor_->WriteProcessMemory(
-      address(), &arch::kBreakInstruction, sizeof(arch::BreakInstructionType),
+      address, &arch::kBreakInstruction, sizeof(arch::BreakInstructionType),
       &actual);
   if (status != ZX_OK)
     return status;
@@ -139,9 +172,11 @@ zx_status_t ProcessBreakpoint::Install() {
   return ZX_OK;
 }
 
-void ProcessBreakpoint::Uninstall() {
+void ProcessBreakpoint::SoftwareBreakpoint::Uninstall() {
   if (!installed_)
     return;  // Not installed.
+
+  uint64_t address = process_breakpoint_->address();
 
   // If the breakpoint was previously installed it means the memory address
   // was valid and writable, so we generally expect to be able to do the same
@@ -151,8 +186,7 @@ void ProcessBreakpoint::Uninstall() {
   arch::BreakInstructionType current_contents = 0;
   size_t actual = 0;
   zx_status_t status = memory_accessor_->ReadProcessMemory(
-      address(), &current_contents, sizeof(arch::BreakInstructionType),
-      &actual);
+      address, &current_contents, sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType))
     return;  // Probably unmapped, safe to ignore.
 
@@ -160,17 +194,38 @@ void ProcessBreakpoint::Uninstall() {
     fprintf(stderr,
             "Warning: Debug break instruction unexpectedly replaced "
             "at %" PRIX64 "\n",
-            address());
+            address);
     return;  // Replaced with something else, ignore.
   }
 
   status = memory_accessor_->WriteProcessMemory(
-      address(), &previous_data_, sizeof(arch::BreakInstructionType), &actual);
+      address, &previous_data_, sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType)) {
     fprintf(stderr, "Warning: unable to remove breakpoint at %" PRIX64 ".",
-            address());
+            address);
   }
   installed_ = false;
+}
+
+void ProcessBreakpoint::SoftwareBreakpoint::FixupMemoryBlock(
+    debug_ipc::MemoryBlock* block) {
+  if (block->data.empty())
+    return;  // Nothing to do.
+  FXL_DCHECK(static_cast<size_t>(block->size) == block->data.size());
+
+  size_t src_size = sizeof(arch::BreakInstructionType);
+  const uint8_t* src = reinterpret_cast<uint8_t*>(&previous_data_);
+  uint64_t address = process_breakpoint_->address();
+
+  // Simple implementation to prevent boundary errors (ARM instructions are
+  // 32-bits and could be hanging partially off either end of the requested
+  // buffer).
+  for (size_t i = 0; i < src_size; i++) {
+    uint64_t dest_address = address + i;
+    if (dest_address >= block->address &&
+        dest_address < block->address + block->size)
+      block->data[dest_address - block->address] = src[i];
+  }
 }
 
 }  // namespace debug_agent

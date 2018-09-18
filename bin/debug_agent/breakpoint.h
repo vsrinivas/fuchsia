@@ -58,6 +58,7 @@ class Breakpoint {
 
   // Sets the initial settings, or updates settings.
   zx_status_t SetSettings(const debug_ipc::BreakpointSettings& settings);
+  const debug_ipc::BreakpointSettings& settings() const { return settings_; }
 
   // Notification that this breakpoint was just hit.
   HitResult OnHit();

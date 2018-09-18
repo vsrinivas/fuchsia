@@ -77,7 +77,7 @@ void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request,
   reply->status = process_.kill();
 }
 
-DebuggedThread* DebuggedProcess::GetThread(zx_koid_t thread_koid) {
+DebuggedThread* DebuggedProcess::GetThread(zx_koid_t thread_koid) const {
   auto found_thread = threads_.find(thread_koid);
   if (found_thread == threads_.end())
     return nullptr;
