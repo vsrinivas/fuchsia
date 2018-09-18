@@ -368,10 +368,10 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
             strcpy(display_params.monitor_serial, info->edid.monitor_serial());
             display_params.manufacturer_name = info->edid.manufacturer_name();
 
-
             if (zxlog_level_enabled_etc(DDK_LOG_TRACE)) {
-                zxlogf(TRACE, "Manufacturer %s, product %04x\n",
-                       info->edid.manufacturer_name(), info->edid.product_code());
+                zxlogf(TRACE, "Manufacturer \"%s\", product %d, name \"%s\", serial \"%s\"\n",
+                       info->edid.manufacturer_name(), info->edid.product_code(),
+                       info->edid.monitor_name(), info->edid.monitor_serial());
                 info->edid.Print([](const char* str) {zxlogf(TRACE, "%s", str);});
             }
         } else {

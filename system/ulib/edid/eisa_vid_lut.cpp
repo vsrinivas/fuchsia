@@ -2466,7 +2466,7 @@ const char* lookup_eisa_vid(uint32_t eisa_vid) {
 
     ZX_DEBUG_ASSERT(found != nullptr);
     if ((found == last) || (found->id != eisa_vid)) {
-        return nullptr;
+        return "";
     }
 
     return found->vendor_name;
