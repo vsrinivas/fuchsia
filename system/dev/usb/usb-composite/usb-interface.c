@@ -199,6 +199,11 @@ static zx_status_t usb_interface_set_interface(void* ctx, uint8_t interface_numb
     return usb_composite_set_interface(intf->comp, interface_number, alt_setting);
 }
 
+static uint8_t usb_interface_get_configuration(void* ctx) {
+    usb_interface_t* intf = ctx;
+    return usb_get_configuration(&intf->comp->usb);
+}
+
 static zx_status_t usb_interface_set_configuration(void* ctx, uint8_t configuration) {
     usb_interface_t* intf = ctx;
     return usb_set_configuration(&intf->comp->usb, configuration);
@@ -228,6 +233,13 @@ static uint32_t usb_interface_get_device_id(void* ctx) {
 static void usb_interface_get_device_descriptor(void* ctx, usb_device_descriptor_t* out_desc) {
     usb_interface_t* intf = ctx;
     return usb_get_device_descriptor(&intf->comp->usb, out_desc);
+}
+
+static zx_status_t usb_interface_get_configuration_descriptor(void* ctx, uint8_t configuration,
+                                                              usb_configuration_descriptor_t** out,
+                                                              size_t* out_length) {
+    usb_interface_t* intf = ctx;
+    return usb_get_configuration_descriptor(&intf->comp->usb, configuration, out, out_length);
 }
 
 static zx_status_t usb_interface_get_descriptor_list(void* ctx, void** out_descriptors,
@@ -346,12 +358,14 @@ usb_protocol_ops_t usb_device_protocol = {
     .request_queue = usb_interface_request_queue,
     .get_speed = usb_interface_get_speed,
     .set_interface = usb_interface_set_interface,
+    .get_configuration = usb_interface_get_configuration,
     .set_configuration = usb_interface_set_configuration,
     .enable_endpoint = usb_interface_enable_endpoint,
     .reset_endpoint = usb_interface_reset_endpoint,
     .get_max_transfer_size = usb_interface_get_max_transfer_size,
     .get_device_id = usb_interface_get_device_id,
     .get_device_descriptor = usb_interface_get_device_descriptor,
+    .get_configuration_descriptor = usb_interface_get_configuration_descriptor,
     .get_descriptor_list = usb_interface_get_descriptor_list,
     .get_additional_descriptor_list = usb_interface_get_additional_descriptor_list,
     .get_string_descriptor = usb_interface_get_string_descriptor,

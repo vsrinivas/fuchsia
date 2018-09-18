@@ -378,7 +378,8 @@ static zx_status_t usb_composite_bind(void* ctx, zx_device_t* parent) {
     usb_get_device_descriptor(&usb, &comp->device_desc);
 
     size_t config_length;
-    status = usb_get_descriptor_list(&comp->usb, (void **)&comp->config_desc, &config_length);
+    status = usb_get_configuration_descriptor(&comp->usb, usb_get_configuration(&comp->usb),
+                                              &comp->config_desc, &config_length);
     if (status != ZX_OK) {
         goto error_exit;
     }

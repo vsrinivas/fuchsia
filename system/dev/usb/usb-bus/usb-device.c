@@ -19,7 +19,7 @@ static usb_protocol_ops_t _usb_protocol;
 
 static zx_status_t usb_device_set_interface(void* ctx, uint8_t interface_number,
                                             uint8_t alt_setting);
-zx_status_t usb_device_set_configuration(void* ctx, uint8_t config);
+static zx_status_t usb_device_set_configuration(void* ctx, uint8_t config);
 
 // By default we create devices for the interfaces on the first configuration.
 // This table allows us to specify a different configuration for certain devices
@@ -245,17 +245,7 @@ static zx_status_t usb_device_ioctl(void* ctx, uint32_t op, const void* in_buf, 
         if (in_len != sizeof(int)) return ZX_ERR_INVALID_ARGS;
         int config = *((int *)in_buf);
         zxlogf(TRACE, "IOCTL_USB_SET_CONFIGURATION %d\n", config);
-        for (uint8_t i = 0; i < dev->num_configurations; i++) {
-            usb_configuration_descriptor_t* descriptor = dev->config_descs[i];
-            if (descriptor->bConfigurationValue == config) {
-                zx_status_t status = usb_device_set_configuration(dev, config);
-                if (status == ZX_OK) {
-                    dev->current_config_index = i;
-                }
-                return ZX_OK;
-            }
-        }
-        return ZX_ERR_INVALID_ARGS;
+        return usb_device_set_configuration(dev, config);
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -463,10 +453,26 @@ static zx_status_t usb_device_set_interface(void* ctx, uint8_t interface_number,
                             USB_REQ_SET_INTERFACE, alt_setting, interface_number, NULL, 0);
 }
 
-zx_status_t usb_device_set_configuration(void* ctx, uint8_t config) {
+static uint8_t usb_device_get_configuration(void* ctx) {
     usb_device_t* dev = ctx;
-    return usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
-                            USB_REQ_SET_CONFIGURATION, config, 0, NULL, 0);
+    return dev->config_descs[dev->current_config_index]->bConfigurationValue;
+}
+
+static zx_status_t usb_device_set_configuration(void* ctx, uint8_t configuration) {
+    usb_device_t* dev = ctx;
+    for (uint8_t i = 0; i < dev->num_configurations; i++) {
+        usb_configuration_descriptor_t* descriptor = dev->config_descs[i];
+        if (descriptor->bConfigurationValue == configuration) {
+            zx_status_t status;
+            status = usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
+                                      USB_REQ_SET_CONFIGURATION, configuration, 0, NULL, 0);
+            if (status == ZX_OK) {
+                dev->current_config_index = i;
+            }
+            return status;
+        }
+    }
+    return ZX_ERR_INVALID_ARGS;
 }
 
 static zx_status_t usb_device_enable_endpoint(void* ctx, usb_endpoint_descriptor_t* ep_desc,
@@ -494,6 +500,29 @@ static uint32_t _usb_device_get_device_id(void* ctx) {
 static void usb_device_get_device_descriptor(void* ctx, usb_device_descriptor_t* out_desc) {
     usb_device_t* dev = ctx;
     memcpy(out_desc, &dev->device_desc, sizeof(usb_device_descriptor_t));
+}
+
+static zx_status_t usb_device_get_configuration_descriptor(void* ctx, uint8_t configuration,
+                                                           usb_configuration_descriptor_t** out,
+                                                           size_t* out_length) {
+    usb_device_t* dev = ctx;
+    for (int i = 0; i <  dev->num_configurations; i++) {
+        usb_configuration_descriptor_t* config_desc = dev->config_descs[i];
+        if (config_desc->bConfigurationValue == configuration) {
+            size_t length = le16toh(config_desc->wTotalLength);
+            usb_configuration_descriptor_t* descriptor = malloc(length);
+            if (!descriptor) {
+                *out = NULL;
+                *out_length = 0;
+                return ZX_ERR_NO_MEMORY;
+            }
+            memcpy(descriptor, config_desc, length);
+            *out = descriptor;
+            *out_length = length;
+            return ZX_OK;
+        }
+    }
+    return ZX_ERR_INVALID_ARGS;
 }
 
 static zx_status_t usb_device_get_descriptor_list(void* ctx, void** out_descriptors,
@@ -559,12 +588,14 @@ static usb_protocol_ops_t _usb_protocol = {
     .request_queue = usb_device_request_queue,
     .get_speed = usb_device_get_speed,
     .set_interface = usb_device_set_interface,
+    .get_configuration = usb_device_get_configuration,
     .set_configuration = usb_device_set_configuration,
     .enable_endpoint = usb_device_enable_endpoint,
     .reset_endpoint = usb_device_reset_endpoint,
     .get_max_transfer_size = usb_device_get_max_transfer_size,
     .get_device_id = _usb_device_get_device_id,
     .get_device_descriptor = usb_device_get_device_descriptor,
+    .get_configuration_descriptor = usb_device_get_configuration_descriptor,
     .get_descriptor_list = usb_device_get_descriptor_list,
     .get_additional_descriptor_list = usb_device_get_additional_descriptor_list,
     .get_string_descriptor = usb_device_get_string_descriptor,
@@ -653,8 +684,9 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
     dev->num_configurations = num_configurations;
 
     // set configuration
-    status = usb_device_set_configuration(dev,
-                                          configs[dev->current_config_index]->bConfigurationValue);
+    status = usb_util_control(dev, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
+                              USB_REQ_SET_CONFIGURATION,
+                              configs[dev->current_config_index]->bConfigurationValue, 0, NULL, 0);
     if (status < 0) {
         zxlogf(ERROR, "usb_device_set_configuration: USB_REQ_SET_CONFIGURATION failed\n");
         goto error_exit;
