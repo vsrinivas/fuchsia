@@ -198,7 +198,10 @@ static ssize_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags) {
         struct iovec *iov = &msg->msg_iov[i];
         ssize_t n = zxsio_read_stream(io, iov->iov_base, iov->iov_len);
         if (n < 0) {
-            return n;
+            if (total == 0) {
+                return n;
+            }
+            return total;
         }
         total += n;
         if ((size_t)n != iov->iov_len) {
