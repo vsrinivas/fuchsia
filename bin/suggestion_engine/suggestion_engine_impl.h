@@ -203,6 +203,7 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   void HandleSelectedInteraction(const std::string& component_url,
                                  const std::string& preloaded_story_id,
                                  fuchsia::modular::Proposal& proposal,
+                                 fuchsia::modular::ProposalListenerPtr listener,
                                  bool suggestion_in_ask);
 
   fidl::BindingSet<fuchsia::modular::SuggestionEngine> bindings_;

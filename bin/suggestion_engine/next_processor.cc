@@ -57,6 +57,15 @@ void NextProcessor::AddProposal(const std::string& component_url,
 
   auto prototype = CreateSuggestionPrototype(
       &prototypes_, component_url, preloaded_story_id, std::move(proposal));
+
+  if (prototype->proposal.listener) {
+    prototype->bound_listener = prototype->proposal.listener.Bind();
+    prototype->bound_listener.set_error_handler(
+        [this, proposal_id = prototype->proposal.id, component_url] {
+          RemoveProposal(component_url, proposal_id);
+        });
+  }
+
   auto ranked_suggestion = RankedSuggestion::New(prototype);
 
   // TODO(miguelfrde): Make NextProcessor not depend on InterruptionsProcessor.

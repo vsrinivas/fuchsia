@@ -225,8 +225,9 @@ void SuggestionEngineImpl::NotifyInteraction(
 
   switch (interaction.type) {
     case fuchsia::modular::InteractionType::SELECTED: {
-      HandleSelectedInteraction(component_url, preloaded_story_id, proposal,
-                                suggestion_in_ask);
+      HandleSelectedInteraction(
+          component_url, preloaded_story_id, proposal,
+          std::move(suggestion->prototype->bound_listener), suggestion_in_ask);
       break;
     }
     case fuchsia::modular::InteractionType::DISMISSED: {
@@ -501,11 +502,11 @@ bool SuggestionEngineImpl::ComponentCanUseRichSuggestions(
 
 void SuggestionEngineImpl::HandleSelectedInteraction(
     const std::string& component_url, const std::string& preloaded_story_id,
-    fuchsia::modular::Proposal& proposal, bool suggestion_in_ask) {
+    fuchsia::modular::Proposal& proposal,
+    fuchsia::modular::ProposalListenerPtr listener, bool suggestion_in_ask) {
   // Rich suggestions are only in Next, so we don't check suggestion_in_ask.
   if (!preloaded_story_id.empty()) {
-    if (proposal.listener) {
-      auto listener = proposal.listener.Bind();
+    if (listener) {
       listener->OnProposalAccepted(proposal.id, preloaded_story_id);
     }
     // TODO(miguelfrde): eventually we should promote stories here. For now rich
@@ -522,14 +523,13 @@ void SuggestionEngineImpl::HandleSelectedInteraction(
                                story_puppet_master.NewRequest());
   auto done = PerformActions(std::move(story_puppet_master),
                              std::move(proposal.on_selected));
-  done->Then(fxl::MakeCopyable(
-      [this, listener = std::move(proposal.listener), proposal_id = proposal.id,
-       suggestion_in_ask, component_url,
-       done](fuchsia::modular::ExecuteResult result) mutable {
+  done->Then(
+      fxl::MakeCopyable([this, proposal_id = proposal.id, suggestion_in_ask,
+                         component_url, listener = std::move(listener),
+                         done](fuchsia::modular::ExecuteResult result) mutable {
         // TODO(miguelfrde): check status.
         if (listener) {
-          auto bound_listener = listener.Bind();
-          bound_listener->OnProposalAccepted(proposal_id, result.story_id);
+          listener->OnProposalAccepted(proposal_id, result.story_id);
         }
         if (suggestion_in_ask) {
           query_processor_.CleanUpPreviousQuery();

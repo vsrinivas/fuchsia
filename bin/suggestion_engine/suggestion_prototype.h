@@ -18,6 +18,7 @@ struct SuggestionPrototype {
   std::string source_url;
   zx::time timestamp;
   fuchsia::modular::Proposal proposal;
+  fidl::InterfacePtr<fuchsia::modular::ProposalListener> bound_listener;
 };
 
 std::string short_proposal_str(const SuggestionPrototype& prototype);
