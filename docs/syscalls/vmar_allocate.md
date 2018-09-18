@@ -70,6 +70,14 @@ In a future build this error will no longer occur.
 
 ## NOTES
 
+### Deallocation
+
+The address space occupied by a VMAR will remain allocated (within its
+parent VMAR) until the VMAR is destroyed by calling **vmar_destroy**().
+
+Note that just closing the VMAR's handle does not deallocate the address
+space occupied by the VMAR.
+
 ### The COMPACT flag
 
 The kernel interprets this flag as a request to reduce sprawl in allocations.
