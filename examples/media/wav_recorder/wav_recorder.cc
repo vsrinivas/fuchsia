@@ -21,6 +21,7 @@ constexpr uint32_t kMaxChannels = 8;
 static const std::string kShowUsageOption1 = "?";
 static const std::string kShowUsageOption2 = "help";
 static const std::string kVerboseOption = "v";
+static const std::string kGainOption = "gain";
 static const std::string kLoopbackOption = "loopback";
 static const std::string kAsyncModeOption = "async";
 static const std::string kFloatFormatOption = "float";
@@ -95,6 +96,11 @@ void WavRecorder::Usage() {
 
   printf("  --%s\t\t\t: Be verbose; display per-packet info\n",
          kVerboseOption.c_str());
+
+  printf("\n    Default is to not set gain, leaving this as 0 dB (unity)\n");
+  printf("  --%s=<gain_db>      : Set input gain (range [%.1f, +%.1f])\n",
+         kGainOption.c_str(), fuchsia::media::MUTED_GAIN_DB,
+         fuchsia::media::MAX_GAIN_DB);
 
   printf("\n    Default is to capture from the preferred input device\n");
   printf("  --%s\t\t: Capture final-mix-output from preferred output device\n",
@@ -232,6 +238,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   frames_per_second_ = fmt.frames_per_second;
 
   bool change_format = false;
+  bool change_gain = false;
 
   if (fmt.sample_format != sample_format_) {
     change_format = true;
@@ -257,6 +264,23 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
       frames_per_second_ = rate;
       change_format = true;
     }
+  }
+
+  if (cmd_line_.GetOptionValue(kGainOption, &opt)) {
+    if (::sscanf(opt.c_str(), "%f", &stream_gain_db_) != 1) {
+      Usage();
+      return;
+    }
+
+    if ((stream_gain_db_ < fuchsia::media::MUTED_GAIN_DB) ||
+        (stream_gain_db_ > fuchsia::media::MAX_GAIN_DB)) {
+      printf("Gain (%.3f dB) must be within range [%.1f, %.1f]\n",
+             stream_gain_db_, fuchsia::media::MUTED_GAIN_DB,
+             fuchsia::media::MAX_GAIN_DB);
+      return;
+    }
+
+    change_gain = true;
   }
 
   if (cmd_line_.GetOptionValue(kChannelsOption, &opt)) {
@@ -304,9 +328,9 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
         sample_format_, channel_count_, frames_per_second_));
   }
 
-  // Record at unity gain.
-  if (change_format) {
-    gain_control_->SetGain(0.0f);
+  // Set the specified gain (if specified) for the recording.
+  if (change_gain) {
+    gain_control_->SetGain(stream_gain_db_);
   }
 
   // Create our shared payload buffer, map it into place, then dup the handle
@@ -352,15 +376,20 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   }
 
   printf(
-      "Recording %s, %u Hz, %u channel linear PCM from %s into '%s'\n",
+      "Recording %s, %u Hz, %u-channel linear PCM\n",
       sample_format_ == fuchsia::media::AudioSampleFormat::FLOAT
           ? "32-bit float"
           : sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
                 ? (pack_24bit_samples_ ? "packed 24-bit signed int"
                                        : "24-bit-in-32-bit signed int")
                 : "16-bit signed int",
-      frames_per_second_, channel_count_,
-      loopback_ ? "loopback" : "default input", filename_);
+      frames_per_second_, channel_count_);
+  printf("from %s into '%s'", loopback_ ? "loopback" : "default input",
+         filename_);
+  if (change_gain) {
+    printf(", applying gain of %.2f dB", stream_gain_db_);
+  }
+  printf("\n");
 
   cleanup.cancel();
 }

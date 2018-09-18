@@ -10,6 +10,9 @@ interface and the WavWriter class to record a waveform audio file.
     Valid options:
     --v                   : Be verbose; display per-packet info
 
+      Default is to not set AudioIn gain, leaving the default 0 dB (unity)
+    --gain=<gain_db>      : Set the stream's gain (range [-160.0, +24.0])
+
       Default is to capture from the preferred input device
     --loopback            : Capture final-mix-output from preferred output device
 

@@ -55,6 +55,7 @@ class WavRecorder {
   bool pack_24bit_samples_ = false;
 
   fuchsia::media::AudioSampleFormat sample_format_;
+  float stream_gain_db_ = 0.0f;
   uint32_t channel_count_ = 0;
   uint32_t frames_per_second_ = 0;
   uint32_t bytes_per_frame_ = 0;

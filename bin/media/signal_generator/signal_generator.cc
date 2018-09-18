@@ -186,9 +186,12 @@ void MediaApp::DisplayConfigurationSettings() {
                                                               : "sine");
   }
 
-  printf(" (amplitude %f, stream gain %.2f dB).", amplitude_, stream_gain_db_);
+  printf(" (amplitude %f", amplitude_);
+  if (set_stream_gain_) {
+    printf(", setting stream gain %.2f dB", stream_gain_db_);
+  }
 
-  printf("\nSignal will play for %.2f seconds, using %u buffers of %u frames",
+  printf(").\nSignal will play for %.2f seconds, using %u buffers of %u frames",
          duration_secs_, payloads_per_total_mapping_, frames_per_payload_);
 
   if (set_system_gain_ || set_system_mute_ || set_system_unmute_) {
@@ -258,9 +261,11 @@ void MediaApp::SetStreamType() {
 
   audio_renderer_->SetPcmStreamType(std::move(format));
 
-  // Set stream gain, and clear the mute status.
-  gain_control_->SetGain(stream_gain_db_);
-  gain_control_->SetMute(false);
+  if (set_stream_gain_) {
+    // Set stream gain, and clear the mute status.
+    gain_control_->SetGain(stream_gain_db_);
+    gain_control_->SetMute(false);
+  }
 }
 
 // Create one Virtual Memory Object and map enough memory for 1 second of audio.
@@ -292,7 +297,8 @@ fuchsia::media::StreamPacket MediaApp::CreateAudioPacket(uint64_t payload_num) {
   // If last payload, send exactly what remains (otherwise send a full payload).
   packet.payload_size =
       (payload_num + 1 == num_packets_to_send_)
-          ? (total_frames_to_send_ % frames_per_payload_) * frame_size_
+          ? (total_frames_to_send_ - (payload_num * frames_per_payload_)) *
+                frame_size_
           : payload_size_;
 
   return packet;
@@ -303,11 +309,12 @@ void MediaApp::GenerateAudioForPacket(fuchsia::media::StreamPacket packet,
   auto audio_buff = reinterpret_cast<uint8_t*>(payload_buffer_.start()) +
                     packet.payload_offset;
 
-  // Recompute payload_frames each time, since the final packet may be 'short'.
+  // Recompute payload_frames each time, since the final packet may be
+  // 'short'.
   //
   // TODO(mpuryear): don't recompute this every time; use payload_frames_ (and
-  // pre-compute this) except for last packet, which we either check for here or
-  // pass in as a boolean parameter.
+  // pre-compute this) except for last packet, which we either check for here
+  // or pass in as a boolean parameter.
   uint32_t payload_frames = packet.payload_size / frame_size_;
 
   if (use_int24_) {
@@ -328,8 +335,9 @@ void MediaApp::GenerateAudioForPacket(fuchsia::media::StreamPacket packet,
   }
 }
 
-// Write signal into the next section of our buffer. Track how many total frames
-// since playback started, to handle arbitrary frequencies of type double.
+// Write signal into the next section of our buffer. Track how many total
+// frames since playback started, to handle arbitrary frequencies of type
+// double.
 template <typename SampleType>
 void MediaApp::WriteAudioIntoBuffer(
     SampleType* audio_buffer, uint32_t num_frames, uint64_t frames_since_start,
@@ -407,7 +415,8 @@ void MediaApp::OnSendPacketComplete() {
   }
 }
 
-// Unmap memory, quit message loop (FIDL interfaces auto-delete upon ~MediaApp).
+// Unmap memory, quit message loop (FIDL interfaces auto-delete upon
+// ~MediaApp).
 void MediaApp::Shutdown() {
   if (wav_writer_is_initialized_) {
     if (!wav_writer_.Close()) {

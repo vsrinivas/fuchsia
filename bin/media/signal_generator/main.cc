@@ -184,6 +184,7 @@ int main(int argc, const char** argv) {
       fxl::StringToNumber<uint32_t>(frames_per_payload_str));
 
   // Handle stream gain, system gain and system mute
+  media_app.set_will_set_stream_gain(command_line.HasOption(kStreamGainSwitch));
   std::string stream_gain_str = command_line.GetOptionValueWithDefault(
       kStreamGainSwitch, kStreamGainDefaultDb);
   media_app.set_stream_gain(std::stof(stream_gain_str));
