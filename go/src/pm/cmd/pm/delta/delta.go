@@ -15,6 +15,7 @@ import (
 
 	"fuchsia.googlesource.com/pm/build"
 	"github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize/english"
 )
 
 const usage = `Usage: %s delta [OPTIONS] SOURCE_SNAPSHOT TARGET_SNAPSHOT
@@ -145,7 +146,10 @@ func Run(cfg *build.Config, args []string) error {
 	source = source.Filter(config.includeTags, config.excludeTags)
 	target = target.Filter(config.includeTags, config.excludeTags)
 
-	delta := build.DeltaSnapshots(source, target)
+	delta, err := build.DeltaSnapshots(source, target)
+	if err != nil {
+		return err
+	}
 
 	if config.outputPath != "" {
 		var encoder *json.Encoder
@@ -184,7 +188,7 @@ func Run(cfg *build.Config, args []string) error {
 				if config.detailed {
 					fmt.Printf("Per-package stats:\n\n")
 				} else {
-					fmt.Printf("Top %v package(s) with largest update size:\n\n", top)
+					fmt.Printf("Top %v with largest update size:\n\n", english.Plural(top, "package", ""))
 				}
 			}
 
@@ -218,7 +222,7 @@ func Run(cfg *build.Config, args []string) error {
 				if config.detailed {
 					fmt.Printf("New blob stats:\n\n")
 				} else {
-					fmt.Printf("Top %v largest new blob(s):\n\n", top)
+					fmt.Printf("Top %v largest new %v:\n\n", top, english.PluralWord(top, "blob", ""))
 				}
 			}
 

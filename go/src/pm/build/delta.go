@@ -55,6 +55,10 @@ type DeltaPackageStats struct {
 }
 
 // SnapshotDelta contains update statistics from one Snapshot to another.
+//
+// All slices within a snapshot are canonically ordered as follows:
+// 1. Reverse sorted by download size/file size
+// 2. Sorted alphabetically by path/name/merkle
 type SnapshotDelta struct {
 	DownloadSize  uint64 `json:"download_size"`
 	DiscardSize   uint64 `json:"discard_size"`
@@ -69,6 +73,20 @@ type SnapshotDelta struct {
 	// Packages contains per-package update statistics, reverse sorted by
 	// update size
 	Packages []DeltaPackageStats `json:"packages"`
+}
+
+// ErrInconsistentSnapshotBlobs indicates that two package snapshots contain
+// blobs with the same hash but different metadata. This situation should
+// require a hash collision and be nearly impossible to encounter.
+type ErrInconsistentSnapshotBlobs struct {
+	Merkle MerkleRoot
+	Source BlobInfo
+	Target BlobInfo
+}
+
+// Error generates a display string for ErrInconsistentSnapshotBlobs
+func (e ErrInconsistentSnapshotBlobs) Error() string {
+	return fmt.Sprintf("blob %v inconsistent between source and target (%v != %v)", e.Merkle, e.Source, e.Target)
 }
 
 type packageFileRefByString []PackageFileRef
@@ -143,8 +161,21 @@ func invertFileMap(files map[string]MerkleRoot) map[MerkleRoot][]string {
 }
 
 // DeltaSnapshots compares two Snapshots, producing various statistics about an update from source to target
-func DeltaSnapshots(source Snapshot, target Snapshot) SnapshotDelta {
+func DeltaSnapshots(source Snapshot, target Snapshot) (SnapshotDelta, error) {
 	var delta SnapshotDelta
+
+	// Ensure blob metadata is consistent between the snapshots
+	for root, sourceInfo := range source.Blobs {
+		if targetInfo, ok := target.Blobs[root]; ok {
+			if sourceInfo != targetInfo {
+				return delta, ErrInconsistentSnapshotBlobs{
+					Merkle: root,
+					Source: sourceInfo,
+					Target: targetInfo,
+				}
+			}
+		}
+	}
 
 	// Determine delta.*Size fields, find all new blobs
 	for root, info := range target.Blobs {
@@ -189,12 +220,13 @@ func DeltaSnapshots(source Snapshot, target Snapshot) SnapshotDelta {
 	// Compute per-package stats
 	for packageName, targetInfo := range target.Packages {
 		stats := DeltaPackageStats{
-			Name:       packageName,
-			AddedBlobs: make([]DeltaPackageBlobStats, 0),
+			Name: packageName,
 		}
 		for merkle, names := range invertFileMap(targetInfo.Files) {
 			size := target.Blobs[merkle].Size
-			if _, ok := source.Blobs[merkle]; !ok {
+			if _, ok := source.Blobs[merkle]; ok {
+				stats.UnchangedSize += size
+			} else {
 				blobInfo := DeltaPackageBlobStats{
 					Merkle: merkle,
 					Size:   size,
@@ -202,8 +234,6 @@ func DeltaSnapshots(source Snapshot, target Snapshot) SnapshotDelta {
 				}
 				stats.AddedBlobs = append(stats.AddedBlobs, blobInfo)
 				stats.DownloadSize += size
-			} else {
-				stats.UnchangedSize += size
 			}
 		}
 		if sourceInfo, ok := source.Packages[packageName]; ok {
@@ -218,5 +248,5 @@ func DeltaSnapshots(source Snapshot, target Snapshot) SnapshotDelta {
 
 	delta.sort()
 
-	return delta
+	return delta, nil
 }

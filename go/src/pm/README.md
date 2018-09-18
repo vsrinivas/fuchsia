@@ -118,3 +118,174 @@ additional font packages may be found and utilized by a font server. The
 discovery of additional fonts.
 
 TODO(raggi): improve documentation
+
+## Updating Fuchsia Packages
+
+When defining the contents of a Fuchsia package, it is worth considering how
+that package will be updated to a newer version. Essentially, to update to a
+newer version of a package, a Fuchsia system must determine which blobs
+referenced by the new package's `meta/contents` file are not present on the
+system and download them. Likewise, after updating a package, any blobs that are
+no longer referenced in the package's `meta/contents` may be safely removed from
+the system, provided that no other package on the system references those blobs.
+
+A major implication of this update model is that updates are performed at
+file granularity. If a Fuchsia package contains a single file with many assets,
+for example, updating a single asset within that file will require downloading
+the entire file. In this case, including the package assets as individual files
+would allow an update to download just the assets that have changed. This
+concept applies to binaries as well. To optimize package update download sizes,
+prefer dynamically linking to libraries instead of statically linking,
+especially if those dependencies change infrequently.
+
+It is difficult to know how changes to a Fuchsia package will affect its update
+download size. Fortunately, `pm` has a few subcommands to help.
+
+### Package Snapshots
+
+A Package Snapshot contains package and file metadata from a set of Fuchsia
+packages, and two package snapshots can be compared to simulate updating from
+one snapshot of packages to another.
+
+Within the Fuchsia source tree, a build automatically produces a package
+snapshot of all products and packages enabled by `fx set`. The automatically
+generated snapshot is stored in the output directory at
+`obj/build/images/system.snapshot`. Outside of the Fuchsia source tree,
+snapshots can be built from a set of packages using `fx snapshot`.
+
+To manually produce a package snapshot file:
+1. When building a Fuchsia package with `pm build`, pass in an `-blobsfile`
+   argument to also generate a metadata file of all files within the package.
+
+   Sample package metadata files are located at
+   `examples/snapshots/(source|target)/pkg_*.json`
+2. Merge one or more package metadata files into a single package snapshot using
+   `pm snapshot`. Packages within a snapshot can be tagged with arbitrary
+   strings. When comparing two snapshots, these tags can be used to select or
+   exclude certain packages.
+
+   Using the package metadata files under `examples/snapshots/source` as an
+   example:
+   ```sh
+   pm snapshot \
+       -package "a=examples/snapshots/source/pkg_a.json" \
+       -package "b#optional=examples/snapshots/source/pkg_b.json" \
+       -output "examples/snapshots/source/packages.snapshot"
+   ```
+
+   Or,
+
+   Create a manifest file containing a package entry per line. Then, provide the
+   manifest to `pm snapshot`:
+   ```sh
+   pm snapshot \
+       -manifest "examples/snapshots/source/packages.manifest" \
+       -output "examples/snapshots/source/packages.snapshot"
+   ```
+
+
+The contents of the package snapshot for the packages at
+`examples/snapshots/source/pkg_*.json` are included below. Notice how the
+package entries list a total of 7 files, but the blobs list only contains 6
+files. The blob for `lib/ld.so.1` is shared between `a` and `b`.
+
+```json
+{
+  "packages": {
+    "a": {
+      "files": {
+        "bin/app": "aa02000000000000000000000000000000000000000000000000000000000000",
+        "img/logo.png": "aa03000000000000000000000000000000000000000000000000000000000000",
+        "lib/ld.so.1": "ab00000000000000000000000000000000000000000000000000000000000000",
+        "meta/": "aa01000000000000000000000000000000000000000000000000000000000000"
+      }
+    },
+    "b": {
+      "files": {
+        "bin/app": "bb02000000000000000000000000000000000000000000000000000000000000",
+        "lib/ld.so.1": "ab00000000000000000000000000000000000000000000000000000000000000",
+        "meta/": "bb01000000000000000000000000000000000000000000000000000000000000"
+      },
+      "tags": [
+        "optional"
+      ]
+    }
+  },
+  "blobs": {
+    "aa01000000000000000000000000000000000000000000000000000000000000": {
+      "size": 20480
+    },
+    "aa02000000000000000000000000000000000000000000000000000000000000": {
+      "size": 2686144
+    },
+    "aa03000000000000000000000000000000000000000000000000000000000000": {
+      "size": 1000000
+    },
+    "ab00000000000000000000000000000000000000000000000000000000000000": {
+      "size": 846896
+    },
+    "bb01000000000000000000000000000000000000000000000000000000000000": {
+      "size": 20480
+    },
+    "bb02000000000000000000000000000000000000000000000000000000000000": {
+      "size": 2686144
+    }
+  }
+}
+```
+
+Using this package snapshot as a baseline, we can now compare it to another
+package snapshot (target) to show what needs to happen to update from `source` to
+`target`.
+
+```
+pm delta examples/snapshot/source/packages.snapshot examples/snapshot/target/packages.snapshot
+```
+
+Which produces the following output:
+```
+Source size: 6.9 MiB
+Target size: 8.8 MiB
+Discard size: 3.6 MiB
+Keep size: 3.4 MiB
+Download size: 5.5 MiB
+
+Top 2 packages with largest update size:
+
+Discard  Keep     Download  Name
+2.6 MiB  827 KiB  4.5 MiB   b
+                  4.5 MiB   - bin/app
+                  20 KiB    - meta/
+997 KiB  3.4 MiB  997 KiB   a
+                  977 KiB   - img/logo.png
+                  20 KiB    - meta/
+
+Top 4 largest new blobs:
+
+Download  Name
+4.5 MiB   b/bin/app
+977 KiB   a/img/logo.png
+20 KiB    a/meta/
+20 KiB    b/meta/
+```
+
+In the above example, `b`'s application binary would be replaced with a new
+version, and `a`'s logo asset would be updated as well. When a package is
+modified in any way, its meta FAR (represented by the "meta/" directory) would
+also change. "Discard size" represents the total size of all blobs that can be
+garbage collected after the update completes. "Keep size" represents the total
+size of all blobs that continue to be referenced by one or more packages after
+the update. Finally, "Download size" represents the total size of all blobs that
+need to be downloaded to complete the update.
+
+Note that the total download size is not always the sum of each package's
+download size. If a blob that is shared between multiple packages (or even
+referenced more than once within a single package) is updated, it only needs to
+be downloaded once but will appear as an update to each package that references
+the blob. Similar concepts apply to the discard and keep sizes.
+
+`pm delta` has various options to customize its output. See `pm delta --help`
+for more info. For example, `pm delta` can output its statistics in JSON format.
+This output format is intended to be parsed by tooling for further processing
+or rendering. An example of this output is at
+[`examples/snapshots/delta.json`](examples/snapshots/delta.json).

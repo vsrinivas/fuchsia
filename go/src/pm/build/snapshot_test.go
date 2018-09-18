@@ -6,92 +6,118 @@ import (
 	"testing"
 )
 
-func makeMerkle(b byte) MerkleRoot {
-	var m MerkleRoot
-	for i := 0; i < len(m); i++ {
-		m[i] = b
+// snapshotBuilder allows test cases to hand generate Snapshot structures
+type snapshotBuilder struct {
+	snapshot Snapshot
+
+	currentBlobID MerkleRoot
+}
+
+type fileRef = PackageFileRef
+
+func newSnapshotBuilder() *snapshotBuilder {
+	return &snapshotBuilder{
+		snapshot: Snapshot{
+			Packages: map[string]Package{},
+			Blobs:    map[MerkleRoot]BlobInfo{},
+		},
 	}
-	return m
+}
+
+func (b *snapshotBuilder) ensurePackage(name string) {
+	if _, ok := b.snapshot.Packages[name]; !ok {
+		b.snapshot.Packages[name] = Package{
+			Files: map[string]MerkleRoot{},
+		}
+	}
+}
+
+// IncrementMerkleRootEpoch moves to the start of the next block of merkle roots
+func (b *snapshotBuilder) IncrementMerkleRootEpoch() *snapshotBuilder {
+	b.currentBlobID[0]++
+	b.currentBlobID[1] = 0
+	return b
+}
+
+// IncrementMerkleRoot moves to the next sequential merkle root
+func (b *snapshotBuilder) IncrementMerkleRoot() *snapshotBuilder {
+	b.currentBlobID[1]++
+	return b
+}
+
+// Package declares a new package with the given tags
+func (b *snapshotBuilder) Package(pkg string, tags ...string) *snapshotBuilder {
+	if _, ok := b.snapshot.Packages[pkg]; ok {
+		panic("Package already defined")
+	}
+	b.snapshot.Packages[pkg] = Package{
+		Files: map[string]MerkleRoot{},
+		Tags:  tags,
+	}
+	return b
+}
+
+// File defines a new file with the given size, included at the given locations
+func (b *snapshotBuilder) File(size uint64, refs ...fileRef) *snapshotBuilder {
+	if len(refs) == 0 {
+		panic("File called without any file refs")
+	}
+	b.IncrementMerkleRoot()
+	b.snapshot.Blobs[b.currentBlobID] = BlobInfo{Size: size}
+
+	for _, ref := range refs {
+		b.ensurePackage(ref.Name)
+		b.snapshot.Packages[ref.Name].Files[ref.Path] = b.currentBlobID
+	}
+
+	return b
+}
+
+// Build finalizes and returns the Snapshot
+func (b *snapshotBuilder) Build() Snapshot {
+	if err := b.snapshot.Verify(); err != nil {
+		panic(err)
+	}
+	return b.snapshot
 }
 
 func makeTestSnapshot() Snapshot {
-	var merklePos byte
-	nextMerkle := func() MerkleRoot {
-		res := makeMerkle(merklePos)
-		merklePos++
-		return res
-	}
-
-	rootFdio := nextMerkle()
-	rootLd := nextMerkle()
-
-	snapshot := Snapshot{
-		Packages: map[string]Package{
-			"system/0": Package{
-				Files: map[string]MerkleRoot{
-					"a":     nextMerkle(),
-					"b":     nextMerkle(),
-					"c":     nextMerkle(),
-					"d":     nextMerkle(),
-					"e":     nextMerkle(),
-					"f":     nextMerkle(),
-					"meta/": nextMerkle(),
-				},
-				Tags: []string{"monolith"},
-			},
-			"foo/0": Package{
-				Files: map[string]MerkleRoot{
-					"bin/app":        nextMerkle(),
-					"lib/ld.so.1":    rootLd,
-					"lib/libfdio.so": rootFdio,
-					"fileA":          nextMerkle(),
-					"meta/":          nextMerkle(),
-				},
-				Tags: []string{"monolith"},
-			},
-			"bar/0": Package{
-				Files: map[string]MerkleRoot{
-					"bin/app":        nextMerkle(),
-					"lib/ld.so.1":    rootLd,
-					"lib/libfdio.so": rootFdio,
-					"fileB":          nextMerkle(),
-					"meta/":          nextMerkle(),
-				},
-				Tags: []string{"monolith"},
-			},
-			"foobar/0": Package{
-				Files: map[string]MerkleRoot{
-					"bin/app":        nextMerkle(),
-					"lib/ld.so.1":    rootLd,
-					"lib/libfdio.so": rootFdio,
-					"meta/":          nextMerkle(),
-				},
-				Tags: []string{"monolith"},
-			},
-			"optional/0": Package{
-				Files: map[string]MerkleRoot{
-					"bin/app":        nextMerkle(),
-					"lib/ld.so.1":    rootLd,
-					"lib/libfdio.so": rootFdio,
-					"meta/":          nextMerkle(),
-				},
-				Tags: []string{"available"},
-			},
-		},
-		Blobs: make(map[MerkleRoot]BlobInfo),
-	}
-
-	for _, pkg := range snapshot.Packages {
-		for _, root := range pkg.Files {
-			snapshot.Blobs[root] = BlobInfo{Size: 1024}
-		}
-	}
-
-	if err := snapshot.Verify(); err != nil {
-		panic(err)
-	}
-
-	return snapshot
+	return newSnapshotBuilder().
+		Package("system/0", "monolith").
+		Package("foo/0", "monolith").
+		Package("bar/0", "monolith").
+		Package("foobar/0", "monolith").
+		Package("optional/0", "available").
+		File(1024, fileRef{"system/0", "a"}).
+		File(1024, fileRef{"system/0", "b"}).
+		File(1024, fileRef{"system/0", "c"}).
+		File(1024, fileRef{"system/0", "d"}).
+		File(1024, fileRef{"system/0", "e"}).
+		File(1024, fileRef{"system/0", "f"}).
+		File(1024, fileRef{"system/0", "meta/"}).
+		File(1024, fileRef{"foo/0", "bin/app"}).
+		File(1024, fileRef{"foo/0", "fileA"}).
+		File(1024, fileRef{"foo/0", "meta/"}).
+		File(1024, fileRef{"bar/0", "bin/app"}).
+		File(1024, fileRef{"bar/0", "fileB"}).
+		File(1024, fileRef{"bar/0", "meta/"}).
+		File(1024, fileRef{"foobar/0", "bin/app"}).
+		File(1024, fileRef{"foobar/0", "meta/"}).
+		File(1024, fileRef{"optional/0", "bin/app"}).
+		File(1024, fileRef{"optional/0", "meta/"}).
+		File(1024,
+			fileRef{"foo/0", "lib/ld.so.1"},
+			fileRef{"bar/0", "lib/ld.so.1"},
+			fileRef{"foobar/0", "lib/ld.so.1"},
+			fileRef{"optional/0", "lib/ld.so.1"},
+		).
+		File(1024,
+			fileRef{"foo/0", "lib/libfdio.so"},
+			fileRef{"bar/0", "lib/libfdio.so"},
+			fileRef{"foobar/0", "lib/libfdio.so"},
+			fileRef{"optional/0", "lib/libfdio.so"},
+		).
+		Build()
 }
 
 func verifyFilteredSnapshot(t *testing.T, original Snapshot, filtered Snapshot, expected []string) {

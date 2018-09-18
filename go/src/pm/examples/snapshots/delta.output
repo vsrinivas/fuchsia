@@ -1,0 +1,23 @@
+Source size: 6.9 MiB
+Target size: 8.8 MiB
+Discard size: 3.6 MiB
+Keep size: 3.4 MiB
+Download size: 5.5 MiB
+
+Top 2 packages with largest update size:
+
+Discard  Keep     Download  Name
+2.6 MiB  827 KiB  4.5 MiB   b
+                  4.5 MiB   - bin/app
+                  20 KiB    - meta/
+997 KiB  3.4 MiB  997 KiB   a
+                  977 KiB   - img/logo.png
+                  20 KiB    - meta/
+
+Top 4 largest new blobs:
+
+Download  Name
+4.5 MiB   b/bin/app
+977 KiB   a/img/logo.png
+20 KiB    a/meta/
+20 KiB    b/meta/
