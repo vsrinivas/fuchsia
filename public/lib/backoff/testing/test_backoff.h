@@ -5,9 +5,8 @@
 #ifndef LIB_BACKOFF_TESTING_TEST_BACKOFF_H_
 #define LIB_BACKOFF_TESTING_TEST_BACKOFF_H_
 
+#include <lib/backoff/backoff.h>
 #include <lib/fit/function.h>
-
-#include "lib/backoff/backoff.h"
 
 namespace backoff {
 

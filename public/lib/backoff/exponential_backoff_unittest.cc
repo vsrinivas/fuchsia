@@ -6,11 +6,10 @@
 
 #include <stdlib.h>
 
-#include <random>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
 
 namespace backoff {
 

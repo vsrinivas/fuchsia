@@ -5,9 +5,8 @@
 #ifndef LIB_BACKOFF_BACKOFF_H_
 #define LIB_BACKOFF_BACKOFF_H_
 
+#include <lib/fxl/macros.h>
 #include <lib/zx/time.h>
-
-#include "lib/fxl/macros.h"
 
 namespace backoff {
 
