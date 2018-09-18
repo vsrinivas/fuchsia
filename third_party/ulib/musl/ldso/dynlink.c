@@ -270,12 +270,12 @@ __NO_SAFESTACK NO_ASAN static inline struct dso* dso_prev(struct dso* p) {
 
 __NO_SAFESTACK NO_ASAN
 static inline void dso_set_next(struct dso* p, struct dso* next) {
-    p->l_map.l_next = &next->l_map;
+    p->l_map.l_next = next ? &next->l_map : NULL;
 }
 
 __NO_SAFESTACK NO_ASAN
 static inline void dso_set_prev(struct dso* p, struct dso* prev) {
-    p->l_map.l_prev = &prev->l_map;
+    p->l_map.l_prev = prev ? &prev->l_map : NULL;
 }
 
 // TODO(mcgrathr): Working around arcane compiler issues; find a better way.
