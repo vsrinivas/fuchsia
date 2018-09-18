@@ -10,6 +10,7 @@ fidl("fuchsia.guest") {
     "environment_controller.fidl",
     "environment_manager.fidl",
     "vsock.fidl",
+    "wayland_dispatcher.fidl",
   ]
 
   public_deps = [
