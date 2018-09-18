@@ -317,7 +317,8 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
     }
 
-    infof("deauthenticating from %s, reason=%hu\n", bss_->ssid->data(), req.body()->reason_code);
+    infof("deauthenticating from %.*s, reason=%hu\n", static_cast<int>(bss_->ssid->size()),
+          bss_->ssid->data(), req.body()->reason_code);
 
     state_ = WlanState::kJoined;
     device_->SetStatus(0);
@@ -483,7 +484,7 @@ zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
         join_timeout_.Cancel();
 
         state_ = WlanState::kJoined;
-        debugjoin("joined %s\n", bss_->ssid->data());
+        debugjoin("joined %.*s\n", static_cast<int>(bss_->ssid->size()), bss_->ssid->data());
         return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
     }
 
@@ -569,7 +570,8 @@ zx_status_t Station::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame)
     }
 
     auto deauth = frame.body();
-    infof("deauthenticating from %s, reason=%hu\n", bss_->ssid->data(), deauth->reason_code);
+    infof("deauthenticating from %.*s, reason=%hu\n", static_cast<int>(bss_->ssid->size()),
+          bss_->ssid->data(), deauth->reason_code);
 
     state_ = WlanState::kJoined;
     device_->SetStatus(0);
@@ -639,10 +641,10 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
         device_->SetStatus(ETH_STATUS_ONLINE);
     }
 
-    infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
-          self_addr().ToString().c_str(), bss_->ssid->data(), bssid.ToString().c_str(),
-          common::ChanStr(GetJoinChan()).c_str(), common::BandStr(GetJoinChan()).c_str(),
-          assoc_ctx_.is_ht ? "802.11n HT" : "802.11g/a");
+    infof("NIC %s associated with \"%.*s\"(%s) in channel %s, %s, %s\n",
+          self_addr().ToString().c_str(), static_cast<int>(bss_->ssid->size()), bss_->ssid->data(),
+          bssid.ToString().c_str(), common::ChanStr(GetJoinChan()).c_str(),
+          common::BandStr(GetJoinChan()).c_str(), assoc_ctx_.is_ht ? "802.11n HT" : "802.11g/a");
 
     // TODO(porce): Time when to establish BlockAck session
     // Handle MLME-level retry, if MAC-level retry ultimately fails
@@ -662,8 +664,8 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
 
     auto disassoc = frame.body();
     common::MacAddr bssid(bss_->bssid.data());
-    infof("disassociating from %s(%s), reason=%u\n", MACSTR(bssid), bss_->ssid->data(),
-          disassoc->reason_code);
+    infof("disassociating from %s(%.*s), reason=%u\n", MACSTR(bssid),
+          static_cast<int>(bss_->ssid->size()), bss_->ssid->data(), disassoc->reason_code);
 
     state_ = WlanState::kAuthenticated;
     device_->SetStatus(0);
