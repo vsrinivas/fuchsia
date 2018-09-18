@@ -22,7 +22,6 @@ declare_args() {
   # List of arguments to populate /boot/config/devmgr in the Zedboot image.
   zedboot_devmgr_config = [
     "netsvc.netboot=true",
-    "virtcon.font=18x32",
   ]
 }
 
