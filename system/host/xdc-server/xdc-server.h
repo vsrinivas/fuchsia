@@ -20,8 +20,18 @@ public:
 
     void SetStreamId(uint32_t stream_id);
     void SetConnected(bool connected);
+    // Returns whether the set of client events we are polling for has changed.
+    bool UpdatePollState();
+
+    // Queues a completed read transfer to be written to the client.
+    void AddCompletedRead(std::unique_ptr<UsbHandler::Transfer> transfer);
+    // Writes data from completed read transfers to the client until there are
+    // no transfers left, or the client is currently unavailable to accept data.
+    void ProcessCompletedReads(std::unique_ptr<UsbHandler>& usb_handler);
 
     int fd()             const { return fd_.get(); }
+    // Returns the set of client events we should poll for.
+    short events()       const { return events_; }
     bool registered()    const { return registered_; }
     uint32_t stream_id() const { return stream_id_; }
     bool connected()     const { return connected_; }
@@ -29,12 +39,15 @@ public:
 private:
     fbl::unique_fd fd_;
 
+    short events_ = 0;
+
     // Whether the client has registered a stream id.
     bool     registered_ = false;
     uint32_t stream_id_  = 0;
     // True if the client has registered a stream id,
     // and that stream id is also registered on the xdc device side.
     bool     connected_  = false;
+    std::vector<std::unique_ptr<UsbHandler::Transfer>> completed_reads_;
 };
 
 class XdcServer {
@@ -50,6 +63,8 @@ public:
 
 private:
     bool Init();
+
+    void UpdateClientPollEvents();
 
     // Updates poll_fds_ with any newly added or removed usb handler fds.
     void UpdateUsbHandlerFds();

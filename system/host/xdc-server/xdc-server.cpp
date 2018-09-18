@@ -43,6 +43,54 @@ void Client::SetConnected(bool connected) {
     connected_ = connected;
 }
 
+bool Client::UpdatePollState() {
+    short updated_events = events_;
+    // We need to poll for the client writable signal if we have data to send to the client.
+    if (completed_reads_.size() > 0) {
+        updated_events |= POLLOUT;
+    } else {
+        updated_events &= ~POLLOUT;
+    }
+    if (updated_events != events_) {
+        events_ = updated_events;
+        return true;
+    }
+    return false;
+}
+
+void Client::AddCompletedRead(std::unique_ptr<UsbHandler::Transfer> transfer) {
+    completed_reads_.push_back(std::move(transfer));
+}
+
+void Client::ProcessCompletedReads(std::unique_ptr<UsbHandler>& usb_handler) {
+    for (auto iter = completed_reads_.begin(); iter != completed_reads_.end(); ) {
+        std::unique_ptr<UsbHandler::Transfer>& transfer = *iter;
+
+        unsigned char* data = transfer->data() + transfer->offset();
+        size_t len_to_write = transfer->actual_length() - transfer->offset();
+
+        ssize_t total_written = 0;
+        while (total_written < len_to_write) {
+            ssize_t res = send(fd(), data + total_written, len_to_write - total_written, 0);
+            if (res < 0) {
+                if (errno == EAGAIN) {
+                    fprintf(stderr, "can't send completed read to client currently\n");
+                    // Need to wait for client to be writable again.
+                    return;
+                } else {
+                    fprintf(stderr, "can't write to client, err: %s\n", strerror(errno));
+                    return;
+                }
+            }
+            total_written += res;
+            int offset = transfer->offset() + res;
+            assert(transfer->SetOffset(offset));
+        }
+        usb_handler->RequeueRead(std::move(transfer));
+        iter = completed_reads_.erase(iter);
+    }
+}
+
 // static
 std::unique_ptr<XdcServer> XdcServer::Create() {
     auto conn = std::make_unique<XdcServer>(ConstructorTag{});
@@ -90,6 +138,25 @@ bool XdcServer::Init() {
         return false;
     }
     return true;
+}
+
+void XdcServer::UpdateClientPollEvents() {
+    for (auto iter : clients_) {
+        std::shared_ptr<Client> client = iter.second;
+        bool changed = client->UpdatePollState();
+        if (changed) {
+            // We need to update the corresponding file descriptor in the poll_fds_ array
+            // passed to poll.
+            int fd = client->fd();
+            auto is_fd = [fd](auto& elem) { return elem.fd == fd; };
+            auto fd_iter = std::find_if(poll_fds_.begin(), poll_fds_.end(), is_fd);
+            if (fd_iter == poll_fds_.end()) {
+                fprintf(stderr, "could not find pollfd for client with fd %d\n", fd);
+                continue;
+            }
+            fd_iter->events = client->events();
+        }
+    }
 }
 
 void XdcServer::UpdateUsbHandlerFds() {
@@ -194,10 +261,13 @@ void XdcServer::Run() {
                     clients_.erase(iter);
                     continue;
                 }
-                // TODO(jocelyndang): handle client reads / writes.
+                // TODO(jocelyndang): handle client writes.
+                client->ProcessCompletedReads(usb_handler_);
             }
             ++i;
         }
+
+        UpdateClientPollEvents();
     }
 }
 
@@ -289,8 +359,20 @@ void XdcServer::UsbReadComplete(std::unique_ptr<UsbHandler::Transfer> transfer) 
     stream_id = read_packet_state_.header.stream_id;
     if (is_new_packet && stream_id == XDC_MSG_STREAM) {
         HandleCtrlMsg(transfer->data(), transfer->actual_length());
+        return;
     }
-    // TODO(jocelyndang): check if the completed transfer should be send to a registered client.
+    // Pass the completed transfer to the registered client, if any.
+    auto client = GetClient(stream_id);
+    if (!client) {
+        fprintf(stderr, "No client registered for stream %u, dropping read of size %d\n",
+                stream_id, transfer->actual_length());
+        return;
+    }
+    // If it is the start of a new packet, the client should begin reading after the header.
+    int offset = is_new_packet ? sizeof(xdc_packet_header_t) : 0;
+    assert(transfer->SetOffset(offset));
+    client->AddCompletedRead(std::move(transfer));
+    requeue.cancel();
 }
 
 void XdcServer::HandleCtrlMsg(unsigned char* transfer_buf, int transfer_len) {

@@ -19,6 +19,14 @@ zx_status_t UsbHandler::Transfer::FillData(uint32_t stream_id, unsigned char* da
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+bool UsbHandler::Transfer::SetOffset(int offset) {
+    if (offset < 0 || offset > actual_length_) {
+        return false;
+    }
+    offset_ = offset;
+    return true;
+}
+
 // static
 std::unique_ptr<UsbHandler> UsbHandler::Create() {
     auto usb_handler = std::make_unique<UsbHandler>(ConstructorTag{});

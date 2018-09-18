@@ -33,8 +33,13 @@ public:
         // MAX_WRITE_DATA_SIZE.
         zx_status_t FillData(uint32_t stream_id, unsigned char* data, size_t data_len);
 
+        bool SetOffset(int offset);
+
         unsigned char* data() const { return data_; }
         int actual_length() const { return actual_length_; }
+        // Returns where the client has read up to in the data.
+        // An offset equal to actual_length indicates the client has reached the end.
+        int offset() const { return offset_; }
 
     private:
         // Only UsbHandler should create transfers.
@@ -43,6 +48,8 @@ public:
         // TODO(jocelyndang): this should store a libusb_transfer instead.
         unsigned char* data_;
         int actual_length_;
+
+        int offset_;
 
         friend class UsbHandler;
     };
