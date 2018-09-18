@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_cobalt::HistogramBucket;
+use fidl_fuchsia_wlan_mlme::{AssociateResultCodes, AuthenticateResultCodes, JoinResultCodes};
 use fidl_fuchsia_wlan_stats as fidl_stats;
 use fidl_fuchsia_wlan_stats::MlmeStats::{ApMlmeStats, ClientMlmeStats};
 use fuchsia_async as fasync;
@@ -18,6 +19,7 @@ use std::collections::HashMap;
 use std::default::Default;
 use std::ops::Sub;
 use std::sync::Arc;
+use wlan_sme::client::{ConnectFailure, ConnectResult};
 
 use crate::cobalt_reporter::CobaltSender;
 use crate::device::IfaceMap;
@@ -253,19 +255,23 @@ fn report_rssi_stats(
 
 pub fn report_connection_time(
     sender: &mut CobaltSender, conn_started_time: zx::Time, conn_finished_time: zx::Time,
-    result: &wlan_sme::client::ConnectResult,
+    result: &ConnectResult, failure: &Option<ConnectFailure>,
 ) {
     let time_micros = (conn_finished_time - conn_started_time).nanos() / 1000;
-    let result_index = match result {
-        wlan_sme::client::ConnectResult::Success => 0,
-        _ => 1,
+    let cobalt_index = match (result, failure) {
+        (ConnectResult::Success, None) => Some(ConnectionResultLabel::SuccessId),
+        (ConnectResult::Success, Some(_)) => None,
+        (_, Some(failure)) => convert_connect_failure(failure),
+        (_, None) => Some(ConnectionResultLabel::FailId),
     };
 
-    sender.log_elapsed_time(
-        CobaltMetricId::ConnectionTime as u32,
-        result_index,
-        time_micros,
-    );
+    if let Some(cobalt_index) = cobalt_index {
+        sender.log_elapsed_time(
+            CobaltMetricId::ConnectionTime as u32,
+            cobalt_index as u32,
+            time_micros,
+        );
+    }
 }
 
 pub fn report_assoc_success_time(
@@ -280,6 +286,61 @@ pub fn report_rsna_established_time(
 ) {
     let time_micros = (rsna_finished_time - rsna_started_time).nanos() / 1000;
     sender.log_elapsed_time(CobaltMetricId::RsnaTime as u32, 0, time_micros);
+}
+
+#[derive(Debug)]
+enum ConnectionResultLabel {
+    SuccessId = 0,
+    FailId = 1,
+    JoinFailureTimeoutId = 1000,
+    AuthRefusedId = 2000,
+    AuthAntiCloggingTokenRequiredId = 2001,
+    AuthFiniteCyclicGroupNotSupportedId = 2002,
+    AuthRejectedId = 2003,
+    AuthFailureTimeoutId = 2004,
+    AssocRefusedReasonUnspecifiedId = 3000,
+    AssocRefusedNotAuthenticatedId = 3001,
+    AssocRefusedCapabilitiesMismatchId = 3002,
+    AssocRefusedExternalReasonId = 3003,
+    AssocRefusedApOutOfMemoryId = 3004,
+    AssocRefusedBasicRatesMismatchId = 3005,
+    AssocRejectedEmergencyServicesNotSupportedId = 3006,
+    AssocRefusedTemporarilyId = 3007,
+}
+
+fn convert_connect_failure(result: &ConnectFailure) -> Option<ConnectionResultLabel> {
+    use crate::telemetry::ConnectionResultLabel::*;
+    use fidl_fuchsia_wlan_mlme::AssociateResultCodes::*;
+    use fidl_fuchsia_wlan_mlme::AuthenticateResultCodes::*;
+    use fidl_fuchsia_wlan_mlme::JoinResultCodes::*;
+
+    let result = match result {
+        ConnectFailure::JoinFailure(join_failure) => match join_failure {
+            JoinResultCodes::Success => { return None; }
+            JoinFailureTimeout => JoinFailureTimeoutId,
+        },
+        ConnectFailure::AuthenticationFailure(auth_failure) => match auth_failure {
+            AuthenticateResultCodes::Success => { return None; }
+            Refused => AuthRefusedId,
+            AntiCloggingTokenRequired => AuthAntiCloggingTokenRequiredId,
+            FiniteCyclicGroupNotSupported => AuthFiniteCyclicGroupNotSupportedId,
+            AuthenticationRejected => AuthRejectedId,
+            AuthFailureTimeout => AuthFailureTimeoutId,
+        },
+        ConnectFailure::AssociationFailure(assoc_failure) => match assoc_failure {
+            AssociateResultCodes::Success => { return None; }
+            RefusedReasonUnspecified => AssocRefusedReasonUnspecifiedId,
+            RefusedNotAuthenticated => AssocRefusedNotAuthenticatedId,
+            RefusedCapabilitiesMismatch => AssocRefusedCapabilitiesMismatchId,
+            RefusedExternalReason => AssocRefusedExternalReasonId,
+            RefusedApOutOfMemory => AssocRefusedApOutOfMemoryId,
+            RefusedBasicRatesMismatch => AssocRefusedBasicRatesMismatchId,
+            RejectedEmergencyServicesNotSupported => AssocRejectedEmergencyServicesNotSupportedId,
+            RefusedTemporarily => AssocRefusedTemporarilyId,
+        },
+    };
+
+    Some(result)
 }
 
 fn get_diff<T>(last_stat: T, current_stat: T) -> T

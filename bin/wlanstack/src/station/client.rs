@@ -221,10 +221,10 @@ fn handle_user_event(e: client_sme::UserEvent<Tokens>,
                 }
             }
         },
-        client_sme::UserEvent::ConnectFinished { token, result } => {
+        client_sme::UserEvent::ConnectFinished { token, result, failure } => {
             let connection_finished_time = zx::Time::get(zx::ClockId::Monotonic);
             telemetry::report_connection_time(cobalt_sender, token.time_started,
-                                              connection_finished_time, &result);
+                                              connection_finished_time, &result, &failure);
             send_connect_result(token.handle, result).unwrap_or_else(|e| {
                 if !is_peer_closed(&e) {
                     error!("Error sending connect result to user: {}", e);

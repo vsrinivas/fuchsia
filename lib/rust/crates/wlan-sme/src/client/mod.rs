@@ -10,7 +10,7 @@ mod state;
 #[cfg(test)]
 mod test_utils;
 
-use fidl_fuchsia_wlan_mlme::{MlmeEvent, ScanRequest};
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent, ScanRequest};
 use futures::channel::mpsc;
 use log::error;
 use std::sync::Arc;
@@ -74,6 +74,13 @@ pub enum ConnectResult {
     BadCredentials,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ConnectFailure {
+    JoinFailure(fidl_mlme::JoinResultCodes),
+    AuthenticationFailure(fidl_mlme::AuthenticateResultCodes),
+    AssociationFailure(fidl_mlme::AssociateResultCodes),
+}
+
 // A message from the Client to a user or a group of listeners
 #[derive(Debug)]
 pub enum UserEvent<T: Tokens> {
@@ -84,6 +91,7 @@ pub enum UserEvent<T: Tokens> {
     ConnectFinished {
         token: T::ConnectToken,
         result: ConnectResult,
+        failure: Option<ConnectFailure>,
     },
     AssociationStarted {
         att_id: ConnectionAttemptId,
@@ -134,7 +142,8 @@ impl<T: Tokens> ClientSme<T> {
         if let Some(t) = canceled_token {
             self.user_sink.send(UserEvent::ConnectFinished {
                 token: t.user_token,
-                result: ConnectResult::Canceled
+                result: ConnectResult::Canceled,
+                failure: None,
             });
         }
         self.send_scan_request(req);
@@ -198,6 +207,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                                 self.user_sink.send(UserEvent::ConnectFinished {
                                     token: token.user_token,
                                     result: ConnectResult::Failed,
+                                    failure: None,
                                 });
                                 state
                             }
@@ -209,8 +219,9 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                             token: token.user_token,
                             result: match reason {
                                 JoinScanFailure::Canceled => ConnectResult::Canceled,
-                                _ => ConnectResult::Failed
-                            }
+                                _ => ConnectResult::Failed,
+                            },
+                            failure: None,
                         });
                         state
                     },
@@ -390,8 +401,9 @@ mod tests {
 
         // User should get a message that connection failed
         let user_event = user_stream.try_next().unwrap().expect("expect message for user");
-        if let ConnectFinished { result, .. } = user_event {
+        if let ConnectFinished { result, failure, .. } = user_event {
             assert_eq!(result, ConnectResult::Failed);
+            assert_eq!(failure, None);
         } else {
             panic!("unexpected user event type in sent message");
         }
@@ -445,8 +457,9 @@ mod tests {
 
         // User should get a message that connection failed
         let user_event = user_stream.try_next().unwrap().expect("expect message for user");
-        if let ConnectFinished { result, .. } = user_event {
+        if let ConnectFinished { result, failure, .. } = user_event {
             assert_eq!(result, ConnectResult::Failed);
+            assert_eq!(failure, None);
         } else {
             panic!("unexpected user event type in sent message");
         }
