@@ -352,7 +352,7 @@ static zx_status_t attempt_userboot() {
     status = ProcessDispatcher::Create(GetRootJobDispatcher(), "userboot", 0,
                                        &proc_disp, &rights,
                                        &vmar, &vmar_rights);
-    if (status < 0)
+    if (status != ZX_OK)
         return status;
 
     handles[BOOTSTRAP_PROC] = Handle::Make(proc_disp, rights).release();
@@ -395,7 +395,7 @@ static zx_status_t attempt_userboot() {
         // Make a copy of proc, as we need to a keep a copy for the
         // bootstrap message.
         status = ThreadDispatcher::Create(proc, 0, "userboot", &ut_disp, &rights);
-        if (status < 0)
+        if (status != ZX_OK)
             return status;
         handles[BOOTSTRAP_THREAD] = Handle::Make(ut_disp, rights).release();
         thread = DownCastDispatcher<ThreadDispatcher>(&ut_disp);

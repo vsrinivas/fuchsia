@@ -150,7 +150,7 @@ StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state, uint64_t c
     // the packet arena size artificially.  See ZX-2166 for details.
     auto status = port_->Queue(&packet_, new_state, count);
 
-    if ((type_ == ZX_PKT_TYPE_SIGNAL_ONE) || (status < 0))
+    if ((type_ == ZX_PKT_TYPE_SIGNAL_ONE) || (status != ZX_OK))
         return kNeedRemoval;
 
     return 0;
@@ -223,7 +223,7 @@ zx_status_t PortDispatcher::QueueUser(const zx_port_packet_t& packet) {
     port_packet->packet.type = ZX_PKT_TYPE_USER;
 
     auto status = Queue(port_packet, 0u, 0u);
-    if (status < 0)
+    if (status != ZX_OK)
         port_packet->Free();
     return status;
 }

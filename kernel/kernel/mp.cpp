@@ -336,7 +336,7 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
     // Wait for the unplug thread to get scheduled on the target
     do {
         status = event_wait(&unplug_done);
-    } while (status < 0);
+    } while (status != ZX_OK);
 
     // Now that the CPU is no longer processing tasks, move all of its timers
     timer_transition_off_cpu(cpu_id);

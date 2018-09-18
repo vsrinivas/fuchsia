@@ -330,7 +330,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         fbl::RefPtr<ProcessDispatcher> process;
         zx_status_t status =
             up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &process);
-        if (status < 0)
+        if (status != ZX_OK)
             return status;
         if (process.get() == up) {
             // Not safe to look at yourself: the user buffer will live
@@ -360,7 +360,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         fbl::RefPtr<ProcessDispatcher> process;
         zx_status_t status =
             up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &process);
-        if (status < 0)
+        if (status != ZX_OK)
             return status;
         if (process.get() == up) {
             // Not safe to look at yourself: the user buffer will live
@@ -389,7 +389,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
     case ZX_INFO_VMAR: {
         fbl::RefPtr<VmAddressRegionDispatcher> vmar;
         zx_status_t status = up->GetDispatcher(handle, &vmar);
-        if (status < 0)
+        if (status != ZX_OK)
             return status;
 
         auto real_vmar = vmar->vmar();

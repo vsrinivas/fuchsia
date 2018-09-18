@@ -359,7 +359,7 @@ zx_status_t JobDispatcher::SetPolicy(
     auto status = GetSystemPolicyManager()->AddPolicy(
         mode, policy_, in_policy, policy_count, &new_policy);
 
-    if (status < 0)
+    if (status != ZX_OK)
         return status;
 
     policy_ = new_policy;
