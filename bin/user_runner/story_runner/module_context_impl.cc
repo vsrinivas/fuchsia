@@ -72,6 +72,16 @@ void ModuleContextImpl::StartModule(
         module_controller,
     fuchsia::modular::SurfaceRelationPtr surface_relation,
     StartModuleCallback callback) {
+  AddModuleToStory(name, std::move(intent), std::move(module_controller),
+                   std::move(surface_relation), callback);
+}
+
+void ModuleContextImpl::AddModuleToStory(
+    fidl::StringPtr name, fuchsia::modular::Intent intent,
+    fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+        module_controller,
+    fuchsia::modular::SurfaceRelationPtr surface_relation,
+    AddModuleToStoryCallback callback) {
   story_controller_impl_->StartModule(
       module_data_->module_path, name, fidl::MakeOptional(std::move(intent)),
       std::move(module_controller), std::move(surface_relation),
@@ -122,12 +132,12 @@ void ModuleContextImpl::RequestFocus() {
   story_controller_impl_->RequestStoryFocus();
 }
 
-// DEPRECATED.
-// TODO(alexmin): Remove once mods stop calling this API.
 void ModuleContextImpl::Active() {}
 
-void ModuleContextImpl::Done() {
-  story_controller_impl_->HandleModuleDone(module_data_->module_path);
+void ModuleContextImpl::Done() { RemoveSelfFromStory(); }
+
+void ModuleContextImpl::RemoveSelfFromStory() {
+  story_controller_impl_->RemoveModuleFromStory(module_data_->module_path);
 }
 
 void ModuleContextImpl::RequestStoryVisibilityState(

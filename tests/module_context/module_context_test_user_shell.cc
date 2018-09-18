@@ -206,8 +206,9 @@ class TestApp
       "When a module is teared down, the ongoing activity should also be "
       "stopped"};
   TestPoint second_module_active_{
-      "Only second module is still active after first calls Done()"};
-  // Signals the first module to call ModuleContext.Done().
+      "Only second module is still active after first calls "
+      "RemoveSelfFromStory()"};
+  // Signals the first module to call ModuleContext.RemoveSelfFromStory().
   void PerformFirstModuleDone() {
     Signal(kFirstModuleCallDone);
     Await(kFirstModuleTerminated, [this] {
@@ -234,7 +235,8 @@ class TestApp
   }
 
   TestPoint story_still_active_{
-      "The story is still active after first module calls Done()"};
+      "The story is still active after first module calls "
+      "RemoveSelfFromStory()"};
   // Verifies that the story is still running after the first module has called
   // done and been stopped.
   void VerifyStoryStillRunning() {
@@ -247,7 +249,7 @@ class TestApp
   }
 
   TestPoint no_module_active_{
-      "No modules are active after second mod calls Done()"};
+      "No modules are active after second mod calls RemoveSelfFromStory()"};
   TestPoint story_stopped_{"The story was stopped."};
   // Signals the second module to call ModuleContext.Done.
   void PerformSecondModuleDone() {

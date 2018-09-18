@@ -67,6 +67,14 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
                    StartModuleCallback callback) override;
 
   // |fuchsia::modular::ModuleContext|
+  void AddModuleToStory(
+      fidl::StringPtr name, fuchsia::modular::Intent intent,
+      fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+          module_controller,
+      fuchsia::modular::SurfaceRelationPtr surface_relation,
+      AddModuleToStoryCallback callback) override;
+
+  // |fuchsia::modular::ModuleContext|
   void StartContainerInShell(
       fidl::StringPtr name, fuchsia::modular::SurfaceRelation parent_relation,
       fidl::VectorPtr<fuchsia::modular::ContainerLayout> layout,
@@ -94,6 +102,9 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
   // |fuchsia::modular::ModuleContext|
   void Done() override;
+
+  // |fuchsia::modular::ModuleContext|
+  void RemoveSelfFromStory() override;
 
   // |fuchsia::modular::ModuleContext|
   void RequestStoryVisibilityState(

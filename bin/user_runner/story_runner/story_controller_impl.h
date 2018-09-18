@@ -159,8 +159,9 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
       fuchsia::modular::SurfaceRelationPtr surface_relation) override;
 
   // Stops the module at |module_path| in response to a call to
-  // |ModuleContext.Done|.
-  void HandleModuleDone(const fidl::VectorPtr<fidl::StringPtr>& module_path);
+  // |ModuleContext.RemoveSelfFromStory|.
+  void RemoveModuleFromStory(
+      const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
   // Called by ModuleContextImpl.
   void HandleStoryVisibilityStateRequest(
