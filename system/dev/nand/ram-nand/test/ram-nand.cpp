@@ -199,7 +199,7 @@ fbl::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
 
     if (operation_size) {
         zircon_nand_Info info;
-        device->Query(&info, operation_size);
+        device->NandQuery(&info, operation_size);
     }
 
     char name[NAME_MAX];
@@ -244,9 +244,9 @@ bool QueryTest() {
 
     zircon_nand_Info info;
     size_t operation_size;
-    device.Query(&info, &operation_size);
+    device.NandQuery(&info, &operation_size);
     ASSERT_EQ(0, memcmp(&info, &params, sizeof(info)));
-    ASSERT_GT(operation_size, sizeof(nand_op_t));
+    ASSERT_GT(operation_size, sizeof(nand_operation_t));
     END_TEST;
 }
 
@@ -256,7 +256,7 @@ struct OpHeader {
     class NandTest* test;
 };
 
-// Wrapper for a nand_op_t.
+// Wrapper for a nand_operation_t.
 class Operation {
   public:
     explicit Operation(size_t op_size, NandTest* test = 0)
@@ -272,11 +272,11 @@ class Operation {
     size_t buffer_size() const { return buffer_size_; }
     char* buffer() const { return mapped_addr_; }
 
-    // Creates a vmo and sets the handle on the nand_op_t.
+    // Creates a vmo and sets the handle on the nand_operation_t.
     bool SetDataVmo();
     bool SetOobVmo();
 
-    nand_op_t* GetOperation();
+    nand_operation_t* GetOperation();
 
     void OnCompletion(zx_status_t status) {
         status_ = status;
@@ -302,7 +302,7 @@ class Operation {
 };
 
 bool Operation::SetDataVmo() {
-    nand_op_t* operation = GetOperation();
+    nand_operation_t* operation = GetOperation();
     if (!operation) {
         return false;
     }
@@ -311,7 +311,7 @@ bool Operation::SetDataVmo() {
 }
 
 bool Operation::SetOobVmo() {
-    nand_op_t* operation = GetOperation();
+    nand_operation_t* operation = GetOperation();
     if (!operation) {
         return false;
     }
@@ -319,11 +319,11 @@ bool Operation::SetOobVmo() {
     return operation->rw.oob_vmo != ZX_HANDLE_INVALID;
 }
 
-nand_op_t* Operation::GetOperation() {
+nand_operation_t* Operation::GetOperation() {
     if (!raw_buffer_) {
         CreateOperation();
     }
-    return reinterpret_cast<nand_op_t*>(raw_buffer_.get() + sizeof(OpHeader));
+    return reinterpret_cast<nand_operation_t*>(raw_buffer_.get() + sizeof(OpHeader));
 }
 
 zx_handle_t Operation::GetVmo() {
@@ -366,7 +366,7 @@ class NandTest {
     NandTest() {}
     ~NandTest() {}
 
-    static void CompletionCb(nand_op_t* op, zx_status_t status) {
+    static void CompletionCb(void* cookie, zx_status_t status, nand_operation_t* op) {
         OpHeader* header =
                 reinterpret_cast<OpHeader*>(reinterpret_cast<char*>(op) - sizeof(OpHeader));
 
@@ -407,30 +407,29 @@ bool QueueOneTest() {
     NandTest test;
     Operation operation(op_size, &test);
 
-    nand_op_t* op = operation.GetOperation();
+    nand_operation_t* op = operation.GetOperation();
     ASSERT_TRUE(op);
 
     op->rw.command = NAND_OP_WRITE;
-    op->completion_cb = &NandTest::CompletionCb;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     op->rw.length = 1;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_BAD_HANDLE, operation.status());
 
     op->rw.offset_nand = kNumPages;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     ASSERT_TRUE(operation.SetDataVmo());
 
     op->rw.offset_nand = kNumPages - 1;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
 
@@ -451,20 +450,18 @@ bool CheckPattern(uint8_t what, int start, int num_pages, const Operation& opera
 
 // Prepares the operation to write num_pages starting at offset.
 void SetForWrite(int offset, int num_pages, Operation* operation) {
-    nand_op_t* op = operation->GetOperation();
+    nand_operation_t* op = operation->GetOperation();
     op->rw.command = NAND_OP_WRITE;
     op->rw.length = num_pages;
     op->rw.offset_nand = offset;
-    op->completion_cb = &NandTest::CompletionCb;
 }
 
 // Prepares the operation to read num_pages starting at offset.
 void SetForRead(int offset, int num_pages, Operation* operation) {
-    nand_op_t* op = operation->GetOperation();
+    nand_operation_t* op = operation->GetOperation();
     op->rw.command = NAND_OP_READ;
     op->rw.length = num_pages;
     op->rw.offset_nand = offset;
-    op->completion_cb = &NandTest::CompletionCb;
 }
 
 bool ReadWriteTest() {
@@ -479,11 +476,11 @@ bool ReadWriteTest() {
     ASSERT_TRUE(operation.SetDataVmo());
     memset(operation.buffer(), 0x55, operation.buffer_size());
 
-    nand_op_t* op = operation.GetOperation();
+    nand_operation_t* op = operation.GetOperation();
     op->rw.corrected_bit_flips = 125;
 
     SetForWrite(4, 4, &operation);
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
@@ -492,7 +489,7 @@ bool ReadWriteTest() {
     op->rw.command = NAND_OP_READ;
     memset(operation.buffer(), 0, operation.buffer_size());
 
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
     ASSERT_EQ(0, op->rw.corrected_bit_flips);
@@ -515,12 +512,12 @@ bool NewChipTest() {
     ASSERT_TRUE(operation.SetOobVmo());
     memset(operation.buffer(), 0x55, operation.buffer_size());
 
-    nand_op_t* op = operation.GetOperation();
+    nand_operation_t* op = operation.GetOperation();
     op->rw.corrected_bit_flips = 125;
 
     SetForRead(0, kNumPages, &operation);
     op->rw.offset_oob_vmo = kNumPages;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
@@ -568,8 +565,8 @@ bool QueueMultipleTest() {
     SetForRead(0, 2, operations[9].get());
 
     for (const auto& operation : operations) {
-        nand_op_t* op = operation->GetOperation();
-        device->Queue(op);
+        nand_operation_t* op = operation->GetOperation();
+        device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     }
 
     ASSERT_TRUE(test.WaitFor(10));
@@ -607,33 +604,32 @@ bool OobLimitsTest() {
     NandTest test;
     Operation operation(op_size, &test);
 
-    nand_op_t* op = operation.GetOperation();
+    nand_operation_t* op = operation.GetOperation();
     op->rw.command = NAND_OP_READ;
-    op->completion_cb = &NandTest::CompletionCb;
 
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     op->rw.length = 1;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_BAD_HANDLE, operation.status());
 
     op->rw.offset_nand = kNumPages;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     ASSERT_TRUE(operation.SetOobVmo());
 
     op->rw.offset_nand = kNumPages - 1;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
 
     op->rw.length = 5;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
@@ -654,11 +650,11 @@ bool ReadWriteOobTest() {
     const char desired[kOobSize] = { 'a', 'b', 'c', 'd' };
     memcpy(operation.buffer(), desired, kOobSize);
 
-    nand_op_t* op = operation.GetOperation();
+    nand_operation_t* op = operation.GetOperation();
     op->rw.corrected_bit_flips = 125;
 
     SetForWrite(2, 1, &operation);
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
@@ -669,7 +665,7 @@ bool ReadWriteOobTest() {
     op->rw.offset_nand = 1;
     memset(operation.buffer(), 0, kOobSize * 2);
 
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
     ASSERT_EQ(0, op->rw.corrected_bit_flips);
@@ -695,12 +691,12 @@ bool ReadWriteDataAndOobTest() {
     memset(operation.buffer(), 0x55, kPageSize * 2);
     memset(operation.buffer() + kPageSize * 2, 0xaa, kOobSize * 2);
 
-    nand_op_t* op = operation.GetOperation();
+    nand_operation_t* op = operation.GetOperation();
     op->rw.corrected_bit_flips = 125;
 
     SetForWrite(2, 2, &operation);
     op->rw.offset_oob_vmo = 2;  // OOB is right after data.
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
@@ -709,7 +705,7 @@ bool ReadWriteDataAndOobTest() {
     op->rw.command = NAND_OP_READ;
     memset(operation.buffer(), 0, kPageSize * 4);
 
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
     ASSERT_EQ(0, op->rw.corrected_bit_flips);
@@ -735,23 +731,22 @@ bool EraseLimitsTest() {
     Operation operation(op_size, &test);
     ASSERT_TRUE(operation.SetDataVmo());
 
-    nand_op_t* op = operation.GetOperation();
+    nand_operation_t* op = operation.GetOperation();
     op->erase.command = NAND_OP_ERASE;
-    op->completion_cb = &NandTest::CompletionCb;
 
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     op->erase.first_block = 5;
     op->erase.num_blocks = 1;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     op->erase.first_block = 4;
     op->erase.num_blocks = 2;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
@@ -768,13 +763,12 @@ bool EraseTest() {
     NandTest test;
     Operation operation(op_size, &test);
 
-    nand_op_t* op = operation.GetOperation();
+    nand_operation_t* op = operation.GetOperation();
     op->erase.command = NAND_OP_ERASE;
     op->erase.first_block = 3;
     op->erase.num_blocks = 2;
-    op->completion_cb = &NandTest::CompletionCb;
 
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
 
@@ -783,7 +777,7 @@ bool EraseTest() {
     ASSERT_TRUE(operation.SetDataVmo());
     ASSERT_TRUE(operation.SetOobVmo());
     op->rw.offset_oob_vmo = kNumPages;
-    device->Queue(op);
+    device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());

@@ -69,23 +69,25 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice> {
     zx_status_t Unlink();
 
     // NAND protocol implementation.
-    void Query(zircon_nand_Info* info_out, size_t* nand_op_size_out);
-    void Queue(nand_op_t* operation);
-    zx_status_t GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
-                                       uint32_t* num_bad_blocks);
+    void NandQuery(zircon_nand_Info* info_out, size_t* nand_op_size_out);
+    void NandQueue(nand_operation_t* operation, nand_queue_callback completion_cb,
+                   void* cookie);
+    zx_status_t NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
+                                       size_t* num_bad_blocks);
 
   private:
     void Kill();
-    bool AddToList(nand_op_t* operation);
-    bool RemoveFromList(nand_op_t** operation);
+    bool AddToList(nand_operation_t* operation, nand_queue_callback completion_cb,
+                   void* cookie);
+    bool RemoveFromList(nand_operation_t** operation);
     int WorkerThread();
     static int WorkerThreadStub(void* arg);
     uint32_t MainDataSize() const { return params_.NumPages() * params_.page_size; }
 
     // Implementation of the actual commands.
-    zx_status_t ReadWriteData(nand_op_t* operation);
-    zx_status_t ReadWriteOob(nand_op_t* operation);
-    zx_status_t Erase(nand_op_t* operation);
+    zx_status_t ReadWriteData(nand_operation_t* operation);
+    zx_status_t ReadWriteOob(nand_operation_t* operation);
+    zx_status_t Erase(nand_operation_t* operation);
 
     uintptr_t mapped_addr_ = 0;
     zx::vmo vmo_;

@@ -43,10 +43,10 @@ public:
     void DdkRelease() { delete this; }
 
     // nand protocol implementation.
-    void Query(zircon_nand_Info* info_out, size_t* nand_op_size_out);
-    void Queue(nand_op_t* op);
-    zx_status_t GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
-                                       uint32_t* num_bad_blocks);
+    void NandQuery(zircon_nand_Info* info_out, size_t* nand_op_size_out);
+    void NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie);
+    zx_status_t NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
+                                           size_t* num_bad_blocks);
 
     // Bad block protocol implementation.
     zx_status_t BadBlockGetBadBlockList(uint32_t* bad_block_list, size_t bad_block_list_len,

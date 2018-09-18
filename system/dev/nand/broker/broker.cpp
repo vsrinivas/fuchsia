@@ -21,31 +21,33 @@
 
 namespace {
 
-// Wrapper for a nand_op_t.
+// Wrapper for a nand_operation_t.
 class Operation {
   public:
     explicit Operation(size_t op_size) {
         raw_buffer_.reset(new uint8_t[op_size]);
 
         memset(raw_buffer_.get(), 0, op_size);
-        nand_op_t* op = reinterpret_cast<nand_op_t*>(raw_buffer_.get());
-        op->completion_cb = OnCompletion;
-        op->cookie = this;
     }
     ~Operation() {}
 
-    nand_op_t* GetOperation() { return reinterpret_cast<nand_op_t*>(raw_buffer_.get()); }
+    nand_operation_t* GetOperation() {
+        return reinterpret_cast<nand_operation_t*>(raw_buffer_.get());
+    }
 
     // Waits for the operation to complete and returns the operation's status.
-    zx_status_t Wait() {
+    zx_status_t Submit(const nand_protocol_t& nand_proto) {
+        ddk::NandProtocolProxy proxy(&nand_proto);
+        proxy.Queue(GetOperation(), OnCompletion, this);
+
         zx_status_t status = sync_completion_wait(&event_, ZX_TIME_INFINITE);
         sync_completion_reset(&event_);
         return status != ZX_OK ? status : status_;
     }
 
   private:
-    static void OnCompletion(nand_op_t* op, zx_status_t status) {
-        Operation* operation = reinterpret_cast<Operation*>(op->cookie);
+    static void OnCompletion(void* cookie, zx_status_t status, nand_operation_t* op) {
+        Operation* operation = reinterpret_cast<Operation*>(cookie);
         operation->status_ = status;
         sync_completion_signal(&operation->event_);
     }
@@ -159,7 +161,7 @@ zx_status_t Broker::Query(zircon_nand_Info* info) {
 zx_status_t Broker::Queue(uint32_t command, const fuchsia_nand_BrokerRequest& request,
                           uint32_t* corrected_bits) {
     Operation operation(op_size_);
-    nand_op_t* op = operation.GetOperation();
+    nand_operation_t* op = operation.GetOperation();
     op->rw.command = command;
 
     switch (command) {
@@ -180,10 +182,7 @@ zx_status_t Broker::Queue(uint32_t command, const fuchsia_nand_BrokerRequest& re
         ZX_DEBUG_ASSERT(false);
     }
 
-    ddk::NandProtocolProxy proxy(&nand_protocol_);
-    proxy.Queue(op);
-
-    zx_status_t status = operation.Wait();
+    zx_status_t status = operation.Submit(nand_protocol_);
 
     if (command == NAND_OP_READ) {
         *corrected_bits = op->rw.corrected_bit_flips;

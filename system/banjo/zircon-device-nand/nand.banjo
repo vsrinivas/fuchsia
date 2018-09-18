@@ -21,4 +21,3 @@ struct NandInfo {
     /// Partition type GUID from partition map.
     array<uint8>:16 partition_guid;
 };
-

@@ -27,6 +27,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/zircon-nand \
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-nand \
     system/banjo/ddk-protocol-platform-device \
     system/banjo/ddk-protocol-rawnand \
 

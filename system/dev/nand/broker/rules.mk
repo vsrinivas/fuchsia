@@ -32,6 +32,9 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-nand \
     system/fidl/zircon-nand \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-nand \
+
 include make/module.mk
 
 # Unit tests:

@@ -29,6 +29,9 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := system/fidl/zircon-nand
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-nand \
+
 include make/module.mk
 
 # Unit tests:
@@ -67,5 +70,8 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := system/fidl/zircon-nand
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-nand \
 
 include make/module.mk

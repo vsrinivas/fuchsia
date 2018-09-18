@@ -32,13 +32,13 @@ constexpr uint8_t fvm_guid[] = GUID_FVM_VALUE;
 
 struct NandPartOpContext {
     uint32_t offset;
-    void (*completion_cb)(nand_op_t* op, zx_status_t status);
+    nand_queue_callback completion_cb;
     void* cookie;
 };
 
 // Shim for calling sub-partition's callback.
-void CompletionCallback(nand_op_t* op, zx_status_t status) {
-    auto* ctx = static_cast<NandPartOpContext*>(op->cookie);
+void CompletionCallback(void* cookie, zx_status_t status, nand_operation_t* op) {
+    auto* ctx = reinterpret_cast<NandPartOpContext*>(cookie);
     // Re-translate the offsets.
     switch (op->command) {
     case NAND_OP_READ:
@@ -51,9 +51,7 @@ void CompletionCallback(nand_op_t* op, zx_status_t status) {
     default:
         ZX_ASSERT(false);
     }
-    op->completion_cb = ctx->completion_cb;
-    op->cookie = ctx->cookie;
-    op->completion_cb(op, status);
+    ctx->completion_cb(ctx->cookie, status, op);
 }
 
 } // namespace
@@ -68,7 +66,7 @@ zx_status_t NandPartDevice::Create(zx_device_t* parent) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // Query parent to get its zircon_nand_Info and size for nand_op_t.
+    // Query parent to get its zircon_nand_Info and size for nand_operation_t.
     zircon_nand_Info nand_info;
     size_t parent_op_size;
     nand_proto.ops->query(nand_proto.ctx, &nand_info, &parent_op_size);
@@ -206,13 +204,14 @@ zx_status_t NandPartDevice::Bind(const char* name, uint32_t copy_count) {
     return ZX_OK;
 }
 
-void NandPartDevice::Query(zircon_nand_Info* info_out, size_t* nand_op_size_out) {
+void NandPartDevice::NandQuery(zircon_nand_Info* info_out, size_t* nand_op_size_out) {
     memcpy(info_out, &nand_info_, sizeof(*info_out));
     // Add size of extra context.
     *nand_op_size_out = parent_op_size_ + sizeof(NandPartOpContext);
 }
 
-void NandPartDevice::Queue(nand_op_t* op) {
+void NandPartDevice::NandQueue(nand_operation_t* op, nand_queue_callback completion_cb,
+                               void* cookie) {
     auto* ctx =
         reinterpret_cast<NandPartOpContext*>(reinterpret_cast<uintptr_t>(op) + parent_op_size_);
     uint32_t command = op->command;
@@ -229,22 +228,19 @@ void NandPartDevice::Queue(nand_op_t* op) {
         op->erase.first_block += erase_block_start_;
         break;
     default:
-        op->completion_cb(op, ZX_ERR_NOT_SUPPORTED);
+        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, op);
         return;
     }
 
-    ctx->completion_cb = op->completion_cb;
-    ctx->cookie = op->cookie;
-
-    op->completion_cb = CompletionCallback;
-    op->cookie = ctx;
+    ctx->completion_cb = completion_cb;
+    ctx->cookie = cookie;
 
     // Call parent's queue
-    nand_.Queue(op);
+    nand_.Queue(op, CompletionCallback, ctx);
 }
 
-zx_status_t NandPartDevice::GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
-                                                   uint32_t* num_bad_blocks) {
+zx_status_t NandPartDevice::NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
+                                                       size_t* num_bad_blocks) {
     // TODO implement this.
     *num_bad_blocks = 0;
     return ZX_ERR_NOT_SUPPORTED;
@@ -297,7 +293,7 @@ zx_status_t NandPartDevice::DdkGetProtocol(uint32_t proto_id, void* protocol) {
     proto->ctx = this;
     switch (proto_id) {
     case ZX_PROTOCOL_NAND:
-        proto->ops = &nand_proto_ops_;
+        proto->ops = &ops_;
         break;
     case ZX_PROTOCOL_BAD_BLOCK:
         proto->ops = &bad_block_protocol_ops_;

@@ -28,7 +28,9 @@ typedef struct nand_device {
 
 // Nand io transactions. One per client request.
 typedef struct nand_io {
-    nand_op_t nand_op;
+    nand_operation_t nand_op;
+    nand_queue_callback completion_cb;
+    void* cookie;
     list_node_t node;
 } nand_io_t;
 

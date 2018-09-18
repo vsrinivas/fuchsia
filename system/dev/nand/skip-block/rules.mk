@@ -32,7 +32,8 @@ MODULE_FIDL_LIBS := \
     system/fidl/zircon-nand.skipblock
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-bad-block
+    system/banjo/ddk-protocol-bad-block \
+    system/banjo/ddk-protocol-nand \
 
 include make/module.mk
 

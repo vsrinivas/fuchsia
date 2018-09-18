@@ -35,8 +35,8 @@
 
 #define NAND_READ_RETRIES 3
 
-static void nand_io_complete(nand_op_t* nand_op, zx_status_t status) {
-    nand_op->completion_cb(nand_op, status);
+static void nand_io_complete(nand_io_t* io, zx_status_t status) {
+    io->completion_cb(io->cookie, status, &io->nand_op);
 }
 
 // Calls controller specific read function.
@@ -76,7 +76,7 @@ zx_status_t nand_erase_block(nand_device_t* dev, uint32_t nand_page) {
     return raw_nand_erase_block(&dev->host, nand_page);
 }
 
-zx_status_t nand_erase_op(nand_device_t* dev, nand_op_t* nand_op) {
+zx_status_t nand_erase_op(nand_device_t* dev, nand_operation_t* nand_op) {
     uint32_t nand_page;
 
     for (uint32_t i = 0; i < nand_op->erase.num_blocks; i++) {
@@ -90,7 +90,7 @@ zx_status_t nand_erase_op(nand_device_t* dev, nand_op_t* nand_op) {
     return ZX_OK;
 }
 
-static zx_status_t nand_read_op(nand_device_t* dev, nand_op_t* nand_op) {
+static zx_status_t nand_read_op(nand_device_t* dev, nand_operation_t* nand_op) {
     uint8_t *aligned_vaddr_data = NULL;
     uint8_t *aligned_vaddr_oob = NULL;
     uint8_t *vaddr_data = NULL;
@@ -178,7 +178,7 @@ static zx_status_t nand_read_op(nand_device_t* dev, nand_op_t* nand_op) {
     return status;
 }
 
-static zx_status_t nand_write_op(nand_device_t* dev, nand_op_t* nand_op) {
+static zx_status_t nand_write_op(nand_device_t* dev, nand_operation_t* nand_op) {
     uint8_t *aligned_vaddr_data = NULL;
     uint8_t *aligned_vaddr_oob = NULL;
     uint8_t *vaddr_data = NULL;
@@ -261,7 +261,7 @@ static zx_status_t nand_write_op(nand_device_t* dev, nand_op_t* nand_op) {
 
 static void nand_do_io(nand_device_t* dev, nand_io_t* io) {
     zx_status_t status = ZX_OK;
-    nand_op_t* nand_op = &io->nand_op;
+    nand_operation_t* nand_op = &io->nand_op;
 
     ZX_DEBUG_ASSERT(dev != NULL);
     ZX_DEBUG_ASSERT(io != NULL);
@@ -278,7 +278,7 @@ static void nand_do_io(nand_device_t* dev, nand_io_t* io) {
     default:
         ZX_DEBUG_ASSERT(false); // Unexpected.
     }
-    nand_io_complete(nand_op, status);
+    nand_io_complete(io, status);
 }
 
 // Initialization is complete by the time the thread starts.
@@ -318,34 +318,38 @@ static zx_status_t nand_worker_thread(void* arg) {
     return ZX_OK;
 }
 
-static void nand_query(void* ctx, zircon_nand_Info* info_out, size_t* nand_op_size_out) {
+static void _nand_query(void* ctx, zircon_nand_Info* info_out, size_t* nand_op_size_out) {
     nand_device_t* dev = (nand_device_t*)ctx;
 
     memcpy(info_out, &dev->nand_info, sizeof(*info_out));
     *nand_op_size_out = sizeof(nand_io_t);
 }
 
-static void nand_queue(void* ctx, nand_op_t* op) {
+static void _nand_queue(void* ctx, nand_operation_t* op, nand_queue_callback completion_cb,
+                       void* cookie) {
     nand_device_t* dev = (nand_device_t*)ctx;
     nand_io_t* io = containerof(op, nand_io_t, nand_op);
 
-    if (op->completion_cb == NULL) {
+    if (completion_cb == NULL) {
         zxlogf(TRACE, "nand: nand op %p completion_cb unset!\n", op);
         zxlogf(TRACE, "nand: cannot queue command!\n");
         return;
     }
+
+    io->completion_cb = completion_cb;
+    io->cookie = cookie;
 
     switch (op->command) {
     case NAND_OP_READ:
     case NAND_OP_WRITE: {
         if (op->rw.offset_nand >= dev->num_nand_pages || !op->rw.length ||
             (dev->num_nand_pages - op->rw.offset_nand) < op->rw.length) {
-            op->completion_cb(op, ZX_ERR_OUT_OF_RANGE);
+            nand_io_complete(io, ZX_ERR_OUT_OF_RANGE);
             return;
         }
         if (op->rw.data_vmo == ZX_HANDLE_INVALID &&
             op->rw.oob_vmo == ZX_HANDLE_INVALID) {
-            op->completion_cb(op, ZX_ERR_BAD_HANDLE);
+            nand_io_complete(io, ZX_ERR_BAD_HANDLE);
             return;
         }
         break;
@@ -354,13 +358,13 @@ static void nand_queue(void* ctx, nand_op_t* op) {
         if (!op->erase.num_blocks ||
             op->erase.first_block >= dev->nand_info.num_blocks ||
             (op->erase.num_blocks > (dev->nand_info.num_blocks - op->erase.first_block))) {
-            op->completion_cb(op, ZX_ERR_OUT_OF_RANGE);
+            nand_io_complete(io, ZX_ERR_OUT_OF_RANGE);
             return;
         }
         break;
 
     default:
-        op->completion_cb(op, ZX_ERR_NOT_SUPPORTED);
+        nand_io_complete(io, ZX_ERR_NOT_SUPPORTED);
         return;
     }
 
@@ -373,18 +377,18 @@ static void nand_queue(void* ctx, nand_op_t* op) {
     mtx_unlock(&dev->lock);
 }
 
-static zx_status_t nand_get_factory_bad_block_list(void* ctx, uint32_t* bad_blocks,
-                                                   uint32_t bad_block_len,
-                                                   uint32_t* num_bad_blocks) {
+static zx_status_t _nand_get_factory_bad_block_list(void* ctx, uint32_t* bad_blocks,
+                                                   size_t bad_block_len,
+                                                   size_t* num_bad_blocks) {
     *num_bad_blocks = 0;
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 // Nand protocol.
 static nand_protocol_ops_t nand_proto = {
-    .query = nand_query,
-    .queue = nand_queue,
-    .get_factory_bad_block_list = nand_get_factory_bad_block_list,
+    .query = _nand_query,
+    .queue = _nand_queue,
+    .get_factory_bad_block_list = _nand_get_factory_bad_block_list,
 };
 
 static void nand_unbind(void* ctx) {
@@ -404,7 +408,7 @@ static void nand_release(void* ctx) {
     nand_io_t* io = NULL;
     list_for_every_entry (&dev->io_list, io, nand_io_t, node) {
         mtx_unlock(&dev->lock);
-        nand_io_complete(&io->nand_op, ZX_ERR_BAD_STATE);
+        nand_io_complete(io, ZX_ERR_BAD_STATE);
         mtx_lock(&dev->lock);
     }
     mtx_unlock(&dev->lock);
