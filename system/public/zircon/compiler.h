@@ -33,6 +33,7 @@
 #define __SRAM __NO_INLINE __SECTION(".sram.text")
 #define __CONSTRUCTOR __attribute__((__constructor__))
 #define __DESTRUCTOR __attribute__((__destructor__))
+#define __RESTRICT __restrict
 
 #ifndef __clang__
 #define __LEAF_FN __attribute__((__leaf__))
