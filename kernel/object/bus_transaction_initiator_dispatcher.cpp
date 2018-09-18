@@ -51,7 +51,7 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, ui
         return ZX_ERR_INVALID_ARGS;
     }
 
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<fbl::Mutex> guard{get_lock()};
 
     if (zero_handles_) {
         return ZX_ERR_BAD_STATE;
@@ -67,13 +67,13 @@ void BusTransactionInitiatorDispatcher::ReleaseQuarantine() {
     // The PMT dtor will call RemovePmo, which will reacquire this BTI's lock.
     // To avoid deadlock, drop the lock before letting the quarantined PMTs go.
     {
-        Guard<fbl::Mutex> guard{&lock_};
+        Guard<fbl::Mutex> guard{get_lock()};
         quarantine_.swap(tmp);
     }
 }
 
 void BusTransactionInitiatorDispatcher::on_zero_handles() {
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<fbl::Mutex> guard{get_lock()};
     // Prevent new pinning from happening.  The Dispatcher will stick around
     // until all of the PMTs are closed.
     zero_handles_ = true;
@@ -95,13 +95,13 @@ void BusTransactionInitiatorDispatcher::AddPmoLocked(PinnedMemoryTokenDispatcher
 }
 
 void BusTransactionInitiatorDispatcher::RemovePmo(PinnedMemoryTokenDispatcher* pmt) {
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<fbl::Mutex> guard{get_lock()};
     DEBUG_ASSERT(pmt->dll_pmt_.InContainer());
     pinned_memory_.erase(*pmt);
 }
 
 void BusTransactionInitiatorDispatcher::Quarantine(fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt) {
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<fbl::Mutex> guard{get_lock()};
 
     DEBUG_ASSERT(pmt->dll_pmt_.InContainer());
     quarantine_.push_back(fbl::move(pmt));

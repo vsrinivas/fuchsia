@@ -67,33 +67,31 @@ protected:
     friend PinnedMemoryTokenDispatcher;
 
     // Used to register a PMT pointer during PMT construction
-    void AddPmoLocked(PinnedMemoryTokenDispatcher* pmt) TA_REQ(lock_);
+    void AddPmoLocked(PinnedMemoryTokenDispatcher* pmt) TA_REQ(get_lock());
     // Used to unregister a PMT pointer during PMT destruction
     void RemovePmo(PinnedMemoryTokenDispatcher* pmt);
 
     // Remove |pmt| from pinned_memory_ and append it to the quarantine_ list.
     // This will prevent its underlying VMO from being unpinned until the
     // quarantine is cleared.
-    void Quarantine(fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt) TA_EXCL(lock_);
+    void Quarantine(fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt) TA_EXCL(get_lock());
 
 private:
     BusTransactionInitiatorDispatcher(fbl::RefPtr<Iommu> iommu, uint64_t bti_id);
-    void PrintQuarantineWarningLocked() TA_REQ(lock_);
+    void PrintQuarantineWarningLocked() TA_REQ(get_lock());
 
     fbl::Canary<fbl::magic("BTID")> canary_;
 
-    // TODO(teisenbe): Unify this lock with the SoloDispatcher lock
-    DECLARE_MUTEX(BusTransactionInitiatorDispatcher) lock_;
     const fbl::RefPtr<Iommu> iommu_;
     const uint64_t bti_id_;
 
     using PmoList = fbl::DoublyLinkedList<PinnedMemoryTokenDispatcher*,
           PinnedMemoryTokenDispatcher::PinnedMemoryTokenListTraits>;
-    PmoList pinned_memory_ TA_GUARDED(lock_);
+    PmoList pinned_memory_ TA_GUARDED(get_lock());
 
     using QuarantineList = fbl::DoublyLinkedList<fbl::RefPtr<PinnedMemoryTokenDispatcher>,
           PinnedMemoryTokenDispatcher::QuarantineListTraits>;
-    QuarantineList quarantine_ TA_GUARDED(lock_);
+    QuarantineList quarantine_ TA_GUARDED(get_lock());
 
-    bool zero_handles_ TA_GUARDED(lock_);
+    bool zero_handles_ TA_GUARDED(get_lock());
 };
