@@ -2,15 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <dirent.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <threads.h>
-#include <unistd.h>
-
-#include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <unittest/unittest.h>
@@ -21,7 +12,8 @@ namespace {
 bool test_fidl_basic() {
     BEGIN_TEST;
 
-    zx_handle_t h, request = ZX_HANDLE_INVALID;
+    zx_handle_t h = ZX_HANDLE_INVALID;
+    zx_handle_t request = ZX_HANDLE_INVALID;
     fuchsia_io_NodeInfo info = {};
 
     ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);

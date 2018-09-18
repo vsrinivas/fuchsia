@@ -11,6 +11,7 @@ MODULE_USERTEST_GROUP := fs
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/fdio-tests.cpp \
     $(LOCAL_DIR)/fidl-tests.cpp \
     $(LOCAL_DIR)/main.c \
 

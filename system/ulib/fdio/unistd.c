@@ -22,6 +22,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <fuchsia/io/c/fidl.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
@@ -516,7 +517,6 @@ static zx_status_t __fdio_opendir_containing(fdio_t** io, const char* path, char
     return __fdio_opendir_containing_at(io, AT_FDCWD, path, name);
 }
 
-
 // hook into libc process startup
 // this is called prior to main to set up the fdio world
 // and thus does not use the fdio_lock
@@ -547,19 +547,45 @@ void __libc_extensions_init(uint32_t handle_count,
         unsigned arg_fd = arg & (~FDIO_FLAG_USE_FOR_STDIO);
 
         switch (PA_HND_TYPE(handle_info[n])) {
-        case PA_FDIO_REMOTE:
+        case PA_FDIO_REMOTE: {
             // remote objects may have a second handle
             // which is for signaling events
+            zx_handle_t event = ZX_HANDLE_INVALID;
             if (((n + 1) < handle_count) &&
                 (handle_info[n] == handle_info[n + 1])) {
-                fdio_fdtab[arg_fd] = fdio_remote_create(h, handle[n + 1]);
-                handle_info[n + 1] = 0;
+                // TODO: Remove this case once all clients migrate to providing
+                // a single handle for PA_FDIO_REMOTE.
+                event = handle[n + 1];
+                handle_info[n + 1] = ZX_HANDLE_INVALID;
             } else {
-                fdio_fdtab[arg_fd] = fdio_remote_create(h, 0);
+                fuchsia_io_NodeInfo info;
+                memset(&info, 0, sizeof(info));
+                zx_status_t status = fuchsia_io_NodeDescribe(h, &info);
+                if (status != ZX_OK) {
+                    LOG(1, "fdio: Failed to describe fd=%d (rio) status=%d (%s)\n",
+                        arg_fd, status, zx_status_get_string(status));
+                    zx_handle_close(h);
+                    continue;
+                }
+
+                switch (info.tag) {
+                case fuchsia_io_NodeInfoTag_file:
+                    event = info.file.event;
+                    break;
+                case fuchsia_io_NodeInfoTag_device:
+                    event = info.device.event;
+                    break;
+                default:
+                    event = ZX_HANDLE_INVALID;
+                    break;
+                }
             }
-            LOG(1, "fdio: inherit fd=%d (rio)\n", arg_fd);
+
+            fdio_fdtab[arg_fd] = fdio_remote_create(h, event);
             fdio_fdtab[arg_fd]->dupcount++;
+            LOG(1, "fdio: inherit fd=%d (rio)\n", arg_fd);
             break;
+        }
         case PA_FDIO_PIPE:
             fdio_fdtab[arg_fd] = fdio_pipe_create(h);
             fdio_fdtab[arg_fd]->dupcount++;

@@ -414,6 +414,7 @@ zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* info) {
     static_assert(__builtin_offsetof(zxrio_node_info_t, device.e) ==
                   __builtin_offsetof(fuchsia_io_NodeInfo, device.event), "Unaligned Device");
     // Connection::NodeDescribe also relies on these static_asserts.
+    // fidl_describe also relies on these static_asserts.
 
     return zxrio_decode_describe_handle(info, extra_handle);
 }
@@ -681,7 +682,7 @@ zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
         if ((r = zx_channel_create(0, &h0, &h1)) < 0) {
             return r;
         }
-        if ((r = zxrio_connect(rio_h, h1, ZXFIDL_OPEN, flags, mode, name)) < 0) {
+        if ((r = zxrio_connect(rio_h, h1, op, flags, mode, name)) < 0) {
             zx_handle_close(h0);
             return r;
         }
@@ -732,33 +733,25 @@ static zx_status_t zxrio_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types
     zxrio_t* rio = (void*)io;
     zx_handle_t h;
     zxrio_describe_t info;
-    zx_status_t r = zxrio_getobject(rio->h, ZXFIDL_CLONE, "", ZX_FS_FLAG_DESCRIBE, 0, &info, &h);
+    zx_status_t r = zxrio_getobject(rio->h, ZXFIDL_CLONE, "", 0, 0, &info, &h);
     if (r < 0) {
         return r;
     }
     handles[0] = h;
     types[0] = PA_FDIO_REMOTE;
-    if (zxrio_object_extract_handle(&info.extra, &handles[1]) == ZX_OK) {
-        types[1] = PA_FDIO_REMOTE;
-        return 2;
-    }
     return 1;
 }
 
 static zx_status_t zxrio_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
     zxrio_t* rio = (void*)io;
     LOG(1, "fdio: zxrio_unwrap(%p,...)\n");
-    zx_status_t r;
     handles[0] = rio->h;
     types[0] = PA_FDIO_REMOTE;
     if (rio->event != ZX_HANDLE_INVALID) {
-        handles[1] = rio->event;
-        types[1] = PA_FDIO_REMOTE;
-        r = 2;
-    } else {
-        r = 1;
+        zx_handle_close(rio->event);
+        rio->event = ZX_HANDLE_INVALID;
     }
-    return r;
+    return 1;
 }
 
 static void zxrio_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals) {
