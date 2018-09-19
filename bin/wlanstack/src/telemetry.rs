@@ -32,6 +32,7 @@ const REPORT_PERIOD_MINUTES: i64 = 1;
 enum CobaltMetricId {
     RsnaTime = 2,
     AssociationTime = 3,
+    ScanTime = 4,
     DispatcherPacketCounter = 5,
     ClientAssocDataRssi = 6,
     ClientBeaconRssi = 7,
@@ -251,6 +252,17 @@ fn report_rssi_stats(
     if !histogram.is_empty() {
         sender.log_int_histogram(rssi_metric_id, histogram);
     }
+}
+
+pub fn report_scan_time(
+    sender: &mut CobaltSender, scan_started_time: zx::Time, scan_finished_time: zx::Time,
+) {
+    let time_micros = (scan_finished_time - scan_started_time).nanos() / 1000;
+    sender.log_elapsed_time(
+        CobaltMetricId::ScanTime as u32,
+        0,
+        time_micros,
+    );
 }
 
 pub fn report_connection_time(

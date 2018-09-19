@@ -57,6 +57,8 @@ pub struct ConnectConfig<T> {
 // by a DisassociateInd message from the MLME.
 pub type ConnectionAttemptId = u64;
 
+pub type ScanTxnId = u64;
+
 pub struct ClientSme<T: Tokens> {
     state: Option<State<T>>,
     scan_sched: ScanScheduler<T::ScanToken, ConnectConfig<T::ConnectToken>>,
@@ -92,6 +94,12 @@ pub enum UserEvent<T: Tokens> {
         token: T::ConnectToken,
         result: ConnectResult,
         failure: Option<ConnectFailure>,
+    },
+    MlmeScanStart {
+        txn_id: ScanTxnId,
+    },
+    MlmeScanEnd {
+        txn_id: ScanTxnId,
     },
     AssociationStarted {
         att_id: ConnectionAttemptId,
@@ -175,6 +183,7 @@ impl<T: Tokens> ClientSme<T> {
 
     fn send_scan_request(&mut self, req: Option<ScanRequest>) {
         if let Some(req) = req {
+            self.user_sink.send(UserEvent::MlmeScanStart { txn_id: req.txn_id} );
             self.mlme_sink.send(MlmeRequest::Scan(req));
         }
     }
@@ -188,6 +197,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 state
             },
             MlmeEvent::OnScanEnd { end } => {
+                self.user_sink.send(UserEvent::MlmeScanEnd { txn_id: end.txn_id} );
                 let (result, request) = self.scan_sched.on_mlme_scan_end(end);
                 self.send_scan_request(request);
                 match result {
@@ -399,6 +409,22 @@ mod tests {
             }
         }
 
+        // User should get a message that scan started
+        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
+        if let UserEvent::MlmeScanStart { txn_id } = user_event {
+            assert_eq!(txn_id, 1);
+        } else {
+            panic!("unexpected user event type in sent message");
+        }
+
+        // User should get a message that scan ended
+        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
+        if let UserEvent::MlmeScanEnd { txn_id } = user_event {
+            assert_eq!(txn_id, 1);
+        } else {
+            panic!("unexpected user event type in sent message");
+        }
+
         // User should get a message that connection failed
         let user_event = user_stream.try_next().unwrap().expect("expect message for user");
         if let ConnectFinished { result, failure, .. } = user_event {
@@ -453,6 +479,22 @@ mod tests {
                     break;
                 }
             }
+        }
+
+        // User should get a message that scan started
+        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
+        if let UserEvent::MlmeScanStart { txn_id } = user_event {
+            assert_eq!(txn_id, 1);
+        } else {
+            panic!("unexpected user event type in sent message");
+        }
+
+        // User should get a message that scan ended
+        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
+        if let UserEvent::MlmeScanEnd { txn_id } = user_event {
+            assert_eq!(txn_id, 1);
+        } else {
+            panic!("unexpected user event type in sent message");
         }
 
         // User should get a message that connection failed

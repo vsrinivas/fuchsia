@@ -13,7 +13,8 @@ use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use wlan_sme::{client as client_sme, DeviceInfo};
-use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult, DiscoveryError, DiscoveryResult, EssInfo};
+use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult,
+                       DiscoveryError, DiscoveryResult, EssInfo, ScanTxnId};
 use fuchsia_zircon as zx;
 
 use crate::cobalt_reporter::CobaltSender;
@@ -40,6 +41,8 @@ type Sme = client_sme::ClientSme<Tokens>;
 
 struct ConnectionTimes {
     att_id: ConnectionAttemptId,
+    txn_id: ScanTxnId,
+    scan_started_time: Option<zx::Time>,
     assoc_started_time: Option<zx::Time>,
     rsna_started_time: Option<zx::Time>,
 }
@@ -74,6 +77,8 @@ async fn serve_fidl(sme: Arc<Mutex<Sme>>,
 {
     let mut fidl_clients = ConcurrentTasks::new();
     let mut connection_times = ConnectionTimes { att_id: 0,
+                                                 txn_id: 0,
+                                                 scan_started_time: None,
                                                  assoc_started_time: None,
                                                  rsna_started_time: None };
     loop {
@@ -175,9 +180,9 @@ fn status(sme: &Arc<Mutex<Sme>>) -> fidl_sme::ClientStatusResponse {
     }
 }
 
-fn att_id_mismatch(this: ConnectionAttemptId, other: ConnectionAttemptId) -> bool {
+fn id_mismatch(this: u64, other: u64, id_type: &str) -> bool {
     if this != other {
-        info!("Found event with different ConnectionAttemptId than expected: {}, {}", this, other);
+        info!("Found an event with different {} than expected: {}, {}", id_type, this, other);
         return true;
     }
     return false;
@@ -188,14 +193,28 @@ fn handle_user_event(e: client_sme::UserEvent<Tokens>,
                      connection_times: &mut ConnectionTimes,
 ) {
     match e {
-        client_sme::UserEvent::ScanFinished{ tokens, result } =>
+        client_sme::UserEvent::ScanFinished { tokens, result } =>
             send_all_scan_results(tokens, result),
+        client_sme::UserEvent::MlmeScanStart { txn_id } => {
+            connection_times.txn_id = txn_id;
+            connection_times.scan_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
+        },
+        client_sme::UserEvent::MlmeScanEnd { txn_id } => {
+            if id_mismatch(txn_id, connection_times.txn_id, "ScanTxnId") {
+                return;
+            }
+            if let Some(scan_started_time) = connection_times.scan_started_time {
+                let scan_finished_time = zx::Time::get(zx::ClockId::Monotonic);
+                telemetry::report_scan_time(cobalt_sender, scan_started_time,
+                                             scan_finished_time);
+            }
+        },
         client_sme::UserEvent::AssociationStarted { att_id } => {
             connection_times.att_id = att_id;
             connection_times.assoc_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
         },
         client_sme::UserEvent::AssociationSuccess { att_id } => {
-            if att_id_mismatch(att_id, connection_times.att_id) {
+            if id_mismatch(att_id, connection_times.att_id, "ConnectionAttemptId") {
                 return;
             }
             if let Some(assoc_started_time) = connection_times.assoc_started_time {
@@ -209,7 +228,7 @@ fn handle_user_event(e: client_sme::UserEvent<Tokens>,
             connection_times.rsna_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
         },
         client_sme::UserEvent::RsnaEstablished { att_id } => {
-            if att_id_mismatch(att_id, connection_times.att_id) {
+            if id_mismatch(att_id, connection_times.att_id, "ConnectionAttemptId") {
                 return;
             }
             match connection_times.rsna_started_time {
