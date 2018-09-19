@@ -13,7 +13,7 @@
 #include "lib/svc/cpp/services.h"
 
 int main(int argc, const char** argv) {
-  std::string server_url = "echo2_server_cpp";
+  std::string server_url = "fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx";
   std::string msg = "hello world";
 
   for (int i = 1; i < argc - 1; ++i) {

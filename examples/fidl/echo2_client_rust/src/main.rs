@@ -18,7 +18,7 @@ fn main() -> Result<(), Error> {
     #[structopt(name = "echo_client_rust")]
     struct Opt {
         #[structopt(long = "server", help = "URL of echo server",
-                    default_value = "echo2_server_rust")]
+                    default_value = "fuchsia-pkg://fuchsia.com/echo2_server_rust#meta/echo2_server_rust.cmx")]
         server_url: String,
     }
 
