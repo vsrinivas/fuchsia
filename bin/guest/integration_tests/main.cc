@@ -31,7 +31,8 @@ class GuestTest : public component::testing::TestWithEnvironment {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = kGuestMgrUrl;
     ASSERT_EQ(ZX_OK, services->AddServiceWithLaunchInfo(
-        std::move(launch_info), fuchsia::guest::EnvironmentManager::Name_));
+                         std::move(launch_info),
+                         fuchsia::guest::EnvironmentManager::Name_));
     enclosing_environment_ =
         CreateNewEnclosingEnvironment(kRealm, std::move(services));
     ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment_.get()));
@@ -42,18 +43,19 @@ class GuestTest : public component::testing::TestWithEnvironment {
     cpu_arg << "--cpus=" << std::to_string(num_cpus);
     guest_launch_info.args.push_back(cpu_arg.str());
 
-    enclosing_environment_->ConnectToService(guest_mgr_.NewRequest());
-    ASSERT_TRUE(guest_mgr_);
-    guest_mgr_->Create(guest_launch_info.url, guest_env_.NewRequest());
-    ASSERT_TRUE(guest_env_);
+    enclosing_environment_->ConnectToService(environment_manager_.NewRequest());
+    ASSERT_TRUE(environment_manager_);
+    environment_manager_->Create(guest_launch_info.url,
+                                 environment_controller_.NewRequest());
+    ASSERT_TRUE(environment_controller_);
 
-    guest_env_->LaunchInstance(std::move(guest_launch_info),
-                               guest_controller_.NewRequest(),
-                               [](fuchsia::guest::InstanceInfo) {});
-    ASSERT_TRUE(guest_controller_);
+    environment_controller_->LaunchInstance(
+        std::move(guest_launch_info), instance_controller_.NewRequest(),
+        [](fuchsia::guest::InstanceInfo) {});
+    ASSERT_TRUE(instance_controller_);
 
     zx::socket socket;
-    guest_controller_->GetSerial(
+    instance_controller_->GetSerial(
         [&socket](zx::socket s) { socket = std::move(s); });
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return socket.is_valid(); },
                                           zx::sec(5)));
@@ -68,9 +70,9 @@ class GuestTest : public component::testing::TestWithEnvironment {
 
   std::unique_ptr<component::testing::EnclosingEnvironment>
       enclosing_environment_;
-  fuchsia::guest::EnvironmentManagerPtr guest_mgr_;
-  fuchsia::guest::EnvironmentControllerPtr guest_env_;
-  fuchsia::guest::InstanceControllerPtr guest_controller_;
+  fuchsia::guest::EnvironmentManagerPtr environment_manager_;
+  fuchsia::guest::EnvironmentControllerPtr environment_controller_;
+  fuchsia::guest::InstanceControllerPtr instance_controller_;
   TestSerial serial_;
 };
 
