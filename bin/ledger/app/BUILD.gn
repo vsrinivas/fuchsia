@@ -134,6 +134,7 @@ source_set("unittests") {
 
   sources = [
     "delaying_facade_unittest.cc",
+    "disk_cleanup_manager_unittest.cc",
     "fidl/serialization_size_unittest.cc",
     "ledger_manager_unittest.cc",
     "ledger_repository_impl_unittest.cc",

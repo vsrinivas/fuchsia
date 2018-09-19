@@ -41,6 +41,17 @@ void DiskCleanupManagerImpl::OnPageOpened(fxl::StringView ledger_name,
 void DiskCleanupManagerImpl::OnPageClosed(fxl::StringView ledger_name,
                                           storage::PageIdView page_id) {
   page_eviction_manager_.OnPageClosed(ledger_name, page_id);
+  page_eviction_manager_.TryEvictPage(
+      ledger_name, page_id, PageEvictionCondition::IF_EMPTY,
+      [ledger_name = ledger_name.ToString(), page_id = page_id.ToString()](
+          Status status, PageWasEvicted) {
+        if (status != Status::OK && status != Status::INTERNAL_ERROR) {
+          FXL_LOG(ERROR)
+              << "Failed to check if page is empty and/or evict it. Status: "
+              << fidl::ToUnderlying(status) << ". Ledger name: " << ledger_name
+              << ". Page ID: " << convert::ToHex(page_id);
+        }
+      });
 }
 
 }  // namespace ledger
