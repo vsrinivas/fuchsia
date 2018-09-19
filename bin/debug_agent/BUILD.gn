@@ -10,6 +10,7 @@ include_test_app = false
 
 static_library("lib") {
   sources = [
+    "arch.cc",
     "arch.h",
     "breakpoint.cc",
     "breakpoint.h",

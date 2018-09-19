@@ -16,12 +16,14 @@ namespace arch {
 //   zero).
 const BreakInstructionType kBreakInstruction = 0xd4200000;
 
-uint64_t BreakpointInstructionForExceptionAddress(uint64_t exception_addr) {
+uint64_t ArchProvider::BreakpointInstructionForExceptionAddress(
+    uint64_t exception_addr) {
   // ARM reports the exception for the exception instruction itself.
   return exception_addr;
 }
 
-uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
+uint64_t ArchProvider::NextInstructionForSoftwareExceptionAddress(
+    uint64_t exception_addr) {
   // For software exceptions, the exception address is the one that caused it,
   // so next one is just 4 bytes following.
   //
@@ -32,7 +34,8 @@ uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
   return exception_addr + 4;
 }
 
-bool IsBreakpointInstruction(zx::process& process, uint64_t address) {
+bool ArchProvider::IsBreakpointInstruction(zx::process& process,
+                                           uint64_t address) {
   BreakInstructionType data;
   size_t actual_read = 0;
   if (process.read_memory(address, &data, sizeof(BreakInstructionType),
@@ -47,11 +50,17 @@ bool IsBreakpointInstruction(zx::process& process, uint64_t address) {
   return (data & kMask) == kBreakInstruction;
 }
 
-uint64_t* IPInRegs(zx_thread_state_general_regs* regs) { return &regs->pc; }
-uint64_t* SPInRegs(zx_thread_state_general_regs* regs) { return &regs->sp; }
-uint64_t* BPInRegs(zx_thread_state_general_regs* regs) { return &regs->r[29]; }
+uint64_t* ArchProvider::IPInRegs(zx_thread_state_general_regs* regs) {
+  return &regs->pc;
+}
+uint64_t* ArchProvider::SPInRegs(zx_thread_state_general_regs* regs) {
+  return &regs->sp;
+}
+uint64_t* ArchProvider::BPInRegs(zx_thread_state_general_regs* regs) {
+  return &regs->r[29];
+}
 
-::debug_ipc::Arch GetArch() { return ::debug_ipc::Arch::kArm64; }
+::debug_ipc::Arch ArchProvider::GetArch() { return ::debug_ipc::Arch::kArm64; }
 
 namespace {
 
@@ -113,7 +122,7 @@ inline zx_status_t ReadVectorRegs(const zx::thread& thread,
 
 }  // namespace
 
-bool GetRegisterStateFromCPU(
+bool ArchProvider::GetRegisterStateFromCPU(
     const zx::thread& thread,
     std::vector<debug_ipc::RegisterCategory>* categories) {
   categories->clear();

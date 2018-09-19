@@ -94,8 +94,8 @@ void DebuggedThread::OnException(uint32_t type) {
       // When stepping in a range, automatically continue as long as we're
       // still in range.
       if (run_mode_ == debug_ipc::ResumeRequest::How::kStepInRange &&
-          *arch::IPInRegs(&regs) >= step_in_range_begin_ &&
-          *arch::IPInRegs(&regs) < step_in_range_end_) {
+          *arch::ArchProvider::Get().IPInRegs(&regs) >= step_in_range_begin_ &&
+          *arch::ArchProvider::Get().IPInRegs(&regs) < step_in_range_end_) {
         ResumeForRunMode();
         return;
       }
@@ -114,8 +114,9 @@ void DebuggedThread::OnException(uint32_t type) {
   // Send the top 2 stack frames so the caller has the current location and
   // its return address.
   UnwindStack(process_->process(), process_->dl_debug_addr(), thread_,
-              *arch::IPInRegs(&regs), *arch::SPInRegs(&regs),
-              *arch::BPInRegs(&regs), 2, &notify.frames);
+              *arch::ArchProvider::Get().IPInRegs(&regs),
+              *arch::ArchProvider::Get().SPInRegs(&regs),
+              *arch::ArchProvider::Get().BPInRegs(&regs), 2, &notify.frames);
 
   // Send notification.
   debug_ipc::MessageWriter writer;
@@ -157,13 +158,15 @@ void DebuggedThread::GetBacktrace(
 
   constexpr size_t kMaxStackDepth = 256;
   UnwindStack(process_->process(), process_->dl_debug_addr(), thread_,
-              *arch::IPInRegs(&regs), *arch::SPInRegs(&regs),
-              *arch::BPInRegs(&regs), kMaxStackDepth, frames);
+              *arch::ArchProvider::Get().IPInRegs(&regs),
+              *arch::ArchProvider::Get().SPInRegs(&regs),
+              *arch::ArchProvider::Get().BPInRegs(&regs), kMaxStackDepth,
+              frames);
 }
 
 void DebuggedThread::GetRegisters(
     std::vector<debug_ipc::RegisterCategory>* categories) const {
-  arch::GetRegisterStateFromCPU(thread_, categories);
+  arch::ArchProvider::Get().GetRegisterStateFromCPU(thread_, categories);
 }
 
 void DebuggedThread::SendThreadNotification() const {
@@ -189,7 +192,8 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     zx_thread_state_general_regs* regs,
     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
   uint64_t breakpoint_address =
-      arch::BreakpointInstructionForExceptionAddress(*arch::IPInRegs(regs));
+      arch::ArchProvider::Get().BreakpointInstructionForExceptionAddress(
+          *arch::ArchProvider::Get().IPInRegs(regs));
 
   ProcessBreakpoint* found_bp =
       process_->FindProcessBreakpointForAddr(breakpoint_address);
@@ -203,13 +207,14 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
   } else {
     // Hit a software breakpoint that doesn't correspond to any current
     // breakpoint.
-    if (arch::IsBreakpointInstruction(process_->process(),
-                                      breakpoint_address)) {
+    if (arch::ArchProvider::Get().IsBreakpointInstruction(process_->process(),
+                                                          breakpoint_address)) {
       // The breakpoint is a hardcoded instruction in the program code. In this
       // case we want to continue from the following instruction since the
       // breakpoint instruction will never go away.
-      *arch::IPInRegs(regs) = arch::NextInstructionForSoftwareExceptionAddress(
-          *arch::IPInRegs(regs));
+      *arch::ArchProvider::Get().IPInRegs(regs) =
+          arch::ArchProvider::Get().NextInstructionForSoftwareExceptionAddress(
+              *arch::ArchProvider::Get().IPInRegs(regs));
       zx_status_t status =
           thread_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs,
                               sizeof(zx_thread_state_general_regs));
@@ -234,7 +239,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       // Not a breakpoint instruction. Probably the breakpoint instruction used
       // to be ours but its removal raced with the exception handler. Resume
       // from the instruction that used to be the breakpoint.
-      *arch::IPInRegs(regs) = breakpoint_address;
+      *arch::ArchProvider::Get().IPInRegs(regs) = breakpoint_address;
 
       // Don't automatically continue execution here. A race for this should be
       // unusual and maybe something weird happened that caused an exception
@@ -257,7 +262,7 @@ void DebuggedThread::UpdateForHitProcessBreakpoint(
   // resumes, this is the address that it will resume from (after
   // putting back the original instruction), and will be what the client
   // wants to display to the user.
-  *arch::IPInRegs(regs) = process_breakpoint->address();
+  *arch::ArchProvider::Get().IPInRegs(regs) = process_breakpoint->address();
   zx_status_t status = thread_.write_state(
       ZX_THREAD_STATE_GENERAL_REGS, regs, sizeof(zx_thread_state_general_regs));
   if (status != ZX_OK) {

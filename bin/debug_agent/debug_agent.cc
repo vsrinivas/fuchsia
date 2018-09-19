@@ -47,7 +47,7 @@ void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
 void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
                          debug_ipc::HelloReply* reply) {
   // Version and signature are default-initialized to their current values.
-  reply->arch = arch::GetArch();
+  reply->arch = arch::ArchProvider::Get().GetArch();
 }
 
 void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,

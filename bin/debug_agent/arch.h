@@ -22,32 +22,43 @@ namespace arch {
 
 extern const BreakInstructionType kBreakInstruction;
 
-// Returns the address of the breakpoint instruction given the address of
-// a software breakpoint exception.
-uint64_t BreakpointInstructionForExceptionAddress(uint64_t exception_addr);
+// Class in charge of abstracting the low-level functionalities of the platform.
+// This permits a virtual interface for your testing convenience.
+class ArchProvider {
+ public:
+  static ArchProvider& Get();
+  // Permits to mock the ArchProvider. Set to nullptr to restore.
+  static void Set(ArchProvider*);
 
-// Returns the instruction following the one causing the given software
-// exception.
-uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr);
+  virtual ~ArchProvider();
 
-// Returns true if there is a breakpoint instruction at the given address.
-// This doesn't just check equality of kBreakInstruction which is guaranteed to
-// be used for our breakpoints, but also checks other encodings that may have
-// been written into the program.
-bool IsBreakpointInstruction(zx::process& process, uint64_t address);
+  // Returns the address of the breakpoint instruction given the address of
+  // a software breakpoint exception.
+  uint64_t BreakpointInstructionForExceptionAddress(uint64_t exception_addr);
 
-// TODO(donosoc): Do we want something like Err here, to communicate what kind
-//                of problems we stumped while doing this?
-bool GetRegisterStateFromCPU(const zx::thread&,
-                             std::vector<debug_ipc::RegisterCategory>*);
+  // Returns the instruction following the one causing the given software
+  // exception.
+  uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr);
 
-// Returns the address of the instruction pointer/stack pointer/base pointer in
-// the given reg structure.
-uint64_t* IPInRegs(zx_thread_state_general_regs* regs);
-uint64_t* SPInRegs(zx_thread_state_general_regs* regs);
-uint64_t* BPInRegs(zx_thread_state_general_regs* regs);
+  // Returns true if there is a breakpoint instruction at the given address.
+  // This doesn't just check equality of kBreakInstruction which is guaranteed
+  // to be used for our breakpoints, but also checks other encodings that may
+  // have been written into the program.
+  bool IsBreakpointInstruction(zx::process& process, uint64_t address);
 
-::debug_ipc::Arch GetArch();
+  // TODO(donosoc): Do we want something like Err here, to communicate what kind
+  //                of problems we stumped while doing this?
+  bool GetRegisterStateFromCPU(const zx::thread&,
+                               std::vector<debug_ipc::RegisterCategory>*);
+
+  // Returns the address of the instruction pointer/stack pointer/base pointer
+  // in the given reg structure.
+  uint64_t* IPInRegs(zx_thread_state_general_regs* regs);
+  uint64_t* SPInRegs(zx_thread_state_general_regs* regs);
+  uint64_t* BPInRegs(zx_thread_state_general_regs* regs);
+
+  ::debug_ipc::Arch GetArch();
+};
 
 }  // namespace arch
 }  // namespace debug_agent
