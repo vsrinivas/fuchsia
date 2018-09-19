@@ -44,17 +44,24 @@ class BazelBuilder(Frontend):
         self.target_arches = []
 
 
+    def _copy_file(self, file, root, destination, result=[]):
+        '''Copies the file from a given root directory and writes the
+        resulting relative paths to a list.
+        '''
+        if os.path.commonprefix([root, file]) != root:
+            raise Exception('%s is not within %s' % (file, root))
+        relative_path = os.path.relpath(file, root)
+        dest = self.dest(destination, relative_path)
+        shutil.copy2(self.source(file), dest)
+        result.append(relative_path)
+
+
     def _copy_files(self, files, root, destination, result=[]):
         '''Copies some files from a given root directory and writes the
         resulting relative paths to a list.
         '''
         for file in files:
-            if os.path.commonprefix([root, file]) != root:
-                raise Exception('%s is not within %s' % (file, root))
-            relative_path = os.path.relpath(file, root)
-            dest = self.dest(destination, relative_path)
-            shutil.copy2(self.source(file), dest)
-            result.append(relative_path)
+            self._copy_file(file, root, destination, result)
 
 
     def local(self, *args):
@@ -252,6 +259,16 @@ class BazelBuilder(Frontend):
         for dep in atom['deps']:
             data.deps.append(sanitize(dep))
         self.write_file(os.path.join(base, 'BUILD'), 'fidl', data)
+
+
+    def install_image_atom(self, atom):
+        # 'image_file' contains a relative path that is good enough to be stored
+        # under the top-level SDK directory. No 'root' or 'destination' is
+        # needed.
+        root = ''
+        dest = ''
+        for image_file in atom['file'].itervalues():
+            self._copy_file(image_file, root, dest)
 
 
 def main():
