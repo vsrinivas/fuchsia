@@ -159,20 +159,22 @@ TestRunContext::TestRunContext(
     TestRunObserver* connection, const std::string& test_id,
     const std::string& url, const std::vector<std::string>& args)
     : test_runner_connection_(connection), test_id_(test_id), success_(true) {
-  // 1. Make a child environment to run the command.
-  child_env_scope_ =
-      std::make_unique<Scope>(app_context->environment(), "test_runner_env");
-
-  // 1.1 Setup child environment services
-  child_env_scope_->AddService<TestRunner>(
+  // 1.1 Set up child environment services
+  auto services = std::make_unique<ScopeServices>();
+  services->AddService<TestRunner>(
       [this](fidl::InterfaceRequest<TestRunner> request) {
         test_runner_clients_.push_back(
             std::make_unique<TestRunnerImpl>(std::move(request), this));
       });
-  child_env_scope_->AddService<TestRunnerStore>(
+  services->AddService<TestRunnerStore>(
       [this](fidl::InterfaceRequest<TestRunnerStore> request) {
         test_runner_store_.AddBinding(std::move(request));
       });
+
+  // 1.2 Make a child environment to run the command.
+  child_env_scope_ =
+      std::make_unique<Scope>(app_context->environment(), "test_runner_env",
+                              std::move(services));
 
   // 2. Launch the test command.
   fuchsia::sys::LauncherPtr launcher;

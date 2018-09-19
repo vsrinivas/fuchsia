@@ -2,21 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/default.h>
 #include "lib/test_runner/cpp/scope.h"
 
 namespace test_runner {
 
-Scope::Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
-             const std::string& label) {
+ScopeServices::ScopeServices()
+    : vfs_(
+          std::make_unique<fs::SynchronousVfs>(async_get_default_dispatcher())),
+      svc_(fbl::AdoptRef(new fs::PseudoDir)) {}
+
+zx::channel ScopeServices::OpenAsDirectory() {
   zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) < 0)
-    return;
-  parent_env->GetDirectory(std::move(h1));
-  service_provider_bridge_.set_backing_dir(std::move(h2));
-  parent_env->CreateNestedEnvironment(
-      env_.NewRequest(), env_controller_.NewRequest(), label,
-      service_provider_bridge_.OpenAsDirectory(),
-      /*additional_services=*/nullptr, /*inherit_parent_services=*/false);
+  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
+    return zx::channel();
+  if (vfs_->ServeDirectory(svc_, std::move(h1)) != ZX_OK)
+    return zx::channel();
+  return h2;
+}
+
+Scope::Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
+             const std::string& label, std::unique_ptr<ScopeServices> services)
+    : services_(std::move(services)) {
+  fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
+  service_list->names = std::move(services_->svc_names_);
+  service_list->host_directory = services_->OpenAsDirectory();
+  parent_env->CreateNestedEnvironment(env_.NewRequest(),
+                                      env_controller_.NewRequest(), label,
+                                      zx::channel(), std::move(service_list),
+                                      /*inherit_parent_services=*/true);
 }
 
 fuchsia::sys::Launcher* Scope::GetLauncher() {
