@@ -76,6 +76,33 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
     return kContinue;  // In existing range, can continue.
 
   if (step_mode_ == StepMode::kSourceLine) {
+    ProcessSymbols* process_symbols = thread()->GetProcess()->GetSymbols();
+    LineDetails line_details = process_symbols->LineDetailsForAddress(ip);
+
+    if (!line_details.is_valid()) {
+      // Stepping by line but we ended up in a place where there's no line
+      // information.
+      if (process_symbols->HaveSymbolsLoadedForModuleAt(ip)) {
+        // We ended up in code with no symbols inside a module where we expect
+        // to have symbols. The common cause of this is a shared library thunk:
+        // When there is an imported symbol, all code in a module will jump to
+        // some generated code (no symbols) that in turn does an indirect jump
+        // to the destination. The destination of the indirect jump is what's
+        // filled in by the dynamic loader when imports are resolved.
+        //
+        // Showing assembly every time one steps into a cross-library call is
+        // undesirable so single-step over such code until we have symbols.
+        current_range_ = AddressRange();  // No range = step by instruction.
+        return kContinue;
+      }
+      // The "else" case here means we stepped into a module with no symbols
+      // loaded.
+      //
+      // TODO(brettw): In the future we will may want to automatically "step
+      // out" if there is a stack frame with no symbols.
+      return kStop;
+    }
+
     // When stepping by source line the current_range_ will be the entry for
     // the current line in the line table. But we could have a line table
     // like this:
@@ -91,10 +118,8 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
     //
     // This checks if we're in another entry representing the same source line
     // or line 0, and continues stepping in that range.
-    LineDetails line_details =
-        thread()->GetProcess()->GetSymbols()->LineDetailsForAddress(ip);
-    if (line_details.is_valid() && (line_details.file_line().line() == 0 ||
-        line_details.file_line() == file_line_)) {
+    if (line_details.file_line().line() == 0 ||
+        line_details.file_line() == file_line_) {
       current_range_ = line_details.GetExtent();
       return kContinue;
     }

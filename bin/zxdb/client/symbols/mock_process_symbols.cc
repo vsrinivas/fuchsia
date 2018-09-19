@@ -38,4 +38,8 @@ std::vector<uint64_t> MockProcessSymbols::AddressesForLine(
   return std::vector<uint64_t>();
 }
 
+bool MockProcessSymbols::HaveSymbolsLoadedForModuleAt(uint64_t address) const {
+  return false;
+}
+
 }  // namespace zxdb

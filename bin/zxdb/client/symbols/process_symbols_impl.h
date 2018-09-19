@@ -56,6 +56,7 @@ class ProcessSymbolsImpl : public ProcessSymbols {
   std::vector<uint64_t> AddressesForFunction(
       const std::string& name) const override;
   std::vector<uint64_t> AddressesForLine(const FileLine& line) const override;
+  bool HaveSymbolsLoadedForModuleAt(uint64_t address) const override;
 
  private:
   struct ModuleInfo {
@@ -64,6 +65,10 @@ class ProcessSymbolsImpl : public ProcessSymbols {
     uint64_t base = 0;
 
     // MAY BE NULL if the symbols could not be loaded.
+    //
+    // If this is ever extended to exist even if DWARF symbols can not be
+    // loaded (like we index ELF exports), be sure to update
+    // HaveSymbolsLoadedForModuleAt().
     std::unique_ptr<LoadedModuleSymbols> symbols;
   };
 

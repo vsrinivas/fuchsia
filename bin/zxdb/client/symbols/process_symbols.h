@@ -49,6 +49,12 @@ class ProcessSymbols {
   virtual std::vector<uint64_t> AddressesForLine(
       const FileLine& line) const = 0;
 
+  // Returns true if the code location is inside a module where there are
+  // symbols loaded. If we did something like index ELF exports, those wouldn't
+  // count. "Symbols loaded" here means there is real DWARF debugging
+  // information available.
+  virtual bool HaveSymbolsLoadedForModuleAt(uint64_t address) const = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessSymbols);
 };

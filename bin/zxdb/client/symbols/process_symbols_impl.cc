@@ -158,6 +158,11 @@ std::vector<uint64_t> ProcessSymbolsImpl::AddressesForLine(
   return result;
 }
 
+bool ProcessSymbolsImpl::HaveSymbolsLoadedForModuleAt(uint64_t address) const {
+  const ModuleInfo* info = InfoForAddress(address);
+  return info && info->symbols;
+}
+
 ProcessSymbolsImpl::ModuleInfo* ProcessSymbolsImpl::SaveModuleInfo(
     const debug_ipc::Module& module, Err* symbol_load_err) {
   ModuleInfo info;
