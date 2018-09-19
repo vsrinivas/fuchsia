@@ -16,25 +16,6 @@
 #include "private.h"
 #include "unistd.h"
 
-static int checksocket(int fd, int sock_err, int err) {
-    fdio_t* io = fd_to_io(fd);
-    if (io == NULL) {
-        errno = EBADF;
-        return -1;
-    }
-    int32_t is_socket = io->ioflag & IOFLAG_SOCKET;
-    fdio_release(io);
-    if (!is_socket) {
-        errno = sock_err;
-        return -1;
-    }
-    if (err) {
-        errno = err;
-        return -1;
-    }
-    return 0;
-}
-
 static ssize_t zx_socketpair_recvfrom(fdio_t* io, void* data, size_t len, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen) {
     if (flags != 0 && flags != MSG_DONTWAIT) {
         return ZX_ERR_INVALID_ARGS;
@@ -146,19 +127,6 @@ int socketpair(int domain, int type, int protocol, int fd[2]) {
         return STATUS(r);
     }
     return 0;
-}
-
-int sendmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int recvmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags, struct timespec* timeout) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int sockatmark(int fd) {
-    // ENOTTY is sic.
-    return checksocket(fd, ENOTTY, ENOSYS);
 }
 
 zx_status_t fdio_socketpair_shutdown(fdio_t* io, int how) {

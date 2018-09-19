@@ -54,6 +54,25 @@ static int checkfd(int fd, int err) {
     }
 }
 
+static int checksocket(int fd, int sock_err, int err) {
+    fdio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        errno = EBADF;
+        return -1;
+    }
+    int32_t is_socket = io->ioflag & IOFLAG_SOCKET;
+    fdio_release(io);
+    if (!is_socket) {
+        errno = sock_err;
+        return -1;
+    }
+    if (err) {
+        errno = err;
+        return -1;
+    }
+    return 0;
+}
+
 // not supported by any filesystems yet
 int symlink(const char* existing, const char* new) {
     errno = ENOSYS;
@@ -120,4 +139,17 @@ int ttyname_r(int fd, char* name, size_t size) {
     }
 
     return checkfd(fd, ENOSYS);
+}
+
+int sendmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags) {
+    return checksocket(fd, ENOTSOCK, ENOSYS);
+}
+
+int recvmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags, struct timespec* timeout) {
+    return checksocket(fd, ENOTSOCK, ENOSYS);
+}
+
+int sockatmark(int fd) {
+    // ENOTTY is sic.
+    return checksocket(fd, ENOTTY, ENOSYS);
 }
