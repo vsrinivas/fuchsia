@@ -4,7 +4,10 @@
 
 #include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
 
+#include <algorithm>
+
 #include <lib/async/cpp/task.h>
+#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <zx/time.h>
@@ -14,6 +17,7 @@
 #include "peridot/bin/ledger/app/page_usage_db.h"
 #include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/coroutine/coroutine_waiter.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -154,9 +158,8 @@ void PageEvictionManagerImpl::TryEvictPages(
           callback(status);
           return;
         }
-        // CanEvictSyncedPage is an expensive operation. Get the sorted list of
-        // all pages first and call CanEvictSyncedPage exactly as many times as
-        // necessary.
+        // CanEvictPage is an expensive operation. Get the sorted list of all
+        // pages first and call CanEvictPage exactly as many times as necessary.
         std::vector<PageInfo> pages;
         status = GetPagesByTimestamp(handler, &pages);
         if (status != Status::OK) {
@@ -166,8 +169,8 @@ void PageEvictionManagerImpl::TryEvictPages(
 
         for (const auto& page_info : pages) {
           bool can_evict;
-          Status status = CanEvictSyncedPage(handler, page_info.ledger_name,
-                                             page_info.page_id, &can_evict);
+          Status status = CanEvictPage(handler, page_info.ledger_name,
+                                       page_info.page_id, &can_evict);
           if (status == Status::PAGE_NOT_FOUND) {
             // The page was already removed, maybe from a previous call to
             // |TryEvictPages|. Mark it as evicted in the Page Usage DB.
@@ -298,27 +301,43 @@ void PageEvictionManagerImpl::EvictPage(fxl::StringView ledger_name,
       });
 }
 
-Status PageEvictionManagerImpl::CanEvictSyncedPage(
+Status PageEvictionManagerImpl::CanEvictPage(
     coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
     storage::PageIdView page_id, bool* can_evict) {
   FXL_DCHECK(delegate_);
 
+  auto waiter =
+      fxl::MakeRefCounted<callback::Waiter<Status, PagePredicateResult>>(
+          Status::OK);
+
+  delegate_->PageIsClosedAndSynced(ledger_name, page_id, waiter->NewCallback());
+  delegate_->PageIsClosedOfflineAndEmpty(ledger_name, page_id,
+                                         waiter->NewCallback());
+
   Status status;
-  PagePredicateResult sync_state;
+  std::vector<PagePredicateResult> can_evict_states;
   auto sync_call_status =
-      coroutine::SyncCall(handler,
-                          [this, ledger_name = ledger_name.ToString(),
-                           page_id = page_id.ToString()](auto callback) {
-                            delegate_->PageIsClosedAndSynced(
-                                ledger_name, page_id, std::move(callback));
-                          },
-                          &status, &sync_state);
+      coroutine::Wait(handler, std::move(waiter), &status, &can_evict_states);
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERNAL_ERROR;
   }
-  *can_evict = (sync_state == PagePredicateResult::YES);
+  if (status != Status::OK) {
+    return status;
+  }
+  FXL_DCHECK(can_evict_states.size() == 2);
+  // Receiving status |PAGE_OPENED| means that the page was opened during the
+  // query. If either result is |PAGE_OPENED| the page cannot be evicted, as the
+  // result of the other might be invalid at this point.
+  *can_evict = std::any_of(can_evict_states.begin(), can_evict_states.end(),
+                           [](PagePredicateResult result) {
+                             return result == PagePredicateResult::YES;
+                           }) &&
+               std::none_of(can_evict_states.begin(), can_evict_states.end(),
+                            [](PagePredicateResult result) {
+                              return result == PagePredicateResult::PAGE_OPENED;
+                            });
 
-  return status;
+  return Status::OK;
 }
 
 Status PageEvictionManagerImpl::CanEvictEmptyPage(

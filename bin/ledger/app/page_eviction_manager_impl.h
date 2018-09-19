@@ -88,11 +88,13 @@ class PageEvictionManagerImpl : public PageEvictionManager {
   void EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
                  fit::function<void(Status)> callback);
 
-  // Checks whether a page is not currently used and has no unsynced commits or
-  // objects, and thus can be evicted.
-  Status CanEvictSyncedPage(coroutine::CoroutineHandler* handler,
-                            fxl::StringView ledger_name,
-                            storage::PageIdView page_id, bool* can_evict);
+  // Checks whether a page can be evicted. A page can be evicted if it is
+  // currently closed and either:
+  // - has no unsynced commits or objects, or
+  // - is empty and offline, i.e. was never synced to the cloud or a peer.
+  Status CanEvictPage(coroutine::CoroutineHandler* handler,
+                      fxl::StringView ledger_name, storage::PageIdView page_id,
+                      bool* can_evict);
 
   // Checks whether a page is closed, offline and empty, and thus can be
   // evicted.

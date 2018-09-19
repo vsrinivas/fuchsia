@@ -59,10 +59,12 @@ class PageEvictionManager : public PageUsageListener {
   virtual bool IsEmpty() = 0;
 
   // Tries to evict from the local storage the least recently used page among
-  // those that have been backed up in the cloud and are not currectly in use.
-  // Returns |IO_ERROR| through the callback in case of failure to retrieve data
-  // on page usage, or when trying to evict a given page; |OK| otherwise. It is
-  // not an error if there is no page fulfilling the requirements.
+  // those that are not currectly in use and can be evicted. A closed page can
+  // be evicted if it has never been synced and is empty, or if has been
+  // completely backed up in the cloud. Returns |IO_ERROR| through the callback
+  // in case of failure to retrieve data on page usage, or when trying to evict
+  // a given page; |OK| otherwise. It is not an error if there is no page
+  // fulfilling the requirements.
   virtual void TryEvictPages(fit::function<void(Status)> callback) = 0;
 
   virtual void EvictIfEmpty(fxl::StringView ledger_name,

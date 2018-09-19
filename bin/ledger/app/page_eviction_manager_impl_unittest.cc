@@ -111,12 +111,13 @@ TEST_F(PageEvictionManagerTest, AtLeastOneEvictionWhenPossible) {
   EXPECT_FALSE(delegate_.deleted_pages.empty());
 }
 
-TEST_F(PageEvictionManagerTest, DontEvictUnsyncedPages) {
+TEST_F(PageEvictionManagerTest, DontEvictUnsyncedNotEmptyPages) {
   std::string ledger_name = "ledger";
   storage::PageId page1 = std::string(::fuchsia::ledger::kPageIdSize, '1');
   storage::PageId page2 = std::string(::fuchsia::ledger::kPageIdSize, '2');
 
   delegate_.closed_and_synced = PagePredicateResult::NO;
+  delegate_.closed_and_empty = PagePredicateResult::NO;
 
   page_eviction_manager_.OnPageOpened(ledger_name, page1);
   page_eviction_manager_.OnPageClosed(ledger_name, page1);
@@ -211,6 +212,102 @@ TEST_F(PageEvictionManagerTest, PageNotFoundIsNotAnError) {
 
   bool called;
   Status status;
+  page_eviction_manager_.TryEvictPages(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
+}
+
+TEST_F(PageEvictionManagerTest, EvictUnsyncedButEmptyPages) {
+  std::string ledger_name = "ledger";
+  storage::PageId page1 = std::string(::fuchsia::ledger::kPageIdSize, '1');
+  storage::PageId page2 = std::string(::fuchsia::ledger::kPageIdSize, '2');
+
+  delegate_.closed_and_synced = PagePredicateResult::NO;
+  delegate_.closed_and_empty = PagePredicateResult::YES;
+
+  page_eviction_manager_.OnPageOpened(ledger_name, page1);
+  page_eviction_manager_.OnPageClosed(ledger_name, page1);
+  page_eviction_manager_.OnPageOpened(ledger_name, page2);
+  page_eviction_manager_.OnPageClosed(ledger_name, page2);
+  RunLoopUntilIdle();
+
+  bool called;
+  Status status;
+  page_eviction_manager_.TryEvictPages(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page1));
+}
+
+TEST_F(PageEvictionManagerTest, EvictSyncedAndNotEmptyPages) {
+  std::string ledger_name = "ledger";
+  storage::PageId page1 = std::string(::fuchsia::ledger::kPageIdSize, '1');
+  storage::PageId page2 = std::string(::fuchsia::ledger::kPageIdSize, '2');
+
+  delegate_.closed_and_synced = PagePredicateResult::YES;
+  delegate_.closed_and_empty = PagePredicateResult::NO;
+
+  page_eviction_manager_.OnPageOpened(ledger_name, page1);
+  page_eviction_manager_.OnPageClosed(ledger_name, page1);
+  page_eviction_manager_.OnPageOpened(ledger_name, page2);
+  page_eviction_manager_.OnPageClosed(ledger_name, page2);
+  RunLoopUntilIdle();
+
+  bool called;
+  Status status;
+  page_eviction_manager_.TryEvictPages(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page1));
+}
+
+TEST_F(PageEvictionManagerTest, DontEvictIfPageWasOpenedDuringQuery) {
+  std::string ledger_name = "ledger";
+  storage::PageId page1 = std::string(::fuchsia::ledger::kPageIdSize, '1');
+  storage::PageId page2 = std::string(::fuchsia::ledger::kPageIdSize, '2');
+
+  // Page is offline and synced, but PageIsClosedOfflineAndEmpty returned
+  // |PAGE_OPENED|, meaning it was opened during the operation. The page cannot
+  // be evicted.
+  delegate_.closed_and_synced = PagePredicateResult::YES;
+  delegate_.closed_and_empty = PagePredicateResult::PAGE_OPENED;
+
+  page_eviction_manager_.OnPageOpened(ledger_name, page1);
+  page_eviction_manager_.OnPageClosed(ledger_name, page1);
+  page_eviction_manager_.OnPageOpened(ledger_name, page2);
+  page_eviction_manager_.OnPageClosed(ledger_name, page2);
+  RunLoopUntilIdle();
+
+  bool called;
+  Status status;
+  page_eviction_manager_.TryEvictPages(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
+  delegate_.deleted_pages.clear();
+
+  // Page is offline and empty, but PageIsClosedAndSynced returned
+  // |PAGE_OPENED|. The page cannot be evicted.
+  delegate_.closed_and_synced = PagePredicateResult::PAGE_OPENED;
+  delegate_.closed_and_empty = PagePredicateResult::YES;
+
+  page_eviction_manager_.OnPageOpened(ledger_name, page2);
+  page_eviction_manager_.OnPageClosed(ledger_name, page2);
+  RunLoopUntilIdle();
+
   page_eviction_manager_.TryEvictPages(
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
