@@ -17,10 +17,7 @@ library fuchsia.media;
 // `DiscardAllPackets` on the AudioOut, before starting to reconfigure it.
 //
 // Ordinal range: 0x0600-0x6ff
-interface AudioOut {
-  /////////////////////////////////////////////////////////////////////////////
-  // AudioOut methods
-
+interface AudioOut : StreamBufferSet, StreamSink {
   // Sets the type of the stream to be delivered by the client. Using this
   // method implies that the stream encoding is AUDIO_ENCODING_LPCM.
   0x0601: SetPcmStreamType(AudioStreamType type);
@@ -267,34 +264,11 @@ interface AudioOut {
 
   /////////////////////////////////////////////////////////////////////////////
   // StreamBufferSet methods
-  // These methods will inherited from the StreamBufferSet interface.
-
-  // Add a payload buffer for stream packets.
-  0x0201: AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
-
-  // Remove a payload buffer.
-  0x0202: RemovePayloadBuffer(uint32 id);
+  // See stream.fidl.
 
   /////////////////////////////////////////////////////////////////////////////
   // StreamSink methods
-  // These methods will inherited from the StreamSink interface.
-
-  // Send a packet to this object. The response callback is triggered when this
-  // StreamSink object is done with the associated payload memory.
-  0x0301: SendPacket(StreamPacket packet) -> ();
-
-  // Send a packet to this object. Note: this interface does not define how
-  // clients would know when the StreamSink is done with the associated payload
-  // memory. The inheriting interface must define that mechanism.
-  0x0302: SendPacketNoReply(StreamPacket packet);
-
-  // Notify the StreamSink that the stream has ended.
-  0x0303: EndOfStream();
-
-  // Discard (release and return without processing) all queued packets that
-  // were previously submitted via `SendPacket()` or `SendPacketNoReply()`.
-  0x0304: DiscardAllPackets() -> ();
-  0x0305: DiscardAllPacketsNoReply();
+  // See stream.fidl.
 
   // TODO(mpuryear): Spec methods/events which can be used for unintentional
   // discontinuity/underflow detection.

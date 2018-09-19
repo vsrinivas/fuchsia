@@ -252,11 +252,7 @@ library fuchsia.media;
 // ++ Consider allowing the mixer to produce compressed audio.
 //
 // Ordinal range: 0x0500-0x5ff
-interface AudioIn {
-  /////////////////////////////////////////////////////////////////////////////
-  // AudioIn methods
-  // These methods will remain in AudioIn.
-
+interface AudioIn : StreamBufferSet, StreamSource {
   // Sets the stream type of the stream to be delivered.  Causes the source
   // material to be reformatted/resampled if needed in order to produce the
   // requested stream type.  Note that the stream type may not be changed after
@@ -285,31 +281,11 @@ interface AudioIn {
 
   /////////////////////////////////////////////////////////////////////////////
   // StreamBufferSet methods
-  // These methods will inherited from the StreamBufferSet interface.
-
-  // Add a payload buffer for stream packets.
-  0x0201: AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
-
-  // Remove a payload buffer.
-  0x0202: RemovePayloadBuffer(uint32 id);
+  // See stream.fidl.
 
   /////////////////////////////////////////////////////////////////////////////
   // StreamSource methods
-  // These methods will inherited from the StreamSource interface.
-
-  // Delivers a packet produced by this object. Each packet delivered via this
-  // event must be released with a call to ReleasePacket.
-  0x0401: -> OnPacketProduced(StreamPacket packet);
-
-  // Indicates that the stream has ended.
-  0x0402: -> OnEndOfStream();
-
-  // Releases a packet delivered via OnPacketProduced.
-  0x0403: ReleasePacket(StreamPacket packet);
-
-  // Discards packets queued packets.
-  0x0404: DiscardAllPackets() -> ();
-  0x0405: DiscardAllPacketsNoReply();
+  // See stream.fidl.
 
   /////////////////////////////////////////////////////////////////////////////
   // Methods to be deprecated
