@@ -70,8 +70,8 @@ void fp_regs_fill_test_values(zx_thread_state_fp_regs* regs) {
 }
 
 void vector_regs_fill_test_values(zx_thread_state_vector_regs* regs) {
-#if defined(__x86_64__)
     memset(regs, 0, sizeof(zx_thread_state_vector_regs));
+#if defined(__x86_64__)
     for (uint64_t i = 0; i < 16; i++) {
         // Only sets the XMM registers (first two) since that's all that's guaranteed.
         regs->zmm[i].v[0] = i;
