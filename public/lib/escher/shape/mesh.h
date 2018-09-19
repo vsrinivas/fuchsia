@@ -28,12 +28,15 @@ class Mesh : public WaitableResource {
        vk::DeviceSize index_buffer_offset = 0);
 
   Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
-       BoundingBox bounding_box, uint32_t num_vertices, uint32_t num_indices,
-       BufferPtr primary_attribute_buffer, BufferPtr secondary_attribute_buffer,
-       BufferPtr index_buffer,
-       vk::DeviceSize primary_attribute_buffer_offset = 0,
-       vk::DeviceSize secondary_attribute_buffer_offset = 0,
-       vk::DeviceSize index_buffer_offset = 0);
+       BoundingBox bounding_box, uint32_t num_indices, BufferPtr index_buffer,
+       vk::DeviceSize index_buffer_offset, uint32_t num_vertices,
+       BufferPtr attribute_buffer0, vk::DeviceSize attribute_buffer0_offset,
+       BufferPtr attribute_buffer1 = nullptr,
+       vk::DeviceSize attribute_buffer1_offset = 0,
+       BufferPtr attribute_buffer2 = nullptr,
+       vk::DeviceSize attribute_buffer2_offset = 0,
+       BufferPtr attribute_buffer3 = nullptr,
+       vk::DeviceSize attribute_buffer3_offset = 0);
 
   ~Mesh() override;
 

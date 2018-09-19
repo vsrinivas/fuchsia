@@ -51,6 +51,59 @@ auto IndexedTriangleMeshClip(MeshT input_mesh,
                                                 planes.data(), planes.size());
 }
 
+// Helper functions that interpolate two attributes from a source mesh, and push
+// the interpolated value to a target mesh.
+template <typename AttrT>
+void IndexedTriangleMeshPushLerpedAttribute(std::vector<AttrT>* target,
+                                            std::vector<AttrT>* source_ptr,
+                                            size_t index1, size_t index2,
+                                            float interp_param) {
+  auto& source = *source_ptr;
+  target->push_back(Lerp(source[index1], source[index2], interp_param));
+}
+template <>
+inline void IndexedTriangleMeshPushLerpedAttribute(
+    std::vector<nullptr_t>* target, std::vector<nullptr_t>* source,
+    size_t index1, size_t index2, float interp_param) {}
+template <typename MeshT>
+void IndexedTriangleMeshPushLerpedAttributes(MeshT* target, MeshT* source,
+                                             size_t index1, size_t index2,
+                                             float interp_param) {
+  IndexedTriangleMeshPushLerpedAttribute(&target->positions, &source->positions,
+                                         index1, index2, interp_param);
+  IndexedTriangleMeshPushLerpedAttribute(
+      &target->attributes1, &source->attributes1, index1, index2, interp_param);
+  IndexedTriangleMeshPushLerpedAttribute(
+      &target->attributes2, &source->attributes2, index1, index2, interp_param);
+  IndexedTriangleMeshPushLerpedAttribute(
+      &target->attributes3, &source->attributes3, index1, index2, interp_param);
+}
+
+// Helper functions that copy an a attribute from a source mesh, pushing it to
+// the back of a target mesh.
+template <typename AttrT>
+void IndexedTriangleMeshPushCopiedAttribute(std::vector<AttrT>* target,
+                                            std::vector<AttrT>* source,
+                                            size_t index) {
+  target->push_back((*source)[index]);
+}
+template <>
+inline void IndexedTriangleMeshPushCopiedAttribute(
+    std::vector<nullptr_t>* target, std::vector<nullptr_t>* source,
+    size_t index) {}
+template <typename MeshT>
+void IndexedTriangleMeshPushCopiedAttributes(MeshT* target, MeshT* source,
+                                             size_t index) {
+  IndexedTriangleMeshPushCopiedAttribute(&target->positions, &source->positions,
+                                         index);
+  IndexedTriangleMeshPushCopiedAttribute(&target->attributes1,
+                                         &source->attributes1, index);
+  IndexedTriangleMeshPushCopiedAttribute(&target->attributes2,
+                                         &source->attributes2, index);
+  IndexedTriangleMeshPushCopiedAttribute(&target->attributes3,
+                                         &source->attributes3, index);
+}
+
 template <typename MeshT, typename PlaneT>
 auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
                              size_t num_planes)
@@ -58,8 +111,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
   TRACE_DURATION("gfx", "escher::IndexedTriangleMeshClip", "triangles",
                  input_mesh.triangle_count(), "vertices",
                  input_mesh.vertex_count(), "num_planes", num_planes);
-  FXL_DCHECK(input_mesh.indices.size() % 3 == 0);
-  FXL_DCHECK(input_mesh.positions.size() == input_mesh.attributes.size());
+  FXL_DCHECK(input_mesh.IsValid());
   using Edge = typename MeshT::EdgeType;
   using Index = typename MeshT::IndexType;
   using Position = typename MeshT::PositionType;
@@ -149,8 +201,8 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
       // - map the input index to the corresponding index of the output mesh
       Index new_index = output_mesh.positions.size();
       FXL_DCHECK(original_index < input_mesh.vertex_count());
-      output_mesh.positions.push_back(input_mesh.positions[original_index]);
-      output_mesh.attributes.push_back(input_mesh.attributes[original_index]);
+      IndexedTriangleMeshPushCopiedAttributes(&output_mesh, &input_mesh,
+                                              original_index);
       reordered_indices.insert(it, {original_index, new_index});
       return new_index;
     };
@@ -202,11 +254,9 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
         FXL_LOG(ERROR) << error_msg << plane << "  origin: " << edge_origin
                        << "  vector: " << edge_vector;
       }
-      const Index new_index = output_mesh.positions.size();
-      output_mesh.positions.push_back(edge_origin + t * edge_vector);
-      output_mesh.attributes.push_back(Lerp(input_mesh.attributes[edge.first],
-                                            input_mesh.attributes[edge.second],
-                                            t));
+      const Index new_index = output_mesh.vertex_count();
+      IndexedTriangleMeshPushLerpedAttributes(&output_mesh, &input_mesh,
+                                              edge.first, edge.second, t);
 
       // Cache the index in case a subsequent triangle shares the same edge.
       new_edge_vertex_indices.insert(it, {edge, new_index});

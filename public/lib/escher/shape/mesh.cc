@@ -59,21 +59,20 @@ static Mesh::AttributeBufferArray GenerateAttributeBufferArray(
 }
 
 Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
-           BoundingBox bounding_box, uint32_t num_vertices,
-           uint32_t num_indices, BufferPtr primary_attribute_buffer,
-           BufferPtr secondary_attribute_buffer, BufferPtr index_buffer,
-           vk::DeviceSize primary_attribute_buffer_offset,
-           vk::DeviceSize secondary_attribute_buffer_offset,
-           vk::DeviceSize index_buffer_offset)
+           BoundingBox bounding_box, uint32_t num_indices,
+           BufferPtr index_buffer, vk::DeviceSize index_buffer_offset,
+           uint32_t num_vertices, BufferPtr attribute_buffer0,
+           vk::DeviceSize attribute_buffer0_offset, BufferPtr attribute_buffer1,
+           vk::DeviceSize attribute_buffer1_offset, BufferPtr attribute_buffer2,
+           vk::DeviceSize attribute_buffer2_offset, BufferPtr attribute_buffer3,
+           vk::DeviceSize attribute_buffer3_offset)
     : Mesh(resource_recycler, spec, bounding_box, num_vertices, num_indices,
            GenerateAttributeBufferArray(
                num_vertices, spec,
-               {
-                   std::move(primary_attribute_buffer),
-                   std::move(secondary_attribute_buffer),
-               },
-               {primary_attribute_buffer_offset,
-                secondary_attribute_buffer_offset}),
+               {std::move(attribute_buffer0), std::move(attribute_buffer1),
+                std::move(attribute_buffer2), std::move(attribute_buffer3)},
+               {attribute_buffer0_offset, attribute_buffer1_offset,
+                attribute_buffer1_offset, attribute_buffer2_offset}),
            std::move(index_buffer), index_buffer_offset) {}
 
 Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,

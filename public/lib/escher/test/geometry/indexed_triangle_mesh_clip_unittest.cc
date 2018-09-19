@@ -12,10 +12,10 @@ using namespace escher;
 
 // Very simple test that is easy to understand.
 TEST(IndexedTriangleMeshClip, OneTriangle2d) {
-  IndexedTriangleMesh2d<vec2> mesh{
+  IndexedTriangleMesh2d<nullptr_t, vec2> mesh{
       .indices = {0, 1, 2},
       .positions = {vec2(0, 0), vec2(1, 0), vec2(0, 3)},
-      .attributes = {vec2(0, 0), vec2(1, 0), vec2(0, 1)}};
+      .attributes2 = {vec2(0, 0), vec2(1, 0), vec2(0, 1)}};
 
   // Clip two vertices, keeping one tip of the original triangle.
   std::vector<plane2> planes = {plane2(vec2(1, 0), 0.5f)};
@@ -23,10 +23,13 @@ TEST(IndexedTriangleMeshClip, OneTriangle2d) {
   auto& output_mesh = result.first;
   EXPECT_EQ(output_mesh.indices.size(), 3U);
   EXPECT_EQ(output_mesh.positions.size(), 3U);
-  EXPECT_EQ(output_mesh.attributes.size(), 3U);
+  EXPECT_EQ(output_mesh.attributes2.size(), 3U);
+  // The unused attributes should be unpopulated.
+  EXPECT_EQ(output_mesh.attributes1.size(), 0U);
+  EXPECT_EQ(output_mesh.attributes3.size(), 0U);
   for (size_t i = 0; i < output_mesh.vertex_count(); ++i) {
     auto& pos = output_mesh.positions[i];
-    auto& attr = output_mesh.attributes[i];
+    auto& attr = output_mesh.attributes2[i];
     if (pos == vec2(1, 0)) {
       EXPECT_EQ(attr, vec2(1, 0));
     } else if (pos == vec2(0.5f, 0)) {
@@ -45,10 +48,10 @@ TEST(IndexedTriangleMeshClip, OneTriangle2d) {
   result = IndexedTriangleMeshClip(mesh, planes);
   EXPECT_EQ(output_mesh.indices.size(), 6U);
   EXPECT_EQ(output_mesh.positions.size(), 4U);
-  EXPECT_EQ(output_mesh.attributes.size(), 4U);
+  EXPECT_EQ(output_mesh.attributes2.size(), 4U);
   for (size_t i = 0; i < output_mesh.vertex_count(); ++i) {
     auto& pos = output_mesh.positions[i];
-    auto& attr = output_mesh.attributes[i];
+    auto& attr = output_mesh.attributes2[i];
     if (pos == vec2(0, 0)) {
       EXPECT_EQ(attr, vec2(0, 0));
     } else if (pos == vec2(0, 3)) {
@@ -75,8 +78,8 @@ IndexedTriangleMesh2d<vec2> GetStandardTestMesh2d() {
   return IndexedTriangleMesh2d<vec2>{
       .positions = {vec2(-2, 1), vec2(0, 1), vec2(2, 1), vec2(-1, -1),
                     vec2(1, -1)},
-      .attributes = {vec2(0, 1), vec2(0.5f, 1), vec2(1, 1), vec2(0, 0),
-                     vec2(1, 0)},
+      .attributes1 = {vec2(0, 1), vec2(0.5f, 1), vec2(1, 1), vec2(0, 0),
+                      vec2(1, 0)},
       .indices = {0, 1, 3, 3, 1, 4, 4, 1, 2}};
 }
 IndexedTriangleMesh3d<vec2> GetStandardTestMesh3d() {
@@ -84,7 +87,7 @@ IndexedTriangleMesh3d<vec2> GetStandardTestMesh3d() {
 
   IndexedTriangleMesh3d<vec2> mesh3d;
   mesh3d.indices = mesh2d.indices;
-  mesh3d.attributes = mesh2d.attributes;
+  mesh3d.attributes1 = mesh2d.attributes1;
   for (const vec2& pos : mesh2d.positions) {
     mesh3d.positions.push_back(vec3(pos, 11));
   }
@@ -122,7 +125,7 @@ void TestUnclippedMesh(const MeshT& mesh, const std::vector<PlaneT>& planes) {
     // is empty, indicating that the plane clipped no vertices.
     EXPECT_EQ(mesh.indices, result.first.indices);
     EXPECT_EQ(mesh.positions, result.first.positions);
-    EXPECT_EQ(mesh.attributes, result.first.attributes);
+    EXPECT_EQ(mesh.attributes1, result.first.attributes1);
     EXPECT_TRUE(result.second.empty());
   }
 
@@ -130,7 +133,7 @@ void TestUnclippedMesh(const MeshT& mesh, const std::vector<PlaneT>& planes) {
   auto result = IndexedTriangleMeshClip(mesh, planes);
   EXPECT_EQ(mesh.indices, result.first.indices);
   EXPECT_EQ(mesh.positions, result.first.positions);
-  EXPECT_EQ(mesh.attributes, result.first.attributes);
+  EXPECT_EQ(mesh.attributes1, result.first.attributes1);
   EXPECT_TRUE(result.second.empty());
 }
 

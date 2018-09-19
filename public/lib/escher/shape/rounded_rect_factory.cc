@@ -70,8 +70,8 @@ MeshPtr RoundedRectFactory::NewRoundedRect(
 
       return fxl::MakeRefCounted<Mesh>(
           static_cast<ResourceRecycler*>(this), mesh_spec, bounding_box,
-          vertex_count, index_count, vertex_buffer, std::move(vertex_buffer),
-          std::move(index_buffer), 0, vertex_count * primary_buffer_stride, 0);
+          index_count, std::move(index_buffer), 0, vertex_count, vertex_buffer,
+          0, std::move(vertex_buffer), vertex_count * primary_buffer_stride);
     }
     default:
       FXL_CHECK(false) << "unsupported vertex buffer count: "

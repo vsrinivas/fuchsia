@@ -24,37 +24,53 @@ MeshPtr IndexedTriangleMeshUpload(
   if (mesh.index_count() == 0)
     return MeshPtr();
 
-  const PositionT* pos_ptr = mesh.positions.data();
-  const AttributeT* attr_ptr = mesh.attributes.data();
-  const MeshSpec::IndexType* ind_ptr = mesh.indices.data();
-
+  const size_t ind_bytes = mesh.total_index_bytes();
   const size_t pos_bytes = mesh.total_position_bytes();
-  const size_t attr_bytes = mesh.total_attribute_bytes();
-  const size_t ind_num_bytes = mesh.total_index_bytes();
-  const size_t total_num_bytes = pos_bytes + attr_bytes + ind_num_bytes;
+  const size_t attr1_bytes = mesh.total_attribute1_bytes();
+  const size_t attr2_bytes = mesh.total_attribute2_bytes();
+  const size_t attr3_bytes = mesh.total_attribute3_bytes();
+  const size_t total_bytes =
+      ind_bytes + pos_bytes + attr1_bytes + attr2_bytes + attr3_bytes;
+
+  const size_t ind_offset = 0;
+  const size_t pos_offset = ind_bytes;
+  const size_t attr1_offset = pos_offset + pos_bytes;
+  const size_t attr2_offset = attr1_offset + attr1_bytes;
+  const size_t attr3_offset = attr2_offset + attr2_bytes;
 
   // Use a single buffer, but don't interleave the position and attribute
   // data.
-  auto buffer = escher->NewBuffer(total_num_bytes,
+  auto buffer = escher->NewBuffer(total_bytes,
                                   vk::BufferUsageFlagBits::eIndexBuffer |
                                       vk::BufferUsageFlagBits::eVertexBuffer |
                                       vk::BufferUsageFlagBits::eTransferDst,
                                   vk::MemoryPropertyFlagBits::eDeviceLocal);
-  auto writer = uploader->AcquireWriter(total_num_bytes);
+  auto writer = uploader->AcquireWriter(total_bytes);
   {
     TRACE_DURATION("gfx", "escher::IndexedTriangleMeshUpload[memcpy]");
-    memcpy(writer->host_ptr(), pos_ptr, pos_bytes);
-    memcpy(writer->host_ptr() + pos_bytes, attr_ptr, attr_bytes);
-    memcpy(writer->host_ptr() + pos_bytes + attr_bytes, ind_ptr, ind_num_bytes);
+    uint8_t* base = writer->host_ptr();
+    memcpy(base + ind_offset, mesh.indices.data(), ind_bytes);
+    memcpy(base + pos_offset, mesh.positions.data(), pos_bytes);
+    if (attr1_bytes > 0) {
+      memcpy(base + attr1_offset, mesh.attributes1.data(), attr1_bytes);
+    }
+    if (attr2_bytes > 0) {
+      memcpy(base + attr2_offset, mesh.attributes2.data(), attr2_bytes);
+    }
+    if (attr3_bytes > 0) {
+      memcpy(base + attr3_offset, mesh.attributes3.data(), attr3_bytes);
+    }
   }
-  writer->WriteBuffer(buffer, {0, 0, total_num_bytes},
+  writer->WriteBuffer(buffer, {0, 0, total_bytes},
                       Semaphore::New(escher->vk_device()));
   uploader->PostWriter(std::move(writer));
 
-  return fxl::MakeRefCounted<Mesh>(escher->resource_recycler(), mesh_spec,
-                                   bounding_box, mesh.vertex_count(),
-                                   mesh.index_count(), buffer, buffer, buffer,
-                                   0, pos_bytes, pos_bytes + attr_bytes);
+  return fxl::MakeRefCounted<Mesh>(
+      escher->resource_recycler(), mesh_spec, bounding_box, mesh.index_count(),
+      buffer, ind_offset, mesh.vertex_count(), buffer, pos_offset,
+      (attr1_bytes ? buffer : nullptr), attr1_offset,
+      (attr2_bytes ? buffer : nullptr), attr2_offset,
+      (attr3_bytes ? buffer : nullptr), attr3_offset);
 }
 
 }  // namespace escher

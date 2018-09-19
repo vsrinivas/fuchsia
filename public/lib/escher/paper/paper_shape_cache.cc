@@ -99,7 +99,7 @@ Mesh* PaperShapeCache::GetRoundedRectMesh(const RoundedRectSpec& spec,
         auto clip_result = IndexedTriangleMeshClip(
             IndexedTriangleMesh2d<vec2>{.indices = std::move(indices),
                                         .positions = std::move(positions),
-                                        .attributes = std::move(attributes)},
+                                        .attributes1 = std::move(attributes)},
             unculled_clip_planes, num_unculled_clip_planes);
 
         // Step 3): Post-process the mesh... next CL.
