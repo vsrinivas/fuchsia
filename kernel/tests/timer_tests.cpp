@@ -479,8 +479,9 @@ static bool trylock_or_cancel_get_lock() {
     // See that timer_cancel returns false indicating that the timer ran.
     ASSERT_FALSE(timer_cancel(&t), "");
 
-    // See that the timer acquired the lock.
-    ASSERT_FALSE(arg.result, "");
+    // Note, we cannot assert the value of arg.result. We have both released the lock and canceled
+    // the timer, but we don't know which of these events the timer observed first.
+
     END_TEST;
 }
 
