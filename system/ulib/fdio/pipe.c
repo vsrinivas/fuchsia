@@ -18,10 +18,15 @@
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
 
-#include "pipe.h"
 #include "private.h"
 
-ssize_t zx_pipe_read_internal(zx_handle_t h, void* data, size_t len, int nonblock) {
+// Used by pipe(2) and socketpair(2) primitives.
+typedef struct zx_pipe {
+    fdio_t io;
+    zx_handle_t h;
+} zx_pipe_t;
+
+static ssize_t zx_pipe_read_internal(zx_handle_t h, void* data, size_t len, int nonblock) {
     // TODO: let the generic read() to do this loop
     for (;;) {
         size_t bytes_read;
@@ -59,7 +64,7 @@ ssize_t zx_pipe_read_internal(zx_handle_t h, void* data, size_t len, int nonbloc
     }
 }
 
-ssize_t zx_pipe_write_internal(zx_handle_t h, const void* data, size_t len, int nonblock) {
+static ssize_t zx_pipe_write_internal(zx_handle_t h, const void* data, size_t len, int nonblock) {
     // TODO: let the generic write() to do this loop
     for (;;) {
         ssize_t r;
@@ -89,23 +94,23 @@ ssize_t zx_pipe_write_internal(zx_handle_t h, const void* data, size_t len, int 
 }
 
 
-ssize_t zx_pipe_write(fdio_t* io, const void* data, size_t len) {
+static ssize_t zx_pipe_write(fdio_t* io, const void* data, size_t len) {
     zx_pipe_t* p = (zx_pipe_t*)io;
     return zx_pipe_write_internal(p->h, data, len, io->ioflag & IOFLAG_NONBLOCK);
 }
 
-ssize_t zx_pipe_read(fdio_t* io, void* data, size_t len) {
+static ssize_t zx_pipe_read(fdio_t* io, void* data, size_t len) {
     zx_pipe_t* p = (zx_pipe_t*)io;
     return zx_pipe_read_internal(p->h, data, len, io->ioflag & IOFLAG_NONBLOCK);
 }
 
-zx_status_t zx_pipe_get_attr(fdio_t* io, vnattr_t* attr) {
+static zx_status_t zx_pipe_get_attr(fdio_t* io, vnattr_t* attr) {
     memset(attr, 0, sizeof(*attr));
     attr->mode = V_TYPE_PIPE | V_IRUSR | V_IWUSR;
     return ZX_OK;
 }
 
-zx_status_t zx_pipe_close(fdio_t* io) {
+static zx_status_t zx_pipe_close(fdio_t* io) {
     zx_pipe_t* p = (zx_pipe_t*)io;
     zx_handle_t h = p->h;
     p->h = 0;
@@ -113,7 +118,7 @@ zx_status_t zx_pipe_close(fdio_t* io) {
     return 0;
 }
 
-void zx_pipe_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals) {
+static void zx_pipe_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals) {
     zx_pipe_t* p = (void*)io;
     *handle = p->h;
     zx_signals_t signals = 0;
@@ -129,7 +134,7 @@ void zx_pipe_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_sig
     *_signals = signals;
 }
 
-void zx_pipe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events) {
+static void zx_pipe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
     if (signals & (ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_READ_DISABLED)) {
         events |= POLLIN;
@@ -143,7 +148,7 @@ void zx_pipe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events) {
     *_events = events;
 }
 
-zx_status_t zx_pipe_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+static zx_status_t zx_pipe_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
     zx_pipe_t* p = (void*)io;
     zx_status_t status = zx_handle_duplicate(p->h, ZX_RIGHT_SAME_RIGHTS, &handles[0]);
     if (status < 0) {
@@ -153,14 +158,14 @@ zx_status_t zx_pipe_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
     return 1;
 }
 
-zx_status_t zx_pipe_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+static zx_status_t zx_pipe_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
     zx_pipe_t* p = (void*)io;
     handles[0] = p->h;
     types[0] = PA_FDIO_PIPE;
     return 1;
 }
 
-ssize_t zx_pipe_posix_ioctl(fdio_t* io, int req, va_list va) {
+static ssize_t zx_pipe_posix_ioctl(fdio_t* io, int req, va_list va) {
     zx_pipe_t* p = (void*)io;
     switch (req) {
     case FIONREAD: {
@@ -179,6 +184,44 @@ ssize_t zx_pipe_posix_ioctl(fdio_t* io, int req, va_list va) {
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
+}
+
+static ssize_t zx_pipe_recvfrom(fdio_t* io, void* data, size_t len, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen) {
+    if (flags != 0 && flags != MSG_DONTWAIT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    zx_pipe_t* p = (zx_pipe_t*)io;
+    int nonblock = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+    return zx_pipe_read_internal(p->h, data, len, nonblock);
+}
+
+static ssize_t zx_pipe_sendto(fdio_t* io, const void* data, size_t len, int flags, const struct sockaddr* addr, socklen_t addrlen) {
+    if (flags != 0 && flags != MSG_DONTWAIT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (addr != NULL) {
+        return ZX_ERR_INVALID_ARGS;  // should set errno to EISCONN
+    }
+    zx_pipe_t* p = (zx_pipe_t*)io;
+    int nonblock = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+    return zx_pipe_write_internal(p->h, data, len, nonblock);
+}
+
+static zx_status_t zx_pipe_shutdown(fdio_t* io, int how) {
+    uint32_t options = 0;
+    switch (how) {
+    case SHUT_RD:
+        options = ZX_SOCKET_SHUTDOWN_READ;
+        break;
+    case SHUT_WR:
+        options = ZX_SOCKET_SHUTDOWN_WRITE;
+        break;
+    case SHUT_RDWR:
+        options = ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE;
+        break;
+    }
+    zx_pipe_t* p = (zx_pipe_t*)io;
+    return zx_socket_write(p->h, options, NULL, 0, NULL);
 }
 
 static fdio_ops_t zx_pipe_ops = {
@@ -209,11 +252,11 @@ static fdio_ops_t zx_pipe_ops = {
     .link = fdio_default_link,
     .get_flags = fdio_default_get_flags,
     .set_flags = fdio_default_set_flags,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
+    .recvfrom = zx_pipe_recvfrom,
+    .sendto = zx_pipe_sendto,
     .recvmsg = fdio_default_recvmsg,
     .sendmsg = fdio_default_sendmsg,
-    .shutdown = fdio_default_shutdown,
+    .shutdown = zx_pipe_shutdown,
 };
 
 fdio_t* fdio_pipe_create(zx_handle_t h) {
@@ -227,6 +270,10 @@ fdio_t* fdio_pipe_create(zx_handle_t h) {
     atomic_init(&p->io.refcount, 1);
     p->h = h;
     return &p->io;
+}
+
+fdio_t* fdio_socketpair_create(zx_handle_t h) {
+    return fdio_pipe_create(h);
 }
 
 int fdio_pipe_pair(fdio_t** _a, fdio_t** _b) {

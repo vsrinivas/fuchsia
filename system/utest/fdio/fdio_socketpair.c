@@ -411,7 +411,7 @@ bool socketpair_clone_or_unwrap_and_wrap_test(void) {
     uint32_t types[FDIO_MAX_HANDLES];
     zx_status_t handle_count = fdio_clone_fd(fds[0], fds[0], handles, types);
     ASSERT_GT(handle_count, 0, "fdio_clone_fd() failed");
-    EXPECT_EQ(PA_HND_TYPE(types[0]), PA_FDIO_SOCKETPAIR, "Wrong cloned fd type");
+    EXPECT_EQ(PA_HND_TYPE(types[0]), PA_FDIO_PIPE, "Wrong cloned fd type");
 
     int cloned_fd = -1;
     status = fdio_create_fd(handles, types, handle_count, &cloned_fd);
@@ -419,7 +419,7 @@ bool socketpair_clone_or_unwrap_and_wrap_test(void) {
 
     handle_count = fdio_transfer_fd(fds[0], fds[0], handles, types);
     ASSERT_GT(handle_count, 0, "fdio_transfer_fd() failed");
-    EXPECT_EQ(PA_HND_TYPE(types[0]), PA_FDIO_SOCKETPAIR, "Wrong transferred fd type");
+    EXPECT_EQ(PA_HND_TYPE(types[0]), PA_FDIO_PIPE, "Wrong transferred fd type");
 
     int transferred_fd = -1;
     status = fdio_create_fd(handles, types, handle_count, &transferred_fd);

@@ -1636,6 +1636,23 @@ int pipe(int pipefd[2]) {
     return pipe2(pipefd, 0);
 }
 
+int socketpair(int domain, int type, int protocol, int fd[2]) {
+    if (type != SOCK_STREAM) {  // TODO(jamesr): SOCK_DGRAM
+        errno = EPROTOTYPE;
+        return -1;
+    }
+    if (domain != AF_UNIX) {
+        errno = EAFNOSUPPORT;
+        return -1;
+    }
+    if (protocol != 0) {
+        errno = EPROTONOSUPPORT;
+        return -1;
+    }
+
+    return pipe(fd);
+}
+
 int faccessat(int dirfd, const char* filename, int amode, int flag) {
     // For now, we just check to see if the file exists, until we
     // model permissions. But first, check that the flags and amode

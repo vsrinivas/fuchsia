@@ -23,7 +23,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/remoteio.c \
     $(LOCAL_DIR)/service.c \
     $(LOCAL_DIR)/socket.c \
-    $(LOCAL_DIR)/socketpair.c \
     $(LOCAL_DIR)/spawn.c \
     $(LOCAL_DIR)/stubs.c \
     $(LOCAL_DIR)/uname.c \
