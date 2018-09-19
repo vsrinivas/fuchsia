@@ -55,7 +55,7 @@ impl Arg {
     arg_to_primitive!(unwrap_handle, zx::Handle, Handle);
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct MessageHeader {
     pub sender: u32,
     pub opcode: u16,
@@ -150,6 +150,15 @@ impl Message {
         }
     }
 
+    /// Reads a |MessageHeader| without advancing the read pointer in the
+    /// underlying buffer.
+    pub fn peek_header(&mut self) -> io::Result<MessageHeader> {
+        let pos = self.byte_buf.position();
+        let header = self.read_header();
+        self.byte_buf.set_position(pos);
+        header
+    }
+
     pub fn read_header(&mut self) -> io::Result<MessageHeader> {
         let sender = self.byte_buf.read_u32::<NativeEndian>()?;
         let word = self.byte_buf.read_u32::<NativeEndian>()?;
@@ -235,6 +244,8 @@ impl From<zx::MessageBuf> for Message {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use failure::Error;
 
     /// Helper to assist asserting a single match branch.
     ///
@@ -371,5 +382,25 @@ mod tests {
         message.rewind();
         let arg = message.read_arg(ArgKind::String).unwrap();
         assert_matches!(arg, Arg::String(ref s) => assert_eq!(s, s5));
+    }
+
+    #[test]
+    fn peek_header() -> Result<(), Error> {
+        // Write just a message header.
+        let header = MessageHeader {
+            sender: 3,
+            opcode: 2,
+            length: 8,
+        };
+        let mut message = Message::new();
+        message.write_header(&header)?;
+        message.rewind();
+
+        // Verify peek doesn't advance the read pointer.
+        assert_eq!(header, message.peek_header()?);
+        assert_eq!(header, message.peek_header()?);
+        assert_eq!(header, message.peek_header()?);
+        assert_eq!(header, message.peek_header()?);
+        Ok(())
     }
 }
