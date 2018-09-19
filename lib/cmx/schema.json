@@ -1,6 +1,9 @@
 {
   "type": "object",
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "required": [
+    "program"
+  ],
   "properties": {
     "program": {
       "$id": "/properties/program",
@@ -9,12 +12,28 @@
         "binary": {
           "$id": "/properties/program/properties/binary",
           "type": "string",
-          "title": "Program entry point",
+          "title": "Program entry point for an Elf binary",
           "examples": [
             "bin/app"
           ]
+        },
+        "data": {
+          "$id": "/properties/program/properties/data",
+          "type": "string",
+          "title": "Relative path for dart/flutter assets within /pkg/data",
+          "examples": [
+            "data/component"
+          ]
         }
-      }
+      },
+      "oneOf": [
+        {
+          "required": [ "binary" ]
+        },
+        {
+          "required": [ "data" ]
+        }
+      ]
     },
     "sandbox": {
       "$id": "/properties/sandbox",
