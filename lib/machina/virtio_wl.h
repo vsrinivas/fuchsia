@@ -32,18 +32,41 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
  public:
   class Vfd {
    public:
-    virtual ~Vfd() {}
+    Vfd() = default;
+    virtual ~Vfd() = default;
 
     // Begin waiting on VFD to become ready. Returns ZX_ERR_NOT_SUPPORTED
     // if VFD type doesn't support waiting.
-    virtual zx_status_t BeginWait(async_dispatcher_t* dispatcher) = 0;
+    virtual zx_status_t BeginWait(async_dispatcher_t* dispatcher) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
 
-    const zx::handle& handle() const { return handle_; }
+    // Read at most |num_bytes| into |bytes| and at most |num_handles|
+    // into |handles|. Returns actual bytes read in |actual_bytes| and
+    // actual handles read in |actual_handles|.
+    //
+    // Returns ZX_ERR_NOT_SUPPORTED if reading is not supported.
+    virtual zx_status_t Read(void* bytes, zx_handle_info_t* handles,
+                             uint32_t num_bytes, uint32_t num_handles,
+                             uint32_t* actual_bytes, uint32_t* actual_handles) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
 
-   protected:
-    explicit Vfd(zx_handle_t handle) : handle_(handle) {}
+    // Write |bytes| and |handles| to local end-point of VFD.
+    //
+    // Returns ZX_ERR_NOT_SUPPORTED if writing is not supported.
+    virtual zx_status_t Write(const void* bytes, uint32_t num_bytes,
+                              const zx_handle_t* handles,
+                              uint32_t num_handles) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
 
-    zx::handle handle_;
+    // Duplicate object for dispatcher.
+    //
+    // Returns ZX_ERR_NOT_SUPPORTED if duplication is not supported.
+    virtual zx_status_t Duplicate(zx::handle* handle) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
   };
   using OnNewConnectionCallback = fit::function<void(zx::channel)>;
 
@@ -77,8 +100,8 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
   void HandleDmabufSync(const virtio_wl_ctrl_vfd_dmabuf_sync_t* request,
                         virtio_wl_ctrl_hdr_t* response);
 
-  void OnConnectionReady(uint32_t vfd_id, async::Wait* wait, zx_status_t status,
-                         const zx_packet_signal_t* signal);
+  void OnReady(uint32_t vfd_id, async::Wait* wait, zx_status_t status,
+               const zx_packet_signal_t* signal);
   void BeginWaitOnQueue();
   void OnQueueReady(zx_status_t status, uint16_t index);
 

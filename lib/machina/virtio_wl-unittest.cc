@@ -89,6 +89,7 @@ class VirtioWlTest : public ::gtest::TestLoopFixture {
     virtio_wl_ctrl_vfd_new_t request = {};
     request.hdr.type = VIRTIO_WL_CMD_VFD_NEW_PIPE;
     request.vfd_id = vfd_id;
+    request.flags = VIRTIO_WL_VFD_READ;
     virtio_wl_ctrl_vfd_new_t response = {};
     zx_status_t status = out_queue_.BuildDescriptor()
                              .AppendReadable(&request, sizeof(request))
@@ -185,6 +186,7 @@ TEST_F(VirtioWlTest, HandleNewPipe) {
   virtio_wl_ctrl_vfd_new_t request = {};
   request.hdr.type = VIRTIO_WL_CMD_VFD_NEW_PIPE;
   request.vfd_id = 1u;
+  request.flags = VIRTIO_WL_VFD_READ;
   virtio_wl_ctrl_vfd_new_t response = {};
   ASSERT_EQ(out_queue_.BuildDescriptor()
                 .AppendReadable(&request, sizeof(request))
@@ -255,6 +257,23 @@ TEST_F(VirtioWlTest, HandleSend) {
   size_t actual_size;
   ASSERT_EQ(socket.write(0, &data, sizeof(data), &actual_size), ZX_OK);
   EXPECT_EQ(actual_size, sizeof(data));
+  RunLoopUntilIdle();
+
+  uint8_t buffer[sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(data)];
+  virtio_wl_ctrl_vfd_recv_t* recv_header =
+      reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(buffer);
+  ASSERT_EQ(in_queue_.BuildDescriptor()
+                .AppendWritable(buffer, sizeof(buffer))
+                .Build(),
+            ZX_OK);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(in_queue_.HasUsed());
+  EXPECT_EQ(sizeof(buffer), in_queue_.NextUsed().len);
+  EXPECT_EQ(recv_header->hdr.type, VIRTIO_WL_CMD_VFD_RECV);
+  EXPECT_EQ(recv_header->hdr.flags, 0u);
+  EXPECT_EQ(recv_header->vfd_id, 2u);
+  EXPECT_EQ(recv_header->vfd_count, 0u);
+  EXPECT_EQ(*reinterpret_cast<uint32_t*>(recv_header + 1), 1234u);
 
   channels_.clear();
 }
@@ -273,20 +292,24 @@ TEST_F(VirtioWlTest, Recv) {
   memset(reinterpret_cast<void*>(addr), 0xaa, PAGE_SIZE);
   ASSERT_EQ(zx::vmar::root_self()->unmap(addr, PAGE_SIZE), ZX_OK);
 
+  zx::socket socket, remote_socket;
+  ASSERT_EQ(zx::socket::create(0, &socket, &remote_socket), ZX_OK);
+
   uint32_t data = 1234u;
-  zx_handle_t handle = vmo.release();
-  ASSERT_EQ(
-      zx_channel_write(channels_[0].get(), 0, &data, sizeof(data), &handle, 1),
-      ZX_OK);
+  zx_handle_t handles[] = {vmo.release(), remote_socket.release()};
+  ASSERT_EQ(zx_channel_write(channels_[0].get(), 0, &data, sizeof(data),
+                             handles, fbl::count_of(handles)),
+            ZX_OK);
   RunLoopUntilIdle();
 
-  uint8_t buffer[sizeof(virtio_wl_ctrl_vfd_new_t) +
-                 sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(uint32_t) +
-                 sizeof(data)];
+  uint8_t buffer[sizeof(virtio_wl_ctrl_vfd_new_t) * fbl::count_of(handles) +
+                 sizeof(virtio_wl_ctrl_vfd_recv_t) +
+                 sizeof(uint32_t) * fbl::count_of(handles) + sizeof(data)];
   virtio_wl_ctrl_vfd_new_t* new_vfd_cmd =
       reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(buffer);
   virtio_wl_ctrl_vfd_recv_t* header =
-      reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(new_vfd_cmd + 1);
+      reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(new_vfd_cmd +
+                                                   fbl::count_of(handles));
   uint32_t* vfds = reinterpret_cast<uint32_t*>(header + 1);
   ASSERT_EQ(in_queue_.BuildDescriptor()
                 .AppendWritable(buffer, sizeof(buffer))
@@ -296,21 +319,31 @@ TEST_F(VirtioWlTest, Recv) {
   RunLoopUntilIdle();
   EXPECT_TRUE(in_queue_.HasUsed());
   EXPECT_EQ(sizeof(buffer), in_queue_.NextUsed().len);
-  EXPECT_EQ(new_vfd_cmd->hdr.type, VIRTIO_WL_CMD_VFD_NEW);
-  EXPECT_EQ(new_vfd_cmd->hdr.flags, 0u);
-  EXPECT_EQ(new_vfd_cmd->vfd_id,
+
+  EXPECT_EQ(new_vfd_cmd[0].hdr.type, VIRTIO_WL_CMD_VFD_NEW);
+  EXPECT_EQ(new_vfd_cmd[0].hdr.flags, 0u);
+  EXPECT_EQ(new_vfd_cmd[0].vfd_id,
             static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE));
-  EXPECT_EQ(new_vfd_cmd->flags,
+  EXPECT_EQ(new_vfd_cmd[0].flags,
             static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
-  EXPECT_GT(new_vfd_cmd->pfn, 0u);
-  EXPECT_EQ(new_vfd_cmd->size, static_cast<uint32_t>(PAGE_SIZE));
-  EXPECT_EQ(*reinterpret_cast<uint8_t*>(new_vfd_cmd->pfn * PAGE_SIZE), 0xaa);
+  EXPECT_GT(new_vfd_cmd[0].pfn, 0u);
+  EXPECT_EQ(new_vfd_cmd[0].size, static_cast<uint32_t>(PAGE_SIZE));
+  EXPECT_EQ(*reinterpret_cast<uint8_t*>(new_vfd_cmd[0].pfn * PAGE_SIZE), 0xaa);
+
+  EXPECT_EQ(new_vfd_cmd[1].hdr.type, VIRTIO_WL_CMD_VFD_NEW_PIPE);
+  EXPECT_EQ(new_vfd_cmd[1].hdr.flags, 0u);
+  EXPECT_EQ(new_vfd_cmd[1].vfd_id,
+            static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE + 1));
+  EXPECT_EQ(new_vfd_cmd[1].flags,
+            static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
+
   EXPECT_EQ(header->hdr.type, VIRTIO_WL_CMD_VFD_RECV);
   EXPECT_EQ(header->hdr.flags, 0u);
   EXPECT_EQ(header->vfd_id, 1u);
-  EXPECT_EQ(header->vfd_count, 1u);
-  EXPECT_EQ(*vfds, static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE));
-  EXPECT_EQ(*reinterpret_cast<uint32_t*>(vfds + 1), 1234u);
+  EXPECT_EQ(header->vfd_count, 2u);
+  EXPECT_EQ(vfds[0], static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE));
+  EXPECT_EQ(vfds[1], static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE + 1));
+  EXPECT_EQ(*reinterpret_cast<uint32_t*>(vfds + fbl::count_of(handles)), 1234u);
 
   // Check that closing shared memory works as expected.
   virtio_wl_ctrl_vfd_t request = {};
