@@ -290,6 +290,7 @@ class TestApp
       std::string parameter_string) {
     fuchsia::modular::Intent intent;
     intent.handler = kModulePackageName;
+    intent.action = kIntentAction;
 
     fuchsia::modular::IntentParameter parameter;
     parameter.name = kLinkName;

@@ -108,17 +108,23 @@ class TestApp : public modular::testing::ComponentBase<void>,
   TestPoint story1_create_{"Story1 Create"};
 
   void Story1_Create() {
-    story_provider_->CreateStory(kCommonNullModule,
-                                 [this](fidl::StringPtr story_id) {
-                                   story1_id_ = std::move(story_id);
-                                   story1_create_.Pass();
-                                   Story1_Run1();
-                                 });
+    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
+      story1_id_ = std::move(story_id);
+      story1_create_.Pass();
+      Story1_Run1();
+    });
   }
 
   TestPoint story1_run1_{"Story1 Run1"};
 
   void Story1_Run1() {
+    story_provider_->GetController(story1_id_, story_controller_.NewRequest());
+
+    fuchsia::modular::Intent intent;
+    intent.action = kCommonNullAction;
+    intent.handler = kCommonNullModule;
+    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
+
     // TODO(jphsiao|vardhan): remodel this |proceed_after_6| style of
     // continuation to use Futures instead.
     auto proceed_after_6 = modular::testing::NewBarrierClosure(6, [this] {
@@ -132,8 +138,6 @@ class TestApp : public modular::testing::ComponentBase<void>,
     Get("root:one:two", proceed_after_6);
     Get("root:one:two manifest", proceed_after_6);
     Get("root:one:two ordering", proceed_after_6);
-
-    story_provider_->GetController(story1_id_, story_controller_.NewRequest());
 
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
@@ -195,17 +199,23 @@ class TestApp : public modular::testing::ComponentBase<void>,
   TestPoint story2_create_{"Story2 Create"};
 
   void Story2_Create() {
-    story_provider_->CreateStory(kCommonNullModule,
-                                 [this](fidl::StringPtr story_id) {
-                                   story2_id_ = std::move(story_id);
-                                   story2_create_.Pass();
-                                   Story2_Run1();
-                                 });
+    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
+      story2_id_ = std::move(story_id);
+      story2_create_.Pass();
+      Story2_Run1();
+    });
   }
 
   TestPoint story2_run1_{"Story2 Run1"};
 
   void Story2_Run1() {
+    story_provider_->GetController(story2_id_, story_controller_.NewRequest());
+
+    fuchsia::modular::Intent intent;
+    intent.handler = kCommonNullModule;
+    intent.action = kCommonNullAction;
+    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
+
     auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
       story2_run1_.Pass();
       Story2_Stop1();
@@ -217,8 +227,6 @@ class TestApp : public modular::testing::ComponentBase<void>,
     Get("root:one:two manifest", proceed_after_5);
     Get("root:one:two ordering", proceed_after_5);
 
-    story_provider_->GetController(story2_id_, story_controller_.NewRequest());
-
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
@@ -226,6 +234,7 @@ class TestApp : public modular::testing::ComponentBase<void>,
     parent_one.push_back("root");
     fuchsia::modular::Intent intent_one;
     intent_one.handler = kCommonNullModule;
+    intent_one.action = kCommonNullAction;
     story_controller_->AddModule(std::move(parent_one), "one",
                                  std::move(intent_one),
                                  nullptr /*surface_relation) */);
@@ -235,6 +244,7 @@ class TestApp : public modular::testing::ComponentBase<void>,
     parent_two.push_back("one");
     fuchsia::modular::Intent intent_two;
     intent_two.handler = kCommonNullModule;
+    intent_two.action = kCommonNullAction;
     story_controller_->AddModule(std::move(parent_two), "two",
                                  std::move(intent_two),
                                  nullptr /* surface_relation */);

@@ -171,7 +171,7 @@ class TestApp
   TestPoint create_story_{"CreateStory()"};
 
   void CreateStory() {
-    story_provider_->CreateStory(kCommonNullModule,
+    story_provider_->CreateStory(nullptr,
                                  [this](const fidl::StringPtr& story_id) {
                                    create_story_.Pass();
                                    story_id_ = story_id;
@@ -183,6 +183,12 @@ class TestApp
 
   void StartStory() {
     story_provider_->GetController(story_id_, story_controller_.NewRequest());
+
+    fuchsia::modular::Intent intent;
+    intent.handler = kCommonNullModule;
+    intent.action = kCommonNullAction;
+    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
+
     story_watcher_.Watch(story_controller_.get());
 
     // Start and show the new story.

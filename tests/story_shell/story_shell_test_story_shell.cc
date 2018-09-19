@@ -88,7 +88,7 @@ class TestApp
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
           module_manifest->intent_filters->size() == 1 &&
           module_manifest->intent_filters.get()[0].action ==
-              "com.google.fuchsia.common.null") {
+              kCommonNullAction) {
         Signal("root:one manifest");
       }
 
@@ -101,7 +101,7 @@ class TestApp
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
           module_manifest->intent_filters->size() == 1 &&
           module_manifest->intent_filters.get()[0].action ==
-              "com.google.fuchsia.common.null") {
+              kCommonNullAction) {
         Signal("root:one:two manifest");
       }
 

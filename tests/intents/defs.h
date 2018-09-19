@@ -11,6 +11,8 @@ constexpr char kChildModuleName[] = "child";
 
 // Package URLs of the test components used here.
 constexpr char kChildModuleUrl[] = "intent_test_child_module";
+// The action of the intent the parent module issues to the child module.
+constexpr char kChildModuleAction[] = "intent_test_child_module_action";
 
 // The signal which the child module sends when it has received an intent.
 constexpr char kChildModuleHandledIntent[] = "child_module_handled_intent";

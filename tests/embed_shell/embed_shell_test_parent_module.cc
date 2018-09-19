@@ -54,11 +54,16 @@ class TestApp {
 
   void StartChildModule() {
     fuchsia::modular::Intent intent;
+    intent.action = kChildModuleAction;
     intent.handler = kChildModuleUrl;
+    FXL_LOG(INFO) << "Starting child module = " << intent.handler;
     module_host_->module_context()->EmbedModule(
         kChildModuleName, std::move(intent), child_module_.NewRequest(),
         child_view_.NewRequest(),
-        [](const fuchsia::modular::StartModuleStatus) {});
+        [](const fuchsia::modular::StartModuleStatus status) {
+          FXL_LOG(INFO) << "StartModuleStatus="
+                        << static_cast<uint32_t>(status);
+        });
   }
 
   modular::ModuleHost* const module_host_;
@@ -73,6 +78,7 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
+  FXL_LOG(INFO) << "embed_shell_test_parent_module";
   modular::ModuleDriver<TestApp> driver(context.get(),
                                         [&loop] { loop.Quit(); });
   loop.Run();

@@ -64,6 +64,7 @@ class TestApp
 
   void AddRootModule() {
     fuchsia::modular::Intent intent;
+    intent.action = "action";
     intent.handler = kModuleUrl;
 
     fuchsia::modular::IntentParameterData data;
@@ -71,10 +72,10 @@ class TestApp
     FXL_CHECK(fsl::VmoFromString(R"("initial data for the story")", &vmo));
     data.set_json(std::move(vmo).ToTransport());
     fuchsia::modular::IntentParameter intent_parameter;
-    intent_parameter.name = "rootModuleNoun1";
+    intent_parameter.name = "rootModuleParam1";
     intent_parameter.data = std::move(data);
     intent.parameters.push_back(std::move(intent_parameter));
-    story_controller_->AddModule({}, "rootMod", std::move(intent),
+    story_controller_->AddModule(nullptr, "rootMod", std::move(intent),
                                  nullptr /* surface_relation */);
     fidl::VectorPtr<fidl::StringPtr> path;
     path.reset({"rootMod"});

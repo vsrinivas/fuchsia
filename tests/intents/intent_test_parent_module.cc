@@ -26,6 +26,7 @@ void StartModuleWithJsonParameter(
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
   fuchsia::modular::Intent intent;
   intent.handler = kChildModuleUrl;
+  intent.action = kChildModuleAction;
 
   fuchsia::modular::IntentParameter intent_parameter;
   intent_parameter.name = parameter_name;
@@ -103,6 +104,7 @@ class TestApp {
   void TestStartIntentWithLinkNameAndPath() {
     fuchsia::modular::Intent intent;
     intent.handler = kChildModuleUrl;
+    intent.action = kChildModuleAction;
     // The framework populates the intent handler's link namespace and provides
     // each parameter in a link with the parameter name.
     std::string first_parameter_name = "first_param";

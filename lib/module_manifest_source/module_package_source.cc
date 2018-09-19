@@ -72,7 +72,7 @@ void ModulePackageSource::IndexManifest(fidl::StringPtr package_name,
           return;
         }
 
-        weak_this->new_entry_fn_(package_name, std::move(entry));
+        weak_this->new_entry_fn_(entry.binary, std::move(entry));
       }));
 }
 
@@ -112,7 +112,8 @@ void ModulePackageSource::Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn,
             contents, "\n", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
         for (auto module_pkg_view : module_pkgs) {
           auto module_pkg = module_pkg_view.ToString();
-          // TODO(vardhan): We only index module package with version=0.
+          // TODO(vardhan): We only index module package with version=0. Do
+          // better.
           IndexManifest(module_pkg,
                         GetModuleManifestPathFromPackage(module_pkg, "0"));
         }

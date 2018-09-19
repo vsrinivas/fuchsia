@@ -51,7 +51,7 @@ class TestApp
  private:
   void CreateStory() {
     story_provider_->CreateStory(
-        kSuggestionTestModule,
+        nullptr,
         [this](const fidl::StringPtr& story_id) { StartStoryById(story_id); });
 
     Await(kSuggestionTestModuleDone, [this] {
@@ -64,6 +64,12 @@ class TestApp
 
   void StartStoryById(const fidl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
+
+    fuchsia::modular::Intent intent;
+    intent.handler = kSuggestionTestModule;
+    intent.action = kSuggestionTestAction;
+    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
+
     story_controller_.set_error_handler([this, story_id] {
       FXL_LOG(ERROR) << "Story controller for story " << story_id
                      << " died. Does this story exist?";

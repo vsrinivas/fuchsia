@@ -29,7 +29,6 @@ class TestListener : public fuchsia::modular::ContextListener {
   TestListener() : binding_(this) {}
 
   void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
-    FXL_VLOG(1) << "OnUpdate(" << update << ")";
     last_update = fidl::MakeOptional(std::move(update));
   }
 
@@ -115,6 +114,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   selector.type = fuchsia::modular::ContextValueType::ENTITY;
   selector.meta = fidl::MakeOptional(
       ContextMetadataBuilder().AddEntityType("someType").Build());
+
   fuchsia::modular::ContextQuery query;
   modular::AddToContextQuery(&query, "a", std::move(selector));
 
@@ -155,10 +155,14 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
       nullptr,
       fidl::MakeOptional(ContextMetadataBuilder().SetStoryId("story").Build()));
 
+  WaitUntilIdle();
+  FXL_LOG(INFO) << "should be null right now: " << listener.last_update;
+
   fuchsia::modular::ContextValueWriterPtr value4;
   story_value->CreateChildValue(value4.NewRequest(),
                                 fuchsia::modular::ContextValueType::ENTITY);
-  value4->Set("1",
+  WaitUntilIdle();
+  value4->Set(R"({"@type": "someType"})",
               fidl::MakeOptional(
                   ContextMetadataBuilder().AddEntityType("someType").Build()));
 
@@ -177,7 +181,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
     entity_result = std::move(results[1]);
   }
   EXPECT_EQ("frob", entity_result.meta.entity->topic);
-  EXPECT_EQ("1", story_result.content);
+  EXPECT_EQ(R"({"@type": "someType"})", story_result.content);
   EXPECT_EQ("story", story_result.meta.story->id);
 
   // Lastly remove one of the values by resetting the

@@ -33,10 +33,10 @@ class TestApp : fuchsia::modular::LinkWatcher {
   }
 
   void Start() {
-    module_host_->module_context()->GetLink("link", link1_.NewRequest());
+    module_host_->module_context()->GetLink("link1", link1_.NewRequest());
     link1_->WatchAll(link1_watcher_binding_.NewBinding());
 
-    module_host_->module_context()->GetLink(nullptr, link2_.NewRequest());
+    module_host_->module_context()->GetLink("link2", link2_.NewRequest());
     link2_->WatchAll(link2_watcher_binding_.NewBinding());
 
     fsl::SizedVmo vmo1;

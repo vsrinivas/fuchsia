@@ -35,7 +35,7 @@ class TestApp {
   }
 
   void Start() {
-    module_host_->module_context()->GetLink("link", link_.NewRequest());
+    module_host_->module_context()->GetLink(kModule1Link, link_.NewRequest());
     Loop();
   }
 
@@ -45,7 +45,6 @@ class TestApp {
           std::string content_string;
           if (content) {
             FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
-            Put("module1_link", content_string);
           }
 
           rapidjson::Document doc;

@@ -11,6 +11,7 @@ constexpr char kChildModuleName[] = "child";
 
 // Package URLs of the test components used here.
 constexpr char kChildModuleUrl[] = "parent_child_test_child_module";
+constexpr char kChildModuleAction[] = "parent_child_test_child_module_action";
 
 constexpr int kTimeoutMilliseconds = 5000;
 

@@ -52,6 +52,7 @@ class TestApp
       fuchsia::modular::SurfaceRelationPtr /* surface_relation */,
       fuchsia::modular::ModuleManifestPtr /* module_manifest */,
       fuchsia::modular::ModuleSource /* module_source */) override {
+    FXL_LOG(INFO) << "view_id=" << view_id << ", anchor_id=" << anchor_id;
     if (view_id == "root:child:child" && anchor_id == "root") {
       add_view_.Pass();
       modular::testing::GetStore()->Put("story_shell_done", "1", [] {});

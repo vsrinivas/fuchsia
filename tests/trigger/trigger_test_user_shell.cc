@@ -24,8 +24,7 @@ using ::modular::testing::TestPoint;
 
 namespace {
 
-class TestApp
-    : public modular::testing::ComponentBase<void> {
+class TestApp : public modular::testing::ComponentBase<void> {
  public:
   TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context), weak_ptr_factory_(this) {
@@ -47,7 +46,7 @@ class TestApp
   TestPoint story_create_{"Created story."};
 
   void CreateStory() {
-    story_provider_->CreateStory(kModuleUrl, [this](fidl::StringPtr story_id) {
+    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
       story_create_.Pass();
       StartStory(story_id);
     });
@@ -65,6 +64,12 @@ class TestApp
       "fuchsia::modular::Agent executed message queue task."};
   void StartStory(const std::string& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
+
+    fuchsia::modular::Intent intent;
+    intent.handler = kModuleUrl;
+    intent.action = kModuleAction;
+    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
+
     story_controller_.set_error_handler([this, story_id] {
       FXL_LOG(ERROR) << "Story controller for story " << story_id
                      << " died. Does this story exist?";

@@ -52,11 +52,10 @@ class Settings {
   std::string test_driver_url;
 };
 
-class DevUserShellApp
-    : fuchsia::modular::StoryWatcher,
-      fuchsia::modular::InterruptionListener,
-      fuchsia::modular::NextListener,
-      public modular::ViewApp {
+class DevUserShellApp : fuchsia::modular::StoryWatcher,
+                        fuchsia::modular::InterruptionListener,
+                        fuchsia::modular::NextListener,
+                        public modular::ViewApp {
  public:
   explicit DevUserShellApp(component::StartupContext* const startup_context,
                            Settings settings)
@@ -159,6 +158,7 @@ class DevUserShellApp
 
     fuchsia::modular::Intent intent;
     intent.handler = settings_.root_module;
+    intent.action = "action";
     intent.parameters = CreateIntentParameters();
     story_controller_->AddModule(nullptr, modular::kRootModuleName,
                                  std::move(intent), nullptr);

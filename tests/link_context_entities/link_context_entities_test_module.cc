@@ -52,8 +52,7 @@ class TestApp {
 
   void Set1() {
     SetLink(link1_.get(), nullptr, R"({"@type": "type1", "value": "value1"})");
-    SetLink(link2_.get(), nullptr,
-            R"({"a_property": {"@type": "type2", "value": "value2"}})");
+    SetLink(link2_.get(), nullptr, R"({"@type": "type2", "value": "value2"})");
     // TODO(thatguy): When we have fuchsia::modular::Entity support in
     // fuchsia::modular::ContextWriter, create a simple fuchsia::modular::Entity
     // reference and slap it into the fuchsia::modular::Link.

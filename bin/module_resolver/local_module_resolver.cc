@@ -16,7 +16,6 @@
 #include "peridot/lib/fidl/clone.h"
 
 namespace modular {
-
 namespace {
 
 // << operator for LocalModuleResolver::ManifestId.
@@ -34,21 +33,36 @@ LocalModuleResolver::LocalModuleResolver()
 
 LocalModuleResolver::~LocalModuleResolver() = default;
 
+std::set<LocalModuleResolver::ManifestId> LocalModuleResolver::FindHandlers(
+    ModuleUri handler) {
+  // Search through each known repository source for |handler|, and return a
+  // set<ManifestId> containing them.
+  std::set<ManifestId> manifests;
+  for (auto& source : ready_sources_) {
+    auto it = manifests_.find(ManifestId(source, handler));
+    if (it != manifests_.end()) {
+      manifests.insert(it->first);
+    }
+  }
+  return manifests;
+}
+
 void LocalModuleResolver::AddSource(
-    std::string name, std::unique_ptr<ModuleManifestSource> repo) {
+    std::string source_name, std::unique_ptr<ModuleManifestSource> repo) {
   FXL_CHECK(bindings_.size() == 0);
 
   auto ptr = repo.get();
-  sources_.emplace(name, std::move(repo));
+  sources_.emplace(source_name, std::move(repo));
 
-  ptr->Watch(
-      async_get_default_dispatcher(), [this, name]() { OnSourceIdle(name); },
-      [this, name](std::string id, fuchsia::modular::ModuleManifest manifest) {
-        OnNewManifestEntry(name, std::move(id), std::move(manifest));
-      },
-      [this, name](std::string id) {
-        OnRemoveManifestEntry(name, std::move(id));
-      });
+  ptr->Watch(async_get_default_dispatcher(),
+             [this, source_name]() { OnSourceIdle(source_name); },
+             [this, source_name](std::string module_uri,
+                                 fuchsia::modular::ModuleManifest manifest) {
+               OnNewManifestEntry(source_name, module_uri, std::move(manifest));
+             },
+             [this, source_name](std::string module_uri) {
+               OnRemoveManifestEntry(source_name, std::move(module_uri));
+             });
 }
 
 void LocalModuleResolver::Connect(
@@ -86,28 +100,51 @@ class LocalModuleResolver::FindModulesCall
   void Run() override {
     FlowToken flow{this, &response_};
 
+    // 1. If a handler is specified, use only that for |candidates_|.
+    if (!query_.handler.is_null()) {
+      auto found_handlers =
+          local_module_resolver_->FindHandlers(query_.handler);
+      if (found_handlers.empty()) {
+        FXL_LOG(INFO) << "No manifest found for handler=" << query_.handler;
+        response_ = CreateEmptyResponseWithStatus(
+            fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER);
+        return;
+      }
+
+      candidates_ = found_handlers;
+    }
+
+    // 2. Find all modules that can handle the action and then take an
+    // intersection |candidates_| if its non-empty.
     auto action_it =
         local_module_resolver_->action_to_manifests_.find(query_.action);
-    if (action_it == local_module_resolver_->action_to_manifests_.end()) {
-      response_ = CreateEmptyResponse();
-      return;
+    if (action_it != local_module_resolver_->action_to_manifests_.end()) {
+      if (!candidates_.empty()) {
+        std::set<ManifestId> new_candidates;
+        if (action_it != local_module_resolver_->action_to_manifests_.end()) {
+          candidates_ = action_it->second;
+          std::set_intersection(
+              candidates_.begin(), candidates_.end(), action_it->second.begin(),
+              action_it->second.end(),
+              std::inserter(new_candidates, new_candidates.begin()));
+          candidates_ = new_candidates;
+        }
+      } else {
+        candidates_ = action_it->second;
+      }
     }
 
-    candidates_ = action_it->second;
-
-    // For each parameter in the FindModulesQuery, try to find Modules that
-    // provide the types in the parameter as constraints.
-    if (query_.parameter_constraints.is_null() ||
-        query_.parameter_constraints->size() == 0) {
-      Finally(flow);
-      return;
+    // 3. For each parameter in the FindModulesQuery, try to filter
+    // |candidates_| to only the modules that provide the types in the parameter
+    // constraints.
+    if (!candidates_.empty() && !query_.parameter_constraints.is_null()) {
+      for (const auto& parameter_entry : *query_.parameter_constraints) {
+        ProcessParameterTypes(parameter_entry.param_name,
+                              parameter_entry.param_types);
+      }
     }
 
-    for (const auto& parameter_entry : *query_.parameter_constraints) {
-      ProcessParameterTypes(parameter_entry.param_name,
-                            parameter_entry.param_types);
-    }
-    Finally(flow);
+    FinalizeResponse(flow);
   }
 
  private:
@@ -149,18 +186,20 @@ class LocalModuleResolver::FindModulesCall
     return found_entries;
   }
 
-  // At this point |candidates_| contains all the modules that could
-  // potentially match the query. The purpose of this method is to create
-  // those matches and populate |response_|.
-  void Finally(FlowToken flow) {
-    response_ = CreateEmptyResponse();
+  // At this point |candidates_| contains all the modules that satisfy the
+  // query. The purpose of this method is to create a response using these
+  // candidates.
+  void FinalizeResponse(FlowToken flow) {
+    response_ = CreateEmptyResponseWithStatus(
+        fuchsia::modular::FindModulesStatus::SUCCESS);
     if (candidates_.empty()) {
       return;
     }
 
-    for (auto id : candidates_) {
-      auto entry_it = local_module_resolver_->manifests_.find(id);
-      FXL_CHECK(entry_it != local_module_resolver_->manifests_.end()) << id;
+    for (auto manifest_id : candidates_) {
+      auto entry_it = local_module_resolver_->manifests_.find(manifest_id);
+      FXL_CHECK(entry_it != local_module_resolver_->manifests_.end())
+          << manifest_id;
 
       const auto& manifest = entry_it->second;
       fuchsia::modular::FindModulesResult result;
@@ -173,8 +212,10 @@ class LocalModuleResolver::FindModulesCall
     }
   }
 
-  fuchsia::modular::FindModulesResponse CreateEmptyResponse() {
+  fuchsia::modular::FindModulesResponse CreateEmptyResponseWithStatus(
+      fuchsia::modular::FindModulesStatus status) {
     fuchsia::modular::FindModulesResponse response;
+    response.status = status;
     response.results.resize(0);
     return response;
   }
@@ -202,7 +243,7 @@ class LocalModuleResolver::FindModulesByTypesCall
   void Run() override {
     FlowToken flow{this, &response_};
 
-    response_ = CreateEmptyResponse();
+    response_ = CreateEmptyResponseWithStatus();
 
     std::set<ManifestId> candidates;
     for (auto& constraint : *query_.parameter_constraints) {
@@ -227,7 +268,7 @@ class LocalModuleResolver::FindModulesByTypesCall
   }
 
  private:
-  fuchsia::modular::FindModulesByTypesResponse CreateEmptyResponse() {
+  fuchsia::modular::FindModulesByTypesResponse CreateEmptyResponseWithStatus() {
     fuchsia::modular::FindModulesByTypesResponse r;
     r.results.resize(0);
     return r;
@@ -436,11 +477,10 @@ void LocalModuleResolver::GetModuleManifest(
     fidl::StringPtr module_id, GetModuleManifestCallback callback) {
   FXL_DCHECK(!module_id.is_null());
 
-  for (auto& manifest : manifests_) {
-    if (manifest.first.second == module_id.get()) {
-      callback(CloneOptional(manifest.second));
-      return;
-    }
+  auto found_handlers = FindHandlers(module_id);
+  if (!found_handlers.empty()) {
+    callback(CloneOptional(manifests_[*found_handlers.begin()]));
+    return;
   }
 
   callback(nullptr);
@@ -534,58 +574,57 @@ void LocalModuleResolver::OnSourceIdle(const std::string& source_name) {
 }
 
 void LocalModuleResolver::OnNewManifestEntry(
-    const std::string& source_name, std::string id_in,
-    fuchsia::modular::ModuleManifest new_entry) {
-  FXL_LOG(INFO) << "New Module manifest for binary " << new_entry.binary
-                << " with " << new_entry.intent_filters->size()
-                << " intent filters";
+    const std::string& source_name, std::string module_uri,
+    fuchsia::modular::ModuleManifest new_manifest) {
+  FXL_LOG(INFO) << "New Module manifest for binary " << module_uri << " with "
+                << new_manifest.intent_filters->size() << " intent filters.";
+  auto manifest_id = ManifestId(source_name, module_uri);
   // Add this new manifest info to our local index.
-  if (manifests_.count(ManifestId(source_name, id_in)) > 0) {
+  if (manifests_.count(manifest_id) > 0) {
     // Remove this existing manifest first, then add it back in.
-    OnRemoveManifestEntry(source_name, id_in);
+    OnRemoveManifestEntry(source_name, module_uri);
   }
-  if (new_entry.intent_filters->size() == 0) {
-    new_entry.intent_filters.resize(0);
+  if (new_manifest.intent_filters->size() == 0) {
+    new_manifest.intent_filters.resize(0);
   }
-  auto ret =
-      manifests_.emplace(ManifestId(source_name, id_in), std::move(new_entry));
+  auto ret = manifests_.emplace(manifest_id, std::move(new_manifest));
   FXL_CHECK(ret.second);
-  const auto& id = ret.first->first;
   const auto& manifest = ret.first->second;
   for (const auto& intent_filter : *manifest.intent_filters) {
-    action_to_manifests_[intent_filter.action].insert(id);
+    action_to_manifests_[intent_filter.action].insert(manifest_id);
 
     for (const auto& constraint : *intent_filter.parameter_constraints) {
       parameter_type_and_name_to_manifests_[std::make_pair(constraint.type,
                                                            constraint.name)]
-          .insert(id);
-      parameter_type_to_manifests_[constraint.type].insert(id);
+          .insert(manifest_id);
+      parameter_type_to_manifests_[constraint.type].insert(manifest_id);
     }
   }
 }
 
 void LocalModuleResolver::OnRemoveManifestEntry(const std::string& source_name,
-                                                std::string id_in) {
-  ManifestId id{source_name, id_in};
-  auto it = manifests_.find(id);
+                                                std::string module_uri) {
+  ManifestId manifest_id(source_name, module_uri);
+  auto it = manifests_.find(manifest_id);
   if (it == manifests_.end()) {
-    FXL_LOG(WARNING) << "Asked to remove non-existent manifest: " << id;
+    FXL_LOG(WARNING) << "Asked to remove non-existent manifest: "
+                     << manifest_id;
     return;
   }
 
   const auto& manifest = it->second;
   for (const auto& intent_filter : *manifest.intent_filters) {
-    action_to_manifests_[intent_filter.action].erase(id);
+    action_to_manifests_[intent_filter.action].erase(manifest_id);
 
     for (const auto& constraint : *intent_filter.parameter_constraints) {
       parameter_type_and_name_to_manifests_[std::make_pair(constraint.type,
                                                            constraint.name)]
-          .erase(id);
-      parameter_type_to_manifests_[constraint.type].erase(id);
+          .erase(manifest_id);
+      parameter_type_to_manifests_[constraint.type].erase(manifest_id);
     }
   }
 
-  manifests_.erase(id);
+  manifests_.erase(manifest_id);
 }
 
 void LocalModuleResolver::PeriodicCheckIfSourcesAreReady() {

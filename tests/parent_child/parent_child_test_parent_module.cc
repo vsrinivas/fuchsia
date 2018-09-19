@@ -33,6 +33,7 @@ void StartModuleWithLinkMapping(
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
   fuchsia::modular::Intent intent;
   intent.handler = kChildModuleUrl;
+  intent.action = kChildModuleAction;
   fuchsia::modular::IntentParameter intent_parameter;
   intent_parameter.name = "link";
   intent_parameter.data = fuchsia::modular::IntentParameterData();

@@ -9,6 +9,7 @@ namespace {
 
 // Package URLs of the test components used here.
 constexpr char kSuggestionTestModule[] = "suggestion_test_module";
+constexpr char kSuggestionTestAction[] = "suggestion_test_action";
 
 constexpr char kSuggestionTestModuleDone[] = "suggestion_test_module_done";
 

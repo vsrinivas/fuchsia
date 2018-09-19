@@ -69,6 +69,7 @@ class TestApp {
 
   void EmbedModule() {
     intent_.handler = kChildModuleUrl;
+    intent_.action = "action";
     intent_.parameters.resize(4);
 
     // We'll put three parameters "one", "two" and "three" on the
@@ -83,17 +84,15 @@ class TestApp {
     //
     // The third parameter we expect to reference a Link created on our behalf
     // by the Framework. We don't get access to that Link.
-    module_context_->GetLink("foo", link_one_.NewRequest());
-    link_one_->SetEntity(entity_one_reference_);
     fuchsia::modular::IntentParameterData parameter_data;
-    parameter_data.set_link_name("foo");
+
     intent_.parameters->at(0) = fuchsia::modular::IntentParameter();
     intent_.parameters->at(0).name = "one";
-    intent_.parameters->at(0).data = std::move(parameter_data);
+    intent_.parameters->at(0).data.set_entity_reference(entity_one_reference_);
 
     module_context_->GetLink("bar", link_two_.NewRequest());
     fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString("12345", &vmo));
+    FXL_CHECK(fsl::VmoFromString("\"12345\"", &vmo));
     link_two_->Set(nullptr, std::move(vmo).ToTransport());
     parameter_data = fuchsia::modular::IntentParameterData();
     parameter_data.set_link_name("bar");
@@ -102,30 +101,26 @@ class TestApp {
     intent_.parameters->at(1).data = std::move(parameter_data);
 
     parameter_data = fuchsia::modular::IntentParameterData();
-    parameter_data.set_json(VmoFromJson("67890"));
+    parameter_data.set_json(VmoFromJson("\"67890\""));
     intent_.parameters->at(2) = fuchsia::modular::IntentParameter();
     intent_.parameters->at(2).name = "three";
     intent_.parameters->at(2).data = std::move(parameter_data);
 
-    // This noun doesn't have a name, and will appear as the root or default
-    // link for the child mod. This is for backwards compatibility.
     parameter_data = fuchsia::modular::IntentParameterData();
-    parameter_data.set_json(VmoFromJson("1337"));
+    parameter_data.set_json(VmoFromJson("\"1337\""));
     intent_.parameters->at(3) = fuchsia::modular::IntentParameter();
+    intent_.parameters->at(3).name = "four";
     intent_.parameters->at(3).data = std::move(parameter_data);
 
     // Sync to avoid race conditions between writing
-    link_one_->Sync([this] {
-      link_two_->Sync([this] {
-        module_context_->EmbedModule(
-            "my child", std::move(intent_), child_module_.NewRequest(),
-            child_view_.NewRequest(),
-            [this](fuchsia::modular::StartModuleStatus status) {
-              if (status == fuchsia::modular::StartModuleStatus::SUCCESS) {
-                start_intent_.Pass();
-              }
-            });
-      });
+    link_two_->Sync([this] {
+      module_context_->EmbedModule(
+          "my child", std::move(intent_), child_module_.NewRequest(),
+          child_view_.NewRequest(),
+          [this](fuchsia::modular::StartModuleStatus status) {
+            FXL_CHECK(status == fuchsia::modular::StartModuleStatus::SUCCESS);
+            start_intent_.Pass();
+          });
     });
   }
 
@@ -137,7 +132,6 @@ class TestApp {
   fidl::StringPtr entity_one_reference_;
   fuchsia::modular::Intent intent_;
 
-  fuchsia::modular::LinkPtr link_one_;
   fuchsia::modular::LinkPtr link_two_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);

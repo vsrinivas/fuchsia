@@ -17,6 +17,8 @@ constexpr char kEntityTypeProperty[] = "@type";
 constexpr char kEntityRefAttribute[] = "@entityRef";
 
 constexpr char kEntityTypeString[] = "com.google.fuchsia.string";
+// We use |kEntityTypeUnknown| if the entity doesn't have a type.
+constexpr char kEntityTypeUnknown[] = "com.google.fuchsia.unknown";
 
 std::string EntityReferenceToJson(const std::string& ref) {
   auto doc = EntityReferenceToJsonDoc(ref);
@@ -67,6 +69,7 @@ bool ExtractEntityTypesFromJson(const std::string& json,
   rapidjson::Document doc;
   doc.Parse(json);
   if (doc.HasParseError()) {
+    FXL_LOG(WARNING) << "Error parsing JSON: " << doc.GetParseError();
     return false;
   }
 
@@ -93,7 +96,7 @@ bool ExtractEntityTypesFromJson(const rapidjson::Value& value,
       return false;
     }
   } else {
-    return false;
+    entity_types.push_back(kEntityTypeUnknown);
   }
 
   output->swap(entity_types);

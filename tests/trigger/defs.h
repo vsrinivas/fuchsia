@@ -14,6 +14,7 @@ constexpr int kTimeoutMilliseconds = 10000;
 // Package URLs of the test components used here.
 constexpr char kTestAgent[] = "trigger_test_agent";
 const char kModuleUrl[] = "trigger_test_module";
+const char kModuleAction[] = "trigger_test_action";
 
 }  // namespace
 

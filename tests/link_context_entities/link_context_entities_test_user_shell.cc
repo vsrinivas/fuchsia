@@ -109,7 +109,7 @@ class TestApp
   TestPoint create_story_{"CreateStory()"};
 
   void CreateStory() {
-    story_provider_->CreateStory(kModuleUrl, [this](fidl::StringPtr story_id) {
+    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
       story_id_ = story_id;
       create_story_.Pass();
       StartStory();
@@ -128,6 +128,11 @@ class TestApp
         });
 
     story_provider_->GetController(story_id_, story_controller_.NewRequest());
+    fuchsia::modular::Intent intent;
+    intent.handler = kModuleUrl;
+    intent.action = kModuleAction;
+    story_controller_->AddModule(nullptr, "root_module_name", std::move(intent),
+                                 nullptr);
 
     // Start and show the new story.
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
@@ -162,19 +167,19 @@ class TestApp
     doc.Parse(value.content);
 
     if (doc.HasParseError()) {
-      FXL_LOG(ERROR) << "JSON Parse Error";
+      FXL_LOG(ERROR) << "JSON Parse Error" << value.content;
       Logout();
       return;
     }
 
     if (!doc.IsObject()) {
-      FXL_LOG(ERROR) << "JSON not an Object";
+      FXL_LOG(ERROR) << "JSON not an Object" << value.content;
       Logout();
       return;
     }
 
     if (!doc.HasMember("value")) {
-      FXL_LOG(ERROR) << "JSON missing 'value'";
+      FXL_LOG(ERROR) << "JSON missing 'value': " << value.content;
       Logout();
       return;
     }

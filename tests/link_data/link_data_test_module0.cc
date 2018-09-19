@@ -60,17 +60,15 @@ class TestApp {
   }
 
   void Start() {
-    // Read null link data, and send its value back to the test user shell to
-    // verify its expected value. Nb. the user shell does this only for the
-    // first invocation. Therefore, it would be wrong to verify this with a
+    // Read kModule0Link link data, and send its value back to the test user
+    // shell to verify its expected value. Nb. the user shell does this only for
+    // the first invocation. Therefore, it would be wrong to verify this with a
     // TestPoint.
-    module_context_->GetLink(nullptr, link_.NewRequest());
+    module_context_->GetLink(kModule0Link, link_.NewRequest());
     link_->Get(nullptr, [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
       std::string content_string;
       FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
-      if (content_string == kRootJson1) {
-        Signal(std::string("module0_link") + ":" + kRootJson1);
-      }
+      Signal(std::string("module0_link") + ":" + content_string);
 
       StartModules();
     });
@@ -82,32 +80,32 @@ class TestApp {
 
     fuchsia::modular::IntentParameterData parameter_data;
     parameter_data.set_link_name(kModule1Link);
-
     fuchsia::modular::IntentParameter parameter;
-    parameter.name = kLink;
+    parameter.name = kModule1Link;
     parameter.data = std::move(parameter_data);
 
     fuchsia::modular::Intent intent;
     intent.handler = kModule1Url;
+    intent.action = kModule1Action;
     intent.parameters.push_back(std::move(parameter));
 
     module_context_->AddModuleToStory(
-        "module1", std::move(intent), module1_.NewRequest(), nullptr,
+        kModule1Name, std::move(intent), module1_.NewRequest(), nullptr,
         [](fuchsia::modular::StartModuleStatus) {});
 
     parameter_data = fuchsia::modular::IntentParameterData();
     parameter_data.set_link_name(kModule2Link);
-
     parameter = fuchsia::modular::IntentParameter();
-    parameter.name = kLink;
+    parameter.name = kModule2Link;
     parameter.data = std::move(parameter_data);
 
     intent = fuchsia::modular::Intent();
     intent.handler = kModule2Url;
+    intent.action = kModule2Action;
     intent.parameters.push_back(std::move(parameter));
 
     module_context_->AddModuleToStory(
-        "module2", std::move(intent), module2_.NewRequest(), nullptr,
+        kModule2Name, std::move(intent), module2_.NewRequest(), nullptr,
         [](fuchsia::modular::StartModuleStatus) {});
 
     connections_.emplace_back(

@@ -9,6 +9,7 @@ namespace {
 
 // Package URLs of the test components used here.
 constexpr char kModuleUrl[] = "link_context_entities_test_module";
+constexpr char kModuleAction[] = "action";
 
 }  // namespace
 

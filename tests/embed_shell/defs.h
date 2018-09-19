@@ -12,6 +12,8 @@ constexpr char kChildModuleName[] = "child";
 // Package URLs of the test components used here.
 constexpr char kChildModuleUrl[] = "embed_shell_test_child_module";
 
+constexpr char kChildModuleAction[] = "action";
+
 }  // namespace
 
 #endif  // PERIDOT_TESTS_EMBED_SHELL_DEFS_H_

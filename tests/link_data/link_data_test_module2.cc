@@ -11,6 +11,7 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/link_data/defs.h"
 
 namespace {
 
@@ -27,7 +28,7 @@ class TestApp : fuchsia::modular::LinkWatcher {
   }
 
   void Start() {
-    module_host_->module_context()->GetLink("link", link_.NewRequest());
+    module_host_->module_context()->GetLink(kModule2Link, link_.NewRequest());
     link_->WatchAll(link_watcher_binding_.NewBinding());
   }
 

@@ -34,14 +34,14 @@ class TestApp {
 
  private:
   void StartChildModule() {
-    fuchsia::modular::Intent intent;
-    intent.handler = kCommonNullModule;
-
     child_module_.events().OnStateChange =
         [this](fuchsia::modular::ModuleState new_state) {
           OnStateChange(std::move(new_state));
         };
 
+    fuchsia::modular::Intent intent;
+    intent.handler = kCommonNullModule;
+    intent.action = kCommonNullAction;
     module_host_->module_context()->AddModuleToStory(
         kChildModuleName, std::move(intent), child_module_.NewRequest(),
         nullptr /* surface_relation */,

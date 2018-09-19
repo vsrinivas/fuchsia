@@ -215,24 +215,25 @@ TEST_F(FindModulesTest, Simpleaction) {
     entry.binary = "module1";
     entry.intent_filters.push_back(
         MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
-    source1->add("1", std::move(entry));
+    source1->add("module1", std::move(entry));
   }
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module2";
     entry.intent_filters.push_back(
         MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
-    source2->add("1", std::move(entry));
+    source2->add("module2", std::move(entry));
   }
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module3";
     entry.intent_filters.push_back(
         MakeIntentFilter("com.google.fuchsia.exist.vinfinity", {}));
-    source1->add("2", std::move(entry));
+    source1->add("module3", std::move(entry));
   }
 
   source1->idle();
+  source2->idle();
 
   // This is mostly the contents of the FindModules() convenience function
   // above.  It's copied here so that we can call source2->idle() before
@@ -259,8 +260,8 @@ TEST_F(FindModulesTest, Simpleaction) {
   // Remove the entries and we should see no more results. Our
   // TestManifestSource implementation above doesn't send its tasks to the
   // task_runner so we don't have to wait.
-  source1->remove("1");
-  source2->remove("1");
+  source1->remove("module1");
+  source2->remove("module2");
 
   FindModules(QueryBuilder("com.google.fuchsia.navigate.v1").build());
   ASSERT_EQ(0lu, results()->size());

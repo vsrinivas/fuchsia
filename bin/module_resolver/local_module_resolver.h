@@ -49,12 +49,15 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
   class FindModulesCall;
   class FindModulesByTypesCall;
 
-  using RepoName = std::string;
-  using ModuleId = std::string;
-  using ManifestId = std::pair<RepoName, ModuleId>;
+  using ModuleUri = std::string;
+  using RepoSource = std::string;
+  // We use the module URI to identify the module manifest.
+  using ManifestId = std::tuple<RepoSource, ModuleUri>;
   using ParameterName = std::string;
   using ParameterType = std::string;
   using Action = std::string;
+
+  std::set<ManifestId> FindHandlers(ModuleUri handler);
 
   // |fuchsia::modular::QueryHandler|
   void OnQuery(fuchsia::modular::UserInput query,
@@ -78,8 +81,9 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
   // Set of sources that have told us they are idle, meaning they have
   // sent us all manifests they knew about at construction time.
   std::set<std::string> ready_sources_;
-  // Map of (repo name, module manifest ID) -> module manifest.
-  std::map<ManifestId, fuchsia::modular::ModuleManifest> manifests_;
+  // Map of module manifest ID -> module manifest.
+  using ManifestMap = std::map<ManifestId, fuchsia::modular::ModuleManifest>;
+  ManifestMap manifests_;
 
   // action -> key in |manifests_|
   std::map<Action, std::set<ManifestId>> action_to_manifests_;

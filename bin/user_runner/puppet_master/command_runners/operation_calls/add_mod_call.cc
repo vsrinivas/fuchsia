@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/find_modules_call.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/get_link_path_for_parameter_name_call.h"
@@ -43,34 +44,64 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
  private:
   void Run() override {
     FlowToken flow{this, &result_, &module_data_};
+
     // Success status by default, it will be update it if an error state is
     // found.
     result_.status = fuchsia::modular::ExecuteStatus::OK;
 
-    AddFindModulesOperation(
-        &operation_queue_, story_storage_, module_resolver_, entity_resolver_,
-        CloneOptional(intent_), surface_parent_mod_name_.Clone(),
-        [this, flow](fuchsia::modular::ExecuteResult result,
-                     fuchsia::modular::FindModulesResponse response) {
-          if (result.status != fuchsia::modular::ExecuteStatus::OK) {
-            result_ = std::move(result);
-            return;
-            // Operation finishes since |flow| goes out of scope.
-          }
-          if (response.results->empty()) {
-            result_.status = fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND;
-            result_.error_message = "Resolution of intent gave zero results.";
-            return;
-            // Operation finishes since |flow| goes out of scope.
-          }
-          resolver_response_ = std::move(response);
-          CreateLinks(flow);
-        });
+    // If we have an action, we use the module resolver to type-check and
+    // resolve the (action, parameter) and the supplied optional handler to a
+    // module. If the module resolver doesn't recognize a supplied handler, we
+    // forgivingly execute the handler anyway.
+    if (!intent_.action.is_null()) {
+      AddFindModulesOperation(
+          &operation_queue_, story_storage_, module_resolver_, entity_resolver_,
+          CloneOptional(intent_), surface_parent_mod_name_.Clone(),
+          [this, flow](fuchsia::modular::ExecuteResult result,
+                       fuchsia::modular::FindModulesResponse response) {
+            if (result.status != fuchsia::modular::ExecuteStatus::OK) {
+              result_ = std::move(result);
+              return;
+              // Operation finishes since |flow| goes out of scope.
+            }
+
+            // NOTE: leave this as a switch case; the compiler will make sure
+            // we're handling all error cases.
+            switch (response.status) {
+              case fuchsia::modular::FindModulesStatus::SUCCESS: {
+                if (response.results->empty()) {
+                  result_.status =
+                      fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND;
+                  result_.error_message =
+                      "Resolution of intent gave zero results.";
+                  return;
+                  // Operation finishes since |flow| goes out of scope.
+                }
+
+                candidate_module_ = std::move(response.results->at(0));
+              } break;
+
+              case fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER: {
+                FXL_LOG(INFO)
+                    << "Resolver could not find handler=" << intent_.handler
+                    << ". Trying to use it anyway..";
+                candidate_module_.module_id = intent_.handler;
+              } break;
+            }
+          });
+    } else {
+      // We arrive here if the Intent has a handler, but no action.
+      FXL_DCHECK(!intent_.handler.is_null())
+          << "Cannot start a module without an action or a handler";
+      candidate_module_.module_id = intent_.handler;
+    }
+
+    CreateLinks(flow);
   }
 
   // Create module parameters info and create links.
   void CreateLinks(FlowToken flow) {
-    CreateModuleParameterMapInfo(flow)->Then([this, flow] {
+    CreateModuleParameterMapInfo(flow, [this, flow] {
       if (result_.status != fuchsia::modular::ExecuteStatus::OK) {
         return;
         // Operation finishes since |flow| goes out of scope.
@@ -96,10 +127,8 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
   // Write module data
   void WriteModuleData(FlowToken flow,
                        fuchsia::modular::ModuleParameterMapPtr map) {
-    const auto& module_result = resolver_response_.results->at(0);
-
     fidl::Clone(*map, &module_data_.parameter_map);
-    module_data_.module_url = module_result.module_id;
+    module_data_.module_url = candidate_module_.module_id;
     module_data_.module_path = surface_parent_mod_name_.Clone();
     module_data_.module_path->insert(module_data_.module_path->end(),
                                      mod_name_->begin(), mod_name_->end());
@@ -108,7 +137,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
     fidl::Clone(surface_relation_, &module_data_.surface_relation);
     module_data_.intent =
         std::make_unique<fuchsia::modular::Intent>(std::move(intent_));
-    fidl::Clone(module_result.manifest, &module_data_.module_manifest);
+    fidl::Clone(candidate_module_.manifest, &module_data_.module_manifest);
 
     // Operation stays alive until flow goes out of scope.
     fuchsia::modular::ModuleData module_data_out;
@@ -117,7 +146,10 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
         ->Then([this, flow] {});
   }
 
-  FuturePtr<> CreateModuleParameterMapInfo(FlowToken flow) {
+  // On success, populates |parameter_info_|. On failure, |result_| contains
+  // error reason. Calls |done()| on completion in either case.
+  void CreateModuleParameterMapInfo(FlowToken flow,
+                                    std::function<void()> done) {
     parameter_info_ = fuchsia::modular::CreateModuleParameterMapInfo::New();
 
     std::vector<FuturePtr<fuchsia::modular::CreateModuleParameterMapEntry>>
@@ -164,9 +196,23 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
           AddGetLinkPathForParameterNameOperation(
               &operations_, story_storage_, surface_parent_mod_name_.Clone(),
               param.data.link_name(), did_get_lp->Completer());
+
           did_get_entries.emplace_back(
-              did_get_lp->Map([param_name = param.name](
-                                  fuchsia::modular::LinkPathPtr link_path) {
+              did_get_lp->Map([this, param_name = param.name,
+                               done](fuchsia::modular::LinkPathPtr link_path) {
+                if (!GetWeakPtr()) {
+                  return fuchsia::modular::CreateModuleParameterMapEntry{};
+                }
+                if (!link_path) {
+                  // OH NO! bail on this entire function's flow.
+                  result_.status =
+                      fuchsia::modular::ExecuteStatus::INTERNAL_ERROR;
+                  result_.error_message = fxl::StringPrintf(
+                      "Link path does not exist for parameter name = %s",
+                      param_name.get().c_str());
+                  done();
+                  return fuchsia::modular::CreateModuleParameterMapEntry{};
+                }
                 fuchsia::modular::CreateModuleParameterMapEntry entry;
                 entry.key = param_name;
                 entry.value.set_link_path(std::move(*link_path));
@@ -181,12 +227,12 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
           break;
         }
         case fuchsia::modular::IntentParameterData::Tag::Invalid: {
-          std::ostringstream stream;
-          stream << "Invalid data for parameter with name: " << param.name;
-          result_.error_message = stream.str();
           result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
-          return Future<>::CreateCompleted(
-              "AddModCommandRunner::FindModulesCall.invalid_parameter");
+          result_.error_message =
+              fxl::StringPrintf("Invalid data for parameter with name: %s",
+                                param.name.get().c_str());
+          done();
+          return;
         }
       }
 
@@ -198,11 +244,12 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
       did_get_entries.emplace_back(std::move(did_create_entry));
     }
 
-    return Wait("AddModCommandRunner::AddModCall::Wait", did_get_entries)
-        ->Then([this, flow](
+    Wait("AddModCommandRunner::AddModCall::Wait", did_get_entries)
+        ->Then([this, done, flow](
                    std::vector<fuchsia::modular::CreateModuleParameterMapEntry>
                        entries) {
           parameter_info_->property_info.reset(std::move(entries));
+          done();
         });
   }
 
@@ -214,7 +261,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
   fuchsia::modular::SurfaceRelationPtr surface_relation_;
   fidl::VectorPtr<fidl::StringPtr> surface_parent_mod_name_;
   fuchsia::modular::ModuleSource module_source_;
-  fuchsia::modular::FindModulesResponse resolver_response_;
+  fuchsia::modular::FindModulesResult candidate_module_;
   fuchsia::modular::CreateModuleParameterMapInfoPtr parameter_info_;
   fuchsia::modular::ModuleData module_data_;
   fuchsia::modular::ExecuteResult result_;

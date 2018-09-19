@@ -41,14 +41,20 @@ TEST(EntityJsonTest, EntityReferenceFromJson) {
 
 TEST(EntityJsonTest, ExtractEntityTypesFromJson) {
   std::vector<std::string> types;
-  // Null cases.
-  EXPECT_FALSE(ExtractEntityTypesFromJson("1", &types));
-  EXPECT_FALSE(ExtractEntityTypesFromJson("[1,2,3]", &types));
-  EXPECT_FALSE(ExtractEntityTypesFromJson("{}", &types));
-  EXPECT_FALSE(ExtractEntityTypesFromJson(R"({"type": "foo"})", &types));
+
+  // Unknown type cases.
+  types = {"com.google.fuchsia.unknown"};
+  EXPECT_TRUE(ExtractEntityTypesFromJson("1", &types));
+  EXPECT_TRUE(ExtractEntityTypesFromJson("[1,2,3]", &types));
+  EXPECT_TRUE(ExtractEntityTypesFromJson("{}", &types));
+  EXPECT_TRUE(ExtractEntityTypesFromJson(R"({"type": "foo"})", &types));
+  types.clear();
+
+  // Types that have a bad format.
   EXPECT_FALSE(ExtractEntityTypesFromJson(R"({"@type": 1})", &types));
   EXPECT_FALSE(ExtractEntityTypesFromJson(R"({"@type": {}})", &types));
   EXPECT_FALSE(ExtractEntityTypesFromJson(R"({"@type": [1,"foo"]})", &types));
+  types.clear();
 
   // JSON string case.
   EXPECT_TRUE(ExtractEntityTypesFromJson(R"("hello")", &types));

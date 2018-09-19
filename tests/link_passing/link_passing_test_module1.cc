@@ -41,15 +41,16 @@ class TestApp : fuchsia::modular::LinkWatcher {
     link2_->WatchAll(link2_watcher_binding_.NewBinding());
 
     fuchsia::modular::IntentParameter param1;
-    param1.name = "link";
+    param1.name = "link1";
     param1.data.set_link_name("link");
 
     fuchsia::modular::IntentParameter param2;
-    param2.name = nullptr;
+    param2.name = "link2";
     param2.data.set_link_name(nullptr);
 
     fuchsia::modular::Intent intent;
     intent.handler = kModule2Url;
+    intent.action = kModule2Action;
     intent.parameters.push_back(std::move(param1));
     intent.parameters.push_back(std::move(param2));
 

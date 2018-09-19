@@ -83,7 +83,7 @@ class TestApp {
                    [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
                      std::string content_string;
                      FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
-                     if (content_string == "12345") {
+                     if (content_string == "\"12345\"") {
                        link_two_correct_.Pass();
                      }
 
@@ -99,26 +99,26 @@ class TestApp {
                      [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
                        std::string content_string;
                        FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
-                       if (content_string == "67890") {
+                       if (content_string == "\"67890\"") {
                          link_three_correct_.Pass();
                        }
 
-                       VerifyDefaultLink();
+                       VerifyLinkFour();
                      });
   }
 
-  TestPoint default_link_correct_{"Default Link value is correct."};
+  TestPoint link_four_correct_{"Link four value is correct."};
 
-  void VerifyDefaultLink() {
+  void VerifyLinkFour() {
     // Check that we did get a default link as specified by the
     // fuchsia::modular::Intent.
-    module_context_->GetLink(nullptr, default_link_.NewRequest());
+    module_context_->GetLink("four", default_link_.NewRequest());
     default_link_->Get(
         nullptr, [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
           std::string content_string;
           FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
-          if (content_string == "1337") {
-            default_link_correct_.Pass();
+          if (content_string == "\"1337\"") {
+            link_four_correct_.Pass();
           }
 
           Signal(modular::testing::kTestShutdown);

@@ -16,6 +16,9 @@ constexpr char kLinkKey[] = "name";
 // The package name for the module under test.
 constexpr char kModulePackageName[] = "module_context_test_module";
 
+// The intent action |kModulePackageName| accepts.
+constexpr char kIntentAction[] = "action";
+
 // The names of the first and second modules to be stopped.
 constexpr char kFirstModuleName[] = "first";
 constexpr char kSecondModuleName[] = "second";

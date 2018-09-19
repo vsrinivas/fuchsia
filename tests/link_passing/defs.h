@@ -9,7 +9,10 @@ namespace {
 
 // Package URLs of the test components used here.
 constexpr char kModule2Url[] = "link_passing_test_module2";
+constexpr char kModule2Action[] = "module2_action";
+
 constexpr char kModule3Url[] = "link_passing_test_module3";
+constexpr char kModule3Action[] = "module3_action";
 
 }  // namespace
 

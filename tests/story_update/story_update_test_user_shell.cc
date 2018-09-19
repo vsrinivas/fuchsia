@@ -24,8 +24,7 @@ using modular::testing::TestPoint;
 namespace {
 
 // Tests how modules are updated in a story.
-class TestApp
-    : public modular::testing::ComponentBase<void> {
+class TestApp : public modular::testing::ComponentBase<void> {
  public:
   TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -45,17 +44,20 @@ class TestApp
   TestPoint story_create_{"Story Create"};
 
   void CreateStory() {
-    story_provider_->CreateStory(kCommonNullModule,
-                                 [this](fidl::StringPtr story_id) {
-                                   story_create_.Pass();
-                                   GetController(story_id);
-                                 });
+    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
+      story_create_.Pass();
+      GetController(story_id);
+    });
   }
 
   TestPoint root_running_{"Root Module RUNNING"};
 
   void GetController(fidl::StringPtr story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
+    fuchsia::modular::Intent intent;
+    intent.handler = kCommonNullModule;
+    intent.action = kCommonNullAction;
+    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
 
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
@@ -100,6 +102,7 @@ class TestApp
     // The observability of the STOPPED state, however, is guaranteed.
     fuchsia::modular::Intent intent;
     intent.handler = kCommonNullModule;
+    intent.action = kCommonNullAction;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module1",
                                  std::move(intent),
                                  nullptr /* surface_relation */);
@@ -162,6 +165,7 @@ class TestApp
     // to resume from the connection error handler of the module controller.
     fuchsia::modular::Intent intent;
     intent.handler = kCommonNullModule;
+    intent.action = kCommonNullAction;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module2",
                                  std::move(intent),
                                  nullptr /* surface_relation */);

@@ -17,9 +17,9 @@ namespace modular {
 // Abstract base class for all Module Manifest Source implementations.
 class ModuleManifestSource {
  public:
-  using NewEntryFn =
-      std::function<void(std::string, fuchsia::modular::ModuleManifest)>;
-  using RemovedEntryFn = std::function<void(std::string)>;
+  using NewEntryFn = std::function<void(std::string /* source name*/,
+                                        fuchsia::modular::ModuleManifest)>;
+  using RemovedEntryFn = std::function<void(std::string /* module uri */)>;
   using IdleFn = std::function<void()>;
 
   virtual ~ModuleManifestSource() = 0;

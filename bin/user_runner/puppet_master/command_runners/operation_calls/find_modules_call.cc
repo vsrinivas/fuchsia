@@ -9,6 +9,7 @@
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/type_converter.h>
+
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/get_link_path_for_parameter_name_call.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "peridot/lib/fidl/clone.h"
@@ -16,6 +17,14 @@
 namespace modular {
 
 namespace {
+
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::IntentPtr& value) {
+  os << "Intent{"
+     << "action: " << value->action << ", handler: " << value->handler
+     << ", parameters.size: " << value->parameters->size() << "}";
+  return os;
+}
 
 class FindModulesCall
     : public Operation<fuchsia::modular::ExecuteResult,
@@ -40,36 +49,20 @@ class FindModulesCall
     // Default status. We'll update it and return if an error occurs.
     result_.status = fuchsia::modular::ExecuteStatus::OK;
 
-    if (intent_->handler) {
-      // We already know which module to use, but we need its manifest.
-      module_resolver_->GetModuleManifest(
-          intent_->handler,
-          [this, flow](fuchsia::modular::ModuleManifestPtr manifest) {
-            fuchsia::modular::FindModulesResult result;
-            result.module_id = intent_->handler;
-            result.manifest = CloneOptional(manifest);
-            response_.results.push_back(std::move(result));
-            // Operation finshes since |flow| goes out of scope.
-          });
-      return;
-    }
-
-    FXL_DCHECK(intent_->action);
+    FXL_DCHECK(intent_->action) << intent_;
 
     constraint_futs_.reserve(intent_->parameters->size());
 
     resolver_query_.action = intent_->action;
+    resolver_query_.handler = intent_->handler;
     resolver_query_.parameter_constraints.resize(0);
     resolver_query_.parameter_constraints->reserve(intent_->parameters->size());
 
     for (auto& param : *intent_->parameters) {
       if (param.name.is_null() && intent_->handler.is_null()) {
-        // It is not allowed to have a null intent name (left in for backwards
-        // compatibility with old code: MI4-736) and rely on action-based
-        // resolution.
         result_.error_message =
             "A null-named module parameter is not allowed "
-            "when using fuchsia::modular::Intent.action.";
+            "when using fuchsia::modular::Intent.";
         result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
         return;
         // Operation finishes since |flow| goes out of scope.
@@ -86,7 +79,7 @@ class FindModulesCall
               }));
     }
 
-    Wait("AddModCommandRunner.FindModulesCall.Run.Wait", constraint_futs_)
+    Wait("FindModulesCall.Run.Wait", constraint_futs_)
         ->Then([this, flow](
                    std::vector<fuchsia::modular::FindModulesParameterConstraint>
                        constraint_params) {
@@ -100,8 +93,17 @@ class FindModulesCall
               std::move(resolver_query_),
               [this, flow](fuchsia::modular::FindModulesResponse response) {
                 response_ = std::move(response);
-                // This operation should end once |flow| goes out of scope
-                // here.
+                if (response_.status ==
+                    fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER) {
+                  FXL_LOG(WARNING) << "Could not resolve to a known module "
+                                      "with a manifest using handler=`"
+                                   << intent_->handler << "` with action=`"
+                                   << intent_->action
+                                   << "`. Going to try launching it anyway!";
+                }
+                // At this point, the only remaining |flow| is the one captured
+                // in this lambda. This operation should end once |flow| goes
+                // out of scope here.
               });
         });
   }
@@ -203,6 +205,7 @@ class FindModulesCall
             return;
           }
           if (auto result = GetTypesFromJson(v)) {
+            FXL_LOG(INFO) << "type=" << result.value()[0];
             done(*result);
             return;
           }
