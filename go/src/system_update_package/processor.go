@@ -206,20 +206,33 @@ var diskImagerPath = filepath.Join("/boot", "bin", "install-disk-image")
 
 func WriteImgs(imgs []string, imgsPath string) error {
 	for _, img := range imgs {
+		imgPath := filepath.Join(imgsPath, img)
+		if fi, err := os.Stat(imgPath); err != nil || fi.Size() == 0 {
+			log.Printf("img_writer: %s image not found or zero length, skipping", img)
+			continue
+		}
+
 		var c *exec.Cmd
 		switch img {
 		case "efi":
 			c = exec.Command(diskImagerPath, "install-efi")
 		case "kernc":
 			c = exec.Command(diskImagerPath, "install-kernc")
+		case "zbi", "zbi.signed":
+			c = exec.Command(diskImagerPath, "install-zircona")
+		case "zedboot", "zedboot.signed":
+			c = exec.Command(diskImagerPath, "install-zirconr")
+		case "bootloader":
+			c = exec.Command(diskImagerPath, "install-bootloader")
 		default:
 			return fmt.Errorf("unrecognized image %q", img)
 		}
 
-		err := writeImg(c, filepath.Join(imgsPath, img))
+		err := writeImg(c, imgPath)
 		if err != nil {
 			return err
 		}
+		log.Printf("img_writer: wrote %s successfully from %s", img, imgPath)
 	}
 	return nil
 }
