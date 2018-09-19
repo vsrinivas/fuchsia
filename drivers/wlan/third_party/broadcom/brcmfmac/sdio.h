@@ -171,6 +171,12 @@
  */
 enum brcmf_sdiod_state { BRCMF_SDIOD_DOWN, BRCMF_SDIOD_DATA, BRCMF_SDIOD_NOMEDIUM };
 
+enum {
+    WIFI_OOB_IRQ_GPIO_INDEX,
+    DEBUG_GPIO_INDEX,
+    GPIO_COUNT,
+};
+
 struct brcmf_sdreg {
     int func;
     int offset;
@@ -186,7 +192,7 @@ struct brcmf_sdio_dev {
     uint32_t manufacturer_id;
     uint32_t product_id;
     sdio_protocol_t sdio_proto;
-    gpio_protocol_t gpio;
+    gpio_protocol_t gpios[GPIO_COUNT];
     zx_handle_t irq_handle;
     thrd_t isr_thread;
     struct brcmf_device dev;

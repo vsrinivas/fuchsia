@@ -58,8 +58,6 @@
 
 #define BRCMF_DEFAULT_RXGLOM_SIZE 32 /* max rx frames in glom chain */
 
-#define WIFI_OOB_IRQ_GPIO_INDEX 0
-
 struct brcmf_sdiod_freezer {
     atomic_int freezing;
     atomic_int thread_count;
@@ -101,19 +99,21 @@ zx_status_t brcmf_sdiod_configure_oob_interrupt(struct brcmf_sdio_dev* sdiodev,
         zxlogf(ERROR, "brcmf_sdiod_intr_register: OOB gpio not available\n");
         return ZX_ERR_INTERNAL;
     }
-    if ((ret = device_get_protocol(sdiodev->dev.zxdev, ZX_PROTOCOL_GPIO, &sdiodev->gpio))
-                                                                               != ZX_OK) {
-        zxlogf(ERROR, "brcmf_sdiod_intr_register: ZX_PROTOCOL_GPIO not available\n");
+    if ((ret = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, WIFI_OOB_IRQ_GPIO_INDEX,
+                                 &sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX])) != ZX_OK) {
+        zxlogf(ERROR, "brcmf_sdiod_intr_register: GPIO WIFI_OOB_IRQ_GPIO_INDEX not available\n");
         return ret;
     }
+    // Debug GPIO is optional.
+    pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, DEBUG_GPIO_INDEX, &sdiodev->gpios[DEBUG_GPIO_INDEX]);
 
-    ret = gpio_config_in(&sdiodev->gpio, WIFI_OOB_IRQ_GPIO_INDEX, GPIO_NO_PULL);
+    ret = gpio_config_in(&sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX], GPIO_NO_PULL);
     if (ret != ZX_OK) {
         zxlogf(ERROR, "brcmf_sdiod_intr_register: gpio_config failed: %d\n", ret);
         return ret;
     }
 
-    ret = gpio_get_interrupt(&sdiodev->gpio, WIFI_OOB_IRQ_GPIO_INDEX,
+    ret = gpio_get_interrupt(&sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX],
                              config->oob_irq_mode,
                              &sdiodev->irq_handle);
     if (ret != ZX_OK) {
