@@ -249,7 +249,7 @@ readonly FX_LOCK_FILE
 # Print a message if the lock isn't immediately entered,
 # and block until it is.
 function fx-try-locked {
-  if !(command -v shlock >/dev/null); then
+  if ! command -v shlock >/dev/null; then
     # Can't lock! Fall back to unlocked operation.
     "$@"
   elif shlock -f "${FX_LOCK_FILE}" -p $$; then
