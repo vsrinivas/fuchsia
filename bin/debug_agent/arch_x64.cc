@@ -138,6 +138,9 @@ inline zx_status_t ReadVectorRegs(const zx::thread& thread,
   return ZX_OK;
 }
 
+// TODO: Enable this when the zircon patch for debug registers lands.
+#ifdef ZX_DEBUG_REGISTERS_ENABLED
+
 inline zx_status_t ReadDebugRegs(const zx::thread& thread,
                                  std::vector<debug_ipc::Register>* out) {
   zx_thread_state_debug_regs_t debug_regs;
@@ -156,6 +159,8 @@ inline zx_status_t ReadDebugRegs(const zx::thread& thread,
 
   return ZX_OK;
 }
+
+#endif
 
 }  // namespace
 
@@ -184,12 +189,16 @@ bool GetRegisterStateFromCPU(const zx::thread& thread,
     return false;
   }
 
+#ifdef ZX_DEBUG_REGISTERS_ENABLED
+
   cats->push_back({debug_ipc::RegisterCategory::Type::kDebug, {}});
   auto& debug_category = cats->back();
   if (ReadDebugRegs(thread, &debug_category.registers) != ZX_OK) {
     cats->clear();
     return false;
   }
+
+#endif
 
   return true;
 }
