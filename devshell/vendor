@@ -1,0 +1,41 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Forward commands to vendor/*/scripts/devshell
+
+## usage: fx vendor <vendor-dir> [command]
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+
+function main {
+  if [[ $# -lt 2 ]]; then
+    fx-command-help
+
+    echo >&2 "commands: "
+    for d in "${FUCHSIA_DIR}"/vendor/*; do
+      for f in "$d"/scripts/devshell/*; do
+        if [[ -x "$f" ]]; then
+          echo >&2 "  $(basename $d)" "$(basename $f)"
+        fi
+      done
+    done
+
+    return 1
+  fi
+
+  vendor_cmd_path="${FUCHSIA_DIR}/vendor/$1/scripts/devshell/$2"
+
+  if [[ ! -x "${vendor_cmd_path}" ]]; then
+    echo >&2 "command $1 $2 not found!"
+    return 1
+  fi
+
+  shift
+  shift
+
+  exec "${vendor_cmd_path}" "$@"
+}
+
+main "$@"
