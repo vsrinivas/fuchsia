@@ -5,11 +5,17 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//garnet/bin/wayland/protocol.gni")
+
+wayland_protocol("wayland") {
+  protocol = "//third_party/wayland/protocol/wayland.xml"
+}
 
 rustc_binary("bin") {
   name = "wayland_bridge"
   edition = "2018"
   deps = [
+    ":wayland",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/fidl/fuchsia.guest:fuchsia.guest-rustc",
     "//garnet/public/rust/crates/fuchsia-app",
