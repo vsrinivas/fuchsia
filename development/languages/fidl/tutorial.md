@@ -325,7 +325,7 @@ the server response.
 
 ```cpp
 int main(int argc, const char** argv) {
-  std::string server_url = "echo2_server_cpp";
+  std::string server_url = "fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx";
   std::string msg = "hello world";
   for (int i = 1; i < argc - 1; ++i) {
     if (!strcmp("--server", argv[i])) {
@@ -385,7 +385,7 @@ allowing `main()` to return and the program to terminate.
 You can run the Hello World example like this:
 
 ```sh
-$ run echo2_client_cpp
+$ run fuchsia-pkg://fuchsia.com/echo2_client_cpp#meta/echo2_client_cpp.cmx
 ```
 
 You do not need to specifically run the server because the call to
@@ -623,7 +623,7 @@ fn main() -> Result<(), Error> {
     #[structopt(name = "echo_client_rust")]
     struct Opt {
         #[structopt(long = "server", help = "URL of echo server",
-                    default_value = "echo2_server_rust")]
+                    default_value = "fuchsia-pkg://fuchsia.com/echo2_server_rust#meta/echo2_server_rust.cmx")]
         server_url: String,
     }
 
@@ -650,7 +650,7 @@ fn main() -> Result<(), Error> {
 You can run the echo example like this:
 
 ```sh
-$ run echo2_client_rust
+$ run fuchsia-pkg://fuchsia.com/echo2_client_rust#meta/echo2_client_rust.cmx
 ```
 
 ## `Echo` server in Dart
@@ -797,7 +797,7 @@ The `main()` function in the client contains all the client code.
 
 ```dart
 void main(List<String> args) {
-  String server = 'echo_server_dart';
+  String server = 'fuchsia-pkg://fuchsia.com/echo_dart#meta/echo_server_dart.cmx';
   if (args.length >= 2 && args[0] == '--server') {
     server = args[1];
   }
@@ -828,7 +828,7 @@ closed, and the component will terminate after the callback returns.
 You can run the Hello World example like this:
 
 ```sh
-$ run echo_client_dart
+$ run fuchsia-pkg://fuchsia.com/echo_dart#meta/echo_client_dart.cmx
 ```
 
 You do not need to specifically run the server because the call to
@@ -840,7 +840,7 @@ As a final exercise, you can now mix & match `Echo` clients and servers as you
 see fit. Let's try having the Dart client call the C++ server.
 
 ```sh
-$ run echo_client_dart --server echo2_server_cpp
+$ run fuchsia-pkg://fuchsia.com/echo_dart#meta/echo_client_dart.cmx --server fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx
 ```
 
 The Dart client will start the C++ server and connect to it. `EchoString()`
