@@ -966,7 +966,7 @@ RUN_TEST((self_fails<ZX_INFO_PROCESS_MAPS, zx_info_maps_t>))
 RUN_TEST((wrong_handle_type_fails<ZX_INFO_PROCESS_MAPS, zx_info_maps_t, get_test_job>));
 RUN_TEST((wrong_handle_type_fails<ZX_INFO_PROCESS_MAPS, zx_info_maps_t, zx_thread_self>));
 RUN_TEST((missing_rights_fails<ZX_INFO_PROCESS_MAPS, zx_info_maps_t, get_test_process,
-                               ZX_RIGHT_READ>));
+                               ZX_RIGHT_INSPECT>));
 
 RUN_TEST(process_vmos_smoke);
 RUN_MULTI_ENTRY_TESTS(ZX_INFO_PROCESS_VMOS, zx_info_vmo_t, get_test_process);
@@ -974,7 +974,7 @@ RUN_TEST((self_fails<ZX_INFO_PROCESS_VMOS, zx_info_vmo_t>))
 RUN_TEST((wrong_handle_type_fails<ZX_INFO_PROCESS_VMOS, zx_info_vmo_t, get_test_job>));
 RUN_TEST((wrong_handle_type_fails<ZX_INFO_PROCESS_VMOS, zx_info_vmo_t, zx_thread_self>));
 RUN_TEST((missing_rights_fails<ZX_INFO_PROCESS_VMOS, zx_info_vmo_t, get_test_process,
-                               ZX_RIGHT_READ>));
+                               ZX_RIGHT_INSPECT>));
 
 RUN_TEST(job_processes_smoke);
 RUN_MULTI_ENTRY_TESTS(ZX_INFO_JOB_PROCESSES, zx_koid_t, get_test_job);

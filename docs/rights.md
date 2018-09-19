@@ -30,7 +30,7 @@ default rights for each object type, which can be reduced via
 | **ZX_RIGHT_SIGNAL**         | Allows use of [*zx_object_signal*](syscalls/object_signal.md) |
 | **ZX_RIGHT_SIGNAL_PEER**    | Allows use of [*zx_object_signal_peer*](syscalls/object_signal.md) |
 | **ZX_RIGHT_WAIT**           | Allows use of [*zx_object_wait_one*](syscalls/object_wait_one.md), [*zx_object_wait_many*](syscalls/object_wait_many.md), and other waiting primitives |
-| **ZX_RIGHT_INSPECT**        | **NOT YET IMPLEMENTED** Allows inspection via [*zx_object_get_info*](syscalls/object_get_info.md) |
+| **ZX_RIGHT_INSPECT**        | Allows inspection via [*zx_object_get_info*](syscalls/object_get_info.md) |
 | **ZX_RIGHT_MANAGE_JOB**     | **NOT YET IMPLEMENTED** Allows creation of processes, subjobs, etc. |
 | **ZX_RIGHT_MANAGE_PROCESS** | **NOT YET IMPLEMENTED** Allows creation of threads, etc |
 | **ZX_RIGHT_MANAGE_THREAD**  | **NOT YET IMPLEMENTED** Allows suspending/resuming threads, etc|
