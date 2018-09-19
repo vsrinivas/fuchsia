@@ -79,9 +79,23 @@ TEST(MagmaUtil, Dret)
 
 TEST(MagmaUtil, ns_to_ms)
 {
-    EXPECT_GE(UINT64_MAX / 1000000ULL, magma::ns_to_ms(UINT64_MAX));
-    EXPECT_GE(INT64_MAX / 1000000ULL, magma::ns_to_ms(INT64_MAX));
+    constexpr uint64_t kNsPerMs = 1000000;
+    EXPECT_GE(UINT64_MAX / kNsPerMs, magma::ns_to_ms(UINT64_MAX));
+    EXPECT_GE(INT64_MAX / kNsPerMs, magma::ns_to_ms(INT64_MAX));
     EXPECT_EQ(0u, magma::ns_to_ms(0));
-    EXPECT_EQ(5u, magma::ns_to_ms(5000000ull));
-    EXPECT_EQ(5u, magma::ns_to_ms(5999999ull));
+    EXPECT_EQ(5u, magma::ns_to_ms(5 * kNsPerMs));
+    EXPECT_EQ(5u, magma::ns_to_ms(6 * kNsPerMs - 1));
+}
+
+TEST(MagmaUtil, ms_to_signed_ns)
+{
+    constexpr int64_t kNsPerMs = 1000000;
+    EXPECT_EQ(INT64_MAX, magma::ms_to_signed_ns(UINT64_MAX));
+    EXPECT_EQ(INT64_MAX, magma::ms_to_signed_ns(UINT64_MAX / kNsPerMs));
+    const int64_t kMaxMs = INT64_MAX / kNsPerMs;
+    EXPECT_EQ(kMaxMs * kNsPerMs, magma::ms_to_signed_ns(kMaxMs));
+    EXPECT_EQ(INT64_MAX, magma::ms_to_signed_ns(kMaxMs + 1));
+    EXPECT_EQ((kMaxMs - 1) * kNsPerMs, magma::ms_to_signed_ns(kMaxMs - 1));
+    EXPECT_EQ(0u, magma::ms_to_signed_ns(0));
+    EXPECT_EQ(kNsPerMs, magma::ms_to_signed_ns(1u));
 }
