@@ -126,14 +126,14 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
     match cmd {
         opts::ClientCmd::Scan { iface_id } => {
             let sme = await!(get_client_sme(wlan_svc, iface_id))?;
-            let (local, remote) = endpoints::create_endpoints()?;
+            let (local, remote) = endpoints::create_proxy()?;
             let mut req = fidl_sme::ScanRequest { timeout: 10 };
             sme.scan(&mut req, remote).context("error sending scan request")?;
             await!(handle_scan_transaction(local))
         }
         opts::ClientCmd::Connect { iface_id, ssid, password, phy_str, cbw_str } => {
             let sme = await!(get_client_sme(wlan_svc, iface_id))?;
-            let (local, remote) = endpoints::create_endpoints()?;
+            let (local, remote) = endpoints::create_proxy()?;
             let (has_phy, phy) = parse_phy_str(phy_str)?;
             let (has_cbw, cbw) = parse_cbw_str(cbw_str)?;
             let mut req = fidl_sme::ConnectRequest {
@@ -261,7 +261,7 @@ async fn handle_connect_transaction(connect_txn: fidl_sme::ConnectTransactionPro
 async fn get_client_sme(wlan_svc: WlanSvc, iface_id: u16)
     -> Result<fidl_sme::ClientSmeProxy, Error>
 {
-    let (proxy, remote) = endpoints::create_endpoints()?;
+    let (proxy, remote) = endpoints::create_proxy()?;
     let status = await!(wlan_svc.get_client_sme(iface_id, remote)).context("error sending GetClientSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(proxy)
@@ -273,7 +273,7 @@ async fn get_client_sme(wlan_svc: WlanSvc, iface_id: u16)
 async fn get_ap_sme(wlan_svc: WlanSvc, iface_id: u16)
     -> Result<fidl_sme::ApSmeProxy, Error>
 {
-    let (proxy, remote) = endpoints::create_endpoints()?;
+    let (proxy, remote) = endpoints::create_proxy()?;
     let status = await!(wlan_svc.get_ap_sme(iface_id, remote)).context("error sending GetApSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(proxy)

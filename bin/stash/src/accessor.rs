@@ -264,7 +264,7 @@ impl Accessor {
 #[cfg(test)]
 mod tests {
     use fuchsia_async as fasync;
-    use fidl::endpoints::create_endpoints;
+    use fidl::endpoints::create_proxy;
     use fidl_fuchsia_stash::{ListItem, Value};
     use parking_lot::Mutex;
     use std::sync::Arc;
@@ -378,7 +378,7 @@ mod tests {
         }
 
         let mut run_test = |prefix: &str, mut expected: Vec<&str>| {
-            let (list_iterator, server_end) = create_endpoints().unwrap();
+            let (list_iterator, server_end) = create_proxy().unwrap();
             acc.list_prefix(prefix.to_string(), server_end);
 
             let mut actual = Vec::new();
@@ -423,7 +423,7 @@ mod tests {
         }
 
         let mut run_test = |prefix: &str, mut expected: Vec<&str>| {
-            let (list_iterator, server_end) = create_endpoints().unwrap();
+            let (list_iterator, server_end) = create_proxy().unwrap();
             acc.list_prefix(prefix.to_string(), server_end);
 
             let mut actual = Vec::new();
@@ -476,7 +476,7 @@ mod tests {
         }
 
         let mut run_test = |prefix: &str, mut expected: Vec<(String, bool)>| {
-            let (get_iterator, server_end) = create_endpoints().unwrap();
+            let (get_iterator, server_end) = create_proxy().unwrap();
             acc.get_prefix(prefix.to_string(), server_end);
 
             let mut actual = Vec::new();
@@ -561,7 +561,7 @@ mod tests {
         assert_eq!(4, acc.fields_updated.lock().len());
         acc.commit();
 
-        let (list_iterator, server_end) = create_endpoints().unwrap();
+        let (list_iterator, server_end) = create_proxy().unwrap();
         acc.list_prefix("".to_string(), server_end);
 
         let mut actual = Vec::new();

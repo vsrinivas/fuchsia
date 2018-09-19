@@ -115,7 +115,7 @@ async fn do_connect<'a>(args: &'a [String], central: &'a CentralProxy)
         return Err(BTError::new("invalid input").into());
     }
 
-    let (_, server_end) = fidl::endpoints::create_endpoints()?;
+    let (_, server_end) = fidl::endpoints::create_proxy()?;
 
     let status = await!(central.connect_peripheral(&args[0], server_end))
         .context("failed to connect to peripheral")?;

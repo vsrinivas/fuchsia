@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_wlan_service as legacy,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fidl_fuchsia_wlan_stats as fidl_wlan_stats,
-    fidl::{self, endpoints::create_endpoints},
+    fidl::{self, endpoints::create_proxy},
     fuchsia_zircon as zx,
     futures::{prelude::*, channel::oneshot},
     std::sync::{Arc, Mutex},
@@ -150,7 +150,7 @@ async fn scan<'a>(client: &ClientRef, legacy_req: legacy::ScanRequest)
 fn start_scan_txn(client: &Client, legacy_req: legacy::ScanRequest)
     -> Result<fidl_sme::ScanTransactionProxy, fidl::Error>
 {
-    let (scan_txn, remote) = create_endpoints()?;
+    let (scan_txn, remote) = create_proxy()?;
     let mut req = fidl_sme::ScanRequest {
         timeout: legacy_req.timeout
     };

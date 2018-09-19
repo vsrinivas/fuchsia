@@ -11,7 +11,7 @@ use crate::{
 
 use {
     failure::{bail, format_err},
-    fidl::endpoints::create_endpoints,
+    fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_device as wlan,
     fidl_fuchsia_wlan_device_service::{
         self as wlan_service,
@@ -103,7 +103,7 @@ async fn on_iface_added(listener: &Listener, iface_id: u16, ess_store: Arc<Known
 {
     let service = listener.proxy.clone();
     let legacy_client = listener.legacy_client.clone();
-    let (sme, remote) = create_endpoints()
+    let (sme, remote) = create_proxy()
         .map_err(|e| format_err!("Failed to create a FIDL channel: {}", e))?;
 
     let status = await!(service.get_client_sme(iface_id, remote))

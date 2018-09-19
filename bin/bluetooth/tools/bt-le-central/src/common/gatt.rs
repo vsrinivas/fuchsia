@@ -289,7 +289,7 @@ async fn do_connect<'a>(args: &'a [&'a str], client: &'a GattClientPtr)
     };
 
     // Initialize the remote service proxy.
-    let (proxy, server) = endpoints::create_endpoints()?;
+    let (proxy, server) = endpoints::create_proxy()?;
 
     // First close the connection to the currently active service.
     if client.read().active_proxy.is_some() {

@@ -41,7 +41,7 @@ pub async fn get_iface_list(wlan_svc: &DeviceServiceProxy)
 
 pub async fn get_iface_sme_proxy(wlan_svc: &WlanService, iface_id: u16)
         -> Result<fidl_sme::ClientSmeProxy, Error> {
-    let (sme_proxy, sme_remote) = endpoints::create_endpoints()?;
+    let (sme_proxy, sme_remote) = endpoints::create_proxy()?;
     let status = await!(wlan_svc.get_client_sme(iface_id, sme_remote))
             .context("error sending GetClientSme request")?;
     if status == zx::sys::ZX_OK {
@@ -55,7 +55,7 @@ pub async fn connect_to_network(iface_sme_proxy: &fidl_sme::ClientSmeProxy,
                                    target_ssid: Vec<u8>,
                                    target_pwd: Vec<u8>)
         -> Result<bool, Error> {
-    let (connection_proxy, connection_remote) = endpoints::create_endpoints()?;
+    let (connection_proxy, connection_remote) = endpoints::create_proxy()?;
 
     // create ConnectRequest holding network info
     let mut req = fidl_sme::ConnectRequest {
@@ -367,7 +367,7 @@ mod tests {
     }
 
     fn create_client_sme_proxy() -> (fidl_sme::ClientSmeProxy, ClientSmeRequestStream) {
-        let (proxy, server) = endpoints::create_endpoints::<ClientSmeMarker>()
+        let (proxy, server) = endpoints::create_proxy::<ClientSmeMarker>()
                 .expect("failed to create sme client channel");
         let server = server.into_stream()
                 .expect("failed to create a client sme response stream");
@@ -376,7 +376,7 @@ mod tests {
 
     fn create_wlan_service_util()
             -> (DeviceServiceProxy, DeviceServiceRequestStream) {
-        let (proxy, server) = endpoints::create_endpoints::<DeviceServiceMarker>()
+        let (proxy, server) = endpoints::create_proxy::<DeviceServiceMarker>()
                 .expect("failed to create a wlan_service channel for tests");
         let server = server.into_stream()
                 .expect("failed to create a wlan_service response stream");

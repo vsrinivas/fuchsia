@@ -81,7 +81,7 @@ pub fn serve() -> (CobaltSender, impl Future<Output = ()>) {
 
 async fn get_cobalt_logger() -> Result<LoggerProxy, Error> {
     let (logger_proxy, server_end) =
-        fidl::endpoints::create_endpoints().context("Failed to create endpoints")?;
+        fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
     let logger_factory = fuchsia_app::client::connect_to_service::<LoggerFactoryMarker>()
         .context("Failed to connect to the Cobalt LoggerFactory")?;
 

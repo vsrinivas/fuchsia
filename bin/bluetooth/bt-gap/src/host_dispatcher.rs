@@ -297,7 +297,7 @@ impl HostDispatcher {
         hd: Arc<RwLock<HostDispatcher>>, device_id: String,
     ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
         HostDispatcher::connect_le_central(hd.clone()).and_then(move |central| {
-            let (service_local, service_remote) = fidl::endpoints::create_endpoints().unwrap();
+            let (service_local, service_remote) = fidl::endpoints::create_proxy().unwrap();
 
             let central = central.unwrap();
             let connected = central.connect_peripheral(device_id.as_str(), service_remote);

@@ -110,7 +110,7 @@ pub async fn listen_central_events(
 async fn connect_peripheral(
     state: &CentralStatePtr, mut id: String,
 ) -> Result<(), Error> {
-    let (proxy, server) = endpoints::create_endpoints()
+    let (proxy, server) = endpoints::create_proxy()
         .map_err(|_| BTError::new("Failed to create Client pair"))?;
 
     let connect_peripheral_fut = state.read()

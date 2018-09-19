@@ -5,7 +5,7 @@
 #![feature(try_from,async_await,await_macro)]
 
 use failure::{err_msg, Error, ResultExt};
-use fidl::endpoints::create_endpoints;
+use fidl::endpoints::create_proxy;
 use fidl_fuchsia_mem;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
@@ -28,7 +28,7 @@ fn main() -> Result<(), Error> {
     let fut = stashserver.identify("stash_ctl")?;
 
     // Create an accessor
-    let (acc, serverEnd) = create_endpoints()?;
+    let (acc, serverEnd) = create_proxy()?;
     stashserver.create_accessor(false, serverEnd)?;
 
     // Perform the operation
@@ -53,7 +53,7 @@ fn main() -> Result<(), Error> {
             println!("{} deleted successfully", k);
         }
         StashOperation::ListPrefix(k) => {
-            let (list_iterator, server_end) = create_endpoints()?;
+            let (list_iterator, server_end) = create_proxy()?;
             acc.list_prefix(&k, server_end)?;
 
             let resp: Result<(), Error> = executor.run_singlethreaded(async {
@@ -68,7 +68,7 @@ fn main() -> Result<(), Error> {
             resp?;
         }
         StashOperation::GetPrefix(k) => {
-            let (get_iterator, server_end) = create_endpoints()?;
+            let (get_iterator, server_end) = create_proxy()?;
             acc.get_prefix(&k, server_end)?;
 
             let resp: Result<(), Error> = executor.run_singlethreaded(async {

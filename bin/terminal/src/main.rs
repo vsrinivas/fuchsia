@@ -9,7 +9,7 @@ mod canvas;
 
 use crate::canvas::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size};
 use failure::{Error, ResultExt};
-use fidl::endpoints::{create_endpoints, ClientEnd, RequestStream, ServerEnd, ServiceMarker};
+use fidl::endpoints::{create_proxy, ClientEnd, RequestStream, ServerEnd, ServiceMarker};
 use fidl_fuchsia_images as images;
 use fidl_fuchsia_math::SizeF;
 use fidl_fuchsia_ui_scenic::{self as scenic, ScenicMarker, ScenicProxy, SessionListenerMarker,
@@ -57,7 +57,7 @@ impl ViewController {
         let session_listener_request =
             ServerEnd::<SessionListenerMarker>::new(session_listener_server);
 
-        let (session_proxy, session_request) = create_endpoints::<SessionMarker>()?;
+        let (session_proxy, session_request) = create_proxy::<SessionMarker>()?;
         scenic.create_session(session_request, Some(session_listener))?;
         let session = Session::new(session_proxy);
         let view_controller = ViewController {
@@ -234,7 +234,7 @@ impl App {
     pub fn create_view(
         &mut self, view_owner_request: ServerEnd<ViewOwnerMarker>,
     ) -> Result<(), Error> {
-        let (view, view_request) = create_endpoints::<ViewMarker>()?;
+        let (view, view_request) = create_proxy::<ViewMarker>()?;
         let (view_listener, view_listener_server) = Channel::create()?;
         let view_listener_request = ServerEnd::new(view_listener_server);
         let (mine, theirs) = EventPair::create()?;
@@ -245,7 +245,7 @@ impl App {
             theirs,
             Some("Terminal"),
         )?;
-        let (scenic, scenic_request) = create_endpoints::<ScenicMarker>()?;
+        let (scenic, scenic_request) = create_proxy::<ScenicMarker>()?;
         self.view_manager.get_scenic(scenic_request)?;
         self.view_controllers.push(ViewController::new(
             self.face.clone(),

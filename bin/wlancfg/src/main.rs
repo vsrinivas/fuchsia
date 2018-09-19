@@ -56,7 +56,7 @@ fn main() -> Result<(), Error> {
     let legacy_client = shim::ClientRef::new();
     let fidl_fut = serve_fidl(legacy_client.clone());
 
-    let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_endpoints()?;
+    let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_proxy()?;
     wlan_svc.watch_devices(watcher_server_end)?;
     let listener = device::Listener::new(wlan_svc, cfg, legacy_client);
     let ess_store = Arc::new(KnownEssStore::new()?);

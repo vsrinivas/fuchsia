@@ -191,13 +191,28 @@ impl<T> zx::HandleBased for ServerEnd<T> {}
 
 handle_based_codable![ClientEnd :- <T,>, ServerEnd :- <T,>,];
 
-/// Create a server endpoint and a client proxy connected to it by a channel.
+/// Creates client and server endpoints connected to by a channel.
+pub fn create_endpoints<T: ServiceMarker>() -> Result<(ClientEnd<T>, ServerEnd<T>), Error> {
+    let (client, server) = zx::Channel::create().map_err(Error::ChannelPairCreate)?;
+    let client_end = ClientEnd::<T>::new(client);
+    let server_end = ServerEnd::new(server);
+    Ok((client_end, server_end))
+}
+
+/// Create a client proxy and a server endpoint connected to it by a channel.
 ///
 /// Useful for sending channel handles to calls that take arguments
 /// of type `request<SomeInterface>`
-pub fn create_endpoints<T: ServiceMarker>() -> Result<(T::Proxy, ServerEnd<T>), Error> {
-    let (client, server) = zx::Channel::create().map_err(Error::ChannelPairCreate)?;
-    let proxy = ClientEnd::<T>::new(client).into_proxy()?;
-    let server_end = ServerEnd::new(server);
-    Ok((proxy, server_end))
+pub fn create_proxy<T: ServiceMarker>() -> Result<(T::Proxy, ServerEnd<T>), Error> {
+    let (client, server) = create_endpoints()?;
+    Ok((client.into_proxy()?, server))
+}
+
+/// Create a request stream and a client endpoint connected to it by a channel.
+///
+/// Useful for sending channel handles to calls that take arguments
+/// of type `SomeInterface`
+pub fn create_request_stream<T: ServiceMarker>() -> Result<(ClientEnd<T>, T::RequestStream), Error> {
+    let (client, server) = create_endpoints()?;
+    Ok((client, server.into_stream()?))
 }

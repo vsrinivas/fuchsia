@@ -9,7 +9,7 @@ use crate::{
 
 use {
     failure::{bail, format_err},
-    fidl::endpoints::create_endpoints,
+    fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon::prelude::*,
     futures::{
@@ -287,7 +287,7 @@ async fn disconnected_state(responder: oneshot::Sender<()>,
 fn start_scan_txn(sme: &fidl_sme::ClientSmeProxy)
     -> Result<fidl_sme::ScanTransactionProxy, failure::Error>
 {
-    let (scan_txn, remote) = create_endpoints()?;
+    let (scan_txn, remote) = create_proxy()?;
     let mut req = fidl_sme::ScanRequest {
         timeout: AUTO_CONNECT_SCAN_TIMEOUT_SECONDS,
     };
@@ -298,7 +298,7 @@ fn start_scan_txn(sme: &fidl_sme::ClientSmeProxy)
 fn start_connect_txn(sme: &fidl_sme::ClientSmeProxy, ssid: &[u8], password: &[u8])
     -> Result<fidl_sme::ConnectTransactionProxy, failure::Error>
 {
-    let (connect_txn, remote) = create_endpoints()?;
+    let (connect_txn, remote) = create_proxy()?;
     let mut req = fidl_sme::ConnectRequest {
         ssid: ssid.to_vec(),
         password: password.to_vec(),
@@ -851,7 +851,7 @@ mod tests {
     fn create_client(ess_store: Arc<KnownEssStore>)
         -> (Client, impl Future<Output = ()>, ClientSmeRequestStream)
     {
-        let (proxy, server) = create_endpoints::<fidl_sme::ClientSmeMarker>()
+        let (proxy, server) = create_proxy::<fidl_sme::ClientSmeMarker>()
             .expect("failed to create an sme channel");
         let (client, fut) = new_client(0, proxy, Arc::clone(&ess_store));
         let server = server.into_stream().expect("failed to create a request stream");
