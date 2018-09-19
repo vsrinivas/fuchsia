@@ -421,6 +421,11 @@ void LineInputStdout::EnsureRawMode() {
     if (tcgetattr(STDOUT_FILENO, original_termios_.get()) == -1)
       return;
 
+    // Always expect non-raw node to wrap lines for us. Without this, if
+    // somebody's terminal was left in raw mode when they started the debugger,
+    // the non-interactive input will be wrapped incorrectly.
+    original_termios_->c_oflag |= OPOST;
+
     raw_termios_ = std::make_unique<termios>(*original_termios_);
 
     raw_termios_->c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
