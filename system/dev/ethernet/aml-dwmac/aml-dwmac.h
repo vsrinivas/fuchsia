@@ -100,6 +100,12 @@ public:
     zx_handle_t EthmacGetBti();
 
 private:
+    enum {
+        PHY_RESET,
+        PHY_INTR,
+        GPIO_COUNT,
+    };
+
     zx_status_t InitBuffers();
     zx_status_t InitDevice();
     zx_status_t DeInitDevice() __TA_REQUIRES(lock_);
@@ -156,7 +162,7 @@ private:
     dw_mac_regs_t* dwmac_regs_ = nullptr;
     dw_dma_regs_t* dwdma_regs_ = nullptr;
 
-    gpio_protocol_t gpio_;
+    gpio_protocol_t gpios_[GPIO_COUNT];
 
     fbl::Mutex lock_;
     fbl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_ __TA_GUARDED(lock_);

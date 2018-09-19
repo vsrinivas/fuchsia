@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/platform-device.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -22,4 +22,4 @@ typedef struct {
 } pl061_gpios_t;
 
 // PL061 GPIO protocol ops uses pl061_gpios_t* for ctx
-extern gpio_protocol_ops_t pl061_proto_ops;
+extern gpio_impl_protocol_ops_t pl061_proto_ops;

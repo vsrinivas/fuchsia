@@ -4,6 +4,7 @@
 
 #include "backlight.h"
 #include <ddk/debug.h>
+#include <ddk/protocol/platform-device.h>
 
 namespace astro_display {
 
@@ -29,29 +30,36 @@ constexpr I2cCommand kBacklightInitTable[] = {
 } // namespace
 
 zx_status_t Backlight::Init(zx_device_t* parent) {
+    platform_device_protocol_t pdev;
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not obtain platform device protocol\n");
+        return status;
+    }
+
     // Obtain I2C Protocol for backlight
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c_);
+    status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c_);
     if (status != ZX_OK) {
         DISP_ERROR("Could not obtain I2C protocol\n");
         return status;
     }
 
     // Obtain GPIO Protocol for backlight enable
-    status = device_get_protocol(parent, ZX_PROTOCOL_GPIO, &gpio_);
+    status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, GPIO_BL, &gpio_);
     if (status != ZX_OK) {
         DISP_ERROR("Could not obtain GPIO protocol\n");
         return status;
     }
 
     // set gpio pin as output
-    gpio_config_out(&gpio_, GPIO_BL, 1);
+    gpio_config_out(&gpio_, 1);
     zx_nanosleep(zx_deadline_after(ZX_USEC(10))); // optional small delay for pin to settle
     return ZX_OK;
 }
 
 void Backlight::Enable() {
     // power on backlight
-    gpio_write(&gpio_, GPIO_BL, 1);
+    gpio_write(&gpio_, 1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1))); // delay to ensure backlight is powered on
 
     for (size_t i = 0; i < fbl::count_of(kBacklightInitTable); i++) {
@@ -64,7 +72,7 @@ void Backlight::Enable() {
 
 void Backlight::Disable() {
     // power off backlight
-    gpio_write(&gpio_, GPIO_BL, 0);
+    gpio_write(&gpio_, 0);
 }
 
 } // namespace astro_display

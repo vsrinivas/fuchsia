@@ -24,11 +24,6 @@
 
 namespace eth {
 
-enum {
-    PHY_RESET,
-    PHY_INTR,
-};
-
 #define MCU_I2C_REG_BOOT_EN_WOL 0x21
 #define MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE 0x03
 
@@ -96,12 +91,14 @@ zx_status_t AmlDWMacDevice::InitPdev() {
         return status;
     }
 
-    status = device_get_protocol(parent_, ZX_PROTOCOL_GPIO, &gpio_);
-    if (status != ZX_OK) {
-        return status;
+    for (uint32_t i = 0; i < countof(gpios_); i++) {
+        status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, i, &gpios_[i]);
+        if (status != ZX_OK) {
+            return status;
+        }
     }
 
-    gpio_config_out(&gpio_, PHY_RESET, 0);
+    gpio_config_out(&gpios_[PHY_RESET], 0);
     ResetPhy();
 
     // Map amlogic peripheral control registers
@@ -154,9 +151,9 @@ zx_status_t AmlDWMacDevice::InitPdev() {
 }
 
 void AmlDWMacDevice::ResetPhy() {
-    gpio_write(&gpio_, PHY_RESET, 0);
+    gpio_write(&gpios_[PHY_RESET], 0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-    gpio_write(&gpio_, PHY_RESET, 1);
+    gpio_write(&gpios_[PHY_RESET], 1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 }
 
@@ -538,7 +535,7 @@ zx_status_t AmlDWMacDevice::DeInitDevice() {
     dwmac_regs_->conf &= ~(GMAC_CONF_TE | GMAC_CONF_RE);
 
     //reset the phy (hold in reset)
-    gpio_write(&gpio_, PHY_RESET, 0);
+    gpio_write(&gpios_[PHY_RESET], 0);
 
     //transmit and receive are not disables, safe to null descriptor list ptrs
     dwdma_regs_->txdesclistaddr = 0;

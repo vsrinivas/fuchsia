@@ -98,13 +98,13 @@ static pbus_dev_t gpio_dev = {
 };
 
 zx_status_t imx8m_gpio_init(imx8mevk_bus_t* bus) {
-    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_GPIO, &gpio_dev);
+    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pbus_protocol_device_add failed %d\n", __FUNCTION__, status);
         return status;
     }
 
-    status = device_get_protocol(bus->parent, ZX_PROTOCOL_GPIO, &bus->gpio);
+    status = device_get_protocol(bus->parent, ZX_PROTOCOL_GPIO_IMPL, &bus->gpio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: device_get_protocol failed %d\n", __FUNCTION__, status);
         return status;

@@ -438,7 +438,7 @@ static void display_release(void* ctx) {
             thrd_join(display->main_thread, &res);
         }
 
-        gpio_release_interrupt(&display->gpio, 0);
+        gpio_release_interrupt(&display->gpio);
         io_buffer_release(&display->mmio_preset);
         io_buffer_release(&display->mmio_hdmitx);
         io_buffer_release(&display->mmio_hiu);
@@ -503,7 +503,7 @@ static int hdmi_irq_handler(void *arg) {
         }
         usleep(500000);
         uint8_t hpd;
-        status = gpio_read(&display->gpio, 0, &hpd);
+        status = gpio_read(&display->gpio, &hpd);
         if (status != ZX_OK) {
             DISP_ERROR("gpio_read failed HDMI HPD\n");
             continue;
@@ -521,7 +521,7 @@ static int hdmi_irq_handler(void *arg) {
             memset(&display->cur_display_mode, 0, sizeof(display_mode_t));
             populate_added_display_args(display, &args);
             display_added = true;
-            gpio_set_polarity(&display->gpio, 0, GPIO_POLARITY_LOW);
+            gpio_set_polarity(&display->gpio, GPIO_POLARITY_LOW);
         } else if (!hpd && display->display_attached) {
             DISP_ERROR("Display Disconnected!\n");
             hdmi_shutdown(display);
@@ -530,7 +530,7 @@ static int hdmi_irq_handler(void *arg) {
             display->display_id++;
             display->display_attached = false;
 
-            gpio_set_polarity(&display->gpio, 0, GPIO_POLARITY_HIGH);
+            gpio_set_polarity(&display->gpio, GPIO_POLARITY_HIGH);
         }
 
         if (display->dc_cb &&
@@ -719,13 +719,13 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    status = gpio_config_in(&display->gpio, 0, GPIO_PULL_DOWN);
+    status = gpio_config_in(&display->gpio, GPIO_PULL_DOWN);
     if (status != ZX_OK) {
         DISP_ERROR("gpio_config_in failed for gpio\n");
         return status;
     }
 
-    status = gpio_get_interrupt(&display->gpio, 0, ZX_INTERRUPT_MODE_LEVEL_HIGH, &display->inth);
+    status = gpio_get_interrupt(&display->gpio, ZX_INTERRUPT_MODE_LEVEL_HIGH, &display->inth);
     if (status != ZX_OK) {
         DISP_ERROR("gpio_get_interrupt failed for gpio\n");
         return status;

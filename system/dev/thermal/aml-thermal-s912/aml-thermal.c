@@ -28,20 +28,20 @@
 static void aml_set_fan_level(aml_thermal_t* dev, uint32_t level) {
     switch (level) {
     case 0:
-        gpio_write(&dev->gpio, FAN_CTL0, 0);
-        gpio_write(&dev->gpio, FAN_CTL1, 0);
+        gpio_write(&dev->gpios[FAN_CTL0], 0);
+        gpio_write(&dev->gpios[FAN_CTL1], 0);
         break;
     case 1:
-        gpio_write(&dev->gpio, FAN_CTL0, 1);
-        gpio_write(&dev->gpio, FAN_CTL1, 0);
+        gpio_write(&dev->gpios[FAN_CTL0], 1);
+        gpio_write(&dev->gpios[FAN_CTL1], 0);
         break;
     case 2:
-        gpio_write(&dev->gpio, FAN_CTL0, 0);
-        gpio_write(&dev->gpio, FAN_CTL1, 1);
+        gpio_write(&dev->gpios[FAN_CTL0], 0);
+        gpio_write(&dev->gpios[FAN_CTL1], 1);
         break;
     case 3:
-        gpio_write(&dev->gpio, FAN_CTL0, 1);
-        gpio_write(&dev->gpio, FAN_CTL1, 1);
+        gpio_write(&dev->gpios[FAN_CTL0], 1);
+        gpio_write(&dev->gpios[FAN_CTL1], 1);
         break;
     default:
         break;
@@ -293,8 +293,8 @@ static zx_status_t aml_thermal_init(aml_thermal_t* thermal) {
     }
 
     // Configure the GPIOs
-    for (uint32_t i = 0; i < info.gpio_count; i++) {
-        status = gpio_config_out(&thermal->gpio, i, 0);
+    for (uint32_t i = 0; i < countof(thermal->gpios); i++) {
+        status = gpio_config_out(&thermal->gpios[i], 0);
         if (status != ZX_OK) {
             THERMAL_ERROR("gpio_config failed\n");
             return status;
@@ -354,10 +354,13 @@ static zx_status_t aml_thermal_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_GPIO, &thermal->gpio);
-    if (status != ZX_OK) {
-        THERMAL_ERROR("Could not get GPIO protocol\n");
-        goto fail;
+    // Configure the GPIOs
+    for (uint32_t i = 0; i < countof(thermal->gpios); i++) {
+        status = pdev_get_protocol(&thermal->pdev, ZX_PROTOCOL_GPIO, i, &thermal->gpios[i]);
+        if (status != ZX_OK) {
+            THERMAL_ERROR("Could not get GPIO protocol\n");
+            goto fail;
+        }
     }
 
     status = device_get_protocol(parent, ZX_PROTOCOL_SCPI, &thermal->scpi);

@@ -118,7 +118,7 @@ static int imx8mevk_start_thread(void* arg) {
 
     // Pinmux
     for (unsigned i = 0; i < sizeof(imx8mevk_pinmux) / sizeof(imx8mevk_pinmux[0]); i++) {
-        gpio_set_alt_function(&bus->gpio, 0, imx8mevk_pinmux[i]);
+        gpio_impl_set_alt_function(&bus->gpio, 0, imx8mevk_pinmux[i]);
     }
 
     if ((status = imx_i2c_init(bus)) != ZX_OK) {

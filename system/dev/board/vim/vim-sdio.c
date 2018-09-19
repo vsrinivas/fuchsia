@@ -123,13 +123,13 @@ static const pbus_dev_t aml_sd_emmc_dev = {
 zx_status_t vim_sdio_init(vim_bus_t* bus) {
     zx_status_t status;
 
-    gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_D0, S912_WIFI_SDIO_D0_FN);
-    gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_D1, S912_WIFI_SDIO_D1_FN);
-    gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_D2, S912_WIFI_SDIO_D2_FN);
-    gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_D3, S912_WIFI_SDIO_D3_FN);
-    gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_CLK, S912_WIFI_SDIO_CLK_FN);
-    gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_CMD, S912_WIFI_SDIO_CMD_FN);
-    gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_WAKE_HOST, S912_WIFI_SDIO_WAKE_HOST_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_WIFI_SDIO_D0, S912_WIFI_SDIO_D0_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_WIFI_SDIO_D1, S912_WIFI_SDIO_D1_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_WIFI_SDIO_D2, S912_WIFI_SDIO_D2_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_WIFI_SDIO_D3, S912_WIFI_SDIO_D3_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_WIFI_SDIO_CLK, S912_WIFI_SDIO_CLK_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_WIFI_SDIO_CMD, S912_WIFI_SDIO_CMD_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_WIFI_SDIO_WAKE_HOST, S912_WIFI_SDIO_WAKE_HOST_FN);
 
     if ((status = pbus_device_add(&bus->pbus, &aml_sd_emmc_dev)) != ZX_OK) {
         zxlogf(ERROR, "vim_sdio_init could not add aml_sd_emmc_dev: %d\n", status);

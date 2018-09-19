@@ -230,8 +230,8 @@ void AstroDisplay::DdkRelease() {
 // This function detect the panel type based.
 void AstroDisplay::PopulatePanelType() {
     uint8_t pt;
-    if ((gpio_config_in(&gpio_, GPIO_PANEL_DETECT, GPIO_NO_PULL) == ZX_OK) &&
-        (gpio_read(&gpio_, GPIO_PANEL_DETECT, &pt) == ZX_OK)) {
+    if ((gpio_config_in(&gpio_, GPIO_NO_PULL) == ZX_OK) &&
+        (gpio_read(&gpio_, &pt) == ZX_OK)) {
         panel_type_ = pt;
         DISP_INFO("Detected panel type = %s (%d)\n",
                   panel_type_ ? "P070ACB_FT" : "TV070WSM_FT", panel_type_);
@@ -410,7 +410,7 @@ zx_status_t AstroDisplay::Bind() {
     }
 
     // Obtain GPIO Protocol for Panel reset
-    status = device_get_protocol(parent_, ZX_PROTOCOL_GPIO, &gpio_);
+    status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, GPIO_PANEL_DETECT, &gpio_);
     if (status != ZX_OK) {
         DISP_ERROR("Could not obtain GPIO protocol\n");
         return status;

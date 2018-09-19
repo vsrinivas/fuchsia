@@ -89,26 +89,26 @@ static pbus_dev_t eth_dev = {
 zx_status_t vim_eth_init(vim_bus_t* bus) {
 
     // setup pinmux for RGMII connections
-    gpio_set_alt_function(&bus->gpio, S912_ETH_MDIO, S912_ETH_MDIO_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_MDC, S912_ETH_MDC_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_RGMII_RX_CLK,
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_MDIO, S912_ETH_MDIO_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_MDC, S912_ETH_MDC_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RGMII_RX_CLK,
                           S912_ETH_RGMII_RX_CLK_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_RX_DV, S912_ETH_RX_DV_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_RXD0, S912_ETH_RXD0_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_RXD1, S912_ETH_RXD1_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_RXD2, S912_ETH_RXD2_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_RXD3, S912_ETH_RXD3_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RX_DV, S912_ETH_RX_DV_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RXD0, S912_ETH_RXD0_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RXD1, S912_ETH_RXD1_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RXD2, S912_ETH_RXD2_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RXD3, S912_ETH_RXD3_FN);
 
-    gpio_set_alt_function(&bus->gpio, S912_ETH_RGMII_TX_CLK,
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RGMII_TX_CLK,
                           S912_ETH_RGMII_TX_CLK_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_TX_EN, S912_ETH_TX_EN_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_TXD0, S912_ETH_TXD0_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_TXD1, S912_ETH_TXD1_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_TXD2, S912_ETH_TXD2_FN);
-    gpio_set_alt_function(&bus->gpio, S912_ETH_TXD3, S912_ETH_TXD3_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_TX_EN, S912_ETH_TX_EN_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_TXD0, S912_ETH_TXD0_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_TXD1, S912_ETH_TXD1_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_TXD2, S912_ETH_TXD2_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_ETH_TXD3, S912_ETH_TXD3_FN);
 
     // Set reset line to output
-    gpio_config_out(&bus->gpio, S912_GPIOZ(14), 0);
+    gpio_impl_config_out(&bus->gpio, S912_GPIOZ(14), 0);
 
     zx_status_t status = pbus_device_add(&bus->pbus, &eth_dev);
     if (status != ZX_OK) {

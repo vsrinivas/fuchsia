@@ -24,7 +24,7 @@
 
 typedef struct {
     zx_device_t* zxdev;
-    gpio_protocol_t gpio;
+    gpio_protocol_t* gpios;
     uint32_t gpio_count;
     thrd_t thread;
     thrd_t wait;
@@ -40,13 +40,14 @@ enum {
 
 static void gpio_test_release(void* ctx) {
     gpio_test_t* gpio_test = ctx;
-    gpio_protocol_t* gpio = &gpio_test->gpio;
+    gpio_protocol_t* gpios = gpio_test->gpios;
 
     gpio_test->done = true;
     zx_handle_close(gpio_test->inth);
-    gpio_release_interrupt(gpio, GPIO_BUTTON);
+    gpio_release_interrupt(&gpios[GPIO_BUTTON]);
     thrd_join(gpio_test->thread, NULL);
     thrd_join(gpio_test->wait, NULL);
+    free(gpio_test->gpios);
     free(gpio_test);
 }
 
@@ -58,11 +59,11 @@ static zx_protocol_device_t gpio_test_device_protocol = {
 // test thread that cycles all of the GPIOs provided to us
 static int gpio_test_thread(void *arg) {
     gpio_test_t* gpio_test = arg;
-    gpio_protocol_t* gpio = &gpio_test->gpio;
+    gpio_protocol_t* gpios = gpio_test->gpios;
     uint32_t gpio_count = gpio_test->gpio_count;
 
     for (unsigned i = 0; i < gpio_count; i++) {
-        if (gpio_config_out(gpio, i, 0) != ZX_OK) {
+        if (gpio_config_out(&gpios[i], 0) != ZX_OK) {
             zxlogf(ERROR, "gpio-test: gpio_config failed for gpio %u\n", i);
             return -1;
         }
@@ -72,9 +73,9 @@ static int gpio_test_thread(void *arg) {
         // Assuming here that the last GPIO is the input button
         // so we don't toggle that one
         for (unsigned i = 0; i < gpio_count-1; i++) {
-            gpio_write(gpio, i, 1);
+            gpio_write(&gpios[i], 1);
             sleep(1);
-            gpio_write(gpio, i, 0);
+            gpio_write(&gpios[i], 0);
             sleep(1);
         }
     }
@@ -84,7 +85,7 @@ static int gpio_test_thread(void *arg) {
 
 static int gpio_waiting_thread(void *arg) {
     gpio_test_t* gpio_test = arg;
-    gpio_protocol_t* gpio = &gpio_test->gpio;
+    gpio_protocol_t* gpios = gpio_test->gpios;
     while(1) {
         zxlogf(INFO, "Waiting for GPIO Test Input Interrupt\n");
         zx_status_t status = zx_interrupt_wait(gpio_test->inth, NULL);
@@ -94,8 +95,8 @@ static int gpio_waiting_thread(void *arg) {
         }
         zxlogf(INFO, "Received GPIO Test Input Interrupt\n");
         uint8_t out;
-        gpio_read(gpio, GPIO_LED, &out);
-        gpio_write(gpio, GPIO_LED, !out);
+        gpio_read(&gpios[GPIO_LED], &out);
+        gpio_write(&gpios[GPIO_LED], !out);
         sleep(1);
     }
 }
@@ -103,14 +104,14 @@ static int gpio_waiting_thread(void *arg) {
 // test thread that cycles runs tests for GPIO interrupts
 static int gpio_interrupt_test(void *arg) {
     gpio_test_t* gpio_test = arg;
-    gpio_protocol_t* gpio = &gpio_test->gpio;
+    gpio_protocol_t* gpios = gpio_test->gpios;
 
-    if (gpio_config_in(gpio, GPIO_BUTTON, GPIO_PULL_DOWN) != ZX_OK) {
+    if (gpio_config_in(&gpios[GPIO_BUTTON], GPIO_PULL_DOWN) != ZX_OK) {
         zxlogf(ERROR, "gpio_interrupt_test: gpio_config failed for gpio %u \n", GPIO_BUTTON);
         return -1;
     }
 
-    if (gpio_get_interrupt(gpio, GPIO_BUTTON,
+    if (gpio_get_interrupt(&gpios[GPIO_BUTTON],
                            ZX_INTERRUPT_MODE_EDGE_HIGH, &gpio_test->inth) != ZX_OK) {
         zxlogf(ERROR, "gpio_interrupt_test: gpio_get_interrupt failed for gpio %u\n", GPIO_BUTTON);
         return -1;
@@ -123,16 +124,16 @@ static int gpio_interrupt_test(void *arg) {
 // test thread that checks for gpio inputs
 static int gpio_test_in(void *arg) {
     gpio_test_t* gpio_test = arg;
-    gpio_protocol_t* gpio = &gpio_test->gpio;
+    gpio_protocol_t* gpios = gpio_test->gpios;
 
-    if (gpio_config_in(gpio, GPIO_BUTTON, GPIO_NO_PULL) != ZX_OK) {
+    if (gpio_config_in(&gpios[GPIO_BUTTON], GPIO_NO_PULL) != ZX_OK) {
         zxlogf(ERROR, "gpio_interrupt_test: gpio_config failed for gpio %u \n", GPIO_BUTTON);
         return -1;
     }
 
     uint8_t out;
     while (!gpio_test->done) {
-        gpio_read(gpio, GPIO_BUTTON, &out);
+        gpio_read(&gpios[GPIO_BUTTON], &out);
         if (out) {
             zxlogf(INFO, "READ GPIO_BUTTON %u\n",out);
             sleep(2);
@@ -147,11 +148,6 @@ static zx_status_t gpio_test_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if (device_get_protocol(parent, ZX_PROTOCOL_GPIO, &gpio_test->gpio) != ZX_OK) {
-        free(gpio_test);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     platform_device_protocol_t pdev;
     if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK) {
         free(gpio_test);
@@ -164,6 +160,19 @@ static zx_status_t gpio_test_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     gpio_test->gpio_count = info.gpio_count;
+    gpio_test->gpios = calloc(info.gpio_count, sizeof(*gpio_test->gpios));
+    if (!gpio_test->gpios) {
+        free(gpio_test);
+        return ZX_ERR_NO_MEMORY;
+    }
+    for (uint32_t i = 0; i < info.gpio_count; i++) {
+        zx_status_t status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &gpio_test->gpios[i]);
+        if (status != ZX_OK) {
+            free(gpio_test->gpios);
+            free(gpio_test);
+            return status;
+        }
+    }
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

@@ -11,7 +11,7 @@
 
 #include "i2c-impl-internal.h"
 
-// DDK I2C protocol support.
+// DDK I2C implementation protocol support.
 //
 // :: Proxies ::
 //
@@ -21,7 +21,7 @@
 // :: Mixins ::
 //
 // ddk::I2cImplProtocol is a mixin class that simplifies writing DDK drivers that
-// implement the I2C protocol.
+// implement the I2C implementation protocol.
 //
 // :: Examples ::
 //

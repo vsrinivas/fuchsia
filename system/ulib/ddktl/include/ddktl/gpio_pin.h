@@ -24,7 +24,6 @@ public:
     GpioPin(GpioPin&& other) {
         gpio_.ops = other.gpio_.ops;
         gpio_.ctx = other.gpio_.ctx;
-        pdev_index_ = other.pdev_index_;
         other.reset();
     }
 
@@ -34,7 +33,6 @@ public:
     GpioPin& operator=(GpioPin&& other) {
         gpio_.ops = other.gpio_.ops;
         gpio_.ctx = other.gpio_.ctx;
-        pdev_index_ = other.pdev_index_;
         other.reset();
         return *this;
     }
@@ -53,32 +51,32 @@ public:
         properly initialized.
     */
     zx_status_t Read(uint8_t* out) const {
-        return gpio_read(&gpio_, pdev_index_, out);
+        return gpio_read(&gpio_, out);
     }
 
     zx_status_t Write(uint8_t val) const {
-        return gpio_write(&gpio_, pdev_index_, val);
+        return gpio_write(&gpio_, val);
     }
 
     zx_status_t ConfigIn(uint32_t flags) const {
-        return gpio_config_in(&gpio_, pdev_index_, flags);
+        return gpio_config_in(&gpio_, flags);
     }
 
     zx_status_t ConfigOut(uint8_t initial_value) const {
-        return gpio_config_out(&gpio_, pdev_index_, initial_value);
+        return gpio_config_out(&gpio_, initial_value);
     }
 
     zx_status_t SetFunction(uint64_t function) const {
-        return gpio_set_alt_function(&gpio_, pdev_index_, function);
+        return gpio_set_alt_function(&gpio_, function);
     }
 
     zx_status_t GetInterrupt(uint32_t flags, zx::interrupt* out) const {
-        return gpio_get_interrupt(&gpio_, pdev_index_, flags,
+        return gpio_get_interrupt(&gpio_, flags,
                                   out->reset_and_get_address());
     }
 
     zx_status_t SetPolarity(uint32_t polarity) const {
-        return gpio_set_polarity(&gpio_, pdev_index_, polarity);
+        return gpio_set_polarity(&gpio_, polarity);
     }
 
     // Check to determine if this object is intiialized
@@ -91,12 +89,9 @@ private:
         Users must use the Pdev class as a factory for GpioPin
         instances, hence the meaningful constructor(s) are buried.
     */
-    GpioPin(uint32_t index, gpio_protocol_t gpio)
-        : pdev_index_(index),
-          gpio_(gpio) {
+    GpioPin(gpio_protocol_t gpio)
+        : gpio_(gpio) {
     }
-
-    uint32_t pdev_index_;
 
     gpio_protocol_t gpio_ = {nullptr, nullptr};
 };

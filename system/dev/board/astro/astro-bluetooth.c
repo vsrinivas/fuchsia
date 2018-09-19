@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/serial.h>
@@ -64,7 +64,7 @@ static pbus_dev_t bt_uart_dev = {
 // Enables and configures PWM_E on the SOC_WIFI_LPO_32k768 line for the Wifi/Bluetooth module
 static zx_status_t aml_enable_wifi_32K(aml_bus_t* bus) {
     // Configure SOC_WIFI_LPO_32k768 pin for PWM_E
-    zx_status_t status = gpio_set_alt_function(&bus->gpio, SOC_WIFI_LPO_32k768, 1);
+    zx_status_t status = gpio_impl_set_alt_function(&bus->gpio, SOC_WIFI_LPO_32k768, 1);
     if (status != ZX_OK) return status;
 
     zx_handle_t bti;
@@ -100,13 +100,13 @@ zx_status_t aml_bluetooth_init(aml_bus_t* bus) {
     zx_status_t status;
 
     // set alternate functions to enable Bluetooth UART
-    status = gpio_set_alt_function(&bus->gpio, S905D2_UART_TX_A, S905D2_UART_TX_A_FN);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_UART_TX_A, S905D2_UART_TX_A_FN);
     if (status != ZX_OK) return status;
-    status = gpio_set_alt_function(&bus->gpio, S905D2_UART_RX_A, S905D2_UART_RX_A_FN);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_UART_RX_A, S905D2_UART_RX_A_FN);
     if (status != ZX_OK) return status;
-    status = gpio_set_alt_function(&bus->gpio, S905D2_UART_CTS_A, S905D2_UART_CTS_A_FN);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_UART_CTS_A, S905D2_UART_CTS_A_FN);
     if (status != ZX_OK) return status;
-    status = gpio_set_alt_function(&bus->gpio, S905D2_UART_RTS_A, S905D2_UART_RTS_A_FN);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_UART_RTS_A, S905D2_UART_RTS_A_FN);
     if (status != ZX_OK) return status;
 
     // Configure the SOC_WIFI_LPO_32k768 PWM, which is needed for the Bluetooth module to work properly
@@ -116,9 +116,9 @@ zx_status_t aml_bluetooth_init(aml_bus_t* bus) {
     }
 
     // set GPIO to reset Bluetooth module
-    gpio_config_out(&bus->gpio, SOC_BT_REG_ON, 0);
+    gpio_impl_config_out(&bus->gpio, SOC_BT_REG_ON, 0);
     usleep(10 * 1000);
-    gpio_write(&bus->gpio, SOC_BT_REG_ON, 1);
+    gpio_impl_write(&bus->gpio, SOC_BT_REG_ON, 1);
     usleep(100 * 1000);
 
     // Bind UART for Bluetooth HCI

@@ -945,9 +945,9 @@ static void imx_sdhci_hw_reset(void* ctx) {
 
     mtx_lock(&dev->mtx);
 
-    gpio_write(&dev->gpio, 0, 0);
+    gpio_write(&dev->gpio, 0);
     usleep(10000);
-    gpio_write(&dev->gpio, 0, 1);
+    gpio_write(&dev->gpio, 1);
 
     dev->info.caps |= SDMMC_HOST_CAP_AUTO_CMD12;
 
@@ -1165,7 +1165,7 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
     dev->base_clock = IMX8M_SDHCI_BASE_CLOCK; // TODO: Better way of obtaining this info
 
     // Toggle the reset button
-    if (gpio_config_out(&dev->gpio, 0, 0) != ZX_OK) {
+    if (gpio_config_out(&dev->gpio, 0) != ZX_OK) {
         SDHCI_ERROR("Could not configure RESET pin as output\n");
         goto fail;
     }

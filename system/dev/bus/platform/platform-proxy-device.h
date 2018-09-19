@@ -11,6 +11,7 @@
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform-device.h>
+#include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -61,21 +62,22 @@ public:
     zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
     zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
     zx_status_t DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out);
+    zx_status_t GetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol);
 
     // Clock protocol implementation.
     static zx_status_t ClkEnable(void* ctx, uint32_t index);
     static zx_status_t ClkDisable(void* ctx, uint32_t index);
 
     // GPIO protocol implementation.
-    static zx_status_t GpioConfigIn(void* ctx, uint32_t index, uint32_t flags);
-    static zx_status_t GpioConfigOut(void* ctx, uint32_t index, uint8_t initial_value);
-    static zx_status_t GpioSetAltFunction(void* ctx, uint32_t index, uint64_t function);
-    static zx_status_t GpioRead(void* ctx, uint32_t index, uint8_t* out_value);
-    static zx_status_t GpioWrite(void* ctx, uint32_t index, uint8_t value);
-    static zx_status_t GpioGetInterrupt(void* ctx, uint32_t index, uint32_t flags,
+    static zx_status_t GpioConfigIn(void* ctx, uint32_t flags);
+    static zx_status_t GpioConfigOut(void* ctx, uint8_t initial_value);
+    static zx_status_t GpioSetAltFunction(void* ctx, uint64_t function);
+    static zx_status_t GpioRead(void* ctx, uint8_t* out_value);
+    static zx_status_t GpioWrite(void* ctx, uint8_t value);
+    static zx_status_t GpioGetInterrupt(void* ctx, uint32_t flags,
                                         zx_handle_t* out_handle);
-    static zx_status_t GpioReleaseInterrupt(void* ctx, uint32_t index);
-    static zx_status_t GpioSetPolarity(void* ctx, uint32_t index, uint32_t polarity);
+    static zx_status_t GpioReleaseInterrupt(void* ctx);
+    static zx_status_t GpioSetPolarity(void* ctx, uint32_t polarity);
 
     // I2C protocol implementation.
     static zx_status_t I2cTransact(void* ctx, uint32_t index, i2c_op_t* ops, size_t cnt,
@@ -93,6 +95,10 @@ private:
         // ZX_INTERRUPT_MODE_* flags
         uint32_t mode;
         zx::handle resource;
+    };
+    struct GpioCtx {
+        ProxyDevice* thiz;
+        uint32_t index;
     };
 
     zx_status_t InitCommon();
@@ -113,6 +119,9 @@ private:
     clk_protocol_ops_t clk_proto_ops_;
     gpio_protocol_ops_t gpio_proto_ops_;
     i2c_protocol_ops_t i2c_proto_ops_;
+
+    // Contexts for our GPIOs
+    fbl::Array<GpioCtx> gpio_ctxs_;
 
     // These fields are saved values from the device_add_args_t passed to pdev_device_add().
     // These are unused for top level devices created via pbus_device_add().

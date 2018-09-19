@@ -167,6 +167,7 @@ typedef enum {
     GPIO_MUX,
     GPIO_PD,
     GPIO_INT,
+    GPIO_COUNT,
 } hdmi_gpio_if_t;
 
 typedef struct {
@@ -177,7 +178,7 @@ typedef struct {
 
 typedef struct {
     zx_device_t* zxdev;
-    gpio_protocol_t gpio;
+    gpio_protocol_t gpios[GPIO_COUNT];
 } hdmi_gpio_t;
 
 

@@ -84,7 +84,7 @@ static zx_status_t hi3660_gpio_set_polarity(void* ctx, uint32_t pin, uint32_t po
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static gpio_protocol_ops_t gpio_ops = {
+static gpio_impl_protocol_ops_t gpio_ops = {
     .config_in = hi3660_gpio_config_in,
     .config_out = hi3660_gpio_config_out,
     .set_alt_function = hi3660_gpio_set_alt_function,

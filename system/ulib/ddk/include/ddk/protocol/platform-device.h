@@ -50,6 +50,7 @@ typedef struct {
     zx_status_t (*get_board_info)(void* ctx, pdev_board_info_t* out_info);
     zx_status_t (*device_add)(void* ctx, uint32_t index, device_add_args_t* args,
                               zx_device_t** out);
+    zx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, uint32_t index, void* out_protocol);
 } platform_device_protocol_ops_t;
 
 typedef struct {
@@ -108,6 +109,11 @@ static inline zx_status_t pdev_get_board_info(const platform_device_protocol_t* 
 static inline zx_status_t pdev_device_add(const platform_device_protocol_t* pdev, uint32_t index,
                                           device_add_args_t* args, zx_device_t** out) {
     return pdev->ops->device_add(pdev->ctx, index, args, out);
+}
+
+static inline zx_status_t pdev_get_protocol(const platform_device_protocol_t* pdev,
+                                            uint32_t proto_id, uint32_t index, void* out_protocol) {
+    return pdev->ops->get_protocol(pdev->ctx, proto_id, index, out_protocol);
 }
 
 // MMIO mapping helper.

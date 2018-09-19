@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
@@ -29,7 +29,7 @@ enum {
 typedef struct {
     zx_device_t* parent;
     platform_bus_protocol_t pbus;
-    gpio_protocol_t gpio;
+    gpio_impl_protocol_t gpio;
     iommu_protocol_t iommu;
 } aml_bus_t;
 

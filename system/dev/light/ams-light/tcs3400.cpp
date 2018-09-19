@@ -23,7 +23,6 @@
 #include "tcs3400-regs.h"
 #include "tcs3400.h"
 
-constexpr uint32_t TCS3400_INTERRUPT_IDX = 0;
 constexpr zx_duration_t INTERRUPTS_HYSTERESIS = ZX_MSEC(100);
 constexpr uint8_t SAMPLES_TO_TRIGGER = 0x01;
 
@@ -346,10 +345,9 @@ zx_status_t Tcs3400Device::Bind() {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    gpio_config_in(&gpio_, TCS3400_INTERRUPT_IDX, GPIO_NO_PULL);
+    gpio_config_in(&gpio_, GPIO_NO_PULL);
 
-    status = gpio_get_interrupt(&gpio_, TCS3400_INTERRUPT_IDX,
-                                ZX_INTERRUPT_MODE_EDGE_LOW,
+    status = gpio_get_interrupt(&gpio_, ZX_INTERRUPT_MODE_EDGE_LOW,
                                 irq_.reset_and_get_address());
     if (status != ZX_OK) {
         return status;

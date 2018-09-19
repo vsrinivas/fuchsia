@@ -71,7 +71,7 @@ static void adv7533_edidchn_read(dsi_t* dsi, uint8_t d1, uint8_t len) {
 }
 
 zx_status_t adv7533_init(dsi_t* dsi) {
-    gpio_protocol_t* gpio = &dsi->hdmi_gpio.gpio;
+    gpio_protocol_t* gpios = dsi->hdmi_gpio.gpios;
 
     adv7533_mainchn_read(dsi, ADV7533_REG_CHIP_REVISION, 1);
     zxlogf(INFO, "%s: HDMI Ver 0x%x\n", __FUNCTION__, dsi->write_buf[0]);
@@ -138,7 +138,7 @@ zx_status_t adv7533_init(dsi_t* dsi) {
     //TODO: Use GPIO IRQ once it is implemented
     uint8_t g = 0;
     do {
-        gpio_read(gpio, GPIO_INT, &g);
+        gpio_read(&gpios[GPIO_INT], &g);
     } while(g);
 
     /* Interrupt fired. Let's see if EDID is ready to be read */

@@ -114,25 +114,25 @@ static int gauss_start_thread(void* arg) {
     }
 
     // pinmux for Gauss i2c
-    gpio_set_alt_function(&bus->gpio, I2C_SCK_A, 1);
-    gpio_set_alt_function(&bus->gpio, I2C_SDA_A, 1);
-    gpio_set_alt_function(&bus->gpio, I2C_SCK_B, 1);
-    gpio_set_alt_function(&bus->gpio, I2C_SDA_B, 1);
+    gpio_impl_set_alt_function(&bus->gpio, I2C_SCK_A, 1);
+    gpio_impl_set_alt_function(&bus->gpio, I2C_SDA_A, 1);
+    gpio_impl_set_alt_function(&bus->gpio, I2C_SCK_B, 1);
+    gpio_impl_set_alt_function(&bus->gpio, I2C_SDA_B, 1);
 
     // Config pinmux for gauss PDM pins
-    gpio_set_alt_function(&bus->gpio, A113_GPIOA(14), 1);
-    gpio_set_alt_function(&bus->gpio, A113_GPIOA(15), 1);
-    gpio_set_alt_function(&bus->gpio, A113_GPIOA(16), 1);
-    gpio_set_alt_function(&bus->gpio, A113_GPIOA(17), 1);
-    gpio_set_alt_function(&bus->gpio, A113_GPIOA(18), 1);
+    gpio_impl_set_alt_function(&bus->gpio, A113_GPIOA(14), 1);
+    gpio_impl_set_alt_function(&bus->gpio, A113_GPIOA(15), 1);
+    gpio_impl_set_alt_function(&bus->gpio, A113_GPIOA(16), 1);
+    gpio_impl_set_alt_function(&bus->gpio, A113_GPIOA(17), 1);
+    gpio_impl_set_alt_function(&bus->gpio, A113_GPIOA(18), 1);
 
-    gpio_set_alt_function(&bus->gpio, TDM_BCLK_C, 1);
-    gpio_set_alt_function(&bus->gpio, TDM_FSYNC_C, 1);
-    gpio_set_alt_function(&bus->gpio, TDM_MOSI_C, 1);
-    gpio_set_alt_function(&bus->gpio, TDM_MISO_C, 2);
+    gpio_impl_set_alt_function(&bus->gpio, TDM_BCLK_C, 1);
+    gpio_impl_set_alt_function(&bus->gpio, TDM_FSYNC_C, 1);
+    gpio_impl_set_alt_function(&bus->gpio, TDM_MOSI_C, 1);
+    gpio_impl_set_alt_function(&bus->gpio, TDM_MISO_C, 2);
 
-    gpio_set_alt_function(&bus->gpio, SPK_MUTEn, 0);
-    gpio_config_out(&bus->gpio, SPK_MUTEn, 1);
+    gpio_impl_set_alt_function(&bus->gpio, SPK_MUTEn, 0);
+    gpio_impl_config_out(&bus->gpio, SPK_MUTEn, 1);
 
     if ((status = gauss_i2c_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_i2c_init failed: %d\n", status);

@@ -57,14 +57,14 @@ zx_status_t aml_i2c_init(aml_bus_t* bus) {
     // setup pinmux for our I2C busses
 
     //i2c_ao_0
-    gpio_set_alt_function(&bus->gpio, S905D2_GPIOAO(2), 1);
-    gpio_set_alt_function(&bus->gpio, S905D2_GPIOAO(3), 1);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOAO(2), 1);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOAO(3), 1);
     //i2c2
-    gpio_set_alt_function(&bus->gpio, S905D2_GPIOZ(14), 3);
-    gpio_set_alt_function(&bus->gpio, S905D2_GPIOZ(15), 3);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOZ(14), 3);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOZ(15), 3);
     //i2c3
-    gpio_set_alt_function(&bus->gpio, S905D2_GPIOA(14), 2);
-    gpio_set_alt_function(&bus->gpio, S905D2_GPIOA(15), 2);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOA(14), 2);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOA(15), 2);
 
     zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
     if (status != ZX_OK) {

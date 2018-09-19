@@ -56,11 +56,11 @@ GpioPin Pdev::GetGpio(uint32_t index) {
 
     gpio_protocol_t gpio;
     //Note: Pdev is a friend class of GpioPin
-    zx_status_t res = device_get_protocol(parent_, ZX_PROTOCOL_GPIO, &gpio);
+    zx_status_t res = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, index, &gpio);
     if (res != ZX_OK) {
         return GpioPin();
     }
-    return GpioPin(index, gpio);
+    return GpioPin(gpio);
 }
 
 fbl::RefPtr<Pdev> Pdev::Create(zx_device_t* parent) {

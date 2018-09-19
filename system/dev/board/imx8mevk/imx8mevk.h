@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
 
@@ -25,7 +25,7 @@ typedef struct {
     platform_bus_protocol_t pbus;
     zx_device_t* parent;
     iommu_protocol_t iommu;
-    gpio_protocol_t gpio;
+    gpio_impl_protocol_t gpio;
     zx_handle_t bti_handle;
     uint32_t soc_pid;
 } imx8mevk_bus_t;

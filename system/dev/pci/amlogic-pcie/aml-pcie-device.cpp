@@ -16,8 +16,6 @@
 namespace pcie {
 namespace aml {
 
-const size_t kRstGpio = 0;
-
 const size_t kElbMmio = 0;
 const size_t kCfgMmio = 1;
 const size_t kRstMmio = 2;
@@ -42,7 +40,7 @@ zx_status_t AmlPcieDevice::InitProtocols() {
         return st;
     }
 
-    st = gpio_config_out(&gpio_, kRstGpio, 0);
+    st = gpio_config_out(&gpio_, 0);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to configure rst gpio, st = %d", st);
         return st;
@@ -196,9 +194,9 @@ zx_status_t AmlPcieDevice::Init() {
     }
 
     // Whack the reset gpio.
-    gpio_write(&gpio_, kRstGpio, 0);
+    gpio_write(&gpio_, 0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-    gpio_write(&gpio_, kRstGpio, 1);
+    gpio_write(&gpio_, 1);
 
     st = pcie_->EstablishLink(&atu_cfg_, &atu_io_, &atu_mem_);
     if (st != ZX_OK) {

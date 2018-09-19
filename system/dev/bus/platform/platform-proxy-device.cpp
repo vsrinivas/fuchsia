@@ -30,91 +30,97 @@
 
 namespace platform_bus {
 
-zx_status_t ProxyDevice::GpioConfigIn(void* ctx, uint32_t index, uint32_t flags) {
-    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
+zx_status_t ProxyDevice::GpioConfigIn(void* ctx, uint32_t flags) {
+    auto gpio_ctx = static_cast<GpioCtx*>(ctx);
+    auto thiz = gpio_ctx->thiz;
     rpc_gpio_req_t req = {};
     rpc_gpio_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_GPIO;
     req.header.op = GPIO_CONFIG_IN;
-    req.index = index;
+    req.index = gpio_ctx->index;
     req.flags = flags;
 
     return thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp.header,
                              sizeof(resp));
 }
 
-zx_status_t ProxyDevice::GpioConfigOut(void* ctx, uint32_t index, uint8_t initial_value) {
-    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
+zx_status_t ProxyDevice::GpioConfigOut(void* ctx, uint8_t initial_value) {
+    auto gpio_ctx = static_cast<GpioCtx*>(ctx);
+    auto thiz = gpio_ctx->thiz;
     rpc_gpio_req_t req = {};
     rpc_gpio_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_GPIO;
     req.header.op = GPIO_CONFIG_OUT;
-    req.index = index;
+    req.index = gpio_ctx->index;
     req.value = initial_value;
 
     return thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp.header,
                              sizeof(resp));
 }
 
-zx_status_t ProxyDevice::GpioSetAltFunction(void* ctx, uint32_t index, uint64_t function) {
-    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
+zx_status_t ProxyDevice::GpioSetAltFunction(void* ctx, uint64_t function) {
+    auto gpio_ctx = static_cast<GpioCtx*>(ctx);
+    auto thiz = gpio_ctx->thiz;
     rpc_gpio_req_t req = {};
     rpc_gpio_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_GPIO;
     req.header.op = GPIO_SET_ALT_FUNCTION;
-    req.index = index;
+    req.index = gpio_ctx->index;
     req.alt_function = function;
 
     return thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp.header,
                              sizeof(resp));
 }
 
-zx_status_t ProxyDevice::GpioGetInterrupt(void* ctx, uint32_t index, uint32_t flags,
-                                          zx_handle_t* out_handle) {
-    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
+zx_status_t ProxyDevice::GpioGetInterrupt(void* ctx, uint32_t flags, zx_handle_t* out_handle) {
+    auto gpio_ctx = static_cast<GpioCtx*>(ctx);
+    auto thiz = gpio_ctx->thiz;
     rpc_gpio_req_t req = {};
     rpc_gpio_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_GPIO;
     req.header.op = GPIO_GET_INTERRUPT;
-    req.index = index;
+    req.index = gpio_ctx->index;
     req.flags = flags;
 
     return thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp),
                               nullptr, 0, out_handle, 1, nullptr);
 }
 
-zx_status_t ProxyDevice::GpioSetPolarity(void* ctx, uint32_t index, uint32_t polarity) {
-    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
+zx_status_t ProxyDevice::GpioSetPolarity(void* ctx, uint32_t polarity) {
+    auto gpio_ctx = static_cast<GpioCtx*>(ctx);
+    auto thiz = gpio_ctx->thiz;
     rpc_gpio_req_t req = {};
     rpc_gpio_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_GPIO;
     req.header.op = GPIO_SET_POLARITY;
-    req.index = index;
+    req.index = gpio_ctx->index;
     req.polarity = polarity;
 
     return thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp.header,
                              sizeof(resp));
 }
 
-zx_status_t ProxyDevice::GpioReleaseInterrupt(void* ctx, uint32_t index) {
-    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
+zx_status_t ProxyDevice::GpioReleaseInterrupt(void* ctx) {
+    auto gpio_ctx = static_cast<GpioCtx*>(ctx);
+    auto thiz = gpio_ctx->thiz;
     rpc_gpio_req_t req = {};
     rpc_gpio_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_GPIO;
     req.header.op = GPIO_RELEASE_INTERRUPT;
-    req.index = index;
+    req.index = gpio_ctx->index;
 
     return thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp.header,
                              sizeof(resp));
 }
 
-zx_status_t ProxyDevice::GpioRead(void* ctx, uint32_t index, uint8_t* out_value) {
-    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
+zx_status_t ProxyDevice::GpioRead(void* ctx, uint8_t* out_value) {
+    auto gpio_ctx = static_cast<GpioCtx*>(ctx);
+    auto thiz = gpio_ctx->thiz;
     rpc_gpio_req_t req = {};
     rpc_gpio_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_GPIO;
     req.header.op = GPIO_READ;
-    req.index = index;
+    req.index = gpio_ctx->index;
 
     auto status = thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp.header,
                                     sizeof(resp));
@@ -126,13 +132,14 @@ zx_status_t ProxyDevice::GpioRead(void* ctx, uint32_t index, uint8_t* out_value)
     return ZX_OK;
 }
 
-zx_status_t ProxyDevice::GpioWrite(void* ctx, uint32_t index, uint8_t value) {
-    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
+zx_status_t ProxyDevice::GpioWrite(void* ctx, uint8_t value) {
+    auto gpio_ctx = static_cast<GpioCtx*>(ctx);
+    auto thiz = gpio_ctx->thiz;
     rpc_gpio_req_t req = {};
     rpc_gpio_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_GPIO;
     req.header.op = GPIO_WRITE;
-    req.index = index;
+    req.index = gpio_ctx->index;
     req.value = value;
 
     return thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp.header,
@@ -392,6 +399,25 @@ zx_status_t ProxyDevice::DeviceAdd(uint32_t index, device_add_args_t* args, zx_d
     return CreateChild(zxdev(), resp.device_id, proxy_, args);
 }
 
+zx_status_t ProxyDevice::GetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol) {
+    // Return the GPIO protocol for the given index.
+    if (proto_id == ZX_PROTOCOL_GPIO) {
+        if (index >= gpio_ctxs_.size()) {
+            return ZX_ERR_OUT_OF_RANGE;
+        }
+        auto proto = static_cast<gpio_protocol_t*>(out_protocol);
+        proto->ops = &gpio_proto_ops_;
+        proto->ctx = &gpio_ctxs_[index];
+        return ZX_OK;
+    }
+
+    // For other protocols, fall through to DdkGetProtocol if index is zero
+    if (index != 0) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return DdkGetProtocol(proto_id, out_protocol);
+}
+
 zx_status_t ProxyDevice::CreateRoot(zx_device_t* parent, fbl::RefPtr<PlatformProxy> proxy) {
     fbl::AllocChecker ac;
     auto dev = fbl::make_unique_checked<ProxyDevice>(&ac,parent, ROOT_DEVICE_ID, proxy);
@@ -508,6 +534,19 @@ zx_status_t ProxyDevice::InitCommon() {
                irq.resource.get());
     }
 
+    uint32_t gpio_count = info.gpio_count;
+    if (gpio_count > 0) {
+        gpio_ctxs_.reset(new (&ac) GpioCtx[gpio_count], gpio_count);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+
+        for (uint32_t i = 0; i < info.gpio_count; i++) {
+            gpio_ctxs_[i].thiz = this;
+            gpio_ctxs_[i].index = i;
+        }
+    }
+
     return ZX_OK;
 }
 
@@ -590,14 +629,24 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
     }
 
     // Finally, protocols provided by platform bus.
+    proto->ctx = this;
     switch (proto_id) {
     case ZX_PROTOCOL_PLATFORM_DEV: {
         proto->ops = &pdev_proto_ops_;
         break;
     }
     case ZX_PROTOCOL_GPIO: {
+        auto count = gpio_ctxs_.size();
+        if (count == 0) {
+            return ZX_ERR_NOT_SUPPORTED;
+        } else if (count > 1) {
+            zxlogf(ERROR, "%s: device has more than one GPIO\n", __func__);
+            return ZX_ERR_BAD_STATE;
+        }
+        // Return zeroth GPIO resource.
         proto->ops = &gpio_proto_ops_;
-        break;
+        proto->ctx = &gpio_ctxs_[0];
+        return ZX_OK;
     }
     case ZX_PROTOCOL_I2C: {
         proto->ops = &i2c_proto_ops_;
@@ -611,7 +660,6 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
         return proxy_->GetProtocol(proto_id, out);;
     }
 
-    proto->ctx = this;
     return ZX_OK;
 }
 

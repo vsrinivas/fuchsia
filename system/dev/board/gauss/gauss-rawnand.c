@@ -99,22 +99,22 @@ zx_status_t gauss_raw_nand_init(gauss_bus_t* bus) {
     zx_status_t status;
 
     // set alternate functions to enable raw_nand
-    status = gpio_set_alt_function(&bus->gpio, A113_GPIOBOOT(8), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(8), 2);
     if (status != ZX_OK)
         return status;
-    status = gpio_set_alt_function(&bus->gpio, A113_GPIOBOOT(9), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(9), 2);
     if (status != ZX_OK)
         return status;
-    status = gpio_set_alt_function(&bus->gpio, A113_GPIOBOOT(10), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(10), 2);
     if (status != ZX_OK)
         return status;
-    status = gpio_set_alt_function(&bus->gpio, A113_GPIOBOOT(11), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(11), 2);
     if (status != ZX_OK)
         return status;
-    status = gpio_set_alt_function(&bus->gpio, A113_GPIOBOOT(12), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(12), 2);
     if (status != ZX_OK)
         return status;
-    status = gpio_set_alt_function(&bus->gpio, A113_GPIOBOOT(13), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(13), 2);
     if (status != ZX_OK)
         return status;
 

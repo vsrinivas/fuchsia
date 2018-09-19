@@ -9,7 +9,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
@@ -71,7 +71,7 @@ typedef struct {
 
 typedef struct {
     platform_device_protocol_t pdev;
-    gpio_protocol_t gpio;
+    gpio_impl_protocol_t gpio;
     zx_device_t* zxdev;
     io_buffer_t mmios[2];    // separate MMIO for AO domain
     io_buffer_t mmio_interrupt;
@@ -439,7 +439,7 @@ static zx_status_t aml_gpio_set_polarity(void *ctx, uint32_t pin,
     return ZX_OK;
 }
 
-static gpio_protocol_ops_t gpio_ops = {
+static gpio_impl_protocol_ops_t gpio_ops = {
     .config_in = aml_gpio_config_in,
     .config_out = aml_gpio_config_out,
     .set_alt_function = aml_gpio_set_alt_function,
@@ -563,7 +563,7 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO, &gpio->gpio, NULL, NULL);
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio->gpio, NULL, NULL);
 
     return ZX_OK;
 

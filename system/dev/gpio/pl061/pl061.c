@@ -124,7 +124,7 @@ static zx_status_t pl061_gpio_set_polarity(void* ctx, uint32_t pin, uint32_t pol
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-gpio_protocol_ops_t pl061_proto_ops = {
+gpio_impl_protocol_ops_t pl061_proto_ops = {
     .config_in = pl061_gpio_config_in,
     .config_out = pl061_gpio_config_out,
     .set_alt_function = pl061_gpio_set_alt_function,

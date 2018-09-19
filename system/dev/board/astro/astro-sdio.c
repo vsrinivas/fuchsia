@@ -123,13 +123,14 @@ zx_status_t aml_sdio_init(aml_bus_t* bus) {
     zx_status_t status;
 
     // set alternate functions to enable EMMC
-    gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_D0, S905D2_WIFI_SDIO_D0_FN);
-    gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_D1, S905D2_WIFI_SDIO_D1_FN);
-    gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_D2, S905D2_WIFI_SDIO_D2_FN);
-    gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_D3, S905D2_WIFI_SDIO_D3_FN);
-    gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_CLK, S905D2_WIFI_SDIO_CLK_FN);
-    gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_CMD, S905D2_WIFI_SDIO_CMD_FN);
-    gpio_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_WAKE_HOST, S905D2_WIFI_SDIO_WAKE_HOST_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_D0, S905D2_WIFI_SDIO_D0_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_D1, S905D2_WIFI_SDIO_D1_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_D2, S905D2_WIFI_SDIO_D2_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_D3, S905D2_WIFI_SDIO_D3_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_CLK, S905D2_WIFI_SDIO_CLK_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_CMD, S905D2_WIFI_SDIO_CMD_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S905D2_WIFI_SDIO_WAKE_HOST,
+                               S905D2_WIFI_SDIO_WAKE_HOST_FN);
     if ((status = pbus_device_add(&bus->pbus, &aml_sd_emmc_dev)) != ZX_OK) {
         zxlogf(ERROR, "aml_sdio_init could not add aml_sd_emmc_dev: %d\n", status);
         return status;

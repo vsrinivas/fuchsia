@@ -219,7 +219,8 @@ zx_status_t PlatformDevice::RpcGpioConfigIn(const DeviceResources* dr, uint32_t 
     return bus_->gpio()->ConfigIn(dr->gpio(index).gpio, flags);
 }
 
-zx_status_t PlatformDevice::RpcGpioConfigOut(const DeviceResources* dr, uint32_t index, uint8_t initial_value) {
+zx_status_t PlatformDevice::RpcGpioConfigOut(const DeviceResources* dr, uint32_t index,
+                                             uint8_t initial_value) {
     if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -305,7 +306,7 @@ zx_status_t PlatformDevice::RpcGpioSetPolarity(const DeviceResources* dr, uint32
 
 zx_status_t PlatformDevice::RpcI2cTransact(const DeviceResources* dr, uint32_t txid,
                                            rpc_i2c_req_t* req, zx_handle_t channel) {
-    if (bus_->i2c_impl() == nullptr) {
+    if (bus_->i2c() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     uint32_t index = req->index;
@@ -319,7 +320,7 @@ zx_status_t PlatformDevice::RpcI2cTransact(const DeviceResources* dr, uint32_t t
 
 zx_status_t PlatformDevice::RpcI2cGetMaxTransferSize(const DeviceResources* dr, uint32_t index,
                                                      size_t* out_size) {
-    if (bus_->i2c_impl() == nullptr) {
+    if (bus_->i2c() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     if (index >= dr->i2c_channel_count()) {
@@ -327,7 +328,7 @@ zx_status_t PlatformDevice::RpcI2cGetMaxTransferSize(const DeviceResources* dr, 
     }
     const pbus_i2c_channel_t& pdev_channel = dr->i2c_channel(index);
 
-    return bus_->i2c_impl()->GetMaxTransferSize(pdev_channel.bus_id, out_size);
+    return bus_->i2c()->GetMaxTransferSize(pdev_channel.bus_id, out_size);
 }
 
 zx_status_t PlatformDevice::RpcClkEnable(const DeviceResources* dr, uint32_t index) {

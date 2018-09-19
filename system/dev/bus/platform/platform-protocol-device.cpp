@@ -173,6 +173,14 @@ zx_status_t ProtocolDevice::DeviceAdd(uint32_t index, device_add_args_t* args, z
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t ProtocolDevice::GetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol) {
+    // Pass through to DdkGetProtocol if index is zero
+    if (index != 0) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return DdkGetProtocol(proto_id, out_protocol);
+}
+
 zx_status_t ProtocolDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
     if (proto_id == ZX_PROTOCOL_PLATFORM_DEV) {
         auto proto = static_cast<platform_device_protocol_t*>(out);

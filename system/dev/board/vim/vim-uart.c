@@ -114,7 +114,7 @@ static pbus_dev_t header_uart_dev = {
 // Enables and configures PWM_E on the WIFI_32K line for the Wifi/Bluetooth module
 static zx_status_t vim_enable_wifi_32K(vim_bus_t* bus) {
     // Configure WIFI_32K pin for PWM_E
-    zx_status_t status = gpio_set_alt_function(&bus->gpio, WIFI_32K, 1);
+    zx_status_t status = gpio_impl_set_alt_function(&bus->gpio, WIFI_32K, 1);
     if (status != ZX_OK) return status;
 
     zx_handle_t bti;
@@ -150,17 +150,17 @@ zx_status_t vim_uart_init(vim_bus_t* bus) {
     zx_status_t status;
 
     // set alternate functions to enable UART_A and UART_AO_B
-    status = gpio_set_alt_function(&bus->gpio, S912_UART_TX_A, S912_UART_TX_A_FN);
+    status = gpio_impl_set_alt_function(&bus->gpio, S912_UART_TX_A, S912_UART_TX_A_FN);
     if (status != ZX_OK) return status;
-    status = gpio_set_alt_function(&bus->gpio, S912_UART_RX_A, S912_UART_RX_A_FN);
+    status = gpio_impl_set_alt_function(&bus->gpio, S912_UART_RX_A, S912_UART_RX_A_FN);
     if (status != ZX_OK) return status;
-    status = gpio_set_alt_function(&bus->gpio, S912_UART_CTS_A, S912_UART_CTS_A_FN);
+    status = gpio_impl_set_alt_function(&bus->gpio, S912_UART_CTS_A, S912_UART_CTS_A_FN);
     if (status != ZX_OK) return status;
-    status = gpio_set_alt_function(&bus->gpio, S912_UART_RTS_A, S912_UART_RTS_A_FN);
+    status = gpio_impl_set_alt_function(&bus->gpio, S912_UART_RTS_A, S912_UART_RTS_A_FN);
     if (status != ZX_OK) return status;
-    status = gpio_set_alt_function(&bus->gpio, S912_UART_TX_AO_B, S912_UART_TX_AO_B_FN);
+    status = gpio_impl_set_alt_function(&bus->gpio, S912_UART_TX_AO_B, S912_UART_TX_AO_B_FN);
     if (status != ZX_OK) return status;
-    status = gpio_set_alt_function(&bus->gpio, S912_UART_RX_AO_B, S912_UART_RX_AO_B_FN);
+    status = gpio_impl_set_alt_function(&bus->gpio, S912_UART_RX_AO_B, S912_UART_RX_AO_B_FN);
     if (status != ZX_OK) return status;
 
     // Configure the WIFI_32K PWM, which is needed for the Bluetooth module to work properly
@@ -170,9 +170,9 @@ zx_status_t vim_uart_init(vim_bus_t* bus) {
     }
 
     // set GPIO to reset Bluetooth module
-    gpio_config_out(&bus->gpio, BT_EN, 0);
+    gpio_impl_config_out(&bus->gpio, BT_EN, 0);
     usleep(10 * 1000);
-    gpio_write(&bus->gpio, BT_EN, 1);
+    gpio_impl_write(&bus->gpio, BT_EN, 1);
 
     // Bind UART for Bluetooth HCI
     status = pbus_device_add(&bus->pbus, &bt_uart_dev);

@@ -482,9 +482,9 @@ static void aml_sd_emmc_init_regs(aml_sd_emmc_t* dev) {
 static void aml_sd_emmc_hw_reset(void* ctx) {
     aml_sd_emmc_t* dev = (aml_sd_emmc_t*)ctx;
     mtx_lock(&dev->mtx);
-    gpio_config_out(&dev->gpio, 0, 0);
+    gpio_config_out(&dev->gpio, 0);
     usleep(10 * 1000);
-    gpio_write(&dev->gpio, 0, 1);
+    gpio_write(&dev->gpio, 1);
     usleep(10 * 1000);
     aml_sd_emmc_init_regs(dev);
     mtx_unlock(&dev->mtx);

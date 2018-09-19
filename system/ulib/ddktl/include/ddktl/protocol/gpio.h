@@ -35,14 +35,14 @@
 //     GpioDevice(zx_device_t* parent)
 //       : GpioDeviceType("my-gpio-device", parent) {}
 //
-//     zx_status_t GpioConfigIn(uint32_t index, uint32_t flags);
-//     zx_status_t GpioConfigOut(uint32_t index, uint8_t initial_value);
-//     zx_status_t GpioSetAltFunction(uint32_t index, uint64_t function);
-//     zx_status_t GpioRead(uint32_t index, uint8_t* out_value);
-//     zx_status_t GpioWrite(uint32_t index, uint8_t value);
-//     zx_status_t GpioGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t *out_handle);
-//     zx_status_t GpioReleaseInterrupt(uint32_t index);
-//     zx_status_t GpioSetPolarity(uint32_t index, uint32_t polarity);
+//     zx_status_t GpioConfigIn(uint32_t flags);
+//     zx_status_t GpioConfigOut(uint8_t initial_value);
+//     zx_status_t GpioSetAltFunction(uint64_t function);
+//     zx_status_t GpioRead(uint8_t* out_value);
+//     zx_status_t GpioWrite(uint8_t value);
+//     zx_status_t GpioGetInterrupt(uint32_t flags, zx_handle_t *out_handle);
+//     zx_status_t GpioReleaseInterrupt();
+//     zx_status_t GpioSetPolarity(uint32_t polarity);
 //     ...
 // };
 
@@ -72,30 +72,30 @@ protected:
     gpio_protocol_ops_t ops_ = {};
 
 private:
-    static zx_status_t GpioConfigIn(void* ctx, uint32_t index, uint32_t flags) {
-        return static_cast<D*>(ctx)->GpioConfigIn(index, flags);
+    static zx_status_t GpioConfigIn(void* ctx, uint32_t flags) {
+        return static_cast<D*>(ctx)->GpioConfigIn(flags);
     }
-    static zx_status_t GpioConfigOut(void* ctx, uint32_t index, uint8_t initial_value) {
-        return static_cast<D*>(ctx)->GpioConfigOut(index, initial_value);
+    static zx_status_t GpioConfigOut(void* ctx, uint8_t initial_value) {
+        return static_cast<D*>(ctx)->GpioConfigOut(initial_value);
     }
-    static zx_status_t GpioSetAltFunction(void* ctx, uint32_t index, uint64_t function) {
-        return static_cast<D*>(ctx)->GpioSetAltFunction(index, function);
+    static zx_status_t GpioSetAltFunction(void* ctx, uint64_t function) {
+        return static_cast<D*>(ctx)->GpioSetAltFunction(function);
     }
-    static zx_status_t GpioRead(void* ctx, uint32_t index, uint8_t* out_value) {
-        return static_cast<D*>(ctx)->GpioRead(index, out_value);
+    static zx_status_t GpioRead(void* ctx, uint8_t* out_value) {
+        return static_cast<D*>(ctx)->GpioRead(out_value);
     }
-    static zx_status_t GpioWrite(void* ctx, uint32_t index, uint8_t value) {
-        return static_cast<D*>(ctx)->GpioWrite(index, value);
+    static zx_status_t GpioWrite(void* ctx, uint8_t value) {
+        return static_cast<D*>(ctx)->GpioWrite(value);
     }
-    static zx_status_t GpioGetInterrupt(void* ctx, uint32_t index, uint32_t flags,
+    static zx_status_t GpioGetInterrupt(void* ctx, uint32_t flags,
                                         zx_handle_t* out_handle) {
-        return static_cast<D*>(ctx)->GpioGetInterrupt(index, flags, out_handle);
+        return static_cast<D*>(ctx)->GpioGetInterrupt(flags, out_handle);
     }
-    static zx_status_t GpioReleaseInterrupt(void* ctx, uint32_t index) {
-        return static_cast<D*>(ctx)->GpioReleaseInterrupt(index);
+    static zx_status_t GpioReleaseInterrupt(void* ctx) {
+        return static_cast<D*>(ctx)->GpioReleaseInterrupt();
     }
-    static zx_status_t GpioSetPolarity(void* ctx, uint32_t index, uint32_t polarity) {
-        return static_cast<D*>(ctx)->GpioSetPolarity(index, polarity);
+    static zx_status_t GpioSetPolarity(void* ctx, uint32_t polarity) {
+        return static_cast<D*>(ctx)->GpioSetPolarity(polarity);
     }
 };
 
@@ -109,29 +109,29 @@ public:
         proto->ops = ops_;
     }
 
-    zx_status_t ConfigIn(uint32_t index, uint32_t flags) {
-        return ops_->config_in(ctx_, index, flags);
+    zx_status_t ConfigIn(uint32_t flags) {
+        return ops_->config_in(ctx_, flags);
     }
-    zx_status_t ConfigOut(uint32_t index, uint8_t initial_value) {
-        return ops_->config_out(ctx_, index, initial_value);
+    zx_status_t ConfigOut(uint8_t initial_value) {
+        return ops_->config_out(ctx_, initial_value);
     }
-    zx_status_t SetAltFunction(uint32_t index, uint64_t function) {
-        return ops_->set_alt_function(ctx_, index, function);
+    zx_status_t SetAltFunction(uint64_t function) {
+        return ops_->set_alt_function(ctx_, function);
     }
-    zx_status_t Read(uint32_t index, uint8_t* out_value) {
-        return ops_->read(ctx_, index, out_value);
+    zx_status_t Read(uint8_t* out_value) {
+        return ops_->read(ctx_, out_value);
     }
-    zx_status_t Write(uint32_t index, uint8_t value) {
-        return ops_->write(ctx_, index, value);
+    zx_status_t Write(uint8_t value) {
+        return ops_->write(ctx_, value);
     }
-    zx_status_t GetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle) {
-        return ops_->get_interrupt(ctx_, index, flags, out_handle);
+    zx_status_t GetInterrupt(uint32_t flags, zx_handle_t* out_handle) {
+        return ops_->get_interrupt(ctx_, flags, out_handle);
     }
-    zx_status_t ReleaseInterrupt(uint32_t index) {
-        return ops_->release_interrupt(ctx_, index);
+    zx_status_t ReleaseInterrupt() {
+        return ops_->release_interrupt(ctx_);
     }
-    zx_status_t SetPolarity(uint32_t index, uint32_t polarity) {
-        return ops_->set_polarity(ctx_, index, polarity);
+    zx_status_t SetPolarity(uint32_t polarity) {
+        return ops_->set_polarity(ctx_, polarity);
     }
 
 private:

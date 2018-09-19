@@ -54,6 +54,7 @@ public:
     zx_status_t GetDeviceInfo(pdev_device_info_t* out_info);
     zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
     zx_status_t DeviceAdd(uint32_t index, device_add_args_t* args, zx_device_t** out);
+    zx_status_t GetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol);
 
     // Starts the underlying devmgr device.
     zx_status_t Start();

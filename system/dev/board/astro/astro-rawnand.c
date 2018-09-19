@@ -95,25 +95,25 @@ zx_status_t aml_raw_nand_init(aml_bus_t* bus) {
     zx_status_t status;
 
     // Set alternate functions to enable raw_nand.
-    status = gpio_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(8), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(8), 2);
     if (status != ZX_OK)
         return status;
-    status = gpio_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(9), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(9), 2);
     if (status != ZX_OK)
         return status;
-    status = gpio_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(10), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(10), 2);
     if (status != ZX_OK)
         return status;
-    status = gpio_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(11), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(11), 2);
     if (status != ZX_OK)
         return status;
-    status = gpio_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(12), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(12), 2);
     if (status != ZX_OK)
         return status;
-    status = gpio_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(14), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(14), 2);
     if (status != ZX_OK)
         return status;
-    status = gpio_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(15), 2);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOBOOT(15), 2);
     if (status != ZX_OK)
         return status;
 

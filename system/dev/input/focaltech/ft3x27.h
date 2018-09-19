@@ -21,10 +21,13 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-// clang-format off
-#define FT_INT_PIN            0
-#define FT_RESET_PIN          1
+enum {
+    FT_INT_PIN,
+    FT_RESET_PIN,
+    FT_PIN_COUNT,
+};
 
+// clang-format off
 #define FTS_REG_CURPOINT                    0x02
 #define FTS_REG_FINGER_START                0x03
 #define FTS_REG_INT_CNT                     0x8F
@@ -106,7 +109,7 @@ private:
     ft3x27_touch_t ft_rpt_ __TA_GUARDED(proxy_lock_);
     void ParseReport(ft3x27_finger_t* rpt, uint8_t* buf);
 
-    gpio_protocol_t gpio_;
+    gpio_protocol_t gpios_[FT_PIN_COUNT];
     zx::interrupt irq_;
     i2c_protocol_t i2c_;
 

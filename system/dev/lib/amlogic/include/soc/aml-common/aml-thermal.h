@@ -22,13 +22,14 @@
 enum {
     FAN_CTL0,
     FAN_CTL1,
+    FAN_CTL_COUNT,
 };
 
 typedef struct {
     zx_device_t*                        zxdev;
     platform_device_protocol_t          pdev;
 
-    gpio_protocol_t                     gpio;
+    gpio_protocol_t                     gpios[FAN_CTL_COUNT];
     scpi_protocol_t                     scpi;
 
     zx_handle_t                         port;

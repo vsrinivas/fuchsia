@@ -4,6 +4,7 @@
 
 #include "lcd.h"
 #include <ddk/debug.h>
+#include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
 
 #define DELAY_CMD           (0xFF)
@@ -578,9 +579,15 @@ zx_status_t Lcd::LoadInitTable(const uint8_t* buffer, size_t size) {
 }
 
 zx_status_t Lcd::Init(zx_device_t* parent) {
+    platform_device_protocol_t pdev;
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not obtain platform device protocol\n");
+        return status;
+    }
 
     // Obtain GPIO protocol
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_GPIO, &gpio_);
+    status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, GPIO_LCD, &gpio_);
     if (status != ZX_OK) {
         DISP_ERROR("Could not obtain GPIO protocol\n");
         return status;
@@ -600,12 +607,12 @@ zx_status_t Lcd::Init(zx_device_t* parent) {
     }
 
     // reset LCD panel via GPIO according to vendor doc
-    gpio_config_out(&gpio_, GPIO_LCD, 1);
-    gpio_write(&gpio_, GPIO_LCD, 1);
+    gpio_config_out(&gpio_, 1);
+    gpio_write(&gpio_, 1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
-    gpio_write(&gpio_, GPIO_LCD, 0);
+    gpio_write(&gpio_, 0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-    gpio_write(&gpio_, GPIO_LCD, 1);
+    gpio_write(&gpio_, 1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
     // check status
     if (GetDisplayId() != ZX_OK) {

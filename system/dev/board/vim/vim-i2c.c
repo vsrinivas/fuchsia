@@ -68,12 +68,12 @@ static const pbus_dev_t i2c_dev = {
 zx_status_t vim_i2c_init(vim_bus_t* bus) {
     // setup pinmux for our I2C busses
     // I2C_A and I2C_B are exposed on the 40 pin header and I2C_C on the FPC connector
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SDA_A, S912_I2C_SDA_A_FN);
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SCK_A, S912_I2C_SCK_A_FN);
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SDA_B, S912_I2C_SDA_B_FN);
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SCK_B, S912_I2C_SCK_B_FN);
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SDA_C, S912_I2C_SDA_C_FN);
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SCK_C, S912_I2C_SCK_C_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_I2C_SDA_A, S912_I2C_SDA_A_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_I2C_SCK_A, S912_I2C_SCK_A_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_I2C_SDA_B, S912_I2C_SDA_B_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_I2C_SCK_B, S912_I2C_SCK_B_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_I2C_SDA_C, S912_I2C_SDA_C_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_I2C_SCK_C, S912_I2C_SCK_C_FN);
 
     zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
     if (status != ZX_OK) {

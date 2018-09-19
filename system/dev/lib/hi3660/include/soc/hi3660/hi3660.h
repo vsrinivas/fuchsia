@@ -5,12 +5,12 @@
 #pragma once
 
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/gpio-impl.h>
 #include <zircon/listnode.h>
 
 typedef struct {
     list_node_t gpios;
-    gpio_protocol_t gpio;
+    gpio_impl_protocol_t gpio;
     io_buffer_t usb3otg_bc;
     io_buffer_t peri_crg;
     io_buffer_t iomcu;

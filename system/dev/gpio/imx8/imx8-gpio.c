@@ -9,7 +9,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
@@ -25,7 +25,7 @@
 typedef struct {
     platform_device_protocol_t pdev;
     platform_bus_protocol_t pbus;
-    gpio_protocol_t gpio;
+    gpio_impl_protocol_t gpio;
     zx_device_t* zxdev;
     io_buffer_t mmios[IMX_GPIO_BLOCKS];
     io_buffer_t mmio_iomux;
@@ -380,7 +380,7 @@ static zx_status_t imx8_gpio_set_polarity(void* ctx, uint32_t pin,
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static gpio_protocol_ops_t gpio_ops = {
+static gpio_impl_protocol_ops_t gpio_ops = {
     .config_in = imx8_gpio_config_in,
     .config_out = imx8_gpio_config_out,
     .set_alt_function = imx8_gpio_set_alt_function,
@@ -499,7 +499,7 @@ static zx_status_t imx8_gpio_bind(void* ctx, zx_device_t* parent) {
 
     gpio->gpio.ops = &gpio_ops;
     gpio->gpio.ctx = gpio;
-    pbus_register_protocol(&gpio->pbus, ZX_PROTOCOL_GPIO, &gpio->gpio, NULL, NULL);
+    pbus_register_protocol(&gpio->pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio->gpio, NULL, NULL);
 
     return ZX_OK;
 

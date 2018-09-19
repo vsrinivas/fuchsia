@@ -114,18 +114,18 @@ zx_status_t vim_sd_emmc_init(vim_bus_t* bus) {
     zx_status_t status;
 
     // set alternate functions to enable EMMC
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_NAND_D0, S912_EMMC_NAND_D0_FN);
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_NAND_D1, S912_EMMC_NAND_D1_FN);
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_NAND_D2, S912_EMMC_NAND_D2_FN);
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_NAND_D3, S912_EMMC_NAND_D3_FN);
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_NAND_D4, S912_EMMC_NAND_D4_FN);
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_NAND_D5, S912_EMMC_NAND_D5_FN);
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_NAND_D6, S912_EMMC_NAND_D6_FN);
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_NAND_D7, S912_EMMC_NAND_D7_FN);
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_CLK, S912_EMMC_CLK_FN);
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_RST, S912_EMMC_RST_FN);
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_CMD, S912_EMMC_CMD_FN);
-    gpio_set_alt_function(&bus->gpio, S912_EMMC_DS, S912_EMMC_DS_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_NAND_D0, S912_EMMC_NAND_D0_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_NAND_D1, S912_EMMC_NAND_D1_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_NAND_D2, S912_EMMC_NAND_D2_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_NAND_D3, S912_EMMC_NAND_D3_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_NAND_D4, S912_EMMC_NAND_D4_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_NAND_D5, S912_EMMC_NAND_D5_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_NAND_D6, S912_EMMC_NAND_D6_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_NAND_D7, S912_EMMC_NAND_D7_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_CLK, S912_EMMC_CLK_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_RST, S912_EMMC_RST_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_CMD, S912_EMMC_CMD_FN);
+    gpio_impl_set_alt_function(&bus->gpio, S912_EMMC_DS, S912_EMMC_DS_FN);
 
     if ((status = pbus_device_add(&bus->pbus, &emmc_dev)) != ZX_OK) {
         zxlogf(ERROR, "vim_sd_emmc_init could not add emmc_dev: %d\n", status);

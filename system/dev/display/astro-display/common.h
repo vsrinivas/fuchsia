@@ -41,6 +41,7 @@ enum {
     GPIO_HW_ID0,
     GPIO_HW_ID1,
     GPIO_HW_ID2,
+    GPIO_COUNT,
 };
 
 // Should match display_i2cs table in board driver

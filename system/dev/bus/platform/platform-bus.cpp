@@ -52,11 +52,12 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol,
     fbl::AllocChecker ac;
 
     switch (proto_id) {
-    case ZX_PROTOCOL_GPIO: {
+    case ZX_PROTOCOL_GPIO_IMPL: {
         if (proxy_cb != nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        gpio_.reset(new (&ac) ddk::GpioProtocolProxy(static_cast<gpio_protocol_t*>(protocol)));
+        gpio_.reset(new (&ac) ddk::GpioImplProtocolProxy(
+                                                static_cast<gpio_impl_protocol_t*>(protocol)));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -72,7 +73,7 @@ zx_status_t PlatformBus::RegisterProtocol(uint32_t proto_id, void* protocol,
             return status;
         }
 
-        i2c_impl_.reset(new (&ac) ddk::I2cImplProtocolProxy(proto));
+        i2c_.reset(new (&ac) ddk::I2cImplProtocolProxy(proto));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -218,15 +219,15 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
         proto->ops = &pbus_proto_ops_;
         return ZX_OK;
     }
-    case ZX_PROTOCOL_GPIO:
+    case ZX_PROTOCOL_GPIO_IMPL:
         if (gpio_ != nullptr) {
-            gpio_->GetProto(static_cast<gpio_protocol_t*>(out));
+            gpio_->GetProto(static_cast<gpio_impl_protocol_t*>(out));
             return ZX_OK;
         }
         break;
     case ZX_PROTOCOL_I2C_IMPL:
-        if (i2c_impl_ != nullptr) {
-            i2c_impl_->GetProto(static_cast<i2c_impl_protocol_t*>(out));
+        if (i2c_ != nullptr) {
+            i2c_->GetProto(static_cast<i2c_impl_protocol_t*>(out));
             return ZX_OK;
         }
         break;

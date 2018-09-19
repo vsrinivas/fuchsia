@@ -32,9 +32,16 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(HikeyUsb);
 
+    enum {
+        HUB_VDD33_EN,
+        VBUS_TYPEC,
+        USBSW_SW_SEL,
+        GPIO_COUNT,
+    };
+
     zx_status_t Init();
 
-    gpio_protocol_t gpio_;
+    gpio_protocol_t gpios_[GPIO_COUNT];
     usb_mode_t usb_mode_;
 };
 
