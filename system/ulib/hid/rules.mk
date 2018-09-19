@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/egalax.c \
     $(LOCAL_DIR)/eyoyo.c \
     $(LOCAL_DIR)/ft3x27.c \
+    $(LOCAL_DIR)/gt92xx.c \
     $(LOCAL_DIR)/hid.c \
     $(LOCAL_DIR)/keymaps.c \
     $(LOCAL_DIR)/paradise.c \
