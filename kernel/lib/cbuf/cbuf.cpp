@@ -51,18 +51,20 @@ size_t cbuf_space_avail(const cbuf_t* cbuf) {
 size_t cbuf_write_char(cbuf_t* cbuf, char c) {
     DEBUG_ASSERT(cbuf);
 
-    AutoSpinLock guard(&cbuf->lock);
-
     size_t ret = 0;
-    if (cbuf_space_avail(cbuf) > 0) {
-        cbuf->buf[cbuf->head] = c;
+    {
+        AutoSpinLock guard(&cbuf->lock);
 
-        cbuf->head = inc_pointer(cbuf, cbuf->head, 1);
-        ret = 1;
+        if (cbuf_space_avail(cbuf) > 0) {
+            cbuf->buf[cbuf->head] = c;
 
-        if (cbuf->head != cbuf->tail) {
-            event_signal(&cbuf->event, true);
+            cbuf->head = inc_pointer(cbuf, cbuf->head, 1);
+            ret = 1;
         }
+    }
+
+    if (ret > 0) {
+        event_signal(&cbuf->event, true);
     }
 
     return ret;
