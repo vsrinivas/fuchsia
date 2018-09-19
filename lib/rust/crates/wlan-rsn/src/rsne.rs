@@ -36,18 +36,18 @@ bitfield!{
     #[derive(PartialOrd, PartialEq, Clone)]
     pub struct RsnCapabilities(u16);
     impl Debug;
-    preauth, set_preauth: 0;
-    no_pairwise, set_no_pairwise: 1;
-    ptksa_replay_counter, set_ptksa_replay_counter: 3, 2;
-    gtksa_replay_counter, set_gtksa_replay_counter: 5, 4;
-    mgmt_frame_protection_req, set_mgmt_frame_protection_req: 6;
-    mgmt_frame_protection_cap, set_mgmt_frame_protection_cap: 7;
-    joint_multiband, set_joint_multiband: 8;
-    peerkey_enabled, set_peerkey_enabled: 9;
-    ssp_amsdu_cap, set_ssp_amsdu_cap: 10;
-    ssp_amsdu_req, set_ssp_amsdu_req: 11;
-    pbac, set_pbac: 12;
-    extended_key_id, set_extended_key_id: 13;
+    pub preauth, set_preauth: 0;
+    pub no_pairwise, set_no_pairwise: 1;
+    pub ptksa_replay_counter, set_ptksa_replay_counter: 3, 2;
+    pub gtksa_replay_counter, set_gtksa_replay_counter: 5, 4;
+    pub mgmt_frame_protection_req, set_mgmt_frame_protection_req: 6;
+    pub mgmt_frame_protection_cap, set_mgmt_frame_protection_cap: 7;
+    pub joint_multiband, set_joint_multiband: 8;
+    pub peerkey_enabled, set_peerkey_enabled: 9;
+    pub ssp_amsdu_cap, set_ssp_amsdu_cap: 10;
+    pub ssp_amsdu_req, set_ssp_amsdu_req: 11;
+    pub pbac, set_pbac: 12;
+    pub extended_key_id, set_extended_key_id: 13;
     // bit 14-15 reserved
 
     value, _: 15, 0;
@@ -167,6 +167,9 @@ fn read_pmkid<'a>(input: &'a [u8]) -> IResult<&'a [u8], pmkid::Pmkid> {
 named!(akm<&[u8], akm::Akm>, call!(read_suite_selector::<akm::Akm>));
 named!(cipher<&[u8], cipher::Cipher>, call!(read_suite_selector::<cipher::Cipher>));
 
+/// convert bytes of an RSNE information element into an RSNE representation. This method
+/// does not depend on the information element length field (second byte) and thus does not
+/// validate that it's correct
 named!(pub from_bytes<&[u8], Rsne>,
        do_parse!(
            _element_id: le_u8 >>
