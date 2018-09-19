@@ -34,6 +34,23 @@
 #define IOCTL_SYSINFO_GET_BOARD_NAME \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SYSINFO, 4)
 
+// Return interrupt controller information
+//   in: none
+//   out: interrupt_controller_info_t
+#define IOCTL_SYSINFO_GET_INTERRUPT_CONTROLLER_INFO \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SYSINFO, 5)
+
+enum {
+    INTERRUPT_CONTROLLER_TYPE_UNKNOWN = 0,
+    INTERRUPT_CONTROLLER_TYPE_APIC = 1,
+    INTERRUPT_CONTROLLER_TYPE_GIC_V2 = 2,
+    INTERRUPT_CONTROLLER_TYPE_GIC_V3 = 3,
+};
+
+typedef struct interrupt_controller_info_t {
+    uint8_t type;
+} interrupt_controller_info_t;
+
 // ssize_t ioctl_sysinfo_get_root_job(int fd, zx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_sysinfo_get_root_job, IOCTL_SYSINFO_GET_ROOT_JOB, zx_handle_t);
 
@@ -45,3 +62,7 @@ IOCTL_WRAPPER_OUT(ioctl_sysinfo_get_hypervisor_resource, IOCTL_SYSINFO_GET_HYPER
 
 // ssize_t ioctl_sysinfo_get_board_name(int fd, char* out, size_t out_len);
 IOCTL_WRAPPER_VAROUT(ioctl_sysinfo_get_board_name, IOCTL_SYSINFO_GET_BOARD_NAME, char);
+
+// ssize_t ioctl_sysinfo_get_gic_version(int fd, uint8_t* out);
+IOCTL_WRAPPER_OUT(ioctl_sysinfo_get_interrupt_controller_info,
+                  IOCTL_SYSINFO_GET_INTERRUPT_CONTROLLER_INFO, interrupt_controller_info_t);

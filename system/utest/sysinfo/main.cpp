@@ -59,9 +59,28 @@ bool get_board_name_succeeds() {
     END_TEST;
 }
 
+bool get_interrupt_controller_info_succeeds() {
+    BEGIN_TEST;
+
+    // Get the resource handle from the driver.
+    int fd = open(SYSINFO_PATH, O_RDWR);
+    ASSERT_GE(fd, 0, "Can't open sysinfo");
+
+    // Test ioctl_sysinfo_get_board_name().
+    interrupt_controller_info_t info;
+    ssize_t n = ioctl_sysinfo_get_interrupt_controller_info(fd, &info);
+    ASSERT_EQ(n, sizeof(info), "ioctl_sysinfo_get_interrupt_controller_info failed");
+    EXPECT_NE(info.type, INTERRUPT_CONTROLLER_TYPE_UNKNOWN, "interrupt controller type is unknown");
+
+    close(fd);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(sysinfo_tests)
 RUN_TEST(get_root_resource_succeeds)
 RUN_TEST(get_board_name_succeeds)
+RUN_TEST(get_interrupt_controller_info_succeeds)
 END_TEST_CASE(sysinfo_tests)
 
 int main(int argc, char** argv) {

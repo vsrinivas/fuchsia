@@ -117,6 +117,27 @@ static zx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         *out_actual = sizeof(sysinfo->board_name);
         return ZX_OK;
     }
+    case IOCTL_SYSINFO_GET_INTERRUPT_CONTROLLER_INFO : {
+        interrupt_controller_info_t info = {};
+
+#if defined(__aarch64__)
+        size_t actual = 0;
+        zx_status_t status = device_get_metadata(sysinfo->zxdev,
+                                                 DEVICE_METADATA_INTERRUPT_CONTROLLER_TYPE,
+                                                 &info.type, sizeof(uint8_t), &actual);
+        if (status != ZX_OK) {
+            return status;
+        }
+#elif defined(__x86_64__)
+        info.type = INTERRUPT_CONTROLLER_TYPE_APIC;
+#else
+        info.type = INTERRUPT_CONTROLLER_TYPE_UNKNOWN;
+#endif
+
+        memcpy(reply, &info, sizeof(interrupt_controller_info_t));
+        *out_actual = sizeof(interrupt_controller_info_t);
+        return ZX_OK;
+    }
     default:
         return ZX_ERR_INVALID_ARGS;
     }

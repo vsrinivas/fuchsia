@@ -19,7 +19,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
+#include <zircon/device/sysinfo.h>
 #include <zircon/process.h>
 #include <zircon/syscalls/iommu.h>
 
@@ -310,6 +312,7 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
     }
 
     bool got_platform_id = false;
+    uint8_t interrupt_controller_type = INTERRUPT_CONTROLLER_TYPE_UNKNOWN;
     zx_off_t metadata_offset = 0;
     len = zbi_length;
     off = sizeof(header);
@@ -347,6 +350,12 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
                 zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
                 return status;
             }
+        } else if (header.type == ZBI_TYPE_KERNEL_DRIVER) {
+            if (header.extra == KDRV_ARM_GIC_V2) {
+                interrupt_controller_type = INTERRUPT_CONTROLLER_TYPE_GIC_V2;
+            } else if (header.extra == KDRV_ARM_GIC_V3) {
+                interrupt_controller_type = INTERRUPT_CONTROLLER_TYPE_GIC_V3;
+            }
         } else if (ZBI_TYPE_DRV_METADATA(header.type)) {
             status = zbi.read(metadata + metadata_offset, off, itemlen);
             if (status != ZX_OK) {
@@ -357,6 +366,15 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
         }
         off += itemlen;
         len -= itemlen;
+    }
+
+    // Publish interrupt controller type to sysinfo driver
+    status = device_publish_metadata(parent(), "/dev/misc/sysinfo",
+                                     DEVICE_METADATA_INTERRUPT_CONTROLLER_TYPE,
+                                     &interrupt_controller_type, sizeof(interrupt_controller_type));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "device_publish_metadata(interrupt_controller_type) failed: %d\n", status);
+        return status;
     }
 
     if (!got_platform_id) {

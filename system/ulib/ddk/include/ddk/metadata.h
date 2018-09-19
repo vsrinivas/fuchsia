@@ -11,28 +11,32 @@
 
 // MAC Address for Ethernet, Wifi, Bluetooth, etc.
 // Content: uint8_t[] (variable length based on type of MAC address)
-#define DEVICE_METADATA_MAC_ADDRESS         0x43414D6D // mMAC
+#define DEVICE_METADATA_MAC_ADDRESS               0x43414D6D // mMAC
 static_assert(DEVICE_METADATA_MAC_ADDRESS == ZBI_TYPE_DRV_MAC_ADDRESS, "");
 
 // Partition map for raw block device.
 // Content: bootdata_partition_map_t
-#define DEVICE_METADATA_PARTITION_MAP       0x5452506D // mPRT
+#define DEVICE_METADATA_PARTITION_MAP             0x5452506D // mPRT
 static_assert(DEVICE_METADATA_PARTITION_MAP == ZBI_TYPE_DRV_PARTITION_MAP, "");
 
 // maximum size of DEVICE_METADATA_PARTITION_MAP data
-#define METADATA_PARTITION_MAP_MAX          4096
+#define METADATA_PARTITION_MAP_MAX                4096
 
 // Initial USB mode
 // type: usb_mode_t
-#define DEVICE_METADATA_USB_MODE            0x4D425355 // USBM
+#define DEVICE_METADATA_USB_MODE                  0x4D425355 // USBM
 
 // Serial port info
 // type: serial_port_info_t
-#define DEVICE_METADATA_SERIAL_PORT_INFO    0x4D524553 // SERM
+#define DEVICE_METADATA_SERIAL_PORT_INFO          0x4D524553 // SERM
 
 // Platform board name (for sysinfo driver)
 // type: char[ZBI_BOARD_NAME_LEN]
-#define DEVICE_METADATA_BOARD_NAME          0x4E524F42 // BORN
+#define DEVICE_METADATA_BOARD_NAME                0x4E524F42 // BORN
+
+// Interrupt controller type (for sysinfo driver)
+// type: uint8_t
+#define DEVICE_METADATA_INTERRUPT_CONTROLLER_TYPE 0x43544E49 // INTC
 
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
