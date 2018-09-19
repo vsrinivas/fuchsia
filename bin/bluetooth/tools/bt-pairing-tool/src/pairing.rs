@@ -4,7 +4,7 @@
 
 use fuchsia_async as fasync;
 use fidl_fuchsia_bluetooth_control::{PairingMethod, PairingDelegateRequest, PairingDelegateRequestStream};
-use fidl::endpoints2::RequestStream;
+use fidl::endpoints::RequestStream;
 use futures::prelude::*;
 use failure::Error;
 use futures::{Future};

@@ -11,7 +11,7 @@ use crate::{
 
 use {
     failure::{bail, format_err},
-    fidl::endpoints2::create_endpoints,
+    fidl::endpoints::create_endpoints,
     fidl_fuchsia_wlan_device as wlan,
     fidl_fuchsia_wlan_device_service::{
         self as wlan_service,

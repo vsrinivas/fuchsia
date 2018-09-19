@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::bail;
-use fidl::{endpoints2::RequestStream, endpoints2::ServerEnd};
+use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use futures::{prelude::*, select};

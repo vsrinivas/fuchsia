@@ -175,7 +175,7 @@ fn start_advertising(state_rc: Arc<Mutex<BatteryPeripheralState>>) -> Result<(),
 
     let (delegate_local, delegate_remote) = zx::Channel::create()?;
     let delegate_local = async::Channel::from_channel(delegate_local)?;
-    let delegate_ptr = fidl::endpoints2::ClientEnd::<le::PeripheralDelegateMarker>::new(delegate_remote);
+    let delegate_ptr = fidl::endpoints::ClientEnd::<le::PeripheralDelegateMarker>::new(delegate_remote);
 
     let mut state = state_rc.lock();
     let start_adv = state.peripheral.start_advertising(
@@ -298,18 +298,18 @@ fn main_res() -> Result<(), Error> {
     // Register a power watcher to monitor the power level.
     let (power_watcher_local, power_watcher_remote) = zx::Channel::create()?;
     let power_watcher_local = async::Channel::from_channel(power_watcher_local)?;
-    let mut watcher_ptr = fidl::endpoints2::ClientEnd::<PowerManagerWatcherMarker>::new(power_watcher_remote);
+    let mut watcher_ptr = fidl::endpoints::ClientEnd::<PowerManagerWatcherMarker>::new(power_watcher_remote);
     power.watch(&mut watcher_ptr)?;
 
     // Publish service and register service delegate.
     let (service_local, service_remote) = zx::Channel::create()?;
     let service_local = async::Channel::from_channel(service_local)?;
-    let mut service_server = fidl::endpoints2::ServerEnd::<gatt::LocalServiceMarker>::new(service_remote);
+    let mut service_server = fidl::endpoints::ServerEnd::<gatt::LocalServiceMarker>::new(service_remote);
     let service_proxy = gatt::LocalServiceProxy::new(service_local);
 
     let (delegate_local, delegate_remote) = zx::Channel::create()?;
     let delegate_local = async::Channel::from_channel(delegate_local)?;
-    let mut delegate_ptr = fidl::endpoints2::ClientEnd::<gatt::ServiceDelegateMarker>::new(delegate_remote);
+    let mut delegate_ptr = fidl::endpoints::ClientEnd::<gatt::ServiceDelegateMarker>::new(delegate_remote);
 
     let publish = server
         .publish_service(&mut service_info, &mut delegate_ptr, &mut service_server)

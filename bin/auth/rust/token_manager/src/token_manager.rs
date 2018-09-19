@@ -10,8 +10,8 @@ use crate::auth_provider_client::AuthProviderClient;
 use crate::error::TokenManagerError;
 use failure::format_err;
 use fidl;
-use fidl::encoding2::OutOfLine;
-use fidl::endpoints2::{ClientEnd, ServerEnd};
+use fidl::encoding::OutOfLine;
+use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AppConfig, AssertionJwtParams, AttestationJwtParams,
                         AttestationSignerMarker, AuthProviderConfig, AuthProviderProxy,
                         AuthProviderStatus, AuthenticationContextProviderMarker, CredentialEcKey,

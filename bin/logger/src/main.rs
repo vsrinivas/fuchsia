@@ -9,7 +9,7 @@ use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use failure::{Error, ResultExt};
-use fidl::endpoints2::{ClientEnd, RequestStream, ServiceMarker};
+use fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker};
 use futures::{TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::collections::HashSet;
@@ -354,7 +354,7 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
 
-    use fidl::encoding2::OutOfLine;
+    use fidl::encoding::OutOfLine;
     use fidl_fuchsia_logger::{LogFilterOptions, LogListenerMarker, LogListenerRequest,
                               LogListenerRequestStream, LogProxy, LogSinkProxy};
     use crate::logger::fx_log_packet_t;
@@ -490,7 +490,7 @@ mod tests {
         dump_logs: bool,
     ) {
         let (remote, local) = zx::Channel::create().expect("failed to create zx channel");
-        let remote_ptr = fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(remote);
+        let remote_ptr = fidl::endpoints::ClientEnd::<LogListenerMarker>::new(remote);
         let local = fasync::Channel::from_channel(local).expect("failed to make async channel");
         spawn_log_listener(ll, local);
 

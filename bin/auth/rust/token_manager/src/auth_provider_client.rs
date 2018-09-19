@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::{format_err, Error, ResultExt};
-use fidl::endpoints2::ServerEnd;
+use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderFactoryMarker,
                         AuthProviderProxy, AuthProviderStatus};
 use fuchsia_app::client::{App, Launcher};

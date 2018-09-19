@@ -6,7 +6,7 @@
 #![feature(futures_api, pin, arbitrary_self_types)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints2::{ServerEnd, ServiceMarker};
+use fidl::endpoints::{ServerEnd, ServiceMarker};
 use fidl_fuchsia_bluetooth_bredr::{ProfileMarker};
 use fidl_fuchsia_bluetooth_control::BondingMarker;
 use fidl_fuchsia_bluetooth_control::ControlMarker;

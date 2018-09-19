@@ -14,7 +14,7 @@ mod token_manager_factory;
 
 use crate::token_manager_factory::TokenManagerFactory;
 use failure::{Error, ResultExt};
-use fidl::endpoints2::ServiceMarker;
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_auth::TokenManagerFactoryMarker;
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;

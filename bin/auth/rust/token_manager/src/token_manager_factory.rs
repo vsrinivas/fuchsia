@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::endpoints2::RequestStream;
+use fidl::endpoints::RequestStream;
 use fidl::Error;
 use fidl_fuchsia_auth::{TokenManagerFactoryRequest, TokenManagerFactoryRequestStream};
 use fuchsia_async as fasync;

@@ -9,7 +9,7 @@ mod dev_auth_provider_iotid_factory;
 
 use crate::dev_auth_provider_iotid_factory::AuthProviderFactory;
 use failure::{Error, ResultExt};
-use fidl::endpoints2::ServiceMarker;
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_auth::AuthProviderFactoryMarker;
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;

@@ -9,7 +9,7 @@ mod canvas;
 
 use crate::canvas::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size};
 use failure::{Error, ResultExt};
-use fidl::endpoints2::{create_endpoints, ClientEnd, RequestStream, ServerEnd, ServiceMarker};
+use fidl::endpoints::{create_endpoints, ClientEnd, RequestStream, ServerEnd, ServiceMarker};
 use fidl_fuchsia_images as images;
 use fidl_fuchsia_math::SizeF;
 use fidl_fuchsia_ui_scenic::{self as scenic, ScenicMarker, ScenicProxy, SessionListenerMarker,

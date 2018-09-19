@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::{Error, ResultExt, bail};
-use fidl::endpoints2::{create_endpoints, ClientEnd, RequestStream, ServerEnd, ServiceMarker};
+use fidl::endpoints::{create_endpoints, ClientEnd, RequestStream, ServerEnd, ServiceMarker};
 use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
 use fidl_fuchsia_ui_scenic::{ScenicMarker, SessionListenerMarker, SessionListenerRequest,
                              SessionMarker};

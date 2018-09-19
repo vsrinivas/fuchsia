@@ -16,7 +16,7 @@ use crate::{config::Config, known_ess_store::KnownEssStore};
 
 use {
     failure::{format_err, Error, ResultExt},
-    fidl::endpoints2::{RequestStream, ServiceMarker},
+    fidl::endpoints::{RequestStream, ServiceMarker},
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fidl_fuchsia_wlan_service as legacy,
     fuchsia_app::server::ServicesServer,
@@ -56,7 +56,7 @@ fn main() -> Result<(), Error> {
     let legacy_client = shim::ClientRef::new();
     let fidl_fut = serve_fidl(legacy_client.clone());
 
-    let (watcher_proxy, watcher_server_end) = fidl::endpoints2::create_endpoints()?;
+    let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_endpoints()?;
     wlan_svc.watch_devices(watcher_server_end)?;
     let listener = device::Listener::new(wlan_svc, cfg, legacy_client);
     let ess_store = Arc::new(KnownEssStore::new()?);

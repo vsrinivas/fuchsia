@@ -5,7 +5,7 @@
 #![feature(try_from,async_await,await_macro)]
 
 use failure::{err_msg, Error, ResultExt};
-use fidl::endpoints2::create_endpoints;
+use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_mem;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;

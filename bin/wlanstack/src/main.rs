@@ -22,7 +22,7 @@ mod watchable_map;
 mod watcher_service;
 
 use failure::{Error, format_err, ResultExt};
-use fidl::endpoints2::ServiceMarker;
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_wlan_device_service::DeviceServiceMarker;
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;

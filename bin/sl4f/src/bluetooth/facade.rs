@@ -4,7 +4,7 @@
 
 use failure::{Error, Fail, ResultExt};
 use fidl;
-use fidl::encoding2::OutOfLine;
+use fidl::encoding::OutOfLine;
 use fidl_fuchsia_bluetooth_gatt::{ClientProxy, ServiceInfo};
 use fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateMarker, LocalServiceMarker,
                                   LocalServiceProxy, Server_Marker, Server_Proxy};
@@ -428,7 +428,7 @@ impl BluetoothFacade {
 
         // TODO(NET-1026): Move to private method?
         // Create server endpoints
-        let (client_end, server_end) = match fidl::endpoints2::create_endpoints() {
+        let (client_end, server_end) = match fidl::endpoints::create_endpoints() {
             Err(e) => {
                 return Left(fready(Err(e.into())));
             }
@@ -574,7 +574,7 @@ impl BluetoothFacade {
         // TODO(NET-1289): Ensure unwrap() safety
         let (service_local, service_remote) = zx::Channel::create().unwrap();
         let service_local = fasync::Channel::from_channel(service_local).unwrap();
-        let service_server = fidl::endpoints2::ServerEnd::<LocalServiceMarker>::new(service_remote);
+        let service_server = fidl::endpoints::ServerEnd::<LocalServiceMarker>::new(service_remote);
 
         // Otherwise, store the local proxy in map with unique local_service_id string
         let service_proxy = LocalServiceProxy::new(service_local);
@@ -582,7 +582,7 @@ impl BluetoothFacade {
         let (delegate_local, delegate_remote) = zx::Channel::create().unwrap();
         let delegate_local = fasync::Channel::from_channel(delegate_local).unwrap();
         let delegate_ptr =
-            fidl::endpoints2::ClientEnd::<LocalServiceDelegateMarker>::new(delegate_remote);
+            fidl::endpoints::ClientEnd::<LocalServiceDelegateMarker>::new(delegate_remote);
 
         bt_facade
             .write()

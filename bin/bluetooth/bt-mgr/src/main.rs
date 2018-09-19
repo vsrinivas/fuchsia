@@ -11,7 +11,7 @@ use fuchsia_bluetooth::make_clones;
 use fuchsia_async as fasync;
 use fuchsia_app::{server::ServicesServer, client::Launcher};
 use failure::{Error, ResultExt};
-use fidl::endpoints2::ServiceMarker;
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
 use fidl_fuchsia_bluetooth_control::BondingMarker;
 use fidl_fuchsia_bluetooth_control::ControlMarker;

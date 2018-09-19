@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::{err_msg, Error};
-use fidl::endpoints2::{RequestStream, ServerEnd};
+use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl_fuchsia_stash::{
     GetIteratorMarker, GetIteratorRequest, GetIteratorRequestStream, ListIteratorMarker,
     ListIteratorRequest, ListIteratorRequestStream, Value, MAX_KEY_SIZE, MAX_STRING_SIZE,
@@ -264,7 +264,7 @@ impl Accessor {
 #[cfg(test)]
 mod tests {
     use fuchsia_async as fasync;
-    use fidl::endpoints2::create_endpoints;
+    use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_stash::{ListItem, Value};
     use parking_lot::Mutex;
     use std::sync::Arc;

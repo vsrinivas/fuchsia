@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::Error;
-use fidl::endpoints2::{ClientEnd, ServerEnd};
+use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AuthenticationContextProviderMarker, AuthenticationContextProviderProxy,
                         AuthenticationUiContextMarker};
 use fuchsia_zircon as zx;

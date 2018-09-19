@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints2::{ServiceMarker, RequestStream};
+use fidl::endpoints::{ServiceMarker, RequestStream};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;

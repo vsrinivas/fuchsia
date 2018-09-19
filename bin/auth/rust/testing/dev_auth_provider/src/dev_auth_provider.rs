@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::encoding2::OutOfLine;
-use fidl::endpoints2::ServerEnd;
+use fidl::encoding::OutOfLine;
+use fidl::endpoints::ServerEnd;
 use fidl::Error;
 use fidl_fuchsia_auth::{AuthProviderGetAppAccessTokenFromAssertionJwtResponder,
                         AuthProviderGetAppAccessTokenResponder,

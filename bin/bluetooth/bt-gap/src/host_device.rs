@@ -5,7 +5,7 @@
 use crate::host_dispatcher::HostDispatcher;
 use crate::util::clone_host_state;
 use fidl;
-use fidl::endpoints2::ClientEnd;
+use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_bluetooth;
 use fidl_fuchsia_bluetooth::Status;
 use fidl_fuchsia_bluetooth_control::AdapterInfo;
@@ -93,7 +93,7 @@ impl HostDevice {
         // TODO map_err
         let (service_local, service_remote) = zx::Channel::create().unwrap();
         let service_local = fasync::Channel::from_channel(service_local).unwrap();
-        let server = fidl::endpoints2::ServerEnd::<CentralMarker>::new(service_remote);
+        let server = fidl::endpoints::ServerEnd::<CentralMarker>::new(service_remote);
         self.host.request_low_energy_central(server)?;
         let proxy = CentralProxy::new(service_local);
         Ok(proxy)

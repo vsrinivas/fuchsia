@@ -7,8 +7,8 @@
 #![feature(async_await, await_macro, try_from)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints2::RequestStream;
-use fidl::endpoints2::ServiceMarker;
+use fidl::endpoints::RequestStream;
+use fidl::endpoints::ServiceMarker;
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};

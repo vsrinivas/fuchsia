@@ -6,7 +6,7 @@
 #![deny(warnings)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints2::{RequestStream, ServiceMarker};
+use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_power::{BatteryStatus, PowerManagerMarker, PowerManagerRequest,
                          PowerManagerRequestStream, PowerManagerWatcherProxy,
                          Status as power_status};

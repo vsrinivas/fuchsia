@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_wlan_service as legacy,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fidl_fuchsia_wlan_stats as fidl_wlan_stats,
-    fidl::{self, endpoints2::create_endpoints},
+    fidl::{self, endpoints::create_endpoints},
     fuchsia_zircon as zx,
     futures::{prelude::*, channel::oneshot},
     std::sync::{Arc, Mutex},

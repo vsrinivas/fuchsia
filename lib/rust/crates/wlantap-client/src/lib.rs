@@ -8,7 +8,7 @@ use {
     byteorder::{NativeEndian, WriteBytesExt},
     failure::Error,
     fdio::{fdio_sys, ioctl, make_ioctl},
-    fidl::encoding2::{Encoder},
+    fidl::encoding::Encoder,
     fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef},

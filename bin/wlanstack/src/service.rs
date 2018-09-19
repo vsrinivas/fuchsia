@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use failure::{bail, format_err};
-use fidl::encoding2::OutOfLine;
-use fidl::endpoints2::RequestStream;
+use fidl::encoding::OutOfLine;
+use fidl::endpoints::RequestStream;
 use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
 use fidl_fuchsia_wlan_device as fidl_wlan_dev;
 use fuchsia_async as fasync;
@@ -233,7 +233,7 @@ async fn get_iface_stats(ifaces: &IfaceMap, iface_id: u16)
 mod tests {
     use super::*;
 
-    use fidl::endpoints2::create_endpoints;
+    use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_wlan_device::{PhyRequest, PhyRequestStream};
     use fidl_fuchsia_wlan_device_service::{IfaceListItem, PhyListItem};
     use fidl_fuchsia_wlan_sme as fidl_sme;

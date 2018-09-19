@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::ime_service::ImeService;
-use fidl::encoding2::OutOfLine;
+use fidl::encoding::OutOfLine;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::InputMethodEditorRequest as ImeReq;
 use fuchsia_syslog::{fx_log, fx_log_err, fx_log_warn};
@@ -338,7 +338,7 @@ mod test {
     impl uii::InputMethodEditorClientProxyInterface for MockImeClient {
         fn did_update_state(
             &self, state: &mut uii::TextInputState,
-            mut _event: Option<fidl::encoding2::OutOfLine<uii::InputEvent>>,
+            mut _event: Option<fidl::encoding::OutOfLine<uii::InputEvent>>,
         ) -> Result<(), fidl::Error> {
             let state2 = clone_state(state);
             self.state

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::ime::IME;
-use fidl::endpoints2::{ClientEnd, ServerEnd};
+use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
 use futures::future;
 use parking_lot::Mutex;

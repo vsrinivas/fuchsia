@@ -7,7 +7,7 @@ use crate::services;
 use crate::util;
 use failure::Error;
 use fidl;
-use fidl::encoding2::OutOfLine;
+use fidl::encoding::OutOfLine;
 use fidl_fuchsia_bluetooth;
 use fidl_fuchsia_bluetooth_control::{AdapterInfo, BondingControlHandle, ControlControlHandle,
                                      PairingDelegateMarker, PairingDelegateProxy};
@@ -297,7 +297,7 @@ impl HostDispatcher {
         hd: Arc<RwLock<HostDispatcher>>, device_id: String,
     ) -> impl Future<Output = fidl::Result<fidl_fuchsia_bluetooth::Status>> {
         HostDispatcher::connect_le_central(hd.clone()).and_then(move |central| {
-            let (service_local, service_remote) = fidl::endpoints2::create_endpoints().unwrap();
+            let (service_local, service_remote) = fidl::endpoints::create_endpoints().unwrap();
 
             let central = central.unwrap();
             let connected = central.connect_peripheral(device_id.as_str(), service_remote);
@@ -496,7 +496,7 @@ fn add_adapter(
             let (delegate_local, delegate_remote) = zx::Channel::create().unwrap();
             let delegate_local = fasync::Channel::from_channel(delegate_local).unwrap();
             let delegate_ptr =
-                fidl::endpoints2::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
+                fidl::endpoints::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
             host_device.read()
                 .set_host_pairing_delegate(hd.read().input, hd.read().output, delegate_ptr);
             fasync::spawn(

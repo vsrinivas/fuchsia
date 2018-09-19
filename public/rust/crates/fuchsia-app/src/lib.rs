@@ -19,7 +19,7 @@ use {
         stream::{FuturesUnordered, StreamExt, StreamFuture},
         task,
     },
-    fidl::endpoints2::{RequestStream, ServiceMarker, Proxy},
+    fidl::endpoints::{RequestStream, ServiceMarker, Proxy},
     fidl_fuchsia_io::{
         DirectoryRequestStream,
         DirectoryRequest,

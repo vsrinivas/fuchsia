@@ -9,7 +9,7 @@ mod manifest;
 
 use self::font_service::FontService;
 use failure::{Error, ResultExt, format_err};
-use fidl::endpoints2::ServiceMarker;
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_fonts::ProviderMarker as FontProviderMarker;
 use fuchsia_app::server::ServicesServer;
 use std::path::PathBuf;

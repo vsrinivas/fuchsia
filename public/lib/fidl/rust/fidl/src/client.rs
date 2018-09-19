@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        encoding2::{
+        encoding::{
             Encodable,
             Decodable,
             Encoder,

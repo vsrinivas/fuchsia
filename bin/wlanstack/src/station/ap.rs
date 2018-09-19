@@ -25,7 +25,7 @@ impl ap_sme::Tokens for Tokens {
     type StopToken = oneshot::Sender<()>;
 }
 
-pub type Endpoint = fidl::endpoints2::ServerEnd<fidl_sme::ApSmeMarker>;
+pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::ApSmeMarker>;
 type Sme = ap_sme::ApSme<Tokens>;
 
 pub async fn serve<S>(proxy: MlmeProxy,

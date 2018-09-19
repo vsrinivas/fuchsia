@@ -4,7 +4,7 @@
 
 use crate::host_dispatcher::HostDispatcher;
 use fidl;
-use fidl::endpoints2::RequestStream;
+use fidl::endpoints::RequestStream;
 use fidl_fuchsia_bluetooth;
 use fidl_fuchsia_bluetooth_control::{BondingRequest, BondingRequestStream};
 use fuchsia_async;

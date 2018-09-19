@@ -7,7 +7,7 @@
 
 use {
     failure::{Error, Fail, ResultExt},
-    fidl::encoding2::OutOfLine,
+    fidl::encoding::OutOfLine,
     fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy, ScanFilter},
     fuchsia_bluetooth::error::Error as BTError,
     fuchsia_async::{
@@ -115,7 +115,7 @@ async fn do_connect<'a>(args: &'a [String], central: &'a CentralProxy)
         return Err(BTError::new("invalid input").into());
     }
 
-    let (_, server_end) = fidl::endpoints2::create_endpoints()?;
+    let (_, server_end) = fidl::endpoints::create_endpoints()?;
 
     let status = await!(central.connect_peripheral(&args[0], server_end))
         .context("failed to connect to peripheral")?;

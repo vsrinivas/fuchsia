@@ -4,8 +4,8 @@
 
 use crate::host_dispatcher::*;
 use failure::Error;
-use fidl::encoding2::OutOfLine;
-use fidl::endpoints2::RequestStream;
+use fidl::encoding::OutOfLine;
+use fidl::endpoints::RequestStream;
 use fidl_fuchsia_bluetooth;
 use fidl_fuchsia_bluetooth_control::{ControlRequest, ControlRequestStream};
 use fuchsia_async::{self as fasync,

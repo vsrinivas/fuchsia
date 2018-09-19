@@ -25,7 +25,7 @@ pub struct {{ .Name }} {
   {{- end }}
 }
 
-fidl2_struct! {
+fidl_struct! {
   name: {{ .Name }},
   members: [
   {{- range .Members }}

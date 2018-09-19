@@ -53,7 +53,7 @@ impl Session {
 
     pub fn present(
         &mut self, presentation_time: u64,
-    ) -> fidl::client2::QueryResponseFut<(PresentationInfo)> {
+    ) -> fidl::client::QueryResponseFut<(PresentationInfo)> {
         self.flush();
         self.session.present(
             presentation_time,

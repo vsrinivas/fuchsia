@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::dev_auth_provider_iotid::AuthProvider;
-use fidl::endpoints2::RequestStream;
+use fidl::endpoints::RequestStream;
 use fidl::Error;
 use fidl_fuchsia_auth::{AuthProviderFactoryRequest, AuthProviderFactoryRequestStream,
                         AuthProviderStatus};

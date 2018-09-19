@@ -9,7 +9,7 @@ use crate::{
 
 use {
     failure::{bail, format_err},
-    fidl::endpoints2::create_endpoints,
+    fidl::endpoints::create_endpoints,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon::prelude::*,
     futures::{
@@ -347,7 +347,7 @@ mod tests {
     use super::*;
     use {
         fuchsia_async as fasync,
-        fidl::endpoints2::RequestStream,
+        fidl::endpoints::RequestStream,
         fidl_fuchsia_wlan_sme::{ClientSmeRequest, ClientSmeRequestStream},
         futures::stream::StreamFuture,
         std::path::Path,

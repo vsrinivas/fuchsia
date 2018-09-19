@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::format_err;
-use fidl::endpoints2::{RequestStream, ServerEnd};
+use fidl::endpoints::{RequestStream, ServerEnd};
 use futures::channel::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use futures::prelude::*;
 use futures::try_join;
@@ -215,7 +215,7 @@ mod tests {
         let (helper, future) = setup();
         pin_mut!(future);
         assert_eq!(0, helper.service.inner.lock().watchers.len());
-        let (client_end, server_end) = fidl::endpoints2::create_endpoints()
+        let (client_end, server_end) = fidl::endpoints::create_endpoints()
             .expect("Failed to create endpoints");
 
         // Add a watcher and check that it was added to the map
@@ -241,7 +241,7 @@ mod tests {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
-        let (client_end, server_end) = fidl::endpoints2::create_endpoints()
+        let (client_end, server_end) = fidl::endpoints::create_endpoints()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
 
@@ -276,7 +276,7 @@ mod tests {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
-        let (client_end, server_end) = fidl::endpoints2::create_endpoints()
+        let (client_end, server_end) = fidl::endpoints::create_endpoints()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
 
@@ -312,7 +312,7 @@ mod tests {
         helper.phys.remove(&20);
 
         // Now add the watcher and pump the events
-        let (client_end, server_end) = fidl::endpoints2::create_endpoints()
+        let (client_end, server_end) = fidl::endpoints::create_endpoints()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
         if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
@@ -340,7 +340,7 @@ mod tests {
         helper.ifaces.remove(&20);
 
         // Now add the watcher and pump the events
-        let (client_end, server_end) = fidl::endpoints2::create_endpoints()
+        let (client_end, server_end) = fidl::endpoints::create_endpoints()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
         if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
@@ -365,12 +365,12 @@ mod tests {
         helper.ifaces.insert(20, 2000);
 
         // Add first watcher
-        let (client_end_one, server_end_one) = fidl::endpoints2::create_endpoints()
+        let (client_end_one, server_end_one) = fidl::endpoints::create_endpoints()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end_one).expect("add_watcher failed (1)");
 
         // Add second watcher
-        let (client_end_two, server_end_two) = fidl::endpoints2::create_endpoints()
+        let (client_end_two, server_end_two) = fidl::endpoints::create_endpoints()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end_two).expect("add_watcher failed (2)");
 

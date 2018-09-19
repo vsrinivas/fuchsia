@@ -12,7 +12,7 @@
 
 use fuchsia_app::client::connect_to_service;
 use failure::{Error, ResultExt};
-use fidl::encoding2::OutOfLine;
+use fidl::encoding::OutOfLine;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::future::ready;
@@ -73,7 +73,7 @@ where
     let logger = connect_to_service::<LogMarker>()?;
     let (log_listener_local, log_listener_remote) = zx::Channel::create()?;
     let log_listener_local = fasync::Channel::from_channel(log_listener_local)?;
-    let listener_ptr = fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(log_listener_remote);
+    let listener_ptr = fidl::endpoints::ClientEnd::<LogListenerMarker>::new(log_listener_remote);
 
     let options = options.map(OutOfLine);
     if dump_logs {

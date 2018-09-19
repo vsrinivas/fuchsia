@@ -6,7 +6,7 @@
 // #![deny(warnings)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints2::{RequestStream, ServiceMarker};
+use fidl::endpoints::{RequestStream, ServiceMarker};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use fuchsia_syslog as syslog;

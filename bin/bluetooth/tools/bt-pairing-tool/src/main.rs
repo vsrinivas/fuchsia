@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
     // Setup pairing delegate
     let (delegate_local, delegate_remote) = zx::Channel::create()?;
     let delegate_local = fasync::Channel::from_channel(delegate_local)?;
-    let delegate_ptr = fidl::endpoints2::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
+    let delegate_ptr = fidl::endpoints::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
     let pairing_delegate_server = pairing::pairing_delegate(delegate_local);
     let pair_set = bt_svc.set_pairing_delegate(Some(delegate_ptr));
 

@@ -6,7 +6,7 @@ mod ime;
 mod ime_service;
 
 use failure::{Error, ResultExt};
-use fidl::endpoints2::ServiceMarker;
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::{ImeServiceMarker, ImeVisibilityServiceMarker};
 use fuchsia_app::server::ServicesServer;

@@ -57,7 +57,7 @@ async fn http_get(url: String) -> Result<(), Error> {
     let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
     let proxy = fasync::Channel::from_channel(p).context("failed to make async channel")?;
 
-    let loader_server = fidl::endpoints2::ServerEnd::<http::UrlLoaderMarker>::new(s);
+    let loader_server = fidl::endpoints::ServerEnd::<http::UrlLoaderMarker>::new(s);
     net.create_url_loader(loader_server)?;
 
     // Send the UrlRequest to fetch the webpage

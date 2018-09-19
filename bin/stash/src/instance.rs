@@ -6,8 +6,8 @@ use fuchsia_async as fasync;
 
 use fuchsia_syslog::{fx_log, fx_log_err};
 use failure::{err_msg, Error};
-use fidl::encoding2::OutOfLine;
-use fidl::endpoints2::{RequestStream, ServerEnd};
+use fidl::encoding::OutOfLine;
+use fidl::endpoints::{RequestStream, ServerEnd};
 use futures::{TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::sync::Arc;

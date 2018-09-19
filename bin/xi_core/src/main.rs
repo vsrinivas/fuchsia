@@ -8,7 +8,7 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl::endpoints2::ServiceMarker,
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_xi::JsonMarker,
     fuchsia_app::server::ServicesServer,
     fuchsia_async as fasync,

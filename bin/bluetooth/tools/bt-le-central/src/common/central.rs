@@ -8,7 +8,7 @@
 use {
     crate::common::gatt::start_gatt_loop,
     failure::Error,
-    fidl::endpoints2,
+    fidl::endpoints,
     fidl_fuchsia_bluetooth_le::{CentralEvent, CentralProxy, RemoteDevice},
     fuchsia_bluetooth::error::Error as BTError,
     futures::{
@@ -110,7 +110,7 @@ pub async fn listen_central_events(
 async fn connect_peripheral(
     state: &CentralStatePtr, mut id: String,
 ) -> Result<(), Error> {
-    let (proxy, server) = endpoints2::create_endpoints()
+    let (proxy, server) = endpoints::create_endpoints()
         .map_err(|_| BTError::new("Failed to create Client pair"))?;
 
     let connect_peripheral_fut = state.read()

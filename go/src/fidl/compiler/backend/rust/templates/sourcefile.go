@@ -25,7 +25,7 @@ extern crate futures;
 extern crate {{ $crate }};
 {{ end -}}
 
-use fidl::encoding2::{Encodable, Decodable};
+use fidl::encoding::{Encodable, Decodable};
 use futures::{Future, Stream, StreamExt};
 use std::ops::Deref;
 

@@ -5,7 +5,7 @@
 use {
     crate::common::gatt_types::Service,
     failure::Error,
-    fidl::endpoints2,
+    fidl::endpoints,
     fidl_fuchsia_bluetooth_gatt::{
         Characteristic as FidlCharacteristic,
         ClientProxy, RemoteServiceEvent,
@@ -289,7 +289,7 @@ async fn do_connect<'a>(args: &'a [&'a str], client: &'a GattClientPtr)
     };
 
     // Initialize the remote service proxy.
-    let (proxy, server) = endpoints2::create_endpoints()?;
+    let (proxy, server) = endpoints::create_endpoints()?;
 
     // First close the connection to the currently active service.
     if client.read().active_proxy.is_some() {

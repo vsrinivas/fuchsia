@@ -439,7 +439,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		}
 	case types.RequestType:
 		r = c.compileCamelCompoundIdentifier(val.RequestSubtype)
-		r = fmt.Sprintf("fidl::endpoints2::ServerEnd<%sMarker>", r)
+		r = fmt.Sprintf("fidl::endpoints::ServerEnd<%sMarker>", r)
 		if val.Nullable {
 			r = fmt.Sprintf("Option<%s>", r)
 		}
@@ -466,7 +466,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		case types.UnionDeclType:
 			if val.Nullable {
 				if borrowed {
-					r = fmt.Sprintf("Option<fidl::encoding2::OutOfLine<%s>>", t)
+					r = fmt.Sprintf("Option<fidl::encoding::OutOfLine<%s>>", t)
 				} else {
 					r = fmt.Sprintf("Option<Box<%s>>", t)
 				}
@@ -478,7 +478,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 				}
 			}
 		case types.InterfaceDeclType:
-			r = fmt.Sprintf("fidl::endpoints2::ClientEnd<%sMarker>", t)
+			r = fmt.Sprintf("fidl::endpoints::ClientEnd<%sMarker>", t)
 			if val.Nullable {
 				r = fmt.Sprintf("Option<%s>", r)
 			}
