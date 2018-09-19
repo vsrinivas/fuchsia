@@ -9,7 +9,6 @@
 #include <wlan/mlme/ap/remote_client_interface.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/eapol.h>
-#include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
@@ -33,7 +32,10 @@ class RemoteClient : public RemoteClientInterface {
 
     // RemoteClientInterface implementation
     void HandleTimeout() override;
-    zx_status_t HandleAnyFrame(fbl::unique_ptr<Packet>) override;
+    void HandleAnyEthFrame(EthFrame&& frame) override;
+    void HandleAnyMgmtFrame(MgmtFrame<>&& frame) override;
+    void HandleAnyDataFrame(DataFrame<>&& frame) override;
+    void HandleAnyCtrlFrame(CtrlFrame<>&& frame) override;
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& mlme_msg) override;
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
@@ -50,10 +52,10 @@ class RemoteClient : public RemoteClientInterface {
     bool HasBufferedFrames() const;
     zx_status_t ConvertEthernetToDataFrame(const EthFrame& frame,
                                            fbl::unique_ptr<Packet>* out_frame);
-    void ReportBuChange(size_t bu_count);
-    zx_status_t ReportDeauthentication();
 
     void MoveToState(fbl::unique_ptr<BaseState> state);
+    void ReportBuChange(size_t bu_count);
+    void ReportDeauthentication();
 
     // Note: There can only ever be one timer running at a time.
     // TODO(hahnr): Evolve this to support multiple timeouts at the same time.
@@ -86,7 +88,7 @@ class RemoteClient : public RemoteClientInterface {
     fbl::unique_ptr<BaseState> state_;
 };
 
-class BaseState : public FrameHandler {
+class BaseState {
    public:
     BaseState(RemoteClient* client) : client_(client) {}
     virtual ~BaseState() = default;
@@ -95,6 +97,10 @@ class BaseState : public FrameHandler {
     virtual void OnExit() {}
     virtual void HandleTimeout() {}
     virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) { return ZX_OK; }
+    virtual void HandleAnyDataFrame(DataFrame<>&&) {}
+    virtual void HandleAnyMgmtFrame(MgmtFrame<>&&) {}
+    virtual void HandleAnyCtrlFrame(CtrlFrame<>&&) {}
+    virtual void HandleEthFrame(EthFrame&&) {}
 
     virtual const char* name() const = 0;
 
@@ -120,9 +126,9 @@ class DeauthenticatedState : public BaseState {
    public:
     DeauthenticatedState(RemoteClient* client);
 
-    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame) override;
-
     inline const char* name() const override { return kName; }
+
+    void HandleAnyMgmtFrame(MgmtFrame<>&&) override;
 
    private:
     static constexpr const char* kName = "Deauthenticated";
@@ -130,7 +136,7 @@ class DeauthenticatedState : public BaseState {
 
 class AuthenticatingState : public BaseState {
    public:
-    AuthenticatingState(RemoteClient* client, const MgmtFrame<Authentication>& frame);
+    AuthenticatingState(RemoteClient* client, MgmtFrame<Authentication>&& frame);
 
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
 
@@ -149,10 +155,7 @@ class AuthenticatedState : public BaseState {
     void OnExit() override;
 
     void HandleTimeout() override;
-
-    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame) override;
-    zx_status_t HandleAssociationRequest(const MgmtFrame<AssociationRequest>& frame) override;
-    zx_status_t HandleDeauthentication(const MgmtFrame<Deauthentication>& frame) override;
+    void HandleAnyMgmtFrame(MgmtFrame<>&&) override;
 
     inline const char* name() const override { return kName; }
 
@@ -162,12 +165,16 @@ class AuthenticatedState : public BaseState {
     // TODO(hahnr): Use WLAN_MIN_TU once defined.
     static constexpr wlan_tu_t kAuthenticationTimeoutTu = 1800000;  // ~30min
 
+    void HandleAuthentication(MgmtFrame<Authentication>&&);
+    void HandleAssociationRequest(MgmtFrame<AssociationRequest>&&);
+    void HandleDeauthentication(MgmtFrame<Deauthentication>&&);
+
     zx::time auth_timeout_;
 };
 
 class AssociatingState : public BaseState {
    public:
-    AssociatingState(RemoteClient* client, const MgmtFrame<AssociationRequest>& frame);
+    AssociatingState(RemoteClient* client, MgmtFrame<AssociationRequest>&& frame);
 
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
     zx_status_t FinalizeAssociationAttempt(status_code::StatusCode st_code);
@@ -190,18 +197,11 @@ class AssociatedState : public BaseState {
 
     void HandleTimeout() override;
 
-    zx_status_t HandleEthFrame(const EthFrame& frame) override;
-    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame) override;
-    zx_status_t HandleAssociationRequest(const MgmtFrame<AssociationRequest>& frame) override;
-    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
-    zx_status_t HandleDataFrame(const DataFrame<LlcHeader>& frame) override;
-    zx_status_t HandleDeauthentication(const MgmtFrame<Deauthentication>& frame) override;
-    zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>& frame) override;
-    zx_status_t HandleCtrlFrame(const FrameControl& fc) override;
-    zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) override;
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
-    zx_status_t HandleActionFrame(const MgmtFrame<ActionFrame>& frame) override;
+    void HandleAnyDataFrame(DataFrame<>&&) override;
+    void HandleAnyMgmtFrame(MgmtFrame<>&&) override;
+    void HandleAnyCtrlFrame(CtrlFrame<>&&) override;
+    void HandleEthFrame(EthFrame&&) override;
 
     inline const char* name() const override { return kName; }
 
@@ -215,6 +215,14 @@ class AssociatedState : public BaseState {
     static constexpr wlan_tu_t kInactivityTimeoutTu = 300000;  // ~5min
     zx_status_t SendNextBu();
     void UpdatePowerSaveMode(const FrameControl& fc);
+
+    void HandleAuthentication(MgmtFrame<Authentication>&&);
+    void HandleAssociationRequest(MgmtFrame<AssociationRequest>&&);
+    void HandleDeauthentication(MgmtFrame<Deauthentication>&&);
+    void HandleDisassociation(MgmtFrame<Disassociation>&&);
+    void HandleActionFrame(MgmtFrame<ActionFrame>&&);
+    void HandleDataLlcFrame(DataFrame<LlcHeader>&&);
+    void HandlePsPollFrame(CtrlFrame<PsPollFrame>&&);
 
     const uint16_t aid_;
     zx::time inactive_timeout_;

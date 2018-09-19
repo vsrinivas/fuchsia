@@ -6,7 +6,6 @@
 
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/channel_scheduler.h>
-#include <wlan/mlme/frame_handler.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 

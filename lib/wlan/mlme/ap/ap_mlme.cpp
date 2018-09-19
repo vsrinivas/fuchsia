@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <wlan/mlme/ap/ap_mlme.h>
-#include <wlan/mlme/frame_dispatcher.h>
 #include <wlan/mlme/service.h>
 
 #include <fbl/ref_ptr.h>

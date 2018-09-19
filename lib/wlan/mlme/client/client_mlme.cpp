@@ -8,7 +8,6 @@
 #include <wlan/common/logging.h>
 #include <wlan/mlme/client/scanner.h>
 #include <wlan/mlme/client/station.h>
-#include <wlan/mlme/frame_dispatcher.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>

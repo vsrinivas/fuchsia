@@ -5,7 +5,6 @@
 #pragma once
 
 #include <wlan/mlme/device_interface.h>
-#include <wlan/mlme/frame_handler.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 

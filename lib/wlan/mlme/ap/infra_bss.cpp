@@ -161,7 +161,7 @@ void InfraBss::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
 
     // Forward all frames to the correct client.
     if (clients_.Has(client_addr)) {
-        clients_.GetClient(client_addr)->HandleAnyFrame(frame.Take());
+        clients_.GetClient(client_addr)->HandleAnyMgmtFrame(fbl::move(frame));
     }
 }
 
@@ -171,7 +171,7 @@ void InfraBss::HandleAnyDataFrame(DataFrame<>&& frame) {
     // Let the correct RemoteClient instance process the received frame.
     const auto& client_addr = frame.hdr()->addr2;
     if (clients_.Has(client_addr)) {
-        clients_.GetClient(client_addr)->HandleAnyFrame(frame.Take());
+        clients_.GetClient(client_addr)->HandleAnyDataFrame(fbl::move(frame));
     }
 }
 
@@ -185,7 +185,7 @@ void InfraBss::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
         if (!clients_.Has(client_addr)) { return; }
         if (clients_.GetClientAid(client_addr) != pspoll_frame.body()->aid) { return; }
 
-        clients_.GetClient(client_addr)->HandleAnyFrame(frame.Take());
+        clients_.GetClient(client_addr)->HandleAnyCtrlFrame(fbl::move(frame));
     }
 }
 
@@ -200,7 +200,7 @@ void InfraBss::HandleEthFrame(EthFrame&& frame) {
     auto& dest_addr = frame.hdr()->dest;
     if (dest_addr.IsUcast()) {
         if (clients_.Has(dest_addr)) {
-            clients_.GetClient(dest_addr)->HandleAnyFrame(frame.Take());
+            clients_.GetClient(dest_addr)->HandleAnyEthFrame(fbl::move(frame));
         }
         return;
     }
@@ -278,7 +278,7 @@ zx_status_t InfraBss::HandleClientDeauth(const common::MacAddr& client) {
                client.ToString().c_str(), status);
         return status;
     }
-    return ZX_ERR_STOP;
+    return ZX_OK;
 }
 
 void InfraBss::HandleClientBuChange(const common::MacAddr& client, size_t bu_count) {

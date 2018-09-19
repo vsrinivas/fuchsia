@@ -11,7 +11,6 @@
 #include <wlan/mlme/ap/remote_client.h>
 #include <wlan/mlme/ap/tim.h>
 #include <wlan/mlme/device_interface.h>
-#include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
