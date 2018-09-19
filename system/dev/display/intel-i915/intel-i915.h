@@ -11,7 +11,7 @@
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/i2cimpl.h>
 #include <ddktl/mmio.h>
-#include <ddktl/protocol/display-controller.h>
+#include <ddktl/protocol/display/controller.h>
 
 #include <fbl/optional.h>
 #include <fbl/unique_ptr.h>
@@ -60,7 +60,8 @@ class Controller;
 using DeviceType = ddk::Device<Controller, ddk::Unbindable,
                                ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
 
-class Controller : public DeviceType, public ddk::DisplayControllerProtocol<Controller> {
+class Controller : public DeviceType,
+                   public ddk::DisplayControllerImplProtocol<Controller> {
 public:
     Controller(zx_device_t* parent);
     ~Controller();
@@ -76,15 +77,18 @@ public:
     zx_status_t Bind(fbl::unique_ptr<i915::Controller>* controller_ptr);
 
     // display controller protocol ops
-    void SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb);
-    zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
-    void ReleaseImage(image_t* image);
-    void CheckConfiguration(const display_config_t** display_config,
-                            uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
-                            uint32_t display_count);
-    void ApplyConfiguration(const display_config_t** display_config, uint32_t display_count);
-    uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format);
-    zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);
+    void DisplayControllerImplSetDisplayControllerInterface(
+            const display_controller_interface* intf);
+    zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx_handle_t vmo, size_t offset);
+    void DisplayControllerImplReleaseImage(image_t* image);
+    uint32_t DisplayControllerImplCheckConfiguration(const display_config_t** display_config,
+                                                     size_t display_count,
+                                                     uint32_t** layer_cfg_result,
+                                                     size_t* layer_cfg_result_count);
+    void DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
+                                                 size_t display_count);
+    uint32_t DisplayControllerImplComputeLinearStride(uint32_t width, zx_pixel_format_t format);
+    zx_status_t DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out);
 
     // gpu core ops
     zx_status_t ReadPciConfig16(uint16_t addr, uint16_t* value_out);
@@ -127,7 +131,7 @@ public:
     bool ResetTrans(registers::Trans trans);
     bool ResetDdi(registers::Ddi ddi);
 
-    const fbl::unique_ptr<GttRegion>& GetGttRegion(void* handle);
+    const fbl::unique_ptr<GttRegion>& GetGttRegion(uint64_t handle);
 
     registers::Dpll SelectDpll(bool is_edp, const dpll_state_t& state);
     const dpll_state_t* GetDpllState(registers::Dpll dpll);
@@ -141,18 +145,18 @@ private:
     void InitDisplayBuffers();
     DisplayDevice* FindDevice(uint64_t display_id) __TA_REQUIRES(display_lock_);
 
-    void CallOnDisplaysChanged(DisplayDevice** added, uint32_t added_count, uint64_t* removed,
-                               uint32_t removed_count) __TA_REQUIRES(display_lock_);
+    void CallOnDisplaysChanged(DisplayDevice** added, size_t added_count, uint64_t* removed,
+                               size_t removed_count) __TA_REQUIRES(display_lock_);
 
     // Gets the layer_t* config for the given pipe/plane. Return false if there is no layer.
     bool GetPlaneLayer(registers::Pipe pipe, uint32_t plane,
-                       const display_config_t** configs, uint32_t display_count,
+                       const display_config_t** configs, size_t display_count,
                        const layer_t** layer_out) __TA_REQUIRES(display_lock_);
-    uint16_t CalculateBuffersPerPipe(uint32_t display_count);
+    uint16_t CalculateBuffersPerPipe(size_t display_count);
     // Returns false if no allocation is possible. When that happens,
     // plane 0 of the failing displays will be set to UINT16_MAX.
     bool CalculateMinimumAllocations(const display_config_t** display_configs,
-                                     uint32_t display_count,
+                                     size_t display_count,
                                      uint16_t min_allocs[registers::kPipeCount]
                                                         [registers::kImagePlaneCount])
                                      __TA_REQUIRES(display_lock_);
@@ -169,26 +173,25 @@ private:
                                   __TA_REQUIRES(display_lock_);
     // Reallocates plane buffers based on the given layer config.
     void ReallocatePlaneBuffers(const display_config_t** display_configs,
-                                uint32_t display_count,
+                                size_t display_count,
                                 bool reallocate_pipes) __TA_REQUIRES(display_lock_);
 
     // Validates that a basic layer configuration can be supported for the
     // given modes of the displays.
-    bool CheckDisplayLimits(const display_config_t** display_configs, uint32_t display_count,
+    bool CheckDisplayLimits(const display_config_t** display_configs, size_t display_count,
                             uint32_t** layer_cfg_results) __TA_REQUIRES(display_lock_);
 
-    bool CalculatePipeAllocation(const display_config_t** display_config, uint32_t display_count,
+    bool CalculatePipeAllocation(const display_config_t** display_config, size_t display_count,
                                  uint64_t alloc[registers::kPipeCount])
                                  __TA_REQUIRES(display_lock_);
-    bool ReallocatePipes(const display_config_t** display_config, uint32_t display_count)
+    bool ReallocatePipes(const display_config_t** display_config, size_t display_count)
                          __TA_REQUIRES(display_lock_);
 
     zx_device_t* zx_gpu_dev_ = nullptr;
     bool gpu_released_ = false;
     bool display_released_ = false;
 
-    void* dc_cb_ctx_ __TA_GUARDED(display_lock_);
-    display_controller_cb_t* dc_cb_ __TA_GUARDED(display_lock_) = nullptr;
+    ddk::DisplayControllerInterfaceProxy dc_intf_ __TA_GUARDED(display_lock_);
     bool ready_for_callback_ __TA_GUARDED(display_lock_) = false;
 
     Gtt gtt_ __TA_GUARDED(gtt_lock_);

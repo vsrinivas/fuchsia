@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/display-controller.h>
+#include <ddk/protocol/display/controller.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <lib/edid/edid.h>

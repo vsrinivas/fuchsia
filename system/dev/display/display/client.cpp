@@ -10,11 +10,11 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/async/cpp/task.h>
 #include <math.h>
+#include <zircon/pixelformat.h>
 #include <zircon/device/display-controller.h>
 
 #include "client.h"
 
-#define DC_IMPL_CALL(fn, ...) controller_->ops()->fn(controller_->ops_ctx(), __VA_ARGS__)
 #define SELECT_TABLE_CASE(NAME) case NAME ## Ordinal: table = &NAME ## RequestTable; break
 #define HANDLE_REQUEST_CASE(NAME) \
     case fuchsia_display_Controller ## NAME ## Ordinal: { \
@@ -219,13 +219,13 @@ void Client::HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImage
         dc_image.planes[i].bytes_per_row = req->image_config.planes[i].bytes_per_row;
     }
 
-    resp->res = DC_IMPL_CALL(import_vmo_image, &dc_image, vmo.get(), req->offset);
+    resp->res = controller_->dc()->ImportVmoImage(&dc_image, vmo.get(), req->offset);
 
     if (resp->res == ZX_OK) {
         fbl::AllocChecker ac;
         auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, fbl::move(vmo)));
         if (!ac.check()) {
-            DC_IMPL_CALL(release_image, &dc_image);
+            controller_->dc()->ReleaseImage(&dc_image);
 
             resp->res = ZX_ERR_NO_MEMORY;
             return;
@@ -443,7 +443,7 @@ void Client::HandleSetLayerPrimaryConfig(
         return;
     }
 
-    layer->pending_layer_.type = LAYER_PRIMARY;
+    layer->pending_layer_.type = LAYER_TYPE_PRIMARY;
     primary_layer_t* primary_layer = &layer->pending_layer_.cfg.primary;
 
     populate_image(req->image_config, &primary_layer->image);
@@ -468,7 +468,7 @@ void Client::HandleSetLayerPrimaryPosition(
         const fuchsia_display_ControllerSetLayerPrimaryPositionRequest* req,
         fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
-    if (!layer.IsValid() || layer->pending_layer_.type != LAYER_PRIMARY) {
+    if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_PRIMARY) {
         zxlogf(ERROR, "SetLayerPrimaryPosition on invalid layer\n");
         TearDown();
         return;
@@ -502,7 +502,7 @@ void Client::HandleSetLayerPrimaryAlpha(
         const fuchsia_display_ControllerSetLayerPrimaryAlphaRequest* req,
         fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
-    if (!layer.IsValid() || layer->pending_layer_.type != LAYER_PRIMARY) {
+    if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_PRIMARY) {
         zxlogf(ERROR, "SetLayerPrimaryAlpha on invalid layer\n");
         TearDown();
         return;
@@ -538,7 +538,7 @@ void Client::HandleSetLayerCursorConfig(
         return;
     }
 
-    layer->pending_layer_.type = LAYER_CURSOR;
+    layer->pending_layer_.type = LAYER_TYPE_CURSOR;
     layer->pending_cursor_x_ = layer->pending_cursor_y_ = 0;
 
 
@@ -555,7 +555,7 @@ void Client::HandleSetLayerCursorPosition(
         const fuchsia_display_ControllerSetLayerCursorPositionRequest* req,
         fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
-    if (!layer.IsValid() || layer->pending_layer_.type != LAYER_CURSOR) {
+    if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_CURSOR) {
         zxlogf(ERROR, "SetLayerCursorPosition on invalid layer\n");
         TearDown();
         return;
@@ -584,7 +584,7 @@ void Client::HandleSetLayerColorConfig(
     // Increase the size of the static array when large color formats are introduced
     ZX_ASSERT(req->color_bytes.count <= sizeof(layer->pending_color_bytes_));
 
-    layer->pending_layer_.type = LAYER_COLOR;
+    layer->pending_layer_.type = LAYER_TYPE_COLOR;
     color_layer_t* color_layer = &layer->pending_layer_.cfg.color;
 
     color_layer->format = req->pixel_format;
@@ -603,7 +603,8 @@ void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRe
         TearDown();
         return;
     }
-    if (layer->pending_layer_.type != LAYER_PRIMARY && layer->pending_layer_.type != LAYER_CURSOR) {
+    if (layer->pending_layer_.type != LAYER_TYPE_PRIMARY &&
+        layer->pending_layer_.type != LAYER_TYPE_CURSOR) {
         zxlogf(ERROR, "SetLayerImage ordinal with bad layer type\n");
         TearDown();
         return;
@@ -614,7 +615,7 @@ void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRe
         TearDown();
         return;
     }
-    image_t* cur_image = layer->pending_layer_.type == LAYER_PRIMARY ?
+    image_t* cur_image = layer->pending_layer_.type == LAYER_TYPE_PRIMARY ?
             &layer->pending_layer_.cfg.primary.image : &layer->pending_layer_.cfg.cursor.image;
     if (!image->HasSameConfig(*cur_image)) {
         zxlogf(ERROR, "SetLayerImage with mismatch layer config\n");
@@ -793,9 +794,9 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                 layer->config_change_ = false;
 
                 image_t* new_image_config = nullptr;
-                if (layer->current_layer_.type == LAYER_PRIMARY) {
+                if (layer->current_layer_.type == LAYER_TYPE_PRIMARY) {
                     new_image_config = &layer->current_layer_.cfg.primary.image;
-                } else if (layer->current_layer_.type == LAYER_CURSOR) {
+                } else if (layer->current_layer_.type == LAYER_TYPE_CURSOR) {
                     new_image_config = &layer->current_layer_.cfg.cursor.image;
 
                     layer->current_cursor_x_ = layer->pending_cursor_x_;
@@ -810,10 +811,11 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                             fbl::clamp(layer->current_cursor_y_,
                                        -static_cast<int32_t>(new_image_config->height) + 1,
                                        static_cast<int32_t>(mode->v_addressable) - 1);
-                } else if (layer->current_layer_.type == LAYER_COLOR) {
+                } else if (layer->current_layer_.type == LAYER_TYPE_COLOR) {
                     memcpy(layer->current_color_bytes_, layer->pending_color_bytes_,
                            sizeof(layer->current_color_bytes_));
-                    layer->current_layer_.cfg.color.color = layer->current_color_bytes_;
+                    layer->current_layer_.cfg.color.color_list = layer->current_color_bytes_;
+                    layer->current_layer_.cfg.color.color_count = 4;
                 } else {
                     // type is validated in ::CheckConfig, so something must be very wrong.
                     ZX_ASSERT(false);
@@ -853,7 +855,7 @@ void Client::HandleComputeLinearImageStride(
         fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto resp = resp_builder->New<fuchsia_display_ControllerComputeLinearImageStrideResponse>();
     *resp_table = &fuchsia_display_ControllerComputeLinearImageStrideResponseTable;
-    resp->stride = DC_IMPL_CALL(compute_linear_stride, req->width, req->pixel_format);
+    resp->stride = controller_->dc()->ComputeLinearStride(req->width, req->pixel_format);
 }
 
 void Client::HandleAllocateVmo(const fuchsia_display_ControllerAllocateVmoRequest* req,
@@ -863,7 +865,7 @@ void Client::HandleAllocateVmo(const fuchsia_display_ControllerAllocateVmoReques
     auto resp = resp_builder->New<fuchsia_display_ControllerAllocateVmoResponse>();
     *resp_table = &fuchsia_display_ControllerAllocateVmoResponseTable;
 
-    resp->res = DC_IMPL_CALL(allocate_vmo, req->size, handle_out);
+    resp->res = controller_->dc()->AllocateVmo(req->size, handle_out);
     *has_handle_out = resp->res == ZX_OK;
     resp->vmo = *has_handle_out ? FIDL_HANDLE_PRESENT : FIDL_HANDLE_ABSENT;
 }
@@ -898,7 +900,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
         display_layer_cfg_results[config_idx++] = layer_cfg_results + layer_idx;
 
         // Create this display's compact layer_t* array
-        display_config.pending_.layers = layers + layer_idx;
+        display_config.pending_.layer_list = layers + layer_idx;
 
         // Frame used for checking that each layer's dest_frame lies entirely
         // within the composed output.
@@ -915,7 +917,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
             layers[layer_idx++] = &layer_node.layer->pending_layer_;
 
             bool invalid = false;
-            if (layer_node.layer->pending_layer_.type == LAYER_PRIMARY) {
+            if (layer_node.layer->pending_layer_.type == LAYER_TYPE_PRIMARY) {
                 primary_layer_t* layer = &layer_node.layer->pending_layer_.cfg.primary;
                 // Frame for checking that the layer's src_frame lies entirely
                 // within the source image.
@@ -935,7 +937,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
                         }
                     }
                 }
-            } else if (layer_node.layer->pending_layer_.type == LAYER_CURSOR) {
+            } else if (layer_node.layer->pending_layer_.type == LAYER_TYPE_CURSOR) {
                 invalid = true;
                 auto& cursor_cfg = layer_node.layer->pending_layer_.cfg.cursor;
                 for (auto& cursor_info : display_config.cursor_infos_) {
@@ -944,10 +946,11 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
                         break;
                     }
                 }
-            } else if (layer_node.layer->pending_layer_.type == LAYER_COLOR) {
+            } else if (layer_node.layer->pending_layer_.type == LAYER_TYPE_COLOR) {
                 // There aren't any API constraints on valid colors.
-                layer_node.layer->pending_layer_.cfg.color.color =
+                layer_node.layer->pending_layer_.cfg.color.color_list =
                         layer_node.layer->pending_color_bytes_;
+                layer_node.layer->pending_layer_.cfg.color.color_count = 4;
             } else {
                 invalid = true;
             }
@@ -968,9 +971,10 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
         return false;
     }
 
-    uint32_t display_cfg_result = CONFIG_DISPLAY_OK;
-    DC_IMPL_CALL(check_configuration, configs, &display_cfg_result,
-                 display_layer_cfg_results, config_idx);
+    size_t layer_cfg_results_count;
+    uint32_t display_cfg_result =
+        controller_->dc()->CheckConfiguration(configs, config_idx, display_layer_cfg_results,
+                                              &layer_cfg_results_count);
 
     if (display_cfg_result != CONFIG_DISPLAY_OK) {
         if (resp) {
@@ -1060,7 +1064,7 @@ void Client::ApplyConfig() {
     int layer_idx = 0;
     for (auto& display_config : configs_) {
         display_config.current_.layer_count = 0;
-        display_config.current_.layers = layers + layer_idx;
+        display_config.current_.layer_list = layers + layer_idx;
         display_config.vsync_layer_count_ = 0;
 
         // Displays with no current layers are filtered out in Controller::ApplyConfig,
@@ -1089,10 +1093,10 @@ void Client::ApplyConfig() {
                 layer->displayed_image_ = fbl::move(node->self);
                 list_remove_head(&layer->waiting_images_);
 
-                void* handle = layer->displayed_image_->info().handle;
-                if (layer->current_layer_.type == LAYER_PRIMARY) {
+                uint64_t handle = layer->displayed_image_->info().handle;
+                if (layer->current_layer_.type == LAYER_TYPE_PRIMARY) {
                     layer->current_layer_.cfg.primary.image.handle = handle;
-                } else if (layer->current_layer_.type == LAYER_CURSOR) {
+                } else if (layer->current_layer_.type == LAYER_TYPE_CURSOR) {
                     layer->current_layer_.cfg.cursor.image.handle = handle;
                 } else {
                     // type is validated in ::CheckConfig, so something must be very wrong.
@@ -1109,8 +1113,8 @@ void Client::ApplyConfig() {
                     console_fb_display_id_ = display_config.id;
 
                     auto fb = layer->displayed_image_;
-                    uint32_t stride = DC_IMPL_CALL(compute_linear_stride,
-                                                   fb->info().width, fb->info().pixel_format);
+                    uint32_t stride = controller_->dc()->ComputeLinearStride(
+                        fb->info().width, fb->info().pixel_format);
                     uint32_t size = fb->info().height *
                             ZX_PIXEL_FORMAT_BYTES(fb->info().pixel_format) * stride;
                     zx_framebuffer_set_range(get_root_resource(),
@@ -1127,7 +1131,7 @@ void Client::ApplyConfig() {
 
             display_config.current_.layer_count++;
             layers[layer_idx++] = &layer->current_layer_;
-            if (layer->current_layer_.type != LAYER_COLOR) {
+            if (layer->current_layer_.type != LAYER_TYPE_COLOR) {
                 display_config.vsync_layer_count_++;
                 if (layer->displayed_image_ == nullptr) {
                     config_missing_image = true;
@@ -1163,8 +1167,8 @@ void Client::SetOwnership(bool is_owner) {
     ApplyConfig();
 }
 
-void Client::OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_count,
-                               const uint64_t* displays_removed, uint32_t removed_count) {
+void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
+                               const uint64_t* displays_removed, size_t removed_count) {
     ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
     ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
 
@@ -1218,7 +1222,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_co
         req->added.count++;
 
         config->current_.display_id = config->id;
-        config->current_.layers = nullptr;
+        config->current_.layer_list = nullptr;
         config->current_.layer_count = 0;
 
         if (edid_timings) {
@@ -1506,8 +1510,8 @@ void ClientProxy::SetOwnership(bool is_owner) {
 }
 
 void ClientProxy::OnDisplaysChanged(const uint64_t* displays_added,
-                                    uint32_t added_count, const uint64_t* displays_removed,
-                                    uint32_t removed_count) {
+                                    size_t added_count, const uint64_t* displays_removed,
+                                    size_t removed_count) {
     handler_.OnDisplaysChanged(displays_added, added_count, displays_removed, removed_count);
 }
 
@@ -1532,7 +1536,7 @@ void ClientProxy::ReapplyConfig() {
 }
 
 void ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
-                                 uint64_t* image_ids, uint32_t count) {
+                                 uint64_t* image_ids, size_t count) {
     ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
 
     if (!enable_vsync_) {

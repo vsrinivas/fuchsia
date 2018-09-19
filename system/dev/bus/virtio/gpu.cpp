@@ -43,13 +43,12 @@ typedef struct imported_image {
     zx::pmt pmt;
 } imported_image_t;
 
-void GpuDevice::virtio_gpu_set_display_controller_cb(void* ctx, void* cb_ctx,
-                                                     display_controller_cb_t* cb) {
+void GpuDevice::virtio_gpu_set_display_controller_interface(
+    void* ctx, const display_controller_interface_t* intf) {
     GpuDevice* gd = static_cast<GpuDevice*>(ctx);
     {
         fbl::AutoLock al(&gd->flush_lock_);
-        gd->dc_cb_ = cb;
-        gd->dc_cb_ctx_ = cb_ctx;
+        gd->dc_intf_ = *intf;
     }
 
     added_display_args_t args = {};
@@ -60,9 +59,10 @@ void GpuDevice::virtio_gpu_set_display_controller_cb(void* ctx, void* cb_ctx,
         .height = gd->pmode_.r.height,
         .refresh_rate_e2 = kRefreshRateHz * 100,
     },
-    args.pixel_formats = &gd->supported_formats_,
+    args.pixel_format_list = &gd->supported_formats_,
     args.pixel_format_count = 1,
-    cb->on_displays_changed(cb_ctx, &args, 1, nullptr, 0);
+    display_controller_interface_on_displays_changed(intf, &args, 1, nullptr, 0,
+                                                     nullptr, 0, nullptr);
 }
 
 zx_status_t GpuDevice::virtio_gpu_import_vmo_image(void* ctx, image_t* image,
@@ -100,7 +100,7 @@ zx_status_t GpuDevice::virtio_gpu_import_vmo_image(void* ctx, image_t* image,
         return status;
     }
 
-    image->handle = import_data.release();
+    image->handle = reinterpret_cast<uint64_t>(import_data.release());
 
     return ZX_OK;
 }
@@ -109,26 +109,26 @@ void GpuDevice::virtio_gpu_release_image(void* ctx, image_t* image) {
     delete reinterpret_cast<imported_image_t*>(image->handle);
 }
 
-void GpuDevice::virtio_gpu_check_configuration(void* ctx,
-                                               const display_config_t** display_configs,
-                                               uint32_t* display_cfg_result,
-                                               uint32_t** layer_cfg_results,
-                                               uint32_t display_count) {
+uint32_t GpuDevice::virtio_gpu_check_configuration(void* ctx,
+                                                   const display_config_t** display_configs,
+                                                   size_t display_count,
+                                                   uint32_t** layer_cfg_results,
+                                                   size_t* layer_cfg_result_count) {
     GpuDevice* gd = static_cast<GpuDevice*>(ctx);
     if (display_count != 1) {
         ZX_DEBUG_ASSERT(display_count == 0);
-        return;
+        return CONFIG_DISPLAY_OK;
     }
     ZX_DEBUG_ASSERT(display_configs[0]->display_id == kDisplayId);
     bool success;
     if (display_configs[0]->layer_count != 1) {
         success = display_configs[0]->layer_count == 0;
     } else {
-        primary_layer_t* layer = &display_configs[0]->layers[0]->cfg.primary;
+        primary_layer_t* layer = &display_configs[0]->layer_list[0]->cfg.primary;
         frame_t frame = {
                 .x_pos = 0, .y_pos = 0, .width = gd->pmode_.r.width, .height = gd->pmode_.r.height,
         };
-        success = display_configs[0]->layers[0]->type == LAYER_PRIMARY
+        success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY
                 && layer->transform_mode == FRAME_TRANSFORM_IDENTITY
                 && layer->image.width == gd->pmode_.r.width
                 && layer->image.height == gd->pmode_.r.height
@@ -142,14 +142,16 @@ void GpuDevice::virtio_gpu_check_configuration(void* ctx,
         for (unsigned i = 1; i < display_configs[0]->layer_count; i++) {
             layer_cfg_results[0][i] = CLIENT_MERGE_SRC;
         }
+        layer_cfg_result_count[0] = display_configs[0]->layer_count;
     }
+    return CONFIG_DISPLAY_OK;
 }
 
 void GpuDevice::virtio_gpu_apply_configuration(void* ctx, const display_config_t** display_configs,
-                                               uint32_t display_count) {
+                                               size_t display_count) {
     GpuDevice* gd = static_cast<GpuDevice*>(ctx);
-    void* handle = display_count == 0 || display_configs[0]->layer_count == 0
-            ? nullptr : display_configs[0]->layers[0]->cfg.primary.image.handle;
+    uint64_t handle = display_count == 0 || display_configs[0]->layer_count == 0
+            ? 0 : display_configs[0]->layer_list[0]->cfg.primary.image.handle;
 
     {
         fbl::AutoLock al(&gd->flush_lock_);
@@ -416,10 +418,10 @@ void GpuDevice::virtio_gpu_flusher() {
 
         {
             fbl::AutoLock al(&flush_lock_);
-            if (dc_cb_) {
-                void* handles[] = { static_cast<void*>(displayed_fb_) };
-                dc_cb_->on_display_vsync(dc_cb_ctx_, kDisplayId,
-                                         next_deadline, handles, displayed_fb_ != nullptr);
+            if (dc_intf_.ops) {
+                uint64_t handles[] = { reinterpret_cast<uint64_t>(displayed_fb_) };
+                display_controller_interface_on_display_vsync(
+                    &dc_intf_, kDisplayId, next_deadline, handles, displayed_fb_ != nullptr);
             }
         }
         next_deadline = zx_time_add_duration(next_deadline, period);
@@ -456,7 +458,8 @@ zx_status_t GpuDevice::virtio_gpu_start() {
 
     LTRACEF("publishing device\n");
 
-    display_proto_ops_.set_display_controller_cb = virtio_gpu_set_display_controller_cb;
+    display_proto_ops_.set_display_controller_interface =
+        virtio_gpu_set_display_controller_interface;
     display_proto_ops_.import_vmo_image = virtio_gpu_import_vmo_image;
     display_proto_ops_.release_image = virtio_gpu_release_image;
     display_proto_ops_.check_configuration = virtio_gpu_check_configuration;

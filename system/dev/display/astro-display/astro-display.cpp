@@ -8,7 +8,7 @@ namespace astro_display {
 
 namespace {
 // List of supported pixel formats
-const zx_pixel_format_t kSupportedPixelFormats = { ZX_PIXEL_FORMAT_RGB_x888 };
+zx_pixel_format_t kSupportedPixelFormats[] = { ZX_PIXEL_FORMAT_RGB_x888 };
 
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
 
@@ -75,30 +75,32 @@ void AstroDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
     args->panel.params.height = height_;
     args->panel.params.width = width_;
     args->panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
-    args->pixel_formats = &kSupportedPixelFormats;
-    args->pixel_format_count = sizeof(kSupportedPixelFormats) / sizeof(zx_pixel_format_t);
+    args->pixel_format_list = kSupportedPixelFormats;
+    args->pixel_format_count = countof(kSupportedPixelFormats);
     args->cursor_info_count = 0;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-uint32_t AstroDisplay::ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
+uint32_t AstroDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
+                                                                zx_pixel_format_t format) {
     // The astro display controller needs buffers with a stride that is an even
     // multiple of 32.
     return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void AstroDisplay::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb) {
+void AstroDisplay::DisplayControllerImplSetDisplayControllerInterface(
+    const display_controller_interface_t* intf) {
     fbl::AutoLock lock(&display_lock_);
-    dc_cb_ = cb;
-    dc_cb_ctx_ = cb_ctx;
+    dc_intf_ = ddk::DisplayControllerInterfaceProxy(intf);
     added_display_args_t args;
     PopulateAddedDisplayArgs(&args);
-    dc_cb_->on_displays_changed(dc_cb_ctx_, &args, 1, NULL, 0);
+    dc_intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t AstroDisplay::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset) {
+zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx_handle_t vmo,
+                                                              size_t offset) {
     zx_status_t status = ZX_OK;
     fbl::AutoLock lock(&image_lock_);
 
@@ -107,7 +109,7 @@ zx_status_t AstroDisplay::ImportVmoImage(image_t* image, const zx::vmo& vmo, siz
         return status;
     }
 
-    uint32_t stride = ComputeLinearStride(image->width, image->pixel_format);
+    uint32_t stride = DisplayControllerImplComputeLinearStride(image->width, image->pixel_format);
 
     canvas_info_t canvas_info;
     canvas_info.height          = image->height;
@@ -117,7 +119,7 @@ zx_status_t AstroDisplay::ImportVmoImage(image_t* image, const zx::vmo& vmo, siz
     canvas_info.endianness      = 0;
 
     zx_handle_t dup_vmo;
-    status = zx_handle_duplicate(vmo.get(), ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+    status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
     if (status != ZX_OK) {
         return status;
     }
@@ -134,13 +136,13 @@ zx_status_t AstroDisplay::ImportVmoImage(image_t* image, const zx::vmo& vmo, siz
         DISP_INFO("Reusing previously allocated canvas (index = %d)\n", local_canvas_idx);
     }
     imported_images_.SetOne(local_canvas_idx);
-    image->handle = reinterpret_cast<void*>(local_canvas_idx);;
+    image->handle = local_canvas_idx;
 
     return status;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void AstroDisplay::ReleaseImage(image_t* image) {
+void AstroDisplay::DisplayControllerImplReleaseImage(image_t* image) {
     fbl::AutoLock lock(&image_lock_);
     size_t local_canvas_idx = (size_t)image->handle;
     if (imported_images_.GetOne(local_canvas_idx)) {
@@ -150,14 +152,13 @@ void AstroDisplay::ReleaseImage(image_t* image) {
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void AstroDisplay::CheckConfiguration(const display_config_t** display_configs,
-                                      uint32_t* display_cfg_result,
-                                      uint32_t** layer_cfg_results,
-                                      uint32_t display_count) {
-    *display_cfg_result = CONFIG_DISPLAY_OK;
+uint32_t AstroDisplay::DisplayControllerImplCheckConfiguration(
+    const display_config_t** display_configs, size_t display_count, uint32_t** layer_cfg_results,
+    size_t* layer_cfg_result_count) {
+
     if (display_count != 1) {
         ZX_DEBUG_ASSERT(display_count == 0);
-        return;
+        return CONFIG_DISPLAY_OK;
     }
     ZX_DEBUG_ASSERT(display_configs[0]->display_id == PANEL_DISPLAY_ID);
 
@@ -167,11 +168,11 @@ void AstroDisplay::CheckConfiguration(const display_config_t** display_configs,
     if (display_configs[0]->layer_count != 1) {
         success = display_configs[0]->layer_count == 0;
     } else {
-        const primary_layer_t& layer = display_configs[0]->layers[0]->cfg.primary;
+        const primary_layer_t& layer = display_configs[0]->layer_list[0]->cfg.primary;
         frame_t frame = {
             .x_pos = 0, .y_pos = 0, .width = width_, .height = height_,
         };
-        success = display_configs[0]->layers[0]->type == LAYER_PRIMARY
+        success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY
                 && layer.transform_mode == FRAME_TRANSFORM_IDENTITY
                 && layer.image.width == width_
                 && layer.image.height == height_
@@ -185,12 +186,14 @@ void AstroDisplay::CheckConfiguration(const display_config_t** display_configs,
         for (unsigned i = 1; i < display_configs[0]->layer_count; i++) {
             layer_cfg_results[0][i] = CLIENT_MERGE_SRC;
         }
+        layer_cfg_result_count[0] = display_configs[0]->layer_count;
     }
+    return CONFIG_DISPLAY_OK;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void AstroDisplay::ApplyConfiguration(const display_config_t** display_configs,
-                                      uint32_t display_count) {
+void AstroDisplay::DisplayControllerImplApplyConfiguration( const display_config_t** display_configs,
+                                                        size_t display_count) {
     ZX_DEBUG_ASSERT(display_configs);
 
     fbl::AutoLock lock(&display_lock_);
@@ -199,7 +202,7 @@ void AstroDisplay::ApplyConfiguration(const display_config_t** display_configs,
     if (display_count == 1 && display_configs[0]->layer_count) {
         // Since Astro does not support plug'n play (fixed display), there is no way
         // a checked configuration could be invalid at this point.
-        addr = (uint8_t) (uint64_t) display_configs[0]->layers[0]->cfg.primary.image.handle;
+        addr = (uint8_t) (uint64_t) display_configs[0]->layer_list[0]->cfg.primary.image.handle;
         current_image_valid_= true;
         current_image_ = addr;
         osd_->Flip(addr);
@@ -210,7 +213,7 @@ void AstroDisplay::ApplyConfiguration(const display_config_t** display_configs,
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t AstroDisplay::AllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
+zx_status_t AstroDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
     return zx_vmo_create_contiguous(bti_.get(), size, 0, vmo_out);
 }
 
@@ -274,7 +277,7 @@ zx_status_t AstroDisplay::SetupDisplayInterface() {
     }
 
     format_ = ZX_PIXEL_FORMAT_RGB_x888;
-    stride_ = ComputeLinearStride(width_, format_);
+    stride_ = DisplayControllerImplComputeLinearStride(width_, format_);
 
     if (!skip_disp_init_) {
         // Ensure Max Bit Rate / pixel clock ~= 8 (8.xxx). This is because the clock calculation
@@ -391,10 +394,10 @@ zx_status_t AstroDisplay::SetupDisplayInterface() {
         imported_images_.Reset(kMaxImportedImages);
     }
 
-    if (dc_cb_) {
+    if (dc_intf_.is_valid()) {
         added_display_args_t args;
         PopulateAddedDisplayArgs(&args);
-        dc_cb_->on_displays_changed(dc_cb_ctx_, &args, 1,nullptr, 0);
+        dc_intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
     }
 
     return ZX_OK;
@@ -409,11 +412,11 @@ int AstroDisplay::VSyncThread() {
             break;
         }
         fbl::AutoLock lock(&display_lock_);
-        void* live = reinterpret_cast<void*>(current_image_);
+        uint64_t live[] = { current_image_ };
         bool current_image_valid = current_image_valid_;
-        if (dc_cb_) {
-            dc_cb_->on_display_vsync(dc_cb_ctx_, kDisplayId, zx_clock_get(ZX_CLOCK_MONOTONIC),
-                                             &live, current_image_valid);
+        if (dc_intf_.is_valid()) {
+            dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get(ZX_CLOCK_MONOTONIC),
+                                    live, current_image_valid);
         }
     }
 

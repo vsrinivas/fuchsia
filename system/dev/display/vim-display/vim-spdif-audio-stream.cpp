@@ -326,8 +326,8 @@ zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
     // generate clock rates up to 192KHz, and can generate 16, 20, and 24 bit audio.
     for (unsigned i = 0; i < display_->audio_format_count; i++) {
         audio_stream_format_range_t range;
-        zx_status_t status = display_->dc_cb->get_audio_format(
-                display_->dc_cb_ctx, display_->display_id, i, &range);
+        zx_status_t status = display_controller_interface_get_audio_format(
+            &display_->dc_intf, display_->display_id, i, &range);
         ZX_ASSERT(status == ZX_OK);
 
         constexpr uint32_t SUPPORTED_FORMATS = AUDIO_SAMPLE_FORMAT_16BIT |

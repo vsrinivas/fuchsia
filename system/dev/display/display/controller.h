@@ -7,8 +7,9 @@
 #if __cplusplus
 
 #include <ddktl/device.h>
+#include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddk/protocol/display-controller.h>
+#include <ddk/protocol/display/controller.h>
 #include <ddk/protocol/i2cimpl.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
@@ -67,6 +68,7 @@ public:
 
 using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::OpenAtable>;
 class Controller : public ControllerParent,
+                   public ddk::DisplayControllerInterface<Controller>,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER> {
 public:
     Controller(zx_device_t* parent);
@@ -79,12 +81,18 @@ public:
     void DdkRelease();
     zx_status_t Bind(fbl::unique_ptr<display::Controller>* device_ptr);
 
-    void OnDisplaysChanged(added_display_args_t* displays_added, uint32_t added_count,
-                           uint64_t* displays_removed, uint32_t removed_count);
-    void OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
-                        void** handles, uint32_t handle_count);
-    zx_status_t GetAudioFormat(uint64_t display_id, uint32_t fmt_idx,
-                               audio_stream_format_range_t* fmt_out);
+    void DisplayControllerInterfaceOnDisplaysChanged(const added_display_args_t* displays_added,
+                                                     size_t added_count,
+                                                     const uint64_t* displays_removed,
+                                                     size_t removed_count,
+                                                     added_display_info_t* out_display_info_list,
+                                                     size_t display_info_count,
+                                                     size_t* display_info_actual);
+    void DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+                                                  const uint64_t* handles, size_t handle_count);
+    zx_status_t DisplayControllerInterfaceGetAudioFormat(uint64_t display_id, uint32_t fmt_idx,
+                                                         audio_stream_format_range_t* fmt_out);
+
     void OnClientDead(ClientProxy* client);
     void SetVcMode(uint8_t mode);
     void ShowActiveDisplay();
@@ -109,8 +117,7 @@ public:
                                const char** monitor_name, const char** monitor_serial)
                                __TA_NO_THREAD_SAFETY_ANALYSIS;
 
-    display_controller_protocol_ops_t* ops() { return ops_.ops; }
-    void* ops_ctx() { return ops_.ctx; }
+    ddk::DisplayControllerImplProtocolProxy* dc() { return &dc_; }
     async::Loop& loop() { return loop_; }
     bool current_thread_is_loop() { return thrd_current() == loop_thread_; }
     mtx_t* mtx() { return &mtx_; }
@@ -135,7 +142,7 @@ private:
 
     async::Loop loop_;
     thrd_t loop_thread_;
-    display_controller_protocol_t ops_;
+    ddk::DisplayControllerImplProtocolProxy dc_;
     i2c_impl_protocol_t i2c_ops_;
     bool has_i2c_ops_;
 };

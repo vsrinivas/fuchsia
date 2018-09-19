@@ -49,11 +49,11 @@
 #define FLAGS_BACKLIGHT 1
 
 namespace {
-static const zx_pixel_format_t supported_formats[2] = {
+static zx_pixel_format_t supported_formats[2] = {
     ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888
 };
 
-static const cursor_info_t cursor_infos[3] = {
+static cursor_info_t cursor_infos[3] = {
     { .width = 64, .height = 64, .format = ZX_PIXEL_FORMAT_ARGB_8888 },
     { .width = 128, .height = 128, .format = ZX_PIXEL_FORMAT_ARGB_8888 },
     { .width = 256, .height = 256, .format = ZX_PIXEL_FORMAT_ARGB_8888 },
@@ -157,8 +157,8 @@ static int finish_init(void* arg) {
 
 const display_config_t* find_config(uint64_t display_id,
                                     const display_config_t** display_configs,
-                                    uint32_t display_count) {
-    for (unsigned i = 0; i < display_count; i++) {
+                                    size_t display_count) {
+    for (size_t i = 0; i < display_count; i++) {
         if (display_configs[i]->display_id == display_id) {
             return display_configs[i];
         }
@@ -245,7 +245,7 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
         }
     }
 
-    if (dc_cb_ && (added_device || display_removed != INVALID_DISPLAY_ID)) {
+    if (dc_intf_.is_valid() && (added_device || display_removed != INVALID_DISPLAY_ID)) {
         CallOnDisplaysChanged(&added_device, added_device != nullptr ? 1 : 0,
                              &display_removed, display_removed != INVALID_DISPLAY_ID);
     }
@@ -254,37 +254,35 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
 void Controller::HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp) {
     fbl::AutoLock lock(&display_lock_);
 
-    if (!dc_cb_) {
+    if (!dc_intf_.is_valid()) {
         return;
     }
 
     uint64_t id = INVALID_DISPLAY_ID;
     // Plane 3 and the cursor are mutually exclusive, so this won't overflow.
-    void* handles[3];
-    int32_t handle_count = 0;
+    uint64_t handles[3];
+    size_t handle_count = 0;
     if (pipes_[pipe].in_use()) {
         id = pipes_[pipe].attached_display_id();
 
         registers::PipeRegs regs(pipe);
         for (int i = 0; i < 3; i++) {
             auto live_surface = regs.PlaneSurfaceLive(i).ReadFrom(mmio_space());
-            void* handle = reinterpret_cast<void*>(
-                    live_surface.surface_base_addr() << live_surface.kPageShift);
+            uint64_t handle = live_surface.surface_base_addr() << live_surface.kPageShift;
             if (handle) {
                 handles[handle_count++] = handle;
             }
         }
 
         auto live_surface = regs.CursorSurfaceLive().ReadFrom(mmio_space());
-        void* handle = reinterpret_cast<void*>(
-                live_surface.surface_base_addr() << live_surface.kPageShift);
+        uint64_t handle = live_surface.surface_base_addr() << live_surface.kPageShift;
         if (handle) {
             handles[handle_count++] = handle;
         }
     }
 
     if (id != INVALID_DISPLAY_ID && handle_count) {
-        dc_cb_->on_display_vsync(dc_cb_ctx_, id, timestamp, handles, handle_count);
+        dc_intf_.OnDisplayVsync(id, timestamp, handles, handle_count);
     }
 }
 
@@ -758,30 +756,35 @@ zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
     return ZX_OK;
 }
 
-void Controller::CallOnDisplaysChanged(DisplayDevice** added, uint32_t added_count,
-                                       uint64_t* removed, uint32_t removed_count) {
+void Controller::CallOnDisplaysChanged(DisplayDevice** added, size_t added_count,
+                                       uint64_t* removed, size_t removed_count) {
     added_display_args_t added_args[added_count];
+    added_display_info_t added_info[added_count];
+    size_t added_actual;
     for (unsigned i = 0; i < added_count; i++) {
         added_args[i].display_id = added[i]->id();
         added_args[i].edid_present = true;
         added_args[i].panel.i2c_bus_id = added[i]->i2c_bus_id();
-        added_args[i].pixel_formats = supported_formats;
+        added_args[i].pixel_format_list = supported_formats;
         added_args[i].pixel_format_count = static_cast<uint32_t>(fbl::count_of(supported_formats));
-        added_args[i].cursor_infos = cursor_infos;
+        added_args[i].cursor_info_list = cursor_infos;
         added_args[i].cursor_info_count = static_cast<uint32_t>(fbl::count_of(cursor_infos));
     }
-    dc_cb_->on_displays_changed(dc_cb_ctx_, added_args, added_count, removed, removed_count);
-    for (unsigned i = 0; i < added_count; i++) {
-        added[i]->set_is_hdmi(added_args[i].is_hdmi_out);
+    dc_intf_.OnDisplaysChanged(added_args, added_count, removed, removed_count,
+                               added_info, added_count, &added_actual);
+    ZX_DEBUG_ASSERT(added_count == added_actual);
+    for (unsigned i = 0; i < added_actual; i++) {
+        added[i]->set_is_hdmi(added_info[i].is_hdmi_out);
     }
 }
 
-// DisplayController methods
+// DisplayControllerImpl methods
 
-void Controller::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb) {
+void Controller::DisplayControllerImplSetDisplayControllerInterface(
+    const display_controller_interface_t* intf) {
+
     fbl::AutoLock lock(&display_lock_);
-    dc_cb_ctx_ = cb_ctx;
-    dc_cb_ = cb;
+    dc_intf_ = ddk::DisplayControllerInterfaceProxy(intf);
 
     if (ready_for_callback_ && display_devices_.size()) {
         DisplayDevice* added_displays[registers::kDdiCount];
@@ -793,7 +796,8 @@ void Controller::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* c
     }
 }
 
-zx_status_t Controller::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset) {
+zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx_handle_t vmo,
+                                                            size_t offset) {
     if (!(image->type == IMAGE_TYPE_SIMPLE || image->type == IMAGE_TYPE_X_TILED
                 || image->type == IMAGE_TYPE_Y_LEGACY_TILED
                 || image->type == IMAGE_TYPE_YF_TILED)) {
@@ -838,30 +842,30 @@ zx_status_t Controller::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_
         gtt_region = fbl::move(alt_gtt_region);
     }
 
-    status = gtt_region->PopulateRegion(vmo.get(), offset / PAGE_SIZE, length);
+    status = gtt_region->PopulateRegion(vmo, offset / PAGE_SIZE, length);
     if (status != ZX_OK) {
         return status;
     }
 
-    image->handle = reinterpret_cast<void*>(gtt_region->base());
+    image->handle = gtt_region->base();
     imported_images_.push_back(fbl::move(gtt_region));
     return ZX_OK;
 }
 
-void Controller::ReleaseImage(image_t* image) {
+void Controller::DisplayControllerImplReleaseImage(image_t* image) {
     fbl::AutoLock lock(&gtt_lock_);
     for (unsigned i = 0; i < imported_images_.size(); i++) {
-        if (imported_images_[i]->base() == reinterpret_cast<uint64_t>(image->handle)) {
+        if (imported_images_[i]->base() == image->handle) {
             imported_images_.erase(i);
             return;
         }
     }
 }
 
-const fbl::unique_ptr<GttRegion>& Controller::GetGttRegion(void* handle) {
+const fbl::unique_ptr<GttRegion>& Controller::GetGttRegion(uint64_t handle) {
     fbl::AutoLock lock(&gtt_lock_);
     for (auto& region : imported_images_) {
-        if (region->base() == reinterpret_cast<uint64_t>(handle)) {
+        if (region->base() == handle) {
             return region;
         }
     }
@@ -869,7 +873,7 @@ const fbl::unique_ptr<GttRegion>& Controller::GetGttRegion(void* handle) {
 }
 
 bool Controller::GetPlaneLayer(registers::Pipe pipe, uint32_t plane,
-                               const display_config_t** configs, uint32_t display_count,
+                               const display_config_t** configs, size_t display_count,
                                const layer_t** layer_out) {
     if (!pipes_[pipe].in_use()) {
         return false;
@@ -881,38 +885,39 @@ bool Controller::GetPlaneLayer(registers::Pipe pipe, uint32_t plane,
         if (config->display_id != disp_id) {
             continue;
         }
-        bool has_color_layer = config->layer_count && config->layers[0]->type == LAYER_COLOR;
+        bool has_color_layer = config->layer_count &&
+                               config->layer_list[0]->type == LAYER_TYPE_COLOR;
         for (unsigned j = 0; j < config->layer_count; j++) {
-            if (config->layers[j]->type == LAYER_PRIMARY) {
-                if (plane != (config->layers[j]->z_index - has_color_layer)) {
+            if (config->layer_list[j]->type == LAYER_TYPE_PRIMARY) {
+                if (plane != (config->layer_list[j]->z_index - has_color_layer)) {
                     continue;
                 }
-            } else if (config->layers[j]->type == LAYER_CURSOR) {
+            } else if (config->layer_list[j]->type == LAYER_TYPE_CURSOR) {
                 // Since the config is validated, we know the cursor is the
                 // highest plane, so we don't care about the layer's z_index.
                 if (plane != registers::kCursorPlane) {
                     continue;
                 }
-            } else if (config->layers[j]->type == LAYER_COLOR) {
+            } else if (config->layer_list[j]->type == LAYER_TYPE_COLOR) {
                 // color layers aren't a plane
                 continue;
             } else {
                 ZX_ASSERT(false);
             }
-            *layer_out = config->layers[j];
+            *layer_out = config->layer_list[j];
             return true;
         }
     }
     return false;
 }
 
-uint16_t Controller::CalculateBuffersPerPipe(uint32_t display_count) {
+uint16_t Controller::CalculateBuffersPerPipe(size_t display_count) {
     ZX_ASSERT(display_count < registers::kPipeCount);
     return static_cast<uint16_t>(registers::PlaneBufCfg::kBufferCount / display_count);
 }
 
 bool Controller::CalculateMinimumAllocations(const display_config_t** display_configs,
-                                             uint32_t display_count,
+                                             size_t display_count,
                                              uint16_t min_allocs[registers::kPipeCount]
                                                                 [registers::kImagePlaneCount]) {
     // This fn ignores layers after kImagePlaneCount. Displays with too many layers already
@@ -929,12 +934,12 @@ bool Controller::CalculateMinimumAllocations(const display_config_t** display_co
                 continue;
             }
 
-            if (layer->type == LAYER_CURSOR) {
+            if (layer->type == LAYER_TYPE_CURSOR) {
                 min_allocs[pipe_num][plane_num] = 8;
                 continue;
             }
 
-            ZX_ASSERT(layer->type == LAYER_PRIMARY);
+            ZX_ASSERT(layer->type == LAYER_TYPE_PRIMARY);
             const primary_layer_t* primary = &layer->cfg.primary;
 
             if (primary->image.type == IMAGE_TYPE_SIMPLE
@@ -1071,7 +1076,7 @@ void Controller::UpdateAllocations(const uint16_t min_allocs[registers::kPipeCou
 }
 
 void Controller::ReallocatePlaneBuffers(const display_config_t** display_configs,
-                                        uint32_t display_count, bool reallocate_pipes) {
+                                        size_t display_count, bool reallocate_pipes) {
     if (display_count == 0) {
         // Deal with reallocation later, when there are actually displays
         return;
@@ -1091,7 +1096,7 @@ void Controller::ReallocatePlaneBuffers(const display_config_t** display_configs
             const layer_t* layer;
             if (!GetPlaneLayer(pipe, plane_num, display_configs, display_count, &layer)) {
                 data_rate[pipe_num][plane_num] = 0;
-            } else if (layer->type == LAYER_PRIMARY) {
+            } else if (layer->type == LAYER_TYPE_PRIMARY) {
                 const primary_layer_t* primary = &layer->cfg.primary;
 
                 uint32_t scaled_width = primary->src_frame.width * primary->src_frame.width
@@ -1100,7 +1105,7 @@ void Controller::ReallocatePlaneBuffers(const display_config_t** display_configs
                         / primary->dest_frame.height;
                 data_rate[pipe_num][plane_num] = scaled_width * scaled_height *
                         ZX_PIXEL_FORMAT_BYTES(primary->image.pixel_format);
-            } else if (layer->type == LAYER_CURSOR) {
+            } else if (layer->type == LAYER_TYPE_CURSOR) {
                 // Use a tiny data rate so the cursor gets the minimum number of buffers
                 data_rate[pipe_num][plane_num] = 1;
             } else {
@@ -1214,7 +1219,7 @@ void Controller::DoPipeBufferReallocation(
 }
 
 bool Controller::CheckDisplayLimits(const display_config_t** display_configs,
-                                    uint32_t display_count, uint32_t** layer_cfg_results) {
+                                    size_t display_count, uint32_t** layer_cfg_results) {
     for (unsigned i = 0; i < display_count; i++) {
         const display_config_t* config = display_configs[i];
 
@@ -1267,12 +1272,12 @@ bool Controller::CheckDisplayLimits(const display_config_t** display_configs,
         // is too low, then make the client do any downscaling itself.
         double min_plane_ratio = 1.0;
         for (unsigned i = 0; i < config->layer_count; i++) {
-            if (config->layers[i]->type != LAYER_PRIMARY) {
+            if (config->layer_list[i]->type != LAYER_TYPE_PRIMARY) {
                 continue;
             }
-            primary_layer_t* primary = &config->layers[i]->cfg.primary;
+            primary_layer_t* primary = &config->layer_list[i]->cfg.primary;
             uint32_t src_width, src_height;
-            get_posttransform_width(*config->layers[i], &src_width, &src_height);
+            get_posttransform_width(*config->layer_list[i], &src_width, &src_height);
 
             double downscale = fbl::max(1.0, 1.0 * src_height / primary->dest_frame.height)
                     * fbl::max(1.0, 1.0 * src_width / primary->dest_frame.width);
@@ -1284,12 +1289,12 @@ bool Controller::CheckDisplayLimits(const display_config_t** display_configs,
                 min_plane_ratio * static_cast<double>(max_pipe_pixel_rate));
         if (max_pipe_pixel_rate < config->mode.pixel_clock_10khz * 10000) {
             for (unsigned j = 0; j < config->layer_count; j++) {
-                if (config->layers[j]->type != LAYER_PRIMARY) {
+                if (config->layer_list[j]->type != LAYER_TYPE_PRIMARY) {
                     continue;
                 }
-                primary_layer_t* primary = &config->layers[j]->cfg.primary;
+                primary_layer_t* primary = &config->layer_list[j]->cfg.primary;
                 uint32_t src_width, src_height;
-                get_posttransform_width(*config->layers[j], &src_width, &src_height);
+                get_posttransform_width(*config->layer_list[j], &src_width, &src_height);
 
                 if (src_height > primary->dest_frame.height
                         || src_width > primary->dest_frame.width) {
@@ -1304,29 +1309,25 @@ bool Controller::CheckDisplayLimits(const display_config_t** display_configs,
     return true;
 }
 
-void Controller::CheckConfiguration(const display_config_t** display_config,
-                                    uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
-                                    uint32_t display_count) {
+uint32_t Controller::DisplayControllerImplCheckConfiguration(
+        const display_config_t** display_config, size_t display_count,
+        uint32_t** layer_cfg_result, size_t* layer_cfg_result_count) {
     fbl::AutoLock lock(&display_lock_);
 
     if (display_count == 0) {
         // All displays off is supported
-        *display_cfg_result = CONFIG_DISPLAY_OK;
-        return;
+        return CONFIG_DISPLAY_OK;
     }
 
     uint64_t pipe_alloc[registers::kPipeCount];
     if (!CalculatePipeAllocation(display_config, display_count, pipe_alloc)) {
-        *display_cfg_result = CONFIG_DISPLAY_TOO_MANY;
-        return;
+        return CONFIG_DISPLAY_TOO_MANY;
     }
 
     if (!CheckDisplayLimits(display_config, display_count, layer_cfg_result)) {
-        *display_cfg_result = CONFIG_DISPLAY_UNSUPPORTED_MODES;
-        return;
+        return CONFIG_DISPLAY_UNSUPPORTED_MODES;
     }
 
-    *display_cfg_result = CONFIG_DISPLAY_OK;
     for (unsigned i = 0; i < display_count; i++) {
         auto* config = display_config[i];
         DisplayDevice* display = nullptr;
@@ -1343,7 +1344,7 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
 
         bool merge_all = false;
         if (config->layer_count > 3) {
-            merge_all = config->layer_count > 4 || config->layers[0]->type != LAYER_COLOR;
+            merge_all = config->layer_count > 4 || config->layer_list[0]->type != LAYER_TYPE_COLOR;
         }
         if (!merge_all && config->cc_flags) {
             if (config->cc_flags & COLOR_CONVERSION_PREOFFSET) {
@@ -1362,9 +1363,9 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
 
         uint32_t total_scalers_needed = 0;
         for (unsigned j = 0; j < config->layer_count; j++) {
-            switch (config->layers[j]->type) {
-            case LAYER_PRIMARY: {
-                primary_layer_t* primary = &config->layers[j]->cfg.primary;
+            switch (config->layer_list[j]->type) {
+            case LAYER_TYPE_PRIMARY: {
+                primary_layer_t* primary = &config->layer_list[j]->cfg.primary;
                 if (primary->transform_mode == FRAME_TRANSFORM_ROT_90
                         || primary->transform_mode == FRAME_TRANSFORM_ROT_270) {
                     // Linear and x tiled images don't support 90/270 rotation
@@ -1379,7 +1380,7 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
                 }
 
                 uint32_t src_width, src_height;
-                get_posttransform_width(*config->layers[j], &src_width, &src_height);
+                get_posttransform_width(*config->layer_list[j], &src_width, &src_height);
 
                 // If the plane is too wide, force the client to do all composition
                 // and just give us a simple configuration.
@@ -1432,11 +1433,11 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
                 }
                 break;
             }
-            case LAYER_CURSOR: {
+            case LAYER_TYPE_CURSOR: {
                 if (j != config->layer_count - 1) {
                     layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
                 }
-                const image_t* image = &config->layers[j]->cfg.cursor.image;
+                const image_t* image = &config->layer_list[j]->cfg.cursor.image;
                 if (image->type != IMAGE_TYPE_SIMPLE) {
                     layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
                 }
@@ -1451,11 +1452,11 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
                 }
                 break;
             }
-            case LAYER_COLOR: {
+            case LAYER_TYPE_COLOR: {
                 if (j != 0) {
                     layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
                 }
-                zx_pixel_format_t format = config->layers[j]->cfg.color.format;
+                zx_pixel_format_t format = config->layer_list[j]->cfg.color.format;
                 if (format != ZX_PIXEL_FORMAT_RGB_x888
                         && format != ZX_PIXEL_FORMAT_ARGB_8888) {
                     layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
@@ -1499,10 +1500,12 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
             }
         }
     }
+
+    return CONFIG_DISPLAY_OK;
 }
 
 bool Controller::CalculatePipeAllocation(const display_config_t** display_config,
-                                         uint32_t display_count,
+                                         size_t display_count,
                                          uint64_t alloc[registers::kPipeCount]) {
     if (display_count > registers::kPipeCount) {
         return false;
@@ -1530,7 +1533,7 @@ bool Controller::CalculatePipeAllocation(const display_config_t** display_config
     return true;
 }
 
-bool Controller::ReallocatePipes(const display_config_t** display_config, uint32_t display_count) {
+bool Controller::ReallocatePipes(const display_config_t** display_config, size_t display_count) {
     if (display_count == 0) {
         // If we were given an empty config, just wait until there's
         // a real config before doing anything.
@@ -1571,8 +1574,8 @@ bool Controller::ReallocatePipes(const display_config_t** display_config, uint32
     return pipe_change;
 }
 
-void Controller::ApplyConfiguration(const display_config_t** display_config,
-                                    uint32_t display_count) {
+void Controller::DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
+                                                         size_t display_count) {
     uint64_t fake_vsyncs[registers::kDdiCount];
     uint32_t fake_vsync_count = 0;
 
@@ -1602,20 +1605,21 @@ void Controller::ApplyConfiguration(const display_config_t** display_config,
         }
     }
 
-    if (dc_cb_) {
+    if (dc_intf_.is_valid()) {
         zx_time_t now = fake_vsync_count ? zx_clock_get(ZX_CLOCK_MONOTONIC) : 0;
         for (unsigned i = 0; i < fake_vsync_count; i++) {
-            dc_cb_->on_display_vsync(dc_cb_ctx_, fake_vsyncs[i], now, nullptr, 0);
+            dc_intf_.OnDisplayVsync(fake_vsyncs[i], now, nullptr, 0);
         }
     }
 }
 
-uint32_t Controller::ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
+uint32_t Controller::DisplayControllerImplComputeLinearStride(uint32_t width,
+                                                              zx_pixel_format_t format) {
     return fbl::round_up(width,
             get_tile_byte_width(IMAGE_TYPE_SIMPLE, format) / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
-zx_status_t Controller::AllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
+zx_status_t Controller::DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
     return zx_vmo_create(size, 0, vmo_out);
 }
 
@@ -1801,9 +1805,9 @@ void Controller::DdkRelease() {
 
 zx_status_t Controller::DdkGetProtocol(uint32_t proto_id, void* out) {
     if (proto_id == ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL) {
-        auto ops = static_cast<display_controller_protocol_t*>(out);
+        auto ops = static_cast<display_controller_impl_protocol_t*>(out);
         ops->ctx = this;
-        ops->ops = static_cast<display_controller_protocol_ops_t*>(ddk_proto_ops_);
+        ops->ops = static_cast<display_controller_impl_protocol_ops_t*>(ddk_proto_ops_);
     } else if (proto_id == ZX_PROTOCOL_I2C_IMPL) {
         auto ops = static_cast<i2c_impl_protocol_t*>(out);
         ops->ctx = this;
@@ -1914,7 +1918,7 @@ void Controller::FinishInit() {
     {
         fbl::AutoLock lock(&display_lock_);
         uint32_t size = static_cast<uint32_t>(display_devices_.size());
-        if (size && dc_cb_) {
+        if (size && dc_intf_.is_valid()) {
             DisplayDevice* added_displays[registers::kDdiCount];
             for (unsigned i = 0; i < size; i++) {
                 added_displays[i] = display_devices_[i].get();

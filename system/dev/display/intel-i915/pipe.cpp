@@ -223,12 +223,12 @@ void Pipe::ApplyConfiguration(const display_config_t* config) {
 
     auto bottom_color = pipe_regs.PipeBottomColor().FromValue(0);
     bottom_color.set_csc_enable(!!config->cc_flags);
-    bool has_color_layer = config->layer_count && config->layers[0]->type == LAYER_COLOR;
+    bool has_color_layer = config->layer_count && config->layer_list[0]->type == LAYER_TYPE_COLOR;
     if (has_color_layer) {
-        color_layer_t* layer = &config->layers[0]->cfg.color;
+        color_layer_t* layer = &config->layer_list[0]->cfg.color;
         ZX_DEBUG_ASSERT(layer->format == ZX_PIXEL_FORMAT_RGB_x888
                 || layer->format == ZX_PIXEL_FORMAT_ARGB_8888);
-        uint32_t color = *reinterpret_cast<uint32_t*>(layer->color);
+        uint32_t color = *reinterpret_cast<const uint32_t*>(layer->color_list);
 
         bottom_color.set_r(encode_pipe_color_component(static_cast<uint8_t>(color >> 16)));
         bottom_color.set_g(encode_pipe_color_component(static_cast<uint8_t>(color >> 8)));
@@ -240,8 +240,8 @@ void Pipe::ApplyConfiguration(const display_config_t* config) {
     for (unsigned plane = 0; plane < 3; plane++) {
         primary_layer_t* primary = nullptr;
         for (unsigned j = 0; j < config->layer_count; j++) {
-            layer_t* layer = config->layers[j];
-            if (layer->type == LAYER_PRIMARY && (layer->z_index - has_color_layer) == plane) {
+            layer_t* layer = config->layer_list[j];
+            if (layer->type == LAYER_TYPE_PRIMARY && (layer->z_index - has_color_layer) == plane) {
                 primary = &layer->cfg.primary;
                 break;
             }
@@ -249,8 +249,9 @@ void Pipe::ApplyConfiguration(const display_config_t* config) {
         ConfigurePrimaryPlane(plane, primary, !!config->cc_flags, &scaler_1_claimed, &regs);
     }
     cursor_layer_t* cursor = nullptr;
-    if (config->layer_count && config->layers[config->layer_count - 1]->type == LAYER_CURSOR) {
-        cursor = &config->layers[config->layer_count - 1]->cfg.cursor;
+    if (config->layer_count &&
+        config->layer_list[config->layer_count - 1]->type == LAYER_TYPE_CURSOR) {
+        cursor = &config->layer_list[config->layer_count - 1]->cfg.cursor;
     }
     ConfigureCursorPlane(cursor, !!config->cc_flags, &regs);
 

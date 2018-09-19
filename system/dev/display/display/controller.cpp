@@ -15,29 +15,6 @@
 
 namespace {
 
-void on_displays_changed(void* ctx, added_display_args_t* displays_added, uint32_t added_count,
-                         uint64_t* displays_removed, uint32_t removed_count) {
-    static_cast<display::Controller*>(ctx)->OnDisplaysChanged(
-            displays_added, added_count, displays_removed, removed_count);
-}
-
-void on_display_vsync(void* ctx, uint64_t display, zx_time_t timestamp,
-                      void** handles, uint32_t handle_count) {
-    static_cast<display::Controller*>(ctx)->OnDisplayVsync(display, timestamp,
-                                                           handles, handle_count);
-}
-
-zx_status_t get_audio_format(void* ctx, uint64_t display_id, uint32_t fmt_idx,
-                             audio_stream_format_range_t* fmt_out) {
-    return static_cast<display::Controller*>(ctx)->GetAudioFormat(display_id, fmt_idx, fmt_out);
-}
-
-display_controller_cb_t dc_cb = {
-    .on_displays_changed = on_displays_changed,
-    .on_display_vsync = on_display_vsync,
-    .get_audio_format = get_audio_format,
-};
-
 typedef struct i2c_bus {
     i2c_impl_protocol_t* i2c;
     uint32_t bus_id;
@@ -83,14 +60,12 @@ void Controller::PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) {
     // Go through all the display mode timings and record whether or not
     // a basic layer configuration is acceptable.
     layer_t test_layer = {};
-    layer_t* test_layers[] = { &test_layer };
-    test_layer.cfg.primary.image.pixel_format = info->pixel_formats_[0];
-
+    layer_t* test_layers[] = { &test_layer }; test_layer.cfg.primary.image.pixel_format = info->pixel_formats_[0]; 
     display_config_t test_config;
     const display_config_t* test_configs[] = { &test_config };
     test_config.display_id = info->id;
     test_config.layer_count = 1;
-    test_config.layers = test_layers;
+    test_config.layer_list = test_layers;
 
     for (auto timing = edid::timing_iterator(&info->edid); timing.is_valid(); ++timing) {
         uint32_t width = timing->horizontal_addressable;
@@ -115,9 +90,10 @@ void Controller::PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) {
 
             uint32_t display_cfg_result;
             uint32_t layer_result = 0;
+            size_t display_layer_results_count;
             uint32_t* display_layer_results[] = { &layer_result };
-            ops_.ops->check_configuration(ops_.ctx, test_configs, &display_cfg_result,
-                                          display_layer_results, 1);
+            display_cfg_result = dc_.CheckConfiguration(test_configs, 1, display_layer_results,
+                                                        &display_layer_results_count);
             if (display_cfg_result == CONFIG_DISPLAY_OK) {
                 fbl::AllocChecker ac;
                 info->edid_timings.push_back(*timing, &ac);
@@ -231,8 +207,14 @@ void Controller::PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info) {
     }
 }
 
-void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_t added_count,
-                                   uint64_t* displays_removed, uint32_t removed_count) {
+void Controller::DisplayControllerInterfaceOnDisplaysChanged(
+    const added_display_args_t* displays_added, size_t added_count,
+    const uint64_t* displays_removed, size_t removed_count,
+    added_display_info_t* out_display_info_list, size_t display_info_count,
+    size_t* display_info_actual) {
+
+    ZX_DEBUG_ASSERT(!out_display_info_list || added_count == display_info_count);
+
     fbl::unique_ptr<fbl::RefPtr<DisplayInfo>[]> added_success;
     fbl::unique_ptr<uint64_t[]> removed;
     fbl::unique_ptr<async::Task> task;
@@ -288,6 +270,7 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
         info->vsync_layer_count = 0;
 
         auto& display_params = displays_added[i];
+        auto* display_info = out_display_info_list ? &out_display_info_list[i] : nullptr;
 
         info->id = display_params.display_id;
 
@@ -301,9 +284,9 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
             zxlogf(INFO, "Out of memory when processing display hotplug\n");
             break;
         }
-        memcpy(info->pixel_formats_.get(), display_params.pixel_formats,
+        memcpy(info->pixel_formats_.get(), display_params.pixel_format_list,
                display_params.pixel_format_count * sizeof(zx_pixel_format_t));
-        memcpy(info->cursor_infos_.get(), display_params.cursor_infos,
+        memcpy(info->cursor_infos_.get(), display_params.cursor_info_list,
                display_params.cursor_info_count * sizeof(cursor_info_t));
 
         info->has_edid = display_params.edid_present;
@@ -347,19 +330,20 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
                 }
             }
 
-            display_params.is_hdmi_out = info->edid.is_hdmi();
-            display_params.is_standard_srgb_out = info->edid.is_standard_rgb();
-            display_params.audio_format_count = static_cast<uint32_t>(info->edid_audio_.size());
+            if (display_info) {
+                display_info->is_hdmi_out = info->edid.is_hdmi();
+                display_info->is_standard_srgb_out = info->edid.is_standard_rgb();
+                display_info->audio_format_count = static_cast<uint32_t>(info->edid_audio_.size());
 
-            static_assert(sizeof(display_params.monitor_name) ==
-                    sizeof(edid::Descriptor::Monitor::data) + 1, "Possible overflow");
-            static_assert(sizeof(display_params.monitor_name) ==
-                    sizeof(edid::Descriptor::Monitor::data) + 1, "Possible overflow");
-            strcpy(display_params.manufacturer_id, info->edid.manufacturer_id());
-            strcpy(display_params.monitor_name, info->edid.monitor_name());
-            strcpy(display_params.monitor_serial, info->edid.monitor_serial());
-            display_params.manufacturer_name = info->edid.manufacturer_name();
-
+                static_assert(sizeof(display_info->monitor_name) ==
+                        sizeof(edid::Descriptor::Monitor::data) + 1, "Possible overflow");
+                static_assert(sizeof(display_info->monitor_name) ==
+                        sizeof(edid::Descriptor::Monitor::data) + 1, "Possible overflow");
+                strcpy(display_info->manufacturer_id, info->edid.manufacturer_id());
+                strcpy(display_info->monitor_name, info->edid.monitor_name());
+                strcpy(display_info->monitor_serial, info->edid.monitor_serial());
+                display_info->manufacturer_name = info->edid.manufacturer_name();
+            }
             if (zxlog_level_enabled_etc(DDK_LOG_TRACE)) {
                 const char* manufacturer = strlen(info->edid.manufacturer_name())
                         ? info->edid.manufacturer_name() : info->edid.manufacturer_id();
@@ -378,6 +362,8 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
             zxlogf(INFO, "Ignoring duplicate display\n");
         }
     }
+    if (display_info_actual)
+        *display_info_actual = added_success_count;
 
     task->set_handler([this,
                        added_ptr = added_success.release(), removed_ptr = removed.release(),
@@ -423,12 +409,12 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
     task.release()->Post(loop_.dispatcher());
 }
 
-void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
-                                void** handles, uint32_t handle_count) {
+void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+                                                          const uint64_t* handles,
+                                                          size_t handle_count) {
     // Emit an event called "VSYNC", which is by convention the event
     // that Trace Viewer looks for in its "Highlight VSync" feature.
     TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
-
     fbl::AutoLock lock(&mtx_);
     DisplayInfo* info = nullptr;
     for (auto& display_config : displays_) {
@@ -460,7 +446,7 @@ void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
             // Otherwise the change is done when the last handle_count==info->layer_count
             // images match the handles in the correct order.
             auto node = list_peek_tail_type(&info->images, image_node_t, link);
-            int32_t handle_idx = handle_count - 1;
+            ssize_t handle_idx = handle_count - 1;
             while (handle_idx >= 0 && node != nullptr) {
                 if (handles[handle_idx] != node->self->info().handle) {
                     break;
@@ -541,8 +527,8 @@ void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
     }
 }
 
-zx_status_t Controller::GetAudioFormat(uint64_t display_id, uint32_t fmt_idx,
-                                       audio_stream_format_range_t* fmt_out) {
+zx_status_t Controller::DisplayControllerInterfaceGetAudioFormat(
+    uint64_t display_id, uint32_t fmt_idx, audio_stream_format_range_t* fmt_out) {
     fbl::AutoLock lock(&mtx_);
     auto display = displays_.find(display_id);
     if (!display.IsValid()) {
@@ -650,11 +636,11 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count,
         applied_stamp_ = client_stamp;
     }
 
-    ops_.ops->apply_configuration(ops_.ctx, display_configs, display_count);
+    dc_.ApplyConfiguration(display_configs, display_count);
 }
 
 void Controller::ReleaseImage(Image* image) {
-    ops_.ops->release_image(ops_.ctx, &image->info());
+    dc_.ReleaseImage(&image->info());
 }
 
 void Controller::SetVcMode(uint8_t vc_mode) {
@@ -837,10 +823,12 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
 
 zx_status_t Controller::Bind(fbl::unique_ptr<display::Controller>* device_ptr) {
     zx_status_t status;
-    if (device_get_protocol(parent_, ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL, &ops_)) {
+    display_controller_impl_protocol_t dc_proto;
+    if (device_get_protocol(parent_, ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL, &dc_proto)) {
         ZX_DEBUG_ASSERT_MSG(false, "Display controller bind mismatch");
         return ZX_ERR_NOT_SUPPORTED;
     }
+    dc_ = ddk::DisplayControllerImplProtocolProxy(&dc_proto);
 
     if (device_get_protocol(parent_, ZX_PROTOCOL_I2C_IMPL, &i2c_ops_) == ZX_OK) {
         has_i2c_ops_ = true;
@@ -860,7 +848,8 @@ zx_status_t Controller::Bind(fbl::unique_ptr<display::Controller>* device_ptr) {
     }
     __UNUSED auto ptr = device_ptr->release();
 
-    ops_.ops->set_display_controller_cb(ops_.ctx, this, &dc_cb);
+    display_controller_interface_t intf = {&display_controller_interface_ops_, this};
+    dc_.SetDisplayControllerInterface(&intf);
 
     return ZX_OK;
 }

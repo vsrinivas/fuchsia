@@ -16,6 +16,7 @@
 #include <fbl/unique_ptr.h>
 
 #include <zircon/compiler.h>
+#include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
 #include "backends/pci.h"

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/display-controller.h>
+#include <ddk/protocol/display/controller.h>
 #include <zircon/types.h>
 
 #include "hdmitx.h"

@@ -19,13 +19,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/assert.h>
+#include <zircon/pixelformat.h>
 #include <zircon/syscalls.h>
 
 #define PANEL_DISPLAY_ID 1
 #define DISPLAY_WIDTH 1920
 #define DISPLAY_HEIGHT 1080
 #define DISPLAY_FORMAT ZX_PIXEL_FORMAT_RGB_x888
-static const zx_pixel_format_t supported_pixel_formats = { DISPLAY_FORMAT };
+static zx_pixel_format_t supported_pixel_formats[] = { DISPLAY_FORMAT };
 
 typedef struct image_info {
     zx_handle_t pmt;
@@ -45,24 +46,25 @@ static void populate_added_display_args(imx8m_display_t* display, added_display_
     args->panel.params.height = DISPLAY_HEIGHT;
     args->panel.params.width = DISPLAY_WIDTH;
     args->panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
-    args->pixel_formats = &supported_pixel_formats;
-    args->pixel_format_count = sizeof(supported_pixel_formats) / sizeof(zx_pixel_format_t);
+    args->pixel_format_list = supported_pixel_formats;
+    args->pixel_format_count = countof(supported_pixel_formats);
     args->cursor_info_count = 0;
 }
 
-static void imx8m_set_display_controller_cb(void* ctx, void* cb_ctx, display_controller_cb_t* cb) {
+static void imx8m_set_display_controller_interface(void* ctx,
+                                                   const display_controller_interface_t* intf) {
     imx8m_display_t* display = ctx;
 
     mtx_lock(&display->display_lock);
 
     bool notify_display = io_buffer_is_valid(&display->fbuffer);
-    display->dc_cb = cb;
-    display->dc_cb_ctx = cb_ctx;
+    display->dc_intf = *intf;
 
     added_display_args_t args;
     populate_added_display_args(display, &args);
     if (notify_display) {
-        display->dc_cb->on_displays_changed(display->dc_cb_ctx, &args, 1, NULL, 0);
+        display_controller_interface_on_displays_changed(&display->dc_intf, &args, 1, NULL, 0,
+                                                         NULL, 0, NULL);
     }
     mtx_unlock(&display->display_lock);
 }
@@ -97,7 +99,7 @@ static zx_status_t imx8m_import_vmo_image(void* ctx, image_t* image,
 
     import_info->paddr = paddr[0];
     list_add_head(&display->imported_images, &import_info->node);
-    image->handle = (void*) paddr[0];
+    image->handle = paddr[0];
 
     mtx_unlock(&display->image_lock);
 
@@ -118,7 +120,7 @@ static void imx8m_release_image(void* ctx, image_t* image) {
 
     image_info_t* info;
     list_for_every_entry(&display->imported_images, info, image_info_t, node) {
-        if ((void*) info->paddr == image->handle) {
+        if (info->paddr == image->handle) {
             list_delete(&info->node);
             break;
         }
@@ -132,15 +134,14 @@ static void imx8m_release_image(void* ctx, image_t* image) {
     }
 }
 
-static void imx8m_check_configuration(void* ctx,
-                                      const display_config_t** display_configs,
-                                      uint32_t* display_cfg_result,
-                                      uint32_t** layer_cfg_results,
-                                      uint32_t display_count) {
-    *display_cfg_result = CONFIG_DISPLAY_OK;
+static uint32_t imx8m_check_configuration(void* ctx,
+                                          const display_config_t** display_configs,
+                                          size_t display_count,
+                                          uint32_t** layer_cfg_results,
+                                          size_t* layer_cfg_result_count) {
     if (display_count != 1) {
         ZX_DEBUG_ASSERT(display_count == 0);
-        return;
+        return CONFIG_DISPLAY_OK;
     }
     ZX_DEBUG_ASSERT(display_configs[0]->display_id == PANEL_DISPLAY_ID);
 
@@ -151,11 +152,11 @@ static void imx8m_check_configuration(void* ctx,
     if (display_configs[0]->layer_count != 1) {
         success = display_configs[0]->layer_count == 0;
     } else {
-        primary_layer_t* layer = &display_configs[0]->layers[0]->cfg.primary;
+        primary_layer_t* layer = &display_configs[0]->layer_list[0]->cfg.primary;
         frame_t frame = {
             .x_pos = 0, .y_pos = 0, .width = DISPLAY_WIDTH, .height = DISPLAY_HEIGHT,
         };
-        success = display_configs[0]->layers[0]->type == LAYER_PRIMARY
+        success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY
                 && layer->transform_mode == FRAME_TRANSFORM_IDENTITY
                 && layer->image.width == DISPLAY_WIDTH
                 && layer->image.height == DISPLAY_HEIGHT
@@ -169,18 +170,20 @@ static void imx8m_check_configuration(void* ctx,
         for (unsigned i = 1; i < display_configs[0]->layer_count; i++) {
             layer_cfg_results[0][i] = CLIENT_MERGE_SRC;
         }
+        layer_cfg_result_count[0] = display_configs[0]->layer_count;
     }
     mtx_unlock(&display->display_lock);
+    return CONFIG_DISPLAY_OK;
 }
 
 static void imx8m_apply_configuration(void* ctx, const display_config_t** display_configs,
-                                      uint32_t display_count) {
+                                      size_t display_count) {
     imx8m_display_t* display = ctx;
     mtx_lock(&display->display_lock);
 
     zx_paddr_t addr;
     if (display_count == 1 && display_configs[0]->layer_count) {
-        addr = (zx_paddr_t) display_configs[0]->layers[0]->cfg.primary.image.handle;
+        addr = (zx_paddr_t) display_configs[0]->layer_list[0]->cfg.primary.image.handle;
     } else {
         addr = 0;
     }
@@ -195,8 +198,8 @@ static zx_status_t allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out) 
     return zx_vmo_create_contiguous(display->bti, size, 0, vmo_out);
 }
 
-static display_controller_protocol_ops_t display_controller_ops = {
-    .set_display_controller_cb = imx8m_set_display_controller_cb,
+static display_controller_impl_protocol_ops_t display_controller_ops = {
+    .set_display_controller_interface = imx8m_set_display_controller_interface,
     .import_vmo_image = imx8m_import_vmo_image,
     .release_image = imx8m_release_image,
     .check_configuration = imx8m_check_configuration,
@@ -247,10 +250,11 @@ static int main_hdmi_thread(void *arg) {
 
     writel(io_buffer_phys(&display->fbuffer), display->mmio_dc.vaddr +  0x80c0);
 
-    if (display->dc_cb) {
+    if (display->dc_intf.ops) {
         added_display_args_t args;
         populate_added_display_args(display, &args);
-        display->dc_cb->on_displays_changed(display->dc_cb_ctx, &args, 1, NULL, 0);
+        display_controller_interface_on_displays_changed(&display->dc_intf, &args, 1, NULL, 0,
+                                                         NULL, 0, NULL);
     }
     mtx_unlock(&display->display_lock);
 

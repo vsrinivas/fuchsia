@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/display-controller.h>
+#include <ddk/protocol/display/controller.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <hwreg/mmio.h>

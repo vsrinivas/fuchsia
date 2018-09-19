@@ -29,6 +29,7 @@ MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
 MODULE_LIBS := $(LOCAL_LIBS)
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-display-controller \
     system/banjo/ddk-protocol-pci \
 
 include make/module.mk
@@ -46,6 +47,7 @@ MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
 MODULE_LIBS := $(LOCAL_LIBS)
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-display-controller \
     system/banjo/ddk-protocol-pci \
 
 include make/module.mk
@@ -63,6 +65,7 @@ MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
 MODULE_LIBS := $(LOCAL_LIBS)
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-display-controller \
     system/banjo/ddk-protocol-pci \
 
 include make/module.mk
@@ -80,6 +83,7 @@ MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
 MODULE_LIBS := $(LOCAL_LIBS)
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-display-controller \
     system/banjo/ddk-protocol-pci \
 
 include make/module.mk

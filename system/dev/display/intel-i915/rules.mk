@@ -38,6 +38,7 @@ MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 MODULE_FIDL_LIBS := system/fidl/zircon-backlight
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-display-controller \
     system/banjo/ddk-protocol-i2c-impl \
     system/banjo/ddk-protocol-intel-gpu-core \
     system/banjo/ddk-protocol-pci \

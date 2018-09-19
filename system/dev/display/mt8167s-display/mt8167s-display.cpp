@@ -5,12 +5,13 @@
 #include "common.h"
 #include "registers-ovl.h"
 #include <fbl/auto_call.h>
+#include <zircon/pixelformat.h>
 
 namespace mt8167s_display {
 
 namespace {
 // List of supported pixel formats
-const zx_pixel_format_t kSupportedPixelFormats = {ZX_PIXEL_FORMAT_RGB_x888};
+zx_pixel_format_t kSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_RGB_x888};
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
 
 struct ImageInfo {
@@ -28,28 +29,30 @@ void Mt8167sDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
     args->panel.params.height = height_;
     args->panel.params.width = width_;
     args->panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
-    args->pixel_formats = &kSupportedPixelFormats;
-    args->pixel_format_count = sizeof(kSupportedPixelFormats) / sizeof(zx_pixel_format_t);
+    args->pixel_format_list = kSupportedPixelFormats;
+    args->pixel_format_count = countof(kSupportedPixelFormats);
     args->cursor_info_count = 0;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-uint32_t Mt8167sDisplay::ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
+uint32_t Mt8167sDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
+                                                                  zx_pixel_format_t format) {
     return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void Mt8167sDisplay::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb) {
+void Mt8167sDisplay::DisplayControllerImplSetDisplayControllerInterface(
+    const display_controller_interface_t* intf) {
     fbl::AutoLock lock(&display_lock_);
-    dc_cb_ = cb;
-    dc_cb_ctx_ = cb_ctx;
+    dc_intf_ = ddk::DisplayControllerInterfaceProxy(intf);
     added_display_args_t args;
     PopulateAddedDisplayArgs(&args);
-    dc_cb_->on_displays_changed(dc_cb_ctx_, &args, 1, NULL, 0);
+    dc_intf_.OnDisplaysChanged(&args, 1, NULL, 0, NULL, 0, NULL);
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t Mt8167sDisplay::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset) {
+zx_status_t Mt8167sDisplay::DisplayControllerImplImportVmoImage(image_t* image,
+                                                                zx_handle_t vmo, size_t offset) {
     ImageInfo* import_info = new(ImageInfo);
     if (import_info == nullptr) {
         return ZX_ERR_NO_MEMORY;
@@ -62,18 +65,18 @@ zx_status_t Mt8167sDisplay::ImportVmoImage(image_t* image, const zx::vmo& vmo, s
      });
 
     fbl::AutoLock lock(&image_lock_);
-    if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats) {
+    if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats[0]) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    uint32_t stride = ComputeLinearStride(image->width, image->pixel_format);
+    uint32_t stride = DisplayControllerImplComputeLinearStride(image->width, image->pixel_format);
     unsigned pixel_size = ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
     size_t size = ROUNDUP((stride * image->height * pixel_size) +
                           (offset & (PAGE_SIZE - 1)), PAGE_SIZE);
     zx_paddr_t paddr;
     zx_status_t status = zx_bti_pin(bti_.get(),
                                     ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
-                                    vmo.get(), offset & ~(PAGE_SIZE - 1), size, &paddr, 1,
+                                    vmo, offset & ~(PAGE_SIZE - 1), size, &paddr, 1,
                                     &import_info->pmt);
     if (status != ZX_OK) {
         DISP_ERROR("Could not pin bit\n");
@@ -82,13 +85,13 @@ zx_status_t Mt8167sDisplay::ImportVmoImage(image_t* image, const zx::vmo& vmo, s
 
     import_info->paddr = paddr;
     list_add_head(&imported_images_, &import_info->node);
-    image->handle = reinterpret_cast<void*>(paddr);
+    image->handle = paddr;
     cleanup.cancel();
     return status;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void Mt8167sDisplay::ReleaseImage(image_t* image) {
+void Mt8167sDisplay::DisplayControllerImplReleaseImage(image_t* image) {
     fbl::AutoLock lock(&image_lock_);
     zx_paddr_t image_paddr = reinterpret_cast<zx_paddr_t>(image->handle);
     ImageInfo* info;
@@ -105,14 +108,12 @@ void Mt8167sDisplay::ReleaseImage(image_t* image) {
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void Mt8167sDisplay::CheckConfiguration(const display_config_t** display_configs,
-                                        uint32_t* display_cfg_result,
-                                        uint32_t** layer_cfg_results,
-                                        uint32_t display_count) {
-    *display_cfg_result = CONFIG_DISPLAY_OK;
+uint32_t Mt8167sDisplay::DisplayControllerImplCheckConfiguration(
+    const display_config_t** display_configs, size_t display_count,
+    uint32_t** layer_cfg_results, size_t* layer_cfg_result_count) {
     if (display_count != 1) {
         ZX_DEBUG_ASSERT(display_count == 0);
-        return;
+        return CONFIG_DISPLAY_OK;
     }
     ZX_DEBUG_ASSERT(display_configs[0]->display_id == PANEL_DISPLAY_ID);
 
@@ -122,11 +123,11 @@ void Mt8167sDisplay::CheckConfiguration(const display_config_t** display_configs
     if (display_configs[0]->layer_count != 1) {
         success = display_configs[0]->layer_count == 0;
     } else {
-        const primary_layer_t& layer = display_configs[0]->layers[0]->cfg.primary;
+        const primary_layer_t& layer = display_configs[0]->layer_list[0]->cfg.primary;
         frame_t frame = {
             .x_pos = 0, .y_pos = 0, .width = width_, .height = height_,
         };
-        success = display_configs[0]->layers[0]->type == LAYER_PRIMARY &&
+        success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
                   layer.transform_mode == FRAME_TRANSFORM_IDENTITY &&
                   layer.image.width == width_ && layer.image.height == height_ &&
                   memcmp(&layer.dest_frame, &frame, sizeof(frame_t)) == 0 &&
@@ -139,18 +140,19 @@ void Mt8167sDisplay::CheckConfiguration(const display_config_t** display_configs
             layer_cfg_results[0][i] = CLIENT_MERGE_SRC;
         }
     }
+    return CONFIG_DISPLAY_OK;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void Mt8167sDisplay::ApplyConfiguration(const display_config_t** display_configs,
-                                        uint32_t display_count) {
+void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
+    const display_config_t** display_configs, size_t display_count) {
     ZX_DEBUG_ASSERT(display_configs);
 
     fbl::AutoLock lock(&display_lock_);
     if (display_count == 1 && display_configs[0]->layer_count) {
         //TODO(payamm): if HDMI support is added + plug n play, we need to validate configuration
         zx_paddr_t addr =
-            reinterpret_cast<zx_paddr_t>(display_configs[0]->layers[0]->cfg.primary.image.handle);
+            reinterpret_cast<zx_paddr_t>(display_configs[0]->layer_list[0]->cfg.primary.image.handle);
         current_image_valid_ = true;
         // write to register and hope for the best
         ovl_mmio_->Write32(static_cast<uint32_t>(addr), OVL_LX_ADDR(0));
@@ -161,7 +163,7 @@ void Mt8167sDisplay::ApplyConfiguration(const display_config_t** display_configs
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t Mt8167sDisplay::AllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
+zx_status_t Mt8167sDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
     return zx_vmo_create_contiguous(bti_.get(), size, 0, vmo_out);
 }
 
@@ -179,11 +181,10 @@ int Mt8167sDisplay::VSyncThread() {
             break;
         }
         fbl::AutoLock lock(&display_lock_);
-        void* live = reinterpret_cast<void*>(current_image_);
+        uint64_t live = current_image_;
         bool current_image_valid = current_image_valid_;
-        if (dc_cb_) {
-            dc_cb_->on_display_vsync(dc_cb_ctx_, kDisplayId, timestamp.get(),
-                                     &live, current_image_valid);
+        if (dc_intf_.is_valid()) {
+            dc_intf_.OnDisplayVsync(kDisplayId, timestamp.get(), &live, current_image_valid);
         }
     }
     return ZX_OK;

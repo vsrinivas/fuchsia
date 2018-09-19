@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/display-controller.h>
+#include <ddk/protocol/display/controller.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <lib/zx/vmo.h>

@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <zircon/compiler.h>
+#include <zircon/pixelformat.h>
 #include <zircon/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/bti.h>
@@ -17,7 +18,7 @@
 #include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/debug.h>
 
-#include <ddktl/protocol/display-controller.h>
+#include <ddktl/protocol/display/controller.h>
 #include <ddktl/device.h>
 
 #include <fbl/unique_ptr.h>
@@ -45,7 +46,7 @@ using ImportedImageBitmap = bitmap::RawBitmapGeneric<bitmap::FixedStorage<kMaxIm
 using DeviceType = ddk::Device<AstroDisplay, ddk::Unbindable>;
 
 class AstroDisplay : public DeviceType,
-                     public ddk::DisplayControllerProtocol<AstroDisplay> {
+                     public ddk::DisplayControllerImplProtocol<AstroDisplay> {
 public:
     AstroDisplay(zx_device_t* parent, uint32_t width, uint32_t height)
         : DeviceType(parent), width_(width), height_(height) {}
@@ -54,15 +55,18 @@ public:
     zx_status_t Bind();
 
     // Required functions needed to implement Display Controller Protocol
-    void SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb);
-    zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
-    void ReleaseImage(image_t* image);
-    void CheckConfiguration(const display_config_t** display_config,
-                            uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
-                            uint32_t display_count);
-    void ApplyConfiguration(const display_config_t** display_config, uint32_t display_count);
-    uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format);
-    zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);
+    void DisplayControllerImplSetDisplayControllerInterface(
+            const display_controller_interface_t* intf);
+    zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx_handle_t vmo, size_t offset);
+    void DisplayControllerImplReleaseImage(image_t* image);
+    uint32_t DisplayControllerImplCheckConfiguration(const display_config_t** display_configs,
+                                                     size_t display_count,
+                                                     uint32_t** layer_cfg_results,
+                                                     size_t* layer_cfg_result_count);
+    void DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
+                                             size_t display_count);
+    uint32_t DisplayControllerImplComputeLinearStride(uint32_t width, zx_pixel_format_t format);
+    zx_status_t DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out);
 
     // Required functions for DeviceType
     void DdkUnbind();
@@ -125,11 +129,10 @@ private:
     DisplaySetting                      disp_setting_;
 
     // Display controller related data
-    display_controller_cb_t*            dc_cb_ TA_GUARDED(display_lock_);
-    void*                               dc_cb_ctx_ TA_GUARDED(display_lock_);
+    ddk::DisplayControllerInterfaceProxy dc_intf_ TA_GUARDED(display_lock_);
 
     // Simple hashtable
-    ImportedImageBitmap                imported_images_ TA_GUARDED(image_lock_);;
+    ImportedImageBitmap                  imported_images_ TA_GUARDED(image_lock_);;
 
     // Objects
     fbl::unique_ptr<astro_display::Vpu>                 vpu_;

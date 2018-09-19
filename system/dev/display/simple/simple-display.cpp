@@ -7,10 +7,11 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/pci-lib.h>
-#include <ddktl/protocol/display-controller.h>
+#include <ddktl/protocol/display/controller.h>
 #include <hw/pci.h>
 
 #include <assert.h>
+#include <zircon/pixelformat.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -24,11 +25,11 @@
 // implement display controller protocol
 static constexpr uint64_t kDisplayId = 1;
 
-static void* const kImageHandle = reinterpret_cast<void*>(0xdecafc0ffee);
+static constexpr uint64_t kImageHandle = 0xdecafc0ffee;
 
-void SimpleDisplay::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb) {
-    cb_ctx_ = cb_ctx;
-    cb_ = cb;
+void SimpleDisplay::DisplayControllerImplSetDisplayControllerInterface(
+    const display_controller_interface_t* intf) {
+    intf_ = ddk::DisplayControllerInterfaceProxy(intf);
 
     added_display_args_t args = {};
     args.display_id = kDisplayId;
@@ -36,17 +37,19 @@ void SimpleDisplay::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t
     args.panel.params.height = height_;
     args.panel.params.width = width_;
     args.panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
-    args.pixel_formats = &format_;
+    args.pixel_format_list = &format_;
     args.pixel_format_count = 1;
 
-    cb->on_displays_changed(cb_ctx, &args, 1, nullptr, 0);
+    intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
 }
 
-zx_status_t SimpleDisplay::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset) {
+zx_status_t SimpleDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx_handle_t vmo,
+                                                           size_t offset) {
     zx_info_handle_basic_t import_info;
     size_t actual, avail;
-    zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_BASIC,
-                                      &import_info, sizeof(import_info), &actual, &avail);
+    zx_status_t status = zx::unowned_vmo(vmo)->get_info(ZX_INFO_HANDLE_BASIC,
+                                                        &import_info, sizeof(import_info), &actual,
+                                                        &avail);
     if (status != ZX_OK) {
         return status;
     }
@@ -61,29 +64,28 @@ zx_status_t SimpleDisplay::ImportVmoImage(image_t* image, const zx::vmo& vmo, si
     return ZX_OK;
 }
 
-void SimpleDisplay::ReleaseImage(image_t* image) {
+void SimpleDisplay::DisplayControllerImplReleaseImage(image_t* image) {
     // noop
 }
 
-void SimpleDisplay::CheckConfiguration(const display_config_t** display_configs,
-                                       uint32_t* display_cfg_result,
-                                       uint32_t** layer_cfg_results,
-                                       uint32_t display_count) {
-    *display_cfg_result = CONFIG_DISPLAY_OK;
+uint32_t SimpleDisplay::DisplayControllerImplCheckConfiguration(
+    const display_config_t** display_configs, size_t display_count, uint32_t** layer_cfg_results,
+    size_t* layer_cfg_result_count) {
+
     if (display_count != 1) {
         ZX_DEBUG_ASSERT(display_count == 0);
-        return;
+        return CONFIG_DISPLAY_OK;
     }
     ZX_DEBUG_ASSERT(display_configs[0]->display_id == kDisplayId);
     bool success;
     if (display_configs[0]->layer_count != 1) {
         success = false;
     } else {
-        primary_layer_t* layer = &display_configs[0]->layers[0]->cfg.primary;
+        primary_layer_t* layer = &display_configs[0]->layer_list[0]->cfg.primary;
         frame_t frame = {
                 .x_pos = 0, .y_pos = 0, .width = width_, .height = height_,
         };
-        success = display_configs[0]->layers[0]->type == LAYER_PRIMARY
+        success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY
                 && layer->transform_mode == FRAME_TRANSFORM_IDENTITY
                 && layer->image.width == width_
                 && layer->image.height == height_
@@ -97,24 +99,26 @@ void SimpleDisplay::CheckConfiguration(const display_config_t** display_configs,
         for (unsigned i = 1; i < display_configs[0]->layer_count; i++) {
             layer_cfg_results[0][i] = CLIENT_MERGE_SRC;
         }
+        layer_cfg_result_count[0] = display_configs[0]->layer_count;
     }
+    return CONFIG_DISPLAY_OK;
 }
 
-void SimpleDisplay::ApplyConfiguration(const display_config_t** display_config,
-                                       uint32_t display_count) {
+void SimpleDisplay::DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
+                                                        size_t display_count) {
     bool has_image = display_count != 0 && display_config[0]->layer_count != 0;
-    void* handles[] = { kImageHandle };
-    if (cb_) {
-        cb_->on_display_vsync(cb_ctx_, kDisplayId, zx_clock_get(ZX_CLOCK_MONOTONIC),
-                              handles, has_image);
+    uint64_t handles[] = { kImageHandle };
+    if (intf_.is_valid()) {
+        intf_.OnDisplayVsync(kDisplayId, zx_clock_get(ZX_CLOCK_MONOTONIC), handles, has_image);
     }
 }
 
-uint32_t SimpleDisplay::ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
+uint32_t SimpleDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
+                                                             zx_pixel_format_t format) {
     return (width == width_ && format == format_) ? stride_ : 0;
 }
 
-zx_status_t SimpleDisplay::AllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
+zx_status_t SimpleDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
     zx_info_handle_count handle_count;
     size_t actual, avail;
     zx_status_t status = framebuffer_mmio_.get_vmo()->get_info(

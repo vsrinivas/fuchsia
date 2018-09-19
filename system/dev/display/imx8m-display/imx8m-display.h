@@ -14,7 +14,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/display-controller.h>
+#include <ddk/protocol/display/controller.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 #include <threads.h>
@@ -38,7 +38,6 @@ typedef struct {
     mmio_buffer_t                       mmio_dc;
     io_buffer_t                         fbuffer;
 
-    display_controller_cb_t*            dc_cb;
-    void*                               dc_cb_ctx;
+    display_controller_interface_t      dc_intf;
     list_node_t                         imported_images;
 } imx8m_display_t;

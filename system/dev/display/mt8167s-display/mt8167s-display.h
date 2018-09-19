@@ -13,7 +13,7 @@
 #include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
-#include <ddktl/protocol/display-controller.h>
+#include <ddktl/protocol/display/controller.h>
 
 #include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
@@ -31,7 +31,7 @@ class Mt8167sDisplay;
 using DeviceType = ddk::Device<Mt8167sDisplay, ddk::Unbindable>;
 
 class Mt8167sDisplay : public DeviceType,
-                       public ddk::DisplayControllerProtocol<Mt8167sDisplay> {
+                       public ddk::DisplayControllerImplProtocol<Mt8167sDisplay> {
 public:
     Mt8167sDisplay(zx_device_t* parent, uint32_t width, uint32_t height)
         : DeviceType(parent), width_(width), height_(height) {}
@@ -40,15 +40,17 @@ public:
     zx_status_t Bind();
 
     // Required functions needed to implement Display Controller Protocol
-    void SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb);
-    zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
-    void ReleaseImage(image_t* image);
-    void CheckConfiguration(const display_config_t** display_config,
-                            uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
-                            uint32_t display_count);
-    void ApplyConfiguration(const display_config_t** display_config, uint32_t display_count);
-    uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format);
-    zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);
+    void DisplayControllerImplSetDisplayControllerInterface(const display_controller_interface_t* intf);
+    zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx_handle_t vmo, size_t offset);
+    void DisplayControllerImplReleaseImage(image_t* image);
+    uint32_t DisplayControllerImplCheckConfiguration(const display_config_t** display_config,
+                                                     size_t display_count,
+                                                     uint32_t** layer_cfg_results,
+                                                     size_t* layer_cfg_result_count);
+    void DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
+                                                 size_t display_count);
+    uint32_t DisplayControllerImplComputeLinearStride(uint32_t width, zx_pixel_format_t format);
+    zx_status_t DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out);
 
     int VSyncThread();
 
@@ -90,8 +92,7 @@ private:
     list_node_t imported_images_ TA_GUARDED(image_lock_);
 
     // Display controller related data
-    display_controller_cb_t* dc_cb_ TA_GUARDED(display_lock_);
-    void* dc_cb_ctx_ TA_GUARDED(display_lock_);
+    ddk::DisplayControllerInterfaceProxy dc_intf_ TA_GUARDED(display_lock_);
 };
 
 } // namespace mt8167s_display

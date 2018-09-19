@@ -7,8 +7,9 @@
 #include <semaphore.h>
 #include <stdlib.h>
 
-#include <ddk/protocol/display-controller.h>
+#include <ddk/protocol/display/controller.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/pixelformat.h>
 #include <zircon/compiler.h>
 
 #include "device.h"
@@ -37,17 +38,16 @@ public:
 
 private:
     // DDK driver hooks
-    static void virtio_gpu_set_display_controller_cb(
-            void* ctx, void* cb_ctx, display_controller_cb_t* cb);
+    static void virtio_gpu_set_display_controller_interface(
+            void* ctx, const display_controller_interface_t* intf);
     static zx_status_t virtio_gpu_import_vmo_image(
             void* ctx, image_t* image, zx_handle_t vmo, size_t offset);
     static void virtio_gpu_release_image(void* ctx, image_t* image);
-    static void virtio_gpu_check_configuration(
-            void* ctx, const display_config_t** display_configs,
-            uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
-            uint32_t display_count);
+    static uint32_t virtio_gpu_check_configuration(
+        void* ctx, const display_config_t** display_configs, size_t display_count,
+        uint32_t** layer_cfg_results, size_t* layer_cfg_result_count);
     static void virtio_gpu_apply_configuration(
-            void* ctx, const display_config_t** display_configs, uint32_t display_count);
+            void* ctx, const display_config_t** display_configs, size_t display_count);
     static uint32_t virtio_gpu_compute_linear_stride(
             void* ctx, uint32_t width, zx_pixel_format_t format);
     static zx_status_t virtio_gpu_allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out);
@@ -71,7 +71,7 @@ private:
     Ring vring_ = {this};
 
     // display protocol ops
-    display_controller_protocol_ops_t display_proto_ops_ = {};
+    display_controller_impl_protocol_ops_t display_proto_ops_ = {};
 
     // gpu op
     io_buffer_t gpu_req_;
@@ -93,8 +93,7 @@ private:
     cnd_t flush_cond_ = {};
     bool flush_pending_ = false;
 
-    display_controller_cb_t* dc_cb_;
-    void* dc_cb_ctx_;
+    display_controller_interface_t dc_intf_;
 
     struct imported_image* current_fb_;
     struct imported_image* displayed_fb_;

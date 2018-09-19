@@ -1,0 +1,32 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zircon.device.audio;
+
+enum AudioSampleFormat : uint32 {
+    BITSTREAM     = 0x1;
+    @8BIT         = 0x2;
+    @16BIT        = 0x4;
+    @20BIT_PACKED = 0x8;
+    @24BIT_PACKED = 0x10;
+    @20BIT_IN32   = 0x20;
+    @24BIT_IN32   = 0x40;
+    @32BIT        = 0x80;
+    @32BIT_FLOAT  = 0x100;
+
+    FLAG_UNSIGNED      = 0x4000;
+    FLAG_INVERT_ENDIAN = 0x8000;
+    FLAG_MASK = 0xC000;
+};
+
+[repr="C", Packed]
+struct AudioStreamFormatRange {
+    AudioSampleFormat   sample_formats;
+    uint32              min_frames_per_second;
+    uint32              max_frames_per_second;
+    uint8               min_channels;
+    uint8               max_channels;
+    uint16              flags;
+};
+

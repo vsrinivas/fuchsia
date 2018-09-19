@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <ddk/protocol/display-controller.h>
+#include <ddk/protocol/display/controller.h>
 #include <fbl/atomic.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
@@ -130,9 +130,9 @@ public:
     zx_status_t Init(zx_handle_t server_handle);
 
     void OnDisplaysChanged(const uint64_t* displays_added,
-                           uint32_t added_count,
+                           size_t added_count,
                            const uint64_t* displays_removed,
-                           uint32_t removed_count);
+                          size_t removed_count);
     void SetOwnership(bool is_owner);
     void ApplyConfig();
 
@@ -255,9 +255,9 @@ public:
 
     // Requires holding controller_->mtx() lock
     void OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
-                        uint64_t* image_ids, uint32_t count);
-    void OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_count,
-                           const uint64_t* displays_removed, uint32_t removed_count);
+                        uint64_t* image_ids, size_t count);
+    void OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
+                           const uint64_t* displays_removed, size_t removed_count);
     void SetOwnership(bool is_owner);
     void ReapplyConfig();
 
