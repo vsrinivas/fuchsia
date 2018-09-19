@@ -36,11 +36,10 @@ void GetPageFromOpenedRow(fxl::StringView row, std::string* ledger_name,
   *page_id = row.substr(kOpenedPagePrefix.size() + ledger_name_size).ToString();
 }
 
-// An iterator over PageUsageDb::PageInfo.
+// An iterator over PageInfo.
 // This class is a wrapper from a LevelDB iterator, deserializing the
 // ExtendedStringView key-value pairs to PageInfo entries.
-class PageInfoIterator final
-    : public storage::Iterator<const PageUsageDb::PageInfo> {
+class PageInfoIterator final : public storage::Iterator<const PageInfo> {
  public:
   explicit PageInfoIterator(
       std::unique_ptr<storage::Iterator<const std::pair<
@@ -52,7 +51,7 @@ class PageInfoIterator final
 
   ~PageInfoIterator() override {}
 
-  storage::Iterator<const PageUsageDb::PageInfo>& Next() override {
+  storage::Iterator<const PageInfo>& Next() override {
     it_->Next();
     PrepareEntry();
     return *this;
@@ -62,13 +61,9 @@ class PageInfoIterator final
 
   storage::Status GetStatus() const override { return it_->GetStatus(); }
 
-  const PageUsageDb::PageInfo& operator*() const override {
-    return *(page_.get());
-  }
+  const PageInfo& operator*() const override { return *(page_.get()); }
 
-  const PageUsageDb::PageInfo* operator->() const override {
-    return page_.get();
-  }
+  const PageInfo* operator->() const override { return page_.get(); }
 
  private:
   // Updates `page_` with page info extracted from the current key-value in
@@ -78,14 +73,14 @@ class PageInfoIterator final
       page_.reset(nullptr);
       return;
     }
-    page_ = std::make_unique<PageUsageDb::PageInfo>();
+    page_ = std::make_unique<PageInfo>();
 
     const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>&
         key_value = **it_;
     GetPageFromOpenedRow(key_value.first, &(page_->ledger_name),
                          &(page_->page_id));
     page_->timestamp =
-        zx::time(storage::DeserializeNumber<zx_time_t>(key_value.second));
+        zx::time_utc(storage::DeserializeNumber<zx_time_t>(key_value.second));
   }
 
   std::unique_ptr<storage::Iterator<const std::pair<
@@ -93,7 +88,7 @@ class PageInfoIterator final
       it_;
 
   // The current page info served by the iterator.
-  std::unique_ptr<PageUsageDb::PageInfo> page_;
+  std::unique_ptr<PageInfo> page_;
 };
 }  // namespace
 
@@ -160,7 +155,7 @@ Status PageUsageDb::MarkAllPagesClosed(coroutine::CoroutineHandler* handler) {
 
 Status PageUsageDb::GetPages(
     coroutine::CoroutineHandler* handler,
-    std::unique_ptr<storage::Iterator<const PageUsageDb::PageInfo>>* pages) {
+    std::unique_ptr<storage::Iterator<const PageInfo>>* pages) {
   std::unique_ptr<storage::Iterator<const std::pair<
       convert::ExtendedStringView, convert::ExtendedStringView>>>
       it;

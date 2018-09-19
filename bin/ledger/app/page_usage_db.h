@@ -9,10 +9,10 @@
 #include <memory>
 
 #include <lib/callback/operation_serializer.h>
-#include <zx/time.h>
 
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/db.h"
 #include "peridot/bin/ledger/storage/impl/leveldb.h"
@@ -32,16 +32,6 @@ namespace ledger {
 // - Value: "<timestamp>" or timestamp 0 for open pages
 class PageUsageDb {
  public:
-  // Holds information on when a page was last used.
-  struct PageInfo {
-    std::string ledger_name;
-    storage::PageId page_id;
-    // The timestamp in UTC of when the page was last closed, as an indication
-    // of when it was last used. If the page is currently open, the value is set
-    // to zx::time(0).
-    zx::time timestamp;
-  };
-
   PageUsageDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path);
   ~PageUsageDb();
 
@@ -73,9 +63,8 @@ class PageUsageDb {
 
   // Updates |pages| to contain an iterator over all entries of page
   // information.
-  Status GetPages(
-      coroutine::CoroutineHandler* handler,
-      std::unique_ptr<storage::Iterator<const PageUsageDb::PageInfo>>* pages);
+  Status GetPages(coroutine::CoroutineHandler* handler,
+                  std::unique_ptr<storage::Iterator<const PageInfo>>* pages);
 
  private:
   // Inserts the given |key|-|value| pair in the underlying database.

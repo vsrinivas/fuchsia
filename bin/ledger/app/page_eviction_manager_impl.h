@@ -103,7 +103,7 @@ class PageEvictionManagerImpl : public PageEvictionManager {
   // Computes the list of PageInfo for all pages that are not currently open,
   // ordered by the timestamp of their last usage, in ascending order.
   Status GetPagesByTimestamp(coroutine::CoroutineHandler* handler,
-                             std::vector<PageUsageDb::PageInfo>* pages_info);
+                             std::vector<PageInfo>* pages_info);
 
   // Marks the given page as evicted in the page usage database.
   void MarkPageEvicted(std::string ledger_name, storage::PageId page_id);

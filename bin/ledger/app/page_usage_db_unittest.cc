@@ -52,7 +52,7 @@ TEST_F(PageUsageDbTest, GetPagesEmpty) {
     std::string page_id(::fuchsia::ledger::kPageIdSize, 'p');
 
     EXPECT_EQ(Status::OK, db_.Init());
-    std::unique_ptr<storage::Iterator<const PageUsageDb::PageInfo>> pages;
+    std::unique_ptr<storage::Iterator<const PageInfo>> pages;
     EXPECT_EQ(Status::OK, db_.GetPages(handler, &pages));
 
     EXPECT_EQ(storage::Status::OK, pages->GetStatus());
@@ -70,7 +70,7 @@ TEST_F(PageUsageDbTest, MarkPageOpened) {
     EXPECT_EQ(Status::OK, db_.MarkPageOpened(handler, ledger_name, page_id));
 
     // Expect to find a single entry with 0 timestamp.
-    std::unique_ptr<storage::Iterator<const PageUsageDb::PageInfo>> pages;
+    std::unique_ptr<storage::Iterator<const PageInfo>> pages;
     EXPECT_EQ(Status::OK, db_.GetPages(handler, &pages));
 
     EXPECT_EQ(storage::Status::OK, pages->GetStatus());
@@ -96,7 +96,7 @@ TEST_F(PageUsageDbTest, MarkPageOpenedAndClosed) {
     EXPECT_EQ(Status::OK, db_.MarkPageClosed(handler, ledger_name, page_id));
 
     // Expect to find a single entry with timestamp > 0.
-    std::unique_ptr<storage::Iterator<const PageUsageDb::PageInfo>> pages;
+    std::unique_ptr<storage::Iterator<const PageInfo>> pages;
     EXPECT_EQ(Status::OK, db_.GetPages(handler, &pages));
 
     EXPECT_EQ(storage::Status::OK, pages->GetStatus());
@@ -132,11 +132,11 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
               db_.MarkPageClosed(handler, ledger_name, page_ids[0]));
 
     // Expect to find a 4 entries with timestamp equal to 0.
-    std::unique_ptr<storage::Iterator<const PageUsageDb::PageInfo>> pages;
+    std::unique_ptr<storage::Iterator<const PageInfo>> pages;
     EXPECT_EQ(Status::OK, db_.GetPages(handler, &pages));
 
     int open_pages_count = 0;
-    zx::time page_0_timestamp(0);
+    zx::time_utc page_0_timestamp(0);
     for (int i = 0; i < N; ++i) {
       EXPECT_EQ(storage::Status::OK, pages->GetStatus());
       ASSERT_TRUE(pages->Valid());
@@ -160,7 +160,7 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
     EXPECT_EQ(Status::OK, db_.MarkAllPagesClosed(handler));
 
     EXPECT_EQ(Status::OK, db_.GetPages(handler, &pages));
-    zx::time timestamp(0);
+    zx::time_utc timestamp(0);
     for (int i = 0; i < N; ++i) {
       EXPECT_EQ(storage::Status::OK, pages->GetStatus());
       ASSERT_TRUE(pages->Valid());

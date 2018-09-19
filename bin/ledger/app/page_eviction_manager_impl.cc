@@ -157,7 +157,7 @@ void PageEvictionManagerImpl::TryEvictPages(
         // CanEvictSyncedPage is an expensive operation. Get the sorted list of
         // all pages first and call CanEvictSyncedPage exactly as many times as
         // necessary.
-        std::vector<PageUsageDb::PageInfo> pages;
+        std::vector<PageInfo> pages;
         status = GetPagesByTimestamp(handler, &pages);
         if (status != Status::OK) {
           callback(status);
@@ -344,15 +344,14 @@ Status PageEvictionManagerImpl::CanEvictEmptyPage(
 }
 
 Status PageEvictionManagerImpl::GetPagesByTimestamp(
-    coroutine::CoroutineHandler* handler,
-    std::vector<PageUsageDb::PageInfo>* pages_info) {
-  std::unique_ptr<storage::Iterator<const PageUsageDb::PageInfo>> pages_it;
+    coroutine::CoroutineHandler* handler, std::vector<PageInfo>* pages_info) {
+  std::unique_ptr<storage::Iterator<const PageInfo>> pages_it;
   Status status = db_.GetPages(handler, &pages_it);
   if (status != Status::OK) {
     return status;
   }
 
-  std::vector<PageUsageDb::PageInfo> pages;
+  std::vector<PageInfo> pages;
   while (pages_it->Valid()) {
     // Sort out pages that are currently in use, i.e. those for which
     // timestamp is 0.
@@ -364,8 +363,7 @@ Status PageEvictionManagerImpl::GetPagesByTimestamp(
 
   // Order pages by the last used timestamp.
   std::sort(pages.begin(), pages.end(),
-            [](const PageUsageDb::PageInfo& info1,
-               const PageUsageDb::PageInfo& info2) {
+            [](const PageInfo& info1, const PageInfo& info2) {
               if (info1.timestamp != info2.timestamp) {
                 return info1.timestamp < info2.timestamp;
               }
