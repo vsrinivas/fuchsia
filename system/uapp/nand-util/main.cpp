@@ -7,8 +7,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <lib/fzl/mapped-vmo.h>
+#include <lib/cksum.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/device/nand.h>
@@ -36,9 +38,12 @@ Options:
   --bbt (-t) : Display bad block info.
   --read (-r) --absolute xxx : Read the page number xxx (0-based).
   --erase (-e) --block xxx : Erase the block number xxx (0-based).
+  --check (-c) : Looks for read errors on the device.
   --absolute (-a) xxx : Use an absolute page number.
   --page (-p) xxx : Use the xxx page number (from within a block).
   --block (-b) xxx : Use the xxx block number.
+  --count (-n) xxx : Limit the operation to xxx blocks.
+                     Only supported with --check.
 )""";
 
 // Configuration info (what to do).
@@ -47,10 +52,13 @@ struct Config {
     uint32_t page_num;
     uint32_t block_num;
     uint32_t abs_page;
+    uint32_t count;
+    int actions;
     bool info;
     bool bbt;
     bool read;
     bool erase;
+    bool read_check;
 };
 
 // Broker device wrapper.
@@ -213,14 +221,16 @@ bool GetOptions(int argc, char** argv, Config* config) {
             {"bbt", no_argument, nullptr, 't'},
             {"read", no_argument, nullptr, 'r'},
             {"erase", no_argument, nullptr, 'e'},
+            {"check", no_argument, nullptr, 'c'},
             {"page", required_argument, nullptr, 'p'},
             {"block", required_argument, nullptr, 'b'},
             {"absolute", required_argument, nullptr, 'a'},
+            {"count", required_argument, nullptr, 'n'},
             {"help", no_argument, nullptr, 'h'},
             {nullptr, 0, nullptr, 0},
         };
         int opt_index;
-        int c = getopt_long(argc, argv, "d:irtep:b:a:h", options, &opt_index);
+        int c = getopt_long(argc, argv, "d:irtecp:b:a:n:h", options, &opt_index);
         if (c < 0) {
             break;
         }
@@ -233,12 +243,19 @@ bool GetOptions(int argc, char** argv, Config* config) {
             break;
         case 't':
             config->bbt = true;
+            config->actions++;
             break;
         case 'r':
             config->read = true;
+            config->actions++;
             break;
         case 'e':
             config->erase = true;
+            config->actions++;
+            break;
+        case 'c':
+            config->read_check = true;
+            config->actions++;
             break;
         case 'p':
             config->page_num = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
@@ -248,6 +265,9 @@ bool GetOptions(int argc, char** argv, Config* config) {
             break;
         case 'a':
             config->abs_page = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+            break;
+        case 'n':
+            config->count = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
             break;
         case 'h':
             printf("%s\n", kUsageMessage);
@@ -264,8 +284,8 @@ bool ValidateOptions(const Config& config) {
         return false;
     }
 
-    if (config.read && config.erase) {
-        printf("Only read OR erase allowed\n");
+    if (config.actions > 1) {
+        printf("Only one action allowed\n");
         return false;
     }
 
@@ -284,10 +304,34 @@ bool ValidateOptions(const Config& config) {
         return false;
     }
 
-    if (!config.info && !config.read && !config.bbt && !config.erase) {
+    if (!config.info && !config.actions) {
         printf("Nothing to do\n");
         return false;
     }
+
+    if (config.count && !config.read_check) {
+        printf("Count only supported for --check\n");
+        return false;
+    }
+    return true;
+}
+
+bool ValidateOptionsWithNand(const NandBroker& nand, const Config& config) {
+    if (config.page_num >= nand.Info().pages_per_block) {
+        printf("Page not within a block:\n");
+        return false;
+    }
+
+    if (config.block_num >= nand.Info().num_blocks) {
+        printf("Block not within device:\n");
+        return false;
+    }
+
+    if (config.abs_page >= nand.Info().num_blocks * nand.Info().pages_per_block) {
+        printf("Page not within device:\n");
+        return false;
+    }
+
     return true;
 }
 
@@ -314,6 +358,33 @@ bool FindBadBlocks(const NandBroker& nand) {
         printf("Unable to find any table\n");
     }
     return found;
+}
+
+// Verifies that reads always return the same data.
+bool ReadCheck(const NandBroker& nand, uint32_t first_block, uint32_t count) {
+    constexpr int kNumReads = 10;
+    uint32_t num_blocks = fbl::min(nand.Info().num_blocks, first_block + count);
+    size_t size = (nand.Info().page_size + nand.Info().oob_size) * nand.Info().pages_per_block;
+    for (uint32_t block = first_block; block < num_blocks; block++) {
+        uint32_t first_crc;
+        for (int i = 0; i < kNumReads; i++) {
+            const uint32_t start = block * nand.Info().pages_per_block;
+            if (!nand.ReadPages(start, nand.Info().pages_per_block)) {
+                printf("\nRead failed for block %u\n", block);
+                return false;
+            }
+            const uint32_t crc = crc32(0, reinterpret_cast<const uint8_t*>(nand.data()), size);
+            if (!i) {
+                first_crc = crc;
+            } else if (first_crc != crc) {
+                printf("\nMismatched reads on block %u\n", block);
+                return false;
+            }
+        }
+        printf("Block %u\r", block);
+    }
+    printf("\ndone\n");
+    return true;
 }
 
 }  // namespace
@@ -347,8 +418,7 @@ int main(int argc, char** argv) {
         return FindBadBlocks(nand) ? 0 : -1;
     }
 
-    if (config.page_num >= nand.Info().pages_per_block) {
-        printf("Page not within a block:\n");
+    if (!ValidateOptionsWithNand(nand, config)) {
         nand.ShowInfo();
         return -1;
     }
@@ -367,6 +437,11 @@ int main(int argc, char** argv) {
             return -1;
         }
         return nand.EraseBlock(config.block_num) ? 0 : -1;
+    }
+
+    if (config.read_check) {
+        printf("Checking blocks...\n");
+        return ReadCheck(nand, config.block_num, config.count) ? 0 : -1;
     }
 
     return 0;
