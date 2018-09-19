@@ -39,11 +39,11 @@ class FakeDelegate : public PageEvictionManager::Delegate {
   void DeletePageStorage(fxl::StringView /*ledger_name*/,
                          storage::PageIdView page_id,
                          fit::function<void(Status)> callback) override {
-    deleted_pages_.push_back(page_id.ToString());
+    deleted_pages.push_back(page_id.ToString());
     callback(Status::OK);
   }
 
-  std::vector<storage::PageId> deleted_pages_;
+  std::vector<storage::PageId> deleted_pages;
 
   PageClosedAndSynced closed_and_synced = PageClosedAndSynced::YES;
   Status page_closed_and_synced_status = Status::OK;
@@ -85,13 +85,13 @@ TEST_F(PageEvictionManagerTest, NoEvictionWithoutPages) {
   EXPECT_TRUE(called);
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_THAT(delegate_.deleted_pages_, IsEmpty());
+  EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
 TEST_F(PageEvictionManagerTest, AtLeastOneEvictionWhenPossible) {
-  fxl::StringView ledger_name = "ledger";
-  storage::PageIdView page1 = std::string(::fuchsia::ledger::kPageIdSize, '1');
-  storage::PageIdView page2 = std::string(::fuchsia::ledger::kPageIdSize, '2');
+  std::string ledger_name = "ledger";
+  storage::PageId page1 = std::string(::fuchsia::ledger::kPageIdSize, '1');
+  storage::PageId page2 = std::string(::fuchsia::ledger::kPageIdSize, '2');
 
   delegate_.closed_and_synced = PageClosedAndSynced::YES;
 
@@ -109,7 +109,7 @@ TEST_F(PageEvictionManagerTest, AtLeastOneEvictionWhenPossible) {
   EXPECT_TRUE(called);
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_FALSE(delegate_.deleted_pages_.empty());
+  EXPECT_FALSE(delegate_.deleted_pages.empty());
 }
 
 TEST_F(PageEvictionManagerTest, DontEvictUnsyncedPages) {
@@ -133,7 +133,7 @@ TEST_F(PageEvictionManagerTest, DontEvictUnsyncedPages) {
   EXPECT_TRUE(called);
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_THAT(delegate_.deleted_pages_, IsEmpty());
+  EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
 TEST_F(PageEvictionManagerTest, DontEvictOpenPages) {
@@ -153,7 +153,7 @@ TEST_F(PageEvictionManagerTest, DontEvictOpenPages) {
   EXPECT_TRUE(called);
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_THAT(delegate_.deleted_pages_, IsEmpty());
+  EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 
   // Close the page. It can now be evicted.
   page_eviction_manager_.OnPageClosed(ledger_name, page);
@@ -165,7 +165,7 @@ TEST_F(PageEvictionManagerTest, DontEvictOpenPages) {
   EXPECT_TRUE(called);
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_THAT(delegate_.deleted_pages_, ElementsAre(page));
+  EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page));
 }
 
 TEST_F(PageEvictionManagerTest, DontEvictAnEvictedPage) {
@@ -186,16 +186,16 @@ TEST_F(PageEvictionManagerTest, DontEvictAnEvictedPage) {
   EXPECT_TRUE(called);
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_THAT(delegate_.deleted_pages_, ElementsAre(page));
+  EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page));
 
-  delegate_.deleted_pages_.clear();
+  delegate_.deleted_pages.clear();
   // Try to clean up again. We shouldn't be able to evict any pages.
   page_eviction_manager_.TryEvictPages(
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_THAT(delegate_.deleted_pages_, IsEmpty());
+  EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
 TEST_F(PageEvictionManagerTest, PageNotFoundIsNotAnError) {
@@ -218,7 +218,7 @@ TEST_F(PageEvictionManagerTest, PageNotFoundIsNotAnError) {
   EXPECT_TRUE(called);
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_THAT(delegate_.deleted_pages_, IsEmpty());
+  EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
 TEST_F(PageEvictionManagerTest, IsEmpty) {
@@ -279,7 +279,7 @@ TEST_F(PageEvictionManagerTest, EvictEmptyPage) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_THAT(delegate_.deleted_pages_, IsEmpty());
+  EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 
   // The page is not evicted if the returned status from
   // PageIsClosedOfflineAndEmpty is |UNKNOWN|.
@@ -290,7 +290,7 @@ TEST_F(PageEvictionManagerTest, EvictEmptyPage) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_THAT(delegate_.deleted_pages_, IsEmpty());
+  EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 
   // The page is evicted if the returned status from PageIsClosedOfflineAndEmpty
   // is |YES|.
@@ -301,7 +301,7 @@ TEST_F(PageEvictionManagerTest, EvictEmptyPage) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_THAT(delegate_.deleted_pages_, ElementsAre(page));
+  EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page));
 }
 
 }  // namespace

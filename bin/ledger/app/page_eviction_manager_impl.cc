@@ -150,7 +150,7 @@ void PageEvictionManagerImpl::TryEvictPages(
              fit::function<void(Status)> callback) mutable {
         ExpiringToken token = NewExpiringToken();
         Status status = initialization_completer_.WaitUntilDone(handler);
-        if (LogOnInitializationError("TryCleanUp", status)) {
+        if (LogOnInitializationError("TryEvictPages", status)) {
           callback(status);
           return;
         }
@@ -170,7 +170,7 @@ void PageEvictionManagerImpl::TryEvictPages(
                                              page_info.page_id, &can_evict);
           if (status == Status::PAGE_NOT_FOUND) {
             // The page was already removed, maybe from a previous call to
-            // |TryCleanUp|. Mark it as evicted in the Page Usage DB.
+            // |TryEvictPages|. Mark it as evicted in the Page Usage DB.
             MarkPageEvicted(page_info.ledger_name, page_info.page_id);
             continue;
           }
