@@ -42,7 +42,7 @@ I2cChannel Pdev::GetI2cChan(uint32_t index) {
 
     i2c_protocol_t i2c;
     //Note: Pdev is a friend class of I2cChannel
-    zx_status_t res = device_get_protocol(parent_, ZX_PROTOCOL_I2C, &i2c);
+    zx_status_t res = pdev_get_protocol(&pdev_, ZX_PROTOCOL_I2C, index, &i2c);
     if (res != ZX_OK) {
         return I2cChannel();
     }

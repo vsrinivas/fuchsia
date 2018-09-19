@@ -59,7 +59,7 @@ static int i2c_test_thread(void *arg) {
 
     while (!i2c_test->done) {
         char write_buf[1] = { 0 };
-        i2c_write_read(&i2c_test->i2c, 0, write_buf, sizeof(write_buf), 8, i2c_complete, NULL);
+        i2c_write_read(&i2c_test->i2c, write_buf, sizeof(write_buf), 8, i2c_complete, NULL);
         sleep(1);
     }
 

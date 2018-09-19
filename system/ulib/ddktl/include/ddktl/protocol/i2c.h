@@ -35,9 +35,9 @@
 //     I2cDevice(zx_device_t* parent)
 //       : I2cDeviceType("my-i2c-device", parent) {}
 //
-//    zx_status_t I2cTransact(uint32_t index, i2c_op_t* ops, size_t cnt,
+//    zx_status_t I2cTransact(i2c_op_t* ops, size_t cnt,
 //                            i2c_transact_cb transact_cb, void* cookie);
-//    zx_status_t I2cGetMaxTransferSize(uint32_t index, size_t* out_size);
+//    zx_status_t I2cGetMaxTransferSize(size_t* out_size);
 //     ...
 // };
 
@@ -61,12 +61,12 @@ protected:
     i2c_protocol_ops_t ops_ = {};
 
 private:
-    static zx_status_t I2cTransact(void* ctx, uint32_t index, i2c_op_t* ops, size_t cnt,
+    static zx_status_t I2cTransact(void* ctx, i2c_op_t* ops, size_t cnt,
                                    i2c_transact_cb transact_cb, void* cookie) {
-        return static_cast<D*>(ctx)->I2cTransact(index, ops, cnt, transact_cb, cookie);
+        return static_cast<D*>(ctx)->I2cTransact(ops, cnt, transact_cb, cookie);
     }
-    static zx_status_t I2cGetMaxTransferSize(void* ctx, uint32_t index, size_t* out_size) {
-        return static_cast<D*>(ctx)->I2cGetMaxTransferSize(index, out_size);
+    static zx_status_t I2cGetMaxTransferSize(void* ctx, size_t* out_size) {
+        return static_cast<D*>(ctx)->I2cGetMaxTransferSize(out_size);
     }
 };
 
@@ -75,12 +75,11 @@ public:
     I2cProtocolProxy(i2c_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    zx_status_t Transact(uint32_t index, i2c_op_t* ops, size_t cnt,
-                         i2c_transact_cb transact_cb, void* cookie) {
-        return ops_->transact(ctx_, index, ops, cnt, transact_cb, cookie);
+    zx_status_t Transact(i2c_op_t* ops, size_t cnt, i2c_transact_cb transact_cb, void* cookie) {
+        return ops_->transact(ctx_, ops, cnt, transact_cb, cookie);
     }
-    zx_status_t GetMaxTransferSize(uint32_t index, size_t* out_size) {
-        return ops_->get_max_transfer_size(ctx_, index, out_size);
+    zx_status_t GetMaxTransferSize(size_t* out_size) {
+        return ops_->get_max_transfer_size(ctx_, out_size);
     }
 
 private:

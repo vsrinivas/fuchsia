@@ -51,23 +51,23 @@ uint8_t* adv7533_get_edid_buffer(void) {
 static void adv7533_mainchn_write(dsi_t* dsi, uint8_t d1, uint8_t d2) {
     dsi->write_buf[0] = d1;
     dsi->write_buf[1] = d2;
-    i2c_write_read_sync(&dsi->i2c_dev.i2c, I2C_MAIN, dsi->write_buf, 2, NULL, 0);
+    i2c_write_read_sync(&dsi->i2c_dev.i2c_main, dsi->write_buf, 2, NULL, 0);
 }
 
 static void adv7533_mainchn_read(dsi_t* dsi, uint8_t d1, uint8_t len) {
     dsi->write_buf[0] = d1;
-    i2c_write_read_sync(&dsi->i2c_dev.i2c, I2C_MAIN, dsi->write_buf, 1, dsi->write_buf, len);
+    i2c_write_read_sync(&dsi->i2c_dev.i2c_main, dsi->write_buf, 1, dsi->write_buf, len);
 }
 
 static void adv7533_cecchn_write(dsi_t* dsi, uint8_t d1, uint8_t d2) {
     dsi->write_buf[0] = d1;
     dsi->write_buf[1] = d2;
-    i2c_write_read_sync(&dsi->i2c_dev.i2c, I2C_CEC, dsi->write_buf, 2, NULL, 0);
+    i2c_write_read_sync(&dsi->i2c_dev.i2c_cec, dsi->write_buf, 2, NULL, 0);
 }
 
 static void adv7533_edidchn_read(dsi_t* dsi, uint8_t d1, uint8_t len) {
     dsi->write_buf[0] = d1;
-    i2c_write_read_sync(&dsi->i2c_dev.i2c, I2C_EDID, dsi->write_buf, 1, dsi->write_buf, len);
+    i2c_write_read_sync(&dsi->i2c_dev.i2c_edid, dsi->write_buf, 1, dsi->write_buf, len);
 }
 
 zx_status_t adv7533_init(dsi_t* dsi) {

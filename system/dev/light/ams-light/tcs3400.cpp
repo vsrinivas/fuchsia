@@ -57,13 +57,13 @@ zx_status_t Tcs3400Device::FillInputRpt() {
         fbl::AutoLock lock(&i2c_lock_);
         // Read lower byte first, the device holds upper byte of a sample in a shadow register after
         // a lower byte read
-        status = i2c_write_read_sync(&i2c_, kI2cIndex, &i.reg_l, 1, &buf_l, 1);
+        status = i2c_write_read_sync(&i2c_, &i.reg_l, 1, &buf_l, 1);
         if (status != ZX_OK) {
             zxlogf(ERROR, "Tcs3400Device::FillInputRpt: i2c_write_read_sync failed: %d\n", status);
             input_rpt_.state = HID_USAGE_SENSOR_STATE_ERROR_VAL;
             return status;
         }
-        status = i2c_write_read_sync(&i2c_, kI2cIndex, &i.reg_h, 1, &buf_h, 1);
+        status = i2c_write_read_sync(&i2c_, &i.reg_h, 1, &buf_h, 1);
         if (status != ZX_OK) {
             zxlogf(ERROR, "Tcs3400Device::FillInputRpt: i2c_write_read_sync failed: %d\n", status);
             input_rpt_.state = HID_USAGE_SENSOR_STATE_ERROR_VAL;
@@ -129,7 +129,7 @@ int Tcs3400Device::Thread() {
                 };
                 for (const auto& i : setup) {
                     fbl::AutoLock lock(&i2c_lock_);
-                    status = i2c_write_sync(&i2c_, kI2cIndex, &i.cmd, sizeof(setup[0]));
+                    status = i2c_write_sync(&i2c_, &i.cmd, sizeof(setup[0]));
                     if (status != ZX_OK) {
                         zxlogf(ERROR, "Tcs3400Device::Thread: i2c_write_sync failed: %d\n",
                                status);
@@ -169,7 +169,7 @@ int Tcs3400Device::Thread() {
             {
                 fbl::AutoLock lock(&i2c_lock_);
                 uint8_t cmd[] = {TCS_I2C_AICLEAR, 0x00};
-                status = i2c_write_sync(&i2c_, kI2cIndex, &cmd, sizeof(cmd));
+                status = i2c_write_sync(&i2c_, &cmd, sizeof(cmd));
                 if (status != ZX_OK) {
                     zxlogf(ERROR, "Tcs3400Device::Thread: i2c_write_sync failed: %d\n",
                            status);
@@ -214,7 +214,7 @@ zx_status_t Tcs3400Device::DdkRead(void* buf, size_t count, zx_off_t off, size_t
     // Read lower byte first, the device holds upper byte of a sample in a shadow register after a
     // lower byte read
     addr = TCS_I2C_CDATAL;
-    status = i2c_write_read_sync(&i2c_, kI2cIndex, &addr, 1, count == 1 ? p : p + 1, 1);
+    status = i2c_write_read_sync(&i2c_, &addr, 1, count == 1 ? p : p + 1, 1);
     if (status != ZX_OK) {
         zxlogf(ERROR, "Tcs3400Device::DdkRead: i2c_write_read_sync failed: %d\n", status);
         return status;
@@ -225,7 +225,7 @@ zx_status_t Tcs3400Device::DdkRead(void* buf, size_t count, zx_off_t off, size_t
         return ZX_OK;
     }
     addr = TCS_I2C_CDATAH;
-    status = i2c_write_read_sync(&i2c_, kI2cIndex, &addr, 1, p, 1);
+    status = i2c_write_read_sync(&i2c_, &addr, 1, p, 1);
     if (status != ZX_OK) {
         zxlogf(ERROR, "Tcs3400Device::DdkRead: i2c_write_read_sync failed: %d\n", status);
         return status;

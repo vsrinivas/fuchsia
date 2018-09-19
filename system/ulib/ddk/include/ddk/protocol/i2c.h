@@ -43,9 +43,9 @@ typedef void (*i2c_transact_cb)(zx_status_t status, i2c_op_t ops[], size_t cnt, 
 
 // Protocol for i2c
 typedef struct {
-    zx_status_t (*transact)(void* ctx, uint32_t index, i2c_op_t ops[], size_t cnt,
+    zx_status_t (*transact)(void* ctx, i2c_op_t ops[], size_t cnt,
                             i2c_transact_cb transact_cb, void* cookie);
-    zx_status_t (*get_max_transfer_size)(void* ctx, uint32_t index, size_t* out_size);
+    zx_status_t (*get_max_transfer_size)(void* ctx, size_t* out_size);
 } i2c_protocol_ops_t;
 
 typedef struct {
@@ -59,9 +59,9 @@ typedef struct {
 // and writes can be specified.  At least the last op must have the stop flag set.
 // The results of the operations are returned asynchronously via the transact_cb.
 // The cookie parameter can be used to pass your own private data to the transact_cb callback.
-static inline zx_status_t i2c_transact(const i2c_protocol_t* i2c, uint32_t index, i2c_op_t ops[],
+static inline zx_status_t i2c_transact(const i2c_protocol_t* i2c, i2c_op_t ops[],
                                        size_t cnt, i2c_transact_cb transact_cb, void* cookie) {
-    return i2c->ops->transact(i2c->ctx, index, ops, cnt, transact_cb, cookie);
+    return i2c->ops->transact(i2c->ctx, ops, cnt, transact_cb, cookie);
 }
 
 // Writes and reads data on an i2c channel. If both write_length and read_length
@@ -71,10 +71,9 @@ static inline zx_status_t i2c_transact(const i2c_protocol_t* i2c, uint32_t index
 // and if write_length is zero, then it will only perform a read operation.
 // The results of the operation are returned asynchronously via the transact_cb.
 // The cookie parameter can be used to pass your own private data to the transact_cb callback.
-static inline zx_status_t i2c_write_read(const i2c_protocol_t* i2c, uint32_t index,
-                                         const void* write_buf, size_t write_length,
-                                         size_t read_length, i2c_transact_cb transact_cb,
-                                         void* cookie) {
+static inline zx_status_t i2c_write_read(const i2c_protocol_t* i2c, const void* write_buf,
+                                         size_t write_length, size_t read_length,
+                                         i2c_transact_cb transact_cb, void* cookie) {
     i2c_op_t ops[2];
     size_t count = 0;
     if (write_length) {
@@ -91,13 +90,12 @@ static inline zx_status_t i2c_write_read(const i2c_protocol_t* i2c, uint32_t ind
         ops[count].stop = true;
         count++;
     }
-    return i2c_transact(i2c, index, ops, count, transact_cb, cookie);
+    return i2c_transact(i2c, ops, count, transact_cb, cookie);
 }
 
 // Returns the maximum transfer size for read and write operations on the channel.
-static inline zx_status_t i2c_get_max_transfer_size(const i2c_protocol_t* i2c, uint32_t index,
-                                                    size_t* out_size) {
-    return i2c->ops->get_max_transfer_size(i2c->ctx, index, out_size);
+static inline zx_status_t i2c_get_max_transfer_size(const i2c_protocol_t* i2c, size_t* out_size) {
+    return i2c->ops->get_max_transfer_size(i2c->ctx, out_size);
 }
 
 static inline void i2c_write_read_sync_cb(zx_status_t status, i2c_op_t* ops, size_t cnt,
@@ -112,15 +110,15 @@ static inline void i2c_write_read_sync_cb(zx_status_t status, i2c_op_t* ops, siz
     sync_completion_signal(&ctx->completion);
 }
 
-static inline zx_status_t i2c_write_read_sync(const i2c_protocol_t* i2c, uint32_t index,
-                                              const void* write_buf, size_t write_length,
-                                              void* read_buf, size_t read_length) {
+static inline zx_status_t i2c_write_read_sync(const i2c_protocol_t* i2c, const void* write_buf,
+                                              size_t write_length, void* read_buf,
+                                              size_t read_length) {
     i2c_write_read_ctx_t ctx;
     sync_completion_reset(&ctx.completion);
     ctx.read_buf = read_buf;
     ctx.read_length = read_length;
 
-    zx_status_t status = i2c_write_read(i2c, index, write_buf, write_length,
+    zx_status_t status = i2c_write_read(i2c, write_buf, write_length,
                                         read_length, i2c_write_read_sync_cb, &ctx);
     if (status != ZX_OK) {
         return status;
@@ -133,14 +131,14 @@ static inline zx_status_t i2c_write_read_sync(const i2c_protocol_t* i2c, uint32_
     }
 }
 
-static inline zx_status_t i2c_write_sync(const i2c_protocol_t* i2c, uint32_t index,
-                                         const void* write_buf, size_t write_length) {
-    return i2c_write_read_sync(i2c, index, write_buf, write_length, NULL, 0);
+static inline zx_status_t i2c_write_sync(const i2c_protocol_t* i2c, const void* write_buf,
+                                         size_t write_length) {
+    return i2c_write_read_sync(i2c, write_buf, write_length, NULL, 0);
 }
 
-static inline zx_status_t i2c_read_sync(const i2c_protocol_t* i2c, uint32_t index,
-                                        void* read_buf, size_t read_length) {
-    return i2c_write_read_sync(i2c, index, NULL, 0, read_buf, read_length);
+static inline zx_status_t i2c_read_sync(const i2c_protocol_t* i2c, void* read_buf,
+                                        size_t read_length) {
+    return i2c_write_read_sync(i2c, NULL, 0, read_buf, read_length);
 }
 
 __END_CDECLS;

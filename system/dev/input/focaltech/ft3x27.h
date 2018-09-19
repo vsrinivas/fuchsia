@@ -83,9 +83,6 @@ public:
     zx_status_t HidBusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(proxy_lock_);
 
 private:
-    //Only one I2c channel is passed to this driver, so index should always
-    // be zero.
-    static constexpr uint32_t kI2cIndex = 0;
     /* Note: the ft3x27 device is connected via i2c and is NOT a HID
         device.  This driver reads a collection of data from the data and
         parses it into a message which will be sent up the stack.  This message

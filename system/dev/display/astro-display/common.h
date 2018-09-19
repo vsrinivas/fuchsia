@@ -44,11 +44,6 @@ enum {
     GPIO_COUNT,
 };
 
-// Should match display_i2cs table in board driver
-enum {
-    I2C_BL,
-};
-
 constexpr uint8_t PANEL_DISPLAY_ID          = 1;
 
 // Astro Display dimension

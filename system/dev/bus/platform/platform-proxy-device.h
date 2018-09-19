@@ -80,9 +80,9 @@ public:
     static zx_status_t GpioSetPolarity(void* ctx, uint32_t polarity);
 
     // I2C protocol implementation.
-    static zx_status_t I2cTransact(void* ctx, uint32_t index, i2c_op_t* ops, size_t cnt,
+    static zx_status_t I2cTransact(void* ctx, i2c_op_t* ops, size_t cnt,
                                    i2c_transact_cb transact_cb, void* cookie);
-    static zx_status_t I2cGetMaxTransferSize(void* ctx, uint32_t index, size_t* out_size);
+    static zx_status_t I2cGetMaxTransferSize(void* ctx, size_t* out_size);
 
 private:
     struct Mmio {
@@ -97,6 +97,10 @@ private:
         zx::handle resource;
     };
     struct GpioCtx {
+        ProxyDevice* thiz;
+        uint32_t index;
+    };
+    struct I2cCtx {
         ProxyDevice* thiz;
         uint32_t index;
     };
@@ -120,8 +124,9 @@ private:
     gpio_protocol_ops_t gpio_proto_ops_;
     i2c_protocol_ops_t i2c_proto_ops_;
 
-    // Contexts for our GPIOs
+    // Contexts
     fbl::Array<GpioCtx> gpio_ctxs_;
+    fbl::Array<I2cCtx> i2c_ctxs_;
 
     // These fields are saved values from the device_add_args_t passed to pdev_device_add().
     // These are unused for top level devices created via pbus_device_add().

@@ -146,13 +146,14 @@ zx_status_t ProxyDevice::GpioWrite(void* ctx, uint8_t value) {
                              sizeof(resp));
 }
 
-zx_status_t ProxyDevice::I2cGetMaxTransferSize(void* ctx, uint32_t index, size_t* out_size) {
-    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
+zx_status_t ProxyDevice::I2cGetMaxTransferSize(void* ctx, size_t* out_size) {
+    auto i2c_ctx = static_cast<I2cCtx*>(ctx);
+    auto thiz = i2c_ctx->thiz;
     rpc_i2c_req_t req = {};
     rpc_i2c_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_I2C;
     req.header.op = I2C_GET_MAX_TRANSFER;
-    req.index = index;
+    req.index = i2c_ctx->index;
 
     auto status = thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp.header,
                                     sizeof(resp));
@@ -162,9 +163,10 @@ zx_status_t ProxyDevice::I2cGetMaxTransferSize(void* ctx, uint32_t index, size_t
     return status;
 }
 
-zx_status_t ProxyDevice::I2cTransact(void* ctx, uint32_t index, i2c_op_t* ops, size_t cnt,
+zx_status_t ProxyDevice::I2cTransact(void* ctx, i2c_op_t* ops, size_t cnt,
                                      i2c_transact_cb transact_cb, void* cookie) {
-    ProxyDevice* thiz = static_cast<ProxyDevice*>(ctx);
+    auto i2c_ctx = static_cast<I2cCtx*>(ctx);
+    auto thiz = i2c_ctx->thiz;
     size_t writes_length = 0;
     size_t reads_length = 0;
     for (size_t i = 0; i < cnt; ++i) {
@@ -186,7 +188,7 @@ zx_status_t ProxyDevice::I2cTransact(void* ctx, uint32_t index, i2c_op_t* ops, s
     auto req = reinterpret_cast<rpc_i2c_req_t*>(req_buffer);
     req->header.proto_id = ZX_PROTOCOL_I2C;
     req->header.op = I2C_TRANSACT;
-    req->index = index;
+    req->index = i2c_ctx->index;
     req->cnt = cnt;
     req->transact_cb = transact_cb;
     req->cookie = cookie;
@@ -411,6 +413,16 @@ zx_status_t ProxyDevice::GetProtocol(uint32_t proto_id, uint32_t index, void* ou
         return ZX_OK;
     }
 
+    if (proto_id == ZX_PROTOCOL_I2C) {
+        if (index >= i2c_ctxs_.size()) {
+            return ZX_ERR_OUT_OF_RANGE;
+        }
+        auto proto = static_cast<i2c_protocol_t*>(out_protocol);
+        proto->ops = &i2c_proto_ops_;
+        proto->ctx = &i2c_ctxs_[index];
+        return ZX_OK;
+    }
+
     // For other protocols, fall through to DdkGetProtocol if index is zero
     if (index != 0) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -547,6 +559,19 @@ zx_status_t ProxyDevice::InitCommon() {
         }
     }
 
+    uint32_t i2c_count = info.i2c_channel_count;
+    if (i2c_count > 0) {
+        i2c_ctxs_.reset(new (&ac) I2cCtx[i2c_count], i2c_count);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+
+        for (uint32_t i = 0; i < i2c_count; i++) {
+            i2c_ctxs_[i].thiz = this;
+            i2c_ctxs_[i].index = i;
+        }
+    }
+
     return ZX_OK;
 }
 
@@ -649,8 +674,17 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
         return ZX_OK;
     }
     case ZX_PROTOCOL_I2C: {
+        auto count = i2c_ctxs_.size();
+        if (count == 0) {
+            return ZX_ERR_NOT_SUPPORTED;
+        } else if (count > 1) {
+            zxlogf(ERROR, "%s: device has more than one I2C channel\n", __func__);
+            return ZX_ERR_BAD_STATE;
+        }
+        // Return zeroth I2C resource.
         proto->ops = &i2c_proto_ops_;
-        break;
+        proto->ctx = &i2c_ctxs_[0];
+        return ZX_OK;
     }
     case ZX_PROTOCOL_CLK: {
         proto->ops = &clk_proto_ops_;
@@ -659,7 +693,6 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
     default:
         return proxy_->GetProtocol(proto_id, out);;
     }
-
     return ZX_OK;
 }
 

@@ -58,8 +58,6 @@ public:
     void DdkRelease();
 
 private:
-    // Only one I2c channel is passed to this driver, so index should always be zero.
-    static constexpr uint32_t kI2cIndex = 0;
     i2c_protocol_t i2c_ TA_GUARDED(i2c_lock_);
     gpio_protocol_t gpio_ TA_GUARDED(i2c_lock_);
     zx::interrupt irq_;

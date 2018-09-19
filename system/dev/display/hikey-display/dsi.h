@@ -158,12 +158,6 @@
 #define ROUND1(x, y)    ((x) / (y) + ((x) % (y)  ? 1 : 0))
 
 typedef enum {
-    I2C_MAIN,
-    I2C_CEC,
-    I2C_EDID,
-} adv7533_if_t;
-
-typedef enum {
     GPIO_MUX,
     GPIO_PD,
     GPIO_INT,
@@ -172,7 +166,9 @@ typedef enum {
 
 typedef struct {
     zx_device_t* zdev;
-    i2c_protocol_t i2c;
+    i2c_protocol_t i2c_main;
+    i2c_protocol_t i2c_cec;
+    i2c_protocol_t i2c_edid;
 } adv7533_i2c_t;
 
 

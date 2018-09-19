@@ -364,7 +364,15 @@ static zx_status_t dsi_bind(void* ctx, zx_device_t* parent) {
     }
 
     /* Obtain the I2C devices */
-    if (device_get_protocol(parent, ZX_PROTOCOL_I2C, &dsi->i2c_dev.i2c) != ZX_OK) {
+    if (pdev_get_protocol(&dsi->pdev, ZX_PROTOCOL_I2C, 0, &dsi->i2c_dev.i2c_main) != ZX_OK) {
+        zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
+        goto fail;
+    }
+    if (pdev_get_protocol(&dsi->pdev, ZX_PROTOCOL_I2C, 1, &dsi->i2c_dev.i2c_cec) != ZX_OK) {
+        zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
+        goto fail;
+    }
+    if (pdev_get_protocol(&dsi->pdev, ZX_PROTOCOL_I2C, 2, &dsi->i2c_dev.i2c_edid) != ZX_OK) {
         zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
         goto fail;
     }

@@ -63,7 +63,7 @@ void Backlight::Enable() {
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1))); // delay to ensure backlight is powered on
 
     for (size_t i = 0; i < fbl::count_of(kBacklightInitTable); i++) {
-        if (i2c_write_sync(&i2c_, I2C_BL, &kBacklightInitTable[i], 2) != ZX_OK) {
+        if (i2c_write_sync(&i2c_, &kBacklightInitTable[i], 2) != ZX_OK) {
             DISP_ERROR("Backlight write failed: reg[0x%x]: 0x%x\n", kBacklightInitTable[i].reg,
                        kBacklightInitTable[i].val);
         }
