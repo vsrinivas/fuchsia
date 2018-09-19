@@ -5,6 +5,7 @@
 #pragma once
 
 #include <zircon/assert.h>
+#include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/macros.h>
 
@@ -141,10 +142,11 @@
 
 namespace fbl {
 
-// Fwd decl of sanity checker class used by tests.
+// Fwd decl of classes used by tests.
 namespace tests {
 namespace intrusive_containers {
 class SinglyLinkedListChecker;
+template <typename> class SequenceContainerTestEnvironment;
 }  // namespace tests
 }  // namespace intrusive_containers
 
@@ -158,11 +160,23 @@ template <typename T>
 struct SinglyLinkedListNodeState {
     using PtrTraits = internal::ContainerPtrTraits<T>;
     constexpr SinglyLinkedListNodeState() { }
+    ~SinglyLinkedListNodeState() {
+        // Note; this ASSERT can only be enforced for lists made of managed
+        // pointer types.  Lists formed from unmanaged pointers can potentially
+        // leave next_ in a non-null state during destruction if the list is
+        // cleared using "clear_unsafe".
+        ZX_DEBUG_ASSERT(!PtrTraits::IsManaged || (next_ == nullptr));
+    }
 
     bool IsValid() const     { return true; }
     bool InContainer() const { return (next_ != nullptr); }
 
-    typename PtrTraits::PtrType next_ = nullptr;
+private:
+    template <typename, typename> friend class SinglyLinkedList;
+    template <typename> friend class tests::intrusive_containers::SequenceContainerTestEnvironment;
+    friend class tests::intrusive_containers::SinglyLinkedListChecker;
+
+    typename PtrTraits::RawPtrType next_ = nullptr;
 };
 
 // DefaultSinglyLinkedListNodeState<T>
@@ -255,13 +269,12 @@ public:
         // will automatically release their references to their elements.
         ZX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
         clear();
-        PtrTraits::DetachSentinel(head_);
     }
 
     // Standard begin/end, cbegin/cend iterator accessors.
-    iterator        begin()       { return iterator(PtrTraits::GetRaw(head_)); }
-    const_iterator  begin() const { return const_iterator(PtrTraits::GetRaw(head_)); }
-    const_iterator cbegin() const { return const_iterator(PtrTraits::GetRaw(head_)); }
+    iterator        begin()       { return iterator(head_); }
+    const_iterator  begin() const { return const_iterator(head_); }
+    const_iterator cbegin() const { return const_iterator(head_); }
 
     iterator          end()       { return iterator(sentinel()); }
     const_iterator    end() const { return const_iterator(sentinel()); }
@@ -273,7 +286,10 @@ public:
     // is_empty
     //
     // True if the list has at least one element in it, false otherwise.
-    bool is_empty() const { ZX_DEBUG_ASSERT(head_ != nullptr); return PtrTraits::IsSentinel(head_); }
+    bool is_empty() const {
+        ZX_DEBUG_ASSERT(head_ != nullptr);
+        return internal::is_sentinel_ptr(head_);
+    }
 
     // front
     //
@@ -294,8 +310,8 @@ public:
         auto& ptr_ns = NodeTraits::node_state(*ptr);
         ZX_DEBUG_ASSERT(!ptr_ns.InContainer());
 
-        ptr_ns.next_ = fbl::move(head_);
-        head_        = fbl::move(ptr);
+        ptr_ns.next_ = head_;
+        head_        = PtrTraits::Leak(ptr);
     }
 
     // insert_after
@@ -314,8 +330,8 @@ public:
         auto& ptr_ns  = NodeTraits::node_state(*ptr);
         ZX_DEBUG_ASSERT(!ptr_ns.InContainer());
 
-        PtrTraits::Swap(iter_ns.next_, ptr_ns.next_);
-        iter_ns.next_ = fbl::move(ptr);
+        ptr_ns.next_  = iter_ns.next_;
+        iter_ns.next_ = PtrTraits::Leak(ptr);
     }
 
     // pop_front
@@ -328,9 +344,12 @@ public:
             return PtrType(nullptr);
 
         auto& head_ns = NodeTraits::node_state(*head_);
-        PtrTraits::Swap(head_, head_ns.next_);
+        PtrType ret = PtrTraits::Reclaim(head_);
 
-        return PtrTraits::Take(head_ns.next_);
+        head_ = head_ns.next_;
+        head_ns.next_ = nullptr;
+
+        return ret;
     }
 
     // clear
@@ -341,7 +360,10 @@ public:
     void clear() {
         while (!is_empty()) {
             auto& head_ns = NodeTraits::node_state(*head_);
-            head_ = PtrTraits::Take(head_ns.next_);
+            RawPtrType tmp = head_;
+            head_ = head_ns.next_;
+            head_ns.next_ = nullptr;
+            PtrTraits::Reclaim(tmp);
         }
     }
 
@@ -360,7 +382,7 @@ public:
     void clear_unsafe() {
         static_assert(PtrTraits::IsManaged == false,
                      "clear_unsafe is not allowed for containers of managed pointers");
-        head_ = PtrTraits::MakeSentinel(sentinel());
+        head_ = sentinel();
     }
 
     // erase_next
@@ -374,20 +396,24 @@ public:
         ZX_DEBUG_ASSERT(iter.IsValid());
         auto& iter_ns = NodeTraits::node_state(*iter);
 
-        if (PtrTraits::IsSentinel(iter_ns.next_))
+        if (internal::is_sentinel_ptr(iter_ns.next_))
             return PtrType(nullptr);
 
-        auto& next_ns  = NodeTraits::node_state(*iter_ns.next_);
+        auto& next_ns = NodeTraits::node_state(*iter_ns.next_);
 
-        PtrTraits::Swap(iter_ns.next_, next_ns.next_);
-        return PtrTraits::Take(next_ns.next_);
+        PtrType ret = PtrTraits::Reclaim(iter_ns.next_);
+        iter_ns.next_ = next_ns.next_;
+        next_ns.next_ = nullptr;
+        return ret;
     }
 
     // swap
     //
     // swaps the contest of two lists.
     void swap(SinglyLinkedList<T, NodeTraits>& other) {
-        PtrTraits::Swap(head_, other.head_);
+        auto tmp = head_;
+        head_ = other.head_;
+        other.head_ = tmp;
     }
 
     // size_slow
@@ -463,16 +489,21 @@ public:
 
         auto iter = begin();
         if (iter.IsValid()) {
-            PtrType* prev_next_ptr = &head_;
+            RawPtrType* prev_next_ptr = &head_;
 
             while (iter.IsValid()) {
                 auto& iter_ns = NodeTraits::node_state(*iter);
 
                 if (fn(static_cast<ConstRefType>(*iter))) {
-                    PtrType replaced(ptr);
-                    PtrTraits::Swap(iter_ns.next_, ptr_ns.next_);
-                    PtrTraits::Swap(*prev_next_ptr, replaced);
-                    return fbl::move(replaced);
+                    PtrType new_ref = ptr;
+                    RawPtrType replaced;
+
+                    replaced       = *prev_next_ptr;
+                    *prev_next_ptr = PtrTraits::Leak(new_ref);
+                    ptr_ns.next_   = iter_ns.next_;
+                    iter_ns.next_  = nullptr;
+
+                    return PtrTraits::Reclaim(replaced);
                 }
 
                 prev_next_ptr = &iter_ns.next_;
@@ -497,15 +528,20 @@ public:
 
         auto iter = begin();
         if (iter.IsValid()) {
-            PtrType* prev_next_ptr = &head_;
+            RawPtrType* prev_next_ptr = &head_;
 
             while (iter.IsValid()) {
                 auto& iter_ns = NodeTraits::node_state(*iter);
 
                 if (fn(static_cast<ConstRefType>(*iter))) {
-                    PtrTraits::Swap(iter_ns.next_, ptr_ns.next_);
-                    PtrTraits::Swap(*prev_next_ptr, ptr);
-                    return fbl::move(ptr);
+                    RawPtrType replaced;
+
+                    replaced       = *prev_next_ptr;
+                    *prev_next_ptr = PtrTraits::Leak(ptr);
+                    ptr_ns.next_   = iter_ns.next_;
+                    iter_ns.next_  = nullptr;
+
+                    return PtrTraits::Reclaim(replaced);
                 }
 
                 prev_next_ptr = &iter_ns.next_;
@@ -541,7 +577,7 @@ private:
             return *this;
         }
 
-        bool IsValid() const { return (node_ != nullptr) && !PtrTraits::IsSentinel(node_); }
+        bool IsValid() const { return (node_ != nullptr) && !internal::is_sentinel_ptr(node_); }
         bool operator==(const iterator_impl& other) const { return node_ == other.node_; }
         bool operator!=(const iterator_impl& other) const { return node_ != other.node_; }
 
@@ -549,8 +585,7 @@ private:
         iterator_impl& operator++() {
             if (!IsValid()) return *this;
 
-            auto& ns = NodeTraits::node_state(*node_);
-            node_    = PtrTraits::GetRaw(ns.next_);
+            node_ = NodeTraits::node_state(*node_).next_;
 
             return *this;
         }
@@ -591,12 +626,26 @@ private:
     // move semantics only
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(SinglyLinkedList);
 
+    // Note: the sentinel value we use for singly linked list is a bit different
+    // from the sentinel value we use for everything else.  Instead of being the
+    // this pointer of the container with the sentinel bit set, the sentinel is
+    // just the bit with nothing else (aka; nullptr | kContainerSentinelBit).
+    //
+    // The reasons which drive this decision are as follows.
+    // 1) When swapping lists, if the sentinel value was list specific, we would
+    //    need to update the sentinel values at the end of each list.  This would
+    //    be an O(n) operation for a SLL, whereas it is an O(1) operation for
+    //    every other container.
+    // 2) The sentinel value used by a list cannot simply be nullptr, or the
+    //    node state for an element which is list-able would not be able to
+    //    distinguish between an element which was not InContainer() and one
+    //    which was InContainer, but located at the end of the list.
     constexpr RawPtrType sentinel() const {
-        return reinterpret_cast<RawPtrType>(internal::kContainerSentinelBit);
+        return internal::make_sentinel<RawPtrType>(nullptr);
     }
 
     // State consists of just a head pointer.
-    PtrType head_ = PtrTraits::MakeSentinel(sentinel());
+    RawPtrType head_ = sentinel();
 };
 
 // Explicit declaration of constexpr storage.

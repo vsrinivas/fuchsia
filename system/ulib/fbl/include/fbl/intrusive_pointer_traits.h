@@ -72,9 +72,17 @@ struct ContainerPtrTraits<T*> {
         second = tmp;
     }
 
+    static inline RawPtrType Leak(PtrType& ptr) __WARN_UNUSED_RESULT {
+        return ptr;
+    }
+
+    static inline PtrType Reclaim(RawPtrType ptr) {
+        return ptr;
+    }
+
     static constexpr PtrType MakeSentinel(void* sentinel) {
-        return reinterpret_cast<RawPtrType>(reinterpret_cast<uintptr_t>(sentinel) |
-                                            kContainerSentinelBit);
+        return reinterpret_cast<PtrType>(reinterpret_cast<uintptr_t>(sentinel) |
+                                         kContainerSentinelBit);
     }
 
     static inline void DetachSentinel(PtrType& ptr) {
@@ -107,6 +115,14 @@ struct ContainerPtrTraits<::fbl::unique_ptr<T>> {
     static inline const T* GetRaw(const ConstPtrType& ptr) { return ptr.get(); }
     static inline PtrType  Take(PtrType& ptr)              { return PtrType(fbl::move(ptr)); }
     static inline void     Swap(PtrType& first, PtrType& second) { first.swap(second); }
+
+    static inline RawPtrType Leak(PtrType& ptr) __WARN_UNUSED_RESULT {
+        return ptr.release();
+    }
+
+    static inline PtrType Reclaim(RawPtrType ptr) {
+        return PtrType(ptr);
+    }
 
     static constexpr PtrType MakeSentinel(void* sentinel) {
         return PtrType(reinterpret_cast<RawPtrType>(reinterpret_cast<uintptr_t>(sentinel) |
@@ -146,6 +162,14 @@ struct ContainerPtrTraits<::fbl::RefPtr<T>> {
     static inline PtrType  Copy(const RawPtrType& ptr)     { return PtrType(ptr); }
     static inline PtrType  Take(PtrType& ptr)              { return PtrType(fbl::move(ptr)); }
     static inline void     Swap(PtrType& first, PtrType& second) { first.swap(second); }
+
+    static inline RawPtrType Leak(PtrType& ptr) __WARN_UNUSED_RESULT {
+        return ptr.leak_ref();
+    }
+
+    static inline PtrType Reclaim(RawPtrType ptr) {
+        return ::fbl::internal::MakeRefPtrNoAdopt(ptr);
+    }
 
     static constexpr PtrType MakeSentinel(void* sentinel) {
         return ::fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<RawPtrType>(
