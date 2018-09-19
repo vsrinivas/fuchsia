@@ -9,6 +9,8 @@ use std::io;
 
 mod message;
 pub use crate::message::*;
+mod registry;
+pub use crate::registry::*;
 
 pub type ObjectId = u32;
 pub type NewId = u32;
