@@ -41,6 +41,8 @@ __BEGIN_CDECLS
         _val;                                    \
     })
 
+#define ARM64_READ_SYSREG_32(reg) ((uint32_t)ARM64_READ_SYSREG(reg))
+
 #define ARM64_WRITE_SYSREG(reg, val)                               \
     ({                                                             \
         uint64_t _val = (val);                                     \

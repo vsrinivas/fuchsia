@@ -5,138 +5,121 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <dev/timer/arm_generic.h>
 
 #include <arch/ops.h>
 #include <assert.h>
-#include <inttypes.h>
-#include <lk/init.h>
-#include <platform.h>
 #include <dev/interrupt.h>
-#include <dev/timer/arm_generic.h>
+#include <inttypes.h>
+#include <lib/fixed_point.h>
+#include <lk/init.h>
+#include <pdev/driver.h>
+#include <platform.h>
 #include <platform/timer.h>
 #include <trace.h>
-#include <zircon/types.h>
-
-#include <pdev/driver.h>
 #include <zircon/boot/driver-config.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
-#include <lib/fixed_point.h>
-
 /* CNTFRQ AArch64 register */
-#define TIMER_REG_CNTFRQ    cntfrq_el0
+#define TIMER_REG_CNTFRQ cntfrq_el0
 
 /* CNTP AArch64 registers */
-#define TIMER_REG_CNTP_CTL  cntp_ctl_el0
+#define TIMER_REG_CNTP_CTL cntp_ctl_el0
 #define TIMER_REG_CNTP_CVAL cntp_cval_el0
 #define TIMER_REG_CNTP_TVAL cntp_tval_el0
-#define TIMER_REG_CNTPCT    cntpct_el0
+#define TIMER_REG_CNTPCT cntpct_el0
 
 /* CNTPS AArch64 registers */
 #define TIMER_REG_CNTPS_CTL cntps_ctl_el1
-#define TIMER_REG_CNTPS_CVAL    cntps_cval_el1
-#define TIMER_REG_CNTPS_TVAL    cntps_tval_el1
+#define TIMER_REG_CNTPS_CVAL cntps_cval_el1
+#define TIMER_REG_CNTPS_TVAL cntps_tval_el1
 
 /* CNTV AArch64 registers */
-#define TIMER_REG_CNTV_CTL  cntv_ctl_el0
+#define TIMER_REG_CNTV_CTL cntv_ctl_el0
 #define TIMER_REG_CNTV_CVAL cntv_cval_el0
 #define TIMER_REG_CNTV_TVAL cntv_tval_el0
-#define TIMER_REG_CNTVCT    cntvct_el0
+#define TIMER_REG_CNTVCT cntvct_el0
 
 static int timer_irq;
 
 struct fp_32_64 cntpct_per_ns;
 struct fp_32_64 ns_per_cntpct;
 
-static uint64_t zx_time_to_cntpct(zx_time_t zx_time)
-{
+static uint64_t zx_time_to_cntpct(zx_time_t zx_time) {
     DEBUG_ASSERT(zx_time >= 0);
     return u64_mul_u64_fp32_64(zx_time, cntpct_per_ns);
 }
 
-zx_time_t cntpct_to_zx_time(uint64_t cntpct)
-{
+zx_time_t cntpct_to_zx_time(uint64_t cntpct) {
     return u64_mul_u64_fp32_64(cntpct, ns_per_cntpct);
 }
 
-static uint32_t read_cntfrq(void)
-{
+static uint32_t read_cntfrq(void) {
     uint32_t cntfrq;
 
-    cntfrq = ARM64_READ_SYSREG(TIMER_REG_CNTFRQ);
+    cntfrq = ARM64_READ_SYSREG_32(TIMER_REG_CNTFRQ);
     LTRACEF("cntfrq: 0x%08x, %u\n", cntfrq, cntfrq);
     return cntfrq;
 }
 
-static uint32_t read_cntp_ctl(void)
-{
-    return ARM64_READ_SYSREG(TIMER_REG_CNTP_CTL);
+static uint32_t read_cntp_ctl(void) {
+    return ARM64_READ_SYSREG_32(TIMER_REG_CNTP_CTL);
 }
 
-static uint32_t read_cntv_ctl(void)
-{
-    return ARM64_READ_SYSREG(TIMER_REG_CNTV_CTL);
+static uint32_t read_cntv_ctl(void) {
+    return ARM64_READ_SYSREG_32(TIMER_REG_CNTV_CTL);
 }
 
-static uint32_t read_cntps_ctl(void)
-{
-    return ARM64_READ_SYSREG(TIMER_REG_CNTPS_CTL);
+static uint32_t read_cntps_ctl(void) {
+    return ARM64_READ_SYSREG_32(TIMER_REG_CNTPS_CTL);
 }
 
-static void write_cntp_ctl(uint32_t val)
-{
+static void write_cntp_ctl(uint32_t val) {
     LTRACEF_LEVEL(3, "cntp_ctl: 0x%x %x\n", val, read_cntp_ctl());
     ARM64_WRITE_SYSREG(TIMER_REG_CNTP_CTL, val);
 }
 
-static void write_cntv_ctl(uint32_t val)
-{
+static void write_cntv_ctl(uint32_t val) {
     LTRACEF_LEVEL(3, "cntv_ctl: 0x%x %x\n", val, read_cntv_ctl());
     ARM64_WRITE_SYSREG(TIMER_REG_CNTV_CTL, val);
 }
 
-static void write_cntps_ctl(uint32_t val)
-{
+static void write_cntps_ctl(uint32_t val) {
     LTRACEF_LEVEL(3, "cntps_ctl: 0x%x %x\n", val, read_cntps_ctl());
     ARM64_WRITE_SYSREG(TIMER_REG_CNTPS_CTL, val);
 }
 
-static void write_cntp_cval(uint64_t val)
-{
+static void write_cntp_cval(uint64_t val) {
     LTRACEF_LEVEL(3, "cntp_cval: 0x%016" PRIx64 ", %" PRIu64 "\n",
                   val, val);
     ARM64_WRITE_SYSREG(TIMER_REG_CNTP_CVAL, val);
 }
 
-static void write_cntv_cval(uint64_t val)
-{
+static void write_cntv_cval(uint64_t val) {
     LTRACEF_LEVEL(3, "cntv_cval: 0x%016" PRIx64 ", %" PRIu64 "\n",
                   val, val);
     ARM64_WRITE_SYSREG(TIMER_REG_CNTV_CVAL, val);
 }
 
-static void write_cntps_cval(uint64_t val)
-{
+static void write_cntps_cval(uint64_t val) {
     LTRACEF_LEVEL(3, "cntps_cval: 0x%016" PRIx64 ", %" PRIu64 "\n",
                   val, val);
     ARM64_WRITE_SYSREG(TIMER_REG_CNTPS_CVAL, val);
 }
 
-static void write_cntp_tval(int32_t val)
-{
+static void write_cntp_tval(int32_t val) {
     LTRACEF_LEVEL(3, "cntp_tval: %d\n", val);
     ARM64_WRITE_SYSREG(TIMER_REG_CNTP_TVAL, val);
 }
 
-static void write_cntv_tval(int32_t val)
-{
+static void write_cntv_tval(int32_t val) {
     LTRACEF_LEVEL(3, "cntv_tval: %d\n", val);
     ARM64_WRITE_SYSREG(TIMER_REG_CNTV_TVAL, val);
 }
 
-static void write_cntps_tval(int32_t val)
-{
+static void write_cntps_tval(int32_t val) {
     LTRACEF_LEVEL(3, "cntps_tval: %d\n", val);
     ARM64_WRITE_SYSREG(TIMER_REG_CNTPS_TVAL, val);
 }
@@ -187,32 +170,27 @@ static inline void write_ctl(uint32_t val) {
     reg_procs->write_ctl(val);
 }
 
-static inline void write_cval(uint64_t val)
-{
+static inline void write_cval(uint64_t val) {
     reg_procs->write_cval(val);
 }
 
-static inline void write_tval(uint32_t val)
-{
+static inline void write_tval(uint32_t val) {
     reg_procs->write_tval(val);
 }
 
-static uint64_t read_ct(void)
-{
+static uint64_t read_ct(void) {
     uint64_t cntpct = reg_procs->read_ct();
     LTRACEF_LEVEL(3, "cntpct: 0x%016" PRIx64 ", %" PRIu64 "\n",
                   cntpct, cntpct);
     return cntpct;
 }
 
-static void platform_tick(void *arg)
-{
+static void platform_tick(void* arg) {
     write_ctl(0);
     timer_tick(current_time());
 }
 
-zx_status_t platform_set_oneshot_timer(zx_time_t deadline)
-{
+zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
     DEBUG_ASSERT(arch_ints_disabled());
 
     if (deadline < 0) {
@@ -231,87 +209,71 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline)
     return 0;
 }
 
-void platform_stop_timer(void)
-{
+void platform_stop_timer(void) {
     write_ctl(0);
 }
 
-void platform_shutdown_timer(void)
-{
+void platform_shutdown_timer(void) {
     DEBUG_ASSERT(arch_ints_disabled());
     mask_interrupt(timer_irq);
 }
 
-zx_time_t current_time(void)
-{
+zx_time_t current_time(void) {
     return cntpct_to_zx_time(read_ct());
 }
 
-zx_ticks_t current_ticks(void)
-{
+zx_ticks_t current_ticks(void) {
     return read_ct();
 }
 
-zx_ticks_t ticks_per_second(void)
-{
+zx_ticks_t ticks_per_second(void) {
     return u64_mul_u32_fp32_64(1000 * 1000 * 1000, cntpct_per_ns);
 }
 
-static uint32_t abs_int32(int32_t a)
-{
+static uint64_t abs_int64(int64_t a) {
     return (a > 0) ? a : -a;
 }
 
-static uint64_t abs_int64(int64_t a)
-{
-    return (a > 0) ? a : -a;
-}
-
-static void test_time_conversion_check_result(uint64_t a, uint64_t b, uint64_t limit, bool is32)
-{
+static void test_time_conversion_check_result(uint64_t a, uint64_t b, uint64_t limit) {
     if (a != b) {
-        uint64_t diff = is32 ? abs_int32(a - b) : abs_int64(a - b);
+        uint64_t diff = abs_int64(a - b);
         if (diff <= limit)
-            LTRACEF("ROUNDED by %" PRIu64 " (up to %" PRIu64 " allowed)\n"
-                    , diff, limit);
+            LTRACEF("ROUNDED by %" PRIu64 " (up to %" PRIu64 " allowed)\n", diff, limit);
         else
             TRACEF("FAIL, off by %" PRIu64 "\n", diff);
     }
 }
 
-static void test_zx_time_to_cntpct(uint32_t cntfrq, zx_time_t zx_time)
-{
+static void test_zx_time_to_cntpct(uint32_t cntfrq, zx_time_t zx_time) {
     uint64_t cntpct = zx_time_to_cntpct(zx_time);
     const uint64_t nanos_per_sec = ZX_SEC(1);
     uint64_t expected_cntpct = ((uint64_t)cntfrq * zx_time + nanos_per_sec / 2) / nanos_per_sec;
 
-    test_time_conversion_check_result(cntpct, expected_cntpct, 1, false);
+    test_time_conversion_check_result(cntpct, expected_cntpct, 1);
     LTRACEF_LEVEL(2, "zx_time_to_cntpct(%" PRIi64 "): got %" PRIu64
-                  ", expect %" PRIu64 "\n",
+                     ", expect %" PRIu64 "\n",
                   zx_time, cntpct, expected_cntpct);
 }
 
-static void test_cntpct_to_zx_time(uint32_t cntfrq, uint64_t expected_s)
-{
+static void test_cntpct_to_zx_time(uint32_t cntfrq, uint64_t expected_s) {
     zx_time_t expected_zx_time = ZX_SEC(expected_s);
     uint64_t cntpct = (uint64_t)cntfrq * expected_s;
     zx_time_t zx_time = cntpct_to_zx_time(cntpct);
 
-    test_time_conversion_check_result(zx_time, expected_zx_time, (1000 * 1000 + cntfrq - 1) / cntfrq, false);
+    test_time_conversion_check_result(zx_time, expected_zx_time, (1000 * 1000 + cntfrq - 1) / cntfrq);
     LTRACEF_LEVEL(2, "cntpct_to_zx_time(%" PRIu64
-                  "): got %" PRIi64 ", expect %" PRIi64 "\n",
+                     "): got %" PRIi64 ", expect %" PRIi64 "\n",
                   cntpct, zx_time, expected_zx_time);
 }
 
-static void test_time_conversions(uint32_t cntfrq)
-{
+static void test_time_conversions(uint32_t cntfrq) {
     test_zx_time_to_cntpct(cntfrq, 0);
     test_zx_time_to_cntpct(cntfrq, 1);
     test_zx_time_to_cntpct(cntfrq, 60 * 60 * 24);
     test_zx_time_to_cntpct(cntfrq, 60 * 60 * 24 * 365);
     test_zx_time_to_cntpct(cntfrq, 60 * 60 * 24 * (365 * 10 + 2));
     test_zx_time_to_cntpct(cntfrq, 60ULL * 60 * 24 * (365 * 100 + 2));
-    test_zx_time_to_cntpct(cntfrq, 1ULL<<60);
+    test_zx_time_to_cntpct(cntfrq, 1ULL << 60);
     test_cntpct_to_zx_time(cntfrq, 0);
     test_cntpct_to_zx_time(cntfrq, 1);
     test_cntpct_to_zx_time(cntfrq, 60 * 60 * 24);
@@ -320,16 +282,14 @@ static void test_time_conversions(uint32_t cntfrq)
     test_cntpct_to_zx_time(cntfrq, 60ULL * 60 * 24 * (365 * 100 + 2));
 }
 
-static void arm_generic_timer_init_conversion_factors(uint32_t cntfrq)
-{
+static void arm_generic_timer_init_conversion_factors(uint32_t cntfrq) {
     fp_32_64_div_32_32(&cntpct_per_ns, cntfrq, ZX_SEC(1));
     fp_32_64_div_32_32(&ns_per_cntpct, ZX_SEC(1), cntfrq);
     dprintf(SPEW, "cntpct_per_ns: %08x.%08x%08x\n", cntpct_per_ns.l0, cntpct_per_ns.l32, cntpct_per_ns.l64);
     dprintf(SPEW, "ns_per_cntpct: %08x.%08x%08x\n", ns_per_cntpct.l0, ns_per_cntpct.l32, ns_per_cntpct.l64);
 }
 
-static void arm_generic_timer_init(uint32_t freq_override)
-{
+static void arm_generic_timer_init(uint32_t freq_override) {
     uint32_t cntfrq;
 
     if (freq_override == 0) {
@@ -363,8 +323,7 @@ static void arm_generic_timer_init(uint32_t freq_override)
     unmask_interrupt(timer_irq);
 }
 
-static void arm_generic_timer_init_secondary_cpu(uint level)
-{
+static void arm_generic_timer_init_secondary_cpu(uint level) {
     LTRACEF("unmask irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
     unmask_interrupt(timer_irq);
 }
@@ -374,8 +333,7 @@ LK_INIT_HOOK_FLAGS(arm_generic_timer_init_secondary_cpu,
                    arm_generic_timer_init_secondary_cpu,
                    LK_INIT_LEVEL_THREADING - 1, LK_INIT_FLAG_SECONDARY_CPUS);
 
-static void arm_generic_timer_resume_cpu(uint level)
-{
+static void arm_generic_timer_resume_cpu(uint level) {
     /* Always trigger a timer interrupt on each cpu for now */
     write_tval(0);
     write_ctl(1);
@@ -386,7 +344,7 @@ LK_INIT_HOOK_FLAGS(arm_generic_timer_resume_cpu, arm_generic_timer_resume_cpu,
 
 static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length) {
     ASSERT(length >= sizeof(dcfg_arm_generic_timer_driver_t));
-    const dcfg_arm_generic_timer_driver_t* driver = driver_data;
+    auto driver = static_cast<const dcfg_arm_generic_timer_driver_t*>(driver_data);
     uint32_t irq_phys = driver->irq_phys;
     uint32_t irq_virt = driver->irq_virt;
     uint32_t irq_sphys = driver->irq_sphys;
