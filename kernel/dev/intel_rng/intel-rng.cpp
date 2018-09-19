@@ -78,7 +78,7 @@ static ssize_t get_entropy_from_instruction(void* buf, size_t len, bool block,
             }
             continue;
         }
-        const size_t to_copy = fbl::min(len, sizeof(val));
+        const size_t to_copy = fbl::min(len - written, sizeof(val));
         memcpy(static_cast<uint8_t*>(buf) + written, &val, to_copy);
         written += to_copy;
     }
