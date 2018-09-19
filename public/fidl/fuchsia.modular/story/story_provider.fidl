@@ -62,6 +62,7 @@ interface StoryProvider {
   9: WatchActivity(StoryActivityWatcher watcher);
 
   // Creates a duplicate connection to this StoryProvider.
+  // DEPRECATED: Please do not use this method as it is going away.
   11: Duplicate(request<StoryProvider> @request);
 
   // Creates a story and sets the options it will have.
