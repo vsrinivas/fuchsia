@@ -112,8 +112,8 @@ struct MockDevice : public DeviceInterface {
         return ZX_OK;
     }
 
-    zx_status_t EnableBeaconing(bool enable) override final {
-        beaconing_enabled = enable;
+    zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) override final {
+        beaconing_enabled = (bcn_cfg != nullptr);
         return ZX_OK;
     }
 

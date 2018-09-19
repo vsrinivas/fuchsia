@@ -201,6 +201,19 @@ typedef struct wlan_hw_scan_result {
     uint8_t code;
 } wlan_hw_scan_result_t;
 
+// Includes the information about beacon template.
+typedef struct wlan_bcn_config {
+    // Points to the beacon template. Since this is just the template, some packet content can
+    // contain only minimum valid info. They will be changed later by hardware/firmware or software.
+    // Note that the driver must copy the packet content into its own memory and cannot rely on
+    // the pointers in the struct.
+    wlan_tx_packet_t tmpl;
+
+    // TIM offset (in bytes) to the start of |bcn_tmpl|. This points to the first byte of TIM IE,
+    // which is the tag ID.
+    size_t tim_ele_offset;
+} wlan_bcn_config_t;
+
 typedef struct wlanmac_ifc {
     // Report the status of the wlanmac device.
     void (*status)(void* cookie, uint32_t status);
@@ -263,10 +276,12 @@ typedef struct wlanmac_protocol_ops {
     zx_status_t (*configure_bss)(void* ctx, uint32_t options, wlan_bss_config_t* config);
 
     // Enables or disables hardware Beaconing.
-    zx_status_t (*enable_beaconing)(void* ctx, uint32_t options, bool enabled);
+    // * bcn_cfg: Pass `nullptr` to disable hardware Beacons. Used by hardware beacon offload.
+    zx_status_t (*enable_beaconing)(void* ctx, uint32_t options, wlan_bcn_config_t* bcn_cfg);
 
     // Configures a Beacon frame in hardware to announce the BSS' existence.
-    // Pass `nullptr` to disable hardware Beacons.
+    // * pkt: Pass `nullptr` to disable hardware Beacons. Used by software generated beacon.
+    // TODO(NET-1565): Rename to update_beacon.
     zx_status_t (*configure_beacon)(void* ctx, uint32_t options, wlan_tx_packet_t* pkt);
 
     // Specify a key for frame protection.

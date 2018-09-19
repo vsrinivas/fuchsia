@@ -153,8 +153,8 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
     .configure_bss = [](void* ctx, uint32_t options, wlan_bss_config_t* config) -> zx_status_t {
         return DEV(ctx)->WlanmacConfigureBss(options, config);
     },
-    .enable_beaconing = [](void* ctx, uint32_t options, bool enabled) -> zx_status_t {
-        return DEV(ctx)->WlanmacEnableBeaconing(options, enabled);
+    .enable_beaconing = [](void* ctx, uint32_t options, wlan_bcn_config_t* bcn_cfg) -> zx_status_t {
+        return DEV(ctx)->WlanmacEnableBeaconing(options, bcn_cfg != nullptr);
     },
     .configure_beacon = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
         return DEV(ctx)->WlanmacConfigureBeacon(options, pkt);

@@ -40,8 +40,8 @@ class WlanmacProxy {
         return proto_.ops->configure_bss(proto_.ctx, options, config);
     }
 
-    zx_status_t EnableBeaconing(uint32_t options, bool enabled) {
-        return proto_.ops->enable_beaconing(proto_.ctx, options, enabled);
+    zx_status_t EnableBeaconing(uint32_t options, wlan_bcn_config_t* bcn_cfg) {
+        return proto_.ops->enable_beaconing(proto_.ctx, options, bcn_cfg);
     }
 
     zx_status_t ConfigureBeacon(uint32_t options, wlan_tx_packet_t* pkt) {

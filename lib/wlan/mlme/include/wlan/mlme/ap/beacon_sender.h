@@ -32,6 +32,8 @@ class BeaconSender {
    private:
     bool ShouldSendProbeResponse(const MgmtFrameView<ProbeRequest>&);
 
+    zx_status_t BuildBeacon(const PsCfg& ps_cfg, MgmtFrame<Beacon>* frame, size_t* tim_ele_offset);
+
     zx_status_t WriteSsid(ElementWriter* w);
     zx_status_t WriteSupportedRates(ElementWriter* w);
     zx_status_t WriteDsssParamSet(ElementWriter* w);

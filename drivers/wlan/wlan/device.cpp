@@ -486,8 +486,8 @@ zx_status_t Device::ConfigureBss(wlan_bss_config_t* cfg) {
     return wlanmac_proxy_.ConfigureBss(0u, cfg);
 }
 
-zx_status_t Device::EnableBeaconing(bool enabled) {
-    return wlanmac_proxy_.EnableBeaconing(0u, enabled);
+zx_status_t Device::EnableBeaconing(wlan_bcn_config_t* bcn_cfg) {
+    return wlanmac_proxy_.EnableBeaconing(0u, bcn_cfg);
 }
 
 zx_status_t Device::ConfigureBeacon(fbl::unique_ptr<Packet> beacon) {
