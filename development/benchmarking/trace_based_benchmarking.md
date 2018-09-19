@@ -1,6 +1,6 @@
 # Trace-based benchmarking
 
-* Updated: 2018 Aug 23
+* Updated: 2018 Sep 18
 
 This document describes how to use trace-based benchmarking to measure and track
 performance of Fuchsia apps.
@@ -137,21 +137,16 @@ event doesn't matter, but the recorded argument must have `uint64` type.
 
 ### Samples
 
-All types of measurements can optionally group the recorded samples into
-consecutive ranges, splitting the samples at the given instances of the
-recorded events and reporting the results of each group separately.
-In order to achieve that, pass a strictly increasing list of zero-based numbers
-denoting the occurrences at which samples must be split as `split_samples_at`.
-
-For example, if a measurement specifies `"split_samples_at": [1, 50],`, the
-results will be reported in three groups: sample 0, samples 1 - 49, and samples
-50 to N, where N is the last samples.
-
 It is possible to specify an exact number of expected samples. In order to do
 so, an optional parameter `"expected_sample_count"` with a positive value must be
 specified for a given measurement. In that case, if the number of recorded
 samples does not match the one provided, an error will be logged and the
 measurement will produce no results (failing the benchmark).
+
+You can also specify the `"split_first"` flag to separate the first sample from
+the rest. This is useful for recording the "cold run" samples (see the
+[best practices] section). This flag is passed to the exported file as well, in
+compliance with the [results schema].
 
 ### Full example
 
@@ -176,8 +171,8 @@ set to different values in each spec file.
 
 For any duration measurement that happens more than once, chances are that the
 first time has different performance characteristics that the subsequent ones.
-You can set `"split_samples_at": [1]` to report and track separately the first
-sample in one group, and all subsequent samples in another group.
+You can set `"split_first": true` to report and track the first sample
+separately.
 
 ## Results
 
@@ -199,5 +194,6 @@ the [dashboard user guide] and the instructions for [automating benchmarks].
 [dashboard user guide]: catapult_user_guide.md
 [examples/benchmark]: https://fuchsia.googlesource.com/garnet/+/master/examples/benchmark/
 [results schema]: results_schema.md
+[best practices]: #best-practices
 [tracing]: https://fuchsia.googlesource.com/garnet/+/master/docs/tracing_usage_guide.md
 
