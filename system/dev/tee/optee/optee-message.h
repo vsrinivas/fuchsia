@@ -135,6 +135,58 @@ class MessageBase {
 public:
     using SharedMemoryPtr = PtrType;
 
+    zx_paddr_t paddr() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing uninitialized OP-TEE message");
+        return memory_->paddr();
+    }
+
+    // TODO(godtamit): Move this to protected once all usages of it outside are removed
+    // TODO(rjascani): Change this to return a reference to make ownership rules clearer
+    MessageParamList params() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing uninitialized OP-TEE message");
+        return MessageParamList(reinterpret_cast<MessageParam*>(header() + 1),
+                                header()->num_params);
+    }
+
+    // Returns whether the message is valid. This must be true to access any class-specific field.
+    bool is_valid() const { return memory_ != nullptr; }
+
+protected:
+    static constexpr size_t CalculateSize(size_t num_params) {
+        return sizeof(MessageHeader) + (sizeof(MessageParam) * num_params);
+    }
+
+    // MessageBase
+    //
+    // Move constructor for MessageBase.
+    MessageBase(MessageBase&& msg)
+        : memory_(fbl::move(msg.memory_)) {
+        msg.memory_ = nullptr;
+    }
+
+    // Move-only, so explicitly delete copy constructor and copy assignment operator for clarity
+    MessageBase(const MessageBase&) = delete;
+    MessageBase& operator=(const MessageBase&) = delete;
+
+    explicit MessageBase()
+        : memory_(nullptr) {}
+
+    explicit MessageBase(SharedMemoryPtr memory)
+        : memory_(fbl::move(memory)) {}
+
+    MessageHeader* header() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing uninitialized OP-TEE message");
+        return reinterpret_cast<MessageHeader*>(memory_->vaddr());
+    }
+
+    SharedMemoryPtr memory_;
+};
+
+// Message
+//
+// A normal message from the rich world (REE).
+class Message : public MessageBase<fbl::unique_ptr<SharedMemory>> {
+public:
     enum Command : uint32_t {
         kOpenSession = 0,
         kInvokeCommand = 1,
@@ -144,7 +196,48 @@ public:
         kUnregisterSharedMemory = 5,
     };
 
-    enum RpcCommand : uint32_t {
+    // Message
+    //
+    // Move constructor for Message. Uses the default implicit implementation.
+    Message(Message&&) = default;
+
+    // Move-only, so explicitly delete copy constructor and copy assignment operator for clarity
+    Message(const Message&) = delete;
+    Message& operator=(const Message&) = delete;
+
+protected:
+    using MessageBase::MessageBase; // inherit constructors
+};
+
+// OpenSessionMessage
+//
+// This OP-TEE message is used to start a session between a client app and trusted app.
+class OpenSessionMessage : public Message {
+public:
+    explicit OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* pool,
+                                const UuidView& trusted_app,
+                                const UuidView& client_app,
+                                uint32_t client_login,
+                                uint32_t cancel_id,
+                                const fbl::Array<MessageParam>& params);
+
+    // Outputs
+    uint32_t session_id() const { return header()->session_id; }
+    uint32_t return_code() const { return header()->return_code; }
+    uint32_t return_origin() const { return header()->return_origin; }
+
+protected:
+    using Message::header; // make header() protected
+
+    static constexpr size_t kNumFixedOpenSessionParams = 2;
+};
+
+// RpcMessage
+//
+// A message originating from the trusted world (TEE) specifying the details of a RPC request.
+class RpcMessage : public MessageBase<SharedMemory*> {
+public:
+    enum Command : uint32_t {
         kLoadTa = 0,
         kReplayMemoryBlock = 1,
         kAccessFileSystem = 2,
@@ -155,69 +248,115 @@ public:
         kFreeMemory = 7
     };
 
-    explicit MessageBase(SharedMemoryPtr memory)
-        : memory_(fbl::move(memory)) {
-        ZX_DEBUG_ASSERT(memory_->size() >= sizeof(MessageHeader));
+    // RpcMessage
+    //
+    // Move constructor for RpcMessage.
+    RpcMessage(RpcMessage&& rpc_msg)
+        : MessageBase(fbl::move(rpc_msg)),
+          is_valid_(fbl::move(rpc_msg.is_valid_)) {
+        rpc_msg.is_valid_ = false;
     }
 
-    zx_paddr_t paddr() const { return memory_->paddr(); }
+    // Move-only, so explicitly delete copy constructor and copy assignment operator for clarity
+    RpcMessage(const RpcMessage&) = delete;
+    RpcMessage& operator=(const RpcMessage&) = delete;
 
-    MessageHeader* header() const {
-        return reinterpret_cast<MessageHeader*>(memory_->vaddr());
+    // RpcMessage
+    //
+    // Constructs an instance of an RpcMessage from a backing SharedMemory object.
+    //
+    // Parameters:
+    //  * memory:   A pointer to the SharedMemory object backing the RpcMessage. This pointer must
+    //              be non-null and valid.
+    explicit RpcMessage(SharedMemory* memory)
+        : MessageBase(memory), is_valid_(TryInitializeMembers()) {}
+
+    uint32_t command() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return header()->command;
     }
 
-    // TODO(rjascani): Change this to return a reference to make ownership rules clearer
-    MessageParamList params() const {
-        return MessageParamList(reinterpret_cast<MessageParam*>(header() + 1),
-                                header()->num_params);
+    void set_return_origin(uint32_t return_origin) {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        header()->return_origin = return_origin;
     }
+
+    void set_return_code(uint32_t return_code) {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        header()->return_code = return_code;
+    }
+
+    // Returns whether the message is a valid RpcMessage. This must be true to access any
+    // class-specific field.
+    bool is_valid() const { return is_valid_; }
 
 protected:
-    static constexpr size_t CalculateSize(size_t num_params) {
-        return sizeof(MessageHeader) + (sizeof(MessageParam) * num_params);
-    }
+    bool is_valid_;
 
-    SharedMemoryPtr memory_;
+private:
+    bool TryInitializeMembers();
 };
 
-// UnmanagedMessage
+// LoadTaRpcMessage
 //
-// An OP-TEE message, where the lifetime of the underlying message memory is unmanaged.
-// This is useful for cases where the driver has already tracked the underlying message memory and
-// just needs to interpret the memory as a Message. This typically occurs when the secure world
-// repurposes a chunk of previously allocated memory as a Message for tasks like RPC.
-using UnmanagedMessage = MessageBase<SharedMemory*>;
-
-// ManagedMessage
-//
-// An OP-TEE message, where the lifetime of the underlying message memory is owned and managed by
-// a unique_ptr.
-// This is useful for cases where the lifetime of the message memory should be coupled with the
-// lifetime of the Message, which typically occurs when allocating memory for a new Message to pass
-// into the secure world.
-
-using ManagedMessage = MessageBase<fbl::unique_ptr<SharedMemory>>;
-
-// OpenSessionMessage
-//
-// This OP-TEE message is used to start a session between a client app and trusted app.
-class OpenSessionMessage : public ManagedMessage {
+// A RpcMessage that should be interpreted with the command of loading a trusted application.
+// A RpcMessage can be converted into a LoadTaRpcMessage via a constructor.
+class LoadTaRpcMessage : public RpcMessage {
 public:
-    static OpenSessionMessage Create(SharedMemoryManager::DriverMemoryPool* pool,
-                                     const UuidView& trusted_app,
-                                     const UuidView& client_app,
-                                     uint32_t client_login,
-                                     uint32_t cancel_id,
-                                     const fbl::Array<MessageParam>& params);
+    // LoadTaRpcMessage
+    //
+    // Move constructor for LoadTaRpcMessage. Uses the default implicit implementation.
+    LoadTaRpcMessage(LoadTaRpcMessage&& load_ta_msg) = default;
 
-    // Outputs
-    uint32_t session_id() const { return header()->session_id; }
-    uint32_t return_code() const { return header()->return_code; }
-    uint32_t return_origin() const { return header()->return_origin; }
+    // LoadTaRpcMessage
+    //
+    // Constructs a LoadTaRpcMessage from a moved-in RpcMessage.
+    explicit LoadTaRpcMessage(RpcMessage&& rpc_message)
+        : RpcMessage(fbl::move(rpc_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The RPC message passed in should've been valid
+        ZX_DEBUG_ASSERT(command() == RpcMessage::Command::kLoadTa);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    const TEEC_UUID& ta_uuid() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return ta_uuid_;
+    }
+
+    uint64_t memory_reference_id() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return mem_id_;
+    }
+
+    uint64_t memory_reference_size() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return mem_size_;
+    }
+
+    uint64_t memory_reference_offset() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return mem_offset_;
+    }
+
+    void set_output_ta_size(uint64_t ta_size) {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        *out_ta_size_ = ta_size;
+    }
 
 protected:
-    using ManagedMessage::header;         // make header() protected
-    using ManagedMessage::ManagedMessage; // inherit constructors
+    static constexpr size_t kNumParams = 2;
+    static constexpr size_t kUuidParamIndex = 0;
+    static constexpr size_t kMemoryReferenceParamIndex = 1;
+
+    TEEC_UUID ta_uuid_;
+    uint64_t mem_id_;
+    uint64_t mem_size_;
+    size_t mem_offset_;
+    uint64_t* out_ta_size_;
+
+private:
+    bool TryInitializeMembers();
 };
 
 } // namespace optee

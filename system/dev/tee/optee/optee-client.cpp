@@ -7,7 +7,6 @@
 #include <fbl/string_piece.h>
 #include <fbl/type_support.h>
 #include <lib/zx/vmo.h>
-#include <string.h>
 #include <tee-client-api/tee-client-types.h>
 
 #include "optee-client.h"
@@ -49,20 +48,6 @@ JoinFrom32BitParts(SRC_T src_hi, SRC_T src_lo, DST_T* dst) {
     static_assert(sizeof(DST_T) >= 8, "Type DST_T should be at least 64-bits!");
     ZX_DEBUG_ASSERT(dst != nullptr);
     *dst = (static_cast<DST_T>(src_hi) << 32) | static_cast<DST_T>(static_cast<uint32_t>(src_lo));
-}
-
-// Converts a big endian TEEC_UUID to host endianness. The fields of the TEEC_UUID are stored in big
-// endian by the TEE and is thus why the parameter value cannot be directly reinterpreted as a UUID.
-static void ConvertBeUuidToHost(const optee::MessageParam::Value& src, TEEC_UUID* dst) {
-    // Convert TEEC_UUID fields from big endian to host endian
-    dst->timeLow = betoh32(src.uuid_big_endian.timeLow);
-    dst->timeMid = betoh16(src.uuid_big_endian.timeMid);
-    dst->timeHiAndVersion = betoh16(src.uuid_big_endian.timeHiAndVersion);
-
-    // Because clockSeqAndNode is uint8_t, no need to convert endianness - just memcpy
-    memcpy(dst->clockSeqAndNode,
-           src.uuid_big_endian.clockSeqAndNode,
-           sizeof(src.uuid_big_endian.clockSeqAndNode));
 }
 
 // Builds a UUID string from a TEEC_UUID, formatting as per the RFC 4122 specification.
@@ -161,12 +146,12 @@ zx_status_t OpteeClient::OpenSession(const tee_ioctl_session_request_t* session_
         return status;
     }
 
-    auto message = OpenSessionMessage::Create(controller_->driver_pool(),
-                                              trusted_app,
-                                              client_app,
-                                              session_request->client_login,
-                                              session_request->cancel_id,
-                                              params);
+    OpenSessionMessage message(controller_->driver_pool(),
+                               trusted_app,
+                               client_app,
+                               session_request->client_login,
+                               session_request->cancel_id,
+                               params);
 
     *out_actual = sizeof(*out_session);
     uint32_t call_code =
@@ -382,7 +367,6 @@ zx_status_t OpteeClient::HandleRpcFreeMemory(const RpcFunctionFreeMemoryArgs& ar
 
 zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& args,
                                           RpcFunctionExecuteCommandsResult* out_result) {
-    zx_status_t status;
     uint64_t mem_id;
     JoinFrom32BitParts(args.msg_mem_id_upper32, args.msg_mem_id_lower32, &mem_id);
 
@@ -391,7 +375,7 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
     // that require more memory than just the header will need to do further memory checks.
     SharedMemoryList::iterator mem_iter = FindSharedMemory(mem_id);
     if (mem_iter == allocated_shared_memory_.end()) {
-        zxlogf(ERROR, "optee: invalid shared memory region passed into RPC command\n");
+        zxlogf(ERROR, "optee: invalid shared memory region passed into RPC command!\n");
         return ZX_ERR_INVALID_ARGS;
     } else if (mem_iter->size() < sizeof(MessageHeader)) {
         zxlogf(ERROR,
@@ -401,134 +385,72 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
 
     // Read message header from shared memory
     SharedMemory& msg_mem = *mem_iter;
-    UnmanagedMessage message(&msg_mem);
-    switch (message.header()->command) {
-    case UnmanagedMessage::RpcCommand::kLoadTa:
-        status = HandleRpcCommandLoadTa(&message);
-        break;
-    case UnmanagedMessage::RpcCommand::kReplayMemoryBlock:
-        status = HandleRpcCommandReplayMemoryBlock(&message);
-        break;
-    case UnmanagedMessage::RpcCommand::kAccessFileSystem:
+    RpcMessage message(&msg_mem);
+    if (!message.is_valid()) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    switch (message.command()) {
+    case RpcMessage::Command::kLoadTa: {
+        LoadTaRpcMessage load_ta_msg(fbl::move(message));
+        if (!load_ta_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandLoadTa(&load_ta_msg);
+    }
+    case RpcMessage::Command::kReplayMemoryBlock:
+        return HandleRpcCommandReplayMemoryBlock(&message);
+    case RpcMessage::Command::kAccessFileSystem:
         zxlogf(ERROR, "optee: RPC command to access file system recognized but not implemented\n");
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-    case UnmanagedMessage::RpcCommand::kGetTime:
+        return ZX_ERR_NOT_SUPPORTED;
+    case RpcMessage::Command::kGetTime:
         zxlogf(ERROR, "optee: RPC command to access file system recognized but not implemented\n");
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-    case UnmanagedMessage::RpcCommand::kWaitQueue:
+        return ZX_ERR_NOT_SUPPORTED;
+    case RpcMessage::Command::kWaitQueue:
         zxlogf(ERROR, "optee: RPC command wait queue recognized but not implemented\n");
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-    case UnmanagedMessage::RpcCommand::kSuspend:
+        return ZX_ERR_NOT_SUPPORTED;
+    case RpcMessage::Command::kSuspend:
         zxlogf(ERROR, "optee: RPC command to suspend recognized but not implemented\n");
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-    case UnmanagedMessage::RpcCommand::kAllocateMemory:
-        status = HandleRpcCommandAllocateMemory(&message);
-        break;
-    case UnmanagedMessage::RpcCommand::kFreeMemory:
-        status = HandleRpcCommandFreeMemory(&message);
-        break;
+        return ZX_ERR_NOT_SUPPORTED;
+    case RpcMessage::Command::kAllocateMemory:
+        return HandleRpcCommandAllocateMemory(&message);
+    case RpcMessage::Command::kFreeMemory:
+        return HandleRpcCommandFreeMemory(&message);
     default:
         zxlogf(ERROR,
                "optee: unrecognized command passed to RPC 0x%" PRIu32 "\n",
-               message.header()->command);
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
+               message.command());
+        return ZX_ERR_NOT_SUPPORTED;
     }
-
-    return status;
 }
 
-zx_status_t OpteeClient::HandleRpcCommandLoadTa(UnmanagedMessage* message) {
-    ZX_DEBUG_ASSERT(message != nullptr);
+zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message->is_valid());
 
     // Mark that the return code will originate from driver
-    message->header()->return_origin = TEEC_ORIGIN_COMMS;
+    message->set_return_origin(TEEC_ORIGIN_COMMS);
 
-    MessageParamList params = message->params();
-    if (params.size() != 2) {
-        zxlogf(ERROR,
-               "optee: RPC command to load trusted app received unexpected number of parameters!"
-               "\n");
-        message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // The first parameter is the UUID of the trusted application to load
-    const MessageParam& uuid_param = params[0];
-    // The second parameter is the memory reference in which to load the trusted application
-    // Not const because if the size of the memory reference is incorrect, the second parameter is
-    // used to output the size of the memory needed for the trusted application.
-    MessageParam& memory_reference_param = params[1];
-
-    // Parse the UUID of the trusted application from the parameters
-    TEEC_UUID ta_uuid;
-    switch (uuid_param.attribute) {
-    case MessageParam::kAttributeTypeValueInput:
-    case MessageParam::kAttributeTypeValueInOut:
-        ConvertBeUuidToHost(uuid_param.payload.value, &ta_uuid);
-        break;
-    default:
-        zxlogf(ERROR,
-               "optee: RPC command to load trusted app received unexpected first parameter!\n");
-        message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // Parse where in memory to write the trusted application
-    uint64_t mem_ref_size;  // The size of the memory reference being passed in
-    uint64_t* out_mem_size; // Where to write the actual TA size in case mem_size < size of TA
-    uint64_t mem_id;
-    size_t mem_offset;
-    switch (memory_reference_param.attribute) {
-    case MessageParam::kAttributeTypeTempMemOutput:
-    case MessageParam::kAttributeTypeTempMemInOut:
-        mem_id = memory_reference_param.payload.temporary_memory.shared_memory_reference;
-        mem_ref_size = memory_reference_param.payload.temporary_memory.size;
-        out_mem_size = &memory_reference_param.payload.temporary_memory.size;
-        // Temporary Memory References are owned by the TEE/TA and used only for the duration of
-        // this operation. Thus, it is sized exactly for the operation being performed and does not
-        // have an offset.
-        mem_offset = 0;
-        break;
-    case MessageParam::kAttributeTypeRegMemOutput:
-    case MessageParam::kAttributeTypeRegMemInOut:
-        mem_id = memory_reference_param.payload.registered_memory.shared_memory_reference;
-        mem_ref_size = memory_reference_param.payload.registered_memory.size;
-        out_mem_size = &memory_reference_param.payload.registered_memory.size;
-        // Registered Memory References were allocated (and registered) before this operation, so
-        // part of the memory might be used for other purposes (hence the offset).
-        mem_offset = static_cast<size_t>(memory_reference_param.payload.registered_memory.offset);
-        break;
-    default:
-        zxlogf(ERROR,
-               "optee: RPC command to load trusted app received unexpected second parameter!\n");
-        message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    if (mem_offset >= mem_ref_size && mem_offset > 0) {
+    if (message->memory_reference_offset() >= message->memory_reference_size() &&
+        message->memory_reference_offset() > 0) {
         zxlogf(ERROR, "optee: RPC command received a memory offset out of bounds!\n");
-        message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
         return ZX_ERR_INVALID_ARGS;
     }
 
     // The amount of memory available for loading the TA
-    uint64_t mem_usable_size = mem_ref_size - mem_offset;
+    uint64_t mem_usable_size = message->memory_reference_size() -
+                               message->memory_reference_offset();
 
     // Try to find the SharedMemory based on the memory id
     uint8_t* out_ta_mem; // Where to write the TA in memory
 
-    if (mem_id != 0) {
-        SharedMemoryList::iterator out_mem_iter = FindSharedMemory(mem_id);
+    if (message->memory_reference_id() != 0) {
+        SharedMemoryList::iterator out_mem_iter = FindSharedMemory(message->memory_reference_id());
         if (out_mem_iter == allocated_shared_memory_.end()) {
             // Valid memory reference could not be found and TEE is not querying size
             zxlogf(ERROR,
                    "optee: received invalid memory reference from TEE command to load TA!\n");
-            message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
+            message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
             return ZX_ERR_INVALID_ARGS;
         } else if (mem_usable_size > out_mem_iter->size()) {
             // The TEE is claiming the memory reference given is larger than it actually is
@@ -536,20 +458,21 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(UnmanagedMessage* message) {
             zxlogf(ERROR,
                    "optee: TEE claimed a memory reference's size is larger than the real memory"
                    "size!\n");
-            message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
+            message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
             return ZX_ERR_INVALID_ARGS;
         }
 
-        out_ta_mem = reinterpret_cast<uint8_t*>(out_mem_iter->vaddr() + mem_offset);
+        out_ta_mem = reinterpret_cast<uint8_t*>(out_mem_iter->vaddr() +
+                                                message->memory_reference_offset());
     } else {
         // TEE is just querying size of TA, so it sent a memory identifier of 0
-        ZX_DEBUG_ASSERT(mem_offset == 0);
-        ZX_DEBUG_ASSERT(mem_ref_size == 0);
+        ZX_DEBUG_ASSERT(message->memory_reference_offset() == 0);
+        ZX_DEBUG_ASSERT(message->memory_reference_size() == 0);
 
         out_ta_mem = nullptr;
     }
 
-    auto ta_name = BuildUuidString(ta_uuid);
+    auto ta_name = BuildUuidString(message->ta_uuid());
     auto ta_path = BuildTaPath(ta_name.ToStringPiece());
 
     // Load the trusted app into a VMO
@@ -563,28 +486,28 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(UnmanagedMessage* message) {
     if (status != ZX_OK) {
         if (status == ZX_ERR_NOT_FOUND) {
             zxlogf(ERROR, "optee: could not find trusted app %s!\n", ta_path.data());
-            message->header()->return_code = TEEC_ERROR_ITEM_NOT_FOUND;
+            message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
         } else {
             zxlogf(ERROR, "optee: error loading trusted app %s!\n", ta_path.data());
-            message->header()->return_code = TEEC_ERROR_GENERIC;
+            message->set_return_code(TEEC_ERROR_GENERIC);
         }
 
         return status;
     } else if (ta_size == 0) {
         zxlogf(ERROR, "optee: loaded trusted app %s with unexpected size!\n", ta_path.data());
-        message->header()->return_code = TEEC_ERROR_GENERIC;
+        message->set_return_code(TEEC_ERROR_GENERIC);
         return status;
     }
 
-    *out_mem_size = ta_size;
+    message->set_output_ta_size(static_cast<uint64_t>(ta_size));
 
     if (out_ta_mem == nullptr) {
-        // TEE was querying the size of the TA
-        message->header()->return_code = TEEC_SUCCESS;
+        // TEE is querying the size of the TA
+        message->set_return_code(TEEC_SUCCESS);
         return ZX_OK;
     } else if (ta_size > mem_usable_size) {
         // TEE provided too small of a memory region to write TA into
-        message->header()->return_code = TEEC_ERROR_SHORT_BUFFER;
+        message->set_return_code(TEEC_ERROR_SHORT_BUFFER);
         return ZX_OK;
     }
 
@@ -593,7 +516,7 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(UnmanagedMessage* message) {
     status = ta_vmo.read(out_ta_mem, 0, ta_size);
     if (status != ZX_OK) {
         zxlogf(ERROR, "optee: failed to copy trusted app from VMO to shared memory!\n");
-        message->header()->return_code = TEEC_ERROR_GENERIC;
+        message->set_return_code(TEEC_ERROR_GENERIC);
         return status;
     }
 
@@ -603,34 +526,30 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(UnmanagedMessage* message) {
         memset(ta_end, 0, mem_usable_size - ta_size);
     }
 
-    message->header()->return_code = TEEC_SUCCESS;
+    message->set_return_code(TEEC_SUCCESS);
     return ZX_OK;
 }
 
-zx_status_t OpteeClient::HandleRpcCommandReplayMemoryBlock(UnmanagedMessage* message) {
-    ZX_DEBUG_ASSERT(message != nullptr);
-
+zx_status_t OpteeClient::HandleRpcCommandReplayMemoryBlock(RpcMessage* message) {
     // Mark that the return code will originate from driver
-    message->header()->return_origin = TEEC_ORIGIN_COMMS;
-    message->header()->return_code = TEEC_ERROR_NOT_SUPPORTED;
+    message->set_return_origin(TEEC_ORIGIN_COMMS);
+    message->set_return_code(TEEC_ERROR_NOT_SUPPORTED);
 
     zxlogf(INFO, "optee: telling TEE side Fuchsia doesn't support RPMB\n");
 
     return ZX_OK;
 }
 
-zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(UnmanagedMessage* message) {
-    ZX_DEBUG_ASSERT(message != nullptr);
-
+zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(RpcMessage* message) {
     // Mark that the return code will originate from driver
-    message->header()->return_origin = TEEC_ORIGIN_COMMS;
+    message->set_return_origin(TEEC_ORIGIN_COMMS);
 
     MessageParamList params = message->params();
     if (params.size() != 1) {
         zxlogf(ERROR,
                "optee: RPC command to allocate shared memory received a bad number of parameters!"
                "\n");
-        message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -640,7 +559,7 @@ zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(UnmanagedMessage* messag
         zxlogf(ERROR,
                "optee: RPC command to allocate shared memory received an unexpected parameter type!"
                "\n");
-        message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -656,7 +575,7 @@ zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(UnmanagedMessage* messag
     default:
         zxlogf(ERROR,
                "optee: cannot allocate unknown memory type %" PRIu64 "\n", mem_specs.memory_type);
-        message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -668,9 +587,9 @@ zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(UnmanagedMessage* messag
                                               &mem_id);
     if (status != ZX_OK) {
         if (status == ZX_ERR_NO_MEMORY) {
-            message->header()->return_code = TEEC_ERROR_OUT_OF_MEMORY;
+            message->set_return_code(TEEC_ERROR_OUT_OF_MEMORY);
         } else {
-            message->header()->return_code = TEEC_ERROR_GENERIC;
+            message->set_return_code(TEEC_ERROR_GENERIC);
         }
 
         return status;
@@ -685,22 +604,20 @@ zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(UnmanagedMessage* messag
     out_temp_mem.buffer = static_cast<uint64_t>(paddr);
     out_temp_mem.shared_memory_reference = mem_id;
 
-    message->header()->return_code = TEEC_SUCCESS;
+    message->set_return_code(TEEC_SUCCESS);
 
     return status;
 }
 
-zx_status_t OpteeClient::HandleRpcCommandFreeMemory(UnmanagedMessage* message) {
-    ZX_DEBUG_ASSERT(message != nullptr);
-
+zx_status_t OpteeClient::HandleRpcCommandFreeMemory(RpcMessage* message) {
     // Mark that the return code will originate from driver
-    message->header()->return_origin = TEEC_ORIGIN_COMMS;
+    message->set_return_origin(TEEC_ORIGIN_COMMS);
 
     MessageParamList params = message->params();
     if (params.size() != 1) {
         zxlogf(ERROR,
                "optee: RPC command to free shared memory received a bad number of parameters!\n");
-        message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -709,7 +626,7 @@ zx_status_t OpteeClient::HandleRpcCommandFreeMemory(UnmanagedMessage* message) {
     if (memory_specs_param.attribute != MessageParam::AttributeType::kAttributeTypeValueInput) {
         zxlogf(ERROR,
                "optee: RPC command to free shared memory received an unexpected parameter type!\n");
-        message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -724,22 +641,22 @@ zx_status_t OpteeClient::HandleRpcCommandFreeMemory(UnmanagedMessage* message) {
     default:
         zxlogf(ERROR,
                "optee: cannot free unknown memory type %" PRIu64 "\n", mem_specs.memory_type);
-        message->header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
         return ZX_ERR_INVALID_ARGS;
     }
 
     zx_status_t status = FreeSharedMemory(mem_specs.memory_id);
     if (status != ZX_OK) {
         if (status == ZX_ERR_NOT_FOUND) {
-            message->header()->return_code = TEEC_ERROR_ITEM_NOT_FOUND;
+            message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
         } else {
-            message->header()->return_code = TEEC_ERROR_GENERIC;
+            message->set_return_code(TEEC_ERROR_GENERIC);
         }
 
         return status;
     }
 
-    message->header()->return_code = TEEC_SUCCESS;
+    message->set_return_code(TEEC_SUCCESS);
     return status;
 }
 

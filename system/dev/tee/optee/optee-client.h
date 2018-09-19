@@ -124,10 +124,10 @@ private:
     // This dispatcher is actually a specific command in the first layer of RPC requests.
     zx_status_t HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& args,
                                  RpcFunctionExecuteCommandsResult* out_result);
-    zx_status_t HandleRpcCommandLoadTa(UnmanagedMessage* message);
-    zx_status_t HandleRpcCommandReplayMemoryBlock(UnmanagedMessage* message);
-    zx_status_t HandleRpcCommandAllocateMemory(UnmanagedMessage* message);
-    zx_status_t HandleRpcCommandFreeMemory(UnmanagedMessage* message);
+    zx_status_t HandleRpcCommandLoadTa(LoadTaRpcMessage* message);
+    zx_status_t HandleRpcCommandReplayMemoryBlock(RpcMessage* message);
+    zx_status_t HandleRpcCommandAllocateMemory(RpcMessage* message);
+    zx_status_t HandleRpcCommandFreeMemory(RpcMessage* message);
 
     OpteeController* controller_;
     bool needs_to_close_ = false;

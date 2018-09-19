@@ -47,7 +47,7 @@ public:
 
     void RemoveClient(OpteeClient* client);
 
-    uint32_t CallWithMessage(const ManagedMessage& message, RpcHandler rpc_handler);
+    uint32_t CallWithMessage(const Message& message, RpcHandler rpc_handler);
 
     SharedMemoryManager::DriverMemoryPool* driver_pool() const {
         return shared_memory_manager_->driver_pool();

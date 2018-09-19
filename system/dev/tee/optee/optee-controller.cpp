@@ -297,7 +297,7 @@ void OpteeController::RemoveClient(OpteeClient* client) {
     }
 }
 
-uint32_t OpteeController::CallWithMessage(const ManagedMessage& message,
+uint32_t OpteeController::CallWithMessage(const Message& message,
                                           RpcHandler rpc_handler) {
     uint32_t return_value = tee::kSmc32ReturnUnknownFunction;
     union {
