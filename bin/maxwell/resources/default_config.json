@@ -4,6 +4,7 @@
     "experiment_agent"
   ],
   "session_agents": [
-    "kronk"
+    "kronk",
+    "puddy"
   ]
 }
