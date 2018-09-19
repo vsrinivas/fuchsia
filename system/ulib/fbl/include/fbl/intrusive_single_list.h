@@ -365,15 +365,16 @@ public:
 
     // erase_next
     //
-    // Remove the element in the list which follows iter.  If there is
-    // no element in the list which follows iter, return a nullptr
-    // instance of PtrType.  It is an error to attempt to
-    // erase_next(end())
+    // Remove the element in the list which follows iter.  If there is no
+    // element in the list which follows iter, return a nullptr instance of
+    // PtrType.  It is an error to attempt to erase_next an invalid iterator
+    // (either an uninitialized iterator, or an iterator which is equal to
+    // end())
     PtrType erase_next(const iterator& iter) {
-        ZX_DEBUG_ASSERT(iter != end());
+        ZX_DEBUG_ASSERT(iter.IsValid());
         auto& iter_ns = NodeTraits::node_state(*iter);
 
-        if (iter_ns.next_ == nullptr)
+        if (PtrTraits::IsSentinel(iter_ns.next_))
             return PtrType(nullptr);
 
         auto& next_ns  = NodeTraits::node_state(*iter_ns.next_);

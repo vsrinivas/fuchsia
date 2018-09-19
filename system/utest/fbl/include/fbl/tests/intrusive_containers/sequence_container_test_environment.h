@@ -294,6 +294,12 @@ public:
         iter++;
         EXPECT_TRUE(iter == container().end(), "");
 
+        // Attempt to erase the element after the final element.  This should
+        // fail, and indicate that it has failed by returning null.
+        iter = container().begin();
+        PtrType tmp = container().erase_next(iter);
+        EXPECT_NULL(tmp, "");
+
         END_TEST;
     }
 

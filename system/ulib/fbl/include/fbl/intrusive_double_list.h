@@ -253,22 +253,27 @@ public:
     PtrType pop_front() { return internal_erase(PtrTraits::GetRaw(head_)); }
     PtrType pop_back()  { return internal_erase(tail()); }
 
-    // erase and erase_next
+    // erase
     //
-    // Erase the element either at the provided iterator, or immediately after
-    // the provided iterator.  Remove the element in the list either at iter, or
-    // which follows iter.  If there is no element in the list at this position
-    // (iter is end()), return a nullptr instance of PtrType.  It is an error to
-    // attempt to use an iterator from a different instance of this list type to
-    // attempt to erase a node.
+    // Erase the element at the provided iterator.  If there is no element in
+    // the list at this position (iter is end()), return a nullptr instance of
+    // PtrType.  It is an error to attempt to use an iterator from a different
+    // instance of this list type to attempt to erase a node.
     PtrType erase(ValueType& obj)       { return internal_erase(&obj); }
     PtrType erase(const iterator& iter) { return internal_erase(iter.node_); }
 
+    // erase_next
+    //
+    // Remove the element in the list which follows iter.  If there is no
+    // element in the list which follows iter, return a nullptr instance of
+    // PtrType.  It is an error to attempt to erase_next an invalid iterator
+    // (either an uninitialized iterator, or an iterator which is equal to
+    // end()) It is an error to attempt to use an iterator from a different
+    // instance of this list type to attempt to erase a node.
     PtrType erase_next(const iterator& iter) {
-        if (!iter.IsValid())
-            return PtrType(nullptr);
-
+        ZX_DEBUG_ASSERT(iter.IsValid());
         auto& ns = NodeTraits::node_state(*iter.node_);
+
         if (PtrTraits::IsSentinel(ns.next_)) {
             ZX_DEBUG_ASSERT(sentinel() == PtrTraits::GetRaw(ns.next_));
             return PtrType(nullptr);
