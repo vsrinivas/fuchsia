@@ -12,9 +12,10 @@ namespace machina {
 static constexpr char kVirtioConsoleUrl[] = "virtio_console";
 
 VirtioConsole::VirtioConsole(const PhysMem& phys_mem)
-    : VirtioComponentDevice(phys_mem, 0 /* device_features */,
-                            fit::bind_member(this, &VirtioConsole::Configure),
-                            fit::bind_member(this, &VirtioConsole::Ready)) {
+    : VirtioComponentDevice(
+          phys_mem, 0 /* device_features */,
+          fit::bind_member(this, &VirtioConsole::ConfigureQueue),
+          fit::bind_member(this, &VirtioConsole::Ready)) {
   std::lock_guard<std::mutex> lock(device_config_.mutex);
   config_.max_nr_ports = kVirtioConsoleMaxNumPorts;
 }
@@ -62,10 +63,10 @@ zx_status_t VirtioConsole::Start(const zx::guest& guest, zx::socket socket,
   return console_->Start(std::move(start_info), std::move(socket));
 }
 
-zx_status_t VirtioConsole::Configure(uint16_t queue, uint16_t size,
-                                     zx_gpaddr_t desc, zx_gpaddr_t avail,
-                                     zx_gpaddr_t used) {
-  return console_->Configure(queue, size, desc, avail, used);
+zx_status_t VirtioConsole::ConfigureQueue(uint16_t queue, uint16_t size,
+                                          zx_gpaddr_t desc, zx_gpaddr_t avail,
+                                          zx_gpaddr_t used) {
+  return console_->ConfigureQueue(queue, size, desc, avail, used);
 }
 
 zx_status_t VirtioConsole::Ready(uint32_t negotiated_features) {

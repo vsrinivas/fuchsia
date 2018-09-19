@@ -42,8 +42,8 @@ class VirtioConsole
   // Use a sync pointer for consistency of virtual machine execution.
   fuchsia::guest::device::VirtioConsoleSyncPtr console_;
 
-  zx_status_t Configure(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                        zx_gpaddr_t avail, zx_gpaddr_t used);
+  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                             zx_gpaddr_t avail, zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
 };
 

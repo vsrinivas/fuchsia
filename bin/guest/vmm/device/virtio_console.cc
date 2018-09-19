@@ -123,8 +123,8 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
   }
 
   // |fuchsia::guest::device::VirtioDevice|
-  void Configure(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                 zx_gpaddr_t avail, zx_gpaddr_t used) override {
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                      zx_gpaddr_t avail, zx_gpaddr_t used) override {
     StreamBase* stream;
     std::tie(stream, std::ignore) = StreamForQueue(queue);
     stream->queue.Configure(size, desc, avail, used);
