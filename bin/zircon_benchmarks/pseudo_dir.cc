@@ -85,10 +85,12 @@ bool PseudoDirReaddirTest(perftest::RepeatState* state, int file_count,
 
   while (state->KeepRunning()) {
     fs::vdircookie_t cookie;
-    size_t real_len;
-    while (dir->Readdir(&cookie, buffer.data(), buffer.size(), &real_len) !=
-           ZX_OK) {
-    }
+    size_t real_len = 0;
+    do {
+      auto status =
+          dir->Readdir(&cookie, buffer.data(), buffer.size(), &real_len);
+      ZX_DEBUG_ASSERT(ZX_OK == status);
+    } while (real_len > 0);
   }
   return true;
 }
