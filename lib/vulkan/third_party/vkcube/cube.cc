@@ -565,6 +565,11 @@ void demo_draw(struct demo* demo) {
                   UINT64_MAX);
   vkResetFences(demo->device, 1, &demo->fences[demo->frame_index]);
 
+  // We update the data buffer here after waiting for the fence because
+  // otherwise the updated uniform buffer can affect the last frame, resulting
+  // in jitter.
+  demo_update_data_buffer(demo);
+
   TRACE_NONCE_DECLARE(nonce);
   TRACE_ASYNC_BEGIN("cube", "acquire next image", nonce);
 
@@ -2041,7 +2046,6 @@ static void demo_run_xlib(struct demo* demo) {
       }
     }
 
-    demo_update_data_buffer(demo);
     demo_draw(demo);
     demo->curFrame++;
     if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
@@ -2114,7 +2118,6 @@ static void demo_run_xcb(struct demo* demo) {
       }
     }
 
-    demo_update_data_buffer(demo);
     demo_draw(demo);
     demo->curFrame++;
     if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
@@ -2168,8 +2171,6 @@ static void demo_create_xcb_window(struct demo* demo) {
 static void demo_update_magma_one_frame(struct demo* demo) {
   static constexpr float kMsPerSec =
       std::chrono::milliseconds(std::chrono::seconds(1)).count();
-
-  demo_update_data_buffer(demo);
 
   auto& num_frames = demo->fuchsia_state->num_frames;
   auto& elapsed_frames = demo->fuchsia_state->elapsed_frames;
