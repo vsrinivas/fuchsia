@@ -428,7 +428,7 @@ impl BluetoothFacade {
 
         // TODO(NET-1026): Move to private method?
         // Create server endpoints
-        let (client_end, server_end) = match fidl::endpoints::create_proxy() {
+        let (proxy, server_end) = match fidl::endpoints::create_proxy() {
             Err(e) => {
                 return Left(fready(Err(e.into())));
             }
@@ -448,7 +448,7 @@ impl BluetoothFacade {
                             BluetoothFacade::update_peripheral_id(
                                 facade,
                                 identifier.clone(),
-                                client_end,
+                                proxy,
                             );
                             fready(Ok(()))
                         }

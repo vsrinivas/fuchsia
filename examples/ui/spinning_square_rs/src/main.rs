@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 use failure::{Error, ResultExt, bail};
-use fidl::endpoints::{create_proxy, ClientEnd, RequestStream, ServerEnd, ServiceMarker};
+use fidl::endpoints::{create_proxy, create_endpoints, RequestStream, ServerEnd, ServiceMarker};
 use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
-use fidl_fuchsia_ui_scenic::{ScenicMarker, SessionListenerMarker, SessionListenerRequest,
-                             SessionMarker};
+use fidl_fuchsia_ui_scenic::{SessionListenerMarker, SessionListenerRequest};
 use fidl_fuchsia_ui_viewsv1::ViewProviderRequest::CreateView;
 use fidl_fuchsia_ui_viewsv1::{ViewListenerMarker, ViewListenerRequest, ViewManagerMarker,
-                              ViewManagerProxy, ViewMarker, ViewProviderMarker,
-                              ViewProviderRequestStream};
+                              ViewManagerProxy, ViewProviderMarker, ViewProviderRequestStream};
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_app as component;
 use fuchsia_app::{client::connect_to_service, server::ServiceFactory};
@@ -42,10 +40,9 @@ impl SpinningSquareView {
         view: fidl_fuchsia_ui_viewsv1::ViewProxy, mine: zx::EventPair,
         scenic: fidl_fuchsia_ui_scenic::ScenicProxy,
     ) -> Result<SpinningSquareViewPtr, Error> {
-        let (session_listener_client, session_listener_server) = zx::Channel::create()?;
-        let session_listener = ClientEnd::new(session_listener_client);
+        let (session_listener, session_listener_request) = create_endpoints()?;
 
-        let (session_proxy, session_request) = create_proxy::<SessionMarker>()?;
+        let (session_proxy, session_request) = create_proxy()?;
         scenic.create_session(session_request, Some(session_listener))?;
         let session = Session::new(session_proxy);
 
@@ -63,7 +60,7 @@ impl SpinningSquareView {
         let view_controller = Arc::new(Mutex::new(view_controller));
 
         Self::setup_timer(&view_controller);
-        Self::setup_session_listener(&view_controller, session_listener_server);
+        Self::setup_session_listener(&view_controller, session_listener_request);
         Self::setup_view_listener(&view_controller, view_listener_request);
 
         if let Ok(vc) = view_controller.lock() {
@@ -87,10 +84,8 @@ impl SpinningSquareView {
     }
 
     fn setup_session_listener(
-        view_controller: &SpinningSquareViewPtr, session_listener_server: zx::Channel,
+        view_controller: &SpinningSquareViewPtr, session_listener_request: ServerEnd::<SessionListenerMarker>,
     ) {
-        let session_listener_request =
-            ServerEnd::<SessionListenerMarker>::new(session_listener_server);
         let view_controller = view_controller.clone();
         fasync::spawn(
             session_listener_request
@@ -248,18 +243,17 @@ impl App {
     }
 
     pub fn create_view(&mut self, req: ServerEnd<ViewOwnerMarker>) -> Result<(), Error> {
-        let (view, view_server_end) = create_proxy::<ViewMarker>()?;
-        let (view_listener, view_listener_server) = zx::Channel::create()?;
-        let view_listener_request = ServerEnd::new(view_listener_server);
+        let (view, view_server_end) = create_proxy()?;
+        let (view_listener, view_listener_request) = create_endpoints()?;
         let (mine, theirs) = zx::EventPair::create().unwrap();
         self.view_manager.create_view(
             view_server_end,
             req,
-            ClientEnd::new(view_listener),
+            view_listener,
             theirs,
             None,
         )?;
-        let (scenic, scenic_request) = create_proxy::<ScenicMarker>()?;
+        let (scenic, scenic_request) = create_proxy()?;
         self.view_manager.get_scenic(scenic_request).unwrap();
         let view_ptr = SpinningSquareView::new(view_listener_request, view, mine, scenic).unwrap();
         self.views.push(view_ptr);

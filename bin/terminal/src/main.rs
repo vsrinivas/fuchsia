@@ -9,14 +9,13 @@ mod canvas;
 
 use crate::canvas::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size};
 use failure::{Error, ResultExt};
-use fidl::endpoints::{create_proxy, ClientEnd, RequestStream, ServerEnd, ServiceMarker};
+use fidl::endpoints::{create_proxy, create_endpoints, RequestStream, ServerEnd, ServiceMarker};
 use fidl_fuchsia_images as images;
 use fidl_fuchsia_math::SizeF;
-use fidl_fuchsia_ui_scenic::{self as scenic, ScenicMarker, ScenicProxy, SessionListenerMarker,
-                             SessionListenerRequest, SessionMarker};
+use fidl_fuchsia_ui_scenic::{self as scenic, ScenicProxy, SessionListenerRequest};
 use fidl_fuchsia_ui_viewsv1::ViewProviderRequest::CreateView;
 use fidl_fuchsia_ui_viewsv1::{ViewListenerMarker, ViewListenerRequest, ViewManagerMarker,
-                              ViewManagerProxy, ViewMarker, ViewProperties, ViewProviderMarker,
+                              ViewManagerProxy, ViewProperties, ViewProviderMarker,
                               ViewProviderRequestStream, ViewProxy};
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fidl_fuchsia_ui_gfx as gfx;
@@ -24,7 +23,7 @@ use fuchsia_app::client::connect_to_service;
 use fuchsia_app::server::ServiceFactory;
 use fuchsia_async as fasync;
 use fuchsia_scenic::{HostImageCycler, ImportNode, Session, SessionPtr};
-use fuchsia_zircon::{Channel, EventPair};
+use fuchsia_zircon::EventPair;
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::env;
@@ -52,12 +51,8 @@ impl ViewController {
         face: FontFacePtr, view_listener_request: ServerEnd<ViewListenerMarker>, view: ViewProxy,
         mine: EventPair, scenic: ScenicProxy,
     ) -> Result<ViewControllerPtr, Error> {
-        let (session_listener_client, session_listener_server) = Channel::create()?;
-        let session_listener = ClientEnd::new(session_listener_client);
-        let session_listener_request =
-            ServerEnd::<SessionListenerMarker>::new(session_listener_server);
-
-        let (session_proxy, session_request) = create_proxy::<SessionMarker>()?;
+        let (session_listener, session_listener_request) = create_endpoints()?;
+        let (session_proxy, session_request) = create_proxy()?;
         scenic.create_session(session_request, Some(session_listener))?;
         let session = Session::new(session_proxy);
         let view_controller = ViewController {
@@ -234,18 +229,17 @@ impl App {
     pub fn create_view(
         &mut self, view_owner_request: ServerEnd<ViewOwnerMarker>,
     ) -> Result<(), Error> {
-        let (view, view_request) = create_proxy::<ViewMarker>()?;
-        let (view_listener, view_listener_server) = Channel::create()?;
-        let view_listener_request = ServerEnd::new(view_listener_server);
+        let (view, view_request) = create_proxy()?;
+        let (view_listener, view_listener_request) = create_endpoints()?;
         let (mine, theirs) = EventPair::create()?;
         self.view_manager.create_view(
             view_request,
             view_owner_request,
-            ClientEnd::new(view_listener),
+            view_listener,
             theirs,
             Some("Terminal"),
         )?;
-        let (scenic, scenic_request) = create_proxy::<ScenicMarker>()?;
+        let (scenic, scenic_request) = create_proxy()?;
         self.view_manager.get_scenic(scenic_request)?;
         self.view_controllers.push(ViewController::new(
             self.face.clone(),

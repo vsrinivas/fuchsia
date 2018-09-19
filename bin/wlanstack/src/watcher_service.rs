@@ -215,7 +215,7 @@ mod tests {
         let (helper, future) = setup();
         pin_mut!(future);
         assert_eq!(0, helper.service.inner.lock().watchers.len());
-        let (client_end, server_end) = fidl::endpoints::create_proxy()
+        let (client_end, server_end) = fidl::endpoints::create_endpoints()
             .expect("Failed to create endpoints");
 
         // Add a watcher and check that it was added to the map
@@ -241,7 +241,7 @@ mod tests {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
-        let (client_end, server_end) = fidl::endpoints::create_proxy()
+        let (proxy, server_end) = fidl::endpoints::create_proxy()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
 
@@ -254,7 +254,7 @@ mod tests {
             panic!("server future returned an error: {:?}", e);
         }
 
-        let events = fetch_events(exec, client_end.take_event_stream());
+        let events = fetch_events(exec, proxy.take_event_stream());
         assert_eq!(3, events.len());
         // Sadly, generated Event struct doesn't implement PartialEq
         match &events[0] {
@@ -276,7 +276,7 @@ mod tests {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
-        let (client_end, server_end) = fidl::endpoints::create_proxy()
+        let (proxy, server_end) = fidl::endpoints::create_proxy()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
 
@@ -288,7 +288,7 @@ mod tests {
             panic!("server future returned an error: {:?}", e);
         }
 
-        let events = fetch_events(exec, client_end.take_event_stream());
+        let events = fetch_events(exec, proxy.take_event_stream());
         assert_eq!(2, events.len());
         match &events[0] {
             &DeviceWatcherEvent::OnIfaceAdded{ iface_id: 50 } => {},
@@ -312,7 +312,7 @@ mod tests {
         helper.phys.remove(&20);
 
         // Now add the watcher and pump the events
-        let (client_end, server_end) = fidl::endpoints::create_proxy()
+        let (proxy, server_end) = fidl::endpoints::create_proxy()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
         if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
@@ -320,7 +320,7 @@ mod tests {
         }
 
         // The watcher should only see phy #30 being "added"
-        let events = fetch_events(exec, client_end.take_event_stream());
+        let events = fetch_events(exec, proxy.take_event_stream());
         assert_eq!(1, events.len());
         match &events[0] {
             &DeviceWatcherEvent::OnPhyAdded{ phy_id: 30 } => {},
@@ -340,7 +340,7 @@ mod tests {
         helper.ifaces.remove(&20);
 
         // Now add the watcher and pump the events
-        let (client_end, server_end) = fidl::endpoints::create_proxy()
+        let (proxy, server_end) = fidl::endpoints::create_proxy()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
         if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
@@ -348,7 +348,7 @@ mod tests {
         }
 
         // The watcher should only see iface #30 being "added"
-        let events = fetch_events(exec, client_end.take_event_stream());
+        let events = fetch_events(exec, proxy.take_event_stream());
         assert_eq!(1, events.len());
         match &events[0] {
             &DeviceWatcherEvent::OnIfaceAdded{ iface_id: 30 } => {},
@@ -365,12 +365,12 @@ mod tests {
         helper.ifaces.insert(20, 2000);
 
         // Add first watcher
-        let (client_end_one, server_end_one) = fidl::endpoints::create_proxy()
+        let (proxy_one, server_end_one) = fidl::endpoints::create_proxy()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end_one).expect("add_watcher failed (1)");
 
         // Add second watcher
-        let (client_end_two, server_end_two) = fidl::endpoints::create_proxy()
+        let (proxy_two, server_end_two) = fidl::endpoints::create_proxy()
             .expect("Failed to create endpoints");
         helper.service.add_watcher(server_end_two).expect("add_watcher failed (2)");
 
@@ -381,9 +381,9 @@ mod tests {
 
         // Each should only receive a single snapshot, despite two snapshots being
         // requested
-        let events_one = fetch_events(exec, client_end_one.take_event_stream());
+        let events_one = fetch_events(exec, proxy_one.take_event_stream());
         assert_eq!(1, events_one.len());
-        let events_two = fetch_events(exec, client_end_two.take_event_stream());
+        let events_two = fetch_events(exec, proxy_two.take_event_stream());
         assert_eq!(1, events_two.len());
     }
 
