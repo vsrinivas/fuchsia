@@ -79,35 +79,31 @@ std::string Describe(const SequenceControl& sc) {
     return std::string(buf);
 }
 
-std::string Describe(const FrameHeader& hdr) {
+std::string Describe(const FrameControl& fc, const common::MacAddr& addr1,
+                     const common::MacAddr& addr2, const common::MacAddr& addr3) {
     // TODO(porce): Support A-MSDU case
     char buf[1024];
     size_t offset = 0;
-
-    BUFFER("[fc] %s dur:%u", Describe(hdr.fc).c_str(), hdr.duration);
-    if (hdr.fc.type() == FrameType::kManagement || hdr.fc.type() == FrameType::kData) {
-        BUFFER("[seq] %s", Describe(hdr.sc).c_str());
-    }
-    BUFFER("\n        ");
+    buf[0] = 0;
 
     // IEEE Std 802.11-2016, Table 9-26
-    uint8_t ds = (hdr.fc.to_ds() << 1) + hdr.fc.from_ds();
+    uint8_t ds = (fc.to_ds() << 1) + fc.from_ds();
     switch (ds) {
     case 0x0:
-        BUFFER("[ra(da)] %s  [ta(sa)] %s  [bssid] %s", hdr.addr1.ToString().c_str(),
-               hdr.addr2.ToString().c_str(), hdr.addr3.ToString().c_str());
+        BUFFER("[ra(da)] %s  [ta(sa)] %s  [bssid] %s", addr1.ToString().c_str(),
+               addr2.ToString().c_str(), addr3.ToString().c_str());
         break;
     case 0x1:
-        BUFFER("[ra(da)] %s  [ta(bssid)] %s  [sa] %s", hdr.addr1.ToString().c_str(),
-               hdr.addr2.ToString().c_str(), hdr.addr3.ToString().c_str());
+        BUFFER("[ra(da)] %s  [ta(bssid)] %s  [sa] %s", addr1.ToString().c_str(),
+               addr2.ToString().c_str(), addr3.ToString().c_str());
         break;
     case 0x2:
-        BUFFER("[ra(bssid)] %s  [ta(sa)] %s  [da] %s", hdr.addr1.ToString().c_str(),
-               hdr.addr2.ToString().c_str(), hdr.addr3.ToString().c_str());
+        BUFFER("[ra(bssid)] %s  [ta(sa)] %s  [da] %s", addr1.ToString().c_str(),
+               addr2.ToString().c_str(), addr3.ToString().c_str());
         break;
     case 0x3:
-        BUFFER("[ra] %s  [ta] %s  [da] %s", hdr.addr1.ToString().c_str(),
-               hdr.addr2.ToString().c_str(), hdr.addr3.ToString().c_str());
+        BUFFER("[ra] %s  [ta] %s  [da] %s", addr1.ToString().c_str(), addr2.ToString().c_str(),
+               addr3.ToString().c_str());
         break;
     default:
         break;
@@ -119,7 +115,11 @@ std::string Describe(const FrameHeader& hdr) {
 std::string Describe(const MgmtFrameHeader& hdr) {
     char buf[1024];
     size_t offset = 0;
-    BUFFER("%s", Describe(*reinterpret_cast<const FrameHeader*>(&hdr)).c_str());
+
+    BUFFER("[fc] %s dur:%u", Describe(hdr.fc).c_str(), hdr.duration);
+    BUFFER("[seq] %s", Describe(hdr.sc).c_str());
+    BUFFER("\n        ");
+    BUFFER("%s", Describe(hdr.fc, hdr.addr1, hdr.addr2, hdr.addr3).c_str());
 
     return std::string(buf);
 }
@@ -127,7 +127,11 @@ std::string Describe(const MgmtFrameHeader& hdr) {
 std::string Describe(const DataFrameHeader& hdr) {
     char buf[1024];
     size_t offset = 0;
-    BUFFER("%s", Describe(*reinterpret_cast<const FrameHeader*>(&hdr)).c_str());
+
+    BUFFER("[fc] %s dur:%u", Describe(hdr.fc).c_str(), hdr.duration);
+    BUFFER("[seq] %s", Describe(hdr.sc).c_str());
+    BUFFER("\n        ");
+    BUFFER("%s", Describe(hdr.fc, hdr.addr1, hdr.addr2, hdr.addr3).c_str());
 
     if (hdr.HasAddr4()) {
         ZX_DEBUG_ASSERT(hdr.addr4() != nullptr);
@@ -361,9 +365,10 @@ std::string Describe(const Packet& p) {
 
     switch (p.peer()) {
     case Packet::Peer::kWlan: {
-        auto hdr = p.field<FrameHeader>(0);
-        if (hdr->fc.type() == FrameType::kManagement || hdr->fc.type() == FrameType::kData) {
-            BUFFER("\n  wlan hdr:%s ", Describe(*hdr).c_str());
+        if (auto mgmt_frame = MgmtFrameView<>::CheckType(&p).CheckLength()) {
+            BUFFER("\n  wlan hdr:%s ", Describe(*mgmt_frame.hdr()).c_str());
+        } else if (auto data_frame = DataFrameView<>::CheckType(&p).CheckLength()) {
+            BUFFER("\n  wlan hdr:%s ", Describe(*data_frame.hdr()).c_str());
         }
         break;
     }
@@ -384,13 +389,9 @@ std::string Describe(const AmsduSubframeHeader& hdr) {
 }
 
 std::string DescribeSuppressed(const Packet& p) {
-    auto hdr = p.field<FrameHeader>(0);
-
-    if (hdr->fc.type() == FrameType::kManagement &&
-        hdr->fc.subtype() == ManagementSubtype::kBeacon) {
+    if (auto bcn_frame = MgmtFrameView<Beacon>::CheckType(&p)) {
         return "Beacon. Decoding suppressed.";
     }
-
     return "";
 }
 

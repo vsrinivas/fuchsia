@@ -734,48 +734,6 @@ constexpr uint8_t kLlcSnapExtension = 0xaa;
 constexpr uint8_t kLlcUnnumberedInformation = 0x03;
 const uint8_t kLlcOui[3] = {};
 
-// IEEE Std 802.11-2016, 9.2.3
-// TODO(NET-500): Remove this header. It causes more problems than it solves.
-struct FrameHeader {
-    // Common fields for Mgmt, Control, Data frames
-    FrameControl fc;
-    uint16_t duration;
-    common::MacAddr addr1;
-
-    // Common fields for Mgmt, Data frames as well as non CTS/ACK Control frames
-    common::MacAddr addr2;
-
-    // Common fields for Mgmt, Data frames
-    common::MacAddr addr3;
-    SequenceControl sc;
-
-    uint16_t len() const {
-        if (fc.IsData()) { return reinterpret_cast<const DataFrameHeader*>(this)->len(); }
-        if (fc.IsMgmt()) { return reinterpret_cast<const MgmtFrameHeader*>(this)->len(); }
-        if (fc.IsCtrl()) {
-            if (fc.subtype() < ControlSubtype::kBeamformingReportPoll) {
-                // Reserved and unspecified.
-                // This is likely to be a wrongful casting onto a byte stream.
-                return 0;
-            }
-            if (fc.subtype() == ControlSubtype::kCts || fc.subtype() == ControlSubtype::kAck) {
-                return 10;  // FC(2) + Duration/ID(2) + RA(6)
-            } else {
-                return 16;  // FC(2) + Duration/ID(2) + RA(6) + TA(6)
-            }
-        }
-
-        // Extension. Unspecified.
-        // This is likely to be a wrongful casting onto a byte stream.
-        return 0;
-    }
-
-    // TODO(porce): Frame caster
-    // eg. ManagementFrameHeader* AsMgmtFrameHdr();
-    // eg. DataFrameHeader* AsDataFrameHdr();
-
-} __PACKED;
-
 // IEEE Std 802.3-2015, 3.1.1
 struct EthernetII {
     common::MacAddr dest;

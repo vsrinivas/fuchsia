@@ -55,6 +55,7 @@ constexpr size_t kReadReqCount = 128;
 constexpr size_t kReadBufSize = 4096;  // Reflecting max A-MSDU length for Ralink: 3839 bytes
 constexpr size_t kWriteReqCount = 128;
 constexpr size_t kWriteBufSize = 4096;
+constexpr size_t kMacHdrAddr1Offset = 4;
 
 constexpr char kFirmwareFile[] = "rt2870.bin";
 
@@ -3949,6 +3950,33 @@ void Device::WlanmacStop() {
     // TODO(tkilbourn) disable radios, stop queues, etc.
 }
 
+// TODO(NET-1570): Extract into a common library.
+uint16_t GetMacHdrLength(const uint8_t* buf, uint16_t len) {
+    if (len < sizeof(wlan::FrameControl)) { return 0; }
+
+    auto fc = reinterpret_cast<const wlan::FrameControl*>(buf);
+    switch (fc->type()) {
+    case wlan::FrameType::kManagement: {
+        if (len < sizeof(wlan::MgmtFrameHeader)) { return 0; }
+        auto hdr = reinterpret_cast<const wlan::MgmtFrameHeader*>(buf);
+        return hdr->len();
+    }
+    case wlan::FrameType::kData: {
+        if (len < sizeof(wlan::DataFrameHeader)) { return 0; }
+        auto hdr = reinterpret_cast<const wlan::DataFrameHeader*>(buf);
+        return hdr->len();
+    }
+    case wlan::FrameType::kControl: {
+        if (len < sizeof(wlan::CtrlFrameHdr)) { return 0; }
+        auto hdr = reinterpret_cast<const wlan::CtrlFrameHdr*>(buf);
+        return hdr->len();
+    }
+    default:
+        warnf("cannot compute MAC header length for unknown frame type: %u\n", fc->type());
+        return 0;
+    }
+}
+
 size_t Device::WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt) {
     // Write and return the length of
     // MPDU Header + L2Pad + MSDU + Bulkout Aggregation Pad + Bulkout Aggregation Tail Pad
@@ -3957,9 +3985,11 @@ size_t Device::WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt) {
 
     auto head_data = static_cast<uint8_t*>(wlan_pkt.packet_head.data);
     auto head_len = wlan_pkt.packet_head.len;
-
-    auto frame_hdr = reinterpret_cast<const wlan::FrameHeader*>(wlan_pkt.packet_head.data);
-    auto frame_hdr_len = frame_hdr->len();
+    uint16_t frame_hdr_len = GetMacHdrLength(head_data, head_len);
+    // If the header length is invalid use the entire length as header length.
+    // This is just as problematic as before but we need to put proper error handling
+    // here first, before we can address this problem.
+    if (frame_hdr_len == 0) { frame_hdr_len = head_len; }
 
     size_t dest_offset = 0;
     auto l2pad_len = ROUNDUP(frame_hdr_len, 4) - frame_hdr_len;
@@ -4172,9 +4202,9 @@ int Device::WriteTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
     TxStatsFifoEntry& tx_stats = tx_stats_fifo_[packet_id];
     if (!tx_stats_fifo_[packet_id].in_use) {
         tx_stats_fifo_counter_ = (tx_stats_fifo_counter_ + 1) % (kTxStatsFifoSize - 1);
-        auto frame_hdr = reinterpret_cast<const wlan::FrameHeader*>(wlan_pkt.packet_head.data);
-        std::copy(std::begin(frame_hdr->addr1.byte), std::end(frame_hdr->addr1.byte),
-                  tx_stats.peer_addr);
+        auto bytes = static_cast<uint8_t*>(wlan_pkt.packet_head.data);
+        auto addr1_offset = bytes + kMacHdrAddr1Offset;
+        std::copy(addr1_offset, addr1_offset + wlan::common::kMacAddrLen, tx_stats.peer_addr);
         tx_stats.tx_vector_idx = wlan_pkt.info.tx_vector_idx;
         tx_stats.in_use = true;
         return packet_id;
@@ -4241,8 +4271,9 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
     txwi0.set_stbc(0);  // TODO(porce): Define the value.
 
     // The frame header is always in the packet head.
-    auto frame_hdr = reinterpret_cast<const wlan::FrameHeader*>(wlan_pkt->packet_head.data);
-    auto wcid = LookupTxWcid(frame_hdr->addr1.byte, protected_frame);
+    auto bytes = static_cast<uint8_t*>(wlan_pkt->packet_head.data);
+    auto addr1_offset = bytes + kMacHdrAddr1Offset;
+    auto wcid = LookupTxWcid(addr1_offset, protected_frame);
     Txwi1& txwi1 = aggr->txwi1;
     txwi1.set_ack(GetRxAckPolicy(*wlan_pkt));
     txwi1.set_nseq(0);
@@ -4275,11 +4306,9 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
 // and uses hardware encryption.
 uint8_t Device::LookupTxWcid(const uint8_t* addr1, bool protected_frame) {
     if (protected_frame) {
-        // TODO(hahnr): Replace addresses and constants with MacAddr once it was moved to
-        // common/.
-        if (memcmp(addr1, kBcastAddr, 6) == 0) {
+        if (memcmp(addr1, wlan::common::kBcastMac.byte, wlan::common::kMacAddrLen) == 0) {
             return kWcidBcastAddr;
-        } else if (memcmp(addr1, bssid_, 6) == 0) {
+        } else if (memcmp(addr1, bssid_, wlan::common::kMacAddrLen) == 0) {
             return kWcidBssid;
         }
     }
@@ -4756,8 +4785,7 @@ size_t Device::GetBulkoutAggrPayloadLen(const wlan_tx_packet_t& wlan_pkt) {
         tail_len_eff = tail->len - tail_offset;
     }
 
-    auto mpdu_hdr = reinterpret_cast<const wlan::FrameHeader*>(head_data);
-    auto mpdu_hdr_len = mpdu_hdr->len();
+    auto mpdu_hdr_len = GetMacHdrLength(head_data, head_len);
     auto msdu_len = head_len + tail_len_eff - mpdu_hdr_len;
 
     auto l2pad_len = GetL2PadLen(wlan_pkt);
@@ -4808,8 +4836,9 @@ void Device::DumpLengths(const wlan_tx_packet_t& wlan_pkt, BulkoutAggregation* u
 }
 
 size_t Device::GetL2PadLen(const wlan_tx_packet_t& wlan_pkt) {
-    auto frame_hdr = reinterpret_cast<const wlan::FrameHeader*>(wlan_pkt.packet_head.data);
-    auto frame_hdr_len = frame_hdr->len();
+    auto head_data = static_cast<uint8_t*>(wlan_pkt.packet_head.data);
+    auto head_len = wlan_pkt.packet_head.len;
+    auto frame_hdr_len = GetMacHdrLength(head_data, head_len);
     auto l2pad_len = ROUNDUP(frame_hdr_len, 4) - frame_hdr_len;
 
     finspect("[ralink] L2padding frame_hdr:%u l2pad:%u\n", frame_hdr_len, l2pad_len);
