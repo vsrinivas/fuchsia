@@ -75,11 +75,6 @@ static const pbus_gpio_t aml_sd_emmc_gpios[] = {
     {
         .gpio = S905D2_GPIOX(6),
     },
-    {
-        // TODO remove this after Wifi adapter is updated to access its GPIOs
-        // using platform device protocol
-        .gpio = S905D2_WIFI_SDIO_WAKE_HOST,
-    },
 };
 
 static aml_sd_emmc_config_t config = {
