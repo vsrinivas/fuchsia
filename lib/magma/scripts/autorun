@@ -17,6 +17,6 @@ echo [UNIT TEST END===]
 echo [INTEGRATION TEST START=]
 /system/test/magma_abi_conformance_tests
 /system/test/msd_intel_gen_integration_tests --gtest_filter=-*Stress*
-/pkgfs/packages/vulkan-tests/0/test/vkreadback
+run fuchsia-pkg://fuchsia.com/vulkan-tests#meta/vkreadback.cmx
 run fuchsia-pkg://fuchsia.com/vulkan-tests#meta/vkext.cmx
 echo [INTEGRATION TEST END===]

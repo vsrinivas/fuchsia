@@ -4,14 +4,8 @@
 
 #include "gtest/gtest.h"
 
-#include "garnet/lib/magma/tests/helper/config_namespace_helper.h"
-
 int main(int argc, char** argv)
 {
-    if (!InstallConfigDirectoryIntoGlobalNamespace()) {
-        return 1;
-    }
-
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

@@ -1,0 +1,8 @@
+{
+    "sandbox": {
+        "features": [ "deprecated-all-services", "vulkan" ]
+    },
+    "program": {
+        "binary": "test/vkreadback"
+    }
+}

@@ -81,7 +81,6 @@ package("vulkan-tests") {
   if (have_libvulkan || use_vulkan_loader_for_tests) {
     deps = [
       "benchmark",
-      "vkcube",
       "vkext",
       "vkloop",
       "vkpriority",
@@ -120,6 +119,22 @@ package("vulkan-tests") {
       {
         path = rebase_path("meta/vkext.cmx")
         dest = "vkext.cmx"
+      },
+      {
+        path = rebase_path("meta/vkreadback.cmx")
+        dest = "vkreadback.cmx"
+      },
+      {
+        path = rebase_path("meta/vkpriority.cmx")
+        dest = "vkpriority.cmx"
+      },
+      {
+        path = rebase_path("meta/vkloop.cmx")
+        dest = "vkloop.cmx"
+      },
+      {
+        path = rebase_path("meta/vkcopy.cmx")
+        dest = "vkcopy.cmx"
       },
     ]
   }

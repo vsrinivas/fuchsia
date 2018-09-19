@@ -15,8 +15,6 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
-#include "garnet/lib/magma/tests/helper/config_namespace_helper.h"
-
 #if defined(MAGMA_USE_SHIM)
 #include "vulkan_shim.h"
 #else
@@ -307,10 +305,6 @@ int main(void)
 #if defined(MAGMA_USE_SHIM)
     VulkanShimInit();
 #endif
-
-    if (!InstallConfigDirectoryIntoGlobalNamespace()) {
-        return 1;
-    }
 
     uint32_t buffer_size = 60 * 1024 * 1024;
     uint32_t iterations = 1000;
