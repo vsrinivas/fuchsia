@@ -8,7 +8,7 @@ use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, NegotiatedRsne, SecAssocUpdate, SecAssocStatus};
 
 use super::bss::convert_bss_description;
-use super::{ConnectionAttemptId, ConnectResult, Status, Tokens};
+use super::{ConnectionAttemptId, ConnectResult, Status, Tokens, UserEvent};
 use super::internal::UserSink;
 use super::rsn::Rsna;
 
@@ -102,7 +102,7 @@ impl<T: Tokens> State<T> {
             State::Associating{ cmd } => match event {
                 MlmeEvent::AssociateConf { resp } => match resp.result_code {
                     fidl_mlme::AssociateResultCodes::Success => {
-                        report_assoc_success(user_sink, *att_id);
+                        user_sink.send(UserEvent::AssociationSuccess { att_id: *att_id });
                         match cmd.rsna {
                             Some(rsna) => {
                                 State::Associated {
@@ -210,7 +210,7 @@ impl<T: Tokens> State<T> {
             }
         ));
         *att_id += 1;
-        report_assoc_started(user_sink, *att_id);
+        user_sink.send(UserEvent::AssociationStarted { att_id: *att_id });
         State::Joining { cmd }
     }
 
@@ -410,27 +410,11 @@ fn report_connect_finished<T>(token: Option<T::ConnectToken>,
     where T: Tokens
 {
     if let Some(token) = token {
-        user_sink.send(super::UserEvent::ConnectFinished {
+        user_sink.send(UserEvent::ConnectFinished {
             token,
             result
         })
     }
-}
-
-fn report_assoc_started<T>(user_sink: &UserSink<T>, att_id: ConnectionAttemptId)
-    where T: Tokens
-{
-    user_sink.send(super::UserEvent::AssociationStarted {
-        att_id,
-    })
-}
-
-fn report_assoc_success<T>(user_sink: &UserSink<T>, att_id: ConnectionAttemptId)
-    where T: Tokens
-{
-    user_sink.send(super::UserEvent::AssociationSuccess {
-        att_id,
-    })
 }
 
 fn clone_ht_capabilities(c: &fidl_mlme::HtCapabilities) -> fidl_mlme::HtCapabilities {
