@@ -26,10 +26,11 @@ class DefaultAllocator : public PayloadAllocator,
 fbl::RefPtr<PayloadBuffer> DefaultAllocator::AllocatePayloadBuffer(
     uint64_t size) {
   FXL_DCHECK(size > 0);
-  // |std::aligned_alloc| requires the size to the aligned.
+  // TODO: Once we have C++17, std::aligned_alloc should work.
+  // |aligned_alloc| requires the size to the aligned.
   return PayloadBuffer::Create(size,
-                               std::aligned_alloc(PayloadBuffer::kByteAlignment,
-                                                  PayloadBuffer::AlignUp(size)),
+                               aligned_alloc(PayloadBuffer::kByteAlignment,
+                                             PayloadBuffer::AlignUp(size)),
                                [](PayloadBuffer* payload_buffer) {
                                  FXL_DCHECK(payload_buffer);
                                  std::free(payload_buffer->data());
