@@ -334,6 +334,11 @@
              remote="https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers"
              revision="3cd387d71e06b766282903147ae8bfafb6f66d84"
              gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="third_party/wayland"
+             path="third_party/wayland"
+             remote="https://fuchsia.googlesource.com/third_party/wayland"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="01095a9ce4d8457ee2f221848b9805c4b5cffc95"/>
     <project name="third_party/yasm"
              path="third_party/yasm"
              remote="https://fuchsia.googlesource.com/third_party/yasm"
