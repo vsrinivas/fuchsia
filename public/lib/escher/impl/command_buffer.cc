@@ -222,7 +222,7 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       break;
     case vk::ImageLayout::ePreinitialized:
       barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
-      src_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
+      src_stage_mask = vk::PipelineStageFlagBits::eHost;
       break;
     case vk::ImageLayout::eShaderReadOnlyOptimal:
       barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
@@ -241,7 +241,7 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       break;
     case vk::ImageLayout::eUndefined:
       // If layout was eUndefined, we don't need a srcAccessMask.
-      src_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
+      src_stage_mask = vk::PipelineStageFlagBits::eAllCommands;
       break;
     default:
       FXL_LOG(ERROR)
@@ -268,7 +268,7 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       break;
     case vk::ImageLayout::ePresentSrcKHR:
       barrier.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
-      dst_stage_mask = vk::PipelineStageFlagBits::eTransfer;
+      dst_stage_mask = vk::PipelineStageFlagBits::eAllGraphics;
       break;
     case vk::ImageLayout::eShaderReadOnlyOptimal:
       barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
@@ -277,7 +277,7 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       dst_stage_mask =
           (pipeline_stage_mask_ & vk::PipelineStageFlagBits::eAllCommands)
               ? vk::PipelineStageFlagBits::eAllCommands
-              : vk::PipelineStageFlagBits::eTopOfPipe;
+              : vk::PipelineStageFlagBits::eAllGraphics;
       break;
     case vk::ImageLayout::eTransferDstOptimal:
       barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
