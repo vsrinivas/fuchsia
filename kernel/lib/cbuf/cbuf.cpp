@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <fbl/algorithm.h>
+#include <kernel/auto_lock.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 #include <pow2.h>
@@ -19,8 +20,9 @@
 
 #define LOCAL_TRACE 0
 
-#define INC_POINTER(cbuf, ptr, inc) \
-    modpow2(((ptr) + (inc)), (cbuf)->len_pow2)
+static inline uint inc_pointer(const cbuf_t* cbuf, uint ptr, uint inc) {
+    return modpow2(ptr + inc, cbuf->len_pow2);
+}
 
 void cbuf_initialize(cbuf_t* cbuf, size_t len) {
     cbuf_initialize_etc(cbuf, len, malloc(len));
@@ -41,30 +43,27 @@ void cbuf_initialize_etc(cbuf_t* cbuf, size_t len, void* buf) {
     LTRACEF("len %zu, len_pow2 %u\n", len, cbuf->len_pow2);
 }
 
-size_t cbuf_space_avail(cbuf_t* cbuf) {
-    uint consumed = modpow2((uint)(cbuf->head - cbuf->tail), cbuf->len_pow2);
+size_t cbuf_space_avail(const cbuf_t* cbuf) {
+    uint consumed = modpow2(cbuf->head - cbuf->tail, cbuf->len_pow2);
     return valpow2(cbuf->len_pow2) - consumed - 1;
 }
 
 size_t cbuf_write_char(cbuf_t* cbuf, char c) {
     DEBUG_ASSERT(cbuf);
 
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&cbuf->lock, state);
+    AutoSpinLock guard(&cbuf->lock);
 
     size_t ret = 0;
     if (cbuf_space_avail(cbuf) > 0) {
         cbuf->buf[cbuf->head] = c;
 
-        cbuf->head = INC_POINTER(cbuf, cbuf->head, 1);
+        cbuf->head = inc_pointer(cbuf, cbuf->head, 1);
         ret = 1;
 
         if (cbuf->head != cbuf->tail) {
             event_signal(&cbuf->event, true);
         }
     }
-
-    spin_unlock_irqrestore(&cbuf->lock, state);
 
     return ret;
 }
@@ -74,28 +73,28 @@ size_t cbuf_read_char(cbuf_t* cbuf, char* c, bool block) {
     DEBUG_ASSERT(c);
 
 retry:
-    if (block)
+    if (block) {
         event_wait(&cbuf->event);
-
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&cbuf->lock, state);
-
-    // see if there's data available
-    size_t ret = 0;
-    if (cbuf->tail != cbuf->head) {
-
-        *c = cbuf->buf[cbuf->tail];
-        cbuf->tail = INC_POINTER(cbuf, cbuf->tail, 1);
-
-        if (cbuf->tail == cbuf->head) {
-            // we've emptied the buffer, unsignal the event
-            event_unsignal(&cbuf->event);
-        }
-
-        ret = 1;
     }
 
-    spin_unlock_irqrestore(&cbuf->lock, state);
+    size_t ret = 0;
+    {
+        AutoSpinLock guard(&cbuf->lock);
+
+        // see if there's data available
+        if (cbuf->tail != cbuf->head) {
+
+            *c = cbuf->buf[cbuf->tail];
+            cbuf->tail = inc_pointer(cbuf, cbuf->tail, 1);
+
+            if (cbuf->tail == cbuf->head) {
+                // we've emptied the buffer, unsignal the event
+                event_unsignal(&cbuf->event);
+            }
+
+            ret = 1;
+        }
+    }
 
     if (block && ret == 0) {
         goto retry;

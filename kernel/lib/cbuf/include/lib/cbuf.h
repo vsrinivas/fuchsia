@@ -53,7 +53,7 @@ void cbuf_initialize_etc(cbuf_t* cbuf, size_t len, void* buf);
  * @return The number of free space available in the cbuf (IOW - the maximum
  * number of bytes which can currently be written)
  */
-size_t cbuf_space_avail(cbuf_t* cbuf);
+size_t cbuf_space_avail(const cbuf_t* cbuf);
 
 /* special cases for dealing with a single char of data */
 size_t cbuf_read_char(cbuf_t* cbuf, char* c, bool block);
