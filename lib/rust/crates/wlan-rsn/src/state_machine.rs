@@ -20,6 +20,10 @@ impl <S> StateMachine<S> {
         &self.state.as_ref().expect("State can never be None")
     }
 
+    pub fn mut_state(&mut self) -> &mut S {
+        self.state.as_mut().expect("State can never be None")
+    }
+
     pub fn into_state(self) -> S {
         self.state.expect("State can never be None")
     }
