@@ -5,8 +5,6 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_QUEUE_FAKE_H_
 #define GARNET_LIB_MACHINA_VIRTIO_QUEUE_FAKE_H_
 
-#include <vector>
-
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
@@ -111,9 +109,7 @@ class VirtioQueueFake {
   VirtioQueue* const queue_ = nullptr;
   VirtioRing* const ring_ __TA_GUARDED(queue_->mutex_) = nullptr;
   const uint16_t queue_size_ = 0;
-  std::vector<uint8_t> desc_buf_;
-  std::vector<uint8_t> avail_buf_;
-  std::vector<uint8_t> used_buf_;
+  PhysMem phys_mem_;
 
   // The next entry in the descriptor table that is available.
   uint16_t next_free_desc_ = 0;
