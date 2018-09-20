@@ -39,6 +39,7 @@ typedef struct usb_hid_device {
     void* cookie;
 
     uint8_t interface;
+    usb_desc_iter_t desc_iter;
     usb_hid_descriptor_t* hid_desc;
 } usb_hid_device_t;
 
@@ -228,6 +229,7 @@ static void usb_hid_unbind(void* ctx) {
 static void usb_hid_release(void* ctx) {
     usb_hid_device_t* hid = ctx;
     usb_req_release(&hid->usb, hid->req);
+    usb_desc_iter_release(&hid->desc_iter);
     free(hid);
 }
 
@@ -238,111 +240,94 @@ static zx_protocol_device_t usb_hid_dev_ops = {
 };
 
 static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
-    usb_protocol_t usb;
+    usb_hid_device_t* usbhid = calloc(1, sizeof(usb_hid_device_t));
+    if (usbhid == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
-    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_USB, &usb);
+    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_USB, &usbhid->usb);
     if (status != ZX_OK) {
-        return status;
+        goto fail;
     }
 
-    usb_desc_iter_t iter;
-    zx_status_t result = usb_desc_iter_init(&usb, &iter);
-    if (result < 0) return result;
-
-    usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
-     if (!intf) {
-        usb_desc_iter_release(&iter);
-        return ZX_ERR_NOT_SUPPORTED;
+    status = usb_desc_iter_init(&usbhid->usb, &usbhid->desc_iter);
+    if (status != ZX_OK) {
+        goto fail;
     }
 
-    // One usb-hid device per HID interface
-    while (intf) {
-        if (intf->bInterfaceClass != USB_CLASS_HID) {
-            intf = usb_desc_iter_next_interface(&iter, true);
-            continue;
-        }
+    usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&usbhid->desc_iter, true);
+     if (!intf || intf->bInterfaceClass != USB_CLASS_HID) {
+        status = ZX_ERR_NOT_SUPPORTED;
+        goto fail;
+    }
 
-        usb_endpoint_descriptor_t* endpt = NULL;
-        usb_hid_descriptor_t* hid_desc = NULL;
+    usb_endpoint_descriptor_t* endpt = NULL;
+    usb_hid_descriptor_t* hid_desc = NULL;
 
-        // look for interrupt endpoint and HID descriptor
-        usb_descriptor_header_t* header = usb_desc_iter_next(&iter);
-        while (header && !(endpt && hid_desc)) {
-            if (header->bDescriptorType == USB_DT_HID) {
-                hid_desc = (usb_hid_descriptor_t *)header;
-            } else if (header->bDescriptorType == USB_DT_ENDPOINT) {
-                endpt = (usb_endpoint_descriptor_t *)header;
-                if (usb_ep_direction(endpt) != USB_ENDPOINT_IN ||
-                    usb_ep_type(endpt) != USB_ENDPOINT_INTERRUPT) {
-                    endpt = NULL;
-                }
-            } else if (header->bDescriptorType == USB_DT_INTERFACE) {
-                goto next_interface;
+    // look for interrupt endpoint and HID descriptor
+    usb_descriptor_header_t* header = usb_desc_iter_next(&usbhid->desc_iter);
+    while (header && !(endpt && hid_desc)) {
+        if (header->bDescriptorType == USB_DT_HID) {
+            hid_desc = (usb_hid_descriptor_t *)header;
+        } else if (header->bDescriptorType == USB_DT_ENDPOINT) {
+            endpt = (usb_endpoint_descriptor_t *)header;
+            if (usb_ep_direction(endpt) != USB_ENDPOINT_IN ||
+                usb_ep_type(endpt) != USB_ENDPOINT_INTERRUPT) {
+                endpt = NULL;
             }
-            header = usb_desc_iter_next(&iter);
         }
-
-        if (!endpt || !hid_desc) {
-            goto next_interface;
-        }
-
-        usb_hid_device_t* usbhid = calloc(1, sizeof(usb_hid_device_t));
-        if (usbhid == NULL) {
-            usb_desc_iter_release(&iter);
-            return ZX_ERR_NO_MEMORY;
-        }
-
-        usbhid->usbdev = dev;
-        memcpy(&usbhid->usb, &usb, sizeof(usbhid->usb));
-        usbhid->interface = usbhid->info.dev_num = intf->bInterfaceNumber;
-        usbhid->hid_desc = hid_desc;
-
-        usbhid->info.boot_device = intf->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
-        usbhid->info.dev_class = HID_DEV_CLASS_OTHER;
-        if (intf->bInterfaceProtocol == USB_HID_PROTOCOL_KBD) {
-            usbhid->info.dev_class = HID_DEV_CLASS_KBD;
-        } else if (intf->bInterfaceProtocol == USB_HID_PROTOCOL_MOUSE) {
-            usbhid->info.dev_class = HID_DEV_CLASS_POINTER;
-        }
-
-        status = usb_req_alloc(&usb, &usbhid->req, usb_ep_max_packet(endpt),
-                                   endpt->bEndpointAddress);
-        if (status != ZX_OK) {
-            usb_desc_iter_release(&iter);
-            free(usbhid);
-            return ZX_ERR_NO_MEMORY;
-        }
-        usbhid->req->complete_cb = usb_interrupt_callback;
-        usbhid->req->cookie = usbhid;
-
-        device_add_args_t args = {
-            .version = DEVICE_ADD_ARGS_VERSION,
-            .name = "usb-hid",
-            .ctx = usbhid,
-            .ops = &usb_hid_dev_ops,
-            .proto_id = ZX_PROTOCOL_HIDBUS,
-            .proto_ops = &usb_hid_bus_ops,
-        };
-
-        status = device_add(dev, &args, &usbhid->zxdev);
-        if (status != ZX_OK) {
-            usb_desc_iter_release(&iter);
-            usb_req_release(&usb, usbhid->req);
-            free(usbhid);
-            return status;
-        }
-
-next_interface:
-        // move on to next interface
-        if (header && header->bDescriptorType == USB_DT_INTERFACE) {
-            intf = (usb_interface_descriptor_t*)header;
-        } else {
-            intf = usb_desc_iter_next_interface(&iter, true);
-        }
+        header = usb_desc_iter_next(&usbhid->desc_iter);
     }
-    usb_desc_iter_release(&iter);
+
+    if (!endpt || !hid_desc) {
+        status = ZX_ERR_NOT_SUPPORTED;
+        goto fail;
+    }
+
+    usbhid->usbdev = dev;
+    usbhid->interface = usbhid->info.dev_num = intf->bInterfaceNumber;
+    usbhid->hid_desc = hid_desc;
+
+    usbhid->info.boot_device = intf->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
+    usbhid->info.dev_class = HID_DEV_CLASS_OTHER;
+    if (intf->bInterfaceProtocol == USB_HID_PROTOCOL_KBD) {
+        usbhid->info.dev_class = HID_DEV_CLASS_KBD;
+    } else if (intf->bInterfaceProtocol == USB_HID_PROTOCOL_MOUSE) {
+        usbhid->info.dev_class = HID_DEV_CLASS_POINTER;
+    }
+
+    status = usb_req_alloc(&usbhid->usb, &usbhid->req, usb_ep_max_packet(endpt),
+                               endpt->bEndpointAddress);
+    if (status != ZX_OK) {
+        status = ZX_ERR_NO_MEMORY;
+        goto fail;
+    }
+    usbhid->req->complete_cb = usb_interrupt_callback;
+    usbhid->req->cookie = usbhid;
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "usb-hid",
+        .ctx = usbhid,
+        .ops = &usb_hid_dev_ops,
+        .proto_id = ZX_PROTOCOL_HIDBUS,
+        .proto_ops = &usb_hid_bus_ops,
+    };
+
+    status = device_add(dev, &args, &usbhid->zxdev);
+    if (status != ZX_OK) {
+        goto fail;
+    }
 
     return ZX_OK;
+
+fail:
+    if (usbhid->req) {
+        usb_req_release(&usbhid->usb, usbhid->req);
+    }
+    usb_desc_iter_release(&usbhid->desc_iter);
+    free(usbhid);
+    return status;
 }
 
 static zx_driver_ops_t usb_hid_driver_ops = {
