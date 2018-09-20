@@ -63,7 +63,10 @@ executable("integration_test_app") {
   output_name = "integration_test_app"
 
   sources = [
-    "integration_test_app.cc",
+    "fill_buffer_integration_test.cc",
+    "integration_test_main.cc",
+    "integration_test_utils.cc",
+    "integration_tests.h",
   ]
 
   deps = [

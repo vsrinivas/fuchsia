@@ -53,6 +53,19 @@ struct Spec {
   std::unique_ptr<std::string> test_suite_name;
 };
 
+enum class BufferingMode {
+  // Tracing stops when the buffer is full.
+  kOneshot,
+  // A circular buffer.
+  kCircular,
+  // Double buffering.
+  kStreaming,
+};
+
+// Returns true on success.
+bool GetBufferingMode(const std::string& buffering_mode_name,
+                      BufferingMode* out_mode);
+
 bool DecodeSpec(const std::string& json, Spec* spec);
 
 }  // namespace tracing

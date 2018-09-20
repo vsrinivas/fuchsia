@@ -12,6 +12,7 @@
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
+#include <zircon/processargs.h>
 #include <zircon/types.h>
 #include <zircon/status.h>
 
@@ -24,17 +25,7 @@
 // The path of the trace program.
 const char kTraceProgramPath[] = "/system/bin/trace";
 
-// Where trace output is written.
-// TODO(dje): This is the current default, /data is going away.
-#define TRACE_OUTPUT_FILE "/data/trace.json"
-
-// For now don't run longer than this. The CQ bot has this timeout as well,
-// so this is as good a value as any. Later we might want to add a timeout
-// value to tspecs.
-constexpr zx_duration_t kTestTimeout = ZX_SEC(60);
-
-static void AppendLoggingArgs(std::vector<std::string>* argv,
-                              const char* prefix) {
+void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix) {
   // Transfer our log settings to the subprogram.
   auto log_settings = fxl::GetLogSettings();
   std::string log_file_arg;
@@ -56,9 +47,9 @@ static void AppendLoggingArgs(std::vector<std::string>* argv,
   }
 }
 
-static void StringArgvToCArgv(std::vector<std::string>* argv,
+static void StringArgvToCArgv(const std::vector<std::string>& argv,
                               std::vector<const char*>* c_argv) {
-  for (const auto& arg : *argv) {
+  for (const auto& arg : argv) {
     c_argv->push_back(arg.c_str());
   }
   c_argv->push_back(nullptr);
@@ -93,15 +84,76 @@ static void BuildVerificationProgramArgv(const std::string& tspec_path,
   argv->push_back(output_file_path.c_str());
 }
 
+zx_status_t SpawnProgram(const zx::job& job,
+                         const std::vector<std::string>& argv,
+                         zx_handle_t arg_handle,
+                         zx::process* out_process) {
+  std::vector<const char*> c_argv;
+  StringArgvToCArgv(argv, &c_argv);
+
+  FXL_VLOG(1) << "Running " << fxl::JoinStrings(argv, " ");
+
+  size_t action_count = 0;
+  fdio_spawn_action_t spawn_actions[1];
+  if (arg_handle != ZX_HANDLE_INVALID) {
+    spawn_actions[0].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+    spawn_actions[0].h.id = PA_HND(PA_USER0, 0);
+    spawn_actions[0].h.handle = arg_handle;
+    action_count = 1;
+  }
+
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  auto status = fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL,
+                               c_argv[0], c_argv.data(), nullptr,
+                               action_count, &spawn_actions[0],
+                               out_process->reset_and_get_address(),
+                               err_msg);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << err_msg;
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t WaitAndGetExitCode(const std::string& program_name,
+                               const zx::process& process,
+                               int* out_exit_code) {
+  auto status = process.wait_one(
+    ZX_PROCESS_TERMINATED, zx::deadline_after(zx::duration(kTestTimeout)),
+    nullptr);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed waiting for program " << program_name
+                   << " to exit: " << zx_status_get_string(status);
+    return status;
+  }
+
+  zx_info_process_t proc_info;
+  status = zx_object_get_info(process.get(), ZX_INFO_PROCESS, &proc_info,
+                              sizeof(proc_info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Error getting return code for program "
+                   << program_name << ": " << zx_status_get_string(status);
+    return status;
+  }
+
+  if (proc_info.return_code != 0) {
+    FXL_LOG(ERROR) << program_name << " exited with exit code "
+                   << proc_info.return_code;
+  }
+  *out_exit_code = proc_info.return_code;
+  return ZX_OK;
+}
+
 // |verify=false| -> run the test
 // |verify=true| -> verify the test
 static bool RunTspecWorker(const std::string& tspec_path,
                            const std::string& output_file_path,
                            bool verify) {
   const char* operation_name = verify ? "Verifying" : "Running";
-  FXL_LOG(INFO) << operation_name << " tspec " << tspec_path;
-  zx_handle_t job = ZX_HANDLE_INVALID; // -> default job
-  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  FXL_LOG(INFO) << operation_name << " tspec " << tspec_path
+                << ", output file " << output_file_path;
+  zx::job job{}; // -> default job
   zx::process subprocess;
 
   std::vector<std::string> argv;
@@ -111,45 +163,22 @@ static bool RunTspecWorker(const std::string& tspec_path,
     BuildVerificationProgramArgv(tspec_path, output_file_path, &argv);
   }
 
-  std::vector<const char*> c_argv;
-  StringArgvToCArgv(&argv, &c_argv);
-
-  FXL_VLOG(1) << "Running " << fxl::JoinStrings(argv, " ");
-
-  auto status = fdio_spawn_etc(job, FDIO_SPAWN_CLONE_ALL,
-                               c_argv[0], c_argv.data(), nullptr,
-                               0, nullptr, subprocess.reset_and_get_address(),
-                               err_msg);
+  auto status = SpawnProgram(job, argv, ZX_HANDLE_INVALID, &subprocess);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << err_msg;
     return false;
   }
 
-  status = subprocess.wait_one(ZX_PROCESS_TERMINATED,
-                               zx::deadline_after(zx::duration(kTestTimeout)),
-                               nullptr);
+  int exit_code;
+  status = WaitAndGetExitCode(argv[0], subprocess, 
+                              &exit_code);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed waiting for subprogram to exit: "
-                   << zx_status_get_string(status);
     return false;
   }
-
-  zx_info_process_t proc_info;
-  status = zx_object_get_info(subprocess.get(), ZX_INFO_PROCESS, &proc_info,
-                              sizeof(proc_info), nullptr, nullptr);
-  if (status < 0) {
-    FXL_LOG(ERROR) << "Error getting return code: "
-                   << zx_status_get_string(status);
-    return false;
-  }
-  if (proc_info.return_code != 0) {
-    FXL_LOG(ERROR) << operation_name << " exited with return code "
-                   << proc_info.return_code;
+  if (exit_code != 0) {
     return false;
   }
 
   FXL_VLOG(1) << operation_name << " completed OK";
-
   return true;
 }
 

@@ -374,4 +374,19 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   *spec = std::move(result);
   return true;
 }
+
+bool GetBufferingMode(const std::string& buffering_mode_name,
+                      BufferingMode* out_mode) {
+  if (buffering_mode_name == "oneshot") {
+    *out_mode = BufferingMode::kOneshot;
+  } else if (buffering_mode_name == "circular") {
+    *out_mode = BufferingMode::kCircular;
+  } else if (buffering_mode_name == "streaming") {
+    *out_mode = BufferingMode::kStreaming;
+  } else {
+    return false;
+  }
+  return true;
+}
+
 }  // namespace tracing
