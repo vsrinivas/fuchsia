@@ -55,8 +55,8 @@ int MediaApp::Run() {
     printf("High water mark: %ldms\n", high_water_mark_ / 1000000);
   }
 
-  if (!AcquireAudioOutSync()) {
-    FXL_LOG(ERROR) << "Could not acquire AudioOutSync";
+  if (!AcquireAudioRendererSync()) {
+    FXL_LOG(ERROR) << "Could not acquire AudioRendererSync";
     return 1;
   }
 
@@ -79,7 +79,7 @@ int MediaApp::Run() {
   // conditions.  Sadly, there is really no good way to do this with a purely
   // single threaded synchronous interface.
   int64_t min_lead_time;
-  audio_out_sync_->GetMinLeadTime(&min_lead_time);
+  audio_renderer_sync_->GetMinLeadTime(&min_lead_time);
   low_water_mark_ += min_lead_time;
   high_water_mark_ += min_lead_time;
 
@@ -107,9 +107,9 @@ int MediaApp::Run() {
   // times that were used. In effect, by using NO_TIMESTAMP for these two input
   // values, we align the following two things: "a local time of _As Soon As
   // We Safely Can_" and "the audio that I gave a PTS of _Zero_."
-  audio_out_sync_->Play(fuchsia::media::NO_TIMESTAMP,
-                        fuchsia::media::NO_TIMESTAMP, &ref_start_time,
-                        &media_start_time);
+  audio_renderer_sync_->Play(fuchsia::media::NO_TIMESTAMP,
+                             fuchsia::media::NO_TIMESTAMP, &ref_start_time,
+                             &media_start_time);
   start_time_known_ = true;
 
   // TODO(johngro): This program is making the assumption that the platform's
@@ -137,17 +137,17 @@ int MediaApp::Run() {
   return 0;
 }
 
-// Connect (synchronously) to the Audio service and get an AudioOutSync.
-bool MediaApp::AcquireAudioOutSync() {
+// Connect (synchronously) to the Audio service and get an AudioRendererSync.
+bool MediaApp::AcquireAudioRendererSync() {
   fuchsia::media::AudioSyncPtr audio;
 
   context_->ConnectToEnvironmentService(audio.NewRequest());
-  return audio->CreateAudioOut(audio_out_sync_.NewRequest()) == ZX_OK;
+  return audio->CreateAudioOut(audio_renderer_sync_.NewRequest()) == ZX_OK;
 }
 
-// Set the AudioOutSync's audio stream_type to stereo 48kHz.
+// Set the AudioRendererSync's audio stream_type to stereo 48kHz.
 bool MediaApp::SetStreamType() {
-  FXL_DCHECK(audio_out_sync_);
+  FXL_DCHECK(audio_renderer_sync_);
 
   fuchsia::media::AudioStreamType stream_type;
   stream_type.sample_format =
@@ -156,7 +156,7 @@ bool MediaApp::SetStreamType() {
   stream_type.channels = kNumChannels;
   stream_type.frames_per_second = kFrameRate;
 
-  if (audio_out_sync_->SetPcmStreamType(std::move(stream_type)) != ZX_OK) {
+  if (audio_renderer_sync_->SetPcmStreamType(std::move(stream_type)) != ZX_OK) {
     FXL_LOG(ERROR) << "Could not set stream type";
     return false;
   }
@@ -177,7 +177,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
   }
 
   // We map a single payload buffer; each packet references a region within it.
-  audio_out_sync_->AddPayloadBuffer(0, std::move(payload_vmo));
+  audio_renderer_sync_->AddPayloadBuffer(0, std::move(payload_vmo));
 
   return ZX_OK;
 }
@@ -203,9 +203,9 @@ void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
 
 // Create a packet for this payload.
 // By not specifying a presentation timestamp for each packet (we allow the
-// default value of fuchsia::media::NO_TIMESTAMP), we rely on the AudioOutSync
-// to treat the sequence of packets as a contiguous unbroken stream of audio. We
-// just need to make sure we present packets early enough.
+// default value of fuchsia::media::NO_TIMESTAMP), we rely on the
+// AudioRendererSync to treat the sequence of packets as a contiguous unbroken
+// stream of audio. We just need to make sure we present packets early enough.
 fuchsia::media::StreamPacket MediaApp::CreateAudioPacket(size_t payload_num) {
   fuchsia::media::StreamPacket packet;
 
@@ -231,13 +231,13 @@ bool MediaApp::SendAudioPacket(fuchsia::media::StreamPacket packet) {
   ++num_packets_sent_;
 
   // Note: SendPacketNoReply returns immediately, before packet is consumed.
-  return audio_out_sync_->SendPacketNoReply(std::move(packet)) == ZX_OK;
+  return audio_renderer_sync_->SendPacketNoReply(std::move(packet)) == ZX_OK;
 }
 
 // Stay ahead of the presentation timeline, by the amount high_water_mark_.
 // We must wait until a packet is consumed before reusing its buffer space.
 // For more fine-grained awareness/control of buffers, clients should use the
-// (asynchronous) AudioOut interface and process callbacks from SendPacket.
+// (asynchronous) AudioRenderer interface and process callbacks from SendPacket.
 bool MediaApp::RefillBuffer() {
   const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   const zx_duration_t time_data_needed =

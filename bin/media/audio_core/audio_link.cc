@@ -18,7 +18,7 @@ AudioLink::AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source,
   // Only outputs and audio ins may be destinations.
   FXL_DCHECK(dest_ != nullptr);
   FXL_DCHECK((dest_->type() == AudioObject::Type::Output) ||
-             (dest_->type() == AudioObject::Type::AudioIn));
+             (dest_->type() == AudioObject::Type::AudioCapturer));
 }
 
 AudioLink::~AudioLink() {}

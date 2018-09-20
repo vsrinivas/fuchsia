@@ -8,7 +8,7 @@ library fuchsia.media;
 // Ordinal range: 0x0700-0x7ff
 [Discoverable]
 interface Audio {
-  0x0701: CreateAudioOut(request<AudioOut> audio_out_request);
+  0x0701: CreateAudioOut(request<AudioOut> audio_renderer_request);
 
   // Create an audio in which either captures from the current default
   // audio input device, or loops-back from the current default audio output
@@ -18,9 +18,9 @@ interface Audio {
   // security surrounding routing decisions) should be much more sophisticated
   // than this.  This is just a placeholder until we have a design in place.
   // Eventually, I suspect that all of this will move up into the audio policy
-  // manager and application clients will obtain AudioIns from and control
+  // manager and application clients will obtain AudioCapturers from and control
   // through the policy manager.
-  0x0702: CreateAudioIn(request<AudioIn> audio_in_request, bool loopback);
+  0x0702: CreateAudioIn(request<AudioIn> audio_capturer_request, bool loopback);
 
   // System Gain and Mute
   // TODO(mpuryear): remove this systemwide setting once device-centric settings
@@ -73,19 +73,19 @@ interface Audio {
 // A placeholder for various types of simple routing policies.  This should be
 // replaced when routing policy moves to a more centralized policy manager.
 enum AudioOutputRoutingPolicy {
-  // AudioOuts are always connected to all audio outputs which currently
+  // AudioRenderers are always connected to all audio outputs which currently
   // in the plugged state (eg; have a connector attached to them)
   ALL_PLUGGED_OUTPUTS = 0;
 
-  // AudioOuts are only connected to the output stream which most
-  // recently entered the plugged state.  AudioOuts move around from output to
+  // AudioRenderers are only connected to the output stream which most
+  // recently entered the plugged state.  AudioRenderers move around from output to
   // output as streams are published/unpublished and become plugged/unplugged.
   //
   // This is the initial setting for audio output routing.
   LAST_PLUGGED_OUTPUT = 1;
 };
 
-// Permitted ranges for AudioOut and AudioIn
+// Permitted ranges for AudioRenderer and AudioCapturer
 const uint32 MIN_PCM_CHANNEL_COUNT = 1;
 const uint32 MAX_PCM_CHANNEL_COUNT = 8;
 const uint32 MIN_PCM_FRAMES_PER_SECOND = 1000;

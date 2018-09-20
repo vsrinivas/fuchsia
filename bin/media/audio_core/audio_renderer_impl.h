@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_OUT_IMPL_H_
-#define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_OUT_IMPL_H_
+#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_
+#define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_
 
 #include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_core/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_core/audio_object.h"
-#include "garnet/bin/media/audio_core/audio_out_format_info.h"
+#include "garnet/bin/media/audio_core/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_core/utils.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -21,14 +21,14 @@ namespace audio {
 
 class AudioCoreImpl;
 
-class AudioOutImpl
+class AudioRendererImpl
     : public AudioObject,
-      public fbl::DoublyLinkedListable<fbl::RefPtr<AudioOutImpl>>,
+      public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
       public fuchsia::media::AudioOut,
       public fuchsia::media::GainControl {
  public:
-  static fbl::RefPtr<AudioOutImpl> Create(
-      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_out_request,
+  static fbl::RefPtr<AudioRendererImpl> Create(
+      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
       AudioCoreImpl* owner);
 
   void Shutdown();
@@ -47,15 +47,15 @@ class AudioOutImpl
 
   // Note: format_info() is subject to change and must only be accessed from the
   // main message loop thread.  Outputs which are running on mixer threads
-  // should never access format_info() directly from an AudioOut.  Instead, they
-  // should use the format_info which was assigned to the AudioLink at the time
-  // the link was created.
-  const fbl::RefPtr<AudioOutFormatInfo>& format_info() const {
+  // should never access format_info() directly from an AudioRenderer.  Instead,
+  // they should use the format_info which was assigned to the AudioLink at the
+  // time the link was created.
+  const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const {
     return format_info_;
   }
   bool format_info_valid() const { return (format_info_ != nullptr); }
 
-  // AudioOut interface
+  // AudioRenderer interface
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
   void SetStreamType(fuchsia::media::StreamType format) final;
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) final;
@@ -92,7 +92,7 @@ class AudioOutImpl
   // Hook called when the minimum clock lead time requirement changes.
   void ReportNewMinClockLeadTime();
 
-  fbl::RefPtr<AudioOutFormatInfo> format_info_;
+  fbl::RefPtr<AudioRendererFormatInfo> format_info_;
   float stream_gain_db_ = 0.0;
   bool mute_ = false;
   std::shared_ptr<AudioLinkPacketSource> throttle_output_link_;
@@ -103,7 +103,8 @@ class AudioOutImpl
  private:
   class GainControlBinding : public fuchsia::media::GainControl {
    public:
-    static fbl::unique_ptr<GainControlBinding> Create(AudioOutImpl* owner) {
+    static fbl::unique_ptr<GainControlBinding> Create(
+        AudioRendererImpl* owner) {
       return fbl::unique_ptr<GainControlBinding>(new GainControlBinding(owner));
     }
 
@@ -121,21 +122,21 @@ class AudioOutImpl
    private:
     friend class fbl::unique_ptr<GainControlBinding>;
 
-    GainControlBinding(AudioOutImpl* owner) : owner_(owner) {}
+    GainControlBinding(AudioRendererImpl* owner) : owner_(owner) {}
     ~GainControlBinding() override {}
 
-    AudioOutImpl* owner_;
+    AudioRendererImpl* owner_;
     bool gain_events_enabled_ = false;
   };
 
-  friend class fbl::RefPtr<AudioOutImpl>;
+  friend class fbl::RefPtr<AudioRendererImpl>;
   friend class GainControlBinding;
 
-  AudioOutImpl(
-      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_out_request,
+  AudioRendererImpl(
+      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
       AudioCoreImpl* owner);
 
-  ~AudioOutImpl() override;
+  ~AudioRendererImpl() override;
 
   bool IsOperating();
   bool ValidateConfig();
@@ -143,7 +144,7 @@ class AudioOutImpl
   void UnlinkThrottle();
 
   AudioCoreImpl* owner_ = nullptr;
-  fidl::Binding<fuchsia::media::AudioOut> audio_out_binding_;
+  fidl::Binding<fuchsia::media::AudioOut> audio_renderer_binding_;
   fidl::BindingSet<fuchsia::media::GainControl,
                    fbl::unique_ptr<GainControlBinding>>
       gain_control_bindings_;
@@ -178,4 +179,4 @@ class AudioOutImpl
 }  // namespace audio
 }  // namespace media
 
-#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_OUT_IMPL_H_
+#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_

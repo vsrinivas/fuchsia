@@ -202,11 +202,11 @@ and tests.
 
 **Numerous Stages**
 
-**Interface to AudioOuts (or other parts of audio_core)**
+**Interface to AudioRenderers (or other parts of audio_core)**
 
 *   MTWN-88
 
-    The AudioOut API schedules each incoming audio packet on an integer
+    The AudioRenderer API schedules each incoming audio packet on an integer
 sample boundary, regardless of whether a fractional sample location would better
 represent the timestamp specified. This bug represents the investigation (and
 potential enabling) of scheduling these packets on fractional sample positions.

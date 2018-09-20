@@ -28,7 +28,7 @@ class MediaApp {
   int Run();
 
  private:
-  bool AcquireAudioOutSync();
+  bool AcquireAudioRendererSync();
   bool SetStreamType();
 
   zx_status_t CreateMemoryMapping();
@@ -42,7 +42,7 @@ class MediaApp {
 
   void WaitForPackets(size_t num_packets);
 
-  fuchsia::media::AudioOutSyncPtr audio_out_sync_;
+  fuchsia::media::AudioOutSyncPtr audio_renderer_sync_;
 
   std::unique_ptr<component::StartupContext> context_;
   fzl::VmoMapper payload_buffer_;

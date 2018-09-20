@@ -17,17 +17,17 @@ namespace media {
 namespace audio {
 
 // An audio object is the simple base class for 4 major types of audio objects
-// in the mixer; Outputs, Inputs, AudioOuts and AudioIns.  It ensures that each
-// of these objects is intrusively ref-counted, and remembers its type so that
-// it may be safely downcast from a generic audio object to something more
-// specific.
+// in the mixer; Outputs, Inputs, AudioRenderers and AudioCapturers.  It ensures
+// that each of these objects is intrusively ref-counted, and remembers its type
+// so that it may be safely downcast from a generic audio object to something
+// more specific.
 class AudioObject : public fbl::RefCounted<AudioObject> {
  public:
   enum class Type {
     Output,
     Input,
-    AudioOut,
-    AudioIn,
+    AudioRenderer,
+    AudioCapturer,
   };
 
   static std::shared_ptr<AudioLink> LinkObjects(
@@ -59,8 +59,8 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   Type type() const { return type_; }
   bool is_output() const { return type() == Type::Output; }
   bool is_input() const { return type() == Type::Input; }
-  bool is_audio_out() const { return type() == Type::AudioOut; }
-  bool is_audio_in() const { return type() == Type::AudioIn; }
+  bool is_audio_renderer() const { return type() == Type::AudioRenderer; }
+  bool is_audio_capturer() const { return type() == Type::AudioCapturer; }
 
  protected:
   friend class fbl::RefPtr<AudioObject>;
@@ -90,19 +90,19 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
 
   // The set of links which this audio device is acting as a source for (eg; the
   // destinations that this object is sending to).  The target of each of these
-  // links must be a either an Output or a AudioIn.
+  // links must be a either an Output or a AudioCapturer.
   AudioLinkSet dest_links_ FXL_GUARDED_BY(links_lock_);
 
   // The set of links which this audio device is acting as a destination for
   // (eg; the sources that that the object is receiving from).  The target of
-  // each of these links must be a either an Output or a AudioIn.
+  // each of these links must be a either an Output or a AudioCapturer.
   //
   // TODO(johngro): Order this by priority.  Use a fbl::WAVLTree (or some other
   // form of ordered intrusive container) so that we can easily remove and
   // re-insert a link if/when priority changes.
   //
-  // Right now, we have no priorities, so this is just a set of AudioOut/output
-  // links.
+  // Right now, we have no priorities, so this is just a set of
+  // AudioRenderer/output links.
   AudioLinkSet source_links_ FXL_GUARDED_BY(links_lock_);
 
  private:

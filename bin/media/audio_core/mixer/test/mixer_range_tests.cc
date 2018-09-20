@@ -85,8 +85,9 @@ TEST(DynamicRange, Epsilon) {
 TEST(DynamicRange, 30Down) {
   Gain gain;
 
-  // Set AudioOut gain to +24dB (note: this combines with -54 to make -30dB).
-  gain.SetAudioOutGain(24.0f);
+  // Set AudioRenderer gain to +24dB (note: this combines with -54 to make
+  // -30dB).
+  gain.SetAudioRendererGain(24.0f);
   // Retrieve the total gainscale multiplier, if system gain is -54dB.
   const Gain::AScale scale = gain.GetGainScale(-54.0f);
 
@@ -104,8 +105,8 @@ TEST(DynamicRange, 30Down) {
 TEST(DynamicRange, 60Down) {
   Gain gain;
 
-  // Set AudioOut gain to -60dB.
-  gain.SetAudioOutGain(-60.0f);
+  // Set AudioRenderer gain to -60dB.
+  gain.SetAudioRendererGain(-60.0f);
   // Retrieve the combined gain scale multiplier, if system gain is 0dB.
   const Gain::AScale scale = gain.GetGainScale(0.0f);
 
@@ -123,8 +124,9 @@ TEST(DynamicRange, 60Down) {
 TEST(DynamicRange, 90Down) {
   Gain gain;
 
-  // Set AudioOut gain to -44dB (note: this combines with -46 to make -90dB).
-  gain.SetAudioOutGain(-44.0f);
+  // Set AudioRenderer gain to -44dB (note: this combines with -46 to make
+  // -90dB).
+  gain.SetAudioRendererGain(-44.0f);
   // Retrieve the combined gain scale multiplier, if system gain is -46dB.
   const Gain::AScale scale = gain.GetGainScale(-46.0f);
 

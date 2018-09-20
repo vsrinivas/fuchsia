@@ -29,7 +29,7 @@ void MediaApp::Run(component::StartupContext* app_context) {
 
   SetupPayloadCoefficients();
   DisplayConfigurationSettings();
-  AcquireAudioOut(app_context);
+  AcquireAudioRenderer(app_context);
   SetStreamType();
 
   if (CreateMemoryMapping() != ZX_OK) {
@@ -61,8 +61,8 @@ void MediaApp::Run(component::StartupContext* app_context) {
       SendPacket(payload_num);
     }
 
-    audio_out_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
-                            fuchsia::media::NO_TIMESTAMP);
+    audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
+                                 fuchsia::media::NO_TIMESTAMP);
   } else {
     Shutdown();
   }
@@ -121,8 +121,9 @@ bool MediaApp::ParameterRangeChecks() {
     ret_val = false;
   }
 
-  stream_gain_db_ = fbl::clamp<float>(
-      stream_gain_db_, fuchsia::media::MUTED_GAIN_DB, fuchsia::media::MAX_GAIN_DB);
+  stream_gain_db_ =
+      fbl::clamp<float>(stream_gain_db_, fuchsia::media::MUTED_GAIN_DB,
+                        fuchsia::media::MAX_GAIN_DB);
 
   system_gain_db_ =
       fbl::clamp<float>(system_gain_db_, fuchsia::media::MUTED_GAIN_DB, 0.0f);
@@ -134,7 +135,7 @@ bool MediaApp::ParameterRangeChecks() {
 // payload, calculate the other related coefficients needed for our mapped
 // memory section, and for our series of payloads that reference that section.
 //
-// We share a memory section with our AudioOut, dividing it into equally-sized
+// We share a memory section with our AudioRenderer, dividing it into equally-sized
 // payloads (size specified by the user). For now, we trim the end of the memory
 // section, rather than handle the occasional irregularly-sized packet.
 // TODO(mpuryear): handle end-of-buffer wraparound; make it a true ring buffer.
@@ -170,7 +171,7 @@ void MediaApp::SetupPayloadCoefficients() {
 }
 
 void MediaApp::DisplayConfigurationSettings() {
-  printf("\nAudioOut configured for %d-channel %s at %u Hz.\nContent is ",
+  printf("\nAudioRenderer configured for %d-channel %s at %u Hz.\nContent is ",
          num_channels_,
          (use_int24_ ? "int24" : (use_int16_ ? "int16" : "float32")),
          frame_rate_);
@@ -205,10 +206,10 @@ void MediaApp::DisplayConfigurationSettings() {
   printf(".\n\n");
 }
 
-// Use StartupContext to acquire AudioPtr, and use that to acquire AudioOutPtr
-// in turn. Set AudioOut error handler, in case of channel closure.
-void MediaApp::AcquireAudioOut(component::StartupContext* app_context) {
-  // The Audio interface is only needed to create AudioOut, set routing policy
+// Use StartupContext to acquire AudioPtr, and use that to acquire AudioRendererPtr
+// in turn. Set AudioRenderer error handler, in case of channel closure.
+void MediaApp::AcquireAudioRenderer(component::StartupContext* app_context) {
+  // The Audio interface is only needed to create AudioRenderer, set routing policy
   // and set system gain/mute. Use the synchronous proxy, for simplicity.
   fuchsia::media::AudioSyncPtr audio;
   app_context->ConnectToEnvironmentService(audio.NewRequest());
@@ -227,11 +228,11 @@ void MediaApp::AcquireAudioOut(component::StartupContext* app_context) {
     audio->SetRoutingPolicy(audio_policy_);
   }
 
-  audio->CreateAudioOut(audio_out_.NewRequest());
-  audio_out_->BindGainControl(gain_control_.NewRequest());
+  audio->CreateAudioOut(audio_renderer_.NewRequest());
+  audio_renderer_->BindGainControl(gain_control_.NewRequest());
 
-  audio_out_.set_error_handler([this]() {
-    FXL_LOG(ERROR) << "fuchsia::media::AudioOut connection lost. Quitting.";
+  audio_renderer_.set_error_handler([this]() {
+    FXL_LOG(ERROR) << "fuchsia::media::AudioRenderer connection lost. Quitting.";
     Shutdown();
   });
 
@@ -241,9 +242,9 @@ void MediaApp::AcquireAudioOut(component::StartupContext* app_context) {
   });
 }
 
-// Set the AudioOut's audio format to stereo 48kHz 16-bit (LPCM).
+// Set the AudioRenderer's audio format to stereo 48kHz 16-bit (LPCM).
 void MediaApp::SetStreamType() {
-  FXL_DCHECK(audio_out_);
+  FXL_DCHECK(audio_renderer_);
 
   fuchsia::media::AudioStreamType format;
 
@@ -254,7 +255,7 @@ void MediaApp::SetStreamType() {
   format.channels = num_channels_;
   format.frames_per_second = frame_rate_;
 
-  audio_out_->SetPcmStreamType(std::move(format));
+  audio_renderer_->SetPcmStreamType(std::move(format));
 
   // Set stream gain, and clear the mute status.
   gain_control_->SetGain(stream_gain_db_);
@@ -262,7 +263,7 @@ void MediaApp::SetStreamType() {
 }
 
 // Create one Virtual Memory Object and map enough memory for 1 second of audio.
-// Reduce rights and send a handle to the AudioOut: this is our shared buffer.
+// Reduce rights and send a handle to the AudioRenderer: this is our shared buffer.
 zx_status_t MediaApp::CreateMemoryMapping() {
   zx::vmo payload_vmo;
   zx_status_t status = payload_buffer_.CreateAndMap(
@@ -274,7 +275,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
     return status;
   }
 
-  audio_out_->AddPayloadBuffer(0, std::move(payload_vmo));
+  audio_renderer_->AddPayloadBuffer(0, std::move(payload_vmo));
 
   return ZX_OK;
 }
@@ -390,8 +391,8 @@ void MediaApp::SendPacket(uint64_t payload_num) {
   }
 
   ++num_packets_sent_;
-  audio_out_->SendPacket(std::move(packet),
-                         [this]() { OnSendPacketComplete(); });
+  audio_renderer_->SendPacket(std::move(packet),
+                              [this]() { OnSendPacketComplete(); });
 }
 
 void MediaApp::OnSendPacketComplete() {

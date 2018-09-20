@@ -20,7 +20,7 @@ struct AudioDeviceInfo {
   bool is_input;
 
   // TODO(mpuryear): Verify whether or not we want to leave this stuff in place
-  // or not.  Technically it is not needed (all of these things could be
+  // or not. Technically it is not needed (all of these things could be
   // queried), but it seems like useful information to send during device
   // enumeration as it saves a user a round trip to the server and eliminates
   // any need to have extra states in a user's state machine when trying to
@@ -45,7 +45,7 @@ interface AudioDeviceEnumerator {
   // events a user receives?
   //
   // Pro: Having filters like this removes the need for the server to send
-  // messages to clients who don't care.  In particular, it seems likely that a
+  // messages to clients who don't care. In particular, it seems likely that a
   // client who just called SetDeviceGain will not care about the
   // OnDeviceGainChanged event being fired.
   //
@@ -68,8 +68,8 @@ interface AudioDeviceEnumerator {
   // from the system before the Get command could be processed.
   //
   // Set commands which are given an invalid device token are ignored and have
-  // no effect on the system.  In addition, users do not need to control all of
-  // the gain settings for an audio device with each call.  Only the settings
+  // no effect on the system. In addition, users do not need to control all of
+  // the gain settings for an audio device with each call. Only the settings
   // with a corresponding flag set in the set_flags parameter will be affected.
   // For example, passing SetAudioGainFlag_MuteValid will cause a SetDeviceGain
   // call to care only about the mute setting in the gain_info structure, while
@@ -86,15 +86,16 @@ interface AudioDeviceEnumerator {
   // Fetch the device ID of the current default input or output device, or
   // ZX_KOID_INVALID if no such device exists.
   //
-  // TODO(mpuryear): solidify the concept of "default" device.  Right now, it
+  // TODO(mpuryear): solidify the concept of "default" device. Right now, it
   // basically means the device which would be chosen as the destination of an
-  // AudioOut stream (or the source for an AudioIn stream), in the absence of...
+  // AudioRenderer stream (or the source for an AudioCapturer stream), in the
+  // absence of...
   //
   // 1) Any manual routing configuration imposed by the user.
   // 2) Any property based routing decision made by the audio service.
   //
   // Currently, this translates to "the default inputs/output will be the last
-  // plugged input/output".  As the human level logic which drives the audio
+  // plugged input/output". As the human level logic which drives the audio
   // routing policy evolves and becomes more complicated, this will probably
   // change.
   300: GetDefaultInputDevice() -> (uint64 device_token);

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/audio_core/audio_in_impl.h"
+#include "garnet/bin/media/audio_core/audio_capturer_impl.h"
 
 #include <lib/fit/defer.h>
 
@@ -15,7 +15,7 @@
 // than 4MB of pending capture buffer bookkeeping, something has gone seriously
 // wrong.
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
-    ::media::audio::AudioInImpl::PcbAllocatorTraits, 0x100);
+    ::media::audio::AudioCapturerImpl::PcbAllocatorTraits, 0x100);
 
 namespace media {
 namespace audio {
@@ -25,20 +25,20 @@ zx_duration_t kAssumedWorstSourceFenceTime = ZX_MSEC(5);
 constexpr float kInitialCaptureGainDb = 0.0;
 
 // static
-AtomicGenerationId AudioInImpl::PendingCaptureBuffer::sequence_generator;
+AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
 
-fbl::RefPtr<AudioInImpl> AudioInImpl::Create(
-    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
+fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
+    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
     AudioCoreImpl* owner, bool loopback) {
-  return fbl::AdoptRef(
-      new AudioInImpl(std::move(audio_in_request), owner, loopback));
+  return fbl::AdoptRef(new AudioCapturerImpl(std::move(audio_capturer_request),
+                                             owner, loopback));
 }
 
-AudioInImpl::AudioInImpl(
-    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
+AudioCapturerImpl::AudioCapturerImpl(
+    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
     AudioCoreImpl* owner, bool loopback)
-    : AudioObject(Type::AudioIn),
-      binding_(this, std::move(audio_in_request)),
+    : AudioObject(Type::AudioCapturer),
+      binding_(this, std::move(audio_capturer_request)),
       owner_(owner),
       state_(State::WaitingForVmo),
       loopback_(loopback),
@@ -58,18 +58,19 @@ AudioInImpl::AudioInImpl(
   UpdateFormat(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 8000);
 }
 
-AudioInImpl::~AudioInImpl() {
+AudioCapturerImpl::~AudioCapturerImpl() {
   // TODO(johngro) : ASSERT that the execution domain has shut down.
   FXL_DCHECK(!payload_buf_vmo_.is_valid());
   FXL_DCHECK(payload_buf_virt_ == nullptr);
   FXL_DCHECK(payload_buf_size_ == 0);
 }
 
-void AudioInImpl::SetInitialFormat(fuchsia::media::AudioStreamType format) {
+void AudioCapturerImpl::SetInitialFormat(
+    fuchsia::media::AudioStreamType format) {
   UpdateFormat(format.sample_format, format.channels, format.frames_per_second);
 }
 
-void AudioInImpl::Shutdown() {
+void AudioCapturerImpl::Shutdown() {
   // Disconnect from everything we were connected to.
   PreventNewLinks();
   Unlink();
@@ -102,13 +103,13 @@ void AudioInImpl::Shutdown() {
 
   // Make sure we have left the set of active audio ins.
   if (InContainer()) {
-    owner_->GetDeviceManager().RemoveAudioIn(this);
+    owner_->GetDeviceManager().RemoveAudioCapturer(this);
   }
 
   state_.store(State::Shutdown);
 }
 
-zx_status_t AudioInImpl::InitializeSourceLink(const AudioLinkPtr& link) {
+zx_status_t AudioCapturerImpl::InitializeSourceLink(const AudioLinkPtr& link) {
   zx_status_t res;
 
   // Allocate our bookkeeping for our link.
@@ -141,14 +142,14 @@ zx_status_t AudioInImpl::InitializeSourceLink(const AudioLinkPtr& link) {
   return res;
 }
 
-void AudioInImpl::GetStreamType(GetStreamTypeCallback cbk) {
+void AudioCapturerImpl::GetStreamType(GetStreamTypeCallback cbk) {
   fuchsia::media::StreamType ret;
   ret.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
   ret.medium_specific.set_audio(*format_);
   cbk(std::move(ret));
 }
 
-void AudioInImpl::SetPcmStreamType(
+void AudioCapturerImpl::SetPcmStreamType(
     fuchsia::media::AudioStreamType stream_type) {
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fit::defer([this]() { Shutdown(); });
@@ -204,7 +205,7 @@ void AudioInImpl::SetPcmStreamType(
   cleanup.cancel();
 }
 
-void AudioInImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
+void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   if (id != 0) {
     FXL_LOG(ERROR) << "Only buffer ID 0 is currently supported.";
     Shutdown();
@@ -325,11 +326,11 @@ void AudioInImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
           break;
         }
 
-        case AudioObject::Type::AudioOut:
+        case AudioObject::Type::AudioRenderer:
           // TODO(johngro): Support capturing from packet sources
           break;
 
-        case AudioObject::Type::AudioIn:
+        case AudioObject::Type::AudioCapturer:
           FXL_DCHECK(false);
           break;
       }
@@ -361,13 +362,14 @@ void AudioInImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   cleanup.cancel();
 }
 
-void AudioInImpl::RemovePayloadBuffer(uint32_t id) {
+void AudioCapturerImpl::RemovePayloadBuffer(uint32_t id) {
   FXL_LOG(ERROR) << "RemovePayloadBuffer is not currently supported.";
   Shutdown();
 }
 
-void AudioInImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
-                            uint32_t num_frames, CaptureAtCallback cbk) {
+void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id,
+                                  uint32_t offset_frames, uint32_t num_frames,
+                                  CaptureAtCallback cbk) {
   if (payload_buffer_id != 0) {
     FXL_LOG(ERROR) << "payload_buffer_id must be 0 for now.";
     return;
@@ -421,13 +423,13 @@ void AudioInImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
   cleanup.cancel();
 }
 
-void AudioInImpl::ReleasePacket(fuchsia::media::StreamPacket packet) {
+void AudioCapturerImpl::ReleasePacket(fuchsia::media::StreamPacket packet) {
   // TODO(mpuryear): Implement.
   FXL_LOG(ERROR) << "ReleasePacket not implemented yet.";
   Shutdown();
 }
 
-void AudioInImpl::DiscardAllPacketsNoReply() {
+void AudioCapturerImpl::DiscardAllPacketsNoReply() {
   // It is illegal to call Flush unless we are currently operating in
   // synchronous mode.
   State state = state_.load();
@@ -459,14 +461,14 @@ void AudioInImpl::DiscardAllPacketsNoReply() {
   }
 }
 
-void AudioInImpl::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
+void AudioCapturerImpl::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
   DiscardAllPacketsNoReply();
   if (binding_.is_bound()) {
     cbk();
   }
 }
 
-void AudioInImpl::StartAsyncCapture(uint32_t frames_per_packet) {
+void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   // In order to enter async mode, we must be operating in synchronous mode, and
@@ -522,9 +524,9 @@ void AudioInImpl::StartAsyncCapture(uint32_t frames_per_packet) {
   cleanup.cancel();
 }
 
-void AudioInImpl::StopAsyncCaptureNoReply() { StopAsyncCapture(nullptr); }
+void AudioCapturerImpl::StopAsyncCaptureNoReply() { StopAsyncCapture(nullptr); }
 
-void AudioInImpl::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
+void AudioCapturerImpl::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
   // In order to leave async mode, we must be operating in async mode, or we
   // must already be operating in sync mode (in which case, there is really
   // nothing to do but signal the callback if one was provided)
@@ -551,7 +553,7 @@ void AudioInImpl::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
   mix_wakeup_->Signal();
 }
 
-zx_status_t AudioInImpl::Process() {
+zx_status_t AudioCapturerImpl::Process() {
   while (true) {
     // Start by figure out what state we are currently in for this cycle.
     bool async_mode = false;
@@ -786,12 +788,12 @@ zx_status_t AudioInImpl::Process() {
   }  // while (true)
 }
 
-void AudioInImpl::BindGainControl(
+void AudioCapturerImpl::BindGainControl(
     fidl::InterfaceRequest<fuchsia::media::GainControl> request) {
   gain_control_bindings_.AddBinding(this, std::move(request));
 }
 
-void AudioInImpl::SetGain(float gain_db) {
+void AudioCapturerImpl::SetGain(float gain_db) {
   if ((gain_db < fuchsia::media::MUTED_GAIN_DB) ||
       (gain_db > fuchsia::media::MAX_GAIN_DB)) {
     FXL_LOG(ERROR) << "Invalid Gain " << gain_db;
@@ -802,11 +804,11 @@ void AudioInImpl::SetGain(float gain_db) {
   stream_gain_db_.store(gain_db);
 }
 
-void AudioInImpl::SetMute(bool muted) {
+void AudioCapturerImpl::SetMute(bool muted) {
   // TODO(mpuryear): Implement.
 }
 
-bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
+bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   // Take a snapshot of our source link references; skip the packet based
   // sources, we don't know how to sample from them yet.
   FXL_DCHECK(source_link_refs_.size() == 0);
@@ -866,8 +868,9 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
     // and get rid of this.
     const auto& driver = device->driver();
     if (driver == nullptr) {
-      FXL_LOG(ERROR) << "AudioIn appears to be linked to throttle output!  "
-                        "Shutting down";
+      FXL_LOG(ERROR)
+          << "AudioCapturer appears to be linked to throttle output!  "
+             "Shutting down";
       return false;
     }
 
@@ -1111,7 +1114,7 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
   return true;
 }
 
-void AudioInImpl::UpdateTransformation(
+void AudioCapturerImpl::UpdateTransformation(
     Bookkeeping* bk, const AudioDriver::RingBufferSnapshot& rb_snap) {
   FXL_DCHECK(bk != nullptr);
 
@@ -1153,7 +1156,7 @@ void AudioInImpl::UpdateTransformation(
   bk->source_trans_gen_id = rb_snap.gen_id;
 }
 
-void AudioInImpl::DoStopAsyncCapture() {
+void AudioCapturerImpl::DoStopAsyncCapture() {
   // If this is being called, we had better be in the async stopping state.
   FXL_DCHECK(state_.load() == State::AsyncStopping);
 
@@ -1195,7 +1198,7 @@ void AudioInImpl::DoStopAsyncCapture() {
       [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishAsyncStopThunk(); });
 }
 
-bool AudioInImpl::QueueNextAsyncPendingBuffer() {
+bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
   // Sanity check our async offset bookkeeping.
   FXL_DCHECK(async_next_frame_offset_ < payload_buf_frames_);
   FXL_DCHECK(async_frames_per_packet_ <= (payload_buf_frames_ / 2));
@@ -1234,7 +1237,7 @@ bool AudioInImpl::QueueNextAsyncPendingBuffer() {
   return true;
 }
 
-void AudioInImpl::ShutdownFromMixDomain() {
+void AudioCapturerImpl::ShutdownFromMixDomain() {
   mix_domain_->DeactivateFromWithinDomain();
   state_.store(State::Shutdown);
 
@@ -1242,7 +1245,7 @@ void AudioInImpl::ShutdownFromMixDomain() {
       [thiz = fbl::WrapRefPtr(this)]() { thiz->Shutdown(); });
 }
 
-void AudioInImpl::FinishAsyncStopThunk() {
+void AudioCapturerImpl::FinishAsyncStopThunk() {
   // Do nothing if we were shutdown between the time that this message was
   // posted to the main message loop and the time that we were dispatched.
   if (state_.load() == State::Shutdown) {
@@ -1274,7 +1277,7 @@ void AudioInImpl::FinishAsyncStopThunk() {
   state_.store(State::OperatingSync);
 }
 
-void AudioInImpl::FinishBuffersThunk() {
+void AudioCapturerImpl::FinishBuffersThunk() {
   // Do nothing if we were shutdown between the time that this message was
   // posted to the main message loop and the time that we were dispatched.
   if (state_.load() == State::Shutdown) {
@@ -1290,7 +1293,7 @@ void AudioInImpl::FinishBuffersThunk() {
   FinishBuffers(finished);
 }
 
-void AudioInImpl::FinishBuffers(const PcbList& finished_buffers) {
+void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
   for (const auto& finished_buffer : finished_buffers) {
     // If there is no callback tied to this buffer (meaning that it was
     // generated while operating in async mode), and it is not filled at all,
@@ -1315,8 +1318,9 @@ void AudioInImpl::FinishBuffers(const PcbList& finished_buffers) {
   }
 }
 
-void AudioInImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_format,
-                               uint32_t channels, uint32_t frames_per_second) {
+void AudioCapturerImpl::UpdateFormat(
+    fuchsia::media::AudioSampleFormat sample_format, uint32_t channels,
+    uint32_t frames_per_second) {
   // Record our new format.
   FXL_DCHECK(state_.load() == State::WaitingForVmo);
   format_->sample_format = sample_format;
@@ -1347,7 +1351,8 @@ void AudioInImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_format,
   FXL_DCHECK(max_frames_per_capture_ > 0);
 }
 
-zx_status_t AudioInImpl::ChooseMixer(const std::shared_ptr<AudioLink>& link) {
+zx_status_t AudioCapturerImpl::ChooseMixer(
+    const std::shared_ptr<AudioLink>& link) {
   FXL_DCHECK(link != nullptr);
 
   const auto& source = link->GetSource();

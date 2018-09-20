@@ -29,11 +29,11 @@ class AudioCoreImpl : public fuchsia::media::Audio {
   ~AudioCoreImpl() override;
 
   // Audio implementation.
-  void CreateAudioOut(
-      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_out_request) final;
+  void CreateAudioOut(fidl::InterfaceRequest<fuchsia::media::AudioOut>
+                          audio_renderer_request) final;
 
   void CreateAudioIn(
-      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
+      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
       bool loopback) final;
 
   void SetSystemGain(float gain_db) final;
@@ -42,7 +42,7 @@ class AudioCoreImpl : public fuchsia::media::Audio {
   void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) final;
 
   // Called (indirectly) by AudioOutputs to schedule the callback for a
-  // packet was queued to an AudioOut.
+  // packet was queued to an AudioRenderer.
   //
   // TODO(johngro): This bouncing through thread contexts is inefficient and
   // will increase the latency requirements for clients (its going to take them

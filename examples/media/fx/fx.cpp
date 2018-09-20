@@ -151,7 +151,7 @@ class FxProcessor {
   fbl::unique_ptr<AudioInput> input_;
   fit::closure quit_callback_;
   uint32_t input_buffer_frames_ = 0;
-  fuchsia::media::AudioOutPtr audio_out_;
+  fuchsia::media::AudioOutPtr audio_renderer_;
   media::TimelineFunction clock_mono_to_input_wr_ptr_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<kWavWriterEnabled> wav_writer_;
@@ -180,10 +180,10 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
     return;
   }
 
-  // Create an AudioOut.  Setup connection error handlers.
-  audio->CreateAudioOut(audio_out_.NewRequest());
+  // Create an AudioRenderer. Setup connection error handlers.
+  audio->CreateAudioOut(audio_renderer_.NewRequest());
 
-  audio_out_.set_error_handler([this]() {
+  audio_renderer_.set_error_handler([this]() {
     Shutdown("fuchsia::media::AudioRenderer connection closed");
   });
 
@@ -192,10 +192,10 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
   stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   stream_type.channels = input_->channel_cnt();
   stream_type.frames_per_second = input_->frame_rate();
-  audio_out_->SetPcmStreamType(std::move(stream_type));
+  audio_renderer_->SetPcmStreamType(std::move(stream_type));
 
-  // Create and map a VMO, to mix and subsequently send data to the AudioOut.
-  // Fill it with silence, then send a (read-only) VMO handle to the AudioOut.
+  // Create and map a VMO, to mix and subsequently send data to the renderer.
+  // Fill it with silence, then send a (read-only) VMO handle to the renderer.
   output_buf_frames_ = static_cast<uint32_t>(
       (OUTPUT_BUF_TIME * input_->frame_rate()) / 1000000000u);
   output_buf_sz_ = static_cast<size_t>(input_->frame_sz()) * output_buf_frames_;
@@ -207,10 +207,10 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
 
   // We use only a single payload buffer, and hence when creating each packet we
   // can allow its payload_buffer_id to remain the default value of 0.
-  audio_out_->AddPayloadBuffer(0, std::move(rend_vmo));
+  audio_renderer_->AddPayloadBuffer(0, std::move(rend_vmo));
 
   // We work in Audio Frames as our PTS units. Configure this now.
-  audio_out_->SetPtsUnits(input_->frame_rate(), 1);
+  audio_renderer_->SetPtsUnits(input_->frame_rate(), 1);
 
   // Start the input ring buffer.
   res = input_->StartRingBuffer();
@@ -220,7 +220,7 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
   }
 
   // Setup the function which will convert from system ticks to the ring
-  // buffer write pointer (in audio frames).  Note, we offset by the fifo
+  // buffer write pointer (in audio frames). Note, we offset by the fifo
   // depth so that the write pointer we get back will be the safe write
   // pointer position; IOW - not where the capture currently is, but where the
   // most recent frame which is guaranteed to be written to system memory is.
@@ -238,19 +238,19 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
   clock_mono_to_input_wr_ptr_ = media::TimelineFunction(
       -fifo_frames, input_->start_time(), frames_per_nsec);
 
-  // Request notifications about the minimum clock lead time requirements.  We
+  // Request notifications about the minimum clock lead time requirements. We
   // will be able to start to process the input stream once we know what this
   // number is.
   // TODO(johngro): Set the handler here!
-  audio_out_.events().OnMinLeadTimeChanged = [this](int64_t nsec) {
+  audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t nsec) {
     OnMinLeadTimeChanged(nsec);
   };
-  audio_out_->EnableMinLeadTimeEvents(true);
+  audio_renderer_->EnableMinLeadTimeEvents(true);
 
-  // Success.  Print out the usage message, and force an update of effect
+  // Success. Print out the usage message, and force an update of effect
   // parameters (which will also print their status).
   printf(
-      "Welcome to FX.  Keybindings are as follows.\n"
+      "Welcome to FX. Keybindings are as follows.\n"
       "q : Quit the application.\n"
       "\n== Pre-amp Gain\n"
       "] : Increase the pre-amp gain\n"
@@ -285,7 +285,7 @@ void FxProcessor::OnMinLeadTimeChanged(int64_t new_min_lead_time_nsec) {
 
   if (new_lead_time_frames > lead_time_frames_) {
     // Note: If the system is currently running, this discontinuity is going to
-    // put a pop into our presentation.  If this is a huge issue, what we would
+    // put a pop into our presentation. If this is a huge issue, what we would
     // really want to do is...
     //
     // 1) Take manual control of the routing policy.
@@ -322,7 +322,7 @@ void FxProcessor::OnMinLeadTimeChanged(int64_t new_min_lead_time_nsec) {
     // control our clock lead time by writing explicit timestamps on packets
     // using the sum of the current output_buf_wp_ and lead_time_frames_.
     ProcessInput();
-    audio_out_->PlayNoReply(now, 0);
+    audio_renderer_->PlayNoReply(now, 0);
   }
 }
 
@@ -437,7 +437,7 @@ void FxProcessor::Shutdown(const char* reason) {
 
   printf("Shutting down, reason = \"%s\"\n", reason);
   shutting_down_ = true;
-  audio_out_.Unbind();
+  audio_renderer_.Unbind();
   input_.reset();
   quit_callback_();
 }
@@ -456,9 +456,9 @@ void FxProcessor::ProcessInput() {
   }
 
   // Send the packet(s)
-  audio_out_->SendPacketNoReply(std::move(pkt1));
+  audio_renderer_->SendPacketNoReply(std::move(pkt1));
   if (pkt2.payload_size) {
-    audio_out_->SendPacketNoReply(std::move(pkt2));
+    audio_renderer_->SendPacketNoReply(std::move(pkt2));
   }
 
   // If the input has been closed by the driver, shutdown.
@@ -531,8 +531,7 @@ void FxProcessor::ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,
     out_pkt2->payload_size = 0;
   }
 
-  // Now actually apply the effects.  Start by just copying the input to the
-  // output.
+  // Now actually apply effects. Start by just copying the input to the output.
   auto input_base = reinterpret_cast<int16_t*>(input_->ring_buffer());
   auto output_base = reinterpret_cast<int16_t*>(output_buf_.start());
   ApplyEffect(input_base, input_start, input_buffer_frames_, output_base,
@@ -578,7 +577,7 @@ void FxProcessor::ApplyEffect(int16_t* src, uint32_t src_offset,
     uint32_t todo = fbl::min(fbl::min(frames, src_space), dst_space);
 
     // TODO(johngro): Either add fbl::invoke to fbl, or use std::invoke
-    // here when we switch to C++17.  The syntax for invoking a pointer to
+    // here when we switch to C++17. The syntax for invoking a pointer to
     // non-static method on an object is ugly and hard to understand, and
     // people should not be forced to look at it.
     ((*this).*(effect))(src + (src_offset * NUM_CHANNELS),

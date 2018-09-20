@@ -14,8 +14,8 @@ namespace audio {
 
 class AudioDeviceManager;
 class AudioCoreImpl;
-class AudioOutFormatInfo;
-class AudioOutImpl;
+class AudioRendererFormatInfo;
+class AudioRendererImpl;
 class AudioLink;
 
 // TODO(johngro) : Remove these definitions when we move to intrusive containers

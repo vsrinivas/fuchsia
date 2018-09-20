@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_IN_IMPL_H_
-#define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_IN_IMPL_H_
+#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
+#define GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
 
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-timer.h>
@@ -28,13 +28,14 @@ namespace audio {
 
 class AudioCoreImpl;
 
-class AudioInImpl : public AudioObject,
-                    public fuchsia::media::AudioIn,
-                    public fuchsia::media::GainControl,
-                    public fbl::DoublyLinkedListable<fbl::RefPtr<AudioInImpl>> {
+class AudioCapturerImpl
+    : public AudioObject,
+      public fuchsia::media::AudioIn,
+      public fuchsia::media::GainControl,
+      public fbl::DoublyLinkedListable<fbl::RefPtr<AudioCapturerImpl>> {
  public:
-  static fbl::RefPtr<AudioInImpl> Create(
-      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
+  static fbl::RefPtr<AudioCapturerImpl> Create(
+      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
       AudioCoreImpl* owner, bool loopback);
 
   bool loopback() const { return loopback_; }
@@ -43,12 +44,12 @@ class AudioInImpl : public AudioObject,
   void Shutdown() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
  protected:
-  friend class fbl::RefPtr<AudioInImpl>;
-  ~AudioInImpl() override;
+  friend class fbl::RefPtr<AudioCapturerImpl>;
+  ~AudioCapturerImpl() override;
   zx_status_t InitializeSourceLink(const AudioLinkPtr& link) override;
 
  private:
-  // Notes about the AudioInImpl state machine.
+  // Notes about the AudioCapturerImpl state machine.
   // TODO(mpuryear): Update this comment block.
   //
   // :: WaitingForVmo ::
@@ -134,10 +135,11 @@ class AudioInImpl : public AudioObject,
 
   friend PcbAllocator;
 
-  AudioInImpl(fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
-              AudioCoreImpl* owner, bool loopback);
+  AudioCapturerImpl(
+      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
+      AudioCoreImpl* owner, bool loopback);
 
-  // AudioIn FIDL implementation
+  // AudioCapturer FIDL implementation
   void GetStreamType(GetStreamTypeCallback cbk) final;
   void SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) final;
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) final;
@@ -256,6 +258,7 @@ class AudioInImpl : public AudioObject,
 }  // namespace audio
 }  // namespace media
 
-FWD_DECL_STATIC_SLAB_ALLOCATOR(::media::audio::AudioInImpl::PcbAllocatorTraits);
+FWD_DECL_STATIC_SLAB_ALLOCATOR(
+    ::media::audio::AudioCapturerImpl::PcbAllocatorTraits);
 
-#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_IN_IMPL_H_
+#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_

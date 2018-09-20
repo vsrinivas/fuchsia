@@ -544,8 +544,8 @@ class AudioResult {
                 over time and hence do not significantly impact fidelity. After
                 this change, as expected there was a measureable but negligible
                 improvement in audio fidelity, shown in updates to the threshold
-                values. For this reason, the internal clients (AudioInImpl and
-                StandardOutputBase) do not yet adopt this feature.
+                values. For this reason, the internal clients (AudioCapturerImpl
+                and StandardOutputBase) do not yet adopt this feature.
     2018-07-16  Added high-precision fixed-point data type 24-in-32-integer
                 support in the normalize and output functions (mixer_utils.h and
                 output_formatter.cc, respectively). Added level and noise-floor

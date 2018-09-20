@@ -66,38 +66,38 @@ static const std::map<int, float> notes_by_key_ = {
 
 Tones::Tones(bool interactive, fit::closure quit_callback)
     : interactive_(interactive), quit_callback_(std::move(quit_callback)) {
-  // Connect to the audio service and get an AudioOut.
+  // Connect to the audio service and get an AudioRenderer.
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   fuchsia::media::AudioPtr audio =
       startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio->CreateAudioOut(audio_out_.NewRequest());
+  audio->CreateAudioOut(audio_renderer_.NewRequest());
 
-  audio_out_.set_error_handler([this]() {
+  audio_renderer_.set_error_handler([this]() {
     std::cerr << "Unexpected error: channel to audio service closed\n";
     Quit();
   });
 
-  // Configure the stream_type of the AudioOut.
+  // Configure the stream_type of the AudioRenderer.
   fuchsia::media::AudioStreamType stream_type;
   stream_type.sample_format = kSampleFormat;
   stream_type.channels = kChannelCount;
   stream_type.frames_per_second = kFramesPerSecond;
-  audio_out_->SetPcmStreamType(std::move(stream_type));
+  audio_renderer_->SetPcmStreamType(std::move(stream_type));
 
   // Fetch minimum lead time; allocate payload buffer; start the synthesis loop.
-  audio_out_.events().OnMinLeadTimeChanged = [this](int64_t nsec) {
+  audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t nsec) {
     OnMinLeadTimeChanged(nsec);
   };
-  audio_out_->EnableMinLeadTimeEvents(true);
+  audio_renderer_->EnableMinLeadTimeEvents(true);
 }
 
 Tones::~Tones() {}
 
 void Tones::Quit() {
   midi_keyboard_.reset();
-  audio_out_.Unbind();
+  audio_renderer_.Unbind();
   quit_callback_();
 }
 
@@ -161,8 +161,8 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
 
   // figure out how many packets we need to keep in flight at all times.
   if (min_lead_time_nsec < 0) {
-    std::cerr << "AudioOut reported invalid lead time (" << min_lead_time_nsec
-              << "nSec)\n";
+    std::cerr << "AudioRenderer reported invalid lead time ("
+              << min_lead_time_nsec << "nSec)\n";
     return;
   }
 
@@ -181,7 +181,7 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
         static_cast<size_t>(kSharedBufferPackets) * kFramesPerBuffer *
         kBytesPerFrame;
 
-    // Allocate a shared payload buffer; pass its handle to the AudioOut.
+    // Allocate a shared payload buffer; pass its handle to the AudioRenderer.
     zx::vmo payload_vmo;
     zx_status_t status = payload_buffer_.CreateAndMap(
         total_mapping_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
@@ -192,11 +192,11 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
       return;
     }
 
-    // Assign our lone shared payload buffer to the AudioOut.
-    audio_out_->AddPayloadBuffer(0, std::move(payload_vmo));
+    // Assign our lone shared payload buffer to the AudioRenderer.
+    audio_renderer_->AddPayloadBuffer(0, std::move(payload_vmo));
 
-    // Configure the AudioOut to use input frames of audio as its PTS units.
-    audio_out_->SetPtsUnits(kFramesPerSecond, 1);
+    // Configure the renderer to use input frames of audio as its PTS units.
+    audio_renderer_->SetPtsUnits(kFramesPerSecond, 1);
 
     // Listen for keystrokes.
     WaitForKeystroke();
@@ -225,8 +225,8 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
     // input parameters. In effect, by using NO_TIMESTAMP for these two input
     // values, we align the following two things: "a local time of _As Soon As
     // We Safely Can_" and "the audio that I gave a PTS of _Zero_."
-    audio_out_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
-                            fuchsia::media::NO_TIMESTAMP);
+    audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
+                                 fuchsia::media::NO_TIMESTAMP);
     started_ = true;
   } else {
     SendPackets();
@@ -243,8 +243,8 @@ void Tones::SendPackets() {
     // Allow default values for packet.pts and packet.payload_buffer_id to stand
     //
     // By not specifying a presentation timestamp for each packet (we allow the
-    // default: fuchsia::media::NO_TIMESTAMP), we rely on the AudioOut to treat
-    // the sequence of packets as a contiguous unbroken stream of audio.
+    // default: fuchsia::media::NO_TIMESTAMP), we rely on the AudioRenderer to
+    // treat the sequence of packets as a contiguous unbroken stream of audio.
 
     packet.payload_offset = (pts_ * kBytesPerFrame) % payload_buffer_.size();
     packet.payload_size = kBytesPerBuffer;
@@ -262,9 +262,9 @@ void Tones::SendPackets() {
     //
     // TODO(johngro): If we really want to minimize latency through the system,
     // we should not be using the SendPacket callbacks to drive the system to
-    // mix more.  Doing this means that we need to wait until the oldest packet
+    // mix more. Doing this means that we need to wait until the oldest packet
     // in the pipeline is completely consumed, and then wait for the mixer to
-    // release to packet back to us.  It can take a bit of time for the mixer to
+    // release to packet back to us. It can take a bit of time for the mixer to
     // wake up and trim the packet, and it will take time for the message that a
     // packet has been completed to make it all of the way back to us.
     //
@@ -283,9 +283,9 @@ void Tones::SendPackets() {
         active_packets_in_flight_--;
         SendPackets();
       };
-      audio_out_->SendPacket(std::move(packet), std::move(on_complete));
+      audio_renderer_->SendPacket(std::move(packet), std::move(on_complete));
     } else {
-      audio_out_->SendPacket(std::move(packet), [this] { Quit(); });
+      audio_renderer_->SendPacket(std::move(packet), [this] { Quit(); });
     }
 
     active_packets_in_flight_++;

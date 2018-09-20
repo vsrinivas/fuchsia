@@ -9,8 +9,8 @@
 #include <limits>
 
 #include "garnet/bin/media/audio_core/audio_link.h"
-#include "garnet/bin/media/audio_core/audio_out_format_info.h"
-#include "garnet/bin/media/audio_core/audio_out_impl.h"
+#include "garnet/bin/media/audio_core/audio_renderer_format_info.h"
+#include "garnet/bin/media/audio_core/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_core/mixer/mixer.h"
 #include "garnet/bin/media/audio_core/mixer/no_op.h"
 #include "lib/fxl/logging.h"
@@ -219,9 +219,10 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
     }
 
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
-    FXL_DCHECK(link->GetSource()->type() == AudioObject::Type::AudioOut);
+    FXL_DCHECK(link->GetSource()->type() == AudioObject::Type::AudioRenderer);
     auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-    auto audio_out = fbl::RefPtr<AudioOutImpl>::Downcast(link->GetSource());
+    auto audio_renderer =
+        fbl::RefPtr<AudioRendererImpl>::Downcast(link->GetSource());
 
     // It would be nice to be able to use a dynamic cast for this, but currently
     // we are building with no-rtti
@@ -230,14 +231,14 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
     FXL_DCHECK(info);
 
     // Ensure the mapping from source-frame to local-time is up-to-date.
-    UpdateSourceTrans(audio_out, info);
+    UpdateSourceTrans(audio_renderer, info);
 
     bool setup_done = false;
     fbl::RefPtr<AudioPacketRef> pkt_ref;
 
-    bool release_audio_out_packet;
+    bool release_audio_renderer_packet;
     while (true) {
-      release_audio_out_packet = false;
+      release_audio_renderer_packet = false;
       // Try to grab the front of the packet queue.  If it has been flushed
       // since the last time we grabbed it, be sure to reset our mixer's
       // internal filter state.
@@ -255,8 +256,9 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
       // If we have not set up for this audio out yet, do so.  If the setup
       // fails for any reason, stop processing packets for this audio out.
       if (!setup_done) {
-        setup_done = (task_type == TaskType::Mix) ? SetupMix(audio_out, info)
-                                                  : SetupTrim(audio_out, info);
+        setup_done = (task_type == TaskType::Mix)
+                         ? SetupMix(audio_renderer, info)
+                         : SetupTrim(audio_renderer, info);
         if (!setup_done) {
           break;
         }
@@ -265,9 +267,10 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
       // Now process the packet which is at the front of the audio out's queue.
       // If the packet has been entirely consumed, pop it off the front and
       // proceed to the next one.  Otherwise, we are finished.
-      release_audio_out_packet = (task_type == TaskType::Mix)
-                                     ? ProcessMix(audio_out, info, pkt_ref)
-                                     : ProcessTrim(audio_out, info, pkt_ref);
+      release_audio_renderer_packet =
+          (task_type == TaskType::Mix)
+              ? ProcessMix(audio_renderer, info, pkt_ref)
+              : ProcessTrim(audio_renderer, info, pkt_ref);
 
       // If we are mixing, and we have produced enough output frames, then we
       // are done with this mix, regardless of what we should now do with the
@@ -278,17 +281,17 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
       }
       // If we still need more output, but could not complete this audio out
       // packet (we're paused, or packet is in the future), then we are done.
-      if (!release_audio_out_packet) {
+      if (!release_audio_renderer_packet) {
         break;
       }
       // We did consume this entire audio out packet, and we should keep mixing.
       pkt_ref.reset();
-      packet_link->UnlockPendingQueueFront(release_audio_out_packet);
+      packet_link->UnlockPendingQueueFront(release_audio_renderer_packet);
     }
 
     // Unlock queue (completing packet if needed) and proceed to next audio out.
     pkt_ref.reset();
-    packet_link->UnlockPendingQueueFront(release_audio_out_packet);
+    packet_link->UnlockPendingQueueFront(release_audio_renderer_packet);
 
     // Note: there is no point in doing this for the trim task, but it doesn't
     // hurt anything, and its easier then introducing another function to the
@@ -298,8 +301,8 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
   }
 }
 
-bool StandardOutputBase::SetupMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
-                                  Bookkeeping* info) {
+bool StandardOutputBase::SetupMix(
+    const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info) {
   // If we need to recompose our transformation from output frame space to input
   // fractional frames, do so now.
   FXL_DCHECK(info);
@@ -309,9 +312,9 @@ bool StandardOutputBase::SetupMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
   return true;
 }
 
-bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
-                                    Bookkeeping* info,
-                                    const fbl::RefPtr<AudioPacketRef>& packet) {
+bool StandardOutputBase::ProcessMix(
+    const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info,
+    const fbl::RefPtr<AudioPacketRef>& packet) {
   // Sanity check our parameters.
   FXL_DCHECK(info);
   FXL_DCHECK(packet);
@@ -459,8 +462,8 @@ bool StandardOutputBase::ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out,
   return consumed_source;
 }
 
-bool StandardOutputBase::SetupTrim(const fbl::RefPtr<AudioOutImpl>& audio_out,
-                                   Bookkeeping* info) {
+bool StandardOutputBase::SetupTrim(
+    const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info) {
   // Compute the cutoff time we will use to decide wether or not to trim
   // packets.  ForeachLink has already updated our transformation, no need
   // for us to do so here.
@@ -481,7 +484,7 @@ bool StandardOutputBase::SetupTrim(const fbl::RefPtr<AudioOutImpl>& audio_out,
 }
 
 bool StandardOutputBase::ProcessTrim(
-    const fbl::RefPtr<AudioOutImpl>& audio_out, Bookkeeping* info,
+    const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info,
     const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
   FXL_DCHECK(pkt_ref);
 
@@ -494,11 +497,11 @@ bool StandardOutputBase::ProcessTrim(
 }
 
 void StandardOutputBase::UpdateSourceTrans(
-    const fbl::RefPtr<AudioOutImpl>& audio_out, Bookkeeping* bk) {
-  FXL_DCHECK(audio_out != nullptr);
+    const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* bk) {
+  FXL_DCHECK(audio_renderer != nullptr);
   uint32_t gen = bk->source_trans_gen_id;
 
-  audio_out->SnapshotCurrentTimelineFunction(
+  audio_renderer->SnapshotCurrentTimelineFunction(
       Timeline::local_now(), &bk->clock_mono_to_frac_source_frames, &gen);
 
   // If local->media transformation hasn't changed since last time, we're done.

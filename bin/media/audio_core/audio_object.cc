@@ -8,7 +8,7 @@
 #include "garnet/bin/media/audio_core/audio_link.h"
 #include "garnet/bin/media/audio_core/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_core/audio_link_ring_buffer_source.h"
-#include "garnet/bin/media/audio_core/audio_out_impl.h"
+#include "garnet/bin/media/audio_core/audio_renderer_impl.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -20,7 +20,7 @@ std::shared_ptr<AudioLink> AudioObject::LinkObjects(
     const fbl::RefPtr<AudioObject>& dest) {
   // Assert that this is a valid source (audio ins may not be sources)
   FXL_DCHECK(source != nullptr);
-  FXL_DCHECK((source->type() == AudioObject::Type::AudioOut) ||
+  FXL_DCHECK((source->type() == AudioObject::Type::AudioRenderer) ||
              (source->type() == AudioObject::Type::Output) ||
              (source->type() == AudioObject::Type::Input));
 
@@ -28,7 +28,7 @@ std::shared_ptr<AudioLink> AudioObject::LinkObjects(
   // destinations)
   FXL_DCHECK(dest != nullptr);
   FXL_DCHECK((dest->type() == AudioObject::Type::Output) ||
-             (dest->type() == AudioObject::Type::AudioIn));
+             (dest->type() == AudioObject::Type::AudioCapturer));
 
   // Assert that we are not trying to connect an output to an output.
   FXL_DCHECK((source->type() != AudioObject::Type::Output) ||
@@ -36,9 +36,9 @@ std::shared_ptr<AudioLink> AudioObject::LinkObjects(
 
   // Create a link of the appropriate type based on our source.
   std::shared_ptr<AudioLink> link;
-  if (source->type() == AudioObject::Type::AudioOut) {
+  if (source->type() == AudioObject::Type::AudioRenderer) {
     link = AudioLinkPacketSource::Create(
-        fbl::RefPtr<AudioOutImpl>::Downcast(source), dest);
+        fbl::RefPtr<AudioRendererImpl>::Downcast(source), dest);
   } else {
     link = AudioLinkRingBufferSource::Create(
         fbl::RefPtr<AudioDevice>::Downcast(source), dest);

@@ -88,7 +88,7 @@ void usage(const char* prog_name) {
   printf("\n\t\t\t\t24-bit signals are saved left-justified in 32-bit ints.\n");
 
   printf(
-      "\n\t--%s=<GAIN>\t\tSet AudioOut (stream) Gain to [%.1f, %.1f] dB "
+      "\n\t--%s=<GAIN>\t\tSet AudioRenderer (stream) Gain to [%.1f, %.1f] dB "
       "(default %s)\n",
       kStreamGainSwitch, fuchsia::media::MUTED_GAIN_DB,
       fuchsia::media::MAX_GAIN_DB, kStreamGainDefaultDb);

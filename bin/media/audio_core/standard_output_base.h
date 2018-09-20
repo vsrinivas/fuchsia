@@ -49,7 +49,7 @@ class StandardOutputBase : public AudioOutput {
   // TODO(mpuryear): per MTWN-129, combine this with CaptureLinkBookkeeping, and
   // integrate it into the Mixer class itself.
   // TODO(mpuryear): Rationalize naming and usage of the bookkeeping structs.
-  void UpdateSourceTrans(const fbl::RefPtr<AudioOutImpl>& audio_out,
+  void UpdateSourceTrans(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
                          Bookkeeping* bk);
   void UpdateDestTrans(const MixJob& job, Bookkeeping* bk);
 
@@ -89,15 +89,17 @@ class StandardOutputBase : public AudioOutput {
   void ForeachLink(TaskType task_type)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  bool SetupMix(const fbl::RefPtr<AudioOutImpl>& audio_out, Bookkeeping* info)
+  bool SetupMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
+                Bookkeeping* info)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool ProcessMix(const fbl::RefPtr<AudioOutImpl>& audio_out, Bookkeeping* info,
-                  const fbl::RefPtr<AudioPacketRef>& pkt_ref)
+  bool ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
+                  Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  bool SetupTrim(const fbl::RefPtr<AudioOutImpl>& audio_out, Bookkeeping* info)
+  bool SetupTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
+                 Bookkeeping* info)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool ProcessTrim(const fbl::RefPtr<AudioOutImpl>& audio_out,
+  bool ProcessTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
                    Bookkeeping* info,
                    const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());

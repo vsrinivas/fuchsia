@@ -1,7 +1,7 @@
 # Signal Generator tool
 
 This directory contains a developer tool that generates and outputs audio
-signals, via the Audio, AudioOut, GainControl and AudioOutputRoutingPolicy FIDL
+signals, via the Audio, AudioRenderer, GainControl and AudioOutputRoutingPolicy FIDL
 interfaces.
 
 ### USAGE
@@ -43,7 +43,7 @@ These optional parameters are interpreted as follows:
                               Note: gain/mute settings do not affect .wav file contents, and
                               24-bit signals are saved left-justified in 32-bit ints.
 
-    --gain=<GAIN>             Set AudioOut (stream) Gain to [-160.0, +24.0] dB (default 0.0)
+    --gain=<GAIN>             Set AudioRenderer (stream) Gain to [-160.0, +24.0] dB (default 0.0)
     --sgain=<GAIN>            Set System Gain to [-160.0, 0.0] dB (default -12.0)
     --smute[=<0|1>]           Set System Mute (1=mute, 0=unmute, default 1)
                               Note: changes to System Gain/Mute persist after playback.

@@ -19,7 +19,7 @@
 
 #include "garnet/bin/media/audio_core/audio_device_settings.h"
 #include "garnet/bin/media/audio_core/audio_object.h"
-#include "garnet/bin/media/audio_core/audio_out_impl.h"
+#include "garnet/bin/media/audio_core/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_core/fwd_decls.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/time/time_point.h"
@@ -49,7 +49,7 @@ class AudioDevice : public AudioObject,
   // connectors (such as a 3.5mm audio jack).  Drivers can report this
   // plugged/unplugged state as well as the time of the last state change.
   // Currently this information is used in the Audio Service to implement simple
-  // routing policies for AudioOuts and AudioIns.
+  // routing policies for AudioRenderers and AudioCapturers.
   //
   // plugged   : true when an audio output stream is either hardwired, or
   //             believes that it has something connected to its plug.

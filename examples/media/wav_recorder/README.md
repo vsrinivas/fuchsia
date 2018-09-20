@@ -1,7 +1,7 @@
 # Wave File Recorder Example App
 
-This directory contains an example application that uses the AudioIn interface
-and the WavWriter class to record a waveform audio file.
+This directory contains an example application that uses the AudioCapturer
+interface and the WavWriter class to record a waveform audio file.
 
 ### USAGE
     wav_recorder [options] <filename>

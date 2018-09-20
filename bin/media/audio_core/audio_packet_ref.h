@@ -49,10 +49,9 @@ class AudioPacketRef
   // after the final frame in the packet would be presented.
   //
   // TODO(johngro): Reconsider this.  It may be best to keep things expressed
-  // simply in media time instead of converting to fractional units of
-  // AudioOut frames.  If/when outputs move away from a single fixed step size
-  // for output sampling, it will probably be best to just convert this back
-  // to media time.
+  // simply in media time instead of converting to fractional units of renderer
+  // frames.  If/when outputs move away from a single fixed step size for output
+  // sampling, it will probably be best to just convert this back to media time.
   int64_t start_pts() const { return start_pts_; }
   int64_t end_pts() const { return end_pts_; }
   uint32_t frac_frame_len() const { return frac_frame_len_; }

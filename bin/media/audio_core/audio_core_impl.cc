@@ -8,9 +8,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
+#include "garnet/bin/media/audio_core/audio_capturer_impl.h"
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
-#include "garnet/bin/media/audio_core/audio_in_impl.h"
-#include "garnet/bin/media/audio_core/audio_out_impl.h"
+#include "garnet/bin/media/audio_core/audio_renderer_impl.h"
 
 namespace media {
 namespace audio {
@@ -91,16 +91,16 @@ void AudioCoreImpl::Shutdown() {
 }
 
 void AudioCoreImpl::CreateAudioOut(
-    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_out_request) {
-  device_manager_.AddAudioOut(
-      AudioOutImpl::Create(std::move(audio_out_request), this));
+    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request) {
+  device_manager_.AddAudioRenderer(
+      AudioRendererImpl::Create(std::move(audio_renderer_request), this));
 }
 
 void AudioCoreImpl::CreateAudioIn(
-    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_in_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
     bool loopback) {
-  device_manager_.AddAudioIn(
-      AudioInImpl::Create(std::move(audio_in_request), this, loopback));
+  device_manager_.AddAudioCapturer(AudioCapturerImpl::Create(
+      std::move(audio_capturer_request), this, loopback));
 }
 
 void AudioCoreImpl::SetSystemGain(float gain_db) {

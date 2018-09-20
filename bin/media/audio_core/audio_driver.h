@@ -268,8 +268,8 @@ class AudioDriver {
 
   // Ring buffer state.  Note, the details of the ring buffer state are
   // protected by a lock and changes are tracked with a generation counter.
-  // This is important as it allows AudioIn clients to take a snapshot of the
-  // ring buffer state during mixing/resampling operations.
+  // This is important as it allows AudioCapturer clients to take a snapshot of
+  // the ring buffer state during mixing/resampling operations.
   mutable std::mutex ring_buffer_state_lock_;
   fbl::RefPtr<DriverRingBuffer> ring_buffer_
       FXL_GUARDED_BY(ring_buffer_state_lock_);

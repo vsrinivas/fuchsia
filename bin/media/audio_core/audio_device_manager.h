@@ -23,7 +23,7 @@
 namespace media {
 namespace audio {
 
-class AudioInImpl;
+class AudioCapturerImpl;
 
 class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
  public:
@@ -54,28 +54,29 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   // service framework each time a new client attempts to connect.
   void AddDeviceEnumeratorClient(zx::channel ch);
 
-  // Add an AudioOut to the set of active AudioOuts.
-  void AddAudioOut(fbl::RefPtr<AudioOutImpl> audio_out) {
-    FXL_DCHECK(audio_out);
-    audio_outs_.push_back(std::move(audio_out));
+  // Add an AudioRenderer to the set of active AudioRenderers.
+  void AddAudioRenderer(fbl::RefPtr<AudioRendererImpl> audio_renderer) {
+    FXL_DCHECK(audio_renderer);
+    audio_renderers_.push_back(std::move(audio_renderer));
   }
 
-  // Remove an AudioOut from the set of active AudioOuts.
-  void RemoveAudioOut(AudioOutImpl* audio_out) {
-    FXL_DCHECK(audio_out != nullptr);
-    FXL_DCHECK(audio_out->InContainer());
-    audio_outs_.erase(*audio_out);
+  // Remove an AudioRenderer from the set of active AudioRenderers.
+  void RemoveAudioRenderer(AudioRendererImpl* audio_renderer) {
+    FXL_DCHECK(audio_renderer != nullptr);
+    FXL_DCHECK(audio_renderer->InContainer());
+    audio_renderers_.erase(*audio_renderer);
   }
 
-  // Select the initial set of outputs for a newly-configured AudioOut.
-  void SelectOutputsForAudioOut(AudioOutImpl* audio_out);
+  // Select the initial set of outputs for a newly-configured AudioRenderer.
+  void SelectOutputsForAudioRenderer(AudioRendererImpl* audio_renderer);
 
-  // Link an output to an AudioOut.
-  void LinkOutputToAudioOut(AudioOutput* output, AudioOutImpl* audio_out);
+  // Link an output to an AudioRenderer.
+  void LinkOutputToAudioRenderer(AudioOutput* output,
+                                 AudioRendererImpl* audio_renderer);
 
-  // Add/remove an AudioIn to/from the set of active AudioIns.
-  void AddAudioIn(fbl::RefPtr<AudioInImpl> audio_in);
-  void RemoveAudioIn(AudioInImpl* audio_in);
+  // Add/remove an AudioCapturer to/from the set of active AudioCapturers.
+  void AddAudioCapturer(fbl::RefPtr<AudioCapturerImpl> audio_capturer);
+  void RemoveAudioCapturer(AudioCapturerImpl* audio_capturer);
 
   // Schedule a closure to run on our encapsulating service's main message loop.
   void ScheduleMainThreadTask(fit::closure task);
@@ -174,7 +175,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   void OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
                        zx_time_t plug_time);
 
-  void LinkToAudioIns(const fbl::RefPtr<AudioDevice>& device);
+  void LinkToAudioCapturers(const fbl::RefPtr<AudioDevice>& device);
 
   // Commit any pending device-settings changes to disk (if settings are disk-
   // backed), then remove the settings from our persisted_device_settings_ map.
@@ -205,16 +206,17 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<::fuchsia::media::AudioDeviceEnumerator> bindings_;
 
-  // Our sets of currently active audio devices, AudioIns, and AudioOuts.
+  // Our sets of currently active audio devices, AudioCapturers, and AudioRenderers.
   //
   // Contents of these collections must only be manipulated on the main message
   // loop thread, so no synchronization should be needed.
   fbl::WAVLTree<uint64_t, fbl::RefPtr<AudioDevice>> devices_pending_init_;
   fbl::WAVLTree<uint64_t, fbl::RefPtr<AudioDevice>> devices_;
-  fbl::DoublyLinkedList<fbl::RefPtr<AudioInImpl>> audio_ins_;
-  fbl::DoublyLinkedList<fbl::RefPtr<AudioOutImpl>> audio_outs_;
+  fbl::DoublyLinkedList<fbl::RefPtr<AudioCapturerImpl>> audio_capturers_;
+  fbl::DoublyLinkedList<fbl::RefPtr<AudioRendererImpl>> audio_renderers_;
 
-  // The special throttle output always exists and is used by every AudioOut.
+  // The special throttle output always exists and is used by every
+  // AudioRenderer.
   fbl::RefPtr<AudioOutput> throttle_output_;
 
   // A helper class we will use to detect plug/unplug events for audio devices

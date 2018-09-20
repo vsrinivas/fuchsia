@@ -11,14 +11,14 @@ in a slightly different way.
   simple_sine_sync [--wake=nn] [--sleep=nn] [--float] [--v|--verbose]
 ```
 The `--wake` flag specifies this application's _low water mark_, expressed in
-milliseconds. When the amount of audio queued at the AudioOutSync falls below
+milliseconds. When the amount of audio queued at the AudioRendererSync falls below
 this amount, the application will be awakened to provide more audio. If not
 provided, a default value of 30 milliseconds is used.
 
 The `--sleep` flag specifies this application's _high water mark_, expressed in
 milliseconds. When the application starts up, or when it is awakened because the
-AudioOutSync needs more data, it will continue sending packets until there is at
-least this much audio data queued at the AudioOutSync. If not provided, a
+AudioRendererSync needs more data, it will continue sending packets until there is at
+least this much audio data queued at the AudioRendererSync. If not provided, a
 default value of 50 milliseconds is used. This value cannot be less than the
 `--wake` value (whether specified or default, for both values). If this would be
 the case, then this value is set to the `--wake` value.

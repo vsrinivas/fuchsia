@@ -68,7 +68,7 @@ class MediaApp {
   bool ParameterRangeChecks();
   void SetupPayloadCoefficients();
   void DisplayConfigurationSettings();
-  void AcquireAudioOut(component::StartupContext* app_context);
+  void AcquireAudioRenderer(component::StartupContext* app_context);
   void SetStreamType();
 
   zx_status_t CreateMemoryMapping();
@@ -91,7 +91,7 @@ class MediaApp {
 
   fit::closure quit_callback_;
 
-  fuchsia::media::AudioOutPtr audio_out_;
+  fuchsia::media::AudioOutPtr audio_renderer_;
   fuchsia::media::GainControlPtr gain_control_;
 
   fzl::VmoMapper payload_buffer_;

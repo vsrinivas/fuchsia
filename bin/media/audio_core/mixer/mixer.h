@@ -85,8 +85,7 @@ class Mixer {
   //
   // Mix
   //
-  // Perform a mixing operation from the source buffer into the destination
-  // buffer.
+  // Perform a mixing operation from source buffer into destination buffer.
   //
   // @param dest
   // The pointer to the destination buffer into which frames will be mixed.
@@ -96,23 +95,22 @@ class Mixer {
   //
   // @param dest_offset
   // The pointer to the offset (in destination frames) at which we should start
-  // to mix destination frames.  When Mix has finished, dest_offset will be
+  // to mix destination frames. When Mix has finished, dest_offset will be
   // updated to indicate the offset into the destination buffer of the next
   // frame to be mixed.
   //
   // @param src
-  // The pointer the the source buffer containing the frames to be mixed into
+  // The pointer to the source buffer containing the frames to be mixed into
   // the destination buffer.
   //
   // @param frac_src_frames
-  // The total number of fractional AudioOut frames contained by the source
-  // buffer.
+  // The total number of fractional renderer frames within the source buffer.
   //
   // @param frac_src_offset
-  // A pointer to the offset (expressed in fractional AudioOut frames) at which
-  // the first frame to be mixed with the destination buffer should be sampled.
-  // When Mix has finished, frac_src_offset will be updated to indicate the
-  // offset of the sampling position of the next frame to be mixed with the
+  // A pointer to the offset (expressed in fractional renderer frames) at
+  // which the first frame to be mixed with the destination buffer should be
+  // sampled. When Mix has finished, frac_src_offset will be updated to indicate
+  // the offset of the sampling position of the next frame to be mixed with the
   // output buffer.
   //
   // @param frac_step_size
@@ -120,27 +118,25 @@ class Mixer {
   // frame produced.
   //
   // @param amplitude_scale
-  // The amplitude scaling factor to be applied when mixing.  This is expressed
+  // The amplitude scaling factor to be applied when mixing. This is expressed
   // as a 32-bit single-precision floating-point value.
   //
   // @param accumulate
   // When true, the mixer will accumulate into the destination buffer (read,
-  // sum, clip, write-back).  When false, the mixer will simply replace the
+  // sum, clip, write-back). When false, the mixer will simply replace the
   // destination buffer with its output.
   //
   // @param rate_modulo
-  // If frac_step_size cannot perfectly express the mix's resampling ratio,
-  // this parameter (along with subsequent denominator) expresses any leftover
-  // precision.  When present, rate_modulo and denominator express a fractional
-  // value of frac_step_size unit that should be advanced, for each destination
-  // frame.
+  // If frac_step_size cannot perfectly express the mix's resampling ratio, this
+  // parameter (along with subsequent denominator) expresses leftover precision.
+  // When present, rate_modulo and denominator express a fractional value of
+  // frac_step_size unit that should be advanced for each destination frame.
   //
   // @param denominator
   // If frac_step_size cannot perfectly express the mix's resampling ratio, this
-  // parameter (along with precedent rate_modulo) expresses any leftover
-  // precision. When present, rate_modulo and denominator express a fractional
-  // value of frac_step_size unit that should be advanced, for each destination
-  // frame.
+  // parameter (along with precedent rate_modulo) expresses leftover precision.
+  // When present, rate_modulo and denominator express a fractional value of
+  // frac_step_size unit that should be advanced, for each destination frame.
   //
   // @param src_pos_modulo
   // If frac_src_offset cannot perfectly express the source's position, this
@@ -149,7 +145,7 @@ class Mixer {
   // frac_src_offset unit that should be used when advancing src position.
   //
   // @return True if the mixer is finished with this source data and will not
-  // need it in the future.  False if the mixer has not consumed the entire
+  // need it in the future. False if the mixer has not consumed the entire
   // source buffer and will need more of it in the future.
   //
   // TODO(mpuryear): Change frac_src_frames parameter to be (integer)
@@ -170,8 +166,7 @@ class Mixer {
   // Q1: For perfect position accuracy, don't we also need an in/out param
   // to specify initial/final subframe rate_modulo, for fractional source
   // offset? A1: Yes, for optimum position accuracy (within quantization
-  // limits), we SHOULD incorporate running subframe position_modulo in this
-  // way.
+  // limits), we SHOULD incorporate running subframe position_modulo.
   //
   // For now, we are defering this work, tracking it with MTWN-128.
   //
@@ -187,8 +182,8 @@ class Mixer {
   //
   // Reset
   //
-  // Reset the internal state of the mixer.  Will be called every time there is
-  // a discontinuity in the source stream.  Mixer implementations should reset
+  // Reset the internal state of the mixer. Will be called every time there is
+  // a discontinuity in the source stream. Mixer implementations should reset
   // anything related to their internal filter state.
   virtual void Reset() {}
 
@@ -196,12 +191,12 @@ class Mixer {
   // Filter widths
   //
   // The positive and negative widths of the filter for this mixer, expressed in
-  // fractional input AudioOut units.  These widths convey which input frames
-  // will be referenced by the filter, when producing output for a specific
-  // instant in time. Positive filter width refers to how far forward
+  // fractional input AudioRenderer units. These widths convey which input
+  // frames will be referenced by the filter, when producing output for a
+  // specific instant in time. Positive filter width refers to how far forward
   // (positively) the filter looks, from the PTS in question; negative filter
   // width refers to how far backward (negatively) the filter looks, from that
-  // same PTS.  Specifically...
+  // same PTS. Specifically...
   //
   // Let:
   // P = pos_filter_width()

@@ -24,12 +24,12 @@ class Gain {
   // constructor
   Gain() : target_src_gain_db_(0.0f) {}
 
-  // Audio gains for AudioOuts/AudioIns and output devices are expressed as
-  // floating-point values, in decibels. For each signal path, two gain values
-  // are combined and then stored in the API-to-device link (usually
-  // AudioOut-to-output), as a 32-bit floating-point amplitude multiplier.
+  // Audio gains for AudioRenderers/AudioCapturers and output devices are
+  // expressed as floating-point values, in decibels. For each signal path, two
+  // gain values are combined and then stored in the API-to-device link (usually
+  // AudioRenderer-to-output), as a 32-bit floating-point amplitude multiplier.
   //
-  // Examples: AudioOut gain + Output gain = combined gain for a playback path.
+  // Examples: renderer gain + Output gain = combined gain for a playback path.
   // Input device gain + audio in gain = combined gain for an audio input path.
   static constexpr float kMinGainDb = fuchsia::media::MUTED_GAIN_DB;
   static constexpr float kMaxGainDb = fuchsia::media::MAX_GAIN_DB;
@@ -40,7 +40,7 @@ class Gain {
 
   // TODO(mpuryear): MTWN-70 Clarify/document/test audio::Gain's thread-safety
   //
-  // Set the AudioOut's contribution to a link's overall software gain
+  // Set the AudioRenderer's contribution to a link's overall software gain
   // control. With a 4.28 fixed point internal amplitude scalar, we allow values
   // in the range of [-inf, 24.0]. Callers of this method must guarantee
   // single-threaded semantics for each Gain instance. This is guaranteed today
@@ -48,7 +48,9 @@ class Gain {
   // their execution domain (giving us the single-threaded guarantee).
   // This value is stored in an atomic float, so that the Mixer can consume it
   // at any time without our needing to use a lock for synchronization.
-  void SetAudioOutGain(float gain_db) { target_src_gain_db_.store(gain_db); }
+  void SetAudioRendererGain(float gain_db) {
+    target_src_gain_db_.store(gain_db);
+  }
 
   // Retrieve the combined amplitude scalar for this Gain, when provided a gain
   // value for the "destination" side of this link (output device, or audio
