@@ -8,6 +8,7 @@
 #include <wlan/mlme/mac_frame.h>
 
 #include <cstring>
+#include <iomanip>
 #include <sstream>
 #include <string>
 
@@ -164,30 +165,30 @@ std::string Describe(const PHY& phy) {
 }
 
 std::string Describe(const GI& gi) {
-        char buf[16];
-        size_t offset = 0;
-        switch (gi) {
-          case WLAN_GI_800NS:
-              BUFFER("GI800");
-              break;
-          case WLAN_GI_400NS:
-              BUFFER("GI400");
-              break;
-          case WLAN_GI_200NS:
-              BUFFER("GI200");
-              break;
-          case WLAN_GI_1600NS:
-              BUFFER("GI1600");
-              break;
-          case WLAN_GI_3200NS:
-              BUFFER("GI3200");
-              break;
-          default:
-              BUFFER("GI Unknown");
-              break;
-        }
-        return std::string(buf);
+    char buf[16];
+    size_t offset = 0;
+    switch (gi) {
+    case WLAN_GI_800NS:
+        BUFFER("GI800");
+        break;
+    case WLAN_GI_400NS:
+        BUFFER("GI400");
+        break;
+    case WLAN_GI_200NS:
+        BUFFER("GI200");
+        break;
+    case WLAN_GI_1600NS:
+        BUFFER("GI1600");
+        break;
+    case WLAN_GI_3200NS:
+        BUFFER("GI3200");
+        break;
+    default:
+        BUFFER("GI Unknown");
+        break;
     }
+    return std::string(buf);
+}
 
 std::string Describe(const TxVector& tx_vec) {
     char buf[128];
@@ -198,7 +199,7 @@ std::string Describe(const TxVector& tx_vec) {
     BUFFER("%s", Describe(tx_vec.gi).c_str());
     BUFFER("%s", ::wlan::common::kCbwStr[tx_vec.cbw]);
     BUFFER("NSS %u", tx_vec.nss);
-    BUFFER("MCS %u." , tx_vec.mcs_idx);
+    BUFFER("MCS %u.", tx_vec.mcs_idx);
     BUFFER("is_valid: %u", tx_vec.IsValid());
 
     return std::string(buf);
@@ -605,6 +606,32 @@ std::string Describe(const std::vector<SupportedRate> rates) {
         BUFFER("%s%u", rate.is_basic() ? "*" : "", rate.rate());
     }
     return std::string(buf);
+}
+
+bool IsPrint(const uint8_t bytes[], size_t len) {
+    for (size_t idx = 0; idx < len; idx++) {
+        if (!std::isprint(bytes[idx])) { return false; }
+    }
+    return true;
+}
+
+std::string ToAsciiOrHexStr(const uint8_t bytes[], size_t len) {
+    if (IsPrint(bytes, len)) { return std::string(bytes, bytes + len); }
+
+    constexpr size_t kMaxLenToPrint = 64;
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    for (size_t idx = 0; idx < std::min(len, kMaxLenToPrint); ++idx) {
+        oss << std::setw(2) << static_cast<unsigned>(bytes[idx]) << " ";
+    }
+
+    if (len > kMaxLenToPrint) { oss << "..(+" << (kMaxLenToPrint - len) << " bytes)"; }
+
+    return oss.str();
+}
+
+std::string ToAsciiOrHexStr(const std::vector<uint8_t>& vec) {
+    return ToAsciiOrHexStr(&vec[0], vec.size());
 }
 
 }  // namespace debug

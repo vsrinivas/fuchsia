@@ -58,5 +58,8 @@ std::string Describe(const CapabilityInfo& cap);
 std::string Describe(const AssocContext& assoc_ctx);
 std::string Describe(const std::vector<SupportedRate> rates);
 
+std::string ToAsciiOrHexStr(const uint8_t bytes[], size_t len);
+std::string ToAsciiOrHexStr(const std::vector<uint8_t>& vec);
+
 }  // namespace debug
 }  // namespace wlan
