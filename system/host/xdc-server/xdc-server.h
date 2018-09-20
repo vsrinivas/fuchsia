@@ -27,7 +27,9 @@ public:
     void AddCompletedRead(std::unique_ptr<UsbHandler::Transfer> transfer);
     // Writes data from completed read transfers to the client until there are
     // no transfers left, or the client is currently unavailable to accept data.
-    void ProcessCompletedReads(std::unique_ptr<UsbHandler>& usb_handler);
+    void ProcessCompletedReads(const std::unique_ptr<UsbHandler>& usb_handler);
+    // Returns any unused transfers to the usb handler.
+    void ReturnTransfers(const std::unique_ptr<UsbHandler>& usb_handler);
 
     int fd()             const { return fd_.get(); }
     // Returns the set of client events we should poll for.

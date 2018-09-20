@@ -62,7 +62,7 @@ void Client::AddCompletedRead(std::unique_ptr<UsbHandler::Transfer> transfer) {
     completed_reads_.push_back(std::move(transfer));
 }
 
-void Client::ProcessCompletedReads(std::unique_ptr<UsbHandler>& usb_handler) {
+void Client::ProcessCompletedReads(const std::unique_ptr<UsbHandler>& usb_handler) {
     for (auto iter = completed_reads_.begin(); iter != completed_reads_.end(); ) {
         std::unique_ptr<UsbHandler::Transfer>& transfer = *iter;
 
@@ -89,6 +89,13 @@ void Client::ProcessCompletedReads(std::unique_ptr<UsbHandler>& usb_handler) {
         usb_handler->RequeueRead(std::move(transfer));
         iter = completed_reads_.erase(iter);
     }
+}
+
+void Client::ReturnTransfers(const std::unique_ptr<UsbHandler>& usb_handler) {
+    for (auto& transfer : completed_reads_) {
+        usb_handler->RequeueRead(std::move(transfer));
+    }
+    completed_reads_.clear();
 }
 
 // static
@@ -251,6 +258,7 @@ void XdcServer::Run() {
                     }
                 }
                 if (delete_client) {
+                    client->ReturnTransfers(usb_handler_);
                     // Notify the host server that the stream is now offline.
                     if (client->stream_id()) {
                         NotifyStreamState(client->stream_id(), false /* online */);
