@@ -108,6 +108,8 @@ func (c *ControlSrvr) ListSrcs() ([]amber.SourceConfig, error) {
 func (c *ControlSrvr) getAndWaitForUpdate(name string, version, merkle *string, ch *zx.Channel) {
 	res, err := c.downloadPkgMeta(name, version, merkle)
 	if err != nil {
+		lg.Log.Printf("error downloading package: %s", err)
+
 		signalErr := ch.Handle().SignalPeer(0, zx.SignalUser0)
 		if signalErr != nil {
 			lg.Log.Printf("signal failed: %s", signalErr)

@@ -63,7 +63,7 @@ func FetchBlob(repos []BlobRepo, blob string, outputDir string) error {
 	for i := range repos {
 		reader, sz, err2 := FetchBlobFromRepo(repos[i], blob)
 		if err2 != nil {
-			log.Printf("got error trying to get blob: %s", err2)
+			log.Printf("got error trying to get blob %q: %s", blob, err2)
 			continue
 		}
 		err = WriteBlob(filepath.Join(outputDir, blob), sz, reader)

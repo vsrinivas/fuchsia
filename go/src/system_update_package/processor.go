@@ -93,7 +93,6 @@ func FetchPackages(pkgs []*Package, amber *amber.ControlInterface) error {
 
 	pkgChan := make(chan *Package, len(pkgs))
 	errChan := make(chan error, len(pkgs))
-	errCount := 0
 
 	for i := 0; i < workerCount; i++ {
 		go fetchWorker(pkgChan, amber, workerWg, errChan)
@@ -110,12 +109,14 @@ func FetchPackages(pkgs []*Package, amber *amber.ControlInterface) error {
 	workerWg.Wait()
 	close(errChan)
 
-	for range errChan {
-		errCount++
+	var errs []string
+
+	for err := range errChan {
+		errs = append(errs, err.Error())
 	}
 
-	if errCount > 0 {
-		return fmt.Errorf("%d packages had errors", errCount)
+	if len(errs) > 0 {
+		return fmt.Errorf("%d packages had errors: %s", len(errs), strings.Join(errs, ","))
 	}
 
 	return nil
