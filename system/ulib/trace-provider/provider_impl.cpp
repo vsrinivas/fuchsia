@@ -34,22 +34,12 @@ TraceProviderImpl::~TraceProviderImpl() = default;
 void TraceProviderImpl::Start(trace_buffering_mode_t buffering_mode,
                               zx::vmo buffer, zx::fifo fifo,
                               fbl::Vector<fbl::String> enabled_categories) {
-    if (running_)
-        return;
-
-    zx_status_t status = TraceHandlerImpl::StartEngine(
+    TraceHandlerImpl::StartEngine(
         dispatcher_, buffering_mode, fbl::move(buffer), fbl::move(fifo),
         fbl::move(enabled_categories));
-    if (status == ZX_OK) {
-        running_ = true;
-    }
 }
 
 void TraceProviderImpl::Stop() {
-    if (!running_)
-        return;
-
-    running_ = false;
     TraceHandlerImpl::StopEngine();
 }
 

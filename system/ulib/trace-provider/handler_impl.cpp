@@ -44,19 +44,42 @@ TraceHandlerImpl::~TraceHandlerImpl() {
     ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
 }
 
-zx_status_t TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
-                                          trace_buffering_mode_t buffering_mode,
-                                          zx::vmo buffer, zx::fifo fifo,
-                                          fbl::Vector<fbl::String> enabled_categories) {
+void TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
+                                   trace_buffering_mode_t buffering_mode,
+                                   zx::vmo buffer, zx::fifo fifo,
+                                   fbl::Vector<fbl::String> enabled_categories) {
     ZX_DEBUG_ASSERT(buffer);
     ZX_DEBUG_ASSERT(fifo);
+
+    // If the engine isn't stopped flag an error. No one else should be
+    // starting/stopping the engine so testing this here is ok.
+    switch (trace_state()) {
+    case TRACE_STOPPED:
+        break;
+    case TRACE_STOPPING:
+        fprintf(stderr, "TraceHandler for process %" PRIu64
+                ": cannot start engine, still stopping from previous trace\n",
+                GetPid());
+        return;
+    case TRACE_STARTED:
+        // We can get here if the app errantly tried to create two providers.
+        // This is a bug in the app, provide extra assistance for diagnosis.
+        // Including the pid here has been extraordinarily helpful.
+        fprintf(stderr, "TraceHandler for process %" PRIu64
+                ": engine is already started. Is there perchance two"
+                " providers in this app?\n",
+                GetPid());
+        return;
+    default:
+        __UNREACHABLE;
+    }
 
     uint64_t buffer_num_bytes;
     zx_status_t status = buffer.get_size(&buffer_num_bytes);
     if (status != ZX_OK) {
         fprintf(stderr, "TraceHandler: error getting buffer size, status=%d(%s)\n",
                 status, zx_status_get_string(status));
-        return status;
+        return;
     }
 
     uintptr_t buffer_ptr;
@@ -66,7 +89,7 @@ zx_status_t TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
     if (status != ZX_OK) {
         fprintf(stderr, "TraceHandler: error mapping buffer, status=%d(%s)\n",
                 status, zx_status_get_string(status));
-        return status;
+        return;
     }
 
     auto handler = new TraceHandlerImpl(reinterpret_cast<void*>(buffer_ptr),
@@ -78,7 +101,7 @@ zx_status_t TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
         fprintf(stderr, "TraceHandler: error starting fifo wait, status=%d(%s)\n",
                 status, zx_status_get_string(status));
         delete handler;
-        return status;
+        return;
     }
 
     status = trace_start_engine(dispatcher, handler, buffering_mode,
@@ -87,20 +110,27 @@ zx_status_t TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
         fprintf(stderr, "TraceHandler: error starting engine, status=%d(%s)\n",
                 status, zx_status_get_string(status));
         delete handler;
-        return status;
+        return;
     }
 
     // The handler will be destroyed in |TraceStopped()|.
-    return ZX_OK;
 }
 
-zx_status_t TraceHandlerImpl::StopEngine() {
+void TraceHandlerImpl::StopEngine() {
     auto status = trace_stop_engine(ZX_OK);
     if (status != ZX_OK) {
-        fprintf(stderr, "Failed to stop engine, status %d(%s)\n",
-                status, zx_status_get_string(status));
+        // During shutdown this can happen twice: once for the Stop() request
+        // and once when the channel is closed. Don't print anything for this
+        // case, it suggests an error that isn't there. We could keep track of
+        // this ourselves, but that has its own problems: Best just have one
+        // place that records engine state: in the engine.
+        if (status == ZX_ERR_BAD_STATE && trace_state() == TRACE_STOPPED) {
+            // this is ok
+        } else {
+            fprintf(stderr, "TraceHandler: Failed to stop engine, status=%d(%s)\n",
+                    status, zx_status_get_string(status));
+        }
     }
-    return status;
 }
 
 void TraceHandlerImpl::HandleFifo(async_dispatcher_t* dispatcher,

@@ -55,7 +55,6 @@ private:
 
     async_dispatcher_t* const dispatcher_;
     Connection connection_;
-    bool running_ = false;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(TraceProviderImpl);
 };
