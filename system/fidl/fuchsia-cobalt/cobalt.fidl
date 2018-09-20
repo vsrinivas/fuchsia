@@ -86,7 +86,7 @@ struct ProjectProfile {
     ReleaseStage release_stage;
 };
 
-[Discoverable]
+[Discoverable, Layout = "Simple"]
 // LoggerFactory creates Loggers.
 interface LoggerFactory {
     // Creates a Logger for the given ProjectProfile.
