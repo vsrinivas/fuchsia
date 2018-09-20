@@ -37,16 +37,15 @@ private:
     void TraceStarted() override;
     void TraceStopped(async_dispatcher_t* dispatcher,
                       zx_status_t disposition, size_t buffer_bytes_written) override;
+    // This is called in streaming mode to notify the trace manager that
+    // buffer |buffer_number| is full and needs to be saved.
+    void NotifyBufferFull(uint32_t wrapped_count, uint64_t durable_data_end)
+        override;
 
     void HandleFifo(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                     zx_status_t status,
                     const zx_packet_signal_t* signal);
     bool ReadFifoMessage();
-
-    // This is called in streaming mode to notify the trace manager that
-    // buffer |buffer_number| is full and needs to be saved.
-    void NotifyBufferFull(uint32_t wrapped_count, uint64_t durable_data_end)
-        override;
 
     // This is called in streaming mode when TraceManager reports back that
     // it has saved the buffer.

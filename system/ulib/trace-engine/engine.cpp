@@ -4,6 +4,7 @@
 
 #include <trace-engine/handler.h>
 
+#include <stdio.h>
 #include <string.h>
 
 #include <zircon/assert.h>
@@ -405,14 +406,15 @@ void handle_hard_shutdown(async_dispatcher_t* dispatcher) {
 
     // Uh oh.
     auto context_refs = g_context_refs.load(fbl::memory_order_relaxed);
-    printf("Timed out waiting for %u buffer, %u prolonged trace context\n"
-           "references (raw 0x%x) to be released after %lu ns\n"
-           "while the asynchronous dispatcher was shutting down.\n"
-           "Tracing will no longer be available in this process.",
-           get_buffer_context_refs(context_refs),
-           get_prolonged_context_refs(context_refs),
-           context_refs,
-           kSynchronousShutdownTimeout.get());
+    fprintf(stderr,
+            "TraceEngine: Timed out waiting for %u buffer, %u prolonged trace context\n"
+            "references (raw 0x%x) to be released after %lu ns\n"
+            "while the asynchronous dispatcher was shutting down.\n"
+            "Tracing will no longer be available in this process.",
+            get_buffer_context_refs(context_refs),
+            get_prolonged_context_refs(context_refs),
+            context_refs,
+            kSynchronousShutdownTimeout.get());
 }
 
 void handle_event(async_dispatcher_t* dispatcher, async_wait_t* wait,

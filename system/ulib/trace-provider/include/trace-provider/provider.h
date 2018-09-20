@@ -123,7 +123,8 @@ namespace trace {
 class TraceProvider {
 public:
     // Create a trace provider synchronously, and return an indicator of
-    // whether tracing has started already.
+    // whether tracing has started already in |*out_already_started|.
+    // Returns a boolean indicating success.
     // This is done with a factory function because it's more complex than
     // the basic constructor.
     static bool CreateSynchronously(

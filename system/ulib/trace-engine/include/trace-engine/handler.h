@@ -79,9 +79,9 @@ struct trace_handler_ops {
 
 // Asynchronously starts the trace engine.
 //
-// |async| is the asynchronous dispatcher which the trace engine will use for dispatch.
-// |handler| is the trace handler which will handle lifecycle events.
-// |buffer| is the trace buffer into which the trace engine will write trace events.
+// |async| is the asynchronous dispatcher which the trace engine will use for dispatch (borrowed).
+// |handler| is the trace handler which will handle lifecycle events (borrowed).
+// |buffer| is the trace buffer into which the trace engine will write trace events (borrowed).
 // |buffer_num_bytes| is the size of the trace buffer in bytes.
 //
 // Returns |ZX_OK| if tracing is ready to go.

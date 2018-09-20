@@ -470,8 +470,8 @@ void trace_context::MarkDurableBufferFull(uint64_t last_offset) {
     if (durable_buffer_full_mark_.compare_exchange_strong(
             &expected_mark, last_offset,
             fbl::memory_order_relaxed, fbl::memory_order_relaxed)) {
-        printf("TraceEngine: durable buffer full @offset %" PRIu64 "\n",
-               last_offset);
+        fprintf(stderr, "TraceEngine: durable buffer full @offset %" PRIu64 "\n",
+                last_offset);
         header_->durable_data_end = last_offset;
 
         // A record may be written that relies on this durable record.

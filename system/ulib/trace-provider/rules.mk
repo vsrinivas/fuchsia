@@ -15,6 +15,7 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/trace_provider.fidl.client.cpp \
     $(LOCAL_DIR)/trace_provider.fidl.tables.cpp \
     $(LOCAL_DIR)/trace_provider.fidl.h \
+    $(LOCAL_DIR)/utils.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/trace \
