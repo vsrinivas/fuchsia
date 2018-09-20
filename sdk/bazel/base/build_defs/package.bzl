@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load(":package_info.bzl", "get_aggregate_info", "PackageAggregateInfo", "PackageGeneratedInfo", "PackageLocalInfo")
+load(":package_info.bzl", "PackageAggregateInfo", "PackageGeneratedInfo", "PackageLocalInfo", "get_aggregate_info")
 
 """
 Defines a Fuchsia package
@@ -94,7 +94,7 @@ def _fuchsia_package_impl(context):
         executable = manifest_script,
         inputs = package_contents,
         outputs = [
-            manifest_file
+            manifest_file,
         ],
         mnemonic = "FuchsiaManifest",
     )
@@ -185,8 +185,10 @@ def _fuchsia_package_impl(context):
         mnemonic = "PmArchive",
     )
 
+    outs = [package_archive]
+
     return [
-        DefaultInfo(files = depset([package_archive])),
+        DefaultInfo(files = depset(outs), runfiles = context.runfiles(files = outs)),
     ]
 
 fuchsia_package = rule(
