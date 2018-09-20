@@ -12,6 +12,7 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/io-buffer.c \
+    $(LOCAL_DIR)/mmio-buffer.c \
     $(LOCAL_DIR)/phys-iter.c \
 
 MODULE_STATIC_LIBS := system/ulib/pretty system/ulib/sync
