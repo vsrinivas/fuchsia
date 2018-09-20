@@ -728,7 +728,7 @@ syscall vcpu_create
     (guest: zx_handle_t, options: uint32_t, entry: zx_vaddr_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-syscall vcpu_resume
+syscall vcpu_resume blocking
     (handle: zx_handle_t)
     returns (zx_status_t, packet: zx_port_packet_t OUT);
 
