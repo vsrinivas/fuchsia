@@ -280,99 +280,52 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
   }
 
   for (auto& element : input->GetArray()) {
-    // The new schema has a member "values" which is a list of floating point
-    // numbers.
-    if (element.HasMember("values")) {
-      std::string name = element["label"].GetString();
-      ConvertSpacesToUnderscores(&name);
+    std::string name = element["label"].GetString();
+    ConvertSpacesToUnderscores(&name);
 
-      // The "test_suite" field in the input becomes the "benchmarks"
-      // diagnostic in the output.
-      rapidjson::Value test_suite_guid =
-          MakeGuidForTestSuiteName(element["test_suite"].GetString());
-      rapidjson::Value diagnostic_map = helper.Copy(shared_diagnostic_map);
-      diagnostic_map.AddMember("benchmarks", test_suite_guid, alloc);
+    // The "test_suite" field in the input becomes the "benchmarks"
+    // diagnostic in the output.
+    rapidjson::Value test_suite_guid =
+        MakeGuidForTestSuiteName(element["test_suite"].GetString());
+    rapidjson::Value diagnostic_map = helper.Copy(shared_diagnostic_map);
+    diagnostic_map.AddMember("benchmarks", test_suite_guid, alloc);
 
-      const rapidjson::Value& values = element["values"].GetArray();
-      if (values.Size() == 0) {
-        fprintf(stderr, "Input 'values' is empty");
-        exit(1);
-      }
+    const rapidjson::Value& values = element["values"].GetArray();
+    if (values.Size() == 0) {
+      fprintf(stderr, "Input 'values' is empty");
+      exit(1);
+    }
 
-      std::vector<double> vals;
-      vals.reserve(values.Size());
-      for (auto& val : values.GetArray()) {
-        vals.push_back(val.GetDouble());
-      }
+    std::vector<double> vals;
+    vals.reserve(values.Size());
+    for (auto& val : values.GetArray()) {
+      vals.push_back(val.GetDouble());
+    }
 
-      // Create the histogram.
-      if (element.HasMember("split_first") && element["split_first"].IsBool() &&
-          element["split_first"].GetBool()) {
-        // Create a histogram for the first sample value.
-        std::string h1_name = name + "_samples_0_to_0";
-        std::vector<double> h1_vals(vals.begin(), vals.begin() + 1);
-        AddHistogram(output, &alloc, h1_name, element["unit"].GetString(),
-                     std::move(h1_vals), helper.Copy(diagnostic_map),
-                     MakeUuid());
+    // Create the histogram.
+    if (element.HasMember("split_first") && element["split_first"].IsBool() &&
+        element["split_first"].GetBool()) {
+      // Create a histogram for the first sample value.
+      std::string h1_name = name + "_samples_0_to_0";
+      std::vector<double> h1_vals(vals.begin(), vals.begin() + 1);
+      AddHistogram(output, &alloc, h1_name, element["unit"].GetString(),
+                   std::move(h1_vals), helper.Copy(diagnostic_map),
+                   MakeUuid());
 
-        // Create a histogram for the remaining sample values, if any.
-        if (vals.size() > 1) {
-          std::stringstream h2_name;
-          h2_name << name << "_samples_1_to_" << vals.size() - 1;
+      // Create a histogram for the remaining sample values, if any.
+      if (vals.size() > 1) {
+        std::stringstream h2_name;
+        h2_name << name << "_samples_1_to_" << vals.size() - 1;
 
-          std::vector<double> h2_vals(vals.begin() + 1, vals.end());
-          AddHistogram(output, &alloc, h2_name.str(),
-                       element["unit"].GetString(), std::move(h2_vals),
-                       helper.Copy(diagnostic_map), MakeUuid());
-        }
-      } else {
-        // Create a histogram for all |vals|.
-        AddHistogram(output, &alloc, name, element["unit"].GetString(),
-                     std::move(vals), std::move(diagnostic_map), MakeUuid());
+        std::vector<double> h2_vals(vals.begin() + 1, vals.end());
+        AddHistogram(output, &alloc, h2_name.str(),
+                     element["unit"].GetString(), std::move(h2_vals),
+                     helper.Copy(diagnostic_map), MakeUuid());
       }
     } else {
-      // Convert the old schema.
-      // TODO(IN-452): Migrate existing tests to the new schema and delete this.
-
-      uint32_t inner_label_count = 0;
-      for (auto& sample : element["samples"].GetArray()) {
-        std::string name = element["label"].GetString();
-        // Generate a compound name if there is an inner label as well as an
-        // outer label.
-        if (sample.HasMember("label")) {
-          if (sample["label"].GetStringLength() == 0) {
-            fprintf(stderr, "Inner label field is empty\n");
-            exit(1);
-          }
-          name += "_";
-          name += sample["label"].GetString();
-          ++inner_label_count;
-        }
-        ConvertSpacesToUnderscores(&name);
-
-        // The "test_suite" field in the input becomes the "benchmarks"
-        // diagnostic in the output.
-        rapidjson::Value test_suite_guid =
-            MakeGuidForTestSuiteName(element["test_suite"].GetString());
-        rapidjson::Value diagnostic_map = helper.Copy(shared_diagnostic_map);
-        diagnostic_map.AddMember("benchmarks", test_suite_guid, alloc);
-
-        const rapidjson::Value& values = sample["values"];
-        std::vector<double> vals;
-        vals.reserve(values.Size());
-        for (auto& val : values.GetArray()) {
-          vals.push_back(val.GetDouble());
-        }
-
-        AddHistogram(output, &alloc, name, element["unit"].GetString(),
-                     std::move(vals), std::move(diagnostic_map), MakeUuid());
-      }
-
-      size_t samples_size = element["samples"].GetArray().Size();
-      if (samples_size > 1 && inner_label_count != samples_size) {
-        fprintf(stderr, "Some entries in 'samples' array lack labels\n");
-        exit(1);
-      }
+      // Create a histogram for all |vals|.
+      AddHistogram(output, &alloc, name, element["unit"].GetString(),
+                   std::move(vals), std::move(diagnostic_map), MakeUuid());
     }
   }
 }

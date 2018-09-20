@@ -134,272 +134,10 @@ TEST(TestTools, SplitLines) {
   EXPECT_STREQ(lines[4].c_str(), "");
 }
 
+// Test the basic case that does not set split_first=true.  This covers
+// multiple time units.  This covers converting spaces to underscores in
+// the test name.
 TEST(CatapultConverter, Convert) {
-  const char* input_str = R"JSON(
-[
-    {
-        "label": "ExampleNullSyscall",
-        "test_suite": "my_test_suite",
-        "samples": [{"values": [101.0, 102.0, 103.0, 104.0, 105.0]}],
-        "unit": "nanoseconds"
-    },
-    {
-        "label": "ExampleOtherTest",
-        "test_suite": "my_test_suite",
-        "samples": [{"values": [200, 6, 100, 110]}],
-        "unit": "ms"
-    }
-]
-)JSON";
-
-  const char* expected_output_str = R"JSON(
-[
-    {
-        "guid": "dummy_guid_0",
-        "type": "GenericSet",
-        "values": [
-            123004005006
-        ]
-    },
-    {
-        "guid": "dummy_guid_1",
-        "type": "GenericSet",
-        "values": [
-            "example_bots"
-        ]
-    },
-    {
-        "guid": "dummy_guid_2",
-        "type": "GenericSet",
-        "values": [
-            "example_masters"
-        ]
-    },
-    {
-        "guid": "dummy_guid_3",
-        "type": "GenericSet",
-        "values": [
-            [
-                "Build Log",
-                "https://ci.example.com/build/100"
-            ]
-        ]
-    },
-    {
-        "guid": "dummy_guid_4",
-        "type": "GenericSet",
-        "values": [
-            "my_test_suite"
-        ]
-    },
-    {
-        "name": "ExampleNullSyscall",
-        "unit": "ms_smallerIsBetter",
-        "description": "",
-        "diagnostics": {
-            "chromiumCommitPositions": "dummy_guid_0",
-            "bots": "dummy_guid_1",
-            "masters": "dummy_guid_2",
-            "logUrls": "dummy_guid_3",
-            "benchmarks": "dummy_guid_4"
-        },
-        "running": [
-            5,
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere"
-        ],
-        "guid": "dummy_guid_5",
-        "maxNumSampleValues": 5,
-        "numNans": 0
-    },
-    {
-        "name": "ExampleOtherTest",
-        "unit": "ms_smallerIsBetter",
-        "description": "",
-        "diagnostics": {
-            "chromiumCommitPositions": "dummy_guid_0",
-            "bots": "dummy_guid_1",
-            "masters": "dummy_guid_2",
-            "logUrls": "dummy_guid_3",
-            "benchmarks": "dummy_guid_4"
-        },
-        "running": [
-            4,
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere"
-        ],
-        "guid": "dummy_guid_6",
-        "maxNumSampleValues": 4,
-        "numNans": 0
-    }
-]
-)JSON";
-
-  rapidjson::Document expected_output;
-  CheckParseResult(expected_output.Parse(expected_output_str));
-
-  rapidjson::Document output;
-  TestConverter(input_str, &output);
-
-  AssertApproxEqual(&output, &output[5]["running"][1], 0.000105);
-  AssertApproxEqual(&output, &output[5]["running"][2], -9.180875);
-  AssertApproxEqual(&output, &output[5]["running"][3], 0.000103);
-  AssertApproxEqual(&output, &output[5]["running"][4], 0.000101);
-  AssertApproxEqual(&output, &output[5]["running"][5], 0.000515);
-  AssertApproxEqual(&output, &output[5]["running"][6], 2.5e-12);
-
-  AssertApproxEqual(&output, &output[6]["running"][1], 200);
-  AssertApproxEqual(&output, &output[6]["running"][2], 4.098931);
-  AssertApproxEqual(&output, &output[6]["running"][3], 104);
-  AssertApproxEqual(&output, &output[6]["running"][4], 6);
-  AssertApproxEqual(&output, &output[6]["running"][5], 416);
-  AssertApproxEqual(&output, &output[6]["running"][6], 6290.666);
-
-  AssertJsonEqual(output, expected_output);
-}
-
-// Test the case where the "samples" list contains multiple entries and
-// these entries have their own "label" fields.
-TEST(CatapultConverter, ConvertNested) {
-  const char* input_str = R"JSON(
-[
-    {
-        "label": "Example Of Split Results",
-        "test_suite": "some_test_suite",
-        "samples": [
-            {"label": "samples 0 to 0",
-             "values": [200]},
-            {"label": "subsequent samples",
-             "values": [50, 60, 70]}
-        ],
-        "unit": "nanoseconds"
-    }
-]
-)JSON";
-
-  const char* expected_output_str = R"JSON(
-[
-    {
-        "guid": "dummy_guid_0",
-        "type": "GenericSet",
-        "values": [
-            123004005006
-        ]
-    },
-    {
-        "guid": "dummy_guid_1",
-        "type": "GenericSet",
-        "values": [
-            "example_bots"
-        ]
-    },
-    {
-        "guid": "dummy_guid_2",
-        "type": "GenericSet",
-        "values": [
-            "example_masters"
-        ]
-    },
-    {
-        "guid": "dummy_guid_3",
-        "type": "GenericSet",
-        "values": [
-            [
-                "Build Log",
-                "https://ci.example.com/build/100"
-            ]
-        ]
-    },
-    {
-        "guid": "dummy_guid_4",
-        "type": "GenericSet",
-        "values": [
-            "some_test_suite"
-        ]
-    },
-    {
-        "name": "Example_Of_Split_Results_samples_0_to_0",
-        "unit": "ms_smallerIsBetter",
-        "description": "",
-        "diagnostics": {
-            "chromiumCommitPositions": "dummy_guid_0",
-            "bots": "dummy_guid_1",
-            "masters": "dummy_guid_2",
-            "logUrls": "dummy_guid_3",
-            "benchmarks": "dummy_guid_4"
-        },
-        "running": [
-            1,
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere"
-        ],
-        "guid": "dummy_guid_5",
-        "maxNumSampleValues": 1,
-        "numNans": 0
-    },
-    {
-        "name": "Example_Of_Split_Results_subsequent_samples",
-        "unit": "ms_smallerIsBetter",
-        "description": "",
-        "diagnostics": {
-            "chromiumCommitPositions": "dummy_guid_0",
-            "bots": "dummy_guid_1",
-            "masters": "dummy_guid_2",
-            "logUrls": "dummy_guid_3",
-            "benchmarks": "dummy_guid_4"
-        },
-        "running": [
-            3,
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere"
-        ],
-        "guid": "dummy_guid_6",
-        "maxNumSampleValues": 3,
-        "numNans": 0
-    }
-]
-)JSON";
-
-  rapidjson::Document expected_output;
-  CheckParseResult(expected_output.Parse(expected_output_str));
-
-  rapidjson::Document output;
-  TestConverter(input_str, &output);
-
-  AssertApproxEqual(&output, &output[5]["running"][1], 0.0002);
-  AssertApproxEqual(&output, &output[5]["running"][2], -8.5171);
-  AssertApproxEqual(&output, &output[5]["running"][3], 0.0002);
-  AssertApproxEqual(&output, &output[5]["running"][4], 0.0002);
-  AssertApproxEqual(&output, &output[5]["running"][5], 0.0002);
-  AssertApproxEqual(&output, &output[5]["running"][6], 0);
-
-  AssertApproxEqual(&output, &output[6]["running"][1], 7.000e-5);
-  AssertApproxEqual(&output, &output[6]["running"][2], -9.7305);
-  AssertApproxEqual(&output, &output[6]["running"][3], 6.000e-5);
-  AssertApproxEqual(&output, &output[6]["running"][4], 5.000e-5);
-  AssertApproxEqual(&output, &output[6]["running"][5], 0.00017999);
-  AssertApproxEqual(&output, &output[6]["running"][6], 1.000e-10);
-
-  AssertJsonEqual(output, expected_output);
-}
-
-TEST(CatapultConverter, ConvertNewSchemaNoSplits) {
   const char* input_str = R"JSON(
 [
     {
@@ -531,7 +269,7 @@ TEST(CatapultConverter, ConvertNewSchemaNoSplits) {
   AssertJsonEqual(output, expected_output);
 }
 
-TEST(CatapultConverter, ConvertNewSchemaWithSplits) {
+TEST(CatapultConverter, ConvertWithSplitFirst) {
   const char* input_str = R"JSON(
 [
     {
@@ -760,7 +498,7 @@ TEST(CatapultConverter, ConvertBytesUnit) {
     {
         "label": "ExampleWithBytes",
         "test_suite": "my_test_suite",
-        "samples": [{"values": [200, 6, 100, 110]}],
+        "values": [200, 6, 100, 110],
         "unit": "bytes"
     }
 ]
@@ -856,7 +594,7 @@ TEST(CatapultConverter, ZeroValues) {
     {
         "label": "ExampleValues",
         "test_suite": "my_test_suite",
-        "samples": [{"values": [0]}],
+        "values": [0],
         "unit": "milliseconds"
     }
 ]
@@ -878,7 +616,7 @@ TEST(CatapultConverter, NegativeValues) {
     {
         "label": "ExampleValues",
         "test_suite": "my_test_suite",
-        "samples": [{"values": [-1]}],
+        "values": [-1],
         "unit": "milliseconds"
     }
 ]
