@@ -194,8 +194,10 @@ TEST(JobsTest, FindProcess) {
 
 TEST(JobsTest, TakeChildJobOwnership) {
   auto top_job = GetDefaultJob();
+  zx::job parent_job;
+  ASSERT_EQ(zx::job::create(top_job, 0, &parent_job), ZX_OK);
   zx::job child_job;
-  ASSERT_EQ(zx::job::create(top_job, 0, &child_job), ZX_OK);
+  ASSERT_EQ(zx::job::create(parent_job, 0, &child_job), ZX_OK);
   auto child_job_koid = GetKoid(child_job.get());
   zx::job my_job;
 
@@ -203,9 +205,11 @@ TEST(JobsTest, TakeChildJobOwnership) {
                                         zx_koid_t parent_koid,
                                         int depth) -> zx_status_t {
     if (koid == child_job_koid) {
+      EXPECT_EQ(depth, 2);
       my_job = std::move(*job);
+      return ZX_ERR_STOP;
     }
-    return ZX_ERR_STOP;
+    return ZX_OK;
   };
   EXPECT_EQ(WalkJobTree(top_job, &job_callback, nullptr, nullptr),
             ZX_ERR_STOP);
