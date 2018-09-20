@@ -11,6 +11,7 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/cobalt_logger.cpp \
     $(LOCAL_DIR)/collector.cpp \
     $(LOCAL_DIR)/counter.cpp \
     $(LOCAL_DIR)/histogram.cpp \
@@ -24,6 +25,7 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/c \
+    system/ulib/fdio \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \

@@ -19,6 +19,13 @@ namespace internal {
 // A value pair which represents a bucket index and the count for such index.
 using HistogramBucket = fuchsia_cobalt_HistogramBucket;
 
+enum class ReleaseStage : fuchsia_cobalt_ReleaseStage {
+    kGa = fuchsia_cobalt_ReleaseStage_GA,
+    kDogfood = fuchsia_cobalt_ReleaseStage_DOGFOOD,
+    kFishfood = fuchsia_cobalt_ReleaseStage_FISHFOOD,
+    kDebug = fuchsia_cobalt_ReleaseStage_DEBUG,
+};
+
 // Each metadata entry is defined as a pair describing a dimension and
 // the value of the given dimension. This values are defined in the metric
 // definition.

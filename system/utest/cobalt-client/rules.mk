@@ -10,6 +10,7 @@ MODULE_NAME := cobalt_client_test
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/cobalt_logger_test.cpp \
     $(LOCAL_DIR)/collector_test.cpp \
     $(LOCAL_DIR)/counter_test.cpp \
     $(LOCAL_DIR)/histogram_options_test.cpp \
@@ -18,14 +19,20 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/types_internal_test.cpp \
 
 MODULE_STATIC_LIBS := \
+	system/ulib/async \
+	system/ulib/async.cpp \
+    system/ulib/async-loop \
+    system/ulib/async-loop.cpp \
     system/ulib/cobalt-client \
     system/ulib/fbl \
     system/ulib/sync \
     system/ulib/fidl \
+    system/ulib/fidl-utils \
     system/ulib/zx \
     system/ulib/zxcpp \
 
 MODULE_LIBS := \
+    system/ulib/async.default \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/unittest \
@@ -33,6 +40,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-cobalt \
+    system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
 
 MODULE_PACKAGE := src
