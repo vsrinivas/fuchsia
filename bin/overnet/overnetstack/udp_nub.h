@@ -8,9 +8,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include "garnet/lib/overnet/packet_nub.h"
+#include "garnet/lib/overnet/links/packet_nub.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/files/unique_fd.h"
+#include "overnet_app.h"
 
 namespace overnetstack {
 
@@ -80,16 +81,14 @@ class EqUdpAddr {
 
 using UdpNubBase = overnet::PacketNub<UdpAddr, 1500, HashUdpAddr, EqUdpAddr>;
 
-class UdpNub final : public UdpNubBase {
+class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
  public:
-  explicit UdpNub(overnet::RouterEndpoint* endpoint,
-                  overnet::TraceSink trace_sink)
-      : UdpNubBase(endpoint->router()->timer(), trace_sink,
-                   endpoint->node_id()),
-        endpoint_(endpoint),
-        timer_(endpoint->router()->timer()) {}
+  explicit UdpNub(OvernetApp* app)
+      : UdpNubBase(app->timer(), app->node_id()),
+        endpoint_(app->endpoint()),
+        timer_(app->timer()) {}
 
-  overnet::Status Start() {
+  overnet::Status Start() override {
     return CreateFD()
         .Then([this]() { return SetOptionSharePort(); })
         .Then([this]() { return SetOptionReceiveAnything(); })
@@ -118,24 +117,24 @@ class UdpNub final : public UdpNubBase {
       memcpy(addr6_addr_bytes + 12, &addr.ipv4.sin_addr, 4);
       addr = addr6;
     }
-    std::cout << "sending packet length " << slice.length() << " to " << addr
-              << "\n";
+    OVERNET_TRACE(DEBUG) << "sending packet length " << slice.length() << " to "
+                         << addr;
     int r = sendto(socket_fd_.get(), slice.begin(), slice.length(), 0,
                    &addr.addr, sizeof(addr));
     if (r == -1) {
       auto got_errno = errno;
-      std::cout << "sendto sets errno " << got_errno << "\n";
+      OVERNET_TRACE(WARNING) << "sendto sets errno " << got_errno;
     }
     assert(static_cast<size_t>(r) == slice.length());
   }
 
-  overnet::Router* GetRouter() override { return endpoint_->router(); }
+  overnet::Router* GetRouter() override { return endpoint_; }
 
   void Publish(overnet::LinkPtr<> link) override {
     overnet::NodeId node = link->GetLinkMetrics().to();
-    std::cout << "NewLink: " << node << "\n";
+    OVERNET_TRACE(DEBUG) << "NewLink: " << node << "\n";
     endpoint_->RegisterPeer(node);
-    endpoint_->router()->RegisterLink(std::move(link));
+    endpoint_->RegisterLink(std::move(link));
   }
 
  private:
@@ -150,15 +149,15 @@ class UdpNub final : public UdpNubBase {
     UdpAddr whoami;
     socklen_t whoami_len = sizeof(whoami.addr);
     if (getsockname(socket_fd_.get(), &whoami.addr, &whoami_len) < 0) {
-      std::cerr << StatusFromErrno("getsockname") << "\n";
+      OVERNET_TRACE(DEBUG) << StatusFromErrno("getsockname") << "\n";
     }
-    std::cerr << "WaitForInbound on " << whoami << "\n";
+    OVERNET_TRACE(DEBUG) << "WaitForInbound on " << whoami << "\n";
     if (!fd_waiter_.Wait(
             [this](zx_status_t status, uint32_t events) {
               InboundReady(status, events);
             },
             socket_fd_.get(), POLLIN)) {
-      std::cerr << "fd_waiter_.Wait() failed\n";
+      OVERNET_TRACE(DEBUG) << "fd_waiter_.Wait() failed\n";
     }
   }
 
@@ -172,7 +171,7 @@ class UdpNub final : public UdpNubBase {
         socket_fd_.get(), const_cast<uint8_t*>(inbound.begin()),
         inbound.length(), 0, &source_address.addr, &source_address_length);
     if (result < 0) {
-      FXL_LOG(ERROR) << "Failed to recvfrom, errno " << errno;
+      OVERNET_TRACE(ERROR) << "Failed to recvfrom, errno " << errno;
       // Wait a bit before trying again to avoid spamming the log.
       async::PostDelayedTask(async_get_default_dispatcher(),
                              [this]() { WaitForInbound(); }, zx::sec(10));
@@ -181,7 +180,9 @@ class UdpNub final : public UdpNubBase {
 
     inbound.TrimEnd(inbound.length() - result);
     assert(inbound.length() == (size_t)result);
-    std::cerr << "Got packet length " << result << "\n";
+    overnet::ScopedOp scoped_op(
+        overnet::Op::New(overnet::OpType::INCOMING_PACKET));
+    OVERNET_TRACE(DEBUG) << "Got packet length " << result;
     Process(now, source_address, std::move(inbound));
 
     WaitForInbound();

@@ -2,78 +2,38 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 
 source_set("overnet") {
-  sources = [
-    "ack_frame.h",
-    "ack_frame.cc",
-    "bandwidth.h",
-    "bbr.h",
-    "bbr.cc",
-    "callback.h",
-    "closed_ptr.h",
-    "datagram_stream.h",
-    "datagram_stream.cc",
-    "fork_frame.h",
-    "fork_frame.cc",
-    "lazy_slice.h",
-    "linearizer.h",
-    "linearizer.cc",
-    "internal_list.h",
-    "manual_constructor.h",
-    "node_id.h",
-    "node_id.cc",
-    "once_fn.h",
-    "optional.h",
-    "packet_link.h",
-    "packet_link.cc",
-    "packet_nub.h",
-    "packet_protocol.h",
-    "packet_protocol.cc",
-    "receive_mode.h",
-    "receive_mode.cc",
-    "reliability_and_ordering.h",
-    "reliability_and_ordering.cc",
-    "routable_message.h",
-    "routable_message.cc",
-    "router.h",
-    "router.cc",
-    "router_endpoint.h",
-    "router_endpoint.cc",
-    "routing_table.h",
-    "routing_table.cc",
-    "seq_num.h",
-    "seq_num.cc",
-    "serialization_helpers.h",
-    "sink.h",
-    "slice.h",
-    "slice.cc",
-    "status.h",
-    "status.cc",
-    "stream_id.h",
-    "stream_id.cc",
-    "timer.h",
-    "timer.cc",
-    "trace.h",
-    "varint.h",
-    "varint.cc",
-    "windowed_filter.h",
+  public_deps = [
+    "datagram_stream:lib",
+    "endpoint:lib",
+    "environment:lib",
+    "labels:lib",
+    "links:lib",
+    "packet_protocol:lib",
+    "protocol:lib",
+    "routing:lib",
+    "vocabulary:lib",
   ]
 }
 
-source_set("test_util") {
+executable("overnet_unittests") {
   testonly = true
 
-  sources = [
-    "csv_writer.h",
-    "test_timer.h",
-    "test_timer.cc",
-    "trace_cout.h",
-  ]
-
   deps = [
-    ":overnet",
+    "datagram_stream:tests",
+    "endpoint:tests",
+    "environment:tests",
+    "labels:tests",
+    "links:tests",
+    "packet_protocol:tests",
+    "protocol:tests",
+    "routing:tests",
+    "testing:run_all_tests",
+    "testing:tests",
+    "vocabulary:tests",
   ]
 }
 
@@ -82,49 +42,6 @@ group("host_tests") {
     ":overnet_unittests($host_toolchain)",
   ]
   testonly = true
-}
-
-executable("overnet_unittests") {
-  testonly = true
-
-  sources = [
-    "run_all_tests.cc",
-    "ack_frame_test.cc",
-    "bbr_test.cc",
-    "callback_test.cc",
-    "datagram_stream_test.cc",
-    "fork_frame_test.cc",
-    "internal_list_fuzzer_helpers.h",
-    "internal_list_test.cc",
-    "linearizer_fuzzer_helpers.h",
-    "linearizer_test.cc",
-    "node_id_test.cc",
-    "once_fn_test.cc",
-    "optional_test.cc",
-    "packet_link_test.cc",
-    "packet_nub_test.cc",
-    "packet_protocol_fuzzer_helpers.h",
-    "packet_protocol_test.cc",
-    "receive_mode_fuzzer_helpers.h",
-    "receive_mode_test.cc",
-    "routable_message_test.cc",
-    "router_test.cc",
-    "router_endpoint_2node_test.cc",
-    "seq_num_test.cc",
-    "sink_test.cc",
-    "slice_test.cc",
-    "status_test.cc",
-    "test_timer_test.cc",
-    "trace_test.cc",
-    "varint_test.cc",
-  ]
-
-  deps = [
-    ":overnet",
-    ":test_util",
-    "//third_party/googletest:gtest",
-    "//third_party/googletest:gmock",
-  ]
 }
 
 package("overnet_tests") {
@@ -136,7 +53,19 @@ package("overnet_tests") {
 
   tests = [
     {
-       name = "overnet_unittests"
-    }
+      name = "overnet_unittests"
+    },
+  ]
+}
+
+fuzz_package("overnet_fuzzers") {
+  targets = [ "packet_protocol:packet_protocol_fuzzer" ]
+  sanitizers = [ "asan" ]
+}
+
+group("host_fuzzers") {
+  testonly=true
+  deps = [
+    "packet_protocol:packet_protocol_fuzzer($host_toolchain)"
   ]
 }

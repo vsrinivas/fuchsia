@@ -4,9 +4,11 @@
 
 #pragma once
 
-#include <garnet/lib/overnet/status.h>
-#include <garnet/lib/overnet/timer.h>
+#include <garnet/lib/overnet/environment/timer.h>
+#include <garnet/lib/overnet/vocabulary/status.h>
 #include <lib/async/cpp/time.h>
+#include <zircon/status.h>
+#include <sstream>
 
 namespace overnetstack {
 
@@ -33,8 +35,11 @@ inline overnet::Status ToOvernetStatus(zx_status_t status) {
       return overnet::Status::Ok();
     case ZX_ERR_CANCELED:
       return overnet::Status::Cancelled();
-    default:
-      return overnet::Status(overnet::StatusCode::UNKNOWN, "Unknown zx_status");
+    default: {
+      std::ostringstream out;
+      out << "zx_status:" << zx_status_get_string(status);
+      return overnet::Status(overnet::StatusCode::UNKNOWN, out.str());
+    }
   }
 }
 

@@ -1,0 +1,160 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+
+###############################################################################
+# AGGREGATE LIBRARIES
+
+source_set("lib") {
+}
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":aead_codec_test",
+    ":bbr_test",
+    ":packet_protocol_test",
+  ]
+}
+
+###############################################################################
+
+# aead_codec
+source_set("aead_codec") {
+  sources = [
+    "aead_codec.cc",
+    "aead_codec.h",
+  ]
+  public_deps = [
+    "//third_party/boringssl:crypto",
+  ]
+  deps = [
+    ":packet_protocol",
+    "//garnet/lib/overnet/protocol:serialization_helpers",
+  ]
+}
+
+source_set("aead_codec_test") {
+  testonly = true
+  sources = [
+    "aead_codec_test.cc",
+  ]
+  deps = [
+    ":aead_codec",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# bbr
+source_set("bbr") {
+  sources = [
+    "bbr.cc",
+    "bbr.h",
+  ]
+  deps = [
+    ":windowed_filter",
+    "//garnet/lib/overnet/environment:timer",
+    "//garnet/lib/overnet/environment:trace",
+    "//garnet/lib/overnet/vocabulary:bandwidth",
+    "//garnet/lib/overnet/vocabulary:callback",
+    "//garnet/lib/overnet/vocabulary:optional",
+  ]
+}
+
+source_set("bbr_fuzzer_helpers") {
+  sources = [
+    "bbr_fuzzer_helpers.h",
+  ]
+  deps = [
+    ":bbr",
+  ]
+}
+
+source_set("bbr_test") {
+  testonly = true
+  sources = [
+    "bbr_test.cc",
+  ]
+  deps = [
+    ":bbr",
+    ":bbr_fuzzer_helpers",
+    "//garnet/lib/overnet/testing:csv_writer",
+    "//garnet/lib/overnet/testing:test_timer",
+    "//garnet/lib/overnet/testing:trace_cout",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# packet_protocol
+source_set("packet_protocol") {
+  sources = [
+    "packet_protocol.cc",
+    "packet_protocol.h",
+  ]
+  deps = [
+    ":bbr",
+    "//garnet/lib/overnet/environment:timer",
+    "//garnet/lib/overnet/environment:trace",
+    "//garnet/lib/overnet/labels:seq_num",
+    "//garnet/lib/overnet/protocol:ack_frame",
+    "//garnet/lib/overnet/protocol:varint",
+    "//garnet/lib/overnet/vocabulary:callback",
+    "//garnet/lib/overnet/vocabulary:lazy_slice",
+    "//garnet/lib/overnet/vocabulary:once_fn",
+    "//garnet/lib/overnet/vocabulary:optional",
+    "//garnet/lib/overnet/vocabulary:slice",
+    "//garnet/lib/overnet/vocabulary:status",
+  ]
+}
+
+source_set("packet_protocol_fuzzer_helpers") {
+  testonly = true
+  sources = [
+    "packet_protocol_fuzzer_helpers.h",
+  ]
+  deps = [
+    ":packet_protocol",
+    "//garnet/lib/overnet/testing:test_timer",
+    "//garnet/lib/overnet/testing:trace_cout",
+    "//garnet/lib/overnet/vocabulary:closed_ptr",
+  ]
+}
+
+source_set("packet_protocol_test") {
+  testonly = true
+  sources = [
+    "packet_protocol_test.cc",
+  ]
+  deps = [
+    ":aead_codec",
+    ":packet_protocol",
+    ":packet_protocol_fuzzer_helpers",
+    "//garnet/lib/overnet/protocol:serialization_helpers",
+    "//garnet/lib/overnet/testing:test_timer",
+    "//garnet/lib/overnet/testing:trace_cout",
+    "//garnet/lib/overnet/vocabulary:closed_ptr",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuzz_target("packet_protocol_fuzzer") {
+  testonly = true
+  sources = [
+    "packet_protocol_fuzzer.cc",
+  ]
+  deps = [
+    ":packet_protocol_fuzzer_helpers",
+  ]
+}
+
+# windowed_filter
+source_set("windowed_filter") {
+  sources = [
+    "windowed_filter.h",
+  ]
+}

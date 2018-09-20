@@ -4,22 +4,35 @@
 
 #pragma once
 
-#include <garnet/lib/overnet/router_endpoint.h>
-#include "lib/component/cpp/startup_context.h"
+#include <fbl/ref_ptr.h>
+#include <garnet/lib/overnet/endpoint/router_endpoint.h>
+#include "overnet_app.h"
 #include "udp_nub.h"
 
 namespace overnetstack {
 
-void RunMdnsIntroducer(component::StartupContext* startup_context,
-                       UdpNub* udp_nub);
-
-class MdnsAdvertisement {
+class MdnsIntroducer : public OvernetApp::Actor {
  public:
-  MdnsAdvertisement(component::StartupContext* startup_context,
-                    UdpNub* udp_nub);
-  ~MdnsAdvertisement();
+  MdnsIntroducer(OvernetApp* app, UdpNub* udp_nub);
+  ~MdnsIntroducer();
+  overnet::Status Start() override;
 
  private:
+  class Impl;
+  OvernetApp* const app_;
+  UdpNub* const udp_nub_;
+  fbl::RefPtr<Impl> impl_;
+};
+
+class MdnsAdvertisement : public OvernetApp::Actor {
+ public:
+  MdnsAdvertisement(OvernetApp* app, UdpNub* udp_nub);
+  ~MdnsAdvertisement();
+  overnet::Status Start() override;
+
+ private:
+  OvernetApp* const app_;
+  UdpNub* const udp_nub_;
   class Impl;
   std::unique_ptr<Impl> impl_;
 };

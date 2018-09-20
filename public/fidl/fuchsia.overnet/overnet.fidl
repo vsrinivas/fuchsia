@@ -4,11 +4,26 @@
 
 library fuchsia.overnet;
 
+using NodeId = uint64;
+
 [Discoverable]
 interface Overnet {
     1: ListPeers() -> (vector<Peer> peers);
+    // TODO(ctiller): remove this, and move to something that looks way more like an explicit registry.
+    2: RegisterService(string service_name, ServiceProvider provider);
+    3: ConnectToService(NodeId node, string service_name, handle<channel> chan);
+};
+
+interface ServiceProvider {
+    1: ConnectToService(string service_name, handle<channel> chan);
+};
+
+struct PeerDescription {
+    vector<string> services;
 };
 
 struct Peer {
-    uint64 id;
+    NodeId id;
+    bool is_self;
+    PeerDescription description;
 };
