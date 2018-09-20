@@ -6,6 +6,7 @@
 
 #include <fbl/auto_call.h>
 #include <lib/fsl/handles/object_info.h>
+#include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
 namespace machina {
@@ -261,22 +262,16 @@ void VirtioVsock::SocketConnection::OnReady(zx_status_t status,
 
 zx_status_t VirtioVsock::SocketConnection::WriteCredit(
     virtio_vsock_hdr_t* header) {
-  size_t max = 0;
+  zx_info_socket_t info;
   zx_status_t status =
-      socket_.get_property(ZX_PROP_SOCKET_TX_BUF_MAX, &max, sizeof(max));
-  if (status != ZX_OK) {
-    return status;
-  }
-  size_t used = 0;
-  status =
-      socket_.get_property(ZX_PROP_SOCKET_TX_BUF_SIZE, &used, sizeof(used));
+      socket_.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     return status;
   }
 
-  header->buf_alloc = max;
-  header->fwd_cnt = rx_cnt_ - used;
-  reported_buf_avail_ = max - used;
+  header->buf_alloc = info.tx_buf_max;
+  header->fwd_cnt = rx_cnt_ - info.tx_buf_size;
+  reported_buf_avail_ = info.tx_buf_max - info.tx_buf_size;
   return reported_buf_avail_ != 0 ? ZX_OK : ZX_ERR_UNAVAILABLE;
 }
 
