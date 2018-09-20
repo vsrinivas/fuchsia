@@ -10,6 +10,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/backoff.h>
 #include <lib/fit/function.h>
+#include <lib/timekeeper/clock.h>
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 
@@ -23,7 +24,8 @@ class Environment {
   Environment(async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
               std::string firebase_api_key,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
-              BackoffFactory backoff_factory);
+              BackoffFactory backoff_factory,
+              std::unique_ptr<timekeeper::Clock> clock);
   Environment(Environment&& other) noexcept;
   ~Environment();
 
@@ -42,6 +44,8 @@ class Environment {
 
   std::unique_ptr<backoff::Backoff> MakeBackoff();
 
+  timekeeper::Clock* clock() { return clock_.get(); }
+
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
 
@@ -53,6 +57,7 @@ class Environment {
 
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   BackoffFactory backoff_factory_;
+  std::unique_ptr<timekeeper::Clock> clock_;
 };
 
 // Builder for the environment.
@@ -75,6 +80,7 @@ class EnvironmentBuilder {
       std::unique_ptr<coroutine::CoroutineService> coroutine_service);
   EnvironmentBuilder& SetBackoffFactory(
       Environment::BackoffFactory backoff_factory);
+  EnvironmentBuilder& SetClock(std::unique_ptr<timekeeper::Clock> clock);
 
   Environment Build();
 
@@ -84,6 +90,7 @@ class EnvironmentBuilder {
   std::string firebase_api_key_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   Environment::BackoffFactory backoff_factory_;
+  std::unique_ptr<timekeeper::Clock> clock_;
 };
 
 }  // namespace ledger

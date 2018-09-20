@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/environment/environment.h"
 
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/timekeeper/test_clock.h>
 
 namespace ledger {
 namespace {
@@ -26,6 +27,17 @@ TEST_F(EnvironmentTest, InitializationOfAsyncAndIOAsync) {
 
   EXPECT_EQ(dispatcher(), env.dispatcher());
   EXPECT_EQ(dispatcher(), env.io_dispatcher());
+}
+
+TEST_F(EnvironmentTest, InitializationClock) {
+  auto clock = std::make_unique<timekeeper::TestClock>();
+  auto clock_ptr = clock.get();
+  Environment env = EnvironmentBuilder()
+                        .SetAsync(dispatcher())
+                        .SetClock(std::move(clock))
+                        .Build();
+
+  EXPECT_EQ(clock_ptr, env.clock());
 }
 
 }  // namespace
