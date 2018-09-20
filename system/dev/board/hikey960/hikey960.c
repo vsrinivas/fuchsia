@@ -46,11 +46,11 @@ static zx_protocol_device_t hikey960_device_protocol = {
 static int hikey960_start_thread(void* arg) {
     hikey960_t* hikey = arg;
 
-    zx_status_t status = hi3660_get_protocol(hikey->hi3660, ZX_PROTOCOL_GPIO, &hikey->gpio);
+    zx_status_t status = hi3660_get_protocol(hikey->hi3660, ZX_PROTOCOL_GPIO_IMPL, &hikey->gpio);
     if (status != ZX_OK) {
         goto fail;
     }
-    status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO, &hikey->gpio, NULL, NULL);
+    status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO_IMPL, &hikey->gpio, NULL, NULL);
     if (status != ZX_OK) {
         goto fail;
     }

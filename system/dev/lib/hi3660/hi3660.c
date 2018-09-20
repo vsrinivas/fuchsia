@@ -95,7 +95,7 @@ fail:
 
 zx_status_t hi3660_get_protocol(hi3660_t* hi3660, uint32_t proto_id, void* out) {
     switch (proto_id) {
-    case ZX_PROTOCOL_GPIO:
+    case ZX_PROTOCOL_GPIO_IMPL:
         memcpy(out, &hi3660->gpio, sizeof(hi3660->gpio));
         return ZX_OK;
     default:
