@@ -53,7 +53,7 @@ JoinFrom32BitParts(SRC_T src_hi, SRC_T src_lo, DST_T* dst) {
 
 // Converts a big endian TEEC_UUID to host endianness. The fields of the TEEC_UUID are stored in big
 // endian by the TEE and is thus why the parameter value cannot be directly reinterpreted as a UUID.
-static void convert_be_uuid_to_host(const optee::MessageParam::Value& src, TEEC_UUID* dst) {
+static void ConvertBeUuidToHost(const optee::MessageParam::Value& src, TEEC_UUID* dst) {
     // Convert TEEC_UUID fields from big endian to host endian
     dst->timeLow = betoh32(src.uuid_big_endian.timeLow);
     dst->timeMid = betoh16(src.uuid_big_endian.timeMid);
@@ -66,7 +66,7 @@ static void convert_be_uuid_to_host(const optee::MessageParam::Value& src, TEEC_
 }
 
 // Builds a UUID string from a TEEC_UUID, formatting as per the RFC 4122 specification.
-static fbl::StringBuffer<kUuidNameLength> build_uuid_string(const TEEC_UUID& ta_uuid) {
+static fbl::StringBuffer<kUuidNameLength> BuildUuidString(const TEEC_UUID& ta_uuid) {
     fbl::StringBuffer<kUuidNameLength> buf;
 
     buf.AppendPrintf(kUuidNameFormat,
@@ -85,7 +85,7 @@ static fbl::StringBuffer<kUuidNameLength> build_uuid_string(const TEEC_UUID& ta_
 }
 
 // Builds the expected path to a trusted application, given its UUID string.
-static fbl::StringBuffer<kTaPathLength> build_ta_path(const fbl::StringPiece& uuid_str) {
+static fbl::StringBuffer<kTaPathLength> BuildTaPath(const fbl::StringPiece& uuid_str) {
     fbl::StringBuffer<kTaPathLength> buf;
 
     buf.Append(kFirmwarePathPrefix);
@@ -290,7 +290,7 @@ zx_status_t OpteeClient::AllocateSharedMemory(size_t size,
 
 zx_status_t OpteeClient::FreeSharedMemory(uint64_t mem_id) {
     // Check if client owns memory that matches the memory id
-    auto mem_iter = FindSharedMemory(mem_id);
+    SharedMemoryList::iterator mem_iter = FindSharedMemory(mem_id);
     if (mem_iter == allocated_shared_memory_.end()) {
         return ZX_ERR_NOT_FOUND;
     }
@@ -389,7 +389,7 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
     // Make sure memory where message is stored is valid
     // This dispatcher method only checks that the memory needed for the header is valid. Commands
     // that require more memory than just the header will need to do further memory checks.
-    auto mem_iter = FindSharedMemory(mem_id);
+    SharedMemoryList::iterator mem_iter = FindSharedMemory(mem_id);
     if (mem_iter == allocated_shared_memory_.end()) {
         zxlogf(ERROR, "optee: invalid shared memory region passed into RPC command\n");
         return ZX_ERR_INVALID_ARGS;
@@ -469,7 +469,7 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(UnmanagedMessage* message) {
     switch (uuid_param.attribute) {
     case MessageParam::kAttributeTypeValueInput:
     case MessageParam::kAttributeTypeValueInOut:
-        convert_be_uuid_to_host(uuid_param.payload.value, &ta_uuid);
+        ConvertBeUuidToHost(uuid_param.payload.value, &ta_uuid);
         break;
     default:
         zxlogf(ERROR,
@@ -523,7 +523,7 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(UnmanagedMessage* message) {
     uint8_t* out_ta_mem; // Where to write the TA in memory
 
     if (mem_id != 0) {
-        auto out_mem_iter = FindSharedMemory(mem_id);
+        SharedMemoryList::iterator out_mem_iter = FindSharedMemory(mem_id);
         if (out_mem_iter == allocated_shared_memory_.end()) {
             // Valid memory reference could not be found and TEE is not querying size
             zxlogf(ERROR,
@@ -549,8 +549,8 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(UnmanagedMessage* message) {
         out_ta_mem = nullptr;
     }
 
-    auto ta_name = build_uuid_string(ta_uuid);
-    auto ta_path = build_ta_path(ta_name.ToStringPiece());
+    auto ta_name = BuildUuidString(ta_uuid);
+    auto ta_path = BuildTaPath(ta_name.ToStringPiece());
 
     // Load the trusted app into a VMO
     size_t ta_size;
@@ -599,7 +599,7 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(UnmanagedMessage* message) {
 
     if (ta_size < mem_usable_size) {
         // Clear out the rest of the memory after the TA
-        auto ta_end = out_ta_mem + ta_size;
+        uint8_t* ta_end = out_ta_mem + ta_size;
         memset(ta_end, 0, mem_usable_size - ta_size);
     }
 
