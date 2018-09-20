@@ -30,7 +30,7 @@ pub fn start_pairing_delegate(
             displayed_passkey,
             responder,
         } => {
-            let pd = hd.read().pairing_delegate.clone();
+            let pd = hd.write().pairing_delegate();
             let passkey_ref = displayed_passkey.as_ref().map(|x| &**x);
             Left(Left(
                 match pd {

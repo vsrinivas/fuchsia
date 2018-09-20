@@ -129,6 +129,17 @@ impl HostDispatcher {
         }
     }
 
+    /// Returns the current pairing delegate proxy if it exists and has not been closed. Clears the
+    /// if the handle is closed.
+    pub fn pairing_delegate(&mut self) -> Option<PairingDelegateProxy> {
+        if let Some(delegate) = &self.pairing_delegate {
+            if delegate.is_closed() {
+                self.pairing_delegate = None;
+            }
+        }
+        self.pairing_delegate.clone()
+    }
+
     pub fn set_name(
         hd: Arc<RwLock<HostDispatcher>>,
         name: Option<String>,
