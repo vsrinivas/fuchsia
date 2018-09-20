@@ -74,25 +74,25 @@ zx_status_t Dispatcher::HandlePacket(fbl::unique_ptr<Packet> packet) {
     case Packet::Peer::kEthernet:
         status = mlme_->HandleFramePacket(fbl::move(packet));
         break;
-    case Packet::Peer::kWlan: {
-        auto fc = packet->field<FrameControl>(0);
-        switch (fc->type()) {
-        case FrameType::kManagement:
-            WLAN_STATS_INC(mgmt_frame.in);
-            break;
-        case FrameType::kControl:
-            WLAN_STATS_INC(ctrl_frame.in);
-            break;
-        case FrameType::kData:
-            WLAN_STATS_INC(data_frame.in);
-            break;
-        default:
-            break;
-        }
+    case Packet::Peer::kWlan:
+        if (auto fc = packet->field<FrameControl>(0)) {
+            switch (fc->type()) {
+            case FrameType::kManagement:
+                WLAN_STATS_INC(mgmt_frame.in);
+                break;
+            case FrameType::kControl:
+                WLAN_STATS_INC(ctrl_frame.in);
+                break;
+            case FrameType::kData:
+                WLAN_STATS_INC(data_frame.in);
+                break;
+            default:
+                break;
+            }
 
-        status = mlme_->HandleFramePacket(fbl::move(packet));
+            status = mlme_->HandleFramePacket(fbl::move(packet));
+        }
         break;
-    }
     default:
         break;
     }
