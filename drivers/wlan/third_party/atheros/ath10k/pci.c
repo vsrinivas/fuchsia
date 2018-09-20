@@ -2959,7 +2959,12 @@ static void ath10k_band_query_info(struct ath10k* ar, const struct ath10k_band* 
     strncpy(wlan_band->desc, dev_band->name, WLAN_BAND_DESC_MAX_LEN);
 
     // ht_caps
-    if (dev_band->ht_supported) { ath10k_get_ht_cap(ar, &wlan_band->ht_caps); }
+    if (dev_band->ht_supported) {
+        wlan_band->ht_supported = true;
+        ath10k_get_ht_cap(ar, &wlan_band->ht_caps);
+    } else {
+        wlan_band->ht_supported = false;
+    }
 
     // vht_caps
     if (dev_band->vht_supported) {

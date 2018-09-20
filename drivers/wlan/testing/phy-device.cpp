@@ -12,6 +12,8 @@
 #include <wlan/protocol/ioctl.h>
 #include <wlan/protocol/phy.h>
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+
 #include <stdio.h>
 #include <algorithm>
 
@@ -19,6 +21,7 @@ namespace wlan {
 namespace testing {
 
 namespace wlan_device = ::fuchsia::wlan::device;
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 #define DEV(c) static_cast<PhyDevice*>(c)
 static zx_protocol_device_t wlanphy_test_device_ops = {
@@ -119,7 +122,7 @@ wlan_device::PhyInfo get_info() {
     ht_caps.mcs_set.rx_mcs_head.set_val(0x01000000ff);
     ht_caps.mcs_set.rx_mcs_tail.set_val(0);
     ht_caps.mcs_set.tx_mcs.set_val(0x10);
-    band24.ht_caps = ht_caps.ToFidl();
+    band24.ht_caps = std::make_unique<wlan_mlme::HtCapabilities>(ht_caps.ToFidl());
 
     band24.basic_rates.reset(std::vector<uint8_t>({2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108}));
     band24.supported_channels.base_freq = 2417;
@@ -136,7 +139,7 @@ wlan_device::PhyInfo get_info() {
     ht_caps.mcs_set.rx_mcs_head.set_val(0x010000ffff);
     ht_caps.mcs_set.rx_mcs_tail.set_val(0);
     ht_caps.mcs_set.tx_mcs.set_val(0x10);
-    band5.ht_caps = ht_caps.ToFidl();
+    band5.ht_caps = std::make_unique<wlan_mlme::HtCapabilities>(ht_caps.ToFidl());
 
     band5.basic_rates.reset(std::vector<uint8_t>({12, 18, 24, 36, 48, 72, 96, 108}));
     band5.supported_channels.base_freq = 5000;

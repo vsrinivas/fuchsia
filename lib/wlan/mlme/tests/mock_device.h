@@ -55,6 +55,7 @@ struct MockDevice : public DeviceInterface {
                     .base_freq = 2407,
                     .channels = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14},
                 },
+            .ht_supported = false,
             .vht_supported = false,
         };
         state->set_channel(wlan_channel_t{.cbw = CBW20, .primary = 1});

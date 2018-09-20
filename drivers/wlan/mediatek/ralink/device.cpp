@@ -3434,6 +3434,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
         .desc = "2.4 GHz",
         // These hard-coded values are experimentally proven to work,
         // but does not necessarily reflect the true capabilities of the chipset.
+        .ht_supported = true,
         .ht_caps =
             {
                 .ht_capability_info = 0x016e,
@@ -3491,6 +3492,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
         info->bands[1] = {
             .desc = "5 GHz",
             // See above for descriptions of these capabilities
+            .ht_supported = true,
             .ht_caps =
                 {
                     .ht_capability_info = 0x016e,

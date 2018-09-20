@@ -29,7 +29,7 @@ const BSSID: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x73, 0x73];
 fn create_2_4_ghz_band_info() -> wlan_device::BandInfo {
     wlan_device::BandInfo{
         description: String::from("2.4 GHz"),
-        ht_caps: wlan_mlme::HtCapabilities {
+        ht_caps: Some(Box::new(wlan_mlme::HtCapabilities {
             ht_cap_info: wlan_mlme::HtCapabilityInfo {
                 ldpc_coding_cap: false,
                 chan_width_set: wlan_mlme::ChanWidthSet::TwentyForty as u8,
@@ -95,7 +95,7 @@ fn create_2_4_ghz_band_info() -> wlan_device::BandInfo {
                 tx_sounding_ppdu: false,
             }
 
-        },
+        })),
         vht_caps: None,
         basic_rates: vec![2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108],
         supported_channels: wlan_device::ChannelList{

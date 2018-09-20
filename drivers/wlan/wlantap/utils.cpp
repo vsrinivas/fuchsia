@@ -106,7 +106,12 @@ void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_band_info_t* out) {
     memset(out, 0, sizeof(*out));
     strlcpy(out->desc, in.description->c_str(), sizeof(out->desc));
 
-    out->ht_caps = ::wlan::HtCapabilities::FromFidl(in.ht_caps).ToDdk();
+    if (in.ht_caps != nullptr) {
+        out->ht_supported = true;
+        out->ht_caps = ::wlan::HtCapabilities::FromFidl(*in.ht_caps).ToDdk();
+    } else {
+        out->ht_supported = false;
+    }
 
     if (in.vht_caps != nullptr) {
         out->vht_supported = true;

@@ -532,6 +532,7 @@ zx_status_t brcmf_phy_query(void* ctx, wlanphy_info_t* phy_info) {
     info->num_bands = 1;
     strlcpy(info->bands[0].desc, "2.4 GHz", WLAN_BAND_DESC_MAX_LEN);
     // TODO(cphoenix): Once this isn't temp/stub code anymore, remove unnecessary "= 0" lines.
+    info->bands[0].ht_supported = false;
     info->bands[0].ht_caps.ht_capability_info = 0;
     info->bands[0].ht_caps.ampdu_params = 0;
     // info->bands[0].ht_caps.supported_mcs_set[ 16 entries ] = 0;

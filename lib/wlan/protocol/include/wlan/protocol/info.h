@@ -187,6 +187,7 @@ typedef struct wlan_band_info {
     // Human-readable description of the band, for debugging.
     char desc[WLAN_BAND_DESC_MAX_LEN];
     // HT PHY capabilities.
+    bool ht_supported;
     wlan_ht_caps_t ht_caps;
     // VHT PHY capabilities.
     bool vht_supported;

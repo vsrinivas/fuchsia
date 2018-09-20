@@ -181,7 +181,7 @@ static void ConvertPhyBandInfo(::fidl::VectorPtr<wlan_device::BandInfo>* BandInf
         Band.description = phy_band->desc;
 
         // ht_caps
-        Band.ht_caps = ::wlan::HtCapabilities::FromDdk(phy_bands->ht_caps).ToFidl();
+        Band.ht_caps = std::make_unique<wlan_mlme::HtCapabilities>(::wlan::HtCapabilities::FromDdk(phy_bands->ht_caps).ToFidl());
 
         // vht_caps
         if (phy_bands->vht_supported) {

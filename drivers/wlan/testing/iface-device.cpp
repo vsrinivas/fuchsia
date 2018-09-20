@@ -96,6 +96,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
     // clang-format off
     ifc_info->bands[0] = {
         .desc = "2.4 GHz",
+        .ht_supported = false,
         .ht_caps = {},
         .vht_supported = false,
         .vht_caps = {},
@@ -108,6 +109,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
     };
     ifc_info->bands[1] = {
         .desc = "5 GHz",
+        .ht_supported = false,
         .ht_caps = {},
         .vht_supported = false,
         .vht_caps = {},
