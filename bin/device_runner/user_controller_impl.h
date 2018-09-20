@@ -45,7 +45,8 @@ class UserControllerImpl : fuchsia::modular::UserController,
       fuchsia::modular::AppConfig story_shell,
       fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
           token_provider_factory,
-      fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
+      fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
+      fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
       fuchsia::modular::auth::AccountPtr account,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,

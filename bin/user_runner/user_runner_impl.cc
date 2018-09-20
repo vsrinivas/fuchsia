@@ -188,13 +188,14 @@ void UserRunnerImpl::Initialize(
     fuchsia::modular::AppConfig story_shell,
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
-    fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext> user_context,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
   InitializeUser(std::move(account), std::move(token_provider_factory),
-                 std::move(token_manager), std::move(user_context));
-  InitializeLedger();
+                 std::move(agent_token_manager), std::move(user_context));
+  InitializeLedger(std::move(ledger_token_manager));
   InitializeLedgerDashboard();
   InitializeDeviceMap();
   InitializeMessageQueueManager();
@@ -209,14 +210,17 @@ void UserRunnerImpl::InitializeUser(
     fuchsia::modular::auth::AccountPtr account,
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
-    fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
         user_context) {
-  token_provider_factory_ = token_provider_factory.Bind();
-  AtEnd(Reset(&token_provider_factory_));
-
-  token_manager_ = token_manager.Bind();
-  AtEnd(Reset(&token_manager_));
+  if (token_provider_factory.is_valid()) {
+    token_provider_factory_ = token_provider_factory.Bind();
+    AtEnd(Reset(&token_provider_factory_));
+  } else {
+    agent_token_manager_ = agent_token_manager.Bind();
+    AtEnd(Reset(&agent_token_manager_));
+    // TODO(ukode): Initialize Agent Runner with this token_manager handle.
+  }
 
   user_context_ = user_context.Bind();
   AtEnd(Reset(&user_context_));
@@ -258,7 +262,8 @@ zx::channel UserRunnerImpl::GetLedgerRepositoryDirectory() {
   return fsl::CloneChannelFromFileDescriptor(dir.get());
 }
 
-void UserRunnerImpl::InitializeLedger() {
+void UserRunnerImpl::InitializeLedger(
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager) {
   fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
 
@@ -488,8 +493,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   agent_runner_.reset(new AgentRunner(
       user_environment_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), agent_runner_storage_.get(),
-      token_provider_factory_.get(), user_intelligence_provider_.get(),
-      entity_provider_runner_.get()));
+      token_provider_factory_.get(),
+      user_intelligence_provider_.get(), entity_provider_runner_.get()));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
   maxwell_component_context_bindings_ = std::make_unique<

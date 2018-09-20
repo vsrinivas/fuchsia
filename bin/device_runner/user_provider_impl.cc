@@ -114,8 +114,10 @@ UserProviderImpl::UserProviderImpl(
     const fuchsia::modular::AppConfig& user_runner,
     const fuchsia::modular::AppConfig& default_user_shell,
     const fuchsia::modular::AppConfig& story_shell,
-    fuchsia::modular::auth::AccountProvider* const account_provider,
-    fuchsia::auth::TokenManagerFactory* const token_manager_factory,
+    fuchsia::modular::auth::AccountProvider* account_provider,
+    fuchsia::auth::TokenManagerFactory* token_manager_factory,
+    fuchsia::auth::AuthenticationContextProviderPtr
+        authentication_context_provider,
     bool use_token_manager_factory, Delegate* const delegate)
     : context_(std::move(context)),
       user_runner_(user_runner),
@@ -124,9 +126,17 @@ UserProviderImpl::UserProviderImpl(
       account_provider_(account_provider),
       token_manager_factory_(token_manager_factory),
       use_token_manager_factory_(use_token_manager_factory),
+      authentication_context_provider_(
+          std::move(authentication_context_provider)),
       delegate_(delegate),
-      auth_context_provider_binding_(this) {
+      authentication_context_provider_binding_(this) {
   FXL_DCHECK(delegate);
+  FXL_DCHECK(authentication_context_provider_);
+
+  authentication_context_provider_binding_.set_error_handler([this] {
+    FXL_LOG(WARNING) << "AuthenticationContextProvider disconnected.";
+    authentication_context_provider_binding_.Unbind();
+  });
 
   // There might not be a file of users persisted. If config file doesn't
   // exist, move forward with no previous users.
@@ -267,7 +277,7 @@ void UserProviderImpl::AddUserV1(
         }
 
         std::string error;
-        if (!AddUserToAccountsDB(fidl::Clone(account), &error)) {
+        if (!AddUserToAccountsDB(account.get(), &error)) {
           callback(nullptr, error);
           return;
         }
@@ -279,21 +289,15 @@ void UserProviderImpl::AddUserV1(
 void UserProviderImpl::AddUserV2(
     const fuchsia::modular::auth::IdentityProvider identity_provider,
     AddUserCallback callback) {
+  FXL_DLOG(INFO) << "Adding a new user with fuchsia::auth::Authorize()";
   FXL_DCHECK(token_manager_factory_);
 
   // Creating a new user, the initial bootstrapping will be done by
   // AccountManager in the future. For now, create an account_id that
   // uniquely maps to a token manager instance at runtime.
   const std::string& account_id = GetRandomId();
-
   fuchsia::auth::TokenManagerPtr token_manager;
-  token_manager_factory_->GetTokenManager(
-      account_id, kUserProviderAppUrl, GetAuthProviderConfigs(),
-      auth_context_provider_binding_.NewBinding(), token_manager.NewRequest());
-  token_manager.set_error_handler([this, account_id] {
-    FXL_LOG(INFO) << "Token Manager for account:" << account_id
-                  << " disconnected";
-  });
+  token_manager = CreateTokenManager(account_id);
 
   // TODO(ukode): Fuchsia mod configuration that is requesting OAuth tokens.
   // This includes OAuth client specific details such as client id, secret,
@@ -305,18 +309,18 @@ void UserProviderImpl::AddUserV2(
   auto scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
   token_manager->Authorize(
       std::move(fuchsia_app_config), std::move(scopes), "", "",
-      [this, identity_provider, account_id, callback](
-          fuchsia::auth::Status status,
-          fuchsia::auth::UserProfileInfoPtr user_profile_info) {
+      [this, identity_provider, account_id,
+       token_manager = std::move(token_manager),
+       callback](fuchsia::auth::Status status,
+                 fuchsia::auth::UserProfileInfoPtr user_profile_info) {
         if (status != fuchsia::auth::Status::OK) {
-          FXL_DLOG(INFO) << "Token Manager Authorize() call returned error";
+          FXL_LOG(ERROR) << "Authorize() call returned error";
           callback(nullptr, "Failed to authorize user");
           return;
         }
 
         if (!user_profile_info) {
-          FXL_DLOG(INFO) << "Token Manager Authorize() call returned empty "
-                            "user profile info";
+          FXL_LOG(ERROR) << "Authorize() call returned empty user profile";
           callback(nullptr,
                    "Empty user profile info returned by auth_provider");
           return;
@@ -331,17 +335,20 @@ void UserProviderImpl::AddUserV2(
         account->profile_id = user_profile_info->id;
 
         std::string error;
-        if (!AddUserToAccountsDB(fidl::Clone(account), &error)) {
+        if (!AddUserToAccountsDB(account.get(), &error)) {
+          FXL_LOG(ERROR) << "Failed to add user: " << account_id
+                         << ", to the accounts database:" << error;
           callback(nullptr, error);
           return;
         }
 
+        FXL_DLOG(INFO) << "Successfully added user: " << account_id;
         callback(std::move(account), "");
       });
 }
 
 bool UserProviderImpl::AddUserToAccountsDB(
-    fuchsia::modular::auth::AccountPtr account, std::string* error) {
+    const fuchsia::modular::auth::Account* account, std::string* error) {
   FXL_DCHECK(account);
 
   flatbuffers::FlatBufferBuilder builder;
@@ -421,18 +428,12 @@ void UserProviderImpl::RemoveUserV1(fuchsia::modular::auth::AccountPtr account,
 
 void UserProviderImpl::RemoveUserV2(fuchsia::modular::auth::AccountPtr account,
                                     RemoveUserCallback callback) {
-  FXL_DCHECK(token_manager_factory_);
   FXL_DCHECK(account);
   auto account_id = account->id;
 
-  fuchsia::auth::TokenManagerPtr token_manager;
-  token_manager_factory_->GetTokenManager(
-      account_id, kUserProviderAppUrl, GetAuthProviderConfigs(),
-      auth_context_provider_binding_.NewBinding(), token_manager.NewRequest());
-  token_manager.set_error_handler([this, account_id] {
-    FXL_LOG(INFO) << "Token Manager for account:" << account_id
-                  << " disconnected";
-  });
+  FXL_DLOG(INFO) << "Invoking DeleteAllTokens() for user:" << account_id;
+
+  auto token_manager = CreateTokenManager(account_id);
 
   // TODO(ukode): Delete tokens for all the supported auth provider configs just
   // not Google. This will be replaced by AccountManager::RemoveUser api in the
@@ -441,9 +442,10 @@ void UserProviderImpl::RemoveUserV2(fuchsia::modular::auth::AccountPtr account,
   fuchsia_app_config.auth_provider_type = kGoogleAuthProviderType;
   token_manager->DeleteAllTokens(
       fuchsia_app_config, account->profile_id,
-      [this, account_id, callback](fuchsia::auth::Status status) {
+      [this, account_id, token_manager = std::move(token_manager),
+       callback](fuchsia::auth::Status status) {
         if (status != fuchsia::auth::Status::OK) {
-          FXL_DLOG(INFO) << "Token Manager Authorize() call returned error";
+          FXL_LOG(ERROR) << "Token Manager Authorize() call returned error";
           callback("Unable to remove user");
           return;
         }
@@ -494,8 +496,27 @@ bool UserProviderImpl::RemoveUserFromAccountsDB(fidl::StringPtr account_id,
 
 void UserProviderImpl::GetAuthenticationUIContext(
     fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) {
-  // TODO(ukode): Provide impl here.
-  FXL_LOG(INFO) << "GetAuthenticationUIContext() is unimplemented.";
+  authentication_context_provider_->GetAuthenticationUIContext(
+      std::move(request));
+}
+
+fuchsia::auth::TokenManagerPtr UserProviderImpl::CreateTokenManager(
+    fidl::StringPtr account_id) {
+  FXL_DCHECK(account_id);
+  FXL_DCHECK(token_manager_factory_);
+
+  fuchsia::auth::TokenManagerPtr token_mgr;
+  token_manager_factory_->GetTokenManager(
+      account_id, kUserProviderAppUrl, GetAuthProviderConfigs(),
+      authentication_context_provider_binding_.NewBinding(),
+      token_mgr.NewRequest());
+
+  token_mgr.set_error_handler([this, account_id] {
+    FXL_LOG(INFO) << "Token Manager for account:" << account_id
+                  << " disconnected";
+  });
+
+  return token_mgr;
 }
 
 bool UserProviderImpl::WriteUsersDb(const std::string& serialized_users,
@@ -534,22 +555,24 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
 
 void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
                                      fuchsia::modular::UserLoginParams params) {
-  FXL_DCHECK(token_manager_factory_);
   auto account_id = account ? account->id.get() : GetRandomId();
+  FXL_DLOG(INFO) << "Login() User:" << account_id;
 
-  // Get |fuchsia::modular::auth::TokenManagerFactory| for this user.
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory;
-  account_provider_->GetTokenProviderFactory(
-      account_id, token_provider_factory.NewRequest());
-
-  // Get a new |fuchsia::auth::TokenManager| handle for this user, that is
-  // passed to user_runner.
-  // TODO(ukode): Maybe its better to pass token_manager_factory_ptr to
-  // user_runner.
-  fuchsia::auth::TokenManagerPtr token_manager;
-  token_manager_factory_->GetTokenManager(
-      account_id, kUserProviderAppUrl, GetAuthProviderConfigs(),
-      auth_context_provider_binding_.NewBinding(), token_manager.NewRequest());
+  fuchsia::auth::TokenManagerPtr ledger_token_manager;
+  fuchsia::auth::TokenManagerPtr agent_token_manager;
+  if (!use_token_manager_factory_) {
+    // Get |fuchsia::modular::auth::TokenProviderFactory| for this user.
+    account_provider_->GetTokenProviderFactory(
+        account_id, token_provider_factory.NewRequest());
+  } else {
+    // Instead of passing token_manager_factory all the way to agents and
+    // runners with all auth provider configurations, send two
+    // |fuchsia::auth::TokenManager| handles, one for ledger and one for agents
+    // for the given user account |account_id|.
+    ledger_token_manager = CreateTokenManager(account_id);
+    agent_token_manager = CreateTokenManager(account_id);
+  }
 
   auto user_shell = params.user_shell_config
                         ? std::move(*params.user_shell_config)
@@ -563,9 +586,10 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
   auto controller = std::make_unique<UserControllerImpl>(
       context_->launcher().get(), CloneStruct(user_runner_),
       std::move(user_shell), CloneStruct(story_shell_),
-      std::move(token_provider_factory), std::move(token_manager),
-      std::move(account), std::move(view_owner), std::move(service_provider),
-      std::move(params.user_controller), [this](UserControllerImpl* c) {
+      std::move(token_provider_factory), std::move(ledger_token_manager),
+      std::move(agent_token_manager), std::move(account), std::move(view_owner),
+      std::move(service_provider), std::move(params.user_controller),
+      [this](UserControllerImpl* c) {
         user_controllers_.erase(c);
         delegate_->DidLogout();
       });

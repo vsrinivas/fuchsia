@@ -23,8 +23,8 @@ struct UsersStorage;
 
 namespace modular {
 
-class UserProviderImpl : fuchsia::modular::UserProvider,
-                         fuchsia::auth::AuthenticationContextProvider {
+class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
+                         fuchsia::modular::UserProvider {
  public:
   // Users of UserProviderImpl must register a Delegate object.
   class Delegate {
@@ -56,13 +56,15 @@ class UserProviderImpl : fuchsia::modular::UserProvider,
   };
 
   // |account_provider| and |delegate| must outlive UserProviderImpl.
-  UserProviderImpl(std::shared_ptr<component::StartupContext> context,
-                   const fuchsia::modular::AppConfig& user_runner,
-                   const fuchsia::modular::AppConfig& default_user_shell,
-                   const fuchsia::modular::AppConfig& story_shell,
-                   fuchsia::modular::auth::AccountProvider* account_provider,
-                   fuchsia::auth::TokenManagerFactory* token_manager_factory,
-                   bool use_token_manager_factory, Delegate* const delegate);
+  UserProviderImpl(
+      std::shared_ptr<component::StartupContext> context,
+      const fuchsia::modular::AppConfig& user_runner,
+      const fuchsia::modular::AppConfig& default_user_shell,
+      const fuchsia::modular::AppConfig& story_shell,
+      fuchsia::modular::auth::AccountProvider* account_provider,
+      fuchsia::auth::TokenManagerFactory* token_manager_factory,
+      fuchsia::auth::AuthenticationContextProviderPtr auth_context_provider,
+      bool use_token_manager_factory, Delegate* const delegate);
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request);
 
@@ -111,7 +113,11 @@ class UserProviderImpl : fuchsia::modular::UserProvider,
   void RemoveUserV2(fuchsia::modular::auth::AccountPtr account,
                     RemoveUserCallback callback);
 
-  bool AddUserToAccountsDB(fuchsia::modular::auth::AccountPtr account,
+  // Returns a new |fuchsia::auth::TokenManager| handle for the given user
+  // account |account_id|.
+  fuchsia::auth::TokenManagerPtr CreateTokenManager(fidl::StringPtr account_id);
+
+  bool AddUserToAccountsDB(const fuchsia::modular::auth::Account* account,
                            std::string* error);
   bool RemoveUserFromAccountsDB(fidl::StringPtr account_id, std::string* error);
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
@@ -132,10 +138,12 @@ class UserProviderImpl : fuchsia::modular::UserProvider,
   fuchsia::auth::TokenManagerFactory* const
       token_manager_factory_;  // Neither owned nor copied.
   bool use_token_manager_factory_ = false;
+  fuchsia::auth::AuthenticationContextProviderPtr
+      authentication_context_provider_;
   Delegate* const delegate_;   // Neither owned nor copied.
-  fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
-      auth_context_provider_binding_;
 
+  fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
+      authentication_context_provider_binding_;
   std::string serialized_users_;
   const fuchsia::modular::UsersStorage* users_storage_ = nullptr;
 

@@ -75,6 +75,7 @@ fidl("fuchsia.modular") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.auth",
     "//garnet/public/fidl/fuchsia.images",
     "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/fidl/fuchsia.sys",

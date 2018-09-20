@@ -200,6 +200,7 @@ class Settings {
 }  // namespace
 
 class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
+                        fuchsia::auth::AuthenticationContextProvider,
                         fuchsia::modular::auth::AccountProviderContext,
                         fuchsia::ui::policy::KeyboardCaptureListenerHACK,
                         modular::UserProviderImpl::Delegate {
@@ -213,7 +214,8 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
         context_(std::move(context)),
         on_shutdown_(std::move(on_shutdown)),
         device_shell_context_binding_(this),
-        account_provider_context_binding_(this) {
+        account_provider_context_binding_(this),
+        authentication_context_provider_binding_(this) {
     if (!context_->has_environment_services()) {
       FXL_LOG(ERROR) << "Failed to receive services from the environment.";
       exit(1);
@@ -407,8 +409,9 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     user_provider_impl_.reset(new UserProviderImpl(
         context_, settings_.user_runner, settings_.user_shell,
         settings_.story_shell, account_provider_->primary_service().get(),
-        token_manager_factory_.get(), settings_.enable_garnet_token_manager,
-        this));
+        token_manager_factory_.get(),
+        authentication_context_provider_binding_.NewBinding().Bind(),
+        settings_.enable_garnet_token_manager, this));
 
     ReportEvent(ModularEvent::BOOTED_TO_DEVICE_RUNNER);
   }
@@ -460,8 +463,19 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     // TODO(MI4-1107): DeviceRunner needs to implement AuthenticationContext
     // itself, and proxy calls for StartOverlay & StopOverlay to DeviceShell,
     // starting it if it's not running yet.
-
+    FXL_CHECK(device_shell_);
     device_shell_->GetAuthenticationContext(account_id, std::move(request));
+  }
+
+  // |AuthenticationContextProvider|
+  void GetAuthenticationUIContext(
+      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext>
+          request) override {
+    // TODO(MI4-1107): DeviceRunner needs to implement AuthenticationUIContext
+    // itself, and proxy calls for StartOverlay & StopOverlay to DeviceShell,
+    // starting it if it's not running yet.
+    FXL_CHECK(device_shell_);
+    device_shell_->GetAuthenticationUIContext(std::move(request));
   }
 
   // |UserProviderImpl::Delegate|
@@ -673,6 +687,8 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
       device_shell_context_binding_;
   fidl::Binding<fuchsia::modular::auth::AccountProviderContext>
       account_provider_context_binding_;
+  fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
+      authentication_context_provider_binding_;
 
   std::unique_ptr<AppClient<fuchsia::modular::auth::AccountProvider>>
       account_provider_;

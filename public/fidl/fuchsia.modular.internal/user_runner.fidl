@@ -15,13 +15,15 @@ using fuchsia.ui.viewsv1token;
 // user.
 [Discoverable]  // Created by user_runner application.
 interface UserRunner {
-  // Launches a user runner instance for a user identified by |user_id|.
+  // Launches a user runner instance for a user identified by |user_id| and
+  // specific TokenManager handles for ledger and agent_runner.
   // TODO(alhaad): Fold paramters into |UserContext|.
   1: Initialize(fuchsia.modular.auth.Account? account,
                fuchsia.modular.AppConfig user_shell,
                fuchsia.modular.AppConfig story_shell,
-               fuchsia.modular.auth.TokenProviderFactory token_provider_factory,
-               fuchsia.auth.TokenManager token_manager,
+               fuchsia.modular.auth.TokenProviderFactory? token_provider_factory,
+               fuchsia.auth.TokenManager? ledger_token_manager,
+               fuchsia.auth.TokenManager? agent_token_manager,
                UserContext user_context,
                request<fuchsia.ui.viewsv1token.ViewOwner>? view_owner);
 

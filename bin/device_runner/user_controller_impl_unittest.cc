@@ -17,7 +17,7 @@ namespace {
 using ::component::testing::FakeLauncher;
 using UserControllerImplTest = gtest::TestLoopFixture;
 
-TEST_F(UserControllerImplTest, StartUserRunner) {
+TEST_F(UserControllerImplTest, StartUserRunnerWithTokenProviderFactory) {
   FakeLauncher launcher;
   std::string url = "test_url_string";
   fuchsia::modular::AppConfig app_config;
@@ -34,16 +34,48 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_ptr;
   auto token_provider_factory_request = token_provider_factory_ptr.NewRequest();
 
-  fuchsia::auth::TokenManagerPtr token_manager_ptr;
-  auto token_manager_request = token_manager_ptr.NewRequest();
+  fuchsia::auth::TokenManagerPtr ledger_token_manager;
+  fuchsia::auth::TokenManagerPtr agent_token_manager;
+  fuchsia::modular::UserControllerPtr user_controller_ptr;
+  UserControllerImpl impl(
+      &launcher, CloneStruct(app_config), CloneStruct(app_config),
+      CloneStruct(app_config), std::move(token_provider_factory_ptr),
+      std::move(ledger_token_manager), std::move(agent_token_manager),
+      nullptr /* account */, nullptr /* view_owner_request */,
+      nullptr /* device_shell_services */, user_controller_ptr.NewRequest(),
+      nullptr /* done_callback */);
+
+  EXPECT_TRUE(callback_called);
+}
+
+TEST_F(UserControllerImplTest, StartUserRunnerWithTokenManagers) {
+  FakeLauncher launcher;
+  std::string url = "test_url_string";
+  fuchsia::modular::AppConfig app_config;
+  app_config.url = url;
+
+  bool callback_called = false;
+  launcher.RegisterComponent(
+      url, [&callback_called](
+               fuchsia::sys::LaunchInfo launch_info,
+               fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        callback_called = true;
+      });
+
+  fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_ptr;
+  fuchsia::auth::TokenManagerPtr ledger_token_manager_ptr;
+  auto ledger_token_manager = ledger_token_manager_ptr.NewRequest();
+  fuchsia::auth::TokenManagerPtr agent_token_manager_ptr;
+  auto agent_token_manager = agent_token_manager_ptr.NewRequest();
 
   fuchsia::modular::UserControllerPtr user_controller_ptr;
   UserControllerImpl impl(
       &launcher, CloneStruct(app_config), CloneStruct(app_config),
       CloneStruct(app_config), std::move(token_provider_factory_ptr),
-      std::move(token_manager_ptr), nullptr /* account */,
-      nullptr /* view_owner_request */, nullptr /* device_shell_services */,
-      user_controller_ptr.NewRequest(), nullptr /* done_callback */);
+      std::move(ledger_token_manager_ptr), std::move(agent_token_manager_ptr),
+      nullptr /* account */, nullptr /* view_owner_request */,
+      nullptr /* device_shell_services */, user_controller_ptr.NewRequest(),
+      nullptr /* done_callback */);
 
   EXPECT_TRUE(callback_called);
 }

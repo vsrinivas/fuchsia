@@ -9,6 +9,7 @@
 #include <memory>
 #include <utility>
 
+#include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
@@ -125,6 +126,15 @@ class DevDeviceShellApp
           fuchsia::modular::auth::AuthenticationContext> /*request*/) override {
     FXL_LOG(INFO) << "fuchsia::modular::DeviceShell::GetAuthenticationContext()"
                      " is unimplemented.";
+  }
+
+  // |fuchsia::modular::DeviceShell|
+  void GetAuthenticationUIContext(
+      fidl::InterfaceRequest<
+          fuchsia::auth::AuthenticationUIContext> /*request*/) override {
+    FXL_LOG(INFO)
+        << "fuchsia::modular::DeviceShell::GetAuthenticationUIContext() is"
+           " unimplemented.";
   }
 
   // |fuchsia::modular::UserWatcher|
