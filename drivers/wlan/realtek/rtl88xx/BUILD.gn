@@ -12,8 +12,12 @@ driver_module("rtl88xx_driver") {
     "binding.c",
     "bus.cc",
     "bus.h",
+    "bus_util.h",
     "device.cc",
     "device.h",
+    "register.h",
+    "usb_bus.cc",
+    "usb_bus.h",
     "wlan_mac.cc",
     "wlan_mac.h",
     "wlan_phy.cc",
@@ -25,6 +29,8 @@ driver_module("rtl88xx_driver") {
     "//garnet/lib/wlan/protocol",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
     "//zircon/system/public",
   ]
 
