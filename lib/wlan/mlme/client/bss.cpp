@@ -444,10 +444,10 @@ wlan_channel_t DeriveChanFromBssDesc(const wlan_mlme::BSSDescription& bss_desc,
     chan.primary = bss_desc.ht_op->primary_chan;
 
     switch (bss_desc.ht_op->ht_op_info.secondary_chan_offset) {
-    case wlan_mlme::SecChanOffset::SECONDARY_ABOVE:
+    case to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE):
         chan.cbw = CBW40ABOVE;
         break;
-    case wlan_mlme::SecChanOffset::SECONDARY_BELOW:
+    case to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW):
         chan.cbw = CBW40BELOW;
     default:  // SECONDARY_NONE or RESERVED
         chan.cbw = CBW20;
@@ -456,7 +456,7 @@ wlan_channel_t DeriveChanFromBssDesc(const wlan_mlme::BSSDescription& bss_desc,
 
     // This overrides Secondary Channel Offset.
     // TODO(NET-677): Conditionally apply
-    if (bss_desc.ht_op->ht_op_info.sta_chan_width == wlan_mlme::StaChanWidth::TWENTY) {
+    if (bss_desc.ht_op->ht_op_info.sta_chan_width == to_enum_type(wlan_mlme::StaChanWidth::TWENTY)) {
         chan.cbw = CBW20;
         return chan;
     }
@@ -470,9 +470,9 @@ wlan_channel_t DeriveChanFromBssDesc(const wlan_mlme::BSSDescription& bss_desc,
 
     // has_ht and has_vht
     switch (bss_desc.vht_op->vht_cbw) {
-    case wlan_mlme::VhtCbw::CBW_20_40:
+    case to_enum_type(wlan_mlme::VhtCbw::CBW_20_40):
         return chan;
-    case wlan_mlme::VhtCbw::CBW_80_160_80P80: {
+    case to_enum_type(wlan_mlme::VhtCbw::CBW_80_160_80P80): {
         // See IEEE Std 802.11-2016, Table 9-253
         auto seg0 = bss_desc.vht_op->center_freq_seg0;
         auto seg1 = bss_desc.vht_op->center_freq_seg1;

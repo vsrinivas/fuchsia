@@ -1437,7 +1437,7 @@ bool Station::IsCbw40Rx() const {
         (bss_->ht_cap != nullptr) ? "yes" : "no",
         (bss_->ht_cap == nullptr)
             ? "invalid"
-            : (bss_->ht_cap->ht_cap_info.chan_width_set == wlan_mlme::ChanWidthSet::TWENTY_ONLY)
+            : (bss_->ht_cap->ht_cap_info.chan_width_set == to_enum_type(wlan_mlme::ChanWidthSet::TWENTY_ONLY))
                   ? "20"
                   : "40",
         client_assoc.has_ht_cap ? "yes" : "no",
@@ -1447,7 +1447,7 @@ bool Station::IsCbw40Rx() const {
         debugjoin("Disable CBW40: no HT support in target BSS\n");
         return false;
     }
-    if (bss_->ht_cap->ht_cap_info.chan_width_set == wlan_mlme::ChanWidthSet::TWENTY_ONLY) {
+    if (bss_->ht_cap->ht_cap_info.chan_width_set == to_enum_type(wlan_mlme::ChanWidthSet::TWENTY_ONLY)) {
         debugjoin("Disable CBW40: no CBW40 support in target BSS\n");
         return false;
     }

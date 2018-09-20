@@ -116,15 +116,15 @@ enum MaxAmsduLen : uint8 {
 
 struct HtCapabilityInfo {
     bool ldpc_coding_cap;
-    ChanWidthSet chan_width_set;
-    SmPowerSave sm_power_save;
+    uint8 chan_width_set; // see enum ChanWidthSet
+    uint8 sm_power_save; // see enum SmPowerSave
     bool greenfield;
     bool short_gi_20;
     bool short_gi_40;
     bool tx_stbc;
     uint8 rx_stbc;
     bool delayed_block_ack;
-    MaxAmsduLen max_amsdu_len;
+    uint8 max_amsdu_len; // see enum MaxAmsduLen
     bool dsss_in_40;
     bool intolerant_40;
     bool lsig_txop_protect;
@@ -143,7 +143,7 @@ enum MinMpduStartSpacing : uint8 {
 
 struct AmpduParams {
     uint8 exponent;
-    MinMpduStartSpacing min_start_spacing;
+    uint8 min_start_spacing; // see enum MinMpduStartSpacing
 };
 
 // SupportedMcsSet
@@ -177,8 +177,8 @@ enum McsFeedback : uint8 {
 
 struct HtExtCapabilities {
     bool pco;
-    PcoTransitionTime pco_transition;
-    McsFeedback mcs_feedback;
+    uint8 pco_transition; // see enum PcoTransitionTime
+    uint8 mcs_feedback; // see enum McsFeedback
     bool htc_ht_support;
     bool rd_responder;
 };
@@ -214,14 +214,14 @@ struct TxBfCapability {
     bool rx_ndp;
     bool tx_ndp;
     bool implicit;
-    Calibration calibration;
+    uint8 calibration; // see enum Calibration
     bool csi; // Explicit CsI Transmit Beamforming
     bool noncomp_steering; // Explicit Noncompressed Steering
     bool comp_steering; // Explicit Compressed Steering
-    Feedback csi_feedback;
-    Feedback noncomp_feedback;
-    Feedback comp_feedback;
-    MinGroup min_grouping;
+    uint8 csi_feedback; // see enum Feedback
+    uint8 noncomp_feedback; // see enum Feedback
+    uint8 comp_feedback; // see enum Feedback
+    uint8 min_grouping; // see enum MinGroup
     uint8 csi_antennas;          // Actual count, different from IEEE spec
     uint8 noncomp_steering_ants; // Actual count, different from IEEE spec
     uint8 comp_steering_ants;    // Actual count, different from IEEE spec
@@ -275,10 +275,10 @@ enum HtProtect : uint8 {
 };
 
 struct HTOperationInfo {
-    SecChanOffset secondary_chan_offset;
-    StaChanWidth sta_chan_width;
+    uint8 secondary_chan_offset; // see enum SecChanOffset
+    uint8 sta_chan_width; // see enum StaChanWidth
     bool rifs_mode;
-    HtProtect ht_protect;
+    uint8 ht_protect; // see enum HtProtect
     bool nongreenfield_present; // Nongreenfield HT STAs present
     bool obss_non_ht;           // OBSS Non-HT STAs present
     uint8 center_freq_seg2;    // VHT
@@ -311,7 +311,7 @@ enum VhtLinkAdaptation : uint8 {
 
 // IEEE Std 802.11-2016, 9.4.2.158.2
 struct VhtCapabilitiesInfo {
-    MaxMpduLen max_mpdu_len;
+    uint8 max_mpdu_len; // see enum MaxMpduLen
     uint8 supported_cbw_set;
     bool rx_ldpc;
     bool sgi_cbw80;
@@ -327,7 +327,7 @@ struct VhtCapabilitiesInfo {
     bool txop_ps;
     bool htc_vht;
     uint8 max_ampdu_exp;
-    VhtLinkAdaptation link_adapt;
+    uint8 link_adapt; // see enum VhtLinkAdaptation
     bool rx_ant_pattern;
     bool tx_ant_pattern;
     uint8 ext_nss_bw;
@@ -342,18 +342,18 @@ enum VhtMcs : uint8 {
 
 // IEEE Std 802.11-2016 9.4.2.158.3
 struct VhtMcsNss {
-    array<VhtMcs>:8 rx_max_mcs;  // idx 0 for ss1, .. idx 7 for ss8
+    array<uint8>:8 rx_max_mcs;  // idx 0 for ss1, .. idx 7 for ss8. See enum VhtMcs
     uint16 rx_max_data_rate;     // Mbps
     uint8 max_nsts;
 
-    array<VhtMcs>:8 tx_max_mcs; // idx 0 for ss1, .. idx 7 for ss8
+    array<uint8>:8 tx_max_mcs; // idx 0 for ss1, .. idx 7 for ss8. See enum VhtMcs
     uint16 tx_max_data_rate;    // Mbps
     bool ext_nss_bw;
 };
 
 // IEEE Std 802.11-2016, Figure 9-562
 struct BasicVhtMcsNss {
-    array<VhtMcs>:8 max_mcs; // idx 0 for ss1, .. idx 7 for ss8
+    array<uint8>:8 max_mcs; // idx 0 for ss1, .. idx 7 for ss8. See enum VhtMcs
 };
 
 // IEEE Std 802.11-2016 9.5.2.158
@@ -372,7 +372,7 @@ enum VhtCbw : uint8 {
 
 // IEEE Std 802.11-2016 9.5.2.159
 struct VhtOperation {
-    VhtCbw vht_cbw;
+    uint8 vht_cbw; // see enum VhtCbw
     uint8 center_freq_seg0;  // channel number
     uint8 center_freq_seg1;  // channel number
     BasicVhtMcsNss basic_mcs;

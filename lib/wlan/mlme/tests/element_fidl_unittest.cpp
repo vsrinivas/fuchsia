@@ -19,23 +19,23 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 TEST(FidlToElement, VhtMcsNssFidlToBitField) {
     wlan_mlme::VhtMcsNss fidl;
 
-    fidl.rx_max_mcs[0] = static_cast<wlan_mlme::VhtMcs>(1);
-    fidl.rx_max_mcs[1] = static_cast<wlan_mlme::VhtMcs>(2);
-    fidl.rx_max_mcs[2] = static_cast<wlan_mlme::VhtMcs>(3);
-    fidl.rx_max_mcs[3] = static_cast<wlan_mlme::VhtMcs>(1);
-    fidl.rx_max_mcs[4] = static_cast<wlan_mlme::VhtMcs>(2);
-    fidl.rx_max_mcs[5] = static_cast<wlan_mlme::VhtMcs>(3);
-    fidl.rx_max_mcs[6] = static_cast<wlan_mlme::VhtMcs>(1);
-    fidl.rx_max_mcs[7] = static_cast<wlan_mlme::VhtMcs>(2);
+    fidl.rx_max_mcs[0] = 1;
+    fidl.rx_max_mcs[1] = 2;
+    fidl.rx_max_mcs[2] = 3;
+    fidl.rx_max_mcs[3] = 1;
+    fidl.rx_max_mcs[4] = 2;
+    fidl.rx_max_mcs[5] = 3;
+    fidl.rx_max_mcs[6] = 1;
+    fidl.rx_max_mcs[7] = 2;
 
-    fidl.tx_max_mcs[0] = static_cast<wlan_mlme::VhtMcs>(3);
-    fidl.tx_max_mcs[1] = static_cast<wlan_mlme::VhtMcs>(2);
-    fidl.tx_max_mcs[2] = static_cast<wlan_mlme::VhtMcs>(1);
-    fidl.tx_max_mcs[3] = static_cast<wlan_mlme::VhtMcs>(3);
-    fidl.tx_max_mcs[4] = static_cast<wlan_mlme::VhtMcs>(2);
-    fidl.tx_max_mcs[5] = static_cast<wlan_mlme::VhtMcs>(1);
-    fidl.tx_max_mcs[6] = static_cast<wlan_mlme::VhtMcs>(3);
-    fidl.tx_max_mcs[7] = static_cast<wlan_mlme::VhtMcs>(2);
+    fidl.tx_max_mcs[0] = 3;
+    fidl.tx_max_mcs[1] = 2;
+    fidl.tx_max_mcs[2] = 1;
+    fidl.tx_max_mcs[3] = 3;
+    fidl.tx_max_mcs[4] = 2;
+    fidl.tx_max_mcs[5] = 1;
+    fidl.tx_max_mcs[6] = 3;
+    fidl.tx_max_mcs[7] = 2;
 
     fidl.rx_max_data_rate = 1234;
     fidl.max_nsts = 7;
@@ -206,10 +206,10 @@ TEST(FidlToElement, HtOperationFidlToBitField) {
     fidl.primary_chan = 169;
 
     auto* ht_op_info = &fidl.ht_op_info;
-    ht_op_info->secondary_chan_offset = wlan_mlme::SecChanOffset::SECONDARY_ABOVE;
-    ht_op_info->sta_chan_width = wlan_mlme::StaChanWidth::ANY;
+    ht_op_info->secondary_chan_offset = to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE);
+    ht_op_info->sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::ANY);
     ht_op_info->rifs_mode = true;
-    ht_op_info->ht_protect = wlan_mlme::HtProtect::TWENTY_MHZ;
+    ht_op_info->ht_protect = to_enum_type(wlan_mlme::HtProtect::TWENTY_MHZ);
     ht_op_info->nongreenfield_present = true;
     ht_op_info->obss_non_ht = true;
     ht_op_info->center_freq_seg2 = 155;
@@ -271,10 +271,10 @@ TEST(ElementToFidl, HtOperationToFidl) {
     EXPECT_EQ(fidl.primary_chan, 169);
 
     const auto& htoi = fidl.ht_op_info;
-    EXPECT_EQ(htoi.secondary_chan_offset, wlan_mlme::SecChanOffset::SECONDARY_ABOVE);
-    EXPECT_EQ(htoi.sta_chan_width, wlan_mlme::StaChanWidth::ANY);
+    EXPECT_EQ(htoi.secondary_chan_offset, to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE));
+    EXPECT_EQ(htoi.sta_chan_width, to_enum_type(wlan_mlme::StaChanWidth::ANY));
     EXPECT_TRUE(htoi.rifs_mode);
-    EXPECT_EQ(htoi.ht_protect, wlan_mlme::HtProtect::TWENTY_MHZ);
+    EXPECT_EQ(htoi.ht_protect, to_enum_type(wlan_mlme::HtProtect::TWENTY_MHZ));
     EXPECT_TRUE(htoi.nongreenfield_present);
     EXPECT_TRUE(htoi.obss_non_ht);
     EXPECT_EQ(htoi.center_freq_seg2, 155);
@@ -292,17 +292,17 @@ TEST(ElementToFidl, HtOperationToFidl) {
 TEST(FidlToElement, VhtOperationFidlToBitField) {
     wlan_mlme::VhtOperation fidl;
 
-    fidl.vht_cbw = wlan_mlme::VhtCbw::CBW_160;
+    fidl.vht_cbw = to_enum_type(wlan_mlme::VhtCbw::CBW_160);
     fidl.center_freq_seg0 = 155;
     fidl.center_freq_seg1 = 169;
-    fidl.basic_mcs.max_mcs[0] = wlan_mlme::VhtMcs::SET_0_TO_8;
-    fidl.basic_mcs.max_mcs[1] = wlan_mlme::VhtMcs::SET_0_TO_9;
-    fidl.basic_mcs.max_mcs[2] = wlan_mlme::VhtMcs::SET_NONE;
-    fidl.basic_mcs.max_mcs[3] = wlan_mlme::VhtMcs::SET_0_TO_9;
-    fidl.basic_mcs.max_mcs[4] = wlan_mlme::VhtMcs::SET_0_TO_8;
-    fidl.basic_mcs.max_mcs[5] = wlan_mlme::VhtMcs::SET_NONE;
-    fidl.basic_mcs.max_mcs[6] = wlan_mlme::VhtMcs::SET_0_TO_8;
-    fidl.basic_mcs.max_mcs[7] = wlan_mlme::VhtMcs::SET_0_TO_9;
+    fidl.basic_mcs.max_mcs[0] = to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8);
+    fidl.basic_mcs.max_mcs[1] = to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9);
+    fidl.basic_mcs.max_mcs[2] = to_enum_type(wlan_mlme::VhtMcs::SET_NONE);
+    fidl.basic_mcs.max_mcs[3] = to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9);
+    fidl.basic_mcs.max_mcs[4] = to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8);
+    fidl.basic_mcs.max_mcs[5] = to_enum_type(wlan_mlme::VhtMcs::SET_NONE);
+    fidl.basic_mcs.max_mcs[6] = to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8);
+    fidl.basic_mcs.max_mcs[7] = to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9);
 
     VhtOperation elem = VhtOperation::FromFidl(fidl);
 
@@ -339,18 +339,18 @@ TEST(ElementToFidl, VhtOperationBitFieldToField) {
 
     wlan_mlme::VhtOperation fidl = elem.ToFidl();
 
-    EXPECT_EQ(fidl.vht_cbw, wlan_mlme::VhtCbw::CBW_160);
+    EXPECT_EQ(fidl.vht_cbw, to_enum_type(wlan_mlme::VhtCbw::CBW_160));
     EXPECT_EQ(fidl.center_freq_seg0, 155);
     EXPECT_EQ(fidl.center_freq_seg1, 169);
 
-    EXPECT_EQ(fidl.basic_mcs.max_mcs[0], wlan_mlme::VhtMcs::SET_0_TO_8);
-    EXPECT_EQ(fidl.basic_mcs.max_mcs[1], wlan_mlme::VhtMcs::SET_0_TO_9);
-    EXPECT_EQ(fidl.basic_mcs.max_mcs[2], wlan_mlme::VhtMcs::SET_NONE);
-    EXPECT_EQ(fidl.basic_mcs.max_mcs[3], wlan_mlme::VhtMcs::SET_0_TO_9);
-    EXPECT_EQ(fidl.basic_mcs.max_mcs[4], wlan_mlme::VhtMcs::SET_0_TO_8);
-    EXPECT_EQ(fidl.basic_mcs.max_mcs[5], wlan_mlme::VhtMcs::SET_NONE);
-    EXPECT_EQ(fidl.basic_mcs.max_mcs[6], wlan_mlme::VhtMcs::SET_0_TO_8);
-    EXPECT_EQ(fidl.basic_mcs.max_mcs[7], wlan_mlme::VhtMcs::SET_0_TO_9);
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[0], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8));
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[1], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9));
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[2], to_enum_type(wlan_mlme::VhtMcs::SET_NONE));
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[3], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9));
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[4], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8));
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[5], to_enum_type(wlan_mlme::VhtMcs::SET_NONE));
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[6], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8));
+    EXPECT_EQ(fidl.basic_mcs.max_mcs[7], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9));
 }
 
 }  // namespace
