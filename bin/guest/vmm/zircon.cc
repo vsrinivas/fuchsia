@@ -25,6 +25,8 @@
 
 #if __aarch64__
 static constexpr uintptr_t kKernelOffset = 0;
+static constexpr uint64_t kPeripheralRangeBase = 0x800000000;
+static constexpr uint64_t kPeripheralRangeSize = 0x8400000;
 
 static constexpr zbi_platform_id_t kPlatformId = {
     .vid = 3,  // PDEV_VID_GOOGLE
@@ -149,7 +151,14 @@ static zx_status_t create_zbi(
     return ZX_ERR_INTERNAL;
   }
   // Memory config.
-  std::vector<zbi_mem_range_t> mem_config;
+  // TODO(MAC-170): Use dev_mem to fill out the peripheral memory ranges.
+  std::vector<zbi_mem_range_t> mem_config{
+      {
+          .paddr = 0x800000000,
+          .length = 0x8400000,
+          .type = ZBI_MEM_RANGE_PERIPHERAL,
+      },
+  };
 
   dev_mem.YieldInverseRange(0, cfg.memory(), [&mem_config](auto range){
     mem_config.emplace_back(zbi_mem_range_t{
@@ -160,6 +169,12 @@ static zx_status_t create_zbi(
   });
 
   for (const auto& range: dev_mem) {
+    // TODO(MAC-170): Remove this once we support filling out the peripheral
+    // memory range from dev_mem.
+    if (range.addr >= kPeripheralRangeBase
+        && range.addr + range.size <= kPeripheralRangeBase + kPeripheralRangeSize) {
+      continue;
+    }
     mem_config.emplace_back(zbi_mem_range_t{
         .paddr = range.addr,
         .length = range.size,
