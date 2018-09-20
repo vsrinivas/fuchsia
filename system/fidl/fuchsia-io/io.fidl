@@ -84,7 +84,7 @@ const uint32 OPEN_FLAG_STATUS = 0x01000000;
 // Node defines the minimal interface for entities which can be accessed in a filesystem.
 [Layout="Simple"]
 interface Node {
-    // May be used to create another connection to the same remote object.
+    // Create another connection to the same remote object.
     0x80000001: Clone(uint32 flags, request<Node> object);
 
     // Terminates connection with object.
@@ -251,7 +251,7 @@ interface Directory : Node {
     //   // Unterminated name of entry.
     //   char name[0];
     // }
-    0x83000003: ReadDirents(uint64 max_out) -> (zx.status s, vector<uint8>:MAX_BUF dirents);
+    0x83000003: ReadDirents(uint64 max_bytes) -> (zx.status s, vector<uint8>:MAX_BUF dirents);
 
     // Reset the directory seek offset.
     0x83000004: Rewind() -> (zx.status s);

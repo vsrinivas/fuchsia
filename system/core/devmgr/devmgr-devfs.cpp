@@ -707,13 +707,13 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
         DECODE_REQUEST(msg, DirectoryReadDirents);
         DEFINE_REQUEST(msg, DirectoryReadDirents);
 
-        if (request->max_out > ZXFIDL_MAX_MSG_BYTES) {
+        if (request->max_bytes > ZXFIDL_MAX_MSG_BYTES) {
             return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
         }
 
-        uint8_t data[request->max_out];
+        uint8_t data[request->max_bytes];
         size_t actual = 0;
-        r = devfs_readdir(dn, &ios->readdir_ino, data, request->max_out);
+        r = devfs_readdir(dn, &ios->readdir_ino, data, request->max_bytes);
         if (r >= 0) {
             actual = r;
             r = ZX_OK;
