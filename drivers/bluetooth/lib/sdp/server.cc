@@ -121,14 +121,9 @@ Server::Server(fbl::RefPtr<data::Domain> data_domain)
       },
       async_get_default_dispatcher());
 
-  // SDP and RFCOMM are already reserved
-  psm_callbacks_.emplace(l2cap::kSDP, [](auto) {
-    ZX_PANIC("Got unexpected connection on SDP PSM!");
-  });
-  // Should not be possible
-  psm_callbacks_.emplace(l2cap::kRFCOMM, [](auto) {
-    ZX_PANIC("Got unexpected L2CAP Connection on RFCOMM PSM!");
-  });
+  // SDP and RFCOMM are used by SDP server.
+  psm_to_service_.emplace(l2cap::kSDP, kSDPHandle);
+  psm_to_service_.emplace(l2cap::kRFCOMM, kSDPHandle);
 }
 
 Server::~Server() { data_domain_->UnregisterService(l2cap::kSDP); }
@@ -243,23 +238,22 @@ ServiceHandle Server::RegisterService(ServiceRecord record,
         rfcomm::ServerChannel rfcomm_channel = 0;
         record.SetAttribute(kProtocolDescriptorList,
                             WriteRFCOMMChannel(primary_list, rfcomm_channel));
-      } else if (psm_callbacks_.count(psm)) {
+      } else if (psm_to_service_.count(psm)) {
         bt_log(SPEW, "sdp", "L2CAP PSM %#.4x is already allocated", psm);
         return 0;
       } else {
-        psm_callbacks_.emplace(
-            psm,
-            [primary_list = primary_list.Clone(), conn_cb = std::move(conn_cb)](
-                zx::socket conn) { conn_cb(std::move(conn), primary_list); });
+        bt_log(SPEW, "sdp", "Allocating PSM %#.4x for new service", psm);
+        psm_to_service_.emplace(psm, next);
         data_domain_->RegisterService(
             psm,
-            [psm, self = weak_ptr_factory_.GetWeakPtr()](auto channel) {
-              if (self)
-                self->OnChannelConnected(psm, std::move(channel));
+            [psm, protocol = primary_list.Clone(),
+             conn_cb = std::move(conn_cb)](auto socket, auto handle) mutable {
+              bt_log(SPEW, "sdp", "Channel connected to %#.4x", psm);
+              conn_cb(std::move(socket), handle, std::move(protocol));
             },
             async_get_default_dispatcher());
         auto psm_place =
-            record_psms_.emplace(next, std::unordered_set<l2cap::PSM>{psm});
+            service_to_psms_.emplace(next, std::unordered_set<l2cap::PSM>{psm});
         if (!psm_place.second) {
           psm_place.first->second.insert(psm);
         }
@@ -283,13 +277,13 @@ bool Server::UnregisterService(ServiceHandle handle) {
   bt_log(TRACE, "sdp", "unregistering service (handle: %#.8x)", handle);
 
   // Unregister any service callbacks from L2CAP
-  auto psms_it = record_psms_.find(handle);
-  if (psms_it != record_psms_.end()) {
+  auto psms_it = service_to_psms_.find(handle);
+  if (psms_it != service_to_psms_.end()) {
     for (const auto& psm : psms_it->second) {
       data_domain_->UnregisterService(psm);
-      psm_callbacks_.erase(psm);
+      psm_to_service_.erase(psm);
     }
-    record_psms_.erase(psms_it);
+    service_to_psms_.erase(psms_it);
   }
 
   records_.erase(handle);
@@ -458,9 +452,6 @@ void Server::OnRxBFrame(const hci::ConnectionHandle& handle,
     }
   });
 }
-
-void Server::OnChannelConnected(l2cap::PSM psm,
-                                fbl::RefPtr<l2cap::Channel> channel) {}
 
 }  // namespace sdp
 }  // namespace btlib

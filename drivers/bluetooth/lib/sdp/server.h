@@ -46,10 +46,11 @@ class Server final {
   // registered. Any service handle previously set in |record| is ignored and
   // overwritten.
   // |conn_cb| will be called for any connections made to the registered
-  // service with a socket set to communicate on the connection and the protocol
-  // descriptor list for the endpoint which was connected.
-  using ConnectCallback =
-      fit::function<void(zx::socket connection, const DataElement& protocol)>;
+  // service with a connected socket, the connection handle the channel was
+  // opened on, and the descriptor list for the endpoint which was connected.
+  // TODO: possibly combine these into a struct later
+  using ConnectCallback = fit::function<void(zx::socket, hci::ConnectionHandle,
+                                             const DataElement&)>;
   ServiceHandle RegisterService(ServiceRecord record, ConnectCallback conn_cb);
 
   // Unregister a service from the database. Idempotent.
@@ -80,23 +81,18 @@ class Server final {
   void OnChannelClosed(const hci::ConnectionHandle& handle);
   void OnRxBFrame(const hci::ConnectionHandle& handle, const l2cap::SDU& sdu);
 
-  // l2cap::RegisterService callback
-  void OnChannelConnected(l2cap::PSM psm, fbl::RefPtr<l2cap::Channel> channel);
-
-  // The data domain that owns the L2CAP layer. Used to register callbacks for
+  // The data domain that owns the L2CAP layer.  Used to register callbacks for
   // the channels of services registered.
   fbl::RefPtr<data::Domain> data_domain_;
 
   std::unordered_map<hci::ConnectionHandle, l2cap::ScopedChannel> channels_;
   std::unordered_map<ServiceHandle, ServiceRecord> records_;
 
-  // Registered handles to sets of PSMs registered.
+  // Which PSMs are registered to services.
+  std::unordered_map<l2cap::PSM, ServiceHandle> psm_to_service_;
+  // The set of PSMs that are registered to a service.
   std::unordered_map<ServiceHandle, std::unordered_set<l2cap::PSM>>
-      record_psms_;
-
-  // Registered PSMs to a callback to route a newly connected socket.
-  std::unordered_map<l2cap::PSM, fit::function<void(zx::socket)>>
-      psm_callbacks_;
+      service_to_psms_;
 
   // The next available ServiceHandle.
   ServiceHandle next_handle_;

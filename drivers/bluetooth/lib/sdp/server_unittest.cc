@@ -26,7 +26,11 @@ using ::btlib::testing::FakeController;
 
 using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
-constexpr hci::ConnectionHandle kTestHandle = 1;
+constexpr hci::ConnectionHandle kTestHandle1 = 1;
+constexpr hci::ConnectionHandle kTestHandle2 = 2;
+
+void NopConnectCallback(zx::socket, hci::ConnectionHandle, const DataElement&) {
+}
 
 class SDP_ServerTest : public TestingBase {
  public:
@@ -39,7 +43,9 @@ class SDP_ServerTest : public TestingBase {
     l2cap_->set_channel_callback(
         [this](auto fake_chan) { channel_ = std::move(fake_chan); });
     l2cap_->Initialize();
-    l2cap_->AddACLConnection(kTestHandle, hci::Connection::Role::kSlave,
+    l2cap_->AddACLConnection(kTestHandle1, hci::Connection::Role::kSlave,
+                             nullptr, nullptr);
+    l2cap_->AddACLConnection(kTestHandle2, hci::Connection::Role::kSlave,
                              nullptr, nullptr);
     server_ = std::make_unique<Server>(l2cap_);
   }
@@ -87,7 +93,7 @@ class SDP_ServerTest : public TestingBase {
     return Expect(expected_response);
   }
 
-  ServiceHandle AddSPP() {
+  ServiceHandle AddSPP(sdp::Server::ConnectCallback cb = NopConnectCallback) {
     ServiceRecord record;
 
     record.SetServiceClassUUIDs({profile::kSerialPort});
@@ -98,12 +104,13 @@ class SDP_ServerTest : public TestingBase {
     record.AddProfile(profile::kSerialPort, 1, 2);
     record.AddInfo("en", "FAKE", "", "");
     ServiceHandle handle =
-        server()->RegisterService(std::move(record), [](auto, const auto&) {});
+        server()->RegisterService(std::move(record), std::move(cb));
     EXPECT_TRUE(handle);
     return handle;
   }
 
-  ServiceHandle AddA2DPSink() {
+  ServiceHandle AddA2DPSink(
+      sdp::Server::ConnectCallback cb = NopConnectCallback) {
     ServiceRecord record;
     record.SetServiceClassUUIDs({profile::kAudioSink});
     record.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
@@ -115,7 +122,7 @@ class SDP_ServerTest : public TestingBase {
     record.SetAttribute(kA2DP_SupportedFeatures,
                         DataElement(uint16_t(0x0001)));  // Headphones
     ServiceHandle handle =
-        server()->RegisterService(std::move(record), [](auto, const auto&) {});
+        server()->RegisterService(std::move(record), std::move(cb));
     EXPECT_TRUE(handle);
     return handle;
   }
@@ -138,7 +145,7 @@ constexpr l2cap::ChannelId kSdpChannel = 0x0041;
 //  - Packets that are the wrong length are responded to with kInvalidSize
 //  - Answers with the same TransactionID as sent
 TEST_F(SDP_ServerTest, BasicError) {
-  l2cap()->TriggerInboundL2capChannel(kTestHandle, l2cap::kSDP, kSdpChannel,
+  l2cap()->TriggerInboundL2capChannel(kTestHandle1, l2cap::kSDP, kSdpChannel,
                                       0x0bad);
   RunLoopUntilIdle();
   ASSERT_TRUE(fake_chan());
@@ -223,8 +230,8 @@ TEST_F(SDP_ServerTest, PSMVerification) {
   psm_rfcomm.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
                                    protocol::kRFCOMM, DataElement());
 
-  EXPECT_TRUE(server()->RegisterService(std::move(psm_rfcomm),
-                                        [](auto, const auto&) {}));
+  EXPECT_TRUE(
+      server()->RegisterService(std::move(psm_rfcomm), NopConnectCallback));
 
   // Another RFCOMM is also fine.
   ServiceRecord psm_rfcomm2;
@@ -235,8 +242,8 @@ TEST_F(SDP_ServerTest, PSMVerification) {
   psm_rfcomm2.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
                                     protocol::kRFCOMM, DataElement());
 
-  EXPECT_TRUE(server()->RegisterService(std::move(psm_rfcomm2),
-                                        [](auto, const auto&) {}));
+  EXPECT_TRUE(
+      server()->RegisterService(std::move(psm_rfcomm2), NopConnectCallback));
 
   ServiceRecord psm_ok;
   psm_ok.SetServiceClassUUIDs({profile::kAVRemoteControl});
@@ -244,7 +251,7 @@ TEST_F(SDP_ServerTest, PSMVerification) {
                                protocol::kL2CAP, DataElement(uint16_t(500)));
 
   auto handle =
-      server()->RegisterService(std::move(psm_ok), [](auto, const auto&) {});
+      server()->RegisterService(std::move(psm_ok), NopConnectCallback);
   EXPECT_TRUE(handle);
 
   ServiceRecord psm_duplicate;
@@ -253,8 +260,8 @@ TEST_F(SDP_ServerTest, PSMVerification) {
                                       protocol::kL2CAP,
                                       DataElement(uint16_t(500)));
 
-  EXPECT_FALSE(server()->RegisterService(std::move(psm_duplicate),
-                                         [](auto, const auto&) {}));
+  EXPECT_FALSE(
+      server()->RegisterService(std::move(psm_duplicate), NopConnectCallback));
 
   // Unregistering allows us to re-register with PSM.
   server()->UnregisterService(handle);
@@ -263,8 +270,8 @@ TEST_F(SDP_ServerTest, PSMVerification) {
   psm_readd.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
                                   protocol::kL2CAP, DataElement(uint16_t(500)));
 
-  EXPECT_TRUE(server()->RegisterService(std::move(psm_readd),
-                                        [](auto, const auto&) {}));
+  EXPECT_TRUE(
+      server()->RegisterService(std::move(psm_readd), NopConnectCallback));
 
   // TODO(NET-1417): test that new connections to the PSM get delivered once
   // they are deliverable
@@ -283,7 +290,7 @@ TEST_F(SDP_ServerTest, ServiceSearchRequest) {
   ServiceHandle spp_handle = AddSPP();
   ServiceHandle a2dp_handle = AddA2DPSink();
 
-  l2cap()->TriggerInboundL2capChannel(kTestHandle, l2cap::kSDP, kSdpChannel,
+  l2cap()->TriggerInboundL2capChannel(kTestHandle1, l2cap::kSDP, kSdpChannel,
                                       0x0bad);
   RunLoopUntilIdle();
 
@@ -385,7 +392,7 @@ TEST_F(SDP_ServerTest, ServiceSearchRequest) {
 // Test ServiceSearchRequest:
 //  - doesn't return more than the max requested
 TEST_F(SDP_ServerTest, ServiceSearchRequestOneOfMany) {
-  l2cap()->TriggerInboundL2capChannel(kTestHandle, l2cap::kSDP, kSdpChannel,
+  l2cap()->TriggerInboundL2capChannel(kTestHandle1, l2cap::kSDP, kSdpChannel,
                                       0x0bad);
   RunLoopUntilIdle();
 
@@ -453,7 +460,7 @@ TEST_F(SDP_ServerTest, ServiceAttributeRequest) {
 
   EXPECT_TRUE(handle);
 
-  l2cap()->TriggerInboundL2capChannel(kTestHandle, l2cap::kSDP, kSdpChannel,
+  l2cap()->TriggerInboundL2capChannel(kTestHandle1, l2cap::kSDP, kSdpChannel,
                                       0x0bad);
   RunLoopUntilIdle();
 
@@ -594,7 +601,7 @@ TEST_F(SDP_ServerTest, SearchAttributeRequest) {
   record1.SetAttribute(0xf000, DataElement(uint32_t(0x01234567)));
 
   ServiceHandle handle1 =
-      server()->RegisterService(std::move(record1), [](auto, const auto&) {});
+      server()->RegisterService(std::move(record1), NopConnectCallback);
 
   EXPECT_TRUE(handle1);
 
@@ -603,11 +610,11 @@ TEST_F(SDP_ServerTest, SearchAttributeRequest) {
   record2.AddProtocolDescriptor(ServiceRecord::kPrimaryProtocolList,
                                 protocol::kL2CAP, DataElement(uint16_t(501)));
   ServiceHandle handle2 =
-      server()->RegisterService(std::move(record2), [](auto, const auto&) {});
+      server()->RegisterService(std::move(record2), NopConnectCallback);
 
   EXPECT_TRUE(handle2);
 
-  l2cap()->TriggerInboundL2capChannel(kTestHandle, l2cap::kSDP, kSdpChannel,
+  l2cap()->TriggerInboundL2capChannel(kTestHandle1, l2cap::kSDP, kSdpChannel,
                                       0x0bad);
   RunLoopUntilIdle();
 
@@ -745,6 +752,42 @@ TEST_F(SDP_ServerTest, SearchAttributeRequest) {
       SDP_ERROR_RSP(0xE002, ErrorCode::kInvalidRequestSyntax);
 
   EXPECT_TRUE(ReceiveAndExpect(kInvalidMaxBytes, kRspErrSyntax2));
+}
+
+TEST_F(SDP_ServerTest, ConnectionCallbacks) {
+  l2cap()->TriggerInboundL2capChannel(kTestHandle1, l2cap::kSDP, kSdpChannel,
+                                      0x0bad);
+  RunLoopUntilIdle();
+
+  std::vector<zx::socket> socks;
+  hci::ConnectionHandle latest_handle;
+
+  // Register a service
+  AddA2DPSink([&socks, &latest_handle](zx::socket incoming_sock, auto handle,
+                                       const auto& protocol) {
+    bt_log(SPEW, "test", "Got socket for the a2dp sink");
+    socks.emplace_back(std::move(incoming_sock));
+    latest_handle = handle;
+  });
+
+  // Connect to the service
+  l2cap()->TriggerInboundL2capChannel(kTestHandle1, l2cap::kAVDTP,
+                                      kSdpChannel + 1, 0x0b00);
+  RunLoopUntilIdle();
+
+  // It should get a callback with a socket
+  EXPECT_EQ(1u, socks.size());
+  EXPECT_EQ(kTestHandle1, latest_handle);
+
+  // Connect to the same service again with the same PSM (on a different
+  // connection, it should still work)
+  l2cap()->TriggerInboundL2capChannel(kTestHandle2, l2cap::kAVDTP,
+                                      kSdpChannel + 2, 0x0b01);
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(2u, socks.size());
+  EXPECT_EQ(kTestHandle2, latest_handle);
+  EXPECT_NE(socks.front(), socks.back());
 }
 
 #undef SDP_ERROR_RSP

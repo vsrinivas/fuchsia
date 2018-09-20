@@ -67,7 +67,7 @@ void FakeDomain::TriggerInboundL2capChannel(hci::ConnectionHandle handle,
   l2cap::ChannelCallback& cb = cb_iter->second.first;
   async_dispatcher_t* const dispatcher = cb_iter->second.second;
   auto chan = OpenFakeChannel(&link_data, id, remote_id);
-  async::PostTask(dispatcher, [cb = std::move(cb), chan = std::move(chan)] {
+  async::PostTask(dispatcher, [cb = cb.share(), chan = std::move(chan)] {
     cb(std::move(chan));
   });
 }

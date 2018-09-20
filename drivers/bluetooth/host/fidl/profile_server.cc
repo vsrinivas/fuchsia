@@ -206,7 +206,8 @@ void ProfileServer::AddService(fidlbredr::ServiceDefinition definition,
     rec.SetAttribute(attribute.id, std::move(elem));
   }
 
-  auto handle = sdp->RegisterService(std::move(rec), [](auto, const auto&) {});
+  auto handle =
+      sdp->RegisterService(std::move(rec), [](auto, auto, const auto&) {});
 
   if (!handle) {
     callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
