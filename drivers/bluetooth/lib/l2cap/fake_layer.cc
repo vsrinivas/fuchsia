@@ -5,6 +5,7 @@
 #include "fake_layer.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "fake_channel.h"
 
@@ -131,6 +132,23 @@ void FakeLayer::RegisterService(PSM psm, ChannelCallback channel_callback,
 
   inbound_conn_cbs_.emplace(
       psm, std::make_pair(std::move(channel_callback), dispatcher));
+}
+
+void FakeLayer::RegisterService(PSM psm, SocketCallback socket_callback,
+                                async_dispatcher_t* cb_dispatcher) {
+  RegisterService(
+      psm,
+      [this, psm, cb = std::move(socket_callback),
+       cb_dispatcher](auto channel) mutable {
+        zx::socket s = socket_factory_.MakeSocketForChannel(channel);
+        // Called every time the service is connected, cb must be shared.
+        async::PostTask(cb_dispatcher,
+                        [s = std::move(s), cb = cb.share(),
+                         handle = channel->link_handle()]() mutable {
+                          cb(std::move(s), handle);
+                        });
+      },
+      async_get_default_dispatcher());
 }
 
 void FakeLayer::UnregisterService(PSM psm) {

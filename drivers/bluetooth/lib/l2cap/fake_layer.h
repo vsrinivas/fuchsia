@@ -12,6 +12,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/socket_factory.h"
 
 namespace btlib {
 namespace l2cap {
@@ -63,6 +64,8 @@ class FakeLayer final : public L2CAP {
                    async_dispatcher_t* dispatcher) override;
   void RegisterService(PSM psm, ChannelCallback channel_callback,
                        async_dispatcher_t* dispatcher) override;
+  void RegisterService(PSM psm, SocketCallback channel_callback,
+                       async_dispatcher_t* dispatcher) override;
   void UnregisterService(PSM psm) override;
 
   // Called when a new channel gets opened. Tests can use this to obtain a
@@ -110,6 +113,9 @@ class FakeLayer final : public L2CAP {
   std::unordered_map<hci::ConnectionHandle, LinkData> links_;
   FakeChannelCallback chan_cb_;
   std::unordered_map<PSM, ChannelDelivery> inbound_conn_cbs_;
+
+  // Makes sockets for RegisterService
+  SocketFactory socket_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLayer);
 };

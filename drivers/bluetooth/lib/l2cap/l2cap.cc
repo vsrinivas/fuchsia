@@ -8,7 +8,8 @@
 #include "garnet/drivers/bluetooth/lib/common/task_domain.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 
-#include "channel_manager.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/socket_factory.h"
 
 namespace btlib {
 namespace l2cap {
@@ -28,6 +29,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
       // This can only run once during initialization.
       ZX_DEBUG_ASSERT(!chanmgr_);
       chanmgr_ = std::make_unique<ChannelManager>(hci_, dispatcher());
+      socket_factory_ = std::make_unique<SocketFactory>();
       bt_log(TRACE, "l2cap", "initialized");
     });
   }
@@ -117,6 +119,23 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
     });
   }
 
+  void RegisterService(PSM psm, SocketCallback socket_callback,
+                       async_dispatcher_t* cb_dispatcher) override {
+    RegisterService(
+        psm,
+        [this, psm, cb = std::move(socket_callback),
+         cb_dispatcher](auto channel) mutable {
+          zx::socket s = socket_factory_->MakeSocketForChannel(channel);
+          // Called every time the service is connected, cb must be shared.
+          async::PostTask(cb_dispatcher,
+                          [s = std::move(s), cb = cb.share(),
+                           handle = channel->link_handle()]() mutable {
+                            cb(std::move(s), handle);
+                          });
+        },
+        dispatcher());
+  }
+
   void UnregisterService(PSM psm) override {
     PostMessage([this, psm] {
       if (chanmgr_) {
@@ -130,6 +149,10 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
 
   // This must be only accessed on the L2CAP task runner.
   std::unique_ptr<ChannelManager> chanmgr_;
+
+  // Makes sockets for RegisterService, should only be used on the L2CAP task
+  // runner.
+  std::unique_ptr<SocketFactory> socket_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Impl);
 };
