@@ -12,11 +12,7 @@ in helping with these.
 
 The debugger runs remotely only (you can't do self-hosted debug).
 
-### Major limitations
-
-  * **There is no “next” command.** This is annoying but can be worked around
-    since “step” and “finish” both work, or you can do things like “u 43” to
-    get to a certain line.
+### Limitations
 
   * Be aware that our debug build is compiled with some optimizations which
     means stepping may not work the way you would want even if the debugger was
@@ -27,6 +23,12 @@ The debugger runs remotely only (you can't do self-hosted debug).
 
   * “step” steps into syscalls which end up as a few assembly instructions you
     have to step through.
+
+### Bugs
+
+  * [Open zxdb bugs](https://fuchsia.atlassian.net/browse/DX-80?jql=project%20%3D%20DX%20AND%20component%20%3D%20zxdb%20order%20by%20lastViewed%20DESC)
+
+  * [Report a new zxdb bug](https://fuchsia.atlassian.net/secure/CreateIssueDetails!init.jspa?pid=11718&issuetype=10006&priority=3&components=11886)
 
 ## Running
 
