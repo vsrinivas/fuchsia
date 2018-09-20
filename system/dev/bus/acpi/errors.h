@@ -57,6 +57,8 @@ static inline zx_status_t acpi_to_zx_status(ACPI_STATUS acpi_status) {
         return ZX_ERR_ACCESS_DENIED;
     case AE_IO_ERROR:
         return ZX_ERR_IO;
+    case AE_OK:
+        return ZX_OK;
     default:
         return ZX_ERR_INTERNAL;
     }
