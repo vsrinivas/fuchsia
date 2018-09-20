@@ -31,6 +31,7 @@ class Guest {
  public:
   using VcpuFactory = fit::function<zx_status_t(Guest* guest, uintptr_t entry,
                                                 uint64_t id, Vcpu* vcpu)>;
+  using IoMappingList = fbl::SinglyLinkedList<fbl::unique_ptr<IoMapping>>;
 
   zx_status_t Init(size_t mem_size);
 
@@ -62,8 +63,10 @@ class Guest {
   // Creates a vmar for a specific region of guest memory.
   zx_status_t CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar);
 
-  fbl::SinglyLinkedList<fbl::unique_ptr<IoMapping>>::const_iterator mappings_begin() const { return mappings_.begin();}
-  fbl::SinglyLinkedList<fbl::unique_ptr<IoMapping>>::const_iterator mappings_end() const { return mappings_.end();}
+  IoMappingList::const_iterator mappings_begin() const {
+    return mappings_.begin();
+  }
+  IoMappingList::const_iterator mappings_end() const { return mappings_.end(); }
 
  private:
   // TODO(alexlegg): Consolidate this constant with other definitions in Garnet.
@@ -74,8 +77,7 @@ class Guest {
   zx::guest guest_;
   zx::vmar vmar_;
   PhysMem phys_mem_;
-
-  fbl::SinglyLinkedList<fbl::unique_ptr<IoMapping>> mappings_;
+  IoMappingList mappings_;
 
   VcpuFactory vcpu_factory_ = [](Guest* guest, uintptr_t entry, uint64_t id,
                                  Vcpu* vcpu) { return ZX_ERR_BAD_STATE; };
