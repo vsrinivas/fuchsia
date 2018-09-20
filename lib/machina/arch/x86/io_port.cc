@@ -6,7 +6,6 @@
 
 #include <time.h>
 
-#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/rtc.h"
@@ -62,6 +61,31 @@ constexpr uint8_t kI8042DataTestResponse        = 0x55;
 // I8237 DMA Controller relative port mappings.
 // See Intel Series 7 Platform Host Controller Hub, Table 13-2.
 constexpr uint16_t kI8237DmaPage0               = 0x7;
+
+// CMOS ports.
+static constexpr uint64_t kCmosBase             = 0x70;
+static constexpr uint64_t kCmosSize             = 0x2;
+
+// I8042 ports.
+static constexpr uint64_t kI8042Base            = 0x60;
+
+// I8237 DMA Controller ports.
+// See Intel Series 7 Platform Host Controller Hub, Table 13-2.
+static constexpr uint64_t kI8237Base            = 0x80;
+
+// Power states as defined in the DSDT.
+//
+// We only implement a transition from S0 to S5 to trigger guest termination.
+static constexpr uint64_t kSlpTyp5              = 0x1;
+
+// PIC ports.
+static constexpr uint64_t kPic1Base             = 0x20;
+static constexpr uint64_t kPic2Base             = 0xa0;
+static constexpr uint64_t kPicSize              = 0x2;
+
+// PIT ports.
+static constexpr uint64_t kPitBase              = 0x40;
+static constexpr uint64_t kPitSize              = 0x4;
 
 // See Intel Series 7 Platform Host Controller Hub, Section 5.4.1.9:
 // If the [IO port] is not claimed by any peripheral (and subsequently aborted),

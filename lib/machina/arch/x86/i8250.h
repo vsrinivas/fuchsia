@@ -15,7 +15,7 @@ namespace machina {
 class Guest;
 
 // Implements the I8250 UART.
-class I8250 : public IoHandler, public PlatformDevice {
+class I8250 : public IoHandler {
  public:
   zx_status_t Init(Guest* guest, uint64_t addr);
 
@@ -34,6 +34,15 @@ class I8250 : public IoHandler, public PlatformDevice {
   uint8_t line_control_ __TA_GUARDED(mutex_) = 0;
 
   void Print(uint8_t ch);
+};
+
+class I8250Group : public PlatformDevice {
+ public:
+  zx_status_t Init(Guest* guest);
+
+ private:
+  static constexpr size_t kNumUarts = 4;
+  I8250 uarts_[kNumUarts];
 };
 
 }  // namespace machina

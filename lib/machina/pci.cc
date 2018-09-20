@@ -33,6 +33,17 @@ constexpr uint16_t pci_ecam_register_etc(uint64_t addr) {
   return bits_shift(addr, 11, 0);
 }
 
+// The size of an ECAM region depends on values in the MCFG ACPI table. For
+// each ECAM region there is a defined physical base address as well as a bus
+// start/end value for that region.
+//
+// When creating an ECAM address for a PCI configuration register, the bus
+// value must be relative to the starting bus number for that ECAM region.
+static inline constexpr uint64_t pci_ecam_size(uint64_t start_bus,
+                                               uint64_t end_bus) {
+  return (end_bus - start_bus) << 20;
+}
+
 // PCI command register bits.
 static constexpr uint16_t kPciCommandIoEnable = 1 << 0;
 static constexpr uint16_t kPciCommandMemEnable = 1 << 1;
@@ -63,6 +74,28 @@ static constexpr uint8_t kPciRegisterCapTop = UINT8_MAX;
 // PCI capabilities register layout.
 constexpr uint8_t kPciCapTypeOffset = 0;
 constexpr uint8_t kPciCapNextOffset = 1;
+
+// clang-format off
+
+// PCI memory ranges.
+#if __aarch64__
+
+static constexpr uint64_t kPciEcamPhysBase    = 0x808100000;
+static constexpr uint64_t kPciMmioBarPhysBase = 0x808200000;
+
+#elif __x86_64__
+
+static constexpr uint64_t kPciEcamPhysBase    = 0xf8100000;
+static constexpr uint64_t kPciMmioBarPhysBase = 0xf8200000;
+static constexpr uint64_t kPciConfigPortBase  = 0xcf8;
+static constexpr uint64_t kPciConfigPortSize  = 0x8;
+
+#endif
+
+static constexpr uint64_t kPciEcamSize        = pci_ecam_size(0, 1);
+static constexpr uint64_t kPciMmioBarSize     = 0x100000;
+
+// clang-format on
 
 // Per-device IRQ assignments.
 //
@@ -135,7 +168,8 @@ PciBus::PciBus(Guest* guest, InterruptController* interrupt_controller)
       ecam_handler_(this),
       port_handler_(this),
       interrupt_controller_(interrupt_controller),
-      root_complex_(kRootComplexAttributes) {}
+      root_complex_(kRootComplexAttributes),
+      mmio_base_(kPciMmioBarPhysBase) {}
 
 zx_status_t PciBus::Init() {
   root_complex_.bar_[0].size = 0x10;
@@ -147,7 +181,7 @@ zx_status_t PciBus::Init() {
 
   // Setup ECAM trap for a single bus.
   status = guest_->CreateMapping(TrapType::MMIO_SYNC, kPciEcamPhysBase,
-                                 pci_ecam_size(0, 1), 0, &ecam_handler_);
+                                 kPciEcamSize, 0, &ecam_handler_);
   if (status != ZX_OK) {
     return status;
   }
@@ -346,7 +380,7 @@ zx_status_t PciBus::Interrupt(PciDevice& device) {
 }
 
 zx_status_t PciBus::ConfigureDtb(void* dtb) const {
-  uint64_t reg_val[2] = {htobe64(kPciEcamPhysBase), htobe64(pci_ecam_size(0, 1))};
+  uint64_t reg_val[2] = {htobe64(kPciEcamPhysBase), htobe64(kPciEcamSize)};
   int node_off = fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
   if (node_off < 0) {
     FXL_LOG(ERROR) << "Failed to find PCI in DTB";

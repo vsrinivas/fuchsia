@@ -19,7 +19,6 @@
 #include <zircon/boot/image.h>
 
 #include "garnet/bin/guest/vmm/guest_config.h"
-#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/dev_mem.h"
 #include "garnet/lib/machina/guest.h"
 

@@ -7,7 +7,6 @@
 #include <endian.h>
 #include <libzbi/zbi.h>
 #include <zircon/boot/driver-config.h>
-#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/vcpu.h"
@@ -26,6 +25,32 @@ static constexpr uint32_t kGicdCtlrARENSMask = 1u << 5;
 static constexpr uint32_t kGicdIrouteIRMMask = 1u << 31;
 
 // clang-format off
+
+// For arm64, memory addresses must be in a 36-bit range. This is due to limits
+// placed within the MMU code based on the limits of a Cortex-A53.
+//
+//See ARM DDI 0487B.b, Table D4-25 for the maximum IPA range that can be used.
+
+// GIC v2 distributor memory range.
+static constexpr uint64_t kGicv2DistributorPhysBase      = 0x800001000;
+static constexpr uint64_t kGicv2DistributorSize          = 0x1000;
+
+// GIC v3 distributor memory range.
+static constexpr uint64_t kGicv3DistributorPhysBase      = 0x800000000;
+static constexpr uint64_t kGicv3DistributorSize          = 0x10000;
+
+// GIC v3 Redistributor memory range.
+//
+// See GIC v3.0/v4.0 Architecture Spec 8.10.
+static constexpr uint64_t kGicv3RedistributorPhysBase    = 0x800010000; // GICR_RD_BASE
+static constexpr uint64_t kGicv3RedistributorSize        = 0x10000;
+static constexpr uint64_t kGicv3RedistributorSgiPhysBase = 0x800020000; // GICR_SGI_BASE
+static constexpr uint64_t kGicv3RedistributorSgiSize     = 0x10000;
+static constexpr uint64_t kGicv3RedistributorStride      = 0x20000;
+static_assert(kGicv3RedistributorPhysBase + kGicv3RedistributorSize == kGicv3RedistributorSgiPhysBase,
+              "GICv3 Redistributor base and SGI base must be continguous");
+static_assert(kGicv3RedistributorStride >= kGicv3RedistributorSize + kGicv3RedistributorSgiSize,
+              "GICv3 Redistributor stride must be >= the size of a single mapping");
 
 // GIC Distributor registers.
 enum class GicdRegister : uint64_t {

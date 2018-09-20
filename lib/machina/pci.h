@@ -10,7 +10,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/interrupt_controller.h"
@@ -267,7 +266,7 @@ class PciBus : public PlatformDevice {
   // Embedded root complex device.
   PciDevice root_complex_;
   // Next mmio window to be allocated to connected devices.
-  uint64_t mmio_base_ = kPciMmioBarPhysBase;
+  uint64_t mmio_base_;
   // Pointer to the next open PCI slot.
   size_t next_open_slot_ = 0;
 };

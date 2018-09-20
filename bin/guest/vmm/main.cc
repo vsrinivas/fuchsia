@@ -29,7 +29,6 @@
 #include "garnet/bin/guest/vmm/instance_controller_impl.h"
 #include "garnet/bin/guest/vmm/linux.h"
 #include "garnet/bin/guest/vmm/zircon.h"
-#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/framebuffer_scanout.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/hid_event_source.h"
@@ -52,11 +51,6 @@
 #if __aarch64__
 #include "garnet/lib/machina/arch/arm64/pl031.h"
 
-static constexpr size_t kNumUarts = 1;
-static constexpr uint64_t kUartBases[kNumUarts] = {
-    // TODO(abdulla): Considering parsing this from the MDI.
-    machina::kPl011PhysBase,
-};
 #elif __x86_64__
 #include "garnet/lib/machina/arch/x86/acpi.h"
 #include "garnet/lib/machina/arch/x86/io_port.h"
@@ -64,13 +58,6 @@ static constexpr uint64_t kUartBases[kNumUarts] = {
 
 static constexpr char kDsdtPath[] = "/pkg/data/dsdt.aml";
 static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
-static constexpr size_t kNumUarts = 4;
-static constexpr uint64_t kUartBases[kNumUarts] = {
-    machina::kI8250Base0,
-    machina::kI8250Base1,
-    machina::kI8250Base2,
-    machina::kI8250Base3,
-};
 #endif
 
 static constexpr size_t kInputQueueDepth = 64;
@@ -206,16 +193,13 @@ int main(int argc, char** argv) {
   std::vector<machina::PlatformDevice*> platform_devices;
 
   // Setup UARTs.
-  machina::Uart uart[kNumUarts];
-  for (size_t i = 0; i < kNumUarts; i++) {
-    status = uart[i].Init(&guest, kUartBases[i]);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create UART at " << std::hex << kUartBases[i]
-                     << " " << status;
-      return status;
-    }
-    platform_devices.push_back(&uart[i]);
+  machina::Uart uart;
+  status = uart.Init(&guest);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to create UART at " << status;
+    return status;
   }
+  platform_devices.push_back(&uart);
   // Setup interrupt controller.
   machina::InterruptController interrupt_controller;
 #if __aarch64__
@@ -472,7 +456,7 @@ int main(int argc, char** argv) {
   machina::AcpiConfig acpi_cfg = {
       .dsdt_path = kDsdtPath,
       .mcfg_path = kMcfgPath,
-      .io_apic_addr = machina::kIoApicPhysBase,
+      .io_apic_addr = machina::IoApic::kPhysBase,
       .num_cpus = cfg.num_cpus(),
   };
   status = machina::create_acpi_table(acpi_cfg, guest.phys_mem());

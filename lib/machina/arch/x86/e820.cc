@@ -6,8 +6,6 @@
 
 #include <zircon/boot/e820.h>
 
-#include "garnet/lib/machina/address.h"
-
 // clang-format off
 
 static constexpr uint64_t kAddr32kb     = 0x0000000000008000;

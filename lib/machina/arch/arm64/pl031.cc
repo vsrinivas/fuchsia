@@ -7,7 +7,6 @@
 #include <endian.h>
 #include <stdio.h>
 
-#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/rtc.h"
 #include "lib/fxl/logging.h"
@@ -22,6 +21,9 @@ namespace machina {
 enum class Pl031Register : uint64_t {
   DR = 0x00,
 };
+
+static constexpr uint64_t kPl031PhysBase = 0x808301000;
+static constexpr uint64_t kPl031Size = 0x1000;
 
 zx_status_t Pl031::Init(Guest* guest) {
   return guest->CreateMapping(TrapType::MMIO_SYNC, kPl031PhysBase, kPl031Size,

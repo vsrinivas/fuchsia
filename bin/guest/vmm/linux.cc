@@ -18,7 +18,6 @@
 #include <zircon/boot/e820.h>
 
 #include "garnet/bin/guest/vmm/guest_config.h"
-#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
 #include "lib/fxl/strings/string_printf.h"

@@ -6,7 +6,6 @@
 
 #include <stdio.h>
 
-#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/guest.h"
 #include "lib/fxl/logging.h"
 
@@ -17,6 +16,12 @@ static constexpr uint64_t kI8250LineStatusEmpty = 1u << 5;
 static constexpr uint64_t kI8250LineStatusIdle = 1u << 6;
 
 // clang-format off
+
+static constexpr uint64_t kI8250Base0 = 0x3f8;
+static constexpr uint64_t kI8250Base1 = 0x2f8;
+static constexpr uint64_t kI8250Base2 = 0x3e8;
+static constexpr uint64_t kI8250Base3 = 0x2e8;
+static constexpr uint64_t kI8250Size  = 0x8;
 
 // I8250 registers.
 enum class I8250Register : uint64_t {
@@ -112,6 +117,22 @@ void I8250::Print(uint8_t ch) {
   fprintf(stdout, "%.*s", tx_offset_, tx_buffer_);
   fflush(stdout);
   tx_offset_ = 0;
+}
+
+zx_status_t I8250Group::Init(Guest* guest) {
+  const uint64_t kUartBases[kNumUarts] = {
+      machina::kI8250Base0,
+      machina::kI8250Base1,
+      machina::kI8250Base2,
+      machina::kI8250Base3,
+  };
+  for (size_t i = 0; i < kNumUarts; i++) {
+    zx_status_t status = uarts_[i].Init(guest, kUartBases[i]);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
 }
 
 }  // namespace machina

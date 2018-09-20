@@ -10,7 +10,7 @@
 #include "garnet/lib/machina/arch/x86/i8250.h"
 
 namespace machina {
-using Uart = I8250;
+using Uart = I8250Group;
 }  // namespace machina
 
 #elif __aarch64__

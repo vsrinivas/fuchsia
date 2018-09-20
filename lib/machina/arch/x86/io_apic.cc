@@ -10,7 +10,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
-#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/vcpu.h"
@@ -43,7 +42,7 @@
 namespace machina {
 
 zx_status_t IoApic::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::MMIO_SYNC, kIoApicPhysBase, kIoApicSize,
+  return guest->CreateMapping(TrapType::MMIO_SYNC, kPhysBase, kMemSize,
                               0, this);
 }
 

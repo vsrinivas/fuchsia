@@ -19,7 +19,7 @@ extern "C" {
 #include <acpica/actypes.h>
 }
 
-#include "garnet/lib/machina/address.h"
+#include "garnet/lib/machina/arch/x86/io_port.h"
 #include "lib/fxl/logging.h"
 
 static uint8_t acpi_checksum(void* table, uint32_t length) {

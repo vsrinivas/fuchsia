@@ -14,6 +14,14 @@
 
 namespace machina {
 
+// clang-format off
+
+// PM1 ports. Exposed here for ACPI.
+static constexpr uint64_t kPm1EventPort   = 0x1000;
+static constexpr uint64_t kPm1ControlPort = 0x2000;
+
+// clang-format on
+
 class Guest;
 
 class PicHandler : public IoHandler {

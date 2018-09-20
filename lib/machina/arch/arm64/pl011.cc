@@ -10,7 +10,6 @@
 #include <libzbi/zbi.h>
 #include <zircon/boot/driver-config.h>
 
-#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/guest.h"
 #include "lib/fxl/logging.h"
 
@@ -35,11 +34,13 @@ enum class Pl011Register : uint64_t {
     ICR     = 0x44,
 };
 
+static constexpr uint64_t kPl011PhysBase = 0x808300000;
+static constexpr uint64_t kPl011Size     = 0x1000;
+
 // clang-format on
 
-zx_status_t Pl011::Init(Guest* guest, uint64_t addr) {
-  base_addr_ = addr;
-  return guest->CreateMapping(TrapType::MMIO_SYNC, addr, kPl011Size, 0, this);
+zx_status_t Pl011::Init(Guest* guest) {
+  return guest->CreateMapping(TrapType::MMIO_SYNC, kPl011PhysBase, kPl011Size, 0, this);
 }
 
 zx_status_t Pl011::Read(uint64_t addr, IoValue* value) const {
@@ -97,7 +98,7 @@ void Pl011::Print(uint8_t ch) {
 
 zx_status_t Pl011::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
   dcfg_simple_t zbi_uart = {
-      .mmio_phys = base_addr_, .irq = 111,
+      .mmio_phys = kPl011PhysBase, .irq = 111,
   };
   zbi_result_t res =
       zbi_append_section(zbi_base, zbi_max, sizeof(zbi_uart),
@@ -106,7 +107,7 @@ zx_status_t Pl011::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
 }
 
 zx_status_t Pl011::ConfigureDtb(void* dtb) const {
-  uint64_t reg_val[2] = {htobe64(base_addr_), htobe64(kPl011Size)};
+  uint64_t reg_val[2] = {htobe64(kPl011PhysBase), htobe64(kPl011Size)};
   int node_off = fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
   if (node_off < 0) {
     FXL_LOG(ERROR) << "Failed to find Pl011 in DTB";

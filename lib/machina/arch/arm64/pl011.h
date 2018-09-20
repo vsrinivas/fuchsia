@@ -17,7 +17,7 @@ class Guest;
 // Implements the PL011 UART.
 class Pl011 : public IoHandler, public PlatformDevice {
  public:
-  zx_status_t Init(Guest* guest, uint64_t addr);
+  zx_status_t Init(Guest* guest);
 
   // IoHandler interface.
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
@@ -35,8 +35,6 @@ class Pl011 : public IoHandler, public PlatformDevice {
   uint16_t tx_offset_ __TA_GUARDED(mutex_) = 0;
 
   uint16_t control_ __TA_GUARDED(mutex_) = 0;
-
-  uint64_t base_addr_ = 0;
 
   void Print(uint8_t ch);
 };
