@@ -27,8 +27,9 @@ with the permissions specified in *options*.
 *options* is a bitfield that may contain one or more of *ZX_BTI_PERM_READ*,
 *ZX_BTI_PERM_WRITE*, *ZX_BTI_PERM_EXECUTE*, *ZX_BTI_COMPRESS*, and
 *ZX_BTI_CONTIGUOUS*.  In order for the call to succeed, *vmo* must have the
-READ/WRITE/EXECUTE rights corresponding to the permissions flags set in
-*options*. *ZX_BTI_CONTIGUOUS* is only allowed if *vmo* was allocated via
+READ/WRITE rights corresponding to the permissions flags set in *options*.
+(Note: *ZX_BTI_PERM_EXECUTE* requires *ZX_RIGHT_READ*, not *ZX_RIGHT_EXECUTE*.)
+*ZX_BTI_CONTIGUOUS* is only allowed if *vmo* was allocated via
 **zx_vmo_create_contiguous**() or **zx_vmo_create_physical**().
 *ZX_BTI_COMPRESS* and *ZX_BTI_CONTIGUOUS* are mutually exclusive.
 

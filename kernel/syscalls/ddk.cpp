@@ -334,7 +334,11 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
         options &= ~ZX_BTI_PERM_WRITE;
     }
     if (options & ZX_BTI_PERM_EXECUTE) {
-        if (!(vmo_rights & ZX_RIGHT_EXECUTE)) {
+        // Note: We check ZX_RIGHT_READ instead of ZX_RIGHT_EXECUTE
+        // here because the latter applies to execute permission of
+        // the host CPU, whereas ZX_BTI_PERM_EXECUTE applies to
+        // transactions initiated by the bus device.
+        if (!(vmo_rights & ZX_RIGHT_READ)) {
             return ZX_ERR_ACCESS_DENIED;
         }
         iommu_perms |= IOMMU_FLAG_PERM_EXECUTE;
