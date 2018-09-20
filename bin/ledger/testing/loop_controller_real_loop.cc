@@ -14,23 +14,6 @@ namespace ledger {
 
 namespace {
 
-// Returns false if the loop returned early.
-bool RunGivenLoopUntil(async::Loop* loop, zx::time time) {
-  bool timed_out = false;
-  async::TaskClosure task([loop, &timed_out] {
-    timed_out = true;
-    loop->Quit();
-  });
-  task.PostForTime(loop->dispatcher(), time);
-  loop->Run();
-  loop->ResetQuit();
-  // Another task can call Quit() on the message loop, which exits the
-  // message loop before the delayed task executes, in which case |timed_out| is
-  // still false here because the delayed task hasn't run yet. Returning from
-  // this function will delete |task| which will unregister it from the loop.
-  return timed_out;
-}
-
 // Implementation of a SubLoop that uses a real loop.
 class SubLoopRealLoop : public SubLoop {
  public:
@@ -87,15 +70,17 @@ bool LoopControllerRealLoop::RunLoopUntil(fit::function<bool()> condition) {
     if (condition()) {
       return true;
     }
-    RunGivenLoopUntil(&loop_, zx::clock::get_monotonic() + zx::msec(10));
+    RunLoopFor(zx::msec(10));
   }
 }
 
 void LoopControllerRealLoop::RunLoopFor(zx::duration duration) {
-  zx::time deadline = zx::clock::get_monotonic() + duration;
-  while (!RunGivenLoopUntil(&loop_, deadline)) {
-    // Do nothing
-  }
+  async::TaskClosure task([this] {
+    loop_.Quit();
+  });
+  task.PostDelayed(loop_.dispatcher(), duration);
+  loop_.Run();
+  loop_.ResetQuit();
 }
 
 }  // namespace ledger
