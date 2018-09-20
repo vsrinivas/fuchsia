@@ -67,9 +67,9 @@ void AudioLinkPacketSource::FlushPendingQueue(
       // our flush token (if any) to the pending flush token queue.  The sink's
       // thread will take are of releasing these objects back to the service
       // thread for cleanup when it has finished it's current job.
-      while (!pending_packet_queue_.size()) {
+      for (size_t i = 0; i < pending_packet_queue_.size(); ++i) {
         pending_flush_packet_queue_.emplace_back(
-            std::move(pending_packet_queue_[0]));
+            std::move(pending_packet_queue_[i]));
       }
       pending_packet_queue_.clear();
 
