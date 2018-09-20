@@ -116,22 +116,6 @@
 
 #define GMAC_RGMII_STATUS_LNKSTS       (1 << 3)
 
-/* AmLogic proprietary registers (not dwmac registers) */
-#define REG2_ETH_REG2_REVERSED     (1 << 28)
-#define REG2_INTERNAL_PHY_ID       (0x110181)
-
-#define REG3_PHY_ENABLE            (1   << 31)
-#define REG3_USE_PHY_IP            (1   << 30)
-#define REG3_CLK_IN_EN             (1   << 29)
-#define REG3_USE_PHY_MDI           (1   << 26)
-#define REG3_LED_POLARITY          (1   << 23)
-#define REG3_ETH_REG3_19_RESVERD   (0x9 << 16)
-#define REG3_CFG_PHY_ADDR          (0x8 <<  8)
-#define REG3_CFG_MODE              (0x7 <<  4)
-#define REG3_CFG_EN_HIGH           (1   <<  3)
-#define REG3_ETH_REG3_2_RESERVED     (0x7)
-
-
 /* GMAC Configuration defines */
 #define GMAC_CONF_2K 0x08000000  /* IEEE 802.3as 2K packets */
 #define GMAC_CONF_TC 0x01000000  /* Transmit Conf. in RGMII/SGMII */
@@ -190,7 +174,6 @@ enum inter_frame_gap {
 #define ETH_REG0_RX_REUSE       (1 << 30)
 #define ETH_REG0_URGENT         (1 << 31)
 
-
 // miiaddr register defintions
 #define MII_BUSY                 (1 << 0)
 #define MII_WRITE                (1 << 1)
@@ -205,6 +188,8 @@ enum inter_frame_gap {
 #define MIIREGSHIFT         (6)
 #define MII_REGMSK          (0x1F << 6)
 #define MII_ADDRMSK         (0x1F << 11)
+
+#define MAC_MAX_FRAME_SZ    (1600)
 
 
 #define MII_BMCR        0x00    /* Basic mode control register */
@@ -229,8 +214,6 @@ enum inter_frame_gap {
 #define MII_TPISTATUS   0x1b    /* TPI status for 10mbps       */
 #define MII_NCONFIG     0x1c    /* Network interface config    */
 #define MII_EPAGSR      0x1f    /* Page Select register */
-
-
 
 /* Basic mode control register. */
 #define BMCR_RESV           0x003f  /* Unused...                   */
@@ -263,4 +246,3 @@ enum inter_frame_gap {
 #define BMSR_100FULL        0x4000  /* Can do 100mbps, full-duplex */
 #define BMSR_100BASE4       0x8000  /* Can do 100mbps, 4k packets  */
 
-#define MAC_MAX_FRAME_SZ    (1600)

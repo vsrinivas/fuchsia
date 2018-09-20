@@ -10,23 +10,15 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/binding.c \
-    $(LOCAL_DIR)/aml-dwmac.cpp \
-    $(LOCAL_DIR)/aml-dwmac-debug.cpp \
-    $(LOCAL_DIR)/pinned-buffer.cpp
-
-
-MODULE_HEADER_DEPS := \
-    system/dev/lib/amlogic
+    $(LOCAL_DIR)/rtl8211f.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
-    system/ulib/fzl \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/pretty \
 
 MODULE_LIBS := \
     system/ulib/driver \

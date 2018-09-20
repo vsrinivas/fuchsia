@@ -1,0 +1,193 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "aml-ethernet.h"
+#include "aml-regs.h"
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/platform-defs.h>
+#include <ddk/protocol/platform-device.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <hw/reg.h>
+#include <soc/aml-s912/s912-hw.h>
+#include <stdio.h>
+#include <string.h>
+#include <zircon/compiler.h>
+
+namespace eth {
+
+#define MCU_I2C_REG_BOOT_EN_WOL 0x21
+#define MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE 0x03
+
+template <typename T, typename U>
+static inline T* offset_ptr(U* ptr, size_t offset) {
+    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(ptr) + offset);
+}
+
+void AmlEthernet::ResetPhy(void* ctx) {
+    auto& self = *static_cast<AmlEthernet*>(ctx);
+    gpio_write(&self.gpios_[PHY_RESET], 0);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    gpio_write(&self.gpios_[PHY_RESET], 1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+}
+
+zx_status_t AmlEthernet::InitPdev(zx_device_t* parent) {
+
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    for (uint32_t i = 0; i < countof(gpios_); i++) {
+        status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, i, &gpios_[i]);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
+    // I2c for MCU messages.
+    status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c_);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Map amlogic peripheral control registers.
+    status = pdev_map_mmio_buffer(&pdev_, MMIO_PERIPH, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &periph_regs_iobuff_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-dwmac: could not map periph mmio: %d\n", status);
+        return status;
+    }
+
+    // Map HHI regs (clocks and power domains).
+    status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &hhi_regs_iobuff_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-dwmac: could not map hiu mmio: %d\n", status);
+        return status;
+    }
+
+    return status;
+}
+
+void AmlEthernet::ReleaseBuffers() {
+    io_buffer_release(&periph_regs_iobuff_);
+    io_buffer_release(&hhi_regs_iobuff_);
+}
+
+static void DdkUnbind(void* ctx) {
+    auto& self = *static_cast<AmlEthernet*>(ctx);
+    device_remove(self.device_);
+}
+
+static void DdkRelease(void* ctx) {
+    auto& self = *static_cast<AmlEthernet*>(ctx);
+    self.ReleaseBuffers();
+    delete &self;
+}
+
+static eth_board_protocol_ops_t proto_ops = {
+    .reset_phy = AmlEthernet::ResetPhy,
+};
+
+static zx_device_prop_t props[] = {
+    {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_DESIGNWARE},
+    {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_ETH_MAC},
+};
+
+static zx_protocol_device_t eth_device_ops = []() {
+    zx_protocol_device_t result;
+
+    result.version = DEVICE_OPS_VERSION;
+    result.unbind = &DdkUnbind;
+    result.release = &DdkRelease;
+    return result;
+}();
+
+static device_add_args_t eth_mac_dev_args = []() {
+    device_add_args_t result;
+
+    result.version = DEVICE_ADD_ARGS_VERSION;
+    result.name = "aml-ethernet";
+    result.ops = &eth_device_ops;
+    result.proto_id = ZX_PROTOCOL_ETH_BOARD;
+    result.proto_ops = &proto_ops;
+    result.props = props;
+    result.prop_count = countof(props);
+    return result;
+}();
+
+zx_status_t AmlEthernet::Create(zx_device_t* device) {
+    fbl::AllocChecker ac;
+    auto eth_device = fbl::make_unique_checked<AmlEthernet>(&ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    zx_status_t status = eth_device->InitPdev(device);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Set reset line to output
+    gpio_config_out(&eth_device->gpios_[PHY_RESET], 0);
+
+    auto cleanup = fbl::MakeAutoCall([&]() { eth_device->ReleaseBuffers(); });
+
+    // Initialize AMLogic peripheral registers associated with dwmac.
+    void* pregs = io_buffer_virt(&eth_device->periph_regs_iobuff_);
+    //Sorry about the magic...rtfm
+    writel(0x1621, offset_ptr<uint32_t>(pregs, PER_ETH_REG0));
+    writel(0x20000, offset_ptr<uint32_t>(pregs, PER_ETH_REG1));
+
+    writel(REG2_ETH_REG2_REVERSED | REG2_INTERNAL_PHY_ID,
+           offset_ptr<uint32_t>(pregs, PER_ETH_REG2));
+
+    writel(REG3_CLK_IN_EN | REG3_ETH_REG3_19_RESVERD |
+               REG3_CFG_PHY_ADDR | REG3_CFG_MODE |
+               REG3_CFG_EN_HIGH | REG3_ETH_REG3_2_RESERVED,
+           offset_ptr<uint32_t>(pregs, PER_ETH_REG3));
+
+    // Enable clocks and power domain for dwmac
+    void* hregs = io_buffer_virt(&eth_device->hhi_regs_iobuff_);
+    set_bitsl(1 << 3, offset_ptr<uint32_t>(hregs, HHI_GCLK_MPEG1));
+    clr_bitsl((1 << 3) | (1 << 2), offset_ptr<uint32_t>(hregs, HHI_MEM_PD_REG0));
+
+    // WOL reset enable to MCU
+    uint8_t write_buf[2] = {MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE};
+    status = i2c_write_sync(&eth_device->i2c_, write_buf, sizeof(write_buf));
+    if (status) {
+        zxlogf(ERROR, "aml-ethernet: WOL reset enable to MCU failed: %d\n", status);
+        return status;
+    }
+
+    eth_mac_dev_args.ctx = eth_device.get();
+
+    // TODO(braval):    Get the device properties from the board driver
+    //                  through the metadata instead of hard coding it
+    //                  in this MAC specific file.
+    status = pdev_device_add(&eth_device->pdev_, 0, &eth_mac_dev_args, &eth_device->device_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-ethernet driver failed to get added\n");
+        return status;
+    } else {
+        zxlogf(INFO, "aml-ethernet driver added\n");
+    }
+
+    cleanup.cancel();
+
+    // eth_device intentionally leaked as it is now held by DevMgr
+    __UNUSED auto ptr = eth_device.release();
+
+    return ZX_OK;
+}
+
+} // namespace eth
+
+extern "C" zx_status_t aml_eth_bind(void* ctx, zx_device_t* device) {
+    return eth::AmlEthernet::Create(device);
+}

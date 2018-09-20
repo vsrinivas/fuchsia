@@ -68,6 +68,7 @@
 
 // IRQs
 #define S912_VIU1_VSYNC_IRQ             35
+#define S912_ETH_GMAC_IRQ               40
 #define S912_M_I2C_0_IRQ                53
 #define S912_DEMUX_IRQ                  55
 #define S912_UART_A_IRQ                 58

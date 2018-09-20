@@ -2,9 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "dwmac.h"
+#include "dw-gmac-dma.h"
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
+#include <ddk/protocol/ethernet_mac.h>
+#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
@@ -13,26 +19,25 @@
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
 #include <lib/fzl/vmar-manager.h>
-#include <soc/aml-s912/s912-hw.h>
-#include <zircon/compiler.h>
-
 #include <stdio.h>
 #include <string.h>
-
-#include "aml-dwmac.h"
-#include "dw-gmac-dma.h"
+#include <zircon/compiler.h>
 
 namespace eth {
 
-#define MCU_I2C_REG_BOOT_EN_WOL 0x21
-#define MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE 0x03
+namespace {
+
+// MMIO Indexes.
+constexpr uint32_t kEthMacMmio = 0;
+
+} // namespace
 
 template <typename T, typename U>
 static inline T* offset_ptr(U* ptr, size_t offset) {
     return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(ptr) + offset);
 }
 
-int AmlDWMacDevice::Thread() {
+int DWMacDevice::Thread() {
     zxlogf(INFO, "AmLogic ethmac started\n");
 
     zx_status_t status;
@@ -64,7 +69,7 @@ int AmlDWMacDevice::Thread() {
     return status;
 }
 
-void AmlDWMacDevice::UpdateLinkStatus() {
+void DWMacDevice::UpdateLinkStatus() {
     bool temp = dwmac_regs_->rgmiistatus & GMAC_RGMII_STATUS_LNKSTS;
     if (temp != online_) {
         online_ = temp;
@@ -82,7 +87,7 @@ void AmlDWMacDevice::UpdateLinkStatus() {
     zxlogf(INFO, "aml-dwmac: Link is now %s\n", online_ ? "up" : "down");
 }
 
-zx_status_t AmlDWMacDevice::InitPdev() {
+zx_status_t DWMacDevice::InitPdev() {
 
     zx_status_t status = device_get_protocol(parent_,
                                              ZX_PROTOCOL_PLATFORM_DEV,
@@ -91,160 +96,153 @@ zx_status_t AmlDWMacDevice::InitPdev() {
         return status;
     }
 
-    for (uint32_t i = 0; i < countof(gpios_); i++) {
-        status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, i, &gpios_[i]);
-        if (status != ZX_OK) {
-            return status;
-        }
-    }
-
-    gpio_config_out(&gpios_[PHY_RESET], 0);
-    ResetPhy();
-
-    // Map amlogic peripheral control registers
-    status = pdev_map_mmio_buffer(&pdev_, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &periph_regs_iobuff_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-dwmac: could not map periph mmio: %d\n", status);
-        return status;
-    }
-
-    // Map mac control registers and dma control registers
-    status = pdev_map_mmio_buffer(&pdev_, 1, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    // Map mac control registers and dma control registers.
+    status = pdev_map_mmio_buffer(&pdev_, kEthMacMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &dwmac_regs_iobuff_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-dwmac: could not map dwmac mmio: %d\n", status);
         return status;
     }
+
     dwmac_regs_ = static_cast<dw_mac_regs_t*>(io_buffer_virt(&dwmac_regs_iobuff_));
     dwdma_regs_ = offset_ptr<dw_dma_regs_t>(dwmac_regs_, DW_DMA_BASE_OFFSET);
 
-    // Map HHI regs (clocks and power domains)
-    status = pdev_map_mmio_buffer(&pdev_, 2, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &hhi_regs_iobuff_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-dwmac: could not map hiu mmio: %d\n", status);
-        return status;
-    }
-
-    // Map dma interrupt
+    // Map dma interrupt.
     status = pdev_map_interrupt(&pdev_, 0, dma_irq_.reset_and_get_address());
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-dwmac: could not map dma interrupt\n");
         return status;
     }
 
-    // Get our bti
+    // Get our bti.
     status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-dwmac: could not obtain bti: %d\n", status);
         return status;
     }
 
-    // i2c for MCU messages
-    status = device_get_protocol(parent_, ZX_PROTOCOL_I2C, &i2c_);
+    // Get ETH_BOARD protocol.
+    status = device_get_protocol(parent_, ZX_PROTOCOL_ETH_BOARD, &eth_board_);
     if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-dwmac: could not obtain ETH_BOARD protocol: %d\n", status);
         return status;
     }
 
     return status;
 }
 
-void AmlDWMacDevice::ResetPhy() {
-    gpio_write(&gpios_[PHY_RESET], 0);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-    gpio_write(&gpios_[PHY_RESET], 1);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-}
-
-void AmlDWMacDevice::ConfigPhy() {
+void DWMacDevice::ConfigPhy() {
     uint32_t val;
 
-    // WOL reset
-    MDIOWrite(MII_EPAGSR, 0xd40);
-    MDIOWrite(22, 0x20);
-    MDIOWrite(MII_EPAGSR, 0);
-
-    MDIOWrite(MII_EPAGSR, 0xd8c);
-    MDIOWrite(16, (mac_[1] << 8) | mac_[0]);
-    MDIOWrite(17, (mac_[3] << 8) | mac_[2]);
-    MDIOWrite(18, (mac_[5] << 8) | mac_[4]);
-    MDIOWrite(MII_EPAGSR, 0);
-
-    MDIOWrite(MII_EPAGSR, 0xd8a);
-    MDIOWrite(17, 0x9fff);
-    MDIOWrite(MII_EPAGSR, 0);
-
-    MDIOWrite(MII_EPAGSR, 0xd8a);
-    MDIOWrite(16, 0x1000);
-    MDIOWrite(MII_EPAGSR, 0);
-
-    MDIOWrite(MII_EPAGSR, 0xd80);
-    MDIOWrite(16, 0x3000);
-    MDIOWrite(17, 0x0020);
-    MDIOWrite(18, 0x03c0);
-    MDIOWrite(19, 0x0000);
-    MDIOWrite(20, 0x0000);
-    MDIOWrite(21, 0x0000);
-    MDIOWrite(22, 0x0000);
-    MDIOWrite(23, 0x0000);
-    MDIOWrite(MII_EPAGSR, 0);
-
-    MDIOWrite(MII_EPAGSR, 0xd8a);
-    MDIOWrite(19, 0x1002);
-    MDIOWrite(MII_EPAGSR, 0);
+    // WOL reset.
+    MDIOWrite(this, MII_EPAGSR, 0xd40);
+    MDIOWrite(this, 22, 0x20);
+    MDIOWrite(this, MII_EPAGSR, 0);
+    MDIOWrite(this, MII_EPAGSR, 0xd8c);
+    MDIOWrite(this, 16, (mac_[1] << 8) | mac_[0]);
+    MDIOWrite(this, 17, (mac_[3] << 8) | mac_[2]);
+    MDIOWrite(this, 18, (mac_[5] << 8) | mac_[4]);
+    MDIOWrite(this, MII_EPAGSR, 0);
+    MDIOWrite(this, MII_EPAGSR, 0xd8a);
+    MDIOWrite(this, 17, 0x9fff);
+    MDIOWrite(this, MII_EPAGSR, 0);
+    MDIOWrite(this, MII_EPAGSR, 0xd8a);
+    MDIOWrite(this, 16, 0x1000);
+    MDIOWrite(this, MII_EPAGSR, 0);
+    MDIOWrite(this, MII_EPAGSR, 0xd80);
+    MDIOWrite(this, 16, 0x3000);
+    MDIOWrite(this, 17, 0x0020);
+    MDIOWrite(this, 18, 0x03c0);
+    MDIOWrite(this, 19, 0x0000);
+    MDIOWrite(this, 20, 0x0000);
+    MDIOWrite(this, 21, 0x0000);
+    MDIOWrite(this, 22, 0x0000);
+    MDIOWrite(this, 23, 0x0000);
+    MDIOWrite(this, MII_EPAGSR, 0);
+    MDIOWrite(this, MII_EPAGSR, 0xd8a);
+    MDIOWrite(this, 19, 0x1002);
+    MDIOWrite(this, MII_EPAGSR, 0);
 
     // Fix txdelay issuee for rtl8211.  When a hw reset is performed
-    //  on the phy, it defaults to having an extra delay in the TXD path.
-    //  Since we reset the phy, this needs to be corrected.
-    MDIOWrite(MII_EPAGSR, 0xd08);
-    MDIORead(0x11, &val);
+    // on the phy, it defaults to having an extra delay in the TXD path.
+    // Since we reset the phy, this needs to be corrected.
+    MDIOWrite(this, MII_EPAGSR, 0xd08);
+    MDIORead(this, 0x11, &val);
     val &= ~0x100;
-    MDIOWrite(0x11, val);
-    MDIOWrite(MII_EPAGSR, 0x00);
+    MDIOWrite(this, 0x11, val);
+    MDIOWrite(this, MII_EPAGSR, 0x00);
 
-    //Enable GigE advertisement
-    MDIOWrite(MII_GBCR, 1 << 9);
+    // Enable GigE advertisement.
+    MDIOWrite(this, MII_GBCR, 1 << 9);
 
-    //Restart advertisements
-    MDIORead(MII_BMCR, &val);
+    // Restart advertisements.
+    MDIORead(this, MII_BMCR, &val);
     val |= BMCR_ANENABLE | BMCR_ANRESTART;
     val &= ~BMCR_ISOLATE;
-    MDIOWrite(MII_BMCR, val);
+    MDIOWrite(this, MII_BMCR, val);
 }
 
-zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
+static void DdkUnbindWrapper(void* ctx) {
+    auto& self = *static_cast<DWMacDevice*>(ctx);
+    // TODO(braval): Remove all PHY devices and then call DdkUnbind()
+    self.DdkUnbind();
+}
 
-    auto mac_device = fbl::make_unique<AmlDWMacDevice>(device);
+static void DdkReleaseWrapper(void* ctx) {
+    delete static_cast<DWMacDevice*>(ctx);
+}
+
+static eth_mac_protocol_ops_t proto_ops = {
+    .mdio_read = DWMacDevice::MDIORead,
+    .mdio_write = DWMacDevice::MDIOWrite,
+};
+
+static zx_device_prop_t props[] = {
+    {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_REALTEK},
+    {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_RTL8211F},
+    {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_ETH_PHY},
+};
+
+static zx_protocol_device_t eth_mac_device_ops = []() {
+    zx_protocol_device_t result;
+
+    result.version = DEVICE_OPS_VERSION;
+    result.unbind = &DdkUnbindWrapper;
+    result.release = &DdkReleaseWrapper;
+    return result;
+}();
+
+static device_add_args_t phy_device_args = []() {
+    device_add_args_t result;
+    result.version = DEVICE_ADD_ARGS_VERSION;
+    result.name = "eth_phy";
+    result.ops = &eth_mac_device_ops,
+    result.proto_id = ZX_PROTOCOL_ETH_MAC;
+    result.proto_ops = &proto_ops;
+    result.props = props;
+    result.prop_count = countof(props);
+    return result;
+}();
+
+zx_status_t DWMacDevice::Create(zx_device_t* device) {
+    auto mac_device = fbl::make_unique<DWMacDevice>(device);
 
     zx_status_t status = mac_device->InitPdev();
     if (status != ZX_OK) {
         return status;
     }
 
-    // Initialize AMLogic peripheral registers associated with dwmac
-    void* pregs = io_buffer_virt(&mac_device->periph_regs_iobuff_);
-    //Sorry about the magic...rtfm
-    writel(0x1621, offset_ptr<uint32_t>(pregs, PER_ETH_REG0));
-    writel(0x20000, offset_ptr<uint32_t>(pregs, PER_ETH_REG1));
+    //TODO(braval@/cjn@):   Disable the WOL first which was enabled
+    //                      during previous boot up & still enable
+    //                      after a soft reboot.
 
-    writel(REG2_ETH_REG2_REVERSED | REG2_INTERNAL_PHY_ID,
-           offset_ptr<uint32_t>(pregs, PER_ETH_REG2));
+    // Reset the phy.
+    eth_board_reset_phy(&mac_device->eth_board_);
 
-    writel(REG3_CLK_IN_EN | REG3_ETH_REG3_19_RESVERD |
-               REG3_CFG_PHY_ADDR | REG3_CFG_MODE |
-               REG3_CFG_EN_HIGH | REG3_ETH_REG3_2_RESERVED,
-           offset_ptr<uint32_t>(pregs, PER_ETH_REG3));
-
-    // Enable clocks and power domain for dwmac
-    void* hregs = io_buffer_virt(&mac_device->hhi_regs_iobuff_);
-    set_bitsl(1 << 3, offset_ptr<uint32_t>(hregs, HHI_GCLK_MPEG1));
-    clr_bitsl((1 << 3) | (1 << 2), offset_ptr<uint32_t>(hregs, HHI_MEM_PD_REG0));
-
-    // get and cache the mac address
+    // Get and cache the mac address.
     mac_device->GetMAC(device);
 
-    //Reset the dma peripheral
+    // Reset the dma peripheral.
     mac_device->dwdma_regs_->busmode |= DMAMAC_SRST;
     uint32_t loop_count = 10;
     do {
@@ -255,9 +253,10 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
         return ZX_ERR_TIMED_OUT;
     }
 
-    // mac address register was erased by the reset; set it!
+    // Mac address register was erased by the reset; set it!
     mac_device->dwmac_regs_->macaddr0hi = (mac_device->mac_[5] << 8) | (mac_device->mac_[4] << 0);
-    mac_device->dwmac_regs_->macaddr0lo = (mac_device->mac_[3] << 24) | (mac_device->mac_[2] << 16) | (mac_device->mac_[1] << 8) | (mac_device->mac_[0] << 0);
+    mac_device->dwmac_regs_->macaddr0lo = (mac_device->mac_[3] << 24) | (mac_device->mac_[2] << 16)
+    | (mac_device->mac_[1] << 8) | (mac_device->mac_[0] << 0);
 
     auto cleanup = fbl::MakeAutoCall([&]() { mac_device->ShutDown(); });
 
@@ -265,20 +264,12 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
     if (status != ZX_OK)
         return status;
 
-    //reset the phy
-    mac_device->ResetPhy();
-    //configure phy
+    // Configure phy.
     mac_device->ConfigPhy();
-    // WOL reset enable to MCU
-    uint8_t write_buf[2] = {MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE};
-    status = i2c_write_sync(&mac_device->i2c_, write_buf, sizeof write_buf);
-    if (status) {
-        zxlogf(ERROR, "aml-dwmac: WOL reset enable to MCU failed: %d\n", status);
-    }
 
     mac_device->InitDevice();
 
-    auto thunk = [](void* arg) -> int { return reinterpret_cast<AmlDWMacDevice*>(arg)->Thread(); };
+    auto thunk = [](void* arg) -> int { return reinterpret_cast<DWMacDevice*>(arg)->Thread(); };
 
     mac_device->running_.store(true);
     int ret = thrd_create_with_name(&mac_device->thread_, thunk,
@@ -286,24 +277,37 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
                                     "amlmac-thread");
     ZX_DEBUG_ASSERT(ret == thrd_success);
 
-    status = mac_device->DdkAdd("AmLogic dwMac");
+    // TODO(braval):        Get the information of
+    //                      number of PHY's to be added
+    //                      and their props from metadata.
+    phy_device_args.ctx = mac_device.get();
+
+    // TODO(braval): use proper device pointer, depending on how
+    //               many PHY devices we have to load, from the metadata.
+    zx_device_t* dev;
+    status = device_add(device, &phy_device_args, &dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-dwmac: Could not create eth device: %d\n", status);
+        zxlogf(ERROR, "dwmac: Could not create phy device: %d\n", status);
+
+        return status;
+    }
+
+    status = mac_device->DdkAdd("Designware MAC");
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "dwmac: Could not create eth device: %d\n", status);
         return status;
     } else {
-        zxlogf(INFO, "aml-dwmac: Added AmLogic dwMac device\n");
+        zxlogf(INFO, "dwmac: Added AmLogic dwMac device\n");
     }
 
     cleanup.cancel();
 
-    // mac_device intentionally leaked as it is now held by DevMgr
+    // mac_device intentionally leaked as it is now held by DevMgr.
     __UNUSED auto ptr = mac_device.release();
     return ZX_OK;
-}
+} // namespace eth
 
-zx_status_t AmlDWMacDevice::InitBuffers() {
-
-    fbl::RefPtr<fzl::VmarManager> vmar_mgr;
+zx_status_t DWMacDevice::InitBuffers() {
 
     constexpr size_t kDescSize = ROUNDUP(2 * kNumDesc * sizeof(dw_dmadescr_t), PAGE_SIZE);
 
@@ -355,24 +359,25 @@ zx_status_t AmlDWMacDevice::InitBuffers() {
     return ZX_OK;
 }
 
-zx_handle_t AmlDWMacDevice::EthmacGetBti() {
+zx_handle_t DWMacDevice::EthmacGetBti() {
 
     return bti_.get();
 }
 
-zx_status_t AmlDWMacDevice::MDIOWrite(uint32_t reg, uint32_t val) {
+zx_status_t DWMacDevice::MDIOWrite(void* ctx, uint32_t reg, uint32_t val) {
+    auto& self = *static_cast<DWMacDevice*>(ctx);
 
-    dwmac_regs_->miidata = val;
+    self.dwmac_regs_->miidata = val;
 
-    uint32_t miiaddr = (mii_addr_ << MIIADDRSHIFT) |
+    uint32_t miiaddr = (self.mii_addr_ << MIIADDRSHIFT) |
                        (reg << MIIREGSHIFT) |
                        MII_WRITE;
 
-    dwmac_regs_->miiaddr = miiaddr | MII_CLKRANGE_150_250M | MII_BUSY;
+    self.dwmac_regs_->miiaddr = miiaddr | MII_CLKRANGE_150_250M | MII_BUSY;
 
     zx_time_t deadline = zx_deadline_after(ZX_MSEC(3));
     do {
-        if (!(dwmac_regs_->miiaddr & MII_BUSY)) {
+        if (!(self.dwmac_regs_->miiaddr & MII_BUSY)) {
             return ZX_OK;
         }
         zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
@@ -380,17 +385,18 @@ zx_status_t AmlDWMacDevice::MDIOWrite(uint32_t reg, uint32_t val) {
     return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t AmlDWMacDevice::MDIORead(uint32_t reg, uint32_t* val) {
+zx_status_t DWMacDevice::MDIORead(void* ctx, uint32_t reg, uint32_t* val) {
+    auto& self = *static_cast<DWMacDevice*>(ctx);
 
-    uint32_t miiaddr = (mii_addr_ << MIIADDRSHIFT) |
+    uint32_t miiaddr = (self.mii_addr_ << MIIADDRSHIFT) |
                        (reg << MIIREGSHIFT);
 
-    dwmac_regs_->miiaddr = miiaddr | MII_CLKRANGE_150_250M | MII_BUSY;
+    self.dwmac_regs_->miiaddr = miiaddr | MII_CLKRANGE_150_250M | MII_BUSY;
 
     zx_time_t deadline = zx_deadline_after(ZX_MSEC(3));
     do {
-        if (!(dwmac_regs_->miiaddr & MII_BUSY)) {
-            *val = dwmac_regs_->miidata;
+        if (!(self.dwmac_regs_->miiaddr & MII_BUSY)) {
+            *val = self.dwmac_regs_->miidata;
             return ZX_OK;
         }
         zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
@@ -398,13 +404,11 @@ zx_status_t AmlDWMacDevice::MDIORead(uint32_t reg, uint32_t* val) {
     return ZX_ERR_TIMED_OUT;
 }
 
-AmlDWMacDevice::AmlDWMacDevice(zx_device_t* device)
-    : ddk::Device<AmlDWMacDevice, ddk::Unbindable>(device) {
+DWMacDevice::DWMacDevice(zx_device_t* device)
+    : ddk::Device<DWMacDevice, ddk::Unbindable>(device) {
 }
 
-void AmlDWMacDevice::ReleaseBuffers() {
-    io_buffer_release(&periph_regs_iobuff_);
-    io_buffer_release(&hhi_regs_iobuff_);
+void DWMacDevice::ReleaseBuffers() {
     io_buffer_release(&dwmac_regs_iobuff_);
     //Unpin the memory used for the dma buffers
     if (txn_buffer_->UnPin() != ZX_OK) {
@@ -415,18 +419,18 @@ void AmlDWMacDevice::ReleaseBuffers() {
     }
 }
 
-void AmlDWMacDevice::DdkRelease() {
+void DWMacDevice::DdkRelease() {
     zxlogf(INFO, "AmLogic Ethmac release...\n");
     delete this;
 }
 
-void AmlDWMacDevice::DdkUnbind() {
+void DWMacDevice::DdkUnbind() {
     zxlogf(INFO, "AmLogic Ethmac DdkUnbind\n");
     ShutDown();
     DdkRemove();
 }
 
-zx_status_t AmlDWMacDevice::ShutDown() {
+zx_status_t DWMacDevice::ShutDown() {
     running_.store(false);
     dma_irq_.destroy();
     thrd_join(thread_, NULL);
@@ -435,11 +439,10 @@ zx_status_t AmlDWMacDevice::ShutDown() {
     ethmac_proxy_.reset();
     DeInitDevice();
     ReleaseBuffers();
-
     return ZX_OK;
 }
 
-zx_status_t AmlDWMacDevice::GetMAC(zx_device_t* dev) {
+zx_status_t DWMacDevice::GetMAC(zx_device_t* dev) {
     // look for MAC address device metadata
     // metadata is padded so we need buffer size > 6 bytes
     uint8_t buffer[16];
@@ -467,7 +470,7 @@ zx_status_t AmlDWMacDevice::GetMAC(zx_device_t* dev) {
     return ZX_OK;
 }
 
-zx_status_t AmlDWMacDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
+zx_status_t DWMacDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     memset(info, 0, sizeof(*info));
     info->features = ETHMAC_FEATURE_DMA;
     info->mtu = 1500;
@@ -475,13 +478,13 @@ zx_status_t AmlDWMacDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     return ZX_OK;
 }
 
-void AmlDWMacDevice::EthmacStop() {
+void DWMacDevice::EthmacStop() {
     zxlogf(INFO, "Stopping AmLogic Ethermac\n");
     fbl::AutoLock lock(&lock_);
     ethmac_proxy_.reset();
 }
 
-zx_status_t AmlDWMacDevice::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
+zx_status_t DWMacDevice::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
     fbl::AutoLock lock(&lock_);
 
     if (ethmac_proxy_ != nullptr) {
@@ -495,7 +498,7 @@ zx_status_t AmlDWMacDevice::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> pro
     return ZX_OK;
 }
 
-zx_status_t AmlDWMacDevice::InitDevice() {
+zx_status_t DWMacDevice::InitDevice() {
 
     dwdma_regs_->intenable = 0;
     dwdma_regs_->busmode = X8PBL | DMA_PBL;
@@ -528,14 +531,14 @@ zx_status_t AmlDWMacDevice::InitDevice() {
     return ZX_OK;
 }
 
-zx_status_t AmlDWMacDevice::DeInitDevice() {
+zx_status_t DWMacDevice::DeInitDevice() {
     //Disable Interrupts
     dwdma_regs_->intenable = 0;
     //Disable Transmit and Receive
     dwmac_regs_->conf &= ~(GMAC_CONF_TE | GMAC_CONF_RE);
 
     //reset the phy (hold in reset)
-    gpio_write(&gpios_[PHY_RESET], 0);
+    //gpio_write(&gpios_[PHY_RESET], 0);
 
     //transmit and receive are not disables, safe to null descriptor list ptrs
     dwdma_regs_->txdesclistaddr = 0;
@@ -544,11 +547,11 @@ zx_status_t AmlDWMacDevice::DeInitDevice() {
     return ZX_OK;
 }
 
-uint32_t AmlDWMacDevice::DmaRxStatus() {
+uint32_t DWMacDevice::DmaRxStatus() {
     return (dwdma_regs_->status & DMA_STATUS_RS_MASK) >> DMA_STATUS_RS_POS;
 }
 
-void AmlDWMacDevice::ProcRxBuffer(uint32_t int_status) {
+void DWMacDevice::ProcRxBuffer(uint32_t int_status) {
     while (true) {
         uint32_t pkt_stat = rx_descriptors_[curr_rx_buf_].txrx_status;
 
@@ -587,7 +590,7 @@ void AmlDWMacDevice::ProcRxBuffer(uint32_t int_status) {
     }
 }
 
-zx_status_t AmlDWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
+zx_status_t DWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
 
     { //Check to make sure we are ready to accept packets
         fbl::AutoLock lock(&lock_);
@@ -610,7 +613,7 @@ zx_status_t AmlDWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* net
 
     zx_cache_flush(temptr, netbuf->len, ZX_CACHE_FLUSH_DATA);
 
-    //Descriptors are pre-iniitialized with the paddr of their corresponding
+    // Descriptors are pre-iniitialized with the paddr of their corresponding
     // buffers, only need to setup the control and status fields.
     tx_descriptors_[curr_tx_buf_].dmamac_cntl =
         DESC_TXCTRL_TXINT |
@@ -628,13 +631,13 @@ zx_status_t AmlDWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* net
     return ZX_OK;
 }
 
-zx_status_t AmlDWMacDevice::EthmacSetParam(uint32_t param, int32_t value, void* data) {
+zx_status_t DWMacDevice::EthmacSetParam(uint32_t param, int32_t value, void* data) {
     zxlogf(INFO, "SetParam called  %x  %x\n", param, value);
     return ZX_OK;
 }
 
 } // namespace eth
 
-extern "C" zx_status_t aml_eth_bind(void* ctx, zx_device_t* device, void** cookie) {
-    return eth::AmlDWMacDevice::Create(device);
+extern "C" zx_status_t dwmac_bind(void* ctx, zx_device_t* device, void** cookie) {
+    return eth::DWMacDevice::Create(device);
 }

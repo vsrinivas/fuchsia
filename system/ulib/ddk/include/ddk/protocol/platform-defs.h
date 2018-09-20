@@ -26,6 +26,8 @@ __BEGIN_CDECLS;
 #define PDEV_DID_ARM_MALI_INIT      13  // ARM MALI GPU (Zircon)
 #define PDEV_DID_OPTEE              14  // OP-TEE OS Driver
 #define PDEV_DID_RTC_FALLBACK       15  // Synthetic RTC device
+#define PDEV_DID_ETH_MAC            16  // Ethernet MAC
+#define PDEV_DID_ETH_PHY            17  // Ethernet PHY
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
@@ -121,5 +123,12 @@ __BEGIN_CDECLS;
 #define PDEV_VID_AMS                10
 #define PDEV_PID_AMS_TCS3400        1
 #define PDEV_DID_AMS_LIGHT          1
+
+// REALTEK
+#define PDEV_VID_REALTEK            11
+#define PDEV_PID_RTL8211F           1
+
+// Designware
+#define PDEV_VID_DESIGNWARE         12
 
 __END_CDECLS;

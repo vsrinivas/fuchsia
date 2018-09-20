@@ -4,20 +4,20 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
+#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/ethernet_board.h>
 #include <ddk/protocol/test.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
-#include <ddktl/protocol/test.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/vmo.h>
+#include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -80,10 +80,10 @@ typedef volatile struct dw_dmadescr {
 
 namespace eth {
 
-class AmlDWMacDevice : public ddk::Device<AmlDWMacDevice, ddk::Unbindable>,
-                       public ddk::EthmacProtocol<AmlDWMacDevice> {
+class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
+                    public ddk::EthmacProtocol<DWMacDevice> {
 public:
-    AmlDWMacDevice(zx_device_t* device);
+    DWMacDevice(zx_device_t* device);
 
     static zx_status_t Create(zx_device_t* device);
 
@@ -95,16 +95,11 @@ public:
     zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) __TA_EXCLUDES(lock_);
     zx_status_t EthmacSetParam(uint32_t param, int32_t value, void* data);
-    zx_status_t MDIOWrite(uint32_t reg, uint32_t val);
-    zx_status_t MDIORead(uint32_t reg, uint32_t* val);
+    static zx_status_t MDIOWrite(void* ctx, uint32_t reg, uint32_t val);
+    static zx_status_t MDIORead(void* ctx, uint32_t reg, uint32_t* val);
     zx_handle_t EthmacGetBti();
 
 private:
-    enum {
-        PHY_RESET,
-        PHY_INTR,
-        GPIO_COUNT,
-    };
 
     zx_status_t InitBuffers();
     zx_status_t InitDevice();
@@ -117,7 +112,6 @@ private:
     void ReleaseBuffers();
     void ProcRxBuffer(uint32_t int_status) __TA_EXCLUDES(lock_);
     uint32_t DmaRxStatus();
-    void ResetPhy();
     void ConfigPhy();
 
     int Thread() __TA_EXCLUDES(lock_);
@@ -153,16 +147,12 @@ private:
     zx::interrupt dma_irq_;
 
     platform_device_protocol_t pdev_;
-    i2c_protocol_t i2c_;
+    eth_board_protocol_t eth_board_;
 
-    io_buffer_t periph_regs_iobuff_;
-    io_buffer_t hhi_regs_iobuff_;
     io_buffer_t dwmac_regs_iobuff_;
 
     dw_mac_regs_t* dwmac_regs_ = nullptr;
     dw_dma_regs_t* dwdma_regs_ = nullptr;
-
-    gpio_protocol_t gpios_[GPIO_COUNT];
 
     fbl::Mutex lock_;
     fbl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_ __TA_GUARDED(lock_);

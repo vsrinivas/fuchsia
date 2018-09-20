@@ -13,7 +13,7 @@
 
 #include "vim.h"
 
-static const pbus_gpio_t eth_gpios[] = {
+static const pbus_gpio_t eth_board_gpios[] = {
     {
         // MAC_RST
         .gpio = S912_GPIOZ(14),
@@ -24,21 +24,17 @@ static const pbus_gpio_t eth_gpios[] = {
     },
 };
 
-static const pbus_irq_t eth_irqs[] = {
+static const pbus_irq_t eth_mac_irqs[] = {
     {
-        .irq = 40,
+        .irq = S912_ETH_GMAC_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 
-static const pbus_mmio_t vim2_eth_mmios[] = {
+static const pbus_mmio_t eth_board_mmios[] = {
     {
         .base = PERIPHS_REG_BASE,
         .length = PERIPHS_REG_SIZE,
-    },
-    {
-        .base = ETH_MAC_REG_BASE,
-        .length = ETH_MAC_REG_SIZE,
     },
     {
         .base = HHI_REG_BASE,
@@ -46,14 +42,21 @@ static const pbus_mmio_t vim2_eth_mmios[] = {
     },
 };
 
-static const pbus_bti_t eth_btis[] = {
+static const pbus_mmio_t eth_mac_mmios[] = {
+    {
+        .base = ETH_MAC_REG_BASE,
+        .length = ETH_MAC_REG_SIZE,
+    },
+};
+
+static const pbus_bti_t eth_mac_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = 0,
     },
 };
 
-static const pbus_boot_metadata_t eth_metadata[] = {
+static const pbus_boot_metadata_t eth_mac_metadata[] = {
     {
         .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
         .zbi_extra = 0,
@@ -67,23 +70,34 @@ static const pbus_i2c_channel_t vim2_mcu_i2c[] = {
     },
 };
 
-static pbus_dev_t eth_dev = {
-    .name = "ethernet",
+static const pbus_dev_t eth_board_children[] = {
+    // Designware MAC.
+    {
+        .name = "dwmac",
+        .mmios = eth_mac_mmios,
+        .mmio_count = countof(eth_mac_mmios),
+        .btis = eth_mac_btis,
+        .bti_count = countof(eth_mac_btis),
+        .irqs = eth_mac_irqs,
+        .irq_count = countof(eth_mac_irqs),
+        .boot_metadata = eth_mac_metadata,
+        .boot_metadata_count = countof(eth_mac_metadata),
+    },
+};
+
+static pbus_dev_t eth_board_dev = {
+    .name = "ethernet_mac",
     .vid = PDEV_VID_KHADAS,
     .pid = PDEV_PID_VIM2,
     .did = PDEV_DID_AMLOGIC_ETH,
-    .mmios = vim2_eth_mmios,
-    .mmio_count = countof(vim2_eth_mmios),
-    .gpios = eth_gpios,
-    .gpio_count = countof(eth_gpios),
-    .btis = eth_btis,
-    .bti_count = countof(eth_btis),
-    .irqs = eth_irqs,
-    .irq_count = countof(eth_irqs),
-    .boot_metadata = eth_metadata,
-    .boot_metadata_count = countof(eth_metadata),
+    .mmios = eth_board_mmios,
+    .mmio_count = countof(eth_board_mmios),
+    .gpios = eth_board_gpios,
+    .gpio_count = countof(eth_board_gpios),
     .i2c_channels = vim2_mcu_i2c,
     .i2c_channel_count = countof(vim2_mcu_i2c),
+    .children = eth_board_children,
+    .child_count = countof(eth_board_children),
 };
 
 zx_status_t vim_eth_init(vim_bus_t* bus) {
@@ -107,10 +121,8 @@ zx_status_t vim_eth_init(vim_bus_t* bus) {
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_TXD2, S912_ETH_TXD2_FN);
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_TXD3, S912_ETH_TXD3_FN);
 
-    // Set reset line to output
-    gpio_impl_config_out(&bus->gpio, S912_GPIOZ(14), 0);
+    zx_status_t status = pbus_device_add(&bus->pbus, &eth_board_dev);
 
-    zx_status_t status = pbus_device_add(&bus->pbus, &eth_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_eth_init: pbus_device_add failed: %d\n", status);
     }
