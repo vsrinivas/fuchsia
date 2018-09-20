@@ -505,10 +505,10 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
             ctx->found_pci = (pcidev != NULL);
         }
         // Get the PCI base bus number
-        acpi_status = acpi_bbn_call(object, &ctx->last_pci);
-        if (acpi_status != AE_OK) {
+        zx_status_t status = acpi_bbn_call(object, &ctx->last_pci);
+        if (status != ZX_OK) {
             zxlogf(ERROR, "acpi: failed to get PCI base bus number for device '%s' "
-                          "(acpi_status %u)\n", (const char*)&info->Name, acpi_status);
+                          "(status %u)\n", (const char*)&info->Name, status);
         }
         zxlogf(TRACE, "acpi: found pci root #%u\n", ctx->last_pci);
     } else if (!memcmp(hid, BATTERY_HID_STRING, HID_LENGTH)) {
