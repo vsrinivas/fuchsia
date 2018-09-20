@@ -94,9 +94,7 @@ class EnvironmentServices {
   EnvironmentServices(const fuchsia::sys::EnvironmentPtr& parent_env,
                       const fbl::RefPtr<fs::Service>& loader_service);
 
-  void set_enclosing_env(EnclosingEnvironment* e) {
-    enclosing_env_ = e;
-  }
+  void set_enclosing_env(EnclosingEnvironment* e) { enclosing_env_ = e; }
 
   std::unique_ptr<fs::SynchronousVfs> vfs_;
   fbl::RefPtr<fs::PseudoDir> svc_;
@@ -129,7 +127,8 @@ class EnclosingEnvironment {
   // |EnvironmentServices| for details.
   static std::unique_ptr<EnclosingEnvironment> Create(
       const std::string& label, const fuchsia::sys::EnvironmentPtr& parent_env,
-      std::unique_ptr<EnvironmentServices> services);
+      std::unique_ptr<EnvironmentServices> services,
+      fuchsia::sys::EnvironmentOptionsPtr options = nullptr);
 
   ~EnclosingEnvironment();
 
@@ -171,13 +170,13 @@ class EnclosingEnvironment {
 
   // Creates a nested enclosing environment on top of underlying environment.
   std::unique_ptr<EnclosingEnvironment> CreateNestedEnclosingEnvironment(
-      std::string& label);
+      const std::string& label);
 
   // Creates a nested enclosing environment on top of underlying environment
   // with custom loader service.
   std::unique_ptr<EnclosingEnvironment>
   CreateNestedEnclosingEnvironmentWithLoader(
-      std::string& label, fbl::RefPtr<fs::Service> loader_service);
+      const std::string& label, fbl::RefPtr<fs::Service> loader_service);
 
   // Connects to service provided by this environment.
   void ConnectToService(fidl::StringPtr service_name, zx::channel channel) {
@@ -194,7 +193,8 @@ class EnclosingEnvironment {
  private:
   EnclosingEnvironment(const std::string& label,
                        const fuchsia::sys::EnvironmentPtr& parent_env,
-                       std::unique_ptr<EnvironmentServices> services);
+                       std::unique_ptr<EnvironmentServices> services,
+                       fuchsia::sys::EnvironmentOptionsPtr options = nullptr);
 
   bool running_ = false;
   const std::string label_;

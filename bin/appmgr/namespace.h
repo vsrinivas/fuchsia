@@ -50,6 +50,14 @@ class Namespace : public fuchsia::sys::Environment,
       fuchsia::sys::ServiceListPtr additional_services,
       bool inherit_parent_services) override;
 
+  void CreateNestedEnvironmentWithOptions(
+      fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
+      fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
+      fidl::StringPtr label,
+      fuchsia::sys::ServiceListPtr additional_services,
+      fuchsia::sys::EnvironmentOptions options) override;
+
+
   void GetLauncher(
       fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher) override;
 

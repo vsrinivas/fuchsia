@@ -58,20 +58,18 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
     for (auto& name : *names) {
       if (service_host_directory_) {
         services_->AddService(
-            fbl::AdoptRef(new fs::Service(
-                [this, name](zx::channel channel) {
-                  fdio_service_connect_at(service_host_directory_.get(),
-                                          name->c_str(), channel.release());
-                  return ZX_OK;
-                })),
+            fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
+              fdio_service_connect_at(service_host_directory_.get(),
+                                      name->c_str(), channel.release());
+              return ZX_OK;
+            })),
             name);
       } else {
         services_->AddService(
-            fbl::AdoptRef(new fs::Service(
-                [this, name](zx::channel channel) {
-                  service_provider_->ConnectToService(name, std::move(channel));
-                  return ZX_OK;
-                })),
+            fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
+              service_provider_->ConnectToService(name, std::move(channel));
+              return ZX_OK;
+            })),
             name);
       }
     }
@@ -88,14 +86,25 @@ void Namespace::AddBinding(
 void Namespace::CreateNestedEnvironment(
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
-    fidl::StringPtr label,
-    zx::channel host_directory,
+    fidl::StringPtr label, zx::channel host_directory,
     fuchsia::sys::ServiceListPtr additional_services,
     bool inherit_parent_services) {
   realm_->CreateNestedEnvironment(
       std::move(environment), std::move(controller), label,
       std::move(host_directory), std::move(additional_services),
-      inherit_parent_services);
+      inherit_parent_services, /*allow_parent_runners=*/false);
+}
+
+void Namespace::CreateNestedEnvironmentWithOptions(
+    fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
+    fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
+    fidl::StringPtr label,
+    fuchsia::sys::ServiceListPtr additional_services,
+    fuchsia::sys::EnvironmentOptions options) {
+  realm_->CreateNestedEnvironment(
+      std::move(environment), std::move(controller), label,
+      zx::channel(), std::move(additional_services),
+      options.inherit_parent_services, options.allow_parent_runners);
 }
 
 void Namespace::GetLauncher(fidl::InterfaceRequest<Launcher> launcher) {

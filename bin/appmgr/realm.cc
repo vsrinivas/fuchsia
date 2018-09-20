@@ -165,11 +165,9 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
 
 // static
 RealmArgs RealmArgs::Make(
-    Realm* parent,
-    fidl::StringPtr label,
+    Realm* parent, fidl::StringPtr label,
     const std::shared_ptr<component::Services>& env_services,
-    bool run_virtual_console,
-    bool inherit_parent_services) {
+    bool run_virtual_console, bool inherit_parent_services) {
   return {.parent = parent,
           .label = label,
           .environment_services = env_services,
@@ -181,11 +179,9 @@ RealmArgs RealmArgs::Make(
 
 // static
 RealmArgs RealmArgs::MakeWithHostDir(
-      Realm* parent,
-      fidl::StringPtr label,
-      const std::shared_ptr<component::Services>& env_services,
-      bool run_virtual_console,
-      zx::channel host_directory) {
+    Realm* parent, fidl::StringPtr label,
+    const std::shared_ptr<component::Services>& env_services,
+    bool run_virtual_console, zx::channel host_directory) {
   return {.parent = parent,
           .label = label,
           .environment_services = env_services,
@@ -197,12 +193,10 @@ RealmArgs RealmArgs::MakeWithHostDir(
 
 // static
 RealmArgs RealmArgs::MakeWithAdditionalServices(
-      Realm* parent,
-      fidl::StringPtr label,
-      const std::shared_ptr<component::Services>& env_services,
-      bool run_virtual_console,
-      fuchsia::sys::ServiceListPtr additional_services,
-      bool inherit_parent_services) {
+    Realm* parent, fidl::StringPtr label,
+    const std::shared_ptr<component::Services>& env_services,
+    bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
+    bool inherit_parent_services) {
   return {.parent = parent,
           .label = label,
           .environment_services = env_services,
@@ -219,7 +213,8 @@ Realm::Realm(RealmArgs args)
       run_virtual_console_(args.run_virtual_console),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
       info_vfs_(async_get_default_dispatcher()),
-      environment_services_(args.environment_services) {
+      environment_services_(args.environment_services),
+      allow_parent_runners_(args.allow_parent_runners) {
   // parent_ is null if this is the root application environment. if so, we
   // derive from the application manager's job.
   zx::unowned<zx::job> parent_job;
@@ -318,10 +313,9 @@ void Realm::CreateNestedEnvironment(
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController>
         controller_request,
-    fidl::StringPtr label,
-    zx::channel host_directory,
+    fidl::StringPtr label, zx::channel host_directory,
     fuchsia::sys::ServiceListPtr additional_services,
-    bool inherit_parent_services) {
+    bool inherit_parent_services, bool allow_parent_runners) {
   if (host_directory && additional_services) {
     FXL_LOG(ERROR) << "CreateNestedEnvironment may not specify both "
                    << "|host_directory| and |additional_services|.";
@@ -336,18 +330,19 @@ void Realm::CreateNestedEnvironment(
 
   RealmArgs args;
   if (host_directory) {
-    args = RealmArgs::MakeWithHostDir(
-        this, label, environment_services_, /*run_virtual_console=*/false,
-        std::move(host_directory));
+    args = RealmArgs::MakeWithHostDir(this, label, environment_services_,
+                                      /*run_virtual_console=*/false,
+                                      std::move(host_directory));
   } else if (additional_services) {
     args = RealmArgs::MakeWithAdditionalServices(
         this, label, environment_services_, /*run_virtual_console=*/false,
         std::move(additional_services), inherit_parent_services);
   } else {
-    args = RealmArgs::Make(
-        this, label, environment_services_, /*run_virtual_console=*/false,
-        inherit_parent_services);
+    args =
+        RealmArgs::Make(this, label, environment_services_,
+                        /*run_virtual_console=*/false, inherit_parent_services);
   }
+  args.allow_parent_runners = allow_parent_runners;
   auto controller = std::make_unique<EnvironmentControllerImpl>(
       std::move(controller_request), std::make_unique<Realm>(std::move(args)));
   Realm* child = controller->realm();
@@ -836,6 +831,10 @@ void Realm::CreateRunnerComponentFromPackage(
 RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
   // We create the entry in |runners_| before calling ourselves
   // recursively to detect cycles.
+  auto found = GetRunnerRecursive(runner);
+  if (found) {
+    return found;
+  }
   auto result = runners_.emplace(runner, nullptr);
   if (result.second) {
     Services runner_services;
@@ -856,6 +855,17 @@ RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
   }
 
   return result.first->second.get();
+}
+
+RunnerHolder* Realm::GetRunnerRecursive(const std::string& runner) const {
+  auto it = runners_.find(runner);
+  if (it != runners_.end()) {
+    return it->second.get();
+  } else if (parent_ && allow_parent_runners_) {
+    return parent_->GetRunnerRecursive(runner);
+  }
+
+  return nullptr;
 }
 
 zx_status_t Realm::BindSvc(zx::channel channel) {

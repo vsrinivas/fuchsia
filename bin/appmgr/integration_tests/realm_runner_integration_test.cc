@@ -41,11 +41,29 @@ class RealmRunnerTest : public TestWithEnvironment {
     ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment_.get()));
   }
 
-  bool WaitForRunnerToRegister() {
+  std::pair<std::unique_ptr<EnclosingEnvironment>,
+            std::unique_ptr<MockRunnerRegistry>>
+  MakeNestedEnvironment(fuchsia::sys::EnvironmentOptionsPtr options) {
+    fuchsia::sys::EnvironmentPtr env;
+    enclosing_environment_->ConnectToService(fuchsia::sys::Environment::Name_,
+                                             env.NewRequest().TakeChannel());
+    auto registry = std::make_unique<MockRunnerRegistry>();
+    auto services = testing::EnvironmentServices::Create(env);
+    EXPECT_EQ(ZX_OK, services->AddService(registry->GetHandler()));
+    auto nested_environment = EnclosingEnvironment::Create(
+        "nested-environment", env, std::move(services), std::move(options));
+    EXPECT_TRUE(WaitForEnclosingEnvToStart(nested_environment.get()));
+    return std::make_pair(std::move(nested_environment), std::move(registry));
+  }
+
+  bool WaitForRunnerToRegister(MockRunnerRegistry* runner_registry = nullptr) {
+    if (!runner_registry) {
+      runner_registry = &runner_registry_;
+    }
     const bool ret = RunLoopWithTimeoutOrUntil(
-        [&] { return runner_registry_.runner(); }, kTimeout);
+        [&] { return runner_registry->runner(); }, kTimeout);
     EXPECT_TRUE(ret) << "Waiting for connection timed out: "
-                     << runner_registry_.connect_count();
+                     << runner_registry->connect_count();
     return ret;
   }
 
@@ -64,7 +82,12 @@ class RealmRunnerTest : public TestWithEnvironment {
   }
 
   bool WaitForComponentCount(size_t expected_components_count) {
-    auto runner = runner_registry_.runner();
+    return WaitForComponentCount(&runner_registry_, expected_components_count);
+  }
+
+  bool WaitForComponentCount(MockRunnerRegistry* runner_registry,
+                             size_t expected_components_count) {
+    auto runner = runner_registry->runner();
     const bool ret = RunLoopWithTimeoutOrUntil(
         [&] {
           return runner->components().size() == expected_components_count;
@@ -139,6 +162,50 @@ TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
   ASSERT_TRUE(WaitForComponentCount(1));
   auto components = runner_registry_.runner()->components();
   ASSERT_EQ(components[0].url, kComponentForRunnerUrl);
+}
+
+TEST_F(RealmRunnerTest, RunnerLaunchedForEachEnvironment) {
+  auto component1 =
+      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  ASSERT_TRUE(WaitForRunnerToRegister());
+
+  std::unique_ptr<EnclosingEnvironment> nested_environment;
+  std::unique_ptr<MockRunnerRegistry> nested_registry;
+  std::tie(nested_environment, nested_registry) = MakeNestedEnvironment({});
+
+  // launch again and check that runner was created for the nested environment
+  auto component2 =
+      nested_environment->CreateComponentFromUrl(kComponentForRunner);
+  WaitForRunnerToRegister(nested_registry.get());
+
+  ASSERT_TRUE(WaitForComponentCount(&runner_registry_, 1));
+  ASSERT_TRUE(WaitForComponentCount(nested_registry.get(), 1));
+  EXPECT_EQ(1, runner_registry_.connect_count());
+  EXPECT_EQ(1, nested_registry->connect_count());
+}
+
+TEST_F(RealmRunnerTest, RunnerSharedFromParent) {
+  auto component1 =
+      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  ASSERT_TRUE(WaitForRunnerToRegister());
+
+  std::unique_ptr<EnclosingEnvironment> nested_environment;
+  std::unique_ptr<MockRunnerRegistry> nested_registry;
+  {
+    auto options = std::make_unique<fuchsia::sys::EnvironmentOptions>();
+    options->allow_parent_runners = true;
+    std::tie(nested_environment, nested_registry) =
+        MakeNestedEnvironment(std::move(options));
+  }
+
+  // launch again and check that the runner from the parent environment was
+  // shared.
+  auto component2 =
+      nested_environment->CreateComponentFromUrl(kComponentForRunner);
+
+  ASSERT_TRUE(WaitForComponentCount(&runner_registry_, 2));
+  EXPECT_EQ(1, runner_registry_.connect_count());
+  EXPECT_EQ(0, nested_registry->connect_count());
 }
 
 TEST_F(RealmRunnerTest, ComponentBridgeReturnsRightReturnCode) {

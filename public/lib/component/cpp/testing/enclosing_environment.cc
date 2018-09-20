@@ -43,8 +43,7 @@ EnvironmentServices::CreateWithCustomLoader(
 }
 
 zx_status_t EnvironmentServices::AddService(
-    const fbl::RefPtr<fs::Service> service,
-    const std::string& service_name) {
+    const fbl::RefPtr<fs::Service> service, const std::string& service_name) {
   svc_names_.push_back(service_name);
   return svc_->AddEntry(service_name.c_str(), service);
 }
@@ -64,8 +63,8 @@ zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
           fidl::Clone(launch_info.arguments, &dup_launch_info.arguments);
           dup_launch_info.directory_request = services.NewRequest();
 
-          enclosing_env_->CreateComponent(
-              std::move(dup_launch_info), controller.NewRequest());
+          enclosing_env_->CreateComponent(std::move(dup_launch_info),
+                                          controller.NewRequest());
           controller.set_error_handler(
               [this, url = launch_info.url, &controller] {
                 // TODO: show error? where on stderr?
@@ -97,9 +96,9 @@ zx_status_t EnvironmentServices::AllowParentService(
 
 EnclosingEnvironment::EnclosingEnvironment(
     const std::string& label, const fuchsia::sys::EnvironmentPtr& parent_env,
-    std::unique_ptr<EnvironmentServices> services)
-    : label_(label),
-      services_(std::move(services)) {
+    std::unique_ptr<EnvironmentServices> services,
+    fuchsia::sys::EnvironmentOptionsPtr options)
+    : label_(label), services_(std::move(services)) {
   services_->set_enclosing_env(this);
 
   // Start environment with services.
@@ -108,9 +107,16 @@ EnclosingEnvironment::EnclosingEnvironment(
   service_list->host_directory =
       OpenAsDirectory(services_->vfs_.get(), services_->svc_);
   fuchsia::sys::EnvironmentPtr env;
-  parent_env->CreateNestedEnvironment(
-      env.NewRequest(), env_controller_.NewRequest(), label_, zx::channel(),
-      std::move(service_list), /*inherit_parent_services=*/false);
+
+  if (options) {
+    parent_env->CreateNestedEnvironmentWithOptions(
+        env.NewRequest(), env_controller_.NewRequest(), label_,
+        std::move(service_list), std::move(*options.release()));
+  } else {
+    parent_env->CreateNestedEnvironment(
+        env.NewRequest(), env_controller_.NewRequest(), label_, zx::channel(),
+        std::move(service_list), /*inherit_parent_services=*/false);
+  }
   env_controller_.set_error_handler([this] { running_ = false; });
   // Connect to launcher
   env->GetLauncher(launcher_.NewRequest());
@@ -124,8 +130,10 @@ EnclosingEnvironment::EnclosingEnvironment(
 // static
 std::unique_ptr<EnclosingEnvironment> EnclosingEnvironment::Create(
     const std::string& label, const fuchsia::sys::EnvironmentPtr& parent_env,
-    std::unique_ptr<EnvironmentServices> services) {
-  auto* env = new EnclosingEnvironment(label, parent_env, std::move(services));
+    std::unique_ptr<EnvironmentServices> services,
+    fuchsia::sys::EnvironmentOptionsPtr options) {
+  auto* env = new EnclosingEnvironment(label, parent_env, std::move(services),
+                                       std::move(options));
   return std::unique_ptr<EnclosingEnvironment>(env);
 }
 
@@ -147,11 +155,12 @@ void EnclosingEnvironment::Kill(std::function<void()> callback) {
 }
 
 std::unique_ptr<EnclosingEnvironment>
-EnclosingEnvironment::CreateNestedEnclosingEnvironment(std::string& label) {
+EnclosingEnvironment::CreateNestedEnclosingEnvironment(
+    const std::string& label) {
   fuchsia::sys::EnvironmentPtr env;
   service_provider_->ConnectToService(fuchsia::sys::Environment::Name_,
                                       env.NewRequest().TakeChannel());
-  return Create(std::move(label), env, EnvironmentServices::Create(env));
+  return Create(label, env, EnvironmentServices::Create(env));
 }
 
 void EnclosingEnvironment::CreateComponent(

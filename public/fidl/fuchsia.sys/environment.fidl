@@ -7,6 +7,16 @@ library fuchsia.sys;
 // Maximum length for an environment label.
 const uint32 kLabelMaxLength = 32;
 
+struct EnvironmentOptions {
+  // True if this environment should inherit services provided by the
+  // parent environment.
+  bool inherit_parent_services;
+  // True if components in this environment can share a runner provided
+  // by the parent environment. If false, a new runner will be started
+  // in this environment for components.
+  bool allow_parent_runners;
+};
+
 // An interface for managing a set of applications.
 //
 // Applications run inside environments, which provide ambient services and
@@ -45,6 +55,15 @@ interface Environment {
                              handle<channel>? host_directory,
                              ServiceList? additional_services,
                              bool inherit_parent_services);
+
+  // Same as |CreateNestedEnvironment|, but with flags passed through
+  // |EnvironmentOptions|.
+  5: CreateNestedEnvironmentWithOptions(
+                             request<Environment> environment,
+                             request<EnvironmentController>? controller,
+                             string? label,
+                             ServiceList? additional_services,
+                             EnvironmentOptions options);
 
   // Gets the Launcher associated with this environment.
   //

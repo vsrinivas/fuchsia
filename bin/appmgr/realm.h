@@ -37,22 +37,17 @@ namespace component {
 
 struct RealmArgs {
   static RealmArgs Make(
-      Realm* parent,
-      fidl::StringPtr label,
+      Realm* parent, fidl::StringPtr label,
       const std::shared_ptr<component::Services>& env_services,
-      bool run_virtual_console,
-      bool inherit_parent_services);
+      bool run_virtual_console, bool inherit_parent_services);
 
   static RealmArgs MakeWithHostDir(
-      Realm* parent,
-      fidl::StringPtr label,
+      Realm* parent, fidl::StringPtr label,
       const std::shared_ptr<component::Services>& env_services,
-      bool run_virtual_console,
-      zx::channel host_directory);
+      bool run_virtual_console, zx::channel host_directory);
 
   static RealmArgs MakeWithAdditionalServices(
-      Realm* parent,
-      fidl::StringPtr label,
+      Realm* parent, fidl::StringPtr label,
       const std::shared_ptr<component::Services>& env_services,
       bool run_virtual_console,
       fuchsia::sys::ServiceListPtr additional_services,
@@ -68,6 +63,7 @@ struct RealmArgs {
   zx::channel host_directory;
   fuchsia::sys::ServiceListPtr additional_services;
   bool inherit_parent_services;
+  bool allow_parent_runners;
 };
 
 class Realm : public ComponentContainer<ComponentControllerImpl> {
@@ -93,10 +89,10 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
       fidl::InterfaceRequest<fuchsia::sys::EnvironmentController>
           controller_request,
-      fidl::StringPtr label,
-      zx::channel host_directory,
+      fidl::StringPtr label, zx::channel host_directory,
       fuchsia::sys::ServiceListPtr additional_services,
-      bool inherit_parent_services);
+      bool inherit_parent_services,
+      bool allow_parent_runners);
 
   using ComponentObjectCreatedCallback =
       fit::function<void(ComponentControllerImpl* component)>;
@@ -129,6 +125,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   static uint32_t next_numbered_label_;
 
   RunnerHolder* GetOrCreateRunner(const std::string& runner);
+  RunnerHolder* GetRunnerRecursive(const std::string& runner) const;
 
   void CreateComponentWithRunnerForScheme(
       std::string runner_url, fuchsia::sys::LaunchInfo launch_info,
@@ -191,6 +188,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   SchemeMap scheme_map_;
 
   const std::shared_ptr<component::Services> environment_services_;
+
+  bool allow_parent_runners_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Realm);
 };
