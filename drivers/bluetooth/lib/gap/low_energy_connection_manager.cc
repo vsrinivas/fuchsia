@@ -479,12 +479,17 @@ LowEnergyConnectionManager::RegisterRemoteInitiatedLink(
 
 void LowEnergyConnectionManager::SetPairingDelegate(
     fxl::WeakPtr<PairingDelegate> delegate) {
+  // TODO(armansito): Add a test case for this once NET-1179 is done.
+  pairing_delegate_ = delegate;
+
+  // Tell existing connections to abort ongoing pairing procedures. The new
+  // delegate will receive calls to PairingDelegate::CompletePairing, unless it
+  // is null.
   for (auto& iter : connections_) {
     iter.second->ResetPairingState(delegate
                                        ? delegate->io_capability()
                                        : sm::IOCapability::kNoInputNoOutput);
   }
-  pairing_delegate_ = delegate;
 }
 
 void LowEnergyConnectionManager::SetConnectionParametersCallbackForTesting(

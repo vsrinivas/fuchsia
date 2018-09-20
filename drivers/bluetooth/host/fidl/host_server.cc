@@ -461,6 +461,7 @@ btlib::sm::IOCapability HostServer::io_capability() const {
 void HostServer::CompletePairing(std::string id, btlib::sm::Status status) {
   bt_log(INFO, "bt-host", "pairing complete for device: %s, status: %s",
          id.c_str(), status.ToString().c_str());
+  ZX_DEBUG_ASSERT(pairing_delegate_);
   pairing_delegate_->OnPairingComplete(std::move(id), fidl_helpers::StatusToFidl(status));
 }
 
