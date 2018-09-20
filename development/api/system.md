@@ -156,3 +156,13 @@ Other return types may be used for functions that cannot fail. For example,
 Similarly, `zx_clock_get` cannot fail to get the current time and has a return
 type of `zx_time_t`.
 
+## Function-specific rules
+
+### zx_object_get_property versus zx_object_get_info
+
+There are two similar mechanisms for exposing data about objects:
+`zx_object_get_property` and `zx_object_get_info`. Prefer exposing data through
+`zx_object_get_property` if (a) the property can be set using
+`zx_object_set_property` or (b) the property exist across multiple types of
+objects. In other case, consider including the data in the general
+`zx_object_get_info` topic for the type of object that has the property.
