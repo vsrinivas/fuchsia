@@ -4,9 +4,7 @@
 
 use std::mem;
 
-use failure::Error;
-
-use crate::Message;
+use crate::MessageReceiver;
 
 /// Helper for constructing a |Registry|.
 ///
@@ -93,34 +91,16 @@ where
     }
 }
 
-/// A |MessageReceiver| is a type that can accept in-bound messages from a
-/// client.
-///
-/// The server will dispatch |Message|s to the appropriate |MessageReceiver|
-/// by reading the sender field in the message header.
-pub trait MessageReceiver {
-    /// Receive and decode the |Message|. Typically this will perform any
-    /// server-side logic required to implement the objects interface as
-    /// defined by the protocol.
-    fn receive(&mut self, message: Message) -> Result<(), Error>;
-}
-
-/// Allow |MessageReceiver|s to be provided as closures.
-impl<F> MessageReceiver for F
-where
-    F: FnMut(Message) -> Result<(), Error>,
-{
-    fn receive(&mut self, message: Message) -> Result<(), Error> {
-        self(message)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use std::cell::RefCell;
     use std::rc::Rc;
+
+    use failure::Error;
+
+    use crate::Message;
 
     #[test]
     fn registry_bind() {
