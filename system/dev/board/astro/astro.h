@@ -24,6 +24,7 @@ enum {
     BTI_THERMAL,
     BTI_AUDIO_IN,
     BTI_AUDIO_OUT,
+    BTI_TEE,
 };
 
 typedef struct {
@@ -91,3 +92,5 @@ zx_status_t aml_video_init(aml_bus_t* bus);
 zx_status_t aml_clk_init(aml_bus_t* bus);
 // astro-audio.c
 zx_status_t astro_tdm_init(aml_bus_t* bus);
+// astro-tee.c
+zx_status_t astro_tee_init(aml_bus_t* bus);

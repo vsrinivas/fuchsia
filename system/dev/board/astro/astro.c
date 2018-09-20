@@ -112,6 +112,11 @@ static int aml_start_thread(void* arg) {
         goto fail;
     }
 
+    if ((status = astro_tee_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "astro_tee_init failed: %d\n", status);
+        goto fail;
+    }
+
     if ((status = aml_video_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_video_init failed: %d\n", status);
         goto fail;
