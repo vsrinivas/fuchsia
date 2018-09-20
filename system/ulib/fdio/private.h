@@ -131,8 +131,6 @@ fdio_t* fdio_pipe_create(zx_handle_t h);
 // Wraps a socket with an fdio_t using socketpair io.
 fdio_t* fdio_socketpair_create(zx_handle_t h);
 
-zx_status_t fdio_pipe_posix_ioctl(fdio_t* io, int req, va_list va);
-
 // Wraps a vmo, offset, length with an fdio_t providing a readonly file.
 // Takens ownership of h.
 fdio_t* fdio_vmofile_create(zx_handle_t h, zx_handle_t vmo, zx_off_t off, zx_off_t len);
@@ -157,10 +155,6 @@ fdio_t* fdio_waitable_create(zx_handle_t h, zx_signals_t signals_in,
 
 void fdio_socket_set_stream_ops(fdio_t* io);
 void fdio_socket_set_dgram_ops(fdio_t* io);
-
-zx_status_t fdio_socket_posix_ioctl(fdio_t* io, int req, va_list va);
-zx_status_t fdio_socket_shutdown(fdio_t* io, int how);
-zx_status_t fdio_socketpair_shutdown(fdio_t* io, int how);
 
 // unsupported / do-nothing hooks shared by implementations
 zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out);
@@ -205,12 +199,6 @@ zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* type
 zx_status_t fdio_default_shutdown(fdio_t* io, int how);
 ssize_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx_handle_t* out);
-
-void __fdio_startup_handles_init(uint32_t num, zx_handle_t handles[],
-                                 uint32_t handle_info[])
-    __attribute__((visibility("hidden")));
-
-void __fdio_rchannel_init(void) __attribute__((visibility("hidden")));
 
 typedef struct {
     mtx_t lock;

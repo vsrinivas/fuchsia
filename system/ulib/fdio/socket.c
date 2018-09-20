@@ -738,6 +738,31 @@ static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
     return r;
 }
 
+static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
+    if (!(io->ioflag & IOFLAG_SOCKET_CONNECTED)) {
+        return ZX_ERR_BAD_STATE;
+    }
+    zxsio_t* sio = (zxsio_t*)io;
+    if (how == SHUT_WR || how == SHUT_RDWR) {
+        // netstack expects this user signal to be set - raise it to keep that code working until
+        // it learns about the read/write disabled signals.
+        zx_object_signal_peer(sio->s, 0u, ZXSIO_SIGNAL_HALFCLOSED);
+    }
+    uint32_t options = 0;
+    switch (how) {
+    case SHUT_RD:
+        options = ZX_SOCKET_SHUTDOWN_READ;
+        break;
+    case SHUT_WR:
+        options = ZX_SOCKET_SHUTDOWN_WRITE;
+        break;
+    case SHUT_RDWR:
+        options = ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE;
+        break;
+    }
+    return zx_socket_write(sio->s, options, NULL, 0, NULL);
+}
+
 static fdio_ops_t fdio_socket_stream_ops = {
     .read = zxsio_read_stream,
     .read_at = fdio_default_read_at,
@@ -831,29 +856,4 @@ void fdio_socket_set_stream_ops(fdio_t* io) {
 void fdio_socket_set_dgram_ops(fdio_t* io) {
     zxsio_t* sio = (zxsio_t*)io;
     sio->io.ops = &fdio_socket_dgram_ops;
-}
-
-zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
-    if (!(io->ioflag & IOFLAG_SOCKET_CONNECTED)) {
-        return ZX_ERR_BAD_STATE;
-    }
-    zxsio_t* sio = (zxsio_t*)io;
-    if (how == SHUT_WR || how == SHUT_RDWR) {
-        // netstack expects this user signal to be set - raise it to keep that code working until
-        // it learns about the read/write disabled signals.
-        zx_object_signal_peer(sio->s, 0u, ZXSIO_SIGNAL_HALFCLOSED);
-    }
-    uint32_t options = 0;
-    switch (how) {
-    case SHUT_RD:
-        options = ZX_SOCKET_SHUTDOWN_READ;
-        break;
-    case SHUT_WR:
-        options = ZX_SOCKET_SHUTDOWN_WRITE;
-        break;
-    case SHUT_RDWR:
-        options = ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE;
-        break;
-    }
-    return zx_socket_write(sio->s, options, NULL, 0, NULL);
 }
