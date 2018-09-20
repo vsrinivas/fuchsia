@@ -263,7 +263,7 @@ void AudioInImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   // Map the VMO into our process.
   uintptr_t tmp;
   res = zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_,
-                                   ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,  &tmp);
+                                   ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &tmp);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map payload buffer VMO (res = " << res << ")";
     return;
@@ -1053,9 +1053,6 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
                      ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
 
       Gain::AScale amplitude_scale = bk->gain.GetGainScale(capture_gain_db);
-
-      FXL_LOG(INFO) << "Will apply amplitude_scale:" << amplitude_scale
-                    << " for capture_gain_db:" << capture_gain_db;
 
       // Looks like we are ready to go. Mix.
       // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
