@@ -30,7 +30,7 @@ export VULKAN_INCLUDE_DIR=$fuchsia_root/third_party/vulkan_loader_and_validation
 export SDL_INCLUDE_DIR=$fuchsia_root/third_party/sdl/include
 export FUCHSIA_LIB_DIR=$fuchsia_root/out/$build/$shared_path
 
-sysroot=$fuchsia_root/out/$build/sdks/zircon_sysroot/arch/$arch/sysroot
+sysroot=$fuchsia_root/out/$build/sdk/exported/zircon_sysroot/arch/$arch/sysroot
 ninja_path=$fuchsia_root/buildtools/ninja
 
 mkdir -p $builddir
