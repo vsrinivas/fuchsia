@@ -67,7 +67,7 @@ def main():
             required=True)
     parser.add_argument(
             '--sysroot',
-            help='zircon sysroot (possibly //out/release-x64/sdks/zircon_sysroot/sysroot)',
+            help='zircon sysroot (possibly //out/release-x64/sdk/exported/zircon_sysroot/sysroot)',
             required=True)
     parser.add_argument(
             '--shared-libs-root',
