@@ -7,10 +7,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fbl/algorithm.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/process.h>
+#include <lib/zx/time.h>
 #include <loader-service/loader-service.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
@@ -30,48 +34,40 @@ static zx_status_t fshost_launch_load(void* ctx, launchpad_t* lp,
     return launchpad_load_from_file(lp, file);
 }
 
-static void pkgfs_finish(zx_handle_t proc, zx_handle_t pkgfs_root) {
-    zx_time_t deadline = zx_deadline_after(ZX_SEC(5));
+static void pkgfs_finish(zx::process proc, zx::channel pkgfs_root) {
+    auto deadline = zx::deadline_after(zx::sec(5));
     zx_signals_t observed;
-    zx_status_t status = zx_object_wait_one(
-        proc, ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED, deadline, &observed);
+    zx_status_t status = proc.wait_one(ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED,
+                                       deadline, &observed);
     if (status != ZX_OK) {
         printf("fshost: pkgfs did not signal completion: %d (%s)\n",
                status, zx_status_get_string(status));
-        goto fail0;
+        return;
     }
     if (!(observed & ZX_USER_SIGNAL_0)) {
         printf("fshost: pkgfs terminated prematurely\n");
-        goto fail0;
+        return;
     }
-    if (vfs_install_fs("/pkgfs", pkgfs_root) != ZX_OK) {
+    if (vfs_install_fs("/pkgfs", pkgfs_root.get()) != ZX_OK) {
         printf("fshost: failed to install /pkgfs\n");
-        goto fail1;
+        return;
     }
 
     // re-export /pkgfs/system as /system
-    zx_handle_t h0, h1;
-    if (zx_channel_create(0, &h0, &h1) != ZX_OK) {
-        goto fail1;
+    zx::channel h0, h1;
+    if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
+        return;
     }
-    if (fdio_open_at(pkgfs_root, "system", FS_DIR_FLAGS, h1) != ZX_OK) {
-        zx_handle_close(h0);
-        goto fail1;
+    if (fdio_open_at(pkgfs_root.release(), "system", FS_DIR_FLAGS, h1.release()) != ZX_OK) {
+        return;
     }
-    if (vfs_install_fs("/system", h0) != ZX_OK) {
+    if (vfs_install_fs("/system", h0.release()) != ZX_OK) {
         printf("fshost: failed to install /system\n");
-        goto fail1;
+        return;
     }
 
     // start the appmgr
     fuchsia_start();
-    zx_handle_close(proc);
-    return;
-
-fail0:
-    zx_handle_close(pkgfs_root);
-fail1:
-    zx_handle_close(proc);
 }
 
 // TODO(mcgrathr): Remove this fallback path when the old args
@@ -86,12 +82,11 @@ static void old_launch_blob_init(void) {
         return;
     }
 
-    zx_handle_t proc = ZX_HANDLE_INVALID;
+    zx::process proc;
 
     uint32_t type = PA_HND(PA_USER0, 0);
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    zx_handle_t pkgfs_root = ZX_HANDLE_INVALID;
-    if (zx_channel_create(0, &handle, &pkgfs_root) != ZX_OK) {
+    zx::channel handle, pkgfs_root;
+    if (zx::channel::create(0, &handle, &pkgfs_root) != ZX_OK) {
         return;
     }
 
@@ -107,18 +102,17 @@ static void old_launch_blob_init(void) {
         argv[1] = blob_init_arg;
     }
 
+    const zx_handle_t raw_handle = handle.release();
     zx_status_t status = devmgr_launch(
         job, "pkgfs", &fshost_launch_load, nullptr, argc, &argv[0], nullptr, -1,
-        &handle, &type, 1, &proc, FS_DATA | FS_BLOB | FS_SVC);
+        &raw_handle, &type, 1, proc.reset_and_get_address(), FS_DATA | FS_BLOB | FS_SVC);
 
     if (status != ZX_OK) {
         printf("fshost: '%s' failed to launch: %d\n", blob_init, status);
-        zx_handle_close(handle);
-        zx_handle_close(pkgfs_root);
         return;
     }
 
-    pkgfs_finish(proc, pkgfs_root);
+    pkgfs_finish(fbl::move(proc), fbl::move(pkgfs_root));
 }
 
 // Launching pkgfs uses its own loader service and command lookup to run out of
@@ -237,8 +231,8 @@ static bool pkgfs_launch(void) {
         return false;
     }
 
-    zx_handle_t h0, h1;
-    zx_status_t status = zx_channel_create(0, &h0, &h1);
+    zx::channel h0, h1;
+    zx_status_t status = zx::channel::create(0, &h0, &h1);
     if (status != ZX_OK) {
         printf("fshost: cannot create pkgfs root channel: %d (%s)\n",
                status, zx_status_get_string(status));
@@ -246,19 +240,20 @@ static bool pkgfs_launch(void) {
         return false;
     }
 
-    zx_handle_t proc = ZX_HANDLE_INVALID;
+    const zx_handle_t raw_h1 = h1.release();
+    zx::process proc;
     status = devmgr_launch_cmdline(
         "fshost", job, "pkgfs",
         &pkgfs_launch_load, (void*)(intptr_t)fs_blob_fd, cmd,
-        &h1, (const uint32_t[]){ PA_HND(PA_USER0, 0) }, 1,
-        &proc, FS_DATA | FS_BLOB | FS_SVC);
+        &raw_h1, (const uint32_t[]){ PA_HND(PA_USER0, 0) }, 1,
+        proc.reset_and_get_address(), FS_DATA | FS_BLOB | FS_SVC);
     if (status != ZX_OK) {
         printf("fshost: failed to launch %s: %d (%s)\n",
                cmd, status, zx_status_get_string(status));
         return false;
     }
 
-    pkgfs_finish(proc, h0);
+    pkgfs_finish(fbl::move(proc), fbl::move(h0));
     return true;
 }
 
