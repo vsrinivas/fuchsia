@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "data/run_integration_test"
+        "binary": "bin/run_integration_test"
     },
     "sandbox": {
         "features": [ "deprecated-all-services", "persistent-storage" ],

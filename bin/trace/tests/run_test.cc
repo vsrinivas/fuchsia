@@ -19,7 +19,7 @@
 
 // The path to the test subprogram.
 // This path can only be interpreted within the context of the test package.
-#define TEST_APP_PATH "/pkg/data/integration_test_app"
+#define TEST_APP_PATH "/pkg/bin/integration_test_app"
 
 // The path of the trace program.
 const char kTraceProgramPath[] = "/system/bin/trace";

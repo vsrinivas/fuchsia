@@ -15,8 +15,8 @@
 const char kOutputFilePath[] = "/data/test.trace";
 
 const char kUsageString[] = {
-  "Usage: run fuchsia-pkg://fuchsia.com/trace_tests#meta/run_trace_integration_test\\n"
-  "  [options] /path/to/test.tspec\n"
+  "Usage: run fuchsia-pkg://fuchsia.com/trace_tests#meta/run_integration_test.cmx\\n"
+  "  [options] /pkg/data/test.tspec\n"
   "\n"
   "Options:\n"
   "  --quiet[=LEVEL]    set quietness level (opposite of verbose)\n"

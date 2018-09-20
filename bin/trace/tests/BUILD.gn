@@ -1,0 +1,138 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("trace_tests_bin") {
+  testonly = true
+
+  output_name = "trace_tests"
+
+  deps = [
+    "//garnet/bin/trace:unittests",
+    "//garnet/lib/measure:unittests",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("run_test") {
+  testonly = true
+
+  sources = [
+    "run_test.cc",
+    "run_test.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("trace_integration_tests") {
+  testonly = true
+  output_name = "trace_integration_tests"
+
+  sources = [
+    "trace_integration_tests.cc",
+  ]
+
+  deps = [
+    ":run_test",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("run_integration_test") {
+  testonly = true
+  output_name = "run_integration_test"
+
+  sources = [
+    "run_integration_test.cc",
+  ]
+
+  deps = [
+    ":run_test",
+  ]
+}
+
+executable("integration_test_app") {
+  testonly = true
+  output_name = "integration_test_app"
+
+  sources = [
+    "integration_test_app.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/trace:spec",
+    "//garnet/lib/measure",
+    "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("trace_tests") {
+  testonly = true
+
+  deps = [
+    ":integration_test_app",
+    ":run_integration_test",
+    ":trace_integration_tests",
+    ":trace_tests_bin",
+  ]
+
+  tests = [
+    {
+      name = "trace_integration_tests"
+    },
+    {
+      name = "trace_tests"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "integration_test_app"
+    },
+    {
+      name = "run_integration_test"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/integration_test_app.cmx")
+      dest = "integration_test_app.cmx"
+    },
+    {
+      path = rebase_path("meta/run_integration_test.cmx")
+      dest = "run_integration_test.cmx"
+    },
+    {
+      path = rebase_path("meta/trace_integration_tests.cmx")
+      dest = "trace_integration_tests.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("oneshot.tspec")
+      dest = "oneshot.tspec"
+    },
+    {
+      path = rebase_path("circular.tspec")
+      dest = "circular.tspec"
+    },
+    {
+      path = rebase_path("streaming.tspec")
+      dest = "streaming.tspec"
+    },
+  ]
+}
