@@ -18,6 +18,7 @@ namespace gap {
 
 RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
                                            bool connectable) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   if (address_map_.find(address) != address_map_.end()) {
     bt_log(WARN, "gap", "tried to create new device with existing address: %s",
            address.ToString().c_str());
@@ -42,6 +43,7 @@ RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
 }
 
 void RemoteDeviceCache::ForEach(DeviceCallback f) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(f);
   for (const auto& iter : devices_) {
     f(*iter.second.device());
@@ -51,6 +53,7 @@ void RemoteDeviceCache::ForEach(DeviceCallback f) {
 bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
                                         const common::DeviceAddress& address,
                                         const sm::PairingData& bond_data) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(!bond_data.identity_address ||
                   address == *bond_data.identity_address);
 
@@ -106,6 +109,7 @@ bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
 
 bool RemoteDeviceCache::StoreLowEnergyBond(const std::string& identifier,
                                            const sm::PairingData& bond_data) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   auto* device = FindDeviceById(identifier);
   if (!device) {
     bt_log(TRACE, "gap-le", "failed to store bond for unknown device: %s",
@@ -150,12 +154,14 @@ bool RemoteDeviceCache::StoreLowEnergyBond(const std::string& identifier,
 
 RemoteDevice* RemoteDeviceCache::FindDeviceById(
     const std::string& identifier) const {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   auto iter = devices_.find(identifier);
   return iter != devices_.end() ? iter->second.device() : nullptr;
 }
 
 RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
     const common::DeviceAddress& address) const {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   auto iter = address_map_.find(address);
   if (iter == address_map_.end())
     return nullptr;

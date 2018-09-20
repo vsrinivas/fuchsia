@@ -14,6 +14,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/sm/types.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/synchronization/thread_checker.h"
 
 namespace btlib {
 
@@ -98,12 +99,14 @@ class RemoteDeviceCache final {
   // When set, |callback| will be invoked whenever a device is added
   // or updated.
   void set_device_updated_callback(DeviceCallback callback) {
+    ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
     device_updated_callback_ = std::move(callback);
   }
 
   // When set, |callback| will be invoked whenever a device is
   // removed.
   void set_device_removed_callback(DeviceIdCallback callback) {
+    ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
     device_removed_callback_ = std::move(callback);
   }
 
@@ -111,6 +114,7 @@ class RemoteDeviceCache final {
   // data of a device is updated and should be persisted. The caller must ensure
   // that |callback| outlives |this|.
   void set_device_bonded_callback(DeviceCallback callback) {
+    ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
     device_bonded_callback_ = std::move(callback);
   }
 
@@ -178,6 +182,8 @@ class RemoteDeviceCache final {
   DeviceCallback device_updated_callback_;
   DeviceIdCallback device_removed_callback_;
   DeviceCallback device_bonded_callback_;
+
+  fxl::ThreadChecker thread_checker_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteDeviceCache);
 };
