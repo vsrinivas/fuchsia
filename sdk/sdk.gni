@@ -29,13 +29,14 @@ declare_args() {
 #     build, for example to port a language runtime which would otherwise rely
 #     on an official SDK.
 #     Defaults to false.
-#
-#   domains (optional)
-#     If `export` is true, specifies the domains of SDK elements to export.
-#     Only the "cpp" domain is currently supported.
 
 template("sdk") {
   assert(defined(invoker.category), "Must define an SDK category")
+
+  # TODO(DX-340): remove this.
+  if (defined(invoker.domains)) {
+    not_needed(invoker, [ "domains" ])
+  }
 
   main_target_name = target_name
   generation_target_name = "${target_name}_molecule"
@@ -73,7 +74,6 @@ template("sdk") {
     forward_variables_from(invoker,
                            "*",
                            [
-                             "domains",
                              "export",
                            ])
 
@@ -96,7 +96,7 @@ template("sdk") {
   if (defined(invoker.name)) {
     sdk_name = invoker.name
   }
-  final_manifest_file = "$root_out_dir/sdk-manifests/$sdk_name"
+  final_manifest_file = "$root_out_dir/sdk/manifest/$sdk_name"
 
   # Copies the manifest to a central location.
   copy(copy_target_name) {
@@ -155,8 +155,9 @@ template("sdk") {
       host_triple,
     ]
 
-    deps = [
+    public_deps = [
       ":$copy_target_name",
+      ":$verification_target_name",
     ]
   }
 
@@ -236,15 +237,14 @@ template("sdk") {
       ]
     }
 
-    deps = [
-      ":$copy_target_name",
+    public_deps = [
       ":$verify_meta_target_name",
     ]
   }
 
   if (build_sdk_archives) {
     # Generates the final archive.
-    final_archive = "$root_out_dir/sdk/$sdk_name.tar.gz"
+    final_archive = "$root_out_dir/sdk/archive/$sdk_name.tar.gz"
 
     compiled_action(archive_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
@@ -268,7 +268,6 @@ template("sdk") {
 
       deps = [
         ":$archive_manifest_target_name",
-        ":$copy_target_name",
       ]
     }
   } else {
@@ -286,26 +285,18 @@ template("sdk") {
 
     deps = [
       ":$archive_target_name",
-      ":$copy_target_name",
-      ":$verification_target_name",
     ]
   }
 
   if (defined(invoker.export) && invoker.export) {
-    if (!defined(invoker.domains)) {
-      assert(false, "A list of domains to export must be specified.")
-    }
-
     stamp_file = "$target_gen_dir/$target_name.exported"
 
     action("${target_name}_export") {
       script = "//build/sdk/export_sdk.py"
 
       inputs = [
-        final_manifest_file,
+        archive_manifest_file,
       ]
-
-      depfile = "$stamp_file.d"
 
       outputs = [
         stamp_file,
@@ -313,30 +304,16 @@ template("sdk") {
 
       args = [
                "--out-dir",
-               rebase_path("$root_out_dir/sdks/$sdk_name"),
+               rebase_path("$root_out_dir/sdk/exported/$sdk_name"),
                "--stamp-file",
                rebase_path(stamp_file),
                "--manifest",
-               rebase_path(final_manifest_file),
-               "--domains",
-             ] + invoker.domains +
-             [
-               "--depfile",
-               rebase_path(depfile),
-               "--depname",
-               rebase_path(stamp_file, root_build_dir),
-               "--arch",
-               target_cpu,
+               rebase_path(archive_manifest_file),
              ]
 
       deps = [
-        ":$copy_target_name",
-        ":$verification_target_name",
+        ":$archive_manifest_target_name",
       ]
-    }
-  } else {  # Not exported.
-    if (defined(invoker.domains)) {
-      assert(false, "A domain list may only be set if export = true.")
     }
   }
 }

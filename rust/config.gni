@@ -27,7 +27,7 @@ _sysroot_deps = []
 # TODO(BLD-230): sysroot.gni should provide the correct label and path to the Fuchsia sysroot.
 if (is_fuchsia) {
   _sysroot_deps = [ "//garnet/public/sdk:zircon_sysroot_export" ]
-  _sysroot = rebase_path("$root_out_dir/sdks/zircon_sysroot/arch/$target_cpu/sysroot")
+  _sysroot = rebase_path("$root_out_dir/sdk/exported/zircon_sysroot/arch/$target_cpu/sysroot")
 }
 
 _std_deps = []
