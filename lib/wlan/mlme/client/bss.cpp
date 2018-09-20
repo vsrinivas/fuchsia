@@ -55,7 +55,9 @@ std::string Bss::ToString() const {
              bssid_.ToString().c_str(),
              bss_desc_.bss_type == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N",
              bss_desc_.rssi_dbm,
-             (bss_desc_.country != nullptr) ? bss_desc_.country->c_str() : "---",
+             bss_desc_.country.is_null()
+                 ? "---"
+                 : reinterpret_cast<const char*>(bss_desc_.country->data()),
              common::ChanStr(bcn_rx_chan_).c_str(), static_cast<int>(bss_desc_.ssid->size()),
              bss_desc_.ssid->data());
     return std::string(buf);
@@ -242,9 +244,10 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc_.country = fidl::StringPtr(reinterpret_cast<const char*>(ie->country),
-                                                CountryElement::kCountryLen);
-            debugbcn("%s Country: %s\n", dbgmsghdr, bss_desc_.country->c_str());
+            bss_desc_.country.resize(0);
+            bss_desc_.country->assign(ie->country, ie->country + CountryElement::kCountryLen);
+
+            debugbcn("%s Country: %3s\n", dbgmsghdr, bss_desc_.country->data());
             break;
         }
         case element_id::kRsn: {
