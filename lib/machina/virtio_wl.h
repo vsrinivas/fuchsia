@@ -35,9 +35,9 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
     Vfd() = default;
     virtual ~Vfd() = default;
 
-    // Begin waiting on VFD to become ready. Returns ZX_ERR_NOT_SUPPORTED
-    // if VFD type doesn't support waiting.
-    virtual zx_status_t BeginWait(async_dispatcher_t* dispatcher) {
+    // Begin waiting on data to read from VFD. Returns ZX_ERR_NOT_SUPPORTED
+    // if VFD type doesn't support reading.
+    virtual zx_status_t BeginWaitOnData(async_dispatcher_t* dispatcher) {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -52,16 +52,24 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
       return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // Write |bytes| and |handles| to local end-point of VFD.
-    //
-    // Returns ZX_ERR_NOT_SUPPORTED if writing is not supported.
-    virtual zx_status_t Write(const void* bytes, uint32_t num_bytes,
-                              const zx_handle_t* handles,
-                              uint32_t num_handles) {
+    // Begin waiting on VFD to become ready for writing. Returns
+    // ZX_ERR_NOT_SUPPORTED if VFD type doesn't support writing.
+    virtual zx_status_t BeginWaitOnWritable(async_dispatcher_t* dispatcher) {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // Duplicate object for dispatcher.
+    // Write |bytes| and |handles| to local end-point of VFD. If VFD has
+    // insufficient space for |bytes|, it writes nothing and returns
+    // ZX_ERR_SHOULD_WAIT.
+    //
+    // Returns ZX_ERR_NOT_SUPPORTED if writing is not supported.
+    virtual zx_status_t Write(const void* bytes, uint32_t num_bytes,
+                              const zx_handle_t* handles, uint32_t num_handles,
+                              size_t* actual_bytes) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // Duplicate object for passing to channel.
     //
     // Returns ZX_ERR_NOT_SUPPORTED if duplication is not supported.
     virtual zx_status_t Duplicate(zx::handle* handle) {
@@ -84,13 +92,13 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
   zx_status_t Init();
 
  private:
-  zx_status_t HandleCommand(VirtioQueue* queue, uint16_t head, uint32_t* used);
+  void HandleCommand(uint16_t head);
   void HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
                  virtio_wl_ctrl_vfd_new_t* response);
   void HandleClose(const virtio_wl_ctrl_vfd_t* request,
                    virtio_wl_ctrl_hdr_t* response);
-  void HandleSend(const virtio_wl_ctrl_vfd_send_t* request,
-                  uint32_t request_len, virtio_wl_ctrl_hdr_t* response);
+  zx_status_t HandleSend(const virtio_wl_ctrl_vfd_send_t* request,
+                         uint32_t request_len, virtio_wl_ctrl_hdr_t* response);
   void HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
                     virtio_wl_ctrl_vfd_new_t* response);
   void HandleNewPipe(const virtio_wl_ctrl_vfd_new_t* request,
@@ -100,8 +108,12 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
   void HandleDmabufSync(const virtio_wl_ctrl_vfd_dmabuf_sync_t* request,
                         virtio_wl_ctrl_hdr_t* response);
 
-  void OnReady(uint32_t vfd_id, async::Wait* wait, zx_status_t status,
-               const zx_packet_signal_t* signal);
+  void OnCommandAvailable(async_dispatcher_t* dispatcher, async::Wait* wait,
+                          zx_status_t status, const zx_packet_signal_t* signal);
+  void OnDataAvailable(uint32_t vfd_id, async::Wait* wait, zx_status_t status,
+                       const zx_packet_signal_t* signal);
+  void OnCanWrite(async_dispatcher_t* dispatcher, async::Wait* wait,
+                  zx_status_t status, const zx_packet_signal_t* signal);
   void BeginWaitOnQueue();
   void OnQueueReady(zx_status_t status, uint16_t index);
 
@@ -109,6 +121,8 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
   async_dispatcher_t* const dispatcher_;
   OnNewConnectionCallback on_new_connection_callback_;
   async::Wait out_queue_wait_;
+  uint16_t out_queue_index_ = 0;
+  size_t bytes_written_for_send_request_ = 0;
   VirtioQueueWaiter in_queue_wait_;
   std::unordered_map<uint32_t, std::unique_ptr<Vfd>> vfds_;
   std::unordered_map<uint32_t, zx_signals_t> ready_vfds_;

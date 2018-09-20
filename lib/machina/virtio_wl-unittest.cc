@@ -361,6 +361,33 @@ TEST_F(VirtioWlTest, Recv) {
   EXPECT_EQ(sizeof(response), out_queue_.NextUsed().len);
   EXPECT_EQ(response.type, VIRTIO_WL_RESP_OK);
 
+  // Check that writing to pipe works as expected.
+  uint8_t send_request[sizeof(virtio_wl_ctrl_vfd_send_t) + sizeof(uint32_t)];
+  virtio_wl_ctrl_vfd_send_t* send_header =
+      reinterpret_cast<virtio_wl_ctrl_vfd_send_t*>(send_request);
+  send_header->hdr.type = VIRTIO_WL_CMD_VFD_SEND;
+  send_header->vfd_id = VIRTWL_NEXT_VFD_ID_BASE + 1;
+  send_header->vfd_count = 0;
+  *reinterpret_cast<uint32_t*>(send_header + 1) = 1234u;  // payload
+  virtio_wl_ctrl_hdr_t send_response = {};
+  ASSERT_EQ(out_queue_.BuildDescriptor()
+                .AppendReadable(&send_request, sizeof(send_request))
+                .AppendWritable(&send_response, sizeof(send_response))
+                .Build(),
+            ZX_OK);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(out_queue_.HasUsed());
+  EXPECT_EQ(sizeof(send_response), out_queue_.NextUsed().len);
+  EXPECT_EQ(send_response.type, VIRTIO_WL_RESP_OK);
+
+  uint32_t pipe_data;
+  size_t actual_bytes;
+  ASSERT_EQ(socket.read(0, &pipe_data, sizeof(pipe_data), &actual_bytes),
+            ZX_OK);
+  EXPECT_EQ(actual_bytes, sizeof(pipe_data));
+  EXPECT_EQ(pipe_data, 1234u);
+
   channels_.clear();
 }
 
