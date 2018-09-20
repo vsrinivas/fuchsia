@@ -55,7 +55,7 @@ def main():
         all_files[dest] = src
 
     for atom in [Atom(a) for a in manifest['atoms']]:
-        for file in atom.new_files:
+        for file in atom.files:
             add(file.destination, file.source)
 
     for dest, source in args.mappings.iteritems():

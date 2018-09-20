@@ -13,8 +13,6 @@ def has_packaged_file(needed_file, deps):
     """Returns true if the given file could be found in the given deps."""
     for dep in deps:
         for file in dep['files']:
-            if not file['packaged']:
-                continue
             if needed_file == os.path.normpath(file['source']):
                 return True
     return False
@@ -63,10 +61,11 @@ def main():
     def find_atom(id):
         return next(a for a in manifest['atoms'] if a['id'] == id)
     atom = find_atom(atom_id)
-    package_deps = map(lambda a: find_atom(a), atom['package-deps'])
+    deps = map(lambda a: find_atom(a), atom['deps'])
+    deps += [atom]
 
     # Check whether all runtime files are available for packaging.
-    if has_missing_files(runtime_files, package_deps):
+    if has_missing_files(runtime_files, deps):
         return 1
 
     with open(args.stamp, 'w') as stamp:

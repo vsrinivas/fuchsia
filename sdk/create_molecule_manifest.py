@@ -19,10 +19,6 @@ def main():
     parser.add_argument('--deps',
                         help='List of manifest paths for the included elements',
                         nargs='*')
-    parser.add_argument('--metadata',
-                        help='Metadata to attach to the manifest',
-                        action='append',
-                        default=[])
     parser.add_argument('--category',
                         help='Minimum publication level',
                         required=False)
@@ -40,8 +36,6 @@ def main():
         'ids': [],
         'atoms': map(lambda a: a.json, sorted(list(atoms))),
     }
-    if args.metadata:
-        manifest['meta'] = dict(map(lambda m: m.split('=', 1), args.metadata))
     with open(os.path.abspath(args.out), 'w') as out:
         json.dump(manifest, out, indent=2, sort_keys=True)
 

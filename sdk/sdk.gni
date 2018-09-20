@@ -78,18 +78,6 @@ template("sdk") {
                            ])
 
     category = invoker.category
-
-    # TODO(DX-340): this attribute should not be needed anymore.
-    metadata = [
-      {
-        key = "target-arch"
-        value = target_triple
-      },
-      {
-        key = "host-arch"
-        value = host_triple
-      },
-    ]
   }
 
   sdk_name = target_name

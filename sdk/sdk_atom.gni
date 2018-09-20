@@ -12,7 +12,6 @@ import("//build/json/validate_json.gni")
 #   $target_gen_dir/$target_name.sdk
 #     A manifest describing what files pertain to the atom and which other atoms
 #     are required by this atom.
-#     TODO(DX-340): mention that this file is now purely internal to the build.
 #
 #   $target_gen_dir/$target_name.meta.json
 #     A metadata file describing the atom.
@@ -20,25 +19,6 @@ import("//build/json/validate_json.gni")
 #     inclusion of the atom in a different build system.
 #
 # Parameters
-#
-#   domain
-#     Name of the domain this element too.
-#     Domains regroup elements of similar nature. Language-based domains are
-#     most common.
-#     TODO(DX-340): remove me.
-#
-#   name (optional)
-#     Name of the element.
-#     Must be unique within the given domain.
-#     TODO(DX-340): remove me.
-#
-#   name_file (optional)
-#     Path to a file containing the name of the element.
-#     This should be used when the element's name requires some computation in
-#     its own build target.
-#     TODO(DX-340): remove me.
-#
-#     NOTE: Exactly one of `name` or `name_file` must be set.
 #
 #   id
 #     Identifier of this element within SDKs.
@@ -61,42 +41,15 @@ import("//build/json/validate_json.gni")
 #
 #   files
 #     List of scopes describing the contents of this element.
-#     See the "File scopes" section for how to describe files - note that for
-#     this attribute, "dest" must be specified relatively to the element's root
-#     in the SDK, not to the SDK root.
-#     This is a legacy attribute which will soon be replaced with new_files.
-#
-#   new_files (optional)
-#     List of scopes describing the contents of this element.
 #     See the "File scopes" section for how to describe files.
-#     TODO(DX-340): rename to "files"
-#
-#   source_dir (optional)
-#     If set, path to the base directory of the sources.
-#     This is useful if the sources are generated and therefore not hosted
-#     directly under the directory where the GN rules are declared.
 #
 #   deps (optional)
 #     List of GN labels for other SDK elements this element depends on at build
 #     time.
 #     These labels must point to "sdk_atom" targets.
 #
-#   package_deps (optional)
-#     List of GN labels for other SDK elements this element depends on at
-#     runtime.
-#     These labels must point to "sdk_atom" targets.
-#
 #   non_sdk_deps (optional)
 #     List of GN labels which this target needs built.
-#
-#   tags (optional)
-#     List of strings characterizing this element.
-#     Examples: "service:networking", "language:rust", "layer:garnet"
-#
-#   tags_file (optional)
-#     File containing a set of tags.
-#     This file must be using the JSON format; the top-level object must be a
-#     map whose values are strings.
 #
 # Metadata scope
 #
@@ -129,19 +82,29 @@ import("//build/json/validate_json.gni")
 #     Path to the original file.
 #     This path may be absolute or relative to the target's directory.
 #
-#   dest (optional)
+#   dest (required)
 #     Destination path of the file relative to the SDK root.
-#     the SDK.
-#     This attribute is required unless "source" points to a file located under
-#     the target's source directory, in which case the relative path of that
-#     file to the target's directory will be used as the default value.
-#
-#   packaged (optional)
-#     Whether this file should be added to Fuchsia packages.
 
 template("sdk_atom") {
-  assert(defined(invoker.domain), "Must define a domain name")
-  domain_name = invoker.domain
+  # TODO(DX-340): remove all of this one all references are gone.
+  if (defined(invoker.domain)) {
+    not_needed(invoker, [ "domain" ])
+  }
+  if (defined(invoker.name)) {
+    not_needed(invoker, [ "name" ])
+  }
+  if (defined(invoker.tags)) {
+    not_needed(invoker, [ "tags" ])
+  }
+  if (defined(invoker.tags_file)) {
+    not_needed(invoker, [ "tags_file" ])
+  }
+  if (defined(invoker.package_deps)) {
+    not_needed(invoker, [ "package_deps" ])
+  }
+  if (defined(invoker.source_dir)) {
+    not_needed(invoker, [ "source_dir" ])
+  }
 
   assert(defined(invoker.category), "Must define an SDK category")
   category = invoker.category
@@ -150,20 +113,6 @@ template("sdk_atom") {
 
   assert(defined(invoker.meta), "Must specify some metadata")
   meta = invoker.meta
-
-  if (defined(invoker.name)) {
-    name_args = [
-      "--name",
-      invoker.name,
-    ]
-  } else if (defined(invoker.name_file)) {
-    name_args = [
-      "--name-file",
-      rebase_path(invoker.name_file),
-    ]
-  } else {
-    assert(false, "Must specify either name or name_file")
-  }
 
   gn_deps = []
   if (defined(invoker.non_sdk_deps)) {
@@ -180,53 +129,25 @@ template("sdk_atom") {
     }
   }
 
-  package_dep_manifests = []
-  if (defined(invoker.package_deps)) {
-    gn_deps += invoker.package_deps
-    foreach(dep, invoker.package_deps) {
-      gen_dir = get_label_info(dep, "target_gen_dir")
-      name = get_label_info(dep, "name")
-      dep_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
-    }
-  }
-
   assert(defined(invoker.files), "An atom must specify some files")
-  assert(defined(invoker.new_files), "An atom must specify some files")
-  file_mappings = []
-  file_inputs = []
+  # TODO(DX-340): remove this.
   all_files = invoker.files
-  foreach(file, all_files) {
-    assert(defined(file.source), "File $file does not specify a source.")
-    file_inputs += [ file.source ]
-    source = rebase_path(file.source)
-    destination = ""
-    if (defined(file.dest)) {
-      destination = file.dest
-    }
-    prefix = "internal"
-    if (defined(file.packaged)) {
-      prefix = "packaged"
-    }
-    file_mappings += [ "$prefix:$destination=$source" ]
+  if (defined(invoker.new_files)) {
+    all_files = []
+    all_files = invoker.new_files
   }
-
-  new_file_mappings = []
-  foreach(file, invoker.new_files) {
+  file_args = []
+  file_inputs = []
+  foreach(file, all_files) {
     assert(defined(file.source), "File $file does not specify a source.")
     assert(defined(file.dest), "File $file does not specify a destination.")
     file_inputs += [ file.source ]
     source = rebase_path(file.source)
-    new_file_mappings += [ "${file.dest}=${source}" ]
-  }
-
-  source_dir = "."
-  if (defined(invoker.source_dir)) {
-    source_dir = invoker.source_dir
-  }
-
-  tags = []
-  if (defined(invoker.tags)) {
-    tags = invoker.tags
+    file_args += [
+      "--file",
+      file.dest,
+      source,
+    ]
   }
 
   meta_target_name = "${target_name}_meta"
@@ -272,7 +193,11 @@ template("sdk_atom") {
 
   # Add the metadata file to the set of files to include in SDKs.
   meta_source = rebase_path(meta_file)
-  new_file_mappings += [ "${meta.dest}=${meta_source}" ]
+  file_args += [
+    "--file",
+    meta.dest,
+    meta_source,
+  ]
 
   # Builds a manifest representing this element.
   action(target_name) {
@@ -295,33 +220,18 @@ template("sdk_atom") {
       manifest,
     ]
 
-    args = name_args + [
+    args = [
              "--id",
              invoker.id,
-             "--domain",
-             domain_name,
              "--out",
              rebase_path(manifest),
-             "--base",
-             rebase_path(source_dir),
              "--gn-label",
              get_label_info(":$target_name", "label_with_toolchain"),
              "--category",
              category,
+             "--meta",
+             meta.dest,
              "--deps",
-           ] + dep_manifests + [ "--package-deps" ] + package_dep_manifests +
-           [ "--files" ] + file_mappings + [ "--tags" ] + tags +
-           [ "--new-files" ] + new_file_mappings
-    if (defined(invoker.tags_file)) {
-      args += [
-        "--tags-file",
-        rebase_path(invoker.tags_file),
-      ]
-    }
-
-    args += [
-      "--meta",
-      meta.dest,
-    ]
+           ] + dep_manifests + file_args
   }
 }

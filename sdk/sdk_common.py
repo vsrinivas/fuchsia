@@ -6,38 +6,12 @@ import collections
 import json
 
 
-class AtomId(object):
-    '''Represents an atom id.'''
-
-    def __init__(self, json):
-     self.json = json
-     self.domain = json['domain']
-     self.name = json['name']
-     self.key = (self.domain, self.name)
-
-    def __str__(self):
-        return '%s{%s}' % (self.name, self.domain)
-
-    def __hash__(self):
-        return hash(self.key)
-
-    def __eq__(self, other):
-        return self.key == other.key
-
-    def __ne__(self, other):
-        return not __eq__(self, other)
-
-    def __cmp__(self, other):
-        return cmp(self.key, other.key)
-
-
 class File(object):
     '''Wrapper class for file definitions.'''
 
     def __init__(self, json):
         self.source = json['source']
         self.destination = json['destination']
-        self.is_packaged = json['packaged']
 
     def __str__(self):
         return '{%s <-- %s}' % (self.destination, self.source)
@@ -48,16 +22,12 @@ class Atom(object):
 
     def __init__(self, json):
         self.json = json
-        self.id = AtomId(json['id'])
-        self.identifier = json['identifier']
+        self.id = json['id']
         self.metadata = json['meta']
         self.label = json['gn-label']
         self.category = json['category']
-        self.deps = map(lambda i: AtomId(i), json['deps'])
-        self.package_deps = map(lambda i: AtomId(i), json['package-deps'])
+        self.deps = json['deps']
         self.files = [File(f) for f in json['files']]
-        self.new_files = [File(f) for f in json['new-files']]
-        self.tags = json['tags']
 
     def __str__(self):
         return str(self.id)
@@ -84,7 +54,7 @@ def gather_dependencies(manifests):
     for dep in manifests:
         with open(dep, 'r') as dep_file:
             dep_manifest = json.load(dep_file)
-            direct_deps.update(map(lambda i: AtomId(i), dep_manifest['ids']))
+            direct_deps.update(dep_manifest['ids'])
             atoms.update(map(lambda a: Atom(a), dep_manifest['atoms']))
     return (direct_deps, atoms)
 

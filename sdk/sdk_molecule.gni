@@ -16,11 +16,6 @@
 #
 #   non_sdk_deps (optional)
 #     List of GN labels which this target needs built.
-#
-#   metadata (optional)
-#     List of scopes describing the metadata to attach to this molecule.
-#     Each scope must have two attributes: a "key" and a "value". Keys are
-#     string; values cannot be arrays or scopes.
 
 template("sdk_molecule") {
   gn_deps = []
@@ -35,16 +30,6 @@ template("sdk_molecule") {
       gen_dir = get_label_info(dep, "target_gen_dir")
       name = get_label_info(dep, "name")
       dep_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
-    }
-  }
-
-  metadata = []
-  if (defined(invoker.metadata)) {
-    foreach(meta, invoker.metadata) {
-      metadata += [
-        "--metadata",
-        "${meta.key}=${meta.value}",
-      ]
     }
   }
 
@@ -71,7 +56,7 @@ template("sdk_molecule") {
              "--out",
              rebase_path(manifest),
              "--deps",
-           ] + dep_manifests + metadata
+           ] + dep_manifests
 
     if (defined(invoker.category)) {
       args += [

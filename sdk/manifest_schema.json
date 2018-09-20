@@ -15,44 +15,18 @@
       "items": {
         "$ref": "#/definitions/atomId"
       }
-    },
-    "meta": {
-      "description": "A collection of metadata about the SDK",
-      "$ref": "#/definitions/sdkMetadata"
     }
   },
   "required": [
       "atoms",
-      "ids",
-      "meta"
+      "ids"
   ],
   "additionalProperties": false,
   "definitions": {
     "atomId": {
       "description": "Unique identifier for an atom",
-      "type": "object",
-      "properties": {
-        "domain": {
-          "description": "The group of atoms this atom belongs to",
-          "type": "string",
-          "enum": [
-            "cpp",
-            "dart",
-            "exe",
-            "fidl",
-            "image"
-          ]
-        },
-        "name": {
-          "description": "The name of this atom, unique within its domain",
-          "type": "string"
-        }
-      },
-      "required": [
-        "domain",
-        "name"
-      ],
-      "additionalProperties": false
+      "type": "string",
+      "pattern": "^sdk://([a-z][a-z0-9-_\\.]+)(/([a-z][a-z0-9-_\\.]+))*$"
     },
     "atom": {
       "description": "An SDK artifact",
@@ -61,11 +35,6 @@
         "id": {
           "description": "The atom's unique identifier",
           "$ref": "#/definitions/atomId"
-        },
-        "identifier": {
-          "description": "The atom's unique identifier",
-          "type": "string",
-          "pattern": "^sdk://([a-z][a-z0-9-_\\.]+)(/([a-z][a-z0-9-_\\.]+))*$"
         },
         "gn-label": {
           "description": "Label of the GN target which generated the atom",
@@ -87,13 +56,6 @@
           ]
         },
         "files": {
-          "description": "The files making up the atom, relative to the atom root -- OBSOLETE, will be replaced by 'new-files' soon",
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/atomFile"
-          }
-        },
-        "new-files": {
           "description": "Paths to files making up the atom, relative to the SDK root",
           "type": "array",
           "items": {
@@ -106,45 +68,14 @@
           "items": {
             "$ref": "#/definitions/atomId"
           }
-        },
-        "package-deps": {
-          "description": "The ids of the atoms this atom needs at runtime",
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/atomId"
-          }
-        },
-        "tags": {
-          "description": "A collection of potentially domain-specific metadata",
-          "oneOf": [
-            {
-              "$ref": "#/definitions/cppTags"
-            },
-            {
-              "$ref": "#/definitions/dartTags"
-            },
-            {
-              "$ref": "#/definitions/exeTags"
-            },
-            {
-              "$ref": "#/definitions/fidlTags"
-            },
-            {
-              "$ref": "#/definitions/imageTags"
-            }
-          ]
         }
       },
       "required": [
         "category",
         "deps",
         "files",
-        "new-files",
         "id",
-        "identifier",
-        "tags",
-        "gn-label",
-        "package-deps"
+        "gn-label"
       ],
       "additionalProperties": false
     },
@@ -157,175 +88,15 @@
           "type": "string"
         },
         "destination": {
-          "description": "Destination path of the file relative to the root of the atom",
+          "description": "Destination path of the file relative to the SDK root",
           "type": "string"
-        },
-        "packaged": {
-          "description": "Whether this file should be included in a Fuchsia package containing this atom",
-          "type": "boolean"
         }
       },
       "required": [
         "source",
-        "destination",
-        "packaged"
+        "destination"
       ],
       "additionalProperties": false
-    },
-    "sdkMetadata": {
-      "description": "Additional information about an SDK",
-      "type": "object",
-      "properties": {
-        "target-arch": {
-          "description": "The architecture for target binaries referenced in this manifest, expressed as a compiler triple",
-          "type": "string"
-        },
-        "host-arch": {
-          "description": "The architecture for host binaries referenced in this manifest, expressed as a compiler triple",
-          "type": "string"
-        }
-      },
-      "required": [
-        "host-arch",
-        "target-arch"
-      ],
-      "additionalProperties": false
-    },
-    "cppTags": {
-      "description": "Tag definitions for the 'cpp' domain",
-      "type": "object",
-      "properties": {
-        "domain": {
-          "description": "Marker for this type of tags",
-          "type": "string",
-          "enum": [
-            "cpp"
-          ]
-        },
-        "type": {
-          "description": "The type of C/C++ artifact represented by this atom",
-          "type": "string",
-          "enum": [
-            "compiled_shared",
-            "compiled_static",
-            "sources",
-            "sysroot"
-          ]
-        },
-        "arch": {
-          "description": "Architecture for prebuilt types",
-          "$ref": "#/definitions/prebuiltArch"
-        }
-      },
-      "required": [
-        "domain",
-        "type"
-      ],
-      "additionalProperties": false
-    },
-    "dartTags": {
-      "description": "Tag definitions for the 'dart' domain",
-      "type": "object",
-      "properties": {
-        "domain": {
-          "description": "Marker for this type of tags",
-          "type": "string",
-          "enum": [
-            "dart"
-          ]
-        },
-        "type": {
-          "description": "The type of Dart artifact represented by this atom",
-          "type": "string",
-          "enum": [
-            "library",
-            "tool"
-          ]
-        },
-        "package_name": {
-          "description": "For libraries, the Dart package name",
-          "type": "string"
-        }
-      },
-      "patternProperties": {
-        "^3p:.+": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "domain",
-        "type"
-      ],
-      "additionalProperties": false
-    },
-    "exeTags": {
-      "description": "Tag definitions for the 'exe' domain",
-      "type": "object",
-      "properties": {
-        "domain": {
-          "description": "Marker for this type of tags",
-          "type": "string",
-          "enum": [
-            "exe"
-          ]
-        },
-        "arch": {
-          "description": "Architecture for prebuilt types",
-          "$ref": "#/definitions/prebuiltArch"
-        }
-      },
-      "required": [
-        "domain",
-        "arch"
-      ],
-      "additionalProperties": false
-    },
-    "fidlTags": {
-      "description": "Tag definitions for the 'fidl' domain",
-      "type": "object",
-      "properties": {
-        "domain": {
-          "description": "Marker for this type of tags",
-          "type": "string",
-          "enum": [
-            "fidl"
-          ]
-        },
-        "name": {
-          "description": "A FIDL library's name",
-          "type": "string"
-        }
-      },
-      "required": [
-        "domain",
-        "name"
-      ],
-      "additionalProperties": false
-    },
-    "imageTags": {
-      "description": "Tag definitions for the 'image' domain",
-      "type": "object",
-      "properties": {
-        "domain": {
-          "description": "Marker for this type of tags",
-          "type": "string",
-          "enum": [
-            "image"
-          ]
-        }
-      },
-      "required": [
-        "domain"
-      ],
-      "additionalProperties": false
-    },
-    "prebuiltArch": {
-      "description": "For prebuilt artifacts, whether this was built for host or target",
-      "type": "string",
-      "enum": [
-        "host",
-        "target"
-      ]
     }
   }
 }
