@@ -182,6 +182,14 @@ std::size_t UUID::Hash() const {
   return hash;
 }
 
+common::Optional<uint16_t> UUID::As16Bit() const {
+  common::Optional<uint16_t> ret;
+  if (type_ == Type::k16Bit) {
+    ret = ValueAs16Bit();
+  }
+  return ret;
+}
+
 uint16_t UUID::ValueAs16Bit() const {
   ZX_DEBUG_ASSERT(type_ == Type::k16Bit);
 

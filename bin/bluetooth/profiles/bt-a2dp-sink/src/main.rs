@@ -11,27 +11,25 @@ use failure::{Error, ResultExt};
 use fidl_fuchsia_bluetooth_bredr::*;
 use futures::{future, TryFutureExt, TryStreamExt};
 use parking_lot::RwLock;
-use std::sync::Arc;
 
 fn main() -> Result<(), Error> {
     let mut executor = fuchsia_async::Executor::new().context("error creating executor")?;
 
-    let profile_svc = Arc::new(RwLock::new(
+    let profile_svc = RwLock::new(
         fuchsia_app::client::connect_to_service::<ProfileMarker>()
             .context("Failed to connect to Bluetooth profile service")?,
-    ));
+    );
 
-    let profile_svc_thread = profile_svc.clone();
-    let evt_stream = profile_svc_thread.read().take_event_stream();
+    let evt_stream = profile_svc.read().take_event_stream();
 
     let event_fut = evt_stream.try_for_each(move |evt| match evt {
         ProfileEvent::OnConnected {
-            device_id: _,
+            device_id,
             service_id: _,
-            channel: _,
-            protocol: _,
+            channel,
+            protocol,
         } => {
-            eprintln!("Connection!");
+            eprintln!("Connection from {}: {:?} {:?}!", device_id, channel, protocol);
             future::ready(Ok(()))
         }
         ProfileEvent::OnDisconnected {

@@ -33,7 +33,7 @@ struct DataElement {
 };
 
 // Defined Protocol Identifiers for the Protocol Descriptor
-// We intentionally omit deprecated profile identifiers
+// We intentionally omit deprecated profile identifiers.
 // From Bluetooth Assigned Numbers:
 // https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
 enum ProtocolIdentifier : uint16 {
@@ -46,7 +46,7 @@ enum ProtocolIdentifier : uint16 {
   HardcopyControlChannel = 18;
   HardcopyDataChannel = 20;
   HardcopyNotification = 22;
-  AVTCP = 23;
+  AVCTP = 23;
   AVDTP = 25;
   MCAPControlChannel = 30;
   MCAPDataChannel = 31;

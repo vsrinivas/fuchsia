@@ -68,6 +68,10 @@ TEST(UUIDTest, 16Bit) {
   EXPECT_NE(UUID(kOther16BitId), uuid);
   EXPECT_NE(UUID(kId2As32), uuid);
   EXPECT_NE(UUID(kId2As128), uuid);
+
+  auto as16 = uuid.As16Bit();
+  EXPECT_TRUE(as16);
+  EXPECT_EQ(kId1As16, *as16);
 }
 
 TEST(UUIDTest, 32Bit) {
@@ -89,6 +93,8 @@ TEST(UUIDTest, 32Bit) {
   EXPECT_NE(UUID(kId1As16), uuid);
   EXPECT_NE(UUID(kId1As32), uuid);
   EXPECT_NE(UUID(kId1As128), uuid);
+
+  EXPECT_FALSE(uuid.As16Bit());
 }
 
 TEST(UUIDTest, 128Bit) {
@@ -103,6 +109,8 @@ TEST(UUIDTest, 128Bit) {
 
   EXPECT_EQ(UUID(kId3As128), uuid);
   EXPECT_NE(UUID(kId1As128), uuid);
+
+  EXPECT_FALSE(uuid.As16Bit());
 }
 
 TEST(UUIDTest, CompareBytes) {
