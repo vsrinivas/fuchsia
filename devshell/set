@@ -345,6 +345,7 @@ function main {
     gn_args+=" select_variant=[${variant}]"
   fi
 
+  mkdir -p "${build_dir}"
   echo "${zircon_args[@]}" > "${build_dir}.zircon-args"
 
   # Using a subshell with -x prints out the gn command precisely with shell
