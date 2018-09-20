@@ -72,13 +72,17 @@ void NormalizeInt28ToPipelineBitwidth(float* source, uint32_t source_len) {
 // specific buffer size, with no SRC, starting at the beginning of each buffer.
 // By default, does not gain-scale or accumulate (both can be overridden).
 void DoMix(MixerPtr mixer, const void* src_buf, float* accum_buf,
-           bool accumulate, int32_t num_frames, Gain::AScale mix_scale) {
+           bool accumulate, int32_t num_frames, float gain_db) {
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
-  bool mix_result =
-      mixer->Mix(accum_buf, num_frames, &dest_offset, src_buf,
-                 num_frames << kPtsFractionalBits, &frac_src_offset,
-                 Mixer::FRAC_ONE, mix_scale, accumulate);
+
+  Bookkeeping info;
+  info.step_size = Mixer::FRAC_ONE;
+  info.gain.SetSourceGain(gain_db);
+
+  bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, src_buf,
+                               num_frames << kPtsFractionalBits,
+                               &frac_src_offset, accumulate, &info);
 
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(static_cast<uint32_t>(num_frames), dest_offset);

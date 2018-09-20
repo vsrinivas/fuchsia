@@ -81,8 +81,7 @@ constexpr double kFullScaleFloatAccumAmplitude = 1.0f;
 // Use supplied mixer to mix (w/out rate conversion) from source to accumulator.
 // TODO(mpuryear): refactor this so that tests just call mixer->Mix directly.
 void DoMix(MixerPtr mixer, const void* src_buf, float* accum_buf,
-           bool accumulate, int32_t num_frames,
-           Gain::AScale mix_scale = Gain::kUnityScale);
+           bool accumulate, int32_t num_frames, float gain_db = 0.0f);
 
 }  // namespace test
 }  // namespace audio

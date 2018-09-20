@@ -65,9 +65,13 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   std::vector<float> accum(kFreqTestBufSize);
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
+
+  Bookkeeping info;
+  info.step_size = Mixer::FRAC_ONE;
+
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
-             Mixer::FRAC_ONE, Gain::kUnityScale, false);
+             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false,
+             &info);
   EXPECT_EQ(kFreqTestBufSize, dest_offset);
   EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
             frac_src_offset);
@@ -279,9 +283,12 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
   // from the resampler, this extra source element should equal source[0].
   std::vector<float> source(src_buf_size + 1);
   std::vector<float> accum(kFreqTestBufSize);
-  uint32_t step_size = (Mixer::FRAC_ONE * src_buf_size) / kFreqTestBufSize;
-  uint32_t rate_modulo =
-      (Mixer::FRAC_ONE * src_buf_size) - (step_size * kFreqTestBufSize);
+
+  Bookkeeping info;
+  info.step_size = (Mixer::FRAC_ONE * src_buf_size) / kFreqTestBufSize;
+  info.rate_modulo =
+      (Mixer::FRAC_ONE * src_buf_size) - (info.step_size * kFreqTestBufSize);
+  info.denominator = kFreqTestBufSize;
 
   // kReferenceFreqs[] contains the full set of official test frequencies (47).
   // The "summary" list is a small subset (3) of that list. Each kSummaryIdxs[]
@@ -316,8 +323,9 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
     int32_t frac_src_offset;
     uint32_t frac_src_frames = source.size() * Mixer::FRAC_ONE;
 
-    // Maintain an ongoing source_position_modulo across multiple Mix() calls.
-    uint32_t src_pos_modulo = 0;
+    // Use this to keep ongoing src_pos_modulo across multiple Mix() calls, but
+    // then reset it each time we start testing a new input signal frequency.
+    info.src_pos_modulo = 0;
 
     for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
       dest_frames = kFreqTestBufSize * (packet + 1) / kResamplerTestNumPackets;
@@ -327,9 +335,7 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
           kResamplerTestNumPackets;
 
       mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
-                 frac_src_frames, &frac_src_offset, step_size,
-                 Gain::kUnityScale, false, rate_modulo, kFreqTestBufSize,
-                 &src_pos_modulo);
+                 frac_src_frames, &frac_src_offset, false, &info);
 
       EXPECT_EQ(dest_frames, dest_offset);
     }
@@ -769,17 +775,18 @@ void TestNxNEquivalence(Resampler sampler_type, double* freq_resp_results,
                   source_rate, num_chans, dest_rate, sampler_type);
   uint32_t frac_src_frames =
       num_chans * (num_source_frames + 1) * Mixer::FRAC_ONE;
-  uint32_t step_size = (Mixer::FRAC_ONE * num_source_frames) / num_dest_frames;
-  uint32_t rate_modulo =
-      (Mixer::FRAC_ONE * num_source_frames) - (step_size * num_dest_frames);
+
+  // Use this to keep ongoing src_pos_modulo across multiple Mix() calls.
+  Bookkeeping info;
+  info.step_size = (Mixer::FRAC_ONE * num_source_frames) / num_dest_frames;
+  info.rate_modulo = (Mixer::FRAC_ONE * num_source_frames) -
+                     (info.step_size * num_dest_frames);
+  info.denominator = num_dest_frames;
 
   // Resample the source into the accumulation buffer, in pieces. (Why in
   // pieces? See description of kResamplerTestNumPackets in frequency_set.h.)
   std::unique_ptr<float[]> accum =
       std::make_unique<float[]>(num_chans * num_dest_frames);
-
-  // Maintain an ongoing source_position_modulo across multiple Mix() calls.
-  uint32_t src_pos_modulo = 0;
 
   for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
     uint32_t dest_frames =
@@ -790,8 +797,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* freq_resp_results,
         kResamplerTestNumPackets;
 
     mixer->Mix(accum.get(), dest_frames, &dest_offset, source.get(),
-               frac_src_frames, &frac_src_offset, step_size, Gain::kUnityScale,
-               false, rate_modulo, num_dest_frames, &src_pos_modulo);
+               frac_src_frames, &frac_src_offset, false, &info);
     EXPECT_EQ(dest_frames, dest_offset);
   }
 

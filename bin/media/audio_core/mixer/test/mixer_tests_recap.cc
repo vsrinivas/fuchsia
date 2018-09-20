@@ -337,9 +337,9 @@ TEST(Recap, DynamicRange) {
 
   printf("\n\n      Input Gain       Mixed Result          Usable Range\n");
   printf("\n     %9.6lf  %10.6lf ( > %9.6lf)   %6.2lf (%5.2lf)",
-         GainScaleToDb(AudioResult::kPrevScaleEpsilon),
-         AudioResult::LevelEpsilonDown, AudioResult::kPrevLevelEpsilonDown,
-         AudioResult::SinadEpsilonDown, AudioResult::kPrevSinadEpsilonDown);
+         AudioResult::kMaxGainDbNonUnity, AudioResult::LevelEpsilonDown,
+         AudioResult::kPrevLevelEpsilonDown, AudioResult::SinadEpsilonDown,
+         AudioResult::kPrevSinadEpsilonDown);
   printf("\n    -30.0000    %8.4lf   (+/- %6.4lf  )   %6.2lf (%5.2lf)",
          AudioResult::Level30Down, AudioResult::kPrevDynRangeTolerance,
          AudioResult::Sinad30Down, AudioResult::kPrevSinad30Down);

@@ -317,38 +317,38 @@ class AudioResult {
   // of precision, minus 1 for sign, plus 1 for rounding effects. At this value
   // exactly (or slightly more, if it cannot be perfectly expressed in float32),
   // all values effectly round back to their original values.
-  static constexpr Gain::AScale kMinUnityScale = 0.999999970198f;
+  static constexpr float kMinGainDbUnity = -0.000000258856886667820f;
 
   // The highest (closest-to-Unity) AScale with an observable effect on
   // full-scale (i.e. the largest sub-Unity AScale distinguishable from Unity).
   //
-  // Related to kMinUnityScale, this const is also determined by the number of
+  // Related to kMinGainDbUnity, this const is also determined by the number of
   // precision bits in a float32. Conceptually, it is infinitesimally less than
   // (2^25 - 1) / (2^25).  At this value, for the first time the largest values
   // (i.e. full-scale) will not round back to their original values.
-  static constexpr Gain::AScale kPrevScaleEpsilon = 0.999999970197f;
+  static constexpr float kMaxGainDbNonUnity = -0.000000258865572365570f;
 
   // The lowest (closest-to-zero) AScale at which full-scale data are not
   // silenced (i.e. the smallest AScale that is distinguishable from Mute).
   //
   // This value would actually be infinitesimally close to zero, if it were not
-  // for our -160dB limit. kPrevMinScaleNonMute is essentially the scale that
-  // leads to kMutedGainDb -- plus the smallest-possible increment that a
-  // float32 can express.  Note the close relation to kMaxScaleMute.
-  static constexpr Gain::AScale kPrevMinScaleNonMute = 0.000000010000000384f;
+  // for our -160dB limit. kMinGainDbNonMute is essentially kMutedGainDb -- plus
+  // the smallest-possible increment that a float32 can express. Note the close
+  // relation to kMaxGainDbMute.
+  static constexpr float kMinGainDbNonMute = -159.99999f;
 
   // The highest (furthest-from-Mute) AScale at which full-scale data are
   // silenced (i.e. the largest AScale that is indistinguishable from Mute).
   //
   // This value would actually be infinitesimally close to zero, if it were not
-  // for our -160dB limit. kMaxScaleMute is essentially the scale that leads to
-  // kMutedGainDb -- plus an increment that float32 ultimately cannot express.
-  static constexpr Gain::AScale kMaxScaleMute = 0.000000010000000383f;
+  // for our -160dB limit. kMaxGainDbMute is essentially kMutedGainDb -- plus an
+  // increment that float32 ultimately CANNOT express.
+  static constexpr float kMaxGainDbMute = -159.999993f;
 
-  static_assert(kMinUnityScale > kPrevScaleEpsilon,
-                "kPrevScaleEpsilon should be distinguishable from Unity");
-  static_assert(kPrevMinScaleNonMute > kMaxScaleMute,
-                "kPrevMinScaleNonMute should be distinguishable from Mute");
+  static_assert(kMinGainDbUnity > kMaxGainDbNonUnity,
+                "kMaxGainDbNonUnity should be distinguishable from Unity");
+  static_assert(kMinGainDbNonMute > kMaxGainDbMute,
+                "kMinGainDbNonMute should be distinguishable from Mute");
 
   // This is the worst-case value (measured potentially across multiple test
   // cases) for how close we can get to Unity scale while still causing

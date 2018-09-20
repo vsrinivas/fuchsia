@@ -54,18 +54,16 @@ class AudioPerformance {
   static void ProfileSamplerChansRateScale(uint32_t in_chans,
                                            uint32_t out_chans,
                                            Mixer::Resampler sampler_type,
-                                           uint32_t source_rate,
-                                           Gain::AScale gain_scale);
+                                           uint32_t source_rate, float gain_db);
   static void ProfileSamplerChansRateScaleMix(uint32_t num_input_chans,
                                               uint32_t num_output_chans,
                                               Mixer::Resampler sampler_type,
                                               uint32_t source_rate,
-                                              Gain::AScale gain_scale,
-                                              bool accumulate);
+                                              float gain_db, bool accumulate);
   template <typename SampleType>
   static void ProfileMixer(uint32_t num_input_chans, uint32_t num_output_chans,
                            Mixer::Resampler sampler_type, uint32_t source_rate,
-                           Gain::AScale gain_scale, bool accumulate);
+                           float gain_db, bool accumulate);
 
   static void ProfileOutputProducers();
 

@@ -430,10 +430,10 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
 // Scale
 //
 Gain::AScale AudioResult::ScaleEpsilon = 0;
-constexpr Gain::AScale AudioResult::kPrevScaleEpsilon;
+constexpr float AudioResult::kMaxGainDbNonUnity;
 
 Gain::AScale AudioResult::MinScaleNonZero = 0;
-constexpr Gain::AScale AudioResult::kPrevMinScaleNonMute;
+constexpr float AudioResult::kMinGainDbNonMute;
 
 double AudioResult::DynRangeTolerance = 0.0;
 constexpr double AudioResult::kPrevDynRangeTolerance;

@@ -22,7 +22,7 @@ class Gain {
   using AScale = float;
 
   // constructor
-  Gain() : target_src_gain_db_(0.0f) {}
+  Gain() : target_src_gain_db_(0.0f), target_dest_gain_db_(0.0f) {}
 
   // Audio gains for AudioRenderers/AudioCapturers and output devices are
   // expressed as floating-point values, in decibels. For each signal path, two
@@ -120,9 +120,9 @@ class Gain {
   std::atomic<float> target_src_gain_db_;
   std::atomic<float> target_dest_gain_db_;
 
-  float current_src_gain_db_ = kMinGainDb;
-  float current_dest_gain_db_ = kMinGainDb;
-  AScale combined_gain_scale_ = 0.0f;
+  float current_src_gain_db_ = 0.0f;
+  float current_dest_gain_db_ = 0.0f;
+  AScale combined_gain_scale_ = kUnityScale;
 };
 
 }  // namespace audio

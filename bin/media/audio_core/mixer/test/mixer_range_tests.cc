@@ -15,7 +15,7 @@ using Resampler = ::media::audio::Mixer::Resampler;
 
 // Ideal dynamic range measurement is exactly equal to the reduction in gain.
 // Ideal accompanying noise is ideal noise floor, minus the reduction in gain.
-void MeasureSummaryDynamicRange(Gain::AScale scale, double* level_db,
+void MeasureSummaryDynamicRange(float gain_db, double* level_db,
                                 double* sinad_db) {
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
                                48000, 1, 48000, Resampler::SampleAndHold);
@@ -29,9 +29,14 @@ void MeasureSummaryDynamicRange(Gain::AScale scale, double* level_db,
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
+
+  Bookkeeping info;
+  info.step_size = Mixer::FRAC_ONE;
+  info.gain.SetSourceGain(gain_db);
+
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
-             Mixer::FRAC_ONE, scale, false);
+             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false,
+             &info);
   EXPECT_EQ(kFreqTestBufSize, dest_offset);
   EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
             frac_src_offset);
@@ -51,24 +56,24 @@ void MeasureSummaryDynamicRange(Gain::AScale scale, double* level_db,
 TEST(DynamicRange, Epsilon) {
   double unity_level_db, unity_sinad_db, level_db, sinad_db;
 
-  MeasureSummaryDynamicRange(Gain::kUnityScale, &unity_level_db,
-                             &unity_sinad_db);
+  MeasureSummaryDynamicRange(0.0f, &unity_level_db, &unity_sinad_db);
   EXPECT_NEAR(unity_level_db, 0.0, AudioResult::kPrevLevelToleranceSourceFloat);
   EXPECT_GE(unity_sinad_db, AudioResult::kPrevFloorSourceFloat);
   AudioResult::LevelToleranceSourceFloat =
       fmax(AudioResult::LevelToleranceSourceFloat, abs(unity_level_db));
 
-  // kMinUnityScale is the lowest (furthest-from-Unity) with no observable
+  // kMinGainDbUnity is the lowest (furthest-from-Unity) with no observable
   // attenuation on float32 (i.e. the smallest indistinguishable from Unity).
   // Just above the 'first detectable reduction' scale; should be same as unity.
-  MeasureSummaryDynamicRange(AudioResult::kMinUnityScale, &level_db, &sinad_db);
+  MeasureSummaryDynamicRange(AudioResult::kMinGainDbUnity, &level_db,
+                             &sinad_db);
   EXPECT_EQ(level_db, unity_level_db);
   EXPECT_EQ(sinad_db, unity_sinad_db);
 
-  // kPrevScaleEpsilon is the highest (closest-to-Unity) with observable effect
+  // kMaxGainDbNonUnity is the highest (closest-to-Unity) with observable effect
   // on full-scale (i.e. largest sub-Unity AScale distinguishable from Unity).
   // At this 'detectable reduction' scale, level and noise floor are reduced.
-  MeasureSummaryDynamicRange(AudioResult::kPrevScaleEpsilon,
+  MeasureSummaryDynamicRange(AudioResult::kMaxGainDbNonUnity,
                              &AudioResult::LevelEpsilonDown,
                              &AudioResult::SinadEpsilonDown);
   EXPECT_NEAR(AudioResult::LevelEpsilonDown, AudioResult::kPrevLevelEpsilonDown,
@@ -83,14 +88,7 @@ TEST(DynamicRange, Epsilon) {
 
 // Measure dynamic range (signal level, noise floor) when gain is -30dB.
 TEST(DynamicRange, 30Down) {
-  Gain gain;
-
-  // Set renderer gain to +24dB (note: this combines with -54 to make -30dB).
-  gain.SetSourceGain(24.0f);
-  // Retrieve the total gainscale multiplier, if system gain is -54dB.
-  const Gain::AScale scale = gain.GetGainScale(-54.0f);
-
-  MeasureSummaryDynamicRange(scale, &AudioResult::Level30Down,
+  MeasureSummaryDynamicRange(-30.0f, &AudioResult::Level30Down,
                              &AudioResult::Sinad30Down);
   AudioResult::DynRangeTolerance = fmax(AudioResult::DynRangeTolerance,
                                         abs(AudioResult::Level30Down + 30.0));
@@ -102,14 +100,7 @@ TEST(DynamicRange, 30Down) {
 
 // Measure dynamic range (signal level, noise floor) when gain is -60dB.
 TEST(DynamicRange, 60Down) {
-  Gain gain;
-
-  // Set AudioRenderer gain to -60dB.
-  gain.SetSourceGain(-60.0f);
-  // Retrieve the combined gain scale multiplier, if system gain is 0dB.
-  const Gain::AScale scale = gain.GetGainScale(0.0f);
-
-  MeasureSummaryDynamicRange(scale, &AudioResult::Level60Down,
+  MeasureSummaryDynamicRange(-60.0f, &AudioResult::Level60Down,
                              &AudioResult::Sinad60Down);
   AudioResult::DynRangeTolerance = fmax(AudioResult::DynRangeTolerance,
                                         abs(AudioResult::Level60Down + 60.0));
@@ -121,14 +112,7 @@ TEST(DynamicRange, 60Down) {
 
 // Measure dynamic range (signal level, noise floor) when gain is -90dB.
 TEST(DynamicRange, 90Down) {
-  Gain gain;
-
-  // Set renderer gain to -44dB (note: this combines with -46 to make -90dB).
-  gain.SetSourceGain(-44.0f);
-  // Retrieve the combined gain scale multiplier, if system gain is -46dB.
-  const Gain::AScale scale = gain.GetGainScale(-46.0f);
-
-  MeasureSummaryDynamicRange(scale, &AudioResult::Level90Down,
+  MeasureSummaryDynamicRange(-90.0f, &AudioResult::Level90Down,
                              &AudioResult::Sinad90Down);
   AudioResult::DynRangeTolerance = fmax(AudioResult::DynRangeTolerance,
                                         abs(AudioResult::Level90Down + 90.0));
@@ -153,9 +137,13 @@ TEST(DynamicRange, MonoToStereo) {
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
+
+  Bookkeeping info;
+  info.step_size = Mixer::FRAC_ONE;
+
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
-             Mixer::FRAC_ONE, Gain::kUnityScale, false);
+             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false,
+             &info);
   EXPECT_EQ(kFreqTestBufSize, dest_offset);
   EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
             frac_src_offset);
@@ -207,9 +195,13 @@ TEST(DynamicRange, StereoToMono) {
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
+
+  Bookkeeping info;
+  info.step_size = Mixer::FRAC_ONE;
+
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
-             Mixer::FRAC_ONE, Gain::kUnityScale, false);
+             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false,
+             &info);
   EXPECT_EQ(kFreqTestBufSize, dest_offset);
   EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
             frac_src_offset);
@@ -291,18 +283,23 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
+
+  // -6.0206 dB leads to 0.500 scale (exactly 50%), to be mixed with itself
+  Bookkeeping info;
+  info.step_size = Mixer::FRAC_ONE;
+  info.gain.SetSourceGain(-6.0205999f);
+
   EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset,
                          source.data(), kFreqTestBufSize << kPtsFractionalBits,
-                         &frac_src_offset, Mixer::FRAC_ONE,
-                         Gain::kUnityScale * 0.5f, false));
+                         &frac_src_offset, false, &info));
 
   // Accumulate the same (reference-frequency) wave.
   dest_offset = 0;
   frac_src_offset = 0;
+
   EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset,
                          source.data(), kFreqTestBufSize << kPtsFractionalBits,
-                         &frac_src_offset, Mixer::FRAC_ONE,
-                         Gain::kUnityScale * 0.5f, true));
+                         &frac_src_offset, true, &info));
   EXPECT_EQ(kFreqTestBufSize, dest_offset);
   EXPECT_EQ(dest_offset << kPtsFractionalBits,
             static_cast<uint32_t>(frac_src_offset));

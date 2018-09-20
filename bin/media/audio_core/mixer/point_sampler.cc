@@ -23,18 +23,14 @@ class PointSamplerImpl : public PointSampler {
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
            const void* src, uint32_t frac_src_frames, int32_t* frac_src_offset,
-           uint32_t frac_step_size, Gain::AScale amplitude_scale,
-           bool accumulate, uint32_t rate_modulo = 0, uint32_t denominator = 1,
-           uint32_t* src_pos_modulo = nullptr) override;
+           bool accumulate, Bookkeeping* info) override;
 
  private:
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
   static inline bool Mix(float* dest, uint32_t dest_frames,
                          uint32_t* dest_offset, const void* src,
                          uint32_t frac_src_frames, int32_t* frac_src_offset,
-                         uint32_t* src_pos_modulo, uint32_t frac_step_size,
-                         uint32_t rate_modulo, uint32_t denominator,
-                         Gain::AScale amplitude_scale);
+                         Bookkeeping* info);
 };
 
 // TODO(mpuryear): MTWN-75 factor to minimize PointSamplerImpl code duplication
@@ -46,18 +42,14 @@ class NxNPointSamplerImpl : public PointSampler {
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
            const void* src, uint32_t frac_src_frames, int32_t* frac_src_offset,
-           uint32_t frac_step_size, Gain::AScale amplitude_scale,
-           bool accumulate, uint32_t rate_modulo = 0, uint32_t denominator = 1,
-           uint32_t* src_pos_modulo = nullptr) override;
+           bool accumulate, Bookkeeping* info) override;
 
  private:
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
   static inline bool Mix(float* dest, uint32_t dest_frames,
                          uint32_t* dest_offset, const void* src,
                          uint32_t frac_src_frames, int32_t* frac_src_offset,
-                         uint32_t* src_pos_modulo, uint32_t frac_step_size,
-                         uint32_t rate_modulo, uint32_t denominator,
-                         Gain::AScale amplitude_scale, uint32_t chan_count);
+                         Bookkeeping* info, uint32_t chan_count);
   uint32_t chan_count_ = 0;
 };
 
@@ -68,17 +60,10 @@ template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
 inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset,
     const void* src_void, uint32_t frac_src_frames, int32_t* frac_src_offset,
-    uint32_t* src_pos_modulo, uint32_t frac_step_size, uint32_t rate_modulo,
-    uint32_t denominator, Gain::AScale amplitude_scale) {
+    Bookkeeping* info) {
   static_assert(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
-
-  // If caller didn't specify a running position modulo param, use one locally.
-  uint32_t temp_modulo = 0;
-  if (src_pos_modulo == nullptr) {
-    src_pos_modulo = &temp_modulo;
-  }
 
   // Although the number of source frames is expressed in fixed-point 19.13
   // format, the actual number of frames must always be an integer.
@@ -95,8 +80,11 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   uint32_t dest_off = *dest_offset;
   int32_t src_off = *frac_src_offset;
 
-  FXL_DCHECK(denominator > 0);
-  FXL_DCHECK(denominator > rate_modulo);
+  if (HasModulo) {
+    FXL_DCHECK(info->denominator > 0);
+    FXL_DCHECK(info->denominator > info->rate_modulo);
+    FXL_DCHECK(info->denominator > info->src_pos_modulo);
+  }
 
   FXL_DCHECK(dest_off < dest_frames);
   FXL_DCHECK(frac_src_frames >= FRAC_ONE);
@@ -114,6 +102,8 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
   if (ScaleType != ScalerType::MUTED) {
+    Gain::AScale amplitude_scale = info->gain.GetGainScale();
+
     while ((dest_off < dest_frames) &&
            (src_off < static_cast<int32_t>(frac_src_frames))) {
       uint32_t src_iter = (src_off >> kPtsFractionalBits) * SrcChanCount;
@@ -125,13 +115,13 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       }
 
       ++dest_off;
-      src_off += frac_step_size;
+      src_off += info->step_size;
 
       if (HasModulo) {
-        *src_pos_modulo = (*src_pos_modulo) + rate_modulo;
-        if (*src_pos_modulo >= denominator) {
+        info->src_pos_modulo += info->rate_modulo;
+        if (info->src_pos_modulo >= info->denominator) {
           ++src_off;
-          *src_pos_modulo = (*src_pos_modulo) - denominator;
+          info->src_pos_modulo -= info->denominator;
         }
       }
     }
@@ -140,17 +130,17 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       // Calc how many samples we would've produced; update src_off &
       // dest_off.
       uint32_t src_avail =
-          ((frac_src_frames - src_off) + frac_step_size - 1) / frac_step_size;
+          ((frac_src_frames - src_off) + info->step_size - 1) / info->step_size;
       uint32_t dest_avail = (dest_frames - dest_off);
       uint32_t avail = std::min(src_avail, dest_avail);
 
-      src_off += avail * frac_step_size;
+      src_off += avail * info->step_size;
       dest_off += avail;
 
       if (HasModulo) {
-        *src_pos_modulo = (*src_pos_modulo) + (rate_modulo * avail);
-        src_off += (*src_pos_modulo / denominator);
-        *src_pos_modulo = (*src_pos_modulo) % denominator;
+        info->src_pos_modulo += (info->rate_modulo * avail);
+        src_off += (info->src_pos_modulo / info->denominator);
+        info->src_pos_modulo %= info->denominator;
       }
     }
   }
@@ -165,65 +155,50 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-    uint32_t frac_src_frames, int32_t* frac_src_offset, uint32_t frac_step_size,
-    Gain::AScale amplitude_scale, bool accumulate, uint32_t rate_modulo,
-    uint32_t denominator, uint32_t* src_pos_modulo) {
-  if (amplitude_scale == Gain::kUnityScale) {
-    return accumulate ? (rate_modulo > 0
-                             ? Mix<ScalerType::EQ_UNITY, true, true>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale)
-                             : Mix<ScalerType::EQ_UNITY, true, false>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale))
-                      : (rate_modulo > 0
-                             ? Mix<ScalerType::EQ_UNITY, false, true>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale)
-                             : Mix<ScalerType::EQ_UNITY, false, false>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale));
-  } else if (amplitude_scale <= Gain::kMinScale) {
-    return (rate_modulo > 0
-                ? Mix<ScalerType::MUTED, true, true>(
-                      dest, dest_frames, dest_offset, src, frac_src_frames,
-                      frac_src_offset, src_pos_modulo, frac_step_size,
-                      rate_modulo, denominator, amplitude_scale)
-                : Mix<ScalerType::MUTED, true, false>(
-                      dest, dest_frames, dest_offset, src, frac_src_frames,
-                      frac_src_offset, src_pos_modulo, frac_step_size,
-                      rate_modulo, denominator, amplitude_scale));
+    uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
+    Bookkeeping* info) {
+  Bookkeeping bk;
+  if (info == nullptr) {
+    info = &bk;
+    info->denominator = 0;
+  }
+  bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
+
+  if (info->gain.IsUnity()) {
+    return accumulate
+               ? (hasModulo ? Mix<ScalerType::EQ_UNITY, true, true>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info)
+                            : Mix<ScalerType::EQ_UNITY, true, false>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info))
+               : (hasModulo ? Mix<ScalerType::EQ_UNITY, false, true>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info)
+                            : Mix<ScalerType::EQ_UNITY, false, false>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info));
+  } else if (info->gain.IsSilent()) {
+    return (hasModulo ? Mix<ScalerType::MUTED, true, true>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info)
+                      : Mix<ScalerType::MUTED, true, false>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info));
   } else {
-    return accumulate ? (rate_modulo > 0
-                             ? Mix<ScalerType::NE_UNITY, true, true>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale)
-                             : Mix<ScalerType::NE_UNITY, true, false>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale))
-                      : (rate_modulo > 0
-                             ? Mix<ScalerType::NE_UNITY, false, true>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale)
-                             : Mix<ScalerType::NE_UNITY, false, false>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale));
+    return accumulate
+               ? (hasModulo ? Mix<ScalerType::NE_UNITY, true, true>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info)
+                            : Mix<ScalerType::NE_UNITY, true, false>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info))
+               : (hasModulo ? Mix<ScalerType::NE_UNITY, false, true>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info)
+                            : Mix<ScalerType::NE_UNITY, false, false>(
+                                  dest, dest_frames, dest_offset, src,
+                                  frac_src_frames, frac_src_offset, info));
   }
 }
 
@@ -234,17 +209,10 @@ template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
 inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset,
     const void* src_void, uint32_t frac_src_frames, int32_t* frac_src_offset,
-    uint32_t* src_pos_modulo, uint32_t frac_step_size, uint32_t rate_modulo,
-    uint32_t denominator, Gain::AScale amplitude_scale, uint32_t chan_count) {
+    Bookkeeping* info, uint32_t chan_count) {
   static_assert(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
-
-  // If caller didn't specify a running position modulo param, use one locally.
-  uint32_t temp_modulo = 0;
-  if (src_pos_modulo == nullptr) {
-    src_pos_modulo = &temp_modulo;
-  }
 
   // Although the number of source frames is expressed in fixed-point 19.13
   // format, the actual number of frames must always be an integer.
@@ -260,8 +228,11 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
   uint32_t dest_off = *dest_offset;
   int32_t src_off = *frac_src_offset;
 
-  FXL_DCHECK(denominator > 0);
-  FXL_DCHECK(denominator > rate_modulo);
+  if (HasModulo) {
+    FXL_DCHECK(info->denominator > 0);
+    FXL_DCHECK(info->denominator > info->rate_modulo);
+    FXL_DCHECK(info->denominator > info->src_pos_modulo);
+  }
 
   FXL_DCHECK(dest_off < dest_frames);
   FXL_DCHECK(frac_src_frames >= FRAC_ONE);
@@ -279,6 +250,7 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
   if (ScaleType != ScalerType::MUTED) {
+    Gain::AScale amplitude_scale = info->gain.GetGainScale();
     while ((dest_off < dest_frames) &&
            (src_off < static_cast<int32_t>(frac_src_frames))) {
       uint32_t src_iter = (src_off >> kPtsFractionalBits) * chan_count;
@@ -291,13 +263,13 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
       }
 
       dest_off += 1;
-      src_off += frac_step_size;
+      src_off += info->step_size;
 
       if (HasModulo) {
-        *src_pos_modulo = (*src_pos_modulo) + rate_modulo;
-        if (*src_pos_modulo >= denominator) {
+        info->src_pos_modulo += info->rate_modulo;
+        if (info->src_pos_modulo >= info->denominator) {
           ++src_off;
-          *src_pos_modulo = (*src_pos_modulo) - denominator;
+          info->src_pos_modulo -= info->denominator;
         }
       }
     }
@@ -306,17 +278,17 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
       // Calc how many samples we would've produced; update src_off &
       // dest_off.
       uint32_t src_avail =
-          ((frac_src_frames - src_off) + frac_step_size - 1) / frac_step_size;
+          ((frac_src_frames - src_off) + info->step_size - 1) / info->step_size;
       uint32_t dest_avail = (dest_frames - dest_off);
       uint32_t avail = std::min(src_avail, dest_avail);
 
-      src_off += avail * frac_step_size;
+      src_off += avail * info->step_size;
       dest_off += avail;
 
       if (HasModulo) {
-        *src_pos_modulo = (*src_pos_modulo) + (rate_modulo * avail);
-        src_off += (*src_pos_modulo / denominator);
-        *src_pos_modulo = (*src_pos_modulo) % denominator;
+        info->src_pos_modulo += (info->rate_modulo * avail);
+        src_off += (info->src_pos_modulo / info->denominator);
+        info->src_pos_modulo %= info->denominator;
       }
     }
   }
@@ -331,65 +303,59 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
 template <typename SrcSampleType>
 bool NxNPointSamplerImpl<SrcSampleType>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-    uint32_t frac_src_frames, int32_t* frac_src_offset, uint32_t frac_step_size,
-    Gain::AScale amplitude_scale, bool accumulate, uint32_t rate_modulo,
-    uint32_t denominator, uint32_t* src_pos_modulo) {
-  if (amplitude_scale == Gain::kUnityScale) {
-    return accumulate ? (rate_modulo > 0
-                             ? Mix<ScalerType::EQ_UNITY, true, true>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale, chan_count_)
-                             : Mix<ScalerType::EQ_UNITY, true, false>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale, chan_count_))
-                      : (rate_modulo > 0
-                             ? Mix<ScalerType::EQ_UNITY, false, true>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale, chan_count_)
-                             : Mix<ScalerType::EQ_UNITY, false, false>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale, chan_count_));
-  } else if (amplitude_scale <= Gain::kMinScale) {
-    return (rate_modulo > 0
+    uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
+    Bookkeeping* info) {
+  Bookkeeping bk;
+  if (info == nullptr) {
+    info = &bk;
+  }
+
+  bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
+
+  if (info->gain.IsUnity()) {
+    return accumulate
+               ? (hasModulo
+                      ? Mix<ScalerType::EQ_UNITY, true, true>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info, chan_count_)
+                      : Mix<ScalerType::EQ_UNITY, true, false>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info,
+                            chan_count_))
+               : (hasModulo
+                      ? Mix<ScalerType::EQ_UNITY, false, true>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info, chan_count_)
+                      : Mix<ScalerType::EQ_UNITY, false, false>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info,
+                            chan_count_));
+  } else if (info->gain.IsSilent()) {
+    return (hasModulo
                 ? Mix<ScalerType::MUTED, true, true>(
                       dest, dest_frames, dest_offset, src, frac_src_frames,
-                      frac_src_offset, src_pos_modulo, frac_step_size,
-                      rate_modulo, denominator, amplitude_scale, chan_count_)
+                      frac_src_offset, info, chan_count_)
                 : Mix<ScalerType::MUTED, true, false>(
                       dest, dest_frames, dest_offset, src, frac_src_frames,
-                      frac_src_offset, src_pos_modulo, frac_step_size,
-                      rate_modulo, denominator, amplitude_scale, chan_count_));
+                      frac_src_offset, info, chan_count_));
   } else {
-    return accumulate ? (rate_modulo > 0
-                             ? Mix<ScalerType::NE_UNITY, true, true>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale, chan_count_)
-                             : Mix<ScalerType::NE_UNITY, true, false>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale, chan_count_))
-                      : (rate_modulo > 0
-                             ? Mix<ScalerType::NE_UNITY, false, true>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale, chan_count_)
-                             : Mix<ScalerType::NE_UNITY, false, false>(
-                                   dest, dest_frames, dest_offset, src,
-                                   frac_src_frames, frac_src_offset,
-                                   src_pos_modulo, frac_step_size, rate_modulo,
-                                   denominator, amplitude_scale, chan_count_));
+    return accumulate
+               ? (hasModulo
+                      ? Mix<ScalerType::NE_UNITY, true, true>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info, chan_count_)
+                      : Mix<ScalerType::NE_UNITY, true, false>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info,
+                            chan_count_))
+               : (hasModulo
+                      ? Mix<ScalerType::NE_UNITY, false, true>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info, chan_count_)
+                      : Mix<ScalerType::NE_UNITY, false, false>(
+                            dest, dest_frames, dest_offset, src,
+                            frac_src_frames, frac_src_offset, info,
+                            chan_count_));
   }
 }
 

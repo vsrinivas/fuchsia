@@ -10,10 +10,7 @@ namespace mixer {
 
 bool NoOp::Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
                const void* src, uint32_t frac_src_frames,
-               int32_t* frac_src_offset, uint32_t frac_step_size,
-               Gain::AScale amplitude_scale, bool accumulate,
-               uint32_t rate_modulo, uint32_t denominator,
-               uint32_t* src_pos_modulo) {
+               int32_t* frac_src_offset, bool accumulate, Bookkeeping* info) {
   return false;
 }
 

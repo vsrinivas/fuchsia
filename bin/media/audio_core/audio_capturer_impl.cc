@@ -22,7 +22,7 @@ namespace audio {
 
 zx_duration_t kAssumedWorstSourceFenceTime = ZX_MSEC(5);
 
-constexpr float kInitialCaptureGainDb = 0.0;
+constexpr float kInitialCaptureGainDb = 0.0f;
 
 // static
 AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
@@ -306,9 +306,9 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
     return;
   }
 
-  // Things went well.  While we may fail to create links to audio sources from
+  // Things went well. While we may fail to create links to audio sources from
   // this point forward, we have successfully configured the mode for this
-  // audio in, so we are now in the OperatingSync state.
+  // capturer, so we are now in the OperatingSync state.
   state_.store(State::OperatingSync);
 
   // Let our source links know about the format that we prefer.
@@ -804,17 +804,6 @@ void AudioCapturerImpl::SetGain(float gain_db) {
   }
 
   stream_gain_db_.store(gain_db);
-
-  // TODO(mpuryear): we should do more than just this value once here. Actually
-  // we should distribute this to the various links and their destination gains,
-  // something like the following:
-  //
-  // {
-  //   fbl::AutoLock links_lock(&links_lock_);
-  //   for (auto& link : source_links_) {
-  //     link->bookkeeping()->gain.SetDestGain(gain_db);
-  //   }
-  // }
 }
 
 void AudioCapturerImpl::SetMute(bool muted) {
@@ -857,8 +846,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   size_t job_bytes = sizeof(mix_buf_[0]) * mix_frames * format_->channels;
   ::memset(mix_buf_.get(), 0u, job_bytes);
 
-  // If our current audio in gain is muted, we have nothing to do after filling
-  // with silence.
+  // If our capturer is muted, we have nothing to do after filling with silence.
   float capture_gain_db = stream_gain_db_.load();
   if (capture_gain_db <= fuchsia::media::MUTED_GAIN_DB) {
     return true;
@@ -870,16 +858,15 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     FXL_DCHECK(link->GetSource()->is_input() || link->GetSource()->is_output());
 
     // Get a hold of our device source (we know it is a device because this is a
-    // ring buffer source, and ring buffer sources are always currently always)
-    // and snapshot the current state of the ring buffer.
+    // ring buffer source, and ring buffer sources are always currently input
+    // devices) and snapshot the current state of the ring buffer.
     auto device = static_cast<AudioDevice*>(link->GetSource().get());
     FXL_DCHECK(device != nullptr);
 
-    // Right now, the only way for a device to not have a driver would be if it
-    // was the throttle output.  Linking a audio in to the throttle output would
-    // be a mistake.  For now if we detect this happening, log a warning, signal
-    // an error and shut down.  Once MTWN-52 is resolved, we can come back here
-    // and get rid of this.
+    // Right now, the only way for a device to not have a driver is if it was
+    // the throttle output. Linking a capturer to the throttle output would be a
+    // mistake. For now if we detect this, log a warning, signal error and shut
+    // down. Once MTWN-52 is resolved, we can come back here and remove this.
     const auto& driver = device->driver();
     if (driver == nullptr) {
       FXL_LOG(ERROR)
@@ -889,8 +876,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     }
 
     // Get our capture link bookkeeping.
-    Bookkeeping* bk = static_cast<Bookkeeping*>(link->bookkeeping().get());
-    FXL_DCHECK(bk != nullptr);
+    Bookkeeping* info = static_cast<Bookkeeping*>(link->bookkeeping().get());
+    FXL_DCHECK(info != nullptr);
 
     // Note that in capture cases, the Gain object's 'source' gain is the system
     // (or input device) gain, whereas the (provided) 'dest' gain for this call
@@ -900,26 +887,26 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     //
     // If this gain scale is at or below our mute threshold, skip this source,
     // as it will not contribute to this mix pass.
-    bk->gain.SetDestGain(capture_gain_db);
-    if (bk->gain.IsSilent()) {
+
+    info->gain.SetDestGain(capture_gain_db);
+    if (info->gain.IsSilent()) {
       continue;
     }
 
     AudioDriver::RingBufferSnapshot rb_snap;
     driver->SnapshotRingBuffer(&rb_snap);
 
-    // If the driver does not have its ring buffer, or it does not have a valid
-    // clock monotonic to ring buffer position transformation, then there is
-    // nothing to do (at the moment).  Just skip this source and move on to the
-    // next one.
+    // If a driver does not have its ring buffer, or a valid clock monotonic to
+    // ring buffer position transformation, then there is nothing to do (at the
+    // moment). Just skip this source and move on to the next one.
     if ((rb_snap.ring_buffer == nullptr) ||
         (!rb_snap.clock_mono_to_ring_pos_bytes.invertable())) {
       continue;
     }
 
     // Update clock transformation if needed.
-    FXL_DCHECK(bk->mixer != nullptr);
-    UpdateTransformation(bk, rb_snap);
+    FXL_DCHECK(info->mixer != nullptr);
+    UpdateTransformation(info, rb_snap);
 
     // TODO(johngro) : Much of the code after this is very similar to the logic
     // used to sample from packet sources (we basically model it as either 1 or
@@ -938,7 +925,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
     int64_t end_fence_frames =
-        (bk->clock_mono_to_frac_source_frames.Apply(now)) >> kPtsFractionalBits;
+        (info->clock_mono_to_frac_source_frames.Apply(now)) >>
+        kPtsFractionalBits;
 
     int64_t start_fence_frames =
         end_fence_frames - rb_snap.end_fence_to_start_fence_frames;
@@ -989,7 +977,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // Figure out where the first and last sampling points of this job are,
       // expressed in fractional source frames
       FXL_DCHECK(frames_left > 0);
-      const auto& trans = bk->dest_frames_to_frac_source_frames;
+      const auto& trans = info->dest_frames_to_frac_source_frames;
       int64_t job_start = trans.Apply(frame_count_ + mix_frames - frames_left);
       int64_t job_end = job_start + trans.rate().Scale(frames_left - 1);
 
@@ -1002,14 +990,14 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // the negative window edge of our filter centered at our job's first
       // sampling point, then this source region is entirely in the past and may
       // be skipped.
-      if (final_pts < (job_start - bk->mixer->neg_filter_width())) {
+      if (final_pts < (job_start - info->mixer->neg_filter_width())) {
         continue;
       }
 
       // If the PTS of the first frame of audio in our source region is after
       // the positive window edge of our filter centered at our job's sampling
       // point, then source region is entirely in the future and we are done.
-      if (region.sfrac_pts > (job_end + bk->mixer->pos_filter_width())) {
+      if (region.sfrac_pts > (job_end + info->mixer->pos_filter_width())) {
         break;
       }
 
@@ -1020,10 +1008,10 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       int64_t source_offset_64 = job_start - region.sfrac_pts;
       int64_t output_offset_64 = 0;
       int64_t first_sample_pos_window_edge =
-          job_start + bk->mixer->pos_filter_width();
+          job_start + info->mixer->pos_filter_width();
 
       const TimelineRate& dest_to_src =
-          bk->dest_frames_to_frac_source_frames.rate();
+          info->dest_frames_to_frac_source_frames.rate();
       // If first frame in this source region comes after positive edge of
       // filter window, we must skip output frames before producing data.
       if (region.sfrac_pts > first_sample_pos_window_edge) {
@@ -1070,8 +1058,6 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       zx_cache_flush(region_source, cache_target_frames * rb->frame_size(),
                      ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
 
-      Gain::AScale amplitude_scale = bk->gain.GetGainScale(capture_gain_db);
-
       // Looks like we are ready to go. Mix.
       // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
       //
@@ -1099,10 +1085,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // measurable and attributable to this jitter, we will defer this work.
       //
       // Update: src_pos_modulo is added to Mix(), but for now we omit it here.
-      bool consumed_source = bk->mixer->Mix(
+      bool consumed_source = info->mixer->Mix(
           buf, frames_left, &output_offset, region_source,
-          region_frac_frame_len, &frac_source_offset, bk->step_size,
-          amplitude_scale, accumulate, bk->rate_modulo, bk->denominator());
+          region_frac_frame_len, &frac_source_offset, accumulate, info);
       FXL_DCHECK(output_offset <= frames_left);
 
       if (!consumed_source) {
@@ -1119,10 +1104,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       }
     }
 
-    // We have now added something to the intermediate mix buffer.  For the next
-    // source we process, we cannot assume that it is full of just silence.  Set
-    // the accumulate flag so we tell the mixer to accumulate instead of just
-    // overwrite.
+    // We have now added something to the intermediate mix buffer. For our next
+    // source to process, we cannot assume that it is just silence. Set the
+    // accumulate flag to tell the mixer to accumulate (not overwrite).
     accumulate = true;
   }
 
@@ -1162,11 +1146,12 @@ void AudioCapturerImpl::UpdateTransformation(
   FXL_DCHECK(tmp_step_size >= 0);
   FXL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
   bk->step_size = static_cast<uint32_t>(tmp_step_size);
+  bk->denominator = bk->denom();
   bk->rate_modulo =
       bk->dest_frames_to_frac_source_frames.rate().subject_delta() -
-      (bk->denominator() * bk->step_size);
+      (bk->denominator * bk->step_size);
 
-  FXL_DCHECK(bk->denominator() > 0);
+  FXL_DCHECK(bk->denominator > 0);
   bk->dest_trans_gen_id = frames_to_clock_mono_gen_.get();
   bk->source_trans_gen_id = rb_snap.gen_id;
 }
@@ -1403,7 +1388,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
   FXL_DCHECK(bk->mixer == nullptr);
   bk->mixer = Mixer::Select(*source_format, *format_);
   if (bk->mixer == nullptr) {
-    FXL_LOG(INFO) << "Failed to find mixer for audio in.";
+    FXL_LOG(INFO) << "Failed to find mixer for capturer.";
     FXL_LOG(INFO) << "Source cfg: rate " << source_format->frames_per_second
                   << " ch " << source_format->channels << " sample fmt "
                   << fidl::ToUnderlying(source_format->sample_format);

@@ -18,8 +18,89 @@ namespace audio {
 class Mixer;
 using MixerPtr = std::unique_ptr<Mixer>;
 
-// TODO(mpuryear): per MTWN-129, integrate this into the Mixer class itself.
-// TODO(mpuryear): Rationalize naming and usage of the bookkeeping structs.
+// TODO(mpuryear): integrate Bookkeeping into the Mixer class: MTWN-129.
+// TODO(mpuryear): Rationalize naming/usage of Bookkeeping and MixJob structs.
+//
+// Bookkeeping
+// Maintained by an AudioLink object that connects a source stream to a
+// destination mix stream, this struct represents the state of that mix
+// operation from the source point-of-view. In a Mix, the relationship between
+// sources and destinations is many-to-one, so this struct largely includes
+// details about its source stream, and how it relates to the destination.
+//
+// When calling Mix(), we communicate resampling details with three parameters
+// found in the Bookkeeping. To augment step_size, rate_modulo and denominator
+// arguments capture any remaining aspects that are not expressed by the 19.13
+// fixed-point step_size. Because frac_src_offset and step_size both use
+// the 19.13 format, they exhibit the same precision limitations. These rate
+// and position limitations are reiterated upon the start of each mix job.
+//
+// Just as we address *rate* with rate_modulo and denominator, likewise for
+// *position* Bookkeeping uses src_pos_modulo to track initial and ongoing
+// modulo of src subframes. This work is only partially complete; the
+// remaining work (e.g., setting src_pos_modulo's initial value to anything
+// other than 0) is tracked with MTWN-128.
+//
+// With *rate*, the effect of inaccuracy accumulates over time, causing
+// measurable distortion that cripples larger mix jobs. For *position*, a
+// change in mix job size affects distortion frequency but not distortion
+// amplitude. Having added this to Bookkeeping, any residual effect seems to
+// be below audible thresholds; for now we are deferring the remaining work.
+
+// Bookkeeping struct members:
+//
+// mixer
+// This is a pointer to the Mixer object that resamples the input. Currently the
+// resampler types include SampleAndHold and LinearInterpolation.
+//
+// gain
+// This object maintains gain values contained in the mix path. This includes
+// source gain and a snapshot of destination gain (Gain objects correspond with
+// source streams, so the definitive value for destination gain is naturally
+// owned elsewhere). In the future, this object may include explicit Mute
+// states for source and dest stages, a separately controlled Category gain
+// stage, and/or the ability to ramp one or more of these gains over time.
+// Gain accepts level in dB, and provides gainscale as float multiplier.
+//
+// step_size
+// This 19.13 fixed-point value represents how much to increment our sampling
+// position in the input (src) stream, for each output (dest) frame produced.
+//
+// rate_modulo
+// If step_size cannot perfectly express the mix's resampling ratio, this
+// parameter (along with subsequent denominator) expresses leftover precision.
+// When non-zero, rate_modulo and denominator express a fractional value of
+// step_size unit that src position should advance, for each dest frame.
+//
+// denominator
+// If step_size cannot perfectly express the mix's resampling ratio, this
+// parameter (along with precedent rate_modulo) expresses leftover precision.
+// When non-zero, rate_modulo and denominator express a fractional value of
+// step_size unit that src position should advance, for each dest frame.
+//
+// denom
+// This inline function returns a snapshot of the dest_trans denominator.
+//
+// src_pos_modulo
+// If src_offset cannot perfectly express the source's position, this
+// parameter (along with denominator) expresses any leftover precision. When
+// present, src_pos_modulo and denominator express a fractional value of
+// src_offset unit that should be used when advancing src position.
+//
+// dest_frames_to_frac_source_frames
+// This translates a destination frame value into a source subframe value.
+//
+// dest_trans_gen_id
+// dest_frames_to_frac_source_frames may change over time; this value represents
+// the current generation (which version), so any change can be detected.
+//
+// clock_mono_to_frac_source_frames
+// This translates a CLOCK_MONOTONIC value into a source subframe value.
+//
+// source_trans_gen_id
+// clock_mono_to_frac_source_frames may change over time; this value represents
+// the current generation (which version), so any change can be detected.
+//
 struct Bookkeeping {
   Bookkeeping() = default;
   ~Bookkeeping() = default;
@@ -29,15 +110,16 @@ struct Bookkeeping {
 
   uint32_t step_size;
   uint32_t rate_modulo;
-  uint32_t denominator() const {
+  uint32_t denominator = 0;
+  uint32_t denom() const {
     return dest_frames_to_frac_source_frames.rate().reference_delta();
   }
+  uint32_t src_pos_modulo = 0;
 
   // The output values of these functions are in fractional frames.
   TimelineFunction dest_frames_to_frac_source_frames;
   uint32_t dest_trans_gen_id = kInvalidGenerationId;
 
-  // TimelineFunction clock_mono_to_src_frames;
   TimelineFunction clock_mono_to_frac_source_frames;
   uint32_t source_trans_gen_id = kInvalidGenerationId;
 };
@@ -52,9 +134,9 @@ class Mixer {
   // Resampler enum
   //
   // This enum lists Fuchsia's available resamplers. Callers of Mixer::Select
-  // optionally use this enum to specify which resampler they require. Default
-  // allows an existing algorithm to select a resampler based on the ratio of
-  // incoming and outgoing sample rates.
+  // optionally use this enum to specify a resampler type. Default allows an
+  // algorithm to select a resampler based on the ratio of incoming and outgoing
+  // rates, using Linear for all except "Integer-to-One" resampling ratios.
   enum class Resampler {
     Default = 0,
     SampleAndHold,
@@ -88,97 +170,51 @@ class Mixer {
   // Perform a mixing operation from source buffer into destination buffer.
   //
   // @param dest
-  // The pointer to the destination buffer into which frames will be mixed.
+  // The pointer to the destination buffer, into which frames will be mixed.
   //
   // @param dest_frames
   // The total number of frames of audio which comprise the destination buffer.
   //
   // @param dest_offset
-  // The pointer to the offset (in destination frames) at which we should start
-  // to mix destination frames. When Mix has finished, dest_offset will be
-  // updated to indicate the offset into the destination buffer of the next
-  // frame to be mixed.
+  // The pointer to the offset (in output frames) from start of dest buffer, at
+  // which we should mix destination frames. Essentially this tells Mix how many
+  // 'dest' frames to skip over, when determining where to place the first mixed
+  // output frame. When Mix has finished, dest_offset is updated to indicate the
+  // destination buffer offset of the next frame to be mixed.
   //
   // @param src
-  // The pointer to the source buffer containing the frames to be mixed into
+  // The pointer to the source buffer, containing input frames to be mixed into
   // the destination buffer.
   //
   // @param frac_src_frames
-  // The total number of fractional renderer frames within the source buffer.
+  // The total number (in 19.13 fixed) of input frames within the source buffer.
   //
   // @param frac_src_offset
-  // A pointer to the offset (expressed in fractional renderer frames) at
-  // which the first frame to be mixed with the destination buffer should be
-  // sampled. When Mix has finished, frac_src_offset will be updated to indicate
-  // the offset of the sampling position of the next frame to be mixed with the
-  // output buffer.
-  //
-  // @param frac_step_size
-  // How much to increment the fractional sampling position for each output
-  // frame produced.
-  //
-  // @param amplitude_scale
-  // The amplitude scaling factor to be applied when mixing. This is expressed
-  // as a 32-bit single-precision floating-point value.
+  // A pointer to the offset (in fractional input frames) from start of src
+  // buffer, at which the first input frame should be sampled. When Mix has
+  // finished, frac_src_offset will be updated to indicate the offset of the
+  // sampling position of the next frame to be sampled.
   //
   // @param accumulate
-  // When true, the mixer will accumulate into the destination buffer (read,
-  // sum, clip, write-back). When false, the mixer will simply replace the
-  // destination buffer with its output.
+  // When true, Mix will accumulate into the destination buffer (sum the mix
+  // results with existing values in the dest buffer). When false, Mix will
+  // overwrite any existing destination buffer values with its mix output.
   //
-  // @param rate_modulo
-  // If frac_step_size cannot perfectly express the mix's resampling ratio, this
-  // parameter (along with subsequent denominator) expresses leftover precision.
-  // When present, rate_modulo and denominator express a fractional value of
-  // frac_step_size unit that should be advanced for each destination frame.
-  //
-  // @param denominator
-  // If frac_step_size cannot perfectly express the mix's resampling ratio, this
-  // parameter (along with precedent rate_modulo) expresses leftover precision.
-  // When present, rate_modulo and denominator express a fractional value of
-  // frac_step_size unit that should be advanced, for each destination frame.
-  //
-  // @param src_pos_modulo
-  // If frac_src_offset cannot perfectly express the source's position, this
-  // parameter (along with denominator) expresses any leftover precision. When
-  // present, src_pos_modulo and denominator express a fractional value of
-  // frac_src_offset unit that should be used when advancing src position.
+  // @param info
+  // The Bookkeeping struct (documented above) contains initial and ongoing
+  // details about how this source relates to this destination, specifically in
+  // the areas of timing/clocking and gain scaling.
   //
   // @return True if the mixer is finished with this source data and will not
   // need it in the future. False if the mixer has not consumed the entire
   // source buffer and will need more of it in the future.
   //
-  // TODO(mpuryear): Change frac_src_frames parameter to be (integer)
-  // src_frames, as number of src_frames was never intended to be fractional.
+  // TODO(mpuryear): Change parameter frac_src_frames to src_frames (change
+  // subframes to int frames), as this was never intended to be fractional.
   virtual bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
                    const void* src, uint32_t frac_src_frames,
-                   int32_t* frac_src_offset, uint32_t frac_step_size,
-                   Gain::AScale amplitude_scale, bool accumulate,
-                   uint32_t rate_modulo = 0, uint32_t denominator = 1,
-                   uint32_t* src_pos_modulo = nullptr) = 0;
-  // When calling Mix(), we communicate the resampling rate with three
-  // parameters. We augment frac_step_size with rate_modulo and denominator
-  // arguments that capture the remaining rate component that cannot be
-  // expressed by a 19.13 fixed-point step_size. Note: frac_step_size and
-  // frac_input_offset use the same format -- they have the same limitations
-  // in what they can and cannot communicate. This begs two questions:
-  //
-  // Q1: For perfect position accuracy, don't we also need an in/out param
-  // to specify initial/final subframe rate_modulo, for fractional source
-  // offset? A1: Yes, for optimum position accuracy (within quantization
-  // limits), we SHOULD incorporate running subframe position_modulo.
-  //
-  // For now, we are defering this work, tracking it with MTWN-128.
-  //
-  // Q2: Why did we solve this issue for rate but not for initial position?
-  // A2: We solved this issue for *rate* because its effect accumulates over
-  // time, causing clearly measurable distortion that becomes crippling with
-  // larger jobs. For *position*, there is no accumulated magnification over
-  // time -- in analyzing the distortion that this should cause, mix job
-  // size would affect the distortion frequency but not amplitude. We expect
-  // the effects to be below audible thresholds. Until the effects are
-  // measurable and attributable to this jitter, we will defer this work.
-
+                   int32_t* frac_src_offset, bool accumulate,
+                   Bookkeeping* info) = 0;
   //
   // Reset
   //
