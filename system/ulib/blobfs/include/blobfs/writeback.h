@@ -30,8 +30,6 @@
 #include <blobfs/blobfs.h>
 #include <blobfs/format.h>
 
-#include <zircon/crashlogger.h>
-
 namespace blobfs {
 
 class Blobfs;

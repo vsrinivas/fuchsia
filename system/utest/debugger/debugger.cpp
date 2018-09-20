@@ -12,9 +12,9 @@
 #include <fbl/atomic.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
+#include <lib/zircon-internal/crashlogger.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
-#include <zircon/crashlogger.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>

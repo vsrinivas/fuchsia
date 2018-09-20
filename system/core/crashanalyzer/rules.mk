@@ -26,6 +26,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/pretty \
     system/ulib/runtime \
+    system/ulib/zircon-internal \
     system/ulib/zxcpp
 
 MODULE_LIBS := \

@@ -16,9 +16,9 @@
 #include <lib/crashanalyzer/crashanalyzer.h>
 #include <lib/fdio/util.h>
 #include <lib/fidl/cpp/message_buffer.h>
+#include <lib/zircon-internal/crashlogger.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
-#include <zircon/crashlogger.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>

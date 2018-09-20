@@ -6,7 +6,7 @@
 #include <string.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
-#include <zircon/crashlogger.h>
+#include <lib/zircon-internal/crashlogger.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>

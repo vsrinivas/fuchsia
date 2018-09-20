@@ -16,7 +16,9 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/runtime \
-    system/ulib/fbl
+    system/ulib/fbl \
+    system/ulib/zircon-internal
+
 MODULE_LIBS := \
     system/ulib/test-utils \
     system/ulib/unittest \
