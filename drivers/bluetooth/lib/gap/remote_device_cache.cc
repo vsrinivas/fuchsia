@@ -28,6 +28,8 @@ RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
       fit::bind_member(this, &RemoteDeviceCache::NotifyDeviceUpdated),
       fit::bind_member(this, &RemoteDeviceCache::UpdateExpiry),
       fxl::GenerateUUID(), address, connectable);
+  // Note: we must emplace() the RemoteDeviceRecord, because it doesn't support
+  // copy or move.
   devices_.emplace(
       std::piecewise_construct, std::forward_as_tuple(device->identifier()),
       std::forward_as_tuple(std::unique_ptr<RemoteDevice>(device),
@@ -78,11 +80,13 @@ bool RemoteDeviceCache::AddBondedDevice(const std::string& identifier,
 
   auto* device = new RemoteDevice(
       fit::bind_member(this, &RemoteDeviceCache::NotifyDeviceUpdated),
-      fit::bind_member(this, &RemoteDeviceCache::UpdateExpiry),
-      identifier, address, true);
+      fit::bind_member(this, &RemoteDeviceCache::UpdateExpiry), identifier,
+      address, true);
 
   // A bonded device must have its identity known.
   device->set_identity_known(true);
+  // Note: we must emplace() the RemoteDeviceRecord, because it doesn't support
+  // copy or move.
   devices_.emplace(
       std::piecewise_construct, std::forward_as_tuple(device->identifier()),
       std::forward_as_tuple(std::unique_ptr<RemoteDevice>(device),

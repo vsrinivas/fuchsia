@@ -10,10 +10,10 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/sm/types.h"
 #include "lib/fxl/macros.h"
-#include "remote_device.h"
 
 namespace btlib {
 
@@ -38,8 +38,12 @@ class RemoteDeviceCache final {
 
   RemoteDeviceCache() = default;
 
-  // Creates a new device entry using the given parameters. Returns nullptr if
-  // an entry matching |address| already exists in the cache.
+  // Creates a new device entry using the given parameters, and returns a
+  // (non-owning) pointer to that device. The caller must not retain the pointer
+  // beyond the current dispatcher task, as the underlying RemoteDevice is owned
+  // by |this| RemoveDeviceCache, and may be invalidated spontaneously.
+  //
+  // Returns nullptr if an entry matching |address| already exists in the cache.
   RemoteDevice* NewDevice(const common::DeviceAddress& address,
                           bool connectable);
 
@@ -116,16 +120,23 @@ class RemoteDeviceCache final {
       std::unordered_map<std::string, std::unique_ptr<RemoteDevice>>;
 
  private:
-  friend class RemoteDeviceRecord;
   class RemoteDeviceRecord final {
    public:
     RemoteDeviceRecord(std::unique_ptr<RemoteDevice> device,
                        fbl::Closure remove_device_callback)
         : device_(std::move(device)),
           removal_task_(std::move(remove_device_callback)) {}
+
+    // The copy and move ctors cannot be implicitly defined, since
+    // async::TaskClosure does not support those operations. Nor is any
+    // meaningful explicit definition possible.
     RemoteDeviceRecord(const RemoteDeviceRecord&) = delete;
     RemoteDeviceRecord(RemoteDeviceRecord&&) = delete;
+
     RemoteDevice* device() const { return device_.get(); }
+
+    // Returns a pointer to removal_task_, which can be used to (re-)schedule or
+    // cancel |remove_device_callback|.
     async::TaskClosure* removal_task() { return &removal_task_; }
 
    private:
