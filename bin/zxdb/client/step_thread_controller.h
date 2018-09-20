@@ -33,6 +33,7 @@ class StepThreadController : public ThreadController {
   StopOp OnThreadStop(
       debug_ipc::NotifyException::Type stop_type,
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
+  const char* GetName() const override { return "Step"; }
 
   // When used as a nested controller, the thread may be stopped by another
   // controller's action and control given to this controller. In this case,

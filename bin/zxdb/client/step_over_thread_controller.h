@@ -44,6 +44,7 @@ class StepOverThreadController : public ThreadController {
   StopOp OnThreadStop(
       debug_ipc::NotifyException::Type stop_type,
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
+  const char* GetName() const override { return "Step Over"; }
 
  private:
   // The fingerprint of the frame we're stepping in. Anything newer than this

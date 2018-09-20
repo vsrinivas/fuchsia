@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/client/thread_impl.h"
 
+#include <inttypes.h>
+
 #include <iostream>
 #include <limits>
 
@@ -75,6 +77,7 @@ void ThreadImpl::Continue() {
     // back rather than several instructions after the breakpoint due to the
     // original "step into" command, so even when "wrong" this current behavior
     // isn't necessarily bad.
+    controllers_.back()->Log("Continuing with this controller as primary.");
     ThreadController::ContinueOp op = controllers_.back()->GetContinueOp();
     request.how = op.how;
     request.range_begin = op.range.begin();
@@ -96,15 +99,20 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
   controller_ptr->InitWithThread(
       this, [ this, controller_ptr,
               on_continue = std::move(on_continue) ](const Err& err) {
-        if (err.has_error())
+        if (err.has_error()) {
+          controller_ptr->Log("InitWithThread failed.");
           NotifyControllerDone(controller_ptr);  // Remove the controller.
-        else
+        } else {
+          controller_ptr->Log("Initialized, continuing...");
           Continue();
+        }
         on_continue(err);
       });
 }
 
 void ThreadImpl::NotifyControllerDone(ThreadController* controller) {
+  controller->Log("Controller done, removing.");
+
   // We expect to have few controllers so brute-force is sufficient.
   for (auto cur = controllers_.begin(); cur != controllers_.end(); ++cur) {
     if (cur->get() == controller) {
@@ -223,6 +231,10 @@ void ThreadImpl::SetMetadataFromException(
 void ThreadImpl::OnException(
     debug_ipc::NotifyException::Type type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+#if defined(DEBUG_THREAD_CONTROLLERS)
+  ThreadController::LogRaw("----------\r\nGot exception @ 0x%" PRIx64,
+  frames_[0]->GetAddress());
+#endif
   bool should_stop;
   if (controllers_.empty()) {
     // When there are no controllers, all stops are effective.
@@ -240,10 +252,13 @@ void ThreadImpl::OnException(
       switch (controllers_[i]->OnThreadStop(type, hit_breakpoints)) {
         case ThreadController::kContinue:
           // Try the next controller.
+          controllers_[i]->Log("Reported continue on exception.");
           continue;
         case ThreadController::kStop:
           // Once a controller tells us to stop, we assume the controller no
           // longer applies and delete it.
+          controllers_[i]->Log(
+              "Reported stop on exception, stopping and removing it.");
           controllers_.erase(controllers_.begin() + i);
           should_stop = true;
           i--;

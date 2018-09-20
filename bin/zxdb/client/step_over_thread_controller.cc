@@ -50,11 +50,15 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (finish_) {
     // Currently trying to step out of a sub-frame.
-    if (finish_->OnThreadStop(stop_type, hit_breakpoints) == kContinue)
-      return kContinue;  // Not done stepping out, keep working on it.
+    if (finish_->OnThreadStop(stop_type, hit_breakpoints) == kContinue) {
+      // Not done stepping out, keep working on it.
+      Log("Still not done stepping out of sub-frame.");
+      return kContinue;
+    }
 
     // Done stepping out. The "finish" operation is complete, but we may need
     // to resume single-stepping in the outer frame.
+    Log("Done stepping out of sub-frame.");
     finish_.reset();
 
     // Ignore the stop type when giving control back to the "step into"
@@ -62,22 +66,30 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     // exception (from the breakpoint inserted by the "finish" controller).
     // We want the "step into" controller to check for contiuation even though
     // this stop type doesn't match what it's looking for.
-    if (step_into_->OnThreadStopIgnoreType(hit_breakpoints) == kContinue)
-      return kContinue;  // Still in range, keep stepping.
+    if (step_into_->OnThreadStopIgnoreType(hit_breakpoints) == kContinue) {
+      Log("Still in range after stepping out.");
+      return kContinue;
+    }
   } else {
-    if (step_into_->OnThreadStop(stop_type, hit_breakpoints) == kContinue)
-      return kContinue;  // Still in range, keep stepping.
+    if (step_into_->OnThreadStop(stop_type, hit_breakpoints) == kContinue) {
+      Log("Still in range.");
+      return kContinue;
+    }
   }
 
   // If we get here the thread is no longer in range but could be in a sub-
   // frame that we need to step out of.
   FrameFingerprint current_fingerprint = thread()->GetFrameFingerprint(0);
-  if (!FrameFingerprint::Newer(current_fingerprint, frame_fingerprint_))
-    return kStop;  // Not a new frame.
+  if (!FrameFingerprint::Newer(current_fingerprint, frame_fingerprint_)) {
+    Log("Not in range or a newer frame.");
+    return kStop;
+  }
 
   auto frames = thread()->GetFrames();
-  if (frames.size() < 2)
-    return kStop;  // Not enough frames to step out.
+  if (frames.size() < 2) {
+    Log("In a newer frame but there are not enough frames to step out.");
+    return kStop;
+  }
 
   // Begin stepping out of the sub-frame. The "finish" command initialization
   // is technically asynchronous since it's waiting for the breakpoint to be
@@ -94,6 +106,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   //
   // Since the IPC will serialize the command, we know that successful
   // breakpoint sets will arrive before telling the thread to continue.
+  Log("In a new frame, passing through to 'finish'.");
   finish_ = std::make_unique<FinishThreadController>(
       FinishThreadController::ToFrame(), frames[1]->GetAddress(),
       frame_fingerprint_);

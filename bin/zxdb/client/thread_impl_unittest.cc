@@ -36,6 +36,7 @@ class ContinueThreadController : public ThreadController {
     *got_stop_ = true;
     return kContinue;
   }
+  const char* GetName() const override { return "Continue"; }
 
  private:
   bool* got_stop_;

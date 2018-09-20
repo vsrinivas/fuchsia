@@ -42,6 +42,7 @@ class FinishThreadController : public ThreadController {
   StopOp OnThreadStop(
       debug_ipc::NotifyException::Type stop_type,
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
+  const char* GetName() const override { return "Finish"; }
 
  private:
   // Callback for when the thread has loaded its frames. This will compute the

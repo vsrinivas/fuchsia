@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/client/step_thread_controller.h"
 
+#include <inttypes.h>
+
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/symbols/line_details.h"
@@ -31,8 +33,15 @@ void StepThreadController::InitWithThread(Thread* thread,
         thread->GetProcess()->GetSymbols()->LineDetailsForAddress(ip);
     file_line_ = line_details.file_line();
     current_range_ = line_details.GetExtent();
+
+    Log("Stepping in %s:%d [0x%" PRIx64 ", 0x%" PRIx64 ")",
+        file_line_.file().c_str(), file_line_.line(),
+        current_range_.begin(), current_range_.end());
+  } else {
+    // In the "else" cases, the range will already have been set up.
+    Log("Stepping in [0x%" PRIx64 ", 0x%" PRIx64 ")",
+        current_range_.begin(), current_range_.end());
   }
-  // In the "else" cases, the range will already have been set up.
 
   cb(Err());
 }
@@ -61,9 +70,6 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
 
 ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
-  if (current_range_.empty())
-    return kStop;  // Single-stepping by instructions, always stop.
-
   // Most uses of "step in range" will return "stop" here since the program
   // won't prematurely stop while executing a line of code. But the code could
   // crash or there could be a breakpoint in the middle, and those don't
@@ -72,8 +78,14 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
   FXL_DCHECK(!frames.empty());
 
   uint64_t ip = frames[0]->GetAddress();
-  if (current_range_.InRange(ip))
-    return kContinue;  // In existing range, can continue.
+  if (current_range_.InRange(ip)) {
+    Log("In existing range: [0x%" PRIx64 ", 0x%" PRIx64 ")",
+          current_range_.begin(), current_range_.end());
+    return kContinue;
+  }
+
+  Log("Left range: [0x%" PRIx64 ", 0x%" PRIx64 ")",
+      current_range_.begin(), current_range_.end());
 
   if (step_mode_ == StepMode::kSourceLine) {
     ProcessSymbols* process_symbols = thread()->GetProcess()->GetSymbols();
@@ -92,6 +104,7 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
         //
         // Showing assembly every time one steps into a cross-library call is
         // undesirable so single-step over such code until we have symbols.
+        Log("In function with no symbols, single-stepping.");
         current_range_ = AddressRange();  // No range = step by instruction.
         return kContinue;
       }
@@ -100,6 +113,7 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
       //
       // TODO(brettw): In the future we will may want to automatically "step
       // out" if there is a stack frame with no symbols.
+      Log("In module with no symbols, giving up.");
       return kStop;
     }
 
@@ -121,6 +135,8 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
     if (line_details.file_line().line() == 0 ||
         line_details.file_line() == file_line_) {
       current_range_ = line_details.GetExtent();
+      Log("Got new range for line: [0x%" PRIx64 ", 0x%" PRIx64 ")",
+          current_range_.begin(), current_range_.end());
       return kContinue;
     }
   }

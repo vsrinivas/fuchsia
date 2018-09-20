@@ -18,6 +18,13 @@ class Breakpoint;
 class Err;
 class Thread;
 
+// Uncomment to enable detailed thread controller logging.
+//
+// TODO(brettw) when we have a settings system, make this run-time enableable
+// for easier debugging when people encounter problems in the field.
+//
+// #define DEBUG_THREAD_CONTROLLERS
+
 // Abstract base class that provides the policy decisions for various types of
 // thread stepping.
 class ThreadController {
@@ -90,9 +97,27 @@ class ThreadController {
       debug_ipc::NotifyException::Type stop_type,
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) = 0;
 
+#if defined(DEBUG_THREAD_CONTROLLERS)
+  // Writes the log message prefixed with the thread controller type. Callers
+  // should pass constant strings through here so the Log function takes
+  // almost no time if it's disabled: in the future we may want to make this
+  // run-time enable-able
+  void Log(const char* format, ...) const;
+
+  // Logs the raw string (no controller name prefix).
+  static void LogRaw(const char* format, ...);
+#else
+  void Log(const char* format, ...) const {}
+  static void LogRaw(const char* format, ...) {}
+#endif
+
  protected:
   Thread* thread() { return thread_; }
   void set_thread(Thread* thread) { thread_ = thread; }
+
+  // Returns the name of this thread controller. This will be visible in logs.
+  // This should be something simple and short like "Step" or "Step Over".
+  virtual const char* GetName() const = 0;
 
   // Tells the owner of this class that this ThreadController has completed
   // its work. Normally returning kStop from OnThreadStop() will do this, but

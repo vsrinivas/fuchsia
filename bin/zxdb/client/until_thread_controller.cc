@@ -89,11 +89,15 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
       break;
     }
   }
-  if (!is_our_breakpoint)
-    return kContinue;  // Not our breakpoint.
+  if (!is_our_breakpoint) {
+    Log("Not our breakpoint.");
+    return kContinue;
+  }
 
-  if (!newest_threadhold_frame_.is_valid())
-    return kStop;  // No stack check necessary, always stop.
+  if (!newest_threadhold_frame_.is_valid()) {
+    Log("No frame check required.");
+    return kStop;
+  }
 
   auto frames = thread()->GetFrames();
   if (frames.empty()) {
@@ -102,9 +106,12 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   }
 
   FrameFingerprint current_frame = thread()->GetFrameFingerprint(0);
-  if (!FrameFingerprint::Newer(current_frame, newest_threadhold_frame_))
-    return kStop;
-  return kContinue;
+  if (FrameFingerprint::Newer(current_frame, newest_threadhold_frame_)) {
+    Log("In newer frame, ignoring.");
+    return kContinue;
+  }
+  Log("Found target frame (or older).");
+  return kStop;
 }
 
 System* UntilThreadController::GetSystem() {
