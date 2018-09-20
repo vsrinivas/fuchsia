@@ -137,7 +137,10 @@ void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
       switch ((*it)->TransferRecords(destination_)) {
         case Tracee::TransferStatus::kComplete:
           break;
-        case Tracee::TransferStatus::kCorrupted:
+        case Tracee::TransferStatus::kProviderError:
+          FXL_LOG(ERROR) << "Problem reading provider output, skipping";
+          break;
+        case Tracee::TransferStatus::kWriteError:
           FXL_LOG(ERROR) << "Encountered unrecoverable error writing socket, "
                             "aborting trace";
           Abort();

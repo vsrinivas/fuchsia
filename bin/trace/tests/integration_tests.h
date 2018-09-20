@@ -24,6 +24,15 @@ struct IntegrationTest {
 };
 
 extern const IntegrationTest kFillBufferIntegrationTest;
+extern const IntegrationTest kSimpleIntegrationTest;
+
+// When emitting a small fixed number of events, emit this amount.
+// We don't need many, and certainly not so much that we overflow the buffer:
+// Here we can verify we got precisely the number of events we expected.
+constexpr size_t kNumSimpleTestEvents = 10;
+
+// When waiting for tracing to start, wait this long.
+constexpr zx::duration kStartTimeout{zx::sec(10)};
 
 // Emit |num_iterations| records that |VerifyTestEvents()| knows how to test.
 extern void WriteTestEvents(size_t num_records);

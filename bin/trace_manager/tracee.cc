@@ -35,7 +35,7 @@ Tracee::TransferStatus WriteBufferToSocket(const zx::socket& socket,
                                  zx::time::infinite(), &pending);
         if (status < 0) {
           FXL_LOG(ERROR) << "Wait on socket failed: " << status;
-          return Tracee::TransferStatus::kCorrupted;
+          return Tracee::TransferStatus::kWriteError;
         }
 
         if (pending & ZX_SOCKET_WRITABLE)
@@ -47,7 +47,7 @@ Tracee::TransferStatus WriteBufferToSocket(const zx::socket& socket,
         }
       }
 
-      return Tracee::TransferStatus::kCorrupted;
+      return Tracee::TransferStatus::kWriteError;
     }
     offset += actual;
   }
@@ -326,7 +326,7 @@ Tracee::TransferStatus Tracee::DoWriteChunk(const zx::socket& socket,
   if (buffer_vmo_.read(buffer.data(), vmo_offset, size) != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_ << ": Failed to read data from buffer_vmo: "
                    << "offset=" << vmo_offset << ", size=" << size;
-    return TransferStatus::kCorrupted;
+    return TransferStatus::kProviderError;
   }
 
   uint64_t bytes_written;
@@ -393,7 +393,7 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   trace::internal::trace_buffer_header header_buffer;
   if (buffer_vmo_.read(&header_buffer, 0, sizeof(header_buffer)) != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_ << ": Failed to read header from buffer_vmo";
-    return TransferStatus::kCorrupted;
+    return TransferStatus::kProviderError;
   }
 
   fbl::unique_ptr<trace::internal::BufferHeaderReader> header;
@@ -401,10 +401,10 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
       &header_buffer, buffer_vmo_size_, &header);
   if (error != "") {
     FXL_LOG(ERROR) << *bundle_ << ": header corrupt, " << error.c_str();
-    return TransferStatus::kCorrupted;
+    return TransferStatus::kProviderError;
   }
   if (!VerifyBufferHeader(header.get())) {
-    return TransferStatus::kCorrupted;
+    return TransferStatus::kProviderError;
   }
 
   if (header->num_records_dropped() > 0) {

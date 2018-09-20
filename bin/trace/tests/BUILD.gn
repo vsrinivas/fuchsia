@@ -67,6 +67,7 @@ executable("integration_test_app") {
     "integration_test_main.cc",
     "integration_test_utils.cc",
     "integration_tests.h",
+    "simple_integration_test.cc",
   ]
 
   deps = [
@@ -74,6 +75,24 @@ executable("integration_test_app") {
     "//garnet/lib/measure",
     "//garnet/public/lib/fxl",
     "//third_party/rapidjson",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("two_provider_provider") {
+  testonly = true
+  output_name = "two_provider_provider"
+
+  sources = [
+    "two_provider_provider.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider",
@@ -89,6 +108,7 @@ package("trace_tests") {
     ":run_integration_test",
     ":trace_integration_tests",
     ":trace_tests_bin",
+    ":two_provider_provider",
   ]
 
   tests = [
@@ -106,6 +126,9 @@ package("trace_tests") {
     },
     {
       name = "run_integration_test"
+    },
+    {
+      name = "two_provider_provider"
     },
   ]
 
@@ -136,6 +159,10 @@ package("trace_tests") {
     {
       path = rebase_path("streaming.tspec")
       dest = "streaming.tspec"
+    },
+    {
+      path = rebase_path("simple.tspec")
+      dest = "simple.tspec"
     },
   ]
 }

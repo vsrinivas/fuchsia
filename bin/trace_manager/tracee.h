@@ -42,10 +42,11 @@ class Tracee {
   enum class TransferStatus {
     // The transfer is complete.
     kComplete,
-    // The transfer is incomplete and subsequent transfers should not be
-    // executed as the underlying stream (or other part of the tracee,
-    // e.g., vmo) has been corrupted.
-    kCorrupted,
+    // An error was detected with the provider, ignore its contribution to
+    // trace output.
+    kProviderError,
+    // Writing of trace data to the receiver failed in an unrecoverable way.
+    kWriteError,
     // The receiver of the transfer went away.
     kReceiverDead,
   };

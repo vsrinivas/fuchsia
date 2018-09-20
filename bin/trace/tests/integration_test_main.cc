@@ -41,6 +41,7 @@ const char kUsageString[] = {
 
 const IntegrationTest* kIntegrationTests[] = {
   &kFillBufferIntegrationTest,
+  &kSimpleIntegrationTest,
 };
 
 static const IntegrationTest* LookupTest(const std::string& test_name) {
