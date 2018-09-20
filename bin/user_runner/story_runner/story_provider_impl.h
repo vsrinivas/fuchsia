@@ -205,16 +205,12 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   fuchsia::modular::AppConfig story_shell_;
   struct StoryShellConnection {
     std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> story_shell_app;
-    fuchsia::ui::viewsv1token::ViewOwnerPtr story_shell_view;
   };
   std::unique_ptr<StoryShellConnection> preloaded_story_shell_;
 
   // When running in a test, we don't preload story shells, because then the
   // preloaded next instance of the story doesn't pass its test points.
   const bool test_;
-
-  // Holds the story shell view proxies for running story shells.
-  ProxySet proxies_;
 
   fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;
   fidl::InterfacePtrSet<fuchsia::modular::StoryActivityWatcher>

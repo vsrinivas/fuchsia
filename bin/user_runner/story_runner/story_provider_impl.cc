@@ -424,8 +424,10 @@ StoryProviderImpl::StartStoryShell(
   auto preloaded_story_shell = std::move(preloaded_story_shell_);
   auto app_client = std::move(preloaded_story_shell->story_shell_app);
 
-  proxies_.Connect(std::move(preloaded_story_shell->story_shell_view),
-                   std::move(request));
+  fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
+  app_client->services().ConnectToService(view_provider.NewRequest());
+
+  view_provider->CreateView(std::move(request), nullptr);
 
   // Kickoff another fuchsia::modular::StoryShell, to make it faster for next
   // story. We optimize even further by delaying the loading of the next story
@@ -463,18 +465,8 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
       std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
           user_environment_->GetLauncher(), CloneStruct(story_shell_));
 
-  // CreateView must be called in order to get the Flutter application to
-  // run
-
-  fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
-  story_shell_app->services().ConnectToService(view_provider.NewRequest());
-
-  fuchsia::ui::viewsv1token::ViewOwnerPtr story_shell_view;
-  view_provider->CreateView(story_shell_view.NewRequest(), nullptr);
-
-  preloaded_story_shell_ =
-      std::make_unique<StoryShellConnection>(StoryShellConnection{
-          std::move(story_shell_app), std::move(story_shell_view)});
+  preloaded_story_shell_ = std::make_unique<StoryShellConnection>(
+      StoryShellConnection{std::move(story_shell_app)});
 }
 
 // |fuchsia::modular::StoryProvider|
