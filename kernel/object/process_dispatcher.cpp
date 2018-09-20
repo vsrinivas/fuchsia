@@ -542,7 +542,7 @@ zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) {
 zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) {
     DEBUG_ASSERT(stats != nullptr);
     Guard<fbl::Mutex> guard{get_lock()};
-    if (state_ != State::RUNNING) {
+    if (state_ == State::DEAD) {
         return ZX_ERR_BAD_STATE;
     }
     VmAspace::vm_usage_t usage;
@@ -561,7 +561,7 @@ zx_status_t ProcessDispatcher::GetAspaceMaps(
     user_out_ptr<zx_info_maps_t> maps, size_t max,
     size_t* actual, size_t* available) {
     Guard<fbl::Mutex> guard{get_lock()};
-    if (state_ != State::RUNNING) {
+    if (state_ == State::DEAD) {
         return ZX_ERR_BAD_STATE;
     }
     return GetVmAspaceMaps(aspace_, maps, max, actual, available);

@@ -56,6 +56,23 @@ bool handle_valid_on_closed_handle_fails() {
     END_TEST;
 }
 
+// Tests that ZX_INFO_TASK_STATS does not return ZX_ERR_BAD_STATE
+// when the task has not yet started.
+bool task_stats_unstarted() {
+    BEGIN_TEST;
+    zx_handle_t vmar;
+    zx_handle_t process;
+    static const char pname[] = "object-info-unstarted";
+    ASSERT_EQ(zx_process_create(zx_job_default(), pname, sizeof(pname),
+                                /* options */ 0u, &process, &vmar),
+              ZX_OK);
+    zx_info_task_stats_t info;
+    EXPECT_EQ(zx_object_get_info(process, ZX_INFO_TASK_STATS, &info,
+                                 sizeof(info), nullptr, nullptr),
+              ZX_OK);
+    END_TEST;
+}
+
 // Tests that ZX_INFO_TASK_STATS seems to work.
 bool task_stats_smoke() {
     BEGIN_TEST;
@@ -274,6 +291,24 @@ zx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
 
 zx_handle_t get_test_process() {
     return get_test_process_etc(nullptr);
+}
+
+// Tests that ZX_INFO_PROCESS_MAPS does not return ZX_ERR_BAD_STATE
+// when the process has not yet started.
+bool process_maps_unstarted() {
+    BEGIN_TEST;
+    zx_handle_t vmar;
+    zx_handle_t process;
+    static const char pname[] = "object-info-unstarted";
+    ASSERT_EQ(zx_process_create(zx_job_default(), pname, sizeof(pname),
+                                /* options */ 0u, &process, &vmar),
+              ZX_OK);
+    size_t actual, avail;
+    zx_info_maps_t maps;
+    EXPECT_EQ(zx_object_get_info(process, ZX_INFO_PROCESS_MAPS, &maps, 0,
+                                 &actual, &avail),
+              ZX_OK);
+    END_TEST;
 }
 
 // Tests that ZX_INFO_PROCESS_MAPS seems to work.
@@ -955,11 +990,13 @@ RUN_TEST(handle_valid_on_valid_handle_succeeds);
 RUN_TEST(handle_valid_on_closed_handle_fails);
 RUN_TEST((invalid_handle_fails<ZX_INFO_HANDLE_VALID, void*>));
 
+RUN_TEST(task_stats_unstarted);
 RUN_TEST(task_stats_smoke);
 RUN_SINGLE_ENTRY_TESTS(ZX_INFO_TASK_STATS, zx_info_task_stats_t, zx_process_self);
 RUN_TEST((wrong_handle_type_fails<ZX_INFO_TASK_STATS, zx_info_task_stats_t, get_test_job>));
 RUN_TEST((wrong_handle_type_fails<ZX_INFO_TASK_STATS, zx_info_task_stats_t, zx_thread_self>));
 
+RUN_TEST(process_maps_unstarted);
 RUN_TEST(process_maps_smoke);
 RUN_MULTI_ENTRY_TESTS(ZX_INFO_PROCESS_MAPS, zx_info_maps_t, get_test_process);
 RUN_TEST((self_fails<ZX_INFO_PROCESS_MAPS, zx_info_maps_t>))

@@ -435,7 +435,7 @@ typedef struct zx_info_task_stats {
 
 Additional errors:
 
-*   **ZX_ERR_BAD_STATE**: If the target process is not currently running.
+*   **ZX_ERR_BAD_STATE**: If the target process has terminated
 
 ### ZX_INFO_PROCESS_MAPS
 
@@ -486,8 +486,8 @@ Additional errors:
     examine yourself: *buffer* will live inside the Aspace being examined, and
     the kernel can't safely fault in pages of the buffer while walking the
     Aspace.
-*   **ZX_ERR_BAD_STATE**: If the target process is not currently running, or if
-    its address space has been destroyed.
+*   **ZX_ERR_BAD_STATE**: If the target process has terminated, or if its
+    address space has been destroyed
 
 ### ZX_INFO_PROCESS_VMOS
 
