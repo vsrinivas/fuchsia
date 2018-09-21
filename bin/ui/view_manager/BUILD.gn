@@ -53,4 +53,8 @@ source_set("lib") {
     "//garnet/public/lib/ui/views/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
+
+  deps = [
+    "//garnet/lib/ui/gfx:object_linker"
+  ]
 }

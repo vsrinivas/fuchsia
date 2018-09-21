@@ -21,7 +21,7 @@ class InputOwner {
   virtual ~InputOwner() {}
 
   // Delivers an event to a view.
-  virtual void DeliverEvent(::fuchsia::ui::viewsv1token::ViewToken view_token,
+  virtual void DeliverEvent(uint32_t view_token,
                             fuchsia::ui::input::InputEvent event,
                             OnEventDelivered callback) = 0;
 

@@ -8,9 +8,9 @@
 #include <memory>
 #include <vector>
 
-#include <lib/zx/eventpair.h>
-
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+
+#include "garnet/lib/ui/gfx/engine/object_linker.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/scenic/cpp/resources.h"
@@ -20,8 +20,10 @@ namespace view_manager {
 class ViewContainerState;
 class ViewRegistry;
 class ViewState;
+class ViewStub;
 class ViewTreeState;
 class PendingViewOwnerTransferState;
+using View1Linker = scenic_impl::gfx::ObjectLinker<ViewStub, ViewState>;
 
 // Describes a link in the view hierarchy either from a parent view to one
 // of its children or from the view tree to its root view.
@@ -44,12 +46,9 @@ class PendingViewOwnerTransferState;
 class ViewStub {
  public:
   // Begins the process of resolving a view.
-  // Invokes |ViewRegistry.OnViewResolved| when the token is obtained
-  // from the owner or passes nullptr if an error occurs.
-  // |host_import_token| is the import token associated with the node
-  // that the parent view exported to host the view's graphical contents.
-  ViewStub(ViewRegistry* registry,
-           fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> owner,
+  // |host_import_token| is the import token for the node exported by the parent
+  // view in order to host this view's graphical contents.
+  ViewStub(ViewRegistry* registry, View1Linker::ExportLink view_link,
            zx::eventpair host_import_token);
   ~ViewStub();
 
@@ -136,8 +135,7 @@ class ViewStub {
   void SetTreeRecursively(ViewTreeState* tree);
   static void SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree);
 
-  void OnViewResolved(::fuchsia::ui::viewsv1token::ViewToken view_token,
-                      bool success);
+  void OnViewResolved(ViewState* view_state, bool success);
 
   // This is true when |ViewStub| has been transferred before |OnViewResolved|
   // has been called, and the child view's ownership is supposed to be
@@ -148,10 +146,10 @@ class ViewStub {
   }
 
   ViewRegistry* registry_;
-  ::fuchsia::ui::viewsv1token::ViewOwnerPtr owner_;
   ViewState* state_ = nullptr;
   bool unavailable_ = false;
 
+  View1Linker::ExportLink view_link_;
   zx::eventpair host_import_token_;
   std::unique_ptr<scenic::ImportNode> host_node_;
 

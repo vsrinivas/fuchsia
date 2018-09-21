@@ -24,13 +24,13 @@ struct FocusChain {
   uint64_t version;
 
   // |chain| is the ordered list of views that a keyboard event will propagate
-  std::vector<::fuchsia::ui::viewsv1token::ViewToken> chain;
+  std::vector<uint32_t /* view token */> chain;
 };
 
 // Provides information about a view which was hit during a hit tests.
 struct ViewHit {
   // The view which was hit.
-  ::fuchsia::ui::viewsv1token::ViewToken view_token;
+  uint32_t view_token;
 
   // The origin of the ray that was used for the hit test, in device
   // coordinates.
@@ -79,18 +79,16 @@ class ViewInspector {
   // Set the current input focus to the provided |view_token|.
   // This is a back channel from input_manager to view_manager to swap focus
   // on touch down events. This logic should be moved in the future
-  virtual void ActivateFocusChain(
-      ::fuchsia::ui::viewsv1token::ViewToken view_token,
-      ActivateFocusChainCallback callback) = 0;
+  virtual void ActivateFocusChain(uint32_t view_token,
+                                  ActivateFocusChainCallback callback) = 0;
 
   // Returns whether view has focus
-  virtual void HasFocus(::fuchsia::ui::viewsv1token::ViewToken view_token,
-                        HasFocusCallback callback) = 0;
+  virtual void HasFocus(uint32_t view_token, HasFocusCallback callback) = 0;
 
   // Retrieve the IME Service that is the closest to the ViewToken
   // in the associated ViewTree
   virtual void GetImeService(
-      ::fuchsia::ui::viewsv1token::ViewToken view_token,
+      uint32_t view_token,
       fidl::InterfaceRequest<fuchsia::ui::input::ImeService> ime_service) = 0;
 };
 

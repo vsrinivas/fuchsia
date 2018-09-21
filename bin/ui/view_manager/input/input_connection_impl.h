@@ -27,14 +27,11 @@ class InputConnectionImpl : public fuchsia::ui::input::InputConnection,
                             fuchsia::ui::input::InputMethodEditorClient {
  public:
   InputConnectionImpl(
-      ViewInspector* inspector, InputOwner* owner,
-      ::fuchsia::ui::viewsv1token::ViewToken view_token,
+      ViewInspector* inspector, InputOwner* owner, uint32_t view_token,
       fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request);
   ~InputConnectionImpl() override;
 
-  ::fuchsia::ui::viewsv1token::ViewToken view_token() const {
-    return view_token_;
-  }
+  uint32_t view_token() const { return view_token_; }
 
   // Delivers an event to a view.
   void DeliverEvent(fuchsia::ui::input::InputEvent event,
@@ -78,9 +75,9 @@ class InputConnectionImpl : public fuchsia::ui::input::InputConnection,
 
   ViewInspector* const inspector_;
   InputOwner* const owner_;
-  ::fuchsia::ui::viewsv1token::ViewToken view_token_;
-  fuchsia::ui::input::InputListenerPtr event_listener_;
+  uint32_t view_token_;
 
+  fuchsia::ui::input::InputListenerPtr event_listener_;
   fidl::Binding<fuchsia::ui::input::InputConnection> binding_;
 
   // From the test input
