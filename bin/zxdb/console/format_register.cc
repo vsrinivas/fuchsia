@@ -8,6 +8,8 @@
 
 #include <map>
 
+#include <lib/fit/defer.h>
+
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/common/err.h"
@@ -18,7 +20,6 @@
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_formatters.h"
-#include "garnet/public/lib/fxl/functional/auto_call.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -109,8 +110,7 @@ Err FilterRegisters(const RegisterSet& register_set, FilteredRegisterSet* out,
       // We use insensitive case regexp matching.
       regex_t regexp;
       auto status = regcomp(&regexp, search_regexp.c_str(), REG_ICASE);
-      fxl::AutoCall<std::function<void()>> reg_freer(
-          [&regexp]() { regfree(&regexp); });
+      auto reg_freer = fit::defer([&regexp]() { regfree(&regexp); });
 
       if (status) {
         return RegexpError("Could not compile regexp", search_regexp.c_str(),

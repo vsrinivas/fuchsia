@@ -4,10 +4,11 @@
 
 #include "gatt_client_server.h"
 
+#include <lib/fit/defer.h>
+
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 #include "gatt_remote_service_server.h"
@@ -97,7 +98,7 @@ void GattClientServer::ConnectToService(
 
     // Automatically called on failure.
     auto fail_cleanup =
-        fxl::MakeAutoCall([self, id] { self->connected_services_.erase(id); });
+        fit::defer([self, id] { self->connected_services_.erase(id); });
 
     if (!service) {
       bt_log(TRACE, "bt-host", "failed to connect to service");

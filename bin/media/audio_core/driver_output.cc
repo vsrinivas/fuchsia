@@ -7,8 +7,8 @@
 #include <audio-proto-utils/format-utils.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <fbl/atomic.h>
-#include <fbl/auto_call.h>
 #include <fbl/limits.h>
+#include <lib/fit/defer.h>
 #include <zircon/process.h>
 #include <iomanip>
 
@@ -290,7 +290,7 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
 }
 
 void DriverOutput::OnDriverInfoFetched() {
-  auto cleanup = fbl::MakeAutoCall([this]() FXL_NO_THREAD_SAFETY_ANALYSIS {
+  auto cleanup = fit::defer([this]() FXL_NO_THREAD_SAFETY_ANALYSIS {
     state_ = State::Shutdown;
     ShutdownSelf();
   });
@@ -374,7 +374,7 @@ void DriverOutput::OnDriverInfoFetched() {
 }
 
 void DriverOutput::OnDriverConfigComplete() {
-  auto cleanup = fbl::MakeAutoCall([this]() FXL_NO_THREAD_SAFETY_ANALYSIS {
+  auto cleanup = fit::defer([this]() FXL_NO_THREAD_SAFETY_ANALYSIS {
     state_ = State::Shutdown;
     ShutdownSelf();
   });

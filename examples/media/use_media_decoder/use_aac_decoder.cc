@@ -7,9 +7,9 @@
 #include "codec_output.h"
 #include "util.h"
 
-#include <fbl/auto_call.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fit/defer.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 
@@ -407,7 +407,7 @@ void use_aac_decoder(async::Loop* main_loop,
 
       const fuchsia::mediacodec::CodecPacket& packet = output->packet();
       // "packet" will live long enough because ~cleanup runs before ~output.
-      auto cleanup = fbl::MakeAutoCall([&codec_client, &packet] {
+      auto cleanup = fit::defer([&codec_client, &packet] {
         // Using an auto call for this helps avoid losing track of the
         // output_buffer.
         //

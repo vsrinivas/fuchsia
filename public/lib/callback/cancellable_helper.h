@@ -7,10 +7,10 @@
 
 #include <type_traits>
 
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 
 #include "lib/callback/cancellable.h"
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
@@ -41,7 +41,7 @@ class WrappedCancellableCallback {
       return;
     }
     *is_done_ptr_ = true;
-    auto call_on_exit = fxl::MakeAutoCall(std::move(post_run_));
+    auto call_on_exit = fit::defer(std::move(post_run_));
     return wrapped_callback_(std::forward<ArgType>(args)...);
   }
 

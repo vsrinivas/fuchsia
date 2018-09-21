@@ -17,6 +17,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
+#include "lib/fit/defer.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/functional/auto_call.h"
@@ -71,7 +72,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Make sure the HCI Transport gets shut down cleanly upon exit.
-  auto ac = fxl::MakeAutoCall([&hci] { hci->ShutDown(); });
+  auto ac = fit::defer([&hci] { hci->ShutDown(); });
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 

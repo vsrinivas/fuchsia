@@ -4,8 +4,8 @@
 
 #include "garnet/bin/guest/mgr/host_vsock_endpoint.h"
 
-#include <fbl/auto_call.h>
 #include <lib/async/default.h>
+#include <lib/fit/defer.h>
 #include <lib/fxl/logging.h>
 
 namespace guestmgr {
@@ -112,7 +112,7 @@ void HostVsockEndpoint::ConnectCallback(
     zx_status_t status, zx::handle dup, uint32_t src_port,
     fuchsia::guest::HostVsockEndpoint::ConnectCallback callback) {
   auto free_port =
-      fbl::MakeAutoCall([this, src_port]() { FreeEphemeralPort(src_port); });
+      fit::defer([this, src_port]() { FreeEphemeralPort(src_port); });
   if (status != ZX_OK) {
     callback(status);
     return;

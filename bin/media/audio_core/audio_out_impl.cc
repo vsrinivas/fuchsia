@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/audio_core/audio_out_impl.h"
 
-#include <fbl/auto_call.h>
+#include <lib/fit/defer.h>
 
 #include "garnet/bin/media/audio_core/audio_core_impl.h"
 #include "garnet/bin/media/audio_core/audio_output.h"
@@ -190,7 +190,7 @@ void AudioOutImpl::UnlinkThrottle() {
 // AudioOut Interface
 //
 void AudioOutImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
 
   // We cannot change the format while we are currently operational
   if (IsOperating()) {
@@ -285,7 +285,7 @@ void AudioOutImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
     return;
   }
 
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
 
   if (IsOperating()) {
     FXL_LOG(ERROR)
@@ -318,7 +318,7 @@ void AudioOutImpl::RemovePayloadBuffer(uint32_t id) {
 
 void AudioOutImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
                                uint32_t tick_per_second_denominator) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
 
   if (IsOperating()) {
     FXL_LOG(ERROR)
@@ -343,7 +343,7 @@ void AudioOutImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
 }
 
 void AudioOutImpl::SetPtsContinuityThreshold(float threshold_seconds) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
 
   if (IsOperating()) {
     FXL_LOG(ERROR)
@@ -368,7 +368,7 @@ void AudioOutImpl::SetPtsContinuityThreshold(float threshold_seconds) {
 }
 
 void AudioOutImpl::SetReferenceClock(zx::handle ref_clock) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
 
   if (IsOperating()) {
     FXL_LOG(ERROR)
@@ -381,7 +381,7 @@ void AudioOutImpl::SetReferenceClock(zx::handle ref_clock) {
 
 void AudioOutImpl::SendPacket(fuchsia::media::StreamPacket packet,
                               SendPacketCallback callback) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
 
   // It is an error to attempt to send a packet before we have established at
   // least a minimum valid configuration.  IOW - the format must have been
@@ -521,7 +521,7 @@ void AudioOutImpl::DiscardAllPacketsNoReply() { DiscardAllPackets(nullptr); }
 
 void AudioOutImpl::Play(int64_t reference_time, int64_t media_time,
                         PlayCallback callback) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
 
   if (!ValidateConfig()) {
     FXL_LOG(ERROR) << "Failed to validate configuration during Play";
@@ -613,7 +613,7 @@ void AudioOutImpl::PlayNoReply(int64_t reference_time, int64_t media_time) {
 }
 
 void AudioOutImpl::Pause(PauseCallback callback) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
 
   if (!ValidateConfig()) {
     FXL_LOG(ERROR) << "Failed to validate configuration during Pause";
@@ -658,7 +658,7 @@ void AudioOutImpl::Pause(PauseCallback callback) {
 void AudioOutImpl::PauseNoReply() { Pause(nullptr); }
 
 void AudioOutImpl::SetGain(float gain_db) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
   if (stream_gain_db_ != gain_db) {
     if (gain_db > fuchsia::media::MAX_GAIN_DB) {
       FXL_LOG(ERROR) << "Gain value too large (" << gain_db << ") for source.";
@@ -683,7 +683,7 @@ void AudioOutImpl::SetGain(float gain_db) {
 }
 
 void AudioOutImpl::SetMute(bool mute) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
   if (mute_ != mute) {
     mute_ = mute;
 

@@ -4,7 +4,7 @@
 
 #include "garnet/lib/machina/virtio_vsock.h"
 
-#include <fbl/auto_call.h>
+#include <lib/fit/defer.h>
 #include <lib/fsl/handles/object_info.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
@@ -823,7 +823,7 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
   std::lock_guard<std::mutex> lock(mutex_);
   do {
     auto free_desc =
-        fbl::MakeAutoCall([this, index]() { tx_queue()->Return(index, 0); });
+        fit::defer([this, index]() { tx_queue()->Return(index, 0); });
     auto header = get_header(tx_queue(), index, &desc, false);
     if (header == nullptr) {
       FXL_LOG(ERROR) << "Failed to get header from write queue";

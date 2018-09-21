@@ -9,9 +9,9 @@
 #include <utility>
 #include <vector>
 
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -57,7 +57,7 @@ class ManagedContainer {
 
    private:
     E* element_;
-    fxl::AutoCall<fit::closure> auto_cleanup_;
+    fit::deferred_action<fit::closure> auto_cleanup_;
   };
 
   // Manage() takes an object |element| as input, and returns a ManagedElement.

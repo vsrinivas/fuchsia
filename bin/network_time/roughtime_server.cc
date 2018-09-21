@@ -5,6 +5,7 @@
 #include "garnet/bin/network_time/roughtime_server.h"
 
 #include <errno.h>
+#include <lib/fit/defer.h>
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -18,7 +19,6 @@
 #include <openssl/rand.h>
 
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/syslog/cpp/logger.h"
 
 namespace time_server {
@@ -60,7 +60,7 @@ Status RoughTimeServer::GetTimeFromServer(
                    << gai_strerror(err);
     return NETWORK_ERROR;
   }
-  auto ac1 = fxl::MakeAutoCall([&]() { freeaddrinfo(addrs); });
+  auto ac1 = fit::defer([&]() { freeaddrinfo(addrs); });
   fxl::UniqueFD sock_ufd(
       socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
   if (!sock_ufd.is_valid()) {

@@ -4,10 +4,10 @@
 
 #include "codec_impl.h"
 
-#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fit/defer.h>
 
 #include <threads.h>
 
@@ -692,8 +692,8 @@ void CodecImpl::QueueInputPacket_StreamControl(
 
     // Unless we cancel this cleanup, we'll free the input packet back to the
     // client.
-    auto send_free_input_packet_locked = fbl::MakeAutoCall(
-        [this, header = std::move(temp_header_copy)]() mutable {
+    auto send_free_input_packet_locked =
+        fit::defer([this, header = std::move(temp_header_copy)]() mutable {
           // Mute sending this if FailLocked() was called previously, in case
           // the reason we're here is something horribly wrong with the packet
           // header. This way we avoid repeating gibberish back to the client.

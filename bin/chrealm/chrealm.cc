@@ -14,6 +14,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/util.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/job.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
@@ -23,7 +24,6 @@
 #include <zircon/types.h>
 
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/strings/concatenate.h"
 
 namespace chrealm {
@@ -33,7 +33,7 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path, const char** argv,
   *return_code = -1;
   fdio_ns_t* ns = nullptr;
   fdio_flat_namespace_t* flat_ns = nullptr;
-  auto cleanup = fxl::MakeAutoCall([&]() {
+  auto cleanup = fit::defer([&]() {
     if (ns != nullptr) {
       fdio_ns_destroy(ns);
     }

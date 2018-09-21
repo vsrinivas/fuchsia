@@ -8,7 +8,7 @@
 
 #include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
+#include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <wlan/common/channel.h>
@@ -3266,7 +3266,7 @@ void Device::HandleRxComplete(usb_request_t* request) {
         usb_reset_endpoint(&usb_, rx_endpt_);
     }
     std::lock_guard<std::mutex> guard(lock_);
-    auto ac = fbl::MakeAutoCall([&]() { usb_request_queue(&usb_, request); });
+    auto ac = fit::defer([&]() { usb_request_queue(&usb_, request); });
 
     if (request->response.status == ZX_OK) {
         // Total bytes received is (request->response.actual) bytes
@@ -4598,9 +4598,7 @@ zx_status_t Device::ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type) {
         WriteSharedKeyMode(skey, KeyMode::kNone);
         break;
     }
-    default: {
-        break;
-    }
+    default: { break; }
     }
     return ZX_OK;
 }
@@ -4667,7 +4665,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
         uint8_t wcid = kWcidBssid;
 
         // Reset everything on failure.
-        auto reset = fbl::MakeAutoCall([&]() { ResetWcid(wcid, 0, WLAN_KEY_TYPE_PAIRWISE); });
+        auto reset = fit::defer([&]() { ResetWcid(wcid, 0, WLAN_KEY_TYPE_PAIRWISE); });
 
         auto status = WriteWcid(wcid, key_config->peer_addr);
         if (status != ZX_OK) { break; }
@@ -4692,7 +4690,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
         uint8_t wcid = kWcidBcastAddr;
 
         // Reset everything on failure.
-        auto reset = fbl::MakeAutoCall([&]() { ResetWcid(wcid, skey, WLAN_KEY_TYPE_GROUP); });
+        auto reset = fit::defer([&]() { ResetWcid(wcid, skey, WLAN_KEY_TYPE_GROUP); });
 
         auto status = WriteSharedKey(skey, key_config->key, key_config->key_len, keyMode);
         if (status != ZX_OK) { break; }

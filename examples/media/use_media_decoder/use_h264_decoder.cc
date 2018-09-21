@@ -8,10 +8,10 @@
 #include "frame_sink.h"
 #include "util.h"
 
-#include <fbl/auto_call.h>
 #include <garnet/lib/media/raw_video_writer/raw_video_writer.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fit/defer.h>
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 
@@ -382,7 +382,7 @@ static void use_video_decoder(
       // is ok with that.  In addition, cleanup can run after codec_client is
       // gone, since we don't block return from use_h264_decoder() on Scenic
       // actually freeing up all previously-queued frames.
-      auto cleanup = fbl::MakeAutoCall(
+      auto cleanup = fit::defer(
           [&codec_client, packet_header = fidl::Clone(packet.header)] {
             // Using an auto call for this helps avoid losing track of the
             // output_buffer.

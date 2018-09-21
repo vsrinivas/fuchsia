@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
+#include <lib/fit/defer.h>
 
 #include "garnet/bin/tts/tts_service_impl.h"
 #include "garnet/bin/tts/tts_speaker.h"
@@ -60,7 +60,7 @@ void TtsServiceImpl::Client::Shutdown() {
 
 void TtsServiceImpl::Client::Say(fidl::StringPtr words, uint64_t token,
                                  SayCallback cbk) {
-  auto cleanup = fbl::MakeAutoCall([this] { Shutdown(); });
+  auto cleanup = fit::defer([this] { Shutdown(); });
   auto speaker = std::make_shared<TtsSpeaker>(owner_->dispatcher_);
 
   if (speaker->Init(owner_->startup_context_) != ZX_OK) {

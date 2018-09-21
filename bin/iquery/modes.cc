@@ -6,7 +6,7 @@
 
 #include <stack>
 
-#include <lib/fxl/functional/auto_call.h>
+#include <lib/fit/defer.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/join_strings.h>
 #include <lib/fxl/strings/string_printf.h>
@@ -140,7 +140,7 @@ bool FindObjects(const std::string& base_directory, bool recursive,
     FXL_VLOG(1) << fxl::Substitute("Finding in $0", path);
 
     auto* dir = opendir(path.c_str());
-    auto cleanup = fxl::MakeAutoCall([dir] {
+    auto cleanup = fit::defer([dir] {
       if (dir != nullptr) {
         closedir(dir);
       }

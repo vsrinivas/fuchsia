@@ -5,10 +5,10 @@
 #include "garnet/bin/media/audio_core/audio_plug_detector.h"
 
 #include <dirent.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -41,7 +41,7 @@ zx_status_t AudioPlugDetector::Start(AudioDeviceManager* manager) {
 
   // If we fail to set up monitoring for any of our target directories,
   // automatically stop monitoring all sources of device nodes.
-  auto error_cleanup = fbl::MakeAutoCall([this]() { Stop(); });
+  auto error_cleanup = fit::defer([this]() { Stop(); });
 
   // If we are already running, we cannot start again.  Cancel the cleanup
   // operation and report that things are successfully started.

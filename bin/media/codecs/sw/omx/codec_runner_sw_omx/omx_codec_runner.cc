@@ -9,10 +9,10 @@
 #include <dlfcn.h>
 #include "OMX_Core.h"
 
-#include <fbl/auto_call.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
+#include <lib/fit/defer.h>
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/vmo.h>
@@ -1585,8 +1585,8 @@ void OmxCodecRunner::QueueInputPacket_StreamControl(
 
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
-    auto send_free_input_packet_locked = fbl::MakeAutoCall(
-        [this, header = std::move(temp_header_copy)]() mutable {
+    auto send_free_input_packet_locked =
+        fit::defer([this, header = std::move(temp_header_copy)]() mutable {
           SendFreeInputPacketLocked(std::move(header));
         });
 
@@ -3032,7 +3032,7 @@ OMX_ERRORTYPE OmxCodecRunner::FillBufferDone(
       }
       return OMX_ErrorNone;
     }
-    auto recycle_packet = fbl::MakeAutoCall([this, pBuffer] {
+    auto recycle_packet = fit::defer([this, pBuffer] {
       // A non-EOS zero-length buffer is allowed by OMX spec AFAICT, but we
       // don't want to allow this in the Codec interface, so hand this buffer
       // back to OMX so OMX can try filling it again.

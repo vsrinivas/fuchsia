@@ -4,8 +4,8 @@
 
 #include "garnet/examples/media/wav_recorder/wav_recorder.h"
 
-#include <fbl/auto_call.h>
 #include <lib/async-loop/loop.h>
+#include <lib/fit/defer.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 #include "lib/fxl/logging.h"
@@ -39,7 +39,7 @@ WavRecorder::~WavRecorder() {
 }
 
 void WavRecorder::Run(component::StartupContext* app_context) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
   const auto& pos_args = cmd_line_.positional_args();
 
   // Parse our args.
@@ -205,7 +205,7 @@ void WavRecorder::SendCaptureJob() {
 // We open our .wav file for recording, set our capture format, set input gain,
 // setup our VMO and add it as a payload buffer, send a series of empty packets
 void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
   zx_status_t res;
 
   if (!type.medium_specific.is_audio()) {

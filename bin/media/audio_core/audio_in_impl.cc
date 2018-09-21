@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/audio_core/audio_in_impl.h"
 
-#include <fbl/auto_call.h>
+#include <lib/fit/defer.h>
 
 #include "garnet/bin/media/audio_core/audio_core_impl.h"
 #include "lib/fxl/logging.h"
@@ -151,7 +151,7 @@ void AudioInImpl::GetStreamType(GetStreamTypeCallback cbk) {
 void AudioInImpl::SetPcmStreamType(
     fuchsia::media::AudioStreamType stream_type) {
   // If something goes wrong, hang up the phone and shutdown.
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
 
   // If our shared buffer has already been assigned, then we are operating and
   // the mode can no longer be changed.
@@ -214,7 +214,7 @@ void AudioInImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   FXL_DCHECK(payload_buf_vmo.is_valid());
 
   // If something goes wrong, hang up the phone and shutdown.
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
   zx_status_t res;
 
   State state = state_.load();
@@ -374,7 +374,7 @@ void AudioInImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
   }
 
   // If something goes wrong, hang up the phone and shutdown.
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
 
   // It is illegal to call CaptureAt unless we are currently operating in
   // synchronous mode.
@@ -467,7 +467,7 @@ void AudioInImpl::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
 }
 
 void AudioInImpl::StartAsyncCapture(uint32_t frames_per_packet) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { Shutdown(); });
 
   // In order to enter async mode, we must be operating in synchronous mode, and
   // we must not have any pending buffers in flight.
@@ -825,16 +825,16 @@ bool AudioInImpl::MixToIntermediate(uint32_t mix_frames) {
   //
   // Note: We need to disable the clang static thread analysis code with this
   // lambda because clang is not able to know that...
-  // 1) Once placed within the fbl::AutoCall, this cleanup routine cannot be
+  // 1) Once placed within the fit::defer, this cleanup routine cannot be
   //    transferred out of the scope of the MixToIntermediate function (so its
   //    life is bound to the scope of this function).
-  // 2) Because of this, the AutoCall basically should inherit all of the thread
+  // 2) Because of this, the defer basically should inherit all of the thread
   //    analysis attributes of MixToIntermediate, including the assertion that
   //    MixToIntermediate is running in the mixer execution domain, which is
   //    what guards the source_link_refs_ member.
   // Because of this, we manually disable the thread analysis on this cleanup
   // lambda.
-  auto release_snapshot_refs = fbl::MakeAutoCall(
+  auto release_snapshot_refs = fit::defer(
       [this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_link_refs_.clear(); });
 
   // Silence our intermediate buffer.

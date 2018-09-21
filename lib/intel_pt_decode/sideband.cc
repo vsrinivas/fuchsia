@@ -11,12 +11,13 @@
 
 #include <map>
 
+#include <lib/fit/defer.h>
+
 #include "garnet/lib/debugger_utils/ktrace_reader.h"
 #include "garnet/lib/debugger_utils/util.h"
 
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -138,7 +139,7 @@ bool DecoderState::ReadPtListFile(const std::string& file) {
   size_t linelen = 0;
   int lineno = 1;
 
-  auto cleanup = fxl::MakeAutoCall([line, f]() {
+  auto cleanup = fit::defer([line, f]() {
     free(line);
     fclose(f);
   });

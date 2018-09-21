@@ -8,7 +8,7 @@
 #include <log/log.h>
 #include <media/stagefright/omx/SoftOMXComponent.h>
 
-#include <lib/fxl/functional/auto_call.h>
+#include <lib/fit/defer.h>
 
 // We intentionally don't have a "using namespace android;" because this is an
 // adapter layer and we want to make clear what's raw OMX and what's android
@@ -74,7 +74,7 @@ void entrypoint_createSoftOMXComponent(const char *name,
   // does just for the benefit of this source file.
   //
   // unless cancelled
-  auto pfd = fxl::MakeAutoCall(
+  auto pfd = fit::defer(
       [&component_cpp]() { component_cpp->prepareForDestruction(); });
   if (OMX_ErrorNone != component_cpp->initCheck()) {
     assert(!(*component));

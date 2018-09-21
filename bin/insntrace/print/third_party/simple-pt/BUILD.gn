@@ -17,6 +17,7 @@ source_set("printer") {
     "//garnet/lib/intel_pt_decode",
     "//garnet/public/lib/fxl",
     "//third_party/processor-trace/libipt",
+    "//zircon/public/lib/fit",
   ]
 
   if (!is_fuchsia) {

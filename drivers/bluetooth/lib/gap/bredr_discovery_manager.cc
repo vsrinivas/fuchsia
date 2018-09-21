@@ -5,13 +5,13 @@
 #include "bredr_discovery_manager.h"
 
 #include <lib/async/default.h>
+#include <lib/fit/defer.h>
 #include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
-#include "lib/fxl/functional/auto_call.h"
 
 namespace btlib {
 namespace gap {
@@ -389,7 +389,7 @@ void BrEdrDiscoveryManager::SetInquiryScan() {
     }
 
     auto status = event.ToStatus();
-    auto resolve_pending = fxl::MakeAutoCall([self, &status]() {
+    auto resolve_pending = fit::defer([self, &status]() {
       while (!self->pending_discoverable_.empty()) {
         auto cb = std::move(self->pending_discoverable_.front());
         self->pending_discoverable_.pop();

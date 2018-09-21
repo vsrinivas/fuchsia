@@ -4,9 +4,10 @@
 
 #include <glob.h>
 
+#include <lib/fit/defer.h>
+
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include <regex>
@@ -75,7 +76,7 @@ ParseArgsResult ParseArgs(int argc, const char** argv,
       }
       return result;
     }
-    auto guard = fxl::MakeAutoCall([&]() { globfree(&globbuf); });
+    auto guard = fit::defer([&]() { globfree(&globbuf); });
     for (size_t i = 0; i < globbuf.gl_pathc; i++) {
       result.matching_urls.push_back(
           GenerateComponentUrl(globbuf.gl_pathv[i] + glob_dir.length() + 1)

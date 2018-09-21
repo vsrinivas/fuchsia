@@ -4,11 +4,11 @@
 
 #include "garnet/examples/media/tones/tones.h"
 
-#include <fbl/auto_call.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/defer.h>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -157,7 +157,7 @@ void Tones::BuildScore() {
 
 void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
   // If anything goes wrong here, shut down.
-  auto cleanup = fbl::MakeAutoCall([this]() { Quit(); });
+  auto cleanup = fit::defer([this]() { Quit(); });
 
   // figure out how many packets we need to keep in flight at all times.
   if (min_lead_time_nsec < 0) {

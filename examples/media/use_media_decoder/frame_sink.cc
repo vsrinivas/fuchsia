@@ -11,7 +11,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fxl/functional/auto_call.h>
+#include <lib/fit/defer.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/vmo.h>
 
@@ -48,18 +48,17 @@ void FrameSink::PutFrame(
 
   frames_outstanding_++;
 
-  auto done_runner =
-      fxl::MakeAutoCall([this, image_id, on_done = std::move(on_done)] {
-        // To be clear, Scenic ImagePipe doesn't really "release an image_id",
-        // it releases an item in the present queue, but the way this example
-        // program uses the present queue, it's equivalent since there's only
-        // ever at most 1 usage of any given image_id in the present queue at
-        // any given time.
-        FXL_VLOG(3) << "Scenic released image_id: " << image_id;
-        on_done();
-        frames_outstanding_--;
-        CheckIfAllFramesReturned();
-      });
+  auto done_runner = fit::defer([this, image_id, on_done = std::move(on_done)] {
+    // To be clear, Scenic ImagePipe doesn't really "release an image_id",
+    // it releases an item in the present queue, but the way this example
+    // program uses the present queue, it's equivalent since there's only
+    // ever at most 1 usage of any given image_id in the present queue at
+    // any given time.
+    FXL_VLOG(3) << "Scenic released image_id: " << image_id;
+    on_done();
+    frames_outstanding_--;
+    CheckIfAllFramesReturned();
+  });
   auto shared_done_runner =
       std::make_shared<decltype(done_runner)>(std::move(done_runner));
 

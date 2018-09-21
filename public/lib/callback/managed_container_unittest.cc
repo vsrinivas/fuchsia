@@ -6,7 +6,6 @@
 
 #include "gtest/gtest.h"
 #include "lib/callback/set_when_called.h"
-#include "lib/fxl/functional/auto_call.h"
 
 namespace callback {
 namespace {
@@ -14,8 +13,7 @@ namespace {
 TEST(ManagedContainer, Cleanup) {
   ManagedContainer managed_container;
   size_t called = 0;
-  auto result =
-      managed_container.Manage(fxl::MakeAutoCall([&called] { ++called; }));
+  auto result = managed_container.Manage(fit::defer([&called] { ++called; }));
   EXPECT_EQ(0u, called);
   result.reset();
   EXPECT_EQ(1u, called);
@@ -23,7 +21,7 @@ TEST(ManagedContainer, Cleanup) {
 
 TEST(ManagedContainer, ContainerDeletion) {
   size_t called = 0;
-  auto updater = fxl::MakeAutoCall([&called] { ++called; });
+  auto updater = fit::defer([&called] { ++called; });
   auto managed_container = std::make_unique<ManagedContainer>();
   auto result = managed_container->Manage(std::move(updater));
   EXPECT_EQ(0u, called);
@@ -33,7 +31,7 @@ TEST(ManagedContainer, ContainerDeletion) {
 
 TEST(ManagedContainer, HandlerDeletion) {
   size_t called = 0;
-  auto updater = fxl::MakeAutoCall([&called] { ++called; });
+  auto updater = fit::defer([&called] { ++called; });
   ManagedContainer managed_container;
   {
     auto result = managed_container.Manage(std::move(updater));
@@ -45,10 +43,8 @@ TEST(ManagedContainer, HandlerDeletion) {
 TEST(ManagedContainer, HeterogenousObject) {
   ManagedContainer managed_container;
   size_t called = 0;
-  auto result1 =
-      managed_container.Manage(fxl::MakeAutoCall([&called] { ++called; }));
-  auto result2 =
-      managed_container.Manage(fxl::MakeAutoCall([&called] { ++called; }));
+  auto result1 = managed_container.Manage(fit::defer([&called] { ++called; }));
+  auto result2 = managed_container.Manage(fit::defer([&called] { ++called; }));
   EXPECT_EQ(0u, called);
   result1.reset();
   EXPECT_EQ(1u, called);
@@ -60,8 +56,7 @@ TEST(ManagedContainer, DoNotCrashIfManagerDeleted) {
   std::unique_ptr<ManagedContainer> managed_container =
       std::make_unique<ManagedContainer>();
   size_t called = 0;
-  auto result =
-      managed_container->Manage(fxl::MakeAutoCall([&called] { ++called; }));
+  auto result = managed_container->Manage(fit::defer([&called] { ++called; }));
   EXPECT_EQ(0u, called);
   managed_container.reset();
   // |managed_container| is deleted and all its storage.

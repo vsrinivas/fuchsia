@@ -6,6 +6,7 @@
 
 #include <arpa/inet.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/defer.h>
 #include <sys/socket.h>
 
 #include <array>
@@ -18,7 +19,6 @@
 #include "garnet/lib/debugger_utils/sysinfo.h"
 #include "garnet/lib/debugger_utils/util.h"
 
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
@@ -60,7 +60,7 @@ bool RspServer::Run() {
     return false;
   }
 
-  auto cleanup_exception_port = fxl::MakeAutoCall([&]() {
+  auto cleanup_exception_port = fit::defer([&]() {
     // Tell the exception port to quit and wait for it to finish.
     FXL_VLOG(2) << "Quitting exception port thread.";
     exception_port_.Quit();

@@ -39,8 +39,9 @@
 
 #include "garnet/lib/intel_pt_decode/decoder.h"
 
+#include <lib/fit/defer.h>
+
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
@@ -387,7 +388,7 @@ uint64_t CallPrinter::PrintOneFile(const PtFile& pt_file) {
     FXL_LOG(ERROR) << "Unable to open pt file: " << pt_file.file;
     return 0;
   }
-  auto free_decoder = fxl::MakeAutoCall([&]() {
+  auto free_decoder = fit::defer([&]() {
       state_->FreeDecoder();
     });
 

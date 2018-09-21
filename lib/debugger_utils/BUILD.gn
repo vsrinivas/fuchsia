@@ -52,6 +52,7 @@ static_library("debugger_utils") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
   ]
 
   if (is_fuchsia) {
@@ -66,10 +67,10 @@ executable("tests") {
   output_name = "debugger_utils_tests"
 
   sources = [
-    "run_all_unittests.cc",
     "jobs.cc",
     "jobs.h",
     "jobs_unittest.cc",
+    "run_all_unittests.cc",
     "sysinfo.cc",
     "sysinfo.h",
     "util.cc",

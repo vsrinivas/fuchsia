@@ -7,8 +7,8 @@
 #include <iostream>
 
 #include <dirent.h>
-#include <fbl/auto_call.h>
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <poll.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -33,7 +33,7 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
     return nullptr;
   }
 
-  auto cleanup = fbl::MakeAutoCall([dir]() { closedir(dir); });
+  auto cleanup = fit::defer([dir]() { closedir(dir); });
 
   while ((de = readdir(dir)) != NULL) {
     char devname[128];

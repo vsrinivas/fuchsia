@@ -10,9 +10,10 @@
 #include <cstring>
 #include <map>
 
+#include <lib/fit/defer.h>
+
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -28,7 +29,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
     FXL_LOG(ERROR) << "error opening file, " << ErrnoString(errno);
     return false;
   }
-  auto close_file = fxl::MakeAutoCall([&]() { fclose(f); });
+  auto close_file = fit::defer([&]() { fclose(f); });
 
   constexpr size_t kMaxLineLen = 1024;
   char* line = nullptr;
@@ -46,7 +47,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
   char* name = reinterpret_cast<char*>(malloc(kMaxLineLen));
   char* so_name = reinterpret_cast<char*>(malloc(kMaxLineLen));
 
-  auto free_mem = fxl::MakeAutoCall([&]() {
+  auto free_mem = fit::defer([&]() {
     free(line);
     free(prefix);
     free(build_id);

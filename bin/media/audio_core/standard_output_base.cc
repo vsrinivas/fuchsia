@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/audio_core/standard_output_base.h"
 
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <lib/fit/defer.h>
 #include <limits>
 
 #include "garnet/bin/media/audio_core/audio_link.h"
@@ -204,7 +204,7 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
 
   // No matter what happens, make sure we release our temporary references as
   // soons a we exit this method.
-  auto cleanup = fbl::MakeAutoCall(
+  auto cleanup = fit::defer(
       [this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_link_refs_.clear(); });
 
   for (const auto& link : source_link_refs_) {

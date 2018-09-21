@@ -9,10 +9,10 @@
 #include <functional>
 #include <utility>
 
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <trace/event.h>
 
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace callback {
@@ -69,13 +69,13 @@ class TracingLambda {
       TRACE_ASYNC_END(category_, name_, id_);
       TRACE_ASYNC_BEGIN(category_, callback_name_, id_);
     }
-    auto guard = fxl::MakeAutoCall([trace_enabled = trace_enabled_, id = id_,
-                                    category = category_,
-                                    callback_name = callback_name_] {
-      if (trace_enabled) {
-        TRACE_ASYNC_END(category, callback_name, id);
-      }
-    });
+    auto guard =
+        fit::defer([trace_enabled = trace_enabled_, id = id_,
+                    category = category_, callback_name = callback_name_] {
+          if (trace_enabled) {
+            TRACE_ASYNC_END(category, callback_name, id);
+          }
+        });
 
     return callback_(std::forward<ArgType>(args)...);
   }

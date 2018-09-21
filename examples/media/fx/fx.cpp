@@ -4,7 +4,6 @@
 
 #include <audio-utils/audio-input.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
@@ -12,6 +11,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/time.h>
@@ -161,7 +161,7 @@ class FxProcessor {
 };
 
 void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
-  auto cleanup = fbl::MakeAutoCall([this] { Shutdown("Startup failure"); });
+  auto cleanup = fit::defer([this] { Shutdown("Startup failure"); });
 
   zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
 
