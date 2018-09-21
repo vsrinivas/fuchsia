@@ -8,6 +8,7 @@
 #include <wlan/common/logging.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/ap/tim.h>
+#include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
@@ -239,9 +240,8 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
 
 zx_status_t BeaconSender::WriteSsid(ElementWriter* w) {
     if (!w->write<SsidElement>(req_.ssid->data(), req_.ssid->size())) {
-        errorf("[bcn-sender] [%s] could not write ssid \"%.*s\" to Beacon\n",
-               bss_->bssid().ToString().c_str(), static_cast<int>(req_.ssid->size()),
-               req_.ssid->data());
+        errorf("[bcn-sender] [%s] could not write ssid \"%s\" to Beacon\n",
+               bss_->bssid().ToString().c_str(), debug::ToAsciiOrHexStr(*req_.ssid).c_str());
         return ZX_ERR_IO;
     }
     return ZX_OK;

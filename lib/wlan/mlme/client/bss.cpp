@@ -51,15 +51,13 @@ zx_status_t Bss::ProcessBeacon(const Beacon& beacon, size_t frame_len,
 std::string Bss::ToString() const {
     // TODO(porce): Convert to finspect Describe()
     char buf[1024];
-    snprintf(buf, sizeof(buf), "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s SSID [%.*s]",
-             bssid_.ToString().c_str(),
-             bss_desc_.bss_type == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N",
-             bss_desc_.rssi_dbm,
-             bss_desc_.country.is_null()
-                 ? "---"
-                 : reinterpret_cast<const char*>(bss_desc_.country->data()),
-             common::ChanStr(bcn_rx_chan_).c_str(), static_cast<int>(bss_desc_.ssid->size()),
-             bss_desc_.ssid->data());
+    snprintf(
+        buf, sizeof(buf), "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s SSID [%s]",
+        bssid_.ToString().c_str(),
+        bss_desc_.bss_type == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N", bss_desc_.rssi_dbm,
+        bss_desc_.country.is_null() ? "---"
+                                    : reinterpret_cast<const char*>(bss_desc_.country->data()),
+        common::ChanStr(bcn_rx_chan_).c_str(), debug::ToAsciiOrHexStr(*bss_desc_.ssid).c_str());
     return std::string(buf);
 }
 
@@ -188,9 +186,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
             }
             std::vector<uint8_t> ssid(ie->ssid, ie->ssid + ie->hdr.len);
             bss_desc_.ssid.reset(std::move(ssid));
-            // TODO(NET-698): Not all SSIDs are ASCII-printable. Write a designated printer module.
-            debugbcn("%s SSID: [%.*s]\n", dbgmsghdr, static_cast<int>(bss_desc_.ssid->size()),
-                     bss_desc_.ssid->data());
+            debugbcn("%s SSID: [%s]\n", dbgmsghdr, debug::ToAsciiOrHexStr(*bss_desc_.ssid).c_str());
             break;
         }
         case element_id::kSuppRates: {

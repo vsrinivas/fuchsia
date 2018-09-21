@@ -317,8 +317,9 @@ zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::Deauthenticate
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
     }
 
-    infof("deauthenticating from %.*s, reason=%hu\n", static_cast<int>(bss_->ssid->size()),
-          bss_->ssid->data(), req.body()->reason_code);
+    infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
+          debug::ToAsciiOrHexStr(*bss_->ssid).c_str(), bssid_.ToString().c_str(),
+          req.body()->reason_code);
 
     state_ = WlanState::kJoined;
     device_->SetStatus(0);
@@ -374,8 +375,8 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
 
     ElementWriter w(assoc->elements, reserved_ie_len);
     if (!w.write<SsidElement>(bss_->ssid->data(), bss_->ssid->size())) {
-        errorf("could not write ssid \"%.*s\" to association request\n",
-               static_cast<int>(bss_->ssid->size()), bss_->ssid->data());
+        errorf("could not write ssid \"%s\" to association request\n",
+               debug::ToAsciiOrHexStr(*bss_->ssid).c_str());
         service::SendAssocConfirm(device_,
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
@@ -484,7 +485,7 @@ zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
         join_timeout_.Cancel();
 
         state_ = WlanState::kJoined;
-        debugjoin("joined %.*s\n", static_cast<int>(bss_->ssid->size()), bss_->ssid->data());
+        debugjoin("joined \"%s\"\n", debug::ToAsciiOrHexStr(*bss_->ssid).c_str());
         return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
     }
 
@@ -570,8 +571,9 @@ zx_status_t Station::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame)
     }
 
     auto deauth = frame.body();
-    infof("deauthenticating from %.*s, reason=%hu\n", static_cast<int>(bss_->ssid->size()),
-          bss_->ssid->data(), deauth->reason_code);
+    infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
+          debug::ToAsciiOrHexStr(*bss_->ssid).c_str(), bssid_.ToString().c_str(),
+          deauth->reason_code);
 
     state_ = WlanState::kJoined;
     device_->SetStatus(0);
@@ -641,8 +643,8 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
         device_->SetStatus(ETH_STATUS_ONLINE);
     }
 
-    infof("NIC %s associated with \"%.*s\"(%s) in channel %s, %s, %s\n",
-          self_addr().ToString().c_str(), static_cast<int>(bss_->ssid->size()), bss_->ssid->data(),
+    infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
+          self_addr().ToString().c_str(), debug::ToAsciiOrHexStr(*bss_->ssid).c_str(),
           bssid.ToString().c_str(), common::ChanStr(GetJoinChan()).c_str(),
           common::BandStr(GetJoinChan()).c_str(), assoc_ctx_.is_ht ? "802.11n HT" : "802.11g/a");
 
@@ -664,8 +666,8 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
 
     auto disassoc = frame.body();
     common::MacAddr bssid(bss_->bssid.data());
-    infof("disassociating from %s(%.*s), reason=%u\n", MACSTR(bssid),
-          static_cast<int>(bss_->ssid->size()), bss_->ssid->data(), disassoc->reason_code);
+    infof("disassociating from \"%s\"(%s), reason=%u\n",
+          debug::ToAsciiOrHexStr(*bss_->ssid).c_str(), MACSTR(bssid), disassoc->reason_code);
 
     state_ = WlanState::kAuthenticated;
     device_->SetStatus(0);
