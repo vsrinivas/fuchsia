@@ -36,9 +36,14 @@ class ThreadControllerTest : public RemoteAPITest {
   uint32_t last_breakpoint_id() const { return last_breakpoint_id_; }
   uint64_t last_breakpoint_address() const { return last_breakpoint_address_; }
 
-  // Load address that the mock module is loaded at. Addresses you want to
-  // support symbol lookup for need to be larger than this.
-  static const uint64_t kModuleAddress;
+  // Load address that a mock module with no symbols is loaded at. If a test
+  // needs an address into an unsymolized module, it should be between this
+  // value and kSymbolizedModuleAddress.
+  static const uint64_t kUnsymbolizedModuleAddress;
+
+  // Load address that the mock module with symbols is loaded at. Addresses you
+  // want to support symbol lookup for need to be larger than this.
+  static const uint64_t kSymbolizedModuleAddress;
 
   // The mock module symbols. Addresses above kModuleAddress will be handled
   // by this mock. Test code should inject the responses it wants into this

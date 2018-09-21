@@ -37,6 +37,8 @@ namespace zxdb {
 
 namespace {
 
+constexpr int kStepIntoUnsymbolized = 1;
+
 // If the system has at least one running process, returns true. If not,
 // returns false and sets the err.
 //
@@ -576,6 +578,13 @@ const char kStepHelp[] =
 
   See also "stepi".
 
+Arguments
+
+  --unsymbolized | -u
+      Force stepping into functions with no symbols. Normally "step" will
+      skip over library calls or thunks with no symbols. This option allows
+      one to step into these unsymbolized calls.
+
 Examples
 
   s
@@ -587,12 +596,14 @@ Examples
       Steps thread 2 in the current process.
 )";
 Err DoStep(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadCommand(context, cmd, true, "stepi");
+  Err err = AssertStoppedThreadCommand(context, cmd, true, "step");
   if (err.has_error())
     return err;
 
   auto controller = std::make_unique<StepThreadController>(
       StepMode::kSourceLine);
+  controller->set_stop_on_no_symbols(cmd.HasSwitch(kStepIntoUnsymbolized));
+
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);
@@ -663,7 +674,7 @@ const char kRegsHelp[] =
         The interpretation of which bits are the MSB will vary across different
         endianess.
 
-Arguments:
+Arguments
 
   --category=<category> | -c <category>
       Which categories if registers to show.
@@ -926,9 +937,14 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   regs.switches.push_back(regs_categories);
   (*verbs)[Verb::kRegs] = std::move(regs);
 
-  (*verbs)[Verb::kStep] =
-      VerbRecord(&DoStep, {"step", "s"}, kStepShortHelp, kStepHelp,
-                 CommandGroup::kStep, SourceAffinity::kSource);
+  // step
+  SwitchRecord step_force(kStepIntoUnsymbolized, false, "unsymbolized", 'u');
+  VerbRecord step(&DoStep, {"step", "s"}, kStepShortHelp, kStepHelp,
+                  CommandGroup::kStep, SourceAffinity::kSource);
+  step.switches.push_back(step_force);
+  (*verbs)[Verb::kStep] = std::move(step);
+
+
   (*verbs)[Verb::kStepi] =
       VerbRecord(&DoStepi, {"stepi", "si"}, kStepiShortHelp, kStepiHelp,
                  CommandGroup::kAssembly, SourceAffinity::kAssembly);

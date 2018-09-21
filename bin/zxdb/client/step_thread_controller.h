@@ -4,12 +4,15 @@
 
 #pragma once
 
+#include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/client/step_mode.h"
 #include "garnet/bin/zxdb/client/symbols/file_line.h"
 #include "garnet/bin/zxdb/client/thread_controller.h"
 #include "garnet/bin/zxdb/common/address_range.h"
 
 namespace zxdb {
+
+class FinishThreadController;
 
 // Implements "step into". This single-steps a thread until the instruction
 // pointer is in a different region (line/range/instruction as defined by the
@@ -25,6 +28,16 @@ class StepThreadController : public ThreadController {
   explicit StepThreadController(AddressRange range);
 
   ~StepThreadController() override;
+
+  // Controls whether the thread will stop when it encounters code with no
+  // symbols. When false, if a function is called with no symbols, it will
+  // automatically step out or through it.
+  //
+  // This only affects "step by line" mode which is symbol-aware.
+  bool stop_on_no_symbols() const { return stop_on_no_symbols_; }
+  void set_stop_on_no_symbols(bool stop) {
+    stop_on_no_symbols_ = stop;
+  }
 
   // ThreadController implementation.
   void InitWithThread(Thread* thread,
@@ -45,13 +58,20 @@ class StepThreadController : public ThreadController {
   StepMode step_mode_;
 
   // When construction_mode_ == kSourceLine, this represents the line
-  // information.
+  // information and the stack fingerprint of where stepping started.
   FileLine file_line_;
+  FrameFingerprint original_frame_fingerprint_;
 
   // Range of addresses we're currently stepping in. This may change when we're
   // stepping over source lines and wind up in a region with no line numbers.
   // It will be empty when stepping by instruction.
   AddressRange current_range_;
+
+  bool stop_on_no_symbols_ = false;
+
+  // Used to step out of unsymbolized functions. When non-null, the user wants
+  // to skip unsymbolized code and has stepped into an unsymbolized function.
+  std::unique_ptr<FinishThreadController> finish_unsymolized_function_;
 };
 
 }  // namespace zxdb

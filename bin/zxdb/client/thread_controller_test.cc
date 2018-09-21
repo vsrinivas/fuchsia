@@ -14,7 +14,10 @@
 namespace zxdb {
 
 // static
-const uint64_t ThreadControllerTest::kModuleAddress = 0x5000000;
+const uint64_t ThreadControllerTest::kUnsymbolizedModuleAddress = 0x4000000;
+
+// static
+const uint64_t ThreadControllerTest::kSymbolizedModuleAddress = 0x5000000;
 
 class ThreadControllerTest::ControllerTestSink : public RemoteAPI {
  public:
@@ -63,13 +66,20 @@ void ThreadControllerTest::SetUp() {
       session().system().GetSymbols()->InjectModuleForTesting(
           build_id, std::move(module_symbols));
 
-  // Make the process load the mocked module symbols.
+  // Make the process load the mocked module symbols and the other one with no
+  // symbols.
   std::vector<debug_ipc::Module> modules;
-  debug_ipc::Module load;
-  load.name = "test";
-  load.base = kModuleAddress;
-  load.build_id = build_id;
-  modules.push_back(load);
+  debug_ipc::Module unsym_load;
+  unsym_load.name = "nosym";
+  unsym_load.base = kUnsymbolizedModuleAddress;
+  unsym_load.build_id = "zzyzx";
+  modules.push_back(unsym_load);
+
+  debug_ipc::Module sym_load;
+  sym_load.name = "sym";
+  sym_load.base = kSymbolizedModuleAddress;
+  sym_load.build_id = build_id;
+  modules.push_back(sym_load);
 
   TargetImpl* target = session().system_impl().GetTargetImpls()[0];
   target->process()->OnModules(modules, std::vector<uint64_t>());
