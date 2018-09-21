@@ -130,7 +130,7 @@ bool TestFuzzer::CheckProcess(zx_handle_t process, const char* target) {
 
 // Protected methods
 
-zx_status_t TestFuzzer::Execute(bool wait_for_completion) {
+zx_status_t TestFuzzer::Execute() {
     zx_status_t rc;
 
     GetArgs(&args_);

@@ -596,6 +596,7 @@ bool TestStart() {
     ASSERT_TRUE(test.Eval("start zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_LT(0, test.FindArg("-jobs=1"));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
 
@@ -607,6 +608,7 @@ bool TestStart() {
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
     EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-jobs=1"));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
@@ -625,6 +627,7 @@ bool TestStart() {
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
     EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-jobs=1"));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
@@ -636,6 +639,7 @@ bool TestStart() {
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
     EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg("-jobs=1"));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));

@@ -346,9 +346,15 @@ void Fuzzer::GetArgs(StringList* out) {
     }
 }
 
-zx_status_t Fuzzer::Execute(bool wait_for_completion) {
+zx_status_t Fuzzer::Execute() {
     zx_status_t rc;
 
+    // If the "-jobs=N" option is set, output will be sent to fuzz-<job>.log and can run to
+    // completion in the background.
+    const char* jobs = options_.get("jobs");
+    bool background = atoi(jobs) != 0;
+
+    // Copy all command line arguments.
     StringList args;
     GetArgs(&args);
 
@@ -364,13 +370,15 @@ zx_status_t Fuzzer::Execute(bool wait_for_completion) {
     argv[argc] = nullptr;
     fprintf(out_, "\n");
 
+    // This works even in a component, since FDIO_SPAWN_CLONE_ALL clones the namespace and argv[0]
+    // in the correct namespace name, /pkg/bin/<binary>.
     if ((rc = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv,
                          process_.reset_and_get_address())) != ZX_OK) {
         fprintf(err_, "Failed to spawn '%s': %s\n", argv[0], zx_status_get_string(rc));
         return rc;
     }
 
-    if (!wait_for_completion) {
+    if (background) {
         return ZX_OK;
     }
 
@@ -565,6 +573,12 @@ zx_status_t Fuzzer::LoadOptions() {
         // No options needed
         return ZX_OK;
 
+    case kStart:
+        if ((rc = SetOption("jobs", "1")) != ZX_OK) {
+            return rc;
+        }
+        break;
+
     case kMerge:
         if ((rc = SetOption("merge", "1")) != ZX_OK ||
             (rc = SetOption("merge_control_file", data_path_.Join(".mergefile").c_str())) !=
@@ -672,7 +686,7 @@ zx_status_t Fuzzer::Start() {
         inputs_.push_front(data_path_.Join("corpus").c_str());
     }
 
-    return Execute(false /* !wait_for_completion */);
+    return Execute();
 }
 
 zx_status_t Fuzzer::Check() {
@@ -757,7 +771,7 @@ zx_status_t Fuzzer::Repro() {
         return ZX_ERR_NOT_FOUND;
     }
 
-    if ((rc = Execute(true /* wait_for_completion */)) != ZX_OK) {
+    if ((rc = Execute()) != ZX_OK) {
         fprintf(err_, "Failed to execute: %s\n", zx_status_get_string(rc));
         return rc;
     }
@@ -787,7 +801,7 @@ zx_status_t Fuzzer::Merge() {
     inputs_.erase_if(data_path_.Join("corpus").c_str());
     inputs_.push_front(data_path_.Join("corpus").c_str());
 
-    if ((rc = Execute(false /* !wait_for_completion */)) != ZX_OK) {
+    if ((rc = Execute()) != ZX_OK) {
         fprintf(err_, "Failed to execute: %s\n", zx_status_get_string(rc));
         return rc;
     }

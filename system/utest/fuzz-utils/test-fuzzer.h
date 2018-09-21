@@ -78,7 +78,7 @@ public:
 
 protected:
     // Overrides |Fuzzer::Execute| to simply save the subprocess' command line without spawning it.
-    zx_status_t Execute(bool wait_for_completion) override;
+    zx_status_t Execute() override;
 
 private:
     // Sets up the test fuzzer to buffer output without changing the test fixture

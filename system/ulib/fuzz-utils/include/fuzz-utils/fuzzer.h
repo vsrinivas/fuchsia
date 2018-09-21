@@ -86,8 +86,8 @@ protected:
     // Fills in |args| with the arguments for the fuzzer subprocess as currently configured.
     void GetArgs(StringList* args);
 
-    // Spawns a fuzzer sub-process.  Runs synchronously if |wait_for_completion| is true.
-    virtual zx_status_t Execute(bool wait_for_completion);
+    // Spawns a fuzzer sub-process.
+    virtual zx_status_t Execute();
 
     // Callback used by |Walker| to match the fuzz target sub-process and print information on it,
     // or kill it if the |kill| parameter is true.
