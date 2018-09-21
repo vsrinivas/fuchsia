@@ -4,6 +4,17 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <poll.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <iostream>
+#include <memory>
+#include <vector>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
@@ -12,20 +23,9 @@
 #include <lib/fdio/util.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <poll.h>
-#include <stdlib.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-
-#include <iostream>
-#include <memory>
-#include <vector>
-
+#include "garnet/lib/chrealm/chrealm.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -122,8 +122,8 @@ class Service {
                                      peer_name.size()) == ZX_OK);
     FXL_CHECK(child_job.replace(kChildJobRights, &child_job) == ZX_OK);
 
-    constexpr size_t kActionCount = 3;
-    fdio_spawn_action_t actions[kActionCount] = {
+    // Launch process with chrealm so that it gets /svc of sys realm
+    const std::vector<fdio_spawn_action_t> actions{
         // Transfer the socket as stdin and stdout
         {.action = FDIO_SPAWN_ACTION_CLONE_FD,
          .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}},
@@ -133,21 +133,16 @@ class Service {
         {.action = FDIO_SPAWN_ACTION_CLONE_FD,
          .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}},
     };
-
     zx::process process;
-    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-
-    zx_status_t status =
-        fdio_spawn_etc(child_job.get(),
-                       FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_LDSVC |
-                           FDIO_SPAWN_CLONE_NAMESPACE,
-                       argv_[0], argv_, nullptr, kActionCount, actions,
-                       process.reset_and_get_address(), err_msg);
-
+    std::string error;
+    zx_status_t status = chrealm::SpawnBinaryInRealmAsync(
+        "/hub", argv_, child_job.get(),
+        FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_LDSVC, actions,
+        process.reset_and_get_address(), &error);
     if (status < 0) {
       shutdown(conn, SHUT_RDWR);
       close(conn);
-      FXL_LOG(ERROR) << "error from fdio_spawn_etc: " << err_msg;
+      FXL_LOG(ERROR) << "Error from chrealm: " << error;
       return;
     }
 

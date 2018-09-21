@@ -4,30 +4,18 @@
 
 import("//build/package.gni")
 
-executable("bin") {
-  output_name = "chrealm"
-
+source_set("chrealm") {
   sources = [
-    "main.cc",
+    "chrealm.cc",
+    "chrealm.h",
   ]
 
-  deps = [
-    "//garnet/lib/chrealm",
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fxl",
-  ]
-}
-
-package("chrealm") {
-  deprecated_system_image = true
-
-  deps = [
-    ":bin",
-  ]
-
-  binaries = [
-    {
-      name = "chrealm"
-    },
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
   ]
 }
 

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <cstdio>
+#include <string>
 
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
-#include "garnet/bin/chrealm/chrealm.h"
+#include "garnet/lib/chrealm/chrealm.h"
 #include "lib/fxl/command_line.h"
 
 static void PrintUsage() {
@@ -45,10 +45,12 @@ int main(int argc, const char** argv) {
   }
 
   int64_t code;
+  std::string error;
   zx_status_t status =
-      chrealm::RunBinaryInRealm(positional_args[0], child_argv, &code);
+      chrealm::RunBinaryInRealm(positional_args[0], child_argv, &code, &error);
   if (status != ZX_OK) {
-    fprintf(stderr, "chrealm failed: %s\n", zx_status_get_string(status));
+    fprintf(stderr, "chrealm returned %s: %s\n", zx_status_get_string(status),
+            error.c_str());
     return 1;
   }
   zx_process_exit(code);

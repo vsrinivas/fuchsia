@@ -3,6 +3,10 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services", "shell" ]
+        "features": [ "shell" ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.net.LegacySocketProvider"
+        ]
     }
 }
