@@ -172,7 +172,8 @@ static const ForegroundColorMap& GetForegroundColorMap() {
 
 }  // namespace
 
-OutputBuffer::Span::Span(Syntax s, std::string t) : syntax(s), text(t) {}
+OutputBuffer::Span::Span(Syntax s, std::string t) : syntax(s), text(std::move(t)) {}
+OutputBuffer::Span::Span(TextForegroundColor fg, std::string t) : foreground(fg), text(std::move(t)) {}
 
 OutputBuffer::OutputBuffer() = default;
 
@@ -182,12 +183,16 @@ OutputBuffer::OutputBuffer(Syntax syntax, std::string str) {
   Append(syntax, std::move(str));
 }
 
+OutputBuffer::OutputBuffer(TextForegroundColor color, std::string str) {
+  spans_.emplace_back(color, std::move(str));
+}
+
 OutputBuffer::~OutputBuffer() = default;
 
 // static
 OutputBuffer OutputBuffer::WithContents(std::string str) {
   OutputBuffer result;
-  result.Append(str);
+  result.Append(std::move(str));
   return result;
 }
 
@@ -199,11 +204,11 @@ OutputBuffer OutputBuffer::WithContents(Syntax syntax, std::string str) {
 }
 
 void OutputBuffer::Append(std::string str) {
-  spans_.push_back(Span(Syntax::kNormal, std::move(str)));
+  spans_.emplace_back(Syntax::kNormal, std::move(str));
 }
 
 void OutputBuffer::Append(Syntax syntax, std::string str) {
-  spans_.push_back(Span(syntax, std::move(str)));
+  spans_.emplace_back(syntax, std::move(str));
 }
 
 void OutputBuffer::Append(OutputBuffer buf) {

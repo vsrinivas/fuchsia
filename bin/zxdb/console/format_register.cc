@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 #include <regex.h>
+#include <stdlib.h>
 
 #include <map>
 
@@ -28,44 +29,25 @@ using debug_ipc::RegisterID;
 
 namespace {
 
-// Using a vector of output buffers make it easy to not have to worry about
-// appending new lines per each new section.
-Err InternalFormatGeneric(const std::vector<Register>& registers,
-                          OutputBuffer* out) {
-  // Registers.
+void InternalFormatGeneric(const std::vector<Register>& registers,
+                           OutputBuffer* out) {
   std::vector<std::vector<OutputBuffer>> rows;
   for (const Register& reg : registers) {
-    rows.emplace_back();
-    auto& row = rows.back();
-
     auto color = rows.size() % 2 == 1 ? TextForegroundColor::kDefault
                                       : TextForegroundColor::kLightGray;
-
-    auto name = OutputBuffer(RegisterIDToString(reg.id()));
-    name.SetForegroundColor(color);
-    row.push_back(std::move(name));
-
-    std::string value;
-    Err err = GetLittleEndianHexOutput(reg.data(), &value);
-    if (!err.ok())
-      return err;
-    OutputBuffer value_buffer(value);
-    value_buffer.SetForegroundColor(color);
-    row.push_back(std::move(value_buffer));
+    rows.push_back(DescribeRegister(reg, color));
   }
 
-  auto colspecs = std::vector<ColSpec>(
-      {ColSpec(Align::kLeft, 0, "Name"), ColSpec(Align::kRight, 0, "Value")});
-  FormatTable(colspecs, rows, out);
-  return Err();
+  FormatTable({ColSpec(Align::kRight), ColSpec(Align::kRight), ColSpec()}, rows,
+              out);
 }
 
 Err FormatCategory(debug_ipc::Arch arch, RegisterCategory::Type category,
                    const std::vector<Register>& registers, OutputBuffer* out) {
   FXL_DCHECK(!registers.empty());
 
-  auto title = fxl::StringPrintf(
-      "%s Registers\n", RegisterCategoryTypeToString(category));
+  auto title = fxl::StringPrintf("%s Registers\n",
+                                 RegisterCategoryTypeToString(category));
   out->Append(OutputBuffer(Syntax::kHeading, std::move(title)));
 
   // We see if architecture specific printing wants to take over.
@@ -86,9 +68,7 @@ Err FormatCategory(debug_ipc::Arch arch, RegisterCategory::Type category,
   }
 
   // Generic case.
-  err = InternalFormatGeneric(registers, &category_out);
-  if (!err.ok())
-    return err;
+  InternalFormatGeneric(registers, &category_out);
 
   out->Append(std::move(category_out));
   return Err();
@@ -188,6 +168,41 @@ Err FormatRegisters(debug_ipc::Arch arch,
 }
 
 // Formatting helpers ----------------------------------------------------------
+
+std::vector<OutputBuffer> DescribeRegister(const Register& reg,
+                                           TextForegroundColor color) {
+  std::vector<OutputBuffer> result;
+  result.emplace_back(color, RegisterIDToString(reg.id()));
+
+  if (reg.size() <= 8) {
+    // Treat <= 64 bit registers as numbers.
+    uint64_t value = reg.GetValue();
+    result.emplace_back(color, fxl::StringPrintf("0x%" PRIx64, value));
+
+    // For plausible small integers, show the decimal value also. This size
+    // check is intented to avoid cluttering up the results with large numbers
+    // corresponding to pointers.
+    constexpr uint64_t kMaxSmallMagnitude = 0xffff;
+    if (value <= kMaxSmallMagnitude ||
+        llabs(static_cast<long long int>(value)) <=
+            static_cast<long long int>(kMaxSmallMagnitude)) {
+      result.emplace_back(color,
+                          fxl::StringPrintf("= %d", static_cast<int>(value)));
+    } else {
+      result.emplace_back();
+    }
+  } else {
+    // Assume anything bigger than 64 bits is a vector and print with grouping.
+    std::string hex_out;
+    Err err = GetLittleEndianHexOutput(reg.data(), &hex_out);
+    if (!err.ok())
+      result.emplace_back(color, err.msg());
+    else
+      result.emplace_back(color, std::move(hex_out));
+  }
+
+  return result;
+}
 
 const char* RegisterCategoryTypeToString(RegisterCategory::Type type) {
   switch (type) {

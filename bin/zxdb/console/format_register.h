@@ -8,13 +8,13 @@
 #include <string>
 #include <vector>
 
+#include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/records.h"
 
 namespace zxdb {
 
 class Err;
-class OutputBuffer;
 class Register;
 class RegisterSet;
 
@@ -34,10 +34,15 @@ Err FormatRegisters(debug_ipc::Arch, const FilteredRegisterSet&,
 
 // Formatting helpers ----------------------------------------------------------
 
+// Formats the register and returns a vector with the following information:
+//  - name
+//  - hex value
+//  - comment (may be empty if unapplicable).
+std::vector<OutputBuffer> DescribeRegister(const Register& reg,
+                                           TextForegroundColor color);
+
 const char* RegisterCategoryTypeToString(debug_ipc::RegisterCategory::Type);
 
 const char* RegisterIDToString(debug_ipc::RegisterID);
-
-Err FormaterRegisterValue(const Register&, std::string* out);
 
 }  // namespace zxdb

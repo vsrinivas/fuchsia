@@ -73,11 +73,19 @@ void SymbolVariableResolver::ResolveVariable(
       var->location().EntryForIP(symbol_context, ip);
   if (!loc_entry) {
     // No DWARF location applies to the current instruction pointer.
+    std::string err_str;
+    if (var->location().is_null()) {
+      // With no locations, this variable has been completely optimized out.
+      err_str = fxl::StringPrintf("The variable '%s' has been optimized out.",
+                                  var->GetAssignedName().c_str());
+    } else {
+      // There are locations but none of them match the current IP.
+      err_str = fxl::StringPrintf("The variable '%s' is not available at this address. ",
+                                  var->GetAssignedName().c_str());
+      err_str += DescribeLocationMissError(symbol_context, ip, var->location());
+    }
     OnComplete(
-        Err(ErrType::kOptimizedOut,
-            fxl::StringPrintf("The variable '%s' has been optimized out. ",
-                              var->GetAssignedName().c_str()) +
-                DescribeLocationMissError(symbol_context, ip, var->location())),
+        Err(ErrType::kOptimizedOut, std::move(err_str)),
         ExprValue());
     return;
   }
