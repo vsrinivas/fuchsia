@@ -20,7 +20,6 @@
 #include <lib/fzl/mapped-vmo.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/thread.h>
-#include <syslog/global.h>
 
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
@@ -32,8 +31,19 @@
 
 namespace {
 
+constexpr char kUsageMessage[] = R"""(
+usage: iochk [OPTIONS] <device>
+
+    -bs block_size - number of bytes to treat as a unit (default=device block size)
+    -t thread# - the number of threads to run (default=1)
+    -c block_count - number of blocks to read (default=the whole device)
+    -o offset - block-size offset to start reading from (default=0)
+    -s seed - the seed to use for pseudorandom testing
+    --live-dangerously - skip confirmation prompt
+    --skip - verify skip-block interface instead of block interface
+)""";
+
 constexpr uint64_t kBlockHeader = 0xdeadbeef;
-constexpr char kTag[] = "iochk";
 
 // Flags.
 bool skip = false;
@@ -156,9 +166,9 @@ protected:
 
         while (idx < length / sizeof(uint64_t)) {
             if (buf[idx] != expected) {
-                FX_LOGF(ERROR, kTag, "inital read verification failed: "
-                                     "block_idx=%d offset=%zu expected=0x%016lx val=0x%016lx",
-                        block_idx, idx, expected, buf[idx]);
+                printf("inital read verification failed: "
+                       "block_idx=%d offset=%zu expected=0x%016lx val=0x%016lx\n",
+                       block_idx, idx, expected, buf[idx]);
                 return ZX_ERR_INTERNAL;
             }
             idx++;
@@ -178,21 +188,21 @@ public:
         fbl::unique_ptr<fzl::MappedVmo> mapped_vmo;
         zx_status_t status = fzl::MappedVmo::Create(block_size, "", &mapped_vmo);
         if (status != ZX_OK) {
-            FX_LOG(ERROR, kTag, "Failled to create MappedVmo");
+            printf("Failled to create MappedVmo\n");
             return status;
         }
 
         zx_handle_t dup;
         status = zx_handle_duplicate(mapped_vmo->GetVmo(), ZX_RIGHT_SAME_RIGHTS, &dup);
         if (status != ZX_OK) {
-            FX_LOG(ERROR, kTag, "cannot duplicate handle");
+            printf("cannot duplicate handle\n");
             return status;
         }
 
         size_t s;
         vmoid_t vmoid;
         if ((s = ioctl_block_attach_vmo(fd.get(), &dup, &vmoid) != sizeof(vmoid_t))) {
-            FX_LOGF(ERROR, kTag, "cannot attach vmo for init %lu", s);
+            printf("cannot attach vmo for init %lu\n", s);
             return ZX_ERR_IO;
         }
 
@@ -226,7 +236,7 @@ public:
             };
             zx_status_t st;
             if ((st = client_.Transaction(&request, 1)) != ZX_OK) {
-                FX_LOGF(ERROR, kTag, "write block_fifo_txn error %d", st);
+                printf("write block_fifo_txn error %d\n", st);
                 return st;
             }
         }
@@ -251,7 +261,7 @@ public:
             };
             zx_status_t st;
             if ((st = client_.Transaction(&request, 1)) != ZX_OK) {
-                FX_LOGF(ERROR, kTag, "read block_fifo_txn error %d", st);
+                printf("read block_fifo_txn error %d\n", st);
                 return st;
             }
             if ((st = CheckBlockData(block_idx, length)) != ZX_OK) {
@@ -288,7 +298,7 @@ public:
         fbl::unique_ptr<fzl::MappedVmo> mapped_vmo;
         zx_status_t status = fzl::MappedVmo::Create(block_size, "", &mapped_vmo);
         if (status != ZX_OK) {
-            FX_LOG(ERROR, kTag, "Failled to create MappedVmo");
+            printf("Failled to create MappedVmo\n");
             return status;
         }
 
@@ -307,7 +317,7 @@ public:
             zx_handle_t dup;
             zx_status_t st = zx_handle_duplicate(mapped_vmo_->GetVmo(), ZX_RIGHT_SAME_RIGHTS, &dup);
             if (st != ZX_OK) {
-                FX_LOG(ERROR, kTag, "cannot duplicate handle");
+                printf("cannot duplicate handle\n");
                 return st;
             }
 
@@ -321,7 +331,7 @@ public:
             bool bad_block_grown;
             ssize_t s = ioctl_skip_block_write(fd_.get(), &request, &bad_block_grown);
             if (s < static_cast<ssize_t>(sizeof(bad_block_grown))) {
-                FX_LOGF(ERROR, kTag, "ioctl_skip_block_write error %zd", s);
+                printf("ioctl_skip_block_write error %zd\n", s);
                 return s < 0 ? static_cast<zx_status_t>(s) : ZX_ERR_IO;
             }
         }
@@ -339,7 +349,7 @@ public:
             zx_handle_t dup;
             zx_status_t st = zx_handle_duplicate(mapped_vmo_->GetVmo(), ZX_RIGHT_SAME_RIGHTS, &dup);
             if (st != ZX_OK) {
-                FX_LOG(ERROR, kTag, "cannot duplicate handle");
+                printf("cannot duplicate handle\n");
                 return st;
             }
 
@@ -351,7 +361,7 @@ public:
             };
             st = static_cast<zx_status_t>(ioctl_skip_block_read(fd_.get(), &request));
             if (st != ZX_OK) {
-                FX_LOGF(ERROR, kTag, "read block_fifo_txn error %d", st);
+                printf("read block_fifo_txn error %d\n", st);
                 return st;
             }
             if ((st = CheckBlockData(block_idx, length)) != ZX_OK) {
@@ -383,25 +393,25 @@ zx_status_t InitializeDevice(WorkContext& ctx) {
     fbl::unique_ptr<Checker> checker;
     zx_status_t status;
     if ((status = InitializeChecker(ctx, &checker)) != ZX_OK) {
-        FX_LOG(ERROR, kTag, "Failed to alloc resources to init device");
+        printf("Failed to alloc resources to init device\n");
         return status;
     }
 
-    FX_LOG(INFO, kTag, "writing test data to device...");
+    printf("writing test data to device...\n");
     fflush(stdout);
     if ((status = checker->Fill(start_block, block_count)) != ZX_OK) {
-        FX_LOG(ERROR, kTag, "failed to write test data");
+        printf("failed to write test data\n");
         return status;
     }
-    FX_LOG(INFO, kTag, "done");
+    printf("done\n");
 
-    FX_LOG(INFO, kTag, "verifying test data...");
+    printf("verifying test data...\n");
     fflush(stdout);
     if ((status = checker->Check(start_block, block_count)) != ZX_OK) {
-        FX_LOG(ERROR, kTag, "failed to verify test data");
+        printf("failed to verify test data\n");
         return status;
     }
-    FX_LOG(INFO, kTag, "done");
+    printf("done\n");
 
     return 0;
 }
@@ -412,7 +422,7 @@ int DoWork(void* arg) {
     fbl::unique_ptr<Checker> checker;
     zx_status_t status;
     if ((status = InitializeChecker(*ctx, &checker)) != ZX_OK) {
-        FX_LOG(ERROR, kTag, "Failed to alloc resources to init device");
+        printf("Failed to alloc resources to init device\n");
         return status;
     }
 
@@ -474,14 +484,7 @@ uint64_t Number(const char* str) {
 }
 
 int Usage(void) {
-    FX_LOG(ERROR, kTag, "usage: iochk [OPTIONS] <device>\n"
-                        "    -bs block_size - number of bytes to treat as a unit (default=device block size)\n"
-                        "    -t thread# - the number of threads to run (default=1)\n"
-                        "    -c block_count - number of blocks to read (default=the whole device)\n"
-                        "    -o offset - block-size offset to start reading from (default=0)\n"
-                        "    -s seed - the seed to use for pseudorandom testing\n"
-                        "    --live-dangerously - skip confirmation prompt\n"
-                        "    --skip - verify skip-block interface instead of block interface");
+    printf("%s\n", kUsageMessage);
     return -1;
 }
 
@@ -491,7 +494,7 @@ int iochk(int argc, char** argv) {
     const char* device = argv[argc - 1];
     fbl::unique_fd fd(open(device, O_RDONLY));
     if (fd.get() < 0) {
-        FX_LOGF(ERROR, kTag, "cannot open '%s'", device);
+        printf("cannot open '%s'\n", device);
         return Usage();
     }
 
@@ -527,22 +530,22 @@ int iochk(int argc, char** argv) {
                    strcmp(*argv, "--help") == 0) {
             return Usage();
         } else {
-            FX_LOGF(ERROR, kTag, "Invalid arg %s", *argv);
+            printf("Invalid arg %s\n", *argv);
             return Usage();
         }
     }
 
     if (!confirmed) {
         constexpr char kWarning[] = "\033[0;31mWARNING\033[0m";
-        FX_LOGF(WARNING, kTag, "%s: iochk is a destructive operation.", kWarning);
-        FX_LOGF(WARNING, kTag, "%s: All data on %s in the given range will be overwritten.",
-                kWarning, device);
-        FX_LOGF(WARNING, kTag, "%s: Type 'y' to continue, 'n' or ESC to cancel:", kWarning);
+        printf("%s: iochk is a destructive operation.\n", kWarning);
+        printf("%s: All data on %s in the given range will be overwritten.\n",
+               kWarning, device);
+        printf("%s: Type 'y' to continue, 'n' or ESC to cancel:\n", kWarning);
         for (;;) {
             char c;
             ssize_t r = read(STDIN_FILENO, &c, 1);
             if (r < 0) {
-                FX_LOG(ERROR, kTag, "Error reading from stdin");
+                printf("Error reading from stdin\n");
                 return -1;
             }
             if (c == 'y' || c == 'Y') {
@@ -556,7 +559,7 @@ int iochk(int argc, char** argv) {
     if (!seed_set) {
         base_seed = zx_clock_get_monotonic();
     }
-    FX_LOGF(INFO, kTag, "seed is %ld", base_seed);
+    printf("seed is %ld\n", base_seed);
 
     WorkContext ctx(fbl::move(fd), ProgressBar());
 
@@ -565,25 +568,25 @@ int iochk(int argc, char** argv) {
         skip_block_partition_info_t info;
         ssize_t s = ioctl_skip_block_get_partition_info(ctx.fd.get(), &info);
         if (s != sizeof(info)) {
-            FX_LOGF(ERROR, kTag, "unable to get skip-block partition info: %zd", s);
-            FX_LOGF(ERROR, kTag, "fd: %d", ctx.fd.get());
+            printf("unable to get skip-block partition info: %zd\n", s);
+            printf("fd: %d\n", ctx.fd.get());
             return -1;
         }
-        FX_LOGF(INFO, kTag, "opened %s - block_size_bytes=%zu, partition_block_count=%lu", device,
-                info.block_size_bytes, info.partition_block_count);
+        printf("opened %s - block_size_bytes=%zu, partition_block_count=%lu\n", device,
+               info.block_size_bytes, info.partition_block_count);
 
         ctx.skip.info = info;
 
         if (block_size == 0) {
             block_size = info.block_size_bytes;
         } else if (block_size % info.block_size_bytes != 0) {
-            FX_LOG(ERROR, kTag, "block-size is not a multiple of device block size");
+            printf("block-size is not a multiple of device block size\n");
             return -1;
         }
         uint32_t dev_blocks_per_block = static_cast<uint32_t>(block_size / info.block_size_bytes);
 
         if (dev_blocks_per_block * start_block >= info.partition_block_count) {
-            FX_LOG(ERROR, kTag, "offset past end of device");
+            printf("offset past end of device\n");
             return -1;
         }
 
@@ -594,31 +597,31 @@ int iochk(int argc, char** argv) {
         } else if (dev_blocks_per_block * (block_count + start_block) >=
                    dev_blocks_per_block + info.partition_block_count) {
             // Don't allow blocks to start past the end of the device
-            FX_LOG(ERROR, kTag, "block_count+offset too large");
+            printf("block_count+offset too large\n");
             return -1;
         }
     } else {
         // Block Device Setup.
         block_info_t info;
         if (ioctl_block_get_info(ctx.fd.get(), &info) != sizeof(info)) {
-            FX_LOG(ERROR, kTag, "unable to get block info");
+            printf("unable to get block info\n");
             return -1;
         }
-        FX_LOGF(INFO, kTag, "opened %s - block_size=%u, block_count=%lu",
-                device, info.block_size, info.block_count);
+        printf("opened %s - block_size=%u, block_count=%lu\n",
+               device, info.block_size, info.block_count);
 
         ctx.block.info = info;
 
         if (block_size == 0) {
             block_size = static_cast<uint32_t>(info.block_size);
         } else if (block_size % info.block_size != 0) {
-            FX_LOG(ERROR, kTag, "block-size is not a multiple of device block size");
+            printf("block-size is not a multiple of device block size\n");
             return -1;
         }
         uint32_t dev_blocks_per_block = static_cast<uint32_t>(block_size / info.block_size);
 
         if (dev_blocks_per_block * start_block >= info.block_count) {
-            FX_LOG(ERROR, kTag, "offset past end of device");
+            printf("offset past end of device\n");
             return -1;
         }
 
@@ -628,24 +631,23 @@ int iochk(int argc, char** argv) {
         } else if (dev_blocks_per_block * (block_count + start_block) >=
                    dev_blocks_per_block + info.block_count) {
             // Don't allow blocks to start past the end of the device
-            FX_LOG(ERROR, kTag, "block_count+offset too large");
+            printf("block_count+offset too large\n");
             return -1;
         }
 
         if (info.max_transfer_size < block_size) {
-            FX_LOGF(ERROR, kTag, "block-size is larger than max transfer size (%d)",
-                    info.max_transfer_size);
+            printf("block-size is larger than max transfer size (%d)\n", info.max_transfer_size);
             return -1;
         }
 
         zx::fifo fifo;
         if (ioctl_block_get_fifos(ctx.fd.get(), fifo.reset_and_get_address()) != sizeof(fifo)) {
-            FX_LOG(ERROR, kTag, "cannot get fifo for device");
+            printf("cannot get fifo for device\n");
             return -1;
         }
 
         if (block_client::Client::Create(fbl::move(fifo), &ctx.block.client) != ZX_OK) {
-            FX_LOG(ERROR, kTag, "cannot create block client for device");
+            printf("cannot create block client for device\n");
             return -1;
         }
 
@@ -655,7 +657,7 @@ int iochk(int argc, char** argv) {
     ctx.progress = ProgressBar(block_count, num_threads);
 
     if (InitializeDevice(ctx)) {
-        FX_LOG(ERROR, kTag, "device initialization failed");
+        printf("device initialization failed\n");
         return -1;
     }
 
@@ -664,17 +666,17 @@ int iochk(int argc, char** argv) {
         BlockChecker::ResetAtomic();
     }
 
-    FX_LOG(INFO, kTag, "starting worker threads...");
+    printf("starting worker threads...\n");
     thrd_t threads[num_threads];
 
     if (num_threads > MAX_TXN_GROUP_COUNT) {
-        FX_LOGF(ERROR, kTag, "number of threads capped at %u", MAX_TXN_GROUP_COUNT);
+        printf("number of threads capped at %u\n", MAX_TXN_GROUP_COUNT);
         num_threads = MAX_TXN_GROUP_COUNT;
     }
 
     for (auto& thread : threads) {
         if (thrd_create(&thread, DoWork, &ctx) != thrd_success) {
-            FX_LOG(ERROR, kTag, "thread creation failed");
+            printf("thread creation failed\n");
             return -1;
         }
     }
@@ -689,34 +691,32 @@ int iochk(int argc, char** argv) {
     }
 
     if (!ctx.iochk_failure) {
-        FX_LOG(INFO, kTag, "re-verifying device...");
+        printf("re-verifying device...\n");
         fflush(stdout);
         fbl::unique_ptr<Checker> checker;
         zx_status_t status;
         if ((status = InitializeChecker(ctx, &checker)) != ZX_OK) {
-            FX_LOG(ERROR, kTag, "failed to initialize verification thread");
+            printf("failed to initialize verification thread\n");
             return status;
         }
         if (checker->Check(start_block, block_count) != ZX_OK) {
-            FX_LOG(ERROR, kTag, "failed to re-verify test data");
+            printf("failed to re-verify test data\n");
             ctx.iochk_failure = true;
         } else {
-            FX_LOG(INFO, kTag, "done");
+            printf("done\n");
         }
     }
 
     if (!ctx.iochk_failure) {
-        FX_LOG(INFO, kTag, "iochk completed successfully");
+        printf("iochk completed successfully\n");
         return 0;
     } else {
-        FX_LOGF(INFO, kTag, "iochk failed (seed was %ld)", base_seed);
+        printf("iochk failed (seed was %ld)\n", base_seed);
         return -1;
     }
 }
 
 int main(int argc, char** argv) {
-    fx_log_init();
-
     if (argc < 2) {
         return Usage();
     }
