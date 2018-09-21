@@ -28,6 +28,10 @@
 
     Configure, create and use FrameBuffers in Fuchsia
 
+* [fuchsia-merkle/](https://fuchsia.googlesource.com/garnet/+/master/public/rust/crates/fuchsia-merkle/)
+
+    Protect and verify data blobs using [Merkle Trees](https://fuchsia.googlesource.com/docs/+/master/the-book/merkleroot.md)
+
 * [fuchsia-scenic/](https://fuchsia.googlesource.com/garnet/+/master/public/rust/crates/fuchsia-scenic/)
 
     Rust interface to Scenic, the Fuchsia compositor
@@ -64,7 +68,7 @@
 
     A convenience crate for Zircon VMO objects mapped into memory
 
-* [mundane-crypto/](https://fuchsia.googlesource.com/garnet/+/master/public/rust/crates/mundane-crypto/)
+* [mundane/](https://fuchsia.googlesource.com/garnet/+/master/public/rust/crates/mundane/)
 
     A Rust crypto library backed by BoringSSL
 
