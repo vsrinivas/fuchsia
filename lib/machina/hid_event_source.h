@@ -5,11 +5,10 @@
 #ifndef GARNET_LIB_MACHINA_HID_EVENT_SOURCE_H_
 #define GARNET_LIB_MACHINA_HID_EVENT_SOURCE_H_
 
+#include <forward_list>
 #include <utility>
 
-#include <fbl/intrusive_single_list.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <hid/hid.h>
 #include <zircon/types.h>
 
@@ -18,8 +17,7 @@
 namespace machina {
 
 // Manages input events from a single (host) HID device.
-class HidInputDevice
-    : public fbl::SinglyLinkedListable<fbl::unique_ptr<HidInputDevice>> {
+class HidInputDevice {
  public:
   HidInputDevice(InputDispatcherImpl* input_dispatcher, fbl::unique_fd fd)
       : fd_(std::move(fd)), input_dispatcher_(input_dispatcher) {}
@@ -60,7 +58,7 @@ class HidEventSource {
 
   InputDispatcherImpl* input_dispatcher_;
   std::mutex mutex_;
-  fbl::SinglyLinkedList<fbl::unique_ptr<HidInputDevice>> devices_
+  std::forward_list<HidInputDevice> devices_
       __TA_GUARDED(mutex_);
 };
 

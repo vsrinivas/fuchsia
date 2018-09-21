@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/vector.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
 
@@ -29,7 +28,7 @@ class InputDispatcherVerifier {
   }
 
   void Reset(InputDispatcherImpl* dispatcher) {
-    queued_events_.reset();
+    queued_events_.clear();
     while (dispatcher->Keyboard()->size() > 0) {
       auto event = dispatcher->Keyboard()->Wait();
       queued_events_.push_back(std::move(event));
@@ -63,7 +62,7 @@ class InputDispatcherVerifier {
   }
 
  private:
-  fbl::Vector<fuchsia::ui::input::InputEvent> queued_events_;
+  std::vector<fuchsia::ui::input::InputEvent> queued_events_;
 };
 
 TEST(HidEventSourceTest, HandleKeyPress) {

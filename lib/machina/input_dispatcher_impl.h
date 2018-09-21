@@ -7,8 +7,8 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <vector>
 
-#include <fbl/array.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 
 namespace machina {
@@ -33,7 +33,7 @@ class InputEventQueue {
 
   std::condition_variable cv_;
   mutable std::mutex mutex_;
-  fbl::Array<fuchsia::ui::input::InputEvent> pending_ __TA_GUARDED(mutex_);
+  std::vector<fuchsia::ui::input::InputEvent> pending_ __TA_GUARDED(mutex_);
   size_t index_ __TA_GUARDED(mutex_) = 0;
   size_t size_ __TA_GUARDED(mutex_) = 0;
 };

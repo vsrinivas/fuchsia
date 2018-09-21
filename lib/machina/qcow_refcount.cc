@@ -41,19 +41,13 @@ zx_status_t QcowRefcount::Load(int fd, const QcowHeader& header) {
   }
 
   // Allocate space to store a single refcount block (second level table).
-  if (loaded_block_.size() != header.cluster_size()) {
-    loaded_block_.reset(new uint8_t[header.cluster_size()],
-                        header.cluster_size());
-  }
+  loaded_block_.resize(header.cluster_size());
 
   // Allocate the top-level refcount table.
   size_t refcount_table_size = header.cluster_size() *
                                header.refcount_table_clusters /
                                sizeof(RefcountTableEntry);
-  if (refcount_table_.size() != refcount_table_size) {
-    refcount_table_.reset(new RefcountTableEntry[refcount_table_size],
-                          refcount_table_size);
-  }
+  refcount_table_.resize(refcount_table_size);
 
   // Read in the top-level table.
   off_t ret = lseek(fd, header.refcount_table_offset, SEEK_SET);
@@ -61,7 +55,7 @@ zx_status_t QcowRefcount::Load(int fd, const QcowHeader& header) {
     FXL_LOG(ERROR) << "Failed to seek to refcount table: " << strerror(errno);
     return ZX_ERR_IO;
   }
-  ssize_t result = read(fd, refcount_table_.get(), refcount_table_.size());
+  ssize_t result = read(fd, refcount_table_.data(), refcount_table_.size());
   if (result != static_cast<ssize_t>(refcount_table_.size())) {
     FXL_LOG(ERROR) << "Failed to read refcount table: " << strerror(errno);
     return ZX_ERR_IO;
@@ -163,10 +157,10 @@ zx_status_t QcowRefcount::WriteRefcount(size_t cluster_index, uint64_t count) {
 zx_status_t QcowRefcount::ReadRefcountBlock(uint32_t block_index,
                                             uint8_t** block) {
   if (block_index == loaded_block_index_) {
-    *block = loaded_block_.get();
+    *block = loaded_block_.data();
     return ZX_OK;
   }
-  if (!refcount_table_ || !loaded_block_) {
+  if (refcount_table_.empty() || loaded_block_.empty()) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -177,13 +171,13 @@ zx_status_t QcowRefcount::ReadRefcountBlock(uint32_t block_index,
     FXL_LOG(ERROR) << "Failed to seek to refcnt table: " << ret;
     return ZX_ERR_IO;
   }
-  ssize_t result = read(fd_, loaded_block_.get(), loaded_block_.size());
+  ssize_t result = read(fd_, loaded_block_.data(), loaded_block_.size());
   if (result != static_cast<ssize_t>(loaded_block_.size())) {
     FXL_LOG(ERROR) << "Failed to read refcnt table: " << ret;
     return ZX_ERR_IO;
   }
   loaded_block_index_ = block_index;
-  *block = loaded_block_.get();
+  *block = loaded_block_.data();
   return ZX_OK;
 }
 

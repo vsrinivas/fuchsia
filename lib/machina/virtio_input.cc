@@ -10,7 +10,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <lib/fxl/logging.h>
 #include <lib/ui/input/cpp/formatting.h>

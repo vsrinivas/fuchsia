@@ -12,9 +12,7 @@
 #include <ios>
 #include <vector>
 
-#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -100,7 +98,7 @@ typedef struct balloon_task_args {
 } balloon_task_args_t;
 
 static int balloon_stats_task(void* ctx) {
-  fbl::unique_ptr<balloon_task_args_t> args(
+  std::unique_ptr<balloon_task_args_t> args(
       static_cast<balloon_task_args_t*>(ctx));
   machina::VirtioBalloon* balloon = args->balloon;
   zx_duration_t interval = args->cfg->balloon_interval();

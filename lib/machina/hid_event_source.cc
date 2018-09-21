@@ -137,18 +137,16 @@ zx_status_t HidEventSource::AddInputDevice(int dirfd, int event,
     return ZX_OK;
   }
 
-  auto keyboard =
-      fbl::make_unique<HidInputDevice>(input_dispatcher_, std::move(fd));
-  zx_status_t status = keyboard->Start();
+  std::lock_guard<std::mutex> lock(mutex_);
+  devices_.emplace_front(input_dispatcher_, std::move(fd));
+  zx_status_t status = devices_.front().Start();
   if (status != ZX_OK) {
+    devices_.pop_front();
     FXL_LOG(ERROR) << "Failed to start device " << kInputDirPath << "/" << fn;
     return status;
   }
   FXL_LOG(INFO) << "Polling device " << kInputDirPath << "/" << fn
                 << " for key events";
-
-  std::lock_guard<std::mutex> lock(mutex_);
-  devices_.push_front(std::move(keyboard));
   return ZX_OK;
 }
 

@@ -4,7 +4,6 @@
 
 #include "garnet/lib/machina/qcow.h"
 
-#include <fbl/array.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -45,7 +44,7 @@ class QcowFile::LookupTable {
   //
   // TODO(tjdetwiler): Add some bound to this L2 cache.
   zx_status_t Load(int fd, const QcowHeader& header) {
-    if (l1_table_) {
+    if (!l1_table_.empty()) {
       return ZX_ERR_BAD_STATE;
     }
 
@@ -62,14 +61,14 @@ class QcowFile::LookupTable {
     }
 
     size_t l2_size = 1 << (header.cluster_bits - 3);
-    l1_table_.reset(new L2Table[header.l1_size], header.l1_size);
+    l1_table_.resize(header.l1_size);
     for (size_t l1_entry = 0; l1_entry < header.l1_size; ++l1_entry) {
       uint64_t offset = BigToHostEndianTraits::Convert(l1_entries[l1_entry]) &
                         kTableOffsetMask;
       if (!offset) {
         continue;
       }
-      L2Table l2_table(new uint64_t[l2_size], l2_size);
+      L2Table l2_table(l2_size);
       ret = lseek(fd, offset, SEEK_SET);
       if (ret < 0) {
         FXL_LOG(ERROR) << "Failed to seek to L2 table " << l1_entry << ": "
@@ -77,7 +76,7 @@ class QcowFile::LookupTable {
         return ZX_ERR_IO;
       }
       // l2_size is number of 8b entries.
-      result = read(fd, l2_table.get(), l2_size << 3);
+      result = read(fd, l2_table.data(), l2_size << 3);
       if (result != static_cast<ssize_t>(l2_size << 3)) {
         FXL_LOG(ERROR) << "Failed to read L2 table " << l1_entry << ": "
                        << result;
@@ -103,7 +102,7 @@ class QcowFile::LookupTable {
   //  |ZX_ERR_BAD_STATE| - The file has not yet been initialized with a call to
   //      |Load|.
   zx_status_t Walk(size_t linear_offset, uint64_t* physical_offset) {
-    if (!l1_table_) {
+    if (l1_table_.empty()) {
       return ZX_ERR_BAD_STATE;
     }
 
@@ -116,7 +115,7 @@ class QcowFile::LookupTable {
       return ZX_ERR_OUT_OF_RANGE;
     }
     const auto& l2 = l1_table_[l1_offset];
-    if (!l2) {
+    if (l2.empty()) {
       return ZX_ERR_NOT_FOUND;
     }
     uint64_t l2_entry = BigToHostEndianTraits::Convert(l2[l2_offset]);
@@ -138,8 +137,8 @@ class QcowFile::LookupTable {
   size_t l1_size_;
 
   using L2Entry = uint64_t;
-  using L2Table = fbl::Array<L2Entry>;
-  using L1Table = fbl::Array<L2Table>;
+  using L2Table = std::vector<L2Entry>;
+  using L1Table = std::vector<L2Table>;
   L1Table l1_table_;
 };
 

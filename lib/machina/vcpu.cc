@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <fbl/string_buffer.h>
 #include <trace/event.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -18,6 +17,7 @@
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/io.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #ifdef __x86_64__
 #include "garnet/lib/machina/arch/x86/decode.h"
@@ -126,14 +126,13 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, uint64_t id) {
       .vcpu = this,
       .entry = entry,
   };
-  fbl::StringBuffer<ZX_MAX_NAME_LEN> name_buffer;
-  name_buffer.AppendPrintf("vcpu-%lu", id);
+  auto name = fxl::StringPrintf("vcpu-%lu", id);
   auto thread_entry = [](void* arg) {
     ThreadEntryArgs* thread_args = reinterpret_cast<ThreadEntryArgs*>(arg);
     return thread_args->vcpu->ThreadEntry(thread_args);
   };
   int ret =
-      thrd_create_with_name(&thread_, thread_entry, &args, name_buffer.c_str());
+      thrd_create_with_name(&thread_, thread_entry, &args, name.c_str());
   if (ret != thrd_success) {
     return ZX_ERR_INTERNAL;
   }
@@ -304,11 +303,11 @@ zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t& mem,
   status = inst_decode(mem.inst_buf, mem.inst_len, mem.default_operand_size,
                        &vcpu_state, &inst);
   if (status != ZX_OK) {
-    fbl::StringBuffer<LINE_MAX> buffer;
+    std::string inst;
     for (uint8_t i = 0; i < mem.inst_len; i++) {
-      buffer.AppendPrintf(" %x", mem.inst_buf[i]);
+      fxl::StringAppendf(&inst, " %x", mem.inst_buf[i]);
     }
-    FXL_LOG(ERROR) << "Unsupported instruction:" << buffer.c_str();
+    FXL_LOG(ERROR) << "Unsupported instruction:" << inst;
   } else {
     status = HandleMmioX86(mem, trap_key, &inst);
     // If there was an attempt to read or test memory, update the GPRs.

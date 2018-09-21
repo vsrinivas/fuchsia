@@ -35,8 +35,7 @@ zx_status_t VirtioNet::Stream::Start(zx_handle_t fifo, size_t fifo_max_entries,
                                      bool rx) {
   fifo_ = fifo;
   rx_ = rx;
-  eth_fifo_entry_t* entries = new eth_fifo_entry_t[fifo_max_entries];
-  fifo_entries_.reset(entries, fifo_max_entries);
+  fifo_entries_.resize(fifo_max_entries);
   fifo_num_entries_ = 0;
   fifo_entries_write_index_ = 0;
 

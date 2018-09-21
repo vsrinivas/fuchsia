@@ -525,18 +525,18 @@ void VirtioVsock::SetContextId(
   tx_stream_.WaitOnQueue();
 }
 
-static fbl::unique_ptr<VirtioVsock::Connection> create_connection(
+static std::unique_ptr<VirtioVsock::Connection> create_connection(
     zx::handle handle, async_dispatcher_t* dispatcher,
     fuchsia::guest::GuestVsockAcceptor::AcceptCallback accept_callback,
     fit::closure queue_callback) {
   zx_obj_type_t type = fsl::GetType(handle.get());
   switch (type) {
     case zx::socket::TYPE:
-      return fbl::make_unique<VirtioVsock::SocketConnection>(
+      return std::make_unique<VirtioVsock::SocketConnection>(
           std::move(handle), dispatcher, std::move(accept_callback),
           std::move(queue_callback));
     case zx::channel::TYPE:
-      return fbl::make_unique<VirtioVsock::ChannelConnection>(
+      return std::make_unique<VirtioVsock::ChannelConnection>(
           std::move(handle), dispatcher, std::move(accept_callback),
           std::move(queue_callback));
     default:
@@ -584,7 +584,7 @@ void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
         WaitOnQueueLocked(key);
       });
   if (!new_conn) {
-    new_conn = fbl::make_unique<NullConnection>();
+    new_conn = std::make_unique<NullConnection>();
   }
   Connection* conn = new_conn.get();
 
@@ -609,7 +609,7 @@ void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
 }
 
 zx_status_t VirtioVsock::AddConnectionLocked(ConnectionKey key,
-                                             fbl::unique_ptr<Connection> conn) {
+                                             std::unique_ptr<Connection> conn) {
   bool inserted;
   std::tie(std::ignore, inserted) = connections_.emplace(key, std::move(conn));
   if (!inserted) {
@@ -867,7 +867,7 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
 
     if (conn == nullptr) {
       // Build a connection to send a connection reset.
-      auto new_conn = fbl::make_unique<NullConnection>();
+      auto new_conn = std::make_unique<NullConnection>();
       conn = new_conn.get();
       status = AddConnectionLocked(key, std::move(new_conn));
       set_shutdown(header);

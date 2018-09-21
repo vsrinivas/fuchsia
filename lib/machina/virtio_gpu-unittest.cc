@@ -4,8 +4,6 @@
 
 #include "garnet/lib/machina/virtio_gpu.h"
 
-#include <fbl/unique_ptr.h>
-
 #include "garnet/lib/machina/gpu_scanout.h"
 #include "garnet/lib/machina/phys_mem_fake.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"

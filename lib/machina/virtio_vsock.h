@@ -70,7 +70,7 @@ class VirtioVsock
     }
   };
   using ConnectionMap =
-      std::unordered_map<ConnectionKey, fbl::unique_ptr<Connection>,
+      std::unordered_map<ConnectionKey, std::unique_ptr<Connection>,
                          ConnectionHash>;
   using ConnectionSet = std::unordered_set<ConnectionKey, ConnectionHash>;
 
@@ -101,7 +101,7 @@ class VirtioVsock
                        zx::handle handle);
 
   zx_status_t AddConnectionLocked(ConnectionKey key,
-                                  fbl::unique_ptr<Connection> conn)
+                                  std::unique_ptr<Connection> conn)
       __TA_REQUIRES(mutex_);
   Connection* GetConnectionLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
   bool EraseOnErrorLocked(ConnectionKey key, zx_status_t status)

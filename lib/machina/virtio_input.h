@@ -5,8 +5,6 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_INPUT_H_
 #define GARNET_LIB_MACHINA_VIRTIO_INPUT_H_
 
-#include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid/hid.h>
 #include <virtio/input.h>

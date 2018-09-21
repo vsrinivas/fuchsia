@@ -6,8 +6,6 @@
 
 #include <string.h>
 
-#include <fbl/intrusive_hash_table.h>
-#include <fbl/unique_ptr.h>
 #include <trace/event.h>
 
 #include "garnet/lib/machina/gpu_resource.h"

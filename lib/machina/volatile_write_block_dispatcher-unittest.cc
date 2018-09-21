@@ -41,19 +41,19 @@ class StaticDispatcher : public BlockDispatcher {
     }                                      \
   } while (0)
 
-fbl::unique_ptr<VolatileWriteBlockDispatcher> CreateDispatcher() {
+std::unique_ptr<VolatileWriteBlockDispatcher> CreateDispatcher() {
   std::unique_ptr<BlockDispatcher> dispatcher;
   zx_status_t status = BlockDispatcher::CreateVolatileWrapper(
       std::make_unique<StaticDispatcher>(kDispatcherSize, 0xab), &dispatcher);
   if (status != ZX_OK) {
     return nullptr;
   }
-  return fbl::unique_ptr<VolatileWriteBlockDispatcher>(
+  return std::unique_ptr<VolatileWriteBlockDispatcher>(
       reinterpret_cast<VolatileWriteBlockDispatcher*>(dispatcher.release()));
 }
 
 TEST(BlockDispatcherTest, VolatileWriteBlock) {
-  fbl::unique_ptr<VolatileWriteBlockDispatcher> dispatcher = CreateDispatcher();
+  std::unique_ptr<VolatileWriteBlockDispatcher> dispatcher = CreateDispatcher();
   uint8_t block[512] = {};
   ASSERT_EQ(ZX_OK, dispatcher->Read(0, block, sizeof(block)));
   ASSERT_BLOCK_VALUE(block, 0xab, sizeof(block));
@@ -66,7 +66,7 @@ TEST(BlockDispatcherTest, VolatileWriteBlock) {
 }
 
 TEST(BlockDispatcherTest, VolatileWriteBlockComplex) {
-  fbl::unique_ptr<VolatileWriteBlockDispatcher> dispatcher = CreateDispatcher();
+  std::unique_ptr<VolatileWriteBlockDispatcher> dispatcher = CreateDispatcher();
 
   // Write blocks 0 & 2, blocks 1 & 3 will hit the static dispatcher.
   uint8_t block[512];
@@ -83,7 +83,7 @@ TEST(BlockDispatcherTest, VolatileWriteBlockComplex) {
 }
 
 TEST(BlockDispatcherTest, VolatileWriteBadRequest) {
-  fbl::unique_ptr<VolatileWriteBlockDispatcher> dispatcher = CreateDispatcher();
+  std::unique_ptr<VolatileWriteBlockDispatcher> dispatcher = CreateDispatcher();
 
   uint8_t block[512] = {};
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, dispatcher->Read(1, block, sizeof(block)));

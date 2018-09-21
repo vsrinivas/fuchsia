@@ -8,7 +8,6 @@
 #include <atomic>
 #include <vector>
 
-#include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <lib/async/cpp/wait.h>
 #include <trace-engine/types.h>
@@ -111,7 +110,7 @@ class VirtioNet
     bool rx_ = false;
     IoBuffer* io_buf_;
 
-    fbl::Array<eth_fifo_entry_t> fifo_entries_;
+    std::vector<eth_fifo_entry_t> fifo_entries_;
     // Number of entries in |fifo_entries_| that have not yet been written
     // to the fifo.
     size_t fifo_num_entries_ = 0;

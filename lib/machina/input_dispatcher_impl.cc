@@ -7,7 +7,7 @@
 namespace machina {
 
 InputEventQueue::InputEventQueue(size_t queue_depth)
-    : pending_(new fuchsia::ui::input::InputEvent[queue_depth], queue_depth) {}
+    : pending_(queue_depth) {}
 
 size_t InputEventQueue::size() const {
   std::lock_guard<std::mutex> lock(mutex_);

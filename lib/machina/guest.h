@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_GUEST_H_
 #define GARNET_LIB_MACHINA_GUEST_H_
 
-#include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
+#include <forward_list>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 #include <zircon/types.h>
@@ -14,6 +14,7 @@
 #include <zx/vmar.h>
 
 #include "garnet/lib/machina/device/phys_mem.h"
+#include "garnet/lib/machina/io.h"
 #include "garnet/lib/machina/vcpu.h"
 
 namespace machina {
@@ -31,7 +32,7 @@ class Guest {
  public:
   using VcpuFactory = fit::function<zx_status_t(Guest* guest, uintptr_t entry,
                                                 uint64_t id, Vcpu* vcpu)>;
-  using IoMappingList = fbl::SinglyLinkedList<fbl::unique_ptr<IoMapping>>;
+  using IoMappingList = std::forward_list<IoMapping>;
 
   zx_status_t Init(size_t mem_size);
 
@@ -81,7 +82,7 @@ class Guest {
 
   VcpuFactory vcpu_factory_ = [](Guest* guest, uintptr_t entry, uint64_t id,
                                  Vcpu* vcpu) { return ZX_ERR_BAD_STATE; };
-  fbl::unique_ptr<Vcpu> vcpus_[kMaxVcpus] = {};
+  std::unique_ptr<Vcpu> vcpus_[kMaxVcpus] = {};
 
   async::Loop device_loop_{&kAsyncLoopConfigNoAttachToThread};
 };

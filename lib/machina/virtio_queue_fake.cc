@@ -4,7 +4,6 @@
 
 #include "garnet/lib/machina/virtio_queue_fake.h"
 
-#include <fbl/alloc_checker.h>
 #include <string.h>
 
 #include "lib/fxl/logging.h"

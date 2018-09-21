@@ -5,7 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_QCOW_REFCOUNT_H_
 #define GARNET_LIB_MACHINA_QCOW_REFCOUNT_H_
 
-#include <fbl/array.h>
+#include <vector>
+
 #include <stdint.h>
 #include <zircon/types.h>
 
@@ -74,11 +75,11 @@ class QcowRefcount {
 
   // Retain the entire top level refcount table in memory.
   using RefcountTableEntry = uint64_t;
-  fbl::Array<RefcountTableEntry> refcount_table_;
+  std::vector<RefcountTableEntry> refcount_table_;
 
   // Only cache the most recently accessed refcount block.
   int64_t loaded_block_index_ = -1;
-  fbl::Array<uint8_t> loaded_block_;
+  std::vector<uint8_t> loaded_block_;
 };
 
 }  // namespace machina

@@ -11,7 +11,6 @@
 #include <block-client/client.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <lib/fdio/watcher.h>
 #include <trace/event.h>
 #include <virtio/virtio_ids.h>

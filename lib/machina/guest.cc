@@ -9,7 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/process.h>
@@ -20,6 +19,7 @@
 
 #include "garnet/lib/machina/io.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
 // Number of threads reading from the async device port.
@@ -83,9 +83,8 @@ zx_status_t Guest::Init(size_t mem_size) {
   }
 
   for (size_t i = 0; i < kNumAsyncWorkers; ++i) {
-    fbl::StringBuffer<ZX_MAX_NAME_LEN> name_buffer;
-    name_buffer.AppendPrintf("io-handler-%zu", i);
-    status = device_loop_.StartThread(name_buffer.c_str());
+    auto name = fxl::StringPrintf("io-handler-%zu", i);
+    status = device_loop_.StartThread(name.c_str());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to create async worker " << status;
       return status;
@@ -98,12 +97,12 @@ zx_status_t Guest::Init(size_t mem_size) {
 zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size,
                                  uint64_t offset, IoHandler* handler) {
   uint32_t kind = trap_kind(type);
-  auto mapping = fbl::make_unique<IoMapping>(kind, addr, size, offset, handler);
-  zx_status_t status = mapping->SetTrap(this);
+  mappings_.emplace_front(kind, addr, size, offset, handler);
+  zx_status_t status = mappings_.front().SetTrap(this);
   if (status != ZX_OK) {
+    mappings_.pop_front();
     return status;
   }
-  mappings_.push_front(std::move(mapping));
   return ZX_OK;
 }
 
@@ -126,7 +125,7 @@ zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
     // on the first. So, we ignore subsequent requests.
     return ZX_OK;
   }
-  auto vcpu = fbl::make_unique<Vcpu>();
+  auto vcpu = std::make_unique<Vcpu>();
   zx_status_t status = vcpu_factory_(this, entry, id, vcpu.get());
   if (status != ZX_OK) {
     return status;

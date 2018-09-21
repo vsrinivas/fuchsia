@@ -5,8 +5,6 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_GPU_H_
 #define GARNET_LIB_MACHINA_VIRTIO_GPU_H_
 
-#include <fbl/intrusive_hash_table.h>
-#include <fbl/unique_ptr.h>
 #include <lib/async/cpp/wait.h>
 #include <virtio/gpu.h>
 #include <virtio/virtio_ids.h>

@@ -9,7 +9,6 @@
 #include <condition_variable>
 #include <mutex>
 
-#include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>

@@ -6,7 +6,6 @@
 #define GARNET_LIB_MACHINA_FRAMEBUFFER_SCANOUT_H_
 
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <virtio/gpu.h>
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>

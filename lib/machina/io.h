@@ -6,7 +6,6 @@
 #define GARNET_LIB_MACHINA_IO_H_
 
 #include <fbl/canary.h>
-#include <fbl/intrusive_single_list.h>
 #include <lib/async/cpp/trap.h>
 #include <trace/event.h>
 #include <zircon/types.h>
@@ -44,7 +43,7 @@ class IoHandler {
 // Represents a single mapping of an |IoHandler| to an address range.
 //
 // A single handler may be mapped to multiple distinct address ranges.
-class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
+class IoMapping {
  public:
   static IoMapping* FromPortKey(uint64_t key) {
     return reinterpret_cast<IoMapping*>(key);
