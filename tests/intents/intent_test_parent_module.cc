@@ -35,9 +35,9 @@ void StartModuleWithJsonParameter(
   intent_parameter.data.set_json(std::move(vmo).ToTransport());
 
   intent.parameters.push_back(std::move(intent_parameter));
-  module_context->StartModule(module_name, std::move(intent),
-                              std::move(request), nullptr,
-                              [](const fuchsia::modular::StartModuleStatus) {});
+  module_context->AddModuleToStory(
+      module_name, std::move(intent), std::move(request), nullptr,
+      [](const fuchsia::modular::StartModuleStatus) {});
 }
 
 // Cf. README.md for what this test does and how.
@@ -132,7 +132,7 @@ class TestApp {
     intent.parameters.push_back(std::move(intent_parameter));
     intent.parameters.push_back(std::move(intent_parameter2));
 
-    module_host_->module_context()->StartModule(
+    module_host_->module_context()->AddModuleToStory(
         kChildModuleName, std::move(intent), child_module_second_.NewRequest(),
         nullptr, [](const fuchsia::modular::StartModuleStatus) {});
 

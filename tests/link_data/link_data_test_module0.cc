@@ -91,9 +91,9 @@ class TestApp {
     intent.handler = kModule1Url;
     intent.parameters.push_back(std::move(parameter));
 
-    module_context_->StartModule("module1", std::move(intent),
-                                 module1_.NewRequest(), nullptr,
-                                 [](fuchsia::modular::StartModuleStatus) {});
+    module_context_->AddModuleToStory(
+        "module1", std::move(intent), module1_.NewRequest(), nullptr,
+        [](fuchsia::modular::StartModuleStatus) {});
 
     parameter_data = fuchsia::modular::IntentParameterData();
     parameter_data.set_link_name(kModule2Link);
@@ -106,9 +106,9 @@ class TestApp {
     intent.handler = kModule2Url;
     intent.parameters.push_back(std::move(parameter));
 
-    module_context_->StartModule("module2", std::move(intent),
-                                 module2_.NewRequest(), nullptr,
-                                 [](fuchsia::modular::StartModuleStatus) {});
+    module_context_->AddModuleToStory(
+        "module2", std::move(intent), module2_.NewRequest(), nullptr,
+        [](fuchsia::modular::StartModuleStatus) {});
 
     connections_.emplace_back(
         new LinkForwarder(module1_link_.get(), module2_link_.get()));

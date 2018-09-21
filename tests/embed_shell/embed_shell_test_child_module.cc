@@ -42,7 +42,7 @@ class TestApp {
           OnStateChange(std::move(new_state));
         };
 
-    module_host_->module_context()->StartModule(
+    module_host_->module_context()->AddModuleToStory(
         kChildModuleName, std::move(intent), child_module_.NewRequest(),
         nullptr /* surface_relation */,
         [](const fuchsia::modular::StartModuleStatus) {});

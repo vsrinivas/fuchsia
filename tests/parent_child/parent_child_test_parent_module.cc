@@ -38,9 +38,9 @@ void StartModuleWithLinkMapping(
   intent_parameter.data = fuchsia::modular::IntentParameterData();
   intent_parameter.data.set_link_name(link_name);
   intent.parameters.push_back(std::move(intent_parameter));
-  module_context->StartModule(kChildModuleName, std::move(intent),
-                              std::move(request), nullptr,
-                              [](const fuchsia::modular::StartModuleStatus) {});
+  module_context->AddModuleToStory(
+      kChildModuleName, std::move(intent), std::move(request), nullptr,
+      [](const fuchsia::modular::StartModuleStatus) {});
 }
 
 // Cf. README.md for what this test does and how.

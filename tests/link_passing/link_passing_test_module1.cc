@@ -53,7 +53,7 @@ class TestApp : fuchsia::modular::LinkWatcher {
     intent.parameters.push_back(std::move(param1));
     intent.parameters.push_back(std::move(param2));
 
-    module_host_->module_context()->StartModule(
+    module_host_->module_context()->AddModuleToStory(
         "two", std::move(intent), module_controller_.NewRequest(),
         nullptr /* surface_relation */,
         [](fuchsia::modular::StartModuleStatus) {});

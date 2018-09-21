@@ -73,7 +73,7 @@ class TestApp {
     document.Parse(sub_module_url.c_str());
     fuchsia::modular::Intent intent;
     intent.handler = document.GetString();
-    module_host_->module_context()->StartModule(
+    module_host_->module_context()->AddModuleToStory(
         kSubModuleName, std::move(intent), sub_module_.NewRequest(), nullptr,
         [this](const fuchsia::modular::StartModuleStatus status) {
           if (status == fuchsia::modular::StartModuleStatus::SUCCESS) {

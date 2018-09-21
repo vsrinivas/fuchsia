@@ -55,7 +55,7 @@ class TestApp {
 
       Await(module_name_ == kFirstModuleName ? kFirstModuleCallDone
                                              : kSecondModuleCallDone,
-            [this, module_context] { module_context->Done(); });
+            [this, module_context] { module_context->RemoveSelfFromStory(); });
       Await(module_name_ == kFirstModuleName ? kFirstModuleCallStartActivity
                                              : kSecondModuleCallStartActivity,
             [this, module_context] {
