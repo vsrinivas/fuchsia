@@ -105,6 +105,24 @@ pub fn transfer_fd(file: std::fs::File) -> Result<(Vec<zx::Channel>, Vec<u32>), 
     }
 }
 
+/// Open a new connection to `file` by sending a request to open
+/// a new connection to the sever.
+pub fn clone_channel(file: &std::fs::File) -> Result<zx::Channel, zx::Status> {
+    unsafe {
+        // First, we must open a new connection to the handle, since
+        // we must return a newly owned copy.
+        let fdio = fdio_sys::__fdio_fd_to_io(file.as_raw_fd());
+        let unowned_handle = fdio_sys::__fdio_borrow_channel(fdio);
+        let handle = fdio_sys::fdio_service_clone(unowned_handle);
+        fdio_sys::__fdio_release(fdio);
+
+        match handle {
+            zx::sys::ZX_HANDLE_INVALID => Err(zx::Status::NOT_SUPPORTED),
+            _ => Ok(zx::Channel::from(zx::Handle::from_raw(handle))),
+        }
+    }
+}
+
 /// Retrieves the topological path for a device node.
 pub fn device_get_topo_path(dev: &File) -> Result<String, zx::Status> {
     let mut topo = vec![0; 1024];
@@ -239,15 +257,4 @@ pub const IOCTL_DEVICE_GET_TOPO_PATH: raw::c_int = make_ioctl!(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_DEVICE,
     4
-);
-
-pub const IOCTL_VFS_MOUNT_FS: raw::c_int = make_ioctl!(
-    fdio_sys::IOCTL_KIND_SET_HANDLE,
-    fdio_sys::IOCTL_FAMILY_VFS,
-    0
-);
-pub const IOCTL_VFS_UNMOUNT_NODE: raw::c_int = make_ioctl!(
-    fdio_sys::IOCTL_KIND_GET_HANDLE,
-    fdio_sys::IOCTL_FAMILY_VFS,
-    2
 );

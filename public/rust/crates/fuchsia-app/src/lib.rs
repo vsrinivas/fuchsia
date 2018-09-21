@@ -388,6 +388,9 @@ pub mod server {
                 DirectoryRequest::Link { src: _, dst_parent_token: _, dst: _, responder, } => {
                     responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
                 }
+                DirectoryRequest::Watch { mask: _, options: _, watcher: _, responder, } => {
+                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
+                }
             }
         }
     }

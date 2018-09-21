@@ -17,7 +17,8 @@ import (
 	"sync"
 	"syscall"
 	"syscall/zx"
-	"syscall/zx/fdio"
+	"syscall/zx/fidl"
+	zxio "syscall/zx/io"
 	"time"
 
 	"app/context"
@@ -197,9 +198,10 @@ func (f *Filesystem) Mount(path string) error {
 		return fmt.Errorf("channel creation: %s", err)
 	}
 
-	handles := []zx.Handle{zx.Handle(mountChan)}
-	if _, _, err := syscall.FDIOForFD(f.mountInfo.parentFd).Ioctl(fdio.IoctlVFSMountFS, 0, nil, handles); err != nil {
-		mountChan.Close()
+	remote := zxio.DirectoryInterface(fidl.InterfaceRequest{Channel: mountChan})
+	dirChan := zx.Channel(syscall.FDIOForFD(f.mountInfo.parentFd).Handles()[0])
+	dir := zxio.DirectoryAdminInterface(fidl.InterfaceRequest{Channel: dirChan})
+	if status, err := dir.Mount(remote); err != nil || status != zx.ErrOk {
 		rpcChan.Close()
 		syscall.Close(f.mountInfo.parentFd)
 		f.mountInfo.parentFd = -1
@@ -214,7 +216,9 @@ func (f *Filesystem) Unmount() {
 	f.mountInfo.unmountOnce.Do(func() {
 		// parentFd is -1 in the case where f was just Serve()'d instead of Mount()'d
 		if f.mountInfo.parentFd != -1 {
-			syscall.FDIOForFD(f.mountInfo.parentFd).Ioctl(fdio.IoctlVFSUnmountNode, 0, nil, nil)
+			dirChan := zx.Channel(syscall.FDIOForFD(f.mountInfo.parentFd).Handles()[0])
+			dir := zxio.DirectoryAdminInterface(fidl.InterfaceRequest{Channel: dirChan})
+			dir.UnmountNode()
 			syscall.Close(f.mountInfo.parentFd)
 			f.mountInfo.parentFd = -1
 		}

@@ -7,11 +7,12 @@ package watcher
 import (
 	"errors"
 	"os"
-	"unsafe"
 
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/fidl"
+	"syscall/zx/io"
 	"syscall/zx/zxwait"
 )
 
@@ -31,7 +32,7 @@ func NewWatcher(dir string) (*Watcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	h, err := ioctlVFSWatchDir(m)
+	h, err := VFSWatchDir(m)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +94,7 @@ func (w *Watcher) wait() (string, uint, error) {
 		return "", 0, errors.New("watcher: malformed message")
 	}
 
-	if msg[0] != fdio.VFSWatchEventAdded {
+	if msg[0] != io.WatchEventAdded {
 		// TODO(smklein): Support other watch events
 		return "", 0, errors.New("watcher: Invalid event")
 	}
@@ -104,16 +105,21 @@ type errorString string
 
 func (e errorString) Error() string { return string(e) }
 
-func ioctlVFSWatchDir(m fdio.FDIO) (h zx.Handle, err error) {
-
+func VFSWatchDir(m fdio.FDIO) (h zx.Handle, err error) {
 	c1, c2, err := zx.NewChannel(0)
 	if err != nil {
-		return 0, errorString("IOCTL_VFS_WATCH_DIR: " + err.Error())
+		return 0, errorString("VFS_WATCH_DIR: " + err.Error())
 	}
-	msg := fdio.VFSWatchDirRequest{Mask: fdio.VFSWatchMaskAdded, Options: 0}
-	_, _, err = m.Ioctl(fdio.IoctlVFSWatchDir, 0, (*[unsafe.Sizeof(fdio.VFSWatchDirRequest{})]byte)(unsafe.Pointer(&msg))[:], []zx.Handle{zx.Handle(c1)})
+
+	dirChan := zx.Channel(m.Handles()[0])
+	dir := io.DirectoryInterface(fidl.InterfaceRequest{Channel: dirChan})
+	status, err := dir.Watch(io.WatchMaskAdded, 0, c1)
 	if err != nil {
-		return 0, errorString("IOCTL_VFS_WATCH_DIR: " + err.Error())
+		c2.Close()
+		return 0, errorString("VFS_WATCH_DIR (IO error): " + err.Error())
+	} else if status != zx.ErrOk {
+		c2.Close()
+		return 0, zx.Error{Status: status, Text: "VFS_WATCH_DIR (Server error)"}
 	}
 	return zx.Handle(c2), nil
 }

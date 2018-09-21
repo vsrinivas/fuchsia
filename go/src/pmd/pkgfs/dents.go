@@ -17,7 +17,7 @@ func (d dirDirEnt) GetType() fs.FileType {
 }
 
 func (d dirDirEnt) GetIno() uint64 {
-	return io.KInoUnknown
+	return io.InoUnknown
 }
 
 func (d dirDirEnt) GetName() string {
@@ -31,7 +31,7 @@ func (d fileDirEnt) GetType() fs.FileType {
 }
 
 func (d fileDirEnt) GetIno() uint64 {
-	return io.KInoUnknown
+	return io.InoUnknown
 }
 
 func (d fileDirEnt) GetName() string {

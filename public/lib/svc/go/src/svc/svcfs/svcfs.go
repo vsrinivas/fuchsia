@@ -26,7 +26,7 @@ func (n *Namespace) Clone(flags uint32, req io.NodeInterfaceRequest) error {
 		c.Close()
 		return err
 	}
-	if flags&io.KOpenFlagDescribe != 0 {
+	if flags&io.OpenFlagDescribe != 0 {
 		pxy := io.NodeEventProxy(fidl.Proxy{c})
 		info := &io.NodeInfo{NodeInfoTag: io.NodeInfoService}
 		return pxy.OnOpen(zx.ErrOk, info)
@@ -69,7 +69,7 @@ func (n *Namespace) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in 
 // Open opens a service and emits an OnOpen event when ready.
 func (n *Namespace) Open(flags, _ uint32, path string, obj io.NodeInterfaceRequest) error {
 	respond := func(status zx.Status) error {
-		if flags&io.KOpenFlagDescribe != 0 {
+		if flags&io.OpenFlagDescribe != 0 {
 			info := &io.NodeInfo{NodeInfoTag: io.NodeInfoService}
 			c := fidl.InterfaceRequest(obj).Channel
 			pxy := io.NodeEventProxy(fidl.Proxy{Channel: c})
@@ -122,6 +122,11 @@ func (n *Namespace) Rename(src string, dstParentToken zx.Handle, dst string) (zx
 
 // Link implements io.Directory for Namespace.
 func (n *Namespace) Link(src string, dstParentToken zx.Handle, dst string) (zx.Status, error) {
+	return zx.ErrNotSupported, nil
+}
+
+func (n *Namespace) Watch(mask uint32, options uint32, watcher zx.Channel) (zx.Status, error) {
+	watcher.Close()
 	return zx.ErrNotSupported, nil
 }
 

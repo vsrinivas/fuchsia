@@ -134,7 +134,6 @@ pub const IOCTL_KIND_SET_HANDLE: raw::c_int = 3;
 pub const IOCTL_KIND_SET_TWO_HANDLES: raw::c_int = 5;
 pub const IOCTL_FAMILY_RESERVED: raw::c_int = 0;
 pub const IOCTL_FAMILY_DEVICE: raw::c_int = 1;
-pub const IOCTL_FAMILY_VFS: raw::c_int = 2;
 pub const IOCTL_FAMILY_DMCTL: raw::c_int = 3;
 pub const IOCTL_FAMILY_TEST: raw::c_int = 4;
 pub const IOCTL_FAMILY_CONSOLE: raw::c_int = 16;
@@ -1583,6 +1582,7 @@ extern "C" {
         is_dir: *mut bool,
     ) -> zx_status_t;
     pub fn __fdio_fd_to_io(fd: raw::c_int) -> *mut fdio_t;
+    pub fn __fdio_borrow_channel(io: *mut fdio) -> zx_handle_t;
     pub fn __fdio_release(io: *mut fdio_t);
     pub fn __fdio_wait_begin(
         io: *mut fdio_t,

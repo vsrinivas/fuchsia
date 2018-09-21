@@ -8,8 +8,11 @@
 #include <fcntl.h>
 #include <sys/types.h>
 
+#include <fbl/unique_fd.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/io.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/device/vfs.h>
 
 #include "lib/fxl/logging.h"
@@ -46,29 +49,28 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
                    << ", errno=" << errno;
     return nullptr;
   }
-  fxl::UniqueFD dir_fd(open_result);  // take ownership of fd here
-
-  // Create the directory watch channel.
-  vfs_watch_dir_t wd;
-  wd.mask =
-      VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_EXISTING | VFS_WATCH_MASK_IDLE;
-  wd.options = 0;
-  zx_handle_t dir_watch_handle;
-  if (zx_channel_create(0, &wd.channel, &dir_watch_handle) < 0) {
+  fbl::unique_fd dir_fd(open_result);
+  zx::channel client, server;
+  if (zx::channel::create(0, &client, &server) != ZX_OK) {
     return nullptr;
   }
-  ssize_t ioctl_result = ioctl_vfs_watch_dir(dir_fd.get(), &wd);
-  if (ioctl_result < 0) {
-    zx_handle_close(wd.channel);
-    zx_handle_close(dir_watch_handle);
+  fzl::FdioCaller caller(fbl::move(dir_fd));
+  uint32_t mask =
+      fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE;
+  zx_status_t status;
+  zx_status_t io_status = fuchsia_io_DirectoryWatch(caller.borrow_channel(),
+                                                    mask, 0, server.release(), &status);
+  if (io_status != ZX_OK || status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create device watcher for " << directory_path
-                   << ", result=" << ioctl_result;
+                   << ", status=" << status;
     return nullptr;
   }
-  zx::channel dir_watch(dir_watch_handle);  // take ownership of handle here
+
+  // This weird handshake is necessary because fxl::UniqueFD != fbl::unique_fd.
+  fxl::UniqueFD dir_fd_alt(caller.release().release());
 
   return std::unique_ptr<DeviceWatcher>(
-      new DeviceWatcher(std::move(dir_fd), std::move(dir_watch),
+      new DeviceWatcher(std::move(dir_fd_alt), std::move(client),
                         std::move(exists_callback), std::move(idle_callback)));
 }
 
@@ -80,7 +82,7 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher,
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     uint32_t size;
-    uint8_t buf[VFS_WATCH_MSG_MAX];
+    uint8_t buf[fuchsia_io_MAX_BUF];
     zx_status_t status =
         dir_watch_.read(0, buf, sizeof(buf), &size, nullptr, 0, nullptr);
     FXL_CHECK(status == ZX_OK) << "Failed to read from directory watch channel";
@@ -93,10 +95,10 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher,
       if (size < (namelen + 2u)) {
         break;
       }
-      if ((event == VFS_WATCH_EVT_ADDED) || (event == VFS_WATCH_EVT_EXISTING)) {
+      if ((event == fuchsia_io_WATCH_EVENT_ADDED) || (event == fuchsia_io_WATCH_EVENT_EXISTING)) {
         exists_callback_(dir_fd_.get(),
                          std::string(reinterpret_cast<char*>(msg), namelen));
-      } else if (event == VFS_WATCH_EVT_IDLE) {
+      } else if (event == fuchsia_io_WATCH_EVENT_IDLE) {
         idle_callback_();
         // Only call the idle callback once.  In case there is some captured
         // context, remove the function, or rather set it to an empty function,
