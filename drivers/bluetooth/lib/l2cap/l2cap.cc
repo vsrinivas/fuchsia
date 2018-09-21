@@ -102,7 +102,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
                        async_dispatcher_t* dispatcher) override {
     PostMessage([this, psm, channel_callback = std::move(channel_callback),
                  dispatcher]() mutable {
-      if (!chanmgr_) {
+      if (chanmgr_) {
         const bool result = chanmgr_->RegisterService(
             psm, std::move(channel_callback), dispatcher);
 
@@ -119,7 +119,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
 
   void UnregisterService(PSM psm) override {
     PostMessage([this, psm] {
-      if (!chanmgr_) {
+      if (chanmgr_) {
         chanmgr_->UnregisterService(psm);
       }
     });
