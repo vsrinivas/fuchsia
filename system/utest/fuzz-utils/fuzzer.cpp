@@ -857,6 +857,9 @@ bool TestMerge() {
     // Fuchsia tests
     ASSERT_TRUE(test.InitFuchsia());
 
+    Path path;
+    size_t len;
+
     // Zircon minimizing merge in Fuchsia
     ASSERT_TRUE(test.Eval("merge zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
@@ -867,6 +870,11 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
+
+    path.Reset();
+    ASSERT_EQ(ZX_OK, path.Push(test.data_path()));
+    EXPECT_NE(ZX_OK, path.Push("corpus.prev"));
+    EXPECT_NE(ZX_OK, path.GetSize(".mergefile", &len));
 
     // Can't merge if no corpus
     ASSERT_TRUE(test.Eval("merge fuchsia1/target1"));
@@ -884,6 +892,11 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
 
+    path.Reset();
+    ASSERT_EQ(ZX_OK, path.Push(test.data_path()));
+    EXPECT_NE(ZX_OK, path.Push("corpus.prev"));
+    EXPECT_NE(ZX_OK, path.GetSize(".mergefile", &len));
+
     // Fuchsia merge of another corpus without an existing corpus
     ASSERT_TRUE(test.Eval("merge fuchsia1/target3 /path/to/another/corpus"));
     EXPECT_EQ(ZX_OK, test.Run());
@@ -895,6 +908,11 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
 
+    path.Reset();
+    ASSERT_EQ(ZX_OK, path.Push(test.data_path()));
+    EXPECT_NE(ZX_OK, path.Push("corpus.prev"));
+    EXPECT_NE(ZX_OK, path.GetSize(".mergefile", &len));
+
     // Fuchsia merge of another corpus with an existing corpus
     ASSERT_TRUE(test.Eval("merge fuchsia2/target4 /path/to/another/corpus"));
     EXPECT_EQ(ZX_OK, test.Run());
@@ -905,6 +923,11 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
     EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
+
+    path.Reset();
+    ASSERT_EQ(ZX_OK, path.Push(test.data_path()));
+    EXPECT_NE(ZX_OK, path.Push("corpus.prev"));
+    EXPECT_NE(ZX_OK, path.GetSize(".mergefile", &len));
 
     END_TEST;
 }

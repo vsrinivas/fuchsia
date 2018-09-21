@@ -782,14 +782,19 @@ zx_status_t Fuzzer::Repro() {
 zx_status_t Fuzzer::Merge() {
     zx_status_t rc;
 
-    // If no inputs, minimize the previous corpus (and there must be an existing corpus!)
-    if (inputs_.is_empty()) {
-        if ((rc = data_path_.Remove("corpus.prev")) != ZX_OK ||
-            (rc = data_path_.Rename("corpus", "corpus.prev")) != ZX_OK) {
+    // If no inputs and no merge in process, minimize the previous corpus (and there must be an
+    // existing corpus!)
+    size_t mergefile_len = 0;
+    data_path_.GetSize(".mergefile", &mergefile_len);
+
+    if (inputs_.is_empty() && mergefile_len == 0) {
+        if ((rc = data_path_.Rename("corpus", "corpus.prev")) != ZX_OK) {
             fprintf(err_, "Failed to move 'corpus' for minimization: %s\n",
                     zx_status_get_string(rc));
             return rc;
         }
+    }
+    if (inputs_.is_empty()) {
         inputs_.push_back(data_path_.Join("corpus.prev").c_str());
     }
 
@@ -803,6 +808,13 @@ zx_status_t Fuzzer::Merge() {
 
     if ((rc = Execute()) != ZX_OK) {
         fprintf(err_, "Failed to execute: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    // Merge complete; cleanup temporary files.
+    if ((rc = data_path_.Remove("corpus.prev")) != ZX_OK ||
+        (rc = data_path_.Remove(".mergefile")) != ZX_OK) {
+        fprintf(err_, "Failed to remove merge control files: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
