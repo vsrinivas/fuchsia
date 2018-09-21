@@ -46,6 +46,8 @@ private:
     bool PipeConfigEpilogue(const display_mode_t& mode,
                             registers::Pipe pipe, registers::Trans trans) final;
     bool ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) final;
+    // Hdmi doesn't need the clock rate when chaning the transcoder
+    uint32_t LoadClockRateForTranscoder(registers::Trans transcoder) final { return 0; }
 
     bool CheckPixelRate(uint64_t pixel_rate) final;
 

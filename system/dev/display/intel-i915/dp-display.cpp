@@ -4,6 +4,7 @@
 
 #include <ddk/driver.h>
 #include <endian.h>
+#include <math.h>
 #include <string.h>
 #include <zircon/assert.h>
 
@@ -1143,14 +1144,12 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode,
     // encoding, which usually encodes an 8-bit data byte).
     uint32_t link_symbol_rate = link_raw_bit_rate / 10;
 
-    uint32_t bits_per_pixel = 24; // kPixelFormat
-
     // Configure ratios between pixel clock/bit rate and symbol clock/bit rate
     uint32_t link_m;
     uint32_t link_n;
     CalculateRatio(pixel_clock_rate, link_symbol_rate, &link_m, &link_n);
 
-    uint32_t pixel_bit_rate = pixel_clock_rate * bits_per_pixel;
+    uint32_t pixel_bit_rate = pixel_clock_rate * kBitsPerPixel;
     uint32_t total_link_bit_rate = link_symbol_rate * 8 * dp_lane_count_;
     ZX_DEBUG_ASSERT(pixel_bit_rate <= total_link_bit_rate); // Should be caught by CheckPixelRate
 
@@ -1387,6 +1386,16 @@ bool DpDisplay::CheckPixelRate(uint64_t pixel_rate) {
     // Multiply by 8/10 because of 8b/10b encoding
     uint64_t max_pixel_rate = (bit_rate * 8 / 10) / kBitsPerPixel;
     return pixel_rate <= max_pixel_rate;
+}
+
+uint32_t DpDisplay::LoadClockRateForTranscoder(registers::Trans transcoder) {
+    registers::TranscoderRegs trans_regs(transcoder);
+    uint32_t data_m = trans_regs.DataM().ReadFrom(mmio_space()).data_m_value();
+    uint32_t data_n = trans_regs.DataN().ReadFrom(mmio_space()).data_n_value();
+
+    double total_link_bit_rate_10khz = dp_link_rate_mhz_ * 100. * (8. / 10.) * dp_lane_count_;
+    double res = (data_m * total_link_bit_rate_10khz) / (data_n * kBitsPerPixel);
+    return static_cast<uint32_t>(round(res));
 }
 
 } // namespace i915

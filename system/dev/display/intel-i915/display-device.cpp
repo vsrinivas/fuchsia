@@ -193,6 +193,7 @@ bool DisplayDevice::Resume() {
 
 void DisplayDevice::LoadActiveMode() {
     pipe_->LoadActiveMode(&info_);
+    info_.pixel_clock_10khz = LoadClockRateForTranscoder(pipe_->transcoder());
 }
 
 bool DisplayDevice::AttachPipe(Pipe* pipe) {

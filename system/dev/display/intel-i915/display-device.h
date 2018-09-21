@@ -80,6 +80,8 @@ protected:
     virtual bool DdiModeset(const display_mode_t& mode,
                             registers::Pipe pipe, registers::Trans trans) = 0;
     virtual bool ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) = 0;
+    // Load the clock rate from hardware if it's necessary when changing the transcoder.
+    virtual uint32_t LoadClockRateForTranscoder(registers::Trans transcoder) = 0;
 
     // Attaching a pipe to a display or configuring a pipe after display mode change has
     // 3 steps. The second step is generic pipe configuration, whereas PipeConfigPreamble
