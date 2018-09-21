@@ -43,8 +43,16 @@ void Client::SetConnected(bool connected) {
     connected_ = connected;
 }
 
-bool Client::UpdatePollState() {
+bool Client::UpdatePollState(bool usb_writable) {
     short updated_events = events_;
+    // We want to poll for the client readable signal if:
+    //  - The client has not yet registered a stream id, or,
+    //  - The xdc stream of the client's id is ready to be written to.
+    if (!stream_id() || (usb_writable && connected())) {
+        updated_events |= POLLIN;
+    } else {
+        updated_events &= ~(POLLIN);
+    }
     // We need to poll for the client writable signal if we have data to send to the client.
     if (completed_reads_.size() > 0) {
         updated_events |= POLLOUT;
@@ -91,11 +99,55 @@ void Client::ProcessCompletedReads(const std::unique_ptr<UsbHandler>& usb_handle
     }
 }
 
+zx_status_t Client::ProcessWrites(const std::unique_ptr<UsbHandler>& usb_handler) {
+    if (!connected()) {
+        return ZX_ERR_SHOULD_WAIT;
+    }
+    while (true) {
+        if (!pending_write_) {
+            pending_write_ = usb_handler->GetWriteTransfer();
+            if (!pending_write_) {
+                return ZX_ERR_SHOULD_WAIT;  // No transfers currently available.
+            }
+        }
+        // If there is no pending data to transfer, read more from the client.
+        if (!has_write_data()) {
+            // Read from the client into the usb transfer buffer. Leave space for the header.
+            unsigned char* buf = pending_write_->write_data_buffer();
+
+            int n = recv(fd(), buf, UsbHandler::Transfer::MAX_WRITE_DATA_SIZE, 0);
+            if (n == 0) {
+                return ZX_ERR_PEER_CLOSED;
+             } else if (n == EAGAIN) {
+                return ZX_ERR_SHOULD_WAIT;
+            } else if (n < 0) {
+                fprintf(stderr, "recv got unhandled err: %s\n", strerror(errno));
+                return ZX_ERR_IO;
+            }
+            pending_write_->FillHeader(stream_id(), n);
+        }
+        if (usb_handler->writable()) {
+            pending_write_ = usb_handler->QueueWriteTransfer(std::move(pending_write_));
+            if (pending_write_) {
+                // Usb handler was busy and returned the write.
+                return ZX_ERR_SHOULD_WAIT;
+            }
+        } else {
+            break;  // Usb handler is busy, need to wait for some writes to complete.
+        }
+    }
+    return ZX_ERR_SHOULD_WAIT;
+}
+
 void Client::ReturnTransfers(const std::unique_ptr<UsbHandler>& usb_handler) {
     for (auto& transfer : completed_reads_) {
         usb_handler->RequeueRead(std::move(transfer));
     }
     completed_reads_.clear();
+
+    if (pending_write_) {
+        usb_handler->ReturnWriteTransfer(std::move(pending_write_));
+    }
 }
 
 // static
@@ -150,7 +202,7 @@ bool XdcServer::Init() {
 void XdcServer::UpdateClientPollEvents() {
     for (auto iter : clients_) {
         std::shared_ptr<Client> client = iter.second;
-        bool changed = client->UpdatePollState();
+        bool changed = client->UpdatePollState(usb_handler_->writable());
         if (changed) {
             // We need to update the corresponding file descriptor in the poll_fds_ array
             // passed to poll.
@@ -248,15 +300,31 @@ void XdcServer::Run() {
                 }
 
                 std::shared_ptr<Client> client = iter->second;
+
                 // Received client disconnect signal.
-                bool delete_client = poll_fds_[i].revents & POLLHUP;
-                // The client sent us some data.
-                if (!delete_client && (poll_fds_[i].revents & POLLIN)) {
+                // Only remove the client if the corresponding xdc device stream is offline.
+                // Otherwise the client may still have data buffered to send to the usb handler,
+                // and we will wait until reading from the client returns zero (disconnect).
+                bool delete_client =
+                    (poll_fds_[i].revents & POLLHUP) && !client->connected();
+
+                // Check if the client had pending data to write, or signalled new data available.
+                bool do_write = client->has_write_data() && usb_handler_->writable() &&
+                                client->connected();
+                bool new_data_available = poll_fds_[i].revents & POLLIN;
+                if (!delete_client && (do_write || new_data_available)) {
                     if (!client->registered()) {
                         // Delete the client if registering the stream failed.
                         delete_client = !RegisterStream(client);
                     }
+                    if (!delete_client) {
+                        zx_status_t status = client->ProcessWrites(usb_handler_);
+                        if (status == ZX_ERR_PEER_CLOSED) {
+                            delete_client = true;
+                        }
+                    }
                 }
+
                 if (delete_client) {
                     client->ReturnTransfers(usb_handler_);
                     // Notify the host server that the stream is now offline.
@@ -269,12 +337,10 @@ void XdcServer::Run() {
                     clients_.erase(iter);
                     continue;
                 }
-                // TODO(jocelyndang): handle client writes.
                 client->ProcessCompletedReads(usb_handler_);
             }
             ++i;
         }
-
         UpdateClientPollEvents();
     }
 }
@@ -438,9 +504,13 @@ bool XdcServer::SendCtrlMsg(xdc_msg_t& msg) {
     }
     zx_status_t res = transfer->FillData(DEBUG_STREAM_ID_RESERVED,
                                          reinterpret_cast<unsigned char*>(&msg), sizeof(msg));
-    assert(res == ZX_OK); // Should not fail.
-    usb_handler_->QueueWriteTransfer(std::move(transfer));
-    return true;
+    assert(res == ZX_OK);  // Should not fail.
+    transfer = usb_handler_->QueueWriteTransfer(std::move(transfer));
+    bool queued = !transfer;
+    if (!queued) {
+        usb_handler_->ReturnWriteTransfer(std::move(transfer));
+    }
+    return queued;
 }
 
 void XdcServer::SendQueuedCtrlMsgs() {
