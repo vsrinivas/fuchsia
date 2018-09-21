@@ -308,6 +308,7 @@ public:
     uint16_t product_code() const { return base_edid_->product_code; }
     bool is_standard_rgb() const { return base_edid_->standard_srgb(); }
     bool supports_basic_audio() const;
+    const char* manufacturer_id() const { return manufacturer_id_; }
     const char* manufacturer_name() const { return manufacturer_name_; }
     const char* monitor_name() const { return monitor_name_; }
     const char* monitor_serial() const { return monitor_serial_; }
@@ -374,6 +375,7 @@ private:
     // be used, since this will be null if something else owns the edid bytes.
     fbl::unique_ptr<uint8_t[]> edid_bytes_;
 
+    char manufacturer_id_[sizeof(Descriptor::Monitor::data) + 1];
     char monitor_name_[sizeof(Descriptor::Monitor::data) + 1];
     char monitor_serial_[sizeof(Descriptor::Monitor::data) + 1];
     const char* manufacturer_name_ = nullptr;

@@ -163,6 +163,11 @@ bool Edid::Init(const uint8_t* bytes, uint16_t len, const char** err_msg) {
     uint8_t c2 = static_cast<uint8_t>((((base_edid_->manufacturer_id1 & 0x03) << 3)
             | (base_edid_->manufacturer_id2 & 0xe0) >> 5) + 'A' - 1);
     uint8_t c3  = static_cast<uint8_t>(((base_edid_->manufacturer_id2 & 0x1f)) + 'A' - 1);
+
+    manufacturer_id_[0] = c1;
+    manufacturer_id_[1] = c2;
+    manufacturer_id_[2] = c3;
+    manufacturer_id_[3] = '\0';
     manufacturer_name_ = lookup_eisa_vid(EISA_ID(c1, c2, c3));
 
     return true;

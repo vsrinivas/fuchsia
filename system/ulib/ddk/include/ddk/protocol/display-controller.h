@@ -102,9 +102,12 @@ typedef struct added_display_args {
 
     uint32_t audio_format_count;
 
-    const char* manufacturer_name;
-    char monitor_name[14]; // null-terminated
-    char monitor_serial[14]; // null-terminated
+    // All strings are null-terminated. |manufacturer_id| is guaranteed to have
+    // length 3, all other strings may be empty.
+    char manufacturer_id[4];
+    const char* manufacturer_name; // non-null
+    char monitor_name[14];
+    char monitor_serial[14];
 } added_display_args_t;
 
 // The client will not make any ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL calls into the device

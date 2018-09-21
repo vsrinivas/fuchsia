@@ -361,13 +361,16 @@ void Controller::OnDisplaysChanged(added_display_args_t* displays_added, uint32_
                     sizeof(edid::Descriptor::Monitor::data) + 1, "Possible overflow");
             static_assert(sizeof(display_params.monitor_name) ==
                     sizeof(edid::Descriptor::Monitor::data) + 1, "Possible overflow");
+            strcpy(display_params.manufacturer_id, info->edid.manufacturer_id());
             strcpy(display_params.monitor_name, info->edid.monitor_name());
             strcpy(display_params.monitor_serial, info->edid.monitor_serial());
             display_params.manufacturer_name = info->edid.manufacturer_name();
 
             if (zxlog_level_enabled_etc(DDK_LOG_TRACE)) {
+                const char* manufacturer = strlen(info->edid.manufacturer_name())
+                        ? info->edid.manufacturer_name() : info->edid.manufacturer_id();
                 zxlogf(TRACE, "Manufacturer \"%s\", product %d, name \"%s\", serial \"%s\"\n",
-                       info->edid.manufacturer_name(), info->edid.product_code(),
+                       manufacturer, info->edid.product_code(),
                        info->edid.monitor_name(), info->edid.monitor_serial());
                 info->edid.Print([](const char* str) {zxlogf(TRACE, "%s", str);});
             }
