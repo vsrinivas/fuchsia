@@ -30,6 +30,7 @@ class Bss : public fbl::RefCounted<Bss> {
    public:
     Bss(const common::MacAddr& bssid) : bssid_(bssid) {
         supported_rates_.reserve(SupportedRatesElement::kMaxLen);
+        bss_desc_.ssid.resize(0); // Make sure SSID is not marked as null
     }
 
     zx_status_t ProcessBeacon(const Beacon& beacon, size_t len, const wlan_rx_info_t* rx_info);
