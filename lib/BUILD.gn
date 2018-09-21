@@ -17,6 +17,7 @@ executable("peridot_lib_unittests") {
     "//peridot/lib/firebase_auth/testing:unittests",
     "//peridot/lib/ledger_client:unittests",
     "//peridot/lib/module_manifest:unittests",
+    "//peridot/lib/rng:unittests",
     "//peridot/lib/scoped_tmpfs:unittests",
     "//peridot/lib/socket:unittests",
     "//peridot/lib/user_shell_settings:unittests",
