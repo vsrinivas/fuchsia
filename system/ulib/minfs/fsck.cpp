@@ -26,6 +26,7 @@ public:
     zx_status_t Init(fbl::unique_ptr<Bcache> bc, const Superblock* info);
     void CheckReserved();
     zx_status_t CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot);
+    zx_status_t CheckUnlinkedInodes();
     zx_status_t CheckForUnusedBlocks() const;
     zx_status_t CheckForUnusedInodes() const;
     zx_status_t CheckLinkCounts() const;
@@ -467,6 +468,54 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
     return ZX_OK;
 }
 
+zx_status_t MinfsChecker::CheckUnlinkedInodes() {
+    ino_t last_ino = 0;
+    ino_t next_ino = fs_->Info().unlinked_head;
+    ino_t unlinked_count = 0;
+
+    while (next_ino != 0) {
+        unlinked_count++;
+
+        Inode inode;
+        zx_status_t status = GetInode(&inode, next_ino);
+        if (status != ZX_OK) {
+            FS_TRACE_ERROR("check: ino#%u: not readable\n", next_ino);
+            return status;
+        }
+
+        if (inode.link_count > 0) {
+            FS_TRACE_ERROR("check: ino#%u: should have 0 links\n", next_ino);
+            return ZX_ERR_BAD_STATE;
+        }
+
+        if (inode.last_inode != last_ino) {
+            FS_TRACE_ERROR("check: ino#%u: incorrect last unlinked inode\n", next_ino);
+            return ZX_ERR_BAD_STATE;
+        }
+
+        links_[next_ino - 1] = -1;
+
+        if ((status = CheckInode(next_ino, 0, 0)) != ZX_OK) {
+            FS_TRACE_ERROR("minfs_check: CheckInode failure: %d\n", status);
+            return status;
+        }
+
+        last_ino = next_ino;
+        next_ino = inode.next_inode;
+    }
+
+    if (fs_->Info().unlinked_tail != last_ino) {
+        FS_TRACE_ERROR("minfs_check: Incorrect unlinked tail\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
+    if (unlinked_count > 0) {
+        FS_TRACE_WARN("minfs_check: Warning: %u unlinked inodes found\n", unlinked_count);
+    }
+
+    return ZX_OK;
+}
+
 zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
     unsigned missing = 0;
 
@@ -598,6 +647,8 @@ zx_status_t Fsck(fbl::unique_ptr<Bcache> bc) {
 
     // Save an error if it occurs, but check for subsequent errors
     // anyway.
+    r = chk.CheckUnlinkedInodes();
+    status |= (status != ZX_OK) ? 0 : r;
     r = chk.CheckForUnusedBlocks();
     status |= (status != ZX_OK) ? 0 : r;
     r = chk.CheckForUnusedInodes();

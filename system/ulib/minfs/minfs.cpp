@@ -424,6 +424,114 @@ zx_status_t Minfs::InoFree(VnodeMinfs* vn, WritebackWork* wb) {
     return ZX_OK;
 }
 
+void Minfs::AddUnlinked(WritebackWork* wb, VnodeMinfs* vn) {
+    ZX_DEBUG_ASSERT(vn->inode_.link_count == 0);
+    ZX_DEBUG_ASSERT(vn->fd_count_ > 0);
+
+    Superblock* info = sb_->MutableInfo();
+
+    if (info->unlinked_tail == 0) {
+        // If no other vnodes are unlinked, |vn| is now both the head and the tail.
+        ZX_DEBUG_ASSERT(info->unlinked_head == 0);
+        info->unlinked_head = vn->ino_;
+        info->unlinked_tail = vn->ino_;
+    } else {
+        // Since all vnodes in the unlinked list are necessarily open, the last vnode
+        // must currently exist in the vnode lookup.
+        fbl::RefPtr<VnodeMinfs> last_vn = VnodeLookupInternal(info->unlinked_tail);
+        ZX_DEBUG_ASSERT(last_vn != nullptr);
+
+        // Add |vn| to the end of the unlinked list.
+        last_vn->inode_.next_inode = vn->ino_;
+        vn->inode_.last_inode = last_vn->ino_;
+        info->unlinked_tail = vn->ino_;
+
+        last_vn->InodeSync(wb, kMxFsSyncDefault);
+        vn->InodeSync(wb, kMxFsSyncDefault);
+    }
+
+    sb_->Write(wb);
+}
+
+void Minfs::RemoveUnlinked(WritebackWork* wb, VnodeMinfs* vn) {
+    if (vn->inode_.last_inode == 0) {
+        // If |vn| is the first unlinked inode, we just need to update the list head
+        // to the next inode (which may not exist).
+        ZX_DEBUG_ASSERT(Info().unlinked_head == vn->ino_);
+        sb_->MutableInfo()->unlinked_head = vn->inode_.next_inode;
+    } else {
+        // Set the previous vnode's next to |vn|'s next.
+        fbl::RefPtr<VnodeMinfs> last_vn = VnodeLookupInternal(vn->inode_.last_inode);
+        ZX_DEBUG_ASSERT(last_vn != nullptr);
+        last_vn->inode_.next_inode = vn->inode_.next_inode;
+        last_vn->InodeSync(wb, kMxFsSyncDefault);
+    }
+
+    if (vn->inode_.next_inode == 0) {
+        // If |vn| is the last unlinked inode, we just need to update the list tail
+        // to the previous inode (which may not exist).
+        ZX_DEBUG_ASSERT(Info().unlinked_tail == vn->ino_);
+        sb_->MutableInfo()->unlinked_tail = vn->inode_.last_inode;
+    } else {
+        // Set the next vnode's previous to |vn|'s previous.
+        fbl::RefPtr<VnodeMinfs> next_vn = VnodeLookupInternal(vn->inode_.next_inode);
+        ZX_DEBUG_ASSERT(next_vn != nullptr);
+        next_vn->inode_.last_inode = vn->inode_.last_inode;
+        next_vn->InodeSync(wb, kMxFsSyncDefault);
+    }
+}
+
+zx_status_t Minfs::PurgeUnlinked() {
+    if (sb_->Info().unlinked_head == 0) {
+        // No unlinked inodes exist, so we can return early.
+        ZX_DEBUG_ASSERT(sb_->Info().unlinked_tail == 0);
+        return ZX_OK;
+    }
+
+    ino_t last_ino = 0;
+    ino_t next_ino = Info().unlinked_head;
+    ino_t unlinked_count = 0;
+
+    fbl::unique_ptr<Transaction> state;
+    zx_status_t status = BeginTransaction(0, 0, &state);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Loop through the unlinked list and free all allocated resources.
+    while (next_ino != 0) {
+        unlinked_count++;
+
+        fbl::RefPtr<VnodeMinfs> vn;
+        if ((status = VnodeMinfs::Recreate(this, next_ino, &vn)) != ZX_OK) {
+            return ZX_ERR_NO_MEMORY;
+        }
+
+        ZX_DEBUG_ASSERT(vn->GetInode()->last_inode == last_ino);
+        ZX_DEBUG_ASSERT(vn->GetInode()->link_count == 0);
+
+        if ((status = InoFree(vn.get(), state->GetWork())) != ZX_OK) {
+            return status;
+        }
+
+        last_ino = next_ino;
+        next_ino = vn->GetInode()->next_inode;
+    }
+
+    ZX_DEBUG_ASSERT(sb_->Info().unlinked_tail == last_ino);
+
+    if (unlinked_count > 0) {
+        FS_TRACE_WARN("minfs: Found and purged %u unlinked vnode(s) on mount\n", unlinked_count);
+    }
+
+    sb_->MutableInfo()->unlinked_head = 0;
+    sb_->MutableInfo()->unlinked_tail = 0;
+    sb_->Write(state->GetWork());
+
+    CommitTransaction(fbl::move(state));
+    return ZX_OK;
+}
+
 #ifdef __Fuchsia__
 zx_status_t Minfs::CreateFsId(uint64_t* out) {
     zx::event event;
@@ -441,6 +549,35 @@ zx_status_t Minfs::CreateFsId(uint64_t* out) {
     return ZX_OK;
 }
 #endif
+
+fbl::RefPtr<VnodeMinfs> Minfs::VnodeLookupInternal(uint32_t ino) {
+#ifdef __Fuchsia__
+    fbl::RefPtr<VnodeMinfs> vn;
+    {
+        // Avoid releasing a reference to |vn| while holding |hash_lock_|.
+        fbl::AutoLock lock(&hash_lock_);
+        auto rawVn = vnode_hash_.find(ino);
+        if (!rawVn.IsValid()) {
+            // Nothing exists in the lookup table
+            return nullptr;
+        }
+        vn = fbl::internal::MakeRefPtrUpgradeFromRaw(rawVn.CopyPointer(), hash_lock_);
+        if (vn == nullptr) {
+            // The vn 'exists' in the map, but it is being deleted.
+            // Remove it (by key) so the next person doesn't trip on it,
+            // and so we can insert another node with the same key into the hash
+            // map.
+            // Notably, VnodeRelease erases the vnode by object, not key,
+            // so it will not attempt to replace any distinct Vnodes that happen
+            // to be re-using the same inode.
+            vnode_hash_.erase(ino);
+        }
+    }
+    return vn;
+#else
+    return fbl::WrapRefPtr(vnode_hash_.find(ino).CopyPointer());
+#endif
+}
 
 void Minfs::InoNew(Transaction* state, const Inode* inode, ino_t* out_ino) {
     size_t allocated_ino = state->AllocateInode();
@@ -479,35 +616,13 @@ void Minfs::VnodeInsert(VnodeMinfs* vn) {
 }
 
 fbl::RefPtr<VnodeMinfs> Minfs::VnodeLookup(uint32_t ino) {
+    fbl::RefPtr<VnodeMinfs> vn = VnodeLookupInternal(ino);
 #ifdef __Fuchsia__
-    fbl::RefPtr<VnodeMinfs> vn;
-    {
-        // Avoid releasing a reference to |vn| while holding |hash_lock_|.
-        fbl::AutoLock lock(&hash_lock_);
-        auto rawVn = vnode_hash_.find(ino);
-        if (!rawVn.IsValid()) {
-            // Nothing exists in the lookup table
-            return nullptr;
-        }
-        vn = fbl::internal::MakeRefPtrUpgradeFromRaw(rawVn.CopyPointer(), hash_lock_);
-        if (vn == nullptr) {
-            // The vn 'exists' in the map, but it is being deleted.
-            // Remove it (by key) so the next person doesn't trip on it,
-            // and so we can insert another node with the same key into the hash
-            // map.
-            // Notably, VnodeRelease erases the vnode by object, not key,
-            // so it will not attempt to replace any distinct Vnodes that happen
-            // to be re-using the same inode.
-            vnode_hash_.erase(ino);
-        }
-    }
     if (vn != nullptr && vn->IsUnlinked()) {
         vn = nullptr;
     }
-    return vn;
-#else
-    return fbl::WrapRefPtr(vnode_hash_.find(ino).CopyPointer());
 #endif
+    return vn;
 }
 
 void Minfs::VnodeRelease(VnodeMinfs* vn) {
@@ -673,6 +788,10 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
         fbl::unique_ptr<Minfs>(new Minfs(fbl::move(bc), fbl::move(sb), fbl::move(block_allocator),
                                          fbl::move(inodes), fbl::move(offsets)));
 #endif
+
+    if ((status = fs->PurgeUnlinked()) != ZX_OK) {
+        return status;
+    }
 
     *out = fbl::move(fs);
     return ZX_OK;

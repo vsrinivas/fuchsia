@@ -33,7 +33,7 @@ typedef uint32_t ino_t;
 
 constexpr uint64_t kMinfsMagic0         = (0x002153466e694d21ULL);
 constexpr uint64_t kMinfsMagic1         = (0x385000d3d3d3d304ULL);
-constexpr uint32_t kMinfsVersion        = 0x00000005;
+constexpr uint32_t kMinfsVersion        = 0x00000006;
 
 constexpr ino_t    kMinfsRootIno        = 1;
 constexpr uint32_t kMinfsFlagClean      = 0x00000001; // Currently unused
@@ -101,8 +101,13 @@ struct Superblock {
     uint32_t abm_slices;    // Slices allocated to block bitmap
     uint32_t ino_slices;    // Slices allocated to inode table
     uint32_t dat_slices;    // Slices allocated to file data section
+
+    ino_t unlinked_head;    // Index to the first unlinked (but open) inode.
+    ino_t unlinked_tail;    // Index to the last unlinked (but open) inode.
 };
 
+static_assert(sizeof(Superblock) <= kMinfsBlockSize,
+              "minfs info size is wrong");
 // Notes:
 // - the ibm, abm, ino, and dat regions must be in that order
 //   and may not overlap
@@ -127,7 +132,9 @@ struct Inode {
     uint32_t seq_num;               // bumped when modified
     uint32_t gen_num;               // bumped when deleted
     uint32_t dirent_count;          // for directories
-    uint32_t rsvd[5];
+    ino_t last_inode;               // index to the previous unlinked inode
+    ino_t next_inode;               // index to the next unlinked inode
+    uint32_t rsvd[3];
     blk_t dnum[kMinfsDirect];    // direct blocks
     blk_t inum[kMinfsIndirect];  // indirect blocks
     blk_t dinum[kMinfsDoublyIndirect]; // doubly indirect blocks

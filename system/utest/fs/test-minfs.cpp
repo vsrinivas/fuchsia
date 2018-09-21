@@ -13,6 +13,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
+#include <fs-management/ramdisk.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <fvm/fvm.h>
@@ -420,9 +421,87 @@ bool TestFullOperations() {
     truncate_size = s.st_size - minfs::kMinfsBlockSize;
     ASSERT_EQ(ftruncate(big_fd.get(), truncate_size), 0);
     ASSERT_TRUE(check_remount());
+
+    mnt_fd.reset(open(kMountPath, O_RDONLY));
+    ASSERT_EQ(unlinkat(mnt_fd.get(), big_path, 0), 0);
+    ASSERT_EQ(unlinkat(mnt_fd.get(), med_path, 0), 0);
+    ASSERT_EQ(unlinkat(mnt_fd.get(), sml_path, 0), 0);
     END_TEST;
 }
 
+bool TestUnlinkFail(void) {
+    BEGIN_TEST;
+
+    if (use_real_disk) {
+        fprintf(stderr, "Ramdisk required; skipping test\n");
+        return true;
+    }
+
+    uint32_t original_blocks;
+    ASSERT_TRUE(GetUsedBlocks(&original_blocks));
+
+    uint32_t fd_count = 100;
+    fbl::unique_fd fds[fd_count];
+
+    char data[minfs::kMinfsBlockSize];
+    memset(data, 0xaa, sizeof(data));
+    const char* filename = "::file";
+
+    // Open, write to, and unlink |fd_count| total files without closing them.
+    for (unsigned i = 0; i < fd_count; i++) {
+        // Since we are unlinking, we can use the same filename for all files.
+        fds[i].reset(open(filename, O_CREAT | O_RDWR | O_EXCL));
+        ASSERT_TRUE(fds[i]);
+        ASSERT_EQ(write(fds[i].get(), data, sizeof(data)), sizeof(data));
+        ASSERT_EQ(unlink(filename), 0);
+    }
+
+    // Close the first, middle, and last files to test behavior when various "links" are removed.
+    uint32_t first_fd = 0;
+    uint32_t mid_fd = fd_count / 2;
+    uint32_t last_fd = fd_count - 1;
+    ASSERT_EQ(close(fds[first_fd].release()), 0);
+    ASSERT_EQ(close(fds[mid_fd].release()), 0);
+    ASSERT_EQ(close(fds[last_fd].release()), 0);
+
+    // Sync Minfs to ensure all unlink operations complete.
+    fbl::unique_fd fd(open(filename, O_CREAT));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(syncfs(fd.get()), 0);
+
+    // Check that the number of Minfs free blocks has decreased.
+    uint32_t current_blocks;
+    ASSERT_TRUE(GetUsedBlocks(&current_blocks));
+    ASSERT_LT(current_blocks, original_blocks);
+
+    // Put the ramdisk to sleep and close all the fds. This will cause file purge to fail,
+    // and all unlinked files will be left intact (on disk).
+    ASSERT_EQ(sleep_ramdisk(ramdisk_path, 0), 0);
+
+    for (unsigned i = first_fd + 1; i < last_fd; i++) {
+        if (i != mid_fd) {
+            ASSERT_EQ(close(fds[i].release()), 0);
+        }
+    }
+
+    // Sync Minfs to ensure all close operations complete.
+    ASSERT_EQ(syncfs(fd.get()), 0);
+
+    // Writeback should have failed.
+    // However, the in-memory state has been updated correctly.
+    ASSERT_TRUE(GetUsedBlocks(&current_blocks));
+    ASSERT_EQ(current_blocks, original_blocks);
+
+    // Remount Minfs, which should cause leftover unlinked files to be removed.
+    ASSERT_EQ(wake_ramdisk(ramdisk_path), 0);
+    ASSERT_TRUE(check_remount());
+
+    // Check that the block count has been reverted to the value before any files were added.
+    ASSERT_TRUE(GetUsedBlocks(&current_blocks));
+    ASSERT_EQ(current_blocks, original_blocks);
+
+    END_TEST;
+}
 }  // namespace
 
 #define RUN_MINFS_TESTS_NORMAL(name, CASE_TESTS) \
@@ -433,9 +512,11 @@ bool TestFullOperations() {
 
 RUN_MINFS_TESTS_NORMAL(FsMinfsTests,
     RUN_TEST_LARGE(TestFullOperations)
+    RUN_TEST_MEDIUM(TestUnlinkFail)
 )
 
 RUN_MINFS_TESTS_FVM(FsMinfsFvmTests,
     RUN_TEST_MEDIUM(TestQueryInfo)
     RUN_TEST_MEDIUM(TestMetrics)
+    RUN_TEST_MEDIUM(TestUnlinkFail)
 )

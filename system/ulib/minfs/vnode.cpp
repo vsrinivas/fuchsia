@@ -862,8 +862,12 @@ void VnodeMinfs::RemoveInodeLink(WritebackWork* wb) {
         }
     }
 
-    if (fd_count_ == 0 && IsUnlinked()) {
-        Purge(wb);
+    if (IsUnlinked()) {
+        if (fd_count_ == 0) {
+            Purge(wb);
+        } else {
+            fs_->AddUnlinked(wb, this);
+        }
     }
 
     InodeSync(wb, kMxFsSyncMtime);
@@ -1185,7 +1189,8 @@ zx_status_t VnodeMinfs::Close() {
 
     if (fd_count_ == 0 && IsUnlinked()) {
         fbl::unique_ptr<Transaction> state;
-        fs_->BeginTransaction(0, 0, &state);
+        ZX_ASSERT(fs_->BeginTransaction(0, 0, &state) == ZX_OK);
+        fs_->RemoveUnlinked(state->GetWork(), this);
         Purge(state->GetWork());
         fs_->CommitTransaction(fbl::move(state));
     }

@@ -157,6 +157,15 @@ public:
     // Free ino in inode bitmap, release all blocks held by inode.
     zx_status_t InoFree(VnodeMinfs* vn, WritebackWork* wb);
 
+    // Mark |vn| to be unlinked.
+    void AddUnlinked(WritebackWork* wb, VnodeMinfs* vn);
+
+    // Remove |vn| from the list of unlinked vnodes.
+    void RemoveUnlinked(WritebackWork* wb, VnodeMinfs* vn);
+
+    // Free resources of all vnodes marked unlinked.
+    zx_status_t PurgeUnlinked();
+
     // Writes back an inode into the inode table on persistent storage.
     // Does not modify inode bitmap.
     void InodeUpdate(WriteTxn* txn, ino_t ino, const Inode* inode) {
@@ -265,6 +274,9 @@ private:
           fbl::unique_ptr<InodeManager> inodes, BlockOffsets offsets);
 #endif
 
+    // Internal version of VnodeLookup which may also return unlinked vnodes.
+    fbl::RefPtr<VnodeMinfs> VnodeLookupInternal(uint32_t ino) FS_TA_EXCLUDES(hash_lock_);
+
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
     void InoNew(Transaction* state, const Inode* inode, ino_t* out_ino);
 
@@ -372,6 +384,8 @@ private:
     // Fsck can introspect Minfs
     friend class MinfsChecker;
     friend zx_status_t Minfs::InoFree(VnodeMinfs* vn, WritebackWork* wb);
+    friend void Minfs::AddUnlinked(WritebackWork* wb, VnodeMinfs* vn);
+    friend void Minfs::RemoveUnlinked(WritebackWork* wb, VnodeMinfs* vn);
 
     VnodeMinfs(Minfs* fs);
 
