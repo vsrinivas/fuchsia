@@ -128,14 +128,16 @@ zx_status_t DWMacDevice::InitPdev() {
     }
 
     // Map mac control registers and dma control registers.
-    status = pdev_map_mmio_buffer(&pdev_, kEthMacMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &dwmac_regs_iobuff_);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev_, kEthMacMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dwmac: could not map dwmac mmio: %d\n", status);
         return status;
     }
 
-    dwmac_regs_ = static_cast<dw_mac_regs_t*>(io_buffer_virt(&dwmac_regs_iobuff_));
+    dwmac_regs_iobuff_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+    dwmac_regs_ = static_cast<dw_mac_regs_t*>(dwmac_regs_iobuff_->get());
     dwdma_regs_ = offset_ptr<dw_dma_regs_t>(dwmac_regs_, DW_DMA_BASE_OFFSET);
 
     // Map dma interrupt.
@@ -402,7 +404,6 @@ DWMacDevice::DWMacDevice(zx_device_t* device)
 }
 
 void DWMacDevice::ReleaseBuffers() {
-    io_buffer_release(&dwmac_regs_iobuff_);
     //Unpin the memory used for the dma buffers
     if (txn_buffer_->UnPin() != ZX_OK) {
         zxlogf(ERROR, "dwmac: Error unpinning transaction buffers\n");

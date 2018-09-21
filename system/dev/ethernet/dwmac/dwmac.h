@@ -5,7 +5,6 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
@@ -13,6 +12,7 @@
 #include <ddk/protocol/ethernet_mac.h>
 #include <ddk/protocol/test.h>
 #include <ddktl/device.h>
+#include <ddktl/mmio.h>
 #include <ddktl/protocol/ethernet.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
@@ -153,7 +153,7 @@ private:
     platform_device_protocol_t pdev_;
     eth_board_protocol_t eth_board_;
 
-    io_buffer_t dwmac_regs_iobuff_;
+    fbl::unique_ptr<ddk::MmioBuffer> dwmac_regs_iobuff_;
 
     dw_mac_regs_t* dwmac_regs_ = nullptr;
     dw_dma_regs_t* dwdma_regs_ = nullptr;
