@@ -93,6 +93,11 @@
              remote="https://fuchsia.googlesource.com/third_party/flite"
              gerrithost="https://fuchsia-review.googlesource.com"
              revision="3fb3d1f9813a7d71641d3aa5d0a055abbb2b2ada"/>
+    <project name="third_party/freetype2"
+             path="third_party/freetype2"
+             remote="https://fuchsia.googlesource.com/third_party/freetype2"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="38d69ce0df2fbae1321a951e896a5c69304e8fb8"/>
     <project name="third_party/gflags"
              path="third_party/gflags"
              remote="https://fuchsia.googlesource.com/third_party/gflags"
@@ -203,6 +208,11 @@
              remote="https://fuchsia.googlesource.com/third_party/jinja2"
              gerrithost="https://fuchsia-review.googlesource.com"
              revision="ce94d60376c2ef59799915a44829311b2114d6c4"/>
+    <project name="third_party/libpng"
+             path="third_party/libpng"
+             remote="https://fuchsia.googlesource.com/third_party/libpng"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="e966646480f7cafc2905a2c78a299c3bfa1de4eb"/>
     <project name="third_party/markupsafe"
              path="third_party/markupsafe"
              remote="https://fuchsia.googlesource.com/third_party/markupsafe"
