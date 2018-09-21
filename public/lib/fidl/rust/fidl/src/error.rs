@@ -16,6 +16,13 @@ pub type Result<T> = result::Result<T, Error>;
 /// The error type used by FIDL operations.
 #[derive(Fail, Debug)]
 pub enum Error {
+    /// Unexpected response to synchronous FIDL query.
+    ///
+    /// This will occur if an event or a response with an unexpected transaction
+    /// ID is received when using the synchronous FIDL bindings.
+    #[fail(display = "Unexpected response to synchronous FIDL query.")]
+    UnexpectedSyncResponse,
+
     /// Invalid header for a FIDL buffer.
     #[fail(display = "Invalid header for a FIDL buffer.")]
     InvalidHeader,

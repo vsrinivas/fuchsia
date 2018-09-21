@@ -4,6 +4,7 @@
 
 //! An implementation of a client for a fidl interface.
 
+#[allow(unused_imports)] // for AsHandleRef (see https://github.com/rust-lang/rust/issues/53682)
 use {
     crate::{
         encoding::{
@@ -21,7 +22,7 @@ use {
         self as fasync,
         temp::{TempFutureExt, Either},
     },
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
         future::{self, Future, Ready, AndThen, TryFutureExt},
         ready,
@@ -504,28 +505,163 @@ impl ClientInner {
     }
 }
 
+pub mod sync {
+    //! Synchronous FIDL Client
+    use super::*;
+
+    /// A synchronous client for making FIDL calls.
+    pub struct Client {
+        // Underlying channel
+        channel: zx::Channel,
+
+        // Reusable buffer for r/w
+        buf: zx::MessageBuf,
+    }
+
+    // TODO: remove this and allow multiple overlapping queries on the same channel.
+    pub(super) const QUERY_TX_ID: u32 = 42;
+
+    impl Client {
+        /// Create a new synchronous FIDL client.
+        pub fn new(channel: zx::Channel) -> Self {
+            Client { channel, buf: zx::MessageBuf::new() }
+        }
+
+        /// Send a new message.
+        pub fn send<E: Encodable>(&mut self, msg: &mut E, ordinal: u32) -> Result<(), Error> {
+            self.buf.clear();
+            let (buf, handles) = self.buf.split_mut();
+            let msg = &mut TransactionMessage {
+                header: TransactionHeader {
+                    tx_id: 0,
+                    flags: 0,
+                    ordinal,
+                },
+                body: msg,
+            };
+            Encoder::encode(buf, handles, msg)?;
+            self.channel.write(buf, handles).map_err(Error::ClientWrite)?;
+            Ok(())
+        }
+
+        /// Send a new message expecting a response.
+        pub fn send_query<E: Encodable, D: Decodable>(
+            &mut self,
+            msg: &mut E,
+            ordinal: u32,
+            deadline: zx::Time,
+        ) -> Result<D, Error> {
+            // Write the message into the channel
+            self.buf.clear();
+            let (buf, handles) = self.buf.split_mut();
+            let msg = &mut TransactionMessage {
+                header: TransactionHeader {
+                    tx_id: QUERY_TX_ID,
+                    flags: 0,
+                    ordinal,
+                },
+                body: msg,
+            };
+            Encoder::encode(buf, handles, msg)?;
+            self.channel.write(buf, handles).map_err(Error::ClientWrite)?;
+
+            // Read the response
+            self.buf.clear();
+            match self.channel.read(&mut self.buf) {
+                Ok(()) => {},
+                Err(zx::Status::SHOULD_WAIT) => {
+                    let signals = self.channel.wait_handle(
+                        zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED,
+                        deadline,
+                    ).map_err(Error::ClientRead)?;
+                    if !signals.contains(zx::Signals::CHANNEL_READABLE) {
+                        debug_assert!(signals.contains(zx::Signals::CHANNEL_PEER_CLOSED));
+                        return Err(Error::ClientRead(zx::Status::PEER_CLOSED));
+                    }
+                    self.channel.read(&mut self.buf).map_err(Error::ClientRead)?;
+                },
+                Err(e) => return Err(Error::ClientRead(e)),
+            }
+            let (buf, handles) = self.buf.split_mut();
+            let (header, body_bytes) = decode_transaction_header(buf)?;
+            if header.tx_id != QUERY_TX_ID || header.ordinal != ordinal {
+                return Err(Error::UnexpectedSyncResponse);
+            }
+            let mut output = D::new_empty();
+            Decoder::decode_into(body_bytes, handles, &mut output)?;
+            Ok(output)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use {
+        failure::{Error, ResultExt},
         futures::{FutureExt, StreamExt},
         fuchsia_async::TimeoutExt,
         fuchsia_zircon::DurationNum,
-        std::io,
+        std::{io, thread},
     };
+
+    const SEND_EXPECTED: &[u8] = &[
+        0, 0, 0, 0, 0, 0, 0, 0, // 32 bit tx_id followed by 32 bits of padding
+        0, 0, 0, 0, // 32 bits for flags
+        SEND_ORDINAL_HIGH_BYTE, 0, 0, 0, // 32 bit ordinal
+        SEND_DATA, // 8 bit data
+        0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
+    ];
+    const SEND_ORDINAL_HIGH_BYTE: u8 = 42;
+    const SEND_ORDINAL: u32 = 42;
+    const SEND_DATA: u8 = 55;
+
+    #[test]
+    fn sync_client() -> Result<(), Error> {
+        let (client_end, server_end) = zx::Channel::create().context("chan create")?;
+        let mut client = sync::Client::new(client_end);
+        client.send(&mut SEND_DATA, SEND_ORDINAL).context("sending")?;
+        let mut received = zx::MessageBuf::new();
+        server_end.read(&mut received).context("reading")?;
+        assert_eq!(SEND_EXPECTED, received.bytes());
+        Ok(())
+    }
+
+    #[test]
+    fn sync_client_with_response() -> Result<(), Error> {
+        let (client_end, server_end) = zx::Channel::create().context("chan create")?;
+        let mut client = sync::Client::new(client_end);
+        thread::spawn(move || {
+            // Server
+            let mut received = zx::MessageBuf::new();
+            server_end.wait_handle(zx::Signals::CHANNEL_READABLE, 5.seconds().after_now())
+                .expect("failed to wait for channel readable");
+            server_end.read(&mut received).expect("failed to read on server end");
+            let (buf, handles) = received.split_mut();
+            let (header, _body_bytes) = decode_transaction_header(buf).expect("server decode");
+            assert_eq!(header.tx_id, sync::QUERY_TX_ID);
+            assert_eq!(header.ordinal, SEND_ORDINAL);
+            let response = &mut TransactionMessage {
+                header: TransactionHeader {
+                    tx_id: header.tx_id,
+                    flags: 0,
+                    ordinal: header.ordinal,
+                },
+                body: &mut SEND_DATA,
+            };
+            Encoder::encode(buf, handles, response).expect("Encoding failure");
+            server_end.write(buf, handles).expect("Server channel write failed");
+        });
+        let response_data = client.send_query::<u8, u8>(
+            &mut SEND_DATA, SEND_ORDINAL, 5.seconds().after_now(),
+        ).context("sending query")?;
+        assert_eq!(SEND_DATA, response_data);
+        Ok(())
+    }
 
     #[test]
     fn client() {
-        const EXPECTED: &[u8] = &[
-            0, 0, 0, 0, 0, 0, 0, 0, // 32 bit tx_id followed by 32 bits of padding
-            0, 0, 0, 0, // 32 bits for flags
-            42, 0, 0, 0, // 32 bit ordinal
-            55, // 8 bit data
-            0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
-        ];
-
         let mut executor = fasync::Executor::new().unwrap();
-
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);
@@ -534,7 +670,7 @@ mod tests {
         let receiver = async move {
             let mut buffer = zx::MessageBuf::new();
             await!(server.recv_msg(&mut buffer)).expect("failed to recv msg");
-            assert_eq!(EXPECTED, buffer.bytes());
+            assert_eq!(SEND_EXPECTED, buffer.bytes());
         };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
@@ -543,7 +679,7 @@ mod tests {
             || panic!("did not receive message in time!"));
 
         let sender = fasync::Timer::new(100.millis().after_now()).map(|()|{
-            client.send(&mut 55u8, 42).expect("failed to send msg");
+            client.send(&mut SEND_DATA, SEND_ORDINAL).expect("failed to send msg");
         });
 
         executor.run_singlethreaded(receiver.join(sender));
