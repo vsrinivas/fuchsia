@@ -185,16 +185,15 @@ void ath10k_htt_rx_free(struct ath10k_htt* htt) {
     free(htt->rx_ring.netbufs_ring);
 }
 
-#if 0   // NEEDS PORTING
-static inline struct sk_buff* ath10k_htt_rx_netbuf_pop(struct ath10k_htt* htt) {
+static inline struct ath10k_msg_buf* ath10k_htt_rx_netbuf_pop(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
     int idx;
-    struct sk_buff* msdu;
+    struct ath10k_msg_buf* msdu;
 
     ASSERT_MTX_HELD(&htt->rx_ring.lock);
 
     if (htt->rx_ring.fill_cnt == 0) {
-        ath10k_warn("tried to pop sk_buff from an empty rx ring\n");
+        ath10k_warn("tried to pop msg_buf from an empty rx ring\n");
         return NULL;
     }
 
@@ -208,44 +207,44 @@ static inline struct sk_buff* ath10k_htt_rx_netbuf_pop(struct ath10k_htt* htt) {
     htt->rx_ring.sw_rd_idx.msdu_payld = idx;
     htt->rx_ring.fill_cnt--;
 
-    dma_unmap_single(htt->ar->dev,
-                     ATH10K_SKB_RXCB(msdu)->paddr,
-                     msdu->len + skb_tailroom(msdu),
-                     DMA_FROM_DEVICE);
     ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt rx netbuf pop: ",
-                    msdu->data, msdu->len + skb_tailroom(msdu));
+                    msdu->vaddr, msdu->capacity);
 
     return msdu;
 }
 
-/* return: < 0 fatal error, 0 - non chained msdu, 1 chained msdu */
-static int ath10k_htt_rx_amsdu_pop(struct ath10k_htt* htt,
-                                   struct sk_buff_head* amsdu) {
-    struct ath10k* ar = htt->ar;
-    int msdu_len, msdu_chaining = 0;
-    struct sk_buff* msdu;
-    struct htt_rx_desc* rx_desc;
+static zx_status_t ath10k_htt_rx_amsdu_pop_chained(struct ath10k_htt* htt,
+                                                   struct ath10k_msg_buf* msdu_head,
+                                                   size_t chained_len,
+                                                   list_node_t* amsdu) {
+    struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu_head, ATH10K_MSG_TYPE_HTT_RX);
+    int num_chained = rx_desc->frag_info.ring2_more_count;
 
+    while (num_chained--) {
+        struct ath10k_msg_buf* chained_part = ath10k_htt_rx_netbuf_pop(htt);
+        if (!chained_part) {
+            return ZX_ERR_NOT_FOUND;
+        }
+
+        size_t part_len = MIN(chained_len, HTT_RX_BUF_SIZE);
+        chained_part->used = part_len;
+        chained_len -= part_len;
+        list_add_tail(amsdu, &chained_part->listnode);
+    }
+    return ZX_OK;
+}
+
+static zx_status_t ath10k_htt_rx_amsdu_pop(struct ath10k_htt* htt, list_node_t* amsdu) {
     ASSERT_MTX_HELD(&htt->rx_ring.lock);
 
     for (;;) {
-        int last_msdu, msdu_len_invalid, msdu_chained;
-
-        msdu = ath10k_htt_rx_netbuf_pop(htt);
+        struct ath10k_msg_buf* msdu = ath10k_htt_rx_netbuf_pop(htt);
         if (!msdu) {
-            __skb_queue_purge(amsdu);
-            return -ENOENT;
+            return ZX_ERR_NOT_FOUND;
         }
 
-        __skb_queue_tail(amsdu, msdu);
-
-        rx_desc = (struct htt_rx_desc*)msdu->data;
-
-        /* FIXME: we must report msdu payload since this is what caller
-         * expects now
-         */
-        skb_put(msdu, offsetof(struct htt_rx_desc, msdu_payload));
-        skb_pull(msdu, offsetof(struct htt_rx_desc, msdu_payload));
+        msdu->type = ATH10K_MSG_TYPE_HTT_RX;
+        struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
 
         /*
          * Sanity check - confirm the HW is finished filling in the
@@ -255,55 +254,33 @@ static int ath10k_htt_rx_amsdu_pop(struct ath10k_htt* htt,
          * To prevent the case that we handle a stale Rx descriptor,
          * just assert for now until we have a way to recover.
          */
-        if (!(rx_desc->attention.flags
-                & RX_ATTENTION_FLAGS_MSDU_DONE)) {
-            __skb_queue_purge(amsdu);
-            return -EIO;
+        if (!(rx_desc->attention.flags & RX_ATTENTION_FLAGS_MSDU_DONE)) {
+            return ZX_ERR_IO;
         }
 
-        msdu_len_invalid = !!(rx_desc->attention.flags
-                              & (RX_ATTENTION_FLAGS_MPDU_LENGTH_ERR |
-                                 RX_ATTENTION_FLAGS_MSDU_LENGTH_ERR));
-        msdu_len = MS(rx_desc->msdu_start.common.info0,
-                      RX_MSDU_START_INFO0_MSDU_LENGTH);
-        msdu_chained = rx_desc->frag_info.ring2_more_count;
+        bool msdu_len_invalid = rx_desc->attention.flags
+                  & (RX_ATTENTION_FLAGS_MPDU_LENGTH_ERR | RX_ATTENTION_FLAGS_MSDU_LENGTH_ERR);
+        int msdu_len = MS(rx_desc->msdu_start.common.info0, RX_MSDU_START_INFO0_MSDU_LENGTH);
+        bool last_msdu = rx_desc->msdu_end.common.info0 & RX_MSDU_END_INFO0_LAST_MSDU;
 
         if (msdu_len_invalid) {
             msdu_len = 0;
         }
 
-        skb_trim(msdu, 0);
-        skb_put(msdu, MIN(msdu_len, HTT_RX_MSDU_SIZE));
-        msdu_len -= msdu->len;
+        size_t first_part_len = MIN(msdu_len, HTT_RX_MSDU_SIZE);
+        msdu->used = sizeof(struct htt_rx_desc) + first_part_len;
+        ZX_DEBUG_ASSERT(msdu->used <= msdu->capacity);
+        list_add_tail(amsdu, &msdu->listnode);
 
-        /* Note: Chained buffers do not contain rx descriptor */
-        while (msdu_chained--) {
-            msdu = ath10k_htt_rx_netbuf_pop(htt);
-            if (!msdu) {
-                __skb_queue_purge(amsdu);
-                return -ENOENT;
-            }
-
-            __skb_queue_tail(amsdu, msdu);
-            skb_trim(msdu, 0);
-            skb_put(msdu, MIN(msdu_len, HTT_RX_BUF_SIZE));
-            msdu_len -= msdu->len;
-            msdu_chaining = 1;
+        zx_status_t status = ath10k_htt_rx_amsdu_pop_chained(
+                htt, msdu, msdu_len - first_part_len, amsdu);
+        if (status != ZX_OK) {
+            return status;
         }
-
-        last_msdu = rx_desc->msdu_end.common.info0 &
-                    RX_MSDU_END_INFO0_LAST_MSDU;
-
-        trace_ath10k_htt_rx_desc(ar, &rx_desc->attention,
-                                 sizeof(*rx_desc) - sizeof(uint32_t));
 
         if (last_msdu) {
             break;
         }
-    }
-
-    if (skb_queue_empty(amsdu)) {
-        msdu_chaining = -1;
     }
 
     /*
@@ -318,10 +295,8 @@ static int ath10k_htt_rx_amsdu_pop(struct ath10k_htt* htt,
      * SW to tell us when it is done pulling all the PPDU's rx buffers
      * out of the rx ring, and then refill it just once.
      */
-
-    return msdu_chaining;
+    return ZX_OK;
 }
-#endif  // NEEDS PORTING
 
 static struct ath10k_msg_buf* ath10k_htt_rx_pop_paddr(struct ath10k_htt* htt, uint32_t paddr) {
     struct ath10k* ar = htt->ar;
@@ -455,8 +430,6 @@ zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
     for (unsigned ndx = 0; ndx < HTT_RX_BUF_HTABLE_SZ; ndx++) {
         list_initialize(&htt->rx_ring.buf_hash[ndx]);
     }
-
-    atomic_store(&htt->num_mpdus_ready, 0);
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "htt rx ring size %d fill_level %d\n", htt->rx_ring.size,
                htt->rx_ring.fill_level);
@@ -1370,91 +1343,25 @@ static void ath10k_htt_rx_h_mpdu(struct ath10k* ar,
         hdr->frame_control &= ~IEEE80211_FCTL_PROTECTED;
     }
 }
+#endif // NEEDS PORTING
 
-static void ath10k_htt_rx_h_deliver(struct ath10k* ar,
-                                    struct sk_buff_head* amsdu,
-                                    struct ieee80211_rx_status* status) {
-    struct sk_buff* msdu;
+static void ath10k_htt_rx_h_deliver(struct ath10k* ar, list_node_t* amsdu) {
+    struct ath10k_msg_buf* msdu;
+    while ((msdu = list_remove_head_type(amsdu, struct ath10k_msg_buf, listnode)) != NULL) {
+        wlan_rx_info_t rx_info = {};
+        // TODO(gbonik): fill in channel correctly
+        memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
+        // TODO(gbonik): fill in rx_info from rx_desc
 
-    while ((msdu = __skb_dequeue(amsdu))) {
-        /* Setup per-MSDU flags */
-        if (skb_queue_empty(amsdu)) {
-            status->flag &= ~RX_FLAG_AMSDU_MORE;
-        } else {
-            status->flag |= RX_FLAG_AMSDU_MORE;
-        }
-
-        ath10k_process_rx(ar, status, msdu);
+        ar->wlanmac.ifc->recv(ar->wlanmac.cookie, 0,
+                              ath10k_msg_buf_get_payload(msdu),
+                              ath10k_msg_buf_get_payload_len(msdu, ATH10K_MSG_TYPE_HTT_RX),
+                              &rx_info);
+        ath10k_msg_buf_free(msdu);
     }
 }
 
-static int ath10k_unchain_msdu(struct sk_buff_head* amsdu) {
-    struct sk_buff* skb, *first;
-    int space;
-    int total_len = 0;
-
-    /* TODO:  Might could optimize this by using
-     * skb_try_coalesce or similar method to
-     * decrease copying, or maybe get mac80211 to
-     * provide a way to just receive a list of
-     * skb?
-     */
-
-    first = __skb_dequeue(amsdu);
-
-    /* Allocate total length all at once. */
-    skb_queue_walk(amsdu, skb)
-    total_len += skb->len;
-
-    space = total_len - skb_tailroom(first);
-    if ((space > 0) &&
-            (pskb_expand_head(first, 0, space, GFP_ATOMIC) < 0)) {
-        /* TODO:  bump some rx-oom error stat */
-        /* put it back together so we can free the
-         * whole list at once.
-         */
-        __skb_queue_head(amsdu, first);
-        return -1;
-    }
-
-    /* Walk list again, copying contents into
-     * msdu_head
-     */
-    while ((skb = __skb_dequeue(amsdu))) {
-        skb_copy_from_linear_data(skb, skb_put(first, skb->len),
-                                  skb->len);
-        dev_kfree_skb_any(skb);
-    }
-
-    __skb_queue_head(amsdu, first);
-    return 0;
-}
-
-static void ath10k_htt_rx_h_unchain(struct ath10k* ar,
-                                    struct sk_buff_head* amsdu) {
-    struct sk_buff* first;
-    struct htt_rx_desc* rxd;
-    enum rx_msdu_decap_format decap;
-
-    first = skb_peek(amsdu);
-    rxd = (void*)first->data - sizeof(*rxd);
-    decap = MS(rxd->msdu_start.common.info1,
-               RX_MSDU_START_INFO1_DECAP_FORMAT);
-
-    /* FIXME: Current unchaining logic can only handle simple case of raw
-     * msdu chaining. If decapping is other than raw the chaining may be
-     * more complex and this isn't handled by the current code. Don't even
-     * try re-constructing such frames - it'll be pretty much garbage.
-     */
-    if (decap != RX_MSDU_DECAP_RAW ||
-            skb_queue_len(amsdu) != 1 + rxd->frag_info.ring2_more_count) {
-        __skb_queue_purge(amsdu);
-        return;
-    }
-
-    ath10k_unchain_msdu(amsdu);
-}
-
+#if 0 // NEEDS PORTING
 static bool ath10k_htt_rx_amsdu_allowed(struct ath10k* ar,
                                         struct sk_buff_head* amsdu,
                                         struct ieee80211_rx_status* rx_status) {
@@ -1488,46 +1395,114 @@ static void ath10k_htt_rx_h_filter(struct ath10k* ar,
 
     __skb_queue_purge(amsdu);
 }
+#endif  // NEEDS PORTING
+
+
+// Pop `n` buffers from the list and free them
+static void ath10k_htt_rx_pop_and_free_n(list_node_t* amsdu, int n) {
+    while (n--) {
+        struct ath10k_msg_buf* msg_buf = list_remove_head_type(
+                amsdu, struct ath10k_msg_buf, listnode);
+        if (!msg_buf) {
+            break;
+        }
+        ath10k_msg_buf_free(msg_buf);
+    }
+}
+
+// Pop the chained buffers from `amsdu` and append their contents into `msdu_head`
+static zx_status_t ath10k_htt_rx_unchain_msdu(list_node_t* amsdu,
+                                              struct ath10k_msg_buf* msdu_head) {
+    struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu_head, ATH10K_MSG_TYPE_HTT_RX);
+    int num_chained = rx_desc->frag_info.ring2_more_count;
+
+    while (num_chained--) {
+        struct ath10k_msg_buf* chained_part = list_remove_head_type(
+                amsdu, struct ath10k_msg_buf, listnode);
+        if (!chained_part) {
+            return ZX_ERR_NOT_FOUND;
+        }
+
+        size_t available = msdu_head->capacity - msdu_head->used;
+        if (chained_part->used > available) {
+            // If the first msdu buffer doesn't have any available room left, drop the frame:
+            // pop the remaining messages, free them and return.
+            ath10k_msg_buf_free(chained_part);
+            ath10k_htt_rx_pop_and_free_n(amsdu, num_chained);
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        /* Note: Chained buffers do not contain rx descriptor */
+        memcpy(msdu_head->vaddr + msdu_head->used, chained_part->vaddr, chained_part->used);
+        msdu_head->used += chained_part->used;
+        ath10k_msg_buf_free(chained_part);
+    }
+    return ZX_OK;
+}
+
+// Unchain all chained msdus in `amsdu`
+static void ath10k_htt_rx_unchain_amsdu(list_node_t* amsdu) {
+    list_node_t unchained_amsdu;
+    list_initialize(&unchained_amsdu);
+    for (;;) {
+        struct ath10k_msg_buf* msdu_head = list_remove_head_type(
+                amsdu, struct ath10k_msg_buf, listnode);
+        if (!msdu_head) {
+            break;
+        }
+        if (ath10k_htt_rx_unchain_msdu(amsdu, msdu_head) == ZX_OK) {
+            list_add_tail(&unchained_amsdu, &msdu_head->listnode);
+        } else {
+            ath10k_msg_buf_free(msdu_head);
+        }
+    }
+    list_move(&unchained_amsdu, amsdu);
+}
 
 static zx_status_t ath10k_htt_rx_handle_amsdu(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
-    struct ieee80211_rx_status* rx_status = &htt->rx_status;
-    struct sk_buff_head amsdu;
-    int ret, num_msdus;
-
-    __skb_queue_head_init(&amsdu);
 
     mtx_lock(&htt->rx_ring.lock);
     if (htt->rx_confused) {
         mtx_unlock(&htt->rx_ring.lock);
-        return -EIO;
+        return ZX_ERR_IO;
     }
-    ret = ath10k_htt_rx_amsdu_pop(htt, &amsdu);
+
+    list_node_t amsdu;
+    list_initialize(&amsdu);
+    zx_status_t ret = ath10k_htt_rx_amsdu_pop(htt, &amsdu);
     mtx_unlock(&htt->rx_ring.lock);
 
-    if (ret < 0) {
-        ath10k_warn("rx ring became corrupted: %d\n", ret);
-        __skb_queue_purge(&amsdu);
+    if (ret != ZX_OK) {
+        ath10k_err("rx ring became corrupted: %d\n", ret);
         /* FIXME: It's probably a good idea to reboot the
          * device instead of leaving it inoperable.
          */
         htt->rx_confused = true;
-        return ret;
+        goto fail;
     }
 
-    num_msdus = skb_queue_len(&amsdu);
-    ath10k_htt_rx_h_ppdu(ar, &amsdu, rx_status, 0xffff);
+    // TODO(gbonik): store RSSI etc. from ppdu
+    // ath10k_htt_rx_h_ppdu(ar, &amsdu, rx_status, 0xffff);
 
-    /* only for ret = 1 indicates chained msdus */
-    if (ret > 0) {
-        ath10k_htt_rx_h_unchain(ar, &amsdu);
-    }
+    ath10k_htt_rx_unchain_amsdu(&amsdu);
 
+#if 0 // NEEDS PORTING
     ath10k_htt_rx_h_filter(ar, &amsdu, rx_status);
     ath10k_htt_rx_h_mpdu(ar, &amsdu, rx_status);
-    ath10k_htt_rx_h_deliver(ar, &amsdu, rx_status);
+#endif // NEEDS PORTING
+    ath10k_htt_rx_h_deliver(ar, &amsdu);
 
-    return num_msdus;
+    return ZX_OK;
+
+fail:
+    {
+        struct ath10k_msg_buf* buf;
+        while ((buf = list_remove_head_type(&amsdu, struct ath10k_msg_buf, listnode)) != NULL) {
+            ath10k_msg_buf_free(buf);
+        }
+    }
+    return ret;
 }
 
 static void ath10k_htt_rx_proc_rx_ind(struct ath10k_htt* htt,
@@ -1550,9 +1525,14 @@ static void ath10k_htt_rx_proc_rx_ind(struct ath10k_htt* htt,
         mpdu_count += mpdu_ranges[i].mpdu_count;
     }
 
-    atomic_fetch_add(&htt->num_mpdus_ready, mpdu_count);
+    while (mpdu_count--) {
+        zx_status_t status = ath10k_htt_rx_handle_amsdu(htt);
+        if (status != ZX_OK) {
+            ath10k_err("Could not handle an AMSDU RX: %s\n", zx_status_get_string(status));
+            break;
+        }
+    }
 }
-#endif  // NEEDS PORTING
 
 static void ath10k_htt_rx_tx_compl_ind(struct ath10k* ar, struct ath10k_msg_buf* buf) {
     struct ath10k_htt* htt = &ar->htt;
@@ -2334,10 +2314,8 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
         break;
     }
     case HTT_T2H_MSG_TYPE_RX_IND:
-        ath10k_err("HTT_T2H_MSG_TYPE_RX_IND unimplemented\n");
-#if 0   // NEEDS PORTING
         ath10k_htt_rx_proc_rx_ind(htt, &resp->rx_ind);
-#endif  // NEEDS PORTING
+        ath10k_htt_rx_msdu_buff_replenish(htt);
         break;
     case HTT_T2H_MSG_TYPE_PEER_MAP: {
         ath10k_err("HTT_T2H_MSG_TYPE_PEER_MAP unimplemented\n");
@@ -2399,10 +2377,10 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
         break;
     }
     case HTT_T2H_MSG_TYPE_RX_FRAG_IND: {
-        ath10k_err("HTT_T2H_MSG_TYPE_RX_FRAG_IND unimplemented\n");
         ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt event: ", msg_buf->vaddr,
                         msg_buf->used);
-        atomic_fetch_add(&htt->num_mpdus_ready, 1);
+        ath10k_htt_rx_handle_amsdu(htt);
+        ath10k_htt_rx_msdu_buff_replenish(htt);
         break;
     }
     case HTT_T2H_MSG_TYPE_TEST:

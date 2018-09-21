@@ -1706,7 +1706,6 @@ struct ath10k_htt {
      * used to avoid further failures
      */
     bool rx_confused;
-    atomic_int num_mpdus_ready;
 
     struct {
         io_buffer_t handle;

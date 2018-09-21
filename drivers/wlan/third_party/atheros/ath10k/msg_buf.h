@@ -76,9 +76,10 @@ struct ath10k_msg_buf {
     zx_paddr_t paddr;
     size_t capacity;
     size_t used;
+    bool allocated;
 
-    // Tx/Rx meta-data. They differ because Tx arrives from the target wrapped in an HTT
-    // packet, and Rx is passed to us from the wlan driver as a raw packet.
+    // Tx/Rx meta-data. They differ because Rx arrives from the target wrapped in an HTT
+    // packet, and Tx is passed to us from the wlan driver as a raw packet.
     union {
         struct {
             // These tell us how to find the packet within the HTT message

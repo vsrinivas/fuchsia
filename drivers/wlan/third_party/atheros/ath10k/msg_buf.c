@@ -171,6 +171,7 @@ zx_status_t ath10k_msg_buf_alloc_internal(struct ath10k* ar, struct ath10k_msg_b
     memset(msg_buf->vaddr, 0, requested_sz);
     msg_buf->type = type;
     msg_buf->used = requested_sz;
+    msg_buf->allocated = true;
 #if DEBUG_MSG_BUF
     msg_buf->alloc_file_name = filename;
     msg_buf->alloc_line_num = line_num;
@@ -223,8 +224,8 @@ void ath10k_msg_buf_free(struct ath10k_msg_buf* msg_buf) {
 #endif
     // Save in pool for reuse
     mtx_lock(&state->lock);
-    ZX_DEBUG_ASSERT_MSG(msg_buf->used != 0, "attempt to free already freed buffer");
-    msg_buf->used = 0;
+    ZX_DEBUG_ASSERT_MSG(msg_buf->allocated, "attempt to free already freed buffer");
+    msg_buf->allocated = false;
     list_add_head(&state->buf_pool, &msg_buf->listnode);
     mtx_unlock(&state->lock);
 }
