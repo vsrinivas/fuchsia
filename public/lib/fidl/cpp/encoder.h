@@ -31,6 +31,10 @@ class Encoder {
 
   void Reset(uint32_t ordinal);
 
+  size_t CurrentLength() const { return bytes_.size(); }
+
+  size_t CurrentHandleCount() const { return handles_.size(); }
+
  private:
   void EncodeMessageHeader(uint32_t ordinal);
 

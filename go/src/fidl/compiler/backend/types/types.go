@@ -329,6 +329,24 @@ type UnionMember struct {
 	Offset     int         `json:"offset"`
 }
 
+// Table represents a declaration of a FIDL table.
+type Table struct {
+	Attributes
+	Name       EncodedCompoundIdentifier `json:"name"`
+	Members    []TableMember             `json:"members"`
+	Size       int                       `json:"size"`
+	Alignment  int                       `json:"alignment"`
+}
+
+// TableMember represents the declaration of a field in a FIDL table.
+type TableMember struct {
+	Reserved          bool       `json:"reserved"`
+	Type              Type       `json:"type"`
+	Name              Identifier `json:"name"`
+	Ordinal           int        `json:"ordinal"`
+	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
+}
+
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
 	Attributes
@@ -428,6 +446,7 @@ const (
 	EnumDeclType               = "enum"
 	InterfaceDeclType          = "interface"
 	StructDeclType             = "struct"
+	TableDeclType              = "table"
 	UnionDeclType              = "union"
 )
 
@@ -447,6 +466,7 @@ type Root struct {
 	Enums      []Enum                      `json:"enum_declarations,omitempty"`
 	Interfaces []Interface                 `json:"interface_declarations,omitempty"`
 	Structs    []Struct                    `json:"struct_declarations,omitempty"`
+	Tables     []Table                     `json:"table_declarations,omitempty"`
 	Unions     []Union                     `json:"union_declarations,omitempty"`
 	DeclOrder  []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
 	Decls      DeclMap                     `json:"declarations,omitempty"`

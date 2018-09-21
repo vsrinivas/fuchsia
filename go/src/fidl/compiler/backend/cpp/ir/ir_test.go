@@ -156,3 +156,79 @@ func TestCompileInterface(t *testing.T) {
 		})
 	}
 }
+
+func TestCompileTable(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    types.Table
+		expected Table
+	}{
+		{
+			name: "Basic",
+			input: types.Table{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{Name: types.Identifier("ServiceName"), Value: "Test"},
+					},
+				},
+				Name: types.EncodedCompoundIdentifier("Test"),
+				Members: []types.TableMember{
+					{
+						Reserved: true,
+						Ordinal:  1,
+					},
+					{
+						Ordinal:    2,
+						Name:       types.Identifier("second"),
+						Reserved:   false,
+						Type:       types.Type{
+							Kind: types.PrimitiveType,
+							PrimitiveSubtype: types.Int64,
+						},
+					},
+				},
+			},
+			expected: Table{
+				Namespace:       "::",
+				Name:            "Test",
+				TableType:       "_TestTable",
+				BiggestOrdinal:  2,
+				Members: []TableMember{
+					{
+						Type: Type {
+							Decl: "int64_t",
+							Dtor: "",
+							DeclType: "",
+						},
+						Name: "second",
+						Ordinal: 2,
+						FieldPresenceName: "has_second_",
+						FieldDataName: "second_",
+						MethodHasName: "has_second",
+						MethodClearName: "clear_second",
+						ValueUnionName: "ValueUnion_second",
+					},
+				},
+			},
+		},
+	}
+	for _, ex := range cases {
+		t.Run(ex.name, func(t *testing.T) {
+			root := types.Root{
+				Tables: []types.Table{ex.input},
+				DeclOrder: []types.EncodedCompoundIdentifier{
+					ex.input.Name,
+				},
+			}
+			result := Compile(root)
+			actual, ok := result.Decls[0].(*Table)
+
+			if !ok || actual == nil {
+				t.Fatalf("decls[0] not an table, was instead %T", result.Decls[0])
+			}
+			if !reflect.DeepEqual(ex.expected, *actual) {
+				t.Fatalf("expected %+v, actual %+v", ex.expected, *actual)
+			}
+		})
+	}
+}

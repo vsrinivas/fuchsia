@@ -19,7 +19,7 @@ namespace {
 // Takes a collection of distincts elements, and checks that the comparison
 // operators are correct.
 template <typename A>
-::testing::AssertionResult CheckComparaisonOperators(const std::vector<A>& v) {
+::testing::AssertionResult CheckComparisonOperators(const std::vector<A>& v) {
   for (size_t i = 0; i < v.size(); ++i) {
     EXPECT_EQ(v[i], fidl::Clone(v[i]));
     for (size_t j = 0; j < v.size(); ++j) {
@@ -42,7 +42,19 @@ TEST(FidlTest, SimpleStructComparison) {
   for (int32_t i = 1; i < 3; ++i) {
     structs.push_back(Int64Struct{i});
   }
-  EXPECT_TRUE(CheckComparaisonOperators(structs));
+  EXPECT_TRUE(CheckComparisonOperators(structs));
+}
+
+TEST(FidlTest, SimpleTableComparison) {
+  // Create a vector of tables.
+  std::vector<SimpleTable> tables;
+  for (int32_t i = 1; i < 3; ++i) {
+    SimpleTable t;
+    t.set_x(i);
+    t.set_y(-i);
+    tables.push_back(std::move(t));
+  }
+  EXPECT_TRUE(CheckComparisonOperators(tables));
 }
 
 TEST(FidlTest, StructWithNullComparison) {
@@ -52,7 +64,7 @@ TEST(FidlTest, StructWithNullComparison) {
     structs.push_back(HasOptionalFieldStruct{
         i == 0 ? nullptr : fidl::MakeOptional(Int64Struct({i}))});
   }
-  EXPECT_TRUE(CheckComparaisonOperators(structs));
+  EXPECT_TRUE(CheckComparisonOperators(structs));
 }
 
 TEST(FidlTest, StructWithMultipleFieldsComparison) {
@@ -65,7 +77,7 @@ TEST(FidlTest, StructWithMultipleFieldsComparison) {
           j == 0 ? nullptr : fidl::MakeOptional(Int64Struct({j}))});
     }
   }
-  EXPECT_TRUE(CheckComparaisonOperators(structs));
+  EXPECT_TRUE(CheckComparisonOperators(structs));
 }
 
 TEST(FidlTest, UnionComparison) {
@@ -91,7 +103,7 @@ TEST(FidlTest, UnionComparison) {
   s.set_os(fidl::MakeOptional(Int64Struct({1})));
   unions.push_back(std::move(s));
 
-  EXPECT_TRUE(CheckComparaisonOperators(unions));
+  EXPECT_TRUE(CheckComparisonOperators(unions));
 }
 
 // Build a vector of fidl::VectorPtr, lexicographically sorted given that
@@ -136,14 +148,14 @@ TEST(FidlTest, TestBuildSortedVector) {
 TEST(FidlTest, VectorOfIntComparison) {
   // Create a vector of vectors.
   auto vectors = BuildSortedVector<uint32_t>(3, [](uint32_t i) { return i; });
-  EXPECT_TRUE(CheckComparaisonOperators(vectors));
+  EXPECT_TRUE(CheckComparisonOperators(vectors));
 }
 
 TEST(FidlTest, VectorOfStructComparison) {
   // Create a vector of vectors.
   auto vectors = BuildSortedVector<Int64Struct>(
       3, [](int32_t i) { return Int64Struct{i}; });
-  EXPECT_TRUE(CheckComparaisonOperators(vectors));
+  EXPECT_TRUE(CheckComparisonOperators(vectors));
 }
 
 TEST(FidlTest, VectorOfOptionalStructComparison) {
@@ -151,7 +163,7 @@ TEST(FidlTest, VectorOfOptionalStructComparison) {
   auto vectors = BuildSortedVector<Int64StructPtr>(3, [](int32_t i) {
     return i == 0 ? Int64StructPtr() : fidl::MakeOptional(Int64Struct({i}));
   });
-  EXPECT_TRUE(CheckComparaisonOperators(vectors));
+  EXPECT_TRUE(CheckComparisonOperators(vectors));
 }
 
 // Build a vector of arrays containing distincts values.
@@ -176,14 +188,14 @@ std::vector<fidl::Array<A, 3>> BuildArray(
 TEST(FidlTest, ArrayOfIntComparaison) {
   // Create an vector of arrays.
   auto arrays = BuildArray<int32_t>([](int32_t i) { return i; });
-  EXPECT_TRUE(CheckComparaisonOperators(arrays));
+  EXPECT_TRUE(CheckComparisonOperators(arrays));
 }
 
 TEST(FidlTest, ArrayOfStructComparaison) {
   // Create an vector of arrays.
   auto arrays =
       BuildArray<Int64Struct>([](int32_t i) { return Int64Struct{i}; });
-  EXPECT_TRUE(CheckComparaisonOperators(arrays));
+  EXPECT_TRUE(CheckComparisonOperators(arrays));
 }
 
 TEST(FidlTest, ArrayOfOptionalStructComparison) {
@@ -191,7 +203,7 @@ TEST(FidlTest, ArrayOfOptionalStructComparison) {
   auto arrays = BuildArray<Int64StructPtr>([](int32_t i) {
     return i == 0 ? Int64StructPtr() : fidl::MakeOptional(Int64Struct({i}));
   });
-  EXPECT_TRUE(CheckComparaisonOperators(arrays));
+  EXPECT_TRUE(CheckComparisonOperators(arrays));
 }
 
 }  // namespace

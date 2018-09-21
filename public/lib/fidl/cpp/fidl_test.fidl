@@ -23,3 +23,30 @@ union SimpleUnion {
   Int64Struct s;
   Int64Struct? os;
 };
+
+table SimpleTable {
+    1: int64 x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: int64 y;
+};
+
+// A variant of SimpleTable that has just the first few fields.
+// Think of this as an older variant of that type!
+table OlderSimpleTable {
+    1: int64 x;
+    2: reserved;
+};
+
+// A variant of SimpleTable that has some additional new fields.
+// Think of this as an newer variant of that type!
+table NewerSimpleTable {
+    1: int64 x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: int64 y;
+    6: int64 z;
+    7: reserved;
+};

@@ -26,35 +26,37 @@ func generateHeader(headerPath string, tmpls *template.Template, tree ir.Root) e
 	}
 	defer f.Close()
 
-	err = tmpls.ExecuteTemplate(f, "GenerateHeaderPreamble", tree)
-	if err != nil {
+	if err := tmpls.ExecuteTemplate(f, "GenerateHeaderPreamble", tree); err != nil {
 		return err
 	}
 
 	for _, d := range tree.Decls {
-		err = d.ForwardDeclaration(tmpls, f)
+		if err := d.ForwardDeclaration(tmpls, f); err != nil {
+			return err
+		}
 	}
 
 	for _, d := range tree.Decls {
-		err = d.Declaration(tmpls, f)
+		if err := d.Declaration(tmpls, f); err != nil {
+			return err
+		}
 	}
 
-	err = tmpls.ExecuteTemplate(f, "GenerateHeaderPostamble", tree)
-	if err != nil {
+	if err := tmpls.ExecuteTemplate(f, "GenerateHeaderPostamble", tree); err != nil {
 		return err
 	}
 
-	err = tmpls.ExecuteTemplate(f, "GenerateTraitsPreamble", tree)
-	if err != nil {
+	if err := tmpls.ExecuteTemplate(f, "GenerateTraitsPreamble", tree); err != nil {
 		return err
 	}
 
 	for _, d := range tree.Decls {
-		err = d.Traits(tmpls, f)
+		if err := d.Traits(tmpls, f); err != nil {
+			return err
+		}
 	}
 
-	err = tmpls.ExecuteTemplate(f, "GenerateTraitsPostamble", tree)
-	if err != nil {
+	if err := tmpls.ExecuteTemplate(f, "GenerateTraitsPostamble", tree); err != nil {
 		return err
 	}
 
@@ -72,17 +74,18 @@ func generateImplementation(implementationPath string, tmpls *template.Template,
 	}
 	defer f.Close()
 
-	err = tmpls.ExecuteTemplate(f, "GenerateImplementationPreamble", tree)
-	if err != nil {
+	if err := tmpls.ExecuteTemplate(f, "GenerateImplementationPreamble", tree); err != nil {
 		return err
 	}
 
 	for _, d := range tree.Decls {
 		err = d.Definition(tmpls, f)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = tmpls.ExecuteTemplate(f, "GenerateImplementationPostamble", tree)
-	if err != nil {
+	if err := tmpls.ExecuteTemplate(f, "GenerateImplementationPostamble", tree); err != nil {
 		return err
 	}
 
@@ -108,6 +111,7 @@ func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error
 	template.Must(tmpls.Parse(templates.Implementation))
 	template.Must(tmpls.Parse(templates.Interface))
 	template.Must(tmpls.Parse(templates.Struct))
+	template.Must(tmpls.Parse(templates.Table))
 	template.Must(tmpls.Parse(templates.Union))
 
 	err = generateHeader(headerPath, tmpls, tree)

@@ -50,6 +50,14 @@ inline typename std::enable_if<IsPrimitive<T>::value, zx_status_t>::type Clone(
 }
 
 template <typename T>
+inline typename std::enable_if<!IsPrimitive<T>::value &&
+                                   !std::is_base_of<zx::object_base, T>::value,
+                               zx_status_t>::type
+Clone(const T& value, T* result) {
+  return value.Clone(result);
+}
+
+template <typename T>
 zx_status_t Clone(const zx::object<T>& value, zx::object<T>* result) {
   if (!value) {
     result->reset();

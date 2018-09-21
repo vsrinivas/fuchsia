@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -65,6 +66,27 @@ type UnionMember struct {
 	StorageName string
 	TagName     string
 	Offset      int
+}
+
+type Table struct {
+	Namespace      string
+	Name           string
+	TableType      string
+	Members        []TableMember
+	Size           int
+	BiggestOrdinal int
+}
+
+type TableMember struct {
+	Type              Type
+	Name              string
+	DefaultValue      string
+	Ordinal           int
+	FieldPresenceName string
+	FieldDataName     string
+	MethodHasName     string
+	MethodClearName   string
+	ValueUnionName    string
 }
 
 type Struct struct {
@@ -127,7 +149,7 @@ type Root struct {
 }
 
 func (c *Const) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
-	return tmpls.ExecuteTemplate(wr, "ConstForwardDeclaration", c)
+	return nil
 }
 
 func (c *Const) Declaration(tmpls *template.Template, wr io.Writer) error {
@@ -172,6 +194,22 @@ func (u *Union) Traits(tmpls *template.Template, wr io.Writer) error {
 
 func (u *Union) Definition(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "UnionDefinition", u)
+}
+
+func (t *Table) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "TableForwardDeclaration", t)
+}
+
+func (t *Table) Declaration(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "TableDeclaration", t)
+}
+
+func (t *Table) Traits(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "TableTraits", t)
+}
+
+func (t *Table) Definition(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "TableDefinition", t)
 }
 
 func (s *Struct) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
@@ -470,6 +508,8 @@ func (c *compiler) compileType(val types.Type) Type {
 			fallthrough
 		case types.StructDeclType:
 			fallthrough
+		case types.TableDeclType:
+			fallthrough
 		case types.UnionDeclType:
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
@@ -624,6 +664,64 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	return r
 }
 
+func (c *compiler) compileTableMember(val types.TableMember) TableMember {
+	t := c.compileType(val.Type)
+
+	defaultValue := ""
+	if val.MaybeDefaultValue != nil {
+		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t)
+	}
+
+	return TableMember{
+		Type:              t,
+		Name:              changeIfReserved(val.Name, ""),
+		DefaultValue:      defaultValue,
+		Ordinal:           val.Ordinal,
+		FieldPresenceName: fmt.Sprintf("has_%s_", val.Name),
+		FieldDataName:     fmt.Sprintf("%s_", val.Name),
+		MethodHasName:     fmt.Sprintf("has_%s", val.Name),
+		MethodClearName:   fmt.Sprintf("clear_%s", val.Name),
+		ValueUnionName:    fmt.Sprintf("ValueUnion_%s", val.Name),
+	}
+}
+
+type byOrdinal []TableMember
+
+func (m byOrdinal) Len() int {
+	return len(m)
+}
+func (m byOrdinal) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+}
+func (m byOrdinal) Less(i, j int) bool {
+	return m[i].Ordinal < m[j].Ordinal
+}
+
+func (c *compiler) compileTable(val types.Table) Table {
+	name := c.compileCompoundIdentifier(val.Name, "")
+	r := Table{
+		Namespace:      c.namespace,
+		Name:           name,
+		TableType:      fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
+		Members:        nil,
+		Size:           val.Size,
+		BiggestOrdinal: 0,
+	}
+
+	for _, v := range val.Members {
+		if v.Reserved {
+			continue
+		}
+		m := c.compileTableMember(v)
+		r.BiggestOrdinal = m.Ordinal
+		r.Members = append(r.Members, m)
+	}
+
+	sort.Sort(byOrdinal(r.Members))
+
+	return r
+}
+
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	n := changeIfReserved(val.Name, "")
 	return UnionMember{
@@ -689,6 +787,11 @@ func Compile(r types.Root) Root {
 
 	for _, v := range r.Structs {
 		d := c.compileStruct(v)
+		decls[v.Name] = &d
+	}
+
+	for _, v := range r.Tables {
+		d := c.compileTable(v)
 		decls[v.Name] = &d
 	}
 
