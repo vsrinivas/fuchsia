@@ -296,6 +296,7 @@ int fdio_pipe_pair(fdio_t** _a, fdio_t** _b) {
     return 0;
 }
 
+__EXPORT
 zx_status_t fdio_pipe_half(zx_handle_t* handle, uint32_t* type) {
     zx_handle_t h0, h1;
     zx_status_t r;

@@ -84,6 +84,7 @@ static zx_status_t get_socket_provider(zx_handle_t* out) {
     return get_service_with_retries("/svc/fuchsia.net.LegacySocketProvider", &saved, &lock, out);
 }
 
+__EXPORT
 int socket(int domain, int type, int protocol) {
     fdio_t* io = NULL;
     zx_status_t r;
@@ -133,6 +134,7 @@ int socket(int domain, int type, int protocol) {
     return fd;
 }
 
+__EXPORT
 int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
@@ -190,6 +192,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     return 0;
 }
 
+__EXPORT
 int bind(int fd, const struct sockaddr* addr, socklen_t len) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
@@ -202,6 +205,7 @@ int bind(int fd, const struct sockaddr* addr, socklen_t len) {
     return STATUS(r);
 }
 
+__EXPORT
 int listen(int fd, int backlog) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
@@ -214,6 +218,7 @@ int listen(int fd, int backlog) {
     return STATUS(r);
 }
 
+__EXPORT
 int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
             int flags) {
     if (flags & ~SOCK_NONBLOCK) {
@@ -292,6 +297,7 @@ static int addrinfo_status_to_eai(int32_t status) {
     }
 }
 
+__EXPORT
 int getaddrinfo(const char* __restrict node,
                 const char* __restrict service,
                 const struct addrinfo* __restrict hints,
@@ -425,6 +431,7 @@ int getaddrinfo(const char* __restrict node,
     return 0;
 }
 
+__EXPORT
 void freeaddrinfo(struct addrinfo* res) {
     free(res);
 }
@@ -456,10 +463,12 @@ static int getsockaddr(int fd, int op, struct sockaddr* restrict addr,
     return 0;
 }
 
+__EXPORT
 int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
     return getsockaddr(fd, ZXSIO_GETSOCKNAME, addr, len);
 }
 
+__EXPORT
 int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
     return getsockaddr(fd, ZXSIO_GETPEERNAME, addr, len);
 }
@@ -487,6 +496,7 @@ static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
     return ZX_OK;
 }
 
+__EXPORT
 int getsockopt(int fd, int level, int optname, void* restrict optval,
                socklen_t* restrict optlen) {
     fdio_t* io = fd_to_io(fd);
@@ -519,6 +529,7 @@ int getsockopt(int fd, int level, int optname, void* restrict optval,
     return STATUS(r);
 }
 
+__EXPORT
 int setsockopt(int fd, int level, int optname, const void* optval,
                socklen_t optlen) {
     fdio_t* io = fd_to_io(fd);

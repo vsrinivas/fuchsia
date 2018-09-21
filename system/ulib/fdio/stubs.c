@@ -74,43 +74,53 @@ static int checksocket(int fd, int sock_err, int err) {
 }
 
 // not supported by any filesystems yet
+__EXPORT
 int symlink(const char* existing, const char* new) {
     errno = ENOSYS;
     return -1;
 }
+__EXPORT
 ssize_t readlink(const char* restrict path, char* restrict buf, size_t bufsize) {
     // EINVAL = not symlink
     return checkfile(path, EINVAL);
 }
 
 // creating things we don't have plumbing for yet
+__EXPORT
 int mkfifo(const char *path, mode_t mode) {
     errno = ENOSYS;
     return -1;
 }
+__EXPORT
 int mknod(const char* path, mode_t mode, dev_t dev) {
     errno = ENOSYS;
     return -1;
 }
 
 // no permissions support yet
+__EXPORT
 int chown(const char *path, uid_t owner, gid_t group) {
     return checkfile(path, ENOSYS);
 }
+__EXPORT
 int fchown(int fd, uid_t owner, gid_t group) {
     return checkfd(fd, ENOSYS);
 }
+__EXPORT
 int lchown(const char *path, uid_t owner, gid_t group) {
     return checkfile(path, ENOSYS);
 }
 
 // no permissions support, but treat rwx bits as don't care rather than error
+__EXPORT
 int chmod(const char *path, mode_t mode) {
     return checkfile(path, (mode & (~0777)) ? ENOSYS : 0);
 }
+__EXPORT
 int fchmod(int fd, mode_t mode) {
     return checkfd(fd, (mode & (~0777)) ? ENOSYS : 0);
 }
+__EXPORT
 int fchmodat(int fd, const char* path, mode_t mode, int flags) {
     if (flags & ~AT_SYMLINK_NOFOLLOW) {
         errno = EINVAL;
@@ -120,19 +130,23 @@ int fchmodat(int fd, const char* path, mode_t mode, int flags) {
     return checkfileat(fd, path, flags, (mode & (~0777)) ? ENOSYS : 0);
 }
 
+__EXPORT
 int access(const char* path, int mode) {
     return checkfile(path, 0);
 }
 
+__EXPORT
 void sync(void) {
 }
 
 // at the moment our unlink works on all fs objects
+__EXPORT
 int rmdir(const char* path) {
     return unlink(path);
 }
 
 // tty stubbing.
+__EXPORT
 int ttyname_r(int fd, char* name, size_t size) {
     if (!isatty(fd)) {
         return ENOTTY;
@@ -141,14 +155,17 @@ int ttyname_r(int fd, char* name, size_t size) {
     return checkfd(fd, ENOSYS);
 }
 
+__EXPORT
 int sendmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags) {
     return checksocket(fd, ENOTSOCK, ENOSYS);
 }
 
+__EXPORT
 int recvmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags, struct timespec* timeout) {
     return checksocket(fd, ENOTSOCK, ENOSYS);
 }
 
+__EXPORT
 int sockatmark(int fd) {
     // ENOTTY is sic.
     return checksocket(fd, ENOTTY, ENOSYS);

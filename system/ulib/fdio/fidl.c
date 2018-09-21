@@ -99,6 +99,7 @@ static zx_status_t handle_rpc(zx_handle_t h, zxfidl_cb_t cb, void* cookie) {
     return cb(&msg, &cnxn.txn, cookie);
 }
 
+__EXPORT
 zx_status_t zxfidl_handler(zx_handle_t h, zxfidl_cb_t cb, void* cookie) {
     if (h == ZX_HANDLE_INVALID) {
         return handle_rpc_close(cb, cookie);
@@ -109,7 +110,8 @@ zx_status_t zxfidl_handler(zx_handle_t h, zxfidl_cb_t cb, void* cookie) {
     }
 }
 
-// Always consumes cnxn.
+// Always consumes cnxn. Exported for the sake of vs-vnode tests
+__EXPORT
 zx_status_t fidl_clone_request(zx_handle_t srv, zx_handle_t cnxn, uint32_t flags) {
     return fuchsia_io_NodeClone(srv, flags, cnxn);
 }

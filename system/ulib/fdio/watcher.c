@@ -21,7 +21,7 @@ typedef struct fdio_watcher {
     int fd;
 } fdio_watcher_t;
 
-zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
+static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
     fdio_watcher_t* watcher;
     if ((watcher = malloc(sizeof(fdio_watcher_t))) == NULL) {
         return ZX_ERR_NO_MEMORY;
@@ -115,13 +115,14 @@ static zx_status_t fdio_watcher_loop(fdio_watcher_t* w, zx_time_t deadline) {
     }
 }
 
-void fdio_watcher_destroy(fdio_watcher_t* watcher) {
+static void fdio_watcher_destroy(fdio_watcher_t* watcher) {
     zx_handle_close(watcher->h);
     free(watcher);
 }
 
+__EXPORT
 zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadline, void *cookie) {
-    fdio_watcher_t* watcher;
+    fdio_watcher_t* watcher = NULL;
 
     zx_status_t status;
     if ((status = fdio_watcher_create(dirfd, &watcher)) < 0) {

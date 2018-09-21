@@ -60,6 +60,7 @@ static fdio_ops_t zx_svc_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
+__EXPORT
 fdio_t* fdio_service_create(zx_handle_t h) {
     zxsvc_t* svc = fdio_alloc(sizeof(*svc));
     if (svc == NULL) {
@@ -73,6 +74,7 @@ fdio_t* fdio_service_create(zx_handle_t h) {
     return &svc->io;
 }
 
+__EXPORT
 zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
     mtx_lock(&fdio_lock);
     if ((fd < 0) || (fd >= FDIO_MAX_FD) || (fdio_fdtab[fd] == NULL)) {
@@ -114,6 +116,7 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
     }
 }
 
+__EXPORT
 zx_handle_t __fdio_borrow_channel(fdio_t* io) {
     if (io == NULL) {
         return ZX_HANDLE_INVALID;

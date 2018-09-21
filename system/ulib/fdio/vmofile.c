@@ -125,7 +125,7 @@ static zx_status_t vmofile_get_attr(fdio_t* io, vnattr_t* attr) {
     return ZX_OK;
 }
 
-zx_status_t vmofile_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
+static zx_status_t vmofile_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
     vmofile_t* vf = (vmofile_t*)io;
 
     if (out == NULL) {
@@ -204,6 +204,7 @@ fdio_t* fdio_vmofile_create(zx_handle_t h, zx_handle_t vmo,
     return &vf->io;
 }
 
+__EXPORT
 int fdio_vmo_fd(zx_handle_t vmo, uint64_t offset, uint64_t length) {
     fdio_t* io;
     int fd;

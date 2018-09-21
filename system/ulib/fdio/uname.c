@@ -18,6 +18,7 @@
 
 IOCTL_WRAPPER_VAROUT(ioctl_netc_get_nodename, IOCTL_NETC_GET_NODENAME, char);
 
+__EXPORT
 int uname(struct utsname* uts) {
     if (!uts) {
         errno = EFAULT;

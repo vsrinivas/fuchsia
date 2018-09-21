@@ -182,6 +182,7 @@ static fdio_ops_t zx_null_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
+__EXPORT
 fdio_t* fdio_null_create(void) {
     fdio_t* io = fdio_alloc(sizeof(*io));
     if (io == NULL) {

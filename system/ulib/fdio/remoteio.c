@@ -388,6 +388,7 @@ static zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* 
     return zxrio_decode_describe_handle(info, extra_handle);
 }
 
+__EXPORT
 zx_status_t fdio_service_connect(const char* svcpath, zx_handle_t h) {
     if (svcpath == NULL) {
         zx_handle_close(h);
@@ -403,6 +404,7 @@ zx_status_t fdio_service_connect(const char* svcpath, zx_handle_t h) {
     return ZX_ERR_NOT_FOUND;
 }
 
+__EXPORT
 zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle_t h) {
     if (path == NULL) {
         zx_handle_close(h);
@@ -416,6 +418,7 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
                          ZX_FS_RIGHT_WRITABLE, 0755, path);
 }
 
+__EXPORT
 zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags, zx_handle_t h) {
     if (path == NULL) {
         zx_handle_close(h);
@@ -428,6 +431,7 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags, zx_h
     return zxrio_connect(dir, h, ZXFIDL_OPEN, flags, 0755, path);
 }
 
+__EXPORT
 zx_handle_t fdio_service_clone(zx_handle_t svc) {
     zx_handle_t cli, srv;
     zx_status_t r;
@@ -445,6 +449,7 @@ zx_handle_t fdio_service_clone(zx_handle_t svc) {
     return cli;
 }
 
+__EXPORT
 zx_status_t fdio_service_clone_to(zx_handle_t svc, zx_handle_t srv) {
     if (srv == ZX_HANDLE_INVALID) {
         return ZX_ERR_INVALID_ARGS;
@@ -590,6 +595,7 @@ static zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_node_info_t* info
     return r;
 }
 
+__EXPORT
 zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
                            int* fd_out) {
     fdio_t* io;
@@ -909,6 +915,7 @@ fdio_ops_t zx_remote_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
+__EXPORT
 fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event) {
     zxrio_t* rio = fdio_alloc(sizeof(*rio));
     if (rio == NULL) {

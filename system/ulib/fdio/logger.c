@@ -113,6 +113,7 @@ static fdio_ops_t log_io_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
+__EXPORT
 fdio_t* fdio_logger_create(zx_handle_t handle) {
     fdio_log_t* log = calloc(1, sizeof(fdio_log_t));
     if (log == NULL) {

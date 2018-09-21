@@ -332,6 +332,7 @@ static zx_status_t send_namespace(zx_handle_t launcher, size_t name_count, size_
     return status;
 }
 
+__EXPORT
 zx_status_t fdio_spawn(zx_handle_t job,
                        uint32_t flags,
                        const char* path,
@@ -340,6 +341,7 @@ zx_status_t fdio_spawn(zx_handle_t job,
     return fdio_spawn_etc(job, flags, path, argv, NULL, 0, NULL, process_out, NULL);
 }
 
+__EXPORT
 zx_status_t fdio_spawn_etc(zx_handle_t job,
                            uint32_t flags,
                            const char* path,
@@ -370,6 +372,7 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
     return status != ZX_OK ? status : spawn_status;
 }
 
+__EXPORT
 zx_status_t fdio_spawn_vmo(zx_handle_t job,
                            uint32_t flags,
                            zx_handle_t executable_vmo,

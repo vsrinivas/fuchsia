@@ -126,6 +126,7 @@ static zx_status_t copy_file_vmo(fdio_t* io, zx_handle_t* out_vmo) {
     return status;
 }
 
+__EXPORT
 zx_status_t fdio_get_vmo_copy(int fd, zx_handle_t* out_vmo) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
@@ -136,6 +137,7 @@ zx_status_t fdio_get_vmo_copy(int fd, zx_handle_t* out_vmo) {
     return status;
 }
 
+__EXPORT
 zx_status_t fdio_get_vmo_clone(int fd, zx_handle_t* out_vmo) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
@@ -146,6 +148,7 @@ zx_status_t fdio_get_vmo_clone(int fd, zx_handle_t* out_vmo) {
     return status;
 }
 
+__EXPORT
 zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
