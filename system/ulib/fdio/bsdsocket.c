@@ -106,15 +106,14 @@ int socket(int domain, int type, int protocol) {
         return STATUS(rr);
     }
 
-    io = fdio_socket_create(s, 0);
-    if (io == NULL) {
-        return ERRNO(EIO);
+    if (type & SOCK_DGRAM) {
+        io = fdio_socket_create_datagram(s, 0);
+    } else {
+        io = fdio_socket_create_stream(s, 0);
     }
 
-    if (type & SOCK_STREAM) {
-        fdio_socket_set_stream_ops(io);
-    } else if (type & SOCK_DGRAM) {
-        fdio_socket_set_dgram_ops(io);
+    if (io == NULL) {
+        return ERRNO(EIO);
     }
 
     if (type & SOCK_NONBLOCK) {
@@ -236,11 +235,10 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
     }
 
     fdio_t* io2;
-    if ((io2 = fdio_socket_create(s2, IOFLAG_SOCKET_CONNECTED)) == NULL) {
+    if ((io2 = fdio_socket_create_stream(s2, IOFLAG_SOCKET_CONNECTED)) == NULL) {
         return ERROR(ZX_ERR_NO_RESOURCES);
     }
 
-    fdio_socket_set_stream_ops(io2);
     io2->ioflag |= IOFLAG_SOCKET_CONNECTED;
 
     if (flags & SOCK_NONBLOCK) {

@@ -833,13 +833,13 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .shutdown = fdio_socket_shutdown,
 };
 
-fdio_t* fdio_socket_create(zx_handle_t s, int flags) {
+static fdio_t* fdio_socket_create(zx_handle_t s, int flags, fdio_ops_t* ops) {
     zxsio_t* sio = calloc(1, sizeof(*sio));
     if (sio == NULL) {
         zx_handle_close(s);
         return NULL;
     }
-    sio->io.ops = &fdio_socket_stream_ops; // default is stream
+    sio->io.ops = ops;
     sio->io.magic = FDIO_MAGIC;
     sio->io.refcount = 1;
     sio->io.ioflag = IOFLAG_SOCKET | flags;
@@ -848,12 +848,10 @@ fdio_t* fdio_socket_create(zx_handle_t s, int flags) {
     return &sio->io;
 }
 
-void fdio_socket_set_stream_ops(fdio_t* io) {
-    zxsio_t* sio = (zxsio_t*)io;
-    sio->io.ops = &fdio_socket_stream_ops;
+fdio_t* fdio_socket_create_stream(zx_handle_t s, int flags) {
+    return fdio_socket_create(s, flags, &fdio_socket_stream_ops);
 }
 
-void fdio_socket_set_dgram_ops(fdio_t* io) {
-    zxsio_t* sio = (zxsio_t*)io;
-    sio->io.ops = &fdio_socket_dgram_ops;
+fdio_t* fdio_socket_create_datagram(zx_handle_t s, int flags) {
+    return fdio_socket_create(s, flags, &fdio_socket_dgram_ops);
 }

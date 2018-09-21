@@ -457,6 +457,34 @@ zx_status_t fdio_service_clone_to(zx_handle_t svc, zx_handle_t srv) {
                          ZX_FS_RIGHT_WRITABLE, 0755, "");
 }
 
+zx_status_t fdio_acquire_socket(zx_handle_t socket, int flags, fdio_t** out_io) {
+    zx_info_socket_t info;
+    memset(&info, 0, sizeof(info));
+    zx_status_t status = zx_object_get_info(socket, ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
+    if (status != ZX_OK) {
+        zx_handle_close(socket);
+        return status;
+    }
+    fdio_t* io = NULL;
+    if ((info.options & ZX_SOCKET_HAS_CONTROL) != 0) {
+        // If the socket has a control plane, then the socket is either
+        // a stream or a datagram socket.
+        if ((info.options & ZX_SOCKET_DATAGRAM) != 0) {
+            io = fdio_socket_create_datagram(socket, flags);
+        } else {
+            io = fdio_socket_create_stream(socket, flags);
+        }
+    } else {
+        // Without a control plane, the socket is a pipe.
+        io = fdio_pipe_create(socket);
+    }
+    if (!io) {
+        return ZX_ERR_NO_RESOURCES;
+    }
+    *out_io = io;
+    return ZX_OK;
+}
+
 // Create a fdio (if possible) from handles and info.
 //
 // The Control channel is provided in |handle|, and auxillary
@@ -512,14 +540,6 @@ static zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_node_info_t* info
         }
         *out = io;
         return ZX_OK;
-    case FDIO_PROTOCOL_PIPE:
-        if (handle != ZX_HANDLE_INVALID) {
-            r = ZX_ERR_INVALID_ARGS;
-            break;
-        } else if ((*out = fdio_pipe_create(info->pipe.s)) == NULL) {
-            return ZX_ERR_NO_RESOURCES;
-        }
-        return ZX_OK;
     case FDIO_PROTOCOL_VMOFILE: {
         if (info->vmofile.v == ZX_HANDLE_INVALID) {
             r = ZX_ERR_INVALID_ARGS;
@@ -532,6 +552,13 @@ static zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_node_info_t* info
         }
         return ZX_OK;
     }
+    case FDIO_PROTOCOL_PIPE:
+        if (info->pipe.s == ZX_HANDLE_INVALID) {
+            r = ZX_ERR_INVALID_ARGS;
+            break;
+        }
+        zx_handle_close(handle);
+        return fdio_acquire_socket(info->pipe.s, 0, out);
     case FDIO_PROTOCOL_SOCKET_CONNECTED:
     case FDIO_PROTOCOL_SOCKET: {
         int flags = (info->tag == FDIO_PROTOCOL_SOCKET_CONNECTED) ? IOFLAG_SOCKET_CONNECTED : 0;
@@ -540,10 +567,7 @@ static zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_node_info_t* info
             break;
         }
         zx_handle_close(handle);
-        if ((*out = fdio_socket_create(info->socket.s, flags)) == NULL) {
-            return ZX_ERR_NO_RESOURCES;
-        }
-        return ZX_OK;
+        return fdio_acquire_socket(info->socket.s, flags, out);
     }
     case FDIO_PROTOCOL_SOCKETPAIR:
         if (handle != ZX_HANDLE_INVALID) {
@@ -572,7 +596,6 @@ zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
     zx_status_t r;
     int fd;
     zxrio_node_info_t info;
-    zx_handle_t control_channel = ZX_HANDLE_INVALID;
 
     // Pack additional handles into |info|, if possible.
     switch (PA_HND_TYPE(types[0])) {
@@ -620,7 +643,7 @@ zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
         goto fail;
     }
 
-    if ((r = fdio_from_handles(control_channel, &info, &io)) != ZX_OK) {
+    if ((r = fdio_from_handles(ZX_HANDLE_INVALID, &info, &io)) != ZX_OK) {
         return r;
     }
 

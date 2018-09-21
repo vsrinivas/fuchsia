@@ -586,20 +586,25 @@ void __libc_extensions_init(uint32_t handle_count,
             LOG(1, "fdio: inherit fd=%d (rio)\n", arg_fd);
             break;
         }
-        case PA_FDIO_PIPE:
-            fdio_fdtab[arg_fd] = fdio_pipe_create(h);
+        case PA_FDIO_SOCKET:
+        case PA_FDIO_PIPE: {
+            fdio_t* io = NULL;
+            zx_status_t status = fdio_acquire_socket(h, IOFLAG_SOCKET_CONNECTED, &io);
+            if (status != ZX_OK) {
+                LOG(1, "fdio: Failed to acquire for fd=%d (socket) status=%d (%s)\n",
+                    arg_fd, status, zx_status_get_string(status));
+                zx_handle_close(h);
+                continue;
+            }
+            fdio_fdtab[arg_fd] = io;
             fdio_fdtab[arg_fd]->dupcount++;
-            LOG(1, "fdio: inherit fd=%d (pipe)\n", arg_fd);
+            LOG(1, "fdio: inherit fd=%d (socket)\n", arg_fd);
             break;
+        }
         case PA_FDIO_LOGGER:
             fdio_fdtab[arg_fd] = fdio_logger_create(h);
             fdio_fdtab[arg_fd]->dupcount++;
             LOG(1, "fdio: inherit fd=%d (log)\n", arg_fd);
-            break;
-        case PA_FDIO_SOCKET:
-            fdio_fdtab[arg] = fdio_socket_create(h, IOFLAG_SOCKET_CONNECTED);
-            fdio_fdtab[arg]->dupcount++;
-            LOG(1, "fdio: inherit fd=%d (socket)\n", arg_fd);
             break;
         case PA_NS_DIR:
             // we always contine here to not steal the
