@@ -8,7 +8,6 @@
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/sdp/pdu.h"
-#include "lib/fxl/functional/auto_call.h"
 
 namespace btlib {
 namespace sdp {

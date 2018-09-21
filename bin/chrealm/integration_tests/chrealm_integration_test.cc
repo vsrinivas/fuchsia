@@ -24,7 +24,6 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/glob.h"
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/split_string.h"

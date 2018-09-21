@@ -6,7 +6,6 @@
 #include "garnet/public/lib/fxl/files/scoped_temp_dir.h"
 
 #include "gtest/gtest.h"
-#include "lib/fxl/functional/auto_call.h"
 
 #define INVALID_CONFIGS 4
 

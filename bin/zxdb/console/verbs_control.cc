@@ -12,7 +12,6 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "garnet/public/lib/fxl/functional/auto_call.h"
 
 namespace zxdb {
 

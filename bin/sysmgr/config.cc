@@ -8,7 +8,6 @@
 #include <utility>
 
 #include "lib/fxl/files/file.h"
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "rapidjson/document.h"
 

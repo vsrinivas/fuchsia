@@ -20,7 +20,6 @@
 #include "lib/fit/defer.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/fxl/functional/auto_call.h"
 
 #include "commands.h"
 

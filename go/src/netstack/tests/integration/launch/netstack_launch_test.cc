@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <string.h>
 
-#include <fbl/auto_call.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fdio/watcher.h>

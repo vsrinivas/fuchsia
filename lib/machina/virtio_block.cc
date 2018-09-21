@@ -9,7 +9,6 @@
 #include <unistd.h>
 
 #include <block-client/client.h>
-#include <fbl/auto_call.h>
 #include <trace-engine/types.h>
 #include <trace/event.h>
 #include <virtio/virtio_ids.h>

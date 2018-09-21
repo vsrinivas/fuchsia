@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <iomanip>
 
-#include <fbl/auto_call.h>
 #include <lib/fxl/logging.h>
 #include <lib/ui/input/cpp/formatting.h>
 

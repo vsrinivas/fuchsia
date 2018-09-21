@@ -5,12 +5,12 @@
 #include "session.h"
 
 #include <lib/async/default.h>
+#include <lib/fit/defer.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/session.h"
-#include "lib/fxl/functional/auto_call.h"
 
 namespace btlib {
 namespace rfcomm {
@@ -839,7 +839,7 @@ void Session::RunInitialParameterNegotiation(DLCI dlci) {
 
     // If we fail negotation for any reason, remove the nascent channel and
     // reset to not-negotiated if negotiation didn't already finish.
-    auto failed_negotiation = fxl::MakeAutoCall([this, dlci] {
+    auto failed_negotiation = fit::defer([this, dlci] {
       channels_.erase(dlci);
       if (initial_param_negotiation_state_ ==
           ParameterNegotiationState::kNegotiating) {

@@ -11,7 +11,6 @@
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fxl/files/glob.h"
 #include "lib/fxl/files/path.h"
-#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace component {

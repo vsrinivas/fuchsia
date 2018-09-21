@@ -216,7 +216,6 @@ executable("fxl_unittests") {
     "files/path_unittest.cc",
     "files/scoped_temp_dir_unittest.cc",
     "functional/apply_unittest.cc",
-    "functional/auto_call_unittest.cc",
     "functional/cancelable_callback_unittest.cc",
     "functional/make_copyable_unittest.cc",
     "log_settings_unittest.cc",
