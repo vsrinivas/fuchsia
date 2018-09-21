@@ -23,4 +23,4 @@ class PlatformDevice {
 
 }  // namespace machina
 
-#endif  // GARNET_LIB_MACHINA_DEVICE_PLATFORM_DEVICE_H_
+#endif  // GARNET_LIB_MACHINA_PLATFORM_DEVICE_H_
