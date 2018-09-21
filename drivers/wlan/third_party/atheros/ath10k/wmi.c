@@ -5862,7 +5862,6 @@ zx_status_t ath10k_wmi_start_scan_verify(const struct wmi_start_scan_arg* arg) {
     return ZX_OK;
 }
 
-#if 0   // NEEDS PORTING
 static size_t
 ath10k_wmi_start_scan_tlvs_len(const struct wmi_start_scan_arg* arg) {
     int len = 0;
@@ -5889,7 +5888,6 @@ ath10k_wmi_start_scan_tlvs_len(const struct wmi_start_scan_arg* arg) {
 
     return len;
 }
-#endif  // NEEDS PORTING
 
 void ath10k_wmi_put_start_scan_common(struct wmi_start_scan_common* cmn,
                                       const struct wmi_start_scan_arg* arg) {
@@ -5919,7 +5917,6 @@ void ath10k_wmi_put_start_scan_common(struct wmi_start_scan_common* cmn,
     cmn->scan_ctrl_flags = arg->scan_ctrl_flags;
 }
 
-#if 0   // NEEDS PORTING
 static void
 ath10k_wmi_put_start_scan_tlvs(struct wmi_start_scan_tlvs* tlvs,
                                const struct wmi_start_scan_arg* arg) {
@@ -5928,16 +5925,15 @@ ath10k_wmi_put_start_scan_tlvs(struct wmi_start_scan_tlvs* tlvs,
     struct wmi_ssid_list* ssids;
     struct wmi_bssid_list* bssids;
     void* ptr = tlvs->tlvs;
-    int i;
 
     if (arg->n_channels) {
         channels = ptr;
         channels->tag = WMI_CHAN_LIST_TAG;
         channels->num_chan = arg->n_channels;
 
-        for (i = 0; i < arg->n_channels; i++)
-            channels->channel_list[i].freq =
-                arg->channels[i];
+        for (size_t i = 0; i < arg->n_channels; i++) {
+            channels->channel_list[i].freq = arg->channels[i];
+        }
 
         ptr += sizeof(*channels);
         ptr += sizeof(uint32_t) * arg->n_channels;
@@ -5948,12 +5944,9 @@ ath10k_wmi_put_start_scan_tlvs(struct wmi_start_scan_tlvs* tlvs,
         ssids->tag = WMI_SSID_LIST_TAG;
         ssids->num_ssids = arg->n_ssids;
 
-        for (i = 0; i < arg->n_ssids; i++) {
-            ssids->ssids[i].ssid_len =
-                arg->ssids[i].len;
-            memcpy(&ssids->ssids[i].ssid,
-                   arg->ssids[i].ssid,
-                   arg->ssids[i].len);
+        for (size_t i = 0; i < arg->n_ssids; i++) {
+            ssids->ssids[i].ssid_len = arg->ssids[i].len;
+            memcpy(&ssids->ssids[i].ssid, arg->ssids[i].ssid, arg->ssids[i].len);
         }
 
         ptr += sizeof(*ssids);
@@ -5965,8 +5958,9 @@ ath10k_wmi_put_start_scan_tlvs(struct wmi_start_scan_tlvs* tlvs,
         bssids->tag = WMI_BSSID_LIST_TAG;
         bssids->num_bssid = arg->n_bssids;
 
-        for (i = 0; i < arg->n_bssids; i++)
+        for (size_t i = 0; i < arg->n_bssids; i++) {
             memcpy(bssids->bssid_list[i].addr, arg->bssids[i].bssid, ETH_ALEN);
+        }
 
         ptr += sizeof(*bssids);
         ptr += sizeof(struct wmi_mac_addr) * arg->n_bssids;
@@ -5983,6 +5977,7 @@ ath10k_wmi_put_start_scan_tlvs(struct wmi_start_scan_tlvs* tlvs,
     }
 }
 
+#if 0   // NEEDS PORTING
 static struct sk_buff*
 ath10k_wmi_op_gen_start_scan(struct ath10k* ar,
                              const struct wmi_start_scan_arg* arg) {
@@ -6012,35 +6007,34 @@ ath10k_wmi_op_gen_start_scan(struct ath10k* ar,
     ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi start scan\n");
     return skb;
 }
+#endif  // NEEDS PORTING
 
-static struct sk_buff*
+zx_status_t
 ath10k_wmi_10x_op_gen_start_scan(struct ath10k* ar,
+                                 struct ath10k_msg_buf** msg_buf_ptr,
                                  const struct wmi_start_scan_arg* arg) {
-    struct wmi_10x_start_scan_cmd* cmd;
-    struct sk_buff* skb;
-    size_t len;
-    int ret;
-
-    ret = ath10k_wmi_start_scan_verify(arg);
-    if (ret) {
-        return ERR_PTR(ret);
+    zx_status_t status = ath10k_wmi_start_scan_verify(arg);
+    if (status != ZX_OK) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    len = sizeof(*cmd) + ath10k_wmi_start_scan_tlvs_len(arg);
-    skb = ath10k_wmi_alloc_skb(ar, len);
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    struct ath10k_msg_buf* msg_buf;
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_10X_START_SCAN,
+                                  ath10k_wmi_start_scan_tlvs_len(arg));
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_10x_start_scan_cmd*)skb->data;
+    struct wmi_10x_start_scan_cmd* cmd = ath10k_msg_buf_get_header(
+            msg_buf, ATH10K_MSG_TYPE_WMI_10X_START_SCAN);
 
     ath10k_wmi_put_start_scan_common(&cmd->common, arg);
     ath10k_wmi_put_start_scan_tlvs(&cmd->tlvs, arg);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi 10x start scan\n");
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
-#endif  // NEEDS PORTING
 
 void ath10k_wmi_start_scan_init(struct wmi_start_scan_arg* arg) {
     /* setup commonly used values */
@@ -6524,37 +6518,31 @@ ath10k_wmi_op_gen_set_ap_ps(struct ath10k* ar, uint32_t vdev_id, const uint8_t* 
                vdev_id, param_id, value, mac);
     return skb;
 }
+#endif // NEEDS PORTING
 
-static struct sk_buff*
+static zx_status_t
 ath10k_wmi_op_gen_scan_chan_list(struct ath10k* ar,
+                                 struct ath10k_msg_buf** msg_buf_ptr,
                                  const struct wmi_scan_chan_list_arg* arg) {
-    struct wmi_scan_chan_list_cmd* cmd;
-    struct sk_buff* skb;
-    struct wmi_channel_arg* ch;
-    struct wmi_channel* ci;
-    int len;
-    int i;
-
-    len = sizeof(*cmd) + arg->n_channels * sizeof(struct wmi_channel);
-
-    skb = ath10k_wmi_alloc_skb(ar, len);
-    if (!skb) {
-        return ERR_PTR(-EINVAL);
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_SCAN_CHAN_LIST,
+                                              arg->n_channels * sizeof(struct wmi_channel));
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_scan_chan_list_cmd*)skb->data;
+    struct wmi_scan_chan_list_cmd* cmd = ath10k_msg_buf_get_header(
+            msg_buf, ATH10K_MSG_TYPE_WMI_SCAN_CHAN_LIST);
     cmd->num_scan_chans = arg->n_channels;
-
-    for (i = 0; i < arg->n_channels; i++) {
-        ch = &arg->channels[i];
-        ci = &cmd->chan_info[i];
-
-        ath10k_wmi_put_wmi_channel(ci, ch);
+    for (size_t i = 0; i < arg->n_channels; i++) {
+        ath10k_wmi_put_wmi_channel(&cmd->chan_info[i], &arg->channels[i]);
     }
 
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
+#if 0   // NEEDS PORTING
 static void
 ath10k_wmi_peer_assoc_fill(struct ath10k* ar, void* buf,
                            const struct wmi_peer_assoc_complete_arg* arg) {
@@ -6844,28 +6832,29 @@ void ath10k_wmi_set_wmm_param(struct wmi_wmm_params* params, const struct wmi_wm
     params->no_ack = arg->no_ack;
 }
 
-#if 0   // NEEDS PORTING
-static struct sk_buff*
+zx_status_t
 ath10k_wmi_op_gen_pdev_set_wmm(struct ath10k* ar,
+                               struct ath10k_msg_buf** msg_buf_ptr,
                                const struct wmi_wmm_params_all_arg* arg) {
-    struct wmi_pdev_set_wmm_params* cmd;
-    struct sk_buff* skb;
-
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_PDEV_SET_WMM, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_pdev_set_wmm_params*)skb->data;
+    struct wmi_pdev_set_wmm_params* cmd = ath10k_msg_buf_get_header(
+            msg_buf, ATH10K_MSG_TYPE_WMI_PDEV_SET_WMM);
     ath10k_wmi_set_wmm_param(&cmd->ac_be, &arg->ac_be);
     ath10k_wmi_set_wmm_param(&cmd->ac_bk, &arg->ac_bk);
     ath10k_wmi_set_wmm_param(&cmd->ac_vi, &arg->ac_vi);
     ath10k_wmi_set_wmm_param(&cmd->ac_vo, &arg->ac_vo);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi pdev set wmm params\n");
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
+#if 0   // NEEDS PORTING
 static struct sk_buff*
 ath10k_wmi_op_gen_request_stats(struct ath10k* ar, uint32_t stats_mask) {
     struct wmi_request_stats_cmd* cmd;
@@ -8018,8 +8007,8 @@ static const struct wmi_ops wmi_10_2_4_ops = {
     .pull_svc_rdy = ath10k_wmi_10x_op_pull_svc_rdy_ev,
 #if 0   // NEEDS PORTING
     .gen_pdev_set_rd = ath10k_wmi_10x_op_gen_pdev_set_rd,
-    .gen_start_scan = ath10k_wmi_10x_op_gen_start_scan,
 #endif  // NEEDS PORTING
+    .gen_start_scan = ath10k_wmi_10x_op_gen_start_scan,
     .gen_echo = ath10k_wmi_op_gen_echo,
 
     .pull_scan = ath10k_wmi_op_pull_scan_ev,
@@ -8062,9 +8051,13 @@ static const struct wmi_ops wmi_10_2_4_ops = {
     .gen_set_psmode = ath10k_wmi_op_gen_set_psmode,
     .gen_set_sta_ps = ath10k_wmi_op_gen_set_sta_ps,
     .gen_set_ap_ps = ath10k_wmi_op_gen_set_ap_ps,
+#endif  // NEEDS PORTING
     .gen_scan_chan_list = ath10k_wmi_op_gen_scan_chan_list,
+#if 0   // NEEDS PORTING
     .gen_beacon_dma = ath10k_wmi_op_gen_beacon_dma,
+#endif  // NEEDS PORTING
     .gen_pdev_set_wmm = ath10k_wmi_op_gen_pdev_set_wmm,
+#if 0   // NEEDS PORTING
     .gen_request_stats = ath10k_wmi_op_gen_request_stats,
     .gen_force_fw_hang = ath10k_wmi_op_gen_force_fw_hang,
     .gen_mgmt_tx = ath10k_wmi_op_gen_mgmt_tx,

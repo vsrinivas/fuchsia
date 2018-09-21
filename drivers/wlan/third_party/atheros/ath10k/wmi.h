@@ -6591,7 +6591,11 @@ struct wmi_pdev_chan_info_req_cmd {
         WMI_MSG(ECHO_CMD, wmi_echo_cmd), WMI_MSG(INIT_CMD_10_2, wmi_init_cmd_10_2),             \
         WMI_MSG(PDEV_SET_PARAM, wmi_pdev_set_param_cmd),                                        \
         WMI_MSG(PDEV_SET_RD, wmi_pdev_set_regdomain_cmd),                                       \
-        WMI_MSG(PDEV_SUSPEND, wmi_pdev_suspend_cmd), WMI_MSG(VDEV_CREATE, wmi_vdev_create_cmd), \
+        WMI_MSG(PDEV_SET_WMM, wmi_pdev_set_wmm_params),                                         \
+        WMI_MSG(PDEV_SUSPEND, wmi_pdev_suspend_cmd),                                            \
+        WMI_MSG(SCAN_CHAN_LIST, wmi_scan_chan_list_cmd),                                        \
+        WMI_MSG(10X_START_SCAN, wmi_10x_start_scan_cmd),                                        \
+        WMI_MSG(VDEV_CREATE, wmi_vdev_create_cmd),                                              \
         WMI_MSG(VDEV_DELETE, wmi_vdev_delete_cmd), WMI_MSG(VDEV_DOWN, wmi_vdev_down_cmd),       \
         WMI_MSG(VDEV_INSTALL_KEY, wmi_vdev_install_key_cmd),                                    \
         WMI_MSG(VDEV_SET_PARAM, wmi_vdev_set_param_cmd),                                        \
