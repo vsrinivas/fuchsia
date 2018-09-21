@@ -21,18 +21,6 @@
 
 #define FDIO_NONBLOCKING 1
 
-// TODO(smklein): Assert that these align with
-// the ObjectInfo tags
-#define FDIO_PROTOCOL_SERVICE 0
-#define FDIO_PROTOCOL_FILE 1
-#define FDIO_PROTOCOL_DIRECTORY 2
-#define FDIO_PROTOCOL_PIPE 3
-#define FDIO_PROTOCOL_VMOFILE 4
-#define FDIO_PROTOCOL_DEVICE 5
-#define FDIO_PROTOCOL_SOCKET 6
-#define FDIO_PROTOCOL_SOCKET_CONNECTED 7
-#define FDIO_PROTOCOL_SOCKETPAIR 8
-
 // events for fdio_wait_fd()
 #define FDIO_EVT_READABLE POLLIN
 #define FDIO_EVT_WRITABLE POLLOUT

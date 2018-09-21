@@ -154,14 +154,14 @@ static zx_status_t zx_pipe_clone(fdio_t* io, zx_handle_t* handles, uint32_t* typ
     if (status < 0) {
         return status;
     }
-    types[0] = PA_FDIO_PIPE;
+    types[0] = PA_FDIO_SOCKET;
     return 1;
 }
 
 static zx_status_t zx_pipe_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
     zx_pipe_t* p = (void*)io;
     handles[0] = p->h;
-    types[0] = PA_FDIO_PIPE;
+    types[0] = PA_FDIO_SOCKET;
     return 1;
 }
 
@@ -315,7 +315,7 @@ zx_status_t fdio_pipe_half(zx_handle_t* handle, uint32_t* type) {
         goto fail;
     }
     *handle = h1;
-    *type = PA_FDIO_PIPE;
+    *type = PA_FDIO_SOCKET;
     return fd;
 
 fail:

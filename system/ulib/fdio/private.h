@@ -139,7 +139,7 @@ fdio_t* fdio_vmofile_create(zx_handle_t h, zx_handle_t vmo, zx_off_t off, zx_off
 // datagram socket.
 //
 // Always consumes |socket|.
-zx_status_t fdio_acquire_socket(zx_handle_t socket, int flags, fdio_t** out_io);
+zx_status_t fdio_acquire_socket(zx_handle_t socket, fdio_t** out_io);
 
 // Wraps a socket with an fdio_t using socket io.
 fdio_t* fdio_socket_create_stream(zx_handle_t s, int flags);

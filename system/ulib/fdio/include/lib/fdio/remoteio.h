@@ -123,9 +123,6 @@ typedef struct {
         struct {
             zx_handle_t e;
         } device;
-        struct {
-            zx_handle_t s;
-        } socket;
     };
 } zxrio_node_info_t;
 

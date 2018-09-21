@@ -141,11 +141,8 @@ struct zx_proc_args {
 
 // Handle types the fdio library uses
 #define PA_FDIO_REMOTE           0x32u
-#define PA_FDIO_PIPE             0x33u
-#define PA_FDIO_EVENT            0x34u
 #define PA_FDIO_LOGGER           0x35u
 #define PA_FDIO_SOCKET           0x36u
-#define PA_FDIO_SOCKETPAIR       0x37u
 
 // Server endpoint for handling connection to appmgr services.
 #define PA_DIRECTORY_REQUEST     0x3Bu

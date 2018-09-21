@@ -551,7 +551,7 @@ fail:
             msg.hdr.ordinal = ZXFIDL_ON_OPEN;
             msg.status = ZX_OK;
             msg.extra_ptr = (zxrio_node_info_t*)FIDL_ALLOC_PRESENT;
-            msg.extra.tag = FDIO_PROTOCOL_DIRECTORY;
+            msg.extra.tag = fuchsia_io_NodeInfoTag_directory;
             zx_channel_write(h, 0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
         }
         return;

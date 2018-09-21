@@ -6,6 +6,7 @@
 
 #include <limits.h>
 
+#include <fuchsia/io/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
@@ -387,7 +388,7 @@ bool test_get_handles() {
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
         EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
                   GetRights(vmo.get()));
-        EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
+        EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, type);
         EXPECT_EQ(PAGE_1 - 5u, info.vmofile.offset);
         EXPECT_EQ(23u, info.vmofile.length);
 
@@ -410,7 +411,7 @@ bool test_get_handles() {
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
         EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
-        EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
+        EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, type);
         EXPECT_EQ(PAGE_1 - 5u, info.vmofile.offset);
         EXPECT_EQ(23u, info.vmofile.length);
 
@@ -440,7 +441,7 @@ bool test_get_handles() {
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
         EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
-        EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
+        EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, type);
         EXPECT_EQ(PAGE_1 - 5u, info.vmofile.offset);
         EXPECT_EQ(23u, info.vmofile.length);
 
@@ -467,7 +468,7 @@ bool test_get_handles() {
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
         EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
                   GetRights(vmo.get()));
-        EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
+        EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, type);
         EXPECT_EQ(PAGE_SIZE - 5u, info.vmofile.offset);
         EXPECT_EQ(23u, info.vmofile.length);
 
@@ -490,7 +491,7 @@ bool test_get_handles() {
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
         EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
-        EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
+        EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, type);
         EXPECT_EQ(PAGE_SIZE - 5u, info.vmofile.offset);
         EXPECT_EQ(23u, info.vmofile.length);
 
@@ -519,7 +520,7 @@ bool test_get_handles() {
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
         EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_WRITE,
                   GetRights(vmo.get()));
-        EXPECT_EQ(FDIO_PROTOCOL_VMOFILE, type);
+        EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, type);
         EXPECT_EQ(PAGE_SIZE - 5u, info.vmofile.offset);
         EXPECT_EQ(23u, info.vmofile.length);
 

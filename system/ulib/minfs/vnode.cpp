@@ -2027,9 +2027,9 @@ zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targ
 zx_status_t VnodeMinfs::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
                                    zxrio_node_info_t* extra) {
     if (IsDirectory()) {
-        *type = FDIO_PROTOCOL_DIRECTORY;
+        *type = fuchsia_io_NodeInfoTag_directory;
     } else {
-        *type = FDIO_PROTOCOL_FILE;
+        *type = fuchsia_io_NodeInfoTag_file;
     }
     return ZX_OK;
 }

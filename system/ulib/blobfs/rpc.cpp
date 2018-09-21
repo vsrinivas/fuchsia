@@ -8,28 +8,26 @@
 #include <string.h>
 #include <threads.h>
 
+#include <blobfs/blobfs.h>
 #include <fs/vfs.h>
-
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
-
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
-#include <blobfs/blobfs.h>
 
 namespace blobfs {
 
 zx_status_t VnodeBlob::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
                                   zxrio_node_info_t* extra) {
     if (IsDirectory()) {
-        *type = FDIO_PROTOCOL_DIRECTORY;
+        *type = fuchsia_io_NodeInfoTag_directory;
         return ZX_OK;
     }
-    *type = FDIO_PROTOCOL_FILE;
+    *type = fuchsia_io_NodeInfoTag_file;
     zx_status_t r = GetReadableEvent(hnd);
     if (r < 0) {
         return r;

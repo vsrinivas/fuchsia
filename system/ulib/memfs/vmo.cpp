@@ -82,7 +82,7 @@ zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* typ
     *off = offset_;
     *len = length_;
     *hnd = vmo;
-    *type = FDIO_PROTOCOL_VMOFILE;
+    *type = fuchsia_io_NodeInfoTag_vmofile;
     return ZX_OK;
 }
 

@@ -48,7 +48,7 @@ static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg,
                                       zx_handle_t* handle) {
     memset(msg, 0, sizeof(*msg));
     msg->hdr.ordinal = ZXFIDL_ON_OPEN;
-    msg->extra.tag = FDIO_PROTOCOL_DEVICE;
+    msg->extra.tag = fuchsia_io_NodeInfoTag_device;
     msg->status = ZX_OK;
     msg->extra_ptr = (zxrio_node_info_t*)FIDL_ALLOC_PRESENT;
     *handle = ZX_HANDLE_INVALID;
