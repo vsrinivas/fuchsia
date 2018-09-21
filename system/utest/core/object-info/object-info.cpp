@@ -324,7 +324,7 @@ bool process_maps_smoke() {
         // All entries should be children of the root VMAR.
         EXPECT_GT(entry->depth, 1u, msg);
         EXPECT_TRUE(entry->type >= ZX_INFO_MAPS_TYPE_ASPACE &&
-                        entry->type < ZX_INFO_MAPS_TYPE_LAST,
+                        entry->type <= ZX_INFO_MAPS_TYPE_MAPPING,
                     msg);
 
         if (entry->type == ZX_INFO_MAPS_TYPE_VMAR &&

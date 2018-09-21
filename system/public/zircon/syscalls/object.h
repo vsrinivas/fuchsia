@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSCALLS_OBJECT_H_
+#define ZIRCON_SYSCALLS_OBJECT_H_
 
 #include <zircon/types.h>
 
@@ -12,34 +13,33 @@ __BEGIN_CDECLS
 // clang-format off
 
 // Valid topics for zx_object_get_info.
-typedef enum {
-    ZX_INFO_NONE                       = 0,
-    ZX_INFO_HANDLE_VALID               = 1,
-    ZX_INFO_HANDLE_BASIC               = 2,  // zx_info_handle_basic_t[1]
-    ZX_INFO_PROCESS                    = 3,  // zx_info_process_t[1]
-    ZX_INFO_PROCESS_THREADS            = 4,  // zx_koid_t[n]
-    ZX_INFO_VMAR                       = 7,  // zx_info_vmar_t[1]
-    ZX_INFO_JOB_CHILDREN               = 8,  // zx_koid_t[n]
-    ZX_INFO_JOB_PROCESSES              = 9,  // zx_koid_t[n]
-    ZX_INFO_THREAD                     = 10, // zx_info_thread_t[1]
-    ZX_INFO_THREAD_EXCEPTION_REPORT    = 11, // zx_exception_report_t[1]
-    ZX_INFO_TASK_STATS                 = 12, // zx_info_task_stats_t[1]
-    ZX_INFO_PROCESS_MAPS               = 13, // zx_info_maps_t[n]
-    ZX_INFO_PROCESS_VMOS               = 14, // zx_info_vmo_t[n]
-    ZX_INFO_THREAD_STATS               = 15, // zx_info_thread_stats_t[1]
-    ZX_INFO_CPU_STATS                  = 16, // zx_info_cpu_stats_t[n]
-    ZX_INFO_KMEM_STATS                 = 17, // zx_info_kmem_stats_t[1]
-    ZX_INFO_RESOURCE                   = 18, // zx_info_resource_t[1]
-    ZX_INFO_HANDLE_COUNT               = 19, // zx_info_handle_count_t[1]
-    ZX_INFO_BTI                        = 20, // zx_info_bti_t[1]
-    ZX_INFO_PROCESS_HANDLE_STATS       = 21, // zx_info_process_handle_stats_t[1]
-    ZX_INFO_SOCKET                     = 22, // zx_info_socket_t[1]
-    ZX_INFO_VMO                        = 23, // zx_info_vmo_t[1]
-} zx_object_info_topic_t;
+typedef uint32_t zx_object_info_topic_t;
+#define ZX_INFO_NONE                    ((zx_object_info_topic_t)  0u)
+#define ZX_INFO_HANDLE_VALID            ((zx_object_info_topic_t)  1u)
+#define ZX_INFO_HANDLE_BASIC            ((zx_object_info_topic_t)  2u) // zx_info_handle_basic_t[1]
+#define ZX_INFO_PROCESS                 ((zx_object_info_topic_t)  3u) // zx_info_process_t[1]
+#define ZX_INFO_PROCESS_THREADS         ((zx_object_info_topic_t)  4u) // zx_koid_t[n]
+#define ZX_INFO_VMAR                    ((zx_object_info_topic_t)  7u) // zx_info_vmar_t[1]
+#define ZX_INFO_JOB_CHILDREN            ((zx_object_info_topic_t)  8u) // zx_koid_t[n]
+#define ZX_INFO_JOB_PROCESSES           ((zx_object_info_topic_t)  9u) // zx_koid_t[n]
+#define ZX_INFO_THREAD                  ((zx_object_info_topic_t) 10u) // zx_info_thread_t[1]
+#define ZX_INFO_THREAD_EXCEPTION_REPORT ((zx_object_info_topic_t) 11u) // zx_exception_report_t[1]
+#define ZX_INFO_TASK_STATS              ((zx_object_info_topic_t) 12u) // zx_info_task_stats_t[1]
+#define ZX_INFO_PROCESS_MAPS            ((zx_object_info_topic_t) 13u) // zx_info_maps_t[n]
+#define ZX_INFO_PROCESS_VMOS            ((zx_object_info_topic_t) 14u) // zx_info_vmo_t[n]
+#define ZX_INFO_THREAD_STATS            ((zx_object_info_topic_t) 15u) // zx_info_thread_stats_t[1]
+#define ZX_INFO_CPU_STATS               ((zx_object_info_topic_t) 16u) // zx_info_cpu_stats_t[n]
+#define ZX_INFO_KMEM_STATS              ((zx_object_info_topic_t) 17u) // zx_info_kmem_stats_t[1]
+#define ZX_INFO_RESOURCE                ((zx_object_info_topic_t) 18u) // zx_info_resource_t[1]
+#define ZX_INFO_HANDLE_COUNT            ((zx_object_info_topic_t) 19u) // zx_info_handle_count_t[1]
+#define ZX_INFO_BTI                     ((zx_object_info_topic_t) 20u) // zx_info_bti_t[1]
+#define ZX_INFO_PROCESS_HANDLE_STATS    ((zx_object_info_topic_t) 21u) // zx_info_process_handle_stats_t[1]
+#define ZX_INFO_SOCKET                  ((zx_object_info_topic_t) 22u) // zx_info_socket_t[1]
+#define ZX_INFO_VMO                     ((zx_object_info_topic_t) 23u) // zx_info_vmo_t[1]
 
 typedef uint32_t zx_obj_props_t;
-#define ZX_OBJ_PROP_NONE ((zx_obj_props_t)0u)
-#define ZX_OBJ_PROP_WAITABLE ((zx_obj_props_t)1u)
+#define ZX_OBJ_PROP_NONE                ((zx_obj_props_t)0u)
+#define ZX_OBJ_PROP_WAITABLE            ((zx_obj_props_t)1u)
 
 typedef struct zx_info_handle_basic {
     // The unique id assigned by kernel to the object referenced by the
@@ -92,9 +92,11 @@ typedef struct zx_info_process {
     bool debugger_attached;
 } zx_info_process_t;
 
+typedef uint32_t zx_thread_state_t;
+
 typedef struct zx_info_thread {
     // One of ZX_THREAD_STATE_* values.
-    uint32_t state;
+    zx_thread_state_t state;
 
     // If |state| is ZX_THREAD_STATE_BLOCKED_EXCEPTION, the thread has gotten
     // an exception and is waiting for the exception to be handled by the
@@ -193,13 +195,11 @@ typedef struct zx_info_maps_mapping {
 // Types of entries represented by zx_info_maps_t.
 // Can't use zx_obj_type_t because not all of these are
 // user-visible kernel object types.
-typedef enum zx_info_maps_type {
-    ZX_INFO_MAPS_TYPE_NONE    = 0,
-    ZX_INFO_MAPS_TYPE_ASPACE  = 1,
-    ZX_INFO_MAPS_TYPE_VMAR    = 2,
-    ZX_INFO_MAPS_TYPE_MAPPING = 3,
-    ZX_INFO_MAPS_TYPE_LAST
-} zx_info_maps_type_t;
+typedef uint32_t zx_info_maps_type_t;
+#define ZX_INFO_MAPS_TYPE_NONE    ((zx_info_maps_type_t) 0u)
+#define ZX_INFO_MAPS_TYPE_ASPACE  ((zx_info_maps_type_t) 1u)
+#define ZX_INFO_MAPS_TYPE_VMAR    ((zx_info_maps_type_t) 2u)
+#define ZX_INFO_MAPS_TYPE_MAPPING ((zx_info_maps_type_t) 3u)
 
 // Describes a node in the aspace/vmar/mapping hierarchy for a user process.
 typedef struct zx_info_maps {
@@ -215,7 +215,7 @@ typedef struct zx_info_maps {
     // of zx_info_maps_t entries, which will be in depth-first pre-order.
     size_t depth;
     // The type of this entry; indicates which union entry is valid.
-    uint32_t type; // zx_info_maps_type_t
+    zx_info_maps_type_t type;
     union {
         zx_info_maps_mapping_t mapping;
         // No additional fields for other types.
@@ -387,57 +387,59 @@ typedef struct zx_info_resource {
 // Object properties.
 
 // Argument is a char[ZX_MAX_NAME_LEN].
-#define ZX_PROP_NAME                        3u
+#define ZX_PROP_NAME                        ((uint32_t) 3u)
 
 #if __x86_64__
 // Argument is a uintptr_t.
-#define ZX_PROP_REGISTER_GS                 2u
-#define ZX_PROP_REGISTER_FS                 4u
+#define ZX_PROP_REGISTER_GS                 ((uint32_t) 2u)
+#define ZX_PROP_REGISTER_FS                 ((uint32_t) 4u)
 #endif
 
 // Argument is the value of ld.so's _dl_debug_addr, a uintptr_t. If the
 // property is set to the magic value of ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET
 // on process startup, ld.so will trigger a debug breakpoint immediately after
 // setting the property to the correct value.
-#define ZX_PROP_PROCESS_DEBUG_ADDR          5u
-#define ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET 1u
+#define ZX_PROP_PROCESS_DEBUG_ADDR          ((uint32_t) 5u)
+#define ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET  ((uintptr_t) 1u)
 
 // Argument is the base address of the vDSO mapping (or zero), a uintptr_t.
-#define ZX_PROP_PROCESS_VDSO_BASE_ADDRESS   6u
+#define ZX_PROP_PROCESS_VDSO_BASE_ADDRESS   ((uint32_t) 6u)
 
 // Argument is a size_t.
-#define ZX_PROP_SOCKET_RX_BUF_MAX           8u
-#define ZX_PROP_SOCKET_RX_BUF_SIZE          9u
-#define ZX_PROP_SOCKET_TX_BUF_MAX           10u
-#define ZX_PROP_SOCKET_TX_BUF_SIZE          11u
+#define ZX_PROP_SOCKET_RX_BUF_MAX           ((uint32_t) 8u)
+#define ZX_PROP_SOCKET_RX_BUF_SIZE          ((uint32_t) 9u)
+#define ZX_PROP_SOCKET_TX_BUF_MAX           ((uint32_t) 10u)
+#define ZX_PROP_SOCKET_TX_BUF_SIZE          ((uint32_t) 11u)
 
 // Argument is a size_t, describing the number of packets a channel
 // endpoint can have pending in its tx direction.
-#define ZX_PROP_CHANNEL_TX_MSG_MAX          12u
+#define ZX_PROP_CHANNEL_TX_MSG_MAX          ((uint32_t) 12u)
 
 // Basic thread states, in zx_info_thread_t.state.
-#define ZX_THREAD_STATE_NEW                 0x0000u
-#define ZX_THREAD_STATE_RUNNING             0x0001u
-#define ZX_THREAD_STATE_SUSPENDED           0x0002u
+#define ZX_THREAD_STATE_NEW                 ((zx_thread_state_t) 0x0000u)
+#define ZX_THREAD_STATE_RUNNING             ((zx_thread_state_t) 0x0001u)
+#define ZX_THREAD_STATE_SUSPENDED           ((zx_thread_state_t) 0x0002u)
 // ZX_THREAD_STATE_BLOCKED is never returned by itself.
 // It is always returned with a more precise reason.
 // See ZX_THREAD_STATE_BLOCKED_* below.
-#define ZX_THREAD_STATE_BLOCKED             0x0003u
-#define ZX_THREAD_STATE_DYING               0x0004u
-#define ZX_THREAD_STATE_DEAD                0x0005u
+#define ZX_THREAD_STATE_BLOCKED             ((zx_thread_state_t) 0x0003u)
+#define ZX_THREAD_STATE_DYING               ((zx_thread_state_t) 0x0004u)
+#define ZX_THREAD_STATE_DEAD                ((zx_thread_state_t) 0x0005u)
 
 // More precise thread states.
-#define ZX_THREAD_STATE_BLOCKED_EXCEPTION       0x0103u
-#define ZX_THREAD_STATE_BLOCKED_SLEEPING        0x0203u
-#define ZX_THREAD_STATE_BLOCKED_FUTEX           0x0303u
-#define ZX_THREAD_STATE_BLOCKED_PORT            0x0403u
-#define ZX_THREAD_STATE_BLOCKED_CHANNEL         0x0503u
-#define ZX_THREAD_STATE_BLOCKED_WAIT_ONE        0x0603u
-#define ZX_THREAD_STATE_BLOCKED_WAIT_MANY       0x0703u
-#define ZX_THREAD_STATE_BLOCKED_INTERRUPT       0x0803u
+#define ZX_THREAD_STATE_BLOCKED_EXCEPTION   ((zx_thread_state_t) 0x0103u)
+#define ZX_THREAD_STATE_BLOCKED_SLEEPING    ((zx_thread_state_t) 0x0203u)
+#define ZX_THREAD_STATE_BLOCKED_FUTEX       ((zx_thread_state_t) 0x0303u)
+#define ZX_THREAD_STATE_BLOCKED_PORT        ((zx_thread_state_t) 0x0403u)
+#define ZX_THREAD_STATE_BLOCKED_CHANNEL     ((zx_thread_state_t) 0x0503u)
+#define ZX_THREAD_STATE_BLOCKED_WAIT_ONE    ((zx_thread_state_t) 0x0603u)
+#define ZX_THREAD_STATE_BLOCKED_WAIT_MANY   ((zx_thread_state_t) 0x0703u)
+#define ZX_THREAD_STATE_BLOCKED_INTERRUPT   ((zx_thread_state_t) 0x0803u)
 
 // Reduce possibly-more-precise state to a basic state.
 // Useful if, for example, you want to check for BLOCKED on anything.
 #define ZX_THREAD_STATE_BASIC(n) ((n) & 0xff)
 
 __END_CDECLS
+
+#endif // ZIRCON_SYSCALLS_OBJECT_H_
