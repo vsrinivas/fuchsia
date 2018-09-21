@@ -13,8 +13,8 @@
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/callback/waiter.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/functional/auto_call.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
@@ -246,28 +246,26 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
 void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                      storage::CommitId head1,
                                      storage::CommitId head2) {
-  auto cleanup =
-      fxl::MakeAutoCall(task_runner_.MakeScoped([this, delayed_status] {
-        // |merge_in_progress_| must be reset before calling
-        // |on_empty_callback_|.
-        merge_in_progress_ = false;
+  auto cleanup = fit::defer(task_runner_.MakeScoped([this, delayed_status] {
+    // |merge_in_progress_| must be reset before calling
+    // |on_empty_callback_|.
+    merge_in_progress_ = false;
 
-        if (has_next_strategy_) {
-          strategy_ = std::move(next_strategy_);
-          next_strategy_.reset();
-          has_next_strategy_ = false;
-        }
-        PostCheckConflicts(delayed_status);
-        // Call on_empty_callback_ at the very end as it might delete the
-        // resolver.
-        if (on_empty_callback_) {
-          on_empty_callback_();
-        }
-      }));
+    if (has_next_strategy_) {
+      strategy_ = std::move(next_strategy_);
+      next_strategy_.reset();
+      has_next_strategy_ = false;
+    }
+    PostCheckConflicts(delayed_status);
+    // Call on_empty_callback_ at the very end as it might delete the
+    // resolver.
+    if (on_empty_callback_) {
+      on_empty_callback_();
+    }
+  }));
   uint64_t id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("ledger", "merge", id);
-  auto tracing =
-      fxl::MakeAutoCall([id] { TRACE_ASYNC_END("ledger", "merge", id); });
+  auto tracing = fit::defer([id] { TRACE_ASYNC_END("ledger", "merge", id); });
 
   auto waiter = fxl::MakeRefCounted<callback::Waiter<
       storage::Status, std::unique_ptr<const storage::Commit>>>(

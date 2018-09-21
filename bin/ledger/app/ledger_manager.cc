@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/memory/weak_ptr.h>
@@ -26,7 +27,7 @@ namespace {
 // A token that performs a given action on destruction.
 // ExpiringToken objects are used with internal page requests to notify the
 // PageManagerContainer that the requested PageManager is no longer used.
-using ExpiringToken = fxl::AutoCall<fit::closure>;
+using ExpiringToken = fit::deferred_action<fit::closure>;
 
 }  // namespace
 
@@ -135,7 +136,7 @@ class LedgerManager::PageManagerContainer {
   void NewInternalRequest(
       fit::function<void(Status, ExpiringToken, PageManager*)> callback) {
     if (status_ != Status::OK) {
-      callback(status_, fxl::MakeAutoCall<fit::closure>([] {}), nullptr);
+      callback(status_, fit::defer<fit::closure>([] {}), nullptr);
       return;
     }
 
@@ -181,7 +182,7 @@ class LedgerManager::PageManagerContainer {
 
     for (auto& callback : internal_request_callbacks_) {
       if (!page_manager_) {
-        callback(status_, fxl::MakeAutoCall<fit::closure>([] {}), nullptr);
+        callback(status_, fit::defer<fit::closure>([] {}), nullptr);
         continue;
       }
       callback(status_, NewExpiringToken(), page_manager_.get());
@@ -435,7 +436,7 @@ void LedgerManager::PageIsClosedAndSatisfiesPredicate(
   uint64_t operation_id = page_was_opened_id_++;
   page_was_opened_map_[page_id.ToString()].push_back(operation_id);
   auto on_return =
-      fxl::MakeAutoCall([this, page_id = page_id.ToString(), operation_id] {
+      fit::defer([this, page_id = page_id.ToString(), operation_id] {
         RemoveTrackedPage(page_id, operation_id);
       });
 

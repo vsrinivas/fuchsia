@@ -7,8 +7,8 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/functional/auto_call.h>
 #include <lib/fxl/memory/ref_ptr.h>
 
 namespace ledger {
@@ -26,10 +26,10 @@ enum class CobaltEvent : uint32_t {
 
 // Cobalt initialization. When cobalt is not need, the returned object must be
 // deleted. This method must not be called again until then.
-fxl::AutoCall<fit::closure> InitializeCobalt(
+fit::deferred_action<fit::closure> InitializeCobalt(
     async_dispatcher_t* dispatcher, component::StartupContext* context);
 
-// Report an event to Cobalt. he AutoCall object returned by |InitializeCobalt|
+// Report an event to Cobalt. The callback returned by |InitializeCobalt|
 // must be live throughout every call to this function. This is
 // thread-compatible, as long as the previous requirement is ensured across
 // threads.

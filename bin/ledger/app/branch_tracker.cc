@@ -8,8 +8,8 @@
 
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/waiter.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/functional/auto_call.h>
 #include <lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/bin/ledger/app/diff_utils.h"
@@ -216,8 +216,7 @@ class BranchTracker::PageWatcherContainer {
                   [this, new_commit = std::move(new_commit),
                    paginated_changes = std::move(paginated_changes)](
                       coroutine::CoroutineHandler* handler) mutable {
-                    auto guard =
-                        fxl::MakeAutoCall([this] { handler_ = nullptr; });
+                    auto guard = fit::defer([this] { handler_ = nullptr; });
                     FXL_DCHECK(!handler_);
                     handler_ = handler;
                     for (size_t i = 0; i < paginated_changes.size(); ++i) {

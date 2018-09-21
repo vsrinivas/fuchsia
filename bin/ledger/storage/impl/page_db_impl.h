@@ -10,7 +10,6 @@
 #include <vector>
 
 #include <lib/async/dispatcher.h>
-#include <lib/fxl/functional/auto_call.h>
 #include <lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"

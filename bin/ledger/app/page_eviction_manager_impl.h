@@ -9,6 +9,7 @@
 
 #include <utility>
 
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
@@ -53,7 +54,7 @@ class PageEvictionManagerImpl : public PageEvictionManager {
  private:
   // A token that performs a given action on destruction. ExpiringToken objects
   // are used to keep track of pending operations.
-  using ExpiringToken = fxl::AutoCall<fit::closure>;
+  using ExpiringToken = fit::deferred_action<fit::closure>;
 
   // A Completer allowing waiting until the target operation is completed.
   class Completer {

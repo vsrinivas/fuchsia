@@ -10,7 +10,7 @@
 #include <lib/context/cpp/formatting.h>
 #include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fxl/functional/auto_call.h>
+#include <lib/fit/defer.h>
 #include <lib/fxl/functional/make_copyable.h>
 
 #include "peridot/bin/context_engine/debug.h"
@@ -179,7 +179,7 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
       std::make_unique<fuchsia::modular::EntityPtr>();
   entity_resolver_->ResolveEntity(reference, entity->NewRequest());
 
-  auto fallback = fxl::MakeAutoCall([done, reference] {
+  auto fallback = fit::defer([done, reference] {
     // The contents of the fuchsia::modular::Entity value could be a deprecated
     // JSON fuchsia::modular::Entity, not an fuchsia::modular::Entity reference.
     done(Deprecated_GetTypesFromJsonEntity(reference));

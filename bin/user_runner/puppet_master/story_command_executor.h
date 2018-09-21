@@ -10,8 +10,8 @@
 #include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/functional/auto_call.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
 namespace modular {
@@ -38,7 +38,7 @@ class StoryCommandExecutor {
   using ListenerCallback = fit::function<void(
       const std::vector<fuchsia::modular::StoryCommand>& commands,
       fuchsia::modular::ExecuteResult result)>;
-  using ListenerAutoCancel = fxl::AutoCall<std::function<void()>>;
+  using ListenerAutoCancel = fit::deferred_action<std::function<void()>>;
 
   // Calls |listener| whenever StoryCommands are executed with the commands and
   // the execution result. Returns a scoped auto-cancel value. The returned

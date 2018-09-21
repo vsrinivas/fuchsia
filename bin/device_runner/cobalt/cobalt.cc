@@ -6,7 +6,6 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/cobalt/cpp/cobalt_logger.h>
-#include <lib/fit/function.h>
 
 namespace modular {
 namespace {
@@ -16,7 +15,7 @@ cobalt::CobaltLogger* g_cobalt_logger = nullptr;
 
 }  // namespace
 
-fxl::AutoCall<fit::closure> InitializeCobalt(
+fit::deferred_action<fit::closure> InitializeCobalt(
     async_dispatcher_t* dispatcher, component::StartupContext* context) {
   FXL_DCHECK(!g_cobalt_logger) << "Cobalt has already been initialized.";
 
@@ -24,10 +23,9 @@ fxl::AutoCall<fit::closure> InitializeCobalt(
       cobalt::NewCobaltLogger(dispatcher, context, kConfigBinProtoPath);
 
   g_cobalt_logger = cobalt_logger.get();
-  return fxl::MakeAutoCall<fit::closure>(
-      [cobalt_logger = std::move(cobalt_logger)] {
-        g_cobalt_logger = nullptr;
-      });
+  return fit::defer<fit::closure>([cobalt_logger = std::move(cobalt_logger)] {
+    g_cobalt_logger = nullptr;
+  });
 }
 
 void ReportEvent(ModularEvent event) {

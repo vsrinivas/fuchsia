@@ -8,8 +8,8 @@
 #include <functional>
 
 #include <lib/callback/capture.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/functional/auto_call.h>
 #include <lib/fxl/memory/ref_counted.h>
 #include <lib/fxl/memory/ref_ptr.h>
 
@@ -113,25 +113,24 @@ FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
   };
 
   auto termination_sentinel = fxl::MakeRefCounted<TerminationSentinel>();
-  auto on_return = fxl::MakeAutoCall(
+  auto on_return = fit::defer(
       [termination_sentinel] { termination_sentinel->terminated = true; });
 
   volatile bool sync_state = true;
   volatile bool callback_called = false;
   // Unblock the coroutine (by having it return early) if the asynchronous call
   // drops its callback without ever calling it.
-  auto unblocker =
-      fxl::MakeAutoCall([termination_sentinel, &handler, &sync_state] {
-        if (termination_sentinel->terminated) {
-          return;
-        }
+  auto unblocker = fit::defer([termination_sentinel, &handler, &sync_state] {
+    if (termination_sentinel->terminated) {
+      return;
+    }
 
-        if (sync_state) {
-          sync_state = false;
-          return;
-        }
-        handler->Resume(ContinuationStatus::INTERRUPTED);
-      });
+    if (sync_state) {
+      sync_state = false;
+      return;
+    }
+    handler->Resume(ContinuationStatus::INTERRUPTED);
+  });
   auto capture = callback::Capture(
       [&sync_state, &callback_called, handler,
        unblocker = std::move(unblocker)]() mutable {

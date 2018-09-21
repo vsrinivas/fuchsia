@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/functional/auto_call.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
@@ -246,7 +246,7 @@ TEST(Coroutine, ResumeCoroutineInOtherCoroutineDestructor) {
   coroutine_service.StartCoroutine([&](CoroutineHandler* local_handler1) {
     handler1 = local_handler1;
     auto autocall =
-        fxl::MakeAutoCall([&] { handler1->Resume(ContinuationStatus::OK); });
+        fit::defer([&] { handler1->Resume(ContinuationStatus::OK); });
     coroutine_service.StartCoroutine(
         [&handler2, &routine2_done,
          autocall = std::move(autocall)](CoroutineHandler* local_handler2) {

@@ -38,11 +38,11 @@ struct AppParams {
   std::string firebase_api_key = "";
 };
 
-fxl::AutoCall<fit::closure> SetupCobalt(
+fit::deferred_action<fit::closure> SetupCobalt(
     bool disable_statistics, async_dispatcher_t* dispatcher,
     component::StartupContext* startup_context) {
   if (disable_statistics) {
-    return fxl::MakeAutoCall<fit::closure>([] {});
+    return fit::defer<fit::closure>([] {});
   }
   return InitializeCobalt(dispatcher, startup_context);
 };
@@ -118,7 +118,7 @@ class App : public ledger_internal::LedgerController {
   async::Loop io_loop_;
   trace::TraceProvider trace_provider_;
   std::unique_ptr<component::StartupContext> startup_context_;
-  fxl::AutoCall<fit::closure> cobalt_cleaner_;
+  fit::deferred_action<fit::closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
   fidl::BindingSet<ledger_internal::LedgerRepositoryFactory> factory_bindings_;

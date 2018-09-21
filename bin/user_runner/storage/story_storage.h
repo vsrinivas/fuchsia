@@ -9,7 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
-#include <lib/fxl/functional/auto_call.h>
+#include <lib/fit/defer.h>
 
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
@@ -98,7 +98,7 @@ class StoryStorage : public PageClient {
   // given the special value of nullptr.
   using LinkUpdatedCallback =
       std::function<void(const fidl::StringPtr& value, const void* context)>;
-  using LinkWatcherAutoCancel = fxl::AutoCall<std::function<void()>>;
+  using LinkWatcherAutoCancel = fit::deferred_action<std::function<void()>>;
 
   // Registers |callback| to be invoked whenever a change to the link value at
   // |link_path| occurs. See documentation for LinkUpdatedCallback above. The
