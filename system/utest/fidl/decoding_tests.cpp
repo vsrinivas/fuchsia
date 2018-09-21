@@ -60,12 +60,14 @@ constexpr zx_handle_t dummy_handle_29 = static_cast<zx_handle_t>(52);
 
 // All sizes in fidl encoding tables are 32 bits. The fidl compiler
 // normally enforces this. Check manually in manual tests.
-template <typename T, size_t N> uint32_t ArrayCount(T const (&array)[N]) {
+template <typename T, size_t N>
+uint32_t ArrayCount(T const (&array)[N]) {
     static_assert(N < UINT32_MAX, "Array is too large!");
     return N;
 }
 
-template <typename T, size_t N> uint32_t ArraySize(T const (&array)[N]) {
+template <typename T, size_t N>
+uint32_t ArraySize(T const (&array)[N]) {
     static_assert(sizeof(array) < UINT32_MAX, "Array is too large!");
     return sizeof(array);
 }
@@ -73,7 +75,7 @@ template <typename T, size_t N> uint32_t ArraySize(T const (&array)[N]) {
 bool decode_null_decode_parameters() {
     BEGIN_TEST;
 
-    zx_handle_t handles[] = { static_cast<zx_handle_t>(23) };
+    zx_handle_t handles[] = {static_cast<zx_handle_t>(23)};
 
     // Null message type.
     {
@@ -327,7 +329,10 @@ bool decode_array_of_present_handles_error_closes_handles() {
     message.inline_struct.handles[3] = FIDL_HANDLE_PRESENT;
 
     zx_handle_t out_of_line_handles[4] = {
-        handle_pairs[0][0], handle_pairs[1][0], handle_pairs[2][0], handle_pairs[3][0],
+        handle_pairs[0][0],
+        handle_pairs[1][0],
+        handle_pairs[2][0],
+        handle_pairs[3][0],
     };
 
     const char* error = nullptr;
@@ -345,7 +350,7 @@ bool decode_array_of_present_handles_error_closes_handles() {
                                      ZX_EVENTPAIR_PEER_CLOSED,
                                      1, // deadline shouldn't matter, should return immediately.
                                      &observed_signals),
-                   ZX_OK);
+                  ZX_OK);
         EXPECT_EQ(observed_signals & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED);
         EXPECT_EQ(zx_handle_close(handle_pairs[i][1]), ZX_OK); // [i][0] was closed by fidl_encode.
     }
@@ -356,7 +361,7 @@ bool decode_array_of_present_handles_error_closes_handles() {
                                      ZX_EVENTPAIR_PEER_CLOSED,
                                      zx_clock_get_monotonic() + 1,
                                      &observed_signals),
-                   ZX_ERR_TIMED_OUT);
+                  ZX_ERR_TIMED_OUT);
         EXPECT_EQ(observed_signals & ZX_EVENTPAIR_PEER_CLOSED, 0);
         EXPECT_EQ(zx_handle_close(handle_pairs[i][0]), ZX_OK);
         EXPECT_EQ(zx_handle_close(handle_pairs[i][1]), ZX_OK);
@@ -465,9 +470,18 @@ bool decode_array_of_array_of_present_handles() {
     message.inline_struct.handles[2][3] = FIDL_HANDLE_PRESENT;
 
     zx_handle_t handles[] = {
-        dummy_handle_0, dummy_handle_1, dummy_handle_2,  dummy_handle_3,
-        dummy_handle_4, dummy_handle_5, dummy_handle_6,  dummy_handle_7,
-        dummy_handle_8, dummy_handle_9, dummy_handle_10, dummy_handle_11,
+        dummy_handle_0,
+        dummy_handle_1,
+        dummy_handle_2,
+        dummy_handle_3,
+        dummy_handle_4,
+        dummy_handle_5,
+        dummy_handle_6,
+        dummy_handle_7,
+        dummy_handle_8,
+        dummy_handle_9,
+        dummy_handle_10,
+        dummy_handle_11,
     };
 
     const char* error = nullptr;
@@ -1017,8 +1031,14 @@ bool decode_present_nonnullable_bounded_vector_of_handles_short_error() {
     message.handles2[3] = FIDL_HANDLE_PRESENT;
 
     zx_handle_t handles[] = {
-        dummy_handle_0, dummy_handle_1, dummy_handle_2, dummy_handle_3,
-        dummy_handle_4, dummy_handle_5, dummy_handle_6, dummy_handle_7,
+        dummy_handle_0,
+        dummy_handle_1,
+        dummy_handle_2,
+        dummy_handle_3,
+        dummy_handle_4,
+        dummy_handle_5,
+        dummy_handle_6,
+        dummy_handle_7,
     };
 
     const char* error = nullptr;
@@ -1047,8 +1067,14 @@ bool decode_present_nullable_bounded_vector_of_handles_short_error() {
     message.handles2[3] = FIDL_HANDLE_PRESENT;
 
     zx_handle_t handles[] = {
-        dummy_handle_0, dummy_handle_1, dummy_handle_2, dummy_handle_3,
-        dummy_handle_4, dummy_handle_5, dummy_handle_6, dummy_handle_7,
+        dummy_handle_0,
+        dummy_handle_1,
+        dummy_handle_2,
+        dummy_handle_3,
+        dummy_handle_4,
+        dummy_handle_5,
+        dummy_handle_6,
+        dummy_handle_7,
     };
 
     const char* error = nullptr;
@@ -1529,12 +1555,36 @@ bool decode_nested_nullable_structs() {
     message.out_out_1.l2_inline.handle_2 = FIDL_HANDLE_PRESENT;
 
     zx_handle_t handles[] = {
-        dummy_handle_0,  dummy_handle_1,  dummy_handle_2,  dummy_handle_3,  dummy_handle_4,
-        dummy_handle_5,  dummy_handle_6,  dummy_handle_7,  dummy_handle_8,  dummy_handle_9,
-        dummy_handle_10, dummy_handle_11, dummy_handle_12, dummy_handle_13, dummy_handle_14,
-        dummy_handle_15, dummy_handle_16, dummy_handle_17, dummy_handle_18, dummy_handle_19,
-        dummy_handle_20, dummy_handle_21, dummy_handle_22, dummy_handle_23, dummy_handle_24,
-        dummy_handle_25, dummy_handle_26, dummy_handle_27, dummy_handle_28, dummy_handle_29,
+        dummy_handle_0,
+        dummy_handle_1,
+        dummy_handle_2,
+        dummy_handle_3,
+        dummy_handle_4,
+        dummy_handle_5,
+        dummy_handle_6,
+        dummy_handle_7,
+        dummy_handle_8,
+        dummy_handle_9,
+        dummy_handle_10,
+        dummy_handle_11,
+        dummy_handle_12,
+        dummy_handle_13,
+        dummy_handle_14,
+        dummy_handle_15,
+        dummy_handle_16,
+        dummy_handle_17,
+        dummy_handle_18,
+        dummy_handle_19,
+        dummy_handle_20,
+        dummy_handle_21,
+        dummy_handle_22,
+        dummy_handle_23,
+        dummy_handle_24,
+        dummy_handle_25,
+        dummy_handle_26,
+        dummy_handle_27,
+        dummy_handle_28,
+        dummy_handle_29,
     };
 
     const char* error = nullptr;
@@ -1761,11 +1811,10 @@ bool decode_nested_struct_recursion_too_deep_error() {
         dummy_handle_0,
     };
 
-
     const char* error = nullptr;
     auto status = fidl_decode(&recursion_message_type, &message,
-        // Tell it to ignore everything after we stop recursion.
-        offsetof(recursion_message_layout, depth_29), handles, ArrayCount(handles), &error);
+                              // Tell it to ignore everything after we stop recursion.
+                              offsetof(recursion_message_layout, depth_29), handles, ArrayCount(handles), &error);
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
 
@@ -1782,7 +1831,7 @@ bool decode_nested_struct_recursion_too_deep_error() {
                          ArrayCount(handles), &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error);
-    const char expected_error_msg[] = "recursion depth exceeded decoding struct";
+    const char expected_error_msg[] = "recursion depth exceeded processing struct";
     EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
 
     END_TEST;

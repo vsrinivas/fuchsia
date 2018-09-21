@@ -43,9 +43,19 @@ struct FidlField {
         : type(type), offset(offset) {}
 };
 
+struct FidlTableField {
+    const fidl_type* type;
+    uint32_t ordinal;
+
+    constexpr FidlTableField(const fidl_type* type, uint32_t ordinal)
+        : type(type), ordinal(ordinal) {}
+};
+
 enum FidlTypeTag : uint32_t {
     kFidlTypeStruct = 0u,
     kFidlTypeStructPointer = 1u,
+    kFidlTypeTable = 8u,
+    kFidlTypeTablePointer = 9u,
     kFidlTypeUnion = 2u,
     kFidlTypeUnionPointer = 3u,
     kFidlTypeArray = 4u,
@@ -72,6 +82,23 @@ struct FidlCodedStructPointer {
 
     constexpr explicit FidlCodedStructPointer(const FidlCodedStruct* struct_type)
         : struct_type(struct_type) {}
+};
+
+struct FidlCodedTable {
+    const FidlTableField* const fields;
+    const uint32_t field_count;
+    const char* name; // may be nullptr if omitted at compile time
+
+    constexpr FidlCodedTable(const FidlTableField* fields, uint32_t field_count,
+                             const char* name)
+        : fields(fields), field_count(field_count), name(name) {}
+};
+
+struct FidlCodedTablePointer {
+    const FidlCodedTable* const table_type;
+
+    constexpr explicit FidlCodedTablePointer(const FidlCodedTable* table_type)
+        : table_type(table_type) {}
 };
 
 // Unlike structs, union members do not have different offsets, so this points to an array of
@@ -171,6 +198,8 @@ struct fidl_type {
     const union {
         const fidl::FidlCodedStruct coded_struct;
         const fidl::FidlCodedStructPointer coded_struct_pointer;
+        const fidl::FidlCodedTable coded_table;
+        const fidl::FidlCodedTablePointer coded_table_pointer;
         const fidl::FidlCodedUnion coded_union;
         const fidl::FidlCodedUnionPointer coded_union_pointer;
         const fidl::FidlCodedHandle coded_handle;
@@ -184,6 +213,12 @@ struct fidl_type {
 
     constexpr fidl_type(fidl::FidlCodedStructPointer coded_struct_pointer)
         : type_tag(fidl::kFidlTypeStructPointer), coded_struct_pointer(coded_struct_pointer) {}
+
+    constexpr fidl_type(fidl::FidlCodedTable coded_table)
+        : type_tag(fidl::kFidlTypeTable), coded_table(coded_table) {}
+
+    constexpr fidl_type(fidl::FidlCodedTablePointer coded_table_pointer)
+        : type_tag(fidl::kFidlTypeTablePointer), coded_table_pointer(coded_table_pointer) {}
 
     constexpr fidl_type(fidl::FidlCodedUnion coded_union)
         : type_tag(fidl::kFidlTypeUnion), coded_union(coded_union) {}

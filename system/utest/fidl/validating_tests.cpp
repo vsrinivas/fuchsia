@@ -940,7 +940,7 @@ bool validate_present_nonnullable_vector_of_uint32() {
 
     const char* error = nullptr;
     auto status = fidl_validate(&unbounded_nonnullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+                                sizeof(message), 0, &error);
 
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
@@ -959,7 +959,7 @@ bool validate_present_nullable_vector_of_uint32() {
 
     const char* error = nullptr;
     auto status = fidl_validate(&unbounded_nullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+                                sizeof(message), 0, &error);
 
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
@@ -978,7 +978,7 @@ bool validate_absent_nonnullable_vector_of_uint32_error() {
 
     const char* error = nullptr;
     auto status = fidl_validate(&unbounded_nonnullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+                                sizeof(message), 0, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error, error);
@@ -994,7 +994,7 @@ bool validate_absent_nullable_vector_of_uint32() {
 
     const char* error = nullptr;
     auto status = fidl_validate(&unbounded_nullable_vector_of_uint32_message_type, &message,
-                              sizeof(message.inline_struct), 0u, &error);
+                                sizeof(message.inline_struct), 0u, &error);
 
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
@@ -1013,7 +1013,7 @@ bool validate_present_nonnullable_bounded_vector_of_uint32() {
 
     const char* error = nullptr;
     auto status = fidl_validate(&bounded_32_nonnullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+                                sizeof(message), 0, &error);
 
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
@@ -1032,7 +1032,7 @@ bool validate_present_nullable_bounded_vector_of_uint32() {
 
     const char* error = nullptr;
     auto status = fidl_validate(&bounded_32_nullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+                                sizeof(message), 0, &error);
 
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
@@ -1051,7 +1051,7 @@ bool validate_absent_nonnullable_bounded_vector_of_uint32() {
 
     const char* error = nullptr;
     auto status = fidl_validate(&bounded_32_nonnullable_vector_of_uint32_message_type, &message,
-                              sizeof(message.inline_struct), 0u, &error);
+                                sizeof(message.inline_struct), 0u, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error);
@@ -1070,7 +1070,7 @@ bool validate_absent_nullable_bounded_vector_of_uint32() {
 
     const char* error = nullptr;
     auto status = fidl_validate(&bounded_32_nullable_vector_of_uint32_message_type, &message,
-                              sizeof(message.inline_struct), 0u, &error);
+                                sizeof(message.inline_struct), 0u, &error);
 
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
@@ -1090,7 +1090,7 @@ bool validate_present_nonnullable_bounded_vector_of_uint32_short_error() {
 
     const char* error = nullptr;
     auto status = fidl_validate(&multiple_nonnullable_vectors_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+                                sizeof(message), 0, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error);
@@ -1107,7 +1107,7 @@ bool validate_present_nullable_bounded_vector_of_uint32_short_error() {
 
     const char* error = nullptr;
     auto status = fidl_validate(&multiple_nullable_vectors_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+                                sizeof(message), 0, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error);
@@ -1550,7 +1550,7 @@ bool validate_nested_struct_recursion_too_deep_error() {
                            ArrayCount(handles), &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error);
-    const char expected_error_msg[] = "recursion depth exceeded validating struct";
+    const char expected_error_msg[] = "recursion depth exceeded processing struct";
     EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
 
     END_TEST;

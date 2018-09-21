@@ -13,6 +13,7 @@ namespace {
 // All the data in coding tables should be pure data.
 static_assert(fbl::is_standard_layout<fidl_type>::value, "");
 static_assert(fbl::is_standard_layout<FidlField>::value, "");
+static_assert(fbl::is_standard_layout<FidlTableField>::value, "");
 static_assert(fbl::is_standard_layout<FidlTypeTag>::value, "");
 static_assert(fbl::is_standard_layout<FidlCodedStruct>::value, "");
 static_assert(fbl::is_standard_layout<FidlCodedUnion>::value, "");

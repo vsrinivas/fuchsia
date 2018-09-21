@@ -46,7 +46,7 @@ fbl::unique_fd OpenBroker(const char* path) {
 
 // The device under test.
 class NandDevice {
-  public:
+public:
     NandDevice();
     ~NandDevice() {
         if (linked_) {
@@ -86,7 +86,7 @@ class NandDevice {
     // True when the whole device under test can be modified.
     bool IsFullDevice() const { return full_device_; }
 
-  private:
+private:
     bool ValidateNandDevice();
 
     ParentDevice* parent_ = g_parent_device_;
@@ -235,8 +235,8 @@ bool ReadWriteLimitsTest() {
 
     nand_broker_request_t request = {};
     nand_broker_response_t response = {};
-    ASSERT_EQ(ZX_ERR_BAD_HANDLE, ioctl_nand_broker_read(device.get(), &request, &response));
-    ASSERT_EQ(ZX_ERR_BAD_HANDLE, ioctl_nand_broker_write(device.get(), &request, &response));
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, ioctl_nand_broker_read(device.get(), &request, &response));
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, ioctl_nand_broker_write(device.get(), &request, &response));
 
     fbl::unique_ptr<fzl::MappedVmo> vmo;
     ASSERT_EQ(ZX_OK, fzl::MappedVmo::Create(device.MaxBufferSize(), nullptr, &vmo));
@@ -358,7 +358,7 @@ bool ReadWriteOobTest() {
     fbl::unique_ptr<fzl::MappedVmo> vmo;
     ASSERT_EQ(ZX_OK, fzl::MappedVmo::Create(device.MaxBufferSize(), nullptr, &vmo));
 
-    const char desired[] = { 'a', 'b', 'c', 'd' };
+    const char desired[] = {'a', 'b', 'c', 'd'};
     memcpy(vmo->GetData(), desired, sizeof(desired));
 
     request.length = 1;
@@ -399,7 +399,7 @@ bool ReadWriteDataAndOobTest() {
 
     request.length = 2;
     request.offset_nand = 2;
-    request.offset_oob_vmo = 2;  // OOB is right after data.
+    request.offset_oob_vmo = 2; // OOB is right after data.
     request.data_vmo = true;
     request.oob_vmo = true;
 
@@ -453,7 +453,7 @@ bool EraseTest() {
     END_TEST;
 }
 
-}  // namespace
+} // namespace
 
 BEGIN_TEST_CASE(NandBrokerTests)
 RUN_TEST_SMALL(TrivialLifetimeTest)
