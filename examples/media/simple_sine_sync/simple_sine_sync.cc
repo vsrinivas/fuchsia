@@ -142,7 +142,7 @@ bool MediaApp::AcquireAudioRendererSync() {
   fuchsia::media::AudioSyncPtr audio;
 
   context_->ConnectToEnvironmentService(audio.NewRequest());
-  return audio->CreateAudioOut(audio_renderer_sync_.NewRequest()) == ZX_OK;
+  return audio->CreateAudioRenderer(audio_renderer_sync_.NewRequest()) == ZX_OK;
 }
 
 // Set the AudioRendererSync's audio stream_type to stereo 48kHz.

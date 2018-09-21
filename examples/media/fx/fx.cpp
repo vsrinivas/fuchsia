@@ -151,7 +151,7 @@ class FxProcessor {
   fbl::unique_ptr<AudioInput> input_;
   fit::closure quit_callback_;
   uint32_t input_buffer_frames_ = 0;
-  fuchsia::media::AudioOutPtr audio_renderer_;
+  fuchsia::media::AudioRendererPtr audio_renderer_;
   media::TimelineFunction clock_mono_to_input_wr_ptr_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<kWavWriterEnabled> wav_writer_;
@@ -181,7 +181,7 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
   }
 
   // Create an AudioRenderer. Setup connection error handlers.
-  audio->CreateAudioOut(audio_renderer_.NewRequest());
+  audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
     Shutdown("fuchsia::media::AudioRenderer connection closed");

@@ -30,7 +30,7 @@ class AudioPacketRef
       public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPacketRef>> {
  public:
   AudioPacketRef(fbl::RefPtr<fzl::RefCountedVmoMapper> vmo_ref,
-                 fuchsia::media::AudioOut::SendPacketCallback callback,
+                 fuchsia::media::AudioRenderer::SendPacketCallback callback,
                  fuchsia::media::StreamPacket packet, AudioCoreImpl* server,
                  uint32_t frac_frame_len, int64_t start_pts);
 
@@ -80,7 +80,7 @@ class AudioPacketRef
   bool NeedsCleanup() { return callback_ != nullptr; }
 
   fbl::RefPtr<fzl::RefCountedVmoMapper> vmo_ref_;
-  fuchsia::media::AudioOut::SendPacketCallback callback_;
+  fuchsia::media::AudioRenderer::SendPacketCallback callback_;
   fuchsia::media::StreamPacket packet_;
 
   AudioCoreImpl* const service_;

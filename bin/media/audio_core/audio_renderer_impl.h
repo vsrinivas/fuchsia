@@ -24,11 +24,12 @@ class AudioCoreImpl;
 class AudioRendererImpl
     : public AudioObject,
       public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
-      public fuchsia::media::AudioOut,
+      public fuchsia::media::AudioRenderer,
       public fuchsia::media::GainControl {
  public:
   static fbl::RefPtr<AudioRendererImpl> Create(
-      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
+          audio_renderer_request,
       AudioCoreImpl* owner);
 
   void Shutdown();
@@ -85,7 +86,7 @@ class AudioRendererImpl
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
                        fuchsia::media::AudioRamp rampType) final {
     FXL_NOTIMPLEMENTED();
-  };
+  }
   void SetMute(bool muted) final;
 
  protected:
@@ -132,9 +133,9 @@ class AudioRendererImpl
   friend class fbl::RefPtr<AudioRendererImpl>;
   friend class GainControlBinding;
 
-  AudioRendererImpl(
-      fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
-      AudioCoreImpl* owner);
+  AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
+                        audio_renderer_request,
+                    AudioCoreImpl* owner);
 
   ~AudioRendererImpl() override;
 
@@ -144,7 +145,7 @@ class AudioRendererImpl
   void UnlinkThrottle();
 
   AudioCoreImpl* owner_ = nullptr;
-  fidl::Binding<fuchsia::media::AudioOut> audio_renderer_binding_;
+  fidl::Binding<fuchsia::media::AudioRenderer> audio_renderer_binding_;
   fidl::BindingSet<fuchsia::media::GainControl,
                    fbl::unique_ptr<GainControlBinding>>
       gain_control_bindings_;

@@ -72,7 +72,7 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
   fuchsia::media::AudioPtr audio =
       startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio->CreateAudioOut(audio_renderer_.NewRequest());
+  audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
     std::cerr << "Unexpected error: channel to audio service closed\n";

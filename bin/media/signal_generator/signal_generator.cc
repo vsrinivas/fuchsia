@@ -135,7 +135,7 @@ bool MediaApp::ParameterRangeChecks() {
 // payload, calculate the other related coefficients needed for our mapped
 // memory section, and for our series of payloads that reference that section.
 //
-// We share a memory section with our AudioRenderer, dividing it into equally-sized
+// We share a memory section with our AudioRenderer, divided into equally-sized
 // payloads (size specified by the user). For now, we trim the end of the memory
 // section, rather than handle the occasional irregularly-sized packet.
 // TODO(mpuryear): handle end-of-buffer wraparound; make it a true ring buffer.
@@ -206,11 +206,11 @@ void MediaApp::DisplayConfigurationSettings() {
   printf(".\n\n");
 }
 
-// Use StartupContext to acquire AudioPtr, and use that to acquire AudioRendererPtr
+// Use StartupContext to acquire AudioPtr; use that to acquire AudioRendererPtr
 // in turn. Set AudioRenderer error handler, in case of channel closure.
 void MediaApp::AcquireAudioRenderer(component::StartupContext* app_context) {
-  // The Audio interface is only needed to create AudioRenderer, set routing policy
-  // and set system gain/mute. Use the synchronous proxy, for simplicity.
+  // The Audio interface is only needed to create AudioRenderer, set routing
+  // policy and set system gain/mute. Use the synchronous proxy, for simplicity.
   fuchsia::media::AudioSyncPtr audio;
   app_context->ConnectToEnvironmentService(audio.NewRequest());
 
@@ -228,11 +228,12 @@ void MediaApp::AcquireAudioRenderer(component::StartupContext* app_context) {
     audio->SetRoutingPolicy(audio_policy_);
   }
 
-  audio->CreateAudioOut(audio_renderer_.NewRequest());
+  audio->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
-    FXL_LOG(ERROR) << "fuchsia::media::AudioRenderer connection lost. Quitting.";
+    FXL_LOG(ERROR)
+        << "fuchsia::media::AudioRenderer connection lost. Quitting.";
     Shutdown();
   });
 
@@ -263,7 +264,7 @@ void MediaApp::SetStreamType() {
 }
 
 // Create one Virtual Memory Object and map enough memory for 1 second of audio.
-// Reduce rights and send a handle to the AudioRenderer: this is our shared buffer.
+// Reduce rights and send handle to AudioRenderer: this is our shared buffer.
 zx_status_t MediaApp::CreateMemoryMapping() {
   zx::vmo payload_vmo;
   zx_status_t status = payload_buffer_.CreateAndMap(

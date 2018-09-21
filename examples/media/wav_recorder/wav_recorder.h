@@ -36,7 +36,7 @@ class WavRecorder {
   void OnPacketProduced(fuchsia::media::StreamPacket pkt);
   void OnQuit();
 
-  fuchsia::media::AudioInPtr audio_capturer_;
+  fuchsia::media::AudioCapturerPtr audio_capturer_;
   fuchsia::media::GainControlPtr gain_control_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<> wav_writer_;

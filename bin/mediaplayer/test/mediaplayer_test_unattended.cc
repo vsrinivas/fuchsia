@@ -66,7 +66,7 @@ MediaPlayerTestUnattended::MediaPlayerTestUnattended(
       fake_reader_ptr.NewRequest();
   fake_reader_.Bind(std::move(reader_request));
 
-  fuchsia::media::AudioOutPtr fake_audio_renderer_ptr;
+  fuchsia::media::AudioRendererPtr fake_audio_renderer_ptr;
   fake_audio_renderer_.Bind(fake_audio_renderer_ptr.NewRequest());
 
   media_player_->SetAudioRenderer(std::move(fake_audio_renderer_ptr));

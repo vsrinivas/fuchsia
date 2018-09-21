@@ -28,14 +28,16 @@ constexpr float kInitialCaptureGainDb = 0.0;
 AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
 
 fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
-    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+        audio_capturer_request,
     AudioCoreImpl* owner, bool loopback) {
   return fbl::AdoptRef(new AudioCapturerImpl(std::move(audio_capturer_request),
                                              owner, loopback));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
-    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+        audio_capturer_request,
     AudioCoreImpl* owner, bool loopback)
     : AudioObject(Type::AudioCapturer),
       binding_(this, std::move(audio_capturer_request)),

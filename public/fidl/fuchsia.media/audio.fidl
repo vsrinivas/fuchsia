@@ -4,13 +4,12 @@
 
 library fuchsia.media;
 
-// NOTE: This interface will be undergoing major revision soon.
 // Ordinal range: 0x0700-0x7ff
 [Discoverable]
 interface Audio {
-  0x0701: CreateAudioOut(request<AudioOut> audio_renderer_request);
+  0x0701: CreateAudioRenderer(request<AudioRenderer> audio_renderer_request);
 
-  // Create an audio in which either captures from the current default
+  // Create an AudioCapturer which either captures from the current default
   // audio input device, or loops-back from the current default audio output
   // device based on value passed for the the loopback flag.
   //
@@ -20,7 +19,8 @@ interface Audio {
   // Eventually, I suspect that all of this will move up into the audio policy
   // manager and application clients will obtain AudioCapturers from and control
   // through the policy manager.
-  0x0702: CreateAudioIn(request<AudioIn> audio_capturer_request, bool loopback);
+  0x0702: CreateAudioCapturer(request<AudioCapturer> audio_capturer_request,
+                              bool loopback);
 
   // System Gain and Mute
   // TODO(mpuryear): remove this systemwide setting once device-centric settings
@@ -68,6 +68,11 @@ interface Audio {
   0x0705: -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
   0x0706: SetRoutingPolicy(AudioOutputRoutingPolicy policy);
+
+  // DEPRECATED
+  0x07FE: CreateAudioOut(request<AudioOut> audio_out_request);
+  0x07FF: CreateAudioIn(request<AudioIn> audio_in_request,
+                              bool loopback);
 };
 
 // A placeholder for various types of simple routing policies.  This should be

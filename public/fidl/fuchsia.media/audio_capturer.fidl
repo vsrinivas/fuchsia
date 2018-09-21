@@ -252,7 +252,7 @@ library fuchsia.media;
 // ++ Consider allowing the mixer to produce compressed audio.
 //
 // Ordinal range: 0x0500-0x5ff
-interface AudioIn : StreamBufferSet, StreamSource {
+interface AudioCapturer : StreamBufferSet, StreamSource {
   // Sets the stream type of the stream to be delivered.  Causes the source
   // material to be reformatted/resampled if needed in order to produce the
   // requested stream type.  Note that the stream type may not be changed after
@@ -304,3 +304,6 @@ interface AudioIn : StreamBufferSet, StreamSource {
   // to specify the format they want.
   0xffff: GetStreamType() -> (StreamType stream_type);
 };
+
+// DEPRECATED
+interface AudioIn : AudioCapturer {};

@@ -35,7 +35,7 @@ class MediaApp {
 
   fit::closure quit_callback_;
 
-  fuchsia::media::AudioOutPtr audio_renderer_;
+  fuchsia::media::AudioRendererPtr audio_renderer_;
 
   fzl::VmoMapper payload_buffer_;
   size_t payload_size_;

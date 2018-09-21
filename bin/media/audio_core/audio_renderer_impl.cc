@@ -15,14 +15,16 @@ namespace media {
 namespace audio {
 
 fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
-    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
+        audio_renderer_request,
     AudioCoreImpl* owner) {
   return fbl::AdoptRef(
       new AudioRendererImpl(std::move(audio_renderer_request), owner));
 }
 
 AudioRendererImpl::AudioRendererImpl(
-    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
+        audio_renderer_request,
     AudioCoreImpl* owner)
     : AudioObject(Type::AudioRenderer),
       owner_(owner),

@@ -60,7 +60,7 @@ void MediaApp::AcquireAudioRenderer(component::StartupContext* app_context) {
   fuchsia::media::AudioPtr audio =
       app_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio->CreateAudioOut(audio_renderer_.NewRequest());
+  audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
     FXL_LOG(ERROR)

@@ -42,7 +42,7 @@ class MediaApp {
 
   void WaitForPackets(size_t num_packets);
 
-  fuchsia::media::AudioOutSyncPtr audio_renderer_sync_;
+  fuchsia::media::AudioRendererSyncPtr audio_renderer_sync_;
 
   std::unique_ptr<component::StartupContext> context_;
   fzl::VmoMapper payload_buffer_;

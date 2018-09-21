@@ -121,8 +121,8 @@ class AudioCoreTest : public gtest::RealLoopFixture {
   std::shared_ptr<component::Services> environment_services_;
 
   fuchsia::media::AudioPtr audio_;
-  fuchsia::media::AudioOutPtr audio_renderer_;
-  fuchsia::media::AudioInPtr audio_capturer_;
+  fuchsia::media::AudioRendererPtr audio_renderer_;
+  fuchsia::media::AudioCapturerPtr audio_capturer_;
 
   float prev_system_gain_db_;
   bool prev_system_mute_;
@@ -140,7 +140,7 @@ constexpr zx::duration AudioCoreTest::kDurationResponseExpected;
 // Test creation and interface independence of AudioRenderer.
 TEST_F(AudioCoreTest, CreateAudioRenderer) {
   // Validate Audio can create AudioRenderer interface.
-  audio_->CreateAudioOut(audio_renderer_.NewRequest());
+  audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
   EXPECT_TRUE(audio_renderer_);
 
   // Validate that Audio persists without AudioRenderer.
@@ -149,7 +149,7 @@ TEST_F(AudioCoreTest, CreateAudioRenderer) {
   EXPECT_TRUE(audio_);
 
   // Validate AudioRenderer persists after Audio is unbound.
-  audio_->CreateAudioOut(audio_renderer_.NewRequest());
+  audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_.Unbind();
   EXPECT_FALSE(audio_);
   EXPECT_TRUE(audio_renderer_);
@@ -158,7 +158,7 @@ TEST_F(AudioCoreTest, CreateAudioRenderer) {
 // Test creation and interface independence of AudioCapturer.
 TEST_F(AudioCoreTest, CreateAudioCapturer) {
   // Validate Audio can create AudioCapturer interface.
-  audio_->CreateAudioIn(audio_capturer_.NewRequest(), false);
+  audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
   EXPECT_TRUE(audio_capturer_);
 
   // Validate that Audio persists without AudioCapturer.
@@ -167,7 +167,7 @@ TEST_F(AudioCoreTest, CreateAudioCapturer) {
   EXPECT_TRUE(audio_);
 
   // Validate AudioCapturer persists after Audio is unbound.
-  audio_->CreateAudioIn(audio_capturer_.NewRequest(), true);
+  audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), true);
   audio_.Unbind();
   EXPECT_FALSE(audio_);
   EXPECT_TRUE(audio_capturer_);
@@ -353,14 +353,14 @@ class AudioCoreSyncTest : public gtest::RealLoopFixture {
 
   std::shared_ptr<component::Services> environment_services_;
   fuchsia::media::AudioSyncPtr audio_;
-  fuchsia::media::AudioOutSyncPtr audio_renderer_;
-  fuchsia::media::AudioInSyncPtr audio_capturer_;
+  fuchsia::media::AudioRendererSyncPtr audio_renderer_;
+  fuchsia::media::AudioCapturerSyncPtr audio_capturer_;
 };
 
 // Test creation and interface independence of AudioRenderer.
 TEST_F(AudioCoreSyncTest, CreateAudioRenderer) {
   // Validate Audio can create AudioRenderer interface.
-  EXPECT_EQ(ZX_OK, audio_->CreateAudioOut(audio_renderer_.NewRequest()));
+  EXPECT_EQ(ZX_OK, audio_->CreateAudioRenderer(audio_renderer_.NewRequest()));
   EXPECT_TRUE(audio_renderer_);
 
   // Validate that Audio persists without AudioRenderer.
@@ -368,7 +368,7 @@ TEST_F(AudioCoreSyncTest, CreateAudioRenderer) {
   ASSERT_TRUE(audio_);
 
   // Validate AudioRenderer persists after Audio is unbound.
-  EXPECT_EQ(ZX_OK, audio_->CreateAudioOut(audio_renderer_.NewRequest()));
+  EXPECT_EQ(ZX_OK, audio_->CreateAudioRenderer(audio_renderer_.NewRequest()));
   audio_ = nullptr;
   EXPECT_TRUE(audio_renderer_);
 }
@@ -376,7 +376,8 @@ TEST_F(AudioCoreSyncTest, CreateAudioRenderer) {
 // Test creation and interface independence of AudioCapturer.
 TEST_F(AudioCoreSyncTest, CreateAudioCapturer) {
   // Validate Audio can create AudioCapturer interface.
-  EXPECT_EQ(ZX_OK, audio_->CreateAudioIn(audio_capturer_.NewRequest(), true));
+  EXPECT_EQ(ZX_OK,
+            audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), true));
   EXPECT_TRUE(audio_capturer_);
 
   // Validate that Audio persists without AudioCapturer.
@@ -384,7 +385,7 @@ TEST_F(AudioCoreSyncTest, CreateAudioCapturer) {
   ASSERT_TRUE(audio_);
 
   // Validate AudioCapturer persists after Audio is unbound.
-  audio_->CreateAudioIn(audio_capturer_.NewRequest(), false);
+  audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
   audio_ = nullptr;
   EXPECT_TRUE(audio_capturer_);
 }

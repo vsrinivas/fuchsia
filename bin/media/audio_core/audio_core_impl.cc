@@ -90,14 +90,16 @@ void AudioCoreImpl::Shutdown() {
   DoPacketCleanup();
 }
 
-void AudioCoreImpl::CreateAudioOut(
-    fidl::InterfaceRequest<fuchsia::media::AudioOut> audio_renderer_request) {
+void AudioCoreImpl::CreateAudioRenderer(
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
+        audio_renderer_request) {
   device_manager_.AddAudioRenderer(
       AudioRendererImpl::Create(std::move(audio_renderer_request), this));
 }
 
-void AudioCoreImpl::CreateAudioIn(
-    fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
+void AudioCoreImpl::CreateAudioCapturer(
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+        audio_capturer_request,
     bool loopback) {
   device_manager_.AddAudioCapturer(AudioCapturerImpl::Create(
       std::move(audio_capturer_request), this, loopback));

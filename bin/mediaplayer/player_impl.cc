@@ -129,8 +129,8 @@ void PlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
       if (!audio_renderer_) {
         auto audio = startup_context_
                          ->ConnectToEnvironmentService<fuchsia::media::Audio>();
-        fuchsia::media::AudioOutPtr audio_renderer;
-        audio->CreateAudioOut(audio_renderer.NewRequest());
+        fuchsia::media::AudioRendererPtr audio_renderer;
+        audio->CreateAudioRenderer(audio_renderer.NewRequest());
         audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
         core_.SetSinkSegment(RendererSinkSegment::Create(
                                  audio_renderer_, decoder_factory_.get()),
@@ -467,7 +467,7 @@ void PlayerImpl::BindGainControl(
 }
 
 void PlayerImpl::SetAudioRenderer(
-    fidl::InterfaceHandle<fuchsia::media::AudioOut> audio_renderer) {
+    fidl::InterfaceHandle<fuchsia::media::AudioRenderer> audio_renderer) {
   if (audio_renderer_) {
     return;
   }

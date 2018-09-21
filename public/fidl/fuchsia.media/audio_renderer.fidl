@@ -16,8 +16,9 @@ library fuchsia.media;
 // If an AudioRenderer must be reconfigured, it is best practice to always call
 // `DiscardAllPackets` on the AudioRenderer, before starting to reconfigure it.
 //
+
 // Ordinal range: 0x0600-0x6ff
-interface AudioOut : StreamBufferSet, StreamSink {
+interface AudioRenderer : StreamBufferSet, StreamSink {
   // Sets the type of the stream to be delivered by the client. Using this
   // method implies that the stream encoding is AUDIO_ENCODING_LPCM.
   0x0601: SetPcmStreamType(AudioStreamType type);
@@ -283,3 +284,6 @@ interface AudioOut : StreamBufferSet, StreamSink {
   // induced gain/ducking changes. (Presuming that they belong at this level at
   // all; they may belong on some sort of policy object).
 };
+
+// DEPRECATED
+interface AudioOut : AudioRenderer {};

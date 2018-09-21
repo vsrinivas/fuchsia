@@ -22,11 +22,12 @@ constexpr int64_t kWarnThresholdNs = ZX_MSEC(500);
 
 // static
 std::shared_ptr<FidlAudioRenderer> FidlAudioRenderer::Create(
-    fuchsia::media::AudioOutPtr audio_renderer) {
+    fuchsia::media::AudioRendererPtr audio_renderer) {
   return std::make_shared<FidlAudioRenderer>(std::move(audio_renderer));
 }
 
-FidlAudioRenderer::FidlAudioRenderer(fuchsia::media::AudioOutPtr audio_renderer)
+FidlAudioRenderer::FidlAudioRenderer(
+    fuchsia::media::AudioRendererPtr audio_renderer)
     : audio_renderer_(std::move(audio_renderer)),
       allocator_(0),
       arrivals_(true),

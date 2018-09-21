@@ -30,12 +30,13 @@ class AudioCoreImpl;
 
 class AudioCapturerImpl
     : public AudioObject,
-      public fuchsia::media::AudioIn,
+      public fuchsia::media::AudioCapturer,
       public fuchsia::media::GainControl,
       public fbl::DoublyLinkedListable<fbl::RefPtr<AudioCapturerImpl>> {
  public:
   static fbl::RefPtr<AudioCapturerImpl> Create(
-      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
+      fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+          audio_capturer_request,
       AudioCoreImpl* owner, bool loopback);
 
   bool loopback() const { return loopback_; }
@@ -135,9 +136,9 @@ class AudioCapturerImpl
 
   friend PcbAllocator;
 
-  AudioCapturerImpl(
-      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
-      AudioCoreImpl* owner, bool loopback);
+  AudioCapturerImpl(fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+                        audio_capturer_request,
+                    AudioCoreImpl* owner, bool loopback);
 
   // AudioCapturer FIDL implementation
   void GetStreamType(GetStreamTypeCallback cbk) final;
@@ -199,7 +200,7 @@ class AudioCapturerImpl
   // one cannot be found.
   zx_status_t ChooseMixer(const std::shared_ptr<AudioLink>& link);
 
-  fidl::Binding<fuchsia::media::AudioIn> binding_;
+  fidl::Binding<fuchsia::media::AudioCapturer> binding_;
   fidl::BindingSet<fuchsia::media::GainControl> gain_control_bindings_;
   AudioCoreImpl* owner_ = nullptr;
   std::atomic<State> state_;

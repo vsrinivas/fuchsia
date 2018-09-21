@@ -22,7 +22,7 @@ namespace media_player {
 namespace test {
 
 // Implements AudioRenderer for testing.
-class FakeAudioRenderer : public fuchsia::media::AudioOut,
+class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
                           public fuchsia::media::GainControl {
  public:
   FakeAudioRenderer();
@@ -30,7 +30,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioOut,
   ~FakeAudioRenderer() override;
 
   // Binds the renderer.
-  void Bind(fidl::InterfaceRequest<fuchsia::media::AudioOut> request);
+  void Bind(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request);
 
   // Indicates that the renderer should print out supplied packet info.
   void DumpPackets() { dump_packets_ = true; }
@@ -115,7 +115,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioOut,
   void MaybeScheduleRetirement();
 
   async_dispatcher_t* dispatcher_;
-  fidl::Binding<fuchsia::media::AudioOut> binding_;
+  fidl::Binding<fuchsia::media::AudioRenderer> binding_;
   fidl::BindingSet<fuchsia::media::GainControl> gain_control_bindings_;
 
   fuchsia::media::AudioStreamType format_;

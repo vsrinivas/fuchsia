@@ -23,7 +23,7 @@ FakeAudioRenderer::FakeAudioRenderer()
 FakeAudioRenderer::~FakeAudioRenderer() {}
 
 void FakeAudioRenderer::Bind(
-    fidl::InterfaceRequest<fuchsia::media::AudioOut> request) {
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request) {
   binding_.Bind(std::move(request));
 }
 

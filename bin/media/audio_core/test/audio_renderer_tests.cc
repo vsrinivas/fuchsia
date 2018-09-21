@@ -29,7 +29,7 @@ class AudioRendererTest : public gtest::RealLoopFixture {
       QuitLoop();
     });
 
-    audio_->CreateAudioOut(audio_renderer_.NewRequest());
+    audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
     ASSERT_TRUE(audio_renderer_);
 
     audio_renderer_.set_error_handler([this]() {
@@ -42,7 +42,7 @@ class AudioRendererTest : public gtest::RealLoopFixture {
 
   std::shared_ptr<component::Services> environment_services_;
   fuchsia::media::AudioPtr audio_;
-  fuchsia::media::AudioOutPtr audio_renderer_;
+  fuchsia::media::AudioRendererPtr audio_renderer_;
   bool error_occurred_ = false;
 };
 
@@ -64,8 +64,8 @@ TEST_F(AudioRendererTest, SetPcmStreamType) {
   EXPECT_GE(lead_time, 0);
 }
 
-// If an AudioRenderer is not in operational mode, a second SetPcmStreamType should
-// succeed.
+// If an AudioRenderer is not in operational mode, a second SetPcmStreamType
+// should succeed.
 TEST_F(AudioRendererTest, SetPcmFormat_Double) {
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
@@ -103,13 +103,13 @@ class AudioRendererSyncTest : public gtest::RealLoopFixture {
     environment_services_->ConnectToService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
-    ASSERT_EQ(ZX_OK, audio_->CreateAudioOut(audio_renderer_.NewRequest()));
+    ASSERT_EQ(ZX_OK, audio_->CreateAudioRenderer(audio_renderer_.NewRequest()));
     ASSERT_TRUE(audio_renderer_);
   }
 
   std::shared_ptr<component::Services> environment_services_;
   fuchsia::media::AudioSyncPtr audio_;
-  fuchsia::media::AudioOutSyncPtr audio_renderer_;
+  fuchsia::media::AudioRendererSyncPtr audio_renderer_;
 };
 
 // Basic validation of SetPcmStreamType() for the synchronous AudioRenderer.
@@ -125,8 +125,8 @@ TEST_F(AudioRendererSyncTest, SetPcmStreamType) {
   EXPECT_GE(min_lead_time, 0);
 }
 
-// If an AudioRenderer is not in operational mode, a second SetPcmStreamType should
-// succeed.
+// If an AudioRenderer is not in operational mode, a second SetPcmStreamType
+// should succeed.
 TEST_F(AudioRendererSyncTest, SetPcmFormat_Double) {
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;

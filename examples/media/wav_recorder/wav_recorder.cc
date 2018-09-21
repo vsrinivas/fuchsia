@@ -63,7 +63,7 @@ void WavRecorder::Run(component::StartupContext* app_context) {
   fuchsia::media::AudioPtr audio =
       app_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio->CreateAudioIn(audio_capturer_.NewRequest(), loopback_);
+  audio->CreateAudioCapturer(audio_capturer_.NewRequest(), loopback_);
   audio_capturer_->BindGainControl(gain_control_.NewRequest());
   audio_capturer_.set_error_handler([this]() {
     FXL_LOG(ERROR)

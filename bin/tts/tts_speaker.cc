@@ -68,7 +68,7 @@ zx_status_t TtsSpeaker::Init(
   auto audio =
       startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio->CreateAudioOut(audio_renderer_.NewRequest());
+  audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
   fuchsia::media::AudioStreamType format;
   format.sample_format = kFliteSampleFormat;
