@@ -394,7 +394,7 @@ void CameraBase::SetTransform(const float eye_position[3],
 }
 
 void CameraBase::SetPoseBuffer(const Buffer& buffer, uint32_t num_entries,
-                               uint64_t base_time, uint64_t time_interval) {
+                               int64_t base_time, uint64_t time_interval) {
   session()->Enqueue(NewSetCameraPoseBufferCmd(id(), buffer.id(), num_entries,
                                                base_time, time_interval));
 }

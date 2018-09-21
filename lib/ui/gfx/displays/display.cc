@@ -6,13 +6,14 @@
 
 #include <zircon/syscalls.h>
 
+#include "garnet/lib/ui/gfx/util/time.h"
 #include "lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {
 
 Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px)
-    : last_vsync_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)),
+    : last_vsync_time_(dispatcher_clock_now()),
       display_id_(id),
       width_in_px_(width_in_px),
       height_in_px_(height_in_px) {
@@ -22,7 +23,7 @@ Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px)
 zx_time_t Display::GetLastVsyncTime() {
   // Since listening for frame presentation events is our only way of knowing
   // when vsyncs have occurred, we often need to make an educated guess.
-  const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t now = dispatcher_clock_now();
   const zx_time_t interval_duration = GetVsyncInterval();
   const uint64_t num_intervals = (now - last_vsync_time_) / interval_duration;
   return last_vsync_time_ + (num_intervals * interval_duration);
@@ -38,7 +39,7 @@ zx_time_t Display::GetVsyncInterval() const {
 
 void Display::set_last_vsync_time(zx_time_t vsync_time) {
   FXL_DCHECK(vsync_time >= last_vsync_time_ &&
-             vsync_time <= zx_clock_get(ZX_CLOCK_MONOTONIC));
+             vsync_time <= dispatcher_clock_now());
   last_vsync_time_ = vsync_time;
 }
 

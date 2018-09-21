@@ -7,12 +7,10 @@
 #include <memory>
 #include <utility>
 
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/zx/time.h>
 #include <trace/event.h>
-
-#include <fuchsia/ui/gfx/cpp/fidl.h>
 
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
@@ -43,9 +41,9 @@
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
+#include "garnet/lib/ui/gfx/util/time.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/gfx/util/wrap.h"
-
 #include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/shape/mesh.h"
@@ -729,7 +727,7 @@ bool Session::ApplySetStereoCameraProjectionCmd(
 
 bool Session::ApplySetCameraPoseBufferCmd(
     ::fuchsia::ui::gfx::SetCameraPoseBufferCmd command) {
-  if (zx::time(command.base_time) > zx::clock::get_monotonic()) {
+  if (command.base_time > dispatcher_clock_now()) {
     error_reporter_->ERROR()
         << "scenic_impl::gfx::Session::ApplySetCameraPoseBufferCmd(): "
            "base time not in the past";

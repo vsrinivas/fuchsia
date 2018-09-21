@@ -4,7 +4,10 @@
 
 #include "garnet/lib/ui/scenic/scenic.h"
 
+#include <lib/async/default.h>
+
 #include "lib/component/cpp/startup_context.h"
+#include "lib/fxl/logging.h"
 
 namespace scenic_impl {
 
@@ -14,6 +17,10 @@ Scenic::Scenic(component::StartupContext* app_context,
   FXL_DCHECK(app_context_);
 
   app_context->outgoing().AddPublicService(scenic_bindings_.GetHandler(this));
+
+  // Scenic relies on having a valid default dispatcher. A hard check here means
+  // we don't have to be defensive everywhere else.
+  FXL_CHECK(async_get_default_dispatcher());
 }
 
 Scenic::~Scenic() = default;

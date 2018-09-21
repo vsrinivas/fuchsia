@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/syscalls.h>
+
 #include "garnet/lib/ui/gfx/tests/vk_session_test.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "public/lib/escher/test/gtest_vulkan.h"
@@ -29,7 +31,7 @@ VK_TEST_F(PoseBufferTest, Validation) {
   zx_status_t status = zx::vmo::create(vmo_size, 0u, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
-  uint64_t base_time = zx::clock::get_monotonic().get();
+  zx_clock_t base_time = zx_clock_get_monotonic();
   uint64_t time_interval = 1024 * 1024;  // 1 ms
   uint32_t num_entries = 1;
 

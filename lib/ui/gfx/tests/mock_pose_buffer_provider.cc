@@ -16,7 +16,7 @@ MockPoseBufferProviderApp::MockPoseBufferProviderApp()
 
 void MockPoseBufferProviderApp::SetPoseBuffer(::zx::vmo buffer,
                                               uint32_t num_entries,
-                                              uint64_t base_time,
+                                              int64_t base_time,
                                               uint64_t time_interval) {
   buffer_ = std::move(buffer);
   num_entries_ = num_entries;

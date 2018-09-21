@@ -14,7 +14,7 @@ namespace mock_pose_buffer_provider {
 class MockPoseBufferProviderApp : public fuchsia::ui::gfx::PoseBufferProvider {
  public:
   MockPoseBufferProviderApp();
-  void SetPoseBuffer(::zx::vmo buffer, uint32_t num_entries, uint64_t base_time,
+  void SetPoseBuffer(::zx::vmo buffer, uint32_t num_entries, int64_t base_time,
                      uint64_t time_interval) override;
 
  private:
@@ -27,7 +27,7 @@ class MockPoseBufferProviderApp : public fuchsia::ui::gfx::PoseBufferProvider {
 
   ::zx::vmo buffer_;
   uint32_t num_entries_;
-  uint64_t base_time_;
+  int64_t base_time_;
   uint64_t time_interval_;
 };
 

@@ -979,7 +979,7 @@ fuchsia::ui::gfx::Command NewSetStereoCameraProjectionCmd(
 fuchsia::ui::gfx::Command NewSetCameraPoseBufferCmd(uint32_t camera_id,
                                                     uint32_t buffer_id,
                                                     uint32_t num_entries,
-                                                    uint64_t base_time,
+                                                    int64_t base_time,
                                                     uint64_t time_interval) {
   fuchsia::ui::gfx::SetCameraPoseBufferCmd set_command;
   set_command.camera_id = camera_id;

@@ -5,6 +5,7 @@
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 
 #include <lib/async/default.h>
+#include <lib/async/time.h>
 
 namespace scenic_impl {
 namespace gfx {
@@ -117,7 +118,8 @@ EventTimestamper::Waiter::~Waiter() {
 void EventTimestamper::Waiter::Handle(async_dispatcher_t* dispatcher,
                                       async::WaitBase* wait, zx_status_t status,
                                       const zx_packet_signal_t* signal) {
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  FXL_DCHECK(dispatcher);
+  zx_time_t now = async_now(dispatcher);
   async::PostTask(dispatcher_, [now, this] {
     if (state_ == State::ABANDONED) {
       // The EventTimestamper::Watch that owned us was destroyed; we must
