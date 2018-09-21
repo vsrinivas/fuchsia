@@ -104,14 +104,10 @@ bool TestFuzzer::InStdErr(const char* needle) {
     return strcasestr(errbuf_, needle) != nullptr;
 }
 
-int TestFuzzer::FindArg(const char* fmt, ...) {
+int TestFuzzer::FindArg(const char* fmt, const fbl::String& arg) {
     fbl::StringBuffer<PATH_MAX> buffer;
-    va_list ap;
-    va_start(ap, fmt);
-    buffer.AppendVPrintf(fmt, ap);
-    va_end(ap);
+    buffer.AppendPrintf(fmt, arg.c_str());
     int result = 0;
-
     for (const char* arg = args_.first(); arg; arg = args_.next()) {
         if (strcmp(arg, buffer.c_str()) == 0) {
             return result;
@@ -158,9 +154,8 @@ zx_status_t TestFuzzer::Execute() {
                                     fixture_.max_version(package.c_str()), target.c_str());
     }
     data_path_.Reset();
-    if ((rc = data_path_.Push(fixture_.path("data/fuzzing").c_str())) != ZX_OK ||
-        (rc = data_path_.Push(package.c_str())) != ZX_OK ||
-        (rc = data_path_.Push(target.c_str())) != ZX_OK) {
+    if ((rc = data_path_.Push(fixture_.path("data/fuzzing"))) != ZX_OK ||
+        (rc = data_path_.Push(package)) != ZX_OK || (rc = data_path_.Push(target)) != ZX_OK) {
         return rc;
     }
 
@@ -180,7 +175,7 @@ bool TestFuzzer::Init() {
     ASSERT_NONNULL(err_);
 
     // Configure base object
-    set_root(fixture_.path().c_str());
+    set_root(fixture_.path());
     set_out(out_);
     set_err(err_);
 

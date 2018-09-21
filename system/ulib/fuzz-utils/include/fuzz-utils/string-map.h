@@ -33,15 +33,19 @@ public:
     //   while(map.next(&key, &value)) { ... }
     void begin();
     bool next(const char** out_key, const char** out_val);
+    bool next(fbl::String* out_key, fbl::String* out_val);
 
     // Returns the value for the given |key|, or null if the key isn't found.
     const char* get(const char* key) const;
+    const char* get(const fbl::String& key) const { return get(key.c_str()); }
 
     // Associates the given |value| with the given |key|.  |key| and |value| must not be null.
     void set(const char* key, const char* val);
+    void set(const fbl::String& key, const fbl::String& val) { set(key.c_str(), val.c_str()); }
 
     // Removes any value associated with the given |key| and removes it from the map.
     void erase(const char* key);
+    void erase(const fbl::String& key) { erase(key.c_str()); };
 
     // Erases all keys.
     void clear();

@@ -8,6 +8,9 @@
 
 #include <fbl/macros.h>
 #include <fbl/string.h>
+#include <unittest/unittest.h>
+
+#define EXPECT_CSTR_EQ(x, y) EXPECT_STR_EQ((x).c_str(), (y).c_str())
 
 namespace fuzzing {
 namespace testing {
@@ -33,12 +36,17 @@ protected:
     // Create a file at |path|, first creating any parent directories needed.  Write the given
     // |contents| to the file, if provided.
     bool CreateFile(const char* path, const char* contents = nullptr);
+    bool CreateFile(const fbl::String& path, const char* contents = nullptr) {
+        return CreateFile(path.c_str(), contents);
+    }
 
     // Creates a directory at |path|, creating any parent directories as needed.
     bool CreateDirectory(const char* path);
+    bool CreateDirectory(const fbl::String& path) { return CreateDirectory(path.c_str()); }
 
     // Deletes a directory and all of its contents
     bool RemoveDirectory(const char* path);
+    bool RemoveDirectory(const fbl::String& path) { return RemoveDirectory(path.c_str()); }
 
     // Removes the root directory if set and resets the object to a pristine state.
     virtual void Reset();

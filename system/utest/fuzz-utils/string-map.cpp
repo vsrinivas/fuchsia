@@ -15,7 +15,8 @@ bool TestEmpty() {
 
     EXPECT_TRUE(map.is_empty());
     map.begin();
-    EXPECT_FALSE(map.next(nullptr, nullptr));
+    const char** nil = nullptr;
+    EXPECT_FALSE(map.next(nil, nil));
 
     END_TEST;
 }

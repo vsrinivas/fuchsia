@@ -29,6 +29,8 @@ public:
     // abstract away the process of wrapping them in the |StringElement| structure defined below.
     void push_front(const char* str);
     void push_back(const char* str);
+    void push_front(const fbl::String& str) { return push_front(str.c_str()); }
+    void push_back(const fbl::String& str) { return push_back(str.c_str()); }
 
     // These methods are similar to |fbl::DoublyLinkedList|'s, except that they apply a simple
     // substring pattern match instead of taking a functor.  Empty strings match everything, while
@@ -36,6 +38,7 @@ public:
 
     // Keeps elements if they **CONTAIN** |substr|.  Null strings leave the list unchanged.
     void keep_if(const char* substr);
+    void keep_if(const fbl::String& substr) { return keep_if(substr.c_str()); }
 
     // Keeps elements if they contain at least one element of |substrs|.
     void keep_if_any(StringList* substrs);
@@ -45,6 +48,7 @@ public:
 
     // Removes elements if they exactly **MATCH** |match|.  Null strings leave the list unchanged.
     void erase_if(const char* match);
+    void erase_if(const fbl::String& match) { return erase_if(match.c_str()); }
 
     // In place of iterators, this class provides |first| and |next| methods.  The former resets the
     // internal iterator to the beginning of the list, while the latter returns successive elements

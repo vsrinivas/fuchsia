@@ -96,13 +96,13 @@ bool TestRebasePath() {
 
     Path path;
     EXPECT_EQ(ZX_OK, test.RebasePath("boot", &path));
-    EXPECT_STR_EQ(path.c_str(), fixture.path("boot/").c_str());
+    EXPECT_CSTR_EQ(path, fixture.path("boot/"));
 
     EXPECT_EQ(ZX_OK, test.RebasePath("boot/test/fuzz", &path));
-    EXPECT_STR_EQ(path.c_str(), fixture.path("boot/test/fuzz/").c_str());
+    EXPECT_CSTR_EQ(path, fixture.path("boot/test/fuzz/"));
 
     EXPECT_NE(ZX_OK, test.RebasePath("pkgfs", &path));
-    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+    EXPECT_CSTR_EQ(path, fixture.path());
 
     END_TEST;
 }
@@ -116,31 +116,28 @@ bool TestGetPackagePath() {
     Path path;
     fbl::String expected;
     EXPECT_NE(ZX_OK, test.GetPackagePath("", &path));
-    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+    EXPECT_CSTR_EQ(path, fixture.path());
 
     EXPECT_NE(ZX_OK, test.GetPackagePath("not-a-package", &path));
-    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+    EXPECT_CSTR_EQ(path, fixture.path());
 
     const char* package = "zircon_fuzzers";
     EXPECT_EQ(ZX_OK, test.GetPackagePath(package, &path));
-    EXPECT_STR_EQ(
-        path.c_str(),
-        fixture.path("pkgfs/packages/%s/%s/", package, fixture.max_version(package)).c_str());
+    EXPECT_CSTR_EQ(path,
+                   fixture.path("pkgfs/packages/%s/%s/", package, fixture.max_version(package)));
 
     EXPECT_NE(ZX_OK, test.GetPackagePath("fuchsia", &path));
-    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+    EXPECT_CSTR_EQ(path, fixture.path());
 
     package = "fuchsia1_fuzzers";
     EXPECT_EQ(ZX_OK, test.GetPackagePath(package, &path));
-    EXPECT_STR_EQ(
-        path.c_str(),
-        fixture.path("pkgfs/packages/%s/%s/", package, fixture.max_version(package)).c_str());
+    EXPECT_CSTR_EQ(path,
+                   fixture.path("pkgfs/packages/%s/%s/", package, fixture.max_version(package)));
 
     package = "fuchsia2_fuzzers";
     EXPECT_EQ(ZX_OK, test.GetPackagePath(package, &path));
-    EXPECT_STR_EQ(
-        path.c_str(),
-        fixture.path("pkgfs/packages/%s/%s/", package, fixture.max_version(package)).c_str());
+    EXPECT_CSTR_EQ(path,
+                   fixture.path("pkgfs/packages/%s/%s/", package, fixture.max_version(package)));
 
     END_TEST;
 }
@@ -598,7 +595,7 @@ bool TestStart() {
     EXPECT_EQ(0, test.FindArg(test.executable()));
     EXPECT_LT(0, test.FindArg("-jobs=1"));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
 
     // // // Fuchsia tests
     ASSERT_TRUE(test.InitFuchsia());
@@ -613,7 +610,7 @@ bool TestStart() {
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
 
     // Fuchsia fuzzer without resources
     ASSERT_TRUE(test.Eval("start fuchsia1/target1"));
@@ -632,7 +629,7 @@ bool TestStart() {
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
 
     // Fuchsia fuzzer with resources, command-line option, and explicit corpus
     ASSERT_TRUE(test.Eval("start fuchsia2/target4 /path/to/another/corpus -foo=baz"));
@@ -645,7 +642,7 @@ bool TestStart() {
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
     EXPECT_LT(0, test.FindArg("-foo=baz"));
     EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
-    EXPECT_GT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_GT(0, test.FindArg(test.data_path("corpus")));
 
     END_TEST;
 }
@@ -769,17 +766,17 @@ bool TestRepro() {
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
-    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef")));
+    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11")));
+    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface")));
 
     // Filter artifacts based on substring
     ASSERT_TRUE(test.Eval("repro zircon/target2 dead"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11").c_str()));
-    EXPECT_GT(0, test.FindArg(test.data_path("oom-feedface").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef")));
+    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11")));
+    EXPECT_GT(0, test.FindArg(test.data_path("oom-feedface")));
 
     // Fuchsia tests
     ASSERT_TRUE(test.InitFuchsia());
@@ -793,10 +790,10 @@ bool TestRepro() {
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
-    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface").c_str()));
-    EXPECT_GT(0, test.FindArg(test.data_path("crash-deadbeef").c_str()));
-    EXPECT_GT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11")));
+    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface")));
+    EXPECT_GT(0, test.FindArg(test.data_path("crash-deadbeef")));
+    EXPECT_GT(0, test.FindArg(test.data_path("corpus")));
 
     ASSERT_TRUE(test.Eval("repro fuchsia1/target1"));
     EXPECT_NE(ZX_OK, test.Run());
@@ -811,10 +808,10 @@ bool TestRepro() {
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
-    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef").c_str()));
-    EXPECT_GT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11")));
+    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface")));
+    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef")));
+    EXPECT_GT(0, test.FindArg(test.data_path("corpus")));
 
     END_TEST;
 }
@@ -850,9 +847,9 @@ bool TestMerge() {
     EXPECT_EQ(0, test.FindArg(test.executable()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
-    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
+    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev")));
 
     // Fuchsia tests
     ASSERT_TRUE(test.InitFuchsia());
@@ -867,9 +864,9 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
-    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
+    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev")));
 
     path.Reset();
     ASSERT_EQ(ZX_OK, path.Push(test.data_path()));
@@ -888,9 +885,9 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
-    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev").c_str()));
+    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev")));
 
     path.Reset();
     ASSERT_EQ(ZX_OK, path.Push(test.data_path()));
@@ -904,8 +901,8 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
-    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
     EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
 
     path.Reset();
@@ -920,8 +917,8 @@ bool TestMerge() {
     EXPECT_LT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
-    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile").c_str()));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus").c_str()));
+    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
+    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
     EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
 
     path.Reset();

@@ -84,7 +84,7 @@ bool Fixture::CreateFile(const char* pathname, const char* contents) {
 
     const char* sep = strrchr(pathname, '/');
     fbl::String basename(pathname, sep - pathname);
-    ASSERT_TRUE(CreateDirectory(basename.c_str()));
+    ASSERT_TRUE(CreateDirectory(basename));
 
     fbl::unique_fd fd(open(pathname, O_RDWR | O_CREAT, 0777));
     ASSERT_TRUE(!!fd);
@@ -119,7 +119,7 @@ bool Fixture::CreateDirectory(const char* pathname) {
         ASSERT_NONNULL(sep);
         fbl::String basename(pathname, sep - pathname);
 
-        ASSERT_TRUE(CreateDirectory(basename.c_str()));
+        ASSERT_TRUE(CreateDirectory(basename));
         ASSERT_GE(mkdir(pathname, 0777), 0);
     }
 
@@ -154,7 +154,7 @@ bool Fixture::RemoveDirectory(const char* pathname) {
 
 void Fixture::Reset() {
     if (!root_.empty()) {
-        RemoveDirectory(root_.c_str());
+        RemoveDirectory(root_);
     }
     root_.clear();
     unsafe_.clear();

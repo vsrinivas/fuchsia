@@ -146,10 +146,8 @@ zx_status_t Fuzzer::Run(StringList* args) {
     }
 }
 
-zx_status_t Fuzzer::SetOption(const char* option) {
-    ZX_DEBUG_ASSERT(option);
-
-    const char* ptr = option;
+zx_status_t Fuzzer::SetOption(const fbl::String& option) {
+    const char* ptr = option.c_str();
     while (*ptr && *ptr != '#' && (*ptr == '-' || isspace(*ptr))) {
         ++ptr;
     }
@@ -167,21 +165,18 @@ zx_status_t Fuzzer::SetOption(const char* option) {
     }
     fbl::String val(mark, ptr - mark);
 
-    return SetOption(key.c_str(), val.c_str());
+    return SetOption(key, val);
 }
 
-zx_status_t Fuzzer::SetOption(const char* key, const char* value) {
-    ZX_DEBUG_ASSERT(key);
-    ZX_DEBUG_ASSERT(value);
-
+zx_status_t Fuzzer::SetOption(const fbl::String& key, const fbl::String& value) {
     // Ignore blank options
-    if (*key == '\0' && *value == '\0') {
+    if (key.empty() && value.empty()) {
         return ZX_OK;
     }
 
     // Must have both key and value
-    if (*key == '\0' || *value == '\0') {
-        fprintf(err_, "Empty key or value: '%s'='%s'\n", key, value);
+    if (key.empty() || value.empty()) {
+        fprintf(err_, "Empty key or value: '%s'='%s'\n", key.c_str(), value.c_str());
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -191,11 +186,11 @@ zx_status_t Fuzzer::SetOption(const char* key, const char* value) {
     return ZX_OK;
 }
 
-zx_status_t Fuzzer::RebasePath(const char* path, Path* out) {
+zx_status_t Fuzzer::RebasePath(const fbl::String& path, Path* out) {
     zx_status_t rc;
 
     out->Reset();
-    if (!root_.empty() && (rc = out->Push(root_.c_str())) != ZX_OK) {
+    if (!root_.empty() && (rc = out->Push(root_)) != ZX_OK) {
         fprintf(err_, "failed to move to '%s': %s\n", root_.c_str(), zx_status_get_string(rc));
         return rc;
     }
@@ -206,7 +201,7 @@ zx_status_t Fuzzer::RebasePath(const char* path, Path* out) {
     return ZX_OK;
 }
 
-zx_status_t Fuzzer::GetPackagePath(const char* package, Path* out) {
+zx_status_t Fuzzer::GetPackagePath(const fbl::String& package, Path* out) {
     zx_status_t rc;
 
     if ((rc = RebasePath("pkgfs/packages", out)) != ZX_OK) {
@@ -214,7 +209,7 @@ zx_status_t Fuzzer::GetPackagePath(const char* package, Path* out) {
     }
     auto pop_prefix = fbl::MakeAutoCall([&out]() { out->Pop(); });
     if ((rc = out->Push(package)) != ZX_OK) {
-        fprintf(err_, "failed to move to '%s': %s\n", package, zx_status_get_string(rc));
+        fprintf(err_, "failed to move to '%s': %s\n", package.c_str(), zx_status_get_string(rc));
         return rc;
     }
     auto pop_package = fbl::MakeAutoCall([&out]() { out->Pop(); });
@@ -237,7 +232,7 @@ zx_status_t Fuzzer::GetPackagePath(const char* package, Path* out) {
         }
     }
     if (!max_version) {
-        fprintf(err_, "No versions available for package: %s\n", package);
+        fprintf(err_, "No versions available for package: %s\n", package.c_str());
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -251,7 +246,8 @@ zx_status_t Fuzzer::GetPackagePath(const char* package, Path* out) {
     return ZX_OK;
 }
 
-void Fuzzer::FindZirconFuzzers(const char* zircon_path, const char* target, StringMap* out) {
+void Fuzzer::FindZirconFuzzers(const fbl::String& zircon_path, const fbl::String& target,
+                               StringMap* out) {
     Path path;
     if (RebasePath(zircon_path, &path) != ZX_OK) {
         return;
@@ -263,11 +259,12 @@ void Fuzzer::FindZirconFuzzers(const char* zircon_path, const char* target, Stri
 
     targets->keep_if(target);
     for (const char* t = targets->first(); t; t = targets->next()) {
-        out->set(fbl::StringPrintf("zircon_fuzzers/%s", t).c_str(), path.Join(t).c_str());
+        out->set(fbl::StringPrintf("zircon_fuzzers/%s", t), path.Join(t));
     }
 }
 
-void Fuzzer::FindFuchsiaFuzzers(const char* package, const char* target, StringMap* out) {
+void Fuzzer::FindFuchsiaFuzzers(const fbl::String& package, const fbl::String& target,
+                                StringMap* out) {
     Path path;
     if (RebasePath("pkgfs/packages", &path) != ZX_OK) {
         return;
@@ -289,39 +286,41 @@ void Fuzzer::FindFuchsiaFuzzers(const char* package, const char* target, StringM
         fbl::String abspath;
         for (const char* t = targets->first(); t; t = targets->next()) {
             fbl::String t1(t, strlen(t) - strlen(".cmx"));
-            out->set(fbl::StringPrintf("%s/%s", p, t1.c_str()).c_str(),
-                     fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s", p, t).c_str());
+            out->set(fbl::StringPrintf("%s/%s", p, t1.c_str()),
+                     fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s", p, t));
         }
     }
 }
 
-void Fuzzer::FindFuzzers(const char* package, const char* target, StringMap* out) {
-    if (strstr("zircon_fuzzers", package) != nullptr) {
+void Fuzzer::FindFuzzers(const fbl::String& package, const fbl::String& target, StringMap* out) {
+    if (strstr("zircon_fuzzers", package.c_str()) != nullptr) {
         FindZirconFuzzers("boot/test/fuzz", target, out);
         FindZirconFuzzers("system/test/fuzz", target, out);
     }
     FindFuchsiaFuzzers(package, target, out);
 }
 
-static zx_status_t ParseName(const char* name, fbl::String* out_package, fbl::String* out_target) {
-    const char* sep = name ? strchr(name, '/') : nullptr;
+static zx_status_t ParseName(const fbl::String& name, fbl::String* out_package,
+                             fbl::String* out_target) {
+    const char* ptr = name.c_str();
+    const char* sep = strchr(ptr, '/');
     if (!sep) {
         return ZX_ERR_NOT_FOUND;
     }
-    out_package->Set(name, sep - name);
+    out_package->Set(ptr, sep - ptr);
     out_target->Set(sep + 1);
     return ZX_OK;
 }
 
-void Fuzzer::FindFuzzers(const char* name, StringMap* out) {
+void Fuzzer::FindFuzzers(const fbl::String& name, StringMap* out) {
     ZX_DEBUG_ASSERT(out);
 
     // Scan the system for available fuzzers
     out->clear();
     fbl::String package, target;
     if (ParseName(name, &package, &target) == ZX_OK) {
-        FindFuzzers(package.c_str(), target.c_str(), out);
-    } else if (name) {
+        FindFuzzers(package, target, out);
+    } else if (name.length() != 0) {
         FindFuzzers(name, "", out);
         FindFuzzers("", name, out);
     } else {
@@ -334,12 +333,12 @@ void Fuzzer::GetArgs(StringList* out) {
     if (strstr(target_.c_str(), "fuchsia-pkg://fuchsia.com/") == target_.c_str()) {
         out->push_back("/system/bin/run");
     }
-    out->push_back(target_.c_str());
+    out->push_back(target_);
     const char* key;
     const char* val;
     options_.begin();
     while (options_.next(&key, &val)) {
-        out->push_back(fbl::StringPrintf("-%s=%s", key, val).c_str());
+        out->push_back(fbl::StringPrintf("-%s=%s", key, val));
     }
     for (const char* input = inputs_.first(); input; input = inputs_.next()) {
         out->push_back(input);
@@ -515,7 +514,7 @@ zx_status_t Fuzzer::SetFuzzer(const char* name) {
 
     // Determine the fuzzer
     StringMap fuzzers;
-    FindFuzzers(name, &fuzzers);
+    FindFuzzers(name_, &fuzzers);
     switch (fuzzers.size()) {
     case 0:
         fprintf(err_, "No matching fuzzers for '%s'.\n", name);
@@ -528,22 +527,19 @@ zx_status_t Fuzzer::SetFuzzer(const char* name) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    const char* executable;
     fuzzers.begin();
-    fuzzers.next(&name, &executable);
-    name_.Set(name);
-    target_.Set(executable);
+    fuzzers.next(&name_, &target_);
 
     fbl::String package, target;
-    if ((rc = ParseName(name_.c_str(), &package, &target)) != ZX_OK) {
+    if ((rc = ParseName(name_, &package, &target)) != ZX_OK) {
         return rc;
     }
 
     // Determine the directory that holds the fuzzing resources. It may not be present if fuzzing
     // Zircon standalone.
-    if ((rc = GetPackagePath(package.c_str(), &resource_path_)) != ZX_OK ||
+    if ((rc = GetPackagePath(package, &resource_path_)) != ZX_OK ||
         (rc = resource_path_.Push("data")) != ZX_OK ||
-        (rc = resource_path_.Push(target.c_str())) != ZX_OK) {
+        (rc = resource_path_.Push(target)) != ZX_OK) {
         // No-op: The directory may not be present when fuzzing standalone Zircon.
         resource_path_.Reset();
     }
@@ -551,11 +547,9 @@ zx_status_t Fuzzer::SetFuzzer(const char* name) {
     // Ensure the directory that will hold the fuzzing artifacts is present.
     if ((rc = RebasePath("data", &data_path_)) != ZX_OK ||
         (rc = data_path_.Ensure("fuzzing")) != ZX_OK ||
-        (rc = data_path_.Push("fuzzing")) != ZX_OK ||
-        (rc = data_path_.Ensure(package.c_str())) != ZX_OK ||
-        (rc = data_path_.Push(package.c_str())) != ZX_OK ||
-        (rc = data_path_.Ensure(target.c_str())) != ZX_OK ||
-        (rc = data_path_.Push(target.c_str())) != ZX_OK) {
+        (rc = data_path_.Push("fuzzing")) != ZX_OK || (rc = data_path_.Ensure(package)) != ZX_OK ||
+        (rc = data_path_.Push(package)) != ZX_OK || (rc = data_path_.Ensure(target)) != ZX_OK ||
+        (rc = data_path_.Push(target)) != ZX_OK) {
         fprintf(err_, "Failed to establish data path for '%s/%s': %s\n", package.c_str(),
                 target.c_str(), zx_status_get_string(rc));
         return ZX_ERR_IO;
@@ -581,8 +575,7 @@ zx_status_t Fuzzer::LoadOptions() {
 
     case kMerge:
         if ((rc = SetOption("merge", "1")) != ZX_OK ||
-            (rc = SetOption("merge_control_file", data_path_.Join(".mergefile").c_str())) !=
-                ZX_OK) {
+            (rc = SetOption("merge_control_file", data_path_.Join(".mergefile"))) != ZX_OK) {
             return rc;
         }
         break;
@@ -597,14 +590,14 @@ zx_status_t Fuzzer::LoadOptions() {
     }
 
     // Early exit if no resources
-    if (strlen(resource_path_.c_str()) <= 1) {
+    if (resource_path_.length() <= 1) {
         return ZX_OK;
     }
 
     // Record the (optional) dictionary
     size_t dict_size;
     if ((rc = resource_path_.GetSize("dictionary", &dict_size)) == ZX_OK && dict_size != 0 &&
-        (rc = SetOption("dict", resource_path_.Join("dictionary").c_str())) != ZX_OK) {
+        (rc = SetOption("dict", resource_path_.Join("dictionary"))) != ZX_OK) {
         fprintf(err_, "failed to set dictionary option: %s\n", zx_status_get_string(rc));
         return rc;
     }
@@ -640,7 +633,7 @@ zx_status_t Fuzzer::Help() {
 
 zx_status_t Fuzzer::List() {
     StringMap fuzzers;
-    FindFuzzers(name_.c_str(), &fuzzers);
+    FindFuzzers(name_, &fuzzers);
     if (fuzzers.is_empty()) {
         fprintf(out_, "No matching fuzzers.\n");
         return ZX_OK;
@@ -655,7 +648,7 @@ zx_status_t Fuzzer::List() {
 }
 
 zx_status_t Fuzzer::Seeds() {
-    if (strlen(resource_path_.c_str()) <= 1) {
+    if (resource_path_.length() <= 1) {
         fprintf(out_, "No seed corpora found for %s.\n", name_.c_str());
         return ZX_OK;
     }
@@ -683,7 +676,7 @@ zx_status_t Fuzzer::Start() {
             fprintf(err_, "Failed to make empty corpus: %s\n", zx_status_get_string(rc));
             return rc;
         }
-        inputs_.push_front(data_path_.Join("corpus").c_str());
+        inputs_.push_front(data_path_.Join("corpus"));
     }
 
     return Execute();
@@ -762,7 +755,7 @@ zx_status_t Fuzzer::Repro() {
     // Get full paths of artifacts
     inputs_.clear();
     for (const char* artifact = artifacts->first(); artifact; artifact = artifacts->next()) {
-        inputs_.push_back(data_path_.Join(artifact).c_str());
+        inputs_.push_back(data_path_.Join(artifact));
     }
 
     // Nothing to repro
@@ -795,7 +788,7 @@ zx_status_t Fuzzer::Merge() {
         }
     }
     if (inputs_.is_empty()) {
-        inputs_.push_back(data_path_.Join("corpus.prev").c_str());
+        inputs_.push_back(data_path_.Join("corpus.prev"));
     }
 
     // Make sure the corpus directory exists, and make sure the output corpus is the first argument
@@ -803,8 +796,8 @@ zx_status_t Fuzzer::Merge() {
         fprintf(err_, "Failed to ensure 'corpus': %s\n", zx_status_get_string(rc));
         return rc;
     }
-    inputs_.erase_if(data_path_.Join("corpus").c_str());
-    inputs_.push_front(data_path_.Join("corpus").c_str());
+    inputs_.erase_if(data_path_.Join("corpus"));
+    inputs_.push_front(data_path_.Join("corpus"));
 
     if ((rc = Execute()) != ZX_OK) {
         fprintf(err_, "Failed to execute: %s\n", zx_status_get_string(rc));

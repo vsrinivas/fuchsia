@@ -106,23 +106,23 @@ bool TestPushAndPop() {
     EXPECT_STR_EQ(path.c_str(), "/");
 
     path.Reset();
-    EXPECT_EQ(ZX_OK, path.Push(fixture.path().c_str()));
-    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+    EXPECT_EQ(ZX_OK, path.Push(fixture.path()));
+    EXPECT_CSTR_EQ(path, fixture.path());
 
     EXPECT_EQ(ZX_OK, path.Push("foo/ba"));
-    EXPECT_STR_EQ(path.c_str(), fixture.path("foo/ba/").c_str());
+    EXPECT_CSTR_EQ(path, fixture.path("foo/ba/"));
 
     EXPECT_NE(ZX_OK, path.Push("r"));
-    EXPECT_STR_EQ(path.c_str(), fixture.path("foo/ba/").c_str());
+    EXPECT_CSTR_EQ(path, fixture.path("foo/ba/"));
 
     EXPECT_EQ(ZX_OK, path.Push("z/qu/ux/"));
-    EXPECT_STR_EQ(path.c_str(), fixture.path("foo/ba/z/qu/ux/").c_str());
+    EXPECT_CSTR_EQ(path, fixture.path("foo/ba/z/qu/ux/"));
 
     path.Pop();
-    EXPECT_STR_EQ(path.c_str(), fixture.path("foo/ba/").c_str());
+    EXPECT_CSTR_EQ(path, fixture.path("foo/ba/"));
 
     path.Pop();
-    EXPECT_STR_EQ(path.c_str(), fixture.path().c_str());
+    EXPECT_CSTR_EQ(path, fixture.path());
 
     path.Pop();
     EXPECT_STR_EQ(path.c_str(), "/");
@@ -136,7 +136,7 @@ bool TestGetSize() {
     ASSERT_TRUE(fixture.Create());
 
     Path path;
-    ASSERT_EQ(ZX_OK, path.Push(fixture.path("foo/ba/").c_str()));
+    ASSERT_EQ(ZX_OK, path.Push(fixture.path("foo/ba/")));
 
     size_t size;
     EXPECT_EQ(ZX_OK, path.GetSize("r", &size));
@@ -155,7 +155,7 @@ bool TestList() {
     ASSERT_TRUE(fixture.Create());
 
     Path path;
-    ASSERT_EQ(ZX_OK, path.Push(fixture.path("foo").c_str()));
+    ASSERT_EQ(ZX_OK, path.Push(fixture.path("foo")));
 
     fbl::unique_ptr<StringList> list;
     list = path.List();
@@ -183,7 +183,7 @@ bool TestEnsureAndRemove() {
     ASSERT_TRUE(fixture.Create());
 
     Path path;
-    ASSERT_EQ(ZX_OK, path.Push(fixture.path().c_str()));
+    ASSERT_EQ(ZX_OK, path.Push(fixture.path()));
     ASSERT_EQ(ZX_OK, path.Push("foo/ba/z/qu"));
 
     EXPECT_EQ(ZX_OK, path.Ensure(""));
@@ -219,7 +219,7 @@ bool TestRename() {
     ASSERT_TRUE(fixture.Create());
 
     Path path;
-    ASSERT_EQ(ZX_OK, path.Push(fixture.path("foo/ba").c_str()));
+    ASSERT_EQ(ZX_OK, path.Push(fixture.path("foo/ba")));
 
     EXPECT_NE(ZX_OK, path.Rename("", "empty"));
     EXPECT_NE(ZX_OK, path.Rename("empty", ""));
@@ -261,7 +261,7 @@ bool TestReset() {
     ASSERT_TRUE(fixture.Create());
 
     Path path;
-    ASSERT_EQ(ZX_OK, path.Push(fixture.path().c_str()));
+    ASSERT_EQ(ZX_OK, path.Push(fixture.path()));
 
     path.Reset();
     EXPECT_STR_EQ(path.c_str(), "/");

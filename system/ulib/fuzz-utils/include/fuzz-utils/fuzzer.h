@@ -43,45 +43,46 @@ protected:
 
     // These getters and setters are provided strictly for unit testing purposes.
     const StringMap& options() const { return options_; }
-    void set_root(const char* root) { root_.Set(root); }
+    void set_root(const fbl::String& root) { root_.Set(root); }
     void set_out(FILE* out) { out_ = out; }
     void set_err(FILE* err) { err_ = err; }
-    void set_target(const char* target) { target_.Set(target); }
+    void set_target(const fbl::String& target) { target_.Set(target); }
 
     // Interpret the given |args| and execute the appropriate subcommand.
     zx_status_t Run(StringList* args);
 
     // Parses |option| as a key-value pair.  If an option with the same key is already set, it is
     // replaced.  Otherwise, the option is added.  Options are of the form '[-]key=value[#comment]'.
-    zx_status_t SetOption(const char* option);
+    zx_status_t SetOption(const fbl::String& option);
 
     // Parses an option made up of a |key|-|value| pair.  If an option with the same key is already
     // set, it is replaced.  Otherwise, the option is added.
-    zx_status_t SetOption(const char* key, const char* value);
+    zx_status_t SetOption(const fbl::String& key, const fbl::String& value);
 
     // Constructs a |Path| object to the |path| directory, relative to the root if set.
-    zx_status_t RebasePath(const char* package, Path* out);
+    zx_status_t RebasePath(const fbl::String& package, Path* out);
 
     // Constructs a |Path| object to the |package|'s max version directory.  On error, |out| will be
     // reset to the root directory.
-    zx_status_t GetPackagePath(const char* package, Path* out);
+    zx_status_t GetPackagePath(const fbl::String& package, Path* out);
 
     // Returns a map of names of available fuzzers to executables in |out| belonging to the
     // 'zircon_fuzzers' fuzz package located under |zircon_path| and matching |target|, if
     // specified.
-    void FindZirconFuzzers(const char* zircon_path, const char* target, StringMap* out);
+    void FindZirconFuzzers(const fbl::String& zircon_path, const fbl::String& target,
+                           StringMap* out);
 
     // Returns a map of names of available fuzzers to executables in |out| belonging to the given
     // fuzz |package| located under "pkgfs/packages" and matching |target|, if specified.
-    void FindFuchsiaFuzzers(const char* package, const char* target, StringMap* out);
+    void FindFuchsiaFuzzers(const fbl::String& package, const fbl::String& target, StringMap* out);
 
     // Returns a map of names of available fuzzers to executables in |out| matching the given
     // |package| and |target|.
-    void FindFuzzers(const char* package, const char* target, StringMap* out);
+    void FindFuzzers(const fbl::String& package, const fbl::String& target, StringMap* out);
 
     // Returns a map of names of available fuzzers to executables in |out| matching |name|, if
     // specified.
-    void FindFuzzers(const char* name, StringMap* out);
+    void FindFuzzers(const fbl::String& name, StringMap* out);
 
     // Fills in |args| with the arguments for the fuzzer subprocess as currently configured.
     void GetArgs(StringList* args);

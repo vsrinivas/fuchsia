@@ -27,21 +27,28 @@ public:
 
     // Returns the current path as a C-style string.
     const char* c_str() const { return path_->buffer_.c_str(); }
+    size_t length() const { return path_->buffer_.length(); }
 
     // Returns an absolute path to the file described by |relpath|.
     fbl::String Join(const char* relpath) const;
+    fbl::String Join(const fbl::String& relpath) const { return Join(relpath.c_str()); }
 
     // Returns the size of the file in |out|, if it exists. |out| is unchanged on error.
     zx_status_t GetSize(const char* relpath, size_t* out) const;
+    zx_status_t GetSize(const fbl::String& relpath, size_t* out) const {
+        return GetSize(relpath.c_str(), out);
+    }
 
     // Returns a list of files in the directory given by the current path.
     fbl::unique_ptr<StringList> List() const;
 
     // Checks if a directory exists at |relpath| and creates on if it does not.
     zx_status_t Ensure(const char* relpath);
+    zx_status_t Ensure(const fbl::String& relpath) { return Ensure(relpath.c_str()); }
 
     // Changes the current path to the directory described by |relpath|.
     zx_status_t Push(const char* relpath);
+    zx_status_t Push(const fbl::String& relpath) { return Push(relpath.c_str()); }
 
     // Changes to current path to value before the corresponding |Push|.  Does nothing if already at
     // the filesystem root.
@@ -49,9 +56,13 @@ public:
 
     // Deletes the file described by |relpath|, if it exists.
     zx_status_t Remove(const char* relpath);
+    zx_status_t Remove(const fbl::String& relpath) { return Remove(relpath.c_str()); }
 
     // Moves and/or renames the file described by |old_relpath| to |new_relpath|.
     zx_status_t Rename(const char* old_relpath, const char* new_relpath);
+    zx_status_t Rename(const fbl::String& old_relpath, const fbl::String& new_relpath) {
+        return Rename(old_relpath.c_str(), new_relpath.c_str());
+    }
 
     // Resets the current path to point at the filesystem root.
     void Reset();

@@ -108,7 +108,7 @@ zx_status_t Path::Ensure(const char* relpath) {
     const char* sep = strrchr(relpath, '/');
     if (sep) {
         fbl::String prefix(relpath, sep - relpath);
-        if ((rc = Ensure(prefix.c_str())) != ZX_OK) {
+        if ((rc = Ensure(prefix)) != ZX_OK) {
             xprintf("Failed to ensure parent directory: %s\n", zx_status_get_string(rc));
             return rc;
         }

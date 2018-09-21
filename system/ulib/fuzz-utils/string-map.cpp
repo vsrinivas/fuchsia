@@ -42,6 +42,18 @@ bool StringMap::next(const char** out_key, const char** out_val) {
     return true;
 }
 
+bool StringMap::next(fbl::String* out_key, fbl::String* out_val) {
+    const char *key, *val;
+    bool result = next(&key, &val);
+    if (out_key) {
+        out_key->Set(key);
+    }
+    if (out_val) {
+        out_val->Set(val);
+    }
+    return result;
+}
+
 const char* StringMap::get(const char* key) const {
     ZX_DEBUG_ASSERT(key);
     auto iterator = elements_.find(key);

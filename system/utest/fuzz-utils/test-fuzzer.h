@@ -47,7 +47,8 @@ public:
 
     // Returns the index in "argv" of the arg produced from |fmt| and any variadic parameters, or -1
     // if it isn't found.
-    int FindArg(const char* fmt, ...);
+    int FindArg(const char* fmt, const fbl::String& arg);
+    int FindArg(const fbl::String& arg) { return FindArg("%s", arg); }
 
     // Various fixture locations
     const char* executable() const { return executable_.c_str(); }
@@ -57,21 +58,24 @@ public:
     fbl::String data_path(const char* relpath) { return data_path_.Join(relpath); }
 
     // Expose parent class methods
-    zx_status_t SetOption(const char* option) { return Fuzzer::SetOption(option); }
-    zx_status_t SetOption(const char* key, const char* val) { return Fuzzer::SetOption(key, val); }
-    zx_status_t RebasePath(const char* package, Path* out) {
+    zx_status_t SetOption(const fbl::String& option) { return Fuzzer::SetOption(option); }
+    zx_status_t SetOption(const fbl::String& key, const fbl::String& val) {
+        return Fuzzer::SetOption(key, val);
+    }
+    zx_status_t RebasePath(const fbl::String& package, Path* out) {
         return Fuzzer::RebasePath(package, out);
     }
-    zx_status_t GetPackagePath(const char* package, Path* out) {
+    zx_status_t GetPackagePath(const fbl::String& package, Path* out) {
         return Fuzzer::GetPackagePath(package, out);
     }
-    void FindZirconFuzzers(const char* zircon_path, const char* target, StringMap* out) {
+    void FindZirconFuzzers(const fbl::String& zircon_path, const fbl::String& target,
+                           StringMap* out) {
         Fuzzer::FindZirconFuzzers(zircon_path, target, out);
     }
-    void FindFuchsiaFuzzers(const char* package, const char* target, StringMap* out) {
+    void FindFuchsiaFuzzers(const fbl::String& package, const fbl::String& target, StringMap* out) {
         Fuzzer::FindFuchsiaFuzzers(package, target, out);
     }
-    void FindFuzzers(const char* name, StringMap* out) { Fuzzer::FindFuzzers(name, out); }
+    void FindFuzzers(const fbl::String& name, StringMap* out) { Fuzzer::FindFuzzers(name, out); }
 
     // Exposes |Fuzzer::CheckProcess| optionally overriding the executable name to look for.
     bool CheckProcess(zx_handle_t process, const char* executable = nullptr);

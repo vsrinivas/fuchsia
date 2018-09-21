@@ -70,31 +70,26 @@ bool FuzzerFixture::CreatePackage(const char* package, long int version, const c
 
     const char* max = max_version(package);
     if (!max || strtol(max, nullptr, 0) < version) {
-        max_versions_.set(package, fbl::StringPrintf("%ld", version).c_str());
+        max_versions_.set(package, fbl::StringPrintf("%ld", version));
     }
 
     if (strcmp(package, "zircon_fuzzers") != 0) {
-        ASSERT_TRUE(
-            CreateFile(path("pkgfs/packages/%s/%ld/bin/%s", package, version, target).c_str()));
+        ASSERT_TRUE(CreateFile(path("pkgfs/packages/%s/%ld/bin/%s", package, version, target)));
     }
 
-    ASSERT_TRUE(
-        CreateFile(path("pkgfs/packages/%s/%ld/meta/%s.cmx", package, version, target).c_str()));
+    ASSERT_TRUE(CreateFile(path("pkgfs/packages/%s/%ld/meta/%s.cmx", package, version, target)));
 
-    ASSERT_TRUE(
-        CreateFile(path("pkgfs/packages/%s/%ld/data/%s/corpora", package, version, target).c_str(),
-                   "//path/to/seed/corpus\n "
-                   "//path/to/cipd/ensure/file\n"
-                   "https://gcs/url\n"));
+    ASSERT_TRUE(CreateFile(path("pkgfs/packages/%s/%ld/data/%s/corpora", package, version, target),
+                           "//path/to/seed/corpus\n "
+                           "//path/to/cipd/ensure/file\n"
+                           "https://gcs/url\n"));
     ASSERT_TRUE(CreateFile(
-        path("pkgfs/packages/%s/%ld/data/%s/dictionary", package, version, target).c_str(),
-        "foo\n"
-        "bar\n"
-        "baz\n"));
-    ASSERT_TRUE(
-        CreateFile(path("pkgfs/packages/%s/%ld/data/%s/options", package, version, target).c_str(),
-                   "foo = bar\n"
-                   "baz = qux\n"));
+        path("pkgfs/packages/%s/%ld/data/%s/dictionary", package, version, target), "foo\n"
+                                                                                    "bar\n"
+                                                                                    "baz\n"));
+    ASSERT_TRUE(CreateFile(path("pkgfs/packages/%s/%ld/data/%s/options", package, version, target),
+                           "foo = bar\n"
+                           "baz = qux\n"));
 
     END_HELPER;
 }
@@ -102,10 +97,10 @@ bool FuzzerFixture::CreatePackage(const char* package, long int version, const c
 bool FuzzerFixture::CreateData(const char* package, const char* target) {
     BEGIN_HELPER;
 
-    ASSERT_TRUE(CreateDirectory(path("data/fuzzing/%s/%s/corpus", package, target).c_str()));
-    ASSERT_TRUE(CreateFile(path("data/fuzzing/%s/%s/crash-deadbeef", package, target).c_str()));
-    ASSERT_TRUE(CreateFile(path("data/fuzzing/%s/%s/leak-deadfa11", package, target).c_str()));
-    ASSERT_TRUE(CreateFile(path("data/fuzzing/%s/%s/oom-feedface", package, target).c_str()));
+    ASSERT_TRUE(CreateDirectory(path("data/fuzzing/%s/%s/corpus", package, target)));
+    ASSERT_TRUE(CreateFile(path("data/fuzzing/%s/%s/crash-deadbeef", package, target)));
+    ASSERT_TRUE(CreateFile(path("data/fuzzing/%s/%s/leak-deadfa11", package, target)));
+    ASSERT_TRUE(CreateFile(path("data/fuzzing/%s/%s/oom-feedface", package, target)));
 
     END_HELPER;
 }
