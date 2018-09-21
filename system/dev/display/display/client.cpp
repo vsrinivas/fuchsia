@@ -1111,7 +1111,7 @@ void Client::SetOwnership(bool is_owner) {
 
     is_owner_ = is_owner;
 
-    fuchsia_display_ControllerClientOwnershipChangeEvent msg;
+    fuchsia_display_ControllerClientOwnershipChangeEvent msg = {};
     msg.hdr.ordinal = fuchsia_display_ControllerClientOwnershipChangeOrdinal;
     msg.has_ownership = is_owner;
 
@@ -1132,6 +1132,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_co
     fidl::Builder builder(bytes, ZX_CHANNEL_MAX_MSG_BYTES);
     auto req = builder.New<fuchsia_display_ControllerDisplaysChangedEvent>();
     zx_status_t status;
+    req->hdr = {};
     req->hdr.ordinal = fuchsia_display_ControllerDisplaysChangedOrdinal;
     req->added.count = 0;
     req->added.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
@@ -1487,6 +1488,7 @@ void ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
 
     fuchsia_display_ControllerVsyncEvent* msg =
             reinterpret_cast<fuchsia_display_ControllerVsyncEvent*>(data);
+    msg->hdr = {};
     msg->hdr.ordinal = fuchsia_display_ControllerVsyncOrdinal;
     msg->display_id = display_id;
     msg->timestamp = timestamp;
