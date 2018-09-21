@@ -94,7 +94,7 @@ use boringssl::raw::{CBB_data, CBB_init, CBB_len, CBS_init, CBS_len, CRYPTO_memc
                      ED25519_verify, ERR_print_errors_cb, EVP_PBE_scrypt, EVP_PKEY_assign_EC_KEY,
                      EVP_PKEY_get1_EC_KEY, EVP_marshal_public_key, EVP_parse_public_key,
                      HMAC_CTX_init, HMAC_Final, HMAC_Init_ex, HMAC_Update, HMAC_size, RAND_bytes,
-                     SHA384_Init};
+                     SHA384_Init, PKCS5_PBKDF2_HMAC};
 
 impl CStackWrapper<CBB> {
     /// Creates a new `CBB` and initializes it with `CBB_init`.
@@ -387,6 +387,26 @@ pub fn evp_pbe_scrypt(
             max_mem,
             out_key.as_mut_ptr(),
             out_key.len(),
+        )
+    }
+}
+
+/// The `PKCS5_PBKDF2_HMAC` function.
+#[must_use]
+pub fn pkcs5_pbkdf2_hmac(
+    password: &[u8], salt: &[u8], iterations: c_uint, digest: &CRef<'static, EVP_MD>,
+    out_key: &mut [u8],
+) -> Result<(), BoringError> {
+    unsafe {
+        PKCS5_PBKDF2_HMAC(
+            password.as_ptr() as *const c_char,
+            password.len(),
+            salt.as_ptr(),
+            salt.len(),
+            iterations,
+            digest.as_const(),
+            out_key.len(),
+            out_key.as_mut_ptr(),
         )
     }
 }

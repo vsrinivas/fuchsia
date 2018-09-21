@@ -277,6 +277,28 @@ pub unsafe fn EVP_PBE_scrypt(
     )
 }
 
+#[allow(non_snake_case)]
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub unsafe fn PKCS5_PBKDF2_HMAC(
+    password: *const c_char, password_len: usize, salt: *const u8, salt_len: usize,
+    iterations: c_uint, digest: *const EVP_MD, key_len: usize, out_key: *mut u8,
+) -> Result<(), BoringError> {
+    one_or_err(
+        "PKCS5_PBKDF2_HMAC",
+        ::boringssl_sys::PKCS5_PBKDF2_HMAC(
+            password,
+            password_len,
+            salt,
+            salt_len,
+            iterations,
+            digest,
+            key_len,
+            out_key,
+        ),
+    )
+}
+
 // hmac.h
 
 // NOTE: We don't implement CInit because some functions that take an HMAC_CTX
