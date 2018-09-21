@@ -258,11 +258,7 @@ pub fn report_scan_time(
     sender: &mut CobaltSender, scan_started_time: zx::Time, scan_finished_time: zx::Time,
 ) {
     let time_micros = (scan_finished_time - scan_started_time).nanos() / 1000;
-    sender.log_elapsed_time(
-        CobaltMetricId::ScanTime as u32,
-        0,
-        time_micros,
-    );
+    sender.log_elapsed_time(CobaltMetricId::ScanTime as u32, 0, time_micros);
 }
 
 pub fn report_connection_time(

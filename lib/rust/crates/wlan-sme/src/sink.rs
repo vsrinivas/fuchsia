@@ -28,3 +28,4 @@ impl<T> UnboundedSink<T> {
 }
 
 pub type MlmeSink = UnboundedSink<crate::MlmeRequest>;
+pub type InfoSink = UnboundedSink<crate::InfoEvent>;

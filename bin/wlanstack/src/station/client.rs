@@ -12,7 +12,7 @@ use log::{error, info};
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
-use wlan_sme::{client as client_sme, DeviceInfo};
+use wlan_sme::{client as client_sme, DeviceInfo, InfoEvent, InfoStream};
 use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult,
                        DiscoveryError, DiscoveryResult, EssInfo, ScanTxnId};
 use fuchsia_zircon as zx;
@@ -26,14 +26,9 @@ use crate::telemetry;
 
 struct Tokens;
 
-struct ConnectToken {
-    handle: Option<fidl_sme::ConnectTransactionControlHandle>,
-    time_started: zx::Time,
-}
-
 impl client_sme::Tokens for Tokens {
     type ScanToken = fidl_sme::ScanTransactionControlHandle;
-    type ConnectToken = ConnectToken;
+    type ConnectToken = Option<fidl_sme::ConnectTransactionControlHandle>;
 }
 
 pub type Endpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
@@ -42,6 +37,7 @@ type Sme = client_sme::ClientSme<Tokens>;
 struct ConnectionTimes {
     att_id: ConnectionAttemptId,
     txn_id: ScanTxnId,
+    connect_started_time: Option<zx::Time>,
     scan_started_time: Option<zx::Time>,
     assoc_started_time: Option<zx::Time>,
     rsna_started_time: Option<zx::Time>,
@@ -56,11 +52,11 @@ pub async fn serve<S>(proxy: MlmeProxy,
     -> Result<(), failure::Error>
     where S: Stream<Item = StatsRequest> + Unpin
 {
-    let (sme, mlme_stream, user_stream) = Sme::new(device_info);
+    let (sme, mlme_stream, user_stream, info_stream) = Sme::new(device_info);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
         proxy, event_stream, Arc::clone(&sme), mlme_stream, stats_requests);
-    let sme_fidl = serve_fidl(sme, new_fidl_clients, user_stream, cobalt_sender);
+    let sme_fidl = serve_fidl(sme, new_fidl_clients, user_stream, info_stream, cobalt_sender);
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);
     Ok(select! {
@@ -72,22 +68,29 @@ pub async fn serve<S>(proxy: MlmeProxy,
 async fn serve_fidl(sme: Arc<Mutex<Sme>>,
                     mut new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
                     mut user_stream: client_sme::UserStream<Tokens>,
+                    mut info_stream: InfoStream,
                     mut cobalt_sender: CobaltSender)
     -> Result<Never, failure::Error>
 {
     let mut fidl_clients = ConcurrentTasks::new();
     let mut connection_times = ConnectionTimes { att_id: 0,
                                                  txn_id: 0,
+                                                 connect_started_time: None,
                                                  scan_started_time: None,
                                                  assoc_started_time: None,
                                                  rsna_started_time: None };
     loop {
         let mut user_event = user_stream.next();
+        let mut info_event = info_stream.next();
         let mut new_fidl_client = new_fidl_clients.next();
         select! {
             user_event => match user_event {
-                Some(e) => handle_user_event(e, &mut cobalt_sender, &mut connection_times),
+                Some(e) => handle_user_event(e),
                 None => bail!("SME->FIDL future unexpectedly finished"),
+            },
+            info_event => match info_event {
+                Some(e) => handle_info_event(e, &mut cobalt_sender, &mut connection_times),
+                None => bail!("Info Event stream unexpectedly ended"),
             },
             fidl_clients => fidl_clients.into_any(),
             new_fidl_client => match new_fidl_client {
@@ -158,11 +161,7 @@ fn connect(sme: &Arc<Mutex<Sme>>, ssid: Vec<u8>, password: Vec<u8>,
         None => None,
         Some(txn) => Some(txn.into_stream()?.control_handle())
     };
-    let token = ConnectToken {
-        handle,
-        time_started: zx::Time::get(zx::ClockId::Monotonic),
-    };
-    sme.lock().unwrap().on_connect_command(ssid, password, token);
+    sme.lock().unwrap().on_connect_command(ssid, password, handle);
     Ok(())
 }
 
@@ -188,18 +187,40 @@ fn id_mismatch(this: u64, other: u64, id_type: &str) -> bool {
     return false;
 }
 
-fn handle_user_event(e: client_sme::UserEvent<Tokens>,
+fn handle_user_event(e: client_sme::UserEvent<Tokens>) {
+    match e {
+        client_sme::UserEvent::ScanFinished { tokens, result } =>
+            send_all_scan_results(tokens, result),
+        client_sme::UserEvent::ConnectFinished { token, result } => {
+            send_connect_result(token, result).unwrap_or_else(|e| {
+                if !is_peer_closed(&e) {
+                    error!("Error sending connect result to user: {}", e);
+                }
+            })
+        }
+    }
+}
+
+fn handle_info_event(e: InfoEvent,
                      cobalt_sender: &mut CobaltSender,
                      connection_times: &mut ConnectionTimes,
 ) {
     match e {
-        client_sme::UserEvent::ScanFinished { tokens, result } =>
-            send_all_scan_results(tokens, result),
-        client_sme::UserEvent::MlmeScanStart { txn_id } => {
+        InfoEvent::ConnectStarted => {
+            connection_times.connect_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
+        },
+        InfoEvent::ConnectFinished { result, failure } => {
+            if let Some(connect_started_time) = connection_times.connect_started_time {
+                let connection_finished_time = zx::Time::get(zx::ClockId::Monotonic);
+                telemetry::report_connection_time(cobalt_sender, connect_started_time,
+                                              connection_finished_time, &result, &failure);
+            }
+        },
+        InfoEvent::MlmeScanStart { txn_id } => {
             connection_times.txn_id = txn_id;
             connection_times.scan_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
         },
-        client_sme::UserEvent::MlmeScanEnd { txn_id } => {
+        InfoEvent::MlmeScanEnd { txn_id } => {
             if id_mismatch(txn_id, connection_times.txn_id, "ScanTxnId") {
                 return;
             }
@@ -209,11 +230,11 @@ fn handle_user_event(e: client_sme::UserEvent<Tokens>,
                                              scan_finished_time);
             }
         },
-        client_sme::UserEvent::AssociationStarted { att_id } => {
+        InfoEvent::AssociationStarted { att_id } => {
             connection_times.att_id = att_id;
             connection_times.assoc_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
         },
-        client_sme::UserEvent::AssociationSuccess { att_id } => {
+        InfoEvent::AssociationSuccess { att_id } => {
             if id_mismatch(att_id, connection_times.att_id, "ConnectionAttemptId") {
                 return;
             }
@@ -223,11 +244,11 @@ fn handle_user_event(e: client_sme::UserEvent<Tokens>,
                                              assoc_finished_time);
             }
         },
-        client_sme::UserEvent::RsnaStarted { att_id } => {
+        InfoEvent::RsnaStarted { att_id } => {
             connection_times.att_id = att_id;
             connection_times.rsna_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
         },
-        client_sme::UserEvent::RsnaEstablished { att_id } => {
+        InfoEvent::RsnaEstablished { att_id } => {
             if id_mismatch(att_id, connection_times.att_id, "ConnectionAttemptId") {
                 return;
             }
@@ -240,16 +261,6 @@ fn handle_user_event(e: client_sme::UserEvent<Tokens>,
                 }
             }
         },
-        client_sme::UserEvent::ConnectFinished { token, result, failure } => {
-            let connection_finished_time = zx::Time::get(zx::ClockId::Monotonic);
-            telemetry::report_connection_time(cobalt_sender, token.time_started,
-                                              connection_finished_time, &result, &failure);
-            send_connect_result(token.handle, result).unwrap_or_else(|e| {
-                if !is_peer_closed(&e) {
-                    error!("Error sending connect result to user: {}", e);
-                }
-            })
-        }
     }
 }
 

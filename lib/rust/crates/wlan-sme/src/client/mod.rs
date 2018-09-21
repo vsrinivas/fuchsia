@@ -15,13 +15,13 @@ use futures::channel::mpsc;
 use log::error;
 use std::sync::Arc;
 
-use super::{DeviceInfo, MlmeRequest, MlmeStream, Ssid};
+use super::{DeviceInfo, InfoEvent, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
 use self::rsn::get_rsna;
 use self::state::{ConnectCommand, State};
 
-use crate::sink::MlmeSink;
+use crate::sink::{InfoSink, MlmeSink};
 
 pub use self::bss::{BssInfo, EssInfo};
 pub use self::scan::{DiscoveryError, DiscoveryResult};
@@ -39,7 +39,20 @@ pub trait Tokens {
 // even though the module itself is private and will never be exported.
 // As a workaround, we add another private module with public types.
 mod internal {
-    pub type UserSink<T> = crate::sink::UnboundedSink<super::UserEvent<T>>;
+    use std::sync::Arc;
+
+    use crate::DeviceInfo;
+    use crate::client::{ConnectionAttemptId, Tokens};
+    use crate::sink::{InfoSink, MlmeSink, UnboundedSink};
+
+    pub type UserSink<T> = UnboundedSink<super::UserEvent<T>>;
+    pub struct Context<T: Tokens> {
+        pub device_info: Arc<DeviceInfo>,
+        pub mlme_sink: MlmeSink,
+        pub user_sink: UserSink<T>,
+        pub info_sink: InfoSink,
+        pub att_id: ConnectionAttemptId,
+    }
 }
 
 use self::internal::*;
@@ -62,13 +75,10 @@ pub type ScanTxnId = u64;
 pub struct ClientSme<T: Tokens> {
     state: Option<State<T>>,
     scan_sched: ScanScheduler<T::ScanToken, ConnectConfig<T::ConnectToken>>,
-    mlme_sink: MlmeSink,
-    user_sink: UserSink<T>,
-    device_info: Arc<DeviceInfo>,
-    att_id: ConnectionAttemptId,
+    context: Context<T>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ConnectResult {
     Success,
     Canceled,
@@ -93,25 +103,6 @@ pub enum UserEvent<T: Tokens> {
     ConnectFinished {
         token: T::ConnectToken,
         result: ConnectResult,
-        failure: Option<ConnectFailure>,
-    },
-    MlmeScanStart {
-        txn_id: ScanTxnId,
-    },
-    MlmeScanEnd {
-        txn_id: ScanTxnId,
-    },
-    AssociationStarted {
-        att_id: ConnectionAttemptId,
-    },
-    AssociationSuccess {
-        att_id: ConnectionAttemptId,
-    },
-    RsnaStarted {
-        att_id: ConnectionAttemptId,
-    },
-    RsnaEstablished {
-        att_id: ConnectionAttemptId,
     },
 }
 
@@ -122,25 +113,31 @@ pub struct Status {
 }
 
 impl<T: Tokens> ClientSme<T> {
-    pub fn new(info: DeviceInfo) -> (Self, MlmeStream, UserStream<T>) {
+    pub fn new(info: DeviceInfo) -> (Self, MlmeStream, UserStream<T>, InfoStream) {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (user_sink, user_stream) = mpsc::unbounded();
+        let (info_sink, info_stream) = mpsc::unbounded();
         (
             ClientSme {
                 state: Some(State::Idle),
                 scan_sched: ScanScheduler::new(Arc::clone(&device_info)),
-                mlme_sink: MlmeSink::new(mlme_sink),
-                user_sink: UserSink::new(user_sink),
-                device_info,
-                att_id: 0,
+                context: Context {
+                    mlme_sink: MlmeSink::new(mlme_sink),
+                    user_sink: UserSink::new(user_sink),
+                    info_sink: InfoSink::new(info_sink),
+                    device_info,
+                    att_id: 0,
+                },
             },
             mlme_stream,
-            user_stream
+            user_stream,
+            info_stream,
         )
     }
 
     pub fn on_connect_command(&mut self, ssid: Ssid, password: Vec<u8>, token: T::ConnectToken) {
+        self.context.info_sink.send(InfoEvent::ConnectStarted);
         let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(
             JoinScan {
                 ssid,
@@ -148,10 +145,9 @@ impl<T: Tokens> ClientSme<T> {
             });
         // If the new scan replaced an existing pending JoinScan, notify the existing transaction
         if let Some(t) = canceled_token {
-            self.user_sink.send(UserEvent::ConnectFinished {
+            self.context.user_sink.send(UserEvent::ConnectFinished {
                 token: t.user_token,
                 result: ConnectResult::Canceled,
-                failure: None,
             });
         }
         self.send_scan_request(req);
@@ -159,7 +155,7 @@ impl<T: Tokens> ClientSme<T> {
 
     pub fn on_disconnect_command(&mut self) {
         self.state = self.state.take().map(
-            |state| state.disconnect(&self.mlme_sink, &self.user_sink));
+            |state| state.disconnect(&self.context));
     }
 
     pub fn on_scan_command(&mut self, token: T::ScanToken) {
@@ -183,8 +179,8 @@ impl<T: Tokens> ClientSme<T> {
 
     fn send_scan_request(&mut self, req: Option<ScanRequest>) {
         if let Some(req) = req {
-            self.user_sink.send(UserEvent::MlmeScanStart { txn_id: req.txn_id} );
-            self.mlme_sink.send(MlmeRequest::Scan(req));
+            self.context.info_sink.send(InfoEvent::MlmeScanStart { txn_id: req.txn_id} );
+            self.context.mlme_sink.send(MlmeRequest::Scan(req));
         }
     }
 }
@@ -197,27 +193,26 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 state
             },
             MlmeEvent::OnScanEnd { end } => {
-                self.user_sink.send(UserEvent::MlmeScanEnd { txn_id: end.txn_id} );
+                self.context.info_sink.send(InfoEvent::MlmeScanEnd { txn_id: end.txn_id} );
                 let (result, request) = self.scan_sched.on_mlme_scan_end(end);
                 self.send_scan_request(request);
                 match result {
                     ScanResult::None => state,
                     ScanResult::ReadyToJoin { token, best_bss } => {
-                        match get_rsna(&self.device_info, &token.password, &best_bss) {
+                        match get_rsna(&self.context.device_info, &token.password, &best_bss) {
                             Ok(rsna) => {
                                 let cmd = ConnectCommand {
                                     bss: Box::new(best_bss),
                                     token: Some(token.user_token),
                                     rsna
                                 };
-                                state.connect(cmd, &self.mlme_sink, &self.user_sink, &mut self.att_id)
+                                state.connect(cmd, &mut self.context)
                             },
                             Err(err) => {
                                 error!("cannot join BSS {:?} {:?}", best_bss.bssid, err);
-                                self.user_sink.send(UserEvent::ConnectFinished {
+                                self.context.user_sink.send(UserEvent::ConnectFinished {
                                     token: token.user_token,
                                     result: ConnectResult::Failed,
-                                    failure: None,
                                 });
                                 state
                             }
@@ -225,18 +220,17 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                     },
                     ScanResult::CannotJoin { token, reason } => {
                         error!("cannot join network because scan failed: {:?}", reason);
-                        self.user_sink.send(UserEvent::ConnectFinished {
+                        self.context.user_sink.send(UserEvent::ConnectFinished {
                             token: token.user_token,
                             result: match reason {
                                 JoinScanFailure::Canceled => ConnectResult::Canceled,
                                 _ => ConnectResult::Failed,
                             },
-                            failure: None,
                         });
                         state
                     },
                     ScanResult::DiscoveryFinished { tokens, result } => {
-                        self.user_sink.send(UserEvent::ScanFinished {
+                        self.context.user_sink.send(UserEvent::ScanFinished {
                             tokens,
                             result
                         });
@@ -245,7 +239,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 }
             },
             other => {
-                state.on_mlme_event(&self.device_info, other, &self.mlme_sink, &self.user_sink, &mut self.att_id)
+                state.on_mlme_event(other, &mut self.context)
             }
         });
     }
@@ -258,7 +252,8 @@ mod tests {
     use std::collections::HashSet;
     use std::error::Error;
 
-    use super::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description};
+    use super::test_utils::{expect_info_event, fake_protected_bss_description,
+                            fake_unprotected_bss_description};
     use super::UserEvent::ConnectFinished;
 
     use crate::Station;
@@ -267,7 +262,7 @@ mod tests {
 
     #[test]
     fn status_connecting_to() {
-        let (mut sme, _mlme_stream, _user_stream) = create_sme();
+        let (mut sme, _mlme_stream, _user_stream, _info_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
@@ -317,7 +312,7 @@ mod tests {
 
     #[test]
     fn connecting_password_supplied_for_protected_network() {
-        let (mut sme, mut mlme_stream, _user_stream) = create_sme();
+        let (mut sme, mut mlme_stream, _user_stream, _info_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
@@ -363,7 +358,7 @@ mod tests {
 
     #[test]
     fn connecting_password_supplied_for_unprotected_network() {
-        let (mut sme, mut mlme_stream, mut user_stream) = create_sme();
+        let (mut sme, mut mlme_stream, mut user_stream, _info_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
@@ -409,27 +404,10 @@ mod tests {
             }
         }
 
-        // User should get a message that scan started
-        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
-        if let UserEvent::MlmeScanStart { txn_id } = user_event {
-            assert_eq!(txn_id, 1);
-        } else {
-            panic!("unexpected user event type in sent message");
-        }
-
-        // User should get a message that scan ended
-        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
-        if let UserEvent::MlmeScanEnd { txn_id } = user_event {
-            assert_eq!(txn_id, 1);
-        } else {
-            panic!("unexpected user event type in sent message");
-        }
-
         // User should get a message that connection failed
         let user_event = user_stream.try_next().unwrap().expect("expect message for user");
-        if let ConnectFinished { result, failure, .. } = user_event {
+        if let ConnectFinished { result, .. } = user_event {
             assert_eq!(result, ConnectResult::Failed);
-            assert_eq!(failure, None);
         } else {
             panic!("unexpected user event type in sent message");
         }
@@ -437,7 +415,7 @@ mod tests {
 
     #[test]
     fn connecting_no_password_supplied_for_protected_network() {
-        let (mut sme, mut mlme_stream, mut user_stream) = create_sme();
+        let (mut sme, mut mlme_stream, mut user_stream, _info_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
@@ -481,30 +459,37 @@ mod tests {
             }
         }
 
-        // User should get a message that scan started
-        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
-        if let UserEvent::MlmeScanStart { txn_id } = user_event {
-            assert_eq!(txn_id, 1);
-        } else {
-            panic!("unexpected user event type in sent message");
-        }
-
-        // User should get a message that scan ended
-        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
-        if let UserEvent::MlmeScanEnd { txn_id } = user_event {
-            assert_eq!(txn_id, 1);
-        } else {
-            panic!("unexpected user event type in sent message");
-        }
-
         // User should get a message that connection failed
         let user_event = user_stream.try_next().unwrap().expect("expect message for user");
-        if let ConnectFinished { result, failure, .. } = user_event {
+        if let ConnectFinished { result, .. } = user_event {
             assert_eq!(result, ConnectResult::Failed);
-            assert_eq!(failure, None);
         } else {
             panic!("unexpected user event type in sent message");
         }
+    }
+
+    #[test]
+    fn connecting_generates_info_events() {
+        let (mut sme, _mlme_stream, _user_stream, mut info_stream) = create_sme();
+
+        sme.on_connect_command(b"foo".to_vec(), vec![], 10);
+        expect_info_event(&mut info_stream, InfoEvent::ConnectStarted);
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 } );
+
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                bss: fake_unprotected_bss_description(b"foo".to_vec()),
+            }
+        });
+        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+            end: fidl_mlme::ScanEnd {
+                txn_id: 1,
+                code: fidl_mlme::ScanResultCodes::Success,
+            }
+        });
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 } );
+        expect_info_event(&mut info_stream, InfoEvent::AssociationStarted { att_id: 1 } );
     }
 
     struct FakeTokens;
@@ -513,7 +498,7 @@ mod tests {
         type ConnectToken = i32;
     }
 
-    fn create_sme() -> (ClientSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>) {
+    fn create_sme() -> (ClientSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>, InfoStream) {
         ClientSme::new(DeviceInfo {
             supported_channels: HashSet::new(),
             addr: CLIENT_ADDR,

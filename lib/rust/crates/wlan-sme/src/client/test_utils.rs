@@ -6,7 +6,7 @@ use bytes::Bytes;
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use wlan_rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI};
 
-use crate::Ssid;
+use crate::{InfoEvent, InfoStream, Ssid};
 
 fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescription {
     fidl_mlme::BssDescription {
@@ -75,6 +75,14 @@ pub fn rsne_as_bytes(s_rsne: Rsne) -> Vec<u8> {
     let mut buf = Vec::with_capacity(s_rsne.len());
     s_rsne.as_bytes(&mut buf);
     buf
+}
+
+pub fn expect_info_event(info_stream: &mut InfoStream, expected_event: InfoEvent) {
+    if let Ok(Some(e)) = info_stream.try_next() {
+        assert_eq!(e, expected_event);
+    } else {
+        panic!("expect event to InfoSink");
+    }
 }
 
 fn make_cipher(suite_type: u8) -> cipher::Cipher {

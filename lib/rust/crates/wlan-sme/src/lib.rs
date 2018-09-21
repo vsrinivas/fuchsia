@@ -12,6 +12,8 @@ use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use futures::channel::mpsc;
 use std::collections::HashSet;
 
+use crate::client::{ConnectFailure, ConnectResult, ConnectionAttemptId, ScanTxnId};
+
 pub type Ssid = Vec<u8>;
 
 pub struct DeviceInfo {
@@ -34,8 +36,36 @@ pub enum MlmeRequest {
     StopAp(fidl_mlme::StopRequest),
 }
 
+#[derive(Debug, PartialEq)]
+pub enum InfoEvent {
+    ConnectStarted,
+    ConnectFinished {
+        result: ConnectResult,
+        failure: Option<ConnectFailure>,
+    },
+    MlmeScanStart {
+        txn_id: ScanTxnId,
+    },
+    MlmeScanEnd {
+        txn_id: ScanTxnId,
+    },
+    AssociationStarted {
+        att_id: ConnectionAttemptId,
+    },
+    AssociationSuccess {
+        att_id: ConnectionAttemptId,
+    },
+    RsnaStarted {
+        att_id: ConnectionAttemptId,
+    },
+    RsnaEstablished {
+        att_id: ConnectionAttemptId,
+    },
+}
+
 pub trait Station {
     fn on_mlme_event(&mut self, event: fidl_mlme::MlmeEvent);
 }
 
 pub type MlmeStream = mpsc::UnboundedReceiver<MlmeRequest>;
+pub type InfoStream = mpsc::UnboundedReceiver<InfoEvent>;
