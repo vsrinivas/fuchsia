@@ -16,6 +16,7 @@ MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/fbl/include \
+    -Isystem/ulib/fit/include \
     -Isystem/ulib/xdc-host-utils/include \
     -Isystem/ulib/xdc-server-utils/include \
 

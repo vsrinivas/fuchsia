@@ -31,6 +31,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/zxcpp/include \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/fbl/include \
+    -Isystem/ulib/fit/include \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/fs-host/include \
 

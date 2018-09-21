@@ -8,6 +8,8 @@
 
 #include <fvm/fvm.h>
 
+#include <lib/fit/defer.h>
+
 #include "fvm/container.h"
 
 #if defined(__APPLE__)
@@ -126,7 +128,7 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size, off_t offset, of
         }
 
         const void* backup = reinterpret_cast<void*>(
-                reinterpret_cast<uintptr_t>(old_metadata.get()) + old_metadata_size);
+            reinterpret_cast<uintptr_t>(old_metadata.get()) + old_metadata_size);
         const void* primary = nullptr;
         if (fvm_validate_header(old_metadata.get(), backup, old_metadata_size, &primary) == ZX_OK) {
             if (primary != old_metadata.get()) {
@@ -231,7 +233,7 @@ zx_status_t FvmContainer::Verify() const {
             end += slice_size_;
 
             if (slice->Vslice() == last_vslice + 1) {
-                extent_lengths[extent_lengths.size()-1] += slice_size_;
+                extent_lengths[extent_lengths.size() - 1] += slice_size_;
             } else {
                 extent_lengths.push_back(slice_size_);
             }
@@ -290,7 +292,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
         return ZX_ERR_IO;
     }
 
-    auto cleanup = fbl::MakeAutoCall([path]() {
+    auto cleanup = fit::defer([path]() {
         if (unlink(path) < 0) {
             fprintf(stderr, "Failed to unlink path %s\n", path);
         }
@@ -515,8 +517,7 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
     }
 
     // If allocated metadata is too small, grow it to an appropriate size
-    size_t required_size = fvm::kAllocTableOffset + (pslice_hint_ + slice_count)
-                           * sizeof(fvm::slice_entry_t);
+    size_t required_size = fvm::kAllocTableOffset + (pslice_hint_ + slice_count) * sizeof(fvm::slice_entry_t);
     if ((status = GrowMetadata(required_size)) != ZX_OK) {
         return status;
     }
@@ -660,7 +661,7 @@ zx_status_t FvmContainer::GetPartition(size_t index, fvm::vpart_entry_t** out) c
 
     uintptr_t metadata_start = reinterpret_cast<uintptr_t>(metadata_.get());
     uintptr_t offset = static_cast<uintptr_t>(fvm::kVPartTableOffset +
-                                                  index * sizeof(fvm::vpart_entry_t));
+                                              index * sizeof(fvm::vpart_entry_t));
     *out = reinterpret_cast<fvm::vpart_entry_t*>(metadata_start + offset);
     return ZX_OK;
 }
@@ -751,8 +752,7 @@ zx_status_t FvmContainer::WriteData(uint32_t pslice, uint32_t block_offset, size
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    if (lseek(fd_.get(), disk_offset_ + fvm::SliceStart(disk_size_, slice_size_, pslice) +
-                block_offset * block_size, SEEK_SET) < 0) {
+    if (lseek(fd_.get(), disk_offset_ + fvm::SliceStart(disk_size_, slice_size_, pslice) + block_offset * block_size, SEEK_SET) < 0) {
         return ZX_ERR_BAD_STATE;
     }
 

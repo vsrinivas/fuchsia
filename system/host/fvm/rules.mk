@@ -22,16 +22,17 @@ MODULE_COMPILEFLAGS := \
     -Wstrict-prototypes -Wwrite-strings \
     -Ithird_party/ulib/lz4/include \
     -Isystem/uapp/fvm/include \
-    -Isystem/ulib/fbl/include \
-    -Isystem/ulib/fvm/include \
-    -Isystem/ulib/digest/include \
-    -Isystem/ulib/gpt/include \
-    -Isystem/ulib/blobfs/include \
-    -Isystem/ulib/fs/include \
-    -Isystem/ulib/fzl/include \
     -Isystem/ulib/bitmap/include \
+    -Isystem/ulib/blobfs/include \
+    -Isystem/ulib/digest/include \
+    -Isystem/ulib/fbl/include \
     -Isystem/ulib/fdio/include \
+    -Isystem/ulib/fit/include \
+    -Isystem/ulib/fs/include \
     -Isystem/ulib/fs-management/include \
+    -Isystem/ulib/fvm/include \
+    -Isystem/ulib/fzl/include \
+    -Isystem/ulib/gpt/include \
     -Isystem/ulib/minfs/include \
 
 MODULE_HOST_LIBS := \

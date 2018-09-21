@@ -26,6 +26,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/uapp/lz4/include \
     -Isystem/host/fvm/include \
     -Isystem/ulib/fbl/include \
+    -Isystem/ulib/fit/include \
     -Isystem/ulib/fvm/include \
     -Isystem/ulib/digest/include \
     -Ithird_party/ulib/uboringssl/include \

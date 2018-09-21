@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 #include <vector>
 
 #include <blobfs/host.h>
 #include <digest/digest.h>
-#include <fbl/auto_call.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>
 #include <fs-host/common.h>
+#include <lib/fit/defer.h>
 
 // Merkle Tree information associated with a file.
 struct MerkleInfo {
@@ -24,7 +26,8 @@ struct MerkleInfo {
 
 class BlobfsCreator : public FsCreator {
 public:
-    BlobfsCreator() : FsCreator(blobfs::kStartBlockMinimum) {}
+    BlobfsCreator()
+        : FsCreator(blobfs::kStartBlockMinimum) {}
 
 private:
     // Parent overrides:
@@ -50,10 +53,10 @@ private:
 
     // A comparison function used to quickly compare MerkleInfo.
     struct DigestCompare {
-        inline bool operator() (const MerkleInfo& lhs, const MerkleInfo& rhs) const {
+        inline bool operator()(const MerkleInfo& lhs, const MerkleInfo& rhs) const {
             const uint8_t* lhs_bytes = lhs.digest.AcquireBytes();
             const uint8_t* rhs_bytes = rhs.digest.AcquireBytes();
-            auto auto_release = fbl::MakeAutoCall([&]() {
+            auto auto_release = fit::defer([&]() {
                 lhs.digest.ReleaseBytes();
                 rhs.digest.ReleaseBytes();
             });
@@ -73,3 +76,4 @@ private:
     // A list of Merkle Information for blobs in |blob_list_|.
     std::vector<MerkleInfo> merkle_list_;
 };
+
