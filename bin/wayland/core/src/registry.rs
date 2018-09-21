@@ -55,7 +55,7 @@ impl Registry {
 }
 
 /// |Global| advertises availability of a bindable interface to clients.
-pub trait Global {
+pub trait Global: Send {
     /// The interface name of this global. This would correspond to the
     /// 'name' attribute on the 'interface' element in the protocol XML.
     fn interface(&self) -> &str;
@@ -80,7 +80,7 @@ pub trait Global {
 ///     }));
 impl<F> Global for (&'static str, F)
 where
-    F: FnMut() -> Box<MessageReceiver>,
+    F: FnMut() -> Box<MessageReceiver> + Send,
 {
     fn interface(&self) -> &str {
         self.0
@@ -95,10 +95,10 @@ where
 mod tests {
     use super::*;
 
-    use std::cell::RefCell;
-    use std::rc::Rc;
+    use std::sync::Arc;
 
     use failure::Error;
+    use parking_lot::Mutex;
 
     use crate::Message;
 
@@ -113,16 +113,16 @@ mod tests {
             interface_1_msg_count: usize,
             interface_2_msg_count: usize,
         }
-        let counts: Rc<RefCell<Counts>> = Rc::new(RefCell::new(Default::default()));
+        let counts: Arc<Mutex<Counts>> = Arc::new(Mutex::new(Default::default()));
         let mut registry = RegistryBuilder::new();
 
         {
             let counts = counts.clone();
             registry.add_global(("interface_1", move || -> Box<MessageReceiver> {
-                counts.borrow_mut().interface_1_bind_count += 1;
+                counts.lock().interface_1_bind_count += 1;
                 let counts = counts.clone();
                 Box::new(move |_| -> Result<(), Error> {
-                    counts.borrow_mut().interface_1_msg_count += 1;
+                    counts.lock().interface_1_msg_count += 1;
                     Ok(())
                 })
             }));
@@ -130,10 +130,10 @@ mod tests {
         {
             let counts = counts.clone();
             registry.add_global(("interface_2", move || -> Box<MessageReceiver> {
-                counts.borrow_mut().interface_2_bind_count += 1;
+                counts.lock().interface_2_bind_count += 1;
                 let counts = counts.clone();
                 Box::new(move |_| -> Result<(), Error> {
-                    counts.borrow_mut().interface_2_msg_count += 1;
+                    counts.lock().interface_2_msg_count += 1;
                     Ok(())
                 })
             }));
@@ -141,26 +141,26 @@ mod tests {
 
         // Build the registry & verify initial counts.
         let mut registry = registry.build();
-        assert_eq!(0, counts.borrow().interface_1_bind_count);
-        assert_eq!(0, counts.borrow().interface_2_bind_count);
-        assert_eq!(0, counts.borrow().interface_1_msg_count);
-        assert_eq!(0, counts.borrow().interface_2_msg_count);
+        assert_eq!(0, counts.lock().interface_1_bind_count);
+        assert_eq!(0, counts.lock().interface_2_bind_count);
+        assert_eq!(0, counts.lock().interface_1_msg_count);
+        assert_eq!(0, counts.lock().interface_2_msg_count);
 
         // Bind to the globals.
         let mut receivers: Vec<Box<MessageReceiver>> =
             registry.globals.iter_mut().map(|g| g.bind()).collect();
-        assert_eq!(1, counts.borrow().interface_1_bind_count);
-        assert_eq!(1, counts.borrow().interface_2_bind_count);
-        assert_eq!(0, counts.borrow().interface_1_msg_count);
-        assert_eq!(0, counts.borrow().interface_2_msg_count);
+        assert_eq!(1, counts.lock().interface_1_bind_count);
+        assert_eq!(1, counts.lock().interface_2_bind_count);
+        assert_eq!(0, counts.lock().interface_1_msg_count);
+        assert_eq!(0, counts.lock().interface_2_msg_count);
 
         // Dispatch a message to each receiver.
         for r in receivers.iter_mut() {
             r.receive(Message::new()).unwrap();
         }
-        assert_eq!(1, counts.borrow().interface_1_bind_count);
-        assert_eq!(1, counts.borrow().interface_2_bind_count);
-        assert_eq!(1, counts.borrow().interface_1_msg_count);
-        assert_eq!(1, counts.borrow().interface_2_msg_count);
+        assert_eq!(1, counts.lock().interface_1_bind_count);
+        assert_eq!(1, counts.lock().interface_2_bind_count);
+        assert_eq!(1, counts.lock().interface_1_msg_count);
+        assert_eq!(1, counts.lock().interface_2_msg_count);
     }
 }
