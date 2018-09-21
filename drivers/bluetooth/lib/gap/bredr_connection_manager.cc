@@ -156,6 +156,18 @@ void BrEdrConnectionManager::SetPairingDelegate(
   // TODO(armansito): implement
 }
 
+std::string BrEdrConnectionManager::GetPeerId(
+    hci::ConnectionHandle handle) const {
+  auto it = connections_.find(handle);
+  if (it == connections_.end()) {
+    return "";
+  }
+
+  auto* device = cache_->FindDeviceByAddress(it->second->peer_address());
+  ZX_DEBUG_ASSERT_MSG(device, "Couldn't find device for handle %#.4x", handle);
+  return device->identifier();
+}
+
 void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
                                                    uint16_t window,
                                                    bool interlaced,
@@ -329,7 +341,7 @@ void BrEdrConnectionManager::OnConnectionComplete(
             },
             self->dispatcher_);
 
-        self->connections_.emplace(device->identifier(), std::move(conn_ptr));
+        self->connections_.emplace(conn_ptr->handle(), std::move(conn_ptr));
         // TODO(NET-1019): Start SDP service discovery.
       });
 }
@@ -346,21 +358,23 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
     return;
   }
 
-  auto it = std::find_if(
-      connections_.begin(), connections_.end(),
-      [handle](const auto& p) { return (p.second->handle() == handle); });
+  auto it = connections_.find(handle);
 
   if (it == connections_.end()) {
     bt_log(TRACE, "gap-bredr", "disconnect from unknown handle %#.4x", handle);
     return;
   }
-  std::string device = it->first;
+
+  auto* device = cache_->FindDeviceByAddress(it->second->peer_address());
+  ZX_DEBUG_ASSERT_MSG(device, "Couldn't find RemoteDevice for handle: %#.4x",
+                      handle);
   auto conn = std::move(it->second);
   connections_.erase(it);
 
   bt_log(INFO, "gap-bredr",
-         "%s disconnected - %s, handle: %#.4x, reason: %#.2x", device.c_str(),
-         event.ToStatus().ToString().c_str(), handle, params.reason);
+         "%s disconnected - %s, handle: %#.4x, reason: %#.2x",
+         device->identifier().c_str(), event.ToStatus().ToString().c_str(),
+         handle, params.reason);
 
   l2cap_->RemoveConnection(handle);
 

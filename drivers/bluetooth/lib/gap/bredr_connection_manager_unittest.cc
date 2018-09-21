@@ -24,6 +24,10 @@ using TestingBase =
     ::btlib::testing::FakeControllerTest<::btlib::testing::TestController>;
 
 constexpr hci::ConnectionHandle kConnectionHandle = 0x0BAA;
+const common::DeviceAddress kTestDevAddr(common::DeviceAddress::Type::kBREDR,
+                                         "00:00:00:00:00:01");
+
+#define TEST_DEV_ADDR_BYTES_LE 0x01, 0x00, 0x00, 0x00, 0x00, 0x00
 
 // clang-format off
 
@@ -133,6 +137,8 @@ class BrEdrConnectionManagerTest : public TestingBase {
 
   l2cap::testing::FakeLayer* l2cap() const { return l2cap_.get(); }
 
+  RemoteDeviceCache* device_cache() const { return device_cache_.get(); }
+
  private:
   std::unique_ptr<BrEdrConnectionManager> connection_manager_;
   std::unique_ptr<RemoteDeviceCache> device_cache_;
@@ -213,18 +219,18 @@ TEST_F(GAP_BrEdrConnectionManagerTest, EnableConnectivity) {
 
 const auto kConnectionRequest = common::CreateStaticByteBuffer(
     hci::kConnectionRequestEventCode,
-    0x0A,  // parameter_total_size (10 byte payload)
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00,  // BD_ADDR (00:00:00:00:00:01)
-    0x00, 0x1F, 0x00,                    // class_of_device (unspecified)
-    0x01                                 // link_type (ACL)
+    0x0A,                    // parameter_total_size (10 byte payload)
+    TEST_DEV_ADDR_BYTES_LE,  // peer address
+    0x00, 0x1F, 0x00,        // class_of_device (unspecified)
+    0x01                     // link_type (ACL)
 );
-const auto kAcceptConnectionRequest = common::CreateStaticByteBuffer(
-    LowerBits(hci::kAcceptConnectionRequest),
-    UpperBits(hci::kAcceptConnectionRequest),
-    0x07,                                // parameter_total_size (7 bytes)
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00,  // BD_ADDR (00:00:00:00:00:01)
-    0x00                                 // role (become master)
-);
+const auto kAcceptConnectionRequest =
+    common::CreateStaticByteBuffer(LowerBits(hci::kAcceptConnectionRequest),
+                                   UpperBits(hci::kAcceptConnectionRequest),
+                                   0x07,  // parameter_total_size (7 bytes)
+                                   TEST_DEV_ADDR_BYTES_LE,  // peer address
+                                   0x00  // role (become master)
+    );
 
 const auto kAcceptConnectionRequestRsp = COMMAND_STATUS_RSP(
     hci::kAcceptConnectionRequest, hci::StatusCode::kSuccess);
@@ -234,26 +240,26 @@ const auto kConnectionComplete = common::CreateStaticByteBuffer(
     0x0B,                       // parameter_total_size (11 byte payload)
     hci::StatusCode::kSuccess,  // status
     0xAA, 0x0B,                 // connection_handle
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00,  // BD_ADDR (00:00:00:00:00:01)
-    0x01,                                // link_type (ACL)
-    0x00                                 // encryption not enabled
+    TEST_DEV_ADDR_BYTES_LE,     // peer address
+    0x01,                       // link_type (ACL)
+    0x00                        // encryption not enabled
 );
 const auto kRemoteNameRequest = common::CreateStaticByteBuffer(
     LowerBits(hci::kRemoteNameRequest), UpperBits(hci::kRemoteNameRequest),
-    0x0a,                                // parameter_total_size (10 bytes)
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00,  // BD_ADDR (00:00:00:00:00:01)
-    0x00,                                // page_scan_repetition_mode (R0)
-    0x00,                                // reserved
-    0x00, 0x00                           // clock_offset
+    0x0a,                    // parameter_total_size (10 bytes)
+    TEST_DEV_ADDR_BYTES_LE,  // peer address
+    0x00,                    // page_scan_repetition_mode (R0)
+    0x00,                    // reserved
+    0x00, 0x00               // clock_offset
 );
 const auto kRemoteNameRequestRsp =
     COMMAND_STATUS_RSP(hci::kRemoteNameRequest, hci::StatusCode::kSuccess);
 
 const auto kRemoteNameRequestComplete = common::CreateStaticByteBuffer(
     hci::kRemoteNameRequestCompleteEventCode,
-    0x20,                                // parameter_total_size (32)
-    hci::StatusCode::kSuccess,           // status
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00,  // BD_ADDR (00:00:00:00:00:01)
+    0x20,                       // parameter_total_size (32)
+    hci::StatusCode::kSuccess,  // status
+    TEST_DEV_ADDR_BYTES_LE,     // peer address
     'F', 'u', 'c', 'h', 's', 'i', 'a', 0xF0, 0x9F, 0x92, 0x96, 0x00, 0x14, 0x15,
     0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20
     // remote name (Fuchsia 💖)
@@ -419,6 +425,8 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnection) {
   test_device()->SetTransactionCallback([&transactions] { transactions++; },
                                         async_get_default_dispatcher());
 
+  EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
+
   test_device()->QueueCommandTransaction(
       CommandTransaction(kAcceptConnectionRequest,
                          {&kAcceptConnectionRequestRsp, &kConnectionComplete}));
@@ -442,6 +450,10 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnection) {
 
   RunLoopUntilIdle();
 
+  auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(dev->identifier(), connmgr()->GetPeerId(kConnectionHandle));
+
   EXPECT_EQ(6u, transactions);
 
   // When we deallocate the connection manager next, we should disconnect.
@@ -459,6 +471,63 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnection) {
   RunLoopUntilIdle();
 
   EXPECT_EQ(9u, transactions);
+}
+
+// Test: A remote disconnect should correctly remove the conneection.
+TEST_F(GAP_BrEdrConnectionManagerTest, RemoteDisconnect) {
+  size_t transactions = 0;
+  test_device()->SetTransactionCallback([&transactions] { transactions++; },
+                                        async_get_default_dispatcher());
+
+  EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kAcceptConnectionRequest,
+                         {&kAcceptConnectionRequestRsp, &kConnectionComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kRemoteNameRequest,
+      {&kRemoteNameRequestRsp, &kRemoteNameRequestComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteVersionInfo,
+      {&kReadRemoteVersionInfoRsp, &kRemoteVersionInfoComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteSupportedFeatures, {&kReadRemoteSupportedFeaturesRsp,
+                                     &kReadRemoteSupportedFeaturesComplete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteExtended1,
+      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended1Complete}));
+  test_device()->QueueCommandTransaction(CommandTransaction(
+      kReadRemoteExtended2,
+      {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended2Complete}));
+
+  test_device()->SendCommandChannelPacket(kConnectionRequest);
+
+  RunLoopUntilIdle();
+
+  auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(dev->identifier(), connmgr()->GetPeerId(kConnectionHandle));
+
+  EXPECT_EQ(6u, transactions);
+
+  // Remote end disconnects.
+  test_device()->SendCommandChannelPacket(kDisconnectionComplete);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
+
+  // deallocating the connection manager disables connectivity.
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspBoth}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnableInq, {&kWriteScanEnableRsp}));
+
+  SetConnectionManager(nullptr);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(8u, transactions);
 }
 
 const auto kRemoteNameRequestCompleteFailed =
@@ -503,29 +572,29 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncommingConnectionFailedInterrogation) {
   EXPECT_EQ(5u, transactions);
 }
 
-const auto kCapabilitiesRequest = common::CreateStaticByteBuffer(
-    hci::kIOCapabilityRequestEventCode,
-    0x06,                               // parameter_total_size (6 byte payload)
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00  // BD_ADDR (00:00:00:00:00:01)
-);
+const auto kCapabilitiesRequest =
+    common::CreateStaticByteBuffer(hci::kIOCapabilityRequestEventCode,
+                                   0x06,  // parameter_total_size (6 bytes)
+                                   TEST_DEV_ADDR_BYTES_LE  // address
+    );
 
-const auto kCapabilitiesRequestReply = common::CreateStaticByteBuffer(
-    LowerBits(hci::kIOCapabilityRequestReply),
-    UpperBits(hci::kIOCapabilityRequestReply),
-    0x09,                                // parameter_total_size (9 bytes)
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00,  // bd_addr (match request)
-    0x03,                                // No input, No output
-    0x00,                                // No OOB data present
-    0x00                                 // No MITM, No Pairing
-);
+const auto kCapabilitiesRequestReply =
+    common::CreateStaticByteBuffer(LowerBits(hci::kIOCapabilityRequestReply),
+                                   UpperBits(hci::kIOCapabilityRequestReply),
+                                   0x09,  // parameter_total_size (9 bytes)
+                                   TEST_DEV_ADDR_BYTES_LE,  // peer address
+                                   0x03,  // No input, No output
+                                   0x00,  // No OOB data present
+                                   0x00   // No MITM, No Pairing
+    );
 
-const auto kCapabilitiesRequestReplyRsp = common::CreateStaticByteBuffer(
-    hci::kCommandCompleteEventCode, 0x0A, 0xF0,
-    LowerBits(hci::kIOCapabilityRequestReply),
-    UpperBits(hci::kIOCapabilityRequestReply),
-    hci::kSuccess,                      // status
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00  // bd_addr
-);
+const auto kCapabilitiesRequestReplyRsp =
+    common::CreateStaticByteBuffer(hci::kCommandCompleteEventCode, 0x0A, 0xF0,
+                                   LowerBits(hci::kIOCapabilityRequestReply),
+                                   UpperBits(hci::kIOCapabilityRequestReply),
+                                   hci::kSuccess,          // status
+                                   TEST_DEV_ADDR_BYTES_LE  // peer address
+    );
 
 // Test: sends replies to Capability Requests
 // TODO(jamuraa): returns correct capabilities when we have different
@@ -548,16 +617,16 @@ TEST_F(GAP_BrEdrConnectionManagerTest, CapabilityRequest) {
 
 const auto kUserConfirmationRequest = common::CreateStaticByteBuffer(
     hci::kUserConfirmationRequestEventCode,
-    0x0A,  // parameter_total_size (10 byte payload)
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00,  // BD_ADDR (00:00:00:00:00:01)
-    0x00, 0x00, 0x00, 0x00               // numeric value 000000
+    0x0A,                    // parameter_total_size (10 byte payload)
+    TEST_DEV_ADDR_BYTES_LE,  // peer address
+    0x00, 0x00, 0x00, 0x00   // numeric value 000000
 );
 
 const auto kConfirmationRequestReply = common::CreateStaticByteBuffer(
     LowerBits(hci::kUserConfirmationRequestReply),
     UpperBits(hci::kUserConfirmationRequestReply),
-    0x06,                               // parameter_total_size (9 bytes)
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00  // bd_addr (match request)
+    0x06,                   // parameter_total_size (6 bytes)
+    TEST_DEV_ADDR_BYTES_LE  // peer address
 );
 
 const auto kConfirmationRequestReplyRsp =

@@ -46,6 +46,9 @@ class BrEdrConnectionManager final {
   // rejected.
   void SetPairingDelegate(fxl::WeakPtr<PairingDelegate> delegate);
 
+  // Retrieves the device id that is connected to the connection |handle|.
+  std::string GetPeerId(hci::ConnectionHandle handle) const;
+
  private:
   // Reads the controller page scan settings.
   void ReadPageScanSettings();
@@ -83,17 +86,15 @@ class BrEdrConnectionManager final {
   // Device cache is used to look up parameters for connecting to devices and
   // update the state of connected devices as well as introduce unknown devices.
   // This object must outlive this instance.
-  // TODO(NET-410) - put newly found devices OnConnectionRequest/Complete
-  // and use for Connect()
-  RemoteDeviceCache* cache_ __UNUSED;
+  RemoteDeviceCache* cache_;
 
   fbl::RefPtr<l2cap::L2CAP> l2cap_;
 
   // Interregator for new connections to pass.
   BrEdrInterrogator interrogator_;
 
-  // Connections that are active.
-  std::unordered_map<std::string, hci::ConnectionPtr> connections_;
+  // Holds the connections that are active.
+  std::unordered_map<hci::ConnectionHandle, hci::ConnectionPtr> connections_;
 
   // Handler ID for connection events
   hci::CommandChannel::EventHandlerId conn_complete_handler_id_;
