@@ -106,6 +106,8 @@ foreach(tgt, amber_host_binaries) {
 
     gopackage = tgt.gopkg
 
+    sdk_category = "partner"
+
     deps = [ ":amber_lib" ]
   }
 }

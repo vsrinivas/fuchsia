@@ -34,6 +34,8 @@ sdk("garnet") {
     "//garnet/bin/far:bin_sdk($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
     "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
+    "//garnet/go/src/amber:amber-publish_sdk($host_toolchain)",
+    "//garnet/go/src/amber:amber-srv_sdk($host_toolchain)",
     "//garnet/lib/vulkan:vulkan_layers",
     "//garnet/public/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.fonts:fuchsia.fonts_sdk($fidl_toolchain)",
