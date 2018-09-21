@@ -5,8 +5,13 @@
 #include "garnet/lib/machina/arch/arm64/gic_distributor.h"
 
 #include <endian.h>
+#include <fcntl.h>
+
+#include <fbl/unique_fd.h>
 #include <libzbi/zbi.h>
 #include <zircon/boot/driver-config.h>
+#include <zircon/device/sysinfo.h>
+
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/vcpu.h"
@@ -18,11 +23,34 @@ __END_CDECLS;
 
 namespace machina {
 
+static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
 static constexpr uint32_t kGicv2Revision = 2;
 static constexpr uint32_t kGicv3Revision = 3;
 static constexpr uint32_t kGicdCtlr = 0x7;
 static constexpr uint32_t kGicdCtlrARENSMask = 1u << 5;
 static constexpr uint32_t kGicdIrouteIRMMask = 1u << 31;
+
+static zx_status_t get_gic_version(GicVersion* version) {
+  fbl::unique_fd fd(open(kSysInfoPath, O_RDWR));
+  if (!fd) {
+    return ZX_ERR_IO;
+  }
+  interrupt_controller_info_t info;
+  ssize_t n = ioctl_sysinfo_get_interrupt_controller_info(fd.get(), &info);
+  if (n != sizeof(interrupt_controller_info_t)) {
+    return ZX_ERR_IO;
+  }
+  switch (info.type) {
+    case INTERRUPT_CONTROLLER_TYPE_GIC_V2:
+      *version = GicVersion::V2;
+      return ZX_OK;
+    case INTERRUPT_CONTROLLER_TYPE_GIC_V3:
+      *version = GicVersion::V3;
+      return ZX_OK;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+}
 
 // clang-format off
 
@@ -154,19 +182,21 @@ static uint32_t pidr2_arch_rev(uint32_t revision) {
   return set_bits(revision, 7, 4);
 }
 
-zx_status_t GicDistributor::Init(Guest* guest, GicVersion version,
-                                 uint8_t num_cpus) {
-  gic_version_ = version;
+zx_status_t GicDistributor::Init(Guest* guest, uint8_t num_cpus) {
+  zx_status_t status = get_gic_version(&gic_version_);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get GIC version from sysinfo " << status;
+    return status;
+  }
 
-  if (version == GicVersion::V2) {
+  if (gic_version_ == GicVersion::V2) {
     return guest->CreateMapping(TrapType::MMIO_SYNC, kGicv2DistributorPhysBase,
                                 kGicv2DistributorSize, 0, this);
   }
 
   // Map the distributor
-  zx_status_t status =
-      guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3DistributorPhysBase,
-                           kGicv3DistributorSize, 0, this);
+  status = guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3DistributorPhysBase,
+                                kGicv3DistributorSize, 0, this);
   if (status != ZX_OK) {
     return status;
   }
@@ -456,12 +486,14 @@ zx_status_t GicDistributor::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
 
   zbi_result_t res;
   if (gic_version_ == machina::GicVersion::V2) {
-    res = zbi_append_section(zbi_base, zbi_max, sizeof(gic_v2),
-                             ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, 0, &gic_v2);
+    res =
+        zbi_append_section(zbi_base, zbi_max, sizeof(gic_v2),
+                           ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, 0, &gic_v2);
   } else {
     // GICv3 driver.
-    res = zbi_append_section(zbi_base, zbi_max, sizeof(gic_v3),
-                             ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, 0, &gic_v3);
+    res =
+        zbi_append_section(zbi_base, zbi_max, sizeof(gic_v3),
+                           ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, 0, &gic_v3);
   }
   return res == ZBI_RESULT_OK ? ZX_OK : ZX_ERR_INTERNAL;
 }

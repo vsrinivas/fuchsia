@@ -16,10 +16,6 @@
 
 #include "garnet/lib/machina/block_dispatcher.h"
 
-#if __aarch64__
-#include "garnet/lib/machina/arch/arm64/gic_distributor.h"
-#endif
-
 struct BlockSpec {
   std::string path;
   machina::BlockDispatcher::Guid guid;
@@ -60,9 +56,6 @@ class GuestConfig {
   GuestDisplay display() const { return display_; }
   bool network() const { return network_; }
   size_t wayland_memory() const { return wayland_memory_; }
-#if __aarch64__
-  machina::GicVersion gic_version() const { return gic_version_; }
-#endif
 
  private:
   friend class GuestConfigParser;
@@ -81,9 +74,6 @@ class GuestConfig {
   GuestDisplay display_ = GuestDisplay::SCENIC;
   bool network_ = true;
   size_t wayland_memory_ = 1 << 30;
-#if __aarch64__
-  machina::GicVersion gic_version_ = machina::GicVersion::V2;
-#endif
 };
 
 class GuestConfigParser {

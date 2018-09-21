@@ -21,7 +21,7 @@
 #include "garnet/lib/machina/io.h"
 #include "lib/fxl/logging.h"
 
-static constexpr char kResourcePath[] = "/dev/misc/sysinfo";
+static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
 // Number of threads reading from the async device port.
 static constexpr size_t kNumAsyncWorkers = 2;
 static constexpr uint32_t kMapFlags =
@@ -30,7 +30,7 @@ static constexpr uint32_t kAllocateFlags =
     ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC;
 
 static zx_status_t guest_get_resource(zx::resource* resource) {
-  fbl::unique_fd fd(open(kResourcePath, O_RDWR));
+  fbl::unique_fd fd(open(kSysInfoPath, O_RDWR));
   if (!fd) {
     return ZX_ERR_IO;
   }

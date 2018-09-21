@@ -38,7 +38,7 @@ class GicRedistributor : public IoHandler {
 // Implements GIC distributor.
 class GicDistributor : public IoHandler, public PlatformDevice {
  public:
-  zx_status_t Init(Guest* guest, GicVersion version,
+  zx_status_t Init(Guest* guest,
                    uint8_t num_cpus) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;

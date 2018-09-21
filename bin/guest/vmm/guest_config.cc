@@ -49,9 +49,6 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t                                to a zircon framebuffer. 'none' disables graphical output.\n";
   std::cerr << "\t--wayland-memory=[bytes]        Reserve 'bytes' of device memory for wayland buffers. The\n";
   std::cerr << "\t                                suffixes 'k', 'M', and 'G' are accepted\n";
-#if __aarch64__
-  std::cerr << "\t--gic={2,3}                     Version 2 or 3\n";
-#endif
   std::cerr << "\n";
   std::cerr << "BLOCK SPEC\n";
   std::cerr << "\n";
@@ -316,56 +313,29 @@ static GuestConfigParser::OptionHandler parse_display(GuestDisplay* out) {
   };
 }
 
-#if __aarch64__
-static GuestConfigParser::OptionHandler parse_gic(machina::GicVersion* out) {
-  return [out](const std::string& key, const std::string& value) {
-    if (value.empty()) {
-      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
-                     << "=<value>)";
-      return ZX_ERR_INVALID_ARGS;
-    }
-    uint32_t number;
-    if (!fxl::StringToNumberWithError<uint32_t>(value, &number)) {
-      FXL_LOG(ERROR) << "Unable to convert '" << value << "' into a number";
-      return ZX_ERR_INVALID_ARGS;
-    }
-    if (number == 2) {
-      *out = machina::GicVersion::V2;
-    } else if (number == 3) {
-      *out = machina::GicVersion::V3;
-    } else {
-      FXL_LOG(ERROR) << "Invalid GIC version";
-      return ZX_ERR_INVALID_ARGS;
-    }
-    return ZX_OK;
-  };
-}
-#endif
-
-GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
-  {"zircon", save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
-      {"linux",
-       save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
-      {"ramdisk", save_option(&cfg_->ramdisk_path_)},
-      {"cmdline", save_option(&cfg_->cmdline_)},
-      {"cmdline-append", append_string(&cfg_->cmdline_, " ")},
-      {"dtb_overlay", save_option(&cfg_->dtb_overlay_path_)},
-      {"block",
-       append_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
-      {"cpus", parse_number(&cfg_->num_cpus_)},
-      {"memory", parse_mem_size(&cfg_->memory_)},
-      {"balloon-demand-page", set_flag(&cfg_->balloon_demand_page_, true)},
-      {"balloon-interval", parse_number(&cfg_->balloon_interval_seconds_)},
-      {"balloon-threshold", parse_number(&cfg_->balloon_pages_threshold_)},
-      {"display", parse_display(&cfg_->display_)},
-      {"network", set_flag(&cfg_->network_, true)},
-      {"block-wait", set_flag(&cfg_->block_wait_, true)},
-      {"wayland-memory", parse_mem_size(&cfg_->wayland_memory_)},
-#if __aarch64__
-      {"gic", parse_gic(&cfg_->gic_version_)},
-#endif
-}
-{}
+GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
+    : cfg_(cfg),
+      opts_{
+          {"zircon",
+           save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
+          {"linux",
+           save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
+          {"ramdisk", save_option(&cfg_->ramdisk_path_)},
+          {"cmdline", save_option(&cfg_->cmdline_)},
+          {"cmdline-append", append_string(&cfg_->cmdline_, " ")},
+          {"dtb_overlay", save_option(&cfg_->dtb_overlay_path_)},
+          {"block",
+           append_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
+          {"cpus", parse_number(&cfg_->num_cpus_)},
+          {"memory", parse_mem_size(&cfg_->memory_)},
+          {"balloon-demand-page", set_flag(&cfg_->balloon_demand_page_, true)},
+          {"balloon-interval", parse_number(&cfg_->balloon_interval_seconds_)},
+          {"balloon-threshold", parse_number(&cfg_->balloon_pages_threshold_)},
+          {"display", parse_display(&cfg_->display_)},
+          {"network", set_flag(&cfg_->network_, true)},
+          {"block-wait", set_flag(&cfg_->block_wait_, true)},
+          {"wayland-memory", parse_mem_size(&cfg_->wayland_memory_)},
+      } {}
 
 GuestConfigParser::~GuestConfigParser() = default;
 
