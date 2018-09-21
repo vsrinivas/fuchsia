@@ -268,6 +268,21 @@ function main {
     done
   fi
 
+  if [[ -z "${boards}" ]]; then
+    # Import the board target definition from the current layer if it exists.
+    local layers
+    if [[ -z "${layers}" ]]; then
+      layers="$(${FUCHSIA_DIR}/build/gn/guess_layer.py)" || return 1
+    fi
+    readonly layers
+    local layer
+    for layer in $layers; do
+      if [[ -e "$layer/boards/$arch.gni" ]]; then
+        boards+="${boards:+,}$layer/boards/$arch.gni"
+      fi
+    done
+  fi
+
   # Remove any trailing slash from build directory name.
   build_dir="${build_dir%/}"
 
