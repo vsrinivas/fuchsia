@@ -4,17 +4,19 @@
 
 #![feature(futures_api)]
 
+mod font_info;
 mod font_service;
+mod freetype_ffi;
 mod manifest;
 
 use self::font_service::FontService;
-use failure::{Error, ResultExt, format_err};
+use failure::{format_err, Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_fonts::ProviderMarker as FontProviderMarker;
 use fuchsia_app::server::ServicesServer;
+use getopts;
 use std::path::PathBuf;
 use std::sync::Arc;
-use getopts;
 
 const FONT_MANIFEST_PATH: &str = "/pkg/data/manifest.json";
 const VENDOR_FONT_MANIFEST_PATH: &str = "/system/data/vendor/fonts/manifest.json";
@@ -23,17 +25,16 @@ fn main() -> Result<(), Error> {
     let mut opts = getopts::Options::new();
 
     opts.optflag("h", "help", "")
-    .optmulti(
-        "m",
-        "font-manifest",
-        "Load fonts from the specified font manifest file.",
-        "MANIFEST"
-    )
-    .optflag(
-        "n",
-        "no-default-fonts",
-        "Don't load fonts from default location."
-    );
+        .optmulti(
+            "m",
+            "font-manifest",
+            "Load fonts from the specified font manifest file.",
+            "MANIFEST",
+        ).optflag(
+            "n",
+            "no-default-fonts",
+            "Don't load fonts from default location.",
+        );
 
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
@@ -60,8 +61,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fuchsia_async::Executor::new()
         .context("Creating async executor for Font service failed")?;
 
-    let service = Arc::new(FontService::new(manifests)?);
-
+    let service = Arc::new(FontService::new(&manifests[..])?);
 
     let fut = ServicesServer::new()
         .add_service((FontProviderMarker::NAME, move |channel| {

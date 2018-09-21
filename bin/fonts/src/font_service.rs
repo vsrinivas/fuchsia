@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::font_info;
 use super::manifest::FontsManifest;
-use failure::{format_err, Error};
+use failure::{format_err, Error, ResultExt};
 use fdio;
 use fidl;
 use fidl::encoding::OutOfLine;
@@ -82,6 +83,12 @@ impl AssetCollection {
         *asset.buffer.write().unwrap() = Some(buf);
         Ok(buf_clone)
     }
+
+    fn reset_cache(&mut self) {
+        for asset in self.assets.iter_mut() {
+            *asset.buffer.write().unwrap() = None;
+        }
+    }
 }
 
 pub type LanguageSet = BTreeSet<String>;
@@ -91,12 +98,13 @@ struct Font {
     font_index: u32,
     slant: fonts::Slant,
     weight: u32,
-    width: u32,
+    _width: u32,
     language: LanguageSet,
+    info: font_info::FontInfo,
 }
 
 struct FontFamily {
-    name: String,
+    _name: String,
     fonts: Vec<Font>,
 }
 
@@ -107,18 +115,24 @@ fn abs_diff(a: u32, b: u32) -> u32 {
 // TODO(US-409): Implement a better font-matching algorithm which:
 //   - follows CSS3 font style matching rules,
 //   - prioritizes fonts according to the language order in the request,
-//   - allows partial language match,
-//   - takes into account character specified in the request.
+//   - allows partial language match
 fn compute_font_request_score(font: &Font, request: &fonts::Request) -> u32 {
+    let mut score = 0;
+
+    let char_matches = request.character != 0 && font.info.charset.contains(request.character);
+    score += 4000 * (!char_matches) as u32;
+
     let language_matches = request
         .language
         .iter()
-        .find(|lang| font.language.contains(*lang)).is_some();
-    let language_score = 2000 * (!language_matches) as u32;
+        .find(|lang| font.language.contains(*lang))
+        .is_some();
+    score += 2000 * (!language_matches) as u32;
 
-    let slant_score = (font.slant != request.slant) as u32 * 1000;
-    let weight_score = abs_diff(request.weight, font.weight);
-    language_score + slant_score + weight_score
+    score += (font.slant != request.slant) as u32 * 1000;
+    score += abs_diff(request.weight, font.weight);
+
+    score
 }
 
 impl FontFamily {
@@ -155,19 +169,43 @@ impl FontCollection {
                 .families
                 .entry(family_manifest.family.clone())
                 .or_insert_with(|| FontFamily {
-                    name: family_manifest.family.clone(),
+                    _name: family_manifest.family.clone(),
                     fonts: vec![],
                 });
 
+            let font_info_loader = font_info::FontInfoLoader::new()?;
+
             for font in family_manifest.fonts.drain(..) {
-                let asset_id = self.assets.add_or_get_asset_id(font.asset);
+                let asset_id = self.assets.add_or_get_asset_id(font.asset.clone());
+
+                let buffer = self.assets.get_asset(asset_id).with_context(|_| {
+                    format!("Failed to load font from {}", font.asset.to_string_lossy())
+                })?;
+
+                // Unsafe because in VMOs may be resized while being mapped and
+                // load_font_info_from_vmo() doesn't handle this case.
+                // fidl::get_vmo_copy_from_file() allocates a new VMO or gets it
+                // from the file system. pkgfs won't resize the VMO, so this can
+                // be unsafe only if font_server is started with a custom
+                // manifest file that refers to files that are not on pkgs.
+                let info = unsafe {
+                    font_info_loader
+                        .load_font_info_from_vmo(&buffer.vmo, buffer.size as usize, font.index)
+                        .with_context(|_| {
+                            format!(
+                                "Failed to load font info from {}",
+                                font.asset.to_string_lossy()
+                            )
+                        })?
+                };
                 family.fonts.push(Font {
                     asset_id,
                     font_index: font.index,
                     weight: font.weight,
-                    width: font.width,
+                    _width: font.width,
                     slant: font.slant,
                     language: font.language.iter().map(|x| x.clone()).collect(),
+                    info,
                 });
             }
         }
@@ -181,6 +219,9 @@ impl FontCollection {
             }
             self.fallback_family = fallback;
         }
+
+        // Flush the cache. Font files will be loaded again when they are needed.
+        self.assets.reset_cache();
 
         Ok(())
     }
@@ -210,11 +251,19 @@ pub struct FontService {
 }
 
 impl FontService {
-    pub fn new(manifests: Vec<PathBuf>) -> Result<FontService, Error> {
+    pub fn new(manifests: &[PathBuf]) -> Result<FontService, Error> {
         let mut font_collection = FontCollection::new();
-        for manifest in manifests {
-            font_collection.add_from_manifest(
-                FontsManifest::load_from_file(&manifest)?);
+        for manifest_path in manifests {
+            let manifest = FontsManifest::load_from_file(&manifest_path)
+                .with_context(|_| format!("Failed to load {}", manifest_path.to_string_lossy()))?;
+            font_collection
+                .add_from_manifest(manifest)
+                .with_context(|_| {
+                    format!(
+                        "Failed to load fonts from {}",
+                        manifest_path.to_string_lossy()
+                    )
+                })?;
         }
 
         if font_collection.fallback_family == "" {

@@ -81,7 +81,7 @@ async fn test_font_collections() -> Result<(), Error> {
     let mut launch_options = LaunchOptions::new();
     launch_options.add_dir_to_namespace(
         "/test_fonts".to_string(),
-        std::fs::File::open("/pkgfs/packages/font_provider_tests/0/data/test_fonts")?,
+        std::fs::File::open("/system/data/testdata/test_fonts")?,
     )?;
 
     let launcher = Launcher::new().context("Failed to open launcher service")?;
