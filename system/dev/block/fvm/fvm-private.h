@@ -131,6 +131,9 @@ public:
     zx_status_t FreeSlicesLocked(VPartition* vp, size_t vslice_start,
                                  size_t count) TA_REQ(lock_);
 
+    // Returns global information about the FVM.
+    void Query(fvm_info_t* info) TA_EXCL(lock_);
+
     size_t DiskSize() const { return info_.block_count * info_.block_size; }
     size_t SliceSize() const { return slice_size_; }
     size_t VSliceMax() const { return VSLICE_MAX; }

@@ -1656,6 +1656,13 @@ zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
     info->used_bytes = fs_->Info().alloc_block_count * fs_->Info().block_size;
     info->total_nodes = fs_->Info().inode_count;
     info->used_nodes = fs_->Info().alloc_inode_count;
+
+    fvm_info_t fvm_info;
+    if (fs_->FVMQuery(&fvm_info) == ZX_OK) {
+        uint64_t free_slices = fvm_info.pslice_total_count - fvm_info.pslice_allocated_count;
+        info->free_shared_pool_bytes = fvm_info.slice_size * free_slices;
+    }
+
     strlcpy(reinterpret_cast<char*>(info->name), kFsName, fuchsia_io_MAX_FS_NAME_BUFFER);
     return ZX_OK;
 }

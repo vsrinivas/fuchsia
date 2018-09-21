@@ -334,13 +334,25 @@ const uint32 MOUNT_CREATE_FLAG_REPLACE = 0x00000001;
 const uint64 MAX_FS_NAME_BUFFER = 32;
 
 struct FilesystemInfo {
+    // The number of data bytes which may be stored in a filesystem.
     uint64 total_bytes;
+    // The number of data bytes which are in use by the filesystem.
     uint64 used_bytes;
+    // The number of nodes which may be stored in the filesystem.
     uint64 total_nodes;
+    // The number of nodes used by the filesystem.
     uint64 used_nodes;
+    // The amount of space which may be allocated from the underlying
+    // volume manager. If unsupported, this will be zero.
+    uint64 free_shared_pool_bytes;
+    // A unique identifier for this filesystem instance. Will not be preserved
+    // across reboots.
     uint64 fs_id;
+    // The size of a single filesystem block.
     uint32 block_size;
+    // The maximum length of a filesystem name.
     uint32 max_filename_size;
+    // A unique identifier for the type of the underlying filesystem.
     uint32 fs_type;
     uint32 padding;
     // TODO(smklein): Replace this field with a string when suppported

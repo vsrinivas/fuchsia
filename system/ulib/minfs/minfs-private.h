@@ -154,6 +154,9 @@ public:
     // Free a data block.
     void BlockFree(WriteTxn* txn, blk_t bno);
 
+    // Queries the underlying FVM, if it exists.
+    zx_status_t FVMQuery(fvm_info_t* info) const;
+
     // Free ino in inode bitmap, release all blocks held by inode.
     zx_status_t InoFree(VnodeMinfs* vn, WritebackWork* wb);
 

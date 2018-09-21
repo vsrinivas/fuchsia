@@ -553,6 +553,16 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_st
     return WriteFvmLocked();
 }
 
+void VPartitionManager::Query(fvm_info_t* info) {
+    info->slice_size = SliceSize();
+    info->vslice_count = VSliceMax();
+    {
+        fbl::AutoLock lock(&lock_);
+        info->pslice_total_count = pslice_total_count_;
+        info->pslice_allocated_count = pslice_allocated_count_;
+    }
+}
+
 void VPartitionManager::FreePhysicalSlice(size_t pslice) {
     auto entry = GetSliceEntryLocked(pslice);
     ZX_DEBUG_ASSERT_MSG(entry->Vpart() != FVM_SLICE_ENTRY_FREE, "Freeing already-free slice");
@@ -638,16 +648,11 @@ zx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
         return ZX_OK;
     }
     case IOCTL_BLOCK_FVM_QUERY: {
-        if (max < sizeof(fvm_info_t))
+        if (max < sizeof(fvm_info_t)) {
             return ZX_ERR_BUFFER_TOO_SMALL;
-        fvm_info_t* info = static_cast<fvm_info_t*>(reply);
-        info->slice_size = SliceSize();
-        info->vslice_count = VSliceMax();
-        {
-            fbl::AutoLock lock(&lock_);
-            info->pslice_total_count = pslice_total_count_;
-            info->pslice_allocated_count = pslice_allocated_count_;
         }
+        fvm_info_t* info = static_cast<fvm_info_t*>(reply);
+        Query(info);
         *out_actual = sizeof(fvm_info_t);
         return ZX_OK;
     }
@@ -873,11 +878,11 @@ zx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
         return ZX_OK;
     }
     case IOCTL_BLOCK_FVM_QUERY: {
-        if (max < sizeof(fvm_info_t))
+        if (max < sizeof(fvm_info_t)) {
             return ZX_ERR_BUFFER_TOO_SMALL;
+        }
         fvm_info_t* info = static_cast<fvm_info_t*>(reply);
-        info->slice_size = mgr_->SliceSize();
-        info->vslice_count = mgr_->VSliceMax();
+        mgr_->Query(info);
         *out_actual = sizeof(fvm_info_t);
         return ZX_OK;
     }

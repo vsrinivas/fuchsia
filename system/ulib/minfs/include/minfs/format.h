@@ -73,6 +73,10 @@ constexpr size_t kFVMBlockDataBmStart  = 0x20000;
 constexpr size_t kFVMBlockInodeStart   = 0x30000;
 constexpr size_t kFVMBlockDataStart    = 0x40000;
 
+// The minimal number of slices to allocate a MinFS partition:
+// Superblock, Inode bitmap, Data bitmap, Inode Table, and actual data.
+constexpr size_t kMinfsMinimumSlices = 5;
+
 constexpr uint64_t kMinfsDefaultInodeCount = 32768;
 
 typedef struct {

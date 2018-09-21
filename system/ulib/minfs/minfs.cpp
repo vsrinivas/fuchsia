@@ -307,6 +307,17 @@ Minfs::~Minfs() {
     vnode_hash_.clear();
 }
 
+zx_status_t Minfs::FVMQuery(fvm_info_t* info) const {
+#ifdef __Fuchsia__
+    if (!(Info().flags & kMinfsFlagFVM)) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return bc_->FVMQuery(info);
+#else
+    return ZX_ERR_NOT_SUPPORTED;
+#endif
+}
+
 zx_status_t Minfs::InoFree(VnodeMinfs* vn, WritebackWork* wb) {
     TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->ino_);
 

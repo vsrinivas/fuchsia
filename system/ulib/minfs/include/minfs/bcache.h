@@ -81,7 +81,7 @@ public:
     zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len);
     zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out) const;
 
-    zx_status_t FVMQuery(fvm_info_t* info) {
+    zx_status_t FVMQuery(fvm_info_t* info) const {
         ssize_t r = ioctl_block_fvm_query(fd_.get(), info);
         if (r < 0) {
             return static_cast<zx_status_t>(r);
@@ -89,7 +89,7 @@ public:
         return ZX_OK;
     }
 
-    zx_status_t FVMVsliceQuery(const query_request_t* request, query_response_t* response) {
+    zx_status_t FVMVsliceQuery(const query_request_t* request, query_response_t* response) const {
         ssize_t r = ioctl_block_fvm_vslice_query(fd_.get(), request, response);
         if (r != sizeof(query_response_t)) {
             return r < 0 ? static_cast<zx_status_t>(r) : ZX_ERR_BAD_STATE;
