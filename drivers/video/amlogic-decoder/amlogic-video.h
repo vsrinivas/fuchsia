@@ -54,7 +54,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
       uint32_t wrap, uint32_t blockmode) override;
   void FreeCanvas(std::unique_ptr<CanvasEntry> canvas) override;
 
-  __WARN_UNUSED_RESULT DecoderCore* core() override { return core_.get(); }
+  __WARN_UNUSED_RESULT DecoderCore* core() override { return core_; }
   __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer,
                                                     size_t size,
                                                     uint32_t alignment_log2,
@@ -79,9 +79,13 @@ class AmlogicVideo final : public VideoDecoder::Owner,
     return video_decoder_->pts_manager();
   }
 
-  void InitializeCore(std::unique_ptr<DecoderCore> core);
-  void ResetCore();
+  // Reset the current instance - only for use with single-stream decoders.
   void ClearDecoderInstance();
+
+  // Erase a specific decoder. May switch to a different decoder in multi-stream
+  // mode. This will stop and power off the core if the decoder is currently
+  // running.
+  void RemoveDecoder(VideoDecoder* decoder);
 
   __WARN_UNUSED_RESULT
   zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size);
@@ -96,7 +100,19 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   zx_status_t ProcessVideoNoParser(const void* data, uint32_t len,
                                    uint32_t* written_out = nullptr);
 
-  void SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder)
+  __WARN_UNUSED_RESULT DecoderCore* hevc_core() const {
+    return hevc_core_.get();
+  }
+  __WARN_UNUSED_RESULT DecoderCore* vdec1_core() const {
+    return vdec1_core_.get();
+  }
+
+  // Add the instance as a swapped-out decoder.
+  void AddNewDecoderInstance(std::unique_ptr<DecoderInstance> instance)
+      __TA_REQUIRES(video_decoder_lock_);
+
+  // For single-instance decoders, set the default instance.
+  void SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder, bool hevc)
       __TA_REQUIRES(video_decoder_lock_);
   __WARN_UNUSED_RESULT
   std::mutex* video_decoder_lock() __TA_RETURN_CAPABILITY(video_decoder_lock_) {
@@ -107,14 +123,22 @@ class AmlogicVideo final : public VideoDecoder::Owner,
     return video_decoder_;
   }
 
+  // This tries to schedule the next runnable decoder. It may leave the current
+  // decoder scheduled if no other decoder is runnable.
+  void TryToReschedule() __TA_REQUIRES(video_decoder_lock_);
+  void TryToRescheduleAssumeVideoDecoderLocked()
+      __TA_NO_THREAD_SAFETY_ANALYSIS {
+    TryToReschedule();
+  }
+
+  __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer,
+                                                        uint32_t size);
+
  private:
   friend class TestH264;
   friend class TestMpeg2;
   friend class TestVP9;
   friend class TestFrameProvider;
-
-  __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer,
-                                                        uint32_t size);
 
   void InitializeStreamInput(bool use_parser);
 
@@ -123,6 +147,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
                                            uint32_t current_offset,
                                            uint32_t* written_out = nullptr);
   void InitializeInterrupts();
+  void SwapOutCurrentInstance() __TA_REQUIRES(video_decoder_lock_);
+  void SwapInCurrentInstance() __TA_REQUIRES(video_decoder_lock_);
 
   zx_device_t* parent_ = nullptr;
   platform_device_protocol_t pdev_;
@@ -162,7 +188,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   std::thread vdec0_interrupt_thread_;
   std::thread vdec1_interrupt_thread_;
 
-  std::unique_ptr<DecoderCore> core_;
+  std::unique_ptr<DecoderCore> hevc_core_;
+  std::unique_ptr<DecoderCore> vdec1_core_;
 
   std::mutex video_decoder_lock_;
   // This is the video decoder that's currently attached to the hardware.
@@ -172,7 +199,13 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // This is the stream buffer that's currently attached to the hardware.
   StreamBuffer* stream_buffer_ = nullptr;
 
-  std::list<DecoderInstance> decoder_instances_;
+  // The decoder core for the currently-running decoder. It must be powered on.
+  DecoderCore* core_ = nullptr;
+
+  __TA_GUARDED(video_decoder_lock_)
+  std::unique_ptr<DecoderInstance> current_instance_;
+  __TA_GUARDED(video_decoder_lock_)
+  std::list<std::unique_ptr<DecoderInstance>> swapped_out_instances_;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_

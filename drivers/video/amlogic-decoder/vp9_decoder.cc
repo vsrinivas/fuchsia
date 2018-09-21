@@ -590,6 +590,10 @@ void Vp9Decoder::HandleInterrupt() {
     frame_done_count_++;
     frame_data_provider_->FrameWasOutput();
     if (state_ != DecoderState::kSwappedOut) {
+      // TODO: Avoid running the decoder if there's no input data or output
+      // buffers available. Once it starts running we don't let it swap out, so
+      // one decoder could hang indefinitely in this case without being swapped
+      // out. This can happen if the player's paused or if the client hangs.
       state_ = DecoderState::kRunning;
       HevcDecStatusReg::Get()
           .FromValue(kVp9ActionDone)
@@ -769,7 +773,9 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height,
     uint32_t frame_count = frame_buffer_size / PAGE_SIZE;
     uint32_t* mmu_data = static_cast<uint32_t*>(
         io_buffer_virt(&working_buffers_.frame_map_mmu.buffer()));
+    ZX_DEBUG_ASSERT(frame_count * 4 <= working_buffers_.frame_map_mmu.size());
     for (uint32_t i = 0; i < frame_count; i++) {
+      ZX_DEBUG_ASSERT(current_frame_->compressed_data.phys_list[i] != 0);
       mmu_data[i] = current_frame_->compressed_data.phys_list[i] >> 12;
     }
     io_buffer_cache_flush(&working_buffers_.frame_map_mmu.buffer(), 0,
@@ -827,6 +833,20 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height,
       .set_mem_map_mode(HevcdIppAxiifConfig::kMemMapModeLinear)
       .set_double_write_endian(HevcdIppAxiifConfig::kBigEndian64)
       .WriteTo(owner_->dosbus());
+}
+
+bool Vp9Decoder::CanBeSwappedIn() {
+  bool has_available_output_frames = false;
+  for (uint32_t i = 0; i < frames_.size(); i++) {
+    if (frames_[i]->refcount == 0) {
+      has_available_output_frames = true;
+      break;
+    }
+  }
+  if (!has_available_output_frames)
+    return false;
+
+  return frame_data_provider_->HasMoreInputData();
 }
 
 void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {

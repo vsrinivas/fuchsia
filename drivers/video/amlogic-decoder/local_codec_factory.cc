@@ -25,6 +25,8 @@ struct CodecAdapterFactory {
   using CreateFunction = std::function<std::unique_ptr<CodecAdapter>(
       std::mutex& lock, CodecAdapterEvents*, DeviceCtx*)>;
 
+  bool multi_instance;
+
   CreateFunction create;
 };
 
@@ -53,6 +55,7 @@ const CodecAdapterFactory kCodecFactories[] = {
             // the case.
             .split_header_handling = true,
         },
+        false,
         [](std::mutex& lock, CodecAdapterEvents* events, DeviceCtx* device) {
           return std::make_unique<CodecAdapterH264>(lock, events, device);
         },
@@ -77,6 +80,7 @@ const CodecAdapterFactory kCodecFactories[] = {
             // the case.
             .split_header_handling = true,
         },
+        false,
         [](std::mutex& lock, CodecAdapterEvents* events, DeviceCtx* device) {
           return std::make_unique<CodecAdapterMpeg2>(lock, events, device);
         },
@@ -101,6 +105,7 @@ const CodecAdapterFactory kCodecFactories[] = {
             // the case.
             .split_header_handling = true,
         },
+        true,
         [](std::mutex& lock, CodecAdapterEvents* events, DeviceCtx* device) {
           return std::make_unique<CodecAdapterVp9>(lock, events, device);
         },
@@ -195,6 +200,7 @@ void LocalCodecFactory::CreateDecoder(
   // The factory pointer remains valid for whole lifetime of this devhost
   // process.
   device_->codec_admission_control()->TryAddCodec(
+      factory->multi_instance,
       [this, video_decoder_params = std::move(video_decoder_params),
        video_decoder = std::move(video_decoder),
        factory](std::unique_ptr<CodecAdmission> codec_admission) mutable {

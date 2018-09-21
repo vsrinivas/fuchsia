@@ -21,12 +21,10 @@ class TestMpeg2 {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
 
-    video->core_ = std::make_unique<Vdec1>(video.get());
-    video->core_->PowerOn();
-
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<Mpeg12Decoder>(video.get()));
+      video->SetDefaultInstance(std::make_unique<Mpeg12Decoder>(video.get()),
+                                false);
     }
 
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true, PAGE_SIZE));
@@ -70,12 +68,10 @@ class TestMpeg2 {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
 
-    video->core_ = std::make_unique<Vdec1>(video.get());
-    video->core_->PowerOn();
-
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<Mpeg12Decoder>(video.get()));
+      video->SetDefaultInstance(std::make_unique<Mpeg12Decoder>(video.get()),
+                                false);
     }
 
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(false, PAGE_SIZE * 1024));

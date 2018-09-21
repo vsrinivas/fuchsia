@@ -90,6 +90,9 @@ class VideoDecoder {
   VideoDecoder() { pts_manager_ = std::make_unique<PtsManager>(); }
 
   virtual __WARN_UNUSED_RESULT zx_status_t Initialize() = 0;
+  virtual __WARN_UNUSED_RESULT zx_status_t InitializeHardware() {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   virtual void HandleInterrupt() = 0;
   virtual void SetFrameReadyNotifier(FrameReadyNotifier notifier) {}
   virtual void SetInitializeFramesHandler(InitializeFramesHandler handler) {
@@ -101,6 +104,13 @@ class VideoDecoder {
   virtual void ReturnFrame(std::shared_ptr<VideoFrame> frame) = 0;
   virtual void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
                                  uint32_t height, uint32_t stride) = 0;
+  virtual void SetSwappedOut() {}
+  virtual void SwappedIn() {}
+  // Returns true if the instance has more data to decode and output buffers to
+  // decode it into.
+  virtual bool __WARN_UNUSED_RESULT CanBeSwappedIn() { return false; }
+  // Returns true if the decoder is at a place where it can be swapped out.
+  virtual bool __WARN_UNUSED_RESULT CanBeSwappedOut() const { return false; }
   virtual ~VideoDecoder() {}
 
   __WARN_UNUSED_RESULT PtsManager* pts_manager() { return pts_manager_.get(); }

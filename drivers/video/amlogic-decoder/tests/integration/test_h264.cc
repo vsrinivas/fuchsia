@@ -69,11 +69,10 @@ class TestH264 {
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
 
-    video->core_ = std::make_unique<Vdec1>(video.get());
-    video->core_->PowerOn();
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()));
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()),
+                                false);
     }
     status = video->InitializeStreamBuffer(
         use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024);
@@ -144,11 +143,10 @@ class TestH264 {
 
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
-    video->core_ = std::make_unique<Vdec1>(video.get());
-    video->core_->PowerOn();
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()));
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()),
+                                false);
     }
     status = video->InitializeStreamBuffer(false, PAGE_SIZE);
     video->InitializeInterrupts();
@@ -220,11 +218,10 @@ class TestH264 {
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
 
-    video->core_ = std::make_unique<Vdec1>(video.get());
-    video->core_->PowerOn();
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()));
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()),
+                                false);
     }
     status = video->InitializeStreamBuffer(
         use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024);

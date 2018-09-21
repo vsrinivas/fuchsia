@@ -14,7 +14,8 @@
 
 // Controls how many Codec instances are concurrently served by this process.
 //
-// The limit is 1 for now, per device.
+// There's a limit of 1 for single-instance decoders, but arbitrarily-many
+// multi-instance decoders can be used if there's no single-instance decoder.
 class DeviceCtx;
 class CodecAdmission;
 class CodecAdmissionControl {
@@ -37,7 +38,8 @@ class CodecAdmissionControl {
   // everything shut down cleanly, the overall fencing isn't really there yet.
   //
   // TODO(dustingreen): std::optional<> instead when C++17.
-  void TryAddCodec(fit::function<void(std::unique_ptr<CodecAdmission>)>
+  void TryAddCodec(bool multi_instance,
+                   fit::function<void(std::unique_ptr<CodecAdmission>)>
                        continue_after_previously_started_channel_closes_done);
 
   // Anything posted here will run after any previously-posted items here or via
@@ -56,14 +58,15 @@ class CodecAdmissionControl {
 
   // This is called after exactly one post via
   // PostAfterPreviouslyStartedClosesDone() performed by TryAddCodec().
-  std::unique_ptr<CodecAdmission> TryAddCodecInternal();
+  std::unique_ptr<CodecAdmission> TryAddCodecInternal(bool multi_instance);
 
-  void RemoveCodec();
+  void RemoveCodec(bool multi_instance);
 
   DeviceCtx* device_ctx_ = nullptr;
 
   std::mutex lock_;
-  uint32_t codec_count_ __TA_GUARDED(lock_);
+  uint32_t single_instance_codec_count_ __TA_GUARDED(lock_);
+  uint32_t multi_instance_codec_count_ __TA_GUARDED(lock_);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdmissionControl);
 };
@@ -82,9 +85,11 @@ class CodecAdmission {
 
  private:
   friend class CodecAdmissionControl;
-  CodecAdmission(CodecAdmissionControl* codec_admission_control);
+  CodecAdmission(CodecAdmissionControl* codec_admission_control,
+                 bool multi_instance);
 
   CodecAdmissionControl* codec_admission_control_ = nullptr;
+  bool multi_instance_;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADMISSION_CONTROL_H_

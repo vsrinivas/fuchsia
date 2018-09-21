@@ -11,13 +11,15 @@
 
 class DecoderInstance {
  public:
-  DecoderInstance(std::unique_ptr<VideoDecoder> decoder)
+  DecoderInstance(std::unique_ptr<VideoDecoder> decoder, DecoderCore* core)
       : stream_buffer_(std::make_unique<StreamBuffer>()),
-        decoder_(std::move(decoder)) {}
+        decoder_(std::move(decoder)),
+        core_(core) {}
 
   StreamBuffer* stream_buffer() const { return stream_buffer_.get(); }
   VideoDecoder* decoder() const { return decoder_.get(); }
   InputContext* input_context() const { return input_context_.get(); }
+  DecoderCore* core() const { return core_; }
 
   void InitializeInputContext() {
     assert(!input_context_);
@@ -30,6 +32,7 @@ class DecoderInstance {
   // running and decoding from the buffer.
   std::unique_ptr<VideoDecoder> decoder_;
   std::unique_ptr<InputContext> input_context_;
+  DecoderCore* core_;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_INSTANCE_H_

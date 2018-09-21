@@ -29,8 +29,12 @@ class Vp9Decoder : public VideoDecoder {
   class FrameDataProvider {
    public:
     // Called with the decoder locked.
-    virtual void ReadMoreInputData(Vp9Decoder* decoder) {}
+    virtual void ReadMoreInputData(Vp9Decoder* decoder) = 0;
+    virtual void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) = 0;
     virtual void FrameWasOutput() = 0;
+    // Default behavior is for the benefit of test code; production
+    // implementation overrides all the methods.
+    virtual bool HasMoreInputData() { return true; }
   };
   enum class DecoderState {
     // In these two states the decoder is stopped because UpdateDecodeSize needs
@@ -51,6 +55,11 @@ class Vp9Decoder : public VideoDecoder {
     // the compressed data.
     kPausedAtHeader,
 
+    // The hardware is waiting for references frames, but the special
+    // end-of-stream size was reached. It can safely be swapped out now, because
+    // its state doesn't matter.
+    kPausedAtEndOfStream,
+
     // The hardware's state doesn't reflect that of the Vp9Decoder.
     kSwappedOut,
   };
@@ -61,6 +70,7 @@ class Vp9Decoder : public VideoDecoder {
   ~Vp9Decoder() override;
 
   __WARN_UNUSED_RESULT zx_status_t Initialize() override;
+  __WARN_UNUSED_RESULT zx_status_t InitializeHardware() override;
   void HandleInterrupt() override;
   void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
@@ -68,6 +78,15 @@ class Vp9Decoder : public VideoDecoder {
   void SetErrorHandler(fit::closure error_handler) override;
   void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
                          uint32_t height, uint32_t stride) override;
+  __WARN_UNUSED_RESULT bool CanBeSwappedIn() override;
+  __WARN_UNUSED_RESULT bool CanBeSwappedOut() const override {
+    return state_ == DecoderState::kFrameJustProduced ||
+           state_ == DecoderState::kPausedAtEndOfStream;
+  }
+  void SetSwappedOut() override { state_ = DecoderState::kSwappedOut; }
+  void SwappedIn() override {
+    frame_data_provider_->ReadMoreInputDataFromReschedule(this);
+  }
 
   void SetFrameDataProvider(FrameDataProvider* provider) {
     frame_data_provider_ = provider;
@@ -81,6 +100,11 @@ class Vp9Decoder : public VideoDecoder {
 
   __WARN_UNUSED_RESULT bool swapped_out() const {
     return state_ == DecoderState::kSwappedOut;
+  }
+
+  void SetPausedAtEndOfStream() {
+    ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
+    state_ = DecoderState::kPausedAtEndOfStream;
   }
 
  private:
@@ -201,7 +225,6 @@ class Vp9Decoder : public VideoDecoder {
   void ConfigureReferenceFrameHardware();
   void SetRefFrames(HardwareRenderParams* params);
   __WARN_UNUSED_RESULT zx_status_t InitializeBuffers();
-  __WARN_UNUSED_RESULT zx_status_t InitializeHardware();
   void InitializeLoopFilterData();
 
   Owner* owner_;

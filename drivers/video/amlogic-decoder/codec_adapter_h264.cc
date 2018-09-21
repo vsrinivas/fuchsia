@@ -145,9 +145,6 @@ void CodecAdapterH264::CoreCodecStartStream() {
     is_avcc_ = false;
     is_input_end_of_stream_queued_ = false;
     is_stream_failed_ = false;
-    auto core = std::make_unique<Vdec1>(video_);
-    core->PowerOn();
-    video_->InitializeCore(std::move(core));
   }  // ~lock
 
   auto decoder = std::make_unique<H264Decoder>(video_);
@@ -191,7 +188,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
-    video_->SetDefaultInstance(std::move(decoder));
+    video_->SetDefaultInstance(std::move(decoder), false);
     status = video_->InitializeStreamBuffer(true, PAGE_SIZE);
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("InitializeStreamBuffer() failed");
@@ -285,7 +282,6 @@ void CodecAdapterH264::CoreCodecStopStream() {
   // DecoderCore, then VideoDecoder.
 
   video_->ClearDecoderInstance();
-  video_->ResetCore();
 }
 
 void CodecAdapterH264::CoreCodecAddBuffer(CodecPort port,

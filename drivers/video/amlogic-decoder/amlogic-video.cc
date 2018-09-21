@@ -26,12 +26,14 @@
 
 #include "device_ctx.h"
 #include "device_fidl.h"
+#include "hevcdec.h"
 #include "local_codec_factory.h"
 #include "macros.h"
 #include "memory_barriers.h"
 #include "mpeg12_decoder.h"
 #include "pts_manager.h"
 #include "registers.h"
+#include "vdec1.h"
 
 // These match the regions exported when the bus device was added.
 enum MmioRegion {
@@ -50,7 +52,12 @@ enum Interrupt {
   kDosMbox2Irq,
 };
 
-AmlogicVideo::AmlogicVideo() { zx::event::create(0, &parser_finished_event_); }
+AmlogicVideo::AmlogicVideo() {
+  zx::event::create(0, &parser_finished_event_);
+
+  vdec1_core_ = std::make_unique<Vdec1>(this);
+  hevc_core_ = std::make_unique<HevcDec>(this);
+}
 
 AmlogicVideo::~AmlogicVideo() {
   if (parser_interrupt_handle_) {
@@ -73,17 +80,34 @@ AmlogicVideo::~AmlogicVideo() {
     if (vdec1_interrupt_thread_.joinable())
       vdec1_interrupt_thread_.join();
   }
-  decoder_instances_.clear();
+  swapped_out_instances_.clear();
   if (core_)
     core_->PowerOff();
+  current_instance_.reset();
+  core_ = nullptr;
+  hevc_core_.reset();
+  vdec1_core_.reset();
   io_buffer_release(&search_pattern_);
 }
 
-void AmlogicVideo::SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder) {
+// TODO: Remove once we can add single-instance decoders through
+// AddNewDecoderInstance.
+void AmlogicVideo::SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder,
+                                      bool hevc) {
+  DecoderCore* core = hevc ? hevc_core_.get() : vdec1_core_.get();
   assert(!stream_buffer_);
-  decoder_instances_.push_back(DecoderInstance(std::move(decoder)));
-  video_decoder_ = decoder_instances_.back().decoder();
-  stream_buffer_ = decoder_instances_.back().stream_buffer();
+  assert(!current_instance_);
+  current_instance_ =
+      std::make_unique<DecoderInstance>(std::move(decoder), core);
+  video_decoder_ = current_instance_->decoder();
+  stream_buffer_ = current_instance_->stream_buffer();
+  core_ = core;
+  core_->PowerOn();
+}
+
+void AmlogicVideo::AddNewDecoderInstance(
+    std::unique_ptr<DecoderInstance> instance) {
+  swapped_out_instances_.push_back(std::move(instance));
 }
 
 void AmlogicVideo::UngateClocks() {
@@ -119,23 +143,36 @@ void AmlogicVideo::GateClocks() {
       .WriteTo(hiubus_.get());
 }
 
-void AmlogicVideo::InitializeCore(std::unique_ptr<DecoderCore> core) {
-  core_ = std::move(core);
-}
-
-void AmlogicVideo::ResetCore() {
-  if (core_) {
-    core_->PowerOff();
-    core_.reset();
-  }
-}
-
 void AmlogicVideo::ClearDecoderInstance() {
   std::lock_guard<std::mutex> lock(video_decoder_lock_);
-  assert(decoder_instances_.size() <= 1u);
-  decoder_instances_.clear();
+  assert(current_instance_);
+  assert(swapped_out_instances_.size() == 0);
+  current_instance_.reset();
+  core_->PowerOff();
+  core_ = nullptr;
   video_decoder_ = nullptr;
   stream_buffer_ = nullptr;
+}
+
+void AmlogicVideo::RemoveDecoder(VideoDecoder* decoder) {
+  DLOG("Removing decoder: %p\n", decoder);
+  std::lock_guard<std::mutex> lock(video_decoder_lock_);
+  if (current_instance_ && current_instance_->decoder() == decoder) {
+    current_instance_.reset();
+    video_decoder_ = nullptr;
+    stream_buffer_ = nullptr;
+    core_->PowerOff();
+    core_ = nullptr;
+    TryToReschedule();
+    return;
+  }
+  for (auto it = swapped_out_instances_.begin();
+       it != swapped_out_instances_.end(); ++it) {
+    if ((*it)->decoder() != decoder)
+      continue;
+    swapped_out_instances_.erase(it);
+    return;
+  }
 }
 
 zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer,
@@ -489,6 +526,95 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data,
   return ZX_OK;
 }
 
+void AmlogicVideo::SwapOutCurrentInstance() {
+  ZX_DEBUG_ASSERT(!!current_instance_);
+  // FrameWasOutput() is called during handling of kVp9CommandNalDecodeDone on
+  // the interrupt thread, which means the decoder HW is currently paused,
+  // which means it's ok to save the state before the stop+wait (without any
+  // explicit pause before the save here).  The decoder HW remains paused
+  // after the save, and makes no further progress until later after the
+  // restore.
+  if (!current_instance_->input_context()) {
+    current_instance_->InitializeInputContext();
+    if (core_->InitializeInputContext(current_instance_->input_context()) !=
+        ZX_OK) {
+      // TODO: exit cleanly
+      exit(-1);
+    }
+  }
+  video_decoder_->SetSwappedOut();
+  core_->SaveInputContext(current_instance_->input_context());
+  core_->StopDecoding();
+  core_->WaitForIdle();
+  // TODO: Avoid power off if swapping to another instance on the same core.
+  core_->PowerOff();
+  core_ = nullptr;
+  // Round-robin; place at the back of the line.
+  swapped_out_instances_.push_back(std::move(current_instance_));
+}
+
+void AmlogicVideo::TryToReschedule() {
+  DLOG("AmlogicVideo::TryToReschedule\n");
+  if (swapped_out_instances_.size() == 0)
+    return;
+
+  if (current_instance_ && !current_instance_->decoder()->CanBeSwappedOut()) {
+    DLOG("Current instance can't be swapped out\n");
+    return;
+  }
+
+  // Round-robin; first in line that can be swapped in goes first.
+  // TODO: Use some priority mechanism to determine which to swap in.
+  auto other_instance = swapped_out_instances_.begin();
+  for (; other_instance != swapped_out_instances_.end(); ++other_instance) {
+    if ((*other_instance)->decoder()->CanBeSwappedIn()) {
+      break;
+    }
+  }
+  if (other_instance == swapped_out_instances_.end()) {
+    DLOG("nothing to swap to\n");
+    return;
+  }
+  if (current_instance_)
+    SwapOutCurrentInstance();
+  current_instance_ = std::move(*other_instance);
+  swapped_out_instances_.erase(other_instance);
+
+  SwapInCurrentInstance();
+}
+
+void AmlogicVideo::SwapInCurrentInstance() {
+  ZX_DEBUG_ASSERT(current_instance_);
+
+  core_ = current_instance_->core();
+  video_decoder_ = current_instance_->decoder();
+  DLOG("Swapping in %p\n", video_decoder_);
+  stream_buffer_ = current_instance_->stream_buffer();
+  core()->PowerOn();
+  zx_status_t status = video_decoder_->InitializeHardware();
+  if (status != ZX_OK) {
+    // Probably failed to load the right firmware.
+    DECODE_ERROR("Failed to initialize hardware: %d\n", status);
+    // TODO: exit cleanly
+    exit(-1);
+  }
+  if (!current_instance_->input_context()) {
+    InitializeStreamInput(false);
+    core_->InitializeDirectInput();
+    // If data has added to the stream buffer before the first swap in(only
+    // relevant in tests right now) then ensure the write pointer's updated to
+    // that spot.
+    // Generally data will only be added after this decoder is swapped in, so
+    // RestoreInputContext will handle that state.
+    core_->UpdateWritePointer(io_buffer_phys(stream_buffer_->buffer()) +
+                              stream_buffer_->data_size() +
+                              stream_buffer_->padding_size());
+  } else {
+    core_->RestoreInputContext(current_instance_->input_context());
+  }
+  video_decoder_->SwappedIn();
+}
+
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
@@ -523,32 +649,37 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   }
 
   mmio_buffer_t cbus_mmio;
-  status = pdev_map_mmio_buffer2(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &cbus_mmio);
+  status = pdev_map_mmio_buffer2(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                 &cbus_mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map cbus");
     return ZX_ERR_NO_MEMORY;
   }
   cbus_ = std::make_unique<CbusRegisterIo>(cbus_mmio);
   mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer2(&pdev_, kDosbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer2(&pdev_, kDosbus,
+                                 ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dosbus");
     return ZX_ERR_NO_MEMORY;
   }
   dosbus_ = std::make_unique<DosRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer2(&pdev_, kHiubus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer2(&pdev_, kHiubus,
+                                 ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map hiubus");
     return ZX_ERR_NO_MEMORY;
   }
   hiubus_ = std::make_unique<HiuRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer2(&pdev_, kAobus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer2(&pdev_, kAobus,
+                                 ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map aobus");
     return ZX_ERR_NO_MEMORY;
   }
   aobus_ = std::make_unique<AoRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer2(&pdev_, kDmc, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer2(&pdev_, kDmc, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                 &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dmc");
     return ZX_ERR_NO_MEMORY;
@@ -588,7 +719,8 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     demux_register_offset = (0x1800 - 0x1600) * 4;
   }
   reset_ = std::make_unique<ResetRegisterIo>(cbus_mmio, reset_register_offset);
-  parser_ = std::make_unique<ParserRegisterIo>(cbus_mmio, parser_register_offset);
+  parser_ =
+      std::make_unique<ParserRegisterIo>(cbus_mmio, parser_register_offset);
   demux_ = std::make_unique<DemuxRegisterIo>(cbus_mmio, demux_register_offset);
   registers_ = std::unique_ptr<MmioRegisters>(new MmioRegisters{
       dosbus_.get(), aobus_.get(), dmc_.get(), hiubus_.get(), reset_.get()});

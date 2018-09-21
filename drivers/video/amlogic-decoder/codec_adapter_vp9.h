@@ -52,7 +52,9 @@ class CodecAdapterVp9 : public CodecAdapter,
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
 
   void ReadMoreInputData(Vp9Decoder* decoder) override;
-  void FrameWasOutput() override {}
+  void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) override;
+  void FrameWasOutput() override;
+  bool HasMoreInputData() override;
 
  private:
   void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
@@ -119,6 +121,8 @@ class CodecAdapterVp9 : public CodecAdapter,
   // ringbuffer. It can hold at most 9 frames (the maximum for a superframe),
   // but will typically have 2 or less.
   std::vector<uint32_t> queued_frame_sizes_;
+
+  Vp9Decoder* decoder_ = nullptr;
 
   CodecAdapterVp9() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterVp9);

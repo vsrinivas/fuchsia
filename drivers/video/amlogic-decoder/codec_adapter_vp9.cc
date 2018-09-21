@@ -133,9 +133,6 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     parsed_video_size_ = 0;
     is_input_end_of_stream_queued_ = false;
     is_stream_failed_ = false;
-    auto core = std::make_unique<HevcDec>(video_);
-    core->PowerOn();
-    video_->InitializeCore(std::move(core));
   }  // ~lock
 
   auto decoder = std::make_unique<Vp9Decoder>(
@@ -181,24 +178,26 @@ void CodecAdapterVp9::CoreCodecStartStream() {
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
-    video_->SetDefaultInstance(std::move(decoder));
-    status = video_->InitializeStreamBuffer(false, PAGE_SIZE * 512);
-    if (status != ZX_OK) {
-      events_->onCoreCodecFailCodec("InitializeStreamBuffer() failed");
-      return;
-    }
-    status =
-        static_cast<Vp9Decoder*>(video_->video_decoder())->InitializeBuffers();
+    status = decoder->InitializeBuffers();
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec(
           "video_->video_decoder_->Initialize() failed");
       return;
     }
-  }  // ~lock
 
-  {  // scope lock
-    std::lock_guard<std::mutex> lock(lock_);
-    video_->core()->InitializeDirectInput();
+    auto instance = std::make_unique<DecoderInstance>(std::move(decoder),
+                                                      video_->hevc_core());
+    status = video_->AllocateStreamBuffer(instance->stream_buffer(),
+                                          512 * PAGE_SIZE);
+    if (status != ZX_OK) {
+      events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
+      return;
+    }
+
+    decoder_ = static_cast<Vp9Decoder*>(instance->decoder());
+    video_->AddNewDecoderInstance(std::move(instance));
+    // Decoder is currently swapped out, but will be swapped in when data is
+    // received for it.
   }  // ~lock
 }
 
@@ -257,12 +256,6 @@ void CodecAdapterVp9::CoreCodecStopStream() {
     ZX_DEBUG_ASSERT(!is_cancelling_input_processing_);
   }  // ~lock
 
-  // Stop processing queued frames.
-  if (video_->core()) {
-    video_->core()->StopDecoding();
-    video_->core()->WaitForIdle();
-  }
-
   // TODO(dustingreen): Currently, we have to tear down a few pieces of video_,
   // to make it possible to run all the AmlogicVideo + DecoderCore +
   // VideoDecoder code that seems necessary to run to ensure that a new stream
@@ -271,8 +264,11 @@ void CodecAdapterVp9::CoreCodecStopStream() {
   // AmlogicVideo to be more re-usable without the stuff in this method, then
   // DecoderCore, then VideoDecoder.
 
-  video_->ClearDecoderInstance();
-  video_->ResetCore();
+  if (decoder_) {
+    // If the decoder's still running this will stop it as well.
+    video_->RemoveDecoder(decoder_);
+    decoder_ = nullptr;
+  }
 }
 
 void CodecAdapterVp9::CoreCodecAddBuffer(CodecPort port,
@@ -309,7 +305,8 @@ void CodecAdapterVp9::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
-    video_->video_decoder()->ReturnFrame(frame);
+    decoder_->ReturnFrame(frame);
+    video_->TryToReschedule();
   }  // ~lock
 }
 
@@ -549,17 +546,48 @@ void CodecAdapterVp9::ProcessInput() {
   }  // ~lock
   std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
   auto decoder = static_cast<Vp9Decoder*>(video_->video_decoder());
-  // We don't actually support more than one stream at a time currently.
-  // TODO: we'll need to avoid interrupting a different decoder mid-stream.
-  if (decoder->swapped_out()) {
-    if (ZX_OK != decoder->InitializeHardware()) {
-      OnCoreCodecFailStream();
-      return;
-    }
+  if (decoder_ != decoder) {
+    video_->TryToReschedule();
+    // The reschedule will queue reading input data if this decoder was
+    // scheduled.
+    return;
   }
   if (decoder->needs_more_input_data()) {
     ReadMoreInputData(decoder);
   }
+}
+
+void CodecAdapterVp9::ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) {
+  bool is_trigger_needed = false;
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    // For now we don't worry about avoiding a trigger if we happen to queue
+    // when ProcessInput() has removed the last item but ProcessInput() is still
+    // running.
+    if (!is_process_input_queued_) {
+      is_trigger_needed = true;
+      is_process_input_queued_ = true;
+    }
+  }  // ~lock
+  // Trigger this on the input thread instead of immediately handling it to
+  // simplifying the locking.
+  if (is_trigger_needed) {
+    PostToInputProcessingThread(
+        fit::bind_member(this, &CodecAdapterVp9::ProcessInput));
+  }
+}
+
+bool CodecAdapterVp9::HasMoreInputData() {
+  if (queued_frame_sizes_.size() > 0)
+    return true;
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    if (is_stream_failed_ || is_cancelling_input_processing_ ||
+        input_queue_.empty()) {
+      return false;
+    }
+  }  // ~lock
+  return true;
 }
 
 CodecInputItem CodecAdapterVp9::DequeueInputItem() {
@@ -573,6 +601,10 @@ CodecInputItem CodecAdapterVp9::DequeueInputItem() {
     input_queue_.pop_front();
     return to_ret;
   }  // ~lock
+}
+
+void CodecAdapterVp9::FrameWasOutput() {
+  video_->TryToRescheduleAssumeVideoDecoderLocked();
 }
 
 // The decoder lock is held by caller during this method.
@@ -692,6 +724,8 @@ zx_status_t CodecAdapterVp9::InitializeFramesHandler(
       }
     }  // ~lock
     if (is_output_end_of_stream) {
+      decoder_->SetPausedAtEndOfStream();
+      video_->TryToRescheduleAssumeVideoDecoderLocked();
       events_->onCoreCodecOutputEndOfStream(false);
       return ZX_ERR_STOP;
     }
