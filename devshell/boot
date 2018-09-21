@@ -167,10 +167,10 @@ case "${machine_type}" in
       fi
       "${GAUSS_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}" \
                           -o "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.gauss.signed"
-      export IMAGE_ZIRCONA_SIGNEDZBI="${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.gauss.signed"
+      export IMAGE_ZIRCONA_SIGNEDZBI="${IMAGE_ZIRCONA_ZBI}.gauss.signed"
       "${GAUSS_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}" \
                           -o "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.gauss.signed"
-      export IMAGE_ZIRCONR_SIGNEDZBI="${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.gauss.signed"
+      export IMAGE_ZIRCONR_SIGNEDZBI="${IMAGE_ZIRCONR_ZBI}.gauss.signed"
     fi
     disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_SIGNEDZBI}" \
                          --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_SIGNEDZBI}")
@@ -186,12 +186,13 @@ case "${machine_type}" in
       fi
       "${ASTRO_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}" \
                           -o "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.astro.signed"
-      export IMAGE_ZIRCONA_SIGNEDZBI="${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.astro.signed"
+      export IMAGE_ZIRCONA_SIGNEDZBI="${IMAGE_ZIRCONA_ZBI}.astro.signed"
       "${ASTRO_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}" \
                           -o "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.astro.signed"
-      export IMAGE_ZIRCONR_SIGNEDZBI="${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.astro.signed"
+      export IMAGE_ZIRCONR_SIGNEDZBI="${IMAGE_ZIRCONR_ZBI}.astro.signed"
     fi
     disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_SIGNEDZBI}"\
+                         --zirconb "${fuchsia_dir}/${IMAGE_ZIRCONR_SIGNEDZBI}"\
                          --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_SIGNEDZBI}")
     add_fvm=$force_pave
   ;;
