@@ -236,10 +236,8 @@ static zx_status_t new_vc_cb(port_handler_t* ph, zx_signals_t signals, uint32_t 
     zx_handle_t handles[FDIO_MAX_HANDLES];
     uint32_t types[FDIO_MAX_HANDLES];
     zx_status_t r = fdio_transfer_fd(fd, FDIO_FLAG_USE_FOR_STDIO | 0, handles, types);
-    if (r != 2) {
-        zx_handle_close_many(handles, r);
-        session_destroy(vc);
-    } else if (zx_channel_write(h, 0, types, 2 * sizeof(uint32_t), handles, 2) != ZX_OK) {
+    if (zx_channel_write(h, 0, types,
+                         static_cast<uint32_t>(r * sizeof(uint32_t)), handles, r) != ZX_OK) {
         session_destroy(vc);
     } else {
         port_wait(&port, &vc->fh.ph);
