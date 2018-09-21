@@ -27,8 +27,6 @@ static constexpr uintptr_t kRamdiskOffset = 0x4000000;
 
 #if __aarch64__
 static constexpr uintptr_t kKernelOffset = 0;
-static constexpr uint64_t kPeripheralRangeBase = 0x800000000;
-static constexpr uint64_t kPeripheralRangeSize = 0x8400000;
 
 static constexpr zbi_platform_id_t kPlatformId = {
     .vid = 3,  // PDEV_VID_GOOGLE
@@ -199,14 +197,7 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg,
     return ZX_ERR_INTERNAL;
   }
   // Memory config.
-  // TODO(MAC-170): Use dev_mem to fill out the peripheral memory ranges.
-  std::vector<zbi_mem_range_t> mem_config{
-      {
-          .paddr = 0x800000000,
-          .length = 0x8400000,
-          .type = ZBI_MEM_RANGE_PERIPHERAL,
-      },
-  };
+  std::vector<zbi_mem_range_t> mem_config;
 
   dev_mem.YieldInverseRange(0, cfg.memory(), [&mem_config](auto range){
     mem_config.emplace_back(zbi_mem_range_t{
@@ -216,18 +207,26 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg,
     });
   });
 
+  // Zircon only supports a limited number of peripheral ranges so for any
+  // dev_mem ranges that are not in the RAM range we will build a single
+  // peripheral range to cover all of them.
+  zbi_mem_range_t periph_range = {.paddr = 0, .length = 0, .type = ZBI_MEM_RANGE_PERIPHERAL};
   for (const auto& range: dev_mem) {
-    // TODO(MAC-170): Remove this once we support filling out the peripheral
-    // memory range from dev_mem.
-    if (range.addr >= kPeripheralRangeBase
-        && range.addr + range.size <= kPeripheralRangeBase + kPeripheralRangeSize) {
-      continue;
+    if (range.addr < cfg.memory()) {
+      mem_config.emplace_back(zbi_mem_range_t{
+          .paddr = range.addr,
+          .length = range.size,
+          .type = ZBI_MEM_RANGE_PERIPHERAL,
+      });
+    } else {
+      if (periph_range.length == 0) {
+        periph_range.paddr = range.addr;
+      }
+      periph_range.length = range.addr + range.size - periph_range.paddr;
     }
-    mem_config.emplace_back(zbi_mem_range_t{
-        .paddr = range.addr,
-        .length = range.size,
-        .type = ZBI_MEM_RANGE_PERIPHERAL,
-    });
+  }
+  if (periph_range.length != 0) {
+    mem_config.emplace_back(std::move(periph_range));
   }
   res = zbi_append_section(container_hdr, zbi_max,
                            sizeof(zbi_mem_range_t) * mem_config.size(),
