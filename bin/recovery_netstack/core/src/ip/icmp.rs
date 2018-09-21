@@ -9,13 +9,16 @@ use std::mem;
 use log::trace;
 
 use crate::ip::{send_ip_packet, IpAddr, IpProto};
-use crate::wire::icmp::{IcmpPacket, IcmpPacketSerializer, Icmpv4Packet};
+use crate::wire::icmp::{IcmpEchoReply, IcmpPacket, IcmpPacketSerializer, Icmpv4Packet};
 use crate::wire::{BufferAndRange, SerializationRequest};
 use crate::{Context, EventDispatcher};
 
 /// Receive an ICMP message in an IP packet.
 pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut<[u8]>>(
-    ctx: &mut Context<D>, src_ip: A, dst_ip: A, buffer: BufferAndRange<B>,
+    ctx: &mut Context<D>,
+    src_ip: A,
+    dst_ip: A,
+    buffer: BufferAndRange<B>,
 ) -> bool {
     trace!("receive_icmp_packet({}, {})", src_ip, dst_ip);
 
@@ -53,7 +56,7 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut
                             ctx,
                             dst_ip,
                             IpProto::Icmp,
-                            |src_ip| buffer.encapsulate(IcmpPacketSerializer::new(src_ip, dst_ip, code, req)),
+                            |src_ip| buffer.encapsulate(IcmpPacketSerializer::new(src_ip, dst_ip, code, req.reply())),
                         );
                         true
                     }
@@ -75,37 +78,47 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut
     A::receive_icmp_packet(ctx, src_ip, dst_ip, buffer)
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::ip::{Ip, Ipv4, Ipv4Addr};
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ip::{Ip, Ipv4, Ipv4Addr};
+    use crate::testutil::DummyEventDispatcher;
+    use crate::{Context, StackState};
 
-//     #[ignore] // TODO(joshlf): Debug why this panics
-//     #[test]
-//     fn test_send_echo_request() {
-//         use crate::ip::testdata::icmp_echo::*;
+    #[test]
+    fn test_send_echo_request() {
+        use crate::ip::testdata::icmp_echo::*;
 
-//         let mut state: StackState = Default::default();
-//         let src = <Ipv4 as Ip>::LOOPBACK_ADDRESS;
-//         let dst = Ipv4Addr::new([192, 168, 1, 5]);
-//         let mut bytes = REQUEST_IP_PACKET_BYTES.to_owned();
-//         let len = bytes.len();
-//         let buf = BufferAndRange::new(&mut bytes, 20..len);
+        let mut ctx = Context::new(Default::default(), DummyEventDispatcher);
+        let src = <Ipv4 as Ip>::LOOPBACK_ADDRESS;
+        let dst = Ipv4Addr::new([192, 168, 1, 5]);
+        let mut bytes = REQUEST_IP_PACKET_BYTES.to_owned();
+        let len = bytes.len();
+        let buf = BufferAndRange::new_from(&mut bytes, 20..len);
 
-//         receive_icmp_packet(&mut ctx, src, dst, buf);
+        receive_icmp_packet(&mut ctx, src, dst, buf);
+        assert_eq!(
+            ctx.state()
+                .test_counters
+                .get("receive_icmp_packet::echo_request"),
+            &1
+        );
 
-//         assert_eq!(
-//             state.test_counters.get("receive_icmp_packet::echo_request"),
-//             &1
-//         );
-
-//         // Check that the echo request was replied to.
-//         assert_eq!(state.test_counters.get("send_ip_packet"), &1);
-//         assert_eq!(state.test_counters.get("send_ip_packet::loopback"), &1);
-//         assert_eq!(state.test_counters.get("dispatch_receive_ip_packet"), &1);
-//         assert_eq!(
-//             state.test_counters.get("receive_icmp_packet::echo_reply"),
-//             &1
-//         );
-//     }
-// }
+        // Check that the echo request was replied to.
+        assert_eq!(ctx.state().test_counters.get("send_ip_packet"), &1);
+        assert_eq!(
+            ctx.state().test_counters.get("send_ip_packet::loopback"),
+            &1
+        );
+        assert_eq!(
+            ctx.state().test_counters.get("dispatch_receive_ip_packet"),
+            &1
+        );
+        assert_eq!(
+            ctx.state()
+                .test_counters
+                .get("receive_icmp_packet::echo_reply"),
+            &1
+        );
+    }
+}

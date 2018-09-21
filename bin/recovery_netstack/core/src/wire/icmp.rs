@@ -118,7 +118,9 @@ impl<B: ByteSlice> Icmpv4Packet<B> {
     /// body to send to another layer of the stack. If the message type has no
     /// body, then the range is meaningless and should be ignored.
     pub fn parse(
-        bytes: B, src_ip: Ipv4Addr, dst_ip: Ipv4Addr,
+        bytes: B,
+        src_ip: Ipv4Addr,
+        dst_ip: Ipv4Addr,
     ) -> Result<(Icmpv4Packet<B>, Range<usize>), ParseError> {
         macro_rules! mtch {
             ($bytes:expr, $src_ip:expr, $dst_ip:expr, $($variant:ident => $type:ty,)*) => {
@@ -267,7 +269,9 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I>> IcmpPacket<I, B, M> {
     /// used to peek at the header and determine what type is present so that
     /// the correct type can then be used in a call to `parse`.
     pub fn parse(
-        bytes: B, src_ip: I::Addr, dst_ip: I::Addr,
+        bytes: B,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
     ) -> Result<(IcmpPacket<I, B, M>, Range<usize>), ParseError> {
         let (header, rest) =
             LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes).ok_or_else(
@@ -290,13 +294,9 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I>> IcmpPacket<I, B, M> {
             "unrecognized code: {}",
             header.code
         ))?;
-        if header.checksum() != Self::compute_checksum(
-            &header,
-            message.bytes(),
-            &message_body,
-            src_ip,
-            dst_ip,
-        ).ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?
+        if header.checksum()
+            != Self::compute_checksum(&header, message.bytes(), &message_body, src_ip, dst_ip)
+                .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?
         {
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
@@ -351,7 +351,11 @@ impl<I: IcmpIpExt, B, M: IcmpMessage<I>> IcmpPacket<I, B, M> {
     /// `compute_checksum` returns `None` if the version is IPv6 and the total
     /// ICMP packet length overflows a u32.
     fn compute_checksum(
-        header: &Header, message: &[u8], message_body: &[u8], src_ip: I::Addr, dst_ip: I::Addr,
+        header: &Header,
+        message: &[u8],
+        message_body: &[u8],
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
     ) -> Option<u16> {
         let mut c = Checksum::new();
         if I::VERSION.is_v6() {
@@ -402,7 +406,10 @@ pub struct IcmpPacketSerializer<I: IcmpIpExt, M: IcmpMessage<I>> {
 impl<I: IcmpIpExt, M: IcmpMessage<I>> IcmpPacketSerializer<I, M> {
     /// Construct a new `IcmpPacketSerializer`.
     pub fn new(
-        src_ip: I::Addr, dst_ip: I::Addr, code: M::Code, msg: M,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        code: M::Code,
+        msg: M,
     ) -> IcmpPacketSerializer<I, M> {
         IcmpPacketSerializer {
             src_ip,
@@ -435,12 +442,12 @@ impl<I: IcmpIpExt, M: IcmpMessage<I>> PacketSerializer for IcmpPacketSerializer<
             );
             // SECURITY: Use _zeroed constructors to ensure we zero memory to prevent
             // leaking information from packets previously stored in this buffer.
-            let (prefix, mut message) =
-                LayoutVerified::<_, M>::new_unaligned_from_suffix_zeroed(prefix)
-                    .expect("too few bytes for ICMP message");
-            let (_, mut header) =
-                LayoutVerified::<_, Header>::new_unaligned_from_suffix_zeroed(prefix)
-                    .expect("too few bytes for ICMP message");
+            let (prefix, mut message) = LayoutVerified::<_, M>::new_unaligned_from_suffix_zeroed(
+                prefix,
+            ).expect("too few bytes for ICMP message");
+            let (_, mut header) = LayoutVerified::<_, Header>::new_unaligned_from_suffix_zeroed(
+                prefix,
+            ).expect("too few bytes for ICMP message");
             *message = self.msg;
             header.set_msg_type(M::TYPE);
             header.code = self.code.into();
@@ -631,6 +638,14 @@ pub struct IcmpEchoRequest {
     id_seq: IdAndSeq,
     /* The rest of of IcmpEchoRequest is variable-length, so is stored in the
      * message_body field in IcmpPacket */
+}
+
+impl IcmpEchoRequest {
+    pub fn reply(self) -> IcmpEchoReply {
+        IcmpEchoReply {
+            id_seq: self.id_seq,
+        }
+    }
 }
 
 /// An ICMP Echo Reply message.
@@ -865,7 +880,9 @@ mod tests {
     use crate::wire::util::{InnerSerializationRequest, SerializationRequest};
 
     fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv4>>(
-        src_ip: Ipv4Addr, dst_ip: Ipv4Addr, icmp: &IcmpPacket<Ipv4, B, M>,
+        src_ip: Ipv4Addr,
+        dst_ip: Ipv4Addr,
+        icmp: &IcmpPacket<Ipv4, B, M>,
         serializer: Ipv4PacketSerializer,
     ) -> Vec<u8> {
         let icmp_serializer = icmp.serializer(src_ip, dst_ip);
