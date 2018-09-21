@@ -37,6 +37,7 @@ var pprofServer = flag.Bool("pprof", false, "run the pprof http server")
 var OnInterfacesChanged func()
 
 func main() {
+	flag.Parse()
 	log.SetFlags(0)
 	log.SetPrefix("netstack: ")
 	log.Print("started")
