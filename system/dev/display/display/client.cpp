@@ -1314,6 +1314,12 @@ void Client::TearDown() {
             || controller_->current_thread_is_loop());
     pending_config_valid_ = false;
 
+    // Teardown stops events from the channel, but not from the ddk, so we
+    // need to make sure we don't try to teardown multiple times.
+    if (!IsValid()) {
+        return;
+    }
+
     if (api_wait_.object() != ZX_HANDLE_INVALID) {
         api_wait_.Cancel();
         api_wait_.set_object(ZX_HANDLE_INVALID);
