@@ -178,7 +178,7 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndCloseChannel) {
   EXPECT_FALSE(closed_called);
 }
 
-TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseMultipleFixedChannels) {
+TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseWithLinkMultipleFixedChannels) {
   // LE-U link
   chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
                         [](auto) {}, DoNothing, dispatcher());
@@ -204,6 +204,20 @@ TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseMultipleFixedChannels) {
 
   EXPECT_TRUE(att_closed);
   EXPECT_FALSE(smp_closed);
+}
+
+TEST_F(L2CAP_ChannelManagerTest, DeactivateDoesNotCrashOrHang) {
+  // Tests that the clean up task posted to the LogicalLink does not crash when
+  // a dynamic registry is not present (which is the case for LE links).
+  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
+                        [](auto) {}, DoNothing, dispatcher());
+  auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
+  ASSERT_TRUE(chan);
+
+  chan->Deactivate();
+
+  // Loop until the clean up task runs.
+  RunLoopUntilIdle();
 }
 
 TEST_F(L2CAP_ChannelManagerTest,

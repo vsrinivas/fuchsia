@@ -175,6 +175,7 @@ void ChannelImpl::OnClosed() {
     dispatcher = dispatcher_;
     task = std::move(closed_cb_);
     active_ = false;
+    link_.reset();
     dispatcher_ = nullptr;
   }
 

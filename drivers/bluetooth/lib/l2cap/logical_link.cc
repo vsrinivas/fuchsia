@@ -290,7 +290,11 @@ void LogicalLink::RemoveChannel(Channel* chan) {
 
   // Disconnect the channel if it's a dynamic channel. This path is for local-
   // initiated closures and does not invoke callbacks back to the channel user.
-  dynamic_registry_->CloseChannel(id);
+  // TODO(armansito): Change this if statement into an assert when a registry
+  // gets created for LE channels.
+  if (dynamic_registry_) {
+    dynamic_registry_->CloseChannel(id);
+  }
 }
 
 void LogicalLink::SignalError() {
