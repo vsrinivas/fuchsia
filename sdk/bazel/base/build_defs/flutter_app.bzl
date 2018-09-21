@@ -51,6 +51,7 @@ def _flutter_app_impl(context):
     for asset in context.files.assets:
         # Remove the package name from the path.
         short_path = asset.short_path[package_name_len + 1:]
+
         # TODO(alainv): Remove once duplication is no longer needed from
         #               https://github.com/flutter/flutter/pull/20728
         mappings["data/%s" % short_path] = asset
@@ -62,13 +63,14 @@ def _flutter_app_impl(context):
         output = asset_manifest,
         content = "%s" % asset_manifest_dict,
     )
+
     # TODO(alainv): Remove once duplication is no longer needed from
     #               https://github.com/flutter/flutter/pull/20728
     mappings["data/AssetManifest.json"] = asset_manifest
     mappings[data_root + "AssetManifest.json"] = asset_manifest
-
+    outs = [kernel_snapshot_file, manifest_file]
     return [
-        DefaultInfo(files = depset([kernel_snapshot_file, manifest_file])),
+        DefaultInfo(files = depset(outs), runfiles = context.runfiles(files = outs)),
         PackageLocalInfo(mappings = mappings.items()),
     ]
 
