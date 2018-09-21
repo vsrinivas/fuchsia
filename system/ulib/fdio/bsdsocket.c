@@ -244,8 +244,6 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERROR(ZX_ERR_NO_RESOURCES);
     }
 
-    io2->ioflag |= IOFLAG_SOCKET_CONNECTED;
-
     if (flags & SOCK_NONBLOCK) {
         io2->ioflag |= IOFLAG_NONBLOCK;
     }

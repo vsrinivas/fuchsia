@@ -243,7 +243,7 @@ static ssize_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int fl
     return total;
 }
 
-static zx_status_t zxsio_clone_stream(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+static zx_status_t zxsio_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
     // TODO: support unconnected sockets
     if (!(io->ioflag & IOFLAG_SOCKET_CONNECTED)) {
         return ZX_ERR_BAD_STATE;
@@ -257,7 +257,7 @@ static zx_status_t zxsio_clone_stream(fdio_t* io, zx_handle_t* handles, uint32_t
     return 1;
 }
 
-static zx_status_t zxsio_unwrap_stream(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+static zx_status_t zxsio_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
     // TODO: support unconnected sockets
     if (!(io->ioflag & IOFLAG_SOCKET_CONNECTED)) {
         return ZX_ERR_BAD_STATE;
@@ -772,11 +772,11 @@ static fdio_ops_t fdio_socket_stream_ops = {
     .misc = zxsio_misc,
     .close = zxsio_close,
     .open = fdio_default_open,
-    .clone = zxsio_clone_stream,
+    .clone = zxsio_clone,
     .ioctl = zxsio_ioctl,
     .wait_begin = zxsio_wait_begin_stream,
     .wait_end = zxsio_wait_end_stream,
-    .unwrap = zxsio_unwrap_stream,
+    .unwrap = zxsio_unwrap,
     .posix_ioctl = zxsio_posix_ioctl_stream,
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
@@ -807,11 +807,11 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .misc = zxsio_misc,
     .close = zxsio_close,
     .open = fdio_default_open,
-    .clone = fdio_default_clone,
+    .clone = zxsio_clone,
     .ioctl = zxsio_ioctl,
     .wait_begin = zxsio_wait_begin_dgram,
     .wait_end = zxsio_wait_end_dgram,
-    .unwrap = fdio_default_unwrap,
+    .unwrap = zxsio_unwrap,
     .posix_ioctl = fdio_default_posix_ioctl, // not supported
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
