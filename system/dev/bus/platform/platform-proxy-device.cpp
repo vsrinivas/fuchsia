@@ -18,6 +18,8 @@
 #include <ddk/protocol/platform-device.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 #include "platform-proxy.h"
 #include "proxy-protocol.h"
@@ -272,20 +274,18 @@ zx_status_t ProxyDevice::ClkDisable(void* ctx, uint32_t index) {
     return thiz->proxy_->Rpc(thiz->device_id_, &req.header, sizeof(req), &resp, sizeof(resp));
 }
 
-zx_status_t ProxyDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
-                                 size_t* out_size, zx_paddr_t* out_paddr,
-                                 zx_handle_t* out_handle) {
+zx_status_t ProxyDevice::GetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     if (index >= mmios_.size()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    Mmio* mmio = &mmios_[index];
-    zx_paddr_t vmo_base = ROUNDDOWN(mmio->base, PAGE_SIZE);
-    size_t vmo_size = ROUNDUP(mmio->base + mmio->length - vmo_base, PAGE_SIZE);
-    zx_handle_t vmo_handle;
+    const Mmio& mmio = mmios_[index];
+    const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, PAGE_SIZE);
+    const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, PAGE_SIZE);
+    zx::vmo vmo;
 
-    zx_status_t status = zx_vmo_create_physical(mmio->resource.get(), vmo_base, vmo_size,
-                                                &vmo_handle);
+    zx_status_t status = zx_vmo_create_physical(mmio.resource.get(), vmo_base, vmo_size,
+                                                vmo.reset_and_get_address());
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s %s: creating vmo failed %d\n", name_, __FUNCTION__, status);
         return status;
@@ -293,38 +293,68 @@ zx_status_t ProxyDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** o
 
     char name[32];
     snprintf(name, sizeof(name), "%s mmio %u", name_, index);
-    status = zx_object_set_property(vmo_handle, ZX_PROP_NAME, name, sizeof(name));
+    status = vmo.set_property(ZX_PROP_NAME, name, sizeof(name));
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s %s: setting vmo name failed %d\n", name_, __FUNCTION__, status);
-        goto fail;
+        return status;
     }
 
-    status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
+    out_mmio->offset = mmio.base - vmo_base;
+    out_mmio->vmo = vmo.release();
+    out_mmio->size = mmio.length;
+    return ZX_OK;
+}
+
+// TODO(surajmalhotra): Remove after migrating all clients off.
+zx_status_t ProxyDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
+                                 size_t* out_size, zx_paddr_t* out_paddr,
+                                 zx_handle_t* out_handle) {
+    if (index >= mmios_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    const Mmio& mmio = mmios_[index];
+    const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, PAGE_SIZE);
+    const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, PAGE_SIZE);
+    zx::vmo vmo;
+
+    zx_status_t status = zx_vmo_create_physical(mmio.resource.get(), vmo_base, vmo_size,
+                                                vmo.reset_and_get_address());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s %s: creating vmo failed %d\n", name_, __FUNCTION__, status);
+        return status;
+    }
+
+    char name[32];
+    snprintf(name, sizeof(name), "%s mmio %u", name_, index);
+    status = vmo.set_property(ZX_PROP_NAME, name, sizeof(name));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s %s: setting vmo name failed %d\n", name_, __FUNCTION__, status);
+        return status;
+    }
+
+    status = vmo.set_cache_policy(cache_policy);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s %s: setting cache policy failed %d\n", name_, __FUNCTION__, status);
-        goto fail;
+        return status;
     }
 
     uintptr_t virt;
-    status = zx_vmar_map(zx_vmar_root_self(),
-                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE,
-                         0, vmo_handle, 0, vmo_size, &virt);
+    status = zx::vmar::root_self()->map(0, vmo, 0, vmo_size, ZX_VM_PERM_READ |
+                                        ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE, &virt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s %s: mapping vmar failed %d\n", name_, __FUNCTION__, status);
-        goto fail;
+        return status;
     }
 
-    *out_size = mmio->length;
+    *out_size = mmio.length;
     if (out_paddr) {
-        *out_paddr = mmio->base;
+        *out_paddr = mmio.base;
     }
-    *out_vaddr = reinterpret_cast<void*>(virt + (mmio->base - vmo_base));
-    *out_handle = vmo_handle;
+    *out_vaddr = reinterpret_cast<void*>(virt + (mmio.base - vmo_base));
+    *out_handle = vmo.release();
     return ZX_OK;
 
-fail:
-    zx_handle_close(vmo_handle);
-    return status;
 }
 
 zx_status_t ProxyDevice::MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle) {

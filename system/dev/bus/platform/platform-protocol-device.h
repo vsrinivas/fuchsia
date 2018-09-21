@@ -47,6 +47,7 @@ public:
     void DdkRelease();
 
     // Platform device protocol implementation.
+    zx_status_t GetMmio(uint32_t index, pdev_mmio_t* out_mmio);
     zx_status_t MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr, size_t* out_size,
                         zx_paddr_t* out_paddr, zx_handle_t* out_handle);
     zx_status_t MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);

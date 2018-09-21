@@ -35,6 +35,7 @@
 //     PlatformDevDevice(zx_device_t* parent)
 //       : PlatformDevDeviceType("my-platform-device", parent) {}
 //
+//        zx_status_t GetMmio(void* ctx, uint32_t index, pdev_mmio_t* out_mmio);
 //        zx_status_t MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
 //                            size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle);
 //        zx_status_t MapInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
@@ -53,6 +54,7 @@ class PlatformDevProtocol : public internal::base_protocol {
 public:
     PlatformDevProtocol() {
         internal::CheckPlatformDevProtocolSubclass<D>();
+        pdev_proto_ops_.get_mmio = GetMmio;
         pdev_proto_ops_.map_mmio = MapMmio;
         pdev_proto_ops_.map_interrupt = MapInterrupt;
         pdev_proto_ops_.get_bti = GetBti;
@@ -71,6 +73,10 @@ protected:
     platform_device_protocol_ops_t pdev_proto_ops_ = {};
 
 private:
+    static zx_status_t GetMmio(void* ctx, uint32_t index, pdev_mmio_t* out_mmio) {
+        return static_cast<D*>(ctx)->GetMmio(index, out_mmio);
+    }
+
     static zx_status_t MapMmio(void* ctx, uint32_t index, uint32_t cache_policy, void** out_vaddr,
                                size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle) {
         return static_cast<D*>(ctx)->MapMmio(index, cache_policy, out_vaddr, out_size, out_paddr,
@@ -109,6 +115,10 @@ class PlatformDevProtocolProxy {
 public:
     PlatformDevProtocolProxy(platform_device_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
+
+    zx_status_t GetMmio(void* ctx, uint32_t index, pdev_mmio_t* out_mmio) {
+        return ops_->get_mmio(ctx_, index, out_mmio);
+    }
 
     zx_status_t MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
                         size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle) {

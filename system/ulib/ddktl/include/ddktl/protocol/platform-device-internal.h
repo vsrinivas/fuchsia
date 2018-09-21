@@ -9,6 +9,8 @@
 namespace ddk {
 namespace internal {
 
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_get_mmio, GetMmio,
+        zx_status_t (C::*)(uint32_t, pdev_mmio_t*));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_map_mmio, MapMmio,
         zx_status_t (C::*)(uint32_t, uint32_t, void**, size_t*, zx_paddr_t*, zx_handle_t*));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_map_interrupt, MapInterrupt,
@@ -26,6 +28,9 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_get_protocol, GetProtocol,
 
 template <typename D>
 constexpr void CheckPlatformDevProtocolSubclass() {
+    static_assert(internal::has_pdev_get_mmio<D>::value,
+                  "PlatformDevProtocol subclasses must implement "
+                  "GetMmio(uint32_t index, pdev_mmio_t* out_mmio)");
     static_assert(internal::has_pdev_map_mmio<D>::value,
                   "PlatformDevProtocol subclasses must implement "
                   "MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr, "

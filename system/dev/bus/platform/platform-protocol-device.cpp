@@ -69,6 +69,38 @@ zx_status_t ProtocolDevice::Init(const pbus_dev_t* pdev) {
     return ZX_OK;
 }
 
+zx_status_t ProtocolDevice::GetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
+    if (index >= resources_.mmio_count()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    const pbus_mmio_t& mmio = resources_.mmio(index);
+    const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, PAGE_SIZE);
+    const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, PAGE_SIZE);
+    zx::vmo vmo;
+
+    zx_status_t status = zx_vmo_create_physical(bus_->GetResource(), vmo_base, vmo_size,
+                                                vmo.reset_and_get_address());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: creating vmo failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    char name[32];
+    snprintf(name, sizeof(name), "mmio %u", index);
+    status = vmo.set_property(ZX_PROP_NAME, name, sizeof(name));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: setting vmo name failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    out_mmio->offset = mmio.base - vmo_base;
+    out_mmio->vmo = vmo.release();
+    out_mmio->size = mmio.length;
+    return ZX_OK;
+}
+
+// TODO(surajmalhotra): Remove after migrating all clients off.
 zx_status_t ProtocolDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** out_vaddr,
                                     size_t* out_size, zx_paddr_t* out_paddr,
                                     zx_handle_t* out_handle) {
@@ -84,6 +116,14 @@ zx_status_t ProtocolDevice::MapMmio(uint32_t index, uint32_t cache_policy, void*
                                                 vmo.reset_and_get_address());
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
+        return status;
+    }
+
+    char name[32];
+    snprintf(name, sizeof(name), "mmio %u", index);
+    status = vmo.set_property(ZX_PROP_NAME, name, sizeof(name));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: setting vmo name failed %d\n", __FUNCTION__, status);
         return status;
     }
 
