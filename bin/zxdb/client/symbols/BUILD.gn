@@ -137,6 +137,7 @@ source_set("tests") {
     "system_symbols_unittest.cc",
     "test_symbol_module.cc",
     "type_utils_unittest.cc",
+    "variable_location_unittest.cc",
   ]
 
   deps = [

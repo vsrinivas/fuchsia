@@ -15,7 +15,7 @@ bool VariableLocation::Entry::InRange(const SymbolContext& symbol_context,
   if (begin == 0 && end == 0)
     return true;
   return ip >= symbol_context.RelativeToAbsolute(begin) &&
-         ip <= symbol_context.RelativeToAbsolute(end);
+         ip < symbol_context.RelativeToAbsolute(end);
 }
 
 VariableLocation::VariableLocation() = default;
