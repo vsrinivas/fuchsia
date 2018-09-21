@@ -20,7 +20,7 @@
 static void arm_gicv3_pcie_init(const void* driver_data, uint32_t length) {
     ASSERT(length >= sizeof(dcfg_arm_gicv3_driver_t));
     __UNUSED const dcfg_arm_gicv3_driver_t* driver =
-            reinterpret_cast<const dcfg_arm_gicv3_driver_t*>(driver_data);
+        reinterpret_cast<const dcfg_arm_gicv3_driver_t*>(driver_data);
 
     // When GICv3 MSI support is added, initialize here
 

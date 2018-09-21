@@ -54,7 +54,7 @@ public:
 static void arm_gicv2_pcie_init(const void* driver_data, uint32_t length) {
     ASSERT(length >= sizeof(dcfg_arm_gicv2_driver_t));
     const dcfg_arm_gicv2_driver_t* driver =
-            reinterpret_cast<const dcfg_arm_gicv2_driver_t*>(driver_data);
+        reinterpret_cast<const dcfg_arm_gicv2_driver_t*>(driver_data);
 
     // based on whether or not ZBI says we support MSI, initialize the v2m allocator
     zx_status_t res;

@@ -116,7 +116,8 @@ static inline void gic_write_igrpen(uint32_t val) {
 
 static inline uint32_t gic_read_sre(void) {
     uint64_t temp;
-    __asm__ volatile("mrs %0, " ICC_SRE_EL1 : "=r"(temp));
+    __asm__ volatile("mrs %0, " ICC_SRE_EL1
+                     : "=r"(temp));
     return (uint32_t)temp;
 }
 
@@ -130,9 +131,10 @@ static inline void gic_write_eoir(uint32_t val) {
     ISB;
 }
 
-static inline uint32_t gic_read_iar(void) {
+static inline uint32_t gic_read_iar() {
     uint64_t temp;
-    __asm__ volatile("mrs %0, " ICC_IAR1_EL1 : "=r"(temp));
+    __asm__ volatile("mrs %0, " ICC_IAR1_EL1
+                     : "=r"(temp));
     DSB;
     return (uint32_t)temp;
 }

@@ -15,9 +15,5 @@
 #define ICH_VMCR_VPMR_MASK        (0xffu << 24)
 #define ICH_VTR_LIST_REGS_MASK    0x1f
 
-__BEGIN_CDECLS;
-
-void gicv3_hw_interface_register(void);
-bool gicv3_is_gic_registered(void);
-
-__END_CDECLS;
+void gicv3_hw_interface_register();
+bool gicv3_is_gic_registered();

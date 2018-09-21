@@ -5,14 +5,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/ops.h>
+#include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <arch/arm64/periphmap.h>
+#include <arch/ops.h>
 #include <assert.h>
 #include <bits.h>
 #include <debug.h>
 #include <dev/interrupt.h>
 #include <dev/interrupt/arm_gic_common.h>
-#include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
 #include <dev/interrupt/arm_gicv2m.h>
 #include <dev/interrupt/arm_gicv2m_msi.h>
@@ -22,14 +22,13 @@
 #include <kernel/thread.h>
 #include <lib/ktrace.h>
 #include <lk/init.h>
+#include <pdev/driver.h>
+#include <pdev/interrupt.h>
 #include <reg.h>
 #include <sys/types.h>
 #include <trace.h>
-#include <zircon/types.h>
-
-#include <pdev/driver.h>
-#include <pdev/interrupt.h>
 #include <zircon/boot/driver-config.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -48,9 +47,9 @@ uint64_t arm_gicv2_gich_offset = 0;
 uint64_t arm_gicv2_gicv_offset = 0;
 static uint32_t ipi_base = 0;
 
-uint max_irqs = 0;
+static uint max_irqs = 0;
 
-static zx_status_t arm_gic_init(void);
+static zx_status_t arm_gic_init();
 
 static zx_status_t gic_configure_interrupt(unsigned int vector,
                                            enum interrupt_trigger_mode tm,
@@ -63,29 +62,28 @@ static bool gic_is_valid_interrupt(unsigned int vector, uint32_t flags) {
     return (vector < max_irqs);
 }
 
-static uint32_t gic_get_base_vector(void) {
+static uint32_t gic_get_base_vector() {
     // ARM Generic Interrupt Controller v2 chapter 2.1
     // INTIDs 0-15 are local CPU interrupts
     return 16;
 }
 
-static uint32_t gic_get_max_vector(void) {
+static uint32_t gic_get_max_vector() {
     return max_irqs;
 }
-
-static DEFINE_GIC_SHADOW_REG(gicd_itargetsr, 4, 0x01010101, 32);
 
 static void gic_set_enable(uint vector, bool enable) {
     int reg = vector / 32;
     uint32_t mask = (uint32_t)(1ULL << (vector % 32));
 
-    if (enable)
+    if (enable) {
         GICREG(0, GICD_ISENABLER(reg)) = mask;
-    else
+    } else {
         GICREG(0, GICD_ICENABLER(reg)) = mask;
+    }
 }
 
-static void gic_init_percpu_early(void) {
+static void gic_init_percpu_early() {
     GICREG(0, GICC_CTLR) = 1;   // enable GIC0
     GICREG(0, GICC_PMR) = 0xFF; // unmask interrupts at all priority levels
 }
@@ -119,11 +117,11 @@ LK_INIT_HOOK_FLAGS(arm_gic_resume_cpu, arm_gic_resume_cpu,
                    LK_INIT_LEVEL_PLATFORM, LK_INIT_FLAG_CPU_RESUME);
 #endif
 
-static int arm_gic_max_cpu(void) {
+static int arm_gic_max_cpu() {
     return (GICREG(0, GICD_TYPER) >> 5) & 0x7;
 }
 
-static zx_status_t arm_gic_init(void) {
+static zx_status_t arm_gic_init() {
     uint i;
     // see if we're gic v2
     uint rev = 0;
@@ -156,14 +154,15 @@ static zx_status_t arm_gic_init(void) {
     }
 
     if (arm_gic_max_cpu() > 0) {
-        /* Set external interrupts to target cpu 0 */
+        // Set external interrupts to target cpu 0
         for (i = 32; i < max_irqs; i += 4) {
-            GICREG(0, GICD_ITARGETSR(i / 4)) = gicd_itargetsr[i / 4];
+            GICREG(0, GICD_ITARGETSR(i / 4)) = 0x01010101;
         }
     }
     // Initialize all the SPIs to edge triggered
-    for (i = GIC_BASE_SPI; i < max_irqs; i++)
+    for (i = GIC_BASE_SPI; i < max_irqs; i++) {
         gic_configure_interrupt(i, IRQ_TRIGGER_MODE_EDGE, IRQ_POLARITY_ACTIVE_HIGH);
+    }
 
     GICREG(0, GICD_CTLR) = 1; // enable GIC0
 
@@ -179,8 +178,9 @@ static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask) {
         ((flags & ARM_GIC_SGI_FLAG_NS) ? (1U << 15) : 0) |
         (irq & 0xf);
 
-    if (irq >= 16)
+    if (irq >= 16) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     LTRACEF("GICD_SGIR: %x\n", val);
 
@@ -190,8 +190,9 @@ static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask) {
 }
 
 static zx_status_t gic_mask_interrupt(unsigned int vector) {
-    if (vector >= max_irqs)
+    if (vector >= max_irqs) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     gic_set_enable(vector, false);
 
@@ -199,8 +200,9 @@ static zx_status_t gic_mask_interrupt(unsigned int vector) {
 }
 
 static zx_status_t gic_unmask_interrupt(unsigned int vector) {
-    if (vector >= max_irqs)
+    if (vector >= max_irqs) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     gic_set_enable(vector, true);
 
@@ -210,9 +212,10 @@ static zx_status_t gic_unmask_interrupt(unsigned int vector) {
 static zx_status_t gic_configure_interrupt(unsigned int vector,
                                            enum interrupt_trigger_mode tm,
                                            enum interrupt_polarity pol) {
-    //Only configurable for SPI interrupts
-    if ((vector >= max_irqs) || (vector < GIC_BASE_SPI))
+    // Only configurable for SPI interrupts
+    if ((vector >= max_irqs) || (vector < GIC_BASE_SPI)) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     if (pol != IRQ_POLARITY_ACTIVE_HIGH) {
         // TODO: polarity should actually be configure through a GPIO controller
@@ -223,7 +226,7 @@ static zx_status_t gic_configure_interrupt(unsigned int vector,
     // 16 irqs encoded per ICFGR register
     uint32_t reg_ndx = vector >> 4;
     uint32_t bit_shift = ((vector & 0xf) << 1) + 1;
-    uint32_t reg_val   = GICREG(0, GICD_ICFGR(reg_ndx));
+    uint32_t reg_val = GICREG(0, GICD_ICFGR(reg_ndx));
     if (tm == IRQ_TRIGGER_MODE_EDGE) {
         reg_val |= (1 << bit_shift);
     } else {
@@ -237,13 +240,16 @@ static zx_status_t gic_configure_interrupt(unsigned int vector,
 static zx_status_t gic_get_interrupt_config(unsigned int vector,
                                             enum interrupt_trigger_mode* tm,
                                             enum interrupt_polarity* pol) {
-    if (vector >= max_irqs)
+    if (vector >= max_irqs) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
-    if (tm)
+    if (tm) {
         *tm = IRQ_TRIGGER_MODE_EDGE;
-    if (pol)
+    }
+    if (pol) {
         *pol = IRQ_POLARITY_ACTIVE_HIGH;
+    }
 
     return ZX_OK;
 }
@@ -293,7 +299,7 @@ static void gic_handle_fiq(struct iframe* frame) {
 static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     uint gic_ipi_num = ipi + ipi_base;
 
-    /* filter out targets outside of the range of cpus we care about */
+    // filter out targets outside of the range of cpus we care about
     target &= ((1UL << SMP_MAX_CPUS) - 1);
     if (target != 0) {
         LTRACEF("target 0x%x, gic_ipi %u\n", target, gic_ipi_num);
@@ -303,14 +309,15 @@ static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return ZX_OK;
 }
 
-static void arm_ipi_halt_handler(void* arg) {
-    LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
+static void arm_ipi_halt_handler() {
+    LTRACEF("cpu %u\n", arch_curr_cpu_num());
 
     arch_disable_ints();
-    while(true) {}
+    while (true) {
+    }
 }
 
-static void gic_init_percpu(void) {
+static void gic_init_percpu() {
     mp_set_curr_cpu_online(true);
     unmask_interrupt(MP_IPI_GENERIC + ipi_base);
     unmask_interrupt(MP_IPI_RESCHEDULE + ipi_base);
@@ -318,13 +325,13 @@ static void gic_init_percpu(void) {
     unmask_interrupt(MP_IPI_HALT + ipi_base);
 }
 
-static void gic_shutdown(void) {
+static void gic_shutdown() {
     // Turn off all GIC0 interrupts at the distributor.
     GICREG(0, GICD_CTLR) = 0;
 }
 
 // Returns true if any PPIs are enabled on the calling CPU.
-static bool is_ppi_enabled(void) {
+static bool is_ppi_enabled() {
     DEBUG_ASSERT(arch_ints_disabled());
 
     // PPIs are 16-31.
@@ -335,7 +342,7 @@ static bool is_ppi_enabled(void) {
 }
 
 // Returns true if any SPIs are enabled on the calling CPU.
-static bool is_spi_enabled(void) {
+static bool is_spi_enabled() {
     DEBUG_ASSERT(arch_ints_disabled());
 
     // We're going to check four interrupts at a time.  Build a repeated mask for the current CPU.
@@ -354,7 +361,7 @@ static bool is_spi_enabled(void) {
     return false;
 }
 
-static void gic_shutdown_cpu(void) {
+static void gic_shutdown_cpu() {
     DEBUG_ASSERT(arch_ints_disabled());
 
     // Before we shutdown the GIC, make sure we've migrated/disabled any and all peripheral
@@ -392,7 +399,7 @@ static const struct pdev_interrupt_ops gic_ops = {
 
 static void arm_gic_v2_init(const void* driver_data, uint32_t length) {
     ASSERT(length >= sizeof(dcfg_arm_gicv2_driver_t));
-    const dcfg_arm_gicv2_driver_t* driver = driver_data;
+    auto driver = static_cast<const dcfg_arm_gicv2_driver_t*>(driver_data);
     ASSERT(driver->mmio_phys);
 
     arm_gicv2_gic_base = periph_paddr_to_vaddr(driver->mmio_phys);
@@ -428,14 +435,14 @@ static void arm_gic_v2_init(const void* driver_data, uint32_t length) {
     pdev_register_interrupts(&gic_ops);
 
     zx_status_t status =
-        gic_register_sgi_handler(MP_IPI_GENERIC + ipi_base, (void*)&mp_mbx_generic_irq, 0);
+        gic_register_sgi_handler(MP_IPI_GENERIC + ipi_base, &mp_mbx_generic_irq);
     DEBUG_ASSERT(status == ZX_OK);
     status =
-        gic_register_sgi_handler(MP_IPI_RESCHEDULE + ipi_base, (void*)&mp_mbx_reschedule_irq, 0);
+        gic_register_sgi_handler(MP_IPI_RESCHEDULE + ipi_base, &mp_mbx_reschedule_irq);
     DEBUG_ASSERT(status == ZX_OK);
-    status = gic_register_sgi_handler(MP_IPI_INTERRUPT + ipi_base, (void*)&mp_mbx_interrupt_irq, 0);
+    status = gic_register_sgi_handler(MP_IPI_INTERRUPT + ipi_base, &mp_mbx_interrupt_irq);
     DEBUG_ASSERT(status == ZX_OK);
-    status = gic_register_sgi_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
+    status = gic_register_sgi_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler);
     DEBUG_ASSERT(status == ZX_OK);
 
     gicv2_hw_interface_register();

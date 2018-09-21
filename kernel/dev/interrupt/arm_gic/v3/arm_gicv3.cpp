@@ -5,33 +5,31 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/arch_ops.h>
+#include <arch/arm64/hypervisor/gic/gicv3.h>
 #include <arch/arm64/periphmap.h>
 #include <assert.h>
 #include <bits.h>
 #include <dev/interrupt.h>
 #include <dev/interrupt/arm_gic_common.h>
-#include <arch/arm64/hypervisor/gic/gicv3.h>
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <lib/ktrace.h>
 #include <lk/init.h>
+#include <pdev/driver.h>
+#include <pdev/interrupt.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/vm.h>
-#include <zircon/types.h>
-
-#include <pdev/driver.h>
-#include <pdev/interrupt.h>
 #include <zircon/boot/driver-config.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
 #include <arch/arm64.h>
 #define IFRAME_PC(frame) ((frame)->elr)
-
-#include <arch/arch_ops.h>
 
 // values read from zbi
 static vaddr_t arm_gicv3_gic_base = 0;
@@ -39,21 +37,20 @@ static uint64_t arm_gicv3_gicd_offset = 0;
 static uint64_t arm_gicv3_gicr_offset = 0;
 static uint64_t arm_gicv3_gicr_stride = 0;
 
-/*
-IMX8M Errata: e11171: CA53: Cannot support single-core runtime wakeup
+//
+// IMX8M Errata: e11171: CA53: Cannot support single-core runtime wakeup
 
-According to the GIC500 specification and the Arm Trusted Firmware design, when a CPU
-core enters the deepest CPU idle state (power-down), it must disable the GIC500 CPU
-interface and set the Redistributor register to indicate that this CPU is in sleep state.
+// According to the GIC500 specification and the Arm Trusted Firmware design, when a CPU
+// core enters the deepest CPU idle state (power-down), it must disable the GIC500 CPU
+// interface and set the Redistributor register to indicate that this CPU is in sleep state.
 
-On NXP IMX8M, However, if the CPU core is in WFI or power-down with CPU interface disabled,
-another core cannot wake-up the powered-down core using SGI interrupt.
+// On NXP IMX8M, However, if the CPU core is in WFI or power-down with CPU interface disabled,
+// another core cannot wake-up the powered-down core using SGI interrupt.
 
-One workaround is to use another A53 core for the IRQ0 which is controlled by the IOMUX
-GPR to generate an external interrupt to wake-up the powered-down core.
-The SW workaround is implemented into default BSP release. The workaround commit tag is
-“MLK-16804-04 driver: irqchip: Add IPI SW workaround for imx8mq" on the linux-imx project
-*/
+// One workaround is to use another A53 core for the IRQ0 which is controlled by the IOMUX
+// GPR to generate an external interrupt to wake-up the powered-down core.
+// The SW workaround is implemented into default BSP release. The workaround commit tag is
+// “MLK-16804-04 driver: irqchip: Add IPI SW workaround for imx8mq" on the linux-imx project
 static uint64_t mx8_gpr_virt = 0;
 
 static uint32_t ipi_base = 0;
@@ -67,13 +64,13 @@ static bool gic_is_valid_interrupt(unsigned int vector, uint32_t flags) {
     return (vector < gic_max_int);
 }
 
-static uint32_t gic_get_base_vector(void) {
+static uint32_t gic_get_base_vector() {
     // ARM Generic Interrupt Controller v3&4 chapter 2.2
     // INTIDs 0-15 are local CPU interrupts
     return 16;
 }
 
-static uint32_t gic_get_max_vector(void) {
+static uint32_t gic_get_max_vector() {
     return gic_max_int;
 }
 
@@ -96,8 +93,7 @@ static void gic_set_enable(uint vector, bool enable) {
         for (uint i = 0; i < arch_max_num_cpus(); i++) {
             if (enable) {
                 GICREG(0, GICR_ISENABLER0(i)) = mask;
-            }
-            else {
+            } else {
                 GICREG(0, GICR_ICENABLER0(i)) = mask;
             }
             gic_wait_for_rwp(GICR_CTLR(i));
@@ -105,15 +101,14 @@ static void gic_set_enable(uint vector, bool enable) {
     } else {
         if (enable) {
             GICREG(0, GICD_ISENABLER(reg)) = mask;
-        }
-        else {
+        } else {
             GICREG(0, GICD_ICENABLER(reg)) = mask;
         }
         gic_wait_for_rwp(GICD_CTLR);
     }
 }
 
-static void gic_init_percpu_early(void) {
+static void gic_init_percpu_early() {
     uint cpu = arch_curr_cpu_num();
 
     // redistributer config: configure sgi/ppi as non-secure group 1.
@@ -145,15 +140,16 @@ static void gic_init_percpu_early(void) {
     gic_write_igrpen(1);
 }
 
-static zx_status_t gic_init(void) {
+static zx_status_t gic_init() {
     LTRACE_ENTRY;
 
     DEBUG_ASSERT(arch_ints_disabled());
 
     uint pidr2 = GICREG(0, GICD_PIDR2);
     uint rev = BITS_SHIFT(pidr2, 7, 4);
-    if (rev != GICV3 && rev != GICV4)
+    if (rev != GICV3 && rev != GICV4) {
         return ZX_ERR_NOT_FOUND;
+    }
 
     uint32_t typer = GICREG(0, GICD_TYPER);
     uint32_t idbits = BITS_SHIFT(typer, 23, 19);
@@ -180,8 +176,8 @@ static zx_status_t gic_init(void) {
 
     // ensure we're running on cpu 0 and that cpu 0 corresponds to affinity 0.0.0.0
     DEBUG_ASSERT(arch_curr_cpu_num() == 0);
-    DEBUG_ASSERT(arch_cpu_num_to_cpu_id(0u) == 0);  // AFF0
-    DEBUG_ASSERT(arch_cpu_num_to_cluster_id(0u) == 0);  // AFF1
+    DEBUG_ASSERT(arch_cpu_num_to_cpu_id(0u) == 0);     // AFF0
+    DEBUG_ASSERT(arch_cpu_num_to_cluster_id(0u) == 0); // AFF1
 
     // TODO(maniscalco): If/when we support AFF2/AFF3, be sure to assert those here.
 
@@ -239,13 +235,13 @@ static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask) {
         if (mx8_gpr_virt) {
             uint32_t regVal;
             // pending irq32 to wakeup core
-            regVal = *(volatile uint32_t *)(mx8_gpr_virt + 0x4);
+            regVal = *(volatile uint32_t*)(mx8_gpr_virt + 0x4);
             regVal |= (1 << 12);
-            *(volatile uint32_t *)(mx8_gpr_virt + 0x4) = regVal;
+            *(volatile uint32_t*)(mx8_gpr_virt + 0x4) = regVal;
             // delay
             spin(50);
             regVal &= ~(1 << 12);
-            *(volatile uint32_t *)(mx8_gpr_virt + 0x4) = regVal;
+            *(volatile uint32_t*)(mx8_gpr_virt + 0x4) = regVal;
         }
     }
 
@@ -255,8 +251,9 @@ static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask) {
 static zx_status_t gic_mask_interrupt(unsigned int vector) {
     LTRACEF("vector %u\n", vector);
 
-    if (vector >= gic_max_int)
+    if (vector >= gic_max_int) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     gic_set_enable(vector, false);
 
@@ -266,8 +263,9 @@ static zx_status_t gic_mask_interrupt(unsigned int vector) {
 static zx_status_t gic_unmask_interrupt(unsigned int vector) {
     LTRACEF("vector %u\n", vector);
 
-    if (vector >= gic_max_int)
+    if (vector >= gic_max_int) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     gic_set_enable(vector, true);
 
@@ -277,7 +275,7 @@ static zx_status_t gic_unmask_interrupt(unsigned int vector) {
 static zx_status_t gic_configure_interrupt(unsigned int vector,
                                            enum interrupt_trigger_mode tm,
                                            enum interrupt_polarity pol) {
-    LTRACEF("vector %u, trigger mode %u, polarity %u\n", vector, tm, pol);
+    LTRACEF("vector %u, trigger mode %d, polarity %d\n", vector, tm, pol);
 
     if (vector <= 15 || vector >= gic_max_int) {
         return ZX_ERR_INVALID_ARGS;
@@ -306,13 +304,16 @@ static zx_status_t gic_get_interrupt_config(unsigned int vector,
                                             enum interrupt_polarity* pol) {
     LTRACEF("vector %u\n", vector);
 
-    if (vector >= gic_max_int)
+    if (vector >= gic_max_int) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
-    if (tm)
+    if (tm) {
         *tm = IRQ_TRIGGER_MODE_EDGE;
-    if (pol)
+    }
+    if (pol) {
         *pol = IRQ_POLARITY_ACTIVE_HIGH;
+    }
 
     return ZX_OK;
 }
@@ -337,8 +338,9 @@ static void gic_handle_irq(iframe* frame) {
     }
 
     // tracking external hardware irqs in this variable
-    if (vector >= 32)
+    if (vector >= 32) {
         CPU_STATS_INC(interrupts);
+    }
 
     uint cpu = arch_curr_cpu_num();
 
@@ -367,7 +369,7 @@ static void gic_handle_fiq(iframe* frame) {
 static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     uint gic_ipi_num = ipi + ipi_base;
 
-    /* filter out targets outside of the range of cpus we care about */
+    // filter out targets outside of the range of cpus we care about
     target &= (cpu_mask_t)(((1UL << arch_max_num_cpus()) - 1));
     if (target != 0) {
         LTRACEF("target 0x%x, gic_ipi %u\n", target, gic_ipi_num);
@@ -377,14 +379,15 @@ static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return ZX_OK;
 }
 
-static void arm_ipi_halt_handler(void* arg) {
-    LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
+static void arm_ipi_halt_handler() {
+    LTRACEF("cpu %u\n", arch_curr_cpu_num());
 
     arch_disable_ints();
-    for (;;) {};
+    for (;;) {
+    }
 }
 
-static void gic_init_percpu(void) {
+static void gic_init_percpu() {
     mp_set_curr_cpu_online(true);
     unmask_interrupt(MP_IPI_GENERIC + ipi_base);
     unmask_interrupt(MP_IPI_RESCHEDULE + ipi_base);
@@ -392,13 +395,13 @@ static void gic_init_percpu(void) {
     unmask_interrupt(MP_IPI_HALT + ipi_base);
 }
 
-static void gic_shutdown(void) {
+static void gic_shutdown() {
     // Turn off all GIC0 interrupts at the distributor.
     GICREG(0, GICD_CTLR) = 0;
 }
 
 // Returns true if any PPIs are enabled on the calling CPU.
-static bool is_ppi_enabled(void) {
+static bool is_ppi_enabled() {
     DEBUG_ASSERT(arch_ints_disabled());
 
     // PPIs are 16-31.
@@ -414,7 +417,7 @@ static bool is_ppi_enabled(void) {
 }
 
 // Returns true if any SPIs are enabled on the calling CPU.
-static bool is_spi_enabled(void) {
+static bool is_spi_enabled() {
     DEBUG_ASSERT(arch_ints_disabled());
 
     uint cpu_num = arch_curr_cpu_num();
@@ -434,7 +437,7 @@ static bool is_spi_enabled(void) {
     return false;
 }
 
-static void gic_shutdown_cpu(void) {
+static void gic_shutdown_cpu() {
     DEBUG_ASSERT(arch_ints_disabled());
 
     // Before we shutdown the GIC, make sure we've migrated/disabled any and all peripheral
@@ -447,11 +450,11 @@ static void gic_shutdown_cpu(void) {
     gic_write_igrpen(0);
 }
 
-static bool gic_msi_is_supported(void) {
+static bool gic_msi_is_supported() {
     return false;
 }
 
-static bool gic_msi_supports_masking(void) {
+static bool gic_msi_supports_masking() {
     return false;
 }
 
@@ -460,9 +463,9 @@ static void gic_msi_mask_unmask(const msi_block_t* block, uint msi_id, bool mask
 }
 
 static zx_status_t gic_msi_alloc_block(uint requested_irqs,
-                                bool can_target_64bit,
-                                bool is_msix,
-                                msi_block_t* out_block) {
+                                       bool can_target_64bit,
+                                       bool is_msix,
+                                       msi_block_t* out_block) {
     PANIC_UNIMPLEMENTED;
 }
 
@@ -503,7 +506,7 @@ static const struct pdev_interrupt_ops gic_ops = {
 
 static void arm_gic_v3_init(const void* driver_data, uint32_t length) {
     ASSERT(length >= sizeof(dcfg_arm_gicv3_driver_t));
-    const dcfg_arm_gicv3_driver_t* driver = driver_data;
+    auto driver = static_cast<const dcfg_arm_gicv3_driver_t*>(driver_data);
     ASSERT(driver->mmio_phys);
 
     LTRACE_ENTRY;
@@ -511,7 +514,7 @@ static void arm_gic_v3_init(const void* driver_data, uint32_t length) {
     // If a GIC driver is already registered to the GIC interface it's means we are running GICv2
     // and we do not need to initialize GICv3. Since we have added both GICv3 and GICv2 in board.mdi,
     // both drivers are initialized
-    if(gicv3_is_gic_registered()) {
+    if (gicv3_is_gic_registered()) {
         return;
     }
 
@@ -545,14 +548,14 @@ static void arm_gic_v3_init(const void* driver_data, uint32_t length) {
     pdev_register_interrupts(&gic_ops);
 
     zx_status_t status =
-        gic_register_sgi_handler(MP_IPI_GENERIC + ipi_base, (void*)&mp_mbx_generic_irq, 0);
+        gic_register_sgi_handler(MP_IPI_GENERIC + ipi_base, &mp_mbx_generic_irq);
     DEBUG_ASSERT(status == ZX_OK);
     status =
-        gic_register_sgi_handler(MP_IPI_RESCHEDULE + ipi_base, (void*)&mp_mbx_reschedule_irq, 0);
+        gic_register_sgi_handler(MP_IPI_RESCHEDULE + ipi_base, &mp_mbx_reschedule_irq);
     DEBUG_ASSERT(status == ZX_OK);
-    status = gic_register_sgi_handler(MP_IPI_INTERRUPT + ipi_base, (void*)&mp_mbx_interrupt_irq, 0);
+    status = gic_register_sgi_handler(MP_IPI_INTERRUPT + ipi_base, &mp_mbx_interrupt_irq);
     DEBUG_ASSERT(status == ZX_OK);
-    status = gic_register_sgi_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
+    status = gic_register_sgi_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler);
     DEBUG_ASSERT(status == ZX_OK);
 
     gicv3_hw_interface_register();

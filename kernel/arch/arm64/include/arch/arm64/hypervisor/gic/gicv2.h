@@ -16,8 +16,4 @@
 
 // clang-format on
 
-__BEGIN_CDECLS;
-
-void gicv2_hw_interface_register(void);
-
-__END_CDECLS;
+void gicv2_hw_interface_register();
