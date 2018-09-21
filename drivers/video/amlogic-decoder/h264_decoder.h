@@ -14,6 +14,15 @@
 
 class H264Decoder : public VideoDecoder {
  public:
+  // This is the state of the actual firmware.
+  enum class DecoderState {
+    // Decoder is in a state ready to decode new frames.
+    kRunning,
+
+    // Decoder is paused waiting for reference frame canvases to be initialized.
+    kWaitingForNewFrames,
+  };
+
   H264Decoder(Owner* owner) : owner_(owner) {}
 
   ~H264Decoder() override;
@@ -25,6 +34,8 @@ class H264Decoder : public VideoDecoder {
   // All H264Decoder errors require creating a new H264Decoder to recover.
   void SetErrorHandler(fit::closure error_handler) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
+  void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
+                         uint32_t height, uint32_t stride) override;
 
  private:
   struct ReferenceFrame {
@@ -52,6 +63,14 @@ class H264Decoder : public VideoDecoder {
   io_buffer_t secondary_firmware_ = {};
   // All H264Decoder errors require creating a new H264Decoder to recover.
   bool fatal_error_ = false;
+  DecoderState state_ = DecoderState::kRunning;
+
+  // These are set in InitializeFrames for use in InitializedFrames.
+  // next_av_scratch0_ contains information about reference frames that firmware
+  // will need to process the video.
+  uint32_t next_av_scratch0_ = 0;
+  uint32_t display_width_ = 0;
+  uint32_t display_height_ = 0;
 
   // TODO(dustingreen): Move these up to the VideoDecoder abstract base class.
   FrameReadyNotifier notifier_;

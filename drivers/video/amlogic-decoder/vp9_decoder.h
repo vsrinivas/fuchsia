@@ -66,6 +66,8 @@ class Vp9Decoder : public VideoDecoder {
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
   void SetInitializeFramesHandler(InitializeFramesHandler handler) override;
   void SetErrorHandler(fit::closure error_handler) override;
+  void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
+                         uint32_t height, uint32_t stride) override;
 
   void SetFrameDataProvider(FrameDataProvider* provider) {
     frame_data_provider_ = provider;

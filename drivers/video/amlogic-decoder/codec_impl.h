@@ -623,7 +623,12 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   void vFailLocked(bool is_fatal, const char* format, va_list args);
 
   void PostSerial(async_dispatcher_t* async, fit::closure to_run);
-  void PostToSharedFidl(fit::closure to_run);
+  // If |promise_not_on_previously_posted_fidl_thread_lambda| is true, the
+  // caller is promising that it's not running in a lambda that was posted to
+  // the fidl thread (running in a FIDL dispatch is fine).
+  void PostToSharedFidl(
+      fit::closure to_run,
+      bool promise_not_on_previously_posted_fidl_thread_lambda = false);
   void PostToStreamControl(fit::closure to_run);
   __WARN_UNUSED_RESULT bool IsStoppingLocked();
   __WARN_UNUSED_RESULT bool IsStopping();

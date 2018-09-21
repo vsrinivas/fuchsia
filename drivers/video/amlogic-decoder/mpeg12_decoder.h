@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MPEG12_DECODER_H_
-#define MPEG12_DECODER_H_
+#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MPEG12_DECODER_H_
+#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MPEG12_DECODER_H_
 
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
@@ -24,6 +24,8 @@ class Mpeg12Decoder : public VideoDecoder {
   void HandleInterrupt() override;
   void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> video_frame) override;
+  void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
+                         uint32_t height, uint32_t stride) override;
 
  private:
   struct ReferenceFrame {
@@ -43,4 +45,4 @@ class Mpeg12Decoder : public VideoDecoder {
   io_buffer_t workspace_buffer_ = {};
 };
 
-#endif  // MPEG12_DECODER_H_
+#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MPEG12_DECODER_H_

@@ -56,8 +56,7 @@ class CodecAdapterH264 : public CodecAdapter {
   zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t frame_count,
                                       uint32_t width, uint32_t height,
                                       uint32_t stride, uint32_t display_width,
-                                      uint32_t display_height,
-                                      std::vector<CodecFrame>* frames_out);
+                                      uint32_t display_height);
 
   void OnCoreCodecFailStream();
 
@@ -84,14 +83,6 @@ class CodecAdapterH264 : public CodecAdapter {
 
   std::vector<const CodecBuffer*> all_output_buffers_;
   std::vector<CodecPacket*> all_output_packets_;
-
-  // True while CoreCodecStopStream() needs InitializeFramesHandler() to cancel
-  // and return.
-  bool is_stopping_ = false;
-  // The value of this bool is only meaningful while InitializeFramesHandler()
-  // is running.
-  bool is_mid_stream_output_config_change_done_ = false;
-  std::condition_variable wake_initialize_frames_handler_;
 
   uint32_t packet_count_total_ = 0;
   uint32_t width_ = 0;

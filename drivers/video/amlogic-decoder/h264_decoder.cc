@@ -313,6 +313,69 @@ void H264Decoder::SetErrorHandler(fit::closure error_handler) {
   error_handler_ = std::move(error_handler);
 }
 
+void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames,
+                                    uint32_t width, uint32_t height,
+                                    uint32_t stride) {
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForNewFrames);
+  uint32_t frame_count = frames.size();
+  for (uint32_t i = 0; i < frame_count; ++i) {
+    auto frame = std::make_shared<VideoFrame>();
+    // While we'd like to pass in IO_BUFFER_CONTIG, since we know the VMO was
+    // allocated with zx_vmo_create_contiguous(), the io_buffer_init_vmo()
+    // treats that flag as an invalid argument, so instead we have to pretend as
+    // if it's a non-contiguous VMO, then validate that the VMO is actually
+    // contiguous later in aml_canvas_config() called by
+    // owner_->ConfigureCanvas() below.
+    zx_status_t status = io_buffer_init_vmo(
+        &frame->buffer, owner_->bti(),
+        frames[i].codec_buffer.data.vmo().vmo_handle.get(), 0, IO_BUFFER_RW);
+    if (status != ZX_OK) {
+      DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n",
+                   status);
+      OnFatalError();
+      return;
+    }
+    io_buffer_cache_flush(&frame->buffer, 0, io_buffer_size(&frame->buffer, 0));
+
+    BarrierAfterFlush();
+
+    frame->uv_plane_offset = width * height;
+    frame->stride = width;
+    frame->width = width;
+    frame->height = height;
+    frame->display_width = display_width_;
+    frame->display_height = display_height_;
+    frame->index = i;
+
+    // can be nullptr
+    frame->codec_packet = frames[i].codec_packet;
+    if (frames[i].codec_packet) {
+      frames[i].codec_packet->SetVideoFrame(frame);
+    }
+
+    // The ConfigureCanvas() calls validate that the VMO is physically
+    // contiguous, regardless of how the VMO was created.
+    auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride,
+                                            frame->height, 0, 0);
+    auto uv_canvas =
+        owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset,
+                                frame->stride, frame->height / 2, 0, 0);
+    if (!y_canvas || !uv_canvas) {
+      OnFatalError();
+      return;
+    }
+
+    AncNCanvasAddr::Get(i)
+        .FromValue((uv_canvas->index() << 16) | (uv_canvas->index() << 8) |
+                   (y_canvas->index()))
+        .WriteTo(owner_->dosbus());
+    video_frames_.push_back(
+        {std::move(frame), std::move(y_canvas), std::move(uv_canvas)});
+  }
+  AvScratch0::Get().FromValue(next_av_scratch0_).WriteTo(owner_->dosbus());
+  state_ = DecoderState::kRunning;
+}
+
 zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
                                           uint32_t height,
                                           uint32_t display_width,
@@ -325,6 +388,8 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
   returned_frames_.clear();
 
   uint64_t frame_vmo_bytes = width * height * 3 / 2;
+  display_width_ = display_width;
+  display_height_ = display_height;
 
   // Regardless of local allocation of VMOs or remote allocation of VMOs, we
   // first represent the frames this way.  This representation conveys the
@@ -342,7 +407,7 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
     }
     zx_status_t initialize_result = initialize_frames_handler_(
         std::move(duplicated_bti), frame_count, width, height, width,
-        display_width, display_height, &frames);
+        display_width, display_height);
     if (initialize_result != ZX_OK) {
       if (initialize_result != ZX_ERR_STOP) {
         DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n",
@@ -381,60 +446,9 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
       });
     }
     next_non_codec_buffer_lifetime_ordinal_++;
+    InitializedFrames(std::move(frames), width, height, width);
   }
 
-  for (uint32_t i = 0; i < frame_count; ++i) {
-    auto frame = std::make_shared<VideoFrame>();
-    // While we'd like to pass in IO_BUFFER_CONTIG, since we know the VMO was
-    // allocated with zx_vmo_create_contiguous(), the io_buffer_init_vmo()
-    // treats that flag as an invalid argument, so instead we have to pretend as
-    // if it's a non-contiguous VMO, then validate that the VMO is actually
-    // contiguous later in aml_canvas_config() called by
-    // owner_->ConfigureCanvas() below.
-    zx_status_t status = io_buffer_init_vmo(
-        &frame->buffer, owner_->bti(),
-        frames[i].codec_buffer.data.vmo().vmo_handle.get(), 0, IO_BUFFER_RW);
-    if (status != ZX_OK) {
-      DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n",
-                   status);
-      return status;
-    }
-    io_buffer_cache_flush(&frame->buffer, 0, io_buffer_size(&frame->buffer, 0));
-
-    BarrierAfterFlush();
-
-    frame->uv_plane_offset = width * height;
-    frame->stride = width;
-    frame->width = width;
-    frame->height = height;
-    frame->display_width = display_width;
-    frame->display_height = display_height;
-    frame->index = i;
-
-    // can be nullptr
-    frame->codec_packet = frames[i].codec_packet;
-    if (frames[i].codec_packet) {
-      frames[i].codec_packet->SetVideoFrame(frame);
-    }
-
-    // The ConfigureCanvas() calls validate that the VMO is physically
-    // contiguous, regardless of how the VMO was created.
-    auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride,
-                                            frame->height, 0, 0);
-    auto uv_canvas =
-        owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset,
-                                frame->stride, frame->height / 2, 0, 0);
-    if (!y_canvas || !uv_canvas) {
-      return ZX_ERR_NO_MEMORY;
-    }
-
-    AncNCanvasAddr::Get(i)
-        .FromValue((uv_canvas->index() << 16) | (uv_canvas->index() << 8) |
-                   (y_canvas->index()))
-        .WriteTo(owner_->dosbus());
-    video_frames_.push_back(
-        {std::move(frame), std::move(y_canvas), std::move(uv_canvas)});
-  }
   return ZX_OK;
 }
 
@@ -468,6 +482,8 @@ void H264Decoder::TryReturnFrames() {
 }
 
 zx_status_t H264Decoder::InitializeStream() {
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
+  state_ = DecoderState::kWaitingForNewFrames;
   BarrierBeforeRelease();  // For reference_mv_buffer_
   if (io_buffer_is_valid(&reference_mv_buffer_))
     io_buffer_release(&reference_mv_buffer_);
@@ -533,6 +549,9 @@ zx_status_t H264Decoder::InitializeStream() {
   uint32_t frame_width = fbl::round_up(mb_width * 16, 32u);
   uint32_t frame_height = mb_height * 16;
 
+  next_av_scratch0_ =
+      (max_reference_size << 24) | (kActualDPBSize << 16) | (max_dpb_size << 8);
+
   // TODO(dustingreen): Plumb min and max frame counts, with max at least
   // kActualDPBSize (24 or higher if possible), and min sufficient to allow
   // decode to proceed without tending to leave the decoder idle for long if the
@@ -546,11 +565,6 @@ zx_status_t H264Decoder::InitializeStream() {
     }
     return status;
   }
-
-  AvScratch0::Get()
-      .FromValue((max_reference_size << 24) | (kActualDPBSize << 16) |
-                 (max_dpb_size << 8))
-      .WriteTo(owner_->dosbus());
 
   return ZX_OK;
 }

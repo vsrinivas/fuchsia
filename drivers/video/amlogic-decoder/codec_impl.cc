@@ -1967,12 +1967,18 @@ void CodecImpl::PostSerial(async_dispatcher_t* async, fit::closure to_run) {
   device_->driver()->PostSerial(async, std::move(to_run));
 }
 
-void CodecImpl::PostToSharedFidl(fit::closure to_run) {
+void CodecImpl::PostToSharedFidl(
+    fit::closure to_run,
+    bool promise_not_on_previously_posted_fidl_thread_lambda) {
   // Re-posting to fidl_thread() is potentially problematic because of
   // how CodecImpl::UnbindLocked() relies on re-posting itself to run "delete
   // this" after any other work posted to fidl_thread() previously - that
   // only works if re-posts to the fidl_thread() aren't allowed.
-  ZX_DEBUG_ASSERT(thrd_current() != fidl_thread());
+  // TODO(dustingreen): Avoid the need for
+  // promise_not_on_previously_posted_fidl_thread_lambda; make enforcement
+  // self-contained while still permitting FIDL dispatch to lambda self-post.
+  ZX_DEBUG_ASSERT(promise_not_on_previously_posted_fidl_thread_lambda ||
+                  (thrd_current() != fidl_thread()));
   device_->driver()->PostToSharedFidl(std::move(to_run));
 }
 
@@ -2205,11 +2211,13 @@ void CodecImpl::onCoreCodecOutputEndOfStream(bool error_detected_before) {
     stream_->SetOutputEndOfStream();
     output_end_of_stream_seen_.notify_all();
     VLOGF("sending OnOutputEndOfStream()\n");
-    PostToSharedFidl([this, stream_lifetime_ordinal = stream_lifetime_ordinal_,
-                      error_detected_before] {
-      binding_.events().OnOutputEndOfStream(stream_lifetime_ordinal,
-                                            error_detected_before);
-    });
+    PostToSharedFidl(
+        [this, stream_lifetime_ordinal = stream_lifetime_ordinal_,
+         error_detected_before] {
+          binding_.events().OnOutputEndOfStream(stream_lifetime_ordinal,
+                                                error_detected_before);
+        },
+        true);
   }  // ~lock
 }
 

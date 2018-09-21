@@ -59,13 +59,13 @@ class VideoDecoder {
   using FrameReadyNotifier = std::function<void(std::shared_ptr<VideoFrame>)>;
   using InitializeFramesHandler =
       std::function<zx_status_t(::zx::bti,
-                                uint32_t,                    // frame_count
-                                uint32_t,                    // width
-                                uint32_t,                    // height
-                                uint32_t,                    // stride
-                                uint32_t,                    // display_width
-                                uint32_t,                    // display_height
-                                std::vector<CodecFrame>*)>;  // frames_out
+                                uint32_t,  // frame_count
+                                uint32_t,  // width
+                                uint32_t,  // height
+                                uint32_t,  // stride
+                                uint32_t,  // display_width
+                                uint32_t   // display_height
+                                )>;
   class Owner {
    public:
     virtual __WARN_UNUSED_RESULT DosRegisterIo* dosbus() = 0;
@@ -96,6 +96,8 @@ class VideoDecoder {
     ZX_ASSERT_MSG(false, "not yet implemented");
   }
   virtual void ReturnFrame(std::shared_ptr<VideoFrame> frame) = 0;
+  virtual void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
+                                 uint32_t height, uint32_t stride) = 0;
   virtual ~VideoDecoder() {}
 
   __WARN_UNUSED_RESULT PtsManager* pts_manager() { return pts_manager_.get(); }

@@ -80,6 +80,9 @@ void Mpeg12Decoder::ResetHardware() {
   old_vld.WriteTo(owner_->dosbus());
 }
 
+void Mpeg12Decoder::InitializedFrames(std::vector<CodecFrame> frames,
+                                      uint32_t width, uint32_t height,
+                                      uint32_t stride) {}
 zx_status_t Mpeg12Decoder::Initialize() {
   uint8_t* data;
   uint32_t firmware_size;

@@ -382,6 +382,66 @@ void Vp9Decoder::ProcessCompletedFrames() {
   last_mpred_buffer_ = std::move(current_mpred_buffer_);
 }
 
+void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames,
+                                   uint32_t width, uint32_t height,
+                                   uint32_t stride) {
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
+  uint32_t frame_vmo_bytes = height * stride + height * stride / 2;
+  for (uint32_t i = 0; i < frames_.size(); i++) {
+    auto video_frame = std::make_shared<VideoFrame>();
+    video_frame->width = width;
+    video_frame->height = height;
+    video_frame->stride = stride;
+    video_frame->uv_plane_offset = video_frame->stride * video_frame->height;
+    video_frame->index = i;
+
+    video_frame->codec_packet = frames[i].codec_packet;
+    if (frames[i].codec_packet) {
+      frames[i].codec_packet->SetVideoFrame(video_frame);
+    }
+
+    assert(video_frame->height % 2 == 0);
+    zx_status_t status = io_buffer_init_vmo(
+        &video_frame->buffer, owner_->bti(),
+        frames[i].codec_buffer.data.vmo().vmo_handle.get(), 0, IO_BUFFER_RW);
+    if (status != ZX_OK) {
+      DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n",
+                   status);
+      return;
+    }
+    size_t vmo_size = io_buffer_size(&video_frame->buffer, 0);
+    if (vmo_size < frame_vmo_bytes) {
+      DECODE_ERROR("Insufficient frame vmo bytes: %ld < %d\n", vmo_size,
+                   frame_vmo_bytes);
+      return;
+    }
+    status = io_buffer_physmap(&video_frame->buffer);
+    if (status != ZX_OK) {
+      DECODE_ERROR("Failed to io_buffer_physmap - status: %d\n", status);
+      return;
+    }
+
+    for (uint32_t i = 1; i < vmo_size / PAGE_SIZE; i++) {
+      if (video_frame->buffer.phys_list[i - 1] + PAGE_SIZE !=
+          video_frame->buffer.phys_list[i]) {
+        DECODE_ERROR("VMO isn't contiguous\n");
+        return;
+      }
+    }
+
+    io_buffer_cache_flush(&video_frame->buffer, 0,
+                          io_buffer_size(&video_frame->buffer, 0));
+    frames_[i]->frame = std::move(video_frame);
+  }
+
+  BarrierAfterFlush();
+
+  ZX_DEBUG_ASSERT(waiting_for_empty_frames_);
+  waiting_for_empty_frames_ = false;
+  // Also updates state_.
+  PrepareNewFrame();
+}
+
 void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
   assert(frame->index < frames_.size());
   auto& ref_frame = frames_[frame->index];
@@ -842,6 +902,7 @@ Vp9Decoder::Frame::~Frame() {
 
 bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
   assert(!current_frame_);
+  ZX_DEBUG_ASSERT(!waiting_for_empty_frames_);
   Frame* new_frame = nullptr;
   for (uint32_t i = 0; i < frames_.size(); i++) {
     if (frames_[i]->refcount == 0) {
@@ -874,7 +935,6 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
       frames_[i]->frame.reset();
     }
 
-    std::vector<CodecFrame> frames;
     uint32_t stride = fbl::round_up(params->width, 32u);
 
     uint32_t frame_vmo_bytes =
@@ -890,7 +950,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
       }
       zx_status_t initialize_result = initialize_frames_handler_(
           std::move(duplicated_bti), frames_.size(), params->width,
-          params->height, stride, display_width, display_height, &frames);
+          params->height, stride, display_width, display_height);
       if (initialize_result != ZX_OK) {
         if (initialize_result != ZX_ERR_STOP) {
           DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n",
@@ -898,7 +958,10 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
         }
         return false;
       }
+      waiting_for_empty_frames_ = true;
+      return false;
     } else {
+      std::vector<CodecFrame> frames;
       for (uint32_t i = 0; i < frames_.size(); i++) {
         ::zx::vmo frame_vmo;
         zx_status_t vmo_create_result =
@@ -927,57 +990,15 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
         });
       }
       next_non_codec_buffer_lifetime_ordinal_++;
+      waiting_for_empty_frames_ = true;
+      InitializedFrames(std::move(frames), params->width, params->height,
+                        stride);
+      // InitializedFrames will call back into PrepareNewFrame to actually
+      // prepare for the decoding, so this call should return false so that the
+      // outer PrepareNewFrame call exits without trying to prepare decoding
+      // again.
+      return false;
     }
-
-    for (uint32_t i = 0; i < frames_.size(); i++) {
-      auto video_frame = std::make_shared<VideoFrame>();
-      video_frame->width = params->width;
-      video_frame->height = params->height;
-      video_frame->stride = stride;
-      video_frame->uv_plane_offset = video_frame->stride * video_frame->height;
-      video_frame->index = i;
-
-      video_frame->codec_packet = frames[i].codec_packet;
-      if (frames[i].codec_packet) {
-        frames[i].codec_packet->SetVideoFrame(video_frame);
-      }
-
-      assert(video_frame->height % 2 == 0);
-      zx_status_t status = io_buffer_init_vmo(
-          &video_frame->buffer, owner_->bti(),
-          frames[i].codec_buffer.data.vmo().vmo_handle.get(), 0, IO_BUFFER_RW);
-      if (status != ZX_OK) {
-        DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n",
-                     status);
-        return false;
-      }
-      size_t vmo_size = io_buffer_size(&video_frame->buffer, 0);
-      if (vmo_size < frame_vmo_bytes) {
-        DECODE_ERROR("Insufficient frame vmo bytes: %ld < %d\n", vmo_size,
-                     frame_vmo_bytes);
-        return false;
-      }
-      status = io_buffer_physmap(&video_frame->buffer);
-      if (status != ZX_OK) {
-        DECODE_ERROR("Failed to io_buffer_physmap - status: %d\n", status);
-        return false;
-      }
-
-      for (uint32_t i = 1; i < vmo_size / PAGE_SIZE; i++) {
-        if (video_frame->buffer.phys_list[i - 1] + PAGE_SIZE !=
-            video_frame->buffer.phys_list[i]) {
-          DECODE_ERROR("VMO isn't contiguous\n");
-          return false;
-        }
-      }
-
-      io_buffer_cache_flush(&video_frame->buffer, 0,
-                            io_buffer_size(&video_frame->buffer, 0));
-
-      frames_[i]->frame = std::move(video_frame);
-    }
-
-    BarrierAfterFlush();
   }
 
   new_frame->frame->display_width = display_width;
