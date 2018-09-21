@@ -8,8 +8,6 @@ executable("bin") {
   output_name = "guest"
 
   sources = [
-    "dump.cc",
-    "dump.h",
     "launch.cc",
     "launch.h",
     "list.cc",

@@ -33,7 +33,6 @@ class InstanceControllerImpl : public fuchsia::guest::InstanceController {
   zx::socket TakeSocket() { return std::move(server_socket_); }
 
   // |fuchsia::guest::InstanceController|
-  void GetPhysicalMemory(GetPhysicalMemoryCallback callback) override;
   void GetSerial(GetSerialCallback callback) override;
   void GetViewProvider(GetViewProviderCallback callback) override;
   void GetInputDispatcher(

@@ -7,7 +7,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 
-#include "garnet/bin/guest/cli/dump.h"
 #include "garnet/bin/guest/cli/launch.h"
 #include "garnet/bin/guest/cli/list.h"
 #include "garnet/bin/guest/cli/serial.h"
@@ -48,23 +47,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     return false;
   }
   fxl::StringView cmd_view(argv[1]);
-  if (cmd_view == "dump" && argc == 6) {
-    uint32_t env_id;
-    if (!parse_number(argv[2], "environment ID", &env_id))
-      return false;
-    uint32_t cid;
-    if (!parse_number(argv[3], "context ID", &cid))
-      return false;
-    zx_vaddr_t addr;
-    if (!parse_number(argv[4], "address", &addr, fxl::Base::k16))
-      return false;
-    size_t len;
-    if (!parse_number(argv[5], "length", &len, fxl::Base::k16))
-      return false;
-    *func = [env_id, cid, addr, len, context] {
-      handle_dump(env_id, cid, addr, len, context);
-    };
-  } else if (cmd_view == "launch" && argc >= 3) {
+  if (cmd_view == "launch" && argc >= 3) {
     *func = [argc, argv, loop, context]() {
       handle_launch(argc - 2, argv + 2, loop, context);
     };

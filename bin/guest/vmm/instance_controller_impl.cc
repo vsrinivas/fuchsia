@@ -26,11 +26,6 @@ InstanceControllerImpl::InstanceControllerImpl(
   context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
-void InstanceControllerImpl::GetPhysicalMemory(
-    GetPhysicalMemoryCallback callback) {
-  callback(duplicate(vmo_, ZX_RIGHT_SAME_RIGHTS));
-}
-
 void InstanceControllerImpl::GetSerial(GetSerialCallback callback) {
   callback(duplicate(client_socket_, ZX_RIGHT_SAME_RIGHTS));
 }
