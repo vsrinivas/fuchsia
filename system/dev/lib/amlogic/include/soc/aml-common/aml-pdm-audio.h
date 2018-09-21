@@ -18,8 +18,8 @@ class AmlPdmDevice {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(AmlPdmDevice);
 
-    static fbl::unique_ptr<AmlPdmDevice> Create(ddk::MmioBlock pdm_mmio,
-                                                ddk::MmioBlock audio_mmio,
+    static fbl::unique_ptr<AmlPdmDevice> Create(ddk::MmioBuffer pdm_mmio,
+                                                ddk::MmioBuffer audio_mmio,
                                                 ee_audio_mclk_src_t pdm_clk_src,
                                                 uint32_t sclk_div,
                                                 uint32_t dclk_div,
@@ -61,7 +61,7 @@ public:
 private:
     friend class fbl::unique_ptr<AmlPdmDevice>;
 
-    AmlPdmDevice(ddk::MmioBlock pdm_mmio, ddk::MmioBlock audio_mmio,
+    AmlPdmDevice(ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio,
                  ee_audio_mclk_src_t clk_src, uint32_t sysclk_div, uint32_t dclk_div,
                  aml_toddr_t toddr, uint32_t fifo_depth)
         : fifo_depth_(fifo_depth),
@@ -110,6 +110,6 @@ private:
     const uint32_t sysclk_div_;
     const uint32_t dclk_div_;
     const zx_off_t toddr_base_; // base offset of frddr ch used by this instance
-    const ddk::MmioBlock pdm_mmio_;
-    const ddk::MmioBlock audio_mmio_;
+    const ddk::MmioBuffer pdm_mmio_;
+    const ddk::MmioBuffer audio_mmio_;
 };

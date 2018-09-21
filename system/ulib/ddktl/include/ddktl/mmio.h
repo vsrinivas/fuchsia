@@ -4,72 +4,80 @@
 
 #pragma once
 
+#include <string.h>
+
+#include <ddk/debug.h>
+#include <ddk/mmio-buffer.h>
 #include <fbl/macros.h>
 #include <fbl/type_support.h>
+#include <fbl/unique_ptr.h>
 #include <hw/arch_ops.h>
+#include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 
-/*
-    MmioBlock is used to hold a reference to a block of memory mapped I/O, intended
-    to be used in platform device drivers.
-*/
 namespace ddk {
 
-class MmioBlock {
+class MmioPinnedBuffer;
+
+// MmioBuffer is wrapper around mmio_block_t.
+class MmioBuffer {
 
 public:
-    friend class Pdev;
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioBuffer);
 
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioBlock);
-    DISALLOW_NEW;
+    MmioBuffer(mmio_buffer_t& mmio)
+        : mmio_(mmio), ptr_(reinterpret_cast<uintptr_t>(mmio.vaddr)) {
+        ZX_ASSERT(mmio_.vaddr != nullptr);
+    }
 
-    MmioBlock() = default;
+    ~MmioBuffer() {
+        mmio_buffer_release(&mmio_);
+    }
 
-    MmioBlock(MmioBlock&& other) {
+    MmioBuffer(MmioBuffer&& other) {
         transfer(fbl::move(other));
     }
 
-    ~MmioBlock() {
-        // If we have a valid pointer, unmap on the way out
-        if (isMapped()) {
-            __UNUSED zx_status_t status;
-            status = zx_vmar_unmap(zx_vmar_root_self(), ptr_, len_);
-            ZX_DEBUG_ASSERT(status == ZX_OK);
-        }
-    }
-    // Allow assignment from an rvalue
-    MmioBlock& operator=(MmioBlock&& other) {
+    MmioBuffer& operator=(MmioBuffer&& other) {
         transfer(fbl::move(other));
         return *this;
     }
 
+    static zx_status_t Create(zx_off_t offset, size_t size, zx::vmo vmo, uint32_t cache_policy,
+                              fbl::unique_ptr<MmioBuffer>* mmio_buffer) {
+        mmio_buffer_t mmio;
+        zx_status_t status = mmio_buffer_init(&mmio, offset, size, vmo.release(), cache_policy);
+        if (status == ZX_OK) {
+            *mmio_buffer = fbl::make_unique<MmioBuffer>(mmio);
+        }
+        return status;
+    }
+
     void reset() {
-        len_ = 0;
-        ptr_ = 0;
+        memset(&mmio_, 0, sizeof(mmio_));
     }
 
     void Info() const {
-        zxlogf(INFO, "ptr = %lx\n", ptr_);
-        zxlogf(INFO, "len = %lu\n", len_);
+        zxlogf(INFO, "vaddr = %p\n", mmio_.vaddr);
+        zxlogf(INFO, "size = %lu\n", mmio_.size);
     }
 
-    bool isMapped() const {
-        return (ptr_ != 0);
-    }
     void* get() const {
-        return reinterpret_cast<void*>(ptr_);
+        return mmio_.vaddr;
     }
 
-    /*
-        The following methods assume that the MmioBlock instance has been
-        successfully initialized by the friend class Pdev.  Method calls against
-        an uninitialized instance will result in a crash.
+    zx_status_t Pin(const zx::bti& bti, fbl::unique_ptr<MmioPinnedBuffer>* pinned_buffer) {
+        mmio_pinned_buffer_t pinned;
+        zx_status_t status = mmio_buffer_pin(&mmio_, bti.get(), &pinned);
+        if (status == ZX_OK) {
+            *pinned_buffer = fbl::make_unique<MmioPinnedBuffer>(pinned);
+        }
+        return status;
+    }
 
-        isMapped() may be used at any time to determine if the MmioBlock instance
-        is safe for these operations.
-    */
+    // TODO: Consider removing the following in favor of hwreg::RegisterIo.
     uint32_t Read32(zx_off_t offs) const {
         return Read<uint32_t>(offs);
     }
@@ -89,20 +97,17 @@ public:
     void ClearBits32(uint32_t mask, zx_off_t offs) const {
         ClearBits<uint32_t>(mask, offs);
     }
+
 private:
-    void transfer(MmioBlock&& other) {
-        len_ = other.len_;
+    void transfer(MmioBuffer&& other) {
+        mmio_ = other.mmio_;
         ptr_ = other.ptr_;
         other.reset();
     }
 
-    MmioBlock(void* ptr, size_t len)
-        : ptr_(reinterpret_cast<uintptr_t>(ptr)),
-          len_(len) {}
-
     template <typename T>
     T Read(zx_off_t offs) const {
-        ZX_DEBUG_ASSERT(offs + sizeof(T) < len_);
+        ZX_DEBUG_ASSERT(offs + sizeof(T) < mmio_.size);
         ZX_DEBUG_ASSERT(ptr_);
         return *reinterpret_cast<volatile T*>(ptr_ + offs);
     }
@@ -114,7 +119,7 @@ private:
 
     template <typename T>
     void Write(T val, zx_off_t offs) const {
-        ZX_DEBUG_ASSERT(offs + sizeof(T) < len_);
+        ZX_DEBUG_ASSERT(offs + sizeof(T) < mmio_.size);
         ZX_DEBUG_ASSERT(ptr_);
         *reinterpret_cast<volatile T*>(ptr_ + offs) = val;
         hw_mb();
@@ -132,8 +137,48 @@ private:
         Write<T>(val & ~mask, offs);
     }
 
-    uintptr_t ptr_ = 0;
-    size_t len_ = 0;
+    mmio_buffer_t mmio_;
+    uintptr_t ptr_;
+};
+
+// MmioPinnedBuffer is wrapper around mmio_pinned_buffer_t.
+class MmioPinnedBuffer {
+
+public:
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioPinnedBuffer);
+
+    MmioPinnedBuffer(mmio_pinned_buffer_t pinned)
+        : pinned_(pinned) {
+        ZX_ASSERT(pinned_.paddr != 0);
+    }
+
+    ~MmioPinnedBuffer() {
+        mmio_buffer_unpin(&pinned_);
+    }
+
+    MmioPinnedBuffer(MmioPinnedBuffer&& other) {
+        transfer(fbl::move(other));
+    }
+
+    MmioPinnedBuffer& operator=(MmioPinnedBuffer&& other) {
+        transfer(fbl::move(other));
+        return *this;
+    }
+
+    void reset() {
+        memset(&pinned_, 0, sizeof(pinned_));
+    }
+
+    zx_paddr_t get_paddr() const {
+        return pinned_.paddr;
+    }
+
+private:
+    void transfer(MmioPinnedBuffer&& other) {
+        pinned_ = other.pinned_;
+        other.reset();
+    }
+    mmio_pinned_buffer_t pinned_;
 };
 
 } //namespace ddk

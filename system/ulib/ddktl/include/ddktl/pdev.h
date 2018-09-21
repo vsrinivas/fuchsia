@@ -12,6 +12,7 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
@@ -26,7 +27,7 @@ public:
     static fbl::RefPtr<Pdev> Create(zx_device_t* parent);
     void ShowInfo();
 
-    MmioBlock GetMmio(uint32_t index);
+    zx_status_t GetMmio(uint32_t index, fbl::unique_ptr<MmioBuffer>* mmio);
 
     zx_status_t MapInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out) {
         return pdev_get_interrupt(&pdev_, index, flags,
@@ -63,4 +64,4 @@ private:
     pdev_device_info_t pdev_info_ = {};
 };
 
-} //namespace ddk
+} // namespace ddk

@@ -19,7 +19,7 @@ public:
     static constexpr int32_t kSclkDivBits = 10;
     static constexpr int32_t kLRclkDivBits = 10;
 
-    static fbl::unique_ptr<AmlTdmDevice> Create(ddk::MmioBlock mmio,
+    static fbl::unique_ptr<AmlTdmDevice> Create(ddk::MmioBuffer mmio,
                                                 ee_audio_mclk_src_t src,
                                                 aml_tdm_out_t tdm_dev,
                                                 aml_frddr_t frddr_dev,
@@ -75,10 +75,10 @@ private:
     const ee_audio_mclk_src_t clk_src_;
     const zx_off_t frddr_base_;    // base offset of frddr ch used by this instance
     const zx_off_t tdm_base_;      // base offset of our tdmout block
-    const ddk::MmioBlock mmio_;
+    const ddk::MmioBuffer mmio_;
     friend class fbl::unique_ptr<AmlTdmDevice>;
 
-    AmlTdmDevice(ddk::MmioBlock mmio, ee_audio_mclk_src_t clk_src,
+    AmlTdmDevice(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src,
         aml_tdm_out_t tdm, aml_frddr_t frddr, aml_tdm_mclk_t mclk,
         uint32_t fifo_depth) :
         fifo_depth_(fifo_depth),

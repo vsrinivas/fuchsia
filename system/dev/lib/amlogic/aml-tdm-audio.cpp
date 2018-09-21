@@ -7,16 +7,11 @@
 #include <soc/aml-common/aml-tdm-audio.h>
 
 //static
-fbl::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBlock mmio,
+fbl::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBuffer mmio,
                                                    ee_audio_mclk_src_t src,
                                                    aml_tdm_out_t tdm_dev,
                                                    aml_frddr_t frddr_dev,
                                                    aml_tdm_mclk_t mclk) {
-
-    if (!mmio.isMapped()) {
-        zxlogf(ERROR, "%s: MmioBlock not initialized!\n", __func__);
-        return nullptr;
-    }
 
     //A and B FRDDR have 128 lines in fifo, C has 256
     uint32_t fifo_depth = 128;

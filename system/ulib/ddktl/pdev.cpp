@@ -20,19 +20,15 @@ void Pdev::ShowInfo() {
     zxlogf(INFO, "bti count           = %d\n", pdev_info_.bti_count);
 }
 
-MmioBlock Pdev::GetMmio(uint32_t index) {
+zx_status_t Pdev::GetMmio(uint32_t index, fbl::unique_ptr<MmioBuffer>* mmio) {
+    pdev_mmio_t pdev_mmio;
 
-    void* ptr;
-    size_t len;
-    zx::vmo vmo;
-
-    zx_status_t res = pdev_map_mmio(&pdev_, index,
-                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &ptr,
-                                    &len, vmo.reset_and_get_address());
-    if (res != ZX_OK) {
-        return MmioBlock();
+    zx_status_t status = pdev_get_mmio(&pdev_, index, &pdev_mmio);
+    if (status != ZX_OK) {
+        return status;
     }
-    return MmioBlock(ptr, len);
+    return MmioBuffer::Create(pdev_mmio.offset, pdev_mmio.size, zx::vmo(pdev_mmio.vmo),
+                              ZX_CACHE_POLICY_UNCACHED_DEVICE, mmio);
 }
 
 I2cChannel Pdev::GetI2cChan(uint32_t index) {
@@ -87,4 +83,4 @@ fbl::RefPtr<Pdev> Pdev::Create(zx_device_t* parent) {
     return fbl::move(pdev);
 }
 
-} //namespace ddk
+} // namespace ddk

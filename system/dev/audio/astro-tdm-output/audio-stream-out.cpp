@@ -45,7 +45,12 @@ zx_status_t AstroAudioStreamOut::InitPdev() {
         return status;
     }
 
-    aml_audio_ = AmlTdmDevice::Create(fbl::move(pdev_->GetMmio(0)),
+    fbl::unique_ptr<ddk::MmioBuffer> mmio;
+    status = pdev_->GetMmio(0, &mmio);
+    if (status != ZX_OK) {
+        return status;
+    }
+    aml_audio_ = AmlTdmDevice::Create(fbl::move(*mmio.release()),
                                       HIFI_PLL, TDM_OUT_B, FRDDR_B, MCLK_A);
     if (aml_audio_ == nullptr) {
         zxlogf(ERROR, "%s failed to create tdm device\n", __func__);

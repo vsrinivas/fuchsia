@@ -58,18 +58,12 @@ static const uint32_t lpf2osr64[] = {
 constexpr uint32_t kLpf2osr64Len = static_cast<uint32_t>(countof(lpf2osr64));
 
 //static
-fbl::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBlock pdm_mmio,
-                                                   ddk::MmioBlock audio_mmio,
+fbl::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
+                                                   ddk::MmioBuffer audio_mmio,
                                                    ee_audio_mclk_src_t pdm_clk_src,
                                                    uint32_t sysclk_div,
                                                    uint32_t dclk_div,
                                                    aml_toddr_t toddr_dev) {
-
-    if (!(pdm_mmio.isMapped() && audio_mmio.isMapped())) {
-        zxlogf(ERROR, "%s: MmioBlock not initialized!\n", __func__);
-        return nullptr;
-    }
-
     //A and B FRDDR have 128 lines in fifo, C has 256
     uint32_t fifo_depth = 128;
     if (toddr_dev == TODDR_A) {
