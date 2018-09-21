@@ -6,6 +6,7 @@
         "//garnet/examples/fidl/echo2_client_cpp",
         "//garnet/examples/fidl/echo2_client_go",
         "//garnet/examples/fidl/echo2_client_rust",
+        "//garnet/examples/fidl/echo2_client_rust_synchronous",
         "//garnet/examples/fidl/echo2_server_c",
         "//garnet/examples/fidl/echo2_server_cpp",
         "//garnet/examples/fidl/echo2_server_go",

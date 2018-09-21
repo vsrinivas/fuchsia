@@ -510,6 +510,7 @@ pub mod sync {
     use super::*;
 
     /// A synchronous client for making FIDL calls.
+    #[derive(Debug)]
     pub struct Client {
         // Underlying channel
         channel: zx::Channel,
@@ -525,6 +526,11 @@ pub mod sync {
         /// Create a new synchronous FIDL client.
         pub fn new(channel: zx::Channel) -> Self {
             Client { channel, buf: zx::MessageBuf::new() }
+        }
+
+        /// Get the underlying channel out of the client.
+        pub fn into_channel(self) -> zx::Channel {
+            self.channel
         }
 
         /// Send a new message.

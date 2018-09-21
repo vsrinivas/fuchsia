@@ -47,9 +47,8 @@ use {
 pub mod client {
     use super::*;
 
-    #[inline]
-
     /// Connect to a FIDL service using the provided namespace prefix.
+    #[inline]
     pub fn connect_to_service_at<S: ServiceMarker>(service_prefix: &str)
         -> Result<S::Proxy, Error>
     {

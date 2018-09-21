@@ -62,6 +62,65 @@ pub trait {{ $interface.Name }}ProxyInterface: Send + Sync {
 	{{- end }}
 }
 
+#[derive(Debug)]
+pub struct {{ $interface.Name }}SynchronousProxy {
+	client: fidl::client::sync::Client,
+}
+
+impl {{ $interface.Name }}SynchronousProxy {
+	pub fn new(channel: zx::Channel) -> Self {
+		Self { client: fidl::client::sync::Client::new(channel) }
+	}
+
+	pub fn into_channel(self) -> zx::Channel {
+		self.client.into_channel()
+	}
+
+	{{- range $method := $interface.Methods }}
+	{{- if $method.HasRequest }}
+        {{- range $index, $line := $method.DocStrings }}
+          {{if ne "" $line }}
+          ///{{ $line }}
+          {{ end }}
+        {{- end }}
+	pub fn {{ $method.Name }}(&mut self,
+		{{- range $request := $method.Request }}
+		mut {{ $request.Name }}: {{ $request.BorrowedType }},
+		{{- end }}
+		{{- if $method.HasResponse -}}
+		___deadline: zx::Time,
+		{{- end -}}
+	) -> Result<(
+		{{- range $index, $response := $method.Response -}}
+		{{- if (eq $index 0) -}} {{ $response.Type }}
+		{{- else -}}, {{ $response.Type }} {{- end -}}
+		{{- end -}}
+	), fidl::Error> {
+		{{- if $method.HasResponse -}}
+			self.client.send_query(&mut (
+				{{- range $index, $request := $method.Request -}}
+				{{- if (eq $index 0) -}} {{ $request.Name }}
+				{{- else -}}, {{ $request.Name }} {{- end -}}
+				{{- end -}}
+				),
+				{{ $method.Ordinal }},
+				___deadline,
+			)
+		{{- else -}}
+			self.client.send(&mut (
+				{{- range $index, $request := $method.Request -}}
+				{{- if (eq $index 0) -}} {{ $request.Name }}
+				{{- else -}}, {{ $request.Name }} {{- end -}}
+				{{- end -}}
+				),
+				{{ $method.Ordinal }},
+			)
+		{{- end -}}
+	}
+	{{- end -}}
+	{{- end }}
+}
+
 #[derive(Debug, Clone)]
 pub struct {{ $interface.Name }}Proxy {
 	client: fidl::client::Client,
