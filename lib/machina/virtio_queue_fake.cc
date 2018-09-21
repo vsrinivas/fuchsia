@@ -12,23 +12,23 @@
 namespace machina {
 
 VirtioQueueFake::VirtioQueueFake(VirtioQueue* queue, uint16_t queue_size)
-    : queue_(queue), ring_(&queue_->ring_), queue_size_(queue_size) {
-  size_t desc_size = sizeof(*VirtioRing::desc) * queue_size;
-  size_t avail_size = sizeof(*VirtioRing::avail) +
-                      (sizeof(*vring_avail::ring) * queue_size) +
-                      sizeof(*VirtioRing::used_event);
-  size_t used_size = sizeof(*VirtioRing::used) +
-                     (sizeof(*vring_used::ring) * queue_size) +
-                     sizeof(*VirtioRing::avail_event);
-  zx_status_t status = phys_mem_.Init(desc_size + avail_size + used_size);
-  FXL_CHECK(status == ZX_OK) << "Failed to initialize guest physical memory";
+    : queue_(queue),
+      ring_(&queue_->ring_),
+      queue_size_(queue_size),
+      desc_buf_(sizeof(*VirtioRing::desc) * queue_size),
+      avail_buf_(sizeof(*VirtioRing::avail) +
+                 (sizeof(*vring_avail::ring) * queue_size) +
+                 sizeof(*VirtioRing::used_event)),
+      used_buf_(sizeof(*VirtioRing::used) +
+                (sizeof(*vring_used::ring) * queue_size) +
+                sizeof(*VirtioRing::avail_event)) {
+  std::fill(desc_buf_.begin(), desc_buf_.end(), 0);
+  std::fill(avail_buf_.begin(), avail_buf_.end(), 0);
+  std::fill(used_buf_.begin(), used_buf_.end(), 0);
 
-  auto desc = reinterpret_cast<zx_gpaddr_t>(phys_mem_.as<void>(0, desc_size));
-  auto avail =
-      reinterpret_cast<zx_gpaddr_t>(phys_mem_.as<void>(desc_size, avail_size));
-  auto used = reinterpret_cast<zx_gpaddr_t>(
-      phys_mem_.as<void>(desc_size + avail_size, used_size));
-  queue_->Configure(queue_size, desc, avail, used);
+  queue_->Configure(queue_size, reinterpret_cast<zx_gpaddr_t>(desc_buf_.data()),
+                    reinterpret_cast<zx_gpaddr_t>(avail_buf_.data()),
+                    reinterpret_cast<zx_gpaddr_t>(used_buf_.data()));
 
   // Disable interrupt generation.
   ring_->used->flags = 1;
