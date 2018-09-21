@@ -190,12 +190,17 @@ AssociatingState::AssociatingState(RemoteClient* client, const MgmtFrame<Associa
     while (reader.is_valid()) {
         const ElementHeader* header = reader.peek();
         ZX_DEBUG_ASSERT(header != nullptr);
-        if (header->id == SsidElement::element_id()) {
+        switch (header->id) {
+        case element_id::kSsid:
             ssid_element = reader.read<SsidElement>();
-        } else if (header->id == RsnElement::element_id()) {
+            break;
+        case element_id::kRsn:
             rsn_element = reader.read<RsnElement>();
+            break;
+        default:
+            reader.skip(*header);
+            break;
         }
-        reader.skip(*header);
     }
 
     ZX_DEBUG_ASSERT(ssid_element != nullptr);

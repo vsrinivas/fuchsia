@@ -114,6 +114,18 @@ zx_status_t WriteHtOperation(ElementWriter* w, const HtOperation& hto) {
     return ZX_OK;
 }
 
+zx_status_t CreateStartRequest(MlmeMsg<wlan_mlme::StartRequest>* out_msg) {
+    auto req = wlan_mlme::StartRequest::New();
+    std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
+    req->ssid.reset(std::move(ssid));
+    req->bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE;
+    req->beacon_period = kBeaconPeriodTu;
+    req->dtim_period = kDtimPeriodTu;
+    req->channel = kBssChannel.primary;
+
+    return WriteServiceMessage(req.get(), fuchsia_wlan_mlme_MLMEStartReqOrdinal, out_msg);
+}
+
 zx_status_t CreateJoinRequest(MlmeMsg<wlan_mlme::JoinRequest>* out_msg) {
     common::MacAddr bssid(kBssid1);
 
@@ -166,6 +178,17 @@ zx_status_t CreateAuthRequest(MlmeMsg<wlan_mlme::AuthenticateRequest>* out_msg) 
     return WriteServiceMessage(req.get(), fuchsia_wlan_mlme_MLMEAuthenticateReqOrdinal, out_msg);
 }
 
+zx_status_t CreateAuthResponse(MlmeMsg<wlan_mlme::AuthenticateResponse>* out_msg,
+                               wlan_mlme::AuthenticateResultCodes result_code) {
+    common::MacAddr client(kClientAddress);
+
+    auto resp = wlan_mlme::AuthenticateResponse::New();
+    std::memcpy(resp->peer_sta_address.mutable_data(), client.byte, common::kMacAddrLen);
+    resp->result_code = result_code;
+
+    return WriteServiceMessage(resp.get(), fuchsia_wlan_mlme_MLMEAuthenticateRespOrdinal, out_msg);
+}
+
 zx_status_t CreateAssocRequest(MlmeMsg<wlan_mlme::AssociateRequest>* out_msg) {
     common::MacAddr bssid(kBssid1);
 
@@ -174,6 +197,18 @@ zx_status_t CreateAssocRequest(MlmeMsg<wlan_mlme::AssociateRequest>* out_msg) {
     req->rsn.reset();
 
     return WriteServiceMessage(req.get(), fuchsia_wlan_mlme_MLMEAssociateReqOrdinal, out_msg);
+}
+
+zx_status_t CreateAssocResponse(MlmeMsg<wlan_mlme::AssociateResponse>* out_msg,
+                                wlan_mlme::AssociateResultCodes result_code) {
+    common::MacAddr client(kClientAddress);
+
+    auto resp = wlan_mlme::AssociateResponse::New();
+    std::memcpy(resp->peer_sta_address.mutable_data(), client.byte, common::kMacAddrLen);
+    resp->result_code = result_code;
+    resp->association_id = kAid;
+
+    return WriteServiceMessage(resp.get(), fuchsia_wlan_mlme_MLMEAssociateRespOrdinal, out_msg);
 }
 
 zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>* out_packet) {
@@ -224,7 +259,35 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
     return ZX_OK;
 }
 
-zx_status_t CreateAuthFrame(fbl::unique_ptr<Packet>* out_packet) {
+zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>* out_packet) {
+    common::MacAddr bssid(kBssid1);
+    common::MacAddr client(kClientAddress);
+
+    MgmtFrame<Authentication> frame;
+    auto status = CreateMgmtFrame(&frame);
+    if (status != ZX_OK) { return status; }
+
+    auto hdr = frame.hdr();
+    hdr->addr1 = bssid;
+    hdr->addr2 = client;
+    hdr->addr3 = bssid;
+    frame.FillTxInfo();
+
+    auto auth = frame.body();
+    auth->auth_algorithm_number = AuthAlgorithm::kOpenSystem;
+    auth->auth_txn_seq_number = 1;
+    auth->status_code = 0;  // Reserved: explicitly set to 0
+
+    auto pkt = frame.Take();
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    pkt->CopyCtrlFrom(rx_info);
+
+    *out_packet = fbl::move(pkt);
+
+    return ZX_OK;
+}
+
+zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
@@ -243,6 +306,44 @@ zx_status_t CreateAuthFrame(fbl::unique_ptr<Packet>* out_packet) {
     auth->auth_txn_seq_number = 2;
     auth->status_code = status_code::kSuccess;
 
+    auto pkt = frame.Take();
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    pkt->CopyCtrlFrom(rx_info);
+
+    *out_packet = fbl::move(pkt);
+
+    return ZX_OK;
+}
+
+zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet) {
+    common::MacAddr bssid(kBssid1);
+    common::MacAddr client(kClientAddress);
+
+    // arbitrarily large reserved len; will shrink down later
+    size_t reserved_len = 4096;
+    MgmtFrame<AssociationRequest> frame;
+    auto status = CreateMgmtFrame(&frame, reserved_len);
+    if (status != ZX_OK) { return status; }
+
+    auto hdr = frame.hdr();
+    hdr->addr1 = bssid;
+    hdr->addr2 = client;
+    hdr->addr3 = bssid;
+    frame.FillTxInfo();
+
+    auto assoc = frame.body();
+    CapabilityInfo cap = {};
+    cap.set_short_preamble(1);
+    cap.set_ess(1);
+    assoc->cap = cap;
+    assoc->listen_interval = kListenInterval;
+
+    size_t elems_len = sizeof(SsidElement) + sizeof(kSsid) + sizeof(kRsne);
+    ElementWriter w(assoc->elements, elems_len);
+    if (!w.write<SsidElement>(kSsid, sizeof(kSsid))) { return ZX_ERR_IO; }
+    if (!w.write<RsnElement>(kRsne, sizeof(kRsne))) { return ZX_ERR_IO; }
+
+    frame.set_body_len(sizeof(AssociationRequest) + elems_len);
     auto pkt = frame.Take();
     wlan_rx_info_t rx_info{.rx_flags = 0};
     pkt->CopyCtrlFrom(rx_info);

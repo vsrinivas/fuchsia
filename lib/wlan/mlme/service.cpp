@@ -180,7 +180,7 @@ zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& 
     auto ind = wlan_mlme::AssociateIndication::New();
     peer_sta.CopyTo(ind->peer_sta_address.mutable_data());
     ind->listen_interval = listen_interval;
-    ind->ssid = ::fidl::VectorPtr<uint8_t>::New(ssid_element.len());
+    ind->ssid = ::fidl::VectorPtr<uint8_t>::New(ssid_element.body_len());
     std::memcpy(ind->ssid->data(), ssid_element.ssid, ssid_element.body_len());
 
     if (rsn_elem != nullptr) {

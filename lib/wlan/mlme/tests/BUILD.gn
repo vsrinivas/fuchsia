@@ -7,6 +7,7 @@ import("//build/package.gni")
 group("tests") {
   testonly = true
   public_deps = [
+    ":ap_tests",
     ":client_tests",
     ":common_tests",
     ":dispatcher_tests",
@@ -41,6 +42,26 @@ source_set("test_main") {
   ]
 
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+}
+
+executable("ap_tests") {
+  output_name = "wlan_ap_unittest"
+
+  testonly = true
+
+  sources = [
+    "ap_infra_bss_unittest.cpp"
+  ]
+
+  deps = [
+    ":test_main",
+    "//garnet/lib/wlan/common",
+    "//garnet/lib/wlan/mlme",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 executable("client_tests") {
@@ -208,6 +229,10 @@ package("wlan_tests") {
   ]
 
   tests = [
+    {
+      name = "wlan_ap_unittest"
+    },
+
     {
       name = "wlan_client_unittest"
     },
