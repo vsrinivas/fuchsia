@@ -17,7 +17,6 @@ runbench_read_arguments "$@"
 runbench_exec "${OUT_DIR}/benchmark_example.json" \
     trace record \
     --spec-file=/pkgfs/packages/benchmark/0/data/benchmark_example.tspec \
-    --test-suite=fuchsia.benchmark_example \
     --benchmark-results-file="${OUT_DIR}/benchmark_example.json"
 
 # Performance tests implemented in the Zircon repo.
