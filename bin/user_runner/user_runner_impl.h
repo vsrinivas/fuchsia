@@ -32,6 +32,7 @@
 #include "peridot/lib/fidl/environment.h"
 #include "peridot/lib/fidl/view_host.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace modular {
 
@@ -54,8 +55,18 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
                        fuchsia::modular::UserShellContext,
                        EntityProviderLauncher {
  public:
-  UserRunnerImpl(component::StartupContext* startup_context, bool test);
+  struct Options {
+    // Tells the user runner whether it is running as a part of an integration
+    // test.
+    bool test;
+    // Tells the user runner whether it should host+pass a memfs-backed
+    // directory to the ledger for the user's repository, or to use
+    // /data/LEDGER.
+    bool use_memfs_for_ledger;
+  };
 
+  UserRunnerImpl(component::StartupContext* startup_context,
+                 const Options& options);
   ~UserRunnerImpl() override;
 
   // |AppDriver| calls this.
@@ -103,6 +114,10 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   // This is a termination sequence that may be used with |AtEnd()|, but also
   // may be executed to terminate the currently running user shell.
   void TerminateUserShell(const std::function<void()>& done);
+
+  // Returns the file descriptor that backs the ledger repository directory for
+  // the user.
+  zx::channel GetLedgerRepositoryDirectory();
 
   // |fuchsia::modular::UserShellContext|
   void GetAccount(GetAccountCallback callback) override;
@@ -174,7 +189,8 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   void TerminateRecurse(int i);
 
   component::StartupContext* const startup_context_;
-  const bool test_;
+  const Options options_;
+  std::unique_ptr<scoped_tmpfs::ScopedTmpFS> memfs_for_ledger_;
 
   fidl::BindingSet<fuchsia::modular::internal::UserRunner> bindings_;
   fidl::Binding<fuchsia::modular::UserShellContext> user_shell_context_binding_;

@@ -40,8 +40,8 @@
 #include "peridot/lib/common/xdr.h"
 #include "peridot/lib/device_info/device_info.h"
 #include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/environment.h"
+#include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
@@ -85,22 +85,6 @@ fuchsia::ledger::cloud::firestore::Config GetLedgerFirestoreConfig() {
   config.server_id = kFirebaseProjectId;
   config.api_key = kFirebaseApiKey;
   return config;
-}
-
-zx::channel GetLedgerRepositoryDirectory() {
-  if (!files::CreateDirectory(kLedgerRepositoryDirectory)) {
-    FXL_LOG(ERROR) << "Unable to create directory at "
-                   << kLedgerRepositoryDirectory;
-    return zx::channel();
-  }
-  fxl::UniqueFD dir(open(kLedgerRepositoryDirectory, O_PATH));
-  if (!dir.is_valid()) {
-    FXL_LOG(ERROR) << "Unable to open directory at "
-                   << kLedgerRepositoryDirectory << ". errno: " << errno;
-    return zx::channel();
-  }
-
-  return fsl::CloneChannelFromFileDescriptor(dir.get());
 }
 
 std::string GetAccountId(const fuchsia::modular::auth::AccountPtr& account) {
@@ -182,9 +166,9 @@ class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
 };
 
 UserRunnerImpl::UserRunnerImpl(component::StartupContext* const startup_context,
-                               const bool test)
+                               const Options& options)
     : startup_context_(startup_context),
-      test_(test),
+      options_(options),
       user_shell_context_binding_(this),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner") {
@@ -247,6 +231,31 @@ void UserRunnerImpl::InitializeUser(
       std::string(kUserEnvironmentLabelPrefix) + GetAccountId(account_),
       *kEnvServices);
   AtEnd(Reset(&user_environment_));
+}
+
+zx::channel UserRunnerImpl::GetLedgerRepositoryDirectory() {
+  if (options_.use_memfs_for_ledger) {
+    FXL_DCHECK(!memfs_for_ledger_)
+        << "An existing memfs for the Ledger has already been initialized.";
+    FXL_LOG(INFO) << "Using memfs-backed storage for the ledger.";
+    memfs_for_ledger_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
+    AtEnd(Reset(&memfs_for_ledger_));
+
+    return fsl::CloneChannelFromFileDescriptor(memfs_for_ledger_->root_fd());
+  }
+  if (!files::CreateDirectory(kLedgerRepositoryDirectory)) {
+    FXL_LOG(ERROR) << "Unable to create directory at "
+                   << kLedgerRepositoryDirectory;
+    return zx::channel();
+  }
+  fxl::UniqueFD dir(open(kLedgerRepositoryDirectory, O_PATH));
+  if (!dir.is_valid()) {
+    FXL_LOG(ERROR) << "Unable to open directory at "
+                   << kLedgerRepositoryDirectory << ". errno: " << errno;
+    return zx::channel();
+  }
+
+  return fsl::CloneChannelFromFileDescriptor(dir.get());
 }
 
 void UserRunnerImpl::InitializeLedger() {
@@ -327,7 +336,7 @@ void UserRunnerImpl::InitializeLedger() {
 }
 
 void UserRunnerImpl::InitializeLedgerDashboard() {
-  if (test_)
+  if (options_.test)
     return;
   static const auto* const kEnvServices = new std::vector<std::string>{
       fuchsia::ledger::internal::LedgerRepositoryDebug::Name_};
@@ -455,7 +464,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   // Start kMaxwellUrl
   fuchsia::modular::AppConfig maxwell_config;
   maxwell_config.url = kMaxwellUrl;
-  if (test_) {
+  if (options_.test) {
     // TODO(mesch): This path name is local to the maxwell package. It should
     // not be exposed outside it at all. Presumably just pass --test.
     maxwell_config.args.push_back(
@@ -567,7 +576,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
 
     fuchsia::modular::AppConfig module_resolver_config;
     module_resolver_config.url = kModuleResolverUrl;
-    if (test_) {
+    if (options_.test) {
       module_resolver_config.args.push_back("--test");
     }
     // For now, we want data_origin to be "", which uses our (parent process's)
@@ -613,7 +622,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       session_storage_.get(), std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider),
       user_intelligence_provider_.get(), module_resolver_service_.get(),
-      entity_provider_runner_.get(), presentation_provider_impl_.get(), test_));
+      entity_provider_runner_.get(), presentation_provider_impl_.get(),
+      options_.test));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   AtEnd(

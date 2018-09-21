@@ -61,6 +61,7 @@ executable_package("user_runner") {
     "//peridot/lib/ledger_client:status",
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/rapidjson",
+    "//peridot/lib/scoped_tmpfs",
     "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/fidl/fuchsia.ledger.cloud",
     "//peridot/public/fidl/fuchsia.modular",

@@ -26,7 +26,10 @@ fxl::AutoCall<fit::closure> SetupCobalt(
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  const bool test = command_line.HasOption("test");
+
+  modular::UserRunnerImpl::Options opts;
+  opts.test = command_line.HasOption("test");
+  opts.use_memfs_for_ledger = command_line.HasOption("use_memfs_for_ledger");
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
@@ -34,11 +37,11 @@ int main(int argc, const char** argv) {
       component::StartupContext::CreateFromStartupInfo();
 
   fxl::AutoCall<fit::closure> cobalt_cleanup =
-      SetupCobalt(test, std::move(loop.dispatcher()), context.get());
+      SetupCobalt(opts.test, std::move(loop.dispatcher()), context.get());
 
   modular::AppDriver<modular::UserRunnerImpl> driver(
       context->outgoing().deprecated_services(),
-      std::make_unique<modular::UserRunnerImpl>(context.get(), test),
+      std::make_unique<modular::UserRunnerImpl>(context.get(), opts),
       [&loop, &cobalt_cleanup] {
         cobalt_cleanup.call();
         loop.Quit();

@@ -8,8 +8,6 @@ visibility = [
 ]
 
 source_set("scoped_tmpfs") {
-  testonly = true
-
   sources = [
     "scoped_tmpfs.cc",
     "scoped_tmpfs.h",
