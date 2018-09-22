@@ -19,6 +19,6 @@ MODULE_STATIC_LIBS := system/ulib/zx
 
 MODULE_LIBS := system/ulib/zircon
 
-MODULE_PACKAGE := a
+MODULE_PACKAGE := static
 
 include make/module.mk
