@@ -684,17 +684,11 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedRich) {
   suggestion_engine_impl_->NotifyInteraction(suggestion_id,
                                              std::move(interaction));
 
-  RunLoopUntil([&] { return test_executor_.execute_count() == 1; });
+  RunLoopUntilIdle();
 
   // The executor should have been called for a second time with a command to
   // promote the story that the adding of the the proposal created.
-  EXPECT_EQ(story_name, test_executor_.last_story_id());
-
-  auto& commands = test_executor_.last_commands();
-  ASSERT_EQ(1u, commands.size());
-  EXPECT_TRUE(commands.at(0).is_set_kind_of_proto_story_option());
-  auto& command = commands.at(0).set_kind_of_proto_story_option();
-  EXPECT_FALSE(command.value);
+  EXPECT_EQ(test_executor_.execute_count(), 0);
 
   // Ensure the story that was created when we adedd the rich proposal still
   // exists.
@@ -705,11 +699,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedRich) {
         done = true;
       });
   RunLoopUntil([&] { return done; });
-
-  // We should have been notified with no suggestions after selecting this
-  // suggestion.
-  auto& listener_results = next_listener_.last_suggestions();
-  EXPECT_TRUE(listener_results->empty());
 }
 
 TEST_F(SuggestionEngineTest, NotifyInteractionDismissedRich) {

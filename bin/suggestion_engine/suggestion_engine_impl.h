@@ -165,10 +165,6 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   friend class NextProcessor;
   friend class QueryProcessor;
 
-  void PromoteNextProposal(const std::string& component_url,
-                           const std::string& story_name,
-                           const std::string& proposal_id);
-
   // Used by AddNextProposal to create a kind-of-proto-story and pre execute
   // actions when |proposal.preload| is true.
   void AddProposalWithRichSuggestion(ProposalPublisherImpl* source,

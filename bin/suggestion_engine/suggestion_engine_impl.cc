@@ -78,6 +78,21 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
     // proposal actions.
     proposal.story_name = "";
   }
+
+  SuggestionPrototype* suggestion =
+      next_processor_.GetSuggestion(source->component_url(), proposal.id);
+
+  // We keep track of the previous story since a new one will be created for a
+  // existing proposal.
+  // TODO(miguelfrde): this logic should probably belong in NextProcessor. We
+  // should also allow clients to reuse the story_name and mod_name to update
+  // the mod in the suggestion directly rather than creating a new one, however
+  // this is not working yet.
+  std::string existing_story;
+  if (suggestion && !suggestion->preloaded_story_id.empty()) {
+    existing_story = suggestion->preloaded_story_id;
+  }
+
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
   puppet_master_->ControlStory(proposal.story_name,
                                story_puppet_master.NewRequest());
@@ -89,8 +104,8 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
                                           std::move(proposal.on_selected));
   performed_actions->Then(fxl::MakeCopyable(
       [this, performed_actions, source_url = source->component_url(),
-       proposal = std::move(proposal)](
-          fuchsia::modular::ExecuteResult result) mutable {
+       proposal = std::move(proposal),
+       existing_story](fuchsia::modular::ExecuteResult result) mutable {
         if (result.status != fuchsia::modular::ExecuteStatus::OK) {
           FXL_LOG(WARNING) << "Preloading of rich suggestion actions resulted "
                            << "non successful status="
@@ -102,6 +117,10 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
         }
         next_processor_.AddProposal(source_url, result.story_id,
                                     std::move(proposal));
+
+        if (!existing_story.empty()) {
+          puppet_master_->DeleteStory(existing_story, [] {});
+        }
       }));
 }
 
@@ -118,35 +137,6 @@ void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
   } else {
     next_processor_.RemoveProposal(component_url, proposal_id);
   }
-}
-
-void SuggestionEngineImpl::PromoteNextProposal(const std::string& component_url,
-                                               const std::string& story_name,
-                                               const std::string& proposal_id) {
-  FXL_DCHECK(!story_name.empty()) << "SuggestionEngineImpl#PromoteNextProposal "
-                                  << "story_name shouldn't be empty";
-
-  fuchsia::modular::SetKindOfProtoStoryOption set_kind_of_proto_story_option;
-  set_kind_of_proto_story_option.value = false;
-  fuchsia::modular::StoryCommand command;
-  command.set_set_kind_of_proto_story_option(
-      std::move(set_kind_of_proto_story_option));
-  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
-  commands.push_back(std::move(command));
-
-  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
-  puppet_master_->ControlStory(story_name, story_puppet_master.NewRequest());
-  story_puppet_master->Enqueue(std::move(commands));
-  story_puppet_master->Execute(fxl::MakeCopyable(
-      [this, sp = std::move(story_puppet_master), component_url,
-       proposal_id](fuchsia::modular::ExecuteResult result) {
-        if (result.status != fuchsia::modular::ExecuteStatus::OK) {
-          FXL_LOG(WARNING) << "Promoting proposal " << proposal_id
-                           << "returned status=" << (uint32_t)result.status
-                           << " message=" << result.error_message;
-        }
-        next_processor_.RemoveProposal(component_url, proposal_id);
-      }));
 }
 
 void SuggestionEngineImpl::Connect(
@@ -518,7 +508,8 @@ void SuggestionEngineImpl::HandleSelectedInteraction(
       auto listener = proposal.listener.Bind();
       listener->OnProposalAccepted(proposal.id, preloaded_story_id);
     }
-    PromoteNextProposal(component_url, preloaded_story_id, proposal.id);
+    // TODO(miguelfrde): eventually we should promote stories here. For now rich
+    // suggestions aren't removed or promoted.
     return;
   }
 
