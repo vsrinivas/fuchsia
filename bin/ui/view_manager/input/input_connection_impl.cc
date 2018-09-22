@@ -13,7 +13,8 @@
 namespace view_manager {
 
 InputConnectionImpl::InputConnectionImpl(
-    ViewInspector* inspector, InputOwner* owner, uint32_t view_token,
+    ViewInspector* inspector, InputOwner* owner,
+    ::fuchsia::ui::viewsv1token::ViewToken view_token,
     fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request)
     : inspector_(inspector),
       owner_(owner),
@@ -106,13 +107,15 @@ void InputConnectionImpl::InjectInput(fuchsia::ui::input::InputEvent event) {
   }
 }
 
-// TODO(TEXT-19): remove these in a later change after PlatformView has been
-// switched over
-void InputConnectionImpl::Show() { ShowKeyboard(); }
+// TODO(TEXT-19): remove these in a later change after PlatformView has been switched over
+void InputConnectionImpl::Show() {
+  ShowKeyboard();
+}
 
-// TODO(TEXT-19): remove these in a later change after PlatformView has been
-// switched over
-void InputConnectionImpl::Hide() { HideKeyboard(); }
+// TODO(TEXT-19): remove these in a later change after PlatformView has been switched over
+void InputConnectionImpl::Hide() {
+  HideKeyboard();
+}
 
 void InputConnectionImpl::ConnectWithImeService(
     fuchsia::ui::input::KeyboardType keyboard_type,
@@ -130,7 +133,6 @@ void InputConnectionImpl::ConnectWithImeService(
       Reset();
     });
   }
-
   // GetInputMethodEditor from IME service
   fuchsia::ui::input::InputMethodEditorClientPtr client_ptr;
   client_binding_.Bind(client_ptr.NewRequest());

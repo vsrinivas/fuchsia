@@ -37,6 +37,13 @@ inline mozart::SceneTokenPtr MakeDummySceneToken(uint32_t value) {
   return result.Pass();
 }
 
+inline ::fuchsia::ui::viewsv1token::ViewTokenPtr MakeDummyViewToken(
+    uint32_t value) {
+  auto result = ::fuchsia::ui::viewsv1token::ViewToken::New();
+  result->value = value;
+  return result.Pass();
+}
+
 inline mozart::HitTestResultPtr MakeSimpleHitTestResult(
     mozart::SceneTokenPtr scene_token, mozart::TransformPtr transform) {
   auto result = mozart::HitTestResult::New();

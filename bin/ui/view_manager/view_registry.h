@@ -13,7 +13,6 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
-
 #include "garnet/bin/ui/view_manager/input/input_connection_impl.h"
 #include "garnet/bin/ui/view_manager/input/input_dispatcher_impl.h"
 #include "garnet/bin/ui/view_manager/internal/input_owner.h"
@@ -22,33 +21,23 @@
 #include "garnet/bin/ui/view_manager/view_state.h"
 #include "garnet/bin/ui/view_manager/view_stub.h"
 #include "garnet/bin/ui/view_manager/view_tree_state.h"
-#include "garnet/lib/ui/gfx/engine/object_linker.h"
+
 #include "lib/component/cpp/startup_context.h"
+
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/scenic/cpp/session.h"
 
 namespace view_manager {
 
-using View1Linker = scenic_impl::gfx::ObjectLinker<ViewStub, ViewState>;
-
 // Maintains a registry of the state of all views.
 // All ViewState objects are owned by the registry.
 class ViewRegistry : public ViewInspector,
                      public InputOwner,
-                     public fuchsia::ui::viewsv1::AccessibilityViewInspector,
-                     public scenic_impl::ErrorReporter {
+                     public fuchsia::ui::viewsv1::AccessibilityViewInspector {
  public:
   explicit ViewRegistry(component::StartupContext* startup_context);
   ~ViewRegistry() override;
-
-  View1Linker& view_linker() { return viewv1_linker_; }
-
-  // |ErrorReporter|
-  void ReportError(fxl::LogSeverity severity,
-                   std::string error_string) override {
-    FXL_LOG(ERROR) << error_string;
-  }
 
   // VIEW MANAGER REQUESTS
 
@@ -68,9 +57,11 @@ class ViewRegistry : public ViewInspector,
 
   // VIEW STUB REQUESTS
 
-  void OnViewResolved(ViewStub* view_stub, ViewState* view_state);
+  void OnViewResolved(ViewStub* view_stub,
+                      ::fuchsia::ui::viewsv1token::ViewToken view_token,
+                      bool success);
   void TransferViewOwner(
-      ViewState* view_state,
+      ::fuchsia::ui::viewsv1token::ViewToken view_token,
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           transferred_view_owner_request);
 
@@ -136,15 +127,17 @@ class ViewRegistry : public ViewInspector,
                HitTestCallback callback) override;
   void ResolveFocusChain(::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
                          ResolveFocusChainCallback callback) override;
-  void ActivateFocusChain(uint32_t view_token,
+  void ActivateFocusChain(::fuchsia::ui::viewsv1token::ViewToken view_token,
                           ActivateFocusChainCallback callback) override;
-  void HasFocus(uint32_t view_token, HasFocusCallback callback) override;
-  void GetImeService(uint32_t view_token,
+  void HasFocus(::fuchsia::ui::viewsv1token::ViewToken view_token,
+                HasFocusCallback callback) override;
+  void GetImeService(::fuchsia::ui::viewsv1token::ViewToken view_token,
                      fidl::InterfaceRequest<fuchsia::ui::input::ImeService>
                          ime_service) override;
 
   // Delivers an event to a view.
-  void DeliverEvent(uint32_t view_token, fuchsia::ui::input::InputEvent event,
+  void DeliverEvent(::fuchsia::ui::viewsv1token::ViewToken view_token,
+                    fuchsia::ui::input::InputEvent event,
                     ViewInspector::OnEventDelivered callback) override;
 
   // INPUT CONNECTION CALLBACKS
@@ -209,7 +202,7 @@ class ViewRegistry : public ViewInspector,
 
   // INPUT CONNECTION
   void CreateInputConnection(
-      uint32_t view_token,
+      ::fuchsia::ui::viewsv1token::ViewToken view_token,
       fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request);
 
   // INPUT DISPATCHER
@@ -222,13 +215,13 @@ class ViewRegistry : public ViewInspector,
   // Walk up the view tree starting at |view_token| to find a service
   // provider that offers a service named |service_name|.
   fuchsia::sys::ServiceProvider* FindViewServiceProvider(
-      ViewState* view, std::string service_name);
+      uint32_t view_token, std::string service_name);
 
-  ViewState* FindView(uint32_t view_token);
+  ViewState* FindView(uint32_t view_token_value);
   ViewTreeState* FindViewTree(uint32_t view_tree_token_value);
 
   bool IsViewStateRegisteredDebug(ViewState* view_state) {
-    return view_state && FindView(view_state->view_token());
+    return view_state && FindView(view_state->view_token().value);
   }
 
   bool IsViewTreeStateRegisteredDebug(ViewTreeState* tree_state) {
@@ -243,7 +236,8 @@ class ViewRegistry : public ViewInspector,
   }
 
   // Returns whether view is allowed to capture focus
-  bool IsViewFocusable(uint32_t view_token);
+  virtual bool IsViewFocusable(
+      ::fuchsia::ui::viewsv1token::ViewToken view_token);
 
   // A11Y VIEW INSPECTOR
 
@@ -261,13 +255,12 @@ class ViewRegistry : public ViewInspector,
 
   bool traversal_scheduled_ = false;
   bool present_session_scheduled_ = false;
+
   uint32_t next_view_token_value_ = 1u;
   uint32_t next_view_tree_token_value_ = 1u;
+  std::unordered_map<uint32_t, ViewState*> views_by_token_;
+  std::unordered_map<uint32_t, ViewTreeState*> view_trees_by_token_;
 
-  View1Linker viewv1_linker_;
-  std::unordered_map<uint32_t, std::unique_ptr<ViewState>> views_by_token_;
-  std::unordered_map<uint32_t, std::unique_ptr<ViewTreeState>>
-      view_trees_by_token_;
   std::unordered_map<uint32_t, std::unique_ptr<InputConnectionImpl>>
       input_connections_by_view_token_;
   std::unordered_map<uint32_t, std::unique_ptr<InputDispatcherImpl>>

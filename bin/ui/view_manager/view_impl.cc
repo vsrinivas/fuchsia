@@ -14,6 +14,11 @@ ViewImpl::ViewImpl(ViewRegistry* registry, ViewState* state)
 
 ViewImpl::~ViewImpl() {}
 
+void ViewImpl::GetToken(
+    ::fuchsia::ui::viewsv1::View::GetTokenCallback callback) {
+  callback(state_->view_token());
+}
+
 void ViewImpl::GetServiceProvider(
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         service_provider_request) {

@@ -11,6 +11,11 @@
 
 namespace media_player {
 namespace test {
+namespace {
+
+constexpr uint32_t kViewTokenValue = 1;
+
+}  // namespace
 
 FakeView::FakeView()
     : dispatcher_(async_get_default_dispatcher()),
@@ -31,6 +36,12 @@ void FakeView::Bind(
   view_listener_ = std::move(listener);
   parent_export_token_ = std::move(parent_export_token);
   label_ = label;
+}
+
+void FakeView::GetToken(GetTokenCallback callback) {
+  ::fuchsia::ui::viewsv1token::ViewToken view_token;
+  view_token.value = kViewTokenValue;
+  callback(view_token);
 }
 
 void FakeView::GetServiceProvider(
@@ -85,6 +96,13 @@ void FakeView::Owner::Bind(
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
   binding_.Bind(std::move(view_owner_request));
+}
+
+void FakeView::Owner::GetToken(GetTokenCallback callback) {
+  FXL_LOG(INFO) << "Owner::GetToken";
+  ::fuchsia::ui::viewsv1token::ViewToken view_token;
+  view_token.value = kViewTokenValue;
+  callback(view_token);
 }
 
 }  // namespace test

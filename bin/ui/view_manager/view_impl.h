@@ -26,6 +26,8 @@ class ViewImpl : public ::fuchsia::ui::viewsv1::View,
 
  private:
   // |View|:
+  void GetToken(
+      ::fuchsia::ui::viewsv1::View::GetTokenCallback callback) override;
   void GetServiceProvider(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                               service_provider_request) override;
   void OfferServiceProvider(

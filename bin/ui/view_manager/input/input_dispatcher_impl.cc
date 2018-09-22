@@ -23,7 +23,7 @@ using Phase = ::fuchsia::ui::input::PointerEventPhase;
 namespace view_manager {
 namespace {
 uint64_t PointerKey(fuchsia::ui::input::PointerEvent pointer) {
-  return ((uint64_t)pointer.device_id) << 32 | ((uint64_t)pointer.pointer_id);
+  return ((uint64_t) pointer.device_id) << 32 | ((uint64_t) pointer.pointer_id);
 }
 
 // Returns a pair of points representing a ray's origin and direction, in that
@@ -121,7 +121,7 @@ void InputDispatcherImpl::ProcessNextEvent() {
 
   do {
     const fuchsia::ui::input::InputEvent* event = &pending_events_.front();
-    FXL_VLOG(1) << "ProcessNextEvent: " << *event;
+    FXL_VLOG(1) << "ProcessNextEvent: " << event;
 
     if (event->is_pointer()) {
       // TODO(MZ-164): We may also need to perform hit tests on ADD and
@@ -134,8 +134,7 @@ void InputDispatcherImpl::ProcessNextEvent() {
       // masquerade as DOWN), or we may never find a new receiver. For the
       // latter case, don't deliver the final UP event; just schedule the next.
       {
-        auto iter = uncaptured_pointers.find(
-            std::make_pair(pointer.device_id, pointer.pointer_id));
+        auto iter = uncaptured_pointers.find(std::make_pair(pointer.device_id, pointer.pointer_id));
         if (iter != uncaptured_pointers.end()) {
           uncaptured_pointers.erase(iter);
           switch (pointer.phase) {
@@ -340,8 +339,8 @@ void InputDispatcherImpl::OnHitTestResult(const fuchsia::math::PointF& point,
   inspector_->ActivateFocusChain(
       view_hits.front().view_token,
       [this, view_hits](std::unique_ptr<FocusChain> new_chain) {
-        if (!active_focus_chain_ ||
-            active_focus_chain_->chain.front() != new_chain->chain.front()) {
+        if (!active_focus_chain_ || active_focus_chain_->chain.front().value !=
+                                        new_chain->chain.front().value) {
           if (active_focus_chain_) {
             FXL_VLOG(1) << "Input focus lost by "
                         << active_focus_chain_->chain.front();
@@ -373,8 +372,7 @@ void InputDispatcherImpl::OnHitTestResult(const fuchsia::math::PointF& point,
         event_path_propagation_id_focused_++;
 
         FXL_VLOG(1) << "OnViewHitResolved: view_token_="
-                    << event_path_focused_.front().view_token
-                    << ", view_transform_="
+                    << event_path_focused_.front().view_token << ", view_transform_="
                     << event_path_focused_.front().inverse_transform
                     << ", event_path_propagation_id_focused_="
                     << event_path_propagation_id_focused_;

@@ -33,15 +33,25 @@ class PendingViewOwnerTransferState {
       transferred_view_owner_request_;
 };
 
-ViewStub::ViewStub(ViewRegistry* registry, View1Linker::ExportLink view_link,
-                   zx::eventpair host_import_token)
+ViewStub::ViewStub(
+    ViewRegistry* registry,
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> owner,
+    zx::eventpair host_import_token)
     : registry_(registry),
-      view_link_(std::move(view_link)),
+      owner_(owner.Bind()),
       host_import_token_(std::move(host_import_token)),
       weak_factory_(this) {
   FXL_DCHECK(registry_);
-  FXL_DCHECK(view_link_.valid());
+  FXL_DCHECK(owner_);
   FXL_DCHECK(host_import_token_);
+
+  owner_.set_error_handler([this] {
+    OnViewResolved(::fuchsia::ui::viewsv1token::ViewToken(), false);
+  });
+
+  owner_->GetToken([this](::fuchsia::ui::viewsv1token::ViewToken view_token) {
+    OnViewResolved(std::move(view_token), true);
+  });
 }
 
 ViewStub::~ViewStub() {
@@ -74,7 +84,7 @@ void ViewStub::SetProperties(
 }
 
 ViewState* ViewStub::ReleaseView() {
-  if (unavailable_)
+  if (is_unavailable())
     return nullptr;
 
   ViewState* state = state_;
@@ -103,20 +113,6 @@ void ViewStub::SetContainer(ViewContainerState* container, uint32_t key) {
     FXL_DCHECK(tree);
     SetTreeRecursively(tree);
   }
-
-  // We cannot call this in the constructor, because this might resolve
-  // immediately.  The resolution callback assumes that |container| has been
-  // set.
-  // TODO(SCN-972): Remove the need for this by making callbacks fire async.
-  view_link_.Initialize(this,
-                        [this](ViewState* state) {
-                          FXL_VLOG(1) << "ViewStub connected: " << this;
-                          OnViewResolved(state, true);
-                        },
-                        [this] {
-                          FXL_VLOG(1) << "ViewStub disconnected: " << this;
-                          OnViewResolved(nullptr, false);
-                        });
 }
 
 void ViewStub::Unlink() {
@@ -139,18 +135,23 @@ void ViewStub::SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree) {
   }
 }
 
-void ViewStub::OnViewResolved(ViewState* view_state, bool success) {
+// Called when the ViewOwner returns a token (using GetToken), or when the
+// ViewOwner is disconnected.
+void ViewStub::OnViewResolved(::fuchsia::ui::viewsv1token::ViewToken view_token,
+                              bool success) {
   if (success && transfer_view_owner_when_view_resolved()) {
-    // While we were waiting for linking, the view was transferred to a new
-    // ViewOwner. Now that we are linked, transfer the ownership
+    // While we were waiting for GetToken(), the view was transferred to a new
+    // ViewOwner). Now that we got the GetToken() call, transfer the ownership
     // correctly internally.
     FXL_DCHECK(!container());  // Make sure we're removed from the view tree
     FXL_DCHECK(pending_view_owner_transfer_->view_stub_ != nullptr);
     FXL_DCHECK(pending_view_owner_transfer_->transferred_view_owner_request_
                    .is_valid());
+    FXL_DCHECK(owner_);
+    owner_.Unbind();
 
     registry_->TransferViewOwner(
-        view_state,
+        std::move(view_token),
         std::move(
             pending_view_owner_transfer_->transferred_view_owner_request_));
 
@@ -162,11 +163,11 @@ void ViewStub::OnViewResolved(ViewState* view_state, bool success) {
     // that reference anymore, which should release us immediately.
     pending_view_owner_transfer_.reset();
   } else {
-    // 1. We got the linking callback as expected (in which case view_state is
-    // non-null and success is true).
-    // 2. Or, the ViewOwner was closed before linking (in which case view_state
-    // is null and success if false).
-    registry_->OnViewResolved(this, view_state);
+    // 1. We got the ViewOwner GetToken() callback as expected.
+    // 2. Or, the ViewOwner was closed before the GetToken() callback (in
+    // which case view_token is null).
+    owner_.Unbind();
+    registry_->OnViewResolved(this, std::move(view_token), success);
   }
 }
 
