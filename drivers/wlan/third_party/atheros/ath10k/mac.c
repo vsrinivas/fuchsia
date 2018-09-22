@@ -4713,7 +4713,11 @@ zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, void* cookie) {
 
     ar->num_started_vdevs = 0;
     ath10k_regd_update(ar);
-    ath10k_add_interface(ar, ar->mac_role);
+    ret = ath10k_add_interface(ar, ar->mac_role);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to add interface: %s\n", zx_status_get_string(ret));
+        goto err_core_stop;
+    }
 
     struct wmi_wmm_params_arg wmm_params;
 
@@ -4757,8 +4761,8 @@ zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, void* cookie) {
     mtx_unlock(&ar->conf_mutex);
     return ZX_OK;
 
-#if 0   // NEEDS PORTING
 err_core_stop:
+#if 0   // NEEDS PORTING
     ath10k_core_stop(ar);
 
 err_power_down:
@@ -4893,21 +4897,18 @@ static zx_status_t ath10k_mac_set_txbf_conf(struct ath10k_vif* arvif) {
     uint32_t value = 0;
     struct ath10k* ar = arvif->ar;
 
-#if 0   // NEEDS PORTING
-    int nsts;
-    int sound_dim;
-
     if (ath10k_wmi_get_txbf_conf_scheme(ar) != WMI_TXBF_CONF_BEFORE_ASSOC) {
-        return 0;
+        return ZX_OK;
     }
+#if 0   // NEEDS PORTING
 
-    nsts = ath10k_mac_get_vht_cap_bf_sts(ar);
+    int nsts = ath10k_mac_get_vht_cap_bf_sts(ar);
     if (ar->vht_cap_info & (IEEE80211_VHT_CAP_SU_BEAMFORMEE_CAPABLE |
                             IEEE80211_VHT_CAP_MU_BEAMFORMEE_CAPABLE)) {
         value |= SM(nsts, WMI_TXBF_STS_CAP_OFFSET);
     }
 
-    sound_dim = ath10k_mac_get_vht_cap_bf_sound_dim(ar);
+    int sound_dim = ath10k_mac_get_vht_cap_bf_sound_dim(ar);
     if (ar->vht_cap_info & (IEEE80211_VHT_CAP_SU_BEAMFORMER_CAPABLE |
                             IEEE80211_VHT_CAP_MU_BEAMFORMER_CAPABLE)) {
         value |= SM(sound_dim, WMI_BF_SOUND_DIM_OFFSET);
