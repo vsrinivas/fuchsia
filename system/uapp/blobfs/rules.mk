@@ -15,6 +15,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/bitmap \
     system/ulib/blobfs \
     system/ulib/fs \
     system/ulib/fzl \
@@ -35,7 +36,6 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/async.default \
-    system/ulib/bitmap \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/trace-engine \

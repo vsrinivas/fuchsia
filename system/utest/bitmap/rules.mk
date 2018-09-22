@@ -16,6 +16,7 @@ MODULE_SRCS += \
 MODULE_NAME := bitmap-test
 
 MODULE_STATIC_LIBS := \
+    system/ulib/bitmap \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
@@ -24,7 +25,6 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
     system/ulib/fdio \
-    system/ulib/bitmap \
     system/ulib/unittest \
 
 include make/module.mk

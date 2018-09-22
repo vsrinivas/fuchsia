@@ -30,6 +30,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
+    system/ulib/bitmap \
     system/ulib/block-client \
     system/ulib/trace \
     system/ulib/zx \
@@ -40,7 +41,6 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/async.default \
-    system/ulib/bitmap \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/trace-engine \

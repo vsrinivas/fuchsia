@@ -8,6 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/raw-bitmap.cpp \
     $(LOCAL_DIR)/rle-bitmap.cpp \
@@ -23,7 +25,6 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
 
-MODULE_EXPORT := so
 MODULE_PACKAGE := src
 
 include make/module.mk
