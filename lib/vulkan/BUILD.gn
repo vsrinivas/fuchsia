@@ -15,20 +15,11 @@ group("image_pipe_swapchain") {
 }
 
 sdk_atom("vulkan_layers") {
-  domain = "cpp"
-  tags = [
-    "type:compiled_shared",
-    "arch:target",
-  ]
-
-  name = "vulkan_layers"
-
   id = "sdk://pkg/vulkan_layers"
 
   category = "partner"
 
   files = []
-  new_files = []
 
   resources =
       vulkan_validation_layers.resources + image_pipe_swapchain.resources
@@ -39,14 +30,8 @@ sdk_atom("vulkan_layers") {
 
   sdk_resources = []
   foreach(resource, resources) {
-    files += [
-      {
-        source = resource.path
-        dest = "data/" + resource.dest
-      },
-    ]
     destination = "pkg/vulkan_layers/data/" + resource.dest
-    new_files += [
+    files += [
       {
         source = resource.path
         dest = destination
@@ -57,15 +42,8 @@ sdk_atom("vulkan_layers") {
 
   sdk_binaries = []
   foreach(loadable_module, loadable_modules) {
-    files += [
-      {
-        source = "$root_out_dir/" + loadable_module.name
-        dest = "dist/" + loadable_module.name
-        packaged = true
-      },
-    ]
     destination = "arch/$target_cpu/dist/" + loadable_module.name
-    new_files += [
+    files += [
       {
         source = "$root_out_dir/" + loadable_module.name
         dest = destination
