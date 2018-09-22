@@ -131,4 +131,8 @@ __BEGIN_CDECLS;
 // Designware
 #define PDEV_VID_DESIGNWARE         12
 
+// Mediatek
+#define PDEV_VID_MEDIATEK           13
+#define PDEV_PID_MEDIATEK_8167S_REF 1
+
 __END_CDECLS;

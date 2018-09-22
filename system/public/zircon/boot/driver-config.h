@@ -15,6 +15,7 @@
 #define KDRV_PL011_UART         0x55304C50  // 'PL0U'
 #define KDRV_AMLOGIC_UART       0x554C4D41  // 'AMLU'
 #define KDRV_NXP_IMX_UART       0x55584D49  // 'IMXU'
+#define KDRV_MT8167_UART        0x5538544D  // 'MT8U'
 #define KDRV_HISILICON_POWER    0x4F505348  // 'HSPO'
 #define KDRV_AMLOGIC_HDCP       0x484C4D41  // 'AMLH'
 
