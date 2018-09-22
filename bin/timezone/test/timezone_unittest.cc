@@ -12,9 +12,7 @@ namespace test {
 using namespace fuchsia::timezone;
 using namespace time_zone;
 
-constexpr char kIcuDataPath[] =
-    // TODO(CP-77): use "/pkg/data/icudtl.dat"
-    "/pkgfs/packages/timezone_tests/0/data/icudtl.dat";
+constexpr char kIcuDataPath[] = "/pkg/data/icudtl.dat";
 constexpr char kTzIdPath[] = "/tmp/timezone-unittest-tz_id_path";
 
 class TimezoneUnitTest : public component::testing::TestWithContext {
