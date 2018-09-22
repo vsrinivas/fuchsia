@@ -8,6 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 COMMON_SRCS := \
     $(LOCAL_DIR)/allocator.cpp \
     $(LOCAL_DIR)/bcache.cpp \

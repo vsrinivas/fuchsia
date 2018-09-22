@@ -9,6 +9,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS := $(LOCAL_DIR)/kvstore.c
 
 MODULE_STATIC_LIBS := third_party/ulib/cksum

@@ -8,6 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/region-alloc.cpp \
     $(LOCAL_DIR)/region-alloc-c-api.cpp

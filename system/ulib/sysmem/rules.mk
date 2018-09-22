@@ -11,6 +11,8 @@ MODULE_TYPE := userlib
 MODULE_SRCS := \
     $(LOCAL_DIR)/sysmem.cpp
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-sysmem
 

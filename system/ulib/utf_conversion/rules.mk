@@ -8,6 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_STATIC_LIBS := system/ulib/fbl
 
 MODULE_SRCS += \

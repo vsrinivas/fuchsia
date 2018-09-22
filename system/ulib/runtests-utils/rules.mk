@@ -14,6 +14,8 @@ MODULE_TYPE := userlib
 
 MODULE_GROUP := test
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/fuchsia-run-test.cpp \
     $(LOCAL_DIR)/log-exporter.cpp \

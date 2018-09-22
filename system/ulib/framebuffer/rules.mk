@@ -9,6 +9,8 @@ MODULE_NAME := framebuffer
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/framebuffer.c
 

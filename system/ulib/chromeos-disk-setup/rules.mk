@@ -9,6 +9,8 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 MODULE_GROUP := disktools
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS := $(LOCAL_DIR)/chromeos-disk-setup.c
 
 MODULE_LIBS := system/ulib/c

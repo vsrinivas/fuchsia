@@ -10,6 +10,8 @@ MODULE_TYPE := userlib
 
 MODULE_PACKAGE := static
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/item.cpp \
     $(LOCAL_DIR)/parser.cpp \

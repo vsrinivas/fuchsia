@@ -10,6 +10,8 @@ MODULE_NAME := async-testutils
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS += \
         $(LOCAL_DIR)/dispatcher_stub.cpp \
         $(LOCAL_DIR)/test_loop.cpp \

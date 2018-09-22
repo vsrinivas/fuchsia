@@ -14,6 +14,8 @@ MODULE_NAME := async-loop
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS = \
     $(LOCAL_DIR)/loop.c
 

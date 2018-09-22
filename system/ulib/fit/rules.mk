@@ -11,6 +11,8 @@ fit_srcs := \
 # Userspace library.
 #
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 MODULE_PACKAGE := src

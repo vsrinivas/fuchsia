@@ -11,6 +11,8 @@ MODULE_TYPE := userlib
 LOCAL_SRCS := \
     $(LOCAL_DIR)/zbi.c \
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS += \
     $(LOCAL_SRCS) \
     $(LOCAL_DIR)/zbi-zx.cpp \

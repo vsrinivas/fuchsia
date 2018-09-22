@@ -8,6 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/dispatcher-channel.cpp \
     $(LOCAL_DIR)/dispatcher-event-source.cpp \

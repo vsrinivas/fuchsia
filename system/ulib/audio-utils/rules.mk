@@ -6,6 +6,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \

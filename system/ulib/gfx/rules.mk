@@ -10,6 +10,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
