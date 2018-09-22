@@ -121,6 +121,7 @@ pub mod scrypt {
     const SCRYPT_MAX_MEM: usize = usize::max_value();
 
     /// The output of the scrypt password hashing function.
+    #[must_use]
     #[allow(non_snake_case)]
     #[derive(Debug, Copy, Clone)]
     pub struct ScryptHash {

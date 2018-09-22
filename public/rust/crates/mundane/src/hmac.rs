@@ -12,6 +12,7 @@ use hash::{inner::Digest, Hasher, Sha256, Sha384, Sha512};
 /// A Hash-based Message Authentication Code (HMAC).
 ///
 /// `Hmac` is an HMAC over the hash function `H`.
+#[must_use]
 pub struct Hmac<H: Hasher> {
     ctx: CStackWrapper<boringssl::HMAC_CTX>,
     _marker: PhantomData<H>,
@@ -36,6 +37,7 @@ impl<H: Hasher> Hmac<H> {
     }
 
     /// Returns the HMAC of the bytes added so far.
+    #[must_use]
     pub fn finish(mut self) -> H::Digest {
         let mut out = H::Digest::zero();
         self.ctx.hmac_final(out.as_mut());
@@ -54,6 +56,7 @@ pub type HmacSha512 = Hmac<Sha512>;
 ///
 /// `hmac` creates a new instance of `Hmac<H>` using the key `key`, adds `bytes`
 /// to it, and then computes the HMAC.
+#[must_use]
 pub fn hmac<H: Hasher>(key: &[u8], bytes: &[u8]) -> H::Digest {
     let mut hmac = Hmac::<H>::new(key);
     hmac.update(bytes);

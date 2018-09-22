@@ -206,7 +206,6 @@ impl<C: PCurve> PrivateKey for EcPrivKey<C> {
 ///
 /// An `EcPubKeyAnyCurve` is an enum of `EcPubKey`s over the three supported
 /// curves. It is returned from [`parse_public_key_der_any_curve`].
-#[must_use]
 #[allow(missing_docs)]
 pub enum EcPubKeyAnyCurve {
     P256(EcPubKey<P256>),
@@ -218,7 +217,6 @@ pub enum EcPubKeyAnyCurve {
 ///
 /// An `EcPrivKeyAnyCurve` is an enum of `EcPrivKey`s over the three supported
 /// curves. It is returned from [`parse_private_key_der_any_curve`].
-#[must_use]
 #[allow(missing_docs)]
 pub enum EcPrivKeyAnyCurve {
     P256(EcPrivKey<P256>),
@@ -228,6 +226,7 @@ pub enum EcPrivKeyAnyCurve {
 
 impl EcPrivKeyAnyCurve {
     /// Gets the public key corresponding to this private key.
+    #[must_use]
     pub fn public(&self) -> EcPubKeyAnyCurve {
         match self {
             EcPrivKeyAnyCurve::P256(key) => EcPubKeyAnyCurve::P256(key.public()),

@@ -70,6 +70,7 @@ pub trait Hasher: Default + self::inner::Hasher {
 }
 
 /// The output of a `Hash`.
+#[must_use]
 pub trait Digest: Eq + PartialEq + Display + Debug + Sized + self::inner::Digest {
     /// The length in bytes of this digest.
     const DIGEST_LEN: usize;
@@ -112,14 +113,17 @@ pub(crate) mod insecure_sha1_digest {
 
 /// The SHA-256 hash function.
 #[derive(Default)]
+#[must_use]
 pub struct Sha256 {
     ctx: CStackWrapper<boringssl::SHA256_CTX>,
 }
 
 /// The digest output by the SHA-256 hash function.
+#[must_use]
 pub struct Sha256Digest(pub(crate) [u8; boringssl::SHA256_DIGEST_LENGTH as usize]);
 
 /// The SHA-384 hash function.
+#[must_use]
 pub struct Sha384 {
     ctx: CStackWrapper<boringssl::SHA512_CTX>,
 }
@@ -136,15 +140,18 @@ impl Default for Sha384 {
 }
 
 /// The digest output by the SHA-384 hash function.
+#[must_use]
 pub struct Sha384Digest(pub(crate) [u8; boringssl::SHA384_DIGEST_LENGTH as usize]);
 
 /// The SHA-512 hash function.
 #[derive(Default)]
+#[must_use]
 pub struct Sha512 {
     ctx: CStackWrapper<boringssl::SHA512_CTX>,
 }
 
 /// The digest output by the SHA-512 hash function.
+#[must_use]
 pub struct Sha512Digest(pub(crate) [u8; boringssl::SHA512_DIGEST_LENGTH as usize]);
 
 /// Implements the `Hash` and `Digest` traits.

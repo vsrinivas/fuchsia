@@ -13,15 +13,32 @@ The `#[must_use]` directive causes the compiler to emit a warning if code calls
 a function but does not use its return value. It is a very useful lint against
 failing to properly act on the result of cryptographic operations. A
 `#[must_use]` directive should go on:
-- All functions/methods (including in trait definitions) which return a value and are visible outside of the
-  crate
+- All functions/methods (including in trait definitions) which return a value
+  and are visible outside of the crate
 - In the `boringssl` module:
-  - All functions/methods (including in trait definitions) which return a value and are visible outside of the
-    `boringssl` module or are exported from the `raw` or `wrapper` modules to
-    the top-level `boringssl` module
+  - All functions/methods (including in trait definitions) which return a value
+    and are visible outside of the `boringssl` module or are exported from the
+    `raw` or `wrapper` modules to the top-level `boringssl` module
 
 `#[must_use]` may also be used on types, but should be evaluated on a
-case-by-case basis.
+case-by-case basis. A few things to keep in mind:
+- All functions defined in `mundane` which return values have `#[must_use]` on
+  them, so the case of a type returned by a function defined in `mundane` is
+  already covered.
+- Unlike on functions, `#[must_use]` on types affects code other than the
+  immediate caller since code outside of this crate may return types which are
+  defined in this crate.
+
+Thus, `#[must_use]` should only be used on a type when it's desired for
+functions defined outside of this crate which return the type to have
+`#[must_use]` behavior.
+
+As a general rule of thumb, this should be restricted to types which could be
+used to make security decisions. For example, digests and signatures should have
+`#[must_use]`, while keys should not have it.
+
+*TODO(joshlf): Re-evaluate this policy? Maybe we want to put `#[must_use]` on
+more types?*
 
 ## Insecure
 
