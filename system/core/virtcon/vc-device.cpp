@@ -93,7 +93,7 @@ static zx_status_t vc_setup(vc_t* vc, bool special) {
 static void vc_invalidate(void* cookie, int x0, int y0, int w, int h) {
     vc_t* vc = reinterpret_cast<vc_t*>(cookie);
 
-    if (!vc->active || !vc_gfx) {
+    if (!g_vc_owns_display || !vc->active || !vc_gfx) {
         return;
     }
 
@@ -162,7 +162,7 @@ static void vc_tc_movecursor(void* cookie, int x, int y) {
     unsigned old_y = vc->cursor_y;
     vc->cursor_x = x;
     vc->cursor_y = y;
-    if (vc->active && !vc->hide_cursor) {
+    if (g_vc_owns_display && vc->active && !vc->hide_cursor) {
         // Clear the cursor from its old position.
         vc_invalidate(cookie, old_x, old_y, 1, 1);
         vc_invalidate_lines(vc, old_y, 1);
@@ -227,7 +227,7 @@ static void vc_set_cursor_hidden(vc_t* vc, bool hide) {
     if (vc->hide_cursor == hide)
         return;
     vc->hide_cursor = hide;
-    if (vc->active) {
+    if (g_vc_owns_display && vc->active) {
         vc_invalidate(vc, vc->cursor_x, vc->cursor_y, 1, 1);
         vc_invalidate_lines(vc, vc->cursor_y, 1);
     }
@@ -252,14 +252,14 @@ static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src, int line_count
     // position where the cursor isn't.  This must be done before the
     // tc_copy_lines() call, otherwise we might render the wrong character.
     bool old_hide_cursor = vc->hide_cursor;
-    if (vc->active) {
+    if (g_vc_owns_display && vc->active) {
         vc_set_cursor_hidden(vc, true);
     }
 
     // The next two calls can be done in any order.
     tc_copy_lines(&vc->textcon, y_dest, y_src, line_count);
 
-    if (vc->active && vc_gfx) {
+    if (g_vc_owns_display && vc->active && vc_gfx) {
         gfx_copyrect(vc_gfx, 0, y_src * vc->charh,
                      vc_gfx->width, line_count * vc->charh,
                      0, y_dest * vc->charh);
@@ -280,7 +280,7 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
         strncpy(vc->title, (char*)arg, sizeof(vc->title));
         vc->title[sizeof(vc->title) - 1] = '\0';
         vc_status_update();
-        if (vc_gfx) {
+        if (g_vc_owns_display && vc_gfx) {
             vc_gfx_invalidate_status();
         }
         break;
@@ -296,7 +296,7 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
 
 static void vc_clear_gfx(vc_t* vc) {
     // Fill display with background color
-    if (vc->active && vc_gfx) {
+    if (g_vc_owns_display && vc->active && vc_gfx) {
         gfx_fillrect(vc_gfx, 0, 0, vc_gfx->width, vc_gfx->height,
                      palette_to_color(vc, vc->back_color));
     }
@@ -332,7 +332,7 @@ static void vc_reset(vc_t* vc) {
 }
 
 void vc_status_clear() {
-    if (vc_gfx) {
+    if (g_vc_owns_display && vc_gfx) {
         gfx_fillrect(vc_tb_gfx, 0, 0,
                      vc_tb_gfx->width, vc_tb_gfx->height,
                      default_palette[STATUS_COLOR_BG]);
@@ -340,7 +340,7 @@ void vc_status_clear() {
 }
 
 void vc_status_commit() {
-    if (vc_gfx) {
+    if (g_vc_owns_display && vc_gfx) {
         vc_gfx_invalidate_status();
     }
 }
@@ -350,7 +350,7 @@ void vc_status_write(int x, unsigned color, const char* text) {
     unsigned fg = default_palette[color];
     unsigned bg = default_palette[STATUS_COLOR_BG];
 
-    if (vc_gfx) {
+    if (g_vc_owns_display && vc_gfx) {
         x *= vc_font->width;
         while ((c = *text++) != 0) {
             gfx_putchar(vc_tb_gfx, vc_font, c, x, 0, fg, bg);
@@ -360,14 +360,14 @@ void vc_status_write(int x, unsigned color, const char* text) {
 }
 
 void vc_render(vc_t* vc) {
-    if (vc->active && vc_gfx) {
+    if (g_vc_owns_display && vc->active && vc_gfx) {
         vc_status_update();
         vc_gfx_invalidate_all(vc);
     }
 }
 
 void vc_full_repaint(vc_t* vc) {
-    if (vc_gfx) {
+    if (g_vc_owns_display && vc_gfx) {
         vc_clear_gfx(vc);
         int scrollback_lines = vc_get_scrollback_lines(vc);
         vc_invalidate(vc, 0, -scrollback_lines,
@@ -396,7 +396,7 @@ static void vc_scroll_viewport_abs(vc_t* vc, int vpy) {
     int diff_abs = ABS(diff);
     vc->viewport_y = vpy;
     int rows = vc_rows(vc);
-    if (!vc->active || !vc_gfx) {
+    if (!g_vc_owns_display || !vc->active || !vc_gfx) {
         return;
     }
     if (diff_abs >= rows) {
@@ -598,7 +598,7 @@ void vc_free(vc_t* vc) {
 }
 
 void vc_flush(vc_t* vc) {
-    if (vc_gfx && vc->invy1 >= 0) {
+    if (g_vc_owns_display && vc_gfx && vc->invy1 >= 0) {
         int rows = vc_rows(vc);
         // Adjust for the current viewport position.  Convert
         // console-relative row numbers to screen-relative row numbers.
@@ -610,7 +610,7 @@ void vc_flush(vc_t* vc) {
 }
 
 void vc_flush_all(vc_t* vc) {
-    if (vc_gfx) {
+    if (g_vc_owns_display && vc_gfx) {
         vc_gfx_invalidate_all(vc);
     }
 }

@@ -198,7 +198,7 @@ static void vc_gfx_invalidate_mem(size_t offset, size_t size) {
 }
 
 void vc_gfx_invalidate_all(vc_t* vc) {
-    if (vc->active) {
+    if (g_vc_owns_display || vc->active) {
         vc_gfx_invalidate_mem(0, vc_gfx_size);
     }
 }
@@ -209,7 +209,7 @@ void vc_gfx_invalidate_status() {
 
 // pixel coords
 void vc_gfx_invalidate_region(vc_t* vc, unsigned x, unsigned y, unsigned w, unsigned h) {
-    if (!vc->active) {
+    if (!g_vc_owns_display || !vc->active) {
         return;
     }
     uint32_t flush_size = w * vc_gfx->pixelsize;

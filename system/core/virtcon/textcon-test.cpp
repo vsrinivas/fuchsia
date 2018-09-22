@@ -16,9 +16,7 @@ void vc_toggle_framebuffer() {
     __builtin_trap();
 }
 
-// This is needed to satisfy a reference from handle_key_press in vc-input.cpp
-// but the code path to that reference is dead in this test.
-bool g_vc_owns_display = false;
+bool g_vc_owns_display = true;
 
 namespace {
 

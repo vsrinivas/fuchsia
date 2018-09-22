@@ -94,7 +94,8 @@ static void handle_ownership_change(fuchsia_display_ControllerClientOwnershipCha
 
     // If we've gained it, repaint
     if (g_vc_owns_display && g_active_vc) {
-        vc_flush_all(g_active_vc);
+        vc_full_repaint(g_active_vc);
+        vc_render(g_active_vc);
     }
 }
 
