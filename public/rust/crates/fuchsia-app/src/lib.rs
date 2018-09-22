@@ -373,7 +373,7 @@ pub mod server {
                 DirectoryRequest::Unlink { path: _, responder, } => {
                     responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
                 }
-                DirectoryRequest::ReadDirents { max_out: _, responder, } => {
+                DirectoryRequest::ReadDirents { max_bytes: _, responder, } => {
                     responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED,
                                    &mut std::iter::empty()).map_err(|e| e.into())
                 }
