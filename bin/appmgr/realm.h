@@ -80,10 +80,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
       fidl::InterfaceRequest<fuchsia::sys::EnvironmentController>
           controller_request,
-      fidl::StringPtr label, zx::channel host_directory,
-      fuchsia::sys::ServiceListPtr additional_services,
-      bool inherit_parent_services,
-      bool allow_parent_runners);
+      fidl::StringPtr label, fuchsia::sys::ServiceListPtr additional_services,
+      bool inherit_parent_services, bool allow_parent_runners);
 
   using ComponentObjectCreatedCallback =
       fit::function<void(ComponentControllerImpl* component)>;

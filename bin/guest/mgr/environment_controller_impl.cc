@@ -19,8 +19,7 @@ EnvironmentControllerImpl::EnvironmentControllerImpl(
   // Create environment.
   context_->environment()->CreateNestedEnvironment(
       env_.NewRequest(), env_controller_.NewRequest(), label,
-      zx::channel(), /*additional_services=*/nullptr,
-      /*inherit_parent_services=*/true);
+      /*additional_services=*/nullptr, {.inherit_parent_services = true});
   env_->GetLauncher(launcher_.NewRequest());
   zx::channel h1, h2;
   FXL_CHECK(zx::channel::create(0, &h1, &h2) == ZX_OK);

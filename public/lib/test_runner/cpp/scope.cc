@@ -27,10 +27,9 @@ Scope::Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
   service_list->names = std::move(services_->svc_names_);
   service_list->host_directory = services_->OpenAsDirectory();
-  parent_env->CreateNestedEnvironment(env_.NewRequest(),
-                                      env_controller_.NewRequest(), label,
-                                      zx::channel(), std::move(service_list),
-                                      /*inherit_parent_services=*/true);
+  parent_env->CreateNestedEnvironment(
+      env_.NewRequest(), env_controller_.NewRequest(), label,
+      std::move(service_list), {.inherit_parent_services=true});
 }
 
 fuchsia::sys::Launcher* Scope::GetLauncher() {

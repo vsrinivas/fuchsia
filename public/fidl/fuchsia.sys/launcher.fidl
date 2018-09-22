@@ -65,7 +65,7 @@ struct ServiceList {
   // A service provider to get the services listed in |names| from.
   ServiceProvider? provider;
 
-  // The directory hosting the services in |names|.
+  // A channel to the directory hosting the services in |names|.
   // TODO(CP-124): Support |host_directory| for CreateComponent and deprecate
   // |provider|.
   handle<channel>? host_directory;

@@ -21,22 +21,13 @@ struct EnvironmentOptions {
 //
 // Applications run inside environments, which provide ambient services and
 // support for their lifecycle.
-[Discoverable]
-interface Environment {
+[Discoverable] interface Environment {
   // Creates a new environment nested inside this environment.
   //
   // When applications are created inside the nested environment using the
   // environment's |Launcher|, the environment requests the
   // environment services from |host_directory| before passing those services to
   // the newly created application in its |StartupInfo|.
-  //
-  // Typically the |host_directory| will make the newly created |environment|
-  // available in the environment services, giving child applications to launch
-  // other applications in the environment and to create nested environments.
-  //
-  // The |host_directory| must provide an |Loader| service (or
-  // inherit one from its parent) if it wishes to allow new applications to be
-  // loaded in the nested environment.
   //
   // The |controller| can be used to control the lifecycle of the created
   // environment. If an |EnvironmentController|'s interface is
@@ -46,20 +37,15 @@ interface Environment {
   // diagnostic purposes.  The label will be truncated if it is longer
   // than |kLabelMaxLength|.
   //
-  // |additional_services| and |inherit_parent_services| are currently unused.
-  // In the future, they will be used instead of |host_directory| to provide
-  // services to the environment.
+  // |additional_services|, which may be empty, contains a list of services
+  // that the environment provides, which are hosted by
+  // |additional_services.host_directory|. If |options.inherit_parent_services|
+  // is false, |host_directory| must provide a |Loader| service if it wishes to
+  // allow new components to be loaded in the new environment.
+  //
+  // |options| provides additional options, see |EnvironmentOptions| for
+  // details.
   1: CreateNestedEnvironment(request<Environment> environment,
-                             request<EnvironmentController>? controller,
-                             string? label,
-                             handle<channel>? host_directory,
-                             ServiceList? additional_services,
-                             bool inherit_parent_services);
-
-  // Same as |CreateNestedEnvironment|, but with flags passed through
-  // |EnvironmentOptions|.
-  5: CreateNestedEnvironmentWithOptions(
-                             request<Environment> environment,
                              request<EnvironmentController>? controller,
                              string? label,
                              ServiceList? additional_services,

@@ -128,7 +128,7 @@ class EnclosingEnvironment {
   static std::unique_ptr<EnclosingEnvironment> Create(
       const std::string& label, const fuchsia::sys::EnvironmentPtr& parent_env,
       std::unique_ptr<EnvironmentServices> services,
-      fuchsia::sys::EnvironmentOptionsPtr options = nullptr);
+      const fuchsia::sys::EnvironmentOptions& options = {});
 
   ~EnclosingEnvironment();
 
@@ -194,7 +194,7 @@ class EnclosingEnvironment {
   EnclosingEnvironment(const std::string& label,
                        const fuchsia::sys::EnvironmentPtr& parent_env,
                        std::unique_ptr<EnvironmentServices> services,
-                       fuchsia::sys::EnvironmentOptionsPtr options = nullptr);
+                       const fuchsia::sys::EnvironmentOptions& options);
 
   bool running_ = false;
   const std::string label_;

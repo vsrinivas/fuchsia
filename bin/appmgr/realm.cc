@@ -293,18 +293,8 @@ void Realm::CreateNestedEnvironment(
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController>
         controller_request,
-    fidl::StringPtr label, zx::channel host_directory,
-    fuchsia::sys::ServiceListPtr additional_services,
+    fidl::StringPtr label, fuchsia::sys::ServiceListPtr additional_services,
     bool inherit_parent_services, bool allow_parent_runners) {
-  if (host_directory) {
-    FXL_LOG(ERROR) << label->c_str()
-                   << ": CreateNestedEnvironment no longer supports "
-                   << "|host_directory|. Please use "
-                   << "|additional_services and |inherit_parent_services| "
-                   << "instead.";
-
-    return;
-  }
   if (additional_services && !additional_services->host_directory) {
     FXL_LOG(ERROR) << label->c_str()
                    << ": |additional_services.provider| is not supported for "

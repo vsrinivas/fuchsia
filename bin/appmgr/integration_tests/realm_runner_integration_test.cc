@@ -43,7 +43,7 @@ class RealmRunnerTest : public TestWithEnvironment {
 
   std::pair<std::unique_ptr<EnclosingEnvironment>,
             std::unique_ptr<MockRunnerRegistry>>
-  MakeNestedEnvironment(fuchsia::sys::EnvironmentOptionsPtr options) {
+  MakeNestedEnvironment(const fuchsia::sys::EnvironmentOptions& options) {
     fuchsia::sys::EnvironmentPtr env;
     enclosing_environment_->ConnectToService(fuchsia::sys::Environment::Name_,
                                              env.NewRequest().TakeChannel());
@@ -192,10 +192,8 @@ TEST_F(RealmRunnerTest, RunnerSharedFromParent) {
   std::unique_ptr<EnclosingEnvironment> nested_environment;
   std::unique_ptr<MockRunnerRegistry> nested_registry;
   {
-    auto options = std::make_unique<fuchsia::sys::EnvironmentOptions>();
-    options->allow_parent_runners = true;
     std::tie(nested_environment, nested_registry) =
-        MakeNestedEnvironment(std::move(options));
+        MakeNestedEnvironment({.allow_parent_runners = true});
   }
 
   // launch again and check that the runner from the parent environment was

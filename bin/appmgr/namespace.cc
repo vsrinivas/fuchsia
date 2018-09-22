@@ -88,25 +88,13 @@ void Namespace::AddBinding(
 void Namespace::CreateNestedEnvironment(
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
-    fidl::StringPtr label, zx::channel host_directory,
-    fuchsia::sys::ServiceListPtr additional_services,
-    bool inherit_parent_services) {
-  realm_->CreateNestedEnvironment(
-      std::move(environment), std::move(controller), label,
-      std::move(host_directory), std::move(additional_services),
-      inherit_parent_services, /*allow_parent_runners=*/false);
-}
-
-void Namespace::CreateNestedEnvironmentWithOptions(
-    fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
-    fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
     fidl::StringPtr label,
     fuchsia::sys::ServiceListPtr additional_services,
     fuchsia::sys::EnvironmentOptions options) {
-  realm_->CreateNestedEnvironment(
-      std::move(environment), std::move(controller), label,
-      zx::channel(), std::move(additional_services),
-      options.inherit_parent_services, options.allow_parent_runners);
+  realm_->CreateNestedEnvironment(std::move(environment), std::move(controller),
+                                  label, std::move(additional_services),
+                                  options.inherit_parent_services,
+                                  options.allow_parent_runners);
 }
 
 void Namespace::GetLauncher(fidl::InterfaceRequest<Launcher> launcher) {

@@ -42,9 +42,8 @@ App::App(Config config)
   service_list->names = std::move(svc_names_);
   service_list->host_directory = OpenAsDirectory();
   startup_context_->environment()->CreateNestedEnvironment(
-      env_.NewRequest(), env_controller_.NewRequest(),
-      kDefaultLabel, /*host_directory=*/zx::channel(), std::move(service_list),
-      /*inherit_parent_services=*/false);
+      env_.NewRequest(), env_controller_.NewRequest(), kDefaultLabel,
+      std::move(service_list), {});
   env_->GetLauncher(env_launcher_.NewRequest());
 
   // Connect to startup services

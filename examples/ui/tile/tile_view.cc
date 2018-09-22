@@ -104,8 +104,8 @@ void TileView::CreateNestedEnvironment() {
   service_list->names.push_back(fuchsia::ui::policy::Presenter::Name_);
   service_list->host_directory = OpenAsDirectory();
   startup_context_->environment()->CreateNestedEnvironment(
-      env_.NewRequest(), env_controller_.NewRequest(), "tile", zx::channel(),
-      std::move(service_list), /*inherit_parent_services=*/true);
+      env_.NewRequest(), env_controller_.NewRequest(), "tile",
+      std::move(service_list), {.inherit_parent_services = true});
   env_->GetLauncher(env_launcher_.NewRequest());
 }
 
