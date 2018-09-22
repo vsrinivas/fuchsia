@@ -19,6 +19,7 @@ MODULE_FIDL_LIBS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/zxio \
+    system/ulib/zx \
 
 MODULE_LIBS := \
     system/ulib/unittest \
