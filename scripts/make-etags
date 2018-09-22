@@ -9,4 +9,4 @@
 
 rm -f TAGS
 find . \( -name 'build-*' -prune \) -o \
-    \( -type f -regex '.*\.[chS]\|.*\.cpp' -print0 \) | xargs -0 etags -a
+    \( -type f -name '*.[chS]' -o -name *.cpp \) -print0 | xargs -0 etags -a
