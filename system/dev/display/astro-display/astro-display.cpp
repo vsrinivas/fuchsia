@@ -241,7 +241,7 @@ void AstroDisplay::PopulatePanelType() {
     }
 }
 
-zx_status_t AstroDisplay::SetupDisplayInterface(void) {
+zx_status_t AstroDisplay::SetupDisplayInterface() {
     zx_status_t status;
     fbl::AutoLock lock(&display_lock_);
 
@@ -287,15 +287,35 @@ zx_status_t AstroDisplay::SetupDisplayInterface(void) {
             return status;
         }
 
-        // Initialize all display related clocks
+        // Setup VPU and VPP units first
         fbl::AllocChecker ac;
+        vpu_ = fbl::make_unique_checked<astro_display::Vpu>(&ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        status = vpu_->Init(parent_);
+        if (status != ZX_OK) {
+            DISP_ERROR("Could not initialize VPU object\n");
+            return status;
+        }
+        vpu_->PowerOff();
+        vpu_->PowerOn();
+        vpu_->VppInit();
+
         clock_ = fbl::make_unique_checked<astro_display::AstroDisplayClock>(&ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        status = clock_->Init(parent_, disp_setting_);
+        status = clock_->Init(parent_);
         if (status != ZX_OK) {
             DISP_ERROR("Could not initialize Clock object\n");
+            return status;
+        }
+
+        // Enable all display related clocks
+        status = clock_->Enable(disp_setting_);
+        if (status != ZX_OK) {
+            DISP_ERROR("Could not enable display clocks!\n");
             return status;
         }
 
@@ -323,7 +343,11 @@ zx_status_t AstroDisplay::SetupDisplayInterface(void) {
     /// OSD
     // Create internal osd object
     fbl::AllocChecker ac;
-    osd_ = fbl::make_unique_checked<astro_display::Osd>(&ac);
+    osd_ = fbl::make_unique_checked<astro_display::Osd>(&ac,
+                                                        width_,
+                                                        height_,
+                                                        disp_setting_.h_active,
+                                                        disp_setting_.v_active);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -333,6 +357,11 @@ zx_status_t AstroDisplay::SetupDisplayInterface(void) {
         DISP_ERROR("Could not initialize OSD object\n");
         return status;
     }
+
+    if (!skip_disp_init_) {
+        osd_->HwInit();
+    }
+
     // Configure osd layer
     current_image_valid_= false;
     osd_->Disable();
@@ -341,7 +370,6 @@ zx_status_t AstroDisplay::SetupDisplayInterface(void) {
         DISP_ERROR("OSD configuration failed!\n");
         return status;
     }
-
     /// Backlight
     backlight_ = fbl::make_unique_checked<astro_display::Backlight>(&ac);
     if (!ac.check()) {

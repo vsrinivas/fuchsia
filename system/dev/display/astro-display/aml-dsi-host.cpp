@@ -102,7 +102,35 @@ void AmlDsiHost::PhyDisable() {
     WRITE32_REG(HHI, HHI_MIPI_CNTL2, 0);
 }
 
+void AmlDsiHost::HostOff(const DisplaySetting& disp_setting) {
+    ZX_DEBUG_ASSERT(initialized_);
+    // turn host off only if it's been fully turned on
+    if (!host_on_) {
+        return;
+    }
+
+    // Place dsi in command mode first
+    HostModeInit(COMMAND_MODE, disp_setting);
+
+    // Turn off LCD
+    lcd_->Disable();
+
+    // disable PHY
+    PhyDisable();
+
+    // finally shutdown host
+    phy_->Shutdown();
+
+    host_on_ = false;
+}
+
 zx_status_t AmlDsiHost::HostOn(const DisplaySetting& disp_setting) {
+    ZX_DEBUG_ASSERT(initialized_);
+
+    if (host_on_) {
+        return ZX_OK;
+    }
+
     // Enable MIPI PHY
     PhyEnable();
 
@@ -171,15 +199,29 @@ zx_status_t AmlDsiHost::HostOn(const DisplaySetting& disp_setting) {
         DISP_ERROR("Error during LCD Initialization! %d\n", status);
         return status;
     }
+
+    status = lcd_->Enable();
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not enable LCD! %d\n", status);
+        return status;
+    }
+
     // switch to video mode
     if ((status = HostModeInit(VIDEO_MODE, disp_setting)) != ZX_OK) {
         DISP_ERROR("Error during dsi host init! %d\n", status);
         return status;
     }
+
+    // Host is On and Active at this point
+    host_on_ = true;
     return ZX_OK;
 }
 
 zx_status_t AmlDsiHost::Init() {
+    if (initialized_) {
+        return ZX_OK;
+    }
+
     zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
     if (status != ZX_OK) {
         DISP_ERROR("AmlDsiHost: Could not get ZX_PROTOCOL_PLATFORM_DEV protocol\n");
@@ -206,10 +248,13 @@ zx_status_t AmlDsiHost::Init() {
     mipi_dsi_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_mipi_dsi_));
     hhi_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_hhi_));
 
+    initialized_ = true;
     return ZX_OK;
 }
 
 void AmlDsiHost::Dump() {
+    ZX_DEBUG_ASSERT(initialized_);
+
     DISP_INFO("%s: DUMPING DSI HOST REGS\n", __func__);
     DISP_INFO("DW_DSI_VERSION = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VERSION));
     DISP_INFO("DW_DSI_PWR_UP = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PWR_UP));

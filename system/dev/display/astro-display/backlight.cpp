@@ -30,6 +30,10 @@ constexpr I2cCommand kBacklightInitTable[] = {
 } // namespace
 
 zx_status_t Backlight::Init(zx_device_t* parent) {
+    if (initialized_) {
+        return ZX_OK;
+    }
+
     platform_device_protocol_t pdev;
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
     if (status != ZX_OK) {
@@ -54,10 +58,15 @@ zx_status_t Backlight::Init(zx_device_t* parent) {
     // set gpio pin as output
     gpio_config_out(&gpio_, 1);
     zx_nanosleep(zx_deadline_after(ZX_USEC(10))); // optional small delay for pin to settle
+    initialized_ = true;
     return ZX_OK;
 }
 
 void Backlight::Enable() {
+    ZX_DEBUG_ASSERT(initialized_);
+    if (enabled_) {
+        return;
+    }
     // power on backlight
     gpio_write(&gpio_, 1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1))); // delay to ensure backlight is powered on
@@ -68,11 +77,18 @@ void Backlight::Enable() {
                        kBacklightInitTable[i].val);
         }
     }
+    enabled_ = true;
+    return;
 }
 
 void Backlight::Disable() {
+    ZX_DEBUG_ASSERT(initialized_);
+    if (!enabled_) {
+        return;
+    }
     // power off backlight
     gpio_write(&gpio_, 0);
+    enabled_ = false;
 }
 
 } // namespace astro_display

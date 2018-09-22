@@ -15,12 +15,16 @@ namespace astro_display {
 
 class Backlight {
 public:
+    Backlight() {}
     zx_status_t Init(zx_device_t* parent);
     void Enable();
     void Disable();
 
 private:
-    gpio_protocol_t                 gpio_ = {nullptr, nullptr};
-    i2c_protocol_t                  i2c_ = {nullptr, nullptr};
+    gpio_protocol_t                 gpio_ = {};
+    i2c_protocol_t                  i2c_ = {};
+
+    bool                            initialized_ = false;
+    bool                            enabled_ = false;
 };
 } // namespace astro_display

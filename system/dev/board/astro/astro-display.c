@@ -35,6 +35,16 @@ static const pbus_mmio_t display_mmios[] = {
         .base = S905D2_VPU_BASE,
         .length = S905D2_VPU_LENGTH,
     },
+    {
+        // AOBUS
+        .base = S905D2_AOBUS_BASE,
+        .length = S905D2_AOBUS_LENGTH,
+    },
+    {
+        // CBUS
+        .base = S905D2_CBUS_BASE,
+        .length = S905D2_CBUS_LENGTH,
+    },
 };
 
 static const pbus_irq_t display_irqs[] = {

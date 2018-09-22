@@ -16,6 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/dw-mipi-dsi.cpp \
     $(LOCAL_DIR)/aml-mipi-phy.cpp \
     $(LOCAL_DIR)/aml-dsi-host.cpp \
+    $(LOCAL_DIR)/vpu.cpp \
     $(LOCAL_DIR)/lcd.cpp \
     $(LOCAL_DIR)/astro-display.cpp \
 

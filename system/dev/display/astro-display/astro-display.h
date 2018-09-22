@@ -27,6 +27,7 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
+#include "vpu.h"
 #include "osd.h"
 #include "backlight.h"
 #include "astro-clock.h"
@@ -70,7 +71,7 @@ public:
     void Dump();
 
 private:
-    zx_status_t SetupDisplayInterface(void);
+    zx_status_t SetupDisplayInterface();
     int VSyncThread();
     void CopyDisplaySettings();
     void PopulateAddedDisplayArgs(added_display_args_t* args);
@@ -85,9 +86,9 @@ private:
     thrd_t                              vsync_thread_;
 
     // Protocol handles used in by this driver
-    platform_device_protocol_t          pdev_ = { nullptr, nullptr };
-    gpio_protocol_t                     gpio_ = { nullptr, nullptr };
-    canvas_protocol_t                   canvas_ = { nullptr, nullptr };
+    platform_device_protocol_t          pdev_ = {};
+    gpio_protocol_t                     gpio_ = {};
+    canvas_protocol_t                   canvas_ = {};
 
     // Board Info
     pdev_board_info_t                   board_info_;
@@ -131,6 +132,7 @@ private:
     ImportedImageBitmap                imported_images_ TA_GUARDED(image_lock_);;
 
     // Objects
+    fbl::unique_ptr<astro_display::Vpu>                 vpu_;
     fbl::unique_ptr<astro_display::Osd>                 osd_;
     fbl::unique_ptr<astro_display::Backlight>           backlight_;
     fbl::unique_ptr<astro_display::AstroDisplayClock>   clock_;

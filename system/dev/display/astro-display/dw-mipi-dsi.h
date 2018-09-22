@@ -56,8 +56,10 @@ private:
     zx_status_t SendCmd(const MipiDsiCmd& cmd);
 
     io_buffer_t                             mmio_mipi_dsi_;
-    platform_device_protocol_t              pdev_ = {nullptr, nullptr};
+    platform_device_protocol_t              pdev_ = {};
     fbl::unique_ptr<hwreg::RegisterIo>      mipi_dsi_regs_;
+
+    bool                                    initialized_ = false;
 };
 
 } // namespace astro_display

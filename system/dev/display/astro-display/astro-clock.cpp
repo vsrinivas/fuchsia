@@ -141,31 +141,28 @@ zx_status_t AstroDisplayClock::GenerateHPLL(const DisplaySetting& d) {
     return ZX_ERR_INTERNAL;
 }
 
-zx_status_t AstroDisplayClock::Init(zx_device_t* parent, const DisplaySetting& d) {
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
-    if (status != ZX_OK) {
-        DISP_ERROR("AstroDisplayClock: Could not get ZX_PROTOCOL_PLATFORM_DEV protocol\n");
-        return status;
+void AstroDisplayClock::Disable() {
+    ZX_DEBUG_ASSERT(initialized_);
+    if (!clock_enabled_) {
+        return;
     }
+    WRITE32_REG(VPU, ENCL_VIDEO_EN, 0);
 
-    // Map VPU and HHI registers
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_vpu_);
-    if (status != ZX_OK) {
-        DISP_ERROR("AstroDisplayClock: Could not map VPU mmio\n");
-        return status;
-    }
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio_hhi_);
-    if (status != ZX_OK) {
-        DISP_ERROR("AstroDisplayClock: Could not map HHI mmio\n");
-        io_buffer_release(&mmio_vpu_);
-        return status;
-    }
+    SET_BIT32(HHI, HHI_VID_CLK_CNTL2, 0, ENCL_GATE_VCLK, 1);
+    SET_BIT32(HHI, HHI_VIID_CLK_CNTL, 0, 0, 5);
+    SET_BIT32(HHI, HHI_VIID_CLK_CNTL, 0, VCLK2_EN, 1);
 
-    // Create register io
-    vpu_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_vpu_));
-    hhi_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_hhi_));
+    // disable pll
+    SET_BIT32(HHI, HHI_HDMI_PLL_CNTL0, 0, LCD_PLL_EN_HPLL_G12A, 1);
+    clock_enabled_ = false;
+}
+
+zx_status_t AstroDisplayClock::Enable(const DisplaySetting& d) {
+    ZX_DEBUG_ASSERT(initialized_);
+
+    if (clock_enabled_) {
+        return ZX_OK;
+    }
 
     // Populate internal LCD timing structure based on predefined tables
     CalculateLcdTiming(d);
@@ -200,7 +197,7 @@ zx_status_t AstroDisplayClock::Init(zx_device_t* parent, const DisplaySetting& d
     SET_BIT32(HHI, HHI_HDMI_PLL_CNTL0, 0, LCD_PLL_RST_HPLL_G12A, 1);
 
     zx_nanosleep(zx_deadline_after(ZX_USEC(50)));
-    status = PllLockWait();
+    zx_status_t status = PllLockWait();
     if (status != ZX_OK) {
         DISP_ERROR("hpll lock failed\n");
         io_buffer_release(&mmio_vpu_);
@@ -258,14 +255,6 @@ zx_status_t AstroDisplayClock::Init(zx_device_t* parent, const DisplaySetting& d
     SET_BIT32(HHI, HHI_VID_CLK_CNTL2, 1, ENCL_GATE_VCLK, 1);
 
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-
-    // uint32_t h_active, v_active;
-    // uint32_t video_on_pixel, video_on_line;
-
-    // h_active        = d.h_active;
-    // v_active        = d.v_active;
-    // video_on_pixel  = lcd_timing_.vid_pixel_on;
-    // video_on_line   = lcd_timing_.vid_line_on;
 
     WRITE32_REG(VPU, ENCL_VIDEO_EN, 0);
 
@@ -354,10 +343,46 @@ zx_status_t AstroDisplayClock::Init(zx_device_t* parent, const DisplaySetting& d
     WRITE32_REG(VPU, VPP_MISC, READ32_REG(VPU, VPP_MISC) & ~(VPP_OUT_SATURATE));
 
     // Ready to be used
+    clock_enabled_ = true;
+    return ZX_OK;
+}
+
+zx_status_t AstroDisplayClock::Init(zx_device_t* parent) {
+    if (initialized_) {
+        return ZX_OK;
+    }
+
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+    if (status != ZX_OK) {
+        DISP_ERROR("AstroDisplayClock: Could not get ZX_PROTOCOL_PLATFORM_DEV protocol\n");
+        return status;
+    }
+
+    // Map VPU and HHI registers
+    status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio_vpu_);
+    if (status != ZX_OK) {
+        DISP_ERROR("AstroDisplayClock: Could not map VPU mmio\n");
+        return status;
+    }
+    status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio_hhi_);
+    if (status != ZX_OK) {
+        DISP_ERROR("AstroDisplayClock: Could not map HHI mmio\n");
+        io_buffer_release(&mmio_vpu_);
+        return status;
+    }
+
+    // Create register io
+    vpu_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_vpu_));
+    hhi_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_hhi_));
+
+    initialized_ = true;
     return ZX_OK;
 }
 
 void AstroDisplayClock::Dump() {
+    ZX_DEBUG_ASSERT(initialized_);
     DISP_INFO("#############################\n");
     DISP_INFO("Dumping pll_cfg structure:\n");
     DISP_INFO("#############################\n");

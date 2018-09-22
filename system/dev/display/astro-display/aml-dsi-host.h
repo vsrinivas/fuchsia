@@ -12,8 +12,8 @@
 #include <ddktl/device.h>
 
 #include "common.h"
-#include "hhi.h"
-#include "vpu.h"
+#include "hhi-regs.h"
+#include "vpu-regs.h"
 #include "lcd.h"
 #include "aml-mipi-phy.h"
 
@@ -23,6 +23,7 @@ class AmlDsiHost {
 public:
     AmlDsiHost(zx_device_t* parent, uint32_t bitrate, uint8_t panel_type)
         : parent_(parent), bitrate_(bitrate), panel_type_(panel_type) {}
+
     ~AmlDsiHost() {
         io_buffer_release(&mmio_hhi_);
         io_buffer_release(&mmio_mipi_dsi_);
@@ -34,6 +35,10 @@ public:
     // information to the generic driver. Therefore, it's just simpler to configure it here
     zx_status_t Init();
     zx_status_t HostOn(const DisplaySetting& disp_setting);
+    // This function will turn off DSI Host. It is a "best-effort" function. We will attempt
+    // to shutdown whatever we can. Error during shutdown path is ignored and function proceeds
+    // with shutting down.
+    void HostOff(const DisplaySetting& disp_setting);
     void Dump();
 private:
     void PhyEnable();
@@ -43,7 +48,7 @@ private:
     io_buffer_t                                 mmio_mipi_dsi_;
     io_buffer_t                                 mmio_hhi_;
 
-    platform_device_protocol_t                  pdev_ = { nullptr, nullptr };
+    platform_device_protocol_t                  pdev_ = {};
 
     fbl::unique_ptr<hwreg::RegisterIo>          mipi_dsi_regs_;
     fbl::unique_ptr<hwreg::RegisterIo>          hhi_regs_;
@@ -52,6 +57,9 @@ private:
 
     uint32_t                                    bitrate_;
     uint8_t                                     panel_type_;
+
+    bool                                        initialized_ = false;
+    bool                                        host_on_ = false;
 
     fbl::unique_ptr<Lcd>         lcd_;
     fbl::unique_ptr<AmlMipiPhy>  phy_;

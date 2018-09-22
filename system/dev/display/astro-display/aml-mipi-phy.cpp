@@ -22,6 +22,8 @@ constexpr uint32_t kUnit = (1 * 1000 * 1000 * 100);
 constexpr uint32_t kPhyDelay = 6;
 
 zx_status_t AmlMipiPhy::PhyCfgLoad(uint32_t bitrate) {
+    ZX_DEBUG_ASSERT(initialized_);
+
     // According to MIPI -PHY Spec, we need to define Unit Interval (UI).
     // This UI is defined as the time it takes to send a bit (i.e. bitrate)
     // The x100 is to ensure the ui is not rounded too much (i.e. 2.56 --> 256)
@@ -191,7 +193,27 @@ zx_status_t AmlMipiPhy::WaitforPhyReady()
     return ZX_OK;
 }
 
+void AmlMipiPhy::Shutdown() {
+    ZX_DEBUG_ASSERT(initialized_);
+
+    if (!phy_enabled_) {
+        return;
+    }
+
+    // Power down DSI
+    WRITE32_REG(MIPI_DSI, DW_DSI_PWR_UP, PWR_UP_RST);
+    WRITE32_REG(DSI_PHY, MIPI_DSI_CHAN_CTRL, 0x1f);
+    SET_BIT32(DSI_PHY, MIPI_DSI_PHY_CTRL, 0, 7, 1);
+    phy_enabled_ = false;
+}
+
 zx_status_t AmlMipiPhy::Startup() {
+    ZX_DEBUG_ASSERT(initialized_);
+
+    if (phy_enabled_) {
+        return ZX_OK;
+    }
+
     // Power up DSI
     WRITE32_REG(MIPI_DSI, DW_DSI_PWR_UP, PWR_UP_ON);
 
@@ -226,10 +248,15 @@ zx_status_t AmlMipiPhy::Startup() {
     WRITE32_REG(MIPI_DSI, DW_DSI_LPCLK_CTRL, (0x1 << LPCLK_CTRL_AUTOCLKLANE_CTRL) |
                 (0x1 << LPCLK_CTRL_TXREQUESTCLKHS));
 
+    phy_enabled_ = true;
     return ZX_OK;
 }
 
 zx_status_t AmlMipiPhy::Init(zx_device_t* parent, uint32_t lane_num) {
+    if (initialized_) {
+        return ZX_OK;
+    }
+
     num_of_lanes_ = lane_num;
 
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
@@ -257,10 +284,12 @@ zx_status_t AmlMipiPhy::Init(zx_device_t* parent, uint32_t lane_num) {
     mipi_dsi_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_mipi_dsi_));
     dsi_phy_regs_ = fbl::make_unique<hwreg::RegisterIo>(io_buffer_virt(&mmio_dsi_phy_));
 
+    initialized_ = true;
     return ZX_OK;
 }
 
 void AmlMipiPhy::Dump() {
+    ZX_DEBUG_ASSERT(initialized_);
     DISP_INFO("%s: DUMPING PHY REGS\n", __func__);
     DISP_INFO("MIPI_DSI_PHY_CTRL = 0x%x\n", READ32_REG(DSI_PHY, MIPI_DSI_PHY_CTRL));
     DISP_INFO("MIPI_DSI_CHAN_CTRL = 0x%x\n", READ32_REG(DSI_PHY, MIPI_DSI_CHAN_CTRL));

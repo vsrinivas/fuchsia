@@ -4,43 +4,49 @@
 
 #pragma once
 
-#define VPU_VIU_OSD1_CTRL_STAT                              (0x1a10 << 2)
-#define VPU_VIU_OSD1_CTRL_STAT2                             (0x1a2d << 2)
-#define VPU_VIU_OSD1_BLK0_CFG_W0                            (0x1a1b << 2)
-#define VPU_VIU_OSD1_BLK0_CFG_W1                            (0x1a1c << 2)
-#define VPU_VIU_OSD1_BLK0_CFG_W2                            (0x1a1d << 2)
-#define VPU_VIU_OSD1_BLK0_CFG_W3                            (0x1a1e << 2)
-#define VPU_VIU_OSD1_BLK0_CFG_W4                            (0x1a13 << 2)
-#define VPU_VIU_OSD1_FIFO_CTRL_STAT                         (0x1a2b << 2)
-#define VPU_VIU_OSD2_BLK0_CFG_W4                            (0x1a64 << 2)
-#define VPU_VIU_OSD_BLEND_CTRL                              (0x39b0 << 2)
-#define VPU_VIU_OSD_BLEND_DIN0_SCOPE_H                      (0x39b1 << 2)
-#define VPU_VIU_OSD_BLEND_DIN0_SCOPE_V                      (0x39b2 << 2)
-#define VPU_VIU_OSD_BLEND_DIN1_SCOPE_H                      (0x39b3 << 2)
-#define VPU_VIU_OSD_BLEND_DIN1_SCOPE_V                      (0x39b4 << 2)
-#define VPU_VIU_OSD_BLEND_DIN2_SCOPE_H                      (0x39b5 << 2)
-#define VPU_VIU_OSD_BLEND_DIN2_SCOPE_V                      (0x39b6 << 2)
-#define VPU_VIU_OSD_BLEND_DIN3_SCOPE_H                      (0x39b7 << 2)
-#define VPU_VIU_OSD_BLEND_DIN3_SCOPE_V                      (0x39b8 << 2)
-#define VPU_VIU_OSD_BLEND_DUMMY_DATA0                       (0x39b9 << 2)
-#define VPU_VIU_OSD_BLEND_DUMMY_ALPHA                       (0x39ba << 2)
-#define VPU_VIU_OSD_BLEND_BLEND0_SIZE                       (0x39bb << 2)
-#define VPU_VIU_OSD_BLEND_BLEND1_SIZE                       (0x39bc << 2)
-#define VPU_VPP_POSTBLEND_H_SIZE                            (0x1d21 << 2)
-#define VPU_VPP_HOLD_LINES                                  (0x1d22 << 2)
-#define VPU_VPP_MISC                                        (0x1d26 << 2)
-#define VPU_VPP_OFIFO_SIZE                                  (0x1d27 << 2)
-#define VPU_VPP_OUT_H_V_SIZE                                (0x1da5 << 2)
-#define VPU_VPP_OSD_SC_CTRL0                                (0x1dc8 << 2)
-#define VPU_VPP_OSD_SCI_WH_M1                               (0x1dc9 << 2)
-#define VPU_VPP_OSD_SCO_H_START_END                         (0x1dca << 2)
-#define VPU_VPP_OSD_SCO_V_START_END                         (0x1dcb << 2)
-#define VPU_VPP_OSD1_IN_SIZE                                (0x1df1 << 2)
-#define VPU_VPP_OSD1_BLD_H_SCOPE                            (0x1df5 << 2)
-#define VPU_VPP_OSD1_BLD_V_SCOPE                            (0x1df6 << 2)
-#define VPU_VPP_OSD2_BLD_H_SCOPE                            (0x1df7 << 2)
-#define VPU_VPP_OSD2_BLD_V_SCOPE                            (0x1df8 << 2)
-#define VPU_OSD_PATH_MISC_CTRL                              (0x1a0e << 2)
-#define VPU_OSD1_BLEND_SRC_CTRL                             (0x1dfd << 2)
-#define VPU_OSD2_BLEND_SRC_CTRL                             (0x1dfe << 2)
-#define VPU_VIU_VENC_MUX_CTRL                               (0x271a << 2)
+#include <zircon/compiler.h>
+#include <ddk/protocol/platform-device.h>
+#include <fbl/unique_ptr.h>
+#include <hwreg/mmio.h>
+#include "vpu-regs.h"
+#include "common.h"
+
+
+namespace astro_display {
+
+class Vpu {
+public:
+    Vpu() {}
+    ~Vpu() {
+        io_buffer_release(&mmio_vpu_);
+        io_buffer_release(&mmio_hhi_);
+    }
+    zx_status_t Init(zx_device_t* parent);
+    // This function powers on VPU related blocks. The function contains undocumented
+    // register and/or power-on sequences.
+    void PowerOn();
+    // This function powers off VPU related blocks. The function contains undocumented
+    // register and/or power-off sequences.
+    void PowerOff();
+    // This function sets up default video post processing unit. It contains undocumented
+    // registers and/or initialization sequences
+    void VppInit();
+private:
+    // This function configures the VPU-related clocks. It contains undocumented registers
+    // and/or clock initialization sequences
+    void ConfigureClock();
+
+    io_buffer_t                         mmio_vpu_;
+    io_buffer_t                         mmio_hhi_;
+    io_buffer_t                         mmio_aobus_;
+    io_buffer_t                         mmio_cbus_;
+    platform_device_protocol_t          pdev_ = {};
+    fbl::unique_ptr<hwreg::RegisterIo>  vpu_regs_;
+    fbl::unique_ptr<hwreg::RegisterIo>  hhi_regs_;
+    fbl::unique_ptr<hwreg::RegisterIo>  aobus_regs_;
+    fbl::unique_ptr<hwreg::RegisterIo>  cbus_regs_;
+
+    bool                                initialized_ = false;
+
+};
+} // namespace astro_display

@@ -19,7 +19,15 @@ namespace astro_display {
 namespace {
 // Based on Vendor datasheet
 // <CMD TYPE><LENGTH><DATA...>
-// <DELAY_CMD><DELAY (us)>
+// <DELAY_CMD><DELAY (ms)>
+constexpr uint8_t lcd_shutdown_sequence[] = {
+    DELAY_CMD,5,
+    DCS_CMD,1,0x28,
+    DELAY_CMD, 30,
+    DCS_CMD,1,0x10,
+    DELAY_CMD,150,
+};
+
 constexpr uint8_t lcd_init_sequence_TV070WSM_FT[] = {
     GEN_CMD,2,0xE0,0x00,
     GEN_CMD,2,0xE1,0x93,
@@ -195,7 +203,7 @@ constexpr uint8_t lcd_init_sequence_TV070WSM_FT[] = {
     GEN_CMD,2,0xE6,0x02,
     GEN_CMD,2,0xE7,0x0C,
     DCS_CMD,1,0x11,
-    DELAY_CMD,120,/* delay 120ms */
+    DELAY_CMD,120,
     GEN_CMD,2,0xE0,0x03,
     GEN_CMD,2,0x2B,0x01,
     GEN_CMD,2,0x2C,0x00,
@@ -556,7 +564,7 @@ zx_status_t Lcd::LoadInitTable(const uint8_t* buffer, size_t size) {
     while (i < size) {
         switch (buffer[i]) {
         case DELAY_CMD:
-            zx_nanosleep(zx_deadline_after(ZX_USEC(buffer[i + 1])));
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(buffer[i + 1])));
             i += 2;
             break;
         case DCS_CMD:
@@ -578,7 +586,60 @@ zx_status_t Lcd::LoadInitTable(const uint8_t* buffer, size_t size) {
     return status;
 }
 
+zx_status_t Lcd::Disable() {
+    ZX_DEBUG_ASSERT(initialized_);
+    if (!enabled_) {
+        return ZX_OK;
+    }
+    // First send shutdown command to LCD
+    enabled_ = false;
+    return LoadInitTable(lcd_shutdown_sequence, sizeof(lcd_shutdown_sequence));
+}
+
+zx_status_t Lcd::Enable() {
+    ZX_DEBUG_ASSERT(initialized_);
+    if (enabled_) {
+        return ZX_OK;
+    }
+    // reset LCD panel via GPIO according to vendor doc
+    gpio_config_out(&gpio_, 1);
+    gpio_write(&gpio_, 1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
+    gpio_write(&gpio_, 0);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+    gpio_write(&gpio_, 1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
+    // check status
+    if (GetDisplayId() != ZX_OK) {
+        DISP_ERROR("Cannot communicate with LCD Panel!\n");
+        return ZX_ERR_TIMED_OUT;
+    }
+    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+
+    // load table
+    zx_status_t status;
+    if (panel_type_ == PANEL_TV070WSM_FT) {
+        status = LoadInitTable(lcd_init_sequence_TV070WSM_FT,
+                             sizeof(lcd_init_sequence_TV070WSM_FT));
+    } else if (panel_type_ == PANEL_P070ACB_FT) {
+        status = LoadInitTable(lcd_init_sequence_P070ACB_FT,
+                             sizeof(lcd_init_sequence_P070ACB_FT));
+    } else {
+        DISP_ERROR("Unsupported panel detected!\n");
+        status = ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if (status == ZX_OK) {
+        // LCD is on now.
+        enabled_ = true;
+    }
+    return status;
+}
+
 zx_status_t Lcd::Init(zx_device_t* parent) {
+    if (initialized_) {
+        return ZX_OK;
+    }
     platform_device_protocol_t pdev;
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
     if (status != ZX_OK) {
@@ -606,31 +667,12 @@ zx_status_t Lcd::Init(zx_device_t* parent) {
         return status;
     }
 
-    // reset LCD panel via GPIO according to vendor doc
-    gpio_config_out(&gpio_, 1);
-    gpio_write(&gpio_, 1);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
-    gpio_write(&gpio_, 0);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-    gpio_write(&gpio_, 1);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
-    // check status
-    if (GetDisplayId() != ZX_OK) {
-        DISP_ERROR("Cannot communicate with LCD Panel!\n");
-        return ZX_ERR_TIMED_OUT;
-    }
-    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+    initialized_ = true;
 
-    // load table
-    if (panel_type_ == PANEL_TV070WSM_FT) {
-        return LoadInitTable(lcd_init_sequence_TV070WSM_FT,
-                             sizeof(lcd_init_sequence_TV070WSM_FT));
-    } else if (panel_type_ == PANEL_P070ACB_FT) {
-        return LoadInitTable(lcd_init_sequence_P070ACB_FT,
-                             sizeof(lcd_init_sequence_P070ACB_FT));
-    } else {
-        DISP_ERROR("Unsupported panel detected!\n");
-        return ZX_ERR_NOT_SUPPORTED;
+    if (kBootloaderDisplayEnabled) {
+        DISP_INFO("LCD Enabled by Bootloader. Disabling before proceeding\n");
+        enabled_ = true;
+        Disable();
     }
 
     return ZX_OK;
