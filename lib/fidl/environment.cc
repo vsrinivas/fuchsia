@@ -50,8 +50,8 @@ void Environment::InitEnvironment(
   }
   service_list->host_directory = OpenAsDirectory();
   parent_env->CreateNestedEnvironment(
-      env_.NewRequest(), env_controller_.NewRequest(), label, zx::channel(),
-      std::move(service_list), /*inherit_parent_services=*/true);
+      env_.NewRequest(), env_controller_.NewRequest(), label,
+      std::move(service_list), {.inherit_parent_services = true});
 }
 
 }  // namespace modular

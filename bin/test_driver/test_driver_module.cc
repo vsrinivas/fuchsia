@@ -87,8 +87,7 @@ class TestApp {
   bool CreateNestedEnv() {
     module_host_->startup_context()->environment()->CreateNestedEnvironment(
         test_driver_env_.NewRequest(), /*controller=*/nullptr, kSubModuleName,
-        zx::channel(), /*additional_services=*/nullptr,
-        /*inherit_parent_services=*/true);
+        /*additional_services=*/nullptr, {.inherit_parent_services = true});
     return true;
   }
 

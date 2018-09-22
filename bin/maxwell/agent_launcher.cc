@@ -23,8 +23,7 @@ component::Services AgentLauncher::StartAgent(
   fuchsia::sys::EnvironmentPtr agent_env;
   environment_->CreateNestedEnvironment(
       agent_env.NewRequest(), /*controller=*/nullptr, kEnvironmentLabel,
-      zx::channel(), std::move(service_list),
-      /*inherit_parent_services=*/false);
+      std::move(service_list), {});
 
   fuchsia::sys::LauncherPtr agent_launcher;
   agent_env->GetLauncher(agent_launcher.NewRequest());
