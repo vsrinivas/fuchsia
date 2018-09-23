@@ -72,14 +72,8 @@ bool InterruptDispatcher::SendPacketLocked(zx_time_t timestamp) {
 
 zx_status_t InterruptDispatcher::Trigger(zx_time_t timestamp) {
 
-    // TODO(braval): Currently @johngro's driver uses zx_interrupt_trigger
-    // to wake up a thread waiting on a physical interrupt
-    // Once his driver adopts the interrupt with ports bounded, we can enforce
-    // the below condition again
-    /*
-    if (!(interrupt_.flags & INTERRUPT_VIRTUAL))
+    if (!(flags_ & INTERRUPT_VIRTUAL))
         return ZX_ERR_BAD_STATE;
-    */
 
     // Using AutoReschedDisable is necessary for correctness to prevent
     // context-switching to the woken thread while holding spinlock_.
