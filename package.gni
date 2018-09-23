@@ -6,6 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/images/manifest.gni")
 import("//build/json/validate_json.gni")
 import("//build/gn/packages.gni")
+import("//build/testing/test_spec.gni")
 
 declare_args() {
   # The package key to use for signing Fuchsia packages made by the
@@ -162,6 +163,12 @@ template("pm_build_package") {
 #
 #       dest (optional)
 #         [path] Location the binary will be placed within `test/`.
+#
+#       environments (optional):
+#         [list of scopes] Target device environments in which the test will
+#         run. The scopes must mirror the Environment go struct found in the
+#         testexec package in https://fuchsia.googlesource.com/infra/infra. If
+#         not present, the default QEMU environment will be used.
 #
 #       disabled (optional)
 #         [bool] Whether to disable the test on continuous integration
@@ -379,6 +386,7 @@ template("package") {
       ]
     }
     foreach(test, pkg.tests) {
+      is_disabled = defined(test.disabled) && test.disabled
       pkg_manifest += [
         {
           if (defined(test.dest)) {
@@ -386,11 +394,20 @@ template("package") {
           } else {
             dest = test.name
           }
-          if (defined(test.disabled) && test.disabled) {
+          if (is_disabled) {
             dest = "disabled/${dest}"
           }
           dest = "test/${dest}"
           source = rebase_path(test.name, "", root_out_dir)
+
+          if (is_disabled) {
+            test_spec(test.name) {
+              path = "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
+              if (defined(test.environments)) {
+                environments = test.environments
+              }
+            }
+          }
         },
       ]
     }

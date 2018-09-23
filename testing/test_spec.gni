@@ -2,40 +2,43 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Describes the hardware environment in which a test will be run. Associated
-# JSON is written to $root_build_dir/test_specs.
+# TODO(IN-575): Run a policy check to ensure that the spec is valid.
+# TODO(joshuaseaton): Only used in package() today; consider a scheme in which
+#   test specs are re-used for host tests.
+
+# Describes the target device environment in which a test should run. Associated
+# JSON is written to $target_out_dir with file extension "spec.json".
 #
 # Parameters
 #
-#   test_path
-#     Required: Path on target to a test binary.
+#   path
+#     Required: Full path to the the test.
+#   environments
+#     Optional: Target device environments in which the test should run. This is
+#       a list of scopes that mirror the Environment go struct found in the
+#       testexec package in https://fuchsia.googlesource.com/infra/infra. If not
+#       present, the default QEMU environment will be used.
 #
-#   device_type
-#     Optional: Type of device to target; if unspecified, the associated test
-#     will run within QEMU.
-
 template("test_spec") {
-  assert(defined(invoker.test_path), "test_path must be defined.")
-  forward_variables_from(invoker,
-                         [
-                           "test_path",
-                           "device_type",
-                         ])
+  assert(defined(invoker.path), "path must be defined.")
 
   test_spec = {
     test = {
-      location = test_path
+      name = target_name
+      location = invoker.path
+    }
+    if (defined(invoker.environments)) {
+      environments = invoker.environments
+    } else {
+      environments = [
+        {
+          device = {
+            type = "QEMU"
+          }
+        },
+      ]
     }
   }
-  spec_name = target_name
 
-  if (defined(device_type)) {
-    test_spec.device = {
-      type = device_type
-    }
-    spec_name = "$target_name-${device_type}"
-  }
-  write_file("$root_build_dir/test_specs/$spec_name.json", test_spec, "json")
-
-  # TODO(IN-575): Run a policy check to ensure that the spec is valid.
+  write_file("$target_out_dir/$target_name.spec.json", test_spec, "json")
 }
