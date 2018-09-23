@@ -33,9 +33,14 @@ VulkanInstance::ProcAddrs::ProcAddrs(vk::Instance instance,
 fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
   params.extension_names.insert(
       VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+#ifdef __Fuchsia__
+  // TODO(ES-143): It's quite possible that this would work on Linux if we
+  // uploaded a new Vulkan SDK to the cloud, but there are obstacles to doing
+  // this immediately, hence this workaround.  Or, it may be the NVIDIA Vulkan
+  // driver itself.
   params.extension_names.insert(
       VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
-
+#endif
   FXL_DCHECK(ValidateLayers(params.layer_names));
   FXL_DCHECK(ValidateExtensions(params.extension_names));
 
