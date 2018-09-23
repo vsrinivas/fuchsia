@@ -149,6 +149,9 @@ std::string Describe(const PHY& phy) {
     char buf[16];
     size_t offset = 0;
     switch (phy) {
+    case WLAN_PHY_CCK:
+        BUFFER("CCK");
+        break;
     case WLAN_PHY_DSSS:
         BUFFER("DSSS");
         break;
@@ -162,7 +165,7 @@ std::string Describe(const PHY& phy) {
         BUFFER("VHT");
         break;
     default:
-        BUFFER("PHY Unknown");
+        BUFFER("PHY---");
         break;
     }
     return std::string(buf);
@@ -188,25 +191,38 @@ std::string Describe(const GI& gi) {
         BUFFER("GI3200");
         break;
     default:
-        BUFFER("GI Unknown");
+        BUFFER("GI---");
         break;
     }
     return std::string(buf);
 }
 
-std::string Describe(const TxVector& tx_vec) {
+std::string Describe(const TxVector& tx_vec, tx_vec_idx_t tx_vec_idx) {
     char buf[128];
     size_t offset = 0;
     buf[0] = 0;
 
+    if (tx_vec_idx == kInvalidTxVectorIdx) {
+        zx_status_t status = tx_vec.ToIdx(&tx_vec_idx);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
+    }
+
+    BUFFER("%u:", tx_vec_idx);
     BUFFER("%s", Describe(tx_vec.phy).c_str());
     BUFFER("%s", Describe(tx_vec.gi).c_str());
     BUFFER("%s", ::wlan::common::kCbwStr[tx_vec.cbw]);
     BUFFER("NSS %u", tx_vec.nss);
-    BUFFER("MCS %u.", tx_vec.mcs_idx);
-    BUFFER("is_valid: %u", tx_vec.IsValid());
+    BUFFER("MCS %u", tx_vec.mcs_idx);
+    BUFFER("%s", tx_vec.IsValid() ? "" : "(x)");
 
     return std::string(buf);
+}
+
+std::string Describe(tx_vec_idx_t tx_vec_idx) {
+    TxVector tx_vec;
+    TxVector::FromIdx(tx_vec_idx, &tx_vec);
+
+    return Describe(tx_vec, tx_vec_idx);
 }
 
 std::string DumpToAscii(const uint8_t bytes[], size_t bytes_len) {

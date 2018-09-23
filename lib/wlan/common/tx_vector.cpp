@@ -42,7 +42,11 @@ zx_status_t TxVector::FromSupportedRate(const SupportedRate& erp_rate, TxVector*
         ZX_DEBUG_ASSERT(false);
         return ZX_ERR_INVALID_ARGS;
     }
-    *tx_vec = TxVector{};
+    *tx_vec = TxVector{
+        .gi = WLAN_GI_800NS,
+        .cbw = CBW20,
+        .nss = 1,
+    };
 
     PHY phy;
     uint8_t mcs_idx;
@@ -147,6 +151,7 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
             .phy = phy,
             .gi = gi,
             .cbw = cbw,
+            .nss = static_cast<uint8_t>(1 + mcs_idx / kHtNumUniqueMcs),
             .mcs_idx = mcs_idx,
         };
         break;
@@ -154,6 +159,9 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
     case WLAN_PHY_ERP:
         *tx_vec = TxVector{
             .phy = phy,
+            .gi = WLAN_GI_800NS,
+            .cbw = CBW20,
+            .nss = 1,
             .mcs_idx = static_cast<uint8_t>(idx - kErpStartIdx),
         };
         break;
@@ -161,10 +169,15 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
     case WLAN_PHY_CCK:
         *tx_vec = TxVector{
             .phy = phy,
+            .gi = WLAN_GI_800NS,
+            .cbw = CBW20,
+            .nss = 1,
             .mcs_idx = static_cast<uint8_t>(idx - kDsssCckStartIdx),
         };
         break;
     default:
+        // Not reachable.
+        ZX_DEBUG_ASSERT(false);
         break;
     }
     return ZX_OK;
@@ -185,9 +198,9 @@ bool TxVector::IsValid() const {
         if (!(cbw == CBW20 || cbw == CBW40 || cbw == CBW40ABOVE || cbw == CBW40BELOW)) {
             return false;
         }
-        // fall through
-    case WLAN_PHY_ERP:
         return 0 <= mcs_idx && mcs_idx < kHtNumMcs;
+    case WLAN_PHY_ERP:
+        return 0 <= mcs_idx && mcs_idx < kErpNumTxVector;
     case WLAN_PHY_VHT:
         // fall through
         // TODO(NET-1541): GI 800ns, 400ns or 200ns, BW any, MCS 0-9

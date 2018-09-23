@@ -17,6 +17,7 @@
 namespace wlan {
 
 static constexpr uint8_t kHtNumMcs = 32;  // Only support MCS 0-31
+static constexpr uint8_t kHtNumUniqueMcs = 8;
 static constexpr uint8_t kErpNumTxVector = 8;
 
 static constexpr tx_vec_idx_t kInvalidTxVectorIdx = WLAN_TX_VECTOR_IDX_INVALID;

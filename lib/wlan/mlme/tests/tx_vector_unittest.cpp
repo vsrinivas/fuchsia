@@ -19,21 +19,22 @@ TEST(TxVectorIndexTest, TxVectorMapping) {
 
     std::vector<TestVector> tvs = {
         // clang-format off
-        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW20, 0,  0},   1,},
-        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW20, 0,  7},   8,},
-        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW20, 0,  8},   9,},
-        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW20, 0, 15},  16,},
-        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW40, 0,  7},  40,},
-        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW40, 0,  8},  41,},
-        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW40, 0, 15},  48,},
-        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW20, 0,  0},  65,},
-        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW20, 0,  7},  72,},
-        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW20, 0,  8},  73,},
-        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW20, 0, 15},  80,},
-        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW40, 0,  0},  97,},
-        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW40, 0,  7}, 104,},
-        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW40, 0,  8}, 105,},
-        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW40, 0, 15}, 112,},
+        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW20, 1,  0},   1,},
+        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW20, 1,  7},   8,},
+        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW20, 2,  8},   9,},
+        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW20, 2, 15},  16,},
+        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW40, 1,  0},  33,},
+        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW40, 1,  7},  40,},
+        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW40, 2,  8},  41,},
+        {{WLAN_PHY_HT, WLAN_GI_800NS, CBW40, 2, 15},  48,},
+        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW20, 1,  0},  65,},
+        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW20, 1,  7},  72,},
+        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW20, 2,  8},  73,},
+        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW20, 2, 15},  80,},
+        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW40, 1,  0},  97,},
+        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW40, 1,  7}, 104,},
+        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW40, 2,  8}, 105,},
+        {{WLAN_PHY_HT, WLAN_GI_400NS, CBW40, 2, 15}, 112,},
 
         {{WLAN_PHY_ERP,  WLAN_GI_800NS, CBW20, 1, 0}, 129,},
         {{WLAN_PHY_ERP,  WLAN_GI_800NS, CBW20, 1, 7}, 136,},
@@ -52,6 +53,10 @@ TEST(TxVectorIndexTest, TxVectorMapping) {
         status = tv.want_vec.ToIdx(&got_idx);
         EXPECT_EQ(ZX_OK, status);
         EXPECT_EQ(tv.want_idx, got_idx);
+
+        std::string got_str_from_idx = debug::Describe(tv.want_idx);
+        std::string got_str_from_vec = debug::Describe(tv.want_vec);
+        EXPECT_EQ(got_str_from_idx, got_str_from_vec);
     }
 }
 

@@ -77,8 +77,8 @@ zx::duration PayloadTxTimeHt(CBW cbw, GI gi, size_t mcs_idx) {
 
     ZX_DEBUG_ASSERT(gi == WLAN_GI_400NS || gi == WLAN_GI_800NS);
 
-    int nss = 1 + mcs_idx / kNumUniqueMcsHt;
-    int relative_mcs_idx = mcs_idx % kNumUniqueMcsHt;
+    int nss = 1 + mcs_idx / kHtNumUniqueMcs;
+    int relative_mcs_idx = mcs_idx % kHtNumUniqueMcs;
 
     uint16_t bits_per_symbol = bits_per_symbol_list[relative_mcs_idx];
     if (cbw == CBW40) {

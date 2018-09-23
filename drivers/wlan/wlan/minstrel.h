@@ -21,9 +21,6 @@
 
 namespace wlan {
 
-static constexpr uint8_t kMaxNssHt = 4;
-static constexpr uint8_t kNumUniqueMcsHt = 8;
-
 static constexpr uint16_t kMinstrelFrameLength = 1400;  // bytes
 static constexpr zx::duration kMinstrelUpdateInterval = zx::msec(100);
 
