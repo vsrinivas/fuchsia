@@ -20,17 +20,15 @@ pub type ObjectId = u32;
 pub type NewId = u32;
 
 /// Trait to be implemented by any type used as an interface 'event'.
-pub trait Event: Sized {
-    type Error: failure::Fail;
-
+pub trait IntoMessage: Sized {
+    type Error: Fail;
     /// Consumes |self| and serializes into a |Message|.
     fn into_message(self, id: u32) -> Result<Message, Self::Error>;
 }
 
 /// Trait to be implemented by any type used as an interface 'request'.
-pub trait Request: Sized {
-    type Error: failure::Fail;
-
+pub trait FromMessage: Sized {
+    type Error: Fail;
     /// Consumes |msg| creates an instance of self.
     fn from_message(msg: Message) -> Result<Self, Self::Error>;
 }
@@ -38,8 +36,8 @@ pub trait Request: Sized {
 pub trait Interface {
     const NAME: &'static str;
     const VERSION: u32;
-    type Request: Request;
-    type Event: Event;
+    type Request: FromMessage;
+    type Event: IntoMessage;
 }
 
 #[derive(Debug, Fail)]

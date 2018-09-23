@@ -24,7 +24,7 @@ impl TestMessage {
     }
 }
 
-impl Request for TestMessage {
+impl FromMessage for TestMessage {
     type Error = DecodeError;
 
     fn from_message(mut message: Message) -> Result<Self, Self::Error> {
@@ -37,7 +37,7 @@ impl Request for TestMessage {
     }
 }
 
-impl Event for TestMessage {
+impl IntoMessage for TestMessage {
     type Error = EncodeError;
 
     fn into_message(self, id: u32) -> Result<Message, Self::Error> {

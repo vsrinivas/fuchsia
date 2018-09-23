@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 mod test {
-    use fuchsia_wayland_core::{Arg, ArgKind, Event, Message, MessageHeader, Request};
+    use fuchsia_wayland_core::{Arg, ArgKind, FromMessage, IntoMessage, Message, MessageHeader};
     use fuchsia_zircon::{self as zx, HandleBased};
     use test_protocol::{TestInterfaceEvent, TestInterfaceRequest};
     use zerocopy::AsBytes;

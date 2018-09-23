@@ -28,9 +28,9 @@ impl<W: io::Write> Codegen<W> {
             "\
 // GENERATED FILE -- DO NOT EDIT
 
-use fuchsia_wayland_core::{{ Arg, ArgKind, Message, MessageHeader, Event,
-                            Request, NewId, ObjectId, EncodeError, DecodeError,
-                            Interface, }};"
+use fuchsia_wayland_core::{{ Arg, ArgKind, FromMessage, IntoMessage, Message,
+                            MessageHeader, NewId, ObjectId, EncodeError,
+                            DecodeError, Interface, }};"
         )?;
 
         for interface in protocol.interfaces.into_iter() {
@@ -86,7 +86,7 @@ use fuchsia_wayland_core::{{ Arg, ArgKind, Message, MessageHeader, Event,
     /// a serialized message.
     ///
     /// Ex:
-    ///   impl Request for MyInterfaceRequest {
+    ///   impl FromMessage for MyInterfaceRequest {
     ///       fn from_message(mut msg: Message) -> Result<Self, Self::Error> {
     ///           let header = msg.read_header()?;
     ///           match header.opcode {
@@ -101,7 +101,7 @@ use fuchsia_wayland_core::{{ Arg, ArgKind, Message, MessageHeader, Event,
         write!(
             self.w,
             "\
-impl Request for {target_type} {{
+impl FromMessage for {target_type} {{
     type Error = DecodeError;
     fn from_message(mut msg: Message) -> Result<Self, Self::Error> {{
         let header = msg.read_header()?;
@@ -153,7 +153,7 @@ impl Request for {target_type} {{
     /// a Message that can be sent over channel.
     ///
     /// Ex:
-    ///   impl Event for MyInterfaceEvent {
+    ///   impl IntoMessage for MyInterfaceEvent {
     ///       fn into_message(self, id: u32) -> Result<Message, Self::Error> {
     ///           let mut header = MessageHeader {...};
     ///           let mut message = Message::new();
@@ -176,7 +176,7 @@ impl Request for {target_type} {{
         write!(
             self.w,
             "\
-impl Event for {target_type} {{
+impl IntoMessage for {target_type} {{
     type Error = EncodeError;
     fn into_message(self, id: u32) -> Result<Message, Self::Error> {{
         let mut header = MessageHeader {{
