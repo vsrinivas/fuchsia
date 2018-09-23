@@ -250,10 +250,19 @@ FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number,
                           bool enable_gpu_logging,
                           escher::CommandBuffer::Type requested_type) {
   TRACE_DURATION("gfx", "escher::Escher::NewFrame ");
-  for (auto& pair : descriptor_set_allocators_) {
-    pair.second->BeginFrame();
+
+  // Check the type before cycling the framebuffer/descriptor-set allocators.
+  // Without these checks it is possible to write into a Vulkan resource before
+  // it is finished being used in a previous frame.
+  // TODO(ES-103): The correct solution is not to use multiple Frames per frame.
+  if (requested_type != CommandBuffer::Type::kTransfer) {
+    for (auto& pair : descriptor_set_allocators_) {
+      pair.second->BeginFrame();
+    }
   }
-  framebuffer_allocator_->BeginFrame();
+  if (requested_type == CommandBuffer::Type::kGraphics) {
+    framebuffer_allocator_->BeginFrame();
+  }
 
   return frame_manager_->NewFrame(trace_literal, frame_number,
                                   enable_gpu_logging, requested_type);
