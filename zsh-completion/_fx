@@ -6,6 +6,11 @@ __fx_nodename() {
   _describe 'nodename' nodenames
 }
 
+__fx_amber_package() {
+  # packages are directories in the build dir under amber-files/repository/targets
+  _values $(cd ${fuchsia_build_dir}/amber-files/repository/targets && echo *(/))
+}
+
 _fx() {
   typeset -A opt_args
 

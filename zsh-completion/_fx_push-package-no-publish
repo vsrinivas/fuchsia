@@ -1,0 +1,4 @@
+_arguments \
+  {-d,--device}'[target device]:nodename:__fx_nodename' \
+  '*:package:__fx_amber_package'
+
