@@ -158,15 +158,17 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
         opts::ClientCmd::Connect { iface_id, ssid, password, phy_str, cbw_str } => {
             let sme = await!(get_client_sme(wlan_svc, iface_id))?;
             let (local, remote) = endpoints::create_proxy()?;
-            let (has_phy, phy) = parse_phy_str(phy_str)?;
-            let (has_cbw, cbw) = parse_cbw_str(cbw_str)?;
+            let (override_phy, phy) = parse_phy_str(phy_str)?;
+            let (override_cbw, cbw) = parse_cbw_str(cbw_str)?;
             let mut req = fidl_sme::ConnectRequest {
                 ssid: ssid.as_bytes().to_vec(),
                 password: password.unwrap_or(String::new()).as_bytes().to_vec(),
-                has_phy,
-                phy,
-                has_cbw,
-                cbw,
+                params: fidl_sme::ConnectPhyParams {
+                    override_phy,
+                    phy,
+                    override_cbw,
+                    cbw,
+                },
             };
             sme.connect(&mut req, Some(remote)).context("error sending connect request")?;
             await!(handle_connect_transaction(local))

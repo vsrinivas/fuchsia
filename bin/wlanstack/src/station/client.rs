@@ -4,7 +4,7 @@
 
 use failure::bail;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
-use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use futures::{prelude::*, select};
 use futures::channel::mpsc;
@@ -13,7 +13,8 @@ use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use wlan_sme::{client as client_sme, DeviceInfo, InfoStream};
-use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult, DiscoveryError,
+use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult,
+                       ConnectPhyParams, DiscoveryError,
                        DiscoveryResult, EssInfo, InfoEvent, ScanTxnId};
 use fuchsia_zircon as zx;
 
@@ -133,7 +134,7 @@ fn handle_fidl_request(sme: &Arc<Mutex<Sme>>, request: fidl_sme::ClientSmeReques
                 .unwrap_or_else(|e| error!("Error starting a scan transaction: {:?}", e)))
         },
         ClientSmeRequest::Connect { req, txn, .. } => {
-            Ok(connect(sme, req.ssid, req.password, txn)
+            Ok(connect(sme, req.ssid, req.password, txn, req.params)
                 .unwrap_or_else(|e| error!("Error starting a connect transaction: {:?}", e)))
         },
         ClientSmeRequest::Disconnect { responder } => {
@@ -153,15 +154,46 @@ fn scan(sme: &Arc<Mutex<Sme>>,
     Ok(())
 }
 
+
+fn convert_to_mlme_phy(sme_phy: fidl_sme::Phy) -> fidl_mlme::Phy {
+    match sme_phy {
+        fidl_sme::Phy::Hr => fidl_mlme::Phy::Hr,
+        fidl_sme::Phy::Erp => fidl_mlme::Phy::Erp,
+        fidl_sme::Phy::Ht => fidl_mlme::Phy::Ht,
+        fidl_sme::Phy::Vht => fidl_mlme::Phy::Vht,
+        fidl_sme::Phy::Hew => fidl_mlme::Phy::Hew,
+    }
+}
+
+fn convert_to_mlme_cbw(sme_cbw: fidl_sme::Cbw) -> fidl_mlme::Cbw {
+    match sme_cbw {
+        fidl_sme::Cbw::Cbw20 => fidl_mlme::Cbw::Cbw20,
+        fidl_sme::Cbw::Cbw40 => fidl_mlme::Cbw::Cbw40,
+        fidl_sme::Cbw::Cbw40Below => fidl_mlme::Cbw::Cbw40Below,
+        fidl_sme::Cbw::Cbw80 => fidl_mlme::Cbw::Cbw80,
+        fidl_sme::Cbw::Cbw160 => fidl_mlme::Cbw::Cbw160,
+        fidl_sme::Cbw::Cbw80P80 => fidl_mlme::Cbw::Cbw80P80,
+        fidl_sme::Cbw::CbwCount => fidl_mlme::Cbw::CbwCount,
+    }
+}
+
 fn connect(sme: &Arc<Mutex<Sme>>, ssid: Vec<u8>, password: Vec<u8>,
-           txn: Option<ServerEnd<fidl_sme::ConnectTransactionMarker>>)
+           txn: Option<ServerEnd<fidl_sme::ConnectTransactionMarker>>,
+           params: fidl_sme::ConnectPhyParams)
     -> Result<(), failure::Error>
 {
     let handle = match txn {
         None => None,
         Some(txn) => Some(txn.into_stream()?.control_handle())
     };
-    sme.lock().unwrap().on_connect_command(ssid, password, handle);
+
+    let mlme_phy = convert_to_mlme_phy(params.phy);
+    let mlme_cbw = convert_to_mlme_cbw(params.cbw);
+    let params = ConnectPhyParams {
+        phy: if params.override_phy { Some(mlme_phy) } else { None },
+        cbw: if params.override_cbw { Some(mlme_cbw) } else { None },
+    };
+    sme.lock().unwrap().on_connect_command(ssid, password, handle, params);
     Ok(())
 }
 

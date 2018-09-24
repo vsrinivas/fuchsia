@@ -8,7 +8,8 @@ use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, NegotiatedRsne, SecAssocUpdate, SecAssocStatus};
 
 use super::bss::convert_bss_description;
-use super::{ConnectFailure, ConnectResult, InfoEvent, InfoSink, Status, Tokens, UserEvent};
+use super::{ConnectFailure, ConnectPhyParams, ConnectResult, InfoEvent,
+            InfoSink, Status, Tokens, UserEvent};
 use super::internal::UserSink;
 use super::rsn::Rsna;
 
@@ -30,6 +31,7 @@ pub struct ConnectCommand<T> {
     pub bss: Box<BssDescription>,
     pub token: Option<T>,
     pub rsna: Option<Box<Rsna>>,
+    pub params: ConnectPhyParams
 }
 
 #[derive(Debug)]
@@ -55,6 +57,7 @@ pub enum State<T: Tokens> {
         bss: Box<BssDescription>,
         last_rssi: Option<i8>,
         link_state: LinkState<T>,
+        params: ConnectPhyParams,
     },
 }
 
@@ -118,6 +121,7 @@ impl<T: Tokens> State<T> {
                                     bss: cmd.bss,
                                     last_rssi: None,
                                     link_state: LinkState::EstablishingRsna(cmd.token, rsna),
+                                    params: cmd.params,
                                 }
                             },
                             None => {
@@ -128,6 +132,7 @@ impl<T: Tokens> State<T> {
                                     bss: cmd.bss,
                                     last_rssi: None,
                                     link_state: LinkState::LinkUp(None),
+                                    params: cmd.params,
                                 }
                             }
                         }
@@ -143,7 +148,7 @@ impl<T: Tokens> State<T> {
                 },
                 _ => State::Associating{ cmd }
             },
-            State::Associated { bss, last_rssi, link_state } => match event {
+            State::Associated { bss, last_rssi, link_state, params, } => match event {
                 MlmeEvent::DisassociateInd{ .. } => {
                     let (token, mut rsna) = match link_state {
                         LinkState::LinkUp(rsna) => (None, rsna),
@@ -153,7 +158,13 @@ impl<T: Tokens> State<T> {
                     if let Some(rsna) = &mut rsna {
                         rsna.supplicant.reset();
                     }
-                    let cmd = ConnectCommand{ bss, token, rsna };
+
+                    let cmd = ConnectCommand{
+                        bss,
+                        token,
+                        rsna,
+                        params,
+                    };
                     context.att_id += 1;
                     to_associating_state(cmd, &context.mlme_sink)
                 },
@@ -170,6 +181,7 @@ impl<T: Tokens> State<T> {
                         bss,
                         last_rssi: Some(ind.rssi_dbm),
                         link_state,
+                        params,
                     }
                 },
                 MlmeEvent::EapolInd{ ref ind } if bss.rsn.is_some() => match link_state {
@@ -182,7 +194,7 @@ impl<T: Tokens> State<T> {
                                                         &context.info_sink,
                                                         ConnectResult::Success, None);
                                 let link_state = LinkState::LinkUp(Some(rsna));
-                                State::Associated { bss, last_rssi, link_state }
+                                State::Associated { bss, last_rssi, link_state, params, }
                             },
                             RsnaStatus::Failed(result) => {
                                 report_connect_finished(token, &context.user_sink,
@@ -192,7 +204,7 @@ impl<T: Tokens> State<T> {
                             },
                             RsnaStatus::Unchanged => {
                                 let link_state = LinkState::EstablishingRsna(token, rsna);
-                                State::Associated { bss, last_rssi, link_state }
+                                State::Associated { bss, last_rssi, link_state, params, }
                             },
                         }
                     },
@@ -204,11 +216,11 @@ impl<T: Tokens> State<T> {
                             s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
                         };
                         let link_state = LinkState::LinkUp(Some(rsna));
-                        State::Associated { bss, last_rssi, link_state }
+                        State::Associated { bss, last_rssi, link_state, params, }
                     },
                     _ => panic!("expected Link to carry RSNA because bss.rsn is present"),
                 }
-                _ => State::Associated{ bss, last_rssi, link_state }
+                _ => State::Associated{ bss, last_rssi, link_state, params, }
             },
         }
     }
@@ -221,10 +233,10 @@ impl<T: Tokens> State<T> {
                 join_failure_timeout: DEFAULT_JOIN_FAILURE_TIMEOUT,
                 nav_sync_delay: 0,
                 op_rate_set: vec![],
-                override_phy: false,
-                phy: fidl_mlme::Phy::Ht,
-                override_cbw: false,
-                cbw: fidl_mlme::Cbw::Cbw20,
+                override_phy: cmd.params.phy.is_some(),
+                phy: cmd.params.phy.unwrap_or(fidl_mlme::Phy::Ht),
+                override_cbw: cmd.params.cbw.is_some(),
+                cbw: cmd.params.cbw.unwrap_or(fidl_mlme::Cbw::Cbw20),
             }
         ));
         context.att_id += 1;
@@ -925,6 +937,7 @@ mod tests {
             bss: Box::new(bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7])),
             token: Some(123_u32),
             rsna: None,
+            params: ConnectPhyParams { phy: None, cbw: None, },
         }
     }
 
@@ -933,6 +946,7 @@ mod tests {
             bss: Box::new(bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
             token: Some(456_u32),
             rsna: None,
+            params: ConnectPhyParams { phy: None, cbw: None, },
         }
     }
 
@@ -941,6 +955,7 @@ mod tests {
             bss: Box::new(bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
             token: None,
             rsna: None,
+            params: ConnectPhyParams { phy: None, cbw: None, },
         }
     }
 
@@ -965,6 +980,7 @@ mod tests {
             bss,
             last_rssi: None,
             link_state: LinkState::LinkUp(None),
+            params: ConnectPhyParams { phy: None, cbw: None, },
         }
     }
 

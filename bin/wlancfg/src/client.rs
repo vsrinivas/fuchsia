@@ -302,10 +302,12 @@ fn start_connect_txn(sme: &fidl_sme::ClientSmeProxy, ssid: &[u8], password: &[u8
     let mut req = fidl_sme::ConnectRequest {
         ssid: ssid.to_vec(),
         password: password.to_vec(),
-        has_phy: false,
-        phy: fidl_sme::Phy::Ht,
-        has_cbw: false,
-        cbw: fidl_sme::Cbw::Cbw20
+        params: fidl_sme::ConnectPhyParams {
+            override_phy: false,
+            phy: fidl_sme::Phy::Ht,
+            override_cbw: false,
+            cbw: fidl_sme::Cbw::Cbw20
+        },
     };
     sme.connect(&mut req, Some(remote))?;
     Ok(connect_txn)

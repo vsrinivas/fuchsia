@@ -59,9 +59,16 @@ use self::internal::*;
 
 pub type UserStream<T> = mpsc::UnboundedReceiver<UserEvent<T>>;
 
+#[derive(Debug, PartialEq)]
+pub struct ConnectPhyParams {
+    pub phy: Option<fidl_mlme::Phy>,
+    pub cbw: Option<fidl_mlme::Cbw>,
+}
+
 pub struct ConnectConfig<T> {
     user_token: T,
     password: Vec<u8>,
+    params: ConnectPhyParams,
 }
 
 // An automatically increasing sequence number that uniquely identifies a logical
@@ -167,12 +174,17 @@ impl<T: Tokens> ClientSme<T> {
         )
     }
 
-    pub fn on_connect_command(&mut self, ssid: Ssid, password: Vec<u8>, token: T::ConnectToken) {
+    pub fn on_connect_command(&mut self, ssid: Ssid, password: Vec<u8>,
+                              token: T::ConnectToken, params: ConnectPhyParams) {
         self.context.info_sink.send(InfoEvent::ConnectStarted);
         let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(
             JoinScan {
                 ssid,
-                token: ConnectConfig { user_token: token, password }
+                token: ConnectConfig {
+                    user_token: token,
+                    password,
+                    params,
+                },
             });
         // If the new scan replaced an existing pending JoinScan, notify the existing transaction
         if let Some(t) = canceled_token {
@@ -235,7 +247,8 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                                 let cmd = ConnectCommand {
                                     bss: Box::new(best_bss),
                                     token: Some(token.user_token),
-                                    rsna
+                                    rsna,
+                                    params: token.params,
                                 };
                                 state.connect(cmd, &mut self.context)
                             },
@@ -313,7 +326,8 @@ mod tests {
         // Issue a connect command and expect the status to change appropriately.
         // We also check that the association machine state is still disconnected
         // to make sure that the status comes from the scanner.
-        sme.on_connect_command(b"foo".to_vec(), vec![], 10);
+        sme.on_connect_command(b"foo".to_vec(), vec![], 10,
+                               ConnectPhyParams { phy: None, cbw: None });
         assert_eq!(None,
                    sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -340,7 +354,8 @@ mod tests {
 
         // Even if we scheduled a scan to connect to another network "bar", we should
         // still report that we are connecting to "foo".
-        sme.on_connect_command(b"bar".to_vec(), vec![], 10);
+        sme.on_connect_command(b"bar".to_vec(), vec![], 10,
+                               ConnectPhyParams { phy: None, cbw: None});
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
                    sme.status());
 
@@ -362,7 +377,8 @@ mod tests {
 
         // Issue a connect command and verify that connecting_to status is changed for upper
         // layer (but not underlying state machine) and a scan request is sent to MLME.
-        sme.on_connect_command(b"foo".to_vec(), "somepass".as_bytes().to_vec(), 10);
+        sme.on_connect_command(b"foo".to_vec(), "somepass".as_bytes().to_vec(), 10,
+                               ConnectPhyParams { phy: None, cbw: None });
         assert_eq!(None,
                    sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -406,7 +422,8 @@ mod tests {
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
-        sme.on_connect_command(b"foo".to_vec(), "somepass".as_bytes().to_vec(), 10);
+        sme.on_connect_command(b"foo".to_vec(), "somepass".as_bytes().to_vec(), 10,
+                               ConnectPhyParams { phy: None, cbw: None });
         assert_eq!(None,
                    sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -463,7 +480,8 @@ mod tests {
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
-        sme.on_connect_command(b"foo".to_vec(), vec![], 10);
+        sme.on_connect_command(b"foo".to_vec(), vec![], 10,
+                               ConnectPhyParams { phy: None, cbw: None });
         assert_eq!(None,
                    sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -516,7 +534,8 @@ mod tests {
     fn connecting_generates_info_events() {
         let (mut sme, _mlme_stream, _user_stream, mut info_stream) = create_sme();
 
-        sme.on_connect_command(b"foo".to_vec(), vec![], 10);
+        sme.on_connect_command(b"foo".to_vec(), vec![], 10,
+                               ConnectPhyParams { phy: None, cbw: None });
         expect_info_event(&mut info_stream, InfoEvent::ConnectStarted);
         expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 } );
 

@@ -61,10 +61,12 @@ pub async fn connect_to_network(iface_sme_proxy: &fidl_sme::ClientSmeProxy,
     let mut req = fidl_sme::ConnectRequest {
         ssid: target_ssid,
         password: target_pwd,
-        has_phy: false,
-        phy: fidl_sme::Phy::Ht,
-        has_cbw: false,
-        cbw: fidl_sme::Cbw::Cbw20
+        params: fidl_sme::ConnectPhyParams {
+            override_phy: false,
+            phy: fidl_sme::Phy::Ht,
+            override_cbw: false,
+            cbw: fidl_sme::Cbw::Cbw20
+        }
     };
 
     let result = iface_sme_proxy.connect(&mut req, Some(connection_remote))?;

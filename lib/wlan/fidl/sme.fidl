@@ -74,14 +74,18 @@ enum Cbw { // Channel Bandwidth
     CBW_COUNT = 6;
 };
 
+struct ConnectPhyParams {
+    bool override_phy;
+    Phy phy;
+    bool override_cbw;
+    Cbw cbw;
+};
+
 struct ConnectRequest {
     vector<uint8>:32 ssid;
     vector<uint8>:64 password;
 
-    bool has_phy;
-    Phy phy;
-    bool has_cbw;
-    Cbw cbw;
+    ConnectPhyParams params;
 };
 
 struct ClientStatusResponse {
