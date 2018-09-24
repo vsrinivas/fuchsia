@@ -15,6 +15,7 @@ use std::collections::HashSet;
 use crate::client::{ConnectFailure, ConnectResult, ConnectionAttemptId, ScanTxnId};
 
 pub type Ssid = Vec<u8>;
+pub type MacAddr = [u8; 6];
 
 pub struct DeviceInfo {
     pub supported_channels: HashSet<u8>,

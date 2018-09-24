@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod aid;
+mod remote_client;
 mod rsn;
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
@@ -10,7 +12,7 @@ use log::{debug, warn};
 use wlan_rsn::rsne::Rsne;
 
 use crate::ap::rsn::{create_wpa2_psk_rsne, is_valid_rsne_subset};
-use crate::{MlmeRequest, Ssid};
+use crate::{MacAddr, MlmeRequest, Ssid};
 use crate::sink::MlmeSink;
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
@@ -43,6 +45,7 @@ enum State {
     Started {
         ssid: Ssid,
         rsne: Option<Rsne>,
+        client_map: remote_client::Map,
     }
 }
 
@@ -99,6 +102,7 @@ impl<T: Tokens> ApSme<T> {
                 self.state = State::Started {
                     ssid: config.ssid,
                     rsne,
+                    client_map: Default::default(),
                 };
             },
             State::Started { .. } => {
@@ -130,7 +134,7 @@ impl<T: Tokens> super::Station for ApSme<T> {
         debug!("received MLME event: {:?}", event);
         match self.state {
             State::Idle => warn!("received MlmeEvent while ApSme is idle {:?}", event),
-            State::Started { rsne: ref a_rsne, .. } => match event {
+            State::Started { rsne: ref a_rsne, ref mut client_map, .. } => match event {
                 MlmeEvent::AuthenticateInd { ind } => {
                     let result_code = if ind.auth_type == fidl_mlme::AuthenticationTypes::OpenSystem {
                         fidl_mlme::AuthenticateResultCodes::Success
@@ -145,19 +149,36 @@ impl<T: Tokens> super::Station for ApSme<T> {
                     self.mlme_sink.send(MlmeRequest::AuthResponse(resp));
                 }
                 MlmeEvent::AssociateInd { ind } => {
-                    let resp = fidl_mlme::AssociateResponse {
-                        peer_sta_address: ind.peer_sta_address,
-                        result_code: evaluate_s_rsne(&ind.rsn, a_rsne),
-                        // TODO(NET-1465): currently MLME generates and keeps track of the
-                        //                 association IDs. SME should generate instead and keep
-                        //                 track of them as well.
-                        association_id: 0u16,
-                    };
+                    let resp = handle_assoc_ind(client_map, ind.peer_sta_address,
+                                                &ind.rsn, a_rsne);
                     self.mlme_sink.send(MlmeRequest::AssocResponse(resp));
                 }
                 _ => warn!("unsupported MlmeEvent type {:?}; ignoring", event),
             }
         }
+    }
+}
+
+fn handle_assoc_ind(client_map: &mut remote_client::Map,
+                    client_addr: MacAddr,
+                    s_rsne_bytes: &Option<Vec<u8>>,
+                    a_rsne: &Option<Rsne>)
+                    -> fidl_mlme::AssociateResponse {
+    use fidl_fuchsia_wlan_mlme::AssociateResultCodes::{Success, RefusedReasonUnspecified};
+    let (aid, result_code) = match evaluate_s_rsne(s_rsne_bytes, a_rsne) {
+        Success => match client_map.add_client(client_addr.clone()) {
+            Ok(aid) => (aid, Success),
+            Err(e) => {
+                warn!("unable to add user to client map: {}", e);
+                (0, RefusedReasonUnspecified)
+            }
+        },
+        other => (0, other)
+    };
+    fidl_mlme::AssociateResponse {
+        peer_sta_address: client_addr,
+        result_code,
+        association_id: aid,
     }
 }
 
@@ -313,7 +334,7 @@ mod tests {
         if let MlmeRequest::AssocResponse(assoc_resp) = msg {
             assert_eq!(assoc_resp.peer_sta_address, CLIENT_ADDR);
             assert_eq!(assoc_resp.result_code, fidl_mlme::AssociateResultCodes::Success);
-            assert_eq!(assoc_resp.association_id, 0);
+            assert_eq!(assoc_resp.association_id, 1);
         } else {
             panic!("expect assoc response to MLME");
         }
@@ -330,7 +351,7 @@ mod tests {
         if let MlmeRequest::AssocResponse(assoc_resp) = msg {
             assert_eq!(assoc_resp.peer_sta_address, CLIENT_ADDR);
             assert_eq!(assoc_resp.result_code, fidl_mlme::AssociateResultCodes::Success);
-            assert_eq!(assoc_resp.association_id, 0);
+            assert_eq!(assoc_resp.association_id, 1);
         } else {
             panic!("expect assoc response to MLME");
         }
@@ -354,6 +375,8 @@ mod tests {
             panic!("expect assoc response to MLME");
         }
     }
+
+    // TODO(NET-1585) add test case for multiple clients
 
     fn authenticate_and_drain_mlme(sme: &mut ApSme<FakeTokens>,
                                    mlme_stream: &mut crate::MlmeStream) {
