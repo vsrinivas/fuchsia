@@ -85,8 +85,7 @@ async fn http_get(url: String) -> Result<(), Error> {
 
     let mut socket = match resp.body.map(|x| *x) {
         Some(http::UrlBody::Stream(s)) => fasync::Socket::from_socket(s)?,
-        Some(http::UrlBody::SizedBuffer(_))
-        | None => return Ok(()),
+        _ => return Err(Error::from(zx::Status::BAD_STATE)),
     };
 
     // stdout is blocking, but we'll pretend it's okay

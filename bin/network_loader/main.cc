@@ -56,7 +56,7 @@ class RetryingLoader {
     request.method = "GET";
     request.url = url_;
     request.auto_follow_redirects = true;
-    request.response_body_mode = http::ResponseBodyMode::SIZED_BUFFER;
+    request.response_body_mode = http::ResponseBodyMode::BUFFER;
     return request;
   }
 
@@ -64,7 +64,7 @@ class RetryingLoader {
     if (response.status_code == 200) {
       auto package = fuchsia::sys::Package::New();
       package->data =
-          fidl::MakeOptional(std::move(response.body->sized_buffer()));
+          fidl::MakeOptional(std::move(response.body->buffer()));
       package->resolved_url = std::move(response.url);
       SendResponse(std::move(package));
     } else if (response.error) {

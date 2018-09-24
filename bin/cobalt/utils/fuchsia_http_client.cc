@@ -35,7 +35,7 @@ http::URLRequest MakeRequest(fxl::RefPtr<NetworkRequest> network_request) {
   auto result = fsl::VmoFromString(network_request->request().body, &data);
   FXL_CHECK(result);
 
-  fx_request.body->set_sized_buffer(std::move(data).ToTransport());
+  fx_request.body->set_buffer(std::move(data).ToTransport());
   for (const auto& header : network_request->request().headers) {
     http::HttpHeader hdr;
     hdr.name = header.first;

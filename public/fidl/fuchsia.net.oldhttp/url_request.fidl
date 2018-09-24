@@ -22,14 +22,18 @@ enum CacheMode {
 
 // Specify the mechanism used to return the response body.
 enum ResponseBodyMode {
-  // The complete response body should be returned in the |sized_buffer| field of
+  // The complete response body should be returned in the |buffer| field of
   // the response body.
-  SIZED_BUFFER = 0;
+  BUFFER = 0;
   // The response body should be streamed through the |stream| field of the
   // response body.
   STREAM = 1;
   // The response body may be returned as a buffer or stream.
   BUFFER_OR_STREAM = 2;
+  // The complete response body should be returned in the |sized_buffer| field of
+  // the response body.
+  // THIS MODE IS DEPRECATED. DO NOT USE.
+  SIZED_BUFFER = 3;
 };
 
 struct URLRequest {

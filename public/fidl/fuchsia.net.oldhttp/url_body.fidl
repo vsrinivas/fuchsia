@@ -11,4 +11,6 @@ union URLBody {
   handle<socket> stream;
   // A sized shared buffer that will contain the complete request or response body.
   fuchsia.mem.Buffer sized_buffer;
+  // A shared buffer that will contain the complete request or response body.
+  fuchsia.mem.Buffer buffer;
 };
