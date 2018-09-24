@@ -22,15 +22,18 @@ enum {
 };
 
 enum {
-    /* Ignore cpu_mask and forward interrupt to all CPUs other than the current cpu */
+    // Ignore cpu_mask and forward interrupt to all CPUs other than the current cpu
     ARM_GIC_SGI_FLAG_TARGET_FILTER_NOT_SENDER = 0x1,
-    /* Ignore cpu_mask and forward interrupt to current CPU only */
+    // Ignore cpu_mask and forward interrupt to current CPU only
     ARM_GIC_SGI_FLAG_TARGET_FILTER_SENDER = 0x2,
     ARM_GIC_SGI_FLAG_TARGET_FILTER_MASK = 0x3,
 
-    /* Only forward the interrupt to CPUs that has the interrupt configured as group 1 (non-secure) */
+    // Only forward the interrupt to CPUs that has the interrupt configured as group 1 (non-secure)
     ARM_GIC_SGI_FLAG_NS = 0x4,
 };
 
 // Registers a software generated interrupt handler.
-zx_status_t gic_register_sgi_handler(unsigned int vector, void (*handler)());
+static inline zx_status_t gic_register_sgi_handler(unsigned int vector, int_handler handler) {
+    DEBUG_ASSERT(vector < GIC_BASE_PPI);
+    return register_int_handler(vector, handler, nullptr);
+}

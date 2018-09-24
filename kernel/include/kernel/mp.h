@@ -67,11 +67,11 @@ static inline zx_status_t mp_unplug_cpu(cpu_num_t cpu) {
 }
 
 // called from arch code during reschedule irq
-void mp_mbx_reschedule_irq(void);
+void mp_mbx_reschedule_irq(void*);
 // called from arch code during generic task irq
-void mp_mbx_generic_irq(void);
+void mp_mbx_generic_irq(void*);
 // called from arch code during interrupt irq
-void mp_mbx_interrupt_irq(void);
+void mp_mbx_interrupt_irq(void*);
 
 // represents a pending task for some number of CPUs to execute
 struct mp_ipi_task {

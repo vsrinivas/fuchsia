@@ -122,7 +122,7 @@ static uint arch_max_num_cpus(void)
 #define WRITE_PERCPU_FIELD32(field, value) \
     x86_write_gs_offset32(offsetof(struct x86_percpu, field), (value))
 
-void x86_ipi_halt_handler(void) __NO_RETURN;
+void x86_ipi_halt_handler(void*) __NO_RETURN;
 void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread);
 void x86_force_halt_all_but_local_and_bsp(void);
 

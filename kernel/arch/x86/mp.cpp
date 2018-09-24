@@ -338,7 +338,7 @@ zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t i
     return ZX_OK;
 }
 
-void x86_ipi_halt_handler(void) {
+void x86_ipi_halt_handler(void*) {
     printf("halting cpu %u\n", arch_curr_cpu_num());
 
     platform_halt_cpu();
