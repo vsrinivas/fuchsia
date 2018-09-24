@@ -153,6 +153,7 @@ class Mesh final : public Shape {
  public:
   Mesh(Session* session);
   Mesh(Mesh&& moved);
+
   ~Mesh();
 
   // These arguments are documented in commands.fidl; see

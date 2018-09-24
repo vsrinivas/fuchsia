@@ -23,6 +23,8 @@ sdk_source_set("cpp") {
     "resources.h",
     "session.cc",
     "session.h",
+    "util/mesh_utils.cc",
+    "util/mesh_utils.h",
   ]
 
   public_deps = [

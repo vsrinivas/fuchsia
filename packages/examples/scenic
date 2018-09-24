@@ -7,6 +7,7 @@
         "//garnet/examples/ui:hello_input",
         "//garnet/examples/ui:hello_input_child",
         "//garnet/examples/ui:hello_pose_buffer",
+        "//garnet/examples/ui:hello_pose_buffer_provider",
         "//garnet/examples/ui:hello_scenic",
         "//garnet/examples/ui:hello_views",
         "//garnet/examples/ui:hello_stereo",
