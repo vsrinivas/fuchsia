@@ -430,24 +430,14 @@ void LedgerManager::PageIsClosedAndSatisfiesPredicate(
     fit::function<void(PageManager*, fit::function<void(Status, bool)>)>
         predicate,
     fit::function<void(Status, YesNoUnknown)> callback) {
-  // Check if there was a previous call to this function for the same page
-  // that hasn't terminated.
-  // TODO(nellyv): Add support for two concurrent calls for the same page. See
-  // LE-500.
-  if (page_was_opened_map_.find(page_id.ToString()) !=
-      page_was_opened_map_.end()) {
-    callback(Status::OK, YesNoUnknown::UNKNOWN);
-    return;
-  }
-
   // Start logging whether the page has been opened during the execution of
   // this method.
-  page_was_opened_map_[page_id.ToString()] = false;
-  auto on_return = fxl::MakeAutoCall([this, page_id = page_id.ToString()] {
-    auto it = page_was_opened_map_.find(page_id);
-    FXL_DCHECK(it != page_was_opened_map_.end());
-    page_was_opened_map_.erase(it);
-  });
+  uint64_t operation_id = page_was_opened_id_++;
+  page_was_opened_map_[page_id.ToString()].push_back(operation_id);
+  auto on_return =
+      fxl::MakeAutoCall([this, page_id = page_id.ToString(), operation_id] {
+        RemoveTrackedPage(page_id, operation_id);
+      });
 
   PageManagerContainer* container;
 
@@ -469,36 +459,57 @@ void LedgerManager::PageIsClosedAndSatisfiesPredicate(
     });
   }
 
-  container->NewInternalRequest(
-      [this, page_id = page_id.ToString(), predicate = std::move(predicate),
-       on_return = std::move(on_return),
-       callback = std::move(callback)](Status status, ExpiringToken token,
-                                       PageManager* page_manager) mutable {
-        if (status != Status::OK) {
-          callback(status, YesNoUnknown::UNKNOWN);
-          return;
-        }
-        FXL_DCHECK(page_manager);
-        predicate(
-            page_manager,
-            [this, page_id = std::move(page_id),
-             on_return = std::move(on_return), token = std::move(token),
-             callback = std::move(callback)](Status status, bool condition) {
-              if (status != Status::OK || page_was_opened_map_[page_id]) {
-                callback(status, YesNoUnknown::UNKNOWN);
-                return;
-              }
-              callback(Status::OK,
-                       condition ? YesNoUnknown::YES : YesNoUnknown::NO);
-            });
-      });
+  container->NewInternalRequest([this, page_id = page_id.ToString(),
+                                 operation_id, predicate = std::move(predicate),
+                                 on_return = std::move(on_return),
+                                 callback = std::move(callback)](
+                                    Status status, ExpiringToken token,
+                                    PageManager* page_manager) mutable {
+    if (status != Status::OK) {
+      callback(status, YesNoUnknown::UNKNOWN);
+      return;
+    }
+    FXL_DCHECK(page_manager);
+    predicate(page_manager, [this, page_id = std::move(page_id), operation_id,
+                             on_return = std::move(on_return),
+                             token = std::move(token),
+                             callback = std::move(callback)](
+                                Status status, bool condition) mutable {
+      on_return.cancel();
+      if (!RemoveTrackedPage(page_id, operation_id) || status != Status::OK) {
+        // If |RemoveTrackedPage| returns false, this means that the page was
+        // opened during this operation and |UNKNOWN| must be returned.
+        callback(status, YesNoUnknown::UNKNOWN);
+        return;
+      }
+      callback(Status::OK, condition ? YesNoUnknown::YES : YesNoUnknown::NO);
+    });
+  });
+}
+
+bool LedgerManager::RemoveTrackedPage(storage::PageIdView page_id,
+                                      uint64_t operation_id) {
+  auto it = page_was_opened_map_.find(page_id.ToString());
+  if (it == page_was_opened_map_.end()) {
+    return false;
+  }
+  if (it->second.size() == 1) {
+    // This is the last operation for this page: delete the page's entry.
+    page_was_opened_map_.erase(it);
+    return true;
+  }
+  // Erase the operation_id, if found, from the found vector (it->second).
+  auto operation_it =
+      std::find(it->second.begin(), it->second.end(), operation_id);
+  if (operation_it != it->second.end()) {
+    it->second.erase(operation_it);
+    return true;
+  }
+  return false;
 }
 
 void LedgerManager::MaybeMarkPageOpened(storage::PageIdView page_id) {
-  auto it = page_was_opened_map_.find(page_id.ToString());
-  if (it != page_was_opened_map_.end()) {
-    it->second = true;
-  }
+  page_was_opened_map_.erase(page_id.ToString());
 }
 
 void LedgerManager::CheckEmpty() {

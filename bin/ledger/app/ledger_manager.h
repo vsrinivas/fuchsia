@@ -145,6 +145,10 @@ class LedgerManager : public LedgerImpl::Delegate,
           predicate,
       fit::function<void(Status, YesNoUnknown)> callback);
 
+  // Marks the page with the given id as no longer tracked by the given
+  // operation. Returns true if the entry was found; false otherwise.
+  bool RemoveTrackedPage(storage::PageIdView page_id, uint64_t operation_id);
+
   // If the page is among the ones whose usage is being tracked, marks this page
   // as opened. See also |page_was_opened_map_|.
   void MaybeMarkPageOpened(storage::PageIdView page_id);
@@ -181,13 +185,17 @@ class LedgerManager : public LedgerImpl::Delegate,
 
   PageAvailabilityManager page_availability_manager_;
 
-  // |page_was_opened_map_| is used to track whether pages checked for their
-  // sync state were opened during the operation: When |PageIsClosedAndSynced()|
-  // is called this map is updated with the id of the page being checked as key
-  // and false as value. Until the callback of that operation is called, all
-  // calls to external requests for that page are tracked and the map entry is
-  // updated if necessary.
-  std::map<storage::PageId, bool> page_was_opened_map_;
+  // |page_was_opened_map_| is used to track whether certain pages were opened
+  // during a given operation. When |PageIsClosedAndSatisfiesPredicate()| is
+  // called, an entry is added in this map, with the given page_id as key, while
+  // a unique operation id is added in the corresponding value. That entry will
+  // be deleted either when that opertion is done, or when the page is opened
+  // because of an external request. This guarantees that if before calling the
+  // callback of |PageIsClosedAndSatisfiesPredicate|, the entry is still present
+  // in the map, the page was not opened during that operation. Otherwise, it
+  // was, and |UNKNOWN| should be returned.
+  std::map<storage::PageId, std::vector<uint64_t>> page_was_opened_map_;
+  uint64_t page_was_opened_id_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManager);
 };
