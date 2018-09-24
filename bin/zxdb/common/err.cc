@@ -4,6 +4,10 @@
 
 #include "err.h"
 
+#include <stdarg.h>
+
+#include "lib/fxl/strings/string_printf.h"
+
 namespace zxdb {
 
 Err::Err() = default;
@@ -11,6 +15,13 @@ Err::Err() = default;
 Err::Err(ErrType type, const std::string& msg) : type_(type), msg_(msg) {}
 
 Err::Err(const std::string& msg) : type_(ErrType::kGeneral), msg_(msg) {}
+
+Err::Err(const char* fmt, ...) : type_(ErrType::kGeneral) {
+  va_list ap;
+  va_start(ap, fmt);
+  msg_ = fxl::StringVPrintf(fmt, ap);
+  va_end(ap);
+}
 
 Err::~Err() = default;
 

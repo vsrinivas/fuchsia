@@ -6,6 +6,8 @@
 
 #include <string>
 
+#include "lib/fxl/compiler_specific.h"
+
 namespace zxdb {
 
 enum class ErrType {
@@ -44,7 +46,9 @@ class Err {
   Err(ErrType type, const std::string& msg = std::string());
 
   // Produces a "general" error with the given message.
-  Err(const std::string& msg);
+  explicit Err(const std::string& msg);
+
+  explicit Err(const char* fmt, ...) FXL_PRINTF_FORMAT(2, 3);
 
   ~Err();
 

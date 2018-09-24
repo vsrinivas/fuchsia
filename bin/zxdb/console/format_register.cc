@@ -45,11 +45,15 @@ void InternalFormatGeneric(const std::vector<Register>& registers,
 
 Err FormatCategory(debug_ipc::Arch arch, RegisterCategory::Type category,
                    const std::vector<Register>& registers, OutputBuffer* out) {
-  FXL_DCHECK(!registers.empty());
 
   auto title = fxl::StringPrintf("%s Registers\n",
                                  RegisterCategoryTypeToString(category));
   out->Append(OutputBuffer(Syntax::kHeading, std::move(title)));
+
+  if (registers.empty()) {
+    out->Append("No registers to show in this category.");
+    return Err();
+  }
 
   // We see if architecture specific printing wants to take over.
   Err err;
@@ -105,6 +109,7 @@ Err FilterRegisters(const RegisterSet& register_set, FilteredRegisterSet* out,
       registers.reserve(it->second.size());
       for (const auto& reg : it->second) {
         registers.emplace_back(reg);
+        registers_found++;
       }
     } else {
       // We use insensitive case regexp matching.
@@ -132,20 +137,30 @@ Err FilterRegisters(const RegisterSet& register_set, FilteredRegisterSet* out,
     }
   }
 
-  if (!search_regexp.empty() && registers_found == 0) {
-    return Err(fxl::StringPrintf(
-        "Could not find registers \"%s\" in the selected categories",
-        search_regexp.data()));
+  if (registers_found == 0) {
+    if (search_regexp.empty()) {
+      return Err("Could not find registers in the selected categories");
+    } else {
+      return Err(
+          "Could not find any registers that match \"%s\" in the selected "
+          "categories",
+          search_regexp.data());
+    }
   }
+
   return Err();
 }
 
 Err FormatRegisters(debug_ipc::Arch arch,
-                    const FilteredRegisterSet& register_set,
+                    const FilteredRegisterSet& filtered_set,
                     OutputBuffer* out) {
+  // We should have detected on the filtering stage that we didn't find any
+  // register.
+  FXL_DCHECK(!filtered_set.empty());
+
   std::vector<OutputBuffer> out_buffers;
-  out_buffers.reserve(register_set.size());
-  for (auto kv : register_set) {
+  out_buffers.reserve(filtered_set.size());
+  for (auto kv : filtered_set) {
     if (kv.second.empty())
       continue;
     OutputBuffer out;
@@ -154,10 +169,6 @@ Err FormatRegisters(debug_ipc::Arch arch,
       return err;
     out_buffers.emplace_back(std::move(out));
   }
-
-  // We should have detected on the filtering stage that we didn't find any
-  // register.
-  FXL_DCHECK(!out_buffers.empty());
 
   // Each section is separated by a new line.
   for (const auto& buf : out_buffers) {
