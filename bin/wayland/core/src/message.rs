@@ -5,6 +5,8 @@
 use std::io::{self, Read, Write};
 
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
+use failure::Fail;
+
 use fuchsia_zircon as zx;
 
 #[derive(Debug)]
@@ -31,7 +33,7 @@ pub enum Arg {
     Handle(zx::Handle),
 }
 
-macro_rules! arg_to_primitive(
+macro_rules! impl_unwrap_arg(
     ($name:ident, $type:ty, $enumtype:ident) => (
         pub fn $name(self) -> $type {
             if let Arg::$enumtype(x) = self {
@@ -45,14 +47,51 @@ macro_rules! arg_to_primitive(
 );
 
 impl Arg {
-    arg_to_primitive!(unwrap_int, i32, Int);
-    arg_to_primitive!(unwrap_uint, u32, Uint);
-    arg_to_primitive!(unwrap_fixed, u32, Fixed);
-    arg_to_primitive!(unwrap_object, u32, Object);
-    arg_to_primitive!(unwrap_new_id, u32, NewId);
-    arg_to_primitive!(unwrap_string, String, String);
-    arg_to_primitive!(unwrap_array, Vec<u8>, Array);
-    arg_to_primitive!(unwrap_handle, zx::Handle, Handle);
+    impl_unwrap_arg!(unwrap_int, i32, Int);
+    impl_unwrap_arg!(unwrap_uint, u32, Uint);
+    impl_unwrap_arg!(unwrap_fixed, u32, Fixed);
+    impl_unwrap_arg!(unwrap_object, u32, Object);
+    impl_unwrap_arg!(unwrap_new_id, u32, NewId);
+    impl_unwrap_arg!(unwrap_string, String, String);
+    impl_unwrap_arg!(unwrap_array, Vec<u8>, Array);
+    impl_unwrap_arg!(unwrap_handle, zx::Handle, Handle);
+}
+
+#[derive(Debug, Fail)]
+#[fail(
+    display = "Argument is not of the required type: expected {:?}, found {:?}",
+    expected,
+    found
+)]
+pub struct MismatchedArgKind {
+    pub expected: ArgKind,
+    pub found: Arg,
+}
+
+macro_rules! impl_as_arg(
+    ($name:ident, $type:ty, $enumtype:ident) => (
+        pub fn $name(self) -> Result<$type, MismatchedArgKind> {
+            if let Arg::$enumtype(x) = self {
+                Ok(x)
+            } else {
+                Err(MismatchedArgKind {
+                    expected: ArgKind::$enumtype,
+                    found: self,
+                })
+            }
+        }
+    )
+);
+
+impl Arg {
+    impl_as_arg!(as_int, i32, Int);
+    impl_as_arg!(as_uint, u32, Uint);
+    impl_as_arg!(as_fixed, u32, Fixed);
+    impl_as_arg!(as_object, u32, Object);
+    impl_as_arg!(as_new_id, u32, NewId);
+    impl_as_arg!(as_string, String, String);
+    impl_as_arg!(as_array, Vec<u8>, Array);
+    impl_as_arg!(as_handle, zx::Handle, Handle);
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
