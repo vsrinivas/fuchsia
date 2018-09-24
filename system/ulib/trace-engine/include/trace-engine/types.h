@@ -24,10 +24,11 @@ __BEGIN_CDECLS
 // Timebase recorded into trace files, as returned by zx_ticks_get().
 typedef uint64_t trace_ticks_t;
 
-// The ids used to correlate related counters, asynchronous operations, and flows.
+// The ids used to correlate related counters, asynchronous operations, flows, and virtual threads.
 typedef uint64_t trace_counter_id_t;
 typedef uint64_t trace_async_id_t;
 typedef uint64_t trace_flow_id_t;
+typedef uint64_t trace_vthread_id_t;
 
 // Specifies the scope of instant events.
 typedef enum {

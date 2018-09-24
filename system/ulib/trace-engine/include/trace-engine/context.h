@@ -151,6 +151,28 @@ __EXPORT void trace_context_register_current_thread(
     trace_context_t* context,
     trace_thread_ref_t* out_ref);
 
+// Registers the virtual thread into the thread table.
+//
+// Writes a thread record into the trace buffer if the virtual thread was added
+// to the thread table.
+//
+// If the thread table is full, returns an inline thread refrence.
+//
+// |context| must be a valid trace context reference.
+// |process_koid| is the koid of the process which contains the thread.
+//   If ZX_KOID_INVALID is passed, the koid of the current process is used.
+// |vthread_literal| must be a null-terminated static string constant.
+// |vthread_id| is the id of the virtual thread to register.
+// |out_ref| points to where the registered thread reference should be returned.
+//
+// This function is thread-safe.
+__EXPORT void trace_context_register_vthread(
+    trace_context_t* context,
+    zx_koid_t process_koid,
+    const char* vthread_literal,
+    trace_vthread_id_t vthread_id,
+    trace_thread_ref_t* out_ref);
+
 // Registers the specified thread into the thread table.
 //
 // Writes a thread record into the trace buffer if the thread was added to the

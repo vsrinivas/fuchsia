@@ -60,4 +60,11 @@ void RunNoTraceBenchmarks() {
                                   "k5", 5, "k6", 6, "k7", 7, "k8", 8);
         },
         NullSetup, NullTeardown);
+
+    RunAndMeasure(
+        "TRACE_VTHREAD_DURATION_BEGIN macro with 0 arguments", "NTRACE",
+        [] {
+             TRACE_VTHREAD_DURATION_BEGIN("+enabled", "name", "vthread", 1);
+        },
+        NullSetup, NullTeardown);
 }

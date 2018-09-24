@@ -149,6 +149,11 @@ void RunBenchmarks(bool tracing_enabled, const BenchmarkSpec* spec) {
                              "k5", "string5", "k6", "string6", "k7", "string7", "k8", "string8");
     });
 
+    runner.Run("TRACE_VTHREAD_DURATION_BEGIN macro with 0 arguments", [] {
+        TRACE_VTHREAD_DURATION_BEGIN("+enabled", "name", "vthread", 1);
+    });
+
+
     if (tracing_enabled) {
         runner.Run("TRACE_DURATION_BEGIN macro with 0 arguments for disabled category", [] {
             TRACE_DURATION_BEGIN("-disabled", "name");
@@ -168,6 +173,10 @@ void RunBenchmarks(bool tracing_enabled, const BenchmarkSpec* spec) {
             TRACE_DURATION_BEGIN("-disabled", "name",
                                  "k1", 1, "k2", 2, "k3", 3, "k4", 4,
                                  "k5", 5, "k6", 6, "k7", 7, "k8", 8);
+        });
+
+        runner.Run("TRACE_VTHREAD_DURATION_BEGIN macro with 0 arguments for disabled category", [] {
+            TRACE_VTHREAD_DURATION_BEGIN("-disabled", "name", "vthread", 1);
         });
     }
 }

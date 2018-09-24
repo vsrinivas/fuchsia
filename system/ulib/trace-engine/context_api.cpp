@@ -89,6 +89,19 @@ struct StringEntry : public fbl::SinglyLinkedListable<StringEntry*> {
     static size_t GetHash(const char* key) { return reinterpret_cast<uintptr_t>(key); }
 };
 
+// A thread table entry.
+struct ThreadEntry : public fbl::SinglyLinkedListable<ThreadEntry*> {
+    // The thread koid itself.
+    zx_koid_t thread_koid;
+
+    // Thread reference for this thread.
+    trace_thread_ref_t thread_ref{};
+
+    // Used by the hash table.
+    zx_koid_t GetKey() const { return thread_koid; }
+    static size_t GetHash(zx_koid_t key) { return key; }
+};
+
 // Cached thread and string data for a context.
 // Each thread has its own cache of context state to avoid locking overhead
 // while writing trace events in the common case.  There may be some
@@ -113,6 +126,17 @@ struct ContextCache {
 
     // Storage for the string entries.
     StringEntry string_entries[kMaxStringEntries];
+
+    // Maximum number of external thread references to cache per thread.
+    static constexpr size_t kMaxThreadEntries = 4;
+
+    // External thread table.
+    // Provides a limited amount of storage for rapidly looking up external threads
+    // registered by this thread.
+    fbl::HashTable<zx_koid_t, ThreadEntry*> thread_table;
+
+    // Storage for the external thread entries.
+    ThreadEntry thread_entries[kMaxThreadEntries];
 };
 thread_local fbl::unique_ptr<ContextCache> tls_cache{};
 
@@ -130,6 +154,7 @@ ContextCache* GetCurrentContextCache(uint32_t generation) {
     cache->generation = generation;
     cache->thread_ref = trace_make_unknown_thread_ref();
     cache->string_table.clear();
+    cache->thread_table.clear();
     return cache;
 }
 
@@ -152,6 +177,26 @@ StringEntry* CacheStringEntry(uint32_t generation,
     entry->flags = 0u;
     entry->index = 0u;
     cache->string_table.insert(entry);
+    return entry;
+}
+
+ThreadEntry* CacheThreadEntry(uint32_t generation, zx_koid_t thread_koid) {
+    ContextCache* cache = GetCurrentContextCache(generation);
+    if (unlikely(!cache))
+        return nullptr;
+
+    auto it = cache->thread_table.find(thread_koid);
+    if (likely(it.IsValid()))
+        return it.CopyPointer();
+
+    size_t count = cache->thread_table.size();
+    if (unlikely(count == ContextCache::kMaxThreadEntries))
+        return nullptr;
+
+    ThreadEntry* entry = &cache->thread_entries[count];
+    entry->thread_koid = thread_koid;
+    entry->thread_ref = trace_make_unknown_thread_ref();
+    cache->thread_table.insert(entry);
     return entry;
 }
 
@@ -615,6 +660,54 @@ void trace_context_register_thread(
     } else {
         *out_ref = trace_make_inline_thread_ref(process_koid, thread_koid);
     }
+}
+
+void trace_context_register_vthread(
+    trace_context_t* context,
+    zx_koid_t process_koid,
+    const char* vthread_literal,
+    trace_vthread_id_t vthread_id,
+    trace_thread_ref_t* out_ref) {
+    // This flag is used to avoid collisions with regular threads. This is not
+    // guaranteed to work but is sufficient until we have koid range that can
+    // never be used by regular threads.
+    constexpr zx_koid_t kVirtualThreadIdFlag = 0x100000000;
+    zx_koid_t vthread_koid = kVirtualThreadIdFlag | vthread_id;
+
+    trace::ThreadEntry* entry = trace::CacheThreadEntry(context->generation(), vthread_koid);
+    if (likely(entry && !trace_is_unknown_thread_ref(&entry->thread_ref))) {
+        // Fast path: the thread is already registered.
+        *out_ref = entry->thread_ref;
+        return;
+    }
+
+    if (process_koid == ZX_KOID_INVALID) {
+        process_koid = trace::GetCurrentProcessKoid();
+    }
+
+    trace_string_ref name_ref = trace_make_inline_c_string_ref(vthread_literal);
+    trace_context_write_thread_info_record(context, process_koid, vthread_koid,
+                                           &name_ref);
+
+    if (likely(entry)) {
+        trace_thread_index_t index;
+        // If allocating an index succeeds but writing the record fails,
+        // toss the index and return an inline reference. The index is lost
+        // anyway, but the result won't be half-complete. The subsequent
+        // write of the inlined reference will likely also fail, but that's ok.
+        if (likely(context->AllocThreadIndex(&index) &&
+                   trace::WriteThreadRecord(context, index,
+                                            process_koid, vthread_koid))) {
+            entry->thread_ref = trace_make_indexed_thread_ref(index);
+        } else {
+            entry->thread_ref = trace_make_inline_thread_ref(
+                process_koid, vthread_koid);
+        }
+        *out_ref = entry->thread_ref;
+        return;
+    }
+
+    *out_ref = trace_make_inline_thread_ref(process_koid, vthread_koid);
 }
 
 void trace_context_write_blob_record(
