@@ -9,17 +9,18 @@ executable("peridot_lib_unittests") {
   testonly = true
 
   deps = [
+    "//peridot/lib/commit_pack:unittests",
     "//peridot/lib/convert:unittests",
     "//peridot/lib/fidl:unittests",
     "//peridot/lib/firebase:unittests",
     "//peridot/lib/firebase_auth:unittests",
     "//peridot/lib/firebase_auth/testing:unittests",
     "//peridot/lib/ledger_client:unittests",
+    "//peridot/lib/module_manifest:unittests",
     "//peridot/lib/scoped_tmpfs:unittests",
     "//peridot/lib/socket:unittests",
     "//peridot/lib/user_shell_settings:unittests",
     "//peridot/lib/util:unittests",
-    "//peridot/lib/module_manifest:unittests",
     "//third_party/googletest:gtest_main",
   ]
 }

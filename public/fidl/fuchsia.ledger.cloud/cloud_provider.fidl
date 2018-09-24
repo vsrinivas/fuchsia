@@ -92,6 +92,15 @@ struct Commit {
   vector<uint8> data;
 };
 
+// Contains an ordered list of commits serialized using the SerializedCommits
+// schema defined in serialized_commits.fbs.
+//
+// This is unused yet, to be swapped in where we're currently passing
+// vector<Commit>.
+struct CommitPack {
+    fuchsia.mem.Buffer buffer;
+};
+
 // A continuation token for paginated requests.
 struct Token {
   vector<uint8> opaque_id;
