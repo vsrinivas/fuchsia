@@ -172,7 +172,7 @@ func (s *State) updateStateUDP(dir Direction, dataLen uint16) error {
 		s.expireTime = time.Now().Add(UDPExpireDefault)
 	}
 
-	if debugFilter {
+	if debug {
 		log.Printf("packet filter: updated state: %v", s)
 	}
 
@@ -354,7 +354,7 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 		now := time.Now()
 		for k, s := range ss.extToGwy {
 			if s.expireTime.After(now) {
-				if debugFilter {
+				if debug {
 					log.Printf("packet filter: delete state: %v (ExtToGwy)", s)
 				}
 				delete(ss.extToGwy, k)
@@ -367,7 +367,7 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 		}
 		for k, s := range ss.lanToExt {
 			if s.expireTime.After(now) {
-				if debugFilter {
+				if debug {
 					log.Printf("packet filter: delete state: %v (LanToExt)", s)
 				}
 				delete(ss.lanToExt, k)
@@ -529,7 +529,7 @@ func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolN
 	ss.lanToExt[kLanToExt] = s
 	ss.extToGwy[kExtToGwy] = s
 
-	if debugFilter {
+	if debug {
 		log.Printf("packet filter: new state: %v", s)
 	}
 

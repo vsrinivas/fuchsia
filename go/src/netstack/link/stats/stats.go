@@ -23,7 +23,7 @@ import (
 	"github.com/google/netstack/tcpip/stack"
 )
 
-var debug = false
+const debug = false
 
 type StatsEndpoint struct {
 	dispatcher stack.NetworkDispatcher

@@ -392,7 +392,9 @@ func (ns *Netstack) addLoopback() error {
 	ns.mu.Unlock()
 
 	linkID := loopback.New()
-	if debug {
+	// TODO(tamird): sniffer doesn't implement WriteBuffer; needs netstack
+	// bump.
+	if false && debug {
 		linkID = sniffer.New(linkID)
 	}
 	linkID = ifs.statsEP.Wrap(linkID)
@@ -458,9 +460,11 @@ func (ns *Netstack) addEth(topo string, device ethernet.DeviceInterface) error {
 
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.
-	if debug {
-		// A wrapper LinkEndpoint should encapsulate the underlying one,
-		// and manifest itself to 3rd party netstack.
+	// TODO(tamird): sniffer doesn't implement WriteBuffer; needs netstack
+	// bump.
+	if false && debug {
+		// A wrapper LinkEndpoint should encapsulate the underlying
+		// one, and manifest itself to 3rd party netstack.
 		linkID = sniffer.New(linkID)
 	}
 

@@ -17,10 +17,11 @@ import (
 	"fidl/fuchsia/netstack"
 )
 
+const debug = false
+
 var service *net.ConnectivityService = &net.ConnectivityService{}
 var reachable bool = false
 var mu sync.Mutex
-var debug = false
 
 func AddOutgoingService(ctx *context.Context) error {
 	ctx.OutgoingService.AddService(net.ConnectivityName, func(c zx.Channel) error {
@@ -66,7 +67,7 @@ func inferReachability(ifs []netstack.NetInterface) bool {
 }
 
 func notify(reachable bool) {
-	for key, _ := range service.Bindings {
+	for key := range service.Bindings {
 		if p, ok := service.EventProxyFor(key); ok {
 			p.OnNetworkReachable(reachable)
 		}
