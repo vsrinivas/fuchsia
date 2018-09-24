@@ -11,20 +11,19 @@ namespace media_player {
 enum class PayloadMode {
   kNotConfigured,
 
-  // Payloads are in accessible virtual memory and are allocated using a
+  // Payloads are in process virtual memory and are allocated using a
   // |PayloadAllocator|.
-  kLocalMemory,
+  kUsesLocalMemory,
 
-  // Payloads are in accessible virtual memory and are allocated by an external
-  // party. Only outputs can use this mode.
-  kExternalLocalMemory,
+  // Only outputs can use this mode. Payloads are in process virtual memory
+  // and are allocated by the output.
+  kProvidesLocalMemory,
 
   // Payloads are in VMOs obtained through |PayloadVmos|.
-  kVmos,
+  kUsesVmos,
 
-  // Payloads are in VMOs provided by an external party via
-  // |PayloadExternalVmos|.
-  kExternalVmos
+  // Payloads are in VMOs provided by the connector via |PayloadVmoProvision|.
+  kProvidesVmos
 };
 
 // Indicates how buffers should be allocated from VMOs.
@@ -102,9 +101,9 @@ struct PayloadConfig {
   // See the class comment above.
   //
   // When an input/output is used a kExternalX mode, it doesn't provide this
-  // value. Outputs using |kExternalLocalMemory| mode are assumed to be able to
+  // value. Outputs using |kProvidesLocalMemory| mode are assumed to be able to
   // allocated an indefinite amount of payload memory. When an input/output
-  // uses kExternalVmos mode, the manager examines the provided VMOs to see if
+  // uses kProvidesVmos mode, the manager examines the provided VMOs to see if
   // they fulfill the requirements of the connected output/input.
   uint64_t max_aggregate_payload_size_ = 0;
 
@@ -116,14 +115,15 @@ struct PayloadConfig {
   // a kExternalX mode provide this value. This value is used to ensure that
   // VMOs allocated for payloads are sufficiently large.
   //
-  // When an input uses |kExternalVmos| mode, the manager examines the provided
+  // When an input uses |kProvidesVmos| mode, the manager examines the provided
   // VMOs to see if they fulfill the requirements of the connected output/input.
   uint64_t max_payload_size_ = 0;
 
   // Indicates how buffers should or will be allocated from VMOs. For
   // inputs/outputs using a |kExternalVmo| mode, this value indicates how that
-  // input/output will allocate buffers. For inputs/output using |kVmos| mode,
-  // this value indicates how buffers must be allocated for that input/output.
+  // input/output will allocate buffers. For inputs/output using |kUsesVmos|
+  // mode, this value indicates how buffers must be allocated for that
+  // input/output.
   //
   // In some cases, incompatible values of |vmo_allocation_| from the input and
   // output in a connection will require that payloads be copied.
@@ -131,7 +131,7 @@ struct PayloadConfig {
 
   // Indicates whether VMOs should or will be physically contiguous. For
   // inputs/outputs using a |kExternalVmo| mode, this value indicates how that
-  // input/output will create VMOs. For inputs/output using |kVmos| mode,
+  // input/output will create VMOs. For inputs/output using |kUsesVmos| mode,
   // this value indicates how VMOs must be created for that input/output.
   //
   // In some cases, incompatible values of |physically_contiguous_| from the

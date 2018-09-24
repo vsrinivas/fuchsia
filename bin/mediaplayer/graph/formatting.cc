@@ -317,14 +317,14 @@ std::ostream& operator<<(std::ostream& os, PayloadMode value) {
   switch (value) {
     case PayloadMode::kNotConfigured:
       return os << "not configured";
-    case PayloadMode::kLocalMemory:
-      return os << "local memory";
-    case PayloadMode::kExternalLocalMemory:
-      return os << "external local memory";
-    case PayloadMode::kVmos:
-      return os << "vmos";
-    case PayloadMode::kExternalVmos:
-      return os << "external vmos";
+    case PayloadMode::kUsesLocalMemory:
+      return os << "uses local memory";
+    case PayloadMode::kProvidesLocalMemory:
+      return os << "provides local memory";
+    case PayloadMode::kUsesVmos:
+      return os << "uses vmos";
+    case PayloadMode::kProvidesVmos:
+      return os << "provides vmos";
   }
 
   return os;

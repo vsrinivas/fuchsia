@@ -22,6 +22,8 @@ source_set("graph") {
     "payloads/payload_buffer.cc",
     "payloads/payload_buffer.h",
     "payloads/payload_config.h",
+    "payloads/payload_manager.cc",
+    "payloads/payload_manager.h",
     "payloads/vmo_payload_allocator.cc",
     "payloads/vmo_payload_allocator.h",
     "refs.cc",

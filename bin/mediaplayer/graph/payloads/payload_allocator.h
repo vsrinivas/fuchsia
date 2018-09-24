@@ -40,11 +40,11 @@ class PayloadVmos {
 };
 
 // A collection of VMOs provided by the client backing a PayloadAllocator.
-class PayloadExternalVmos : public PayloadVmos {
+class PayloadVmoProvision : public PayloadVmos {
  public:
-  PayloadExternalVmos() = default;
+  PayloadVmoProvision() = default;
 
-  virtual ~PayloadExternalVmos() = default;
+  virtual ~PayloadVmoProvision() = default;
 
   // Adds a VMO to the collection, return a pointer to a |PayloadVmo| for the
   // added VMO.

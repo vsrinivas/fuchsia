@@ -28,10 +28,10 @@ namespace media_player {
 // case |VmoPayloadAllocator::AllocatePayloadBuffer| is never called. In the
 // case of an output, the node can simply create |PayloadBuffers| that
 // reference the VMOs when it needs them. In the case of an input, the node
-// registers its allocation function when calling |ConfigureInputForVmos| or
-// |ConfigureInputForExternalVmos|.
+// registers its allocation function when calling |ConfigureInputToUseVmos| or
+// |ConfigureInputToProvideVmos|.
 class VmoPayloadAllocator : public PayloadAllocator,
-                            public PayloadExternalVmos,
+                            public PayloadVmoProvision,
                             public fbl::RefCounted<VmoPayloadAllocator> {
  public:
   static fbl::RefPtr<VmoPayloadAllocator> Create();
@@ -62,7 +62,7 @@ class VmoPayloadAllocator : public PayloadAllocator,
   // PayloadVmos implementation.
   std::vector<fbl::RefPtr<PayloadVmo>> GetVmos() const override;
 
-  // PayloadExternalVmos implementation.
+  // PayloadVmoProvision implementation.
   void AddVmo(fbl::RefPtr<PayloadVmo> vmo) override;
 
   void RemoveVmo(fbl::RefPtr<PayloadVmo> payload_vmo) override;
