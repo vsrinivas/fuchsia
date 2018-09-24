@@ -27,22 +27,20 @@ class PageEvictionManager : public PageUsageListener {
   class Delegate {
    public:
     // Checks whether the given page is closed and synced. The result returned
-    // in the callback will be |PageClosedAndSynced:UNKNOWN| if the page is
-    // opened after calling this method and before the callback is called.
-    // Otherwise it will be |YES| or |NO| depending on whether the page is
-    // synced.
+    // in the callback will be |PAGE_OPENED| if the page is opened after calling
+    // this method and before the callback is called. Otherwise it will be |YES|
+    // or |NO| depending on whether the page is synced.
     virtual void PageIsClosedAndSynced(
         fxl::StringView ledger_name, storage::PageIdView page_id,
-        fit::function<void(Status, PageClosedAndSynced)> callback) = 0;
+        fit::function<void(Status, PagePredicateResult)> callback) = 0;
 
     // Checks whether the given page is closed, offline and empty. The result
-    // returned in the callback will be |PageClosedOfflineAndEmpty:UNKNOWN| if
-    // the page is opened after calling this method and before the callback is
-    // called. Otherwise it will be |YES| or |NO| depending on whether the page
-    // is offline and empty.
+    // returned in the callback will be |PAGE_OPENED| if the page is opened
+    // after calling this method and before the callback is called. Otherwise it
+    // will be |YES| or |NO| depending on whether the page is offline and empty.
     virtual void PageIsClosedOfflineAndEmpty(
         fxl::StringView ledger_name, storage::PageIdView page_id,
-        fit::function<void(Status, PageClosedOfflineAndEmpty)> callback) = 0;
+        fit::function<void(Status, PagePredicateResult)> callback) = 0;
 
     // Deletes the local copy of the given page from storage.
     virtual void DeletePageStorage(fxl::StringView ledger_name,

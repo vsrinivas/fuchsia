@@ -42,7 +42,7 @@ void LedgerRepositoryImpl::BindRepository(
 
 void LedgerRepositoryImpl::PageIsClosedAndSynced(
     fxl::StringView ledger_name, storage::PageIdView page_id,
-    fit::function<void(Status, PageClosedAndSynced)> callback) {
+    fit::function<void(Status, PagePredicateResult)> callback) {
   LedgerManager* ledger_manager =
       GetLedgerManager(ledger_name, CreateIfMissing::YES);
   FXL_DCHECK(ledger_manager);
@@ -52,7 +52,7 @@ void LedgerRepositoryImpl::PageIsClosedAndSynced(
 
 void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
     fxl::StringView ledger_name, storage::PageIdView page_id,
-    fit::function<void(Status, PageClosedOfflineAndEmpty)> callback) {
+    fit::function<void(Status, PagePredicateResult)> callback) {
   LedgerManager* ledger_manager =
       GetLedgerManager(ledger_name, CreateIfMissing::YES);
   FXL_DCHECK(ledger_manager);

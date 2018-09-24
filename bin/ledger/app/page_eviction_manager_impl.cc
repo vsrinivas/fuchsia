@@ -304,7 +304,7 @@ Status PageEvictionManagerImpl::CanEvictSyncedPage(
   FXL_DCHECK(delegate_);
 
   Status status;
-  PageClosedAndSynced sync_state;
+  PagePredicateResult sync_state;
   auto sync_call_status =
       coroutine::SyncCall(handler,
                           [this, ledger_name = ledger_name.ToString(),
@@ -316,7 +316,7 @@ Status PageEvictionManagerImpl::CanEvictSyncedPage(
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERNAL_ERROR;
   }
-  *can_evict = (sync_state == PageClosedAndSynced::YES);
+  *can_evict = (sync_state == PagePredicateResult::YES);
 
   return status;
 }
@@ -327,7 +327,7 @@ Status PageEvictionManagerImpl::CanEvictEmptyPage(
   FXL_DCHECK(delegate_);
 
   Status status;
-  PageClosedOfflineAndEmpty empty_state;
+  PagePredicateResult empty_state;
   auto sync_call_status =
       coroutine::SyncCall(handler,
                           [this, ledger_name = ledger_name.ToString(),
@@ -339,7 +339,7 @@ Status PageEvictionManagerImpl::CanEvictEmptyPage(
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERNAL_ERROR;
   }
-  *can_evict = (empty_state == PageClosedOfflineAndEmpty::YES);
+  *can_evict = (empty_state == PagePredicateResult::YES);
   return status;
 }
 

@@ -331,7 +331,7 @@ TEST_F(LedgerManagerTest, OnEmptyCalled) {
 TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckNotFound) {
   bool called;
   Status status;
-  PageClosedAndSynced is_closed_and_synced;
+  PagePredicateResult is_closed_and_synced;
 
   ledger::PageId id = RandomId();
 
@@ -350,7 +350,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckNotFound) {
 TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckClosed) {
   bool called;
   Status status;
-  PageClosedAndSynced is_closed_and_synced;
+  PagePredicateResult is_closed_and_synced;
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
@@ -371,7 +371,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckClosed) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(PageClosedAndSynced::NO, is_closed_and_synced);
+  EXPECT_EQ(PagePredicateResult::PAGE_OPENED, is_closed_and_synced);
 
   // Close the page. PageIsClosedAndSynced should now be true.
   page.Unbind();
@@ -383,7 +383,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckClosed) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(PageClosedAndSynced::YES, is_closed_and_synced);
+  EXPECT_EQ(PagePredicateResult::YES, is_closed_and_synced);
 }
 
 // Check for a page that exists, is closed, but is not synced.
@@ -391,7 +391,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckClosed) {
 TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckSynced) {
   bool called;
   Status status;
-  PageClosedAndSynced is_closed_and_synced;
+  PagePredicateResult is_closed_and_synced;
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
@@ -408,6 +408,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckSynced) {
   // Mark the page as unsynced and close it.
   storage_ptr->set_page_storage_synced(storage_page_id, false);
   page.Unbind();
+  RunLoopUntilIdle();
 
   ledger_manager_->PageIsClosedAndSynced(
       storage_page_id, callback::Capture(callback::SetWhenCalled(&called),
@@ -415,15 +416,15 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckSynced) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(PageClosedAndSynced::NO, is_closed_and_synced);
+  EXPECT_EQ(PagePredicateResult::NO, is_closed_and_synced);
 }
 
 // Check for a page that exists, is closed, and synced, but was opened during
-// the PageIsClosedAndSynced call. Expect an |UNKNOWN| return status.
-TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckUnknown) {
+// the PageIsClosedAndSynced call. Expect an |PAGE_OPENED| result.
+TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
   bool called;
   Status status;
-  PageClosedAndSynced is_closed_and_synced;
+  PagePredicateResult is_closed_and_synced;
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
@@ -461,11 +462,11 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckUnknown) {
   page.Unbind();
   RunLoopUntilIdle();
 
-  // Make sure PageIsClosedAndSynced terminates with a |UNKNOWN| status.
+  // Make sure PageIsClosedAndSynced terminates with a |PAGE_OPENED| result.
   storage_ptr->CallIsSyncedCallback(storage_page_id);
   EXPECT_TRUE(page_is_closed_and_synced_called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(PageClosedAndSynced::UNKNOWN, is_closed_and_synced);
+  EXPECT_EQ(PagePredicateResult::PAGE_OPENED, is_closed_and_synced);
 }
 
 // Check for a page that exists, is closed, and synced. Test two concurrent
@@ -494,7 +495,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   // Make a first call to PageIsClosedAndSynced but don't let it terminate.
   bool called1 = false;
   Status status1;
-  PageClosedAndSynced is_closed_and_synced1;
+  PagePredicateResult is_closed_and_synced1;
   storage_ptr->DelayIsSyncedCallback(storage_page_id, true);
   ledger_manager_->PageIsClosedAndSynced(
       storage_page_id, callback::Capture(callback::SetWhenCalled(&called1),
@@ -505,7 +506,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   // result is |YES|.
   bool called2 = false;
   Status status2;
-  PageClosedAndSynced is_closed_and_synced2;
+  PagePredicateResult is_closed_and_synced2;
   storage_ptr->DelayIsSyncedCallback(storage_page_id, false);
   ledger_manager_->PageIsClosedAndSynced(
       storage_page_id, callback::Capture(callback::SetWhenCalled(&called2),
@@ -514,7 +515,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   EXPECT_FALSE(called1);
   EXPECT_TRUE(called2);
   EXPECT_EQ(Status::OK, status2);
-  EXPECT_EQ(PageClosedAndSynced::YES, is_closed_and_synced2);
+  EXPECT_EQ(PagePredicateResult::YES, is_closed_and_synced2);
 
   // Open and close the page.
   ledger_->GetPage(
@@ -527,17 +528,17 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   RunLoopUntilIdle();
 
   // Call the callback and let the first call to PageIsClosedAndSynced
-  // terminate. The expected returend status is |UNKNOWN|.
+  // terminate. The expected returned result is |PAGE_OPENED|.
   storage_ptr->CallIsSyncedCallback(storage_page_id);
   EXPECT_TRUE(called1);
   EXPECT_EQ(Status::OK, status1);
-  EXPECT_EQ(PageClosedAndSynced::UNKNOWN, is_closed_and_synced1);
+  EXPECT_EQ(PagePredicateResult::PAGE_OPENED, is_closed_and_synced1);
 }
 
 TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckNotFound) {
   bool called;
   Status status;
-  PageClosedOfflineAndEmpty is_closed_offline_empty;
+  PagePredicateResult is_closed_offline_empty;
 
   ledger::PageId id = RandomId();
 
@@ -554,7 +555,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckNotFound) {
 TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
   bool called;
   Status status;
-  PageClosedOfflineAndEmpty is_closed_offline_empty;
+  PagePredicateResult is_closed_offline_empty;
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
@@ -575,9 +576,9 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(PageClosedOfflineAndEmpty::NO, is_closed_offline_empty);
+  EXPECT_EQ(PagePredicateResult::PAGE_OPENED, is_closed_offline_empty);
 
-  // Close the page. PageClosedOfflineAndEmpty should now be true.
+  // Close the page. PagePredicateResult should now be true.
   page.Unbind();
   RunLoopUntilIdle();
 
@@ -587,7 +588,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(PageClosedOfflineAndEmpty::YES, is_closed_offline_empty);
+  EXPECT_EQ(PagePredicateResult::YES, is_closed_offline_empty);
 }
 
 // Verifies that two successive calls to GetPage do not create 2 storages.
@@ -750,7 +751,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
   // opened/closed should be made.
   bool called;
   Status status;
-  PageClosedAndSynced page_state;
+  PagePredicateResult page_state;
   ledger_manager_->PageIsClosedAndSynced(
       convert::ToString(id.id),
       callback::Capture(callback::SetWhenCalled(&called), &status,
@@ -758,7 +759,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(PageClosedAndSynced::NO, page_state);
+  EXPECT_EQ(PagePredicateResult::NO, page_state);
   EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
   EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
 

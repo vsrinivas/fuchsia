@@ -51,21 +51,20 @@ class LedgerManager : public LedgerImpl::Delegate,
   void BindLedger(fidl::InterfaceRequest<Ledger> ledger_request);
 
   // Checks whether the given page is closed and synced. The result returned in
-  // the callback will be |PageClosedAndSynced:UNKNOWN| if the page is opened
-  // after calling this method and before the callback is called. Otherwise it
-  // will be |YES| or |NO| depending on whether the page is synced or not.
+  // the callback will be |PAGE_OPENED| if the page is opened after calling this
+  // method and before the callback is called. Otherwise it will be |YES| or
+  // |NO| depending on whether the page is synced or not.
   void PageIsClosedAndSynced(
       storage::PageIdView page_id,
-      fit::function<void(Status, PageClosedAndSynced)> callback);
+      fit::function<void(Status, PagePredicateResult)> callback);
 
   // Checks whether the given page is closed, offline and empty. The result
-  // returned in the callback will be |PageClosedOfflineAndEmpty:UNKNOWN| if the
-  // page is opened after calling this method and before the callback is called.
-  // Otherwise it will be |YES| or |NO| depending on whether the page is offline
-  // and empty or not.
+  // returned in the callback will be |PAGE_OPENED| if the page is opened after
+  // calling this method and before the callback is called. Otherwise it will be
+  // |YES| or |NO| depending on whether the page is offline and empty or not.
   void PageIsClosedOfflineAndEmpty(
       storage::PageIdView page_id,
-      fit::function<void(Status, PageClosedOfflineAndEmpty)> callback);
+      fit::function<void(Status, PagePredicateResult)> callback);
 
   // Deletes the local copy of the page. If the page is currently open, the
   // callback will be called with |ILLEGAL_STATE|.
@@ -135,15 +134,15 @@ class LedgerManager : public LedgerImpl::Delegate,
       PageManager::PageStorageState state);
 
   // Checks whether the given page is closed and staisfies the given
-  // |predicate|. The result returned in the callback will be
-  // |YesNoUnknown:UNKNOWN| if the page is opened after calling this method and
-  // before the callback is called. Otherwise it will be |YES| or |NO| depending
-  // on whether the predicate is satisfied.
+  // |predicate|. The result returned in the callback will be |PAGE_OPENED| if
+  // the page is opened after calling this method and before the callback is
+  // called. Otherwise it will be |YES| or |NO| depending on whether the
+  // predicate is satisfied.
   void PageIsClosedAndSatisfiesPredicate(
       storage::PageIdView page_id,
       fit::function<void(PageManager*, fit::function<void(Status, bool)>)>
           predicate,
-      fit::function<void(Status, YesNoUnknown)> callback);
+      fit::function<void(Status, PagePredicateResult)> callback);
 
   // Marks the page with the given id as no longer tracked by the given
   // operation. Returns true if the entry was found; false otherwise.
@@ -193,7 +192,7 @@ class LedgerManager : public LedgerImpl::Delegate,
   // because of an external request. This guarantees that if before calling the
   // callback of |PageIsClosedAndSatisfiesPredicate|, the entry is still present
   // in the map, the page was not opened during that operation. Otherwise, it
-  // was, and |UNKNOWN| should be returned.
+  // was, and |PAGE_OPENED| should be returned.
   std::map<storage::PageId, std::vector<uint64_t>> page_was_opened_map_;
   uint64_t page_was_opened_id_ = 0;
 

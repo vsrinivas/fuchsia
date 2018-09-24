@@ -53,10 +53,10 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   // PageEvictionManagerImpl::Delegate:
   void PageIsClosedAndSynced(
       fxl::StringView ledger_name, storage::PageIdView page_id,
-      fit::function<void(Status, PageClosedAndSynced)> callback) override;
+      fit::function<void(Status, PagePredicateResult)> callback) override;
   void PageIsClosedOfflineAndEmpty(
       fxl::StringView ledger_name, storage::PageIdView page_id,
-      fit::function<void(Status, PageClosedOfflineAndEmpty)> callback) override;
+      fit::function<void(Status, PagePredicateResult)> callback) override;
   void DeletePageStorage(fxl::StringView ledger_name,
                          storage::PageIdView page_id,
                          fit::function<void(Status)> callback) override;

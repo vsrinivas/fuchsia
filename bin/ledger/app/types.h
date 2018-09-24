@@ -13,11 +13,10 @@
 
 namespace ledger {
 
-enum class YesNoUnknown { YES, NO, UNKNOWN };
-
-using PageClosedAndSynced = YesNoUnknown;
-
-using PageClosedOfflineAndEmpty = YesNoUnknown;
+// The result of a predicate, meant to be checked on a closed page. The result
+// is |YES| or |NO| depending on whether the predicate is satisfied or not. If
+// however the page was opened during the operation, |PAGE_OPENED| is returned.
+enum class PagePredicateResult { YES, NO, PAGE_OPENED };
 
 // Holds information on when a page was last used.
 struct PageInfo {

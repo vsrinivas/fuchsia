@@ -278,7 +278,7 @@ void LedgerManager::BindLedger(fidl::InterfaceRequest<Ledger> ledger_request) {
 
 void LedgerManager::PageIsClosedAndSynced(
     storage::PageIdView page_id,
-    fit::function<void(Status, PageClosedAndSynced)> callback) {
+    fit::function<void(Status, PagePredicateResult)> callback) {
   auto is_synced = [](PageManager* page_manager,
                       fit::function<void(Status, bool)> on_done) {
     page_manager->IsSynced(std::move(on_done));
@@ -289,7 +289,7 @@ void LedgerManager::PageIsClosedAndSynced(
 
 void LedgerManager::PageIsClosedOfflineAndEmpty(
     storage::PageIdView page_id,
-    fit::function<void(Status, PageClosedOfflineAndEmpty)> callback) {
+    fit::function<void(Status, PagePredicateResult)> callback) {
   auto is_offline_and_empty = [](PageManager* page_manager,
                                  fit::function<void(Status, bool)> on_done) {
     page_manager->IsOfflineAndEmpty(std::move(on_done));
@@ -429,7 +429,7 @@ void LedgerManager::PageIsClosedAndSatisfiesPredicate(
     storage::PageIdView page_id,
     fit::function<void(PageManager*, fit::function<void(Status, bool)>)>
         predicate,
-    fit::function<void(Status, YesNoUnknown)> callback) {
+    fit::function<void(Status, PagePredicateResult)> callback) {
   // Start logging whether the page has been opened during the execution of
   // this method.
   uint64_t operation_id = page_was_opened_id_++;
@@ -446,7 +446,7 @@ void LedgerManager::PageIsClosedAndSatisfiesPredicate(
     // The page manager is open, check if there are any open connections.
     container = &it->second;
     if (container->PageConnectionIsOpen()) {
-      callback(Status::OK, YesNoUnknown::NO);
+      callback(Status::OK, PagePredicateResult::PAGE_OPENED);
       return;
     }
   } else {
@@ -459,32 +459,34 @@ void LedgerManager::PageIsClosedAndSatisfiesPredicate(
     });
   }
 
-  container->NewInternalRequest([this, page_id = page_id.ToString(),
-                                 operation_id, predicate = std::move(predicate),
-                                 on_return = std::move(on_return),
-                                 callback = std::move(callback)](
-                                    Status status, ExpiringToken token,
-                                    PageManager* page_manager) mutable {
-    if (status != Status::OK) {
-      callback(status, YesNoUnknown::UNKNOWN);
-      return;
-    }
-    FXL_DCHECK(page_manager);
-    predicate(page_manager, [this, page_id = std::move(page_id), operation_id,
-                             on_return = std::move(on_return),
-                             token = std::move(token),
-                             callback = std::move(callback)](
-                                Status status, bool condition) mutable {
-      on_return.cancel();
-      if (!RemoveTrackedPage(page_id, operation_id) || status != Status::OK) {
-        // If |RemoveTrackedPage| returns false, this means that the page was
-        // opened during this operation and |UNKNOWN| must be returned.
-        callback(status, YesNoUnknown::UNKNOWN);
-        return;
-      }
-      callback(Status::OK, condition ? YesNoUnknown::YES : YesNoUnknown::NO);
-    });
-  });
+  container->NewInternalRequest(
+      [this, page_id = page_id.ToString(), operation_id,
+       predicate = std::move(predicate), on_return = std::move(on_return),
+       callback = std::move(callback)](Status status, ExpiringToken token,
+                                       PageManager* page_manager) mutable {
+        if (status != Status::OK) {
+          callback(status, PagePredicateResult::PAGE_OPENED);
+          return;
+        }
+        FXL_DCHECK(page_manager);
+        predicate(page_manager,
+                  [this, page_id = std::move(page_id), operation_id,
+                   on_return = std::move(on_return), token = std::move(token),
+                   callback = std::move(callback)](Status status,
+                                                   bool condition) mutable {
+                    on_return.cancel();
+                    if (!RemoveTrackedPage(page_id, operation_id) ||
+                        status != Status::OK) {
+                      // If |RemoveTrackedPage| returns false, this means that
+                      // the page was opened during this operation and
+                      // |PAGE_OPENED| must be returned.
+                      callback(status, PagePredicateResult::PAGE_OPENED);
+                      return;
+                    }
+                    callback(Status::OK, condition ? PagePredicateResult::YES
+                                                   : PagePredicateResult::NO);
+                  });
+      });
 }
 
 bool LedgerManager::RemoveTrackedPage(storage::PageIdView page_id,
