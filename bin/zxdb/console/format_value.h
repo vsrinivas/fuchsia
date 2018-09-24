@@ -185,6 +185,10 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
                          OutputBuffer* out);
   void FormatChar(const ExprValue& value, OutputBuffer* out);
   void FormatPointer(const ExprValue& value, OutputBuffer* out);
+  void FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
+                       const ExprValue& value,
+                       const FormatValueOptions& options,
+                       OutputKey output_key);
 
   OutputKey GetRootOutputKey();
 
@@ -197,8 +201,11 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // done.
   OutputKey AsyncAppend(OutputKey parent);
 
-  // Saves the given OutputBuffer contents to the given key. This will check
-  // for completion and issue the callback if everything has been resolved.
+  // Marks the given output key complete. The variant that takes an output
+  // buffer is a shorthand for appending the contents and marking it complete.
+  // This will check for completion and issue the callback if everything has
+  // been resolved.
+  void OutputKeyComplete(OutputKey key);
   void OutputKeyComplete(OutputKey key, OutputBuffer contents);
 
   // Issues the pending callback if necessary. The callback may delete |this|

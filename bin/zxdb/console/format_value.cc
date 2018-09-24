@@ -10,6 +10,7 @@
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/resolve_array.h"
 #include "garnet/bin/zxdb/expr/resolve_member.h"
+#include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "garnet/bin/zxdb/symbols/array_type.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
@@ -247,18 +248,30 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
     return;
   }
 
+  // References (these require asynchronous calls to format so can't be in the
+  // "modified types" block below in the synchronous section).
+  if (type->tag() == Symbol::kTagReferenceType) {
+    FormatReference(data_provider, value, options, output_key);
+    return;
+  }
+
   // Everything below here is formatted synchronously. Do not early return
   // since the bottom of this function sets the output and marks the output key
   // resolved.
   OutputBuffer out;
 
   if (const ModifiedType* modified_type = type->AsModifiedType()) {
-    // Modified types (pointers, references, etc.).
+    // Modified types (references were handled above).
     switch (modified_type->tag()) {
       case Symbol::kTagPointerType:
         FormatPointer(value, &out);
         break;
-        // TODO(brettw) need to handle various reference types here.
+      default:
+        out.Append(Syntax::kComment,
+                   fxl::StringPrintf(
+                       "<Unhandled type modifier 0x%x, please file a bug.>",
+                       static_cast<unsigned>(modified_type->tag())));
+        break;
     }
   } else if (IsNumericBaseType(value.GetBaseType()) &&
              options.num_format != FormatValueOptions::NumFormat::kDefault) {
@@ -377,7 +390,7 @@ void FormatValue::FormatStructClass(
                     AsyncAppend(output_key));
   }
   AppendToOutputKey(output_key, OutputBuffer("}"));
-  OutputKeyComplete(output_key, OutputBuffer());
+  OutputKeyComplete(output_key);
 }
 
 void FormatValue::FormatString(fxl::RefPtr<SymbolDataProvider> data_provider,
@@ -501,7 +514,7 @@ void FormatValue::FormatArrayData(
 
   // Now we can mark the root output key as complete. The children added above
   // may or may not have completed synchronously.
-  OutputKeyComplete(output_key, OutputBuffer());
+  OutputKeyComplete(output_key);
 }
 
 void FormatValue::FormatBoolean(const ExprValue& value, OutputBuffer* out) {
@@ -577,6 +590,49 @@ void FormatValue::FormatPointer(const ExprValue& value, OutputBuffer* out) {
   }
 }
 
+void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
+                                  const ExprValue& value,
+                                  const FormatValueOptions& options,
+                                  OutputKey output_key) {
+  EnsureResolveReference(data_provider, value, [
+    weak_this = weak_factory_.GetWeakPtr(), data_provider,
+    original_value = value, options, output_key
+  ](const Err& err, ExprValue resolved_value) {
+    if (!weak_this)
+      return;
+
+    // First show the type.
+    OutputBuffer out;
+    out.Append(Syntax::kComment,
+               fxl::StringPrintf("(%s) ",
+                                 original_value.type()->GetFullName().c_str()));
+
+    // Followed by the address.
+    uint64_t address = 0;
+    Err addr_err = original_value.PromoteToUint64(&address);
+    if (addr_err.has_error()) {
+      // Invalid data in the reference.
+      out.Append(ErrToOutput(addr_err));
+      weak_this->OutputKeyComplete(output_key, std::move(out));
+      return;
+    }
+    out.Append(Syntax::kComment,
+               fxl::StringPrintf("0x%" PRIx64 " = ", address));
+
+    // Follow with the resolved value.
+    if (err.has_error()) {
+      out.Append(ErrToOutput(err));
+      weak_this->OutputKeyComplete(output_key, std::move(out));
+    } else {
+      // FormatExprValue will mark the output key complete when it's done
+      // formatting.
+      weak_this->AppendToOutputKey(output_key, std::move(out));
+      weak_this->FormatExprValue(data_provider, resolved_value, options,
+                                 output_key);
+    }
+  });
+}
+
 FormatValue::OutputKey FormatValue::GetRootOutputKey() {
   return reinterpret_cast<intptr_t>(&root_);
 }
@@ -603,7 +659,7 @@ FormatValue::OutputKey FormatValue::AsyncAppend(OutputKey parent) {
   return result;
 }
 
-void FormatValue::OutputKeyComplete(OutputKey key, OutputBuffer contents) {
+void FormatValue::OutputKeyComplete(OutputKey key) {
   // See OutputKey definition in the header for how it works.
   OutputNode* dest = reinterpret_cast<OutputNode*>(key);
 
@@ -611,12 +667,15 @@ void FormatValue::OutputKeyComplete(OutputKey key, OutputBuffer contents) {
   FXL_DCHECK(dest->pending);
   dest->pending = false;
 
-  dest->buffer = std::move(contents);
-
   // Decrement the pending count.
   FXL_DCHECK(pending_resolution_ > 0);
   pending_resolution_--;
   CheckPendingResolution();
+}
+
+void FormatValue::OutputKeyComplete(OutputKey key, OutputBuffer contents) {
+  AppendToOutputKey(key, std::move(contents));
+  OutputKeyComplete(key);
 }
 
 void FormatValue::CheckPendingResolution() {

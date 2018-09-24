@@ -350,6 +350,28 @@ TEST_F(FormatValueTest, TruncatedArray) {
             SyncFormatValue(ExprValue(array_type, addr_data), opts));
 }
 
+TEST_F(FormatValueTest, Reference) {
+  FormatValueOptions opts;
+
+  auto base_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "int");
+  auto ref_type = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagReferenceType,
+                                                    LazySymbol(base_type));
+  constexpr uint64_t kAddress = 0x1100;
+  provider()->AddMemory(kAddress, {123, 0, 0, 0, 0, 0, 0, 0});
+
+  // This data refers to the address above.
+  std::vector<uint8_t> data = {0x00, 0x11, 0, 0, 0, 0, 0, 0};
+  ExprValue value(ref_type, data);
+  EXPECT_EQ("(int&) 0x1100 = 123", SyncFormatValue(value, opts));
+
+  // Test an invalid one with an invalud address.
+  std::vector<uint8_t> bad_data = {0x00, 0x22, 0, 0, 0, 0, 0, 0};
+  value = ExprValue(ref_type, bad_data);
+  EXPECT_EQ("(int&) 0x2200 = <Invalid pointer 0x2200>",
+            SyncFormatValue(value, opts));
+}
+
 // TODO(brettw) check nested arrays.
 // Pretty sure this ends up being wrong:
 //   int a[2][2] = { ... }

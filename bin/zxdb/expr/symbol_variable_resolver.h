@@ -45,12 +45,10 @@ class SymbolVariableResolver {
                        Callback cb);
 
  private:
+  // The functions below represent a flow that is usually executed in order.
+
   // Callback for when the dwarf_eval_ has completed evaluation.
   void OnDwarfEvalComplete(const Err& err, fxl::RefPtr<Type> type);
-
-  // Implements ResolveFromCallback after a callback has already been installed
-  // in this class.
-  void DoResolveFromAddress(uint64_t address, fxl::RefPtr<Type> type);
 
   // Issuse the callback. The callback could possibly delete |this| so don't
   // do anything after calling.

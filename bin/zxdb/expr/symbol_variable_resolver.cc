@@ -9,7 +9,7 @@
 #include <algorithm>
 
 #include "garnet/bin/zxdb/expr/expr_value.h"
-#include "garnet/bin/zxdb/expr/resolve_pointer.h"
+#include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/type.h"
@@ -144,18 +144,13 @@ void SymbolVariableResolver::OnDwarfEvalComplete(const Err& err,
     OnComplete(Err(), ExprValue(std::move(type), std::move(data)));
   } else {
     // The DWARF result is a pointer to the value.
-    DoResolveFromAddress(result_int, std::move(type));
+    ResolvePointer(data_provider_, result_int, std::move(type),
+                   [weak_this = weak_factory_.GetWeakPtr()](const Err& err,
+                                                            ExprValue value) {
+                     if (weak_this)
+                       weak_this->OnComplete(err, std::move(value));
+                   });
   }
-}
-
-void SymbolVariableResolver::DoResolveFromAddress(uint64_t address,
-                                                  fxl::RefPtr<Type> type) {
-  ResolvePointer(data_provider_, address, type,
-                 [weak_this = weak_factory_.GetWeakPtr()](const Err& err,
-                                                          ExprValue value) {
-                   if (weak_this)
-                     weak_this->OnComplete(err, std::move(value));
-                 });
 }
 
 void SymbolVariableResolver::OnComplete(const Err& err, ExprValue value) {

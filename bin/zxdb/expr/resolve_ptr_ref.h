@@ -29,4 +29,16 @@ void ResolvePointer(fxl::RefPtr<SymbolDataProvider> data_provider,
                     const ExprValue& pointer,
                     std::function<void(const Err&, ExprValue)> cb);
 
+// Ensures that the value is not a reference type. The result will be an
+// ExprValue passed to the callback that has any reference types stripped.
+//
+// If the input ExprValue does not have a reference type, calls the callback
+// immediately (from within the calling function's stack frame) with the input.
+//
+// If the value is a reference type, it will be resolved and the value will be
+// the value of the referenced data.
+void EnsureResolveReference(fxl::RefPtr<SymbolDataProvider> data_provider,
+                            ExprValue value,
+                            std::function<void(const Err&, ExprValue)> cb);
+
 }  // namespace zxdb
