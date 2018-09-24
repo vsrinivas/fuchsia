@@ -23,6 +23,7 @@
 #define ALT_FUNCTION_MAX                6
 #define MAX_GPIO_INDEX                  255
 #define BITS_PER_GPIO_INTERRUPT         8
+#define BITS_PER_FILTER_SELECT          4
 
 #define READ32_GPIO_REG(index, offset)              readl(io_buffer_virt(&gpio->mmios[index]) + offset*4)
 #define WRITE32_GPIO_REG(index, offset, value)      writel(value, io_buffer_virt(&gpio->mmios[index]) + offset*4)
@@ -383,7 +384,8 @@ static zx_status_t aml_gpio_get_interrupt(void *ctx, uint32_t pin,
 
     // Configure Interrupt Select Filter
     regval = READ32_GPIO_INTERRUPT_REG(interrupt->filter_select_offset);
-    WRITE32_GPIO_INTERRUPT_REG(interrupt->filter_select_offset, regval | (0x7 << index));
+    WRITE32_GPIO_INTERRUPT_REG(interrupt->filter_select_offset,
+                               regval | (0x7 << (index * BITS_PER_FILTER_SELECT)));
     interrupt->irq_status |= 1 << index;
     interrupt->irq_info[index] = pin;
 fail:
