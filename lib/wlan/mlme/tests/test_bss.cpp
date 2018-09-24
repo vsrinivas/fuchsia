@@ -7,8 +7,8 @@
 
 #include <wlan/common/channel.h>
 #include <wlan/mlme/ap/bss_interface.h>
-#include <wlan/mlme/packet.h>
 #include <wlan/mlme/mac_frame.h>
+#include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
 
 #include <fbl/unique_ptr.h>
@@ -88,7 +88,8 @@ zx_status_t WriteCountry(ElementWriter* w, const wlan_channel_t chan) {
     return ZX_OK;
 }
 
-zx_status_t WriteExtendedSupportedRates(ElementWriter* w, const std::vector<SupportedRate>& ext_rates) {
+zx_status_t WriteExtendedSupportedRates(ElementWriter* w,
+                                        const std::vector<SupportedRate>& ext_rates) {
     if (!w->write<ExtendedSupportedRatesElement>(ext_rates)) {
         errorf("could not write extended supported rates\n");
         return ZX_ERR_IO;
@@ -243,7 +244,8 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
 
     if (WriteCountry(&w, kBssChannel) != ZX_OK) { return ZX_ERR_IO; }
 
-    std::vector<SupportedRate> ext_rates(std::cbegin(kExtendedSupportedRates), std::cend(kExtendedSupportedRates));
+    std::vector<SupportedRate> ext_rates(std::cbegin(kExtendedSupportedRates),
+                                         std::cend(kExtendedSupportedRates));
     if (WriteExtendedSupportedRates(&w, ext_rates) != ZX_OK) { return ZX_ERR_IO; }
 
     ZX_DEBUG_ASSERT(bcn->Validate(w.size()));
@@ -413,9 +415,7 @@ zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* 
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
     llc_hdr->protocol_id = 42;
-    if (len > 0) {
-        std::memcpy(llc_hdr->payload, payload, len);
-    }
+    if (len > 0) { std::memcpy(llc_hdr->payload, payload, len); }
 
     size_t actual_body_len = llc_hdr->len() + len;
     auto status = data_frame.set_body_len(actual_body_len);
@@ -460,8 +460,7 @@ zx_status_t CreateNullDataFrame(fbl::unique_ptr<Packet>* out_packet) {
     return ZX_OK;
 }
 
-zx_status_t CreateEthFrame(fbl::unique_ptr<Packet>* out_packet,
-                           const uint8_t* payload,
+zx_status_t CreateEthFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* payload,
                            size_t len) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);

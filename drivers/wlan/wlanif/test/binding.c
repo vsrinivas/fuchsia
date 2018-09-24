@@ -25,23 +25,20 @@ zx_status_t wlanif_start(void* ctx, wlanif_impl_ifc_t* ifc, void* cookie) {
     return ZX_OK;
 }
 
-void wlanif_stop(void* ctx) {
-}
+void wlanif_stop(void* ctx) {}
 
 #define MAX_SSID_LEN 100
 
 wlanif_bss_description_t scan_results[] = {
-    { .bssid = {11, 22, 33, 44, 55, 66},
-      .ssid = "Fake AP 1",
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
-      .beacon_period = 1,
-      .dtim_period = 1,
-      .timestamp = 0,
-      .local_time = 0,
-      .rsne_len = 0,
-      .chan = { .primary = 4, .cbw = CBW20, .secondary80 = 0 }
-    }
-};
+    {.bssid = {11, 22, 33, 44, 55, 66},
+     .ssid = "Fake AP 1",
+     .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+     .beacon_period = 1,
+     .dtim_period = 1,
+     .timestamp = 0,
+     .local_time = 0,
+     .rsne_len = 0,
+     .chan = {.primary = 4, .cbw = CBW20, .secondary80 = 0}}};
 
 #define NUM_SCAN_RESULTS countof(scan_results)
 
@@ -55,8 +52,7 @@ int fake_scan_results(void* arg) {
         wlanif_ifc.on_scan_result(wlanif_cookie, &scan_result);
     }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
-    wlanif_scan_end_t scan_end = {.txn_id = scan_txn_id,
-                                  .code = WLAN_SCAN_RESULT_SUCCESS};
+    wlanif_scan_end_t scan_end = {.txn_id = scan_txn_id, .code = WLAN_SCAN_RESULT_SUCCESS};
     wlanif_ifc.on_scan_end(wlanif_cookie, &scan_end);
     return 0;
 }
@@ -71,7 +67,7 @@ void wlanif_start_scan(void* ctx, wlanif_scan_req_t* req) {
 
 void wlanif_join_req(void* ctx, wlanif_join_req_t* req) {
     printf("***** join_req\n");
-    wlanif_join_confirm_t conf = { .result_code = WLAN_JOIN_RESULT_SUCCESS };
+    wlanif_join_confirm_t conf = {.result_code = WLAN_JOIN_RESULT_SUCCESS};
     wlanif_ifc.join_conf(wlanif_cookie, &conf);
 }
 
@@ -137,7 +133,7 @@ void wlanif_query(void* ctx, wlanif_query_info_t* info) {
     memset(info, 0, sizeof(*info));
 
     // mac_addr
-    uint8_t mac_addr[ETH_ALEN] = { 1, 2, 3, 4, 5, 6 };
+    uint8_t mac_addr[ETH_ALEN] = {1, 2, 3, 4, 5, 6};
     memcpy(info->mac_addr, mac_addr, ETH_ALEN);
 
     // role
@@ -150,7 +146,7 @@ void wlanif_query(void* ctx, wlanif_query_info_t* info) {
     info->num_bands = 1;
 
     // basic_rates
-    const uint16_t basic_rates[] = { 2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108 };
+    const uint16_t basic_rates[] = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
     static_assert(countof(basic_rates) <= WLAN_BASIC_RATES_MAX_LEN, "too many basic rates");
     size_t num_rates = countof(basic_rates);
     info->bands[0].num_basic_rates = num_rates;
@@ -160,7 +156,7 @@ void wlanif_query(void* ctx, wlanif_query_info_t* info) {
     info->bands[0].base_frequency = 2407;
 
     // channels
-    const uint8_t channels[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
+    const uint8_t channels[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
     static_assert(countof(channels) <= WLAN_CHANNELS_MAX_LEN, "too many channels");
     size_t num_channels = countof(channels);
     info->bands[0].num_channels = num_channels;
@@ -198,12 +194,9 @@ static zx_protocol_device_t device_ops = {
 };
 
 zx_status_t dev_bind(void* ctx, zx_device_t* device) {
-
     static bool first = true;
 
-    if (! first) {
-        return ZX_ERR_ALREADY_BOUND;
-    }
+    if (!first) { return ZX_ERR_ALREADY_BOUND; }
     first = false;
     static device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -220,8 +213,7 @@ zx_status_t dev_init(void** out_ctx) {
     return ZX_OK;
 }
 
-void dev_release(void* ctx) {
-}
+void dev_release(void* ctx) {}
 
 static zx_driver_ops_t wlanif_test_driver_ops = {
     .version = DRIVER_OPS_VERSION,
@@ -230,5 +222,5 @@ static zx_driver_ops_t wlanif_test_driver_ops = {
     .release = dev_release,
 };
 
-ZIRCON_DRIVER_BEGIN(wlanif-test, wlanif_test_driver_ops, "fuchsia", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT), ZIRCON_DRIVER_END(wlanif-test)
+ZIRCON_DRIVER_BEGIN(wlanif - test, wlanif_test_driver_ops, "fuchsia", "0.1", 1)
+BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT), ZIRCON_DRIVER_END(wlanif - test)
