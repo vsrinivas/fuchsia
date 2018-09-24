@@ -329,7 +329,7 @@ static int aml_get_ecc_corrections(aml_raw_nand_t* raw_nand, int ecc_pages,
                 raw_nand->stats.failed++;
                 return ECC_CHECK_RETURN_FF;
             }
-            zxlogf(ERROR, "%s: Blank Page@%u\n", __func__, nand_page);
+            zxlogf(INFO, "%s: Blank Page@%u\n", __func__, nand_page);
             continue;
         }
         if (info->ecc.eccerr_cnt != 0) {
@@ -484,6 +484,37 @@ static bool is_page0_nand_page(uint32_t nand_page) {
             ((nand_page % AML_PAGE0_STEP) == 0));
 }
 
+/*
+ * Fills up the (data) buffer with 0xdeadbeef to debug what is being
+ * returned back to the user from the read.
+ */
+static void fill_data_pattern(char* buf, size_t size) {
+    uint32_t* p = (uint32_t*)buf;
+
+    for (int num_words = size / sizeof(uint32_t); num_words > 0; num_words--) {
+        *p++ = 0xdeadbeef;
+    }
+}
+
+static void fill_info_pattern(aml_raw_nand_t* raw_nand, char* buf) {
+    uint32_t ecc_pagesize = aml_get_ecc_pagesize(raw_nand, raw_nand->controller_params.bch_mode);
+    uint32_t ecc_pages = raw_nand->writesize / ecc_pagesize;
+
+    for (uint32_t i = 0; i < ecc_pages; i++) {
+        struct aml_info_format* info;
+
+        info = aml_info_ptr(raw_nand, i);
+        /*
+         * Force the read completion state to be "bad". For successful
+         * reads, the NAND controller will successfully DMA state in here.
+         * If the DMA happens to be aborted, we will retain the bad state
+         * we seed here and the read will fail.
+         */
+        info->ecc.eccerr_cnt = AML_ECC_UNCORRECTABLE_CNT;
+        info->ecc.completed = 0;
+    }
+}
+
 static zx_status_t aml_read_page_hwecc(void* ctx,
                                        void* data,
                                        void* oob,
@@ -513,6 +544,21 @@ static zx_status_t aml_read_page_hwecc(void* ctx,
      * Flush and invalidate (only invalidate is really needed), the
      * info and data buffers before kicking off DMA into them.
      */
+#if 0
+    /* TODO - Remove this once we fix our HW issues with DMA aborts (ZX-2616). */
+    fill_data_pattern(raw_nand->data_buf, raw_nand->writesize);
+#endif
+    /*
+     * We see DMAs (data + info) being aborted, which means we cannot
+     * rely on consistent and correct read completion status being posted.
+     *
+     * Pre-initialize the info buf (read completion status) for
+     * every ECC page with known "bad" values (read not completed,
+     * ECC uncorrectable errors). This way if the DMA of the data+status
+     * is aborted, we will forcibly fail the read (and have it retried
+     * from the NAND protocol layer).
+     */
+    fill_info_pattern(raw_nand, raw_nand->info_buf);
     io_buffer_cache_flush_invalidate(&raw_nand->data_buffer, 0,
                                      raw_nand->writesize);
     io_buffer_cache_flush_invalidate(&raw_nand->info_buffer, 0,
