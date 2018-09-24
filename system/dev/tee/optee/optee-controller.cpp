@@ -338,6 +338,9 @@ uint32_t OpteeController::CallWithMessage(const Message& message,
                    result.response.arg3);
             status = rpc_handler(result.rpc_args, &func_call.rpc_result);
 
+            // TODO(godtamit): Re-evaluate whether ZX_DEBUG_ASSERT is necessary once all supported
+            // RPC commands are implemented
+            //
             // Crash if we run into unsupported functionality
             // Otherwise, if status != ZX_OK, we can still call the TEE with the response and let it
             // clean up on its end.

@@ -239,13 +239,16 @@ class RpcMessage : public MessageBase<SharedMemory*> {
 public:
     enum Command : uint32_t {
         kLoadTa = 0,
-        kReplayMemoryBlock = 1,
+        kAccessReplayProtectedMemoryBlock = 1,
         kAccessFileSystem = 2,
         kGetTime = 3,
         kWaitQueue = 4,
         kSuspend = 5,
         kAllocateMemory = 6,
-        kFreeMemory = 7
+        kFreeMemory = 7,
+        kAccessSqlFileSystem = 8,
+        kLoadGprof = 9,
+        kPerformSocketIo = 10
     };
 
     // RpcMessage

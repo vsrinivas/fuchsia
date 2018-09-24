@@ -398,8 +398,6 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
         }
         return HandleRpcCommandLoadTa(&load_ta_msg);
     }
-    case RpcMessage::Command::kReplayMemoryBlock:
-        return HandleRpcCommandReplayMemoryBlock(&message);
     case RpcMessage::Command::kAccessFileSystem:
         zxlogf(ERROR, "optee: RPC command to access file system recognized but not implemented\n");
         return ZX_ERR_NOT_SUPPORTED;
@@ -416,10 +414,24 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
         return HandleRpcCommandAllocateMemory(&message);
     case RpcMessage::Command::kFreeMemory:
         return HandleRpcCommandFreeMemory(&message);
+    case RpcMessage::Command::kPerformSocketIo:
+        zxlogf(ERROR, "optee: RPC command to perform socket IO recognized but not implemented\n");
+        message.set_return_origin(TEEC_ORIGIN_COMMS);
+        message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
+        return ZX_OK;
+    case RpcMessage::Command::kAccessReplayProtectedMemoryBlock:
+    case RpcMessage::Command::kAccessSqlFileSystem:
+    case RpcMessage::Command::kLoadGprof:
+        zxlogf(INFO, "optee: received unsupported RPC command\n");
+        message.set_return_origin(TEEC_ORIGIN_COMMS);
+        message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
+        return ZX_OK;
     default:
         zxlogf(ERROR,
                "optee: unrecognized command passed to RPC 0x%" PRIu32 "\n",
                message.command());
+        message.set_return_origin(TEEC_ORIGIN_COMMS);
+        message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
@@ -527,16 +539,6 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
     }
 
     message->set_return_code(TEEC_SUCCESS);
-    return ZX_OK;
-}
-
-zx_status_t OpteeClient::HandleRpcCommandReplayMemoryBlock(RpcMessage* message) {
-    // Mark that the return code will originate from driver
-    message->set_return_origin(TEEC_ORIGIN_COMMS);
-    message->set_return_code(TEEC_ERROR_NOT_SUPPORTED);
-
-    zxlogf(INFO, "optee: telling TEE side Fuchsia doesn't support RPMB\n");
-
     return ZX_OK;
 }
 

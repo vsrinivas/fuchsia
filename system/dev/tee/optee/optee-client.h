@@ -125,7 +125,6 @@ private:
     zx_status_t HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& args,
                                  RpcFunctionExecuteCommandsResult* out_result);
     zx_status_t HandleRpcCommandLoadTa(LoadTaRpcMessage* message);
-    zx_status_t HandleRpcCommandReplayMemoryBlock(RpcMessage* message);
     zx_status_t HandleRpcCommandAllocateMemory(RpcMessage* message);
     zx_status_t HandleRpcCommandFreeMemory(RpcMessage* message);
 
