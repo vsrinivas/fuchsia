@@ -11,6 +11,7 @@
 #include <lib/backoff/backoff.h>
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/capture.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/macros.h>
@@ -32,10 +33,9 @@ constexpr zx::duration kBackoffInterval = zx::msec(10);
 constexpr zx::duration kHalfBackoffInterval = zx::msec(5);
 
 // Creates a dummy continuation token.
-std::unique_ptr<cloud_provider::Token> MakeToken(
-    convert::ExtendedStringView token_id) {
-  auto token = std::make_unique<cloud_provider::Token>();
-  token->opaque_id = convert::ToArray(token_id);
+cloud_provider::Token MakeToken(convert::ExtendedStringView token_id) {
+  cloud_provider::Token token;
+  token.opaque_id = convert::ToArray(token_id);
   return token;
 }
 
@@ -165,7 +165,7 @@ TEST_F(PageUploadTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
       MakeTestCommit(&encryption_service_, "remote3", "content3"));
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "remote4", "content4"));
-  page_cloud_.position_token_to_return = MakeToken("44");
+  page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("44"));
 
   is_download_idle_ = false;
   bool upload_wait_remote_download = false;

@@ -164,7 +164,7 @@ interface PageCloudWatcher {
   //
   // No subsequent calls are made until the client calls the callback of the
   // previous one.
-  1: OnNewCommits(vector<Commit> commits, Token? position_token) -> ();
+  1: OnNewCommits(vector<Commit> commits, Token position_token) -> ();
 
   // Called when a new object is added to the cloud.
   //

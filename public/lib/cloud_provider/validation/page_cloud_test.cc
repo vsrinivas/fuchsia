@@ -101,7 +101,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
 
   int on_new_commits_calls_ = 0;
   fidl::VectorPtr<cloud_provider::Commit> on_new_commits_commits_;
-  std::unique_ptr<cloud_provider::Token> on_new_commits_position_token_;
+  cloud_provider::Token on_new_commits_position_token_;
   OnNewCommitsCallback on_new_commits_commits_callback_;
 
   cloud_provider::Status on_error_status_ = cloud_provider::Status::OK;
@@ -109,7 +109,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
  private:
   // PageCloudWatcher:
   void OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
-                    std::unique_ptr<cloud_provider::Token> position_token,
+                    cloud_provider::Token position_token,
                     OnNewCommitsCallback callback) override {
     on_new_commits_calls_++;
     for (auto& commit : *commits) {

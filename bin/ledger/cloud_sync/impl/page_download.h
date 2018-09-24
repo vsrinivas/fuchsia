@@ -52,7 +52,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
  private:
   // cloud_provider::PageCloudWatcher:
   void OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
-                    std::unique_ptr<cloud_provider::Token> position_token,
+                    cloud_provider::Token position_token,
                     OnNewCommitsCallback callback) override;
 
   void OnNewObject(fidl::VectorPtr<uint8_t> id, fuchsia::mem::Buffer data,

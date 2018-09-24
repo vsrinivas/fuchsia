@@ -384,8 +384,7 @@ void PageCloudImpl::HandleCommits(
 void PageCloudImpl::SendWaitingCommits() {
   FXL_DCHECK(watcher_);
   FXL_DCHECK(!commits_waiting_for_ack_->empty());
-  auto token = std::make_unique<cloud_provider::Token>();
-  *token = std::move(token_for_waiting_commits_);
+  cloud_provider::Token token = std::move(token_for_waiting_commits_);
   watcher_->OnNewCommits(std::move(commits_waiting_for_ack_), std::move(token),
                          [this] {
                            waiting_for_watcher_to_ack_commits_ = false;

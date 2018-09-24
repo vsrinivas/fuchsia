@@ -46,15 +46,13 @@ class TestPageCloudWatcher : public cloud_provider::PageCloudWatcher {
  private:
   // cloud_provider::PageCloudWatcher:
   void OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
-                    std::unique_ptr<cloud_provider::Token> position_token,
+                    cloud_provider::Token position_token,
                     OnNewCommitsCallback callback) override {
     if (commits) {
       std::move(commits->begin(), commits->end(),
                 std::back_inserter(received_commits));
     }
-    if (position_token) {
-      received_tokens.push_back(std::move(*position_token));
-    }
+    received_tokens.push_back(std::move(position_token));
 
     EXPECT_FALSE(pending_on_new_commit_callback);
     pending_on_new_commit_callback = std::move(callback);

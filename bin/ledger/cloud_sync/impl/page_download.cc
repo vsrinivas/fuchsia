@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/page_download.h"
 
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/strings/concatenate.h>
 
@@ -200,22 +201,22 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
       }));
 }
 
-void PageDownload::OnNewCommits(
-    fidl::VectorPtr<cloud_provider::Commit> commits,
-    std::unique_ptr<cloud_provider::Token> position_token,
-    OnNewCommitsCallback callback) {
+void PageDownload::OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+                                cloud_provider::Token position_token,
+                                OnNewCommitsCallback callback) {
   if (batch_download_) {
     // If there is already a commit batch being downloaded, save the new commits
     // to be downloaded when it is done.
     for (auto& commit : *commits) {
       commits_to_download_.push_back(std::move(commit));
     }
-    position_token_ = std::move(position_token);
+    position_token_ = fidl::MakeOptional(std::move(position_token));
     callback();
     return;
   }
   SetCommitState(DOWNLOAD_IN_PROGRESS);
-  DownloadBatch(std::move(commits), std::move(position_token),
+  DownloadBatch(std::move(commits),
+                fidl::MakeOptional(std::move(position_token)),
                 std::move(callback));
 }
 

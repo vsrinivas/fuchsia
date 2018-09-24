@@ -13,6 +13,7 @@
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/macros.h>
@@ -32,10 +33,9 @@ namespace cloud_sync {
 namespace {
 
 // Creates a dummy continuation token.
-std::unique_ptr<cloud_provider::Token> MakeToken(
-    convert::ExtendedStringView token_id) {
-  auto token = std::make_unique<cloud_provider::Token>();
-  token->opaque_id = convert::ToArray(token_id);
+cloud_provider::Token MakeToken(convert::ExtendedStringView token_id) {
+  cloud_provider::Token token;
+  token.opaque_id = convert::ToArray(token_id);
   return token;
 }
 
@@ -126,7 +126,7 @@ TEST_F(PageDownloadTest, DownloadBacklog) {
       MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "id2", "content2"));
-  page_cloud_.position_token_to_return = MakeToken("43");
+  page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
@@ -148,7 +148,7 @@ TEST_F(PageDownloadTest, RegisterWatcher) {
       MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "id2", "content2"));
-  page_cloud_.position_token_to_return = MakeToken("43");
+  page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
@@ -263,7 +263,7 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
   page_cloud_.status_to_return = cloud_provider::Status::OK;
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "id1", "content1"));
-  page_cloud_.position_token_to_return = MakeToken("42");
+  page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("42"));
   RunLoopFor(kTestBackoffInterval);
   EXPECT_TRUE(page_download_->IsIdle());
 
@@ -297,7 +297,7 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
       MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "id2", "content2"));
-  page_cloud_.position_token_to_return = MakeToken("43");
+  page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   int on_idle_calls = 0;
   SetOnNewStateCallback([this, &on_idle_calls] {
@@ -449,7 +449,7 @@ TEST_F(FailingDecryptCommitPageDownloadTest, Fail) {
       MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "id2", "content2"));
-  page_cloud_.position_token_to_return = MakeToken("43");
+  page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   EXPECT_FALSE(StartDownloadAndWaitForIdle());
   ASSERT_FALSE(states_.empty());

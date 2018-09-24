@@ -14,6 +14,7 @@
 #include <lib/backoff/backoff.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -34,10 +35,9 @@ namespace {
 using testing::ElementsAre;
 
 // Creates a dummy continuation token.
-std::unique_ptr<cloud_provider::Token> MakeToken(
-    convert::ExtendedStringView token_id) {
-  auto token = std::make_unique<cloud_provider::Token>();
-  token->opaque_id = convert::ToArray(token_id);
+cloud_provider::Token MakeToken(convert::ExtendedStringView token_id) {
+  cloud_provider::Token token;
+  token.opaque_id = convert::ToArray(token_id);
   return token;
 }
 
@@ -68,8 +68,10 @@ class PageSyncImplTest : public gtest::TestLoopFixture {
     page_sync_ = std::make_unique<PageSyncImpl>(
         dispatcher(), &storage_, &storage_, &encryption_service_,
         std::move(page_cloud_ptr_),
-        std::make_unique<ledger::TestBackoff>(&download_backoff_get_next_calls_, zx::msec(50)),
-        std::make_unique<ledger::TestBackoff>(&upload_backoff_get_next_calls_, zx::msec(50)),
+        std::make_unique<ledger::TestBackoff>(&download_backoff_get_next_calls_,
+                                              zx::msec(50)),
+        std::make_unique<ledger::TestBackoff>(&upload_backoff_get_next_calls_,
+                                              zx::msec(50)),
         std::move(watcher));
   }
   ~PageSyncImplTest() override {}
@@ -207,7 +209,7 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
       MakeTestCommit(&encryption_service_, "remote3", "content3"));
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "remote4", "content4"));
-  page_cloud_.position_token_to_return = MakeToken("43");
+  page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
   bool backlog_downloaded_called = false;
   page_sync_->SetOnBacklogDownloaded([this, &backlog_downloaded_called] {
     EXPECT_EQ(0u, page_cloud_.received_commits.size());
@@ -326,7 +328,7 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
       MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "id2", "content2"));
-  page_cloud_.position_token_to_return = MakeToken("43");
+  page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   int on_idle_calls = 0;
   page_sync_->SetOnIdle([&on_idle_calls] { on_idle_calls++; });

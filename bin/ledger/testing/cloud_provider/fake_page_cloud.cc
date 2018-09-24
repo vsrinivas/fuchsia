@@ -29,11 +29,11 @@ constexpr uint32_t kGetCommitsSeed = 2u;
 constexpr uint32_t kAddObjectSeed = 3u;
 constexpr uint32_t kGetObjectSeed = 4u;
 
-std::unique_ptr<cloud_provider::Token> PositionToToken(size_t position) {
+cloud_provider::Token PositionToToken(size_t position) {
   std::string bytes(
       std::string(reinterpret_cast<char*>(&position), sizeof(position)));
-  auto result = std::make_unique<cloud_provider::Token>();
-  result->opaque_id = convert::ToArray(bytes);
+  cloud_provider::Token result;
+  result.opaque_id = convert::ToArray(bytes);
   return result;
 }
 
@@ -210,7 +210,7 @@ void FakePageCloud::GetCommits(
     // This will cause the last commit to be delivered again when the token is
     // used for the next GetCommits() call. This is allowed by the FIDL contract
     // and should be handled correctly by the client.
-    token = PositionToToken(commits_->size() - 1);
+    token = fidl::MakeOptional(PositionToToken(commits_->size() - 1));
   }
   callback(cloud_provider::Status::OK, std::move(result), std::move(token));
 }
