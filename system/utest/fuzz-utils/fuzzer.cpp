@@ -836,11 +836,6 @@ bool TestMerge() {
     EXPECT_NE(ZX_OK, test.Run());
     EXPECT_TRUE(test.InStdErr("multiple"));
 
-    // Can't merge if no corpus
-    ASSERT_TRUE(test.Eval("merge zircon/target1"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("failed"));
-
     // Zircon minimizing merge
     ASSERT_TRUE(test.Eval("merge zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
@@ -872,11 +867,6 @@ bool TestMerge() {
     ASSERT_EQ(ZX_OK, path.Push(test.data_path()));
     EXPECT_NE(ZX_OK, path.Push("corpus.prev"));
     EXPECT_NE(ZX_OK, path.GetSize(".mergefile", &len));
-
-    // Can't merge if no corpus
-    ASSERT_TRUE(test.Eval("merge fuchsia1/target1"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("failed"));
 
     // Fuchsia minimizing merge
     ASSERT_TRUE(test.Eval("merge fuchsia2/target4"));

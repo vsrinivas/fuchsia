@@ -543,12 +543,12 @@ zx_status_t Fuzzer::SetFuzzer(const char* name) {
         resource_path_.Reset();
     }
 
-    // Ensure the directory that will hold the fuzzing artifacts is present.
+    // Ensure the directories that will hold the fuzzing outputs are present.
     if ((rc = RebasePath("data", &data_path_)) != ZX_OK ||
         (rc = data_path_.Ensure("fuzzing")) != ZX_OK ||
         (rc = data_path_.Push("fuzzing")) != ZX_OK || (rc = data_path_.Ensure(package)) != ZX_OK ||
         (rc = data_path_.Push(package)) != ZX_OK || (rc = data_path_.Ensure(target)) != ZX_OK ||
-        (rc = data_path_.Push(target)) != ZX_OK) {
+        (rc = data_path_.Push(target)) != ZX_OK || (rc = data_path_.Ensure("corpus")) != ZX_OK) {
         fprintf(err_, "Failed to establish data path for '%s/%s': %s\n", package.c_str(),
                 target.c_str(), zx_status_get_string(rc));
         return ZX_ERR_IO;
