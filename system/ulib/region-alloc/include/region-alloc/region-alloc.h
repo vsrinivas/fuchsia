@@ -495,7 +495,7 @@ public:
                 break;
             }
         }
-}
+    }
 
 private:
     zx_status_t AddSubtractSanityCheckLocked(const ralloc_region_t& region)
