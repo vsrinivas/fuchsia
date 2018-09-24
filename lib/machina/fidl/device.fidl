@@ -98,3 +98,9 @@ interface VirtioInput : VirtioDevice {
     // Start the input device.
     0x81000001: Start(StartInfo start_info);
 };
+
+[Discoverable]
+interface VirtioRng : VirtioDevice {
+    // Start the RNG device.
+    0x81000001: Start(StartInfo start_info);
+};

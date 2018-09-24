@@ -24,39 +24,77 @@ executable("virtio_balloon_bin") {
   visibility = [ ":*" ]
 
   output_name = "virtio_balloon"
-  sources = [ "virtio_balloon.cc" ]
-  deps = [ ":lib" ]
+  sources = [
+    "virtio_balloon.cc",
+  ]
+  deps = [
+    ":lib",
+  ]
 }
 
 package("virtio_balloon") {
   binary = "virtio_balloon"
-  deps = [ ":virtio_balloon_bin" ]
+  deps = [
+    ":virtio_balloon_bin",
+  ]
 }
 
 executable("virtio_console_bin") {
   visibility = [ ":*" ]
 
   output_name = "virtio_console"
-  sources = [ "virtio_console.cc" ]
-  deps = [ ":lib" ]
+  sources = [
+    "virtio_console.cc",
+  ]
+  deps = [
+    ":lib",
+  ]
 }
 
 package("virtio_console") {
   binary = "virtio_console"
-  deps = [ ":virtio_console_bin" ]
+  deps = [
+    ":virtio_console_bin",
+  ]
 }
 
 executable("virtio_input_bin") {
   visibility = [ ":*" ]
 
   output_name = "virtio_input"
-  sources = [ "virtio_input.cc" ]
-  deps = [ ":lib" ]
+  sources = [
+    "virtio_input.cc",
+  ]
+  deps = [
+    ":lib",
+  ]
 }
 
 package("virtio_input") {
   binary = "virtio_input"
-  deps = [ ":virtio_input_bin" ]
+  deps = [
+    ":virtio_input_bin",
+  ]
+}
+
+executable("virtio_rng_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_rng"
+  sources = [
+    "virtio_rng.cc",
+  ]
+  deps = [
+    ":lib",
+  ]
+}
+
+package("virtio_rng") {
+  binary = "virtio_rng"
+
+  deps = [
+    ":virtio_rng_bin",
+  ]
 }
 
 executable("device_tests") {
@@ -71,6 +109,7 @@ executable("device_tests") {
     "virtio_input_test.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
+    "virtio_rng_test.cc",
   ]
 
   deps = [

@@ -41,6 +41,7 @@
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "garnet/lib/machina/virtio_input.h"
 #include "garnet/lib/machina/virtio_net.h"
+#include "garnet/lib/machina/virtio_rng.h"
 #include "garnet/lib/machina/virtio_vsock.h"
 #include "garnet/lib/machina/virtio_wl.h"
 #include "garnet/public/lib/fxl/files/file.h"
@@ -296,6 +297,19 @@ int main(int argc, char** argv) {
     }
   }
 
+  // Setup rng device
+  machina::VirtioRng rng(guest.phys_mem());
+  status = bus.Connect(rng.pci_device(), true);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status =
+      rng.Start(*guest.object(), launcher.get(), guest.device_dispatcher());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to start RNG device" << status;
+    return status;
+  }
+
   // Setup vsock device.
   machina::VirtioVsock vsock(context.get(), guest.phys_mem(),
                              guest.device_dispatcher());
@@ -413,8 +427,8 @@ int main(int argc, char** argv) {
 
   // Setup VCPUs.
   auto initialize_vcpu = [boot_ptr, &interrupt_controller](
-                             machina::Guest* guest, uintptr_t guest_ip,
-                             uint64_t id, machina::Vcpu* vcpu) {
+      machina::Guest* guest, uintptr_t guest_ip, uint64_t id,
+      machina::Vcpu* vcpu) {
     zx_status_t status = vcpu->Create(guest, guest_ip, id);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to create VCPU " << status;
