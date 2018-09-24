@@ -230,6 +230,19 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                         state
                     },
                     ScanResult::DiscoveryFinished { tokens, result } => {
+                        match &result {
+                            Ok(ess_list) => {
+                                let bss_count = ess_list
+                                    .into_iter()
+                                    .map(|ess_info| ess_info.bss_count)
+                                    .sum();
+                                self.context.info_sink.send(InfoEvent::ScanDiscoveryFinished {
+                                    bss_count,
+                                    ess_count: ess_list.len(),
+                                });
+                            }
+                            _ => {}
+                        };
                         self.context.user_sink.send(UserEvent::ScanFinished {
                             tokens,
                             result

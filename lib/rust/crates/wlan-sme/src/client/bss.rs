@@ -22,6 +22,7 @@ pub struct BssInfo {
 #[derive(Clone, Debug, PartialEq)]
 pub struct EssInfo {
     pub best_bss: BssInfo,
+    pub bss_count: usize,
 }
 
 pub fn convert_bss_description(bss: &BssDescription) -> BssInfo {

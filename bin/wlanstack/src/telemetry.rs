@@ -39,6 +39,7 @@ enum CobaltMetricId {
     ConnectionDelay = 8,
     RxTxFrameCount = 9,
     RxTxFrameBytes = 10,
+    NeighborNetworks = 11,
 }
 
 // Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
@@ -294,6 +295,23 @@ pub fn report_rsna_established_delay(
 ) {
     let delay_micros = (rsna_finished_time - rsna_started_time).nanos() / 1000;
     sender.log_elapsed_time(CobaltMetricId::RsnaDelay as u32, 0, delay_micros);
+}
+
+pub fn report_scanned_networks_count(
+    sender: &mut CobaltSender, bss_count: usize, ess_count: usize,
+) {
+    const BSS_COUNT_INDEX: u32 = 0;
+    const ESS_COUNT_INDEX: u32 = 1;
+    sender.log_event_count(
+        CobaltMetricId::NeighborNetworks as u32,
+        BSS_COUNT_INDEX,
+        bss_count as i64,
+    );
+    sender.log_event_count(
+        CobaltMetricId::NeighborNetworks as u32,
+        ESS_COUNT_INDEX,
+        ess_count as i64,
+    );
 }
 
 #[derive(Debug)]

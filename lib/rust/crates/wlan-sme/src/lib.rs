@@ -49,6 +49,10 @@ pub enum InfoEvent {
     MlmeScanEnd {
         txn_id: ScanTxnId,
     },
+    ScanDiscoveryFinished {
+        bss_count: usize,
+        ess_count: usize,
+    },
     AssociationStarted {
         att_id: ConnectionAttemptId,
     },

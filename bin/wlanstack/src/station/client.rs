@@ -230,6 +230,9 @@ fn handle_info_event(e: InfoEvent,
                                              scan_finished_time);
             }
         },
+        InfoEvent::ScanDiscoveryFinished { bss_count, ess_count } => {
+            telemetry::report_scanned_networks_count(cobalt_sender, bss_count, ess_count);
+        },
         InfoEvent::AssociationStarted { att_id } => {
             connection_times.att_id = att_id;
             connection_times.assoc_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
@@ -302,7 +305,7 @@ fn send_scan_results(token: fidl_sme::ScanTransactionControlHandle,
 
 fn convert_ess_info(ess: EssInfo) -> fidl_sme::EssInfo {
     fidl_sme::EssInfo {
-        best_bss: convert_bss_info(ess.best_bss)
+        best_bss: convert_bss_info(ess.best_bss),
     }
 }
 

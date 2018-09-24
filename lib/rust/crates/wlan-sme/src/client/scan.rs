@@ -322,19 +322,24 @@ fn convert_discovery_result(msg: fidl_mlme::ScanEnd,
 }
 
 fn group_networks(bss_set: Vec<BssDescription>) -> Vec<EssInfo> {
-    let mut best_bss_by_ssid: HashMap<Ssid, BssDescription> = HashMap::new();
+    let mut best_bss_by_ssid: HashMap<Ssid, (BssDescription, usize)> = HashMap::new();
     for bss in bss_set {
         match best_bss_by_ssid.entry(bss.ssid.clone()) {
-            Entry::Vacant(e) => { e.insert(bss); },
-            Entry::Occupied(mut e) =>
-                if compare_bss(e.get(), &bss) == Ordering::Less {
-                    e.insert(bss);
+            Entry::Vacant(e) => { e.insert((bss, 1)); },
+            Entry::Occupied(mut e) => {
+                let (bss_desc, bss_count) = e.get_mut();
+                *bss_count += 1;
+                if compare_bss(bss_desc, &bss) == Ordering::Less {
+                    *bss_desc = bss;
                 }
+            }
+
         };
     }
     best_bss_by_ssid.values()
-        .map(|bss| EssInfo {
-                best_bss: convert_bss_description(&bss)
+        .map(|(bss, bss_count)| EssInfo {
+                best_bss: convert_bss_description(&bss),
+                bss_count: *bss_count,
             })
         .collect()
 }
