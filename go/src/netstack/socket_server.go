@@ -388,7 +388,10 @@ func (ios *iostate) loopDgramRead(stk *stack.Stack) {
 		ios.wq.EventUnregister(&waitEntry)
 
 		out := make([]byte, c_fdio_socket_msg_hdr_len+len(v))
-		writeSocketMsgHdr(out, sender)
+		if err := writeSocketMsgHdr(out, sender); err != nil {
+			// TODO communicate to user
+			log.Printf("writeSocketMsgHdr failed: %v (TODO)", err)
+		}
 		copy(out[c_fdio_socket_msg_hdr_len:], v)
 
 	writeLoop:
@@ -479,14 +482,17 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 	synthesizeClose := true
 	defer func() {
 		if synthesizeClose {
-			zxsocket.Handler(0, zxsocket.ServerHandler(s.zxsocketHandler), cookie)
+			switch err := zxsocket.Handler(0, zxsocket.ServerHandler(s.zxsocketHandler), cookie); mxerror.Status(err) {
+			case zx.ErrOk:
+			default:
+				log.Printf("synethsize close failed: %v", err)
+			}
 		}
 		ios.loopControlDone <- struct{}{}
 	}()
 
 	for {
-		err := zxsocket.Handler(ios.dataHandle, zxsocket.ServerHandler(s.zxsocketHandler), cookie)
-		switch mxerror.Status(err) {
+		switch err := zxsocket.Handler(ios.dataHandle, zxsocket.ServerHandler(s.zxsocketHandler), cookie); mxerror.Status(err) {
 		case zx.ErrOk:
 			// Success. Pass the data to the endpoint and loop.
 		case zx.ErrBadState:
@@ -525,7 +531,7 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 	}
 }
 
-func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) (localS, peerS zx.Socket, reterr error) {
+func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) (localS, peerS zx.Socket, err error) {
 	ios := &iostate{
 		netProto:         netProto,
 		transProto:       transProto,
@@ -539,16 +545,16 @@ func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transPro
 	switch transProto {
 	case tcp.ProtocolNumber, udp.ProtocolNumber, ipv4.PingProtocolNumber:
 		var t uint32
-		if transProto == tcp.ProtocolNumber {
+		switch transProto {
+		case tcp.ProtocolNumber:
 			t = zx.SocketStream
-		} else {
+		case udp.ProtocolNumber:
 			t = zx.SocketDatagram
 		}
 		t |= zx.SocketHasControl
 		if !isAccept {
 			t |= zx.SocketHasAccept
 		}
-		var err error
 		localS, peerS, err = zx.NewSocket(t)
 		if err != nil {
 			return zx.Socket(zx.HandleInvalid), zx.Socket(zx.HandleInvalid), err
@@ -565,9 +571,13 @@ func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transPro
 	s.mu.Unlock()
 
 	defer func() {
-		if reterr != nil {
-			ios.dataHandle.Close()
-			peerS.Close()
+		if err != nil {
+			if err := ios.dataHandle.Close(); err != nil {
+				log.Printf("data handle close failed: %v", err)
+			}
+			if err := peerS.Close(); err != nil {
+				log.Printf("peer socket close failed: %v", err)
+			}
 
 			s.mu.Lock()
 			delete(s.io, newCookie)
@@ -827,15 +837,21 @@ func (s *socketServer) buildIfInfos() *c_netc_get_if_info {
 		rep.info[index].index = uint16(index + 1)
 		rep.info[index].flags |= NETC_IFF_UP
 		copy(rep.info[index].name[:], ifs.nic.Name)
-		writeSockaddrStorage(&rep.info[index].addr, tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr})
-		writeSockaddrStorage(&rep.info[index].netmask, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.nic.Netmask)})
+		if _, err := writeSockaddrStorage(&rep.info[index].addr, tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr}); err != nil {
+			log.Printf("writeSockaddrStorage of address failed: %v", err)
+		}
+		if _, err := writeSockaddrStorage(&rep.info[index].netmask, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.nic.Netmask)}); err != nil {
+			log.Printf("writeSockaddrStorage of netmask failed: %v", err)
+		}
 
 		// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
 		broadaddr := []byte(ifs.nic.Addr)
 		for i := range broadaddr {
 			broadaddr[i] |= ^ifs.nic.Netmask[i]
 		}
-		writeSockaddrStorage(&rep.info[index].broadaddr, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(broadaddr)})
+		if _, err := writeSockaddrStorage(&rep.info[index].broadaddr, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(broadaddr)}); err != nil {
+			log.Printf("writeSockaddrStorage of broadaddr failed: %v", err)
+		}
 		index++
 	}
 	rep.n_info = index
@@ -1180,7 +1196,9 @@ func (s *socketServer) opClose(ios *iostate, cookie cookie) zx.Status {
 		}
 
 		ios.ep.Close()
-		ios.dataHandle.Close()
+		if err := ios.dataHandle.Close(); err != nil {
+			log.Printf("data handle close failed: %v", err)
+		}
 	}()
 
 	return zx.ErrOk

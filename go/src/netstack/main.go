@@ -93,7 +93,9 @@ func main() {
 		connectivity.InferAndNotify(interfaces)
 		for key := range netstackService.Bindings {
 			if p, ok := netstackService.EventProxyFor(key); ok {
-				p.OnInterfacesChanged(interfaces)
+				if err := p.OnInterfacesChanged(interfaces); err != nil {
+					log.Printf("OnInterfacesChanged failed: %v", err)
+				}
 			}
 		}
 	}
@@ -108,7 +110,9 @@ func main() {
 		// Send a synthetic InterfacesChanged event to each client when they join
 		// Prevents clients from having to race GetInterfaces / InterfacesChanged.
 		if p, ok := netstackService.EventProxyFor(k); ok {
-			p.OnInterfacesChanged(getInterfaces(ns))
+			if err := p.OnInterfacesChanged(getInterfaces(ns)); err != nil {
+				log.Printf("OnInterfacesChanged failed: %v", err)
+			}
 		}
 		return nil
 	})

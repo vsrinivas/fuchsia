@@ -122,9 +122,15 @@ func (ns *Netstack) setInterfaceState(id uint64, enabled bool) *stack.Error {
 	}
 
 	if enabled {
-		ifs.eth.Up()
+		if err := ifs.eth.Up(); err != nil {
+			log.Printf("ifs.eth.Up() failed: %v", err)
+			return &stack.Error{Type: stack.ErrorTypeInternal}
+		}
 	} else {
-		ifs.eth.Down()
+		if err := ifs.eth.Down(); err != nil {
+			log.Printf("ifs.eth.Down() failed: %v", err)
+			return &stack.Error{Type: stack.ErrorTypeInternal}
+		}
 	}
 	return nil
 }
@@ -161,6 +167,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 	nic := ifs.nic.ID
 	addr := fidlconv.ToTCPIPAddress(ifAddr.IpAddress)
 	if err := ns.setInterfaceAddress(nic, protocol, addr, ifAddr.PrefixLen); err != nil {
+		log.Printf("(*Netstack).setInterfaceAddress(...) failed: %v", err)
 		return &stack.Error{Type: stack.ErrorTypeBadState}
 	}
 	return nil

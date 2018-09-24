@@ -298,21 +298,16 @@ func (ni *netstackImpl) GetStats(nicid uint32) (stats netstack.NetInterfaceStats
 	return ifState.statsEP.Stats, nil
 }
 
-func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) (err error) {
-	ifState, ok := ni.ns.ifStates[tcpip.NICID(nicid)]
-
-	if !ok {
-		// TODO(stijlist): refactor to return NetErr and use StatusUnknownInterface
-		return fmt.Errorf("no such interface id: %d", nicid)
+func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) error {
+	if ifState, ok := ni.ns.ifStates[tcpip.NICID(nicid)]; ok {
+		if enabled {
+			return ifState.eth.Up()
+		}
+		return ifState.eth.Down()
 	}
 
-	if enabled {
-		ifState.eth.Up()
-	} else {
-		ifState.eth.Down()
-	}
-
-	return nil
+	// TODO(stijlist): refactor to return NetErr and use StatusUnknownInterface
+	return fmt.Errorf("no such interface id: %d", nicid)
 }
 
 func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (result netstack.NetErr, err error) {
