@@ -439,13 +439,6 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
       done += todo;
     } while (done < size);
 
-    if (loader_->response_body_mode_ ==
-        ::fuchsia::net::oldhttp::ResponseBodyMode::SIZED_BUFFER) {
-      // TODO(qsr): Remove when all callers are gone.
-      response_.body->set_sized_buffer(
-          fsl::SizedVmo(std::move(vmo), size).ToTransport());
-      return ZX_OK;
-    }
     FXL_DCHECK(loader_->response_body_mode_ ==
                ::fuchsia::net::oldhttp::ResponseBodyMode::BUFFER);
     response_.body->set_buffer(
@@ -507,8 +500,6 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
       response.body = std::make_unique<::fuchsia::net::oldhttp::URLBody>();
 
       switch (loader_->response_body_mode_) {
-        // TODO(qsr): Remove when all callers are gone.
-        case ::fuchsia::net::oldhttp::ResponseBodyMode::SIZED_BUFFER:
         case ::fuchsia::net::oldhttp::ResponseBodyMode::BUFFER:
           response_ = std::move(response);
 
