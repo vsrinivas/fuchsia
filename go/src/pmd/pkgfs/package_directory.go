@@ -227,3 +227,15 @@ func (d *packageDir) Stat() (int64, time.Time, time.Time, error) {
 	// TODO(raggi): forward stat values from the index
 	return 0, d.fs.mountTime, d.fs.mountTime, nil
 }
+
+func (d *packageDir) Blobs() []string {
+	// TODO(PKG-273) consider preallocation which would over-allocate, but cause less thrash
+	blobs := []string{}
+	for path, blob := range d.contents {
+		if strings.HasPrefix(path, "meta/") {
+			continue
+		}
+		blobs = append(blobs, blob)
+	}
+	return blobs
+}

@@ -175,3 +175,22 @@ func (idx *DynamicIndex) Notify(roots ...string) {
 		}()
 	}
 }
+
+// PackageBlobs returns the list of blobs which are meta FARs backing packages in the index.
+func (idx *DynamicIndex) PackageBlobs() ([]string, error) {
+	paths, err := filepath.Glob(idx.PackageVersionPath("*", "*"))
+	if err != nil {
+		return nil, err
+	}
+
+	blobIds := make([]string, 0, len(paths))
+	for _, path := range paths {
+		merkle, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		blobIds = append(blobIds, string(merkle))
+	}
+	log.Printf("Number of blobs in dynamic index: %d", len(blobIds))
+	return blobIds, nil
+}

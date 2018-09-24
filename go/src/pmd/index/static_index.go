@@ -137,3 +137,12 @@ func (idx *StaticIndex) List() ([]pkg.Package, error) {
 	sort.Sort(pkg.ByNameVersion(packages))
 	return packages, nil
 }
+
+// PackageBlobs returns the list of blobs which are meta FARs backing packages in the index.
+func (idx *StaticIndex) PackageBlobs() []string {
+	blobs := make([]string, 0, len(idx.roots))
+	for _, m := range idx.roots {
+		blobs = append(blobs, m)
+	}
+	return blobs
+}
