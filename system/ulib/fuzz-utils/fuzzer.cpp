@@ -44,29 +44,28 @@ enum Command : uint32_t {
     kMerge,
 };
 
-// Usage information for specific tool subcommands.
+// Usage information for specific tool subcommands.  Keep in sync with //scripts/devshell/fuzz!
 const struct {
     Command cmd;
     const char* name;
     const char* args;
     const char* desc;
 } kCommands[] = {
-    {kHelp, "help", "", "Print this message and exit."},
-    {kList, "list", "[name]", "Lists fuzzers matching 'name' if provided, or all fuzzers."},
-    {kSeeds, "seeds", "name", "Lists the seed corpus location(s) for the fuzzer."},
-    {kStart, "start", "name [...]",
-     "Starts the named fuzzer.  Additional arguments are passed to the fuzzer."},
-    {kCheck, "check", "name",
-     "Reports information about the named fuzzer, such as execution status, corpus size, and "
-     "number of artifacts."},
-    {kStop, "stop", "name",
-     "Stops all instances of the named fuzzer."},
-    {kRepro, "repro", "name [...]",
-     "Runs the named fuzzer on specific inputs. If no additional inputs are provided, uses "
-     "previously found artifacts."},
-    {kMerge, "merge", "name [...]",
-     "Merges the corpus for the named fuzzer.  If no additional inputs are provided, minimizes the "
-     "current corpus."},
+    {kHelp, "help", "", "Prints this message and exits."},
+    {kList, "list", "[name]", "Lists fuzzers matching 'name' if provided, or all\nfuzzers."},
+    {kSeeds, "seeds", "<name>", "Lists the seed corpus location(s) for the fuzzer."},
+    {kStart, "start", "<name> [...]",
+     "Starts the named fuzzer.  Additional arguments are\npassed to the fuzzer."},
+    {kCheck, "check", "<name>",
+     "Reports information about the named fuzzer, such as\nexecution status, corpus size, and "
+     "number of\nartifacts."},
+    {kStop, "stop", "<name>", "Stops all instances of the named fuzzer."},
+    {kRepro, "repro", "<name> [...]",
+     "Runs the named fuzzer on specific inputs. If no\nadditional inputs are provided, uses "
+     "previously\nfound artifacts."},
+    {kMerge, "merge", "<name> [...]",
+     "Merges the corpus for the named fuzzer.  If no\nadditional inputs are provided, minimizes "
+     "the\ncurrent corpus."},
 };
 
 // |kArtifactPrefixes| should matches the prefixes in libFuzzer passed to |Fuzzer::DumpCurrentUnit|
@@ -351,7 +350,7 @@ zx_status_t Fuzzer::Execute() {
     // If the "-jobs=N" option is set, output will be sent to fuzz-<job>.log and can run to
     // completion in the background.
     const char* jobs = options_.get("jobs");
-    bool background = atoi(jobs) != 0;
+    bool background = jobs && atoi(jobs) != 0;
 
     // Copy all command line arguments.
     StringList args;
@@ -622,11 +621,23 @@ zx_status_t Fuzzer::LoadOptions() {
 // Specific subcommands
 
 zx_status_t Fuzzer::Help() {
-    fprintf(out_, "usage: fuzz <command> [args]\n\n");
-    fprintf(out_, "Supported commands are:\n");
+    fprintf(out_, "Run a fuzz test\n");
+    fprintf(out_, "\n");
+    fprintf(out_, "Usage: fuzz <command> [command-arguments]\n");
+    fprintf(out_, "\n");
+    fprintf(out_, "Commands:\n");
+    fprintf(out_, "\n");
     for (size_t i = 0; i < sizeof(kCommands) / sizeof(kCommands[0]); ++i) {
-        fprintf(out_, "  %s %s\n", kCommands[i].name, kCommands[i].args);
-        fprintf(out_, "    %s\n\n", kCommands[i].desc);
+        fprintf(out_, "  %-7s %-15s ", kCommands[i].name, kCommands[i].args);
+        const char* desc = kCommands[i].desc;
+        const char* fmt = "%s\n";
+        for (const char* nl = strchr(desc, '\n'); nl; nl = strchr(desc, '\n')) {
+            fbl::String line(desc, nl - desc);
+            fprintf(out_, fmt, line.c_str());
+            desc = nl + 1;
+            fmt = "                          %s\n";
+        }
+        fprintf(out_, fmt, desc);
     }
     return ZX_OK;
 }
