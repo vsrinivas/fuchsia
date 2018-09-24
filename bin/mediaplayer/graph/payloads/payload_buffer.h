@@ -103,7 +103,7 @@ class PayloadBuffer final : public fbl::RefCounted<PayloadBuffer>,
   // deletes itself, so the recycler should not attempt to delete it.
   using Recycler = fit::function<void(PayloadBuffer*)>;
 
-  // Function type used for |BeforeRecycling|.
+  // Function type used for |AfterRecycling|.
   using Action = fit::function<void(PayloadBuffer*)>;
 
   // Creates a new |PayloadBuffer|. |size| may not be 0, and |data| may not be
@@ -161,11 +161,11 @@ class PayloadBuffer final : public fbl::RefCounted<PayloadBuffer>,
     buffer_config_ = buffer_config;
   }
 
-  // Registers a function to be called prior to recycling. This method may only
+  // Registers a function to be called after recycling. This method may only
   // be called once on a given instance. An |Action| should not hold a reference
   // to the |PayloadBuffer|, because this would produce a circular reference,
   // and the |PayloadBuffer| would never be released.
-  void BeforeRecycling(Action action);
+  void AfterRecycling(Action action);
 
  private:
   PayloadBuffer(uint64_t size, void* data, Recycler recycler);
@@ -179,10 +179,10 @@ class PayloadBuffer final : public fbl::RefCounted<PayloadBuffer>,
   void* data_;
   fbl::RefPtr<PayloadVmo> vmo_;
   uint64_t offset_;
-  uint32_t id_;
-  uint64_t buffer_config_;
+  uint32_t id_ = 0;
+  uint64_t buffer_config_ = 0;
   Recycler recycler_;
-  Action before_recycling_;
+  Action after_recycling_;
 
   friend class fbl::Recyclable<PayloadBuffer>;
 };

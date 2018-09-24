@@ -515,7 +515,11 @@ void PayloadManager::ProvideVmos(VmoPayloadAllocator* allocator,
                                              : VmoAllocation::kVmoPerBuffer;
   }
 
-  allocator->SetVmoAllocation(vmo_allocation);
+  if (allocator->vmo_allocation() != vmo_allocation) {
+    // TODO(dalesat): Make sure we never call this twice on the same allocator,
+    // or make |VmoPayloadAllocator| support that.
+    allocator->SetVmoAllocation(vmo_allocation);
+  }
 
   if (vmo_allocation == VmoAllocation::kVmoPerBuffer) {
     FXL_DCHECK(max_aggregate_payload_size >= max_payload_size);
@@ -588,14 +592,19 @@ void PayloadManager::PrepareForExternalVmos(VmoPayloadAllocator* allocator,
   FXL_DCHECK(allocator);
   FXL_DCHECK(config.vmo_allocation_ != VmoAllocation::kNotApplicable);
 
-  allocator->SetVmoAllocation(config.vmo_allocation_);
+  if (allocator->vmo_allocation() != config.vmo_allocation_) {
+    allocator->SetVmoAllocation(config.vmo_allocation_);
+  }
 }
 
 void PayloadManager::PrepareSharedAllocatorForExternalVmos(
     VmoPayloadAllocator* allocator) const {
   FXL_DCHECK(allocator);
 
-  allocator->SetVmoAllocation(CombinedVmoAllocation());
+  VmoAllocation vmo_allocation = CombinedVmoAllocation();
+  if (allocator->vmo_allocation() != vmo_allocation) {
+    allocator->SetVmoAllocation(vmo_allocation);
+  }
 }
 
 fbl::RefPtr<PayloadBuffer> PayloadManager::AllocateUsingAllocateCallback(

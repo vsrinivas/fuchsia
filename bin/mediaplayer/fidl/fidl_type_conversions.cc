@@ -13,7 +13,21 @@ namespace fxl {
 
 namespace {
 
-static const char kAacMimeType[] = "audio/aac-adts";
+static const char kAudioMimeTypeLpcm[] = "audio/raw";
+
+static const char kVideoMimeTypeUncompressed[] = "video/raw";
+static const char kVideoMimeTypeH264[] = "video/h264";
+// TODO(dalesat): Restore this once the VP9 decoder provides pixel aspect ratio.
+// static const char kVideoMimeTypeVp9[] = "video/vp9";
+// TODO(dalesat): Add MPEG2.
+
+static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
+                                             uint8_t d) {
+  return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
+         (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
+}
+
+static constexpr uint32_t kNv12FourCc = make_fourcc('N', 'V', '1', '2');
 
 bool KnownEncodingsMatch() {
   return !strcmp(media_player::StreamType::kAudioEncodingAac,
@@ -490,14 +504,37 @@ std::unique_ptr<media_player::Bytes> TypeConverter<
 fuchsia::mediacodec::CodecFormatDetailsPtr TypeConverter<
     fuchsia::mediacodec::CodecFormatDetailsPtr,
     media_player::StreamType>::Convert(const media_player::StreamType& input) {
-  if (input.medium() != media_player::StreamType::Medium::kAudio ||
-      input.encoding() != media_player::StreamType::kAudioEncodingAac) {
+  const char* mime_type = nullptr;
+
+  switch (input.medium()) {
+    case media_player::StreamType::Medium::kAudio:
+      // TODO(dalesat): Add aac-adts support.
+      // We have an aac-adts decoder, but we don't have an encoding defined in
+      // |media_player::StreamType| for that.
+      break;
+    case media_player::StreamType::Medium::kVideo:
+      if (input.encoding() == media_player::StreamType::kVideoEncodingH264) {
+        mime_type = kVideoMimeTypeH264;
+      } else if (input.encoding() ==
+                 media_player::StreamType::kVideoEncodingVp9) {
+        // Disabling this one, because the decoder won't currently provide
+        // pixel aspect ratio. We have an ffmpeg decoder.
+        // TODO(dalesat): Enable this once VP9 reports pixel aspect ratio.
+        // mime_type = kVideoMimeTypeVp9;
+      }
+      break;
+    case media_player::StreamType::Medium::kSubpicture:
+    case media_player::StreamType::Medium::kText:
+      break;
+  }
+
+  if (mime_type == nullptr) {
     return nullptr;
   }
 
   auto result = fuchsia::mediacodec::CodecFormatDetails::New();
   result->format_details_version_ordinal = 0;
-  result->mime_type = kAacMimeType;
+  result->mime_type = mime_type;
   if (input.encoding_parameters()) {
     result->codec_oob_bytes =
         fxl::To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
@@ -510,32 +547,80 @@ std::unique_ptr<media_player::StreamType>
 TypeConverter<std::unique_ptr<media_player::StreamType>,
               fuchsia::mediacodec::CodecFormatDetails>::
     Convert(const fuchsia::mediacodec::CodecFormatDetails& input) {
-  if (input.mime_type != "audio/raw" || !input.domain->is_audio() ||
-      !input.domain->audio().is_uncompressed() ||
-      !input.domain->audio().uncompressed().is_pcm()) {
-    return nullptr;
-  }
-
-  auto& format = input.domain->audio().uncompressed().pcm();
-  if (format.pcm_mode != fuchsia::mediacodec::AudioPcmMode::LINEAR) {
-    return nullptr;
-  }
-
-  media_player::AudioStreamType::SampleFormat sample_format;
-  switch (format.bits_per_sample) {
-    case 8:
-      sample_format = media_player::AudioStreamType::SampleFormat::kUnsigned8;
-      break;
-    case 16:
-      sample_format = media_player::AudioStreamType::SampleFormat::kSigned16;
-      break;
-    default:
+  if (input.mime_type == kAudioMimeTypeLpcm) {
+    if (!input.domain->is_audio() || !input.domain->audio().is_uncompressed() ||
+        !input.domain->audio().uncompressed().is_pcm()) {
       return nullptr;
+    }
+
+    auto& format = input.domain->audio().uncompressed().pcm();
+    if (format.pcm_mode != fuchsia::mediacodec::AudioPcmMode::LINEAR) {
+      return nullptr;
+    }
+
+    media_player::AudioStreamType::SampleFormat sample_format;
+    switch (format.bits_per_sample) {
+      case 8:
+        sample_format = media_player::AudioStreamType::SampleFormat::kUnsigned8;
+        break;
+      case 16:
+        sample_format = media_player::AudioStreamType::SampleFormat::kSigned16;
+        break;
+      default:
+        return nullptr;
+    }
+
+    return media_player::AudioStreamType::Create(
+        media_player::StreamType::kAudioEncodingLpcm, nullptr, sample_format,
+        format.channel_map->size(), format.frames_per_second);
   }
 
-  return media_player::AudioStreamType::Create(
-      media_player::StreamType::kAudioEncodingLpcm, nullptr, sample_format,
-      format.channel_map->size(), format.frames_per_second);
+  if (input.mime_type == kVideoMimeTypeUncompressed) {
+    if (!input.domain->is_video() || !input.domain->video().is_uncompressed()) {
+      return nullptr;
+    }
+
+    auto& format = input.domain->video().uncompressed();
+
+    if (format.fourcc != kNv12FourCc) {
+      return nullptr;
+    }
+
+    std::vector<uint32_t> line_stride;
+    std::vector<uint32_t> plane_offset;
+
+    if (format.planar) {
+      line_stride.push_back(format.primary_line_stride_bytes);
+      line_stride.push_back(format.secondary_line_stride_bytes);
+
+      plane_offset.push_back(format.primary_start_offset);
+      plane_offset.push_back(format.secondary_start_offset);
+
+      if (format.tertiary_start_offset != 0) {
+        // This path should not be taken, since we know we're looking at NV12.
+        // This code remains here, because it will be relevent
+        FXL_LOG(FATAL) << "NV12 format provided tertiary_start_offset.";
+        // secondary_line_stride_bytes is resused here.
+        line_stride.push_back(format.secondary_line_stride_bytes);
+        plane_offset.push_back(format.tertiary_start_offset);
+      }
+    }
+
+    // This doesn't care if has_pixel_aspect_ratio is true or false, as
+    // pixel_aspect_ratio_width == 1, pixel_aspect_ratio_height == 1 is as good
+    // a default as any, at least for now.
+    return media_player::VideoStreamType::Create(
+        media_player::StreamType::kVideoEncodingUncompressed, nullptr,
+        media_player::VideoStreamType::VideoProfile::kUnknown,
+        media_player::VideoStreamType::PixelFormat::kNv12,
+        media_player::VideoStreamType::ColorSpace::kUnknown,
+        format.primary_display_width_pixels,
+        format.primary_display_height_pixels, format.primary_width_pixels,
+        format.primary_height_pixels, format.pixel_aspect_ratio_width,
+        format.pixel_aspect_ratio_height, line_stride, plane_offset);
+  }
+
+  return nullptr;
 }
 
 }  // namespace fxl

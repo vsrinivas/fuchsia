@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/mediacodec/cpp/fidl.h>
-
 #include "garnet/bin/mediaplayer/fidl/fidl_decoder_factory.h"
 
+#include <fuchsia/mediacodec/cpp/fidl.h>
 #include "garnet/bin/mediaplayer/fidl/fidl_decoder.h"
 #include "garnet/bin/mediaplayer/fidl/fidl_type_conversions.h"
 #include "lib/fidl/cpp/clone.h"
@@ -51,8 +50,8 @@ void FidlDecoderFactory::CreateDecoder(
                                 decoder.NewRequest());
   FXL_DCHECK(decoder);
 
-  FidlDecoder::Create(std::move(*format_details), std::move(decoder),
-                      std::move(callback));
+  FidlDecoder::Create(stream_type, std::move(*format_details),
+                      std::move(decoder), std::move(callback));
 }
 
 }  // namespace media_player

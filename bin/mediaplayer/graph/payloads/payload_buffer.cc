@@ -128,24 +128,21 @@ PayloadBuffer::~PayloadBuffer() {
   FXL_DCHECK(!recycler_) << "PayloadBuffers must delete themselves.";
 }
 
-void PayloadBuffer::BeforeRecycling(Action action) {
-  FXL_DCHECK(!before_recycling_) << "BeforeRecycling may only be called once.";
-  before_recycling_ = std::move(action);
+void PayloadBuffer::AfterRecycling(Action action) {
+  FXL_DCHECK(!after_recycling_) << "AfterRecycling may only be called once.";
+  after_recycling_ = std::move(action);
 }
 
 void PayloadBuffer::fbl_recycle() {
   FXL_DCHECK(recycler_ != nullptr);
 
-  if (before_recycling_) {
-    before_recycling_(this);
-    // It seems cleaner to release this function now so anything it captures
-    // is released before the recycler runs.
-    before_recycling_ = nullptr;
-  }
-
   recycler_(this);
   // This tells the destructor that deletion is being done properly.
   recycler_ = nullptr;
+
+  if (after_recycling_) {
+    after_recycling_(this);
+  }
 
   delete this;
 }

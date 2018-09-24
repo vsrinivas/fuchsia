@@ -9,6 +9,7 @@
 #include <memory>
 #include "garnet/bin/mediaplayer/decode/decoder.h"
 #include "garnet/bin/mediaplayer/fidl/buffer_set.h"
+#include "lib/fxl/synchronization/thread_checker.h"
 
 namespace media_player {
 
@@ -18,11 +19,13 @@ class FidlDecoder : public Decoder {
   // Creates a fidl decoder factory. Calls the callback with the initalized
   // decoder on success. Calls the callback with nullptr on failure.
   static void Create(
+      const StreamType& stream_type,
       fuchsia::mediacodec::CodecFormatDetails input_format_details,
       fuchsia::mediacodec::CodecPtr decoder,
       fit::function<void(std::shared_ptr<Decoder>)> callback);
 
-  FidlDecoder(fuchsia::mediacodec::CodecFormatDetails input_format_details);
+  FidlDecoder(const StreamType& stream_type,
+              fuchsia::mediacodec::CodecFormatDetails input_format_details);
 
   ~FidlDecoder() override;
 
@@ -36,10 +39,14 @@ class FidlDecoder : public Decoder {
 
   void ConfigureConnectors() override;
 
+  void OnInputConnectionReady(size_t input_index) override;
+
   void FlushInput(bool hold_frame, size_t input_index,
                   fit::closure callback) override;
 
   void PutInputPacket(PacketPtr packet, size_t input_index) override;
+
+  void OnOutputConnectionReady(size_t output_index) override;
 
   void FlushOutput(size_t output_index, fit::closure callback) override;
 
@@ -56,13 +63,43 @@ class FidlDecoder : public Decoder {
   // first time it or |InitSucceeded| is called.
   void InitFailed();
 
+  // Configures the input as appropriate. |ConfigureConnectors| calls this as
+  // does |OnInputConstraints|. If |constraints| is supplied, this method will
+  // either cache the value (if the node isn't ready) or use it to configure
+  // the input (if the node is ready). If |constraints| is null, there are
+  // cached constraints and the node is ready, this method will configure the
+  // input with the cached constraints and clear the cache.
+  void MaybeConfigureInput(
+      fuchsia::mediacodec::CodecBufferConstraints* constraints);
+
+  // Adds input buffers to the outboard decoder. This method must not be called
+  // until the input connection is ready.
+  void AddInputBuffers();
+
+  // Configures the output as appropriate. |ConfigureConnectors| calls this as
+  // does |OnOutputConfig|. If |constraints| is supplied, this method will
+  // either cache the value (if the node isn't ready) or use it to configure
+  // the output (if the node is ready). If |constraints| is null, there are
+  // cached constraints and the node is ready, this method will configure the
+  // output with the cached constraints and clear the cache.
+  void MaybeConfigureOutput(
+      fuchsia::mediacodec::CodecBufferConstraints* constraints);
+
+  // Adds output buffers to the outboard decoder. This method must not be called
+  // until the output connection is ready.
+  void AddOutputBuffers();
+
+  // Requests an input packet when appropriate.
+  void MaybeRequestInputPacket();
+
   // Handles failure of the connection to the outboard decoder.
   void OnConnectionFailed();
 
   // Handles the |OnStreamFailed| event from the outboard decoder.
   void OnStreamFailed(uint64_t stream_lifetime_ordinal);
 
-  // Handles the |OnInputConstraints| event from the outboard decoder.
+  // Handles the |OnInputConstraints| event from the outboard decoder after
+  // |ConfigureConnectors| is called.
   void OnInputConstraints(
       fuchsia::mediacodec::CodecBufferConstraints constraints);
 
@@ -81,18 +118,30 @@ class FidlDecoder : public Decoder {
   void OnFreeInputPacket(fuchsia::mediacodec::CodecPacketHeader packet_header);
 
   // Recycles an output packet back to the outboard decoder.
-  void RecycleOutputPacket(uint64_t buffer_ordinal, uint32_t buffer_index);
+  void RecycleOutputPacket(PayloadBuffer* payload_buffer);
 
   // Determines if the output stream type has changed and takes action if it
   // has.
   void HandlePossibleOutputStreamTypeChange(const StreamType& old_type,
                                             const StreamType& new_type);
 
+  FXL_DECLARE_THREAD_CHECKER(thread_checker_);
+
+  StreamType::Medium medium_;
   fuchsia::mediacodec::CodecPtr outboard_decoder_;
   fuchsia::mediacodec::CodecFormatDetails input_format_details_;
   fit::function<void(bool)> init_callback_;
-  std::unique_ptr<StreamType> stream_type_;
-  std::unique_ptr<StreamType> revised_stream_type_;
+  bool have_real_output_stream_type_ = false;
+  uint32_t pre_stream_type_packet_requests_remaining_ = 10;
+  std::unique_ptr<StreamType> output_stream_type_;
+  std::unique_ptr<StreamType> revised_output_stream_type_;
+  bool input_constraints_cached_ = false;
+  fuchsia::mediacodec::CodecBufferConstraints cached_input_constraints_;
+  bool add_input_buffers_pending_ = false;
+  bool output_constraints_cached_ = false;
+  fuchsia::mediacodec::CodecBufferConstraints cached_output_constraints_;
+  bool add_output_buffers_pending_ = false;
+  bool output_vmos_physically_contiguous_ = false;
   uint64_t stream_lifetime_ordinal_ = 1;
   uint64_t output_format_details_version_ordinal_ = 0;
   bool end_of_input_stream_ = false;

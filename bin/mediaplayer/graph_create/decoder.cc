@@ -73,6 +73,8 @@ void CompositeDecoderFactory::ContinueCreateDecoder(
     callback(nullptr);
   }
 
+  FXL_DCHECK(*iter);
+
   (*iter)->CreateDecoder(
       stream_type, [this, iter, &stream_type, callback = std::move(callback)](
                        std::shared_ptr<Decoder> decoder) mutable {
@@ -90,9 +92,7 @@ void CompositeDecoderFactory::ContinueCreateDecoder(
 std::unique_ptr<DecoderFactory> DecoderFactory::Create(
     component::StartupContext* startup_context) {
   auto parent_factory = CompositeDecoderFactory::Create();
-  // |FidlDecoderFactory| is turned off for now.
-  // TODO(dalesat): Turn on |FidlDecoderFactory|.
-  // parent_factory->AddFactory(FidlDecoderFactory::Create(startup_context));
+  parent_factory->AddFactory(FidlDecoderFactory::Create(startup_context));
   parent_factory->AddFactory(FfmpegDecoderFactory::Create(startup_context));
   return parent_factory;
 }

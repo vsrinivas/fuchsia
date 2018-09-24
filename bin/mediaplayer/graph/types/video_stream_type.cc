@@ -31,6 +31,8 @@ const VideoStreamType::PixelFormatInfo& VideoStreamType::InfoForPixelFormat(
   };
   // TODO(dalesat): Provide the plane_indices_ fields.
   static const std::unordered_map<PixelFormat, PixelFormatInfo, Hash> table = {
+      {PixelFormat::kUnknown,
+       {0, {}, {}, {}}},
       {PixelFormat::kI420,
        {3, {}, {1, 1, 1}, {Extent(1, 1), Extent(2, 2), Extent(2, 2)}}},
       {PixelFormat::kYv12,
