@@ -10,6 +10,7 @@
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/ethernet_board.h>
+#include <ddk/protocol/ethernet_mac.h>
 #include <ddk/protocol/test.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
@@ -95,8 +96,6 @@ public:
     zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) __TA_EXCLUDES(lock_);
     zx_status_t EthmacSetParam(uint32_t param, int32_t value, void* data);
-    static zx_status_t MDIOWrite(void* ctx, uint32_t reg, uint32_t val);
-    static zx_status_t MDIORead(void* ctx, uint32_t reg, uint32_t* val);
     zx_handle_t EthmacGetBti();
 
 private:
@@ -112,11 +111,16 @@ private:
     void ReleaseBuffers();
     void ProcRxBuffer(uint32_t int_status) __TA_EXCLUDES(lock_);
     uint32_t DmaRxStatus();
-    void ConfigPhy();
 
     int Thread() __TA_EXCLUDES(lock_);
+    int WorkerThread();
 
     zx_status_t GetMAC(zx_device_t* dev);
+
+    // ZX_PROTOCOL_ETH_MAC ops.
+    zx_status_t MDIOWrite(uint32_t reg, uint32_t val);
+    zx_status_t MDIORead(uint32_t reg, uint32_t* val);
+    zx_status_t RegisterCallbacks(eth_mac_callbacks_t* callbacks);
 
     //Number each of tx/rx transaction descriptors
     static constexpr uint32_t kNumDesc = 32;
@@ -169,6 +173,13 @@ private:
     fbl::atomic<bool> running_;
 
     thrd_t thread_;
+    thrd_t worker_thread_;
+
+    // PHY callbacks.
+    eth_mac_callbacks_t cb_;
+
+    // Callbacks registered signal.
+    sync_completion_t cb_registered_signal_;
 };
 
 } // namespace eth

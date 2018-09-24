@@ -11,7 +11,7 @@ namespace phy {
 class PhyDevice {
 public:
     zx_device_t* device_;
-    void ConfigPhy();
+    static zx_status_t ConfigPhy(void* ctx, uint8_t* mac, uint8_t len);
     static zx_status_t Create(zx_device_t* device);
 
 private:
