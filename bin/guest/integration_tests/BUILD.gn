@@ -35,9 +35,24 @@ package("guest_integration_tests") {
     ":bin",
   ]
 
-  tests = [
-    {
-      name = "guest_integration_tests"
-    },
-  ]
+  # There is currently only x64 hardware available for testing.
+  if (target_cpu == "x64") {
+    tests = [
+      {
+        name = "guest_integration_tests"
+        environments = [
+          {
+            device = {
+              type = "Intel NUC Kit NUC6i3SYK"
+            }
+          },
+          {
+            device = {
+              type = "Intel NUC Kit NUC7i5DNHE"
+            }
+          },
+        ]
+      },
+    ]
+  }
 }
