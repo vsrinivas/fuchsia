@@ -8,6 +8,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":ap_tests",
+    ":buffer_utils_tests",
     ":client_tests",
     ":common_tests",
     ":mac_tests",
@@ -170,6 +171,25 @@ executable("timer_manager_tests") {
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
 }
 
+executable("buffer_utils_tests") {
+  output_name = "wlan_buffer_utils_unittest"
+
+  testonly = true
+
+  sources = [
+    "buffer_utils_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//garnet/lib/wlan/mlme",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+}
+
 executable("common_tests") {
   output_name = "wlan_common_unittest"
 
@@ -212,6 +232,10 @@ package("wlan_tests") {
   tests = [
     {
       name = "wlan_ap_unittest"
+    },
+
+    {
+      name = "wlan_buffer_utils_unittest"
     },
 
     {
