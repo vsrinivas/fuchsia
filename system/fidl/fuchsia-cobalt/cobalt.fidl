@@ -496,15 +496,15 @@ struct Experiment {
 };
 
 [Discoverable]
-// The SystemProfileUpdater interface allows callers to update the state of
-// the SystemProfile in Cobalt. The changes are global and affect all loggers
-// running on the device.
-interface SystemProfileUpdater {
+// The SystemDataUpdater interface allows callers to update the state of
+// the System Data in Cobalt. This includes the SystemProfile and experiment 
+// state. The changes are global and affect all loggers running on the device.
+interface SystemDataUpdater {
     // Resets Cobalt's view of the system-wide experiment state and replaces it
     // with the given values.
     //
     // |experiments|  All experiments the device has a notion of and the
-    // arms the device belongs to for each of them. These are the only 
+    // arms the device belongs to for each of them. These are the only
     // experiments the device can collect data for.
     1: SetExperimentState(vector<Experiment> experiments)
             -> (Status status);
