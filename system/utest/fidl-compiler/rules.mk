@@ -65,6 +65,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/bad_compound_identifier_tests.cpp \
     $(LOCAL_DIR)/dup_attributes_tests.cpp \
     $(LOCAL_DIR)/formatter_unittests.cpp \
+    $(LOCAL_DIR)/json_generator_tests.cpp \
     $(LOCAL_DIR)/max_bytes_tests.cpp \
     $(LOCAL_DIR)/max_handle_tests.cpp \
     $(LOCAL_DIR)/superinterface_tests.cpp \

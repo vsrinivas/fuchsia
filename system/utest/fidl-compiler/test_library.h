@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_
 
 #include <fidl/flat_ast.h>
+#include <fidl/json_generator.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
@@ -49,6 +50,12 @@ public:
         return parser_.Ok() &&
                library_->ConsumeFile(std::move(ast)) &&
                library_->Compile();
+    }
+
+    std::string GenerateJSON() {
+        auto json_generator = fidl::JSONGenerator(library_.get());
+        auto out = json_generator.Produce();
+        return out.str();
     }
 
     bool AddSourceFile(const std::string& filename, const std::string& raw_source_code) {
