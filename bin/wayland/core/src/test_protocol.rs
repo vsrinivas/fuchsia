@@ -18,8 +18,8 @@ pub enum TestMessage {
 impl TestMessage {
     pub fn opcode(&self) -> u16 {
         match self {
-        TestMessage::Message1 => 0,
-        TestMessage::Message2 => 1,
+            TestMessage::Message1 => 0,
+            TestMessage::Message2 => 1,
         }
     }
 }
@@ -30,9 +30,9 @@ impl FromMessage for TestMessage {
     fn from_message(mut message: Message) -> Result<Self, Self::Error> {
         let header = message.read_header()?;
         match header.opcode {
-        0 => Ok(TestMessage::Message1),
-        1 => Ok(TestMessage::Message2),
-        op => Err(DecodeError::InvalidOpcode(op)),
+            0 => Ok(TestMessage::Message1),
+            1 => Ok(TestMessage::Message2),
+            op => Err(DecodeError::InvalidOpcode(op)),
         }
     }
 }
@@ -57,6 +57,9 @@ pub struct TestInterface;
 impl Interface for TestInterface {
     const NAME: &'static str = "test_interface";
     const VERSION: u32 = 0;
+    // |TestMessage| contains 2 operations; neither has arguments.
+    const REQUESTS: MessageGroupSpec = MessageGroupSpec(&[MessageSpec(&[]), MessageSpec(&[])]);
+    const EVENTS: MessageGroupSpec = MessageGroupSpec(&[MessageSpec(&[]), MessageSpec(&[])]);
     type Request = TestMessage;
     type Event = TestMessage;
 }

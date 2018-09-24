@@ -29,8 +29,8 @@ impl<W: io::Write> Codegen<W> {
 // GENERATED FILE -- DO NOT EDIT
 
 use fuchsia_wayland_core::{{ Arg, ArgKind, FromMessage, IntoMessage, Message,
-                            MessageHeader, NewId, ObjectId, EncodeError,
-                            DecodeError, Interface, }};"
+                            MessageGroupSpec, MessageHeader, MessageSpec, NewId,
+                            ObjectId, EncodeError, DecodeError, Interface, }};"
         )?;
 
         for interface in protocol.interfaces.into_iter() {
@@ -251,10 +251,28 @@ impl IntoMessage for {target_type} {{
             interface.name
         )?;
         writeln!(self.w, "    const VERSION: u32 = {};", interface.version)?;
+        write!(self.w,   "    const REQUESTS: MessageGroupSpec = ")?;
+        self.codegen_message_group_spec(&interface.requests)?;
+        write!(self.w,   "    const EVENTS: MessageGroupSpec = ")?;
+        self.codegen_message_group_spec(&interface.events)?;
         writeln!(self.w, "    type Request = {}Request;", camel_name)?;
         writeln!(self.w, "    type Event = {}Event;", camel_name)?;
         writeln!(self.w, "}}")?;
         writeln!(self.w, "")?;
+        Ok(())
+    }
+
+    fn codegen_message_group_spec(&mut self, messages: &Vec<ast::Message>) -> Result {
+        writeln!(self.w, "MessageGroupSpec(&[")?;
+        for m in messages.iter() {
+            writeln!(self.w, "        // {}", m.name)?;
+            writeln!(self.w, "        MessageSpec(&[")?;
+            for arg in m.args.iter() {
+                writeln!(self.w, "            {},", format_arg_kind(&arg))?;
+            }
+            writeln!(self.w, "        ]),")?;
+        }
+        writeln!(self.w, "    ]);")?;
         Ok(())
     }
 }

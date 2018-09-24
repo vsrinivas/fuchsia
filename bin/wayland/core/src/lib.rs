@@ -33,10 +33,33 @@ pub trait FromMessage: Sized {
     fn from_message(msg: Message) -> Result<Self, Self::Error>;
 }
 
+/// An array of |ArgKind|s for a single request or event message.
+pub struct MessageSpec(pub &'static [ArgKind]);
+
+/// An array of |MessageSpec|s for either a set of requests or events.
+///
+/// The slice is indexed by message opcode.
+pub struct MessageGroupSpec(pub &'static [MessageSpec]);
+
 pub trait Interface {
+    /// The name of this interface. This will correspond to the 'name' attribute
+    /// on the 'interface' element in the wayland protocol XML.
     const NAME: &'static str;
+
+    /// The version of this interface. This will correspond to the 'version'
+    /// attribute on the 'interface' element in the wayland protocol XML.
     const VERSION: u32;
+
+    /// A description of the structure of request messages.
+    const REQUESTS: MessageGroupSpec;
+
+    /// A description of the structure of event messages.
+    const EVENTS: MessageGroupSpec;
+
+    /// The rust type that can hold the decoded request messages.
     type Request: FromMessage;
+
+    /// The rust type that can hold the decoded event messages.
     type Event: IntoMessage;
 }
 

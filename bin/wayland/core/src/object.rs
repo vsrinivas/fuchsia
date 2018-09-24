@@ -30,7 +30,7 @@ use std::marker::PhantomData;
 
 use failure::{format_err, Error};
 
-use crate::{Interface, Message, FromMessage};
+use crate::{FromMessage, Interface, Message};
 
 /// The |ObjectMap| holds the state of active objects for a single connection.
 ///
@@ -148,7 +148,8 @@ impl<I: Interface, R: RequestReceiver<I>> RequestDispatcher<I, R> {
 /// receiver.
 impl<I: Interface, R: RequestReceiver<I>> MessageReceiver for RequestDispatcher<I, R> {
     fn receive(&mut self, message: Message) -> Result<(), Error> {
-        let request: I::Request = <<I as Interface>::Request as FromMessage>::from_message(message)?;
+        let request: I::Request =
+            <<I as Interface>::Request as FromMessage>::from_message(message)?;
         self.receiver.receive(request)?;
         Ok(())
     }
