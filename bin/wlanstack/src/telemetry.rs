@@ -30,13 +30,13 @@ const REPORT_PERIOD_MINUTES: i64 = 1;
 
 // These IDs must match the Cobalt config from //third_party/cobalt_config/fuchsia/wlan/config.yaml
 enum CobaltMetricId {
-    RsnaTime = 2,
-    AssociationTime = 3,
-    ScanTime = 4,
+    RsnaDelay = 2,
+    AssociationDelay = 3,
+    ScanDelay = 4,
     DispatcherPacketCounter = 5,
     ClientAssocDataRssi = 6,
     ClientBeaconRssi = 7,
-    ConnectionTime = 8,
+    ConnectionDelay = 8,
     RxTxFrameCount = 9,
     RxTxFrameBytes = 10,
 }
@@ -254,18 +254,18 @@ fn report_rssi_stats(
     }
 }
 
-pub fn report_scan_time(
+pub fn report_scan_delay(
     sender: &mut CobaltSender, scan_started_time: zx::Time, scan_finished_time: zx::Time,
 ) {
-    let time_micros = (scan_finished_time - scan_started_time).nanos() / 1000;
-    sender.log_elapsed_time(CobaltMetricId::ScanTime as u32, 0, time_micros);
+    let delay_micros = (scan_finished_time - scan_started_time).nanos() / 1000;
+    sender.log_elapsed_time(CobaltMetricId::ScanDelay as u32, 0, delay_micros);
 }
 
-pub fn report_connection_time(
+pub fn report_connection_delay(
     sender: &mut CobaltSender, conn_started_time: zx::Time, conn_finished_time: zx::Time,
     result: &ConnectResult, failure: &Option<ConnectFailure>,
 ) {
-    let time_micros = (conn_finished_time - conn_started_time).nanos() / 1000;
+    let delay_micros = (conn_finished_time - conn_started_time).nanos() / 1000;
     let cobalt_index = match (result, failure) {
         (ConnectResult::Success, None) => Some(ConnectionResultLabel::SuccessId),
         (ConnectResult::Success, Some(_)) => None,
@@ -275,25 +275,25 @@ pub fn report_connection_time(
 
     if let Some(cobalt_index) = cobalt_index {
         sender.log_elapsed_time(
-            CobaltMetricId::ConnectionTime as u32,
+            CobaltMetricId::ConnectionDelay as u32,
             cobalt_index as u32,
-            time_micros,
+            delay_micros,
         );
     }
 }
 
-pub fn report_assoc_success_time(
+pub fn report_assoc_success_delay(
     sender: &mut CobaltSender, assoc_started_time: zx::Time, assoc_finished_time: zx::Time,
 ) {
-    let time_micros = (assoc_finished_time - assoc_started_time).nanos() / 1000;
-    sender.log_elapsed_time(CobaltMetricId::AssociationTime as u32, 0, time_micros);
+    let delay_micros = (assoc_finished_time - assoc_started_time).nanos() / 1000;
+    sender.log_elapsed_time(CobaltMetricId::AssociationDelay as u32, 0, delay_micros);
 }
 
-pub fn report_rsna_established_time(
+pub fn report_rsna_established_delay(
     sender: &mut CobaltSender, rsna_started_time: zx::Time, rsna_finished_time: zx::Time,
 ) {
-    let time_micros = (rsna_finished_time - rsna_started_time).nanos() / 1000;
-    sender.log_elapsed_time(CobaltMetricId::RsnaTime as u32, 0, time_micros);
+    let delay_micros = (rsna_finished_time - rsna_started_time).nanos() / 1000;
+    sender.log_elapsed_time(CobaltMetricId::RsnaDelay as u32, 0, delay_micros);
 }
 
 #[derive(Debug)]

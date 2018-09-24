@@ -212,7 +212,7 @@ fn handle_info_event(e: InfoEvent,
         InfoEvent::ConnectFinished { result, failure } => {
             if let Some(connect_started_time) = connection_times.connect_started_time {
                 let connection_finished_time = zx::Time::get(zx::ClockId::Monotonic);
-                telemetry::report_connection_time(cobalt_sender, connect_started_time,
+                telemetry::report_connection_delay(cobalt_sender, connect_started_time,
                                               connection_finished_time, &result, &failure);
             }
         },
@@ -226,7 +226,7 @@ fn handle_info_event(e: InfoEvent,
             }
             if let Some(scan_started_time) = connection_times.scan_started_time {
                 let scan_finished_time = zx::Time::get(zx::ClockId::Monotonic);
-                telemetry::report_scan_time(cobalt_sender, scan_started_time,
+                telemetry::report_scan_delay(cobalt_sender, scan_started_time,
                                              scan_finished_time);
             }
         },
@@ -240,7 +240,7 @@ fn handle_info_event(e: InfoEvent,
             }
             if let Some(assoc_started_time) = connection_times.assoc_started_time {
                 let assoc_finished_time = zx::Time::get(zx::ClockId::Monotonic);
-                telemetry::report_assoc_success_time(cobalt_sender, assoc_started_time,
+                telemetry::report_assoc_success_delay(cobalt_sender, assoc_started_time,
                                              assoc_finished_time);
             }
         },
@@ -256,7 +256,7 @@ fn handle_info_event(e: InfoEvent,
                 None => info!("Received UserEvent.RsnaEstablished before UserEvent.RsnaStarted"),
                 Some(rsna_started_time) => {
                     let rsna_finished_time = zx::Time::get(zx::ClockId::Monotonic);
-                    telemetry::report_rsna_established_time(cobalt_sender, rsna_started_time,
+                    telemetry::report_rsna_established_delay(cobalt_sender, rsna_started_time,
                                                             rsna_finished_time);
                 }
             }
