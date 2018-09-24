@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
+#include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/platform-defs.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
@@ -63,6 +64,33 @@ static const pbus_boot_metadata_t eth_mac_metadata[] = {
     },
 };
 
+static const eth_dev_metadata_t eth_phy_device = {
+    .vid = PDEV_VID_REALTEK,
+    .pid = PDEV_PID_RTL8211F,
+    .did = PDEV_DID_ETH_PHY,
+};
+
+static const pbus_metadata_t eth_mac_device_metadata[] = {
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .data = &eth_phy_device,
+        .len = sizeof(eth_dev_metadata_t),
+    },
+};
+
+static const eth_dev_metadata_t eth_mac_device = {
+    .vid = PDEV_VID_DESIGNWARE,
+    .did = PDEV_DID_ETH_MAC,
+};
+
+static const pbus_metadata_t eth_board_metadata[] = {
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .data = &eth_mac_device,
+        .len = sizeof(eth_dev_metadata_t),
+    },
+};
+
 static const pbus_i2c_channel_t vim2_mcu_i2c[] = {
     {
         .bus_id = 1,
@@ -80,6 +108,8 @@ static const pbus_dev_t eth_board_children[] = {
         .bti_count = countof(eth_mac_btis),
         .irqs = eth_mac_irqs,
         .irq_count = countof(eth_mac_irqs),
+        .metadata = eth_mac_device_metadata,
+        .metadata_count = countof(eth_mac_device_metadata),
         .boot_metadata = eth_mac_metadata,
         .boot_metadata_count = countof(eth_mac_metadata),
     },
@@ -96,6 +126,8 @@ static pbus_dev_t eth_board_dev = {
     .gpio_count = countof(eth_board_gpios),
     .i2c_channels = vim2_mcu_i2c,
     .i2c_channel_count = countof(vim2_mcu_i2c),
+    .metadata = eth_board_metadata,
+    .metadata_count = countof(eth_board_metadata),
     .children = eth_board_children,
     .child_count = countof(eth_board_children),
 };
@@ -106,7 +138,7 @@ zx_status_t vim_eth_init(vim_bus_t* bus) {
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_MDIO, S912_ETH_MDIO_FN);
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_MDC, S912_ETH_MDC_FN);
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RGMII_RX_CLK,
-                          S912_ETH_RGMII_RX_CLK_FN);
+                               S912_ETH_RGMII_RX_CLK_FN);
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RX_DV, S912_ETH_RX_DV_FN);
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RXD0, S912_ETH_RXD0_FN);
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RXD1, S912_ETH_RXD1_FN);
@@ -114,7 +146,7 @@ zx_status_t vim_eth_init(vim_bus_t* bus) {
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RXD3, S912_ETH_RXD3_FN);
 
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_RGMII_TX_CLK,
-                          S912_ETH_RGMII_TX_CLK_FN);
+                               S912_ETH_RGMII_TX_CLK_FN);
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_TX_EN, S912_ETH_TX_EN_FN);
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_TXD0, S912_ETH_TXD0_FN);
     gpio_impl_set_alt_function(&bus->gpio, S912_ETH_TXD1, S912_ETH_TXD1_FN);

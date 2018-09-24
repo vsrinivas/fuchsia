@@ -74,6 +74,12 @@ typedef struct ethmac_ifc_virt {
     void (*complete_tx)(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status);
 } ethmac_ifc_t;
 
+typedef struct eth_dev_metadata {
+    uint32_t vid;
+    uint32_t pid;
+    uint32_t did;
+} eth_dev_metadata_t;
+
 // Indicates that additional data is available to be sent after this call finishes. Allows a ethmac
 // driver to batch tx to hardware if possible.
 #define ETHMAC_TX_OPT_MORE (1u)

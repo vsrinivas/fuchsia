@@ -172,12 +172,6 @@ static void DdkReleaseWrapper(void* ctx) {
     delete static_cast<DWMacDevice*>(ctx);
 }
 
-static zx_device_prop_t props[] = {
-    {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_REALTEK},
-    {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_RTL8211F},
-    {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_ETH_PHY},
-};
-
 static zx_protocol_device_t eth_mac_device_ops = []() {
     zx_protocol_device_t result;
 
@@ -193,8 +187,6 @@ static device_add_args_t phy_device_args = []() {
     result.name = "eth_phy";
     result.ops = &eth_mac_device_ops,
     result.proto_id = ZX_PROTOCOL_ETH_MAC;
-    result.props = props;
-    result.prop_count = countof(props);
     return result;
 }();
 
@@ -205,10 +197,6 @@ zx_status_t DWMacDevice::Create(zx_device_t* device) {
     if (status != ZX_OK) {
         return status;
     }
-
-    //TODO(braval@/cjn@):   Disable the WOL first which was enabled
-    //                      during previous boot up & still enable
-    //                      after a soft reboot.
 
     // Reset the phy.
     eth_board_reset_phy(&mac_device->eth_board_);
@@ -240,10 +228,6 @@ zx_status_t DWMacDevice::Create(zx_device_t* device) {
 
     sync_completion_reset(&mac_device->cb_registered_signal_);
 
-    // TODO(braval):        Get the information of
-    //                      number of PHY's to be added
-    //                      and their props from metadata.
-
     auto mdio_write_thunk = [](void* arg, uint32_t reg, uint32_t val) -> zx_status_t {
         return reinterpret_cast<DWMacDevice*>(arg)->MDIOWrite(reg, val);
     };
@@ -262,6 +246,24 @@ zx_status_t DWMacDevice::Create(zx_device_t* device) {
         .register_callbacks = register_cb_thunk,
     }; // namespace eth
 
+    // Populate board specific information
+    eth_dev_metadata_t phy_info;
+    size_t actual;
+    status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &phy_info,
+                                 sizeof(eth_dev_metadata_t), &actual);
+    if (status != ZX_OK || actual != sizeof(eth_dev_metadata_t)) {
+        zxlogf(ERROR, "dwmac: Could not get PHY metadata %d\n", status);
+        return status;
+    }
+
+    static zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, phy_info.vid},
+        {BIND_PLATFORM_DEV_DID, 0, phy_info.did},
+        {BIND_PLATFORM_DEV_PID, 0, phy_info.pid},
+    };
+
+    phy_device_args.props = props;
+    phy_device_args.prop_count = countof(props);
     phy_device_args.ctx = mac_device.get();
     phy_device_args.proto_ops = &proto_ops;
 

@@ -7,6 +7,8 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddk/metadata.h>
+#include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <fbl/auto_call.h>
@@ -94,11 +96,6 @@ static eth_board_protocol_ops_t proto_ops = {
     .reset_phy = AmlEthernet::ResetPhy,
 };
 
-static zx_device_prop_t props[] = {
-    {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_DESIGNWARE},
-    {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_ETH_MAC},
-};
-
 static zx_protocol_device_t eth_device_ops = []() {
     zx_protocol_device_t result;
 
@@ -116,8 +113,6 @@ static device_add_args_t eth_mac_dev_args = []() {
     result.ops = &eth_device_ops;
     result.proto_id = ZX_PROTOCOL_ETH_BOARD;
     result.proto_ops = &proto_ops;
-    result.props = props;
-    result.prop_count = countof(props);
     return result;
 }();
 
@@ -165,11 +160,25 @@ zx_status_t AmlEthernet::Create(zx_device_t* device) {
         return status;
     }
 
+    // Populate board specific information
+    eth_dev_metadata_t mac_info;
+    size_t actual;
+    status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &mac_info,
+                                 sizeof(eth_dev_metadata_t), &actual);
+    if (status != ZX_OK || actual != sizeof(eth_dev_metadata_t)) {
+        zxlogf(ERROR, "aml-ethernet: Could not get MAC metadata %d\n", status);
+        return status;
+    }
+
+    static zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, mac_info.vid},
+        {BIND_PLATFORM_DEV_DID, 0, mac_info.did},
+    };
+
+    eth_mac_dev_args.props = props;
+    eth_mac_dev_args.prop_count = countof(props);
     eth_mac_dev_args.ctx = eth_device.get();
 
-    // TODO(braval):    Get the device properties from the board driver
-    //                  through the metadata instead of hard coding it
-    //                  in this MAC specific file.
     status = pdev_device_add(&eth_device->pdev_, 0, &eth_mac_dev_args, &eth_device->device_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-ethernet driver failed to get added\n");
