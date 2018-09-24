@@ -31,6 +31,7 @@ source_set("story_runner") {
   ]
 
   public_deps = [
+    "//garnet/bin/ui/snapshot:snapshot_loader",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",

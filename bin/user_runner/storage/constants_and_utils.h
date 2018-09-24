@@ -42,6 +42,11 @@ constexpr char kAgentRunnerPageId[] = "AgentRunnerPage_";  // 16 chars
 constexpr char kStoryKeyPrefix[] = "Story/";
 constexpr char kDeviceKeyPrefix[] = "Device/";
 constexpr char kFocusKeyPrefix[] = "Focus/";
+
+// Keys under kStoryKeyPrefix
+constexpr char kStoryDataKeyPrefix[] = "Story/Data/";
+constexpr char kStorySnapshotKeyPrefix[] = "Story/Snapshot/";
+
 //
 //    Message Queue page:
 constexpr char kMessageQueueKeyPrefix[] = "fuchsia::modular::MessageQueue/";

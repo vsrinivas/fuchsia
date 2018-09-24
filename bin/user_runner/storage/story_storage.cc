@@ -480,9 +480,9 @@ void StoryStorage::OnPageChange(const std::string& key,
       on_module_data_updated_(std::move(*module_data));
     }
   } else {
-    // TODO(thatguy): We store some Link data on the root page (where StoryData
-    // is stored) for the user shell to make use of. This means we get notified
-    // in that instance of changes we don't care about.
+    // TODO(thatguy): We store some Link data on the root page (where
+    // StoryData is stored) for the user shell to make use of. This means we
+    // get notified in that instance of changes we don't care about.
     //
     // Consider putting all story-scoped data under a shared prefix, and use
     // that when initializing the PageClient.

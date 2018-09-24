@@ -29,6 +29,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fxl/macros.h>
 
+#include "peridot/bin/user_runner/storage/session_storage.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/bin/user_runner/story_runner/ongoing_activity_impl.h"
 #include "peridot/bin/user_runner/story_runner/story_shell_context_impl.h"
@@ -50,7 +51,8 @@ class StoryStorage;
 // clients control over the story.
 class StoryControllerImpl : fuchsia::modular::StoryController {
  public:
-  StoryControllerImpl(fidl::StringPtr story_id, StoryStorage* story_storage,
+  StoryControllerImpl(fidl::StringPtr story_id, SessionStorage* session_storage,
+                      StoryStorage* story_storage,
                       StoryProviderImpl* story_provider_impl);
   ~StoryControllerImpl() override;
 
@@ -178,6 +180,9 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void Start(fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
                  request) override;
   void Stop(StopCallback done) override;
+  void TakeAndLoadSnapshot(
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
+      TakeAndLoadSnapshotCallback done) override;
   void Watch(
       fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override;
   void GetActiveModules(
@@ -238,6 +243,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   StoryProviderImpl* const story_provider_impl_;
 
+  SessionStorage* const session_storage_;
   StoryStorage* const story_storage_;
 
   // The application environment (which abstracts a zx::job) in which the
@@ -349,6 +355,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   class StopCall;
   class StopModuleCall;
   class StopModuleAndStoryIfEmptyCall;
+  class LoadSnapshotCall;
+  class TakeSnapshotCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };

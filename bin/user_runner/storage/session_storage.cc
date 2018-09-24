@@ -25,20 +25,30 @@ SessionStorage::SessionStorage(LedgerClient* ledger_client,
 
 namespace {
 
-fidl::StringPtr StoryNameToLedgerKey(fidl::StringPtr story_name) {
-  // Not escaped, because only one component after the prefix.
-  return kStoryKeyPrefix + story_name.get();
+// TODO(rosswang): replace with |std::string::starts_with| after C++20
+bool StartsWith(const std::string& string, const std::string& prefix) {
+  return string.compare(0, prefix.size(), prefix) == 0;
 }
 
-fidl::StringPtr StoryNameFromLedgerKey(fidl::StringPtr key) {
-  return key->substr(sizeof(kStoryKeyPrefix) - 1);
+fidl::StringPtr StoryNameToStoryDataKey(fidl::StringPtr story_name) {
+  // Not escaped, because only one component after the prefix.
+  return kStoryDataKeyPrefix + story_name.get();
+}
+
+fidl::StringPtr StoryNameFromStoryDataKey(fidl::StringPtr key) {
+  return key->substr(sizeof(kStoryDataKeyPrefix) - 1);
+}
+
+fidl::StringPtr StoryNameToStorySnapshotKey(fidl::StringPtr story_name) {
+  // Not escaped, because only one component after the prefix.
+  return kStorySnapshotKeyPrefix + story_name.get();
 }
 
 OperationBase* MakeGetStoryDataCall(
     fuchsia::ledger::Page* const page, fidl::StringPtr story_name,
     std::function<void(fuchsia::modular::internal::StoryDataPtr)> result_call) {
   return new ReadDataCall<fuchsia::modular::internal::StoryData>(
-      page, StoryNameToLedgerKey(story_name), true /* not_found_is_ok */,
+      page, StoryNameToStoryDataKey(story_name), true /* not_found_is_ok */,
       XdrStoryData, std::move(result_call));
 };
 
@@ -47,7 +57,7 @@ OperationBase* MakeWriteStoryDataCall(
     fuchsia::modular::internal::StoryDataPtr story_data,
     std::function<void()> result_call) {
   return new WriteDataCall<fuchsia::modular::internal::StoryData>(
-      page, StoryNameToLedgerKey(story_data->story_info.id), XdrStoryData,
+      page, StoryNameToStoryDataKey(story_data->story_info.id), XdrStoryData,
       std::move(story_data), std::move(result_call));
 };
 
@@ -192,9 +202,24 @@ class DeleteStoryCall : public Operation<> {
   }
 
   void Cont3(FlowToken flow) {
-    // Finally remove the entry in the session page.
+    // Remove the story data in the session page.
     session_page_->Delete(
-        to_array(StoryNameToLedgerKey(story_data_.story_info.id)),
+        to_array(StoryNameToStoryDataKey(story_data_.story_info.id)),
+        [this, flow](fuchsia::ledger::Status status) {
+          // Deleting a key that doesn't exist is OK, not
+          // KEY_NOT_FOUND.
+          if (status != fuchsia::ledger::Status::OK) {
+            FXL_LOG(ERROR) << "SessionStorage: Page.Delete() "
+                           << fidl::ToUnderlying(status);
+          }
+          Cont4(flow);
+        });
+  }
+
+  void Cont4(FlowToken flow) {
+    // Remove the story snapshot in the session page.
+    session_page_->Delete(
+        to_array(StoryNameToStorySnapshotKey(story_data_.story_info.id)),
         [this, flow](fuchsia::ledger::Status status) {
           // Deleting a key that doesn't exist is OK, not
           // KEY_NOT_FOUND.
@@ -305,7 +330,7 @@ SessionStorage::GetAllStoryData() {
           "SessionStorage.GetAllStoryData.ret");
   operation_queue_.Add(
       new ReadAllDataCall<fuchsia::modular::internal::StoryData>(
-          page(), kStoryKeyPrefix, XdrStoryData, ret->Completer()));
+          page(), kStoryDataKeyPrefix, XdrStoryData, ret->Completer()));
   return ret;
 }
 
@@ -347,30 +372,150 @@ FuturePtr<std::unique_ptr<StoryStorage>> SessionStorage::GetStoryStorage(
   return returned_future;
 }
 
-void SessionStorage::OnPageChange(const std::string& key,
-                                  const std::string& value) {
-  auto story_data = fuchsia::modular::internal::StoryData::New();
-  if (!XdrRead(value, &story_data, XdrStoryData)) {
-    FXL_LOG(ERROR) << "SessionStorage::OnPageChange : could not decode ledger "
-                      "value for key "
-                   << key << "\nvalue:\n"
-                   << value;
-    return;
+namespace {
+
+class WriteSnapshotCall : public Operation<> {
+ public:
+  WriteSnapshotCall(PageClient* page_client, fidl::StringPtr story_name,
+                    fuchsia::mem::Buffer snapshot, ResultCall result_call)
+      : Operation("SessionStorage::WriteSnapshotCall", std::move(result_call)),
+        page_client_(page_client),
+        key_(StoryNameToStorySnapshotKey(story_name)),
+        snapshot_(std::move(snapshot)) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+    page_client_->page()->CreateReferenceFromBuffer(
+        std::move(snapshot_),
+        [this, flow](fuchsia::ledger::Status status,
+                     std::unique_ptr<fuchsia::ledger::Reference> reference) {
+          if (status != fuchsia::ledger::Status::OK) {
+            FXL_LOG(ERROR) << trace_name()
+                           << " PageSnapshot.CreateReferenceFromBuffer() "
+                           << fidl::ToUnderlying(status);
+            return;
+          } else if (!reference) {
+            return;
+          }
+
+          PutReference(std::move(reference), flow);
+        });
   }
 
-  auto story_name = StoryNameFromLedgerKey(key);
-  if (on_story_updated_) {
-    on_story_updated_(std::move(story_name), std::move(*story_data));
+  void PutReference(std::unique_ptr<fuchsia::ledger::Reference> reference,
+                    FlowToken flow) {
+    page_client_->page()->PutReference(
+        to_array(key_), std::move(*reference),
+        // TODO(MI4-1425): Experiment with declaring lazy priority.
+        fuchsia::ledger::Priority::EAGER,
+        [this, flow](fuchsia::ledger::Status status) {
+          if (status != fuchsia::ledger::Status::OK) {
+            FXL_LOG(ERROR) << trace_name() << " PageSnapshot.PutReference() "
+                           << fidl::ToUnderlying(status);
+          }
+        });
+  }
+
+  PageClient* const page_client_;
+  fidl::StringPtr key_;
+  fuchsia::mem::Buffer snapshot_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(WriteSnapshotCall);
+};
+
+class ReadSnapshotCall : public Operation<fuchsia::mem::BufferPtr> {
+ public:
+  ReadSnapshotCall(PageClient* page_client, fidl::StringPtr story_name,
+                   ResultCall result_call)
+      : Operation("SessionStorage::ReadSnapshotCall", std::move(result_call)),
+        page_client_(page_client),
+        key_(StoryNameToStorySnapshotKey(story_name)) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this, &snapshot_};
+
+    page_snapshot_ = page_client_->NewSnapshot(
+        /* on_error = */ [this] { Done(nullptr); });
+    page_snapshot_->Get(
+        to_array(key_), [this, flow](fuchsia::ledger::Status status,
+                                     fuchsia::mem::BufferPtr snapshot) {
+          // TODO(MI4-1425): Handle NEEDS_FETCH status if using lazy priority.
+          switch (status) {
+            case fuchsia::ledger::Status::KEY_NOT_FOUND:
+              return;
+            case fuchsia::ledger::Status::OK:
+              snapshot_ = std::move(snapshot);
+              return;
+            default:
+              FXL_LOG(ERROR) << trace_name() << " PageSnapshot.Get() "
+                             << fidl::ToUnderlying(status);
+              return;
+          }
+        });
+  }
+
+  // Input parameters.
+  PageClient* const page_client_;
+  fidl::StringPtr key_;
+
+  // Intermediate state.
+  fuchsia::ledger::PageSnapshotPtr page_snapshot_;
+
+  // Return values.
+  fuchsia::mem::BufferPtr snapshot_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ReadSnapshotCall);
+};
+}  // namespace
+
+FuturePtr<> SessionStorage::WriteSnapshot(fidl::StringPtr story_name,
+                                          fuchsia::mem::Buffer snapshot) {
+  auto ret = Future<>::Create("SessionStorage.WriteSnapshot.ret");
+  operation_queue_.Add(new WriteSnapshotCall(
+      this, std::move(story_name), std::move(snapshot), ret->Completer()));
+  return ret;
+}
+
+FuturePtr<fuchsia::mem::BufferPtr> SessionStorage::ReadSnapshot(
+    fidl::StringPtr story_name) {
+  auto ret = Future<fuchsia::mem::BufferPtr>::Create(
+      "SessionStorage.ReadSnapshot.ret");
+  operation_queue_.Add(
+      new ReadSnapshotCall(this, std::move(story_name), ret->Completer()));
+  return ret;
+}
+
+void SessionStorage::OnPageChange(const std::string& key,
+                                  const std::string& value) {
+  if (StartsWith(key, kStoryDataKeyPrefix)) {
+    auto story_data = fuchsia::modular::internal::StoryData::New();
+    if (!XdrRead(value, &story_data, XdrStoryData)) {
+      FXL_LOG(ERROR)
+          << "SessionStorage::OnPageChange : could not decode ledger "
+             "value for key "
+          << key << "\nvalue:\n"
+          << value;
+      return;
+    }
+
+    auto story_name = StoryNameFromStoryDataKey(key);
+    if (on_story_updated_) {
+      on_story_updated_(std::move(story_name), std::move(*story_data));
+    }
+  } else {
+    // No-op.
   }
 }
 
 void SessionStorage::OnPageDelete(const std::string& key) {
   if (on_story_deleted_) {
-    // Call to StoryNameFromLedgerKey() needed because a deleted story is
+    // Call to StoryNameFromStoryDataKey() needed because a deleted story is
     // modelled by deleting the key, and then the value is not available.
     // TODO(thatguy,mesch): Change PageClient to supply values of deleted keys
     // and/or change modeling of deleted stories.
-    on_story_deleted_(StoryNameFromLedgerKey(key));
+    on_story_deleted_(StoryNameFromStoryDataKey(key));
   }
 }
 

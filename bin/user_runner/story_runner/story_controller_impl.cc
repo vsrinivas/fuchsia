@@ -15,6 +15,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
+#include <lib/async/default.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/entity/cpp/json.h>
@@ -67,6 +68,7 @@ struct less<fuchsia::modular::LinkPath> {
 namespace modular {
 
 constexpr char kStoryEnvironmentLabelPrefix[] = "story-";
+constexpr auto kTakeSnapshotTimeout = zx::sec(1);
 
 namespace {
 
@@ -1041,7 +1043,6 @@ class StoryControllerImpl::StartCall : public Operation<> {
           << "StoryControllerImpl::StartCall() while already running: ignored.";
       return;
     }
-
     story_controller_impl_->StartStoryShell(std::move(request_));
 
     // Start all modules that were not themselves explicitly started by another
@@ -1076,11 +1077,114 @@ class StoryControllerImpl::StartCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StartCall);
 };
 
+class StoryControllerImpl::TakeSnapshotCall : public Operation<> {
+ public:
+  TakeSnapshotCall(StoryControllerImpl* const story_controller_impl,
+                   SessionStorage* const session_storage,
+                   const std::string story_id)
+      : Operation("StoryControllerImpl::TakeSnapshotCall", [] {}),
+        story_id_(story_id),
+        story_controller_impl_(story_controller_impl),
+        session_storage_(session_storage) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    // If the story shell is not running, we avoid taking a snapshot.
+    if (!story_controller_impl_->IsRunning()) {
+      FXL_LOG(INFO) << "StoryControllerImpl::TakeSnapshotCall() called when "
+                       "story shell is not initialized.";
+      return;
+    }
+
+    FlowTokenHolder branch{flow};
+    // |flow| will branch into normal and timeout paths. |flow| must go out of
+    // scope when either of the paths finishes.
+    story_controller_impl_->story_provider_impl_->TakeSnapshot(
+        story_id_, [this, branch](fuchsia::mem::Buffer snapshot) {
+          if (snapshot.size == 0) {
+            FXL_LOG(INFO)
+                << "TakeSnapshot returned an invalid snapshot for story: "
+                << story_id_;
+            return;
+          }
+
+          // Even if the snapshot comes back after timeout, we attempt to save
+          // it.
+          session_storage_->WriteSnapshot(story_id_, std::move(snapshot))
+              ->Then([this, branch]() {
+                auto flow = branch.Continue();
+                if (!flow) {
+                  FXL_LOG(INFO) << "Saved snapshot for story after timeout: "
+                                << story_id_;
+                } else {
+                  FXL_LOG(INFO) << "Saved snapshot for story: " << story_id_;
+                }
+              });
+        });
+
+    async::PostDelayedTask(
+        async_get_default_dispatcher(),
+        [this, branch] {
+          auto flow = branch.Continue();
+          if (flow) {
+            FXL_LOG(INFO) << "Timed out while taking snapshot for story: "
+                          << story_id_;
+          }
+        },
+        kTakeSnapshotTimeout);
+  }
+
+  const std::string story_id_;
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  SessionStorage* const session_storage_;             // not owned
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TakeSnapshotCall);
+};
+
+class StoryControllerImpl::LoadSnapshotCall : public Operation<> {
+ public:
+  LoadSnapshotCall(
+      StoryControllerImpl* const story_controller_impl,
+      SessionStorage* const session_storage,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
+      std::function<void()> done)
+      : Operation("StoryControllerImpl::LoadSnapshotCall", done),
+        story_controller_impl_(story_controller_impl),
+        session_storage_(session_storage),
+        request_(std::move(request)) {}
+
+ private:
+  void Run() override {
+    session_storage_->ReadSnapshot(story_controller_impl_->story_id_)
+        ->Then([this](fuchsia::mem::BufferPtr snapshot) {
+          if (!snapshot) {
+            FXL_LOG(INFO) << "ReadSnapshot returned a null/invalid snapshot.";
+            Done();
+            return;
+          }
+
+          story_controller_impl_->story_provider_impl_->LoadSnapshot(
+              std::move(request_), std::move(*snapshot.get()));
+          Done();
+        });
+  }
+
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  SessionStorage* const session_storage_;             // not owned
+  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(LoadSnapshotCall);
+};
+
 StoryControllerImpl::StoryControllerImpl(
-    fidl::StringPtr story_id, StoryStorage* const story_storage,
+    fidl::StringPtr story_id, SessionStorage* const session_storage,
+    StoryStorage* const story_storage,
     StoryProviderImpl* const story_provider_impl)
     : story_id_(story_id),
       story_provider_impl_(story_provider_impl),
+      session_storage_(session_storage),
       story_storage_(story_storage),
       story_shell_context_impl_{story_id, story_provider_impl, this} {
   auto story_scope = fuchsia::modular::StoryScope::New();
@@ -1380,6 +1484,15 @@ void StoryControllerImpl::Stop(StopCallback done) {
   operation_queue_.Add(new StopCall(this, true /* notify watchers */, done));
 }
 
+void StoryControllerImpl::TakeAndLoadSnapshot(
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
+    TakeAndLoadSnapshotCallback done) {
+  operation_queue_.Add(
+      new TakeSnapshotCall(this, session_storage_, story_id_.get()));
+  operation_queue_.Add(
+      new LoadSnapshotCall(this, session_storage_, std::move(request), done));
+}
+
 void StoryControllerImpl::Watch(
     fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) {
   auto ptr = watcher.Bind();
@@ -1489,7 +1602,8 @@ void StoryControllerImpl::AddModule(
 
 void StoryControllerImpl::StartStoryShell(
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request) {
-  story_shell_app_ = story_provider_impl_->StartStoryShell(std::move(request));
+  story_shell_app_ =
+      story_provider_impl_->StartStoryShell(story_id_, std::move(request));
   story_shell_app_->services().ConnectToService(story_shell_.NewRequest());
   fuchsia::modular::StoryShellContextPtr story_shell_context;
   story_shell_context_impl_.Connect(story_shell_context.NewRequest());

@@ -8,12 +8,15 @@
 #include <utility>
 #include <vector>
 
+#include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fit/function.h>
+#include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/zx/time.h>
@@ -37,6 +40,8 @@
 #define PREFETCH_MONDRIAN 1
 
 namespace modular {
+
+constexpr char kSnapshotLoaderUrl[] = "snapshot";
 
 // 1. Ask SessionStorage to create an ID and storage for the new story.
 // 2. Optionally add the module in |url| to the story.
@@ -86,7 +91,8 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
                    [this, flow](std::unique_ptr<StoryStorage> story_storage) {
                      storage_ = std::move(story_storage);
                      controller_ = std::make_unique<StoryControllerImpl>(
-                         story_id_, storage_.get(), story_provider_impl_);
+                         story_id_, session_storage_, storage_.get(),
+                         story_provider_impl_);
                      if (intent_.handler) {
                        controller_->AddModule(
                            {} /* parent_module_path */, kRootModuleName,
@@ -234,7 +240,8 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
           struct StoryControllerImplContainer container;
           container.storage = std::move(story_storage);
           container.impl = std::make_unique<StoryControllerImpl>(
-              story_id_, container.storage.get(), story_provider_impl_);
+              story_id_, session_storage_, container.storage.get(),
+              story_provider_impl_);
           container.impl->Connect(std::move(request_));
           container.current_info = std::move(story_info_);
           story_provider_impl_->story_controller_impls_.emplace(
@@ -325,7 +332,8 @@ StoryProviderImpl::StoryProviderImpl(
         user_intelligence_provider,
     fuchsia::modular::ModuleResolver* const module_resolver,
     fuchsia::modular::EntityResolver* const entity_resolver,
-    PresentationProvider* const presentation_provider, const bool test)
+    PresentationProvider* const presentation_provider,
+    fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot, const bool test)
     : user_environment_(user_environment),
       session_storage_(session_storage),
       device_id_(std::move(device_id)),
@@ -338,6 +346,7 @@ StoryProviderImpl::StoryProviderImpl(
       presentation_provider_(presentation_provider),
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this),
+      view_snapshot_(std::move(view_snapshot)),
       weak_factory_(this) {
   session_storage_->set_on_story_deleted(
       [weak_ptr = weak_factory_.GetWeakPtr()](fidl::StringPtr story_id) {
@@ -418,10 +427,15 @@ void StoryProviderImpl::Duplicate(
 
 std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>>
 StoryProviderImpl::StartStoryShell(
+    fidl::StringPtr story_id,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request) {
   MaybeLoadStoryShell();
 
   auto app_client = std::move(preloaded_story_shell_app_);
+
+  // TODO(SCN-1019): This is a temporary hack to cache the endpoint ID of the
+  // view so that framework can make snapshot requests.
+  view_endpoints_[story_id] = fsl::GetKoid(request.channel().get());
 
   fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
   app_client->services().ConnectToService(view_provider.NewRequest());
@@ -700,6 +714,44 @@ void StoryProviderImpl::WatchVisualState(
     fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) {
   presentation_provider_->WatchVisualState(std::move(story_id),
                                            std::move(watcher));
+}
+
+void StoryProviderImpl::TakeSnapshot(
+    fidl::StringPtr story_id,
+    fit::function<void(fuchsia::mem::Buffer)> callback) {
+  auto it = view_endpoints_.find(story_id);
+  if (it != view_endpoints_.end()) {
+    view_snapshot_->TakeSnapshot(it->second, [callback = std::move(callback)](
+                                                 fuchsia::mem::Buffer buffer) {
+      callback(std::move(buffer));
+    });
+  } else {
+    callback(fuchsia::mem::Buffer{});
+  }
+}
+
+void StoryProviderImpl::LoadSnapshot(
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
+    fuchsia::mem::Buffer snapshot) {
+  if (!snapshot_loader_app_) {
+    fuchsia::modular::AppConfig snapshot_loader_config;
+    snapshot_loader_config.url = kSnapshotLoaderUrl;
+
+    snapshot_loader_app_ =
+        std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+            user_environment_->GetLauncher(),
+            std::move(snapshot_loader_config));
+  }
+
+  fuchsia::sys::ServiceProviderPtr service_provider;
+  fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
+  snapshot_loader_app_->services().ConnectToService(view_provider.NewRequest());
+  view_provider->CreateView(std::move(request), service_provider.NewRequest());
+
+  fuchsia::scenic::snapshot::LoaderPtr loader;
+  service_provider->ConnectToService(fuchsia::scenic::snapshot::Loader::Name_,
+                                     loader.NewRequest().TakeChannel());
+  loader->Load(std::move(snapshot));
 }
 
 }  // namespace modular

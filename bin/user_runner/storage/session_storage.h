@@ -122,6 +122,17 @@ class SessionStorage : public PageClient {
   FuturePtr<std::unique_ptr<StoryStorage>> GetStoryStorage(
       fidl::StringPtr story_id);
 
+  // Returns the snapshot for the story. If there is no snapshot for the story
+  // or the read operation failed, the return value of |fuchsia::mem::BufferPtr|
+  // will be nullptr.
+  FuturePtr<fuchsia::mem::BufferPtr> ReadSnapshot(fidl::StringPtr story_id);
+
+  // Writes the given |snapshot| to storage. The returned future will resolve
+  // when the |snapshot| has been written to storage or when it has failed to
+  // write to storage.
+  FuturePtr<> WriteSnapshot(fidl::StringPtr story_id,
+                            fuchsia::mem::Buffer snapshot);
+
  private:
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;

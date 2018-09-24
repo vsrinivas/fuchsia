@@ -624,6 +624,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       std::move(focus_provider_story_provider),
       user_intelligence_provider_.get(), module_resolver_service_.get(),
       entity_provider_runner_.get(), presentation_provider_impl_.get(),
+      startup_context_
+          ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewSnapshot>(),
       options_.test));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
