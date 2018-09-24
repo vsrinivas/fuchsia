@@ -631,7 +631,7 @@ images += [
 ]
 
 # data.blk creates an empty but initialized minfs data partition.
-# The partition is included in fvm.data.sparse.blk.
+# The partition is included in fvm.sparse.blk.
 zircon_tool_action("data.blk") {
   tool = "minfs"
   data_image_path = "$target_out_dir/$target_name"
@@ -698,38 +698,6 @@ images += [
       "IMAGE_FVM_SPARSE",
     ]
     legacy_copy = "fvm.sparse.blk"
-    legacy_copy_dir = legacy_images_dir
-  },
-]
-
-
-# fmv.data.sparse.blk is an FVM image containing only data.blk. It is
-# used to pave new data partitions to a device.
-# This target is deprecated and will be removed in future versions.
-generate_fvm("fvm.data.sparse.blk") {
-  output_name = "$target_out_dir/fvm.data.sparse.blk"
-  deps = [
-    ":data.blk",
-  ]
-  args = fvm_sparse_args + [
-           "--zxcrypt",
-           "--data",
-         ]
-}
-images += [
-  {
-    json = {
-      name = "data-template"
-      type = "blk"
-    }
-    deps = [
-      ":fvm.data.sparse.blk",
-    ]
-    installer = "fvm.data.sparse.blk"
-    public = [
-      "IMAGE_DATA_FVM_RAW",
-    ]
-    legacy_copy = "fvm.data.sparse.blk"
     legacy_copy_dir = legacy_images_dir
   },
 ]
