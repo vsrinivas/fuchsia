@@ -31,7 +31,8 @@ void wlanif_stop(void* ctx) {}
 
 wlanif_bss_description_t scan_results[] = {
     {.bssid = {11, 22, 33, 44, 55, 66},
-     .ssid = "Fake AP 1",
+     .ssid.data = {'F', 'a', 'k', 'e', ' ', 'A', 'P', ' ', '1'},
+     .ssid.len = 9,
      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
      .beacon_period = 1,
      .dtim_period = 1,

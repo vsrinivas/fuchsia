@@ -7,6 +7,7 @@
 
 #include <wlan/common/channel.h>
 #include <wlan/mlme/ap/bss_interface.h>
+#include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
@@ -23,7 +24,8 @@ namespace wlan_mlme = wlan_mlme;
 
 zx_status_t WriteSsid(ElementWriter* w, const uint8_t* ssid, size_t ssid_len) {
     if (!w->write<SsidElement>(ssid, ssid_len)) {
-        errorf("could not write ssid \"%.*s\" to Beacon\n", static_cast<int>(ssid_len), ssid);
+        errorf("could not write ssid \"%s\" to Beacon\n",
+               debug::ToAsciiOrHexStr(ssid, ssid_len).c_str());
         return ZX_ERR_IO;
     }
     return ZX_OK;
