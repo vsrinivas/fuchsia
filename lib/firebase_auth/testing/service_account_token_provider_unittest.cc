@@ -57,7 +57,7 @@ class ServiceAccountTokenProviderTest : public gtest::TestLoopFixture {
       ADD_FAILURE() << "Unable to convert string to Vmo.";
     }
     response.body = http::URLBody::New();
-    response.body->set_sized_buffer(std::move(buffer).ToTransport());
+    response.body->set_buffer(std::move(buffer).ToTransport());
     return response;
   }
 

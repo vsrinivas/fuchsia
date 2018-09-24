@@ -250,7 +250,7 @@ http::URLRequest ServiceAccountTokenProvider::GetIdentityRequest(
       api_key;
   request.method = "POST";
   request.auto_follow_redirects = true;
-  request.response_body_mode = http::ResponseBodyMode::SIZED_BUFFER;
+  request.response_body_mode = http::ResponseBodyMode::BUFFER;
 
   // content-type header.
   http::HttpHeader content_type_header;
@@ -269,7 +269,7 @@ http::URLRequest ServiceAccountTokenProvider::GetIdentityRequest(
   FXL_DCHECK(result);
 
   request.body = http::URLBody::New();
-  request.body->set_sized_buffer(std::move(data).ToTransport());
+  request.body->set_buffer(std::move(data).ToTransport());
 
   return request;
 }
@@ -303,8 +303,8 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
 
   std::string response_body;
   if (response.body) {
-    FXL_DCHECK(response.body->is_sized_buffer());
-    if (!fsl::StringFromVmo(response.body->sized_buffer(), &response_body)) {
+    FXL_DCHECK(response.body->is_buffer());
+    if (!fsl::StringFromVmo(response.body->buffer(), &response_body)) {
       ResolveCallbacks(api_key, nullptr,
                        GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR,
                                 "Unable to read from VMO."));

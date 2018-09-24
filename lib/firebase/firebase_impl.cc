@@ -50,7 +50,7 @@ fit::function<http::URLRequest()> MakeRequest(const std::string& url,
         return http::URLRequest();
       }
       request.body = http::URLBody::New();
-      request.body->set_sized_buffer(std::move(duplicated_body).ToTransport());
+      request.body->set_buffer(std::move(duplicated_body).ToTransport());
     }
     if (stream_request) {
       http::HttpHeader accept_header;

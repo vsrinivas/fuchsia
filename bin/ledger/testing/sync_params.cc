@@ -79,7 +79,7 @@ bool FetchCredentials(component::StartupContext* startup_context,
   http::URLRequest request;
   request.method = "GET";
   request.url = kCredentialsFetchUrl.ToString();
-  request.response_body_mode = http::ResponseBodyMode::SIZED_BUFFER;
+  request.response_body_mode = http::ResponseBodyMode::BUFFER;
   http::URLResponse response;
 
   status = url_loader->Start(std::move(request), &response);
@@ -99,7 +99,7 @@ bool FetchCredentials(component::StartupContext* startup_context,
     return false;
   }
 
-  return fsl::StringFromVmo(response.body->sized_buffer(), credentials);
+  return fsl::StringFromVmo(response.body->buffer(), credentials);
 }
 
 // Extracts the credentials content. This function will return |true| if it
