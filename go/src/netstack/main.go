@@ -13,6 +13,7 @@ import (
 	"app/context"
 	"netstack/connectivity"
 	"netstack/dns"
+	"netstack/filter"
 	"netstack/link/eth"
 
 	"fidl/fuchsia/devicesettings"
@@ -140,6 +141,12 @@ func main() {
 	if err := connectivity.AddOutgoingService(ctx); err != nil {
 		log.Fatal(err)
 	}
+
+	f := filter.New(stk.PortManager)
+	if err := filter.AddOutgoingService(ctx, f); err != nil {
+		log.Fatal(err)
+	}
+	ns.filter = f
 
 	ctx.Serve()
 

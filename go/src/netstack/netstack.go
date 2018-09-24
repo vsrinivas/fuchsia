@@ -488,9 +488,7 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 		linkID = sniffer.New(linkID)
 	}
 
-	f := filter.New(ns.mu.stack.PortManager)
-	linkID = filter.NewEndpoint(f, linkID)
-	ns.filter = f
+	linkID = filter.NewEndpoint(ns.filter, linkID)
 
 	linkID = ifs.statsEP.Wrap(linkID)
 

@@ -13,7 +13,12 @@ func (e Error) Error() string {
 }
 
 var (
-	ErrBadTCPState     = Error{Msg: "Bad TCP state"}
-	ErrPacketTooShort  = Error{Msg: "Packet is too short"}
-	ErrUnknownProtocol = Error{Msg: "Unknown Protocol"}
+	ErrBadTCPState        = Error{Msg: "Bad TCP state"}
+	ErrPacketTooShort     = Error{Msg: "Packet is too short"}
+	ErrUnknownProtocol    = Error{Msg: "Unknown Protocol"}
+	ErrBadProtocol        = Error{Msg: "Bad Protocol"}
+	ErrUnknownAction      = Error{Msg: "Unknown Action"}
+	ErrUnknownDirection   = Error{Msg: "Unknown Direction"}
+	ErrUnknownAddressType = Error{Msg: "Unknown Address Type"}
+	ErrBadAddress         = Error{Msg: "Bad address"}
 )

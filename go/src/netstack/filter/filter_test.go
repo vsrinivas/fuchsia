@@ -13,7 +13,7 @@ import (
 )
 
 func ruleset1() ([]*Rule, error) {
-	srcNet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
+	srcSubnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
 	if err != nil {
 		return nil, err
 	}
@@ -22,7 +22,7 @@ func ruleset1() ([]*Rule, error) {
 			action:     Drop,
 			direction:  Incoming,
 			transProto: header.TCPProtocolNumber,
-			srcNet:     &srcNet,
+			srcSubnet:  &srcSubnet,
 			srcPort:    100,
 			log:        true,
 		},
@@ -30,7 +30,7 @@ func ruleset1() ([]*Rule, error) {
 }
 
 func ruleset2() ([]*Rule, error) {
-	srcNet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
+	srcSubnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func ruleset2() ([]*Rule, error) {
 			action:     Pass,
 			direction:  Incoming,
 			transProto: header.UDPProtocolNumber,
-			srcNet:     &srcNet,
+			srcSubnet:  &srcSubnet,
 			srcPort:    100,
 			log:        true,
 		},

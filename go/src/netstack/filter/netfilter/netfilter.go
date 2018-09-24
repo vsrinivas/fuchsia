@@ -10,18 +10,18 @@ import (
 
 	"app/context"
 
-	"fidl/fuchsia/netstack"
+	"fidl/fuchsia/net/filter"
 )
 
 const commandName = "netfilter"
 
 type app struct {
-	ctx      *context.Context
-	netstack *netstack.NetstackInterface
+	ctx    *context.Context
+	filter *filter.FilterInterface
 }
 
 func (a *app) getFilterStatus() {
-	enabled, err := a.netstack.GetFilterStatus()
+	enabled, err := a.filter.IsEnabled()
 	if err != nil {
 		fmt.Println("GetFilterStatus error:", err)
 		return
@@ -36,9 +36,9 @@ func (a *app) getFilterStatus() {
 func (a *app) setFilterStatus(enableDisable string) {
 	switch enableDisable {
 	case "enable":
-		a.netstack.SetFilterStatus(true)
+		a.filter.Enable(true)
 	case "disable":
-		a.netstack.SetFilterStatus(false)
+		a.filter.Enable(false)
 	default:
 		usage()
 	}
@@ -51,12 +51,12 @@ func usage() {
 
 func main() {
 	a := &app{ctx: context.CreateFromStartupInfo()}
-	req, pxy, err := netstack.NewNetstackInterfaceRequest()
+	req, pxy, err := filter.NewFilterInterfaceRequest()
 	if err != nil {
 		panic(err.Error())
 	}
-	a.netstack = pxy
-	defer a.netstack.Close()
+	a.filter = pxy
+	defer a.filter.Close()
 	a.ctx.ConnectToEnvService(req)
 
 	// TODO: more functions to support here.

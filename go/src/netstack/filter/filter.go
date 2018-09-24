@@ -290,7 +290,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	case Outgoing:
 		if nat = f.matchNAT(header.UDPProtocolNumber, srcAddr); nat != nil {
 			if debug {
-				log.Printf("packet filter: NAT rule matched: proto: %d, srcNet: %s(%s), srcAddr: %s, nic: %d", nat.transProto, nat.srcNet.ID(), tcpip.Address(nat.srcNet.Mask()), nat.newSrcAddr, nat.nic)
+				log.Printf("packet filter: NAT rule matched: proto: %d, srcNet: %s(%s), srcAddr: %s, nic: %d", nat.transProto, nat.srcSubnet.ID(), tcpip.Address(nat.srcSubnet.Mask()), nat.newSrcAddr, nat.nic)
 			}
 			newAddr = nat.newSrcAddr
 			// Reserve a new port.
@@ -500,9 +500,9 @@ func (f *Filter) matchMain(dir Direction, transProto tcpip.TransportProtocolNumb
 	for _, r := range f.rulesetMain.v {
 		if r.direction == dir &&
 			r.transProto == transProto &&
-			(r.srcNet == nil || r.srcNet.Contains(srcAddr) != r.srcNot) &&
+			(r.srcSubnet == nil || r.srcSubnet.Contains(srcAddr) != r.srcSubnetInvertMatch) &&
 			(r.srcPort == 0 || r.srcPort == srcPort) &&
-			(r.dstNet == nil || r.dstNet.Contains(dstAddr) != r.dstNot) &&
+			(r.dstSubnet == nil || r.dstSubnet.Contains(dstAddr) != r.dstSubnetInvertMatch) &&
 			(r.dstPort == 0 || r.dstPort == dstPort) {
 			rm = r
 			if r.quick {
@@ -518,7 +518,7 @@ func (f *Filter) matchNAT(transProto tcpip.TransportProtocolNumber, srcAddr tcpi
 	defer f.rulesetNAT.RUnlock()
 	for _, r := range f.rulesetNAT.v {
 		if r.transProto == transProto &&
-			r.srcNet.Contains(srcAddr) {
+			r.srcSubnet.Contains(srcAddr) {
 			return r
 		}
 	}

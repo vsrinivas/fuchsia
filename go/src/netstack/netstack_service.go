@@ -301,15 +301,6 @@ func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, erro
 	return netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 
-func (ni *netstackImpl) SetFilterStatus(enabled bool) (result netstack.NetErr, err error) {
-	ni.ns.filter.Enable(enabled)
-	return netstack.NetErr{Status: netstack.StatusOk, Message: ""}, nil
-}
-
-func (ni *netstackImpl) GetFilterStatus() (enabled bool, err error) {
-	return ni.ns.filter.IsEnabled(), nil
-}
-
 func (ni *netstackImpl) GetAggregateStats() (stats netstack.AggregateStats, err error) {
 	s := ni.ns.mu.stack.Stats()
 	return netstack.AggregateStats{

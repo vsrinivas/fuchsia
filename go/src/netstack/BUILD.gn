@@ -119,6 +119,7 @@ go_library("netstack_lib") {
 
   deps = [
     "//garnet/public/fidl/fuchsia.devicesettings($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.net.filter($go_toolchain)",
     "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/go/third_party:github.com/google/go-cmp",

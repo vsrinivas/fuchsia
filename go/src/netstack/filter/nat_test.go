@@ -93,7 +93,7 @@ func createTestStackRouterNAT(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName, tcp.ProtocolName}, stack.Options{})
 
 	f := New(s.PortManager)
-	srcNet, terr := tcpip.NewSubnet(testLanNet, tcpip.AddressMask(testLanNetMask))
+	srcSubnet, terr := tcpip.NewSubnet(testLanNet, tcpip.AddressMask(testLanNetMask))
 	if terr != nil {
 		t.Fatalf("NewSubnet error: %s", terr)
 	}
@@ -101,12 +101,12 @@ func createTestStackRouterNAT(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 	f.rulesetNAT.v = []*NAT{
 		{
 			transProto: header.UDPProtocolNumber,
-			srcNet:     &srcNet,
+			srcSubnet:  &srcSubnet,
 			newSrcAddr: testRouterNICAddr2,
 		},
 		{
 			transProto: header.TCPProtocolNumber,
-			srcNet:     &srcNet,
+			srcSubnet:  &srcSubnet,
 			newSrcAddr: testRouterNICAddr2,
 		},
 	}

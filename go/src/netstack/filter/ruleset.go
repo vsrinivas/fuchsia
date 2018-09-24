@@ -53,26 +53,26 @@ func (action Action) String() string {
 
 // Rule describes the conditions and the action of a rule.
 type Rule struct {
-	action     Action
-	direction  Direction
-	quick      bool // If a rule with this flag enabled is matched, no more rules will be tested.
-	transProto tcpip.TransportProtocolNumber
-	srcNot     bool
-	srcNet     *tcpip.Subnet
-	srcPort    uint16
-	dstNot     bool
-	dstNet     *tcpip.Subnet
-	dstPort    uint16
-	nic        tcpip.NICID
-	log        bool
-	keepState  bool
+	action               Action
+	direction            Direction
+	quick                bool // If a rule with this flag enabled is matched, no more rules will be tested.
+	transProto           tcpip.TransportProtocolNumber
+	srcSubnet            *tcpip.Subnet
+	srcSubnetInvertMatch bool // If true, matches any address that is NOT contained in the subnet.
+	srcPort              uint16
+	dstSubnet            *tcpip.Subnet
+	dstSubnetInvertMatch bool // If true, matches any address that is NOT contained in the subnet.
+	dstPort              uint16
+	nic                  tcpip.NICID
+	log                  bool
+	keepState            bool
 }
 
 // NAT is a special rule for Network Address Translation, which rewrites
 // the address of an outgoing packet.
 type NAT struct {
 	transProto tcpip.TransportProtocolNumber
-	srcNet     *tcpip.Subnet
+	srcSubnet  *tcpip.Subnet
 	newSrcAddr tcpip.Address
 	nic        tcpip.NICID
 }
@@ -90,15 +90,18 @@ type RDR struct {
 
 type RulesetMain struct {
 	sync.RWMutex
-	v []*Rule
+	generation uint32
+	v          []*Rule
 }
 
 type RulesetNAT struct {
 	sync.RWMutex
-	v []*NAT
+	generation uint32
+	v          []*NAT
 }
 
 type RulesetRDR struct {
 	sync.RWMutex
-	v []*RDR
+	generation uint32
+	v          []*RDR
 }
