@@ -4,11 +4,11 @@
 
 #include "garnet/bin/zxdb/client/step_thread_controller.h"
 #include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/symbols/line_details.h"
-#include "garnet/bin/zxdb/client/symbols/mock_module_symbols.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/client/thread_controller_test.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/symbols/line_details.h"
+#include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 
 namespace zxdb {

@@ -8,11 +8,11 @@
 
 #include <limits>
 
-#include "garnet/bin/zxdb/client/symbols/function.h"
-#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/bin/zxdb/symbols/location.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
 

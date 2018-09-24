@@ -11,10 +11,6 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/step_over_thread_controller.h"
 #include "garnet/bin/zxdb/client/step_thread_controller.h"
-#include "garnet/bin/zxdb/client/symbols/code_block.h"
-#include "garnet/bin/zxdb/client/symbols/function.h"
-#include "garnet/bin/zxdb/client/symbols/location.h"
-#include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/client/until_thread_controller.h"
 #include "garnet/bin/zxdb/common/err.h"
@@ -30,6 +26,10 @@
 #include "garnet/bin/zxdb/console/verbs.h"
 #include "garnet/bin/zxdb/expr/expr.h"
 #include "garnet/bin/zxdb/expr/symbol_eval_context.h"
+#include "garnet/bin/zxdb/symbols/code_block.h"
+#include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/bin/zxdb/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/variable.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -336,8 +336,8 @@ Err DoNext(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  auto controller = std::make_unique<StepOverThreadController>(
-      StepMode::kSourceLine);
+  auto controller =
+      std::make_unique<StepOverThreadController>(StepMode::kSourceLine);
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);
@@ -391,8 +391,8 @@ Err DoNexti(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  auto controller = std::make_unique<StepOverThreadController>(
-      StepMode::kInstruction);
+  auto controller =
+      std::make_unique<StepOverThreadController>(StepMode::kInstruction);
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);
@@ -600,8 +600,8 @@ Err DoStep(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  auto controller = std::make_unique<StepThreadController>(
-      StepMode::kSourceLine);
+  auto controller =
+      std::make_unique<StepThreadController>(StepMode::kSourceLine);
   controller->set_stop_on_no_symbols(cmd.HasSwitch(kStepIntoUnsymbolized));
 
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
@@ -771,8 +771,8 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   }
 
   // We pass the given register name to the callback
-  auto regs_cb = [reg_name, cats = std::move(cats_to_show)](
-                     const Err& err, const RegisterSet& registers) {
+  auto regs_cb = [ reg_name, cats = std::move(cats_to_show) ](
+      const Err& err, const RegisterSet& registers) {
     OnRegsComplete(err, registers, reg_name, std::move(cats));
   };
 
@@ -943,7 +943,6 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
                   CommandGroup::kStep, SourceAffinity::kSource);
   step.switches.push_back(step_force);
   (*verbs)[Verb::kStep] = std::move(step);
-
 
   (*verbs)[Verb::kStepi] =
       VerbRecord(&DoStepi, {"stepi", "si"}, kStepiShortHelp, kStepiHelp,

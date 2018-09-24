@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "garnet/bin/zxdb/client/remote_api_test.h"
-#include "garnet/bin/zxdb/client/symbols/system_symbols.h"
+#include "garnet/bin/zxdb/symbols/system_symbols.h"
 
 namespace zxdb {
 

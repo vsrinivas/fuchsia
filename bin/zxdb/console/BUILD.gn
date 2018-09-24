@@ -99,8 +99,8 @@ source_set("tests") {
   deps = [
     ":console",
     "//garnet/bin/zxdb/client:test_support",
-    "//garnet/bin/zxdb/client/symbols:test_support",
     "//garnet/bin/zxdb/common:test_support",
+    "//garnet/bin/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
   ]
 }

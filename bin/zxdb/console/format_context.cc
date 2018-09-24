@@ -12,12 +12,12 @@
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/common/file_util.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
+#include "garnet/bin/zxdb/symbols/location.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -149,26 +149,25 @@ Err OutputSourceContext(Process* process, const Location& location,
 
     size_t size = options.max_instructions * arch_info->max_instr_len();
 
-    process->ReadMemory(start_address, size,
-                        [options, weak_process = process->GetWeakPtr()](
-                            const Err& in_err, MemoryDump dump) {
-                          if (!weak_process)
-                            return;  // Give up when the process went away.
+    process->ReadMemory(
+        start_address, size, [ options, weak_process = process->GetWeakPtr() ](
+                                 const Err& in_err, MemoryDump dump) {
+          if (!weak_process)
+            return;  // Give up when the process went away.
 
-                          Console* console = Console::get();
-                          if (in_err.has_error()) {
-                            console->Output(in_err);
-                            return;
-                          }
-                          OutputBuffer out;
-                          Err err = FormatAsmContext(
-                              weak_process->session()->arch_info(), dump,
-                              options, &out);
-                          if (err.has_error())
-                            console->Output(err);
-                          else
-                            console->Output(out);
-                        });
+          Console* console = Console::get();
+          if (in_err.has_error()) {
+            console->Output(in_err);
+            return;
+          }
+          OutputBuffer out;
+          Err err = FormatAsmContext(weak_process->session()->arch_info(), dump,
+                                     options, &out);
+          if (err.has_error())
+            console->Output(err);
+          else
+            console->Output(out);
+        });
   }
   return Err();
 }

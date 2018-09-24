@@ -87,9 +87,9 @@ static_library("client") {
   ]
 
   public_deps = [
-    "symbols",
     "//garnet/bin/zxdb/common",
     "//garnet/bin/zxdb/expr",
+    "//garnet/bin/zxdb/symbols",
     "//garnet/lib/debug_ipc:client",
     "//garnet/lib/debug_ipc/helper",
     "//garnet/public/lib/fxl",
@@ -120,7 +120,7 @@ source_set("test_support") {
 
   public_deps = [
     ":client",
-    "symbols:test_support",
+    "//garnet/bin/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
   ]
 }
@@ -147,8 +147,8 @@ source_set("tests") {
   deps = [
     ":client",
     ":test_support",
-    "symbols:test_support",
-    "symbols:tests",
+    "//garnet/bin/zxdb/symbols:test_support",
+    "//garnet/bin/zxdb/symbols:tests",
     "//third_party/googletest:gtest",
   ]
 }

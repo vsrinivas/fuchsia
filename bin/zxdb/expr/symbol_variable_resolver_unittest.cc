@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
-#include "garnet/bin/zxdb/client/symbols/base_type.h"
-#include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
-#include "garnet/bin/zxdb/client/symbols/symbol_context.h"
-#include "garnet/bin/zxdb/client/symbols/type_test_support.h"
-#include "garnet/bin/zxdb/client/symbols/variable_test_support.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/symbols/base_type.h"
+#include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
+#include "garnet/bin/zxdb/symbols/symbol_context.h"
+#include "garnet/bin/zxdb/symbols/type_test_support.h"
+#include "garnet/bin/zxdb/symbols/variable_test_support.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
 #include "llvm/BinaryFormat/Dwarf.h"

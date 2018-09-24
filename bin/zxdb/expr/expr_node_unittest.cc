@@ -5,13 +5,6 @@
 #include <map>
 #include <type_traits>
 
-#include "garnet/bin/zxdb/client/symbols/base_type.h"
-#include "garnet/bin/zxdb/client/symbols/code_block.h"
-#include "garnet/bin/zxdb/client/symbols/data_member.h"
-#include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
-#include "garnet/bin/zxdb/client/symbols/modified_type.h"
-#include "garnet/bin/zxdb/client/symbols/struct_class.h"
-#include "garnet/bin/zxdb/client/symbols/type_test_support.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/common/test_with_loop.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
@@ -19,6 +12,13 @@
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/symbol_eval_context.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
+#include "garnet/bin/zxdb/symbols/base_type.h"
+#include "garnet/bin/zxdb/symbols/code_block.h"
+#include "garnet/bin/zxdb/symbols/data_member.h"
+#include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
+#include "garnet/bin/zxdb/symbols/modified_type.h"
+#include "garnet/bin/zxdb/symbols/struct_class.h"
+#include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
 

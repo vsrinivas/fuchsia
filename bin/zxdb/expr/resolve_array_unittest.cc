@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/expr/resolve_array.h"
-#include "garnet/bin/zxdb/client/symbols/base_type.h"
-#include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/common/test_with_loop.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/symbols/base_type.h"
+#include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {

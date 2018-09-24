@@ -7,15 +7,15 @@
 #include <inttypes.h>
 
 #include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/symbols/function.h"
-#include "garnet/bin/zxdb/client/symbols/location.h"
-#include "garnet/bin/zxdb/client/symbols/value.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_value.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
+#include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/bin/zxdb/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/value.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -96,9 +96,12 @@ void FormatFrameLong(const Frame* frame, FormatValue* out,
     out->Append(DescribeLocation(location, false));
 
   // Long format includes the IP address.
-  out->Append(OutputBuffer(Syntax::kComment, fxl::StringPrintf(
-      "\n      IP = 0x%" PRIx64 ", BP = 0x%" PRIx64 ", SP = 0x%" PRIx64,
-      frame->GetAddress(), frame->GetBasePointer(), frame->GetStackPointer())));
+  out->Append(OutputBuffer(
+      Syntax::kComment,
+      fxl::StringPrintf("\n      IP = 0x%" PRIx64 ", BP = 0x%" PRIx64
+                        ", SP = 0x%" PRIx64,
+                        frame->GetAddress(), frame->GetBasePointer(),
+                        frame->GetStackPointer())));
 
   if (location.function()) {
     const Function* func = location.function().Get()->AsFunction();

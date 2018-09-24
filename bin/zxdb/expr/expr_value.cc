@@ -4,8 +4,8 @@
 
 #include "garnet/bin/zxdb/expr/expr_value.h"
 
-#include "garnet/bin/zxdb/client/symbols/base_type.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/symbols/base_type.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

@@ -8,16 +8,16 @@
 
 #include <ostream>
 
-#include "garnet/bin/zxdb/client/symbols/array_type.h"
-#include "garnet/bin/zxdb/client/symbols/base_type.h"
-#include "garnet/bin/zxdb/client/symbols/modified_type.h"
-#include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/resolve_member.h"
 #include "garnet/bin/zxdb/expr/resolve_pointer.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
+#include "garnet/bin/zxdb/symbols/array_type.h"
+#include "garnet/bin/zxdb/symbols/base_type.h"
+#include "garnet/bin/zxdb/symbols/modified_type.h"
+#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

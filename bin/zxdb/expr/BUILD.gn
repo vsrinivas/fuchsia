@@ -30,8 +30,8 @@ static_library("expr") {
   ]
 
   public_deps = [
-    "//garnet/bin/zxdb/client/symbols",
     "//garnet/bin/zxdb/common",
+    "//garnet/bin/zxdb/symbols",
     "//garnet/public/lib/fxl",
   ]
 }
@@ -52,8 +52,8 @@ source_set("tests") {
 
   deps = [
     ":expr",
-    "//garnet/bin/zxdb/client/symbols:test_support",
     "//garnet/bin/zxdb/common:test_support",
+    "//garnet/bin/zxdb/symbols:test_support",
     "//garnet/third_party/llvm:LLVMBinaryFormat",
     "//third_party/googletest:gtest",
   ]

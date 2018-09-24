@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <string>
 
-#include "garnet/bin/zxdb/client/symbols/file_line.h"
+#include "garnet/bin/zxdb/symbols/file_line.h"
 
 namespace zxdb {
 

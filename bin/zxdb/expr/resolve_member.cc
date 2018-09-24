@@ -4,14 +4,14 @@
 
 #include "garnet/bin/zxdb/expr/resolve_member.h"
 
-#include "garnet/bin/zxdb/client/symbols/data_member.h"
-#include "garnet/bin/zxdb/client/symbols/modified_type.h"
-#include "garnet/bin/zxdb/client/symbols/struct_class.h"
-#include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
-#include "garnet/bin/zxdb/client/symbols/type_utils.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/resolve_pointer.h"
+#include "garnet/bin/zxdb/symbols/data_member.h"
+#include "garnet/bin/zxdb/symbols/modified_type.h"
+#include "garnet/bin/zxdb/symbols/struct_class.h"
+#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
+#include "garnet/bin/zxdb/symbols/type_utils.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

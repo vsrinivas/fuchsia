@@ -4,10 +4,10 @@
 
 #include "garnet/bin/zxdb/expr/resolve_array.h"
 
-#include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
-#include "garnet/bin/zxdb/client/symbols/type.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
+#include "garnet/bin/zxdb/symbols/type.h"
 
 namespace zxdb {
 

@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/client/mock_frame.h"
-#include "garnet/bin/zxdb/client/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/location.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {

@@ -5,7 +5,7 @@
 #pragma once
 
 #include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/memory/ref_counted.h"
 

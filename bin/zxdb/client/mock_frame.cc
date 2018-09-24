@@ -4,8 +4,8 @@
 
 #include "garnet/bin/zxdb/client/mock_frame.h"
 
-#include "garnet/bin/zxdb/client/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/expr/symbol_eval_context.h"
+#include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
 
 namespace zxdb {
 

@@ -4,15 +4,15 @@
 
 #include "garnet/bin/zxdb/expr/symbol_eval_context.h"
 
-#include "garnet/bin/zxdb/client/symbols/code_block.h"
-#include "garnet/bin/zxdb/client/symbols/function.h"
-#include "garnet/bin/zxdb/client/symbols/location.h"
-#include "garnet/bin/zxdb/client/symbols/modified_type.h"
-#include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
-#include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/resolve_pointer.h"
+#include "garnet/bin/zxdb/symbols/code_block.h"
+#include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/bin/zxdb/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/modified_type.h"
+#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
+#include "garnet/bin/zxdb/symbols/variable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 

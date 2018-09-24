@@ -4,11 +4,11 @@
 
 #include "garnet/bin/zxdb/expr/resolve_pointer.h"
 
-#include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
-#include "garnet/bin/zxdb/client/symbols/type.h"
-#include "garnet/bin/zxdb/client/symbols/type_utils.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
+#include "garnet/bin/zxdb/symbols/type.h"
+#include "garnet/bin/zxdb/symbols/type_utils.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

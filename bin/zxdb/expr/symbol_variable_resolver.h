@@ -7,7 +7,7 @@
 #include <functional>
 #include <vector>
 
-#include "garnet/bin/zxdb/client/symbols/dwarf_expr_eval.h"
+#include "garnet/bin/zxdb/symbols/dwarf_expr_eval.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {

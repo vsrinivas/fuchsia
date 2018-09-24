@@ -6,7 +6,7 @@
 
 #include "garnet/bin/zxdb/client/breakpoint_impl.h"
 #include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/symbols/process_symbols.h"
+#include "garnet/bin/zxdb/symbols/process_symbols.h"
 
 namespace zxdb {
 

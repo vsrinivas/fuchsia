@@ -9,7 +9,7 @@
 #include <map>
 #include <memory>
 
-#include "garnet/bin/zxdb/client/symbols/process_symbols_impl.h"
+#include "garnet/bin/zxdb/symbols/process_symbols_impl.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 

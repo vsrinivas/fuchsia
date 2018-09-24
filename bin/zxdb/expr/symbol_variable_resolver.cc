@@ -8,12 +8,12 @@
 
 #include <algorithm>
 
-#include "garnet/bin/zxdb/client/symbols/symbol_context.h"
-#include "garnet/bin/zxdb/client/symbols/symbol_data_provider.h"
-#include "garnet/bin/zxdb/client/symbols/type.h"
-#include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/resolve_pointer.h"
+#include "garnet/bin/zxdb/symbols/symbol_context.h"
+#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
+#include "garnet/bin/zxdb/symbols/type.h"
+#include "garnet/bin/zxdb/symbols/variable.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -80,13 +80,12 @@ void SymbolVariableResolver::ResolveVariable(
                                   var->GetAssignedName().c_str());
     } else {
       // There are locations but none of them match the current IP.
-      err_str = fxl::StringPrintf("The variable '%s' is not available at this address. ",
-                                  var->GetAssignedName().c_str());
+      err_str = fxl::StringPrintf(
+          "The variable '%s' is not available at this address. ",
+          var->GetAssignedName().c_str());
       err_str += DescribeLocationMissError(symbol_context, ip, var->location());
     }
-    OnComplete(
-        Err(ErrType::kOptimizedOut, std::move(err_str)),
-        ExprValue());
+    OnComplete(Err(ErrType::kOptimizedOut, std::move(err_str)), ExprValue());
     return;
   }
 

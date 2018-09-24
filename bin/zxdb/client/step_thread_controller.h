@@ -6,9 +6,9 @@
 
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/client/step_mode.h"
-#include "garnet/bin/zxdb/client/symbols/file_line.h"
 #include "garnet/bin/zxdb/client/thread_controller.h"
 #include "garnet/bin/zxdb/common/address_range.h"
+#include "garnet/bin/zxdb/symbols/file_line.h"
 
 namespace zxdb {
 
@@ -35,9 +35,7 @@ class StepThreadController : public ThreadController {
   //
   // This only affects "step by line" mode which is symbol-aware.
   bool stop_on_no_symbols() const { return stop_on_no_symbols_; }
-  void set_stop_on_no_symbols(bool stop) {
-    stop_on_no_symbols_ = stop;
-  }
+  void set_stop_on_no_symbols(bool stop) { stop_on_no_symbols_ = stop; }
 
   // ThreadController implementation.
   void InitWithThread(Thread* thread,

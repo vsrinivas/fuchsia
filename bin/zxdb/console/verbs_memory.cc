@@ -13,7 +13,6 @@
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/common/err.h"
@@ -25,6 +24,7 @@
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/memory_format.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/symbols/location.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -444,12 +444,11 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
 
   // Schedule memory request.
   Process* process = cmd.target()->GetProcess();
-  process->ReadMemory(address, size,
-                      [options, process = process->GetWeakPtr()](
-                          const Err& err, MemoryDump dump) {
-                        CompleteDisassemble(err, std::move(dump),
-                                            std::move(process), options);
-                      });
+  process->ReadMemory(
+      address, size, [ options, process = process->GetWeakPtr() ](
+                         const Err& err, MemoryDump dump) {
+        CompleteDisassemble(err, std::move(dump), std::move(process), options);
+      });
   return Err();
 }
 

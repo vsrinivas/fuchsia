@@ -6,9 +6,9 @@
 
 #include <vector>
 
-#include "garnet/bin/zxdb/client/symbols/symbol_context.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
+#include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {

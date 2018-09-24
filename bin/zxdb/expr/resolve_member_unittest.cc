@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/expr/resolve_member.h"
-#include "garnet/bin/zxdb/client/symbols/base_type.h"
-#include "garnet/bin/zxdb/client/symbols/data_member.h"
-#include "garnet/bin/zxdb/client/symbols/modified_type.h"
-#include "garnet/bin/zxdb/client/symbols/struct_class.h"
-#include "garnet/bin/zxdb/client/symbols/type_test_support.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/symbols/base_type.h"
+#include "garnet/bin/zxdb/symbols/data_member.h"
+#include "garnet/bin/zxdb/symbols/modified_type.h"
+#include "garnet/bin/zxdb/symbols/struct_class.h"
+#include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {

@@ -8,10 +8,10 @@
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/step_thread_controller.h"
-#include "garnet/bin/zxdb/client/symbols/line_details.h"
-#include "garnet/bin/zxdb/client/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/symbols/line_details.h"
+#include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "lib/fxl/logging.h"
 
 namespace zxdb {

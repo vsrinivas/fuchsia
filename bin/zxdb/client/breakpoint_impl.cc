@@ -12,14 +12,14 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/symbols/loaded_module_symbols.h"
-#include "garnet/bin/zxdb/client/symbols/module_symbols.h"
-#include "garnet/bin/zxdb/client/symbols/process_symbols.h"
-#include "garnet/bin/zxdb/client/symbols/target_symbols.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
+#include "garnet/bin/zxdb/symbols/module_symbols.h"
+#include "garnet/bin/zxdb/symbols/process_symbols.h"
+#include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 
 namespace zxdb {

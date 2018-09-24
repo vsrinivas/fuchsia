@@ -5,8 +5,8 @@
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 
 #include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
+#include "garnet/bin/zxdb/symbols/location.h"
 
 namespace zxdb {
 
