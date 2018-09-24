@@ -138,8 +138,21 @@ while true; do
     if [[ "$state" == "discover" || "$state" == "discover1" ]]; then
       log "SSH Tunnel connecting to ${device_addr}..."
       if fx-command-run ssh -f -o LogLevel=ERROR -o ExitOnForwardFailure=yes -R 8083:localhost:8083 "${device_addr}" "echo -n"; then
+        log "Tunnel up"
+        state="config"
+      fi
+
+      sleep 1
+    fi
+
+    if [[ "$state" == "config" ]]; then
+      log "Registering target's localhost as update source"
+      if fx-command-run add-update-source --type=localhost --disable-source=devhost $device_arg; then
         log "Ready to push packages!"
         state="ready"
+      else
+        log "Device lost while configuring update source"
+        state="discover"
       fi
 
       sleep 1
@@ -179,7 +192,7 @@ while true; do
 
     if [[ "$state" == "config" ]]; then
       log "Registering devhost as update source"
-      if fx-command-run add-update-source --remove-localhost $device_arg; then
+      if fx-command-run add-update-source --disable-source=localhost $device_arg; then
         log "Ready to push packages!"
         state="ready"
       else

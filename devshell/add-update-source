@@ -5,12 +5,19 @@
 
 ### register dev host as target's update source
 
-## usage: fx add-update-source [--name=NAME] [--device=hostname] [--remove-localhost]
+## usage: fx add-update-source [--type=TYPE] [--name=NAME] [--device=hostname] [--disable-source=NAME]
 ##
-## Configure target device to use the dev host as its update source.
-## Register a new update source using the dev host's address as seen from a
-## target fuchsia device.  Also, if requested, remove any "localhost" update
-## source that requires an active ssh tunnel.
+## Configure target device to use a new update source.
+##
+## When --type is devhost (the default), configure the target to use the dev
+## host's address as seen from the target fuchsia device.
+##
+## When --type is localhost, configure the target to use 127.0.0.1 as its
+## update source.
+##
+## --name=NAME           Name the generated update source config NAME. Defaults to the config type.
+## --device=hostname     Configure the given device.
+## --disable-source=NAME Disable the update source with NAME after adding the new update source.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -23,12 +30,17 @@ function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
-  source_name="devhost"
+  config_type="devhost"
+  source_name=""
   device_name=""
   device_arg=""
-  remove_localhost=false
+  disable_source=""
   while [[ $# -ne 0 ]]; do
     case "$1" in
+      --type)
+        config_type="$2"
+        shift
+        ;;
       --name)
         source_name="$2"
         shift
@@ -38,8 +50,13 @@ function main {
         device_arg="-d $2"
         shift
         ;;
+      --disable-source)
+        disable_source="$2"
+        shift
+        ;;
       --remove-localhost)
-        remove_localhost=true
+        # Legacy option, equivalent to --disable-source=localhost
+        disable_source="localhost"
         ;;
       *)
         echo >&2 "Unrecognized option: $1"
@@ -48,6 +65,10 @@ function main {
     esac
     shift
   done
+
+  if [[ -z "${source_name}" ]]; then
+    source_name="${config_type}"
+  fi
 
   if ! [[ -x "$(command -v shasum)" ]]; then
     echo >&2 "'shasum' binary not found"
@@ -68,16 +89,25 @@ function main {
     exit 1
   fi
 
-  config_dir="${repository_dir}/devhost"
+  config_dir="${repository_dir}/${source_name}"
   mkdir -p "${config_dir}"
   config_path="${config_dir}/config.json"
-  config_url="http://[${device_addr}]:8083/devhost/config.json"
+  config_url="http://[${device_addr}]:8083/${source_name}/config.json"
+
+  if [[ "${config_type}" == "devhost" ]]; then
+    repo_url="http://[${device_addr}]:8083"
+  elif [[ "${config_type}" == "localhost" ]]; then
+    repo_url="http://127.0.0.1:8083"
+  else
+    echo >&2 "Unknown config type. Valid options: devhost, localhost"
+    exit 1
+  fi
 
   "${FUCHSIA_DIR}/scripts/generate-update-source-config.py" \
     --build-dir="${FUCHSIA_BUILD_DIR}" \
     --name="${source_name}" \
-    --repo-url="http://[${device_addr}]:8083" \
-    --blobs-url="http://[${device_addr}]:8083/blobs" \
+    --repo-url="${repo_url}" \
+    --blobs-url="${repo_url}/blobs" \
     --output "${config_path}" \
     || exit $?
 
@@ -98,8 +128,9 @@ function main {
     exit 1
   fi
 
-  if $remove_localhost; then
-    fx-command-run shell $device_arg amber_ctl rm_src -n localhost 2>/dev/null || true
+  if [[ -n "${disable_source}" ]]; then
+    # Best effort, don't show status or fail on error
+    fx-command-run shell $device_arg amber_ctl disable_src -n "${disable_source}" >/dev/null 2>/dev/null || true
   fi
 }
 
