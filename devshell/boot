@@ -203,10 +203,6 @@ esac
 
 if $add_fvm; then
   disks=("${disks[@]}" --fvm "${fuchsia_dir}/${IMAGE_FVM_SPARSE}")
-
-  if [[ -s "${fuchsia_dir}/${IMAGE_DATA_FVM_RAW}" ]]; then
-    disks=("${disks[@]}" --fvm "${fuchsia_dir}/${IMAGE_DATA_FVM_RAW}")
-  fi
 fi
 
 exec "${zircon_tools}/bootserver" \
