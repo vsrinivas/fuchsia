@@ -9,6 +9,7 @@ import (
 	"fidl/compiler/backend/types"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 )
 
@@ -645,7 +646,16 @@ func Compile(r types.Root) Root {
 	}
 
 	thisLibCompiled := compileLibraryName(thisLibParsed)
+
+	// Sort the extern crates to make sure the generated file is
+	// consistent across builds.
+	var externCrates []string
 	for k, _ := range c.externCrates {
+		externCrates = append(externCrates, k)
+	}
+	sort.Strings(externCrates)
+
+	for _, k := range externCrates {
 		if k != thisLibCompiled {
 			root.ExternCrates = append(root.ExternCrates, k)
 		}
