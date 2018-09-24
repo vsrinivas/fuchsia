@@ -14,6 +14,7 @@ BOOT_SHIM_SRCS := \
     $(BOOT_SHIM_DIR)/debug.c \
     $(BOOT_SHIM_DIR)/devicetree.c \
     $(BOOT_SHIM_DIR)/util.c \
+    $(BOOT_SHIM_DIR)/$(PLATFORM_BOARD_NAME)-uart.c \
     kernel/lib/libc/string/memcpy.c \
     kernel/lib/libc/string/memmove.c \
     kernel/lib/libc/string/memset.c \
