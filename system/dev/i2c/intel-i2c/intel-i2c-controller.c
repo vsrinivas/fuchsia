@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/i2c.h>
 #include <hw/reg.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -42,7 +43,72 @@
 #define STOP_DETECTED_SIGNAL ZX_USER_SIGNAL_2
 #define ERROR_DETECTED_SIGNAL ZX_USER_SIGNAL_3
 
+// More than enough
+#define MAX_TRANSFER_SIZE (UINT16_MAX - 1)
+
 // Implement the functionality of the i2c bus device.
+
+static zx_status_t intel_i2c_transact(void* ctx, i2c_op_t ops[], size_t cnt,
+                                      i2c_transact_cb transact_cb, void* cookie) {
+    intel_serialio_i2c_slave_device_t* slave = ctx;
+    i2c_slave_segment_t segs[I2C_MAX_RW_OPS];
+    if (cnt >= I2C_MAX_RW_OPS) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    uint8_t* read_buffer = malloc(MAX_TRANSFER_SIZE);
+    if (read_buffer == NULL) {
+        zxlogf(ERROR, "intel-i2c-controller: out of memory\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+    uint8_t* p_reads = read_buffer;
+    for (size_t i = 0; i < cnt; ++i) {
+        if (ops[i].is_read) {
+            segs[i].buf = p_reads;
+            segs[i].type = I2C_SEGMENT_TYPE_READ;
+            p_reads += ops[i].length;
+            if (p_reads - read_buffer > MAX_TRANSFER_SIZE) {
+                free(read_buffer);
+                return ZX_ERR_INVALID_ARGS;
+            }
+        } else {
+            segs[i].buf = ops[i].buf;
+            segs[i].type = I2C_SEGMENT_TYPE_WRITE;
+        }
+        segs[i].len = ops[i].length;
+    }
+    zx_status_t status = intel_serialio_i2c_slave_transfer(slave, segs, cnt);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "intel-i2c-controller: intel_serialio_i2c_slave_transfer: %d\n", status);
+        free(read_buffer);
+        return status;
+    }
+    if (transact_cb) {
+        i2c_op_t read_ops[I2C_MAX_RW_OPS];
+        size_t read_ops_cnt = 0;
+        uint8_t* p_reads = read_buffer;
+        for (size_t i = 0; i < cnt; ++i) {
+            if (ops[i].is_read) {
+                read_ops[read_ops_cnt] = ops[i];
+                read_ops[read_ops_cnt].buf = p_reads;
+                read_ops_cnt++;
+                p_reads += ops[i].length;
+            }
+        }
+        transact_cb(status, read_ops, read_ops_cnt, cookie);
+    }
+    free(read_buffer);
+    return status;
+}
+
+static zx_status_t intel_i2c_get_max_transfer_size(void* ctx, size_t* out_size) {
+    *out_size = MAX_TRANSFER_SIZE;
+    return ZX_OK;
+}
+
+i2c_protocol_ops_t i2c_protocol_ops = {
+    .transact = intel_i2c_transact,
+    .get_max_transfer_size = intel_i2c_get_max_transfer_size,
+};
 
 static uint32_t chip_addr_mask(int width) {
     return ((1 << width) - 1);
@@ -134,7 +200,7 @@ static zx_status_t intel_serialio_i2c_add_slave(intel_serialio_i2c_device_t* dev
     };
     snprintf(name, sizeof(name) - 1, "%04x", address);
 
-   device_add_args_t args = {
+    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = slave,
@@ -144,11 +210,14 @@ static zx_status_t intel_serialio_i2c_add_slave(intel_serialio_i2c_device_t* dev
         .prop_count = count,
     };
 
+    if (protocol_id == ZX_PROTOCOL_I2C) {
+        args.proto_ops = &i2c_protocol_ops;
+    }
+
     status = device_add(device->zxdev, &args, &slave->zxdev);
     if (status != ZX_OK) {
         goto fail;
     }
-
     return ZX_OK;
 
 fail:
@@ -881,7 +950,7 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
     char name[ZX_DEVICE_NAME_MAX];
     snprintf(name, sizeof(name), "i2c-bus-%04x", device_id);
 
-   device_add_args_t args = {
+    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = device,

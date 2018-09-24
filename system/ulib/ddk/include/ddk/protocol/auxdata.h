@@ -10,7 +10,7 @@
 
 __BEGIN_CDECLS;
 
-#define AUXDATA_MAX_DEVPROPS 4
+#define AUXDATA_MAX_DEVPROPS 5
 
 typedef struct {
     // i2c bus config

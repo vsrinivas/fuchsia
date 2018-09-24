@@ -22,3 +22,6 @@ typedef struct intel_serialio_i2c_slave_device {
 
 // device protocol for a slave device
 extern zx_protocol_device_t intel_serialio_i2c_slave_device_proto;
+
+zx_status_t intel_serialio_i2c_slave_transfer(
+    intel_serialio_i2c_slave_device_t* slave, i2c_slave_segment_t *segments, int segment_count);

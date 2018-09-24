@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+
 #include <zircon/device/audio-codec.h>
 #include <zircon/device/i2c.h>
 #include <zircon/assert.h>
@@ -17,58 +18,26 @@ namespace audio {
 namespace alc5514 {
 
 uint32_t Alc5514Device::ReadReg(uint32_t addr) {
+    uint32_t buf = htobe32(addr);
     uint32_t val = 0;
-
-    // segments followed by write data (address)
-    struct {
-        i2c_slave_ioctl_segment_t segs[3];
-        uint32_t addr;
-    } __PACKED msg;
-    msg.segs[0].type = I2C_SEGMENT_TYPE_WRITE;
-    msg.segs[0].len = sizeof(addr);
-    msg.segs[1].type = I2C_SEGMENT_TYPE_READ;
-    msg.segs[1].len = sizeof(val);
-    msg.segs[2].type = I2C_SEGMENT_TYPE_END;
-    msg.segs[2].len = 0;
-    msg.addr = htobe32(addr);
-
-    size_t actual = 0;
-    zx_status_t st = device_ioctl(parent(), IOCTL_I2C_SLAVE_TRANSFER, &msg, sizeof(msg),
-                                  &val, sizeof(val), &actual);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "alc5514: register 0x%08x read failed (err %d)\n", addr, st);
-        return 0;
-    }
-    if (actual != sizeof(val)) {
-        zxlogf(ERROR, "alc5514: register 0x%08x read unexpected length (got %zu, expected %zu)\n",
-                      addr, actual, sizeof(val));
-        return 0;
+    zx_status_t status = i2c_write_read_sync(&i2c_, &buf, sizeof(buf), &val, sizeof(val));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "alc5514: could not read reg addr: 0x%08x  status: %d\n", addr, status);
+        return -1;
     }
 
     zxlogf(SPEW, "alc5514: register 0x%08x read 0x%08x\n", addr, betoh32(val));
-
     return betoh32(val);
 }
 
 void Alc5514Device::WriteReg(uint32_t addr, uint32_t val) {
-    // segments followed by write data (address and val)
-    struct {
-        i2c_slave_ioctl_segment_t segs[2];
-        uint32_t addr;
-        uint32_t val;
-    } __PACKED msg;
-    msg.segs[0].type = I2C_SEGMENT_TYPE_WRITE;
-    msg.segs[0].len = sizeof(addr) + sizeof(val);
-    msg.segs[1].type = I2C_SEGMENT_TYPE_END;
-    msg.segs[1].len = 0;
-    msg.addr = htobe32(addr);
-    msg.val = htobe32(val);
-
-    size_t actual = 0;
-    zx_status_t st = device_ioctl(parent(), IOCTL_I2C_SLAVE_TRANSFER, &msg, sizeof(msg),
-                                  NULL, 0, &actual);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "alc5514: register 0x%08x write failed (err %d)\n", addr, st);
+    uint32_t buf[2];
+    buf[0] = htobe32(addr);
+    buf[1] = htobe32(val);
+    zx_status_t status = i2c_write_sync(&i2c_, buf, sizeof(buf));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "alc5514: could not write reg addr/val: 0x%08x/0x%08x status: %d\n", addr,
+               val, status);
     }
 
     zxlogf(SPEW, "alc5514: register 0x%08x write 0x%08x\n", addr, val);
@@ -250,7 +219,13 @@ zx_status_t Alc5514Device::Initialize() {
 }
 
 zx_status_t Alc5514Device::Bind() {
-    zx_status_t st = Initialize();
+    zx_status_t st = device_get_protocol(parent(), ZX_PROTOCOL_I2C, &i2c_);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "alc5514: could not get I2C protocol: %d\n", st);
+        return st;
+    }
+
+    st = Initialize();
     if (st != ZX_OK) {
         return st;
     }

@@ -21,6 +21,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
 

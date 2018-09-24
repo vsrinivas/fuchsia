@@ -7,6 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/hidbus.h>
+#include <ddk/protocol/i2c.h>
 
 #include <zircon/assert.h>
 #include <zircon/types.h>
@@ -149,30 +150,33 @@ static zx_status_t i2c_hid_get_descriptor(void* ctx, uint8_t desc_type,
     i2c_hid_device_t* hid = ctx;
     size_t desc_len = letoh16(hid->hiddesc->wReportDescLength);
     uint16_t desc_reg = letoh16(hid->hiddesc->wReportDescRegister);
-
-    uint8_t buf[3 * sizeof(i2c_slave_ioctl_segment_t) + 2];
-    uint8_t* bufdata = i2c_hid_prepare_write_read_buffer(buf, 2, desc_len);
-    *bufdata++ = desc_reg & 0xff;
-    *bufdata++ = (desc_reg >> 8 ) & 0xff;
-
+    uint16_t buf = htole16(desc_reg);
     uint8_t* out = malloc(desc_len);
     if (out == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
-    size_t actual = 0;
+    i2c_protocol_t i2c;
+    zx_status_t status;
+    status = device_get_protocol(hid->i2cdev, ZX_PROTOCOL_I2C, &i2c);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i2c-hid: could not get I2C protocol: %d\n", status);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     mtx_lock(&hid->i2c_lock);
     i2c_wait_for_ready_locked(hid);
-    zx_status_t status = device_ioctl(hid->i2cdev, IOCTL_I2C_SLAVE_TRANSFER,
-                                      buf, sizeof(buf), out, desc_len, &actual);
+
+    status = i2c_write_read_sync(&i2c, &buf, sizeof(uint16_t), out, desc_len);
     mtx_unlock(&hid->i2c_lock);
     if (status < 0) {
-        zxlogf(ERROR, "i2c-hid: could not read HID report descriptor: %d\n", status);
+        zxlogf(ERROR, "i2c-hid: could not read HID report descriptor from reg 0x%04x: %d\n",
+               desc_reg, status);
         free(out);
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     *data = out;
-    *len = actual;
+    *len = desc_len;
     return ZX_OK;
 }
 
@@ -428,17 +432,22 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev) {
 
     // Read the i2c HID descriptor
     // TODO: get the address out of ACPI
-    uint8_t buf[3 * sizeof(i2c_slave_ioctl_segment_t) + 2];
-    uint8_t* data = i2c_hid_prepare_write_read_buffer(buf, 2, 4);
+    uint8_t buf[2];
+    uint8_t* data = buf;
     *data++ = 0x01;
     *data++ = 0x00;
     uint8_t out[4];
-    size_t actual = 0;
-    zx_status_t ret = device_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), out, sizeof(out), &actual);
-    if (ret < 0 || actual != sizeof(out)) {
-        zxlogf(ERROR, "i2c-hid: could not read HID descriptor: %d\n", ret);
+    i2c_protocol_t i2c;
+    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_I2C, &i2c);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i2c-hid: could not get I2C protocol: %d\n", status);
         return ZX_ERR_NOT_SUPPORTED;
     }
+    if (i2c_write_read_sync(&i2c, buf, sizeof(buf), out, sizeof(out)) != ZX_OK) {
+        zxlogf(ERROR, "i2c-hid: could not read HID descriptor: %d\n", status);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     i2c_hid_desc_t* i2c_hid_desc_hdr = (i2c_hid_desc_t*)out;
     uint16_t desc_len = letoh16(i2c_hid_desc_hdr->wHIDDescLength);
 
@@ -455,11 +464,8 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev) {
     // reset the device in the IRQ thread.
     i2chid->i2c_pending_reset = true;
 
-    i2c_hid_prepare_write_read_buffer(buf, 2, desc_len);
-    actual = 0;
-    ret = device_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), i2chid->hiddesc, desc_len, &actual);
-    if (ret < 0 || actual != desc_len) {
-        zxlogf(ERROR, "i2c-hid: could not read HID descriptor: %d\n", ret);
+    if (i2c_write_read_sync(&i2c, buf, sizeof(buf), i2chid->hiddesc, desc_len) != ZX_OK) {
+        zxlogf(ERROR, "i2c-hid: could not read HID descriptor: %d\n", status);
         free(i2chid->hiddesc);
         free(i2chid);
         return ZX_ERR_NOT_SUPPORTED;
@@ -487,7 +493,7 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev) {
         .proto_ops = &i2c_hidbus_ops,
     };
 
-    zx_status_t status = device_add(i2chid->i2cdev, &args, NULL);
+    status = device_add(i2chid->i2cdev, &args, NULL);
     if (status != ZX_OK) {
         zxlogf(ERROR, "i2c-hid: could not add device: %d\n", status);
         free(i2chid->hiddesc);
@@ -496,11 +502,13 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev) {
     }
 
     zx_handle_t irq;
+    size_t actual;
     status = device_ioctl(dev, IOCTL_I2C_SLAVE_IRQ, NULL, 0, &irq, sizeof(irq), &actual);
     if (status == ZX_OK && actual == sizeof(irq)) {
         i2chid->irq = irq;
     }
 
+    int ret;
     if (i2chid->irq) {
         ret = thrd_create_with_name(&i2chid->irq_thread, i2c_hid_irq_thread, i2chid, "i2c-hid-irq");
     } else {
@@ -523,6 +531,7 @@ static zx_driver_ops_t i2c_hid_driver_ops = {
     .bind = i2c_hid_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(i2c_hid, i2c_hid_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_I2C_HID),
+ZIRCON_DRIVER_BEGIN(i2c_hid, i2c_hid_driver_ops, "zircon", "0.1", 2)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_MATCH_IF(EQ, BIND_I2C_CLASS, I2C_CLASS_HID),
 ZIRCON_DRIVER_END(i2c_hid)

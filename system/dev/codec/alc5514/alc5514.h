@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/audio-codec.h>
 #include <zircon/types.h>
@@ -39,6 +40,8 @@ private:
     uint32_t ReadReg(uint32_t addr);
     void WriteReg(uint32_t addr, uint32_t val);
     void UpdateReg(uint32_t addr, uint32_t mask, uint32_t bits);
+
+    i2c_protocol_t i2c_;
 };
 
 }  // namespace alc5514

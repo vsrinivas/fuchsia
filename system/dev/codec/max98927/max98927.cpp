@@ -16,97 +16,48 @@ namespace audio {
 namespace max98927 {
 
 uint8_t Max98927Device::ReadReg(uint16_t addr) {
+    uint16_t buf = htobe16(addr);
     uint8_t val = 0;
-
-    // segments followed by write data (address)
-    struct {
-        i2c_slave_ioctl_segment_t segs[3];
-        uint16_t addr;
-    } __PACKED msg;
-    msg.segs[0].type = I2C_SEGMENT_TYPE_WRITE;
-    msg.segs[0].len = sizeof(addr);
-    msg.segs[1].type = I2C_SEGMENT_TYPE_READ;
-    msg.segs[1].len = sizeof(val);
-    msg.segs[2].type = I2C_SEGMENT_TYPE_END;
-    msg.segs[2].len = 0;
-    msg.addr = htobe16(addr);
-
-    size_t actual = 0;
-    zx_status_t st = device_ioctl(parent(), IOCTL_I2C_SLAVE_TRANSFER, &msg, sizeof(msg),
-                                  &val, sizeof(val), &actual);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "max98927: register 0x%04x read failed (err %d)\n", addr, st);
-        return 0;
-    }
-    if (actual != sizeof(val)) {
-        zxlogf(ERROR, "max98927: register 0x%04x read unexpected length (got %zu, expected %zu)\n",
-                      addr, actual, sizeof(val));
-        return 0;
+    zx_status_t status = i2c_write_read_sync(&i2c_, &buf, sizeof(buf), &val, sizeof(val));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "max98927: could not read reg addr: 0x%04X  status: %d\n", addr, status);
+        return -1;
     }
 
     zxlogf(SPEW, "max98927: register 0x%04x read 0x%02x\n", addr, val);
-
     return val;
 }
 
 void Max98927Device::WriteReg(uint16_t addr, uint8_t val) {
-    // segments followed by write data (address and val)
-    struct {
-        i2c_slave_ioctl_segment_t segs[2];
-        uint16_t addr;
-        uint8_t val;
-    } __PACKED msg;
-    msg.segs[0].type = I2C_SEGMENT_TYPE_WRITE;
-    msg.segs[0].len = sizeof(addr) + sizeof(val);
-    msg.segs[1].type = I2C_SEGMENT_TYPE_END;
-    msg.segs[1].len = 0;
-    msg.addr = htobe16(addr);
-    msg.val = val;
-
-    size_t actual = 0;
-    zx_status_t st = device_ioctl(parent(), IOCTL_I2C_SLAVE_TRANSFER, &msg, sizeof(msg),
-                                  NULL, 0, &actual);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "max98927: register 0x%04x write failed (err %d)\n", addr, st);
+    uint8_t buf[3];
+    uint16_t* p = reinterpret_cast<uint16_t*>(buf);
+    *p = htobe16(addr);
+    buf[2] = val;
+    zx_status_t status = i2c_write_sync(&i2c_, buf, sizeof(buf));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "alc5514: could not write reg addr/val: 0x%04x/0x%02x  status: %d\n", addr,
+               val, status);
     }
-
-    zxlogf(SPEW, "max98927: register 0x%04x write0x%02x\n", addr, val);
+    zxlogf(SPEW, "max98927: register 0x%04x write 0x%02x\n", addr, val);
 }
 
 void Max98927Device::DumpRegs() {
     constexpr uint16_t first = INTERRUPT_RAW_1;
     constexpr uint16_t last = GLOBAL_ENABLE;
 
-    uint8_t data[last]; // 1-based
     // read all registers
     // segments followed by write data (first register)
     // the address pointer is automatically incremented after each byte read
-    struct {
-        i2c_slave_ioctl_segment_t segs[3];
-        uint16_t addr;
-    } __PACKED msg;
-    msg.segs[0].type = I2C_SEGMENT_TYPE_WRITE;
-    msg.segs[0].len = sizeof(uint16_t);
-    msg.segs[1].type = I2C_SEGMENT_TYPE_READ;
-    msg.segs[1].len = sizeof(uint8_t) * last;
-    msg.segs[2].type = I2C_SEGMENT_TYPE_END;
-    msg.segs[2].len = 0;
-    msg.addr = htobe16(first);
-
-    size_t actual = 0;
-    zx_status_t st = device_ioctl(parent(), IOCTL_I2C_SLAVE_TRANSFER, &msg, sizeof(msg),
-                                  data, sizeof(data), &actual);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "max98927: register dump failed (err %d)\n", st);
-    }
-    if (actual != sizeof(data)) {
-        zxlogf(ERROR, "max98927: register dump unexpected length (got %zu, expected %zu)\n",
-                      actual, sizeof(data));
+    uint16_t buf = htobe16(first);
+    uint8_t out[last];
+    zx_status_t status = i2c_write_read_sync(&i2c_, &buf, sizeof(buf), out, sizeof(out));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "max98927: could not read regs status: %d\n", status);
     }
 
     zxlogf(INFO, "max98927: register dump\n");
     for (uint16_t i = 0; i < last; i++) {
-        zxlogf(INFO, "    [%04x]: 0x%02x\n", i + 1, data[i]);
+        zxlogf(INFO, "    [%04x]: 0x%02x\n", i + 1, out[i]);
     }
 }
 
@@ -259,7 +210,13 @@ zx_status_t Max98927Device::Initialize() {
 }
 
 zx_status_t Max98927Device::Bind() {
-    zx_status_t st = Initialize();
+    zx_status_t st = device_get_protocol(parent(), ZX_PROTOCOL_I2C, &i2c_);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "max98927: could not get I2C protocol: %d\n", st);
+        return st;
+    }
+
+    st = Initialize();
     if (st != ZX_OK) {
         return st;
     }

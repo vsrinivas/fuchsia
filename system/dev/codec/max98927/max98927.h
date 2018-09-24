@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/audio-codec.h>
 #include <zircon/types.h>
@@ -48,6 +49,8 @@ private:
 
     // Debug
     void DumpRegs();
+
+    i2c_protocol_t i2c_;
 };
 
 }  // namespace max98927

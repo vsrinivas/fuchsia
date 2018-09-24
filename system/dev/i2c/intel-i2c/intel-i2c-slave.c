@@ -65,7 +65,7 @@ static int rx_fifo_empty(intel_serialio_i2c_device_t *controller) {
 // Thread safety analysis cannot see the control flow through the
 // gotos, and cannot prove that the lock is unheld at return through
 // all paths.
-static zx_status_t intel_serialio_i2c_slave_transfer(
+zx_status_t intel_serialio_i2c_slave_transfer(
     intel_serialio_i2c_slave_device_t* slave, i2c_slave_segment_t *segments, int segment_count)
     TA_NO_THREAD_SAFETY_ANALYSIS {
     zx_status_t status = ZX_OK;

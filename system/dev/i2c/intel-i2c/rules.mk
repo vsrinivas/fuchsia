@@ -19,5 +19,6 @@ MODULE_LIBS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
+    system/ulib/sync \
 
 include make/module.mk

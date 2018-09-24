@@ -139,6 +139,9 @@ __BEGIN_CDECLS;
 #define BIND_SDIO_VID             0x0900
 #define BIND_SDIO_PID             0x0901
 
+// I2C binding variables at 0x0AXX
+#define BIND_I2C_CLASS            0x0A00
+
 // TEMPORARY binding variables at 0xfXX
 // I2C_ADDR is a temporary way to bind the i2c touchscreen on the Acer12. This
 // binding will eventually be made via some sort of ACPI device enumeration.
