@@ -5,25 +5,28 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/pow2_range_allocator.h>
+
 #include <assert.h>
 #include <debug.h>
-#include <lib/pow2_range_allocator.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 #include <pow2.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <trace.h>
 
 #define LOCAL_TRACE 0
 
 typedef struct p2ra_block {
     struct list_node node;
-    uint             bucket;
-    uint             start;
+    uint bucket;
+    uint start;
 } p2ra_block_t;
 
 typedef struct p2ra_range {
     struct list_node node;
-    uint             start, len;
+    uint start, len;
 } p2ra_range_t;
 
 static inline p2ra_block_t* p2ra_get_unused_block(p2ra_state_t* state) {
@@ -58,9 +61,9 @@ static void p2ra_return_free_block(p2ra_state_t* state,
 
     /* Return the block to its proper free bucket, sorted by base ID.  Start by
      * finding the block which should come after this block in the list. */
-    struct list_node* l         = &state->free_block_buckets[block->bucket];
-    p2ra_block_t*     after     = list_peek_head_type(l, p2ra_block_t, node);
-    uint              block_len = 1u << block->bucket;
+    struct list_node* l = &state->free_block_buckets[block->bucket];
+    p2ra_block_t* after = list_peek_head_type(l, p2ra_block_t, node);
+    uint block_len = 1u << block->bucket;
 
     while (after) {
         /* We do not allow ranges to overlap */
@@ -91,10 +94,10 @@ static void p2ra_return_free_block(p2ra_state_t* state,
     if (block->start & ((block_len << 1) - 1)) {
         /* Odd alignment.  This might be the second block of a merge pair */
         second = block;
-        first  = list_prev_type(l, &block->node, p2ra_block_t, node);
+        first = list_prev_type(l, &block->node, p2ra_block_t, node);
     } else {
         /* Even alignment.  This might be the first block of a merge pair */
-        first  = block;
+        first = block;
         second = list_next_type(l, &block->node, p2ra_block_t, node);
     }
 
@@ -123,7 +126,6 @@ static void p2ra_return_free_block(p2ra_state_t* state,
     }
 }
 
-
 zx_status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size) {
     if (!state)
         return ZX_ERR_INVALID_ARGS;
@@ -135,7 +137,8 @@ zx_status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size) {
 
     /* Allocate the storage for our free buckets */
     state->bucket_count = log2_uint_floor(max_alloc_size) + 1;
-    state->free_block_buckets = malloc(state->bucket_count * sizeof(state->free_block_buckets[0]));
+    const size_t size = state->bucket_count * sizeof(state->free_block_buckets[0]);
+    state->free_block_buckets = static_cast<list_node*>(malloc(size));
     if (!state->free_block_buckets) {
         TRACEF("Failed to allocate storage for %u free bucket lists!\n", state->bucket_count);
         return ZX_ERR_NO_MEMORY;
@@ -171,46 +174,58 @@ void p2ra_free(p2ra_state_t* state) {
 zx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len) {
     LTRACEF("Adding range [%u, %u]\n", range_start, range_start + range_len - 1);
 
-    if (!state      ||
-        !range_len  ||
+    if (!state ||
+        !range_len ||
         ((range_start + range_len) < range_start))
         return ZX_ERR_INVALID_ARGS;
 
-    zx_status_t      ret       = ZX_OK;
-    p2ra_range_t*    new_range = NULL;
+    zx_status_t ret = ZX_OK;
+    p2ra_range_t* new_range = NULL;
     struct list_node new_blocks;
     list_initialize(&new_blocks);
 
+    // if we're exiting with a failure, clean up anything we've allocated
+    auto ac = fbl::MakeAutoCall([&]() {
+        if (ret != ZX_OK) {
+            if (new_range) {
+                DEBUG_ASSERT(!list_in_list(&new_range->node));
+                free(new_range);
+            }
+
+            p2ra_free_block_list(&new_blocks);
+        }
+    });
+
     /* Enter the lock and check for overlap with pre-existing ranges */
-    mutex_acquire(&state->lock);
+    fbl::AutoLock guard(&state->lock);
 
     p2ra_range_t* range;
-    list_for_every_entry(&state->ranges, range, p2ra_range_t, node) {
-        if (((range->start >= range_start)  && (range->start < (range_start  + range_len))) ||
-            ((range_start  >= range->start) && (range_start  < (range->start + range->len)))) {
+    list_for_every_entry (&state->ranges, range, p2ra_range_t, node) {
+        if (((range->start >= range_start) && (range->start < (range_start + range_len))) ||
+            ((range_start >= range->start) && (range_start < (range->start + range->len)))) {
             TRACEF("Range [%u, %u] overlaps with existing range [%u, %u].\n",
-                    range_start,  range_start  + range_len  - 1,
-                    range->start, range->start + range->len - 1);
+                   range_start, range_start + range_len - 1,
+                   range->start, range->start + range->len - 1);
             ret = ZX_ERR_ALREADY_EXISTS;
-            goto finished;
+            return ret;
         }
     }
 
     /* Allocate our range state */
-    new_range = calloc(1, sizeof(*new_range));
+    new_range = static_cast<p2ra_range_t*>(calloc(1, sizeof(*new_range)));
     if (!new_range) {
         ret = ZX_ERR_NO_MEMORY;
-        goto finished;
+        return ret;
     }
     new_range->start = range_start;
-    new_range->len   = range_len;
+    new_range->len = range_len;
 
     /* Break the range we were given into power of two aligned chunks, and place
      * them on the new blocks list to be added to the free-blocks buckets */
     DEBUG_ASSERT(state->bucket_count && state->free_block_buckets);
-    uint bucket     = state->bucket_count - 1;
-    uint csize      = (1u << bucket);
-    uint max_csize  = csize;
+    uint bucket = state->bucket_count - 1;
+    uint csize = (1u << bucket);
+    uint max_csize = csize;
     while (range_len) {
         /* Shrink the chunk size until it is aligned with the start of the
          * range, and not larger than the number of irqs we have left. */
@@ -248,15 +263,15 @@ zx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len
                    "[%u, %u] still left to track.\n",
                    range_start, range_start + range_len - 1);
             ret = ZX_ERR_NO_MEMORY;
-            goto finished;
+            return ret;
         }
 
         block->bucket = bucket;
-        block->start  = range_start;
+        block->start = range_start;
         list_add_tail(&new_blocks, &block->node);
 
         range_start += csize;
-        range_len   -= csize;
+        range_len -= csize;
     }
 
     /* Looks like we managed to allocate everything we needed to.  Go ahead and
@@ -266,19 +281,6 @@ zx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len
     p2ra_block_t* block;
     while ((block = list_remove_head_type(&new_blocks, p2ra_block_t, node)) != NULL)
         p2ra_return_free_block(state, block, false);
-
-
-finished:
-    mutex_release(&state->lock);
-
-    if (ret != ZX_OK) {
-        if (new_range) {
-            DEBUG_ASSERT(!list_in_list(&new_range->node));
-            free(new_range);
-        }
-
-        p2ra_free_block_list(&new_blocks);
-    }
 
     return ret;
 }
@@ -293,17 +295,17 @@ zx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_
     }
 
     uint orig_bucket = log2_uint_floor(size);
-    uint bucket      = orig_bucket;
+    uint bucket = orig_bucket;
     if (bucket >= state->bucket_count) {
         TRACEF("Invalid size (%u).  Valid sizes are integer powers of 2 from [1, %u]\n",
-                size, 1u << (state->bucket_count - 1));
+               size, 1u << (state->bucket_count - 1));
         return ZX_ERR_INVALID_ARGS;
     }
 
     /* Lock state during allocation */
     p2ra_block_t* block = NULL;
-    zx_status_t   ret   = ZX_OK;
-    mutex_acquire(&state->lock);
+
+    fbl::AutoLock guard(&state->lock);
 
     /* Find the smallest sized chunk which can hold the allocation and is
      * compatible with the requested addressing capabilities */
@@ -316,8 +318,7 @@ zx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_
 
     /* Nothing found, unlock and get out */
     if (!block) {
-        ret = ZX_ERR_NO_RESOURCES;
-        goto finished;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     /* Looks like we have a chunk which can satisfy this allocation request.
@@ -335,8 +336,7 @@ zx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_
             TRACEF("Failed to allocated free bookkeeping block when attempting to "
                    "split for allocation\n");
             p2ra_return_free_block(state, block, true);
-            ret = ZX_ERR_NO_MEMORY;
-            goto finished;
+            return ZX_ERR_NO_MEMORY;
         }
 
         DEBUG_ASSERT(bucket);
@@ -346,7 +346,7 @@ zx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_
         block->bucket = bucket;
 
         /* Fill out the bookkeeping for the second half of the chunk */
-        split_block->start  = block->start + (1u << block->bucket);
+        split_block->start = block->start + (1u << block->bucket);
         split_block->bucket = bucket;
 
         /* Return the second half of the chunk to the free pool */
@@ -357,9 +357,7 @@ zx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_
     list_add_head(&state->allocated_blocks, &block->node);
     *out_range_start = block->start;
 
-finished:
-    mutex_release(&state->lock);
-    return ret;
+    return ZX_OK;
 }
 
 void p2ra_free_range(p2ra_state_t* state, uint range_start, uint size) {
@@ -368,7 +366,7 @@ void p2ra_free_range(p2ra_state_t* state, uint range_start, uint size) {
 
     uint bucket = log2_uint_floor(size);
 
-    mutex_acquire(&state->lock);
+    fbl::AutoLock guard(&state->lock);
 
     /* In a debug build, find the specific block being returned in the list of
      * allocated blocks and use it as the bookkeeping for returning to the free
@@ -388,13 +386,12 @@ void p2ra_free_range(p2ra_state_t* state, uint range_start, uint size) {
     }
     ASSERT(block);
 #else
-    block         = list_remove_head_type(&state->allocated_blocks, p2ra_block_t, node);
+    block = list_remove_head_type(&state->allocated_blocks, p2ra_block_t, node);
     ASSERT(block);
-    block->start  = range_start;
+    block->start = range_start;
     block->bucket = bucket;
 #endif
 
     /* Return the block to the free buckets (merging as needed) and we are done */
     p2ra_return_free_block(state, block, true);
-    mutex_release(&state->lock);
 }
