@@ -7,6 +7,8 @@
 #include <new>
 #include <utility>
 
+#include "traits_internal.h"
+
 namespace fit {
 
 // A move-only deferred action wrapper with RAII semantics.
@@ -25,9 +27,13 @@ public:
         : pending_(false) {}
 
     // Creates a deferred action with a pending target.
-    explicit deferred_action(T target)
-        : pending_(true) {
-        new (&target_) T(std::move(target));
+    explicit deferred_action(T target) {
+        if (fit::internal::is_null(target)) {
+            pending_ = false;
+        } else {
+            pending_ = true;
+            new (&target_) T(std::move(target));
+        }
     }
 
     // Creates a deferred action with a pending target moved from another

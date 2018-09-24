@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <functional>
 #include <memory>
 
 #include <lib/fit/defer.h>
@@ -39,21 +40,23 @@ void incr_arg(int* p) {
     *p += 1;
 }
 
+template <typename T>
 bool default_construction() {
     BEGIN_TEST;
 
-    fit::deferred_action<fit::closure> d;
+    fit::deferred_action<T> d;
     EXPECT_FALSE(d);
 
     END_TEST;
 }
 
+template <typename T>
 bool basic() {
     BEGIN_TEST;
 
     int var = 0;
     {
-        auto do_incr = fit::defer([&var]() { incr_arg(&var); });
+        auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
         EXPECT_TRUE(do_incr);
         EXPECT_EQ(var, 0);
     }
@@ -62,12 +65,13 @@ bool basic() {
     END_TEST;
 }
 
+template <typename T>
 bool cancel() {
     BEGIN_TEST;
 
     int var = 0;
     {
-        auto do_incr = fit::defer([&var]() { incr_arg(&var); });
+        auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
         EXPECT_TRUE(do_incr);
         EXPECT_EQ(var, 0);
 
@@ -85,12 +89,13 @@ bool cancel() {
     END_TEST;
 }
 
+template <typename T>
 bool call() {
     BEGIN_TEST;
 
     int var = 0;
     {
-        auto do_incr = fit::defer([&var]() { incr_arg(&var); });
+        auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
         EXPECT_TRUE(do_incr);
         EXPECT_EQ(var, 0);
 
@@ -108,14 +113,15 @@ bool call() {
     END_TEST;
 }
 
+template <typename T>
 bool recursive_call() {
     BEGIN_TEST;
 
     int var = 0;
     {
-        auto do_incr = fit::defer<fit::closure>([]() { /* no-op */ });
+        auto do_incr = fit::defer<T>([]() { /* no-op */ });
         EXPECT_TRUE(do_incr);
-        do_incr = fit::defer<fit::closure>([&do_incr, &var]() {
+        do_incr = fit::defer<T>([&do_incr, &var]() {
             incr_arg(&var);
             do_incr.call();
             EXPECT_FALSE(do_incr);
@@ -132,12 +138,13 @@ bool recursive_call() {
     END_TEST;
 }
 
+template <typename T>
 bool move_construct_basic() {
     BEGIN_TEST;
 
     int var = 0;
     {
-        auto do_incr = fit::defer([&var]() { incr_arg(&var); });
+        auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
         EXPECT_TRUE(do_incr);
 
         auto do_incr2(std::move(do_incr));
@@ -150,12 +157,13 @@ bool move_construct_basic() {
     END_TEST;
 }
 
+template <typename T>
 bool move_construct_from_canceled() {
     BEGIN_TEST;
 
     int var = 0;
     {
-        auto do_incr = fit::defer([&var]() { incr_arg(&var); });
+        auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
         EXPECT_TRUE(do_incr);
 
         do_incr.cancel();
@@ -171,12 +179,13 @@ bool move_construct_from_canceled() {
     END_TEST;
 }
 
+template <typename T>
 bool move_construct_from_called() {
     BEGIN_TEST;
 
     int var = 0;
     {
-        auto do_incr = fit::defer([&var]() { incr_arg(&var); });
+        auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
         EXPECT_TRUE(do_incr);
         EXPECT_EQ(var, 0);
 
@@ -193,13 +202,14 @@ bool move_construct_from_called() {
     END_TEST;
 }
 
+template <typename T>
 bool move_assign_basic() {
     BEGIN_TEST;
 
     int var1 = 0, var2 = 0;
     {
-        auto do_incr = fit::defer<fit::closure>([&var1]() { incr_arg(&var1); });
-        auto do_incr2 = fit::defer<fit::closure>([&var2]() { incr_arg(&var2); });
+        auto do_incr = fit::defer<T>([&var1]() { incr_arg(&var1); });
+        auto do_incr2 = fit::defer<T>([&var2]() { incr_arg(&var2); });
         EXPECT_TRUE(do_incr);
         EXPECT_TRUE(do_incr2);
         EXPECT_EQ(var1, 0);
@@ -218,17 +228,18 @@ bool move_assign_basic() {
     END_TEST;
 }
 
+template <typename T>
 bool move_assign_wider_scoped() {
     BEGIN_TEST;
 
     int var1 = 0, var2 = 0;
     {
-        auto do_incr = fit::defer<fit::closure>([&var1]() { incr_arg(&var1); });
+        auto do_incr = fit::defer<T>([&var1]() { incr_arg(&var1); });
         EXPECT_TRUE(do_incr);
         EXPECT_EQ(var1, 0);
         EXPECT_EQ(var2, 0);
         {
-            auto do_incr2 = fit::defer<fit::closure>([&var2]() { incr_arg(&var2); });
+            auto do_incr2 = fit::defer<T>([&var2]() { incr_arg(&var2); });
             EXPECT_TRUE(do_incr);
             EXPECT_TRUE(do_incr2);
             EXPECT_EQ(var1, 0);
@@ -253,13 +264,14 @@ bool move_assign_wider_scoped() {
     END_TEST;
 }
 
+template <typename T>
 bool move_assign_from_canceled() {
     BEGIN_TEST;
 
     int var1 = 0, var2 = 0;
     {
-        auto do_incr = fit::defer<fit::closure>([&var1]() { incr_arg(&var1); });
-        auto do_incr2 = fit::defer<fit::closure>([&var2]() { incr_arg(&var2); });
+        auto do_incr = fit::defer<T>([&var1]() { incr_arg(&var1); });
+        auto do_incr2 = fit::defer<T>([&var2]() { incr_arg(&var2); });
         EXPECT_TRUE(do_incr);
         EXPECT_TRUE(do_incr2);
         EXPECT_EQ(var1, 0);
@@ -285,13 +297,14 @@ bool move_assign_from_canceled() {
     END_TEST;
 }
 
+template <typename T>
 bool move_assign_from_called() {
     BEGIN_TEST;
 
     int var1 = 0, var2 = 0;
     {
-        auto do_incr = fit::defer<fit::closure>([&var1]() { incr_arg(&var1); });
-        auto do_incr2 = fit::defer<fit::closure>([&var2]() { incr_arg(&var2); });
+        auto do_incr = fit::defer<T>([&var1]() { incr_arg(&var1); });
+        auto do_incr2 = fit::defer<T>([&var2]() { incr_arg(&var2); });
         EXPECT_TRUE(do_incr);
         EXPECT_TRUE(do_incr2);
         EXPECT_EQ(var1, 0);
@@ -317,14 +330,48 @@ bool move_assign_from_called() {
     END_TEST;
 }
 
+template <typename T>
+bool move_assign_to_null() {
+    BEGIN_TEST;
+
+    int call_count = 0;
+    {
+        fit::deferred_action<T> deferred(nullptr);
+        EXPECT_FALSE(deferred);
+        deferred = fit::defer<T>([&call_count] { call_count++; });
+        EXPECT_EQ(0, call_count);
+    }
+    EXPECT_EQ(1, call_count);
+
+    END_TEST;
+}
+
+template <typename T>
+bool move_assign_to_invalid() {
+    BEGIN_TEST;
+
+    int call_count = 0;
+    {
+        T fn;
+        fit::deferred_action<T> deferred(std::move(fn));
+        EXPECT_FALSE(deferred);
+        deferred = fit::defer<T>([&call_count] { call_count++; });
+        EXPECT_EQ(0, call_count);
+    }
+    EXPECT_EQ(1, call_count);
+
+    END_TEST;
+}
+
+template <typename T>
 bool target_destroyed_when_scope_exited() {
     BEGIN_TEST;
 
     int call_count = 0;
     int instance_count = 0;
     {
-        auto action = fit::defer(
-            [&call_count, balance = balance(&instance_count) ] {
+        auto action = fit::defer<T>(
+            [&call_count, balance = balance(&instance_count)] {
                 incr_arg(&call_count);
             });
         EXPECT_EQ(0, call_count);
@@ -336,14 +383,15 @@ bool target_destroyed_when_scope_exited() {
     END_TEST;
 }
 
+template <typename T>
 bool target_destroyed_when_called() {
     BEGIN_TEST;
 
     int call_count = 0;
     int instance_count = 0;
     {
-        auto action = fit::defer(
-            [&call_count, balance = balance(&instance_count) ] {
+        auto action = fit::defer<T>(
+            [&call_count, balance = balance(&instance_count)] {
                 incr_arg(&call_count);
             });
         EXPECT_EQ(0, call_count);
@@ -359,14 +407,15 @@ bool target_destroyed_when_called() {
     END_TEST;
 }
 
+template <typename T>
 bool target_destroyed_when_canceled() {
     BEGIN_TEST;
 
     int call_count = 0;
     int instance_count = 0;
     {
-        auto action = fit::defer(
-            [&call_count, balance = balance(&instance_count) ] {
+        auto action = fit::defer<T>(
+            [&call_count, balance = balance(&instance_count)] {
                 incr_arg(&call_count);
             });
         EXPECT_EQ(0, call_count);
@@ -382,14 +431,15 @@ bool target_destroyed_when_canceled() {
     END_TEST;
 }
 
+template <typename T>
 bool target_destroyed_when_move_constructed() {
     BEGIN_TEST;
 
     int call_count = 0;
     int instance_count = 0;
     {
-        auto action = fit::defer(
-            [&call_count, balance = balance(&instance_count) ] {
+        auto action = fit::defer<T>(
+            [&call_count, balance = balance(&instance_count)] {
                 incr_arg(&call_count);
             });
         EXPECT_EQ(0, call_count);
@@ -405,20 +455,21 @@ bool target_destroyed_when_move_constructed() {
     END_TEST;
 }
 
+template <typename T>
 bool target_destroyed_when_move_assigned() {
     BEGIN_TEST;
 
     int call_count = 0;
     int instance_count = 0;
     {
-        auto action = fit::defer<fit::closure>(
-            [&call_count, balance = balance(&instance_count) ] {
+        auto action = fit::defer<T>(
+            [&call_count, balance = balance(&instance_count)] {
                 incr_arg(&call_count);
             });
         EXPECT_EQ(0, call_count);
         EXPECT_EQ(1, instance_count);
 
-        auto action2 = fit::defer<fit::closure>([] {});
+        auto action2 = fit::defer<T>([] {});
         action2 = std::move(action);
         EXPECT_EQ(0, call_count);
         EXPECT_EQ(1, instance_count);
@@ -432,21 +483,39 @@ bool target_destroyed_when_move_assigned() {
 } // namespace
 
 BEGIN_TEST_CASE(defer_tests)
-RUN_TEST(default_construction)
-RUN_TEST(basic)
-RUN_TEST(cancel)
-RUN_TEST(call)
-RUN_TEST(recursive_call)
-RUN_TEST(move_construct_basic)
-RUN_TEST(move_construct_from_canceled)
-RUN_TEST(move_construct_from_called)
-RUN_TEST(move_assign_basic)
-RUN_TEST(move_assign_wider_scoped)
-RUN_TEST(move_assign_from_canceled)
-RUN_TEST(move_assign_from_called)
-RUN_TEST(target_destroyed_when_scope_exited)
-RUN_TEST(target_destroyed_when_called)
-RUN_TEST(target_destroyed_when_canceled)
-RUN_TEST(target_destroyed_when_move_constructed)
-RUN_TEST(target_destroyed_when_move_assigned)
+RUN_TEST(default_construction<fit::closure>)
+RUN_TEST(default_construction<std::function<void()>>)
+RUN_TEST(basic<fit::closure>)
+RUN_TEST(basic<std::function<void()>>)
+RUN_TEST(cancel<fit::closure>)
+RUN_TEST(cancel<std::function<void()>>)
+RUN_TEST(call<fit::closure>)
+RUN_TEST(call<std::function<void()>>)
+RUN_TEST(recursive_call<fit::closure>)
+RUN_TEST(recursive_call<std::function<void()>>)
+RUN_TEST(move_construct_basic<fit::closure>)
+RUN_TEST(move_construct_basic<std::function<void()>>)
+RUN_TEST(move_construct_from_canceled<fit::closure>)
+RUN_TEST(move_construct_from_canceled<std::function<void()>>)
+RUN_TEST(move_construct_from_called<fit::closure>)
+RUN_TEST(move_construct_from_called<std::function<void()>>)
+RUN_TEST(move_assign_basic<fit::closure>)
+RUN_TEST(move_assign_basic<std::function<void()>>)
+RUN_TEST(move_assign_wider_scoped<fit::closure>)
+RUN_TEST(move_assign_wider_scoped<std::function<void()>>)
+RUN_TEST(move_assign_from_canceled<fit::closure>)
+RUN_TEST(move_assign_from_canceled<std::function<void()>>)
+RUN_TEST(move_assign_from_called<fit::closure>)
+RUN_TEST(move_assign_from_called<std::function<void()>>)
+RUN_TEST(move_assign_to_null<fit::closure>)
+RUN_TEST(move_assign_to_null<std::function<void()>>)
+RUN_TEST(move_assign_to_invalid<fit::closure>)
+RUN_TEST(move_assign_to_invalid<std::function<void()>>)
+// These tests do not support std::function because std::function copies
+// the captured values (which balance does not support).
+RUN_TEST(target_destroyed_when_scope_exited<fit::closure>)
+RUN_TEST(target_destroyed_when_called<fit::closure>)
+RUN_TEST(target_destroyed_when_canceled<fit::closure>)
+RUN_TEST(target_destroyed_when_move_constructed<fit::closure>)
+RUN_TEST(target_destroyed_when_move_assigned<fit::closure>)
 END_TEST_CASE(defer_tests)
