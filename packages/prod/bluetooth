@@ -1,14 +1,11 @@
 {
+    "imports": [
+        "garnet/packages/prod/bluetooth_drivers"
+    ],
     "packages": [
         "//garnet/bin/bluetooth/profiles/bt-a2dp-sink",
         "//garnet/bin/bluetooth/bt-gap",
         "//garnet/bin/bluetooth/bt-mgr",
-        "//garnet/bin/bluetooth/tools:bt-tools",
-        "//garnet/drivers/bluetooth/hci/atheros:btatheros",
-        "//garnet/drivers/bluetooth/hci/fake:bthci_fake",
-        "//garnet/drivers/bluetooth/hci/intel:btintel",
-        "//garnet/drivers/bluetooth/hci/passthrough:bthci_passthrough",
-        "//garnet/drivers/bluetooth/host:bthost",
-        "//garnet/drivers/bluetooth/profiles/gatt/hid:bthog"
+        "//garnet/bin/bluetooth/tools:bt-tools"
     ]
 }
