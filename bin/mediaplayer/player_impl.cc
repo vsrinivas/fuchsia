@@ -367,7 +367,7 @@ void PlayerImpl::SetHttpSource(
     fidl::StringPtr http_url,
     fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) {
   BeginSetReader(
-      HttpReader::Create(startup_context_, http_url, std::move(headers))) ;
+      HttpReader::Create(startup_context_, http_url, std::move(headers)));
 }
 
 void PlayerImpl::SetFileSource(zx::channel file_channel) {
@@ -466,7 +466,7 @@ void PlayerImpl::BindGainControl(
   audio_renderer_->BindGainControl(std::move(gain_control_request));
 }
 
-void PlayerImpl::SetAudioOut(
+void PlayerImpl::SetAudioRenderer(
     fidl::InterfaceHandle<fuchsia::media::AudioOut> audio_renderer) {
   if (audio_renderer_) {
     return;

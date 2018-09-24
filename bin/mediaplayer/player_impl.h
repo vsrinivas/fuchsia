@@ -60,7 +60,7 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::GainControl>
                            gain_control_request) override;
 
-  void SetAudioOut(
+  void SetAudioRenderer(
       fidl::InterfaceHandle<fuchsia::media::AudioOut> audio_renderer) override;
 
   void AddBinding(

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_TEST_FAKES_FAKE_AUDIO_OUT_H_
-#define GARNET_BIN_MEDIAPLAYER_TEST_FAKES_FAKE_AUDIO_OUT_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_TEST_FAKES_FAKE_AUDIO_RENDERER_H_
+#define GARNET_BIN_MEDIAPLAYER_TEST_FAKES_FAKE_AUDIO_RENDERER_H_
 
 #include <memory>
 #include <queue>
@@ -21,13 +21,13 @@
 namespace media_player {
 namespace test {
 
-// Implements AudioOut for testing.
-class FakeAudioOut : public fuchsia::media::AudioOut,
-                     public fuchsia::media::GainControl {
+// Implements AudioRenderer for testing.
+class FakeAudioRenderer : public fuchsia::media::AudioOut,
+                          public fuchsia::media::GainControl {
  public:
-  FakeAudioOut();
+  FakeAudioRenderer();
 
-  ~FakeAudioOut() override;
+  ~FakeAudioRenderer() override;
 
   // Binds the renderer.
   void Bind(fidl::InterfaceRequest<fuchsia::media::AudioOut> request);
@@ -141,4 +141,4 @@ class FakeAudioOut : public fuchsia::media::AudioOut,
 }  // namespace test
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_TEST_FAKES_FAKE_AUDIO_OUT_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_TEST_FAKES_FAKE_AUDIO_RENDERER_H_

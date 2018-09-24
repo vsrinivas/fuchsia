@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mediaplayer/test/fakes/fake_audio_out.h"
+#include "garnet/bin/mediaplayer/test/fakes/fake_audio_renderer.h"
 
 #include <iomanip>
 #include <iostream>
@@ -17,47 +17,51 @@
 namespace media_player {
 namespace test {
 
-FakeAudioOut::FakeAudioOut()
+FakeAudioRenderer::FakeAudioRenderer()
     : dispatcher_(async_get_default_dispatcher()), binding_(this) {}
 
-FakeAudioOut::~FakeAudioOut() {}
+FakeAudioRenderer::~FakeAudioRenderer() {}
 
-void FakeAudioOut::Bind(
+void FakeAudioRenderer::Bind(
     fidl::InterfaceRequest<fuchsia::media::AudioOut> request) {
   binding_.Bind(std::move(request));
 }
 
-void FakeAudioOut::SetPcmStreamType(fuchsia::media::AudioStreamType format) {
+void FakeAudioRenderer::SetPcmStreamType(
+    fuchsia::media::AudioStreamType format) {
   format_ = format;
 }
 
-void FakeAudioOut::SetStreamType(fuchsia::media::StreamType format) {
+void FakeAudioRenderer::SetStreamType(fuchsia::media::StreamType format) {
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeAudioOut::AddPayloadBuffer(uint32_t id, ::zx::vmo payload_buffer) {
+void FakeAudioRenderer::AddPayloadBuffer(uint32_t id,
+                                         ::zx::vmo payload_buffer) {
   FXL_DCHECK(id == 0) << "Only ID 0 is currently supported.";
   mapped_buffer_.InitFromVmo(std::move(payload_buffer), ZX_VM_PERM_READ);
 }
 
-void FakeAudioOut::RemovePayloadBuffer(uint32_t id) { FXL_NOTIMPLEMENTED(); }
+void FakeAudioRenderer::RemovePayloadBuffer(uint32_t id) {
+  FXL_NOTIMPLEMENTED();
+}
 
-void FakeAudioOut::SetPtsUnits(uint32_t tick_per_second_numerator,
-                               uint32_t tick_per_second_denominator) {
+void FakeAudioRenderer::SetPtsUnits(uint32_t tick_per_second_numerator,
+                                    uint32_t tick_per_second_denominator) {
   pts_rate_ = media::TimelineRate(tick_per_second_numerator,
                                   tick_per_second_denominator);
 }
 
-void FakeAudioOut::SetPtsContinuityThreshold(float threshold_seconds) {
+void FakeAudioRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
   threshold_seconds_ = threshold_seconds;
 }
 
-void FakeAudioOut::SetReferenceClock(::zx::handle ref_clock) {
+void FakeAudioRenderer::SetReferenceClock(::zx::handle ref_clock) {
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeAudioOut::SendPacket(fuchsia::media::StreamPacket packet,
-                              SendPacketCallback callback) {
+void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
+                                   SendPacketCallback callback) {
   if (dump_packets_) {
     std::cerr << "{ " << packet.pts << ", " << packet.payload_size << ", 0x"
               << std::hex << std::setw(16) << std::setfill('0')
@@ -93,13 +97,13 @@ void FakeAudioOut::SendPacket(fuchsia::media::StreamPacket packet,
   }
 }
 
-void FakeAudioOut::SendPacketNoReply(fuchsia::media::StreamPacket packet) {
+void FakeAudioRenderer::SendPacketNoReply(fuchsia::media::StreamPacket packet) {
   SendPacket(std::move(packet), []() {});
 }
 
-void FakeAudioOut::EndOfStream() { FXL_NOTIMPLEMENTED(); }
+void FakeAudioRenderer::EndOfStream() { FXL_NOTIMPLEMENTED(); }
 
-void FakeAudioOut::DiscardAllPackets(DiscardAllPacketsCallback callback) {
+void FakeAudioRenderer::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   while (!packet_queue_.empty()) {
     packet_queue_.front().second();
     packet_queue_.pop();
@@ -108,12 +112,12 @@ void FakeAudioOut::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   callback();
 }
 
-void FakeAudioOut::DiscardAllPacketsNoReply() {
+void FakeAudioRenderer::DiscardAllPacketsNoReply() {
   DiscardAllPackets([]() {});
 }
 
-void FakeAudioOut::Play(int64_t reference_time, int64_t media_time,
-                        PlayCallback callback) {
+void FakeAudioRenderer::Play(int64_t reference_time, int64_t media_time,
+                             PlayCallback callback) {
   if (reference_time == fuchsia::media::NO_TIMESTAMP) {
     reference_time = media::Timeline::local_now();
   }
@@ -136,12 +140,13 @@ void FakeAudioOut::Play(int64_t reference_time, int64_t media_time,
   MaybeScheduleRetirement();
 }
 
-void FakeAudioOut::PlayNoReply(int64_t reference_time, int64_t media_time) {
+void FakeAudioRenderer::PlayNoReply(int64_t reference_time,
+                                    int64_t media_time) {
   Play(reference_time, media_time,
        [](int64_t reference_time, int64_t media_time) {});
 }
 
-void FakeAudioOut::Pause(PauseCallback callback) {
+void FakeAudioRenderer::Pause(PauseCallback callback) {
   int64_t reference_time = media::Timeline::local_now();
   int64_t media_time = timeline_function_(reference_time);
   timeline_function_ =
@@ -149,30 +154,30 @@ void FakeAudioOut::Pause(PauseCallback callback) {
   callback(reference_time, media_time);
 }
 
-void FakeAudioOut::PauseNoReply() {
+void FakeAudioRenderer::PauseNoReply() {
   Pause([](int64_t reference_time, int64_t media_time) {});
 }
 
-void FakeAudioOut::BindGainControl(
+void FakeAudioRenderer::BindGainControl(
     ::fidl::InterfaceRequest<fuchsia::media::GainControl> request) {
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeAudioOut::EnableMinLeadTimeEvents(bool enabled) {
+void FakeAudioRenderer::EnableMinLeadTimeEvents(bool enabled) {
   if (enabled) {
     binding_.events().OnMinLeadTimeChanged(min_lead_time_ns_);
   }
 }
 
-void FakeAudioOut::GetMinLeadTime(GetMinLeadTimeCallback callback) {
+void FakeAudioRenderer::GetMinLeadTime(GetMinLeadTimeCallback callback) {
   callback(min_lead_time_ns_);
 }
 
-void FakeAudioOut::SetGain(float gain_db) { gain_ = gain_db; }
+void FakeAudioRenderer::SetGain(float gain_db) { gain_ = gain_db; }
 
-void FakeAudioOut::SetMute(bool muted) { mute_ = muted; }
+void FakeAudioRenderer::SetMute(bool muted) { mute_ = muted; }
 
-void FakeAudioOut::MaybeScheduleRetirement() {
+void FakeAudioRenderer::MaybeScheduleRetirement() {
   if (!progressing() || packet_queue_.empty()) {
     return;
   }

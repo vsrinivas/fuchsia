@@ -9,8 +9,8 @@ using fuchsia.media;
 // Manages sinks on behalf of a Player.
 // Ordinal range: 0x1501-15ff
 interface SinkManager {
-  // Creates a sink that renders audio using an AudioOut.
-  0x1501: CreateAudioOutSink(fuchsia.media.AudioOut audio_out,
+  // Creates a sink that renders audio using an AudioRenderer.
+  0x1501: CreateAudioOutSink(fuchsia.media.AudioOut audio_renderer,
                              request<Sink> sink_request);
 
   // Adds a sink.

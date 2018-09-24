@@ -63,10 +63,10 @@ interface Player {
   /////////////////////////////////////////////////////////////////////////////
   // SinkManager methods
   // Player will inherit the SinkManager interface. Currently, we have only
-  // the deprecated method SetAudioOut.
+  // the deprecated method SetAudioRenderer.
 
   // DEPRECATED
-  0x1501: SetAudioOut(fuchsia.media.AudioOut? audio_out);
+  0x1501: SetAudioRenderer(fuchsia.media.AudioOut? audio_renderer);
 };
 
 // Player status information.

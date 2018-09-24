@@ -27,17 +27,17 @@ std::shared_ptr<FidlAudioRenderer> FidlAudioRenderer::Create(
 }
 
 FidlAudioRenderer::FidlAudioRenderer(fuchsia::media::AudioOutPtr audio_renderer)
-    : audio_out_(std::move(audio_renderer)),
+    : audio_renderer_(std::move(audio_renderer)),
       allocator_(0),
       arrivals_(true),
       departures_(false) {
-  FXL_DCHECK(audio_out_);
+  FXL_DCHECK(audio_renderer_);
 
   // |demand_task_| is used to wake up when demand might transition from
   // negative to positive.
   demand_task_.set_handler([this]() { SignalCurrentDemand(); });
 
-  audio_out_.events().OnMinLeadTimeChanged =
+  audio_renderer_.events().OnMinLeadTimeChanged =
       [this](int64_t min_lead_time_nsec) {
         FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
         // Pad this number just a bit so we are sure to have time to get the
@@ -47,7 +47,7 @@ FidlAudioRenderer::FidlAudioRenderer(fuchsia::media::AudioOutPtr audio_renderer)
           min_lead_time_ns_ = min_lead_time_nsec;
         }
       };
-  audio_out_->EnableMinLeadTimeEvents(true);
+  audio_renderer_->EnableMinLeadTimeEvents(true);
 
   supported_stream_types_.push_back(AudioStreamTypeSet::Create(
       {StreamType::kAudioEncodingLpcm},
@@ -119,7 +119,7 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
   SetEndOfStreamPts(fuchsia::media::NO_TIMESTAMP);
   input_packet_request_outstanding_ = false;
 
-  audio_out_->DiscardAllPackets(
+  audio_renderer_->DiscardAllPackets(
       fxl::MakeCopyable([this, callback = std::move(callback)]() {
         last_supplied_pts_ns_ = 0;
         last_departed_pts_ns_ = fuchsia::media::NO_TIMESTAMP;
@@ -184,7 +184,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
       audioPacket.payload_offset = buffer_.OffsetFromPtr(packet->payload());
     }
 
-    audio_out_->SendPacket(audioPacket, [this, packet]() {
+    audio_renderer_->SendPacket(audioPacket, [this, packet]() {
       FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
       int64_t now = media::Timeline::local_now();
 
@@ -222,7 +222,7 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
   audio_stream_type.frames_per_second =
       stream_type.audio()->frames_per_second();
 
-  audio_out_->SetPcmStreamType(std::move(audio_stream_type));
+  audio_renderer_->SetPcmStreamType(std::move(audio_stream_type));
 
   // TODO: What about stream type changes?
 
@@ -236,13 +236,13 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
     allocator_.Reset(size);
 
     // Give the renderer a handle to the buffer vmo.
-    audio_out_->AddPayloadBuffer(
+    audio_renderer_->AddPayloadBuffer(
         0, buffer_.GetDuplicateVmo(ZX_RIGHTS_BASIC | ZX_RIGHT_READ |
                                    ZX_RIGHT_MAP));
   }
 
   // Tell the renderer that media time is in frames.
-  audio_out_->SetPtsUnits(stream_type.audio()->frames_per_second(), 1);
+  audio_renderer_->SetPtsUnits(stream_type.audio()->frames_per_second(), 1);
 
   pts_rate_ = media::TimelineRate(stream_type.audio()->frames_per_second(), 1);
   bytes_per_frame_ = stream_type.audio()->bytes_per_frame();
@@ -281,17 +281,17 @@ void FidlAudioRenderer::SetTimelineFunction(
   Renderer::SetTimelineFunction(timeline_function, std::move(callback));
 
   if (timeline_function.subject_delta() == 0) {
-    audio_out_->PauseNoReply();
+    audio_renderer_->PauseNoReply();
   } else {
     int64_t presentation_time = from_ns(timeline_function.subject_time());
-    audio_out_->PlayNoReply(timeline_function.reference_time(),
-                            presentation_time);
+    audio_renderer_->PlayNoReply(timeline_function.reference_time(),
+                                 presentation_time);
   }
 }
 
 void FidlAudioRenderer::BindGainControl(
     fidl::InterfaceRequest<fuchsia::media::GainControl> gain_control_request) {
-  audio_out_->BindGainControl(std::move(gain_control_request));
+  audio_renderer_->BindGainControl(std::move(gain_control_request));
 }
 
 fbl::RefPtr<PayloadBuffer> FidlAudioRenderer::AllocatePayloadBuffer(

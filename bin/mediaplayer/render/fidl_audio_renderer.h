@@ -89,7 +89,7 @@ class FidlAudioRenderer
   }
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
-  fuchsia::media::AudioOutPtr audio_out_;
+  fuchsia::media::AudioOutPtr audio_renderer_;
   media::TimelineRate pts_rate_;
   int64_t last_supplied_pts_ns_ = 0;
   int64_t last_departed_pts_ns_ = 0;
