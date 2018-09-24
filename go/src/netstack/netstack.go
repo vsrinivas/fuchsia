@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sort"
@@ -14,17 +15,16 @@ import (
 
 	"netstack/dns"
 	"netstack/filter"
-	"netstack/link/bridge"
 	"netstack/link/eth"
 	"netstack/link/stats"
 	"netstack/netiface"
-	"netstack/util"
 
 	"fidl/fuchsia/devicesettings"
 	"fidl/zircon/ethernet"
 
 	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/link/loopback"
 	"github.com/google/netstack/tcpip/link/sniffer"
 	"github.com/google/netstack/tcpip/network/arp"
@@ -36,9 +36,6 @@ import (
 const (
 	deviceSettingsManagerNodenameKey = "DeviceName"
 	defaultNodename                  = "fuchsia-unset-device-name"
-
-	ipv4Loopback tcpip.Address = "\x7f\x00\x00\x01"
-	ipv6Loopback tcpip.Address = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
 )
 
 // A Netstack tracks all of the running state of the network stack.
@@ -102,11 +99,22 @@ func defaultRouteTable(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
 
 func subnetRoute(addr tcpip.Address, mask tcpip.AddressMask, nicid tcpip.NICID) tcpip.Route {
 	return tcpip.Route{
-		Destination: util.ApplyMask(addr, mask),
+		Destination: applyMask(addr, mask),
 		Mask:        tcpip.Address(mask),
 		Gateway:     tcpip.Address(""),
 		NIC:         nicid,
 	}
+}
+
+func applyMask(addr tcpip.Address, mask tcpip.AddressMask) tcpip.Address {
+	if len(addr) != len(mask) {
+		return ""
+	}
+	subnet := []byte(addr)
+	for i := 0; i < len(subnet); i++ {
+		subnet[i] &= mask[i]
+	}
+	return tcpip.Address(subnet)
 }
 
 func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, prefixLen uint8) error {
@@ -116,13 +124,13 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 	}
 
 	if hasSubnet, err := ns.stack.ContainsSubnet(nic, subnet); err != nil {
-		return fmt.Errorf("error finding subnet %+v for NIC ID %d: %s", subnet, nic, err)
+		return fmt.Errorf("error finding subnet %s for NIC ID %d: %s", subnet, nic, err)
 	} else if hasSubnet {
 		if err := ns.stack.RemoveSubnet(nic, subnet); err != nil {
-			return fmt.Errorf("error removing subnet %+v from NIC ID %d: %s", subnet, nic, err)
+			return fmt.Errorf("error removing subnet %s from NIC ID %d: %s", subnet, nic, err)
 		}
 	} else {
-		return fmt.Errorf("no such subnet %+v for NIC ID %d", subnet, nic)
+		return fmt.Errorf("no such subnet %s for NIC ID %d", subnet, nic)
 	}
 
 	if err := ns.stack.RemoveAddress(nic, addr); err != nil {
@@ -141,8 +149,8 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 		}
 		netmask := subnet.Mask()
 		if netmask == "" {
-			addressSize := len(addr) * 8
-			netmask = util.CIDRMask(addressSize, addressSize)
+			addressSize := int(len(addr) * 8)
+			netmask = tcpip.CIDRMask(addressSize, addressSize)
 		}
 		ifs.staticAddressChanged(addr, netmask)
 	}
@@ -151,8 +159,8 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 }
 
 func toSubnet(address tcpip.Address, prefixLen uint8) (tcpip.Subnet, error) {
-	m := util.CIDRMask(int(prefixLen), int(len(address)*8))
-	return tcpip.NewSubnet(util.ApplyMask(address, m), m)
+	m := tcpip.CIDRMask(int(prefixLen), int(len(address)*8))
+	return tcpip.NewSubnet(address.Mask(m), m)
 }
 
 func (ns *Netstack) setInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, prefixLen uint8) error {
@@ -166,7 +174,7 @@ func (ns *Netstack) setInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkP
 	}
 
 	if err := ns.stack.AddSubnet(nic, protocol, subnet); err != nil {
-		return fmt.Errorf("error adding subnet %+v to NIC ID %d: %s", subnet, nic, err)
+		return fmt.Errorf("error adding subnet %s to NIC ID %d: %s", subnet, nic, err)
 	}
 
 	ifs, ok := ns.ifStates[nic]
@@ -342,17 +350,17 @@ func (ns *Netstack) addLoopback() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	nic := &netiface.NIC{
 		ID:       nicid,
-		Addr:     ipv4Loopback,
+		Addr:     header.IPv4Loopback,
 		Netmask:  tcpip.AddressMask(strings.Repeat("\xff", 4)),
 		Features: ethernet.InfoFeatureLoopback,
 		Routes: []tcpip.Route{
 			{
-				Destination: ipv4Loopback,
+				Destination: header.IPv4Loopback,
 				Mask:        tcpip.Address(strings.Repeat("\xff", 4)),
 				NIC:         nicid,
 			},
 			{
-				Destination: ipv6Loopback,
+				Destination: header.IPv6Loopback,
 				Mask:        tcpip.Address(strings.Repeat("\xff", 16)),
 				NIC:         nicid,
 			},
@@ -388,10 +396,10 @@ func (ns *Netstack) addLoopback() error {
 	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
 		return fmt.Errorf("loopback: could not create interface: %v", err)
 	}
-	if err := ns.stack.AddAddress(nicid, ipv4.ProtocolNumber, ipv4Loopback); err != nil {
+	if err := ns.stack.AddAddress(nicid, ipv4.ProtocolNumber, header.IPv4Loopback); err != nil {
 		return fmt.Errorf("loopback: adding ipv4 address failed: %v", err)
 	}
-	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, ipv6Loopback); err != nil {
+	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, header.IPv6Loopback); err != nil {
 		return fmt.Errorf("loopback: adding ipv6 address failed: %v", err)
 	}
 
@@ -402,7 +410,12 @@ func (ns *Netstack) addLoopback() error {
 
 func (ns *Netstack) Bridge(nics []tcpip.NICID) error {
 	// TODO(stijlist): save bridge in netstack state as NetInterface
-	links := make([]stack.LinkEndpoint, 0, len(nics))
+	// TODO(stijlist): initialize bridge context.Context & cancelFunc
+	b, err := ns.stack.Bridge(nics)
+	if err != nil {
+		return errors.New(err.String())
+	}
+
 	for _, nicid := range nics {
 		nic, ok := ns.ifStates[nicid]
 		if !ok {
@@ -411,49 +424,13 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) error {
 		if err := nic.eth.SetPromiscuousMode(true); err != nil {
 			return err
 		}
-		links = append(links, &nic.statsEP)
 	}
 
-	return ns.addEndpoint(func(*ifState) (stack.LinkEndpoint, error) {
-		return bridge.New(links), nil
-	}, func(*ifState) error {
-		return nil
-	})
+	b.Enable()
+	return nil
 }
 
 func (ns *Netstack) addEth(path string) error {
-	var client *eth.Client
-	return ns.addEndpoint(func(ifs *ifState) (stack.LinkEndpoint, error) {
-		var err error
-		client, err = eth.NewClient("netstack", path, ns.arena, ifs.stateChange)
-		if err != nil {
-			return nil, err
-		}
-		ifs.eth = client
-		ifs.nic.Features = client.Info.Features
-		return eth.NewLinkEndpoint(client), nil
-	}, func(ifs *ifState) error {
-		// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
-		// in third_party/netstack.
-		if client.Info.Features&ethernet.InfoFeatureWlan != 0 {
-			// WLAN: Upon 802.1X port open, the state change will ensue, which
-			// will invoke the DHCP Client.
-			return nil
-		}
-
-		status, err := client.GetStatus()
-		if err != nil {
-			return fmt.Errorf("failed to getStatus for MAC[%v], error %v", client.Info.MAC, err)
-		}
-
-		if status == eth.LinkUp {
-			ifs.setDHCPStatus(true)
-		}
-		return nil
-	})
-}
-
-func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint, error), finalize func(*ifState) error) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	ifs := &ifState{
@@ -465,13 +442,15 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	}
 	ifs.statsEP.Nic = ifs.nic
 
-	ep, err := makeEndpoint(ifs)
+	client, err := eth.NewClient("netstack", path, ns.arena, ifs.stateChange)
 	if err != nil {
 		return err
 	}
+	ifs.eth = client
+	ep := eth.NewLinkEndpoint(client)
 	linkID := stack.RegisterLinkEndpoint(ep)
 	linkAddr := ep.LinkAddress()
-	lladdr := ipv6LinkLocalAddr(linkAddr)
+	lladdr := ipv6.LinkLocalAddr(linkAddr)
 
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.
@@ -492,6 +471,7 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 
 	nicid := ns.countNIC + 1
 	ifs.nic.ID = nicid
+	ifs.nic.Features = client.Info.Features
 	setNICName(ifs.nic)
 
 	ifs.nic.Routes = defaultRouteTable(nicid, "")
@@ -499,8 +479,10 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	ns.countNIC++
 	ns.mu.Unlock()
 
+	log.Printf("NIC %s added using ethernet device %q", ifs.nic.Name, path)
+
 	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
-		return fmt.Errorf("NIC %s: could not create NIC: %v", ifs.nic.Name, err)
+		return fmt.Errorf("NIC %s: could not create NIC for %q: %v", ifs.nic.Name, path, err)
 	}
 	if err := ns.stack.AddAddress(nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
 		return fmt.Errorf("NIC %s: adding arp address failed: %v", ifs.nic.Name, err)
@@ -508,7 +490,7 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, lladdr); err != nil {
 		return fmt.Errorf("NIC %s: adding link-local IPv6 %v failed: %v", ifs.nic.Name, lladdr, err)
 	}
-	snaddr := ipv6SolicitedNodeAddr(lladdr)
+	snaddr := ipv6.SolicitedNodeAddr(lladdr)
 	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, snaddr); err != nil {
 		return fmt.Errorf("NIC %s: adding solicited-node IPv6 %v (link-local IPv6 %v) failed: %v", ifs.nic.Name, snaddr, lladdr, err)
 	}
@@ -519,7 +501,23 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	// Add default route. This will get clobbered later when we get a DHCP response.
 	ns.stack.SetRouteTable(ns.flattenRouteTables())
 
-	return finalize(ifs)
+	// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
+	// in third_party/netstack.
+	if client.Info.Features&ethernet.InfoFeatureWlan != 0 {
+		// WLAN: Upon 802.1X port open, the state change will ensue, which
+		// will invoke the DHCP Client.
+		return nil
+	}
+
+	status, err := client.GetStatus()
+	if err != nil {
+		return fmt.Errorf("failed to getStatus for MAC[%v], error %v", client.Info.MAC, err)
+	}
+
+	if status == eth.LinkUp {
+		ifs.setDHCPStatus(true)
+	}
+	return nil
 }
 
 func setNICName(nic *netiface.NIC) {
@@ -530,34 +528,4 @@ func setNICName(nic *netiface.NIC) {
 	} else {
 		nic.Name = fmt.Sprintf("en%d", nic.ID)
 	}
-}
-
-// ipv6LinkLocalAddr computes the default IPv6 link-local address from a
-// link-layer (MAC) address.
-func ipv6LinkLocalAddr(linkAddr tcpip.LinkAddress) tcpip.Address {
-	// Convert a 48-bit MAC to an EUI-64 and then prepend the link-local
-	// header, FE80::.
-	//
-	// The conversion is very nearly:
-	//	aa:bb:cc:dd:ee:ff => FE80::Aabb:ccFF:FEdd:eeff
-	// Note the capital A. The conversion aa->Aa involves a bit flip.
-	lladdrb := [16]byte{
-		0:  0xFE,
-		1:  0x80,
-		8:  linkAddr[0] ^ 2,
-		9:  linkAddr[1],
-		10: linkAddr[2],
-		11: 0xFF,
-		12: 0xFE,
-		13: linkAddr[3],
-		14: linkAddr[4],
-		15: linkAddr[5],
-	}
-	return tcpip.Address(lladdrb[:])
-}
-
-// ipv6SolicitedNodeAddr computes the solicited-node multicast address. This
-// is used for NDP. Described in RFC 4291.
-func ipv6SolicitedNodeAddr(addr tcpip.Address) tcpip.Address {
-	return "\xff\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\xff" + addr[len(addr)-3:]
 }

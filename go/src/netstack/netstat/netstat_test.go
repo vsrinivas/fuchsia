@@ -51,6 +51,7 @@ func TestOutput(t *testing.T) {
 		for _, metric := range []string{
 			"total packets received",
 			"with invalid addresses",
+			"incoming packets discarded",
 			"incoming packets delivered",
 			"requests sent out",
 			"outgoing packets with errors",

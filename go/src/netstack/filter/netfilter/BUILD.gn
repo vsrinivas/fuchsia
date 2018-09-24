@@ -21,4 +21,5 @@ go_library("netfilter_lib") {
     "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
   ]
+
 }

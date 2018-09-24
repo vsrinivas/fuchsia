@@ -7,8 +7,5 @@
         "//garnet/go/src/netstack/tests:netstack_manual_tests",
         "//garnet/go/src/netstack/tests:netstack_tests",
         "//garnet/go/src/netstack/tests/integration:netstack_integration"
-    ],
-    "host_tests": [
-        "//garnet/go/src/netstack/util:netstack_util_test"
     ]
 }

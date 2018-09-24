@@ -52,6 +52,7 @@ func (o *statsOutput) String() string {
 		`IP:
 	%d total packets received
 	%d with invalid addresses
+	%d incoming packets discarded
 	%d incoming packets delivered
 	%d requests sent out
 	%d outgoing packets with errors
@@ -81,6 +82,7 @@ ICMP:
 %v`,
 		o.ip.PacketsReceived,
 		o.ip.InvalidAddressesReceived,
+		o.ip.PacketsDiscarded,
 		o.ip.PacketsDelivered,
 		o.ip.PacketsSent,
 		o.ip.OutgoingPacketErrors,
