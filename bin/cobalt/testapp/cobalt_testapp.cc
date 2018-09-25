@@ -66,7 +66,8 @@ bool CobaltTestApp::RunTests() {
 }
 
 void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
-                            uint32_t min_interval_seconds) {
+                            uint32_t min_interval_seconds,
+                            uint32_t initial_interval_seconds) {
   controller_.Unbind();
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info;
@@ -75,6 +76,12 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   {
     std::ostringstream stream;
     stream << "--schedule_interval_seconds=" << schedule_interval_seconds;
+    launch_info.arguments.push_back(stream.str());
+  }
+
+  if (initial_interval_seconds > 0) {
+    std::ostringstream stream;
+    stream << "--initial_interval_seconds=" << initial_interval_seconds;
     launch_info.arguments.push_back(stream.str());
   }
 

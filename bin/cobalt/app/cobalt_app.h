@@ -32,16 +32,21 @@ class CobaltApp {
   // |dispatcher| The async_t to be used for all asynchronous operations.
   //
   // |schedule_interval| The scheduling interval provided to
-  //                     ShippingManager::ScheduleParams.
+  //                     encoder::UploadScheduler.
   //
-  // |min_interval| The minimum interval provided to
-  //                ShippingManager::ScheduleParams.
+  // |min_interval| The minimum interval provided to encoder::UploadScheduler.
+  //
+  // |initial_interval| The scheduling interval that is the starting point for
+  //                    the exponentially increasing interval value used in
+  //                    encoder::UploadScheduler.
   //
   // |product_name| A product name to override the one used in the
   //                ObservationMetadata.
   CobaltApp(async_dispatcher_t* dispatcher,
             std::chrono::seconds schedule_interval,
-            std::chrono::seconds min_interval, const std::string& product_name);
+            std::chrono::seconds min_interval,
+            std::chrono::seconds initial_interval,
+            const std::string& product_name);
 
  private:
   static encoder::ClientSecret getClientSecret();

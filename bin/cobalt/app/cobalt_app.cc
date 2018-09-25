@@ -8,6 +8,7 @@
 #include "garnet/bin/cobalt/utils/fuchsia_http_client.h"
 #include "lib/backoff/exponential_backoff.h"
 #include "third_party/cobalt/encoder/file_observation_store.h"
+#include "third_party/cobalt/encoder/upload_scheduler.h"
 #include "third_party/cobalt/util/posix_file_system.h"
 
 namespace cobalt {
@@ -20,6 +21,7 @@ using encoder::ClientSecret;
 using encoder::FileObservationStore;
 using encoder::LegacyShippingManager;
 using encoder::ShippingManager;
+using encoder::UploadScheduler;
 using util::PosixFileSystem;
 using utils::FuchsiaHTTPClient;
 
@@ -44,6 +46,7 @@ constexpr char kLegacyObservationStorePath[] =
 CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                      std::chrono::seconds schedule_interval,
                      std::chrono::seconds min_interval,
+                     std::chrono::seconds initial_interval,
                      const std::string& product_name)
     : system_data_(product_name),
       context_(component::StartupContext::CreateFromStartupInfo()),
@@ -67,7 +70,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       encrypt_to_shuffler_(ReadPublicKeyPem(kShufflerPublicKeyPemPath),
                            EncryptedMessage::HYBRID_ECDH_V1),
       shipping_manager_(
-          ShippingManager::ScheduleParams(schedule_interval, min_interval),
+          UploadScheduler(schedule_interval, min_interval, initial_interval),
           &observation_store_, &encrypt_to_shuffler_,
           LegacyShippingManager::SendRetryerParams(kInitialRpcDeadline,
                                                    kDeadlinePerSendAttempt),

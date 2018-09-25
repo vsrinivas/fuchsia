@@ -27,14 +27,19 @@
 constexpr fxl::StringView kScheduleIntervalSecondsFlagName =
     "schedule_interval_seconds";
 
+constexpr fxl::StringView kInitialIntervalSecondsFlagName =
+    "initial_interval_seconds";
+
 // Used to override kMinIntervalDefault;
 constexpr fxl::StringView kMinIntervalSecondsFlagName = "min_interval_seconds";
 
-// As an initial test of the persistent storage system, we are scheduling
-// uploads every 3 minutes rather than every 10 seconds. In order to properly
-// support scheduling every hour, we need to add some kind of "fast track" for
-// systems that don't run for an hour (and thus won't ever upload observations).
-const std::chrono::seconds kScheduleIntervalDefault(60 * 3);
+// We want to only upload every hour. This is the interval that will be
+// approached by the uploader.
+const std::chrono::hours kScheduleIntervalDefault(1);
+
+// We start uploading every minute and exponentially back off until we reach 1
+// hour.
+const std::chrono::minutes kInitialIntervalDefault(1);
 
 // We send Observations to the Shuffler more frequently than kScheduleInterval
 // under some circumstances, namely, if there is memory pressure or if we
@@ -56,18 +61,35 @@ int main(int argc, const char** argv) {
   }
 
   // Parse the schedule_interval_seconds flag.
-  std::chrono::seconds schedule_interval = kScheduleIntervalDefault;
+  std::chrono::seconds schedule_interval =
+      std::chrono::duration_cast<std::chrono::seconds>(
+          kScheduleIntervalDefault);
+  std::chrono::seconds initial_interval =
+      std::chrono::duration_cast<std::chrono::seconds>(kInitialIntervalDefault);
   std::string flag_value;
   if (command_line.GetOptionValue(kScheduleIntervalSecondsFlagName,
                                   &flag_value)) {
     int num_seconds = std::stoi(flag_value);
     if (num_seconds > 0) {
       schedule_interval = std::chrono::seconds(num_seconds);
+      // Set initial_interval, it can still be overridden by a flag.
+      initial_interval = std::chrono::seconds(num_seconds);
+    }
+  }
+
+  // Parse the initial_interval_seconds flag.
+  flag_value.clear();
+  if (command_line.GetOptionValue(kInitialIntervalSecondsFlagName,
+                                  &flag_value)) {
+    int num_seconds = std::stoi(flag_value);
+    if (num_seconds > 0) {
+      initial_interval = std::chrono::seconds(num_seconds);
     }
   }
 
   // Parse the min_interval_seconds flag.
-  std::chrono::seconds min_interval = kMinIntervalDefault;
+  std::chrono::seconds min_interval =
+      std::chrono::duration_cast<std::chrono::seconds>(kMinIntervalDefault);
   flag_value.clear();
   if (command_line.GetOptionValue(kMinIntervalSecondsFlagName, &flag_value)) {
     int num_seconds = std::stoi(flag_value);
@@ -80,11 +102,12 @@ int main(int argc, const char** argv) {
   FXL_LOG(INFO) << "Cobalt client schedule params: schedule_interval="
                 << schedule_interval.count()
                 << " seconds, min_interval=" << min_interval.count()
+                << " seconds, initial_interval=" << initial_interval.count()
                 << " seconds.";
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   cobalt::CobaltApp app(loop.dispatcher(), schedule_interval, min_interval,
-                        cobalt::hack::GetLayer());
+                        initial_interval, cobalt::hack::GetLayer());
   loop.Run();
   return 0;
 }

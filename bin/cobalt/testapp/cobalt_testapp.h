@@ -41,7 +41,8 @@ class CobaltTestApp {
   // Starts and connects to the cobalt fidl service using the provided
   // scheduling parameters.
   void Connect(uint32_t schedule_interval_seconds,
-               uint32_t min_interval_seconds);
+               uint32_t min_interval_seconds,
+               uint32_t initial_interval_seconds = 0);
 
   // Loads the CobaltConfig proto for this project and writes it to a VMO.
   // Returns the VMO and the size of the proto in bytes.

@@ -25,7 +25,7 @@
              revision="f61897ea129c33a7d864696bf9d26e9af997ae29"/>
     <project name="third_party/abseil-cpp"
              path="third_party/abseil-cpp"
-             revision="c9e90005c0885c09d6b68d70222a2c4a50b2f6f8"
+             revision="a6fe4cb596c41c430924543b6d11f0377f4d1e11"
              remote="https://fuchsia.googlesource.com/third_party/abseil-cpp"/>
     <project name="third_party/android/platform/external/aac"
              path="third_party/android/platform/external/aac"
@@ -56,7 +56,7 @@
     <project name="cobalt"
              path="third_party/cobalt"
              remote="https://fuchsia.googlesource.com/cobalt"
-             revision="92878cf2790c345a0ab550d55792cc9d6d19a0b6"
+             revision="4e6cde04f232ea16e2ef4dc4e839884d7476367e"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="cobalt_config"
              path="third_party/cobalt_config"
