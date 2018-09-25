@@ -251,7 +251,7 @@ readonly FX_LOCK_FILE
 function fx-try-locked {
   if ! command -v shlock >/dev/null; then
     # Can't lock! Fall back to unlocked operation.
-    "$@"
+    fx-exit-on-failure "$@"
   elif shlock -f "${FX_LOCK_FILE}" -p $$; then
     # This will cause a deadlock if any subcommand calls back to fx build,
     # because shlock isn't reentrant by forked processes.
@@ -266,6 +266,9 @@ function fx-try-locked {
 function fx-cmd-locked {
   # Exit trap to clean up lock file
   trap "[[ -n \"${FX_LOCK_FILE}\" ]] && rm -f \"${FX_LOCK_FILE}\"" EXIT
-  "$@"
-  exit $?
+  fx-exit-on-failure "$@"
+}
+
+function fx-exit-on-failure {
+  "$@" || exit $?
 }
