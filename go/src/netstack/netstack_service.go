@@ -213,11 +213,11 @@ func (ni *netstackImpl) StartRouteTableTransaction(req netstack.RouteTableTransa
 		if ni.ns.mu.transactionRequest != nil {
 			oldChannel := ni.ns.mu.transactionRequest.ToChannel()
 			observed, _ := zxwait.Wait(*oldChannel.Handle(), 0, 0)
-			// If both readable is clear than there is no more data to be
-			// processed.  If writable is clear then we can't return any
-			// more results, so the channel is effectively done.  It's not
-			// enough to only look at peerclosed because the peer can close
-			// the channel while it still has data in its buffers.
+			// If the channel is neither readable nor writable, there is no
+			// data left to be processed (not readable) and we can't return
+			// any more results (not writable).  It's not enough to only
+			// look at peerclosed because the peer can close the channel
+			// while it still has data in its buffers.
 			if observed&(zx.SignalChannelReadable|zx.SignalChannelWritable) == 0 {
 				ni.ns.mu.transactionRequest = nil
 			}
