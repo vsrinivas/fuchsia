@@ -11,27 +11,34 @@
 namespace cpuperf {
 
 const EventDetails g_arch_event_details[] = {
-#define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, \
-                       description)                                    \
-  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_ARCH, id), name, description},
+#define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, \
+                       umask, flags, readable_name, description) \
+  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_ARCH, id), #event_name, \
+          readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
 
 const EventDetails g_fixed_event_details[] = {
-#define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
-  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_FIXED, id), name, description},
+#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, \
+                        readable_name, description) \
+  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_FIXED, id), #event_name, \
+          readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
 
 const EventDetails g_skl_event_details[] = {
-#define DEF_SKL_EVENT(symbol, id, event, umask, flags, name, description) \
-  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MODEL, id), name, description},
+#define DEF_SKL_EVENT(symbol, event_name, id, event, umask, \
+                      flags, readable_name, description) \
+  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_MODEL, id), #event_name, \
+          readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 };
 
-const EventDetails g_misc_event_details[] = {
-#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
-  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id), name, description},
+const EventDetails g_skl_misc_event_details[] = {
+#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, \
+                           flags, readable_name, description) \
+  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_MISC, id), #event_name, \
+          readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 };
 
@@ -40,20 +47,20 @@ bool EventIdToEventDetails(cpuperf_event_id_t id,
   unsigned event = CPUPERF_EVENT_ID_EVENT(id);
   const EventDetails* details;
 
-  switch (CPUPERF_EVENT_ID_UNIT(id)) {
-    case CPUPERF_UNIT_ARCH:
+  switch (CPUPERF_EVENT_ID_GROUP(id)) {
+    case CPUPERF_GROUP_ARCH:
       details = &g_arch_event_details[event];
       break;
-    case CPUPERF_UNIT_FIXED:
+    case CPUPERF_GROUP_FIXED:
       details = &g_fixed_event_details[event];
       break;
-    case CPUPERF_UNIT_MODEL:
+    case CPUPERF_GROUP_MODEL:
       // TODO(dje): For now assume Skylake, Kaby Lake.
       details = &g_skl_event_details[event];
       break;
-    case CPUPERF_UNIT_MISC:
+    case CPUPERF_GROUP_MISC:
       // TODO(dje): For now assume Skylake, Kaby Lake.
-      details = &g_misc_event_details[event];
+      details = &g_skl_misc_event_details[event];
       break;
     default:
       return false;

@@ -14,6 +14,7 @@ namespace cpuperf {
 struct EventDetails {
   cpuperf_event_id_t id;
   const char* name;
+  const char* readable_name;
   const char* description;
 };
 

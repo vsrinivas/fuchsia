@@ -389,7 +389,7 @@ trace_thread_ref_t Importer::GetCpuThreadRef(trace_cpu_number_t cpu,
   FXL_DCHECK(cpu < countof(cpu_thread_refs_));
   // TODO(dje): Misc events are currently all system-wide, not attached
   // to any specific cpu. That won't always be the case.
-  if (CPUPERF_EVENT_ID_UNIT(id) == CPUPERF_UNIT_MISC)
+  if (CPUPERF_EVENT_ID_GROUP(id) == CPUPERF_GROUP_MISC)
     cpu = 0;
   else
     ++cpu;

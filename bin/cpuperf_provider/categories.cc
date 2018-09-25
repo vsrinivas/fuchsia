@@ -14,19 +14,22 @@
 namespace cpuperf_provider {
 
 enum EventId {
-#define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
-  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_FIXED, id),
-#define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, \
-                       description)                                    \
-  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_ARCH, id),
+#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, \
+                        readable_name, description) \
+  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_FIXED, id),
+#define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, \
+                       umask, flags, readable_name, description) \
+  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_ARCH, id),
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 
-#define DEF_SKL_EVENT(symbol, id, event, umask, flags, name, description) \
-  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MODEL, id),
+#define DEF_SKL_EVENT(symbol, event_name, id, event, umask, \
+                      flags, readable_name, description) \
+  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_MODEL, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 
-#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
-  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
+#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, \
+                           flags, readable_name, description) \
+  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_MISC, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 };
 
