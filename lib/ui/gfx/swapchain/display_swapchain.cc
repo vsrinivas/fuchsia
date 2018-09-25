@@ -164,7 +164,7 @@ bool DisplaySwapchain::InitializeFramebuffers(
     vk::ImportMemoryFuchsiaHandleInfoKHR import_info;
     import_info.setHandle(memory.release());
     import_info.setHandleType(
-        vk::ExternalMemoryHandleTypeFlagBitsKHR::eFuchsiaVmo);
+        vk::ExternalMemoryHandleTypeFlagBits::eFuchsiaVmoKHR);
     vk::MemoryAllocateInfo alloc_info;
     alloc_info.setPNext(&import_info);
     alloc_info.allocationSize = memory_requirements.size;
@@ -216,7 +216,7 @@ bool DisplaySwapchain::InitializeFramebuffers(
     // Export the vkDeviceMemory to a VMO.
     vk::MemoryGetFuchsiaHandleInfoKHR export_memory_info(
         buffer.device_memory->base(),
-        vk::ExternalMemoryHandleTypeFlagBitsKHR::eFuchsiaVmo);
+        vk::ExternalMemoryHandleTypeFlagBits::eFuchsiaVmoKHR);
 
     auto export_result =
         escher_->device()->proc_addrs().getMemoryFuchsiaHandleKHR(

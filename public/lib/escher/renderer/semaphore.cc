@@ -13,8 +13,8 @@ Semaphore::Semaphore(vk::Device device) : Semaphore(device, false) {}
 Semaphore::Semaphore(vk::Device device, bool exportable) : device_(device) {
   vk::SemaphoreCreateInfo info;
 #ifdef __Fuchsia__
-  vk::ExternalSemaphoreHandleTypeFlagsKHR flags(
-      vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eFuchsiaFence);
+  vk::ExternalSemaphoreHandleTypeFlags flags(
+      vk::ExternalSemaphoreHandleTypeFlagBits::eFuchsiaFenceKHR);
   vk::ExportSemaphoreCreateInfoKHR export_info(flags);
   if (exportable) {
     info.pNext = &export_info;

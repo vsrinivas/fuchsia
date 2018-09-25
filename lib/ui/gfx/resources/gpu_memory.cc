@@ -50,7 +50,7 @@ GpuMemoryPtr GpuMemory::New(Session* session, ResourceId id, vk::Device device,
   // Import a VkDeviceMemory from the VMO. VkAllocateMemory takes ownership of
   // the VMO handle it is passed.
   vk::ImportMemoryFuchsiaHandleInfoKHR memory_import_info(
-      vk::ExternalMemoryHandleTypeFlagBitsKHR::eFuchsiaVmo, vmo.release());
+      vk::ExternalMemoryHandleTypeFlagBits::eFuchsiaVmoKHR, vmo.release());
 
   vk::MemoryAllocateInfo memory_allocate_info(
       vmo_size, session->engine()->imported_memory_type_index());

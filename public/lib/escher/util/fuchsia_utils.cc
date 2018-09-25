@@ -29,7 +29,7 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
   vk::ImportSemaphoreFuchsiaHandleInfoKHR info;
   info.semaphore = sema->vk_semaphore();
   info.handle = event_copy.release();
-  info.handleType = vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eFuchsiaFence;
+  info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eFuchsiaFenceKHR;
 
   if (VK_SUCCESS !=
       device->proc_addrs().ImportSemaphoreFuchsiaHandleKHR(
@@ -51,7 +51,7 @@ zx::event GetEventForSemaphore(
 
   vk::SemaphoreGetFuchsiaHandleInfoKHR info(
       semaphore->vk_semaphore(),
-      vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eFuchsiaFence);
+      vk::ExternalSemaphoreHandleTypeFlagBits::eFuchsiaFenceKHR);
 
   VkResult result = proc_addresses.GetSemaphoreFuchsiaHandleKHR(
       device,
@@ -68,7 +68,7 @@ zx::event GetEventForSemaphore(
 zx::vmo ExportMemoryAsVmo(escher::Escher* escher,
                           const escher::GpuMemPtr& mem) {
   vk::MemoryGetFuchsiaHandleInfoKHR export_memory_info(
-      mem->base(), vk::ExternalMemoryHandleTypeFlagBitsKHR::eFuchsiaVmo);
+      mem->base(), vk::ExternalMemoryHandleTypeFlagBits::eFuchsiaVmoKHR);
   auto result = escher->device()->proc_addrs().getMemoryFuchsiaHandleKHR(
       escher->vulkan_context().device, export_memory_info);
   if (result.result != vk::Result::eSuccess) {
