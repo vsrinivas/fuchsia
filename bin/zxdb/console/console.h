@@ -64,7 +64,11 @@ class Console : public debug_ipc::FDWatcher {
   debug_ipc::MessageLoop::WatchHandle stdio_watch_;
 
   LineInputStdout line_input_;
-  Command previous_command_;
+
+  // Saves the last nonempty input line for re-running when the user just
+  // presses "Enter" with no parameters. This must be re-parsed each time
+  // because the context can be different.
+  std::string previous_line_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Console);
 };

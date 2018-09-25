@@ -83,10 +83,11 @@ Console::Result Console::DispatchInputLine(const std::string& line,
   Err err;
   if (line.empty()) {
     // Repeat the previous command, don't add to history.
-    cmd = previous_command_;
+    err = ParseCommand(previous_line_, &cmd);
   } else {
     line_input_.AddToHistory(line);
     err = ParseCommand(line, &cmd);
+    previous_line_ = line;
   }
 
   if (err.ok()) {
@@ -96,7 +97,6 @@ Console::Result Console::DispatchInputLine(const std::string& line,
       err = context_.FillOutCommand(&cmd);
       if (!err.has_error()) {
         err = DispatchCommand(&context_, cmd, callback);
-        previous_command_ = cmd;
 
         if (cmd.thread() && cmd.verb() != Verb::kNone) {
           // Show the right source/disassembly for the next listing.
