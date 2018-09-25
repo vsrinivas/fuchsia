@@ -22,6 +22,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddktl \
     system/ulib/explicit-memory \
     system/ulib/fbl \
+    system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
 

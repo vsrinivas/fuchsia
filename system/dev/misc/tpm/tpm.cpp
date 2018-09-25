@@ -15,6 +15,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
+#include <ddk/protocol/i2c.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -230,10 +231,15 @@ Device::~Device() {
 
 zx_status_t tpm_bind(void* ctx, zx_device_t* parent) {
     zx::handle irq;
-    size_t actual;
-    zx_status_t status = device_ioctl(parent, IOCTL_I2C_SLAVE_IRQ, NULL, 0,
-                                      irq.reset_and_get_address(), sizeof(zx_handle_t), &actual);
-    if (status == ZX_OK && actual != sizeof(zx_handle_t)) {
+    i2c_protocol_t i2c;
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "tpm: could not get I2C protocol: %d\n", status);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    status = i2c_get_interrupt(&i2c, 0, irq.reset_and_get_address());
+    if (status == ZX_OK) {
         // irq contains garbage?
         zx_handle_t ignored __UNUSED = irq.release();
     }
