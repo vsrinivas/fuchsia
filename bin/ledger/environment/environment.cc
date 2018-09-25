@@ -10,6 +10,7 @@
 
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/lib/ledger_client/constants.h"
+#include "peridot/lib/rng/system_random.h"
 
 namespace ledger {
 
@@ -17,17 +18,19 @@ Environment::Environment(
     async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
     std::string firebase_api_key,
     std::unique_ptr<coroutine::CoroutineService> coroutine_service,
-    BackoffFactory backoff_factory, std::unique_ptr<timekeeper::Clock> clock)
+    BackoffFactory backoff_factory, std::unique_ptr<timekeeper::Clock> clock,
+    std::unique_ptr<rng::Random> random)
     : dispatcher_(dispatcher),
       io_dispatcher_(io_dispatcher),
       firebase_api_key_(std::move(firebase_api_key)),
       coroutine_service_(std::move(coroutine_service)),
       backoff_factory_(std::move(backoff_factory)),
-      clock_(std::move(clock)) {
+      clock_(std::move(clock)), random_(std::move(random)) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);
   FXL_DCHECK(clock_);
+  FXL_DCHECK(random_);
 }
 
 Environment::Environment(Environment&& other) noexcept {
@@ -41,10 +44,12 @@ Environment& Environment::operator=(Environment&& other) noexcept {
   coroutine_service_ = std::move(other.coroutine_service_);
   backoff_factory_ = std::move(other.backoff_factory_);
   clock_ = std::move(other.clock_);
+  random_ = std::move(other.random_);
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);
   FXL_DCHECK(clock_);
+  FXL_DCHECK(random_);
   return *this;
 }
 
@@ -96,6 +101,12 @@ EnvironmentBuilder& EnvironmentBuilder::SetClock(
   return *this;
 }
 
+EnvironmentBuilder& EnvironmentBuilder::SetRandom(
+    std::unique_ptr<rng::Random> random) {
+  random_ = std::move(random);
+  return *this;
+}
+
 Environment EnvironmentBuilder::Build() {
   if (!coroutine_service_) {
     coroutine_service_ = std::make_unique<coroutine::CoroutineServiceImpl>();
@@ -108,9 +119,12 @@ Environment EnvironmentBuilder::Build() {
   if (!clock_) {
     clock_ = std::make_unique<timekeeper::SystemClock>();
   }
+  if (!random_) {
+    random_ = std::make_unique<rng::SystemRandom>();
+  }
   return Environment(dispatcher_, io_dispatcher_, std::move(firebase_api_key_),
                      std::move(coroutine_service_), std::move(backoff_factory_),
-                     std::move(clock_));
+                     std::move(clock_), std::move(random_));
 }
 
 }  // namespace ledger

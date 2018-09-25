@@ -7,6 +7,8 @@
 #include <lib/fit/function.h>
 #include <lib/timekeeper/test_clock.h>
 
+#include "peridot/lib/rng/test_random.h"
+
 namespace ledger {
 
 namespace {
@@ -56,6 +58,8 @@ TestWithEnvironment::TestWithEnvironment()
                        .SetAsync(dispatcher())
                        .SetIOAsync(dispatcher())
                        .SetClock(std::make_unique<timekeeper::TestClock>())
+                       .SetRandom(std::make_unique<rng::TestRandom>(
+                           test_loop().initial_state()))
                        .Build()) {}
 
 void TestWithEnvironment::RunInCoroutine(

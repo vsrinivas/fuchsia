@@ -41,6 +41,7 @@ source_set("lib") {
     "//peridot/bin/ledger/fidl/include",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing:service_account",
+    "//peridot/lib/rng:testing",
     "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/fidl/fuchsia.ledger.cloud",
     "//peridot/public/fidl/fuchsia.modular.auth",

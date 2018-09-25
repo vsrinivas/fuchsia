@@ -13,6 +13,7 @@
 #include <lib/timekeeper/clock.h>
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/lib/rng/random.h"
 
 namespace ledger {
 
@@ -25,7 +26,8 @@ class Environment {
               std::string firebase_api_key,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory,
-              std::unique_ptr<timekeeper::Clock> clock);
+              std::unique_ptr<timekeeper::Clock> clock,
+              std::unique_ptr<rng::Random> random);
   Environment(Environment&& other) noexcept;
   ~Environment();
 
@@ -46,6 +48,8 @@ class Environment {
 
   timekeeper::Clock* clock() { return clock_.get(); }
 
+  rng::Random* random() { return random_.get(); }
+
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
 
@@ -58,6 +62,7 @@ class Environment {
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   BackoffFactory backoff_factory_;
   std::unique_ptr<timekeeper::Clock> clock_;
+  std::unique_ptr<rng::Random> random_;
 };
 
 // Builder for the environment.
@@ -81,6 +86,7 @@ class EnvironmentBuilder {
   EnvironmentBuilder& SetBackoffFactory(
       Environment::BackoffFactory backoff_factory);
   EnvironmentBuilder& SetClock(std::unique_ptr<timekeeper::Clock> clock);
+  EnvironmentBuilder& SetRandom(std::unique_ptr<rng::Random> random);
 
   Environment Build();
 
@@ -91,6 +97,7 @@ class EnvironmentBuilder {
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   Environment::BackoffFactory backoff_factory_;
   std::unique_ptr<timekeeper::Clock> clock_;
+  std::unique_ptr<rng::Random> random_;
 };
 
 }  // namespace ledger

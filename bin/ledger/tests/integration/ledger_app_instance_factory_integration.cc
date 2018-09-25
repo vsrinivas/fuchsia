@@ -27,6 +27,8 @@
 #include "peridot/bin/ledger/testing/loop_controller_test_loop.h"
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
+#include "peridot/lib/rng/random.h"
+#include "peridot/lib/rng/test_random.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
 
@@ -36,8 +38,25 @@ namespace {
 constexpr zx::duration kBackoffDuration = zx::msec(5);
 const char kUserId[] = "user";
 
+// Implementation of rng::Random that delegates to another instance. This is
+// needed because EnvironmentBuilder requires taking ownership of the random
+// implementation.
+class RandomDelegate final : public rng::Random {
+ public:
+  RandomDelegate(rng::Random* base) : base_(base) {}
+  ~RandomDelegate() override = default;
+
+ private:
+  void InternalDraw(void* buffer, size_t buffer_size) {
+    base_->Draw(buffer, buffer_size);
+  }
+
+  rng::Random* base_;
+};
+
 Environment BuildEnvironment(async_dispatcher_t* dispatcher,
-                             async_dispatcher_t* io_dispatcher) {
+                             async_dispatcher_t* io_dispatcher,
+                             rng::Random* random) {
   return EnvironmentBuilder()
       .SetAsync(dispatcher)
       .SetIOAsync(io_dispatcher)
@@ -46,6 +65,7 @@ Environment BuildEnvironment(async_dispatcher_t* dispatcher,
             kBackoffDuration, 1u, kBackoffDuration);
       })
       .SetClock(std::make_unique<timekeeper::TestClock>())
+      .SetRandom(std::make_unique<RandomDelegate>(random))
       .Build();
 }
 
@@ -63,6 +83,7 @@ class LedgerAppInstanceImpl final
  public:
   LedgerAppInstanceImpl(
       LoopController* loop_controller, async_dispatcher_t* services_dispatcher,
+      rng::Random* random,
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
           repository_factory_request,
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory>
@@ -78,11 +99,12 @@ class LedgerAppInstanceImpl final
    public:
     LedgerRepositoryFactoryContainer(
         async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
+        rng::Random* random,
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
             request,
         std::unique_ptr<p2p_sync::UserCommunicatorFactory>
             user_communicator_factory)
-        : environment_(BuildEnvironment(dispatcher, io_dispatcher)),
+        : environment_(BuildEnvironment(dispatcher, io_dispatcher, random)),
           factory_impl_(&environment_, std::move(user_communicator_factory)),
           factory_binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
@@ -110,6 +132,7 @@ class LedgerAppInstanceImpl final
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     LoopController* loop_controller, async_dispatcher_t* services_dispatcher,
+    rng::Random* random,
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
         repository_factory_request,
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory>
@@ -127,12 +150,12 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       weak_ptr_factory_(this) {
   async::PostTask(
       loop_->dispatcher(),
-      [this, request = std::move(repository_factory_request),
+      [this, random, request = std::move(repository_factory_request),
        user_communicator_factory =
            std::move(user_communicator_factory)]() mutable {
         factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-            loop_->dispatcher(), io_loop_->dispatcher(), std::move(request),
-            std::move(user_communicator_factory));
+            loop_->dispatcher(), io_loop_->dispatcher(), random,
+            std::move(request), std::move(user_communicator_factory));
       });
 }
 
@@ -156,11 +179,12 @@ LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
 class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
  public:
   FakeUserCommunicatorFactory(async_dispatcher_t* services_dispatcher,
+                              rng::Random* random,
                               NetConnectorFactory* netconnector_factory,
                               std::string host_name)
       : services_dispatcher_(services_dispatcher),
         environment_(
-            BuildEnvironment(services_dispatcher, services_dispatcher)),
+            BuildEnvironment(services_dispatcher, services_dispatcher, random)),
         netconnector_factory_(netconnector_factory),
         host_name_(std::move(host_name)),
         weak_ptr_factory_(this) {}
@@ -200,10 +224,12 @@ enum EnableP2PMesh { NO, YES };
 
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
-  LedgerAppInstanceFactoryImpl(std::unique_ptr<LoopController> loop_controller,
-                               InjectNetworkError inject_network_error,
-                               EnableP2PMesh enable_p2p_mesh)
+  LedgerAppInstanceFactoryImpl(
+      std::unique_ptr<LoopControllerTestLoop> loop_controller,
+      InjectNetworkError inject_network_error, EnableP2PMesh enable_p2p_mesh)
       : loop_controller_(std::move(loop_controller)),
+        random_(std::make_unique<rng::TestRandom>(
+            loop_controller_->test_loop().initial_state())),
         services_loop_(loop_controller_->StartNewLoop()),
         cloud_provider_(FakeCloudProvider::Builder().SetInjectNetworkError(
             inject_network_error)),
@@ -215,7 +241,8 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   LoopController* GetLoopController() override;
 
  private:
-  std::unique_ptr<LoopController> loop_controller_;
+  std::unique_ptr<LoopControllerTestLoop> loop_controller_;
+  std::unique_ptr<rng::Random> random_;
   // Loop on which to run services.
   std::unique_ptr<SubLoop> services_loop_;
   fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
@@ -241,11 +268,11 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   if (enable_p2p_mesh_ == EnableP2PMesh::YES) {
     std::string host_name = "host_" + std::to_string(app_instance_counter_);
     user_communicator_factory = std::make_unique<FakeUserCommunicatorFactory>(
-        services_loop_->dispatcher(), &netconnector_factory_,
+        services_loop_->dispatcher(), random_.get(), &netconnector_factory_,
         std::move(host_name));
   }
   auto result = std::make_unique<LedgerAppInstanceImpl>(
-      loop_controller_.get(), services_loop_->dispatcher(),
+      loop_controller_.get(), services_loop_->dispatcher(), random_.get(),
       std::move(repository_factory_request), std::move(repository_factory_ptr),
       &cloud_provider_, std::move(user_communicator_factory));
   app_instance_counter_++;

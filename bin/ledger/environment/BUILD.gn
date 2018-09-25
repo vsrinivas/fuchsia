@@ -16,10 +16,12 @@ source_set("environment") {
     "//garnet/public/lib/timekeeper",
     "//garnet/public/lib/timekeeper:impl",
     "//peridot/bin/ledger/coroutine",
+    "//peridot/lib/rng",
   ]
 
   deps = [
     "//peridot/lib/ledger_client:constants",
+    "//peridot/lib/rng:system",
     "//zircon/public/lib/async-cpp",
   ]
 
@@ -38,6 +40,7 @@ source_set("unittests") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/timekeeper:testing",
+    "//peridot/lib/rng:testing",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

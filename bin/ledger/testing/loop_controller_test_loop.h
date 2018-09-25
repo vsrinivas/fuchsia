@@ -37,6 +37,8 @@ class LoopControllerTestLoop : public LoopController {
 
   void RunLoopFor(zx::duration duration) override;
 
+  async::TestLoop& test_loop() { return loop_; }
+
  private:
   async::TestLoop loop_;
 };

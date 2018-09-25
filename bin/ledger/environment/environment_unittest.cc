@@ -7,6 +7,8 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/timekeeper/test_clock.h>
 
+#include "peridot/lib/rng/test_random.h"
+
 namespace ledger {
 namespace {
 
@@ -38,6 +40,17 @@ TEST_F(EnvironmentTest, InitializationClock) {
                         .Build();
 
   EXPECT_EQ(clock_ptr, env.clock());
+}
+
+TEST_F(EnvironmentTest, InitializationRandom) {
+  auto random = std::make_unique<rng::TestRandom>(0);
+  auto random_ptr = random.get();
+  Environment env = EnvironmentBuilder()
+                        .SetAsync(dispatcher())
+                        .SetRandom(std::move(random))
+                        .Build();
+
+  EXPECT_EQ(random_ptr, env.random());
 }
 
 }  // namespace
