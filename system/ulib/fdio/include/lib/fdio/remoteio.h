@@ -154,12 +154,6 @@ static_assert(FDIO_MMAP_FLAG_READ == ZX_VM_PERM_READ, "Vmar / Mmap flags should 
 static_assert(FDIO_MMAP_FLAG_WRITE == ZX_VM_PERM_WRITE, "Vmar / Mmap flags should be aligned");
 static_assert(FDIO_MMAP_FLAG_EXEC == ZX_VM_PERM_EXECUTE, "Vmar / Mmap flags should be aligned");
 
-typedef struct zxrio_mmap_data {
-    size_t offset;
-    uint64_t length;
-    int32_t flags;
-} zxrio_mmap_data_t;
-
 static_assert(FDIO_CHUNK_SIZE >= PATH_MAX, "FDIO_CHUNK_SIZE must be large enough to contain paths");
 
 #define READDIR_CMD_NONE  0
