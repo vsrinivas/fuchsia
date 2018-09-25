@@ -97,8 +97,12 @@ void ExprNode::EvalFollowReferences(fxl::RefPtr<ExprEvalContext> context,
                                     EvalCallback cb) const {
   Eval(context,
        [ context, cb = std::move(cb) ](const Err& err, ExprValue value) {
-         EnsureResolveReference(context->GetDataProvider(), std::move(value),
-                                std::move(cb));
+         if (err.has_error()) {
+           cb(err, ExprValue());
+         } else {
+           EnsureResolveReference(context->GetDataProvider(), std::move(value),
+                                  std::move(cb));
+         }
        });
 }
 

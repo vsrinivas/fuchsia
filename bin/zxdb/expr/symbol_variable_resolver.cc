@@ -18,33 +18,6 @@
 
 namespace zxdb {
 
-namespace {
-
-// Generates some text describing the validity ranges for a VariableLocation
-// for use in error messages where a variable is not valid.
-//
-// When the debugger is stable we probably want to remove this as it is very
-// noisy and not useful. But with symbol and variable handling is in active
-// development, listing this information can be very helpful.
-std::string DescribeLocationMissError(const SymbolContext& symbol_context,
-                                      uint64_t ip,
-                                      const VariableLocation& loc) {
-  if (loc.locations().empty())
-    return "Completely optimized out.";
-
-  // Describe ranges.
-  std::string result = fxl::StringPrintf("IP = 0x%" PRIx64 ", valid", ip);
-  for (const auto& entry : loc.locations()) {
-    result.append(
-        fxl::StringPrintf(" [0x%" PRIx64 ", 0x%" PRIx64 ")",
-                          symbol_context.RelativeToAbsolute(entry.begin),
-                          symbol_context.RelativeToAbsolute(entry.end)));
-  }
-  return result;
-}
-
-}  // namespace
-
 SymbolVariableResolver::SymbolVariableResolver(
     fxl::RefPtr<SymbolDataProvider> data_provider)
     : data_provider_(std::move(data_provider)), weak_factory_(this) {}
@@ -76,14 +49,12 @@ void SymbolVariableResolver::ResolveVariable(
     std::string err_str;
     if (var->location().is_null()) {
       // With no locations, this variable has been completely optimized out.
-      err_str = fxl::StringPrintf("The variable '%s' has been optimized out.",
+      err_str = fxl::StringPrintf("'%s' has been optimized out.",
                                   var->GetAssignedName().c_str());
     } else {
       // There are locations but none of them match the current IP.
-      err_str = fxl::StringPrintf(
-          "The variable '%s' is not available at this address. ",
-          var->GetAssignedName().c_str());
-      err_str += DescribeLocationMissError(symbol_context, ip, var->location());
+      err_str = fxl::StringPrintf("'%s' is not available at this address. ",
+                                  var->GetAssignedName().c_str());
     }
     OnComplete(Err(ErrType::kOptimizedOut, std::move(err_str)), ExprValue());
     return;
