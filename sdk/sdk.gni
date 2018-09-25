@@ -33,11 +33,6 @@ declare_args() {
 template("sdk") {
   assert(defined(invoker.category), "Must define an SDK category")
 
-  # TODO(DX-340): remove this.
-  if (defined(invoker.domains)) {
-    not_needed(invoker, [ "domains" ])
-  }
-
   main_target_name = target_name
   generation_target_name = "${target_name}_molecule"
   copy_target_name = "${target_name}_copy"

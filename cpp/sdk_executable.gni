@@ -33,8 +33,6 @@ template("sdk_executable") {
     file_base = "tools/$output_name"
 
     sdk_atom("${target_name}_sdk") {
-      domain = "exe"
-      name = output_name
       id = "sdk://tools/$output_name"
 
       category = invoker.category
@@ -52,16 +50,7 @@ template("sdk_executable") {
         }
       }
 
-      tags = [ "arch:host" ]
-
       files = [
-        {
-          source = "$root_out_dir/$output_name"
-          dest = output_name
-        },
-      ]
-
-      new_files = [
         {
           source = "$root_out_dir/$output_name"
           dest = file_base

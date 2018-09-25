@@ -146,8 +146,6 @@ template("go_build") {
     file_base = "tools/$output_name"
 
     sdk_atom("${target_name}_sdk") {
-      domain = "exe"
-      name = output_name
       id = "sdk://tools/$output_name"
 
       category = invoker.sdk_category
@@ -165,16 +163,7 @@ template("go_build") {
         }
       }
 
-      tags = [ "arch:host" ]
-
       files = [
-        {
-          source = output_path
-          dest = output_name
-        },
-      ]
-
-      new_files = [
         {
           source = output_path
           dest = file_base

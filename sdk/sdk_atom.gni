@@ -86,26 +86,6 @@ import("//build/json/validate_json.gni")
 #     Destination path of the file relative to the SDK root.
 
 template("sdk_atom") {
-  # TODO(DX-340): remove all of this one all references are gone.
-  if (defined(invoker.domain)) {
-    not_needed(invoker, [ "domain" ])
-  }
-  if (defined(invoker.name)) {
-    not_needed(invoker, [ "name" ])
-  }
-  if (defined(invoker.tags)) {
-    not_needed(invoker, [ "tags" ])
-  }
-  if (defined(invoker.tags_file)) {
-    not_needed(invoker, [ "tags_file" ])
-  }
-  if (defined(invoker.package_deps)) {
-    not_needed(invoker, [ "package_deps" ])
-  }
-  if (defined(invoker.source_dir)) {
-    not_needed(invoker, [ "source_dir" ])
-  }
-
   assert(defined(invoker.category), "Must define an SDK category")
   category = invoker.category
 
@@ -130,15 +110,9 @@ template("sdk_atom") {
   }
 
   assert(defined(invoker.files), "An atom must specify some files")
-  # TODO(DX-340): remove this.
-  all_files = invoker.files
-  if (defined(invoker.new_files)) {
-    all_files = []
-    all_files = invoker.new_files
-  }
   file_args = []
   file_inputs = []
-  foreach(file, all_files) {
+  foreach(file, invoker.files) {
     assert(defined(file.source), "File $file does not specify a source.")
     assert(defined(file.dest), "File $file does not specify a destination.")
     file_inputs += [ file.source ]

@@ -90,7 +90,6 @@ template("sdk_source_set") {
   sdk_headers = []
   sdk_sources = []
   sdk_files = []
-  sdk_new_files = []
   foreach(header, all_headers) {
     include_base = "include"
     if (defined(invoker.include_base)) {
@@ -102,12 +101,6 @@ template("sdk_source_set") {
     sdk_files += [
       {
         source = header
-        dest = "include/$relative_destination"
-      },
-    ]
-    sdk_new_files += [
-      {
-        source = header
         dest = destination
       },
     ]
@@ -115,11 +108,6 @@ template("sdk_source_set") {
   foreach(source, all_sources) {
     sdk_sources += [ "$file_base/$source" ]
     sdk_files += [
-      {
-        source = source
-      },
-    ]
-    sdk_new_files += [
       {
         source = source
         dest = "$file_base/$source"
@@ -163,8 +151,6 @@ template("sdk_source_set") {
                              "testonly",
                            ])
 
-    domain = "cpp"
-    name = invoker.sdk_name
     id = "sdk://pkg/${invoker.sdk_name}"
     category = invoker.category
 
@@ -174,10 +160,7 @@ template("sdk_source_set") {
       schema = "cc_source_library"
     }
 
-    tags = [ "type:sources" ]
-
     files = sdk_files
-    new_files = sdk_new_files
 
     deps = sdk_deps
 

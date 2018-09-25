@@ -676,9 +676,9 @@ zircon_tool_action("fvm.sparse.blk") {
   }
   # Note: this action can not be expressed using the `generate_fvm` template
   # because it needs to interleave the blob and data flags.
-  args = rebase_path(outputs, root_build_dir) + 
+  args = rebase_path(outputs, root_build_dir) +
     fvm_sparse_args +
-    [ "--blob" ] + 
+    [ "--blob" ] +
     rebase_path(get_target_outputs(":blob.blk"), root_build_dir) +
     [ "--data" ] +
     rebase_path(get_target_outputs(":data.blk"), root_build_dir)
@@ -1425,8 +1425,6 @@ foreach(image, images) {
     image_target_name = "${image.sdk}_sdk"
     sdk_images += [ ":$image_target_name" ]
     sdk_atom(image_target_name) {
-      domain = "image"
-      name = image.sdk
       id = "sdk://images/${image.sdk}"
       category = "partner"
       testonly = true
@@ -1462,12 +1460,6 @@ foreach(image, images) {
       assert(image_sources == [ image_sources[0] ])
 
       files = [
-        {
-          source = image_sources[0]
-          dest = image.sdk
-        },
-      ]
-      new_files = [
         {
           source = image_sources[0]
           dest = "target/$target_cpu/${image.sdk}"

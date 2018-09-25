@@ -72,8 +72,6 @@ metadata = {
 }
 
 sdk_atom("${data.name}_sdk") {
-  domain = "cpp"
-  name = "${data.name}"
   id = "sdk://pkg/${data.name}"
   category = "partner"
 
@@ -83,26 +81,7 @@ sdk_atom("${data.name}_sdk") {
     value = metadata
   }
 
-  tags = [
-    "type:sources",
-  ]
-
   files = [
-    % for dest, source in sorted(data.includes.iteritems()):
-    {
-      source = "${source}"
-      dest = "include/${dest}"
-    },
-    % endfor
-    % for dest, source in sorted(data.sources.iteritems()):
-    {
-      source = "${source}"
-      dest = "${dest}"
-    },
-    % endfor
-  ]
-
-  new_files = [
     % for dest, source in sorted(data.includes.iteritems()):
     {
       source = "${source}"
@@ -117,7 +96,7 @@ sdk_atom("${data.name}_sdk") {
     % endfor
   ]
 
-  package_deps = [
+  deps = [
     % for dep in sorted(data.deps):
     "../${dep}:${dep}_sdk",
     % endfor

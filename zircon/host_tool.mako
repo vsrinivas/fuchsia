@@ -18,8 +18,6 @@ copy("${data.name}") {
 file_base = "tools/${data.name}"
 
 sdk_atom("${data.name}_sdk") {
-  domain = "exe"
-  name = "${data.name}"
   id = "sdk://tools/${data.name}"
   category = "partner"
 
@@ -36,16 +34,7 @@ sdk_atom("${data.name}_sdk") {
     }
   }
 
-  tags = [ "arch:host" ]
-
   files = [
-    {
-      source = "${data.executable}"
-      dest = "${data.name}"
-    },
-  ]
-
-  new_files = [
     {
       source = "${data.executable}"
       dest = file_base

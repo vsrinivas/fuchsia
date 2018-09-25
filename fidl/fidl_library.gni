@@ -169,7 +169,6 @@ template("fidl_library") {
     # Process sources.
     file_base = "fidl/$library_name"
     all_files = []
-    new_all_files = []
     sdk_sources = []
     foreach(source, invoker.sources) {
       relative_source = rebase_path(source, ".")
@@ -181,12 +180,6 @@ template("fidl_library") {
       destination = "$file_base/$relative_source"
       sdk_sources += [ destination ]
       all_files += [
-        {
-          source = rebase_path(source)
-          dest = relative_source
-        },
-      ]
-      new_all_files += [
         {
           source = rebase_path(source)
           dest = destination
@@ -233,8 +226,6 @@ template("fidl_library") {
     }
 
     sdk_atom("${target_name}_sdk") {
-      domain = "fidl"
-      name = library_name
       id = "sdk://fidl/$library_name"
 
       category = invoker.sdk_category
@@ -245,10 +236,7 @@ template("fidl_library") {
         schema = "fidl_library"
       }
 
-      tags = [ "name:$library_name" ]
-
       files = all_files
-      new_files = new_all_files
 
       non_sdk_deps = [
         ":$meta_target_name",

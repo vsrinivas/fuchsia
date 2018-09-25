@@ -68,8 +68,6 @@ metadata = {
 }
 
 sdk_atom("sysroot_sdk") {
-  domain = "cpp"
-  name = "system"
   id = "sdk://pkg/sysroot"
   category = "partner"
 
@@ -79,23 +77,7 @@ sdk_atom("sysroot_sdk") {
     value = metadata
   }
 
-  tags = [
-    "type:sysroot",
-  ]
-
   files = [
-    % for path, file in sorted(data.sdk_files.iteritems()):
-    {
-      source = "${file}"
-      dest = "${path}"
-      % if path.startswith("dist/"):
-      packaged = true
-      % endif
-    },
-    % endfor
-  ]
-
-  new_files = [
     % for path, file in sorted(data.sdk_files.iteritems()):
     {
       source = "${file}"

@@ -138,7 +138,6 @@ template("prebuilt_shared_library") {
   }
   sdk_headers = []
   sdk_files = []
-  new_sdk_files = []
   foreach(header, all_headers) {
     include_base = "include"
     if (defined(invoker.include_base)) {
@@ -148,12 +147,6 @@ template("prebuilt_shared_library") {
     header_dest = "$file_base/include/$destination"
     sdk_headers += [ header_dest ]
     sdk_files += [
-      {
-        source = header
-        dest = "include/$destination"
-      },
-    ]
-    new_sdk_files += [
       {
         source = header
         dest = header_dest
@@ -168,22 +161,6 @@ template("prebuilt_shared_library") {
   dist_lib = "$prebuilt_base/dist/$lib_name"
   debug_lib = "$prebuilt_base/debug/$lib_name"
   sdk_files += [
-    {
-      # TODO(TO-791): put ABI stubs under lib/, not the full thing.
-      source = "$shared_out_dir/$lib_name"
-      dest = "lib/$lib_name"
-    },
-    {
-      source = "$shared_out_dir/$lib_name"
-      dest = "dist/$lib_name"
-      packaged = true
-    },
-    {
-      source = "$shared_out_dir/lib.unstripped/$lib_name"
-      dest = "debug/$lib_name"
-    },
-  ]
-  new_sdk_files += [
     {
       # TODO(TO-791): put ABI stubs under lib/, not the full thing.
       source = "$shared_out_dir/$lib_name"
@@ -237,10 +214,7 @@ template("prebuilt_shared_library") {
   sdk_atom(manifest_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    domain = "cpp"
-    name = atom_name
     id = "sdk://pkg/$atom_name"
-    tags = [ "type:compiled_shared" ]
 
     category = invoker.category
 
@@ -250,15 +224,7 @@ template("prebuilt_shared_library") {
       schema = "cc_prebuilt_library"
     }
 
-    if (is_fuchsia) {
-      tags += [ "arch:target" ]
-    } else {
-      tags += [ "arch:host" ]
-    }
-
     files = sdk_files
-
-    new_files = new_sdk_files
 
     deps = sdk_deps
 

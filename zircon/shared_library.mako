@@ -152,8 +152,6 @@ metadata = {
 }
 
 sdk_atom("${data.name}_sdk") {
-  domain = "cpp"
-  name = "${data.name}"
   id = "sdk://pkg/${data.name}"
   category = "partner"
 
@@ -163,43 +161,9 @@ sdk_atom("${data.name}_sdk") {
     value = metadata
   }
 
-  tags = [
-    "type:compiled_shared",
-    "arch:target",
-  ]
-
   shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
 
   files = [
-    % if data.with_sdk_headers:
-    % for dest, source in sorted(data.includes.iteritems()):
-    {
-      source = "${source}"
-      dest = "include/${dest}"
-    },
-    % endfor
-    % endif
-    {
-      source = "$shared_out_dir/${data.lib_name}"
-      dest = "lib/${data.lib_name}"
-      % if not data.has_impl_prebuilt:
-      packaged = true
-      % endif
-    },
-    % if data.has_impl_prebuilt:
-    {
-      source = "$shared_out_dir/${data.lib_name}.impl"
-      dest = "dist/${data.lib_name}"
-      packaged = true
-    },
-    % endif
-    {
-      source = "$shared_out_dir/lib.unstripped/${data.lib_name}"
-      dest = "debug/${data.lib_name}"
-    },
-  ]
-
-  new_files = [
     % if data.with_sdk_headers:
     % for dest, source in sorted(data.includes.iteritems()):
     {
@@ -224,7 +188,7 @@ sdk_atom("${data.name}_sdk") {
     },
   ]
 
-  package_deps = [
+  deps = [
     % for dep in sorted(data.deps):
     "../${dep}:${dep}_sdk",
     % endfor

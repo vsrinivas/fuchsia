@@ -291,7 +291,6 @@ if (current_toolchain == dart_toolchain) {
       assert(
           defined(invoker.package_name),
           "Dart libraries published in SDKs must have an explicit package name")
-      atom_name = invoker.package_name
 
       assert(
           !defined(invoker.extra_sources),
@@ -323,45 +322,15 @@ if (current_toolchain == dart_toolchain) {
         }
       }
 
-      # Build a manifest file listing third-party dependencies of this package.
-      # This will make it easier to build the final published package.
-      third_party_spec_target_name = "${target_name}_third_party_spec"
-      third_party_spec_file = "$target_gen_dir/${target_name}_3p_tags"
-
-      # TODO(DX-340): should not be needed anymore.
-      action(third_party_spec_target_name) {
-        script = "//build/dart/sdk/gen_3p_manifest.py"
-
-        outputs = [
-          third_party_spec_file,
-        ]
-
-        args = [
-                 "--out",
-                 rebase_path(third_party_spec_file),
-                 "--name",
-                 atom_name,
-                 "--specs",
-               ] + third_party_pubspecs
-      }
-
       file_base = "dart/${invoker.package_name}"
 
       sdk_sources = []
       sdk_source_mappings = []
-      new_sdk_source_mappings = []
       foreach(source, rebased_sources) {
         relative_source = rebase_path(source, source_dir)
-        destination = "lib/$relative_source"
-        dest = "$file_base/$destination"
+        dest = "$file_base/lib/$relative_source"
         sdk_sources += [ dest ]
         sdk_source_mappings += [
-          {
-            source = source
-            dest = destination
-          }
-        ]
-        new_sdk_source_mappings += [
           {
             source = source
             dest = dest
@@ -399,13 +368,6 @@ if (current_toolchain == dart_toolchain) {
 
       sdk_atom("${target_name}_sdk") {
         id = "sdk://dart/${invoker.package_name}"
-        domain = "dart"
-        tags = [
-          "type:library",
-          "package_name:${invoker.package_name}",
-        ]
-        tags_file = third_party_spec_file
-        name = atom_name
 
         category = invoker.sdk_category
 
@@ -419,14 +381,12 @@ if (current_toolchain == dart_toolchain) {
 
         non_sdk_deps = [
           ":$metadata_target_name",
-          ":$third_party_spec_target_name",
         ]
         if (defined(invoker.non_dart_deps)) {
           non_sdk_deps += invoker.non_dart_deps
         }
 
         files = sdk_source_mappings
-        new_files = new_sdk_source_mappings
       }
     }
   }
