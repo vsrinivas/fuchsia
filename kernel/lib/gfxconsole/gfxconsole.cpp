@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 /**
  * @file
  * @brief  Manage graphics console
@@ -15,15 +14,16 @@
  * @ingroup graphics
  */
 
-#include <debug.h>
+#include <lib/gfxconsole.h>
+
 #include <assert.h>
+#include <debug.h>
+#include <dev/display.h>
+#include <kernel/cmdline.h>
+#include <lib/gfx.h>
+#include <lib/io.h>
 #include <stdlib.h>
 #include <string.h>
-#include <kernel/cmdline.h>
-#include <lib/io.h>
-#include <lib/gfx.h>
-#include <lib/gfxconsole.h>
-#include <dev/display.h>
 
 #define TEXT_COLOR 0xffffffff
 #define BACK_COLOR 0xff000000
@@ -40,9 +40,9 @@
  */
 static struct {
     // main surface to draw on
-    gfx_surface *surface;
+    gfx_surface* surface;
     // underlying hw surface, if different from above
-    gfx_surface *hw_surface;
+    gfx_surface* hw_surface;
 
     // surface to do single line sub-region flushing with
     gfx_surface line;
@@ -57,8 +57,7 @@ static struct {
     uint32_t back_color;
 } gfxconsole;
 
-static void draw_char(char c, const struct gfx_font* font)
-{
+static void draw_char(char c, const struct gfx_font* font) {
     gfx_putchar(gfxconsole.surface, font, c,
                 gfxconsole.x * font->width, gfxconsole.y * font->height,
                 gfxconsole.front_color, gfxconsole.back_color);
@@ -70,38 +69,38 @@ void gfxconsole_putpixel(unsigned x, unsigned y, unsigned color) {
 
 static const struct gfx_font* font = &font_9x16;
 
-static bool gfxconsole_putc(char c)
-{
-    static enum { NORMAL, ESCAPE } state = NORMAL;
+static bool gfxconsole_putc(char c) {
+    static enum { NORMAL,
+                  ESCAPE } state = NORMAL;
     static uint32_t p_num = 0;
     bool inval = 0;
 
     if (state == NORMAL) {
         switch (c) {
-            case '\r':
-                gfxconsole.x = 0;
-                break;
-            case '\n':
-                gfxconsole.y++;
-                inval = 1;
-                break;
-            case '\b':
-                // back up one character unless we're at the left side
-                if (gfxconsole.x > 0) {
-                    gfxconsole.x--;
-                }
-                break;
-            case '\t':
-                gfxconsole.x = ROUNDUP(gfxconsole.x + 1, 8);
-                break;
-            case 0x1b:
-                p_num = 0;
-                state = ESCAPE;
-                break;
-            default:
-                draw_char(c, font);
-                gfxconsole.x++;
-                break;
+        case '\r':
+            gfxconsole.x = 0;
+            break;
+        case '\n':
+            gfxconsole.y++;
+            inval = 1;
+            break;
+        case '\b':
+            // back up one character unless we're at the left side
+            if (gfxconsole.x > 0) {
+                gfxconsole.x--;
+            }
+            break;
+        case '\t':
+            gfxconsole.x = ROUNDUP(gfxconsole.x + 1, 8);
+            break;
+        case 0x1b:
+            p_num = 0;
+            state = ESCAPE;
+            break;
+        default:
+            draw_char(c, font);
+            gfxconsole.x++;
+            break;
         }
     } else if (state == ESCAPE) {
         if (c >= '0' && c <= '9') {
@@ -139,8 +138,7 @@ static bool gfxconsole_putc(char c)
     return inval;
 }
 
-static void gfxconsole_print_callback(print_callback_t *cb, const char *str, size_t len)
-{
+static void gfxconsole_print_callback(print_callback_t* cb, const char* str, size_t len) {
     int refresh_full_screen = 0;
     for (size_t i = 0; i < len; i++) {
         if (str[i] == '\n')
@@ -156,10 +154,10 @@ static void gfxconsole_print_callback(print_callback_t *cb, const char *str, siz
             // Only re-blit the active console line.
             // Since blend only works in whole surfaces, configure a sub-surface
             // to use as the blend source.
-            gfxconsole.line.ptr = ((uint8_t*) gfxconsole.surface->ptr) +
-                (gfxconsole.y * gfxconsole.linestride);
+            gfxconsole.line.ptr = ((uint8_t*)gfxconsole.surface->ptr) +
+                                  (gfxconsole.y * gfxconsole.linestride);
             gfx_surface_blend(gfxconsole.hw_surface, &gfxconsole.line,
-                0, gfxconsole.y * font->height);
+                              0, gfxconsole.y * font->height);
         }
         gfx_flush(gfxconsole.hw_surface);
     } else {
@@ -170,11 +168,9 @@ static void gfxconsole_print_callback(print_callback_t *cb, const char *str, siz
 static print_callback_t cb = {
     .entry = {},
     .print = gfxconsole_print_callback,
-    .context = NULL
-};
+    .context = NULL};
 
-static void gfxconsole_setup(gfx_surface *surface, gfx_surface *hw_surface)
-{
+static void gfxconsole_setup(gfx_surface* surface, gfx_surface* hw_surface) {
     const char* fname = cmdline_get("gfxconsole.font");
     if (fname != NULL) {
         if (!strcmp(fname, "18x32")) {
@@ -201,8 +197,7 @@ static void gfxconsole_setup(gfx_surface *surface, gfx_surface *hw_surface)
             gfxconsole.columns, gfxconsole.extray);
 }
 
-static void gfxconsole_clear(bool crash_console)
-{
+static void gfxconsole_clear(bool crash_console) {
     // start in the upper left
     gfxconsole.x = 0;
     gfxconsole.y = 0;
@@ -227,8 +222,7 @@ static void gfxconsole_clear(bool crash_console)
  * The graphics console subsystem is initialized, and registered as
  * an output device for debug output.
  */
-void gfxconsole_start(gfx_surface *surface, gfx_surface *hw_surface)
-{
+void gfxconsole_start(gfx_surface* surface, gfx_surface* hw_surface) {
     DEBUG_ASSERT(gfxconsole.surface == NULL);
 
     gfxconsole_setup(surface, hw_surface);
@@ -242,14 +236,13 @@ static gfx_surface hw_surface;
 static gfx_surface sw_surface;
 static struct display_info dispinfo;
 
-zx_status_t gfxconsole_display_get_info(struct display_info *info)
-{
+zx_status_t gfxconsole_display_get_info(struct display_info* info) {
     if (gfxconsole.surface) {
         memcpy(info, &dispinfo, sizeof(*info));
         return 0;
     } else {
         return -1;
-   }
+    }
 }
 
 /**
@@ -265,7 +258,7 @@ zx_status_t gfxconsole_display_get_info(struct display_info *info)
  * surface (stride * height * pixelsize) for the provided hardware display.
  * This is used for very early framebuffer init before the heap is alive.
  */
-void gfxconsole_bind_display(struct display_info *info, void *raw_sw_fb) {
+void gfxconsole_bind_display(struct display_info* info, void* raw_sw_fb) {
     static bool active = false;
     bool same_as_before = false;
     struct gfx_surface hw;
@@ -307,12 +300,12 @@ void gfxconsole_bind_display(struct display_info *info, void *raw_sw_fb) {
     }
     memcpy(&hw_surface, &hw, sizeof(hw));
 
-    gfx_surface *s = &hw_surface;
+    gfx_surface* s = &hw_surface;
     if (info->flags & DISPLAY_FLAG_HW_FRAMEBUFFER) {
         if (!same_as_before) {
             // we can't re-use the existing sw_surface, create a new one
             if (gfx_init_surface(&sw_surface, raw_sw_fb, hw_surface.width,
-                hw_surface.height, hw_surface.stride, hw_surface.format, 0)) {
+                                 hw_surface.height, hw_surface.stride, hw_surface.format, 0)) {
                 return;
             }
         }

@@ -13,6 +13,6 @@ MODULE_DEPS += \
 	kernel/lib/gfx
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/gfxconsole.c
+	$(LOCAL_DIR)/gfxconsole.cpp
 
 include make/module.mk
