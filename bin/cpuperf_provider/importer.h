@@ -15,8 +15,8 @@
 #include <trace-engine/context.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
+#include "garnet/lib/cpuperf/device_reader.h"
 #include "garnet/lib/cpuperf/events.h"
-#include "garnet/lib/cpuperf/reader.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
@@ -28,7 +28,7 @@ class Importer {
            trace_ticks_t start_time, trace_ticks_t stop_time);
   ~Importer();
 
-  bool Import(cpuperf::Reader& reader);
+  bool Import(cpuperf::DeviceReader& reader);
 
  private:
   static constexpr size_t kMaxNumCpus = 32;
@@ -109,20 +109,20 @@ class Importer {
     EventData data_;
   };
 
-  uint64_t ImportRecords(cpuperf::Reader& reader,
+  uint64_t ImportRecords(cpuperf::DeviceReader& reader,
                          const cpuperf_properties_t& props,
                          const cpuperf_config_t& config);
 
   void ImportSampleRecord(trace_cpu_number_t cpu,
                           const cpuperf_config_t& config,
-                          const cpuperf::Reader::SampleRecord& record,
+                          const cpuperf::SampleRecord& record,
                           trace_ticks_t previous_time,
                           trace_ticks_t current_time, uint64_t ticks_per_second,
                           uint64_t event_value);
 
   void EmitSampleRecord(trace_cpu_number_t cpu,
                         const cpuperf::EventDetails* details,
-                        const cpuperf::Reader::SampleRecord& record,
+                        const cpuperf::SampleRecord& record,
                         trace_ticks_t start_time, trace_ticks_t end_time,
                         uint64_t ticks_per_second, uint64_t value);
 

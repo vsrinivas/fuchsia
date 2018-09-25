@@ -2,50 +2,70 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_CPUPERF_CONTROL_H_
-#define GARNET_LIB_CPUPERF_CONTROL_H_
+#ifndef GARNET_LIB_CPUPERF_CONTROLLER_H_
+#define GARNET_LIB_CPUPERF_CONTROLLER_H_
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <memory>
 
+#include <lib/fxl/files/unique_fd.h>
 #include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
 
-#include "garnet/lib/cpuperf/reader.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "garnet/lib/cpuperf/device_reader.h"
 
 namespace cpuperf {
 
 class Controller {
  public:
-  Controller(uint32_t buffer_size_in_mb, const cpuperf_config_t& config);
+  enum class Mode {
+    // Collect profile-based samples.
+    kSample,
+    // Collect simple counts of events.
+    kTally,
+  };
+
+  // The buffer size used by each cpu to record its data.
+  // The protocol restricts buffer sizes in bytes to a uint32.
+  // 2 gigabytes per cpu is plenty for now.
+  static constexpr uint32_t kMaxBufferSizeInMb = 2 * 1024;
+
+  static bool Create(uint32_t buffer_size_in_mb,
+                     const cpuperf_config_t& config,
+                     std::unique_ptr<Controller>* out_controller);
+
   ~Controller();
 
   bool Start();
   // It is ok to call this while stopped.
   void Stop();
 
-  bool is_valid() const;
   bool started() const { return started_; }
 
-  std::unique_ptr<Reader> GetReader();
+  Mode mode() const { return mode_; }
+
+  uint32_t num_traces() const { return num_traces_; }
+
+  std::unique_ptr<DeviceReader> GetReader();
 
  private:
-  void Alloc();
+  static bool Alloc(int fd, uint32_t num_traces, uint32_t buffer_size,
+                    const cpuperf_config_t& config);
+  Controller(fxl::UniqueFD fd, Mode mode, uint32_t num_traces,
+             uint32_t buffer_size, const cpuperf_config_t& config);
   bool Stage();
   void Free();
+  void Reset();
 
-  // If |!sample_mode_| then we ignore the provided buffer size, we don't
-  // need it.
-  const bool sample_mode_;
+  fxl::UniqueFD fd_;
+  const Mode mode_;
+  // The number of traces we will collect (== #cpus for now).
+  uint32_t num_traces_;
   // This is the actual buffer size we use, in bytes.
   const uint32_t buffer_size_;
   const cpuperf_config_t config_;
-  fxl::UniqueFD fd_;
-  bool alloc_;
-  bool started_;
+  bool started_ = false;
 };
 
 }  // namespace cpuperf
 
-#endif  // GARNET_LIB_CPUPERF_CONTROL_H_
+#endif  // GARNET_LIB_CPUPERF_CONTROLLER_H_

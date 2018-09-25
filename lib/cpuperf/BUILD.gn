@@ -6,23 +6,38 @@ import("//build/package.gni")
 
 static_library("cpuperf") {
   sources = [
+    "buffer_reader.cc",
+    "buffer_reader.h",
+    "events.cc",
+    "events.h",
+    "reader.cc",
+    "reader.h",
+    "records.cc",
+    "records.h",
+    "types.cc",
+    "types.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/zircon-internal",
   ]
 
   # arm64 support will come later
-  if (current_cpu == "x64") {
+  if (is_fuchsia && current_cpu == "x64") {
     sources += [
       "controller.cc",
       "controller.h",
-      "events.cc",
-      "events.h",
-      "reader.cc",
-      "reader.h",
+      "device_reader.cc",
+      "device_reader.h",
+    ]
+
+    public_deps += [
+      "//zircon/public/lib/zx",
     ]
   }
 
-  deps = [
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
-    "//zircon/public/lib/zircon-internal",
-  ]
+  if (!is_fuchsia) {
+    public_deps += [ "//zircon/system/public" ]
+  }
 }

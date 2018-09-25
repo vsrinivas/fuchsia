@@ -11,6 +11,11 @@
 
 namespace cpuperf {
 
+// TODO(dje): Reconcile event SYMBOLs with event names.
+// Ideally they should match, but there's also good reasons
+// to keep them different (organization, and matching vendor docs).
+// TODO(dje): Add missing event descriptions. See cpuperf --list-events.
+
 struct EventDetails {
   cpuperf_event_id_t id;
   const char* name;

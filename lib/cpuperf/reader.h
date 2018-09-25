@@ -5,91 +5,80 @@
 #ifndef GARNET_LIB_CPUPERF_READER_H_
 #define GARNET_LIB_CPUPERF_READER_H_
 
-#include <lib/zx/vmar.h>
-#include <lib/zx/vmo.h>
+#include <cstdint>
+#include <memory>
+
+#include <lib/fxl/macros.h>
 #include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
 #include <zircon/types.h>
 
-#include "lib/fxl/macros.h"
+#include "buffer_reader.h"
 
 namespace cpuperf {
 
 class Reader {
  public:
-  // When reading sample data, the record we read is one of these.
-  // To avoid unnecessary copying of the larger records we just return a
-  // pointer to the record, which will remain valid until the next record
-  // is read.
-  union SampleRecord {
-    const cpuperf_record_header_t* header;
-    const cpuperf_time_record_t* time;
-    const cpuperf_tick_record_t* tick;
-    const cpuperf_count_record_t* count;
-    const cpuperf_value_record_t* value;
-    const cpuperf_pc_record_t* pc;
+  virtual ~Reader();
 
-    // Ideally this would return the enum type, but we don't make any
-    // assumptions about the validity of the trace data.
-    uint8_t type() const { return header->type; }
-    cpuperf_event_id_t event() const { return header->event; }
-  };
+  uint32_t num_traces() const { return num_traces_; }
 
-  // |fd| is borrowed.
-  Reader(int fd, uint32_t buffer_size);
+  // See |BufferReader::ticks_per_second()|.
+  uint64_t ticks_per_second() const {
+    if (buffer_reader_)
+      return buffer_reader_->ticks_per_second();
+    return 0;
+  }
 
-  bool is_valid() { return vmar_.is_valid(); }
+  // See |BufferReader::time()|.
+  zx_time_t time() const {
+    if (buffer_reader_)
+      return buffer_reader_->time();
+    return 0;
+  }
 
-  uint32_t num_cpus() const { return num_cpus_; }
+  // Set the buffer we're reading to |trace_num|.
+  ReaderStatus SetTrace(uint32_t trace_num);
 
-  // The returned value is zero until the first call to ReadNextRecord(),
-  // after which it contains the value used by the trace.
-  // Note: The returned value could be bogus, including zero.
-  // We just pass on what the trace told us.
-  uint64_t ticks_per_second() const { return ticks_per_second_; }
+  // Return a pointer to the current trace.
+  // Returns nullptr if no buffer has been mapped yet.
+  const void* GetCurrentTraceBuffer() const;
 
-  // Return the current time, in ticks, based on the last time record read.
-  zx_time_t time() const { return time_; }
+  // Return the size in bytes of the current trace.
+  // Returns zero if no buffer has been mapped yet.
+  size_t GetCurrentTraceSize() const;
 
-  bool GetProperties(cpuperf_properties_t* props);
-
-  bool GetConfig(cpuperf_config_t* config);
+  // Return the offset of the last record read, for error reporting purposes.
+  // Only valid after a call to |ReadNextRecord()|.
+  size_t GetLastRecordOffset() const;
 
   // Read the next record.
   // Note: To avoid unnecessary copying of larger records, the result contains
   // a pointer to the record. Such pointers remain valid until the next call.
-  bool ReadNextRecord(uint32_t* cpu, SampleRecord* record);
+  ReaderStatus ReadNextRecord(uint32_t* trace_num, SampleRecord* record);
 
-  // Returns IPM_RECORD_RESERVED for an invalid record type.
-  static cpuperf_record_type_t RecordType(const cpuperf_record_header_t* hdr);
+ protected:
+  Reader(uint32_t num_traces);
 
-  // Returns 0 for an invalid record type or invalid record.
-  static size_t RecordSize(const cpuperf_record_header_t* hdr);
+  virtual bool MapBuffer(const std::string& name, uint32_t trace_num) = 0;
+  virtual bool UnmapBuffer() = 0;
 
- private:
-  bool MapBufferVmo(zx_handle_t vmo);
+  bool BufferMapped() const { return !!buffer_reader_; }
 
-  int fd_;  // borrowed
-  const uint32_t buffer_size_;
-  const uint32_t num_cpus_;
-  uint32_t current_cpu_ = 0;
+  // Utility to update |status_| and return the current value.
+  // The status is updated only if it is currently |kOk|.
+  ReaderStatus set_status(ReaderStatus status) {
+    if (status_ == ReaderStatus::kOk)
+      status_ = status;
+    return status_;
+  }
 
-  zx::vmar vmar_;
-  zx::vmo current_vmo_;
-  const uint8_t* buffer_start_ = nullptr;
-  const uint8_t* next_record_ = nullptr;
-  const uint8_t* capture_end_ = nullptr;
+  const uint32_t num_traces_;
+  uint32_t current_trace_ = 0;
 
-  // Reading of one trace can span multiple cpus, and the ticks-per-second
-  // value comes from each cpu's trace. Generally it's all the same value,
-  // but there is no uber record to specify that. zx_ticks_per_second() will
-  // return a constant value (though not necessarily the same value on each
-  // boot), and it's this value we expect in the trace. OTOH, we use what
-  // the trace buffer gives us. We don't want each record to encode its own
-  // value, so keep track of the value here.
-  uint64_t ticks_per_second_ = 0;
+  std::unique_ptr<BufferReader> buffer_reader_;
 
-  // The time from the last CPUPERF_RECORD_TIME record read.
-  zx_time_t time_ = 0;
+  // Reader status. Once we get a reader error, reading stops.
+  ReaderStatus status_ = ReaderStatus::kOk;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Reader);
 };

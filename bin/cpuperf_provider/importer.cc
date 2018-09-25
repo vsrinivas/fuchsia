@@ -60,7 +60,7 @@ Importer::Importer(trace_context_t* context, const TraceConfig* trace_config,
 
 Importer::~Importer() = default;
 
-bool Importer::Import(cpuperf::Reader& reader) {
+bool Importer::Import(cpuperf::DeviceReader& reader) {
   trace_context_write_process_info_record(context_, kCpuProcess,
                                           &cpu_string_ref_);
 
@@ -86,7 +86,7 @@ bool Importer::Import(cpuperf::Reader& reader) {
   return true;
 }
 
-uint64_t Importer::ImportRecords(cpuperf::Reader& reader,
+uint64_t Importer::ImportRecords(cpuperf::DeviceReader& reader,
                                  const cpuperf_properties_t& props,
                                  const cpuperf_config_t& config) {
   EventTracker event_data(start_time_);
@@ -99,13 +99,13 @@ uint64_t Importer::ImportRecords(cpuperf::Reader& reader,
   uint32_t printed_late_record_warning_count = 0;
 
   uint32_t cpu;
-  cpuperf::Reader::SampleRecord record;
+  cpuperf::SampleRecord record;
 
   uint64_t sample_rate = trace_config_->sample_rate();
   bool is_tally_mode = sample_rate == 0;
   trace_ticks_t current_time = reader.time();
 
-  while (reader.ReadNextRecord(&cpu, &record)) {
+  while (reader.ReadNextRecord(&cpu, &record) == cpuperf::ReaderStatus::kOk) {
     FXL_DCHECK(cpu < kMaxNumCpus);
     cpuperf_event_id_t event_id = record.event();
     uint64_t ticks_per_second = reader.ticks_per_second();
@@ -217,7 +217,7 @@ uint64_t Importer::ImportRecords(cpuperf::Reader& reader,
 
 void Importer::ImportSampleRecord(trace_cpu_number_t cpu,
                                   const cpuperf_config_t& config,
-                                  const cpuperf::Reader::SampleRecord& record,
+                                  const cpuperf::SampleRecord& record,
                                   trace_ticks_t previous_time,
                                   trace_ticks_t current_time,
                                   uint64_t ticks_per_second,
@@ -236,7 +236,7 @@ void Importer::ImportSampleRecord(trace_cpu_number_t cpu,
 
 void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
                                 const cpuperf::EventDetails* details,
-                                const cpuperf::Reader::SampleRecord& record,
+                                const cpuperf::SampleRecord& record,
                                 trace_ticks_t start_time,
                                 trace_ticks_t end_time,
                                 uint64_t ticks_per_second, uint64_t value) {

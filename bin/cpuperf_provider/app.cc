@@ -105,20 +105,20 @@ void App::StartTracing(const TraceConfig& trace_config) {
     return;
   }
 
-  auto controller = std::unique_ptr<cpuperf::Controller>(
-      new cpuperf::Controller(buffer_size_in_mb_, device_config));
-  if (!controller->is_valid()) {
+  std::unique_ptr<cpuperf::Controller> controller;
+  if (!cpuperf::Controller::Create(buffer_size_in_mb_, device_config,
+                                   &controller)) {
     FXL_LOG(ERROR) << "Cpuperf controller failed to initialize";
     return;
   }
-
-  FXL_VLOG(1) << "Starting trace, config = " << trace_config.ToString();
 
   context_ = trace_acquire_prolonged_context();
   if (!context_) {
     // Tracing was disabled in the meantime.
     return;
   }
+
+  FXL_VLOG(1) << "Starting trace, config = " << trace_config.ToString();
 
   start_time_ = zx_ticks_get();
   if (!controller->Start())
@@ -150,7 +150,7 @@ void App::StopTracing() {
   auto buffer_context = trace_acquire_context();
 
   auto reader = controller_->GetReader();
-  if (reader->is_valid()) {
+  if (reader) {
     Importer importer(buffer_context, &trace_config_, start_time_, stop_time_);
     if (!importer.Import(*reader)) {
       FXL_LOG(ERROR) << "Errors encountered while importing cpuperf data";
