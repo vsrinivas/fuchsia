@@ -45,12 +45,11 @@ zx_status_t pmm_alloc_page(uint alloc_flags, vm_page **p, paddr_t *pa) __NONNULL
 // Allocate a specific range of physical pages, adding to the tail of the passed list.
 zx_status_t pmm_alloc_range(paddr_t address, size_t count, list_node* list) __NONNULL((3));
 
-// Allocate a run of contiguous pages, aligned on log2 byte boundary (0-31)
-// If the optional physical address pointer is passed, return the address.
-// If the optional list is passed, append the allocate page structures to the tail of the list.
-size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t align_log2, paddr_t* pa,
-                            list_node* list);
-//zx_status_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t align_log2, list_node* list);
+// Allocate a run of contiguous pages, aligned on log2 byte boundary (0-31).
+// Return the base address of the run in the physical address pointer and
+// append the allocate page structures to the tail of the passed in list.
+zx_status_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t align_log2,
+                                 paddr_t* pa, list_node* list) __NONNULL((4, 5));
 
 // Free a list of physical pages.
 void pmm_free(list_node* list) __NONNULL((1));

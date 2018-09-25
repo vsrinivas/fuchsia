@@ -171,7 +171,7 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
 
     size_t allocated = 0;
     if (count == 0)
-        return 0;
+        return ZX_OK;
 
     address = ROUNDDOWN(address, PAGE_SIZE);
 
@@ -211,14 +211,18 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
     return ZX_OK;
 }
 
-size_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8_t alignment_log2,
+zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8_t alignment_log2,
                                 paddr_t* pa, list_node* list) {
     LTRACEF("count %zu, align %u\n", count, alignment_log2);
 
     if (count == 0)
-        return 0;
+        return ZX_OK;
     if (alignment_log2 < PAGE_SIZE_SHIFT)
         alignment_log2 = PAGE_SIZE_SHIFT;
+
+    // pa and list must be valid pointers
+    DEBUG_ASSERT(pa);
+    DEBUG_ASSERT(list);
 
     Guard<fbl::Mutex> guard{&lock_};
 
@@ -227,8 +231,7 @@ size_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8_t al
         if (!p)
             continue;
 
-        if (pa)
-            *pa = p->paddr();
+        *pa = p->paddr();
 
         // remove the pages from the run out of the free list
         for (size_t i = 0; i < count; i++, p++) {
@@ -246,15 +249,14 @@ size_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8_t al
             CheckFreeFill(p);
 #endif
 
-            if (list)
-                list_add_tail(list, &p->queue_node);
+            list_add_tail(list, &p->queue_node);
         }
 
-        return count;
+        return ZX_OK;
     }
 
     LTRACEF("couldn't find run\n");
-    return 0;
+    return ZX_ERR_NOT_FOUND;
 }
 
 void PmmNode::FreePageLocked(vm_page* page) {

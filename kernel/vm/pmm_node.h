@@ -32,7 +32,7 @@ public:
     zx_status_t AllocPage(uint alloc_flags, vm_page_t** page, paddr_t* pa);
     zx_status_t AllocPages(size_t count, uint alloc_flags, list_node* list);
     zx_status_t AllocRange(paddr_t address, size_t count, list_node* list);
-    size_t AllocContiguous(size_t count, uint alloc_flags, uint8_t alignment_log2, paddr_t* pa, list_node* list);
+    zx_status_t AllocContiguous(size_t count, uint alloc_flags, uint8_t alignment_log2, paddr_t* pa, list_node* list);
     void FreePage(vm_page* page);
     void FreeList(list_node* list);
 

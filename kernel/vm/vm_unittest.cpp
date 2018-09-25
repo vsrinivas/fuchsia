@@ -76,10 +76,9 @@ static bool pmm_alloc_contiguous_one_test() {
     list_node list = LIST_INITIAL_VALUE(list);
     paddr_t pa;
     size_t count = 1U;
-    size_t num_allocated = pmm_alloc_contiguous(count, 0, PAGE_SIZE_SHIFT, &pa, &list);
-    ASSERT_EQ(num_allocated, count, "pmm_alloc_contiguous wrong number allocated");
-    ASSERT_EQ(num_allocated, list_length(&list),
-              "pmm_alloc_contiguous list size is wrong");
+    zx_status_t status = pmm_alloc_contiguous(count, 0, PAGE_SIZE_SHIFT, &pa, &list);
+    ASSERT_EQ(ZX_OK, status, "pmm_alloc_contiguous returned failure\n");
+    ASSERT_EQ(count, list_length(&list), "pmm_alloc_contiguous list size is wrong");
     ASSERT_NE(nullptr, paddr_to_physmap(pa), "");
     pmm_free(&list);
     END_TEST;

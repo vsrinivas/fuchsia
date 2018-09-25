@@ -306,7 +306,7 @@ static int string_tests(int argc, const cmd_args* argv, uint32_t flags) {
     size_t total_size = (BUFFER_SIZE + 256) * 4;
     size_t page_count = ROUNDUP(total_size, PAGE_SIZE) / PAGE_SIZE;
     paddr_t pa;
-    if (pmm_alloc_contiguous(page_count, 0, PAGE_SIZE_SHIFT, &pa, &list) != page_count) {
+    if (pmm_alloc_contiguous(page_count, 0, PAGE_SIZE_SHIFT, &pa, &list) != ZX_OK) {
         printf("failed to allocate %zu bytes of contiguous memory for test\n", total_size);
         return -1;
     }

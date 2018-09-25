@@ -112,9 +112,9 @@ static zx_status_t vmo_coalesce_pages(zx_handle_t vmo_hdl, const size_t extra_by
     const size_t num_pages = ROUNDUP(vmo_size + extra_bytes, PAGE_SIZE) / PAGE_SIZE;
 
     paddr_t base_addr;
-    const size_t allocated = pmm_alloc_contiguous(num_pages, PMM_ALLOC_FLAG_ANY,
-                                                  0, &base_addr, nullptr);
-    if (allocated < num_pages) {
+    list_node list = LIST_INITIAL_VALUE(list);
+    st = pmm_alloc_contiguous(num_pages, PMM_ALLOC_FLAG_ANY, 0, &base_addr, &list);
+    if (st != ZX_OK) {
         // TODO(gkalsi): Free pages allocated by pmm_alloc_contiguous pages
         //               and return an error.
         panic("Failed to allocate contiguous memory");

@@ -75,19 +75,17 @@ zx_status_t pmm_alloc_range(paddr_t address, size_t count, list_node* list) {
     return pmm_node.AllocRange(address, count, list);
 }
 
-size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_log2, paddr_t* pa,
+zx_status_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_log2, paddr_t* pa,
                             list_node* list) {
     // if we're called with a single page, just fall through to the regular allocation routine
-    if (unlikely(count == 1 && alignment_log2 == PAGE_SIZE_SHIFT)) {
+    if (unlikely(count == 1 && alignment_log2 <= PAGE_SIZE_SHIFT)) {
         vm_page_t* page;
         zx_status_t status = pmm_node.AllocPage(alloc_flags, &page, pa);
         if (status != ZX_OK) {
-            return 0;
+            return status;
         }
-        if (list != nullptr) {
-            list_add_tail(list, &page->queue_node);
-        }
-        return 1;
+        list_add_tail(list, &page->queue_node);
+        return ZX_OK;
     }
 
     return pmm_node.AllocContiguous(count, alloc_flags, alignment_log2, pa, list);

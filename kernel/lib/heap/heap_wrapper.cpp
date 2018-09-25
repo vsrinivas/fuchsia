@@ -260,8 +260,8 @@ void* heap_page_alloc(size_t pages) {
     list_node list = LIST_INITIAL_VALUE(list);
 
     paddr_t pa;
-    size_t allocated = pmm_alloc_contiguous(pages, 0, PAGE_SIZE_SHIFT, &pa, &list);
-    if (allocated == 0) {
+    zx_status_t status = pmm_alloc_contiguous(pages, 0, PAGE_SIZE_SHIFT, &pa, &list);
+    if (status != ZX_OK) {
         return nullptr;
     }
 
@@ -272,7 +272,7 @@ void* heap_page_alloc(size_t pages) {
         p->state = VM_PAGE_STATE_HEAP;
     }
 
-    LTRACEF("pages %zu: allocated %zu, pa %#lx, va %p\n", pages, allocated, pa, paddr_to_physmap(pa));
+    LTRACEF("pages %zu: pa %#lx, va %p\n", pages, pa, paddr_to_physmap(pa));
 
     return paddr_to_physmap(pa);
 }

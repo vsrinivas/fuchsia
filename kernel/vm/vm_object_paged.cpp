@@ -141,17 +141,15 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
     list_initialize(&page_list);
 
     size_t num_pages = size / PAGE_SIZE;
-    size_t allocated = pmm_alloc_contiguous(num_pages, pmm_alloc_flags, alignment_log2, nullptr, &page_list);
-    if (allocated != num_pages) {
-        LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", num_pages, allocated);
-        pmm_free(&page_list);
+    paddr_t pa;
+    status = pmm_alloc_contiguous(num_pages, pmm_alloc_flags, alignment_log2, &pa, &page_list);
+    if (status != ZX_OK) {
+        LTRACEF("failed to allocate enough pages (asked for %zu)\n", num_pages);
         return ZX_ERR_NO_MEMORY;
     }
     auto cleanup_phys_pages = fbl::MakeAutoCall([&page_list]() {
         pmm_free(&page_list);
     });
-
-    DEBUG_ASSERT(list_length(&page_list) == allocated);
 
     // add them to the appropriate range of the object
     VmObjectPaged* vmop = static_cast<VmObjectPaged*>(vmo.get());
