@@ -39,10 +39,7 @@ $root/
             debug/
     target/                        # target-dependent prebuilts
         x64/
-            zircon.bin
-            bootdata-pc.bin
+            fuchsia.zbi
         arm64/
-            zircon.bin
-            bootdata-gauss.bin
-            bootdata-hikey960.bin
+            fuchsia.zbi
 ```
