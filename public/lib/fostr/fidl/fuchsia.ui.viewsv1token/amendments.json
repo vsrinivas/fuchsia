@@ -1,5 +1,0 @@
-{
-  "exclusions": [
-    "fuchsia.ui.viewsv1token/ViewToken"
-  ]
-}

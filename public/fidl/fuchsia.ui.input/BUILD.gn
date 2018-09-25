@@ -23,6 +23,5 @@ fidl("fuchsia.ui.input") {
 
   public_deps = [
     "//garnet/public/fidl/fuchsia.math",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
   ]
 }

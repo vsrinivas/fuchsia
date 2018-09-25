@@ -12,28 +12,25 @@
 namespace view_manager {
 
 ViewState::ViewState(
-    ViewRegistry* registry, ::fuchsia::ui::viewsv1token::ViewToken view_token,
+    ViewRegistry* registry, uint32_t view_token,
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
     ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener,
     scenic::Session* session, const std::string& label)
-    : view_token_(std::move(view_token)),
+    : registry_(registry),
+      view_token_(view_token),
       view_listener_(std::move(view_listener)),
       top_node_(session),
       label_(label),
       impl_(new ViewImpl(registry, this)),
       view_binding_(impl_.get(), std::move(view_request)),
-      owner_binding_(impl_.get()),
       weak_factory_(this) {
+  FXL_DCHECK(registry_);
   FXL_DCHECK(view_listener_);
 
-  view_binding_.set_error_handler([this, registry] {
-    registry->OnViewDied(this, "View connection closed");
-  });
-  owner_binding_.set_error_handler([this, registry] {
-    registry->OnViewDied(this, "ViewOwner connection closed");
-  });
-  view_listener_.set_error_handler([this, registry] {
-    registry->OnViewDied(this, "ViewListener connection closed");
+  view_binding_.set_error_handler(
+      [this] { registry_->OnViewDied(this, "View connection closed"); });
+  view_listener_.set_error_handler([this] {
+    registry_->OnViewDied(this, "ViewListener connection closed");
   });
 }
 
@@ -44,16 +41,29 @@ void ViewState::IssueProperties(
   issued_properties_ = std::move(properties);
 }
 
-void ViewState::BindOwner(
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request) {
-  FXL_DCHECK(!owner_binding_.is_bound());
-  owner_binding_.Bind(std::move(view_owner_request));
-}
+void ViewState::BindOwner(View1Linker::ImportLink owner_link) {
+  FXL_DCHECK(owner_link.valid());
+  FXL_DCHECK(!owner_link.initialized());
 
-void ViewState::ReleaseOwner() {
-  FXL_DCHECK(owner_binding_.is_bound());
-  owner_binding_.Unbind();
+  owner_link_ = std::move(owner_link);
+  owner_link_.Initialize(this,
+                         [this](ViewStub* stub) {
+                           // The peer ViewStub will take care of setting
+                           // view_stub_ via set_view_stub.  Otherwise,
+                           // ViewRegistry::HijackView will cause us to be
+                           // detached from the ViewStub prematurely.
+                           FXL_VLOG(1) << "View connected: " << this;
+                         },
+                         [this] {
+                           // Ensure the referenced ViewStub is marked nullptr
+                           // here, as the pointer is invalid at this point as
+                           // we don't want ViewRegistry::HijackView to use it
+                           // at all.
+                           FXL_VLOG(1) << "View disconnected: " << this;
+                           view_stub_ = nullptr;
+                           registry_->OnViewDied(this,
+                                                 "ViewOwner connection closed");
+                         });
 }
 
 ViewState* ViewState::AsViewState() { return this; }
@@ -62,11 +72,12 @@ const std::string& ViewState::FormattedLabel() const {
   if (formatted_label_cache_.empty()) {
     formatted_label_cache_ =
         label_.empty()
-            ? fxl::StringPrintf("<V%d>", view_token_.value)
-            : fxl::StringPrintf("<V%d:%s>", view_token_.value, label_.c_str());
+            ? fxl::StringPrintf("<V%d>", view_token_)
+            : fxl::StringPrintf("<V%d:%s>", view_token_, label_.c_str());
   }
   return formatted_label_cache_;
 }
+
 fuchsia::sys::ServiceProvider* ViewState::GetServiceProviderIfSupports(
     std::string service_name) {
   if (service_names_) {

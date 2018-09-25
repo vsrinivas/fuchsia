@@ -34,9 +34,6 @@ class FakeView : public ::fuchsia::ui::viewsv1::View,
             ::fuchsia::ui::viewsv1::ViewListenerPtr listener,
             zx::eventpair parent_export_token, fidl::StringPtr label);
 
-  // View implementation.
-  void GetToken(GetTokenCallback callback) override;
-
   void GetServiceProvider(
       fidl::InterfaceRequest<::fuchsia::sys::ServiceProvider> service_provider)
       override;
@@ -80,9 +77,6 @@ class FakeView : public ::fuchsia::ui::viewsv1::View,
     // Binds the view owner.
     void Bind(fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
                   view_owner_request);
-
-    // ViewOwner implementation.
-    void GetToken(GetTokenCallback callback) override;
 
    private:
     fidl::Binding<::fuchsia::ui::viewsv1token::ViewOwner> binding_;

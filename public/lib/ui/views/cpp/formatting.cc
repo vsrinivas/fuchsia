@@ -33,16 +33,3 @@ std::ostream& operator<<(std::ostream& os,
 }  // namespace viewsv1
 }  // namespace ui
 }  // namespace fuchsia
-
-namespace fuchsia {
-namespace ui {
-namespace viewsv1token {
-
-std::ostream& operator<<(std::ostream& os,
-                         const ::fuchsia::ui::viewsv1token::ViewToken& value) {
-  return os << "<V" << value.value << ">";
-}
-
-}  // namespace viewsv1token
-}  // namespace ui
-}  // namespace fuchsia

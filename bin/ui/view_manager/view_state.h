@@ -9,8 +9,10 @@
 #include <string>
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
+#include "garnet/lib/ui/gfx/engine/object_linker.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -21,6 +23,9 @@ namespace view_manager {
 
 class ViewRegistry;
 class ViewImpl;
+class ViewState;
+class ViewStub;
+using View1Linker = scenic_impl::gfx::ObjectLinker<ViewStub, ViewState>;
 
 // Describes the state of a particular view.
 // This object is owned by the ViewRegistry that created it.
@@ -45,8 +50,7 @@ class ViewState : public ViewContainerState {
     INVALIDATION_STALLED = 1u << 4,
   };
 
-  ViewState(ViewRegistry* registry,
-            ::fuchsia::ui::viewsv1token::ViewToken view_token,
+  ViewState(ViewRegistry* registry, uint32_t view_token,
             fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
             ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener,
             scenic::Session* session, const std::string& label);
@@ -56,9 +60,7 @@ class ViewState : public ViewContainerState {
 
   // Gets the token used to refer to this view globally.
   // Caller does not obtain ownership of the token.
-  const ::fuchsia::ui::viewsv1token::ViewToken& view_token() const {
-    return view_token_;
-  }
+  uint32_t view_token() const { return view_token_; }
 
   // Gets the view listener interface, never null.
   // Caller does not obtain ownership of the view listener.
@@ -89,13 +91,13 @@ class ViewState : public ViewContainerState {
   uint32_t invalidation_flags() const { return invalidation_flags_; }
   void set_invalidation_flags(uint32_t value) { invalidation_flags_ = value; }
 
-  // Binds the |ViewOwner| interface to the view which has the effect of
-  // tying the view's lifetime to that of the owner's pipe.
-  void BindOwner(fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-                     view_owner_request);
-
-  // Unbinds the view from its owner.
-  void ReleaseOwner();
+  // Binds the |owner_link| to this view which will link it to the matching
+  // |ViewStub| internally.  The link will occur either immediately (if the
+  // |ViewStub| exists and is bound), or later (upon |ViewStub| binding)).
+  //
+  // After this view is bound to the |owner_link|, it's lifetime will be
+  // connected to the |ViewStub| via the |owner_link|.
+  void BindOwner(View1Linker::ImportLink owner_link);
 
   ViewState* AsViewState() override;
 
@@ -119,7 +121,8 @@ class ViewState : public ViewContainerState {
  private:
   void RebuildFocusChain();
 
-  ::fuchsia::ui::viewsv1token::ViewToken view_token_;
+  ViewRegistry* const registry_;
+  uint32_t view_token_;
   ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener_;
   scenic::EntityNode top_node_;
 
@@ -128,8 +131,7 @@ class ViewState : public ViewContainerState {
 
   std::unique_ptr<ViewImpl> impl_;
   fidl::Binding<::fuchsia::ui::viewsv1::View> view_binding_;
-  fidl::Binding<::fuchsia::ui::viewsv1token::ViewOwner> owner_binding_;
-
+  View1Linker::ImportLink owner_link_;
   ViewStub* view_stub_ = nullptr;
 
   ::fuchsia::ui::viewsv1::ViewPropertiesPtr issued_properties_;
