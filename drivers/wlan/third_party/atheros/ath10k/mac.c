@@ -4416,7 +4416,6 @@ zx_status_t ath10k_mac_op_tx(struct ath10k* ar, wlan_tx_packet_t* pkt) {
             if (is_mgmt) { ath10k_htt_tx_mgmt_dec_pending(htt); }
             mtx_unlock(&ar->htt.tx_lock);
         }
-        ath10k_msg_buf_free(tx_buf);
         return ret;
     }
     return ZX_OK;
