@@ -25,3 +25,5 @@ extern zx_protocol_device_t intel_serialio_i2c_slave_device_proto;
 
 zx_status_t intel_serialio_i2c_slave_transfer(
     intel_serialio_i2c_slave_device_t* slave, i2c_slave_segment_t *segments, int segment_count);
+zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* slave,
+                                             zx_handle_t* out);

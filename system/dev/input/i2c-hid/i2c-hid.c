@@ -500,19 +500,13 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev) {
         free(i2chid);
         return status;
     }
-
-    zx_handle_t irq;
-    size_t actual;
-    status = device_ioctl(dev, IOCTL_I2C_SLAVE_IRQ, NULL, 0, &irq, sizeof(irq), &actual);
-    if (status == ZX_OK && actual == sizeof(irq)) {
-        i2chid->irq = irq;
-    }
-
+    status = i2c_get_interrupt(&i2c, 0, &i2chid->irq);
     int ret;
-    if (i2chid->irq) {
-        ret = thrd_create_with_name(&i2chid->irq_thread, i2c_hid_irq_thread, i2chid, "i2c-hid-irq");
-    } else {
+    if (status != ZX_OK) {
         ret = thrd_create_with_name(&i2chid->irq_thread, i2c_hid_noirq_thread, i2chid,
+                                    "i2c-hid-noirq");
+    } else {
+        ret = thrd_create_with_name(&i2chid->irq_thread, i2c_hid_irq_thread, i2chid,
                                     "i2c-hid-irq");
     }
     if (ret != thrd_success) {

@@ -387,14 +387,17 @@ slave_transfer_ioctl_finish_2:
 static zx_status_t intel_serialio_i2c_slave_irq_ioctl(
     intel_serialio_i2c_slave_device_t* slave, uint32_t op, const void* in_buf, size_t in_len,
     void* out_buf, size_t out_len, size_t* out_actual) {
-
     if (out_len < sizeof(zx_handle_t)) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
-
     // This IOCTL is a hack to get interrupts to the right devices.
     // TODO(teisenbe): Remove this when we discover interrupts via ACPI and
     // route more appropriately.
+    return intel_serialio_i2c_slave_get_irq(slave, out_buf);
+}
+
+zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* slave,
+                                             zx_handle_t* out) {
     if (slave->chip_address == 0xa) {
         zx_handle_t irq;
         zx_status_t status = zx_interrupt_create(get_root_resource(), 0x1f,
@@ -402,8 +405,7 @@ static zx_status_t intel_serialio_i2c_slave_irq_ioctl(
         if (status != ZX_OK) {
             return status;
         }
-        memcpy(out_buf, &irq, sizeof(irq));
-        *out_actual = sizeof(irq);
+        *out = irq;
         return ZX_OK;
     } else if (slave->chip_address == 0x49) {
         zx_handle_t irq;
@@ -412,8 +414,7 @@ static zx_status_t intel_serialio_i2c_slave_irq_ioctl(
         if (status != ZX_OK) {
             return status;
         }
-       memcpy(out_buf, &irq, sizeof(irq));
-        *out_actual = sizeof(irq);
+        *out = irq;
         return ZX_OK;
     } else if (slave->chip_address == 0x10) {
         // Acer12
@@ -423,8 +424,7 @@ static zx_status_t intel_serialio_i2c_slave_irq_ioctl(
         if (status != ZX_OK) {
             return status;
         }
-        memcpy(out_buf, &irq, sizeof(irq));
-        *out_actual = sizeof(irq);
+        *out = irq;
         return ZX_OK;
     } else if (slave->chip_address == 0x50) {
         zx_handle_t irq;
@@ -433,8 +433,7 @@ static zx_status_t intel_serialio_i2c_slave_irq_ioctl(
         if (status != ZX_OK) {
             return status;
         }
-        memcpy(out_buf, &irq, sizeof(irq));
-        *out_actual = sizeof(irq);
+        *out = irq;
         return ZX_OK;
     }
 

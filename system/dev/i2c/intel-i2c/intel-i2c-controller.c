@@ -105,9 +105,15 @@ static zx_status_t intel_i2c_get_max_transfer_size(void* ctx, size_t* out_size) 
     return ZX_OK;
 }
 
+static zx_status_t intel_i2c_get_interrupt(void* ctx, uint32_t flags, zx_handle_t* out_handle) {
+    intel_serialio_i2c_slave_device_t* slave = ctx;
+    return intel_serialio_i2c_slave_get_irq(slave, out_handle);
+}
+
 i2c_protocol_ops_t i2c_protocol_ops = {
     .transact = intel_i2c_transact,
     .get_max_transfer_size = intel_i2c_get_max_transfer_size,
+    .get_interrupt = intel_i2c_get_interrupt,
 };
 
 static uint32_t chip_addr_mask(int width) {

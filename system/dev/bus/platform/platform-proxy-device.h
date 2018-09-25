@@ -84,6 +84,7 @@ public:
     static zx_status_t I2cTransact(void* ctx, i2c_op_t* ops, size_t cnt,
                                    i2c_transact_cb transact_cb, void* cookie);
     static zx_status_t I2cGetMaxTransferSize(void* ctx, size_t* out_size);
+    static zx_status_t I2cGetInterrupt(void* ctx, uint32_t flags, zx_handle_t* out_handle);
 
 private:
     struct Mmio {

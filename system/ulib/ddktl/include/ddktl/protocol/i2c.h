@@ -68,6 +68,9 @@ private:
     static zx_status_t I2cGetMaxTransferSize(void* ctx, size_t* out_size) {
         return static_cast<D*>(ctx)->I2cGetMaxTransferSize(out_size);
     }
+    static zx_status_t I2cGetInterupt(void* ctx, uint32_t flags, zx_handle_t* out_handle) {
+        return static_cast<D*>(ctx)->I2cGetInterupt(flags, out_handle);
+    }
 };
 
 class I2cProtocolProxy {
@@ -80,6 +83,9 @@ public:
     }
     zx_status_t GetMaxTransferSize(size_t* out_size) {
         return ops_->get_max_transfer_size(ctx_, out_size);
+    }
+    zx_status_t GetInterupt(uint32_t flags, zx_handle_t* out_handle) {
+        return ops_->get_interupt(ctx_, flags, out_handle);
     }
 
 private:

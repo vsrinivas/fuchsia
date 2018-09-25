@@ -165,6 +165,10 @@ zx_status_t ProxyDevice::I2cGetMaxTransferSize(void* ctx, size_t* out_size) {
     return status;
 }
 
+zx_status_t ProxyDevice::I2cGetInterrupt(void* ctx, uint32_t flags, zx_handle_t* out_handle) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t ProxyDevice::I2cTransact(void* ctx, i2c_op_t* ops, size_t cnt,
                                      i2c_transact_cb transact_cb, void* cookie) {
     auto i2c_ctx = static_cast<I2cCtx*>(ctx);
@@ -509,6 +513,7 @@ ProxyDevice::ProxyDevice(zx_device_t* parent, uint32_t device_id,
     gpio_proto_ops_.set_polarity = GpioSetPolarity;
     i2c_proto_ops_.transact = I2cTransact;
     i2c_proto_ops_.get_max_transfer_size = I2cGetMaxTransferSize;
+    i2c_proto_ops_.get_interrupt = I2cGetInterrupt;
 }
 
 zx_status_t ProxyDevice::InitCommon() {

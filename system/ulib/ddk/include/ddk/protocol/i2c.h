@@ -46,6 +46,7 @@ typedef struct {
     zx_status_t (*transact)(void* ctx, i2c_op_t ops[], size_t cnt,
                             i2c_transact_cb transact_cb, void* cookie);
     zx_status_t (*get_max_transfer_size)(void* ctx, size_t* out_size);
+    zx_status_t (*get_interrupt)(void* ctx, uint32_t flags, zx_handle_t* out_handle);
 } i2c_protocol_ops_t;
 
 typedef struct {
@@ -96,6 +97,11 @@ static inline zx_status_t i2c_write_read(const i2c_protocol_t* i2c, const void* 
 // Returns the maximum transfer size for read and write operations on the channel.
 static inline zx_status_t i2c_get_max_transfer_size(const i2c_protocol_t* i2c, size_t* out_size) {
     return i2c->ops->get_max_transfer_size(i2c->ctx, out_size);
+}
+
+static inline zx_status_t i2c_get_interrupt(const i2c_protocol_t* i2c, uint32_t flags,
+                                            zx_handle_t* out_handle) {
+    return i2c->ops->get_interrupt(i2c->ctx, flags, out_handle);
 }
 
 static inline void i2c_write_read_sync_cb(zx_status_t status, i2c_op_t* ops, size_t cnt,
