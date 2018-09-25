@@ -23,9 +23,9 @@ interface ModuleContext {
 
   // DEPRECATED in favor of AddModuleToStory.
   2: StartModule(string name, Intent intent,
-                request<ModuleController> module_controller,
-                SurfaceRelation? surface_relation)
-                -> (StartModuleStatus @status);
+                 request<ModuleController> module_controller,
+                 SurfaceRelation? surface_relation)
+                 -> (StartModuleStatus @status);
 
   // Starts a new Module instance and adds it to the story. The Module to
   // execute is identified by the contents of |intent| and the Module instance
@@ -41,9 +41,9 @@ interface ModuleContext {
   // with the changed arguments. If the other arguments don't change, just an additional
   // ModuleController connection is made.
   15: AddModuleToStory(string name, Intent intent,
-                request<ModuleController> module_controller,
-                SurfaceRelation? surface_relation)
-                -> (StartModuleStatus @status);
+                       request<ModuleController> module_controller,
+                       SurfaceRelation? surface_relation)
+                       -> (StartModuleStatus @status);
 
   // Like StartModule(), but requests a |view_owner| explicitly to embed the
   // view of the requested Module instance in the view of the requesting Module
@@ -51,8 +51,9 @@ interface ModuleContext {
   // instance with the same |name| and |intent| is already running, |view_owner|
   // is just closed.
   3: EmbedModule(string name, Intent intent,
-                request<ModuleController> module_controller,
-                request<fuchsia.ui.viewsv1token.ViewOwner> view_owner) -> (StartModuleStatus @status);
+                 request<ModuleController> module_controller,
+                 request<fuchsia.ui.viewsv1token.ViewOwner> view_owner)
+                 -> (StartModuleStatus @status);
 
   // Like StartModule(), but starts multiple modules simultaneously and
   // specifies a custom layout for them (aka container).
