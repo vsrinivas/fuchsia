@@ -5,6 +5,7 @@
 package ir
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"testing"
@@ -72,33 +73,47 @@ func nullable(t types.Type) types.Type {
 	return t
 }
 
-func compoundIdentifier(a ...string) types.CompoundIdentifier {
-	var r types.CompoundIdentifier
-	for _, s := range a {
-		r = append(r, types.Identifier(s))
-	}
-	return r
-}
+type expectKind int
 
-func compileExpect(t *testing.T, testName string, input types.Root, expect Root) {
+const (
+	expectEnum expectKind = iota
+	expectStructs
+	expectInterface
+)
+
+func compileExpect(t *testing.T, testName string, kind expectKind, input types.Root, wrapped_expect Root) {
 	t.Run(testName, func(t *testing.T) {
-		actual := Compile(input)
+		wrapped_actual := Compile(input)
+		var actual, expect interface{}
+		switch kind {
+		case expectEnum:
+			actual = wrapped_actual.Enums
+			expect = wrapped_expect.Enums
+		case expectStructs:
+			actual = wrapped_actual.Structs
+			expect = wrapped_expect.Structs
+		case expectInterface:
+			actual = wrapped_actual.Interfaces
+			expect = wrapped_expect.Interfaces
+		default:
+			panic(fmt.Sprintf("unknown expect kind %d", kind))
+		}
 		if !reflect.DeepEqual(actual, expect) {
-			t.Fatalf("expected: %v, got %v", expect, actual)
+			t.Fatalf("expected: %+v, got %+v", expect, actual)
 		}
 	})
 }
 
 func compileEnumsExpect(t *testing.T, testName string, input []types.Enum, expect []Enum) {
-	compileExpect(t, testName, types.Root{Enums: input}, Root{Enums: expect})
+	compileExpect(t, testName, expectEnum, types.Root{Enums: input}, Root{Enums: expect})
 }
 
 func compileStructsExpect(t *testing.T, testName string, input []types.Struct, expect []Struct) {
-	compileExpect(t, testName, types.Root{Structs: input}, Root{Structs: expect})
+	compileExpect(t, testName, expectStructs, types.Root{Structs: input}, Root{Structs: expect})
 }
 
 func compileInterfaceExpect(t *testing.T, testName string, input types.Interface, expect Interface) {
-	compileExpect(t, testName, types.Root{Interfaces: []types.Interface{input}}, Root{Interfaces: []Interface{expect}})
+	compileExpect(t, testName, expectInterface, types.Root{Interfaces: []types.Interface{input}}, Root{Interfaces: []Interface{expect}})
 }
 
 func TestCompileStruct(t *testing.T) {
@@ -106,7 +121,7 @@ func TestCompileStruct(t *testing.T) {
 
 	compileStructsExpect(t, "Basic struct", []types.Struct{
 		{
-			Name: compoundIdentifier("Test"),
+			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
 					Type: primitiveType(types.Int8),
@@ -123,12 +138,14 @@ func TestCompileStruct(t *testing.T) {
 			Name: "Test",
 			Members: []StructMember{
 				{
-					Type: "int8",
-					Name: "Test",
+					Type:        "int8",
+					PrivateName: "test",
+					Name:        "Test",
 				},
 				{
-					Type: "float32",
-					Name: "Test2",
+					Type:        "float32",
+					PrivateName: "test2",
+					Name:        "Test2",
 				},
 			},
 		},
@@ -136,7 +153,7 @@ func TestCompileStruct(t *testing.T) {
 
 	compileStructsExpect(t, "Struct with name mangling", []types.Struct{
 		{
-			Name: compoundIdentifier("test"),
+			Name: types.EncodedCompoundIdentifier("test"),
 			Members: []types.StructMember{
 				{
 					Type: primitiveType(types.Int8),
@@ -149,8 +166,9 @@ func TestCompileStruct(t *testing.T) {
 			Name: "Test",
 			Members: []StructMember{
 				{
-					Type: "int8",
-					Name: "Test",
+					Type:        "int8",
+					PrivateName: "test",
+					Name:        "Test",
 				},
 			},
 		},
@@ -158,7 +176,7 @@ func TestCompileStruct(t *testing.T) {
 
 	compileStructsExpect(t, "Struct with array types", []types.Struct{
 		{
-			Name: compoundIdentifier("Test"),
+			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
 					Type: arrayType(primitiveType(types.Uint8), 10),
@@ -175,12 +193,14 @@ func TestCompileStruct(t *testing.T) {
 			Name: "Test",
 			Members: []StructMember{
 				{
-					Type: "[10]uint8",
-					Name: "Flat",
+					Type:        "[10]uint8",
+					PrivateName: "flat",
+					Name:        "Flat",
 				},
 				{
-					Type: "[27][1]bool",
-					Name: "Nested",
+					Type:        "[27][1]bool",
+					PrivateName: "nested",
+					Name:        "Nested",
 				},
 			},
 		},
@@ -189,7 +209,7 @@ func TestCompileStruct(t *testing.T) {
 	maxElems := 40
 	compileStructsExpect(t, "Struct with string types", []types.Struct{
 		{
-			Name: compoundIdentifier("Test"),
+			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
 					Type: stringType(nil),
@@ -218,26 +238,31 @@ func TestCompileStruct(t *testing.T) {
 			Name: "Test",
 			Members: []StructMember{
 				{
-					Type: "string",
-					Name: "Flat",
+					Type:        "string",
+					PrivateName: "flat",
+					Name:        "Flat",
 				},
 				{
-					Type: "*string",
-					Name: "Nullable",
+					Type:        "*string",
+					PrivateName: "nullable",
+					Name:        "Nullable",
 				},
 				{
-					Type: "*string",
-					Name: "Max",
-					Tag:  "`fidl:\"40\"`",
+					Type:        "*string",
+					PrivateName: "max",
+					Name:        "Max",
+					Tag:         "`fidl:\"40\"`",
 				},
 				{
-					Type: "[27]string",
-					Name: "Nested",
+					Type:        "[27]string",
+					PrivateName: "nested",
+					Name:        "Nested",
 				},
 				{
-					Type: "[27]*string",
-					Name: "NestedNullableMax",
-					Tag:  "`fidl:\"40\"`",
+					Type:        "[27]*string",
+					PrivateName: "nestedNullableMax",
+					Name:        "NestedNullableMax",
+					Tag:         "`fidl:\"40\"`",
 				},
 			},
 		},
@@ -245,7 +270,7 @@ func TestCompileStruct(t *testing.T) {
 
 	compileStructsExpect(t, "Struct with vector types", []types.Struct{
 		{
-			Name: compoundIdentifier("Test"),
+			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
 					Type: vectorType(primitiveType(types.Uint8), nil),
@@ -274,26 +299,31 @@ func TestCompileStruct(t *testing.T) {
 			Name: "Test",
 			Members: []StructMember{
 				{
-					Type: "[]uint8",
-					Name: "Flat",
+					Type:        "[]uint8",
+					PrivateName: "flat",
+					Name:        "Flat",
 				},
 				{
-					Type: "[]uint8",
-					Name: "Max",
-					Tag:  "`fidl:\"40\"`",
+					Type:        "[]uint8",
+					PrivateName: "max",
+					Name:        "Max",
+					Tag:         "`fidl:\"40\"`",
 				},
 				{
-					Type: "[][]bool",
-					Name: "Nested",
+					Type:        "[][]bool",
+					PrivateName: "nested",
+					Name:        "Nested",
 				},
 				{
-					Type: "[]*[]bool",
-					Name: "Nullable",
+					Type:        "[]*[]bool",
+					PrivateName: "nullable",
+					Name:        "Nullable",
 				},
 				{
-					Type: "[][][]uint8",
-					Name: "NestedMax",
-					Tag:  "`fidl:\"40,,\"`",
+					Type:        "[][][]uint8",
+					PrivateName: "nestedMax",
+					Name:        "NestedMax",
+					Tag:         "`fidl:\"40,,\"`",
 				},
 			},
 		},
@@ -305,7 +335,7 @@ func TestCompileEnum(t *testing.T) {
 
 	compileEnumsExpect(t, "Basic enum", []types.Enum{
 		{
-			Name: compoundIdentifier("Test"),
+			Name: types.EncodedCompoundIdentifier("Test"),
 			Type: types.Int64,
 			Members: []types.EnumMember{
 				{
@@ -337,7 +367,7 @@ func TestCompileEnum(t *testing.T) {
 
 	compileEnumsExpect(t, "Bool enum", []types.Enum{
 		{
-			Name: compoundIdentifier("Test"),
+			Name: types.EncodedCompoundIdentifier("Test"),
 			Type: types.Bool,
 			Members: []types.EnumMember{
 				{
@@ -369,7 +399,7 @@ func TestCompileEnum(t *testing.T) {
 
 	compileEnumsExpect(t, "Enum with name mangling", []types.Enum{
 		{
-			Name: compoundIdentifier("test"),
+			Name: types.EncodedCompoundIdentifier("test"),
 			Type: types.Uint32,
 			Members: []types.EnumMember{
 				{
@@ -394,8 +424,12 @@ func TestCompileEnum(t *testing.T) {
 
 func TestCompileInterface(t *testing.T) {
 	compileInterfaceExpect(t, "Basic", types.Interface{
-		Attributes: []types.Attribute{{Name: types.Identifier("ServiceName"), Value: "Test"}},
-		Name:       compoundIdentifier("Test"),
+		Attributes: types.Attributes{
+			Attributes: []types.Attribute{
+				{Name: types.Identifier("ServiceName"), Value: "Test"},
+			},
+		},
+		Name: types.EncodedCompoundIdentifier("Test"),
 		Methods: []types.Method{
 			{
 				Ordinal:    types.Ordinal(1),
@@ -431,35 +465,44 @@ func TestCompileInterface(t *testing.T) {
 			},
 		},
 	}, Interface{
-		Name:        "Test",
-		ProxyName:   "TestProxy",
-		StubName:    "TestStub",
-		ServiceName: "Test",
-		RequestName: "TestInterfaceRequest",
+		Name:                "Test",
+		ProxyName:           "TestInterface",
+		StubName:            "TestStub",
+		EventProxyName:      "TestEventProxy",
+		RequestName:         "TestInterfaceRequest",
+		ServerName:          "TestService",
+		ServiceNameString:   "",
+		ServiceNameConstant: "TestName",
 		Methods: []Method{
 			{
-				Ordinal: types.Ordinal(1),
-				Name:    "TestFirst",
+				Ordinal:     types.Ordinal(1),
+				OrdinalName: "TestFirstOrdinal",
+				Name:        "First",
 				Request: &Struct{
 					Name: "TestFirstRequest",
 					Members: []StructMember{
 						{
-							Name: "Value",
-							Type: "int16",
+							Name:        "Value",
+							PrivateName: "value",
+							Type:        "int16",
 						},
 					},
 					Size: 2,
 				},
+				EventExpectName: "ExpectFirst",
+				IsEvent:         false,
 			},
 			{
-				Ordinal: types.Ordinal(2),
-				Name:    "TestSecond",
+				Ordinal:     types.Ordinal(2),
+				OrdinalName: "TestSecondOrdinal",
+				Name:        "Second",
 				Request: &Struct{
 					Name: "TestSecondRequest",
 					Members: []StructMember{
 						{
-							Name: "Value",
-							Type: "*string",
+							Name:        "Value",
+							PrivateName: "value",
+							Type:        "*string",
 						},
 					},
 					Size: 16,
@@ -468,19 +511,26 @@ func TestCompileInterface(t *testing.T) {
 					Name: "TestSecondResponse",
 					Members: []StructMember{
 						{
-							Name: "Value",
-							Type: "uint32",
+							Name:        "Value",
+							PrivateName: "value",
+							Type:        "uint32",
 						},
 					},
 					Size: 4,
 				},
+				EventExpectName: "ExpectSecond",
+				IsEvent:         false,
 			},
 		},
 	})
 
 	compileInterfaceExpect(t, "Event and name mangling", types.Interface{
-		Attributes: []types.Attribute{{Name: types.Identifier("ServiceName"), Value: "Test"}},
-		Name:       compoundIdentifier("test"),
+		Attributes: types.Attributes{
+			Attributes: []types.Attribute{
+				{Name: types.Identifier("ServiceName"), Value: "Test"},
+			},
+		},
+		Name: types.EncodedCompoundIdentifier("test"),
 		Methods: []types.Method{
 			{
 				Ordinal:     types.Ordinal(1),
@@ -496,25 +546,32 @@ func TestCompileInterface(t *testing.T) {
 			},
 		},
 	}, Interface{
-		Name:        "Test",
-		ProxyName:   "TestProxy",
-		StubName:    "TestStub",
-		RequestName: "TestInterfaceRequest",
-		ServiceName: "Test",
+		Name:                "Test",
+		ProxyName:           "TestInterface",
+		StubName:            "TestStub",
+		EventProxyName:      "TestEventProxy",
+		RequestName:         "TestInterfaceRequest",
+		ServerName:          "TestService",
+		ServiceNameString:   "",
+		ServiceNameConstant: "TestName",
 		Methods: []Method{
 			{
-				Ordinal: types.Ordinal(1),
-				Name:    "TestFirst",
+				Ordinal:     types.Ordinal(1),
+				OrdinalName: "TestFirstOrdinal",
+				Name:        "First",
 				Response: &Struct{
 					Name: "TestFirstResponse",
 					Members: []StructMember{
 						{
-							Name: "Value",
-							Type: "string",
+							Name:        "Value",
+							PrivateName: "value",
+							Type:        "string",
 						},
 					},
 					Size: 16,
 				},
+				EventExpectName: "ExpectFirst",
+				IsEvent:         true,
 			},
 		},
 	})
