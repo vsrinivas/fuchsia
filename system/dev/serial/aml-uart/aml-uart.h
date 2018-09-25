@@ -4,11 +4,11 @@
 
 #include <threads.h>
 
-#include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/serial-impl.h>
 #include <ddk/protocol/serial.h>
 #include <ddktl/device.h>
+#include <ddktl/mmio.h>
 #include <ddktl/protocol/serial-impl.h>
 
 #include <fbl/function.h>
@@ -34,7 +34,6 @@ public:
     }
     void DdkRelease() {
         Enable(false);
-        io_buffer_release(&mmio_);
         delete this;
     }
 
@@ -50,8 +49,10 @@ private:
     using Callback = fbl::Function<void(uint32_t)>;
 
     explicit AmlUart(zx_device_t* parent, const platform_device_protocol_t& pdev,
-                     const serial_port_info_t& serial_port_info, io_buffer_t mmio)
-        : DeviceType(parent), pdev_(pdev), serial_port_info_(serial_port_info), mmio_(mmio) {}
+                     const serial_port_info_t& serial_port_info,
+                     ddk::MmioBuffer mmio)
+        : DeviceType(parent), pdev_(pdev), serial_port_info_(serial_port_info),
+          mmio_(fbl::move(mmio)) {}
 
     // Reads the current state from the status register and calls notify_cb if it has changed.
     uint32_t ReadStateAndNotify();
@@ -60,7 +61,7 @@ private:
 
     const platform_device_protocol_t pdev_;
     const serial_port_info_t serial_port_info_;
-    io_buffer_t mmio_;
+    ddk::MmioBuffer mmio_;
     zx::interrupt irq_;
 
     thrd_t irq_thread_ TA_GUARDED(enable_lock_);

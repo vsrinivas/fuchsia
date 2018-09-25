@@ -49,17 +49,16 @@ zx_status_t AmlUart::Create(zx_device_t* parent) {
         return ZX_ERR_INTERNAL;
     }
 
-    io_buffer_t mmio;
-    status = pdev_map_mmio_buffer(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_map_mmio_buffer failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: pdev_map_&mmio__buffer failed %d\n", __func__, status);
         return status;
     }
 
     fbl::AllocChecker ac;
-    auto* uart = new (&ac) AmlUart(parent, pdev, info, mmio);
+    auto* uart = new (&ac) AmlUart(parent, pdev, info, ddk::MmioBuffer(mmio));
     if (!ac.check()) {
-        io_buffer_release(&mmio);
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -82,10 +81,9 @@ zx_status_t AmlUart::Create(zx_device_t* parent) {
 }
 
 uint32_t AmlUart::ReadStateAndNotify() {
-    hwreg::RegisterIo mmio(io_buffer_virt(&mmio_));
     fbl::AutoLock al(&status_lock_);
 
-    auto status = Status::Get().ReadFrom(&mmio);
+    auto status = Status::Get().ReadFrom(&mmio_);
 
     uint32_t state = 0;
     if (!status.rx_empty()) {
@@ -127,8 +125,6 @@ zx_status_t AmlUart::GetInfo(serial_port_info_t* info) {
 }
 
 zx_status_t AmlUart::Config(uint32_t baud_rate, uint32_t flags) {
-    hwreg::RegisterIo mmio(io_buffer_virt(&mmio_));
-
     // Control register is determined completely by this logic, so start with a clean slate.
     auto ctrl = Control::Get().FromValue(0);
 
@@ -208,30 +204,28 @@ zx_status_t AmlUart::Config(uint32_t baud_rate, uint32_t flags) {
         if (!enabled_ && (ctrl.two_wire() == 0)) {
             ctrl.set_inv_rts(1);
         }
-        ctrl.WriteTo(&mmio);
+        ctrl.WriteTo(&mmio_);
     }
 
-    baud.WriteTo(&mmio);
+    baud.WriteTo(&mmio_);
 
     return ZX_OK;
 }
 
 void AmlUart::EnableLocked(bool enable) {
-    hwreg::RegisterIo mmio(io_buffer_virt(&mmio_));
-
-    auto ctrl = Control::Get().ReadFrom(&mmio);
+    auto ctrl = Control::Get().ReadFrom(&mmio_);
 
     if (enable) {
         // Reset the port.
         ctrl.set_rst_rx(1)
             .set_rst_tx(1)
             .set_clear_error(1)
-            .WriteTo(&mmio);
+            .WriteTo(&mmio_);
 
         ctrl.set_rst_rx(0)
             .set_rst_tx(0)
             .set_clear_error(0)
-            .WriteTo(&mmio);
+            .WriteTo(&mmio_);
 
         // Enable rx and tx.
         ctrl.set_tx_enable(1)
@@ -240,7 +234,7 @@ void AmlUart::EnableLocked(bool enable) {
             .set_rx_interrupt_enable(1)
             // Clear our RTS.
             .set_inv_rts(0)
-            .WriteTo(&mmio);
+            .WriteTo(&mmio_);
 
         // Set interrupt thresholds.
         // Generate interrupt if TX buffer drops below half full.
@@ -251,13 +245,13 @@ void AmlUart::EnableLocked(bool enable) {
             .FromValue(0)
             .set_xmit_irq_count(kTransmitIrqCount)
             .set_recv_irq_count(kRecieveIrqCount)
-            .WriteTo(&mmio);
+            .WriteTo(&mmio_);
     } else {
         ctrl.set_tx_enable(0)
             .set_rx_enable(0)
             // Invert our RTS if we are configured for flow control.
             .set_inv_rts(!ctrl.two_wire())
-            .WriteTo(&mmio);
+            .WriteTo(&mmio_);
     }
 }
 
@@ -290,12 +284,10 @@ zx_status_t AmlUart::Enable(bool enable) {
 }
 
 zx_status_t AmlUart::Read(void* buf, size_t length, size_t* out_actual) {
-    hwreg::RegisterIo mmio(io_buffer_virt(&mmio_));
-
     auto* bufptr = static_cast<uint8_t*>(buf);
     const uint8_t* const end = bufptr + length;
     while (bufptr < end && (ReadStateAndNotify() & SERIAL_STATE_READABLE)) {
-        uint32_t val = mmio.Read<uint32_t>(AML_UART_RFIFO);
+        uint32_t val = mmio_.Read32(AML_UART_RFIFO);
         *bufptr++ = static_cast<uint8_t>(val);
     }
 
@@ -308,12 +300,10 @@ zx_status_t AmlUart::Read(void* buf, size_t length, size_t* out_actual) {
 }
 
 zx_status_t AmlUart::Write(const void* buf, size_t length, size_t* out_actual) {
-    hwreg::RegisterIo mmio(io_buffer_virt(&mmio_));
-
     const auto* bufptr = static_cast<const uint8_t*>(buf);
     const uint8_t* const end = bufptr + length;
     while (bufptr < end && (ReadStateAndNotify() & SERIAL_STATE_WRITABLE)) {
-        mmio.Write(AML_UART_WFIFO, *bufptr++);
+        mmio_.Write32(*bufptr++, AML_UART_WFIFO);
     }
 
     const size_t written = reinterpret_cast<uintptr_t>(bufptr) - reinterpret_cast<uintptr_t>(buf);
