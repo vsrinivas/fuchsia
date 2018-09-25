@@ -11,6 +11,7 @@ rustc_binary("bin") {
   name = "wayland_bridge"
   edition = "2018"
   deps = [
+    "//garnet/bin/wayland/core",
     "//garnet/bin/wayland/protocols:wayland",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/fidl/fuchsia.guest:fuchsia.guest-rustc",
@@ -35,6 +36,8 @@ rustc_library("wayland_bridge_test") {
   edition = "2018"
   with_unit_tests = true
   deps = [
+    "//garnet/bin/wayland/core",
+    "//garnet/bin/wayland/protocols:wayland",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/fidl/fuchsia.guest:fuchsia.guest-rustc",
     "//garnet/public/rust/crates/fuchsia-app",

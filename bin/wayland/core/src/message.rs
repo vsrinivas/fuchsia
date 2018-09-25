@@ -144,6 +144,12 @@ impl Message {
         }
     }
 
+    /// Returns |true| iff this buffer has no more data (bytes or handles).
+    pub fn is_empty(&self) -> bool {
+        self.byte_buf.get_ref().len() as u64 == self.byte_buf.position()
+            && self.handle_buf.is_empty()
+    }
+
     pub fn clear(&mut self) {
         self.byte_buf.set_position(0);
         self.byte_buf.get_mut().truncate(0);
@@ -470,5 +476,26 @@ mod tests {
         assert_eq!(header, message.peek_header()?);
         assert_eq!(header, message.peek_header()?);
         Ok(())
+    }
+
+    #[test]
+    fn empty_message() {
+        let (h1, h2) = zx::Channel::create().unwrap();
+
+        let message = Message::new();
+        assert!(message.is_empty());
+        let message = Message::from_parts(vec![], vec![]);
+        assert!(message.is_empty());
+        let message = Message::from_parts(vec![1], vec![]);
+        assert!(!message.is_empty());
+        let message = Message::from_parts(vec![], vec![h1.into()]);
+        assert!(!message.is_empty());
+
+        let mut message = Message::from_parts(vec![0, 0, 0, 0], vec![h2.into()]);
+        assert!(!message.is_empty());
+        let _ = message.read_arg(ArgKind::Uint).unwrap();
+        assert!(!message.is_empty());
+        let _ = message.read_arg(ArgKind::Handle).unwrap();
+        assert!(message.is_empty());
     }
 }

@@ -138,28 +138,30 @@ impl ObjectMap {
     /// Returns Err if no object is associated with the sender field in the
     /// message header, or if the objects receiver itself fails.
     pub fn receive_message(&mut self, mut message: Message) -> Result<(), Error> {
-        let header = message.read_header()?;
-        // Lookup the table entry for this object & fail if there is no entry
-        // found.
-        let (receiver, spec) = {
-            let ObjectMapEntry {
-                request_spec,
-                receiver,
-            } = self
-                .objects
-                .get(&header.sender)
-                .ok_or(ObjectMapError::InvalidObjectId(header.sender))?;
-            let spec = request_spec
-                .0
-                .get(header.opcode as usize)
-                .ok_or(ObjectMapError::InvalidOpcode(header.opcode))?;
+        while !message.is_empty() {
+            let header = message.read_header()?;
+            // Lookup the table entry for this object & fail if there is no entry
+            // found.
+            let (receiver, spec) = {
+                let ObjectMapEntry {
+                    request_spec,
+                    receiver,
+                } = self
+                    .objects
+                    .get(&header.sender)
+                    .ok_or(ObjectMapError::InvalidObjectId(header.sender))?;
+                let spec = request_spec
+                    .0
+                    .get(header.opcode as usize)
+                    .ok_or(ObjectMapError::InvalidOpcode(header.opcode))?;
 
-            (receiver.receiver(), spec)
-        };
+                (receiver.receiver(), spec)
+            };
 
-        // Decode the argument stream and invoke the |MessageReceiver|.
-        let args = message.read_args(spec.0)?;
-        receiver(header.sender, header.opcode, args, self)?;
+            // Decode the argument stream and invoke the |MessageReceiver|.
+            let args = message.read_args(spec.0)?;
+            receiver(header.sender, header.opcode, args, self)?;
+        }
         Ok(())
     }
 
@@ -253,7 +255,7 @@ pub trait RequestReceiver<I: Interface>: Any + Sized {
 /// |MessageReceiver| trait that is used to dispatch raw message buffers and
 /// the higher level |RequestReceiver| that operates on the decoded request
 /// enums.
-pub(crate) struct RequestDispatcher<I: Interface, R: RequestReceiver<I>> {
+pub struct RequestDispatcher<I: Interface, R: RequestReceiver<I>> {
     _marker: PhantomData<I>,
     receiver: R,
 }
