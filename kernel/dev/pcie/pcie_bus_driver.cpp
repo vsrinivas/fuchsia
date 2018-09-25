@@ -68,9 +68,6 @@ PcieBusDriver::~PcieBusDriver() {
 
     // Release the region bookkeeping memory.
     region_bookkeeping_.reset();
-
-    // Unmap and free all of our mapped ECAM regions.
-    ecam_regions_.clear();
 }
 
 zx_status_t PcieBusDriver::AddRoot(fbl::RefPtr<PcieRoot>&& root) {
@@ -92,6 +89,21 @@ zx_status_t PcieBusDriver::AddRoot(fbl::RefPtr<PcieRoot>&& root) {
             return ZX_ERR_ALREADY_EXISTS;
         }
     }
+
+    return ZX_OK;
+}
+
+zx_status_t PcieBusDriver::SetAddressTranslationProvider(fbl::unique_ptr<PcieAddressProvider> provider) {
+    if (!IsNotStarted()) {
+        TRACEF("Cannot set an address provider if the driver is already running\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
+    if (provider == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    addr_provider_ = fbl::move(provider);
 
     return ZX_OK;
 }
@@ -488,145 +500,43 @@ void PcieBusDriver::ShutdownDriver() {
  * lifecycle of both are already dependent. Should this still return a refptr?
  */
 const PciConfig* PcieBusDriver::GetConfig(uint bus_id,
-                                        uint dev_id,
-                                        uint func_id,
-                                        paddr_t* out_cfg_phys) {
+                                          uint dev_id,
+                                          uint func_id,
+                                          paddr_t* out_cfg_phys) {
     DEBUG_ASSERT(bus_id  < PCIE_MAX_BUSSES);
     DEBUG_ASSERT(dev_id  < PCIE_MAX_DEVICES_PER_BUS);
     DEBUG_ASSERT(func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE);
 
-    uintptr_t addr;
-    if (is_mmio_) {
-        // Find the region which would contain this bus_id, if any.
-        // add does not overlap with any already defined regions.
-        AutoLock ecam_region_lock(&ecam_region_lock_);
-        auto iter = ecam_regions_.upper_bound(static_cast<uint8_t>(bus_id));
-        --iter;
-
-        if (out_cfg_phys) {
-            *out_cfg_phys = 0;
-        }
-
-        if (!iter.IsValid()) {
-            return nullptr;
-        }
-
-        if ((bus_id < iter->ecam().bus_start) ||
-                (bus_id > iter->ecam().bus_end)) {
-            return nullptr;
-        }
-
-        bus_id -= iter->ecam().bus_start;
-        size_t offset = (static_cast<size_t>(bus_id)  << 20) |
-            (static_cast<size_t>(dev_id)  << 15) |
-            (static_cast<size_t>(func_id) << 12);
-
-        if (out_cfg_phys) {
-            *out_cfg_phys = iter->ecam().phys_base + offset;
-        }
-
-        // TODO(cja): Move to a BDF based associative container for better lookup time
-        // and insert or find behavior.
-        addr = reinterpret_cast<uintptr_t>(static_cast<uint8_t*>(iter->vaddr()) + offset);
-    } else {
-        addr = Pci::PciBdfAddr(static_cast<uint8_t>(bus_id), static_cast<uint8_t>(dev_id),
-                               static_cast<uint8_t>(func_id), 0);
+    if (!addr_provider_) {
+        TRACEF("Cannot get state if no address translation provider is set\n");
+        return nullptr;
     }
 
+    if (out_cfg_phys) {
+        *out_cfg_phys = 0;
+    }
+
+    uintptr_t addr;
+    zx_status_t result = addr_provider_->Translate(bus_id, dev_id, func_id,
+                                                   &addr, out_cfg_phys);
+    if (result != ZX_OK) {
+        return nullptr;
+    }
+
+    // Check if we already have this config space cached somewhere.
     auto cfg_iter = configs_.find_if([addr](const PciConfig& cfg) {
                                         return (cfg.base() == addr);
                                         });
-    /* An entry for this bdf config has been found in cache, return it */
+
     if (cfg_iter.IsValid()) {
         return &(*cfg_iter);
     }
 
     // Nothing found, create a new PciConfig for this address
-    auto cfg = PciConfig::Create(addr, (is_mmio_) ? PciAddrSpace::MMIO : PciAddrSpace::PIO);
+    auto cfg = addr_provider_->CreateConfig(addr);
     configs_.push_front(cfg);
+
     return cfg.get();
-}
-
-zx_status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
-    if (!IsNotStarted()) {
-        TRACEF("Cannot add/subtract ECAM regions once the bus driver has been started!\n");
-        return ZX_ERR_BAD_STATE;
-    }
-
-    // Sanity check the region first.
-    if (ecam.bus_start > ecam.bus_end)
-        return ZX_ERR_INVALID_ARGS;
-
-    size_t bus_count = static_cast<size_t>(ecam.bus_end) - ecam.bus_start + 1u;
-    if (ecam.size != (PCIE_ECAM_BYTE_PER_BUS * bus_count))
-        return ZX_ERR_INVALID_ARGS;
-
-    // Grab the ECAM lock and make certain that the region we have been asked to
-    // add does not overlap with any already defined regions.
-    AutoLock ecam_region_lock(&ecam_region_lock_);
-    auto iter = ecam_regions_.upper_bound(ecam.bus_start);
-    --iter;
-
-    // If iter is valid, it now points to the region with the largest bus_start
-    // which is <= ecam.bus_start.  If any region overlaps with the region we
-    // are attempting to add, it will be this one.
-    if (iter.IsValid()) {
-        uint8_t iter_start = iter->ecam().bus_start;
-        uint8_t iter_end   = iter->ecam().bus_end;
-        if (((iter_start >= ecam.bus_start) && (iter_start <= ecam.bus_end)) ||
-            ((ecam.bus_start >= iter_start) && (ecam.bus_start <= iter_end)))
-            return ZX_ERR_BAD_STATE;
-    }
-
-    // Looks good.  Attempt to allocate and map this ECAM region.
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<MappedEcamRegion> region(new (&ac) MappedEcamRegion(ecam));
-    if (!ac.check()) {
-        TRACEF("Failed to allocate ECAM region for bus range [0x%02x, 0x%02x]\n",
-               ecam.bus_start, ecam.bus_end);
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    zx_status_t res = region->MapEcam();
-    if (res != ZX_OK) {
-        TRACEF("Failed to map ECAM region for bus range [0x%02x, 0x%02x]\n",
-               ecam.bus_start, ecam.bus_end);
-        return res;
-    }
-
-    // Everything checks out.  Add the new region to our set of regions and we are done.
-    ecam_regions_.insert(fbl::move(region));
-    return ZX_OK;
-}
-
-PcieBusDriver::MappedEcamRegion::~MappedEcamRegion() {
-    if (vaddr_ != nullptr) {
-        VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(vaddr_));
-    }
-}
-
-zx_status_t PcieBusDriver::MappedEcamRegion::MapEcam() {
-    DEBUG_ASSERT(ecam_.bus_start <= ecam_.bus_end);
-    DEBUG_ASSERT((ecam_.size % PCIE_ECAM_BYTE_PER_BUS) == 0);
-    DEBUG_ASSERT((ecam_.size / PCIE_ECAM_BYTE_PER_BUS) ==
-                 (static_cast<size_t>(ecam_.bus_end) - ecam_.bus_start + 1u));
-
-    if (vaddr_ != nullptr)
-        return ZX_ERR_BAD_STATE;
-
-    char name_buf[32];
-    snprintf(name_buf, sizeof(name_buf), "pcie_cfg_%02x_%02x", ecam_.bus_start, ecam_.bus_end);
-
-    return VmAspace::kernel_aspace()->AllocPhysical(
-            name_buf,
-            ecam_.size,
-            &vaddr_,
-            PAGE_SIZE_SHIFT,
-            ecam_.phys_base,
-            0 /* vmm flags */,
-            ARCH_MMU_FLAG_UNCACHED_DEVICE |
-            ARCH_MMU_FLAG_PERM_READ |
-            ARCH_MMU_FLAG_PERM_WRITE);
 }
 
 // External references to the quirks handler table.

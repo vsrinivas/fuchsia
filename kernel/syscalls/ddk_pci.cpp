@@ -12,6 +12,7 @@
 #include <string.h>
 #include <trace.h>
 
+#include <dev/address_provider/ecam_region.h>
 #include <dev/interrupt.h>
 #include <lib/pci/pio.h>
 #include <lib/user_copy/user_ptr.h>
@@ -26,6 +27,7 @@
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_free_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <zircon/syscalls/pci.h>
 
 #include "priv.h"
@@ -261,19 +263,47 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
         // TODO(johngro): Update the syscall to pass a paddr_t for base instead of a uint64_t
         ASSERT(arg->addr_windows[0].base < fbl::numeric_limits<paddr_t>::max());
 
+        fbl::AllocChecker ac;
+        auto addr_provider = fbl::make_unique_checked<MmioPcieAddressProvider>(&ac);
+        if (!ac.check()) {
+            TRACEF("Failed to allocate PCIe Address Provider\n");
+            return ZX_ERR_NO_MEMORY;
+        }
+
         // TODO(johngro): Do not limit this to a single range.  Instead, fetch all
         // of the ECAM ranges from ACPI, as well as the appropriate bus start/end
         // ranges.
-        const PcieBusDriver::EcamRegion ecam = {
+        const PciEcamRegion ecam = {
             .phys_base = static_cast<paddr_t>(arg->addr_windows[0].base),
             .size = arg->addr_windows[0].size,
             .bus_start = 0x00,
             .bus_end = static_cast<uint8_t>((arg->addr_windows[0].size / PCIE_ECAM_BYTE_PER_BUS) - 1),
         };
 
-        zx_status_t ret = pcie->AddEcamRegion(ecam);
+        zx_status_t ret = addr_provider->AddEcamRegion(ecam);
         if (ret != ZX_OK) {
             TRACEF("Failed to add ECAM region to PCIe bus driver! (ret %d)\n", ret);
+            return ret;
+        }
+
+        ret = pcie->SetAddressTranslationProvider(fbl::move(addr_provider));
+        if (ret != ZX_OK) {
+            TRACEF("Failed to set Address Translation Provider, st = %d\n", ret);
+            return ret;
+        }
+    } else {
+        // Create a PIO address provider.
+        fbl::AllocChecker ac;
+
+        auto addr_provider = fbl::make_unique_checked<PioPcieAddressProvider>(&ac);
+        if (!ac.check()) {
+            TRACEF("Failed to allocate PCIe address provider\n");
+            return ZX_ERR_NO_MEMORY;
+        }
+
+        zx_status_t ret = pcie->SetAddressTranslationProvider(fbl::move(addr_provider));
+        if (ret != ZX_OK) {
+            TRACEF("Failed to set Address Translation Provider, st = %d\n", ret);
             return ret;
         }
     }
@@ -284,9 +314,6 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
     auto root = PcieRootLUTSwizzle::Create(*pcie, 0, arg->dev_pin_to_global_irq);
     if (root == nullptr)
         return ZX_ERR_NO_MEMORY;
-
-    // Enable PIO config space if the address window was not MMIO
-    pcie->EnablePIOWorkaround(!arg->addr_windows[0].is_mmio);
 
     zx_status_t ret = pcie->AddRoot(fbl::move(root));
     if (ret != ZX_OK) {

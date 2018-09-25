@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <dev/address_provider/address_provider.h>
 #include <dev/pci_config.h>
 #include <dev/pcie_platform.h>
 #include <kernel/auto_lock.h>
@@ -52,20 +53,10 @@ public:
     // actions (if any) for the new chipset.
     using QuirkHandler = void (*)(const fbl::RefPtr<PcieDevice>& device);
 
-    struct EcamRegion {
-        paddr_t phys_base;  // Physical address of the memory mapped config region.
-        size_t  size;       // Size (in bytes) of the memory mapped config region.
-        uint8_t bus_start;  // Inclusive ID of the first bus controlled by this region.
-        uint8_t bus_end;    // Inclusive ID of the last bus controlled by this region.
-    };
-
     ~PcieBusDriver();
 
     PciePlatformInterface& platform() const { return platform_; }
 
-    // Add a section of memory mapped PCI config space to the bus driver,
-    // provided that it does not overlap with any existing ecam regions.
-    zx_status_t AddEcamRegion(const EcamRegion& ecam);
     const PciConfig* GetConfig(uint bus_id,
                                uint dev_id,
                                uint func_id,
@@ -98,27 +89,9 @@ public:
     // Add a root bus to the driver and attempt to scan it for devices.
     zx_status_t AddRoot(fbl::RefPtr<PcieRoot>&& root);
 
-    // Set a bus driver's memory address space to MMIO or IO.
-    //
-    // TODO(cja): This is a workaround to get around a problem with the current
-    // system of initializing PCI. Presently, while PCI is in the kernel,
-    // we create the PcieBusDriver singleton in a platform specific early
-    // init hook linked via LK_INIT_HOOK, then after ACPI runs we add roots
-    // and start the bus driver. It would make more sense to apply the memory
-    // space to the root, however during downstream scanning we rely on the
-    // bus driver's ability to call its own GetConfig(). For this reason, since
-    // we're only surfacing a single root right now anyway we need to mark that
-    // root as MMIO or PIO in the bus driver itself. When we move to userspace
-    // and have a bus driver instance for each root, this will no longer be an
-    // issue.
-    bool EnablePIOWorkaround(bool enable) {
-        fbl::AutoLock lock(&driver_lock_);
-        if (roots_.is_empty()) {
-            is_mmio_ = !enable;
-        }
-
-        return is_mmio_;
-    }
+    // A PcieAddressProvider translates a BDF address to an address that the
+    // system can use to access ECAMs.
+    zx_status_t SetAddressTranslationProvider(fbl::unique_ptr<PcieAddressProvider> provider);
 
     // Start the driver
     //
@@ -202,23 +175,6 @@ private:
         OPERATIONAL                  = 4,
     };
 
-    class MappedEcamRegion : public fbl::WAVLTreeContainable<fbl::unique_ptr<MappedEcamRegion>> {
-    public:
-        explicit MappedEcamRegion(const EcamRegion& ecam) : ecam_(ecam) { }
-        ~MappedEcamRegion();
-
-        const EcamRegion& ecam() const { return ecam_; }
-        void* vaddr() const { return vaddr_; }
-        zx_status_t MapEcam();
-
-        // WAVLTree properties
-        uint8_t GetKey() const { return ecam_.bus_start; }
-
-    private:
-        EcamRegion ecam_;
-        void*      vaddr_ = nullptr;
-    };
-
     explicit PcieBusDriver(PciePlatformInterface& platform);
 
     bool     AdvanceState(State expected, State next);
@@ -247,15 +203,13 @@ private:
     RootCollection                      roots_;
     fbl::SinglyLinkedList<fbl::RefPtr<PciConfig>> configs_;
 
-    bool                                is_mmio_ = true;
     RegionAllocator::RegionPool::RefPtr region_bookkeeping_;
     RegionAllocator                     pf_mmio_regions_;
     RegionAllocator                     mmio_lo_regions_;
     RegionAllocator                     mmio_hi_regions_;
     RegionAllocator                     pio_regions_;
 
-    mutable fbl::Mutex                 ecam_region_lock_;
-    fbl::WAVLTree<uint8_t, fbl::unique_ptr<MappedEcamRegion>> ecam_regions_;
+    fbl::unique_ptr<PcieAddressProvider>    addr_provider_;
 
     fbl::Mutex                         legacy_irq_list_lock_;
     fbl::SinglyLinkedList<fbl::RefPtr<SharedLegacyIrqHandler>> legacy_irq_list_;

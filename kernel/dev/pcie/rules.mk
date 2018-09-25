@@ -19,7 +19,11 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/pcie_irqs.cpp \
 	$(LOCAL_DIR)/pcie_quirks.cpp \
 	$(LOCAL_DIR)/pcie_root.cpp \
-	$(LOCAL_DIR)/pcie_upstream_node.cpp
+	$(LOCAL_DIR)/pcie_upstream_node.cpp \
+	$(LOCAL_DIR)/address_provider/mmio.cpp \
+	$(LOCAL_DIR)/address_provider/pio.cpp \
+	$(LOCAL_DIR)/address_provider/ecam_region.cpp \
+
 
 MODULE_DEPS += \
     kernel/lib/zxcpp \
