@@ -6,7 +6,7 @@
 #![feature(drain_filter)]
 #![deny(warnings)]
 
-use failure::Fail;
+use failure::{self, Fail};
 
 pub mod akm;
 pub mod auth;
@@ -22,7 +22,111 @@ pub mod rsne;
 mod state_machine;
 pub mod suite_selector;
 
-use crate::key::exchange::handshake::fourway::MessageNumber;
+use crate::auth::psk;
+use crate::key::exchange::{
+    self,
+    handshake::fourway::{self, MessageNumber},
+    handshake::group_key,
+};
+use crate::rsne::Rsne;
+use crate::rsna::esssa::EssSa;
+use crate::rsna::{NegotiatedRsne, UpdateSink, Role};
+
+#[derive(Debug, PartialEq)]
+pub struct Supplicant {
+    esssa: EssSa,
+}
+
+impl Supplicant {
+    /// WPA2-PSK CCMP-128 Supplicant which supports 4-Way- and Group-Key Handshakes.
+    pub fn new_wpa2psk_ccmp128(
+        ssid: &[u8],
+        passphrase: &[u8],
+        s_addr: [u8; 6],
+        s_rsne: Rsne,
+        a_addr: [u8; 6],
+        a_rsne: Rsne,
+    ) -> Result<Supplicant, failure::Error> {
+        let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
+        let akm = negotiated_rsne.akm.clone();
+
+        let mut esssa = EssSa::new(
+            Role::Supplicant,
+            negotiated_rsne,
+            auth::Config::Psk(psk::Config::new(passphrase, ssid)?),
+            exchange::Config::FourWayHandshake(fourway::Config::new(
+                Role::Supplicant, s_addr, s_rsne, a_addr, a_rsne
+            )?),
+            exchange::Config::GroupKeyHandshake(group_key::Config {
+                role: Role::Supplicant, akm
+            }),
+        )?;
+
+        // The Supplicant always waits for Authenticator to initiate and does not yet support EAPOL
+        // request frames. Thus, all updates can be ignored.
+        let mut dead_update_sink = vec![];
+        esssa.initiate(&mut dead_update_sink)?;
+
+        Ok(Supplicant{ esssa })
+    }
+
+    /// Resets all established Security Associations and invalidates all derived keys.
+    /// The Supplicant must be reset or destroyed when the underlying 802.11 association terminates.
+    pub fn reset(&mut self) {
+        self.esssa.reset();
+    }
+
+    /// Entry point for all incoming EAPOL frames. Incoming frames can be corrupted, invalid or of
+    /// unsupported types; the Supplicant will filter and drop all unexpected frames.
+    /// Outbound EAPOL frames, status and key updates will be pushed into the `update_sink`.
+    /// The method will return an `Error` if the frame was invalid.
+    pub fn on_eapol_frame(&mut self, update_sink: &mut UpdateSink, frame: &eapol::Frame)
+        -> Result<(), failure::Error>
+    {
+        self.esssa.on_eapol_frame(update_sink, frame)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Authenticator {
+    esssa: EssSa,
+}
+
+impl Authenticator {
+    /// WPA2-PSK CCMP-128 Authenticator which supports 4-Way Handshake.
+    /// The Authenticator does not support GTK rotations.
+    pub fn new_wpa2psk_authenticator() -> Result<Authenticator, failure::Error> {
+        panic!("not yet implemented")
+    }
+
+    /// Resets all established Security Associations and invalidates all derived keys.
+    /// The Authenticator must be reset or destroyed when the underlying 802.11 association
+    /// terminates.
+    pub fn reset(&mut self) {
+        self.esssa.reset();
+    }
+
+    /// `initiate(...)` must be called when the Authenticator should start establishing a
+    /// security association with a client.
+    /// The Authenticator must always initiate the security association in the current system as
+    /// EAPOL request frames from clients are not yet supported.
+    /// This method can be called multiple times to re-initiate the security association, however,
+    /// calling this method will invalidate all established security associations and their derived
+    /// keys.
+    pub fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), failure::Error> {
+        self.esssa.initiate(update_sink)
+    }
+
+    /// Entry point for all incoming EAPOL frames. Incoming frames can be corrupted, invalid or of
+    /// unsupported types; the Authenticator will filter and drop all unexpected frames.
+    /// Outbound EAPOL frames, status and key updates will be pushed into the `update_sink`.
+    /// The method will return an `Error` if the frame was invalid.
+    pub fn on_eapol_frame(&mut self, update_sink: &mut UpdateSink, frame: &eapol::Frame)
+                          -> Result<(), failure::Error>
+    {
+        self.esssa.on_eapol_frame(update_sink, frame)
+    }
+}
 
 #[derive(Debug, Fail)]
 pub enum Error {

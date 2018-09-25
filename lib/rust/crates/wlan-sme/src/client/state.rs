@@ -151,7 +151,7 @@ impl<T: Tokens> State<T> {
                     };
                     // Client is disassociating. The ESS-SA must be kept alive but reset.
                     if let Some(rsna) = &mut rsna {
-                        rsna.esssa.reset();
+                        rsna.supplicant.reset();
                     }
                     let cmd = ConnectCommand{ bss, token, rsna };
                     context.att_id += 1;
@@ -304,7 +304,7 @@ fn process_eapol_ind(mlme_sink: &MlmeSink, rsna: &mut Rsna, ind: &fidl_mlme::Eap
     };
 
     let mut update_sink = rsna::UpdateSink::default();
-    if let Err(e) = rsna.esssa.on_eapol_frame(&mut update_sink, &eapol_frame) {
+    if let Err(e) = rsna.supplicant.on_eapol_frame(&mut update_sink, &eapol_frame) {
         error!("error processing EAPOL key frame: {}", e);
         return RsnaStatus::Unchanged;
     }

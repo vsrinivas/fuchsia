@@ -5,17 +5,15 @@
 use super::*;
 use bytes::Bytes;
 use crate::akm::{self, Akm};
-use crate::auth;
 use crate::cipher::{self, Cipher};
 use crate::crypto_utils::nonce::NonceReader;
 use crate::key::exchange::{
-    self,
-    handshake::fourway::{Config, Fourway},
+    handshake::fourway::{self, Fourway},
 };
 use crate::key::ptk::Ptk;
 use crate::key_data;
 use crate::key_data::kde;
-use crate::rsna::{esssa::EssSa, NegotiatedRsne};
+use crate::Supplicant;
 use crate::rsne::Rsne;
 use crate::suite_selector::OUI;
 use hex::FromHex;
@@ -67,25 +65,14 @@ pub fn get_s_rsne() -> Rsne {
     rsne
 }
 
-pub fn get_esssa() -> EssSa {
-    let a_rsne = get_a_rsne();
-    let s_rsne = get_s_rsne();
-    let negotiated_rsne =
-        NegotiatedRsne::from_rsne(&s_rsne).expect("could not derive negotiated RSNE");
-    let auth_cfg = auth::Config::for_psk("ThisIsAPassword".as_bytes(), "ThisIsASSID".as_bytes())
-        .expect("could not construct authentication config");
-    let ptk_exch_cfg =
-        exchange::Config::for_4way_handshake(Role::Supplicant, S_ADDR, s_rsne, A_ADDR, a_rsne)
-            .expect("could not construct PTK exchange method");
-    let gtk_cfg =
-        exchange::Config::for_groupkey_handshake(Role::Supplicant, negotiated_rsne.akm.clone());
-    EssSa::new(
-        Role::Supplicant,
-        negotiated_rsne,
-        auth_cfg,
-        ptk_exch_cfg,
-        gtk_cfg,
-    ).expect("error constructing ESS Security Assocation")
+pub fn get_supplicant() -> Supplicant {
+    Supplicant::new_wpa2psk_ccmp128("ThisIsASSID".as_bytes(),
+                                  "ThisIsAPassword".as_bytes(),
+                                  test_util::S_ADDR,
+                                  test_util::get_s_rsne(),
+                                  test_util::A_ADDR,
+                                  test_util::get_a_rsne())
+        .expect("could not create Supplicant")
 }
 
 pub fn get_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
@@ -270,17 +257,19 @@ pub fn is_zero(slice: &[u8]) -> bool {
     slice.iter().all(|&x| x == 0)
 }
 
-pub fn make_handshake(role: Role) -> Fourway {
-    // Create a new instance of the 4-Way Handshake in Supplicant role.
-    let pmk = test_util::get_pmk();
-    let cfg = Config {
-        s_rsne: test_util::get_s_rsne(),
-        a_rsne: test_util::get_a_rsne(),
-        s_addr: test_util::S_ADDR,
-        a_addr: test_util::A_ADDR,
+pub fn make_fourway_cfg(role: Role) -> fourway::Config {
+    fourway::Config::new(
         role,
-    };
-    Fourway::new(cfg, pmk).expect("error while creating 4-Way Handshake")
+        test_util::S_ADDR,
+        test_util::get_s_rsne(),
+        test_util::A_ADDR,
+        test_util::get_a_rsne(),
+    ).expect("could not construct PTK exchange method")
+}
+
+pub fn make_handshake(role: Role) -> Fourway {
+    let pmk = test_util::get_pmk();
+    Fourway::new(make_fourway_cfg(role), pmk).expect("error while creating 4-Way Handshake")
 }
 
 fn compute_ptk(a_nonce: &[u8], supplicant_updates: &UpdateSink) -> Option<Ptk> {

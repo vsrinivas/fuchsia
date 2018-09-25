@@ -8,11 +8,9 @@ use self::handshake::{
     fourway::{self, Fourway},
     group_key::{self, GroupKey},
 };
-use crate::akm::Akm;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
-use crate::rsna::{Role, UpdateSink, VerifiedKeyFrame};
-use crate::rsne::Rsne;
+use crate::rsna::{UpdateSink, VerifiedKeyFrame};
 use failure;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,6 +43,17 @@ impl Method {
             Method::GroupKeyHandshake(hs) => hs.on_eapol_key_frame(update_sink, key_replay_counter, frame),
         }
     }
+    pub fn initiate(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        key_replay_counter: u64,
+    ) -> Result<(), failure::Error> {
+        match self {
+            Method::FourWayHandshake(hs) => hs.initiate(update_sink, key_replay_counter),
+            // Only 4-Way Handshake supports initiation so far.
+            _ => Ok(()),
+        }
+    }
 
     pub fn destroy(self) -> Config {
         match self {
@@ -58,22 +67,4 @@ impl Method {
 pub enum Config {
     FourWayHandshake(fourway::Config),
     GroupKeyHandshake(group_key::Config),
-}
-
-impl Config {
-    pub fn for_4way_handshake(
-        role: Role,
-        sta_addr: [u8; 6],
-        sta_rsne: Rsne,
-        peer_addr: [u8; 6],
-        peer_rsne: Rsne,
-    ) -> Result<Config, failure::Error> {
-        fourway::Config::new(role, sta_addr, sta_rsne, peer_addr, peer_rsne)
-            .map_err(|e| e.into())
-            .map(|c| Config::FourWayHandshake(c))
-    }
-
-    pub fn for_groupkey_handshake(role: Role, akm: Akm) -> Config {
-        Config::GroupKeyHandshake(group_key::Config { role, akm })
-    }
 }

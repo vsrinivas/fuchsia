@@ -28,15 +28,7 @@ impl Method {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Config {
     Psk(psk::Config),
-}
-
-impl Config {
-    pub fn for_psk(passphrase: &[u8], ssid: &[u8]) -> Result<Config, failure::Error> {
-        psk::Config::new(passphrase, ssid)
-            .map_err(|e| e.into())
-            .map(|c| Config::Psk(c))
-    }
 }
