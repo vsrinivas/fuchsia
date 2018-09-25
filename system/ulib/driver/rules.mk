@@ -27,7 +27,12 @@ MODULE_SRCS := \
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl system/ulib/sync system/ulib/port
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/fbl \
+    system/ulib/fidl \
+    system/ulib/sync \
+    system/ulib/port \
 
 MODULE_LIBS := system/ulib/fdio system/ulib/zircon system/ulib/c
 

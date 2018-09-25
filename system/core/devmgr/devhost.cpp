@@ -57,7 +57,7 @@ static iostate_t root_ios = []() {
     return ios;
 }();
 
-static list_node_t dh_drivers = LIST_INITIAL_VALUE(dh_drivers);
+static fbl::DoublyLinkedList<zx_driver*> dh_drivers;
 
 static const char* mkdevpath(zx_device_t* dev, char* path, size_t max) {
     if (dev == nullptr) {
@@ -125,24 +125,23 @@ static void logflag(char* flag, uint32_t* flags) {
 
 static zx_status_t dh_find_driver(const char* libname, zx_handle_t vmo, zx_driver_t** out) {
     // check for already-loaded driver first
-    zx_driver_t* drv;
-    list_for_every_entry(&dh_drivers, drv, zx_driver_t, node) {
-        if (!strcmp(libname, drv->libname)) {
-            *out = drv;
+    for (auto& drv : dh_drivers) {
+        if (!strcmp(libname, drv.libname)) {
+            *out = &drv;
             zx_handle_close(vmo);
-            return drv->status;
+            return drv.status;
         }
     }
 
     size_t len = strlen(libname) + 1;
-    drv = static_cast<zx_driver_t*>(calloc(1, sizeof(zx_driver_t) + len));
+    auto drv = static_cast<zx_driver_t*>(calloc(1, sizeof(zx_driver_t) + len));
     if (drv == nullptr) {
         zx_handle_close(vmo);
         return ZX_ERR_NO_MEMORY;
     }
     memcpy((void*) (drv + 1), libname, len);
     drv->libname = (const char*) (drv + 1);
-    list_add_tail(&dh_drivers, &drv->node);
+    dh_drivers.push_back(drv);
     *out = drv;
 
     void* dl = dlopen_vmo(vmo, RTLD_NOW);
