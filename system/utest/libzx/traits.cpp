@@ -11,6 +11,7 @@
 #include <lib/fzl/time.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/fifo.h>
@@ -219,6 +220,15 @@ bool traits_test() {
         user_signaling(log);
         waiting(log);
         peering(log);
+    }
+
+    {
+        zx::debuglog debuglog;
+        ASSERT_EQ(zx::debuglog::create(zx::resource(), 0u, &debuglog), ZX_OK);
+        duplicating(debuglog);
+        user_signaling(debuglog);
+        waiting(debuglog);
+        peering(debuglog);
     }
 
     {

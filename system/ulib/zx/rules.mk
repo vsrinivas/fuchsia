@@ -12,6 +12,7 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/channel.cpp \
+    $(LOCAL_DIR)/debuglog.cpp \
     $(LOCAL_DIR)/event.cpp \
     $(LOCAL_DIR)/eventpair.cpp \
     $(LOCAL_DIR)/fifo.cpp \
