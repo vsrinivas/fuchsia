@@ -174,6 +174,10 @@ void TestLoop::Quit() {
 }
 
 
+void TestLoop::AdvanceTimeByEpsilon() {
+    time_keeper_->AdvanceTimeTo(Now() + zx::duration(1));
+}
+
 bool TestLoop::RunUntil(zx::time deadline) {
     ZX_ASSERT(!is_running_);
     is_running_ = true;

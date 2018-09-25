@@ -43,6 +43,10 @@ public:
     // dispatch as usual.
     void Quit();
 
+    // Advances the fake clock time by the smallest possible amount.
+    // This doesn't run the loop.
+    void AdvanceTimeByEpsilon();
+
     // Dispatches all waits and all tasks with deadlines up until |deadline|,
     // progressively advancing the fake clock.
     // Returns true iff any tasks or waits were invoked during the run.

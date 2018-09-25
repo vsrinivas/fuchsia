@@ -233,6 +233,36 @@ bool TasksAreCanceled() {
     END_TEST;
 }
 
+bool TimeIsAdvanced() {
+    BEGIN_TEST;
+    async::TestLoop loop;
+
+    bool called = false;
+    async::TaskClosure task([&called] { called = true; });
+    auto time1 = async::Now(loop.dispatcher());
+
+    ASSERT_EQ(ZX_OK, task.PostDelayed(loop.dispatcher(), zx::duration(1)));
+
+    loop.RunUntilIdle();
+
+    EXPECT_FALSE(called);
+    EXPECT_EQ(time1.get(), async::Now(loop.dispatcher()).get());
+
+    loop.AdvanceTimeByEpsilon();
+
+    auto time2 = async::Now(loop.dispatcher());
+
+    EXPECT_FALSE(called);
+    EXPECT_GT(time2.get(), time1.get());
+
+    loop.RunUntilIdle();
+
+    EXPECT_TRUE(called);
+    EXPECT_EQ(time2.get(), async::Now(loop.dispatcher()).get());
+
+    END_TEST;
+}
+
 bool WaitsAreDispatched() {
     BEGIN_TEST;
 
@@ -576,6 +606,7 @@ RUN_TEST(SameDeadlinesDispatchInPostingOrder)
 RUN_TEST(NestedTasksAreDispatched)
 RUN_TEST(TimeIsCorrectWhileDispatching)
 RUN_TEST(TasksAreCanceled)
+RUN_TEST(TimeIsAdvanced)
 RUN_TEST(WaitsAreDispatched)
 RUN_TEST(NestedWaitsAreDispatched)
 RUN_TEST(WaitsAreCanceled)
