@@ -77,7 +77,6 @@ public:
         return status;
     }
 
-    // TODO: Consider removing the following in favor of hwreg::RegisterIo.
     uint32_t Read32(zx_off_t offs) const {
         return Read<uint32_t>(offs);
     }
@@ -90,19 +89,16 @@ public:
         Write<uint32_t>(val, offs);
     }
 
-    void SetBits32(uint32_t mask, zx_off_t offs) const {
-        SetBits<uint32_t>(mask, offs);
+    void ModifyBits32(uint32_t bits, uint32_t mask, zx_off_t offs) const {
+        ModifyBits<uint32_t>(bits, mask, offs);
     }
 
-    void ClearBits32(uint32_t mask, zx_off_t offs) const {
-        ClearBits<uint32_t>(mask, offs);
+    void SetBits32(uint32_t bits, zx_off_t offs) const {
+        SetBits<uint32_t>(bits, offs);
     }
 
-private:
-    void transfer(MmioBuffer&& other) {
-        mmio_ = other.mmio_;
-        ptr_ = other.ptr_;
-        other.reset();
+    void ClearBits32(uint32_t bits, zx_off_t offs) const {
+        ClearBits<uint32_t>(bits, offs);
     }
 
     template <typename T>
@@ -126,15 +122,26 @@ private:
     }
 
     template <typename T>
-    void SetBits(T mask, zx_off_t offs) const {
+    void ModifyBits(T bits, T mask, zx_off_t offs) const {
         T val = Read<T>(offs);
-        Write<T>(val | mask, offs);
+        Write<T>((val & ~mask) | (bits & mask), offs);
     }
 
     template <typename T>
-    void ClearBits(T mask, zx_off_t offs) const {
-        T val = Read<T>(offs);
-        Write<T>(val & ~mask, offs);
+    void SetBits(T bits, zx_off_t offs) const {
+        ModifyBits<T>(bits, bits, offs);
+    }
+
+    template <typename T>
+    void ClearBits(T bits, zx_off_t offs) const {
+        ModifyBits<T>(0, bits, offs);
+    }
+
+private:
+    void transfer(MmioBuffer&& other) {
+        mmio_ = other.mmio_;
+        ptr_ = other.ptr_;
+        other.reset();
     }
 
     mmio_buffer_t mmio_;
