@@ -91,6 +91,7 @@
 #define HHI_GP0_PLL_CNTL6           (0x16 << 2)
 
 // HHI PLL register bitfield definitions
+#define HHI_PLL_LOCK           (1 << 31)
 #define HHI_PLL_CNTL0_EN       (1 << 28)
 #define HHI_PLL_CNTL0_RESET    (1 << 29)
 #define HHI_PLL_CNTL0_M_SHIFT  (0)
@@ -180,6 +181,12 @@ zx_status_t s905d2_pll_set_rate(aml_pll_dev_t* pll, uint64_t freq);
     valid divider values have been written to the control registers.
 */
 zx_status_t s905d2_pll_ena(aml_pll_dev_t* pll);
+
+/*
+    Disable the selected pll.  Returns if the pll was actually enabled
+    when the call was made.
+*/
+bool s905d2_pll_disable(aml_pll_dev_t* pll_dev);
 
 /*
     Look for freq in pll rate table.  Returns ZX_ERR_NOT_SUPPORTED if the rate

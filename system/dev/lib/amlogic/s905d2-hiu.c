@@ -29,23 +29,10 @@ zx_status_t s905d2_hiu_init(zx_handle_t bti, aml_hiu_dev_t* device) {
     return ZX_OK;
 }
 
-zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_plls_t pll_num) {
-    ZX_DEBUG_ASSERT(device);
-    ZX_DEBUG_ASSERT(pll_dev);
+static zx_status_t s905d2_pll_init_regs(aml_pll_dev_t* pll_dev) {
+    aml_hiu_dev_t* device = pll_dev->hiu;
 
-    if (pll_num == HIFI_PLL) {
-        pll_dev->hiu = device;
-        pll_dev->rate_table = s905d2_pll_get_rate_table(HIFI_PLL);
-        pll_dev->rate_idx = 0;
-        pll_dev->frequency = 0;
-        pll_dev->pll_num = pll_num;
-        pll_dev->rate_count = s905d2_get_rate_table_count(HIFI_PLL);
-
-        ZX_DEBUG_ASSERT(pll_dev->rate_table);
-        ZX_DEBUG_ASSERT(pll_dev->rate_count);
-
-        //Disable and reset the pll
-        hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL0, 1 << 29);
+    if (pll_dev->pll_num == HIFI_PLL) {
         //write config values
         hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL1, G12A_HIFI_PLL_CNTL1);
         hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL2, G12A_HIFI_PLL_CNTL2);
@@ -53,20 +40,9 @@ zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_p
         hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL4, G12A_HIFI_PLL_CNTL4);
         hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL5, G12A_HIFI_PLL_CNTL5);
         hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL6, G12A_HIFI_PLL_CNTL6);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
         return ZX_OK;
-    } else if (pll_num == SYS_PLL) {
-        pll_dev->hiu = device;
-        pll_dev->rate_table = s905d2_pll_get_rate_table(SYS_PLL);
-        pll_dev->rate_idx = 0;
-        pll_dev->frequency = 0;
-        pll_dev->pll_num = pll_num;
-        pll_dev->rate_count = s905d2_get_rate_table_count(SYS_PLL);
-
-        ZX_DEBUG_ASSERT(pll_dev->rate_table);
-        ZX_DEBUG_ASSERT(pll_dev->rate_count);
-
-        //Disable and reset the pll
-        hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL0, 1 << 29);
+    } else if (pll_dev->pll_num == SYS_PLL) {
         //write config values
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL1, G12A_SYS_PLL_CNTL1);
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL2, G12A_SYS_PLL_CNTL2);
@@ -74,21 +50,9 @@ zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_p
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL4, G12A_SYS_PLL_CNTL4);
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL5, G12A_SYS_PLL_CNTL5);
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL6, G12A_SYS_PLL_CNTL6);
-
+        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
         return ZX_OK;
-    } else if (pll_num == GP0_PLL) {
-        pll_dev->hiu = device;
-        pll_dev->rate_table = s905d2_pll_get_rate_table(GP0_PLL);
-        pll_dev->rate_idx = 0;
-        pll_dev->frequency = 0;
-        pll_dev->pll_num = pll_num;
-        pll_dev->rate_count = s905d2_get_rate_table_count(GP0_PLL);
-
-        ZX_DEBUG_ASSERT(pll_dev->rate_table);
-        ZX_DEBUG_ASSERT(pll_dev->rate_count);
-
-        //Disable and reset the pll
-        hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL0, 1 << 29);
+    } else if (pll_dev->pll_num == GP0_PLL) {
         //write config values
         hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL1, G12A_GP0_PLL_CNTL1);
         hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL2, G12A_GP0_PLL_CNTL2);
@@ -96,11 +60,43 @@ zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_p
         hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL4, G12A_GP0_PLL_CNTL4);
         hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL5, G12A_GP0_PLL_CNTL5);
         hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL6, G12A_GP0_PLL_CNTL6);
-
+        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
         return ZX_OK;
     }
-    //Need to find/add values for GP0 and PCIE plls
-    return ZX_ERR_NOT_SUPPORTED;
+    return ZX_OK;
+}
+
+zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_plls_t pll_num) {
+    ZX_DEBUG_ASSERT(device);
+    ZX_DEBUG_ASSERT(pll_dev);
+
+    pll_dev->hiu = device;
+
+    pll_dev->rate_table = s905d2_pll_get_rate_table(pll_num);
+    pll_dev->rate_idx = 0;
+    pll_dev->frequency = 0;
+    pll_dev->pll_num = pll_num;
+    pll_dev->rate_count = s905d2_get_rate_table_count(pll_num);
+
+    ZX_DEBUG_ASSERT(pll_dev->rate_table);
+    ZX_DEBUG_ASSERT(pll_dev->rate_count);
+
+    //Disable and reset the pll
+    s905d2_pll_disable(pll_dev);
+    //Write configuration registers
+    return s905d2_pll_init_regs(pll_dev);
+}
+
+bool s905d2_pll_disable(aml_pll_dev_t* pll_dev) {
+    uint32_t offs = hiu_get_pll_offs(pll_dev);
+    uint32_t ctl0 = hiu_clk_get_reg(pll_dev->hiu, offs);
+
+    bool retval = ctl0 & HHI_PLL_CNTL0_EN;
+
+    ctl0 = (ctl0 & ~HHI_PLL_CNTL0_EN) | HHI_PLL_CNTL0_RESET;
+    hiu_clk_set_reg(pll_dev->hiu, offs, ctl0);
+
+    return retval;
 }
 
 zx_status_t s905d2_pll_ena(aml_pll_dev_t* pll_dev) {
@@ -108,14 +104,26 @@ zx_status_t s905d2_pll_ena(aml_pll_dev_t* pll_dev) {
 
     uint32_t offs = hiu_get_pll_offs(pll_dev);
     uint32_t reg_val = hiu_clk_get_reg(pll_dev->hiu, offs);
+
     // Set Enable bit
     reg_val |= HHI_PLL_CNTL0_EN;
     hiu_clk_set_reg(pll_dev->hiu, offs, reg_val);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(50)));
+
     // Clear Reset bit
     reg_val &= ~HHI_PLL_CNTL0_RESET;
     hiu_clk_set_reg(pll_dev->hiu, offs, reg_val);
 
-    return ZX_OK;
+    uint32_t wait_count = 100;
+    while (wait_count) {
+        if (hiu_clk_get_reg(pll_dev->hiu, offs) & HHI_PLL_LOCK) {
+            return ZX_OK;
+        }
+        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+        wait_count--;
+    }
+
+    return ZX_ERR_TIMED_OUT;
 }
 
 /* Notes:
@@ -132,6 +140,11 @@ zx_status_t s905d2_pll_set_rate(aml_pll_dev_t* pll_dev, uint64_t freq) {
     if (status != ZX_OK) {
         return status;
     }
+    //Disable/reset the pll, save previous state
+    bool ena = s905d2_pll_disable(pll_dev);
+
+    //Initialize the registers to defaults (may not be retained after reset)
+    s905d2_pll_init_regs(pll_dev);
 
     uint32_t offs = hiu_get_pll_offs(pll_dev);
     uint32_t ctl0 = hiu_clk_get_reg(pll_dev->hiu, offs);
@@ -148,6 +161,10 @@ zx_status_t s905d2_pll_set_rate(aml_pll_dev_t* pll_dev, uint64_t freq) {
     hiu_clk_set_reg(pll_dev->hiu, offs, ctl0);
 
     hiu_clk_set_reg(pll_dev->hiu, offs + 4, pll_rate->frac);
+
+    if (ena) {
+        return s905d2_pll_ena(pll_dev);
+    }
 
     return ZX_OK;
 }
