@@ -8,6 +8,7 @@ use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, NegotiatedRsne, SecAssocUpdate, SecAssocStatus};
 
 use super::bss::convert_bss_description;
+use super::phy_selection::{derive_phy_cbw};
 use super::{ConnectFailure, ConnectPhyParams, ConnectResult, InfoEvent,
             InfoSink, Status, Tokens, UserEvent};
 use super::internal::UserSink;
@@ -227,6 +228,8 @@ impl<T: Tokens> State<T> {
 
     pub fn connect(self, cmd: ConnectCommand<T::ConnectToken>, context: &mut Context<T>) -> Self {
         self.disconnect_internal(context);
+
+        let (phy_to_use, cbw_to_use) = derive_phy_cbw(&cmd.bss, &cmd.params);
         context.mlme_sink.send(MlmeRequest::Join(
             fidl_mlme::JoinRequest {
                 selected_bss: clone_bss_desc(&cmd.bss),
@@ -234,9 +237,9 @@ impl<T: Tokens> State<T> {
                 nav_sync_delay: 0,
                 op_rate_set: vec![],
                 override_phy: cmd.params.phy.is_some(),
-                phy: cmd.params.phy.unwrap_or(fidl_mlme::Phy::Ht),
+                phy: phy_to_use,
                 override_cbw: cmd.params.cbw.is_some(),
-                cbw: cmd.params.cbw.unwrap_or(fidl_mlme::Cbw::Cbw20),
+                cbw: cbw_to_use,
             }
         ));
         context.att_id += 1;
