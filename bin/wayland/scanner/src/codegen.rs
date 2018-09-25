@@ -28,20 +28,28 @@ impl<W: io::Write> Codegen<W> {
             "\
 // GENERATED FILE -- DO NOT EDIT
 
-use fuchsia_wayland_core::{{ Arg, ArgKind, FromMessage, IntoMessage, Message,
+use failure;
+use \
+             fuchsia_wayland_core::{{ArgKind, Arg, FromArgs, IntoMessage, Message,
                             MessageGroupSpec, MessageHeader, MessageSpec, NewId,
-                            ObjectId, EncodeError, DecodeError, Interface, }};"
+                            ObjectId, EncodeError, DecodeError,
+                            Interface }};"
         )?;
 
         for interface in protocol.interfaces.into_iter() {
             let interface_name = to_camel_case(&interface.name);
             let request_type_name = format!("{}Request", interface_name);
             let event_type_name = format!("{}Event", interface_name);
-            self.codegen_message_enum(&request_type_name, &interface.requests)?;
-            self.codegen_message_enum(&event_type_name, &interface.events)?;
+            self.codegen_message_enum(
+                &request_type_name,
+                &interface.requests,
+                format_dispatch_arg_rust,
+            )?;
+            self.codegen_message_enum(&event_type_name, &interface.events, format_wire_arg_rust)?;
 
-            self.codegen_impl_request(&request_type_name, &interface.requests)?;
             self.codegen_impl_event(&event_type_name, &interface.events)?;
+            self.codegen_from_args(&request_type_name, &interface.requests)?;
+
             self.codegen_interface_trait(&interface)?;
         }
         Ok(())
@@ -55,7 +63,9 @@ use fuchsia_wayland_core::{{ Arg, ArgKind, FromMessage, IntoMessage, Message,
     ///    Request1 { arg1: u32 },
     ///    Request2 { name: String},
     ///  }
-    fn codegen_message_enum(&mut self, name: &str, messages: &Vec<ast::Message>) -> Result {
+    fn codegen_message_enum<F: FnMut(&ast::Arg) -> &'static str>(
+        &mut self, name: &str, messages: &Vec<ast::Message>, arg_formatter: F,
+    ) -> Result {
         writeln!(self.w, "#[derive(Debug)]");
         writeln!(self.w, "pub enum {enum_name} {{", enum_name = name)?;
         for message in messages.iter() {
@@ -66,7 +76,7 @@ use fuchsia_wayland_core::{{ Arg, ArgKind, FromMessage, IntoMessage, Message,
                     format!(
                         "{arg_name}: {arg_type}",
                         arg_name = arg.name,
-                        arg_type = format_arg_kind_rust(&arg)
+                        arg_type = arg_formatter(&arg)
                     )
                 }).collect::<Vec<String>>()
                 .join(", ");
@@ -79,73 +89,6 @@ use fuchsia_wayland_core::{{ Arg, ArgKind, FromMessage, IntoMessage, Message,
         }
         writeln!(self.w, "}}")?;
         Ok(())
-    }
-
-    /// Generates an impl for the Request trait for a set of messages. This
-    /// will be the code that allows the message type to be instantiated from
-    /// a serialized message.
-    ///
-    /// Ex:
-    ///   impl FromMessage for MyInterfaceRequest {
-    ///       fn from_message(mut msg: Message) -> Result<Self, Self::Error> {
-    ///           let header = msg.read_header()?;
-    ///           match header.opcode {
-    ///           0 => Ok(MyInterfaceRequest::Request1 {
-    ///               uint_arg: msg.read_arg(ArgKind::Uint)?.as_uint(),
-    ///           }),
-    ///           // ... Decode other ordinals...
-    ///           }
-    ///       }
-    ///   }
-    fn codegen_impl_request(&mut self, for_type: &str, messages: &Vec<ast::Message>) -> Result {
-        write!(
-            self.w,
-            "\
-impl FromMessage for {target_type} {{
-    type Error = DecodeError;
-    fn from_message(mut msg: Message) -> Result<Self, Self::Error> {{
-        let header = msg.read_header()?;
-        match header.opcode {{",
-            target_type = for_type
-        )?;
-
-        for (op, request) in messages.iter().enumerate() {
-            write!(
-                self.w,
-                "
-        {opcode} /* {op_name} */ => {{
-            Ok({self_type}::{message_name} {{\n",
-                opcode = op,
-                op_name = request.name,
-                self_type = for_type,
-                message_name = to_camel_case(&request.name)
-            )?;
-            for arg in request.args.iter() {
-                writeln!(
-                    self.w,
-                    "                {}: msg.read_arg({})?.{},",
-                    arg.name,
-                    format_arg_kind(&arg),
-                    arg_to_primitive(&arg)
-                )?;
-            }
-            write!(
-                self.w,
-                "
-            }})
-        }},"
-            )?;
-        }
-        write!(
-            self.w,
-            "
-        _ => {{
-            Err(DecodeError::InvalidOpcode(header.opcode))
-        }},
-        }}
-    }}
-}}\n"
-        )
     }
 
     /// Generates an impl for the Event trait for a set of messages. This
@@ -178,8 +121,10 @@ impl FromMessage for {target_type} {{
             "\
 impl IntoMessage for {target_type} {{
     type Error = EncodeError;
-    fn into_message(self, id: u32) -> Result<Message, Self::Error> {{
-        let mut header = MessageHeader {{
+    fn \
+             into_message(self, id: u32) -> Result<Message, Self::Error> {{
+        let mut \
+             header = MessageHeader {{
             sender: id,
             opcode: 0,
             length: 0,
@@ -206,7 +151,7 @@ impl IntoMessage for {target_type} {{
                 write!(
                     self.w,
                     "            msg.write_arg({arg})?;\n",
-                    arg = format_arg(&arg, &arg.name)
+                    arg = format_wire_arg(&arg, &arg.name)
                 )?;
             }
             write!(
@@ -224,6 +169,59 @@ impl IntoMessage for {target_type} {{
         msg.rewind();
         msg.write_header(&header)?;
         Ok(msg)
+    }}
+}}\n"
+        )
+    }
+
+    fn codegen_from_args(&mut self, for_type: &str, messages: &Vec<ast::Message>) -> Result {
+        write!(
+            self.w,
+            "\
+impl FromArgs for {target_type} {{
+    fn from_args(op: u16, mut args: \
+             Vec<Arg>) -> Result<Self, failure::Error> {{
+        match op {{",
+            target_type = for_type
+        )?;
+
+        for (op, message) in messages.iter().enumerate() {
+            write!(
+                self.w,
+                "
+        {opcode} /* {op_name} */ => {{
+            let mut iter = \
+                 args.into_iter();
+            Ok({self_type}::{message_name} {{\n",
+                opcode = op,
+                op_name = message.name,
+                self_type = for_type,
+                message_name = to_camel_case(&message.name)
+            )?;
+            for arg in message.args.iter() {
+                writeln!(
+                    self.w,
+                    "                {}: iter.next()
+                                             .ok_or(DecodeError::InsufficientArgs)?
+                                             .{}?,",
+                    arg.name,
+                    arg_to_primitive(&arg)
+                )?;
+            }
+            write!(
+                self.w,
+                "
+            }})
+        }},"
+            )?;
+        }
+        write!(
+            self.w,
+            "
+        _ => {{
+            Err(DecodeError::InvalidOpcode(op).into())
+        }},
+        }}
     }}
 }}\n"
         )
@@ -251,9 +249,9 @@ impl IntoMessage for {target_type} {{
             interface.name
         )?;
         writeln!(self.w, "    const VERSION: u32 = {};", interface.version)?;
-        write!(self.w,   "    const REQUESTS: MessageGroupSpec = ")?;
+        write!(self.w, "    const REQUESTS: MessageGroupSpec = ")?;
         self.codegen_message_group_spec(&interface.requests)?;
-        write!(self.w,   "    const EVENTS: MessageGroupSpec = ")?;
+        write!(self.w, "    const EVENTS: MessageGroupSpec = ")?;
         self.codegen_message_group_spec(&interface.events)?;
         writeln!(self.w, "    type Request = {}Request;", camel_name)?;
         writeln!(self.w, "    type Event = {}Event;", camel_name)?;
@@ -284,7 +282,20 @@ fn to_camel_case(s: &str) -> String {
         .collect()
 }
 
-fn format_arg_kind_rust(arg: &ast::Arg) -> &'static str {
+fn format_dispatch_arg_rust(arg: &ast::Arg) -> &'static str {
+    match arg.kind {
+        ArgKind::Int => "i32",
+        ArgKind::Uint => "u32",
+        ArgKind::Fixed => "u32",
+        ArgKind::String => "String",
+        ArgKind::Object => "ObjectId",
+        ArgKind::NewId => "ObjectId",
+        ArgKind::Array => "Vec<u8>",
+        ArgKind::Fd => "fuchsia_zircon::Handle",
+    }
+}
+
+fn format_wire_arg_rust(arg: &ast::Arg) -> &'static str {
     match arg.kind {
         ArgKind::Int => "i32",
         ArgKind::Uint => "u32",
@@ -310,7 +321,7 @@ fn format_arg_kind(arg: &ast::Arg) -> &'static str {
     }
 }
 
-fn format_arg(arg: &ast::Arg, var: &str) -> String {
+fn format_wire_arg(arg: &ast::Arg, var: &str) -> String {
     match arg.kind {
         ArgKind::Int => format!("Arg::Int({})", var),
         ArgKind::Uint => format!("Arg::Uint({})", var),
@@ -325,13 +336,13 @@ fn format_arg(arg: &ast::Arg, var: &str) -> String {
 
 fn arg_to_primitive(arg: &ast::Arg) -> &'static str {
     match arg.kind {
-        ArgKind::Int => "unwrap_int()",
-        ArgKind::Uint => "unwrap_uint()",
-        ArgKind::Fixed => "unwrap_fixed()",
-        ArgKind::String => "unwrap_string()",
-        ArgKind::Object => "unwrap_object()",
-        ArgKind::NewId => "unwrap_new_id()",
-        ArgKind::Array => "unwrap_array()",
-        ArgKind::Fd => "unwrap_handle()",
+        ArgKind::Int => "as_int()",
+        ArgKind::Uint => "as_uint()",
+        ArgKind::Fixed => "as_fixed()",
+        ArgKind::String => "as_string()",
+        ArgKind::Object => "as_object()",
+        ArgKind::NewId => "as_new_id()",
+        ArgKind::Array => "as_array()",
+        ArgKind::Fd => "as_handle()",
     }
 }

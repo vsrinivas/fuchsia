@@ -9,7 +9,9 @@ use failure::Fail;
 
 use fuchsia_zircon as zx;
 
-#[derive(Debug)]
+use crate::{NewId, ObjectId};
+
+#[derive(Copy, Clone, Debug)]
 pub enum ArgKind {
     Int,
     Uint,
@@ -27,10 +29,25 @@ pub enum Arg {
     Uint(u32),
     Fixed(u32),
     String(String),
-    Object(u32),
-    NewId(u32),
+    Object(ObjectId),
+    NewId(NewId),
     Array(Vec<u8>),
     Handle(zx::Handle),
+}
+
+impl Arg {
+    pub fn kind(&self) -> ArgKind {
+        match self {
+            Arg::Int(_) => ArgKind::Int,
+            Arg::Uint(_) => ArgKind::Uint,
+            Arg::Fixed(_) => ArgKind::Fixed,
+            Arg::String(_) => ArgKind::String,
+            Arg::Object(_) => ArgKind::Object,
+            Arg::NewId(_) => ArgKind::NewId,
+            Arg::Array(_) => ArgKind::Array,
+            Arg::Handle(_) => ArgKind::Handle,
+        }
+    }
 }
 
 macro_rules! impl_unwrap_arg(
@@ -40,7 +57,8 @@ macro_rules! impl_unwrap_arg(
                 x
             } else {
                 panic!("Argument is not of the required type: \
-                        expected {}: found {:?}", stringify!($enumtype), self);
+                        expected {:?}, found {:?}",
+                        stringify!($enumtype), self);
             }
         }
     )
@@ -50,8 +68,8 @@ impl Arg {
     impl_unwrap_arg!(unwrap_int, i32, Int);
     impl_unwrap_arg!(unwrap_uint, u32, Uint);
     impl_unwrap_arg!(unwrap_fixed, u32, Fixed);
-    impl_unwrap_arg!(unwrap_object, u32, Object);
-    impl_unwrap_arg!(unwrap_new_id, u32, NewId);
+    impl_unwrap_arg!(unwrap_object, ObjectId, Object);
+    impl_unwrap_arg!(unwrap_new_id, ObjectId, NewId);
     impl_unwrap_arg!(unwrap_string, String, String);
     impl_unwrap_arg!(unwrap_array, Vec<u8>, Array);
     impl_unwrap_arg!(unwrap_handle, zx::Handle, Handle);
@@ -65,7 +83,7 @@ impl Arg {
 )]
 pub struct MismatchedArgKind {
     pub expected: ArgKind,
-    pub found: Arg,
+    pub found: ArgKind,
 }
 
 macro_rules! impl_as_arg(
@@ -76,7 +94,7 @@ macro_rules! impl_as_arg(
             } else {
                 Err(MismatchedArgKind {
                     expected: ArgKind::$enumtype,
-                    found: self,
+                    found: self.kind(),
                 })
             }
         }
@@ -87,8 +105,8 @@ impl Arg {
     impl_as_arg!(as_int, i32, Int);
     impl_as_arg!(as_uint, u32, Uint);
     impl_as_arg!(as_fixed, u32, Fixed);
-    impl_as_arg!(as_object, u32, Object);
-    impl_as_arg!(as_new_id, u32, NewId);
+    impl_as_arg!(as_object, ObjectId, Object);
+    impl_as_arg!(as_new_id, ObjectId, NewId);
     impl_as_arg!(as_string, String, String);
     impl_as_arg!(as_array, Vec<u8>, Array);
     impl_as_arg!(as_handle, zx::Handle, Handle);
@@ -187,6 +205,17 @@ impl Message {
                 ))
             },
         }
+    }
+
+    /// Reads the set of arguments specified by the given &[ArgKind].
+    pub fn read_args(&mut self, args: &[ArgKind]) -> io::Result<Vec<Arg>> {
+        args.iter().map(|arg| self.read_arg(*arg)).collect()
+    }
+
+    /// Reads the set of arguments specified by the given &[ArgKind].
+    pub fn write_args(&mut self, args: Vec<Arg>) -> io::Result<()> {
+        args.into_iter().try_for_each(|arg| self.write_arg(arg))?;
+        Ok(())
     }
 
     /// Reads a |MessageHeader| without advancing the read pointer in the

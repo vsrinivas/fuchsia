@@ -100,18 +100,17 @@ mod tests {
     use failure::Error;
     use parking_lot::Mutex;
 
-    use crate::Message;
+    use crate::test_protocol::*;
+    use crate::{Interface, IntoMessage, ObjectMap, RequestDispatcher};
 
     #[test]
-    fn registry_bind() {
+    fn registry_bind() -> Result<(), Error> {
         // We'll pass this to our globals and verify that the right number of
         // messages are delivered.
         #[derive(Default)]
         struct Counts {
             interface_1_bind_count: usize,
             interface_2_bind_count: usize,
-            interface_1_msg_count: usize,
-            interface_2_msg_count: usize,
         }
         let counts: Arc<Mutex<Counts>> = Arc::new(Mutex::new(Default::default()));
         let mut registry = RegistryBuilder::new();
@@ -120,22 +119,14 @@ mod tests {
             let counts = counts.clone();
             registry.add_global(("interface_1", move || -> Box<MessageReceiver> {
                 counts.lock().interface_1_bind_count += 1;
-                let counts = counts.clone();
-                Box::new(move |_| -> Result<(), Error> {
-                    counts.lock().interface_1_msg_count += 1;
-                    Ok(())
-                })
+                Box::new(RequestDispatcher::new(TestReceiver::new()))
             }));
         }
         {
             let counts = counts.clone();
             registry.add_global(("interface_2", move || -> Box<MessageReceiver> {
                 counts.lock().interface_2_bind_count += 1;
-                let counts = counts.clone();
-                Box::new(move |_| -> Result<(), Error> {
-                    counts.lock().interface_2_msg_count += 1;
-                    Ok(())
-                })
+                Box::new(RequestDispatcher::new(TestReceiver::new()))
             }));
         }
 
@@ -143,24 +134,27 @@ mod tests {
         let mut registry = registry.build();
         assert_eq!(0, counts.lock().interface_1_bind_count);
         assert_eq!(0, counts.lock().interface_2_bind_count);
-        assert_eq!(0, counts.lock().interface_1_msg_count);
-        assert_eq!(0, counts.lock().interface_2_msg_count);
 
         // Bind to the globals.
         let mut receivers: Vec<Box<MessageReceiver>> =
             registry.globals.iter_mut().map(|g| g.bind()).collect();
-        assert_eq!(1, counts.lock().interface_1_bind_count);
-        assert_eq!(1, counts.lock().interface_2_bind_count);
-        assert_eq!(0, counts.lock().interface_1_msg_count);
-        assert_eq!(0, counts.lock().interface_2_msg_count);
-
-        // Dispatch a message to each receiver.
-        for r in receivers.iter_mut() {
-            r.receive(Message::new()).unwrap();
+        let mut objects = ObjectMap::new();
+        for (id, r) in receivers.into_iter().enumerate() {
+            objects.add_object_raw(id as u32, r, &TestInterface::REQUESTS)?;
         }
         assert_eq!(1, counts.lock().interface_1_bind_count);
         assert_eq!(1, counts.lock().interface_2_bind_count);
-        assert_eq!(1, counts.lock().interface_1_msg_count);
-        assert_eq!(1, counts.lock().interface_2_msg_count);
+        assert_eq!(0, objects.get::<TestReceiver>(0)?.count());
+        assert_eq!(0, objects.get::<TestReceiver>(1)?.count());
+
+        // Dispatch a message to each receiver.
+        objects.receive_message(TestMessage::Message1.into_message(0)?)?;
+        objects.receive_message(TestMessage::Message1.into_message(1)?)?;
+
+        assert_eq!(1, counts.lock().interface_1_bind_count);
+        assert_eq!(1, counts.lock().interface_2_bind_count);
+        assert_eq!(1, objects.get::<TestReceiver>(0)?.count());
+        assert_eq!(1, objects.get::<TestReceiver>(1)?.count());
+        Ok(())
     }
 }

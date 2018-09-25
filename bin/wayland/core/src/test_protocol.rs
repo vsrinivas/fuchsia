@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use failure::Error;
+
 use crate::*;
 
 ///! An example of a simple wayland interface that uses the primives in this
@@ -24,15 +26,12 @@ impl TestMessage {
     }
 }
 
-impl FromMessage for TestMessage {
-    type Error = DecodeError;
-
-    fn from_message(mut message: Message) -> Result<Self, Self::Error> {
-        let header = message.read_header()?;
-        match header.opcode {
+impl FromArgs for TestMessage {
+    fn from_args(op: u16, _: Vec<Arg>) -> Result<Self, Error> {
+        match op {
             0 => Ok(TestMessage::Message1),
             1 => Ok(TestMessage::Message2),
-            op => Err(DecodeError::InvalidOpcode(op)),
+            op => Err(DecodeError::InvalidOpcode(op).into()),
         }
     }
 }
@@ -62,4 +61,33 @@ impl Interface for TestInterface {
     const EVENTS: MessageGroupSpec = MessageGroupSpec(&[MessageSpec(&[]), MessageSpec(&[])]);
     type Request = TestMessage;
     type Event = TestMessage;
+}
+
+pub struct TestReceiver {
+    request_count: usize,
+}
+
+impl TestReceiver {
+    pub fn new() -> Self {
+        TestReceiver { request_count: 0 }
+    }
+
+    pub fn increment_count(&mut self) {
+        self.request_count += 1;
+    }
+
+    pub fn count(&self) -> usize {
+        self.request_count
+    }
+}
+
+impl RequestReceiver<TestInterface> for TestReceiver {
+    fn receive(
+        this: ObjectRef<Self>, request: TestMessage, map: &mut ObjectMap,
+    ) -> Result<(), Error> {
+        if let TestMessage::Message1 = request {
+            this.get_mut(map)?.increment_count();
+        }
+        Ok(())
+    }
 }

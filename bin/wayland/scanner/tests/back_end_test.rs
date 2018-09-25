@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(warnings)]
+
 #[cfg(test)]
 mod test {
-    use fuchsia_wayland_core::{Arg, ArgKind, FromMessage, IntoMessage, Message, MessageHeader};
+    use fuchsia_wayland_core::{Arg, FromArgs, IntoMessage};
     use fuchsia_zircon::{self as zx, HandleBased};
     use test_protocol::{TestInterfaceEvent, TestInterfaceRequest};
     use zerocopy::AsBytes;
@@ -60,10 +62,10 @@ mod test {
 
     #[test]
     fn test_deserialize_uint() {
-        let request = TestInterfaceRequest::from_message(Message::from_parts(
-            message_bytes!(SENDER_ID, 0 /* opcode */, UINT_VALUE).to_vec(),
-            Vec::new(),
-        )).unwrap();
+        let request = TestInterfaceRequest::from_args(
+            0, /* opcode */
+            vec![Arg::Uint(UINT_VALUE)],
+        ).unwrap();
 
         assert_match!(request, TestInterfaceRequest::Uint{arg} => assert_eq!(arg, UINT_VALUE));
     }
@@ -82,10 +84,9 @@ mod test {
 
     #[test]
     fn test_deserialize_int() {
-        let request = TestInterfaceRequest::from_message(Message::from_parts(
-            message_bytes!(SENDER_ID, 1 /* opcode */, INT_VALUE).to_vec(),
-            Vec::new(),
-        )).unwrap();
+        let request =
+            TestInterfaceRequest::from_args(1 /* opcode */, vec![Arg::Int(INT_VALUE)])
+                .unwrap();
 
         assert_match!(request, TestInterfaceRequest::Int{arg} => assert_eq!(arg, INT_VALUE));
     }
@@ -107,10 +108,10 @@ mod test {
 
     #[test]
     fn test_deserialize_fixed() {
-        let request = TestInterfaceRequest::from_message(Message::from_parts(
-            message_bytes!(SENDER_ID, 2 /* opcode */, FIXED_VALUE).to_vec(),
-            Vec::new(),
-        )).unwrap();
+        let request = TestInterfaceRequest::from_args(
+            2, /* opcode */
+            vec![Arg::Fixed(FIXED_VALUE)],
+        ).unwrap();
 
         assert_match!(request, TestInterfaceRequest::Fixed{arg} => assert_eq!(arg, FIXED_VALUE));
     }
@@ -133,7 +134,7 @@ mod test {
     #[test]
     fn test_serialize_string() {
         let (bytes, handles) = TestInterfaceEvent::String {
-            arg: STRING_VALUE.to_owned(),
+            arg: STRING_VALUE.to_string(),
         }.into_message(SENDER_ID)
         .unwrap()
         .take();
@@ -143,10 +144,10 @@ mod test {
 
     #[test]
     fn test_deserialize_string() {
-        let request = TestInterfaceRequest::from_message(Message::from_parts(
-            STRING_MESSAGE_BYTES.to_vec(),
-            Vec::new(),
-        )).unwrap();
+        let request = TestInterfaceRequest::from_args(
+            3, /* opcode */
+            vec![Arg::String(STRING_VALUE.to_string())],
+        ).unwrap();
 
         assert_match!(request, TestInterfaceRequest::String{arg} => assert_eq!(arg, STRING_VALUE));
     }
@@ -168,10 +169,10 @@ mod test {
 
     #[test]
     fn test_deserialize_object() {
-        let request = TestInterfaceRequest::from_message(Message::from_parts(
-            message_bytes!(SENDER_ID, 4 /* opcode */, OBJECT_VALUE).to_vec(),
-            Vec::new(),
-        )).unwrap();
+        let request = TestInterfaceRequest::from_args(
+            4, /* opcode */
+            vec![Arg::Object(OBJECT_VALUE)],
+        ).unwrap();
 
         assert_match!(request, TestInterfaceRequest::Object{arg} => assert_eq!(arg, OBJECT_VALUE));
     }
@@ -193,10 +194,10 @@ mod test {
 
     #[test]
     fn test_deserialize_new_id() {
-        let request = TestInterfaceRequest::from_message(Message::from_parts(
-            message_bytes!(SENDER_ID, 5 /* opcode */, NEW_ID_VALUE).to_vec(),
-            Vec::new(),
-        )).unwrap();
+        let request = TestInterfaceRequest::from_args(
+            5, /* opcode */
+            vec![Arg::NewId(NEW_ID_VALUE)],
+        ).unwrap();
 
         assert_match!(request, TestInterfaceRequest::NewId{arg} => assert_eq!(arg, NEW_ID_VALUE));
     }
@@ -231,10 +232,13 @@ mod test {
 
     #[test]
     fn test_deserialize_untyped_new_id() {
-        let request = TestInterfaceRequest::from_message(Message::from_parts(
-            UNTYPED_NEW_ID_MESSAGE_BYTES.to_vec(),
-            Vec::new(),
-        )).unwrap();
+        let request = TestInterfaceRequest::from_args(
+            9 /* opcode */,
+            vec![
+                Arg::String(UNTYPED_NEW_ID_INTERFACE_NAME.to_string()),
+                Arg::Uint(UNTYPED_NEW_ID_INTERFACE_VERSION),
+                Arg::NewId(UNTYPED_NEW_ID_VALUE),
+            ]).unwrap();
 
         assert_match!(request, TestInterfaceRequest::UntypedNewId{
             arg,
@@ -271,10 +275,10 @@ mod test {
 
     #[test]
     fn test_deserialize_array() {
-        let request = TestInterfaceRequest::from_message(Message::from_parts(
-            ARRAY_MESSAGE_BYTES.to_vec(),
-            Vec::new(),
-        )).unwrap();
+        let request = TestInterfaceRequest::from_args(
+            6, /* opcode */
+            vec![Arg::Array(ARRAY_VALUE.to_vec())],
+        ).unwrap();
 
         assert_match!(request, TestInterfaceRequest::Array{arg} => assert_eq!(arg, ARRAY_VALUE));
     }
@@ -287,7 +291,7 @@ mod test {
 
     #[test]
     fn test_serialize_handle() {
-        let (s1, s2) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+        let (s1, _s2) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
         let (bytes, handles) = TestInterfaceEvent::Handle {
             arg: s1.into_handle(),
         }.into_message(SENDER_ID)
@@ -300,11 +304,11 @@ mod test {
 
     #[test]
     fn test_deserialize_handle() {
-        let (s1, s2) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
-        let request = TestInterfaceRequest::from_message(Message::from_parts(
-            HANDLE_MESSAGE_BYTES.to_vec(),
-            vec![s1.into_handle()],
-        )).unwrap();
+        let (s1, _s2) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+        let request = TestInterfaceRequest::from_args(
+            7, /* opcode */
+            vec![Arg::Handle(s1.into_handle())],
+        ).unwrap();
 
         assert_match!(request, TestInterfaceRequest::Handle{arg} => assert!(!arg.is_invalid()));
     }
@@ -333,11 +337,18 @@ mod test {
     #[test]
     fn test_deserialize_complex() {
         let (s1, s2) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
-        let message_handles: Vec<zx::Handle> = vec![s1.into_handle(), s2.into_handle()];
-        let request = test_protocol::TestInterfaceRequest::from_message(Message::from_parts(
-            COMPLEX_MESSAGE_BYTES.to_vec(),
-            message_handles,
-        )).unwrap();
+        let request = test_protocol::TestInterfaceRequest::from_args(
+            8, /* opcode */
+            vec![
+                Arg::Uint(UINT_VALUE),
+                Arg::Int(INT_VALUE),
+                Arg::Handle(s1.into_handle()),
+                Arg::Object(OBJECT_VALUE),
+                Arg::Handle(s2.into_handle()),
+                Arg::String(STRING_VALUE.to_string()),
+                Arg::Array(ARRAY_VALUE.to_vec()),
+            ],
+        ).unwrap();
 
         match request {
             test_protocol::TestInterfaceRequest::Complex {
@@ -370,7 +381,7 @@ mod test {
             handle_arg1: s1.into_handle(),
             object_arg: OBJECT_VALUE,
             handle_arg2: s2.into_handle(),
-            string_arg: STRING_VALUE.to_owned(),
+            string_arg: STRING_VALUE.to_string(),
             array_arg: ARRAY_VALUE.to_vec(),
         };
         let message = event.into_message(SENDER_ID).unwrap();
@@ -384,31 +395,13 @@ mod test {
 
     #[test]
     fn test_deserialize_request_invalid_opcode() {
-        let message = vec![
-            0x03, 0x00, 0x00, 0x00, // sender: 3
-            0x6f, 0x00, // opcode: 111 (invalid)
-            0x08, 0x00, // length: 8
-        ];
-
-        let result = test_protocol::TestInterfaceRequest::from_message(Message::from_parts(
-            message,
-            Vec::new(),
-        ));
+        let result = test_protocol::TestInterfaceRequest::from_args(111, vec![]);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_deserialize_request_message_too_short() {
-        let message = vec![
-            0x03, 0x00, 0x00, 0x00, // sender: 3
-            0x00, 0x00, // opcode: 0
-            0x44, 0x00, // length: 68
-        ];
-
-        let result = test_protocol::TestInterfaceRequest::from_message(Message::from_parts(
-            message,
-            Vec::new(),
-        ));
+        let result = test_protocol::TestInterfaceRequest::from_args(0, vec![]);
         assert!(result.is_err());
     }
 

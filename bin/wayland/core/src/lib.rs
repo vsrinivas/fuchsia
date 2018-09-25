@@ -4,7 +4,7 @@
 
 #![deny(warnings)]
 
-use failure::Fail;
+use failure::{Error, Fail};
 use std::io;
 
 mod message;
@@ -27,10 +27,9 @@ pub trait IntoMessage: Sized {
 }
 
 /// Trait to be implemented by any type used as an interface 'request'.
-pub trait FromMessage: Sized {
-    type Error: Fail;
-    /// Consumes |msg| creates an instance of self.
-    fn from_message(msg: Message) -> Result<Self, Self::Error>;
+pub trait FromArgs: Sized {
+    /// Consumes |args| creates an instance of self.
+    fn from_args(op: u16, args: Vec<Arg>) -> Result<Self, Error>;
 }
 
 /// An array of |ArgKind|s for a single request or event message.
@@ -57,7 +56,7 @@ pub trait Interface {
     const EVENTS: MessageGroupSpec;
 
     /// The rust type that can hold the decoded request messages.
-    type Request: FromMessage;
+    type Request: FromArgs;
 
     /// The rust type that can hold the decoded event messages.
     type Event: IntoMessage;
@@ -67,6 +66,8 @@ pub trait Interface {
 pub enum DecodeError {
     #[fail(display = "invalid message opcode: {}", _0)]
     InvalidOpcode(u16),
+    #[fail(display = "end of argument list occurred while decoding")]
+    InsufficientArgs,
     #[fail(display = "{}", _0)]
     IoError(#[cause] io::Error),
 }
