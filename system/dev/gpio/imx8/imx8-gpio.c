@@ -9,6 +9,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
@@ -27,8 +28,8 @@ typedef struct {
     platform_bus_protocol_t pbus;
     gpio_impl_protocol_t gpio;
     zx_device_t* zxdev;
-    io_buffer_t mmios[IMX_GPIO_BLOCKS];
-    io_buffer_t mmio_iomux;
+    mmio_buffer_t mmios[IMX_GPIO_BLOCKS];
+    mmio_buffer_t mmio_iomux;
     mtx_t lock[IMX_GPIO_BLOCKS];
     zx_handle_t inth[IMX_GPIO_INTERRUPTS];
     zx_handle_t vinth[IMX_GPIO_MAX];
@@ -38,9 +39,9 @@ typedef struct {
 } imx8_gpio_t;
 
 #define READ32_GPIO_REG(block_index, offset) \
-    readl(io_buffer_virt(&gpio->mmios[block_index]) + offset)
-#define WRITE32_GPIO_REG(block_index, offset, value) writel(value, \
-                                                            io_buffer_virt(&gpio->mmios[block_index]) + offset)
+        readl((uint8_t*)gpio->mmios[block_index].vaddr + offset)
+#define WRITE32_GPIO_REG(block_index, offset, value) \
+        writel(value, (uint8_t*)gpio->mmios[block_index].vaddr + offset)
 
 static zx_status_t imx8_gpio_config_in(void* ctx, uint32_t pin, uint32_t flags) {
     uint32_t gpio_block;
@@ -151,7 +152,7 @@ static zx_status_t imx8_gpio_set_alt_function(void* ctx, const uint32_t pin, con
     imx8_gpio_t* gpio = ctx;
     iomux_cfg_struct s_cfg = (iomux_cfg_struct)fn;
 
-    volatile uint8_t* iomux = (volatile uint8_t*)io_buffer_virt(&gpio->mmio_iomux);
+    volatile uint8_t* iomux = (volatile uint8_t*)gpio->mmio_iomux.vaddr;
 
     zxlogf(SPEW, "0x%lx\n", s_cfg);
     zxlogf(SPEW, "val = 0x%lx, reg = %p\n",
@@ -396,9 +397,9 @@ static void imx8_gpio_release(void* ctx) {
     imx8_gpio_t* gpio = ctx;
     mtx_lock(&gpio->gpio_lock);
     for (i = 0; i < IMX_GPIO_BLOCKS; i++) {
-        io_buffer_release(&gpio->mmios[i]);
+        mmio_buffer_release(&gpio->mmios[i]);
     }
-    io_buffer_release(&gpio->mmio_iomux);
+    mmio_buffer_release(&gpio->mmio_iomux);
 
     for (int i = 0; i < IMX_GPIO_INTERRUPTS; i++) {
         zx_interrupt_destroy(gpio->inth[i]);
@@ -435,8 +436,8 @@ static zx_status_t imx8_gpio_bind(void* ctx, zx_device_t* parent) {
     }
 
     for (i = 0; i < IMX_GPIO_BLOCKS; i++) {
-        status = pdev_map_mmio_buffer(&gpio->pdev, i, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                      &gpio->mmios[i]);
+        status = pdev_map_mmio_buffer2(&gpio->pdev, i, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       &gpio->mmios[i]);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: pdev_map_mmio_buffer gpio failed %d\n", __FUNCTION__, status);
             goto fail;
@@ -445,8 +446,8 @@ static zx_status_t imx8_gpio_bind(void* ctx, zx_device_t* parent) {
         mtx_init(&gpio->lock[i], mtx_plain);
     }
 
-    status = pdev_map_mmio_buffer(&gpio->pdev, IMX_GPIO_BLOCKS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &gpio->mmio_iomux);
+    status = pdev_map_mmio_buffer2(&gpio->pdev, IMX_GPIO_BLOCKS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &gpio->mmio_iomux);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_map_mmio_buffer iomux failed %d\n", __FUNCTION__, status);
         goto fail;
