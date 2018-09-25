@@ -28,10 +28,9 @@ namespace intel_processor_trace {
 
 std::unique_ptr<RawPrinter> RawPrinter::Create(DecoderState* state,
                                                const Config& config) {
-  std::string output_file_name = config.output_file_name;
   FILE* out_file = stdout;
   if (config.output_file_name != "") {
-    out_file = fopen(output_file_name.c_str(), "w");
+    out_file = fopen(config.output_file_name.c_str(), "w");
     if (!out_file) {
       FXL_LOG(ERROR) << "Unable to open file for writing: "
                      << config.output_file_name;
