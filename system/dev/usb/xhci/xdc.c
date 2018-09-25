@@ -732,6 +732,8 @@ static zx_status_t xdc_write(xdc_t* xdc, uint32_t stream_id, const void* buf, si
         if (status != ZX_OK) {
             goto out;
         }
+        req->complete_cb = xdc_write_complete;
+        req->cookie = xdc;
     }
 
     usb_request_copyto(req, &header, header_len, 0);
