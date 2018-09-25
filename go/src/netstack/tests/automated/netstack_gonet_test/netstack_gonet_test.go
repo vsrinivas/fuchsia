@@ -12,129 +12,89 @@ import (
 )
 
 const loopbackAddr = "127.0.0.1:1234"
+const msg = "hello"
 
-func loopbackStreamAcceptWrite(msg string, ready chan struct{}, done chan struct{}, cancel chan error) {
+func TestLoopbackStreamConnectRead(t *testing.T) {
 	ln, err := net.Listen("tcp", loopbackAddr)
 	if err != nil {
-		cancel <- fmt.Errorf("net.Listen error: %v", err)
-		return
+		t.Fatalf("net.Listen error: %v", err)
 	}
 	defer ln.Close()
 
-	ready <- struct{}{}
+	done := make(chan error, 1)
+	go func() {
+		done <- func() error {
+			conn, err := net.Dial("tcp", loopbackAddr)
+			if err != nil {
+				return fmt.Errorf("net.Dial error: %v", err)
+			}
+			defer conn.Close()
+			if _, err := conn.Write([]byte(msg)); err != nil {
+				return fmt.Errorf("conn.Write error: %v", err)
+			}
+			return nil
+		}()
+	}()
 
 	conn, err := ln.Accept()
 	if err != nil {
-		cancel <- fmt.Errorf("net.Accept error: %v", err)
-		return
+		t.Fatalf("net.Accept error: %v", err)
 	}
 	defer conn.Close()
 
-	_, err = conn.Write([]byte(msg))
-	if err != nil {
-		cancel <- fmt.Errorf("conn.Write error: %v", err)
-		return
-	}
-
-	done <- struct{}{}
-}
-
-func TestLoopbackStreamConnectRead(t *testing.T) {
-	ready := make(chan struct{})
-	done := make(chan struct{})
-	cancel := make(chan error)
-
-	msg := "hello"
-	go loopbackStreamAcceptWrite(msg, ready, done, cancel)
-
-	select {
-	case <-ready:
-		// Server is ready.
-	case err := <-cancel:
+	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
 
-	conn, err := net.Dial("tcp", loopbackAddr)
+	b := make([]byte, 1024)
+	n, err := conn.Read(b)
 	if err != nil {
-		t.Fatal("net.Dial error:", err)
+		t.Fatalf("conn.Read error: %v", err)
 	}
-	defer conn.Close()
-
-	select {
-	case <-done:
-		reply := make([]byte, 1024)
-		n, err := conn.Read(reply)
-		if err != nil {
-			t.Fatal("conn.Read error:", err)
-		}
-		rmsg := string(reply[:n])
-		if rmsg != msg {
-			t.Fatalf("strings differ: %v != %v", rmsg, msg)
-		}
-	case err := <-cancel:
-		t.Fatal(err)
+	b = b[:n]
+	if string(b) != msg {
+		t.Fatalf("want = %v, got = %v", msg, string(b))
 	}
-}
-
-func loopbackDatagramRead(buffer *[]byte, ready chan struct{}, done chan struct{}, cancel chan error) {
-	ready <- struct{}{}
-
-	pconn, err := net.ListenPacket("udp", loopbackAddr)
-	if err != nil {
-		cancel <- fmt.Errorf("net.ListenPacket error: %v", err)
-		return
-	}
-	defer pconn.Close()
-
-	n, _, err := pconn.ReadFrom(*buffer)
-	if err != nil {
-		cancel <- fmt.Errorf("pconn.ReadFrom error: %v", err)
-		return
-	}
-	*buffer = (*buffer)[:n]
-
-	done <- struct{}{}
 }
 
 func TestLoopbackDatagram(t *testing.T) {
-	// TODO: Stop skipping once this test works.
 	if runtime.GOOS == "fuchsia" {
-		t.SkipNow()
+		t.Skip("unimplemented; see https://fuchsia.googlesource.com/third_party/go/+/1064b67/src/net/udpsock_fuchsia.go")
 	}
 
-	ready := make(chan struct{})
-	done := make(chan struct{})
-	cancel := make(chan error)
-
-	buffer := make([]byte, 1024)
-	go loopbackDatagramRead(&buffer, ready, done, cancel)
-
-	select {
-	case <-ready:
-		// Server is ready.
-	case err := <-cancel:
-		t.Fatal(err)
-	}
-
-	conn, err := net.Dial("udp", loopbackAddr)
+	conn, err := net.ListenPacket("udp", loopbackAddr)
 	if err != nil {
-		t.Fatal("net.Dial error:", err)
+		t.Fatalf("net.ListenPacket error: %v", err)
 	}
 	defer conn.Close()
 
-	msg := "hello"
-	_, err = conn.Write([]byte(msg))
-	if err != nil {
-		t.Fatal("conn.Write error:", err)
+	done := make(chan error, 1)
+	go func() {
+		done <- func() error {
+			conn, err := net.Dial("udp", loopbackAddr)
+			if err != nil {
+				return fmt.Errorf("net.Dial error: %v", err)
+			}
+			defer conn.Close()
+
+			if _, err = conn.Write([]byte(msg)); err != nil {
+				return fmt.Errorf("conn.Write error: %v", err)
+			}
+			return nil
+		}()
+	}()
+
+	if err := <-done; err != nil {
+		t.Fatal(err)
 	}
 
-	select {
-	case <-done:
-		rmsg := string(buffer)
-		if rmsg != msg {
-			t.Fatalf("strings differ: %v != %v", rmsg, msg)
-		}
-	case err := <-cancel:
-		t.Fatal(err)
+	b := make([]byte, 1024)
+	n, _, err := conn.ReadFrom(b)
+	if err != nil {
+		t.Fatalf("conn.ReadFrom error: %v", err)
+	}
+	b = b[:n]
+	if string(b) != msg {
+		t.Fatalf("want = %v, got = %v", msg, string(b))
 	}
 }
