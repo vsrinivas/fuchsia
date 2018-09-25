@@ -71,7 +71,7 @@ zx_status_t pmm_alloc_pages(size_t count, uint alloc_flags, list_node* list) {
     return pmm_node.AllocPages(count, alloc_flags, list);
 }
 
-size_t pmm_alloc_range(paddr_t address, size_t count, list_node* list) {
+zx_status_t pmm_alloc_range(paddr_t address, size_t count, list_node* list) {
     return pmm_node.AllocRange(address, count, list);
 }
 

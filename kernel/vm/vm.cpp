@@ -48,8 +48,8 @@ void MarkPagesInUsePhys(paddr_t pa, size_t len) {
 
     list_node list = LIST_INITIAL_VALUE(list);
 
-    auto allocated = pmm_alloc_range(pa, len / PAGE_SIZE, &list);
-    ASSERT_MSG(allocated == len / PAGE_SIZE,
+    zx_status_t status = pmm_alloc_range(pa, len / PAGE_SIZE, &list);
+    ASSERT_MSG(status == ZX_OK,
                "failed to reserve memory range [%#" PRIxPTR ", %#" PRIxPTR "]\n",
                pa, pa + len - 1);
 

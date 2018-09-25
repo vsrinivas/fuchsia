@@ -68,8 +68,8 @@ void boot_reserve_wire() {
                 res[i].pa, res[i].pa + res[i].len - 1);
 
         size_t pages = ROUNDUP_PAGE_SIZE(res[i].len) / PAGE_SIZE;
-        size_t actual = pmm_alloc_range(res[i].pa, pages, &reserved_page_list);
-        if (actual != pages) {
+        zx_status_t status = pmm_alloc_range(res[i].pa, pages, &reserved_page_list);
+        if (status != ZX_OK) {
             printf("PMM: unable to reserve reserved range [%#" PRIxPTR ", %#" PRIxPTR "]\n",
                    res[i].pa, res[i].pa + res[i].len - 1);
             continue; // this is probably fatal but go ahead and continue

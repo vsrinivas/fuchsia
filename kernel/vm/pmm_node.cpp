@@ -163,8 +163,11 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
     return ZX_OK;
 }
 
-size_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) {
+zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) {
     LTRACEF("address %#" PRIxPTR ", count %zu\n", address, count);
+
+    // list must be initialized prior to calling this
+    DEBUG_ASSERT(list);
 
     size_t allocated = 0;
     if (count == 0)
@@ -188,8 +191,7 @@ size_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) {
 
             page->state = VM_PAGE_STATE_ALLOC;
 
-            if (list)
-                list_add_tail(list, &page->queue_node);
+            list_add_tail(list, &page->queue_node);
 
             allocated++;
             address += PAGE_SIZE;
@@ -200,9 +202,13 @@ size_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) {
             break;
     }
 
-    LTRACEF("returning allocated count %zu\n", allocated);
+    if (allocated != count) {
+        // we were not able to allocate the entire run, free these pages
+        FreeListLocked(list);
+        return ZX_ERR_NOT_FOUND;
+    }
 
-    return allocated;
+    return ZX_OK;
 }
 
 size_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8_t alignment_log2,

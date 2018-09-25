@@ -214,7 +214,8 @@ zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::
             if (page->state == VM_PAGE_STATE_WIRED) {
                 // it's wired to the kernel, so we can just use it directly
             } else if (page->state == VM_PAGE_STATE_FREE) {
-                ASSERT(pmm_alloc_range(pa, 1, nullptr) == 1);
+                list_node list = LIST_INITIAL_VALUE(list);
+                ASSERT(pmm_alloc_range(pa, 1, &list) == ZX_OK);
                 page->state = VM_PAGE_STATE_WIRED;
             } else {
                 panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %u\n", pa,
