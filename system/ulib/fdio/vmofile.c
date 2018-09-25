@@ -9,13 +9,14 @@
 #include <string.h>
 #include <threads.h>
 
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/vfs.h>
+#include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <lib/fdio/io.h>
-#include <lib/fdio/util.h>
-
-#include <lib/fdio/remoteio.h>
-#include <lib/fdio/vfs.h>
 
 #include "private.h"
 
@@ -117,6 +118,53 @@ static zx_status_t vmofile_close(fdio_t* io) {
     return 0;
 }
 
+static zx_status_t vmofile_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+    vmofile_t* vf = (vmofile_t*)io;
+    zx_handle_t h, request;
+    zx_status_t status = zx_channel_create(0, &h, &request);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = fuchsia_io_NodeClone(vf->h, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, request);
+    if (status != ZX_OK) {
+        zx_handle_close(h);
+        return status;
+    }
+    handles[0] = h;
+    types[0] = PA_FDIO_REMOTE;
+    return 1;
+}
+
+static zx_status_t vmofile_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+    vmofile_t* vf = (vmofile_t*)io;
+    LOG(1, "fdio: vmofile_unwrap(%p,...)\n");
+    uint64_t seek = 0u;
+    zx_handle_t control = ZX_HANDLE_INVALID;
+
+    // This function should only be called from fdio_transfer_fd, which checks
+    // that the dupcount is one and removes the entry from the FD table. Those
+    // checks should ensure that this function has exclusive access to the
+    // |vmofile_t|, but we take this lock here to maintain the invariant that
+    // we never access |ptr| without holding |lock|.
+    mtx_lock(&vf->lock);
+    seek = vf->ptr - vf->off;
+    control = vf->h;
+    mtx_unlock(&vf->lock);
+
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_FileSeek(control, seek, fuchsia_io_SeekOrigin_START,
+                                         &status, &seek)) != ZX_OK) {
+        return io_status;
+    }
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    handles[0] = control;
+    types[0] = PA_FDIO_REMOTE;
+    return 1;
+}
+
 static zx_status_t vmofile_get_attr(fdio_t* io, vnattr_t* attr) {
     vmofile_t* vf = (vmofile_t*)io;
     memset(attr, 0, sizeof(*attr));
@@ -159,11 +207,11 @@ static fdio_ops_t vmofile_ops = {
     .misc = fdio_default_misc,
     .close = vmofile_close,
     .open = fdio_default_open,
-    .clone = fdio_default_clone,
+    .clone = vmofile_clone,
     .ioctl = fdio_default_ioctl,
     .wait_begin = fdio_default_wait_begin,
     .wait_end = fdio_default_wait_end,
-    .unwrap = fdio_default_unwrap,
+    .unwrap = vmofile_unwrap,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = vmofile_get_vmo,
     .get_token = fdio_default_get_token,
@@ -186,20 +234,22 @@ static fdio_ops_t vmofile_ops = {
 };
 
 fdio_t* fdio_vmofile_create(zx_handle_t h, zx_handle_t vmo,
-                            zx_off_t off, zx_off_t len) {
+                            zx_off_t offset, zx_off_t length, zx_off_t seek) {
     vmofile_t* vf = fdio_alloc(sizeof(vmofile_t));
     if (vf == NULL) {
         zx_handle_close(h);
         return NULL;
     }
+    if (seek > length)
+        seek = length;
     vf->io.ops = &vmofile_ops;
     vf->io.magic = FDIO_MAGIC;
     atomic_init(&vf->io.refcount, 1);
     vf->h = h;
     vf->vmo = vmo;
-    vf->off = off;
-    vf->end = off + len;
-    vf->ptr = off;
+    vf->off = offset;
+    vf->end = offset + length;
+    vf->ptr = offset + seek;
     mtx_init(&vf->lock, mtx_plain);
     return &vf->io;
 }
@@ -208,7 +258,7 @@ __EXPORT
 int fdio_vmo_fd(zx_handle_t vmo, uint64_t offset, uint64_t length) {
     fdio_t* io;
     int fd;
-    if ((io = fdio_vmofile_create(ZX_HANDLE_INVALID, vmo, offset, length)) == NULL) {
+    if ((io = fdio_vmofile_create(ZX_HANDLE_INVALID, vmo, offset, length, 0u)) == NULL) {
         return -1;
     }
     if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {

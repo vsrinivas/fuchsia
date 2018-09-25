@@ -53,10 +53,6 @@ zx_status_t VnodeVmo::ValidateFlags(uint32_t flags) {
     return ZX_OK;
 }
 
-zx_status_t VnodeVmo::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
-    return ZX_OK;
-}
-
 zx_status_t VnodeVmo::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
     zx_status_t status;
     if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {

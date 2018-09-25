@@ -298,7 +298,50 @@ zx_status_t fdio_service_clone_to(zx_handle_t svc, zx_handle_t srv) {
                          ZX_FS_RIGHT_WRITABLE, 0755, "");
 }
 
-zx_status_t fdio_acquire_socket(zx_handle_t socket, fdio_t** out_io) {
+zx_status_t fdio_from_channel(zx_handle_t channel, fdio_t** out_io) {
+    fuchsia_io_NodeInfo info;
+    memset(&info, 0, sizeof(info));
+    zx_status_t status = fuchsia_io_NodeDescribe(channel, &info);
+    if (status != ZX_OK) {
+        zx_handle_close(channel);
+        return status;
+    }
+
+    zx_handle_t event = ZX_HANDLE_INVALID;
+    switch (info.tag) {
+    case fuchsia_io_NodeInfoTag_file:
+        event = info.file.event;
+        break;
+    case fuchsia_io_NodeInfoTag_device:
+        event = info.device.event;
+        break;
+    case fuchsia_io_NodeInfoTag_vmofile: {
+        uint64_t seek = 0u;
+        zx_status_t io_status = fuchsia_io_FileSeek(
+            channel, 0, fuchsia_io_SeekOrigin_START, &status, &seek);
+        if (io_status != ZX_OK) {
+            status = io_status;
+        }
+        if (status != ZX_OK) {
+            zx_handle_close(channel);
+            zx_handle_close(info.vmofile.vmo);
+            return status;
+        }
+        *out_io = fdio_vmofile_create(channel, info.vmofile.vmo,
+                                      info.vmofile.offset, info.vmofile.length,
+                                      seek);
+        return ZX_OK;
+    }
+    default:
+        event = ZX_HANDLE_INVALID;
+        break;
+    }
+
+    *out_io = fdio_remote_create(channel, event);
+    return ZX_OK;
+}
+
+zx_status_t fdio_from_socket(zx_handle_t socket, fdio_t** out_io) {
     zx_info_socket_t info;
     memset(&info, 0, sizeof(info));
     zx_status_t status = zx_object_get_info(socket, ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
@@ -387,7 +430,7 @@ static zx_status_t fdio_from_handles(zx_handle_t handle, fuchsia_io_NodeInfo* in
             break;
         }
         *out = fdio_vmofile_create(handle, info->vmofile.vmo, info->vmofile.offset,
-                                   info->vmofile.length);
+                                   info->vmofile.length, 0u);
         if (*out == NULL) {
             return ZX_ERR_NO_RESOURCES;
         }
@@ -399,7 +442,7 @@ static zx_status_t fdio_from_handles(zx_handle_t handle, fuchsia_io_NodeInfo* in
             break;
         }
         zx_handle_close(handle);
-        return fdio_acquire_socket(info->pipe.socket, out);
+        return fdio_from_socket(info->pipe.socket, out);
     }
     default:
         printf("fdio_from_handles: Not supported\n");

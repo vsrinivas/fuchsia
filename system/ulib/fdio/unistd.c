@@ -570,38 +570,27 @@ void __libc_extensions_init(uint32_t handle_count,
                 // a single handle for PA_FDIO_REMOTE.
                 event = handle[n + 1];
                 handle_info[n + 1] = ZX_HANDLE_INVALID;
+                fdio_fdtab[arg_fd] = fdio_remote_create(h, event);
+                fdio_fdtab[arg_fd]->dupcount++;
+                LOG(1, "fdio: inherit fd=%d (channel)\n", arg_fd);
             } else {
-                fuchsia_io_NodeInfo info;
-                memset(&info, 0, sizeof(info));
-                zx_status_t status = fuchsia_io_NodeDescribe(h, &info);
+                fdio_t* io = NULL;
+                zx_status_t status = fdio_from_channel(h, &io);
                 if (status != ZX_OK) {
-                    LOG(1, "fdio: Failed to describe fd=%d (rio) status=%d (%s)\n",
+                    LOG(1, "fdio: Failed to acquire for fd=%d (channel) status=%d (%s)\n",
                         arg_fd, status, zx_status_get_string(status));
                     zx_handle_close(h);
                     continue;
                 }
-
-                switch (info.tag) {
-                case fuchsia_io_NodeInfoTag_file:
-                    event = info.file.event;
-                    break;
-                case fuchsia_io_NodeInfoTag_device:
-                    event = info.device.event;
-                    break;
-                default:
-                    event = ZX_HANDLE_INVALID;
-                    break;
-                }
+                fdio_fdtab[arg_fd] = io;
+                fdio_fdtab[arg_fd]->dupcount++;
+                LOG(1, "fdio: inherit fd=%d (channel)\n", arg_fd);
             }
-
-            fdio_fdtab[arg_fd] = fdio_remote_create(h, event);
-            fdio_fdtab[arg_fd]->dupcount++;
-            LOG(1, "fdio: inherit fd=%d (rio)\n", arg_fd);
             break;
         }
         case PA_FDIO_SOCKET: {
             fdio_t* io = NULL;
-            zx_status_t status = fdio_acquire_socket(h, &io);
+            zx_status_t status = fdio_from_socket(h, &io);
             if (status != ZX_OK) {
                 LOG(1, "fdio: Failed to acquire for fd=%d (socket) status=%d (%s)\n",
                     arg_fd, status, zx_status_get_string(status));

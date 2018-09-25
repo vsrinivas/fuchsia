@@ -165,7 +165,6 @@ public:
     virtual zx_status_t ValidateFlags(uint32_t flags) override;
 
 private:
-    zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) final;

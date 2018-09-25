@@ -13,7 +13,8 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/fidl-tests.cpp \
     $(LOCAL_DIR)/main.c \
-    $(LOCAL_DIR)/memfs-tests.cpp
+    $(LOCAL_DIR)/memfs-tests.cpp \
+    $(LOCAL_DIR)/vmofile-tests.cpp \
 
 MODULE_NAME := memfs-test
 
@@ -26,6 +27,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
     system/ulib/sync \
+    system/ulib/fs \
+    system/ulib/memfs.cpp \
+    system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
