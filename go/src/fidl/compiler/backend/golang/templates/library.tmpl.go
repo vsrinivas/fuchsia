@@ -14,17 +14,21 @@ const Library = `
 
 package {{ .Name }}
 
+{{if .Libraries}}
 import (
 {{- range .Libraries }}
 	{{ .Alias }} "{{ .Path }}"
 {{- end }}
 )
+{{end}}
 
+{{if .Consts}}
 const (
 {{- range $const := .Consts }}
 	{{ .Name }} {{ .Type }} = {{ .Value }}
 {{- end }}
 )
+{{end}}
 
 {{ range $enum := .Enums -}}
 {{ template "EnumDefinition" $enum }}

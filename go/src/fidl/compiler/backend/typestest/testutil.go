@@ -65,6 +65,12 @@ func StringType(elementCount *int) types.Type {
 	}
 }
 
+func HandleType() types.Type {
+	return types.Type{
+		Kind: types.HandleType,
+	}
+}
+
 func Nullable(t types.Type) types.Type {
 	t.Nullable = true
 	return t

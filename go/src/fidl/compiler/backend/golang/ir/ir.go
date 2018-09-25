@@ -7,6 +7,7 @@ package ir
 import (
 	"fmt"
 	"log"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -94,6 +95,30 @@ type Struct struct {
 	Alignment int
 }
 
+type tagNew struct {
+	reverseOfBounds []int
+}
+
+func (t tagNew) String() string {
+	var (
+		elems    []string
+		allEmpty = true
+	)
+	for i := len(t.reverseOfBounds) - 1; 0 <= i; i-- {
+		bound := t.reverseOfBounds[i]
+		if bound == math.MaxInt32 {
+			elems = append(elems, "")
+		} else {
+			elems = append(elems, strconv.Itoa(bound))
+			allEmpty = false
+		}
+	}
+	if allEmpty {
+		return ""
+	}
+	return fmt.Sprintf(`fidl2:"%s"`, strings.Join(elems, ","))
+}
+
 // Tag loosely represents a golang struct member tag for maximum elements e.g.
 // `fidl:"3,4,5"`. For a type like vector<vector<int>:3>:4, the tag would
 // look like `fidl:"3,4"`, such that the commas separate nesting. Note that if
@@ -138,7 +163,21 @@ func (t *Tag) String() string {
 	if !anyData {
 		return ""
 	}
-	return fmt.Sprintf("`fidl:\"%s\"`", strings.Join(elemsTag, ","))
+	return fmt.Sprintf(`fidl:"%s"`, strings.Join(elemsTag, ","))
+}
+
+func tagsfmt(t Tag, t2 tagNew) string {
+	var tags []string
+	if t_str := t.String(); len(t_str) != 0 {
+		tags = append(tags, t_str)
+	}
+	if t2_str := t2.String(); len(t2_str) != 0 {
+		tags = append(tags, t2_str)
+	}
+	if len(tags) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("`%s`", strings.Join(tags, " "))
 }
 
 // StructMember represents the member of a golang struct.
@@ -152,9 +191,9 @@ type StructMember struct {
 	// Type is the type of the golang struct member.
 	Type Type
 
-	// Tag is the golang struct member tag which holds additional metadata
+	// Tags are the golang struct member tag which holds additional metadata
 	// about the struct field.
-	Tag string
+	Tags string
 }
 
 // Union represets a FIDL union as a golang struct.
@@ -186,9 +225,9 @@ type UnionMember struct {
 	// Type is the golang type of the union member.
 	Type Type
 
-	// Tag is the golang struct member tag which holds additional metadata
+	// Tag are the golang struct member tag which holds additional metadata
 	// about the union member.
-	Tag string
+	Tags string
 }
 
 // Interface represents a FIDL interface in terms of golang structures.
@@ -476,14 +515,20 @@ func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 	return Type(t)
 }
 
-func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
+func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 	switch val.Kind {
 	case types.ArrayType:
-		e, et := c.compileType(*val.ElementType)
+		e, et, et2 := c.compileType(*val.ElementType)
 		r = Type(fmt.Sprintf("[%s]%s", strconv.Itoa(*val.ElementCount), e))
 		t = et
+		t2 = et2
 	case types.StringType:
 		t.MaxElems = append(t.MaxElems, val.ElementCount)
+		if val.ElementCount == nil {
+			t2.reverseOfBounds = append(t2.reverseOfBounds, math.MaxInt32)
+		} else {
+			t2.reverseOfBounds = append(t2.reverseOfBounds, *val.ElementCount)
+		}
 		if val.Nullable {
 			r = Type("*string")
 		} else {
@@ -498,25 +543,37 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 			// handle subtype.
 			e = handleTypes[types.Handle]
 		}
+		var nullability int
 		if val.Nullable {
 			t.Nullable = true
+			nullability = 1
 		}
+		t2.reverseOfBounds = append(t2.reverseOfBounds, nullability)
 		r = Type(e)
 	case types.RequestType:
 		e := c.compileCompoundIdentifier(val.RequestSubtype, RequestSuffix)
+		var nullability int
 		if val.Nullable {
 			t.Nullable = true
+			nullability = 1
 		}
+		t2.reverseOfBounds = append(t2.reverseOfBounds, nullability)
 		r = Type(e)
 	case types.VectorType:
-		e, et := c.compileType(*val.ElementType)
+		e, et, et2 := c.compileType(*val.ElementType)
 		et.MaxElems = append(et.MaxElems, val.ElementCount)
+		if val.ElementCount == nil {
+			et2.reverseOfBounds = append(et2.reverseOfBounds, math.MaxInt32)
+		} else {
+			et2.reverseOfBounds = append(et2.reverseOfBounds, *val.ElementCount)
+		}
 		if val.Nullable {
 			r = Type(fmt.Sprintf("*[]%s", e))
 		} else {
 			r = Type(fmt.Sprintf("[]%s", e))
 		}
 		t = et
+		t2 = et2
 	case types.PrimitiveType:
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
@@ -553,7 +610,7 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 func (c *compiler) compileConst(val types.Const) Const {
 	// It's OK to ignore the tag because this type is guaranteed by the frontend
 	// to be either an enum, a primitive, or a string.
-	t, _ := c.compileType(val.Type)
+	t, _, _ := c.compileType(val.Type)
 	return Const{
 		Name:  c.compileCompoundIdentifier(val.Name, ""),
 		Type:  t,
@@ -580,12 +637,12 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 }
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
-	ty, tag := c.compileType(val.Type)
+	ty, tag, tag2 := c.compileType(val.Type)
 	return StructMember{
 		Type:        ty,
 		Name:        c.compileIdentifier(val.Name, true, ""),
 		PrivateName: c.compileIdentifier(val.Name, false, ""),
-		Tag:         tag.String(),
+		Tags:        tagsfmt(tag, tag2),
 	}
 }
 
@@ -602,12 +659,12 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 }
 
 func (c *compiler) compileUnionMember(unionName string, val types.UnionMember) UnionMember {
-	ty, tag := c.compileType(val.Type)
+	ty, tag, tag2 := c.compileType(val.Type)
 	return UnionMember{
 		Type:        ty,
 		Name:        c.compileIdentifier(val.Name, true, ""),
 		PrivateName: c.compileIdentifier(val.Name, false, ""),
-		Tag:         tag.String(),
+		Tags:        tagsfmt(tag, tag2),
 	}
 }
 
@@ -625,12 +682,12 @@ func (c *compiler) compileUnion(val types.Union) Union {
 }
 
 func (c *compiler) compileParameter(p types.Parameter) StructMember {
-	ty, tag := c.compileType(p.Type)
+	ty, tag, tag2 := c.compileType(p.Type)
 	return StructMember{
 		Type:        ty,
 		Name:        c.compileIdentifier(p.Name, true, ""),
 		PrivateName: c.compileIdentifier(p.Name, false, ""),
-		Tag:         tag.String(),
+		Tags:        tagsfmt(tag, tag2),
 	}
 }
 
@@ -748,9 +805,11 @@ func Compile(fidlData types.Root) Root {
 	for _, v := range fidlData.Unions {
 		r.Unions = append(r.Unions, c.compileUnion(v))
 	}
+	if len(fidlData.Structs) != 0 || len(fidlData.Interfaces) != 0 {
+		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
+	}
 	if len(fidlData.Interfaces) != 0 {
 		c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
-		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 	}
 	for _, v := range fidlData.Interfaces {
 		r.Interfaces = append(r.Interfaces, c.compileInterface(v))

@@ -191,7 +191,7 @@ func TestCompileStruct(t *testing.T) {
 					Type:        "*string",
 					PrivateName: "max",
 					Name:        "Max",
-					Tag:         "`fidl:\"40\"`",
+					Tags:        "`" + `fidl:"40" fidl2:"40"` + "`",
 				},
 				{
 					Type:        "[27]string",
@@ -202,7 +202,7 @@ func TestCompileStruct(t *testing.T) {
 					Type:        "[27]*string",
 					PrivateName: "nestedNullableMax",
 					Name:        "NestedNullableMax",
-					Tag:         "`fidl:\"40\"`",
+					Tags:        "`" + `fidl:"40" fidl2:"40"` + "`",
 				},
 			},
 		},
@@ -247,7 +247,7 @@ func TestCompileStruct(t *testing.T) {
 					Type:        "[]uint8",
 					PrivateName: "max",
 					Name:        "Max",
-					Tag:         "`fidl:\"40\"`",
+					Tags:        "`" + `fidl:"40" fidl2:"40"` + "`",
 				},
 				{
 					Type:        "[][]bool",
@@ -263,7 +263,95 @@ func TestCompileStruct(t *testing.T) {
 					Type:        "[][][]uint8",
 					PrivateName: "nestedMax",
 					Name:        "NestedMax",
-					Tag:         "`fidl:\"40,,\"`",
+					Tags:        "`" + `fidl:"40,," fidl2:",,40"` + "`",
+				},
+			},
+		},
+	})
+
+	compileStructsExpect(t, "Struct with nullable handles", []types.Struct{
+		{
+			Name: types.EncodedCompoundIdentifier("Test"),
+			Members: []types.StructMember{
+				{
+					Type: VectorType(Nullable(HandleType()), nil),
+					Name: types.Identifier("NullableHandles"),
+				},
+				{
+					Type: VectorType(HandleType(), &maxElems),
+					Name: types.Identifier("BoundedNonNullableHandles"),
+				},
+			},
+		},
+	}, []Struct{
+		{
+			Name: "Test",
+			Members: []StructMember{
+				{
+					Type:        "[]_zx.Handle",
+					PrivateName: "nullableHandles",
+					Name:        "NullableHandles",
+					Tags:        "`" + `fidl:"*," fidl2:",1"` + "`",
+				},
+				{
+					Type:        "[]_zx.Handle",
+					PrivateName: "boundedNonNullableHandles",
+					Name:        "BoundedNonNullableHandles",
+					Tags:        "`" + `fidl:"40" fidl2:"40,0"` + "`",
+				},
+			},
+		},
+	})
+
+	one, three := 1, 3
+	compileStructsExpect(t, "Struct with arrays and vectors", []types.Struct{
+		{
+			Name: types.EncodedCompoundIdentifier("Test"),
+			Members: []types.StructMember{
+				{
+					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), nil), 2), nil),
+					Name: types.Identifier("no_vec_bounds"),
+				},
+				{
+					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), nil), 2), &one),
+					Name: types.Identifier("outer_vec_bounds"),
+				},
+				{
+					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), &three), 2), nil),
+					Name: types.Identifier("inner_vec_bounds"),
+				},
+				{
+					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), &three), 2), &one),
+					Name: types.Identifier("both_vec_bounds"),
+				},
+			},
+		},
+	}, []Struct{
+		{
+			Name: "Test",
+			Members: []StructMember{
+				{
+					Type:        "[][2][][4]uint8",
+					PrivateName: "noVecBounds",
+					Name:        "NoVecBounds",
+				},
+				{
+					Type:        "[][2][][4]uint8",
+					PrivateName: "outerVecBounds",
+					Name:        "OuterVecBounds",
+					Tags:        "`" + `fidl:",1" fidl2:"1,"` + "`",
+				},
+				{
+					Type:        "[][2][][4]uint8",
+					PrivateName: "innerVecBounds",
+					Name:        "InnerVecBounds",
+					Tags:        "`" + `fidl:"3," fidl2:",3"` + "`",
+				},
+				{
+					Type:        "[][2][][4]uint8",
+					PrivateName: "bothVecBounds",
+					Name:        "BothVecBounds",
+					Tags:        "`" + `fidl:"3,1" fidl2:"1,3"` + "`",
 				},
 			},
 		},

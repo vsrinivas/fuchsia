@@ -15,9 +15,9 @@ const (
 
 // {{ .Name }} is a FIDL union.
 type {{ .Name }} struct {
-	{{ .TagName }} ` + "`fidl:\"tag\"`" + `
+	{{ .TagName }} ` + "`" + `fidl:"tag" fidl2:"u,{{ .Size }},{{ .Alignment }}"` + "`" + `
 	{{- range .Members }}
-	{{ .Name }} {{ .Type }} {{ .Tag }}
+	{{ .Name }} {{ .Type }} {{ .Tags }}
 	{{- end }}
 }
 

@@ -7,9 +7,16 @@ package templates
 const Struct = `
 {{- define "StructDefinition" -}}
 type {{ .Name }} struct {
+	_ struct{} ` + "`" + `fidl2:"s,{{ .Size }},{{ .Alignment }}"` + "`" + `
 	{{- range .Members }}
-	{{ .Name }} {{ .Type }} {{ .Tag }}
+	{{ .Name }} {{ .Type }} {{ .Tags }}
 	{{- end }}
+}
+
+var _m{{ .Name }} = _bindings.CreateLazyMarshaler({{ .Name }}{})
+
+func (msg *{{ .Name }}) Marshaler() _bindings.Marshaler {
+	return _m{{ .Name }}
 }
 
 // Implements Payload.
