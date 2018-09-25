@@ -38,8 +38,8 @@
 #define OUT_EP_ADDR            0x01
 #define IN_EP_ADDR             0x81
 
-#define MAX_REQS               10
-#define MAX_REQ_SIZE           4096
+#define MAX_REQS               30
+#define MAX_REQ_SIZE           (16 * 1024)
 
 typedef struct xdc_instance {
     zx_device_t* zxdev;

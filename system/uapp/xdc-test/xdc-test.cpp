@@ -18,7 +18,8 @@
 
 #include "xdc-init.h"
 
-static constexpr uint32_t BUFFER_SIZE = 10 * 1024;
+// TODO(jocelyndang): investigate issue with larger buffer sizes.
+static constexpr uint32_t BUFFER_SIZE = 8 * 1024;
 static constexpr uint32_t DEFAULT_STREAM_ID = 1;
 
 typedef struct {
