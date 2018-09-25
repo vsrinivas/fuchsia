@@ -574,15 +574,25 @@ static zx_status_t usb_dev_set_interface(usb_device_t* dev, unsigned interface,
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t usb_dev_control(void* ctx, const usb_setup_t* setup, void* buffer,
-                                   size_t buffer_length, size_t* out_actual) {
+static zx_status_t usb_dev_control(void* ctx, const usb_setup_t* setup, const void* write_buffer,
+                                   size_t write_size, void* out_read_buffer, size_t read_size,
+                                   size_t* out_read_actual) {
     usb_device_t* dev = ctx;
     uint8_t request_type = setup->bmRequestType;
+    uint8_t direction = request_type & USB_DIR_MASK;
     uint8_t request = setup->bRequest;
     uint16_t value = le16toh(setup->wValue);
     uint16_t index = le16toh(setup->wIndex);
     uint16_t length = le16toh(setup->wLength);
-    if (length > buffer_length) length = buffer_length;
+
+    if (direction == USB_DIR_IN && length > read_size) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    } else if (direction == USB_DIR_OUT && length > write_size) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    if ((write_size > 0 && write_buffer == NULL) || (read_size > 0 && out_read_buffer == NULL)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     zxlogf(TRACE, "usb_dev_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
             request_type, request, value, index, length);
@@ -592,15 +602,15 @@ static zx_status_t usb_dev_control(void* ctx, const usb_setup_t* setup, void* bu
         // handle standard device requests
         if ((request_type & (USB_DIR_MASK | USB_TYPE_MASK)) == (USB_DIR_IN | USB_TYPE_STANDARD) &&
             request == USB_REQ_GET_DESCRIPTOR) {
-            return usb_dev_get_descriptor(dev, request_type, value, index, buffer, length,
-                                             out_actual);
+            return usb_dev_get_descriptor(dev, request_type, value, index, out_read_buffer, length,
+                                          out_read_actual);
         } else if (request_type == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
                    request == USB_REQ_SET_CONFIGURATION && length == 0) {
             return usb_dev_set_configuration(dev, value);
         } else if (request_type == (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
                    request == USB_REQ_GET_CONFIGURATION && length > 0) {
-            *((uint8_t *)buffer) = dev->configuration;
-            *out_actual = sizeof(uint8_t);
+            *((uint8_t *)out_read_buffer) = dev->configuration;
+            *out_read_actual = sizeof(uint8_t);
             return ZX_OK;
         }
         break;
@@ -612,8 +622,14 @@ static zx_status_t usb_dev_control(void* ctx, const usb_setup_t* setup, void* bu
             // delegate to the function driver for the interface
             usb_function_t* function = dev->interface_map[index];
             if (function && function->interface.ops) {
-                return usb_function_control(&function->interface, setup, buffer, buffer_length,
-                                            out_actual);
+                if (direction == USB_DIR_IN) {
+                    return usb_function_control(&function->interface, setup, out_read_buffer,
+                                                read_size, out_read_actual);
+                } else {
+                    size_t actual;
+                    return usb_function_control(&function->interface, setup, (void *)write_buffer,
+                                                write_size, &actual);
+                }
             }
         }
         break;
@@ -626,8 +642,13 @@ static zx_status_t usb_dev_control(void* ctx, const usb_setup_t* setup, void* bu
         }
         usb_function_t* function = dev->endpoint_map[index];
         if (function && function->interface.ops) {
-            return usb_function_control(&function->interface, setup, buffer, buffer_length,
-                                        out_actual);
+            if (direction == USB_DIR_IN) {
+                return usb_function_control(&function->interface, setup, out_read_buffer, read_size,
+                                            out_read_actual);
+            } else {
+                return usb_function_control(&function->interface, setup, (void *)write_buffer,
+                                            write_size, NULL);
+            }
         }
         break;
     }

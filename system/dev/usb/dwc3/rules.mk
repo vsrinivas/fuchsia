@@ -9,17 +9,26 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/dwc3.c \
-    $(LOCAL_DIR)/dwc3-commands.c \
-    $(LOCAL_DIR)/dwc3-endpoints.c \
-    $(LOCAL_DIR)/dwc3-ep0.c \
-    $(LOCAL_DIR)/dwc3-events.c
+    $(LOCAL_DIR)/bind.c \
+    $(LOCAL_DIR)/dwc3.cpp \
+    $(LOCAL_DIR)/dwc3-commands.cpp \
+    $(LOCAL_DIR)/dwc3-endpoints.cpp \
+    $(LOCAL_DIR)/dwc3-ep0.cpp \
+    $(LOCAL_DIR)/dwc3-events.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/ddk  	 \
-                      system/ulib/sync   \
-                      system/ulib/pretty \
-                      system/dev/lib/usb \
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk  	 \
+    system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/sync   \
+    system/ulib/pretty \
+    system/dev/lib/usb \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/c \
 
 include make/module.mk

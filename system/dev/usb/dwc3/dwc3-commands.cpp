@@ -5,26 +5,27 @@
 #include "dwc3.h"
 #include "dwc3-regs.h"
 
+#include <fbl/auto_lock.h>
+
 #include <stdio.h>
 
 static void dwc3_ep_cmd(dwc3_t* dwc, unsigned ep_num, uint32_t command, uint32_t param0,
                         uint32_t param1, uint32_t param2, uint32_t flags) {
-    volatile void* mmio = dwc3_mmio(dwc);
+    auto* mmio = dwc3_mmio(dwc);
 
-    mtx_lock(&dwc->lock);
+    fbl::AutoLock lock(&dwc->lock);
 
     DWC3_WRITE32(mmio + DEPCMDPAR0(ep_num), param0);
     DWC3_WRITE32(mmio + DEPCMDPAR1(ep_num), param1);
     DWC3_WRITE32(mmio + DEPCMDPAR2(ep_num), param2);
 
     command |= (DEPCMD_CMDACT | flags);
-    volatile void* depcmd = mmio + DEPCMD(ep_num);
+    auto* depcmd = reinterpret_cast<volatile uint32_t*>(mmio + DEPCMD(ep_num));
     DWC3_WRITE32(depcmd, command | DEPCMD_CMDACT);
 
     if ((flags & DEPCMD_CMDIOC) == 0) {
         dwc3_wait_bits(depcmd, DEPCMD_CMDACT, 0);
     }
-    mtx_unlock(&dwc->lock);
 }
 
 void dwc3_cmd_start_new_config(dwc3_t* dwc, unsigned ep_num, unsigned rsrc_id) {

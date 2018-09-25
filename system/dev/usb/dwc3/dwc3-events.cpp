@@ -175,17 +175,17 @@ static void dwc3_handle_event(dwc3_t* dwc, uint32_t event) {
 }
 
 static int dwc3_irq_thread(void* arg) {
-    dwc3_t* dwc = arg;
-    volatile void* mmio = dwc3_mmio(dwc);
+    auto* dwc = static_cast<dwc3_t*>(arg);
+    auto* mmio = dwc3_mmio(dwc);
 
     zxlogf(TRACE, "dwc3_irq_thread start\n");
 
-    uint32_t* ring_start = io_buffer_virt(&dwc->event_buffer);
-    uint32_t* ring_end = (void *)ring_start + EVENT_BUFFER_SIZE;
-    volatile uint32_t* ring_cur = ring_start;
+    auto* ring_start = static_cast<uint32_t*>(io_buffer_virt(&dwc->event_buffer));
+    auto* ring_end = ring_start + EVENT_BUFFER_SIZE / sizeof(*ring_start);
+    auto* ring_cur = ring_start;
 
     while (1) {
-        zx_status_t status = zx_interrupt_wait(dwc->irq_handle, NULL);
+        zx_status_t status = dwc->irq_handle.wait(nullptr);
         if (status != ZX_OK) {
             zxlogf(ERROR, "dwc3_irq_thread: zx_interrupt_wait returned %d\n", status);
             break;
@@ -196,7 +196,7 @@ static int dwc3_irq_thread(void* arg) {
             // invalidate cache so we can read fresh events
             io_buffer_cache_flush_invalidate(&dwc->event_buffer, 0, EVENT_BUFFER_SIZE);
 
-            for (unsigned i = 0; i < event_count; i += sizeof(uint32_t)) {
+            for (uint32_t i = 0; i < event_count; i += static_cast<uint32_t>(sizeof(uint32_t))) {
                 uint32_t event = *ring_cur++;
                 if (ring_cur == ring_end) {
                     ring_cur = ring_start;
@@ -214,7 +214,7 @@ static int dwc3_irq_thread(void* arg) {
 }
 
 void dwc3_events_start(dwc3_t* dwc) {
-    volatile void* mmio = dwc3_mmio(dwc);
+    auto* mmio = dwc3_mmio(dwc);
 
     // set event buffer pointer and size
     // keep interrupts masked until we are ready
@@ -233,6 +233,6 @@ void dwc3_events_start(dwc3_t* dwc) {
 }
 
 void dwc3_events_stop(dwc3_t* dwc) {
-    zx_interrupt_destroy(dwc->irq_handle);
-    thrd_join(dwc->irq_thread, NULL);
+    dwc->irq_handle.destroy();
+    thrd_join(dwc->irq_thread, nullptr);
 }

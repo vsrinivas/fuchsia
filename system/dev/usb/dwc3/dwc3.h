@@ -10,6 +10,9 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-mode-switch.h>
+#include <fbl/mutex.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/interrupt.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -62,7 +65,7 @@ typedef struct {
     // and ep specific hardware registers
     // This should be acquired before dwc3_t.lock
     // if acquiring both locks.
-    mtx_t lock;
+    fbl::Mutex lock;
 
     uint16_t max_packet_size;
     uint8_t ep_num;
@@ -83,15 +86,15 @@ typedef struct {
     usb_mode_switch_protocol_t ums;
     usb_dci_interface_t dci_intf;
     mmio_buffer_t mmio;
-    zx_handle_t bti_handle;
+    zx::handle bti_handle;
 
     usb_mode_t usb_mode;
     bool start_device_on_xhci_release;
-    mtx_t usb_mode_lock; // protects usb_mode and start_device_on_xhci_release
+    fbl::Mutex usb_mode_lock; // protects usb_mode and start_device_on_xhci_release
 
     // event stuff
     io_buffer_t event_buffer;
-    zx_handle_t irq_handle;
+    zx::interrupt irq_handle;
     thrd_t irq_thread;
 
     dwc3_endpoint_t eps[DWC3_MAX_EPS];
@@ -108,12 +111,12 @@ typedef struct {
     // and non ep specific hardware registers.
     // dwc3_endpoint_t.lock should be acquired first
     // if acquiring both locks.
-    mtx_t lock;
+    fbl::Mutex lock;
     bool configured;
 } dwc3_t;
 
-static inline volatile void* dwc3_mmio(dwc3_t* dwc) {
-    return dwc->mmio.vaddr;
+static inline volatile uint8_t* dwc3_mmio(dwc3_t* dwc) {
+    return static_cast<volatile uint8_t*>(dwc->mmio.vaddr);
 }
 
 void dwc3_usb_reset(dwc3_t* dwc);
@@ -135,8 +138,8 @@ void dwc3_cmd_ep_clear_stall(dwc3_t* dwc, unsigned ep_num);
 // Endpoints
 zx_status_t dwc3_ep_fifo_init(dwc3_t* dwc, unsigned ep_num);
 void dwc3_ep_fifo_release(dwc3_t* dwc, unsigned ep_num);
-zx_status_t dwc3_ep_config(dwc3_t* dwc, usb_endpoint_descriptor_t* ep_desc,
-                                  usb_ss_ep_comp_descriptor_t* ss_comp_desc);
+zx_status_t dwc3_ep_config(dwc3_t* dwc, const usb_endpoint_descriptor_t* ep_desc,
+                           const usb_ss_ep_comp_descriptor_t* ss_comp_desc);
 void dwc3_ep_set_config(dwc3_t* dwc, unsigned ep_num, bool enable);
 zx_status_t dwc3_ep_disable(dwc3_t* dwc, uint8_t ep_addr);
 void dwc3_start_eps(dwc3_t* dwc);
@@ -156,7 +159,6 @@ void dwc3_ep0_start(dwc3_t* dwc);
 void dwc3_ep0_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage);
 void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num);
 
-
 // Events
 void dwc3_events_start(dwc3_t* dwc);
 void dwc3_events_stop(dwc3_t* dwc);
@@ -164,3 +166,7 @@ void dwc3_events_stop(dwc3_t* dwc);
 // Utils
 void dwc3_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected);
 void dwc3_print_status(dwc3_t* dwc);
+
+__BEGIN_CDECLS
+zx_status_t dwc3_bind(void* ctx, zx_device_t* parent);
+__END_CDECLS

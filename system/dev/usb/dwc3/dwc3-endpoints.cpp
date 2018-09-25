@@ -7,6 +7,7 @@
 #include <zircon/assert.h>
 
 #include <usb/usb-request.h>
+#include <fbl/auto_lock.h>
 
 #include "dwc3.h"
 #include "dwc3-regs.h"
@@ -18,13 +19,13 @@
 #define EP_FIFO_SIZE    PAGE_SIZE
 
 static zx_paddr_t dwc3_ep_trb_phys(dwc3_endpoint_t* ep, dwc3_trb_t* trb) {
-    return io_buffer_phys(&ep->fifo.buffer) + ((void *)trb - (void *)ep->fifo.first);
+    return io_buffer_phys(&ep->fifo.buffer) + (trb - ep->fifo.first) * sizeof(*trb);
 }
 
 static void dwc3_enable_ep(dwc3_t* dwc, unsigned ep_num, bool enable) {
     volatile void* reg = dwc3_mmio(dwc) + DALEPENA;
 
-    mtx_lock(&dwc->lock);
+    fbl::AutoLock lock(&dwc->lock);
 
     uint32_t temp = DWC3_READ32(reg);
     uint32_t bit = 1 << ep_num;
@@ -35,8 +36,6 @@ static void dwc3_enable_ep(dwc3_t* dwc, unsigned ep_num, bool enable) {
         temp &= ~bit;
     }
     DWC3_WRITE32(reg, temp);
-
-    mtx_unlock(&dwc->lock);
 }
 
 zx_status_t dwc3_ep_fifo_init(dwc3_t* dwc, unsigned ep_num) {
@@ -45,16 +44,16 @@ zx_status_t dwc3_ep_fifo_init(dwc3_t* dwc, unsigned ep_num) {
     dwc3_fifo_t* fifo = &ep->fifo;
 
     static_assert(EP_FIFO_SIZE <= PAGE_SIZE, "");
-    zx_status_t status = io_buffer_init(&fifo->buffer, dwc->bti_handle, EP_FIFO_SIZE,
+    zx_status_t status = io_buffer_init(&fifo->buffer, dwc->bti_handle.get(), EP_FIFO_SIZE,
                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         return status;
     }
 
-    fifo->first = io_buffer_virt(&fifo->buffer);
+    fifo->first = static_cast<dwc3_trb_t*>(io_buffer_virt(&fifo->buffer));
     fifo->next = fifo->first;
-    fifo->current = NULL;
-    fifo->last = (void *)fifo->first + EP_FIFO_SIZE - sizeof(dwc3_trb_t);
+    fifo->current = nullptr;
+    fifo->last = fifo->first + (EP_FIFO_SIZE / sizeof(dwc3_trb_t)) - 1;
 
     // set up link TRB pointing back to the start of the fifo
     dwc3_trb_t* trb = fifo->last;
@@ -86,13 +85,13 @@ void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_padd
     if (ep->fifo.next == ep->fifo.last) {
         ep->fifo.next = ep->fifo.first;
     }
-    if (ep->fifo.current == NULL) {
+    if (ep->fifo.current == nullptr) {
         ep->fifo.current = trb;
     }
 
     trb->ptr_low = (uint32_t)buffer;
     trb->ptr_high = (uint32_t)(buffer >> 32);
-    trb->status = TRB_BUFSIZ(length);
+    trb->status = TRB_BUFSIZ(static_cast<uint32_t>(length));
     if (send_zlp) {
         trb->control = type | TRB_HWO;
     } else {
@@ -118,8 +117,8 @@ void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_padd
 static void dwc3_ep_queue_next_locked(dwc3_t* dwc, dwc3_endpoint_t* ep) {
     usb_request_t* req;
 
-    if (ep->current_req == NULL && ep->got_not_ready &&
-        (req = list_remove_head_type(&ep->queued_reqs, usb_request_t, node)) != NULL) {
+    if (ep->current_req == nullptr && ep->got_not_ready &&
+        (req = list_remove_head_type(&ep->queued_reqs, usb_request_t, node)) != nullptr) {
         ep->current_req = req;
         ep->got_not_ready = false;
         if (EP_IN(ep->ep_num)) {
@@ -131,7 +130,7 @@ static void dwc3_ep_queue_next_locked(dwc3_t* dwc, dwc3_endpoint_t* ep) {
         // TODO(voydanoff) scatter/gather support
         phys_iter_t iter;
         zx_paddr_t phys;
-        usb_request_physmap(req, dwc->bti_handle);
+        usb_request_physmap(req, dwc->bti_handle.get());
         usb_request_phys_iter_init(&iter, req, PAGE_SIZE);
         usb_request_phys_iter_next(&iter, &phys);
         bool send_zlp = req->header.send_zlp && (req->header.length % ep->max_packet_size) == 0;
@@ -140,8 +139,8 @@ static void dwc3_ep_queue_next_locked(dwc3_t* dwc, dwc3_endpoint_t* ep) {
     }
 }
 
-zx_status_t dwc3_ep_config(dwc3_t* dwc, usb_endpoint_descriptor_t* ep_desc,
-                                  usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
+zx_status_t dwc3_ep_config(dwc3_t* dwc, const usb_endpoint_descriptor_t* ep_desc,
+                           const usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
     // convert address to index in range 0 - 31
     // low bit is IN/OUT
     unsigned ep_num = dwc3_ep_num(ep_desc->bEndpointAddress);
@@ -150,7 +149,7 @@ zx_status_t dwc3_ep_config(dwc3_t* dwc, usb_endpoint_descriptor_t* ep_desc,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    unsigned ep_type = usb_ep_type(ep_desc);
+    uint8_t ep_type = usb_ep_type(ep_desc);
     if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
         zxlogf(ERROR, "dwc3_ep_config: isochronous endpoints are not supported\n");
         return ZX_ERR_NOT_SUPPORTED;
@@ -158,11 +157,11 @@ zx_status_t dwc3_ep_config(dwc3_t* dwc, usb_endpoint_descriptor_t* ep_desc,
 
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
 
-    mtx_lock(&ep->lock);
+    fbl::AutoLock lock(&ep->lock);
+
     zx_status_t status = dwc3_ep_fifo_init(dwc, ep_num);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dwc3_config_ep: dwc3_ep_fifo_init failed %d\n", status);
-        mtx_unlock(&ep->lock);
         return status;
     }
     ep->max_packet_size = usb_ep_max_packet(ep_desc);
@@ -175,8 +174,6 @@ zx_status_t dwc3_ep_config(dwc3_t* dwc, usb_endpoint_descriptor_t* ep_desc,
     if (dwc->configured) {
         dwc3_ep_queue_next_locked(dwc, ep);
     }
-
-    mtx_unlock(&ep->lock);
 
     return ZX_OK;
 }
@@ -191,10 +188,11 @@ zx_status_t dwc3_ep_disable(dwc3_t* dwc, uint8_t ep_addr) {
     }
 
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
-    mtx_lock(&ep->lock);
+
+    fbl::AutoLock lock(&ep->lock);
+
     dwc3_ep_fifo_release(dwc, ep_num);
     ep->enabled = false;
-    mtx_unlock(&ep->lock);
 
     return ZX_OK;
 }
@@ -211,10 +209,9 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req) {
         }
     }
 
-    mtx_lock(&ep->lock);
+    fbl::AutoLock lock(&ep->lock);
 
     if (!ep->enabled) {
-        mtx_unlock(&ep->lock);
         usb_request_complete(req, ZX_ERR_BAD_STATE, 0);
         return;
     }
@@ -224,8 +221,6 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req) {
     if (dwc->configured) {
         dwc3_ep_queue_next_locked(dwc, ep);
     }
-
-    mtx_unlock(&ep->lock);
 }
 
 void dwc3_ep_set_config(dwc3_t* dwc, unsigned ep_num, bool enable) {
@@ -254,9 +249,8 @@ void dwc3_start_eps(dwc3_t* dwc) {
         if (ep->enabled) {
             dwc3_ep_set_config(dwc, ep_num, true);
 
-            mtx_lock(&ep->lock);
+            fbl::AutoLock lock(&ep->lock);
             dwc3_ep_queue_next_locked(dwc, ep);
-            mtx_unlock(&ep->lock);
         }
     }
 }
@@ -273,9 +267,9 @@ static void dwc_ep_read_trb(dwc3_endpoint_t* ep, dwc3_trb_t* trb, dwc3_trb_t* ou
 
 void dwc3_ep_xfer_started(dwc3_t* dwc, unsigned ep_num, unsigned rsrc_id) {
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
-    mtx_lock(&ep->lock);
+    fbl::AutoLock lock(&ep->lock);
+
     ep->rsrc_id = rsrc_id;
-    mtx_unlock(&ep->lock);
 }
 
 void dwc3_ep_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
@@ -286,10 +280,9 @@ void dwc3_ep_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
     } else {
         dwc3_endpoint_t* ep = &dwc->eps[ep_num];
 
-        mtx_lock(&ep->lock);
+        fbl::AutoLock lock(&ep->lock);
         ep->got_not_ready = true;
         dwc3_ep_queue_next_locked(dwc, ep);
-        mtx_unlock(&ep->lock);
     }
 }
 
@@ -306,14 +299,14 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
     } else {
         dwc3_endpoint_t* ep = &dwc->eps[ep_num];
 
-        mtx_lock(&ep->lock);
+        ep->lock.Acquire();
         usb_request_t* req = ep->current_req;
-        ep->current_req = NULL;
+        ep->current_req = nullptr;
 
         if (req) {
             dwc3_trb_t  trb;
             dwc_ep_read_trb(ep, ep->fifo.current, &trb);
-            ep->fifo.current = NULL;
+            ep->fifo.current = nullptr;
             if (trb.control & TRB_HWO) {
                 zxlogf(ERROR, "TRB_HWO still set in dwc3_ep_xfer_complete\n");
             }
@@ -321,11 +314,11 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
             zx_off_t actual = req->header.length - TRB_BUFSIZ(trb.status);
 //            dwc3_ep_queue_next_locked(dwc, ep);
 
-            mtx_unlock(&ep->lock);
+            ep->lock.Release();
 
             usb_request_complete(req, ZX_OK, actual);
         } else {
-            mtx_unlock(&ep->lock);
+            ep->lock.Release();
             zxlogf(ERROR, "dwc3_ep_xfer_complete: no usb request found to complete!\n");
         }
     }
@@ -337,10 +330,9 @@ zx_status_t dwc3_ep_set_stall(dwc3_t* dwc, unsigned ep_num, bool stall) {
     }
 
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
-    mtx_lock(&ep->lock);
+    fbl::AutoLock lock(&ep->lock);
 
     if (!ep->enabled) {
-        mtx_unlock(&ep->lock);
         return ZX_ERR_BAD_STATE;
     }
     if (stall && !ep->stalled) {
@@ -349,25 +341,22 @@ zx_status_t dwc3_ep_set_stall(dwc3_t* dwc, unsigned ep_num, bool stall) {
         dwc3_cmd_ep_clear_stall(dwc, ep_num);
     }
     ep->stalled = stall;
-    mtx_unlock(&ep->lock);
 
     return ZX_OK;
 }
 
 void dwc3_ep_end_transfers(dwc3_t* dwc, unsigned ep_num, zx_status_t reason) {
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
-    mtx_lock(&ep->lock);
+    fbl::AutoLock lock(&ep->lock);
 
     if (ep->current_req) {
         dwc3_cmd_ep_end_transfer(dwc, ep_num);
         usb_request_complete(ep->current_req, reason, 0);
-        ep->current_req = NULL;
+        ep->current_req = nullptr;
     }
 
     usb_request_t* req;
-    while ((req = list_remove_head_type(&ep->queued_reqs, usb_request_t, node)) != NULL) {
+    while ((req = list_remove_head_type(&ep->queued_reqs, usb_request_t, node)) != nullptr) {
         usb_request_complete(req, reason, 0);
     }
-
-    mtx_unlock(&ep->lock);
 }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <fbl/auto_lock.h>
 
 #include "dwc3.h"
 #include "dwc3-regs.h"
@@ -39,26 +40,24 @@ zx_status_t dwc3_ep0_init(dwc3_t* dwc) {
 }
 
 void dwc3_ep0_reset(dwc3_t* dwc) {
-    mtx_lock(EP0_LOCK(dwc));
+    fbl::AutoLock lock(EP0_LOCK(dwc));
+
     dwc3_cmd_ep_end_transfer(dwc, EP0_OUT);
     dwc->ep0_state = EP0_STATE_NONE;
-    mtx_unlock(EP0_LOCK(dwc));
 }
 
 void dwc3_ep0_start(dwc3_t* dwc) {
-    mtx_lock(EP0_LOCK(dwc));
+    fbl::AutoLock lock(EP0_LOCK(dwc));
+
     dwc3_cmd_start_new_config(dwc, EP0_OUT, 0);
     dwc3_ep_set_config(dwc, EP0_OUT, true);
     dwc3_ep_set_config(dwc, EP0_IN, true);
 
     dwc3_queue_setup_locked(dwc);
-    mtx_unlock(EP0_LOCK(dwc));
 }
 
 static zx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buffer, size_t length,
                                      size_t* out_actual) {
-    zx_status_t status;
-
     if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) {
         // handle some special setup requests in this driver
         switch (setup->bRequest) {
@@ -67,18 +66,20 @@ static zx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buff
             dwc3_set_address(dwc, setup->wValue);
             *out_actual = 0;
             return ZX_OK;
-        case USB_REQ_SET_CONFIGURATION:
+        case USB_REQ_SET_CONFIGURATION: {
             zxlogf(TRACE, "SET_CONFIGURATION %d\n", setup->wValue);
             dwc3_reset_configuration(dwc);
             dwc->configured = false;
-            status = usb_dci_control(&dwc->dci_intf, setup, buffer, length, out_actual);
+            zx_status_t status = usb_dci_interface_control(&dwc->dci_intf, setup, nullptr, 0,
+                                                           nullptr, 0, out_actual);
             if (status == ZX_OK && setup->wValue) {
                 dwc->configured = true;
                 dwc3_start_eps(dwc);
             }
             return status;
+        }
         default:
-            // fall through to usb_dci_control()
+            // fall through to usb_dci_interface_control()
             break;
         }
     } else if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE) &&
@@ -86,7 +87,8 @@ static zx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buff
         zxlogf(TRACE, "SET_INTERFACE %d\n", setup->wValue);
         dwc3_reset_configuration(dwc);
         dwc->configured = false;
-        status = usb_dci_control(&dwc->dci_intf, setup, buffer, length, out_actual);
+        zx_status_t status = usb_dci_interface_control(&dwc->dci_intf, setup, nullptr, 0, nullptr,
+                                                       0, out_actual);
         if (status == ZX_OK) {
             dwc->configured = true;
             dwc3_start_eps(dwc);
@@ -94,11 +96,17 @@ static zx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buff
         return status;
     }
 
-    return usb_dci_control(&dwc->dci_intf, setup, buffer, length, out_actual);
+    if ((setup->bmRequestType & USB_DIR_MASK) == USB_DIR_IN) {
+        return usb_dci_interface_control(&dwc->dci_intf, setup, nullptr, 0, buffer, length,
+                                         out_actual);
+    } else {
+        return usb_dci_interface_control(&dwc->dci_intf, setup, buffer, length, nullptr, 0,
+                                         out_actual);
+    }
 }
 
 void dwc3_ep0_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
-    mtx_lock(EP0_LOCK(dwc));
+    fbl::AutoLock lock(EP0_LOCK(dwc));
 
     switch (dwc->ep0_state) {
     case EP0_STATE_SETUP:
@@ -149,12 +157,10 @@ void dwc3_ep0_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
         zxlogf(ERROR, "dwc3_ep0_xfer_not_ready unhandled state %u\n", dwc->ep0_state);
         break;
     }
-
-    mtx_unlock(EP0_LOCK(dwc));
 }
 
 void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
-    mtx_lock(EP0_LOCK(dwc));
+    fbl::AutoLock lock(EP0_LOCK(dwc));
 
     switch (dwc->ep0_state) {
     case EP0_STATE_SETUP: {
@@ -208,6 +214,4 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
     default:
         break;
     }
-
-    mtx_unlock(EP0_LOCK(dwc));
 }
