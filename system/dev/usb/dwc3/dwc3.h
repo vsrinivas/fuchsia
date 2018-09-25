@@ -6,6 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-mode-switch.h>
@@ -81,7 +82,7 @@ typedef struct {
     platform_device_protocol_t pdev;
     usb_mode_switch_protocol_t ums;
     usb_dci_interface_t dci_intf;
-    io_buffer_t mmio;
+    mmio_buffer_t mmio;
     zx_handle_t bti_handle;
 
     usb_mode_t usb_mode;
@@ -112,7 +113,7 @@ typedef struct {
 } dwc3_t;
 
 static inline volatile void* dwc3_mmio(dwc3_t* dwc) {
-    return io_buffer_virt(&dwc->mmio);
+    return dwc->mmio.vaddr;
 }
 
 void dwc3_usb_reset(dwc3_t* dwc);

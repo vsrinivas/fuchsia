@@ -443,7 +443,7 @@ static void dwc3_release(void* ctx) {
     }
     io_buffer_release(&dwc->event_buffer);
     io_buffer_release(&dwc->ep0_buffer);
-    io_buffer_release(&dwc->mmio);
+    mmio_buffer_release(&dwc->mmio);
     zx_handle_close(dwc->irq_handle);
     zx_handle_close(dwc->bti_handle);
     free(dwc);
@@ -491,8 +491,8 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
     dwc->parent = parent;
     dwc->usb_mode = USB_MODE_NONE;
 
-    status = pdev_map_mmio_buffer(&dwc->pdev, MMIO_USB3OTG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &dwc->mmio);
+    status = pdev_map_mmio_buffer2(&dwc->pdev, MMIO_USB3OTG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &dwc->mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dwc3_bind: pdev_map_mmio_buffer failed\n");
         goto fail;
