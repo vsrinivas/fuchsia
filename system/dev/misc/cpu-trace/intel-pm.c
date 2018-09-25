@@ -36,28 +36,28 @@
 
 // There's only a few fixed events, so handle them directly.
 typedef enum {
-#define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
-    symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_FIXED, id),
+#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
+    symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_FIXED, id),
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 } fixed_event_id_t;
 
 // Verify each fixed counter regnum < IPM_MAX_FIXED_COUNTERS.
-#define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
+#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
     && (regnum) < IPM_MAX_FIXED_COUNTERS
 static_assert(1
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
     , "");
 
 typedef enum {
-#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
-    symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
+#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
+    symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_MISC, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 } misc_event_id_t;
 
 // Misc event ids needn't be consecutive.
 // Build a lookup table we can use to track duplicates.
 typedef enum {
-#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
     symbol ## _NUMBER,
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
     NUM_MISC_EVENTS
@@ -65,8 +65,8 @@ typedef enum {
 
 // This table is sorted at startup.
 static cpuperf_event_id_t misc_event_table_contents[NUM_MISC_EVENTS] = {
-#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
-    CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
+#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
+    CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_MISC, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 };
 
@@ -76,13 +76,13 @@ static const cpuperf_event_id_t* misc_event_table = &misc_event_table_contents[0
 static void ipm_init_misc_event_table(void);
 
 typedef enum {
-#define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, description) \
+#define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, umask, flags, readable_name, description) \
     symbol,
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 } arch_event_t;
 
 typedef enum {
-#define DEF_SKL_EVENT(symbol, id, event, umask, flags, name, description) \
+#define DEF_SKL_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
     symbol,
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 } model_event_t;
@@ -94,26 +94,26 @@ typedef struct {
 } event_details_t;
 
 static const event_details_t kArchEvents[] = {
-#define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, description) \
+#define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, umask, flags, readable_name, description) \
     { event, umask, flags },
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
 
 static const event_details_t kModelEvents[] = {
-#define DEF_SKL_EVENT(symbol, id, event, umask, flags, name, description) \
+#define DEF_SKL_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
     { event, umask, flags },
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 };
 
 static const uint16_t kArchEventMap[] = {
-#define DEF_ARCH_EVENT(symbol, id, ebx_bit, event, umask, flags, name, description) \
+#define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, umask, flags, readable_name, description) \
     [id] = symbol,
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
 static_assert(countof(kArchEventMap) <= CPUPERF_MAX_EVENT + 1, "");
 
 static const uint16_t kModelEventMap[] = {
-#define DEF_SKL_EVENT(symbol, id, event, umask, flags, name, description) \
+#define DEF_SKL_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
     [id] = symbol,
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 };
@@ -225,7 +225,7 @@ static void ipm_free_buffers_for_trace(ipm_per_trace_state_t* per_trace, uint32_
 // Returns IPM_MAX_FIXED_COUNTERS if |id| is unknown.
 static unsigned ipm_fixed_counter_number(cpuperf_event_id_t id) {
     enum {
-#define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
+#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
         symbol ## _NUMBER = regnum,
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
     };
@@ -518,7 +518,7 @@ static zx_status_t ipm_stage_programmable_config(const cpuperf_config_t* icfg,
                                                  zx_x86_ipm_config_t* ocfg) {
     const unsigned ii = input_index;
     cpuperf_event_id_t id = icfg->events[ii];
-    unsigned unit = CPUPERF_EVENT_ID_UNIT(id);
+    unsigned group = CPUPERF_EVENT_ID_GROUP(id);
     unsigned event = CPUPERF_EVENT_ID_EVENT(id);
     bool uses_timebase0 = !!(icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0);
 
@@ -540,15 +540,15 @@ static zx_status_t ipm_stage_programmable_config(const cpuperf_config_t* icfg,
             ss->max_programmable_value - icfg->rate[ii] + 1;
     }
     const event_details_t* details = NULL;
-    switch (unit) {
-    case CPUPERF_UNIT_ARCH:
+    switch (group) {
+    case CPUPERF_GROUP_ARCH:
         if (event >= countof(kArchEventMap)) {
             zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
         details = &kArchEvents[kArchEventMap[event]];
         break;
-    case CPUPERF_UNIT_MODEL:
+    case CPUPERF_GROUP_MODEL:
         if (event >= countof(kModelEventMap)) {
             zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
@@ -688,32 +688,32 @@ static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
         zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
         if (id == 0)
             break;
-        unsigned unit = CPUPERF_EVENT_ID_UNIT(id);
+        unsigned group = CPUPERF_EVENT_ID_GROUP(id);
 
         if (icfg->flags[ii] & ~CPUPERF_CONFIG_FLAG_MASK) {
             zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
 
-        switch (unit) {
-        case CPUPERF_UNIT_FIXED:
+        switch (group) {
+        case CPUPERF_GROUP_FIXED:
             status = ipm_stage_fixed_config(icfg, ss, ii, ocfg);
             if (status != ZX_OK)
                 return status;
             break;
-        case CPUPERF_UNIT_ARCH:
-        case CPUPERF_UNIT_MODEL:
+        case CPUPERF_GROUP_ARCH:
+        case CPUPERF_GROUP_MODEL:
             status = ipm_stage_programmable_config(icfg, ss, ii, ocfg);
             if (status != ZX_OK)
                 return status;
             break;
-        case CPUPERF_UNIT_MISC:
+        case CPUPERF_GROUP_MISC:
             status = ipm_stage_misc_config(icfg, ss, ii, ocfg);
             if (status != ZX_OK)
                 return status;
             break;
         default:
-            zxlogf(ERROR, "%s: Invalid event [%u] (bad unit)\n",
+            zxlogf(ERROR, "%s: Invalid event [%u] (bad group)\n",
                    __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }

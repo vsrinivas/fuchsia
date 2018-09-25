@@ -83,14 +83,14 @@
 // There's only a few misc events, and they're non-homogenous,
 // so handle them directly.
 typedef enum {
-#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
-    symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_UNIT_MISC, id),
+#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
+    symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_MISC, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 } misc_event_id_t;
 
 // h/w address of misc events.
 typedef enum {
-#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
     symbol ## _OFFSET = offset,
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 } misc_event_offset_t;
@@ -153,7 +153,7 @@ const uint16_t supported_mem_device_ids[] = {
 #define UNC_IMC_STATS_END   0x5983 // MISC_PKG_GT_TEMP
 
 // Verify all values are within [BEGIN,END].
-#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
     && (offset >= UNC_IMC_STATS_BEGIN && (offset + size/8) <= UNC_IMC_STATS_END + 1)
 static_assert(1
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
@@ -514,10 +514,10 @@ static void x86_perfmon_clear_overflow_indicators() {
 // Return the h/w register number for fixed event id |id|
 // or IPM_MAX_FIXED_COUNTERS if not found.
 static unsigned x86_perfmon_lookup_fixed_counter(cpuperf_event_id_t id) {
-    if (CPUPERF_EVENT_ID_UNIT(id) != CPUPERF_UNIT_FIXED)
+    if (CPUPERF_EVENT_ID_GROUP(id) != CPUPERF_GROUP_FIXED)
         return IPM_MAX_FIXED_COUNTERS;
     switch (CPUPERF_EVENT_ID_EVENT(id)) {
-#define DEF_FIXED_EVENT(symbol, id, regnum, flags, name, description) \
+#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
     case id: return regnum;
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
     default: return IPM_MAX_FIXED_COUNTERS;
@@ -826,7 +826,7 @@ static zx_status_t x86_ipm_verify_misc_config(
                 return ZX_ERR_INVALID_ARGS;
             }
             switch (CPUPERF_EVENT_ID_EVENT(id)) {
-#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
             case id: break;
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
             default:
@@ -961,7 +961,7 @@ static void x86_ipm_stage_misc_config(const zx_x86_ipm_config_t* config,
         // All misc events currently come from MCHBAR.
         // When needed we can add a flag to the event to denote origin.
         switch (CPUPERF_EVENT_ID_EVENT(state->misc_ids[i])) {
-#define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
+#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
         case id:
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
             state->need_mchbar = true;
@@ -1204,7 +1204,7 @@ static ReadMiscResult read_mc_gt_freq_clamping_reasons(PerfmonState* state) {
 
 static ReadMiscResult read_mc_rp_slice_freq(PerfmonState* state) {
     uint32_t value = read_mc_value32(
-        get_mc_addr32(state, MISC_PKG_RP_SLICE_FREQ_OFFSET));
+        get_mc_addr32(state, MISC_PKG_RP_GT_SLICE_FREQ_OFFSET));
     value = (value >> 17) & 0x1ff;
     // Convert the value to Mhz.
     // We can't do floating point, and this doesn't have to be perfect.
@@ -1214,7 +1214,7 @@ static ReadMiscResult read_mc_rp_slice_freq(PerfmonState* state) {
 
 static ReadMiscResult read_mc_rp_unslice_freq(PerfmonState* state) {
     uint32_t value = read_mc_value32(
-        get_mc_addr32(state, MISC_PKG_RP_UNSLICE_FREQ_OFFSET));
+        get_mc_addr32(state, MISC_PKG_RP_GT_UNSLICE_FREQ_OFFSET));
     value = (value >> 8) & 0x1ff;
     // Convert the value to Mhz.
     // We can't do floating point, and this doesn't have to be perfect.
@@ -1222,9 +1222,9 @@ static ReadMiscResult read_mc_rp_unslice_freq(PerfmonState* state) {
     return ReadMiscResult{scaled_value, CPUPERF_RECORD_VALUE};
 }
 
-static ReadMiscResult read_mc_rp_volt(PerfmonState* state) {
+static ReadMiscResult read_mc_rp_gt_volt(PerfmonState* state) {
     uint32_t value = read_mc_value32(
-        get_mc_addr32(state, MISC_PKG_RP_VOLT_OFFSET));
+        get_mc_addr32(state, MISC_PKG_RP_GT_VOLT_OFFSET));
     return ReadMiscResult{value & 0xff, CPUPERF_RECORD_VALUE};
 }
 
@@ -1285,12 +1285,12 @@ static ReadMiscResult read_misc_event(PerfmonState* state,
         return read_mc_ia_freq_clamping_reasons(state);
     case MISC_PKG_GT_FREQ_CLAMPING_REASONS_ID:
         return read_mc_gt_freq_clamping_reasons(state);
-    case MISC_PKG_RP_SLICE_FREQ_ID:
+    case MISC_PKG_RP_GT_SLICE_FREQ_ID:
         return read_mc_rp_slice_freq(state);
-    case MISC_PKG_RP_UNSLICE_FREQ_ID:
+    case MISC_PKG_RP_GT_UNSLICE_FREQ_ID:
         return read_mc_rp_unslice_freq(state);
-    case MISC_PKG_RP_VOLT_ID:
-        return read_mc_rp_volt(state);
+    case MISC_PKG_RP_GT_VOLT_ID:
+        return read_mc_rp_gt_volt(state);
     case MISC_PKG_EDRAM_TEMP_ID:
         return read_mc_edram_temp(state);
     case MISC_PKG_PKG_TEMP_ID:

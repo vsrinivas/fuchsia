@@ -75,28 +75,29 @@ typedef enum {
 // Having more than 64K different events for any one arch is unlikely
 // so we use 16 bits for the event id.
 // To help each arch manage the plethora of different events, the event id
-// is split it two parts: 6 bit event unit, and 10 bit event within that unit.
+// is split it two parts: 6 bit event group, and 10 bit event within that
+// group.
 // An event id of zero is defined to be unused. To simplify things we just
-// take the whole set of |unit| == 0 as reserved.
+// take the whole set of |group| == 0 as reserved.
 typedef uint16_t cpuperf_event_id_t;
-#define CPUPERF_MAKE_EVENT_ID(unit, event) (((unit) << 10) | (event))
-#define CPUPERF_EVENT_ID_UNIT(id) (((id) >> 10) & 0x3f)
+#define CPUPERF_MAKE_EVENT_ID(group, event) (((group) << 10) | (event))
+#define CPUPERF_EVENT_ID_GROUP(id) (((id) >> 10) & 0x3f)
 #define CPUPERF_EVENT_ID_EVENT(id) ((id) & 0x3ff)
-#define CPUPERF_MAX_UNIT 0x3f
+#define CPUPERF_MAX_GROUP 0x3f
 #define CPUPERF_MAX_EVENT 0x3ff
 #define CPUPERF_EVENT_ID_NONE 0
 
-// Possible values for the |unit| field of |cpuperf_event_id_t|.
+// Possible values for the |group| field of |cpuperf_event_id_t|.
 // TODO(dje): Reorganize these into something like
 // {arch,model} -x- {fixed,programmable}, which these currently are,
 // it's just not immediately apparent.
 typedef enum {
-    CPUPERF_UNIT_RESERVED = 0,
-    CPUPERF_UNIT_ARCH = 1,
-    CPUPERF_UNIT_FIXED = 2,
-    CPUPERF_UNIT_MODEL = 3,
-    CPUPERF_UNIT_MISC = 4,
-} cpuperf_unit_type_t;
+    CPUPERF_GROUP_RESERVED = 0,
+    CPUPERF_GROUP_ARCH = 1,
+    CPUPERF_GROUP_FIXED = 2,
+    CPUPERF_GROUP_MODEL = 3,
+    CPUPERF_GROUP_MISC = 4,
+} cpuperf_group_type_t;
 
 // Trace record header.
 // Note: Avoid holes in all trace records.
