@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <lib/timekeeper/clock_impl.h>
+#include <lib/timekeeper/system_clock.h>
 #include <lib/zx/time.h>
 #include <lib/zx/timer.h>
 #include <zircon/types.h>
@@ -45,7 +45,7 @@ class SystemTimer final : public Timer {
     zx_status_t CancelTimerImpl() override;
 
    private:
-    timekeeper::ClockImpl clock_;
+    timekeeper::SystemClock clock_;
     zx::timer timer_;
 };
 

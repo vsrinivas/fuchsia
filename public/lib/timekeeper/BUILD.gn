@@ -14,14 +14,21 @@ source_set("timekeeper") {
   public_configs = [ "//garnet/public:config" ]
 }
 
-source_set("impl") {
+source_set("system") {
   sources = [
-    "clock_impl.cc",
-    "clock_impl.h",
+    "system_clock.cc",
+    "system_clock.h",
   ]
 
   public_deps = [
     ":timekeeper",
+  ]
+}
+
+# Deprecated target. Must be replaced by system.
+source_set("impl") {
+  public_deps = [
+    ":system",
   ]
 }
 
@@ -45,12 +52,12 @@ source_set("unittests") {
   testonly = true
   sources = [
     "async_test_clock_unittest.cc",
-    "clock_impl_unittest.cc",
+    "system_clock_unittest.cc",
     "test_clock_unittest.cc",
   ]
 
   deps = [
-    ":impl",
+    ":system",
     ":testing",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
