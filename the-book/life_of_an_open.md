@@ -27,12 +27,15 @@ call, where the kernel might handle path parsing, redirection, etc. In that
 model, the kernel would need to mediate access to resources based on exterior
 knowledge about the caller. The Zircon kernel, however, intentionally has no
 such system call. Instead, clients access filesystems through **channels** --
-when a process is initialized, it may be provided a handle representing the
-**root (“/”) directory** and a handle representing the current working
-directory **(CWD)**.  Alternatively, in more exotic runtimes, one or more of
-these handles may not be provided. In this example, however, involving a request
-to open “foobar”, a relative path was used, so the incoming call could be sent
-over the path representing the current working directory.
+when a process is initialized, it is provided a [namespace](namespaces.md),
+which is a table of "absolute path" -> "handle" mappings. All paths accessed
+from within a process are opened by directing requests through this namespace
+mapping.
+
+In this example, however, involving a request to open “foobar”, a relative path
+was used, so the incoming call could be sent over the path representing the
+current working directory (which itself is represented as an absolute path
+and a handle).
 
 The standard library is responsible for taking a handle (or multiple handles)
 and making them appear like file descriptors. As a consequence, the “file
@@ -62,9 +65,9 @@ receive a call to `open` or `write`, they will need to interpret those commands
 differently.
 
 For the purposes of this document, we’ll be focusing on the primary protocol
-used by filesystem clients: RemoteIO.
+used by filesystem clients: [FIDL](../../development/languages/fidl/README.md).
 
-## RemoteIO
+## FIDL
 
 A program calling `open("foo")` will have called into the standard library,
 found an “fdio” object corresponding to the current working directory, and will
@@ -92,56 +95,47 @@ an unintended behavior). Additionally, if this protocol allowed the client to
 have arbitrary control over the server, this communication layer would be ripe
 for exploitation.
 
-The [RemoteIO protocol
-(RIO)](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fdio/include/lib/fdio/remoteio.h)
+The [FIDL IO protocol](https://fuchsia.googlesource.com/zircon/+/master/system/fidl/fuchsia-io/io.fidl)
 describes the wire-format of what these bytes and handles should actually mean
 when transmitted between two entities. The protocol describes things like
 “expected number of handles”, “enumerated operation”, and “data”. In our case,
-`open("foo")` creates an `ZXRIO_OPEN` message, and sets the “data” field of the RIO
+`open("foo")` creates an `Open` message, and sets the “data” field of the FIDL
 message to the string “foo”. Additionally, if any flags are passed to
 open (such as `O_RDONLY, O_RDWR, O_CREAT`, etc) these flags would be placed in
-the “arg” field of the rio structure. However, if the operation was changed
+the “arg” field of the FIDL structure. However, if the operation was changed
 (to, for example, `write`), the interpretation of this message would be
 altered.
 
 Exact byte agreement at this layer is critical, as it allows communication
-between drastically different runtimes: **processes which understand RIO can
+between drastically different runtimes: **processes which understand FIDL can
 communicate easily between C, C++, Go, Rust, Dart programs (and others)
 transparently.**
 
-This protocol, although incredibly useful, has currently been
-constructed by hand, and is only used by the lower-level components within the
-system. There is an ongoing effort to re-specify Remote IO as a FIDL
-interface, which is used by the higher-level components of the Fuchsia, to take
-advantage of the multiple-runtime interoperability that FIDL provides. In the
-future, the two protocols will become unified, and FIDL binding will be
-automatically generated and typechecked in a variety of languages.
-
-**libfdio** contains both the client and server-side code for the C/C++
-implementation of RIO, and is responsible for cautiously verifying the input
+**libfidl** contains both the client and server-side code for the C/C++
+implementation of FIDL, and is responsible for automatically verifying the input
 and output of both ends.
 
-In the case of the `open` operation, the remote IO protocol expects that the
+In the case of the `open` operation, the FIDL protocol expects that the
 client will create a channel and pass one end (as a handle) to the server. Once
 the transaction is complete, this channel may be used as the mechanism to
 communicate with the opened file, just as there had previously been a
 communication with the “CWD” handle.
 
-By designing the protocol so RIO clients provide handles, rather than servers,
-the communication is better suited to pipelining. Access to RIO objects can be
-asynchronous; requests to the RIO object can be transmitted before the object
+By designing the protocol so FIDL clients provide handles, rather than servers,
+the communication is better suited to pipelining. Access to FIDL objects can be
+asynchronous; requests to the FIDL object can be transmitted before the object
 is actually opened. This behavior is critical for interaction with services
 (which will be described in more detail in the “ServiceFS” section).
 
 To recap, an “open” call has gone through the standard library, acted on the
-“CWD” fdio object, which transformed the request into a RIO message which is
+“CWD” fdio object, which transformed the request into a FIDL message which is
 sent to the server using the `zx_channel_write` system call. The client can
 optionally wait for the server’s response using `zx_object_wait_one`, or continue
 processing asynchronously. Either way, a channel has been created, where
 one end lives with the client, and the other end is transmitted to the
 “server".
 
-## RemoteIO: Server-Side
+## Filesystems: Server-Side
 
 ### Dispatching
 
@@ -169,7 +163,7 @@ along with some previously-supplied “iostate” representing the open connecti
 For C++ filesystems using libfs, this callback function is called
 `vfs_handler`, and it receives a couple key pieces of information:
 
-  * The RIO message which was provided by the client (or artificially constructed
+  * The FIDL message which was provided by the client (or artificially constructed
     by the server to appear like a “close” message, if the handle was closed)
   * The I/O state representing the current connection to the handle (passed as the
     “iostate” field, mentioned earlier).
@@ -182,9 +176,9 @@ For C++ filesystems using libfs, this callback function is called
     multiple clients, or multiple file descriptors)
 
 This handler function, equipped with this information, acts as a large
-“switch/case” table, redirecting the RIO message to an appropriate function
+“switch/case” table, redirecting the FIDL message to an appropriate function
 depending on the “operation” field provided by the client. In the open case, the
-`ZXRIO_OPEN` field is noticed as the operation, so (1) a handle is expected, and
+`Open` ordinal is noticed as the operation, so (1) a handle is expected, and
 (2) the ‘data’ field (“foo”) is interpreted as the path.
 
 ### VFS Layer
@@ -194,7 +188,7 @@ may dispatch and interpret server-side messages, and call operations in the
 underlying filesystem where appropriate. Notably, this layer is completely
 optional -- if a filesystem server does not want to link against this library,
 they have no obligation to use it. To be a filesystem server, a process must
-merely understand the remote IO wire format. As a consequence, there could be
+merely understand the FIDL wire format. As a consequence, there could be
 any number of “VFS” implementations in a language, but at the time of writing,
 two well-known implementations exist: one written in C++ within the [libfs
 library](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fs/),
@@ -237,9 +231,9 @@ resource can be accessed with the provided flags, before calling “GetHandles�
 asking the underlying filesystem if there are additional handles required to
 interact with the Vnode. Assuming the client asked for the “foo” object
 synchronously (which is implied with the default POSIX open call), any
-additional handles required to interact with “foo” are packed into a small RIO
+additional handles required to interact with “foo” are packed into a small FIDL
 description object and passed back to the client. Alternatively, if "foo" had
-failed to open, a RIO discription object would still be returned, but with the
+failed to open, a FIDL discription object would still be returned, but with the
 “status” field set to an error code, indicating failure. Let’s assume the “foo”
 open was successful. The server will proceed to create an “iostate” object for
 “foo” and register it with the dispatcher. Doing so, future calls to “foo” can
@@ -250,7 +244,7 @@ From the client’s perspective, at the start of the “Open” call, a path and
 handle combination was transmitted over the CWD handle to a remote filesystem
 server. Since the call was synchronous, the client proceeded to wait for a
 response on the handle. Once the server properly found, opened, and initialized
-I/O state for this file, it sent back a “success” RIO description object. This
+I/O state for this file, it sent back a “success” FIDL description object. This
 object would be read by the client, identifying that the call completed
 successfully. At this point, the client could create an fdio object
 representing the handle to “foo”, reference it with an entry in a file
@@ -267,13 +261,13 @@ need to route through the ‘CWD’ on future requests.
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Fdio (RIO) | Fdio (RIO) |
+| Fdio (FIDL) | Fdio (FIDL) |
 +-------------------------+
 | '/' Handle | CWD Handle |
 +-------------------------+
       ^            ^
       |            |
-Zircon Channels, speaking RIO                   State BEFORE open(‘foo’)
+Zircon Channels, speaking FIDL                   State BEFORE open(‘foo’)
       |            |
       v            v
 +-------------------------+
@@ -291,13 +285,13 @@ Zircon Channels, speaking RIO                   State BEFORE open(‘foo’)
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Fdio (RIO) | Fdio (RIO) |
+| Fdio (FIDL) | Fdio (FIDL) |
 +-------------------------+
 | '/' Handle | CWD Handle |   **foo Handle x2**
 +-------------------------+
       ^            ^
       |            |
-Zircon Channels, speaking RIO                   Client Creates Channel
+Zircon Channels, speaking FIDL                   Client Creates Channel
       |            |
       v            v
 +-------------------------+
@@ -315,13 +309,13 @@ Zircon Channels, speaking RIO                   Client Creates Channel
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Fdio (RIO) | Fdio (RIO) |
+| Fdio (FIDL) | Fdio (FIDL) |
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
       ^            ^
       |            |
-Zircon Channels, speaking RIO                   Client Sends RIO message to Server
+Zircon Channels, speaking FIDL                  Client Sends FIDL message to Server
       |            |                            Message includes a ‘foo’ handle
       v            v                            (and waits for response)
 +-------------------------+
@@ -339,13 +333,13 @@ Zircon Channels, speaking RIO                   Client Sends RIO message to Serv
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Fdio (RIO) | Fdio (RIO) |
+| Fdio (FIDL) | Fdio (FIDL) |
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
       ^            ^
       |            |
-Zircon Channels, speaking RIO                   Server dispatches message to I/O State,
+Zircon Channels, speaking FIDL                  Server dispatches message to I/O State,
       |            |                            Interprets as ‘open’
       v            v                            Finds or Creates ‘foo’
 +-------------------------+
@@ -363,14 +357,14 @@ Zircon Channels, speaking RIO                   Server dispatches message to I/O
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Fdio (RIO) | Fdio (RIO) |
+| Fdio (FIDL) | Fdio (FIDL) |
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
       ^            ^          ^
       |            |          |
-Zircon Channels, speaking RIO |                  Server allocates I/O state for Vnode
-      |            |          |                  Responds to client-provided handle
+Zircon Channels, FIDL         |                   Server allocates I/O state for Vnode
+      |            |          |                   Responds to client-provided handle
       v            v          v
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
@@ -387,14 +381,14 @@ Zircon Channels, speaking RIO |                  Server allocates I/O state for 
              | Client Program |
 +-----------------------------+----------+
 |   fd: x    |   fd: y    |    fd: z     |
-| Fdio (RIO) | Fdio (RIO) |  Fdio (RIO)  |
+| Fdio (FIDL) | Fdio (FIDL) |  Fdio (FIDL)  |
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
       ^            ^          ^
       |            |          |
-Zircon Channels, speaking RIO |                  Client recognizes that ‘foo’ was opened
-      |            |          |                  Allocated Fdio + fd, ‘open’ succeeds.
+Zircon Channels, speaking FIDL |                  Client recognizes that ‘foo’ was opened
+      |            |          |                   Allocated Fdio + fd, ‘open’ succeeds.
       v            v          v
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |

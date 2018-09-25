@@ -43,8 +43,9 @@ in this document) allows for service discovery through a filesystem interface.
 ### Establishing a Connection
 
 To open a file, Fuchsia programs (clients) send RPC requests to filesystem
-servers using a protocol called [RemoteIO](life_of_an_open.md#RemoteIO).
-RemoteIO defines a wire-format for transmitting messages and handles between a
+servers using a FIDL.
+
+FIDL defines the wire-format for transmitting messages and handles between a
 filesystem client and server. Instead of interacting with a kernel-implemented
 VFS layer, Fuchsia processes send requests to filesystem services which
 implement protocols for Files, Directories, and Devices. To send one of these
@@ -93,24 +94,23 @@ or service, subsequent operations are also transmitted using RPC messages.
 These messages are transmitted on one or more handles, using a wire format that
 the server validates and understands.
 
-In the case of files, directories, and devices, these operations use the
-RemoteIO protocol; in the case of services, these operations use the FIDL
-protocol, though there are plans to unify all operations into the FIDL protocol.
+In the case of files, directories, devices, and services, these operations use the
+FIDL protocol.
 
-As an example, to seek within a file, a client would send an `ZXRIO_SEEK`
-message with the desired position and “whence” within the RIO message, and the
-new seek position would be returned. To truncate a file, an `FDIO_TRUNCATE`
+As an example, to seek within a file, a client would send a `Seek`
+message with the desired position and “whence” within the FIDL message, and the
+new seek position would be returned. To truncate a file, a `Truncate`
 message could be sent with the new desired filesystem, and a status message
-would be returned. To read a directory, an `ZXRIO_READDIR` message could be
+would be returned. To read a directory, a `ReadDirents` message could be
 sent, and a list of direntries would be returned. If these requests were sent to
 a filesystem entity that can’t handle them, an error would be sent, and the
-operation would not be executed (like an `ZXRIO_READDIR` message sent to a text
+operation would not be executed (like a `ReadDirents` message sent to a text
 file).
 
 ### Memory Mapping
 
 For filesystems capable of supporting it, memory mapping files is slightly more
-complicated. To actually “mmap” part of a file, a client sends an “FDIO_MMAP”
+complicated. To actually “mmap” part of a file, a client sends an “GetVmo”
 message, and receives a Virtual Memory Object, or VMO, in response. This object
 is then typically mapped into the client’s address space using a Virtual Memory
 Address Region, or VMAR. Transmitting a limited view of the file’s internal
@@ -152,7 +152,7 @@ These multi-path operations do the following:
   * Open the parent source vnode (for “/foo/bar”, this means opening “/foo”)
   * Open the target parent vnode (for “baz”, this means opening the current
     working directory) and acquire a vnode token using the operation
-    `IOCTL_DEVMGR_GET_TOKEN`, which is a handle to a filesystem cookie.
+    `GetToken`, which is a handle to a filesystem cookie.
   * Send a “rename” request to the source parent vnode, along with the source
     and destination paths (“bar” and “baz”), along with the vnode token acquired
     earlier. This provides a mechanism for the filesystem to safely refer to the
