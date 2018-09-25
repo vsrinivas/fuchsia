@@ -5,7 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/i2c-impl.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
@@ -26,8 +26,7 @@
 typedef struct {
     zx_handle_t                     irq_handle;
     zx_handle_t                     event_handle;
-    io_buffer_t                     regs_iobuff;
-    void*                           virt_reg;
+    mmio_buffer_t                   regs_iobuff;
     zx_duration_t                   timeout;
 
     uint32_t                        tx_fifo_depth;
@@ -384,12 +383,12 @@ static zx_status_t i2c_dw_init(i2c_dw_t* i2c, uint32_t index) {
 
     device->timeout = ZX_SEC(10);
 
-    status = pdev_map_mmio_buffer(&i2c->pdev, index, ZX_CACHE_POLICY_UNCACHED_DEVICE, &device->regs_iobuff);
+    status = pdev_map_mmio_buffer2(&i2c->pdev, index, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &device->regs_iobuff);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: io_buffer_init_physical failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
         goto init_fail;
     }
-    device->virt_reg = io_buffer_virt(&device->regs_iobuff);
 
     status = pdev_map_interrupt(&i2c->pdev, index, &device->irq_handle);
     if (status != ZX_OK) {
@@ -415,7 +414,7 @@ static zx_status_t i2c_dw_init(i2c_dw_t* i2c, uint32_t index) {
 
 init_fail:
     if (device) {
-        io_buffer_release(&device->regs_iobuff);
+        mmio_buffer_release(&device->regs_iobuff);
         if (device->event_handle != ZX_HANDLE_INVALID) {
             zx_handle_close(device->event_handle);
         }
