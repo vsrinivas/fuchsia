@@ -5,6 +5,7 @@
         "garnet/packages/experimental/all",
         "garnet/packages/prod/all",
         "garnet/packages/sdk/all",
+        "garnet/packages/testing/all",
         "garnet/packages/tests/all",
         "garnet/packages/tools/all"
     ]
