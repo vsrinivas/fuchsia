@@ -209,9 +209,5 @@ package("config") {
       dest = "sysmgr/amber.config"
       path = rebase_path("startup.config")
     },
-    {
-      dest = "amber/sources/localhost/config.json"
-      path = rebase_path("etc/sources/localhost/config.json")
-    },
   ]
 }

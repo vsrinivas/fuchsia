@@ -383,14 +383,14 @@ func main() {
 			fmt.Printf("Error enabling source: %s", err)
 			os.Exit(1)
 		}
-		fmt.Printf("Source %q enabled", *name)
+		fmt.Printf("Source %q enabled\n", *name)
 	case "disable_src":
 		err := setSourceEnablement(proxy, *name, false)
 		if err != nil {
 			fmt.Printf("Error disabling source: %s", err)
 			os.Exit(1)
 		}
-		fmt.Printf("Source %q disabled", *name)
+		fmt.Printf("Source %q disabled\n", *name)
 	default:
 		log.Printf("Error, %q is not a recognized command\n%s",
 			os.Args[1], usage)

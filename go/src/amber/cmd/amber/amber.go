@@ -73,16 +73,22 @@ func main() {
 	defer d.CancelAll()
 
 	// Now that the daemon is up and running, we can register all of the
-	// system configured sources.
+	// system configured sources, if they exist.
 	//
 	// TODO(etryzelaar): Since these sources are only installed once,
 	// there's currently no way to upgrade them. PKG-82 is tracking coming
 	// up with a plan to address this.
 	if !storeExists {
-		log.Printf("initializing store: %s", *store)
+		defaultConfigsExist, err := exists(defaultSourceDir)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		if err := addDefaultSourceConfigs(d, defaultSourceDir); err != nil {
-			log.Fatalf("failed to register default sources: %s", err)
+		if defaultConfigsExist {
+			log.Printf("initializing store: %s", *store)
+			if err := addDefaultSourceConfigs(d, defaultSourceDir); err != nil {
+				log.Fatalf("failed to register default sources: %s", err)
+			}
 		}
 	}
 
