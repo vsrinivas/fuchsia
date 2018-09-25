@@ -1,5 +1,6 @@
 {
     "imports": [
+        "garnet/packages/prod/netcfg",
         "garnet/packages/prod/netstack"
     ],
     "packages": [
