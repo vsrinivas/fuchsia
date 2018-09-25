@@ -93,7 +93,7 @@ func roundTrip(ctx context.Context, transport tcpip.TransportProtocolNumber, ep 
 
 	// Write to endpoint.
 	for len(b) > 0 {
-		n, err := ep.Write(b, nil)
+		n, err := ep.Write(tcpip.SlicePayload(b), tcpip.WriteOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("dns: write: %v", err)
 		}
@@ -107,7 +107,7 @@ func roundTrip(ctx context.Context, transport tcpip.TransportProtocolNumber, ep 
 	wq.EventRegister(&waitEntry, waiter.EventIn)
 	defer wq.EventUnregister(&waitEntry)
 	for {
-		v, err := ep.Read(nil)
+		v, _, err := ep.Read(nil)
 		if err != nil {
 			if err == tcpip.ErrClosedForReceive {
 				break

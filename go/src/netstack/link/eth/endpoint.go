@@ -17,133 +17,107 @@ import (
 	"github.com/google/netstack/tcpip/stack"
 )
 
-const headerLength = 14
 const debug = false
 
-type linkEndpoint struct {
-	c *Client
+var _ stack.LinkEndpoint = (*endpoint)(nil)
 
-	vv    buffer.VectorisedView
-	views [1]buffer.View
+type endpoint struct {
+	client     *Client
+	dispatcher stack.NetworkDispatcher
 }
 
-func (ep *linkEndpoint) MTU() uint32             { return ep.c.Info.Mtu }
-func (ep *linkEndpoint) MaxHeaderLength() uint16 { return headerLength }
-func (ep *linkEndpoint) LinkAddress() tcpip.LinkAddress {
-	return tcpip.LinkAddress(ep.c.Info.Mac.Octets[:])
+func (e *endpoint) MTU() uint32 { return e.client.Info.Mtu }
+func (e *endpoint) Capabilities() stack.LinkEndpointCapabilities {
+	return stack.CapabilityResolutionRequired
+}
+func (e *endpoint) MaxHeaderLength() uint16 { return header.EthernetMinimumSize }
+func (e *endpoint) LinkAddress() tcpip.LinkAddress {
+	return tcpip.LinkAddress(e.client.Info.Mac.Octets[:])
 }
 
-// TODO(stijlist): modified from WritePacket below. These two implementations are the same except for where header and payload
-// are read.
-func (ep *linkEndpoint) WriteBuffer(r *stack.Route, payload *buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+func (e *endpoint) IsAttached() bool {
+	return e.dispatcher != nil
+}
+
+func (e *endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
 	trace.DebugTrace("eth write")
 
-	ethHdr := make([]byte, headerLength)
-	if r.RemoteLinkAddress == "" && r.RemoteAddress == "\xff\xff\xff\xff" {
-		r.RemoteLinkAddress = "\xff\xff\xff\xff\xff\xff"
+	eth := header.Ethernet(hdr.Prepend(header.EthernetMinimumSize))
+	ethHdr := &header.EthernetFields{
+		Type: protocol,
 	}
-	remoteLinkAddr := r.RemoteLinkAddress
-	if header.IsV4MulticastAddress(r.RemoteAddress) {
-		// RFC 1112.6.4
-		remoteLinkAddr = tcpip.LinkAddress([]byte{0x01, 0x00, 0x5e, r.RemoteAddress[1] & 0x7f, r.RemoteAddress[2], r.RemoteAddress[3]})
-	} else if header.IsV6MulticastAddress(r.RemoteAddress) {
-		// RFC 2464.7
-		remoteLinkAddr = tcpip.LinkAddress([]byte{0x33, 0x33, r.RemoteAddress[12], r.RemoteAddress[13], r.RemoteAddress[14], r.RemoteAddress[15]})
-	}
-
-	copy(ethHdr[0:], remoteLinkAddr)
-	// Allow callers to preserve link-layer source address.
-	// Useful for transparent bridging.
+	// Preserve the src address if it's set in the route.
 	if r.LocalLinkAddress != "" {
-		copy(ethHdr[6:], r.LocalLinkAddress)
+		ethHdr.SrcAddr = r.LocalLinkAddress
 	} else {
-		copy(ethHdr[6:], ep.c.Info.Mac.Octets[:])
+		ethHdr.SrcAddr = tcpip.LinkAddress(e.client.Info.Mac.Octets[:])
 	}
-	ethHdr[12] = uint8(protocol >> 8)
-	ethHdr[13] = uint8(protocol)
+	switch {
+	case header.IsV4MulticastAddress(r.RemoteAddress):
+		// RFC 1112.6.4
+		ethHdr.DstAddr = tcpip.LinkAddress([]byte{0x01, 0x00, 0x5e, r.RemoteAddress[1] & 0x7f, r.RemoteAddress[2], r.RemoteAddress[3]})
+	case header.IsV6MulticastAddress(r.RemoteAddress):
+		// RFC 2464.7
+		ethHdr.DstAddr = tcpip.LinkAddress([]byte{0x33, 0x33, r.RemoteAddress[12], r.RemoteAddress[13], r.RemoteAddress[14], r.RemoteAddress[15]})
+	default:
+		ethHdr.DstAddr = r.RemoteLinkAddress
+	}
+	eth.Encode(ethHdr)
 
-	pktlen := len(ethHdr) + payload.Size()
-	if pktlen < 60 {
-		pktlen = 60
-	}
-	var buf Buffer
 	for {
-		buf = ep.c.AllocForSend()
-		if buf != nil {
-			break
+		if buf := e.client.AllocForSend(); buf != nil {
+			used := copy(buf, hdr.View())
+			for _, v := range payload.Views() {
+				used += copy(buf[used:], v)
+			}
+			if err := e.client.Send(buf[:used]); err != nil {
+				trace.DebugDrop("link: send error: %v", err)
+				return tcpip.ErrWouldBlock
+			}
+			return nil
 		}
-		if err := ep.c.WaitSend(); err != nil {
-			trace.DebugDrop("Alloc error: pktlen %d payload len %d", pktlen, payload.Size())
-			log.Printf("link: alloc error: %v", err)
+		if err := e.client.WaitSend(); err != nil {
+			trace.DebugDrop("link: alloc error: %v", err)
 			return tcpip.ErrWouldBlock
 		}
 	}
-	buf = buf[:pktlen]
-	copy(buf, ethHdr)
-	used := len(ethHdr)
-	for _, v := range payload.Views() {
-		l := len(v)
-		copy(buf[used:], v)
-		used += l
-	}
-	if err := ep.c.Send(buf); err != nil {
-		trace.DebugDrop("Send error: pktlen %d payload len %d", pktlen, payload.Size())
-		if debug {
-			log.Printf("link: send error: %v", err)
-		}
-		return tcpip.ErrWouldBlock
-	}
-	return nil
 }
 
-func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, payload buffer.View, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
-	vs := []buffer.View{hdr.UsedBytes(), payload}
-	vv := buffer.NewVectorisedView(hdr.UsedLength()+len(payload), vs)
-	return ep.WriteBuffer(r, &vv, protocol)
-}
-
-func (ep *linkEndpoint) Attach(dispatcher stack.NetworkDispatcher) {
+func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	trace.DebugTraceDeep(5, "eth attach")
+
 	go func() {
-		if err := ep.dispatch(dispatcher); err != nil {
+		if err := func() error {
+			for {
+				b, err := e.client.Recv()
+				switch mxerror.Status(err) {
+				case zx.ErrOk:
+					// TODO: optimization: consider unpacking the destination link addr
+					// and checking that we are a destination (including multicast support).
+
+					eth := header.Ethernet(b)
+
+					// TODO: avoid the copy? currently results in breaking sftp.
+					v := buffer.NewViewFromBytes(b)
+					v.TrimFront(header.EthernetMinimumSize)
+
+					dispatcher.DeliverNetworkPacket(e, eth.SourceAddress(), eth.DestinationAddress(), eth.Type(), v.ToVectorisedView())
+
+					e.client.Free(b)
+				case zx.ErrShouldWait:
+					e.client.WaitRecv()
+				default:
+					return err
+				}
+			}
+		}(); err != nil {
 			log.Printf("dispatch error: %v", err)
 		}
 	}()
+
+	e.dispatcher = dispatcher
 }
 
-func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) (err error) {
-	for {
-		var b Buffer
-		for {
-			b, err = ep.c.Recv()
-			if mxerror.Status(err) != zx.ErrShouldWait {
-				break
-			}
-			ep.c.WaitRecv()
-		}
-		if err != nil {
-			return err
-		}
-		// TODO: use the Buffer as a buffer.View
-		v := make(buffer.View, len(b))
-		copy(v, b)
-		ep.views[0] = v
-		ep.vv.SetViews(ep.views[:])
-		ep.vv.SetSize(len(v))
-		ep.c.Free(b)
-
-		// TODO: optimization: consider unpacking the destination link addr
-		// and checking that we are a destination (including multicast support).
-
-		dstLinkAddr := tcpip.LinkAddress(v[:6])
-		srcLinkAddr := tcpip.LinkAddress(v[6:12])
-		p := tcpip.NetworkProtocolNumber(uint16(v[12])<<8 | uint16(v[13]))
-
-		ep.vv.TrimFront(headerLength)
-		d.DeliverNetworkPacket(ep, dstLinkAddr, srcLinkAddr, p, &ep.vv)
-	}
-}
-
-func NewLinkEndpoint(c *Client) *linkEndpoint {
-	return &linkEndpoint{c: c}
+func NewLinkEndpoint(client *Client) *endpoint {
+	return &endpoint{client: client}
 }

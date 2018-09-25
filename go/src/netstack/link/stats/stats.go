@@ -45,17 +45,19 @@ func (e *StatsEndpoint) Wrap(lower tcpip.LinkEndpointID) tcpip.LinkEndpointID {
 // DeliverNetworkPacket handles incoming packet from the lower layer.
 // It performs packet inspection, and extract a rich set of statistics,
 // and stores them to a FIDL data structure.
-func (e *StatsEndpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, remoteLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv *buffer.VectorisedView) {
-	e.Stats.Rx.PktsTotal += 1
-	e.Stats.Rx.BytesTotal += uint64(vv.Size())
+func (e *StatsEndpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, remoteLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
 	e.analyzeTrafficStats(&e.Stats.Rx, protocol, vv.First(), vv.Size())
 	e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, remoteLinkAddr, protocol, vv)
 }
 
-// Attach implements registaion of lower endpoint and dispatcher.
+// Attach implements registration of lower endpoint and dispatcher.
 func (e *StatsEndpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	e.dispatcher = dispatcher
 	e.lower.Attach(e)
+}
+
+func (e *StatsEndpoint) Capabilities() stack.LinkEndpointCapabilities {
+	return e.lower.Capabilities()
 }
 
 // MTU direcly directly uses lower layer MTU().
@@ -73,31 +75,22 @@ func (e *StatsEndpoint) LinkAddress() tcpip.LinkAddress {
 	return e.lower.LinkAddress()
 }
 
-// WriteBuffer handles outgoing packet from the higher layer.
-// It inspects headers and modifies endpoint statistics.
-func (e *StatsEndpoint) WriteBuffer(r *stack.Route, vv *buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
-	if le, ok := e.lower.(stack.BufferWritingLinkEndpoint); ok {
-		e.Stats.Tx.PktsTotal += 1
-		e.Stats.Tx.BytesTotal += uint64(vv.Size())
-		e.analyzeTrafficStats(&e.Stats.Tx, protocol, vv.First(), vv.Size())
-		return le.WriteBuffer(r, vv, protocol)
-	}
-	panic("wrapped link endpoint does not implement WriteBuffer")
+func (e *StatsEndpoint) IsAttached() bool {
+	return e.lower.IsAttached()
 }
 
 // WritePacket handles outgoing packet from the higher layer.
 // It performs packet inspection, and extracts a rich set of statistics,
 // and stores them to a FIDL data structure.
-func (e *StatsEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, payload buffer.View, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
-	raw := hdr.UsedBytes()
-	size := len(payload) + len(raw)
-	e.Stats.Tx.PktsTotal += 1
-	e.Stats.Tx.BytesTotal += uint64(size)
-	e.analyzeTrafficStats(&e.Stats.Tx, protocol, raw, size)
+func (e *StatsEndpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+	e.analyzeTrafficStats(&e.Stats.Tx, protocol, hdr.View(), hdr.UsedLength()+payload.Size())
 	return e.lower.WritePacket(r, hdr, payload, protocol)
 }
 
 func (e *StatsEndpoint) analyzeTrafficStats(ts *nsfidl.NetTrafficStats, protocol tcpip.NetworkProtocolNumber, hdr []byte, packetSize int) {
+	ts.PktsTotal += 1
+	ts.BytesTotal += uint64(packetSize)
+
 	switch protocol {
 	case header.IPv4ProtocolNumber:
 		ipPkt := header.IPv4(hdr)
