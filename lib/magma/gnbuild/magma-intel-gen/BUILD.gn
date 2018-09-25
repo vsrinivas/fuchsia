@@ -100,12 +100,28 @@ package("tests") {
       "//garnet/drivers/gpu/msd-intel-gen/tests/integration",
     ]
 
+    # Target environments with an Intel GPU.
+    intel_gpu_envs = [
+      {
+        device = {
+          type = "Intel NUC Kit NUC6i3SYK"
+        }
+      },
+      {
+        device = {
+          type = "Intel NUC Kit NUC7i5DNHE"
+        }
+      },
+    ]
+
     tests = [
       {
         name = "test_wsi_magma"
+        environments = intel_gpu_envs
       },
       {
         name = "msd_intel_gen_integration_tests"
+        environments = intel_gpu_envs
       },
     ]
 
