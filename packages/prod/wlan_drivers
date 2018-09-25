@@ -7,8 +7,5 @@
         "garnet/packages/prod/wlanif",
         "garnet/packages/prod/wlanphy",
         "garnet/packages/prod/wlantap"
-    ],
-    "packages": [
-        "//garnet/drivers/wlan/wlan"
     ]
 }
