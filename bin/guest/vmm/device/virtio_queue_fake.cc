@@ -51,14 +51,20 @@ void VirtioQueueFake::Configure(zx_gpaddr_t data_addr, size_t data_len) {
   data_end_ = data_addr + data_len;
 }
 
-zx_status_t VirtioQueueFake::WriteDesc(void* buf, uint32_t len, uint16_t flags,
+zx_status_t VirtioQueueFake::WriteDesc(void** buf, uint32_t len, uint16_t flags,
                                        uint16_t* desc_idx) {
   *desc_idx = next_desc_++;
   if (*desc_idx >= ring_.size || data_begin_ + len >= data_end_) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  memcpy(phys_mem_.as<void>(data_begin_, len), buf, len);
+  void* data = phys_mem_.as<void>(data_begin_, len);
+  if (flags & VRING_DESC_F_WRITE) {
+    *buf = data;
+  } else {
+    memcpy(data, *buf, len);
+  }
+
   auto& desc = const_cast<volatile vring_desc&>(ring_.desc[*desc_idx]);
   desc.addr = data_begin_;
   desc.len = len;
@@ -89,7 +95,7 @@ DescriptorChainBuilder::DescriptorChainBuilder(VirtioQueueFake& queue_fake)
     : queue_fake_(queue_fake) {}
 
 DescriptorChainBuilder& DescriptorChainBuilder::AppendDescriptor(
-    void* buf, uint32_t len, uint16_t flags) {
+    void** buf, uint32_t len, uint16_t flags) {
   if (status_ != ZX_OK) {
     return *this;
   }
@@ -109,11 +115,11 @@ DescriptorChainBuilder& DescriptorChainBuilder::AppendDescriptor(
 
 DescriptorChainBuilder& DescriptorChainBuilder::AppendReadableDescriptor(
     const void* buf, uint32_t len) {
-  return AppendDescriptor(const_cast<void*>(buf), len, 0);
+  return AppendDescriptor(const_cast<void**>(&buf), len, 0);
 }
 
 DescriptorChainBuilder& DescriptorChainBuilder::AppendWritableDescriptor(
-    void* buf, uint32_t len) {
+    void** buf, uint32_t len) {
   return AppendDescriptor(buf, len, VRING_DESC_F_WRITE);
 }
 

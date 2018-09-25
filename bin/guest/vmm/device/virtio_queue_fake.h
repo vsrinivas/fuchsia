@@ -33,7 +33,7 @@ class VirtioQueueFake {
   zx_gpaddr_t data_end_ = 0;
   uint16_t next_desc_ = 0;
 
-  zx_status_t WriteDesc(void* buf, uint32_t len, uint16_t flags,
+  zx_status_t WriteDesc(void** buf, uint32_t len, uint16_t flags,
                         uint16_t* desc_idx);
   void WriteAvail(uint16_t head_idx);
   zx_status_t SetNext(uint16_t desc_idx, uint16_t next_idx);
@@ -48,7 +48,7 @@ class DescriptorChainBuilder {
 
   DescriptorChainBuilder& AppendReadableDescriptor(const void* buf,
                                                    uint32_t len);
-  DescriptorChainBuilder& AppendWritableDescriptor(void* buf, uint32_t len);
+  DescriptorChainBuilder& AppendWritableDescriptor(void** buf, uint32_t len);
 
   zx_status_t Build();
 
@@ -59,7 +59,7 @@ class DescriptorChainBuilder {
   uint16_t head_idx_ = 0;
   zx_status_t status_ = ZX_OK;
 
-  DescriptorChainBuilder& AppendDescriptor(void* buf, uint32_t len,
+  DescriptorChainBuilder& AppendDescriptor(void** buf, uint32_t len,
                                            uint16_t flags);
 };
 
