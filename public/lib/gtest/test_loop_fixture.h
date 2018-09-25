@@ -75,6 +75,9 @@ class TestLoopFixture : public ::testing::Test {
     return [this] { loop_.Quit(); };
   }
 
+  // Accessor for the underlying TestLoop.
+  async::TestLoop& test_loop() { return loop_; }
+
  private:
   // The test message loop for the test fixture.
   async::TestLoop loop_;
