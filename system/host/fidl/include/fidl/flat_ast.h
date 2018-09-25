@@ -51,7 +51,7 @@ struct Name {
         }
         return name_.data() == other.name_.data();
     }
-    bool operator!=(const Name& other) const { return name_.data() != other.name_.data(); }
+    bool operator!=(const Name& other) const { return !operator==(other); }
 
     bool operator<(const Name& other) const {
         if (LibraryName(library_, ".") != LibraryName(other.library_, ".")) {
@@ -483,6 +483,7 @@ public:
     // Lookup a library by its |library_name|.
     bool Lookup(const std::vector<StringView>& library_name,
                 Library** out_library) const;
+
 private:
     std::map<std::vector<StringView>, std::unique_ptr<Library>> all_libraries_;
 };
@@ -493,7 +494,7 @@ public:
     // will be referenced by its name, and may also be optionally be referenced
     // by an alias.
     bool Register(StringView filename, Library* dep_library,
-                 const std::unique_ptr<raw::Identifier>& maybe_alias);
+                  const std::unique_ptr<raw::Identifier>& maybe_alias);
 
     // Lookup a dependent library by |filename| and |name|.
     bool Lookup(StringView filename, const std::vector<StringView>& name,

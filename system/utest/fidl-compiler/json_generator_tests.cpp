@@ -16,13 +16,20 @@
 
 namespace {
 
-static inline void trim(std::string &s) {
+// We repeat each test in a loop in order to catch situations where memory layout
+// determines what JSON is produced (this is often manifested due to using a std::map<Foo*,...>
+// in compiler source code).
+static const int kRepeatTestCount = 100;
+
+static inline void trim(std::string& s) {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
-        return !std::isspace(ch) && ch != '\n';
-    }));
+                return !std::isspace(ch) && ch != '\n';
+            }));
     s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-        return !std::isspace(ch) && ch != '\n';
-    }).base(), s.end());
+                return !std::isspace(ch) && ch != '\n';
+            })
+                .base(),
+            s.end());
 }
 
 bool checkJSONGenerator(std::string raw_source_code, std::string expected_json) {
@@ -57,7 +64,8 @@ bool checkJSONGenerator(std::string raw_source_code, std::string expected_json) 
 bool json_generator_test_simple() {
     BEGIN_TEST;
 
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        EXPECT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 struct Simple {
@@ -65,7 +73,8 @@ struct Simple {
     bool f2;
 };
 
-)FIDL", R"JSON(
+)FIDL",
+                                       R"JSON(
 {
   "version": "0.0.1",
   "name": "fidl.test.json",
@@ -114,6 +123,7 @@ struct Simple {
   }
 }
 )JSON"));
+    }
 
     END_TEST;
 }
@@ -121,7 +131,8 @@ struct Simple {
 bool json_generator_test_union() {
     BEGIN_TEST;
 
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        EXPECT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 struct Pizza {
@@ -137,7 +148,8 @@ union PizzaOrPasta {
     Pasta pasta;
 };
 
-)FIDL", R"JSON(
+)FIDL",
+                                       R"JSON(
 {
   "version": "0.0.1",
   "name": "fidl.test.json",
@@ -224,8 +236,8 @@ union PizzaOrPasta {
     }
   ],
   "declaration_order": [
-    "fidl.test.json/Pasta",
     "fidl.test.json/Pizza",
+    "fidl.test.json/Pasta",
     "fidl.test.json/PizzaOrPasta"
   ],
   "declarations": {
@@ -235,6 +247,7 @@ union PizzaOrPasta {
   }
 }
 )JSON"));
+    }
 
     END_TEST;
 }

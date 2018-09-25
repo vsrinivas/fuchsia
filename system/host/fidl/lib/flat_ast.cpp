@@ -292,7 +292,7 @@ bool Libraries::Insert(std::unique_ptr<Library> library) {
 }
 
 bool Libraries::Lookup(const std::vector<StringView>& library_name,
-                          Library** out_library) const {
+                       Library** out_library) const {
     auto iter = all_libraries_.find(library_name);
     if (iter == all_libraries_.end()) {
         return false;
@@ -1109,11 +1109,21 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     return true;
 }
 
+namespace {
+// To compare two Decl's in the same library, it suffices to compare the unqualified names of the Decl's.
+struct CmpDeclInLibrary {
+    bool operator()(const Decl* a, const Decl* b) const {
+        assert(a->name != b->name || a == b);
+        return a->name < b->name;
+    }
+};
+} // namespace
+
 bool Library::SortDeclarations() {
     // |degree| is the number of undeclared dependencies for each decl.
-    std::map<Decl*, uint32_t> degrees;
+    std::map<Decl*, uint32_t, CmpDeclInLibrary> degrees;
     // |inverse_dependencies| records the decls that depend on each decl.
-    std::map<Decl*, std::vector<Decl*>> inverse_dependencies;
+    std::map<Decl*, std::vector<Decl*>, CmpDeclInLibrary> inverse_dependencies;
     for (auto& name_and_decl : declarations_) {
         Decl* decl = name_and_decl.second;
         degrees[decl] = 0u;
