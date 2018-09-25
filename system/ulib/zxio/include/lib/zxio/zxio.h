@@ -146,7 +146,7 @@ zx_status_t zxio_seek(zxio_t* io, size_t offset,
                       zxio_seek_origin_t start, size_t* out_offset);
 
 // Shrink the file size to |length| bytes.
-zx_status_t zxio_trucate(zxio_t* io, size_t length);
+zx_status_t zxio_truncate(zxio_t* io, size_t length);
 
 // Returns the flags associated with the file.
 //

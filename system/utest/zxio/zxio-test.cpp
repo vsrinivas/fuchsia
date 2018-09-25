@@ -7,11 +7,7 @@
 
 #include <unittest/unittest.h>
 
-typedef struct myctx {
-    uint64_t value[4];
-} myctx_t;
-
-static zx_status_t my_close(void* ctx) {
+static zx_status_t my_close(zxio_t* io) {
     return ZX_OK;
 }
 
@@ -22,14 +18,9 @@ bool ctx_test(void) {
     memset(&ops, 0, sizeof(ops));
     ops.close = my_close;
 
-    zxio_t* file;
-    zx_status_t status = zxio_alloc(&ops, sizeof(myctx_t), &file);
-    ASSERT_EQ(ZX_OK, status);
-    myctx_t ctx_zero = {};
-    myctx_t* ctx_file = static_cast<myctx_t*>(zxio_ctx_get(file));
-    EXPECT_EQ(0, memcmp(ctx_file, &ctx_zero, sizeof(myctx_t)));
-    status = zxio_close(file);
-    ASSERT_EQ(ZX_OK, status);
+    zxio_t io = {};
+    zxio_init(&io, &ops);
+    ASSERT_EQ(ZX_OK, zxio_close(&io));
 
     END_TEST;
 }

@@ -313,7 +313,7 @@ zx_status_t fidl_link(zxrio_t* rio, const char* src, size_t srclen,
     return status;
 }
 
-zx_status_t fidl_ioctl(zxrio_t* rio, uint32_t op, const void* in_buf,
+zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,
                        size_t in_len, void* out_buf, size_t out_len,
                        size_t* out_actual) {
     size_t in_handle_count = 0;
@@ -346,7 +346,7 @@ zx_status_t fidl_ioctl(zxrio_t* rio, uint32_t op, const void* in_buf,
     zx_handle_t hbuf[out_handle_count];
     size_t out_handle_actual;
     zx_status_t io_status, status;
-    if ((io_status = fuchsia_io_NodeIoctl(zxrio_handle(rio), op,
+    if ((io_status = fuchsia_io_NodeIoctl(h, op,
                                           out_len, (zx_handle_t*) in_buf,
                                           in_handle_count, in_buf,
                                           in_len, &status, hbuf,

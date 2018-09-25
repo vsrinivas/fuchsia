@@ -32,6 +32,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vmofile.c \
     $(LOCAL_DIR)/waitable.c \
     $(LOCAL_DIR)/watcher.c \
+    $(LOCAL_DIR)/zxio.c \
 
 MODULE_EXPORT := so
 
@@ -44,7 +45,9 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-process
 
 MODULE_STATIC_LIBS := \
-    system/ulib/fidl
+    system/ulib/fidl \
+    system/ulib/zxio \
+    system/ulib/zx
 
 MODULE_LIBS := system/ulib/zircon \
     system/ulib/c

@@ -44,11 +44,13 @@ zx_status_t fidl_rename(zxrio_t* rio, const char* src, size_t srclen,
                         zx_handle_t dst_token, const char* dst, size_t dstlen);
 zx_status_t fidl_link(zxrio_t* rio, const char* src, size_t srclen,
                       zx_handle_t dst_token, const char* dst, size_t dstlen);
-zx_status_t fidl_ioctl(zxrio_t* rio, uint32_t op, const void* in_buf,
-                       size_t in_len, void* out_buf, size_t out_len,
-                       size_t* out_actual);
 zx_status_t fidl_getvmo(zxrio_t* rio, uint32_t flags, zx_handle_t* out);
 zx_status_t fidl_getflags(zxrio_t* rio, uint32_t* outflags);
 zx_status_t fidl_setflags(zxrio_t* rio, uint32_t flags);
+
+// TODO(abarth): Remove all these functions once FDIO is rehosted on ZXIO.
+zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,
+                       size_t in_len, void* out_buf, size_t out_len,
+                       size_t* out_actual);
 
 __END_CDECLS

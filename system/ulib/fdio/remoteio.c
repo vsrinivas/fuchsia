@@ -251,7 +251,7 @@ static ssize_t zxrio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
         return ZX_ERR_INVALID_ARGS;
     }
     size_t actual;
-    zx_status_t status = fidl_ioctl(rio, op, in_buf, in_len, out_buf, out_len, &actual);
+    zx_status_t status = fidl_ioctl(rio->h, op, in_buf, in_len, out_buf, out_len, &actual);
     if (status != ZX_OK) {
         return status;
     }
@@ -870,8 +870,13 @@ fdio_ops_t zx_remote_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
+#define FDIO_USE_ZXIO 0
+
 __EXPORT
 fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event) {
+#if FDIO_USE_ZXIO
+    return fdio_zxio_create_remote(h, event);
+#else
     zxrio_t* rio = fdio_alloc(sizeof(*rio));
     if (rio == NULL) {
         zx_handle_close(h);
@@ -884,4 +889,5 @@ fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event) {
     rio->h = h;
     rio->event = event;
     return &rio->io;
+#endif
 }
