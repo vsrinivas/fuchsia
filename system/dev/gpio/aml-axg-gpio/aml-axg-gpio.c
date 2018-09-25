@@ -9,6 +9,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
@@ -24,11 +25,15 @@
 #define BITS_PER_GPIO_INTERRUPT         8
 #define BITS_PER_FILTER_SELECT          4
 
-#define READ32_GPIO_REG(index, offset)              readl(io_buffer_virt(&gpio->mmios[index]) + offset*4)
-#define WRITE32_GPIO_REG(index, offset, value)      writel(value, io_buffer_virt(&gpio->mmios[index]) + offset*4)
+#define READ32_GPIO_REG(index, offset) \
+        readl((uint32_t*)gpio->mmios[index].vaddr + offset)
+#define WRITE32_GPIO_REG(index, offset, value) \
+        writel(value, (uint32_t*)gpio->mmios[index].vaddr + offset)
 
-#define READ32_GPIO_INTERRUPT_REG(offset)           readl(io_buffer_virt(&gpio->mmio_interrupt) + offset*4)
-#define WRITE32_GPIO_INTERRUPT_REG(offset, value)   writel(value, io_buffer_virt(&gpio->mmio_interrupt) + offset*4)
+#define READ32_GPIO_INTERRUPT_REG(offset) \
+        readl((uint32_t*)gpio->mmio_interrupt.vaddr + offset)
+#define WRITE32_GPIO_INTERRUPT_REG(offset, value) \
+        writel(value, (uint32_t*)gpio->mmio_interrupt.vaddr + offset)
 
 
 typedef struct {
@@ -64,8 +69,8 @@ typedef struct {
     platform_device_protocol_t pdev;
     gpio_impl_protocol_t gpio;
     zx_device_t* zxdev;
-    io_buffer_t mmios[2];    // separate MMIO for AO domain
-    io_buffer_t mmio_interrupt;
+    mmio_buffer_t mmios[2];    // separate MMIO for AO domain
+    mmio_buffer_t mmio_interrupt;
     aml_gpio_block_t* gpio_blocks;
     aml_gpio_interrupt_t* gpio_interrupt;
     size_t block_count;
@@ -428,9 +433,9 @@ static gpio_impl_protocol_ops_t gpio_ops = {
 
 static void aml_gpio_release(void* ctx) {
     aml_gpio_t* gpio = ctx;
-    io_buffer_release(&gpio->mmios[MMIO_GPIO]);
-    io_buffer_release(&gpio->mmios[MMIO_GPIO_A0]);
-    io_buffer_release(&gpio->mmio_interrupt);
+    mmio_buffer_release(&gpio->mmios[MMIO_GPIO]);
+    mmio_buffer_release(&gpio->mmios[MMIO_GPIO_A0]);
+    mmio_buffer_release(&gpio->mmio_interrupt);
     free(gpio->gpio_interrupt->irq_info);
     free(gpio);
 }
@@ -460,22 +465,22 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer(&gpio->pdev, MMIO_GPIO, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                    &gpio->mmios[MMIO_GPIO]);
+    status = pdev_map_mmio_buffer2(&gpio->pdev, MMIO_GPIO, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &gpio->mmios[MMIO_GPIO]);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_gpio_bind: pdev_map_mmio_buffer failed\n");
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer(&gpio->pdev, MMIO_GPIO_A0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                    &gpio->mmios[MMIO_GPIO_A0]);
+    status = pdev_map_mmio_buffer2(&gpio->pdev, MMIO_GPIO_A0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &gpio->mmios[MMIO_GPIO_A0]);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_gpio_bind: pdev_map_mmio_buffer failed\n");
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer(&gpio->pdev, MMIO_GPIO_INTERRUPTS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                    &gpio->mmio_interrupt);
+    status = pdev_map_mmio_buffer2(&gpio->pdev, MMIO_GPIO_INTERRUPTS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &gpio->mmio_interrupt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_gpio_bind: pdev_map_mmio_buffer failed\n");
         goto fail;
