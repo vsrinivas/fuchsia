@@ -36,6 +36,7 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
+    "//garnet/public/lib/timekeeper:testing",
     "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/fidl/include",
     "//peridot/lib/convert",

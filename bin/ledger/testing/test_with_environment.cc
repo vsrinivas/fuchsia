@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 
 #include <lib/fit/function.h>
+#include <lib/timekeeper/test_clock.h>
 
 namespace ledger {
 
@@ -54,6 +55,7 @@ TestWithEnvironment::TestWithEnvironment()
     : environment_(EnvironmentBuilder()
                        .SetAsync(dispatcher())
                        .SetIOAsync(dispatcher())
+                       .SetClock(std::make_unique<timekeeper::TestClock>())
                        .Build()) {}
 
 void TestWithEnvironment::RunInCoroutine(

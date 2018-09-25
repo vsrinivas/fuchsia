@@ -13,6 +13,7 @@
 #include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
+#include <lib/timekeeper/test_clock.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
@@ -44,6 +45,7 @@ Environment BuildEnvironment(async_dispatcher_t* dispatcher) {
         return std::make_unique<backoff::ExponentialBackoff>(
             kBackoffDuration, 1u, kBackoffDuration);
       })
+      .SetClock(std::make_unique<timekeeper::TestClock>())
       .Build();
 }
 
