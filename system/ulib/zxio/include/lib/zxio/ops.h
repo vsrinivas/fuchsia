@@ -27,16 +27,16 @@ typedef struct zxio_ops zxio_ops_t;
 //
 // The memory allocated by this function is freed by calling either
 // |zxio_release| or |zxio_close|.
-zx_status_t zxio_alloc(const zxio_ops_t* ops, size_t ctx_size, zxio_t** out_file);
+zx_status_t zxio_alloc(const zxio_ops_t* ops, size_t ctx_size, zxio_t** out_io);
 
-// Returns a pointer to the |ctx| object embedded in the given |file|.
+// Returns a pointer to the |ctx| object embedded in the given |io|.
 //
 // The |ctx| object is private storage for use by the caller of |zxio_alloc|
 // and should not be accessed or modified by other clients.
 //
 // The |ctx| object is guaranteed to have 16 byte alignment.
-static inline void* zxio_ctx_get(zxio_t* file) {
-    return ((char*)file) + 4 * sizeof(void*);
+static inline void* zxio_ctx_get(zxio_t* io) {
+    return ((char*)io) + 4 * sizeof(uint64_t);
 }
 
 struct zxio_ops {
@@ -67,7 +67,7 @@ struct zxio_ops {
     zx_status_t (*vmo_get)(void* ctx, uint32_t flags, zx_handle_t* out_vmo,
                            size_t* out_size);
     zx_status_t (*open)(void* ctx, uint32_t flags, uint32_t mode,
-                        const char* path, zxio_t** out_file);
+                        const char* path, zxio_t** out_io);
     zx_status_t (*open_async)(void* ctx, uint32_t flags, uint32_t mode,
                               const char* path, zx_handle_t request);
     zx_status_t (*unlink)(void* ctx, const char* path);
