@@ -233,9 +233,9 @@ TEST_F(ExprNodeTest, UnaryMinus) {
   EXPECT_EQ(ExprValue(), out_value);
 }
 
-// This test mocks at the SymbolDataProdiver level because most of the
+// This test mocks at the SymbolDataProvider level because most of the
 // dereference logic is in the SymbolEvalContext.
-TEST_F(ExprNodeTest, DereferenceReference) {
+TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
       SymbolContext::ForRelativeAddresses(), data_provider,
@@ -341,6 +341,8 @@ TEST_F(ExprNodeTest, DereferenceReference) {
   EXPECT_EQ("Invalid pointer 0x0", out_err.msg());
 }
 
+// This also tests ExprNode::EvalFollowReferences() by making the index a
+// reference type.
 TEST_F(ExprNodeTest, ArrayAccess) {
   // The base address of the array (of type uint32_t*).
   auto uint32_type =
@@ -352,9 +354,18 @@ TEST_F(ExprNodeTest, ArrayAccess) {
                           {0x78, 0x56, 0x34, 0x12, 0x00, 0x00, 0x00, 0x00});
   auto pointer_node = fxl::MakeRefCounted<TestExprNode>(false, pointer_value);
 
-  // The index of the array access.
-  constexpr uint32_t kIndex = 5;
-  auto index = fxl::MakeRefCounted<TestExprNode>(false, ExprValue(kIndex));
+  // The index value (= 5) lives in memory as a 32-bit little-endian value.
+  constexpr uint64_t kRefAddress = 0x5000;
+  constexpr uint8_t kIndex = 5;
+  auto context = fxl::MakeRefCounted<TestEvalContext>();
+  context->data_provider()->AddMemory(kRefAddress, { kIndex, 0, 0, 0 });
+
+  // The index expression is a reference to the index we saved above, and the
+  // reference data is the address.
+  auto uint32_ref_type = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagReferenceType, LazySymbol(uint32_type));
+  auto index = fxl::MakeRefCounted<TestExprNode>(false,
+      ExprValue(uint32_ref_type, {0, 0x50, 0, 0, 0, 0, 0, 0}));
 
   // The node to evaluate the access. Note the pointer are index nodes are
   // moved here so the source reference is gone. This allows us to test that
@@ -365,7 +376,6 @@ TEST_F(ExprNodeTest, ArrayAccess) {
   // We expect it to read @ kAddress[kIndex]. Insert a value there.
   constexpr uint64_t kExpectedAddr = kAddress + 4 * kIndex;
   constexpr uint32_t kExpectedValue = 0x11223344;
-  auto context = fxl::MakeRefCounted<TestEvalContext>();
   context->data_provider()->AddMemory(kExpectedAddr, {0x44, 0x33, 0x22, 0x11});
 
   // Execute.

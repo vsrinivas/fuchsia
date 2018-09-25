@@ -67,8 +67,20 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   // normally be done by having the tree be owned by the callback itself. If
   // this is causing memory lifetime problems, we should switch nodes to be
   // reference counted.
+  //
+  // See also EvalFollowReferences below.
   virtual void Eval(fxl::RefPtr<ExprEvalContext> context,
                     EvalCallback cb) const = 0;
+
+  // Like "Eval" but expands all references to the values they point to. When
+  // evaluating a subexpression this is the variant you want because without
+  // it the ExprValue in the callback will be the reference, which just
+  // contains the address of the value you want.
+  //
+  // The time you wouldn't want this is when calling externally where the
+  // caller wants to know the actual type the expression evaluated to.
+  void EvalFollowReferences(fxl::RefPtr<ExprEvalContext> context,
+                            EvalCallback cb) const;
 
   // Dumps the tree to a stream with the given indent. Used for unit testing
   // and debugging.
