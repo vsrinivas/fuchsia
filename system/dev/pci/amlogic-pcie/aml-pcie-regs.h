@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <hwreg/bitfields.h>
+#include <hwreg/mmio.h>
 #include <zircon/compiler.h>
 
 #pragma once
@@ -66,9 +68,17 @@
 #define PCI_TYPE1_BAR0  (0x10)
 #define PCI_TYPE1_BAR1  (0x14)
 
-typedef struct pci_bus_reg {
-    uint8_t primary_bus;
-    uint8_t secondary_bus;
-    uint8_t subordinate_bus;
-    uint8_t secondary_lat_timer;
-}  __PACKED pci_bus_reg_t;
+namespace pcie {
+namespace aml {
+
+class PciBusReg : public hwreg::RegisterBase<PciBusReg, uint32_t> {
+  public:
+    DEF_FIELD(31, 24, secondary_lat_timer);
+    DEF_FIELD(23, 16, subordinate_bus);
+    DEF_FIELD(15, 8, secondary_bus);
+    DEF_FIELD(7, 0, primary_bus);
+    static auto Get() {return hwreg::RegisterAddr<PciBusReg>(PCIE_HEADER_BUS_REG_OFF); }
+};
+
+}  // namespace aml
+}  // namespace pcie

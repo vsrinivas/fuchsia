@@ -5,16 +5,21 @@
 #pragma once
 
 #include <stdint.h>
+
+#include <ddktl/mmio.h>
+#include <fbl/unique_ptr.h>
 #include <zircon/types.h>
+
 #include <dev/pci/designware/atu-cfg.h>
 
 namespace pcie {
 namespace designware {
 
 class DwPcie {
-  protected:
-    DwPcie(void* dbi, void* cfg, const uint32_t nLanes)
-        : dbi_(dbi), cfg_(cfg), nLanes_(nLanes) {}
+protected:
+    DwPcie(fbl::unique_ptr<ddk::MmioBuffer> dbi, fbl::unique_ptr<ddk::MmioBuffer> cfg,
+           const uint32_t nLanes)
+        : dbi_(fbl::move(dbi)), cfg_(fbl::move(cfg)), nLanes_(nLanes) {}
     virtual ~DwPcie() {}
 
     virtual bool IsLinkUp();
@@ -25,19 +30,18 @@ class DwPcie {
     zx_status_t SetupRootComplex(
         const iatu_translation_entry_t* cfg,
         const iatu_translation_entry_t* io,
-        const iatu_translation_entry_t* mem
-    );
+        const iatu_translation_entry_t* mem);
 
-    volatile void* dbi_;
-    volatile void* cfg_;
+    fbl::unique_ptr<ddk::MmioBuffer> dbi_;
+    fbl::unique_ptr<ddk::MmioBuffer> cfg_;
     const uint32_t nLanes_;
 
-  private:
+private:
     void LinkSpeedChange();
     zx_status_t ProgramOutboundAtu(const uint32_t index, const uint32_t type,
                                    const zx_paddr_t cpu_addr,
                                    const uintptr_t pci_addr, const size_t sz);
 };
 
-}  // namespace designware
-}  // namespace pcie
+} // namespace designware
+} // namespace pcie

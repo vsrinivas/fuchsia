@@ -27,10 +27,7 @@ namespace pcie {
 namespace designware {
 
 bool DwPcie::IsLinkUp() {
-    volatile uint8_t* dbi = reinterpret_cast<volatile uint8_t*>(dbi_);
-    hwreg::RegisterIo phyDebugR1mmio(dbi + PortLogic::DebugR1Offset);
-
-    auto phyDebugR1 = PortLogic::DebugR1::Get().ReadFrom(&phyDebugR1mmio);
+    auto phyDebugR1 = PortLogic::DebugR1::Get().ReadFrom(dbi_.get());
 
     const bool isLinkUp = phyDebugR1.link_up();
     const bool isLinkTraining = phyDebugR1.link_in_training();
@@ -39,15 +36,12 @@ bool DwPcie::IsLinkUp() {
 }
 
 uint32_t DwPcie::ReadRC(const uint32_t offset) {
-    volatile uint8_t* dbi = reinterpret_cast<volatile uint8_t*>(dbi_);
-    return readl(dbi + offset);
+    return dbi_->Read32(offset);
 }
 
 void DwPcie::WriteRC(const uint32_t offset, const uint32_t val) {
-    volatile uint8_t* dbi = reinterpret_cast<volatile uint8_t*>(dbi_);
-    writel(val, dbi + offset);
+    return dbi_->Write32(val, offset);
 }
-
 
 /*
  * Program a region into the outbound ATU
@@ -71,7 +65,7 @@ zx_status_t DwPcie::ProgramOutboundAtu(const uint32_t index,
     // DBI base
     const size_t bank_offset = (0x3 << 20) | (index << 9);
     volatile uint8_t* atu_base =
-        reinterpret_cast<volatile uint8_t*>(dbi_) + bank_offset;
+        reinterpret_cast<volatile uint8_t*>(dbi_->get()) + bank_offset;
 
     volatile atu_ctrl_regs_t* regs =
         reinterpret_cast<volatile atu_ctrl_regs_t*>(atu_base);
@@ -111,12 +105,7 @@ zx_status_t DwPcie::ProgramOutboundAtu(const uint32_t index,
 }
 
 void DwPcie::LinkSpeedChange() {
-    volatile uint8_t* elbi = reinterpret_cast<volatile uint8_t*>(dbi_);
-    volatile uint8_t* reg = elbi + GEN2_CTRL_OFF;
-
-    uint32_t val = readl(reg);
-    val |= G2_CTRL_DIRECT_SPEED_CHANGE;
-    writel(val, reg);
+    dbi_->SetBits32(G2_CTRL_DIRECT_SPEED_CHANGE, GEN2_CTRL_OFF);
 }
 
 zx_status_t DwPcie::SetupRootComplex(
@@ -124,9 +113,8 @@ zx_status_t DwPcie::SetupRootComplex(
     const iatu_translation_entry_t* io,
     const iatu_translation_entry_t* mem
 ) {
-    uint32_t val;
     uint32_t portLinkMode = 0;
-    uint32_t g2ctrlNoOfLanes = G2_CTRL_NO_OF_LANES(nLanes_);
+    const uint32_t g2ctrlNoOfLanes = G2_CTRL_NO_OF_LANES(nLanes_);
 
     switch (nLanes_) {
         case 1:
@@ -145,6 +133,7 @@ zx_status_t DwPcie::SetupRootComplex(
             return ZX_ERR_INVALID_ARGS;
     }
 
+    uint32_t val;
     val = ReadRC(PORT_LINK_CTRL_OFF);
     val &= ~PLC_LINK_CAPABLE_MASK;
     val |= portLinkMode;

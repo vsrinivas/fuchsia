@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include <ddktl/mmio.h>
 #include <dev/pci/designware/dw-pcie.h>
+#include <fbl/unique_ptr.h>
 
 namespace pcie {
 namespace aml {
@@ -17,22 +19,20 @@ const uint32_t kRstPciePhy = (0x1 << 7);
 // The Aml Pcie controller is an instance of the DesignWare IP
 class AmlPcie : public designware::DwPcie {
   public:
-    AmlPcie(
-        void* elbi,
-        void* cfg,
-        void* rst,
-        const uint32_t nLanes
-    ) : designware::DwPcie(elbi, cfg, nLanes)
-      , rst_(rst) {}
+      AmlPcie(
+          fbl::unique_ptr<ddk::MmioBuffer> elbi,
+          fbl::unique_ptr<ddk::MmioBuffer> cfg,
+          fbl::unique_ptr<ddk::MmioBuffer> rst,
+          const uint32_t nLanes)
+          : designware::DwPcie(fbl::move(elbi), fbl::move(cfg), nLanes), rst_(fbl::move(rst)) {}
 
-    void AssertReset(const uint32_t bits);
-    void ClearReset(const uint32_t bits);
+      void AssertReset(const uint32_t bits);
+      void ClearReset(const uint32_t bits);
 
-    zx_status_t EstablishLink(
-        const iatu_translation_entry_t* cfg,
-        const iatu_translation_entry_t* io,
-        const iatu_translation_entry_t* mem
-    );
+      zx_status_t EstablishLink(
+          const iatu_translation_entry_t* cfg,
+          const iatu_translation_entry_t* io,
+          const iatu_translation_entry_t* mem);
 
   private:
     bool IsLinkUp() override;
@@ -45,7 +45,7 @@ class AmlPcie : public designware::DwPcie {
     void ConfigureRootBridge();
     void RmwCtrlSts(const uint32_t size, const uint32_t shift, const uint32_t mask);
 
-    volatile void* rst_;
+    fbl::unique_ptr<ddk::MmioBuffer> rst_;
 };
 
 }  // namespace aml

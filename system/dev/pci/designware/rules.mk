@@ -19,6 +19,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
+    system/ulib/zx \
 
 MODULE_LIBS := \
     system/ulib/c \

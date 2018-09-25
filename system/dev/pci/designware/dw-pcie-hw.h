@@ -12,13 +12,13 @@ namespace pcie {
 namespace designware {
 
 namespace PortLogic {
-const uint32_t Base = 0x700;
-const uint32_t DebugR1Offset = Base + 0x2c;
+constexpr uint32_t Base = 0x700;
+constexpr uint32_t DebugR1Offset = Base + 0x2c;
 class DebugR1 : public hwreg::RegisterBase<DebugR1, uint32_t> {
   public:
     DEF_BIT(4, link_up);
     DEF_BIT(29, link_in_training);
-    static auto Get() {return hwreg::RegisterAddr<DebugR1>(0); }
+    static auto Get() {return hwreg::RegisterAddr<DebugR1>(DebugR1Offset); }
 };
 
 } // namespace PortLogic

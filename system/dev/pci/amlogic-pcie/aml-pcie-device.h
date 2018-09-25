@@ -10,6 +10,7 @@
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddktl/mmio.h>
 #include <dev/pci/designware/atu-cfg.h>
 #include <fbl/unique_ptr.h>
 
@@ -21,7 +22,7 @@ namespace aml {
 class AmlPcieDevice {
   public:
     AmlPcieDevice(zx_device_t* parent) : parent_(parent) {}
-    ~AmlPcieDevice();
+    ~AmlPcieDevice() = default;
 
     zx_status_t Init();
 
@@ -38,11 +39,11 @@ class AmlPcieDevice {
     clk_protocol_t clk_;
     gpio_protocol_t gpio_;
 
-    // IO Buffers
-    io_buffer_t dbi_;
-    io_buffer_t cfg_;
-    io_buffer_t rst_;
-    io_buffer_t pll_;
+    // MMIO Buffers
+    fbl::unique_ptr<ddk::MmioBuffer> dbi_;
+    fbl::unique_ptr<ddk::MmioBuffer> cfg_;
+    fbl::unique_ptr<ddk::MmioBuffer> rst_;
+    fbl::unique_ptr<ddk::MmioBuffer> pll_;
 
     // Device Metadata
     iatu_translation_entry_t atu_cfg_;

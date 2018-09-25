@@ -15,13 +15,13 @@
 
 #define AXG_MIPI_CNTL0 0xa5b80000
 
-#define PCIE_PLL_CNTL0 0x36
-#define PCIE_PLL_CNTL1 0x37
-#define PCIE_PLL_CNTL2 0x38
-#define PCIE_PLL_CNTL3 0x39
-#define PCIE_PLL_CNTL4 0x3A
-#define PCIE_PLL_CNTL5 0x3B
-#define PCIE_PLL_CNTL6 0x3C
+#define PCIE_PLL_CNTL0 (0x36 * 4)
+#define PCIE_PLL_CNTL1 (0x37 * 4)
+#define PCIE_PLL_CNTL2 (0x38 * 4)
+#define PCIE_PLL_CNTL3 (0x39 * 4)
+#define PCIE_PLL_CNTL4 (0x3A * 4)
+#define PCIE_PLL_CNTL5 (0x3B * 4)
+#define PCIE_PLL_CNTL6 (0x3C * 4)
 
 #define AXG_PCIE_PLL_CNTL0 0x400106c8
 #define AXG_PCIE_PLL_CNTL1 0x0084a2aa
@@ -43,7 +43,7 @@ class MesonPLLControl0 : public hwreg::RegisterBase<MesonPLLControl0, uint32_t> 
     DEF_BIT(30, enable);
     DEF_BIT(31, lock);
 
-    static auto Get() {return hwreg::RegisterAddr<MesonPLLControl0>(0); }
+    static auto Get() {return hwreg::RegisterAddr<MesonPLLControl0>(PCIE_PLL_CNTL0); }
 };
 
 class MesonPLLControl1 : public hwreg::RegisterBase<MesonPLLControl1, uint32_t> {
@@ -62,7 +62,7 @@ class MesonPLLControl1 : public hwreg::RegisterBase<MesonPLLControl1, uint32_t> 
     DEF_BIT(29, afc_clk_sel);
     DEF_FIELD(31, 30, acq_r_ctr);
 
-    static auto Get() {return hwreg::RegisterAddr<MesonPLLControl1>(0); }
+    static auto Get() {return hwreg::RegisterAddr<MesonPLLControl1>(PCIE_PLL_CNTL1); }
 };
 
 class MesonPLLControl6 : public hwreg::RegisterBase<MesonPLLControl6, uint32_t> {
@@ -72,67 +72,61 @@ class MesonPLLControl6 : public hwreg::RegisterBase<MesonPLLControl6, uint32_t> 
     DEF_BIT(1, cml_input_sel0);
     DEF_BIT(0, cml_input_en);
 
-    static auto Get() { return hwreg::RegisterAddr<MesonPLLControl6>(0); }
+    static auto Get() { return hwreg::RegisterAddr<MesonPLLControl6>(PCIE_PLL_CNTL6); }
 };
 
 
-zx_status_t PllSetRate(zx_vaddr_t regbase) {
+zx_status_t PllSetRate(ddk::MmioBuffer* mmio) {
     // TODO(gkalsi): This statically configures the PCIe PLL to run at
     //               100mhz. When we write a real clock driver, we want this
     //               value to be configurable.
 
-    volatile uint32_t* regs = (volatile uint32_t*)regbase;
+    mmio->Write32(AXG_MIPI_CNTL0, 0);
+    mmio->Write32(AXG_PCIE_PLL_CNTL0, PCIE_PLL_CNTL0);
+    mmio->Write32(AXG_PCIE_PLL_CNTL1, PCIE_PLL_CNTL1);
+    mmio->Write32(AXG_PCIE_PLL_CNTL2, PCIE_PLL_CNTL2);
+    mmio->Write32(AXG_PCIE_PLL_CNTL3, PCIE_PLL_CNTL3);
+    mmio->Write32(AXG_PCIE_PLL_CNTL4, PCIE_PLL_CNTL4);
+    mmio->Write32(AXG_PCIE_PLL_CNTL5, PCIE_PLL_CNTL5);
+    mmio->Write32(AXG_PCIE_PLL_CNTL6, PCIE_PLL_CNTL6);
 
-    writel(AXG_MIPI_CNTL0, regs + 0);
-    writel(AXG_PCIE_PLL_CNTL0, regs + PCIE_PLL_CNTL0);
-    writel(AXG_PCIE_PLL_CNTL1, regs + PCIE_PLL_CNTL1);
-    writel(AXG_PCIE_PLL_CNTL2, regs + PCIE_PLL_CNTL2);
-    writel(AXG_PCIE_PLL_CNTL3, regs + PCIE_PLL_CNTL3);
-    writel(AXG_PCIE_PLL_CNTL4, regs + PCIE_PLL_CNTL4);
-    writel(AXG_PCIE_PLL_CNTL5, regs + PCIE_PLL_CNTL5);
-    writel(AXG_PCIE_PLL_CNTL6, regs + PCIE_PLL_CNTL6);
-
-    hwreg::RegisterIo cntl0_mmio(regs + PCIE_PLL_CNTL0);
-    hwreg::RegisterIo cntl1_mmio(regs + PCIE_PLL_CNTL1);
-    hwreg::RegisterIo cntl6_mmio(regs + PCIE_PLL_CNTL6);
-
-    auto cntl0 = MesonPLLControl0::Get().ReadFrom(&cntl0_mmio);
+    auto cntl0 = MesonPLLControl0::Get().ReadFrom(mmio);
 
     cntl0.set_enable(1);
     cntl0.set_reset(0);
-    cntl0.WriteTo(&cntl0_mmio);
+    cntl0.WriteTo(mmio);
 
     cntl0.set_m(200);
     cntl0.set_n(3);
     cntl0.set_od(1);
-    cntl0.WriteTo(&cntl0_mmio);
+    cntl0.WriteTo(mmio);
 
-    auto cntl1 = MesonPLLControl1::Get().ReadFrom(&cntl1_mmio);
+    auto cntl1 = MesonPLLControl1::Get().ReadFrom(mmio);
     cntl1.set_div_frac(0);
-    cntl1.WriteTo(&cntl1_mmio);
+    cntl1.WriteTo(mmio);
 
-    auto cntl6 = MesonPLLControl6::Get().ReadFrom(&cntl6_mmio);
+    auto cntl6 = MesonPLLControl6::Get().ReadFrom(mmio);
     cntl6.set_od2(3);
     cntl6.set_cml_input_sel1(1);
     cntl6.set_cml_input_sel0(1);
     cntl6.set_cml_input_en(1);
-    cntl6.WriteTo(&cntl6_mmio);
+    cntl6.WriteTo(mmio);
 
     // Assert the Reset pin on the PLL
     cntl0.set_reset(1);
-    cntl0.WriteTo(&cntl0_mmio);
+    cntl0.WriteTo(mmio);
 
     // Wait for the reset to take effect
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
     // De-assert the reset pin
     cntl0.set_reset(0);
-    cntl0.WriteTo(&cntl0_mmio);
+    cntl0.WriteTo(mmio);
 
     // Wait for the PLL parameters to lock.
     const uint64_t kTimeout = 24000000;
     for (uint64_t attempts = 0; attempts < kTimeout; ++attempts) {
-        auto cntl0 = MesonPLLControl0::Get().ReadFrom(&cntl0_mmio);
+        auto cntl0 = MesonPLLControl0::Get().ReadFrom(mmio);
 
         // PLL has successfully locked?
         if (cntl0.lock()) return ZX_OK;

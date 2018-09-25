@@ -16,28 +16,16 @@
 namespace pcie {
 namespace aml {
 
-void AmlPcie::AssertReset(const uint32_t bits) {
-    volatile uint32_t* reg =
-        reinterpret_cast<volatile uint32_t*>(rst_);
-    uint32_t val = readl(reg);
-    val &= ~bits;
-    writel(val, reg);
+void AmlPcie::AssertReset(const uint32_t mask) {
+    rst_->ClearBits32(mask, 0);
 }
 
-void AmlPcie::ClearReset(const uint32_t bits) {
-    volatile uint32_t* reg =
-        reinterpret_cast<volatile uint32_t*>(rst_);
-    uint32_t val = readl(reg);
-    val |= bits;
-    writel(val, reg);
+void AmlPcie::ClearReset(const uint32_t mask) {
+    rst_->SetBits32(mask, 0);
 }
 
-void AmlPcie::RmwCtrlSts(const uint32_t size, const uint32_t shift,
-                                     const uint32_t mask) {
-    volatile uint8_t* ecam = reinterpret_cast<volatile uint8_t*>(dbi_);;
-    volatile uint8_t* reg = (ecam + PCIE_CTRL_STS_OFF);
+void AmlPcie::RmwCtrlSts(const uint32_t size, const uint32_t shift, const uint32_t mask) {
     uint32_t regval;
-
     switch (size) {
     case 128:
         regval = 0;
@@ -61,48 +49,24 @@ void AmlPcie::RmwCtrlSts(const uint32_t size, const uint32_t shift,
         regval = 1;
     }
 
-    uint32_t val = readl(reg);
-    val &= ~(mask << shift);
-    writel(val, reg);
-
-    val = readl(reg);
-    val |= (regval << shift);
-    writel(val, reg);
+    dbi_->ClearBits32(mask << shift, PCIE_CTRL_STS_OFF);
+    dbi_->SetBits32(regval << shift, PCIE_CTRL_STS_OFF);
 }
 
 void AmlPcie::PcieInit() {
-    uint32_t val;
+    cfg_->SetBits32(APP_LTSSM_ENABLE, 0);
 
-    volatile uint8_t* elb = reinterpret_cast<volatile uint8_t*>(dbi_);
-    volatile uint8_t* cfg = reinterpret_cast<volatile uint8_t*>(cfg_);
+    dbi_->SetBits32(PLC_FAST_LINK_MODE, PORT_LINK_CTRL_OFF);
 
-    val = readl(cfg);
-    val |= APP_LTSSM_ENABLE;
-    writel(val, cfg);
+    dbi_->ClearBits32(PLC_LINK_CAPABLE_MASK, PORT_LINK_CTRL_OFF);
 
-    val = readl(elb + PORT_LINK_CTRL_OFF);
-    val |= PLC_FAST_LINK_MODE;
-    writel(val, elb + PORT_LINK_CTRL_OFF);
+    dbi_->SetBits32(PLC_LINK_CAPABLE_X1, PORT_LINK_CTRL_OFF);
 
-    val = readl(elb + PORT_LINK_CTRL_OFF);
-    val &= ~PLC_LINK_CAPABLE_MASK;
-    writel(val, elb + PORT_LINK_CTRL_OFF);
+    dbi_->ClearBits32(G2_CTRL_NUM_OF_LANES_MASK, GEN2_CTRL_OFF);
 
-    val = readl(elb + PORT_LINK_CTRL_OFF);
-    val |= PLC_LINK_CAPABLE_X1;
-    writel(val, elb + PORT_LINK_CTRL_OFF);
+    dbi_->SetBits32(G2_CTRL_NO_OF_LANES(1), GEN2_CTRL_OFF);
 
-    val = readl(elb + GEN2_CTRL_OFF);
-    val &= ~G2_CTRL_NUM_OF_LANES_MASK;
-    writel(val, elb + GEN2_CTRL_OFF);
-
-    val = readl(elb + GEN2_CTRL_OFF);
-    val |= G2_CTRL_NO_OF_LANES(1);
-    writel(val, elb + GEN2_CTRL_OFF);
-
-    val = readl(elb + GEN2_CTRL_OFF);
-    val |= G2_CTRL_DIRECT_SPEED_CHANGE;
-    writel(val, elb + GEN2_CTRL_OFF);
+    dbi_->SetBits32(G2_CTRL_DIRECT_SPEED_CHANGE, GEN2_CTRL_OFF);
 }
 
 void AmlPcie::SetMaxPayload(const uint32_t size) {
@@ -119,21 +83,14 @@ void AmlPcie::SetMaxReadRequest(const uint32_t size) {
 
 void AmlPcie::EnableMemorySpace() {
     // Cause the root port to handle transactions.
-    volatile uint8_t* ecam = reinterpret_cast<volatile uint8_t*>(dbi_);
-    volatile uint8_t* reg = ecam + PCIE_TYPE1_STS_CMD_OFF;
-    uint32_t val = readl(reg);
-
-    val |= (PCIE_TYPE1_STS_CMD_IO_ENABLE |
-            PCIE_TYPE1_STS_CMD_MEM_SPACE_ENABLE |
-            PCIE_TYPE1_STS_CMD_BUS_MASTER_ENABLE);
-    writel(val, reg);
+    constexpr uint32_t bits = (PCIE_TYPE1_STS_CMD_IO_ENABLE |
+                               PCIE_TYPE1_STS_CMD_MEM_SPACE_ENABLE |
+                               PCIE_TYPE1_STS_CMD_BUS_MASTER_ENABLE);
+    dbi_->SetBits32(bits, PCIE_TYPE1_STS_CMD_OFF);
 }
 
 bool AmlPcie::IsLinkUp() {
-    volatile uint8_t* cfg = reinterpret_cast<volatile uint8_t*>(cfg_);
-    volatile uint8_t* reg = cfg + PCIE_CFG_STATUS12;
-
-    uint32_t val = readl(reg);
+    uint32_t val = cfg_->Read32(PCIE_CFG_STATUS12);
 
     return (val & PCIE_CFG12_SMLH_UP) &&
            (val & PCIE_CFG12_RDLH_UP) &&
@@ -152,30 +109,25 @@ zx_status_t AmlPcie::AwaitLinkUp() {
 }
 
 void AmlPcie::ConfigureRootBridge() {
-    volatile uint8_t* rb_ecam = reinterpret_cast<volatile uint8_t*>(dbi_);
-
     // PCIe Type 1 header Bus Register (offset 0x18 into the Ecam)
-    volatile uint8_t* addr = rb_ecam + PCIE_HEADER_BUS_REG_OFF;
-    uint32_t bus_reg = readl(addr);
-
-    pci_bus_reg_t* reg = (pci_bus_reg_t*)(&bus_reg);
+    auto reg = PciBusReg::Get().ReadFrom(dbi_.get());
 
     // The Upstream Bus for the root bridge is Bus 0
-    reg->primary_bus = 0x0;
+    reg.set_primary_bus(0x0);
 
     // The Downstream bus for the root bridge is Bus 1
-    reg->secondary_bus = 0x1;
+    reg.set_secondary_bus(0x1);
 
     // This bridge will also claim all transactions for any other bus IDs on
     // this bus.
-    reg->subordinate_bus = 0x1;
+    reg.set_subordinate_bus(0x1);
 
-    writel(bus_reg, addr);
+    reg.WriteTo(dbi_.get());
 
     // Zero out the BARs for the Root bridge because the DW root bridge doesn't
     // need them.
-    writel(0, rb_ecam + PCI_TYPE1_BAR0);
-    writel(0, rb_ecam + PCI_TYPE1_BAR1);
+    dbi_->Write32(0, PCI_TYPE1_BAR0);
+    dbi_->Write32(0, PCI_TYPE1_BAR1);
 }
 
 zx_status_t AmlPcie::EstablishLink(const iatu_translation_entry_t* cfg,

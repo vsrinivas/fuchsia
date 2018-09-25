@@ -58,33 +58,38 @@ zx_status_t AmlPcieDevice::InitProtocols() {
 zx_status_t AmlPcieDevice::InitMmios() {
     zx_status_t st;
 
-    st = pdev_map_mmio_buffer(&pdev_, kElbMmio,
-                              ZX_CACHE_POLICY_UNCACHED_DEVICE, &dbi_);
+    mmio_buffer_t mmio;
+    st = pdev_map_mmio_buffer2(&pdev_, kElbMmio,
+                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (st != ZX_OK) {
-        zxlogf(ERROR, "aml_pcie: failed to map elbi mmio, st = %d\n", st);
+        zxlogf(ERROR, "aml_pcie: failed to map dbi mmio, st = %d\n", st);
         return st;
     }
+    dbi_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
-    st = pdev_map_mmio_buffer(&pdev_, kCfgMmio,
-                              ZX_CACHE_POLICY_UNCACHED_DEVICE, &cfg_);
+    st = pdev_map_mmio_buffer2(&pdev_, kCfgMmio,
+                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to map cfg mmio, st = %d\n", st);
         return st;
     }
+    cfg_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
-    st = pdev_map_mmio_buffer(&pdev_, kRstMmio,
-                              ZX_CACHE_POLICY_UNCACHED_DEVICE, &rst_);
+    st = pdev_map_mmio_buffer2(&pdev_, kRstMmio,
+                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to map rst mmio, st = %d\n", st);
         return st;
     }
+    rst_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
-    st = pdev_map_mmio_buffer(&pdev_, kPllMmio,
-                              ZX_CACHE_POLICY_UNCACHED_DEVICE, &pll_);
+    st = pdev_map_mmio_buffer2(&pdev_, kPllMmio,
+                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to map pll mmio, st = %d\n", st);
         return st;
     }
+    pll_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     return st;
 }
@@ -161,15 +166,15 @@ zx_status_t AmlPcieDevice::Init() {
     if (st != ZX_OK) return st;
 
     pcie_ = fbl::make_unique<AmlPcie>(
-        io_buffer_virt(&dbi_),
-        io_buffer_virt(&cfg_),
-        io_buffer_virt(&rst_),
+        fbl::move(dbi_),
+        fbl::move(cfg_),
+        fbl::move(rst_),
         1   // Single Lane PCIe
     );
 
     pcie_->AssertReset(kRstPcieA | kRstPcieB | kRstPcieApb | kRstPciePhy);
 
-    PllSetRate((zx_vaddr_t)io_buffer_virt(&pll_));
+    PllSetRate(pll_.get());
 
     pcie_->ClearReset(kRstPcieApb | kRstPciePhy);
 
@@ -255,13 +260,6 @@ zx_status_t AmlPcieDevice::Init() {
     }
 
     return st;
-}
-
-AmlPcieDevice::~AmlPcieDevice() {
-    io_buffer_release(&dbi_);
-    io_buffer_release(&cfg_);
-    io_buffer_release(&rst_);
-    io_buffer_release(&pll_);
 }
 
 }  // namespace aml
