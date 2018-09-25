@@ -113,10 +113,6 @@ package("vulkan-tests") {
 
     meta = [
       {
-        path = rebase_path("meta/vulkan-tests.cmx")
-        dest = "vulkan-tests.cmx"
-      },
-      {
         path = rebase_path("meta/vkext.cmx")
         dest = "vkext.cmx"
       },

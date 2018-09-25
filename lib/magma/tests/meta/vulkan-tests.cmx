@@ -1,5 +1,0 @@
-{
-    "sandbox": {
-        "features": [ "deprecated-all-services", "vulkan" ]
-    }
-}
