@@ -52,6 +52,7 @@ zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_p
         hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL3, G12A_HIFI_PLL_CNTL3);
         hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL4, G12A_HIFI_PLL_CNTL4);
         hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL5, G12A_HIFI_PLL_CNTL5);
+        hiu_clk_set_reg(device, HHI_HIFI_PLL_CNTL6, G12A_HIFI_PLL_CNTL6);
         return ZX_OK;
     } else if (pll_num == SYS_PLL) {
         pll_dev->hiu = device;
@@ -72,6 +73,7 @@ zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_p
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL3, G12A_SYS_PLL_CNTL3);
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL4, G12A_SYS_PLL_CNTL4);
         hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL5, G12A_SYS_PLL_CNTL5);
+        hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL6, G12A_SYS_PLL_CNTL6);
 
         return ZX_OK;
     } else if (pll_num == GP0_PLL) {
@@ -93,6 +95,7 @@ zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_p
         hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL3, G12A_GP0_PLL_CNTL3);
         hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL4, G12A_GP0_PLL_CNTL4);
         hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL5, G12A_GP0_PLL_CNTL5);
+        hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL6, G12A_GP0_PLL_CNTL6);
 
         return ZX_OK;
     }
