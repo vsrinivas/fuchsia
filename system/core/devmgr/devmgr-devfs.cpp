@@ -131,7 +131,7 @@ static void prepopulate_protocol_dirs(void) {
 void describe_error(zx_handle_t h, zx_status_t status) {
     zxrio_describe_t msg;
     memset(&msg, 0, sizeof(msg));
-    msg.hdr.ordinal = ZXFIDL_ON_OPEN;
+    msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
     msg.status = status;
     zx_channel_write(h, 0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
     zx_handle_close(h);
@@ -548,7 +548,7 @@ fail:
         if (describe) {
             zxrio_describe_t msg;
             memset(&msg, 0, sizeof(msg));
-            msg.hdr.ordinal = ZXFIDL_ON_OPEN;
+            msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
             msg.status = ZX_OK;
             msg.extra_ptr = (zxrio_node_info_t*)FIDL_ALLOC_PRESENT;
             msg.extra.tag = fuchsia_io_NodeInfoTag_directory;
@@ -649,7 +649,7 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
 
     zx_status_t r;
     switch (hdr->ordinal) {
-    case ZXFIDL_CLONE: {
+    case fuchsia_io_NodeCloneOrdinal: {
         DECODE_REQUEST(msg, NodeClone);
         DEFINE_REQUEST(msg, NodeClone);
         zx_handle_t h = request->object;
@@ -659,7 +659,7 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
         devfs_open(dn, h, path, flags | ZX_FS_FLAG_NOREMOTE);
         return ZX_OK;
     }
-    case ZXFIDL_DESCRIBE: {
+    case fuchsia_io_NodeDescribeOrdinal: {
         DECODE_REQUEST(msg, NodeDescribe);
         fuchsia_io_NodeInfo info;
         memset(&info, 0, sizeof(info));
@@ -681,7 +681,7 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
         }
         return ZX_OK;
     }
-    case ZXFIDL_STAT: {
+    case fuchsia_io_NodeGetAttrOrdinal: {
         DECODE_REQUEST(msg, NodeGetAttr);
         uint32_t mode;
         if (devnode_is_dir(dn)) {
@@ -720,7 +720,7 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
         }
         return fuchsia_io_DirectoryReadDirents_reply(txn, r, data, actual);
     }
-    case ZXFIDL_IOCTL: {
+    case fuchsia_io_NodeIoctlOrdinal: {
         DECODE_REQUEST(msg, NodeIoctl);
         DEFINE_REQUEST(msg, NodeIoctl);
 

@@ -42,7 +42,7 @@ static zx_status_t txn_null_reply(fidl_txn_t* reply, const fidl_msg_t* msg) {
 static zx_status_t handle_rpc_close(zxfidl_cb_t cb, void* cookie) {
     fuchsia_io_NodeCloseRequest request;
     memset(&request, 0, sizeof(request));
-    request.hdr.ordinal = ZXFIDL_CLOSE;
+    request.hdr.ordinal = fuchsia_io_NodeCloseOrdinal;
     fidl_msg_t msg = {
         .bytes = &request,
         .handles = NULL,

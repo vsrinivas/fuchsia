@@ -23,7 +23,7 @@ zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t deadline) {
     // the only other messages we ever send are no-reply OPEN or CLONE with
     // txid of 0.
     request->hdr.txid = 1;
-    request->hdr.ordinal = ZXFIDL_IOCTL;
+    request->hdr.ordinal = fuchsia_io_NodeIoctlOrdinal;
     request->opcode = IOCTL_VFS_UNMOUNT_FS;
     request->max_out = 0;
     request->handles.count = 0;

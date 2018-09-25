@@ -119,7 +119,7 @@ static zx_status_t zxrio_connect(zx_handle_t svc, zx_handle_t cnxn,
 
     zx_status_t r;
     switch (op) {
-    case ZXFIDL_CLONE:
+    case fuchsia_io_NodeCloneOrdinal:
         r = fidl_clone_request(svc, cnxn, flags);
         break;
     case ZXFIDL_OPEN:
@@ -336,7 +336,7 @@ static zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* 
     if (r != ZX_OK) {
         return r;
     }
-    if (dsize < ZXRIO_DESCRIBE_HDR_SZ || info->hdr.ordinal != ZXFIDL_ON_OPEN) {
+    if (dsize < ZXRIO_DESCRIBE_HDR_SZ || info->hdr.ordinal != fuchsia_io_NodeOnOpenOrdinal) {
         r = ZX_ERR_IO;
     } else {
         r = info->status;
@@ -431,7 +431,7 @@ zx_handle_t fdio_service_clone(zx_handle_t svc) {
     if ((r = zx_channel_create(0, &cli, &srv)) < 0) {
         return ZX_HANDLE_INVALID;
     }
-    if ((r = zxrio_connect(svc, srv, ZXFIDL_CLONE, ZX_FS_RIGHT_READABLE |
+    if ((r = zxrio_connect(svc, srv, fuchsia_io_NodeCloneOrdinal, ZX_FS_RIGHT_READABLE |
                            ZX_FS_RIGHT_WRITABLE, 0755, "")) < 0) {
         zx_handle_close(cli);
         return ZX_HANDLE_INVALID;
@@ -448,7 +448,7 @@ zx_status_t fdio_service_clone_to(zx_handle_t svc, zx_handle_t srv) {
         zx_handle_close(srv);
         return ZX_ERR_INVALID_ARGS;
     }
-    return zxrio_connect(svc, srv, ZXFIDL_CLONE, ZX_FS_RIGHT_READABLE |
+    return zxrio_connect(svc, srv, fuchsia_io_NodeCloneOrdinal, ZX_FS_RIGHT_READABLE |
                          ZX_FS_RIGHT_WRITABLE, 0755, "");
 }
 
@@ -641,7 +641,7 @@ static zx_status_t zxrio_sync_open_connection(zx_handle_t svc, uint32_t op,
     }
 
     switch (op) {
-    case ZXFIDL_CLONE:
+    case fuchsia_io_NodeCloneOrdinal:
         r = fidl_clone_request(svc, cnxn, flags);
         break;
     case ZXFIDL_OPEN:
@@ -723,7 +723,7 @@ static zx_status_t zxrio_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types
     zxrio_t* rio = (void*)io;
     zx_handle_t h;
     zxrio_describe_t info;
-    zx_status_t r = zxrio_getobject(rio->h, ZXFIDL_CLONE, "", 0, 0, &info, &h);
+    zx_status_t r = zxrio_getobject(rio->h, fuchsia_io_NodeCloneOrdinal, "", 0, 0, &info, &h);
     if (r < 0) {
         return r;
     }
