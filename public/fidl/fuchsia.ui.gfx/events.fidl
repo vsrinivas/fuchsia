@@ -25,6 +25,7 @@ union Event {
   ViewAttachedToSceneEvent view_attached_to_scene;
   ViewDetachedFromSceneEvent view_detached_from_scene;
   ViewPropertiesChangedEvent view_properties_changed;
+  ViewStateChangedEvent view_state_changed;
 };
 
 // Provides rendering target metrics information about the specified node.
@@ -117,4 +118,10 @@ struct ViewDetachedFromSceneEvent {
 struct ViewPropertiesChangedEvent {
   uint32 view_id;
   ViewProperties properties;
+};
+
+// Delivered to a ViewHolder's Session when its peer View's state has changed.
+struct ViewStateChangedEvent {
+  uint32 view_holder_id;
+  ViewState state;
 };

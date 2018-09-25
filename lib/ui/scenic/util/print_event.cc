@@ -35,6 +35,8 @@ std::ostream& operator<<(std::ostream& stream,
       return stream << event.view_detached_from_scene();
     case Event::Tag::kViewPropertiesChanged:
       return stream << event.view_properties_changed();
+    case Event::Tag::kViewStateChanged:
+      return stream << event.view_state_changed();
     case Event::Tag::Invalid:
       return stream << "Invalid";
   }
@@ -95,4 +97,12 @@ std::ostream& operator<<(
     const fuchsia::ui::gfx::ViewPropertiesChangedEvent& event) {
   return stream << "ViewPropertiesChangedEvent(view_id=" << event.view_id
                 << ", properties=<TBD>)";
+}
+
+std::ostream& operator<<(
+    std::ostream& stream,
+    const fuchsia::ui::gfx::ViewStateChangedEvent& event) {
+  return stream << "ViewStateChangedEvent(view_id=" << event.view_holder_id
+                << ", state=.is_rendering" << event.state.is_rendering
+                << ")";
 }

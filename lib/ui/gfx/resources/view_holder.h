@@ -75,6 +75,9 @@ class ViewHolder final : public Resource {
   // e.g. when the parent of our parent has changed.
   void RefreshScene();
 
+  // Called when the corresponding View is traversed for rendering.
+  void SetIsViewRendering(bool is_view_rendering);
+
  private:
   // | ViewLinker::ImportCallbacks |
   void LinkResolved(View* view);
@@ -86,12 +89,14 @@ class ViewHolder final : public Resource {
   void SendViewDisconnectedEvent();
   void SendViewAttachedToSceneEvent();
   void SendViewDetachedFromSceneEvent();
+  void SendViewStateChangedEvent();
 
   ViewLinker::ExportLink link_;
   Scene* scene_ = nullptr;
   View* view_ = nullptr;
   Node* parent_ = nullptr;
   fuchsia::ui::gfx::ViewProperties view_properties_;
+  fuchsia::ui::gfx::ViewState view_state_;
 };
 using ViewHolderPtr = fxl::RefPtr<ViewHolder>;
 

@@ -227,3 +227,10 @@ struct ViewProperties {
   // underlying Views.
   bool downward_input;
 };
+
+// Represents the state of a View in Scenic.
+struct ViewState {
+  // Whether the View is rendering. Default is false. Delivered to the View's
+  // corresponding ViewHolder after the View's first frame render request.
+  bool is_rendering;
+};

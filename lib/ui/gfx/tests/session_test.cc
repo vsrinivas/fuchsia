@@ -20,6 +20,7 @@ void SessionTest::TearDown() {
   session_->TearDown();
   session_ = nullptr;
   engine_.reset();
+  events_.clear();
 }
 
 std::unique_ptr<Engine> SessionTest::CreateEngine() {

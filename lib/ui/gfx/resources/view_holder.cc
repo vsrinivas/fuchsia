@@ -72,15 +72,23 @@ void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props) {
 
 void ViewHolder::RefreshScene() {
   Scene* new_scene = parent_ ? parent_->scene() : nullptr;
+  if (scene_ == new_scene) {
+    return;
+  }
+  scene_ = new_scene;
 
-  if (new_scene != scene_) {
-    if (scene_) {
-      SendViewDetachedFromSceneEvent();
-    }
-    if (new_scene) {
-      SendViewAttachedToSceneEvent();
-    }
-    scene_ = new_scene;
+  if (!view_) {
+    // No view to interact with events.
+    return;
+  }
+
+  if (scene_) {
+    SendViewAttachedToSceneEvent();
+  } else {
+    // View is no longer part of a scene and therefore cannot render to one.
+    SetIsViewRendering(false);
+
+    SendViewDetachedFromSceneEvent();
   }
 }
 
@@ -102,7 +110,21 @@ void ViewHolder::LinkDisconnected() {
   // The child is already dead (or never existed) and it cleans things up in its
   // destructor, including Detaching any grandchild Nodes from the parent.
   view_ = nullptr;
+
+  // Link was disconnected, the view can no longer be rendering. If the state
+  // was previously rendering, update with not rendering event.
+  SetIsViewRendering(false);
+
   SendViewDisconnectedEvent();
+}
+
+void ViewHolder::SetIsViewRendering(bool is_rendering) {
+  if (view_state_.is_rendering == is_rendering) {
+    // No state change, return.
+    return;
+  }
+  view_state_.is_rendering = is_rendering;
+  SendViewStateChangedEvent();
 }
 
 void ViewHolder::SendViewPropertiesChangedEvent() {
@@ -135,6 +157,13 @@ void ViewHolder::SendViewDetachedFromSceneEvent() {
   fuchsia::ui::gfx::Event event;
   event.set_view_detached_from_scene({.view_id = view_->id()});
   view_->session()->EnqueueEvent(std::move(event));
+}
+
+void
+ViewHolder::SendViewStateChangedEvent() {
+  fuchsia::ui::gfx::Event event;
+  event.set_view_state_changed({.view_holder_id = id(), .state = view_state_});
+  session()->EnqueueEvent(std::move(event));
 }
 
 }  // namespace gfx
