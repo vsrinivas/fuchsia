@@ -13,6 +13,11 @@
 ## Options (must be first):
 ##   -d, --device   <name>   Connect to device using Fuchsia link-local name.
 ##                           Must be specified if multiple devices are present.
+##   -s, --staging  <dir>    Use the given directory for staging temporary
+##                           corpus files being transferred on or off of a
+##                           target device. Defaults to a temporary directory
+##                           that is removed on completion; use this options to
+##                           preserve those temporary files on the host.
 ##
 ## Commands:
 ##   help                    Prints this message and exits.
@@ -66,6 +71,7 @@ CIPD="${FUCHSIA_DIR}/buildtools/cipd"
 # Global variables
 device=""
 staging=""
+keep=0
 
 fuzzer=""
 status=""
@@ -88,13 +94,17 @@ set_device() {
 }
 
 set_staging() {
-  staging=$(mktemp -d)
-  [[ $? -eq 0 ]] || fatal "failed to make staging directory"
+  if [[ -z "${staging}" ]] ; then
+    staging=$(mktemp -d)
+    [[ $? -eq 0 ]] || fatal "failed to make staging directory"
+  fi
 }
 
 # Ensure the temporary directory is removed as needed
 cleanup() {
-  rm -rf "${staging}"
+  if [[ -n "${staging}" ]] && [[ ${keep} -eq 0 ]] ; then
+    rm -rf "${staging}"
+  fi
 }
 trap cleanup EXIT
 
@@ -181,6 +191,10 @@ main() {
     case $1 in
       -d|--device)
         device=$(get-device-addr $1 $2)
+        ;;
+      -s|--staging)
+        keep=1
+        staging="$2"
         ;;
       *)
         fatal "unknown option: $1"
