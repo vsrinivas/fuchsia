@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <signal.h>
 #include <stdio.h>
 #include <sys/file.h>
 #include <sys/socket.h>
@@ -249,6 +250,8 @@ void XdcServer::UpdateUsbHandlerFds() {
 }
 
 void XdcServer::Run() {
+    signal(SIGPIPE, SIG_IGN);  // Prevent clients from causing SIGPIPE.
+
     printf("Waiting for connections on: %s\n", XDC_SOCKET_PATH);
 
     // Listen for new client connections.
