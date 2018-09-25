@@ -124,9 +124,9 @@ struct DisplayReceiver {
 
 impl wl::RequestReceiver<WlDisplay> for DisplayReceiver {
     fn receive(
-        this: wl::ObjectRef<Self>, request: WlDisplayRequest, map: &mut wl::ObjectMap,
+        display: wl::ObjectRef<Self>, request: WlDisplayRequest, map: &mut wl::ObjectMap,
     ) -> Result<(), Error> {
-        let this = this.get(map)?;
+        let this = display.get(map)?;
         match request {
             WlDisplayRequest::GetRegistry { registry } => {
                 let receiver = RegistryReceiver {
@@ -138,8 +138,12 @@ impl wl::RequestReceiver<WlDisplay> for DisplayReceiver {
                 map.add_object(WlRegistry, registry, receiver)?;
                 Ok(())
             }
-            WlDisplayRequest::Sync { .. } => {
-                Err(format_err!("wl_display::sync not yet implemented!"))
+            WlDisplayRequest::Sync { callback } => {
+                this.event_sender
+                    .send(callback, WlCallbackEvent::Done { callback_data: 0 })?;
+                this.event_sender
+                    .send(display.id(), WlDisplayEvent::DeleteId { id: callback })?;
+                Ok(())
             }
         }
     }

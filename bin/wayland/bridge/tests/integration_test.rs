@@ -32,34 +32,56 @@ mod test {
         // Send get_registry(0x10000)
         let mut message = wl::Message::new();
         message.write_header(&wl::MessageHeader {
-            sender: 1, // wl_display
-            opcode: 1, // get_registry
+            sender: 1,  // wl_display
+            opcode: 1,  // get_registry
             length: 12, // header + new_id
         })?;
-        message.write_arg(wl::Arg::Uint(0x10000))?;
+        message.write_arg(wl::Arg::NewId(0x10000))?;
+        let (bytes, mut handles) = message.take();
+        client_channel.write(&bytes, &mut handles)?;
+
+        // Send sync(0x10001)
+        let mut message = wl::Message::new();
+        message.write_header(&wl::MessageHeader {
+            sender: 1,  // wl_display
+            opcode: 0,  // sync
+            length: 12, // header + new_id
+        })?;
+        message.write_arg(wl::Arg::NewId(0x10001))?;
         let (bytes, mut handles) = message.take();
         client_channel.write(&bytes, &mut handles)?;
 
         // Receive a message on the channel. We expect a single global to
         // be reported right now.
-        //
-        // TODO(tjdetwiler): once wl_display::sync is wired up we can make this
-        // more smarter.
         let receiver = async move {
+            let mut buffer = zx::MessageBuf::new();
+            await!(client_channel.recv_msg(&mut buffer))
+                .expect("Failed to receive message from the bridge");
+
+            // Expect a global announce
+            let mut message: wl::Message = buffer.into();
+            let header = message.read_header().unwrap();
+            let name = message.read_arg(wl::ArgKind::Uint).unwrap().unwrap_uint();
+            let interface = message
+                .read_arg(wl::ArgKind::String)
+                .unwrap()
+                .unwrap_string();
+            let version = message.read_arg(wl::ArgKind::Uint).unwrap().unwrap_uint();
+            assert_eq!(0x10000, header.sender);
+            assert_eq!(0 /* wl_registry::global */, header.opcode);
+            assert_eq!(0, name);
+            assert_eq!(WlCompositor::NAME, interface);
+            assert_eq!(0, version);
+
+            // Expect callback::done for the sync
             let mut buffer = zx::MessageBuf::new();
             await!(client_channel.recv_msg(&mut buffer))
                 .expect("Failed to receive message from the bridge");
             let mut message: wl::Message = buffer.into();
             let header = message.read_header().unwrap();
-            assert_eq!(0x10000, header.sender);
-            assert_eq!(0 /* wl_registry::global */, header.opcode);
-
-            let name = message.read_arg(wl::ArgKind::Uint).unwrap().unwrap_uint();
-            let interface = message.read_arg(wl::ArgKind::String).unwrap().unwrap_string();
-            let version = message.read_arg(wl::ArgKind::Uint).unwrap().unwrap_uint();
-            assert_eq!(0, name);
-            assert_eq!(WlCompositor::NAME, interface);
-            assert_eq!(0, version);
+            let _callback_data = message.read_arg(wl::ArgKind::Uint).unwrap().unwrap_uint();
+            assert_eq!(0x10001, header.sender);
+            assert_eq!(0 /* wl_callback::done */, header.opcode);
         };
         let receiver = receiver.on_timeout(5.seconds().after_now(), || {
             panic!("timed out waiting for bridge response")

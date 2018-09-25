@@ -90,6 +90,10 @@ pub enum ObjectLookupError {
 pub struct ObjectRef<T: 'static>(PhantomData<T>, ObjectId);
 
 impl<T> ObjectRef<T> {
+    pub fn id(&self) -> ObjectId {
+        self.1
+    }
+
     /// Provides an immutable reference to an object, downcasted to |T|.
     pub fn get<'a>(&self, map: &'a ObjectMap) -> Result<&'a T, ObjectLookupError> {
         map.get(self.1)
