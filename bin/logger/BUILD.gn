@@ -31,6 +31,13 @@ package("logger") {
   ]
 
   binary = "rust_crates/logger"
+
+  meta = [
+    {
+      path = rebase_path("meta/logger.cmx")
+      dest = "logger.cmx"
+    },
+  ]
 }
 
 package("logger_tests") {
