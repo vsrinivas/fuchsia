@@ -7,6 +7,9 @@
 #include <hwreg/internal.h>
 #include <hwreg/mmio.h>
 
+#ifndef _KERNEL
+#include <ddktl/mmio.h>
+#endif
 #include <fbl/type_support.h>
 #include <limits.h>
 #include <stdint.h>
@@ -114,10 +117,23 @@ public:
         reg_value_ = reg_io->Read<ValueType>(reg_addr_);
         return *static_cast<SelfType*>(this);
     }
+#ifndef _KERNEL
+    SelfType& ReadFrom(ddk::MmioBuffer* mmio) {
+        reg_value_ = mmio->Read<ValueType>(reg_addr_);
+        return *static_cast<SelfType*>(this);
+    }
+#endif
+
     SelfType& WriteTo(RegisterIo* reg_io) {
         reg_io->Write(reg_addr_, static_cast<IntType>(reg_value_ & ~rsvdz_mask_));
         return *static_cast<SelfType*>(this);
     }
+#ifndef _KERNEL
+    SelfType& WriteTo(ddk::MmioBuffer* mmio) {
+        mmio->Write(static_cast<IntType>(reg_value_ & ~rsvdz_mask_), reg_addr_);
+        return *static_cast<SelfType*>(this);
+    }
+#endif
 
     // Invokes print_fn(const char* buf) once for each field, including each
     // RsvdZ field, and one extra time if there are any undefined bits set.
@@ -181,6 +197,14 @@ public:
         reg.ReadFrom(reg_io);
         return reg;
     }
+#ifndef _KERNEL
+    RegType ReadFrom(ddk::MmioBuffer* mmio) {
+        RegType reg;
+        reg.set_reg_addr(reg_addr_);
+        reg.ReadFrom(mmio);
+        return reg;
+    }
+#endif
 
     // Instantiate a RegisterBase using the given value for the register.
     RegType FromValue(typename RegType::ValueType value) {

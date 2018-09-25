@@ -14,8 +14,11 @@ MODULE_SRCS += \
 MODULE_NAME := libhwreg-test
 
 MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/ddktl \
     system/ulib/fbl \
     system/ulib/hwreg \
+    system/ulib/zx \
 
 MODULE_LIBS := \
     system/ulib/c \
