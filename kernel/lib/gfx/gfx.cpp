@@ -16,6 +16,7 @@
  * @file
  * @brief  Graphics drawing library
  */
+#include <lib/gfx.h>
 
 #include <debug.h>
 #include <err.h>
@@ -25,7 +26,6 @@
 #include <assert.h>
 #include <arch/ops.h>
 #include <sys/types.h>
-#include <lib/gfx.h>
 #include <dev/display.h>
 
 #include <zircon/font/font-9x16.h>
@@ -63,7 +63,7 @@ static uint32_t ARGB8888_to_Luma(uint32_t in)
 
 static uint32_t ARGB8888_to_RGB565(uint32_t in)
 {
-    uint16_t out;
+    uint32_t out;
 
     out = (in >> 3) & 0x1f;  // b
     out |= ((in >> 10) & 0x3f) << 5;  // g
@@ -74,7 +74,7 @@ static uint32_t ARGB8888_to_RGB565(uint32_t in)
 
 static uint32_t ARGB8888_to_RGB332(uint32_t in)
 {
-    uint8_t out = 0;
+    uint32_t out = 0;
 
     out = (in >> 6) & 0x3;  // b
     out |= ((in >> 13) & 0x7) << 2;  // g
@@ -85,7 +85,7 @@ static uint32_t ARGB8888_to_RGB332(uint32_t in)
 
 static uint32_t ARGB8888_to_RGB2220(uint32_t in)
 {
-    uint8_t out = 0;
+    uint32_t out = 0;
 
     out =  ((in >> 6) & 0x3) << 2;
     out |= ((in >> 14) & 0x3) << 4;
@@ -549,8 +549,8 @@ static void FUNC(gfx_surface* surface, const struct gfx_font* font, \
     for (unsigned i = font->height; i > 0; i--) { \
         uint16_t xdata = *cdata++; \
         for (unsigned j = fw; j > 0; j--) { \
-            *dest++ = (xdata & 1) ? fg : bg; \
-            xdata >>= 1; \
+            *dest++ = (TYPE)((xdata & 1) ? fg : bg); \
+            xdata = (uint16_t)(xdata >> 1); \
         } \
         dest += (surface->stride - fw); \
     } \
@@ -621,7 +621,7 @@ void gfx_flush_rows(struct gfx_surface *surface, uint start, uint end)
  */
 gfx_surface *gfx_create_surface(void *ptr, uint width, uint height, uint stride, gfx_format format, uint32_t flags)
 {
-    gfx_surface *surface = calloc(1, sizeof(*surface));
+    gfx_surface *surface = static_cast<gfx_surface*>(calloc(1, sizeof(*surface)));
     if (surface == NULL) return NULL;
     if (gfx_init_surface(surface, ptr, width, height, stride, format, flags)) {
         free(surface);
@@ -714,7 +714,7 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
  */
 gfx_surface *gfx_create_surface_from_display(struct display_info *info)
 {
-    gfx_surface *surface = calloc(1, sizeof(*surface));
+    gfx_surface *surface = static_cast<gfx_surface*>(calloc(1, sizeof(*surface)));
     if (surface == NULL)
         return NULL;
     if (gfx_init_surface_from_display(surface, info)) {
@@ -883,10 +883,15 @@ static int cmd_gfx(int argc, const cmd_args *argv, uint32_t flags)
     } else if (!strcmp(argv[1].str, "fill")) {
         uint x, y;
 
+        uint fillval = static_cast<uint>(
+                (0xff << 24) |
+                (argv[2].u << 16) |
+                (argv[3].u << 8) |
+                argv[4].u);
         for (y = 0; y < surface->height; y++) {
             for (x = 0; x < surface->width; x++) {
                 /* write pixel to frame buffer */
-                gfx_putpixel(surface, x, y, (0xff << 24) | (argv[2].i << 16) | (argv[3].i << 8) | argv[4].i);
+                gfx_putpixel(surface, x, y, fillval);
             }
         }
     }

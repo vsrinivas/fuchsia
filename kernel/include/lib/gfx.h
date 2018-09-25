@@ -12,6 +12,9 @@
 #include <inttypes.h>
 #include <zircon/types.h>
 #include <zircon/pixelformat.h>
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
 
 // gfx library
 
@@ -109,3 +112,4 @@ void gfx_surface_destroy(struct gfx_surface *surface);
 // utility routine to fill the display with a little moire pattern
 void gfx_draw_pattern(void);
 
+__END_CDECLS
