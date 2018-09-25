@@ -10,8 +10,6 @@ sdk("zircon_sysroot") {
 
   export = true
 
-  domains = [ "c-pp" ]
-
   deps = [
     "//zircon/public/sysroot:sysroot_sdk",
   ]
