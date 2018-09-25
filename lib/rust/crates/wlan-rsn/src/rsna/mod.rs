@@ -253,10 +253,23 @@ impl<'a> VerifiedKeyFrame<'a> {
 
         // IEEE Std 802.11-2016, 12.7.2, d)
         if key_replay_counter > 0 {
-            ensure!(
-                frame.key_replay_counter > key_replay_counter,
-                Error::InvalidKeyReplayCounter(frame.key_replay_counter, key_replay_counter)
-            );
+            match sender {
+                // Supplicant responds to messages from the Authenticator with the same
+                // key replay counter.
+                Role::Supplicant => {
+                    ensure!(
+                        frame.key_replay_counter >= key_replay_counter,
+                        Error::InvalidKeyReplayCounter(frame.key_replay_counter, key_replay_counter)
+                    );
+                },
+                // Authenticator must send messages with a strictly larger key replay counter.
+                Role::Authenticator => {
+                    ensure!(
+                        frame.key_replay_counter > key_replay_counter,
+                        Error::InvalidKeyReplayCounter(frame.key_replay_counter, key_replay_counter)
+                    );
+                },
+            }
         }
 
         // IEEE Std 802.11-2016, 12.7.2, e)

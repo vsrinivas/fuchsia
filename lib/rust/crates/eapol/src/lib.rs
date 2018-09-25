@@ -81,8 +81,15 @@ bitfield! {
     pub request, set_request: 11;
     pub encrypted_key_data, set_encrypted_key_data: 12;
     pub smk_message, set_smk_message: 13;
-    pub value, _: 15,0;
     // Bit 14-15 reserved.
+
+    pub value, _: 15,0;
+}
+
+impl Clone for KeyInformation {
+    fn clone(&self) -> KeyInformation {
+        KeyInformation(self.value())
+    }
 }
 
 impl Default for KeyInformation {
@@ -92,7 +99,7 @@ impl Default for KeyInformation {
 }
 
 // IEEE Std 802.11-2016, 12.7.2, Figure 12-32
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub struct KeyFrame {
     pub version: u8,
     pub packet_type: u8,
@@ -218,6 +225,17 @@ mod tests {
             0x03,
         ];
         b.iter(|| key_frame_from_bytes(&frame, black_box(16)));
+    }
+
+    #[test]
+    fn test_key_info() {
+        let value = 0b1010_0000_0000_0000u16;
+        let key_info = KeyInformation(value);
+        assert_eq!(key_info.key_descriptor_version(), 0);
+        assert!(key_info.smk_message());
+        assert_eq!(key_info.value(), value);
+        let cloned = key_info.clone();
+        assert_eq!(key_info.value(), cloned.value());
     }
 
     #[test]

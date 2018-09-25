@@ -57,9 +57,9 @@ impl Supplicant {
             exchange::Config::FourWayHandshake(fourway::Config::new(
                 Role::Supplicant, s_addr, s_rsne, a_addr, a_rsne
             )?),
-            exchange::Config::GroupKeyHandshake(group_key::Config {
+            Some(exchange::Config::GroupKeyHandshake(group_key::Config {
                 role: Role::Supplicant, akm
-            }),
+            })),
         )?;
 
         // The Supplicant always waits for Authenticator to initiate and does not yet support EAPOL
@@ -95,8 +95,27 @@ pub struct Authenticator {
 impl Authenticator {
     /// WPA2-PSK CCMP-128 Authenticator which supports 4-Way Handshake.
     /// The Authenticator does not support GTK rotations.
-    pub fn new_wpa2psk_authenticator() -> Result<Authenticator, failure::Error> {
-        panic!("not yet implemented")
+    pub fn new_wpa2psk_ccmp128(
+        ssid: &[u8],
+        passphrase: &[u8],
+        s_addr: [u8; 6],
+        s_rsne: Rsne,
+        a_addr: [u8; 6],
+        a_rsne: Rsne
+    ) -> Result<Authenticator, failure::Error> {
+        let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
+        let esssa = EssSa::new(
+            Role::Authenticator,
+            negotiated_rsne,
+            auth::Config::Psk(psk::Config::new(passphrase, ssid)?),
+            exchange::Config::FourWayHandshake(fourway::Config::new(
+                Role::Authenticator, s_addr, s_rsne, a_addr, a_rsne
+            )?),
+            // Group-Key Handshake does not support Authenticator role yet.
+            None,
+        )?;
+
+        Ok(Authenticator{ esssa })
     }
 
     /// Resets all established Security Associations and invalidates all derived keys.
@@ -122,7 +141,7 @@ impl Authenticator {
     /// Outbound EAPOL frames, status and key updates will be pushed into the `update_sink`.
     /// The method will return an `Error` if the frame was invalid.
     pub fn on_eapol_frame(&mut self, update_sink: &mut UpdateSink, frame: &eapol::Frame)
-                          -> Result<(), failure::Error>
+        -> Result<(), failure::Error>
     {
         self.esssa.on_eapol_frame(update_sink, frame)
     }

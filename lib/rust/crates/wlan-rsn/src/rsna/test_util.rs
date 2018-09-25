@@ -13,7 +13,7 @@ use crate::key::exchange::{
 use crate::key::ptk::Ptk;
 use crate::key_data;
 use crate::key_data::kde;
-use crate::Supplicant;
+use crate::{Authenticator, Supplicant};
 use crate::rsne::Rsne;
 use crate::suite_selector::OUI;
 use hex::FromHex;
@@ -73,6 +73,16 @@ pub fn get_supplicant() -> Supplicant {
                                   test_util::A_ADDR,
                                   test_util::get_a_rsne())
         .expect("could not create Supplicant")
+}
+
+pub fn get_authenticator() -> Authenticator {
+    Authenticator::new_wpa2psk_ccmp128("ThisIsASSID".as_bytes(),
+                                       "ThisIsAPassword".as_bytes(),
+                                       test_util::S_ADDR,
+                                       test_util::get_s_rsne(),
+                                       test_util::A_ADDR,
+                                       test_util::get_a_rsne())
+        .expect("could not create Authenticator")
 }
 
 pub fn get_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {

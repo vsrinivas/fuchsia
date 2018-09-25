@@ -72,7 +72,7 @@ impl State {
                     fourway::MessageNumber::Message2 => {
                         match process_message_2(update_sink, &pmk[..], &cfg, &anonce[..], last_krc, last_krc + 1, frame) {
                             Ok((ptk, gtk)) => {
-                                State::AwaitingMsg4 { pmk, ptk, gtk, cfg, last_krc: krc + 1 }
+                                State::AwaitingMsg4 { pmk, ptk, gtk, cfg, last_krc: last_krc + 1 }
                             },
                             Err(e) => {
                                 eprintln!("error: {}", e);
@@ -218,7 +218,7 @@ pub fn handle_message_2(
         KeyFrameState::NoMic(_) => bail!("msg2 of 4-Way Handshake must carry a MIC"),
     };
     ensure!(frame.key_replay_counter == krc,
-            "error, expected Supplicant response to message {:?} but was {:?}",
+            "error, expected Supplicant response to message {:?} but was {:?} in msg #2",
             krc, frame.key_replay_counter);
 
     // TODO(hahnr): Key data must carry RSNE. Verify.
@@ -311,7 +311,7 @@ pub fn handle_message_4(
     };
     ensure!(
         frame.key_replay_counter == krc,
-        "error, expected Supplicant response to message {:?} but was {:?}",
+        "error, expected Supplicant response to message {:?} but was {:?} in msg #4",
         krc, frame.key_replay_counter);
 
     // Note: The message's integrity was already verified by low layers.

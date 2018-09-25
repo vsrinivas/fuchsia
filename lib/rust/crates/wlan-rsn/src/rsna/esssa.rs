@@ -87,16 +87,19 @@ impl Ptksa {
     }
 }
 
+/// A GTKSA is composed of a GTK and a key exchange method.
+/// While a key is required for successfully establishing a GTKSA, the key exchange method is
+/// optional as it's used only for re-keying the GTK.
 #[derive(Debug, PartialEq)]
 enum Gtksa {
     Uninitialized {
-        cfg: exchange::Config
+        cfg: Option<exchange::Config>
     },
     Initialized {
-        method: exchange::Method,
+        method: Option<exchange::Method>,
     },
     Established {
-        method: exchange::Method,
+        method: Option<exchange::Method>,
         gtk: Gtk,
     },
 }
@@ -105,16 +108,17 @@ impl Gtksa {
     fn initialize(self, kck: &[u8], kek: &[u8]) -> Self {
         match self {
             Gtksa::Uninitialized { cfg } => match cfg {
-                exchange::Config::GroupKeyHandshake(method_cfg) => {
+                None => Gtksa::Initialized { method: None },
+                Some(exchange::Config::GroupKeyHandshake(method_cfg)) => {
                     match GroupKey::new(method_cfg.clone(), kck, kek) {
                         Err(e) => {
                             eprintln!("error creating Group KeyHandshake from config: {}", e);
                             Gtksa::Uninitialized {
-                                cfg: exchange::Config::GroupKeyHandshake(method_cfg),
+                                cfg: Some(exchange::Config::GroupKeyHandshake(method_cfg)),
                             }
                         },
                         Ok(method) => Gtksa::Initialized {
-                            method: exchange::Method::GroupKeyHandshake(method),
+                            method: Some(exchange::Method::GroupKeyHandshake(method)),
                         },
                     }
                 },
@@ -130,13 +134,17 @@ impl Gtksa {
         match self {
             Gtksa::Uninitialized { cfg } => Gtksa::Uninitialized { cfg },
             Gtksa::Initialized { method } | Gtksa::Established { method, .. } => {
-                Gtksa::Uninitialized { cfg: method.destroy() }
+                Gtksa::Uninitialized { cfg: method.map(|m| m.destroy()) }
             },
         }
     }
 }
 
-// IEEE Std 802.11-2016, 12.6.1.3.2
+/// An ESS Security Association is composed of three security associations, namely, PMKSA, PTKSA and
+/// GTKSA. The individual security associations have dependencies on each other. For example, the
+/// PMKSA must be established first as it yields the PMK used in the PTK and GTK key hierarchy.
+/// Depending on the selected PTKSA, it can yield not just the PTK but also GTK, and thus leaving
+/// the GTKSA's key exchange method only useful for re-keying.
 #[derive(Debug, PartialEq)]
 pub(crate) struct EssSa {
     // Configuration.
@@ -150,13 +158,14 @@ pub(crate) struct EssSa {
     gtksa: StateMachine<Gtksa>,
 }
 
+// IEEE Std 802.11-2016, 12.6.1.3.2
 impl EssSa {
     pub fn new(
         role: Role,
         negotiated_rsne: NegotiatedRsne,
         auth_cfg: auth::Config,
         ptk_exch_cfg: exchange::Config,
-        gtk_exch_cfg: exchange::Config,
+        gtk_exch_cfg: Option<exchange::Config>,
     ) -> Result<EssSa, failure::Error> {
         let auth_method = auth::Method::from_config(auth_cfg)?;
 
@@ -220,6 +229,8 @@ impl EssSa {
                 self.ptksa.replace_state(|state| state.initialize(pmk));
                 if let Ptksa::Initialized { method } = self.ptksa.mut_state() {
                     method.initiate(update_sink, self.key_replay_counter)?;
+                } else {
+                    bail!("PTKSA not initialized");
                 }
             }
             Key::Ptk(ptk) => {
@@ -367,8 +378,14 @@ impl EssSa {
         } else if frame.key_info.key_type() == eapol::KEY_TYPE_GROUP_SMK {
             match self.gtksa.mut_state() {
                 Gtksa::Uninitialized{ .. } => Ok(()),
-                Gtksa::Initialized { method } | Gtksa::Established { method, .. } => {
-                    method.on_eapol_key_frame(update_sink, self.key_replay_counter, verified_frame)
+                Gtksa::Initialized { method } | Gtksa::Established { method, .. } => match method {
+                    Some(method) => {
+                        method.on_eapol_key_frame(update_sink, self.key_replay_counter, verified_frame)
+                    },
+                    None => {
+                        eprintln!("received group key EAPOL Key frame with GTK re-keying disabled");
+                        Ok(())
+                    },
                 },
             }
         } else {
@@ -387,6 +404,61 @@ mod tests {
     const ANONCE: [u8; 32] = [0x1A; 32];
     const GTK: [u8; 16] = [0x1B; 16];
     const GTK_REKEY: [u8; 16] = [0x1F; 16];
+
+    #[test]
+    fn test_supplicant_with_authenticator() {
+        let mut supplicant = test_util::get_supplicant();
+        let mut authenticator = test_util::get_authenticator();
+
+        // Initiate Authenticator.
+        let mut a_updates = vec![];
+        let result = authenticator.initiate(&mut a_updates);
+        assert!(result.is_ok(), "Authenticator failed initiating: {}", result.unwrap_err());
+        assert_eq!(a_updates.len(), 1);
+        let msg1 = extract_eapol_resp(&a_updates).expect("Authenticator did not send msg #1");
+
+        // Send msg #1 to Supplicant and wait for response.
+        let mut s_updates = vec![];
+        let result = supplicant.on_eapol_frame(&mut s_updates, &eapol::Frame::Key(msg1.clone()));
+        assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
+        assert_eq!(s_updates.len(), 1);
+        let msg2 = extract_eapol_resp(&s_updates).expect("Supplicant did not send msg #2");
+
+        // Send msg #2 to Authenticator and wait for response.
+        let mut a_updates = vec![];
+        let result = authenticator.on_eapol_frame(&mut a_updates, &eapol::Frame::Key(msg2.clone()));
+        assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
+        assert_eq!(a_updates.len(), 1);
+        let msg3 = extract_eapol_resp(&a_updates).expect("Authenticator did not send msg #3");
+
+        // Send msg #3 to Supplicant and wait for response.
+        let mut s_updates = vec![];
+        let result = supplicant.on_eapol_frame(&mut s_updates, &eapol::Frame::Key(msg3.clone()));
+        assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
+        assert_eq!(s_updates.len(), 4);
+        let msg4 = extract_eapol_resp(&s_updates).expect("Supplicant did not send msg #4");
+        let s_ptk = extract_reported_ptk(&s_updates).expect("Supplicant did not send PTK");
+        let s_gtk = extract_reported_gtk(&s_updates).expect("Supplicant did not send GTK");
+        let s_status = extract_reported_status(&s_updates).expect("Supplicant did not send status");
+
+        // Send msg #4 to Authenticator.
+        let mut a_updates = vec![];
+        let result = authenticator.on_eapol_frame(&mut a_updates, &eapol::Frame::Key(msg4.clone()));
+        assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
+        assert_eq!(a_updates.len(), 3);
+        let a_ptk = extract_reported_ptk(&a_updates).expect("Authenticator did not send PTK");
+        let a_gtk = extract_reported_gtk(&a_updates).expect("Authenticator did not send GTK");
+        let a_status = extract_reported_status(&a_updates)
+            .expect("Authenticator did not send status");
+
+        // Verify derived keys match and status reports ESS-SA as established.
+        assert_eq!(a_ptk, s_ptk);
+        assert_eq!(a_gtk, s_gtk);
+        match (a_status, s_status) {
+            (SecAssocStatus::EssSaEstablished, SecAssocStatus::EssSaEstablished) => {}
+            (a, s) => panic!("Invalid status; Authenticator: {:?}, Supplicant: {:?}", a, s),
+        };
+    }
 
     #[test]
     fn test_zero_key_replay_counter_msg1() {
