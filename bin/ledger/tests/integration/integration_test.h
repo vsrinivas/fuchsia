@@ -26,7 +26,8 @@ namespace ledger {
 // separate thread.
 class BaseIntegrationTest : public ::testing::Test, public LoopController {
  public:
-  BaseIntegrationTest(const LedgerAppInstanceFactoryBuilder* factory_builder);
+  explicit BaseIntegrationTest(
+      const LedgerAppInstanceFactoryBuilder* factory_builder);
   ~BaseIntegrationTest() override;
 
   BaseIntegrationTest(const BaseIntegrationTest&) = delete;
