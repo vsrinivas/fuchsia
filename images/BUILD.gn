@@ -750,6 +750,10 @@ vboot("vboot") {
 }
 images += [
   {
+    json = {
+      name = "zircon-vboot"
+      type = "vboot"
+    }
     deps = [
       ":vboot",
     ]
