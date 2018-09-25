@@ -36,11 +36,11 @@ namespace {
 constexpr zx::duration kBackoffDuration = zx::msec(5);
 const char kUserId[] = "user";
 
-Environment BuildEnvironment(async_dispatcher_t* dispatcher) {
+Environment BuildEnvironment(async_dispatcher_t* dispatcher,
+                             async_dispatcher_t* io_dispatcher) {
   return EnvironmentBuilder()
       .SetAsync(dispatcher)
-      // TODO(qsr) LE-558 Consider using a different dispatcher here.
-      .SetIOAsync(dispatcher)
+      .SetIOAsync(io_dispatcher)
       .SetBackoffFactory([] {
         return std::make_unique<backoff::ExponentialBackoff>(
             kBackoffDuration, 1u, kBackoffDuration);
@@ -77,12 +77,12 @@ class LedgerAppInstanceImpl final
   class LedgerRepositoryFactoryContainer {
    public:
     LedgerRepositoryFactoryContainer(
-        async_dispatcher_t* dispatcher,
+        async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
             request,
         std::unique_ptr<p2p_sync::UserCommunicatorFactory>
             user_communicator_factory)
-        : environment_(BuildEnvironment(dispatcher)),
+        : environment_(BuildEnvironment(dispatcher, io_dispatcher)),
           factory_impl_(&environment_, std::move(user_communicator_factory)),
           factory_binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
@@ -98,6 +98,7 @@ class LedgerAppInstanceImpl final
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
 
   std::unique_ptr<SubLoop> loop_;
+  std::unique_ptr<SubLoop> io_loop_;
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   async_dispatcher_t* services_dispatcher_;
   fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
@@ -120,18 +121,19 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     : LedgerAppInstanceFactory::LedgerAppInstance(
           loop_controller, RandomArray(1), std::move(repository_factory_ptr)),
       loop_(loop_controller->StartNewLoop()),
+      io_loop_(loop_controller->StartNewLoop()),
       services_dispatcher_(services_dispatcher),
       cloud_provider_(cloud_provider),
       weak_ptr_factory_(this) {
-  async::PostTask(loop_->dispatcher(),
-                  [this, request = std::move(repository_factory_request),
-                   user_communicator_factory =
-                       std::move(user_communicator_factory)]() mutable {
-                    factory_container_ =
-                        std::make_unique<LedgerRepositoryFactoryContainer>(
-                            loop_->dispatcher(), std::move(request),
-                            std::move(user_communicator_factory));
-                  });
+  async::PostTask(
+      loop_->dispatcher(),
+      [this, request = std::move(repository_factory_request),
+       user_communicator_factory =
+           std::move(user_communicator_factory)]() mutable {
+        factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
+            loop_->dispatcher(), io_loop_->dispatcher(), std::move(request),
+            std::move(user_communicator_factory));
+      });
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
@@ -157,7 +159,8 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
                               NetConnectorFactory* netconnector_factory,
                               std::string host_name)
       : services_dispatcher_(services_dispatcher),
-        environment_(BuildEnvironment(services_dispatcher)),
+        environment_(
+            BuildEnvironment(services_dispatcher, services_dispatcher)),
         netconnector_factory_(netconnector_factory),
         host_name_(std::move(host_name)),
         weak_ptr_factory_(this) {}
