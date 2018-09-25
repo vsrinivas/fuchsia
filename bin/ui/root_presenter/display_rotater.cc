@@ -93,9 +93,11 @@ glm::vec2 DisplayRotater::RotatePointerCoordinates(Presentation* p, float x,
 
   if (abs(startup_rotation) % 180 == 90) {
     // If the aspect ratio is flipped, the origin needs to be adjusted too.
-    float adjust_origin = (p->simulated_display_metrics().width_in_px() -
-                           p->simulated_display_metrics().height_in_px()) /
-                          2;
+    int32_t sim_w =
+        static_cast<int32_t>(p->simulated_display_metrics().width_in_px());
+    int32_t sim_h =
+        static_cast<int32_t>(p->simulated_display_metrics().height_in_px());
+    float adjust_origin = (sim_w - sim_h) / 2.f;
     rotated_coords =
         glm::translate(glm::vec3(-adjust_origin, adjust_origin, 0)) *
         rotated_coords;
