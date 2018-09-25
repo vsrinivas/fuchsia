@@ -352,7 +352,7 @@ noreturn void _start(void* start_arg) {
     zx_handle_t log = ZX_HANDLE_INVALID;
     zx_debuglog_create(ZX_HANDLE_INVALID, 0, &log);
     if (log == ZX_HANDLE_INVALID)
-        printl(log, "zx_log_create failed, using zx_debug_write instead");
+        printl(log, "zx_debuglog_create failed, using zx_debug_write instead");
 
     zx_handle_t bootstrap_pipe = (uintptr_t)start_arg;
     bootstrap(log, bootstrap_pipe);
