@@ -82,7 +82,7 @@ func (a *ToolApp) Scan(seconds uint8) {
 				if ap.IsCompatible {
 					compatStr = ""
 				}
-				fmt.Printf("%12s %x (RSSI: %d) Chan %s %v %q\n",
+				fmt.Printf("%12s %x (RSSI: %4d) Chan %s %v %q\n",
 					compatStr, ap.Bssid, ap.RssiDbm, ChanToStr(ap.Chan), prot, ap.Ssid)
 			}
 		}
