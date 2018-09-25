@@ -30,3 +30,22 @@ package("virtio_console") {
     ":virtio_console_bin",
   ]
 }
+
+executable("device_unittests") {
+  visibility = [ "//garnet/bin/guest/vmm:*" ]
+  testonly = true
+
+  sources = [
+    "virtio_console-unittest.cc",
+    "virtio_queue_fake.cc",
+    "virtio_queue_fake.h",
+  ]
+
+  deps = [
+    "//garnet/lib/machina/device",
+    "//garnet/lib/machina/fidl:fuchsia.guest.device",
+    "//garnet/public/lib/component/cpp/testing",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/virtio",
+  ]
+}

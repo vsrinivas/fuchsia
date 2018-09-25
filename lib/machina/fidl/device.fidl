@@ -23,7 +23,7 @@ struct StartInfo {
 
   // The guest associated with a device. This handle should be used to setup
   // device traps, and then be released before device operation begins.
-  handle<guest> guest;
+  handle<guest>? guest;
 
   // The event associated with a device interrupt. This is how the device will
   // notify the guest of events it should process.
@@ -39,9 +39,18 @@ interface VirtioDevice {
   0x80000001: ConfigureQueue(uint16 queue, uint16 size, zx.gpaddr desc,
                              zx.gpaddr avail, zx.gpaddr used);
 
+  // Notify a |queue| for the device. Primarily used for black-box testing.
+  0x80000002: NotifyQueue(uint16 queue);
+
   // Ready a device. This provides the set of |negotiated_features| that the
   // driver and device have agreed upon.
-  0x80000002: Ready(uint32 negotiated_features);
+  0x80000003: Ready(uint32 negotiated_features);
+};
+
+[Discoverable]
+interface VirtioBalloon : VirtioDevice {
+  // Start the balloon device.
+  0x81000001: Start(StartInfo start_info);
 };
 
 [Discoverable]

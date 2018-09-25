@@ -103,23 +103,25 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
   // |fuchsia::guest::device::VirtioConsole|
   void Start(fuchsia::guest::device::StartInfo start_info,
              zx::socket socket) override {
-    FXL_CHECK(!socket_) << "Device has already been started";
+    FXL_CHECK(!event_) << "Device has already been started";
 
-    trap_addr_ = start_info.trap.addr;
     event_ = std::move(start_info.event);
     zx_status_t status = phys_mem_.Init(std::move(start_info.vmo));
     FXL_CHECK(status == ZX_OK)
         << "Failed to init guest physical memory " << status;
 
+    if (start_info.guest) {
+      trap_addr_ = start_info.trap.addr;
+      status = trap_.SetTrap(async_get_default_dispatcher(), start_info.guest,
+                             start_info.trap.addr, start_info.trap.size);
+      FXL_CHECK(status == ZX_OK) << "Failed to set trap " << status;
+    }
+
     socket_ = std::move(socket);
-    tx_stream_.Init(socket_, phys_mem_,
-                    fit::bind_member(this, &VirtioConsoleImpl::Interrupt));
     rx_stream_.Init(socket_, phys_mem_,
                     fit::bind_member(this, &VirtioConsoleImpl::Interrupt));
-
-    status = trap_.SetTrap(async_get_default_dispatcher(), start_info.guest,
-                           start_info.trap.addr, start_info.trap.size);
-    FXL_CHECK(status == ZX_OK) << "Failed to set trap " << status;
+    tx_stream_.Init(socket_, phys_mem_,
+                    fit::bind_member(this, &VirtioConsoleImpl::Interrupt));
   }
 
   // |fuchsia::guest::device::VirtioDevice|
@@ -128,6 +130,20 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
     StreamBase* stream;
     std::tie(stream, std::ignore) = StreamForQueue(queue);
     stream->queue.Configure(size, desc, avail, used);
+  }
+
+  void NotifyQueue(uint16_t queue, async_dispatcher_t* dispatcher) {
+    StreamBase* stream;
+    async::WaitBase* wait;
+    std::tie(stream, wait) = StreamForQueue(queue);
+    zx_status_t status = wait->Begin(dispatcher);
+    FXL_CHECK(status == ZX_OK || status == ZX_ERR_ALREADY_EXISTS)
+        << "Failed to wait on socket " << status;
+  }
+
+  // |fuchsia::guest::device::VirtioDevice|
+  void NotifyQueue(uint16_t queue) override {
+    NotifyQueue(queue, async_get_default_dispatcher());
   }
 
   // |fuchsia::guest::device::VirtioDevice|
@@ -145,12 +161,20 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
     FXL_CHECK(status == ZX_OK) << "Device trap failed " << status;
     const uint16_t queue =
         (bell->addr - trap_addr_) / machina::kQueueNotifyMultiplier;
-    StreamBase* stream;
-    async::WaitBase* wait;
-    std::tie(stream, wait) = StreamForQueue(queue);
-    status = wait->Begin(dispatcher);
-    FXL_CHECK(status == ZX_OK || status == ZX_ERR_ALREADY_EXISTS)
-        << "Failed to wait on socket " << status;
+    NotifyQueue(queue, dispatcher);
+  }
+
+  void OnSocketReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                        zx_status_t status, const zx_packet_signal_t* signal) {
+    FXL_CHECK(status == ZX_OK) << "Wait for socket readable failed " << status;
+    OnSocketReady(dispatcher, wait, &rx_stream_, [this] {
+      machina::VirtioDescriptor* desc = &rx_stream_.desc;
+      FXL_CHECK(desc->writable) << "Descriptor is not writable";
+      size_t actual = 0;
+      zx_status_t status = socket_.read(0, desc->addr, desc->len, &actual);
+      rx_stream_.used += actual;
+      return status;
+    });
   }
 
   void OnSocketWritable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
@@ -169,19 +193,6 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
         desc->len -= actual;
         status = ZX_ERR_SHOULD_WAIT;
       }
-      return status;
-    });
-  }
-
-  void OnSocketReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                        zx_status_t status, const zx_packet_signal_t* signal) {
-    FXL_CHECK(status == ZX_OK) << "Wait for socket readable failed " << status;
-    OnSocketReady(dispatcher, wait, &rx_stream_, [this] {
-      machina::VirtioDescriptor* desc = &rx_stream_.desc;
-      FXL_CHECK(desc->writable) << "Descriptor is not writable";
-      size_t actual = 0;
-      zx_status_t status = socket_.read(0, desc->addr, desc->len, &actual);
-      rx_stream_.used += actual;
       return status;
     });
   }
@@ -219,9 +230,9 @@ class VirtioConsoleImpl : public fuchsia::guest::device::VirtioConsole {
   async::GuestBellTrapMethod<VirtioConsoleImpl,
                              &VirtioConsoleImpl::OnQueueNotify>
       trap_{this};
-  Stream<ZX_SOCKET_WRITABLE, &VirtioConsoleImpl::OnSocketWritable> tx_stream_{
-      this};
   Stream<ZX_SOCKET_READABLE, &VirtioConsoleImpl::OnSocketReadable> rx_stream_{
+      this};
+  Stream<ZX_SOCKET_WRITABLE, &VirtioConsoleImpl::OnSocketWritable> tx_stream_{
       this};
 };
 

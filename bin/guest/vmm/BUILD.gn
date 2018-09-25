@@ -104,9 +104,13 @@ executable("vmm_unittests") {
 test_package("vmm_tests") {
   deps = [
     ":vmm_unittests",
+    "//garnet/bin/guest/vmm/device:device_unittests",
   ]
 
   tests = [
+    {
+      name = "device_unittests"
+    },
     {
       name = "vmm_unittests"
     },
