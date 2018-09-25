@@ -13,11 +13,11 @@ use fidl_fuchsia_bluetooth_control::{ControlMarker, PairingDelegateMarker};
 
 mod pairing;
 
-fn main() -> Result<(), Error> {
-    let mut exec = fasync::Executor::new().context("error creating event loop")?;
+fn run() -> Result<(), Error> {
+    let mut exec = fasync::Executor::new().context("Error creating event loop")?;
 
     let bt_svc = connect_to_service::<ControlMarker>()
-        .context("failed to connect to bluetooth control interface")?;
+        .context("Failed to connect to bluetooth control interface")?;
 
     // Setup pairing delegate
     let (delegate_local, delegate_remote) = zx::Channel::create()?;
@@ -28,10 +28,16 @@ fn main() -> Result<(), Error> {
 
     if !exec.run_singlethreaded(pair_set)? {
         return Err(format_err!(
-            "Failed to set pairing delegate, one is already bound."
+            "Failed to take ownership of Bluetooth Pairing. Another process is likely already managing this."
         ));
     };
 
     exec.run_singlethreaded(pairing_delegate_server)
         .map_err(|_| format_err!("Failed to run pairing server"))
+}
+
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("{}", e);
+    }
 }
