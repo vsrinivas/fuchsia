@@ -151,13 +151,13 @@ TEST(Recap, SINAD) {
   printf("\n Signal-to-Noise-and-Distortion (SINAD)");
   printf("\n   (in dB, with prior results)");
 
-  printf("\n\n   Point resampler\n            ");
-  printf("           No SRC            96k->48k");
+  printf("\n\n   Point resampler\n           ");
+  printf("            No SRC             96k->48k  ");
 
   uint32_t num_freqs;
   if (FrequencySet::UseFullFrequencySet) {
-    printf("          88.2k->48k         44.1k->48k ");
-    printf("         24k->48k           Micro-SRC");
+    printf("         88.2k->48k          44.1k->48k ");
+    printf("          24k->48k            Micro-SRC");
     num_freqs = FrequencySet::kReferenceFreqs.size();
   } else {
     num_freqs = FrequencySet::kSummaryIdxs.size();
@@ -170,57 +170,57 @@ TEST(Recap, SINAD) {
     printf("\n   %8u Hz ", FrequencySet::kRefFreqsTranslated[freq]);
     if (AudioResult::kPrevSinadPointUnity[freq] !=
         -std::numeric_limits<double>::infinity()) {
-      printf("    %6.2lf  (%5.2lf)", AudioResult::SinadPointUnity[freq],
+      printf("    %6.2lf  (%6.2lf)", AudioResult::SinadPointUnity[freq],
              AudioResult::kPrevSinadPointUnity[freq]);
     } else {
-      printf("                   ");
+      printf("                    ");
     }
     if (AudioResult::kPrevSinadPointDown1[freq] !=
         -std::numeric_limits<double>::infinity()) {
-      printf("    %6.2lf  (%5.2lf)", AudioResult::SinadPointDown1[freq],
+      printf("    %6.2lf  (%6.2lf)", AudioResult::SinadPointDown1[freq],
              AudioResult::kPrevSinadPointDown1[freq]);
     } else {
-      printf("                   ");
+      printf("                    ");
     }
 
     if (FrequencySet::UseFullFrequencySet) {
       if (AudioResult::kPrevSinadPointDown2[freq] !=
           -std::numeric_limits<double>::infinity()) {
-        printf("    %6.2lf  (%5.2lf)", AudioResult::SinadPointDown2[freq],
+        printf("    %6.2lf  (%6.2lf)", AudioResult::SinadPointDown2[freq],
                AudioResult::kPrevSinadPointDown2[freq]);
       } else {
-        printf("                   ");
+        printf("                    ");
       }
       if (AudioResult::kPrevSinadPointUp1[freq] !=
           -std::numeric_limits<double>::infinity()) {
-        printf("    %6.2lf  (%5.2lf)", AudioResult::SinadPointUp1[freq],
+        printf("    %6.2lf  (%6.2lf)", AudioResult::SinadPointUp1[freq],
                AudioResult::kPrevSinadPointUp1[freq]);
       } else {
-        printf("                   ");
+        printf("                    ");
       }
       if (AudioResult::kPrevSinadPointUp2[freq] !=
           -std::numeric_limits<double>::infinity()) {
-        printf("    %6.2lf  (%5.2lf)", AudioResult::SinadPointUp2[freq],
+        printf("    %6.2lf  (%6.2lf)", AudioResult::SinadPointUp2[freq],
                AudioResult::kPrevSinadPointUp2[freq]);
       } else {
-        printf("                   ");
+        printf("                    ");
       }
 
       if (AudioResult::kPrevSinadPointMicro[freq] !=
           -std::numeric_limits<double>::infinity()) {
-        printf("    %6.2lf  (%5.2lf)", AudioResult::SinadPointMicro[freq],
+        printf("    %6.2lf  (%6.2lf)", AudioResult::SinadPointMicro[freq],
                AudioResult::kPrevSinadPointMicro[freq]);
       }
     }
   }
 
-  printf("\n\n   Linear resampler\n            ");
+  printf("\n\n   Linear resampler\n           ");
   if (FrequencySet::UseFullFrequencySet) {
-    printf("           No SRC            96k->48k ");
+    printf("            No SRC             96k->48k ");
   }
-  printf("         88.2k->48k         44.1k->48k");
+  printf("          88.2k->48k          44.1k->48k");
   if (FrequencySet::UseFullFrequencySet) {
-    printf("          24k->48k           Micro-SRC");
+    printf("           24k->48k            Micro-SRC");
   }
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     uint32_t freq = FrequencySet::UseFullFrequencySet
@@ -231,47 +231,47 @@ TEST(Recap, SINAD) {
     if (FrequencySet::UseFullFrequencySet) {
       if (AudioResult::kPrevSinadLinearUnity[freq] !=
           -std::numeric_limits<double>::infinity()) {
-        printf("    %6.2lf  (%5.2lf)", AudioResult::SinadLinearUnity[freq],
+        printf("    %6.2lf  (%6.2lf)", AudioResult::SinadLinearUnity[freq],
                AudioResult::kPrevSinadLinearUnity[freq]);
       } else {
-        printf("                   ");
+        printf("                    ");
       }
       if (AudioResult::kPrevSinadLinearDown1[freq] !=
           -std::numeric_limits<double>::infinity()) {
-        printf("    %6.2lf  (%5.2lf)", AudioResult::SinadLinearDown1[freq],
+        printf("    %6.2lf  (%6.2lf)", AudioResult::SinadLinearDown1[freq],
                AudioResult::kPrevSinadLinearDown1[freq]);
       } else {
-        printf("                   ");
+        printf("                    ");
       }
     }
 
     if (AudioResult::kPrevSinadLinearDown2[freq] !=
         -std::numeric_limits<double>::infinity()) {
-      printf("    %6.2lf  (%5.2lf)", AudioResult::SinadLinearDown2[freq],
+      printf("    %6.2lf  (%6.2lf)", AudioResult::SinadLinearDown2[freq],
              AudioResult::kPrevSinadLinearDown2[freq]);
     } else {
-      printf("                   ");
+      printf("                    ");
     }
     if (AudioResult::kPrevSinadLinearUp1[freq] !=
         -std::numeric_limits<double>::infinity()) {
-      printf("    %6.2lf  (%5.2lf)", AudioResult::SinadLinearUp1[freq],
+      printf("    %6.2lf  (%6.2lf)", AudioResult::SinadLinearUp1[freq],
              AudioResult::kPrevSinadLinearUp1[freq]);
     } else {
-      printf("                   ");
+      printf("                    ");
     }
 
     if (FrequencySet::UseFullFrequencySet) {
       if (AudioResult::kPrevSinadLinearUp2[freq] !=
           -std::numeric_limits<double>::infinity()) {
-        printf("    %6.2lf  (%5.2lf)", AudioResult::SinadLinearUp2[freq],
+        printf("    %6.2lf  (%6.2lf)", AudioResult::SinadLinearUp2[freq],
                AudioResult::kPrevSinadLinearUp2[freq]);
       } else {
-        printf("                   ");
+        printf("                    ");
       }
 
       if (AudioResult::kPrevSinadLinearMicro[freq] !=
           -std::numeric_limits<double>::infinity()) {
-        printf("    %6.2lf  (%5.2lf)", AudioResult::SinadLinearMicro[freq],
+        printf("    %6.2lf  (%6.2lf)", AudioResult::SinadLinearMicro[freq],
                AudioResult::kPrevSinadLinearMicro[freq]);
       }
     }

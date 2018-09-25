@@ -300,7 +300,7 @@ bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
                                    frac_src_frames, frac_src_offset,
                                    src_pos_modulo, frac_step_size, rate_modulo,
                                    denominator, amplitude_scale));
-  } else if (amplitude_scale <= Gain::MuteThreshold()) {
+  } else if (amplitude_scale <= Gain::kMinScale) {
     return (rate_modulo > 0
                 ? Mix<ScalerType::MUTED, true, true>(
                       dest, dest_frames, dest_offset, src, frac_src_frames,
@@ -551,7 +551,7 @@ bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
                                    frac_src_frames, frac_src_offset,
                                    src_pos_modulo, frac_step_size, rate_modulo,
                                    denominator, amplitude_scale, chan_count_));
-  } else if (amplitude_scale <= Gain::MuteThreshold()) {
+  } else if (amplitude_scale <= Gain::kMinScale) {
     return (rate_modulo > 0
                 ? Mix<ScalerType::MUTED, true, true>(
                       dest, dest_frames, dest_offset, src, frac_src_frames,

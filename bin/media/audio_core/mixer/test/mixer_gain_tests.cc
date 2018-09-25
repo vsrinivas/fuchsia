@@ -17,9 +17,8 @@ using Resampler = media::audio::Mixer::Resampler;
 //
 // Gain tests - how does the Gain object respond when given values close to its
 // maximum or minimum; does it correctly cache; do values combine to form Unity
-// gain. From a data scaling standpoint, is our scaling accurately performed,
-// and is it adequately linear? Do our gains and accumulators behave as expected
-// when they overflow?
+// gain. Is data scaling accurately performed, and is it adequately linear? Do
+// our gains and accumulators behave as expected when they overflow?
 //
 // Gain tests using the Gain and AScale objects only
 //
@@ -39,42 +38,42 @@ TEST(Gain, GainScaleToDb) {
             -6.020600f);  // 1/2x scale-down by calculation: -6.02059991328..dB.
 }
 
-// Do AudioRenderer and output gains correctly combine to produce unity scaling?
-TEST(Gain, Unity) {
+void TestUnityGain(float source_gain_db, float dest_gain_db) {
   Gain gain;
-  Gain::AScale amplitude_scale;
 
-  gain.SetAudioRendererGain(0.0f);
-  amplitude_scale = gain.GetGainScale(0.0f);
-  EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
+  gain.SetSourceGain(source_gain_db);
+  EXPECT_EQ(Gain::kUnityScale, gain.GetGainScale(dest_gain_db));
 
-  // These positive/negative values should sum to 0.0: UNITY
-  gain.SetAudioRendererGain(Gain::kMaxGainDb / 2);
-  amplitude_scale = gain.GetGainScale(-Gain::kMaxGainDb / 2);
-  EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
-
-  // These positive/negative values should sum to 0.0: UNITY
-  gain.SetAudioRendererGain(Gain::kMaxGainDb);
-  amplitude_scale = gain.GetGainScale(-Gain::kMaxGainDb);
-  EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
+  gain.SetDestGain(dest_gain_db);
+  EXPECT_TRUE(gain.IsUnity());
+  EXPECT_FALSE(gain.IsSilent());
 }
 
-// Gain caches any previously set AudioRenderer gain, using it if needed.
+// Do renderer and output gains correctly combine to produce unity scaling?
+TEST(Gain, Unity) {
+  TestUnityGain(0.0f, 0.0f);
+
+  // These positive/negative values should sum to 0.0: UNITY
+  TestUnityGain(Gain::kMaxGainDb / 2, -Gain::kMaxGainDb / 2);
+  TestUnityGain(-Gain::kMaxGainDb, Gain::kMaxGainDb);
+}
+
+// Gain caches any previously set renderer gain, using it if needed.
 // This verifies the default and caching behavior of the Gain object
 TEST(Gain, Caching) {
   Gain gain, expect_gain;
   Gain::AScale amplitude_scale, expect_amplitude_scale;
 
   // Set expect_amplitude_scale to a value that represents -6.0 dB.
-  expect_gain.SetAudioRendererGain(6.0f);
+  expect_gain.SetSourceGain(6.0f);
   expect_amplitude_scale = expect_gain.GetGainScale(-12.0f);
 
   // If Render gain defaults to 0.0, this represents -6.0 dB too.
   amplitude_scale = gain.GetGainScale(-6.0f);
   EXPECT_EQ(expect_amplitude_scale, amplitude_scale);
 
-  // Now set a different AudioRenderer gain that will be cached (+3.0)
-  gain.SetAudioRendererGain(3.0f);
+  // Now set a different renderer gain that will be cached (+3.0).
+  gain.SetSourceGain(3.0f);
   amplitude_scale = gain.GetGainScale(-3.0f);
   EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
 
@@ -83,66 +82,71 @@ TEST(Gain, Caching) {
   EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
 
   // Try another Output gain; with cached +3 this should equate to -6dB.
-  amplitude_scale = gain.GetGainScale(-9.0f);
-  EXPECT_EQ(expect_amplitude_scale, amplitude_scale);
+  gain.SetDestGain(-9.0f);
+  EXPECT_EQ(expect_amplitude_scale, gain.GetGainScale());
+
+  // Render gain cached +3 and Output gain non-cached -3 should lead to Unity.
+  EXPECT_EQ(Gain::kUnityScale, gain.GetGainScale(-3.0f));
+
+  // Cached Output gain should still be -9, leading to -6dB.
+  EXPECT_EQ(expect_amplitude_scale, gain.GetGainScale());
 }
 
-// System independently limits AudioRendererGain to kMaxGainDb (24 dB) and
-// OutputGain to 0, intending for their sum to fit into a fixed-point (4.28)
-// container. MTWN-70 relates to Gain's statefulness. Does it need this
-// complexity?
+// We independently limit renderer/Output gains to kMaxGainDb/0, respectively.
+// MTWN-70 concerns Gain's statefulness. Does it need this complexity?
 TEST(Gain, MaxClamp) {
-  Gain gain, expect_gain;
-  Gain::AScale amplitude_scale;
+  Gain gain;
 
   // AudioRenderer Gain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
-  gain.SetAudioRendererGain(Gain::kMaxGainDb * 2);
-  amplitude_scale = gain.GetGainScale(0.0f);
-  EXPECT_EQ(Gain::kMaxScale, amplitude_scale);
-
-  constexpr float kScale24DbDown = 0.0630957344f;
-  // System limits AudioRendererGain to kMaxGainDb, even when the sum is less
-  // than 0. AudioRenderer Gain +36dB (clamped to +24dB) plus system Gain -48dB
-  // ==> -24dB.
-  gain.SetAudioRendererGain(Gain::kMaxGainDb * 1.5f);
-  amplitude_scale = gain.GetGainScale(-2 * Gain::kMaxGainDb);
-  EXPECT_EQ(kScale24DbDown, amplitude_scale);
+  gain.SetSourceGain(Gain::kMaxGainDb * 2);
+  EXPECT_EQ(Gain::kMaxScale, gain.GetGainScale(0.0f));
 
   // This combination (24.05 dB) would even fit into 4.24, but clamps to 24.0dB.
-  gain.SetAudioRendererGain(Gain::kMaxGainDb);
-  amplitude_scale = gain.GetGainScale(0.05f);
-  EXPECT_EQ(Gain::kMaxScale, amplitude_scale);
+  gain.SetSourceGain(Gain::kMaxGainDb);
+  EXPECT_EQ(Gain::kMaxScale, gain.GetGainScale(0.05f));
+
+  constexpr float kScale24DbDown = 0.0630957344f;
+  // System limits renderer gain to kMaxGainDb, even when sum is less than 0.
+  // Renderer Gain +36dB (clamped to +24dB) plus system Gain -48dB ==> -24dB.
+  gain.SetSourceGain(Gain::kMaxGainDb * 1.5f);
+  gain.SetDestGain(-2 * Gain::kMaxGainDb);
+  EXPECT_EQ(kScale24DbDown, gain.GetGainScale());
+  EXPECT_FALSE(gain.IsUnity());
+  EXPECT_FALSE(gain.IsSilent());
 
   // AudioCore limits master to 0dB, but Gain object handles up to kMaxGainDb.
   // Master +36dB (clamped to +24dB) plus stream gain -48dB becomes -24dB.
-  gain.SetAudioRendererGain(-2 * Gain::kMaxGainDb);
-  amplitude_scale = gain.GetGainScale(Gain::kMaxGainDb * 1.5f);
-  EXPECT_EQ(kScale24DbDown, amplitude_scale);
+  gain.SetSourceGain(-2 * Gain::kMaxGainDb);
+  gain.SetDestGain(Gain::kMaxGainDb * 1.5f);
+  EXPECT_EQ(kScale24DbDown, gain.GetGainScale());
+  EXPECT_FALSE(gain.IsUnity());
+  EXPECT_FALSE(gain.IsSilent());
+}
+
+void TestMinMuteGain(float source_gain_db, float dest_gain_db) {
+  Gain gain;
+
+  gain.SetSourceGain(source_gain_db);
+  EXPECT_EQ(0.0f, gain.GetGainScale(dest_gain_db));
+
+  gain.SetDestGain(dest_gain_db);
+  EXPECT_EQ(0.0f, gain.GetGainScale());
+  EXPECT_TRUE(gain.IsSilent());
+  EXPECT_FALSE(gain.IsUnity());
 }
 
 // System independently limits AudioRenderer and Output Gains to kMinGainDb
 // (-160dB). Assert scale is zero, if either (or combo) are kMinGainDb or less.
 TEST(Gain, MinMute) {
-  Gain gain;
-  Gain::AScale amplitude_scale;
+  // if OutputGain <= kMinGainDb, scale must be 0, regardless of renderer gain.
+  TestMinMuteGain(-2 * Gain::kMinGainDb, Gain::kMinGainDb);
 
-  // if OutputGain <= kMinGainDb, scale must be 0, regardless of
-  // AudioRendererGain
-  gain.SetAudioRendererGain(-2 * Gain::kMinGainDb);
-  amplitude_scale = gain.GetGainScale(Gain::kMinGainDb);
-  EXPECT_EQ(0, amplitude_scale);
+  // if renderer gain <= kMinGainDb, scale must be 0, regardless of Output gain.
+  TestMinMuteGain(Gain::kMinGainDb, Gain::kMaxGainDb * 1.2);
 
-  // if AudioRendererGain <= kMinGainDb, scale must be 0, regardless of
-  // OutputGain
-  gain.SetAudioRendererGain(Gain::kMinGainDb);
-  amplitude_scale = gain.GetGainScale(Gain::kMaxGainDb * 1.2);
-  EXPECT_EQ(0, amplitude_scale);
-
-  // if sum of AudioRendererGain and OutputGain <= kMinGainDb, scale should be 0
-  // Output gain is just slightly above MinGain, and Render takes us below it
-  gain.SetAudioRendererGain(-2.0f);
-  amplitude_scale = gain.GetGainScale(Gain::kMinGainDb + 1.0f);
-  EXPECT_EQ(0, amplitude_scale);
+  // if sum of renderer gain and Output gain <= kMinGainDb, scale should be 0.
+  // Output gain is just slightly above MinGain; renderer takes us below it.
+  TestMinMuteGain(-2.0f, Gain::kMinGainDb + 1.0f);
 }
 
 //
@@ -156,15 +160,18 @@ TEST(Gain, MinMute) {
 // internal format of our accumulator. For this reason, all "expect" values are
 // specified at a higher-than-needed precision of 24-bit, and then normalized
 // down to the actual pipeline width.
+//
+// The 'MixGain' tests involve gain-scaling in the context of mixing (as opposed
+// to earlier tests that probe the Gain object in isolation).
 
 // Verify whether per-stream gain interacts linearly with accumulation buffer.
-TEST(Gain, Scaling_Linearity) {
+TEST(MixGain, Scaling_Linearity) {
   int16_t source[] = {0x0CE4, 0x0CCC, 0x23, 4, -0x0E, -0x19, -0x0CCC, -0x0CDB};
   float accum[8];
   Gain gain;
 
   // Validate that +20.00 dB leads to exactly 10x in value (within limits)
-  gain.SetAudioRendererGain(20.0f);
+  gain.SetSourceGain(20.0f);
   Gain::AScale stream_scale = gain.GetGainScale(0.0f);
 
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
@@ -180,7 +187,7 @@ TEST(Gain, Scaling_Linearity) {
   //
   // How precisely linear are our gain stages, mathematically?
   // Validate that -12.0411998 dB leads to exactly 0.25x in value
-  gain.SetAudioRendererGain(-12.0411998f);
+  gain.SetSourceGain(-12.0411998f);
   stream_scale = gain.GetGainScale(0.0f);
 
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1,
@@ -197,7 +204,7 @@ TEST(Gain, Scaling_Linearity) {
 // How does our gain scaling respond to scale values close to the limits?
 // Using 16-bit inputs, verify the behavior of our Gain object when given the
 // closest-to-Unity and closest-to-Mute scale values.
-TEST(Gain, Scaling_Precision) {
+TEST(MixGain, Scaling_Precision) {
   int16_t max_source[] = {0x7FFF, -0x8000};  // max/min 16-bit signed values.
   float accum[2];
 
@@ -269,7 +276,7 @@ TEST(Gain, Scaling_Precision) {
 // accumulator hit its limit, and at that limit does it clamp or rollover?
 //
 // Can accumulator result exceed the max range of individual streams?
-TEST(Gain, Accumulator) {
+TEST(MixGain, Accumulator) {
   int16_t source[] = {0x7FFF, -0x8000};
   float accum[] = {0x07FFF000, -0x08000000};
   float expect[] = {0x0FFFE000, -0x10000000};
@@ -295,7 +302,7 @@ TEST(Gain, Accumulator) {
 
 // Our mixer contains an optimization in which it skips mixing operations if it
 // detects that gain is below a certain threshold (regardless of "accumulate").
-TEST(Gain, Accumulator_Clear) {
+TEST(MixGain, Accumulator_Clear) {
   int16_t source[] = {-32768, 32767};
   float accum[] = {-32768, 32767};
   float expect[] = {-32768, 32767};
@@ -303,16 +310,16 @@ TEST(Gain, Accumulator_Clear) {
   // We will test both SampleAndHold and LinearInterpolation interpolators.
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
                                48000, 1, 48000, Resampler::SampleAndHold);
-  // Use the gain guaranteed to silence all signals: Gain::MuteThreshold.
+  // Use the gain guaranteed to silence all signals: Gain::kMinScale.
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),
-        Gain::MuteThreshold());
+        Gain::kMinScale);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   // Try with the other sampler.
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
                       48000, Resampler::LinearInterpolation);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),
-        Gain::MuteThreshold());
+        Gain::kMinScale);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   //
@@ -321,14 +328,14 @@ TEST(Gain, Accumulator_Clear) {
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
                       48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
-        Gain::MuteThreshold());
+        Gain::kMinScale);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   // Ensure that both samplers behave identically in this regard.
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
                       48000, Resampler::LinearInterpolation);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
-        Gain::MuteThreshold());
+        Gain::kMinScale);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
 

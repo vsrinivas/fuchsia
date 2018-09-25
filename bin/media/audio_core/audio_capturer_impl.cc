@@ -804,10 +804,22 @@ void AudioCapturerImpl::SetGain(float gain_db) {
   }
 
   stream_gain_db_.store(gain_db);
+
+  // TODO(mpuryear): we should do more than just this value once here. Actually
+  // we should distribute this to the various links and their destination gains,
+  // something like the following:
+  //
+  // {
+  //   fbl::AutoLock links_lock(&links_lock_);
+  //   for (auto& link : source_links_) {
+  //     link->bookkeeping()->gain.SetDestGain(gain_db);
+  //   }
+  // }
 }
 
 void AudioCapturerImpl::SetMute(bool muted) {
-  // TODO(mpuryear): Implement.
+  // TODO(mpuryear): Implement Mute in the Gain object, then just pass the
+  // SetDestMute call along to the various links, here.
 }
 
 bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
@@ -888,7 +900,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     //
     // If this gain scale is at or below our mute threshold, skip this source,
     // as it will not contribute to this mix pass.
-    if (bk->gain.GetGainScale(capture_gain_db) <= Gain::MuteThreshold()) {
+    bk->gain.SetDestGain(capture_gain_db);
+    if (bk->gain.IsSilent()) {
       continue;
     }
 

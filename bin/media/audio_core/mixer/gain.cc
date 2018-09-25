@@ -17,13 +17,11 @@ constexpr Gain::AScale Gain::kMaxScale;
 constexpr float Gain::kMinGainDb;
 constexpr float Gain::kMaxGainDb;
 
-// Calculate a stream's gain-scale multiplier, given a destination gain (in db).
+// Calculate a stream's gain-scale multiplier from source and dest gains in dB.
 // Use a few optimizations to avoid doing the full calculation unless we must.
-Gain::AScale Gain::GetGainScale(float dest_gain_db) {
-  float target_src_gain_db = target_src_gain_db_.load();
-
+Gain::AScale Gain::GetGainScale(float src_gain_db, float dest_gain_db) {
   // If nothing changed, return the previously-computed amplitude scale value.
-  if ((current_src_gain_db_ == target_src_gain_db) &&
+  if ((current_src_gain_db_ == src_gain_db) &&
       (current_dest_gain_db_ == dest_gain_db)) {
     return combined_gain_scale_;
   }
@@ -33,7 +31,7 @@ Gain::AScale Gain::GetGainScale(float dest_gain_db) {
   // gain is limited to a max of 0 dB. This is because the roles played by
   // src_gain and dest_gain during playback are reversed during capture (i.e.
   // during capture the master/device gain is the src_gain).
-  current_src_gain_db_ = fbl::clamp(target_src_gain_db, kMinGainDb, kMaxGainDb);
+  current_src_gain_db_ = fbl::clamp(src_gain_db, kMinGainDb, kMaxGainDb);
   current_dest_gain_db_ = fbl::clamp(dest_gain_db, kMinGainDb, kMaxGainDb);
 
   // If source and dest gains cancel each other, the combined is kUnityScale.

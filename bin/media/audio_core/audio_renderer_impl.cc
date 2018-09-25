@@ -667,9 +667,10 @@ void AudioRendererImpl::PauseNoReply() { Pause(nullptr); }
 
 void AudioRendererImpl::SetGain(float gain_db) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
+
   if (stream_gain_db_ != gain_db) {
     if (gain_db > fuchsia::media::MAX_GAIN_DB) {
-      FXL_LOG(ERROR) << "Gain value too large (" << gain_db << ") for source.";
+      FXL_LOG(ERROR) << "Stream gain value too large (" << gain_db << ").";
       return;
     }
 
@@ -682,7 +683,10 @@ void AudioRendererImpl::SetGain(float gain_db) {
     for (const auto& link : dest_links_) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
       auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-      packet_link->bookkeeping()->gain.SetAudioRendererGain(effective_gain_db);
+
+      // The Gain object contains multiple stages. In playback, renderer gain is
+      // "source" gain and device (or master) gain is "dest" gain.
+      packet_link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
     }
   }
 
@@ -692,6 +696,7 @@ void AudioRendererImpl::SetGain(float gain_db) {
 
 void AudioRendererImpl::SetMute(bool mute) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
+
   if (mute_ != mute) {
     mute_ = mute;
 
@@ -702,7 +707,10 @@ void AudioRendererImpl::SetMute(bool mute) {
     for (const auto& link : dest_links_) {
       FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
       auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-      packet_link->bookkeeping()->gain.SetAudioRendererGain(effective_gain_db);
+
+      // The Gain object contains multiple stages. In playback, renderer gain is
+      // "source" gain and device (or master) gain is "dest" gain.
+      packet_link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
     }
   }
 
