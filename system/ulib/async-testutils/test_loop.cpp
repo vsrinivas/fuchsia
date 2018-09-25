@@ -146,7 +146,7 @@ private:
 };
 
 TestLoop::TestLoop()
-    : time_keeper_(new TestLoopTimeKeeper()), state_(GetRandomSeed()) {
+    : time_keeper_(new TestLoopTimeKeeper()), initial_state_(GetRandomSeed()), state_(initial_state_) {
     dispatchers_.push_back(fbl::make_unique<TestLoopDispatcher>(time_keeper_.get()));
     async_set_default_dispatcher(dispatchers_[0].get());
 }

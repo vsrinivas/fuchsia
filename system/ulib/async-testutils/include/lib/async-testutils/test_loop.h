@@ -58,6 +58,9 @@ public:
     // Returns true iff any tasks or waits were invoked during the run.
     bool RunUntilIdle();
 
+    // The initial value of the state of the TestLoop.
+    uint32_t initial_state() { return initial_state_; }
+
 private:
     // An implementation of LoopInterface.
     class TestLoopInterface;
@@ -77,8 +80,10 @@ private:
     // Encapsulation of the async_dispatcher_t dispatch methods.
     fbl::Vector<fbl::unique_ptr<TestLoopDispatcher>> dispatchers_;
 
-    // A pseudo-random number used to determinisitically determine the
+    // The seed of a pseudo-random number used to determinisitically determine the
     // dispatching order across |dispatchers_|.
+    uint32_t initial_state_;
+    // The current state of the pseudo-random generator.
     uint32_t state_;
 
     // Quit state of the loop.
