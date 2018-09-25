@@ -4,26 +4,30 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #include <zircon/compiler.h>
 
 // Resources that require a region allocator to handle exclusive reservations
-// are defined in a contiguous block starting at 0 up to ZX_RSRC_STATIC_COUNT-1.
+// are defined in a contiguous block starting at 0 up to ZX_RSRC_KIND_COUNT-1.
 // After that point, all resource 'kinds' are abstract and need no underlying
-// bookkeeping. It's important that ZX_RSRC_STATIC_COUNT is defined for each
+// bookkeeping. It's important that ZX_RSRC_KIND_COUNT is defined for each
 // architecture to properly allocate only the bookkeeping necessary.
 //
-// TODO(ZX-2419): Give these a type and don't expose ZX_RSRC_STATIC_COUNT to userspace
+// TODO(ZX-2419): Don't expose ZX_RSRC_KIND_COUNT to userspace
 
-#define ZX_RSRC_KIND_MMIO           0u
-#define ZX_RSRC_KIND_IRQ            1u
-#define ZX_RSRC_KIND_IOPORT         2u
-#define ZX_RSRC_KIND_HYPERVISOR     3u
-#define ZX_RSRC_KIND_ROOT           4u
-#define ZX_RSRC_KIND_VMEX           5u
-#define ZX_RSRC_KIND_COUNT          6u
+typedef uint32_t zx_rsrc_kind_t;
+#define ZX_RSRC_KIND_MMIO           ((zx_rsrc_kind_t)0u)
+#define ZX_RSRC_KIND_IRQ            ((zx_rsrc_kind_t)1u)
+#define ZX_RSRC_KIND_IOPORT         ((zx_rsrc_kind_t)2u)
+#define ZX_RSRC_KIND_HYPERVISOR     ((zx_rsrc_kind_t)3u)
+#define ZX_RSRC_KIND_ROOT           ((zx_rsrc_kind_t)4u)
+#define ZX_RSRC_KIND_VMEX           ((zx_rsrc_kind_t)5u)
+#define ZX_RSRC_KIND_COUNT          ((zx_rsrc_kind_t)6u)
 
-#define ZX_RSRC_FLAG_EXCLUSIVE      0x00010000u
-#define ZX_RSRC_FLAGS_MASK          (ZX_RSRC_FLAG_EXCLUSIVE)
+typedef uint32_t zx_rsrc_flags_t;
+#define ZX_RSRC_FLAG_EXCLUSIVE      ((zx_rsrc_flags_t)0x00010000u)
+#define ZX_RSRC_FLAGS_MASK          ((zx_rsrc_flags_t)ZX_RSRC_FLAG_EXCLUSIVE)
 
 #define ZX_RSRC_EXTRACT_KIND(x)     ((x) & 0x0000FFFF)
 #define ZX_RSRC_EXTRACT_FLAGS(x)    ((x) & 0xFFFF0000)
