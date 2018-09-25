@@ -1,0 +1,31 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.game.tennis;
+
+[Discoverable]
+interface TennisService {
+    1: GetState() -> (GameState state);
+    2: RegisterPaddle(string player_name, Paddle paddle);
+};
+
+struct GameState {
+    float64 ballX;
+    float64 ballY;
+    float64 player_1_y; // player 1 is on the left side of the screen
+    float64 player_2_y;
+    int64 player_1_score;
+    int64 player_2_score;
+    int64 time; // start of each game is zero, represents in-game time steps elapsed
+    int64 game_num; // increments by one any time a new game starts, 0 if not enough players yet
+    string player_1_name;
+    string player_2_name;
+};
+
+interface Paddle {
+    1: NewGame(bool is_player_2);
+    2: -> Up();
+    3: -> Down();
+    4: -> Stop();
+};
