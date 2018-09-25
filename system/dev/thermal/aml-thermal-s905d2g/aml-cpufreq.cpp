@@ -50,15 +50,17 @@ zx_status_t AmlCpuFrequency::InitPdev(zx_device_t* parent) {
     }
 
     // Initialized the MMIOs
-    status = pdev_map_mmio_buffer(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &hiu_mmio_);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: could not map periph mmio: %d\n", status);
         return status;
     }
+    hiu_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     // Get BTI handle.
-    status = pdev_get_bti(&pdev_, 0, &bti_);
+    status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: could not get BTI handle: %d\n", status);
         return status;
@@ -74,7 +76,7 @@ zx_status_t AmlCpuFrequency::Init(zx_device_t* parent) {
     }
 
     // HIU Init.
-    status = s905d2_hiu_init(bti_, &hiu_);
+    status = s905d2_hiu_init(bti_.get(), &hiu_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: hiu_init failed: %d\n", status);
         return status;
@@ -132,12 +134,11 @@ zx_status_t AmlCpuFrequency::Init(zx_device_t* parent) {
 }
 
 zx_status_t AmlCpuFrequency::WaitForBusy() {
-    hwreg::RegisterIo mmio(io_buffer_virt(&hiu_mmio_));
-    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(&mmio);
+    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(hiu_mmio_.get());
 
     // Wait till we are not busy.
     for (uint32_t i = 0; i < SYS_CPU_WAIT_BUSY_RETRIES; i++) {
-        sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(&mmio);
+        sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(hiu_mmio_.get());
         if (sys_cpu_ctrl0.busy()) {
             // Wait a little bit before trying again.
             zx_nanosleep(zx_deadline_after(ZX_USEC(SYS_CPU_WAIT_BUSY_TIMEOUT_US)));
@@ -174,8 +175,7 @@ zx_status_t AmlCpuFrequency::ConfigureFixedPLL(uint32_t new_rate) {
     }
 
     // Now program the values into sys cpu clk control0
-    hwreg::RegisterIo mmio(io_buffer_virt(&hiu_mmio_));
-    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(&mmio);
+    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(hiu_mmio_.get());
 
     if (sys_cpu_ctrl0.final_dyn_mux_sel()) {
         // Dynamic mux 1 is in use, we setup dynamic mux 0
@@ -192,7 +192,7 @@ zx_status_t AmlCpuFrequency::ConfigureFixedPLL(uint32_t new_rate) {
     }
 
     // Select the final mux.
-    sys_cpu_ctrl0.set_final_mux_sel(kFixedPll).WriteTo(&mmio);
+    sys_cpu_ctrl0.set_final_mux_sel(kFixedPll).WriteTo(hiu_mmio_.get());
 
     current_rate_ = new_rate;
     return ZX_OK;
@@ -215,9 +215,8 @@ zx_status_t AmlCpuFrequency::ConfigureSysPLL(uint32_t new_rate) {
     }
 
     // Select the final mux.
-    hwreg::RegisterIo mmio(io_buffer_virt(&hiu_mmio_));
-    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(&mmio);
-    sys_cpu_ctrl0.set_final_mux_sel(kSysPll).WriteTo(&mmio);
+    auto sys_cpu_ctrl0 = SysCpuClkControl0::Get().ReadFrom(hiu_mmio_.get());
+    sys_cpu_ctrl0.set_final_mux_sel(kSysPll).WriteTo(hiu_mmio_.get());
 
     current_rate_ = new_rate;
     return status;
@@ -263,11 +262,6 @@ zx_status_t AmlCpuFrequency::SetFrequency(uint32_t new_rate) {
 
 uint32_t AmlCpuFrequency::GetFrequency() {
     return current_rate_;
-}
-
-AmlCpuFrequency::~AmlCpuFrequency() {
-    io_buffer_release(&hiu_mmio_);
-    zx_handle_close(bti_);
 }
 
 } // namespace thermal

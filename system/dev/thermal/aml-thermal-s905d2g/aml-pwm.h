@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
+#include <ddktl/mmio.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
@@ -25,7 +25,7 @@ public:
         : period_(period), hwpwm_(hwpwm){};
     zx_status_t Init(zx_device_t* parent);
     zx_status_t Configure(uint32_t duty_cycle);
-    ~AmlPwm();
+    ~AmlPwm() = default;
 
 private:
     uint32_t period_;
@@ -35,8 +35,7 @@ private:
     uint32_t enable_bit_;
     uint32_t clk_enable_bit_;
     platform_device_protocol_t pdev_;
-    io_buffer_t pwm_mmio_;
-    fbl::unique_ptr<hwreg::RegisterIo> pwm_regs_;
+    fbl::unique_ptr<ddk::MmioBuffer> pwm_mmio_;
     fbl::Mutex pwm_lock_;
 };
 } // namespace thermal

@@ -4,13 +4,14 @@
 
 #pragma once
 
-#include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddktl/mmio.h>
 #include <ddktl/protocol/clk.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
+#include <lib/zx/bti.h>
 
 namespace thermal {
 // This class handles the dynamic changing of
@@ -20,7 +21,7 @@ class AmlCpuFrequency {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpuFrequency);
     AmlCpuFrequency(){};
-    ~AmlCpuFrequency();
+    ~AmlCpuFrequency() = default;
     zx_status_t SetFrequency(uint32_t rate);
     zx_status_t Init(zx_device_t* parent);
     uint32_t GetFrequency();
@@ -37,9 +38,9 @@ private:
     clk_protocol_t clk_protocol_;
     fbl::unique_ptr<ddk::ClkProtocolProxy> clk_;
     // MMIOS.
-    io_buffer_t hiu_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer> hiu_mmio_;
     // BTI handle.
-    zx_handle_t bti_;
+    zx::bti bti_;
     // HIU Handle.
     aml_hiu_dev_t hiu_;
     // Sys PLL.

@@ -4,12 +4,11 @@
 
 #pragma once
 
-#include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
+#include <ddktl/mmio.h>
 #include <fbl/atomic.h>
 #include <fbl/unique_ptr.h>
-#include <hwreg/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 #include <zircon/device/thermal.h>
@@ -40,13 +39,10 @@ private:
     void UpdateRiseThresholdIrq(uint32_t irq);
     uint32_t trim_info_;
     platform_device_protocol_t pdev_;
-    io_buffer_t pll_mmio_;
-    io_buffer_t ao_mmio_;
-    io_buffer_t hiu_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer> pll_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer> ao_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer> hiu_mmio_;
     zx::interrupt tsensor_irq_;
-    fbl::unique_ptr<hwreg::RegisterIo> pll_regs_;
-    fbl::unique_ptr<hwreg::RegisterIo> ao_regs_;
-    fbl::unique_ptr<hwreg::RegisterIo> hiu_regs_;
     thrd_t irq_thread_;
     fbl::atomic<bool> running_;
     zx_handle_t port_;
