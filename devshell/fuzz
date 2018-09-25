@@ -13,6 +13,8 @@
 ## Options (must be first):
 ##   -d, --device   <name>   Connect to device using Fuchsia link-local name.
 ##                           Must be specified if multiple devices are present.
+##   -o, --output   <dir>    Use the given directory for saving output files.
+##                           Defaults to the current directory.
 ##   -s, --staging  <dir>    Use the given directory for staging temporary
 ##                           corpus files being transferred on or off of a
 ##                           target device. Defaults to a temporary directory
@@ -48,18 +50,28 @@
 ## Example workflow:
 ##   1. Shows available fuzzers:
 ##         fx fuzz list
-##   2. Run a fuzzer for 8 hours (e.g. overnight), fetching the initial corpus
-##      if needed:
-##         fx fuzz start foo_package/bar_fuzz_test -max_total_time=28800
-##   3. Check if any crashes occurred:
+##
+##   2. Fetch an initial corpus:
+##         fx fuzz fetch foo_package/bar_fuzz_test
+##
+##   3. Run a fuzzer for 8 hours (e.g. overnight):
+##         fx fuzz -o out foo/bar -max_total_time=28800
+##
+##   4. Check if the fuzzer is still running.
 ##         fx fuzz check foo/bar
-##   4. Execute the fuzzer with a crashing input:
+##
+##   5. Execute the fuzzer with a crashing input:
 ##         fx fuzz repro foo/bar crash-deadbeef
-##   5. Fix bugs and repeat step 4 until it doesn't crash.
-##   6. Repeat steps 2-4 until no crashes found.
-##   7. Minimize the resulting corpus:
+##
+##   6. Use the artifacts in 'out/foo_package/bar_fuzz_test/latest' to file and
+##      fix bugs. Repeat step 5 until the target doesn't crash.
+##
+##   7. Repeat steps 3-5 until no crashes found.
+##
+##   8. Minimize the resulting corpus:
 ##         fx fuzz merge foo/bar
-##   8. Save the new, minimized corpus in CIPD:
+##
+##   9. Save the new, minimized corpus in CIPD:
 ##         fx fuzz store foo/bar
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
@@ -70,9 +82,11 @@ CIPD="${FUCHSIA_DIR}/buildtools/cipd"
 
 # Global variables
 device=""
+output="."
 staging=""
 keep=0
 
+host=$(uname)
 fuzzer=""
 status=""
 data_path=""
@@ -84,6 +98,19 @@ fatal() {
   echo "Fatal error: $@"
   echo "Try 'fx help fuzz'"
   exit 1
+}
+
+abspath() {
+  if [[ ${host} == "Darwin" ]] ; then
+    # Ugh, Mac OSX, why can't you have decent utilities?
+    if [[ -d "$1" ]] ; then
+      cd $1 && pwd -P
+    else
+      cd $(dirname $1) && echo "$(pwd -P)/$(basename $1)"
+    fi
+  else
+    realpath $1
+  fi
 }
 
 set_device() {
@@ -116,6 +143,77 @@ query() {
   tmp="$(echo "${tmp}" | tr -d ':' | cut -d' ' -f1,2,8,11)"
   read fuzzer status data_path corpus_size <<< "${tmp}"
   cipd_path="fuchsia/test_data/fuzzing/${fuzzer}"
+}
+
+record() {
+  if [[ -z "$1" ]] ; then
+    return
+  fi
+  query "$1"
+
+  mkdir -p "${output}/${fuzzer}"
+  [[ $? -eq 0 ]] || fatal "failed to make directory: ${output}/${fuzzer}"
+  pushd "${output}/${fuzzer}" >/dev/null
+
+  if [[ ${status} == "RUNNING" ]] && [[ ! -h active ]] ; then
+    local results="$(date +%F-%T)"
+    mkdir ${results}
+    [[ $? -eq 0 ]] || fatal "failed to make directory: ${results}"
+    ln -s ${results} active
+    pushd active >/dev/null
+
+  elif [[ ${status} == "STOPPED" ]] && [[ -h active ]] ; then
+    rm -f latest
+    mv active latest
+    pushd latest >/dev/null
+
+  else
+    # Already started, or already processed
+    return
+  fi
+
+  # Copy log files.
+  i=0
+  while [[ $i -ge 0 ]] ; do
+    local log="fuzz-${i}.log"
+    fx-command-run scp "[${device}]:${data_path}${log}" . 2>/dev/null
+    if [[ $? -eq 0 ]] ; then
+      i=$((${i}+1))
+    else
+      i=-1
+    fi
+  done
+
+  if [[ ${status} == "RUNNING" ]] ; then
+    # Start log collection
+    ${ZIRCON_TOOLS_DIR}/loglistener >zircon.log  &
+    echo $! >.loglistener.pid
+  else
+    # Stop log collection and symbolize
+    if [[ -f .loglistener.pid ]] ; then
+      kill $(cat .loglistener.pid)
+      rm -f .loglistener.pid
+    fi
+    if [[ -f zircon.log ]] ; then
+      ${FUCHSIA_DIR}/zircon/scripts/symbolize-filter \
+        ${FUCHSIA_BUILD_DIR}/ids.txt <zircon.log >symbolized.log
+    fi
+
+    # Transfer the fuzz logs
+    for log in fuzz-*.log ; do
+      if [[ -f ${log} ]] ; then
+        for unit in $(grep 'Test unit written to ' ${log} | sed 's/.* //') ; do
+          fx-command-run scp "[${device}]:${unit}" .
+        done
+        fx-command-run ssh ${device} rm "${data_path}${log}"
+      fi
+    done
+
+    # Alert the user
+    echo "Results written to $(pwd -P)"
+  fi
+  popd >/dev/null
+  popd >/dev/null
 }
 
 fetch() {
@@ -184,6 +282,30 @@ EOF
   popd
 }
 
+monitor() {
+  # Wait for completion
+  while [[ "${status}" == "RUNNING" ]] ; do
+    sleep 10
+    query "${fuzzer}"
+  done
+
+  # Notify user
+  local title="${fuzzer} has stopped"
+  local body=$(record "${fuzzer}")
+  if [[ -z "${body}" ]] ; then
+    body="No results produced."
+  fi
+  if [[ ${host} == "Linux" ]] ; then
+    if [[ -x /usr/bin/notify-send ]] ; then
+      /usr/bin/notify-send "${title}." "${body}"
+    else
+      wall "${title}; ${body}"
+    fi
+  elif [[ ${host} == "Darwin" ]] ; then
+    osascript -e "display notification \"${body}\" with title \"${title}.\""
+  fi
+}
+
 # Main
 main() {
   # Parse options
@@ -191,6 +313,9 @@ main() {
     case $1 in
       -d|--device)
         device=$(get-device-addr $1 $2)
+        ;;
+      -o|--output)
+        output="$2"
         ;;
       -s|--staging)
         keep=1
@@ -206,6 +331,7 @@ main() {
     shift
     shift
   done
+  output=$(abspath "${output}")
 
   # Parse command
   local command=$1
@@ -219,16 +345,24 @@ main() {
     list|check|stop|repro|merge)
       set_device
       fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args}
+      record "${fuzzer}"
       ;;
     start)
       set_device
       fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args} &
+      sleep 1
+      record "${fuzzer}"
       ;;
     fetch|store)
       set_device
       set_staging
       query "${fuzzer}"
       ${command} ${args}
+      ;;
+    watch)
+      set_device
+      query "${fuzzer}"
+      monitor &
       ;;
     *)
       fatal "unrecognized command: '${command}'"
