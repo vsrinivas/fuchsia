@@ -1,7 +1,4 @@
 {
-    "imports": [
-        "garnet/packages/prod/bluetooth_drivers"
-    ],
     "packages": [
         "//garnet/bin/bluetooth/profiles/bt-a2dp-sink",
         "//garnet/bin/bluetooth/bt-gap",
