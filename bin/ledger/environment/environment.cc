@@ -6,7 +6,7 @@
 
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fxl/macros.h>
-#include <lib/timekeeper/clock_impl.h>
+#include <lib/timekeeper/system_clock.h>
 
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/lib/ledger_client/constants.h"
@@ -106,7 +106,7 @@ Environment EnvironmentBuilder::Build() {
     };
   }
   if (!clock_) {
-    clock_ = std::make_unique<timekeeper::ClockImpl>();
+    clock_ = std::make_unique<timekeeper::SystemClock>();
   }
   return Environment(dispatcher_, io_dispatcher_, std::move(firebase_api_key_),
                      std::move(coroutine_service_), std::move(backoff_factory_),
