@@ -27,7 +27,13 @@ FinishThreadController::~FinishThreadController() = default;
 FinishThreadController::StopOp FinishThreadController::OnThreadStop(
     debug_ipc::NotifyException::Type stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
-  return until_controller_->OnThreadStop(stop_type, hit_breakpoints);
+  if (until_controller_)
+    return until_controller_->OnThreadStop(stop_type, hit_breakpoints);
+
+  // When there's no "until" controller, this controller just said "continue"
+  // to step out of the oldest stack frame. Therefore, any stops at this level
+  // aren't ours.
+  return kContinue;
 }
 
 void FinishThreadController::InitWithThread(
@@ -56,7 +62,9 @@ void FinishThreadController::InitWithThread(
 }
 
 ThreadController::ContinueOp FinishThreadController::GetContinueOp() {
-  return until_controller_->GetContinueOp();
+  if (until_controller_)
+    return until_controller_->GetContinueOp();
+  return ContinueOp::Continue();
 }
 
 void FinishThreadController::InitWithFrames(
@@ -89,6 +97,13 @@ void FinishThreadController::InitWithFrames(
   // The stack frame to exit to is just the next one up.
   size_t step_to_index = requested_index + 1;
   to_address_ = frames[step_to_index]->GetAddress();
+  if (!to_address_) {
+    // Often the bottom-most stack frame will have a 0 IP which obviously
+    // we can't return to. Treat this the same as when returning from the
+    // last frame and just continue.
+    cb(Err());
+    return;
+  }
   to_frame_fingerprint_ = thread()->GetFrameFingerprint(step_to_index);
   InitWithFingerprint(std::move(cb));
 }
@@ -99,7 +114,6 @@ bool FinishThreadController::HaveAddressAndFingerprint() const {
 
 void FinishThreadController::InitWithFingerprint(
     std::function<void(const Err&)> cb) {
-  FXL_DCHECK(HaveAddressAndFingerprint());
   until_controller_ = std::make_unique<UntilThreadController>(
       InputLocation(to_address_), to_frame_fingerprint_);
 

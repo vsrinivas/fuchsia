@@ -66,6 +66,8 @@ class FinishThreadController : public ThreadController {
   uint64_t to_address_ = 0;
   FrameFingerprint to_frame_fingerprint_;
 
+  // Will be non-null when stepping out. During initialization or when stepping
+  // out of the earliest stack frame, this can be null.
   std::unique_ptr<UntilThreadController> until_controller_;
 };
 

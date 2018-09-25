@@ -131,12 +131,18 @@ struct Module {
 };
 
 struct StackFrame {
-  uint64_t ip = 0;  // Instruction pointer.
-  uint64_t sp = 0;  // Stack pointer.
+  StackFrame() = default;
+  StackFrame(uint64_t ip, uint64_t bp, uint64_t sp) : ip(ip), bp(bp), sp(sp) {}
+
+  // Instruction pointer.
+  uint64_t ip = 0;
 
   // Frame base pointer. This may be invalid if the code was compiled without
   // frame pointers.
   uint64_t bp = 0;
+
+  // Stack pointer.
+  uint64_t sp = 0;
 };
 
 struct AddressRegion {

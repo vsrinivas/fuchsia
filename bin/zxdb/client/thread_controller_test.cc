@@ -19,37 +19,6 @@ const uint64_t ThreadControllerTest::kUnsymbolizedModuleAddress = 0x4000000;
 // static
 const uint64_t ThreadControllerTest::kSymbolizedModuleAddress = 0x5000000;
 
-class ThreadControllerTest::ControllerTestSink : public RemoteAPI {
- public:
-  // The argument is a variable to increment every time Resume() is called.
-  explicit ControllerTestSink(ThreadControllerTest* test) : test_(test) {}
-
-  void Resume(
-      const debug_ipc::ResumeRequest& request,
-      std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override {
-    test_->resume_count_++;
-  }
-
-  void AddOrChangeBreakpoint(
-      const debug_ipc::AddOrChangeBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb)
-      override {
-    test_->last_breakpoint_address_ = request.breakpoint.locations[0].address;
-    test_->last_breakpoint_id_ = request.breakpoint.breakpoint_id;
-    test_->add_breakpoint_count_++;
-  }
-
-  void RemoveBreakpoint(
-      const debug_ipc::RemoveBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb)
-      override {
-    test_->remove_breakpoint_count_++;
-  }
-
- private:
-  ThreadControllerTest* test_;
-};
-
 ThreadControllerTest::ThreadControllerTest() = default;
 ThreadControllerTest::~ThreadControllerTest() = default;
 
@@ -85,7 +54,9 @@ void ThreadControllerTest::SetUp() {
 }
 
 std::unique_ptr<RemoteAPI> ThreadControllerTest::GetRemoteAPIImpl() {
-  return std::make_unique<ControllerTestSink>(this);
+  auto remote_api = std::make_unique<MockRemoteAPI>();
+  mock_remote_api_ = remote_api.get();
+  return remote_api;
 }
 
 }  // namespace zxdb

@@ -90,7 +90,7 @@ TEST_F(ThreadImplTest, Frames) {
   expected_reply.frames[0].sp = kStack1;
   expected_reply.frames[1].ip = kAddress2;
   expected_reply.frames[1].sp = kStack2;
-  sink().set_frames_response(expected_reply);
+  mock_remote_api().set_backtrace_reply(expected_reply);
 
   // Asynchronously request the frames. The
   thread->SyncFrames([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });

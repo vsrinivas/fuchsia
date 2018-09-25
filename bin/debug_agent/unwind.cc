@@ -109,6 +109,10 @@ zx_status_t UnwindStack(const zx::process& process, uint64_t dl_debug_addr,
     stack->push_back(frame);
   }
 
+  // The last stack entry will typically have a 0 IP address. We want to send
+  // this anyway because it will hold the initial stack pointer for the thread,
+  // which in turn allows computation of the first real frame's fingerprint.
+
   return ZX_OK;
 }
 

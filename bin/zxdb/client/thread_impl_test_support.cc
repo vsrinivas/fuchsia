@@ -9,49 +9,13 @@
 
 namespace zxdb {
 
-void ThreadImplTestSink::AddOrChangeBreakpoint(
-    const debug_ipc::AddOrChangeBreakpointRequest& request,
-    std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) {
-  breakpoint_add_called_ = true;
-  last_breakpoint_add_ = request;
-  debug_ipc::MessageLoop::Current()->PostTask(
-      [cb]() { cb(Err(), debug_ipc::AddOrChangeBreakpointReply()); });
-}
-
-void ThreadImplTestSink::RemoveBreakpoint(
-    const debug_ipc::RemoveBreakpointRequest& request,
-    std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) {
-  breakpoint_remove_called_ = true;
-  debug_ipc::MessageLoop::Current()->PostTask(
-      [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
-}
-
-void ThreadImplTestSink::Backtrace(
-    const debug_ipc::BacktraceRequest& request,
-    std::function<void(const Err&, debug_ipc::BacktraceReply)> cb) {
-  // Returns the canned response.
-  debug_ipc::MessageLoop::Current()->PostTask([
-    cb, response = frames_response_
-  ]() { cb(Err(), std::move(response)); });
-}
-
-void ThreadImplTestSink::Resume(
-    const debug_ipc::ResumeRequest& request,
-    std::function<void(const Err&, debug_ipc::ResumeReply)> cb) {
-  // Always returns success and then quits the message loop.
-  debug_ipc::MessageLoop::Current()->PostTask([cb]() {
-    cb(Err(), debug_ipc::ResumeReply());
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  });
-}
-
 ThreadImplTest::ThreadImplTest() = default;
 ThreadImplTest::~ThreadImplTest() = default;
 
 std::unique_ptr<RemoteAPI> ThreadImplTest::GetRemoteAPIImpl() {
-  auto sink = std::make_unique<ThreadImplTestSink>();
-  sink_ = sink.get();
-  return std::move(sink);
+  auto remote_api = std::make_unique<MockRemoteAPI>();
+  mock_remote_api_ = remote_api.get();
+  return std::move(remote_api);
 }
 
 TestThreadObserver::TestThreadObserver(Thread* thread) : thread_(thread) {

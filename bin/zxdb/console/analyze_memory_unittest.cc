@@ -98,9 +98,9 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   std::vector<Frame*> frames;
   const uint64_t kStack0SP = kBegin;
   const uint64_t kStack1SP = kBegin + 8;
-  MockFrame frame0(nullptr, nullptr, debug_ipc::StackFrame{0x100, kStack0SP},
+  MockFrame frame0(nullptr, nullptr, debug_ipc::StackFrame(0x100, kStack0SP, kStack0SP),
                    Location(Location::State::kSymbolized, 0x1234));
-  MockFrame frame1(nullptr, nullptr, debug_ipc::StackFrame{0x108, kStack1SP},
+  MockFrame frame1(nullptr, nullptr, debug_ipc::StackFrame(0x108, kStack1SP, kStack1SP),
                    Location(Location::State::kSymbolized, 0x1234));
   frames.push_back(&frame0);
   frames.push_back(&frame1);

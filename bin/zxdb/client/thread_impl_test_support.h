@@ -8,60 +8,24 @@
 // involving lower-level thread contol such as ThreadImpl utself, and
 // ThreadControllers.
 
+#include "garnet/bin/zxdb/client/mock_remote_api.h"
 #include "garnet/bin/zxdb/client/remote_api_test.h"
 #include "garnet/bin/zxdb/client/thread_observer.h"
 
 namespace zxdb {
-
-class ThreadImplTestSink : public RemoteAPI {
- public:
-  void set_frames_response(const debug_ipc::BacktraceReply& response) {
-    frames_response_ = response;
-  }
-
-  bool breakpoint_add_called() const { return breakpoint_add_called_; }
-  bool breakpoint_remove_called() const { return breakpoint_remove_called_; }
-
-  const debug_ipc::AddOrChangeBreakpointRequest& last_breakpoint_add() const {
-    return last_breakpoint_add_;
-  }
-
-  void AddOrChangeBreakpoint(
-      const debug_ipc::AddOrChangeBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb)
-      override;
-  void RemoveBreakpoint(
-      const debug_ipc::RemoveBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb)
-      override;
-  void Backtrace(
-      const debug_ipc::BacktraceRequest& request,
-      std::function<void(const Err&, debug_ipc::BacktraceReply)> cb) override;
-  void Resume(
-      const debug_ipc::ResumeRequest& request,
-      std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override;
-
- private:
-  debug_ipc::BacktraceReply frames_response_;
-
-  bool breakpoint_add_called_ = false;
-  debug_ipc::AddOrChangeBreakpointRequest last_breakpoint_add_;
-
-  bool breakpoint_remove_called_ = false;
-};
 
 class ThreadImplTest : public RemoteAPITest {
  public:
   ThreadImplTest();
   ~ThreadImplTest() override;
 
-  ThreadImplTestSink& sink() { return *sink_; }
+  MockRemoteAPI& mock_remote_api() { return *mock_remote_api_; }
 
  protected:
   std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() override;
 
  private:
-  ThreadImplTestSink* sink_;  // Owned by the session.
+  MockRemoteAPI* mock_remote_api_;  // Owned by the session.
 };
 
 class TestThreadObserver : public ThreadObserver {

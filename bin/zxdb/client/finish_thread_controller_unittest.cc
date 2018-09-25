@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/client/finish_thread_controller.h"
+#include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/thread.h"
+#include "garnet/bin/zxdb/client/thread_controller_test.h"
 #include "garnet/bin/zxdb/client/thread_impl_test_support.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "gtest/gtest.h"
@@ -12,80 +14,75 @@ namespace zxdb {
 
 namespace {
 
-class FinishThreadControllerTest : public ThreadImplTest {};
+constexpr uint64_t kInitialAddress = 0x12345678;
+constexpr uint64_t kInitialBase = 0x1000;
+constexpr uint64_t kReturnAddress = 0x34567890;
+constexpr uint64_t kReturnBase = 0x1010;
+
+class FinishThreadControllerTest : public ThreadControllerTest {
+ public:
+  // Creates a break notification with two stack frames using the constants
+  // above.
+  debug_ipc::NotifyException MakeBreakNotification() {
+    debug_ipc::NotifyException n;
+
+    n.process_koid = process()->GetKoid();
+    n.type = debug_ipc::NotifyException::Type::kSoftware;
+    n.thread.koid = thread()->GetKoid();
+    n.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+    n.frames.emplace_back(kInitialAddress, kInitialBase, kInitialBase);
+    n.frames.emplace_back(kReturnAddress, kReturnBase, kReturnBase);
+
+    return n;
+  }
+};
 
 }  // namespace
 
 TEST_F(FinishThreadControllerTest, Finish) {
-  // Make a process and thread for notifying about.
-  constexpr uint64_t kProcessKoid = 1234;
-  InjectProcess(kProcessKoid);
-  constexpr uint64_t kThreadKoid = 5678;
-  Thread* thread = InjectThread(kProcessKoid, kThreadKoid);
-
   // Notify of thread stop.
-  constexpr uint64_t kInitialAddress = 0x12345678;
-  constexpr uint64_t kInitialBase = 0x1000;
-  debug_ipc::NotifyException break_notification;
-  break_notification.process_koid = kProcessKoid;
-  break_notification.type = debug_ipc::NotifyException::Type::kSoftware;
-  break_notification.thread.koid = kThreadKoid;
-  break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  break_notification.frames.resize(1);
-  break_notification.frames[0].ip = kInitialAddress;
-  break_notification.frames[0].sp = kInitialBase;
-  break_notification.frames[0].bp = kInitialBase;
+  auto break_notification = MakeBreakNotification();
   InjectException(break_notification);
 
-  // Supply two frames for when the thread requests them: the top one (of the
-  // stop above), and the one we'll return to. This stack value should be
-  // larger than above (stack grows downward).
-  constexpr uint64_t kReturnAddress = 0x34567890;
-  constexpr uint64_t kReturnBase = 0x1010;
+  // Supply three frames for when the thread requests them: the top one (of the
+  // stop above), the one we'll return to, and the one before that (so the
+  // fingerprint of the one to return to can be computed). This stack value
+  // should be larger than above (stack grows downward).
   debug_ipc::BacktraceReply expected_reply;
-  expected_reply.frames.resize(2);
-  expected_reply.frames[0].ip = kInitialAddress;
-  expected_reply.frames[0].sp = kInitialBase;
-  expected_reply.frames[0].bp = kInitialBase;
-  expected_reply.frames[1].ip = kReturnAddress;
-  expected_reply.frames[1].sp = kReturnBase;
-  expected_reply.frames[1].bp = kReturnBase;
-  sink().set_frames_response(expected_reply);
+  expected_reply.frames = break_notification.frames;  // Copy previous ones.
+  expected_reply.frames.emplace_back(kReturnAddress, kReturnBase, kReturnBase);
+  mock_remote_api()->set_backtrace_reply(expected_reply);
 
-  auto frames = thread->GetFrames();
-  ASSERT_EQ(1u, frames.size());  // Should have top frame from the stop only.
+  auto frames = thread()->GetFrames();
 
-  EXPECT_FALSE(sink().breakpoint_add_called());
+  EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
   Err out_err;
-  thread->ContinueWith(std::make_unique<FinishThreadController>(
-                           FinishThreadController::FromFrame(), frames[0]),
-                       [&out_err](const Err& err) {
-                         out_err = err;
-                         debug_ipc::MessageLoop::Current()->QuitNow();
-                       });
+  thread()->ContinueWith(std::make_unique<FinishThreadController>(
+                             FinishThreadController::FromFrame(), frames[0]),
+                         [&out_err](const Err& err) {
+                           out_err = err;
+                           debug_ipc::MessageLoop::Current()->QuitNow();
+                         });
   loop().Run();
 
-  TestThreadObserver thread_observer(thread);
+  TestThreadObserver thread_observer(thread());
 
   // Finish should have added a temporary breakpoint at the return address.
   // The particulars of this may change with the implementation, but it's worth
   // testing to make sure the breakpoints are all hooked up to the stepping
   // properly.
-  EXPECT_TRUE(sink().breakpoint_add_called());
-  ASSERT_EQ(1u, sink().last_breakpoint_add().breakpoint.locations.size());
-  ASSERT_EQ(kReturnAddress,
-            sink().last_breakpoint_add().breakpoint.locations[0].address);
-  EXPECT_FALSE(sink().breakpoint_remove_called());
+  ASSERT_EQ(1, mock_remote_api()->breakpoint_add_count());
+  ASSERT_EQ(kReturnAddress, mock_remote_api()->last_breakpoint_address());
+  ASSERT_EQ(0, mock_remote_api()->breakpoint_remove_count());
 
   // Simulate a hit of the breakpoint. This stack pointer is too small
   // (indicating a recursive call) so it should not trigger.
-  break_notification.frames.resize(1);
-  break_notification.frames[0].ip = kReturnAddress;
-  break_notification.frames[0].sp = kInitialBase - 0x100;
-  break_notification.frames[0].bp = kInitialBase - 0x100;
+  break_notification.frames.clear();
+  break_notification.frames.emplace_back(kReturnAddress, kInitialBase - 0x100,
+                                         kInitialBase - 0x100);
   break_notification.hit_breakpoints.emplace_back();
   break_notification.hit_breakpoints[0].breakpoint_id =
-      sink().last_breakpoint_add().breakpoint.breakpoint_id;
+      mock_remote_api()->last_breakpoint_id();
   InjectException(break_notification);
   EXPECT_FALSE(thread_observer.got_stopped());
 
@@ -95,7 +92,42 @@ TEST_F(FinishThreadControllerTest, Finish) {
   break_notification.frames[0].bp = kReturnBase;
   InjectException(break_notification);
   EXPECT_TRUE(thread_observer.got_stopped());
-  EXPECT_TRUE(sink().breakpoint_remove_called());
+  EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
+}
+
+// Tests "finish" at the bottom stack frame. Normally there's a stack frame
+// with an IP of 0 below the last "real" stack frame.
+TEST_F(FinishThreadControllerTest, BottomStackFrame) {
+  // Notify of thread stop. Here we have the 0th frame of the current
+  // location, and a null frame.
+  auto break_notification = MakeBreakNotification();
+  break_notification.frames[1] = debug_ipc::StackFrame(0, 0, 0);
+  InjectException(break_notification);
+
+  // The backtrace reply gives the same two frames since that's all there is
+  // (the Thread doesn't know until it requests them).
+  debug_ipc::BacktraceReply expected_reply;
+  expected_reply.frames = break_notification.frames;
+  mock_remote_api()->set_backtrace_reply(expected_reply);
+
+  auto frames = thread()->GetFrames();
+
+  EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
+  Err out_err;
+  thread()->ContinueWith(std::make_unique<FinishThreadController>(
+                             FinishThreadController::FromFrame(), frames[0]),
+                         [&out_err](const Err& err) {
+                           out_err = err;
+                           debug_ipc::MessageLoop::Current()->QuitNow();
+                         });
+  loop().Run();
+
+  TestThreadObserver thread_observer(thread());
+
+  // Since the return address is null, we should not have attempted to create
+  // a breakpoint, and the thread should have been resumed.
+  ASSERT_EQ(0, mock_remote_api()->breakpoint_add_count());
+  ASSERT_EQ(1, mock_remote_api()->resume_count());
 }
 
 }  // namespace zxdb

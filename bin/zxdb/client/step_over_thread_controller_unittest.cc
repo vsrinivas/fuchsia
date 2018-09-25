@@ -53,14 +53,14 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
 
   // It should have been able to step without doing any further async work.
   EXPECT_TRUE(continued);
-  EXPECT_EQ(1, resume_count());
+  EXPECT_EQ(1, mock_remote_api()->resume_count());
 
   // Issue a stop in the range. This should get transparently resumed. In
   // general the backend won't issue this since it will continue stepping in
   // the given range, but it could, and we should resume anyway.
   exception.frames[0].ip += 4;
   InjectException(exception);
-  EXPECT_EQ(2, resume_count());
+  EXPECT_EQ(2, mock_remote_api()->resume_count());
 
   // Issue a stop in a new stack frame. The base pointer will be the same as
   // the outer function since the prologue hasn't executed yet. The previous
@@ -75,22 +75,24 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
 
   // That should have sent a resume + a breakpoint set at the frame 1 IP (this
   // breakpoint is implementing the "finish" to step out of the function call).
-  EXPECT_EQ(3, resume_count());
-  EXPECT_EQ(0, remove_breakpoint_count());
-  EXPECT_EQ(exception.frames[1].ip, last_breakpoint_address());
+  EXPECT_EQ(3, mock_remote_api()->resume_count());
+  EXPECT_EQ(0, mock_remote_api()->breakpoint_remove_count());
+  EXPECT_EQ(exception.frames[1].ip,
+            mock_remote_api()->last_breakpoint_address());
 
   // Send a breakpoint completion notification at the previous stack frame.
   exception.frames.erase(exception.frames.begin());  // Erase topmost.
   // Breakpoint exceptions are "software".
   exception.type = debug_ipc::NotifyException::Type::kSoftware;
   exception.hit_breakpoints.resize(1);
-  exception.hit_breakpoints[0].breakpoint_id = last_breakpoint_id();
+  exception.hit_breakpoints[0].breakpoint_id =
+      mock_remote_api()->last_breakpoint_id();
   exception.hit_breakpoints[0].hit_count = 1;
   InjectException(exception);
 
   // That should have removed the breakpoint and resumed the thread.
-  EXPECT_EQ(1, remove_breakpoint_count());
-  EXPECT_EQ(4, resume_count());
+  EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
+  EXPECT_EQ(4, mock_remote_api()->resume_count());
 
   // Last exception is outside the range (the end is non-inclusive).
   exception.hit_breakpoints.clear();
@@ -98,7 +100,7 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
   InjectException(exception);
 
   // Should have stopped.
-  EXPECT_EQ(4, resume_count());  // Same value as above.
+  EXPECT_EQ(4, mock_remote_api()->resume_count());  // Same value as above.
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
 }
 
