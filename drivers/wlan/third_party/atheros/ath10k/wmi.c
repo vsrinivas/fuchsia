@@ -2082,7 +2082,7 @@ static zx_status_t ath10k_wmi_op_pull_mgmt_rx_ev(struct ath10k* ar, struct ath10
     arg->phy_mode = ev_hdr->phy_mode;
     arg->rate = ev_hdr->rate;
 
-    msg_buf->rx.frame_offset = ath10k_msg_buf_get_payload_offset(ATH10K_MSG_TYPE_WMI) + ev_len;
+    msg_buf->rx.frame_offset = ev_len;
 
     msdu_len = arg->buf_len;
     if (msg_buf->used - (ath10k_msg_buf_get_payload_offset(ATH10K_MSG_TYPE_WMI) + ev_len) <
