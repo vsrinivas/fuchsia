@@ -88,6 +88,11 @@ struct ApInfraBssTest : public ::testing::Test {
             [=](auto msg) { return CreateAssocResponse(msg, result_code); });
     }
 
+    zx_status_t SendEapolRequestMsg() {
+        return HandleMlmeMsg<wlan_mlme::EapolRequest>(
+            [=](auto msg) { return CreateEapolRequest(msg); });
+    }
+
     void StartAp() {
         SendStartReqMsg();
         device.svc_queue.clear();
@@ -101,14 +106,23 @@ struct ApInfraBssTest : public ::testing::Test {
         device.wlan_queue.clear();
     }
 
+    void AssociateClient() {
+        AuthenticateClient();
+
+        SendClientAssocReqFrame();
+        SendAssocResponseMsg(wlan_mlme::AssociateResultCodes::SUCCESS);
+        device.svc_queue.clear();
+        device.wlan_queue.clear();
+    }
+
     void AssertAuthInd(fbl::unique_ptr<Packet> pkt) {
         ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
         MlmeMsg<wlan_mlme::AuthenticateIndication> msg;
         auto status = MlmeMsg<wlan_mlme::AuthenticateIndication>::FromPacket(fbl::move(pkt), &msg);
         ASSERT_EQ(status, ZX_OK);
 
-        ASSERT_EQ(msg.body()->auth_type, wlan_mlme::AuthenticationTypes::OPEN_SYSTEM);
-        ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), kClientAddress, 6), 0);
+        EXPECT_EQ(msg.body()->auth_type, wlan_mlme::AuthenticationTypes::OPEN_SYSTEM);
+        EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), kClientAddress, 6), 0);
     }
 
     void AssertAssocInd(fbl::unique_ptr<Packet> pkt) {
@@ -117,10 +131,10 @@ struct ApInfraBssTest : public ::testing::Test {
         auto status = MlmeMsg<wlan_mlme::AssociateIndication>::FromPacket(fbl::move(pkt), &msg);
         ASSERT_EQ(status, ZX_OK);
 
-        ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), kClientAddress, 6), 0);
-        ASSERT_EQ(msg.body()->listen_interval, kListenInterval);
-        ASSERT_EQ(std::memcmp(msg.body()->ssid->data(), kSsid, msg.body()->ssid->size()), 0);
-        ASSERT_EQ(std::memcmp(msg.body()->rsn->data(), kRsne, sizeof(kRsne)), 0);
+        EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), kClientAddress, 6), 0);
+        EXPECT_EQ(msg.body()->listen_interval, kListenInterval);
+        EXPECT_EQ(std::memcmp(msg.body()->ssid->data(), kSsid, msg.body()->ssid->size()), 0);
+        EXPECT_EQ(std::memcmp(msg.body()->rsn->data(), kRsne, sizeof(kRsne)), 0);
     }
 
     MockDevice device;
@@ -151,12 +165,12 @@ TEST_F(ApInfraBssTest, Authenticate_Success) {
     auto frame = TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.get());
 
     // Verify authentication response frame for the client
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-    ASSERT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
-    ASSERT_EQ(frame.body()->auth_txn_seq_number, 2);
-    ASSERT_EQ(frame.body()->status_code, status_code::kSuccess);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+    EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
+    EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
+    EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
 }
 
 TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
@@ -171,12 +185,12 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
     auto frame = TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.get());
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-    ASSERT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
-    ASSERT_EQ(frame.body()->auth_txn_seq_number, 2);
-    ASSERT_EQ(frame.body()->status_code, status_code::kRefused);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+    EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
+    EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
+    EXPECT_EQ(frame.body()->status_code, status_code::kRefused);
 }
 
 TEST_F(ApInfraBssTest, Associate_Success) {
@@ -201,13 +215,13 @@ TEST_F(ApInfraBssTest, Associate_Success) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(2));
     auto pkt = std::move(*device.wlan_queue.begin());
     auto frame = TypeCheckWlanFrame<MgmtFrameView<AssociationResponse>>(pkt.get());
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-    ASSERT_EQ(frame.body()->status_code, status_code::kSuccess);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+    EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
     // TODO(NET-1465) - MLME currently generates its own association ID so it ignores the one from
     //                  SME's AssociateResponse
-    ASSERT_EQ(frame.body()->aid, 1);
+    EXPECT_EQ(frame.body()->aid, 1);
 }
 
 TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
@@ -223,13 +237,46 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
     auto frame = TypeCheckWlanFrame<MgmtFrameView<AssociationResponse>>(pkt.get());
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
-    ASSERT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-    ASSERT_EQ(frame.body()->status_code, status_code::kRefused);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+    EXPECT_EQ(frame.body()->status_code, status_code::kRefused);
     // TODO(NET-1465) - MLME currently generates its own association ID so it ignores the one from
     //                  SME's AssociateResponse
-    ASSERT_EQ(frame.body()->aid, 1);
+    EXPECT_EQ(frame.body()->aid, 1);
+}
+
+TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
+    AssociateClient();
+
+    // Send MLME-EAPOL.request.
+    SendEapolRequestMsg();
+
+    // Verify MLME-EAPOL.confirm message was sent.
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    auto eapol_conf = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEEapolConfOrdinal>);
+    ASSERT_FALSE(eapol_conf.empty());
+    auto eapol_conf_pkt = fbl::move(*eapol_conf.begin());
+    ASSERT_EQ(eapol_conf_pkt->peer(), Packet::Peer::kService);
+    MlmeMsg<wlan_mlme::EapolConfirm> msg;
+    auto status = MlmeMsg<wlan_mlme::EapolConfirm>::FromPacket(fbl::move(eapol_conf_pkt), &msg);
+    ASSERT_EQ(status, ZX_OK);
+    EXPECT_EQ(msg.body()->result_code, wlan_mlme::EapolResultCodes::SUCCESS);
+
+    // Verify EAPOL frame was sent.
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+    auto pkt = std::move(*device.wlan_queue.begin());
+    auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.get());
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+    EXPECT_EQ(frame.body()->protocol_id, htobe16(kEapolProtocolId));
+    auto type_checked_frame = frame.SkipHeader().CheckBodyType<EapolHdr>();
+    ASSERT_TRUE(type_checked_frame);
+    auto llc_eapol_frame = type_checked_frame.CheckLength();
+    ASSERT_TRUE(llc_eapol_frame);
+    EXPECT_EQ(llc_eapol_frame.body_len(), static_cast<size_t>(5));
+    EXPECT_EQ(std::memcmp(llc_eapol_frame.body_data(), kEapolPdu, sizeof(kEapolPdu)), 0);
 }
 
 }  // namespace

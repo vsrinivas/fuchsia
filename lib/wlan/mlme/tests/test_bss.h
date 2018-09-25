@@ -37,7 +37,7 @@ static constexpr wlan_channel_t kBssChannel = {
     .primary = 11,
 };
 static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's', 'i', 'a', '-', 'A', 'P'};
-;
+static constexpr uint8_t kEapolPdu[] = {'E', 'A', 'P', 'O', 'L'};
 static constexpr SupportedRate kSupportedRates[] = {
     SupportedRate(2),  SupportedRate(12), SupportedRate(24), SupportedRate(48),
     SupportedRate(54), SupportedRate(96), SupportedRate(108)};
@@ -62,6 +62,7 @@ zx_status_t CreateAuthResponse(MlmeMsg<wlan_mlme::AuthenticateResponse>*,
 zx_status_t CreateAssocRequest(MlmeMsg<wlan_mlme::AssociateRequest>* out_msg);
 zx_status_t CreateAssocResponse(MlmeMsg<wlan_mlme::AssociateResponse>*,
                                 wlan_mlme::AssociateResultCodes result_code);
+zx_status_t CreateEapolRequest(MlmeMsg<wlan_mlme::EapolRequest>*);
 zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>*);

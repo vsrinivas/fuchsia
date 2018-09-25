@@ -222,6 +222,8 @@ zx_status_t InfraBss::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         peer_addr = common::MacAddr(auth_resp->body()->peer_sta_address.data());
     } else if (auto assoc_resp = msg.As<wlan_mlme::AssociateResponse>()) {
         peer_addr = common::MacAddr(assoc_resp->body()->peer_sta_address.data());
+    } else if (auto eapol_req = msg.As<wlan_mlme::EapolRequest>()) {
+        peer_addr = common::MacAddr(eapol_req->body()->dst_addr.data());
     } else {
         warnf("[infra-bss] received unsupported MLME msg; ordinal: %u\n", msg.ordinal());
         return ZX_ERR_INVALID_ARGS;

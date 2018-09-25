@@ -457,6 +457,16 @@ zx_status_t AssociatedState::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     return ZX_OK;
 }
 
+zx_status_t AssociatedState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
+    if (auto eapol_request = msg.As<wlan_mlme::EapolRequest>()) {
+        return HandleMlmeEapolReq(*eapol_request);
+    } else {
+        warnf("[client] [%s] unexpected MLME msg type in associated state; ordinal: %u\n",
+              client_->addr().ToString().c_str(), msg.ordinal());
+        return ZX_ERR_INVALID_ARGS;
+    }
+}
+
 void AssociatedState::HandleTimeout() {
     if (!client_->IsDeadlineExceeded(inactive_timeout_)) { return; }
 
@@ -504,7 +514,8 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
 }
 
 zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req) {
-    size_t len = DataFrameHeader::max_len() + LlcHeader::max_len() + req.body()->data->size();
+    size_t eapol_pdu_len = req.body()->data->size();
+    size_t len = DataFrameHeader::max_len() + LlcHeader::max_len() + eapol_pdu_len;
     auto buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
@@ -526,8 +537,9 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRe
     llc->control = kLlcUnnumberedInformation;
     std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
     llc->protocol_id = htobe16(kEapolProtocolId);
-    std::memcpy(llc->payload, req.body()->data->data(), req.body()->data->size());
+    std::memcpy(llc->payload, req.body()->data->data(), eapol_pdu_len);
 
+    packet->set_len(hdr->len() + llc->len() + eapol_pdu_len);
     auto status = client_->bss()->SendDataFrame(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send EAPOL request packet: %d\n",

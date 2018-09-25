@@ -200,15 +200,16 @@ class AssociatedState : public BaseState {
     zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>& frame) override;
     zx_status_t HandleCtrlFrame(const FrameControl& fc) override;
     zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) override;
-    // TODO(hahnr): Forward MLME message from Ap to here.
-    zx_status_t HandleMlmeEapolReq(const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req);
-    zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>& req);
+    zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
     zx_status_t HandleActionFrame(const MgmtFrame<ActionFrame>& frame) override;
 
     inline const char* name() const override { return kName; }
 
    private:
     static constexpr const char* kName = "Associated";
+
+    zx_status_t HandleMlmeEapolReq(const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req);
+    zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>& req);
 
     // TODO(hahnr): Use WLAN_MIN_TU once defined.
     static constexpr wlan_tu_t kInactivityTimeoutTu = 300000;  // ~5min

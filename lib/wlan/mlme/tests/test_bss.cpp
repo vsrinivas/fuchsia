@@ -214,6 +214,19 @@ zx_status_t CreateAssocResponse(MlmeMsg<wlan_mlme::AssociateResponse>* out_msg,
     return WriteServiceMessage(resp.get(), fuchsia_wlan_mlme_MLMEAssociateRespOrdinal, out_msg);
 }
 
+zx_status_t CreateEapolRequest(MlmeMsg<wlan_mlme::EapolRequest>* out_msg) {
+    common::MacAddr bssid(kBssid1);
+    common::MacAddr client(kClientAddress);
+
+    auto req = wlan_mlme::EapolRequest::New();
+    std::memcpy(req->dst_addr.mutable_data(), client.byte, common::kMacAddrLen);
+    std::memcpy(req->src_addr.mutable_data(), bssid.byte, common::kMacAddrLen);
+    std::vector<uint8_t> eapol_pdu(kEapolPdu, kEapolPdu + sizeof(kEapolPdu));
+    req->data.reset(std::move(eapol_pdu));
+
+    return WriteServiceMessage(req.get(), fuchsia_wlan_mlme_MLMEEapolReqOrdinal, out_msg);
+}
+
 zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>* out_packet) {
     return CreateBeaconFrameWithBssid(out_packet, common::MacAddr(kBssid1));
 }
