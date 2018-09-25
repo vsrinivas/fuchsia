@@ -16,27 +16,27 @@ __BEGIN_CDECLS
 
 /* command args */
 typedef struct {
-    const char *str;
+    const char* str;
     unsigned long u;
-    void *p;
+    void* p;
     long i;
     bool b;
 } cmd_args;
 
-typedef int console_cmd(int argc, const cmd_args *argv, uint32_t flags);
+typedef int console_cmd(int argc, const cmd_args* argv, uint32_t flags);
 
 #define CMD_AVAIL_NORMAL (0x1 << 0)
-#define CMD_AVAIL_PANIC  (0x1 << 1)
+#define CMD_AVAIL_PANIC (0x1 << 1)
 #define CMD_AVAIL_ALWAYS (CMD_AVAIL_NORMAL | CMD_AVAIL_PANIC)
 
 /* command is happening at crash time */
-#define CMD_FLAG_PANIC   (0x1 << 0)
+#define CMD_FLAG_PANIC (0x1 << 0)
 
 /* a block of commands to register */
 typedef struct {
-    const char *cmd_str;
-    const char *help_str;
-    console_cmd *cmd_callback;
+    const char* cmd_str;
+    const char* help_str;
+    console_cmd* cmd_callback;
     uint8_t availability_mask;
 } cmd;
 
@@ -50,15 +50,17 @@ typedef struct {
 #define STATIC_COMMAND_START \
     __USED __SECTION(".data.rel.ro.commands") static const cmd _cmd_list[] = {
 
-#define STATIC_COMMAND_END(name) };                                     \
+#define STATIC_COMMAND_END(name) \
+    }                            \
+    ;
 
-#define STATIC_COMMAND(command_str, help_str, func) { command_str, help_str, func, CMD_AVAIL_NORMAL },
-#define STATIC_COMMAND_MASKED(command_str, help_str, func, availability_mask) { command_str, help_str, func, availability_mask },
+#define STATIC_COMMAND(command_str, help_str, func) {command_str, help_str, func, CMD_AVAIL_NORMAL},
+#define STATIC_COMMAND_MASKED(command_str, help_str, func, availability_mask) {command_str, help_str, func, availability_mask},
 
 /* external api */
-int console_run_script(const char *string);
-int console_run_script_locked(const char *string); // special case from inside a command
-console_cmd *console_get_command_handler(const char *command);
+int console_run_script(const char* string);
+int console_run_script_locked(const char* string); // special case from inside a command
+console_cmd* console_get_command_handler(const char* command);
 void console_abort_script(void);
 
 /* panic shell api */
