@@ -19,7 +19,7 @@ zx_status_t InitLogger(const syslog::LogSettings& settings,
   }
   const char* ctags[FX_LOG_MAX_TAGS];
   int i = 0;
-  for (auto tag : tags) {
+  for (auto& tag : tags) {
     ctags[i++] = tag.c_str();
   }
   fx_logger_config_t config = {.min_severity = settings.severity,
