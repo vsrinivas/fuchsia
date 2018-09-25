@@ -569,7 +569,12 @@ evalpipe(union node *n, int flags)
 	INTOFF;
 	jp = makejob(n, pipelen);
 
-	for (lp = n->npipe.cmdlist ; lp ; lp = lp->next) {
+	const size_t processes_size = pipelen * sizeof(zx_handle_t);
+	zx_handle_t* processes = ckmalloc(processes_size);
+	memset(processes, 0, processes_size);
+
+	size_t idx = 0u;
+	for (lp = n->npipe.cmdlist ; lp ; lp = lp->next, ++idx) {
 		prehash(lp->n);
 		if (pip[0] > 0)
 			fds[0] = pip[0];
@@ -580,17 +585,16 @@ evalpipe(union node *n, int flags)
 		} else {
 			fds[1] = STDOUT_FILENO;
 		}
-		zx_handle_t process;
 		char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 		const char* const* envp = (const char* const*)environment();
-		zx_status_t status = process_subshell(lp->n, envp, &process, jp->zx_job_hndl, fds, err_msg);
+		zx_status_t status = process_subshell(lp->n, envp, &processes[idx], jp->zx_job_hndl, fds, err_msg);
 		if (fds[0] != STDIN_FILENO)
 			close(fds[0]);
 		if (fds[1] != STDOUT_FILENO)
 			close(fds[1]);
 		if (status == ZX_OK) {
 			/* Process-tracking management */
-			forkparent(jp, lp->n, FORK_NOJOB, process);
+			forkparent(jp, lp->n, FORK_NOJOB, processes[idx]);
 		} else {
 			freejob(jp);
 			sh_error("Failed to create shell: %d (%s): %s", status, zx_status_get_string(status), err_msg);
@@ -602,6 +606,9 @@ evalpipe(union node *n, int flags)
 		TRACE(("evalpipe:  job done exit status: %d (%s)\n", status, zx_status_get_string(status)));
 	}
 	INTON;
+
+	zx_handle_close_many(processes, pipelen);
+	ckfree(processes);
 
 	return status;
 }
