@@ -14,8 +14,8 @@ namespace {
 // RAII helper class to reset the iostream to its original flags.
 class IOFlagsGuard {
 public:
-    explicit IOFlagsGuard(std::ostream* stream) :
-        stream_(stream), flags_(stream_->flags()) {
+    explicit IOFlagsGuard(std::ostream* stream)
+        : stream_(stream), flags_(stream_->flags()) {
     }
     ~IOFlagsGuard() {
         stream_->setf(flags_);
@@ -528,12 +528,18 @@ void CGenerator::GeneratePrologues() {
     EmitIncludeHeader(&file_, "<zircon/fidl.h>");
     EmitIncludeHeader(&file_, "<zircon/syscalls/object.h>");
     EmitIncludeHeader(&file_, "<zircon/types.h>");
+    // Dependencies are in pointer order... change to a deterministic
+    // ordering prior to output.
+    std::set<std::string> add_includes;
     for (const auto& dep_library : library_->dependencies()) {
         if (dep_library == library_)
             continue;
         if (dep_library->HasAttribute("Internal"))
             continue;
-        EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(dep_library->name()) + ">");
+        add_includes.insert(NameLibraryCHeader(dep_library->name()));
+    }
+    for (const auto& include : add_includes) {
+        EmitIncludeHeader(&file_, "<" + include + ">");
     }
     EmitBlank(&file_);
     EmitBeginExternC(&file_);
@@ -568,7 +574,8 @@ void CGenerator::GeneratePrimitiveDefine(StringView name, types::PrimitiveSubtyp
     case types::PrimitiveSubtype::kBool:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64: {
-        file_ << "#define " << name << " " << "(" << value << ")\n";
+        file_ << "#define " << name << " "
+              << "(" << value << ")\n";
         break;
     }
     default:
@@ -782,7 +789,6 @@ void CGenerator::ProduceConstDeclaration(const NamedConst& named_const) {
         abort();
     }
 
-
     EmitBlank(&file_);
 }
 
@@ -964,7 +970,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                 file_ << kIndent << "}\n";
             }
 
-            hcount = method_info.response->typeshape.MaxHandles();;
+            hcount = method_info.response->typeshape.MaxHandles();
             if ((count == 0) && (hcount == 0)) {
                 file_ << kIndent << "// OPTIMIZED AWAY fidl_decode() of POD-only response\n";
                 file_ << kIndent << "if (_actual_num_handles > 0) {\n";
