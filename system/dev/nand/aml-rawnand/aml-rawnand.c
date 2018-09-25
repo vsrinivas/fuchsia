@@ -13,6 +13,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
@@ -133,7 +134,7 @@ int aml_get_ecc_strength(uint32_t ecc_mode) {
 static void aml_cmd_idle(aml_raw_nand_t* raw_nand, uint32_t time) {
     uint32_t cmd = 0;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     cmd = raw_nand->chip_select | AML_CMD_IDLE | (time & 0x3ff);
     writel(cmd, reg + P_NAND_CMD);
@@ -146,7 +147,7 @@ static zx_status_t aml_wait_cmd_finish(aml_raw_nand_t* raw_nand,
     uint64_t total_time = 0;
     uint32_t numcmds;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     /* wait until cmd fifo is empty */
     while (true) {
@@ -169,7 +170,7 @@ static zx_status_t aml_wait_cmd_finish(aml_raw_nand_t* raw_nand,
 static void aml_cmd_seed(aml_raw_nand_t* raw_nand, uint32_t seed) {
     uint32_t cmd;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     cmd = AML_CMD_SEED | (0xc2 + (seed & 0x7fff));
     writel(cmd, reg + P_NAND_CMD);
@@ -179,7 +180,7 @@ static void aml_cmd_n2m(aml_raw_nand_t* raw_nand, uint32_t ecc_pages,
                         uint32_t ecc_pagesize) {
     uint32_t cmd;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     cmd = CMDRWGEN(AML_CMD_N2M,
                    raw_nand->controller_params.rand_mode,
@@ -198,7 +199,7 @@ static void aml_cmd_m2n(aml_raw_nand_t* raw_nand, uint32_t ecc_pages,
                         uint32_t ecc_pagesize) {
     uint32_t cmd;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     cmd = CMDRWGEN(AML_CMD_M2N,
                    raw_nand->controller_params.rand_mode,
@@ -211,7 +212,7 @@ static void aml_cmd_m2n(aml_raw_nand_t* raw_nand, uint32_t ecc_pages,
 static void aml_cmd_n2m_page0(aml_raw_nand_t* raw_nand) {
     uint32_t cmd;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     /*
      * For page0 reads, we must use AML_ECC_BCH60_1K,
@@ -363,7 +364,7 @@ static zx_status_t aml_queue_rb(aml_raw_nand_t* raw_nand) {
     uint32_t cmd, cfg;
     zx_status_t status;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     raw_nand->req_completion = SYNC_COMPLETION_INIT;
     cfg = readl(reg + P_NAND_CFG);
@@ -390,7 +391,7 @@ static void aml_cmd_ctrl(void* ctx,
     aml_raw_nand_t* raw_nand = (aml_raw_nand_t*)ctx;
 
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     if (cmd == NAND_CMD_NONE)
         return;
@@ -406,7 +407,7 @@ static uint8_t aml_read_byte(void* ctx) {
     aml_raw_nand_t* raw_nand = (aml_raw_nand_t*)ctx;
     uint32_t cmd;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     cmd = raw_nand->chip_select | AML_CMD_DRD | 0;
     nandctrl_send_cmd(raw_nand, cmd);
@@ -425,7 +426,7 @@ static void aml_set_clock_rate(aml_raw_nand_t* raw_nand,
     uint32_t always_on = 0x1 << 24;
     uint32_t clk;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[CLOCKREG_WINDOW]);
+        raw_nand->mmio[CLOCKREG_WINDOW].vaddr;
 
     /* For Amlogic type  AXG */
     always_on = 0x1 << 28;
@@ -502,7 +503,7 @@ static zx_status_t aml_read_page_hwecc(void* ctx,
     uint64_t iaddr = raw_nand->info_buf_paddr;
     int ecc_c;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
     uint32_t ecc_pagesize = 0; /* initialize to silence compiler */
     uint32_t ecc_pages;
     bool page0 = is_page0_nand_page(nand_page);
@@ -591,7 +592,7 @@ static zx_status_t aml_write_page_hwecc(void* ctx,
     uint64_t iaddr = raw_nand->info_buf_paddr;
     zx_status_t status;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
     uint32_t ecc_pagesize = 0; /* initialize to silence compiler */
     uint32_t ecc_pages;
     bool page0 = is_page0_nand_page(nand_page);
@@ -826,7 +827,7 @@ static void aml_raw_nand_release(void* ctx) {
     for (raw_nand_addr_window_t wnd = 0;
          wnd < ADDR_WINDOW_COUNT;
          wnd++)
-        io_buffer_release(&raw_nand->mmio[wnd]);
+        mmio_buffer_release(&raw_nand->mmio[wnd]);
     io_buffer_release(&raw_nand->data_buffer);
     io_buffer_release(&raw_nand->info_buffer);
     zx_handle_close(raw_nand->bti_handle);
@@ -836,7 +837,7 @@ static void aml_raw_nand_release(void* ctx) {
 static void aml_set_encryption(aml_raw_nand_t* raw_nand) {
     uint32_t cfg;
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     cfg = readl(reg + P_NAND_CFG);
     cfg |= (1 << 17);
@@ -1046,15 +1047,15 @@ static zx_status_t aml_raw_nand_bind(void* ctx, zx_device_t* parent) {
     for (raw_nand_addr_window_t wnd = 0;
          wnd < ADDR_WINDOW_COUNT;
          wnd++) {
-        status = pdev_map_mmio_buffer(&raw_nand->pdev,
-                                      wnd,
-                                      ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                      &raw_nand->mmio[wnd]);
+        status = pdev_map_mmio_buffer2(&raw_nand->pdev,
+                                       wnd,
+                                       ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       &raw_nand->mmio[wnd]);
         if (status != ZX_OK) {
             zxlogf(ERROR, "aml_raw_nand_bind: pdev_map_mmio_buffer failed %d\n",
                    status);
             for (raw_nand_addr_window_t j = 0; j < wnd; j++)
-                io_buffer_release(&raw_nand->mmio[j]);
+                mmio_buffer_release(&raw_nand->mmio[j]);
             free(raw_nand);
             return status;
         }
@@ -1129,7 +1130,7 @@ fail:
     for (raw_nand_addr_window_t wnd = 0;
          wnd < ADDR_WINDOW_COUNT;
          wnd++)
-        io_buffer_release(&raw_nand->mmio[wnd]);
+        mmio_buffer_release(&raw_nand->mmio[wnd]);
     free(raw_nand);
     return status;
 }

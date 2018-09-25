@@ -23,7 +23,7 @@ typedef struct {
     raw_nand_protocol_t raw_nand_proto;
     platform_device_protocol_t pdev;
     zx_device_t* zxdev;
-    io_buffer_t mmio[ADDR_WINDOW_COUNT];
+    mmio_buffer_t mmio[ADDR_WINDOW_COUNT];
     thrd_t irq_thread;
     zx_handle_t irq_handle;
     bool enabled;
@@ -58,7 +58,7 @@ static inline void set_bits(uint32_t* _reg, const uint32_t _value,
 static inline void nandctrl_set_cfg(aml_raw_nand_t* raw_nand,
                                     uint32_t val) {
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     writel(val, reg + P_NAND_CFG);
 }
@@ -67,7 +67,7 @@ static inline void nandctrl_set_timing_async(aml_raw_nand_t* raw_nand,
                                              int bus_tim,
                                              int bus_cyc) {
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     set_bits((uint32_t*)(reg + P_NAND_CFG),
              ((bus_cyc & 31) | ((bus_tim & 31) << 5) | (0 << 10)),
@@ -77,7 +77,7 @@ static inline void nandctrl_set_timing_async(aml_raw_nand_t* raw_nand,
 static inline void nandctrl_send_cmd(aml_raw_nand_t* raw_nand,
                                      uint32_t cmd) {
     volatile uint8_t* reg = (volatile uint8_t*)
-        io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
+        raw_nand->mmio[NANDREG_WINDOW].vaddr;
 
     writel(cmd, reg + P_NAND_CMD);
 }
