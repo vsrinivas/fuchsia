@@ -1,0 +1,14 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("run_test") {
+  sources = [
+    "run_test.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/test_runner/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}

@@ -22,6 +22,20 @@ package("run_integration_tests") {
   ]
 }
 
+package("run_test") {
+  deprecated_system_image = true
+
+  deps = [
+    "run_test",
+  ]
+
+  binaries = [
+    {
+      name = "run_test"
+    },
+  ]
+}
+
 package("test_runner_tests") {
   testonly = true
   deprecated_system_image = true
