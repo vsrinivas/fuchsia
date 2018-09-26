@@ -25,6 +25,9 @@ constexpr uint32_t kHiuMmio = 2;
 // 1GHz Frequency.
 constexpr uint32_t kFrequencyThreshold = 1000000000;
 
+// 1.896GHz Frequency.
+constexpr uint32_t kMaxCPUFrequency = 1896000000;
+
 // Final Mux for selecting clock source.
 constexpr uint32_t kFixedPll = 0;
 constexpr uint32_t kSysPll = 1;
@@ -108,6 +111,13 @@ zx_status_t AmlCpuFrequency::Init(zx_device_t* parent) {
     status = s905d2_pll_init(&hiu_, &sys_pll_, SYS_PLL);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: s905d2_pll_init failed: %d\n", status);
+        return status;
+    }
+
+    // Set the SYS PLL to some known rate, before enabling the PLL.
+    status = s905d2_pll_set_rate(&sys_pll_, kMaxCPUFrequency);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-cpufreq: failed to set SYS_PLL rate, status = %d\n", status);
         return status;
     }
 
