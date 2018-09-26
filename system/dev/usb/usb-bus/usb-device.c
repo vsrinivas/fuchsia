@@ -281,26 +281,20 @@ static zx_protocol_device_t usb_device_proto = {
 
 static zx_status_t usb_device_req_alloc(void* ctx, usb_request_t** out, uint64_t data_size,
                                            uint8_t ep_address) {
-    usb_device_t* dev = ctx;
-
-    return usb_request_alloc(out, dev->bus->bti_handle, data_size, ep_address);
+    return usb_request_alloc(out, data_size, ep_address);
 }
 
 static zx_status_t usb_device_req_alloc_vmo(void* ctx, usb_request_t** out,
                                                zx_handle_t vmo_handle, uint64_t vmo_offset,
                                                uint64_t length, uint8_t ep_address) {
-    usb_device_t* dev = ctx;
-
-    return usb_request_alloc_vmo(out, dev->bus->bti_handle, vmo_handle, vmo_offset, length,
+    return usb_request_alloc_vmo(out, vmo_handle, vmo_offset, length,
                                  ep_address);
 }
 
 static zx_status_t usb_device_req_init(void* ctx, usb_request_t* req, zx_handle_t vmo_handle,
                                           uint64_t vmo_offset, uint64_t length,
                                           uint8_t ep_address) {
-    usb_device_t* dev = ctx;
-
-    return usb_request_init(req, dev->bus->bti_handle, vmo_handle, vmo_offset, length, ep_address);
+    return usb_request_init(req, vmo_handle, vmo_offset, length, ep_address);
 }
 
 static ssize_t usb_device_req_copy_from(void* ctx, usb_request_t* req, void* data,
@@ -333,7 +327,8 @@ static zx_status_t usb_device_req_cache_flush_invalidate(void* ctx, usb_request_
 }
 
 static zx_status_t usb_device_req_physmap(void* ctx, usb_request_t* req) {
-    return usb_request_physmap(req);
+    usb_device_t* dev = ctx;
+    return usb_request_physmap(req, dev->bus->bti_handle);
 }
 
 static void usb_device_req_release(void* ctx, usb_request_t* req) {
@@ -366,7 +361,7 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
     }
 
     if (req == NULL) {
-        zx_status_t status = usb_request_alloc(&req, dev->bus->bti_handle, length, 0);
+        zx_status_t status = usb_request_alloc(&req, length, 0);
         if (status != ZX_OK) {
             return status;
         }

@@ -56,7 +56,7 @@ static void usb_request_release_free(usb_request_t* req) {
     free(req);
 }
 
-zx_status_t usb_request_alloc(usb_request_t** out, zx_handle_t bti_handle, uint64_t data_size,
+zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
                               uint8_t ep_address) {
     usb_request_t* req = calloc(1, sizeof(usb_request_t));
     if (!req) {
@@ -84,7 +84,6 @@ zx_status_t usb_request_alloc(usb_request_t** out, zx_handle_t bti_handle, uint6
         req->virt = (void *)mapped_addr;
         req->offset = 0;
         req->size = data_size;
-        req->bti_handle = bti_handle;
     }
     req->header.ep_address = ep_address;
     req->header.length = data_size;
@@ -94,7 +93,7 @@ zx_status_t usb_request_alloc(usb_request_t** out, zx_handle_t bti_handle, uint6
 }
 
 // usb_request_alloc_vmo() creates a new usb request with the given VMO.
-zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t bti_handle,
+zx_status_t usb_request_alloc_vmo(usb_request_t** out,
                                   zx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t length,
                                   uint8_t ep_address) {
     usb_request_t* req = calloc(1, sizeof(usb_request_t));
@@ -131,7 +130,6 @@ zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t bti_handle,
     req->virt = (void *)mapped_addr;
     req->offset = vmo_offset;
     req->size = size;
-    req->bti_handle = bti_handle;
 
     req->pmt = ZX_HANDLE_INVALID;
 
@@ -144,7 +142,7 @@ zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t bti_handle,
 
 // usb_request_init() initializes the statically allocated usb request with the given VMO.
 // This will free any resources allocated by the usb request but not the usb request itself.
-zx_status_t usb_request_init(usb_request_t* req, zx_handle_t bti_handle, zx_handle_t vmo_handle,
+zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle,
                              uint64_t vmo_offset, uint64_t length, uint8_t ep_address) {
     memset(req, 0, sizeof(*req));
 
@@ -176,7 +174,6 @@ zx_status_t usb_request_init(usb_request_t* req, zx_handle_t bti_handle, zx_hand
     req->virt = (void *)mapped_addr;
     req->offset = vmo_offset;
     req->size = size;
-    req->bti_handle = bti_handle;
 
     req->pmt = ZX_HANDLE_INVALID;
 
@@ -227,7 +224,7 @@ zx_status_t usb_request_cache_flush_invalidate(usb_request_t* req, zx_off_t offs
                           ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
 }
 
-zx_status_t usb_request_physmap(usb_request_t* req) {
+zx_status_t usb_request_physmap(usb_request_t* req, zx_handle_t bti_handle) {
     if (req->phys_count > 0) {
         return ZX_OK;
     }
@@ -252,7 +249,7 @@ zx_status_t usb_request_physmap(usb_request_t* req) {
     }
     zx_handle_t pmt;
     uint32_t options = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE;
-    zx_status_t status = zx_bti_pin(req->bti_handle, options, req->vmo_handle,
+    zx_status_t status = zx_bti_pin(bti_handle, options, req->vmo_handle,
                                     pin_offset, pin_length, paddrs, pages, &pmt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_request_physmap: zx_bti_pin failed:%d\n", status);

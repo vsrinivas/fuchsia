@@ -23,17 +23,16 @@ typedef struct {
 } usb_request_pool_t;
 
 // usb_request_alloc() creates a new usb request with payload space of data_size.
-zx_status_t usb_request_alloc(usb_request_t** out, zx_handle_t bti_handle, uint64_t data_size,
+zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
                               uint8_t ep_address);
 
 // usb_request_alloc_vmo() creates a new usb request with the given VMO.
-zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t bti_handle,
-                                  zx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t length,
-                                  uint8_t ep_address);
+zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_handle, uint64_t vmo_offset,
+                                  uint64_t length, uint8_t ep_address);
 
 // usb_request_init() initializes the statically allocated usb request with the given VMO.
 // This will free any resources allocated by the usb request but not the usb request itself.
-zx_status_t usb_request_init(usb_request_t* req, zx_handle_t bti_handle, zx_handle_t vmo_handle,
+zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle,
                              uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
 
 // usb_request_copyfrom() copies data from the usb_request's vm object.
@@ -60,7 +59,7 @@ zx_status_t usb_request_cache_flush(usb_request_t* req, zx_off_t offset, size_t 
 zx_status_t usb_request_cache_flush_invalidate(usb_request_t* req, zx_off_t offset, size_t length);
 
 // Looks up the physical pages backing this request's vm object.
-zx_status_t usb_request_physmap(usb_request_t* req);
+zx_status_t usb_request_physmap(usb_request_t* req, zx_handle_t bti_handle);
 
 // usb_request_release() frees the message data -- should be called only by the entity that allocated it
 void usb_request_release(usb_request_t* req);

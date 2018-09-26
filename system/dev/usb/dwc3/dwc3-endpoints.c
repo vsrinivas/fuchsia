@@ -131,7 +131,7 @@ static void dwc3_ep_queue_next_locked(dwc3_t* dwc, dwc3_endpoint_t* ep) {
         // TODO(voydanoff) scatter/gather support
         phys_iter_t iter;
         zx_paddr_t phys;
-        usb_request_physmap(req);
+        usb_request_physmap(req, dwc->bti_handle);
         usb_request_phys_iter_init(&iter, req, PAGE_SIZE);
         usb_request_phys_iter_next(&iter, &phys);
         bool send_zlp = req->header.send_zlp && (req->header.length % ep->max_packet_size) == 0;

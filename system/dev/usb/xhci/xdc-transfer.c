@@ -105,7 +105,7 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in, bool is_
     }
 
     if (req->header.length > 0) {
-        zx_status_t status = usb_request_physmap(req);
+        zx_status_t status = usb_request_physmap(req, xdc->bti_handle);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: usb_request_physmap failed: %d\n", __FUNCTION__, status);
             mtx_unlock(&xdc->lock);

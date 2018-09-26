@@ -103,6 +103,8 @@ typedef struct dwc_usb_transfer_request {
     uint32_t request_id;
 } dwc_usb_transfer_request_t;
 
+typedef struct dwc_usb dwc_usb_t;
+
 typedef struct dwc_usb_device {
     mtx_t devmtx;
 
@@ -110,6 +112,7 @@ typedef struct dwc_usb_device {
     uint32_t hub_address;
     int port;
     uint32_t device_id;
+    dwc_usb_t *parent;
 
     list_node_t endpoints;
 } dwc_usb_device_t;
@@ -668,7 +671,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
 
     usb_request_t* get_desc = usb_request_pool_get(&dwc->free_usb_reqs, 64);
     if (get_desc == NULL) {
-        zx_status_t status = usb_request_alloc(&get_desc, dwc->bti_handle, 64, 0);
+        zx_status_t status = usb_request_alloc(&get_desc, 64, 0);
         assert(status == ZX_OK);
     }
 
@@ -697,7 +700,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
     // Set the Device ID of the newly added device.
     usb_request_t* set_addr = usb_request_pool_get(&dwc->free_usb_reqs, 64);
     if (set_addr == NULL) {
-        zx_status_t status = usb_request_alloc(&set_addr, dwc->bti_handle, 64, 0);
+        zx_status_t status = usb_request_alloc(&set_addr, 64, 0);
         assert(status == ZX_OK);
     }
 
@@ -727,6 +730,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
     dwc->usb_devices[dwc->next_device_address].hub_address = hub_address;
     dwc->usb_devices[dwc->next_device_address].port = port;
     dwc->usb_devices[dwc->next_device_address].device_id = dwc->next_device_address;
+    dwc->usb_devices[dwc->next_device_address].parent = dwc;
     list_initialize(&dwc->usb_devices[dwc->next_device_address].endpoints);
 
     dwc_usb_endpoint_t* ctrl_endpoint = calloc(1, sizeof(*ctrl_endpoint));
@@ -1195,7 +1199,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
 
             phys_iter_t iter;
             zx_paddr_t phys;
-            usb_request_physmap(req->setup_req);
+            usb_request_physmap(req->setup_req, dev->parent->bti_handle);
             usb_request_phys_iter_init(&iter, req->setup_req, PAGE_SIZE);
             usb_request_phys_iter_next(&iter, &phys);
             data = (void*)phys;
@@ -1215,7 +1219,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
 
             phys_iter_t iter;
             zx_paddr_t phys;
-            usb_request_physmap(usb_req);
+            usb_request_physmap(usb_req, dev->parent->bti_handle);
             usb_request_phys_iter_init(&iter, usb_req, PAGE_SIZE);
             usb_request_phys_iter_next(&iter, &phys);
             data = (void*)phys + req->bytes_transferred;
@@ -1255,7 +1259,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
 
         phys_iter_t iter;
         zx_paddr_t phys;
-        usb_request_physmap(usb_req);
+        usb_request_physmap(usb_req, dev->parent->bti_handle);
         usb_request_phys_iter_init(&iter, usb_req, PAGE_SIZE);
         usb_request_phys_iter_next(&iter, &phys);
         data = (void*)phys + req->bytes_transferred;
@@ -1621,7 +1625,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
                 req->setup_req = usb_request_pool_get(&dwc->free_usb_reqs, sizeof(usb_setup_t));
                 if (req->setup_req == NULL) {
                     zx_status_t status =
-                        usb_request_alloc(&req->setup_req, dwc->bti_handle, sizeof(usb_setup_t), 0);
+                        usb_request_alloc(&req->setup_req, sizeof(usb_setup_t), 0);
                     assert(status == ZX_OK);
                 }
 
@@ -1683,6 +1687,7 @@ static zx_status_t create_default_device(dwc_usb_t* dwc) {
     default_device->speed = USB_SPEED_HIGH;
     default_device->hub_address = 0;
     default_device->port = 0;
+    default_device->parent = dwc;
 
     default_device->device_id = 0;
 
