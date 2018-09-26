@@ -302,11 +302,30 @@ struct MerkleRootTraits {
     }
 };
 
+// CachePolicy describes the techniques used to cache blobs in memory, avoiding
+// re-reading and re-verifying them from disk.
+enum class CachePolicy {
+    // When all references to a blob are closed, the blob is evicted from
+    // memory. On re-acquisition, the blob is read from disk and re-verified.
+    //
+    // This option avoids using memory for any longer than it needs to, but
+    // may result in higher performance penalties for blobfs that are frequently
+    // opened and closed.
+    EvictImmediately,
+
+    // The blob is never evicted from memory, unless it has been fully deleted
+    // and there are no additional references.
+    //
+    // This option costs a significant amount of memory, but it results in high
+    // performance.
+    NeverEvict,
+};
 
 // Toggles that may be set on blobfs during initialization.
 struct MountOptions {
     bool readonly = false;
     bool metrics = false;
+    CachePolicy cache_policy = CachePolicy::EvictImmediately;
 };
 
 class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>,
@@ -348,6 +367,7 @@ public:
     static zx_status_t Create(fbl::unique_fd blockfd, const MountOptions& options,
                               const Superblock* info, fbl::unique_ptr<Blobfs>* out);
 
+    void SetCachePolicy(CachePolicy policy) { cache_policy_ = policy; }
     void CollectMetrics() { collecting_metrics_ = true; }
     bool CollectingMetrics() const { return collecting_metrics_; }
     void DisableMetrics() { collecting_metrics_ = false; }
@@ -600,6 +620,7 @@ private:
     bool collecting_metrics_ = false;
     BlobfsMetrics metrics_ = {};
 
+    CachePolicy cache_policy_;
     fbl::Closure on_unmount_ = {};
 };
 

@@ -1399,6 +1399,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options,
     fbl::AllocChecker ac;
     auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(fbl::move(fd), info));
     fs->SetReadonly(options.readonly);
+    fs->SetCachePolicy(options.cache_policy);
     if (options.metrics) {
         fs->CollectMetrics();
     }
@@ -1511,7 +1512,20 @@ zx_status_t Blobfs::VnodeInsertClosedLocked(fbl::RefPtr<VnodeBlob> vn) {
         vn->SetState(kBlobStatePurged);
         return ZX_ERR_ALREADY_EXISTS;
     }
-    vn->TearDown();
+
+    // While in the closed cache, the blob may either be destroyed or in an
+    // inactive state. The toggles here make tradeoffs between memory usage
+    // and performance.
+    switch (cache_policy_) {
+    case CachePolicy::EvictImmediately:
+        vn->TearDown();
+        break;
+    case CachePolicy::NeverEvict:
+        break;
+    default:
+        ZX_ASSERT_MSG(false, "Unexpected cache policy");
+    }
+
     __UNUSED auto leak = vn.leak_ref();
     return ZX_OK;
 }
@@ -1587,7 +1601,6 @@ zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
         fprintf(stderr, "blobfs: mount failed; could not create blobfs\n");
         return status;
     }
-
     return ZX_OK;
 }
 
