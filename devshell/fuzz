@@ -8,7 +8,7 @@
 ### Run a fuzz test on target a device
 ## Run a fuzz test on target a device
 ##
-## Usage: fx fuzz [options] <command> [command-arguments]
+## Usage: fx fuzz [options] [command] [command-arguments]
 ##
 ## Options (must be first):
 ##   -d, --device   <name>   Connect to device using Fuchsia link-local name.
@@ -47,31 +47,35 @@
 ##                           as it will updates the build files with the new
 ##                           corpus location.
 ##
+## The RECOMMENDED way to run a fuzzer is to omit 'command', which will use
+## "automatic" mode.  In this mode, 'fx fuzz' will check if a corpus is already
+## present, and if not it will fetch the latest.  It will then start the fuzzer
+## and watch it to see when it stops.  Each of these steps respects the options
+## above.
+##
 ## Example workflow:
 ##   1. Shows available fuzzers:
 ##         fx fuzz list
 ##
-##   2. Fetch an initial corpus:
-##         fx fuzz fetch foo_package/bar_fuzz_test
+##   2. Run a fuzzer for 8 hours (e.g. overnight), fetching the initial corpus
+##      if needed:
+##         fx fuzz -o out foo_package/bar_fuzz_test -max_total_time=28800
 ##
-##   3. Run a fuzzer for 8 hours (e.g. overnight):
-##         fx fuzz -o out foo/bar -max_total_time=28800
-##
-##   4. Check if the fuzzer is still running.
+##   3. Check if the fuzzer is still running.
 ##         fx fuzz check foo/bar
 ##
-##   5. Execute the fuzzer with a crashing input:
+##   4. Execute the fuzzer with a crashing input:
 ##         fx fuzz repro foo/bar crash-deadbeef
 ##
-##   6. Use the artifacts in 'out/foo_package/bar_fuzz_test/latest' to file and
-##      fix bugs. Repeat step 5 until the target doesn't crash.
+##   5. Use the artifacts in 'out/foo_package/bar_fuzz_test/latest' to file and
+##      fix bugs. Repeat step 4 until the target doesn't crash.
 ##
-##   7. Repeat steps 3-5 until no crashes found.
+##   6. Repeat steps 2-4 until no crashes found.
 ##
-##   8. Minimize the resulting corpus:
+##   7. Minimize the resulting corpus:
 ##         fx fuzz merge foo/bar
 ##
-##   9. Save the new, minimized corpus in CIPD:
+##   8. Save the new, minimized corpus in CIPD:
 ##         fx fuzz store foo/bar
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
@@ -365,7 +369,24 @@ main() {
       monitor &
       ;;
     *)
-      fatal "unrecognized command: '${command}'"
+      # "Automatic" mode
+      fuzzer="${command}"
+      args="${@:2}"
+      echo "Command omitted; starting fuzzer '${fuzzer}' in automatic mode."
+      set_device
+      set_staging
+      query "${fuzzer}"
+      if [[ ${corpus_size} == "0" ]] ; then
+        fetch
+      fi
+      fx-command-run ssh ${device} fuzz start ${fuzzer} ${args} &
+      sleep 1
+      record "${fuzzer}"
+      monitor &
+      sleep 1
+      echo
+      echo "Fuzzer started; you should be notified when it stops."
+      echo "To check its progress, use 'fx fuzz check'."
       ;;
   esac
 }
