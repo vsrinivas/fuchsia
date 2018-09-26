@@ -201,7 +201,7 @@ zx_status_t Vim2SpdifAudioStream::SetGain(const audio_proto::SetGainReq& req) {
 zx_status_t Vim2SpdifAudioStream::Init() {
     zx_status_t res;
 
-    if (!regs_ || !regs_->valid()) {
+    if (!regs_) {
         zxlogf(ERROR, "null or invalid registers in %s\n", __PRETTY_FUNCTION__);
         return ZX_ERR_INVALID_ARGS;
     }
@@ -298,12 +298,10 @@ zx_status_t Vim2SpdifAudioStream::Init() {
 }
 
 void Vim2SpdifAudioStream::Disable(const Registers& regs) {
-    ZX_DEBUG_ASSERT(regs.valid());
-
-    regs[AIU_958_DCU_FF_CTRL] = 0; // Disable the FIFO
-    regs.ClrBits(AIU_MEM_IEC958_CONTROL,
-                 AIU_958_MCTRL_FILL_ENB | AIU_958_MCTRL_EMPTY_ENB); // Disable the DMA
-    regs[AIU_RST_SOFT] = AIU_RS_958_FAST_DOMAIN; // reset the unit
+    regs.Write32(0, AIU_958_DCU_FF_CTRL); // Disable the FIFO
+    regs.ClearBits32(AIU_958_MCTRL_FILL_ENB | AIU_958_MCTRL_EMPTY_ENB,
+                     AIU_MEM_IEC958_CONTROL); // Disable the DMA
+    regs.Write32(AIU_RS_958_FAST_DOMAIN, AIU_RST_SOFT); // reset the unit
 }
 
 zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
@@ -369,10 +367,9 @@ zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
 }
 
 void Vim2SpdifAudioStream::Enable() {
-    ZX_DEBUG_ASSERT((regs_ != nullptr) && regs_->valid());
     const auto& regs = *regs_;
 
-    regs[AIU_RST_SOFT] = AIU_RS_958_FAST_DOMAIN;   // reset
+    regs.Write32(AIU_RS_958_FAST_DOMAIN, AIU_RST_SOFT);   // reset
 
     // Force the next sample fetched from the FIFO to be the start of a
     // frame by writing *any* value to the FORCE_LEFT register.
@@ -386,15 +383,15 @@ void Vim2SpdifAudioStream::Enable() {
     // sequence of marker bits transmitted, we are supposed to use the
     // FORCE_LEFT register to reset this state as well any time we reset the
     // SPDIF TX unit.
-    regs[AIU_958_FORCE_LEFT] = 0x00;
+    regs.Write32(0x00, AIU_958_FORCE_LEFT);
 
-    regs.SetBits(AIU_MEM_IEC958_CONTROL,
-                 AIU_958_MCTRL_FILL_ENB | AIU_958_MCTRL_EMPTY_ENB);   // Enable the DMA
-    regs.SetBits(AIU_958_DCU_FF_CTRL, AIU_958_DCU_FF_CTRL_ENB);       // Enable the fifo
+    regs.SetBits32(AIU_MEM_IEC958_CONTROL,
+                   AIU_958_MCTRL_FILL_ENB | AIU_958_MCTRL_EMPTY_ENB);   // Enable the DMA
+    regs.SetBits32(AIU_958_DCU_FF_CTRL_ENB, AIU_958_DCU_FF_CTRL);       // Enable the fifo
 }
 
 void Vim2SpdifAudioStream::SetupBuffer() {
-    ZX_DEBUG_ASSERT((regs_ != nullptr) && regs_->valid());
+    ZX_DEBUG_ASSERT((regs_ != nullptr));
     const auto& regs = *regs_;
 
     // Set up the DMA addresses.
@@ -407,14 +404,14 @@ void Vim2SpdifAudioStream::SetupBuffer() {
     const auto& r = pinned_ring_buffer_.region(0);
     ZX_DEBUG_ASSERT(usable_buffer_size_ >= AIU_958_BYTES_PER_FRAME);
     ZX_DEBUG_ASSERT(usable_buffer_size_ <= r.size);
-    regs[AIU_MEM_IEC958_START_PTR] = static_cast<uint32_t>(r.phys_addr);
-    regs[AIU_MEM_IEC958_RD_PTR]    = static_cast<uint32_t>(r.phys_addr);
-    regs[AIU_MEM_IEC958_END_PTR]   = static_cast<uint32_t>(r.phys_addr + usable_buffer_size_ - 8);
+    regs.Write32(static_cast<uint32_t>(r.phys_addr), AIU_MEM_IEC958_START_PTR);
+    regs.Write32(static_cast<uint32_t>(r.phys_addr), AIU_MEM_IEC958_RD_PTR);
+    regs.Write32(static_cast<uint32_t>(r.phys_addr + usable_buffer_size_ - 8), AIU_MEM_IEC958_END_PTR);
 
     // Set the masks register to all channels present, and to read from all
     // channels.  Apparently, this is the thing to do when we are operating in
     // "split mode"
-    regs[AIU_MEM_IEC958_MASKS] = 0xFFFF;
+    regs.Write32(0xFFFF, AIU_MEM_IEC958_MASKS);
 
     // Now that the buffer has been set up, perform some register writes to the
     // CONTROL and BUF_CONTROL registers in order complete the setup.
@@ -429,14 +426,14 @@ void Vim2SpdifAudioStream::SetupBuffer() {
     // by AmLogic's engineer(s) in other code bases.  They provide no
     // real explanation for what is going on here either; so for now, this
     // remains nothing but cargo-cult garbage.
-    regs.SetBits(AIU_MEM_IEC958_CONTROL, AIU_958_MCTRL_INIT);
-    regs.ClrBits(AIU_MEM_IEC958_CONTROL, AIU_958_MCTRL_INIT);
-    regs[AIU_MEM_IEC958_BUF_CNTL] = 1;
-    regs[AIU_MEM_IEC958_BUF_CNTL] = 0;
+    regs.SetBits32(AIU_958_MCTRL_INIT, AIU_MEM_IEC958_CONTROL);
+    regs.ClearBits32(AIU_958_MCTRL_INIT, AIU_MEM_IEC958_CONTROL);
+    regs.Write32(1, AIU_MEM_IEC958_BUF_CNTL);
+    regs.Write32(0, AIU_MEM_IEC958_BUF_CNTL);
 }
 
 void Vim2SpdifAudioStream::SetMode(uint32_t frame_rate, audio_sample_format_t fmt) {
-    ZX_DEBUG_ASSERT((regs_ != nullptr) && regs_->valid());
+    ZX_DEBUG_ASSERT((regs_ != nullptr));
     const auto& regs = *regs_;
 
     // Look up our frame rate to figure out our clock divider and channel status
@@ -487,19 +484,19 @@ void Vim2SpdifAudioStream::SetMode(uint32_t frame_rate, audio_sample_format_t fm
 
     // Now go ahead and set up the clock divider.
     constexpr uint32_t DIV_MASK = SHIFTED_MASK(AIU_CLK_CTRL_958_DIV) | AIU_CLK_CTRL_958_DIV_MORE;
-    regs.ModBits(AIU_CLK_CTRL, DIV_MASK, RATE.div_bits);
+    regs.ModifyBits32(RATE.div_bits, DIV_MASK, AIU_CLK_CTRL);
 
     // Send a 0 for the V bit in each frame.  This indicates that the audio is
     // "valid", at least from a PCM perspective.  When packing compressed audio
     // into a SPDIF transport, apparently the thing to do is set the V bit to 1
     // in order to prevent older SPDIF receivers from treating the data like PCM
     // and breaking your ears.
-    regs[AIU_958_VALID_CTRL] = AIU_958_VCTRL_SEND_VBIT;
+    regs.Write32(AIU_958_VCTRL_SEND_VBIT, AIU_958_VALID_CTRL);
 
     // TODO(johngro): Should the bytes per frame vary based on the size of an
     // audio frame?  In particular, should the bytes per frame be an integer
     // multiple of the audio frame size?
-    regs[AIU_958_BPF] = AIU_958_BYTES_PER_FRAME;
+    regs.Write32(AIU_958_BYTES_PER_FRAME, AIU_958_BPF);
 
     // TODO(johngro): Provide some way to change the category code.  Shipping
     // products should not be sending "experimental" as their category code.
@@ -556,15 +553,15 @@ void Vim2SpdifAudioStream::SetMode(uint32_t frame_rate, audio_sample_format_t fm
         break;
     }
 
-    regs[AIU_958_CHSTAT_L0] = (ch_status & 0xFFFF);
-    regs[AIU_958_CHSTAT_R0] = (ch_status & 0xFFFF);
-    regs[AIU_958_CHSTAT_L1] = (ch_status >> 16);
-    regs[AIU_958_CHSTAT_R1] = (ch_status >> 16);
-    regs[AIU_958_MISC] = misc;
-    regs[AIU_MEM_IEC958_CONTROL] = mctrl;
+    regs.Write32((ch_status & 0xFFFF), AIU_958_CHSTAT_L0);
+    regs.Write32((ch_status & 0xFFFF), AIU_958_CHSTAT_R0);
+    regs.Write32((ch_status >> 16), AIU_958_CHSTAT_L1);
+    regs.Write32((ch_status >> 16), AIU_958_CHSTAT_R1);
+    regs.Write32(misc, AIU_958_MISC);
+    regs.Write32(mctrl, AIU_MEM_IEC958_CONTROL);
 
     // Set the "level hold" to zero.  I have no idea why.
-    regs.ClrBits(AIU_MEM_IEC958_BUF_CNTL, SHIFTED_MASK(AIU_958_BCTRL_LEVEL_HOLD));
+    regs.ClearBits32(SHIFTED_MASK(AIU_958_BCTRL_LEVEL_HOLD), AIU_MEM_IEC958_BUF_CNTL);
 }
 
 void Vim2SpdifAudioStream::Mute(bool muted) {
@@ -573,7 +570,7 @@ void Vim2SpdifAudioStream::Mute(bool muted) {
                                  | AIU_958_CTRL_FUB_ZERO;
     const auto& regs = *regs_;
 
-    regs[AIU_958_CTRL] = muted ? MUTE_BITS : 0u;
+    regs.Write32(muted ? MUTE_BITS : 0u, AIU_958_CTRL);
 }
 
 }  // namespace vim2

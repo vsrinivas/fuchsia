@@ -448,12 +448,12 @@ static void display_release(void* ctx) {
         }
 
         gpio_release_interrupt(&display->gpio);
-        io_buffer_release(&display->mmio_preset);
-        io_buffer_release(&display->mmio_hdmitx);
-        io_buffer_release(&display->mmio_hiu);
-        io_buffer_release(&display->mmio_vpu);
-        io_buffer_release(&display->mmio_hdmitx_sec);
-        io_buffer_release(&display->mmio_cbus);
+        display->mmio_preset.reset();
+        display->mmio_hdmitx.reset();
+        display->mmio_hiu.reset();
+        display->mmio_vpu.reset();
+        display->mmio_hdmitx_sec.reset();
+        display->mmio_cbus.reset();
         zx_handle_close(display->bti);
         zx_handle_close(display->vsync_interrupt);
         zx_handle_close(display->inth);
@@ -686,47 +686,54 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map all the various MMIOs
-    status = pdev_map_mmio_buffer(&display->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_preset);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO PRESET\n");
         return status;
     }
+    display->mmio_preset = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
-    status = pdev_map_mmio_buffer(&display->pdev, MMIO_HDMITX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_hdmitx);
+    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_HDMITX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO HDMITX\n");
         return status;
     }
+    display->mmio_hdmitx = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
-    status = pdev_map_mmio_buffer(&display->pdev, MMIO_HIU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_hiu);
+    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_HIU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO HIU\n");
         return status;
     }
+    display->mmio_hiu = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
-    status = pdev_map_mmio_buffer(&display->pdev, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_vpu);
+    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO VPU\n");
         return status;
     }
+    display->mmio_vpu = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
-    status = pdev_map_mmio_buffer(&display->pdev, MMIO_HDMTX_SEC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_hdmitx_sec);
+    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_HDMTX_SEC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO HDMITX SEC\n");
         return status;
     }
+    display->mmio_hdmitx_sec = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
-    status = pdev_map_mmio_buffer(&display->pdev, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_cbus);
+    status = pdev_map_mmio_buffer2(&display->pdev, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO CBUS\n");
         return status;
     }
+    display->mmio_cbus = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     status = gpio_config_in(&display->gpio, GPIO_PULL_DOWN);
     if (status != ZX_OK) {
@@ -754,7 +761,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
 
     // For some reason the vsync interrupt enable bit needs to be cleared for
     // vsync interrupts to occur at the correct rate.
-    *((uint32_t*)(static_cast<uint8_t*>(display->mmio_vpu.virt) + VPU_VIU_MISC_CTRL0)) &= ~(1 << 8);
+    display->mmio_vpu->ClearBits32(1 << 8, VPU_VIU_MISC_CTRL0);
 
     fbl::AllocChecker ac;
     display->p = new(&ac) struct hdmi_param();

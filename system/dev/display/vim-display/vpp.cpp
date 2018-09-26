@@ -71,28 +71,28 @@ void osd_debug_dump_register_all(vim2_display_t* display) {
 
 void disable_vd(vim2_display* display, uint32_t vd_index) {
     display->vd1_image_valid = false;
-    hwreg::RegisterIo vpu(io_buffer_virt(&display->mmio_vpu));
-    registers::Vd(vd_index).IfGenReg().ReadFrom(&vpu).set_enable(false).WriteTo(&vpu);
+    auto* const vpu = display->mmio_vpu.get();
+    registers::Vd(vd_index).IfGenReg().ReadFrom(vpu).set_enable(false).WriteTo(vpu);
     registers::VpuVppMisc::Get()
-        .ReadFrom(&vpu)
+        .ReadFrom(vpu)
         .set_vd1_enable_postblend(false)
-        .WriteTo(&vpu);
+        .WriteTo(vpu);
 }
 
 void configure_vd(vim2_display* display, uint32_t vd_index) {
     disable_vd(display, vd_index);
-    hwreg::RegisterIo vpu(io_buffer_virt(&display->mmio_vpu));
+    auto* const vpu = display->mmio_vpu.get();
     uint32_t x_start, x_end, y_start, y_end;
     x_start = y_start = 0;
     x_end = display->cur_display_mode.h_addressable - 1;
     y_end = display->cur_display_mode.v_addressable - 1;
 
     auto vd = registers::Vd(vd_index);
-    vd.IfLumaX0().FromValue(0).set_end(x_end).set_start(x_start).WriteTo(&vpu);
-    vd.IfLumaY0().FromValue(0).set_end(y_end).set_start(y_start).WriteTo(&vpu);
-    vd.IfChromaX0().FromValue(0).set_end(x_end / 2).set_start(x_start / 2).WriteTo(&vpu);
-    vd.IfChromaY0().FromValue(0).set_end(y_end / 2).set_start(y_start / 2).WriteTo(&vpu);
-    vd.IfGenReg2().FromValue(0).set_color_map(1).WriteTo(&vpu);
+    vd.IfLumaX0().FromValue(0).set_end(x_end).set_start(x_start).WriteTo(vpu);
+    vd.IfLumaY0().FromValue(0).set_end(y_end).set_start(y_start).WriteTo(vpu);
+    vd.IfChromaX0().FromValue(0).set_end(x_end / 2).set_start(x_start / 2).WriteTo(vpu);
+    vd.IfChromaY0().FromValue(0).set_end(y_end / 2).set_start(y_start / 2).WriteTo(vpu);
+    vd.IfGenReg2().FromValue(0).set_color_map(1).WriteTo(vpu);
     vd.FmtCtrl()
         .FromValue(0)
         .set_vertical_enable(true)
@@ -101,24 +101,24 @@ void configure_vd(vim2_display* display, uint32_t vd_index) {
         .set_vertical_repeat_line0(true)
         .set_horizontal_enable(true)
         .set_horizontal_yc_ratio(1)
-        .WriteTo(&vpu);
+        .WriteTo(vpu);
     vd.FmtW()
         .FromValue(0)
         .set_horizontal_width(display->cur_display_mode.h_addressable)
         .set_vertical_width(display->cur_display_mode.h_addressable / 2)
-        .WriteTo(&vpu);
+        .WriteTo(vpu);
 
-    vd.IfRptLoop().FromValue(0).WriteTo(&vpu);
-    vd.IfLuma0RptPat().FromValue(0).WriteTo(&vpu);
-    vd.IfChroma0RptPat().FromValue(0).WriteTo(&vpu);
-    vd.IfLumaPsel().FromValue(0).WriteTo(&vpu);
-    vd.IfChromaPsel().FromValue(0).WriteTo(&vpu);
+    vd.IfRptLoop().FromValue(0).WriteTo(vpu);
+    vd.IfLuma0RptPat().FromValue(0).WriteTo(vpu);
+    vd.IfChroma0RptPat().FromValue(0).WriteTo(vpu);
+    vd.IfLumaPsel().FromValue(0).WriteTo(vpu);
+    vd.IfChromaPsel().FromValue(0).WriteTo(vpu);
 }
 
 void flip_vd(vim2_display* display, uint32_t vd_index, uint32_t index) {
     display->vd1_image_valid = true;
     display->vd1_image = index;
-    hwreg::RegisterIo vpu(io_buffer_virt(&display->mmio_vpu));
+    auto* const vpu = display->mmio_vpu.get();
     auto vd = registers::Vd(vd_index);
     vd.IfGenReg()
         .FromValue(0)
@@ -128,33 +128,33 @@ void flip_vd(vim2_display* display, uint32_t vd_index, uint32_t index) {
         .set_hold_lines(3)
         .set_urgent_luma(true)
         .set_urgent_chroma(true)
-        .WriteTo(&vpu);
-    vd.IfCanvas0().FromValue(index).WriteTo(&vpu);
+        .WriteTo(vpu);
+    vd.IfCanvas0().FromValue(index).WriteTo(vpu);
     registers::VpuVppMisc::Get()
-        .ReadFrom(&vpu)
+        .ReadFrom(vpu)
         .set_vd1_enable_postblend(true)
-        .WriteTo(&vpu);
+        .WriteTo(vpu);
 }
 
 void disable_osd(vim2_display_t* display, uint32_t osd_index) {
     display->current_image_valid = false;
-    hwreg::RegisterIo vpu(io_buffer_virt(&display->mmio_vpu));
+    auto* const vpu = display->mmio_vpu.get();
     auto osd = registers::Osd(osd_index);
     osd
         .CtrlStat()
-        .ReadFrom(&vpu)
+        .ReadFrom(vpu)
         .set_osd_blk_enable(false)
-        .WriteTo(&vpu);
+        .WriteTo(vpu);
     if (osd_index == 0) {
         registers::VpuVppMisc::Get()
-            .ReadFrom(&vpu)
+            .ReadFrom(vpu)
             .set_osd2_enable_postblend(false)
-            .WriteTo(&vpu);
+            .WriteTo(vpu);
     } else {
         registers::VpuVppMisc::Get()
-            .ReadFrom(&vpu)
+            .ReadFrom(vpu)
             .set_osd1_enable_postblend(false)
-            .WriteTo(&vpu);
+            .WriteTo(vpu);
     }
 }
 
@@ -166,38 +166,38 @@ zx_status_t configure_osd(vim2_display_t* display, uint32_t osd_index) {
     y_end = display->cur_display_mode.v_addressable - 1;
 
     disable_osd(display, osd_index);
-    hwreg::RegisterIo vpu(io_buffer_virt(&display->mmio_vpu));
+    auto* const vpu = display->mmio_vpu.get();
     auto osd = registers::Osd(osd_index);
-    registers::VpuVppOsdScCtrl0::Get().FromValue(0).WriteTo(&vpu);
+    registers::VpuVppOsdScCtrl0::Get().FromValue(0).WriteTo(vpu);
 
     osd.CtrlStat2()
-        .ReadFrom(&vpu)
+        .ReadFrom(vpu)
         .set_replaced_alpha_en(true)
         .set_replaced_alpha(0xff)
-        .WriteTo(&vpu);
+        .WriteTo(vpu);
 
     osd.Blk0CfgW1()
         .FromValue(0)
         .set_virtual_canvas_x_end(x_end)
         .set_virtual_canvas_x_start(x_start)
-        .WriteTo(&vpu);
+        .WriteTo(vpu);
     osd.Blk0CfgW2()
         .FromValue(0)
         .set_virtual_canvas_y_end(y_end)
         .set_virtual_canvas_y_start(y_start)
-        .WriteTo(&vpu);
+        .WriteTo(vpu);
     osd.Blk0CfgW3().FromValue(0).set_display_h_end(x_end).set_display_h_start(x_start).WriteTo(
-        &vpu);
+        vpu);
     osd.Blk0CfgW4().FromValue(0).set_display_v_end(y_end).set_display_v_start(y_start).WriteTo(
-        &vpu);
+        vpu);
 
-    registers::VpuVppOsdScoHStartEnd::Get().FromValue(0).WriteTo(&vpu);
-    registers::VpuVppOsdScoVStartEnd::Get().FromValue(0).WriteTo(&vpu);
+    registers::VpuVppOsdScoHStartEnd::Get().FromValue(0).WriteTo(vpu);
+    registers::VpuVppOsdScoVStartEnd::Get().FromValue(0).WriteTo(vpu);
 
     registers::VpuVppPostblendHSize::Get()
         .FromValue(display->cur_display_mode.h_addressable)
-        .WriteTo(&vpu);
-    registers::VpuVppOsdSciWhM1::Get().FromValue(0).WriteTo(&vpu);
+        .WriteTo(vpu);
+    registers::VpuVppOsdSciWhM1::Get().FromValue(0).WriteTo(vpu);
 
     return ZX_OK;
 }
@@ -205,7 +205,7 @@ zx_status_t configure_osd(vim2_display_t* display, uint32_t osd_index) {
 void flip_osd(vim2_display_t* display, uint32_t osd_index, uint8_t idx) {
     display->current_image = idx;
     display->current_image_valid = true;
-    hwreg::RegisterIo vpu(io_buffer_virt(&display->mmio_vpu));
+    auto* const vpu = display->mmio_vpu.get();
     auto osd = registers::Osd(osd_index);
     osd.Blk0CfgW0()
         .FromValue(0)
@@ -214,20 +214,20 @@ void flip_osd(vim2_display_t* display, uint32_t osd_index, uint8_t idx) {
         .set_block_mode(registers::VpuViuOsdBlk0CfgW0::kBlockMode32Bit)
         .set_rgb_en(true)
         .set_color_matrix(registers::VpuViuOsdBlk0CfgW0::kColorMatrixARGB8888)
-        .WriteTo(&vpu);
+        .WriteTo(vpu);
     osd.CtrlStat()
-        .ReadFrom(&vpu)
+        .ReadFrom(vpu)
         .set_osd_blk_enable(true)
-        .WriteTo(&vpu);
+        .WriteTo(vpu);
     if (osd_index == 0) {
         registers::VpuVppMisc::Get()
-            .ReadFrom(&vpu)
+            .ReadFrom(vpu)
             .set_osd1_enable_postblend(true)
-            .WriteTo(&vpu);
+            .WriteTo(vpu);
     } else {
         registers::VpuVppMisc::Get()
-            .ReadFrom(&vpu)
+            .ReadFrom(vpu)
             .set_osd2_enable_postblend(true)
-            .WriteTo(&vpu);
+            .WriteTo(vpu);
     }
 }

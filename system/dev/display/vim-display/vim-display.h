@@ -7,10 +7,10 @@
 #include "edid.h"
 #include <assert.h>
 #include <ddk/debug.h>
-#include <ddk/io-buffer.h>
 #include <ddk/protocol/amlogic-canvas.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/display-controller.h>
+#include <ddktl/mmio.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,13 +79,13 @@ typedef struct vim2_display {
     bool                                vd1_image_valid;
     uint32_t                            vd1_image;
 
-    io_buffer_t                         mmio_preset;
-    io_buffer_t                         mmio_hdmitx;
-    io_buffer_t                         mmio_hiu;
-    io_buffer_t                         mmio_vpu;
-    io_buffer_t                         mmio_hdmitx_sec;
-    io_buffer_t                         mmio_dmc;
-    io_buffer_t                         mmio_cbus;
+    fbl::unique_ptr<ddk::MmioBuffer>    mmio_preset;
+    fbl::unique_ptr<ddk::MmioBuffer>    mmio_hdmitx;
+    fbl::unique_ptr<ddk::MmioBuffer>    mmio_hiu;
+    fbl::unique_ptr<ddk::MmioBuffer>    mmio_vpu;
+    fbl::unique_ptr<ddk::MmioBuffer>    mmio_hdmitx_sec;
+    fbl::unique_ptr<ddk::MmioBuffer>    mmio_dmc;
+    fbl::unique_ptr<ddk::MmioBuffer>    mmio_cbus;
 
     zx_handle_t                         vsync_interrupt;
 

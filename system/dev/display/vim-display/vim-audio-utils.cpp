@@ -12,33 +12,22 @@ namespace vim2 {
 fbl::RefPtr<Registers> Registers::Create(const platform_device_protocol_t* pdev,
                                          uint32_t which_mmio,
                                          zx_status_t* out_res) {
+    ZX_DEBUG_ASSERT(pdev != nullptr);
+
+    mmio_buffer_t mmio;
+    *out_res = pdev_map_mmio_buffer2(pdev, which_mmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    if (*out_res != ZX_OK) {
+        return nullptr;
+    }
+
     fbl::AllocChecker ac;
-    auto ret = fbl::AdoptRef(new (&ac) Registers());
+    auto ret = fbl::AdoptRef(new (&ac) Registers(mmio));
     if (!ac.check()) {
         *out_res = ZX_ERR_NO_MEMORY;
-    } else {
-        *out_res = ret->Map(pdev, which_mmio);
+        return nullptr;
     }
 
-    return (*out_res != ZX_OK) ? nullptr : ret;
-}
-
-Registers::~Registers() {
-    io_buffer_release(&buf_);
-}
-
-zx_status_t Registers::Map(const platform_device_protocol_t* pdev, uint32_t which_mmio) {
-    ZX_DEBUG_ASSERT(pdev != nullptr);
-    ZX_DEBUG_ASSERT(buf_.virt == nullptr);
-    zx_status_t res;
-
-    res = pdev_map_mmio_buffer(pdev, which_mmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf_);
-    if (res == ZX_OK) {
-        base_ = reinterpret_cast<volatile uint32_t*>(
-                reinterpret_cast<uintptr_t>(buf_.virt) + buf_.offset);
-    }
-
-    return res;
+    return ret;
 }
 
 fbl::RefPtr<RefCountedVmo> RefCountedVmo::Create(zx::vmo vmo) {
