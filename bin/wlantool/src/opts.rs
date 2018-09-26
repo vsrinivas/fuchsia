@@ -106,11 +106,11 @@ pub enum ClientCmd {
         iface_id: u16,
         #[structopt(raw(required = "true"))]
         ssid: String,
-        #[structopt(short = "p", long = "password")]
+        #[structopt(short = "p", long = "password", help = "WPA2 PSK")]
         password: Option<String>,
-        #[structopt(short = "y", long = "phy")]
+        #[structopt(short = "y", long = "phy", help = "Choose one from (hr, erp, ht, vht, hew) to specify an upper bound")]
         phy_str: Option<String>,
-        #[structopt(short = "w", long = "cbw")]
+        #[structopt(short = "w", long = "cbw", help = "Choose one from (20, 40, 80, 160, 80p80) to specify an upper bound")]
         cbw_str: Option<String>,
     },
     #[structopt(name = "disconnect")]
