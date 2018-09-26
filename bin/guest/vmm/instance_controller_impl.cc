@@ -4,10 +4,7 @@
 
 #include "garnet/bin/guest/vmm/instance_controller_impl.h"
 
-#include "lib/fxl/logging.h"
-
-static constexpr zx_rights_t kVmoRights =
-    ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHTS_BASIC;
+#include <lib/fxl/logging.h>
 
 template <typename T>
 static T duplicate(const T& handle, zx_rights_t rights) {
@@ -18,8 +15,7 @@ static T duplicate(const T& handle, zx_rights_t rights) {
 }
 
 InstanceControllerImpl::InstanceControllerImpl(
-    component::StartupContext* context, const machina::PhysMem& phys_mem)
-    : vmo_(duplicate(phys_mem.vmo(), kVmoRights)) {
+    component::StartupContext* context) {
   zx_status_t status = zx::socket::create(0, &server_socket_, &client_socket_);
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";
 

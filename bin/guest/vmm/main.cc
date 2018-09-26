@@ -160,6 +160,8 @@ int main(int argc, char** argv) {
   trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<component::StartupContext> context =
       component::StartupContext::CreateFromStartupInfo();
+  InstanceControllerImpl instance_controller(context.get());
+
   fuchsia::sys::LauncherPtr launcher;
   context->environment()->GetLauncher(launcher.NewRequest());
 
@@ -184,9 +186,6 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     return status;
   }
-
-  // Instantiate the controller service.
-  InstanceControllerImpl instance_controller(context.get(), guest.phys_mem());
 
   std::vector<machina::PlatformDevice*> platform_devices;
 

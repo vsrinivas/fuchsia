@@ -7,20 +7,18 @@
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <lib/component/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
 
-#include "garnet/lib/machina/device/phys_mem.h"
 #include "garnet/lib/machina/input_dispatcher_impl.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
 
 // Provides an implementation of the |fuchsia::guest::InstanceController|
 // interface. This exposes some guest services over FIDL.
 class InstanceControllerImpl : public fuchsia::guest::InstanceController {
  public:
-  InstanceControllerImpl(component::StartupContext* context,
-                         const machina::PhysMem& phys_mem);
+  InstanceControllerImpl(component::StartupContext* context);
 
-  void SetViewProvider(::fuchsia::ui::viewsv1::ViewProvider* view_provider) {
+  void SetViewProvider(fuchsia::ui::viewsv1::ViewProvider* view_provider) {
     view_provider_ = view_provider;
   }
   void SetInputDispatcher(machina::InputDispatcherImpl* input_dispatcher) {
@@ -41,15 +39,14 @@ class InstanceControllerImpl : public fuchsia::guest::InstanceController {
 
  private:
   fidl::BindingSet<fuchsia::guest::InstanceController> bindings_;
-  fidl::BindingSet<::fuchsia::ui::viewsv1::ViewProvider>
+  fidl::BindingSet<fuchsia::ui::viewsv1::ViewProvider>
       view_provider_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDispatcher>
       input_dispatcher_bindings_;
 
-  const zx::vmo vmo_;
   zx::socket server_socket_;
   zx::socket client_socket_;
-  ::fuchsia::ui::viewsv1::ViewProvider* view_provider_;
+  fuchsia::ui::viewsv1::ViewProvider* view_provider_;
   machina::InputDispatcherImpl* input_dispatcher_;
 };
 
