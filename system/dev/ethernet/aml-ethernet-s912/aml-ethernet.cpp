@@ -24,11 +24,6 @@ namespace eth {
 #define MCU_I2C_REG_BOOT_EN_WOL 0x21
 #define MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE 0x03
 
-template <typename T, typename U>
-static inline T* offset_ptr(U* ptr, size_t offset) {
-    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(ptr) + offset);
-}
-
 void AmlEthernet::ResetPhy(void* ctx) {
     auto& self = *static_cast<AmlEthernet*>(ctx);
     gpio_write(&self.gpios_[PHY_RESET], 0);
@@ -58,27 +53,30 @@ zx_status_t AmlEthernet::InitPdev(zx_device_t* parent) {
     }
 
     // Map amlogic peripheral control registers.
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_PERIPH, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &periph_regs_iobuff_);
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_PERIPH, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-dwmac: could not map periph mmio: %d\n", status);
         return status;
     }
+    periph_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     // Map HHI regs (clocks and power domains).
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &hhi_regs_iobuff_);
+    status = pdev_map_mmio_buffer2(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-dwmac: could not map hiu mmio: %d\n", status);
         return status;
     }
+    hhi_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     return status;
 }
 
 void AmlEthernet::ReleaseBuffers() {
-    io_buffer_release(&periph_regs_iobuff_);
-    io_buffer_release(&hhi_regs_iobuff_);
+    periph_mmio_.reset();
+    hhi_mmio_.reset();
 }
 
 static void DdkUnbind(void* ctx) {
@@ -131,26 +129,23 @@ zx_status_t AmlEthernet::Create(zx_device_t* device) {
     // Set reset line to output
     gpio_config_out(&eth_device->gpios_[PHY_RESET], 0);
 
-    auto cleanup = fbl::MakeAutoCall([&]() { eth_device->ReleaseBuffers(); });
-
     // Initialize AMLogic peripheral registers associated with dwmac.
-    void* pregs = io_buffer_virt(&eth_device->periph_regs_iobuff_);
+    auto* pregs = eth_device->periph_mmio_.get();
     //Sorry about the magic...rtfm
-    writel(0x1621, offset_ptr<uint32_t>(pregs, PER_ETH_REG0));
-    writel(0x20000, offset_ptr<uint32_t>(pregs, PER_ETH_REG1));
+    pregs->Write32(0x1621, PER_ETH_REG0);
+    pregs->Write32(0x20000, PER_ETH_REG1);
 
-    writel(REG2_ETH_REG2_REVERSED | REG2_INTERNAL_PHY_ID,
-           offset_ptr<uint32_t>(pregs, PER_ETH_REG2));
+    pregs->Write32(REG2_ETH_REG2_REVERSED | REG2_INTERNAL_PHY_ID, PER_ETH_REG2);
 
-    writel(REG3_CLK_IN_EN | REG3_ETH_REG3_19_RESVERD |
-               REG3_CFG_PHY_ADDR | REG3_CFG_MODE |
-               REG3_CFG_EN_HIGH | REG3_ETH_REG3_2_RESERVED,
-           offset_ptr<uint32_t>(pregs, PER_ETH_REG3));
+    pregs->Write32(REG3_CLK_IN_EN | REG3_ETH_REG3_19_RESVERD |
+                       REG3_CFG_PHY_ADDR | REG3_CFG_MODE |
+                       REG3_CFG_EN_HIGH | REG3_ETH_REG3_2_RESERVED,
+                   PER_ETH_REG3);
 
     // Enable clocks and power domain for dwmac
-    void* hregs = io_buffer_virt(&eth_device->hhi_regs_iobuff_);
-    set_bitsl(1 << 3, offset_ptr<uint32_t>(hregs, HHI_GCLK_MPEG1));
-    clr_bitsl((1 << 3) | (1 << 2), offset_ptr<uint32_t>(hregs, HHI_MEM_PD_REG0));
+    auto* hregs = eth_device->hhi_mmio_.get();
+    hregs->SetBits32(1 << 3, HHI_GCLK_MPEG1);
+    hregs->ClearBits32((1 << 3) | (1 << 2), HHI_MEM_PD_REG0);
 
     // WOL reset enable to MCU
     uint8_t write_buf[2] = {MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE};
@@ -186,8 +181,6 @@ zx_status_t AmlEthernet::Create(zx_device_t* device) {
     } else {
         zxlogf(INFO, "aml-ethernet driver added\n");
     }
-
-    cleanup.cancel();
 
     // eth_device intentionally leaked as it is now held by DevMgr
     __UNUSED auto ptr = eth_device.release();

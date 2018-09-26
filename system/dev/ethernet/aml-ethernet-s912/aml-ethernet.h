@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <ddk/protocol/ethernet_board.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
+#include <ddktl/mmio.h>
 #include <fbl/atomic.h>
 #include <fbl/unique_ptr.h>
 #include <threads.h>
@@ -51,8 +51,8 @@ private:
 
     i2c_protocol_t i2c_;
 
-    io_buffer_t periph_regs_iobuff_;
-    io_buffer_t hhi_regs_iobuff_;
+    fbl::unique_ptr<ddk::MmioBuffer> periph_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer> hhi_mmio_;
 };
 
 } // namespace eth
