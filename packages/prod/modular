@@ -1,9 +1,7 @@
 {
     "packages": [
-        "//peridot/bin/device_runner_monitor",
         "//peridot/bin/device_runner",
-        "//peridot/bin/user_runner",
-        "//peridot/bin/sessionctl"
+        "//peridot/bin/user_runner"
     ],
     "labels": [
       "//peridot/cloud/go/src/remote_module_resolver:host"

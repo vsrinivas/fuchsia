@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//peridot/bin/device_runner_monitor"
+    ]
+}

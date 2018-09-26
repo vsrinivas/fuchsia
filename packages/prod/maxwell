@@ -1,11 +1,7 @@
 {
     "packages": [
         "//peridot/bin/context_engine",
-        "//peridot/bin/agents/clipboard:clipboard_agent",
         "//peridot/bin/maxwell",
-        "//peridot/bin/module_resolver",
-        "//peridot/bin/module_resolver/module_package_indexer",
-        "//peridot/bin/acquirers/story_info",
         "//peridot/bin/suggestion_engine"
     ]
 }
