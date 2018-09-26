@@ -62,6 +62,16 @@ public:
     zx_status_t set_cache_policy(uint32_t cache_policy) {
         return zx_vmo_set_cache_policy(get(), cache_policy);
     }
+
+    zx_status_t replace_as_executable(const handle& vmex, vmo* result) {
+        zx_handle_t h = ZX_HANDLE_INVALID;
+        zx_status_t status = zx_vmo_replace_as_executable(value_, vmex.get(), &h);
+        // We store ZX_HANDLE_INVALID to value_ before calling reset on result
+        // in case result == this.
+        value_ = ZX_HANDLE_INVALID;
+        result->reset(h);
+        return status;
+    }
 };
 
 using unowned_vmo = unowned<vmo>;
