@@ -244,7 +244,7 @@ static void devhost_finalize(void) REQ_DM_LOCK {
         // invoke release op
         if (dev->flags & DEV_FLAG_ADDED) {
             DM_UNLOCK();
-            dev_op_release(dev);
+            dev->Release();
             DM_LOCK();
         }
 
@@ -556,7 +556,7 @@ static void devhost_unbind_child(zx_device_t* child) TA_REQ(&__devhost_api_lock)
             // hold a reference so the child won't get released during its unbind callback.
             dev_ref_acquire(child);
             DM_UNLOCK();
-            dev_op_unbind(child);
+            child->Unbind();
             DM_LOCK();
             dev_ref_release(child);
         }
@@ -624,9 +624,9 @@ zx_status_t devhost_device_open_at(zx_device_t* dev, zx_device_t** out,
     DM_UNLOCK();
     *out = dev;
     if (path) {
-        r = dev_op_open_at(dev, out, path, flags);
+        r = dev->OpenAt(out, path, flags);
     } else {
-        r = dev_op_open(dev, out, flags);
+        r = dev->Open(out, flags);
     }
     DM_LOCK();
     if (r < 0) {
@@ -645,9 +645,8 @@ zx_status_t devhost_device_open_at(zx_device_t* dev, zx_device_t** out,
 }
 
 zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags) REQ_DM_LOCK {
-    zx_status_t r;
     DM_UNLOCK();
-    r = dev_op_close(dev, flags);
+    zx_status_t r = dev->Close(flags);
     DM_LOCK();
     dev_ref_release(dev);
     return r;

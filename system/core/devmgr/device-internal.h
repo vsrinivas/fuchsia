@@ -12,6 +12,57 @@ __BEGIN_CDECLS
 typedef struct proxy_iostate proxy_iostate_t;
 
 struct zx_device {
+    zx_status_t Open(zx_device_t** dev_out, uint32_t flags) {
+        return ops->open(ctx, dev_out, flags);
+    }
+
+    zx_status_t OpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
+        return ops->open_at(ctx, dev_out, path, flags);
+    }
+
+    zx_status_t Close(uint32_t flags) {
+        return ops->close(ctx, flags);
+    }
+
+    void Unbind() {
+        ops->unbind(ctx);
+    }
+
+    void Release() {
+        ops->release(ctx);
+    }
+
+    zx_status_t Suspend(uint32_t flags) {
+        return ops->suspend(ctx, flags);
+    }
+
+    zx_status_t Resume(uint32_t flags) {
+        return ops->resume(ctx, flags);
+    }
+
+    zx_status_t Read(void* buf, size_t count, zx_off_t off,
+                     size_t* actual) {
+        return ops->read(ctx, buf, count, off, actual);
+    }
+
+    zx_status_t Write(const void* buf, size_t count,
+                      zx_off_t off, size_t* actual) {
+        return ops->write(ctx, buf, count, off, actual);
+    }
+
+    zx_off_t GetSize() {
+        return ops->get_size(ctx);
+    }
+
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                      void* out_buf, size_t out_len, size_t* out_actual) {
+        return ops->ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
+    }
+
+    zx_status_t Message(fidl_msg_t* msg, fidl_txn_t* txn) {
+        return ops->message(ctx, msg, txn);
+    }
+
     uintptr_t magic;
 
     zx_protocol_device_t* ops;
@@ -75,58 +126,5 @@ struct zx_device {
 zx_status_t device_bind(zx_device_t* dev, const char* drv_libname);
 zx_status_t device_open_at(zx_device_t* dev, zx_device_t** out, const char* path, uint32_t flags);
 zx_status_t device_close(zx_device_t* dev, uint32_t flags);
-
-static inline zx_status_t dev_op_open(zx_device_t* dev, zx_device_t** dev_out, uint32_t flags) {
-    return dev->ops->open(dev->ctx, dev_out, flags);
-}
-
-static inline zx_status_t dev_op_open_at(zx_device_t* dev, zx_device_t** dev_out,
-                                           const char* path, uint32_t flags) {
-    return dev->ops->open_at(dev->ctx, dev_out, path, flags);
-}
-
-static inline zx_status_t dev_op_close(zx_device_t* dev, uint32_t flags) {
-    return dev->ops->close(dev->ctx, flags);
-}
-
-static inline void dev_op_unbind(zx_device_t* dev) {
-    dev->ops->unbind(dev->ctx);
-}
-
-static inline void dev_op_release(zx_device_t* dev) {
-    dev->ops->release(dev->ctx);
-}
-
-static inline zx_status_t dev_op_suspend(zx_device_t* dev, uint32_t flags) {
-    return dev->ops->suspend(dev->ctx, flags);
-}
-
-static inline zx_status_t dev_op_resume(zx_device_t* dev, uint32_t flags) {
-    return dev->ops->resume(dev->ctx, flags);
-}
-
-static inline zx_status_t dev_op_read(zx_device_t* dev, void* buf, size_t count, zx_off_t off,
-                                         size_t* actual) {
-    return dev->ops->read(dev->ctx, buf, count, off, actual);
-}
-
-static inline zx_status_t dev_op_write(zx_device_t* dev, const void* buf, size_t count,
-                                          zx_off_t off, size_t* actual) {
-    return dev->ops->write(dev->ctx, buf, count, off, actual);
-}
-
-static inline zx_off_t dev_op_get_size(zx_device_t* dev) {
-    return dev->ops->get_size(dev->ctx);
-}
-
-static inline zx_status_t dev_op_ioctl(zx_device_t* dev, uint32_t op,
-                                      const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len, size_t* out_actual) {
-    return dev->ops->ioctl(dev->ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
-}
-
-static inline zx_status_t dev_op_message(zx_device_t* dev, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return dev->ops->message(dev->ctx, msg, txn);
-}
 
 __END_CDECLS

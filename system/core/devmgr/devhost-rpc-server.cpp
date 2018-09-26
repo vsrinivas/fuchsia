@@ -141,9 +141,9 @@ static ssize_t do_sync_io(zx_device_t* dev, uint32_t opcode, void* buf, size_t c
     size_t actual;
     zx_status_t r;
     if (opcode == DO_READ) {
-        r = dev_op_read(dev, buf, count, off, &actual);
+        r = dev->Read(buf, count, off, &actual);
     } else {
-        r = dev_op_write(dev, buf, count, off, &actual);
+        r = dev->Write(buf, count, off, &actual);
     }
     if (r < 0) {
         return r;
@@ -215,10 +215,10 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
         return ZX_OK;
     }
     case IOCTL_DEVICE_DEBUG_SUSPEND: {
-        return dev_op_suspend(dev, 0);
+        return dev->Suspend(0);
     }
     case IOCTL_DEVICE_DEBUG_RESUME: {
-        return dev_op_resume(dev, 0);
+        return dev->Resume(0);
     }
     case IOCTL_DEVICE_GET_DRIVER_LOG_FLAGS: {
         if (!dev->driver) {
@@ -245,7 +245,7 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
         return ZX_OK;
     }
     default: {
-        return dev_op_ioctl(dev, op, in_buf, in_len, out_buf, out_len, out_actual);
+        return dev->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     }
     }
 }
@@ -483,7 +483,7 @@ static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrig
                                   fidl_txn_t* txn) {
     auto ios = static_cast<devhost_iostate_t*>(ctx);
     size_t end, n;
-    end = dev_op_get_size(ios->dev);
+    end = ios->dev->GetSize();
     switch (start) {
     case fuchsia_io_SeekOrigin_START:
         if ((offset < 0) || ((size_t)offset > end)) {
@@ -581,7 +581,7 @@ static zx_status_t fidl_node_getattr(void* ctx, fidl_txn_t* txn) {
     fuchsia_io_NodeAttributes attributes;
     memset(&attributes, 0, sizeof(attributes));
     attributes.mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-    attributes.content_size = dev_op_get_size(ios->dev);
+    attributes.content_size = ios->dev->GetSize();
     attributes.link_count = 1;
     return fuchsia_io_NodeGetAttr_reply(txn, ZX_OK, &attributes);
 }
@@ -659,6 +659,6 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
         return fuchsia_io_DirectoryAdmin_dispatch(cookie, txn, msg, &kDirectoryAdminOps);
     } else {
         auto ios = static_cast<devhost_iostate_t*>(cookie);
-        return dev_op_message(ios->dev, msg, txn);
+        return ios->dev->Message(msg, txn);
     }
 }
