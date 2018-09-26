@@ -16,6 +16,8 @@ source_set("lib") {
     "logger_impl.cc",
     "logger_impl.h",
     "product_hack.h",
+    "system_data_updater_impl.cc",
+    "system_data_updater_impl.h",
     "timer_manager.cc",
     "timer_manager.h",
     "utils.cc",
@@ -84,12 +86,13 @@ executable("cobalt_app_unittests") {
   testonly = true
 
   sources = [
-    "timer_manager.cc",
-    "timer_manager.h",
     "timer_manager_test.cc",
+    "system_data_updater_impl_test.cc",
   ]
 
   deps = [
+    ":lib",
+    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",

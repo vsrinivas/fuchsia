@@ -87,6 +87,11 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
   context_->outgoing().AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));
 
+  system_data_updater_impl_.reset(new SystemDataUpdaterImpl(&system_data_));
+  context_->outgoing().AddPublicService(
+      system_data_updater_bindings_.GetHandler(
+          system_data_updater_impl_.get()));
+
   context_->outgoing().AddPublicService(
       controller_bindings_.GetHandler(controller_impl_.get()));
 }
