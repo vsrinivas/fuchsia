@@ -221,11 +221,13 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     }
 
     debugmstl("Minstrel peer added: %s\n", addr.ToString().c_str());
-    peer_map_.emplace(addr, std::move(peer));
-    if (peer_map_.size() == 1) {
+    if (peer_map_.empty()) {
         ZX_DEBUG_ASSERT(!next_update_event_.IsActive());
         timer_mgr_.Schedule(timer_mgr_.Now() + kMinstrelUpdateInterval, &next_update_event_);
+    } else if (GetPeer(addr) != nullptr) {
+        warnf("Peer %s already exists. Forgot to clean up?\n", addr.ToString().c_str());
     }
+    peer_map_.emplace(addr, std::move(peer));
     // TODO(eyw): RemovePeer() needs to be called at de-association.
 }
 
