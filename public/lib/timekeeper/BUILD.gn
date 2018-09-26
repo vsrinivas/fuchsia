@@ -38,13 +38,19 @@ source_set("testing") {
   sources = [
     "async_test_clock.cc",
     "async_test_clock.h",
+    "monotonic_test_clock_base.cc",
+    "monotonic_test_clock_base.h",
     "test_clock.cc",
     "test_clock.h",
+    "test_loop_test_clock.cc",
+    "test_loop_test_clock.h",
   ]
 
   public_deps = [
     ":timekeeper",
     "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-testutils",
+    "//zircon/public/lib/fit",
   ]
 }
 
@@ -54,6 +60,7 @@ source_set("unittests") {
     "async_test_clock_unittest.cc",
     "system_clock_unittest.cc",
     "test_clock_unittest.cc",
+    "test_loop_test_clock_unittest.cc",
   ]
 
   deps = [
