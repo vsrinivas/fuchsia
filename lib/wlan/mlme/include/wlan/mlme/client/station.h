@@ -75,14 +75,6 @@ struct AssocContext {
     void set_aid(uint16_t aid) { aid = aid & kAidMask; }
 };
 
-// TODO(NET-1322): Replace by a FIDL struct
-// AssocConfig stores the per-association configuration on top of
-// what associations peers are mutually capable of.
-// The configuration is an instruction from SME to MLME.
-struct AssocConfig {
-    wlan_mlme::CBW cbw;
-};
-
 class Station {
    public:
     Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched);
@@ -225,7 +217,6 @@ class Station {
     wlan_channel_t join_chan_;
     common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
     AssocContext assoc_ctx_{};
-    AssocConfig assoc_cfg_{};
 
     // Queue holding buffered, outbound Ethernet frames
     PacketQueue bu_queue_;

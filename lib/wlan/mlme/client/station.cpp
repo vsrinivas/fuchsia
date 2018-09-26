@@ -167,31 +167,19 @@ zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& re
     bssid_.Set(bss_->bssid.data());
 
     auto chan = GetBssChan();
-    debugjoin("JoinReq BSSID %s Chan %u CBW %u Sec80 %u\n",
-              common::MacAddr(bssid_).ToString().c_str(), chan.primary, chan.cbw, chan.secondary80);
+    infof("JoinReq BSSID %s Chan %u CBW %u Sec80 %u\n", common::MacAddr(bssid_).ToString().c_str(),
+          chan.primary, chan.cbw, chan.secondary80);
+    debugf("Overriders: override_phy %u phy %u overide_cbw %u cbw %u\n", req.body()->override_phy,
+           req.body()->phy, req.body()->override_cbw, req.body()->cbw);
 
-    // TODO(NET-1322): Receive instruction from SME
-    assoc_cfg_ = {};
-    assoc_cfg_.cbw = wlan_mlme::CBW::CBW40;
-
-    // TODO(NET-449): Move this logic to policy engine
-    // Validation and sanitization
     if (!common::IsValidChan(chan)) {
+        // If what SME instructs seems invalid, treat it as an error.
+        // Shout out, and auto-correct
         wlan_channel_t chan_sanitized = chan;
         chan_sanitized.cbw = common::GetValidCbw(chan);
         errorf("Wlanstack attempts to configure an invalid channel: %s. Falling back to %s\n",
                common::ChanStr(chan).c_str(), common::ChanStr(chan_sanitized).c_str());
         chan = chan_sanitized;
-    }
-    if (IsCbw40Rx()) {
-        wlan_channel_t chan_override = chan;
-        // Override with capabilities and configurations
-        if (assoc_cfg_.cbw == wlan_mlme::CBW::CBW40) { chan_override.cbw = CBW40; }
-        chan_override.cbw = common::GetValidCbw(chan_override);
-
-        infof("CBW40 Rx is ready. Overriding the channel configuration from %s to %s\n",
-              common::ChanStr(chan).c_str(), common::ChanStr(chan_override).c_str());
-        chan = chan_override;
     }
 
     debugjoin("setting channel to %s\n", common::ChanStr(chan).c_str());
@@ -1417,7 +1405,7 @@ bool Station::IsCbw40Rx() const {
 
     debugf(
         "IsCbw40Rx: bss.ht_cap:%s, bss.chan_width_set:%s client_assoc.has_ht_cap:%s "
-        "client_assoc.chan_width_set:%u user_cfg.cbw:%u\n",
+        "client_assoc.chan_width_set:%u\n",
         (bss_->ht_cap != nullptr) ? "yes" : "no",
         (bss_->ht_cap == nullptr)
             ? "invalid"
@@ -1425,7 +1413,7 @@ bool Station::IsCbw40Rx() const {
                   ? "20"
                   : "40",
         client_assoc.has_ht_cap ? "yes" : "no",
-        static_cast<uint8_t>(client_assoc.ht_cap.ht_cap_info.chan_width_set()), assoc_cfg_.cbw);
+        static_cast<uint8_t>(client_assoc.ht_cap.ht_cap_info.chan_width_set()));
 
     if (bss_->ht_cap == nullptr) {
         debugjoin("Disable CBW40: no HT support in target BSS\n");
@@ -1442,11 +1430,6 @@ bool Station::IsCbw40Rx() const {
     }
     if (client_assoc.ht_cap.ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_ONLY) {
         debugjoin("Disable CBW40: no CBW40 support in the this device\n");
-        return false;
-    }
-
-    if (assoc_cfg_.cbw == wlan_mlme::CBW::CBW20) {
-        debugjoin("Disable CBW40: overridden by user config\n");
         return false;
     }
 
@@ -1574,7 +1557,7 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
 
     assoc_ctx_.is_ht = assoc_ctx_.has_ht_cap;
     assoc_ctx_.is_cbw40_rx =
-        assoc_cfg_.cbw != wlan_mlme::CBW::CBW20 && assoc_ctx_.has_ht_cap &&
+        assoc_ctx_.has_ht_cap &&
         ap.ht_cap.ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY &&
         client.ht_cap.ht_cap_info.chan_width_set() != HtCapabilityInfo::TWENTY_FORTY;
 
