@@ -25,6 +25,12 @@
 
 #include "dnode.h"
 
+namespace {
+
+constexpr size_t kPageSize = static_cast<size_t>(PAGE_SIZE);
+
+}
+
 namespace memfs {
 
 zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, fbl::StringPiece name,
@@ -37,6 +43,42 @@ zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, fbl::StringPiece name,
 void Vfs::MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree) {
     fbl::AutoLock lock(&vfs_lock_);
     parent->MountSubtree(fbl::move(subtree));
+}
+
+zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size,
+                         size_t request_size, size_t* actual_size) {
+    if (request_size <= current_size) {
+        *actual_size = current_size;
+        return ZX_OK;
+    }
+    size_t aligned_len = fbl::round_up(request_size, kPageSize);
+    ZX_DEBUG_ASSERT(current_size % kPageSize == 0);
+    size_t num_new_pages = (aligned_len - current_size) / kPageSize;
+    if (num_new_pages + num_allocated_pages_ > pages_limit_) {
+        *actual_size = current_size;
+        return ZX_ERR_NO_SPACE;
+    }
+    zx_status_t status;
+    if (!vmo.is_valid()) {
+        if ((status = zx::vmo::create(aligned_len, 0, &vmo)) != ZX_OK) {
+            return status;
+        }
+    } else {
+        if ((status = vmo.set_size(aligned_len)) != ZX_OK) {
+            return status;
+        }
+    }
+    // vmo operation succeeded
+    num_allocated_pages_ += num_new_pages;
+    *actual_size = aligned_len;
+    return ZX_OK;
+}
+
+void Vfs::WillFreeVMO(size_t vmo_size) {
+    ZX_DEBUG_ASSERT(vmo_size % kPageSize == 0);
+    size_t freed_pages = vmo_size / kPageSize;
+    ZX_DEBUG_ASSERT(freed_pages <= num_allocated_pages_);
+    num_allocated_pages_ -= freed_pages;
 }
 
 fbl::atomic<uint64_t> VnodeMemfs::ino_ctr_(0);
@@ -75,7 +117,7 @@ zx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
     return ZX_OK;
 }
 
-zx_status_t createFilesystem(const char* name, memfs::Vfs* vfs, fbl::RefPtr<VnodeDir>* out) {
+zx_status_t CreateFilesystem(const char* name, memfs::Vfs* vfs, fbl::RefPtr<VnodeDir>* out) {
     fbl::AllocChecker ac;
     fbl::RefPtr<VnodeDir> fs = fbl::AdoptRef(new (&ac) VnodeDir(vfs));
     if (!ac.check()) {

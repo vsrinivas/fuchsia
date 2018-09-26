@@ -43,7 +43,7 @@ public:
     bool IsDirectory() const { return dnode_ != nullptr; }
     void UpdateModified() { modify_time_ = zx_clock_get(ZX_CLOCK_UTC); }
 
-    virtual ~VnodeMemfs();
+    ~VnodeMemfs() override;
 
     Vfs* vfs() const { return vfs_; }
     uint64_t ino() const { return ino_; }
@@ -65,8 +65,8 @@ private:
 
 class VnodeFile final : public VnodeMemfs {
 public:
-    VnodeFile(Vfs* vfs);
-    ~VnodeFile();
+    explicit VnodeFile(Vfs* vfs);
+    ~VnodeFile() override;
 
     virtual zx_status_t ValidateFlags(uint32_t flags) final;
 
@@ -95,8 +95,8 @@ private:
 
 class VnodeDir final : public VnodeMemfs {
 public:
-    VnodeDir(Vfs* vfs);
-    virtual ~VnodeDir();
+    explicit VnodeDir(Vfs* vfs);
+    ~VnodeDir() override;
 
     zx_status_t ValidateFlags(uint32_t flags) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
@@ -152,7 +152,7 @@ private:
 class VnodeVmo final : public VnodeMemfs {
 public:
     VnodeVmo(Vfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length);
-    ~VnodeVmo();
+    ~VnodeVmo() override;
 
     virtual zx_status_t ValidateFlags(uint32_t flags) override;
 
@@ -171,14 +171,53 @@ private:
 
 class Vfs : public fs::ManagedVfs {
 public:
+    // Creates a Vfs with practically unlimited pages upper bound.
+    Vfs(): fs::ManagedVfs(), pages_limit_(UINT64_MAX), num_allocated_pages_(0) { }
+
+    // Creates a Vfs with the maximum |pages_limit| number of pages.
+    explicit Vfs(size_t pages_limit):
+        fs::ManagedVfs(), pages_limit_(pages_limit), num_allocated_pages_(0) { }
+
+    // Creates a VnodeVmo under |parent| with |name| which is backed by |vmo|.
+    // N.B. The VMO will not be taken into account when calculating
+    // number of allocated pages in this Vfs.
     zx_status_t CreateFromVmo(VnodeDir* parent, fbl::StringPiece name,
                               zx_handle_t vmo, zx_off_t off,
                               zx_off_t len);
 
     void MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree);
+
+    size_t PagesLimit() const { return pages_limit_; }
+
+    size_t NumAllocatedPages() const { return num_allocated_pages_; }
+
+private:
+    // Maximum number of pages available; fixed at Vfs creation time.
+    // Puts a bound on maximum memory usage.
+    const size_t pages_limit_;
+
+    // Number of pages currently in use by VnodeFiles.
+    size_t num_allocated_pages_;
+
+    // Allows VnodeFile (and no other class) to manipulate number of allocated pages
+    // using GrowVMO and WillFreeVMO.
+    friend VnodeFile;
+
+    // Increases the size of the |vmo| to at least |request_size| bytes.
+    // If the VMO is invalid, it will try to create it.
+    // |current_size| is the current size of the VMO in number of bytes. It should be
+    // a multiple of page size. The new size of the VMO is returned via |actual_size|.
+    // If the new size would cause us to exceed the limit on number of pages or if the system
+    // ran out of memory, an error is returned.
+    zx_status_t GrowVMO(zx::vmo& vmo, size_t current_size,
+                        size_t request_size, size_t* actual_size);
+
+    // VnodeFile must call this function in the destructor to signal that its VMO will be freed.
+    // |vmo_size| is the size of the owned vmo in bytes. It should be a multiple of page size.
+    void WillFreeVMO(size_t vmo_size);
 };
 
-zx_status_t createFilesystem(const char* name, memfs::Vfs* vfs, fbl::RefPtr<VnodeDir>* out);
+zx_status_t CreateFilesystem(const char* name, memfs::Vfs* vfs, fbl::RefPtr<VnodeDir>* out);
 
 } // namespace memfs
 

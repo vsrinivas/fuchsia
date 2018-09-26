@@ -23,10 +23,20 @@
 
 struct memfs_filesystem {
     memfs::Vfs vfs;
+
+    explicit memfs_filesystem(size_t pages_limit): vfs(pages_limit) { }
 };
 
-zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesystem_t** out_fs,
+zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher,
+                                    memfs_filesystem_t** out_fs,
                                     zx_handle_t* out_root) {
+    return memfs_create_filesystem_with_page_limit(dispatcher, UINT64_MAX, out_fs, out_root);
+}
+
+zx_status_t memfs_create_filesystem_with_page_limit(async_dispatcher_t* dispatcher,
+                                                    size_t max_num_pages,
+                                                    memfs_filesystem_t** out_fs,
+                                                    zx_handle_t* out_root) {
     ZX_DEBUG_ASSERT(dispatcher != nullptr);
     ZX_DEBUG_ASSERT(out_fs != nullptr);
     ZX_DEBUG_ASSERT(out_root != nullptr);
@@ -37,11 +47,11 @@ zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesy
         return status;
     }
 
-    fbl::unique_ptr<memfs_filesystem_t> fs = fbl::make_unique<memfs_filesystem_t>();
+    fbl::unique_ptr<memfs_filesystem_t> fs = fbl::make_unique<memfs_filesystem_t>(max_num_pages);
     fs->vfs.SetDispatcher(dispatcher);
 
     fbl::RefPtr<memfs::VnodeDir> root;
-    if ((status = memfs::createFilesystem("<tmp>", &fs->vfs, &root)) != ZX_OK) {
+    if ((status = memfs::CreateFilesystem("<tmp>", &fs->vfs, &root)) != ZX_OK) {
         return status;
     }
     if ((status = fs->vfs.ServeDirectory(fbl::move(root), fbl::move(server))) != ZX_OK) {
@@ -54,6 +64,11 @@ zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesy
 }
 
 zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path) {
+    return memfs_install_at_with_page_limit(dispatcher, UINT64_MAX, path);
+}
+
+zx_status_t memfs_install_at_with_page_limit(async_dispatcher_t* dispatcher,
+                                             size_t max_num_pages, const char* path) {
     fdio_ns_t* ns;
     zx_status_t status = fdio_ns_get_installed(&ns);
     if (status != ZX_OK) {
@@ -62,7 +77,7 @@ zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path) {
 
     memfs_filesystem_t* fs;
     zx_handle_t root;
-    status = memfs_create_filesystem(dispatcher, &fs, &root);
+    status = memfs_create_filesystem_with_page_limit(dispatcher, max_num_pages, &fs, &root);
     if (status != ZX_OK) {
         return status;
     }

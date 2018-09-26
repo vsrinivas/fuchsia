@@ -27,9 +27,11 @@ namespace memfs {
 constexpr size_t kMemfsMaxFileSize = 512 * 1024 * 1024;
 
 VnodeFile::VnodeFile(Vfs* vfs)
-    : VnodeMemfs(vfs), vmo_size_(0), length_(0) {}
+    : VnodeMemfs(vfs), vmo_size_(0), length_(0)  {}
 
-VnodeFile::~VnodeFile() = default;
+VnodeFile::~VnodeFile() {
+    vfs()->WillFreeVMO(vmo_size_);
+}
 
 zx_status_t VnodeFile::ValidateFlags(uint32_t flags) {
     if (flags & ZX_FS_FLAG_DIRECTORY) {
@@ -58,29 +60,15 @@ zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
     zx_status_t status;
     size_t newlen = offset + len;
     newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
-    size_t alignedlen = fbl::round_up(newlen, static_cast<size_t>(PAGE_SIZE));
-
-    if (!vmo_.is_valid()) {
-        // First access to the file? Allocate it.
-        if ((status = zx::vmo::create(alignedlen, 0, &vmo_)) != ZX_OK) {
-            return status;
-        }
-        vmo_size_ = alignedlen;
-    } else if (newlen > length_) {
-        // Accessing beyond the end of the file? Extend it.
-        if (offset > length_) {
-            // Zero-extending the tail of the file by writing to
-            // an offset beyond the end of the file.
-            ZeroTail(length_, offset);
-        }
-        if (alignedlen > vmo_size_) {
-            if ((status = vmo_.set_size(alignedlen)) != ZX_OK) {
-                return status;
-            }
-            vmo_size_ = alignedlen;
-        }
+    if ((status = vfs()->GrowVMO(vmo_, vmo_size_, newlen, &vmo_size_)) != ZX_OK) {
+        return status;
     }
-
+    // Accessing beyond the end of the file? Extend it.
+    if (offset > length_) {
+        // Zero-extending the tail of the file by writing to
+        // an offset beyond the end of the file.
+        ZeroTail(length_, offset);
+    }
     size_t writelen = newlen - offset;
     if ((status = vmo_.write(data, offset, writelen)) != ZX_OK) {
         return status;
@@ -164,30 +152,16 @@ zx_status_t VnodeFile::Truncate(size_t len) {
     if (len > kMemfsMaxFileSize) {
         return ZX_ERR_INVALID_ARGS;
     }
-
-    constexpr size_t kPageSize = static_cast<size_t>(PAGE_SIZE);
-    if (!vmo_.is_valid()) {
-        // First access to the file? Allocate it.
-        size_t alignedLen = fbl::round_up(len, kPageSize);
-        if ((status = zx::vmo::create(alignedLen, 0, &vmo_)) != ZX_OK) {
-            return status;
-        }
-        vmo_size_ = alignedLen;
-    } else if (len < length_) {
+    if ((status = vfs()->GrowVMO(vmo_, vmo_size_, len, &vmo_size_)) != ZX_OK) {
+        return status;
+    }
+    if (len < length_) {
         // Shrink the logical file length.
         // Zeroing the tail here is optional, but it saves memory.
         ZeroTail(len, length_);
     } else if (len > length_) {
         // Extend the logical file length.
         ZeroTail(length_, len);
-        if (len > vmo_size_) {
-            // Extend the underlying VMO used to store the file.
-            size_t alignedLen = fbl::round_up(len, kPageSize);
-            if ((status = vmo_.set_size(alignedLen)) != ZX_OK) {
-                return status;
-            }
-            vmo_size_ = alignedLen;
-        }
     }
 
     length_ = len;

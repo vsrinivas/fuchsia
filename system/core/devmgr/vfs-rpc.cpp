@@ -87,7 +87,7 @@ zx_status_t add_vmofile(fbl::RefPtr<VnodeDir> vnb, const char* path, zx_handle_t
 
 fbl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
     if (memfs::systemfs_root == nullptr) {
-        zx_status_t r = memfs::createFilesystem("system", &memfs::system_vfs, &memfs::systemfs_root);
+        zx_status_t r = memfs::CreateFilesystem("system", &memfs::system_vfs, &memfs::systemfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'system' file system\n", r);
             __builtin_trap();
@@ -98,7 +98,7 @@ fbl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
 
 fbl::RefPtr<memfs::VnodeDir> MemfsRoot() {
     if (memfs::memfs_root == nullptr) {
-        zx_status_t r = memfs::createFilesystem("tmp", &memfs::root_vfs, &memfs::memfs_root);
+        zx_status_t r = memfs::CreateFilesystem("tmp", &memfs::root_vfs, &memfs::memfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'tmp' file system\n", r);
             __builtin_trap();
@@ -109,7 +109,7 @@ fbl::RefPtr<memfs::VnodeDir> MemfsRoot() {
 
 fbl::RefPtr<memfs::VnodeDir> DevfsRoot() {
     if (memfs::devfs_root == nullptr) {
-        zx_status_t r = memfs::createFilesystem("dev", &memfs::root_vfs, &memfs::devfs_root);
+        zx_status_t r = memfs::CreateFilesystem("dev", &memfs::root_vfs, &memfs::devfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'device' file system\n", r);
             __builtin_trap();
@@ -120,7 +120,7 @@ fbl::RefPtr<memfs::VnodeDir> DevfsRoot() {
 
 fbl::RefPtr<memfs::VnodeDir> BootfsRoot() {
     if (memfs::bootfs_root == nullptr) {
-        zx_status_t r = memfs::createFilesystem("boot", &memfs::root_vfs, &memfs::bootfs_root);
+        zx_status_t r = memfs::CreateFilesystem("boot", &memfs::root_vfs, &memfs::bootfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'boot' file system\n", r);
             __builtin_trap();
@@ -168,7 +168,7 @@ zx_status_t vfs_install_fs(const char* path, zx_handle_t h) {
 // Hardcoded initialization function to create/access global root directory
 VnodeDir* vfs_create_global_root() {
     if (memfs::global_root == nullptr) {
-        zx_status_t r = memfs::createFilesystem("<root>", &memfs::root_vfs, &memfs::global_root);
+        zx_status_t r = memfs::CreateFilesystem("<root>", &memfs::root_vfs, &memfs::global_root);
         if (r < 0) {
             printf("fatal error %d allocating root file system\n", r);
             __builtin_trap();
