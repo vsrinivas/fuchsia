@@ -374,6 +374,7 @@ source_set("escher") {
     "util/bitmap.h",
     "util/block_allocator.cc",
     "util/block_allocator.h",
+    "util/debug_print.h",
     "util/depth_to_color.cc",
     "util/depth_to_color.h",
     "util/enum_cast.h",

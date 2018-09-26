@@ -16,6 +16,7 @@ executable("unittests") {
   output_name = "input_unittests"
   sources = [
     "coordinate_transform_test.cc",
+    "import_node_test.cc",
     "util.cc",
     "util.h",
   ]

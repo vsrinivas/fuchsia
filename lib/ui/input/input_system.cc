@@ -30,36 +30,14 @@
 namespace scenic_impl {
 namespace input {
 
-InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
-    : System(std::move(context), /*initialized_after_construction*/ false),
-      gfx_system_(gfx_system) {
-  FXL_CHECK(gfx_system_);
-  gfx_system_->AddInitClosure([this]() {
-    SetToInitialized();
-    FXL_LOG(INFO) << "Scenic input system initialized.";
-  });
-}
-
-std::unique_ptr<CommandDispatcher> InputSystem::CreateCommandDispatcher(
-    CommandDispatcherContext context) {
-  return std::make_unique<InputCommandDispatcher>(std::move(context),
-                                                  gfx_system_);
-}
-
-InputCommandDispatcher::InputCommandDispatcher(
-    CommandDispatcherContext context, gfx::GfxSystem* gfx_system)
-    : CommandDispatcher(std::move(context)),
-      gfx_system_(gfx_system) {
-  FXL_CHECK(gfx_system_);
-}
-
+namespace {
 // Helper for DispatchCommand.
-static int64_t NowInNs() {
+int64_t NowInNs() {
   return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
 }
 
 // Helper for DispatchCommand.
-static escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
+escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
   // We set the elevation for the origin point, and Z value for the direction,
   // such that we start above the scene and point into the scene.
   //
@@ -79,8 +57,8 @@ static escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
 }
 
 // Helper for DispatchCommand.
-static escher::vec2 TransformPointerEvent(
-    const escher::ray4& ray, const escher::mat4& transform) {
+escher::vec2 TransformPointerEvent(const escher::ray4& ray,
+                                   const escher::mat4& transform) {
   escher::ray4 local_ray = glm::inverse(transform) * ray;
 
   // We treat distance as 0 to simplify; otherwise the formula is:
@@ -91,6 +69,85 @@ static escher::vec2 TransformPointerEvent(
               << ", " << ray.origin.x << ")->(" << hit.x << ", " << hit.y
               << ")";
   return hit;
+}
+
+// Helper for DispatchCommand.
+glm::mat4 FindGlobalTransform(gfx::ResourcePtr view) {
+  glm::mat4 global_transform(1.f);  // Default is identity transform.
+  if (!view) {
+    return global_transform;
+  }
+
+  if (view->IsKindOf<gfx::View>()) {
+    gfx::ViewPtr v2view = view->As<gfx::View>();
+    if (v2view->view_holder() && v2view->view_holder()->parent()) {
+      global_transform = v2view->view_holder()->parent()->GetGlobalTransform();
+    }
+  } else {
+    // TODO(SCN-1006): After v2 transition, remove this clause.
+    FXL_DCHECK(view->IsKindOf<gfx::Import>());
+    if (gfx::ImportPtr import = view->As<gfx::Import>()) {
+      if (gfx::Resource* delegate = import->delegate()) {
+        FXL_DCHECK(delegate->IsKindOf<gfx::Node>());
+        if (gfx::NodePtr node = delegate->As<gfx::Node>()) {
+          global_transform = node->GetGlobalTransform();
+        }
+      }
+    }
+  }
+  return global_transform;
+}
+
+// Helper for DispatchCommand.
+fuchsia::ui::input::PointerEvent ClonePointerWithCoords(
+    const fuchsia::ui::input::PointerEvent& event, float x, float y) {
+  fuchsia::ui::input::PointerEvent clone;
+  fidl::Clone(event, &clone);
+  clone.x = x;
+  clone.y = y;
+  return clone;
+}
+
+// Helper for DispatchCommand.
+// Ensure sessions get each event just once: stamp out duplicate
+// sessions in the rest of the hits. This assumes:
+// - there may be a ViewManager that interposes many Import nodes
+// - each client has at most one "view" (whether View or Import)
+// - each client receives at most one hit per view
+// which reflects the pre-v2 migration scene graph.
+// TODO(SCN-1006): Enable multiple Views per client.
+// TODO(SCN-935): Return full set of hits to each client.
+void RemoveHitsFromSameSession(SessionId session_id, size_t start_idx,
+                               std::vector<gfx::ResourcePtr>* views) {
+  FXL_DCHECK(views);
+  for (size_t k = start_idx; k < views->size(); ++k) {
+    if ((*views)[k] && ((*views)[k]->session()->id() == session_id)) {
+      (*views)[k] = nullptr;
+    }
+  }
+}
+}  // namespace
+
+InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
+    : System(std::move(context), /*initialized_after_construction*/ false),
+      gfx_system_(gfx_system) {
+  FXL_CHECK(gfx_system_);
+  gfx_system_->AddInitClosure([this]() {
+    SetToInitialized();
+    FXL_LOG(INFO) << "Scenic input system initialized.";
+  });
+}
+
+std::unique_ptr<CommandDispatcher> InputSystem::CreateCommandDispatcher(
+    CommandDispatcherContext context) {
+  return std::make_unique<InputCommandDispatcher>(std::move(context),
+                                                  gfx_system_);
+}
+
+InputCommandDispatcher::InputCommandDispatcher(CommandDispatcherContext context,
+                                               gfx::GfxSystem* gfx_system)
+    : CommandDispatcher(std::move(context)), gfx_system_(gfx_system) {
+  FXL_CHECK(gfx_system_);
 }
 
 void InputCommandDispatcher::DispatchCommand(
@@ -105,11 +162,9 @@ void InputCommandDispatcher::DispatchCommand(
 
   const InputCommand& input_command = command.input();
   if (input_command.is_send_keyboard_input()) {
-    // Send keyboard events to active focus.
-    if (gfx::ViewPtr view = FindView(focus_)) {
-      EnqueueEventToView(view,
-                         input_command.send_keyboard_input().keyboard_event);
-    }
+    // Send keyboard events to the active focus.
+    EnqueueEventToView(focus_,
+                       input_command.send_keyboard_input().keyboard_event);
   } else if (input_command.is_send_pointer_input()) {
     const fuchsia::ui::input::SendPointerInputCmd& send =
         input_command.send_pointer_input();
@@ -124,50 +179,50 @@ void InputCommandDispatcher::DispatchCommand(
     // for a stylus pointer, which may HOVER between ADD and DOWN.
     // TODO(SCN-940, SCN-164): Implement stylus support.
     if (pointer_phase == PointerEventPhase::ADD) {
-      escher::ray4 ray;
-      {
-        fuchsia::math::PointF point;
-        point.x = send.pointer_event.x;
-        point.y = send.pointer_event.y;
-        ray = CreateScreenPerpendicularRay(point.x, point.y);
-        FXL_VLOG(1) << "HitTest: device point " << point;
-      }
+      escher::ray4 ray = CreateScreenPerpendicularRay(send.pointer_event.x,
+                                                      send.pointer_event.y);
+      FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", "
+                  << ray.origin.y << ")";
 
       std::vector<gfx::Hit> hits;
       {
         gfx::Compositor* compositor =
             gfx_system_->GetCompositor(send.compositor_id);
-        FXL_DCHECK(compositor)
-            << "No compositor found (id=" << send.compositor_id << ").";
+        if (!compositor)
+          return;  // Race with GFX; no delivery.
 
         gfx::LayerStackPtr layer_stack = compositor->layer_stack();
+        if (!layer_stack)
+          return;  // Race with GFX; no delivery.
+
         auto hit_tester = std::make_unique<gfx::GlobalHitTester>();
         hits = layer_stack->HitTest(ray, hit_tester.get());
-        FXL_VLOG(1) << "Hits acquired, count: " << hits.size();
       }
+      FXL_VLOG(1) << "Hits acquired, count: " << hits.size();
 
       // Find input targets.  Honor the "input masking" view property.
       ViewStack hit_views;
-      for (size_t i = 0; i < hits.size(); ++i) {
-        ViewId view_id(hits[i].view_session, hits[i].view_resource);
-        if (gfx::ViewPtr view = FindView(view_id)) {
-          glm::mat4 global_transform(1.f);  // Identity transform as default.
-          if (view->view_holder() && view->view_holder()->parent()) {
-            global_transform =
-                view->view_holder()->parent()->GetGlobalTransform();
-          }
-          hit_views.stack.push_back({view_id, global_transform});
-          if (/*TODO(SCN-919): view_id may mask input */ false) {
-            break;
-          }
-          // Ensure Views are unique: stamp out duplicates in the hits vector.
-          // TODO(SCN-935): Return hits (in model space coordinates) to clients.
-          for (size_t k = i + 1; k < hits.size(); ++k) {
-            ViewId next(hits[k].view_session, hits[k].view_resource);
-            if (view_id == next) {
-              hits[k].view_session = 0u;
-              hits[k].view_resource = 0u;
+      {
+        // Precompute the View for each hit. Don't hold on to these RefPtrs!
+        std::vector<gfx::ResourcePtr> views;
+        views.reserve(hits.size());
+        for (const gfx::Hit& hit : hits) {
+          FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
+          views.push_back(hit.node->FindOwningView());
+        }
+        FXL_DCHECK(hits.size() == views.size());
+
+        // Find the global transform for each hit, fill out hit_views.
+        for (size_t i = 0; i < hits.size(); ++i) {
+          if (gfx::ResourcePtr view = views[i]) {
+            glm::mat4 global_transform = FindGlobalTransform(view);
+            hit_views.stack.push_back(
+                {{view->session()->id(), view->id()}, global_transform});
+            if (/*TODO(SCN-919): view_id may mask input */ false) {
+              break;
             }
+            // Don't do this. Refer to comment on RemoveHitsFromSameSession.
+            RemoveHitsFromSameSession(view->session()->id(), i + 1, &views);
           }
         }
       }
@@ -194,22 +249,18 @@ void InputCommandDispatcher::DispatchCommand(
       if (focus_ != new_focus) {
         const int64_t focus_time = NowInNs();
         if (focus_) {
-          if (gfx::ViewPtr view = FindView(focus_)) {
-            fuchsia::ui::input::FocusEvent event;
-            event.event_time = focus_time;
-            event.focused = false;
-            EnqueueEventToView(view, event);
-            FXL_VLOG(1) << "Input focus lost by " << focus_;
-          }
+          fuchsia::ui::input::FocusEvent event;
+          event.event_time = focus_time;
+          event.focused = false;
+          EnqueueEventToView(focus_, event);
+          FXL_VLOG(1) << "Input focus lost by " << focus_;
         }
         if (new_focus) {
-          if (gfx::ViewPtr view = FindView(new_focus)) {
-            fuchsia::ui::input::FocusEvent event;
-            event.event_time = focus_time;
-            event.focused = true;
-            EnqueueEventToView(view, event);
-            FXL_VLOG(1) << "Input focus gained by " << new_focus;
-          }
+          fuchsia::ui::input::FocusEvent event;
+          event.event_time = focus_time;
+          event.focused = true;
+          EnqueueEventToView(new_focus, event);
+          FXL_VLOG(1) << "Input focus gained by " << new_focus;
         }
         focus_ = new_focus;
       }
@@ -217,19 +268,14 @@ void InputCommandDispatcher::DispatchCommand(
 
     // Input delivery must be parallel; needed for gesture disambiguation.
     for (const auto& entry : pointer_targets_[pointer_id].stack) {
-      if (gfx::ViewPtr view = FindView(entry.id)) {
-        escher::ray4 screen_ray = CreateScreenPerpendicularRay(
-            send.pointer_event.x, send.pointer_event.y);
-        escher::vec2 hit =
-            TransformPointerEvent(screen_ray, entry.global_transform);
+      escher::ray4 screen_ray = CreateScreenPerpendicularRay(
+          send.pointer_event.x, send.pointer_event.y);
+      escher::vec2 hit =
+          TransformPointerEvent(screen_ray, entry.global_transform);
 
-        fuchsia::ui::input::PointerEvent clone;
-        fidl::Clone(command.input().send_pointer_input().pointer_event, &clone);
-        clone.x = hit.x;
-        clone.y = hit.y;
-
-        EnqueueEventToView(view, std::move(clone));
-      }
+      auto clone = ClonePointerWithCoords(
+          command.input().send_pointer_input().pointer_event, hit.x, hit.y);
+      EnqueueEventToView(entry.id, std::move(clone));
     }
 
     if (pointer_phase == PointerEventPhase::REMOVE ||
@@ -239,47 +285,34 @@ void InputCommandDispatcher::DispatchCommand(
   }  // send pointer event
 }
 
-gfx::ViewPtr InputCommandDispatcher::FindView(ViewId view_id) {
-  if (!view_id) {
-    return nullptr;  // Don't bother.
+void InputCommandDispatcher::EnqueueEventToView(
+    ViewId view_id, fuchsia::ui::input::FocusEvent focus) {
+  if (gfx::Session* session = gfx_system_->GetSession(view_id.session_id)) {
+    fuchsia::ui::input::InputEvent event;
+    event.set_focus(std::move(focus));
+
+    session->EnqueueEvent(std::move(event));
   }
+}
 
-  gfx::Session* session = gfx_system_->GetSession(view_id.session_id);
-  if (session && session->is_valid()) {
-    return session->resources()->FindResource<gfx::View>(view_id.resource_id);
+void InputCommandDispatcher::EnqueueEventToView(
+    ViewId view_id, fuchsia::ui::input::KeyboardEvent keyboard) {
+  if (gfx::Session* session = gfx_system_->GetSession(view_id.session_id)) {
+    fuchsia::ui::input::InputEvent event;
+    event.set_keyboard(std::move(keyboard));
+
+    session->EnqueueEvent(std::move(event));
   }
-
-  return nullptr;
 }
 
 void InputCommandDispatcher::EnqueueEventToView(
-    gfx::ViewPtr view, fuchsia::ui::input::FocusEvent focus) {
-  FXL_DCHECK(view);
+    ViewId view_id, fuchsia::ui::input::PointerEvent pointer) {
+  if (gfx::Session* session = gfx_system_->GetSession(view_id.session_id)) {
+    fuchsia::ui::input::InputEvent event;
+    event.set_pointer(std::move(pointer));
 
-  fuchsia::ui::input::InputEvent event;
-  event.set_focus(std::move(focus));
-
-  view->session()->EnqueueEvent(std::move(event));
-}
-
-void InputCommandDispatcher::EnqueueEventToView(
-    gfx::ViewPtr view, fuchsia::ui::input::KeyboardEvent keyboard) {
-  FXL_DCHECK(view);
-
-  fuchsia::ui::input::InputEvent event;
-  event.set_keyboard(std::move(keyboard));
-
-  view->session()->EnqueueEvent(std::move(event));
-}
-
-void InputCommandDispatcher::EnqueueEventToView(
-    gfx::ViewPtr view, fuchsia::ui::input::PointerEvent pointer) {
-  FXL_DCHECK(view);
-
-  fuchsia::ui::input::InputEvent event;
-  event.set_pointer(std::move(pointer));
-
-  view->session()->EnqueueEvent(std::move(event));
+    session->EnqueueEvent(std::move(event));
+  }
 }
 
 }  // namespace input

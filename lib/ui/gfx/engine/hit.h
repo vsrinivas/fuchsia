@@ -17,9 +17,9 @@ struct Hit {
   // The node's tag value. Non-zero values participate in the SessionHitTester.
   uint32_t tag_value;
 
-  // The View that owns the node that was hit.
-  SessionId view_session;
-  ResourceId view_resource;
+  // Raw pointer to the node. Valid only in the context of Scenic itself.
+  // NOTE: The consumer (input subsystem) must not retain these pointers!
+  Node* node;
 
   // The ray that was used to perform the hit test, in the hit node's coordinate
   // system.

@@ -7,6 +7,8 @@
 namespace scenic_impl {
 namespace input {
 
+using escher::operator<<;
+
 ViewId::operator bool() {
   static const ViewId kNoView;
   return *this != kNoView;
@@ -28,14 +30,18 @@ std::ostream& operator<<(std::ostream& os, const ViewId& value) {
   return os << "]";
 }
 
+std::ostream& operator<<(std::ostream& os, const ViewStack::Entry& value) {
+  return os << "Entry: [" << value.id << ", GlobalTransform=\n"
+            << value.global_transform << "\n]";
+}
+
 std::ostream& operator<<(std::ostream& os, const ViewStack& value) {
   os << "ViewStack: [";
   if (value.stack.empty()) {
     os << "empty";
   } else {
     for (size_t i = 0; i < value.stack.size(); ++i) {
-      os << value.stack[i].id;
-      os << ", global_transform=<elided>";
+      os << value.stack[i];
       if (i + 1 < value.stack.size()) {
         os << ", ";
       }

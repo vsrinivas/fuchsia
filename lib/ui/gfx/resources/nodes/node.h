@@ -118,7 +118,7 @@ class Node : public Resource {
   // Walk up tree until we find the responsible View; otherwise return nullptr.
   // N.B. Typically the view and node are in the same session, but it's possible
   // to have them inhabit different sessions.
-  View* FindOwningView() const;
+  ResourcePtr FindOwningView() const;
 
  protected:
   Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);

@@ -42,20 +42,15 @@ class InputCommandDispatcher : public CommandDispatcher {
   void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
 
  private:
-  // Retrieve ViewPtr given its SessionId and ResourceId. If either is not
-  // available, return nullptr.
-  gfx::ViewPtr FindView(ViewId view_id);
-
   // Enqueue the focus event into the view's SessionListener.
-  void EnqueueEventToView(gfx::ViewPtr view,
-                          fuchsia::ui::input::FocusEvent focus);
+  void EnqueueEventToView(ViewId view_id, fuchsia::ui::input::FocusEvent focus);
 
   // Enqueue the keyboard event into the view's SessionListener.
-  void EnqueueEventToView(gfx::ViewPtr view,
+  void EnqueueEventToView(ViewId view_id,
                           fuchsia::ui::input::KeyboardEvent keyboard);
 
   // Enqueue the pointer event into the view's SessionListener.
-  void EnqueueEventToView(gfx::ViewPtr view,
+  void EnqueueEventToView(ViewId view_id,
                           fuchsia::ui::input::PointerEvent pointer);
 
   gfx::GfxSystem* const gfx_system_ = nullptr;

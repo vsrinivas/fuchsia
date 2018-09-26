@@ -83,7 +83,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
 
   // Returns whether this resource is currently exported or available for
   // export.
-  bool is_exported() { return exported_; }
+  bool is_exported() const { return exported_; }
 
   /// Adds the import resource to the list of importers of this resource.
   virtual void AddImport(Import* import);

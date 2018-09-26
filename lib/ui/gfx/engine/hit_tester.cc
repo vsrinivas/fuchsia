@@ -83,11 +83,8 @@ void HitTester::AccumulateHitsLocal(Node* node) {
   tag_info_ = outer_tag_info;
 
   if (local_tag_info.is_hit()) {
-    View* view = node->FindOwningView();
-    SessionId view_session_id = view ? view->session()->id() : 0u;
-    ResourceId view_resource_id = view ? view->id() : 0u;
-    hits_.emplace_back(Hit{node->tag_value(), view_session_id, view_resource_id,
-                           ray_info_->ray, ray_info_->inverse_transform,
+    hits_.emplace_back(Hit{node->tag_value(), node, ray_info_->ray,
+                           ray_info_->inverse_transform,
                            local_tag_info.distance});
     if (outer_tag_info)
       outer_tag_info->ReportIntersection(local_tag_info.distance);

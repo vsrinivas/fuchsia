@@ -3,29 +3,17 @@
 // found in the LICENSE file.
 
 #include <memory>
-#include <string>
 
-#include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/time.h>
 #include <lib/zx/eventpair.h>
 
-#include "garnet/lib/ui/gfx/displays/display.h"
-#include "garnet/lib/ui/gfx/displays/display_manager.h"
-#include "garnet/lib/ui/gfx/id.h"
-#include "garnet/lib/ui/gfx/tests/mocks.h"
-#include "garnet/lib/ui/input/input_system.h"
 #include "garnet/lib/ui/input/tests/util.h"
-#include "garnet/lib/ui/scenic/scenic.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/escher/impl/command_buffer_sequencer.h"
 #include "lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
-#include "lib/ui/gfx/tests/gfx_test.h"
 #include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/scenic/command_dispatcher.h"
-#include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 
@@ -72,144 +60,23 @@
 
 namespace lib_ui_input_tests {
 
-using ScenicEvent = fuchsia::ui::scenic::Event;
-using escher::impl::CommandBufferSequencer;
 using fuchsia::ui::input::InputEvent;
 using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventType;
-using fuchsia::ui::scenic::SessionListener;
-using scenic_impl::Scenic;
-using scenic_impl::gfx::Display;
-using scenic_impl::gfx::DisplayManager;
-using scenic_impl::gfx::test::GfxSystemForTest;
-using scenic_impl::input::InputSystem;
-using scenic_impl::test::ScenicTest;
 
-// Device-independent "display"; for testing only. Needed to ensure GfxSystem
-// doesn't wait for a device-driven "display ready" signal.
-class TestDisplay : public Display {
- public:
-  static uint32_t kWidth;
-  static uint32_t kHeight;
-
-  TestDisplay(uint64_t id) : Display(id, kWidth, kHeight) {}
-  ~TestDisplay() = default;
-  bool is_test_display() const override { return true; }
-};
-
-// Test-global display defaults.
-uint32_t TestDisplay::kWidth = 9;
-uint32_t TestDisplay::kHeight = 9;
-
-// Class fixture for TEST_F. Sets up a 9x9 "display" for GfxSystem to use, as
-// well as a live InputSystem to test.
-class InputSystemTest : public ScenicTest {
- public:
-  Scenic* scenic() { return scenic_.get(); }
-
-  std::string DumpScenes() { return gfx_->engine()->DumpScenes(); }
-
-  // Convenience function; triggers scene operations.
-  void RequestToPresent(scenic::Session* session) {
-    bool scene_presented = false;
-    session->Present(
-        /*presentation time*/ 0,
-        [&scene_presented](fuchsia::images::PresentationInfo info) {
-          scene_presented = true;
-        });
-    RunLoopFor(zx::msec(20));  // Schedule the render task.
-    EXPECT_TRUE(scene_presented);
-  }
-
+// Class fixture for TEST_F. Sets up a 9x9 "display" for GfxSystem.
+class CoordinateTransformTest : public InputSystemTest {
  protected:
-  void TearDown() override {
-    // A clean teardown sequence is a little involved but possible.
-    // 0. Sessions Flush their last resource-release cmds (in ~SessionWrapper).
-    // 1. Scenic runs the last resource-release cmds.
-    RunLoopUntilIdle();
-    // 2. Destroy Scenic before destroying the command buffer sequencer (CBS).
-    //    This ensures no CBS listeners are active by the time CBS is destroyed.
-    //    Scenic is destroyed by the superclass TearDown (now), CBS is destroyed
-    //    by the implicit class destructor (later).
-    ScenicTest::TearDown();
-  }
-
-  void InitializeScenic(Scenic* scenic) override {
-    auto display_manager = std::make_unique<DisplayManager>();
-    display_manager->SetDefaultDisplayForTests(
-        std::make_unique<TestDisplay>(/*id*/ 0));
-    command_buffer_sequencer_ = std::make_unique<CommandBufferSequencer>();
-    gfx_ = scenic->RegisterSystem<GfxSystemForTest>(
-        std::move(display_manager), command_buffer_sequencer_.get());
-    input_ = scenic->RegisterSystem<InputSystem>(gfx_);
-  }
-
- private:
-  std::unique_ptr<CommandBufferSequencer> command_buffer_sequencer_;
-  GfxSystemForTest* gfx_ = nullptr;
-  InputSystem* input_ = nullptr;
+  uint32_t test_display_width_px() const override { return 9; }
+  uint32_t test_display_height_px() const override { return 9; }
 };
 
-// Convenience wrapper to write Scenic clients with less boilerplate.
-class SessionWrapper {
- public:
-  SessionWrapper(Scenic* scenic) : scenic_(scenic) {
-    fuchsia::ui::scenic::SessionPtr session_fidl;
-    fidl::InterfaceHandle<SessionListener> listener_handle;
-    fidl::InterfaceRequest<SessionListener> listener_request =
-        listener_handle.NewRequest();
-    scenic_->CreateSession(session_fidl.NewRequest(),
-                           std::move(listener_handle));
-    session_ = std::make_unique<scenic::Session>(std::move(session_fidl),
-                                                 std::move(listener_request));
-    root_node_ = std::make_unique<scenic::EntityNode>(session_.get());
-
-    session_->set_event_handler([this](fidl::VectorPtr<ScenicEvent> events) {
-      for (ScenicEvent& event : *events) {
-        if (event.is_input()) {
-          events_.push_back(std::move(event.input()));
-        }
-        // Ignore other event types for this test.
-      }
-    });
-  }
-
-  ~SessionWrapper() {
-    root_node_.reset();  // Let go of the resource; enqueue the release cmd.
-    session_->Flush();   // Ensure Scenic receives the release cmd.
-  }
-
-  void RunNow(fit::function<void(scenic::Session* session,
-                                 scenic::EntityNode* root_node)>
-                  create_scene_callback) {
-    create_scene_callback(session_.get(), root_node_.get());
-  }
-
-  void ExamineEvents(
-      fit::function<void(const std::vector<InputEvent>& events)>
-          examine_events_callback) {
-    examine_events_callback(events_);
-  }
-
- private:
-  scenic_impl::Scenic* const scenic_;
-  std::unique_ptr<scenic::Session> session_;
-  std::unique_ptr<scenic::EntityNode> root_node_;
-  std::vector<InputEvent> events_;
-};
-
-// Convenience function to reduce clutter.
-void CreateTokenPairs(zx::eventpair* t1, zx::eventpair* t2) {
-  zx_status_t status = zx::eventpair::create(/*flags*/ 0u, t1, t2);
-  FXL_CHECK(status == ZX_OK);
-}
-
-TEST_F(InputSystemTest, CoordinateTransform) {
+TEST_F(CoordinateTransformTest, CoordinateTransform) {
   SessionWrapper presenter(scenic());
 
   zx::eventpair vh1, v1, vh2, v2;
-  CreateTokenPairs(&vh1, &v1);
-  CreateTokenPairs(&vh2, &v2);
+  CreateTokenPair(&vh1, &v1);
+  CreateTokenPair(&vh2, &v2);
 
   // Tie the test's dispatcher clock to the system (real) clock.
   RunLoopUntil(zx::clock::get_monotonic());
@@ -229,7 +96,7 @@ TEST_F(InputSystemTest, CoordinateTransform) {
     renderer.SetCamera(camera);
 
     scenic::Layer layer(session);
-    layer.SetSize(TestDisplay::kWidth, TestDisplay::kHeight);
+    layer.SetSize(test_display_width_px(), test_display_height_px());
     layer.SetRenderer(renderer);
 
     scenic::LayerStack layer_stack(session);

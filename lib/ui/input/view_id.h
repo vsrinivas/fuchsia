@@ -23,6 +23,9 @@ struct ViewId {
   explicit operator bool();
 
   scenic::SessionId session_id;
+  // We store the View's resource ID to distinguish between Views vended by a
+  // single Session. However, a View's RefPtr may not actually be in the
+  // Session's ResourceMap, so the resource ID is *not* useful for recall.
   scenic::ResourceId resource_id;
 };
 
