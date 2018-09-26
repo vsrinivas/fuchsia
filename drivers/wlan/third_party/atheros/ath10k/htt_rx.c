@@ -2318,25 +2318,19 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
         ath10k_htt_rx_msdu_buff_replenish(htt);
         break;
     case HTT_T2H_MSG_TYPE_PEER_MAP: {
-        ath10k_err("HTT_T2H_MSG_TYPE_PEER_MAP unimplemented\n");
-#if 0   // NEEDS PORTING
         struct htt_peer_map_event ev = {
             .vdev_id = resp->peer_map.vdev_id,
             .peer_id = resp->peer_map.peer_id,
         };
         memcpy(ev.addr, resp->peer_map.addr, sizeof(ev.addr));
         ath10k_peer_map_event(htt, &ev);
-#endif  // NEEDS PORTING
         break;
     }
     case HTT_T2H_MSG_TYPE_PEER_UNMAP: {
-        ath10k_err("HTT_T2H_MSG_TYPE_PEER_UNMAP unimplemented\n");
-#if 0   // NEEDS PORTING
         struct htt_peer_unmap_event ev = {
             .peer_id = resp->peer_unmap.peer_id,
         };
         ath10k_peer_unmap_event(htt, &ev);
-#endif  // NEEDS PORTING
         break;
     }
     case HTT_T2H_MSG_TYPE_MGMT_TX_COMPLETION: {

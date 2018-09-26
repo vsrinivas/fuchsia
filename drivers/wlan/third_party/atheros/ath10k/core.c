@@ -2535,8 +2535,8 @@ zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size, zx_devi
     thrd_create_with_name(&ar->assoc_work, ath10k_mac_bss_assoc, ar, "ath10k_assoc_work");
     thrd_detach(ar->assoc_work);
 
+    cnd_init(&ar->peer_mapping_cnd);
 #if 0   // NEEDS PORTING
-    init_waitqueue_head(&ar->peer_mapping_wq);
     init_waitqueue_head(&ar->htt.empty_tx_wq);
 
     ar->offchan_tx_completed = SYNC_COMPLETION_INIT;

@@ -298,23 +298,29 @@ struct ath10k_dfs_stats {
     uint32_t pulses_discarded;
     uint32_t radar_detected;
 };
+#endif  // NEEDS PORTING
 
 #define ATH10K_MAX_NUM_PEER_IDS (1 << 11) /* htt rx_desc limit */
 
 struct ath10k_peer {
-    struct list_head list;
+    list_node_t listnode;
+#if 0   // NEEDS PORTING
     struct ieee80211_vif* vif;
     struct ieee80211_sta* sta;
+#endif  // NEEDS PORTING
 
     bool removed;
-    int vdev_id;
+    uint32_t vdev_id;
     uint8_t addr[ETH_ALEN];
     BITARR(peer_ids, ATH10K_MAX_NUM_PEER_IDS);
 
+#if 0   // NEEDS PORTING
     /* protected by ar->data_lock */
     struct ieee80211_key_conf* keys[WMI_MAX_KEY_INDEX + 1];
+#endif  // NEEDS PORTING
 };
 
+#if 0   // NEEDS PORTING
 struct ath10k_sta {
     struct ath10k_vif* arvif;
 
@@ -885,10 +891,8 @@ struct ath10k {
     list_node_t txqs;
     list_node_t arvifs;
     list_node_t peers;
-#if 0   // NEEDS PORTING
     struct ath10k_peer* peer_map[ATH10K_MAX_NUM_PEER_IDS];
-    wait_queue_head_t peer_mapping_wq;
-#endif  // NEEDS PORTING
+    cnd_t peer_mapping_cnd;
 
     /* protected by conf_mutex */
     int num_peers;

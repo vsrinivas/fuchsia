@@ -611,65 +611,66 @@ ath10k_mac_get_any_chandef_iter(struct ieee80211_hw* hw,
 
     *def = &conf->def;
 }
+#endif  //NEEDS PORTING
 
-static int ath10k_peer_create(struct ath10k* ar,
-                              struct ieee80211_vif* vif,
-                              struct ieee80211_sta* sta,
-                              uint32_t vdev_id,
-                              const uint8_t* addr,
-                              enum wmi_peer_type peer_type) {
-    struct ath10k_vif* arvif;
-    struct ath10k_peer* peer;
-    int num_peers = 0;
-    int ret;
-
+__attribute__ ((unused))
+static zx_status_t ath10k_peer_create(struct ath10k* ar,
+                                      uint32_t vdev_id,
+                                      const uint8_t* addr,
+                                      enum wmi_peer_type peer_type) {
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    num_peers = ar->num_peers;
+    int num_peers = ar->num_peers;
 
     /* Each vdev consumes a peer entry as well */
+#if 0   // NEEDS PORTING
+    struct ath10k_vif* arvif;
     list_for_each_entry(arvif, &ar->arvifs, list)
-    num_peers++;
+        num_peers++;
+#else
+    num_peers++; // There is only one vdev for now
+#endif  // NEEDS PORTING
 
     if (num_peers >= ar->max_num_peers) {
-        return -ENOBUFS;
+        return ZX_ERR_NO_RESOURCES;
     }
 
-    ret = ath10k_wmi_peer_create(ar, vdev_id, addr, peer_type);
-    if (ret) {
-        ath10k_warn("failed to create wmi peer %pM on vdev %i: %i\n",
-                    addr, vdev_id, ret);
-        return ret;
+    zx_status_t status = ath10k_wmi_peer_create(ar, vdev_id, addr, peer_type);
+    if (status != ZX_OK) {
+        ath10k_warn("failed to create wmi peer %pM on vdev %i: %s\n",
+                    addr, vdev_id, zx_status_get_string(status));
+        return status;
     }
 
-    ret = ath10k_wait_for_peer_created(ar, vdev_id, addr);
-    if (ret) {
-        ath10k_warn("failed to wait for created wmi peer %pM on vdev %i: %i\n",
-                    addr, vdev_id, ret);
-        return ret;
+    status = ath10k_wait_for_peer_created(ar, vdev_id, addr);
+    if (status != ZX_OK) {
+        ath10k_warn("failed to wait for created wmi peer %pM on vdev %i: %s\n",
+                    addr, vdev_id, zx_status_get_string(status));
+        return status;
     }
 
     mtx_lock(&ar->data_lock);
 
-    peer = ath10k_peer_find(ar, vdev_id, addr);
+    struct ath10k_peer* peer = ath10k_peer_find(ar, vdev_id, addr);
     if (!peer) {
         mtx_unlock(&ar->data_lock);
         ath10k_warn("failed to find peer %pM on vdev %i after creation\n",
                     addr, vdev_id);
         ath10k_wmi_peer_delete(ar, vdev_id, addr);
-        return -ENOENT;
+        return ZX_ERR_NOT_FOUND;
     }
 
+#if 0   // NEEDS PORTING
     peer->vif = vif;
     peer->sta = sta;
+#endif  // NEEDS PORTING
 
     mtx_unlock(&ar->data_lock);
 
     ar->num_peers++;
 
-    return 0;
+    return ZX_OK;
 }
-#endif  //NEEDS PORTING
 
 static zx_status_t ath10k_mac_set_kickout(struct ath10k_vif* arvif) {
     struct ath10k* ar = arvif->ar;
@@ -715,7 +716,7 @@ static zx_status_t ath10k_mac_set_kickout(struct ath10k_vif* arvif) {
     return ZX_OK;
 }
 
-#if 0  // NEEDS PORTING
+#if 0   // NEEDS PORTING
 static int ath10k_mac_set_rts(struct ath10k_vif* arvif, uint32_t value) {
     struct ath10k* ar = arvif->ar;
     uint32_t vdev_param;
@@ -723,79 +724,76 @@ static int ath10k_mac_set_rts(struct ath10k_vif* arvif, uint32_t value) {
     vdev_param = ar->wmi.vdev_param->rts_threshold;
     return ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param, value);
 }
+#endif  // NEEDS PORTING
 
-static int ath10k_peer_delete(struct ath10k* ar, uint32_t vdev_id, const uint8_t* addr) {
-    int ret;
-
+__attribute__ ((unused))
+static zx_status_t ath10k_peer_delete(struct ath10k* ar, uint32_t vdev_id, const uint8_t* addr) {
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    ret = ath10k_wmi_peer_delete(ar, vdev_id, addr);
-    if (ret) {
-        return ret;
+    zx_status_t status = ath10k_wmi_peer_delete(ar, vdev_id, addr);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    ret = ath10k_wait_for_peer_deleted(ar, vdev_id, addr);
-    if (ret) {
-        return ret;
+    status = ath10k_wait_for_peer_deleted(ar, vdev_id, addr);
+    if (status != ZX_OK) {
+        return status;
     }
 
     ar->num_peers--;
-
-    return 0;
+    return ZX_OK;
 }
 
+__attribute__ ((unused))
 static void ath10k_peer_cleanup(struct ath10k* ar, uint32_t vdev_id) {
-    struct ath10k_peer* peer, *tmp;
-    int peer_id;
-    int i;
-
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
     mtx_lock(&ar->data_lock);
-    list_for_each_entry_safe(peer, tmp, &ar->peers, list) {
+
+    struct ath10k_peer* peer, *tmp;
+    list_for_every_entry_safe(&ar->peers, peer, tmp, struct ath10k_peer, listnode) {
         if (peer->vdev_id != vdev_id) {
             continue;
         }
 
-        ath10k_warn("removing stale peer %pM from vdev_id %d\n",
-                    peer->addr, vdev_id);
+        ath10k_warn("removing stale peer %pM from vdev_id %d\n", peer->addr, vdev_id);
 
-        for_each_set_bit(peer_id, peer->peer_ids,
-                         ATH10K_MAX_NUM_PEER_IDS) {
+        size_t peer_id;
+        for_each_set_bit(peer_id, peer->peer_ids, ATH10K_MAX_NUM_PEER_IDS) {
             ar->peer_map[peer_id] = NULL;
         }
 
         /* Double check that peer is properly un-referenced from
          * the peer_map
          */
-        for (i = 0; i < countof(ar->peer_map); i++) {
+        for (size_t i = 0; i < countof(ar->peer_map); i++) {
             if (ar->peer_map[i] == peer) {
-                ath10k_warn("removing stale peer_map entry for %pM (ptr %pK idx %d)\n",
+                ath10k_warn("removing stale peer_map entry for %pM (ptr %pK idx %zu)\n",
                             peer->addr, peer, i);
                 ar->peer_map[i] = NULL;
             }
         }
 
-        list_del(&peer->list);
-        kfree(peer);
+        list_delete(&peer->listnode);
+        free(peer);
         ar->num_peers--;
     }
     mtx_unlock(&ar->data_lock);
 }
 
+__attribute__ ((unused))
 static void ath10k_peer_cleanup_all(struct ath10k* ar) {
-    struct ath10k_peer* peer, *tmp;
-    int i;
-
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
     mtx_lock(&ar->data_lock);
-    list_for_each_entry_safe(peer, tmp, &ar->peers, list) {
-        list_del(&peer->list);
-        kfree(peer);
+
+    struct ath10k_peer* peer, *tmp;
+    list_for_every_entry_safe(&ar->peers, peer, tmp, struct ath10k_peer, listnode) {
+        list_delete(&peer->listnode);
+        free(peer);
     }
 
-    for (i = 0; i < countof(ar->peer_map); i++) {
+    for (size_t i = 0; i < countof(ar->peer_map); i++) {
         ar->peer_map[i] = NULL;
     }
 
@@ -805,6 +803,7 @@ static void ath10k_peer_cleanup_all(struct ath10k* ar) {
     ar->num_stations = 0;
 }
 
+#if 0   // NEEDS PORTING
 static int ath10k_mac_tdls_peer_update(struct ath10k* ar, uint32_t vdev_id,
                                        struct ieee80211_sta* sta,
                                        enum wmi_tdls_peer_state state) {
