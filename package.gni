@@ -573,7 +573,7 @@ template("package") {
           ":${pkg_target_name}.meta",
         ]
         response_file_contents = [
-          "--manifest=" + rebase_path("${pkg_target_name}.manifest",
+          "--manifest-no-meta=" + rebase_path("${pkg_target_name}.manifest",
                                       root_build_dir,
                                       target_out_dir),
           "--entry-manifest=${pkg_label}",
