@@ -25,6 +25,13 @@
 #include "fvm-private.h"
 
 namespace fvm {
+namespace {
+
+zx_status_t FvmLoadThread(void* arg) {
+    return reinterpret_cast<fvm::VPartitionManager*>(arg)->Load();
+}
+
+}
 
 fbl::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
     ZX_DEBUG_ASSERT(start() <= vslice);
@@ -71,7 +78,8 @@ VPartitionManager::VPartitionManager(zx_device_t* parent, const block_info_t& in
 
 VPartitionManager::~VPartitionManager() = default;
 
-zx_status_t VPartitionManager::Create(zx_device_t* dev, fbl::unique_ptr<VPartitionManager>* out) {
+// static
+zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
     block_info_t block_info;
     block_protocol_t bp;
     size_t block_op_size = 0;
@@ -88,7 +96,23 @@ zx_status_t VPartitionManager::Create(zx_device_t* dev, fbl::unique_ptr<VPartiti
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    *out = fbl::move(vpm);
+
+    zx_status_t status = vpm->DdkAdd("fvm", DEVICE_ADD_INVISIBLE);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Read vpartition table asynchronously.
+    int rc = thrd_create_with_name(&vpm->initialization_thread_, FvmLoadThread, vpm.get(),
+                                   "fvm-init");
+    if (rc < 0) {
+        vpm->DdkRemove();
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    // The VPartitionManager object is owned by the DDK, now that it has been
+    // added. It will be deleted when the device is released.
+    __UNUSED auto ptr = vpm.release();
     return ZX_OK;
 }
 
@@ -197,7 +221,7 @@ zx_status_t VPartitionManager::Load() {
         //
         // If we fail to initialize anything before it is added,
         // detach the thread and clean up gracefully.
-        thrd_detach(init_);
+        thrd_detach(initialization_thread_);
         // Clang's thread analyzer doesn't think we're holding this lock, but
         // we clearly are, and need to release it before deleting the
         // VPartitionManager.
@@ -675,14 +699,14 @@ void VPartitionManager::DdkUnbind() {
 }
 
 void VPartitionManager::DdkRelease() {
-    thrd_join(init_, nullptr);
+    thrd_join(initialization_thread_, nullptr);
     delete this;
 }
 
 VPartition::VPartition(VPartitionManager* vpm, size_t entry_index, size_t block_op_size)
     : PartitionDeviceType(vpm->zxdev()), mgr_(vpm), entry_index_(entry_index) {
 
-    memcpy(&info_, &mgr_->info_, sizeof(block_info_t));
+    memcpy(&info_, &mgr_->Info(), sizeof(block_info_t));
     info_.block_count = 0;
 }
 
@@ -1143,27 +1167,6 @@ void VPartition::BlockQuery(block_info_t* info_out, size_t* block_op_size_out) {
 
 // C-compatibility definitions
 
-static zx_status_t fvm_load_thread(void* arg) {
-    return reinterpret_cast<fvm::VPartitionManager*>(arg)->Load();
-}
-
 zx_status_t fvm_bind(zx_device_t* parent) {
-    fbl::unique_ptr<fvm::VPartitionManager> vpm;
-    zx_status_t status = fvm::VPartitionManager::Create(parent, &vpm);
-    if (status != ZX_OK) {
-        return status;
-    }
-    if ((status = vpm->DdkAdd("fvm", DEVICE_ADD_INVISIBLE)) != ZX_OK) {
-        return status;
-    }
-
-    // Read vpartition table asynchronously
-    status = thrd_create_with_name(&vpm->init_, fvm_load_thread, vpm.get(), "fvm-init");
-    if (status < 0) {
-        vpm->DdkRemove();
-        return status;
-    }
-    // TODO(johngro): ask smklein why it is OK to release this managed pointer.
-    __UNUSED auto ptr = vpm.release();
-    return ZX_OK;
+    return fvm::VPartitionManager::Bind(parent);
 }

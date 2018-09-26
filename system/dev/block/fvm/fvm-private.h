@@ -27,12 +27,6 @@
 
 namespace fvm {
 
-class VPartitionManager;
-using ManagerDeviceType = ddk::Device<VPartitionManager, ddk::Ioctlable, ddk::Unbindable>;
-
-class VPartition;
-using PartitionDeviceType = ddk::Device<VPartition, ddk::Ioctlable, ddk::GetSizable, ddk::Unbindable>;
-
 class SliceExtent : public fbl::WAVLTreeContainable<fbl::unique_ptr<SliceExtent>> {
 public:
     size_t GetKey() const { return vslice_start_; }
@@ -82,19 +76,22 @@ private:
     const size_t vslice_start_;
 };
 
+class VPartitionManager;
+using ManagerDeviceType = ddk::Device<VPartitionManager, ddk::Ioctlable, ddk::Unbindable>;
+
+class VPartition;
+using PartitionDeviceType = ddk::Device<VPartition,
+                                        ddk::Ioctlable,
+                                        ddk::GetSizable,
+                                        ddk::Unbindable>;
+
 class VPartitionManager : public ManagerDeviceType {
 public:
-    static zx_status_t Create(zx_device_t* dev, fbl::unique_ptr<VPartitionManager>* out);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(VPartitionManager);
+    static zx_status_t Bind(zx_device_t* dev);
 
     // Read the underlying block device, initialize the recorded VPartitions.
     zx_status_t Load();
-
-    // Given a VPartition object, add a corresponding ddk device.
-    zx_status_t AddPartition(fbl::unique_ptr<VPartition> vp) const;
-
-    // Update, hash, and write back the current copy of the FVM metadata.
-    // Automatically handles alternating writes to primary / backup copy of FVM.
-    zx_status_t WriteFvmLocked() TA_REQ(lock_);
 
     // Block Protocol
     size_t BlockOpSize() const { return block_op_size_; }
@@ -110,9 +107,30 @@ public:
 
     // Allocate 'count' slices, write back the FVM.
     zx_status_t AllocateSlices(VPartition* vp, size_t vslice_start, size_t count) TA_EXCL(lock_);
-    zx_status_t AllocateSlicesLocked(VPartition* vp, size_t vslice_start,
-                                     size_t count) TA_REQ(lock_);
 
+    // Deallocate 'count' slices, write back the FVM.
+    // If a request is made to remove vslice_count = 0, deallocates the entire
+    // VPartition.
+    zx_status_t FreeSlices(VPartition* vp, size_t vslice_start, size_t count) TA_EXCL(lock_);
+
+    // Returns global information about the FVM.
+    void Query(fvm_info_t* info) TA_EXCL(lock_);
+
+    size_t DiskSize() const { return info_.block_count * info_.block_size; }
+    size_t SliceSize() const { return slice_size_; }
+    size_t VSliceMax() const { return VSLICE_MAX; }
+    const block_info_t& Info() const { return info_; }
+
+    zx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
+                         void* reply, size_t max, size_t* out_actual);
+    void DdkUnbind();
+    void DdkRelease();
+
+    VPartitionManager(zx_device_t* dev, const block_info_t& info, size_t block_op_size,
+                      const block_protocol_t* bp);
+    ~VPartitionManager();
+
+private:
     // Marks the partition with instance GUID |old_guid| as inactive,
     // and marks partitions with instance GUID |new_guid| as active.
     //
@@ -124,33 +142,18 @@ public:
     // Updates the FVM metadata atomically.
     zx_status_t Upgrade(const uint8_t* old_guid, const uint8_t* new_guid) TA_EXCL(lock_);
 
-    // Deallocate 'count' slices, write back the FVM.
-    // If a request is made to remove vslice_count = 0, deallocates the entire
-    // VPartition.
-    zx_status_t FreeSlices(VPartition* vp, size_t vslice_start, size_t count) TA_EXCL(lock_);
+    // Given a VPartition object, add a corresponding ddk device.
+    zx_status_t AddPartition(fbl::unique_ptr<VPartition> vp) const;
+
+    // Update, hash, and write back the current copy of the FVM metadata.
+    // Automatically handles alternating writes to primary / backup copy of FVM.
+    zx_status_t WriteFvmLocked() TA_REQ(lock_);
+
+    zx_status_t AllocateSlicesLocked(VPartition* vp, size_t vslice_start,
+                                     size_t count) TA_REQ(lock_);
+
     zx_status_t FreeSlicesLocked(VPartition* vp, size_t vslice_start,
                                  size_t count) TA_REQ(lock_);
-
-    // Returns global information about the FVM.
-    void Query(fvm_info_t* info) TA_EXCL(lock_);
-
-    size_t DiskSize() const { return info_.block_count * info_.block_size; }
-    size_t SliceSize() const { return slice_size_; }
-    size_t VSliceMax() const { return VSLICE_MAX; }
-
-    zx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
-                         void* reply, size_t max, size_t* out_actual);
-    void DdkUnbind();
-    void DdkRelease();
-
-    VPartitionManager(zx_device_t* dev, const block_info_t& info, size_t block_op_size,
-                      const block_protocol_t* bp);
-    ~VPartitionManager();
-    block_info_t info_; // Cached info from parent device
-    thrd_t init_;
-
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(VPartitionManager);
 
     zx_status_t FindFreeVPartEntryLocked(size_t* out) const TA_REQ(lock_);
     zx_status_t FindFreeSliceLocked(size_t* out, size_t hint) const TA_REQ(lock_);
@@ -188,6 +191,9 @@ private:
     }
 
     zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command);
+
+    thrd_t initialization_thread_;
+    block_info_t info_; // Cached info from parent device
 
     fbl::Mutex lock_;
     fbl::unique_ptr<fzl::MappedVmo> metadata_ TA_GUARDED(lock_);
