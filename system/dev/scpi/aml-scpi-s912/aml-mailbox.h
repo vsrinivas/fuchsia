@@ -7,6 +7,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/protocol/mailbox.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
@@ -32,8 +33,8 @@ typedef struct {
     zx_device_t* zxdev;
     platform_device_protocol_t pdev;
 
-    io_buffer_t mmio_mailbox;
-    io_buffer_t mmio_mailbox_payload;
+    mmio_buffer_t mmio_mailbox;
+    mmio_buffer_t mmio_mailbox_payload;
 
     zx_handle_t inth[NUM_MAILBOXES];
 

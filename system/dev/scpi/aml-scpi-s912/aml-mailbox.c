@@ -11,14 +11,14 @@
 #include <string.h>
 #include <unistd.h>
 
-#define READ32_MAILBOX_PL_REG(offset) readl(io_buffer_virt(&mailbox->mmio_mailbox_payload) + \
-                                            (offset)*4)
-#define WRITE32_MAILBOX_PL_REG(offset, value) writel(value, \
-                                                    io_buffer_virt(&mailbox->mmio_mailbox_payload) \
-                                                     + (offset)*4)
-#define READ32_MAILBOX_REG(offset) readl(io_buffer_virt(&mailbox->mmio_mailbox) + (offset)*4)
-#define WRITE32_MAILBOX_REG(offset, value) writel(value, io_buffer_virt(&mailbox->mmio_mailbox) \
-                                                  + (offset)*4)
+#define READ32_MAILBOX_PL_REG(offset) \
+        readl((uint32_t*)mailbox->mmio_mailbox_payload.vaddr + (offset))
+#define WRITE32_MAILBOX_PL_REG(offset, value) \
+        writel(value, (uint32_t*)mailbox->mmio_mailbox_payload.vaddr + (offset))
+#define READ32_MAILBOX_REG(offset) \
+        readl((uint32_t*)mailbox->mmio_mailbox.vaddr + (offset))
+#define WRITE32_MAILBOX_REG(offset, value) \
+        writel(value, (uint32_t*)mailbox->mmio_mailbox.vaddr + (offset))
 
 static int aml_get_rx_mailbox(uint32_t tx_mailbox) {
     switch (tx_mailbox) {
@@ -88,8 +88,8 @@ static zx_status_t aml_mailbox_send_cmd(void* ctx,
 
 static void aml_mailbox_release(void* ctx) {
     aml_mailbox_t* mailbox = ctx;
-    io_buffer_release(&mailbox->mmio_mailbox);
-    io_buffer_release(&mailbox->mmio_mailbox_payload);
+    mmio_buffer_release(&mailbox->mmio_mailbox);
+    mmio_buffer_release(&mailbox->mmio_mailbox_payload);
     for (uint32_t i = 0; i < NUM_MAILBOXES; i++) {
         zx_interrupt_destroy(mailbox->inth[i]);
         zx_handle_close(mailbox->inth[i]);
@@ -128,7 +128,7 @@ static zx_status_t aml_mailbox_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map all MMIOs
-    status = pdev_map_mmio_buffer(&mailbox->pdev, MMIO_MAILBOX,
+    status = pdev_map_mmio_buffer2(&mailbox->pdev, MMIO_MAILBOX,
                                   ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mailbox->mmio_mailbox);
     if (status != ZX_OK) {
@@ -136,7 +136,7 @@ static zx_status_t aml_mailbox_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = pdev_map_mmio_buffer(&mailbox->pdev, MMIO_MAILBOX_PAYLOAD,
+    status = pdev_map_mmio_buffer2(&mailbox->pdev, MMIO_MAILBOX_PAYLOAD,
                                   ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mailbox->mmio_mailbox_payload);
     if (status != ZX_OK) {
