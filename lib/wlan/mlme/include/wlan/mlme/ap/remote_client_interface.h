@@ -16,6 +16,7 @@ class RemoteClientInterface {
    public:
     virtual ~RemoteClientInterface() = default;
 
+    virtual aid_t GetAid() = 0;
     virtual void HandleTimeout() = 0;
     virtual void HandleAnyEthFrame(EthFrame&&) = 0;
     virtual void HandleAnyMgmtFrame(MgmtFrame<>&&) = 0;

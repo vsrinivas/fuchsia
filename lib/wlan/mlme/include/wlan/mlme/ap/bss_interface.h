@@ -65,14 +65,6 @@ class BssInterface {
     virtual const common::MacAddr& bssid() const = 0;
     virtual uint64_t timestamp() = 0;
 
-    // Assigns an AID to the given client. Returns an error if there is no AID
-    // available anymore.
-    virtual zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) = 0;
-    // Releases the AID associated with the given client. The AID will be
-    // available afterwards and can get assigned to other, newly associated
-    // clients.
-    virtual zx_status_t ReleaseAid(const common::MacAddr& client) = 0;
-
     virtual seq_t NextSeq(const MgmtFrameHeader& hdr) = 0;
     virtual seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) = 0;
     virtual seq_t NextSeq(const DataFrameHeader& hdr) = 0;

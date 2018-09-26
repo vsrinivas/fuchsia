@@ -160,24 +160,10 @@ void AuthenticatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&
 // AssociatingState implementation.
 
 AssociatingState::AssociatingState(RemoteClient* client, MgmtFrame<AssociationRequest>&& frame)
-    : BaseState(client), status_code_(status_code::kRefusedReasonUnspecified), aid_(0) {
+    : BaseState(client), aid_(kUnknownAid) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr()->addr2 == client_->addr());
     debugbss("[client] [%s] received Assocation Request\n", client_->addr().ToString().c_str());
-
-    aid_t aid;
-    auto status = client_->bss()->AssignAid(client_->addr(), &aid);
-    if (status == ZX_ERR_NO_RESOURCES) {
-        debugbss("[client] [%s] no more AIDs available \n", client_->addr().ToString().c_str());
-        status_code_ = status_code::kDeniedNoMoreStas;
-        return;
-    } else if (status != ZX_OK) {
-        errorf("[client] [%s] couldn't assign AID to client: %d\n",
-               client_->addr().ToString().c_str(), status);
-        return;
-    }
-
-    aid_ = aid;
 
     auto assoc_req_frame = frame.View().NextFrame();
     size_t elements_len = assoc_req_frame.body_len();
@@ -215,6 +201,7 @@ zx_status_t AssociatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
                         common::MacAddr(assoc_resp->body()->peer_sta_address.data()));
         status_code::StatusCode st_code;
         if (assoc_resp->body()->result_code == wlan_mlme::AssociateResultCodes::SUCCESS) {
+            aid_ = assoc_resp->body()->association_id;
             st_code = status_code::kSuccess;
         } else {
             // TODO(NET-1464): map result code to status code;
@@ -413,9 +400,9 @@ void AssociatedState::OnExit() {
         client_->SendDeauthentication(reason_code::ReasonCode::kLeavingNetworkDeauth);
     }
 
-    // Ensure the client's AID is released when association is broken.
-    client_->bss()->ReleaseAid(client_->addr());
-    debugbss("[client] [%s] released AID: %u\n", client_->addr().ToString().c_str(), aid_);
+    client_->ReportDisassociation(aid_);
+    debugbss("[client] [%s] reported disassociation, AID: %u\n", client_->addr().ToString().c_str(),
+             aid_);
 }
 
 void AssociatedState::HandleDataLlcFrame(DataFrame<LlcHeader>&& frame) {
@@ -474,6 +461,10 @@ zx_status_t AssociatedState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
               client_->addr().ToString().c_str(), msg.ordinal());
         return ZX_ERR_INVALID_ARGS;
     }
+}
+
+aid_t AssociatedState::GetAid() {
+    return aid_;
 }
 
 void AssociatedState::HandleTimeout() {
@@ -673,6 +664,10 @@ void RemoteClient::MoveToState(fbl::unique_ptr<BaseState> to) {
     state_ = fbl::move(to);
 
     state_->OnEnter();
+}
+
+aid_t RemoteClient::GetAid() {
+    return state_->GetAid();
 }
 
 void RemoteClient::HandleTimeout() {
@@ -878,6 +873,10 @@ void RemoteClient::ReportBuChange(size_t bu_count) {
 
 void RemoteClient::ReportDeauthentication() {
     if (listener_ != nullptr) { listener_->HandleClientDeauth(addr_); }
+}
+
+void RemoteClient::ReportDisassociation(aid_t aid) {
+    if (listener_ != nullptr) { listener_->HandleClientDisassociation(aid); }
 }
 
 zx_status_t RemoteClient::WriteHtCapabilities(ElementWriter* w) {

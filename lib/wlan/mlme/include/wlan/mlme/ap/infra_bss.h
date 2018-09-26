@@ -6,7 +6,6 @@
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/mlme/ap/beacon_sender.h>
-#include <wlan/mlme/ap/bss_client_map.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/ap/remote_client.h>
 #include <wlan/mlme/ap/tim.h>
@@ -47,8 +46,6 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     // BssInterface implementation
     const common::MacAddr& bssid() const override;
     uint64_t timestamp() override;
-    zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) override;
-    zx_status_t ReleaseAid(const common::MacAddr& client) override;
 
     zx_status_t SendMgmtFrame(fbl::unique_ptr<Packet> packet) override;
     zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet) override;
@@ -72,6 +69,9 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     wlan_channel_t Chan() const override { return chan_; }
 
    private:
+    using ClientMap = std::unordered_map<common::MacAddr, fbl::unique_ptr<RemoteClientInterface>,
+                                         common::MacAddrHasher>;
+
     void HandleEthFrame(EthFrame&&);
     void HandleAnyWlanFrame(fbl::unique_ptr<Packet>);
     void HandleAnyMgmtFrame(MgmtFrame<>&&);
@@ -79,14 +79,18 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     void HandleAnyCtrlFrame(CtrlFrame<>&&);
     void HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>&);
 
+    bool HasClient(const common::MacAddr& client);
+    RemoteClientInterface* GetClient(const common::MacAddr& addr);
+
     // Maximum number of group addressed packets buffered while at least one
     // client is dozing.
     // TODO(NET-687): Find good BU limit.
     static constexpr size_t kMaxGroupAddressedBu = 128;
 
     // RemoteClient::Listener implementation
-    zx_status_t HandleClientDeauth(const common::MacAddr& client) override;
-    void HandleClientBuChange(const common::MacAddr& client, size_t bu_count) override;
+    zx_status_t HandleClientDeauth(const common::MacAddr& client_addr) override;
+    void HandleClientDisassociation(aid_t aid) override;
+    void HandleClientBuChange(const common::MacAddr& client_addr, size_t bu_count) override;
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
                                   fbl::unique_ptr<Timer>* out_timer);
@@ -99,7 +103,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     DeviceInterface* device_;
     fbl::unique_ptr<BeaconSender> bcn_sender_;
     zx_time_t started_at_;
-    BssClientMap clients_;
+    ClientMap clients_;
     Sequence seq_;
     // Queue which holds buffered non-GCR-SP frames when at least one client is
     // dozing.

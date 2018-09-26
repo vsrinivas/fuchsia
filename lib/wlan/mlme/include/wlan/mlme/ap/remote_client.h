@@ -23,6 +23,7 @@ class RemoteClient : public RemoteClientInterface {
    public:
     struct Listener {
         virtual zx_status_t HandleClientDeauth(const common::MacAddr& client) = 0;
+        virtual void HandleClientDisassociation(aid_t aid) = 0;
         virtual void HandleClientBuChange(const common::MacAddr& client, size_t bu_count) = 0;
     };
 
@@ -31,6 +32,7 @@ class RemoteClient : public RemoteClientInterface {
     ~RemoteClient();
 
     // RemoteClientInterface implementation
+    aid_t GetAid() override;
     void HandleTimeout() override;
     void HandleAnyEthFrame(EthFrame&& frame) override;
     void HandleAnyMgmtFrame(MgmtFrame<>&& frame) override;
@@ -56,6 +58,7 @@ class RemoteClient : public RemoteClientInterface {
     void MoveToState(fbl::unique_ptr<BaseState> state);
     void ReportBuChange(size_t bu_count);
     void ReportDeauthentication();
+    void ReportDisassociation(aid_t aid);
 
     // Note: There can only ever be one timer running at a time.
     // TODO(hahnr): Evolve this to support multiple timeouts at the same time.
@@ -95,6 +98,7 @@ class BaseState {
 
     virtual void OnEnter() {}
     virtual void OnExit() {}
+    virtual aid_t GetAid() { return kUnknownAid; }
     virtual void HandleTimeout() {}
     virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) { return ZX_OK; }
     virtual void HandleAnyDataFrame(DataFrame<>&&) {}
@@ -184,7 +188,6 @@ class AssociatingState : public BaseState {
    private:
     static constexpr const char* kName = "Associating";
 
-    status_code::StatusCode status_code_;
     uint16_t aid_;
 };
 
@@ -195,6 +198,7 @@ class AssociatedState : public BaseState {
     void OnEnter() override;
     void OnExit() override;
 
+    aid_t GetAid() override;
     void HandleTimeout() override;
 
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;

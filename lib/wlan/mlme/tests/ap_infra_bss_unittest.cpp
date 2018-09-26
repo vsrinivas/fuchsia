@@ -219,9 +219,7 @@ TEST_F(ApInfraBssTest, Associate_Success) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
-    // TODO(NET-1465) - MLME currently generates its own association ID so it ignores the one from
-    //                  SME's AssociateResponse
-    EXPECT_EQ(frame.body()->aid, 1);
+    EXPECT_EQ(frame.body()->aid, kAid);
 }
 
 TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
@@ -241,9 +239,7 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.body()->status_code, status_code::kRefused);
-    // TODO(NET-1465) - MLME currently generates its own association ID so it ignores the one from
-    //                  SME's AssociateResponse
-    EXPECT_EQ(frame.body()->aid, 1);
+    EXPECT_EQ(frame.body()->aid, kUnknownAid);
 }
 
 TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {

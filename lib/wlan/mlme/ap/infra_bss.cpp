@@ -86,7 +86,7 @@ void InfraBss::Stop() {
 
     debugbss("[infra-bss] [%s] stopping BSS\n", bssid_.ToString().c_str());
 
-    clients_.Clear();
+    clients_.clear();
     bcn_sender_->Stop();
     started_at_ = 0;
 }
@@ -153,16 +153,15 @@ void InfraBss::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
 
     // Register the client if it's not yet known.
     const auto& client_addr = mgmt_frame.hdr()->addr2;
-    if (!clients_.Has(client_addr)) {
+    if (!HasClient(client_addr)) {
         if (auto auth_frame = mgmt_frame.CheckBodyType<Authentication>().CheckLength()) {
             HandleNewClientAuthAttempt(auth_frame);
         }
     }
 
     // Forward all frames to the correct client.
-    if (clients_.Has(client_addr)) {
-        clients_.GetClient(client_addr)->HandleAnyMgmtFrame(fbl::move(frame));
-    }
+    auto client = GetClient(client_addr);
+    if (client != nullptr) { client->HandleAnyMgmtFrame(fbl::move(frame)); }
 }
 
 void InfraBss::HandleAnyDataFrame(DataFrame<>&& frame) {
@@ -170,9 +169,8 @@ void InfraBss::HandleAnyDataFrame(DataFrame<>&& frame) {
 
     // Let the correct RemoteClient instance process the received frame.
     const auto& client_addr = frame.hdr()->addr2;
-    if (clients_.Has(client_addr)) {
-        clients_.GetClient(client_addr)->HandleAnyDataFrame(fbl::move(frame));
-    }
+    auto client = GetClient(client_addr);
+    if (client != nullptr) { client->HandleAnyDataFrame(fbl::move(frame)); }
 }
 
 void InfraBss::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
@@ -182,16 +180,18 @@ void InfraBss::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
         if (pspoll_frame.body()->bssid != bssid_) { return; }
 
         const auto& client_addr = pspoll_frame.body()->ta;
-        if (!clients_.Has(client_addr)) { return; }
-        if (clients_.GetClientAid(client_addr) != pspoll_frame.body()->aid) { return; }
+        auto client = GetClient(client_addr);
+        if (client == nullptr) { return; }
+        if (client->GetAid() != pspoll_frame.body()->aid) { return; }
 
-        clients_.GetClient(client_addr)->HandleAnyCtrlFrame(fbl::move(frame));
+        client->HandleAnyCtrlFrame(fbl::move(frame));
     }
 }
 
 zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {
-    ZX_DEBUG_ASSERT(clients_.Has(client_addr));
-    if (clients_.Has(client_addr)) { clients_.GetClient(client_addr)->HandleTimeout(); }
+    auto client = GetClient(client_addr);
+    ZX_DEBUG_ASSERT(client != nullptr);
+    if (client != nullptr) { client->HandleTimeout(); }
     return ZX_OK;
 }
 
@@ -199,9 +199,8 @@ void InfraBss::HandleEthFrame(EthFrame&& frame) {
     // Lookup client associated with incoming unicast frame.
     auto& dest_addr = frame.hdr()->dest;
     if (dest_addr.IsUcast()) {
-        if (clients_.Has(dest_addr)) {
-            clients_.GetClient(dest_addr)->HandleAnyEthFrame(fbl::move(frame));
-        }
+        auto client = GetClient(dest_addr);
+        if (client != nullptr) { client->HandleAnyEthFrame(fbl::move(frame)); }
         return;
     }
 
@@ -229,19 +228,21 @@ zx_status_t InfraBss::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    ZX_DEBUG_ASSERT(clients_.Has(peer_addr));
-    if (clients_.Has(peer_addr)) {
-        return clients_.GetClient(peer_addr)->HandleMlmeMsg(msg);
+    auto client = GetClient(peer_addr);
+    ZX_DEBUG_ASSERT(client != nullptr);
+    if (client != nullptr) {
+        return client->HandleMlmeMsg(msg);
     } else {
         warnf("[infra-bss] unrecognized peer address in MlmeMsg: %s -- ordinal: %u\n",
               peer_addr.ToString().c_str(), msg.ordinal());
     }
+
     return ZX_OK;
 }
 
 void InfraBss::HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>& frame) {
     auto& client_addr = frame.hdr()->addr2;
-    ZX_DEBUG_ASSERT(!clients_.Has(client_addr));
+    ZX_DEBUG_ASSERT(!HasClient(client_addr));
 
     debugbss("[infra-bss] [%s] new client: %s\n", bssid_.ToString().c_str(),
              client_addr.ToString().c_str());
@@ -254,71 +255,64 @@ void InfraBss::HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>& f
                                                      this,  // bss
                                                      this,  // client listener
                                                      client_addr);
-        clients_.Add(client_addr, fbl::move(client));
+        clients_.emplace(client_addr, fbl::move(client));
     } else {
         errorf("[infra-bss] [%s] could not create client timer: %d\n", bssid_.ToString().c_str(),
                status);
     }
 }
 
-zx_status_t InfraBss::HandleClientDeauth(const common::MacAddr& client) {
+zx_status_t InfraBss::HandleClientDeauth(const common::MacAddr& client_addr) {
     debugfn();
-    ZX_DEBUG_ASSERT(clients_.Has(client));
-    if (!clients_.Has(client)) {
+    auto iter = clients_.find(client_addr);
+    ZX_DEBUG_ASSERT(iter != clients_.end());
+    if (iter == clients_.end()) {
         errorf("[infra-bss] [%s] unknown client deauthenticated: %s\n", bssid_.ToString().c_str(),
-               client.ToString().c_str());
+               client_addr.ToString().c_str());
         return ZX_ERR_BAD_STATE;
     }
 
     debugbss("[infra-bss] [%s] removing client %s\n", bssid_.ToString().c_str(),
-             client.ToString().c_str());
-    auto status = clients_.Remove(client);
-    if (status != ZX_OK) {
-        errorf("[infra-bss] [%s] couldn't remove client %s: %d\n", bssid_.ToString().c_str(),
-               client.ToString().c_str(), status);
-        return status;
-    }
+             client_addr.ToString().c_str());
+    clients_.erase(iter);
     return ZX_OK;
 }
 
-void InfraBss::HandleClientBuChange(const common::MacAddr& client, size_t bu_count) {
+void InfraBss::HandleClientDisassociation(aid_t aid) {
     debugfn();
-    auto aid = clients_.GetClientAid(client);
+    ps_cfg_.GetTim()->SetTrafficIndication(aid, false);
+}
+
+void InfraBss::HandleClientBuChange(const common::MacAddr& client_addr, size_t bu_count) {
+    debugfn();
+    auto client = GetClient(client_addr);
+    ZX_DEBUG_ASSERT(client != nullptr);
+    if (client == nullptr) {
+        errorf("[infra-bss] [%s] received traffic indication for untracked client: %s\n",
+               bssid_.ToString().c_str(), client_addr.ToString().c_str());
+        return;
+    }
+    auto aid = client->GetAid();
     ZX_DEBUG_ASSERT(aid != kUnknownAid);
     if (aid == kUnknownAid) {
         errorf(
             "[infra-bss] [%s] received traffic indication from client with unknown "
             "AID: %s\n",
-            bssid_.ToString().c_str(), client.ToString().c_str());
+            bssid_.ToString().c_str(), client_addr.ToString().c_str());
         return;
     }
 
     ps_cfg_.GetTim()->SetTrafficIndication(aid, bu_count > 0);
 }
 
-zx_status_t InfraBss::AssignAid(const common::MacAddr& client, aid_t* out_aid) {
-    debugfn();
-    auto status = clients_.AssignAid(client, out_aid);
-    if (status != ZX_OK) {
-        errorf("[infra-bss] [%s] couldn't assign AID to client %s: %d\n", bssid_.ToString().c_str(),
-               client.ToString().c_str(), status);
-        return status;
-    }
-    return ZX_OK;
+bool InfraBss::HasClient(const common::MacAddr& client) {
+    return clients_.find(client) != clients_.end();
 }
 
-zx_status_t InfraBss::ReleaseAid(const common::MacAddr& client) {
-    debugfn();
-    auto aid = clients_.GetClientAid(client);
-    ZX_DEBUG_ASSERT(aid != kUnknownAid);
-    if (aid == kUnknownAid) {
-        errorf("[infra-bss] [%s] tried releasing AID for unknown client: %s\n",
-               bssid_.ToString().c_str(), client.ToString().c_str());
-        return ZX_ERR_NOT_FOUND;
-    }
-
-    ps_cfg_.GetTim()->SetTrafficIndication(aid, false);
-    return clients_.ReleaseAid(client);
+RemoteClientInterface* InfraBss::GetClient(const common::MacAddr& addr) {
+    auto iter = clients_.find(addr);
+    if (iter == clients_.end()) { return nullptr; }
+    return iter->second.get();
 }
 
 zx_status_t InfraBss::CreateClientTimer(const common::MacAddr& client_addr,
