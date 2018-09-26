@@ -59,6 +59,10 @@ void BlockTxn::EnqueueOperation(uint32_t op, vmoid_t id, uint64_t vmo_offset,
 }
 
 zx_status_t BlockTxn::Transact() {
+    // Fast-path for already completed transactions.
+    if (requests_.is_empty()) {
+        return ZX_OK;
+    }
     // Convert 'filesystem block' units to 'disk block' units.
     const size_t kBlockFactor = handler_->FsBlockSize() / handler_->DeviceBlockSize();
     for (size_t i = 0; i < requests_.size(); i++) {
