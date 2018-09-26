@@ -337,8 +337,11 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   // not have scheduled another frame when there are no framebuffers available.
   if (frames_[next_frame_index_]) {
     FXL_CHECK(frames_[next_frame_index_]->frame_timings->finalized());
-    FXL_CHECK(frames_[next_frame_index_]->retired_event.wait_one(
-                  ZX_EVENT_SIGNALED, zx::time(), nullptr) == ZX_OK);
+    if (frames_[next_frame_index_]->retired_event.wait_one(
+            ZX_EVENT_SIGNALED, zx::time(), nullptr) != ZX_OK) {
+      FXL_LOG(WARNING) << "DisplaySwapchain::DrawAndPresentFrame rendering "
+                          "into in-use backbuffer";
+    }
   }
 
   auto& frame_record = frames_[next_frame_index_] =
