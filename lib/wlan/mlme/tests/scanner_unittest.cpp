@@ -41,14 +41,11 @@ template <typename T>
 static fbl::unique_ptr<Packet> IntoPacket(const T& msg, uint32_t ordinal = 42) {
     // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
     // everyone.
-    constexpr size_t kBufLen = 4096;
-
-    auto buffer = GetBuffer(kBufLen);
-    memset(buffer->data(), 0, kBufLen);
-    auto pkt = fbl::make_unique<Packet>(fbl::move(buffer), kBufLen);
-    pkt->set_peer(Packet::Peer::kService);
-    SerializeServiceMsg(pkt.get(), ordinal, msg.get());
-    return fbl::move(pkt);
+    const size_t kBufLen = 4096;
+    auto packet = GetSvcPacket(kBufLen);
+    memset(packet->mut_data(), 0, kBufLen);
+    SerializeServiceMsg(packet.get(), ordinal, msg.get());
+    return fbl::move(packet);
 }
 
 struct MockOnChannelHandler : OnChannelHandler {

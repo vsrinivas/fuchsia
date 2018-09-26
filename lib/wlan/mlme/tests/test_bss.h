@@ -101,12 +101,9 @@ enable_if_same<M, wlan_mlme::AssociateRequest> CreateMlmeMsg(MlmeMsg<M>* msg) {
 
 template <typename T>
 static zx_status_t WriteServiceMessage(T* message, uint32_t ordinal, MlmeMsg<T>* out_msg) {
-    size_t buf_len = 16384;
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    auto packet = GetSvcPacket(16384);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kService);
     zx_status_t status = SerializeServiceMsg(packet.get(), ordinal, message);
     if (status != ZX_OK) { return status; }
 

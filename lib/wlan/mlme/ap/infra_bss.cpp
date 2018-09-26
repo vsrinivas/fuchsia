@@ -395,13 +395,10 @@ zx_status_t InfraBss::SendNextBu() {
 
 zx_status_t InfraBss::EthToDataFrame(const EthFrame& frame, fbl::unique_ptr<Packet>* out_packet) {
     size_t max_frame_len = DataFrameHeader::max_len() + LlcHeader::max_len() + frame.body_len();
-    auto buffer = GetBuffer(max_frame_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    *out_packet = fbl::make_unique<Packet>(std::move(buffer), max_frame_len);
-    (*out_packet)->set_peer(Packet::Peer::kWlan);
-
-    auto hdr = (*out_packet)->mut_field<DataFrameHeader>(0);
+    auto hdr = packet->mut_field<DataFrameHeader>(0);
     hdr->fc.clear();
     hdr->fc.set_type(FrameType::kData);
     hdr->fc.set_subtype(DataSubtype::kDataSubtype);
@@ -436,7 +433,7 @@ zx_status_t InfraBss::EthToDataFrame(const EthFrame& frame, fbl::unique_ptr<Pack
         }
     }
 
-    auto llc = (*out_packet)->mut_field<LlcHeader>(hdr->len());
+    auto llc = packet->mut_field<LlcHeader>(hdr->len());
     llc->dsap = kLlcSnapExtension;
     llc->ssap = kLlcSnapExtension;
     llc->control = kLlcUnnumberedInformation;
@@ -445,7 +442,7 @@ zx_status_t InfraBss::EthToDataFrame(const EthFrame& frame, fbl::unique_ptr<Pack
     std::memcpy(llc->payload, frame.body(), frame.body_len());
 
     auto frame_len = hdr->len() + llc->len() + frame.body_len();
-    auto status = (*out_packet)->set_len(frame_len);
+    auto status = packet->set_len(frame_len);
     if (status != ZX_OK) {
         errorf("[infra-bss] [%s] could not set data frame length to %zu: %d\n",
                bssid_.ToString().c_str(), frame_len, status);
@@ -453,12 +450,13 @@ zx_status_t InfraBss::EthToDataFrame(const EthFrame& frame, fbl::unique_ptr<Pack
     }
 
     finspect("Outbound data frame: len %zu, hdr_len:%zu body_len:%zu frame_len:%zu\n",
-             (*out_packet)->len(), hdr->len(), frame.body_len(), frame_len);
+             packet->len(), hdr->len(), frame.body_len(), frame_len);
     finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
     finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
-    finspect("  frame   : %s\n", debug::HexDump((*out_packet)->data(), frame_len).c_str());
+    finspect("  frame   : %s\n", debug::HexDump(packet->data(), frame_len).c_str());
 
-    (*out_packet)->CopyCtrlFrom(txinfo);
+    packet->CopyCtrlFrom(txinfo);
+    *out_packet = fbl::move(packet);
 
     return ZX_OK;
 }

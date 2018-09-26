@@ -827,11 +827,8 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
 
     // Prepare a packet
     const size_t eth_frame_len = EthernetII::max_len() + llc_payload_len;
-    auto buffer = GetBuffer(eth_frame_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), eth_frame_len);
-    packet->set_peer(Packet::Peer::kEthernet);
-    // No need to clear Packet as every byte will be overwritten.
+    auto packet = GetEthPacket(eth_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     EthFrame eth_frame(fbl::move(packet));
     auto eth_hdr = eth_frame.hdr();
@@ -889,13 +886,8 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     auto eth_hdr = eth_frame.hdr();
     const size_t frame_len =
         DataFrameHeader::max_len() + LlcHeader::max_len() + eth_frame.body_len();
-    auto buffer = GetBuffer(frame_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), frame_len);
-    // no need to clear the whole packet; we memset the headers instead and copy over all bytes in
-    // the payload
-    packet->set_peer(Packet::Peer::kWlan);
+    auto packet = GetWlanPacket(frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     bool needs_protection = !bss_->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
     DataFrame<LlcHeader> data_frame(fbl::move(packet));
@@ -1039,11 +1031,9 @@ zx_status_t Station::SendKeepAliveResponse() {
         return ZX_OK;
     }
 
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(DataFrameHeader::max_len());
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), DataFrameHeader::max_len());
+    auto packet = GetWlanPacket(DataFrameHeader::max_len());
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
     packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
 
     DataFrame<> data_frame(fbl::move(packet));
     auto data_hdr = data_frame.hdr();
@@ -1147,11 +1137,9 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
 
     size_t llc_payload_len = req.body()->data->size();
     size_t max_frame_len = DataFrameHeader::max_len() + LlcHeader::max_len() + llc_payload_len;
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(max_frame_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), max_frame_len);
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
     packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
 
     bool needs_protection = !bss_->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
     DataFrame<LlcHeader> data_frame(fbl::move(packet));
@@ -1307,11 +1295,9 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
         return ZX_OK;
     }
 
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(DataFrameHeader::max_len());
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), DataFrameHeader::max_len());
+    auto packet = GetWlanPacket(DataFrameHeader::max_len());
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
     packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
 
     DataFrame<> data_frame(fbl::move(packet));
     auto data_hdr = data_frame.hdr();
@@ -1360,11 +1346,9 @@ zx_status_t Station::SendPsPoll() {
     }
 
     size_t len = CtrlFrameHdr::max_len() + PsPollFrame::max_len();
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), len);
+    auto packet = GetWlanPacket(len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
     packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
 
     CtrlFrame<PsPollFrame> frame(std::move(packet));
     ZX_DEBUG_ASSERT(frame.HasValidLen());

@@ -24,11 +24,9 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 template <typename T>
 static zx_status_t SendServiceMsg(DeviceInterface* device, T* message, uint32_t ordinal) {
     // TODO(FIDL-2): replace this when we can get the size of the serialized response.
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(kHugeBufferSize);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    auto packet = GetSvcPacket(kHugeBufferSize);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), kHugeBufferSize));
-    packet->set_peer(Packet::Peer::kService);
     zx_status_t status = SerializeServiceMsg(packet.get(), ordinal, message);
     if (status != ZX_OK) {
         errorf("could not serialize FIDL message %d: %d\n", ordinal, status);

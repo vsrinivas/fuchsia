@@ -361,12 +361,10 @@ void AssociatedState::HandlePsPollFrame(CtrlFrame<PsPollFrame>&& frame) {
     // There are no frames buffered for the client.
     // Respond with a null data frame and report the situation.
     size_t len = DataFrameHeader::max_len();
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
-    if (buffer == nullptr) { return; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), len);
+    auto packet = GetWlanPacket(len);
+    if (packet == nullptr) { return; }
     packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
+
     auto hdr = packet->mut_field<DataFrameHeader>(0);
     hdr->fc.set_type(FrameType::kData);
     hdr->fc.set_subtype(DataSubtype::kNull);
@@ -433,12 +431,8 @@ void AssociatedState::HandleDataLlcFrame(DataFrame<LlcHeader>&& frame) {
     if (eapol_controlled_port_ != eapol::PortState::kOpen) { return; }
 
     const size_t eth_len = EthernetII::max_len() + llc_frame.body_len();
-    auto buffer = GetBuffer(eth_len);
-    if (buffer == nullptr) { return; }
-
-    auto eth_packet = fbl::make_unique<Packet>(fbl::move(buffer), eth_len);
-    // no need to clear the packet since every byte is overwritten
-    eth_packet->set_peer(Packet::Peer::kEthernet);
+    auto eth_packet = GetEthPacket(eth_len);
+    if (eth_packet == nullptr) { return; }
 
     auto eth = eth_packet->mut_field<EthernetII>(0);
     eth->dest = data_hdr->addr3;
@@ -518,12 +512,9 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
 zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req) {
     size_t eapol_pdu_len = req.body()->data->size();
     size_t len = DataFrameHeader::max_len() + LlcHeader::max_len() + eapol_pdu_len;
-    auto buffer = GetBuffer(len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), len);
+    auto packet = GetWlanPacket(len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
     packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
 
     auto hdr = packet->mut_field<DataFrameHeader>(0);
     hdr->fc.set_type(FrameType::kData);
@@ -830,6 +821,7 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
     return status;
 }
 
+// TODO(hahnr): Transfer ownership of Ethernet frame rather than copying it.
 zx_status_t RemoteClient::EnqueueEthernetFrame(const EthFrame& frame) {
     // Drop oldest frame if queue reached its limit.
     if (bu_queue_.size() >= kMaxPowerSavingQueueSize) {
@@ -840,13 +832,10 @@ zx_status_t RemoteClient::EnqueueEthernetFrame(const EthFrame& frame) {
     debugps("[client] [%s] client is dozing; buffer outbound frame\n", addr().ToString().c_str());
 
     size_t eth_len = frame.len();
-    auto buffer = GetBuffer(eth_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    auto packet = GetEthPacket(eth_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    // Copy ethernet frame into buffer acquired from the BSS.
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), eth_len);
     memcpy(packet->mut_data(), frame.hdr(), eth_len);
-
     bu_queue_.Enqueue(fbl::move(packet));
     ReportBuChange(bu_queue_.size());
 

@@ -407,11 +407,8 @@ zx_status_t CreateDataFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* 
     common::MacAddr client(kClientAddress);
 
     const size_t buf_len = DataFrameHeader::max_len() + LlcHeader::max_len() + len;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kWlan);
+    auto packet = GetWlanPacket(buf_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     DataFrame<LlcHeader> data_frame(fbl::move(packet));
     auto data_hdr = data_frame.hdr();
@@ -449,11 +446,8 @@ zx_status_t CreateNullDataFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    auto buffer = GetBuffer(DataFrameHeader::max_len());
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), DataFrameHeader::max_len());
-    packet->set_peer(Packet::Peer::kWlan);
+    auto packet = GetWlanPacket(DataFrameHeader::max_len());
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     DataFrame<> data_frame(fbl::move(packet));
     auto data_hdr = data_frame.hdr();
@@ -480,12 +474,9 @@ zx_status_t CreateEthFrame(fbl::unique_ptr<Packet>* out_packet, const uint8_t* p
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
-    size_t buf_len = sizeof(EthernetII) + len;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
-    packet->set_peer(Packet::Peer::kEthernet);
+    size_t buf_len = EthernetII::max_len() + len;
+    auto packet = GetEthPacket(buf_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     EthFrame eth_frame(fbl::move(packet));
     auto eth_hdr = eth_frame.hdr();

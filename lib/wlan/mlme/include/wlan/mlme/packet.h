@@ -251,6 +251,12 @@ class PacketQueue {
     size_t size_ = 0;
 };
 
+// Gets a Packet setup for a specific use-case, backed by a slab allocated Buffer
+// with at least |len| bytes capacity.
+fbl::unique_ptr<Packet> GetEthPacket(size_t len);
+fbl::unique_ptr<Packet> GetWlanPacket(size_t len);
+fbl::unique_ptr<Packet> GetSvcPacket(size_t len);
+
 }  // namespace wlan
 
 // Declaration of static slab allocators.

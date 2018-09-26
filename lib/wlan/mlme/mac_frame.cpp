@@ -12,16 +12,12 @@
 
 namespace wlan {
 
+// TODO(hahnr): Decomission and replace with FrameWriter.
 template <typename Body>
 zx_status_t CreateMgmtFrame(MgmtFrame<Body>* out_frame, size_t body_payload_len, bool has_ht_ctrl) {
     size_t max_frame_len = MgmtFrameHeader::max_len() + Body::max_len() + body_payload_len;
-
-    auto buffer = GetBuffer(max_frame_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), max_frame_len);
-    packet->set_peer(Packet::Peer::kWlan);
-
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
     // Zero out the packet buffer by default for the management frame.
     packet->clear();
 
