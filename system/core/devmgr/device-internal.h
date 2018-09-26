@@ -12,6 +12,15 @@ __BEGIN_CDECLS
 typedef struct proxy_iostate proxy_iostate_t;
 
 struct zx_device {
+    zx_device() = default;
+    ~zx_device() = default;
+
+    zx_device(const zx_device&) = delete;
+    zx_device& operator=(const zx_device&) = delete;
+
+    zx_device(zx_device&&) = default;
+    zx_device& operator=(zx_device&&) = default;
+
     zx_status_t Open(zx_device_t** dev_out, uint32_t flags) {
         return ops->open(ctx, dev_out, flags);
     }
