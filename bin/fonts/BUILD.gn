@@ -94,6 +94,46 @@ package("fonts") {
   }
 }
 
+# TODO(sergeyu): Once PKG-47 is fixed it will be possible to separate fonts
+#                packages from font_server.
+package("fonts_minimal") {
+  deps = [
+    ":font_server",
+  ]
+
+  binary = "font_server"
+
+  meta = [
+    {
+      path = rebase_path("meta/fonts.cmx")
+      dest = "fonts.cmx"
+    }
+  ]
+
+  resources = [
+    {
+      path = rebase_path("manifest_minimal.json")
+      dest = "manifest.json"
+    },
+  ]
+
+  fonts = [
+    "material/MaterialIcons-Regular.ttf",
+    "roboto/Roboto-Light.ttf",
+    "roboto/Roboto-Medium.ttf",
+    "roboto/Roboto-Regular.ttf",
+  ]
+  foreach (font, fonts) {
+    resources += [
+      {
+        path = rebase_path("third_party/${font}")
+        file_name = get_path_info(font, "file")
+        dest = "fonts/${file_name}"
+      }
+    ]
+  }
+}
+
 rustc_binary("font_provider_test") {
   testonly = true
   edition = "2018"
