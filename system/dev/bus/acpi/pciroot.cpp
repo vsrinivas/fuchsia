@@ -82,9 +82,6 @@ static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object,
         // Publish HID
         if ((info->Valid & ACPI_VALID_HID) && info->HardwareId.Length <= HID_LENGTH + 1) {
             const char* hid = info->HardwareId.String;
-            if (!strncmp(hid, GOOGLE_TPM_HID_STRING, HID_LENGTH)) {
-                data->protocol_id = ZX_PROTOCOL_TPM;
-            }
             data->props[data->propcount].id = BIND_ACPI_HID_0_3;
             data->props[data->propcount++].value = htobe32(*((uint32_t*)(hid)));
             data->props[data->propcount].id = BIND_ACPI_HID_4_7;
