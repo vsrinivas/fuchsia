@@ -264,8 +264,9 @@ fn handle_info_event(e: InfoEvent,
                 connection_times.scan_started_time = None;
             }
         },
-        InfoEvent::ScanDiscoveryFinished { bss_count, ess_count } => {
+        InfoEvent::ScanDiscoveryFinished { bss_count, ess_count, num_bss_by_standard } => {
             telemetry::report_neighbor_networks_count(cobalt_sender, bss_count, ess_count);
+            telemetry::report_standards(cobalt_sender, num_bss_by_standard);
         },
         InfoEvent::AssociationStarted { att_id } => {
             connection_times.att_id = att_id;

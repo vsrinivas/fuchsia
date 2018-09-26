@@ -10,6 +10,7 @@ use wlan_rsn::rsne;
 
 use crate::Ssid;
 use crate::client::clone_utils::clone_bss_desc;
+use crate::client::Standard;
 use super::rsn::is_rsn_compatible;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -85,6 +86,32 @@ pub fn group_networks(bss_set: &[BssDescription]) -> Vec<EssInfo> {
         .filter_map(|bss_list| get_best_bss(bss_list))
         .map(|bss| EssInfo { best_bss: convert_bss_description(&bss) })
         .collect()
+}
+
+pub fn get_standard_map(bss_list: &Vec<BssDescription>) -> HashMap<Standard, usize> {
+    let mut standard_map: HashMap<Standard, usize> = HashMap::new();
+    for bss in bss_list {
+        match standard_map.entry(get_standard(&bss)) {
+            Entry::Vacant(e) => { e.insert(1); },
+            Entry::Occupied(mut e) => {
+                *e.get_mut() += 1;
+            }
+        }
+    }
+    standard_map
+}
+
+fn get_standard(bss: &BssDescription) -> Standard {
+    if bss.vht_cap.is_some() && bss.vht_op.is_some() {
+        Standard::Ac
+    } else if bss.ht_cap.is_some() && bss.ht_op.is_some() {
+        Standard::N
+    } else if bss.chan.primary >= 36 {
+        Standard::A
+    } else {
+        // TODO(NET-1587): Differentiate between 802.11b and 802.11g
+        Standard::G
+    }
 }
 
 #[cfg(test)]

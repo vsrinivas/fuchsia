@@ -16,10 +16,11 @@ use log::error;
 use parking_lot::Mutex;
 use std::cmp::PartialOrd;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::default::Default;
 use std::ops::Sub;
 use std::sync::Arc;
-use wlan_sme::client::{ConnectFailure, ConnectResult};
+use wlan_sme::client::{ConnectFailure, ConnectResult, Standard};
 
 use crate::cobalt_reporter::CobaltSender;
 use crate::device::IfaceMap;
@@ -40,6 +41,7 @@ enum CobaltMetricId {
     RxTxFrameCount = 9,
     RxTxFrameBytes = 10,
     NeighborNetworks = 11,
+    WlanStandards = 12,
 }
 
 // Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
@@ -312,6 +314,36 @@ pub fn report_neighbor_networks_count(
         ESS_COUNT_INDEX,
         ess_count as i64,
     );
+}
+
+pub fn report_standards(sender: &mut CobaltSender, num_bss_by_standard: HashMap<Standard, usize>) {
+    const ALL_STANDARDS: [(Standard, StandardLabel); 5] = [
+        (Standard::B, StandardLabel::B),
+        (Standard::G, StandardLabel::G),
+        (Standard::A, StandardLabel::A),
+        (Standard::N, StandardLabel::N),
+        (Standard::Ac, StandardLabel::Ac),
+    ];
+    ALL_STANDARDS.into_iter().for_each(|(standard, label)| {
+        let count = match num_bss_by_standard.entry(standard.clone()) {
+            Entry::Vacant(_) => 0 as i64,
+            Entry::Occupied(e) => *e.get() as i64,
+        };
+        sender.log_event_count(
+            CobaltMetricId::WlanStandards as u32,
+            label.clone() as u32,
+            count,
+        )
+    });
+}
+
+#[derive(Clone, Debug)]
+enum StandardLabel {
+    B = 0,
+    G = 1,
+    A = 2,
+    N = 3,
+    Ac = 4,
 }
 
 #[derive(Debug)]

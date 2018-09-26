@@ -15,6 +15,7 @@ mod test_utils;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent, ScanRequest};
 use futures::channel::mpsc;
 use log::error;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
@@ -23,7 +24,7 @@ use self::scan::{DiscoveryScan, JoinScan, ScanResult, ScanScheduler};
 use self::rsn::get_rsna;
 use self::state::{ConnectCommand, State};
 
-use crate::client::bss::{get_best_bss, group_networks};
+use crate::client::bss::{get_best_bss, get_standard_map, group_networks};
 use crate::client::clone_utils::clone_bss_desc;
 use crate::sink::{InfoSink, MlmeSink};
 
@@ -135,6 +136,7 @@ pub enum InfoEvent {
     ScanDiscoveryFinished {
         bss_count: usize,
         ess_count: usize,
+        num_bss_by_standard: HashMap<Standard, usize>,
     },
     AssociationStarted {
         att_id: ConnectionAttemptId,
@@ -154,6 +156,15 @@ pub enum InfoEvent {
 pub struct Status {
     pub connected_to: Option<BssInfo>,
     pub connecting_to: Option<Ssid>
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum Standard {
+    B,
+    G,
+    A,
+    N,
+    Ac
 }
 
 impl<T: Tokens> ClientSme<T> {
@@ -288,12 +299,18 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                         let result = match result {
                             Ok(bss_list) => {
                                 let bss_count = bss_list.len();
+
                                 let ess_list = group_networks(&bss_list);
                                 let ess_count = ess_list.len();
+
+                                let num_bss_by_standard = get_standard_map(&bss_list);
+
                                 self.context.info_sink.send(InfoEvent::ScanDiscoveryFinished {
                                     bss_count,
                                     ess_count,
+                                    num_bss_by_standard,
                                 });
+
                                 Ok(ess_list)
                             },
                             Err(e) => Err(e)
