@@ -369,39 +369,6 @@ static zx_status_t intel_serialio_i2c_set_bus_frequency(intel_serialio_i2c_devic
     return ZX_OK;
 }
 
-static zx_status_t intel_serialio_i2c_ioctl(
-    void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-    void* out_buf, size_t out_len, size_t* out_actual) {
-    intel_serialio_i2c_device_t* device = ctx;
-    switch (op) {
-    case IOCTL_I2C_BUS_ADD_SLAVE: {
-        const i2c_ioctl_add_slave_args_t* args = in_buf;
-        if (in_len < sizeof(*args))
-            return ZX_ERR_INVALID_ARGS;
-
-        return intel_serialio_i2c_add_slave(device, args->chip_address_width,
-                                            args->chip_address, ZX_PROTOCOL_I2C, NULL, 0);
-    }
-    case IOCTL_I2C_BUS_REMOVE_SLAVE: {
-        const i2c_ioctl_remove_slave_args_t* args = in_buf;
-        if (in_len < sizeof(*args))
-            return ZX_ERR_INVALID_ARGS;
-
-        return intel_serialio_i2c_remove_slave(device, args->chip_address_width,
-                                              args->chip_address);
-    }
-    case IOCTL_I2C_BUS_SET_FREQUENCY: {
-        const i2c_ioctl_set_bus_frequency_args_t* args = in_buf;
-        if (in_len < sizeof(*args)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return intel_serialio_i2c_set_bus_frequency(device, args->frequency);
-    }
-    default:
-        return ZX_ERR_INVALID_ARGS;
-    }
-}
-
 static int intel_serialio_i2c_irq_thread(void* arg) {
     intel_serialio_i2c_device_t* dev = (intel_serialio_i2c_device_t*)arg;
     zx_status_t status;
@@ -662,7 +629,6 @@ static void intel_serialio_i2c_release(void* ctx) {
 
 static zx_protocol_device_t intel_serialio_i2c_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = intel_serialio_i2c_ioctl,
     .unbind = intel_serialio_i2c_unbind,
     .release = intel_serialio_i2c_release,
 };

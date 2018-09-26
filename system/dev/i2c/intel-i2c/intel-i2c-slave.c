@@ -384,18 +384,6 @@ slave_transfer_ioctl_finish_2:
     return status;
 }
 
-static zx_status_t intel_serialio_i2c_slave_irq_ioctl(
-    intel_serialio_i2c_slave_device_t* slave, uint32_t op, const void* in_buf, size_t in_len,
-    void* out_buf, size_t out_len, size_t* out_actual) {
-    if (out_len < sizeof(zx_handle_t)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-    // This IOCTL is a hack to get interrupts to the right devices.
-    // TODO(teisenbe): Remove this when we discover interrupts via ACPI and
-    // route more appropriately.
-    return intel_serialio_i2c_slave_get_irq(slave, out_buf);
-}
-
 zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* slave,
                                              zx_handle_t* out) {
     if (slave->chip_address == 0xa) {
@@ -449,9 +437,6 @@ static zx_status_t intel_serialio_i2c_slave_ioctl(
         return intel_serialio_i2c_slave_transfer_ioctl(
             slave, op, in_buf, in_len, out_buf, out_len, out_actual);
         break;
-    case IOCTL_I2C_SLAVE_IRQ:
-        return intel_serialio_i2c_slave_irq_ioctl(
-            slave, op, in_buf, in_len, out_buf, out_len, out_actual);
     default:
         return ZX_ERR_INVALID_ARGS;
     }

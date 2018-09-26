@@ -60,17 +60,6 @@ typedef struct i2c_hid_device {
     zx_handle_t irq;
 } i2c_hid_device_t;
 
-static uint8_t* i2c_hid_prepare_write_read_buffer(uint8_t* buf, int wlen, int rlen) {
-    i2c_slave_ioctl_segment_t* segments = (i2c_slave_ioctl_segment_t*)buf;
-    segments[0].type = I2C_SEGMENT_TYPE_WRITE;
-    segments[0].len = wlen;
-    segments[1].type = I2C_SEGMENT_TYPE_READ;
-    segments[1].len = rlen;
-    segments[2].type = I2C_SEGMENT_TYPE_END;
-    segments[2].len = 0;
-    return buf + 3 * sizeof(i2c_slave_ioctl_segment_t);
-}
-
 // Send the device a HOST initiated RESET.  Caller must call
 // i2c_wait_for_ready_locked() afterwards to guarantee completion.
 // If |force| is false, do not issue a reset if there is one outstanding.

@@ -24,15 +24,6 @@ void print_usage(void) {
     printf("COMMAND is one of the following commands, optionally followed \n");
     printf("arguments which are specific to each command.\n");
     printf("\n");
-    printf("add-slave ADDRESS: Add a slave device to the target bus.\n");
-    printf("ADDRESS is the 7 bit chip address of the slave in hex.\n");
-    printf("\n");
-    printf("remove-slave ADDRESS: Remove a slave from the target bus.\n");
-    printf("ADDRESS is the 7 bit chip address of the slave in hex.\n");
-    printf("\n");
-    printf("set-frequency FREQUENCY: Set the frequency of the target bus.\n");
-    printf("FREQUENCY is the frequency to set the bus to in decimal Hz.\n");
-    printf("\n");
     printf("read LENGTH: Read data from the target slave device.\n");
     printf("LENGTH is the number of bytes to read in decimal.\n");
     printf("\n");
@@ -51,86 +42,6 @@ void print_usage(void) {
     printf("For example, to perform a write of one byte and then a read\n");
     printf("of one byte without giving up the bus:\n");
     printf("%s [dev] transfer w 1 00 r 1\n", prog_name);
-}
-
-int cmd_add_slave(int fd, int argc, const char** argv) {
-    if (argc < 1) {
-        print_usage();
-        return 1;
-    }
-
-    errno = 0;
-    long int address = strtol(argv[0], NULL, 16);
-    if (errno) {
-        print_usage();
-        return errno;
-    }
-
-    i2c_ioctl_add_slave_args_t add_slave_args = {
-        .chip_address_width = I2C_7BIT_ADDRESS,
-        .chip_address = address,
-    };
-
-    ssize_t ret = ioctl_i2c_bus_add_slave(fd, &add_slave_args);
-    if (ret < 0) {
-        printf("Error when adding I2C slave. (%zd)\n", ret);
-        return 1;
-    }
-
-    return 0;
-}
-
-int cmd_remove_slave(int fd, int argc, const char** argv) {
-    if (argc < 1) {
-        print_usage();
-        return 1;
-    }
-
-    errno = 0;
-    long int address = strtol(argv[0], NULL, 16);
-    if (errno) {
-        print_usage();
-        return errno;
-    }
-
-    i2c_ioctl_remove_slave_args_t remove_slave_args = {
-        .chip_address_width = I2C_7BIT_ADDRESS,
-        .chip_address = address,
-    };
-
-    ssize_t ret = ioctl_i2c_bus_remove_slave(fd, &remove_slave_args);
-    if (ret < 0) {
-        printf("Error when removing I2C slave. (%zd)\n", ret);
-        return 1;
-    }
-
-    return 0;
-}
-
-int cmd_set_bus_frequency(int fd, int argc, const char** argv) {
-    if (argc < 1) {
-        print_usage();
-        return 1;
-    }
-
-    errno = 0;
-    long int frequency = strtol(argv[0], NULL, 10);
-    if (errno) {
-        print_usage();
-        return errno;
-    }
-
-    i2c_ioctl_set_bus_frequency_args_t set_bus_frequency_args = {
-        .frequency = frequency,
-    };
-
-    ssize_t ret = ioctl_i2c_bus_set_frequency(fd, &set_bus_frequency_args);
-    if (ret < 0) {
-        printf("Error when setting bus frequency. (%zd)\n", ret);
-        return 1;
-    }
-
-    return 0;
 }
 
 int cmd_read(int fd, int argc, const char** argv) {
@@ -345,13 +256,7 @@ int main(int argc, const char** argv) {
         return 1;
     }
 
-    if (!strcmp("add-slave", cmd)) {
-        return cmd_add_slave(fd, argc, argv);
-    } else if (!strcmp("remove-slave", cmd)) {
-        return cmd_remove_slave(fd, argc, argv);
-    } else if (!strcmp("set-frequency", cmd)) {
-        return cmd_set_bus_frequency(fd, argc, argv);
-    } else if (!strcmp("read", cmd)) {
+    if (!strcmp("read", cmd)) {
         return cmd_read(fd, argc, argv);
     } else if (!strcmp("write", cmd)) {
         return cmd_write(fd, argc, argv);
